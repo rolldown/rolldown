@@ -1,0 +1,16 @@
+{
+  "_comment": "Same indirect star as `already_loaded_indirect_external_star`, but a second entry also uses `barrel.js`, so the barrel lands in its own chunk. Pins that the extracted namespace still merges the barrel's namespace object across that chunk boundary.",
+  "config": {
+    "input": [
+      {
+        "name": "main",
+        "import": "./main.js"
+      },
+      {
+        "name": "other",
+        "import": "./other.js"
+      }
+    ],
+    "external": ["ext-indirect-shared"]
+  }
+}

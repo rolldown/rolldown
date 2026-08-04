@@ -34,37 +34,6 @@ use napi_derive::napi;
 #[global_allocator]
 static ALLOC: mimalloc_safe::MiMalloc = mimalloc_safe::MiMalloc;
 
-#[cfg(all(
-  not(target_family = "wasm"),
-  not(feature = "default_global_allocator"),
-  not(target_env = "ohos")
-))]
-unsafe extern "C" {
-  fn mi_collect(force: bool);
-}
-
-#[cfg(all(
-  not(target_family = "wasm"),
-  not(feature = "default_global_allocator"),
-  not(target_env = "ohos")
-))]
-pub(crate) fn collect_allocator() {
-  // A completed bundle may still have heavy link-stage state being destroyed on a rayon worker.
-  // Wait for those frees before collecting, otherwise pages released just after `mi_collect` stay
-  // resident until a later build happens to trigger another collection.
-  rolldown::drain_deferred_drops();
-  // SAFETY: mimalloc's process-wide collection operation is thread-safe. A forced collection
-  // releases free pages left by the completed bundle before downstream tools run in Node.
-  unsafe { mi_collect(true) };
-}
-
-#[cfg(not(all(
-  not(target_family = "wasm"),
-  not(feature = "default_global_allocator"),
-  not(target_env = "ohos")
-)))]
-pub(crate) fn collect_allocator() {}
-
 pub mod binding_bundler;
 pub mod binding_dev_engine;
 pub mod binding_dev_options;

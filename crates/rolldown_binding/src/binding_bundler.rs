@@ -80,9 +80,7 @@ impl BindingBundler {
         return Ok(napi::Either::A(BindingErrors::new(vec![error])));
       }
 
-      let outputs = bundle_output.assets.into();
-      crate::collect_allocator();
-      Ok(napi::Either::B(outputs))
+      Ok(napi::Either::B(bundle_output.assets.into()))
     };
     spawn_boxed_future(env, fut)
   }
@@ -130,9 +128,7 @@ impl BindingBundler {
         return Ok(napi::Either::A(BindingErrors::new(vec![error])));
       }
 
-      let outputs = bundle_output.assets.into();
-      crate::collect_allocator();
-      Ok(napi::Either::B(outputs))
+      Ok(napi::Either::B(bundle_output.assets.into()))
     };
     spawn_boxed_future(env, fut)
   }

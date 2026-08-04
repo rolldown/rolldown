@@ -380,44 +380,6 @@ fn collect_transitive_dependencies(
   visited_deps
 }
 
-#[cfg(test)]
-mod tests {
-  use oxc_index::index_vec;
-
-  use super::*;
-
-  #[test]
-  fn collects_transitive_dependencies_in_traversal_order() {
-    let dependencies = index_vec![
-      vec![InsChunkIdx::from(1), InsChunkIdx::from(2)],
-      vec![InsChunkIdx::from(3)],
-      vec![InsChunkIdx::from(3)],
-      vec![],
-    ];
-
-    assert_eq!(
-      collect_transitive_dependencies(InsChunkIdx::from(0), &dependencies)
-        .into_iter()
-        .map(InsChunkIdx::raw)
-        .collect::<Vec<_>>(),
-      vec![1, 3, 2]
-    );
-  }
-
-  #[test]
-  fn terminates_for_circular_dependencies() {
-    let dependencies = index_vec![vec![InsChunkIdx::from(1)], vec![InsChunkIdx::from(0)],];
-
-    assert_eq!(
-      collect_transitive_dependencies(InsChunkIdx::from(0), &dependencies)
-        .into_iter()
-        .map(InsChunkIdx::raw)
-        .collect::<Vec<_>>(),
-      vec![1, 0]
-    );
-  }
-}
-
 /// Walks chunks in a deterministic order and rehashes any chunk whose resolved file name would
 /// collide with a previously assigned one. Comparison is case-insensitive so the output is safe
 /// to write on case-insensitive filesystems (macOS HFS+, Windows NTFS).
@@ -459,4 +421,42 @@ fn rehash(prev_hash_str: &str, hash_base: u8) -> (String, u128) {
   hasher.update(prev_hash_str.as_bytes());
   let digest = hasher.digest128();
   (encode_hash_with_base(&digest.to_le_bytes(), hash_base), digest)
+}
+
+#[cfg(test)]
+mod tests {
+  use oxc_index::index_vec;
+
+  use super::*;
+
+  #[test]
+  fn collects_transitive_dependencies_in_traversal_order() {
+    let dependencies = index_vec![
+      vec![InsChunkIdx::from(1), InsChunkIdx::from(2)],
+      vec![InsChunkIdx::from(3)],
+      vec![InsChunkIdx::from(3)],
+      vec![],
+    ];
+
+    assert_eq!(
+      collect_transitive_dependencies(InsChunkIdx::from(0), &dependencies)
+        .into_iter()
+        .map(InsChunkIdx::raw)
+        .collect::<Vec<_>>(),
+      vec![1, 3, 2]
+    );
+  }
+
+  #[test]
+  fn terminates_for_circular_dependencies() {
+    let dependencies = index_vec![vec![InsChunkIdx::from(1)], vec![InsChunkIdx::from(0)],];
+
+    assert_eq!(
+      collect_transitive_dependencies(InsChunkIdx::from(0), &dependencies)
+        .into_iter()
+        .map(InsChunkIdx::raw)
+        .collect::<Vec<_>>(),
+      vec![1, 0]
+    );
+  }
 }

@@ -1545,7 +1545,7 @@ impl GenerateStage<'_> {
           let mut export_name: CompactStr;
           loop {
             named_index += 1;
-            export_name = generate_minified_names(named_index).into();
+            export_name = generate_minified_names(named_index);
             // Unreachable in practice — the generator first produces the four-character `then`
             // at value 443,179, i.e. after ~443k internal exports in one chunk — but it is the
             // only other source of internal export names, so make it impossible rather than
@@ -1681,22 +1681,25 @@ const REST_BASE: u32 = 64;
 const FREQUENT_CHARS: &[u8; REST_BASE as usize] =
   b"etnriaoscludfpmhg_vybxSCwTEDOkAjMNPFILRzBVHUWGKqJYXZQ$1024368579";
 
-// Intentionally NOT routed through `ConflictResolver`: this is a generative
-// base54 namer (not `$N`-suffix), so it shares only `deconflict_order_key`,
-// not the conflict loop. See docs/superpowers/specs/2026-06-17-renamer-naming-engine-design.md.
-fn generate_minified_names(mut value: u32) -> String {
-  let mut buffer = vec![];
+// Intentionally NOT routed through `ConflictResolver`. This is a generative base54 namer, not
+// a `$N`-suffix one. Its call site shares `deconflict_order_key` with the resolver path, but
+// not the conflict loop (#9831).
+fn generate_minified_names(mut value: u32) -> CompactStr {
+  // `u32::MAX` needs 6 bytes: one base-54 head plus five base-64 digits, because
+  // `u32::MAX / FIRST_BASE` lands between `REST_BASE.pow(4)` and `REST_BASE.pow(5)`.
+  let mut buffer = [0u8; 6];
+  let mut len = 0;
 
   // Base 54 at first because these are the usable first characters in JavaScript identifiers
-  let byte = FREQUENT_CHARS[(value % FIRST_BASE) as usize];
-  buffer.push(byte);
+  buffer[len] = FREQUENT_CHARS[(value % FIRST_BASE) as usize];
+  len += 1;
   value /= FIRST_BASE;
 
   while value > 0 {
-    let byte = FREQUENT_CHARS[(value % REST_BASE) as usize];
-    buffer.push(byte);
+    buffer[len] = FREQUENT_CHARS[(value % REST_BASE) as usize];
+    len += 1;
     value /= REST_BASE;
   }
-  // SAFETY: `buffer` is base64 characters, it is valid utf8 characters
-  unsafe { String::from_utf8_unchecked(buffer) }
+  // SAFETY: every byte written comes from `FREQUENT_CHARS`, which is ASCII.
+  CompactStr::new(unsafe { std::str::from_utf8_unchecked(&buffer[..len]) })
 }

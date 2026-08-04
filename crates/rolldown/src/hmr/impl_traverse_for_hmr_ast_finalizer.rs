@@ -1,9 +1,6 @@
 use oxc::{
   allocator::TakeIn,
-  ast::{
-    ast::{self, Expression},
-    builder::NONE,
-  },
+  ast::ast::{self, Expression},
   span::SPAN,
 };
 use oxc_traverse::Traverse;
@@ -87,7 +84,7 @@ impl<'ast> Traverse<'ast, ()> for HmrAstFinalizer<'_, 'ast> {
                 CJS_ROLLDOWN_MODULE_REF_IDENT,
                 self,
               ),
-              NONE,
+              None,
               Some(module_object),
               false,
               self,
@@ -110,7 +107,7 @@ impl<'ast> Traverse<'ast, ()> for HmrAstFinalizer<'_, 'ast> {
                 CJS_ROLLDOWN_EXPORTS_REF_IDENT,
                 self,
               ),
-              NONE,
+              None,
               Some(Expression::new_member_access_expr(CJS_ROLLDOWN_MODULE_REF, "exports", self)),
               false,
               self,
@@ -145,7 +142,7 @@ impl<'ast> Traverse<'ast, ()> for HmrAstFinalizer<'_, 'ast> {
     let final_block = ast::BlockStatement::boxed(SPAN, [], self);
 
     let try_stmt =
-      ast::Statement::new_try_statement(SPAN, try_block, NONE, Some(final_block), self);
+      ast::Statement::new_try_statement(SPAN, try_block, None, Some(final_block), self);
 
     // The runtime calls the factory with the module's stable id as its argument, so it's
     // available inside the body as `__rolldown_module_id__`. This lets registerModule /
@@ -155,19 +152,19 @@ impl<'ast> Traverse<'ast, ()> for HmrAstFinalizer<'_, 'ast> {
       SPAN,
       [],
       ast::BindingPattern::new_binding_identifier(SPAN, MODULE_ID_PARAM_FOR_HMR, self),
-      NONE,
-      NONE,
+      None,
+      None,
       false,
       None,
       false,
       false,
       self,
     );
-    let params = ast::FormalParameters::new(
+    let params = ast::FormalParameters::boxed(
       SPAN,
       ast::FormalParameterKind::Signature,
       [module_id_param],
-      NONE,
+      None,
       self,
     );
     // function () { [user code] }
@@ -178,11 +175,11 @@ impl<'ast> Traverse<'ast, ()> for HmrAstFinalizer<'_, 'ast> {
       false,
       false,
       false,
-      NONE,
-      NONE,
+      None,
+      None,
       params,
-      NONE,
-      Some(ast::FunctionBody::new(SPAN, [], [try_stmt], self)),
+      None,
+      Some(ast::FunctionBody::boxed(SPAN, [], [try_stmt], self)),
       self,
     );
     // mark the callback as PIFE because the callback is executed when this chunk is loaded
@@ -213,7 +210,7 @@ impl<'ast> Traverse<'ast, ()> for HmrAstFinalizer<'_, 'ast> {
     let register_factory_call = ast::Expression::new_call_expression(
       SPAN,
       Expression::new_identifier(SPAN, "__rolldown_runtime__.registerFactory", self),
-      NONE,
+      None,
       register_factory_args,
       false,
       self,

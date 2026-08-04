@@ -2,13 +2,10 @@ use oxc::allocator::GetAllocator;
 use oxc::ast::builder::AstBuilder;
 use oxc::{
   allocator::{CloneIn as _, TakeIn as _},
-  ast::{
-    ast::{
-      Argument, BindingPattern, BindingProperty, Expression, FormalParameterKind, FormalParameters,
-      FunctionBody, IdentifierName, ObjectPattern, PropertyKey, Statement, StaticMemberExpression,
-      VariableDeclarationKind, VariableDeclarator,
-    },
-    builder::NONE,
+  ast::ast::{
+    Argument, ArrowFunctionBody, BindingPattern, BindingProperty, Expression, FormalParameterKind,
+    FormalParameters, FunctionBody, IdentifierName, ObjectPattern, PropertyKey, Statement,
+    StaticMemberExpression, VariableDeclarationKind, VariableDeclarator,
   },
   ast_visit::walk_js_mut::walk_arguments,
   semantic::ScopeFlags,
@@ -71,7 +68,7 @@ impl<'a> BuildImportAnalysisVisitor<'a> {
               false,
               self,
             )],
-            NONE,
+            None,
             self,
           ),
           await_expr.take_in(self),
@@ -152,12 +149,11 @@ impl<'a> BuildImportAnalysisVisitor<'a> {
   ) -> Expression<'a> {
     self.vite_preload_call(Argument::new_arrow_function_expression(
       SPAN,
-      false,
       true,
-      NONE,
-      FormalParameters::new(SPAN, FormalParameterKind::Signature, [], NONE, self),
-      NONE,
-      FunctionBody::new(
+      None,
+      FormalParameters::boxed(SPAN, FormalParameterKind::Signature, [], None, self),
+      None,
+      ArrowFunctionBody::FunctionBody(FunctionBody::boxed(
         SPAN,
         [],
         {
@@ -169,7 +165,7 @@ impl<'a> BuildImportAnalysisVisitor<'a> {
               SPAN,
               VariableDeclarationKind::Const,
               BindingPattern::ObjectPattern(object_pat.clone_in(self.ast_builder.allocator())),
-              NONE,
+              None,
               Some(await_expr),
               false,
               self,
@@ -185,7 +181,7 @@ impl<'a> BuildImportAnalysisVisitor<'a> {
           statements
         },
         self,
-      ),
+      )),
       self,
     ))
   }
@@ -194,7 +190,7 @@ impl<'a> BuildImportAnalysisVisitor<'a> {
     Expression::new_call_expression(
       SPAN,
       Expression::new_identifier(SPAN, "__vitePreload", self),
-      NONE,
+      None,
       {
         let append_import_meta_url = self.render_built_url || self.is_relative_base;
         let capacity = if append_import_meta_url { 3 } else { 2 };

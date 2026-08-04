@@ -192,14 +192,11 @@ fn contributes_no_closure_body(stmt: &Statement, keep_names: bool) -> bool {
     // into the wrapper closure to preserve `fn.name` (see `insert_keep_name_statements`), so the
     // init is no longer a no-op.
     Statement::FunctionDeclaration(_) => !keep_names,
-    Statement::ExportNamedDeclaration(export) => {
-      export.source.is_none()
-        && match &export.declaration {
-          None => true,
-          Some(Declaration::FunctionDeclaration(_)) => !keep_names,
-          Some(_) => false,
-        }
-    }
+    Statement::ExportDeclaration(export) => match &export.declaration {
+      Declaration::FunctionDeclaration(_) => !keep_names,
+      _ => false,
+    },
+    Statement::ExportNamedDeclaration(_) => true,
     _ => false,
   }
 }

@@ -37,7 +37,7 @@ const capture = (cmd: string, cwd: string): string =>
 export function ensureViteCheckout(): void {
   if (!nodeFs.existsSync(nodePath.join(viteDir, 'package.json'))) {
     run('git clone --branch rolldown-canary https://github.com/vitejs/vite.git vite', repoRoot);
-    run('git rebase origin/main', viteDir);
+    rebaseOntoMain();
   } else {
     updateViteCheckout();
   }
@@ -60,5 +60,22 @@ function updateViteCheckout(): void {
     return;
   }
   run('git checkout -B rolldown-canary origin/rolldown-canary', viteDir);
-  run('git rebase origin/main', viteDir);
+  rebaseOntoMain();
+}
+
+// `rolldown-canary` stops rebasing onto `main` whenever it falls behind a
+// conflicting upstream change, and only the Vite side can resolve that. Every
+// job here needs a Vite checkout, so keep the unrebased branch instead of
+// failing: the canary line is still tested, just without the newest `main`.
+function rebaseOntoMain(): void {
+  try {
+    run('git rebase origin/main', viteDir);
+  } catch {
+    console.log('[setup-vite] rolldown-canary does not rebase onto main, using it as-is');
+    try {
+      run('git rebase --abort', viteDir);
+    } catch {
+      // The rebase failed before it started, so there is nothing to abort.
+    }
+  }
 }

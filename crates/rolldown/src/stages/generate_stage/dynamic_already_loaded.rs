@@ -216,14 +216,14 @@ impl GenerateStage<'_> {
       return false;
     }
 
-    // A namespace carrying a callable `then` is assimilated by `import()`, so the extraction
-    // callback would receive whatever that `then` produces instead of the namespace. Only the
-    // export *name* can do that, so a local symbol named `then` exported under an alias is
-    // harmless — the alias is what lands in the namespace.
+    // `import()` assimilates a namespace that carries a callable `then`. The extraction callback
+    // would then get whatever that `then` returns, not the namespace. Only the export name can do
+    // this. A local symbol named `then` that leaves under an alias is harmless, because the alias
+    // is what lands in the namespace.
     //
-    // No other export name can become `then`: the minified generator skips it and
-    // `ConflictResolver` reserves it, so an internal export named `then` deconflicts to
-    // `then$1` (see `THENABLE_HAZARD_EXPORT_NAME` in compute_cross_chunk_links.rs).
+    // No other export name can become `then`. The minified generator skips it, and
+    // `ConflictResolver` reserves it up front. So an internal export named `then` deconflicts to
+    // `then$1`. See `THENABLE_HAZARD_EXPORT_NAME` in compute_cross_chunk_links.rs.
     if self.link_output.metas[entry_module_idx]
       .resolved_exports
       .keys()

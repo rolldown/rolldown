@@ -674,11 +674,11 @@ impl GenerateStage<'_> {
         let ChunkKind::EntryPoint { module, .. } = &chunk.kind else {
           return None;
         };
-        // An entry whose `import()` call sites extract its simulated namespace must keep its
-        // external star re-exports inside that namespace as runtime `__reExport` merges:
-        // flattening them to a chunk-level `export *` would drop them from the extracted
-        // namespace, and would also let an external-supplied callable `then` make the chunk
-        // namespace thenable and hijack the extraction callback. See
+        // Some `import()` call sites extract an entry's simulated namespace. Such an entry must
+        // keep its external star re-exports inside that namespace, merged at run time by
+        // `__reExport`. Flattening them to a chunk-level `export *` would drop them from the
+        // extracted namespace. It would also let a callable `then` from the external turn the
+        // chunk namespace thenable and hijack the extraction callback. See
         // `dynamic_entry_supports_namespace_extraction` in dynamic_already_loaded.rs.
         if extraction_namespaces.get(&idx).is_some_and(|entries| entries.contains(module)) {
           return None;

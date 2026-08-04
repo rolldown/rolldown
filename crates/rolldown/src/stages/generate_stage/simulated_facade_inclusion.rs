@@ -36,9 +36,9 @@ impl GenerateStage<'_> {
     if !matches!(wrap_kind, WrapKind::Cjs) {
       let namespace_stmt =
         &mut self.link_output.stmt_infos[entry_module_idx][StmtInfos::NAMESPACE_STMT_IDX];
-      // Symbols the namespace statement declares itself — an external `export *` record's
-      // namespace binding, consumed by that statement's own `__reExport` merge — are
-      // structural rather than getters, so they must survive the narrowing.
+      // The namespace statement declares some symbols itself. One is an external `export *`
+      // record's namespace binding, consumed by that statement's own `__reExport` merge. Those
+      // symbols are structural rather than getters, so they must survive the narrowing.
       let self_declared: FxHashSet<_> =
         namespace_stmt.declared_symbols.iter().map(TaggedSymbolRef::inner).collect();
       // Filter in place to avoid cloning

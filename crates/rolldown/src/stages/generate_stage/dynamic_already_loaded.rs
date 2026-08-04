@@ -232,22 +232,22 @@ impl GenerateStage<'_> {
       return false;
     }
 
-    // If the entry has dynamic exports through `export * from`, it _might_ have a `then`
-    // export — unless every one of those stars is a direct external re-export of the entry
-    // itself, which the materialized namespace merges at runtime with `__reExport` (Rollup
-    // does the same with `_mergeNamespaces`). `find_entry_level_external_module` skips the
-    // entry-level flatten for extraction-registered entries, so those records stay inside the
-    // namespace and the chunk itself publishes no `export *` that could turn its own
-    // namespace thenable.
+    // An entry with dynamic exports through `export * from` _might_ have a `then` export. The
+    // exception is an entry whose stars are all direct external re-exports of its own. The
+    // materialized namespace merges those at run time with `__reExport`, the same shape Rollup
+    // produces with `_mergeNamespaces`. `find_entry_level_external_module` skips the
+    // entry-level flatten for extraction-registered entries. Those records therefore stay
+    // inside the namespace. The chunk itself publishes no `export *`, so its own namespace
+    // never turns thenable.
     !self.link_output.metas[entry_module_idx].has_dynamic_exports
       || self.dynamic_exports_are_direct_external_stars(entry_module_idx)
   }
 
   /// Whether every source of this entry's dynamic exports is a direct `export * from
-  /// <external>` record on the entry itself. Only those records participate in the
-  /// materialized namespace's runtime `__reExport` merge, so any other source — the entry
-  /// being CommonJS, or a star into a normal module that itself has dynamic exports — would
-  /// leave the simulated namespace missing names that only exist at runtime.
+  /// <external>` record on the entry itself. Only those records join the materialized
+  /// namespace's run-time `__reExport` merge. Any other source would leave the simulated
+  /// namespace missing names that only exist at run time. Two such sources: the entry being
+  /// CommonJS, or a star into a normal module that itself has dynamic exports.
   fn dynamic_exports_are_direct_external_stars(&self, entry_module_idx: ModuleIdx) -> bool {
     let Some(module) = self.link_output.module_table[entry_module_idx].as_normal() else {
       return false;

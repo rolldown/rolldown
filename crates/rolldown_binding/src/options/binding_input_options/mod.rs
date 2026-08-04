@@ -21,7 +21,7 @@ use std::collections::HashMap;
 use binding_inject_import::BindingInjectImport;
 use binding_input_item::BindingInputItem;
 use binding_resolve_options::BindingResolveOptions;
-use binding_watch_option::BindingWatchOption;
+pub use binding_watch_option::BindingWatchOption;
 
 use super::plugin::BindingPluginOrParallelJsPluginPlaceholder;
 use crate::generated::binding_checks_options;

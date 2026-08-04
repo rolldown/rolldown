@@ -9,7 +9,7 @@ use rolldown_error::{
 };
 use rolldown_fs_watcher::{DynFsWatcher, RecursiveMode};
 use rolldown_utils::{dashmap::FxDashSet, pattern_filter};
-use std::path::Path;
+use std::path::{Component, Path, PathBuf};
 use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::time::Instant;
@@ -167,7 +167,12 @@ impl WatchTask {
         }
         Ok(BuildOutcome::Success(BundleEndEventData {
           task_index,
-          output: self.options.cwd.join(&self.options.out_dir).to_string_lossy().into_owned(),
+          output: resolve_output_path(
+            &self.options.cwd,
+            self.options.file.as_deref().unwrap_or(&self.options.out_dir),
+          )
+          .to_string_lossy()
+          .into_owned(),
           duration,
           bundle_handle,
         }))
@@ -368,6 +373,85 @@ impl WatchTask {
   }
 }
 
+/// Resolve the output path reported by `BundleEnd` events.
+///
+/// Rollup reports the resolved `output.file` (falling back to `output.dir`)
+/// here, so honor `file` when it is set instead of always using `out_dir`,
+/// and normalize `.`/`..` components for a stable absolute path.
+///
+/// See "API Contract" in `internal-docs/watch-mode/implementation.md`.
+fn resolve_output_path(cwd: &Path, output: &str) -> PathBuf {
+  let output = Path::new(output);
+  let path = join_absolute(cwd, output);
+  let absolute_path = if path.is_absolute() {
+    path
+  } else {
+    std::env::current_dir().map_or(path.clone(), |current_dir| join_absolute(&current_dir, &path))
+  };
+
+  let mut normalized = PathBuf::new();
+  for component in absolute_path.components() {
+    match component {
+      Component::CurDir => {}
+      Component::ParentDir => {
+        normalized.pop();
+      }
+      Component::Prefix(_) | Component::RootDir | Component::Normal(_) => {
+        normalized.push(component.as_os_str());
+      }
+    }
+  }
+  normalized
+}
+
+/// Join `path` onto `base`, producing an absolute path when `base` is absolute.
+///
+/// This is `Path::join` plus handling for Windows drive-relative paths such as
+/// `C:foo` (a `Prefix` component without a `RootDir`). Plain `join` would let
+/// such a path replace `base` entirely (`PathBuf::push`: "if `path` has a
+/// prefix but no root, it replaces `self`"), leaking a non-absolute path.
+fn join_absolute(base: &Path, path: &Path) -> PathBuf {
+  if path.is_absolute() {
+    return path.to_path_buf();
+  }
+
+  #[cfg(windows)]
+  if let Some(Component::Prefix(prefix)) = path.components().next()
+    && let std::path::Prefix::Disk(drive) = prefix.kind()
+    && !path.has_root()
+  {
+    let remainder: PathBuf = path.components().skip(1).collect();
+    let base_drive = match base.components().next() {
+      Some(Component::Prefix(base_prefix)) => match base_prefix.kind() {
+        std::path::Prefix::Disk(d) | std::path::Prefix::VerbatimDisk(d) => Some(d),
+        _ => None,
+      },
+      _ => None,
+    };
+    return if drive_relative_uses_base(drive, base_drive) {
+      base.join(remainder)
+    } else {
+      // `base` lives on another drive (or has no disk prefix), so it cannot
+      // anchor the path; per-drive current directories are process state we do
+      // not track, so fall back to the drive's root.
+      let mut resolved = PathBuf::from(format!("{}:\\", char::from(drive)));
+      resolved.push(remainder);
+      resolved
+    };
+  }
+
+  base.join(path)
+}
+
+/// Decision logic for a Windows drive-relative path (e.g. `C:foo`): it may be
+/// resolved against the base directory only when both sit on the same drive
+/// (drive letters compare ASCII case-insensitively); otherwise it must be
+/// resolved from its own drive.
+#[cfg(any(windows, test))]
+fn drive_relative_uses_base(path_drive: u8, base_drive: Option<u8>) -> bool {
+  base_drive.is_some_and(|base_drive| base_drive.eq_ignore_ascii_case(&path_drive))
+}
+
 /// Outcome of a build attempt
 pub enum BuildOutcome {
   /// Build was skipped (no rebuild needed)
@@ -378,4 +462,47 @@ pub enum BuildOutcome {
   Error(WatchErrorEventData),
   /// `watcher.close()` was called during the build; output was discarded.
   Closed,
+}
+
+#[cfg(test)]
+mod tests {
+  use super::*;
+
+  #[test]
+  fn relative_output_path_is_resolved_and_normalized() {
+    let cwd = std::env::current_dir().expect("current directory");
+    assert_eq!(resolve_output_path(&cwd, "./nested/../dist/out.js"), cwd.join("dist/out.js"));
+
+    let absolute = cwd.join("absolute.js");
+    assert_eq!(resolve_output_path(&cwd, absolute.to_string_lossy().as_ref()), absolute);
+  }
+
+  #[test]
+  fn drive_relative_decision_logic() {
+    // Same drive (ASCII case-insensitive): resolve against the base directory.
+    assert!(drive_relative_uses_base(b'C', Some(b'C')));
+    assert!(drive_relative_uses_base(b'c', Some(b'C')));
+    assert!(drive_relative_uses_base(b'D', Some(b'd')));
+    // Different drive: the base directory cannot anchor the path.
+    assert!(!drive_relative_uses_base(b'D', Some(b'C')));
+    // Base without a disk prefix (e.g. a UNC path): same.
+    assert!(!drive_relative_uses_base(b'C', None));
+  }
+
+  /// `output.file` is arbitrary user config, so drive-relative (`C:bundle.js`)
+  /// and root-relative (`\bundle.js`) forms must still resolve to the absolute
+  /// path promised by the `BUNDLE_END.output` contract.
+  #[cfg(windows)]
+  #[test]
+  fn windows_drive_relative_output_path_resolves_against_cwd() {
+    let cwd = PathBuf::from(r"C:\proj");
+    // Drive-relative on the same drive resolves inside `cwd`.
+    assert_eq!(resolve_output_path(&cwd, "C:bundle.js"), PathBuf::from(r"C:\proj\bundle.js"));
+    // Drive letters match case-insensitively; the prefix comes from `cwd`.
+    assert_eq!(resolve_output_path(&cwd, "c:bundle.js"), PathBuf::from(r"C:\proj\bundle.js"));
+    // Drive-relative on another drive resolves from that drive's root.
+    assert_eq!(resolve_output_path(&cwd, "D:bundle.js"), PathBuf::from(r"D:\bundle.js"));
+    // Root-relative keeps `cwd`'s drive.
+    assert_eq!(resolve_output_path(&cwd, r"\bundle.js"), PathBuf::from(r"C:\bundle.js"));
+  }
 }

@@ -114,12 +114,12 @@ impl<'ast> VisitJs<'ast> for TopLevelImportReadDetector<'_> {
     }
   }
 
-  // `export { a }` / `export { a } from '...'` forward bindings without reading them. An export
-  // declaration (`export const x = imp`) evaluates at module-eval time.
+  // An export declaration (`export const x = imp`) evaluates at module-eval time.
   fn visit_export_declaration(&mut self, it: &ExportDeclaration<'ast>) {
     self.visit_declaration(&it.declaration);
   }
 
+  // `export { a }` / `export { a } from '...'` forward bindings without reading them.
   fn visit_export_named_declaration(&mut self, _it: &ExportNamedDeclaration<'ast>) {}
   fn visit_export_from_declaration(&mut self, _it: &ExportFromDeclaration<'ast>) {}
 }

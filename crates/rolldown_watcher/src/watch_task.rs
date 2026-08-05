@@ -1,7 +1,7 @@
 use arcstr::ArcStr;
 use rolldown::{Bundler, BundlerBuilder, BundlerConfig};
 use rolldown_common::{
-  BundleMode, LogLevel, NormalizedBundlerOptions, ScanMode, WatcherChangeKind,
+  BundleMode, Log, LogLevel, NormalizedBundlerOptions, ScanMode, WatcherChangeKind,
 };
 use rolldown_error::{
   BatchedBuildDiagnostic, BuildDiagnostic, BuildResult, Diagnostic, DiagnosticOptions, ResultExt,
@@ -213,36 +213,7 @@ impl WatchTask {
     // that throws to abort the build stops at the first failure without invoking
     // later handlers. Mirrors `handle_warnings` in the binding. See #9748.
     for (warning, rendered) in warnings.into_iter().zip(rendered) {
-      #[expect(
-        clippy::cast_possible_truncation,
-        reason = "line/column/position values are unlikely to exceed u32::MAX in practical use"
-      )]
-      let (loc, pos) = match rendered.primary_location {
-        Some(location) => (
-          Some(rolldown_common::LogLocation {
-            line: location.line as u32,
-            column: location.column as u32,
-            file: warning.id(),
-          }),
-          Some(location.utf16_position as u32),
-        ),
-        None => (None, None),
-      };
-      on_log
-        .call(
-          LogLevel::Warn,
-          rolldown_common::Log {
-            id: warning.id(),
-            exporter: warning.exporter(),
-            code: Some(warning.kind().to_string()),
-            message: rendered.message,
-            plugin: None,
-            loc,
-            pos,
-            ids: warning.ids(),
-          },
-        )
-        .await?;
+      on_log.call(LogLevel::Warn, Log::from_rendered(&warning, rendered)).await?;
     }
     Ok(())
   }

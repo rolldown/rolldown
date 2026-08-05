@@ -14,7 +14,7 @@ use napi::{
   bindgen_prelude::{PromiseRaw, ToNapiValue},
 };
 use napi_derive::napi;
-use rolldown::{LogLevel, NormalizedBundlerOptions};
+use rolldown::{Log, LogLevel, NormalizedBundlerOptions};
 use rolldown_error::{
   BuildDiagnostic, Diagnostic, DiagnosticOptions, filter_out_disabled_diagnostics,
 };
@@ -99,39 +99,7 @@ pub async fn handle_warnings(
   // #9748 was the per-warning re-render above, not the JS round-trip, so awaiting
   // one call at a time does not reintroduce the hang.
   for (warning, rendered) in warnings.into_iter().zip(rendered) {
-    // Only include loc/pos for warning types that report specific source locations.
-    // Use warning.id() for the file path since the diagnostic may only store the filename.
-    #[expect(
-      clippy::cast_possible_truncation,
-      reason = "line/column/position values are unlikely to exceed u32::MAX in practical use"
-    )]
-    let (loc, pos) = match rendered.primary_location {
-      Some(location) => (
-        Some(rolldown::LogLocation {
-          line: location.line as u32,
-          column: location.column as u32,
-          file: warning.id(),
-        }),
-        Some(location.utf16_position as u32),
-      ),
-      None => (None, None),
-    };
-
-    on_log
-      .call(
-        LogLevel::Warn,
-        rolldown::Log {
-          id: warning.id(),
-          exporter: warning.exporter(),
-          code: Some(warning.kind().to_string()),
-          message: rendered.message,
-          plugin: warning.plugin(),
-          loc,
-          pos,
-          ids: warning.ids(),
-        },
-      )
-      .await?;
+    on_log.call(LogLevel::Warn, Log::from_rendered(&warning, rendered)).await?;
   }
 
   Ok(())

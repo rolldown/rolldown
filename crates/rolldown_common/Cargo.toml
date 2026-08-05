@@ -47,7 +47,6 @@ num-bigint = { workspace = true }
 
 [dev-dependencies]
 insta = { workspace = true }
-regex = { workspace = true }
 
 [features]
 default = ["serde"]

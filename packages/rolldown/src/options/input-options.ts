@@ -153,10 +153,6 @@ export interface WatcherOptions {
    */
   watcher?: WatcherFileWatcherOptions;
   /**
-   * @deprecated Use {@linkcode watcher} instead.
-   */
-  notify?: WatcherFileWatcherOptions;
-  /**
    * Filter to limit the file-watching to certain files.
    *
    * Strings are treated as glob patterns.

@@ -21,6 +21,7 @@ import type {
   OnLogFunction,
   OnwarnFunction,
   OptimizationOptions,
+  WatchFilterFunction,
 } from '../options/input-options';
 import type {
   AddonFunction,
@@ -291,12 +292,15 @@ const WatcherFileWatcherOptionsSchema = v.strictObject({
   ),
 });
 
+const WatchFilterFunctionSchema = vFunction<WatchFilterFunction>();
+const WatchFilterSchema = v.union([StringOrRegExpSchema, WatchFilterFunctionSchema]);
+
 const WatcherOptionsSchema = v.strictObject({
   chokidar: v.optional(
     v.never(`The "watch.chokidar" option is deprecated, please use "watch.watcher" instead of it`),
   ),
-  exclude: v.optional(v.union([StringOrRegExpSchema, v.array(StringOrRegExpSchema)])),
-  include: v.optional(v.union([StringOrRegExpSchema, v.array(StringOrRegExpSchema)])),
+  exclude: v.optional(v.union([WatchFilterSchema, v.array(WatchFilterSchema)])),
+  include: v.optional(v.union([WatchFilterSchema, v.array(WatchFilterSchema)])),
   watcher: v.optional(WatcherFileWatcherOptionsSchema),
   notify: v.optional(WatcherFileWatcherOptionsSchema),
   skipWrite: v.pipe(v.optional(v.boolean()), v.description('Skip the bundle.write() step')),

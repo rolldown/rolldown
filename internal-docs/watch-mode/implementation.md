@@ -304,7 +304,7 @@ Configured via `WatcherOptions`, fires **immediately** on file change (before de
 
 - After each build, `bundler.watch_files()` returns the current set.
 - `WatchTask::update_watch_files()` diffs against the current set — new files are added to the per-task `DynFsWatcher`.
-- `include`/`exclude` patterns filter which files are watched (via `pattern_filter`).
+- `include`/`exclude` filters can be patterns and/or functions; excludes run first, then includes.
 - Files are watched **non-recursively** (individual file watches).
 - Batch operations: `fs_watcher.paths_mut()` returns a guard for batching adds, committed via `.commit()`.
 
@@ -444,11 +444,13 @@ interface WatcherOptions {
     pollInterval?: number; // Polling interval ms. Default: 100
   };
   notify?: { ... }; // Deprecated — use `watcher` instead
-  include?: StringOrRegExp | StringOrRegExp[];
-  exclude?: StringOrRegExp | StringOrRegExp[];
+  include?: WatchFilter | WatchFilter[];
+  exclude?: WatchFilter | WatchFilter[];
   onInvalidate?: (id: string) => void;
   clearScreen?: boolean; // Clear screen on rebuild. Default: true
 }
+
+type WatchFilter = StringOrRegExp | ((id: string) => boolean);
 ```
 
 Environment variables set during watch mode:

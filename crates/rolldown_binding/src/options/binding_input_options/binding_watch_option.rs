@@ -2,9 +2,10 @@ use crate::types::binding_string_or_regex::{
   BindingStringOrRegex, bindingify_string_or_regex_array,
 };
 use crate::types::js_callback::JsCallback;
+use crate::types::js_callback::{JsCallbackExt, JsCallbackResultExt};
 use derive_more::Debug;
 use napi::{bindgen_prelude::FnArgs, threadsafe_function::ThreadsafeFunctionCallMode};
-use rolldown::OnInvalidate;
+use rolldown::{OnInvalidate, WatchFilter};
 use std::sync::Arc;
 
 #[napi_derive::napi(object, object_to_js = false)]
@@ -20,6 +21,12 @@ pub struct BindingWatchOption {
   pub use_debounce: Option<bool>,
   pub debounce_delay: Option<u32>,
   pub debounce_tick_rate: Option<u32>,
+  #[napi(ts_type = "((id: string) => boolean) | undefined")]
+  #[debug(skip)]
+  pub include_fn: Option<JsCallback<FnArgs<(String,)>, bool>>,
+  #[napi(ts_type = "((id: string) => boolean) | undefined")]
+  #[debug(skip)]
+  pub exclude_fn: Option<JsCallback<FnArgs<(String,)>, bool>>,
   #[napi(ts_type = "((id: string) => void) | undefined")]
   #[debug(skip)]
   pub on_invalidate: Option<JsCallback<FnArgs<(String,)>>>,
@@ -38,6 +45,32 @@ impl From<BindingWatchOption> for rolldown_common::WatchOption {
       use_debounce: value.use_debounce.unwrap_or_default(),
       debounce_delay: value.debounce_delay.map(u64::from),
       debounce_tick_rate: value.debounce_tick_rate.map(u64::from),
+      include_fn: value.include_fn.map(|js_callback| {
+        WatchFilter::new(Arc::new(move |path| {
+          let js_callback = Arc::clone(&js_callback);
+          let path = path.to_string();
+          Box::pin(async move {
+            js_callback
+              .invoke_async((path,).into())
+              .await
+              .context("watch.include option")
+              .map_err(anyhow::Error::from)
+          })
+        }))
+      }),
+      exclude_fn: value.exclude_fn.map(|js_callback| {
+        WatchFilter::new(Arc::new(move |path| {
+          let js_callback = Arc::clone(&js_callback);
+          let path = path.to_string();
+          Box::pin(async move {
+            js_callback
+              .invoke_async((path,).into())
+              .await
+              .context("watch.exclude option")
+              .map_err(anyhow::Error::from)
+          })
+        }))
+      }),
       on_invalidate: value.on_invalidate.map(|js_callback| {
         OnInvalidate::new(Arc::new(move |path| {
           let f = Arc::clone(&js_callback);

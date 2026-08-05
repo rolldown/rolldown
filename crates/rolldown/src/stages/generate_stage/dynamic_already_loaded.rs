@@ -231,20 +231,25 @@ impl GenerateStage<'_> {
       return false;
     }
 
-    // An entry with dynamic exports through `export * from` _might_ have a `then` export. The
-    // exception is a single direct external re-export on the entry itself. The materialized
-    // namespace merges that one at run time with `__reExport`, the same shape Rollup produces
-    // with `_mergeNamespaces`. `find_entry_level_external_module` skips the entry-level flatten
-    // for extraction-registered entries. That record therefore stays inside the namespace. The
-    // chunk itself publishes no `export *`, so its own namespace never turns thenable.
-    !meta.has_dynamic_exports || self.dynamic_exports_are_direct_external_stars(entry_module_idx)
+    // If the entry has dynamic exports through `export * from`, it _might_ have a `then`
+    // export — unless a single external star supplies them, on the entry itself or through a
+    // chain of normal re-exports. The materialized namespace merges each hop at runtime with
+    // `__reExport`. `find_entry_level_external_module` skips the entry-level flatten for
+    // extraction-registered entries, so those records stay inside the namespace and the chunk
+    // itself publishes no `export *` that could turn its own namespace thenable.
+    !meta.has_dynamic_exports || self.dynamic_exports_are_external_stars(entry_module_idx)
   }
 
-  /// Whether this entry's run-time-only dynamic exports come from exactly one direct external
-  /// star, in ESM output. Only a direct record joins the materialized namespace's run-time
-  /// `__reExport` merge, so any other dynamic source would leave the simulated namespace missing
-  /// names that only exist at run time.
-  fn dynamic_exports_are_direct_external_stars(&self, entry_module_idx: ModuleIdx) -> bool {
+  /// Whether this entry's runtime-only dynamic exports come from exactly one external star in
+  /// ESM output. The star may sit on the entry itself or on a normal module it re-exports,
+  /// since every hop of that chain adds its own `__reExport` call to the materialized
+  /// namespace. Any other dynamic source would leave the simulated namespace missing names
+  /// that only exist at runtime.
+  ///
+  /// Rollup merges only the entry's own direct stars (`_mergeNamespaces`), so it drops the
+  /// names an indirect star supplies. Following the chain keeps `import()` matching the
+  /// unbundled module instead.
+  fn dynamic_exports_are_external_stars(&self, entry_module_idx: ModuleIdx) -> bool {
     let Some(module) = self.link_output.module_table[entry_module_idx].as_normal() else {
       return false;
     };
@@ -264,27 +269,43 @@ impl GenerateStage<'_> {
       return false;
     }
     let mut external_star_count = 0;
-    for rec in &module.import_records {
-      if !rec.meta.contains(ImportRecordMeta::IsExportStar) {
+    let mut visited = FxHashSet::default();
+    let mut queue = VecDeque::from([entry_module_idx]);
+    while let Some(module_idx) = queue.pop_front() {
+      if !visited.insert(module_idx) {
         continue;
       }
-      let Some(resolved_idx) = rec.resolved_module else {
+      let Some(module) = self.link_output.module_table[module_idx].as_normal() else {
         return false;
       };
-      match &self.link_output.module_table[resolved_idx] {
-        Module::External(_) => {
-          // ESM omits a name two stars both export; `__copyProps` keeps whichever it copies
-          // first. Which names collide is unknowable for an external, so a second star is
-          // refused outright rather than merged into a namespace that can differ from the
-          // facade's. Rollup's `_mergeNamespaces` is first-wins here too.
-          external_star_count += 1;
-          if external_star_count > 1 {
-            return false;
-          }
+      if module.exports_kind.is_commonjs() {
+        return false;
+      }
+      for rec in &module.import_records {
+        if !rec.meta.contains(ImportRecordMeta::IsExportStar) {
+          continue;
         }
-        Module::Normal(_) => {
-          if self.link_output.metas[resolved_idx].has_dynamic_exports {
-            return false;
+        let Some(resolved_idx) = rec.resolved_module else {
+          return false;
+        };
+        match &self.link_output.module_table[resolved_idx] {
+          Module::External(_) => {
+            // ESM omits a name two stars both export; `__copyProps` keeps whichever it copies
+            // first. Which names collide is unknowable for an external, so a second star is
+            // refused outright rather than merged into a namespace that can differ from the
+            // facade's. Rollup's `_mergeNamespaces` is first-wins here too. The count spans the
+            // whole chain, since every star in it merges into the same namespace.
+            external_star_count += 1;
+            if external_star_count > 1 {
+              return false;
+            }
+          }
+          Module::Normal(_) => {
+            // A star into a module with static exports adds no runtime names, so only a
+            // dynamic-export target needs its own chain walked.
+            if self.link_output.metas[resolved_idx].has_dynamic_exports {
+              queue.push_back(resolved_idx);
+            }
           }
         }
       }

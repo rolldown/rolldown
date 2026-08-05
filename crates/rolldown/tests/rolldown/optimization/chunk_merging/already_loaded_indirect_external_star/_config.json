@@ -1,0 +1,12 @@
+{
+  "_comment": "`app.js` reaches the external star through the `barrel.js` re-export, so the run-time names are one hop away from the entry. Pins that they stay observable through `import('./app.js')` and that the hop does not cost a chunk. Rollup drops these names because `_mergeNamespaces` only takes the entry's own direct stars.",
+  "config": {
+    "input": [
+      {
+        "name": "main",
+        "import": "./main.js"
+      }
+    ],
+    "external": ["ext-indirect"]
+  }
+}

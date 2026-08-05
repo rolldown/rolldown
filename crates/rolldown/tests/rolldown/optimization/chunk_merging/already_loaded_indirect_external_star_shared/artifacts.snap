@@ -1,0 +1,69 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## app.js
+
+```js
+import { n as __exportAll, r as __reExport, t as barrel_exports } from "./barrel.js";
+//#region shared.js
+function compute(x) {
+	return x * 2;
+}
+//#endregion
+//#region app.js
+var app_exports = /* @__PURE__ */ __exportAll({
+	done: () => done,
+	own: () => own
+});
+__reExport(app_exports, barrel_exports);
+const own = compute(21) + 1;
+const done = import("./lazy.js").then((m) => m.lazyValue);
+//#endregion
+export { done, compute as n, own, app_exports as t };
+
+```
+
+## barrel.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+//#region barrel.js
+var barrel_exports = /* @__PURE__ */ __exportAll({});
+import * as import_ext_indirect_shared from "ext-indirect-shared";
+__reExport(barrel_exports, import_ext_indirect_shared);
+//#endregion
+export { __exportAll as n, __reExport as r, barrel_exports as t };
+
+```
+
+## lazy.js
+
+```js
+import { n as compute } from "./app.js";
+//#region lazy.js
+const lazyValue = compute(42);
+//#endregion
+export { lazyValue };
+
+```
+
+## main.js
+
+```js
+//#region main.js
+const app = import("./app.js").then((n) => n.t);
+//#endregion
+export { app };
+
+```
+
+## other.js
+
+```js
+import { t as barrel_exports } from "./barrel.js";
+var otherMarker = barrel_exports.marker;
+export { otherMarker };
+
+```

@@ -24,6 +24,6 @@ assert.deepEqual(keys, ['done']);
 
 const jsFiles = readdirSync(join(import.meta.dirname, 'dist')).filter((f) => f.endsWith('.js'));
 
-// main + app + lazy + vendor: `vendor.js` is not inlined into the dynamic
-// entry chunk today.
-assert.strictEqual(jsFiles.length, 4, `Expected 4 chunks but got: ${jsFiles.join(', ')}`);
+// `minifyInternalExports: false` no longer blocks inlining:
+// main + app(+vendor) + lazy.
+assert.strictEqual(jsFiles.length, 3, `Expected 3 chunks but got: ${jsFiles.join(', ')}`);

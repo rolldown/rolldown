@@ -103,6 +103,10 @@ test-node-hmr-only *args:
 test-vite: # We don't use `test-node-vite` because it's not expected to run in `just test-node`.
   vp run --filter vite-tests test
 
+# Build the WASI artifacts and smoke test them inside a WebContainer. Opt-in only, needs network.
+test-webcontainer:
+  vp run --filter browser-tests test:webcontainer
+
 # --- `t` series commands provide scenario-specific shortcut commands for testing compared to `test` series commands.
 
 # Run both Rolldown's tests and Rollup's test suite without building Rolldown.

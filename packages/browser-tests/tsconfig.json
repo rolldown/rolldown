@@ -1,0 +1,10 @@
+{
+  "extends": "../../tsconfig.json",
+  "include": ["tests/**/*.ts", "vitest.config.mts"],
+  "exclude": ["tests/fixtures/**"],
+  "compilerOptions": {
+    "types": ["node"],
+    "rootDir": "./",
+    "isolatedDeclarations": false
+  }
+}

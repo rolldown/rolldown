@@ -12,11 +12,8 @@ import type {
  * @description
  * Matches a reference id returned by `PluginContext.emitFile`.
  *
- * A reference id is only guaranteed to be made of characters that an identifier can
- * contain. It is *not* guaranteed to be usable as a standalone identifier: ids are hashes,
- * so they may begin with a digit. That is fine, because an id is always interpolated after
- * a prefix which supplies the identifier's first character, as in
- * `import.meta.ROLLDOWN_FILE_URL_<referenceId>`.
+ * A reference id is guaranteed to be made of characters that an identifier can
+ * contain.
  */
 export const REFERENCE_ID_REGEX = /^[$\w]+$/;
 

@@ -36,14 +36,5 @@ pub use rolldown_resolver::ResolveOptions;
 
 pub use rolldown_plugin as plugin;
 
-/// Wait for heavy build-state values queued for background destruction.
-///
-/// This is an internal integration point for the native binding, which must ensure all deferred
-/// frees finish before asking the process allocator to return unused pages to the operating system.
-#[doc(hidden)]
-pub fn drain_deferred_drops() {
-  utils::defer_drop::drain();
-}
-
 #[cfg(feature = "testing")]
 pub use crate::utils::determine_minify_internal_exports_default;

@@ -462,7 +462,6 @@ pub type SharedFileEmitter = Arc<FileEmitter>;
 #[cfg(test)]
 mod tests {
   use super::*;
-  use regex::Regex;
 
   /// Reference ids are the base64url encoding of a 128-bit xxhash (with `-` remapped to `$`),
   /// which is always 22 characters. The `import.meta.ROLLDOWN_FILE_URL_<referenceId>_<urlId>`

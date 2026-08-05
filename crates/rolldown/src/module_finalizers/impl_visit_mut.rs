@@ -911,7 +911,8 @@ impl<'ast> VisitJsMut<'ast> for ScopeHoistingFinalizer<'_, 'ast> {
       ast::Declaration::TSTypeAliasDeclaration(_)
       | ast::Declaration::TSInterfaceDeclaration(_)
       | ast::Declaration::TSEnumDeclaration(_)
-      | ast::Declaration::TSModuleDeclaration(_)
+      | ast::Declaration::TSExternalModuleDeclaration(_)
+      | ast::Declaration::TSNamespaceDeclaration(_)
       | ast::Declaration::TSImportEqualsDeclaration(_)
       | ast::Declaration::TSGlobalDeclaration(_) => unreachable!(),
     }

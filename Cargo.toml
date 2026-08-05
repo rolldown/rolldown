@@ -262,7 +262,7 @@ napi-build = { version = "2" }
 napi-derive = { version = "3", default-features = false, features = ["type-def", "tracing"] }
 
 # oxc crates with the same version
-oxc = { git = "https://github.com/oxc-project/oxc", rev = "44fd320324e011deceaf016fc8ee60d23778225c", features = [
+oxc = { git = "https://github.com/oxc-project/oxc", rev = "6be314f22605c3ea83cfe8d5d22c2bad76212a35", features = [
   "ast_visit",
   "transformer",
   "minifier",
@@ -273,16 +273,16 @@ oxc = { git = "https://github.com/oxc-project/oxc", rev = "44fd320324e011deceaf0
   "isolated_declarations",
   "regular_expression",
 ] }
-oxc_allocator = { git = "https://github.com/oxc-project/oxc", rev = "44fd320324e011deceaf016fc8ee60d23778225c", features = [
+oxc_allocator = { git = "https://github.com/oxc-project/oxc", rev = "6be314f22605c3ea83cfe8d5d22c2bad76212a35", features = [
   "pool",
 ] }
-oxc_ecmascript = { git = "https://github.com/oxc-project/oxc", rev = "44fd320324e011deceaf016fc8ee60d23778225c" }
-oxc_napi = { git = "https://github.com/oxc-project/oxc", rev = "44fd320324e011deceaf016fc8ee60d23778225c" }
-oxc_str = { git = "https://github.com/oxc-project/oxc", rev = "44fd320324e011deceaf016fc8ee60d23778225c" }
-oxc_minify_napi = { git = "https://github.com/oxc-project/oxc", rev = "44fd320324e011deceaf016fc8ee60d23778225c" }
-oxc_parser_napi = { git = "https://github.com/oxc-project/oxc", rev = "44fd320324e011deceaf016fc8ee60d23778225c" }
-oxc_transform_napi = { git = "https://github.com/oxc-project/oxc", rev = "44fd320324e011deceaf016fc8ee60d23778225c" }
-oxc_traverse = { git = "https://github.com/oxc-project/oxc", rev = "44fd320324e011deceaf016fc8ee60d23778225c" }
+oxc_ecmascript = { git = "https://github.com/oxc-project/oxc", rev = "6be314f22605c3ea83cfe8d5d22c2bad76212a35" }
+oxc_napi = { git = "https://github.com/oxc-project/oxc", rev = "6be314f22605c3ea83cfe8d5d22c2bad76212a35" }
+oxc_str = { git = "https://github.com/oxc-project/oxc", rev = "6be314f22605c3ea83cfe8d5d22c2bad76212a35" }
+oxc_minify_napi = { git = "https://github.com/oxc-project/oxc", rev = "6be314f22605c3ea83cfe8d5d22c2bad76212a35" }
+oxc_parser_napi = { git = "https://github.com/oxc-project/oxc", rev = "6be314f22605c3ea83cfe8d5d22c2bad76212a35" }
+oxc_transform_napi = { git = "https://github.com/oxc-project/oxc", rev = "6be314f22605c3ea83cfe8d5d22c2bad76212a35" }
+oxc_traverse = { git = "https://github.com/oxc-project/oxc", rev = "6be314f22605c3ea83cfe8d5d22c2bad76212a35" }
 
 # oxc crates in their own repos
 # Versions must be relaxed for usage in oxc.

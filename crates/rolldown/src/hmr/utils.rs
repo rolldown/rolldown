@@ -107,7 +107,6 @@ pub trait HmrAstBuilder<'any, 'ast> {
         // var $hot_name
         ast::VariableDeclarator::new(
           SPAN,
-          ast::VariableDeclarationKind::Const,
           ast::BindingPattern::new_binding_identifier(
             SPAN,
             self.alias_name_for_import_meta_hot(),

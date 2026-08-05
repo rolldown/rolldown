@@ -580,7 +580,6 @@ pub trait StatementFactoryExt<'ast> {
     let declarations = oxc::allocator::Vec::from_value_in(
       VariableDeclarator::new(
         SPAN,
-        VariableDeclarationKind::Var,
         BindingPattern::new_binding_identifier(
           SPAN,
           oxc::ast::ast::Str::from_str_in(name, builder),
@@ -611,7 +610,6 @@ pub trait StatementFactoryExt<'ast> {
     let declarations = oxc::allocator::Vec::from_value_in(
       VariableDeclarator::new(
         SPAN,
-        VariableDeclarationKind::Var,
         BindingPattern::new_binding_identifier(
           SPAN,
           oxc::ast::ast::Str::from_str_in(name, builder),

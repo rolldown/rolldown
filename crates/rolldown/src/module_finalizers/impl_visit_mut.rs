@@ -334,7 +334,6 @@ impl<'ast> VisitJsMut<'ast> for ScopeHoistingFinalizer<'_, 'ast> {
           let decorations = self.top_level_var_bindings.iter().map(|var_name| {
             ast::VariableDeclarator::new(
               SPAN,
-              ast::VariableDeclarationKind::Var,
               ast::BindingPattern::new_binding_identifier(SPAN, *var_name, ast_builder),
               None,
               None,

@@ -5,6 +5,10 @@
 
 - dev: don't let a failed watch registration abort the batch (#10548) by @shulaoda
 
+### 🚜 Refactor
+
+- remove deprecated `watch.notify` option (#10628) by @sapphi-red
+
 ### 📚 Documentation
 
 - fix the dangling spec link on `generate_minified_names` (#10617) by @IWANABETHATGUY

@@ -1,0 +1,152 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## lazy.js
+
+```js
+import { t as __exportAll } from "./main.js";
+//#region lazy.js
+var lazy_exports = /* @__PURE__ */ __exportAll({ value: () => value });
+__rolldown_runtime__.createModuleHotContext("lazy.js");
+__rolldown_runtime__.registerModule("lazy.js", { exports: lazy_exports });
+const value = "lazy";
+//#endregion
+export { value };
+
+```
+
+## main.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+//#region hub.js
+var hub_exports = /* @__PURE__ */ __exportAll({ load: () => load });
+__rolldown_runtime__.createModuleHotContext("hub.js");
+__rolldown_runtime__.registerModule("hub.js", { exports: hub_exports });
+function load() {
+	return import("./lazy.js");
+}
+//#endregion
+//#region main.js
+var main_exports = /* @__PURE__ */ __exportAll({});
+const main_hot = __rolldown_runtime__.createModuleHotContext("main.js");
+__rolldown_runtime__.registerModule("main.js", { exports: main_exports });
+main_hot.accept();
+//#endregion
+export { __exportAll as t };
+
+```
+
+# HMR Step 0
+
+## Code
+
+```js
+//#region main.js
+var init_main_0 = __rolldown_runtime__.createEsmInitializer("main.js", (function(__rolldown_module_id__) {
+	try {
+		__rolldown_runtime__.registerModule(__rolldown_module_id__, {});
+		const hot_main = __rolldown_runtime__.createModuleHotContext(__rolldown_module_id__);
+		hot_main.accept();
+	} finally {}
+}));
+
+//#endregion
+init_main_0()
+__rolldown_runtime__.applyUpdates([['main.js', 'main.js']]);
+```
+
+## Meta
+
+- update type: patch
+
+### Hmr Boundaries
+
+- boundary: main.js, accepted_via: main.js
+
+## Build Output
+
+### Assets
+
+#### main.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+//#region main.js
+const main_hot = __rolldown_runtime__.createModuleHotContext("main.js");
+__rolldown_runtime__.registerModule("main.js", {});
+main_hot.accept();
+//#endregion
+
+```
+
+# HMR Step 1
+
+## Code
+
+```js
+//#region main.js
+var init_main_0 = __rolldown_runtime__.createEsmInitializer("main.js", (function(__rolldown_module_id__) {
+	try {
+		var __rolldown_exports__ = __rolldown_runtime__.__exportAll({});
+		__rolldown_runtime__.registerModule(__rolldown_module_id__, { exports: __rolldown_exports__ });
+		const hot_main = __rolldown_runtime__.createModuleHotContext(__rolldown_module_id__);
+		var import_hub_00 = __rolldown_runtime__.loadExports("hub.js");
+		hot_main.accept();
+	} finally {}
+}));
+
+//#endregion
+init_main_0()
+__rolldown_runtime__.applyUpdates([['main.js', 'main.js']]);
+```
+
+## Meta
+
+- update type: patch
+
+### Hmr Boundaries
+
+- boundary: main.js, accepted_via: main.js
+
+## Build Output
+
+### Assets
+
+#### lazy.js
+
+```js
+import { t as __exportAll } from "./main.js";
+//#region lazy.js
+var lazy_exports = /* @__PURE__ */ __exportAll({ value: () => value });
+__rolldown_runtime__.createModuleHotContext("lazy.js");
+__rolldown_runtime__.registerModule("lazy.js", { exports: lazy_exports });
+const value = "lazy";
+//#endregion
+export { value };
+
+```
+
+#### main.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+//#region hub.js
+var hub_exports = /* @__PURE__ */ __exportAll({ load: () => load });
+__rolldown_runtime__.createModuleHotContext("hub.js");
+__rolldown_runtime__.registerModule("hub.js", { exports: hub_exports });
+function load() {
+	return import("./lazy.js");
+}
+//#endregion
+//#region main.js
+var main_exports = /* @__PURE__ */ __exportAll({});
+const main_hot = __rolldown_runtime__.createModuleHotContext("main.js");
+__rolldown_runtime__.registerModule("main.js", { exports: main_exports });
+main_hot.accept();
+//#endregion
+export { __exportAll as t };
+
+```

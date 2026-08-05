@@ -1,4 +1,40 @@
 
+## [1.2.3] - 2026-08-05
+
+### 🐛 Bug Fixes
+
+- dev: don't let a failed watch registration abort the batch (#10548) by @shulaoda
+
+### 🚜 Refactor
+
+- remove deprecated `watch.notify` option (#10628) by @sapphi-red
+
+### 📚 Documentation
+
+- fix the dangling spec link on `generate_minified_names` (#10617) by @IWANABETHATGUY
+
+### ⚡ Performance
+
+- reduce finalization memory usage (#10554) by @ericclemmons
+- chunk-naming: build minified export names without allocating (#10618) by @IWANABETHATGUY
+
+### 🧪 Testing
+
+- resolve-file-url: allow a reference id to start with a digit (#10623) by @jjb
+- code-splitting: pin the already-loaded namespace-extraction boundaries (#10593) by @IWANABETHATGUY
+
+### ⚙️ Miscellaneous Tasks
+
+- deps: upgrade oxc to 0.143.0  (#10603) by @camc314
+- deps: update rollup submodule for tests to v4.62.4 (#10607) by @rolldown-guard[bot]
+- deps: update test262 submodule for tests (#10608) by @rolldown-guard[bot]
+
+### ❤️ New Contributors
+
+* @ericclemmons made their first contribution in [#10554](https://github.com/rolldown/rolldown/pull/10554)
+* @jjb made their first contribution in [#10623](https://github.com/rolldown/rolldown/pull/10623)
+
+
 ## [1.2.2] - 2026-08-03
 
 ### 🚀 Features

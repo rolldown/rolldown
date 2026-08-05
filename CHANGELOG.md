@@ -3,7 +3,6 @@
 
 ### 🐛 Bug Fixes
 
-- reduce finalization memory usage (#10554) by @ericclemmons
 - dev: don't let a failed watch registration abort the batch (#10548) by @shulaoda
 
 ### 📚 Documentation
@@ -12,6 +11,7 @@
 
 ### ⚡ Performance
 
+- reduce finalization memory usage (#10554) by @ericclemmons
 - chunk-naming: build minified export names without allocating (#10618) by @IWANABETHATGUY
 
 ### 🧪 Testing

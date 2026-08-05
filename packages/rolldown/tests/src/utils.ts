@@ -10,6 +10,15 @@ import type {
 
 /**
  * @description
+ * Matches a reference id returned by `PluginContext.emitFile`.
+ *
+ * A reference id is guaranteed to be made of characters that an identifier can
+ * contain.
+ */
+export const REFERENCE_ID_REGEX = /^[$\w]+$/;
+
+/**
+ * @description
  * - Get the absolute path to the root of the workspace. The root is always the directory containing the root `Cargo.toml`, `package.json`, `pnpm-workspace.yaml` etc.
  * - `workspaceRoot('packages')` equals to `path.resolve(workspaceRoot(), 'packages')`
  */

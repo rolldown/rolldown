@@ -350,7 +350,7 @@ import MagicString from 'magic-string';
 
 generateBundle(options, bundle) {
   for (const chunk of Object.values(bundle)) {
-    if (chunk.type !== 'chunk' || !chunk.map) continue;
+    if (chunk.type !== 'chunk') continue;
 
     const s = new MagicString(chunk.code);
     // ...your transform...

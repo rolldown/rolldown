@@ -2,7 +2,7 @@ use std::collections::VecDeque;
 
 use oxc_index::{IndexVec, index_vec};
 use rolldown_common::{
-  ChunkIdx, ChunkKind, ChunkMeta, ImportKind, ImportRecordIdx, ImportRecordMeta, ModuleIdx,
+  ChunkIdx, ChunkKind, ChunkMeta, ImportKind, ImportRecordIdx, ImportRecordMeta, Module, ModuleIdx,
   PreserveEntrySignatures, RuntimeHelper, StmtInfoIdx, UsedSymbolRefsBuilder,
   dynamic_import_usage::DynamicImportExportsUsage,
 };
@@ -232,9 +232,47 @@ impl GenerateStage<'_> {
       return false;
     }
 
-    // If the entry has dynamic exports through `export * from`, it _might_
-    // have a `then` export.
+    // An entry with dynamic exports through `export * from` _might_ have a `then` export. The
+    // exception is an entry whose stars are all direct external re-exports of its own. The
+    // materialized namespace merges those at run time with `__reExport`, the same shape Rollup
+    // produces with `_mergeNamespaces`. `find_entry_level_external_module` skips the
+    // entry-level flatten for extraction-registered entries. Those records therefore stay
+    // inside the namespace. The chunk itself publishes no `export *`, so its own namespace
+    // never turns thenable.
     !self.link_output.metas[entry_module_idx].has_dynamic_exports
+      || self.dynamic_exports_are_direct_external_stars(entry_module_idx)
+  }
+
+  /// Whether every source of this entry's dynamic exports is a direct `export * from
+  /// <external>` record on the entry itself. Only those records join the materialized
+  /// namespace's run-time `__reExport` merge. Any other source would leave the simulated
+  /// namespace missing names that only exist at run time. Two such sources: the entry being
+  /// CommonJS, or a star into a normal module that itself has dynamic exports.
+  fn dynamic_exports_are_direct_external_stars(&self, entry_module_idx: ModuleIdx) -> bool {
+    let Some(module) = self.link_output.module_table[entry_module_idx].as_normal() else {
+      return false;
+    };
+    if module.exports_kind.is_commonjs() {
+      return false;
+    }
+    let mut saw_external_star = false;
+    for rec in &module.import_records {
+      if !rec.meta.contains(ImportRecordMeta::IsExportStar) {
+        continue;
+      }
+      let Some(resolved_idx) = rec.resolved_module else {
+        return false;
+      };
+      match &self.link_output.module_table[resolved_idx] {
+        Module::External(_) => saw_external_star = true,
+        Module::Normal(_) => {
+          if self.link_output.metas[resolved_idx].has_dynamic_exports {
+            return false;
+          }
+        }
+      }
+    }
+    saw_external_star
   }
 
   /// Generates a definition for a fake module namespace for the inlined module, which is then

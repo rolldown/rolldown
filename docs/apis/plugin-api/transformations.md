@@ -22,7 +22,7 @@ return {
 
 ## Transforming a Chunk
 
-To transform a chunk, you can use [`renderChunk`](/reference/Interface.Plugin#renderchunk). If you return the sourcemap for the transform you applied, Rolldown composes that map with the previous transforms. It also rebuilds `x_google_ignoreList`, which [`sourcemapIgnoreList`](/reference/OutputOptions.sourcemapIgnoreList) fills in by default:
+To transform a chunk, you can use [`renderChunk`](/reference/Interface.Plugin#renderchunk). If you return the sourcemap for the transform you applied, Rolldown composes that map with the previous transforms and rebuilds `x_google_ignoreList` field based on the options:
 
 ```js
 import MagicString from 'magic-string';

@@ -29,6 +29,7 @@ jobs:
       # A Windows CI request runs the complete Windows suite, even for paths outside the normal filters.
       rust-changes: "${{ (steps.filter.outputs.rust-changes == 'true') || (github.ref_name == 'main') || (steps.pr-labels.outputs.run-windows == 'true') }}"
       node-changes: "${{ (steps.filter.outputs.node-changes == 'true') || (github.ref_name == 'main') || (steps.pr-labels.outputs.run-windows == 'true') }}"
+      android-binding-changes: "${{ (steps.filter.outputs.android-binding-changes == 'true') || (github.ref_name == 'main') }}"
       # Allows opting into Windows CI per-PR by adding the `ci: windows` label.
       run-windows: "${{ steps.pr-labels.outputs.run-windows == 'true' }}"
       # Allows opting into the WebContainer smoke test per-PR by adding the `ci: webcontainer` label.
@@ -76,6 +77,19 @@ jobs:
               - '.gitattributes'
               - 'justfile'
               - 'test262'
+            android-binding-changes:
+              - '.github/workflows/ci.yml'
+              - '.github/workflows/reusable-release-build.yml'
+              - '.cargo/**'
+              - 'crates/**'
+              - 'Cargo.toml'
+              - 'Cargo.lock'
+              - 'rust-toolchain.toml'
+              - 'package.json'
+              - 'pnpm-lock.yaml'
+              - 'pnpm-workspace.yaml'
+              - 'packages/rolldown/build-binding.ts'
+              - 'packages/rolldown/package.json'
             node-changes:
               - *rust-changes
               - 'packages/**'
@@ -86,6 +100,7 @@ jobs:
         run: |
           echo "Rust changes: ${{ (steps.filter.outputs.rust-changes == 'true') || (github.ref_name == 'main') || (steps.pr-labels.outputs.run-windows == 'true') }}"
           echo "Node changes: ${{ (steps.filter.outputs.node-changes == 'true') || (github.ref_name == 'main') || (steps.pr-labels.outputs.run-windows == 'true') }}"
+          echo "Android binding changes: ${{ (steps.filter.outputs.android-binding-changes == 'true') || (github.ref_name == 'main') }}"
 
   rust-validation:
     name: Rust Validation
@@ -123,6 +138,42 @@ jobs:
     with:
       os: ${{ matrix.target }}
       changed: ${{ needs.changes.outputs.rust-changes == 'true' }}
+
+  android-arm64-cortex-a53:
+    name: Android ARM64 Cortex-A53
+    needs: changes
+    if: ${{ needs.changes.outputs.android-binding-changes == 'true' }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: taiki-e/checkout-action@7d1e50e93dc4fb3bba58f85018fadf77898aee8b # v1.4.2
+
+      - name: Setup Rust
+        uses: oxc-project/setup-rust@3d6fb132fbe7cdcb66bf8ec193911c2945369d12 # v1.0.17
+        with:
+          cache-key: android-arm64-cortex-a53
+          save-cache: ${{ github.ref_name == 'main' }}
+
+      - name: Add Android target
+        run: rustup target add aarch64-linux-android
+
+      - uses: voidzero-dev/setup-vp@250f29ce396baf5e8f24498e17c0dfdebabc26eb # v1.15.0
+        with:
+          version: '0.2.1'
+          cache: true
+
+      - name: Install QEMU and APEX tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install --yes --no-install-recommends e2fsprogs qemu-user unzip
+
+      - name: Build Android ARM64 binding
+        run: vp run ci:build-release-binding --target aarch64-linux-android
+        env:
+          TARGET_CC: clang # for mimalloc
+
+      - name: Test binding on Cortex-A53
+        run: bash crates/rolldown_binding/tests/android_arm64_cortex_a53/run.sh packages/rolldown/src/rolldown-binding.android-arm64.node
 
   node-test-windows:
     needs: [changes, build-rolldown-windows]

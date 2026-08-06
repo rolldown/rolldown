@@ -27,10 +27,16 @@ Transform a chunk in [`renderChunk`](/reference/Interface.Plugin#renderchunk) an
 ```js
 import MagicString from 'magic-string';
 
-renderChunk(code) {
-  const s = new MagicString(code);
-  s.prepend('/* banner */\n');
-  return { code: s.toString(), map: s.generateMap({ hires: 'boundary' }) };
+
+export default function myPlugin() {
+  return {
+    name: 'example',
+    renderChunk(code) {
+      const s = new MagicString(code);
+      s.prepend('/* banner */\n');
+      return { code: s.toString(), map: s.generateMap({ hires: 'boundary' }) };
+    }
+  }
 }
 ```
 

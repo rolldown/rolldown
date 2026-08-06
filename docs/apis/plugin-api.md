@@ -285,7 +285,7 @@ In Rolldown, the [`writeBundle`](/reference/Interface.FunctionPluginHooks#writeb
 
 ### Sourcemap Validation
 
-Rollup does not validate the sourcemap passed to it and silently ignores it. Rolldown validates the sourcemap when converting to the internal representation. This can cause an error if an invalid sourcemap is passed. For example:
+Rollup does not check a plugin's sourcemap against its own `sources` and `names`. A mapping that points at a missing source is dropped. A mapping that points at a missing name is kept without the name. Rolldown checks every index while converting the map to the internal representation. So a map that Rollup accepts can fail the build here. For example:
 
 ```
 Failed to convert json sourcemap to struct
@@ -332,7 +332,7 @@ renderChunk(code) {
   s.prepend('/* banner */\n');
   // Rolldown composes this map into the chunk's own, so the emitted `.map`
   // follows the new line numbers and the ignore list is rebuilt for you.
-  return { code: s.toString(), map: s.generateMap({ hires: true }) };
+  return { code: s.toString(), map: s.generateMap({ hires: 'boundary' }) };
 }
 ```
 
@@ -356,7 +356,7 @@ generateBundle(options, bundle) {
     // ...your transform...
     if (!s.hasChanged()) continue;
 
-    // `hires: 'boundary'` is required, or the composed map comes back empty.
+    // A low-resolution map can compose down to nothing, so keep the boundaries.
     const step = s.generateMap({ source: chunk.fileName, hires: 'boundary' });
     chunk.code = s.toString();
 

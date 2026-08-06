@@ -1,0 +1,63 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## app.js
+
+```js
+//#region app.js
+const own = require("./shared.js").compute(21) + 1;
+const done = Promise.resolve().then(() => require("./lazy.js")).then((m) => m.lazyValue);
+//#endregion
+exports.done = done;
+exports.own = own;
+var primitive = require("primitive");
+Object.keys(primitive).forEach(function(k) {
+	if (k !== "default" && !Object.prototype.hasOwnProperty.call(exports, k)) Object.defineProperty(exports, k, {
+		enumerable: true,
+		get: function() {
+			return primitive[k];
+		}
+	});
+});
+
+```
+
+## lazy.js
+
+```js
+//#region lazy.js
+const lazyValue = require("./shared.js").compute(42);
+//#endregion
+exports.lazyValue = lazyValue;
+
+```
+
+## main.js
+
+```js
+Object.defineProperty(exports, Symbol.toStringTag, { value: "Module" });
+//#region main.js
+const app = Promise.resolve().then(() => require("./app.js"));
+//#endregion
+exports.app = app;
+
+```
+
+## shared.js
+
+```js
+//#region shared.js
+function compute(value) {
+	return value * 2;
+}
+//#endregion
+Object.defineProperty(exports, "compute", {
+	enumerable: true,
+	get: function() {
+		return compute;
+	}
+});
+
+```

@@ -1,0 +1,12 @@
+{
+  "_comment": "With minifyInternalExports disabled, app.js deliberately publishes an app_exports alias matching the synthetic namespace symbol used by already-loaded extraction. The bundle must deconflict that internal namespace export or retain the unextracted entry shape instead of emitting duplicate exports.",
+  "config": {
+    "input": [
+      {
+        "name": "main",
+        "import": "./main.js"
+      }
+    ],
+    "minifyInternalExports": false
+  }
+}

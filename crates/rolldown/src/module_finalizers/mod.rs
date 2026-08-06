@@ -1047,9 +1047,23 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
               Expression::new_id_ref_expr(SPAN, importee_namespace_name, self),
               self,
             );
+            // The record's `with` clause travels with the request, so the generated namespace
+            // import has to keep it — otherwise a `export * from './data.json' with { type:
+            // 'json' }` reaches the host as a bare specifier once the namespace is materialized.
+            let with_clause = self
+              .ctx
+              .module
+              .import_attribute_map
+              .get(&idx)
+              .map(|import_attribute| import_attribute.to_with_clause(self));
             vec![
               // Insert `import * as ns from 'ext'`external module in esm format
-              Statement::new_import_star_stmt(importee_name, importee_namespace_name, self),
+              Statement::new_import_star_stmt(
+                importee_name,
+                importee_namespace_name,
+                with_clause,
+                self,
+              ),
               // Insert `__reExport(foo_exports, ns)`
               ast::Statement::new_expression_statement(
                 SPAN,

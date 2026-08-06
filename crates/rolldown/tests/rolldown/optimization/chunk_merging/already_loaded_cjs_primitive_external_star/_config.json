@@ -1,0 +1,14 @@
+{
+  "_comment": "In CJS output, a facade's Object.keys merge exposes the indexed properties of a primitive external export. Namespace extraction must not replace that merge with __reExport, whose __copyProps ignores primitive values.",
+  "config": {
+    "input": [
+      {
+        "name": "main",
+        "import": "./main.js"
+      }
+    ],
+    "external": ["primitive"],
+    "format": "cjs",
+    "minifyInternalExports": false
+  }
+}

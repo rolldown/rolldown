@@ -27,7 +27,6 @@ Transform a chunk in [`renderChunk`](/reference/Interface.Plugin#renderchunk) an
 ```js
 import MagicString from 'magic-string';
 
-
 export default function myPlugin() {
   return {
     name: 'example',
@@ -35,8 +34,8 @@ export default function myPlugin() {
       const s = new MagicString(code);
       s.prepend('/* banner */\n');
       return { code: s.toString(), map: s.generateMap({ hires: 'boundary' }) };
-    }
-  }
+    },
+  };
 }
 ```
 
@@ -52,26 +51,26 @@ export default function myPlugin() {
     generateBundle(options, bundle) {
       for (const chunk of Object.values(bundle)) {
         if (chunk.type !== 'chunk') continue;
-    
+
         const s = new MagicString(chunk.code);
         // ...your transform...
         if (!s.hasChanged()) continue;
-    
+
         // A low-resolution map can compose down to nothing, so keep the mappings at the boundaries.
         const step = s.generateMap({ source: chunk.fileName, hires: 'boundary' });
         chunk.code = s.toString();
-    
+
         if (chunk.map) {
           // Assign the composed map, do not spread it. `toString()` lives on its
           // prototype, and spreading would leave you with `[object Object]`.
           chunk.map = remapping([step, chunk.map], () => null);
-    
+
           // The emitted file comes from this asset, not from `chunk.map`.
           const asset = bundle[`${chunk.fileName}.map`];
           if (asset) asset.source = chunk.map.toString();
         }
       }
-    }
-  }
+    },
+  };
 }
 ```

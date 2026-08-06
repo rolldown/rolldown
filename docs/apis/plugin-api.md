@@ -356,8 +356,8 @@ generateBundle(options, bundle) {
     // ...your transform...
     if (!s.hasChanged()) continue;
 
-    // `hires: true` is required, or the composed map comes back empty.
-    const step = s.generateMap({ source: chunk.fileName, hires: true });
+    // `hires: 'boundary'` is required, or the composed map comes back empty.
+    const step = s.generateMap({ source: chunk.fileName, hires: 'boundary' });
     chunk.code = s.toString();
 
     // Assign the composed map, do not spread it. `toString()` lives on its

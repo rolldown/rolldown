@@ -53,8 +53,6 @@ jobs:
       - name: Tokio Runtime Lifecycle Test
         run: vp run --filter rolldown-tests test:wasi-runtime
 
-      # `@example/typescript` is excluded because its config enables `devtools`, which currently
-      # panics under WASI when the writer tries to open its log file (crates/rolldown_devtools/src/writer.rs).
       # `@example/native-magic-string` is excluded because it depends on a native-only addon.
       - name: Build Examples
-        run: vp run --filter '@example/*' --filter '!@example/native-magic-string' --filter '!@example/typescript' build
+        run: vp run --filter '@example/*' --filter '!@example/native-magic-string' build

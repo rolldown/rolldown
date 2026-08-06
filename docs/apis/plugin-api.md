@@ -285,16 +285,12 @@ In Rolldown, the [`writeBundle`](/reference/Interface.FunctionPluginHooks#writeb
 
 ### Sourcemap Validation
 
-Rollup keeps sourcemaps in JavaScript for the whole build, so it never checks a plugin's map as a whole. What it does with a bad index depends on the field. A mapping that points at a source the map does not list is dropped. A mapping that points at a missing name is kept, and only the name goes. Nothing is logged either way. Rollup does not always survive a bad map, though. A five-field mapping with no `names` array throws.
-
-Rolldown converts each plugin map into a Rust value, and that step checks every index. The build fails if a mapping points at a source or a name the map does not list, or if `x_google_ignoreList` holds an index past the end of `sources`:
+Rollup does not validate the sourcemap passed to it and silently ignores it. Rolldown validates the sourcemap when converting to the internal representation. This can cause an error if an invalid sourcemap is passed. For example:
 
 ```
 Failed to convert json sourcemap to struct
 Reference to non-existing source at position 1
 ```
-
-So a plugin that has always worked with Rollup can still fail here. The map was wrong in both cases. Only Rolldown says so.
 
 The usual cause is merging a fresh map into an old one with `Object.assign`. The fresh map does not carry every field, so each field left behind still describes the old `sources`. `x_google_ignoreList` is the one that bites, because [`sourcemapIgnoreList`](/reference/OutputOptions.sourcemapIgnoreList) fills it in by default for any chunk that bundles a file from `node_modules`:
 

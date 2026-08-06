@@ -2,8 +2,8 @@ use oxc::{
   ast::{
     AstKind,
     ast::{
-      BindingIdentifier, BindingPattern, Declaration, ExportDefaultDeclaration,
-      ExportDefaultDeclarationKind, ExportNamedDeclaration, Expression,
+      BindingIdentifier, BindingPattern, Declaration, ExportDeclaration, ExportDefaultDeclaration,
+      ExportDefaultDeclarationKind, Expression,
     },
     builder::AstBuilder,
   },
@@ -450,11 +450,9 @@ impl<'a, 'ast: 'a> VisitJs<'ast> for CrossModuleOptimizationRunnerContext<'a, 'a
     }
   }
 
-  fn visit_export_named_declaration(&mut self, it: &ExportNamedDeclaration<'ast>) {
-    if it.source.is_none()
-      && self.immutable_ctx.config.inline_const_optimization
-      && let Some(ref decl) = it.declaration
-      && let Declaration::VariableDeclaration(var_decl) = decl
+  fn visit_export_declaration(&mut self, it: &ExportDeclaration<'ast>) {
+    if self.immutable_ctx.config.inline_const_optimization
+      && let Declaration::VariableDeclaration(var_decl) = &it.declaration
     {
       var_decl.declarations.iter().for_each(|declarator| {
         if let BindingPattern::BindingIdentifier(ref binding) = declarator.id {
@@ -482,7 +480,7 @@ impl<'a, 'ast: 'a> VisitJs<'ast> for CrossModuleOptimizationRunnerContext<'a, 'a
         }
       });
     }
-    walk_js::walk_export_named_declaration(self, it);
+    walk_js::walk_export_declaration(self, it);
   }
 
   fn visit_export_default_declaration(&mut self, it: &ExportDefaultDeclaration<'ast>) {

@@ -1,0 +1,16 @@
+{
+  "name": "browser-tests",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "prepare-fixture": "node ./scripts/prepare-fixture.mjs",
+    "test:webcontainer": "node ./scripts/prepare-fixture.mjs && vitest run"
+  },
+  "devDependencies": {
+    "@vitest/browser-playwright": "^4.1.6",
+    "@webcontainer/test": "^0.3.0",
+    "playwright": "^1.62.0",
+    "vitest": "catalog:"
+  }
+}

@@ -282,3 +282,12 @@ In Rollup, the [`options`](/reference/Interface.Plugin#options) hook is called o
 In Rollup, certain hooks like [`writeBundle`](/reference/Interface.FunctionPluginHooks#writebundle) are "parallel" by default, meaning they run concurrently across multiple plugins. This requires plugins to explicitly set `sequential: true` if they need their hooks to run one after another.
 
 In Rolldown, the [`writeBundle`](/reference/Interface.FunctionPluginHooks#writebundle) hook is already sequential by default, so plugins do not need to specify `sequential: true` for this hook.
+
+### Sourcemap Validation
+
+Rollup does not check a plugin's sourcemap against its own `sources` and `names`. A mapping that points at a missing source is dropped. A mapping that points at a missing name is kept without the name. Rolldown checks every index while converting the map to the internal representation. So an invalid map that Rollup accepts can fail the build here. For example:
+
+```
+Failed to convert json sourcemap to struct
+Reference to non-existing source at position 1
+```

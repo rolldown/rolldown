@@ -89,6 +89,11 @@ IMPORTANT: The project uses `just` as a task runner. Always prefer `just` comman
 
 - For Windows coverage on a PR, add the `ci: windows` label, then rerun all jobs in the latest `CI` workflow run whose event is `pull_request` and whose head SHA matches the PR. Adding the label alone does not start a workflow. Keep the label so later PR pushes also run the Windows jobs.
 
+# WebContainer CI
+
+- The `ci: webcontainer` label runs a smoke test that installs and builds the packed `rolldown` / `@rolldown/browser` artifacts inside a WebContainer. Activation works exactly like `ci: windows` above. Locally: `just test-webcontainer` (needs network — WebContainer boots from StackBlitz's CDN).
+- **ALWAYS add this label when a PR touches anything napi-rs related** (napi / emnapi / wasm-runtime versions, the binding loader and glue, the `napi` config, `webcontainer-fallback.cjs`, binding packaging or publish steps). Pure wasm behavior changes don't need it — the default CI's `wasi` job already runs the test suite against the wasm binding; this label checks that the packed packages install and work inside WebContainer.
+
 # Common Pitfalls & Best Practices
 
 - **`AGENTS.md` is the source of truth.** `CLAUDE.md` is a symlink to it.

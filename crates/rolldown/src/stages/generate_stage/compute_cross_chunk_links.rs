@@ -2,7 +2,8 @@ use super::{FinalEsmInitMetadata, GenerateStage, Sealed};
 use crate::chunk_graph::ChunkGraph;
 use crate::esm_init_obligations::{
   ObligationPurpose, WrappedEsmInitTarget, WrappedEsmInitTargetContext,
-  collect_wrapped_esm_init_targets_for_import_record, for_each_init_obligation_record,
+  collect_entry_reexported_wrapper_inits, collect_wrapped_esm_init_targets_for_import_record,
+  for_each_init_obligation_record,
 };
 use crate::utils::chunk::conflict_resolver::{ConflictResolver, deconflict_order_key};
 use crate::utils::chunk::normalize_preserve_entry_signature;
@@ -633,22 +634,13 @@ impl GenerateStage<'_> {
           let entry_meta = &self.link_output.metas[entry.idx];
 
           if !matches!(entry_meta.wrap_kind(), WrapKind::Cjs) {
-            for export_ref in entry_meta
-              .resolved_exports
-              .iter()
-              .sorted_unstable_by_key(|(name, _)| *name)
-              .map(|(_, export)| export)
-              // A chunk should always consume a cjs export symbol by property access, so filter
-              // out a exported symbol that came from a cjs module.
-              .filter(|resolved_export| !resolved_export.came_from_commonjs)
-            {
-              self.add_depended_symbol_with_wrapped_esm_init(
-                chunk_graph,
-                order_state,
-                depended_symbols,
-                symbols.canonical_ref_resolving_namespace(export_ref.symbol_ref),
-              );
-            }
+            self.register_entry_export_depended_symbols(
+              chunk_graph,
+              order_state,
+              depended_symbols,
+              entry.idx,
+              entry_meta,
+            );
           }
 
           if matches!(entry_meta.wrap_kind(), WrapKind::Cjs) {
@@ -744,6 +736,56 @@ impl GenerateStage<'_> {
     let symbols = &mut self.link_output.symbol_db;
     for (symbol_ref, chunk_idx) in &table.map {
       symbols.get_mut(*symbol_ref).chunk_idx = Some(*chunk_idx);
+    }
+  }
+
+  /// Register what a non-CJS entry's export signature makes the chunk depend on: the canonical
+  /// symbol of every re-exported binding, plus — off-strict — the `init_*` wrapper of every
+  /// ESM-wrapped module backing one. The wrappers come from the same walk entry emission
+  /// consumes (`collect_entry_reexported_wrapper_inits`), so everything the entry chunk may call
+  /// is imported by construction; `None` for the names because registration runs before chunk
+  /// names exist — it is what makes a wrapper reachable. The entry's own wrapper is not part of
+  /// the walk; the caller's `esm_init_target` arm covers it.
+  fn register_entry_export_depended_symbols(
+    &self,
+    chunk_graph: &ChunkGraph,
+    order_state: &super::order_wrap_state::OrderWrapState,
+    depended_symbols: &mut FxIndexSet<SymbolRef>,
+    entry_idx: ModuleIdx,
+    entry_meta: &crate::types::linking_metadata::LinkingMetadata,
+  ) {
+    let symbols = &self.link_output.symbol_db;
+    let sorted_export_refs = entry_meta
+      .resolved_exports
+      .iter()
+      .sorted_unstable_by_key(|(name, _)| *name)
+      .map(|(_, export)| export)
+      // A chunk should always consume a cjs export symbol by property access, so filter
+      // out a exported symbol that came from a cjs module.
+      .filter(|resolved_export| !resolved_export.came_from_commonjs);
+    if self.options.is_strict_execution_order_enabled() {
+      for export_ref in sorted_export_refs {
+        self.add_depended_symbol_with_wrapped_esm_init(
+          chunk_graph,
+          order_state,
+          depended_symbols,
+          symbols.canonical_ref_resolving_namespace(export_ref.symbol_ref),
+        );
+      }
+    } else {
+      for export_ref in sorted_export_refs {
+        depended_symbols.insert(symbols.canonical_ref_resolving_namespace(export_ref.symbol_ref));
+      }
+      for init in collect_entry_reexported_wrapper_inits(
+        entry_idx,
+        entry_meta,
+        &self.link_output.metas,
+        &self.link_output.module_table.modules,
+        symbols,
+        None,
+      ) {
+        depended_symbols.insert(init.wrapper_ref);
+      }
     }
   }
 
@@ -1503,7 +1545,7 @@ impl GenerateStage<'_> {
           let mut export_name: CompactStr;
           loop {
             named_index += 1;
-            export_name = generate_minified_names(named_index).into();
+            export_name = generate_minified_names(named_index);
             // Unreachable in practice — the generator first produces the four-character `then`
             // at value 443,179, i.e. after ~443k internal exports in one chunk — but it is the
             // only other source of internal export names, so make it impossible rather than
@@ -1639,22 +1681,25 @@ const REST_BASE: u32 = 64;
 const FREQUENT_CHARS: &[u8; REST_BASE as usize] =
   b"etnriaoscludfpmhg_vybxSCwTEDOkAjMNPFILRzBVHUWGKqJYXZQ$1024368579";
 
-// Intentionally NOT routed through `ConflictResolver`: this is a generative
-// base54 namer (not `$N`-suffix), so it shares only `deconflict_order_key`,
-// not the conflict loop. See docs/superpowers/specs/2026-06-17-renamer-naming-engine-design.md.
-fn generate_minified_names(mut value: u32) -> String {
-  let mut buffer = vec![];
+// Intentionally NOT routed through `ConflictResolver`. This is a generative base54 namer, not
+// a `$N`-suffix one. Its call site shares `deconflict_order_key` with the resolver path, but
+// not the conflict loop (#9831).
+fn generate_minified_names(mut value: u32) -> CompactStr {
+  // `u32::MAX` needs 6 bytes: one base-54 head plus five base-64 digits, because
+  // `u32::MAX / FIRST_BASE` lands between `REST_BASE.pow(4)` and `REST_BASE.pow(5)`.
+  let mut buffer = [0u8; 6];
+  let mut len = 0;
 
   // Base 54 at first because these are the usable first characters in JavaScript identifiers
-  let byte = FREQUENT_CHARS[(value % FIRST_BASE) as usize];
-  buffer.push(byte);
+  buffer[len] = FREQUENT_CHARS[(value % FIRST_BASE) as usize];
+  len += 1;
   value /= FIRST_BASE;
 
   while value > 0 {
-    let byte = FREQUENT_CHARS[(value % REST_BASE) as usize];
-    buffer.push(byte);
+    buffer[len] = FREQUENT_CHARS[(value % REST_BASE) as usize];
+    len += 1;
     value /= REST_BASE;
   }
-  // SAFETY: `buffer` is base64 characters, it is valid utf8 characters
-  unsafe { String::from_utf8_unchecked(buffer) }
+  // SAFETY: every byte written comes from `FREQUENT_CHARS`, which is ASCII.
+  CompactStr::new(unsafe { std::str::from_utf8_unchecked(&buffer[..len]) })
 }

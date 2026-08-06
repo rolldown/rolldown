@@ -38,6 +38,13 @@ jobs:
       - name: Build Rolldown with WASI Binding
         run: just build-rolldown-wasi
 
+      - name: Build `@rolldown/test-dev-server`
+        run: vp run --filter '@rolldown/test-dev-server' build
+
+      # `test:wasi` is `test:main` with `ROLLDOWN_WASI_TEST=1`, which skips the tests that the wasm binding cannot pass; they are tracked in https://github.com/rolldown/rolldown/issues/10609.
+      - name: Node Test
+        run: vp run --filter rolldown-tests test:wasi
+
       - name: Stability Test
         run: vp run --filter rolldown-tests test:stability
 
@@ -46,8 +53,6 @@ jobs:
       - name: Tokio Runtime Lifecycle Test
         run: vp run --filter rolldown-tests test:wasi-runtime
 
-      # `@example/typescript` is excluded because its config enables `devtools`, which currently
-      # panics under WASI when the writer tries to open its log file (crates/rolldown_devtools/src/writer.rs).
       # `@example/native-magic-string` is excluded because it depends on a native-only addon.
       - name: Build Examples
-        run: vp run --filter '@example/*' --filter '!@example/native-magic-string' --filter '!@example/typescript' build
+        run: vp run --filter '@example/*' --filter '!@example/native-magic-string' build

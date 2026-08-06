@@ -41,12 +41,12 @@ catalog:
   '@emnapi/core': 2.0.0-alpha.3
   '@emnapi/runtime': 2.0.0-alpha.3
   '@jridgewell/trace-mapping': ^0.3.31
-  '@napi-rs/cli': ^3.8.0
-  '@napi-rs/wasm-runtime': ^1.2.1
+  '@napi-rs/cli': ^3.8.2
+  '@napi-rs/wasm-runtime': ^1.2.2
   '@oxc-node/cli': ^0.1.0
   '@oxc-node/core': ^0.1.0
-  '@oxc-project/runtime': '=0.142.0'
-  '@oxc-project/types': '=0.142.0'
+  '@oxc-project/runtime': '=0.143.0'
+  '@oxc-project/types': '=0.143.0'
   '@pnpm/find-workspace-packages': ^6.0.9
   '@rolldown/pluginutils': ^1.0.0
   '@rollup/plugin-commonjs': ^29.0.0
@@ -78,14 +78,14 @@ catalog:
   glob: ^13.0.0
   lodash-es: ^4.17.21
   micromatch: ^4.0.8
-  oxc-parser: '=0.142.0'
-  oxc-transform: '=0.142.0'
+  oxc-parser: '=0.143.0'
+  oxc-transform: '=0.143.0'
   pathe: ^2.0.3
   react: ^19.0.0
   react-dom: ^19.0.0
   remark-parse: ^11.0.0
   remeda: ^2.34.1
-  rolldown-plugin-dts: ^0.27.0
+  rolldown-plugin-dts: ^0.28.0
   rollup: ^4.60.4
   semver: ^7.8.0
   serve-static: ^2.0.0
@@ -148,7 +148,7 @@ minimumReleaseAgeExclude:
   - vite-plus
   - vitepress-plugin-feedback-tracker@0.2.0-alpha.1
   - void
-  - '@napi-rs/wasm-runtime@1.2.1'
+  - '@napi-rs/wasm-runtime'
 
 # avoid accidentally relying on `NODE_PATH` env var
 extendNodePath: false

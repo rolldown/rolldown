@@ -56,10 +56,7 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
             .checked_sub(3)
             .and_then(|idx| self.visit_path.get(idx))
             .is_some_and(|kind| {
-              matches!(
-                kind,
-                AstKind::ExportDefaultDeclaration(_) | AstKind::ExportNamedDeclaration(_)
-              )
+              matches!(kind, AstKind::ExportDeclaration(_) | AstKind::ExportDefaultDeclaration(_))
             });
           match self.update_dynamic_import_usage_info_from_binding_pattern(
             &var_decl.id,
@@ -125,7 +122,7 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
         // parent
         let is_exported = matches!(
           self.visit_path.get(ast_after_remove_paren_idx.saturating_sub(2)),
-          Some(AstKind::ExportDefaultDeclaration(_) | AstKind::ExportNamedDeclaration(_))
+          Some(AstKind::ExportDeclaration(_) | AstKind::ExportDefaultDeclaration(_))
         );
         self.update_dynamic_import_usage_info_from_binding_pattern(
           &var_decl.id,
@@ -143,7 +140,7 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
           AstKind::ReturnStatement(_) => None,
           AstKind::FunctionBody(_) => {
             match self.visit_path.get(ast_after_remove_paren_idx.saturating_sub(2))? {
-              AstKind::ArrowFunctionExpression(expr) if expr.expression => None,
+              AstKind::ArrowFunctionExpression(expr) if expr.is_expression() => None,
               _ => Some(FxHashSet::default()),
             }
           }

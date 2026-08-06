@@ -5,7 +5,7 @@ use oxc::{
   allocator::{self, GetAllocator, ReplaceWith, TakeIn},
   ast::{
     ast::{self, BindingPattern, Expression, SimpleAssignmentTarget, Statement},
-    builder::{AstBuilder, NONE},
+    builder::AstBuilder,
     match_member_expression,
   },
   ast_visit::{VisitJsMut, walk_js_mut},
@@ -54,7 +54,7 @@ impl<'ast> ScopeHoistingFinalizer<'_, 'ast> {
       let require_call = ast::Expression::new_call_expression(
         SPAN,
         importee_wrapper_expr,
-        NONE,
+        None,
         [],
         false,
         &ast_builder,
@@ -185,6 +185,14 @@ impl<'ast> VisitJsMut<'ast> for ScopeHoistingFinalizer<'_, 'ast> {
     // init namespace_alias_symbol_id
 
     let last_import_stmt_idx = self.remove_unused_top_level_stmt(program);
+
+    // Runs after `remove_unused_top_level_stmt` so statement-position init calls already sit in
+    // the dedup set, and splices at the same after-imports index the HMR header uses (an HMR
+    // header spliced below lands before these calls, which is fine — it is registration glue).
+    let entry_init_prelude = self.entry_reexported_wrapper_init_prelude();
+    if !entry_init_prelude.is_empty() {
+      program.body.splice(last_import_stmt_idx..last_import_stmt_idx, entry_init_prelude);
+    }
 
     if self.ctx.options.is_dev_mode_enabled() {
       let hmr_header = if self.ctx.runtime.id() == self.ctx.module.idx {
@@ -328,7 +336,7 @@ impl<'ast> VisitJsMut<'ast> for ScopeHoistingFinalizer<'_, 'ast> {
               SPAN,
               ast::VariableDeclarationKind::Var,
               ast::BindingPattern::new_binding_identifier(SPAN, *var_name, ast_builder),
-              NONE,
+              None,
               None,
               false,
               ast_builder,

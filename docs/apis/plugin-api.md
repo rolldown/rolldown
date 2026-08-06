@@ -313,6 +313,8 @@ The fix is to transform the chunk in [`renderChunk`](/reference/Interface.Plugin
 ::: code-group
 
 ```js [Broken: generateBundle]
+import MagicString from 'magic-string';
+
 generateBundle(options, bundle) {
   for (const chunk of Object.values(bundle)) {
     if (chunk.type !== 'chunk' || !chunk.map) continue;
@@ -327,6 +329,8 @@ generateBundle(options, bundle) {
 ```
 
 ```js [Correct: renderChunk]
+import MagicString from 'magic-string';
+
 renderChunk(code) {
   const s = new MagicString(code);
   s.prepend('/* banner */\n');
@@ -345,6 +349,9 @@ Editing `chunk.map` in [`generateBundle`](/reference/Interface.Plugin#generatebu
 If you have to transform a chunk here, compose the maps and write the asset yourself:
 
 ```js
+import remapping from '@jridgewell/remapping';
+import MagicString from 'magic-string';
+
 generateBundle(options, bundle) {
   for (const chunk of Object.values(bundle)) {
     if (chunk.type !== 'chunk' || !chunk.map) continue;

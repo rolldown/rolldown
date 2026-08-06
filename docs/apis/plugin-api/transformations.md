@@ -40,26 +40,31 @@ We discourage transforming in [`generateBundle`](/reference/Interface.Plugin#gen
 import remapping from '@jridgewell/remapping';
 import MagicString from 'magic-string';
 
-generateBundle(options, bundle) {
-  for (const chunk of Object.values(bundle)) {
-    if (chunk.type !== 'chunk') continue;
-
-    const s = new MagicString(chunk.code);
-    // ...your transform...
-    if (!s.hasChanged()) continue;
-
-    // A low-resolution map can compose down to nothing, so keep the boundaries.
-    const step = s.generateMap({ source: chunk.fileName, hires: 'boundary' });
-    chunk.code = s.toString();
-
-    if (chunk.map) {
-      // Assign the composed map, do not spread it. `toString()` lives on its
-      // prototype, and spreading would leave you with `[object Object]`.
-      chunk.map = remapping([step, chunk.map], () => null);
-
-      // The emitted file comes from this asset, not from `chunk.map`.
-      const asset = bundle[`${chunk.fileName}.map`];
-      if (asset) asset.source = chunk.map.toString();
+export default function myPlugin() {
+  return {
+    name: 'example',
+    generateBundle(options, bundle) {
+      for (const chunk of Object.values(bundle)) {
+        if (chunk.type !== 'chunk') continue;
+    
+        const s = new MagicString(chunk.code);
+        // ...your transform...
+        if (!s.hasChanged()) continue;
+    
+        // A low-resolution map can compose down to nothing, so keep the mappings at the boundaries.
+        const step = s.generateMap({ source: chunk.fileName, hires: 'boundary' });
+        chunk.code = s.toString();
+    
+        if (chunk.map) {
+          // Assign the composed map, do not spread it. `toString()` lives on its
+          // prototype, and spreading would leave you with `[object Object]`.
+          chunk.map = remapping([step, chunk.map], () => null);
+    
+          // The emitted file comes from this asset, not from `chunk.map`.
+          const asset = bundle[`${chunk.fileName}.map`];
+          if (asset) asset.source = chunk.map.toString();
+        }
+      }
     }
   }
 }

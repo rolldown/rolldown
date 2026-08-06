@@ -29,7 +29,6 @@ jobs:
       # A Windows CI request runs the complete Windows suite, even for paths outside the normal filters.
       rust-changes: "${{ (steps.filter.outputs.rust-changes == 'true') || (github.ref_name == 'main') || (steps.pr-labels.outputs.run-windows == 'true') }}"
       node-changes: "${{ (steps.filter.outputs.node-changes == 'true') || (github.ref_name == 'main') || (steps.pr-labels.outputs.run-windows == 'true') }}"
-      android-binding-changes: "${{ (steps.filter.outputs.android-binding-changes == 'true') || (github.ref_name == 'main') }}"
       # Allows opting into Windows CI per-PR by adding the `ci: windows` label.
       run-windows: "${{ steps.pr-labels.outputs.run-windows == 'true' }}"
       # Allows opting into the WebContainer smoke test per-PR by adding the `ci: webcontainer` label.
@@ -77,19 +76,6 @@ jobs:
               - '.gitattributes'
               - 'justfile'
               - 'test262'
-            android-binding-changes:
-              - '.github/workflows/ci.yml'
-              - '.github/workflows/reusable-release-build.yml'
-              - '.cargo/**'
-              - 'crates/**'
-              - 'Cargo.toml'
-              - 'Cargo.lock'
-              - 'rust-toolchain.toml'
-              - 'package.json'
-              - 'pnpm-lock.yaml'
-              - 'pnpm-workspace.yaml'
-              - 'packages/rolldown/build-binding.ts'
-              - 'packages/rolldown/package.json'
             node-changes:
               - *rust-changes
               - 'packages/**'
@@ -100,7 +86,6 @@ jobs:
         run: |
           echo "Rust changes: ${{ (steps.filter.outputs.rust-changes == 'true') || (github.ref_name == 'main') || (steps.pr-labels.outputs.run-windows == 'true') }}"
           echo "Node changes: ${{ (steps.filter.outputs.node-changes == 'true') || (github.ref_name == 'main') || (steps.pr-labels.outputs.run-windows == 'true') }}"
-          echo "Android binding changes: ${{ (steps.filter.outputs.android-binding-changes == 'true') || (github.ref_name == 'main') }}"
 
   rust-validation:
     name: Rust Validation
@@ -142,7 +127,7 @@ jobs:
   android-arm64-cortex-a53:
     name: Android ARM64 Cortex-A53
     needs: changes
-    if: ${{ needs.changes.outputs.android-binding-changes == 'true' }}
+    if: ${{ needs.changes.outputs.rust-changes == 'true' }}
     runs-on: ubuntu-24.04
     timeout-minutes: 15
     steps:

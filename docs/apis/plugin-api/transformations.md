@@ -22,7 +22,7 @@ return {
 
 ## Transforming a Chunk
 
-Transform a chunk in [`renderChunk`](/reference/Interface.Plugin#renderchunk) and return the new map with it. Rolldown composes that map with the chunk's own, rebuilds `x_google_ignoreList`, and hashes the transformed code:
+To transform a chunk, you can use [`renderChunk`](/reference/Interface.Plugin#renderchunk). If you return the sourcemap for the transform you applied, Rolldown composes that map with the previous transforms. It also rebuilds `x_google_ignoreList`, which [`sourcemapIgnoreList`](/reference/OutputOptions.sourcemapIgnoreList) fills in by default:
 
 ```js
 import MagicString from 'magic-string';
@@ -61,8 +61,7 @@ export default function myPlugin() {
         chunk.code = s.toString();
 
         if (chunk.map) {
-          // Assign the composed map, do not spread it. `toString()` lives on its
-          // prototype, and spreading would leave you with `[object Object]`.
+          // compose the sourcemap
           chunk.map = remapping([step, chunk.map], () => null);
 
           // The emitted file comes from this asset, not from `chunk.map`.

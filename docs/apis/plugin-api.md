@@ -360,9 +360,9 @@ generateBundle(options, bundle) {
     const step = s.generateMap({ source: chunk.fileName, hires: 'boundary' });
     chunk.code = s.toString();
 
-    // Assign the composed map, do not spread it. `toString()` lives on its
-    // prototype, and spreading would leave you with `[object Object]`.
-    chunk.map = remapping([step, chunk.map], () => null);
+    if (chunk.map) {
+      chunk.map = remapping([step, chunk.map], () => null);
+    }
 
     // The emitted file comes from this asset, not from `chunk.map`.
     const asset = bundle[`${chunk.fileName}.map`];

@@ -213,7 +213,7 @@ impl FileEmitter {
           return Ok(reference_id);
         }
         Entry::Vacant(entry) => {
-          let reference_id = self.assign_reference_id(None);
+          let reference_id = self.assign_reference_id(Some(hash.clone()));
           // Insert into self.files while the VacantEntry holds its shard lock,
           // so any concurrent Occupied branch always finds the files entry.
           self.insert_new_file(
@@ -484,5 +484,49 @@ mod tests {
     for name in ["a", "index.js", "assets/deeply/nested/asset.name.txt", ""] {
       assert_eq!(emitter.assign_reference_id(Some(ArcStr::from(name))).len(), 22, "name={name:?}");
     }
+  }
+
+  /// Assets are emitted concurrently while modules are processed, so the order
+  /// in which `emit_file` calls arrive varies between builds of identical input.
+  /// The reference id an asset receives must not depend on that order: Vite
+  /// inlines the reference id into the module's own source text
+  /// (`__VITE_ASSET__<referenceId>__`), which then reaches the sourcemap's
+  /// `sourcesContent`, so an order-dependent id makes builds non-reproducible.
+  #[test]
+  fn asset_reference_ids_do_not_depend_on_emit_order() {
+    let emit_in_order = |order: &[u32]| {
+      let emitter = FileEmitter::new(Arc::new(NormalizedBundlerOptions::default()));
+      let mut ids = order
+        .iter()
+        .map(|&n| {
+          let name = format!("asset-{n}.txt");
+          let reference_id = emitter
+            .emit_file(
+              EmittedAsset {
+                name: Some(name.clone()),
+                source: StrOrBytes::Str(format!("payload for asset {n}")),
+                ..Default::default()
+              },
+              Some(FilenameTemplate::new(
+                "assets/[name]-[hash]".to_string(),
+                "output.assetFileNames",
+              )),
+              Some(ArcStr::from(name)),
+            )
+            .unwrap();
+          (n, reference_id)
+        })
+        .collect::<Vec<_>>();
+      ids.sort_by_key(|(n, _)| *n);
+      ids
+    };
+
+    let forward = (0..8u32).collect::<Vec<_>>();
+    let reversed = (0..8u32).rev().collect::<Vec<_>>();
+    assert_eq!(
+      emit_in_order(&forward),
+      emit_in_order(&reversed),
+      "asset -> reference id assignment must not depend on emit_file call order"
+    );
   }
 }

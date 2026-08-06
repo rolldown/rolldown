@@ -285,7 +285,7 @@ In Rolldown, the [`writeBundle`](/reference/Interface.FunctionPluginHooks#writeb
 
 ### Sourcemap Validation
 
-Rollup does not check a plugin's sourcemap against its own `sources` and `names`. A mapping that points at a missing source is dropped. A mapping that points at a missing name is kept without the name. Rolldown checks every index while converting the map to the internal representation. So a map that Rollup accepts can fail the build here. For example:
+Rollup does not check a plugin's sourcemap against its own `sources` and `names`. A mapping that points at a missing source is dropped. A mapping that points at a missing name is kept without the name. Rolldown checks every index while converting the map to the internal representation. So an invalid map that Rollup accepts can fail the build here. For example:
 
 ```
 Failed to convert json sourcemap to struct

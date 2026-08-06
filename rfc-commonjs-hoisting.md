@@ -312,24 +312,28 @@ Hoisted, as proposed — unlike the earlier blocks, this one is a design sketch 
 var mod_a;
 var mod_b;
 var mod_exports = /* @__PURE__ */ __exportAll({ a: () => mod_a, b: () => mod_b }, true);
-var mod_ns = /* @__PURE__ */ __exportAll({
-  a: () => mod_a,
-  b: () => mod_b,
-  default: () => mod_exports,
-});
+var mod_ns = /* @__PURE__ */ __toESM(mod_exports, 1);
 mod_a = 1;
 mod_b = () => 2;
 
 send(mod_ns, mod_exports);
 ```
 
-Two objects over one set of bindings, and that is the part to get right. `ns` is an ESM namespace, so it carries `Symbol.toStringTag: 'Module'` and a `default` key. What `default` holds is `module.exports`, an ordinary object that must not carry the tag. `__exportAll`'s existing `no_symbols` argument is exactly that difference.
+The getter map is written once. The namespace is derived from the exports object instead of built from a second copy, so what lands in the chunk stays linear in the export count. webpack does the same: it writes the map into a base object, then calls `__webpack_require__.t(base, 2)` to get the namespace.
+
+Deriving through `__toESM` buys more than brevity. It is the same call the importer of a wrapped module makes today, over an object of the same shape. So the namespace it returns is the one rolldown already produces: same keys in the same order, same absent tag, same prototype, same `default` identity. That is the strongest guarantee available that hoisting is unobservable. Not an argument that the two agree, but the same code path.
+
+Two objects over one set of bindings, and that is the part to get right. `ns` is the namespace and carries a `default` key; what `default` holds is `module.exports`. webpack emits the same two-object split for this case, with `default` pointing at the base object, so the shape is not speculative.
+
+Both objects pass `no_symbols`, which needs saying because it is not what Node does. In Node a namespace carries `Symbol.toStringTag: 'Module'` and `module.exports` does not. Rolldown today builds a CommonJS namespace through `__toESM`, which sets no tag, so `Object.prototype.toString.call(ns)` already returns `[object Object]` for a wrapped module. Tagging the hoisted one would make hoisting observable, which is the one thing it must never be. Matching Node is worth doing on its own, for wrapped and hoisted modules at once — see [Unresolved questions](#unresolved-questions).
 
 Getters, not a snapshot. A hoisted module may still assign `exports.a` after evaluation, from a callback or a timer. The wrapper's object would have shown that. Because the map holds thunks and not values, both calls can sit above the writes, which is where rolldown already places them for ESM.
 
-No `__toESM` at the import site either, since the export names are known statically. That helper exists to discover them at runtime.
+Named imports need none of this. No object, no `__exportAll`, no `__toESM` — the import resolves to the binding and the helpers never enter the chunk. The interop cost that every CommonJS import pays today becomes a cost only an escaping namespace pays.
 
-The honest caveat: a module whose namespace or `default` escapes gains least. It trades a wrapper plus an object for an object, and for both consumer kinds at once it trades one object for two. Static reads pay nothing, so the cost tracks how the module is used rather than what it exports. The predicate could take that into account. But it ties a link-stage decision to usage, and the wrap decision avoids that on purpose today. Left open below.
+A module whose namespace escapes gains least. It swaps the `__commonJSMin` closure for an `__exportAll` map and keeps the `__toESM` call it already had, so the object comes back and the helpers stay. It is not worse than today, and the bindings underneath are still bindings the minifier can reach, but most of the win is gone. Static reads pay nothing at all. So the benefit tracks how a module is used, not what it exports.
+
+The predicate could take that into account and leave escaping modules wrapped. But it ties a link-stage decision to usage, and the wrap decision avoids that on purpose today. Left open below.
 
 ### Strict execution order
 
@@ -413,10 +417,6 @@ _Only for builds that opt in:_
 
 **Bugs are quiet.** A predicate bug does not fail the build. It emits a bundle that runs and is subtly wrong, which is the worst kind to debug. This is the drawback the flag exists for, and it bounds the exposure to people who asked for it.
 
-**The gain is uneven.** A module whose consumers read named properties gets the full win, because nothing is materialized. One whose namespace or `default` escapes trades a wrapper for a synthesized object, and gains much less.
-
-**Debugging changes.** `exports.a` becomes `mod_a` in the output. Source maps carry it, but anyone reading a bundle by hand sees a different program.
-
 _Deferred to the default flip:_
 
 **Snapshot churn.** With the flag off, every existing snapshot stays as it is, and new coverage arrives as flag-on variants. The wide diff comes when `commonjs` becomes the default, and it lands across a large share of the Rust suite at once. Wide diffs hide regressions. The corpus is the answer — it asserts behaviour, not output shape — but that review still has to happen, just later.
@@ -471,7 +471,9 @@ esbuild wraps every CommonJS module in `__commonJS`. Rolldown's `__commonJSMin` 
 
 ### Rollup
 
-Rollup has no CommonJS support in core. `@rollup/plugin-commonjs` does the same work as a source transform. It detects statically assigned `exports.x` names and re-exports them, so the rest of the pipeline sees ESM. The plugin is safe enough to be the default path for most of the Rollup ecosystem, which is decent evidence that the analysis in this RFC is sound. The difference is where it runs. A transform has to be careful about what it cannot see. A link-stage decision knows every edge in the graph.
+Rollup has no CommonJS support in core, and `@rollup/plugin-commonjs` does not hoist. Built on the module above, it emits a lazy memoized wrapper — `var mod = {}; function requireMod() { … }` behind a `hasRequiredMod` guard — and the importer reads `modExports.a`. It resolves the named import, so `import { a }` compiles, but the output is structurally rolldown's `__commonJSMin`, not webpack's bindings.
+
+So the plugin is in the wrapper class, not the hoisting class. webpack is the only prior implementation of what this RFC proposes. It also removes a tempting argument. The plugin's wide adoption says nothing about whether hoisting is safe, because the plugin does not hoist.
 
 ## Unresolved questions
 
@@ -480,6 +482,7 @@ Rollup has no CommonJS support in core. `@rollup/plugin-commonjs` does the same 
 3. **When does the flag flip?** What is the bar for making `commonjs` the default — the 11 gap rows green, or a real application bundling and running unchanged? And does the flag stay afterwards as a permanent escape hatch, or get removed like any other experiment?
 4. **`preserveModules` and `format: cjs`.** A hoisted module still has to re-export correctly when the output format is CommonJS. Is there a shape where the synthesized namespace and the output-format export differ?
 5. **Binding names.** `mod_a` reads well in a bundle; the deconflicting suffix form (`a$1`) is shorter. Which one, and does it matter after minification?
+6. **The namespace tag.** Rolldown's CommonJS namespace reports `[object Object]` where Node reports `[object Module]`, because `__toESM` sets no `Symbol.toStringTag`. Hoisting must reproduce that, or it becomes observable. Is the divergence worth fixing on its own, for wrapped and hoisted modules at once? webpack went the other way and tags both objects, so its `default` claims to be a namespace too.
 
 ## Future work
 

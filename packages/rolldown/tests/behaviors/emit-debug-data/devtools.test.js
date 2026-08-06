@@ -2,6 +2,8 @@ import { rolldown } from 'rolldown';
 
 import { existsSync, readdirSync, readFileSync, rmSync } from 'node:fs';
 import { join } from 'node:path';
+// Relative because this directory's own `package.json` shadows the `rolldown-tests/utils` self-reference other tests use.
+import { isWasiTest } from '../../src/utils';
 import { expect, test } from 'vitest';
 
 // `.rolldown` dir is generated based on real cwd instead of `InputOptions.cwd`. We might be able to solve this in the future.
@@ -16,7 +18,8 @@ function expectPathToEndWith(path, suffix) {
   expect(normalizePath(path).endsWith(suffix)).toBe(true);
 }
 
-test(`emit data for devtool`, async () => {
+// Under the wasm binding `crates/rolldown_devtools/src/writer.rs` panics opening its log file (WASI ENOENT). See https://github.com/rolldown/rolldown/issues/10609.
+test.skipIf(isWasiTest)(`emit data for devtool`, async () => {
   // Clean up previous test data if exists
   if (existsSync(dotRolldownFileName)) {
     rmSync(dotRolldownFileName, { recursive: true, force: true });

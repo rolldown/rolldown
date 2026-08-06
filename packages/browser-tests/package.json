@@ -5,7 +5,8 @@
   "type": "module",
   "scripts": {
     "prepare-fixture": "node ./scripts/prepare-fixture.mjs",
-    "test:webcontainer": "node ./scripts/prepare-fixture.mjs && vitest run"
+    "test:browser": "node ./scripts/prepare-fixture.mjs browser && vitest run --project browser",
+    "test:webcontainer": "node ./scripts/prepare-fixture.mjs webcontainer && vitest run --project webcontainer"
   },
   "devDependencies": {
     "@vitest/browser-playwright": "^4.1.6",

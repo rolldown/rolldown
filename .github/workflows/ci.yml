@@ -45,7 +45,7 @@ jobs:
           if ! labels="$(gh api "repos/${GITHUB_REPOSITORY}/pulls/${PR_NUMBER}" --jq '[.labels[].name]')"; then
             echo "::warning::Could not read pull request labels; running Windows CI and skipping the WebContainer smoke test."
             run_windows=true
-            # fail closed: this lane runs third-party code fetched at test time, so never opt in without a maintainer label
+            # fail closed: the WebContainer suite runs third-party code fetched at test time, so never opt in without a maintainer label
             run_webcontainer=false
           else
             run_windows="$(jq 'any(. == "ci: windows")' <<< "$labels")"
@@ -173,12 +173,15 @@ jobs:
     with:
       changed: ${{ needs.changes.outputs.node-changes == 'true' }}
 
-  # Opt-in only: this lane never runs on path changes or on main, just on the `ci: webcontainer` label.
-  webcontainer:
+  # Runs the packed @rolldown/browser in a real browser page on every PR that touches node code. The
+  # `ci: webcontainer` label adds the WebContainer suite to the same job; it never runs on path
+  # changes or on main.
+  browser:
     needs: changes
-    uses: ./.github/workflows/reusable-webcontainer.yml
+    uses: ./.github/workflows/reusable-browser.yml
     with:
-      changed: ${{ needs.changes.outputs.run-webcontainer == 'true' }}
+      changed: ${{ needs.changes.outputs.node-changes == 'true' }}
+      webcontainer: ${{ needs.changes.outputs.run-webcontainer == 'true' }}
 
   node-dev-server-test-windows:
     needs: [changes, build-rolldown-windows]

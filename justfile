@@ -111,6 +111,10 @@ test-vite: # We don't use `test-node-vite` because it's not expected to run in `
 test-webcontainer:
   vp run --filter browser-tests test:webcontainer
 
+# Build `@rolldown/browser` and smoke test the packed artifact inside a real browser page.
+test-browser:
+  vp run --filter browser-tests test:browser
+
 # --- `t` series commands provide scenario-specific shortcut commands for testing compared to `test` series commands.
 
 # Run both Rolldown's tests and Rollup's test suite without building Rolldown.

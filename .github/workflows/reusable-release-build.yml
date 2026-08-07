@@ -70,6 +70,16 @@ jobs:
             build: vp run ci:build-release-binding --target powerpc64le-unknown-linux-gnu --use-napi-cross
 
           - os: ubuntu-latest
+            target: loongarch64-unknown-linux-gnu
+            build: |
+              apt update & apt install gcc-loongarch64-linux-gnu g++-loongarch64-linux-gnu gcc-13-loongarch64-linux-gnu
+              vp run ci:build-release-binding --target loongarch64-unknown-linux-gnu --use-napi-cross
+
+          - os: ubuntu-latest
+            target: loongarch64-unknown-linux-musl
+            build: vp run ci:build-release-binding -x --target loongarch64-unknown-linux-musl
+
+          - os: ubuntu-latest
             target: wasm32-wasip1-threads
             build: |
               vp run --filter rolldown build-binding:wasi:release

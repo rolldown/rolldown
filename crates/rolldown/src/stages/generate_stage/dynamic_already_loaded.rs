@@ -3,8 +3,8 @@ use std::collections::VecDeque;
 use oxc_index::{IndexVec, index_vec};
 use rolldown_common::{
   ChunkIdx, ChunkKind, ChunkMeta, ImportKind, ImportRecordIdx, ImportRecordMeta, ModuleIdx,
-  PreserveEntrySignatures, RuntimeHelper, StmtInfoIdx, UsedSymbolRefsBuilder,
-  dynamic_import_usage::DynamicImportExportsUsage,
+  PreserveEntrySignatures, RuntimeHelper, StmtInfoIdx, SymbolOrMemberExprRef, SymbolRef,
+  UsedSymbolRefsBuilder, dynamic_import_usage::DynamicImportExportsUsage,
 };
 use rolldown_utils::BitSet;
 use rustc_hash::{FxHashMap, FxHashSet};
@@ -68,8 +68,12 @@ impl GenerateStage<'_> {
     let module_to_atom_idx = self.compute_module_to_atom_idx(&atoms);
     let atom_dependencies = self.compute_atom_dependencies(&atoms, &module_to_atom_idx);
 
-    let static_dependency_atoms_by_entry =
-      Self::compute_static_dependency_atoms_by_entry(entries_len as usize, &atoms);
+    let static_dependency_atoms_by_entry = self.compute_static_dependency_atoms_by_entry(
+      entries_len as usize,
+      &atoms,
+      &atom_dependencies,
+      &module_to_atom_idx,
+    );
     let already_loaded_atoms_by_entry = Self::compute_already_loaded_atoms_by_entry(
       &static_dependency_atoms_by_entry,
       dynamically_dependent_entries_by_dynamic_entry,
@@ -311,29 +315,114 @@ impl GenerateStage<'_> {
     module_to_atom_idx
   }
 
+  // See internal-docs/code-splitting/implementation.md#dynamic-already-loaded-analysis.
   fn compute_atom_dependencies(
     &self,
     atoms: &[ChunkAtom],
     module_to_atom_idx: &IndexVec<ModuleIdx, Option<usize>>,
   ) -> Vec<Vec<usize>> {
+    let strict_execution_order = self.options.is_strict_execution_order_enabled();
     atoms
       .iter()
       .enumerate()
       .map(|(atom_idx, atom)| {
         let mut dependencies = FxHashSet::default();
+        let add = |dep_module_idx: ModuleIdx, dependencies: &mut FxHashSet<usize>| {
+          if let Some(dep_atom_idx) = module_to_atom_idx[dep_module_idx]
+            && dep_atom_idx != atom_idx
+          {
+            dependencies.insert(dep_atom_idx);
+          }
+        };
         for &module_idx in &atom.modules {
-          for &dep_module_idx in &self.link_output.metas[module_idx].dependencies {
-            let Some(dep_atom_idx) = module_to_atom_idx[dep_module_idx] else {
-              continue;
-            };
-            if dep_atom_idx != atom_idx {
-              dependencies.insert(dep_atom_idx);
+          if strict_execution_order {
+            // Strict lowering can turn linked import records back into `init_*` imports.
+            for &dep_module_idx in &self.link_output.metas[module_idx].dependencies {
+              add(dep_module_idx, &mut dependencies);
             }
+            continue;
+          }
+          for dep_module_idx in self.predicted_static_import_targets(module_idx) {
+            add(dep_module_idx, &mut dependencies);
           }
         }
         dependencies.into_iter().collect()
       })
       .collect()
+  }
+
+  /// Returns the targets that `compute_cross_chunk_links` will import for this module. Transitive
+  /// side-effect dependencies behind a `sideEffects: false` barrel are retained only when an
+  /// included symbol reference also requires them.
+  fn predicted_static_import_targets(&self, module_idx: ModuleIdx) -> Vec<ModuleIdx> {
+    let meta = &self.link_output.metas[module_idx];
+    let Some(module) = self.link_output.module_table[module_idx].as_normal() else {
+      return meta.load_dependencies.iter().copied().collect();
+    };
+
+    // A side-effectful runtime dependency has no import record.
+    let side_effectful_runtime_idx =
+      meta.has_side_effectful_runtime_dep.then(|| self.link_output.runtime.id());
+
+    let direct_record_targets: FxHashSet<ModuleIdx> = module
+      .import_records
+      .iter()
+      .filter(|rec| rec.kind != ImportKind::DynamicImport)
+      .filter_map(|rec| rec.resolved_module)
+      .collect();
+
+    let mut ambiguous = vec![];
+    let mut targets = Vec::with_capacity(meta.load_dependencies.len());
+    for &dep_module_idx in &meta.load_dependencies {
+      if !self.link_output.module_table[dep_module_idx].side_effects().has_side_effects()
+        || side_effectful_runtime_idx == Some(dep_module_idx)
+        || direct_record_targets.contains(&dep_module_idx)
+      {
+        targets.push(dep_module_idx);
+      } else {
+        ambiguous.push(dep_module_idx);
+      }
+    }
+    if ambiguous.is_empty() {
+      return targets;
+    }
+
+    let symbol_owners = self.referenced_symbol_owners(module_idx);
+    targets.extend(ambiguous.into_iter().filter(|dep_idx| symbol_owners.contains(dep_idx)));
+    targets
+  }
+
+  fn referenced_symbol_owners(&self, module_idx: ModuleIdx) -> FxHashSet<ModuleIdx> {
+    let meta = &self.link_output.metas[module_idx];
+    let mut owners = FxHashSet::default();
+    let note = |symbol_ref: SymbolRef, owners: &mut FxHashSet<ModuleIdx>| {
+      let canonical_ref = self.link_output.symbol_db.canonical_ref_for(symbol_ref);
+      owners.insert(canonical_ref.owner);
+      if let Some(ns) = &self.link_output.symbol_db.get(canonical_ref).namespace_alias {
+        owners.insert(ns.namespace_ref.owner);
+      }
+    };
+    for (symbol_ref, _) in &meta.referenced_symbols_by_entry_point_chunk {
+      note(*symbol_ref, &mut owners);
+    }
+    for (stmt_idx, stmt_info) in self.link_output.stmt_infos[module_idx].iter_enumerated() {
+      if !meta.stmt_info_included.has_bit(stmt_idx) {
+        continue;
+      }
+      for reference_ref in &stmt_info.referenced_symbols {
+        match reference_ref {
+          SymbolOrMemberExprRef::Symbol(symbol_ref) => note(*symbol_ref, &mut owners),
+          SymbolOrMemberExprRef::MemberExpr(member_expr) => {
+            if let Some(symbol_ref) =
+              member_expr.represent_symbol_ref(&meta.resolved_member_expr_refs)
+            {
+              note(symbol_ref, &mut owners);
+            }
+          }
+        }
+      }
+    }
+    owners
   }
 
   fn reduced_atom_graph_has_static_cycle(
@@ -515,15 +604,45 @@ impl GenerateStage<'_> {
   }
 
   fn compute_static_dependency_atoms_by_entry(
+    &self,
     entries_count: usize,
     atoms: &[ChunkAtom],
+    atom_dependencies: &[Vec<usize>],
+    module_to_atom_idx: &IndexVec<ModuleIdx, Option<usize>>,
   ) -> Vec<BitSet> {
     let atom_count: u32 = atoms.len().try_into().expect("Too many atoms, u32 overflowed.");
     let mut static_dependency_atoms_by_entry = vec![BitSet::new(atom_count); entries_count];
-    for (atom_idx, atom) in atoms.iter().enumerate() {
-      let atom_bit: u32 = atom_idx.try_into().expect("Too many atoms, u32 overflowed.");
-      for entry_idx in atom.dependent_entries.index_of_one() {
-        static_dependency_atoms_by_entry[entry_idx as usize].set_bit(atom_bit);
+
+    if self.options.is_strict_execution_order_enabled() {
+      // Conservative strict edges are safe for cycle detection, but cannot prove an atom is loaded.
+      // Keep the `load_dependencies` reachability recorded in the dependent-entry bits.
+      for (atom_idx, atom) in atoms.iter().enumerate() {
+        let atom_bit: u32 = atom_idx.try_into().expect("Too many atoms, u32 overflowed.");
+        for entry_idx in atom.dependent_entries.index_of_one() {
+          static_dependency_atoms_by_entry[entry_idx as usize].set_bit(atom_bit);
+        }
+      }
+      return static_dependency_atoms_by_entry;
+    }
+
+    for (entry_module_idx, loaded_atoms) in self
+      .link_output
+      .entries
+      .iter()
+      .flat_map(|(&idx, entries)| std::iter::repeat_n(idx, entries.len()))
+      .zip(static_dependency_atoms_by_entry.iter_mut())
+    {
+      let Some(entry_atom_idx) = module_to_atom_idx[entry_module_idx] else {
+        continue;
+      };
+      let mut stack = vec![entry_atom_idx];
+      while let Some(atom_idx) = stack.pop() {
+        let atom_bit: u32 = atom_idx.try_into().expect("Too many atoms, u32 overflowed.");
+        if loaded_atoms.has_bit(atom_bit) {
+          continue;
+        }
+        loaded_atoms.set_bit(atom_bit);
+        stack.extend(atom_dependencies[atom_idx].iter().copied());
       }
     }
     static_dependency_atoms_by_entry

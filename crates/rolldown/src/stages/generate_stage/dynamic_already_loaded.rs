@@ -315,8 +315,7 @@ impl GenerateStage<'_> {
     module_to_atom_idx
   }
 
-  /// Builds atom edges matching the static imports that will be emitted. See
-  /// internal-docs/code-splitting/implementation.md#dynamic-already-loaded-analysis.
+  // See internal-docs/code-splitting/implementation.md#dynamic-already-loaded-analysis.
   fn compute_atom_dependencies(
     &self,
     atoms: &[ChunkAtom],
@@ -393,7 +392,6 @@ impl GenerateStage<'_> {
     targets
   }
 
-  /// Reconstructs symbol-derived dependencies from entry exports and included statements.
   fn referenced_symbol_owners(&self, module_idx: ModuleIdx) -> FxHashSet<ModuleIdx> {
     let meta = &self.link_output.metas[module_idx];
     let mut owners = FxHashSet::default();
@@ -605,7 +603,6 @@ impl GenerateStage<'_> {
     atoms
   }
 
-  /// Computes each entry's loaded-atom closure over the emitted dependency graph.
   fn compute_static_dependency_atoms_by_entry(
     &self,
     entries_count: usize,
@@ -617,10 +614,8 @@ impl GenerateStage<'_> {
     let mut static_dependency_atoms_by_entry = vec![BitSet::new(atom_count); entries_count];
 
     if self.options.is_strict_execution_order_enabled() {
-      // The strict atom edges over-approximate the emitted imports (see
-      // `compute_atom_dependencies`). Extra edges only make the cycle check refuse more folds, but
-      // here they would claim atoms as already loaded that the entry never imports. Keep the
-      // dependent-entry bits, which come from `load_dependencies` reachability.
+      // Conservative strict edges are safe for cycle detection, but cannot prove an atom is loaded.
+      // Keep the `load_dependencies` reachability recorded in the dependent-entry bits.
       for (atom_idx, atom) in atoms.iter().enumerate() {
         let atom_bit: u32 = atom_idx.try_into().expect("Too many atoms, u32 overflowed.");
         for entry_idx in atom.dependent_entries.index_of_one() {

@@ -568,6 +568,8 @@ Per changed file:
    scan, nothing is queued in `pending_rescans`, so the lost edits
    reach the graph only when a later change touches those files
    again — the same contract as `watchChange`.
+   The builtin `import.meta.glob` plugin is the in-tree consumer of this
+   chain — see [import-meta-glob](../import-meta-glob/implementation.md).
 3. **Delete handling** — a deleted module cannot be re-fetched; the
    update starts from its importers instead.
 

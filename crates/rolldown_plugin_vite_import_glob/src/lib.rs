@@ -24,6 +24,7 @@ pub struct ViteImportGlobPlugin {
   pub root: Option<String>,
   pub sourcemap: bool,
   pub restore_query_extension: bool,
+  /// See `internal-docs/import-meta-glob/implementation.md`.
   pub glob_matchers: FxDashMap<ArcStr, Vec<GlobMatcher>>,
 }
 

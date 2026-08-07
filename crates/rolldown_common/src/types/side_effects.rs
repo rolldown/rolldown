@@ -52,7 +52,7 @@ pub(crate) fn glob_match_with_normalized_pattern(pattern: &str, path: &str) -> b
   fast_glob::glob_match(&normalized_glob, path.trim_start_matches("./"))
 }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum HookSideEffects {
   True,
   False,

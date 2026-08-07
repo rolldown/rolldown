@@ -27,7 +27,7 @@ use crate::{
   builtin::{BuiltinChecker, is_node_like_builtin},
   external::{self, ExternalDecider, ExternalDeciderOptions},
   file_url::file_url_str_to_path_and_postfix,
-  resolver::{self, AdditionalOptions, Resolvers},
+  resolver::{self, AdditionalOptions, Resolvers, TsconfigPathsOption},
   utils::{
     BROWSER_EXTERNAL_ID, OPTIONAL_PEER_DEP_ID, is_bare_import, is_windows_drive_path,
     normalize_leading_slashes, normalize_path,
@@ -103,7 +103,7 @@ pub struct ViteResolveResolveOptions {
   pub try_index: bool,
   pub try_prefix: Option<String>,
   pub preserve_symlinks: bool,
-  pub tsconfig_paths: bool,
+  pub tsconfig_paths: TsconfigPathsOption,
 }
 
 #[derive(Hash, PartialEq, Eq)]
@@ -152,7 +152,7 @@ impl ViteResolvePlugin {
       as_src: options.resolve_options.as_src,
       root: PathBuf::from(&options.resolve_options.root),
       preserve_symlinks: options.resolve_options.preserve_symlinks,
-      tsconfig_paths: options.resolve_options.tsconfig_paths,
+      tsconfig_paths: options.resolve_options.tsconfig_paths.clone(),
       yarn_pnp: options.yarn_pnp,
     };
     let builtin_checker = Arc::new(BuiltinChecker::new(options.builtins));

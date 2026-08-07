@@ -1,3 +1,3 @@
 export function eagerValueB() {
-  return "value-b";
+  return 'value-b';
 }

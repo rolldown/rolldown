@@ -1,4 +1,4 @@
-const prefix = "value-a";
+const prefix = 'value-a';
 
 export function lazyValueA1() {
   return `${prefix}-1`;

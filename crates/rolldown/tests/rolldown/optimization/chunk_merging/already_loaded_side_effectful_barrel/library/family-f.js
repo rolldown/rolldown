@@ -1,3 +1,3 @@
 export function unusedValue() {
-  return "unused-family-value";
+  return 'unused-family-value';
 }

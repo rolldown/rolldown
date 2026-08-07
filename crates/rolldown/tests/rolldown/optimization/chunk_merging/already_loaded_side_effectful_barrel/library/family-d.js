@@ -1,3 +1,3 @@
 export function lazyValueB() {
-  return "value-b";
+  return 'value-b';
 }

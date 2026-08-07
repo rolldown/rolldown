@@ -1,13 +1,25 @@
 use std::collections::HashMap;
+use std::sync::Arc;
 
-use rolldown_plugin_replace::ReplaceOptions;
+use napi::bindgen_prelude::FnArgs;
+use rolldown_plugin_replace::{ReplaceOptions, ReplacementFn};
 use rustc_hash::FxBuildHasher;
 
-#[napi_derive::napi(object)]
-#[derive(Debug, Default)]
+use crate::types::js_callback::{
+  JsCallbackResultExt as _, MaybeAsyncJsCallback, MaybeAsyncJsCallbackExt as _,
+};
+
+#[napi_derive::napi(object, object_to_js = false)]
+#[derive(derive_more::Debug, Default)]
 pub struct BindingReplacePluginConfig {
   // It's ok we use `HashMap` here, because we don't care about the order of the keys.
   pub values: HashMap<String, String, FxBuildHasher>,
+  /// Targets whose replacement is computed per module. Kept apart from `values` so that the
+  /// all-strings config never pays for the JS boundary.
+  #[napi(ts_type = "Record<string, (id: string, target: string) => MaybePromise<string>>")]
+  #[debug(skip)]
+  pub value_callbacks:
+    Option<HashMap<String, MaybeAsyncJsCallback<FnArgs<(String, String)>, String>, FxBuildHasher>>,
   #[napi(ts_type = "[string, string]")]
   pub delimiters: Option<Vec<String>>,
   pub prevent_assignment: Option<bool>,
@@ -29,8 +41,27 @@ impl TryFrom<BindingReplacePluginConfig> for ReplaceOptions {
         ));
       }
     };
+    let value_callbacks = config
+      .value_callbacks
+      .unwrap_or_default()
+      .into_iter()
+      .map(|(target, callback)| {
+        let callback: Arc<ReplacementFn> = Arc::new(move |id: String, target: String| {
+          let callback = Arc::clone(&callback);
+          Box::pin(async move {
+            callback
+              .await_call((id, target).into())
+              .await
+              .context("replace plugin value callback")
+              .map_err(anyhow::Error::from)
+          })
+        });
+        (target, callback)
+      })
+      .collect();
     Ok(Self {
       values: config.values,
+      value_callbacks,
       delimiters,
       prevent_assignment: config.prevent_assignment.unwrap_or(false),
       object_guards: config.object_guards.unwrap_or(false),

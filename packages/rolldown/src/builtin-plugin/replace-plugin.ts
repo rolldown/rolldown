@@ -2,6 +2,16 @@ import type { BindingReplacePluginConfig } from '../binding.cjs';
 import { BuiltinPlugin, makeBuiltinPluginCallable } from './utils';
 
 /**
+ * A replacement is either a literal, or a function called with the id of the module being
+ * transformed. The function runs once per match, like `@rollup/plugin-replace`.
+ */
+export type ReplacementValue =
+  | string
+  | number
+  | boolean
+  | ((id: string) => string | Promise<string>);
+
+/**
  * Replaces targeted strings in files while bundling.
  *
  * @example
@@ -27,16 +37,24 @@ import { BuiltinPlugin, makeBuiltinPluginCallable } from './utils';
  * @category Builtin Plugins
  */
 export function replacePlugin(
-  values: BindingReplacePluginConfig['values'] = {},
-  options: Omit<BindingReplacePluginConfig, 'values'> = {},
+  values: Record<string, ReplacementValue> = {},
+  options: Omit<BindingReplacePluginConfig, 'values' | 'valueCallbacks'> = {},
 ): BuiltinPlugin {
-  // Convert all values to string during runtime
+  const stringValues: BindingReplacePluginConfig['values'] = {};
+  let valueCallbacks: BindingReplacePluginConfig['valueCallbacks'];
+
   Object.keys(values).forEach((key) => {
     const value = values[key];
-    if (typeof value !== 'string') {
-      values[key] = String(value);
+    if (typeof value === 'function') {
+      valueCallbacks ??= {};
+      valueCallbacks[key] = async (id: string) => String(await value(id));
+    } else {
+      // Convert all values to string during runtime
+      stringValues[key] = typeof value === 'string' ? value : String(value);
     }
   });
 
-  return makeBuiltinPluginCallable(new BuiltinPlugin('builtin:replace', { ...options, values }));
+  return makeBuiltinPluginCallable(
+    new BuiltinPlugin('builtin:replace', { ...options, values: stringValues, valueCallbacks }),
+  );
 }

@@ -2966,6 +2966,7 @@ name = "rolldown_plugin_replace"
 version = "1.2.3"
 dependencies = [
  "anyhow",
+ "derive_more",
  "oxc",
  "regex",
  "regress",

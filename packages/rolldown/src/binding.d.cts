@@ -2775,6 +2775,11 @@ export declare enum BindingRebuildStrategy {
 
 export interface BindingReplacePluginConfig {
   values: Record<string, string>
+  /**
+   * Targets whose replacement is computed per module. Kept apart from `values` so that the
+   * all-strings config never pays for the JS boundary.
+   */
+  valueCallbacks?: Record<string, (id: string, target: string) => MaybePromise<string>>
   delimiters?: [string, string]
   preventAssignment?: boolean
   objectGuards?: boolean

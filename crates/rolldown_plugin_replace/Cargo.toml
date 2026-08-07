@@ -17,6 +17,7 @@ doctest = false
 
 [dependencies]
 anyhow = { workspace = true }
+derive_more = { workspace = true }
 oxc = { workspace = true }
 regex = { workspace = true }
 regress = { workspace = true }

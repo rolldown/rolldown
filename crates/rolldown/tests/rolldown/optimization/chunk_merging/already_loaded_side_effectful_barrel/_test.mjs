@@ -43,10 +43,10 @@ assert.equal(
   `package initialization must run exactly once; got ${JSON.stringify(log)}`,
 );
 
-const distDir = new URL("./dist/", import.meta.url);
+const distDir = path.join(import.meta.dirname, "dist");
 const jsFiles = fs.readdirSync(distDir).filter((file) => file.endsWith(".js"));
 for (const file of jsFiles) {
-  const code = fs.readFileSync(path.join(distDir.pathname, file), "utf8");
+  const code = fs.readFileSync(path.join(distDir, file), "utf8");
   assert.doesNotMatch(
     code,
     /unused-family-value/,
@@ -61,7 +61,7 @@ assert.ok(
 
 for (const file of ["lazy-consumer-a.js", "lazy-consumer-b.js", "lazy-consumer-c.js"]) {
   assert.doesNotMatch(
-    fs.readFileSync(path.join(distDir.pathname, file), "utf8"),
+    fs.readFileSync(path.join(distDir, file), "utf8"),
     /["']\.\/library\.js["']/,
     `${file} should not import a barrel side effect already executed by entry.js`,
   );

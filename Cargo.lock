@@ -3038,6 +3038,7 @@ name = "rolldown_plugin_vite_import_glob"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "arcstr",
  "fast-glob",
  "itoa",
  "oxc",

@@ -41,7 +41,7 @@ jobs:
       - name: Build `@rolldown/test-dev-server`
         run: vp run --filter '@rolldown/test-dev-server' build
 
-      # `test:wasi` is `test:main` with `ROLLDOWN_WASI_TEST=1`, which skips the tests that the wasm binding cannot pass; they are tracked in https://github.com/rolldown/rolldown/issues/10609.
+      # `test:wasi` is `test:main` with `ROLLDOWN_WASI_TEST=1`, which skips the tests that the wasm binding cannot pass; every skip states its own reason.
       - name: Node Test
         run: vp run --filter rolldown-tests test:wasi
 

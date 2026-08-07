@@ -4,7 +4,7 @@ import { isWasiTest } from 'rolldown-tests/utils';
 import { expect } from 'vitest';
 
 export default defineTest({
-  // Under the wasm binding the error arrives as a bare `my-error`, without the `[plugin my-plugin] <id>:1:4` diagnostic asserted below. See https://github.com/rolldown/rolldown/issues/10609.
+  // Under the wasm binding the error arrives as a bare `my-error`, without the `[plugin my-plugin] <id>:1:4` diagnostic asserted below.
   skip: isWasiTest,
   config: {
     plugins: [

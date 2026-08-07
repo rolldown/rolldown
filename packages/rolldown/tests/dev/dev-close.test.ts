@@ -37,7 +37,7 @@ function dev(
 // Fix: after `close()`, `ensureCurrentBuildFinish()` is a no-op rather than
 // an error — there is no ongoing bundle to wait for.
 //
-// Under the wasm binding `close()` tears down the shared tokio runtime, so the no-op call panics with "Access tokio runtime failed in spawn". See https://github.com/rolldown/rolldown/issues/10609.
+// Under the wasm binding `close()` tears down the shared tokio runtime, so the no-op call panics with "Access tokio runtime failed in spawn". See https://github.com/rolldown/rolldown/issues/10639.
 test.skipIf(isWasiTest)(
   'ensureCurrentBuildFinish after close resolves instead of rejecting',
   { timeout: TEST_TIMEOUT },

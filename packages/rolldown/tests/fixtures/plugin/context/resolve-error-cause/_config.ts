@@ -5,7 +5,7 @@ import { expect, vi } from 'vitest';
 const fn = vi.fn();
 
 export default defineTest({
-  // Under the wasm binding the error arrives with a `wasm://` stack and none of the `Caused by:` chain asserted below. See https://github.com/rolldown/rolldown/issues/10609.
+  // Under the wasm binding the error arrives with a `wasm://` stack and none of the `Caused by:` chain asserted below.
   skip: isWasiTest,
   config: {
     plugins: [

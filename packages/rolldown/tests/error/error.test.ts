@@ -165,7 +165,7 @@ test('call transformContext error', async () => {
 });
 
 // #4141
-// Under the wasm binding the `structuredClone` failure degrades to a plain `Error`, losing the `DataCloneError` name. See https://github.com/rolldown/rolldown/issues/10609.
+// Under the wasm binding the `structuredClone` failure degrades to a plain `Error`, losing the `DataCloneError` name.
 test.skipIf(isWasiTest)('should print original error if it can not be assigned', async () => {
   const error = await buildWithPlugin({
     name: 'test',

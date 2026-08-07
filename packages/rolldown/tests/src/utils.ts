@@ -8,7 +8,7 @@ import type {
   RolldownOutput as RollupOutput,
 } from 'rolldown';
 
-/** `true` when the suite runs against the WASI binding, set by the WASI lane and `just test-wasi`; the tests it skips are tracked in https://github.com/rolldown/rolldown/issues/10609. */
+/** `true` when the suite runs against the WASI binding, set by the `wasi` CI job and `just test-wasi`; every test it skips states its own reason. */
 export const isWasiTest = process.env.ROLLDOWN_WASI_TEST === '1';
 
 /**

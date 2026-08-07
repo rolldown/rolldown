@@ -6,7 +6,6 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## entry.js
 
 ```js
-import "./library.js";
 //#region library/family-a.js
 function eagerValueA() {
 	return "value-a";
@@ -16,6 +15,10 @@ function eagerValueA() {
 function eagerValueB() {
 	return "value-b";
 }
+//#endregion
+//#region library/index.js
+(globalThis.fixtureLog ??= []).push("initialize");
+globalThis.fixtureInitialized = true;
 //#endregion
 //#region eager-consumer.js
 (globalThis.fixtureLog ??= []).push(`eager:${eagerValueB()}`);
@@ -35,7 +38,7 @@ export { loadPart };
 ## lazy-consumer-a.js
 
 ```js
-import "./library.js";
+import "./entry.js";
 //#region library/family-c.js
 const prefix = "value-a";
 function lazyValueA1() {
@@ -54,7 +57,7 @@ function lazyValueA2() {
 ## lazy-consumer-b.js
 
 ```js
-import "./library.js";
+import "./entry.js";
 //#region library/family-d.js
 function lazyValueB() {
 	return "value-b";
@@ -69,7 +72,7 @@ function lazyValueB() {
 ## lazy-consumer-c.js
 
 ```js
-import "./library.js";
+import "./entry.js";
 //#region library/family-e.js
 function lazyValueC() {
 	return "value-c";
@@ -77,16 +80,6 @@ function lazyValueC() {
 //#endregion
 //#region lazy-consumer-c.js
 (globalThis.fixtureLog ??= []).push(`lazy-c:${lazyValueC()}`);
-//#endregion
-
-```
-
-## library.js
-
-```js
-//#region library/index.js
-(globalThis.fixtureLog ??= []).push("initialize");
-globalThis.fixtureInitialized = true;
 //#endregion
 
 ```

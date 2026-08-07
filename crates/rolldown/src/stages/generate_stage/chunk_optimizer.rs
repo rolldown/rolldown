@@ -716,6 +716,8 @@ impl GenerateStage<'_> {
   /// new exports to the entry chunk. A module is safe to merge if:
   /// 1. It has no exports of its own (purely internal implementation code), OR
   /// 2. All its exports are already part of the entry's resolved exports (re-exported by the entry)
+  ///
+  /// Re-exports owned by modules outside the merge cannot widen the chunk's signature.
   pub(super) fn can_merge_without_changing_entry_signature(
     &self,
     chunk: &Chunk,
@@ -726,6 +728,7 @@ impl GenerateStage<'_> {
     };
     let metas = &self.link_output.metas;
     let module_table = &self.link_output.module_table;
+    let merged: FxHashSet<ModuleIdx> = modules.iter().copied().collect();
 
     let entry_exports = &metas[entry_module_idx].resolved_exports;
 
@@ -742,6 +745,11 @@ impl GenerateStage<'_> {
       // 1. The module has no exports (empty resolved_exports)
       // 2. All of the module's exports point to symbols that the entry also exports
       module_meta.resolved_exports.iter().all(|(export_name, resolved_export)| {
+        let canonical_ref =
+          self.link_output.symbol_db.canonical_ref_for(resolved_export.symbol_ref);
+        if !merged.contains(&canonical_ref.owner) {
+          return true;
+        }
         // Check if the entry has an export with the same name that resolves to the same symbol
         entry_exports
           .get(export_name)

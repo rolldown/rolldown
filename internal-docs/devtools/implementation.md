@@ -232,7 +232,10 @@ The `@rolldown/debug` package provides:
 ```ts
 import { parseToEvents, type Event, type StringRef } from '@rolldown/debug';
 
-const data = fs.readFileSync('<InputOptions.cwd>/node_modules/.rolldown/<safe-session-component>/logs.json', 'utf8');
+const data = fs.readFileSync(
+  '<InputOptions.cwd>/node_modules/.rolldown/<safe-session-component>/logs.json',
+  'utf8',
+);
 const events = parseToEvents(data.trim());
 // events: Array<StringRef | { timestamp, session_id, action: "BuildStart" | "ModuleGraphReady" | "PackageGraphReady" | ... }>
 ```

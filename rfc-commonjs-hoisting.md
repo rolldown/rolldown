@@ -431,23 +431,11 @@ It keeps the wrapper, through the existing transitive rule. Take a wrapped ESM m
 
 ## Drawbacks
 
-The drawbacks fall into three groups, sorted by their relation to the option. The first group arrives when the code lands. The second is what a user pays to turn the option on. The third waits until the option becomes the default. Only the first group is unavoidable.
+Both drawbacks arrive when the code lands, whatever the value of the option. A predicate bug that emits a quiet, wrong bundle is not a third entry. That is a failure mode, not a design cost, and [the option](#the-option) exists to bound it.
 
-**When the code lands, whatever the value of the option:**
-
-**The wrapper decision stops being local.** Today it depends only on the syntax of an `(importer, importee, ImportKind)` triple. That is why it can run before symbol binding and tree shaking. Condition 3 adds an input from the whole graph. The predicate stays a pure function of the module graph, and it runs once. But "syntax only" was a property worth having, and this change gives it up.
+**The wrapper decision starts to read the whole graph.** Today rolldown decides each wrapper from one import edge: the importer, the importee, and the `ImportKind`. One edge is enough, so the decision can run before symbol binding and tree shaking, and one edge explains every wrapper. Condition 3 ends that: "does any `require()` reach this module?" is a question about every edge in the graph at once. The predicate still runs once, and it stays deterministic. But the answer to "why did this module keep its wrapper?" can now sit anywhere in the graph.
 
 **Two code paths to maintain.** Every later pass gets a second CommonJS shape to handle: the finalizer, chunk linking, HMR, and `preserveModules`. Those branches exist whether or not a user turns the option on. So this cost arrives in full on the first day, and the option cannot defer it.
-
-**Only for a build that turns the option on:**
-
-**A bug is quiet.** A bug in the predicate does not fail the build. It emits a bundle that runs and is wrong in a small way, which is the hardest kind to debug. The option exists for this drawback. It limits the exposure to the users who asked for the feature.
-
-**Deferred until the option becomes the default:**
-
-**Snapshot churn.** With the option off, every existing snapshot stays as it is. New coverage arrives as variants with the option on.
-
-The wide diff comes when `commonjs` becomes the default, and it lands across a large part of the Rust suite at once. A wide diff hides a regression. The corpus is the answer, because it asserts behaviour and not output shape. But somebody must still review that diff. The option only delays the review.
 
 ## Rationale and alternatives
 

@@ -307,7 +307,9 @@ impl BindingNormalizedOptions {
   }
 
   #[napi(getter, ts_return_type = "false | 'dce-only' | MinifyOptions")]
-  pub fn minify(&self) -> napi::Result<Either3<bool, &'static str, oxc_minify_napi::MinifyOptions>> {
+  pub fn minify(
+    &self,
+  ) -> napi::Result<Either3<bool, &'static str, oxc_minify_napi::MinifyOptions>> {
     Ok(match &self.try_get_inner()?.minify {
       MinifyOptions::Disabled => Either3::A(false),
       MinifyOptions::DeadCodeEliminationOnly(_) => Either3::B("dce-only"),

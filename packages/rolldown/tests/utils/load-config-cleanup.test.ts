@@ -73,9 +73,9 @@ describe('loadConfig bundle cleanup', () => {
     // the config's own directory.
     expect(outputDir).toBe(fixtureDir);
     // The imported entry is removed immediately (it already lives in memory)…
-    await expect(access(path.join(fixtureDir, 'rolldown.config.cleanup.mjs'))).rejects.toMatchObject(
-      { code: 'ENOENT' },
-    );
+    await expect(
+      access(path.join(fixtureDir, 'rolldown.config.cleanup.mjs')),
+    ).rejects.toMatchObject({ code: 'ENOENT' });
     // …while sibling outputs a deferred config function may still import stay
     // on disk until the process exits.
     await expect(access(path.join(fixtureDir, 'config-chunk.mjs'))).resolves.toBeUndefined();

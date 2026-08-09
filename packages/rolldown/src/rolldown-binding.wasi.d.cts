@@ -1554,6 +1554,7 @@ export declare class BindingCallableBuiltinPlugin {
 }
 
 export declare class BindingChunkingContext {
+  dropInner(): ExternalMemoryStatus
   getModuleInfo(moduleId: string): BindingModuleInfo | null
 }
 
@@ -1608,6 +1609,7 @@ export declare class BindingDevEngine {
 }
 
 export declare class BindingLoadPluginContext {
+  dropInner(): ExternalMemoryStatus
   inner(): BindingPluginContext
   addWatchFile(file: string): void
 }
@@ -1708,10 +1710,12 @@ export declare class BindingModuleInfo {
   exports: Array<string>
   isEntry: boolean
   inputFormat: 'es' | 'cjs' | 'unknown'
+  dropInner(): ExternalMemoryStatus
   get code(): string | null
 }
 
 export declare class BindingNormalizedOptions {
+  dropInner(): ExternalMemoryStatus
   get input(): Array<string> | Record<string, string>
   get cwd(): string
   get platform(): 'node' | 'browser' | 'neutral'
@@ -1783,6 +1787,7 @@ export declare class BindingOutputChunk {
 }
 
 export declare class BindingPluginContext {
+  dropInner(): ExternalMemoryStatus
   closeIdentity(): string
   load(specifier: string, sideEffects: boolean | 'no-treeshake' | undefined, packageJsonPath?: string): Promise<void>
   resolve(specifier: string, importer?: string | undefined | null, extraOptions?: BindingPluginContextResolveOptions | undefined | null): Promise<BindingPluginContextResolvedId | null>
@@ -1796,6 +1801,7 @@ export declare class BindingPluginContext {
 }
 
 export declare class BindingRenderedChunk {
+  dropInner(): ExternalMemoryStatus
   get name(): string
   get isEntry(): boolean
   get isDynamicEntry(): boolean
@@ -1809,6 +1815,7 @@ export declare class BindingRenderedChunk {
 }
 
 export declare class BindingRenderedChunkMeta {
+  dropInner(): ExternalMemoryStatus
   get chunks(): Record<string, BindingRenderedChunk>
 }
 
@@ -1841,6 +1848,7 @@ export declare class BindingSourceMap {
 }
 
 export declare class BindingTransformPluginContext {
+  dropInner(): ExternalMemoryStatus
   getCombinedSourcemap(): string
   inner(): BindingPluginContext
   addWatchFile(file: string): void

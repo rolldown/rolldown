@@ -486,7 +486,10 @@ jobs:
       # lane builds a RELEASE wasm, whose memory slopes differ from the DEBUG
       # wasm these budgets were measured against.
       - name: Test @rolldown/browser/workerd end-to-end in real workerd
-        run: node scripts/misc/check-workerd-suite.mjs
+        # --rounds=20 shrinks the slope quantum to ~0.0037 MiB/rebuild so the
+        # moduleBoxDelta control (threshold 0.014) has real detection margin;
+        # per-rebuild slopes and the MEMORY_BUDGETS bands are round-invariant.
+        run: node scripts/misc/check-workerd-suite.mjs --rounds=20
 
       # `just build-browser` runs the single-thread (wasm32-wasip1) binding
       # build. WASI loader regeneration is per-flavor with distinct file names

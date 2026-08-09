@@ -499,6 +499,52 @@ async function caseConcurrency() {
 }
 
 // ---------------------------------------------------------------------------
+// CASE 6: fire-and-forget `this.load()` -- the documented un-awaited pattern
+// (docs/apis/plugin-api/inter-plugin-communication.md) plus the self-load
+// cycle shape of tests/fixtures/plugin/context/cycle-load-error. The
+// un-awaited native call keeps a napi borrow on the plugin-context box past
+// the hook's settle -- exactly when the eager-release wiring wants to drop it
+// -- so the release must defer to the call's completion: the build must stay
+// green and no late continuation may surface an error. An awaited load runs
+// alongside as the control.
+async function caseFireAndForgetLoad() {
+  const files = fanFiles();
+  const before = getWorkerdRuntimeStats().liveInstances;
+  let awaitedCodeType = null;
+  const result = await build({
+    module: wasmModule,
+    input: 'fan:entry.js',
+    plugins: [
+      {
+        name: 'fire-and-forget-load',
+        buildStart() {
+          // Documented shape: trigger loading, deliberately no await.
+          this.load({ id: 'fan:shared.js' });
+        },
+        async load(id) {
+          // cycle-load-error shape: un-awaited self-load of the module
+          // currently loading (a CYCLE_LOADING warning, never an error).
+          this.load({ id });
+          if (id === 'fan:entry.js') {
+            const info = await this.load({ id: 'fan:leaf-0-0.js' });
+            awaitedCodeType = typeof info?.code;
+          }
+          return null;
+        },
+      },
+      fanPlugin(newTrace(), files),
+    ],
+    output: { format: 'esm' },
+  });
+  const after = getWorkerdRuntimeStats().liveInstances;
+  return {
+    chunkCount: result.output.filter((item) => item.type === 'chunk').length,
+    awaitedCodeType,
+    liveDelta: after - before,
+  };
+}
+
+// ---------------------------------------------------------------------------
 // CASE 5: capabilities, as reported from inside workerd.
 async function caseCapabilities() {
   const instance = await createInstance(wasmModule);
@@ -734,6 +780,7 @@ export default {
           ['lifecycle', caseLifecycle],
           ['concurrency', caseConcurrency],
           ['capabilities', caseCapabilities],
+          ['fireAndForgetLoad', caseFireAndForgetLoad],
         ];
         for (const [name, fn] of steps) {
           try {

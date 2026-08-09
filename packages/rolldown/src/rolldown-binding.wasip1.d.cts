@@ -1554,6 +1554,7 @@ export declare class BindingCallableBuiltinPlugin {
 }
 
 export declare class BindingChunkingContext {
+  dropInner(): ExternalMemoryStatus
   getModuleInfo(moduleId: string): BindingModuleInfo | null
 }
 
@@ -1608,6 +1609,7 @@ export declare class BindingDevEngine {
 }
 
 export declare class BindingLoadPluginContext {
+  dropInner(): ExternalMemoryStatus
   inner(): BindingPluginContext
   addWatchFile(file: string): void
 }
@@ -1708,10 +1710,12 @@ export declare class BindingModuleInfo {
   exports: Array<string>
   isEntry: boolean
   inputFormat: 'es' | 'cjs' | 'unknown'
+  dropInner(): ExternalMemoryStatus
   get code(): string | null
 }
 
 export declare class BindingNormalizedOptions {
+  dropInner(): ExternalMemoryStatus
   get input(): Array<string> | Record<string, string>
   get cwd(): string
   get platform(): 'node' | 'browser' | 'neutral'
@@ -1783,6 +1787,7 @@ export declare class BindingOutputChunk {
 }
 
 export declare class BindingPluginContext {
+  dropInner(): ExternalMemoryStatus
   closeIdentity(): string
   load(specifier: string, sideEffects: boolean | 'no-treeshake' | undefined, packageJsonPath?: string): Promise<void>
   resolve(specifier: string, importer?: string | undefined | null, extraOptions?: BindingPluginContextResolveOptions | undefined | null): Promise<BindingPluginContextResolvedId | null>
@@ -1796,6 +1801,7 @@ export declare class BindingPluginContext {
 }
 
 export declare class BindingRenderedChunk {
+  dropInner(): ExternalMemoryStatus
   get name(): string
   get isEntry(): boolean
   get isDynamicEntry(): boolean
@@ -1809,6 +1815,7 @@ export declare class BindingRenderedChunk {
 }
 
 export declare class BindingRenderedChunkMeta {
+  dropInner(): ExternalMemoryStatus
   get chunks(): Record<string, BindingRenderedChunk>
 }
 
@@ -1841,6 +1848,7 @@ export declare class BindingSourceMap {
 }
 
 export declare class BindingTransformPluginContext {
+  dropInner(): ExternalMemoryStatus
   getCombinedSourcemap(): string
   inner(): BindingPluginContext
   addWatchFile(file: string): void
@@ -2268,7 +2276,9 @@ export interface BindingEsmExternalRequirePluginConfig {
 export interface BindingExperimentalDevModeOptions {
   host?: string
   port?: number
-  implement?: string
+  implement: string
+  /** @deprecated Common runtime injection will be disabled by default in the future. */
+  skipCommonRuntimeInjection?: boolean
   lazy?: boolean
 }
 
@@ -2478,6 +2488,8 @@ export interface BindingInputOptions {
   keepNames?: boolean
   checks?: BindingChecksOptions
   deferSyncScanData?: undefined | (() => BindingDeferSyncScanData[])
+  /** Asked for while the build is closing, so what it returns includes `closeBundle`. */
+  pluginTimings?: undefined | (() => BindingPluginTimingsMeasurement)
   makeAbsoluteExternalsRelative?: BindingMakeAbsoluteExternalsRelative
   devtools?: BindingDevtoolsOptions
   invalidateJsSideCache?: () => void
@@ -2746,6 +2758,33 @@ export interface BindingPluginOptions {
 export declare enum BindingPluginOrder {
   Pre = 0,
   Post = 1
+}
+
+/**
+ * What one callback cost, measured inside it on the JavaScript side — the one place the
+ * measurement exists, since this side can only bracket dispatch and completion.
+ */
+export interface BindingPluginTiming {
+  /** The plugin the callback belongs to, or the options it was configured on. */
+  owner: string
+  kind: 'plugin' | 'outputOption' | 'inputOption'
+  hook: string
+  calls: number
+  ms: number
+  maxInFlight: number
+  /** How much of `ms` is double counted because calls overlapped. */
+  overlapMs: number
+  /**
+   * Whether `ms` may be compared against another row's — false once two calls of this hook
+   * overlapped, because then their spans cover work each other was doing.
+   */
+  rankable: boolean
+}
+
+export interface BindingPluginTimingsMeasurement {
+  /** Wall time in which any measured callback was running, counting overlap once. */
+  busyMs: number
+  rows: Array<BindingPluginTiming>
 }
 
 export interface BindingPluginWithIndex {

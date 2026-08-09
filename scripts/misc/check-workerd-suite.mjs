@@ -55,32 +55,36 @@ const measureOnly = flags.has('--measure');
 // MEMORY BUDGETS -- MiB of Wasm linear memory retained per identical rebuild
 // on ONE reusable instance.
 //
-// !!! THESE BUDGETS ENCODE A KNOWN, UNFIXED LEAK -- TIGHTEN THEM WHEN IT LANDS.
+// Every hook-input box now has an eager-release path on this flavor
+// (`dropInner()` on rendered chunks/meta, module infos, plugin contexts and
+// normalized options, wired through the hook wrappers behind
+// `shouldEagerlyFreeOutputs()`), so the old unbounded retention -- the native
+// payload behind every rendered chunk handed to a JavaScript hook staying
+// alive for the whole lifetime of the instance -- is gone: `renderchunk*`
+// dropped from 0.528/0.549 to the numbers below, and reading `chunk.modules`
+// no longer costs anything over not reading it. What remains is the shared
+// per-rebuild build/marshalling slope (see the `nohooks` note) plus a small
+// (~0.035) per-rebuild cost for installing the extra output hook itself.
+// These budgets exist to catch a REGRESSION -- any release path silently
+// dropping out -- and the floors below catch further improvements that would
+// otherwise leave stale ceilings behind.
 //
-// `BindingRenderedChunk` has no `dropInner()`, so the native payload behind
-// every rendered chunk handed to a JavaScript hook stays alive for the whole
-// lifetime of the instance. `freeOutputs()` can release `BindingOutputs`
-// chunks/assets; nothing can release a rendered chunk. The numbers below are
-// therefore NOT "flat" -- they are the CURRENT measured slopes plus headroom.
-// Their job today is to catch a REGRESSION (the leak growing, or a currently
-// free path starting to leak) and to fail loudly when that happens.
-//
-// >>> WHEN `BindingRenderedChunk::dropInner()` LANDS: re-run this script with
-// >>> `--measure` and drop every budget to just above the new numbers. If they
-// >>> come back near zero, collapse this table to one flat budget and delete
-// >>> this block. Leaving these budgets in place would silently accept the
-// >>> leak forever, which is exactly the failure mode this suite exists to
-// >>> prevent.
-//
-// Measured 2026-07-28 on the DEBUG wasm that BOTH CI lanes build (~29.8 MiB
-// `rolldown-binding.wasm32-wasip1.wasm`), 300-module graph, 12 rounds, 2
-// warmup rounds; three consecutive runs agreed to within 0.014 MiB/rebuild
-// (two 64 KiB Wasm pages). Budgets carry ~25% headroom over the measured
-// value to absorb that quantisation plus toolchain differences between this
-// machine and the CI builder. That headroom is far below the signal each
-// variant is guarding: a generateBundle release regression would push
-// `generatebundle` to ~0.53, and any doubling of the base leak puts
-// `nohooks` at ~0.57 -- both well over budget.
+// Measured 2026-08-09 (post eager-release) on the DEBUG wasm that BOTH CI
+// lanes build (~29.6 MiB `rolldown-binding.wasm32-wasip1.wasm`), 300-module
+// graph, 2 warmup rounds, at --rounds=20 -- the count ci.yml runs. The window
+// length is part of the number: rebuild growth is CONVEX (dlmalloc arena
+// stepping retains more per round in the tail), so the same build measures
+// 0.278/0.278/0.313/0.313 over 12 rounds and the values below over 20. Five
+// consecutive 20-round runs agreed EXACTLY for `nohooks` and `renderchunk*`;
+// `generatebundle` alone varied (0.309-0.342 -- GC timing decides when the
+// marshaled bundle copies' JS handles die, which moves a page boundary), so
+// its `measured` records a mid value and its band swallows the spread.
+// Budgets carry ~25% headroom over the measured value to absorb page
+// quantisation plus toolchain differences between this machine and the CI
+// builder. That headroom is far below the signal each variant is guarding:
+// the eager release of the renderChunk argument regressing puts
+// `renderchunk-nomodules` back at ~0.55, and any doubling of the base slope
+// puts `nohooks` at ~0.72 -- both well over budget.
 const MEMORY_BUDGETS = {
   // Baseline -- and NOT "the cost of a bare rebuild". The slope graph exists
   // only inside `slopeGraphPlugin`'s map, so that plugin is structurally
@@ -93,19 +97,29 @@ const MEMORY_BUDGETS = {
   // Consequence for this table: only the variant-to-variant DELTAS isolate one
   // hook's retention, because that shared baseline cancels out of them. A move
   // in `nohooks` itself means the shared build/marshalling path changed.
-  nohooks: { measured: 0.285, budget: 0.38 },
-  // A generateBundle hook that READS the chunks it is given. Currently costs
-  // NOTHING extra, because the per-invocation bundle copy IS released when the
-  // hook returns -- the contract pinned by
+  nohooks: { measured: 0.36, budget: 0.45 },
+  // A generateBundle hook that READS the chunks it is given. Costs NOTHING
+  // extra, because the per-invocation bundle copy IS released when the hook
+  // returns -- the contract pinned by
   // packages/rolldown/tests/workerd-output-ownership.test.ts. This variant is
-  // the regression guard on that release: if it ever starts tracking
-  // `renderchunk-nomodules`, the generateBundle copy stopped being freed.
-  generatebundle: { measured: 0.285, budget: 0.38 },
-  // Receiving a BindingRenderedChunk in renderChunk. THIS is the leak.
-  'renderchunk-nomodules': { measured: 0.528, budget: 0.66 },
-  // ...plus marshalling one BindingRenderedModule per module for chunk.modules
-  // (a further ~0.021 MiB/rebuild on a 300-module graph).
-  renderchunk: { measured: 0.549, budget: 0.7 },
+  // the regression guard on that release: if it ever starts tracking well
+  // above the baseline, the generateBundle copy stopped being freed.
+  generatebundle: { measured: 0.32, budget: 0.4 },
+  // Receiving a BindingRenderedChunk in renderChunk. The chunk argument is
+  // snapshot-and-released per invocation now, so this is baseline plus the
+  // cost of installing the extra hook, NOT a payload retention (it no longer
+  // scales with output size; over the 20-round window the arena tail even
+  // puts it slightly BELOW `nohooks` -- see the workload-resolution control).
+  // If this variant climbs back toward 0.55, the renderChunk eager release
+  // broke.
+  'renderchunk-nomodules': { measured: 0.342, budget: 0.43 },
+  // ...plus reading `chunk.modules`, which marshals one BindingRenderedModule
+  // per module. Identical to `renderchunk-nomodules` today because the module
+  // boxes are snapshot-and-released too. The shared band alone cannot see the
+  // module-box cost returning (0.021 fits under the ceiling), so the
+  // `moduleBoxDelta` control below asserts the two rows stay within two page
+  // quanta of each other.
+  renderchunk: { measured: 0.342, budget: 0.43 },
 };
 
 // Every variant is enforced as a two-sided BAND, not just a ceiling. `budget`
@@ -115,14 +129,17 @@ const MEMORY_BUDGETS = {
 // back into with CI green the whole way.
 //
 // The ratio has to sit between the two things it separates:
-//   * NOISE -- three consecutive runs agreed to within 0.014 MiB/rebuild, and
-//     the same numbers reproduced unchanged on a Linux CI runner. The slope
-//     window is 10 samples wide, so ONE extra 64 KiB page of total growth only
-//     moves a slope by 0.007. 25% of the smallest measured slope is 0.071
-//     MiB/rebuild -- ~5x the widest spread ever seen here.
-//   * SIGNAL -- retiring the BindingRenderedChunk leak drops
-//     `renderchunk-nomodules` by ~0.243 MiB/rebuild (0.528 -> ~0.285, i.e. down
-//     to the shared baseline), landing 28% below its 0.396 floor. Detected.
+//   * NOISE -- eight 20-round runs of the 2026-08-09 re-derivation agreed
+//     EXACTLY for `nohooks` and `renderchunk*`; the widest spread ever seen
+//     is `generatebundle`'s GC-timing band of 0.033 (0.309-0.342), and its
+//     floor of 0.240 sits 0.069 below the lowest value observed in it. 25% of
+//     the smallest measured slope is 0.080 MiB/rebuild -- ~2.4x that widest
+//     spread.
+//   * SIGNAL -- proven in anger: the hook-input eager release landing dropped
+//     `renderchunk-nomodules` from 0.528 to 0.313 (12-round window), 21%
+//     below its then-floor of 0.396, which is exactly the detection that
+//     forced this table's 2026-08-09 re-derivation. A shift of that size
+//     stays detectable.
 const SLOPE_FLOOR_RATIO = 0.75;
 
 // ---------------------------------------------------------------------------
@@ -201,7 +218,8 @@ const behavior = await dispatch('/behavior');
 if (behavior.error) throw new Error(`worker failed before reporting: ${behavior.error}`);
 assert.equal(behavior.ok, true, `a case threw unexpectedly: ${JSON.stringify(behavior, null, 2)}`);
 
-const { multiModuleBuild, errorSurface, lifecycle, concurrency, capabilities } = behavior.cases;
+const { multiModuleBuild, errorSurface, lifecycle, concurrency, capabilities, fireAndForgetLoad } =
+  behavior.cases;
 
 // --- CASE 1: multi-module build through the high-level API -----------------
 assert.equal(multiModuleBuild.chunkCount, 1, 'expected exactly one chunk');
@@ -245,7 +263,7 @@ assert.equal(
 assert.equal(generated.stamp, '-transformed-by-workerd-suite');
 assert.equal(generated.moduleTag, '390-transformed-by-workerd-suite');
 console.log(
-  `  [1/6] multi-module build       ok  (${multiModuleBuild.moduleCount} modules in chunk, ` +
+  `  [1/7] multi-module build       ok  (${multiModuleBuild.moduleCount} modules in chunk, ` +
     `total=${generated.total}) ${elapsed()}`,
 );
 
@@ -302,7 +320,7 @@ assert.equal(
   'a FAILED build({module}) must still dispose the private instance it created',
 );
 console.log(
-  `  [2/6] error surface            ok  (${caught.errorCount} error(s), code frame ` +
+  `  [2/7] error surface            ok  (${caught.errorCount} error(s), code frame ` +
     `inlined in message, ${caught.frameCount} separate .frame, no ANSI, ` +
     `failed build({module}) self-disposed) ${elapsed()}`,
 );
@@ -325,7 +343,7 @@ assert.equal(lifecycle.disposeAfterClose.ok, true, 'dispose() must succeed once 
 assert.equal(lifecycle.instanceADisposed, true);
 assert.equal(lifecycle.instanceBDisposed, true);
 assert.equal(lifecycle.liveDelta, 0, 'the lifecycle case must leak no instance');
-console.log(`  [3/6] lifecycle contracts      ok  ${elapsed()}`);
+console.log(`  [3/7] lifecycle contracts      ok  ${elapsed()}`);
 
 // --- CASE 4: concurrency and admission -------------------------------------
 // "Both promises fulfilled" is not success: empty output, cross-wired output,
@@ -383,7 +401,7 @@ assert.equal(
 );
 assert.equal(concurrency.liveDelta, 0, 'the concurrency case must leak no instance');
 console.log(
-  `  [4/6] concurrency + admission  ok  (concurrent totals ${concurrentTotals.join('/')}) ` +
+  `  [4/7] concurrency + admission  ok  (concurrent totals ${concurrentTotals.join('/')}) ` +
     `${elapsed()}`,
 );
 
@@ -411,11 +429,26 @@ assert.deepEqual(
   'the workerd entry export surface changed',
 );
 assert.ok(capabilities.memoryBytes > 0);
-assert.equal(behavior.finalLiveInstances, behavior.baselineLiveInstances, 'an instance leaked');
 console.log(
-  `  [5/6] capabilities             ok  (target=${capabilities.target}, ` +
+  `  [5/7] capabilities             ok  (target=${capabilities.target}, ` +
     `flavor=${capabilities.flavor}, threads=${capabilities.threads}) ${elapsed()}`,
 );
+
+// --- CASE 6: fire-and-forget this.load() -----------------------------------
+// The documented un-awaited `this.load()` (and the cycle-load-error self-load
+// shape) keeps a napi borrow on the plugin-context box past the hook's
+// settle. The eager-release wiring must defer the box's release to the call's
+// completion instead of tripping the napi borrow checker inside the hook
+// wrapper's `finally` and failing the build in the plugin's name.
+assert.equal(fireAndForgetLoad.chunkCount, 1, 'the fire-and-forget this.load() build must succeed');
+assert.equal(
+  fireAndForgetLoad.awaitedCodeType,
+  'string',
+  'an awaited this.load() must still deliver the module info',
+);
+assert.equal(fireAndForgetLoad.liveDelta, 0, 'build({module}) must dispose its private instance');
+assert.equal(behavior.finalLiveInstances, behavior.baselineLiveInstances, 'an instance leaked');
+console.log(`  [6/7] fire-and-forget load     ok  ${elapsed()}`);
 
 // ===========================================================================
 // PART 2 -- memory slope with plugin hooks.
@@ -428,6 +461,7 @@ function slopeMiBPerRound(memPerRound) {
 }
 
 const slopes = {};
+const firstSamples = {};
 const failures = [];
 for (const variant of Object.keys(MEMORY_BUDGETS)) {
   const report = await dispatch(
@@ -465,6 +499,7 @@ for (const variant of Object.keys(MEMORY_BUDGETS)) {
 
   const slope = slopeMiBPerRound(report.memPerRound);
   slopes[variant] = slope;
+  firstSamples[variant] = report.memPerRound[0];
 
   // POSITIVE CONTROL -- prove the telemetry is ALIVE before trusting a slope.
   // Every budget check below is `slope <= budget`, so the moment
@@ -520,7 +555,7 @@ for (const variant of Object.keys(MEMORY_BUDGETS)) {
           ? 'UNDER FLOOR'
           : 'ok';
   console.log(
-    `  [6/6] memory ${variant.padEnd(21)} ${verdict.padEnd(11)} ` +
+    `  [7/7] memory ${variant.padEnd(21)} ${verdict.padEnd(11)} ` +
       `${slope.toFixed(3)} MiB/rebuild` +
       (budget === null ? '' : ` (band ${floor.toFixed(3)}-${budget.toFixed(3)})`) +
       `  [${report.memFirstMiB} -> ${report.memLastMiB} MiB over ${rounds} rounds]`,
@@ -528,19 +563,19 @@ for (const variant of Object.keys(MEMORY_BUDGETS)) {
   if (!measureOnly && budget !== null && slope > budget) {
     failures.push(
       `memory variant '${variant}' retained ${slope.toFixed(3)} MiB/rebuild, ` +
-        `budget is ${budget.toFixed(3)} MiB/rebuild. The known BindingRenderedChunk ` +
-        'leak GREW, or a new one was introduced. Investigate before raising this budget.',
+        `budget is ${budget.toFixed(3)} MiB/rebuild. A hook-input eager-release path ` +
+        '(dropInner wiring) regressed, or a new leak was introduced. Investigate before ' +
+        'raising this budget.',
     );
   }
   if (!measureOnly && slope < floor) {
     failures.push(
       `memory variant '${variant}' retained ${slope.toFixed(3)} MiB/rebuild, well under the ` +
         `${measured.toFixed(3)} recorded for it (floor ${floor.toFixed(3)}). THIS IS GOOD ` +
-        'NEWS: something now releases memory this suite still budgets for -- most likely ' +
-        '`BindingRenderedChunk::dropInner()` landed. Re-run this script with `--measure` and ' +
-        'update BOTH `measured` and `budget` for every variant in MEMORY_BUDGETS to the new ' +
-        'numbers. Leaving the old ceiling in place would let a future regression grow back ' +
-        'into it with this lane green the whole way.',
+        'NEWS: something now releases memory this suite still budgets for. Re-run this ' +
+        'script with `--measure` and update BOTH `measured` and `budget` for every variant ' +
+        'in MEMORY_BUDGETS to the new numbers. Leaving the old ceiling in place would let a ' +
+        'future regression grow back into it with this lane green the whole way.',
     );
   }
 }
@@ -548,20 +583,37 @@ for (const variant of Object.keys(MEMORY_BUDGETS)) {
 // The last positive control, and the strongest one: the telemetry must RESOLVE
 // a workload difference, not merely move. `renderchunk-nomodules` differs from
 // `nohooks` by exactly one thing -- a hook that RECEIVES a rendered chunk --
-// and that is worth ~0.243 MiB/rebuild today, ~17x the widest run-to-run
-// spread. A counter that grows but ignores what the build actually did would
-// still satisfy every per-variant check above.
+// and with the chunk payload snapshot-and-released per invocation, that
+// difference shows up as a distinct, exactly-reproducible trajectory: a
+// +0.187 MiB first-round footprint (installing the extra hook, 3 pages) and a
+// slope gap of -0.018 at --rounds=20 (+0.035 over a 12-round window; the
+// arena tail flips the sign, which is why this checks MAGNITUDES). A counter
+// that grows but ignores what the build actually did would show NEITHER --
+// and would still satisfy every per-variant check above.
 if (!measureOnly) {
-  const leakDelta = slopes['renderchunk-nomodules'] - slopes.nohooks;
-  if (leakDelta < 0.1) {
+  const hookSlopeDelta = slopes['renderchunk-nomodules'] - slopes.nohooks;
+  const hookFirstDelta = (firstSamples['renderchunk-nomodules'] - firstSamples.nohooks) / MiB;
+  if (Math.abs(hookSlopeDelta) < 0.014 && Math.abs(hookFirstDelta) < 0.1) {
     failures.push(
-      `the renderChunk retention is no longer distinguishable from the baseline: ` +
+      `the renderChunk workload is no longer distinguishable from the baseline: ` +
         `'renderchunk-nomodules' ${slopes['renderchunk-nomodules'].toFixed(3)} vs 'nohooks' ` +
-        `${slopes.nohooks.toFixed(3)} MiB/rebuild, a gap of ${leakDelta.toFixed(3)} where ` +
-        '~0.243 is expected. EITHER instance.memoryBytes stopped tracking what the build ' +
-        'does -- in which case every slope above is meaningless -- OR ' +
-        '`BindingRenderedChunk::dropInner()` landed, in which case re-run with `--measure` ' +
-        'and re-baseline the whole MEMORY_BUDGETS table.',
+        `${slopes.nohooks.toFixed(3)} MiB/rebuild (gap ${hookSlopeDelta.toFixed(3)}) and a ` +
+        `first-round footprint gap of ${hookFirstDelta.toFixed(3)} MiB where ~0.187 is ` +
+        'expected. EITHER instance.memoryBytes stopped tracking what the build does -- in ' +
+        'which case every slope above is meaningless -- OR the per-hook cost itself was ' +
+        'eliminated, in which case re-run with `--measure` and re-baseline the whole ' +
+        'MEMORY_BUDGETS table.',
+    );
+  }
+
+  const moduleBoxDelta = slopes.renderchunk - slopes['renderchunk-nomodules'];
+  if (moduleBoxDelta > 0.014) {
+    failures.push(
+      `reading chunk.modules costs ${moduleBoxDelta.toFixed(3)} MiB/rebuild over not reading it ` +
+        `('renderchunk' ${slopes.renderchunk.toFixed(3)} vs 'renderchunk-nomodules' ` +
+        `${slopes['renderchunk-nomodules'].toFixed(3)}); the rows were identical at baseline. ` +
+        'Either `snapshotChunkModules` stopped covering the hook path, or the ' +
+        'BindingRenderedModule boxes leak again (historical cost: 0.021 MiB/rebuild).',
     );
   }
 }

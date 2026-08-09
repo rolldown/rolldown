@@ -4,7 +4,7 @@ use rolldown::ChunkingContext;
 
 use crate::types::{
   binding_module_info::BindingModuleInfo, binding_string_or_regex::BindingStringOrRegex,
-  js_callback::JsCallback,
+  external_memory_status::ExternalMemoryStatus, js_callback::JsCallback,
 };
 
 #[napi_derive::napi(object, object_to_js = false)]
@@ -47,19 +47,43 @@ pub struct BindingMatchGroup {
 #[napi_derive::napi]
 #[derive(Debug)]
 pub struct BindingChunkingContext {
-  inner: ChunkingContext,
+  inner: Option<ChunkingContext>,
 }
 
 impl BindingChunkingContext {
   pub fn new(inner: ChunkingContext) -> Self {
-    Self { inner }
+    Self { inner: Some(inner) }
+  }
+
+  fn try_get_inner(&self) -> napi::Result<&ChunkingContext> {
+    self.inner.as_ref().ok_or_else(|| {
+      napi::Error::from_reason(
+        "Memory has been freed: this chunking context's native data was eagerly released after its group-name invocation settled. Use the context only while the callback runs.",
+      )
+    })
   }
 }
 
 #[napi_derive::napi]
 impl BindingChunkingContext {
+  // `ChunkingContext` keeps its `Arc` private, so unlike the other droppable
+  // boxes no strong-count detail can be reported here.
+  #[napi(enumerable = false)]
+  pub fn drop_inner(&mut self) -> ExternalMemoryStatus {
+    match self.inner.take() {
+      None => ExternalMemoryStatus {
+        freed: false,
+        reason: Some("Memory has already been freed".to_string()),
+      },
+      Some(_inner) => {
+        // The `ChunkingContext` drops here automatically
+        ExternalMemoryStatus { freed: true, reason: None }
+      }
+    }
+  }
+
   #[napi]
-  pub fn get_module_info(&self, module_id: String) -> Option<BindingModuleInfo> {
-    self.inner.get_module_info(&module_id).map(BindingModuleInfo::new)
+  pub fn get_module_info(&self, module_id: String) -> napi::Result<Option<BindingModuleInfo>> {
+    Ok(self.try_get_inner()?.get_module_info(&module_id).map(BindingModuleInfo::new))
   }
 }

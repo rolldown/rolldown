@@ -5,7 +5,8 @@ import type { PluginContextData } from '../plugin/plugin-context-data';
 import { ChunkingContextImpl } from '../types/chunking-context';
 import { transformAssetSource } from './asset-source';
 import { unimplemented } from './misc';
-import { transformRenderedChunk } from './transform-rendered-chunk';
+import { releaseOrDefer, shouldEagerlyFreeOutputs } from './threadless-free';
+import { snapshotRenderedChunk, transformRenderedChunk } from './transform-rendered-chunk';
 import { logger } from '../cli/logger';
 import {
   measureHookCost,
@@ -175,10 +176,15 @@ function bindingifyAddon(
     // Measure the user's callback, not `transformRenderedChunk` around it, so the row is
     // their work rather than the conversion their choice of a function forced.
     const measured = measureHookCost(timings, OUTPUT_OPTIONS_OWNER, name, configAddon);
-    return async (chunk) =>
-      runBuildCallback
-        ? runBuildCallback(() => measured(transformRenderedChunk(chunk)))
-        : measured(transformRenderedChunk(chunk));
+    return async (chunk) => {
+      // On the threadless flavor the per-invocation chunk box would otherwise
+      // wait for GC finalizers that never run there; hand the callback a
+      // plain-data snapshot and release the box up front.
+      const rendered = shouldEagerlyFreeOutputs()
+        ? snapshotRenderedChunk(chunk)
+        : transformRenderedChunk(chunk);
+      return runBuildCallback ? runBuildCallback(() => measured(rendered)) : measured(rendered);
+    };
   }
   return configAddon;
 }
@@ -394,8 +400,20 @@ function bindingifyCodeSplitting(
                     timings,
                     OUTPUT_OPTIONS_OWNER,
                     'codeSplitting groups[].name',
-                    (id: string, ctx: BindingChunkingContext) =>
-                      name(id, new ChunkingContextImpl(ctx, pluginContextData)),
+                    (id: string, ctx: BindingChunkingContext) => {
+                      // The classifier is sync by contract (the binding
+                      // expects a plain string back), so its per-candidate
+                      // native context box can be released as soon as the
+                      // call returns — on the threadless flavor, where the
+                      // GC finalizers that normally reclaim it never run.
+                      // Any getModuleInfo boxes it minted were already
+                      // snapshot-and-dropped by `ChunkingContextImpl`.
+                      try {
+                        return name(id, new ChunkingContextImpl(ctx, pluginContextData));
+                      } finally {
+                        releaseOrDefer(ctx);
+                      }
+                    },
                   ),
                   runBuildCallback,
                 )

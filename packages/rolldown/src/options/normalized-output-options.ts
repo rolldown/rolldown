@@ -2,7 +2,7 @@ import type { RolldownPlugin } from '..';
 import type { BindingNormalizedOptions } from '../binding.cjs';
 import { lazyProp } from '../decorators/lazy';
 import type { SourcemapIgnoreListOption, SourcemapPathTransformOption } from '../types/misc';
-import { PlainObjectLike } from '../types/plain-object-like';
+import { getLazyFields, PlainObjectLike } from '../types/plain-object-like';
 import type { StringOrRegExp } from '../types/utils';
 import type {
   AddonFunction,
@@ -111,16 +111,82 @@ export interface NormalizedOutputOptions {
   minifyInternalExports?: boolean;
 }
 
+// Lazy fields whose getter reads the ORIGINAL user `outputOptions` object and
+// nothing from the native box. A property read on the user's config can
+// execute user code (accessors, Proxies), so `materializeBoxBackedFields()`
+// must never evaluate these; they keep working after the box is released
+// precisely because they never touch it.
+const USER_BACKED_LAZY_FIELDS: ReadonlySet<string> = new Set([
+  'banner',
+  'footer',
+  'postBanner',
+  'postFooter',
+  'intro',
+  'outro',
+  'paths',
+  'sourcemapIgnoreList',
+  'sourcemapPathTransform',
+]);
+
+// Lazy fields shaped `nativeValue || userValue`: the native side is falsy
+// exactly when the user supplied a function (or nothing), and evaluating the
+// public getter would then read the user object. `materializeBoxBackedFields()`
+// pre-warms only their `#boxRead` native component; the user fallback stays
+// as lazy as on the native flavors.
+const MIXED_LAZY_FIELDS: ReadonlySet<string> = new Set([
+  'entryFileNames',
+  'chunkFileNames',
+  'assetFileNames',
+  'sourcemapFileNames',
+  'globals',
+]);
+
 export class NormalizedOutputOptionsImpl
   extends PlainObjectLike
   implements NormalizedOutputOptions
 {
+  // Caches each mixed getter's native-box component so the getter stays
+  // readable after the box is released without ever re-reading the user's
+  // original object from the release path.
+  #boxReads: Map<string, unknown> | undefined;
+
   constructor(
     private inner: BindingNormalizedOptions,
     private outputOptions: OutputOptions,
     private normalizedOutputPlugins: RolldownPlugin[],
   ) {
     super();
+  }
+
+  #boxRead<T>(key: string, read: () => T): T {
+    const cache = (this.#boxReads ??= new Map());
+    if (!cache.has(key)) {
+      cache.set(key, read());
+    }
+    return cache.get(key) as T;
+  }
+
+  /**
+   * Evaluates and caches every value this wrapper reads from the native box —
+   * and nothing that reads the user's original `outputOptions` object — so
+   * the box can be released while the wrapper keeps serving reads. The
+   * release path is not user-observable on a successful build, so it must
+   * never execute user accessors; user-provided values are read exactly as
+   * lazily as on the native flavors.
+   */
+  materializeBoxBackedFields(): void {
+    for (const field of getLazyFields(this)) {
+      if (USER_BACKED_LAZY_FIELDS.has(field) || MIXED_LAZY_FIELDS.has(field)) {
+        continue;
+      }
+      // property access is enough to evaluate and cache the lazy field
+      void (this as Record<string, any>)[field];
+    }
+    this.#boxRead('entryFilenames', () => this.inner.entryFilenames);
+    this.#boxRead('chunkFilenames', () => this.inner.chunkFilenames);
+    this.#boxRead('assetFilenames', () => this.inner.assetFilenames);
+    this.#boxRead('sourcemapFilenames', () => this.inner.sourcemapFilenames);
+    this.#boxRead('globals', () => this.inner.globals);
   }
 
   @lazyProp
@@ -130,17 +196,26 @@ export class NormalizedOutputOptionsImpl
 
   @lazyProp
   get entryFileNames(): string | ChunkFileNamesFunction {
-    return this.inner.entryFilenames || this.outputOptions.entryFileNames!;
+    return (
+      this.#boxRead('entryFilenames', () => this.inner.entryFilenames) ||
+      this.outputOptions.entryFileNames!
+    );
   }
 
   @lazyProp
   get chunkFileNames(): string | ChunkFileNamesFunction {
-    return this.inner.chunkFilenames || this.outputOptions.chunkFileNames!;
+    return (
+      this.#boxRead('chunkFilenames', () => this.inner.chunkFilenames) ||
+      this.outputOptions.chunkFileNames!
+    );
   }
 
   @lazyProp
   get assetFileNames(): string | AssetFileNamesFunction {
-    return this.inner.assetFilenames || this.outputOptions.assetFileNames!;
+    return (
+      this.#boxRead('assetFilenames', () => this.inner.assetFilenames) ||
+      this.outputOptions.assetFileNames!
+    );
   }
 
   @lazyProp
@@ -160,7 +235,10 @@ export class NormalizedOutputOptionsImpl
 
   @lazyProp
   get sourcemapFileNames(): string | ChunkFileNamesFunction | undefined {
-    return this.inner.sourcemapFilenames || this.outputOptions.sourcemapFileNames;
+    return (
+      this.#boxRead('sourcemapFilenames', () => this.inner.sourcemapFilenames) ||
+      this.outputOptions.sourcemapFileNames
+    );
   }
   @lazyProp
   get sourcemapBaseUrl(): string | undefined {
@@ -247,7 +325,7 @@ export class NormalizedOutputOptionsImpl
 
   @lazyProp
   get globals(): Record<string, string> | GlobalsFunction {
-    return this.inner.globals || this.outputOptions.globals!;
+    return this.#boxRead('globals', () => this.inner.globals) || this.outputOptions.globals!;
   }
 
   @lazyProp

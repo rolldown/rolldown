@@ -2,7 +2,7 @@ import type { InputOptions, RolldownPlugin } from '..';
 import type { BindingNormalizedOptions } from '../binding.cjs';
 import { lazyProp } from '../decorators/lazy';
 import type { LogHandler } from '../log/log-handler';
-import { PlainObjectLike } from '../types/plain-object-like';
+import { getLazyFields, PlainObjectLike } from '../types/plain-object-like';
 
 /** @category Plugin APIs */
 export interface NormalizedInputOptions {
@@ -30,6 +30,19 @@ export class NormalizedInputOptionsImpl extends PlainObjectLike implements Norma
   ) {
     super();
     this.inner = inner;
+  }
+
+  /**
+   * Evaluates and caches every lazy field so the native box can be released
+   * while the wrapper keeps serving reads. Every lazy field on this class
+   * reads only the native box — never a user-provided object — so this is
+   * safe to call from the release path, which must not execute user code.
+   */
+  materializeBoxBackedFields(): void {
+    for (const field of getLazyFields(this)) {
+      // property access is enough to evaluate and cache the lazy field
+      void (this as Record<string, any>)[field];
+    }
   }
 
   @lazyProp

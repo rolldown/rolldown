@@ -11,7 +11,6 @@ import type { LogHandler } from '../log/log-handler';
 import { NormalizedInputOptionsImpl } from '../options/normalized-input-options';
 import { NormalizedOutputOptionsImpl } from '../options/normalized-output-options';
 import type { ModuleInfo } from '../types/module-info';
-import { getLazyFields } from '../types/plain-object-like';
 import { shouldEagerlyFreeOutputs } from '../utils/threadless-free';
 import { snapshotModuleInfo, transformModuleInfo } from '../utils/transform-module-info';
 import type { RenderedChunkMeta } from '.';
@@ -22,8 +21,8 @@ export class PluginContextData {
   resolveOptionsMap: Map<number, PluginContextResolveOptions> = new Map();
   loadModulePromiseMap: Map<string, Promise<void>> = new Map();
   renderedChunkMeta: RenderedChunkMeta | null = null;
-  normalizedInputOptions: NormalizedInputOptions | null = null;
-  normalizedOutputOptions: NormalizedOutputOptions | null = null;
+  normalizedInputOptions: NormalizedInputOptionsImpl | null = null;
+  normalizedOutputOptions: NormalizedOutputOptionsImpl | null = null;
 
   // The native option boxes the cached wrappers above still read from, kept
   // so `clear()` can snapshot the wrappers and release the boxes on the
@@ -197,24 +196,38 @@ export class PluginContextData {
 
   // The native side invalidates the JS caches once per completed generate
   // (before writeBundle). On the threadless-WASI flavor that is also the
-  // settle point for the cached options wrappers: copy their remaining lazy
-  // fields to JavaScript and release the native boxes behind them. The
-  // wrappers stay cached as plain data, so later hooks — and user code that
-  // kept a reference — read the snapshot while each fresh incoming box is
-  // dropped as a never-read duplicate.
+  // settle point for the cached options wrappers: copy every value they read
+  // from the native boxes to JavaScript and release the boxes. The wrappers
+  // stay cached, so later hooks — and user code that kept a reference — keep
+  // reading them while each fresh incoming box is dropped as a never-read
+  // duplicate. Two rules keep this invisible to callers:
+  // - Only BOX-BACKED data is materialized. Fields backed by the user's
+  //   original `outputOptions` object stay lazy — reading them here could
+  //   execute user accessors from a cleanup path, which must never turn a
+  //   successful build into a rejection (they survive the drop anyway
+  //   because they never touch the box).
+  // - The whole release is best-effort: one failing wrapper or box must
+  //   neither surface an error nor strand the remaining boxes.
   #releaseOptionBoxes(): void {
     if (!shouldEagerlyFreeOutputs() || this.#retainedOptionBoxes.size === 0) {
       return;
     }
     for (const wrapper of [this.normalizedInputOptions, this.normalizedOutputOptions]) {
       if (wrapper == null) continue;
-      for (const field of getLazyFields(wrapper)) {
-        // property access is enough to evaluate and cache the lazy field
-        const _value = (wrapper as any)[field];
+      try {
+        wrapper.materializeBoxBackedFields();
+      } catch {
+        // A failed materialization only means later reads of the affected
+        // box-backed fields report the documented "memory has been freed"
+        // error instead of data; cleanup still must not throw or stop.
       }
     }
     for (const box of this.#retainedOptionBoxes) {
-      box.dropInner();
+      try {
+        box.dropInner();
+      } catch {
+        // Same best-effort contract as above.
+      }
     }
     this.#retainedOptionBoxes.clear();
   }

@@ -263,8 +263,10 @@ THE SOFTWARE.
 ---
 
 @napi-rs/wasm-runtime's embedded filesystem bundle contains code from the
-following packages. This inventory is checked against the bundle's inline
-source map during WASI package staging:
+following packages. This inventory is checked during WASI package staging,
+against the bundle's inline source map when it ships one and against the
+audited bundle hashes pinned in scripts/misc/stage-wasi-packages.mjs
+otherwise:
 
   - @jsonjoy.com/base64
   - @jsonjoy.com/buffers

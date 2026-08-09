@@ -62,25 +62,106 @@ const unavailableExecutionIdentity = 'unavailable';
 let currentExecutionIdentityPromise;
 let currentProcessIncarnationPromise;
 
+// @napi-rs/wasm-runtime 1.2.2 ships dist/fs.js WITHOUT the inline source map
+// that 1.2.0 carried, so the embedded-package inventory can no longer always
+// be derived from the bundle itself. The 1.2.2 bundle is byte-identical to the
+// 1.2.0 bundle minus its sourceMappingURL line (verified by diff), so the
+// inventory derived from 1.2.0's source map still describes it exactly. Pin
+// each audited map-less bundle by content hash: a wasm-runtime bump that
+// changes the bundle must re-audit its embedded packages (diff against the
+// last audited bundle, or rebuild it upstream with source maps) and update
+// BOTH this table and the THIRD-PARTY-LICENSE inventory.
+const auditedRuntimeFsBundles = new Map([
+  [
+    // dist/fs.js of @napi-rs/wasm-runtime 1.2.2 (== 1.2.0 minus the map line)
+    'efd9b172f08d00055e7475994df6698ef995070a41e408dfb9bdec074e2e5a60',
+    {
+      version: '1.2.2',
+      packages: [
+        '@jsonjoy.com/base64',
+        '@jsonjoy.com/buffers',
+        '@jsonjoy.com/fs-core',
+        '@jsonjoy.com/fs-node',
+        '@jsonjoy.com/fs-node-builtins',
+        '@jsonjoy.com/fs-node-utils',
+        '@jsonjoy.com/fs-print',
+        '@jsonjoy.com/fs-snapshot',
+        '@jsonjoy.com/json-pack',
+        'abort-controller',
+        'async-function',
+        'async-generator-function',
+        'base64-js',
+        'buffer',
+        'call-bind-apply-helpers',
+        'call-bound',
+        'dunder-proto',
+        'es-define-property',
+        'es-errors',
+        'es-object-atoms',
+        'events',
+        'function-bind',
+        'generator-function',
+        'get-intrinsic',
+        'get-proto',
+        'glob-to-regex.js',
+        'gopd',
+        'has-symbols',
+        'hasown',
+        'ieee754',
+        'math-intrinsics',
+        'memfs',
+        'object-inspect',
+        'path-browserify',
+        'process',
+        'punycode',
+        'qs',
+        'readable-stream',
+        'safe-buffer',
+        'side-channel',
+        'side-channel-list',
+        'side-channel-map',
+        'side-channel-weakmap',
+        'string_decoder',
+        'thingies',
+        'tree-dump',
+        'tslib',
+        'url',
+      ],
+    },
+  ],
+]);
+
 async function assertEmbeddedRuntimeNotices(repoRoot, runtimeFsBundle) {
   const code = await readFile(runtimeFsBundle, 'utf8');
   const sourceMapMarker = '//# sourceMappingURL=data:application/json;charset=utf-8;base64,';
   const sourceMapIndex = code.lastIndexOf(sourceMapMarker);
-  assert.notEqual(sourceMapIndex, -1, 'wasm-runtime filesystem bundle must include its source map');
-  const encodedSourceMap = code.slice(sourceMapIndex + sourceMapMarker.length).split(/\r?\n/, 1)[0];
-  const sourceMap = JSON.parse(Buffer.from(encodedSourceMap, 'base64').toString('utf8'));
-  const embeddedPackages = [
-    ...new Set(
-      sourceMap.sources
-        .map(
-          (source) =>
-            source.match(
-              /node_modules\/(?:\.pnpm\/[^/]+\/node_modules\/)?((?:@[^/]+\/)?[^/]+)/,
-            )?.[1],
-        )
-        .filter(Boolean),
-    ),
-  ].sort((a, b) => a.localeCompare(b));
+  let embeddedPackages;
+  if (sourceMapIndex === -1) {
+    const bundleHash = createHash('sha256').update(code).digest('hex');
+    const auditedBundle = auditedRuntimeFsBundles.get(bundleHash);
+    assert.ok(
+      auditedBundle,
+      `wasm-runtime filesystem bundle ships no inline source map and its content hash ${bundleHash} is not audited; diff the bundle against the last audited version, then update auditedRuntimeFsBundles and the THIRD-PARTY-LICENSE inventory`,
+    );
+    embeddedPackages = auditedBundle.packages;
+  } else {
+    const encodedSourceMap = code
+      .slice(sourceMapIndex + sourceMapMarker.length)
+      .split(/\r?\n/, 1)[0];
+    const sourceMap = JSON.parse(Buffer.from(encodedSourceMap, 'base64').toString('utf8'));
+    embeddedPackages = [
+      ...new Set(
+        sourceMap.sources
+          .map(
+            (source) =>
+              source.match(
+                /node_modules\/(?:\.pnpm\/[^/]+\/node_modules\/)?((?:@[^/]+\/)?[^/]+)/,
+              )?.[1],
+          )
+          .filter(Boolean),
+      ),
+    ].sort((a, b) => a.localeCompare(b));
+  }
   const thirdPartyLicense = await readFile(path.join(repoRoot, 'THIRD-PARTY-LICENSE'), 'utf8');
 
   for (const packageName of embeddedPackages) {

@@ -373,12 +373,24 @@ export default {
   // .pnpm store layout is deterministic.
   const pnpmStoreEntries = await readdir(path.join(consumerDir, 'node_modules/.pnpm'));
   for (const [dependency, pinnedRange] of Object.entries(expectedRegistryRuntimeDependencies)) {
-    const storePrefix = `${dependency.replace('/', '+')}@${pinnedRange.replace(/^\^/, '')}`;
-    const installed = pnpmStoreEntries.filter((entry) =>
-      pinnedRange.startsWith('^')
-        ? entry.startsWith(`${dependency.replace('/', '+')}@${pinnedRange.slice(1).split('.')[0]}.`)
-        : entry === storePrefix || entry.startsWith(`${storePrefix}_`),
-    );
+    // A virtual-store entry is `<name>@<version>`, plus a `_`-joined
+    // peer-resolution suffix when the package declares peer dependencies
+    // (@napi-rs/wasm-runtime 1.2.2 peers on the emnapi runtimes, so its entry
+    // carries one). Match the version prefix the range guarantees: the major
+    // for `^`, major.minor for `~`, and the exact version for pins.
+    const storeName = dependency.replace('/', '+');
+    const installed = pnpmStoreEntries.filter((entry) => {
+      if (pinnedRange.startsWith('^')) {
+        return entry.startsWith(`${storeName}@${pinnedRange.slice(1).split('.')[0]}.`);
+      }
+      if (pinnedRange.startsWith('~')) {
+        return entry.startsWith(
+          `${storeName}@${pinnedRange.slice(1).split('.').slice(0, 2).join('.')}.`,
+        );
+      }
+      const storePrefix = `${storeName}@${pinnedRange}`;
+      return entry === storePrefix || entry.startsWith(`${storePrefix}_`);
+    });
     assert.ok(
       installed.length > 0,
       `${dependency}@${pinnedRange} must install from the registry into the packed consumer (found: ${

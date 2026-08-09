@@ -1,0 +1,20 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+Object.defineProperty(exports, Symbol.toStringTag, { value: "Module" });
+// HIDDEN [\0rolldown/runtime.js]
+let node_https = require("node:https");
+node_https = __toESM(node_https);
+//#region main.js
+function getAgentCtor() {
+	return node_https.default.Agent;
+}
+//#endregion
+exports.getAgentCtor = getAgentCtor;
+
+```

@@ -1,0 +1,16 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+let node_https = require("node:https");
+node_https = __toESM(node_https, 1);
+//#region main.js
+console.log(node_https.default);
+//#endregion
+
+```

@@ -1,2 +1,2 @@
 (globalThis.log ??= []).push('target');
-export const value = 1;
+export * from './bridge.js';

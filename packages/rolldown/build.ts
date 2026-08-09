@@ -89,6 +89,19 @@ const threadedWasiFiles = {
   worker: nodePath.resolve('src/wasi-worker.mjs'),
   browserWorker: nodePath.resolve('src/wasi-worker-browser.mjs'),
 };
+const commonRuntimeInputFile = nodePath.resolve(
+  __dirname,
+  '../../crates/rolldown_plugin_hmr/src/runtime/runtime-extra-dev-common.js',
+);
+const runtimeBaseInputFile = nodePath.resolve(
+  __dirname,
+  '../../crates/rolldown/src/runtime/runtime-base.js',
+);
+const defaultRuntimeInputFile = nodePath.resolve(
+  __dirname,
+  '../../crates/rolldown_plugin_hmr/src/runtime/runtime-extra-dev-default.js',
+);
+
 const configs: BuildOptions[] = [
   withShared({
     plugins: [patchBindingJs(), dts(), removeIncludeTagsFromDts()],
@@ -133,7 +146,7 @@ if (buildMeta.target === 'browser-pkg') {
     await bundleBrowserWasiLoaders();
     await bundleThreadedWasiLoaders();
   }
-  generateRuntimeTypes();
+  generateRuntimeEntry();
 })();
 
 function withShared({
@@ -189,6 +202,9 @@ function withShared({
       define: {
         'import.meta.browserBuild': String(isBrowserBuild),
         'import.meta.workerdPackageApi': String(buildMeta.target === 'browser-pkg'),
+        __RUNTIME_STRING__: isBrowserBuild
+          ? JSON.stringify(readDefaultDevRuntimeSource())
+          : 'undefined',
       },
     },
   };
@@ -208,6 +224,9 @@ async function bundleManagedWorkerdLoaders() {
     // Same polyfill as the browser package build: workerd has no ambient
     // `process`, and the logger init reads this flag.
     'process.env.ROLLDOWN_TEST': 'false',
+    // Same as the browser package build: the default dev runtime source must be
+    // embedded, because workerd has no filesystem fallback to read it from.
+    __RUNTIME_STRING__: JSON.stringify(readDefaultDevRuntimeSource()),
   };
 
   await build({
@@ -508,30 +527,60 @@ if (!nativeBinding && globalThis.process?.versions?.["webcontainer"]) {
   };
 }
 
-function generateRuntimeTypes() {
-  const inputFile = nodePath.resolve(
-    __dirname,
-    '../../crates/rolldown_plugin_hmr/src/runtime/runtime-extra-dev-common.js',
+// Prefix the common runtime with its canonical compiler-helper imports for standalone ESM use.
+// The default runtime loader removes this generated first line before injecting the source into a
+// bundle, where the same helpers are already in scope.
+function generateRuntimeEntry() {
+  const outputFile = nodePath.resolve(buildMeta.buildOutputDir, 'experimental-runtime.d.ts');
+
+  console.log(styleText('green', '[build:done]'), 'Generating dts from', commonRuntimeInputFile);
+
+  const { commonRuntimeSource, defaultRuntimeSource } = readDevRuntimeSources();
+  const runtimeHelperImport =
+    "import { __exportAll, __reExport, __toCommonJS, __toESM } from './experimental-runtime-base.mjs';\n";
+  fs.writeFileSync(
+    nodePath.resolve(buildMeta.buildOutputDir, 'experimental-runtime.mjs'),
+    runtimeHelperImport + commonRuntimeSource,
   );
-  const outputFile = nodePath.resolve(buildMeta.buildOutputDir, 'experimental-runtime-types.d.ts');
+  fs.copyFileSync(
+    runtimeBaseInputFile,
+    nodePath.resolve(buildMeta.buildOutputDir, 'experimental-runtime-base.mjs'),
+  );
+  fs.writeFileSync(
+    nodePath.resolve(buildMeta.buildOutputDir, 'experimental-default-runtime.mjs'),
+    defaultRuntimeSource,
+  );
 
-  console.log(styleText('green', '[build:done]'), 'Generating dts from', inputFile);
-
-  const jsCode = fs.readFileSync(inputFile, 'utf-8');
-  const result = ts.transpileDeclaration(jsCode, {
+  const result = ts.transpileDeclaration(commonRuntimeSource, {
     compilerOptions: {
-      ...getTsconfigCompilerOptionsForFile(inputFile),
+      ...getTsconfigCompilerOptionsForFile(commonRuntimeInputFile),
       noEmit: false,
       emitDeclarationOnly: true,
     },
-    fileName: inputFile,
+    fileName: commonRuntimeInputFile,
   });
 
   if (result && result.outputText) {
     fs.writeFileSync(outputFile, result.outputText, 'utf-8');
+    fs.copyFileSync(
+      outputFile,
+      nodePath.resolve(buildMeta.buildOutputDir, 'experimental-runtime-types.d.ts'),
+    );
   } else {
     throw new Error('Failed to generate d.ts from runtime-extra-dev.js');
   }
+}
+
+function readDevRuntimeSources() {
+  return {
+    commonRuntimeSource: fs.readFileSync(commonRuntimeInputFile, 'utf-8'),
+    defaultRuntimeSource: fs.readFileSync(defaultRuntimeInputFile, 'utf-8'),
+  };
+}
+
+function readDefaultDevRuntimeSource() {
+  const { commonRuntimeSource, defaultRuntimeSource } = readDevRuntimeSources();
+  return `${commonRuntimeSource}\n${defaultRuntimeSource}`;
 }
 
 function getTsconfigCompilerOptionsForFile(file: string) {

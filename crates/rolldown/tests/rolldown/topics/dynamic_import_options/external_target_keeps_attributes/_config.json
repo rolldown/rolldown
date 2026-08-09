@@ -1,0 +1,14 @@
+{
+  "_comment": "An external target is the one case where the second argument is load-bearing: the host resolves the specifier and `with { type: 'json' }` picks the module type. Such a call must be emitted untouched, and in particular must not be lowered to `require()`, which cannot carry attributes.",
+  "config": {
+    "external": ["external-data.json"],
+    "format": "cjs",
+    "dynamicImportInCjs": false
+  },
+  "configVariants": [
+    {
+      "format": "esm"
+    }
+  ],
+  "expectExecuted": false
+}

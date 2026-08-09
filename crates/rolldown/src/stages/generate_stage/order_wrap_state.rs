@@ -8,6 +8,8 @@ use rolldown_common::{
 use rolldown_utils::indexmap::FxIndexSet;
 use rustc_hash::{FxHashMap, FxHashSet};
 
+use crate::esm_init_obligations::WrappedEsmInitTarget;
+
 oxc_index::define_index_type! {
   pub struct OrderSyntheticStmtIdx = u32;
 }
@@ -15,6 +17,14 @@ oxc_index::define_index_type! {
 #[derive(Debug, Default)]
 pub struct OrderWrapState {
   modules: FxHashMap<ModuleIdx, OrderWrappedModule>,
+  reexport_init_transparent: FxHashSet<ModuleIdx>,
+  consumer_local_reexport_routes: FxHashSet<ModuleIdx>,
+  consumer_local_namespace_targets: FxHashMap<ModuleIdx, Vec<WrappedEsmInitTarget>>,
+  cjs_carriers: FxHashMap<OrderCjsCarrierKey, OrderCjsCarrier>,
+  cjs_carriers_by_importee: FxHashMap<ModuleIdx, Vec<OrderCjsCarrierKey>>,
+  cjs_carriers_by_symbol: FxHashMap<SymbolRef, Vec<OrderCjsCarrierKey>>,
+  cjs_carrier_by_namespace: FxHashMap<SymbolRef, OrderCjsCarrierKey>,
+  cjs_carrier_wrapper_refs: FxHashSet<SymbolRef>,
   synthetic_statements: IndexVec<OrderSyntheticStmtIdx, OrderSyntheticStmt>,
   synthetic_statements_by_chunk: FxHashMap<ChunkIdx, Vec<OrderSyntheticStmtIdx>>,
   import_overlays: FxHashMap<OrderImportKey, OrderImportOverlay>,
@@ -135,6 +145,7 @@ impl OrderWrapState {
   /// [`LinkingMetadata`]: crate::types::linking_metadata::LinkingMetadata
   pub(crate) fn is_execution_order_wrapper_ref(&self, symbol_ref: SymbolRef) -> bool {
     self.modules.get(&symbol_ref.owner).is_some_and(|module| module.wrapper_ref == symbol_ref)
+      || self.cjs_carrier_wrapper_refs.contains(&symbol_ref)
   }
 
   pub(crate) fn set_nested_reexport_records(
@@ -208,6 +219,75 @@ impl OrderWrapState {
     self.insert_order_wrapped_module(module_idx, wrapper_ref, None);
   }
 
+  pub(crate) fn insert_order_cjs_carrier(
+    &mut self,
+    key: OrderCjsCarrierKey,
+    spec: OrderCjsCarrierSpec,
+    referenced_symbols: Vec<SymbolRef>,
+    runtime_helpers: RuntimeHelper,
+  ) {
+    let wrapper_statement = self.add_synthetic_statement(OrderSyntheticStmt {
+      owner: key.importer,
+      declared_symbols: vec![
+        TaggedSymbolRef::normal(spec.wrapper_ref),
+        TaggedSymbolRef::normal(spec.namespace_ref),
+      ],
+      referenced_symbols,
+      runtime_helpers,
+      chunk: None,
+    });
+    self.insert_order_cjs_carrier_inner(key, spec, Some(wrapper_statement));
+  }
+
+  pub(crate) fn insert_order_cjs_carrier_probe(
+    &mut self,
+    key: OrderCjsCarrierKey,
+    spec: OrderCjsCarrierSpec,
+  ) {
+    self.insert_order_cjs_carrier_inner(key, spec, None);
+  }
+
+  fn insert_order_cjs_carrier_inner(
+    &mut self,
+    key: OrderCjsCarrierKey,
+    spec: OrderCjsCarrierSpec,
+    wrapper_statement: Option<OrderSyntheticStmtIdx>,
+  ) {
+    assert!(
+      self
+        .cjs_carriers
+        .insert(
+          key,
+          OrderCjsCarrier {
+            importee: spec.importee,
+            wrapper_ref: spec.wrapper_ref,
+            namespace_ref: spec.namespace_ref,
+            wrapper_statement,
+            chunk: None,
+            eager: spec.eager,
+            needs_to_esm: spec.needs_to_esm,
+            is_node_mode: spec.is_node_mode,
+          },
+        )
+        .is_none(),
+      "duplicate order CJS carrier",
+    );
+    self.cjs_carriers_by_importee.entry(spec.importee).or_default().push(key);
+    assert!(self.cjs_carrier_wrapper_refs.insert(spec.wrapper_ref));
+    assert!(self.cjs_carrier_by_namespace.insert(spec.namespace_ref, key).is_none());
+  }
+
+  pub(crate) fn map_order_cjs_carrier_symbol(
+    &mut self,
+    symbol_ref: SymbolRef,
+    key: OrderCjsCarrierKey,
+  ) {
+    let carriers = self.cjs_carriers_by_symbol.entry(symbol_ref).or_default();
+    if !carriers.contains(&key) {
+      carriers.push(key);
+    }
+  }
+
   fn insert_order_wrapped_module(
     &mut self,
     module_idx: ModuleIdx,
@@ -217,15 +297,7 @@ impl OrderWrapState {
     assert!(
       self
         .modules
-        .insert(
-          module_idx,
-          OrderWrappedModule {
-            wrapper_ref,
-            wrapper_statement,
-            chunk: None,
-            reexport_init_transparent: false,
-          },
-        )
+        .insert(module_idx, OrderWrappedModule { wrapper_ref, wrapper_statement, chunk: None },)
         .is_none(),
       "duplicate order-wrapped module",
     );
@@ -306,20 +378,106 @@ impl OrderWrapState {
     }
   }
 
+  pub(crate) fn assign_order_cjs_carrier_chunk(
+    &mut self,
+    key: OrderCjsCarrierKey,
+    chunk_idx: ChunkIdx,
+  ) {
+    let carrier = self.cjs_carriers.get_mut(&key).expect("order CJS carrier should exist");
+    carrier.chunk = Some(chunk_idx);
+    if let Some(wrapper_statement) = carrier.wrapper_statement {
+      self.assign_synthetic_statement_chunk(wrapper_statement, chunk_idx);
+    }
+  }
+
   /// Mark an execution-order wrapper as a routing waypoint for binding-driven re-export init.
   /// Its module has no local executable body and no unconditional execution dependency, so a
   /// consumer may route directly to the wrapped leaf definers it actually consumes instead of
   /// making this shared barrel wrapper own every retained re-export path.
   pub(crate) fn set_reexport_init_transparent(&mut self, module_idx: ModuleIdx) {
-    self
-      .modules
-      .get_mut(&module_idx)
-      .expect("order-wrapped module should exist")
-      .reexport_init_transparent = true;
+    self.reexport_init_transparent.insert(module_idx);
   }
 
   pub(crate) fn reexport_init_is_transparent(&self, module_idx: ModuleIdx) -> bool {
-    self.modules.get(&module_idx).is_some_and(|module| module.reexport_init_transparent)
+    self.reexport_init_transparent.contains(&module_idx)
+  }
+
+  pub(crate) fn set_consumer_local_reexport_route(&mut self, module_idx: ModuleIdx) {
+    self.consumer_local_reexport_routes.insert(module_idx);
+    self.set_reexport_init_transparent(module_idx);
+  }
+
+  pub(crate) fn is_consumer_local_reexport_route(&self, module_idx: ModuleIdx) -> bool {
+    self.consumer_local_reexport_routes.contains(&module_idx)
+  }
+
+  pub(crate) fn has_consumer_local_reexport_routes(&self) -> bool {
+    !self.consumer_local_reexport_routes.is_empty()
+  }
+
+  pub(crate) fn set_consumer_local_namespace_targets(
+    &mut self,
+    module_idx: ModuleIdx,
+    targets: Vec<WrappedEsmInitTarget>,
+  ) {
+    self.consumer_local_namespace_targets.insert(module_idx, targets);
+  }
+
+  pub(crate) fn consumer_local_namespace_targets(
+    &self,
+    module_idx: ModuleIdx,
+  ) -> Option<&[WrappedEsmInitTarget]> {
+    self.consumer_local_namespace_targets.get(&module_idx).map(Vec::as_slice)
+  }
+
+  pub(crate) fn order_cjs_carrier(&self, key: OrderCjsCarrierKey) -> Option<&OrderCjsCarrier> {
+    self.cjs_carriers.get(&key)
+  }
+
+  pub(crate) fn has_order_cjs_carrier(&self, key: OrderCjsCarrierKey) -> bool {
+    self.cjs_carriers.contains_key(&key)
+  }
+
+  pub(crate) fn order_cjs_carriers_for_importee(
+    &self,
+    importee_idx: ModuleIdx,
+  ) -> &[OrderCjsCarrierKey] {
+    self.cjs_carriers_by_importee.get(&importee_idx).map_or(&[], Vec::as_slice)
+  }
+
+  pub(crate) fn order_cjs_carrier_keys(&self) -> impl Iterator<Item = OrderCjsCarrierKey> + '_ {
+    self.cjs_carriers.keys().copied()
+  }
+
+  pub(crate) fn order_cjs_carriers_for_symbol(
+    &self,
+    symbol_ref: SymbolRef,
+  ) -> &[OrderCjsCarrierKey] {
+    self.cjs_carriers_by_symbol.get(&symbol_ref).map_or(&[], Vec::as_slice)
+  }
+
+  pub(crate) fn is_order_cjs_carrier_namespace(&self, symbol_ref: SymbolRef) -> bool {
+    self.cjs_carrier_by_namespace.contains_key(&symbol_ref)
+  }
+
+  pub(crate) fn order_cjs_carrier_key_for_namespace(
+    &self,
+    symbol_ref: SymbolRef,
+  ) -> Option<OrderCjsCarrierKey> {
+    self.cjs_carrier_by_namespace.get(&symbol_ref).copied()
+  }
+
+  pub(crate) fn order_cjs_carrier_included_in_live_chunk(
+    &self,
+    key: OrderCjsCarrierKey,
+    chunk_graph: &crate::chunk_graph::ChunkGraph,
+  ) -> bool {
+    self.cjs_carriers.get(&key).is_some_and(|carrier| {
+      carrier.chunk.is_some_and(|chunk_idx| {
+        chunk_graph.module_to_chunk[carrier.importee] == Some(chunk_idx)
+          && chunk_graph.module_is_in_live_chunk(carrier.importee)
+      })
+    })
   }
 
   pub(crate) fn synthetic_statements_for_chunk(
@@ -518,10 +676,34 @@ pub struct OrderWrappedModule {
   /// statement to answer `order_wrapper_chunk`. Kept in sync with the wrapper statement's chunk on
   /// the real path.
   pub(crate) chunk: Option<ChunkIdx>,
-  /// This order wrapper has no module-local executable body and no unconditional execution
-  /// dependency. Binding-driven consumers may therefore route through it to the leaf wrappers
-  /// they consume. Side-effect-only imports still call the wrapper directly.
-  pub(crate) reexport_init_transparent: bool,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+pub struct OrderCjsCarrierKey {
+  pub(crate) importer: ModuleIdx,
+  pub(crate) record: ImportRecordIdx,
+}
+
+#[derive(Clone, Copy, Debug)]
+pub struct OrderCjsCarrierSpec {
+  pub(crate) importee: ModuleIdx,
+  pub(crate) wrapper_ref: SymbolRef,
+  pub(crate) namespace_ref: SymbolRef,
+  pub(crate) eager: bool,
+  pub(crate) needs_to_esm: bool,
+  pub(crate) is_node_mode: bool,
+}
+
+#[derive(Debug)]
+pub struct OrderCjsCarrier {
+  pub(crate) importee: ModuleIdx,
+  pub(crate) wrapper_ref: SymbolRef,
+  pub(crate) namespace_ref: SymbolRef,
+  wrapper_statement: Option<OrderSyntheticStmtIdx>,
+  pub(crate) chunk: Option<ChunkIdx>,
+  pub(crate) eager: bool,
+  pub(crate) needs_to_esm: bool,
+  pub(crate) is_node_mode: bool,
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]

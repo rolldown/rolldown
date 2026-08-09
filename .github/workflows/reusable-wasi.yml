@@ -129,7 +129,8 @@ jobs:
       # loader/Wasm pair. This profile is intentionally separate from
       # `test:main`: managed-workerd tests require the threadless Wasm file,
       # and Node's `--input-type` child-process probes are invalid when
-      # inherited by file-based napi-rs worker entrypoints.
+      # inherited by file-based napi-rs worker entrypoints. The full node
+      # suite runs against the single-thread flavor below (`test:wasi`).
       - name: Node Test (threaded WASI)
         run: vp run --filter rolldown-tests test:wasi-threaded
 
@@ -185,13 +186,15 @@ jobs:
         run: vp run --filter '@rolldown/test-dev-server' build
 
       # Full node suite against the single-thread WASI binding (the dist is
-      # wired to the wasip1 loaders by `build-rolldown-wasi-single`). No lane
-      # env vars: the artifact self-identifies through
+      # wired to the wasip1 loaders by `build-rolldown-wasi-single`).
+      # `test:wasi` is `test:main` with `ROLLDOWN_WASI_TEST=1`, which skips the
+      # tests that the wasm binding cannot pass; every skip states its own
+      # reason. The artifact additionally self-identifies through
       # `getRuntimeCapabilities()` -- it reports the CurrentThread flavor (all
       # `isSingleThread` skips apply) and the wasi target (all wasm-boundary
       # `isWasiTest` skips apply); see tests/src/runtime-flavor.ts.
       - name: Node Test (single-thread WASI)
-        run: vp run --filter rolldown-tests test:main
+        run: vp run --filter rolldown-tests test:wasi
 
       # `@example/typescript` is shared by the basic TypeScript, chunk-import-map, and watch
       # examples. It remains excluded because the watch example is unsupported on WASI; the

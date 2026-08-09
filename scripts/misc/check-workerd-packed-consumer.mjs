@@ -37,16 +37,16 @@ const bundledRuntimePackages = [
 // The dist code itself stays fully bundled (the AST scans below still forbid
 // bare runtime imports), but the manifest deliberately declares the registry
 // emnapi v2 line: the .wasm links the emnapi 2.0.0-alpha C archives, so a v1
-// JS runtime is an ABI mismatch (f3ac20b26). @napi-rs/wasm-runtime is only
-// v2-ready through the workspace pnpm patch, which never reaches registry
-// installers — @rolldown/browser therefore stays `private: true` until a
-// v2-ready runtime is published upstream (bb2996029). These pins are the ABI
+// JS runtime is an ABI mismatch (f3ac20b26). The published @napi-rs/wasm-runtime
+// 1.2.x line is v2-ready (the workspace pnpm patch was dropped in 4d4042404),
+// but @rolldown/browser stays `private: true` while its emnapi runtime deps
+// remain on the 2.0.0-alpha prerelease line (bb2996029). These pins are the ABI
 // line a future registry consumer must resolve; drift here must fail CI until
 // this script is updated deliberately.
 const expectedRegistryRuntimeDependencies = {
   '@emnapi/core': '2.0.0-alpha.3',
   '@emnapi/runtime': '2.0.0-alpha.3',
-  '@napi-rs/wasm-runtime': '^1.2.0',
+  '@napi-rs/wasm-runtime': '~1.2.2',
 };
 const forbiddenRegistryRuntimeDependencies = ['buffer', 'node:buffer'];
 

@@ -37,7 +37,7 @@ describe('hmr-accept-outside-circular', () => {
     // (`main` self-accepts, so a plain no-boundary reason would be a bug).
     await untilBrowserLogAfter(
       () => editFile('c.js', (code) => code.replace("export const c = 'c'", "export const c = 'cc'")),
-      /full reload: circular import chain between `[^`]*b\.js` and `[^`]*c\.js`/,
+      /full reload needed: circular import chain between `[^`]*b\.js` and `[^`]*c\.js`/,
     );
     await expect.poll(() => page.textContent('.chain')).toBe('cc');
 

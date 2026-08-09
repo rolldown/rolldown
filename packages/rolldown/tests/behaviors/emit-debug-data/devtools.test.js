@@ -4,6 +4,7 @@ import { existsSync, readdirSync, readFileSync, rmSync } from 'node:fs';
 import { join } from 'node:path';
 import { expect, test } from 'vitest';
 
+// The `.rolldown` dir is generated under `InputOptions.cwd`, which `runBundle` sets to this directory.
 const dotRolldownFileName = join(import.meta.dirname, 'node_modules/.rolldown');
 const requestedSessionId = 'requested-devtools-session';
 

@@ -272,6 +272,8 @@ pub fn prepare_build_context(
       .unwrap_or_default(),
   );
 
+  let mut clean_dir = raw_options.clean_dir.unwrap_or(false);
+
   let mut raw_treeshake = raw_options.treeshake;
   let mut experimental = raw_options.experimental.unwrap_or_default();
   if experimental.dev_mode.is_some() {
@@ -280,6 +282,9 @@ pub fn prepare_build_context(
     // treeshaking, so it must be disabled as well.
     raw_treeshake = TreeshakeOptions::Boolean(false);
     experimental.lazy_barrel = Some(false);
+    // Dev rebuilds write only the changed chunks, so cleaning the output
+    // directory would delete chunks the browser can still ask for.
+    clean_dir = false;
   }
 
   if experimental.attach_debug_info.is_none() {
@@ -445,6 +450,7 @@ pub fn prepare_build_context(
     keep_names: raw_options.keep_names.unwrap_or_default(),
     polyfill_require: raw_options.polyfill_require.unwrap_or(true),
     defer_sync_scan_data: raw_options.defer_sync_scan_data,
+    plugin_timings: raw_options.plugin_timings,
     transform_options,
     make_absolute_externals_relative: raw_options
       .make_absolute_externals_relative
@@ -470,7 +476,7 @@ pub fn prepare_build_context(
     minify_internal_exports: raw_options
       .minify_internal_exports
       .unwrap_or_else(|| determine_minify_internal_exports_default(Some(format), &raw_minify)),
-    clean_dir: raw_options.clean_dir.unwrap_or(false),
+    clean_dir,
     context: raw_options.context.unwrap_or_default(),
     strict_execution_order: raw_options.strict_execution_order.unwrap_or(false),
     strict: raw_options.strict.unwrap_or_default(),
@@ -479,4 +485,26 @@ pub fn prepare_build_context(
   normalized.minify = raw_minify.normalize(&normalized);
 
   Ok(PrepareBuildContext { fs, resolver, options: Arc::new(normalized), warnings })
+}
+
+#[cfg(test)]
+mod tests {
+  use rolldown_common::{DevModeOptions, ExperimentalOptions};
+
+  #[test]
+  fn dev_mode_forces_incompatible_options_off() {
+    let ctx = super::prepare_build_context(crate::BundlerOptions {
+      clean_dir: Some(true),
+      experimental: Some(ExperimentalOptions {
+        dev_mode: Some(DevModeOptions::default()),
+        ..Default::default()
+      }),
+      ..Default::default()
+    })
+    .unwrap();
+    assert!(!ctx.options.clean_dir);
+    assert!(ctx.options.experimental.is_incremental_build_enabled());
+    assert!(!ctx.options.experimental.is_lazy_barrel_enabled());
+    assert!(ctx.options.treeshake.is_none());
+  }
 }

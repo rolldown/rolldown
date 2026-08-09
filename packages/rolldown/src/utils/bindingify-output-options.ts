@@ -7,10 +7,17 @@ import { transformAssetSource } from './asset-source';
 import { unimplemented } from './misc';
 import { transformRenderedChunk } from './transform-rendered-chunk';
 import { logger } from '../cli/logger';
+import {
+  measureHookCost,
+  measureIfFunction,
+  OUTPUT_OPTIONS_OWNER,
+  type PluginTimingsRecorder,
+} from './plugin-timings';
 
 export function bindingifyOutputOptions(
   outputOptions: OutputOptions,
   pluginContextData: PluginContextData,
+  timings: PluginTimingsRecorder | undefined,
   runBuildCallback?: BuildCallbackRunner,
 ): BindingOutputOptions {
   const {
@@ -40,6 +47,7 @@ export function bindingifyOutputOptions(
     paths,
     generatedCode,
     file,
+    // Already measured at the source; see `createBundlerOptions`.
     sanitizeFileName,
     preserveModules,
     virtualDirname,
@@ -63,6 +71,7 @@ export function bindingifyOutputOptions(
     outputOptions.advancedChunks,
     manualChunks,
     pluginContextData,
+    timings,
     runBuildCallback,
   );
 
@@ -76,28 +85,59 @@ export function bindingifyOutputOptions(
     sourcemap: bindingifySourcemap(sourcemap),
     sourcemapBaseUrl,
     sourcemapDebugIds,
-    sourcemapFileNames,
+    sourcemapFileNames: measureIfFunction(
+      timings,
+      OUTPUT_OPTIONS_OWNER,
+      'sourcemapFileNames',
+      sourcemapFileNames,
+    ),
     sourcemapExcludeSources,
     sourcemapIgnoreList: wrapOptionalBuildCallback(
-      sourcemapIgnoreList ?? /node_modules/,
+      measureIfFunction(
+        timings,
+        OUTPUT_OPTIONS_OWNER,
+        'sourcemapIgnoreList',
+        sourcemapIgnoreList ?? /node_modules/,
+      ),
       runBuildCallback,
     ),
-    sourcemapPathTransform: wrapOptionalBuildCallback(sourcemapPathTransform, runBuildCallback),
-    banner: bindingifyAddon(banner, runBuildCallback),
-    footer: bindingifyAddon(footer, runBuildCallback),
-    postBanner: bindingifyAddon(postBanner, runBuildCallback),
-    postFooter: bindingifyAddon(postFooter, runBuildCallback),
-    intro: bindingifyAddon(intro, runBuildCallback),
-    outro: bindingifyAddon(outro, runBuildCallback),
+    sourcemapPathTransform: wrapOptionalBuildCallback(
+      measureIfFunction(
+        timings,
+        OUTPUT_OPTIONS_OWNER,
+        'sourcemapPathTransform',
+        sourcemapPathTransform,
+      ),
+      runBuildCallback,
+    ),
+    banner: bindingifyAddon(banner, 'banner', timings, runBuildCallback),
+    footer: bindingifyAddon(footer, 'footer', timings, runBuildCallback),
+    postBanner: bindingifyAddon(postBanner, 'postBanner', timings, runBuildCallback),
+    postFooter: bindingifyAddon(postFooter, 'postFooter', timings, runBuildCallback),
+    intro: bindingifyAddon(intro, 'intro', timings, runBuildCallback),
+    outro: bindingifyAddon(outro, 'outro', timings, runBuildCallback),
     extend: outputOptions.extend,
-    globals: wrapOptionalBuildCallback(globals, runBuildCallback),
-    paths: wrapOptionalBuildCallback(paths, runBuildCallback),
+    globals: wrapOptionalBuildCallback(
+      measureIfFunction(timings, OUTPUT_OPTIONS_OWNER, 'globals', globals),
+      runBuildCallback,
+    ),
+    paths: wrapOptionalBuildCallback(
+      measureIfFunction(timings, OUTPUT_OPTIONS_OWNER, 'paths', paths),
+      runBuildCallback,
+    ),
     generatedCode,
     esModule,
     name,
+    // Already measured at the source; see `createBundlerOptions`.
     assetFileNames: bindingifyAssetFilenames(assetFileNames, runBuildCallback),
-    entryFileNames: wrapOptionalBuildCallback(entryFileNames, runBuildCallback),
-    chunkFileNames: wrapOptionalBuildCallback(chunkFileNames, runBuildCallback),
+    entryFileNames: wrapOptionalBuildCallback(
+      measureIfFunction(timings, OUTPUT_OPTIONS_OWNER, 'entryFileNames', entryFileNames),
+      runBuildCallback,
+    ),
+    chunkFileNames: wrapOptionalBuildCallback(
+      measureIfFunction(timings, OUTPUT_OPTIONS_OWNER, 'chunkFileNames', chunkFileNames),
+      runBuildCallback,
+    ),
     // TODO(sapphi-red): support parallel plugins
     plugins: [],
     minify: outputOptions.minify,
@@ -124,16 +164,21 @@ type AddonKeys = 'banner' | 'footer' | 'postBanner' | 'postFooter' | 'intro' | '
 
 function bindingifyAddon(
   configAddon: OutputOptions[AddonKeys],
+  name: AddonKeys,
+  timings: PluginTimingsRecorder | undefined,
   runBuildCallback?: BuildCallbackRunner,
 ): BindingOutputOptions[AddonKeys] {
   if (configAddon == null || configAddon === '') {
     return undefined;
   }
   if (typeof configAddon === 'function') {
+    // Measure the user's callback, not `transformRenderedChunk` around it, so the row is
+    // their work rather than the conversion their choice of a function forced.
+    const measured = measureHookCost(timings, OUTPUT_OPTIONS_OWNER, name, configAddon);
     return async (chunk) =>
       runBuildCallback
-        ? runBuildCallback(() => configAddon(transformRenderedChunk(chunk)))
-        : configAddon(transformRenderedChunk(chunk));
+        ? runBuildCallback(() => measured(transformRenderedChunk(chunk)))
+        : measured(transformRenderedChunk(chunk));
   }
   return configAddon;
 }
@@ -216,6 +261,7 @@ function bindingifyCodeSplitting(
   advancedChunks: OutputOptions['advancedChunks'],
   manualChunks: OutputOptions['manualChunks'],
   pluginContextData: PluginContextData,
+  timings: PluginTimingsRecorder | undefined,
   runBuildCallback?: BuildCallbackRunner,
 ): {
   inlineDynamicImports: BindingOutputOptions['inlineDynamicImports'];
@@ -329,18 +375,30 @@ function bindingifyCodeSplitting(
     advancedChunksResult = {
       ...restOptions,
       groups: groups?.map((group) => {
-        const { name, ...restGroup } = group;
+        const { name, test, ...restGroup } = group;
         return {
           ...restGroup,
-          test: wrapOptionalBuildCallback(restGroup.test, runBuildCallback),
+          test: wrapOptionalBuildCallback(
+            typeof test === 'function'
+              ? measureHookCost(timings, OUTPUT_OPTIONS_OWNER, 'codeSplitting groups[].test', test)
+              : test,
+            runBuildCallback,
+          ),
+          // The core calls this classifier directly rather than through a plugin, so it
+          // belongs to no plugin's rows — and it runs once per module, which is how it ends
+          // up dominating a build.
           name:
             typeof name === 'function'
-              ? (id: string, ctx: BindingChunkingContext) =>
-                  runBuildCallback
-                    ? runBuildCallback(() =>
-                        name(id, new ChunkingContextImpl(ctx, pluginContextData)),
-                      )
-                    : name(id, new ChunkingContextImpl(ctx, pluginContextData))
+              ? wrapOptionalBuildCallback(
+                  measureHookCost(
+                    timings,
+                    OUTPUT_OPTIONS_OWNER,
+                    'codeSplitting groups[].name',
+                    (id: string, ctx: BindingChunkingContext) =>
+                      name(id, new ChunkingContextImpl(ctx, pluginContextData)),
+                  ),
+                  runBuildCallback,
+                )
               : name,
         };
       }),

@@ -617,10 +617,11 @@ impl IntegrationTest {
     // Dispatch to appropriate build method and generate snapshot
     let snapshot_content = if hmr_mode_enabled {
       let artifacts_snapshot =
-        self.run_multiple_for_dev(multiple_options, plugins, &hmr_steps).await;
+        Box::pin(self.run_multiple_for_dev(multiple_options, plugins, &hmr_steps)).await;
       artifacts_snapshot.render(&self.test_meta)
     } else {
-      let artifacts_snapshot = self.run_multiple_for_build(multiple_options, plugins).await;
+      let artifacts_snapshot =
+        Box::pin(self.run_multiple_for_build(multiple_options, plugins)).await;
       artifacts_snapshot.render(&self.test_meta)
     };
 
@@ -674,7 +675,12 @@ impl IntegrationTest {
     if let Some(experimental) = &mut options.experimental {
       if let Some(dev_mode) = &mut experimental.dev_mode {
         if dev_mode.implement.is_none() {
-          dev_mode.implement = Some(include_str!("./hmr-runtime.js").to_owned());
+          dev_mode.implement = Some(format!(
+            "{}\n{}",
+            include_str!("../../rolldown_plugin_hmr/src/runtime/runtime-extra-dev-common.js"),
+            include_str!("./hmr-runtime.js")
+          ));
+          dev_mode.skip_common_runtime_injection = Some(true);
         }
       }
     }

@@ -102,6 +102,9 @@
         "src/dev-engine-close-child.mjs", // spawned by dev-engine-close.test.ts via execa
       ],
     },
+    "packages/browser-tests": {
+      "ignore": ["tests/fixtures/**"], // mounted into the container and built there, not here
+    },
     "scripts": {
       "entry": ["misc/**", "lint/index.ts"],
       // misc/workerd-suite/worker.js runs inside workerd, not Node. Its two

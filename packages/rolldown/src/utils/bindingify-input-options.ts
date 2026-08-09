@@ -29,6 +29,14 @@ import {
   normalizeTransformOptions,
 } from './normalize-transform-options';
 import { getParallelPluginInfo } from './parallel-plugin';
+import { getDefaultDevRuntime } from './default-dev-runtime';
+import {
+  INPUT_OPTIONS_OWNER,
+  measureHookCost,
+  measureIfFunction,
+  type PluginTimingsRecorder,
+  summarizePluginTimings,
+} from './plugin-timings';
 
 export function bindingifyInputOptions(
   rawPlugins: RolldownPlugin[],
@@ -39,6 +47,7 @@ export function bindingifyInputOptions(
   onLog: LogHandler,
   logLevel: LogLevelOption,
   watchMode: boolean,
+  timings: PluginTimingsRecorder | undefined,
   closeCallbackScope?: CloseCallbackScope,
   configWatchHooks: boolean = watchMode,
   runBuildCallback?: BuildCallbackRunner,
@@ -64,6 +73,7 @@ export function bindingifyInputOptions(
       onLog,
       logLevel,
       watchMode,
+      timings,
       closeCallbackScope,
       configWatchHooks,
       runBuildCallback,
@@ -77,7 +87,7 @@ export function bindingifyInputOptions(
     input: bindingifyInput(inputOptions.input),
     plugins,
     cwd: inputOptions.cwd ?? (import.meta.browserBuild ? '/' : process.cwd()),
-    external: bindingifyExternal(inputOptions.external, runBuildCallback),
+    external: bindingifyExternal(inputOptions.external, timings, runBuildCallback),
     resolve: bindingifyResolve(inputOptions.resolve),
     platform: inputOptions.platform,
     shimMissingExports: inputOptions.shimMissingExports,
@@ -86,7 +96,7 @@ export function bindingifyInputOptions(
     // After normalized, `false` will be converted to `undefined`, otherwise, default value will be assigned
     // Because it is hard to represent Enum in napi, ref: https://github.com/napi-rs/napi-rs/issues/507
     // So we use `undefined | NormalizedTreeshakingOptions` (or Option<NormalizedTreeshakingOptions> in Rust side), to represent `false | NormalizedTreeshakingOptions`
-    treeshake: bindingifyTreeshakeOptions(inputOptions.treeshake, runBuildCallback),
+    treeshake: bindingifyTreeshakeOptions(inputOptions.treeshake, timings, runBuildCallback),
     moduleTypes: inputOptions.moduleTypes,
     define: normalizedTransform.define,
     inject: bindingifyInject(normalizedTransform.inject),
@@ -97,6 +107,9 @@ export function bindingifyInputOptions(
     dropLabels: normalizedTransform.dropLabels,
     keepNames: outputOptions.keepNames,
     checks: inputOptions.checks,
+    // Pulled by the core while the build closes, so what it returns includes `closeBundle`.
+    // Only registered when measuring; its absence is how Rust knows to stay quiet.
+    pluginTimings: timings ? () => summarizePluginTimings(inputOptions) : undefined,
     deferSyncScanData: () => {
       let ret: BindingDeferSyncScanData[] = [];
       pluginContextData.moduleOptionMap.forEach((value, key) => {
@@ -126,9 +139,16 @@ export function bindingifyInputOptions(
 function bindingifyDevMode(devMode?: DevModeOptions): BindingExperimentalOptions['devMode'] {
   if (devMode) {
     if (typeof devMode === 'boolean') {
-      return devMode ? {} : undefined;
+      return devMode
+        ? { implement: getDefaultDevRuntime(), skipCommonRuntimeInjection: true }
+        : undefined;
     }
-    return devMode;
+    const usesDefaultRuntime = devMode.implement == null;
+    return {
+      ...devMode,
+      implement: devMode.implement ?? getDefaultDevRuntime(devMode.host, devMode.port),
+      skipCommonRuntimeInjection: usesDefaultRuntime ? true : devMode.skipCommonRuntimeInjection,
+    };
   }
 }
 
@@ -149,13 +169,16 @@ function bindingifyAttachDebugInfo(
 
 function bindingifyExternal(
   external: InputOptions['external'],
+  timings: PluginTimingsRecorder | undefined,
   runBuildCallback?: BuildCallbackRunner,
 ): BindingInputOptions['external'] {
   if (external) {
     if (typeof external === 'function') {
+      // Runs once per import specifier, so a slow one is felt across the whole graph.
+      const measured = measureHookCost(timings, INPUT_OPTIONS_OWNER, 'external', external);
       return (id, importer, isResolved) => {
         if (id.startsWith('\0')) return false;
-        const invoke = () => external(id, importer, isResolved);
+        const invoke = () => measured(id, importer, isResolved);
         return (runBuildCallback ? runBuildCallback(invoke) : invoke()) ?? false;
       };
     }
@@ -305,11 +328,7 @@ function bindingifyWatch(
   configWatchHooks: boolean,
 ): BindingInputOptions['watch'] {
   if (watch) {
-    if (watch.notify) {
-      console.warn('The "watch.notify" option is deprecated. Please use "watch.watcher" instead.');
-    }
-    // Merge deprecated `notify` into `watcher`, with `watcher` taking precedence
-    const watcher = { ...watch.notify, ...watch.watcher };
+    const watcher = watch.watcher ?? {};
     return {
       buildDelay: watch.buildDelay,
       skipWrite: watch.skipWrite,
@@ -328,6 +347,7 @@ function bindingifyWatch(
 
 function bindingifyTreeshakeOptions(
   config: InputOptions['treeshake'],
+  timings: PluginTimingsRecorder | undefined,
   runBuildCallback?: BuildCallbackRunner,
 ): BindingInputOptions['treeshake'] {
   if (config === false) {
@@ -374,9 +394,18 @@ function bindingifyTreeshakeOptions(
       { external: false, sideEffects: true },
     ];
   } else {
+    // The function form runs once per module.
     normalizedConfig.moduleSideEffects =
       typeof config.moduleSideEffects === 'function'
-        ? wrapBuildCallback(config.moduleSideEffects, runBuildCallback)
+        ? wrapBuildCallback(
+            measureIfFunction(
+              timings,
+              INPUT_OPTIONS_OWNER,
+              'treeshake.moduleSideEffects',
+              config.moduleSideEffects,
+            ),
+            runBuildCallback,
+          )
         : config.moduleSideEffects;
   }
 

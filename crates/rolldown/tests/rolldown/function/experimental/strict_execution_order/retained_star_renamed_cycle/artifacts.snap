@@ -8,7 +8,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```js
 //#region main.js
 await import("./page-b.js").then((n) => (n.t(), n.n));
-const pageA = await import("./page-a.js").then((n) => (n.t(), n.n));
+const pageA = await import("./page-a.js");
 console.log(pageA.common, pageA._);
 //#endregion
 
@@ -17,7 +17,8 @@ console.log(pageA.common, pageA._);
 ## page-a.js
 
 ```js
-import { n as __exportAll, t as __esmMin } from "./rolldown-runtime.js";
+import "./page-b.js";
+import { t as __esmMin } from "./rolldown-runtime.js";
 //#region common.js
 function init() {
 	globalThis.value = typeof globalThis.value === "number" ? globalThis.value + 1 : 0;
@@ -31,10 +32,6 @@ function init_common() {
 }
 //#endregion
 //#region page-a.js
-var page_a_exports = /* @__PURE__ */ __exportAll({
-	_: () => _,
-	common: () => common
-});
 function init_page_a() {
 	return (init_page_a = __esmMin((() => {
 		init_common();
@@ -42,16 +39,19 @@ function init_page_a() {
 	})))();
 }
 //#endregion
-export { page_a_exports as n, init_common as r, init_page_a as t };
+init_page_a();
+export { _, common };
 
 ```
 
 ## page-b.js
 
 ```js
-import "./page-a.js";
 import { n as __exportAll, t as __esmMin } from "./rolldown-runtime.js";
 //#region bridge.js
+function x() {
+	return 1;
+}
 //#endregion
 //#region page-b.js
 var page_b_exports = /* @__PURE__ */ __exportAll({});
@@ -61,7 +61,7 @@ function init_page_b() {
 	})))();
 }
 //#endregion
-export { page_b_exports as n, init_page_b as t };
+export { page_b_exports as n, x as r, init_page_b as t };
 
 ```
 
@@ -86,7 +86,7 @@ var pageA;
 function init_main() {
 	return (init_main = __esmMin((async () => {
 		await import("./page-b.js").then((n) => (n.t(), n.n));
-		pageA = await import("./page-a.js").then((n) => (n.t(), n.n));
+		pageA = await import("./page-a.js");
 		console.log(pageA.common, pageA._);
 	})))();
 }
@@ -99,7 +99,7 @@ await init_main();
 
 ```js
 import "./page-b.js";
-import { n as __exportAll, t as __esmMin } from "./rolldown-runtime.js";
+import { t as __esmMin } from "./rolldown-runtime.js";
 //#region common.js
 function init() {
 	globalThis.value = typeof globalThis.value === "number" ? globalThis.value + 1 : 0;
@@ -113,10 +113,6 @@ function init_common() {
 }
 //#endregion
 //#region page-a.js
-var page_a_exports = /* @__PURE__ */ __exportAll({
-	_: () => _,
-	common: () => common
-});
 function init_page_a() {
 	return (init_page_a = __esmMin((() => {
 		init_common();
@@ -124,16 +120,19 @@ function init_page_a() {
 	})))();
 }
 //#endregion
-export { page_a_exports as n, init_common as r, init_page_a as t };
+init_page_a();
+export { _, common };
 
 ```
 
 ### page-b.js
 
 ```js
-import "./page-a.js";
 import { n as __exportAll, t as __esmMin } from "./rolldown-runtime.js";
 //#region bridge.js
+function x() {
+	return 1;
+}
 function init_bridge() {
 	return (init_bridge = __esmMin((() => {})))();
 }
@@ -146,7 +145,7 @@ function init_page_b() {
 	})))();
 }
 //#endregion
-export { page_b_exports as n, init_bridge as r, init_page_b as t };
+export { x as i, page_b_exports as n, init_bridge as r, init_page_b as t };
 
 ```
 

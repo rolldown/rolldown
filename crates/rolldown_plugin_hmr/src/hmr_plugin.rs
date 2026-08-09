@@ -1,7 +1,7 @@
-use rolldown_common::{Platform, RUNTIME_MODULE_KEY, ResolvedExternal};
+use rolldown_common::RUNTIME_MODULE_KEY;
 use rolldown_plugin::{
-  HookResolveIdOutput, HookTransformArgs, HookTransformOutput, HookTransformReturn, HookUsage,
-  Plugin, SharedTransformPluginContext,
+  HookTransformArgs, HookTransformOutput, HookTransformReturn, HookUsage, Plugin,
+  SharedTransformPluginContext,
 };
 
 #[derive(Debug)]
@@ -13,28 +13,7 @@ impl Plugin for HmrPlugin {
   }
 
   fn register_hook_usage(&self) -> rolldown_plugin::HookUsage {
-    HookUsage::Transform | HookUsage::ResolveId
-  }
-
-  async fn resolve_id(
-    &self,
-    _ctx: &rolldown_plugin::PluginContext,
-    args: &rolldown_plugin::HookResolveIdArgs<'_>,
-  ) -> rolldown_plugin::HookResolveIdReturn {
-    // Only handle ws external marking for Node.js
-    if args.specifier == "ws" {
-      return Ok(Some(HookResolveIdOutput {
-        id: args.specifier.into(),
-        external: Some(ResolvedExternal::Bool(true)),
-        ..Default::default()
-      }));
-    }
-
-    Ok(None)
-  }
-
-  fn resolve_id_meta(&self) -> Option<rolldown_plugin::PluginHookMeta> {
-    Some(rolldown_plugin::PluginHookMeta { order: Some(rolldown_plugin::PluginOrder::Pre) })
+    HookUsage::Transform
   }
 
   async fn transform(
@@ -53,23 +32,14 @@ impl Plugin for HmrPlugin {
 
     let mut hmr_source = String::new();
 
-    // Platform-specific WebSocket import
-    if matches!(bundler_options.platform, Platform::Node) {
-      hmr_source.push_str("import { WebSocket } from 'ws';\n");
+    if dev_mode_options.skip_common_runtime_injection != Some(true) {
+      hmr_source.push_str(include_str!("./runtime/runtime-extra-dev-common.js"));
     }
 
-    // Common runtime
-    hmr_source.push_str(include_str!("./runtime/runtime-extra-dev-common.js"));
-
-    // Default or custom implementation
+    // The JS API supplies the default implementation. Rust consumers must provide the
+    // complete implementation, including the common runtime when they need it.
     if let Some(implement) = dev_mode_options.implement.as_deref() {
       hmr_source.push_str(implement);
-    } else {
-      let content = include_str!("./runtime/runtime-extra-dev-default.js");
-      let host = dev_mode_options.host.as_deref().unwrap_or("localhost");
-      let port = dev_mode_options.port.unwrap_or(3000);
-      let addr = format!("{host}:{port}");
-      hmr_source.push_str(&content.replace("$ADDR", &addr));
     }
 
     // Append to runtime

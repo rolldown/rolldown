@@ -31,6 +31,8 @@ jobs:
       node-changes: "${{ (steps.filter.outputs.node-changes == 'true') || (github.ref_name == 'main') || (steps.pr-labels.outputs.run-windows == 'true') }}"
       # Allows opting into Windows CI per-PR by adding the `ci: windows` label.
       run-windows: "${{ steps.pr-labels.outputs.run-windows == 'true' }}"
+      # Allows opting into the WebContainer smoke test per-PR by adding the `ci: webcontainer` label.
+      run-webcontainer: "${{ steps.pr-labels.outputs.run-webcontainer == 'true' }}"
     steps:
       # Reruns keep the original event payload, so query the current labels instead.
       - name: Read pull request labels
@@ -40,11 +42,17 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           PR_NUMBER: ${{ github.event.pull_request.number }}
         run: |
-          if ! run_windows="$(gh api "repos/${GITHUB_REPOSITORY}/pulls/${PR_NUMBER}" --jq '[.labels[].name] | any(. == "ci: windows")')"; then
-            echo "::warning::Could not read pull request labels; running Windows CI."
+          if ! labels="$(gh api "repos/${GITHUB_REPOSITORY}/pulls/${PR_NUMBER}" --jq '[.labels[].name]')"; then
+            echo "::warning::Could not read pull request labels; running Windows CI and skipping the WebContainer smoke test."
             run_windows=true
+            # fail closed: the WebContainer suite runs third-party code fetched at test time, so never opt in without a maintainer label
+            run_webcontainer=false
+          else
+            run_windows="$(jq 'any(. == "ci: windows")' <<< "$labels")"
+            run_webcontainer="$(jq 'any(. == "ci: webcontainer")' <<< "$labels")"
           fi
           echo "run-windows=${run_windows}" >> "$GITHUB_OUTPUT"
+          echo "run-webcontainer=${run_webcontainer}" >> "$GITHUB_OUTPUT"
 
       - uses: taiki-e/checkout-action@7d1e50e93dc4fb3bba58f85018fadf77898aee8b # v1.4.2
 
@@ -173,6 +181,16 @@ jobs:
     uses: ./.github/workflows/reusable-wasi.yml
     with:
       changed: ${{ needs.changes.outputs.node-changes == 'true' }}
+
+  # Runs the packed @rolldown/browser in a real browser page on every PR that touches node code. The
+  # `ci: webcontainer` label adds the WebContainer suite to the same job; it never runs on path
+  # changes or on main.
+  browser:
+    needs: changes
+    uses: ./.github/workflows/reusable-browser.yml
+    with:
+      changed: ${{ needs.changes.outputs.node-changes == 'true' }}
+      webcontainer: ${{ needs.changes.outputs.run-webcontainer == 'true' }}
 
   native-async-runtime:
     name: Native Async Runtime

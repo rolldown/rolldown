@@ -52,11 +52,11 @@ catalog:
   '@emnapi/runtime': 2.0.0-alpha.3
   '@jridgewell/trace-mapping': ^0.3.31
   '@napi-rs/cli': 3.7.2
-  '@napi-rs/wasm-runtime': ^1.2.0
+  '@napi-rs/wasm-runtime': ~1.2.2
   '@oxc-node/cli': ^0.1.0
   '@oxc-node/core': ^0.1.0
-  '@oxc-project/runtime': '=0.142.0'
-  '@oxc-project/types': '=0.142.0'
+  '@oxc-project/runtime': '=0.143.0'
+  '@oxc-project/types': '=0.143.0'
   '@pnpm/find-workspace-packages': ^6.0.9
   '@rolldown/pluginutils': ^1.0.0
   '@rollup/plugin-commonjs': ^29.0.0
@@ -90,14 +90,14 @@ catalog:
   lodash-es: ^4.17.21
   micromatch: ^4.0.8
   miniflare: ^4.20260611.0
-  oxc-parser: '=0.142.0'
-  oxc-transform: '=0.142.0'
+  oxc-parser: '=0.143.0'
+  oxc-transform: '=0.143.0'
   pathe: ^2.0.3
   react: ^19.0.0
   react-dom: ^19.0.0
   remark-parse: ^11.0.0
   remeda: ^2.34.1
-  rolldown-plugin-dts: ^0.27.0
+  rolldown-plugin-dts: ^0.28.0
   rollup: ^4.60.4
   semver: ^7.8.0
   serve-static: ^2.0.0
@@ -165,16 +165,17 @@ minimumReleaseAgeExclude:
   - vite-plus
   - vitepress-plugin-feedback-tracker@0.2.0-alpha.1
   - void
-  - '@napi-rs/wasm-runtime@1.2.0'
+  - '@napi-rs/wasm-runtime'
 
 # avoid accidentally relying on `NODE_PATH` env var
 extendNodePath: false
 
-# The catalog resolves @napi-rs/wasm-runtime to 1.2.0, which declares
-# @emnapi/core / @emnapi/runtime ^2.0.0-alpha.3 peers and needs no rule. But the
-# oxc packages (oxc-parser / oxc-transform / oxc-minify) still pull transitive
-# 1.1.6 copies, which declare ^1.7.1 peers, and the `emnapi` override above
-# forces those onto the v2 line. Keep allowing that resolution.
+# The catalog resolves @napi-rs/wasm-runtime to the 1.2.x line (~1.2.2), which
+# declares @emnapi/core / @emnapi/runtime `^1.7.1 || ^2.0.0-alpha.3` peers and
+# needs no rule. But the oxc packages (oxc-parser / oxc-transform / oxc-minify)
+# still pull transitive 1.1.6 copies, which declare ^1.7.1 peers, and the
+# `emnapi` override above forces those onto the v2 line. Keep allowing that
+# resolution.
 # @napi-rs/cli@3.7.2 declares an @emnapi/runtime ^1.7.1 peer for the same reason.
 peerDependencyRules:
   allowedVersions:

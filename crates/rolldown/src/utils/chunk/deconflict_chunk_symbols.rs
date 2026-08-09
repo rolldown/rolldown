@@ -3,18 +3,19 @@ use oxc_str::CompactStr;
 use crate::{
   stages::{generate_stage::order_wrap_state::OrderWrapState, link_stage::LinkStageOutput},
   utils::{
-    external_import_interop::{external_import_needs_interop, specifier_needs_interop},
+    external_import_interop::{
+      ChunkAssignments, chunk_external_interop_modes, chunk_has_node_esm_reader,
+    },
     renamer::{NestedScopeRenamer, Renamer},
   },
 };
 use arcstr::ArcStr;
-use rolldown_common::{
-  Chunk, ChunkIdx, ChunkKind, GetLocalDb, NormalModule, OutputFormat, SymbolRef, WrapKind,
-};
+use rolldown_common::{Chunk, ChunkIdx, ChunkKind, GetLocalDb, OutputFormat, SymbolRef, WrapKind};
 use rolldown_utils::ecmascript::legitimize_identifier_name;
 use rustc_hash::{FxHashMap, FxHashSet};
 
 #[tracing::instrument(level = "trace", skip_all)]
+#[expect(clippy::too_many_arguments)]
 pub fn deconflict_chunk_symbols(
   chunk_idx: ChunkIdx,
   chunk: &mut Chunk,
@@ -23,6 +24,7 @@ pub fn deconflict_chunk_symbols(
   order_live_symbols: &FxHashSet<SymbolRef>,
   format: OutputFormat,
   index_chunk_id_to_name: &FxHashMap<ChunkIdx, ArcStr>,
+  chunk_assignments: ChunkAssignments<'_>,
 ) {
   let mut renamer = Renamer::new(chunk.entry_module_idx(), &link_output.symbol_db, format);
   // Reserve global scope symbols (unresolved references) to prevent generating conflicting names.
@@ -140,8 +142,16 @@ pub fn deconflict_chunk_symbols(
         // finalizer's `remove_unused_top_level_stmt`); without it a user top-level binding named
         // `__esmMin`/`__esm` co-hosted with the runtime collides with the forced helper declaration.
         .filter(|(idx, stmt_info)| {
-          meta.stmt_info_included.has_bit(*idx)
-            || order_wrap_state.forces_runtime_stmt(&link_output.runtime, module.idx, stmt_info)
+          (meta.stmt_info_included.has_bit(*idx)
+            || order_wrap_state.forces_runtime_stmt(&link_output.runtime, module.idx, stmt_info))
+            && !stmt_info.import_records.iter().any(|rec_idx| {
+              order_wrap_state.has_order_cjs_carrier(
+                crate::stages::generate_stage::order_wrap_state::OrderCjsCarrierKey {
+                  importer: module.idx,
+                  record: *rec_idx,
+                },
+              )
+            })
         })
         .for_each(|(_, stmt_info)| {
           for declared_symbol in stmt_info.declared_symbols.iter().filter(|item| item.is_normal()) {
@@ -215,31 +225,46 @@ pub fn deconflict_chunk_symbols(
   // needing interop on the same external. Create a separate binding name for node-mode.
   if matches!(format, OutputFormat::Iife | OutputFormat::Umd | OutputFormat::Cjs) {
     let mut node_mode_names = FxHashMap::default();
-    for (ext_idx, named_imports) in &chunk.direct_imports_from_external_modules {
-      if !external_import_needs_interop(named_imports) {
+    // Externals the chunk only *references* (their importing module lives in another chunk or was
+    // tree-shaken away) carry no `named_imports`, but the inclusion pass still recorded how they
+    // are observed — so they can be mixed-mode too. See `chunk_recorded_external_interop`.
+    //
+    // Only the cjs renderer emits bindings for that indirect list; `render_chunk_external_imports`
+    // walks the direct list alone, so a name planned from an indirect external under iife/umd would
+    // have no `let` to bind it. Keep the two in step rather than plan a name nothing declares.
+    let indirect_externals = matches!(format, OutputFormat::Cjs)
+      .then(|| chunk.import_symbol_from_external_modules.iter())
+      .into_iter()
+      .flatten();
+    let externals = chunk
+      .direct_imports_from_external_modules
+      .iter()
+      .map(|(ext_idx, named_imports)| (*ext_idx, Some(named_imports.as_slice())))
+      .chain(indirect_externals.map(|ext_idx| (*ext_idx, None)));
+    for (ext_idx, named_imports) in externals {
+      let ext =
+        link_output.module_table[ext_idx].as_external().expect("Should be external module here");
+      let Some(modes) = chunk_external_interop_modes(
+        link_output,
+        chunk_assignments,
+        chunk_idx,
+        ext.namespace_ref,
+        named_imports,
+      ) else {
         continue;
-      }
-      let mut has_node_mode = false;
-      let mut has_non_node_mode = false;
-      for (importer_idx, import) in named_imports {
-        if !specifier_needs_interop(&import.imported) {
-          continue;
-        }
-        if link_output.module_table[*importer_idx]
-          .as_normal()
-          .is_some_and(NormalModule::should_consider_node_esm_spec_for_static_import)
-        {
-          has_node_mode = true;
-        } else {
-          has_non_node_mode = true;
-        }
-        if has_node_mode && has_non_node_mode {
-          break;
-        }
-      }
-      if has_node_mode && has_non_node_mode {
-        let ext =
-          link_output.module_table[*ext_idx].as_external().expect("Should be external module here");
+      };
+      // Both modes are needed *and* some module here will actually read the node one. Without the
+      // second test the binding is dead on arrival and only its `__toESM(mod, 1)` call survives DCE.
+      if modes.node_esm
+        && modes.non_node_esm
+        && chunk_has_node_esm_reader(
+          link_output,
+          chunk_assignments,
+          chunk_idx,
+          ext.namespace_ref,
+          named_imports,
+        )
+      {
         let canonical_ref = link_output.symbol_db.canonical_ref_for(ext.namespace_ref);
         let original_name = canonical_ref.name(&link_output.symbol_db);
         let node_name = renamer.create_conflictless_name(original_name);

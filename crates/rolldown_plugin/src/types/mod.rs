@@ -1,3 +1,4 @@
+pub mod build_timings;
 pub mod custom_field;
 pub mod hook_addon_args;
 pub mod hook_build_end_args;
@@ -16,7 +17,6 @@ pub mod hook_resolve_file_url_output;
 pub mod hook_resolve_id_args;
 pub mod hook_resolve_id_output;
 pub mod hook_resolve_id_skipped;
-pub mod hook_timing;
 pub mod hook_transform_args;
 pub mod hook_transform_ast_args;
 pub mod hook_transform_output;

@@ -57,16 +57,18 @@ These are the main places where strict output deliberately accepts extra wrapper
   record counts as a possible load even if never executed.
   A pure dynamic entry is the exception when every live `import()` call site can carry the trigger:
   the implementation chunk becomes a common chunk and each call site rewrites to either
-  `Promise.resolve().then(() => (init_*(), namespace))` or
-  `import(host).then(n => (n.init_*(), n.namespace))`. This applies both to facades removed by the
+  `Promise.resolve().then(() => (init_*()..., namespace))` or
+  `import(host).then(n => (n.init_*()..., n.namespace))`. The activation is normally one module
+  wrapper; for a consumer-local namespace it is the route's complete leaf/CJS-carrier target list,
+  never the intentionally empty shared barrel wrapper. This applies both to facades removed by the
   chunk optimizer and to facades that strict lowering would otherwise create. It is rejected for a
-  previously restored empty facade, an emitted/user entry, a two-argument `import()`, a TLA-tainted
-  target, a cross-chunk host namespace that may expose callable `then`, or — on the create path — a
-  direct or transitive export-star chain that reaches an external module. Entry-level external
-  merges render on the facade chunk in every format, and the module-local simulated namespace does
-  not reproduce their format-specific behavior. The external-star guard is create-path-only: the
-  restore path instead relies on the chunk optimizer's simulated-namespace handling, whose
-  external-star preservation is handled separately.
+  previously restored empty facade, an emitted/user entry, a TLA-tainted target, a cross-chunk host
+  namespace that may expose callable `then`, or — on the create path — a direct or transitive
+  export-star chain that reaches an external module. Entry-level external merges render on the
+  facade chunk in every format, and the module-local simulated namespace does not reproduce their
+  format-specific behavior. The external-star guard is create-path-only: the restore path instead
+  relies on the chunk optimizer's simulated-namespace handling, whose external-star preservation is
+  handled separately.
 - **CJS namespace merge is skipped under strict** (`determine_safely_merge_cjs_ns`): merging
   moves the surviving require call to whichever statement stays included — an intra-body
   move no wrapping can repair. Per-importer call sites cost bytes; the wrapper memoizes.
@@ -77,13 +79,14 @@ These are the main places where strict output deliberately accepts extra wrapper
 
 Every site that can run a wrapped module, in one place:
 
-| Trigger                                                                           | Lives in                                                                                 | Owner                                                                               |
-| --------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------- |
-| `init_*()` for an order-wrapped importee of a live statement                      | importer body, statement position                                                        | finalizer via the shared init-target view                                           |
-| `init_*()` / `require_*()` obligations of removed statements                      | importer body, removed statement's position                                              | `OrderImportOverlay` / transitive init targets                                      |
-| user or dynamic entry activation, unless every live `import()` rewrite carries it | entry chunk prologue (a facade only when other chunks can load the implementation chunk) | `create_order_wrap_entry_facades` / `restore_order_wrap_entry_facades`              |
-| collapsible dynamic entry activation                                              | importer body, the rewritten `import()` call site                                        | finalizer `rewrite_dynamic_import_for_merged_entry` via the shared init-target view |
-| interop `require_*()` of an eager importer                                        | importer body (its carrier)                                                              | flag-off interop machinery, order-analysis carrier rule                             |
+| Trigger                                                                           | Lives in                                                                                 | Owner                                                                                              |
+| --------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------- |
+| `init_*()` for an order-wrapped importee of a live statement                      | importer body, statement position                                                        | finalizer via the shared init-target view                                                          |
+| `init_*()` / `require_*()` obligations of removed statements                      | importer body, removed statement's position                                              | `OrderImportOverlay` / transitive init targets                                                     |
+| generated CJS re-export interop from a consumer-local barrel                      | importer body, routed statement position; declaration beside the CJS importee            | per-import-record `OrderCjsCarrier`                                                                |
+| user or dynamic entry activation, unless every live `import()` rewrite carries it | entry chunk prologue (a facade only when other chunks can load the implementation chunk) | `create_order_wrap_entry_facades` / `restore_order_wrap_entry_facades`                             |
+| collapsible dynamic entry activation                                              | importer body, the rewritten `import()` call site                                        | finalizer `rewrite_dynamic_import_for_merged_entry` via the shared module-or-namespace target view |
+| interop `require_*()` of an eager importer                                        | importer body (its carrier)                                                              | flag-off interop machinery, order-analysis carrier rule                                            |
 
 A trigger must never sit inline in a chunk body that other chunks can evaluate as a
 dependency; that is the facade rule's content.
@@ -92,6 +95,37 @@ Moving a dynamic entry trigger to the promise continuation deliberately puts it 
 after the host chunk settles. The importing promise still resolves only after `init_*()` runs, but
 a microtask queued during host evaluation can observe the target before initialization. Both strict
 modes use this policy; `m4_dynamic_facade_race` pins it.
+
+## Thenable chunk namespaces
+
+`import()` resolves through the promise resolution procedure, so a chunk namespace that carries a
+callable `then` export is assimilated: the promise settles with whatever that `then` produces, and
+the call-site rewrite's extraction callback never receives the namespace. For a merged dynamic
+entry this would let a chunk-mate's export change what importing the target observes — impossible
+in source, where importing a module never exposes a sibling's exports.
+
+The defense splits by who owns the export name:
+
+- **Bundler-owned names are never `then`.** `deconflict_exported_names` reserves it before naming
+  internal exports — a source symbol named `then` deconflicts to `then$1` like any collision — and
+  the minified-name generator skips the literal `then` (it would otherwise appear at value
+  443,179). An `emitFile`-promised export keeps `then` only when `then` is the promised name
+  itself; #10500 tracks routing those through the predefined-names path, which removes that
+  carve-out.
+- **User-observable names cannot be renamed, so the collapse is refused instead**: an entry's own
+  public exports, `emitFile`-promised names, and whatever an `export * from` chain reaching an
+  external module supplies at runtime. `order_wrap_host_can_expose_then_export` guards the restore
+  path and the entry-facade decision guards the create path — see the entry-trigger facade bullet
+  above. In addition to that, `dynamic_entry_supports_namespace_extraction`, which rewrites dynamic
+  importers to `.then((n) => n.<ns>)`, will avoid inlining the module into the dynamic entry.
+  Note that this is only needed when the exports used by the dynamic import are not a known subset
+  of the ones exported by the dynamic entry module. If they are a known subset, then we do not need
+  to generate this intermediate namespace and we can directly inline the module even though there
+  is a `then` export of `export * from` (see `dynamic_entry_partial_usage_allows_plain_merge`).
+
+Deliberately kept: a dynamic-import target's own `then` export. Native `import()` of the source
+module assimilates the same way, so renaming it would diverge from source semantics rather than
+preserve them.
 
 ## Tree-shaking parity across strict modes
 
@@ -102,6 +136,28 @@ is marked re-export-transparent when it has no local executable body, generated 
 assignment, unconditional execution dependency, or `keepNames` work. Each consumer then routes
 through it only to the leaf bindings that consumer retained.
 
+A direct CJS re-export used to disqualify an otherwise pure barrel because the ordinary CJS
+finalizer generated `namespace = __toESM(require_cjs())` inside the shared barrel wrapper. Strict
+lowering now represents that generated body as one `OrderCjsCarrier` per import record. The barrel
+wrapper becomes an empty routing waypoint; a consumer of `cn` reaches only `cn`, while a consumer of
+`cloneDeep` additionally calls the carrier for that exact CJS record. Two CJS re-export records
+never share a monolithic init, even when they target the same CJS module. A carrier declaration is
+placed beside its CJS importee, is inert until its memoized init is called, and owns the original
+record's namespace conversion and Node-interop mode.
+
+An effectful CJS re-export remains an eager obligation of every evaluation of that barrel route
+only when the barrel's own side-effect contract retains that record unconditionally. A
+`moduleSideEffects: false` barrel may retain a CJS record globally for one lazy binding consumer
+without making that record eager for unrelated consumers. The same boundary applies at every hop
+through nested consumer-local barrels: an outer `moduleSideEffects: false` barrel blocks a deeper
+carrier from becoming an unconditional obligation even when each inner barrel retains side
+effects. The resolver recursively collects only the carriers whose complete forwarding path
+retains side effects, then sorts them with selected leaves by their complete source-record path,
+preserving `effect-before`, leaf, `effect-after` order. A bare import has no binding route but still
+receives the genuinely eager carriers. Retained-path traversal carries the same permission through
+every selected hop: a carrier explicitly selected by binding demand still crosses a pure boundary,
+but an off-path eager carrier does not.
+
 The routing evidence is consumer-local. Named imports use their local facade's link-stage liveness,
 including facades retained through an export chain. Namespace holders — both `import * as ns` and a
 named import whose value is a namespace — inspect only included statements: statically resolved
@@ -110,6 +166,29 @@ member that the constant-inlining pass will replace is skipped using the same co
 inline mode as tree shaking. Module-global leaf or namespace liveness is deliberately insufficient,
 because another importer can make the same canonical symbol live without retaining it for this
 consumer.
+
+The optimization is deliberately restricted to source modules whose body consists entirely of
+direct re-exports. Tree shaking must be enabled, and the module must not be in a synchronous
+`import`/`require` SCC, be the target of an opaque CommonJS `require()`, carry top-level await or a
+TLA dependency, expose dynamic exports, require a missing-export shim, or be a concatenated
+wrapper. CJS `export *` is also excluded because its namespace is dynamic. These shapes keep the
+existing monolithic initialization path. Rejecting a synchronous SCC is the first-line cycle
+safety rule: it preserves one module's evaluating guard across dependency traversal and local body
+instead of flattening a cycle into separately ordered leaf calls. A direct `require()` target also
+stays monolithic. When that monolithic wrapper (or any other non-routing wrapper) retains an
+`export *` into a consumer-local route and materializes the resulting namespace, its guarded
+record position initializes the route's complete leaf/carrier target list before exposing the
+namespace getters.
+
+Code-splitting placement makes the same consumer-local decision before chunks exist. A probe
+`OrderWrapState` is built from the wrap-all structural plan, and entry reachability routes an
+incoming record through the shared resolver. Once a non-entry consumer-local barrel is reached,
+its module-wide `load_dependencies` union is not traversed; only recursively eager carriers and
+consumer-local waypoint modules are unconditional. Named leaves and pure carriers get bits only
+from the incoming consumer that chose them. Preserving waypoint modules keeps every included
+routing barrel reachable without reopening its union of unrelated leaves. A barrel that is itself
+a user or dynamic entry exposes its complete namespace and therefore uses the conservative full
+traversal and an entry prologue containing every statically known target.
 
 A namespace synthesized only to replace a collapsed dynamic-entry facade is not an opaque namespace
 consumer. Its getters are restricted to the export interface already retained by link-time
@@ -120,7 +199,8 @@ binding under a different alias must not widen this dynamic-entry interface. If 
 also has a real semantic consumer, that complete semantic interface wins. Excluded re-export init
 routing otherwise continues to use the dynamic consumers' recorded paths. Treating the synthetic
 namespace as opaque would discard those paths and can skip a required leaf initializer in a
-re-export cycle (`retained_star_renamed_cycle`).
+re-export cycle. `cross_chunk_dynamic_importer_uses_call_site_trigger` pins the narrowed simulated
+facade independently of the retained-star fixtures' routing topology.
 
 ## Audit decisions
 
@@ -228,6 +308,14 @@ Generate-stage finalization creates a side table that remains empty unless stric
 ```rust
 pub struct OrderWrapState {
   modules: FxHashMap<ModuleIdx, OrderWrappedModule>,
+  reexport_init_transparent: FxHashSet<ModuleIdx>,
+  consumer_local_reexport_routes: FxHashSet<ModuleIdx>,
+  consumer_local_namespace_targets: FxHashMap<ModuleIdx, Vec<WrappedEsmInitTarget>>,
+  cjs_carriers: FxHashMap<OrderCjsCarrierKey, OrderCjsCarrier>,
+  cjs_carriers_by_importee: FxHashMap<ModuleIdx, Vec<OrderCjsCarrierKey>>,
+  cjs_carriers_by_symbol: FxHashMap<SymbolRef, Vec<OrderCjsCarrierKey>>,
+  cjs_carrier_by_namespace: FxHashMap<SymbolRef, OrderCjsCarrierKey>,
+  cjs_carrier_wrapper_refs: FxHashSet<SymbolRef>,
   synthetic_statements: IndexVec<OrderSyntheticStmtIdx, OrderSyntheticStmt>,
   synthetic_statements_by_chunk: FxHashMap<ChunkIdx, Vec<OrderSyntheticStmtIdx>>,
   import_overlays: FxHashMap<OrderImportKey, OrderImportOverlay>,
@@ -243,11 +331,25 @@ pub struct OrderWrappedModule {
   pub wrapper_ref: SymbolRef,
   pub wrapper_statement: Option<OrderSyntheticStmtIdx>,
   pub chunk: Option<ChunkIdx>,
-  pub reexport_init_transparent: bool,
+}
+
+pub struct OrderCjsCarrierKey {
+  pub importer: ModuleIdx,
+  pub record: ImportRecordIdx,
+}
+
+pub struct OrderCjsCarrier {
+  pub importee: ModuleIdx,
+  pub wrapper_ref: SymbolRef,
+  pub namespace_ref: SymbolRef,
+  pub wrapper_statement: Option<OrderSyntheticStmtIdx>,
+  pub chunk: Option<ChunkIdx>,
+  pub eager: bool,
+  pub needs_to_esm: bool,
+  pub is_node_mode: bool,
 }
 
 pub struct OrderSyntheticStmt {
-  pub owner: ModuleIdx,
   pub declared_symbols: Vec<TaggedSymbolRef>,
   pub referenced_symbols: Vec<SymbolRef>,
   pub runtime_helpers: RuntimeHelper,
@@ -273,9 +375,10 @@ pub struct OrderImportOverlay {
 `OrderWrapState` is the sole owner of these order-lowering fields. Helper views may borrow it, but the data is not mirrored into `LinkingMetadata`.
 
 - order-wrapper symbols and placement belong to order state, not `LinkingMetadata`;
+- per-import-record CJS carriers, their namespace symbols, and their importee-chunk placement belong to order state;
 - order state does not contain mutable user-statement inclusion;
 - importer-specific references and runtime helpers belong to `import_overlays`, not the original `StmtInfo`;
-- synthetic declarations participate in chunk assignment and deconfliction through an explicit synthetic-statement API, with secondary indexes for chunk rendering;
+- synthetic declarations participate in chunk assignment and deconfliction through an explicit synthetic-statement API, with secondary indexes for chunk rendering; declarations need not share their symbol owner's module chunk because CJS carrier symbols are deliberately placed beside the CJS importee;
 - entry facades are explicit chunk-graph changes made by the caller after lowering, while required runtime symbols are derived from synthetic statements and import overlays;
 - namespace requirements retain the live importer modules that require each namespace, so a dead overlay cannot keep a namespace alive;
 - nested re-export records and consumed facades preserve the frozen tree-shaking decisions used by re-export init routing;
@@ -297,6 +400,8 @@ pub struct OrderLoweringInput<'a> {
   pub star_reexport_records_by_imported_symbol:
     &'a FxHashMap<SymbolRef, Vec<Vec<(ModuleIdx, ImportRecordIdx)>>>,
   pub used_symbols: &'a UsedSymbolRefsBuilder,
+  pub cyclic_modules: &'a FxHashSet<ModuleIdx>,
+  pub tree_shaking: bool,
 }
 
 pub struct OrderLoweringOutput<'a> {
@@ -320,7 +425,7 @@ pub struct FinalEsmInitMetadata {
 
 struct ModuleEsmInitMetadata {
   init_is_noop: bool,
-  transitive_init_targets: FxHashMap<StmtInfoIdx, Vec<ModuleIdx>>,
+  transitive_init_targets: FxHashMap<StmtInfoIdx, Vec<WrappedEsmInitTarget>>,
 }
 
 fn compute_wrapped_esm_init_metadata(/* ... */) -> Sealed<FinalEsmInitMetadata>;
@@ -332,10 +437,11 @@ The table is sparse: a missing entry means `init_is_noop == false` and no exclud
 
 ### Shared init-target view
 
-Finalization and cross-chunk linking need to work with two sources of lazy initialization:
+Finalization and cross-chunk linking need to work with three sources of lazy initialization:
 
 1. interop ESM wrappers from `LinkingMetadata`;
-2. order wrappers from `OrderWrapState`.
+2. order wrappers from `OrderWrapState`;
+3. generated per-record CJS carriers from `OrderWrapState`.
 
 They use a read-only view instead of testing an effective `WrapKind`:
 
@@ -350,9 +456,14 @@ pub enum EsmInitOrigin {
   Interop,
   ExecutionOrder,
 }
+
+pub enum WrappedEsmInitTarget {
+  Module(ModuleIdx),
+  CjsCarrier(OrderCjsCarrierKey),
+}
 ```
 
-An accessor resolves at most one ESM init target for a module. Interop ESM wrapping takes precedence because an already interop-wrapped module is represented by that existing wrapper; the order planner selects an eligible carrier instead of adding a second wrapper. This view carries structural wrapper identity only; final no-op and excluded-statement facts come from `FinalEsmInitMetadata`.
+An accessor resolves at most one ESM init target for a module. Interop ESM wrapping takes precedence because an already interop-wrapped module is represented by that existing wrapper; the order planner selects an eligible carrier instead of adding a second wrapper. Record routing returns `WrappedEsmInitTarget`, so Emit, Register, Project, and pre-chunk placement agree on whether an obligation names a module wrapper or a CJS carrier. The module view carries structural wrapper identity only; final no-op and excluded-statement facts come from `FinalEsmInitMetadata`.
 
 ### Synthetic symbol inclusion
 
@@ -373,6 +484,9 @@ Changing an importee from eager execution to an order wrapper affects its import
 - direct and transitive init obligations.
 
 Finalization and cross-chunk linking read the overlay alongside the immutable original import record. Tree shaking and user statement inclusion never read it.
+For a non-empty retained path, the overlay keeps only namespace/runtime glue and does not separately
+reference the direct wrapper; the shared resolved target list is the sole source for both emitted
+calls and cross-chunk registration.
 
 ### Finalizer
 
@@ -386,9 +500,9 @@ The execution-order case reuses the established hoisted `function init_*()` code
 
 Removed user import/re-export statements are finalized with any matching `OrderImportOverlay`. The finalizer may emit a synthetic init or re-export expression in the removed statement's source position, but it does not restore the original statement.
 
-### Entry prologue
+### Complete consumer-local namespaces and entry prologues
 
-Entry rendering consumes the same init-target view as module finalization. Order-wrapped entries emit an explicit init call. Interop entries used internally also keep an inert implementation chunk behind their public facade.
+Lowering precomputes the complete, source-ordered namespace target list for every consumer-local route. Included import/re-export records route through the importer-local resolver even when the route also has a link-stage interop wrapper; excluded `export *` records whose namespace is materialized use the cached complete list from final metadata. Both paths keep the calls inside the consuming monolithic wrapper's evaluating guard and at the re-export record's source position. Entry rendering and collapsed dynamic-entry call-site activation consume the same list: a consumer-local barrel entry cannot call its intentionally empty shared wrapper, so its prologue or rewritten `import()` calls every namespace target instead. For a cross-chunk rewrite, the host chunk imports and re-exports every target wrapper/carrier beside the simulated namespace; the callback invokes them in list order before returning that namespace. Other order-wrapped entries emit an explicit init call, and interop entries used internally keep an inert implementation chunk behind their public facade.
 
 ### Topology
 
@@ -399,6 +513,7 @@ Entry rendering consumes the same init-target view as module finalization. Order
 ```text
 link + tree shaking
   -> immutable LinkingMetadata and execution dependencies
+  -> pre-chunk consumer-local probe + importer-local entry-bit propagation
   -> provisional ChunkGraph
   -> OrderAnalysis / OrderWrapPlan
   -> lower plan into OrderWrapState + final ChunkGraph
@@ -413,6 +528,7 @@ link + tree shaking
 - No generate-stage call can change `LinkingMetadata::wrap_kind()`.
 - No order-lowering call can set a user statement inclusion bit.
 - Every order wrapper has exactly one symbol owner and one rendered chunk.
+- Every CJS re-export carrier is keyed by one importer record and rendered in its CJS importee's chunk.
 - Every synthetic declaration participates in symbol-to-chunk assignment and deconfliction.
 - Every import overlay is backed by an immutable link-stage execution dependency or retained re-export contract.
 - Every synthesized init call references a reachable interop or order wrapper.
@@ -421,6 +537,7 @@ link + tree shaking
 - Every excluded-statement init obligation is either a retained re-export obligation or a synthetic obligation backed by an execution dependency.
 - Final cross-chunk registration and finalizer emission require the same `Sealed<FinalEsmInitMetadata>` type; pre-final projection cannot supply one and does not consume final metadata.
 - Wrap-all and on-demand preserve the same link-stage statement and binding liveness; only their wrapper plans may differ.
+- Emit, Register, Project, and pre-chunk placement resolve consumer-local records through the same target model.
 - Every order-wrapped entry has an explicit entry trigger.
 - Flag-off builds create no order wrappers or strict-only entry facades.
 

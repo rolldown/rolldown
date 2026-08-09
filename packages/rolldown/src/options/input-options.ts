@@ -153,10 +153,6 @@ export interface WatcherOptions {
    */
   watcher?: WatcherFileWatcherOptions;
   /**
-   * @deprecated Use {@linkcode watcher} instead.
-   */
-  notify?: WatcherFileWatcherOptions;
-  /**
    * Filter to limit the file-watching to certain files.
    *
    * Strings are treated as glob patterns.
@@ -220,6 +216,13 @@ export type DevModeOptions =
       host?: string;
       port?: number;
       implement?: string;
+      /**
+       * Prevent Rolldown from prepending its common dev runtime to {@link implement}.
+       * @deprecated Common runtime injection will be disabled by default in the future.
+       * Include the common runtime in {@link implement} instead.
+       * @default false
+       */
+      skipCommonRuntimeInjection?: boolean;
       lazy?: boolean;
     };
 
@@ -765,10 +768,11 @@ export interface InputOptions {
    * Devtools integration options.
    *
    * When enabled, Rolldown writes JSON-lines devtools output under
-   * `<cwd>/node_modules/.rolldown/{safe_session_component}/`. The raw session
-   * ID remains in events, while unsafe, empty, Unicode, reserved, and very long
-   * IDs are encoded for the directory name. Consumers can parse the output
-   * with `@rolldown/debug` after `await bundle.close()` resolves successfully.
+   * `node_modules/.rolldown/{safe_session_component}/`, resolved against
+   * {@linkcode cwd}. The raw session ID remains in events, while unsafe, empty,
+   * Unicode, reserved, and very long IDs are encoded for the directory name.
+   * Consumers can parse the output with `@rolldown/debug` after
+   * `await bundle.close()` resolves successfully.
    *
    * @experimental
    */

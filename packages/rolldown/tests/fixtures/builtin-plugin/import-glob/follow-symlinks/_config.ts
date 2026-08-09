@@ -16,6 +16,7 @@ export default defineTest({
   // rolldown_plugin_vite_import_glob) cannot traverse the `linked/my-lib`
   // directory symlink on wasm32-wasip1, so the glob
   // `./linked/*/components/*.js` matches 0 of the 2 expected modules.
+  // See https://github.com/rolldown/rolldown/issues/10609.
   skip: isWasiTest,
   config: {
     plugins: [viteImportGlobPlugin()],

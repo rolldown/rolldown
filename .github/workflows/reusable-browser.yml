@@ -1,0 +1,69 @@
+name: Browser
+
+# The WebContainer suite below runs an unpinned runtime fetched from stackblitz.com at test time, so
+# this job must never be granted secrets or a non-empty permissions block.
+permissions: {}
+
+on:
+  workflow_call:
+    inputs:
+      changed:
+        required: true
+        type: boolean
+      webcontainer:
+        required: true
+        type: boolean
+
+jobs:
+  run:
+    name: Browser
+    # both suites live in packages/browser-tests and need the same wasm build, so they share one job.
+    # A PR can carry the `ci: webcontainer` label without touching node code, hence the `or`.
+    if: ${{ inputs.changed || inputs.webcontainer }}
+    runs-on: ubuntu-latest
+    # matches the WASI job: on a rust change the shared debug wasm32 cache is stale and this job
+    # builds the same target from scratch
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Setup Rust
+        uses: oxc-project/setup-rust@3d6fb132fbe7cdcb66bf8ec193911c2945369d12 # v1.0.17
+        with:
+          tools: just
+          # reads the cache the WASI job saves on main; both build the same debug wasm32 target
+          cache-key: debug-build-wasi
+          save-cache: false
+
+      - uses: voidzero-dev/setup-vp@250f29ce396baf5e8f24498e17c0dfdebabc26eb # v1.15.0
+        with:
+          version: '0.2.1'
+          cache: true
+
+      - name: Add WASI target
+        run: rustup target add wasm32-wasip1-threads
+
+      # no browser download: the vitest config points Playwright at the runner's system Chrome
+      - name: Browser Smoke Test
+        if: ${{ inputs.changed }}
+        run: just test-browser
+
+      # opt-in only, and slower: it boots a WebContainer from StackBlitz's CDN
+      - name: WebContainer Smoke Test
+        if: ${{ inputs.webcontainer }}
+        run: just test-webcontainer
+
+      - name: Upload failure screenshots
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        if: failure()
+        with:
+          name: browser-tests-screenshots
+          # vitest writes a failing test's screenshot to both, under different names
+          path: |
+            packages/browser-tests/.vitest-attachments
+            packages/browser-tests/tests/browser/__screenshots__
+            packages/browser-tests/tests/webcontainer/__screenshots__
+          retention-days: 7
+          if-no-files-found: ignore

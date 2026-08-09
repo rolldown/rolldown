@@ -18,6 +18,11 @@ import { bindingifyOutputOptions } from './bindingify-output-options';
 import type { CloseCallbackScope } from './close-callback-scope';
 import { initializeParallelPlugins } from './initialize-parallel-plugins';
 import {
+  measureIfFunction,
+  OUTPUT_OPTIONS_OWNER,
+  pluginTimingsRecorderFor,
+} from './plugin-timings';
+import {
   createCleanupFailureError,
   isCleanupFailureError,
   retryCleanupFromError,
@@ -40,6 +45,12 @@ export async function createBundlerOptions(
   // See internal-docs/watch-mode/implementation.md.
   configWatchHooks: boolean = watchMode,
   runBuildCallback?: BuildCallbackRunner,
+  /**
+   * Whether to time plugin hooks. Only `RolldownBuild` asks for it, because it is the one
+   * caller that reaches `close()`, where the report is flushed. A recorder created for
+   * watch, dev or scan would be written to on every hook call and never read.
+   */
+  measureTimings = false,
 ): Promise<BundlerOptionWithStopWorker> {
   // A `plugins` accessor is user code that native close can end up waiting on,
   // and every read below happens while a build is (or is about to be)
@@ -126,6 +137,36 @@ export async function createBundlerOptions(
     ...checkOutputPluginOption(normalizedOutputPlugins, onLog),
   ];
 
+  // Keyed on the input options so a plugin running a nested `rolldown()` build accumulates
+  // separately from the build that spawned it, and so repeated `generate`/`write` calls on
+  // one build share a recorder — `close()` flushes it once, keyed on the same object.
+  const timings =
+    measureTimings && inputOptions.checks?.pluginTimings !== false
+      ? pluginTimingsRecorderFor(inputOptions)
+      : undefined;
+
+  // `assetFileNames` and `sanitizeFileName` are read twice: once here on the way to Rust,
+  // and again by `this.emitFile` in a plugin context, which calls the user's option
+  // directly. Measuring at each consumer would count one call in two places, so these two
+  // are measured once at the source and passed on already wrapped.
+  if (timings) {
+    outputOptions = {
+      ...outputOptions,
+      assetFileNames: measureIfFunction(
+        timings,
+        OUTPUT_OPTIONS_OWNER,
+        'assetFileNames',
+        outputOptions.assetFileNames,
+      ),
+      sanitizeFileName: measureIfFunction(
+        timings,
+        OUTPUT_OPTIONS_OWNER,
+        'sanitizeFileName',
+        outputOptions.sanitizeFileName,
+      ),
+    };
+  }
+
   let parallelPluginInitResult: Awaited<ReturnType<typeof initializeParallelPlugins>>;
   try {
     if (import.meta.browserBuild) {
@@ -169,6 +210,7 @@ export async function createBundlerOptions(
       onLog,
       logLevel,
       watchMode,
+      timings,
       closeCallbackScope,
       configWatchHooks,
       runBuildCallback,
@@ -178,6 +220,7 @@ export async function createBundlerOptions(
     const bindingOutputOptions = bindingifyOutputOptions(
       outputOptions,
       pluginContextData,
+      timings,
       runBuildCallback,
     );
 

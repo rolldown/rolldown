@@ -334,11 +334,12 @@ export class RolldownBuild {
     const option = await createBundlerOptions(
       this.#inputOptions,
       outputOptions,
-      false,
+      /* watchMode */ false,
       this.#closeCallbackScope,
-      false,
+      /* configWatchHooks */ false,
       (callback, callbackName) =>
         this.#runBuildCallback(initiatingInvocation, callback, callbackName),
+      /* measureTimings */ true,
     );
     const operation: BuildOperation = {
       settled: false,

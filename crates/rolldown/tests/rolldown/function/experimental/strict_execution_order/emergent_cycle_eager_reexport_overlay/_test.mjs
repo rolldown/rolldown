@@ -1,14 +1,10 @@
 import assert from 'node:assert';
 
-// The pre-lowering chunk graph is acyclic; applying the wrap plan adds the eager forwarder's
-// cross-chunk `init_definer` overlay import (A -> B), which closes a chunk cycle with the baseline
-// B -> A edge from the eager reader's CJS carrier. Chunk B's body then evaluates before chunk A's.
-// The forwarder carries no `init_forwarder` of its own, so the fixpoint projector — which only
-// walks importers that own an ESM `init_*` — skips it and misses the A -> B overlay edge. Without
-// projecting overlay edges the eager reader's record-position interop trigger runs mid-cycle and
-// reads A's not-yet-assigned `var require_carrier` — `TypeError: require_carrier is not a function`
-// (vue-vben-admin's `qe is not a function`). Projecting the overlay edge wraps chunk B's eligible
-// modules, deferring the read until after both chunk bodies.
+// On-demand routing gives the entry direct ownership of `init_definer` and does not leave a
+// duplicate direct-wrapper reference on the forwarder's non-empty retained path. That avoids a
+// phantom A -> B edge and the artificial cycle it would close with B's CJS import from A.
+// Wrap-all keeps the conservative wrapper route and safely defers the carrier read. Both modes
+// must observe initialized values.
 await import('./dist/main.js');
 
 assert.strictEqual(

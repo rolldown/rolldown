@@ -32,4 +32,13 @@ describe('package.json exports consistency', () => {
     });
     expect(browserPkg.exports['./workerd/wasm.wasm']).toEqual(browserPkg.exports['./workerd/wasm']);
   });
+
+  test('browser package.json imports keys match normal package imports keys except parallel plugin worker', () => {
+    const importsKeys = Object.keys(pkg.imports)
+      .filter((key) => key !== '#parallel-plugin-worker')
+      .sort();
+    const browserImportsKeys = Object.keys(browserPkg.imports).sort();
+
+    expect(browserImportsKeys).toStrictEqual(importsKeys);
+  });
 });

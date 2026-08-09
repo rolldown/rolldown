@@ -78,6 +78,26 @@ pub struct DevContext {
 }
 ```
 
+### Browser runtime ownership
+
+The HMR plugin appends `experimental.devMode.implement`. The Rust layer
+deliberately has no default implementation. The JavaScript API keeps its default
+client in `crates/rolldown_plugin_hmr/src/runtime/runtime-extra-dev-default.js`;
+option normalization reads the standalone common runtime from its package export,
+removes its generated first-line helper import, and reads the default runtime
+through the package-internal `#default-runtime` import. It then joins them after
+substituting the server address. Rust consumers and the integration test harness
+provide the complete implementation explicitly.
+
+The reusable runtime classes are also built as the ESM entry
+`rolldown/experimental/runtime`; its package export points at the matching
+generated declaration file so custom runtime implementations can import both
+the values and their types from one specifier. The entry imports its helpers from
+an unmodified copy of `crates/rolldown/src/runtime/runtime-base.js`, which is the
+same source the Rust core includes in generated bundles. Removing the standalone
+entry's generated helper import recovers the verbatim common runtime source for
+injection, so generated bundle output does not change.
+
 ### Threading model
 
 - The `BundleCoordinator` runs in **one** task on the selected runtime.

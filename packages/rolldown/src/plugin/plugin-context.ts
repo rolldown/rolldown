@@ -371,6 +371,24 @@ export class PluginContextImpl extends MinimalPluginContextImpl {
 
   public emitFile: PluginContext['emitFile'] = (file): string => {
     if (file.type === 'prebuilt-chunk') {
+      // Rollup validates prebuilt chunks in `FileEmitter#emitPrebuiltChunk` — `code`
+      // first, then `fileName` — before either reaches the bundler. Without these the
+      // values fall through to N-API, which reports the napi `Status` (`InvalidArg`,
+      // `StringExpected`) as `pluginCode` instead of `VALIDATION_ERROR`.
+      if (typeof file.code !== 'string') {
+        return error(
+          logFailedValidation(
+            `Emitted prebuilt chunks need to have a valid string code, received "${file.code}".`,
+          ),
+        );
+      }
+      if (typeof file.fileName !== 'string' || isPathFragment(file.fileName)) {
+        return error(
+          logFailedValidation(
+            `The "fileName" property of emitted prebuilt chunks must be strings that are neither absolute nor relative paths, received "${file.fileName}".`,
+          ),
+        );
+      }
       return this.context.emitPrebuiltChunk({
         fileName: file.fileName,
         name: file.name,

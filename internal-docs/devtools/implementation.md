@@ -34,13 +34,15 @@ When devtools is enabled, rolldown writes JSON-lines files to:
   logs.json    # All other actions, one JSON object per line
 ```
 
-The JavaScript API normalizes an omitted `cwd` to `process.cwd()` on Node and
-to `/` in browser builds. `ClassicBundler` canonicalizes an existing cwd before
-appending `node_modules/.rolldown` and records that root on the session span.
-Symlink, `.`/`..`, case, and drive aliases therefore share one filesystem
-identity without canonicalizing or relocating the output directory itself. If
-the cwd cannot be canonicalized, the writer falls back to absolute lexical
-normalization so the original I/O error is still reported through close.
+Log paths resolve against `InputOptions#cwd` — never the process working
+directory of whoever reads the files. The JavaScript API normalizes an omitted
+`cwd` to `process.cwd()` on Node and to `/` in browser builds. `ClassicBundler`
+canonicalizes an existing cwd before appending `node_modules/.rolldown` and
+records that root on the session span. Symlink, `.`/`..`, case, and drive
+aliases therefore share one filesystem identity without canonicalizing or
+relocating the output directory itself. If the cwd cannot be canonicalized, the
+writer falls back to absolute lexical normalization so the original I/O error
+is still reported through close.
 
 The raw `sessionId` remains the `session_id` value in emitted actions. For the
 directory name, portable non-empty IDs containing only lowercase ASCII letters,
@@ -102,7 +104,7 @@ filesystem directory uses a bounded encoded component.
 
 ### Key Types
 
-- **`DebugTracer`** — Acquires the serialized process-global subscriber result, registers one writer owner, and increments the active-tracer count used by both devtools layer filters. Its `DevtoolsSessionKey` combines the logical canonical-root/raw-ID pair with a unique owner ID. Clones share one `Arc` lease, so only the final clone sends the best-effort no-ack close fallback and decrements the active count. Each admitted native operation guard retains a clone, preventing N-API object finalization from closing the owner while that operation can still emit events. The authoritative flush path clones the same owner key into `ClassicBundler::close()`, passes it to `rolldown_devtools::flush_session(...)`, and awaits the structured result before resolving.
+- **`DebugTracer`** — Acquires the serialized process-global subscriber result, registers one writer owner, and increments the active-tracer count used by both devtools layer filters. Its `DevtoolsSessionKey` combines the logical canonical-root/raw-ID pair — the root derives from `InputOptions#cwd` passed to `DebugTracer::init` — with a unique owner ID. Clones share one `Arc` lease, so only the final clone sends the best-effort no-ack close fallback and decrements the active count. Each admitted native operation guard retains a clone, preventing N-API object finalization from closing the owner while that operation can still emit events. The authoritative flush path clones the same owner key into `ClassicBundler::close()`, passes it to `rolldown_devtools::flush_session(...)`, and awaits the structured result before resolving.
 - **`Session`** — Holds a session `id` (e.g. `sid_0_1710000000000`) and a parent `tracing::Span`. All build spans are children of the session span. A `Session::dummy()` is used when devtools is disabled (no-op span).
 - **`DevtoolsLayer`** — A `tracing_subscriber::Layer` that extracts `CONTEXT_*` prefixed fields from spans and stores them as `ContextData` in span extensions.
 - **`DevtoolsFormatter`** — A `FormatEvent` impl that parses `devtoolsAction`-tagged events, injects context variables, consumes the output root carried by the session span, encodes the session directory component, and submits the resolved action to the selected writer backend.
@@ -230,7 +232,7 @@ The `@rolldown/debug` package provides:
 ```ts
 import { parseToEvents, type Event, type StringRef } from '@rolldown/debug';
 
-const data = fs.readFileSync('node_modules/.rolldown/<safe-session-component>/logs.json', 'utf8');
+const data = fs.readFileSync('<InputOptions.cwd>/node_modules/.rolldown/<safe-session-component>/logs.json', 'utf8');
 const events = parseToEvents(data.trim());
 // events: Array<StringRef | { timestamp, session_id, action: "BuildStart" | "ModuleGraphReady" | "PackageGraphReady" | ... }>
 ```

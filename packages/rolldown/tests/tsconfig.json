@@ -10,8 +10,9 @@
   ],
   "compilerOptions": {
     "types": ["node", "vite/client"],
-    // Some focused tests import package internals to validate generated glue
-    // and cleanup behavior without publishing those helpers.
+    // `../` rather than `./` so a test may unit-test the package's own internals, which
+    // are not on its public entry points. The project is `noEmit`, so this only widens
+    // which files may be referenced.
     "rootDir": "../",
     "allowJs": true,
     "isolatedDeclarations": false,

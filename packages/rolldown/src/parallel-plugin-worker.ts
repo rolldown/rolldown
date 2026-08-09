@@ -43,6 +43,9 @@ export async function initializeParallelPluginWorker(
           () => {},
           'info' as const,
           watchMode,
+          // Not measured: these hooks run on a worker thread, so their spans could not
+          // be summed with the main thread's or reported through its log handler.
+          undefined,
         ),
       };
     }),

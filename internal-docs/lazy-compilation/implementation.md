@@ -145,11 +145,13 @@ When `resolve_id` is called for a dynamic import:
 1. If the importer is a **fetched proxy** (`?rolldown-lazy=1` + in `fetched_entries`) → return `None` (skip proxy creation, resolve to actual module)
 2. Otherwise → resolve the specifier via `ctx.resolve` (`skip_self: true`, forwarding `args.custom`) and append `?rolldown-lazy=1`. The append is **idempotent** (#9439): `ctx.resolve` can re-enter other plugins' resolve hooks (e.g. an alias plugin), so if the resolved id already ends with the marker it is reused — a doubled suffix would desync the proxy id from the runtime invalidation key in the stub template (regression vitejs/vite#22454, pinned by the aliased-import spec)
 
+Re-resolution of a known proxy id (any import kind — e.g. a dev server resolving the stub id as an entry to serve a lazy compilation request) is claimed by the lazy plugin itself: if the specifier ends with `?rolldown-lazy=1` and is present in `lazy_entries`, it resolves to itself. Unknown proxy ids fall through and stay unresolvable (cf. the #9969 gate below). User-land `resolve_id` hooks never see proxy ids at all — the `PluginDriver` skips them for `?rolldown-lazy=1` specifiers — because a virtual-module plugin would not recognize its own id with the query appended and nothing else can resolve a virtual id (regression vitejs/vite#23124, pinned by `packages/rolldown/tests/dev/dev-lazy-compile.test.ts`).
+
 When `load` is called for a proxy module:
 
 1. Only ids present in `lazy_entries` are served at all — any other `?rolldown-lazy=1` id falls through to `Ok(None)`
 2. If in `fetched_entries` → return fetched template; otherwise → return stub template
-3. User-land build hooks are skipped for proxy ids (`?rolldown-lazy=1`) so plugins only see real modules; the lazy plugin itself still runs to serve the stub/fetched template.
+3. User-land build hooks (`resolve_id`, `load`, `transform`, `transform_ast`, `module_parsed`) are skipped for proxy ids (`?rolldown-lazy=1`) so plugins only see real modules; the lazy plugin itself still runs to serve the stub/fetched template.
 
 **Security gate — unknown module rejection (#9969)**: the id passed to `compileEntry` / `compile_lazy_entry` is treated purely as a lookup key into the build cache, never resolved as a filesystem path. An id not present from a prior build is rejected in `HmrStage::compile_lazy_entry` with `Lazy entry module not found in cache` — so a malicious `/@vite/lazy` request cannot bundle an arbitrary file (analogous to Vite's `server.fs.strict`; pinned by `packages/rolldown/tests/dev/dev-lazy-compile.test.ts`). Note the ordering: `DevEngine::compile_lazy_entry` calls `mark_as_fetched` unconditionally **before** this validation, so an unknown id still lands in `fetched_entries` (harmless, but worth knowing when debugging).
 
@@ -457,6 +459,12 @@ The flow is:
 **Problem**: `export * as ns from './dep'` and `export * from './dep'` are the same oxc AST node (`ExportAllDeclaration`), distinguished only by whether `exported` is set. The HMR finalizer ignored that field and rendered both as a star re-export — `__reExport(__rolldown_exports__, import_dep)` — so the re-exporting module's namespace object never carried `ns`, and every consumer read `undefined`. Only the module wrappers were affected (lazy chunks and HMR patches); the scope-hoisted build resolves the same source correctly.
 
 **Solution**: When `exported` is present, bind the importee's `loadExports` result under that single name in the namespace object (`{ ns: () => import_dep }`, computed when the name is not a valid identifier) and emit no `__reExport`. Pinned by `crates/rolldown/tests/rolldown/topics/hmr/export_star_as/`.
+
+### Issue 12: Re-exports From Externals Must Keep a Real Import (#10478)
+
+**Problem**: The dev runtime registry only holds modules this build wrapped, so an external is never in it — `loadExports('<external id>')` warns `Module <id> not found` and returns `{}`. The plain-import arm of the HMR finalizer knew this and emitted a real `import * as X from 'ext'` hoisted outside the wrapper; the three re-export arms (`export * from`, `export * as ns from`, `export { x } from`) did not, and asked the registry instead. Every re-exported name read as `undefined`, silently. When the same module also imported that external, both arms named the binding through `ensure_static_import_info` but deduplicated against different sets, so both declarations were emitted under one name — and since the real import sits at chunk top level while the `var` sits inside the factory, the `var` legally shadowed it and the module's own uses of the external broke too.
+
+**Solution**: Route all four arms through one `create_importee_binding_stmt`, which picks `loadExports` for normal modules and a real import statement for externals. The per-kind deduplication sets then stay disjoint by construction, so the shadowing `var` cannot be emitted. Pinned by `crates/rolldown/tests/rolldown/topics/hmr/reexport_external/` (HMR patch, executed) and a `dev-lazy-compile.test.ts` case (lazy chunk).
 
 ## Implementation Notes
 

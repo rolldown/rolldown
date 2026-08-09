@@ -1,0 +1,54 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+import assert from "node:assert";
+//#region main.js
+import("./target.js").then((target) => {
+	assert.strictEqual(target.value, 42);
+});
+//#endregion
+
+```
+
+## target.js
+
+```js
+//#region target.js
+const value = 42;
+//#endregion
+export { value };
+
+```
+
+# Variant: [format: Cjs]
+
+## Assets
+
+### main.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+let node_assert = require("node:assert");
+node_assert = __toESM(node_assert);
+//#region main.js
+Promise.resolve().then(() => require("./target.js")).then((target) => {
+	node_assert.default.strictEqual(target.value, 42);
+});
+//#endregion
+
+```
+
+### target.js
+
+```js
+//#region target.js
+const value = 42;
+//#endregion
+exports.value = value;
+
+```

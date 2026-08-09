@@ -588,6 +588,8 @@ impl<'a> StmtEvalAnalyzer<'a> {
   fn analyze_module_declaration(&self, decl: &ast::ModuleDeclaration) -> StmtEvalFacts {
     match decl {
       ast::ModuleDeclaration::ExportAllDeclaration(_)
+      | ast::ModuleDeclaration::ExportFromDeclaration(_)
+      | ast::ModuleDeclaration::ExportNamedDeclaration(_)
       | ast::ModuleDeclaration::ImportDeclaration(_) => {
         // We consider `import ...` has no side effect. However, `import ...` might be rewritten to other statements by the bundler.
         // In that case, we will mark the statement as having side effect in link stage.
@@ -609,12 +611,8 @@ impl<'a> StmtEvalAnalyzer<'a> {
           }
         }
       }
-      ast::ModuleDeclaration::ExportNamedDeclaration(named_decl) => {
-        if named_decl.source.is_some() {
-          StmtEvalFacts::default()
-        } else {
-          named_decl.declaration.as_ref().map(|decl| self.analyze_decl(decl)).unwrap_or_default()
-        }
+      ast::ModuleDeclaration::ExportDeclaration(export_decl) => {
+        self.analyze_decl(&export_decl.declaration)
       }
       ast::ModuleDeclaration::TSExportAssignment(_)
       | ast::ModuleDeclaration::TSNamespaceExportDeclaration(_) => {
@@ -754,7 +752,7 @@ impl<'analyzer, 'ctx> EagerEvaluationOrderReasonCollector<'analyzer, 'ctx> {
       }
       Expression::ArrowFunctionExpression(arrow) => {
         self.visit_formal_parameters(&arrow.params);
-        self.visit_function_body(&arrow.body);
+        self.visit_arrow_function_body(&arrow.body);
       }
       Expression::SequenceExpression(sequence) => {
         if let Some(last) = sequence.expressions.last() {

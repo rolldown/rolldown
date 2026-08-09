@@ -1,6 +1,5 @@
 {
-  "_comment": "A live two-argument import() is not rewritten by the module finalizer. If its wrapped dynamic entry is merged into the manually assigned host chunk, the entry facade must remain available at the original stable specifier so the import resolves and runs the entry trigger.",
-  "snapshot": false,
+  "_comment": "A live two-argument `import()` is rewritten like any other call site. Its wrapped dynamic entry is merged into the manually assigned host chunk, and the collapse carries the entry trigger, so no facade file stays behind at the specifier the source wrote.",
   "config": {
     "input": [
       {

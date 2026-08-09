@@ -296,7 +296,7 @@ test.skipIf(isSingleThread)(
 // A virtual module behind a lazy proxy must stay loadable: re-resolving the proxy id
 // (`\0virtual:lazy-me?rolldown-lazy=1`) is claimed by the lazy compilation plugin itself
 // and never reaches user `resolveId` hooks, which only recognize the bare id.
-test(
+test.skipIf(isSingleThread)(
   'lazy proxy ids resolve without reaching user resolveId hooks',
   { timeout: TEST_TIMEOUT },
   async ({ onTestFinished }) => {
@@ -471,7 +471,7 @@ test.skipIf(isSingleThread)(
 // ask the registry for it instead, which yields `{}`; and when the same module also
 // imported that external, the two paths emitted one binding name twice, the inner
 // `var` shadowing the real import.
-test(
+test.skipIf(isSingleThread)(
   'a lazy chunk imports externals it re-exports instead of asking the registry',
   { timeout: TEST_TIMEOUT },
   async ({ onTestFinished }) => {

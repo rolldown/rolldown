@@ -380,6 +380,11 @@ fn rename_shadowing_symbols_in_nested_scopes<'a>(
       output_format,
       OutputFormat::Iife | OutputFormat::Umd | OutputFormat::Cjs
     ));
+
+    if matches!(output_format, OutputFormat::Cjs) {
+      ctx.rename_bindings_shadowing_cjs_require();
+    }
+
     ctx.rename_cjs_locals_shadowing_referenced_chunk_bindings();
   }
 }

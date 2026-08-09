@@ -480,6 +480,41 @@ impl NestedScopeRenamer<'_, '_> {
     }
   }
 
+  /// Rename nested bindings that would shadow the ambient `require` of CommonJS output.
+  ///
+  /// Several rewrites emit a bare `require(...)` call into the module body: external imports, and
+  /// the `import.meta.url` polyfill (`require("url").pathToFileURL(__filename).href`). Those calls
+  /// mean the CommonJS `require`, so a nested binding of the same name must not capture them.
+  ///
+  /// The binding is hoisted, so it shadows even an injected call inside its own initializer:
+  ///
+  /// ```js
+  /// // input, the shape emscripten emits with `-s EXPORT_ES6=1 -s ENVIRONMENT='node'`
+  /// function init() {
+  ///   var require = createRequire(import.meta.url);
+  ///   return require("node:path").sep;
+  /// }
+  /// ```
+  ///
+  /// Without renaming, the polyfill resolves to the still-undefined local and the module throws
+  /// `require is not a function` on first call:
+  ///
+  /// ```js
+  /// var require = createRequire(require("url").pathToFileURL(__filename).href);
+  /// ```
+  pub fn rename_bindings_shadowing_cjs_require(&mut self) {
+    // Skip root scope (index 0), check nested scopes only. Root-scope bindings are already covered
+    // by the renamer's `manual_reserved` list for CommonJS output.
+    for (_, bindings) in self.scoping.iter_bindings().skip(1) {
+      for (&name, symbol_id) in bindings {
+        if name == "require" {
+          let symbol_ref = (self.module_idx, *symbol_id).into();
+          self.renamer.register_nested_scope_symbols(symbol_ref, name.as_str());
+        }
+      }
+    }
+  }
+
   /// Rename a CJS-wrapped module's *root-scope* locals that shadow a chunk-root binding the closure
   /// actually references.
   ///

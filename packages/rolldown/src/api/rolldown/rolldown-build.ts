@@ -352,12 +352,17 @@ export class RolldownBuild {
     let result: RolldownOutput;
     let nativeBuildEntered = false;
     let supersededCleanupErrors: unknown[] = [];
+    // The native invalidate callback only fires after a successful generate,
+    // so a failed build — and the boxes writeBundle-era hooks retain after
+    // that callback — must be released when this build settles, whichever way
+    // it settles (no-op outside the threadless-WASI flavor).
     try {
       const nativeBuild = await this.#enterNativeBuild(operation, isWrite, option.bundlerOptions);
       nativeBuildEntered = true;
       supersededCleanupErrors = nativeBuild.supersededCleanupErrors;
       result = new RolldownOutputImpl(unwrapBindingResult(await nativeBuild.nativePromise));
     } catch (error) {
+      option.releaseOptionBoxes();
       const errors: unknown[] = [error];
       operation.settled = true;
       if (this.#latestBuildOperation !== operation) {
@@ -390,6 +395,7 @@ export class RolldownBuild {
       throw error;
     }
 
+    option.releaseOptionBoxes();
     operation.settled = true;
     const cleanupErrors = [...supersededCleanupErrors];
     if (this.#latestBuildOperation !== operation) {

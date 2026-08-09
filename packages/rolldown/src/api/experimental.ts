@@ -82,6 +82,14 @@ export const scan = async (
       } catch (error) {
         errors.push(error);
       }
+      try {
+        // scan() never generates, so the native invalidate callback never
+        // fires even on success; release the option boxes its hooks retained
+        // (idempotent, no-op outside the threadless-WASI flavor).
+        ret.releaseOptionBoxes();
+      } catch (error) {
+        errors.push(error);
+      }
       return errors;
     })().finally(() => {
       resourceCleanupAttempt = undefined;

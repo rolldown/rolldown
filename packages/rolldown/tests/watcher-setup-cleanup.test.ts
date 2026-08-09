@@ -1195,6 +1195,7 @@ function createBundlerOption(stopWorkers: () => Promise<void>, inputOptions = {}
     inputOptions,
     onLog,
     stopWorkers,
+    releaseOptionBoxes: vi.fn(),
   };
 }
 

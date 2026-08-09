@@ -144,6 +144,7 @@ test('scan setup retries parallel-worker cleanup after the first termination rej
     inputOptions: { input: 'entry.js' },
     onLog: vi.fn(),
     stopWorkers,
+    releaseOptionBoxes: vi.fn(),
   });
   mocks.acquireRuntimeLease.mockRejectedValue(setupError);
 
@@ -169,6 +170,7 @@ test('scan setup-only cleanup remains eligible for abandoned recovery', async ()
     inputOptions: { input: 'entry.js' },
     onLog: vi.fn(),
     stopWorkers,
+    releaseOptionBoxes: vi.fn(),
   });
   mocks.acquireRuntimeLease.mockRejectedValue(setupError);
 
@@ -198,6 +200,7 @@ test('scan retry clears worker ownership even when native close remains failed',
     inputOptions: { input: 'entry.js' },
     onLog: vi.fn(),
     stopWorkers,
+    releaseOptionBoxes: vi.fn(),
   });
   mocks.acquireRuntimeLease.mockResolvedValue({ release });
   mocks.scan.mockRejectedValue(scanError);
@@ -223,6 +226,7 @@ test('scan retries a synchronous native close transport failure before releasing
     inputOptions: { input: 'entry.js' },
     onLog: vi.fn(),
     stopWorkers,
+    releaseOptionBoxes: vi.fn(),
   });
   mocks.acquireRuntimeLease.mockResolvedValue({ release });
   mocks.scan.mockRejectedValue(scanError);
@@ -250,6 +254,7 @@ test('scan retries an asynchronous native close transport rejection before clean
     inputOptions: { input: 'entry.js' },
     onLog: vi.fn(),
     stopWorkers,
+    releaseOptionBoxes: vi.fn(),
   });
   mocks.acquireRuntimeLease.mockResolvedValue({ release });
   mocks.scan.mockResolvedValue(undefined);
@@ -273,6 +278,7 @@ test('scan preserves a terminal diagnostic delivered by a transport retry', asyn
     inputOptions: { input: 'entry.js' },
     onLog: vi.fn(),
     stopWorkers,
+    releaseOptionBoxes: vi.fn(),
   });
   mocks.acquireRuntimeLease.mockResolvedValue({ release });
   mocks.scan.mockResolvedValue(undefined);
@@ -306,6 +312,7 @@ test(
         inputOptions: { input: 'entry.js' },
         onLog: vi.fn(),
         stopWorkers,
+        releaseOptionBoxes: vi.fn(),
       });
       mocks.acquireRuntimeLease.mockResolvedValue({ release });
       mocks.scan.mockResolvedValue(undefined);
@@ -368,6 +375,7 @@ test('scan bounds abandoned recovery when native close persistently rejects', as
       inputOptions: { input: 'entry.js' },
       onLog: vi.fn(),
       stopWorkers,
+      releaseOptionBoxes: vi.fn(),
     });
     mocks.acquireRuntimeLease.mockResolvedValue({ release });
     mocks.scan.mockResolvedValue(undefined);

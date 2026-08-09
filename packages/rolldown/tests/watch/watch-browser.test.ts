@@ -314,6 +314,7 @@ async function buildBrowserWatcherHarness(): Promise<string> {
             bundlerOptions: {},
             inputOptions: { ...inputOptions, watch: inputOptions.watch ?? null },
             onLog() {},
+            releaseOptionBoxes() {},
             async stopWorkers() {
               if (stopped) return;
               harness.stopWorkerCalls += 1;

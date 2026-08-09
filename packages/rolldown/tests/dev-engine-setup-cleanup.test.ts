@@ -25,6 +25,7 @@ function mockBundlerOptions() {
       inputOptions: {},
       onLog: () => {},
       stopWorkers,
+      releaseOptionBoxes: vi.fn(),
     }),
   }));
   return stopWorkers;
@@ -103,6 +104,7 @@ test('a failing worker stop surfaces together with the setup error', async () =>
       inputOptions: {},
       onLog: () => {},
       stopWorkers,
+      releaseOptionBoxes: vi.fn(),
     }),
   }));
 

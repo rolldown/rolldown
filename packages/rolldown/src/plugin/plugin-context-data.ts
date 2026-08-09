@@ -183,6 +183,18 @@ export class PluginContextData {
     this.#releaseOptionBoxes();
   }
 
+  // Terminal release for builds where the native invalidate callback never
+  // fires: it only runs after a successful generate (bundle.rs `bundle_up`,
+  // between generateBundle and writeBundle), so failed builds, scan(), and
+  // hooks that run after it (writeBundle) would otherwise strand their
+  // retained boxes until a GC finalizer — which never runs on the
+  // threadless-WASI flavor. Same snapshot-then-drop as the invalidate path;
+  // no-op on native flavors and when nothing is retained, so it is safe to
+  // call from every terminal path, repeatedly.
+  releaseRetainedOptionBoxes(): void {
+    this.#releaseOptionBoxes();
+  }
+
   // The native side invalidates the JS caches once per completed generate
   // (before writeBundle). On the threadless-WASI flavor that is also the
   // settle point for the cached options wrappers: copy their remaining lazy

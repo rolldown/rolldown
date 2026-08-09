@@ -544,6 +544,73 @@ async function caseFireAndForgetLoad() {
   };
 }
 
+// Failed builds never reach the native invalidate callback (it only fires
+// after a successful generate), so the option boxes their hooks retained must
+// be released at the build's own settle instead. A ~1 MiB banner rides inside
+// the normalized options: a stranded per-build options box would grow the
+// arena by ~1 MiB per failed build, far above dlmalloc jitter, while the
+// fixed path stays near-flat. The same instance must also keep building.
+async function caseFailedBuildReuse() {
+  const banner = '/*' + 'x'.repeat(1024 * 1024) + '*/';
+  const rounds = 10;
+  const warmup = 2;
+  const instance = await createInstance(wasmModule);
+  const mem = [];
+  let failures = 0;
+  let sawOptions = 0;
+  try {
+    for (let i = 0; i < rounds; i++) {
+      try {
+        await build({
+          instance,
+          input: 'virt:main.js',
+          plugins: [
+            {
+              name: 'failing-load',
+              buildStart(opts) {
+                // Read through the options box so the wrapper (and its
+                // retained box) actually exists, mirroring real plugins.
+                if (opts.platform) sawOptions += 1;
+              },
+              resolveId: (source) => (source === 'virt:main.js' ? source : null),
+              load() {
+                throw new Error('deliberate load failure');
+              },
+            },
+          ],
+          output: { format: 'esm', banner },
+        });
+        return { unexpectedSuccess: true };
+      } catch (e) {
+        if (!/deliberate load failure/.test(String(e?.message ?? e))) throw e;
+        failures += 1;
+      }
+      mem.push(instance.memoryBytes);
+    }
+    const recovered = await build({
+      instance,
+      input: 'virt:main.js',
+      plugins: [
+        {
+          name: 'recovering-load',
+          resolveId: (source) => (source === 'virt:main.js' ? source : null),
+          load: () => 'export default 1;',
+        },
+      ],
+      output: { format: 'esm' },
+    });
+    const post = mem.slice(warmup);
+    return {
+      failures,
+      sawOptions,
+      slopeMiBPerFailedBuild: (post.at(-1) - post[0]) / (post.length - 1) / (1024 * 1024),
+      recoveredChunkCount: recovered.output.filter((item) => item.type === 'chunk').length,
+    };
+  } finally {
+    instance.dispose();
+  }
+}
+
 // ---------------------------------------------------------------------------
 // CASE 5: capabilities, as reported from inside workerd.
 async function caseCapabilities() {
@@ -781,6 +848,7 @@ export default {
           ['concurrency', caseConcurrency],
           ['capabilities', caseCapabilities],
           ['fireAndForgetLoad', caseFireAndForgetLoad],
+          ['failedBuildReuse', caseFailedBuildReuse],
         ];
         for (const [name, fn] of steps) {
           try {

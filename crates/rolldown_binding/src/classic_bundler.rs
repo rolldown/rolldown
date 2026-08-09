@@ -716,7 +716,14 @@ impl ClassicBundler {
     }
     if self.close_future.is_none() {
       let mut terminal_close = self.lifecycle.begin_terminal_close(None);
-      let last_bundle_handle = self.last_bundle_handle.clone();
+      // `take`, not `clone`: nothing reads `self.last_bundle_handle` after the
+      // terminal close starts (`create_bundle` rejects on `closed`), and the
+      // handle pins the normalized options and plugin driver. Leaving a copy on
+      // the struct parks that payload until the N-API finalizer runs — which
+      // never happens on the threadless WASI flavor, leaking one options graph
+      // per bundler. Moving it into the close future frees it when the close
+      // settles on every flavor.
+      let last_bundle_handle = self.last_bundle_handle.take();
       let cwd =
         last_bundle_handle.as_ref().map(|handle| handle.options().cwd.clone()).unwrap_or_default();
       // Keep the fallback tracer guard alive until the authoritative flush has

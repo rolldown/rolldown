@@ -254,6 +254,7 @@ class Watcher {
   emitter: WatcherEmitter;
   runtimeLease: RuntimeLease;
   stopWorkers: ((() => Promise<void>) | undefined)[];
+  releaseOptionBoxes: (() => void)[];
   scheduledRun: ReturnType<typeof setTimeout> | undefined;
   runOutcomePromise: Promise<unknown[]> | undefined;
   settledRunOutcomeErrors: unknown[] | undefined;
@@ -280,12 +281,14 @@ class Watcher {
     inner: BindingWatcher,
     runtimeLease: RuntimeLease,
     stopWorkers: ((() => Promise<void>) | undefined)[],
+    releaseOptionBoxes: (() => void)[],
   ) {
     this.closed = false;
     this.inner = inner;
     this.emitter = emitter;
     this.runtimeLease = runtimeLease;
     this.stopWorkers = stopWorkers;
+    this.releaseOptionBoxes = releaseOptionBoxes;
   }
 
   start(): void {
@@ -478,6 +481,17 @@ class Watcher {
     }
 
     errors.push(...this.retainedWorkerDiagnostics.map(({ error }) => error));
+    // The watch session is terminally closed: rebuild-cycle invalidates only
+    // ran after successful rebuilds, so any boxes stranded by failed rebuilds
+    // (and by hooks after the last invalidate) are released here (idempotent,
+    // no-op outside the threadless-WASI flavor).
+    for (const release of this.releaseOptionBoxes) {
+      try {
+        release();
+      } catch (error) {
+        errors.push(error);
+      }
+    }
     const stopWorkers = this.stopWorkers;
     const workerResults = await Promise.allSettled(stopWorkers.map(async (stop) => stop?.()));
     this.stopWorkers = stopWorkers.filter((_, index) => workerResults[index].status === 'rejected');
@@ -682,6 +696,7 @@ export async function createWatcher(
     bindingWatcher,
     runtimeLease,
     bundlerOptions.map((option) => option.stopWorkers),
+    bundlerOptions.map((option) => option.releaseOptionBoxes),
   );
   try {
     onNativeClose = () => watcher.onNativeClose();

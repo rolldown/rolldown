@@ -249,6 +249,7 @@ export async function createBundlerOptions(
       inputOptions,
       onLog,
       stopWorkers: parallelPluginInitResult?.stopWorkers,
+      releaseOptionBoxes: () => pluginContextData.releaseRetainedOptionBoxes(),
     };
   } catch (error) {
     const stopWorkers = parallelPluginInitResult?.stopWorkers;
@@ -275,6 +276,13 @@ export interface BundlerOptionWithStopWorker {
   inputOptions: InputOptions;
   onLog: LogHandler;
   stopWorkers?: () => Promise<void>;
+  /**
+   * Releases the native option boxes this build's hooks retained; see
+   * {@linkcode PluginContextData.releaseRetainedOptionBoxes}. Idempotent and
+   * a no-op outside the threadless-WASI flavor; every consumer must call it
+   * once its build reaches a terminal state (settled, scanned, or closed).
+   */
+  releaseOptionBoxes: () => void;
 }
 
 type SnapshotPluginHookName = 'onLog' | 'outputOptions';

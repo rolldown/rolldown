@@ -218,8 +218,15 @@ const behavior = await dispatch('/behavior');
 if (behavior.error) throw new Error(`worker failed before reporting: ${behavior.error}`);
 assert.equal(behavior.ok, true, `a case threw unexpectedly: ${JSON.stringify(behavior, null, 2)}`);
 
-const { multiModuleBuild, errorSurface, lifecycle, concurrency, capabilities, fireAndForgetLoad } =
-  behavior.cases;
+const {
+  multiModuleBuild,
+  errorSurface,
+  lifecycle,
+  concurrency,
+  capabilities,
+  fireAndForgetLoad,
+  failedBuildReuse,
+} = behavior.cases;
 
 // --- CASE 1: multi-module build through the high-level API -----------------
 assert.equal(multiModuleBuild.chunkCount, 1, 'expected exactly one chunk');
@@ -263,7 +270,7 @@ assert.equal(
 assert.equal(generated.stamp, '-transformed-by-workerd-suite');
 assert.equal(generated.moduleTag, '390-transformed-by-workerd-suite');
 console.log(
-  `  [1/7] multi-module build       ok  (${multiModuleBuild.moduleCount} modules in chunk, ` +
+  `  [1/8] multi-module build       ok  (${multiModuleBuild.moduleCount} modules in chunk, ` +
     `total=${generated.total}) ${elapsed()}`,
 );
 
@@ -320,7 +327,7 @@ assert.equal(
   'a FAILED build({module}) must still dispose the private instance it created',
 );
 console.log(
-  `  [2/7] error surface            ok  (${caught.errorCount} error(s), code frame ` +
+  `  [2/8] error surface            ok  (${caught.errorCount} error(s), code frame ` +
     `inlined in message, ${caught.frameCount} separate .frame, no ANSI, ` +
     `failed build({module}) self-disposed) ${elapsed()}`,
 );
@@ -343,7 +350,7 @@ assert.equal(lifecycle.disposeAfterClose.ok, true, 'dispose() must succeed once 
 assert.equal(lifecycle.instanceADisposed, true);
 assert.equal(lifecycle.instanceBDisposed, true);
 assert.equal(lifecycle.liveDelta, 0, 'the lifecycle case must leak no instance');
-console.log(`  [3/7] lifecycle contracts      ok  ${elapsed()}`);
+console.log(`  [3/8] lifecycle contracts      ok  ${elapsed()}`);
 
 // --- CASE 4: concurrency and admission -------------------------------------
 // "Both promises fulfilled" is not success: empty output, cross-wired output,
@@ -401,7 +408,7 @@ assert.equal(
 );
 assert.equal(concurrency.liveDelta, 0, 'the concurrency case must leak no instance');
 console.log(
-  `  [4/7] concurrency + admission  ok  (concurrent totals ${concurrentTotals.join('/')}) ` +
+  `  [4/8] concurrency + admission  ok  (concurrent totals ${concurrentTotals.join('/')}) ` +
     `${elapsed()}`,
 );
 
@@ -430,7 +437,7 @@ assert.deepEqual(
 );
 assert.ok(capabilities.memoryBytes > 0);
 console.log(
-  `  [5/7] capabilities             ok  (target=${capabilities.target}, ` +
+  `  [5/8] capabilities             ok  (target=${capabilities.target}, ` +
     `flavor=${capabilities.flavor}, threads=${capabilities.threads}) ${elapsed()}`,
 );
 
@@ -447,8 +454,33 @@ assert.equal(
   'an awaited this.load() must still deliver the module info',
 );
 assert.equal(fireAndForgetLoad.liveDelta, 0, 'build({module}) must dispose its private instance');
+console.log(`  [6/8] fire-and-forget load     ok  ${elapsed()}`);
+
+// --- CASE 7: failed-build reuse --------------------------------------------
+// The native invalidateJsSideCache callback only fires after a successful
+// generate, so a failed build must release its retained option boxes at its
+// own settle. The case runs 10 failing builds carrying a ~1 MiB banner inside
+// the normalized options on one reusable instance: a stranded per-build
+// options box shows up as ~1 MiB of arena growth per failed build, while the
+// released path stays near-flat (bound 0.25 leaves 4x margin each way).
+assert.equal(failedBuildReuse.unexpectedSuccess, undefined, 'the failing builds must fail');
+assert.equal(failedBuildReuse.failures, 10, 'every failing build must reject');
+assert.equal(failedBuildReuse.sawOptions, 10, 'buildStart must read the options box every build');
+assert.ok(
+  failedBuildReuse.slopeMiBPerFailedBuild < 0.25,
+  `failed builds must not retain their options graph: ` +
+    `${failedBuildReuse.slopeMiBPerFailedBuild.toFixed(4)} MiB/failed-build (leak signal ~1.0)`,
+);
+assert.equal(
+  failedBuildReuse.recoveredChunkCount,
+  1,
+  'the instance must still build successfully after repeated failed builds',
+);
 assert.equal(behavior.finalLiveInstances, behavior.baselineLiveInstances, 'an instance leaked');
-console.log(`  [6/7] fire-and-forget load     ok  ${elapsed()}`);
+console.log(
+  `  [7/8] failed-build reuse       ok  ` +
+    `(${failedBuildReuse.slopeMiBPerFailedBuild.toFixed(4)} MiB/failed-build) ${elapsed()}`,
+);
 
 // ===========================================================================
 // PART 2 -- memory slope with plugin hooks.
@@ -555,7 +587,7 @@ for (const variant of Object.keys(MEMORY_BUDGETS)) {
           ? 'UNDER FLOOR'
           : 'ok';
   console.log(
-    `  [7/7] memory ${variant.padEnd(21)} ${verdict.padEnd(11)} ` +
+    `  [8/8] memory ${variant.padEnd(21)} ${verdict.padEnd(11)} ` +
       `${slope.toFixed(3)} MiB/rebuild` +
       (budget === null ? '' : ` (band ${floor.toFixed(3)}-${budget.toFixed(3)})`) +
       `  [${report.memFirstMiB} -> ${report.memLastMiB} MiB over ${rounds} rounds]`,

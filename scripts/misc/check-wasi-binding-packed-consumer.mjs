@@ -97,7 +97,7 @@ const requiredNotices = {
     'Copyright 2008 Fair Oaks Labs, Inc.',
     'safe-buffer',
     'Copyright (c) Feross Aboukhadijeh',
-    'source map during WASI package staging',
+    'checked during WASI package staging',
     '@jsonjoy.com/fs-core',
     'abort-controller',
     'glob-to-regex.js',

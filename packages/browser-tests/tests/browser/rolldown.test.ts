@@ -12,17 +12,20 @@
 // package.json keys; only running the package in a browser catches a leak like that.
 import { beforeAll, expect, inject, test } from 'vitest';
 import type * as RolldownBrowser from '@rolldown/browser';
+import type * as RolldownBrowserExperimental from '@rolldown/browser/experimental';
 
 // Vite serves every node builtin it externalizes for the browser from this id, so any of them in
 // the loaded graph shows up as a fetched module regardless of how it was imported.
 const BROWSER_EXTERNAL = '__vite-browser-external';
 
 let rolldownBrowser: typeof RolldownBrowser;
+let experimental: typeof RolldownBrowserExperimental;
 
 // imported here rather than at the top level so a load-time failure is reported against this suite
 // rather than as a bare collection error for the whole file
 beforeAll(async () => {
   rolldownBrowser = await import('@rolldown/browser');
+  experimental = await import('@rolldown/browser/experimental');
 });
 
 function loadedModules() {
@@ -49,9 +52,11 @@ test('the packed @rolldown/browser bundles in the browser', async () => {
   const externalized = loadedModules().filter((name) => name.includes(BROWSER_EXTERNAL));
   expect(externalized, externalized.join('\n')).toHaveLength(0);
 
-  // A plugin-backed virtual file system, the way a playground feeds editor buffers to the bundler.
-  // Nothing here touches a real path, so the bundle exercises the JS plugin round trip through the
-  // wasm worker rather than the browser's in-memory fs.
+  // The editor buffers a playground would feed to the bundler. On this branch a plain browser page
+  // bundles them callback-free through the wasm runtime's in-memory filesystem: JavaScript plugin
+  // hooks additionally require host-backed async-context propagation (docs/guide/wasi.md), which
+  // system Chrome does not ship, so the plugin round trip is asserted further down as the
+  // documented preflight failure instead.
   const files: Record<string, string> = {
     '/entry.js': "import { hyperCube } from './hyper-cube.js';\nconsole.log(hyperCube(5));\n",
     '/hyper-cube.js':
@@ -59,24 +64,15 @@ test('the packed @rolldown/browser bundles in the browser', async () => {
     '/cube.js': 'export function cube(x) {\n  return x * x * x;\n}\n',
   };
 
+  const { memfs, getAsyncContextSupport } = experimental;
+  if (!memfs) {
+    throw new Error('the browser build must expose the wasm in-memory filesystem');
+  }
+  memfs.volume.fromJSON(files);
+
   const bundle = await rolldownBrowser.rolldown({
     input: '/entry.js',
     cwd: '/',
-    plugins: [
-      {
-        name: 'virtual-files',
-        resolveId(id, importer) {
-          if (files[id]) {
-            return id;
-          }
-          const resolved = importer && id.startsWith('./') ? `/${id.slice(2)}` : undefined;
-          return resolved && files[resolved] ? resolved : null;
-        },
-        load(id) {
-          return files[id] ?? null;
-        },
-      },
-    ],
   });
 
   try {
@@ -95,4 +91,42 @@ test('the packed @rolldown/browser bundles in the browser', async () => {
   } finally {
     await bundle.close();
   }
+
+  // A callback-bearing build must fail the async-context preflight BEFORE invoking any user hook.
+  // If this section ever flips because the runner's Chrome ships AsyncContext.Variable, upgrade it
+  // to run the full JS plugin round trip instead.
+  expect(getAsyncContextSupport()).toEqual({ source: 'unavailable', supported: false });
+  let hookCalls = 0;
+  const callbackError: unknown = await rolldownBrowser
+    .rolldown({
+      input: '/entry.js',
+      cwd: '/',
+      plugins: [
+        {
+          name: 'callback-probe',
+          load() {
+            hookCalls += 1;
+            return null;
+          },
+        },
+      ],
+    })
+    .then(
+      async (callbackBundle) => {
+        try {
+          await callbackBundle.generate({ format: 'esm' });
+          return new Error('callback-bearing build unexpectedly succeeded');
+        } catch (error) {
+          return error;
+        } finally {
+          await callbackBundle.close();
+        }
+      },
+      (error) => error,
+    );
+  expect(hookCalls, 'the async-context preflight must reject before user hooks run').toBe(0);
+  expect(callbackError).toMatchObject({
+    name: 'AsyncContextUnavailableError',
+    code: 'ERR_ROLLDOWN_ASYNC_CONTEXT_UNAVAILABLE',
+  });
 });

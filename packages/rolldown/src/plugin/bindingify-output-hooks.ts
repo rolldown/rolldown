@@ -177,6 +177,9 @@ export function bindingifyAugmentChunkHash(
   return bindingifyHook(args.plugin.augmentChunkHash, ({ handler }) => ({
     plugin: async (ctx, chunk) => {
       try {
+        // The hook is typed sync, but a handler may still return a thenable at runtime and
+        // release must follow its settlement.
+        // oxlint-disable-next-line typescript/await-thenable
         return await handler.call(
           createPluginContext(args, ctx),
           shouldEagerlyFreeOutputs() ? snapshotRenderedChunk(chunk) : transformRenderedChunk(chunk),
@@ -194,6 +197,9 @@ export function bindingifyResolveFileUrl(
   return bindingifyHook(args.plugin.resolveFileUrl, ({ handler }) => ({
     plugin: async (ctx, resolveFileUrlArgs) => {
       try {
+        // The hook is typed sync, but a handler may still return a thenable at runtime and
+        // release must follow its settlement.
+        // oxlint-disable-next-line typescript/await-thenable
         return await handler.call(createPluginContext(args, ctx), resolveFileUrlArgs);
       } finally {
         releaseOrDefer(ctx);

@@ -452,6 +452,7 @@ async function buildBrowserParallelPluginHarness(): Promise<string> {
     import.meta.dirname,
     '../../src/utils/close-callback-scope.ts',
   );
+  const pluginTimingsPath = path.resolve(import.meta.dirname, '../../src/utils/plugin-timings.ts');
   const virtualModules = new Map<string, string>([
     [
       'binding',
@@ -586,7 +587,14 @@ async function buildBrowserParallelPluginHarness(): Promise<string> {
       `,
     ],
     ['logging', `export const LOG_LEVEL_INFO = 'info';`],
-    ['plugin-context-data', `export class PluginContextData {}`],
+    [
+      'plugin-context-data',
+      `
+        export class PluginContextData {
+          releaseRetainedOptionBoxes() {}
+        }
+      `,
+    ],
     [
       'bindingify-input-options',
       `
@@ -694,6 +702,7 @@ async function buildBrowserParallelPluginHarness(): Promise<string> {
           if (id === '../utils/parallel-plugin' || id === './parallel-plugin') {
             return parallelPluginInfoPath;
           }
+          if (id === './plugin-timings') return pluginTimingsPath;
           if (id === './bindingify-input-options') return '\0bindingify-input-options';
           if (id === './bindingify-output-options') return '\0bindingify-output-options';
           if (id === './initialize-parallel-plugins') return '\0initialize-parallel-plugins';

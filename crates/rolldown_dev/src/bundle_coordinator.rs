@@ -11,7 +11,7 @@ use futures::StreamExt;
 use notify::EventKind;
 use rolldown_common::WatcherChangeKind;
 use rolldown_dev_common::types::{DevCallbackError, DevCallbackResult};
-use rolldown_error::{BatchedBuildDiagnostic, BuildResult};
+use rolldown_error::BuildResult;
 use rolldown_fs_watcher::{DynFsWatcher, FsEventResult, RecursiveMode};
 use rolldown_utils::{
   dashmap::FxDashSet, futures::spawn_detached, indexmap::FxIndexMap, pattern_filter,
@@ -770,7 +770,6 @@ impl BundleCoordinator {
     let mut watcher = watcher.lock().ok().context("Failed to acquire watcher lock")?;
     let mut paths_mut = watcher.paths_mut();
     let mut pending_watch_files = Vec::new();
-    let mut add_errors = Vec::new();
     for watch_file in watch_files {
       let watch_file = &**watch_file;
       if !watched_files.contains(watch_file)
@@ -778,7 +777,12 @@ impl BundleCoordinator {
       {
         match paths_mut.add(watch_file.as_path(), RecursiveMode::NonRecursive) {
           Ok(()) => pending_watch_files.push(ArcStr::from(watch_file)),
-          Err(error) => add_errors.extend(error.into_vec()),
+          // `addWatchFile` accepts nonexistent and virtual paths, so a refused
+          // registration must not fail the build. Skipped paths are retried on
+          // later builds because they never enter `watched_files`.
+          Err(error) => {
+            tracing::debug!(name = "notify watch skipped", path = ?watch_file.as_path(), error = ?error);
+          }
         }
       }
     }
@@ -793,9 +797,7 @@ impl BundleCoordinator {
       }
     }
 
-    let add_result =
-      if add_errors.is_empty() { Ok(()) } else { Err(BatchedBuildDiagnostic::new(add_errors)) };
-    Self::merge_build_results(add_result, commit_result)
+    commit_result
   }
 }
 
@@ -808,6 +810,7 @@ mod tests {
   use futures::channel::mpsc::unbounded;
   use futures::channel::oneshot;
   use rolldown::{BundlerOptions, DevModeOptions, ExperimentalOptions};
+  use rolldown_error::BatchedBuildDiagnostic;
   use rolldown_fs_watcher::{FsEventHandler, FsWatcher, FsWatcherConfig, NoopFsWatcher, PathsMut};
   use std::{
     fs,
@@ -1009,7 +1012,10 @@ mod tests {
     let successful_after = ArcStr::from("/virtual/project/after.js");
     let watch_files = [successful_before.clone(), failed.clone(), successful_after.clone()];
 
-    let error = BundleCoordinator::update_watch_paths_from(
+    // `addWatchFile` accepts nonexistent and virtual paths, so a refused
+    // registration is skipped (and retried on later builds), never surfaced
+    // as a build error.
+    BundleCoordinator::update_watch_paths_from(
       &watcher,
       &watched_files,
       &watch_files,
@@ -1017,10 +1023,8 @@ mod tests {
       None,
       None,
     )
-    .expect_err("the failed watcher addition must be reported");
+    .expect("a failed watcher addition must not fail the build");
 
-    assert!(error.to_string().contains("intentional watcher add failure"));
-    assert_eq!(error.len(), 1);
     assert_eq!(commit_attempts.load(Ordering::SeqCst), 1);
     assert!(watched_files.contains(successful_before.as_str()));
     assert!(!watched_files.contains(failed.as_str()));
@@ -1167,6 +1171,8 @@ mod tests {
     let failed_add = ArcStr::from("/virtual/project/fail.js");
     let watch_files = [successful_add.clone(), failed_add.clone()];
 
+    // The refused add is skipped by contract; only the commit failure is a
+    // build error, and nothing is published when the commit fails.
     let error = BundleCoordinator::update_watch_paths_from(
       &watcher,
       &watched_files,
@@ -1175,12 +1181,12 @@ mod tests {
       None,
       None,
     )
-    .expect_err("add and commit failures must both be reported");
+    .expect_err("the commit failure must be reported");
     let message = error.to_string();
 
-    assert!(message.contains("intentional watcher add failure"));
+    assert!(!message.contains("intentional watcher add failure"));
     assert!(message.contains("intentional watcher commit failure"));
-    assert_eq!(error.len(), 2);
+    assert_eq!(error.len(), 1);
     assert_eq!(commit_attempts.load(Ordering::SeqCst), 1);
     assert!(!watched_files.contains(successful_add.as_str()));
     assert!(!watched_files.contains(failed_add.as_str()));

@@ -24,7 +24,10 @@ long IDs use a `~`-prefixed encoded component. Both files are complete after
 import fs from 'node:fs';
 import { parseToEvents, type Event, type StringRef } from '@rolldown/debug';
 
-const data = fs.readFileSync('<cwd>/node_modules/.rolldown/<safe_session_component>/logs.json', 'utf8');
+const data = fs.readFileSync(
+  '<cwd>/node_modules/.rolldown/<safe_session_component>/logs.json',
+  'utf8',
+);
 const events = parseToEvents(data.trim());
 
 type ActionEvent = Exclude<Event, StringRef> & { build_id: string };
@@ -47,7 +50,10 @@ function isActionEvent(event: Event): event is ActionEvent {
   return 'build_id' in event;
 }
 
-const data = fs.readFileSync('<cwd>/node_modules/.rolldown/<safe_session_component>/logs.json', 'utf8');
+const data = fs.readFileSync(
+  '<cwd>/node_modules/.rolldown/<safe_session_component>/logs.json',
+  'utf8',
+);
 const actionEvents = parseToEvents(data.trim()).filter(isActionEvent);
 const buildId = actionEvents.at(-1)?.build_id;
 

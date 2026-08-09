@@ -1339,8 +1339,8 @@ dependencies = [
 
 [[package]]
 name = "napi"
-version = "3.10.5"
-source = "git+https://github.com/napi-rs/napi-rs.git?rev=ad23bdeb8139be6e25eee508f18866c41c94d9b9#ad23bdeb8139be6e25eee508f18866c41c94d9b9"
+version = "3.12.0"
+source = "git+https://github.com/napi-rs/napi-rs.git?rev=c0c2f0c25c82bece529db3eff6a685c3ac2d5e12#c0c2f0c25c82bece529db3eff6a685c3ac2d5e12"
 dependencies = [
  "anyhow",
  "bitflags",
@@ -1373,13 +1373,13 @@ dependencies = [
 
 [[package]]
 name = "napi-build"
-version = "2.3.2"
-source = "git+https://github.com/napi-rs/napi-rs.git?rev=ad23bdeb8139be6e25eee508f18866c41c94d9b9#ad23bdeb8139be6e25eee508f18866c41c94d9b9"
+version = "2.4.0"
+source = "git+https://github.com/napi-rs/napi-rs.git?rev=c0c2f0c25c82bece529db3eff6a685c3ac2d5e12#c0c2f0c25c82bece529db3eff6a685c3ac2d5e12"
 
 [[package]]
 name = "napi-derive"
-version = "3.5.10"
-source = "git+https://github.com/napi-rs/napi-rs.git?rev=ad23bdeb8139be6e25eee508f18866c41c94d9b9#ad23bdeb8139be6e25eee508f18866c41c94d9b9"
+version = "3.6.2"
+source = "git+https://github.com/napi-rs/napi-rs.git?rev=c0c2f0c25c82bece529db3eff6a685c3ac2d5e12#c0c2f0c25c82bece529db3eff6a685c3ac2d5e12"
 dependencies = [
  "convert_case",
  "ctor",
@@ -1391,8 +1391,8 @@ dependencies = [
 
 [[package]]
 name = "napi-derive-backend"
-version = "5.1.2"
-source = "git+https://github.com/napi-rs/napi-rs.git?rev=ad23bdeb8139be6e25eee508f18866c41c94d9b9#ad23bdeb8139be6e25eee508f18866c41c94d9b9"
+version = "6.1.1"
+source = "git+https://github.com/napi-rs/napi-rs.git?rev=c0c2f0c25c82bece529db3eff6a685c3ac2d5e12#c0c2f0c25c82bece529db3eff6a685c3ac2d5e12"
 dependencies = [
  "convert_case",
  "proc-macro2",
@@ -1403,8 +1403,8 @@ dependencies = [
 
 [[package]]
 name = "napi-sys"
-version = "3.2.3"
-source = "git+https://github.com/napi-rs/napi-rs.git?rev=ad23bdeb8139be6e25eee508f18866c41c94d9b9#ad23bdeb8139be6e25eee508f18866c41c94d9b9"
+version = "3.3.0"
+source = "git+https://github.com/napi-rs/napi-rs.git?rev=c0c2f0c25c82bece529db3eff6a685c3ac2d5e12#c0c2f0c25c82bece529db3eff6a685c3ac2d5e12"
 dependencies = [
  "libloading",
 ]

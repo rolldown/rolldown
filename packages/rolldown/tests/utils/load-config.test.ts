@@ -1,3 +1,4 @@
+import { execa } from 'execa';
 import path from 'node:path';
 import { loadConfig } from 'rolldown/config';
 import { describe, expect, it } from 'vitest';
@@ -41,5 +42,32 @@ describe('loadConfig native configLoader', () => {
       throw new TypeError('expected bundled config function');
     }
     await expect(config({})).resolves.toStrictEqual({ input: './dynamic-entry.js' });
+  });
+
+  it('resolves runtime relative dynamic imports in a deferred config function against the config directory', async () => {
+    // Run in a plain Node child process — the environment the CLI actually
+    // loads configs in (vite-node would intercept the emitted entry's dynamic
+    // import). The CLI only invokes a deferred config function after
+    // `loadConfig` has already returned (and cleaned up its bundling
+    // artifacts), so the runtime-computed `import('./deferred-helper.mjs')`
+    // must resolve against the config file's own directory and must not
+    // depend on any transient bundling output that has been removed by then.
+    const script = [
+      `import { loadConfig } from 'rolldown/config';`,
+      `const config = await loadConfig(${JSON.stringify(
+        path.join(fixtures, 'deferred-dynamic-import.config.ts'),
+      )});`,
+      `if (typeof config !== 'function') throw new TypeError('expected bundled config function');`,
+      `const resolved = await config({});`,
+      `if (resolved.input !== './deferred-entry.js') {`,
+      `  throw new Error('unexpected deferred config: ' + JSON.stringify(resolved));`,
+      `}`,
+      `console.log('deferred-config-ok');`,
+    ].join('\n');
+    const ret = await execa('node', ['--input-type=module', '--eval', script], {
+      cwd: import.meta.dirname,
+    });
+    expect(ret.exitCode).toBe(0);
+    expect(ret.stdout).toContain('deferred-config-ok');
   });
 });

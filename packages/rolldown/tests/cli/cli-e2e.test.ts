@@ -468,6 +468,22 @@ describe('config', () => {
     }
   });
 
+  it('should resolve runtime relative dynamic imports in a deferred ts config against the config directory', async () => {
+    const cwd = cliFixturesDir('config-deferred-dynamic-import');
+    // The config exports an async function that performs a runtime-computed
+    // relative dynamic import. The CLI invokes it only after `loadConfig` has
+    // returned and removed its transient bundling output, so the import must
+    // resolve against the config file's own directory.
+    const status = await $({ cwd })`rolldown -c rolldown.config.ts`;
+    expect(status.exitCode).toBe(0);
+    const file = path.resolve(cwd, 'dist/index.js');
+    const content = fs.readFileSync(file, 'utf-8');
+    expect(content).toContain('deferred-config-entry');
+    // No transient bundled-config files may be left beside the config file.
+    const leftovers = fs.readdirSync(cwd).filter((name) => name.startsWith('.rolldown'));
+    expect(leftovers).toEqual([]);
+  });
+
   it('should allow CLI options to override config values', async () => {
     const cwd = cliFixturesDir('cli-override-config');
     const status = await $({ cwd })`rolldown -c rolldown.config.js --format cjs`;

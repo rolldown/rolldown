@@ -19,34 +19,38 @@ const fixture = path.join(
   'load-config',
   'bundled-cleanup.config.ts',
 );
-let generatedOutputDir: string | undefined;
+const fixtureDir = path.dirname(fixture);
+let generatedFiles: string[] = [];
+
+async function emitFile(dir: string, fileName: string, content: string): Promise<void> {
+  const filePath = path.join(dir, fileName);
+  generatedFiles.push(filePath);
+  await writeFile(filePath, content);
+}
 
 afterEach(async () => {
   vi.restoreAllMocks();
   close.mockReset();
   rolldown.mockReset();
   write.mockReset();
-  if (generatedOutputDir !== undefined) {
-    await rm(generatedOutputDir, { force: true, recursive: true });
-    generatedOutputDir = undefined;
-  }
+  await Promise.all(generatedFiles.map((file) => rm(file, { force: true })));
+  generatedFiles = [];
 });
 
 describe('loadConfig bundle cleanup', () => {
-  it('closes the transient build and removes every generated output', async () => {
+  it('closes the transient build, removes the imported entry, and keeps sibling outputs for deferred imports', async () => {
     rolldown.mockResolvedValue({ close, write });
+    let outputDir: string | undefined;
     write.mockImplementation(async (outputOptions: { dir: string }) => {
-      generatedOutputDir = outputOptions.dir;
+      outputDir = outputOptions.dir;
       const fileName = 'rolldown.config.cleanup.mjs';
-      await writeFile(
-        path.join(outputOptions.dir, fileName),
+      await emitFile(
+        outputOptions.dir,
+        fileName,
         'import input from "./config-chunk.mjs"; export default { input }',
       );
-      await writeFile(
-        path.join(outputOptions.dir, 'config-chunk.mjs'),
-        'export default "./entry.js"',
-      );
-      await writeFile(path.join(outputOptions.dir, 'config-asset.txt'), 'temporary config asset');
+      await emitFile(outputOptions.dir, 'config-chunk.mjs', 'export default "./entry.js"');
+      await emitFile(outputOptions.dir, 'config-asset.txt', 'temporary config asset');
       return {
         output: [
           { fileName, isEntry: true, type: 'chunk' },
@@ -60,12 +64,22 @@ describe('loadConfig bundle cleanup', () => {
     expect(write).toHaveBeenCalledWith(
       expect.objectContaining({
         codeSplitting: false,
+        entryFileNames: expect.stringMatching(/^\.rolldown\.config\.[0-9a-f]{8}\./),
       }),
     );
     expect(close).toHaveBeenCalledOnce();
-    expect(path.dirname(generatedOutputDir!)).toBe(path.dirname(fixture));
-    await expect(access(generatedOutputDir!)).rejects.toMatchObject({ code: 'ENOENT' });
-    generatedOutputDir = undefined;
+    // The entry is emitted directly beside the config file so that runtime
+    // relative dynamic imports in a deferred config function resolve against
+    // the config's own directory.
+    expect(outputDir).toBe(fixtureDir);
+    // The imported entry is removed immediately (it already lives in memory)…
+    await expect(access(path.join(fixtureDir, 'rolldown.config.cleanup.mjs'))).rejects.toMatchObject(
+      { code: 'ENOENT' },
+    );
+    // …while sibling outputs a deferred config function may still import stay
+    // on disk until the process exits.
+    await expect(access(path.join(fixtureDir, 'config-chunk.mjs'))).resolves.toBeUndefined();
+    await expect(access(path.join(fixtureDir, 'config-asset.txt'))).resolves.toBeUndefined();
   });
 
   it('closes the transient build when config generation fails', async () => {
@@ -99,8 +113,7 @@ describe('loadConfig bundle cleanup', () => {
     const fileName = 'rolldown.config.close-failure.mjs';
     rolldown.mockResolvedValue({ close, write });
     write.mockImplementation(async (outputOptions: { dir: string }) => {
-      generatedOutputDir = outputOptions.dir;
-      await writeFile(path.join(outputOptions.dir, fileName), 'export default {}');
+      await emitFile(outputOptions.dir, fileName, 'export default {}');
       return {
         output: [{ fileName, isEntry: true, type: 'chunk' }],
       };
@@ -110,20 +123,17 @@ describe('loadConfig bundle cleanup', () => {
     const error = await loadConfig(fixture).catch((error: unknown) => error);
 
     expect((error as Error).cause).toBe(closeError);
-    await expect(access(generatedOutputDir!)).rejects.toMatchObject({ code: 'ENOENT' });
-    generatedOutputDir = undefined;
+    await expect(access(path.join(fixtureDir, fileName))).rejects.toMatchObject({
+      code: 'ENOENT',
+    });
   });
 
-  it('preserves config import and recursive cleanup failures', async () => {
-    const cleanupError = new Error('config directory cleanup failed');
+  it('preserves config import and cleanup failures', async () => {
+    const cleanupError = new Error('config file cleanup failed');
     const fileName = 'rolldown.config.import-failure.mjs';
     rolldown.mockResolvedValue({ close, write });
     write.mockImplementation(async (outputOptions: { dir: string }) => {
-      generatedOutputDir = outputOptions.dir;
-      await writeFile(
-        path.join(outputOptions.dir, fileName),
-        'throw new Error("config import failed")',
-      );
+      await emitFile(outputOptions.dir, fileName, 'throw new Error("config import failed")');
       return {
         output: [{ fileName, isEntry: true, type: 'chunk' }],
       };

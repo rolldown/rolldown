@@ -49,9 +49,16 @@ try {
   await withTimeout(loadStarted, 'the pending plugin load did not start');
 
   firstContext.destroy();
+  // The cancellation message depends on the pinned napi revision: the integration
+  // pin rejects with "Async task was cancelled because its runtime stopped", while
+  // upstream napi main (the #3352 identity, used by the publish stack) rejects with
+  // "task was cancelled before completion". Both are correct drains; drop the first
+  // arm once the pin moves to the published crates.
   await assert.rejects(
     withTimeout(pendingGenerate, 'the pending generate promise did not settle during cleanup'),
-    (error) => containsMessage(error, 'Async task was cancelled because its runtime stopped'),
+    (error) =>
+      containsMessage(error, 'Async task was cancelled because its runtime stopped') ||
+      containsMessage(error, 'task was cancelled before completion'),
   );
   firstContext.destroy();
 

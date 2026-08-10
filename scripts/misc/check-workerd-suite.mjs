@@ -61,10 +61,10 @@ const renderChunkDepth = (variant) =>
 // transform sees even though no `load` ever serves it.
 const TRANSFORMED_MODULES_PER_ROUND = slopeModules + 5 + 1;
 // Hook invocations one round owes. The output hooks run once per chunk, times
-// their stack depth; `transform-ast` hooks the BUILD side instead, so its count
-// is per-module.
+// their stack depth; the `transform-ast*` rows hook the BUILD side instead, so
+// their count is per-module.
 const hookCallsPerRound = (variant) =>
-  variant === 'transform-ast' ? TRANSFORMED_MODULES_PER_ROUND : renderChunkDepth(variant);
+  variant.startsWith('transform-ast') ? TRANSFORMED_MODULES_PER_ROUND : renderChunkDepth(variant);
 
 // ---------------------------------------------------------------------------
 // MEMORY BUDGETS -- MiB of Wasm linear memory retained per identical rebuild on
@@ -138,6 +138,15 @@ const MEMORY_BUDGETS = {
   // steadiest row in the table, so both edges keep 18 page quanta of margin
   // (twice the widest spread any row here has ever shown).
   'transform-ast': { measured: 0.265, budget: 0.331 },
+  // The FAILING half of that path: `this.parse()` on unparsable source, which
+  // throws. oxc fills `ParseResult` before it reports errors, so the throwing
+  // branch owes those same drains plus `program`, which the succeeding branch
+  // frees only by returning it. Move the drains back after `wrap()`'s error
+  // check, as they once were, and this row measures 3.706 -- 11x this budget,
+  // the loudest signal in the table. Three consecutive 20-round runs measured
+  // 0.2647 with ZERO spread, landing exactly on `transform-ast` now that both
+  // branches drain every field.
+  'transform-ast-error': { measured: 0.265, budget: 0.331 },
 };
 
 // Every variant is enforced as a two-sided BAND. `budget` catches the leak

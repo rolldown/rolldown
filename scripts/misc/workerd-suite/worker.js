@@ -766,6 +766,35 @@ async function caseMemorySlope(url) {
             return null;
           },
         });
+      } else if (variant === 'transform-ast-error') {
+        // The FAILING half of that same path: `this.parse()` on source that
+        // cannot parse, which throws. oxc fills the whole `ParseResult` before it
+        // reports errors -- recovered program, module record and comments are all
+        // there behind a parse error -- so the throwing branch owes the same
+        // drains. Appending to the real module source keeps the retained bytes on
+        // the same scale as `transform-ast`.
+        plugins.push({
+          name: 'workerd-suite-transform-ast-error',
+          transform(code) {
+            hookCalls += 1;
+            let caught = null;
+            try {
+              this.parse(`${code}\nfunction (`);
+            } catch (e) {
+              caught = e;
+            }
+            // Those drains run BEFORE the error check, so this pins that they do
+            // not eat the diagnostics on the way past: same code, same frame.
+            if (caught?.code !== 'PARSE_ERROR' || !caught.message.includes('function (')) {
+              throw new Error(
+                'this.parse() must reject broken source with a framed PARSE_ERROR, got: ' +
+                  `${caught?.message ?? '(no error)'}`,
+              );
+            }
+            modulesSeen += 1;
+            return null;
+          },
+        });
       } else if (variant !== 'nohooks') {
         throw new Error(`unknown memory variant: ${variant}`);
       }

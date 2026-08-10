@@ -24,15 +24,17 @@ export type ParseResult = BindingParseResult;
 export type ParserOptions = BindingParserOptions;
 
 function wrap(result: ParseResult, filename: string | undefined, sourceText: string) {
-  if (result.errors.length > 0) {
-    return normalizeParseError(filename, sourceText, result.errors);
-  }
   // Drains, not reads: `ParseResult` is an upstream napi class whose getters
-  // hand the native storage back, so reading is the only way to free these two.
+  // hand the native storage back, so reading is the only way to free a field.
+  // Before the error check because a failed parse still carries a whole program.
   // Skipped elsewhere: finalizers do it there, and the reads cost real time.
   if (shouldEagerlyFreeOutputs()) {
     void result.module;
     void result.comments;
+    void result.program;
+  }
+  if (result.errors.length > 0) {
+    return normalizeParseError(filename, sourceText, result.errors);
   }
   return result.program;
 }

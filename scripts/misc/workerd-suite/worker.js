@@ -696,6 +696,10 @@ async function caseMemorySlope(url) {
   const variant = url.searchParams.get('variant') ?? 'nohooks';
   const rounds = Number(url.searchParams.get('rounds') ?? 10);
   const moduleCount = Number(url.searchParams.get('modules') ?? 150);
+  // How deep the renderChunk variants stack their hook. Supplied by the driver so
+  // `hookCalls` stays a count the driver can predict exactly; see
+  // STACKED_RENDER_CHUNK_PLUGINS there for why one variant asks for more than 1.
+  const renderChunkPlugins = Number(url.searchParams.get('hooks') ?? 1);
   const files = makeSlopeGraph(moduleCount);
 
   const baseline = getWorkerdRuntimeStats().liveInstances;
@@ -722,26 +726,32 @@ async function caseMemorySlope(url) {
             modulesSeen = seen;
           },
         });
-      } else if (variant === 'renderchunk-nomodules') {
-        // Receives the rendered chunk but never touches `modules`.
-        plugins.push({
-          name: 'workerd-suite-render-chunk-nomodules',
-          renderChunk(code, chunk) {
-            hookCalls += 1;
-            modulesSeen = code.length + chunk.fileName.length;
-            return null;
-          },
-        });
+      } else if (variant === 'renderchunk-nomodules' || variant === 'renderchunk-stacked') {
+        // Receives the rendered chunk but never touches `modules`. The SAME hook
+        // for both variants; only the driver's stack depth differs, so
+        // `renderchunk-stacked` measures nothing but a deeper plugin stack of it.
+        for (let p = 0; p < renderChunkPlugins; p += 1) {
+          plugins.push({
+            name: `workerd-suite-render-chunk-nomodules-${p}`,
+            renderChunk(code, chunk) {
+              hookCalls += 1;
+              modulesSeen = code.length + chunk.fileName.length;
+              return null;
+            },
+          });
+        }
       } else if (variant === 'renderchunk') {
-        plugins.push({
-          name: 'workerd-suite-render-chunk',
-          renderChunk(_code, chunk) {
-            hookCalls += 1;
-            // Reading `chunk.modules` marshals one object per module.
-            modulesSeen = Object.keys(chunk.modules).length;
-            return null;
-          },
-        });
+        for (let p = 0; p < renderChunkPlugins; p += 1) {
+          plugins.push({
+            name: `workerd-suite-render-chunk-${p}`,
+            renderChunk(_code, chunk) {
+              hookCalls += 1;
+              // Reading `chunk.modules` marshals one object per module.
+              modulesSeen = Object.keys(chunk.modules).length;
+              return null;
+            },
+          });
+        }
       } else if (variant !== 'nohooks') {
         throw new Error(`unknown memory variant: ${variant}`);
       }

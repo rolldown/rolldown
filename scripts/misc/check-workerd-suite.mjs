@@ -35,6 +35,26 @@ const warmupRounds = Number(args.get('--warmup') ?? 2);
 // `--measure` reports the slopes without enforcing the budgets. Use it to
 // re-derive the numbers below after an intentional memory change.
 const measureOnly = flags.has('--measure');
+// The measurement quantum: every slope here is (last - first) / intervals, and
+// both ends are Wasm page multiples, so no slope can express less than one 64 KiB
+// page spread across the post-warmup intervals. ~0.0037 MiB/rebuild at
+// --rounds=20. Every threshold below is stated as a multiple of it.
+const quantum = 65536 / (rounds - warmupRounds - 1) / MiB;
+
+// How deep `renderchunk-stacked` stacks the renderChunk hook, the way a real
+// build stacks renderChunk plugins. It exists to give the workload-resolution
+// control at the bottom a signal larger than the measurement noise, and the ONLY
+// lever that works is invocation count: the rendered chunk is ~25 KiB, under one
+// 64 KiB page, so payload is no lever at all -- returning a 16x larger chunk from
+// the hook measured the SAME slope as returning nothing, which is the eager
+// release working. Retention over `nohooks` by stack depth, measured 2026-08-10:
+// 1 -> 3, 2 -> 4-7, 3 -> 8, then a dlmalloc arena step to 4 -> 42, 5 -> 38,
+// 6 -> 38, 7 -> 41, 8 -> 45 page quanta. 6 sits mid-plateau: clear of the step at
+// 3->4 and on the flattest stretch, so a builder that steps one depth either way
+// still lands on 38-45.
+const STACKED_RENDER_CHUNK_PLUGINS = 6;
+const renderChunkDepth = (variant) =>
+  variant === 'renderchunk-stacked' ? STACKED_RENDER_CHUNK_PLUGINS : 1;
 
 // ---------------------------------------------------------------------------
 // MEMORY BUDGETS -- MiB of Wasm linear memory retained per identical rebuild on
@@ -43,17 +63,20 @@ const measureOnly = flags.has('--measure');
 // would otherwise leave stale ceilings behind.
 //
 // Measured 2026-08-10 on the registry napi pin (napi 3.12.1 / napi-derive 3.6.3,
-// @napi-rs/cli 3.8.4) on the DEBUG wasm that BOTH CI lanes build (~29.6 MiB
+// @napi-rs/cli 3.8.5) on the DEBUG wasm that BOTH CI lanes build (28.3 MiB
 // `rolldown-binding.wasm32-wasip1.wasm`), 300-module graph, 2 warmup rounds, at
-// --rounds=20 -- the count ci.yml runs. Seven consecutive 20-round runs agreed
-// EXACTLY for `nohooks` and `renderchunk*`; `generatebundle` alone moved one
-// 64 KiB page quantum (0.180-0.184 -- GC timing decides when the marshaled
-// bundle copies' JS handles die, which moves a page boundary), so its `measured`
-// records the mid value. CI run 31322883081 (0.195 / 0.180 / 0.206 / 0.206) sits
-// inside every band below, so the calibration holds on the CI builder too. The
-// window length is part of the number: rebuild growth is CONVEX (dlmalloc arena
-// stepping retains more per round in the tail), so these values are valid ONLY
-// at --rounds=20. Budgets carry ~25% headroom over `measured` to absorb page
+// --rounds=20 -- the count ci.yml runs. Six consecutive 20-round runs agreed
+// EXACTLY for `nohooks` and both single-hook `renderchunk*` rows;
+// `generatebundle` spread two 64 KiB page quanta (0.180-0.188 -- GC timing
+// decides when the marshaled bundle copies' JS handles die, which moves a page
+// boundary) and `renderchunk-stacked` two (0.338-0.346), so their `measured`
+// records the modal value. CI run 31322883081 (0.195 / 0.180 / 0.206 / 0.206)
+// sits inside every band it covers, so the calibration holds on the CI builder
+// too; `renderchunk-stacked` is new here and has no CI datum yet, which is why
+// the control it feeds is set far below its measured gap, not just under it.
+// The window length is part of the number: rebuild growth is CONVEX (dlmalloc
+// arena stepping retains more per round in the tail), so these values are valid
+// ONLY at --rounds=20. Budgets carry ~25% headroom over `measured` to absorb page
 // quantisation plus toolchain differences from the CI builder -- far below the
 // signal each variant guards (see the per-variant notes).
 const MEMORY_BUDGETS = {
@@ -73,16 +96,27 @@ const MEMORY_BUDGETS = {
   generatebundle: { measured: 0.182, budget: 0.228 },
   // Receiving a BindingRenderedChunk in renderChunk. Snapshot-and-released per
   // invocation, so this is baseline plus the cost of installing the extra hook
-  // (~0.011 above `nohooks` on this pin -- see the workload-resolution control
-  // below), NOT a payload retention that scales with output size. Climbing back
-  // toward 0.55 means the renderChunk eager release broke.
+  // (~0.011 above `nohooks` on this pin), NOT a payload retention that scales
+  // with output size -- returning a 16x larger chunk from the hook measured this
+  // same 0.210. Climbing back toward 0.55 means the renderChunk eager release
+  // broke.
   'renderchunk-nomodules': { measured: 0.21, budget: 0.263 },
   // ...plus reading `chunk.modules`, which marshals one BindingRenderedModule
   // per module; identical to `renderchunk-nomodules` because those boxes are
   // snapshot-and-released too. The band alone cannot see the module-box cost
   // returning (0.021 fits under the ceiling), so the `moduleBoxDelta` control
-  // below asserts the two rows stay within two page quanta of each other.
+  // below asserts the two rows stay within two page quanta of each other. Both
+  // rows are kept at stack depth 1 precisely so that delta stays quiet: they
+  // agreed EXACTLY on every calibration run, and stacking them (as
+  // `renderchunk-stacked` does) made each jitter +-2 quanta, which would have
+  // spent most of the ceiling's margin on noise.
   renderchunk: { measured: 0.21, budget: 0.263 },
+  // The same hook as `renderchunk-nomodules`, installed
+  // STACKED_RENDER_CHUNK_PLUGINS deep. Its band is a second, harder read on the
+  // renderChunk eager release -- one round now marshals 6 hook-input boxes, so a
+  // release that stops firing shows up 6x -- and its gap over `nohooks` is what
+  // the workload-resolution control at the bottom measures.
+  'renderchunk-stacked': { measured: 0.346, budget: 0.432 },
 };
 
 // Every variant is enforced as a two-sided BAND. `budget` catches the leak
@@ -450,7 +484,8 @@ const firstSamples = {};
 const failures = [];
 for (const variant of Object.keys(MEMORY_BUDGETS)) {
   const report = await dispatch(
-    `/memory?variant=${variant}&rounds=${rounds}&modules=${slopeModules}`,
+    `/memory?variant=${variant}&rounds=${rounds}&modules=${slopeModules}` +
+      `&hooks=${renderChunkDepth(variant)}`,
   );
   // A teardown that only breaks after N rebuilds is exactly what this part is
   // shaped to find, so build failure and DISPOSE failure are reported separately
@@ -471,7 +506,15 @@ for (const variant of Object.keys(MEMORY_BUDGETS)) {
       `(delta ${report.liveDelta})`,
   );
   if (variant !== 'nohooks') {
-    assert.equal(report.hookCalls, rounds, `variant ${variant} hook did not run every round`);
+    // `rounds * depth`, not `rounds`: every installed hook must fire every round,
+    // and the depth is the driver's own constant rather than anything the worker
+    // reports back, so a worker that quietly installed fewer cannot satisfy it.
+    const expectedHookCalls = rounds * renderChunkDepth(variant);
+    assert.equal(
+      report.hookCalls,
+      expectedHookCalls,
+      `variant ${variant} ran ${report.hookCalls} hook calls, expected ${expectedHookCalls}`,
+    );
     assert.ok(report.modulesSeen > 0, `variant ${variant} hook observed nothing`);
   }
   // Identical rebuilds must produce identical output, or the slope is not
@@ -561,25 +604,41 @@ for (const variant of Object.keys(MEMORY_BUDGETS)) {
 }
 
 // The strongest positive control: the telemetry must RESOLVE a workload
-// difference, not merely move. `renderchunk-nomodules` differs from `nohooks` by
-// exactly one hook that RECEIVES a rendered chunk. On the registry napi pin that
-// resolution lives entirely in the slope gap: all seven 2026-08-10 calibration
-// runs measured +0.011 MiB/rebuild at --rounds=20, with a first-round footprint
-// gap of 0.000 (single-page 0.063 jitter seen once). The 0.007 slope threshold
-// is two measurement quanta -- one 64 KiB page across the 17 post-warmup
-// intervals at --rounds=20 is ~0.0037 MiB/rebuild -- and also above half the
-// observed 0.011 gap. Both gaps are checked as MAGNITUDES because the arena tail
-// can flip the sign. A counter that grows but ignores what the build did would
-// show NEITHER, and would still satisfy every per-variant check above.
+// difference, not merely move. `renderchunk-stacked` differs from `nohooks` by
+// STACKED_RENDER_CHUNK_PLUGINS hooks that RECEIVE a rendered chunk, and on the
+// registry napi pin that resolution lives entirely in the slope gap: the six
+// 2026-08-10 calibration runs measured 38 or 40 quanta (0.140-0.147 MiB/rebuild)
+// at --rounds=20, with a first-round footprint gap of 0.000.
+//
+// The threshold arithmetic, in page quanta -- one 64 KiB page across the 17
+// post-warmup intervals at --rounds=20 is ~0.0037 MiB/rebuild:
+//   * measured gap        38-40   (`nohooks` never moved off 54 quanta;
+//                                  `renderchunk-stacked` sat on 94, once on 92)
+//   * threshold 0.030      8.2    -> ~30 quanta of margin, so page jitter on both
+//                                  rows at once cannot come near it
+//   * still fires at       <8.2   -> the single-hook gap this control used to run
+//                                  on was 3 quanta, so a collapse back to that
+//                                  level, or to 0, still fails
+// Deliberately NOT set just under the measured gap: `renderchunk-stacked` has no
+// CI datum yet, and partial degradation is already the job of that variant's own
+// floor (0.259) rather than this binary is-it-resolving-anything check. Both gaps
+// are checked as MAGNITUDES because the arena tail can flip the sign. A counter
+// that grows but ignores what the build did would show NEITHER, and would still
+// satisfy every per-variant check above.
+//
+// This replaces a 0.007 threshold read against the single-hook
+// `renderchunk-nomodules` row. That gap was only 3 quanta while each side jitters
+// a page, so a 2-quanta threshold sat inside the noise: CI run 31394326339 failed
+// it at 0.004 with every band green, `nohooks` having drifted one page.
 if (!measureOnly) {
-  const hookSlopeDelta = slopes['renderchunk-nomodules'] - slopes.nohooks;
-  const hookFirstDelta = (firstSamples['renderchunk-nomodules'] - firstSamples.nohooks) / MiB;
-  if (Math.abs(hookSlopeDelta) < 0.007 && Math.abs(hookFirstDelta) < 0.1) {
+  const hookSlopeDelta = slopes['renderchunk-stacked'] - slopes.nohooks;
+  const hookFirstDelta = (firstSamples['renderchunk-stacked'] - firstSamples.nohooks) / MiB;
+  if (Math.abs(hookSlopeDelta) < 0.03 && Math.abs(hookFirstDelta) < 0.1) {
     failures.push(
       `the renderChunk workload is no longer distinguishable from the baseline: ` +
-        `'renderchunk-nomodules' ${slopes['renderchunk-nomodules'].toFixed(3)} vs 'nohooks' ` +
+        `'renderchunk-stacked' ${slopes['renderchunk-stacked'].toFixed(3)} vs 'nohooks' ` +
         `${slopes.nohooks.toFixed(3)} MiB/rebuild (gap ${hookSlopeDelta.toFixed(3)}, threshold ` +
-        `0.007) and a first-round footprint gap of ${hookFirstDelta.toFixed(3)} MiB (measured ` +
+        `0.030) and a first-round footprint gap of ${hookFirstDelta.toFixed(3)} MiB (measured ` +
         '0.000 on the registry napi pin, so the slope gap carries the resolution). EITHER ' +
         'instance.memoryBytes stopped tracking what the build does -- in ' +
         'which case every slope above is meaningless -- OR the per-hook cost itself was ' +
@@ -603,6 +662,16 @@ if (!measureOnly) {
 if (measureOnly) {
   console.log(`\nMEASURED SLOPES (--measure, budgets not enforced):`);
   console.log(JSON.stringify(slopes, null, 2));
+  // The two controls above, in the unit they are calibrated in, so a re-baseline
+  // can read its margin off the run instead of recomputing it.
+  const gap = slopes['renderchunk-stacked'] - slopes.nohooks;
+  const boxDelta = slopes.renderchunk - slopes['renderchunk-nomodules'];
+  console.log(
+    `workload-resolution gap ${gap.toFixed(4)} (${(gap / quantum).toFixed(1)} quanta, ` +
+      `threshold 0.030) | moduleBoxDelta ${boxDelta.toFixed(4)} ` +
+      `(${(boxDelta / quantum).toFixed(1)} quanta, ceiling 0.014) | quantum ` +
+      `${quantum.toFixed(4)} MiB/rebuild`,
+  );
 } else if (failures.length > 0) {
   throw new Error(`\n${failures.join('\n')}`);
 }

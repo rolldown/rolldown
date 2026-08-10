@@ -32,11 +32,7 @@ onlyBuiltDependencies:
   - tree-sitter
 
 overrides:
-  # emnapi v2 line: napi-build 2.4.1 unconditionally exports the emnapi v2
-  # env-management symbols (emnapi_create_env/emnapi_delete_env) on WASI, which
-  # only the 2.0.0-alpha C archives define. The released 2.0.0-alpha.3 ships the
-  # per-flavor napi-rs archives the pin links (non-threads
-  # `libemnapi-basic-napi-rs.a`, threads `libemnapi-napi-rs-mt.a`).
+  # napi-build 2.4.1 links the emnapi v2 C archives; pin the exact release so a range change cannot silently swap them.
   emnapi: 2.0.0-alpha.3
   vitepress>vite: npm:rolldown-vite@latest
 
@@ -44,10 +40,7 @@ catalog:
   '@babel/core': ^7.29.7
   '@babel/preset-env': ^7.29.7
   '@babel/preset-typescript': ^7.29.7
-  # emnapi v2 line (see the `emnapi` override above): the .wasm links the
-  # 2.0.0-alpha C archives, so a v1 JS runtime is an ABI mismatch. Both
-  # `packages/browser` and `packages/rolldown` resolve these through the catalog
-  # so the ABI pin lives in exactly one place.
+  # the .wasm links emnapi v2 C archives, so a v1 JS runtime is an ABI mismatch (see the `emnapi` override above).
   '@emnapi/core': 2.0.0-alpha.3
   '@emnapi/runtime': 2.0.0-alpha.3
   '@jridgewell/trace-mapping': ^0.3.31

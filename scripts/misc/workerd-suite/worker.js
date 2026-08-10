@@ -752,6 +752,20 @@ async function caseMemorySlope(url) {
             },
           });
         }
+      } else if (variant === 'transform-ast') {
+        // A transform hook that reads `meta.ast` -- the parseAst() path. Unlike
+        // every other variant here this hook fires once per MODULE, and each
+        // read mints one upstream oxc `ParseResult` whose `module`/`comments`
+        // fields are freed only by being read (packages/rolldown/src/
+        // parse-ast-index.ts). `body.length` forces the program itself too.
+        plugins.push({
+          name: 'workerd-suite-transform-ast',
+          transform(_code, _id, meta) {
+            hookCalls += 1;
+            modulesSeen += meta.ast.body.length;
+            return null;
+          },
+        });
       } else if (variant !== 'nohooks') {
         throw new Error(`unknown memory variant: ${variant}`);
       }

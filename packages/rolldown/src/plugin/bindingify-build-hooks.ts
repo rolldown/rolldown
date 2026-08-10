@@ -182,8 +182,11 @@ export function bindingifyTransform(
       // Hoisted so the box `ctx.inner()` mints here can be released in the
       // `finally` alongside `ctx` itself on the threadless flavor.
       const innerCtx = ctx.inner();
+      // Hoisted for the same reason: the `meta.magicString` getter below mints
+      // this box lazily, and the `finally` has to be able to reach it.
+      let magicStringInstance: RolldownMagicString | undefined;
       try {
-        let magicStringInstance: RolldownMagicString, astInstance: Program;
+        let astInstance: Program;
         Object.defineProperties(meta, {
           magicString: {
             get() {
@@ -283,6 +286,12 @@ export function bindingifyTransform(
           // specialized wrapper box `ctx` is sync-only and drops directly.
           releaseOrDefer(innerCtx);
           ctx.dropInner();
+          // The source text plus its UTF-16 mapping table run ~9x the source
+          // bytes. `sendMagicString` above may already have moved the string
+          // itself out, but the mapping table -- the bulk of that -- stays, so
+          // this still has work to do; it reports `freed: false` instead of
+          // throwing once there is nothing left.
+          magicStringInstance?.dropInner();
         }
       }
     },

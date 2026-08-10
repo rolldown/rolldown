@@ -71,9 +71,6 @@ async function build(options: BuildOptions[]): Promise<RolldownOutput[]>;
 async function build(
   options: BuildOptions | BuildOptions[],
 ): Promise<RolldownOutput | RolldownOutput[]> {
-  for (const option of Array.isArray(options) ? options : [options]) {
-    assertParallelPluginOptionsSupported(option.plugins, option.output?.plugins);
-  }
   if (Array.isArray(options)) {
     const outputs: RolldownOutput[] = [];
     for (const option of options) {
@@ -82,6 +79,8 @@ async function build(
     return outputs;
   } else {
     const { output, write = true, ...inputOptions } = options;
+    // Read the snapshot, not `options`, so an accessor-backed option runs once.
+    assertParallelPluginOptionsSupported(inputOptions.plugins, output?.plugins);
     const build = await rolldown(inputOptions);
     let result!: RolldownOutput;
     let buildError: unknown;

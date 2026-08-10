@@ -162,10 +162,3 @@ minimumReleaseAgeExclude:
 
 # avoid accidentally relying on `NODE_PATH` env var
 extendNodePath: false
-
-# Lets the v2-prerelease `@emnapi/*` (pinned by the `emnapi` override above) satisfy
-# `@napi-rs/wasm-runtime`'s peer ranges.
-peerDependencyRules:
-  allowedVersions:
-    '@napi-rs/wasm-runtime>@emnapi/core': 2.0.0-alpha.3
-    '@napi-rs/wasm-runtime>@emnapi/runtime': 2.0.0-alpha.3

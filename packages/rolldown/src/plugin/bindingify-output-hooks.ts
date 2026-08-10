@@ -52,6 +52,9 @@ export function bindingifyRenderChunk(
 ): PluginHookWithBindingExt<BindingPluginOptions['renderChunk'], BindingHookFilter | undefined> {
   return bindingifyHook(args.plugin.renderChunk, ({ handler, options }) => ({
     plugin: async (ctx, code, chunk, opts, meta) => {
+      // Hoisted so the box the `magicString` getter below mints lazily can be
+      // released in the `finally` on the threadless flavor.
+      let magicStringInstance: RolldownMagicString | undefined;
       try {
         // cache the chunks binding to deduplicated avoid clone chunks
         if (args.pluginContextData.getRenderChunkMeta() == null) {
@@ -72,7 +75,6 @@ export function bindingifyRenderChunk(
         const renderChunkMeta = args.pluginContextData.getRenderChunkMeta()!;
 
         // Add lazy-loaded magicString if nativeMagicString is enabled
-        let magicStringInstance: RolldownMagicString;
         if (args.options.experimental?.nativeMagicString) {
           Object.defineProperty(renderChunkMeta, 'magicString', {
             get() {
@@ -102,16 +104,19 @@ export function bindingifyRenderChunk(
         if (ret instanceof RolldownMagicString) {
           const normalizedCode = ret.toString();
           const generatedMap = ret.generateMap();
-          return {
-            code: normalizedCode,
-            map: bindingifySourcemap({
-              file: generatedMap.file,
-              mappings: generatedMap.mappings,
-              names: generatedMap.names,
-              sources: generatedMap.sources,
-              sourcesContent: generatedMap.sourcesContent.map((s) => s ?? null),
-            }),
-          };
+          const map = bindingifySourcemap({
+            file: generatedMap.file,
+            mappings: generatedMap.mappings,
+            names: generatedMap.names,
+            sources: generatedMap.sources,
+            sourcesContent: generatedMap.sourcesContent.map((s) => s ?? null),
+          });
+          // Every field is copied out above, so the native map box has no
+          // reader left; nothing else holds it, so it drops directly.
+          if (shouldEagerlyFreeOutputs()) {
+            generatedMap.dropInner();
+          }
+          return { code: normalizedCode, map };
         }
 
         if (typeof ret === 'string') {
@@ -129,16 +134,19 @@ export function bindingifyRenderChunk(
           }
           if (ret.map === undefined) {
             const generatedMap = magicString.generateMap();
-            return {
-              code: normalizedCode,
-              map: bindingifySourcemap({
-                file: generatedMap.file,
-                mappings: generatedMap.mappings,
-                names: generatedMap.names,
-                sources: generatedMap.sources,
-                sourcesContent: generatedMap.sourcesContent.map((s) => s ?? null),
-              }),
-            };
+            const map = bindingifySourcemap({
+              file: generatedMap.file,
+              mappings: generatedMap.mappings,
+              names: generatedMap.names,
+              sources: generatedMap.sources,
+              sourcesContent: generatedMap.sourcesContent.map((s) => s ?? null),
+            });
+            // Same as the direct-return branch above: every field is copied
+            // out, so the native map box has no reader left.
+            if (shouldEagerlyFreeOutputs()) {
+              generatedMap.dropInner();
+            }
+            return { code: normalizedCode, map };
           }
           return {
             code: normalizedCode,
@@ -161,6 +169,11 @@ export function bindingifyRenderChunk(
           // cached), so every invocation's copy can go, as can the context.
           meta.dropInner();
           releaseOrDefer(ctx);
+          // The `magicString` getter mints a box holding the chunk source plus
+          // its UTF-16 mapping table, ~9x the source bytes. The getter is only
+          // installed under `experimental.nativeMagicString` and only runs if
+          // the hook read it, so this stays undefined otherwise.
+          magicStringInstance?.dropInner();
         }
       }
     },

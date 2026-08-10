@@ -15,8 +15,8 @@
 
 The scheduler itself does not live in this repo. The
 [`napi-async-runtime`](https://crates.io/crates/napi-async-runtime) crate (a
-git pin, see §9) owns every executor internal — the MultiThread work-stealing
-executor, the `crossbeam` injector, parked-driver bookkeeping, the blocking
+published release, see §9) owns every executor internal — the MultiThread
+work-stealing executor, the `crossbeam` injector, parked-driver bookkeeping, the blocking
 owner-lane lending machine, the timer heap, generations, and the
 CurrentThread task-host registry/TSFN publication protocol. Rolldown only
 **selects, configures, consumes, and bridges** it. This document maps that
@@ -468,8 +468,8 @@ browser-build, and packed-browser tests exercise this contract;
 `pluginErrorMetadata` is therefore a universal public-support invariant rather
 than a target capability.
 
-This invariant depends on the workspace's napi-rs pin
-`55421392cbaa24d4df69419e4c6d4958fbcb6a12` in `Cargo.toml` (§9). Synchronous
+This invariant depends on the workspace's `napi 3.12.1` registry pin (§9).
+Synchronous
 threadsafe-function exceptions use
 `Error::capture_unknown_with_status_and_diagnostics`, and Promise rejections use
 `Error::from_unknown_without_coercion`; both retain the exact JavaScript value
@@ -861,13 +861,22 @@ transform uses explicit generated-block markers, is idempotent, validates all
 loader anchors before writing any output, and fails when the expected napi-rs
 shape changes; committed loaders must therefore be regenerated rather than
 edited. The binding wrapper bypasses napi-rs's feature-blind declaration cache
-for both dedicated WASI targets and native `async-runtime` builds, and preserves
-the inactive WASI flavor declaration around every build. Default and threaded
-builds update `rolldown-binding.wasi.d.cts`; async-runtime builds update
-`rolldown-binding.wasip1.d.cts`. Bypassing the cache removes its default-feature
-entry, so the next native build regenerates that entry instead of reusing
-async-runtime metadata. Build ordering therefore cannot copy one flavor's
-cfg-specific comments into the other declaration. The deferred loader's
+for dedicated WASI targets and native `async-runtime` builds — each gets a fresh
+type-def scratch folder, so no stale fragments survive — and restores the
+inactive flavor's `rolldown-binding.*.d.cts` around every build. Only a build
+whose target IS a WASI flavor regenerates that flavor's declaration; every other
+build writes the committed bytes back, so a native build can rewrite neither.
+`binding.d.cts` is the opposite: `--dts` is honoured on every build, so it keeps
+whichever flavor built last. Regenerating declarations therefore has a required
+order:
+
+```text
+build-binding:wasi        # threaded d.cts; repoints browser.js to -wasm32-wasi
+build-binding:wasi-single # threadless d.cts
+just build-rolldown       # native LAST: restores binding.d.cts and browser.js
+```
+
+The deferred loader's
 `instantiate` export aliases its managed `createInstance` factory; no published
 workerd entry returns raw binding exports or host controls.
 The deferred declaration imports `rolldown-binding.wasip1.cjs`, which resolves
@@ -1060,9 +1069,11 @@ build-order coupling in the WASI workflow) is gone:
   EVERY declared wasi flavor's loader set, each with `hasThreads` derived from
   its own triple, so loader regeneration is deterministic and byte-identical to
   the committed copies on every host and under every build variant. A wasi
-  build regenerates only the flavor being built. No restore steps are needed;
+  build regenerates only the flavor being built. Loaders need no restore step;
   CI's "Check no diff" in `reusable-native-build.yml` has full coverage of all
-  committed loaders.
+  committed loaders. Declarations do: `binding.d.cts` keeps whichever flavor
+  built last, so the native build must run last — which is why ci.yml restores
+  it after `just build-browser`.
 - `packages/rolldown/package.json` declares `napi.rootPublisher: "pnpm"`
   (honored from `@napi-rs/cli` 3.8.5, per napi-rs#3450). Pre-publish
   validation is publisher-aware: because the manifest also declares

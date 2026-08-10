@@ -11,6 +11,7 @@ import { locate } from './log/locate-character';
 import { augmentCodeLocation, error, logParseError } from './log/logs';
 import { getCodeFrame } from './utils/code-frame';
 import { parse, parseSync } from './utils/parse';
+import { shouldEagerlyFreeOutputs } from './utils/threadless-free';
 
 /**
  * @hidden
@@ -25,6 +26,13 @@ export type ParserOptions = BindingParserOptions;
 function wrap(result: ParseResult, filename: string | undefined, sourceText: string) {
   if (result.errors.length > 0) {
     return normalizeParseError(filename, sourceText, result.errors);
+  }
+  // Drains, not reads: `ParseResult` is an upstream napi class whose getters
+  // hand the native storage back, so reading is the only way to free these two.
+  // Skipped elsewhere: finalizers do it there, and the reads cost real time.
+  if (shouldEagerlyFreeOutputs()) {
+    void result.module;
+    void result.comments;
   }
   return result.program;
 }

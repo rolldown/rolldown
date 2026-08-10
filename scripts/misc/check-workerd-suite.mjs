@@ -56,6 +56,16 @@ const STACKED_RENDER_CHUNK_PLUGINS = 6;
 const renderChunkDepth = (variant) =>
   variant === 'renderchunk-stacked' ? STACKED_RENDER_CHUNK_PLUGINS : 1;
 
+// What one round owes `transform`: the whole slope graph (`--modules` modules
+// plus 4 utils and 1 entry) AND rolldown's injected runtime module, which
+// transform sees even though no `load` ever serves it.
+const TRANSFORMED_MODULES_PER_ROUND = slopeModules + 5 + 1;
+// Hook invocations one round owes. The output hooks run once per chunk, times
+// their stack depth; `transform-ast` hooks the BUILD side instead, so its count
+// is per-module.
+const hookCallsPerRound = (variant) =>
+  variant === 'transform-ast' ? TRANSFORMED_MODULES_PER_ROUND : renderChunkDepth(variant);
+
 // ---------------------------------------------------------------------------
 // MEMORY BUDGETS -- MiB of Wasm linear memory retained per identical rebuild on
 // ONE reusable instance. They catch a REGRESSION (a hook-input eager-release
@@ -117,6 +127,17 @@ const MEMORY_BUDGETS = {
   // release that stops firing shows up 6x -- and its gap over `nohooks` is what
   // the workload-resolution control at the bottom measures.
   'renderchunk-stacked': { measured: 0.346, budget: 0.432 },
+  // The only BUILD-side row, and the only one whose hook runs per MODULE (306 a
+  // round, not 1): a transform hook reading `meta.ast`, i.e. `parseAst()`, which
+  // hands back oxc's `ParseResult` -- an upstream napi class rolldown cannot add
+  // a release method to, so reading a field IS how its native storage comes
+  // back. `packages/rolldown/src/parse-ast-index.ts` reads `module` and
+  // `comments` for no other reason; delete exactly that block from the built
+  // `workerd.browser.mjs` and this row measures 1.287, 3.9x this budget.
+  // Three consecutive 20-round runs measured 0.2647 with ZERO spread, the
+  // steadiest row in the table, so both edges keep 18 page quanta of margin
+  // (twice the widest spread any row here has ever shown).
+  'transform-ast': { measured: 0.265, budget: 0.331 },
 };
 
 // Every variant is enforced as a two-sided BAND. `budget` catches the leak
@@ -506,10 +527,11 @@ for (const variant of Object.keys(MEMORY_BUDGETS)) {
       `(delta ${report.liveDelta})`,
   );
   if (variant !== 'nohooks') {
-    // `rounds * depth`, not `rounds`: every installed hook must fire every round,
-    // and the depth is the driver's own constant rather than anything the worker
-    // reports back, so a worker that quietly installed fewer cannot satisfy it.
-    const expectedHookCalls = rounds * renderChunkDepth(variant);
+    // `rounds * per-round count`, not `rounds`: every installed hook must fire
+    // every round, and that count is the driver's own arithmetic rather than
+    // anything the worker reports back, so a worker that quietly installed
+    // fewer -- or transformed a smaller graph -- cannot satisfy it.
+    const expectedHookCalls = rounds * hookCallsPerRound(variant);
     assert.equal(
       report.hookCalls,
       expectedHookCalls,

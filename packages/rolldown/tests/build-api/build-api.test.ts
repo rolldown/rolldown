@@ -1071,6 +1071,45 @@ test('build option arrays finish cleanup before starting the next option', async
   expect(secondOptionsSawFirstClosed).toBe(true);
 });
 
+test.each(['single', 'array'] as const)(
+  'build reads a %s config object once per option',
+  async (shape) => {
+    let outputReads = 0;
+    let pluginReads = 0;
+    let buildStarts = 0;
+    const options = { input: './main.js', cwd: import.meta.dirname, write: false };
+    Object.defineProperty(options, 'output', {
+      enumerable: true,
+      get() {
+        outputReads += 1;
+        return outputReads === 1 ? { format: 'iife' } : undefined;
+      },
+    });
+    Object.defineProperty(options, 'plugins', {
+      enumerable: true,
+      get() {
+        pluginReads += 1;
+        if (pluginReads > 1) return undefined;
+        return [
+          {
+            name: 'one-shot-plugins',
+            buildStart() {
+              buildStarts += 1;
+            },
+          },
+        ];
+      },
+    });
+
+    const result = shape === 'array' ? (await build([options]))[0] : await build(options);
+
+    expect(outputReads).toBe(1);
+    expect(pluginReads).toBe(1);
+    expect(buildStarts).toBe(1);
+    expect(result.output[0].code).toContain('(function() {');
+  },
+);
+
 test('supports closeBundle hook', async () => {
   let closeBundleCalls = 0;
   try {

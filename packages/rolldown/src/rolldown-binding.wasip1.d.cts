@@ -1557,6 +1557,7 @@ export declare class BindingChunkingContext {
 
 /** A decoded source map with mappings as an array of arrays instead of VLQ-encoded string. */
 export declare class BindingDecodedMap {
+  dropInner(): ExternalMemoryStatus
   /** The source map version (always 3). */
   get version(): number
   /** The generated file name. */
@@ -1613,6 +1614,11 @@ export declare class BindingLoadPluginContext {
 
 export declare class BindingMagicString {
   constructor(source: string, options?: BindingMagicStringOptions | undefined | null)
+  /**
+   * Releases the source text and its UTF-16 mapping table — together about nine
+   * times the source bytes — without waiting for a finalizer.
+   */
+  dropInner(): ExternalMemoryStatus
   get original(): string
   get filename(): string | null
   get indentExclusionRanges(): Array<Array<number>> | Array<number> | null
@@ -1824,6 +1830,7 @@ export declare class BindingRenderedModule {
 
 /** A source map object with properties matching the SourceMap V3 specification. */
 export declare class BindingSourceMap {
+  dropInner(): ExternalMemoryStatus
   /** The source map version (always 3). */
   get version(): number
   /** The generated file name. */

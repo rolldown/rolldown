@@ -328,14 +328,14 @@ const threadlessCapabilities = {
 };
 
 const threadedCapabilities = {
-  backend: 'tokio',
-  flavor: 'MultiThread',
+  backend: 'shared',
+  flavor: 'CurrentThread',
   target: 'wasi-threads',
   wasi: true,
-  asyncRuntimeBuild: false,
-  threads: true,
+  asyncRuntimeBuild: true,
+  threads: false,
   timers: true,
-  devSupported: true,
+  devSupported: false,
   watchSupported: false,
   blockOnJsThreadSafe: false,
 };
@@ -409,7 +409,7 @@ function assertRootPackageExercise(stdout, flavor) {
     outputs: 1,
     capabilities: threadless ? threadlessCapabilities : threadedCapabilities,
     support: {
-      dev: !threadless,
+      dev: false,
       watch: false,
       dynamicImportVarsResolver: true,
       importGlobResolver: true,
@@ -620,7 +620,11 @@ async function assertWorkerdDeclarationParity(packageDir, runtimeExports, worker
     bindingExportBlock[1]
       .split(',')
       .map((name) => name.trim())
-      .filter(Boolean),
+      .filter(Boolean)
+      // The dts bundler renames colliding local declarations and re-exports
+      // them under their public name (`BindingSourceMap$1 as BindingSourceMap`);
+      // parity is about the public name.
+      .map((name) => name.split(/\s+as\s+/).at(-1)),
   );
   assert.deepEqual(
     runtimeExports.filter((name) => !loaderExports.has(name)).sort((a, b) => a.localeCompare(b)),
@@ -852,12 +856,14 @@ try {
 
 function assertThreadlessNodeLifecycle(code, loader) {
   for (const signature of [
-    'function __removeEmnapiContextBeforeExitListener() {',
-    'function __removeEmnapiContextAtExitListener() {',
-    'function __removeEmnapiContextCleanupListeners() {',
-    'function __retainEmnapiContextCleanupListener() {',
-    'function __handoffEmnapiContextCleanupToExit() {',
-    'function __preserveCleanupError(__error, __cleanupError) {',
+    'function __prepareWasmEnvCleanup() {',
+    'function __drainWasmEnvCleanup() {',
+    'function __destroyEmnapiContext() {',
+    'function __rollbackWasiInitialization() {',
+    'function __runWasiInitializationRollback(record) {',
+    'function __attachCleanupErrors(error, cleanupErrors) {',
+    'function __registerWasiExitListener() {',
+    'function __disposeWasiBinding() {',
   ]) {
     assert.equal(
       code.split(signature).length - 1,
@@ -865,30 +871,61 @@ function assertThreadlessNodeLifecycle(code, loader) {
       `${loader} must contain exactly one ${signature}`,
     );
   }
+  // The settlement barrier runs before the only raw context destroy.
+  // (Staged copies are reprinted, so stay tolerant of formatting.)
+  assert.equal(
+    code.match(/__prepareWasmEnvCleanup\(\);?\n\s*const result = __emnapiContext\.destroy\(\);?/g)
+      ?.length,
+    1,
+    `${loader} must run the wasm-env cleanup barrier directly before the context destroy`,
+  );
+  // The settlement drain polls the wasm export and rejects retryably.
+  assert.ok(
+    code.includes('napi_wasm_env_cleanup_pending'),
+    `${loader} must poll the wasm-env cleanup queue while draining`,
+  );
   assert.match(
     code,
-    /process\.removeListener\(["']beforeExit["'], __destroyEmnapiContextBeforeExit\);?\s*__emnapiContextRegisteredForBeforeExit = false;?/,
-    `${loader} must preserve beforeExit ownership when physical removal fails`,
+    /drainError\.code = ["']ERR_NAPI_WASI_CLEANUP_PENDING["'];?/,
+    `${loader} must reject an undrained disposal retryably`,
   );
+  // Deterministic disposal is published behind the shared symbol.
   assert.match(
     code,
-    /process\.removeListener\(["']exit["'], __destroyEmnapiContextAtExit\);?\s*__emnapiContextRegisteredForExit = false;?/,
-    `${loader} must preserve exit ownership when physical removal fails`,
+    /Symbol\.for\(["']napi\.rs\.wasi\.dispose["']\)/,
+    `${loader} must publish its disposal behind the shared dispose symbol`,
+  );
+  // A failed initialization registers a retryable rollback record and
+  // rethrows the augmented error.
+  assert.match(
+    code,
+    /Symbol\.for\(["']napi\.rs\.wasi\.rollback\.registry\.v1["']\)/,
+    `${loader} must anchor its rollback registry behind the shared symbol`,
   );
   assert.equal(
-    code.match(/["']emnapi context cleanup listener handoff failed["']/g)?.length,
+    code.match(/__wasiRollbackRegistry\.set\(__wasiRollbackRegistryKey, rollback\)/g)?.length,
     1,
-    `${loader} must retain transactional handoff rollback diagnostics`,
+    `${loader} must register its initialization rollback exactly once`,
   );
   assert.equal(
-    code.match(/return __error\.cause === __cleanupError;?/g)?.length,
-    2,
-    `${loader} must surface cleanup errors when the primary cause is occupied`,
-  );
-  assert.equal(
-    code.match(/^\s*__handoffEmnapiContextCleanupToExit\(\);?$/gm)?.length,
+    code.match(/^\s*throw rollback\.error;?$/gm)?.length,
     1,
-    `${loader} must hand successful eager initialization to exit exactly once`,
+    `${loader} must rethrow the rollback-augmented initialization error`,
+  );
+  // The injected CurrentThread host cleanup releases rolldown's hosts before
+  // the generated rollback destroys the context.
+  const timerHostCleanup = code.search(/["']Threadless Node timer-host cleanup failed["']/);
+  const taskHostCleanup = code.search(/["']Threadless Node task-host cleanup failed["']/);
+  const rollbackRegistration = code.indexOf(
+    '__wasiRollbackRegistry.set(__wasiRollbackRegistryKey, rollback)',
+  );
+  assert.ok(
+    timerHostCleanup !== -1 &&
+      taskHostCleanup !== -1 &&
+      rollbackRegistration !== -1 &&
+      timerHostCleanup < taskHostCleanup &&
+      taskHostCleanup < rollbackRegistration,
+    `${loader} must release the CurrentThread hosts before running the initialization rollback`,
   );
 }
 
@@ -2022,7 +2059,9 @@ async function exerciseRootPackageLayouts(consumerDir, packageManager, packedFla
 
 try {
   runtimeNodes = await resolveRuntimeNodes();
-  assert.equal((await runPnpm(['--version'])).stdout.trim(), pnpmVersion);
+  // Probe from the neutral temp dir: the repo root pins its own (newer)
+  // packageManager, which corepack-invoked pnpm refuses to impersonate.
+  assert.equal((await runPnpm(['--version'], { cwd: tempDir })).stdout.trim(), pnpmVersion);
 
   const packDir = path.join(tempDir, 'pack');
   const packedFlavors = new Map();
@@ -2202,18 +2241,7 @@ try {
     workerEventErrors: 0,
     workerMessageErrors: 0,
     outputs: 1,
-    capabilities: {
-      backend: 'tokio',
-      flavor: 'MultiThread',
-      target: 'wasi-threads',
-      wasi: true,
-      asyncRuntimeBuild: false,
-      threads: true,
-      timers: true,
-      devSupported: true,
-      watchSupported: false,
-      blockOnJsThreadSafe: false,
-    },
+    capabilities: threadedCapabilities,
   });
 
   const stagedBrowserDir = path.join(tempDir, 'browser-package');

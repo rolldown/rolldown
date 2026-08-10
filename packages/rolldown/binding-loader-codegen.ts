@@ -22,139 +22,72 @@ const WASI_BINDING_ASSIGNMENT = 'nativeBinding = wasiBinding';
 const NATIVE_BINDING_EXPORT_ANCHOR = 'module.exports = nativeBinding\n';
 const WASI_CJS_EXPORT_ANCHOR = 'module.exports = __napiModule.exports\n';
 const WASI_ESM_EXPORT_ANCHOR = 'export default __napiModule.exports\n';
-const WASI_CJS_CONTEXT_IMPORT = '  getDefaultContext: __emnapiGetDefaultContext,\n';
-const WASI_ESM_CONTEXT_IMPORT = '  getDefaultContext as __emnapiGetDefaultContext,\n';
-const WASI_CJS_WASM_RUNTIME_CREATE_CONTEXT_IMPORT = '  createContext: __emnapiCreateContext,\n';
-const WASI_ESM_WASM_RUNTIME_CREATE_CONTEXT_IMPORT = '  createContext as __emnapiCreateContext,\n';
-const WASI_CJS_RUNTIME_IMPORT_ANCHOR = "} = require('@napi-rs/wasm-runtime')\n";
-const WASI_ESM_RUNTIME_IMPORT_ANCHOR = "} from '@napi-rs/wasm-runtime'\n";
 const WASI_CJS_CREATE_CONTEXT_IMPORT =
   "const { createContext: __emnapiCreateContext } = require('@emnapi/runtime')\n";
 const WASI_ESM_CREATE_CONTEXT_IMPORT =
   "import { createContext as __emnapiCreateContext } from '@emnapi/runtime'\n";
-const WASI_DEFAULT_CONTEXT_CREATION = 'const __emnapiContext = __emnapiGetDefaultContext()\n';
-const WASI_ISOLATED_CONTEXT_CREATION = 'const __emnapiContext = __emnapiCreateContext()\n';
-const WASI_NODE_CONTEXT_CREATION =
-  '  __emnapiContext = __emnapiCreateContext({ autoDestroy: false })\n';
-const WASI_NODE_CONTEXT_SUPPRESS_DESTROY = '  __emnapiContext.suppressDestroy()\n';
-const WASI_NAPI_INSTANCE_DECLARATION = 'let __napiInstance\n';
-const WASI_NAPI_INSTANCE_ASSIGNMENT = '      __napiInstance = instance\n';
-const WASI_CONTEXT_DESTROY_HELPER = 'function __destroyEmnapiContext() {\n';
+const WASI_CONTEXT_CREATION = '__emnapiContext = __emnapiCreateContext({ autoDestroy: false })';
+const WASI_CONTEXT_SUPPRESS_DESTROY = '__emnapiContext.suppressDestroy()';
 const WASI_CONTEXT_PREPARE_CLEANUP_FLAG = 'let __emnapiWasmEnvCleanupPrepared = false\n';
-const WASI_CONTEXT_DESTROY_WRAP = `if (__emnapiContext !== undefined) {
-  // A raw destroy call on the emnapi context (bypassing
-  // __destroyEmnapiContext) must still settle pending napi async work: run
-  // the wasm-side cleanup preparation while the environment can still call
-  // into JavaScript, then delegate to the original destroy.
+const WASI_PREPARE_CLEANUP_HELPER = 'function __prepareWasmEnvCleanup() {';
+const WASI_CONTEXT_DESTROY_WRAP_HELPER = 'function __wrapEmnapiContextDestroyForSettlement(';
+// A raw destroy call on the emnapi context (bypassing the published dispose
+// symbol and the loader's own teardown) must still settle pending napi async
+// work: the wasm-side cleanup preparation cancels the runtime's tasks while
+// the environment can still call into JavaScript, so their deferreds reject
+// with the runtime's cancellation error instead of panicking on a dead
+// threadsafe function. The upstream template only guards its own destroy
+// paths, so the loader wraps the context it creates.
+const WASI_CONTEXT_DESTROY_WRAP = `function __wrapEmnapiContextDestroyForSettlement(context) {
   // oxlint-disable-next-line typescript/unbound-method -- invoked with the wrapper receiver below
-  const __emnapiContextDestroy = __emnapiContext.destroy
-  __emnapiContext.destroy = function() {
-    if (!__emnapiWasmEnvCleanupPrepared) {
-      const __prepareWasmEnvCleanup =
-        __napiInstance?.exports?.napi_prepare_wasm_env_cleanup
-      if (typeof __prepareWasmEnvCleanup === 'function') {
-        __prepareWasmEnvCleanup()
-      }
-      __emnapiWasmEnvCleanupPrepared = true
-    }
-    return Reflect.apply(__emnapiContextDestroy, this, arguments)
-  }
-}
-`;
-const WASI_CONTEXT_PREPARE_CLEANUP = `  const __prepareWasmEnvCleanup =
-    __napiInstance?.exports?.napi_prepare_wasm_env_cleanup
-  if (typeof __prepareWasmEnvCleanup === 'function') {
+  const __contextDestroy = context.destroy
+  context.destroy = function () {
     __prepareWasmEnvCleanup()
+    return Reflect.apply(__contextDestroy, this, arguments)
   }
+  return context
+}
+
 `;
-const WASI_CONTEXT_PREPARE_CLEANUP_GUARD = `  if (!__emnapiWasmEnvCleanupPrepared) {
-    const __prepareWasmEnvCleanup =
-      __napiInstance?.exports?.napi_prepare_wasm_env_cleanup
-    if (typeof __prepareWasmEnvCleanup === 'function') {
-      __prepareWasmEnvCleanup()
-    }
-    __emnapiWasmEnvCleanupPrepared = true
-  }
+// The pre-destroy settlement barrier: __destroyEmnapiContext must run the
+// wasm-side cleanup preparation before the context destroy so pending napi
+// async work settles instead of being discarded by the TSFN cleanup hook.
+const WASI_CONTEXT_DESTROY_SETTLEMENT = `  __prepareWasmEnvCleanup()
+  const result = __emnapiContext.destroy()
 `;
-const WASI_NODE_CONTEXT_PREPARE_CLEANUP = `    const __prepareWasmEnvCleanup =
-      __napiInstance?.exports?.napi_prepare_wasm_env_cleanup
-    if (typeof __prepareWasmEnvCleanup === 'function') {
-      __prepareWasmEnvCleanup()
-    }
-`;
-const WASI_NODE_CONTEXT_PREPARE_CLEANUP_GUARD = `    if (!__emnapiWasmEnvCleanupPrepared) {
-      const __prepareWasmEnvCleanup =
-        __napiInstance?.exports?.napi_prepare_wasm_env_cleanup
-      if (typeof __prepareWasmEnvCleanup === 'function') {
-        __prepareWasmEnvCleanup()
-      }
-      __emnapiWasmEnvCleanupPrepared = true
-    }
-`;
-const WASI_BEFORE_INIT_ANCHOR = '  beforeInit({ instance }) {\n';
-const WASI_CONTEXT_DESTROY_CALL = '    __wrapEmnapiContextDestroy(instance)\n';
+// The disposal chain runs prepare -> drain -> destroy -> worker termination
+// and publishes Symbol.for('napi.rs.wasi.dispose') on the binding exports.
+const WASI_DISPOSAL_CHAIN_SIGNATURES = [
+  'function __prepareWasmEnvCleanup() {',
+  'function __drainWasmEnvCleanup() {',
+  'function __destroyEmnapiContext() {',
+  'function __terminateWasiWorkers() {',
+  'function __startWasiDisposal() {',
+  'function __disposeWasiBinding() {',
+  'function __publishWasiDispose(exports) {',
+  'function __rollbackWasiInitialization() {',
+] as const;
+const WASI_DISPOSE_PUBLICATION = '__publishWasiDispose(__napiModule.exports)';
+const WASI_EXIT_LISTENER_HELPER = 'function __registerWasiExitListener() {';
 const WASI_NODE_HELPER_ANCHOR = 'const __rootDir = __nodePath.parse(process.cwd()).root\n';
 const WASI_NODE_ENV_ASSIGNMENT = 'env: process.env,';
-const WASI_NODE_WORKER_CONSTRUCTION = `    const worker = new Worker(__nodePath.join(__dirname, 'wasi-worker.mjs'), {
-      env: process.env,
-    })`;
-const WASI_BROWSER_SYNC_WORKER_TERMINATION =
-  '      __terminations.push({ error: __cleanupError })\n';
-const WASI_BROWSER_ASYNC_WORKER_TERMINATION =
-  '      __terminations.push(Promise.resolve({ error: __cleanupError }))\n';
-const WASI_NODE_UPSTREAM_WORKER_HELPERS = `function __getWorkerExecArgv() {
-  const __workerExecArgv = []
-  for (let __index = 0; __index < process.execArgv.length; __index += 1) {
-    const __arg = process.execArgv[__index]
-    if (
-      __arg === '--input-type' ||
-      __arg === '--eval' ||
-      __arg === '-e' ||
-      __arg === '--print' ||
-      __arg === '-p'
-    ) {
-      __index += 1
-      continue
-    }
-    if (
-      __arg.startsWith('--input-type=') ||
-      __arg.startsWith('--eval=') ||
-      __arg.startsWith('--print=')
-    ) {
-      continue
-    }
-    __workerExecArgv.push(__arg)
-  }
-  return __workerExecArgv
-}
-
-function __createWasiWorker(filename) {
-  try {
-    return new Worker(filename, {
-      env: process.env,
-      execArgv: __getWorkerExecArgv(),
-    })
-  } catch (error) {
-    if (!error || error.code !== 'ERR_WORKER_INVALID_EXEC_ARGV') {
-      throw error
-    }
-  }
-  return new Worker(filename, {
-    env: process.env,
-    execArgv: [],
-  })
-}
-
-`;
-const WASI_NODE_ASYNC_WORK_POOL_SIZE = `  asyncWorkPoolSize: (function() {
-    const threadsSizeFromEnv = Number(process.env.NAPI_RS_ASYNC_WORK_POOL_SIZE ?? process.env.UV_THREADPOOL_SIZE)
-    // NaN > 0 is false
-    if (threadsSizeFromEnv > 0) {
-      return threadsSizeFromEnv
-    } else {
-      return 4
-    }
-  })(),`;
+const WASI_NODE_WORKER_HELPER_SIGNATURES = [
+  'function __getWasiWorkerExecArgv() {',
+  'function __isInvalidWasiWorkerExecArgv(errorMessage, argument) {',
+  'function __removeInvalidWasiWorkerExecArgv(execArgv, error) {',
+  'function __createWasiWorker(filename) {',
+] as const;
+const WASI_NODE_WORKER_CONSTRUCTION =
+  "const worker = __createWasiWorker(__nodePath.join(__dirname, 'wasi-worker.mjs'))";
+const WASI_NODE_ASYNC_WORK_POOL_SIZE = `    asyncWorkPoolSize: (function() {
+      const threadsSizeFromEnv = Number(process.env.NAPI_RS_ASYNC_WORK_POOL_SIZE ?? process.env.UV_THREADPOOL_SIZE)
+      // NaN > 0 is false
+      if (threadsSizeFromEnv > 0) {
+        return threadsSizeFromEnv
+      } else {
+        return 4
+      }
+    })(),`;
 const WASI_CJS_TARGET_PATTERN = new RegExp(
   `module\\.exports\\.${LOADED_BINDING_TARGET_EXPORT}\\s*=\\s*[^\\r\\n]+`,
   'g',
@@ -262,358 +195,104 @@ export function patchWasiBindingLoader(source: string, target: WasiBindingTarget
   throw new Error('Unexpected NAPI-RS WASI loader template: no module export anchor');
 }
 
+/**
+ * Verify the generated loader carries the upstream (>= 3.8.4) context
+ * lifecycle contract this repo relies on, then harden its raw destroy path.
+ *
+ * @napi-rs/cli 3.8.4 ships the full lifecycle that earlier rolldown patch
+ * layers injected: an isolated non-auto-destroying context, the
+ * `napi_prepare_wasm_env_cleanup` settlement barrier guarded by
+ * `__emnapiWasmEnvCleanupPrepared`, the macrotask-yield settlement drain
+ * (`__drainWasmEnvCleanup` polling `napi_wasm_env_cleanup_pending`, rejecting
+ * retryably with `ERR_NAPI_WASI_CLEANUP_PENDING`), a thenable-aware disposal
+ * chain published as `Symbol.for('napi.rs.wasi.dispose')`, and an
+ * initialization-failure rollback. This assertion set pins those seams so a
+ * future CLI bump that drops or reshapes any of them fails the build loudly
+ * instead of silently regressing teardown.
+ *
+ * The one remaining rolldown addition is the raw-destroy settlement wrapper:
+ * upstream only runs the settlement barrier on its own destroy paths, while
+ * rolldown's lifecycle suite pins that a direct `context.destroy()` call also
+ * settles pending work (see `WASI_CONTEXT_DESTROY_WRAP`).
+ */
 export function patchWasiBindingContextLifecycle(source: string): string {
   const cjsDirectImportCount = countOccurrences(source, WASI_CJS_CREATE_CONTEXT_IMPORT);
   const esmDirectImportCount = countOccurrences(source, WASI_ESM_CREATE_CONTEXT_IMPORT);
-  const cjsWasmRuntimeImportCount =
-    countOccurrences(source, WASI_CJS_CONTEXT_IMPORT) +
-    countOccurrences(source, WASI_CJS_WASM_RUNTIME_CREATE_CONTEXT_IMPORT);
-  const esmWasmRuntimeImportCount =
-    countOccurrences(source, WASI_ESM_CONTEXT_IMPORT) +
-    countOccurrences(source, WASI_ESM_WASM_RUNTIME_CREATE_CONTEXT_IMPORT);
-  const directImportCount = cjsDirectImportCount + esmDirectImportCount;
-  const wasmRuntimeImportCount = cjsWasmRuntimeImportCount + esmWasmRuntimeImportCount;
-
-  if (directImportCount > 1 || wasmRuntimeImportCount > 1) {
+  if (cjsDirectImportCount + esmDirectImportCount !== 1) {
     throw new Error(
-      `Unexpected NAPI-RS WASI loader template for context import: expected one anchor, found ${directImportCount + wasmRuntimeImportCount}`,
-    );
-  }
-  if (directImportCount === 1 && wasmRuntimeImportCount !== 0) {
-    throw new Error('Unexpected NAPI-RS WASI loader template: duplicate context imports');
-  }
-  if (directImportCount === 0 && wasmRuntimeImportCount !== 1) {
-    throw new Error(
-      `Unexpected NAPI-RS WASI loader template for context import: expected one anchor, found ${wasmRuntimeImportCount}`,
+      `Unexpected NAPI-RS WASI loader template for context import: expected one direct @emnapi/runtime createContext import, found ${cjsDirectImportCount + esmDirectImportCount}`,
     );
   }
 
-  if (cjsWasmRuntimeImportCount === 1) {
-    source = source
-      .replace(WASI_CJS_CONTEXT_IMPORT, '')
-      .replace(WASI_CJS_WASM_RUNTIME_CREATE_CONTEXT_IMPORT, '');
-    source = replaceExactly(
-      source,
-      WASI_CJS_RUNTIME_IMPORT_ANCHOR,
-      `${WASI_CJS_RUNTIME_IMPORT_ANCHOR}${WASI_CJS_CREATE_CONTEXT_IMPORT}`,
-      1,
-      'WASI CommonJS emnapi context import',
-    );
-  } else if (esmWasmRuntimeImportCount === 1) {
-    source = source
-      .replace(WASI_ESM_CONTEXT_IMPORT, '')
-      .replace(WASI_ESM_WASM_RUNTIME_CREATE_CONTEXT_IMPORT, '');
-    source = replaceExactly(
-      source,
-      WASI_ESM_RUNTIME_IMPORT_ANCHOR,
-      `${WASI_ESM_RUNTIME_IMPORT_ANCHOR}${WASI_ESM_CREATE_CONTEXT_IMPORT}`,
-      1,
-      'WASI ESM emnapi context import',
-    );
+  for (const signature of WASI_DISPOSAL_CHAIN_SIGNATURES) {
+    assertExactlyOne(source, signature, 'WASI disposal chain helper');
   }
-
-  const generatedDestroyHelperCount = countOccurrences(source, WASI_CONTEXT_DESTROY_HELPER);
-  if (generatedDestroyHelperCount > 0) {
-    if (generatedDestroyHelperCount !== 1) {
-      throw new Error(
-        `Unexpected NAPI-RS WASI loader template for context destroy helper: expected one helper, found ${generatedDestroyHelperCount}`,
-      );
-    }
-    if (source.includes('function __wrapEmnapiContextDestroy(instance)')) {
-      throw new Error('Unexpected NAPI-RS WASI loader template: mixed context lifecycle helpers');
-    }
-
-    const browserContextCount = countOccurrences(source, WASI_ISOLATED_CONTEXT_CREATION);
-    const nodeContextCount = countOccurrences(source, WASI_NODE_CONTEXT_CREATION);
-    if (browserContextCount + nodeContextCount !== 1) {
-      throw new Error(
-        `Unexpected NAPI-RS WASI loader template for context creation: expected one browser or Node lifecycle, found ${browserContextCount + nodeContextCount}`,
-      );
-    }
-    assertExactlyOne(source, WASI_NAPI_INSTANCE_DECLARATION, 'WASI N-API instance declaration');
-    assertExactlyOne(source, WASI_NAPI_INSTANCE_ASSIGNMENT, 'WASI N-API instance capture');
-    assertExactlyOne(source, '__emnapiContext.destroy()', 'WASI context destroy operation');
-    if (nodeContextCount === 1) {
-      assertExactlyOne(
-        source,
-        WASI_NODE_CONTEXT_SUPPRESS_DESTROY,
-        'WASI Node context auto-destroy suppression',
-      );
-      for (const signature of [
-        'function __destroyEmnapiContextBeforeExit() {',
-        'function __destroyEmnapiContextAtExit() {',
-        'function __handoffEmnapiContextCleanupToExit() {',
-      ]) {
-        assertExactlyOne(source, signature, 'WASI Node context lifecycle helper');
-      }
-    }
-
-    const preparation =
-      nodeContextCount === 1 ? WASI_NODE_CONTEXT_PREPARE_CLEANUP : WASI_CONTEXT_PREPARE_CLEANUP;
-    const guardedPreparation =
-      nodeContextCount === 1
-        ? WASI_NODE_CONTEXT_PREPARE_CLEANUP_GUARD
-        : WASI_CONTEXT_PREPARE_CLEANUP_GUARD;
-    // The destroy wrapper embeds its own guarded preparation, so count the
-    // helper's preparation shapes with wrapper occurrences stripped.
-    const destroyWrapCount = countOccurrences(source, WASI_CONTEXT_DESTROY_WRAP);
-    const sourceWithoutDestroyWrap = source.split(WASI_CONTEXT_DESTROY_WRAP).join('');
-    const preparationCount = countOccurrences(sourceWithoutDestroyWrap, preparation);
-    const guardedPreparationCount = countOccurrences(sourceWithoutDestroyWrap, guardedPreparation);
-    const preparationFlagCount = countOccurrences(
-      sourceWithoutDestroyWrap,
-      WASI_CONTEXT_PREPARE_CLEANUP_FLAG,
-    );
-    // A raw `__emnapiContext.destroy()` must settle pending napi work exactly
-    // like the loader's own `__destroyEmnapiContext()` does, so the flag
-    // declaration is always followed by the destroy wrapper.
-    const injectDestroyWrap = (input: string): string =>
-      replaceExactly(
-        input,
-        WASI_CONTEXT_PREPARE_CLEANUP_FLAG,
-        `${WASI_CONTEXT_PREPARE_CLEANUP_FLAG}
-${WASI_CONTEXT_DESTROY_WRAP}`,
-        1,
-        'WASI context destroy settlement wrapper',
-      );
-    if (preparationCount === 0 && guardedPreparationCount === 1 && preparationFlagCount === 1) {
-      if (destroyWrapCount === 1) {
-        return source;
-      }
-      if (destroyWrapCount !== 0) {
-        throw new Error(
-          `Unexpected NAPI-RS WASI loader template for context destroy settlement: expected one wrapper, found ${destroyWrapCount}`,
-        );
-      }
-      return injectDestroyWrap(source);
-    }
-    if (
-      preparationCount !== 1 ||
-      guardedPreparationCount !== 0 ||
-      preparationFlagCount !== 0 ||
-      destroyWrapCount !== 0
-    ) {
-      throw new Error('Unexpected NAPI-RS WASI loader template for context cleanup preparation');
-    }
-
-    source = replaceExactly(
-      source,
-      WASI_CONTEXT_DESTROY_HELPER,
-      `${WASI_CONTEXT_PREPARE_CLEANUP_FLAG}
-${WASI_CONTEXT_DESTROY_HELPER}`,
-      1,
-      'WASI context cleanup preparation state',
-    );
-    source = replaceExactly(
-      source,
-      preparation,
-      guardedPreparation,
-      1,
-      'WASI context cleanup preparation',
-    );
-    return injectDestroyWrap(source);
-  }
-
-  const contextLifecycle = `${WASI_ISOLATED_CONTEXT_CREATION}
-let __emnapiContextDestroyWrapped = false
-let __emnapiWasmEnvCleanupPrepared = false
-
-function __wrapEmnapiContextDestroy(instance) {
-  if (__emnapiContextDestroyWrapped) {
-    return
-  }
-  // oxlint-disable-next-line typescript/unbound-method -- invoked with the wrapper receiver below
-  const __destroyEmnapiContext = __emnapiContext.destroy
-  __emnapiContext.destroy = function() {
-    if (!__emnapiWasmEnvCleanupPrepared) {
-      const __prepareWasmEnvCleanup =
-        instance.exports.napi_prepare_wasm_env_cleanup
-      if (typeof __prepareWasmEnvCleanup === 'function') {
-        __prepareWasmEnvCleanup()
-      }
-      __emnapiWasmEnvCleanupPrepared = true
-    }
-    return Reflect.apply(__destroyEmnapiContext, this, arguments)
-  }
-  __emnapiContextDestroyWrapped = true
-}
-`;
-  if (source.includes(WASI_DEFAULT_CONTEXT_CREATION)) {
-    source = replaceExactly(
-      source,
-      WASI_DEFAULT_CONTEXT_CREATION,
-      contextLifecycle,
-      1,
-      'WASI isolated context creation',
-    );
-  } else if (
-    source.includes(WASI_ISOLATED_CONTEXT_CREATION) &&
-    !source.includes('function __wrapEmnapiContextDestroy(instance)')
-  ) {
-    source = replaceExactly(
-      source,
-      WASI_ISOLATED_CONTEXT_CREATION,
-      contextLifecycle,
-      1,
-      'WASI context destroy wrapper',
-    );
-  } else if (!source.includes('function __wrapEmnapiContextDestroy(instance)')) {
-    throw new Error('Unexpected NAPI-RS WASI loader template: no context creation anchor');
-  }
-
-  const destroyCallCount = countOccurrences(source, WASI_CONTEXT_DESTROY_CALL);
-  if (destroyCallCount === 0) {
-    return replaceExactly(
-      source,
-      WASI_BEFORE_INIT_ANCHOR,
-      `${WASI_BEFORE_INIT_ANCHOR}${WASI_CONTEXT_DESTROY_CALL}`,
-      1,
-      'WASI context destroy preparation',
-    );
-  }
-  if (destroyCallCount !== 1) {
-    throw new Error(
-      `Unexpected NAPI-RS WASI loader template for context destroy preparation: expected one call, found ${destroyCallCount}`,
-    );
-  }
-  return source;
-}
-
-export function patchWasiNodeWorkerExecArgv(source: string): string {
-  const rolldownHelperCount = countOccurrences(
+  assertExactlyOne(source, WASI_CONTEXT_SUPPRESS_DESTROY, 'WASI context auto-destroy suppression');
+  assertExactlyOne(
     source,
-    'function __removeInvalidWasiWorkerExecArgv(execArgv, error) {',
+    WASI_CONTEXT_PREPARE_CLEANUP_FLAG,
+    'WASI context cleanup preparation state',
   );
-  if (rolldownHelperCount > 0) {
-    if (
-      rolldownHelperCount !== 1 ||
-      countOccurrences(source, 'function __getWasiWorkerExecArgv() {') !== 1 ||
-      countOccurrences(source, 'function __createWasiWorker(filename) {') !== 1
-    ) {
-      throw new Error('Unexpected Rolldown WASI worker execArgv helper template');
-    }
+  // The only raw context destroy lives inside __destroyEmnapiContext, directly
+  // behind the settlement barrier.
+  assertExactlyOne(source, '__emnapiContext.destroy()', 'WASI context destroy operation');
+  assertExactlyOne(
+    source,
+    WASI_CONTEXT_DESTROY_SETTLEMENT,
+    'WASI context destroy settlement barrier',
+  );
+  assertExactlyOne(source, WASI_DISPOSE_PUBLICATION, 'WASI dispose symbol publication');
+  const isCommonJs = cjsDirectImportCount === 1;
+  const exitListenerCount = countOccurrences(source, WASI_EXIT_LISTENER_HELPER);
+  if (isCommonJs && exitListenerCount !== 1) {
+    throw new Error(
+      `Unexpected NAPI-RS WASI loader template for exit-time teardown: expected one exit listener helper, found ${exitListenerCount}`,
+    );
+  }
+
+  // A wasi-target build only regenerates its own flavor's loaders, so the
+  // other flavor's files arrive here already carrying the wrapper: verify it
+  // and return them unchanged.
+  const wrappedCreation =
+    '__emnapiContext = __wrapEmnapiContextDestroyForSettlement(__emnapiCreateContext({ autoDestroy: false }))';
+  if (countOccurrences(source, WASI_CONTEXT_DESTROY_WRAP_HELPER) > 0) {
+    assertExactlyOne(source, WASI_CONTEXT_DESTROY_WRAP, 'WASI context destroy settlement wrapper');
+    assertExactlyOne(source, wrappedCreation, 'WASI context destroy settlement wiring');
     return source;
   }
 
-  const workerHelpers = `function __getWasiWorkerExecArgv() {
-  const __workerExecArgv = []
-  for (let __index = 0; __index < process.execArgv.length; __index += 1) {
-    const __arg = process.execArgv[__index]
-    if (
-      __arg === '--input-type' ||
-      __arg === '--eval' ||
-      __arg === '-e' ||
-      __arg === '--print' ||
-      __arg === '-p'
-    ) {
-      __index += 1
-      continue
-    }
-    if (
-      __arg.startsWith('--input-type=') ||
-      __arg.startsWith('--eval=') ||
-      __arg.startsWith('--print=')
-    ) {
-      continue
-    }
-    __workerExecArgv.push(__arg)
-  }
-  return __workerExecArgv
-}
-
-function __isInvalidWasiWorkerExecArgv(errorMessage, argument) {
-  const __equalsIndex = argument.indexOf('=')
-  const __argumentName =
-    __equalsIndex === -1 ? argument : argument.slice(0, __equalsIndex)
-  return (
-    errorMessage.includes(': ' + __argumentName + ',') ||
-    errorMessage.includes(': ' + __argumentName + '=') ||
-    errorMessage.endsWith(': ' + __argumentName) ||
-    errorMessage.includes(', ' + __argumentName + ',') ||
-    errorMessage.includes(', ' + __argumentName + '=') ||
-    errorMessage.endsWith(', ' + __argumentName)
-  )
-}
-
-function __removeInvalidWasiWorkerExecArgv(execArgv, error) {
-  if (typeof error.message !== 'string') {
-    return
-  }
-  const __workerExecArgv = []
-  let __removed = false
-  for (let __index = 0; __index < execArgv.length; __index += 1) {
-    const __arg = execArgv[__index]
-    if (
-      __arg.startsWith('-') &&
-      __isInvalidWasiWorkerExecArgv(error.message, __arg)
-    ) {
-      __removed = true
-      if (
-        !__arg.includes('=') &&
-        __index + 1 < execArgv.length &&
-        !execArgv[__index + 1].startsWith('-')
-      ) {
-        __index += 1
-      }
-      continue
-    }
-    __workerExecArgv.push(__arg)
-  }
-  return __removed ? __workerExecArgv : undefined
-}
-
-function __createWasiWorker(filename) {
-  let __workerExecArgv = __getWasiWorkerExecArgv()
-  while (true) {
-    try {
-      return new Worker(filename, {
-        env: process.env,
-        execArgv: __workerExecArgv,
-      })
-    } catch (error) {
-      if (!error || error.code !== 'ERR_WORKER_INVALID_EXEC_ARGV') {
-        throw error
-      }
-      const __nextWorkerExecArgv =
-        __removeInvalidWasiWorkerExecArgv(__workerExecArgv, error)
-      if (!__nextWorkerExecArgv) {
-        throw error
-      }
-      __workerExecArgv = __nextWorkerExecArgv
-    }
-  }
-}
-
-`;
-  const upstreamWorkerHelperCount = countOccurrences(source, 'function __getWorkerExecArgv() {');
-  const workerFactoryCount = countOccurrences(source, 'function __createWasiWorker(filename) {');
-  if (upstreamWorkerHelperCount > 0 || workerFactoryCount > 0) {
-    if (upstreamWorkerHelperCount !== 1 || workerFactoryCount !== 1) {
-      throw new Error('Unexpected NAPI-RS WASI worker execArgv helper template');
-    }
-    return replaceExactly(
-      source,
-      WASI_NODE_UPSTREAM_WORKER_HELPERS,
-      workerHelpers,
-      1,
-      'WASI worker execArgv helpers',
-    );
-  }
-
+  assertExactlyOne(source, WASI_CONTEXT_CREATION, 'WASI isolated context creation');
   source = replaceExactly(
     source,
-    WASI_NODE_HELPER_ANCHOR,
-    workerHelpers + WASI_NODE_HELPER_ANCHOR,
+    WASI_PREPARE_CLEANUP_HELPER,
+    `${WASI_CONTEXT_DESTROY_WRAP}${WASI_PREPARE_CLEANUP_HELPER}`,
     1,
-    'WASI worker execArgv helpers',
+    'WASI context destroy settlement wrapper',
   );
   return replaceExactly(
     source,
-    WASI_NODE_WORKER_CONSTRUCTION,
-    `    const worker = __createWasiWorker(__nodePath.join(__dirname, 'wasi-worker.mjs'))`,
+    WASI_CONTEXT_CREATION,
+    wrappedCreation,
     1,
-    'WASI worker construction',
+    'WASI context destroy settlement wiring',
   );
+}
+
+/**
+ * Verify the generated Node WASI loader spawns its threads through the
+ * hardened worker factory and return it unchanged.
+ *
+ * @napi-rs/cli 3.8.4 ships the exec-argv sanitizing worker helpers this repo
+ * previously injected (`__getWasiWorkerExecArgv` filtering eval/print
+ * arguments, `__removeInvalidWasiWorkerExecArgv` retrying on
+ * ERR_WORKER_INVALID_EXEC_ARGV, and the `__createWasiWorker` factory).
+ */
+export function patchWasiNodeWorkerExecArgv(source: string): string {
+  for (const signature of WASI_NODE_WORKER_HELPER_SIGNATURES) {
+    assertExactlyOne(source, signature, 'WASI worker execArgv helper');
+  }
+  assertExactlyOne(source, WASI_NODE_WORKER_CONSTRUCTION, 'WASI worker construction');
+  return source;
 }
 
 export function patchWasiNodeAsyncWorkPoolSize(source: string): string {
@@ -651,68 +330,65 @@ const __rolldownWasiEnv = {
   source = replaceExactly(
     source,
     WASI_NODE_ASYNC_WORK_POOL_SIZE,
-    '  asyncWorkPoolSize: __rolldownAsyncWorkPoolSize,',
+    '    asyncWorkPoolSize: __rolldownAsyncWorkPoolSize,',
     1,
     'WASI async-work-pool option',
   );
+  // One environment on the WASI instance, one inside __createWasiWorker.
   const environmentCount = countOccurrences(source, WASI_NODE_ENV_ASSIGNMENT);
-  if (environmentCount !== 2 && environmentCount !== 3) {
+  if (environmentCount !== 2) {
     throw new Error(
-      `Unexpected NAPI-RS loader template for WASI runtime and worker environments: expected 2 or 3 anchors, found ${environmentCount}`,
+      `Unexpected NAPI-RS loader template for WASI runtime and worker environments: expected 2 anchors, found ${environmentCount}`,
     );
   }
   return source.replaceAll(WASI_NODE_ENV_ASSIGNMENT, 'env: __rolldownWasiEnv,');
 }
 
+/**
+ * Verify the generated browser WASI loader tears its context down through the
+ * thenable-aware disposal chain and return it unchanged.
+ *
+ * @napi-rs/cli 3.8.4 routes every browser context destroy through
+ * `__destroyEmnapiContext()` behind `__isThenable` checks, so a synchronous
+ * emnapi destroy and a promise-returning one settle identically; there is no
+ * bare `await __emnapiContext.destroy()` left to normalize.
+ */
 export function patchWasiBrowserContextDestroyAwait(source: string): string {
-  const expressions = ['__emnapiContext.destroy()', '__destroyEmnapiContext()'] as const;
-  const matches = expressions.flatMap((expression) => {
-    const generated = `await ${expression}`;
-    const normalized = `await Promise.resolve(${expression})`;
-    return [
-      { count: countOccurrences(source, generated), expression, generated, normalized: false },
-      {
-        count: countOccurrences(source, normalized),
-        expression,
-        generated: normalized,
-        normalized: true,
-      },
-    ];
-  });
-  const matched = matches.filter(({ count }) => count > 0);
-  const total = matched.reduce((count, match) => count + match.count, 0);
-  if (total !== 1) {
+  assertExactlyOne(
+    source,
+    `  const destroyResult = __destroyEmnapiContext()
+  if (__isThenable(destroyResult)) {
+`,
+    'WASI browser thenable-aware context destroy',
+  );
+  if (countOccurrences(source, 'await __emnapiContext.destroy()') !== 0) {
     throw new Error(
-      `Unexpected NAPI-RS WASI browser cleanup template: expected one context destroy await, found ${total}`,
+      'Unexpected NAPI-RS WASI browser cleanup template: found a bare context destroy await outside the disposal chain',
     );
   }
-  const [match] = matched;
-  if (match.count !== 1) {
-    throw new Error(
-      `Unexpected NAPI-RS WASI browser cleanup template: expected one context destroy await, found ${match.count}`,
-    );
-  }
-  if (match.normalized) {
-    return source;
-  }
-  return source.replace(match.generated, `await Promise.resolve(${match.expression})`);
+  return source;
 }
 
+/**
+ * Verify the generated browser WASI loader collects worker termination
+ * results uniformly and return it unchanged.
+ *
+ * @napi-rs/cli 3.8.4's `__terminateWasiWorkers` wraps thenable termination
+ * results in `Promise.resolve` and funnels synchronous failures into the same
+ * cleanup error aggregation, so mixed settled/unsettled termination entries
+ * can no longer race the disposal.
+ */
 export function patchWasiBrowserWorkerTerminationAwait(source: string): string {
-  const generatedCount = countOccurrences(source, WASI_BROWSER_SYNC_WORKER_TERMINATION);
-  const normalizedCount = countOccurrences(source, WASI_BROWSER_ASYNC_WORKER_TERMINATION);
-  if (generatedCount === 0 && normalizedCount === 1) {
-    return source;
-  }
-  if (generatedCount !== 1 || normalizedCount !== 0) {
-    throw new Error(
-      `Unexpected NAPI-RS WASI browser worker cleanup template: expected one synchronous termination result, found ${generatedCount}`,
-    );
-  }
-  return source.replace(
-    WASI_BROWSER_SYNC_WORKER_TERMINATION,
-    WASI_BROWSER_ASYNC_WORKER_TERMINATION,
+  assertExactlyOne(source, 'function __terminateWasiWorkers() {', 'WASI browser worker termination');
+  assertExactlyOne(
+    source,
+    `    if (__isThenable(result)) {
+      pending.push(
+        Promise.resolve(result).then(
+`,
+    'WASI browser thenable-aware worker termination',
   );
+  return source;
 }
 
 export function assertAsyncRuntimeHostExports(

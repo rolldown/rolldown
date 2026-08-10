@@ -143,9 +143,12 @@ async function readCurrentThreadHostBootstrap(loaderPath: URL): Promise<string> 
 }
 
 async function readGeneratedNodeLifecycle(): Promise<string> {
+  // The full generated lifecycle block: dispose symbol, disposal chain, the
+  // initialization rollback helpers, the rollback registry, and the module
+  // declarations, ending right before the top-level initialization try.
   const source = await readFile(cjsLoaderPath, 'utf8');
-  const start = source.indexOf('function __destroyEmnapiContext()');
-  const end = source.indexOf('if (__contextInitializationFailed)', start);
+  const start = source.indexOf('const __wasiDisposeSymbol');
+  const end = source.indexOf('\ntry {\n', start);
   expect(start).toBeGreaterThanOrEqual(0);
   expect(end).toBeGreaterThan(start);
   return source.slice(start, end);
@@ -246,12 +249,13 @@ async function loadBrowserLoaderWithDependencies(dependencies: object) {
   if (typeof createContext === 'function') {
     Reflect.set(testDependencies, 'createContext', (...args: unknown[]) => {
       const context = Reflect.apply(createContext, dependencies, args);
-      if (
-        context &&
-        (typeof context === 'object' || typeof context === 'function') &&
-        !Reflect.has(context, 'feature')
-      ) {
-        Reflect.set(context, 'feature', {});
+      if (context && (typeof context === 'object' || typeof context === 'function')) {
+        if (!Reflect.has(context, 'features')) {
+          Reflect.set(context, 'features', {});
+        }
+        if (!Reflect.has(context, 'suppressDestroy')) {
+          Reflect.set(context, 'suppressDestroy', () => {});
+        }
       }
       return context;
     });
@@ -277,6 +281,8 @@ async function loadBrowserLoaderWithDependencies(dependencies: object) {
       `const {
   Buffer,
   createContext: __emnapiCreateContext,
+  emnapiAsyncWorkPlugin: __emnapiAsyncWorkPlugin,
+  emnapiTSFNPlugin: __emnapiTSFNPlugin,
   fetch: __browserFetch,
   instantiateNapiModule: __emnapiInstantiateNapiModule,
   memfs,
@@ -502,31 +508,36 @@ describe.sequential('managed workerd loader', () => {
   maximum: 65536,
 })
 
-const __emnapiContext = __emnapiCreateContext()
+let __emnapiContext
+let __napiInstance
 
-function __createInitializationCleanupError(__error, __cleanupError) {
-  return new AggregateError([__error, __cleanupError])
+function __rollbackWasiInitialization() {
+  return []
 }
 
-let __napiInstance
+function __attachCleanupErrors(error, cleanupErrors) {
+  return error
+}
+
+function __publishWasiDispose(exports) {}
+
 let __wasiModule
 let __napiModule
 
 try {
-  __emnapiContext.feature.Buffer = Buffer
+  __emnapiContext = __emnapiCreateContext({ autoDestroy: false })
+  __emnapiContext.suppressDestroy()
+    __emnapiContext.features.Buffer = Buffer
 
   ;({
     instance: __napiInstance,
     module: __wasiModule,
     napiModule: __napiModule,
   } = await __emnapiInstantiateNapiModule(__wasmFile, {}))
-} catch (__error) {
-  try {
-    await __emnapiContext.destroy()
-  } catch (__cleanupError) {
-    throw __createInitializationCleanupError(__error, __cleanupError)
-  }
-  throw __error
+  __publishWasiDispose(__napiModule.exports)
+} catch (error) {
+  const cleanupErrors = await __rollbackWasiInitialization()
+  throw __attachCleanupErrors(error, cleanupErrors)
 }
 export default __napiModule.exports
 `;
@@ -547,12 +558,16 @@ export default __napiModule.exports
     expect(hardened).toContain(currentThreadBootstrapStart);
     expect(hardened).toContain(currentThreadBootstrapEnd);
     expect(hardened).toContain('let __browserTaskHostRegistration');
+    expect(hardened).toContain('let __browserTimerHostRegistration');
     expect(hardened).toContain('initial: 1024');
-    expect(hardened).toContain('__emnapiContext.feature.Buffer = Buffer');
-    expect(hardened).toContain('Threadless browser initialization cleanup failed');
+    expect(hardened).toContain('__emnapiContext.features.Buffer = Buffer');
+    expect(hardened).toContain('Threadless browser timer-host cleanup failed');
+    expect(hardened).toContain('Threadless browser task-host cleanup failed');
     expect(hardened).toContain('const __cleanupSync = (__operation, __message)');
-    expect(hardened).toContain('const __cleanup = async');
-    expect(hardened).toContain('await __cleanup(');
+    expect(hardened).toContain('const cleanupErrors = await __rollbackWasiInitialization()');
+    expect(hardened).toContain(
+      'throw __attachCleanupErrors(error, __hostCleanupErrors.concat(cleanupErrors))',
+    );
     expect(hardened).toContain('getCurrentThreadTaskHostContractVersion');
     expect(hardened).toContain('__taskHostContractVersion !== 4');
     expect(hardened).toContain(
@@ -580,60 +595,26 @@ export default __napiModule.exports
 
   test('hardens the generated napi-rs Node initialization lifecycle', async () => {
     const lifecycle = await readGeneratedNodeLifecycle();
-    const source = `${lifecycle}
-let __wasmMemory
-let __napiModule
+    const source = `let __wasmMemory = new WebAssembly.Memory({
+  initial: 16384,
+  maximum: 65536,
+})
 
+${lifecycle}
 try {
-  __registerEmnapiContextBeforeExit()
-
-  __wasmMemory = new WebAssembly.Memory({
-    initial: 16384,
-    maximum: 65536,
-  })
-
   ;({ napiModule: __napiModule } = __emnapiInstantiateNapiModuleSync())
-  __handoffEmnapiContextCleanupToExit()
-} catch (__error) {
-  let __cleanupResult
-  let __cleanupFailed = false
-  try {
-    __cleanupResult = __destroyEmnapiContext()
-  } catch (__cleanupError) {
-    __cleanupFailed = true
-    __preserveCleanupError(__error, __cleanupError)
-    try {
-      __retainEmnapiContextCleanupListener()
-    } catch (__listenerError) {
-      __preserveCleanupError(__error, __listenerError)
-    }
+  __publishWasiDispose(__napiModule.exports)
+  __registerWasiExitListener()
+} catch (error) {
+  const rollback = {
+    active: false,
+    error,
+    promise: undefined,
+    rollback: __rollbackWasiInitialization,
   }
-  if (__cleanupResult) {
-    void __cleanupResult.then(
-      () => {
-        try {
-          __removeEmnapiContextCleanupListeners()
-        } catch (__cleanupError) {
-          __preserveCleanupError(__error, __cleanupError)
-        }
-      },
-      (__cleanupError) => {
-        __preserveCleanupError(__error, __cleanupError)
-        try {
-          __retainEmnapiContextCleanupListener()
-        } catch (__listenerError) {
-          __preserveCleanupError(__error, __listenerError)
-        }
-      },
-    )
-  } else if (!__cleanupFailed) {
-    try {
-      __removeEmnapiContextCleanupListeners()
-    } catch (__cleanupError) {
-      __preserveCleanupError(__error, __cleanupError)
-    }
-  }
-  throw __error
+  __wasiRollbackRegistry.set(__wasiRollbackRegistryKey, rollback)
+  __runWasiInitializationRollback(rollback)
+  throw rollback.error
 }
 module.exports = __napiModule.exports
 `;
@@ -641,7 +622,7 @@ module.exports = __napiModule.exports
     const hardened = injectCurrentThreadHostBootstrap(
       source,
       'rolldown-binding.wasip1.cjs',
-      '} catch (__error) {\n  let __cleanupResult\n  let __cleanupFailed = false',
+      '} catch (error) {\n  const rollback = {',
       false,
       {
         initialMemory: 1024,
@@ -660,18 +641,17 @@ module.exports = __napiModule.exports
     expect(hardened).toContain('initial: 1024');
     expect(hardened).toContain('Threadless Node timer-host cleanup failed');
     expect(hardened).toContain('Threadless Node task-host cleanup failed');
-    expect(hardened).toContain('Threadless Node initialization cleanup failed');
     expect(hardened).toContain('for (let __attempt = 0; __attempt < 2; __attempt += 1)');
-    expect(hardened).toContain('void __cleanupResult.then(');
-    expect(hardened).toContain('__removeEmnapiContextCleanupListeners()');
-    expect(hardened).toContain('__registerEmnapiContextBeforeExit()');
-    expect(hardened).toContain('__retainEmnapiContextCleanupListener()');
-    expect(hardened).toContain('__preserveCleanupError(__error, __cleanupError)');
+    expect(hardened).toContain('error: __attachCleanupErrors(error, __hostCleanupErrors)');
+    expect(hardened).toContain('rollback: __rollbackWasiInitialization,');
+    expect(hardened).toContain('__wasiRollbackRegistry.set(__wasiRollbackRegistryKey, rollback)');
+    expect(hardened).toContain('__runWasiInitializationRollback(rollback)');
+    expect(hardened).toContain('throw rollback.error');
     expect(
       injectCurrentThreadHostBootstrap(
         hardened,
         'rolldown-binding.wasip1.cjs',
-        '} catch (__error) {\n  let __cleanupResult\n  let __cleanupFailed = false',
+        '} catch (error) {\n  const rollback = {',
         false,
         {
           initialMemory: 1024,
@@ -691,23 +671,29 @@ module.exports = __napiModule.exports
         ),
     },
     {
-      name: 'weakens state-preserving listener removal',
+      name: 'weakens the pinned rollback runner',
       mutate: (source: string) =>
         source.replace(
-          `    process.removeListener('beforeExit', __destroyEmnapiContextBeforeExit)
-    __emnapiContextRegisteredForBeforeExit = false`,
-          `    __emnapiContextRegisteredForBeforeExit = false
-    process.removeListener('beforeExit', __destroyEmnapiContextBeforeExit)`,
+          `function __runWasiInitializationRollback(record) {
+  if (record.active) {
+    return
+  }
+  record.active = true`,
+          `function __runWasiInitializationRollback(record) {
+  record.active = true
+  if (record.active) {
+    return
+  }`,
         ),
     },
     {
       name: 'duplicates a lifecycle helper',
       mutate: (source: string) =>
         source.replace(
-          'function __retainEmnapiContextCleanupListener() {',
-          `function __retainEmnapiContextCleanupListener() {}
+          'function __rollbackWasiInitialization() {',
+          `function __rollbackWasiInitialization() {}
 
-function __retainEmnapiContextCleanupListener() {`,
+function __rollbackWasiInitialization() {`,
         ),
     },
   ])('rejects a marked Node loader that $name', async ({ mutate }) => {
@@ -733,12 +719,13 @@ function __retainEmnapiContextCleanupListener() {`,
     const require = createRequire(import.meta.url);
     const packageDir = dirname(require.resolve('@napi-rs/cli/package.json'));
     const helperSignatures = [
-      'function __removeEmnapiContextBeforeExitListener() {',
-      'function __removeEmnapiContextAtExitListener() {',
-      'function __removeEmnapiContextCleanupListeners() {',
-      'function __retainEmnapiContextCleanupListener() {',
-      'function __handoffEmnapiContextCleanupToExit() {',
-      'function __preserveCleanupError(__error, __cleanupError) {',
+      'function __prepareWasmEnvCleanup() {',
+      'function __drainWasmEnvCleanup() {',
+      'function __destroyEmnapiContext() {',
+      'function __rollbackWasiInitialization() {',
+      'function __runWasiInitializationRollback(record) {',
+      'function __attachCleanupErrors(error, cleanupErrors) {',
+      'function __registerWasiExitListener() {',
     ];
 
     for (const name of ['cli.js', 'index.cjs', 'index.js']) {
@@ -746,25 +733,25 @@ function __retainEmnapiContextCleanupListener() {`,
       for (const signature of helperSignatures) {
         expect(countOccurrences(source, signature), `${name}: ${signature}`).toBe(1);
       }
-      expect(source).toContain(
-        `process.removeListener('beforeExit', __destroyEmnapiContextBeforeExit)
-    __emnapiContextRegisteredForBeforeExit = false`,
-      );
-      expect(source).toContain(
-        `process.removeListener('exit', __destroyEmnapiContextAtExit)
-    __emnapiContextRegisteredForExit = false`,
-      );
-      expect(source).toContain(`      }
-      return __error.cause === __cleanupError`);
-      expect(source.match(/^  __handoffEmnapiContextCleanupToExit\(\)$/gm)).toHaveLength(1);
+      // The settlement drain polls the wasm export and stays retryable.
+      expect(source).toContain('napi_wasm_env_cleanup_pending');
+      expect(source).toContain("drainError.code = 'ERR_NAPI_WASI_CLEANUP_PENDING'");
+      // The destroy helper runs the settlement barrier before the destroy.
+      expect(source).toContain(`  __prepareWasmEnvCleanup()
+  const result = __emnapiContext.destroy()`);
+      // The initialization catch registers a retryable rollback record.
+      expect(source).toContain('__wasiRollbackRegistry.set(__wasiRollbackRegistryKey, rollback)');
+      expect(source).toContain('napi.rs.wasi.rollback.registry.v1');
+      expect(source).toContain('napi.rs.wasi.dispose');
     }
   });
 
-  test('keeps generated threaded browser context cleanup await lint-safe', async () => {
+  test('keeps generated threaded browser context cleanup thenable-aware', async () => {
     const source = await readFile(threadedBrowserLoaderPath, 'utf8');
 
-    expect(source).toContain('await Promise.resolve(__destroyEmnapiContext())');
-    expect(source).not.toContain('await __destroyEmnapiContext()');
+    expect(source).toContain('const destroyResult = __destroyEmnapiContext()');
+    expect(source).toContain('if (__isThenable(destroyResult)) {');
+    expect(source).not.toContain('await __emnapiContext.destroy()');
   });
 
   test('exposes createInstance and instantiate through the same managed host path', () => {
@@ -860,10 +847,8 @@ function __retainEmnapiContextCleanupListener() {`,
         throw new Error('transient task host cleanup failure');
       })
       .mockImplementationOnce(() => {});
-    const destroy = vi
-      .fn()
-      .mockRejectedValueOnce(new Error('transient context cleanup failure'))
-      .mockResolvedValueOnce(undefined);
+    const contextCleanupError = new Error('context cleanup failure');
+    const destroy = vi.fn().mockRejectedValueOnce(contextCleanupError);
 
     await expect(
       loadBrowserLoaderWithDependencies({
@@ -911,7 +896,10 @@ function __retainEmnapiContextCleanupListener() {`,
       registration.low,
     );
     expect(prepareWasmEnvCleanup).toHaveBeenCalledOnce();
-    expect(destroy).toHaveBeenCalledTimes(2);
+    // The generated rollback destroys the context exactly once; a failed
+    // destroy is reported through the attached cleanup errors instead of
+    // being retried.
+    expect(destroy).toHaveBeenCalledOnce();
   });
 
   test('rolls back the exact browser task host before context destruction', async () => {
@@ -920,10 +908,7 @@ function __retainEmnapiContextCleanupListener() {`,
       new Error('browser task host cleanup failed once'),
       new Error('browser task host cleanup failed twice'),
     ];
-    const destroyErrors = [
-      new Error('browser context cleanup failed once'),
-      new Error('browser context cleanup failed twice'),
-    ];
+    const destroyError = new Error('browser context cleanup failed');
     const registration = { high: 0x1234_5678, low: 0x9abc_def0 };
     const timerRegistration = { high: 0x1234_5678, low: 0x9abc_def1 };
     const reservations = [registration, timerRegistration];
@@ -953,7 +938,7 @@ function __retainEmnapiContextCleanupListener() {`,
     const context = {
       destroy() {
         cleanupOrder.push('destroy context');
-        throw destroyErrors[cleanupOrder.filter((step) => step === 'destroy context').length - 1];
+        throw destroyError;
       },
     };
 
@@ -984,30 +969,23 @@ function __retainEmnapiContextCleanupListener() {`,
       `unregister task ${registration.high}:${registration.low}`,
       `unregister task ${registration.high}:${registration.low}`,
       'destroy context',
-      'destroy context',
     ]);
     // The reserved timer token is rolled back exactly once even though its
     // registration threw: v4 reserves the capability before side effects, so
     // cleanup can always target the exact token.
     expect(unregisterTimerHost).toHaveBeenCalledTimes(1);
     expect(unregisterTimerHost).toHaveBeenCalledWith(timerRegistration.high, timerRegistration.low);
-    expect(failure).toMatchObject({
-      cause: registrationError,
+    // The primary error keeps its identity; host cleanup failures (retried
+    // twice) and the single context destroy failure ride along on its cause.
+    expect(failure).toBe(registrationError);
+    expect((failure as Error).cause).toMatchObject({
+      message: 'WASI binding cleanup failed',
       errors: [
-        registrationError,
         expect.objectContaining({
-          message: 'Threadless browser initialization cleanup failed',
-          errors: [
-            expect.objectContaining({
-              message: 'Threadless browser task-host cleanup failed',
-              errors: unregisterErrors,
-            }),
-            expect.objectContaining({
-              message: 'Threadless browser context cleanup failed',
-              errors: destroyErrors,
-            }),
-          ],
+          message: 'Threadless browser task-host cleanup failed',
+          errors: unregisterErrors,
         }),
+        destroyError,
       ],
     });
   });
@@ -4963,384 +4941,17 @@ try {
     expect(cjsSource).toContain(nodeInitializationCleanupEnd);
   });
 
-  test('rolls back the exit listener when beforeExit removal throws', async () => {
-    const lifecycle = await readGeneratedNodeLifecycle();
-    const removalError = new Error('beforeExit removal failed');
-    const operations: string[] = [];
-    const listeners = {
-      beforeExit: [] as Array<() => void>,
-      exit: [] as Array<() => void>,
-    };
-    let failedBeforeExitRemoval = false;
-    const processStub = {
-      once(event: keyof typeof listeners, listener: () => void) {
-        operations.push(`once:${event}`);
-        listeners[event].push(listener);
-      },
-      removeListener(event: keyof typeof listeners, listener: () => void) {
-        operations.push(`remove:${event}`);
-        if (event === 'beforeExit' && !failedBeforeExitRemoval) {
-          failedBeforeExitRemoval = true;
-          throw removalError;
-        }
-        const index = listeners[event].lastIndexOf(listener);
-        if (index >= 0) listeners[event].splice(index, 1);
-      },
-    };
-    const state: Record<string, unknown> = {};
-
-    expect(() =>
-      runInNewContext(
-        `let __emnapiContext = { destroy() {} }
-let __emnapiContextDestroyed = false
-let __emnapiContextDestroying = false
-let __emnapiContextDestroyPromise
-let __emnapiContextRegisteredForBeforeExit = false
-let __emnapiContextRegisteredForExit = false
-let __emnapiContextBeforeExitRegistrationRetryCount = 0
-let __emnapiContextBeforeExitRegistrationRetryScheduled = false
-let __napiInstance
-let __emnapiWasmEnvCleanupPrepared = false
-${lifecycle}
-__registerEmnapiContextBeforeExit()
-try {
-  __handoffEmnapiContextCleanupToExit()
-} finally {
-  __state.beforeExit = __emnapiContextRegisteredForBeforeExit
-  __state.exit = __emnapiContextRegisteredForExit
-}`,
-        {
-          __state: state,
-          process: processStub,
-        },
-      ),
-    ).toThrow(removalError);
-    expect(operations).toEqual([
-      'once:beforeExit',
-      'once:exit',
-      'remove:beforeExit',
-      'remove:exit',
-    ]);
-    expect(listeners.beforeExit).toHaveLength(1);
-    expect(listeners.exit).toHaveLength(0);
-    expect(state).toEqual({ beforeExit: true, exit: false });
-  });
-
-  test('preserves both listeners when handoff and rollback removal fail', async () => {
-    const lifecycle = await readGeneratedNodeLifecycle();
-    const beforeExitError = new Error('beforeExit removal failed');
-    const rollbackError = new Error('exit rollback removal failed');
-    const operations: string[] = [];
-    const listeners = {
-      beforeExit: [] as Array<() => void>,
-      exit: [] as Array<() => void>,
-    };
-    const processStub = {
-      once(event: keyof typeof listeners, listener: () => void) {
-        operations.push(`once:${event}`);
-        listeners[event].push(listener);
-      },
-      removeListener(event: keyof typeof listeners) {
-        operations.push(`remove:${event}`);
-        throw event === 'beforeExit' ? beforeExitError : rollbackError;
-      },
-    };
-    const state: Record<string, unknown> = {};
-    let failure: unknown;
-
-    try {
-      runInNewContext(
-        `let __emnapiContext = { destroy() {} }
-let __emnapiContextDestroyed = false
-let __emnapiContextDestroying = false
-let __emnapiContextDestroyPromise
-let __emnapiContextRegisteredForBeforeExit = false
-let __emnapiContextRegisteredForExit = false
-let __emnapiContextBeforeExitRegistrationRetryCount = 0
-let __emnapiContextBeforeExitRegistrationRetryScheduled = false
-let __napiInstance
-let __emnapiWasmEnvCleanupPrepared = false
-${lifecycle}
-__registerEmnapiContextBeforeExit()
-try {
-  __handoffEmnapiContextCleanupToExit()
-} finally {
-  __state.beforeExit = __emnapiContextRegisteredForBeforeExit
-  __state.exit = __emnapiContextRegisteredForExit
-}`,
-        {
-          __state: state,
-          process: processStub,
-        },
-      );
-    } catch (error) {
-      failure = error;
-    }
-
-    expect(operations).toEqual([
-      'once:beforeExit',
-      'once:exit',
-      'remove:beforeExit',
-      'remove:exit',
-    ]);
-    expect(listeners.beforeExit).toHaveLength(1);
-    expect(listeners.exit).toHaveLength(1);
-    expect(state).toEqual({ beforeExit: true, exit: true });
-    expect(failure).toMatchObject({
-      cause: beforeExitError,
-      errors: [beforeExitError, rollbackError],
-      message: 'emnapi context cleanup listener handoff failed',
-    });
-  });
-
-  test('keeps beforeExit ownership when exit listener registration throws', async () => {
-    const lifecycle = await readGeneratedNodeLifecycle();
-    const registrationError = new Error('exit registration failed');
-    const operations: string[] = [];
-    const beforeExitListeners: Array<() => void> = [];
-    const processStub = {
-      once(event: string, listener: () => void) {
-        operations.push(`once:${event}`);
-        if (event === 'exit') throw registrationError;
-        beforeExitListeners.push(listener);
-      },
-      removeListener(event: string) {
-        operations.push(`remove:${event}`);
-      },
-    };
-    const state: Record<string, unknown> = {};
-
-    expect(() =>
-      runInNewContext(
-        `let __emnapiContext = { destroy() {} }
-let __emnapiContextDestroyed = false
-let __emnapiContextDestroying = false
-let __emnapiContextDestroyPromise
-let __emnapiContextRegisteredForBeforeExit = false
-let __emnapiContextRegisteredForExit = false
-let __emnapiContextBeforeExitRegistrationRetryCount = 0
-let __emnapiContextBeforeExitRegistrationRetryScheduled = false
-let __napiInstance
-let __emnapiWasmEnvCleanupPrepared = false
-${lifecycle}
-__registerEmnapiContextBeforeExit()
-try {
-  __handoffEmnapiContextCleanupToExit()
-} finally {
-  __state.beforeExit = __emnapiContextRegisteredForBeforeExit
-  __state.exit = __emnapiContextRegisteredForExit
-}`,
-        {
-          __state: state,
-          process: processStub,
-        },
-      ),
-    ).toThrow(registrationError);
-    expect(operations).toEqual(['once:beforeExit', 'once:exit']);
-    expect(beforeExitListeners).toHaveLength(1);
-    expect(state).toEqual({ beforeExit: true, exit: false });
-  });
-
-  test('aggregates both listener removal failures and keeps them retryable', async () => {
-    const lifecycle = await readGeneratedNodeLifecycle();
-    const beforeExitError = new Error('beforeExit removal failed');
-    const exitError = new Error('exit removal failed');
-    const operations: string[] = [];
-    const listeners = {
-      beforeExit: [] as Array<() => void>,
-      exit: [] as Array<() => void>,
-    };
-    let failRemovals = true;
-    const processStub = {
-      once(event: keyof typeof listeners, listener: () => void) {
-        operations.push(`once:${event}`);
-        listeners[event].push(listener);
-      },
-      removeListener(event: keyof typeof listeners, listener: () => void) {
-        operations.push(`remove:${event}`);
-        if (failRemovals) {
-          throw event === 'beforeExit' ? beforeExitError : exitError;
-        }
-        const index = listeners[event].lastIndexOf(listener);
-        if (index >= 0) listeners[event].splice(index, 1);
-      },
-    };
-    const state: Record<string, unknown> = {};
-
-    runInNewContext(
-      `let __emnapiContext = { destroy() {} }
-let __emnapiContextDestroyed = false
-let __emnapiContextDestroying = false
-let __emnapiContextDestroyPromise
-let __emnapiContextRegisteredForBeforeExit = false
-let __emnapiContextRegisteredForExit = false
-let __emnapiContextBeforeExitRegistrationRetryCount = 0
-let __emnapiContextBeforeExitRegistrationRetryScheduled = false
-let __napiInstance
-let __emnapiWasmEnvCleanupPrepared = false
-${lifecycle}
-__registerEmnapiContextBeforeExit()
-__registerEmnapiContextAtExit()
-try {
-  __removeEmnapiContextCleanupListeners()
-} catch (__error) {
-  __state.failure = __error
-}
-__state.failedBeforeExit = __emnapiContextRegisteredForBeforeExit
-__state.failedExit = __emnapiContextRegisteredForExit
-__state.failedBeforeExitListeners = __listenerCount('beforeExit')
-__state.failedExitListeners = __listenerCount('exit')
-__allowRemovals()
-__removeEmnapiContextCleanupListeners()
-__state.retriedBeforeExit = __emnapiContextRegisteredForBeforeExit
-__state.retriedExit = __emnapiContextRegisteredForExit`,
-      {
-        __allowRemovals: () => {
-          failRemovals = false;
-        },
-        __listenerCount: (event: keyof typeof listeners) => listeners[event].length,
-        __state: state,
-        process: processStub,
-      },
-    );
-
-    expect(operations).toEqual([
-      'once:beforeExit',
-      'once:exit',
-      'remove:beforeExit',
-      'remove:exit',
-      'remove:beforeExit',
-      'remove:exit',
-    ]);
-    expect(state).toMatchObject({
-      failedBeforeExit: true,
-      failedBeforeExitListeners: 1,
-      failedExit: true,
-      failedExitListeners: 1,
-      retriedBeforeExit: false,
-      retriedExit: false,
-    });
-    expect(state.failure).toMatchObject({
-      errors: [beforeExitError, exitError],
-      message: 'emnapi context cleanup listener removal failed',
-    });
-    expect(listeners.beforeExit).toHaveLength(0);
-    expect(listeners.exit).toHaveLength(0);
-  });
-
-  test('rearms cleanup ownership when bootstrap and both destroy attempts fail', async () => {
-    const source = await readFile(cjsLoaderPath, 'utf8');
-    const lifecycle = await readGeneratedNodeLifecycle();
-    const start = source.indexOf(nodeInitializationCleanupStart);
-    const end = source.indexOf(nodeInitializationCleanupEnd, start);
-    const cleanup = source.slice(start + nodeInitializationCleanupStart.length, end);
-    const primaryError = new Error('Node bootstrap failed');
-    const destroyErrors = [
-      new Error('Node context cleanup failed once'),
-      new Error('Node context cleanup failed twice'),
-    ];
-    const beforeExitListeners: Array<() => void> = [];
-    const processStub = {
-      once(event: string, listener: () => void) {
-        if (event === 'beforeExit') beforeExitListeners.push(listener);
-      },
-      removeListener() {},
-    };
-    let failure: unknown;
-
-    try {
-      runInNewContext(
-        `let __emnapiContext = {
-  destroy() {
-    throw __destroyErrors.shift()
-  },
-}
-let __emnapiContextDestroyed = false
-let __emnapiContextDestroying = false
-let __emnapiContextDestroyPromise
-let __emnapiContextRegisteredForBeforeExit = false
-let __emnapiContextRegisteredForExit = false
-let __emnapiContextBeforeExitRegistrationRetryCount = 0
-let __emnapiContextBeforeExitRegistrationRetryScheduled = false
-let __napiInstance
-let __emnapiWasmEnvCleanupPrepared = false
-let __nodeTaskHostRegistration
-let __nodeTimerHostRegistration
-${lifecycle}
-try {
-  throw __primaryError
-${cleanup}`,
-        {
-          __attachCleanupError: vi.fn(),
-          __destroyErrors: [...destroyErrors],
-          __primaryError: primaryError,
-          process: processStub,
-        },
-      );
-    } catch (error) {
-      failure = error;
-    }
-
-    expect(beforeExitListeners).toHaveLength(1);
-    expect(failure).toMatchObject({
-      cause: primaryError,
-      errors: [
-        primaryError,
-        expect.objectContaining({
-          errors: [
-            expect.objectContaining({
-              errors: destroyErrors,
-              message: 'Threadless Node initialization context cleanup failed',
-            }),
-          ],
-          message: 'Threadless Node initialization cleanup failed',
-        }),
-      ],
-    });
-  });
-
-  test('retries transient generated Node context cleanup failures', async () => {
+  async function readInjectedNodeInitializationCleanup(): Promise<string> {
     const source = await readFile(cjsLoaderPath, 'utf8');
     const start = source.indexOf(nodeInitializationCleanupStart);
     const end = source.indexOf(nodeInitializationCleanupEnd, start);
     expect(start).toBeGreaterThanOrEqual(0);
     expect(end).toBeGreaterThan(start);
-    const cleanup = source.slice(start + nodeInitializationCleanupStart.length, end);
-    const primaryError = new Error('Node initialization failed');
-    const firstCleanupError = new Error('transient Node context cleanup failure');
-    const destroyEmnapiContext = vi
-      .fn()
-      .mockImplementationOnce(() => {
-        throw firstCleanupError;
-      })
-      .mockImplementationOnce(() => {});
-    const removeEmnapiContextCleanupListeners = vi.fn();
-    const preserveCleanupError = vi.fn();
+    return source.slice(start + nodeInitializationCleanupStart.length, end);
+  }
 
-    expect(() =>
-      runInNewContext(
-        `try {
-  throw __primaryError
-${cleanup}`,
-        {
-          __preserveCleanupError: preserveCleanupError,
-          __destroyEmnapiContext: destroyEmnapiContext,
-          __emnapiContextRegisteredForBeforeExit: true,
-          __removeEmnapiContextCleanupListeners: removeEmnapiContextCleanupListeners,
-          __primaryError: primaryError,
-        },
-      ),
-    ).toThrow(primaryError);
-    expect(destroyEmnapiContext).toHaveBeenCalledTimes(2);
-    expect(removeEmnapiContextCleanupListeners).toHaveBeenCalledOnce();
-    expect(preserveCleanupError).not.toHaveBeenCalled();
-  });
-
-  test('retries transient generated Node host cleanup before destroying the context', async () => {
-    const source = await readFile(cjsLoaderPath, 'utf8');
-    const start = source.indexOf(nodeInitializationCleanupStart);
-    const end = source.indexOf(nodeInitializationCleanupEnd, start);
-    const cleanup = source.slice(start + nodeInitializationCleanupStart.length, end);
+  test('retries transient generated Node host cleanup before registering the rollback', async () => {
+    const cleanup = await readInjectedNodeInitializationCleanup();
     const primaryError = new Error('Node initialization failed');
     const transientTimerError = new Error('transient timer-host cleanup failure');
     const taskRegistration = { high: 0x1234_5678, low: 0x9abc_def0 };
@@ -5358,35 +4969,37 @@ ${cleanup}`,
     const unregisterCurrentThreadTaskHost = vi.fn(() => {
       operations.push('task');
     });
-    const destroyEmnapiContext = vi.fn(() => {
-      operations.push('context');
-    });
-    const removeEmnapiContextCleanupListeners = vi.fn();
+    const attachCleanupErrors = vi.fn((error: unknown) => error);
+    const rollbackWasiInitialization = vi.fn(() => []);
+    const runWasiInitializationRollback = vi.fn();
+    const registrySet = vi.fn();
+    const registryKey = 'rolldown-test-rollback-key';
+    const vmContext: Record<string, unknown> = {
+      __attachCleanupErrors: attachCleanupErrors,
+      __napiModule: {
+        exports: {
+          unregisterCurrentThreadTaskHost,
+          unregisterTimerHost,
+        },
+      },
+      __nodeTaskHostRegistration: taskRegistration,
+      __nodeTimerHostRegistration: timerRegistration,
+      __rollbackWasiInitialization: rollbackWasiInitialization,
+      __runWasiInitializationRollback: runWasiInitializationRollback,
+      __wasiRollbackRegistry: { set: registrySet },
+      __wasiRollbackRegistryKey: registryKey,
+      __primaryError: primaryError,
+    };
 
     expect(() =>
       runInNewContext(
         `try {
   throw __primaryError
 ${cleanup}`,
-        {
-          __attachCleanupError: vi.fn(),
-          __destroyEmnapiContext: destroyEmnapiContext,
-          __emnapiContextRegisteredForBeforeExit: true,
-          __napiModule: {
-            exports: {
-              unregisterCurrentThreadTaskHost,
-              unregisterTimerHost,
-            },
-          },
-          __nodeTaskHostRegistration: taskRegistration,
-          __nodeTimerHostRegistration: timerRegistration,
-          __removeEmnapiContextCleanupListeners: removeEmnapiContextCleanupListeners,
-          __retainEmnapiContextCleanupListener: vi.fn(),
-          __primaryError: primaryError,
-        },
+        vmContext,
       ),
     ).toThrow(primaryError);
-    expect(operations).toEqual(['timer', 'timer', 'task', 'context']);
+    expect(operations).toEqual(['timer', 'timer', 'task']);
     expect(unregisterTimerHost).toHaveBeenNthCalledWith(
       1,
       timerRegistration.high,
@@ -5401,363 +5014,127 @@ ${cleanup}`,
       taskRegistration.high,
       taskRegistration.low,
     );
-    expect(removeEmnapiContextCleanupListeners).toHaveBeenCalledOnce();
+    // Recovered host cleanup surfaces no cleanup errors.
+    expect(attachCleanupErrors).toHaveBeenCalledWith(primaryError, []);
+    // Successfully released registrations are cleared for the retryable
+    // rollback that may run later.
+    expect(vmContext.__nodeTimerHostRegistration).toBeUndefined();
+    expect(vmContext.__nodeTaskHostRegistration).toBeUndefined();
+    // The rollback record is registered and started through the generated
+    // rollback flow.
+    expect(registrySet).toHaveBeenCalledOnce();
+    const [registeredKey, record] = registrySet.mock.calls[0] as [string, Record<string, unknown>];
+    expect(registeredKey).toBe(registryKey);
+    expect(record).toMatchObject({
+      active: false,
+      error: primaryError,
+      promise: undefined,
+    });
+    expect(record.rollback).toBe(rollbackWasiInitialization);
+    expect(runWasiInitializationRollback).toHaveBeenCalledExactlyOnceWith(record);
+    expect(registrySet.mock.invocationCallOrder[0]).toBeLessThan(
+      runWasiInitializationRollback.mock.invocationCallOrder[0],
+    );
   });
 
-  test('removes generated Node cleanup listeners after asynchronous context cleanup', async () => {
-    const source = await readFile(cjsLoaderPath, 'utf8');
-    const start = source.indexOf(nodeInitializationCleanupStart);
-    const end = source.indexOf(nodeInitializationCleanupEnd, start);
-    const cleanup = source.slice(start + nodeInitializationCleanupStart.length, end);
+  test('aggregates persistent generated Node host cleanup failures into the rollback error', async () => {
+    const cleanup = await readInjectedNodeInitializationCleanup();
     const primaryError = new Error('Node initialization failed');
-    const destroyEmnapiContext = vi.fn(() => Promise.resolve());
-    const removeEmnapiContextCleanupListeners = vi.fn();
-    const preserveCleanupError = vi.fn();
-
-    expect(() =>
-      runInNewContext(
-        `try {
-  throw __primaryError
-${cleanup}`,
-        {
-          __preserveCleanupError: preserveCleanupError,
-          __destroyEmnapiContext: destroyEmnapiContext,
-          __emnapiContextRegisteredForBeforeExit: true,
-          __removeEmnapiContextCleanupListeners: removeEmnapiContextCleanupListeners,
-          __retainEmnapiContextCleanupListener: vi.fn(),
-          __primaryError: primaryError,
-        },
-      ),
-    ).toThrow(primaryError);
-    await vi.waitFor(() => {
-      expect(removeEmnapiContextCleanupListeners).toHaveBeenCalledOnce();
-    });
-    expect(destroyEmnapiContext).toHaveBeenCalledOnce();
-    expect(preserveCleanupError).not.toHaveBeenCalled();
-  });
-
-  test('retains generated Node cleanup listeners after asynchronous context cleanup rejects', async () => {
-    const source = await readFile(cjsLoaderPath, 'utf8');
-    const start = source.indexOf(nodeInitializationCleanupStart);
-    const end = source.indexOf(nodeInitializationCleanupEnd, start);
-    const cleanup = source.slice(start + nodeInitializationCleanupStart.length, end);
-    const primaryError = new Error('Node initialization failed');
-    const cleanupError = new Error('asynchronous Node context cleanup failed');
-    const destroyEmnapiContext = vi.fn(() => Promise.reject(cleanupError));
-    const removeEmnapiContextCleanupListeners = vi.fn();
-    const retainEmnapiContextCleanupListener = vi.fn();
-    const preserveCleanupError = vi.fn();
-
-    expect(() =>
-      runInNewContext(
-        `try {
-  throw __primaryError
-${cleanup}`,
-        {
-          __preserveCleanupError: preserveCleanupError,
-          __destroyEmnapiContext: destroyEmnapiContext,
-          __emnapiContextRegisteredForBeforeExit: true,
-          __removeEmnapiContextCleanupListeners: removeEmnapiContextCleanupListeners,
-          __retainEmnapiContextCleanupListener: retainEmnapiContextCleanupListener,
-          __primaryError: primaryError,
-        },
-      ),
-    ).toThrow(primaryError);
-    await vi.waitFor(() => {
-      expect(preserveCleanupError).toHaveBeenCalledWith(primaryError, cleanupError);
-    });
-    expect(destroyEmnapiContext).toHaveBeenCalledOnce();
-    expect(removeEmnapiContextCleanupListeners).not.toHaveBeenCalled();
-    expect(retainEmnapiContextCleanupListener).toHaveBeenCalledOnce();
-  });
-
-  test('surfaces asynchronous cleanup rejection after a primitive initialization failure', async () => {
-    const source = await readFile(cjsLoaderPath, 'utf8');
-    const lifecycle = await readGeneratedNodeLifecycle();
-    const start = source.indexOf(nodeInitializationCleanupStart);
-    const end = source.indexOf(nodeInitializationCleanupEnd, start);
-    const cleanup = source.slice(start + nodeInitializationCleanupStart.length, end);
-    const primaryError = 'primitive Node initialization failure';
-    const cleanupError = new Error('asynchronous Node context cleanup failed');
-    const queuedMicrotasks: Array<() => void> = [];
-    const beforeExitListeners: Array<() => void> = [];
-    const removeListener = vi.fn();
-    let rejectCleanup!: (error: unknown) => void;
-    const cleanupResult = new Promise<never>((_resolve, reject) => {
-      rejectCleanup = reject;
-    });
-    let failure: unknown;
-
-    try {
-      runInNewContext(
-        `let __emnapiContext = {
-  destroy() {
-    return __cleanupResult
-  },
-}
-let __emnapiContextDestroyed = false
-let __emnapiContextDestroying = false
-let __emnapiContextDestroyPromise
-let __emnapiContextRegisteredForBeforeExit = false
-let __emnapiContextRegisteredForExit = false
-let __emnapiContextBeforeExitRegistrationRetryCount = 0
-let __emnapiContextBeforeExitRegistrationRetryScheduled = false
-let __napiInstance
-let __emnapiWasmEnvCleanupPrepared = false
-${lifecycle}
-__registerEmnapiContextBeforeExit()
-try {
-  throw __primaryError
-${cleanup}`,
-        {
-          __cleanupResult: cleanupResult,
-          __primaryError: primaryError,
-          process: {
-            once(event: string, listener: () => void) {
-              if (event === 'beforeExit') beforeExitListeners.push(listener);
-            },
-            removeListener,
-          },
-          queueMicrotask(callback: () => void) {
-            queuedMicrotasks.push(callback);
-          },
-        },
-      );
-    } catch (error) {
-      failure = error;
-    }
-
-    expect(failure).toBe(primaryError);
-    rejectCleanup(cleanupError);
-    await vi.waitFor(() => {
-      expect(queuedMicrotasks).toHaveLength(1);
-    });
-    expect(beforeExitListeners).toHaveLength(1);
-    expect(removeListener).not.toHaveBeenCalled();
-    expect(() => queuedMicrotasks[0]()).toThrow(cleanupError);
-  });
-
-  test('surfaces asynchronous listener-removal failure when the primary cause is occupied', async () => {
-    const source = await readFile(cjsLoaderPath, 'utf8');
-    const lifecycle = await readGeneratedNodeLifecycle();
-    const start = source.indexOf(nodeInitializationCleanupStart);
-    const end = source.indexOf(nodeInitializationCleanupEnd, start);
-    const cleanup = source.slice(start + nodeInitializationCleanupStart.length, end);
-    const existingCause = new Error('existing primary cause');
-    const primaryError = new Error('Node initialization failed', {
-      cause: existingCause,
-    });
-    const removalError = new Error('beforeExit listener removal failed');
-    const queuedMicrotasks: Array<() => void> = [];
-    const beforeExitListeners: Array<() => void> = [];
-    let resolveCleanup!: () => void;
-    const cleanupResult = new Promise<void>((resolve) => {
-      resolveCleanup = resolve;
-    });
-
-    expect(() =>
-      runInNewContext(
-        `let __emnapiContext = {
-  destroy() {
-    return __cleanupResult
-  },
-}
-let __emnapiContextDestroyed = false
-let __emnapiContextDestroying = false
-let __emnapiContextDestroyPromise
-let __emnapiContextRegisteredForBeforeExit = false
-let __emnapiContextRegisteredForExit = false
-let __emnapiContextBeforeExitRegistrationRetryCount = 0
-let __emnapiContextBeforeExitRegistrationRetryScheduled = false
-let __napiInstance
-let __emnapiWasmEnvCleanupPrepared = false
-${lifecycle}
-__registerEmnapiContextBeforeExit()
-try {
-  throw __primaryError
-${cleanup}`,
-        {
-          __cleanupResult: cleanupResult,
-          __primaryError: primaryError,
-          process: {
-            once(event: string, listener: () => void) {
-              if (event === 'beforeExit') beforeExitListeners.push(listener);
-            },
-            removeListener() {
-              throw removalError;
-            },
-          },
-          queueMicrotask(callback: () => void) {
-            queuedMicrotasks.push(callback);
-          },
-        },
-      ),
-    ).toThrow(primaryError);
-
-    resolveCleanup();
-    await vi.waitFor(() => {
-      expect(queuedMicrotasks).toHaveLength(1);
-    });
-    expect(primaryError.cause).toBe(existingCause);
-    expect(beforeExitListeners).toHaveLength(1);
-    expect(() => queuedMicrotasks[0]()).toThrow(removalError);
-  });
-
-  test('aggregates persistent generated Node host and context cleanup failures', async () => {
-    const source = await readFile(cjsLoaderPath, 'utf8');
-    const start = source.indexOf(nodeInitializationCleanupStart);
-    const end = source.indexOf(nodeInitializationCleanupEnd, start);
-    const cleanup = source.slice(start + nodeInitializationCleanupStart.length, end);
-    const primaryError = new Error('Node initialization failed');
-    const contextCleanupErrors = [
-      new Error('Node context cleanup failed once'),
-      new Error('Node context cleanup failed twice'),
+    const timerErrors = [
+      new Error('timer-host cleanup failed once'),
+      new Error('timer-host cleanup failed twice'),
     ];
-    const timerCleanupErrors = [
-      new Error('Node timer-host cleanup failed once'),
-      new Error('Node timer-host cleanup failed twice'),
+    const taskErrors = [
+      new Error('task-host cleanup failed once'),
+      new Error('task-host cleanup failed twice'),
     ];
     const taskRegistration = { high: 0x1234_5678, low: 0x9abc_def0 };
     const timerRegistration = { high: 0x0fed_cba9, low: 0x8765_4321 };
-    const operations: string[] = [];
     const unregisterTimerHost = vi.fn(() => {
-      operations.push('timer');
-      throw timerCleanupErrors[unregisterTimerHost.mock.calls.length - 1];
+      throw timerErrors[unregisterTimerHost.mock.calls.length - 1];
     });
     const unregisterCurrentThreadTaskHost = vi.fn(() => {
-      operations.push('task');
+      throw taskErrors[unregisterCurrentThreadTaskHost.mock.calls.length - 1];
     });
-    const destroyEmnapiContext = vi.fn(() => {
-      operations.push('context');
-      throw contextCleanupErrors[destroyEmnapiContext.mock.calls.length - 1];
-    });
-    const removeEmnapiContextCleanupListeners = vi.fn();
-    const retainEmnapiContextCleanupListener = vi.fn();
-    let failure: unknown;
+    const attachCleanupErrors = vi.fn((error: unknown) => error);
+    const rollbackWasiInitialization = vi.fn(() => []);
+    const runWasiInitializationRollback = vi.fn();
+    const vmContext: Record<string, unknown> = {
+      __attachCleanupErrors: attachCleanupErrors,
+      __napiModule: {
+        exports: {
+          unregisterCurrentThreadTaskHost,
+          unregisterTimerHost,
+        },
+      },
+      __nodeTaskHostRegistration: taskRegistration,
+      __nodeTimerHostRegistration: timerRegistration,
+      __rollbackWasiInitialization: rollbackWasiInitialization,
+      __runWasiInitializationRollback: runWasiInitializationRollback,
+      __wasiRollbackRegistry: { set: vi.fn() },
+      __wasiRollbackRegistryKey: 'rolldown-test-rollback-key',
+      __primaryError: primaryError,
+    };
 
-    try {
+    expect(() =>
       runInNewContext(
         `try {
   throw __primaryError
 ${cleanup}`,
-        {
-          __attachCleanupError: vi.fn(),
-          __destroyEmnapiContext: destroyEmnapiContext,
-          __emnapiContextRegisteredForBeforeExit: true,
-          __napiModule: {
-            exports: {
-              unregisterCurrentThreadTaskHost,
-              unregisterTimerHost,
-            },
-          },
-          __nodeTaskHostRegistration: taskRegistration,
-          __nodeTimerHostRegistration: timerRegistration,
-          __removeEmnapiContextCleanupListeners: removeEmnapiContextCleanupListeners,
-          __retainEmnapiContextCleanupListener: retainEmnapiContextCleanupListener,
-          __primaryError: primaryError,
-        },
-      );
-    } catch (error) {
-      failure = error;
-    }
-    expect(operations).toEqual(['timer', 'timer', 'task', 'context', 'context']);
+        vmContext,
+      ),
+    ).toThrow(primaryError);
     expect(unregisterTimerHost).toHaveBeenCalledTimes(2);
-    expect(unregisterCurrentThreadTaskHost).toHaveBeenCalledWith(
-      taskRegistration.high,
-      taskRegistration.low,
-    );
-    expect(destroyEmnapiContext).toHaveBeenCalledTimes(2);
-    expect(removeEmnapiContextCleanupListeners).not.toHaveBeenCalled();
-    expect(retainEmnapiContextCleanupListener).toHaveBeenCalledOnce();
-    expect(failure).toMatchObject({
-      cause: primaryError,
-      errors: [
-        primaryError,
-        expect.objectContaining({
-          message: 'Threadless Node initialization cleanup failed',
-          errors: [
-            expect.objectContaining({
-              message: 'Threadless Node timer-host cleanup failed',
-              errors: timerCleanupErrors,
-            }),
-            expect.objectContaining({
-              message: 'Threadless Node initialization context cleanup failed',
-              errors: contextCleanupErrors,
-            }),
-          ],
-        }),
-      ],
-      message: 'Threadless Node initialization failed and cleanup did not complete',
-    });
+    expect(unregisterCurrentThreadTaskHost).toHaveBeenCalledTimes(2);
+    // Both persistent host cleanup failures are attached to the primary
+    // error, each aggregating its two attempts.
+    expect(attachCleanupErrors).toHaveBeenCalledOnce();
+    const [attachedError, cleanupErrors] = attachCleanupErrors.mock.calls[0] as [unknown, unknown[]];
+    expect(attachedError).toBe(primaryError);
+    expect(cleanupErrors).toEqual([
+      expect.objectContaining({
+        message: 'Threadless Node timer-host cleanup failed',
+        errors: timerErrors,
+      }),
+      expect.objectContaining({
+        message: 'Threadless Node task-host cleanup failed',
+        errors: taskErrors,
+      }),
+    ]);
+    // Failed releases keep their registrations for the retryable rollback.
+    expect(vmContext.__nodeTimerHostRegistration).toBe(timerRegistration);
+    expect(vmContext.__nodeTaskHostRegistration).toBe(taskRegistration);
+    expect(runWasiInitializationRollback).toHaveBeenCalledOnce();
   });
 
-  test.each([
-    {
-      name: 'a primitive primary failure',
-      createPrimaryError: () => 'primitive Node initialization failure',
-    },
-    {
-      name: 'an occupied primary cause',
-      createPrimaryError: () =>
-        new Error('Node initialization failed', {
-          cause: new Error('existing primary cause'),
-        }),
-    },
-  ])('retains generated Node cleanup diagnostics for $name', async ({ createPrimaryError }) => {
-    const source = await readFile(cjsLoaderPath, 'utf8');
-    const start = source.indexOf(nodeInitializationCleanupStart);
-    const end = source.indexOf(nodeInitializationCleanupEnd, start);
-    const cleanup = source.slice(start + nodeInitializationCleanupStart.length, end);
-    const primaryError: unknown = createPrimaryError();
-    const cleanupErrors = [
-      new Error('Node context cleanup failed once'),
-      new Error('Node context cleanup failed twice'),
-    ];
-    const destroyEmnapiContext = vi.fn(() => {
-      throw cleanupErrors[destroyEmnapiContext.mock.calls.length - 1];
-    });
-    const removeEmnapiContextCleanupListeners = vi.fn();
-    const retainEmnapiContextCleanupListener = vi.fn();
-    let failure: unknown;
+  test('rethrows the augmented rollback error for host-free initialization failures', async () => {
+    const cleanup = await readInjectedNodeInitializationCleanup();
+    const primaryError = new Error('Node initialization failed');
+    const augmentedError = new Error('augmented Node initialization failure');
+    const attachCleanupErrors = vi.fn(() => augmentedError);
+    const rollbackWasiInitialization = vi.fn(() => []);
+    const runWasiInitializationRollback = vi.fn();
+    const registrySet = vi.fn();
 
-    try {
+    expect(() =>
       runInNewContext(
         `try {
   throw __primaryError
 ${cleanup}`,
         {
-          __attachCleanupError: vi.fn(),
-          __destroyEmnapiContext: destroyEmnapiContext,
-          __emnapiContextRegisteredForBeforeExit: true,
-          __removeEmnapiContextCleanupListeners: removeEmnapiContextCleanupListeners,
-          __retainEmnapiContextCleanupListener: retainEmnapiContextCleanupListener,
+          __attachCleanupErrors: attachCleanupErrors,
+          __rollbackWasiInitialization: rollbackWasiInitialization,
+          __runWasiInitializationRollback: runWasiInitializationRollback,
+          __wasiRollbackRegistry: { set: registrySet },
+          __wasiRollbackRegistryKey: 'rolldown-test-rollback-key',
           __primaryError: primaryError,
         },
-      );
-    } catch (error) {
-      failure = error;
-    }
-
-    expect(removeEmnapiContextCleanupListeners).not.toHaveBeenCalled();
-    expect(retainEmnapiContextCleanupListener).toHaveBeenCalledOnce();
-    expect(failure).toMatchObject({
-      cause: primaryError,
-      errors: [
-        primaryError,
-        expect.objectContaining({
-          message: 'Threadless Node initialization cleanup failed',
-          errors: [
-            expect.objectContaining({
-              message: 'Threadless Node initialization context cleanup failed',
-              errors: cleanupErrors,
-            }),
-          ],
-        }),
-      ],
-    });
-    if (primaryError instanceof Error) {
-      expect(primaryError.cause).toMatchObject({ message: 'existing primary cause' });
-    }
+      ),
+    ).toThrow(augmentedError);
+    expect(attachCleanupErrors).toHaveBeenCalledWith(primaryError, []);
+    const [, record] = registrySet.mock.calls[0] as [string, Record<string, unknown>];
+    expect(record.error).toBe(augmentedError);
+    expect(runWasiInitializationRollback).toHaveBeenCalledExactlyOnceWith(record);
   });
 
   test('generated root timer hosts preserve relay semantics across long delays and failures', async () => {

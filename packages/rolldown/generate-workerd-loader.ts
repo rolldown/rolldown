@@ -26,110 +26,117 @@ const NODE_INITIALIZATION_CLEANUP_START = '/* ROLLDOWN_NODE_INITIALIZATION_CLEAN
 const NODE_INITIALIZATION_CLEANUP_END = '/* ROLLDOWN_NODE_INITIALIZATION_CLEANUP_END */';
 const NODE_LIFECYCLE_HELPER_SIGNATURES = [
   'function __destroyEmnapiContext() {',
-  'function __removeEmnapiContextBeforeExitListener() {',
-  'function __removeEmnapiContextAtExitListener() {',
-  'function __removeEmnapiContextCleanupListeners() {',
-  'function __retainEmnapiContextCleanupListener() {',
-  'function __handoffEmnapiContextCleanupToExit() {',
-  'function __attachCleanupError(__error, __cleanupError) {',
-  'function __preserveCleanupError(__error, __cleanupError) {',
+  'function __prepareWasmEnvCleanup() {',
+  'function __drainWasmEnvCleanup() {',
+  'function __createCleanupError(errors, message) {',
+  'function __attachCleanupErrors(error, cleanupErrors) {',
+  'function __rollbackWasiInitialization() {',
+  'function __completeWasiInitializationRollback(record, cleanupErrors) {',
+  'function __runWasiInitializationRollback(record) {',
+  'function __registerWasiExitListener() {',
 ] as const;
+// Exact bodies of the generated helpers the injected initialization cleanup
+// interlocks with (in generated source order). A cli bump that reshapes any of
+// them must be reviewed here: the injected catch block below re-enters the
+// generated rollback flow through these seams.
 const NODE_LIFECYCLE_CONTRACT_SNIPPETS = [
-  `function __removeEmnapiContextBeforeExitListener() {
-  if (__emnapiContextRegisteredForBeforeExit) {
-    process.removeListener('beforeExit', __destroyEmnapiContextBeforeExit)
-    __emnapiContextRegisteredForBeforeExit = false
+  `function __attachCleanupErrors(error, cleanupErrors) {
+  if (cleanupErrors.length === 0) {
+    return error
   }
-}`,
-  `function __removeEmnapiContextAtExitListener() {
-  if (__emnapiContextRegisteredForExit) {
-    process.removeListener('exit', __destroyEmnapiContextAtExit)
-    __emnapiContextRegisteredForExit = false
-  }
-}`,
-  `function __removeEmnapiContextCleanupListeners() {
-  const __errors = []
-  try {
-    __removeEmnapiContextBeforeExitListener()
-  } catch (__error) {
-    __errors.push(__error)
-  }
-  try {
-    __removeEmnapiContextAtExitListener()
-  } catch (__error) {
-    __errors.push(__error)
-  }
-  if (__errors.length === 0) {
-    __emnapiContextBeforeExitRegistrationRetryCount = 0
-    return
-  }
-  if (__errors.length === 1) {
-    throw __errors[0]
-  }
-  throw new AggregateError(
-    __errors,
-    'emnapi context cleanup listener removal failed',
+  const cleanupError = __createCleanupError(
+    cleanupErrors,
+    'WASI binding cleanup failed',
   )
-}`,
-  `function __retainEmnapiContextCleanupListener() {
-  if (
-    __emnapiContextDestroyed ||
-    __emnapiContextRegisteredForBeforeExit ||
-    __emnapiContextRegisteredForExit
-  ) {
-    return
-  }
-  __registerEmnapiContextBeforeExit()
-}`,
-  `function __handoffEmnapiContextCleanupToExit() {
-  const __exitWasRegistered = __emnapiContextRegisteredForExit
-  __registerEmnapiContextAtExit()
-  try {
-    __removeEmnapiContextBeforeExitListener()
-  } catch (__error) {
-    if (!__exitWasRegistered) {
-      try {
-        __removeEmnapiContextAtExitListener()
-      } catch (__rollbackError) {
-        throw new AggregateError(
-          [__error, __rollbackError],
-          'emnapi context cleanup listener handoff failed',
-          { cause: __error },
-        )
-      }
-    }
-    throw __error
-  }
-}`,
-  `function __attachCleanupError(__error, __cleanupError) {
   try {
     if (
-      __error &&
-      (typeof __error === 'object' || typeof __error === 'function')
+      error &&
+      (typeof error === 'object' || typeof error === 'function')
     ) {
-      if (__error.cause === undefined) {
-        __error.cause = __cleanupError
-        return __error.cause === __cleanupError
+      if (error.cause === undefined) {
+        error.cause = cleanupError
+        if (error.cause === cleanupError) {
+          return error
+        }
       }
-      return __error.cause === __cleanupError
+      if (Array.isArray(error.cleanupErrors)) {
+        error.cleanupErrors.push(cleanupError)
+        return error
+      } else {
+        const attachedCleanupErrors = [cleanupError]
+        error.cleanupErrors = attachedCleanupErrors
+        if (error.cleanupErrors === attachedCleanupErrors) {
+          return error
+        }
+      }
     }
   } catch {}
-  return false
-}
-
-function __preserveCleanupError(__error, __cleanupError) {
-  if (!__attachCleanupError(__error, __cleanupError)) {
-    queueMicrotask(() => {
-      throw __cleanupError
-    })
+  const aggregate = __createCleanupError(
+    [error, cleanupError],
+    'WASI binding initialization and cleanup failed',
+  )
+  try {
+    aggregate.cause = error
+  } catch {}
+  return aggregate
+}`,
+  `function __completeWasiInitializationRollback(record, cleanupErrors) {
+  try {
+    if (cleanupErrors.length === 0) {
+      if (
+        __wasiRollbackRegistry.get(__wasiRollbackRegistryKey) === record
+      ) {
+        __wasiRollbackRegistry.delete(__wasiRollbackRegistryKey)
+      }
+      return
+    }
+    record.error = __attachCleanupErrors(record.error, cleanupErrors)
+  } catch (cleanupError) {
+    try {
+      record.error = __createCleanupError(
+        [record.error, cleanupError],
+        'WASI binding initialization and cleanup failed',
+      )
+    } catch {}
+  } finally {
+    record.active = false
+    record.promise = undefined
   }
 }`,
-  `  __handoffEmnapiContextCleanupToExit()`,
+  `function __runWasiInitializationRollback(record) {
+  if (record.active) {
+    return
+  }
+  record.active = true
+
+  let rollbackResult
+  try {
+    rollbackResult = record.rollback()
+  } catch (cleanupError) {
+    __completeWasiInitializationRollback(record, [cleanupError])
+    return
+  }
+
+  if (!__isThenable(rollbackResult)) {
+    __completeWasiInitializationRollback(record, rollbackResult)
+    return
+  }
+
+  record.promise = Promise.resolve(rollbackResult).then(
+    (cleanupErrors) => {
+      __completeWasiInitializationRollback(record, cleanupErrors)
+    },
+    (cleanupError) => {
+      __completeWasiInitializationRollback(record, [cleanupError])
+    },
+  )
+}`,
+  `  __publishWasiDispose(__napiModule.exports)\n  __registerWasiExitListener()`,
 ] as const;
 const CURRENT_THREAD_LOADERS = [
   {
     path: join(__dirname, 'src/rolldown-binding.wasip1.cjs'),
-    bootstrapAnchor: '} catch (__error) {\n  let __cleanupResult\n  let __cleanupFailed = false',
+    bootstrapAnchor: '} catch (error) {\n  const rollback = {',
     browserInitializationGuard: false,
   },
   {
@@ -3045,19 +3052,17 @@ function injectBrowserInitializationGuard(
     if (guardEnd < guardStart) {
       throw new Error(`Malformed browser initialization guard in ${loaderPath}`);
     }
-    const catchStart = source.indexOf('\n} catch (__error) {\n', guardEnd);
+    const catchStart = source.indexOf('\n} catch (error) {\n', guardEnd);
     if (catchStart < guardEnd || catchStart > exportStart) {
       throw new Error(`Malformed browser initialization cleanup in ${loaderPath}`);
     }
-    const contextDestroyExpression = readInjectedBrowserContextDestroyExpression(
-      source,
-      loaderPath,
-    );
-    return `${source.slice(0, catchStart + 1)}${renderBrowserInitializationCleanup(contextDestroyExpression)}
+    return `${source.slice(0, catchStart + 1)}${renderBrowserInitializationCleanup()}
 ${source.slice(exportStart)}`.replace(/[ \t]+$/gm, '');
   }
 
-  const contextAnchor = 'const __emnapiContext = __emnapiCreateContext()';
+  // The creation call itself: the loader may wrap it (the codegen's raw
+  // destroy settlement wrapper), so anchor on the inner createContext call.
+  const contextAnchor = '__emnapiCreateContext({ autoDestroy: false })';
   const contextCount = source.split(contextAnchor).length - 1;
   if (contextCount !== 1) {
     throw new Error(`Unable to locate generated browser context creation in ${loaderPath}`);
@@ -3067,8 +3072,7 @@ ${source.slice(exportStart)}`.replace(/[ \t]+$/gm, '');
     throw new Error(`Generated browser initialization follows its exports in ${loaderPath}`);
   }
 
-  const declarationAnchor = `let __napiInstance
-let __wasiModule
+  const declarationAnchor = `let __wasiModule
 let __napiModule`;
   const declarationCount = source.split(declarationAnchor).length - 1;
   const instantiationAnchor = `;({
@@ -3084,10 +3088,13 @@ let __napiModule`;
   const instantiationStart = source.indexOf(instantiationAnchor);
   const tryAnchor = '\ntry {\n';
   const tryStartWithNewline = source.lastIndexOf(tryAnchor, instantiationStart);
-  const catchAnchor = '\n} catch (__error) {\n';
+  const catchAnchor = '\n} catch (error) {\n';
   const catchStart = source.indexOf(catchAnchor, instantiationStart);
   if (
-    tryStartWithNewline < contextStart ||
+    tryStartWithNewline < 0 ||
+    // The upstream template opens its initialization try block before it
+    // creates the context; the guard must wrap both.
+    contextStart < tryStartWithNewline ||
     catchStart < instantiationStart ||
     catchStart > exportStart
   ) {
@@ -3095,33 +3102,11 @@ let __napiModule`;
   }
 
   const generatedCatch = source.slice(catchStart + 1, exportStart).trimEnd();
-  const legacyGeneratedCatch = `} catch (__error) {
-  try {
-    await __emnapiContext.destroy()
-  } catch (__cleanupError) {
-    throw __createInitializationCleanupError(__error, __cleanupError)
-  }
-  throw __error
+  const expectedGeneratedCatch = `} catch (error) {
+  const cleanupErrors = await __rollbackWasiInitialization()
+  throw __attachCleanupErrors(error, cleanupErrors)
 }`;
-  const upstreamGeneratedCatch = `} catch (__error) {
-  const __cleanupErrors = []
-  try {
-    await __destroyEmnapiContext()
-  } catch (__cleanupError) {
-    __cleanupErrors.push(__cleanupError)
-  }
-  if (__cleanupErrors.length > 0) {
-    throw __createInitializationCleanupError(__error, __cleanupErrors)
-  }
-  throw __error
-}`;
-  const contextDestroyExpression =
-    generatedCatch === legacyGeneratedCatch
-      ? '__emnapiContext.destroy()'
-      : generatedCatch === upstreamGeneratedCatch
-        ? '__destroyEmnapiContext()'
-        : undefined;
-  if (contextDestroyExpression === undefined) {
+  if (generatedCatch !== expectedGeneratedCatch) {
     throw new Error(`Unexpected generated browser initialization cleanup in ${loaderPath}`);
   }
 
@@ -3139,29 +3124,13 @@ ${declarationAnchor}`,
 ${BROWSER_INITIALIZATION_GUARD_START}
 ${tryBody}
 ${BROWSER_INITIALIZATION_GUARD_END}
-${renderBrowserInitializationCleanup(contextDestroyExpression)}
+${renderBrowserInitializationCleanup()}
 ${source.slice(exportStart)}`;
 }
 
-function readInjectedBrowserContextDestroyExpression(
-  source: string,
-  loaderPath: string,
-): '__emnapiContext.destroy()' | '__destroyEmnapiContext()' {
-  const expressions = ['__emnapiContext.destroy()', '__destroyEmnapiContext()'] as const;
-  const matches = expressions.filter(
-    (expression) => source.split(`      () => ${expression},`).length - 1 === 1,
-  );
-  if (matches.length !== 1) {
-    throw new Error(`Malformed browser context cleanup in ${loaderPath}`);
-  }
-  return matches[0];
-}
-
-function renderBrowserInitializationCleanup(
-  contextDestroyExpression: '__emnapiContext.destroy()' | '__destroyEmnapiContext()',
-): string {
-  return `} catch (__error) {
-  const __cleanupErrors = []
+function renderBrowserInitializationCleanup(): string {
+  return `} catch (error) {
+  const __hostCleanupErrors = []
   const __cleanupSync = (__operation, __message) => {
     const __operationErrors = []
     for (let __attempt = 0; __attempt < 2; __attempt += 1) {
@@ -3172,19 +3141,7 @@ function renderBrowserInitializationCleanup(
         __operationErrors.push(__cleanupError)
       }
     }
-    __cleanupErrors.push(new AggregateError(__operationErrors, __message))
-  }
-  const __cleanup = async (__operation, __message) => {
-    const __operationErrors = []
-    for (let __attempt = 0; __attempt < 2; __attempt += 1) {
-      try {
-        await __operation()
-        return
-      } catch (__cleanupError) {
-        __operationErrors.push(__cleanupError)
-      }
-    }
-    __cleanupErrors.push(new AggregateError(__operationErrors, __message))
+    __hostCleanupErrors.push(new AggregateError(__operationErrors, __message))
   }
   if (__browserTimerHostRegistration !== undefined) {
     __cleanupSync(() => {
@@ -3204,33 +3161,15 @@ function renderBrowserInitializationCleanup(
       ])
     }, 'Threadless browser task-host cleanup failed')
   }
-  if (__emnapiContext !== undefined) {
-    await __cleanup(
-      () => ${contextDestroyExpression},
-      'Threadless browser context cleanup failed',
-    )
-  }
-  if (__cleanupErrors.length > 0) {
-    throw new AggregateError(
-      [
-        __error,
-        new AggregateError(
-          __cleanupErrors,
-          'Threadless browser initialization cleanup failed',
-        ),
-      ],
-      'Threadless browser initialization failed and cleanup did not complete',
-      { cause: __error },
-    )
-  }
-  throw __error
+  const cleanupErrors = await __rollbackWasiInitialization()
+  throw __attachCleanupErrors(error, __hostCleanupErrors.concat(cleanupErrors))
 }`;
 }
 
 function renderNodeInitializationCleanup(): string {
   return `${NODE_INITIALIZATION_CLEANUP_START}
-} catch (__error) {
-  const __cleanupErrors = []
+} catch (error) {
+  const __hostCleanupErrors = []
   const __cleanupSync = (__operation, __message) => {
     const __operationErrors = []
     for (let __attempt = 0; __attempt < 2; __attempt += 1) {
@@ -3241,7 +3180,7 @@ function renderNodeInitializationCleanup(): string {
         __operationErrors.push(__cleanupError)
       }
     }
-    __cleanupErrors.push(new AggregateError(__operationErrors, __message))
+    __hostCleanupErrors.push(new AggregateError(__operationErrors, __message))
     return false
   }
   if (
@@ -3274,68 +3213,15 @@ function renderNodeInitializationCleanup(): string {
       __nodeTaskHostRegistration = undefined
     }
   }
-  let __cleanupResult
-  let __contextCleanupCompleted = false
-  const __contextCleanupErrors = []
-  for (let __attempt = 0; __attempt < 2; __attempt += 1) {
-    try {
-      __cleanupResult = __destroyEmnapiContext()
-      __contextCleanupCompleted = true
-      break
-    } catch (__cleanupError) {
-      __contextCleanupErrors.push(__cleanupError)
-    }
+  const rollback = {
+    active: false,
+    error: __attachCleanupErrors(error, __hostCleanupErrors),
+    promise: undefined,
+    rollback: __rollbackWasiInitialization,
   }
-  if (!__contextCleanupCompleted) {
-    __cleanupErrors.push(
-      new AggregateError(
-        __contextCleanupErrors,
-        'Threadless Node initialization context cleanup failed',
-      ),
-    )
-    __cleanupSync(
-      () => __retainEmnapiContextCleanupListener(),
-      'Threadless Node initialization cleanup listener retention failed',
-    )
-  }
-  if (__cleanupResult) {
-    void __cleanupResult.then(
-      () => {
-        try {
-          __removeEmnapiContextCleanupListeners()
-        } catch (__cleanupError) {
-          __preserveCleanupError(__error, __cleanupError)
-        }
-      },
-      (__cleanupError) => {
-        __preserveCleanupError(__error, __cleanupError)
-        try {
-          __retainEmnapiContextCleanupListener()
-        } catch (__listenerError) {
-          __preserveCleanupError(__error, __listenerError)
-        }
-      },
-    )
-  } else if (__contextCleanupCompleted) {
-    __cleanupSync(
-      () => __removeEmnapiContextCleanupListeners(),
-      'Threadless Node initialization cleanup listener removal failed',
-    )
-  }
-  if (__cleanupErrors.length > 0) {
-    throw new AggregateError(
-      [
-        __error,
-        new AggregateError(
-          __cleanupErrors,
-          'Threadless Node initialization cleanup failed',
-        ),
-      ],
-      'Threadless Node initialization failed and cleanup did not complete',
-      { cause: __error },
-    )
-  }
-  throw __error
+  __wasiRollbackRegistry.set(__wasiRollbackRegistryKey, rollback)
+  __runWasiInitializationRollback(rollback)
+  throw rollback.error
 }
 ${NODE_INITIALIZATION_CLEANUP_END}`;
 }
@@ -3432,46 +3318,16 @@ function injectNodeInitializationCleanup(
   const catchStart = source.indexOf(generatedCatchAnchor);
   const exportStart = source.indexOf(exportAnchor, catchStart);
   const generatedCatch = source.slice(catchStart, exportStart).trimEnd();
-  const expectedGeneratedCatch = `} catch (__error) {
-  let __cleanupResult
-  let __cleanupFailed = false
-  try {
-    __cleanupResult = __destroyEmnapiContext()
-  } catch (__cleanupError) {
-    __cleanupFailed = true
-    __preserveCleanupError(__error, __cleanupError)
-    try {
-      __retainEmnapiContextCleanupListener()
-    } catch (__listenerError) {
-      __preserveCleanupError(__error, __listenerError)
-    }
+  const expectedGeneratedCatch = `} catch (error) {
+  const rollback = {
+    active: false,
+    error,
+    promise: undefined,
+    rollback: __rollbackWasiInitialization,
   }
-  if (__cleanupResult) {
-    void __cleanupResult.then(
-      () => {
-        try {
-          __removeEmnapiContextCleanupListeners()
-        } catch (__cleanupError) {
-          __preserveCleanupError(__error, __cleanupError)
-        }
-      },
-      (__cleanupError) => {
-        __preserveCleanupError(__error, __cleanupError)
-        try {
-          __retainEmnapiContextCleanupListener()
-        } catch (__listenerError) {
-          __preserveCleanupError(__error, __listenerError)
-        }
-      },
-    )
-  } else if (!__cleanupFailed) {
-    try {
-      __removeEmnapiContextCleanupListeners()
-    } catch (__cleanupError) {
-      __preserveCleanupError(__error, __cleanupError)
-    }
-  }
-  throw __error
+  __wasiRollbackRegistry.set(__wasiRollbackRegistryKey, rollback)
+  __runWasiInitializationRollback(rollback)
+  throw rollback.error
 }`;
   if (generatedCatch !== expectedGeneratedCatch) {
     throw new Error(`Unexpected generated Node initialization cleanup in ${loaderPath}`);

@@ -248,17 +248,19 @@ for (const rel of LOADERS) {
       const taskUnregisterPattern =
         /Reflect\.apply\(__binding\.unregisterCurrentThreadTaskHost, __binding, \[\s*__browserTaskHostRegistration\.high,\s*__browserTaskHostRegistration\.low,\s*\]\)/;
       const taskUnregister = source.search(taskUnregisterPattern);
-      const contextDestroy = source.search(
-        /__cleanup\(\s*\(\) => __destroyEmnapiContext\(\),\s*['"]Threadless browser context cleanup failed['"],?\s*\)/,
+      // The injected initialization cleanup destroys the context through the
+      // generated rollback (prepare -> drain -> destroy -> worker teardown).
+      const contextRollback = source.search(
+        /const cleanupErrors = await __rollbackWasiInitialization\(\)/,
       );
       if (taskUnregister === -1) {
         failures.push(
           `${rel}: missing exact CurrentThread task-host unregister with the captured high/low token`,
         );
       }
-      if (contextDestroy === -1 || (taskUnregister !== -1 && taskUnregister > contextDestroy)) {
+      if (contextRollback === -1 || (taskUnregister !== -1 && taskUnregister > contextRollback)) {
         failures.push(
-          `${rel}: CurrentThread task host must unregister before browser context destruction`,
+          `${rel}: CurrentThread task host must unregister before the browser initialization rollback destroys the context`,
         );
       }
     }

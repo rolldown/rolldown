@@ -13,7 +13,6 @@ on:
     paths:
       - 'crates/**'
       - 'packages/**'
-      - 'patches/@napi-rs__cli@3.7.2.patch'
       - 'scripts/misc/check-wasi-binding-deps.mjs'
       - 'scripts/misc/check-wasi-binding-packed-consumer.mjs'
       - 'scripts/misc/stage-wasi-packages.mjs'

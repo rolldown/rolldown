@@ -2914,7 +2914,6 @@ dependencies = [
  "oxc_sourcemap",
  "regex",
  "rolldown_plugin",
- "rolldown_sourcemap",
  "rustc-hash",
  "serde_json",
 ]

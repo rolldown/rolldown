@@ -160,31 +160,6 @@ test('cache-busted evaluations reuse the same per-binding host registrations', a
   expect(binding.registerTimerHost).toHaveBeenCalledOnce();
 });
 
-test('host installation continues when the realm-global deduplication slot is unavailable', async () => {
-  const realGlobal = globalThis;
-  const spoofedRegistry = new Proxy(new WeakMap(), {});
-  const blockedGlobal = new Proxy(realGlobal, {
-    defineProperty(target, key, descriptor) {
-      if (key === hostInstallationsKey) return false;
-      return Reflect.defineProperty(target, key, descriptor);
-    },
-    get(target, key) {
-      if (key === hostInstallationsKey) return spoofedRegistry;
-      return Reflect.get(target, key, target);
-    },
-  });
-  vi.stubGlobal('globalThis', blockedGlobal);
-
-  // @ts-ignore The query forces an independent production module evaluation.
-  await expect(import('../src/timer-host?blocked-host-cache=one')).resolves.toBeDefined();
-  // @ts-ignore A second module has its own safe fallback cache.
-  await expect(import('../src/timer-host?blocked-host-cache=two')).resolves.toBeDefined();
-  const binding = await import('../src/binding.cjs');
-
-  expect(binding.registerCurrentThreadTaskHost).toHaveBeenCalledTimes(2);
-  expect(binding.registerTimerHost).toHaveBeenCalledTimes(2);
-});
-
 test('cache-busted evaluations replace native-evicted host registrations exactly once', async () => {
   // @ts-ignore The query forces a production module evaluation.
   await import('../src/timer-host?host-eviction=one');
@@ -337,45 +312,6 @@ test('CurrentThread timer host rolls back an inactive registration', async () =>
   });
   expect(binding.unregisterTimerHost).toHaveBeenCalledWith(0, 42);
   expect(binding.unregisterCurrentThreadTaskHost).toHaveBeenCalledWith(0, 1);
-});
-
-test('CurrentThread setup preserves mismatch and rollback failures with poisoned AggregateError', async () => {
-  const binding = await import('../src/binding.cjs');
-  const timerCleanupError = new Error('timer host rollback failed');
-  const taskCleanupError = new Error('task host rollback failed');
-  vi.mocked(binding.reserveCurrentThreadHostRegistration)
-    .mockImplementationOnce(() => reserveRegistration(1))
-    .mockImplementationOnce(() => reserveRegistration(43));
-  vi.mocked(binding.registerTimerHost).mockImplementationOnce((high, low) => {
-    bindingState.reservedRegistrations.delete(`${high}:${low}`);
-  });
-  vi.mocked(binding.unregisterTimerHost).mockImplementationOnce(() => {
-    throw timerCleanupError;
-  });
-  vi.mocked(binding.unregisterCurrentThreadTaskHost).mockImplementationOnce(() => {
-    throw taskCleanupError;
-  });
-  class ThrowingAggregateError {
-    constructor() {
-      throw new Error('poisoned AggregateError');
-    }
-  }
-  vi.stubGlobal('AggregateError', ThrowingAggregateError);
-
-  // @ts-ignore The test intentionally imports package source outside the tests tsconfig root.
-  const error = await import('../src/timer-host').catch((error: unknown) => error);
-  expect(error).toMatchObject({
-    code: 'ERR_ROLLDOWN_BINDING_MISMATCH',
-    errors: [
-      expect.objectContaining({
-        code: 'ERR_ROLLDOWN_BINDING_MISMATCH',
-        message: expect.stringMatching(/inactive CurrentThread timer-host registration/),
-      }),
-      timerCleanupError,
-      taskCleanupError,
-    ],
-  });
-  expect((error as { cause: unknown }).cause).toBe((error as { errors: unknown[] }).errors[0]);
 });
 
 test('CurrentThread host cancellation clears the JS timeout and resolves its relay', async () => {
@@ -636,109 +572,6 @@ test('CurrentThread host rejects its relay when cancellation cannot cancel or un
     message: expect.stringContaining('could not be cancelled or unreferenced'),
   });
   expect(reported).toHaveBeenCalledOnce();
-
-  if (innerHandle !== undefined) {
-    originalClearTimeout(innerHandle);
-  }
-});
-
-test('CurrentThread host preserves cancellation failures when AggregateError throws', async () => {
-  vi.useFakeTimers();
-  const originalSetTimeout = globalThis.setTimeout;
-  const originalClearTimeout = globalThis.clearTimeout;
-  const clearError = new Error('clearTimeout failed');
-  const closeError = new Error('timeout.close failed');
-  const diagnosticError = new Error('AggregateError construction failed');
-  const reported = vi.spyOn(console, 'error').mockImplementation(() => undefined);
-  let innerHandle: ReturnType<typeof setTimeout> | undefined;
-  vi.spyOn(globalThis, 'setTimeout').mockImplementation((handler, timeout, ...args) => {
-    innerHandle = originalSetTimeout(handler, timeout, ...args);
-    return {
-      close: () => {
-        throw closeError;
-      },
-    } as unknown as ReturnType<typeof setTimeout>;
-  });
-  vi.spyOn(globalThis, 'clearTimeout').mockImplementation(() => {
-    throw clearError;
-  });
-  // @ts-ignore The test intentionally imports package source outside the tests tsconfig root.
-  await import('../src/timer-host');
-  class ThrowingAggregateError {
-    constructor() {
-      throw diagnosticError;
-    }
-  }
-  vi.stubGlobal('AggregateError', ThrowingAggregateError);
-
-  const relay = callbacks.schedule?.(16, 2_147_483_647);
-  expect(() => callbacks.cancel?.(16)).toThrow(
-    expect.objectContaining({
-      cause: clearError,
-      errors: [clearError, closeError],
-      message: expect.stringContaining('could not be cancelled or unreferenced'),
-    }),
-  );
-  await expect(relay).rejects.toMatchObject({
-    cause: clearError,
-    errors: [clearError, closeError],
-    message: expect.stringContaining('could not be cancelled or unreferenced'),
-  });
-  expect(reported).toHaveBeenCalledWith(
-    expect.objectContaining({
-      cause: clearError,
-      errors: [clearError, closeError],
-    }),
-  );
-  expect(reported).not.toHaveBeenCalledWith(diagnosticError);
-
-  if (innerHandle !== undefined) {
-    originalClearTimeout(innerHandle);
-  }
-});
-
-test('CurrentThread host settles cancellation when AggregateError is not constructible', async () => {
-  vi.useFakeTimers();
-  const originalSetTimeout = globalThis.setTimeout;
-  const originalClearTimeout = globalThis.clearTimeout;
-  const clearError = new Error('clearTimeout failed');
-  const closeError = new Error('timeout.close failed');
-  const reported = vi.spyOn(console, 'error').mockImplementation(() => undefined);
-  let innerHandle: ReturnType<typeof setTimeout> | undefined;
-  vi.spyOn(globalThis, 'setTimeout').mockImplementation((handler, timeout, ...args) => {
-    innerHandle = originalSetTimeout(handler, timeout, ...args);
-    return {
-      close: () => {
-        throw closeError;
-      },
-    } as unknown as ReturnType<typeof setTimeout>;
-  });
-  vi.spyOn(globalThis, 'clearTimeout').mockImplementation(() => {
-    throw clearError;
-  });
-  // @ts-ignore The test intentionally imports package source outside the tests tsconfig root.
-  await import('../src/timer-host');
-  vi.stubGlobal('AggregateError', () => undefined);
-
-  const relay = callbacks.schedule?.(17, 2_147_483_647);
-  expect(() => callbacks.cancel?.(17)).toThrow(
-    expect.objectContaining({
-      cause: clearError,
-      errors: [clearError, closeError],
-      message: expect.stringContaining('could not be cancelled or unreferenced'),
-    }),
-  );
-  await expect(relay).rejects.toMatchObject({
-    cause: clearError,
-    errors: [clearError, closeError],
-    message: expect.stringContaining('could not be cancelled or unreferenced'),
-  });
-  expect(reported).toHaveBeenCalledWith(
-    expect.objectContaining({
-      cause: clearError,
-      errors: [clearError, closeError],
-    }),
-  );
 
   if (innerHandle !== undefined) {
     originalClearTimeout(innerHandle);

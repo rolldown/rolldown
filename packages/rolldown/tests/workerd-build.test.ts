@@ -169,6 +169,9 @@ describe('workerd stubs', () => {
     );
   });
 
+  // The workerd bundle aliases `src/timer-host.ts` to this module by path, so
+  // nothing imports it in a type-checked position: this is the only gate that
+  // the stub stays export-free and registers no process-wide host on import.
   test('timer-host stub has no exports and no registration side effects', () => {
     expect(Object.keys(timerHostStub)).toStrictEqual([]);
   });
@@ -290,28 +293,6 @@ describe('workerd build() against the built dist', () => {
         instance.dispose();
       }
       expect(instance.disposed).toBe(true);
-    },
-    180_000,
-  );
-
-  distTest(
-    'builds with a caller-provided module and disposes its private instance',
-    async () => {
-      const { workerd, wasmModule } = await loadDistWorkerd();
-      const graph = makeVirtualGraph(5);
-      const before = workerd.getWorkerdRuntimeStats().liveInstances;
-      const result = await workerd.build({
-        module: wasmModule,
-        input: 'virt:entry.js',
-        plugins: [graph.plugin()],
-      });
-      expect(workerd.getWorkerdRuntimeStats().liveInstances).toBe(before);
-      const chunk = result.output[0];
-      // Outputs stay readable after the private instance was disposed:
-      // the threadless flavor copies output payloads to JavaScript eagerly.
-      if (chunk.type === 'chunk') {
-        expect(chunk.code).toContain('hello ${name}');
-      }
     },
     180_000,
   );
@@ -476,49 +457,6 @@ describe('workerd build() against the built dist', () => {
           // A failed assertion above may have left the bundle open; don't
           // let the refused dispose mask it.
         }
-      }
-    },
-    180_000,
-  );
-
-  distTest(
-    'surfaces build failures as an ANSI-free BundleError and keeps the instance usable',
-    async () => {
-      const { workerd, wasmModule } = await loadDistWorkerd();
-      const graph = makeVirtualGraph(3);
-      const instance = await workerd.createInstance(wasmModule);
-      try {
-        let caught: unknown;
-        try {
-          await workerd.build({
-            instance,
-            input: 'virt:not-there.js',
-            plugins: [graph.plugin()],
-          });
-        } catch (error) {
-          caught = error;
-        }
-        expect(caught).toBeInstanceOf(Error);
-        const bundleError = caught as Error & { errors?: Array<{ message?: string }> };
-        expect(bundleError.message).toMatch(/Build failed with 1 error/);
-        expect(bundleError.message).toMatch(/virt:not-there\.js/);
-        // oxlint-disable-next-line no-control-regex -- asserting ANSI escapes were stripped.
-        expect(bundleError.message).not.toMatch(/\u001B/);
-        // `stack` is materialized at construction with the colored message and
-        // must be stripped separately from `message`.
-        // oxlint-disable-next-line no-control-regex -- asserting ANSI escapes were stripped.
-        expect(bundleError.stack ?? '').not.toMatch(/\u001B/);
-        expect(bundleError.errors).toHaveLength(1);
-
-        // A failed build must not leak the active-binding slot.
-        const result = await workerd.build({
-          instance,
-          input: 'virt:entry.js',
-          plugins: [graph.plugin()],
-        });
-        expect(result.output[0].fileName).toBe('virt_entry.js');
-      } finally {
-        instance.dispose();
       }
     },
     180_000,

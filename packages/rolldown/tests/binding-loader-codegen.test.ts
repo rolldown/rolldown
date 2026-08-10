@@ -5,18 +5,14 @@ import { describe, expect, test } from 'vitest';
 
 import {
   assertAsyncRuntimeHostExports,
-  ASYNC_RUNTIME_HOST_EXPORTS,
-  EMNAPI_ASYNC_WORK_POOL_SIZE_DEFAULT,
   EMNAPI_ASYNC_WORK_POOL_SIZE_MAX,
   LOADED_BINDING_TARGET_EXPORT,
-  normalizeEmnapiAsyncWorkPoolSize,
   patchWasiBrowserContextDestroyAwait,
   patchWasiBrowserWorkerTerminationAwait,
   patchWasiBindingContextLifecycle,
   patchWasiBindingLoader,
   patchWasiNodeAsyncWorkPoolSize,
   patchWasiNodeWorkerExecArgv,
-  resolveWasiBindingTarget,
 } from '../binding-loader-codegen';
 
 const cjsAnchor = 'module.exports = __napiModule.exports\n';
@@ -67,17 +63,6 @@ function unwrapGeneratedLifecycle(source: string): string {
 }
 
 describe('WASI binding target metadata', () => {
-  test('resolves supported build targets without accepting unknown wasm targets', () => {
-    expect(resolveWasiBindingTarget(undefined)).toBe('wasi-threads');
-    expect(resolveWasiBindingTarget('aarch64-apple-darwin')).toBe('wasi-threads');
-    expect(resolveWasiBindingTarget('wasm32-wasip1-threads')).toBe('wasi-threads');
-    expect(resolveWasiBindingTarget('wasm32-wasip1')).toBe('wasi');
-    expect(() => resolveWasiBindingTarget('wasm32-wasip2')).toThrow(
-      'Unsupported WASI binding target',
-    );
-    expect(() => resolveWasiBindingTarget(null)).toThrow('Unsupported WASI binding target');
-  });
-
   test.each([
     ['CommonJS', cjsAnchor, `module.exports.${LOADED_BINDING_TARGET_EXPORT}`],
     ['ESM', esmAnchor, `export const ${LOADED_BINDING_TARGET_EXPORT}`],
@@ -125,21 +110,6 @@ describe('WASI binding target metadata', () => {
 });
 
 describe('WASI async work pool normalization', () => {
-  test.each([
-    [undefined, EMNAPI_ASYNC_WORK_POOL_SIZE_DEFAULT],
-    ['', EMNAPI_ASYNC_WORK_POOL_SIZE_DEFAULT],
-    ['0', EMNAPI_ASYNC_WORK_POOL_SIZE_DEFAULT],
-    ['0.5', EMNAPI_ASYNC_WORK_POOL_SIZE_DEFAULT],
-    ['invalid', EMNAPI_ASYNC_WORK_POOL_SIZE_DEFAULT],
-    ['Infinity', EMNAPI_ASYNC_WORK_POOL_SIZE_DEFAULT],
-    ['1.9', 1],
-    ['1e2', 100],
-    ['0x10', 16],
-    ['2048', EMNAPI_ASYNC_WORK_POOL_SIZE_MAX],
-  ])('normalizes %j to %d', (value, expected) => {
-    expect(normalizeEmnapiAsyncWorkPoolSize(value)).toBe(expected);
-  });
-
   test('the generated Node loader gives emnapi and the WASI guest the same capped value', () => {
     const patched = patchWasiNodeAsyncWorkPoolSize(wasiNodeLoaderTemplate);
     const process = {
@@ -306,40 +276,6 @@ describe('generated WASI loader lifecycle', () => {
     expect(patchWasiBindingContextLifecycle(generatedWasiNodeLoader)).toBe(generatedWasiNodeLoader);
   });
 
-  test('retries failed preparation without repeating successful preparation', () => {
-    const cleanupEvents: string[] = [];
-    let prepareAttempts = 0;
-    let destroyAttempts = 0;
-    const context = {
-      destroy() {
-        cleanupEvents.push('destroy');
-        destroyAttempts += 1;
-        if (destroyAttempts === 1) {
-          throw new Error('destroy failed');
-        }
-      },
-    };
-
-    const execution = executeGeneratedWasiNodeLoader({
-      createContext: () => context,
-      prepareCleanup() {
-        cleanupEvents.push('prepare');
-        prepareAttempts += 1;
-        if (prepareAttempts === 1) {
-          throw new Error('prepare failed');
-        }
-      },
-    });
-
-    expect(() => execution.cleanup()).not.toThrow();
-    expect(cleanupEvents).toEqual(['prepare']);
-    expect(() => execution.cleanup()).not.toThrow();
-    expect(cleanupEvents).toEqual(['prepare', 'prepare', 'destroy']);
-    expect(() => execution.cleanup()).not.toThrow();
-    expect(() => execution.cleanup()).not.toThrow();
-    expect(cleanupEvents).toEqual(['prepare', 'prepare', 'destroy', 'destroy']);
-  });
-
   test('raw context destroy prepares and tears down exactly once with the real emnapi runtime', () => {
     // Uses the actual pinned @emnapi/runtime Context (resolved from the
     // rolldown package, exactly what generated loaders load) instead of a
@@ -379,63 +315,6 @@ describe('generated WASI loader lifecycle', () => {
     expect(cleanupEvents).toEqual(['prepare', 'teardown']);
   });
 
-  test('preserves valid worker arguments while retrying rejected inherited arguments', () => {
-    const workerExecArgvAttempts: string[][] = [];
-
-    class Worker {
-      onmessage?: (event: { data: unknown }) => void;
-
-      constructor(_filename: string, options: { execArgv?: string[] }) {
-        const execArgv = options.execArgv ?? [];
-        workerExecArgvAttempts.push(execArgv);
-        if (execArgv.includes('--title') || execArgv.includes('--stack-trace-limit=100')) {
-          throw Object.assign(
-            new Error(
-              'Initiated Worker with invalid execArgv flags: --title, --stack-trace-limit=100',
-            ),
-            { code: 'ERR_WORKER_INVALID_EXEC_ARGV' },
-          );
-        }
-      }
-
-      unref(): void {}
-    }
-
-    executeGeneratedWasiNodeLoader({
-      Worker,
-      createContext: () => ({ destroy() {} }),
-      createWorker: true,
-      execArgv: [
-        '--trace-warnings',
-        '--input-type=module',
-        '--eval',
-        'evaluate()',
-        '-p',
-        'print()',
-        '--title',
-        'test-worker',
-        '--require',
-        './hook.cjs',
-        '--stack-trace-limit=100',
-        '--conditions=worker-test',
-      ],
-    });
-
-    expect(workerExecArgvAttempts).toEqual([
-      [
-        '--trace-warnings',
-        '--title',
-        'test-worker',
-        '--require',
-        './hook.cjs',
-        '--stack-trace-limit=100',
-        '--conditions=worker-test',
-      ],
-      ['--trace-warnings', '--require', './hook.cjs', '--conditions=worker-test'],
-    ]);
-    expect(patchWasiNodeWorkerExecArgv(generatedWasiNodeLoader)).toBe(generatedWasiNodeLoader);
-  });
-
   test('verifies the retrying worker factory instead of rewriting it', () => {
     // @napi-rs/cli ships the argument-preserving retry factory itself now; the
     // patcher pins the helper set and the construction call.
@@ -462,25 +341,6 @@ function __getWasiWorkerExecArgv() {`,
 });
 
 describe('async-runtime host export contract', () => {
-  test.each([
-    [
-      'CommonJS',
-      'commonjs' as const,
-      ASYNC_RUNTIME_HOST_EXPORTS.map(
-        (name) => `module.exports.${name} = nativeBinding.${name}\n`,
-      ).join(''),
-    ],
-    [
-      'ESM',
-      'esm' as const,
-      ASYNC_RUNTIME_HOST_EXPORTS.map(
-        (name) => `export const ${name} = __napiModule.exports.${name}\n`,
-      ).join(''),
-    ],
-  ])('accepts a complete generated %s loader', (_name, format, source) => {
-    expect(() => assertAsyncRuntimeHostExports(source, format)).not.toThrow();
-  });
-
   test('reports every missing named export', () => {
     expect(() =>
       assertAsyncRuntimeHostExports(

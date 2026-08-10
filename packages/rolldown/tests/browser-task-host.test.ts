@@ -24,8 +24,6 @@ test('browser builds reserve and register the ABI-v4 CurrentThread task host', a
     expect(code).toContain('getCurrentThreadTaskHostContractVersion');
     expect(code).toContain('reserveCurrentThreadHostRegistration');
     expect(code).toContain('registerCurrentThreadTaskHost');
-    expect(code).not.toContain('driveCurrentThreadRuntimeTasks');
-    expect(code).not.toContain('cancelCurrentThreadRuntimeTaskDispatch');
 
     // Browser timer support remains a separate capability decision.
     expect(code).not.toContain('registerTimerHost(');

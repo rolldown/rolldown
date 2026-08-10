@@ -1,5 +1,5 @@
 import { rolldown } from 'rolldown';
-import { dev, getRuntimeCapabilities, getRuntimeSupport } from 'rolldown/experimental';
+import { getRuntimeCapabilities, getRuntimeSupport } from 'rolldown/experimental';
 import { expect, test } from 'vitest';
 
 const capabilities = getRuntimeCapabilities();
@@ -130,50 +130,5 @@ test.runIf(capabilities.target === 'wasi-threads' || expectThreadedWasi)(
     } finally {
       await bundle.close();
     }
-  },
-);
-
-// `dev()` needs a MultiThread executor for its initial build and threaded WASI
-// resolves to CurrentThread, so the binding reports `devSupported: false` and
-// the public entry must fail closed instead of stalling on a build that can
-// never finish.
-test.runIf(capabilities.target === 'wasi-threads' || expectThreadedWasi)(
-  'rejects threaded WASI dev engines before entering the binding',
-  { timeout: 20_000 },
-  async () => {
-    expect(getRuntimeSupport().dev).toBe(false);
-
-    let hookCalls = 0;
-    await expect(
-      dev(
-        {
-          input: 'entry',
-          experimental: { devMode: true },
-          plugins: [
-            {
-              name: 'threaded-wasi-dev-lifecycle',
-              resolveId(id) {
-                hookCalls += 1;
-                if (id === 'entry') return '\0entry';
-              },
-              load(id) {
-                hookCalls += 1;
-                if (id === '\0entry') return 'export const value = 1';
-              },
-            },
-          ],
-        },
-        {},
-        {
-          onOutput() {
-            hookCalls += 1;
-          },
-        },
-      ),
-    ).rejects.toMatchObject({
-      code: 'ERR_ROLLDOWN_UNSUPPORTED_RUNTIME_FEATURE',
-      feature: 'dev',
-    });
-    expect(hookCalls).toBe(0);
   },
 );

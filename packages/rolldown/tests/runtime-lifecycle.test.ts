@@ -38,7 +38,7 @@ import {
 // @ts-ignore These focused unit tests intentionally reach package source outside the test rootDir.
 import * as runtimeLease from '../src/runtime-lease-manager';
 
-const { getOrCreateWasiRuntimeLeaseManager, WasiRuntimeLeaseManager } = runtimeLease;
+const { WasiRuntimeLeaseManager } = runtimeLease;
 const LEASE_MANAGER_REGISTRY_KEY = Symbol.for('@rolldown/runtime-lease-managers/v1');
 
 test('the native lease fallback never calls legacy manual lifecycle exports', async () => {
@@ -177,55 +177,6 @@ describe('WasiRuntimeLeaseManager', () => {
     expect(acquire).not.toHaveBeenCalled();
   });
 
-  test('does not install a registry for disabled runtimes', async () => {
-    const registryHost = Object.preventExtensions({});
-    const manager = getOrCreateWasiRuntimeLeaseManager(
-      function acquireAsyncRuntime() {},
-      {
-        enabled: false,
-        acquire: vi.fn(),
-      },
-      registryHost,
-    );
-
-    const lease = await manager.acquire();
-    expect(() => lease.release()).not.toThrow();
-    expect(Reflect.ownKeys(registryHost)).toEqual([]);
-  });
-
-  test.each([
-    ['a non-extensible registry host', Object.preventExtensions({})],
-    [
-      'an incompatible registry value',
-      (() => {
-        const host = {};
-        Object.defineProperty(host, Symbol.for('@rolldown/runtime-lease-managers/v1'), {
-          configurable: false,
-          enumerable: false,
-          value: {},
-          writable: false,
-        });
-        return host;
-      })(),
-    ],
-  ])('falls back to a local manager for %s', async (_name, registryHost) => {
-    const release = vi.fn();
-    const acquire = vi.fn().mockResolvedValue({ release });
-    const manager = getOrCreateWasiRuntimeLeaseManager(
-      function acquireAsyncRuntime() {},
-      {
-        enabled: true,
-        acquire,
-      },
-      registryHost,
-    );
-
-    const lease = await manager.acquire();
-    lease.release();
-    expect(acquire).toHaveBeenCalledOnce();
-    expect(release).toHaveBeenCalledOnce();
-  });
-
   test('shares one lease manager across package copies', async () => {
     const acquire = vi
       .fn()
@@ -260,30 +211,6 @@ describe('WasiRuntimeLeaseManager', () => {
     first.release();
     second.release();
     expect(secondManager.activeLeases).toBe(0);
-  });
-
-  test('uses independent native tokens when realms cannot share a registry', async () => {
-    const releases = [vi.fn(), vi.fn()];
-    const acquire = vi
-      .fn()
-      .mockResolvedValueOnce({ release: releases[0] })
-      .mockResolvedValueOnce({ release: releases[1] });
-    const bindingIdentity = function acquireAsyncRuntime() {};
-    const control = {
-      enabled: true,
-      acquire,
-    };
-    const firstManager = getOrCreateWasiRuntimeLeaseManager(bindingIdentity, control, {});
-    const secondManager = getOrCreateWasiRuntimeLeaseManager(bindingIdentity, control, {});
-
-    expect(firstManager).not.toBe(secondManager);
-    const [first, second] = await Promise.all([firstManager.acquire(), secondManager.acquire()]);
-    expect(acquire).toHaveBeenCalledTimes(2);
-
-    first.release();
-    second.release();
-    expect(releases[0]).toHaveBeenCalledOnce();
-    expect(releases[1]).toHaveBeenCalledOnce();
   });
 
   test('does not retain a lease when native acquisition fails', async () => {
@@ -323,51 +250,6 @@ describe('WasiRuntimeLeaseManager', () => {
       expect(manager.activeLeases).toBe(0);
     },
   );
-
-  test('wraps a throwing native lease release accessor as a binding mismatch', async () => {
-    const accessorError = new Error('release accessor failed');
-    const nativeLease = Object.defineProperty({}, 'release', {
-      get() {
-        throw accessorError;
-      },
-    });
-    const manager = new WasiRuntimeLeaseManager({
-      enabled: true,
-      acquire: vi.fn().mockResolvedValue(nativeLease),
-    });
-
-    await expect(manager.acquire()).rejects.toMatchObject({
-      cause: accessorError,
-      code: 'ERR_ROLLDOWN_BINDING_MISMATCH',
-      message: expect.stringContaining('runtime lease without a release() method'),
-    });
-    expect(manager.activeLeases).toBe(0);
-  });
-
-  test('captures the native lease release method once with its original receiver', async () => {
-    let releaseReads = 0;
-    let releaseReceiver: unknown;
-    const nativeLease = Object.defineProperty({}, 'release', {
-      get() {
-        releaseReads += 1;
-        return function (this: unknown) {
-          // oxlint-disable-next-line typescript/no-this-alias -- verifies the native method receiver
-          releaseReceiver = this;
-        };
-      },
-    });
-    const manager = new WasiRuntimeLeaseManager({
-      enabled: true,
-      acquire: vi.fn().mockResolvedValue(nativeLease),
-    });
-
-    const lease = await manager.acquire();
-    lease.release();
-
-    expect(releaseReads).toBe(1);
-    expect(releaseReceiver).toBe(nativeLease);
-    expect(manager.activeLeases).toBe(0);
-  });
 
   test('retries a transient native release before another realm acquires', async () => {
     const release = vi

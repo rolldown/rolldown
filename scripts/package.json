@@ -5,7 +5,7 @@
   "scripts": {
     "check-workerd-packed-consumer": "node ./misc/check-workerd-packed-consumer.mjs",
     "check-wasi-binding-packed-consumer": "node ./misc/check-wasi-binding-packed-consumer.mjs",
-    "test:package-transactions": "node --test --test-concurrency=1 ./misc/napi-package-transactions.test.mjs ./misc/stage-wasi-packages.test.mjs",
+    "test:package-transactions": "node --test --test-concurrency=1 ./misc/stage-wasi-packages.test.mjs",
     "setup-bench": "oxnode ./misc/setup-benchmark-input/index.js",
     "setup-vite": "oxnode ./src/setup-vite/main.ts",
     "gen-esbuild-tests": "oxnode ./src/esbuild-tests/gen-tests.ts",

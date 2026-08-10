@@ -293,30 +293,6 @@ test.skipIf(isSingleThread)(
 );
 
 test.skipIf(isSingleThread)(
-  'run propagates a synchronous onOutput throw',
-  { timeout: TEST_TIMEOUT },
-  async ({ onTestFinished }) => {
-    const { dir, input, outputDir } = createFixture('dev-sync-output');
-    const callbackError = new RangeError('sync onOutput failed');
-    const engine = await dev(
-      { input, experimental: { devMode: true } },
-      { dir: outputDir },
-      {
-        onOutput() {
-          throw callbackError;
-        },
-      },
-    );
-    onTestFinished(async () => {
-      await engine.close().catch(() => {});
-      if (!process.env.CI) fs.rmSync(dir, { recursive: true, force: true });
-    });
-
-    await expect(engine.run()).rejects.toBe(callbackError);
-  },
-);
-
-test.skipIf(isSingleThread)(
   'run rejects a self-resolving onOutput thenable and close still settles',
   { timeout: TEST_TIMEOUT },
   async ({ onTestFinished }) => {

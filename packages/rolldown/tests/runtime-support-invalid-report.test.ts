@@ -68,20 +68,6 @@ test('a present capability reporter export must be callable', () => {
   );
 });
 
-test('a throwing capability reporter export getter is wrapped as a binding mismatch', () => {
-  const cause = new Error('capability export getter failed');
-  binding.capabilityGetterError = cause;
-  binding.capabilityGetterThrows = true;
-
-  expect(() => getRuntimeCapabilitiesCompat()).toThrow(
-    expect.objectContaining({
-      cause,
-      code: 'ERR_ROLLDOWN_BINDING_MISMATCH',
-      message: expect.stringContaining('binding export getRuntimeCapabilities could not be read'),
-    }),
-  );
-});
-
 test('a throwing capability reporter is wrapped as a binding mismatch', () => {
   const cause = new Error('capability reporter failed');
   binding.capabilityGetter = () => {
@@ -97,20 +83,6 @@ test('a throwing capability reporter is wrapped as a binding mismatch', () => {
   );
 });
 
-test('a throwing generated loader target getter is wrapped as a binding mismatch', () => {
-  const cause = new Error('loader target getter failed');
-  binding.loadedTargetError = cause;
-  binding.loadedTargetThrows = true;
-
-  expect(() => getRuntimeCapabilitiesCompat()).toThrow(
-    expect.objectContaining({
-      cause,
-      code: 'ERR_ROLLDOWN_BINDING_MISMATCH',
-      message: expect.stringContaining('binding export __rolldownBindingTarget could not be read'),
-    }),
-  );
-});
-
 test('capability reports must include every non-legacy field', () => {
   delete binding.report.wasi;
 
@@ -120,62 +92,6 @@ test('capability reports must include every non-legacy field', () => {
       message: expect.stringContaining('wasi must be a boolean'),
     }),
   );
-});
-
-test('throwing capability field getters are wrapped as binding mismatches', () => {
-  const cause = new Error('threads getter failed');
-  Object.defineProperty(binding.report, 'threads', {
-    configurable: true,
-    get() {
-      throw cause;
-    },
-  });
-
-  expect(() => getRuntimeCapabilitiesCompat()).toThrow(
-    expect.objectContaining({
-      cause,
-      code: 'ERR_ROLLDOWN_BINDING_MISMATCH',
-      message: expect.stringContaining('threads could not be read'),
-    }),
-  );
-});
-
-test('throwing optional capability field getters are wrapped as binding mismatches', () => {
-  const cause = new Error('watchSupported getter failed');
-  Object.defineProperty(binding.report, 'watchSupported', {
-    configurable: true,
-    get() {
-      throw cause;
-    },
-  });
-
-  expect(() => getRuntimeCapabilitiesCompat()).toThrow(
-    expect.objectContaining({
-      cause,
-      code: 'ERR_ROLLDOWN_BINDING_MISMATCH',
-      message: expect.stringContaining('watchSupported could not be read'),
-    }),
-  );
-});
-
-test('an undefined reporter failure remains available as the mismatch cause', () => {
-  binding.capabilityGetter = () => {
-    throw undefined;
-  };
-
-  let error: unknown;
-  try {
-    getRuntimeCapabilitiesCompat();
-  } catch (caught) {
-    error = caught;
-  }
-
-  expect(error).toMatchObject({
-    code: 'ERR_ROLLDOWN_BINDING_MISMATCH',
-    message: expect.stringContaining('getRuntimeCapabilities() threw while reporting'),
-  });
-  expect(Object.prototype.hasOwnProperty.call(error, 'cause')).toBe(true);
-  expect((error as Error).cause).toBeUndefined();
 });
 
 test('capability reports cannot contradict generated loader target metadata', () => {

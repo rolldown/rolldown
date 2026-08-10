@@ -4,39 +4,17 @@ import { fileURLToPath } from 'node:url';
 
 import { expect, test } from 'vitest';
 
+// Session-directory encoding, canonical/symlinked output roots, per-file
+// StringRefs and per-owner failure isolation are unit-tested where that logic
+// lives, in crates/rolldown_devtools/src/writer.rs. Only the process-global
+// tracing-subscriber interactions below need a spawned Node process.
 const testsDir = fileURLToPath(new URL('.', import.meta.url));
-const childPath = nodePath.join(testsDir, 'fixtures', 'devtools-output-isolation', 'child.mjs');
 const rdLogChildPath = nodePath.join(testsDir, 'fixtures', 'devtools-rd-log', 'child.mjs');
 const devtoolsFirstChildPath = nodePath.join(
   testsDir,
   'fixtures',
   'devtools-rd-log',
   'devtools-first.mjs',
-);
-
-test(
-  'devtools isolates owners and output roots while containing unsafe IDs',
-  { timeout: 65_000 },
-  () => {
-    const child = spawnSync(process.execPath, [childPath], {
-      cwd: testsDir,
-      encoding: 'utf8',
-      env: { ...process.env },
-      timeout: 60_000,
-    });
-
-    expect(child.error).toBeUndefined();
-    expect(child.signal).toBeNull();
-    expect(child.status, child.stderr || child.stdout).toBe(0);
-    expect(JSON.parse(child.stdout.trim().split('\n').at(-1)!)).toEqual({
-      canonicalAliases: process.platform !== 'win32',
-      encodedIdBoundaries: true,
-      escapedSessionContained: true,
-      independentSameKeyOwners: true,
-      isolatedOutputRoots: true,
-      selfContainedStringRefs: true,
-    });
-  },
 );
 
 test(

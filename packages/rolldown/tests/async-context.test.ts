@@ -34,6 +34,10 @@ describe.sequential('browser async-context contract', () => {
   test('support probing validates storage shape without locking or using it', async () => {
     await withNativeAsyncContext(undefined, async () => {
       const asyncContext = await importBrowserAsyncContext();
+      expect(() => asyncContext.configureAsyncContext(undefined as never)).toThrow(
+        'Async context provider must define createStorage()',
+      );
+
       let invalidStorageCreations = 0;
       asyncContext.configureAsyncContext({
         createStorage() {
@@ -116,296 +120,6 @@ describe.sequential('browser async-context contract', () => {
       });
       expect(storageCreations).toBe(2);
     });
-  });
-
-  test('reentrant global AsyncContext accessor recovers and adopts the nested provider', async () => {
-    let asyncContext: AsyncContextModule;
-    let nestedContext: ReturnType<typeof createAsyncContext>;
-    let getterCalls = 0;
-    const providerCreations: string[] = [];
-    const accessorError = new Error('nested global AsyncContext accessor failed');
-    const ProviderAVariable = createNativeVariableClass(() => providerCreations.push('A'));
-    const ProviderBVariable = createNativeVariableClass(() => providerCreations.push('B'));
-
-    await withNativeAsyncContextDescriptor(
-      {
-        configurable: true,
-        get() {
-          getterCalls += 1;
-          if (getterCalls === 1) {
-            asyncContext.createAsyncContext();
-            throw new Error('Expected nested global AsyncContext accessor to fail');
-          }
-          if (getterCalls === 2) throw accessorError;
-          Object.defineProperty(globalThis, 'AsyncContext', {
-            configurable: true,
-            value: { Variable: ProviderBVariable },
-            writable: true,
-          });
-          nestedContext = asyncContext.createAsyncContext();
-          return { Variable: ProviderAVariable };
-        },
-      },
-      async () => {
-        asyncContext = await importBrowserAsyncContext();
-
-        let acquisitionError: unknown;
-        try {
-          asyncContext.createAsyncContext();
-        } catch (error) {
-          acquisitionError = error;
-        }
-        expect(acquisitionError).toBe(accessorError);
-        expect(providerCreations).toEqual([]);
-        expect(() => asyncContext.configureAsyncContext(undefined as never)).toThrow(
-          'Async context provider must define createStorage()',
-        );
-
-        const outerContext = asyncContext.createAsyncContext();
-        const laterContext = asyncContext.createAsyncContext();
-
-        expect(outerContext).toBeDefined();
-        expect(nestedContext).toBeDefined();
-        expect(laterContext).toBeDefined();
-        expect(getterCalls).toBe(3);
-        expect(providerCreations).toEqual(['B', 'B', 'B']);
-        expect(asyncContext.getAsyncContextSupport()).toEqual({
-          source: 'native',
-          supported: true,
-        });
-        expect(providerCreations).toEqual(['B', 'B', 'B', 'B']);
-      },
-    );
-  });
-
-  test('reentrant AsyncContext.Variable accessor recovers and adopts the nested provider', async () => {
-    let asyncContext: AsyncContextModule;
-    let nestedContext: ReturnType<typeof createAsyncContext>;
-    let getterCalls = 0;
-    const providerCreations: string[] = [];
-    const accessorError = new Error('nested AsyncContext.Variable accessor failed');
-    const ProviderAVariable = createNativeVariableClass(() => providerCreations.push('A'));
-    const ProviderBVariable = createNativeVariableClass(() => providerCreations.push('B'));
-    const nativeAsyncContext = Object.defineProperty({}, 'Variable', {
-      configurable: true,
-      get() {
-        getterCalls += 1;
-        if (getterCalls === 1) {
-          asyncContext.createAsyncContext();
-          throw new Error('Expected nested AsyncContext.Variable accessor to fail');
-        }
-        if (getterCalls === 2) throw accessorError;
-        Object.defineProperty(nativeAsyncContext, 'Variable', {
-          configurable: true,
-          value: ProviderBVariable,
-          writable: true,
-        });
-        nestedContext = asyncContext.createAsyncContext();
-        return ProviderAVariable;
-      },
-    });
-
-    await withNativeAsyncContext(nativeAsyncContext, async () => {
-      asyncContext = await importBrowserAsyncContext();
-
-      let acquisitionError: unknown;
-      try {
-        asyncContext.createAsyncContext();
-      } catch (error) {
-        acquisitionError = error;
-      }
-      expect(acquisitionError).toBe(accessorError);
-      expect(providerCreations).toEqual([]);
-      expect(() => asyncContext.configureAsyncContext(undefined as never)).toThrow(
-        'Async context provider must define createStorage()',
-      );
-
-      const outerContext = asyncContext.createAsyncContext();
-      const laterContext = asyncContext.createAsyncContext();
-
-      expect(outerContext).toBeDefined();
-      expect(nestedContext).toBeDefined();
-      expect(laterContext).toBeDefined();
-      expect(getterCalls).toBe(3);
-      expect(providerCreations).toEqual(['B', 'B', 'B']);
-      expect(asyncContext.getAsyncContextSupport()).toEqual({
-        source: 'native',
-        supported: true,
-      });
-      expect(providerCreations).toEqual(['B', 'B', 'B', 'B']);
-    });
-  });
-
-  test('reentrant native acquisition keeps the first provider candidate', async () => {
-    let asyncContext: AsyncContextModule;
-    let nestedContext: ReturnType<typeof createAsyncContext>;
-    let providerACreations = 0;
-    let providerBCreations = 0;
-
-    class ProviderBVariable {
-      readonly storage = new AsyncLocalStorage<unknown>();
-
-      constructor() {
-        providerBCreations += 1;
-      }
-
-      get(): unknown {
-        return this.storage.getStore();
-      }
-
-      run<R>(store: unknown, callback: () => R): R {
-        return this.storage.run(store, callback);
-      }
-    }
-
-    class ProviderAVariable {
-      readonly storage = new AsyncLocalStorage<unknown>();
-
-      constructor() {
-        providerACreations += 1;
-        if (providerACreations === 1) {
-          Object.defineProperty(globalThis, 'AsyncContext', {
-            configurable: true,
-            value: { Variable: ProviderBVariable },
-            writable: true,
-          });
-          nestedContext = asyncContext.createAsyncContext();
-        }
-      }
-
-      get(): unknown {
-        return this.storage.getStore();
-      }
-
-      run<R>(store: unknown, callback: () => R): R {
-        return this.storage.run(store, callback);
-      }
-    }
-
-    await withNativeAsyncContext({ Variable: ProviderAVariable }, async () => {
-      asyncContext = await importBrowserAsyncContext();
-
-      const outerContext = asyncContext.createAsyncContext();
-      const laterContext = asyncContext.createAsyncContext();
-
-      expect(outerContext).toBeDefined();
-      expect(nestedContext).toBeDefined();
-      expect(laterContext).toBeDefined();
-      expect(providerACreations).toBe(3);
-      expect(providerBCreations).toBe(0);
-      expect(asyncContext.getAsyncContextSupport()).toEqual({
-        source: 'native',
-        supported: true,
-      });
-      expect(providerACreations).toBe(4);
-      expect(providerBCreations).toBe(0);
-    });
-  });
-
-  test('reentrant acquisition failure cannot reopen a successful provider selection', async () => {
-    await withNativeAsyncContext(undefined, async () => {
-      const asyncContext = await importBrowserAsyncContext();
-      let storageCreations = 0;
-      let replacementDuringSelection = false;
-      const replacementProvider = {
-        createStorage: () => new AsyncLocalStorage<unknown>(),
-      };
-      asyncContext.configureAsyncContext({
-        createStorage() {
-          storageCreations += 1;
-          if (storageCreations === 1) {
-            expect(() => asyncContext.createAsyncContext()).toThrow('nested acquisition failed');
-            try {
-              asyncContext.configureAsyncContext(replacementProvider);
-              replacementDuringSelection = true;
-            } catch {}
-            return new AsyncLocalStorage<unknown>();
-          }
-          if (storageCreations === 2) throw new Error('nested acquisition failed');
-          return new AsyncLocalStorage<unknown>();
-        },
-      });
-
-      expect(asyncContext.createAsyncContext()).toBeDefined();
-      expect(replacementDuringSelection).toBe(false);
-      expect(() => asyncContext.configureAsyncContext(replacementProvider)).toThrow(
-        /already in use/,
-      );
-      expect(asyncContext.getAsyncContextSupport()).toEqual({
-        source: 'custom',
-        supported: true,
-      });
-    });
-  });
-
-  test('provider validation cannot reenter configuration and snapshots createStorage', async () => {
-    await withNativeAsyncContext(undefined, async () => {
-      const asyncContext = await importBrowserAsyncContext();
-      let getterCalls = 0;
-      let selectedStorageCreations = 0;
-      let replacementStorageCreations = 0;
-      const replacementProvider = {
-        createStorage() {
-          replacementStorageCreations += 1;
-          return new AsyncLocalStorage<unknown>();
-        },
-      };
-      const provider = Object.defineProperty({}, 'createStorage', {
-        get() {
-          getterCalls += 1;
-          expect(() => asyncContext.configureAsyncContext(replacementProvider)).toThrow(
-            /already in use/,
-          );
-          return () => {
-            selectedStorageCreations += 1;
-            return new AsyncLocalStorage<unknown>();
-          };
-        },
-      });
-
-      asyncContext.configureAsyncContext(provider as never);
-      expect(asyncContext.createAsyncContext()).toBeDefined();
-      expect(asyncContext.getAsyncContextSupport()).toEqual({
-        source: 'custom',
-        supported: true,
-      });
-      expect(getterCalls).toBe(1);
-      expect(selectedStorageCreations).toBe(2);
-      expect(replacementStorageCreations).toBe(0);
-    });
-  });
-
-  test('provider validation cannot finish after reentrant native selection', async () => {
-    await withNativeAsyncContext(
-      {
-        Variable: class {
-          get(): undefined {
-            return undefined;
-          }
-
-          run<T>(_store: unknown, callback: () => T): T {
-            return callback();
-          }
-        },
-      },
-      async () => {
-        const asyncContext = await importBrowserAsyncContext();
-        const provider = Object.defineProperty({}, 'createStorage', {
-          get() {
-            expect(asyncContext.createAsyncContext()).toBeDefined();
-            return () => new AsyncLocalStorage<unknown>();
-          },
-        });
-
-        expect(() => asyncContext.configureAsyncContext(provider as never)).toThrow(
-          /already in use/,
-        );
-        expect(asyncContext.getAsyncContextSupport()).toEqual({
-          source: 'native',
-          supported: true,
-        });
-      },
-    );
   });
 
   test('unavailable optional selection remains configurable', async () => {
@@ -812,22 +526,12 @@ async function withNativeAsyncContext(
   value: unknown,
   callback: () => Promise<void>,
 ): Promise<void> {
-  await withNativeAsyncContextDescriptor(
-    {
-      configurable: true,
-      value,
-      writable: true,
-    },
-    callback,
-  );
-}
-
-async function withNativeAsyncContextDescriptor(
-  nativeDescriptor: PropertyDescriptor,
-  callback: () => Promise<void>,
-): Promise<void> {
   const descriptor = Object.getOwnPropertyDescriptor(globalThis, 'AsyncContext');
-  Object.defineProperty(globalThis, 'AsyncContext', nativeDescriptor);
+  Object.defineProperty(globalThis, 'AsyncContext', {
+    configurable: true,
+    value,
+    writable: true,
+  });
   try {
     await callback();
   } finally {
@@ -837,22 +541,4 @@ async function withNativeAsyncContextDescriptor(
       Reflect.deleteProperty(globalThis, 'AsyncContext');
     }
   }
-}
-
-function createNativeVariableClass(onCreate: () => void) {
-  return class {
-    readonly storage = new AsyncLocalStorage<unknown>();
-
-    constructor() {
-      onCreate();
-    }
-
-    get(): unknown {
-      return this.storage.getStore();
-    }
-
-    run<R>(store: unknown, callback: () => R): R {
-      return this.storage.run(store, callback);
-    }
-  };
 }

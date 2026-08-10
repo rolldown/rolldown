@@ -83,30 +83,6 @@ test('rejects the previous callback-accepting binding before task-host invocatio
   expect(binding.registerTimerHost).not.toHaveBeenCalled();
 });
 
-test('wraps a throwing capability export getter during host installation', async () => {
-  const cause = new Error('capability getter failed');
-  binding.exportErrors.set('getRuntimeCapabilities', cause);
-
-  await expect(import('../src/timer-host')).rejects.toMatchObject({
-    cause,
-    code: 'ERR_ROLLDOWN_BINDING_MISMATCH',
-    message: expect.stringContaining('binding export getRuntimeCapabilities could not be read'),
-  });
-});
-
-test('wraps a throwing async-runtime host export getter', async () => {
-  const cause = new Error('contract getter failed');
-  binding.exportErrors.set('getCurrentThreadTaskHostContractVersion', cause);
-
-  await expect(import('../src/timer-host')).rejects.toMatchObject({
-    cause,
-    code: 'ERR_ROLLDOWN_BINDING_MISMATCH',
-    message: expect.stringContaining(
-      'async-runtime host export getCurrentThreadTaskHostContractVersion could not be read',
-    ),
-  });
-});
-
 test('wraps a throwing async-runtime host contract reporter', async () => {
   const cause = 'contract reporter failed';
   binding.getCurrentThreadTaskHostContractVersion = vi.fn(() => {

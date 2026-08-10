@@ -1189,6 +1189,111 @@ test('public watcher preserves cross-realm setup error identity', async () => {
   expect(reportedError).toBe(setupError);
 });
 
+test('the first watcher run is deferred to a host turn', async () => {
+  const stopWorkers = vi.fn<() => Promise<void>>().mockResolvedValue(undefined);
+  mocks.createBundlerOptions.mockResolvedValue(createBundlerOption(stopWorkers));
+  mocks.acquireRuntimeLease.mockResolvedValue({ release: vi.fn() });
+
+  const emitter = new WatcherEmitter();
+  await createWatcher(emitter, { output: {} });
+
+  expect(mocks.bindingRun).not.toHaveBeenCalled();
+
+  await nextHostTurn();
+
+  expect(mocks.bindingRun).toHaveBeenCalledOnce();
+  await expect(withTimeout(emitter.close(), 'deferred watcher run close')).resolves.toBeUndefined();
+});
+
+test('close reports a clearTimeout failure that cancels the deferred run', async () => {
+  const cancellationError = new Error('host turn cancellation failed');
+  const stopWorkers = vi.fn<() => Promise<void>>().mockResolvedValue(undefined);
+  const release = vi.fn();
+  mocks.createBundlerOptions.mockResolvedValue(createBundlerOption(stopWorkers));
+  mocks.acquireRuntimeLease.mockResolvedValue({ release });
+
+  const emitter = new WatcherEmitter();
+  await createWatcher(emitter, { output: {} });
+  const originalClearTimeout = globalThis.clearTimeout;
+  globalThis.clearTimeout = () => {
+    throw cancellationError;
+  };
+  let closeError: unknown;
+  try {
+    closeError = await emitter.close().then(
+      () => undefined,
+      (error: unknown) => error,
+    );
+  } finally {
+    globalThis.clearTimeout = originalClearTimeout;
+  }
+  // The uncancelled timer still fires; a closed watcher must not run anyway.
+  await nextHostTurn();
+
+  expect(closeError).toBe(cancellationError);
+  expect(mocks.bindingRun).not.toHaveBeenCalled();
+  expect(mocks.bindingClose).toHaveBeenCalledOnce();
+  expect(stopWorkers).toHaveBeenCalledOnce();
+  expect(release).toHaveBeenCalledOnce();
+});
+
+test('a failing host turn scheduler retries setup cleanup before public close', async () => {
+  const schedulingError = new Error('host turn scheduling failed');
+  const workerCleanupError = new Error('worker cleanup failed');
+  const releaseError = new Error('runtime release failed');
+  const stopWorkers = vi
+    .fn<() => Promise<void>>()
+    .mockRejectedValueOnce(workerCleanupError)
+    .mockRejectedValueOnce(workerCleanupError)
+    .mockResolvedValue(undefined);
+  const release = vi
+    .fn()
+    .mockImplementationOnce(() => {
+      throw releaseError;
+    })
+    .mockImplementationOnce(() => {
+      throw releaseError;
+    });
+  mocks.createBundlerOptions.mockResolvedValue(createBundlerOption(stopWorkers));
+  mocks.acquireRuntimeLease.mockResolvedValue({ release });
+
+  const emitter = new WatcherEmitter();
+  let closeEvents = 0;
+  emitter.on('close', () => {
+    closeEvents += 1;
+  });
+  const originalSetTimeout = globalThis.setTimeout;
+  globalThis.setTimeout = (() => {
+    throw schedulingError;
+  }) as typeof globalThis.setTimeout;
+  let setupError: unknown;
+  try {
+    setupError = await createWatcher(emitter, { output: {} }).then(
+      () => undefined,
+      (error: unknown) => error,
+    );
+  } finally {
+    globalThis.setTimeout = originalSetTimeout;
+  }
+
+  expect(setupError).toBeInstanceOf(AggregateError);
+  expect((setupError as AggregateError).errors[0]).toBe(schedulingError);
+  // `createWatcher` runs `cleanupAfterSetupFailure` twice while it stays retryable.
+  expect(stopWorkers).toHaveBeenCalledTimes(2);
+  expect(release).toHaveBeenCalledTimes(2);
+
+  await withTimeout(emitter.failSetup(setupError), 'scheduler failure setup reporting');
+  await expect(
+    withTimeout(emitter.close(), 'scheduler failure watcher close'),
+  ).resolves.toBeUndefined();
+
+  expect(mocks.bindingRun).not.toHaveBeenCalled();
+  expect(mocks.bindingClose).toHaveBeenCalledOnce();
+  expect(stopWorkers).toHaveBeenCalledTimes(3);
+  expect(release).toHaveBeenCalledTimes(3);
+  expect(closeEvents).toBe(1);
+});
+
 function createBundlerOption(stopWorkers: () => Promise<void>, inputOptions = {}, onLog = vi.fn()) {
   return {
     bundlerOptions: {},
@@ -1197,6 +1302,13 @@ function createBundlerOption(stopWorkers: () => Promise<void>, inputOptions = {}
     stopWorkers,
     releaseOptionBoxes: vi.fn(),
   };
+}
+
+// The watcher defers its first run with a timer, so a microtask is not enough.
+function nextHostTurn(): Promise<void> {
+  return new Promise((resolve) => {
+    setTimeout(resolve, 0);
+  });
 }
 
 function createDeferred<T>() {

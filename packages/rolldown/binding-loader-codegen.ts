@@ -1,7 +1,7 @@
 export const LOADED_BINDING_TARGET_EXPORT = '__rolldownBindingTarget';
-export const EMNAPI_ASYNC_WORK_POOL_SIZE_DEFAULT = 4;
+const EMNAPI_ASYNC_WORK_POOL_SIZE_DEFAULT = 4;
 export const EMNAPI_ASYNC_WORK_POOL_SIZE_MAX = 1024;
-export const ASYNC_RUNTIME_HOST_EXPORTS = [
+const ASYNC_RUNTIME_HOST_EXPORTS = [
   'getCurrentThreadTaskHostContractVersion',
   'isCurrentThreadHostRegistrationActive',
   'registerCurrentThreadTaskHost',
@@ -15,8 +15,6 @@ type LoadedBindingTarget = 'native' | 'wasi' | 'wasi-threads';
 export type WasiBindingTarget = Exclude<LoadedBindingTarget, 'native'>;
 export type BindingLoaderModuleFormat = 'commonjs' | 'esm';
 
-const WASI_TARGET = 'wasm32-wasip1';
-const WASI_THREADS_TARGET = 'wasm32-wasip1-threads';
 const NATIVE_BINDING_ANCHOR = 'let nativeBinding = null\n';
 const WASI_BINDING_ASSIGNMENT = 'nativeBinding = wasiBinding';
 const NATIVE_BINDING_EXPORT_ANCHOR = 'module.exports = nativeBinding\n';
@@ -92,31 +90,6 @@ const WASI_ESM_TARGET_PATTERN = new RegExp(
   `export const ${LOADED_BINDING_TARGET_EXPORT}\\s*=\\s*[^\\r\\n]+`,
   'g',
 );
-
-export function resolveWasiBindingTarget(target: unknown): WasiBindingTarget {
-  if (target === WASI_TARGET) return 'wasi';
-  if (target === WASI_THREADS_TARGET || target === undefined) return 'wasi-threads';
-  if (typeof target === 'string' && !target.startsWith('wasm')) return 'wasi-threads';
-  throw new Error(`Unsupported WASI binding target: ${String(target)}`);
-}
-
-/**
- * Normalize the napi-rs pool environment before emnapi receives it.
- *
- * Upstream accepts any positive Number, then emnapi applies ToInt32 and a 1024
- * cap. Canonicalizing first keeps the actual pool and the value visible to the
- * WASI guest identical, including Number()'s scientific and hex input forms.
- */
-export function normalizeEmnapiAsyncWorkPoolSize(value: unknown): number {
-  const numeric = Number(value);
-  if (!Number.isFinite(numeric) || numeric <= 0) {
-    return EMNAPI_ASYNC_WORK_POOL_SIZE_DEFAULT;
-  }
-  const integer = Math.trunc(numeric);
-  return integer > 0
-    ? Math.min(integer, EMNAPI_ASYNC_WORK_POOL_SIZE_MAX)
-    : EMNAPI_ASYNC_WORK_POOL_SIZE_DEFAULT;
-}
 
 export function patchNativeBindingLoader(source: string): string {
   if (source.includes(`module.exports.${LOADED_BINDING_TARGET_EXPORT} = loadedBindingTarget`)) {

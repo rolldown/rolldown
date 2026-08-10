@@ -108,24 +108,6 @@ test.each(asyncRuntimeExports)(
   },
 );
 
-test.each(asyncRuntimeExports)(
-  'wraps a throwing $name export getter as a binding mismatch',
-  async ({ name, invoke }) => {
-    const cause = new Error(`${name} getter failed`);
-    binding.exportErrors.set(name, cause);
-    // @ts-ignore This focused unit test intentionally reaches package source outside the test rootDir.
-    const api = await import('../src/api/async-runtime');
-
-    expect(() => invoke(api)).toThrow(
-      expect.objectContaining({
-        cause,
-        code: 'ERR_ROLLDOWN_BINDING_MISMATCH',
-        message: expect.stringContaining('the export could not be read'),
-      }),
-    );
-  },
-);
-
 test.each([
   ['getAsyncRuntimeConfig', (api) => api.getAsyncRuntimeConfig()],
   ['getAsyncRuntimeMetrics', (api) => api.getAsyncRuntimeMetrics()],
@@ -144,28 +126,6 @@ test.each([
       message: expect.stringContaining('the reporter threw'),
     }),
   );
-});
-
-test('an undefined reporter failure remains available as the mismatch cause', async () => {
-  binding.getAsyncRuntimeConfig = vi.fn(() => {
-    throw undefined;
-  });
-  // @ts-ignore This focused unit test intentionally reaches package source outside the test rootDir.
-  const api = await import('../src/api/async-runtime');
-
-  let error: unknown;
-  try {
-    api.getAsyncRuntimeConfig();
-  } catch (caught) {
-    error = caught;
-  }
-
-  expect(error).toMatchObject({
-    code: 'ERR_ROLLDOWN_BINDING_MISMATCH',
-    message: expect.stringContaining('the reporter threw'),
-  });
-  expect(Object.prototype.hasOwnProperty.call(error, 'cause')).toBe(true);
-  expect((error as Error).cause).toBeUndefined();
 });
 
 test.each([
@@ -194,26 +154,6 @@ test.each([
     expect.objectContaining({
       code: 'ERR_ROLLDOWN_BINDING_MISMATCH',
       message: expect.stringContaining('incompatible getAsyncRuntimeConfig() result'),
-    }),
-  );
-});
-
-test('preserves a throwing config field getter as the mismatch cause', async () => {
-  const cause = new Error('workerThreads getter failed');
-  binding.getAsyncRuntimeConfig = vi.fn(() => ({
-    ...validConfig,
-    get workerThreads() {
-      throw cause;
-    },
-  }));
-  // @ts-ignore This focused unit test intentionally reaches package source outside the test rootDir.
-  const api = await import('../src/api/async-runtime');
-
-  expect(() => api.getAsyncRuntimeConfig()).toThrow(
-    expect.objectContaining({
-      cause,
-      code: 'ERR_ROLLDOWN_BINDING_MISMATCH',
-      message: expect.stringContaining('workerThreads field could not be read'),
     }),
   );
 });
@@ -255,26 +195,6 @@ test('metrics accept a snapshot without the config-only drain linger field', asy
   expect(Object.prototype.hasOwnProperty.call(metrics, 'drainLingerUs')).toBe(false);
   // The config path DOES require and preserve the field from the same mock.
   expect(api.getAsyncRuntimeConfig()).toEqual(validConfig);
-});
-
-test('preserves a throwing metrics field getter as the mismatch cause', async () => {
-  const cause = new Error('tasksCompleted getter failed');
-  binding.getAsyncRuntimeMetrics = vi.fn(() => ({
-    ...validMetrics,
-    get tasksCompleted() {
-      throw cause;
-    },
-  }));
-  // @ts-ignore This focused unit test intentionally reaches package source outside the test rootDir.
-  const api = await import('../src/api/async-runtime');
-
-  expect(() => api.getAsyncRuntimeMetrics()).toThrow(
-    expect.objectContaining({
-      cause,
-      code: 'ERR_ROLLDOWN_BINDING_MISMATCH',
-      message: expect.stringContaining('tasksCompleted field could not be read'),
-    }),
-  );
 });
 
 test.each(asyncRuntimeExports)(

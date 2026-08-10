@@ -32,7 +32,7 @@ onlyBuiltDependencies:
   - tree-sitter
 
 overrides:
-  # emnapi v2 line: napi-build at ad23bdeb unconditionally exports the emnapi v2
+  # emnapi v2 line: napi-build 2.4.1 unconditionally exports the emnapi v2
   # env-management symbols (emnapi_create_env/emnapi_delete_env) on WASI, which
   # only the 2.0.0-alpha C archives define. The released 2.0.0-alpha.3 ships the
   # per-flavor napi-rs archives the pin links (non-threads

@@ -321,10 +321,16 @@ CurrentThread timer:
 - `crates/rolldown_utils/Cargo.toml` — `napi-async-runtime = { version =
 "0.2.0", default-features = false }` from crates.io (napi-free
   consumption), pulled in by the `async-runtime` feature; the `tokio-runtime`
-  feature pulls `tokio` + `async-scoped` instead. The root `Cargo.toml`
-  `[patch.crates-io]` redirects the single shared `napi` node graph-wide to
-  a napi-rs **main** rev (post-#3420) — one non-prerelease `3.11.0` node
-  covers `rolldown_binding` **and** every `oxc_*_napi`.
+  feature pulls `tokio` + `async-scoped` instead. The root `Cargo.toml` pins
+  the napi stack to **published crates.io releases** — `napi 3.12.1`,
+  `napi-build 2.4.1`, `napi-derive 3.6.3` (resolving `napi-derive-backend
+6.1.2` and `napi-sys 3.3.0`) — and carries **no** `[patch.crates-io]`
+  section: that single registry `napi` node covers `rolldown_binding` **and**
+  every `oxc_*_napi`. Those are the first registry releases cut from the
+  napi-rs main content rolldown's CI matrix verified; the comment above the
+  pins in `Cargo.toml` records the four things older releases do not carry
+  (native borrow tracker, non-`Error` rejection identity, wasm teardown
+  barrier/drain + disposal latch, addon-image pinning).
 - `crates/rolldown_binding/build.rs` — emits `cargo::rustc-cfg=rolldown_wasi_threads`
   only for `wasm32-wasip1-threads` (the two WASI targets are otherwise
   cfg-indistinguishable); consumed by `compiled_target()`.
@@ -676,9 +682,10 @@ The napi-rs CLI changes from napi-rs#3353 link `libemnapi-basic-napi-rs.a`
 unshared `WebAssembly.Memory`, set `asyncWorkPoolSize: 0`, and omit Worker
 imports and factories. `packages/rolldown` keeps the threaded WASI scripts and
 adds `build-binding:wasi-single`; browser-package scripts select the
-single-thread variant. Until those napi-rs CLI changes are published, the
-single-thread build loads the pnpm-patched CLI source from the installed
-package; other build variants use the normal package entry.
+single-thread variant. Those CLI changes are published: the workspace catalog
+pins `@napi-rs/cli` to `3.8.5`, so every build variant — single-thread
+included — uses the released package entry and the repository carries no
+`patchedDependencies` at all.
 
 Each WASI flavor has its own artifact names end to end (napi CLI
 `parseTriple`: non-threaded `wasm32-wasipX` triples get their own
@@ -713,7 +720,7 @@ artifact containing the threaded CJS/browser/Node-worker/browser-worker graph.
 `scripts/misc/stage-wasi-packages.mjs` installs those bundles into both WASI
 binding packages, copies each package's declaration from the matching generated
 profile, and removes its now-vendored `buffer`/emnapi/wasm-runtime dependency
-closure. The patched pre-publish validator accepts either that fully
+closure. The released CLI's pre-publish validator accepts either that fully
 self-contained staged form or the complete generated external dependency set;
 partial dependency sets and staged loaders with a remaining direct Buffer
 import fail validation. For the threadless package, staging publishes the standalone managed
@@ -1031,8 +1038,9 @@ loaders are post-bundled with their emnapi/wasm runtime dependencies, as are
 the managed workerd entries. Release assembly reuses those hardened loader
 bundles for both standalone WASI binding flavors, including both threaded
 worker entry points. Published browser, standalone-flavor, and root-facade
-consumers therefore do not depend on the repository's pnpm patches or resolve
-registry emnapi at runtime.
+consumers therefore do not depend on any repository-local build tooling (the
+repository declares no `patchedDependencies`) or resolve registry emnapi at
+runtime.
 
 ---
 
@@ -1045,14 +1053,24 @@ name-collision guard lattice (restore steps in the justfile, the
 `rolldown-binding.wasi.cjs` arm of the ci.yml drift allowlist, the wasi
 build-order coupling in the WASI workflow) is gone:
 
-- The vendored CLI patch (`patches/@napi-rs__cli@3.7.2.patch`) is a dist
-  rebuild of the napi-rs fork branch (napi-rs#3353 + per-flavor naming): a
-  build whose target is NOT wasi regenerates EVERY declared wasi flavor's
-  loader set, each with `hasThreads` derived from its own triple, so loader
-  regeneration is deterministic and byte-identical to the committed copies on
-  every host and under every build variant. A wasi build regenerates only the
-  flavor being built. No restore steps are needed; CI's "Check no diff" in
-  `reusable-native-build.yml` has full coverage of all committed loaders.
+- The per-flavor naming and loader codegen (napi-rs#3353) ship in the released
+  `@napi-rs/cli`, pinned to `3.8.5` in the workspace catalog — there is no
+  vendored CLI patch any more. A build whose target is NOT wasi regenerates
+  EVERY declared wasi flavor's loader set, each with `hasThreads` derived from
+  its own triple, so loader regeneration is deterministic and byte-identical to
+  the committed copies on every host and under every build variant. A wasi
+  build regenerates only the flavor being built. No restore steps are needed;
+  CI's "Check no diff" in `reusable-native-build.yml` has full coverage of all
+  committed loaders.
+- `packages/rolldown/package.json` declares `napi.rootPublisher: "pnpm"`
+  (honoured from `@napi-rs/cli` 3.8.5, per napi-rs#3450). Pre-publish
+  validation is publisher-aware: because the manifest also declares
+  `publishConfig.exports` — the map pnpm substitutes for `exports` while
+  packing — the validator checks that publish-effective map and generates the
+  `./workerd` / `./wasm` / `./wasm.wasm` facade subpaths inside it, leaving the
+  raw dev `exports` map (whose `dev: ./src/*.ts` conditions are never packed)
+  untouched. Without the declaration the validator would judge the raw dev map
+  and reject those unpacked `./src/*.ts` targets.
 - The Node Validation job in `ci.yml` still asserts a drift allowlist after
   `just build-browser`, but the allowlist is down to `binding.d.cts`
   (feature-gated doc-comment drift only).

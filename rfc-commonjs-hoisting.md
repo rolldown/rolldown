@@ -89,15 +89,11 @@ A "wrapper" is the `__commonJSMin` closure that rolldown puts around a CommonJS 
 
 Nothing about `mod.cjs` above is difficult to analyze. Rolldown wraps it anyway, because it has exactly one lowering for CommonJS: a 3-line constants file and a module that reassigns `module.exports` inside a conditional get the same wrapper.
 
-The wrapper exists because a CommonJS module decides its exports at run time. `exports` is a plain mutable object, and the body is arbitrary code that writes into it, so the only general way to learn what a module exports is to run it. The wrapper is what runs it — once, on the first `require()`, in a scope where `module` and `exports` exist. `wrapping.rs:127` calls it "like a commonjs runtime to help initialize the commonjs module correctly". A cycle then sees a partly filled object instead of a crash, and a `require()` that never runs never evaluates the body.
-
-Rolldown gives that answer to every module, because the wrap decision reads only the `(importer, importee, ImportKind)` triple. That is what lets it settle before symbol binding and tree shaking, which both need it (`internal-docs/linking/determine-module-exports-kind/implementation.md`). The module body is not an input to it.
-
 The cost lands in three places.
 
 **Nothing crosses the wrapper.** After a value becomes a property of `import_src`, every read is a property lookup. The minifier cannot analyze that object. A call to `a` becomes `(0, import_src.a)()`, which keeps `this` undefined. The minifier cannot inline a call, fold a constant, or remove a dead export.
 
-**Every ESM importer pays interop.** Keep `mod.cjs` exactly as it is. Change only the entry to a namespace import:
+**A namespace import builds a second object.** Keep `mod.cjs` exactly as it is. Change only the entry to a namespace import:
 
 ```js
 // entry.mjs
@@ -106,15 +102,7 @@ console.log(JSON.stringify([ns.a(), ns.b()]));
 ```
 
 ```js
-var __create = Object.create;
-var __defProp = Object.defineProperty;
-var __getOwnPropDesc = Object.getOwnPropertyDescriptor;
-var __getOwnPropNames = Object.getOwnPropertyNames;
-var __getProtoOf = Object.getPrototypeOf;
-var __hasOwnProp = Object.prototype.hasOwnProperty;
-var __commonJSMin = /* … */;
-var __copyProps = /* … 14 lines … */;
-var __toESM = /* … 4 lines … */;
+/* … six Object.* aliases, __commonJSMin, __copyProps, __toESM … */
 
 var require_src = /* @__PURE__ */ __commonJSMin((exports) => {
   exports.a = () => 1;
@@ -125,9 +113,27 @@ var import_src = /* @__PURE__ */ __toESM(require_src(), 1);
 console.log(JSON.stringify([import_src.a(), import_src.b()]));
 ```
 
-Count what the namespace import added. Nine runtime helpers entered the chunk: six `Object.*` aliases, `__commonJSMin`, `__copyProps`, and `__toESM`. At run time, `__toESM` builds a second object, and `__copyProps` copies every export onto it as a getter. All of that exists so the entry can call two functions on an object rolldown built itself.
+`__toESM` creates a fresh object, and `__copyProps` then defines one bound getter per export on it, with a descriptor read for each (`runtime-base.js:44-70`).
 
-**The wrapper spreads.** Under `experimental.onDemandWrapping`, `eagerly_triggers_interop_module` marks a module as sensitive to execution order when it statically imports a wrapped module. Rolldown then wraps that module in `__esm` as well. One CommonJS leaf can pull its whole importer subtree into wrappers.
+Rolldown does not pay this per importer. `determine_safely_merge_cjs_ns` merges the namespace bindings of every ESM importer of one CommonJS module inside a chunk, so two importers share one `import_src` (`determine_module_exports_kind.rs:110-142`, `code_splitting.rs:550-562`). The cost is one object plus one accessor per export, for each CommonJS module in each chunk. Under `strictExecutionOrder` the merge is skipped, and each importer gets its own call.
+
+**The wrapper spreads, with no option set.** A wrapped module defers its body, so everything it imports must be ready when that body runs. `wrap_module_recursively` (`wrapping.rs:19-49`) wraps the whole import subtree of a wrapped module for that reason: an ESM importee gets `__esm`, a CommonJS importee gets `__commonJSMin`. So one `require()` of an ESM module puts that module behind a wrapper too, and adds two more helpers:
+
+```js
+var dep_exports = /* @__PURE__ */ __exportAll({ v: () => 1 });
+var v;
+var init_dep = __esmMin(() => {
+  console.log('DEP EVALUATED');
+  v = 1;
+});
+
+var require_src = /* @__PURE__ */ __commonJSMin((exports) => {
+  const { v } = (init_dep(), __toCommonJS(dep_exports));
+  exports.x = v + 1;
+});
+```
+
+Under `experimental.onDemandWrapping` it also spreads the other way. `eagerly_triggers_interop_module` marks a module as sensitive to execution order when it statically imports a wrapped module, so rolldown wraps that importer in `__esm` as well. One CommonJS leaf can then pull its whole importer subtree into wrappers.
 
 This isn't an issue for a module that genuinely needs the wrapper. It scales with how much CommonJS a build contains, and most of `node_modules` is still CommonJS. So the wrapper is the normal outcome, not a rare one.
 
@@ -139,22 +145,26 @@ This isn't an issue for a module that genuinely needs the wrapper. It scales wit
 
 </details>
 
-### Why and how rolldown wraps every CommonJS module
+### Why rolldown wraps
 
-Two rules produce every wrapper rolldown emits:
+A CommonJS module decides its exports at run time. `exports` is a plain mutable object, and the body is arbitrary code that writes into it, so the only general way to learn what a module exports is to run it.
+
+The wrapper is what runs it — once, on the first `require()`, in a scope where `module` and `exports` exist. `wrapping.rs:127` calls it "like a commonjs runtime to help initialize the commonjs module correctly". Laziness and memoization come with that job. A cycle sees a partly filled object instead of a crash, and a `require()` that never runs never evaluates the body.
+
+### How rolldown wraps
+
+The decision reads only the `(importer, importee, ImportKind)` triple, and never the module body. That is what lets it settle before symbol binding and tree shaking, which both need the answer (`internal-docs/linking/determine-module-exports-kind/implementation.md`).
+
+Two rules then produce every wrapper rolldown emits:
 
 1. A module's format decides its lowering. `exports_kind == CommonJs` means the wrapper.
 2. Everything a wrapped module imports is wrapped as well.
 
-**1.** is the direct cause. It reads one field, and nothing in the module body changes the answer. **2.** then carries the first rule outwards: `wrap_module_recursively` repeats it through the whole subtree, so a single CommonJS leaf can wrap its importers too.
+**1.** is the direct cause. `determine_module_exports_kind` marks every CommonJS module that is not an entry `WrapKind::Cjs`.
 
-Rolldown does not lack the analysis to do better. It computes the answer today and then discards it:
+**2.** is what carries the first rule past CommonJS. `wrap_module_recursively` walks a wrapped module's import records and wraps everything it reaches, `WrapKind::Esm` for an ESM importee and `WrapKind::Cjs` for a CommonJS one, because a deferred body must find its imports ready when it runs.
 
-- Rolldown sets `EcmaViewMeta::SafelyTreeshakeCommonjs` under two conditions. Every export write is a static property assignment, and nothing reads the exports object in an unknown way (`ecma_module_view_factory.rs:133-139`).
-- The scanner creates a facade symbol for each `exports.x = …` write and records it as a `LocalExport` (`ast_scanner/impl_visit.rs:249-267`).
-- The facade symbols are already in the module's `named_exports`, if the module writes each name exactly once (`ecma_module_view_factory.rs:96-99`).
-
-So the export table already holds the symbols a hoisted module would bind to, with their names. The import binder never reads them. It short-circuits on `exports_kind` first.
+Three overrides sit on top of both rules, and each one always wins: a `require()` edge, an `import()` edge with code splitting off, and the forced wrapper under strict execution order with manual groups. [How rolldown decides the wrapper today](#how-rolldown-decides-the-wrapper-today) gives the file and line for each.
 
 ### The single-lowering limit
 
@@ -163,7 +173,7 @@ With one lowering, a user who wants `mod.cjs` to cost nothing has two choices:
 1. Accept the wrapper. **Every importer then pays the property lookups and the interop helpers**, on a module the bundler already analyzed completely.
 2. Replace the dependency with an ESM build of it. That is not a choice at all for most of `node_modules`.
 
-### The dilemma
+### Rule 1 conflates two questions
 
 > 1. A module's format decides its lowering. `exports_kind == CommonJs` means the wrapper.
 > 2. Everything a wrapped module imports is wrapped as well.
@@ -223,7 +233,7 @@ The reason is that the current lowering mixes up two things:
 
 Rolldown reads the format and picks the strategy from it. The two are independent. A module can write its exports statically and still need the lazy strategy, and it can write them statically and not need it. Rule `1` cannot tell those apart, so it gives both the same answer.
 
-So now we're in the dilemma. Keeping rule `1` costs every static CommonJS module a wrapper it does not need. Breaking rule `1` for every module changes what programs do.
+So rule `1` does not face a trade. It faces a question nobody asks. Nothing works out which modules need the lazy strategy, so every module gets it, and the ones that do not need it pay for it.
 
 ## Guide-level explanation
 
@@ -308,9 +318,9 @@ for (const module of graph.commonjsModules()) {
 
 Each one makes the object itself observable. A set of separate bindings cannot replace it. Conditions 1 and 2 together are the meaning of `SafelyTreeshakeCommonjs` today.
 
-**3. Nothing reaches the module through `require()`.** This condition matters most, and [the dilemma](#the-dilemma) is the case it exists for. For a module that only static `import` reaches, eager evaluation changes nothing. Rolldown already places the `require_mod()` call at the module's own position in the chunk, directly after the wrapper definition. The call does not sit at the import site. So when a side-effecting module comes between the two, the CommonJS body still runs first, and the run order matches node. Hoisting runs the body at the same position, without the call. The same rule excludes CommonJS entries and members of a `require` cycle.
+**3. Nothing reaches the module through `require()`.** This condition matters most, and [rule 1 conflating two questions](#rule-1-conflates-two-questions) is the case it exists for. For a module that only static `import` reaches, eager evaluation changes nothing. Rolldown already places the `require_mod()` call at the module's own position in the chunk, directly after the wrapper definition. The call does not sit at the import site. So when a side-effecting module comes between the two, the CommonJS body still runs first, and the run order matches node. Hoisting runs the body at the same position, without the call. The same rule excludes CommonJS entries and members of a `require` cycle.
 
-**4. No wrapped module imports it.** This is rule `2` of [today's model](#why-and-how-rolldown-wraps-every-commonjs-module), kept as it is. A wrapped module defers its body, and everything it imports must still be ready when that body runs. Inside a deferred subtree, hoisting would move a body's side effects ahead of the wrapper that guards them. So v1 leaves that subtree alone (see [Future work](#future-work)).
+**4. No wrapped module imports it.** This is rule `2` of [today's model](#how-rolldown-wraps), kept as it is. A wrapped module defers its body, and everything it imports must still be ready when that body runs. Inside a deferred subtree, hoisting would move a body's side effects ahead of the wrapper that guards them. So v1 leaves that subtree alone (see [Future work](#future-work)).
 
 Note: this feature never removes a wrapper that a correctness rule put in place. See [the hoistable predicate](#the-hoistable-predicate).
 
@@ -382,7 +392,7 @@ You can see that `console.log` references `mod_a` literally, and that the body i
 
 ### Co-existing wrapped and hoisted modules in the output
 
-The predicate runs per module, so one chunk holds both kinds. Take `mod.cjs` from [History](#history), plus the `optional.cjs` and `feature.cjs` from [the dilemma](#the-dilemma):
+The predicate runs per module, so one chunk holds both kinds. Take `mod.cjs` from [History](#history), plus the `optional.cjs` and `feature.cjs` from [rule 1 conflating two questions](#rule-1-conflates-two-questions):
 
 ```js
 // entry.mjs
@@ -440,7 +450,7 @@ The overrides:
 The predicate reads three inputs:
 
 - The `commonjs` option. When it is off, the predicate answers no for every module, and nothing after it changes.
-- `EcmaViewMeta::SafelyTreeshakeCommonjs` — conditions 1 and 2. The scanner computes this already.
+- `EcmaViewMeta::SafelyTreeshakeCommonjs` — conditions 1 and 2. The scanner sets it when every export write is a static property assignment and nothing reads the exports object in an unknown way (`ecma_module_view_factory.rs:133-139`).
 - The import records of every module in the graph — condition 3. Three things disqualify a module: an incoming `ImportKind::Require` record, entry status, or membership of a `require` cycle. `LinkingMetadata::required_by_other_module` already carries part of this signal.
 
 Rolldown knows the whole module graph before the link stage runs. So the predicate is one pass over the module table. It runs once, before rolldown assigns any `WrapKind`.
@@ -451,7 +461,7 @@ One rule keeps this safe: **hoisting refuses to add a wrapper. It never removes 
 
 `bind_imports_and_exports.rs:1250-1252` returns `ImportStatus::CommonJS` for any importee whose `exports_kind` is `CommonJs`. It returns before it reads `resolved_exports`. The caller at line 1377 then routes the import through the namespace object.
 
-For a hoistable module, rolldown skips that short-circuit. The import then resolves through `resolved_exports`, like an ESM import. The facade symbols are already there. Two gaps must close first:
+For a hoistable module, rolldown skips that short-circuit. The import then resolves through `resolved_exports`, like an ESM import. The facade symbols are already there: the scanner creates one for each `exports.x = …` write and records it as a `LocalExport` (`ast_scanner/impl_visit.rs:249-267`). Two gaps must close first:
 
 - `module.exports.x = …` creates no facade symbol. The scanner's `StaticMemberExpression` branch (`impl_visit.rs:271-282`) records the `module` identifier and nothing else. A module in that style has no symbols to bind to. Corpus case: `hoist/module-exports-prop`.
 - `named_exports` drops any export that the module writes more than once (`ecma_module_view_factory.rs:96-99` keeps only `v.len() == 1`). After hoisting, a repeated write is an ordinary reassignment. The table should carry the first write, and the rest become assignments. Corpus case: `hoist/repeated-write`.
@@ -519,7 +529,7 @@ Neither object gets the tag, and that needs saying, because node behaves differe
 
 The map holds getters, not a snapshot. A hoisted module may still assign `exports.a` after evaluation, from a callback or a timer. The wrapper's object shows such a write today. The map holds thunks and not values, so both calls can be above the writes. That is where rolldown already puts them for ESM.
 
-A named import needs none of this. The import resolves to the binding. Rolldown emits no object, and no helper enters the chunk. Today every CommonJS import pays the interop cost. After this change, only an escaping namespace pays it.
+A named import needs none of this. The import resolves to the binding. Rolldown emits no object, and no helper enters the chunk. Today every wrapped CommonJS module pays the interop cost once per chunk, whatever its importers do with it. After this change, only an escaping namespace pays it.
 
 ### Execution order semantics
 
@@ -658,7 +668,7 @@ The bundler knows all three at link time. The minifier does not. So nothing down
 
 ### Hoist everything
 
-This alternative is a real change in program behaviour, not a trade against size. [The dilemma](#the-dilemma) shows the case. A `require()` inside a branch is how CommonJS writes an optional dependency. Run that `require()` every time, and the program can throw on a platform where the module does not load. The lazy wrapper exists exactly for this.
+This alternative is a real change in program behaviour, not a trade against size. [Rule 1 conflates two questions](#rule-1-conflates-two-questions) shows the case. A `require()` inside a branch is how CommonJS writes an optional dependency. Run that `require()` every time, and the program can throw on a platform where the module does not load. The lazy wrapper exists exactly for this.
 
 ### Run the wrapper eagerly
 

@@ -43,10 +43,8 @@ jobs:
           cache: true
 
       - name: Add WASI targets
-        # @rolldown/browser is built from the threadless wasm32-wasip1 flavor
-        # (build-browser-pkg:debug), and the webcontainer suite additionally
-        # packs the threaded wasm32-wasip1-threads binding (build-binding:wasi),
-        # so the job needs both targets.
+        # @rolldown/browser is built from the threadless wasm32-wasip1 flavor; the
+        # webcontainer suite additionally packs the threaded wasm32-wasip1-threads binding.
         run: rustup target add wasm32-wasip1 wasm32-wasip1-threads
 
       # no browser download: the vitest config points Playwright at the runner's system Chrome

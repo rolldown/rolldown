@@ -446,7 +446,6 @@ impl<'ast> HmrAstFinalizer<'_, 'ast> {
       ast::VariableDeclarationKind::Var,
       [ast::VariableDeclarator::new(
         SPAN,
-        ast::VariableDeclarationKind::Var,
         ast::BindingPattern::new_binding_identifier(
           SPAN,
           Str::from_str_in(binding_name, self),

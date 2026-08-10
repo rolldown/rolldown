@@ -815,7 +815,7 @@ impl<'analyzer, 'ctx> EagerEvaluationOrderReasonCollector<'analyzer, 'ctx> {
     for decorator in &class.decorators {
       self.visit_expression(&decorator.expression);
     }
-    if let Some(super_class) = &class.super_class {
+    if let Some(super_class) = class.heritage_expression() {
       self.visit_expression(super_class);
     }
 

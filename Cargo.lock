@@ -2623,6 +2623,7 @@ dependencies = [
  "rolldown_plugin",
  "rolldown_plugin_bundle_analyzer",
  "rolldown_plugin_esm_external_require",
+ "rolldown_plugin_fake_js",
  "rolldown_plugin_isolated_declaration",
  "rolldown_plugin_oxc_runtime",
  "rolldown_plugin_replace",
@@ -2902,6 +2903,20 @@ dependencies = [
  "rolldown_plugin",
  "rolldown_utils",
  "rustc-hash",
+]
+
+[[package]]
+name = "rolldown_plugin_fake_js"
+version = "1.2.3"
+dependencies = [
+ "anyhow",
+ "oxc",
+ "oxc_sourcemap",
+ "regex",
+ "rolldown_plugin",
+ "rolldown_sourcemap",
+ "rustc-hash",
+ "serde_json",
 ]
 
 [[package]]

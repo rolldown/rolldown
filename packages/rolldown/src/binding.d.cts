@@ -1901,6 +1901,7 @@ export interface BindingBuiltinPlugin {
 
 export type BindingBuiltinPluginName =  'builtin:bundle-analyzer'|
 'builtin:esm-external-require'|
+'builtin:fake-js'|
 'builtin:isolated-declaration'|
 'builtin:replace'|
 'builtin:vite-alias'|
@@ -2253,6 +2254,12 @@ export interface BindingExperimentalOptions {
   nativeMagicString?: boolean
   chunkOptimization?: boolean | BindingChunkOptimizationOptions
   lazyBarrel?: boolean
+}
+
+export interface BindingFakeJsPluginConfig {
+  sourcemap?: boolean
+  cjsDefault?: boolean
+  sideEffects?: boolean
 }
 
 export interface BindingFilterToken {

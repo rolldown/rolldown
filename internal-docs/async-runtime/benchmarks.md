@@ -18,10 +18,9 @@ Committed, reproducible A/B results for the two native binding builds:
 - **shared** — `--no-default-features --features async-runtime`
 
 Both bindings and the JS glue were built from commit `d6622e8f0`
-(sizes 16,344,368 B tokio / 16,095,680 B shared). Harness, prerequisites and
-methodology: [`scripts/misc/bench-async-runtime/README.md`](../../scripts/misc/bench-async-runtime/README.md)
-(hyperfine 3 warmups + 12 runs per side; `/usr/bin/time -l` counters as
-medians of 3 samples; peak threads via a 50 ms `ps -M` sampler).
+(sizes 16,344,368 B tokio / 16,095,680 B shared). Methodology: hyperfine
+3 warmups + 12 runs per side; `/usr/bin/time -l` counters as medians of
+3 samples; peak threads via a 50 ms `ps -M` sampler.
 
 - **Date**: 2026-07-02
 - **Host**: Apple M5 Max, 18 physical / 18 logical cores, 128 GB RAM,
@@ -139,8 +138,7 @@ this historical A/B cannot justify the current default or quantify its cost.
   `ROLLDOWN_MAX_BLOCKING_THREADS=1` peaked at 49 threads (4/4 runs) instead of
   25; it never reproduced across 16 subsequent runs and never occurred at the
   default settings used for every number in this document.
-- Results directories are intentionally not committed
-  (`scripts/misc/bench-async-runtime/.gitignore`); the tables above are the
+- Raw results directories were never committed; the tables above are the
   committed record.
 
 ## Wake-path certification: pre-Task-3 vs head (2026-07-03)

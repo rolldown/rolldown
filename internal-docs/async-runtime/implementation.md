@@ -1123,8 +1123,7 @@ workspace-only pnpm patches from defining a published WASI runtime.
 ## 15. Metrics and baseline
 
 Superseded: committed, reproducible measurements now live in
-[benchmarks.md](./benchmarks.md) (harness:
-`scripts/misc/bench-async-runtime/`). They confirm the earlier illustrative
+[benchmarks.md](./benchmarks.md). They confirm the earlier illustrative
 observation — the Tokio-async + Tokio-blocking + Rayon thread population
 collapses to a single shared pool (56 → 25 peak threads on the measured host)
 — and add wall-time, instruction, RSS, and context-switch comparisons across

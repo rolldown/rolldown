@@ -199,7 +199,7 @@ export function patchWasiBindingLoader(source: string, target: WasiBindingTarget
  * Verify the generated loader carries the upstream (>= 3.8.4) context
  * lifecycle contract this repo relies on, then harden its raw destroy path.
  *
- * @napi-rs/cli 3.8.4 ships the full lifecycle that earlier rolldown patch
+ * `@napi-rs/cli` 3.8.4 ships the full lifecycle that earlier rolldown patch
  * layers injected: an isolated non-auto-destroying context, the
  * `napi_prepare_wasm_env_cleanup` settlement barrier guarded by
  * `__emnapiWasmEnvCleanupPrepared`, the macrotask-yield settlement drain
@@ -282,7 +282,7 @@ export function patchWasiBindingContextLifecycle(source: string): string {
  * Verify the generated Node WASI loader spawns its threads through the
  * hardened worker factory and return it unchanged.
  *
- * @napi-rs/cli 3.8.4 ships the exec-argv sanitizing worker helpers this repo
+ * `@napi-rs/cli` 3.8.4 ships the exec-argv sanitizing worker helpers this repo
  * previously injected (`__getWasiWorkerExecArgv` filtering eval/print
  * arguments, `__removeInvalidWasiWorkerExecArgv` retrying on
  * ERR_WORKER_INVALID_EXEC_ARGV, and the `__createWasiWorker` factory).
@@ -348,7 +348,7 @@ const __rolldownWasiEnv = {
  * Verify the generated browser WASI loader tears its context down through the
  * thenable-aware disposal chain and return it unchanged.
  *
- * @napi-rs/cli 3.8.4 routes every browser context destroy through
+ * `@napi-rs/cli` 3.8.4 routes every browser context destroy through
  * `__destroyEmnapiContext()` behind `__isThenable` checks, so a synchronous
  * emnapi destroy and a promise-returning one settle identically; there is no
  * bare `await __emnapiContext.destroy()` left to normalize.
@@ -373,7 +373,7 @@ export function patchWasiBrowserContextDestroyAwait(source: string): string {
  * Verify the generated browser WASI loader collects worker termination
  * results uniformly and return it unchanged.
  *
- * @napi-rs/cli 3.8.4's `__terminateWasiWorkers` wraps thenable termination
+ * `@napi-rs/cli` 3.8.4's `__terminateWasiWorkers` wraps thenable termination
  * results in `Promise.resolve` and funnels synchronous failures into the same
  * cleanup error aggregation, so mixed settled/unsettled termination entries
  * can no longer race the disposal.

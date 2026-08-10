@@ -2763,8 +2763,8 @@ test('package bootstrap uses the real NapiCli generator without leaving transact
     );
     assert.equal(threadedManifest.name, '@rolldown/binding-wasm32-wasi');
     assert.equal(threadlessManifest.name, '@rolldown/binding-wasm32-wasip1');
-    assert.equal(threadedManifest.dependencies['@napi-rs/wasm-runtime'], '^9.9.9');
-    assert.equal(threadlessManifest.dependencies['@napi-rs/wasm-runtime'], '^9.9.9');
+    assert.equal(threadedManifest.dependencies['@napi-rs/wasm-runtime'], '~9.9.9');
+    assert.equal(threadlessManifest.dependencies['@napi-rs/wasm-runtime'], '~9.9.9');
     assert.deepEqual(fetchRequests, ['https://registry.example.invalid/@napi-rs/wasm-runtime']);
     assert.deepEqual((await readdir(packageRoot)).sort(), ['wasm32-wasi', 'wasm32-wasip1']);
     assert.deepEqual((await readdir(rolldownRoot)).sort(), ['npm', 'package.json']);

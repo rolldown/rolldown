@@ -4,14 +4,14 @@
 //
 // Vendoring is load-bearing, not cosmetic: the emnapi v2 plugin exports
 // (`emnapiAsyncWorkPlugin` / `emnapiTSFNPlugin`) that the WASI loaders import
-// from `@napi-rs/wasm-runtime` currently exist ONLY via a local pnpm patch
-// (see the patch note in pnpm-workspace.yaml). pnpm `patchedDependencies` are
-// never propagated to registry consumers, so any package that still resolved
-// `@napi-rs/wasm-runtime` from the registry would load the pristine runtime,
-// which lacks those exports, and fail at load time. Bundling the patched
-// runtime into the artifacts is what makes publishing safe while the patch is
-// in place — so a registry runtime dependency surviving staging is a release
-// blocker, which is exactly what this script asserts.
+// from `@napi-rs/wasm-runtime` ship upstream since the `@napi-rs/cli` 3.8.4 /
+// `@napi-rs/wasm-runtime` 1.2.2 pair, so no local pnpm patch is involved
+// anymore. The vendored-runtime invariant still holds on its own: staging
+// replaces every runtime-bearing loader with a self-contained bundle whose
+// embedded runtime is exactly the audited workspace version, so a registry
+// runtime dependency surviving staging would reintroduce an unpinned runtime
+// resolution the packed artifacts were never validated against. That is a
+// release blocker, which is exactly what this script asserts.
 
 import * as fs from 'node:fs';
 import * as path from 'node:path';

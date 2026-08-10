@@ -5176,7 +5176,7 @@ ${cleanup}`,
     const unregisterCurrentThreadTaskHost = vi.fn(() => {
       throw taskErrors[unregisterCurrentThreadTaskHost.mock.calls.length - 1];
     });
-    const attachCleanupErrors = vi.fn((error: unknown) => error);
+    const attachCleanupErrors = vi.fn((error: unknown, _cleanupErrors: unknown[]) => error);
     const rollbackWasiInitialization = vi.fn(() => []);
     const runWasiInitializationRollback = vi.fn();
     const vmContext: Record<string, unknown> = {
@@ -5209,10 +5209,7 @@ ${cleanup}`,
     // Both persistent host cleanup failures are attached to the primary
     // error, each aggregating its two attempts.
     expect(attachCleanupErrors).toHaveBeenCalledOnce();
-    const [attachedError, cleanupErrors] = attachCleanupErrors.mock.calls[0] as [
-      unknown,
-      unknown[],
-    ];
+    const [attachedError, cleanupErrors] = attachCleanupErrors.mock.calls[0];
     expect(attachedError).toBe(primaryError);
     expect(cleanupErrors).toEqual([
       expect.objectContaining({

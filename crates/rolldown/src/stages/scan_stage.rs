@@ -206,6 +206,9 @@ impl<Fs: FileSystem + Clone + 'static> ScanStage<Fs> {
   }
 
   fn create_sourcemap_channel(&self) -> SourcemapChannel {
+    // A thread-capability proxy, not deadlock protection: wasm cannot select
+    // MultiThread, so this is what keeps `thread::spawn` off the threadless
+    // artifact. Every other flavor generates its maps inline instead.
     if !rolldown_utils::async_runtime::is_multi_threaded() {
       return (None, None);
     }
@@ -214,10 +217,9 @@ impl<Fs: FileSystem + Clone + 'static> ScanStage<Fs> {
       && self.options.is_sourcemap_enabled()
     {
       let (tx, rx) = std::sync::mpsc::channel::<SourceMapGenMsg>();
-      // Dedicated OS thread, never a runtime `spawn_blocking`: with
-      // `worker_threads == 1` the sole drainer would run this consumer inline
-      // and then block in `rx.recv()` forever, so the module tasks feeding the
-      // channel never get polled -> deadlock.
+      // Dedicated OS thread, never a runtime `spawn_blocking`: a drainer that
+      // took this consumer inline would block in `rx.recv()` forever, leaving
+      // the module tasks that feed the channel unpolled -> deadlock.
       let handler = thread::spawn(move || {
         let mut map: FxHashMap<ModuleIdx, Vec<_>> = FxHashMap::default();
         while let Ok(msg) = rx.recv() {

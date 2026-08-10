@@ -5089,7 +5089,10 @@ ${cleanup}`,
     // Both persistent host cleanup failures are attached to the primary
     // error, each aggregating its two attempts.
     expect(attachCleanupErrors).toHaveBeenCalledOnce();
-    const [attachedError, cleanupErrors] = attachCleanupErrors.mock.calls[0] as [unknown, unknown[]];
+    const [attachedError, cleanupErrors] = attachCleanupErrors.mock.calls[0] as [
+      unknown,
+      unknown[],
+    ];
     expect(attachedError).toBe(primaryError);
     expect(cleanupErrors).toEqual([
       expect.objectContaining({

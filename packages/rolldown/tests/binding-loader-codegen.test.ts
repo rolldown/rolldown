@@ -265,7 +265,10 @@ describe('generated WASI loader lifecycle', () => {
     );
     expect(() =>
       patchWasiBrowserWorkerTerminationAwait(
-        generatedWasiBrowserLoader.replace('function __terminateWasiWorkers() {', 'function __x() {'),
+        generatedWasiBrowserLoader.replace(
+          'function __terminateWasiWorkers() {',
+          'function __x() {',
+        ),
       ),
     ).toThrow('WASI browser worker termination');
   });

@@ -379,7 +379,11 @@ export function patchWasiBrowserContextDestroyAwait(source: string): string {
  * can no longer race the disposal.
  */
 export function patchWasiBrowserWorkerTerminationAwait(source: string): string {
-  assertExactlyOne(source, 'function __terminateWasiWorkers() {', 'WASI browser worker termination');
+  assertExactlyOne(
+    source,
+    'function __terminateWasiWorkers() {',
+    'WASI browser worker termination',
+  );
   assertExactlyOne(
     source,
     `    if (__isThenable(result)) {

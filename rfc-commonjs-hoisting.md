@@ -87,7 +87,13 @@ Nothing about `mod.cjs` above is difficult to analyze. Rolldown wraps it anyway,
 
 The cost lands in three places.
 
-**Nothing crosses the wrapper.** After a value becomes a property of `import_src`, every read is a property lookup. The minifier cannot analyze that object. A call to `a` becomes `(0, import_src.a)()`, which keeps `this` undefined. The minifier cannot inline a call, fold a constant, or remove a dead export.
+**Nothing crosses the wrapper.** After a value becomes a property of `import_src`, every read is a property lookup. A call to `a` becomes `(0, import_src.a)()`, which keeps `this` undefined. To inline the function behind that read, the minifier must prove three things at once:
+
+- the closure runs once;
+- nothing else writes the object;
+- no getter is involved.
+
+The bundler knows all three at link time. The minifier does not, so it cannot inline a call, fold a constant, or remove a dead export. The object is what blocks it, and not the laziness.
 
 **A namespace import builds a second object.** Keep `mod.cjs` exactly as it is. Change only the entry to a namespace import:
 
@@ -595,7 +601,7 @@ That is the whole design cost. A predicate bug that emits a quiet, wrong bundle 
 
 ## Rationale and alternatives
 
-[Why this shape](#why-this-shape) is the rationale. The next four sections are the alternatives, each with the reason against it. The last section says what this RFC does not change.
+[Why this shape](#why-this-shape) is the rationale. The next two sections are the alternatives that would give the same result, each with the reason against it. The last section says what this RFC does not change.
 
 ### Why this shape
 
@@ -609,23 +615,11 @@ Three properties make this design better than the alternatives below. All three 
 
 This is a second lowering for one class of module, not a replacement for rolldown's CommonJS support.
 
-### Do nothing
+### Transform CommonJS to ESM before rolldown links it
 
-The minifier cannot cross the wrapper. `import_src.a` is a property read on an object that a memoized closure builds. To inline the function behind it, the minifier must prove three things at once:
+A plugin can rewrite `exports.a = v` into `export var a = v` at the transform hook. Rolldown then sees an ESM module, and no wrapper decision applies at all. This gives the same result without touching the link stage.
 
-- the closure runs once;
-- nothing else writes the object;
-- no getter is involved.
-
-The bundler knows all three at link time. The minifier does not. So nothing downstream recovers what rule `1` gave away.
-
-### Hoist everything
-
-This alternative is a real change in program behaviour, not a trade against size. [Which modules actually need the wrapper?](#which-modules-actually-need-the-wrapper) shows the case. A `require()` inside a branch is how CommonJS writes an optional dependency. Run that `require()` every time, and the program can throw on a platform where the module does not load. The lazy wrapper exists exactly for this.
-
-### Run the wrapper eagerly
-
-`var ns = (() => { … })()` removes the laziness, but it keeps the object. So the property access, the interop, and the tree-shaking barrier all stay. This alternative gives up the semantics that make the wrapper valuable. It keeps the cost that makes the wrapper expensive.
+The transform sees one module at a time, and it never sees the graph. So it cannot answer condition 3: "does any `require()` reach this module?". A conservative transform must therefore keep a wrapper wherever the answer could be yes. [`@rollup/plugin-commonjs`](#rollup) is that transform, and its output has the structure of `__commonJSMin`.
 
 ### Copy webpack's three states
 
@@ -690,7 +684,11 @@ Rolldown's CommonJS namespace reports `[object Object]`, where node reports `[ob
 
 ### Which plugins depend on the wrapper shape?
 
-A hoisted module reaches `renderChunk` with no `require_<name>` symbol and no exports object. Which plugins match on that shape today, and does any of them read `this.getModuleInfo` expecting one CommonJS lowering? Vite's dependency pre-bundling is the first thing to measure, because its output is itself pre-bundled CommonJS.
+A hoisted module reaches `renderChunk` with no `require_<name>` symbol and no `__commonJSMin` call. A plugin that matches the emitted wrapper as text sees different output. Which plugins do that today?
+
+`getModuleInfo` is not a risk. Its only format field is `inputFormat`, and that reports the module's own syntax and package metadata (`packages/rolldown/src/types/module-info.ts`). A hoisted module still reports `cjs`, because hoisting changes the lowering and not the input.
+
+Vite's dependency pre-bundling converts CommonJS to ESM, so a pre-bundled dependency reaches the main build as ESM already. This change does not touch it. The exposure is the CommonJS that reaches rolldown directly, without pre-bundling.
 
 ## Future work
 

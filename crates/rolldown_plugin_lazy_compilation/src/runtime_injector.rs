@@ -108,7 +108,6 @@ pub fn create_unwrap_lazy_compilation_entry_helper(allocator: &Allocator) -> Sta
     oxc::ast::ast::VariableDeclarationKind::Var,
     [VariableDeclarator::new(
       SPAN,
-      oxc::ast::ast::VariableDeclarationKind::Var,
       BindingPattern::new_binding_identifier(SPAN, "e", &ast_builder),
       None,
       Some(Expression::new_computed_member_expression(

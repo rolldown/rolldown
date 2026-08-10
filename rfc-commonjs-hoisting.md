@@ -259,7 +259,8 @@ The names follow one pattern: module name, underscore, export name. So `mod_a` i
 
 The emitted shape is really small, and the ability it unlocks is large: rolldown already emits this shape for every ESM module, so after hoisting a CommonJS module is an ordinary module in the chunk. The minifier can see into it, tree shaking removes its unused exports, and the order analysis treats it like any other module. Complexity mainly comes from deciding which modules qualify.
 
-Note: the block above collapses each declaration and its write into one statement, to keep the example short. [Render](#render-declare-once-assign-in-place) gives the exact lowering.
+> [!NOTE]
+> The block above collapses each declaration and its write into one statement, to keep the example short. [Render](#render-declare-once-assign-in-place) gives the exact lowering.
 
 ### What's the `commonjs` option?
 
@@ -281,7 +282,8 @@ experimental: {
 
 Where hoisting is safe, it is a pure improvement. The option is still necessary, because of how hoisting fails. A bug in the predicate does not break the build. It emits a bundle that runs and is wrong, without a warning. The wrong code is code the user did not write, somewhere in `node_modules`. An experimental feature that fails this way needs a switch to turn it off. That switch is also what a user bisects against after a bug report.
 
-Note: today the docs define `onDemandWrapping` "under `output.strictExecutionOrder`", and `is_strict_on_demand_wrapping_enabled()` returns false without it. The main benefits of hoisting are a smaller output, tree-shakeable exports, and no interop helpers. None of them relates to strict execution order, and a gate on it would hide the feature from most users. So **rolldown reads the `commonjs` option on its own, whatever the value of `strictExecutionOrder`.** The boolean form keeps its existing gate. The two halves of the option differ here, so the docs must say so.
+> [!NOTE]
+> Today the docs define `onDemandWrapping` "under `output.strictExecutionOrder`", and `is_strict_on_demand_wrapping_enabled()` returns false without it. The main benefits of hoisting are a smaller output, tree-shakeable exports, and no interop helpers. None of them relates to strict execution order, and a gate on it would hide the feature from most users. So **rolldown reads the `commonjs` option on its own, whatever the value of `strictExecutionOrder`.** The boolean form keeps its existing gate. The two halves of the option differ here, so the docs must say so.
 
 The expected end state is on by default. Two things must happen first. Every corpus case must pass, and real builds must use the option for some time.
 
@@ -315,7 +317,8 @@ Each one makes the object itself observable. A set of separate bindings cannot r
 
 **4. No wrapped module imports it.** This is rule `2` of [today's model](#how-rolldown-wraps), kept as it is. A wrapped module defers its body, and everything it imports must still be ready when that body runs. Inside a deferred subtree, hoisting would move a body's side effects ahead of the wrapper that guards them. So v1 leaves that subtree alone (see [Future work](#future-work)).
 
-Note: this feature never removes a wrapper that a correctness rule put in place. See [the hoistable predicate](#the-hoistable-predicate).
+> [!NOTE]
+> This feature never removes a wrapper that a correctness rule put in place. See [the hoistable predicate](#the-hoistable-predicate).
 
 ### What keeps its wrapper
 

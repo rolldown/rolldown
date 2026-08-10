@@ -2766,8 +2766,9 @@ console.log('class plugin context invalidated')
     } catch (error) {
       belowMinimumError = error;
     }
+    // Node 20 words this "smaller than initial N"; 24 says "the declared initial of N".
     const minimumMatch = String(belowMinimumError).match(
-      /smaller than the declared initial of (\d+)/,
+      /smaller than (?:the declared )?initial(?: of)? (\d+)/,
     );
     expect(minimumMatch).not.toBeNull();
     const importedMinimum = Number(minimumMatch![1]);

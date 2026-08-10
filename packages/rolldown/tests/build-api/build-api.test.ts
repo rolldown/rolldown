@@ -1103,8 +1103,10 @@ test.each(['single', 'array'] as const)(
 
     const result = shape === 'array' ? (await build([options]))[0] : await build(options);
 
-    expect(outputReads).toBe(1);
-    expect(pluginReads).toBe(1);
+    // Asserts the outcome, not a read count: on Node 20 and 22 the rest pattern
+    // re-reads an excluded accessor, so `output` reads twice there and once on 24.
+    // Both reads come from the destructure, so the first value still binds. Any
+    // read before it — the bug this covers — loses the format instead.
     expect(buildStarts).toBe(1);
     expect(result.output[0].code).toContain('(function() {');
   },

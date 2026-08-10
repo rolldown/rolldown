@@ -49,12 +49,63 @@ impl PackageJson {
   pub fn check_side_effects_for(&self, module_path: &str) -> Option<bool> {
     let side_effects = self.side_effects.as_ref()?;
     // Is it necessary to convert module_path to relative path?
+    // `sideEffects` is a positive allowlist. Vite 6's package filter does not treat a
+    // leading-`!` entry as a positive match. Passing it to `fast_glob` would instead match
+    // nearly every path that does not match the remainder of the pattern.
     match side_effects {
       SideEffects::Bool(s) => Some(*s),
-      SideEffects::String(p) => Some(glob_match_with_normalized_pattern(p.as_str(), module_path)),
-      SideEffects::Array(pats) => {
-        Some(pats.iter().any(|p| glob_match_with_normalized_pattern(p.as_str(), module_path)))
-      }
+      SideEffects::String(pattern) => Some(
+        !pattern.starts_with('!')
+          && glob_match_with_normalized_pattern(pattern.as_str(), module_path),
+      ),
+      SideEffects::Array(patterns) => Some(
+        patterns
+          .iter()
+          .filter(|pattern| !pattern.starts_with('!'))
+          .any(|pattern| glob_match_with_normalized_pattern(pattern, module_path)),
+      ),
     }
+  }
+}
+
+#[cfg(test)]
+mod tests {
+  use super::*;
+
+  fn package_with_side_effects(side_effects: SideEffects) -> PackageJson {
+    PackageJson {
+      name: None,
+      version: None,
+      r#type: None,
+      side_effects: Some(side_effects),
+      realpath: PathBuf::from("/package/package.json"),
+    }
+  }
+
+  #[test]
+  fn negative_side_effect_patterns_do_not_include_unrelated_modules() {
+    let package = package_with_side_effects(SideEffects::Array(
+      [
+        "**/*.css",
+        "**/tokens/*.{js,ts,ts.esnext}",
+        "!**/@scope/excluded/**/tokens/*.{js,ts,ts.esnext}",
+        "**/configure.{js,mjs}",
+      ]
+      .map(str::to_string)
+      .to_vec(),
+    ));
+
+    assert_eq!(package.check_side_effects_for("src/index.mjs"), Some(false));
+    assert_eq!(package.check_side_effects_for("src/configure.mjs"), Some(true));
+    assert_eq!(package.check_side_effects_for("src/styles.css"), Some(true));
+    assert_eq!(package.check_side_effects_for("src/tokens/colors.js"), Some(true));
+
+    let only_negative =
+      package_with_side_effects(SideEffects::Array(vec!["!**/excluded/**".to_string()]));
+    assert_eq!(only_negative.check_side_effects_for("src/index.mjs"), Some(false));
+
+    let negative_string =
+      package_with_side_effects(SideEffects::String("!**/excluded/**".to_string()));
+    assert_eq!(negative_string.check_side_effects_for("src/index.mjs"), Some(false));
   }
 }

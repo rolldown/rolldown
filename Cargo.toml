@@ -262,9 +262,23 @@ syn = { version = "3", default-features = false }
 # napi
 # Keep the `tracing` feature on: `#[napi]` logs every binding call, which helps debug deadlocks
 # (e.g. #7289) by showing which napi function is pending.
-napi = { version = "3", features = ["anyhow", "tracing", "object_indexmap"] }
-napi-build = { version = "2" }
-napi-derive = { version = "3", default-features = false, features = ["type-def", "tracing"] }
+# Minimum versions: napi 3.12.1 / napi-derive 3.6.3 / napi-build 2.4.1 are the first
+# registry releases cut from napi-rs main at the napi-rs#3423 content (git c0c2f0c2,
+# the exact tree rolldown's full CI matrix verified). rolldown depends on four things
+# older releases do not carry (verified 2026-08-09):
+# (a) the native borrow tracker — the Shared guard held across return conversion,
+#     the memory-safety net for the eager-release dropInner pattern on borrowed
+#     getters;
+# (b) non-Error rejection identity — the promise catch arm uses
+#     `from_unknown_without_coercion`, so a thrown string/number/null keeps its
+#     identity instead of being coerced into an Error;
+# (c) the wasm teardown barrier/drain + disposal latch;
+# (d) addon-image pinning.
+# napi-async-runtime is independent of these: rolldown_utils consumes the published
+# 0.2.0 (napi-free, default features off).
+napi = { version = "3.12.1", features = ["anyhow", "tracing", "object_indexmap"] }
+napi-build = { version = "2.4.1" }
+napi-derive = { version = "3.6.3", default-features = false, features = ["type-def", "tracing"] }
 
 # oxc crates with the same version
 oxc = { version = "0.143.0", features = [
@@ -332,28 +346,3 @@ opt-level = "s"
 # it will strip these information for non-debug files
 debug = "full"
 strip = "none"
-
-[patch.crates-io]
-# integration/rolldown-non-threaded-wasi-napi3 head (ad23bdeb) merges the rebased
-# napi stack (crates/napi v3.10.5, the merged SPI + #3353/#3393) INTO rolldown's
-# rich async-runtime SPI. rolldown_binding hard-depends on that rich SPI —
-# fallible try_start/try_shutdown_async_runtime, TokioRuntimeRetirementWaiter,
-# primitive-value boxing on promise rejection, and graceful ThreadsafeFunction
-# release on napi_closing — which upstream napi-rs main does NOT carry. Do not
-# "unpin to main" again without re-checking those four: main's
-# `bindgen_runtime/js_values/promise.rs` catch arm converts a rejection with
-# `ctx.value.into()` (`From<Unknown> for Error` → `napi_create_reference`), which
-# returns napi_invalid_arg for primitives and replaces a thrown string/number/null
-# with `Error { InvalidArg, "Create Error reference failed" }`; and main has no
-# `register_finalizer`/`build_callback_with_finalizer`, so a ThreadsafeFunction
-# retained across an exiting worker Environment has no quiescence barrier and
-# access-violates on Windows. On WASI, napi-build at this rev links the emnapi
-# archives shipped by the released `emnapi` npm package (non-threads
-# `libemnapi-basic-napi-rs.a`, threads `libemnapi-napi-rs-mt.a`); no vendored
-# archives are needed. napi-async-runtime is NOT git-pinned: rolldown_utils
-# consumes the published 0.2.0 from crates.io (napi-free, default features off),
-# so it is independent of this rev.
-napi = { git = "https://github.com/napi-rs/napi-rs.git", rev = "ad23bdeb8139be6e25eee508f18866c41c94d9b9" }
-napi-derive = { git = "https://github.com/napi-rs/napi-rs.git", rev = "ad23bdeb8139be6e25eee508f18866c41c94d9b9" }
-napi-derive-backend = { git = "https://github.com/napi-rs/napi-rs.git", rev = "ad23bdeb8139be6e25eee508f18866c41c94d9b9" }
-napi-build = { git = "https://github.com/napi-rs/napi-rs.git", rev = "ad23bdeb8139be6e25eee508f18866c41c94d9b9" }

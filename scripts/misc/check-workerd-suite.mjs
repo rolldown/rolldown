@@ -64,27 +64,33 @@ const measureOnly = flags.has('--measure');
 // dropped from 0.528/0.549 to the numbers below, and reading `chunk.modules`
 // no longer costs anything over not reading it. What remains is the shared
 // per-rebuild build/marshalling slope (see the `nohooks` note) plus a small
-// (~0.035) per-rebuild cost for installing the extra output hook itself.
+// (~0.011 on this pin) per-rebuild cost for installing the extra output hook.
 // These budgets exist to catch a REGRESSION -- any release path silently
 // dropping out -- and the floors below catch further improvements that would
 // otherwise leave stale ceilings behind.
 //
-// Measured 2026-08-09 (post eager-release) on the DEBUG wasm that BOTH CI
-// lanes build (~29.6 MiB `rolldown-binding.wasm32-wasip1.wasm`), 300-module
-// graph, 2 warmup rounds, at --rounds=20 -- the count ci.yml runs. The window
-// length is part of the number: rebuild growth is CONVEX (dlmalloc arena
-// stepping retains more per round in the tail), so the same build measures
-// 0.278/0.278/0.313/0.313 over 12 rounds and the values below over 20. Five
-// consecutive 20-round runs agreed EXACTLY for `nohooks` and `renderchunk*`;
-// `generatebundle` alone varied (0.309-0.342 -- GC timing decides when the
-// marshaled bundle copies' JS handles die, which moves a page boundary), so
-// its `measured` records a mid value and its band swallows the spread.
-// Budgets carry ~25% headroom over the measured value to absorb page
-// quantisation plus toolchain differences between this machine and the CI
-// builder. That headroom is far below the signal each variant is guarding:
-// the eager release of the renderChunk argument regressing puts
-// `renderchunk-nomodules` back at ~0.55, and any doubling of the base slope
-// puts `nohooks` at ~0.72 -- both well over budget.
+// Measured 2026-08-10 on the registry napi pin (napi 3.12.1 / napi-derive
+// 3.6.3, @napi-rs/cli 3.8.4) on the DEBUG wasm that BOTH CI lanes build
+// (~29.6 MiB `rolldown-binding.wasm32-wasip1.wasm`), 300-module graph, 2
+// warmup rounds, at --rounds=20 -- the count ci.yml runs. Seven consecutive
+// 20-round runs agreed EXACTLY for `nohooks` and `renderchunk*`;
+// `generatebundle` alone moved one 64 KiB page quantum (0.180-0.184 -- GC
+// timing decides when the marshaled bundle copies' JS handles die, which
+// moves a page boundary), so its `measured` records the mid value. The
+// napi-3423 verify lane's CI datapoint (run 31322883081: 0.195 / 0.180 /
+// 0.206 / 0.206) sits inside every band below, so the calibration holds on
+// the CI builder too. The registry binding genuinely retains ~40% less per
+// rebuild than the previous integration pin (smaller per-instance wrap
+// bookkeeping), which is what tripped the old floors and forced this
+// re-derivation. The window length remains part of the number: rebuild
+// growth is CONVEX (dlmalloc arena stepping retains more per round in the
+// tail), so these values are only valid at --rounds=20. Budgets carry ~25%
+// headroom over the measured value to absorb page quantisation plus
+// toolchain differences between this machine and the CI builder. That
+// headroom is far below the signal each variant is guarding: the eager
+// release of the renderChunk argument regressing puts `renderchunk-nomodules`
+// back at ~0.55, and any doubling of the base slope puts `nohooks` at ~0.40
+// -- both well over budget.
 const MEMORY_BUDGETS = {
   // Baseline -- and NOT "the cost of a bare rebuild". The slope graph exists
   // only inside `slopeGraphPlugin`'s map, so that plugin is structurally
@@ -97,29 +103,29 @@ const MEMORY_BUDGETS = {
   // Consequence for this table: only the variant-to-variant DELTAS isolate one
   // hook's retention, because that shared baseline cancels out of them. A move
   // in `nohooks` itself means the shared build/marshalling path changed.
-  nohooks: { measured: 0.36, budget: 0.45 },
+  nohooks: { measured: 0.199, budget: 0.249 },
   // A generateBundle hook that READS the chunks it is given. Costs NOTHING
   // extra, because the per-invocation bundle copy IS released when the hook
   // returns -- the contract pinned by
   // packages/rolldown/tests/workerd-output-ownership.test.ts. This variant is
   // the regression guard on that release: if it ever starts tracking well
   // above the baseline, the generateBundle copy stopped being freed.
-  generatebundle: { measured: 0.32, budget: 0.4 },
+  generatebundle: { measured: 0.182, budget: 0.228 },
   // Receiving a BindingRenderedChunk in renderChunk. The chunk argument is
   // snapshot-and-released per invocation now, so this is baseline plus the
   // cost of installing the extra hook, NOT a payload retention (it no longer
-  // scales with output size; over the 20-round window the arena tail even
-  // puts it slightly BELOW `nohooks` -- see the workload-resolution control).
+  // scales with output size; on the registry pin it sits ~0.011 above
+  // `nohooks` -- see the workload-resolution control below).
   // If this variant climbs back toward 0.55, the renderChunk eager release
   // broke.
-  'renderchunk-nomodules': { measured: 0.342, budget: 0.43 },
+  'renderchunk-nomodules': { measured: 0.21, budget: 0.263 },
   // ...plus reading `chunk.modules`, which marshals one BindingRenderedModule
   // per module. Identical to `renderchunk-nomodules` today because the module
   // boxes are snapshot-and-released too. The shared band alone cannot see the
   // module-box cost returning (0.021 fits under the ceiling), so the
   // `moduleBoxDelta` control below asserts the two rows stay within two page
   // quanta of each other.
-  renderchunk: { measured: 0.342, budget: 0.43 },
+  renderchunk: { measured: 0.21, budget: 0.263 },
 };
 
 // Every variant is enforced as a two-sided BAND, not just a ceiling. `budget`
@@ -129,12 +135,13 @@ const MEMORY_BUDGETS = {
 // back into with CI green the whole way.
 //
 // The ratio has to sit between the two things it separates:
-//   * NOISE -- eight 20-round runs of the 2026-08-09 re-derivation agreed
-//     EXACTLY for `nohooks` and `renderchunk*`; the widest spread ever seen
-//     is `generatebundle`'s GC-timing band of 0.033 (0.309-0.342), and its
-//     floor of 0.240 sits 0.069 below the lowest value observed in it. 25% of
-//     the smallest measured slope is 0.080 MiB/rebuild -- ~2.4x that widest
-//     spread.
+//   * NOISE -- seven 20-round runs of the 2026-08-10 re-derivation agreed
+//     EXACTLY for `nohooks` and `renderchunk*`, and `generatebundle` moved
+//     one page quantum (0.180-0.184); the widest spread ever seen remains
+//     `generatebundle`'s GC-timing band of 0.033 on the old pin
+//     (0.309-0.342). Its floor of 0.137 sits 0.043 below the lowest value
+//     observed on this pin, and 25% of the smallest measured slope is 0.046
+//     MiB/rebuild -- ~1.4x that historical widest spread.
 //   * SIGNAL -- proven in anger: the hook-input eager release landing dropped
 //     `renderchunk-nomodules` from 0.528 to 0.313 (12-round window), 21%
 //     below its then-floor of 0.396, which is exactly the detection that
@@ -615,23 +622,28 @@ for (const variant of Object.keys(MEMORY_BUDGETS)) {
 // The last positive control, and the strongest one: the telemetry must RESOLVE
 // a workload difference, not merely move. `renderchunk-nomodules` differs from
 // `nohooks` by exactly one thing -- a hook that RECEIVES a rendered chunk --
-// and with the chunk payload snapshot-and-released per invocation, that
-// difference shows up as a distinct, exactly-reproducible trajectory: a
-// +0.187 MiB first-round footprint (installing the extra hook, 3 pages) and a
-// slope gap of -0.018 at --rounds=20 (+0.035 over a 12-round window; the
-// arena tail flips the sign, which is why this checks MAGNITUDES). A counter
-// that grows but ignores what the build actually did would show NEITHER --
-// and would still satisfy every per-variant check above.
+// and that difference has to show up in the numbers. On the registry napi pin
+// the resolution lives entirely in the slope gap: all seven 2026-08-10
+// calibration runs measured +0.011 MiB/rebuild at --rounds=20 with a
+// first-round footprint gap of 0.000 (installing the extra hook no longer
+// costs pages up front on this binding; single-page 0.063 jitter was seen
+// once). The slope threshold is 0.007 -- two measurement quanta, one 64 KiB
+// page across the 17 post-warmup intervals at --rounds=20 being ~0.0037
+// MiB/rebuild, and also above half the observed 0.011 gap -- and both gaps
+// are checked as MAGNITUDES because the arena tail can flip the sign. A
+// counter that grows but ignores what the build actually did would show
+// NEITHER -- and would still satisfy every per-variant check above.
 if (!measureOnly) {
   const hookSlopeDelta = slopes['renderchunk-nomodules'] - slopes.nohooks;
   const hookFirstDelta = (firstSamples['renderchunk-nomodules'] - firstSamples.nohooks) / MiB;
-  if (Math.abs(hookSlopeDelta) < 0.014 && Math.abs(hookFirstDelta) < 0.1) {
+  if (Math.abs(hookSlopeDelta) < 0.007 && Math.abs(hookFirstDelta) < 0.1) {
     failures.push(
       `the renderChunk workload is no longer distinguishable from the baseline: ` +
         `'renderchunk-nomodules' ${slopes['renderchunk-nomodules'].toFixed(3)} vs 'nohooks' ` +
-        `${slopes.nohooks.toFixed(3)} MiB/rebuild (gap ${hookSlopeDelta.toFixed(3)}) and a ` +
-        `first-round footprint gap of ${hookFirstDelta.toFixed(3)} MiB where ~0.187 is ` +
-        'expected. EITHER instance.memoryBytes stopped tracking what the build does -- in ' +
+        `${slopes.nohooks.toFixed(3)} MiB/rebuild (gap ${hookSlopeDelta.toFixed(3)}, threshold ` +
+        `0.007) and a first-round footprint gap of ${hookFirstDelta.toFixed(3)} MiB (measured ` +
+        '0.000 on the registry napi pin, so the slope gap carries the resolution). EITHER ' +
+        'instance.memoryBytes stopped tracking what the build does -- in ' +
         'which case every slope above is meaningless -- OR the per-hook cost itself was ' +
         'eliminated, in which case re-run with `--measure` and re-baseline the whole ' +
         'MEMORY_BUDGETS table.',

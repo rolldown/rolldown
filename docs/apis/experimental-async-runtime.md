@@ -47,7 +47,7 @@ The binding reads these variables once during module initialization:
 - `ROLLDOWN_PARK_DEADLINE_MS`
 - `ROLLDOWN_DRAIN_LINGER_US`
 
-`ROLLDOWN_RUNTIME` selects the flavor and the two thread-count variables size
+`ROLLDOWN_RUNTIME` selects the flavor; the two thread-count variables size
 the topology. `ROLLDOWN_PARK_DEADLINE_MS` is not a topology knob: it opts into
 deadline-based `block_on` deadlock detection, which is disabled by default.
 `ROLLDOWN_DRAIN_LINGER_US` sets the MultiThread drainer's idle-linger budget
@@ -58,7 +58,7 @@ built-in default (500µs), and oversized values are clamped. It has no
 
 Native `ROLLDOWN_*` worker counts are capped at 256. Explicit
 `configureAsyncRuntime()` thread values above 256 throw
-instead of being silently clamped. Valid values still undergo
+instead of being silently clamped. Valid values still go through
 topology normalization: CurrentThread becomes `(1, 1)`, MultiThread promotes
 one worker to two, applies the platform worker cap, and limits blocking
 admission to one less than the effective worker count. On WebAssembly, the

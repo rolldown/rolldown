@@ -236,7 +236,8 @@ leases. It never drives tasks.
 
 - **Host install (register-only, contract-gated)** —
   `packages/rolldown/src/timer-host.ts` installs the task host and (on
-  non-browser builds) the timer host as a module side effect. Before any native side effect it verifies
+  non-browser builds) the timer host as a module side effect. Before any
+  native side effect, it verifies
   `getCurrentThreadTaskHostContractVersion() === 4`, then reserves + validates
   the capability, then calls `registerCurrentThreadTaskHost(high, low)`
   (no callback) and `registerTimerHost(high, low, schedule, cancel)`. The
@@ -327,8 +328,8 @@ CurrentThread timer:
 6.1.2` and `napi-sys 3.3.0`) — and carries **no** `[patch.crates-io]`
   section: that single registry `napi` node covers `rolldown_binding` **and**
   every `oxc_*_napi`. Those are the first registry releases cut from the
-  napi-rs main content rolldown's CI matrix verified; the comment above the
-  pins in `Cargo.toml` records the four things older releases do not carry
+  napi-rs main content that rolldown's CI matrix verified; the comment above
+  the pins in `Cargo.toml` records the four things older releases do not carry
   (native borrow tracker, non-`Error` rejection identity, wasm teardown
   barrier/drain + disposal latch, addon-image pinning).
 - `crates/rolldown_binding/build.rs` — emits `cargo::rustc-cfg=rolldown_wasi_threads`
@@ -842,7 +843,7 @@ generated deferred loader after every napi build. The same generation pass
 post-processes the napi-rs CJS and browser loaders for BOTH wasm flavors —
 `wasm32-wasip1` and threaded `wasm32-wasip1-threads` — registering the v4
 native CurrentThread runnable host and the JavaScript timer host before
-exposing the binding: since the registry napi pin every wasm artifact runs the
+exposing the binding: since the registry napi pin, every wasm artifact runs the
 shared CurrentThread flavor, so a raw import of either shipped loader set must
 carry its own task/timer hosts or a build never completes. The threadless
 loaders install unconditionally (that target is by construction an
@@ -994,7 +995,7 @@ This ordering must remain aligned with napi-rs#3352's environment lifecycle as
 that upstream API evolves.
 
 The threadless loaders start with 1024 WebAssembly pages (64 MiB), replacing
-their inherited use of the threaded-WASI value of 16384 pages (1 GiB).
+the inherited threaded-WASI value of 16384 pages (1 GiB).
 `napi.wasm.initialMemory` remains 16384 for the existing threaded flavor;
 Rolldown's `threadlessInitialMemory` setting is applied only to generated
 `wasip1` loaders by the deterministic post-generator. The generated threadless
@@ -1063,7 +1064,7 @@ build-order coupling in the WASI workflow) is gone:
   CI's "Check no diff" in `reusable-native-build.yml` has full coverage of all
   committed loaders.
 - `packages/rolldown/package.json` declares `napi.rootPublisher: "pnpm"`
-  (honoured from `@napi-rs/cli` 3.8.5, per napi-rs#3450). Pre-publish
+  (honored from `@napi-rs/cli` 3.8.5, per napi-rs#3450). Pre-publish
   validation is publisher-aware: because the manifest also declares
   `publishConfig.exports` — the map pnpm substitutes for `exports` while
   packing — the validator checks that publish-effective map and generates the

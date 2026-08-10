@@ -63,7 +63,7 @@ process (single in-process build, JIT warmup included on both sides equally).
 ¹ tokio's peak is bimodal on `apps/1000` (38 or 56 across sessions): the extra
 18 threads are the lazily-created **global** rayon pool, which the tokio build
 spawns in addition to its 27 tokio workers + up-to-4 blocking threads. The
-shared build never creates it — rayon work initiated from the executor's own
+shared build never creates it — rayon work started from the executor's own
 rayon-backed pool reuses that pool. Thread inventory at peak (from `sample`):
 shared = 18 `rolldown-runtime-*` + 4 V8 workers + main + inspector + task
 scheduler = 25.
@@ -173,17 +173,16 @@ hitting 1–3 runs of a 32-run window (see the Anomalies section above —
 same machine, same behavior); the paired design absorbs them two ways: a
 burst spanning both runs of a pair cancels inside that pair's delta, and a
 one-sided burst corrupts only that single pair's delta, which the median
-tolerates (worst case below: 2 corrupted pairs of 14). A kept-run wall σ
-
-> 5% of the side median was the pre-registered trigger to run an
-> **additional** window (it fired for apps/5000 and apps/10000; both got 3
-> windows, all published below). As an _acceptance_ criterion that σ bar is
-> unsatisfiable on this machine — three windows at different hours,
-> including one at the calmest ambient observed (load ~2.0), each contain at
-> least one burst, and only apps/1000 meets it — so **the PASS below is NOT
-> claimed on σ**. It is claimed on: (1) the pooled pair-delta median vs the
-> 1% bar, (2) agreement of the per-window medians (window-selection
-> insensitivity), (3) pair-sign counts.
+tolerates (worst case below: 2 corrupted pairs of 14). A kept-run wall
+σ > 5% of the side median was the pre-registered trigger to run an
+**additional** window (it fired for apps/5000 and apps/10000; both got 3
+windows, all published below). As an _acceptance_ criterion that σ bar is
+unsatisfiable on this machine — three windows at different hours,
+including one at the calmest ambient observed (load ~2.0), each contain at
+least one burst, and only apps/1000 meets it — so **the PASS below is NOT
+claimed on σ**. It is claimed on: (1) the pooled pair-delta median vs the
+1% bar, (2) agreement of the per-window medians (window-selection
+insensitivity), (3) pair-sign counts.
 
 **Scope disclosure.** The two sides load their own checkout's dist glue —
 head glue cannot drive the old binding (`registerTimerHost`, added in

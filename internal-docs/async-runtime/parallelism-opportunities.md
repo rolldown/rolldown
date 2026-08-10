@@ -252,7 +252,7 @@ prior guesses are corrected where the profile disagrees.
 - **Rejected as a standalone wall lever** — however, the fs-read-pool A/B
   below implicates this wake path as the reason IO-shaping experiments
   fail, which promotes it from "hygiene" to "prerequisite". (The
-  prerequisite was subsequently built — Task 3's targeted-wake + LIFO-slot
+  prerequisite was later built — Task 3's targeted-wake + LIFO-slot
   rewrite, certified in [benchmarks.md](./benchmarks.md) — and the Task-8
   re-test below shows it does NOT rescue the pool: the implication was
   wrong.)

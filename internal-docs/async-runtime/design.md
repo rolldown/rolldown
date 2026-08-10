@@ -397,15 +397,15 @@ Rust core — see [implementation.md](./implementation.md).
    Threaded-WASI artifacts run the same shared CurrentThread runtime and need
    no cross-realm JavaScript ownership protocol; the lifecycle exports remain
    as no-ops for loader compatibility. Only Tokio-backed threaded-WASI
-   artifacts — previously published legacy Tokio-era artifacts (the buildable
-   `tokio-runtime` binding lane was removed), recognized through the package's
-   compatibility shim, which
-   synthesizes `backend: 'tokio'` for bindings without a capability report —
-   still hold their runtime alive through explicit reference-counted
+   artifacts still hold their runtime alive through explicit reference-counted
    JavaScript leases, and a restart there waits off the JavaScript thread for
-   the previous generation to retire. Legacy bindings from the still-earlier
-   implicit-owner protocol fail closed instead of attempting to coordinate a
-   single owner through realm-local JavaScript state.
+   the previous generation to retire. Those are previously published legacy
+   Tokio-era artifacts (the buildable `tokio-runtime` binding lane was
+   removed), recognized through the package's compatibility shim, which
+   synthesizes `backend: 'tokio'` for bindings without a capability report.
+   Legacy bindings from the still-earlier implicit-owner protocol fail closed
+   instead of attempting to coordinate a single owner through realm-local
+   JavaScript state.
    JavaScript close single-flight state is published before invoking cleanup,
    so synchronous re-entry joins the original lifecycle attempt rather than
    creating a second owner-release or native-close sequence.

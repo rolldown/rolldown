@@ -262,20 +262,7 @@ syn = { version = "3", default-features = false }
 # napi
 # Keep the `tracing` feature on: `#[napi]` logs every binding call, which helps debug deadlocks
 # (e.g. #7289) by showing which napi function is pending.
-# Minimum versions: napi 3.12.1 / napi-derive 3.6.3 / napi-build 2.4.1 are the first
-# registry releases cut from napi-rs main at the napi-rs#3423 content (git c0c2f0c2,
-# the exact tree rolldown's full CI matrix verified). rolldown depends on four things
-# older releases do not carry (verified 2026-08-09):
-# (a) the native borrow tracker — the Shared guard held across return conversion,
-#     the memory-safety net for the eager-release dropInner pattern on borrowed
-#     getters;
-# (b) non-Error rejection identity — the promise catch arm uses
-#     `from_unknown_without_coercion`, so a thrown string/number/null keeps its
-#     identity instead of being coerced into an Error;
-# (c) the wasm teardown barrier/drain + disposal latch;
-# (d) addon-image pinning.
-# napi-async-runtime is independent of these: rolldown_utils consumes the published
-# 0.2.0 (napi-free, default features off).
+# Minimum versions: the first registry releases with the napi-rs#3423 content rolldown needs (borrow tracker, non-Error rejection identity, wasm teardown barrier, addon pinning).
 napi = { version = "3.12.1", features = ["anyhow", "tracing", "object_indexmap"] }
 napi-build = { version = "2.4.1" }
 napi-derive = { version = "3.6.3", default-features = false, features = ["type-def", "tracing"] }

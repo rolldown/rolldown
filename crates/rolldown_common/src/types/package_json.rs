@@ -49,9 +49,9 @@ impl PackageJson {
   pub fn check_side_effects_for(&self, module_path: &str) -> Option<bool> {
     let side_effects = self.side_effects.as_ref()?;
     // Is it necessary to convert module_path to relative path?
-    // `sideEffects` is a positive allowlist. Vite 6's package filter does not treat a
-    // leading-`!` entry as a positive match. Passing it to `fast_glob` would instead match
-    // nearly every path that does not match the remainder of the pattern.
+    // `sideEffects` is a positive allowlist, so a leading-`!` entry never marks a module as
+    // side-effectful. Handing it to `fast_glob` would instead match nearly every path that
+    // does not match the remainder of the pattern.
     match side_effects {
       SideEffects::Bool(s) => Some(*s),
       SideEffects::String(pattern) => Some(

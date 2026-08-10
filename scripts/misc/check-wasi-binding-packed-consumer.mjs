@@ -2246,9 +2246,35 @@ try {
 
   const stagedBrowserDir = path.join(tempDir, 'browser-package');
   await mkdir(stagedBrowserDir);
-  await copyFile(
-    path.join(browserPackageDir, 'package.json'),
+  // This consumer validates the self-contained consumption path: the packed
+  // dist bundles its emnapi/wasm runtimes (the loader sweeps above forbid
+  // bare runtime imports) and `assertNoRegistryRuntimePackages` requires that
+  // none of them install from the registry. Drop the registry runtime
+  // dependencies from the staged manifest -- their workspace `catalog:`
+  // specifiers also cannot resolve outside the repository, where this staged
+  // copy is packed. The with-registry-dependencies path is validated
+  // separately by check-workerd-packed-consumer.mjs, which packs the
+  // workspace manifest in place.
+  const stagedBrowserManifest = JSON.parse(
+    await readFile(path.join(browserPackageDir, 'package.json'), 'utf8'),
+  );
+  for (const dependency of runtimePackages) {
+    delete stagedBrowserManifest.dependencies?.[dependency];
+  }
+  if (
+    stagedBrowserManifest.dependencies &&
+    Object.keys(stagedBrowserManifest.dependencies).length === 0
+  ) {
+    delete stagedBrowserManifest.dependencies;
+  }
+  assert.doesNotMatch(
+    JSON.stringify(stagedBrowserManifest),
+    /"catalog:/,
+    'Staged @rolldown/browser manifest must not retain workspace catalog specifiers',
+  );
+  await writeFile(
     path.join(stagedBrowserDir, 'package.json'),
+    `${JSON.stringify(stagedBrowserManifest, null, 2)}\n`,
   );
   await cp(path.join(browserPackageDir, 'bin'), path.join(stagedBrowserDir, 'bin'), {
     recursive: true,

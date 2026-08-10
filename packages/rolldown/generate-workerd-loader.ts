@@ -133,16 +133,38 @@ const NODE_LIFECYCLE_CONTRACT_SNIPPETS = [
 }`,
   `  __publishWasiDispose(__napiModule.exports)\n  __registerWasiExitListener()`,
 ] as const;
+export type CurrentThreadLoaderFlavor = 'threadless' | 'threaded';
 const CURRENT_THREAD_LOADERS = [
   {
     path: join(__dirname, 'src/rolldown-binding.wasip1.cjs'),
     bootstrapAnchor: '} catch (error) {\n  const rollback = {',
     browserInitializationGuard: false,
+    flavor: 'threadless',
   },
   {
     path: join(__dirname, 'src/rolldown-binding.wasip1-browser.js'),
     bootstrapAnchor: 'export default __napiModule.exports',
     browserInitializationGuard: true,
+    flavor: 'threadless',
+  },
+  // The threaded (wasm32-wasip1-threads) artifact links the same shared
+  // CurrentThread runtime as the threadless one: its real OS threads change
+  // the loader, not the executor. A raw import of the shipped threaded
+  // package therefore needs the same task/timer host bootstrap to make
+  // progress. Unlike the wasip1 loaders, the threaded bootstrap is gated on
+  // the binding reporting `asyncRuntimeBuild` so a self-scheduling binding
+  // without the shared runtime keeps loading without the host contract.
+  {
+    path: join(__dirname, 'src/rolldown-binding.wasi.cjs'),
+    bootstrapAnchor: '} catch (error) {\n  const rollback = {',
+    browserInitializationGuard: false,
+    flavor: 'threaded',
+  },
+  {
+    path: join(__dirname, 'src/rolldown-binding.wasi-browser.js'),
+    bootstrapAnchor: 'export default __napiModule.exports',
+    browserInitializationGuard: true,
+    flavor: 'threaded',
   },
 ] as const;
 
@@ -2839,17 +2861,17 @@ export const instantiate: typeof createInstance;
 `;
 }
 
-function renderCurrentThreadHostBootstrap(captureBrowserRegistrations = false): string {
+function renderCurrentThreadHostBootstrap(
+  captureBrowserRegistrations = false,
+  flavor: CurrentThreadLoaderFlavor = 'threadless',
+): string {
   const captureTaskHostRegistration = captureBrowserRegistrations
     ? '  __browserTaskHostRegistration = __taskHostRegistration'
     : '  __nodeTaskHostRegistration = __taskHostRegistration';
   const captureTimerHostRegistration = captureBrowserRegistrations
     ? '    __browserTimerHostRegistration = __timerHostRegistration'
     : '    __nodeTimerHostRegistration = __timerHostRegistration';
-  return `${CURRENT_THREAD_HOST_BOOTSTRAP_START}
-;{
-  const __rolldownBinding = __napiModule.exports
-  const __getCurrentThreadTaskHostContractVersion =
+  const body = `  const __getCurrentThreadTaskHostContractVersion =
     __rolldownBinding.getCurrentThreadTaskHostContractVersion
   const __isCurrentThreadHostRegistrationActive =
     __rolldownBinding.isCurrentThreadHostRegistrationActive
@@ -2871,7 +2893,7 @@ function renderCurrentThreadHostBootstrap(captureBrowserRegistrations = false): 
     typeof __unregisterTimerHost !== 'function'
   ) {
     throw new TypeError(
-      'The threadless Rolldown binding does not expose its CurrentThread host integration',
+      'The ${flavor} Rolldown binding does not expose its CurrentThread host integration',
     )
   }
   const __taskHostContractVersion =
@@ -2882,7 +2904,7 @@ function renderCurrentThreadHostBootstrap(captureBrowserRegistrations = false): 
     )
   if (__taskHostContractVersion !== ${CURRENT_THREAD_TASK_HOST_CONTRACT_VERSION}) {
     throw new TypeError(
-      'The threadless Rolldown binding uses CurrentThread task-host contract version ' +
+      'The ${flavor} Rolldown binding uses CurrentThread task-host contract version ' +
         String(__taskHostContractVersion) +
         ', but version ${CURRENT_THREAD_TASK_HOST_CONTRACT_VERSION} is required',
     )
@@ -2904,7 +2926,7 @@ function renderCurrentThreadHostBootstrap(captureBrowserRegistrations = false): 
       (__high === 0 && __low === 0)
     ) {
       throw new TypeError(
-        'The threadless Rolldown binding returned an invalid ' +
+        'The ${flavor} Rolldown binding returned an invalid ' +
           __label +
           ' host registration',
       )
@@ -2919,14 +2941,14 @@ function renderCurrentThreadHostBootstrap(captureBrowserRegistrations = false): 
     )
     if (typeof __active !== 'boolean') {
       throw new TypeError(
-        'The threadless Rolldown binding returned an invalid ' +
+        'The ${flavor} Rolldown binding returned an invalid ' +
           __label +
           ' host liveness result',
       )
     }
     if (!__active) {
       throw new TypeError(
-        'The threadless Rolldown binding returned an inactive ' +
+        'The ${flavor} Rolldown binding returned an inactive ' +
           __label +
           ' host registration',
       )
@@ -3026,6 +3048,40 @@ ${captureTimerHostRegistration}
         },
       ])
     __assertHostRegistrationActive(__timerHostRegistration, 'timer')
+  }`;
+  if (flavor === 'threadless') {
+    // The wasm32-wasip1 build is always the shared CurrentThread runtime, so
+    // its loaders install the hosts unconditionally and fail loudly when the
+    // binding does not expose the host contract.
+    return `${CURRENT_THREAD_HOST_BOOTSTRAP_START}
+;{
+  const __rolldownBinding = __napiModule.exports
+${body}
+}
+${CURRENT_THREAD_HOST_BOOTSTRAP_END}`;
+  }
+  // The threaded artifact only needs JavaScript task/timer hosts while the
+  // linked binding runs the shared CurrentThread runtime. A binding that does
+  // not report `asyncRuntimeBuild` schedules itself and exposes no host
+  // contract, so the bootstrap stays inert there instead of throwing.
+  const gatedBody = body
+    .split('\n')
+    .map((line) => (line === '' ? line : `  ${line}`))
+    .join('\n');
+  return `${CURRENT_THREAD_HOST_BOOTSTRAP_START}
+;{
+  const __rolldownBinding = __napiModule.exports
+  const __getRuntimeCapabilities = __rolldownBinding.getRuntimeCapabilities
+  const __runtimeCapabilities =
+    typeof __getRuntimeCapabilities === 'function'
+      ? Reflect.apply(__getRuntimeCapabilities, __rolldownBinding, [])
+      : undefined
+  if (
+    __runtimeCapabilities !== null &&
+    typeof __runtimeCapabilities === 'object' &&
+    __runtimeCapabilities.asyncRuntimeBuild === true
+  ) {
+${gatedBody}
   }
 }
 ${CURRENT_THREAD_HOST_BOOTSTRAP_END}`;
@@ -3035,6 +3091,7 @@ function injectBrowserInitializationGuard(
   source: string,
   loaderPath: string,
   exportAnchor: string,
+  flavor: CurrentThreadLoaderFlavor,
 ): string {
   const guardStartCount = source.split(BROWSER_INITIALIZATION_GUARD_START).length - 1;
   const guardEndCount = source.split(BROWSER_INITIALIZATION_GUARD_END).length - 1;
@@ -3056,7 +3113,7 @@ function injectBrowserInitializationGuard(
     if (catchStart < guardEnd || catchStart > exportStart) {
       throw new Error(`Malformed browser initialization cleanup in ${loaderPath}`);
     }
-    return `${source.slice(0, catchStart + 1)}${renderBrowserInitializationCleanup()}
+    return `${source.slice(0, catchStart + 1)}${renderBrowserInitializationCleanup(flavor)}
 ${source.slice(exportStart)}`.replace(/[ \t]+$/gm, '');
   }
 
@@ -3124,11 +3181,12 @@ ${declarationAnchor}`,
 ${BROWSER_INITIALIZATION_GUARD_START}
 ${tryBody}
 ${BROWSER_INITIALIZATION_GUARD_END}
-${renderBrowserInitializationCleanup()}
+${renderBrowserInitializationCleanup(flavor)}
 ${source.slice(exportStart)}`;
 }
 
-function renderBrowserInitializationCleanup(): string {
+function renderBrowserInitializationCleanup(flavor: CurrentThreadLoaderFlavor): string {
+  const flavorLabel = flavor === 'threaded' ? 'Threaded' : 'Threadless';
   return `} catch (error) {
   const __hostCleanupErrors = []
   const __cleanupSync = (__operation, __message) => {
@@ -3150,7 +3208,7 @@ function renderBrowserInitializationCleanup(): string {
         __browserTimerHostRegistration.high,
         __browserTimerHostRegistration.low,
       ])
-    }, 'Threadless browser timer-host cleanup failed')
+    }, '${flavorLabel} browser timer-host cleanup failed')
   }
   if (__browserTaskHostRegistration !== undefined) {
     __cleanupSync(() => {
@@ -3159,14 +3217,15 @@ function renderBrowserInitializationCleanup(): string {
         __browserTaskHostRegistration.high,
         __browserTaskHostRegistration.low,
       ])
-    }, 'Threadless browser task-host cleanup failed')
+    }, '${flavorLabel} browser task-host cleanup failed')
   }
   const cleanupErrors = await __rollbackWasiInitialization()
   throw __attachCleanupErrors(error, __hostCleanupErrors.concat(cleanupErrors))
 }`;
 }
 
-function renderNodeInitializationCleanup(): string {
+function renderNodeInitializationCleanup(flavor: CurrentThreadLoaderFlavor): string {
+  const flavorLabel = flavor === 'threaded' ? 'Threaded' : 'Threadless';
   return `${NODE_INITIALIZATION_CLEANUP_START}
 } catch (error) {
   const __hostCleanupErrors = []
@@ -3193,7 +3252,7 @@ function renderNodeInitializationCleanup(): string {
         __nodeTimerHostRegistration.high,
         __nodeTimerHostRegistration.low,
       ])
-    }, 'Threadless Node timer-host cleanup failed')
+    }, '${flavorLabel} Node timer-host cleanup failed')
     if (__released) {
       __nodeTimerHostRegistration = undefined
     }
@@ -3208,7 +3267,7 @@ function renderNodeInitializationCleanup(): string {
         __nodeTaskHostRegistration.high,
         __nodeTaskHostRegistration.low,
       ])
-    }, 'Threadless Node task-host cleanup failed')
+    }, '${flavorLabel} Node task-host cleanup failed')
     if (__released) {
       __nodeTaskHostRegistration = undefined
     }
@@ -3288,6 +3347,7 @@ function injectNodeInitializationCleanup(
   source: string,
   loaderPath: string,
   generatedCatchAnchor: string,
+  flavor: CurrentThreadLoaderFlavor,
 ): string {
   validateGeneratedNodeLifecycle(source, loaderPath);
   source = injectNodeHostRegistrationDeclarations(source, loaderPath);
@@ -3304,7 +3364,7 @@ function injectNodeInitializationCleanup(
     }
     return (
       source.slice(0, cleanupStart) +
-      renderNodeInitializationCleanup() +
+      renderNodeInitializationCleanup(flavor) +
       source.slice(cleanupEnd + NODE_INITIALIZATION_CLEANUP_END.length)
     );
   }
@@ -3332,7 +3392,7 @@ function injectNodeInitializationCleanup(
   if (generatedCatch !== expectedGeneratedCatch) {
     throw new Error(`Unexpected generated Node initialization cleanup in ${loaderPath}`);
   }
-  return `${source.slice(0, catchStart)}${renderNodeInitializationCleanup()}
+  return `${source.slice(0, catchStart)}${renderNodeInitializationCleanup(flavor)}
 ${source.slice(exportStart)}`;
 }
 
@@ -3360,6 +3420,7 @@ export function injectCurrentThreadHostBootstrap(
   bootstrapAnchor: string,
   browserInitializationGuard: boolean,
   { initialMemory, maximumMemory }: WasmConfig,
+  flavor: CurrentThreadLoaderFlavor = 'threadless',
 ): string {
   const startCount = source.split(CURRENT_THREAD_HOST_BOOTSTRAP_START).length - 1;
   const endCount = source.split(CURRENT_THREAD_HOST_BOOTSTRAP_END).length - 1;
@@ -3377,15 +3438,19 @@ export function injectCurrentThreadHostBootstrap(
       source.slice(end + CURRENT_THREAD_HOST_BOOTSTRAP_END.length).replace(/^\n+/, '');
   }
 
-  source = rewriteThreadlessMemoryDescriptor(source, loaderPath, {
-    initialMemory,
-    maximumMemory,
-  });
+  if (flavor === 'threadless') {
+    // The threaded loaders keep their generated shared-memory descriptor:
+    // only the threadless flavor's linear memory floor is rewritten here.
+    source = rewriteThreadlessMemoryDescriptor(source, loaderPath, {
+      initialMemory,
+      maximumMemory,
+    });
+  }
 
   if (browserInitializationGuard) {
-    source = injectBrowserInitializationGuard(source, loaderPath, bootstrapAnchor);
+    source = injectBrowserInitializationGuard(source, loaderPath, bootstrapAnchor, flavor);
   } else {
-    source = injectNodeInitializationCleanup(source, loaderPath, bootstrapAnchor);
+    source = injectNodeInitializationCleanup(source, loaderPath, bootstrapAnchor, flavor);
   }
 
   const effectiveBootstrapAnchor = browserInitializationGuard
@@ -3396,7 +3461,7 @@ export function injectCurrentThreadHostBootstrap(
     throw new Error(`Unable to locate generated CurrentThread bootstrap anchor in ${loaderPath}`);
   }
   const anchor = source.indexOf(effectiveBootstrapAnchor);
-  const bootstrap = renderCurrentThreadHostBootstrap(browserInitializationGuard);
+  const bootstrap = renderCurrentThreadHostBootstrap(browserInitializationGuard, flavor);
   return `${source.slice(0, anchor)}${bootstrap}\n${source.slice(anchor)}`;
 }
 
@@ -3412,7 +3477,7 @@ export function generateWorkerdLoader(): boolean {
   const threadlessDeclaration = readFileSync(threadlessDeclarationPath, 'utf8');
   const generatedLoaders = CURRENT_THREAD_LOADERS.map((loader) => {
     if (!existsSync(loader.path)) {
-      throw new Error(`Generated threadless WASI loader not found: ${loader.path}`);
+      throw new Error(`Generated ${loader.flavor} WASI loader not found: ${loader.path}`);
     }
     return {
       path: loader.path,
@@ -3422,6 +3487,7 @@ export function generateWorkerdLoader(): boolean {
         loader.bootstrapAnchor,
         loader.browserInitializationGuard,
         memoryConfig,
+        loader.flavor,
       ),
     };
   });

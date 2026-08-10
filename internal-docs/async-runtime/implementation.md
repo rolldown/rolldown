@@ -832,9 +832,17 @@ JavaScript-file pattern, so unrelated sources remain outside the transaction.
 
 `packages/rolldown/generate-workerd-loader.ts` deterministically hardens the
 generated deferred loader after every napi build. The same generation pass
-post-processes the napi-rs CJS and browser loaders for `wasm32-wasip1`,
-registering the v4 native CurrentThread runnable host and the JavaScript timer
-host before exposing the binding. The task-host bootstrap validates contract
+post-processes the napi-rs CJS and browser loaders for BOTH wasm flavors —
+`wasm32-wasip1` and threaded `wasm32-wasip1-threads` — registering the v4
+native CurrentThread runnable host and the JavaScript timer host before
+exposing the binding: since the registry napi pin every wasm artifact runs the
+shared CurrentThread flavor, so a raw import of either shipped loader set must
+carry its own task/timer hosts or a build never completes. The threadless
+loaders install unconditionally (that target is by construction an
+async-runtime build) while the threaded loaders gate the same bootstrap on the
+binding reporting `getRuntimeCapabilities().asyncRuntimeBuild === true`, so a
+self-scheduling binding without the shared runtime still loads with the
+bootstrap inert. The task-host bootstrap validates contract
 version 4 and the exact reserved registration capability, captures that
 capability for cleanup, and never exposes JavaScript drive or cancellation
 functions. The CJS
@@ -1066,9 +1074,12 @@ build-order coupling in the WASI workflow) is gone:
 - `scripts/misc/check-wasi-binding-packed-consumer.mjs` imports the published
   threadless package root through both its CJS and browser conditions, executes
   an async binding build, and requires the generated task/timer bootstrap to
-  report `timers: true`. Its managed-workerd pass also checks runtime export
-  names against the bundled declaration and repeats the representative memory
-  lifecycle described above.
+  report `timers: true`. The threaded Chromium exercise raw-imports the packed
+  `rolldown-binding.wasi-browser.js` the same way and completes a build purely
+  on the loader's own gated bootstrap — no package entry ever runs there — so
+  it pins the same `timers: true` contract for the threaded flavor. Its
+  managed-workerd pass also checks runtime export names against the bundled
+  declaration and repeats the representative memory lifecycle described above.
 
 `napi artifacts` routes each flavor's wasm + generated loaders into its own npm
 dir (`npm/wasm32-wasi`, `npm/wasm32-wasip1`) by exact-name match. Release

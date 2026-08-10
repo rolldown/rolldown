@@ -35,6 +35,7 @@ const wasiTest = test.runIf(existsSync(wasmPath));
 const deferredLoaderPath = new URL('../src/rolldown-binding.wasip1-deferred.js', import.meta.url);
 const cjsLoaderPath = new URL('../src/rolldown-binding.wasip1.cjs', import.meta.url);
 const browserLoaderPath = new URL('../src/rolldown-binding.wasip1-browser.js', import.meta.url);
+const threadedCjsLoaderPath = new URL('../src/rolldown-binding.wasi.cjs', import.meta.url);
 const threadedBrowserLoaderPath = new URL(
   '../src/rolldown-binding.wasi-browser.js',
   import.meta.url,
@@ -4868,6 +4869,125 @@ try {
         expect(bootstrap).not.toContain(removedExport);
       }
     }
+  });
+
+  test('gates the threaded loader host bootstrap on the reported shared runtime', async () => {
+    const [threadedCjsSource, threadedBrowserSource] = await Promise.all([
+      readFile(threadedCjsLoaderPath, 'utf8'),
+      readFile(threadedBrowserLoaderPath, 'utf8'),
+    ]);
+    expect(threadedCjsSource).toContain('Threaded Node timer-host cleanup failed');
+    expect(threadedCjsSource).toContain('Threaded Node task-host cleanup failed');
+    expect(threadedBrowserSource).toContain('Threaded browser timer-host cleanup failed');
+    expect(threadedBrowserSource).toContain('Threaded browser task-host cleanup failed');
+    for (const source of [threadedCjsSource, threadedBrowserSource]) {
+      // The threaded loaders keep their generated shared-memory descriptor.
+      expect(source).toContain('shared: true');
+      for (const removedExport of removedTaskHostExports) {
+        expect(source).not.toContain(removedExport);
+      }
+    }
+
+    const [cjsBootstrap, browserBootstrap] = await Promise.all([
+      readCurrentThreadHostBootstrap(threadedCjsLoaderPath),
+      readCurrentThreadHostBootstrap(threadedBrowserLoaderPath),
+    ]);
+    const normalizeCapturedRegistrations = (bootstrap: string) =>
+      bootstrap
+        .replace(/^[ \t]*__browserTaskHostRegistration = __taskHostRegistration$/m, '')
+        .replace(/^[ \t]*__browserTimerHostRegistration = __timerHostRegistration$/m, '')
+        .replace(/^[ \t]*__nodeTaskHostRegistration = __taskHostRegistration$/m, '')
+        .replace(/^[ \t]*__nodeTimerHostRegistration = __timerHostRegistration$/m, '');
+    expect(normalizeCapturedRegistrations(browserBootstrap)).toBe(
+      normalizeCapturedRegistrations(cjsBootstrap),
+    );
+
+    for (const bootstrap of [cjsBootstrap, browserBootstrap]) {
+      expect(bootstrap).toContain('__runtimeCapabilities.asyncRuntimeBuild === true');
+      expect(bootstrap).toContain('The threaded Rolldown binding');
+      expect(bootstrap).not.toContain('threadless');
+
+      // A binding without a capability reporter loads without the host contract.
+      const reserveWithoutCapabilities = vi.fn();
+      runCurrentThreadHostBootstrap(bootstrap, {
+        reserveCurrentThreadHostRegistration: reserveWithoutCapabilities,
+      });
+      expect(reserveWithoutCapabilities).not.toHaveBeenCalled();
+
+      // A self-scheduling binding reports no shared runtime and stays untouched.
+      const reserveWithoutSharedRuntime = vi.fn();
+      runCurrentThreadHostBootstrap(bootstrap, {
+        getRuntimeCapabilities: () => ({ asyncRuntimeBuild: false }),
+        reserveCurrentThreadHostRegistration: reserveWithoutSharedRuntime,
+      });
+      expect(reserveWithoutSharedRuntime).not.toHaveBeenCalled();
+
+      // A shared-runtime binding without the host contract fails loudly.
+      expect(() =>
+        runCurrentThreadHostBootstrap(bootstrap, {
+          getRuntimeCapabilities: () => ({ asyncRuntimeBuild: true }),
+        }),
+      ).toThrow('The threaded Rolldown binding does not expose its CurrentThread host integration');
+
+      // A shared-runtime binding registers both hosts through the v4 contract.
+      const taskRegistration = { high: 0x1234_5678, low: 0x9abc_def0 };
+      const timerRegistration = { high: 0, low: 2 };
+      const registrations = [taskRegistration, timerRegistration];
+      const live = new Set<number>();
+      const binding = {
+        getRuntimeCapabilities: vi.fn(() => ({ asyncRuntimeBuild: true })),
+        getCurrentThreadTaskHostContractVersion: vi.fn(() => 4),
+        isCurrentThreadHostRegistrationActive: vi.fn((_high: number, low: number) => live.has(low)),
+        registerCurrentThreadTaskHost: vi.fn((_high: number, low: number) => {
+          live.add(low);
+        }),
+        registerTimerHost: vi.fn((_high: number, low: number) => {
+          live.add(low);
+        }),
+        reserveCurrentThreadHostRegistration: vi.fn(() => registrations.shift()),
+        unregisterCurrentThreadTaskHost: vi.fn(),
+        unregisterTimerHost: vi.fn(),
+      };
+      runCurrentThreadHostBootstrap(bootstrap, binding);
+      expect(binding.getRuntimeCapabilities).toHaveBeenCalledWith();
+      expect(binding.reserveCurrentThreadHostRegistration).toHaveBeenCalledTimes(2);
+      expect(binding.registerCurrentThreadTaskHost).toHaveBeenCalledWith(
+        taskRegistration.high,
+        taskRegistration.low,
+      );
+      expect(binding.registerTimerHost).toHaveBeenCalledWith(
+        timerRegistration.high,
+        timerRegistration.low,
+        expect.any(Function),
+        expect.any(Function),
+      );
+    }
+  });
+
+  test('re-injects the threaded loader bootstrap idempotently', async () => {
+    const memoryConfig = { initialMemory: 1024, maximumMemory: 65536 };
+    const cjsSource = await readFile(threadedCjsLoaderPath, 'utf8');
+    expect(
+      injectCurrentThreadHostBootstrap(
+        cjsSource,
+        'rolldown-binding.wasi.cjs',
+        '} catch (error) {\n  const rollback = {',
+        false,
+        memoryConfig,
+        'threaded',
+      ),
+    ).toBe(cjsSource);
+    const browserSource = await readFile(threadedBrowserLoaderPath, 'utf8');
+    expect(
+      injectCurrentThreadHostBootstrap(
+        browserSource,
+        'rolldown-binding.wasi-browser.js',
+        'export default __napiModule.exports',
+        true,
+        memoryConfig,
+        'threaded',
+      ),
+    ).toBe(browserSource);
   });
 
   test('rejects a mismatched generated root task-host ABI before registration', async () => {

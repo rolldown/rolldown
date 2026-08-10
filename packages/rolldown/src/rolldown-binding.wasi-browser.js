@@ -567,10 +567,13 @@ function __rollbackWasiInitialization() {
   return __destroyContextForWasiRollback(cleanupErrors)
 }
 
+let __browserTaskHostRegistration
+let __browserTimerHostRegistration
 let __wasiModule
 let __napiModule
 
 try {
+/* ROLLDOWN_BROWSER_INITIALIZATION_GUARD_START */
   __emnapiContext = __wrapEmnapiContextDestroyForSettlement(__emnapiCreateContext({ autoDestroy: false }))
   __emnapiContext.suppressDestroy()
     __emnapiContext.features.Buffer = Buffer
@@ -627,9 +630,235 @@ try {
     },
   }))
   __publishWasiDispose(__napiModule.exports)
+/* ROLLDOWN_CURRENT_THREAD_HOST_BOOTSTRAP_START */
+;{
+  const __rolldownBinding = __napiModule.exports
+  const __getRuntimeCapabilities = __rolldownBinding.getRuntimeCapabilities
+  const __runtimeCapabilities =
+    typeof __getRuntimeCapabilities === 'function'
+      ? Reflect.apply(__getRuntimeCapabilities, __rolldownBinding, [])
+      : undefined
+  if (
+    __runtimeCapabilities !== null &&
+    typeof __runtimeCapabilities === 'object' &&
+    __runtimeCapabilities.asyncRuntimeBuild === true
+  ) {
+    const __getCurrentThreadTaskHostContractVersion =
+      __rolldownBinding.getCurrentThreadTaskHostContractVersion
+    const __isCurrentThreadHostRegistrationActive =
+      __rolldownBinding.isCurrentThreadHostRegistrationActive
+    const __registerCurrentThreadTaskHost =
+      __rolldownBinding.registerCurrentThreadTaskHost
+    const __registerTimerHost = __rolldownBinding.registerTimerHost
+    const __reserveCurrentThreadHostRegistration =
+      __rolldownBinding.reserveCurrentThreadHostRegistration
+    const __unregisterCurrentThreadTaskHost =
+      __rolldownBinding.unregisterCurrentThreadTaskHost
+    const __unregisterTimerHost = __rolldownBinding.unregisterTimerHost
+    if (
+      typeof __getCurrentThreadTaskHostContractVersion !== 'function' ||
+      typeof __isCurrentThreadHostRegistrationActive !== 'function' ||
+      typeof __registerCurrentThreadTaskHost !== 'function' ||
+      typeof __registerTimerHost !== 'function' ||
+      typeof __reserveCurrentThreadHostRegistration !== 'function' ||
+      typeof __unregisterCurrentThreadTaskHost !== 'function' ||
+      typeof __unregisterTimerHost !== 'function'
+    ) {
+      throw new TypeError(
+        'The threaded Rolldown binding does not expose its CurrentThread host integration',
+      )
+    }
+    const __taskHostContractVersion =
+      Reflect.apply(
+        __getCurrentThreadTaskHostContractVersion,
+        __rolldownBinding,
+        [],
+      )
+    if (__taskHostContractVersion !== 4) {
+      throw new TypeError(
+        'The threaded Rolldown binding uses CurrentThread task-host contract version ' +
+          String(__taskHostContractVersion) +
+          ', but version 4 is required',
+      )
+    }
+    const __readHostRegistration = (__registration, __label) => {
+      let __high
+      let __low
+      try {
+        __high = Reflect.get(__registration, 'high', __registration)
+        __low = Reflect.get(__registration, 'low', __registration)
+      } catch {}
+      if (
+        !Number.isInteger(__high) ||
+        __high < 0 ||
+        __high > 0xffffffff ||
+        !Number.isInteger(__low) ||
+        __low < 0 ||
+        __low > 0xffffffff ||
+        (__high === 0 && __low === 0)
+      ) {
+        throw new TypeError(
+          'The threaded Rolldown binding returned an invalid ' +
+            __label +
+            ' host registration',
+        )
+      }
+      return { high: __high, low: __low }
+    }
+    const __assertHostRegistrationActive = (__registration, __label) => {
+      const __active = Reflect.apply(
+        __isCurrentThreadHostRegistrationActive,
+        __rolldownBinding,
+        [__registration.high, __registration.low],
+      )
+      if (typeof __active !== 'boolean') {
+        throw new TypeError(
+          'The threaded Rolldown binding returned an invalid ' +
+            __label +
+            ' host liveness result',
+        )
+      }
+      if (!__active) {
+        throw new TypeError(
+          'The threaded Rolldown binding returned an inactive ' +
+            __label +
+            ' host registration',
+        )
+      }
+    }
+    const __taskHostRegistration = __readHostRegistration(
+      Reflect.apply(
+        __reserveCurrentThreadHostRegistration,
+        __rolldownBinding,
+        [],
+      ),
+      'task',
+    )
+    __browserTaskHostRegistration = __taskHostRegistration
+    Reflect.apply(__registerCurrentThreadTaskHost, __rolldownBinding, [
+      __taskHostRegistration.high,
+      __taskHostRegistration.low,
+    ])
+    __assertHostRegistrationActive(__taskHostRegistration, 'task')
+
+    const __setTimeoutHost = globalThis.setTimeout?.bind(globalThis)
+    const __clearTimeoutHost = globalThis.clearTimeout?.bind(globalThis)
+    if (__setTimeoutHost && __clearTimeoutHost) {
+      const __MAX_HOST_TIMEOUT_MS = 2147483647
+      const __activeTimers = new Map()
+      const __armTimer = (__id, __timer) => {
+        const __delay = Math.min(__timer.remainingMs, __MAX_HOST_TIMEOUT_MS)
+        __timer.handle = __setTimeoutHost(() => {
+          if (__activeTimers.get(__id) !== __timer) return
+          __timer.remainingMs -= __delay
+          if (__timer.remainingMs > 0) {
+            try {
+              __armTimer(__id, __timer)
+            } catch (__error) {
+              __activeTimers.delete(__id)
+              __timer.reject(__error)
+            }
+            return
+          }
+          __activeTimers.delete(__id)
+          __timer.resolve()
+        }, __delay)
+      }
+      const __cancelTimer = (__timer) => {
+        try {
+          if (__timer.handle !== undefined) {
+            __clearTimeoutHost(__timer.handle)
+          }
+        } catch {
+          // Rust invokes this callback through a non-catching TSFN. Contain
+          // host cancellation failures at the JavaScript boundary.
+        } finally {
+          __timer.resolve()
+        }
+      }
+      const __timerHostRegistration = __readHostRegistration(
+        Reflect.apply(
+          __reserveCurrentThreadHostRegistration,
+          __rolldownBinding,
+          [],
+        ),
+        'timer',
+      )
+      __browserTimerHostRegistration = __timerHostRegistration
+      Reflect.apply(__registerTimerHost, __rolldownBinding, [
+        __timerHostRegistration.high,
+        __timerHostRegistration.low,
+        (__id, __ms) => {
+          const __previous = __activeTimers.get(__id)
+          if (__previous) {
+              __activeTimers.delete(__id)
+              __cancelTimer(__previous)
+            }
+            return new Promise((__resolve, __reject) => {
+              const __timer = {
+                handle: undefined,
+                remainingMs: Math.max(__ms, 0),
+                reject: __reject,
+                resolve: __resolve,
+              }
+              __activeTimers.set(__id, __timer)
+              try {
+                __armTimer(__id, __timer)
+              } catch (__error) {
+                if (__activeTimers.get(__id) === __timer) {
+                  __activeTimers.delete(__id)
+                }
+                __reject(__error)
+              }
+            })
+          },
+          (__id) => {
+            const __timer = __activeTimers.get(__id)
+            if (!__timer) return
+            __activeTimers.delete(__id)
+            __cancelTimer(__timer)
+          },
+        ])
+      __assertHostRegistrationActive(__timerHostRegistration, 'timer')
+    }
+  }
+}
+/* ROLLDOWN_CURRENT_THREAD_HOST_BOOTSTRAP_END */
+/* ROLLDOWN_BROWSER_INITIALIZATION_GUARD_END */
 } catch (error) {
+  const __hostCleanupErrors = []
+  const __cleanupSync = (__operation, __message) => {
+    const __operationErrors = []
+    for (let __attempt = 0; __attempt < 2; __attempt += 1) {
+      try {
+        __operation()
+        return
+      } catch (__cleanupError) {
+        __operationErrors.push(__cleanupError)
+      }
+    }
+    __hostCleanupErrors.push(new AggregateError(__operationErrors, __message))
+  }
+  if (__browserTimerHostRegistration !== undefined) {
+    __cleanupSync(() => {
+      const __binding = __napiModule.exports
+      Reflect.apply(__binding.unregisterTimerHost, __binding, [
+        __browserTimerHostRegistration.high,
+        __browserTimerHostRegistration.low,
+      ])
+    }, 'Threaded browser timer-host cleanup failed')
+  }
+  if (__browserTaskHostRegistration !== undefined) {
+    __cleanupSync(() => {
+      const __binding = __napiModule.exports
+      Reflect.apply(__binding.unregisterCurrentThreadTaskHost, __binding, [
+        __browserTaskHostRegistration.high,
+        __browserTaskHostRegistration.low,
+      ])
+    }, 'Threaded browser task-host cleanup failed')
+  }
   const cleanupErrors = await __rollbackWasiInitialization()
-  throw __attachCleanupErrors(error, cleanupErrors)
+  throw __attachCleanupErrors(error, __hostCleanupErrors.concat(cleanupErrors))
 }
 export default __napiModule.exports
 export const __rolldownBindingTarget = 'wasi-threads'

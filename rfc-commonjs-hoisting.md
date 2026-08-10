@@ -166,7 +166,7 @@ Three overrides sit on top of both rules, and each override always wins:
 - an `import()` edge with code splitting off;
 - the forced wrapper under strict execution order with manual groups.
 
-[Where hoisting plugs in](#where-hoisting-plugs-in) gives the file and line for each one.
+[How rolldown decides the wrapper today](#how-rolldown-decides-the-wrapper-today) gives the file and line for each one.
 
 ### Which modules actually need the wrapper?
 
@@ -399,7 +399,7 @@ console.log(mod_a(), feature_get());
 
 `mod.cjs` and `feature.cjs` cost one binding each. `optional.cjs` keeps the closure it needs, and `__commonJSMin` stays in the chunk because something still uses it. So a chunk pays for the helper only while at least one module still needs it, and calling `require()` never blocks the caller from hoisting. Corpus case: `hoist/calls-require`.
 
-### Where hoisting plugs in
+### How rolldown decides the wrapper today
 
 [How rolldown wraps](#how-rolldown-wraps) gives the shape. This is where each part of it lives, and what this RFC does to it:
 
@@ -511,6 +511,8 @@ The map holds getters, not a snapshot. A hoisted module may still assign `export
 
 A named import needs none of this. The import resolves to the binding. Rolldown emits no object, and no helper enters the chunk. Today every wrapped CommonJS module pays the interop cost once per chunk, whatever its importers do with it. After this change, only an escaping namespace pays it.
 
+So a module whose namespace escapes gains the least. It exchanges the `__commonJSMin` closure for an `__exportAll` map, and it keeps the `__toESM` call it already had. The object returns and the helpers stay. The result is not worse than today, and the minifier can still reach the bindings under the object. But most of the benefit is gone, so the benefit depends on how code uses a module, not on what the module exports.
+
 ### Execution order semantics
 
 A hoisted body runs at the module's position in the chunk. That is exactly where its `require_mod()` call sits today, directly after the wrapper definition, and not at the import site. So for the modules the predicate selects, hoisting preserves 100% of the current evaluation order. Condition 3 is what buys that: it removes every module whose body might not have run at all.
@@ -587,23 +589,13 @@ It keeps the wrapper, through the existing transitive rule. Take a wrapped ESM m
 
 ## Drawbacks
 
-All three drawbacks arrive when the code lands, whatever the value of the option. A predicate bug that emits a quiet, wrong bundle is not a fourth entry. That is a failure mode, not a design cost, and [the option](#whats-the-commonjs-option) exists to bound it.
+**Two code paths to maintain.** Every later pass gets a second CommonJS shape to handle: the finalizer, chunk linking, HMR, and `preserveModules`. Those branches exist whether or not a user turns the option on. So this cost arrives in full on the first day, and the option cannot defer it.
 
-### The wrapper decision starts to read the whole graph
-
-Today rolldown decides each wrapper from one import edge: the importer, the importee, and the `ImportKind`. One edge is enough, so the decision can run before symbol binding and tree shaking, and one edge explains every wrapper. Condition 3 ends that: "does any `require()` reach this module?" is a question about every edge in the graph at once. The predicate still runs once, and it stays deterministic. But the answer to "why did this module keep its wrapper?" can now sit anywhere in the graph.
-
-### Two code paths to maintain
-
-Every later pass gets a second CommonJS shape to handle: the finalizer, chunk linking, HMR, and `preserveModules`. Those branches exist whether or not a user turns the option on. So this cost arrives in full on the first day, and the option cannot defer it.
-
-### A module whose namespace escapes gains almost nothing
-
-It exchanges the `__commonJSMin` closure for an `__exportAll` map, and it keeps the `__toESM` call it already had. So the object returns and the helpers stay. The result is not worse than today, and the minifier can still reach the bindings under the object. But most of the benefit is gone, and the benefit therefore depends on how code uses a module, not on what the module exports.
-
-The predicate could read usage and leave an escaping module wrapped. That would tie a link-stage decision to usage, which the wrapper decision avoids today on purpose. So this drawback has no mitigation inside the current design.
+That is the whole design cost. A predicate bug that emits a quiet, wrong bundle is not a second entry. That is a failure mode, not a design cost, and [the option](#whats-the-commonjs-option) exists to bound it.
 
 ## Rationale and alternatives
+
+[Why this shape](#why-this-shape) is the rationale. The next four sections are the alternatives, each with the reason against it. The last section says what this RFC does not change.
 
 ### Why this shape
 
@@ -674,7 +666,7 @@ So the plugin belongs to the wrapper class, not to the hoisting class. Webpack i
 
 ### Should a module stay wrapped when every importer only wants `default`?
 
-To answer that, usage must inform the wrapper decision. No other wrapper rule reads usage today, and [the escaping-namespace drawback](#a-module-whose-namespace-escapes-gains-almost-nothing) is the same question from the other side.
+To answer that, usage must inform the wrapper decision. No other wrapper rule reads usage today, and the wrapper decision avoids that on purpose. [An escaping namespace](#namespaces-and-default-interop) is the same question from the other side. It gains almost nothing from hoisting, and the predicate cannot tell without reading usage.
 
 ### What happens to a module with repeated writes?
 

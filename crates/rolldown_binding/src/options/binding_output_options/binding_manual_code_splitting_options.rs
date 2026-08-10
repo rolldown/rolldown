@@ -75,10 +75,7 @@ impl BindingChunkingContext {
         freed: false,
         reason: Some("Memory has already been freed".to_string()),
       },
-      Some(_inner) => {
-        // The `ChunkingContext` drops here automatically
-        ExternalMemoryStatus { freed: true, reason: None }
-      }
+      Some(_inner) => ExternalMemoryStatus { freed: true, reason: None },
     }
   }
 

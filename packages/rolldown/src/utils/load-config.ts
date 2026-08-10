@@ -53,12 +53,10 @@ async function bundleTsConfig(configFile: string, isEsm: boolean): Promise<Bundl
       },
     ],
   });
-  // Emit the entry beside the config file: the emitted module's URL is the
-  // resolution base for any runtime-computed relative dynamic import (e.g.
-  // `import(`./${name}.js`)`) a deferred config function performs after
-  // loading, so it must be the config's own directory. The per-call random
-  // token keeps concurrent loads collision-free, and the leading dot hides
-  // the transient file.
+  // Must be emitted beside the config file: the emitted module's URL is the
+  // resolution base for any runtime-computed relative dynamic import a
+  // deferred config function performs later. The per-call random token keeps
+  // concurrent loads collision-free.
   const outputDir = path.dirname(configFile);
   const outputPrefix = `.rolldown.config.${randomBytes(4).toString('hex')}.`;
   let outputFile: string | undefined;
@@ -126,11 +124,9 @@ async function removeBundledFiles(files: string[]): Promise<void> {
 const filesPendingRemovalAtExit = new Set<string>();
 
 /**
- * Defer removal of emitted files that a deferred config function might still
- * runtime-import to process exit. With `codeSplitting: false` the bundle is a
- * single entry, so this should never receive any file in practice — it is a
- * safety net so cleanup can never break a deferred dynamic import while still
- * not leaking transient files across runs.
+ * Defer removal of emitted files a deferred config function might still
+ * runtime-import. With `codeSplitting: false` this should never receive any
+ * file; it is a safety net so cleanup cannot break a deferred dynamic import.
  */
 function scheduleRemovalAtExit(files: string[]): void {
   if (files.length === 0) return;
@@ -177,11 +173,9 @@ async function loadTsConfig(configFile: string): Promise<ConfigExport> {
   let cleanupError: unknown;
   try {
     if (importError === undefined) {
-      // The entry module is loaded into memory now, so its file can be
-      // removed immediately. Any other emitted file must stay on disk until
-      // the process exits: the config may be a deferred function that the
-      // caller (e.g. the CLI) invokes after this returns, and it may still
-      // runtime-import such a file.
+      // The entry is in memory now, so its file can go. Any other emitted file
+      // must survive until process exit: a deferred config function the caller
+      // invokes after this returns may still runtime-import it.
       await removeBundledFiles([outputFile]);
       scheduleRemovalAtExit(outputFiles.filter((file) => file !== outputFile));
     } else {

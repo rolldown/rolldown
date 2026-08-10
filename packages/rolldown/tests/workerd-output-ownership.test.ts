@@ -1,17 +1,8 @@
 // Output-memory ownership on the threadless-WASI flavor, through the BUILT
-// dist entry (the node variant of the same bundle wiring the workerd
-// condition uses). The threadless flavor snapshots every output field to
-// JavaScript eagerly and releases the native payload immediately, because
-// engines like workerd never run the GC finalizers that would otherwise free
-// it. These tests pin the two ownership contracts added for that flavor:
-//
-// 1. `chunk.modules` values are plain JS-owned data — readable after the
-//    build's private instance is disposed (previously they were live getters
-//    into `BindingRenderedModule` boxes and threw after dispose).
-// 2. Each generateBundle/writeBundle hook invocation's marshaled bundle copy
-//    is released when the hook round-trip finishes: mutations still apply,
-//    rebuilds on the same instance keep working, and a bundle object stashed
-//    past the hook gets throwing getters for fields it never read.
+// dist entry (the node variant of the same bundle the workerd condition wires
+// up). That flavor snapshots every output field to JavaScript and releases the
+// native payload immediately, because engines like workerd never run the GC
+// finalizers that would otherwise free it.
 import { existsSync } from 'node:fs';
 import { readFile } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
@@ -131,8 +122,8 @@ describe('workerd output ownership against the built dist', () => {
             seenBundleKeys.push(keys);
             const chunk = bundle[keys[0]] as OutputChunk & { code: string };
             // Reading + writing `code` marks the chunk changed; the mutation
-            // must reach the final output even though the hook's bundle copy
-            // is released right after this invocation returns.
+            // must survive the hook's bundle copy being released when this
+            // invocation returns.
             chunk.code = `${chunk.code}\n// stamped-by-generate-bundle`;
             // Model a plugin stashing the bundle object past the hook.
             stashedChunk = chunk;
@@ -148,17 +139,15 @@ describe('workerd output ownership against the built dist', () => {
         const firstChunk = first.output[0] as OutputChunk;
         expect(firstChunk.code).toContain('// stamped-by-generate-bundle');
 
-        // The hook's marshaled copy was dropped after the invocation: fields
-        // read during the hook round-trip stay readable (the mutable wrapper
-        // caches every read, and collecting the changed chunk read most of
-        // them), while `modules` — which nothing read — now throws on this
-        // flavor.
+        // The hook's copy was dropped after the invocation: fields read during
+        // the round-trip stay readable (the mutable wrapper caches every read),
+        // while `modules` -- which nothing read -- now throws on this flavor.
         expect(stashedChunk).toBeDefined();
         expect(stashedChunk!.code).toContain('// stamped-by-generate-bundle');
         expect(() => stashedChunk!.modules).toThrowError(/Memory has been freed/);
 
-        // A rebuild on the same instance keeps working and invokes the hook
-        // with a fresh, readable copy.
+        // A rebuild on the same instance must invoke the hook with a fresh,
+        // readable copy.
         const second = await workerd.build({
           instance,
           input: 'virt:entry.js',
@@ -214,9 +203,9 @@ describe('workerd output ownership against the built dist', () => {
         expect(Uint8Array.from(emitted)).toStrictEqual(original);
 
         // The returned array must carry its own JavaScript bytes: the native
-        // payload behind it is freed eagerly on this flavor, so a re-emit that
-        // resolved through the original native address would read freed (and
-        // by then reused) memory.
+        // payload is freed eagerly on this flavor, so a re-emit resolving
+        // through the original native address would read freed (by now reused)
+        // memory.
         const reemitted = await buildEmitting(emitted);
         expect(Uint8Array.from(reemitted)).toStrictEqual(original);
 

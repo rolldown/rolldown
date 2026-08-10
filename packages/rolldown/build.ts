@@ -24,8 +24,8 @@ const buildMeta = (function makeBuildMeta() {
   type TargetRolldownPkg = 'rolldown-pkg';
 
   // Threaded (wasm32-wasip1-threads) and single-thread (wasm32-wasip1) WASI
-  // dist builds: the artifact sets have distinct per-flavor names, so each
-  // target wires the dist to its own flavor's loaders.
+  // dists: the artifact sets have distinct per-flavor names, so each target
+  // wires its dist to its own flavor's loaders.
   type TargetRolldownPkgWasi = 'rolldown-pkg-wasi';
   type TargetRolldownPkgWasiSingle = 'rolldown-pkg-wasi-single';
 
@@ -210,14 +210,12 @@ function withShared({
   };
 }
 
-// Keep the managed workerd entries self-contained so release staging can use
-// the same public factory in @rolldown/browser, the threadless optional
-// package, and the generated rolldown/workerd facade.
+// Keep the managed workerd entries self-contained so release staging can reuse
+// the same public factory across every package that ships them.
 // See internal-docs/async-runtime/implementation.md.
 async function bundleManagedWorkerdLoaders() {
-  // The workerd entries reuse the browser pipeline (rolldown(), bindingify,
-  // RolldownBuild) against per-instance managed bindings, so they are browser
-  // builds of the package API from the pipeline's point of view.
+  // The workerd entries drive the browser pipeline against per-instance managed
+  // bindings, so from the pipeline's point of view they are browser builds.
   const workerdDefine = {
     'import.meta.browserBuild': 'true',
     'import.meta.workerdPackageApi': 'true',
@@ -283,10 +281,9 @@ async function bundleManagedWorkerdLoaders() {
   });
 }
 
-// Published browser consumers do not inherit the workspace's pnpm patches.
-// Bundle the generated loaders last so every supported package-root condition
-// embeds the exact hardened emnapi runtime used to build the release.
-// See internal-docs/async-runtime/implementation.md.
+// Published browser consumers do not inherit the workspace's pnpm patches, so
+// bundle the generated loaders last: every package-root condition must embed
+// the exact hardened emnapi runtime the release was built with.
 async function bundleBrowserWasiLoaders() {
   await build({
     input: bindingFileWasiBrowser,
@@ -391,10 +388,9 @@ function bundleThreadedNodeWorkerRuntime(): Plugin {
     transform: {
       filter: { id: threadedWasiFiles.worker },
       handler(code) {
-        // The emnapi-v2 worker template destructures the TSFN/async-work
-        // plugins alongside the runtime helpers (the wasm links a "basic"
-        // emnapi archive, so every instantiating thread must provide the
-        // JavaScript implementations through these plugins).
+        // The wasm links a "basic" emnapi archive, so every instantiating
+        // thread must supply the TSFN/async-work plugins the emnapi-v2 worker
+        // template destructures alongside the runtime helpers.
         const runtimeRequire =
           /const\s*\{\s*instantiateNapiModuleSync,\s*MessageHandler,\s*getDefaultContext,\s*emnapiAsyncWorkPlugin,\s*emnapiTSFNPlugin,?\s*\}\s*=\s*require\(["']@napi-rs\/wasm-runtime["']\);?/;
         if (!runtimeRequire.test(code)) {
@@ -410,13 +406,13 @@ function bundleThreadedNodeWorkerRuntime(): Plugin {
 }
 
 // The bundled workerd entries must never evaluate ambient-binding side
-// effects: the binding surface is entered per managed instance instead.
+// effects; the binding is entered per managed instance instead.
 // - `src/binding.cjs` -> slot-based forwarding proxy (`binding-workerd-proxy`)
 // - `src/timer-host.ts` -> empty stub (the deferred loader registers hosts)
 // - `src/binding-magic-string.ts` -> throwing stub (prototype mutation at
 //   module evaluation needs a live binding)
-// The dts-only workerd build intentionally omits this plugin so declarations
-// keep coming from the real modules.
+// The dts-only workerd build omits this plugin so declarations keep coming
+// from the real modules.
 function aliasWorkerdPipelineModules(): Plugin {
   const aliases = new Map([
     [bindingFile, nodePath.resolve('src/binding-workerd-proxy.ts')],

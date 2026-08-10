@@ -13,9 +13,8 @@ export class ChunkingContextImpl {
     const bindingInfo = this.context.getModuleInfo(moduleId);
     if (bindingInfo) {
       // Each call mints a fresh module-info box retaining the module's full
-      // source; on the threadless flavor GC finalizers (its normal
-      // reclamation path) never run, so hand out a plain-data snapshot and
-      // release the box immediately.
+      // source, and the threadless flavor never runs GC finalizers, so hand
+      // out a plain-data snapshot and release the box immediately.
       const info = shouldEagerlyFreeOutputs()
         ? snapshotModuleInfo(bindingInfo, this.pluginContextData.getModuleOption(moduleId))
         : transformModuleInfo(bindingInfo, this.pluginContextData.getModuleOption(moduleId));

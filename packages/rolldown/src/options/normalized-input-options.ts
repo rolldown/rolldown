@@ -33,10 +33,9 @@ export class NormalizedInputOptionsImpl extends PlainObjectLike implements Norma
   }
 
   /**
-   * Evaluates and caches every lazy field so the native box can be released
-   * while the wrapper keeps serving reads. Every lazy field on this class
-   * reads only the native box — never a user-provided object — so this is
-   * safe to call from the release path, which must not execute user code.
+   * Evaluate and cache every lazy field so the native box can be released
+   * while the wrapper keeps serving reads. Safe from the release path (which
+   * must not run user code) because no lazy field here reads a user object.
    */
   materializeBoxBackedFields(): void {
     for (const field of getLazyFields(this)) {

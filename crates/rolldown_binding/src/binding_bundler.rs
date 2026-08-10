@@ -206,9 +206,8 @@ impl BindingBundler {
         Some(error) => close_rejection_promise(env, &error),
       },
     )?;
-    // `nested` was created by `env.spawn_future_with_callback` above, so it is a Promise
-    // owned by this very `env`, and both handles stay valid for `'env`. Only the phantom resolved
-    // type changes, because JavaScript promise resolution assimilates it.
+    // `nested` is a Promise owned by this very `env` and valid for `'env`; only the
+    // phantom resolved type changes, because JS promise resolution assimilates it.
     Ok(PromiseRaw::new(env.raw(), nested.raw()))
   }
 
@@ -441,8 +440,7 @@ impl BindingBundler {
 
   fn install_bundle_handle(&mut self, handle: BundleHandle) {
     self.inner.install_bundle_handle(handle.clone());
-    // Every handle is retained (not just the last): a `RolldownBuild` may build more
-    // than once, and the plugin-timing measurement accumulates across all of them.
+    // Every handle, not just the last: see the `bundle_handles` field doc.
     self.bundle_handles.push(handle);
   }
 

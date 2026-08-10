@@ -35,10 +35,8 @@ const NODE_LIFECYCLE_HELPER_SIGNATURES = [
   'function __runWasiInitializationRollback(record) {',
   'function __registerWasiExitListener() {',
 ] as const;
-// Exact bodies of the generated helpers the injected initialization cleanup
-// interlocks with (in generated source order). A cli bump that reshapes any of
-// them must be reviewed here: the injected catch block below re-enters the
-// generated rollback flow through these seams.
+// Exact bodies (in generated source order) of the helpers the injected catch
+// block re-enters. A cli bump that reshapes any of them must be reviewed here.
 const NODE_LIFECYCLE_CONTRACT_SNIPPETS = [
   `function __attachCleanupErrors(error, cleanupErrors) {
   if (cleanupErrors.length === 0) {
@@ -147,13 +145,10 @@ const CURRENT_THREAD_LOADERS = [
     browserInitializationGuard: true,
     flavor: 'threadless',
   },
-  // The threaded (wasm32-wasip1-threads) artifact links the same shared
-  // CurrentThread runtime as the threadless one: its real OS threads change
-  // the loader, not the executor. A raw import of the shipped threaded
-  // package therefore needs the same task/timer host bootstrap to make
-  // progress. Unlike the wasip1 loaders, the threaded bootstrap is gated on
-  // the binding reporting `asyncRuntimeBuild` so a self-scheduling binding
-  // without the shared runtime keeps loading without the host contract.
+  // The threaded artifact links the same CurrentThread runtime, so it needs
+  // the same task/timer host bootstrap. Unlike the wasip1 loaders, its
+  // bootstrap is gated on `asyncRuntimeBuild` so a self-scheduling binding
+  // without the shared runtime still loads without the host contract.
   {
     path: join(__dirname, 'src/rolldown-binding.wasi.cjs'),
     bootstrapAnchor: '} catch (error) {\n  const rollback = {',
@@ -3050,9 +3045,8 @@ ${captureTimerHostRegistration}
     __assertHostRegistrationActive(__timerHostRegistration, 'timer')
   }`;
   if (flavor === 'threadless') {
-    // The wasm32-wasip1 build is always the shared CurrentThread runtime, so
-    // its loaders install the hosts unconditionally and fail loudly when the
-    // binding does not expose the host contract.
+    // wasm32-wasip1 is always the shared CurrentThread runtime, so install the
+    // hosts unconditionally and fail loudly if the contract is missing.
     return `${CURRENT_THREAD_HOST_BOOTSTRAP_START}
 ;{
   const __rolldownBinding = __napiModule.exports
@@ -3060,10 +3054,8 @@ ${body}
 }
 ${CURRENT_THREAD_HOST_BOOTSTRAP_END}`;
   }
-  // The threaded artifact only needs JavaScript task/timer hosts while the
-  // linked binding runs the shared CurrentThread runtime. A binding that does
-  // not report `asyncRuntimeBuild` schedules itself and exposes no host
-  // contract, so the bootstrap stays inert there instead of throwing.
+  // A binding that does not report `asyncRuntimeBuild` schedules itself and
+  // exposes no host contract, so keep the bootstrap inert instead of throwing.
   const gatedBody = body
     .split('\n')
     .map((line) => (line === '' ? line : `  ${line}`))

@@ -1,13 +1,7 @@
-// High-level rollup-style build API for `@rolldown/browser/workerd`.
-//
-// This module reuses the existing normalization pipeline (`rolldown()` →
-// `createBundlerOptions` → bindingify → `RolldownBuild`) instead of
-// reimplementing it. Inside workerd bundles, `src/binding.cjs` is aliased to
+// Inside workerd bundles `src/binding.cjs` is aliased to
 // `src/binding-workerd-proxy.ts` (see `build.ts#bundleManagedWorkerdLoaders`),
 // so every binding call the pipeline makes is forwarded to the managed
 // per-instance exports entered here.
-//
-// See internal-docs/async-runtime/implementation.md.
 import * as bindingNamespace from './binding.cjs';
 import { rolldown } from './api/rolldown';
 import type { RolldownBuild } from './api/rolldown/rolldown-build';
@@ -132,23 +126,19 @@ function assertWorkerdBundleContext(): void {
 
 let asyncContextInit: Promise<void> | undefined;
 
-// Workerd (with the `nodejs_als` or `nodejs_compat` compatibility flag) and
-// Node.js both provide `node:async_hooks`. The workerd bundles are browser
-// builds, so the pipeline's required async context has no default provider;
-// configure AsyncLocalStorage when the host offers it. Hosts without it keep
-// working for builds that never invoke JavaScript callbacks.
+// Browser builds have no default async-context provider, so adopt the host's
+// `node:async_hooks` (workerd needs `nodejs_als` or `nodejs_compat`) when it
+// exists. Hosts without it still work for builds that never call into JS.
 function ensureAsyncContext(): Promise<void> {
   if (!import.meta.browserBuild) return Promise.resolve();
-  // A boolean latch would race: the first caller parks on the dynamic import
-  // (which crosses a macrotask in workerd) while a concurrent first build
-  // sails past the latch on pure microtasks and hits the pipeline's
-  // async-context preflight before the storage is configured. Every caller
-  // awaits one shared initialization promise instead.
+  // Must be one shared promise, not a boolean latch: the dynamic import below
+  // crosses a macrotask in workerd, so a concurrent first build would sail
+  // past a latch and hit the async-context preflight before configuration.
   asyncContextInit ??= (async () => {
     try {
       if (getAsyncContextSupport().source !== 'unavailable') return;
-      // Keep the specifier dynamic so bundlers (wrangler/esbuild) do not try
-      // to resolve a node builtin statically in workers without nodejs_compat.
+      // Indirect specifier: bundlers (wrangler/esbuild) must not resolve a node
+      // builtin statically in workers without nodejs_compat.
       const specifier = 'node:async_hooks';
       const hooks: { AsyncLocalStorage?: new () => unknown } = await import(
         /* @vite-ignore */ specifier
@@ -190,12 +180,10 @@ function requireInstanceExports(instance: DeferredRolldownInstance): object {
  * `output`, ...) against a managed workerd Rolldown instance, entirely in
  * memory.
  *
- * Only one instance can be the active binding at a time. Concurrent builds on
- * the SAME instance are supported; a build on a different instance while one
- * is active rejects. For concurrent fetch handlers, share one module-scope
- * instance (below) rather than passing `module:` per request — every `module:`
- * call creates its own private instance, so overlapping `module:` builds
- * reject each other.
+ * Only one instance is the active binding at a time: concurrent builds on the
+ * SAME instance work, a build on a different instance rejects. Concurrent
+ * fetch handlers should share one module-scope instance (below), since every
+ * `module:` call creates its own private instance.
  *
  * Plugin builds need an async-context storage: enable the `nodejs_als` (or
  * `nodejs_compat`) compatibility flag, or call `configureAsyncContext()` from
@@ -265,10 +253,8 @@ async function buildWithInstance(
     let result: RolldownOutput;
     try {
       result = await bundle.generate(outputOptions);
-      // Materialize every lazy output field while this instance's binding is
-      // active. The threadless flavor copies output payloads to JavaScript
-      // eagerly and frees the native side, so the result stays fully readable
-      // after the instance is released or disposed.
+      // Materialize lazy output fields while this instance's binding is still
+      // active, so the result stays readable after it is released or disposed.
       void result.output;
     } catch (error) {
       try {
@@ -340,19 +326,15 @@ export async function createWorkerdBundle(
       try {
         await bundle.close();
       } catch (error) {
-        // `close()` can reject while the native bundle is still fully open
-        // (e.g. when called from one of the bundle's own active hooks, on a
-        // retryable native-close failure, or while another close is still in
-        // flight). Keep the instance slot and keep reporting the bundle open
-        // so the caller can retry; release only when the native terminal
-        // close actually settled (e.g. a throwing closeBundle hook).
+        // A rejected close() can leave the native bundle fully open (retryable
+        // failure, call from one of its own hooks, concurrent close). Release
+        // the instance slot only once the native terminal close settled.
         if (bundle.__nativeCloseSettled) release();
         throw stripAnsi ? stripAnsiFromError(error) : error;
       }
       // A fulfilled close() may be a re-entrant acknowledgement from inside a
-      // closeBundle hook, issued while the REAL close is still running its
-      // cleanup. Resolve early (so in-hook awaits cannot deadlock) but only
-      // release the instance slot once the native terminal close settles.
+      // closeBundle hook (resolved early so in-hook awaits cannot deadlock),
+      // so again release only once the native terminal close settles.
       if (bundle.__nativeCloseSettled) {
         release();
       } else {

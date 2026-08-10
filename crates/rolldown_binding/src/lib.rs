@@ -18,9 +18,8 @@
 // already `FxBuildHasher` at every use site).
 #![allow(clippy::disallowed_types)]
 
-// The shared tokio-free scheduler is the only runtime; the binding-level Tokio
-// flavor was removed. The negative check in `.github/workflows/reusable-wasi.yml`
-// greps for this message, so keep them in sync.
+// `.github/workflows/reusable-wasi.yml` greps for this exact message; keep the
+// two in sync.
 #[cfg(not(feature = "async-runtime"))]
 compile_error!(
   "rolldown_binding requires the `async-runtime` feature: the shared tokio-free scheduler is the only runtime"
@@ -126,13 +125,9 @@ mod manual_async_runtime_transition_tests {
 
 #[napi_derive::module_init]
 fn init() {
-  // Pin the runtime-config snapshot at module load on EVERY artifact. The
-  // WASI JS loaders size the real emnapi async work pool from the environment
-  // at module load -- resolving lazily here would let a post-import env
-  // change make the report diverge from the pool that is already running (and
-  // would leave the pinning to the accident of the host's WASI shim
-  // snapshotting its env). One source of truth: resolve here, where every
-  // consumer of the snapshot agrees on "load time".
+  // Pin the runtime-config snapshot at module load: the WASI JS loaders size
+  // the real emnapi async work pool from the environment at load time, so a
+  // lazy resolve could report a config the already-running pool does not match.
   crate::async_runtime::resolved_runtime_config();
 
   #[cfg(not(feature = "disable_panic_hook"))]

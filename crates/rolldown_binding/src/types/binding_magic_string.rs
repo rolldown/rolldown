@@ -12,11 +12,8 @@ use string_wizard::{MagicString, MagicStringOptions, SourceMapOptions, UpdateOpt
 
 use super::js_regex::JsRegExp;
 
-/// Concrete class storage with no borrow from the N-API call frame.
-///
-/// The alias keeps the lifetime out of the `#[napi]` field syntax while fixing
-/// it to `'static`; the constructor below satisfies that bound by moving its
-/// `String` into `Cow::Owned`.
+/// Class storage with no borrow from the N-API call frame: the alias keeps the
+/// lifetime out of the `#[napi]` field syntax while fixing it to `'static`.
 /// See internal-docs/async-runtime/implementation.md.
 type BindingMagicStringStorage = MagicString<'static>;
 

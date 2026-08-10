@@ -130,9 +130,8 @@ impl BundleFactory {
       self.transform_dependencies_for_incremental_build = Arc::default();
     }
 
-    // Full builds own independent emitted-file state. Incremental builds keep
-    // using the preceding handle's emitter so HMR/lazy compilation can drain
-    // assets emitted outside a full bundle pass.
+    // Incremental builds must reuse the preceding handle's emitter so HMR/lazy
+    // compilation can drain assets emitted outside a full bundle pass.
     // See internal-docs/bundler-data-lifecycle/implementation.md.
     let file_emitter = if bundle_mode.is_full_build() {
       Arc::new(FileEmitter::new(Arc::clone(&self.options)))
@@ -167,10 +166,8 @@ impl BundleFactory {
     file_emitter: SharedFileEmitter,
     cache: ScanStageCache,
   ) -> Bundle<Fs> {
-    // Every build passes through here exactly once before any scan/link work
-    // starts. Wait for the previous build's deferred drops to retire so they
-    // can never overlap this build's rayon work; a no-op in steady state.
-    // See `utils::defer_drop` for the full invariant.
+    // Sole entry point for every build: retire the previous build's deferred
+    // drops before any scan/link work touches the rayon pool.
     crate::utils::defer_drop::drain();
 
     let bundle_span = self.generate_unique_bundle_span();

@@ -53,13 +53,10 @@ export async function createBundlerOptions(
   measureTimings = false,
 ): Promise<BundlerOptionWithStopWorker> {
   // A `plugins` accessor is user code that native close can end up waiting on,
-  // and every read below happens while a build is (or is about to be)
-  // registered as an active build. Reading inside the close-callback scope lets
-  // a `bundle.close()` issued from such an accessor be acknowledged
-  // reentrantly, so a thenable derived from that close still settles.
-  // `run()` assimilates a thenable RESULT, which would replace a user-supplied
-  // thenable plugin option, so only the accessor runs inside the scope and the
-  // raw value is handed to `normalizePluginOption` for assimilation.
+  // so run it inside the close-callback scope: a `bundle.close()` issued from
+  // it is then acknowledged reentrantly. Only the accessor runs in the scope —
+  // `run()` assimilates a thenable RESULT, which would swallow a user-supplied
+  // thenable plugin option — and the raw value goes to `normalizePluginOption`.
   const readPluginOption = <T>(read: () => T): T => {
     if (!closeCallbackScope) return read();
     let value!: T;

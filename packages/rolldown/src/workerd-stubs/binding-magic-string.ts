@@ -1,12 +1,8 @@
-// Workerd bundles alias `src/binding-magic-string.ts` to this stub. The real
+// Workerd bundles alias `src/binding-magic-string.ts` to this stub: the real
 // module mutates `BindingMagicString.prototype` at module evaluation, which
-// requires an ambient binding instance that workerd bundles only have while a
-// managed build is active.
-//
-// The stub keeps the two behaviors the reused pipeline depends on:
-// - `value instanceof RolldownMagicString` must be safe and false, so the
-//   bindingify hook-result paths take the plain `{ code }` object route.
-// - Constructing one reports a clear unsupported-feature error.
+// needs an ambient binding workerd only has while a managed build is active.
+// `value instanceof RolldownMagicString` must stay safe and false so the
+// bindingify hook-result paths take the plain `{ code }` route.
 import type { RolldownMagicString as RealRolldownMagicString } from '../binding-magic-string';
 
 class UnsupportedWorkerdMagicString {

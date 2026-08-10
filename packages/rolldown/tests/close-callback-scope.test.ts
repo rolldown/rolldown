@@ -962,11 +962,10 @@ test('plugin array flattening preserves depth-first left-to-right accessor order
   expect(accesses).toEqual(['first', 'nested', 'second']);
 });
 
-// A plugin-option accessor runs while the build that reads it is already
-// registered as an active build, so `bundle.close()` must be acknowledged
-// reentrantly there. Returning a thenable DERIVED from that close is the
-// regression: unless the accessor itself runs inside the close-callback scope,
-// the derived thenable waits for a close that waits for this build.
+// A plugin-option accessor runs while its build is already registered as an
+// active build, so `bundle.close()` must be acknowledged reentrantly there:
+// unless the accessor itself runs inside the close-callback scope, a thenable
+// derived from that close waits for a close that waits for this build.
 const PLUGIN_ACCESSOR_DEADLINE_MS = 5_000;
 const VIRTUAL_ENTRY_ID = '\0close-callback-scope-entry';
 

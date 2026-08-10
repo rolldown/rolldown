@@ -94,9 +94,8 @@ test('a failing worker stop surfaces together with the setup error', async () =>
       }
     },
   }));
-  // Setup cleanup is retried once before the failure is reported, so a worker
-  // stop that keeps failing would surface its diagnostic twice. Fail the first
-  // attempt only, mirroring the scan setup path's retry coverage.
+  // Setup cleanup is retried once before the failure is reported, so a stop that
+  // keeps failing would surface its diagnostic twice; fail only the first attempt.
   const stopWorkers = vi.fn().mockRejectedValueOnce(cleanupError).mockResolvedValue(undefined);
   vi.doMock('../src/utils/create-bundler-option', () => ({
     createBundlerOptions: vi.fn().mockResolvedValue({

@@ -1047,9 +1047,7 @@ function __rollbackWasiInitialization() {`,
       registration.high,
       registration.low,
     );
-    // The reserved timer token is rolled back even though its registration
-    // threw: v4 reserves the capability before side effects, so cleanup can
-    // always target the exact token.
+    // The reserved timer token is rolled back even though its registration threw.
     expect(rawBinding.unregisterTimerHost).toHaveBeenCalledWith(
       timerRegistration.high,
       timerRegistration.low,
@@ -3566,10 +3564,9 @@ console.log('managed binding wrappers collected')
     { timeout: 30_000 },
     ({ pluginSource }) => {
       const tsxLoader = createRequire(import.meta.url).resolve('tsx');
-      // Import the deferred loader directly: the public workerd entry now
-      // also pulls the high-level build() pipeline, whose legacy decorators
-      // the child's tsx transform mishandles; these tests only exercise the
-      // managed loader's own mediation behavior.
+      // Import the deferred loader directly: the public workerd entry also pulls
+      // the high-level build() pipeline, whose legacy decorators the child's tsx
+      // transform mishandles.
       const workerdUrl = new URL('../src/rolldown-binding.wasip1-deferred.js', import.meta.url)
         .href;
       const child = spawnSync(
@@ -3628,10 +3625,9 @@ console.log('input record context invalidated')
     { timeout: 30_000 },
     () => {
       const tsxLoader = createRequire(import.meta.url).resolve('tsx');
-      // Import the deferred loader directly: the public workerd entry now
-      // also pulls the high-level build() pipeline, whose legacy decorators
-      // the child's tsx transform mishandles; these tests only exercise the
-      // managed loader's own mediation behavior.
+      // Import the deferred loader directly: the public workerd entry also pulls
+      // the high-level build() pipeline, whose legacy decorators the child's tsx
+      // transform mishandles.
       const workerdUrl = new URL('../src/rolldown-binding.wasip1-deferred.js', import.meta.url)
         .href;
       const child = spawnSync(
@@ -3798,13 +3794,12 @@ console.log('class plugin context invalidated')
     const importedMinimum = Number(minimumMatch![1]);
 
     expect(() => instantiateWithPages(importedMinimum)).not.toThrow();
-    // The floor must cover what the artifact declares, or workerd cannot
-    // instantiate it at all (`generate-workerd-loader.ts` enforces the same
-    // rule at build time). Equality is allowed on purpose: the debug profile's
-    // larger static data consumes the whole floor, while the shipped
-    // release-wasi artifact declares ~998 pages and keeps real headroom.
-    // Raising the floor for a profile we never ship would spend the workerd
-    // isolate budget (128 MiB total) on nothing.
+    // The floor must cover what the artifact declares or workerd cannot
+    // instantiate it at all (`generate-workerd-loader.ts` enforces the same rule
+    // at build time). Equality is allowed on purpose: the debug profile's larger
+    // static data consumes the whole floor, while the shipped release-wasi
+    // artifact declares ~998 pages and keeps real headroom. Raising the floor for
+    // a profile we never ship would spend the 128 MiB isolate budget on nothing.
     expect(WORKERD_WASM_MEMORY.initialPages).toBeGreaterThanOrEqual(importedMinimum);
   });
 
@@ -4613,10 +4608,10 @@ try {
   const source = await readFile(${JSON.stringify(fileURLToPath(deferredLoaderPath))}, 'utf8')
   const dependencyKey = '__rolldownManagedTsfnDisposalTest'
   let rawBinding
-  // Replacing the import block leaves the loader's plugin bindings undeclared,
-  // so the async-work/TSFN plugins have to be injected alongside the runtime.
-  // Without them the basic emnapi archive this wasm links fails to instantiate
-  // with a LinkError on napi_create_threadsafe_function.
+  // Replacing the import block leaves the loader's plugin bindings undeclared, so
+  // the async-work/TSFN plugins must be injected alongside the runtime; without
+  // them this wasm's basic emnapi archive fails to instantiate with a LinkError
+  // on napi_create_threadsafe_function.
   globalThis[dependencyKey] = {
     Buffer,
     createContext,

@@ -352,7 +352,6 @@ impl BindingDevEngine {
       ) as OnHmrUpdatesCallback
     });
 
-    // If callback is provided, wrap it to convert BuildResult<BundleOutput> to BindingResult<BindingOutputs>
     let on_output = on_output_callback.map(|js_callback| {
       let cwd = Arc::<Path>::clone(&cwd);
       let lifecycle = Arc::clone(&lifecycle);
@@ -666,10 +665,9 @@ impl BindingDevEngine {
     let inner = Arc::clone(&self.inner);
     let cwd = Arc::clone(&self.cwd);
     spawn_boxed_future(env, async move {
-      // Route the result through `dev_engine_binding_result` (like `run` /
-      // `ensure_current_build_finish`) so an `onAdditionalAssets` callback
-      // rejection propagates as the original JS error instead of being
-      // flattened into a `GenericFailure` string. See dev-callbacks.test.ts
+      // Via `dev_engine_binding_result` (like `run`) so an `onAdditionalAssets`
+      // rejection propagates as the original JS error instead of being flattened
+      // into a `GenericFailure` string. Covered by dev-callbacks.test.ts
       // "compileEntry awaits onAdditionalAssets and propagates its rejection".
       let result = dev_engine_binding_result(
         inner.compile_lazy_entry(module_id, client_id).await.map(|output| BindingLazyChunkOutput {

@@ -599,11 +599,10 @@ async function reclaimStaleStageWasiPackageLock(
     throw new Error(`WASI package transaction lock is not a directory: ${lockPath}`);
   }
 
-  // The holder releases the lock by renaming the directory away, so the owner
-  // read can race a release that happened right after the directory check
-  // above. Locks are published fully formed (prepared with owner.json, then
+  // The holder releases by renaming the directory away, so this owner read can
+  // race a release. Locks are published fully formed (owner.json written, then
   // renamed into place), so a missing owner means either that race — the
-  // directory is gone on a second look — or the genuinely corrupt ownerless
+  // directory is gone on a second look — or a genuinely corrupt ownerless
   // directory, which persists through a poll interval and must fail loudly.
   let observedOwner = await readStageWasiPackageLockOwner(ownerPath);
   if (observedOwner === undefined) {

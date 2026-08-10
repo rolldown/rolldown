@@ -621,9 +621,8 @@ async function assertWorkerdDeclarationParity(packageDir, runtimeExports, worker
       .split(',')
       .map((name) => name.trim())
       .filter(Boolean)
-      // The dts bundler renames colliding local declarations and re-exports
-      // them under their public name (`BindingSourceMap$1 as BindingSourceMap`);
-      // parity is about the public name.
+      // The dts bundler re-exports renamed locals under their public name
+      // (`BindingSourceMap$1 as BindingSourceMap`); parity is about that name.
       .map((name) => name.split(/\s+as\s+/).at(-1)),
   );
   assert.deepEqual(
@@ -889,14 +888,11 @@ function assertThreadlessNodeLifecycle(code, loader) {
     /drainError\.code = ["']ERR_NAPI_WASI_CLEANUP_PENDING["'];?/,
     `${loader} must reject an undrained disposal retryably`,
   );
-  // Deterministic disposal is published behind the shared symbol.
   assert.match(
     code,
     /Symbol\.for\(["']napi\.rs\.wasi\.dispose["']\)/,
     `${loader} must publish its disposal behind the shared dispose symbol`,
   );
-  // A failed initialization registers a retryable rollback record and
-  // rethrows the augmented error.
   assert.match(
     code,
     /Symbol\.for\(["']napi\.rs\.wasi\.rollback\.registry\.v1["']\)/,
@@ -912,8 +908,7 @@ function assertThreadlessNodeLifecycle(code, loader) {
     1,
     `${loader} must rethrow the rollback-augmented initialization error`,
   );
-  // The injected CurrentThread host cleanup releases rolldown's hosts before
-  // the generated rollback destroys the context.
+  // rolldown's injected host cleanup runs before the generated rollback.
   const timerHostCleanup = code.search(/["']Threadless Node timer-host cleanup failed["']/);
   const taskHostCleanup = code.search(/["']Threadless Node task-host cleanup failed["']/);
   const rollbackRegistration = code.indexOf(
@@ -2246,15 +2241,13 @@ try {
 
   const stagedBrowserDir = path.join(tempDir, 'browser-package');
   await mkdir(stagedBrowserDir);
-  // This consumer validates the self-contained consumption path: the packed
-  // dist bundles its emnapi/wasm runtimes (the loader sweeps above forbid
-  // bare runtime imports) and `assertNoRegistryRuntimePackages` requires that
-  // none of them install from the registry. Drop the registry runtime
+  // This consumer validates the self-contained path: the packed dist bundles
+  // its emnapi/wasm runtimes and `assertNoRegistryRuntimePackages` requires
+  // that none of them install from the registry. Drop the registry runtime
   // dependencies from the staged manifest -- their workspace `catalog:`
-  // specifiers also cannot resolve outside the repository, where this staged
-  // copy is packed. The with-registry-dependencies path is validated
-  // separately by check-workerd-packed-consumer.mjs, which packs the
-  // workspace manifest in place.
+  // specifiers cannot resolve outside the repository either, where this staged
+  // copy is packed. check-workerd-packed-consumer.mjs covers the
+  // with-registry-dependencies path by packing the workspace manifest in place.
   const stagedBrowserManifest = JSON.parse(
     await readFile(path.join(browserPackageDir, 'package.json'), 'utf8'),
   );
@@ -2459,10 +2452,9 @@ try {
       default: `./${generatedRootFiles.wasmEntry}`,
     },
   };
-  // The staged manifest declares `publishConfig.exports`, so pre-publish
-  // generates the facade subpaths only in that publish-effective map (pnpm
-  // replaces `exports` with it while packing) and must leave the raw dev
-  // `exports` map untouched.
+  // pnpm replaces `exports` with `publishConfig.exports` while packing, so
+  // pre-publish generates the facade subpaths only in that publish-effective
+  // map and must leave the raw dev `exports` map untouched.
   assert.deepEqual(
     generatedRootManifest.exports,
     stagedRootManifest.exports,
@@ -2483,8 +2475,7 @@ try {
     );
   }
   const rootTarball = await pack(stagedRootDir, packDir);
-  // pnpm's pack rewrite is what ships the generated facade subpaths: the
-  // packed manifest's `exports` must be exactly the publish-effective map.
+  // pnpm's pack rewrite is what ships the generated facade subpaths.
   const packedRootManifest = JSON.parse(
     (await run('tar', ['-xzOf', rootTarball, 'package/package.json'])).stdout,
   );

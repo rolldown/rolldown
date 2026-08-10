@@ -217,11 +217,9 @@ impl DebugTracer {
 
 impl Drop for DebugTracerLease {
   fn drop(&mut self) {
-    // Best-effort cleanup path. Callers that need "file readable after this
-    // call" semantics should use `flush_session(...)` instead, which returns a
-    // receiver with the result after the writer backend drains this session.
-    // This fallback must not replace that structured result with a panic if the
-    // process-global writer failed to initialize or is poisoned.
+    // Best-effort only, and never panicking: callers needing "file readable
+    // after this call" must use `flush_session(...)`, which acks once the
+    // writer backend has drained the session.
     writer::send_best_effort(LogCommand::CloseSession { session: self.session.clone(), ack: None });
     release_tracer_interest();
   }

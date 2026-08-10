@@ -296,10 +296,10 @@ impl ClassicBundlerOperationGuard {
       ClassicBundlerFailureCloseTask::new(terminal_close, handle, close_identity).await;
       return;
     }
+    // The failed binding promise must settle before the unrelated operations
+    // drain; this tracked task keeps admission closed meanwhile and publishes
+    // its terminal outcome for the final close.
     // See internal-docs/rust-classic-bundler/implementation.md.
-    // A contended failed binding promise must settle before the unrelated
-    // operations drain, while this tracked task keeps admission closed and
-    // publishes its terminal outcome for the final close.
     submit_failure_close(ClassicBundlerFailureCloseTask::new(
       terminal_close,
       handle,
@@ -716,13 +716,11 @@ impl ClassicBundler {
     }
     if self.close_future.is_none() {
       let mut terminal_close = self.lifecycle.begin_terminal_close(None);
-      // `take`, not `clone`: nothing reads `self.last_bundle_handle` after the
-      // terminal close starts (`create_bundle` rejects on `closed`), and the
-      // handle pins the normalized options and plugin driver. Leaving a copy on
-      // the struct parks that payload until the N-API finalizer runs — which
-      // never happens on the threadless WASI flavor, leaking one options graph
-      // per bundler. Moving it into the close future frees it when the close
-      // settles on every flavor.
+      // `take`, not `clone`: the handle pins the normalized options and plugin
+      // driver, and a copy left on the struct is only freed by the N-API
+      // finalizer — which never runs on the threadless WASI flavor, leaking one
+      // options graph per bundler. Nothing reads it after the terminal close
+      // starts (`create_bundle` rejects on `closed`).
       let last_bundle_handle = self.last_bundle_handle.take();
       let cwd =
         last_bundle_handle.as_ref().map(|handle| handle.options().cwd.clone()).unwrap_or_default();

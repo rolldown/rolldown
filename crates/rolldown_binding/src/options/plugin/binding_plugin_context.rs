@@ -46,8 +46,6 @@ impl BindingPluginContext {
       Some(arc) => {
         let strong_count = Arc::strong_count(&arc);
         if strong_count > 1 {
-          // Drop our reference, but others exist
-          // Arc drops here automatically
           ExternalMemoryStatus {
             freed: false,
             reason: Some(format!(
@@ -56,8 +54,6 @@ impl BindingPluginContext {
             )),
           }
         } else {
-          // Last reference - memory will be freed
-          // Arc drops here automatically
           ExternalMemoryStatus { freed: true, reason: None }
         }
       }
@@ -78,9 +74,8 @@ impl BindingPluginContext {
     side_effects: Option<BindingHookSideEffects>,
     package_json_path: Option<String>,
   ) -> napi::Result<()> {
-    // Clone the shared context up front so the in-flight future owns its own
-    // strong reference: a fire-and-forget call must stay valid even if the
-    // hook settles and `drop_inner` releases this box mid-flight.
+    // Own a strong reference before awaiting: a fire-and-forget call must stay
+    // valid even if the hook settles and `drop_inner` releases this box mid-flight.
     let inner = Arc::clone(self.try_get_inner()?);
     let package_json = package_json_path
       .as_ref()

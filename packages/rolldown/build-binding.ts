@@ -46,10 +46,9 @@ const napiArgs = {
   package: 'rolldown_binding',
   jsBinding: 'binding.cjs',
   dts: 'binding.d.cts',
-  // napi-rs keys this cache only by crate path and CLI version, so it can
-  // retain declarations after their Rust binding metadata changes. Dedicated
-  // WASI builds and native async-runtime builds must regenerate their exact
-  // declaration surface instead of reusing that feature-blind cache.
+  // napi-rs keys this cache only by crate path and CLI version, so it retains
+  // declarations after the Rust binding metadata changes. WASI and native
+  // async-runtime builds must regenerate their exact declaration surface.
   dtsCache:
     argsOptions.target !== WASI_THREADS_TARGET &&
     argsOptions.target !== WASI_SINGLE_TARGET &&

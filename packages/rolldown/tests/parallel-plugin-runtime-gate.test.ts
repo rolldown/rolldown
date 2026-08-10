@@ -184,10 +184,9 @@ vi.mock('../src/binding.cjs', () => ({
   },
 }));
 
-// Worker spawning is the side effect the runtime gate must precede; a real
-// spawn would load the dist worker entry and the real binding. The stand-ins
-// play the worker side of the authenticated control-port handshake so the pool
-// still initializes and shuts down through the production code path.
+// Worker spawning is the side effect the runtime gate must precede. The
+// stand-ins play the worker side of the authenticated control-port handshake so
+// the pool still initializes and shuts down through the production code path.
 vi.mock('node:worker_threads', async (importOriginal) => ({
   ...(await importOriginal()),
   MessageChannel: binding.FakeMessageChannel,

@@ -24,25 +24,22 @@ const tempDir = await mkdtemp(path.join(tmpdir(), 'rolldown-workerd-consumer-'))
 const bundledRuntimePackages = [
   '@emnapi/core',
   '@emnapi/runtime',
-  // Transitives of the bundled runtimes: the patched @napi-rs/wasm-runtime
-  // consumes bare @tybys/wasm-util, and @emnapi/core's dist imports bare
-  // @emnapi/wasi-threads. If either ever escapes the bundle, it would resolve
-  // from the (unpatched) registry.
+  // Transitives of the bundled runtimes: @napi-rs/wasm-runtime consumes bare
+  // @tybys/wasm-util, @emnapi/core's dist imports bare @emnapi/wasi-threads.
+  // Either escaping the bundle would resolve from the registry instead.
   '@emnapi/wasi-threads',
   '@napi-rs/wasm-runtime',
   '@tybys/wasm-util',
   'buffer',
   'node:buffer',
 ];
-// The dist code itself stays fully bundled (the AST scans below still forbid
-// bare runtime imports), but the manifest deliberately declares the registry
-// emnapi v2 line: the .wasm links the emnapi 2.0.0-alpha C archives, so a v1
-// JS runtime is an ABI mismatch (f3ac20b26). The published @napi-rs/wasm-runtime
-// 1.2.x line is v2-ready (the workspace pnpm patch was dropped in 4d4042404),
-// but @rolldown/browser stays `private: true` while its emnapi runtime deps
-// remain on the 2.0.0-alpha prerelease line (bb2996029). These pins are the ABI
-// line a future registry consumer must resolve; drift here must fail CI until
-// this script is updated deliberately.
+// dist stays fully bundled (the AST scans below forbid bare runtime imports),
+// but the manifest deliberately declares the registry emnapi v2 line: the .wasm
+// links the emnapi 2.0.0-alpha C archives, so a v1 JS runtime is an ABI mismatch
+// (f3ac20b26). @rolldown/browser stays `private: true` while these deps sit on
+// the 2.0.0-alpha prerelease line (bb2996029). These pins are the ABI line a
+// future registry consumer must resolve; drift must fail CI until this script is
+// updated deliberately.
 const expectedRegistryRuntimeDependencies = {
   '@emnapi/core': '2.0.0-alpha.3',
   '@emnapi/runtime': '2.0.0-alpha.3',
@@ -109,9 +106,7 @@ function findBareRuntimeImports(code, sourceType) {
     const node = pending.pop();
     if (!node || typeof node !== 'object') continue;
 
-    // `ExportNamedDeclaration`/`ExportAllDeclaration` carry a `source` for the
-    // `export ... from '...'` forms, which resolve the specifier exactly like
-    // an import would.
+    // `export ... from '...'` resolves its specifier exactly like an import.
     if (
       (node.type === 'ImportDeclaration' ||
         node.type === 'ImportExpression' ||
@@ -366,11 +361,10 @@ export default {
       `Published consumers must not resolve ${dependency} from the registry`,
     );
   }
-  // The pins must not only be declared — the registry copies they resolve to
-  // must actually install next to the tarball at the pinned emnapi v2
-  // versions. An unpublished or drifted version must fail here. The script
-  // already pins the pnpm version and forces the isolated node-linker, so the
-  // .pnpm store layout is deterministic.
+  // Declared pins are not enough: the registry copies must actually install
+  // next to the tarball at the pinned emnapi v2 versions, so an unpublished or
+  // drifted version fails here. The pinned pnpm version plus the forced
+  // isolated node-linker make the .pnpm store layout deterministic.
   const pnpmStoreEntries = await readdir(path.join(consumerDir, 'node_modules/.pnpm'));
   for (const [dependency, pinnedRange] of Object.entries(expectedRegistryRuntimeDependencies)) {
     // A virtual-store entry is `<name>@<version>`, plus a `_`-joined
@@ -431,10 +425,9 @@ export default {
   }
 
   // Every packed dist JS file must stay self-contained, not just the entries
-  // the smokes below exercise: with the registry runtime dependencies now
-  // installed in the consumer, a bare specifier that leaks into ANY chunk
-  // would silently resolve to the unpatched registry packages (the manifest
-  // pins document the ABI line; dist must never actually load them).
+  // the smokes below exercise: with the registry runtime dependencies installed
+  // in the consumer, a bare specifier leaking into ANY chunk would silently
+  // resolve to them, and dist must never actually load them.
   const collectPackedDistJs = async (dir) => {
     const collected = [];
     for (const entry of await readdir(dir, { withFileTypes: true })) {

@@ -83,8 +83,8 @@ pub fn derive_benchmark_items(
   ret
 }
 
-/// Walk a directory recursively and load all files into a `MemoryFileSystem`.
-/// This is used in benchmarks to eliminate disk I/O from the timed section.
+/// Load a directory tree into a `MemoryFileSystem`, keeping disk I/O out of
+/// the timed section.
 pub fn preload_into_memory_fs(dir: &Path) -> MemoryFileSystem {
   let mut fs = MemoryFileSystem::default();
   for entry in ignore::WalkBuilder::new(dir)
@@ -105,8 +105,7 @@ pub fn preload_into_memory_fs(dir: &Path) -> MemoryFileSystem {
   fs
 }
 
-/// Precomputed benchmark context: factory, MemoryFileSystem, and resolver config.
-/// Created once per benchmark item (outside the timed loop).
+/// Precomputed per-item benchmark context, built outside the timed loop.
 pub struct BenchContext {
   pub factory: BundleFactory,
   pub mem_fs: MemoryFileSystem,
@@ -129,9 +128,8 @@ impl BenchContext {
   }
 }
 
-/// Create a `BenchContext` for a given set of bundler options.
-/// This performs all one-time setup (option normalization, FS preloading, resolver creation)
-/// so the timed loop only measures bundling work.
+/// Create a `BenchContext`, doing all one-time setup (option normalization, FS
+/// preloading, resolver creation) so the timed loop only measures bundling.
 pub fn create_bench_context(options: &BundlerOptions) -> BenchContext {
   let cwd = options
     .cwd
@@ -170,10 +168,8 @@ pub enum BenchMode {
   Bundle,
 }
 
-/// Criterion executor that drives benchmark futures on the production shared
-/// async runtime (`rolldown_utils::async_runtime`) — the same scheduler
-/// `generate()`'s internal spawns run on, so the outer bench driver and the
-/// inner bundling work share one runtime with no cross-runtime wakeup hop.
+/// Criterion executor running on the same shared runtime as `generate()`'s
+/// internal spawns, so there is no cross-runtime wakeup hop.
 struct SharedRuntimeExecutor;
 
 impl criterion::async_executor::AsyncExecutor for SharedRuntimeExecutor {
@@ -194,11 +190,8 @@ pub fn run_bench_group(
   items: Vec<(&str, BundlerOptions)>,
 ) {
   let mut group = c.benchmark_group(group_name);
-  // Pin the historical bench configuration (MultiThread, 8 workers / 4
-  // blocking tasks) for A/B parity with the previously pinned tokio runtime.
-  // Production instead resolves these limits from the environment at addon
-  // load. The runtime starts lazily on the first submission — no explicit
-  // start is needed.
+  // Pin a fixed configuration so bench numbers stay comparable across runs;
+  // production resolves these limits from the environment instead.
   CONFIGURE_SHARED_RUNTIME.call_once(|| {
     rolldown_utils::async_runtime::configure(rolldown_utils::async_runtime::RuntimeOptions {
       flavor: rolldown_utils::async_runtime::RuntimeFlavor::MultiThread,
@@ -216,15 +209,12 @@ pub fn run_bench_group(
         b.to_async(SharedRuntimeExecutor).iter(|| {
           let bundle = ctx.factory.create_bundle_with_fs(ctx.mem_fs.clone(), ctx.create_resolver());
           async {
-            // Run the root bundling future as a spawned task on the runtime
-            // pool instead of polling it inline on criterion's main thread.
-            // Inline polling would run `par_iter` sections reached from the
-            // root future on rayon's global pool (the criterion thread is not
-            // a runtime worker), instantiating a second thread pool that
-            // production never has — and that CodSpeed's simulation bills.
-            // Boxed: the root bundling state machine is large, and an unboxed
-            // future is memcpy-ed at every non-inlined hop of the runtime's
-            // spawn chain. Boxing moves it to the heap once.
+            // Spawn rather than poll inline: criterion's thread is not a
+            // runtime worker, so inline polling would run the root future's
+            // `par_iter` sections on rayon's global pool — a second thread pool
+            // production never has, which CodSpeed's simulation bills.
+            // Boxed because the root state machine is large and would otherwise
+            // be memcpy-ed at every non-inlined hop of the spawn chain.
             rolldown_utils::async_runtime::spawn(Box::pin(async move {
               match mode {
                 BenchMode::Scan => {

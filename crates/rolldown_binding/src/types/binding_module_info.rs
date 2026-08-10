@@ -73,12 +73,10 @@ impl BindingModuleInfo {
 
   #[napi(enumerable = false)]
   pub fn drop_inner(&mut self) -> ExternalMemoryStatus {
-    // Unlike the `inner`-only boxes, this class also stores per-field
-    // `BindingSharedString` clones whose backing strings would otherwise stay
-    // pinned by the box until a finalizer runs. Clear them alongside `inner`;
-    // the JS side snapshots every field before calling this, so post-drop
-    // field reads (which cannot error, being plain fields) only ever see the
-    // emptied values.
+    // These per-field clones pin their backing strings until a finalizer runs,
+    // so clear them alongside `inner`. Safe because the JS side snapshots every
+    // field first; post-drop reads (plain fields, so they cannot error) just see
+    // the emptied values.
     self.id = BindingSharedString::from(arcstr::ArcStr::new());
     self.importers = Vec::new();
     self.dynamic_importers = Vec::new();
@@ -93,8 +91,6 @@ impl BindingModuleInfo {
       Some(arc) => {
         let strong_count = Arc::strong_count(&arc);
         if strong_count > 1 {
-          // Drop our reference, but others exist
-          // Arc drops here automatically
           ExternalMemoryStatus {
             freed: false,
             reason: Some(format!(
@@ -103,8 +99,6 @@ impl BindingModuleInfo {
             )),
           }
         } else {
-          // Last reference - memory will be freed
-          // Arc drops here automatically
           ExternalMemoryStatus { freed: true, reason: None }
         }
       }

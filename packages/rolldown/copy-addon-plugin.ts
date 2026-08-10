@@ -11,11 +11,9 @@ interface CopyAddonPluginOptions {
   workerdPackageApi?: boolean;
 }
 
-// Per-flavor WASI artifact sets (distinct names, so both flavors co-exist
-// under packages/rolldown/src). The threaded flavor keeps the legacy
-// `wasm32-wasi`/`wasi` names; the single-thread flavor has its own
-// `wasm32-wasip1`/`wasip1` names and never ships worker scripts (its loaders
-// never spawn workers).
+// Per-flavor WASI artifact sets, named distinctly so both can co-exist under
+// packages/rolldown/src: threaded keeps the legacy `wasm32-wasi`/`wasi` stems,
+// single-thread uses `wasm32-wasip1`/`wasip1` and ships no worker scripts.
 const WASM_FILE_LIST_THREADED = [
   'rolldown-binding.wasm32-wasi.wasm',
   'rolldown-binding.wasi-browser.js',

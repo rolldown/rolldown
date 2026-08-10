@@ -9,12 +9,11 @@ test.runIf(capabilities.target === 'wasi-threads' || expectThreadedWasi)(
   'executes threaded WASI while preserving concurrent runtime leases',
   { timeout: 20_000 },
   async () => {
-    // The threaded artifact runs the shared tokio-free scheduler like every
-    // other artifact, and the resolver normalizes every non-native target to
-    // CurrentThread (`crates/rolldown_binding/src/async_runtime.rs`): the
-    // shared scheduler has no MultiThread executor on WebAssembly because
-    // `napi-async-runtime` does not compile Rayon there. Real OS threads in
-    // `wasm32-wasip1-threads` therefore change the loader, not the executor.
+    // The resolver normalizes every non-native target to CurrentThread
+    // (`crates/rolldown_binding/src/async_runtime.rs`): the shared scheduler has
+    // no MultiThread executor on WebAssembly because `napi-async-runtime` does
+    // not compile Rayon there, so the real OS threads in `wasm32-wasip1-threads`
+    // change the loader, not the executor.
     expect(capabilities).toMatchObject({
       backend: 'shared',
       flavor: 'CurrentThread',
@@ -134,10 +133,9 @@ test.runIf(capabilities.target === 'wasi-threads' || expectThreadedWasi)(
   },
 );
 
-// `dev()` needs a MultiThread executor to complete its initial build, and the
-// threaded WASI artifact resolves to CurrentThread like every wasm artifact,
-// so the binding reports `devSupported: false` and the public entry must fail
-// closed before entering the binding instead of stalling on a build that can
+// `dev()` needs a MultiThread executor for its initial build and threaded WASI
+// resolves to CurrentThread, so the binding reports `devSupported: false` and
+// the public entry must fail closed instead of stalling on a build that can
 // never finish.
 test.runIf(capabilities.target === 'wasi-threads' || expectThreadedWasi)(
   'rejects threaded WASI dev engines before entering the binding',

@@ -112,10 +112,9 @@ export interface NormalizedOutputOptions {
 }
 
 // Lazy fields whose getter reads the ORIGINAL user `outputOptions` object and
-// nothing from the native box. A property read on the user's config can
-// execute user code (accessors, Proxies), so `materializeBoxBackedFields()`
-// must never evaluate these; they keep working after the box is released
-// precisely because they never touch it.
+// nothing from the native box. Reading the user's config can execute user code
+// (accessors, Proxies), so `materializeBoxBackedFields()` must skip these; they
+// survive the box release precisely because they never touch it.
 const USER_BACKED_LAZY_FIELDS: ReadonlySet<string> = new Set([
   'banner',
   'footer',
@@ -129,10 +128,9 @@ const USER_BACKED_LAZY_FIELDS: ReadonlySet<string> = new Set([
 ]);
 
 // Lazy fields shaped `nativeValue || userValue`: the native side is falsy
-// exactly when the user supplied a function (or nothing), and evaluating the
-// public getter would then read the user object. `materializeBoxBackedFields()`
-// pre-warms only their `#boxRead` native component; the user fallback stays
-// as lazy as on the native flavors.
+// exactly when the user supplied a function, so the public getter would reach
+// the user object. `materializeBoxBackedFields()` pre-warms only their
+// `#boxRead` component and leaves the user fallback lazy.
 const MIXED_LAZY_FIELDS: ReadonlySet<string> = new Set([
   'entryFileNames',
   'chunkFileNames',
@@ -167,12 +165,10 @@ export class NormalizedOutputOptionsImpl
   }
 
   /**
-   * Evaluates and caches every value this wrapper reads from the native box —
-   * and nothing that reads the user's original `outputOptions` object — so
-   * the box can be released while the wrapper keeps serving reads. The
-   * release path is not user-observable on a successful build, so it must
-   * never execute user accessors; user-provided values are read exactly as
-   * lazily as on the native flavors.
+   * Evaluate and cache every value this wrapper reads from the native box —
+   * and nothing that reads the user's original `outputOptions` — so the box
+   * can be released while the wrapper keeps serving reads. The release path is
+   * not user-observable on a successful build, so it must never run user code.
    */
   materializeBoxBackedFields(): void {
     for (const field of getLazyFields(this)) {

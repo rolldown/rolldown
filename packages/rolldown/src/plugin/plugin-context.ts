@@ -299,14 +299,11 @@ export class PluginContextImpl extends MinimalPluginContextImpl {
     if (id === this.currentLoadingModule) {
       this.onLog(LOG_LEVEL_WARN, logCycleLoading(this.pluginName, this.currentLoadingModule));
     }
-    // A fire-and-forget (un-awaited) call legally outlives its hook, whose
-    // wrapper then requests the eager release of `this.context` on the
-    // threadless flavor. Bracket everything from before the native `load`
-    // (which holds a napi borrow on the box until it settles) through the
-    // `getModuleInfo` continuation below, so the release is deferred until
-    // this call is done with the box. Both settle paths of the native promise
-    // (including the `.catch` that un-caches failures) funnel through the one
-    // `finally` below, so the decrement runs exactly once.
+    // A fire-and-forget call legally outlives its hook, so bracket from before
+    // the native `load` through the `getModuleInfo` continuation to defer the
+    // box release until this call is done with it (see `releaseOrDefer`). Both
+    // settle paths funnel through the single `finally`, so the decrement runs
+    // exactly once.
     beginNativeCall(this.context);
     try {
       // resolveDependencies always true at rolldown

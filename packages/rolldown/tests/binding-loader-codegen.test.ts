@@ -51,9 +51,8 @@ const generatedWasiBrowserLoader = readFileSync(
   fileURLToPath(new URL('../src/rolldown-binding.wasi-browser.js', import.meta.url)),
   'utf8',
 );
-// The raw-destroy settlement wrapper the lifecycle patch injects; reversing it
-// reconstructs the pristine template output the patcher receives from a fresh
-// napi build.
+// Reversing the lifecycle patch's raw-destroy settlement wrapper reconstructs
+// the pristine template output the patcher receives from a fresh napi build.
 const contextDestroyWrapPattern =
   /function __wrapEmnapiContextDestroyForSettlement\(context\) \{[\s\S]*?\n\}\n\n/;
 const wrappedContextCreation =
@@ -374,9 +373,8 @@ describe('generated WASI loader lifecycle', () => {
     context!.destroy();
     expect(cleanupEvents).toEqual(['prepare', 'teardown']);
 
-    // The loader's own exit-time cleanup afterwards shares the preparation
-    // latch and delegates into emnapi's already-drained cleanup queue:
-    // preparation and teardown each ran exactly once overall.
+    // The loader's exit-time cleanup shares the preparation latch and delegates
+    // into emnapi's already-drained queue: prepare and teardown each ran once.
     expect(() => execution.cleanup()).not.toThrow();
     expect(cleanupEvents).toEqual(['prepare', 'teardown']);
   });

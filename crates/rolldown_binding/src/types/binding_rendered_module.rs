@@ -35,8 +35,6 @@ impl BindingRenderedModule {
       Some(arc) => {
         let strong_count = Arc::strong_count(&arc);
         if strong_count > 1 {
-          // Drop our reference, but others exist
-          // Arc drops here automatically
           ExternalMemoryStatus {
             freed: false,
             reason: Some(format!(
@@ -45,8 +43,6 @@ impl BindingRenderedModule {
             )),
           }
         } else {
-          // Last reference - memory will be freed
-          // Arc drops here automatically
           ExternalMemoryStatus { freed: true, reason: None }
         }
       }
@@ -59,11 +55,9 @@ impl BindingRenderedModule {
   }
 
   // Owned `String`s, not `&str` borrowed from the inner `Arc`: napi-derive
-  // converts the returned `Vec` after this function has returned, one
-  // `napi_set_element` at a time. Those are ordinary JavaScript `[[Set]]`
-  // operations on a holey array, so a `Array.prototype` index setter can run
-  // between elements and re-enter `dropInner()` — freeing the data the
-  // remaining borrows point into.
+  // converts the `Vec` after this function returns, one `napi_set_element` at a
+  // time, so an `Array.prototype` index setter can re-enter `dropInner()`
+  // between elements and free the data the remaining borrows point into.
   #[napi(getter)]
   pub fn rendered_exports(&self) -> napi::Result<Vec<String>> {
     Ok(self.try_get_inner()?.rendered_exports.iter().map(ToString::to_string).collect())

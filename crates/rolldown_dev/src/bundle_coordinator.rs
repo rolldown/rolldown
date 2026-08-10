@@ -1012,9 +1012,6 @@ mod tests {
     let successful_after = ArcStr::from("/virtual/project/after.js");
     let watch_files = [successful_before.clone(), failed.clone(), successful_after.clone()];
 
-    // `addWatchFile` accepts nonexistent and virtual paths, so a refused
-    // registration is skipped (and retried on later builds), never surfaced
-    // as a build error.
     BundleCoordinator::update_watch_paths_from(
       &watcher,
       &watched_files,

@@ -45,8 +45,6 @@ impl BindingNormalizedOptions {
       Some(arc) => {
         let strong_count = Arc::strong_count(&arc);
         if strong_count > 1 {
-          // Drop our reference, but others exist
-          // Arc drops here automatically
           ExternalMemoryStatus {
             freed: false,
             reason: Some(format!(
@@ -55,8 +53,6 @@ impl BindingNormalizedOptions {
             )),
           }
         } else {
-          // Last reference - memory will be freed
-          // Arc drops here automatically
           ExternalMemoryStatus { freed: true, reason: None }
         }
       }

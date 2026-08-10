@@ -114,12 +114,10 @@ export class CloseCoordinator {
   }
 }
 
-// Only legacy tokio-backed threaded-WASI artifacts hold their async runtime
-// alive through explicit reference-counted leases (the compat shim
-// synthesizes `backend: 'tokio'` for old bindings without a capability
-// reporter). Every current binding runs the shared runtime, follows the
-// automatic N-API environment lifecycle on every target, and uses no-op
-// leases.
+// Only legacy tokio-backed threaded-WASI artifacts need explicit
+// reference-counted leases (the compat shim synthesizes `backend: 'tokio'` for
+// bindings without a capability reporter). Every current binding follows the
+// automatic N-API environment lifecycle and uses no-op leases.
 const capabilityBinding = binding as Record<PropertyKey, unknown>;
 const loadedRuntimeCapabilities = getRuntimeCapabilitiesCompat();
 const runtimeLeaseRequired =

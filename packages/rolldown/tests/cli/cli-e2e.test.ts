@@ -470,10 +470,9 @@ describe('config', () => {
 
   it('should resolve runtime relative dynamic imports in a deferred ts config against the config directory', async () => {
     const cwd = cliFixturesDir('config-deferred-dynamic-import');
-    // The config exports an async function that performs a runtime-computed
-    // relative dynamic import. The CLI invokes it only after `loadConfig` has
-    // returned and removed its transient bundling output, so the import must
-    // resolve against the config file's own directory.
+    // The CLI invokes the config's async function only after `loadConfig`
+    // returned and removed its transient bundling output, so the runtime
+    // relative dynamic import must resolve against the config's own directory.
     const status = await $({ cwd })`rolldown -c rolldown.config.ts`;
     expect(status.exitCode).toBe(0);
     const file = path.resolve(cwd, 'dist/index.js');
@@ -516,13 +515,12 @@ describe('config', () => {
     },
   );
 
-  // KNOWN: watch mode never completes the initial build on the single-thread
-  // WASI binding. The `rolldown -w` child prints "Waiting for changes..." and
-  // fires the options/buildStart hooks, but no output file is ever written
-  // and closeBundle never runs — even with a plugin-free config. The child's
-  // JS event loop stays alive (it exits cleanly on SIGTERM), so the stall is
-  // in the build task, not a frozen loop. Every `-w` test is skipped under
-  // isWasiTest.
+  // KNOWN: on the single-thread WASI binding watch mode never completes its
+  // initial build -- "Waiting for changes..." prints and options/buildStart
+  // fire, but no output is written and closeBundle (which would
+  // `process.exit(0)`) never runs. The child's event loop stays alive (clean
+  // exit on SIGTERM), so the stall is in the build task. Every `-w` test here
+  // is skipped under isWasiTest.
   it.skipIf(isWasiTest)(
     'should handle `-c -w` without `-w` being consumed as config filename (#3248)',
     async () => {
@@ -549,7 +547,6 @@ describe('watch cli', () => {
     expect(status.exitCode).toBe(0);
   });
 
-  // KNOWN: wasm watch hang — see the #3248 test above for the description.
   it.skipIf(process.platform === 'win32' || isWasiTest)(
     'should handle output options',
     async () => {
@@ -572,7 +569,6 @@ describe('watch cli', () => {
     },
   );
 
-  // KNOWN: wasm watch hang — see the #3248 test above for the description.
   it.skipIf(process.platform === 'win32' || isWasiTest)(
     'should allow multiply options',
     async () => {
@@ -595,7 +591,6 @@ describe('watch cli', () => {
     },
   );
 
-  // KNOWN: wasm watch hang — see the #3248 test above for the description.
   it.skipIf(process.platform === 'win32' || isWasiTest)(
     'should allow multiply output',
     async () => {
@@ -631,9 +626,6 @@ describe('watch cli', () => {
     expect(cleanStdout(status.stdout)).toMatchSnapshot();
   });
 
-  // KNOWN: wasm watch hang — the initial `-w` build never reaches
-  // closeBundle (which would `process.exit(0)`), so awaiting the child times
-  // out. See the #3248 test above for the description.
   it.skipIf(isWasiTest)(
     'should require both ROLLDOWN_WATCH and this.meta.watchMode to be true',
     async () => {
@@ -643,15 +635,6 @@ describe('watch cli', () => {
     },
   );
 
-  // Runs on NATIVE async-runtime builds (both flavors) since the runtime
-  // timer facility landed: the debounce timer goes through
-  // `rolldown_utils::time::sleep_until` (MultiThread heap driver /
-  // CurrentThread host-delegated setTimeout) instead of
-  // `tokio::time::sleep_until`, which used to panic "there is no reactor
-  // running" and silently kill the coordinator at the first debounce.
-  // KNOWN: still skipped under isWasiTest like every other `-w` test here --
-  // wasm watch mode never completes its initial build (see the #3248 test
-  // above); that stall is unrelated to the debounce timer.
   it.skipIf(process.platform === 'win32' || isWasiTest)(
     'should close with exit code 0 even when there are errors',
     {
@@ -668,15 +651,11 @@ describe('watch cli', () => {
       })`rolldown index.ts -d dist -w`;
       const stdoutWaiter = createStreamWaiter(process.stdout);
       await stdoutWaiter.waitFor('Waiting for changes...', { timeout: 5_000 });
-      // "Waiting for changes..." is printed synchronously right after
-      // `rolldownWatch()` returns -- BEFORE the initial build completes and
-      // BEFORE the file watches are armed. A write landing between the
-      // initial scan reading index.ts and watch arming is lost on Linux
-      // (inotify only reports changes made after `inotify_add_watch`), so
-      // nothing would ever rebuild and the UNRESOLVED_IMPORT wait below
-      // would time out. Arming strictly precedes the initial BUNDLE_END line
-      // ("Rebuilt ..."), so gating the write on it makes the change
-      // deterministically observable.
+      // "Waiting for changes..." prints before the initial build completes and
+      // before the file watches are armed; a write landing in that window is
+      // lost on Linux (inotify only reports changes made after
+      // `inotify_add_watch`). Arming precedes the first "Rebuilt" line, so gate
+      // the write on that.
       await stdoutWaiter.waitFor('Rebuilt', { timeout: 5_000 });
 
       fs.writeFileSync(

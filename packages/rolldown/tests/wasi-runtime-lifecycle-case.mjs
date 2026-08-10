@@ -40,10 +40,9 @@ assert.equal(
   true,
   'the published threaded-WASI artifact is built on the shared scheduler',
 );
-// The shared scheduler has no MultiThread executor on WebAssembly (it is
-// Rayon-backed and Rayon is not compiled for wasm), so the resolver normalizes
-// every non-native target to CurrentThread. The real OS threads of
-// `wasm32-wasip1-threads` change the loader, not the executor.
+// The MultiThread executor is Rayon-backed and Rayon is not compiled for wasm,
+// so the resolver normalizes every non-native target to CurrentThread: the real
+// OS threads of `wasm32-wasip1-threads` change the loader, not the executor.
 assert.equal(
   runtimeCapabilities.flavor,
   'CurrentThread',
@@ -59,10 +58,9 @@ assert.equal(
   false,
   'dev needs a MultiThread executor, which no WebAssembly artifact has',
 );
-// The lease API is a compatibility no-op on the shared runtime (the runtime
-// lifecycle follows the N-API environment hooks), but the generated WASI
-// loaders still acquire a lease at import and release it at teardown, so the
-// export has to stay.
+// The lease API is a compatibility no-op on the shared runtime, but the
+// generated WASI loaders still acquire a lease at import and release it at
+// teardown, so the export has to stay.
 assert.equal(
   typeof binding.acquireAsyncRuntime,
   'function',
@@ -120,9 +118,8 @@ const poolCapProbe = spawnSync(
 assert.equal(poolCapProbe.error, undefined, poolCapProbe.stderr);
 assert.equal(poolCapProbe.status, 0, poolCapProbe.stderr || poolCapProbe.stdout);
 // `NAPI_RS_ASYNC_WORK_POOL_SIZE` sized napi-rs' Tokio work pool, which this
-// artifact no longer has. The probe therefore now guards the opposite
-// contract: a stray Tokio-era pool variable must NOT resize the shared
-// scheduler, and the artifact keeps its one-lane CurrentThread shape.
+// artifact no longer has: the stray Tokio-era variable must NOT resize the
+// shared scheduler, and the artifact keeps its one-lane CurrentThread shape.
 const poolCapReport = JSON.parse(poolCapProbe.stdout.trim().split('\n').at(-1));
 assert.equal(
   typeof poolCapReport.config.drainLingerUs,
@@ -246,11 +243,9 @@ await check('overlapping owners and restart after final release', async () => {
   await generateAndClose('restart-after-overlap');
 });
 
-// Tokio retired a refcounted runtime between the last release and the next
-// acquisition, so a tight reacquire loop used to race that retirement. The
-// shared runtime's lifecycle follows the N-API environment instead and the
-// leases are compatibility no-ops, so the loop now guards the weaker but still
-// real contract: churning leases must not disturb a later build.
+// Leases are compatibility no-ops here (the runtime's lifecycle follows the
+// N-API environment), so this loop guards a weaker contract than the Tokio-era
+// reacquire race it replaces: churning leases must not disturb a later build.
 await check('rapid lease churn leaves the shared runtime usable', async () => {
   for (let iteration = 0; iteration < 24; iteration += 1) {
     const lease = await binding.acquireAsyncRuntime();
@@ -260,13 +255,10 @@ await check('rapid lease churn leaves the shared runtime usable', async () => {
   await generateAndClose('restart-after-lease-churn');
 });
 
-// The original case asserted that a worker's acquisition stayed PENDING behind
-// Tokio's retirement barrier. That barrier no longer exists -- a lease is a
-// no-op -- and the assertion only survived because one acquisition round-trip
-// through the wasm worker proxy measures ~33ms against its 25ms window, i.e. it
-// asserted machine speed, not runtime behaviour. What still matters, and is
-// what #8411/#8747 were about, is that tearing an environment down mid
-// acquisition must not wedge the runtime for the surviving realm.
+// #8411/#8747: tearing an environment down mid-acquisition must not wedge the
+// runtime for the surviving realm. The 25ms window below deliberately does NOT
+// assert a pending acquisition -- one round-trip through the wasm worker proxy
+// measures ~33ms, so such an assertion would only measure machine speed.
 await check('environment teardown mid-acquisition leaves the main realm usable', async () => {
   const worker = new Worker(
     `
@@ -405,10 +397,9 @@ await check('construction failures release real runtime leases', async () => {
   await generateAndClose('restart-after-construction-failure');
 });
 
-// `dev()` needs a MultiThread executor to finish its initial build, and no
-// WebAssembly artifact has one, so the public entry must fail closed through the
-// capability contract instead of stalling on a build that can never complete.
-// The rejection must also be repeatable and must leave the runtime usable.
+// `dev()` needs a MultiThread executor and no WebAssembly artifact has one, so
+// the entry must fail closed through the capability contract instead of stalling
+// on a build that can never complete -- repeatably, leaving the runtime usable.
 await check(
   'dev is rejected by the capability contract and leaves the runtime usable',
   async () => {
@@ -420,11 +411,9 @@ await check(
   },
 );
 
-// The original case drove a real dev engine through a cancelled close callback.
-// That scenario is unreachable now that dev is rejected, but the copied-package
-// machinery still proves something worth proving: the gate lives above the
-// binding, so a second package copy cannot reach `BindingDevEngine` and cannot
-// strand a runtime lease on its way to the rejection.
+// The capability gate lives above the binding: a second package copy must not
+// reach `BindingDevEngine`, nor strand a runtime lease on its way to the
+// rejection.
 await check('a package copy cannot reach the dev binding behind the capability gate', async () => {
   const copyRoot = mkdtempSync(path.join(packageDir, '.wasi-dev-close-copy-'));
   const copyDirectory = path.join(copyRoot, 'dist');

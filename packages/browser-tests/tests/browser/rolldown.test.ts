@@ -52,11 +52,10 @@ test('the packed @rolldown/browser bundles in the browser', async () => {
   const externalized = loadedModules().filter((name) => name.includes(BROWSER_EXTERNAL));
   expect(externalized, externalized.join('\n')).toHaveLength(0);
 
-  // The editor buffers a playground would feed to the bundler. On this branch a plain browser page
-  // bundles them callback-free through the wasm runtime's in-memory filesystem: JavaScript plugin
-  // hooks additionally require host-backed async-context propagation (docs/guide/wasi.md), which
-  // system Chrome does not ship, so the plugin round trip is asserted further down as the
-  // documented preflight failure instead.
+  // The editor buffers a playground would feed to the bundler: a plain browser page bundles them
+  // callback-free through the wasm runtime's in-memory filesystem. JavaScript plugin hooks also
+  // need host-backed async-context propagation (docs/guide/wasi.md), which system Chrome does not
+  // ship, so the plugin round trip is asserted below as the documented preflight failure instead.
   const files: Record<string, string> = {
     '/entry.js': "import { hyperCube } from './hyper-cube.js';\nconsole.log(hyperCube(5));\n",
     '/hyper-cube.js':

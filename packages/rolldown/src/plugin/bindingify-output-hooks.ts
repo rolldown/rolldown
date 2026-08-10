@@ -23,16 +23,13 @@ import type { BindingifyPluginArgs } from './bindingify-plugin';
 import { bindingifyHook, type PluginHookWithBindingExt } from './bindingify-plugin-hook-meta';
 import { createPluginContext } from './plugin-context';
 
-// Every hook invocation marshals a fresh `BindingPluginContext` box (and, per
-// hook, rendered-chunk / module-info / normalized-options boxes). Those boxes
-// are normally reclaimed by GC finalizers, which the threadless-WASI flavor
-// cannot rely on (workerd never runs them), so on that flavor the wrappers
-// release each box once its hook invocation settles. Arguments a callback may
-// legally retain are handed over as plain-data snapshots first
-// (`snapshotRenderedChunk` / `snapshotModuleInfo`), so a retained argument
-// keeps working as data; a retained plugin context used after its hook
-// settles throws a clear post-release error on this flavor only. Duplicate
-// normalized-options boxes are handled inside `PluginContextData`.
+// Every hook invocation marshals fresh boxes (plugin context, rendered chunk,
+// module info, normalized options). On the threadless-WASI flavor, where GC
+// finalizers cannot be relied on, the wrappers release each box once its hook
+// settles. Arguments a callback may legally retain are handed over as
+// plain-data snapshots first, so a retained argument keeps working as data; a
+// retained plugin context used after its hook settles throws a clear
+// post-release error on this flavor only.
 export function bindingifyRenderStart(
   args: BindingifyPluginArgs,
 ): PluginHookWithBindingExt<BindingPluginOptions['renderStart']> {
@@ -236,16 +233,13 @@ function createOutputBundle(
   return { changed, context, output };
 }
 
-// Each generateBundle/writeBundle invocation receives its own marshaled copy
-// of the bundle: new BindingOutputChunk/BindingOutputAsset boxes sharing the
-// build's native `Arc`s (`js_plugin.rs` marshals `args.bundle.clone()`). Those
-// boxes are normally reclaimed by GC finalizers, which the threadless-WASI
-// flavor cannot rely on (workerd never runs them), so there we release them as
-// soon as the hook round-trip is done — after `collectChangedBundle` finished
-// its native reads and before the Rust side applies the changes (it then sees
-// our references gone and can `Arc::get_mut` in place). Plugins that stash the
-// `bundle` object past the hook invocation get throwing getters for
-// not-yet-read fields on this flavor only.
+// Each generateBundle/writeBundle invocation gets its own marshaled bundle
+// copy: fresh boxes sharing the build's native `Arc`s (`js_plugin.rs` marshals
+// `args.bundle.clone()`). On the threadless-WASI flavor they must be released
+// after `collectChangedBundle` finished its native reads and before Rust
+// applies the changes, so Rust sees our references gone and can `Arc::get_mut`
+// in place. Plugins that stash `bundle` past the hook then get throwing getters
+// for not-yet-read fields, on this flavor only.
 export function bindingifyGenerateBundle(
   args: BindingifyPluginArgs,
 ): PluginHookWithBindingExt<BindingPluginOptions['generateBundle']> {

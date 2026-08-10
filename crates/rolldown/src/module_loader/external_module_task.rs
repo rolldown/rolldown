@@ -38,8 +38,7 @@ impl<Fs: FileSystem> ExternalModuleTask<Fs> {
   #[tracing::instrument(name="ExternalModuleTask::run", level = "trace", skip_all, fields(module_id = ?self.resolved_id.id))]
   pub async fn run(self) {
     if let Err(errs) = self.run_inner().await {
-      // The loader owner may have been cancelled while this detached task was awaiting a hook.
-      // Cancellation closes the receiver, so a failed send is ignored here.
+      // A cancelled loader owner closes the receiver; a failed send is expected.
       let _ = self
         .ctx
         .tx
@@ -97,8 +96,7 @@ impl<Fs: FileSystem> ExternalModuleTask<Fs> {
       side_effects: external_module_side_effects,
       need_renormalize_render_path,
     }));
-    // The loader owner may have been cancelled while this detached task was awaiting a hook.
-    // Cancellation closes the receiver, so a failed send is ignored here.
+    // A cancelled loader owner closes the receiver; a failed send is expected.
     let _ = self.ctx.tx.unbounded_send(msg);
     Ok(())
   }

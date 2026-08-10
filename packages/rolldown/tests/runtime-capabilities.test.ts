@@ -5,9 +5,8 @@ import nodePath from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { MessageChannel, Worker } from 'node:worker_threads';
 import { createParallelPluginWorkerBootstrap } from '../src/utils/initialize-parallel-plugins';
-// Ensures the timer host is registered before `timers` is asserted: importing
-// the rolldown entry runs `setup.ts` -> `timer-host.ts` -> `registerTimerHost`
-// (the same side effect every public binding-loading entry now carries).
+// Registers the timer host before `timers` is asserted: this entry runs
+// `setup.ts` -> `timer-host.ts` -> `registerTimerHost`.
 import { rolldown, watch } from 'rolldown';
 import {
   dev,
@@ -19,19 +18,17 @@ import {
 } from 'rolldown/experimental';
 import { describe, expect, test } from 'vitest';
 
-// This spec runs against whatever binding the worktree built (native in
-// either shared-runtime flavor, or a WASI artifact) and asserts the
-// capability report is internally coherent and matches the artifact. The
-// per-lane correctness of the individual flags is additionally pinned by the
-// suites themselves: every `isWasiTest` / `isSingleThread` skip predicate in
-// tests/src/runtime-flavor.ts is now derived from this report, so a lying
-// capability shifts the lane's pass/skip counts immediately.
+// Runs against whatever binding the worktree built (native in either
+// shared-runtime flavor, or a WASI artifact) and asserts the capability report is
+// internally coherent and matches the artifact. Every `isWasiTest` /
+// `isSingleThread` skip predicate in tests/src/runtime-flavor.ts derives from
+// this report, so a lying capability shifts the lane's pass/skip counts too.
 
 const testsDir = fileURLToPath(new URL('.', import.meta.url));
 
 // Run `script` (an ESM module body) in a FRESH node process that resolves
-// packages from this tests package; returns the last stdout line parsed as
-// JSON (stderr, e.g. node:wasi's ExperimentalWarning, is ignored).
+// packages from this tests package; returns the last stdout line parsed as JSON
+// (stderr, e.g. node:wasi's ExperimentalWarning, is ignored).
 function inFreshProcess(script: string, env: Record<string, string | undefined> = {}): any {
   const stdout = execFileSync(process.execPath, ['--input-type=module', '-e', script], {
     cwd: testsDir,
@@ -45,8 +42,8 @@ function inFreshProcess(script: string, env: Record<string, string | undefined> 
 
 describe('getRuntimeCapabilities', () => {
   const caps = getRuntimeCapabilities();
-  // Every shared-runtime artifact has a timer facility once a public entry
-  // has loaded: MultiThread owns a timer heap, CurrentThread delegates to the
+  // Every shared-runtime artifact has a timer facility once a public entry has
+  // loaded: MultiThread owns a timer heap, CurrentThread delegates to the
   // registered host driver.
   const timersExpected = true;
 
@@ -223,9 +220,6 @@ describe('getRuntimeCapabilities', () => {
     );
   });
   test('a timer facility is available once any public entry has loaded', () => {
-    // The shared MultiThread flavor owns a timer heap; shared CurrentThread
-    // delegates to the host driver registered by the entry's timer-host side
-    // effect.
     expect(caps.timers).toBe(timersExpected);
   });
 
@@ -250,12 +244,11 @@ describe('getRuntimeCapabilities', () => {
     }
   });
 
-  // Import-order invariant: the capability contract must not depend on which
-  // public entry loads first. A fresh process whose ONLY import is
-  // `rolldown/experimental` must still see working timers (the entry carries
-  // the timer-host side effect itself) and the artifact-static watch flag.
-  // Without that side effect, a CurrentThread artifact reports timers:false
-  // and watchSupported:false despite supporting both.
+  // Import-order invariant: a fresh process whose ONLY import is
+  // `rolldown/experimental` must still see working timers (that entry carries the
+  // timer-host side effect itself) and the artifact-static watch flag. Without
+  // it, a CurrentThread artifact reports timers:false and watchSupported:false
+  // despite supporting both.
   test('capabilities do not depend on import order (experimental-only import)', () => {
     const fresh = inFreshProcess(`
       const { getRuntimeCapabilities } = await import('rolldown/experimental');
@@ -268,13 +261,11 @@ describe('getRuntimeCapabilities', () => {
   });
 
   // Load-time snapshot invariant: every artifact resolves the runtime config
-  // eagerly in lib.rs `init`, so an env
-  // mutation between import and the FIRST query is invisible -- the report
-  // must equal a control process that queried immediately. Threaded-WASI
-  // note: node:wasi additionally snapshots the WASI env at loader load
-  // (uvwasi), which masked the lazy-resolution hole on this particular host;
-  // the eager init makes load-time pinning a property of rolldown itself
-  // rather than of the host's WASI shim.
+  // eagerly in lib.rs `init`, so an env mutation between import and the FIRST
+  // query is invisible -- the report must equal a control process that queried
+  // immediately. On threaded-WASI node:wasi also snapshots the WASI env at loader
+  // load (uvwasi), so the eager init is what makes load-time pinning a property
+  // of rolldown itself rather than of the host's WASI shim.
   test('first query reflects load-time env even if mutated after import', () => {
     const spawnEnv = {
       ROLLDOWN_WORKER_THREADS: '7',
@@ -310,16 +301,14 @@ describe('getRuntimeCapabilities', () => {
     },
   );
 
-  // Worker-environment invariant: the contract must hold inside Node
-  // worker_threads too. Timer-host registration carries NO isMainThread guard
-  // because the parallel-plugin machinery loads the binding in workers. A
-  // fresh process whose FIRST binding import happens inside a worker must see
-  // working timers there. The native driver registry takes one registration
+  // Worker-environment invariant: a fresh process whose FIRST binding import
+  // happens inside a Node worker must see working timers there -- timer-host
+  // registration carries NO isMainThread guard, since the parallel-plugin
+  // machinery loads the binding in workers. The registry takes one registration
   // per importing env and races every timer across all live hosts, so the
-  // worker's registration joins rather than clobbers a later main-thread
-  // import. Without worker-side registration, a CurrentThread worker reports
-  // timers:false and a CT sleep_until there panics driverless even though
-  // watchSupported is statically true.
+  // worker's joins rather than clobbers a later main-thread import. Without it, a
+  // CurrentThread worker reports timers:false and a CT sleep_until there panics
+  // driverless even though watchSupported is statically true.
   test('capabilities hold when a worker thread imports the binding first', () => {
     const result = inFreshProcess(`
       import { Worker } from 'node:worker_threads';
@@ -342,16 +331,15 @@ describe('getRuntimeCapabilities', () => {
     expect(result.mainCaps.timers).toBe(timersExpected);
   });
 
-  // Driver-lifetime invariant: a worker that imports the binding FIRST and
-  // then EXITS must not leave timer duty to its dead driver. The weak
-  // threadsafe function behind the timer host does not keep the worker's
-  // event loop alive, so the worker exits naturally and its env teardown
-  // kills the callback. A first-registration-wins slot would let that dead
-  // driver shadow the live main-thread host; a later main-thread watch
-  // debounce (a REAL CurrentThread sleep -- buildDelay > 0 keeps it off the
-  // already-elapsed fast path) would then busy-fail against the dead callback.
-  // The registry must evict the dead registrant, re-arm on the main thread's
-  // live driver, and keep stderr clean.
+  // Driver-lifetime invariant: a worker that imports the binding FIRST and then
+  // EXITS must not leave timer duty to its dead driver. The weak threadsafe
+  // function behind the timer host does not keep the worker's event loop alive,
+  // so the worker exits naturally and its env teardown kills the callback. The
+  // registry must evict the dead registrant, re-arm on the main thread's live
+  // driver, and keep stderr clean. Fails (busy-retry against the dead callback)
+  // if a first-registration-wins slot lets the dead driver shadow the live host;
+  // buildDelay > 0 keeps the debounce off the already-elapsed fast path so it is
+  // a REAL CurrentThread sleep.
   test.skipIf(!caps.watchSupported)(
     'watch debounce timers survive a worker-first registrant that exited',
     { retry: 3, timeout: 60_000 },
@@ -431,22 +419,20 @@ describe('getRuntimeCapabilities', () => {
       const result = JSON.parse(lines[lines.length - 1]);
       expect(result.rebuilt).toBe(true);
       expect(result.endCount).toBeGreaterThanOrEqual(2);
-      // A busy retry loop against the dead worker-owned callback emits this
-      // line repeatedly. Correct eviction and re-arming never touch the dead
-      // driver's relay.
+      // A busy retry loop against the dead worker-owned callback emits this line
+      // repeatedly; correct eviction never touches that relay.
       expect(child.stderr).not.toContain('host timer callback failed');
       expect(child.status).toBe(0);
     },
   );
 
   // Worker-entry invariant: the REAL `#parallel-plugin-worker` entry loads the
-  // binding, so it must import './timer-host' first and carry its own timer-host
-  // registration. On native the
-  // process-global registry can mask a missing registration (main's driver
-  // serves); on the wasm artifacts the registry is per-instance and the
-  // worker would be genuinely driverless. Bundling may place `require_binding`
-  // and timer-host's top-level registration in one shared chunk, so this test
-  // also guards the contract across future chunk splits.
+  // binding, so it must import './timer-host' first and carry its own
+  // registration. On native, the process-global registry can mask a missing one
+  // (main's driver serves); on the wasm artifacts the registry is per-instance
+  // and the worker would be genuinely driverless. Bundling may place
+  // `require_binding` and timer-host's top-level registration in one shared
+  // chunk, so this also guards the contract across future chunk splits.
   const rolldownPkgDir = nodePath.dirname(
     createRequire(import.meta.url).resolve('rolldown/package.json'),
   );
@@ -479,14 +465,13 @@ describe('getRuntimeCapabilities', () => {
     { timeout: 30_000 },
     async () => {
       expect(existsSync(parallelWorkerEntry)).toBe(true);
-      // STRUCTURAL: the entry's static import graph (the entry plus its
-      // relative chunks -- including BARE side-effect imports, which is
-      // exactly the form the timer-host import takes on the wasi dist) must
-      // contain the registration call. Top-level chunk code executes on
-      // import, so presence in the graph IS registration in the worker's
-      // env. The paired, receiver-bound host bridge must include both timeout
-      // creation and cancellation; resolving the relay after clearTimeout lets
-      // Rust retire the detached schedule task immediately.
+      // STRUCTURAL: the entry's static import graph (the entry plus its relative
+      // chunks -- including BARE side-effect imports, the form the timer-host
+      // import takes on the wasi dist) must contain the registration call.
+      // Top-level chunk code executes on import, so presence in the graph IS
+      // registration in the worker's env. The receiver-bound host bridge must
+      // include both timeout creation and cancellation; resolving the relay after
+      // clearTimeout lets Rust retire the detached schedule task immediately.
       const entryText = readFileSync(parallelWorkerEntry, 'utf8');
       let graphText = entryText;
       for (const match of entryText.matchAll(/(?:from\s+|import\s+)["'](\.\/[^"']+)["']/g)) {
@@ -574,15 +559,13 @@ describe('getRuntimeCapabilities', () => {
     },
   );
 
-  // Relay-eviction invariant: eviction must be decided by the unforgeable
-  // Closing status or the liveness probe -- NEVER by error
-  // message. A rejected JS promise coerces to GenericFailure carrying the
-  // JS-controlled rejection string, so a LIVE callback rejecting with
-  // Error('oneshot canceled') (colliding with napi's env-died-mid-promise
-  // message) must not be misclassified as env death and evicted immediately.
-  // It consumes one strike from the 3-strike budget, stays registered, and
-  // retries the debounce. Only meaningful where host timers serve watch: the
-  // shared CurrentThread flavor on a watch-capable artifact.
+  // Relay-eviction invariant: eviction must be decided by the unforgeable Closing
+  // status or the liveness probe, NEVER by error message -- a rejected JS promise
+  // coerces to GenericFailure carrying the JS-controlled rejection string. A LIVE
+  // callback rejecting with Error('oneshot canceled') (colliding with napi's
+  // env-died-mid-promise message) must consume one strike of the 3-strike budget,
+  // stay registered and retry the debounce, not be evicted as env death. Only
+  // meaningful where host timers serve watch: CurrentThread + watch-capable.
   test.skipIf(caps.flavor !== 'CurrentThread' || !caps.watchSupported)(
     'a live timer host rejecting with a colliding message takes the strike path',
     { retry: 3, timeout: 60_000 },
@@ -602,9 +585,9 @@ describe('getRuntimeCapabilities', () => {
       const { watch } = await import('rolldown');
 
       // registerTimerHost is not re-exported publicly; recover the binding's
-      // module.exports through the dist shared chunks' require_binding
-      // factory (a plain zero-arity function; the chunks are already loaded
-      // via the 'rolldown' import above, so this adds no side effects).
+      // module.exports through the dist shared chunks' require_binding factory (a
+      // zero-arity function; the chunks are already loaded by the 'rolldown'
+      // import above, so this adds no side effects).
       const pkgDir = path.dirname(createRequire(import.meta.url).resolve('rolldown/package.json'));
       const sharedDir = path.join(pkgDir, 'dist', 'shared');
       let binding;
@@ -632,9 +615,9 @@ describe('getRuntimeCapabilities', () => {
         process.exit(2);
       }
 
-      // A LIVE additional host: rejects its FIRST arm with the colliding
-      // message, then behaves normally. Every live registration receives the
-      // debounce, so this host must remain present for the retry.
+      // A LIVE additional host: rejects its FIRST arm with the colliding message,
+      // then behaves normally. Every live registration receives the debounce, so
+      // this host must remain present for the retry.
       let calls = 0;
       const active = new Map();
       const registration = binding.reserveCurrentThreadHostRegistration();

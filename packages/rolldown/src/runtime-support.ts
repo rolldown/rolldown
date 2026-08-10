@@ -199,9 +199,8 @@ function normalizeRuntimeCapabilities(
     throw new BindingRuntimeContractError('wasi does not agree with the reported target');
   }
   // No cross-checks for devSupported/watchSupported: missing fields already
-  // took the stable `threads` / inverse-`wasi` compatibility defaults above,
-  // but explicit values are independent workflow capabilities and are
-  // preserved (see internal-docs/async-runtime/implementation.md).
+  // took their compatibility defaults above, and explicit values are
+  // independent workflow capabilities that must be preserved as given.
   if (loadedTarget && loadedTarget !== target) {
     throw new BindingRuntimeContractError(
       'getRuntimeCapabilities().target does not match the generated loader target',

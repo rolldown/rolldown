@@ -56,11 +56,9 @@ export function transformChunkModules(
 
 /**
  * Like {@linkcode transformRenderedChunk}, but copies every field to plain JS
- * data (modules included, via {@linkcode snapshotChunkModules}) and releases
- * the native `BindingRenderedChunk` box immediately. For the threadless-WASI
- * flavor, where GC finalizers (the box's normal reclamation path) never run.
- * A callback that retains the returned chunk past its hook invocation keeps
- * working: nothing on it reads through the released box.
+ * data (modules included) and releases the native box immediately, for the
+ * threadless-WASI flavor. A callback that retains the returned chunk past its
+ * hook keeps working: nothing on it reads through the released box.
  */
 export function snapshotRenderedChunk(chunk: BindingRenderedChunk): RenderedChunk {
   const snapshot: RenderedChunk = {
@@ -82,9 +80,8 @@ export function snapshotRenderedChunk(chunk: BindingRenderedChunk): RenderedChun
 
 /**
  * Like {@linkcode transformChunkModules}, but copies every rendered module to
- * plain JS data and releases each native `BindingRenderedModule` box
- * immediately. For the threadless-WASI flavor, where GC finalizers (the boxes'
- * normal reclamation path) never run.
+ * plain JS data and releases each native box immediately, for the
+ * threadless-WASI flavor.
  */
 export function snapshotChunkModules(
   modules: BindingRenderedChunk['modules'],

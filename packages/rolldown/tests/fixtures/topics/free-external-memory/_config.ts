@@ -3,21 +3,15 @@ import { defineTest } from 'rolldown-tests';
 import { freeExternalMemory } from 'rolldown/experimental';
 import { expect } from 'vitest';
 
-// `freeExternalMemory()` has two truthful contracts, one per flavor:
-//
-//   native / threaded WASI  outputs keep their lazy fields, so the FIRST call
-//                           hands back the payload -> { freed: true }, and a
-//                           later read throws.
+// `freeExternalMemory()` has one contract per flavor:
+//   native / threaded WASI  fields stay lazy, so the first call hands back the
+//                           payload -> { freed: true } and later reads throw.
 //   threadless WASI         `transformToRollupOutput()` already materialized
-//                           every field and called `dropInner()` (workerd never
-//                           runs the GC finalizers that would reclaim it, see
-//                           src/utils/threadless-free.ts), so there is nothing
-//                           left to release -> { freed: false, reason: '...
-//                           already been freed' }, and reads still work off the
-//                           JavaScript copy.
-//
-// Both are asserted below rather than skipping the WASI lane: the "already
-// freed, data still readable" pair is exactly what proves the eager-free path
+//                           every field and called `dropInner()` (see
+//                           src/utils/threadless-free.ts), so nothing is left to
+//                           release -> { freed: false, reason: '...already been
+//                           freed' } and reads still work off the JS copy.
+// Asserting both instead of skipping WASI is what proves the eager-free path
 // dropped the payload WITHOUT losing the output.
 function expectFirstFree(status: { freed: boolean; reason?: string }): void {
   expect(status).toHaveProperty('freed');
@@ -63,8 +57,8 @@ export default defineTest({
       expect(result1Again.reason).toContain('already been freed');
 
       if (isThreadlessWasi) {
-        // The eager path copies every field into the wrapper before dropping,
-        // so the payload is gone yet the data is intact.
+        // The eager path copied every field into the wrapper before dropping:
+        // payload gone, data intact.
         expect(chunk.name).toBe('main');
         expect(typeof chunk.code).toBe('string');
       } else {
@@ -84,9 +78,8 @@ export default defineTest({
     }
 
     // Test 3: Can call freeExternalMemory on RolldownOutput (after individual items are freed)
-    // This should report that items are already freed. Flavor-independent: on
-    // every flavor each item's payload is gone by now, whether this test freed
-    // it or the eager path did.
+    // This should report that items are already freed, on every flavor --
+    // whether this test freed the payload or the eager path did.
     const result3 = freeExternalMemory(output);
     expect(result3).toHaveProperty('freed');
     expect(typeof result3.freed).toBe('boolean');

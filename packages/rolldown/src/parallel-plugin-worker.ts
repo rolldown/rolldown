@@ -1,8 +1,6 @@
-// FIRST import: this worker env loads the binding, so it must register its
-// own timer host (the per-env contract from timer-host.ts). On native the
-// process-global driver registry can mask a missing registration (main's
-// driver serves), but on the wasm artifacts the registry is per-instance --
-// without this, a parallel-plugin worker's instance is genuinely driverless
+// FIRST import: this worker env loads the binding, so it must register its own
+// timer host (per-env contract, see timer-host.ts). On the wasm artifacts the
+// driver registry is per-instance, so without this the worker is driverless
 // and a CurrentThread sleep there panics.
 import './timer-host';
 import { registerPlugins } from './binding.cjs';

@@ -1,9 +1,6 @@
-// The public napi surface in this module (the `Binding*` `#[napi(object)]` types and
-// the `configure_async_runtime` / `get_async_runtime_*` / `reset_async_runtime_metrics`
-// `#[napi]` exports) is reachable only from JS. The in-crate unit-test binary never
-// constructs or calls it, so `dead_code` flags it in the TEST profile. Relax dead_code
-// for the TEST profile only: genuinely dead library code is still caught by the
-// non-test (cdylib) clippy gate, which carries no such allow.
+// The napi surface here is reachable only from JS, so the unit-test binary trips
+// `dead_code`. Test profile only: the non-test (cdylib) clippy gate carries no such
+// allow and still catches genuinely dead library code.
 #![cfg_attr(test, allow(dead_code))]
 
 use std::{future::Future, pin::Pin, ptr};
@@ -31,10 +28,9 @@ use crate::types::js_callback::JsCallback;
 
 struct RolldownAsyncRuntime;
 
-// SAFETY: Shutdown closes
-// admission, waits for the scheduler generation to quiesce, joins native
-// workers, and releases active resources. Independently, napi-rs permanently
-// retains the native image after a module that registered this backend exports
+// SAFETY: `shutdown` closes admission, waits for the scheduler generation to quiesce,
+// joins native workers and releases active resources. Independently, napi-rs permanently
+// retains the native image once a module that registered this backend exported
 // successfully, so externally cloned wakers cannot call into unmapped code.
 unsafe impl AsyncRuntime for RolldownAsyncRuntime {
   fn spawn(
@@ -60,8 +56,7 @@ unsafe impl AsyncRuntime for RolldownAsyncRuntime {
     &self,
     work: Box<dyn FnOnce() + Send + 'static>,
   ) -> std::result::Result<(), AsyncRuntimeRejection<Box<dyn FnOnce() + Send + 'static>>> {
-    // Route blocking work submitted through this SPI to the same bounded lane
-    // as Rolldown's facade.
+    // Same bounded blocking lane as Rolldown's own facade.
     match try_spawn_blocking(work) {
       Ok(handle) => {
         handle.detach();
@@ -132,10 +127,8 @@ impl TryFrom<BindingRuntimeOptions> for RuntimeOptionsPatch {
         value.max_blocking_tasks,
         MAX_ASYNC_RUNTIME_WORKER_THREADS,
       )?,
-      // Not exposed through the JS `configureAsyncRuntime` surface: the
-      // drainer linger budget is resolved once at module init from
-      // `ROLLDOWN_DRAIN_LINGER_US` (mirroring how upstream's napi adapter
-      // owns it at addon load), so a JS patch always leaves it unchanged.
+      // Not exposed through `configureAsyncRuntime`: the drainer linger budget is
+      // resolved once at module init from `ROLLDOWN_DRAIN_LINGER_US`.
       drain_linger: None,
     })
   }
@@ -269,21 +262,12 @@ pub fn get_async_runtime_config() -> BindingRuntimeConfig {
   configured_options().into()
 }
 
-// === Unified config-resolution pipeline =====================================
-//
-// ONE typed resolution: every runtime-config environment variable is read in
-// exactly one place (`RuntimeEnv::from_process`), resolved through one pure
-// per-target defaults table (`resolve_runtime_config_for`), and snapshotted
-// once per process (`resolved_runtime_config`). Every consumer -- the shared
-// runtime's `register_async_runtime` and the `get_runtime_capabilities`
-// export -- reads that same snapshot, so a later `process.env` mutation can
-// never make what we report diverge from the runtime that was actually built.
-//
-// The defaults are preserved within explicit production bounds:
-// - the shared native runtime keeps `max(physical, 2)` workers and reserves
-//   one execution lane from blocking admission, capped at 256 workers;
-// - the wasm artifacts report the CurrentThread executor's one physical
-//   execution lane (no env worker override, as before).
+// Every runtime-config environment variable is read in exactly one place
+// (`RuntimeEnv::from_process`), resolved by the pure per-target defaults table
+// (`resolve_runtime_config_for`), and snapshotted once per process
+// (`resolved_runtime_config`). Both the runtime that gets built and the
+// `get_runtime_capabilities` export read that same snapshot, so a later `process.env`
+// mutation can never make what we report diverge from the runtime that exists.
 
 /// Which target family this binding was compiled for.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -341,7 +325,6 @@ pub struct RuntimeEnv {
 }
 
 impl RuntimeEnv {
-  /// THE single env-read site for runtime configuration.
   fn from_process() -> Self {
     Self {
       runtime: std::env::var("ROLLDOWN_RUNTIME").ok(),
@@ -353,10 +336,8 @@ impl RuntimeEnv {
   }
 }
 
-/// The typed result of config resolution: the effective values the runtime is
-/// built from. CurrentThread is normalized to one worker; MultiThread is
-/// normalized to a truthful minimum of two workers before it reaches the
-/// controller.
+/// The effective values the runtime is built from. CurrentThread is normalized to one
+/// worker, MultiThread to a minimum of two, before either reaches the controller.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct ResolvedRuntimeConfig {
   pub target: ResolvedRuntimeTarget,
@@ -373,11 +354,10 @@ pub struct ResolvedRuntimeConfig {
 
 const fn compiled_target() -> ResolvedRuntimeTarget {
   // `rolldown_wasi_threads` is emitted by build.rs for the exact
-  // `wasm32-wasip1-threads` cargo TARGET. It is NOT derivable from built-in
-  // cfgs: on current rustc the two WASI targets expose identical cfg sets --
-  // `cfg!(target_feature = "atomics")` is false even on the threads target
-  // (verified empirically; a threaded artifact built with that predicate
-  // reported `target: "wasi"`).
+  // `wasm32-wasip1-threads` cargo TARGET. It is NOT derivable from built-in cfgs: the
+  // two WASI targets expose identical cfg sets, and `cfg!(target_feature = "atomics")`
+  // reads false even on the threads target (a threaded artifact built with that
+  // predicate reported `target: "wasi"`).
   if cfg!(not(target_family = "wasm")) {
     ResolvedRuntimeTarget::Native
   } else if cfg!(rolldown_wasi_threads) {
@@ -387,27 +367,19 @@ const fn compiled_target() -> ResolvedRuntimeTarget {
   }
 }
 
-/// Parse a raw `ROLLDOWN_PARK_DEADLINE_MS` value; unset, non-numeric or `0`
-/// disable deadline detection rather than erroring (the same lenient
-/// treatment `env_config::resolve_thread_count` gives the thread counts --
-/// never panic module init over a typo). The read AND the parse live here,
-/// in the single resolver: the shared scheduler never reads the environment
-/// itself, and Rolldown deliberately keeps its historical variable name
-/// rather than the shared crate's `PARK_DEADLINE_ENV` convention
-/// (`NAPI_RUNTIME_PARK_DEADLINE_MS`).
+/// Parse a raw `ROLLDOWN_PARK_DEADLINE_MS` value; unset, non-numeric or `0` disable
+/// deadline detection rather than erroring -- never panic module init over a typo.
 fn parse_park_deadline_ms(raw: Option<String>) -> Option<u64> {
   raw.and_then(|value| value.parse::<u64>().ok()).filter(|&millis| millis != 0)
 }
 
-/// Parse a raw `ROLLDOWN_DRAIN_LINGER_US` value; unset or non-numeric keeps
-/// the shared crate's default budget. Unlike `parse_park_deadline_ms` there
-/// is deliberately NO `!= 0` filter: `0` is a value (lingering disabled), not
-/// unset. Oversized values are clamped by the shared crate's validation, not
-/// here. Rolldown keeps a `ROLLDOWN_`-prefixed variable rather than the
-/// shared crate's `DRAIN_LINGER_ENV` (`NAPI_RUNTIME_DRAIN_LINGER_US`)
-/// because this binding vendors its own `AsyncRuntime` adapter and never
-/// calls the shared napi adapter's `install()`, so the upstream env
-/// resolution never runs here.
+/// Parse a raw `ROLLDOWN_DRAIN_LINGER_US` value; unset or non-numeric keeps the shared
+/// crate's default budget. Deliberately NO `!= 0` filter: `0` is a value (lingering
+/// disabled), not unset. Oversized values are clamped by `configure`, not here.
+///
+/// The variable is `ROLLDOWN_`-prefixed rather than the shared crate's
+/// `NAPI_RUNTIME_DRAIN_LINGER_US` because this binding vendors its own `AsyncRuntime`
+/// adapter and never calls the shared napi adapter's `install()`.
 fn parse_drain_linger_us(raw: Option<String>) -> Option<u64> {
   raw.and_then(|value| value.trim().parse::<u64>().ok())
 }
@@ -458,11 +430,10 @@ fn resolve_runtime_config_for(
   let default_flavor =
     if native { ResolvedRuntimeFlavor::MultiThread } else { ResolvedRuntimeFlavor::CurrentThread };
   let requested_flavor = resolve_runtime_flavor(env.runtime.as_deref(), default_flavor);
-  // The shared scheduler has no MultiThread executor on WebAssembly:
-  // `rolldown_utils` does not compile Rayon there. Normalize an unsupported
-  // environment override before the module-init hook calls `configure`, so
-  // loading a WASI artifact can never panic because `ROLLDOWN_RUNTIME=multi`
-  // leaked in from a native process environment.
+  // The shared scheduler has no MultiThread executor on WebAssembly (`rolldown_utils`
+  // does not compile Rayon there). Normalize the unsupported override before the
+  // module-init hook calls `configure`, so loading a WASI artifact cannot panic because
+  // `ROLLDOWN_RUNTIME=multi` leaked in from a native process environment.
   let flavor = if native { requested_flavor } else { ResolvedRuntimeFlavor::CurrentThread };
   let requested_worker_threads = if native {
     resolve_thread_count(
@@ -471,10 +442,8 @@ fn resolve_runtime_config_for(
       max_async_runtime_worker_threads(),
     )
   } else {
-    // `RuntimeOptions::default()` parity: the env worker override has
-    // never applied on wasm (`register_async_runtime`'s override block
-    // was `not(target_family = "wasm")`), so the default stays
-    // `available_parallelism` and `ROLLDOWN_WORKER_THREADS` is ignored.
+    // `ROLLDOWN_WORKER_THREADS` does not apply on wasm; keep
+    // `RuntimeOptions::default()` parity with `available_parallelism`.
     std::thread::available_parallelism().map_or(1, usize::from)
   };
   let worker_threads = match flavor {
@@ -495,12 +464,10 @@ fn resolve_runtime_config_for(
   }
 }
 
-/// The per-process resolved runtime-config snapshot. The environment is read
-/// exactly once, and lib.rs `init` (a `module_init` hook that runs on EVERY
-/// artifact) forces the resolution at module load -- the same moment the WASI
-/// loader sizes its async work pool -- so a later env mutation can never make
-/// the report diverge from the runtime/pool that already exists, regardless
-/// of whether the host's WASI shim snapshots or live-reads its environment.
+/// The per-process resolved runtime-config snapshot. lib.rs `init` forces the resolution
+/// at module load -- the same moment the WASI loader sizes its async work pool -- so a
+/// later env mutation can never make the report diverge from the runtime/pool that
+/// already exists, whether or not the host's WASI shim live-reads its environment.
 pub fn resolved_runtime_config() -> &'static ResolvedRuntimeConfig {
   static RESOLVED_RUNTIME_CONFIG: std::sync::OnceLock<ResolvedRuntimeConfig> =
     std::sync::OnceLock::new();
@@ -1114,31 +1081,19 @@ pub fn unregister_current_thread_task_host(registration_high: u32, registration_
   }
 }
 
-/// Host timer driver for the shared runtime's CurrentThread flavor:
-/// `sleep_until` on the single-thread executor cannot park a
-/// helper thread (none exists on threadless wasm), so it delegates each timer
-/// to the host event loop through the JS callback registered at import --
-/// `(id, ms) => new Promise((resolve) => setTimeout(resolve, ms))`, paired
-/// with a cancellation callback that clears the timeout and resolves the
-/// relay promise.
+/// Host timer driver for the CurrentThread flavor: `sleep_until` cannot park a helper
+/// thread (none exists on threadless wasm), so each timer is delegated to the host event
+/// loop through the schedule/cancel JS callbacks registered at import.
 ///
-/// Per timer id: the FIRST `register` arms one host timeout via a detached
-/// relay task; re-registers (`Sleep` re-polls) only refresh the stored waker.
-/// `cancel` removes the pending waker and either invokes the host cancellation
-/// callback or leaves a pre-arm tombstone for the accepted TSFN delivery. The
-/// JS side clears the timeout and resolves its promise, so a dropped sleep
-/// leaves neither a live timeout nor a detached relay task.
+/// Per timer id: the FIRST `register` arms one host timeout via a detached relay task;
+/// re-registers (`Sleep` re-polls) only refresh the stored waker. `cancel` removes the
+/// waker and either invokes the host cancellation callback or leaves a pre-arm tombstone
+/// for the accepted TSFN delivery, so a dropped sleep leaves neither a live timeout nor
+/// a detached relay task.
 ///
-/// LIFETIME: each importing napi env registers its own
-/// host, and a host dies WITH its env -- the weak threadsafe function does
-/// not keep a worker's event loop alive, so a worker that imported the
-/// binding can exit at any time and orphan its host. A dead host must never
-/// keep timer duty (the registry would busy-fail every debounce against it),
-/// so it is EVICTED -- proactively by the env-cleanup hook installed at
-/// registration, and reactively by the `is_live` probe (the threadsafe
-/// function's `aborted` flag) and by relay-call failure. Eviction wakes every
-/// sleep armed here so each re-polls onto the registry's next live registrant
-/// (see `TimerDriverRegistry`).
+/// A host dies WITH its importing env -- the weak threadsafe function does not keep a
+/// worker's event loop alive -- and a dead host must be evicted (see
+/// [`JsTimerHostInner::evict`]) or the registry busy-fails every debounce against it.
 struct JsTimerHost {
   inner: std::sync::Arc<JsTimerHostInner>,
 }
@@ -1219,44 +1174,22 @@ impl HostTimerRelayHealth {
   }
 }
 
-/// Consecutive NON-LIFETIME relay failures tolerated on one live host before
-/// eviction. A transient failure (a one-off JS rejection, a queueing hiccup)
-/// must not poison a live driver -- on a
-/// main-only process that would leave NO driver and every later CT sleep
-/// would hit the loud no-driver panic. But a PERSISTENTLY failing live
-/// callback can never fire a timer either, so after this many consecutive
-/// failures the host is evicted anyway (announced in the log). Reset on any
-/// successful relay. Small on purpose: each strike costs one wasted arm/wake
-/// round-trip for the affected sleep.
+/// Consecutive NON-LIFETIME relay failures tolerated on one live host before eviction.
+/// A one-off JS rejection must not poison a live driver -- on a main-only process that
+/// leaves NO driver and every later CurrentThread sleep hits the loud no-driver panic --
+/// but a persistently failing callback can never fire a timer either. Reset on any
+/// successful relay; each strike costs one wasted arm/wake round-trip.
 const HOST_TIMER_MAX_TRANSIENT_FAILURES: u32 = 3;
 
-/// Does this relay error mean the HOST IS GONE (evict immediately), as
-/// opposed to a callback failure on a live host (strike-counted)?
+/// Does this relay error mean the HOST IS GONE (evict immediately), as opposed to a
+/// callback failure on a live host (strike-counted)?
 ///
-/// ERROR CLASSIFICATION: no message strings. A rejected JS promise is
-/// coerced into `GenericFailure` CARRYING THE JS REJECTION STRING (pinned
-/// napi 3.10, error.rs `From<Unknown> for Error`: native coerces the value
-/// to a string, wasm reads `.message` -- both always `GenericFailure`), so
-/// any message match is forgeable by a live callback rejecting with a
-/// colliding string (e.g. `Error('oneshot canceled')`) and would evict a
-/// live host, bypassing the strike budget. Two string-free authorities
-/// instead:
-/// - `Status::Closing` is LIFETIME: it originates only from the TSFN layer
-///   (aborted pre-check, raw `napi_closing`), and the JS coercion above can
-///   never produce it -- unforgeable.
-/// - Everything else defers to the LIVENESS PROBE (`is_live` = the dead
-///   latch + the threadsafe function's own `aborted` flag): the genuine
-///   teardown shapes (queue drained at env teardown, env died before the JS
-///   promise settled) all coincide with the env being torn down, which the
-///   probe observes directly.
-///
-/// Race walk: env dies between the error and the probe read -> the probe
-/// reads dead -> evict: correct. Env alive at the probe but dying a
-/// microsecond later -> strike now (the affected sleep is re-woken); the
-/// death is then caught by the env-cleanup hook, by the aborted-probe sweep
-/// at the next selection, or by the next relay failure (which will probe
-/// dead) -> bounded, correct. A LIVE host's failure -- whatever its message
-/// says -- takes the strike path.
+/// The decision must stay STRING-FREE: a rejected JS promise coerces into
+/// `GenericFailure` carrying the JS rejection string (pinned napi 3.10, error.rs
+/// `From<Unknown> for Error`), so any message match is forgeable by a live callback
+/// rejecting with a colliding string and would evict a live host. The two unforgeable
+/// authorities are `Status::Closing`, which only the TSFN layer produces, and the
+/// liveness probe, which observes env teardown directly.
 fn should_evict_for_relay_error(status: napi::Status, host_is_live: bool) -> bool {
   status == napi::Status::Closing || !host_is_live
 }
@@ -1309,10 +1242,8 @@ struct JsTimerHostInner {
   /// Exact JavaScript-facing capability used to unregister this host before
   /// emnapi starts running fallible environment cleanup hooks.
   host_registration: u64,
-  /// This host's registration in the global driver registry. Installation and
-  /// eviction use this mutex as their publication boundary, but the core
-  /// registration call itself runs outside it because that call may wake
-  /// arbitrary task wakers.
+  /// This host's registration in the global driver registry; the mutex is the
+  /// publication boundary between installation and eviction.
   registration: std::sync::Mutex<Option<TimerDriverId>>,
   /// Consecutive non-lifetime relay failures (see
   /// [`HOST_TIMER_MAX_TRANSIENT_FAILURES`]); reset on success.
@@ -1505,9 +1436,8 @@ fn run_host_timer_cleanup_safely(cleanup: impl FnOnce()) {
     && let Err(nested_payload) =
       std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| drop(payload)))
   {
-    // The original unwind is contained. A hostile payload destructor may
-    // panic again; quarantine only that nested payload so its destructor
-    // cannot unwind through the napi env cleanup hook either.
+    // Quarantine the nested payload so a panicking payload destructor cannot unwind
+    // through the napi env cleanup hook either.
     std::mem::forget(nested_payload);
   }
 }
@@ -1544,10 +1474,9 @@ fn complete_relay_schedule_callback<T: PendingRelayState, R>(
   result: R,
   deliver: impl FnOnce(R),
 ) {
-  // This runs from napi-rs's return-value callback on the JavaScript call
-  // stack, after the schedule function has returned but before delivery wakes
-  // the Rust relay future. A terminal runnable drop therefore sees
-  // CallbackComplete, while cleanup that won earlier is completed here.
+  // Runs on the JavaScript call stack after the schedule function returned but before
+  // delivery wakes the Rust relay future, so a terminal runnable drop sees
+  // `CallbackComplete` while cleanup that won earlier is completed here.
   run_host_timer_cleanup_safely(|| {
     if state.mark_relay_callback_complete(id, relay_id) {
       state.cancel_relay(relay_id, std::sync::Arc::clone(relay_health));
@@ -1573,10 +1502,9 @@ fn normalize_timer_schedule_result(
 }
 
 fn wake_host_timer_safely(waker: std::task::Waker) {
-  // Host eviction runs from a napi env cleanup hook. A custom RawWaker must
-  // not unwind through that FFI boundary or abort the remaining timer drain.
-  // Borrowing for the wake keeps a panicking wake and a panicking destructor
-  // in separate containment boundaries.
+  // Host eviction runs from a napi env cleanup hook, where a custom RawWaker must not
+  // unwind through the FFI boundary. Waking by reference keeps a panicking wake and a
+  // panicking destructor in separate containment boundaries.
   run_host_timer_cleanup_safely(|| waker.wake_by_ref());
   run_host_timer_cleanup_safely(|| drop(waker));
 }
@@ -1784,11 +1712,10 @@ impl JsTimerHostInner {
     })?
   }
 
-  /// Remove this host from timer duty: latch `dead`, drop the registry
-  /// entry, and wake every sleep armed here so each re-polls onto the next
-  /// live registrant (absolute deadlines preserve the remaining time; with no
-  /// live registrant left the re-poll fails LOUD in `rolldown_utils`).
-  /// Idempotent -- the cleanup hook, the `is_live` race path, and the
+  /// Remove this host from timer duty: latch `dead`, drop the registry entry, and wake
+  /// every sleep armed here so each re-polls onto the next live registrant (absolute
+  /// deadlines preserve the remaining time; with none left the re-poll fails LOUD in
+  /// `rolldown_utils`). Idempotent: the cleanup hook, the `is_live` race path and the
   /// relay-failure backstop may all reach it.
   fn evict(self: &std::sync::Arc<Self>) {
     self.dead.store(true, std::sync::atomic::Ordering::SeqCst);
@@ -1892,21 +1819,15 @@ impl TimerDriver for JsTimerHost {
           // drop guard has nothing left to clean up either way.
           relay_drop_guard.disarm();
           if !schedule_started.load(std::sync::atomic::Ordering::Acquire) {
-            // The schedule callback was never invoked (the cancellation was
-            // already pending at this task's first poll), so there is no host
-            // result to observe -- and invoking the callback now would arm a
+            // The cancellation was already pending at this task's first poll, so there
+            // is no host result to observe -- and invoking the callback now would arm a
             // JS timer that nothing will ever cancel.
             return;
           }
-          // The schedule callback is in flight. Conforming hosts settle the
-          // schedule promise on cancellation (see `cancelTimer` in
-          // workerd-timer-host.ts and the node host in timer-host.ts), and
-          // that settlement shares this relay's health record with the
-          // cancellation callback: whichever failure reaches Rust first
-          // consumes the relay's one strike and the other is reported as
-          // diagnostic-only (`Duplicate`, "already accounted"). Dropping the
-          // schedule future here instead would leave the schedule-side
-          // result unobserved and the shared accounting blind.
+          // The schedule callback is in flight. Conforming hosts settle the schedule
+          // promise on cancellation, and that settlement shares this relay's health
+          // record with the cancellation callback; dropping the schedule future here
+          // would leave the schedule-side result unobserved and the accounting blind.
           schedule.await
         }
         futures::future::Either::Right((result, _cancellation)) => result,
@@ -1950,10 +1871,9 @@ impl TimerDriver for JsTimerHost {
                   if let Some(pending) =
                     inner.take_pending_relay(id, relay_id, RelayCancellationAccounting::CleanupOnly)
                   {
-                    // The callback may have synchronously armed a timeout before
-                    // throwing, returning the wrong type, or producing a
-                    // rejected Promise. Cleanup cancellation must not add a
-                    // second strike for this same relay failure.
+                    // The callback may have armed a timeout before failing, so cleanup
+                    // still cancels -- without adding a second strike for the same
+                    // relay failure.
                     retire_pending_relay(&inner, pending);
                   }
                 },
@@ -2013,10 +1933,8 @@ impl TimerDriver for JsTimerHost {
   }
 
   fn on_swept(&self) {
-    // The registry's selection sweep noticed this host's death (the
-    // `aborted` probe can fire before the env-cleanup hook runs): run the
-    // full eviction so every sleep pending here is woken into re-selection
-    // instead of stranded. Idempotent with the hook and the relay backstop.
+    // The `aborted` probe can fire before the env-cleanup hook runs; evict so every
+    // sleep pending here is woken into re-selection instead of stranded.
     self.inner.evict();
   }
 }
@@ -2068,9 +1986,8 @@ pub fn register_timer_host(
       "The CurrentThread timer host was evicted during registration",
     ));
   }
-  // Proactive eviction at env teardown (worker exit): the primary lifetime
-  // mechanism; the `aborted` probe and the relay-failure path in the driver
-  // are the backstops for anything the hook cannot reach in time.
+  // Proactive eviction at env teardown (worker exit); the `aborted` probe and the
+  // relay-failure path are the backstops.
   let hook_inner = std::sync::Arc::clone(&inner);
   install_cleanup_hook_or_rollback(
     || {
@@ -2096,28 +2013,18 @@ pub fn unregister_timer_host(registration_high: u32, registration_low: u32) {
 
 #[napi_derive::module_init]
 fn install_async_runtime_backend() {
-  // Consume the SAME resolved snapshot the reporter and the capability export
-  // read (the single config-resolution pipeline). `configure` validates the
-  // already-normalized values, and the runtime controller's options remain
-  // the reporting authority on this build.
+  // The same resolved snapshot `get_runtime_capabilities` reports from.
   let resolved = resolved_runtime_config();
   let options = RuntimeOptions {
     flavor: resolved.flavor.into(),
     worker_threads: resolved.worker_threads,
     max_blocking_tasks: resolved.max_blocking_tasks,
-    // Resolved from `ROLLDOWN_PARK_DEADLINE_MS` by the single resolver; the
-    // runtime itself no longer reads the environment at executor construction.
     park_deadline: resolved.park_deadline_ms.map(std::time::Duration::from_millis),
-    // Resolved from `ROLLDOWN_DRAIN_LINGER_US` by the same single resolver
-    // (this binding vendors its own adapter, so the shared napi adapter's
-    // `NAPI_RUNTIME_DRAIN_LINGER_US` resolution never runs). Unset keeps the
-    // shared crate's default budget; `configure` clamps oversized values.
     drain_linger: resolved.drain_linger_us.map_or(
       std::time::Duration::from_micros(rolldown_utils::async_runtime::DEFAULT_DRAIN_LINGER_MICROS),
       std::time::Duration::from_micros,
     ),
-    // The shared `napi-async-runtime` crate defaults to its own neutral
-    // prefix; pin Rolldown's historical worker thread names explicitly.
+    // The shared crate defaults to a neutral prefix; pin Rolldown's thread names.
     thread_name_prefix: "rolldown-runtime".to_string(),
   };
   configure(options).expect("Failed to configure the Rolldown async runtime");
@@ -2228,8 +2135,7 @@ pub fn start_async_runtime_for_submission_failure_test() -> napi::Result<()> {
 /// resolved runtime snapshot; nothing re-reads the environment. Tests and
 /// embedders query the artifact instead of inferring the build flavor from
 /// env vars or error-message probes.
-// The bools ARE the contract: independent capability flags on a napi object
-// consumed from JS, not state to be modeled as an enum.
+// Independent capability flags on a napi object consumed from JS, not state to model.
 #[expect(clippy::struct_excessive_bools)]
 #[napi(object)]
 pub struct BindingRuntimeCapabilities {
@@ -2303,18 +2209,14 @@ pub fn get_runtime_capabilities() -> BindingRuntimeCapabilities {
   };
   let wasi = !matches!(resolved.target, ResolvedRuntimeTarget::Native);
 
-  // The runtime controller's validated options are the flavor authority:
-  // they include a pre-first-use `configureAsyncRuntime` override, which the
-  // load-time snapshot cannot know about.
+  // The controller's validated options are the flavor authority: they include a
+  // pre-first-use `configureAsyncRuntime` override the load-time snapshot cannot know.
   let flavor: BindingRuntimeFlavor = configured_options().flavor.into();
   let timers = match flavor {
     // Executor-owned timer heap, available unconditionally.
     BindingRuntimeFlavor::MultiThread => true,
-    // Host-delegated timers: available while a LIVE driver is registered
-    // (see the `timers` field doc for the before-registration case). Dead
-    // registrants -- hosts whose envs were torn down -- do not count, so
-    // this cannot read `true` off a worker-registered driver that died
-    // with its worker.
+    // Host-delegated timers: true only while a LIVE driver is registered. Dead
+    // registrants (hosts whose envs were torn down) do not count.
     BindingRuntimeFlavor::CurrentThread => rolldown_utils::async_runtime::has_live_timer_driver(),
   };
   let threads = matches!(flavor, BindingRuntimeFlavor::MultiThread);
@@ -2334,10 +2236,8 @@ pub fn get_runtime_capabilities() -> BindingRuntimeCapabilities {
   }
 }
 
-// Resolver tests are parameterized on the target, so every arm of the
-// defaults table is exercised on any host. The runtime snapshot must win over
-// later environment mutations: the environment is read exactly once inside
-// the `OnceLock` initializer of `resolved_runtime_config`.
+// Resolver tests are parameterized on the target, so every arm of the defaults table is
+// exercised on any host.
 #[cfg(test)]
 mod tests {
   use rolldown_utils::max_async_runtime_worker_threads;
@@ -3897,8 +3797,7 @@ mod tests {
 
   #[test]
   fn shared_park_deadline_parsing_treats_unset_zero_and_garbage_as_disabled() {
-    // Ports the parse test from rolldown_utils (the read AND the parse moved
-    // here): never panic module init over a typo, just disable detection.
+    // Never panic module init over a typo; a bad value just disables detection.
     assert_eq!(parse_park_deadline_ms(None), None);
     assert_eq!(parse_park_deadline_ms(Some("0".to_string())), None);
     assert_eq!(parse_park_deadline_ms(Some("abc".to_string())), None);
@@ -4010,11 +3909,10 @@ mod tests {
       );
       assert_eq!(resolved.max_blocking_tasks, 1);
 
-      // ROLLDOWN_WORKER_THREADS has never applied on wasm. An inherited
-      // `ROLLDOWN_RUNTIME=multi` must be normalized before module init:
-      // `configure` rejects MultiThread on every shared WebAssembly build,
-      // and an expect panic while loading the addon is not an acceptable
-      // configuration error.
+      // `ROLLDOWN_WORKER_THREADS` does not apply on wasm, and an inherited
+      // `ROLLDOWN_RUNTIME=multi` must be normalized before module init: `configure`
+      // rejects MultiThread on every shared WebAssembly build, and panicking while
+      // loading the addon is not an acceptable configuration error.
       let overridden = resolve(
         target,
         &RuntimeEnv {
@@ -4030,36 +3928,27 @@ mod tests {
     }
   }
 
-  /// Relay-eviction invariant: the relay must evict ONLY on host death, and
-  /// the decision must be STRING-FREE. A rejected JS promise coerces to
-  /// `GenericFailure` carrying the JS-controlled rejection string (pinned
-  /// napi 3.10 error.rs), so message matching is forgeable by a live
-  /// callback. The two authorities: the unforgeable `Closing` status, and
-  /// the liveness probe.
+  /// Relay eviction must fire ONLY on host death, and the decision must be STRING-FREE
+  /// (see `should_evict_for_relay_error`).
   #[test]
   fn relay_eviction_is_decided_by_status_and_probe_never_by_message() {
     use napi::Status;
 
     use super::should_evict_for_relay_error;
 
-    // `Closing` is authoritative host death: it originates only from the
-    // TSFN layer (aborted pre-check, raw napi_closing) and JS coercion can
-    // never produce it -- evict even if the probe still reads live (the
-    // finalize flag can lag the raw status).
+    // `Closing` is authoritative host death, so evict even if the probe still reads
+    // live -- the finalize flag can lag the raw status.
     assert!(should_evict_for_relay_error(Status::Closing, true), "Closing overrides a live probe");
     assert!(should_evict_for_relay_error(Status::Closing, false));
 
-    // A DEAD probe evicts regardless of status. Queue drain during env
-    // teardown and env death before a JS promise settles both coincide with
-    // the env being torn down, which the probe observes directly.
+    // A DEAD probe evicts regardless of status: queue drain during env teardown and env
+    // death before a JS promise settles both coincide with teardown the probe observes.
     assert!(should_evict_for_relay_error(Status::GenericFailure, false));
     assert!(should_evict_for_relay_error(Status::PendingException, false));
 
-    // A LIVE host's failure takes the strike path no matter what the error
-    // says. A live callback can reject with
-    // `Promise.reject(new Error('oneshot canceled'))`, which coerces to
-    // GenericFailure + "Error: oneshot canceled" and must not be mistaken for
-    // environment teardown.
+    // A LIVE host's failure takes the strike path whatever the error says: a callback
+    // rejecting with `new Error('oneshot canceled')` coerces to GenericFailure and must
+    // not be mistaken for environment teardown.
     assert!(
       !should_evict_for_relay_error(Status::GenericFailure, true),
       "a live host's GenericFailure -- e.g. a forged 'oneshot canceled' rejection -- must strike"

@@ -13,9 +13,8 @@ const TEST_RETRY = 3;
 const TEST_TIMEOUT = 60_000;
 
 // Dev mode spawns the BindingDevEngine, which is out of scope for the
-// single-thread (CurrentThread) runtime flavor — `engine.run()` never
-// resolves there (same class as the dev-close/dev-lazy-compile skips; NOT a
-// watch-timer issue: the hang precedes any debounce timer).
+// single-thread (CurrentThread) runtime flavor: `engine.run()` never resolves
+// there (same as the dev-close/dev-lazy-compile skips).
 
 // Wrap dev() to inject usePolling for CI stability.
 // PollWatcher uses whole-second mtime comparison, so file edits

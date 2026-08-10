@@ -1,34 +1,27 @@
 import { getRuntimeCapabilities, getRuntimeSupport } from 'rolldown/experimental';
 
-// The binding self-reports what it IS (backend / flavor / target) through
-// `getRuntimeCapabilities()`: compile-time facts plus the config snapshot
-// resolved once at addon load. The helpers below are capability queries
-// against the loaded artifact -- nothing here reads lane env vars or probes
-// error messages. Querying at module scope is safe in every lane: this module
-// already loaded the binding at collection time for `runtimeFlavor` before.
+// Capability queries against the loaded artifact -- no lane env vars, no
+// error-message probing. Safe at module scope: the binding is already loaded
+// at collection time.
 const capabilities = getRuntimeCapabilities();
 
-// Flavor is reported by every build: native builds report the configured
-// shared-runtime executor; every WebAssembly build is 'CurrentThread'.
+// Native builds report the configured shared-runtime executor; every
+// WebAssembly build is 'CurrentThread'.
 export const runtimeFlavor: string = capabilities.flavor;
 
-// True when the binding schedules everything on the calling thread
-// (native build with ROLLDOWN_RUNTIME=single, or any WASI build).
-// Equivalent to `capabilities.flavor === 'CurrentThread'`.
+// Everything scheduled on the calling thread: native with
+// ROLLDOWN_RUNTIME=single, or any WASI build.
 export const isSingleThread: boolean = !capabilities.threads;
 
-// True when the loaded binding is a WebAssembly/WASI artifact ('wasi' or
-// 'wasi-threads' target) -- distinguishes "wasm binding" from "native binding
-// in single-thread mode". Gates wasm-boundary-specific skips (watch and
-// symlink traversal); no CI env var is involved, the artifact identifies itself.
+// WebAssembly/WASI artifact ('wasi' or 'wasi-threads' target) -- distinct from a
+// native binding in single-thread mode. Gates wasm-boundary skips (watch,
+// symlink traversal).
 export const isWasiTest: boolean = capabilities.wasi;
 
-// True only for the threadless WASI artifact ('wasi' target without threads),
-// which is neither `isWasiTest` alone (threaded WASI is a wasm build too) nor
-// `isSingleThread` alone (a native CurrentThread binding is threadless but not
-// wasm). This is the exact predicate the package uses for its eager-output-free
-// path (`src/utils/threadless-free.ts` reads the same `threadlessWasi` field),
-// so tests that assert the eager-free contract stay in lockstep with it.
+// Threadless WASI only ('wasi' target without threads): neither `isWasiTest`
+// (threaded WASI is wasm too) nor `isSingleThread` (native CurrentThread is
+// threadless but not wasm). Same field `src/utils/threadless-free.ts` reads, so
+// eager-free assertions stay in lockstep with the package.
 export const isThreadlessWasi: boolean = getRuntimeSupport(capabilities).threadlessWasi;
 
 // True for every current binding (the shared runtime is the only backend);

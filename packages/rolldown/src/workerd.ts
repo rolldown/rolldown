@@ -61,12 +61,10 @@ export interface WorkerdFreeOutputsReport {
  * Release the native memory behind a completed `BindingBundler#generate()` or
  * `#write()` result.
  *
- * Each build's output payload (chunk code, sourcemaps, and the per-module
- * rendered sources) lives on the Wasm side and is normally reclaimed by a
- * JavaScript GC finalizer. workerd gives the surrounding isolate no JS-heap
- * pressure for Wasm memory and does not reliably run finalizers, so on this
- * surface every build's payload stays resident and sequential rebuilds grow
- * linear memory without bound (about 0.9 MiB per 300-module rebuild).
+ * The payload lives on the Wasm side and is normally reclaimed by a GC
+ * finalizer, which workerd does not run reliably: without this call every
+ * build's payload stays resident and sequential rebuilds grow linear memory
+ * without bound (about 0.9 MiB per 300-module rebuild).
  *
  * Call this once you have finished reading an output (or copied the fields you
  * need). After it returns, the output's getters throw for anything not already

@@ -19,10 +19,9 @@ const requireSharedRuntime = process.env.ROLLDOWN_TEST_REQUIRE_SHARED_ASYNC_RUNT
 // These regressions exercise lifecycle test probes that only the probe-enabled
 // binding exports (Native Async Runtime CI job). The regular binding built by
 // node-test-ubuntu reports `backend === 'shared'` but lacks the probes, so gate
-// each test on the specific probe its child fixture needs instead of letting the
-// child throw "built without ... probe". `requireSharedRuntime` bypasses the
-// probe gate on purpose: the probe CI lane sets it as a tripwire, and a probe
-// binding missing its probes must fail loudly there, never skip.
+// each test on the specific probe its child fixture needs. `requireSharedRuntime`
+// bypasses the probe gate on purpose: the probe CI lane sets it as a tripwire,
+// and a probe binding missing its probes must fail loudly there, never skip.
 const asyncRuntimeProbes = bindingModule as unknown as Record<string, unknown>;
 const hasWorkerTeardownWakerProbe =
   requireSharedRuntime ||

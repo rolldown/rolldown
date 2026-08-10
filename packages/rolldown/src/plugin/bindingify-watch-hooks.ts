@@ -5,10 +5,9 @@ import { bindingifyHook, type PluginHookWithBindingExt } from './bindingify-plug
 import type { ChangeEvent } from './index';
 import { createPluginContext } from './plugin-context';
 
-// Watch mode never runs on the threadless-WASI flavor today, but these
-// wrappers release their per-invocation `BindingPluginContext` boxes on that
-// flavor anyway, for consistency with the build/output hook wrappers (see the
-// comment in `bindingify-build-hooks.ts`).
+// Watch mode never runs on the threadless-WASI flavor today; these wrappers
+// still release their boxes there, for consistency with the other hook
+// wrappers (see `bindingify-build-hooks.ts`).
 export function bindingifyHotUpdate(
   args: BindingifyPluginArgs,
 ): PluginHookWithBindingExt<BindingPluginOptions['hotUpdate']> {

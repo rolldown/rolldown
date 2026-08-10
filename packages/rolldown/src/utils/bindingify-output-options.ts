@@ -401,12 +401,10 @@ function bindingifyCodeSplitting(
                     OUTPUT_OPTIONS_OWNER,
                     'codeSplitting groups[].name',
                     (id: string, ctx: BindingChunkingContext) => {
-                      // The classifier is sync by contract (the binding
-                      // expects a plain string back), so its per-candidate
-                      // native context box can be released as soon as the
-                      // call returns — on the threadless flavor, where the
-                      // GC finalizers that normally reclaim it never run.
-                      // Any getModuleInfo boxes it minted were already
+                      // The classifier is sync by contract (the binding wants
+                      // a plain string back), so its per-candidate context box
+                      // can be released as soon as the call returns. Any
+                      // getModuleInfo boxes it minted were already
                       // snapshot-and-dropped by `ChunkingContextImpl`.
                       try {
                         return name(id, new ChunkingContextImpl(ctx, pluginContextData));

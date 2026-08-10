@@ -1,16 +1,12 @@
-// Workerd bundles alias `src/binding.cjs` to this module so the whole
-// JavaScript pipeline (option normalization, bindingify, RolldownBuild) can be
-// reused against a managed per-instance threadless WASI binding instead of a
-// process-global native addon. Module evaluation is side-effect free: every
-// export defers to the currently entered instance's exports and throws a clear
-// error when no managed instance is active.
+// Workerd bundles alias `src/binding.cjs` to this module, so the pipeline runs
+// against a managed per-instance threadless WASI binding instead of a
+// process-global native addon. Module evaluation must stay side-effect free:
+// every export defers to the currently entered instance.
 //
 // The export list mirrors the `napi-rs-artifact-metadata` header of
 // `src/rolldown-binding.wasip1.cjs` minus the seven private CurrentThread host
-// exports (the managed deferred loader registers and hides those itself); the
-// unit test in `tests/workerd-build.test.ts` keeps the two lists in sync.
-//
-// See internal-docs/async-runtime/implementation.md.
+// exports (the deferred loader registers and hides those itself);
+// `tests/workerd-build.test.ts` keeps the two lists in sync.
 import type * as binding from './binding.cjs';
 import type { BindingRuntimeCapabilities } from './binding.cjs';
 
@@ -114,12 +110,10 @@ function enumExport(name: string): any {
 // `runtime-support.ts#getLoadedBindingTarget()`.
 export const __rolldownBindingTarget = 'wasi';
 
-// Static threadless capability report used while no managed instance is
-// active. It matches `crates/rolldown_binding/src/async_runtime.rs`
-// `get_runtime_capabilities()` for the wasm32-wasip1 artifact before any
-// CurrentThread timer driver registration (`timers: false` pre-registration).
-// This keeps importing `runtime-lifecycle.ts` (which reports capabilities at
-// module evaluation) safe inside workerd bundles.
+// Report used while no managed instance is active, so importing
+// `runtime-lifecycle.ts` (which reads capabilities at module evaluation) is
+// safe in workerd bundles. Matches `async_runtime.rs get_runtime_capabilities()`
+// for wasm32-wasip1 before any timer driver registration (`timers: false`).
 const STATIC_THREADLESS_CAPABILITIES: BindingRuntimeCapabilities = Object.freeze({
   asyncRuntimeBuild: true,
   backend: 'shared',

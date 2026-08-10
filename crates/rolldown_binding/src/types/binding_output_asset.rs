@@ -87,15 +87,9 @@ impl BindingOutputAsset {
         {
           source.set_named_property("inner", Uint8ArraySlice::from_data(env, value.as_slice())?)?;
         }
-        // On Wasm, `Uint8ArraySlice::from_data` copies the bytes into a Rust
-        // `Vec` and hands it to `napi_create_external_arraybuffer`, whose
-        // buffer emnapi copies to JavaScript AGAIN while the `Vec` itself is
-        // `mem::forget`-ed and owned by a GC finalizer. Engines that do not
-        // reliably run finalizers for Wasm-held externals (workerd never
-        // does) then leak one copy of the asset bytes per build. Hand emnapi
-        // the asset's own bytes instead: it copies them into a JS-owned
-        // `ArrayBuffer` synchronously and, with no finalizer to register,
-        // nothing on the native side outlives this call.
+        // On Wasm, `Uint8ArraySlice::from_data` leaves a `mem::forget`-ed `Vec`
+        // owned by a GC finalizer; engines that do not reliably run finalizers
+        // for Wasm-held externals leak one copy of the bytes per build.
         #[cfg(target_family = "wasm")]
         {
           source.set_named_property("inner", js_owned_uint8_array(env, value.as_slice())?)?;
@@ -117,30 +111,24 @@ impl BindingOutputAsset {
 }
 
 /// Create a `Uint8Array` holding a JS-owned copy of `data`, with no native
-/// memory handed to a GC finalizer and no native address remembered for it.
+/// memory handed to a GC finalizer and no native address remembered for it —
+/// engines that do not reliably run finalizers for Wasm-held externals (workerd
+/// never does) would otherwise leak.
 ///
 /// `napi_create_external_arraybuffer` on emnapi copies the referenced Wasm
-/// bytes into a fresh JS `ArrayBuffer` synchronously (JavaScript cannot alias
-/// Wasm linear memory), and a NULL `finalize_cb` skips finalizer registration
-/// entirely, so nothing native outlives this call. `data` only needs to stay
-/// valid for the duration of the call — here it borrows the asset's own bytes.
+/// bytes into a fresh JS `ArrayBuffer` synchronously, and a NULL `finalize_cb`
+/// registers no finalizer, so `data` only needs to stay valid for this call.
+/// Not `napi_create_arraybuffer` + copy (napi-rs's
+/// `no_external_buffers_allowed` fallback): emnapi hands back a Wasm-side
+/// MIRROR of the JS buffer, so the copied bytes never reach JavaScript and the
+/// mirror itself is freed by a FinalizationRegistry.
 ///
-/// Deliberately NOT `napi_create_arraybuffer` + copy (napi-rs's
-/// `no_external_buffers_allowed` fallback): emnapi hands back a pointer to a
-/// runtime-allocated Wasm-side MIRROR of the JS buffer, so the copied bytes
-/// never reach JavaScript and the mirror itself is freed by a
-/// FinalizationRegistry — the exact never-runs-on-workerd mechanism this
-/// function exists to avoid.
-///
-/// The external `ArrayBuffer` is NOT what we return: emnapi records its
-/// creation address in a table, and any later marshaling of that exact object
-/// back into the binding (re-emitting a build's `asset.source`, or reading a
-/// plugin's in-place edit of it) resolves through that address instead of the
-/// JavaScript bytes. Once the eager threadless free drops the asset payload,
-/// that address is freed memory — a use-after-free that can read another
-/// build's data. `slice()` produces an engine-created buffer with no table
-/// entry, so the returned array marshals back by copying its JS bytes, at the
-/// cost of one extra in-JS copy per binary asset.
+/// Returns `slice()`, not the external view: emnapi records the external
+/// buffer's creation address in a table, so marshaling that exact object back
+/// into the binding resolves through that address instead of the JavaScript
+/// bytes — freed memory once the eager threadless free drops the asset payload,
+/// a use-after-free that can read another build's data. The engine-created
+/// `slice()` copy has no table entry.
 #[cfg(target_family = "wasm")]
 fn js_owned_uint8_array<'env>(
   env: &'env Env,

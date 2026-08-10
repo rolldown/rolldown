@@ -1,27 +1,12 @@
-// End-to-end suite for `@rolldown/browser/workerd` running inside REAL workerd.
+// End-to-end suite for `@rolldown/browser/workerd` inside REAL workerd, via
+// Miniflare (which embeds the same workerd binary a Cloudflare deployment runs):
+// multi-module build, error surface, lifecycle/admission contracts, memory slope.
 //
-// Why this exists: every other workerd check in this repo either runs the
-// workerd entry under Node (`packages/rolldown/tests/workerd-*.test.ts`,
-// `scripts/misc/check-workerd-memory.mjs`) or exercises real workerd only as a
-// packaging smoke with a two-module build
-// (`scripts/misc/check-workerd-packed-consumer.mjs`). Nothing asserted that a
-// realistic multi-module build, the error surface, the lifecycle and admission
-// contracts, or the per-rebuild memory slope actually behave inside workerd.
-// This script does, through Miniflare, which embeds the same workerd binary a
-// Cloudflare deployment runs.
-//
-// Transport choice: an explicit Miniflare `modules` list pointed straight at
-// `packages/browser/dist`, rather than `wrangler deploy --dry-run` + a bundle.
-//   * `check-workerd-packed-consumer.mjs` already proves the wrangler/packaging
-//     path, so re-bundling here would buy no new signal for ~20s per run.
-//   * The workerd entry reaches its async-context provider through a GUARDED
-//     dynamic `import('node:async_hooks')`. Miniflare's automatic module
-//     collection statically scans the entry and rejects that specifier at
-//     config time; an explicit module list lets workerd resolve it at runtime
-//     exactly as a real deployment does.
-// The tradeoff is that this script tests the dist artifacts directly rather
-// than a wrangler-bundled copy of them -- which is precisely the split of
-// responsibilities with the packed-consumer check.
+// `modules` is listed explicitly rather than left to Miniflare's automatic
+// collection, which statically scans the entry and rejects the workerd entry's
+// GUARDED dynamic `import('node:async_hooks')` at config time. The suite runs
+// against `packages/browser/dist` directly; the wrangler/packaging path is
+// covered by `scripts/misc/check-workerd-packed-consumer.mjs`.
 import assert from 'node:assert/strict';
 import { existsSync } from 'node:fs';
 import { readFile } from 'node:fs/promises';
@@ -44,109 +29,74 @@ const flags = new Set(process.argv.slice(2).filter((arg) => !arg.includes('=')))
 const distDir = path.resolve(repoRoot, args.get('--dist') ?? 'packages/browser/dist');
 const rounds = Number(args.get('--rounds') ?? 12);
 const slopeModules = Number(args.get('--modules') ?? 300);
-// Rounds to discard before measuring: the first rebuilds on a fresh instance
-// also pay one-time allocations that are not a per-rebuild leak.
+// Rounds discarded before measuring: the first rebuilds on a fresh instance pay
+// one-time allocations that are not a per-rebuild leak.
 const warmupRounds = Number(args.get('--warmup') ?? 2);
 // `--measure` reports the slopes without enforcing the budgets. Use it to
 // re-derive the numbers below after an intentional memory change.
 const measureOnly = flags.has('--measure');
 
 // ---------------------------------------------------------------------------
-// MEMORY BUDGETS -- MiB of Wasm linear memory retained per identical rebuild
-// on ONE reusable instance.
+// MEMORY BUDGETS -- MiB of Wasm linear memory retained per identical rebuild on
+// ONE reusable instance. They catch a REGRESSION (a hook-input eager-release
+// path silently dropping out); the floors below catch further improvements that
+// would otherwise leave stale ceilings behind.
 //
-// Every hook-input box now has an eager-release path on this flavor
-// (`dropInner()` on rendered chunks/meta, module infos, plugin contexts and
-// normalized options, wired through the hook wrappers behind
-// `shouldEagerlyFreeOutputs()`), so the old unbounded retention -- the native
-// payload behind every rendered chunk handed to a JavaScript hook staying
-// alive for the whole lifetime of the instance -- is gone: `renderchunk*`
-// dropped from 0.528/0.549 to the numbers below, and reading `chunk.modules`
-// no longer costs anything over not reading it. What remains is the shared
-// per-rebuild build/marshalling slope (see the `nohooks` note) plus a small
-// (~0.011 on this pin) per-rebuild cost for installing the extra output hook.
-// These budgets exist to catch a REGRESSION -- any release path silently
-// dropping out -- and the floors below catch further improvements that would
-// otherwise leave stale ceilings behind.
-//
-// Measured 2026-08-10 on the registry napi pin (napi 3.12.1 / napi-derive
-// 3.6.3, @napi-rs/cli 3.8.4) on the DEBUG wasm that BOTH CI lanes build
-// (~29.6 MiB `rolldown-binding.wasm32-wasip1.wasm`), 300-module graph, 2
-// warmup rounds, at --rounds=20 -- the count ci.yml runs. Seven consecutive
-// 20-round runs agreed EXACTLY for `nohooks` and `renderchunk*`;
-// `generatebundle` alone moved one 64 KiB page quantum (0.180-0.184 -- GC
-// timing decides when the marshaled bundle copies' JS handles die, which
-// moves a page boundary), so its `measured` records the mid value. The
-// napi-3423 verify lane's CI datapoint (run 31322883081: 0.195 / 0.180 /
-// 0.206 / 0.206) sits inside every band below, so the calibration holds on
-// the CI builder too. The registry binding genuinely retains ~40% less per
-// rebuild than the previous integration pin (smaller per-instance wrap
-// bookkeeping), which is what tripped the old floors and forced this
-// re-derivation. The window length remains part of the number: rebuild
-// growth is CONVEX (dlmalloc arena stepping retains more per round in the
-// tail), so these values are only valid at --rounds=20. Budgets carry ~25%
-// headroom over the measured value to absorb page quantisation plus
-// toolchain differences between this machine and the CI builder. That
-// headroom is far below the signal each variant is guarding: the eager
-// release of the renderChunk argument regressing puts `renderchunk-nomodules`
-// back at ~0.55, and any doubling of the base slope puts `nohooks` at ~0.40
-// -- both well over budget.
+// Measured 2026-08-10 on the registry napi pin (napi 3.12.1 / napi-derive 3.6.3,
+// @napi-rs/cli 3.8.4) on the DEBUG wasm that BOTH CI lanes build (~29.6 MiB
+// `rolldown-binding.wasm32-wasip1.wasm`), 300-module graph, 2 warmup rounds, at
+// --rounds=20 -- the count ci.yml runs. Seven consecutive 20-round runs agreed
+// EXACTLY for `nohooks` and `renderchunk*`; `generatebundle` alone moved one
+// 64 KiB page quantum (0.180-0.184 -- GC timing decides when the marshaled
+// bundle copies' JS handles die, which moves a page boundary), so its `measured`
+// records the mid value. CI run 31322883081 (0.195 / 0.180 / 0.206 / 0.206) sits
+// inside every band below, so the calibration holds on the CI builder too. The
+// window length is part of the number: rebuild growth is CONVEX (dlmalloc arena
+// stepping retains more per round in the tail), so these values are valid ONLY
+// at --rounds=20. Budgets carry ~25% headroom over `measured` to absorb page
+// quantisation plus toolchain differences from the CI builder -- far below the
+// signal each variant guards (see the per-variant notes).
 const MEMORY_BUDGETS = {
-  // Baseline -- and NOT "the cost of a bare rebuild". The slope graph exists
-  // only inside `slopeGraphPlugin`'s map, so that plugin is structurally
-  // mandatory and `caseMemorySlope` installs it for EVERY variant, `nohooks`
-  // included. What this number actually contains is one full 305-module build
-  // (300 modules + 4 utils + 1 entry) whose entire graph is served across the
-  // JavaScript boundary -- 608 resolveId plus 305 load callbacks per rebuild,
-  // both counted -- plus materialising the rendered output for the caller.
-  // `nohooks` names the absence of an OUTPUT hook, not the absence of hooks.
-  // Consequence for this table: only the variant-to-variant DELTAS isolate one
-  // hook's retention, because that shared baseline cancels out of them. A move
-  // in `nohooks` itself means the shared build/marshalling path changed.
+  // Baseline, NOT "the cost of a bare rebuild": the slope graph lives inside
+  // `slopeGraphPlugin`'s map, so `caseMemorySlope` installs that plugin for
+  // EVERY variant. This number contains a full 305-module build (300 modules + 4
+  // utils + 1 entry) served across the JavaScript boundary -- 608 resolveId plus
+  // 305 load callbacks per rebuild -- plus materialising the rendered output.
+  // `nohooks` names the absence of an OUTPUT hook. Only variant-to-variant
+  // DELTAS isolate one hook's retention; a move here means the shared
+  // build/marshalling path changed (a doubled base slope reads ~0.40).
   nohooks: { measured: 0.199, budget: 0.249 },
-  // A generateBundle hook that READS the chunks it is given. Costs NOTHING
-  // extra, because the per-invocation bundle copy IS released when the hook
-  // returns -- the contract pinned by
-  // packages/rolldown/tests/workerd-output-ownership.test.ts. This variant is
-  // the regression guard on that release: if it ever starts tracking well
-  // above the baseline, the generateBundle copy stopped being freed.
+  // A generateBundle hook that READS its chunks. Costs NOTHING extra: the
+  // per-invocation bundle copy IS released when the hook returns, the contract
+  // pinned by packages/rolldown/tests/workerd-output-ownership.test.ts. Tracking
+  // well above baseline means that copy stopped being freed.
   generatebundle: { measured: 0.182, budget: 0.228 },
-  // Receiving a BindingRenderedChunk in renderChunk. The chunk argument is
-  // snapshot-and-released per invocation now, so this is baseline plus the
-  // cost of installing the extra hook, NOT a payload retention (it no longer
-  // scales with output size; on the registry pin it sits ~0.011 above
-  // `nohooks` -- see the workload-resolution control below).
-  // If this variant climbs back toward 0.55, the renderChunk eager release
-  // broke.
+  // Receiving a BindingRenderedChunk in renderChunk. Snapshot-and-released per
+  // invocation, so this is baseline plus the cost of installing the extra hook
+  // (~0.011 above `nohooks` on this pin -- see the workload-resolution control
+  // below), NOT a payload retention that scales with output size. Climbing back
+  // toward 0.55 means the renderChunk eager release broke.
   'renderchunk-nomodules': { measured: 0.21, budget: 0.263 },
   // ...plus reading `chunk.modules`, which marshals one BindingRenderedModule
-  // per module. Identical to `renderchunk-nomodules` today because the module
-  // boxes are snapshot-and-released too. The shared band alone cannot see the
-  // module-box cost returning (0.021 fits under the ceiling), so the
-  // `moduleBoxDelta` control below asserts the two rows stay within two page
-  // quanta of each other.
+  // per module; identical to `renderchunk-nomodules` because those boxes are
+  // snapshot-and-released too. The band alone cannot see the module-box cost
+  // returning (0.021 fits under the ceiling), so the `moduleBoxDelta` control
+  // below asserts the two rows stay within two page quanta of each other.
   renderchunk: { measured: 0.21, budget: 0.263 },
 };
 
-// Every variant is enforced as a two-sided BAND, not just a ceiling. `budget`
-// catches the leak growing; `measured * SLOPE_FLOOR_RATIO` catches it
-// SHRINKING, which is the day this table has to be re-derived. Without a floor
-// a landed fix leaves a stale ceiling behind that a future regression can grow
-// back into with CI green the whole way.
+// Every variant is enforced as a two-sided BAND. `budget` catches the leak
+// growing; `measured * SLOPE_FLOOR_RATIO` catches it SHRINKING, which is the day
+// this table has to be re-derived -- without a floor, a landed fix leaves a stale
+// ceiling a future regression can grow back into with CI green the whole way.
 //
 // The ratio has to sit between the two things it separates:
-//   * NOISE -- seven 20-round runs of the 2026-08-10 re-derivation agreed
-//     EXACTLY for `nohooks` and `renderchunk*`, and `generatebundle` moved
-//     one page quantum (0.180-0.184); the widest spread ever seen remains
-//     `generatebundle`'s GC-timing band of 0.033 on the old pin
-//     (0.309-0.342). Its floor of 0.137 sits 0.043 below the lowest value
-//     observed on this pin, and 25% of the smallest measured slope is 0.046
-//     MiB/rebuild -- ~1.4x that historical widest spread.
-//   * SIGNAL -- proven in anger: the hook-input eager release landing dropped
-//     `renderchunk-nomodules` from 0.528 to 0.313 (12-round window), 21%
-//     below its then-floor of 0.396, which is exactly the detection that
-//     forced this table's 2026-08-09 re-derivation. A shift of that size
-//     stays detectable.
+//   * NOISE -- the widest spread ever seen is `generatebundle`'s GC-timing band
+//     of 0.033 on the old pin (0.309-0.342); 25% of the smallest measured slope
+//     is 0.046 MiB/rebuild, ~1.4x that historical widest spread.
+//   * SIGNAL -- the hook-input eager release dropped `renderchunk-nomodules`
+//     from 0.528 to 0.313 (12-round window), 21% below its then-floor of 0.396.
+//     A shift of that size stays detectable.
 const SLOPE_FLOOR_RATIO = 0.75;
 
 // ---------------------------------------------------------------------------
@@ -174,13 +124,11 @@ for (const [label, file] of [
 const workerSourceText = await readFile(workerSource, 'utf8');
 
 /**
- * Run one request against a FRESH workerd isolate.
- *
- * The module names are derived from each path relative to `modulesRoot`, so
- * the worker's `./workerd.browser.mjs` / `./rolldown-binding.wasm32-wasip1.wasm`
- * specifiers resolve to the real dist artifacts. `contents` is supplied only
- * for the worker itself, which lets its source live in this repo's scripts
- * tree instead of being staged into `dist/`.
+ * Run one request against a FRESH workerd isolate. Module names derive from each
+ * path relative to `modulesRoot`, so the worker's `./workerd.browser.mjs` /
+ * `./rolldown-binding.wasm32-wasip1.wasm` specifiers resolve to the real dist
+ * artifacts; `contents` is supplied only for the worker itself, letting its
+ * source live in this scripts tree instead of being staged into `dist/`.
  */
 async function dispatch(route) {
   const miniflare = new Miniflare({
@@ -263,9 +211,9 @@ assert.deepEqual(
 );
 assert.equal(multiModuleBuild.liveDelta, 0, 'build({module}) must dispose its private instance');
 
-// Prove the OUTPUT is correct, not merely well-shaped: execute the chunk that
-// workerd generated and check the value it computes. (workerd itself forbids
-// dynamic code evaluation, so this half necessarily runs in Node.)
+// Prove the OUTPUT is correct, not merely well-shaped: execute the chunk workerd
+// generated and check the value it computes. workerd forbids dynamic code
+// evaluation, so this half necessarily runs in Node.
 const generated = await import(
   `data:text/javascript;base64,${Buffer.from(multiModuleBuild.code).toString('base64')}`
 );
@@ -292,10 +240,9 @@ assert.ok(
   '`errors[].message` must name the unresolved import',
 );
 assert.equal(caught.hasStack, true, 'the rejection must carry a stack');
-// The rendered code frame is inlined into `message` (there is no separate
-// `.frame` property on this error). Assert the frame is really there, so the
-// ANSI check below is guarding real diagnostic output rather than a bare
-// one-line message.
+// The rendered code frame is inlined into `message` (this error has no separate
+// `.frame`). Asserting it is really there keeps the ANSI check below guarding
+// real diagnostic output rather than a bare one-line message.
 assert.match(caught.message, /UNRESOLVED_IMPORT/);
 assert.match(caught.message, /fan:bad-entry\.js:1:19/, 'the code frame must carry a location');
 assert.match(
@@ -304,8 +251,8 @@ assert.match(
   'the code frame must quote the offending source line',
 );
 // message / stack / frame -- and the same fields on every entry of `errors` --
-// must be free of ANSI escapes: workerd has no TTY and these strings are
-// routinely serialised into logs and JSON.
+// must be ANSI-free: workerd has no TTY and these strings are routinely
+// serialised into logs and JSON.
 assert.deepEqual(caught.ansiAt, [], `ANSI escapes leaked into: ${caught.ansiAt.join(', ')}`);
 assert.equal(errorSurface.reuse.ok, true, 'the same instance must build after a failed build');
 assert.equal(errorSurface.reuse.loadedCount, 26);
@@ -316,9 +263,9 @@ assert.equal(
   'a failed build must leave the caller-owned instance disposable',
 );
 // The caller-owned half above cannot prove failure CLEANUP -- its dispose() is
-// explicit. `build({ module })` is the path that can actually leak: it creates
-// a private instance only build() itself can dispose, so a failed build that
-// forgets strands an entire Wasm instance inside the 128 MiB isolate cap.
+// explicit. `build({ module })` creates a private instance only build() itself
+// can dispose, so a failed build that forgets strands an entire Wasm instance
+// inside the 128 MiB isolate cap.
 const ownedFailure = errorSurface.ownedFailure;
 assert.ok(ownedFailure.caught, 'the failing build({module}) must reject');
 assert.equal(ownedFailure.caught.isError, true, 'the rejection must be a real Error');
@@ -360,11 +307,10 @@ assert.equal(lifecycle.liveDelta, 0, 'the lifecycle case must leak no instance')
 console.log(`  [3/8] lifecycle contracts      ok  ${elapsed()}`);
 
 // --- CASE 4: concurrency and admission -------------------------------------
-// "Both promises fulfilled" is not success: empty output, cross-wired output,
-// or one build silently producing nothing would all satisfy it. The two builds
-// therefore run DISTINCT entries with distinct computed totals, and each half
-// is validated on its own -- its own chunk, executed the same way CASE 1
-// executes its chunk, and its own independent hook trace.
+// "Both promises fulfilled" is not success: empty, cross-wired, or silently
+// empty output would all satisfy it. The two builds run DISTINCT entries with
+// distinct computed totals, and each half is validated on its own -- its own
+// executed chunk and its own independent hook trace.
 const concurrentTotals = [];
 for (const [label, side, entryId, expectedTotal, expectedTag] of [
   ['first', concurrency.concurrentSameInstance.first, 'fan:entry-a.js', 1390, 'a'],
@@ -450,10 +396,10 @@ console.log(
 
 // --- CASE 6: fire-and-forget this.load() -----------------------------------
 // The documented un-awaited `this.load()` (and the cycle-load-error self-load
-// shape) keeps a napi borrow on the plugin-context box past the hook's
-// settle. The eager-release wiring must defer the box's release to the call's
-// completion instead of tripping the napi borrow checker inside the hook
-// wrapper's `finally` and failing the build in the plugin's name.
+// shape) keeps a napi borrow on the plugin-context box past the hook's settle,
+// so the eager-release wiring must defer that box's release to the call's
+// completion. Fails if it instead trips the napi borrow checker in the hook
+// wrapper's `finally` and fails the build in the plugin's name.
 assert.equal(fireAndForgetLoad.chunkCount, 1, 'the fire-and-forget this.load() build must succeed');
 assert.equal(
   fireAndForgetLoad.awaitedCodeType,
@@ -465,11 +411,11 @@ console.log(`  [6/8] fire-and-forget load     ok  ${elapsed()}`);
 
 // --- CASE 7: failed-build reuse --------------------------------------------
 // The native invalidateJsSideCache callback only fires after a successful
-// generate, so a failed build must release its retained option boxes at its
-// own settle. The case runs 10 failing builds carrying a ~1 MiB banner inside
-// the normalized options on one reusable instance: a stranded per-build
-// options box shows up as ~1 MiB of arena growth per failed build, while the
-// released path stays near-flat (bound 0.25 leaves 4x margin each way).
+// generate, so a failed build must release its retained option boxes at its own
+// settle. 10 failing builds carry a ~1 MiB banner inside the normalized options
+// on one reusable instance: a stranded per-build options box shows up as ~1 MiB
+// of arena growth per failed build, the released path stays near-flat (bound
+// 0.25 leaves 4x margin each way).
 assert.equal(failedBuildReuse.unexpectedSuccess, undefined, 'the failing builds must fail');
 assert.equal(failedBuildReuse.failures, 10, 'every failing build must reject');
 assert.equal(failedBuildReuse.sawOptions, 10, 'buildStart must read the options box every build');
@@ -506,10 +452,10 @@ for (const variant of Object.keys(MEMORY_BUDGETS)) {
   const report = await dispatch(
     `/memory?variant=${variant}&rounds=${rounds}&modules=${slopeModules}`,
   );
-  // A teardown that only breaks after N rebuilds is exactly the regression
-  // this part is shaped to find, so the worker reports build failure and
-  // DISPOSE failure separately and both are fatal here. A run whose rounds all
-  // succeeded but whose dispose() threw must not go on to pass a budget.
+  // A teardown that only breaks after N rebuilds is exactly what this part is
+  // shaped to find, so build failure and DISPOSE failure are reported separately
+  // and both are fatal: a run whose rounds all succeeded but whose dispose()
+  // threw must not go on to pass a budget.
   if (report.error || report.disposeError) {
     throw new Error(
       `memory variant ${variant} failed:\n` +
@@ -541,17 +487,12 @@ for (const variant of Object.keys(MEMORY_BUDGETS)) {
   firstSamples[variant] = report.memPerRound[0];
 
   // POSITIVE CONTROL -- prove the telemetry is ALIVE before trusting a slope.
-  // Every budget check below is `slope <= budget`, so the moment
-  // `instance.memoryBytes` starts returning a constant (API change, wiring
-  // regression, a stubbed accessor) every slope reads 0.000, every check
-  // passes, and the whole memory half of this lane reports green while
-  // measuring nothing. These checks make that fail loudly instead.
-  //
-  // They are asserted for EVERY variant because every variant demonstrably
-  // grows: the shared baseline (see MEMORY_BUDGETS.nohooks) retains on its own,
-  // so growth does not depend on which output hook is installed. They also
-  // survive the BindingRenderedChunk fix, which is expected to pull the
-  // renderChunk variants down TO that baseline, not to zero.
+  // Every budget check is `slope <= budget`, so the moment `instance.memoryBytes`
+  // starts returning a constant every slope reads 0.000, every check passes, and
+  // this whole half reports green while measuring nothing. Asserted for EVERY
+  // variant because every variant demonstrably grows: the shared baseline (see
+  // MEMORY_BUDGETS.nohooks) retains on its own, independent of which output hook
+  // is installed.
   const distinctSamples = new Set(report.memPerRound).size;
   report.memPerRound.forEach((bytes, index) => {
     // Wasm linear memory can only grow, and never below the pages the instance
@@ -619,20 +560,17 @@ for (const variant of Object.keys(MEMORY_BUDGETS)) {
   }
 }
 
-// The last positive control, and the strongest one: the telemetry must RESOLVE
-// a workload difference, not merely move. `renderchunk-nomodules` differs from
-// `nohooks` by exactly one thing -- a hook that RECEIVES a rendered chunk --
-// and that difference has to show up in the numbers. On the registry napi pin
-// the resolution lives entirely in the slope gap: all seven 2026-08-10
-// calibration runs measured +0.011 MiB/rebuild at --rounds=20 with a
-// first-round footprint gap of 0.000 (installing the extra hook no longer
-// costs pages up front on this binding; single-page 0.063 jitter was seen
-// once). The slope threshold is 0.007 -- two measurement quanta, one 64 KiB
-// page across the 17 post-warmup intervals at --rounds=20 being ~0.0037
-// MiB/rebuild, and also above half the observed 0.011 gap -- and both gaps
-// are checked as MAGNITUDES because the arena tail can flip the sign. A
-// counter that grows but ignores what the build actually did would show
-// NEITHER -- and would still satisfy every per-variant check above.
+// The strongest positive control: the telemetry must RESOLVE a workload
+// difference, not merely move. `renderchunk-nomodules` differs from `nohooks` by
+// exactly one hook that RECEIVES a rendered chunk. On the registry napi pin that
+// resolution lives entirely in the slope gap: all seven 2026-08-10 calibration
+// runs measured +0.011 MiB/rebuild at --rounds=20, with a first-round footprint
+// gap of 0.000 (single-page 0.063 jitter seen once). The 0.007 slope threshold
+// is two measurement quanta -- one 64 KiB page across the 17 post-warmup
+// intervals at --rounds=20 is ~0.0037 MiB/rebuild -- and also above half the
+// observed 0.011 gap. Both gaps are checked as MAGNITUDES because the arena tail
+// can flip the sign. A counter that grows but ignores what the build did would
+// show NEITHER, and would still satisfy every per-variant check above.
 if (!measureOnly) {
   const hookSlopeDelta = slopes['renderchunk-nomodules'] - slopes.nohooks;
   const hookFirstDelta = (firstSamples['renderchunk-nomodules'] - firstSamples.nohooks) / MiB;

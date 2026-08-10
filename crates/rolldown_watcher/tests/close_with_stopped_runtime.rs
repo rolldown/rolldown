@@ -1,16 +1,10 @@
-//! `Watcher::close()` submits the retained coordinator through the shared async
-//! runtime, so a stopped runtime rejects the close the same way it rejects
-//! `run()`. This locks in that the rejection is *retryable*: the coordinator --
-//! and with it every fs watcher and bundler -- stays retained instead of being
-//! silently dropped, and a later `close()` on a restarted runtime still runs
-//! the close hooks, closes the bundlers, and releases everything.
+//! A stopped async runtime rejects `Watcher::close()`, and that rejection must
+//! stay *retryable*: the coordinator -- and every fs watcher and bundler it
+//! owns -- stays retained, so a later `close()` on a restarted runtime still
+//! runs the close hooks. `packages/rolldown/src/api/watch/watcher.ts` depends
+//! on this and must not latch its `closed` flag on a rejected close.
 //!
-//! The JavaScript wrapper in `packages/rolldown/src/api/watch/watcher.ts`
-//! depends on exactly this contract: it must not latch its `closed` flag on a
-//! rejected close, or this recovery path becomes unreachable.
-//!
-//! This lives in its own integration-test binary because it stops the
-//! process-global async runtime.
+//! Own test binary: it stops the process-global async runtime.
 
 use rolldown::{BundlerConfig, BundlerOptions};
 use rolldown_common::WatcherChangeKind;
@@ -20,9 +14,8 @@ use std::path::PathBuf;
 use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
 
-/// Stands in for everything the coordinator owns (fs watchers, bundlers, the
-/// event handler). `Drop` fires only when the retained coordinator future is
-/// released, so it observes whether close actually tore the watcher down.
+/// Stands in for everything the coordinator owns. `Drop` fires only when the
+/// retained coordinator future is released, so it observes a real teardown.
 struct Probe {
   dropped: Arc<AtomicBool>,
   closes: Arc<AtomicUsize>,

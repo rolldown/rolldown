@@ -24,11 +24,10 @@ export class PluginContextData {
   normalizedInputOptions: NormalizedInputOptionsImpl | null = null;
   normalizedOutputOptions: NormalizedOutputOptionsImpl | null = null;
 
-  // The native option boxes the cached wrappers above still read from, kept
-  // so `clear()` can snapshot the wrappers and release the boxes on the
-  // threadless-WASI flavor (see `#releaseOptionBoxes`). Every other option
-  // box a hook invocation marshals is a never-read duplicate of these and is
-  // dropped on arrival there.
+  // Native option boxes the cached wrappers above still read from. On the
+  // threadless-WASI flavor GC finalizers never run, so these are released
+  // explicitly (see `#releaseOptionBoxes`); every other box a hook marshals is
+  // a never-read duplicate and is dropped on arrival.
   #retainedOptionBoxes: Set<BindingNormalizedOptions> = new Set();
 
   constructor(
@@ -74,9 +73,8 @@ export class PluginContextData {
     const bindingInfo = context.getModuleInfo(id);
     if (bindingInfo) {
       // Each call mints a fresh module-info box retaining the module's full
-      // source; on the threadless flavor GC finalizers (its normal
-      // reclamation path) never run, so hand out a plain-data snapshot and
-      // release the box immediately.
+      // source, and the threadless flavor never runs GC finalizers, so hand
+      // out a plain-data snapshot and release the box immediately.
       const info = shouldEagerlyFreeOutputs()
         ? snapshotModuleInfo(bindingInfo, this.getModuleOption(id))
         : transformModuleInfo(bindingInfo, this.getModuleOption(id));
@@ -159,11 +157,9 @@ export class PluginContextData {
   }
 
   // Every hook invocation marshals its own fresh `BindingNormalizedOptions`
-  // box, but only the box behind the first (cached) wrapper is ever read. On
-  // the threadless-WASI flavor GC finalizers (the boxes' normal reclamation
-  // path) never run, so remember the read box for `clear()` and release every
-  // never-read duplicate on the spot. renderStart passes the SAME box to both
-  // getters, hence the set membership check before dropping.
+  // box, but only the box behind the first (cached) wrapper is ever read: keep
+  // that one for `clear()` and drop the duplicates on the spot. renderStart
+  // passes the SAME box to both getters, hence the membership check below.
   #trackOptionBox(opts: BindingNormalizedOptions): void {
     if (shouldEagerlyFreeOutputs()) {
       this.#retainedOptionBoxes.add(opts);
@@ -185,29 +181,19 @@ export class PluginContextData {
   // Terminal release for builds where the native invalidate callback never
   // fires: it only runs after a successful generate (bundle.rs `bundle_up`,
   // between generateBundle and writeBundle), so failed builds, scan(), and
-  // hooks that run after it (writeBundle) would otherwise strand their
-  // retained boxes until a GC finalizer — which never runs on the
-  // threadless-WASI flavor. Same snapshot-then-drop as the invalidate path;
-  // no-op on native flavors and when nothing is retained, so it is safe to
-  // call from every terminal path, repeatedly.
+  // writeBundle would otherwise strand their retained boxes. No-op on native
+  // flavors and idempotent, so every terminal path may call it repeatedly.
   releaseRetainedOptionBoxes(): void {
     this.#releaseOptionBoxes();
   }
 
-  // The native side invalidates the JS caches once per completed generate
-  // (before writeBundle). On the threadless-WASI flavor that is also the
-  // settle point for the cached options wrappers: copy every value they read
-  // from the native boxes to JavaScript and release the boxes. The wrappers
-  // stay cached, so later hooks — and user code that kept a reference — keep
-  // reading them while each fresh incoming box is dropped as a never-read
-  // duplicate. Two rules keep this invisible to callers:
-  // - Only BOX-BACKED data is materialized. Fields backed by the user's
-  //   original `outputOptions` object stay lazy — reading them here could
-  //   execute user accessors from a cleanup path, which must never turn a
-  //   successful build into a rejection (they survive the drop anyway
-  //   because they never touch the box).
-  // - The whole release is best-effort: one failing wrapper or box must
-  //   neither surface an error nor strand the remaining boxes.
+  // Settle point for the cached options wrappers on the threadless-WASI
+  // flavor: copy every box-backed value to JavaScript, then release the boxes.
+  // The wrappers stay cached, so later hooks and user-held references keep
+  // reading them. Only BOX-BACKED data is materialized — fields backed by the
+  // user's original `outputOptions` stay lazy, because running user accessors
+  // from a cleanup path must never turn a successful build into a rejection.
+  // The whole release is best-effort: one failure must not strand the rest.
   #releaseOptionBoxes(): void {
     if (!shouldEagerlyFreeOutputs() || this.#retainedOptionBoxes.size === 0) {
       return;
@@ -217,9 +203,8 @@ export class PluginContextData {
       try {
         wrapper.materializeBoxBackedFields();
       } catch {
-        // A failed materialization only means later reads of the affected
-        // box-backed fields report the documented "memory has been freed"
-        // error instead of data; cleanup still must not throw or stop.
+        // Later reads of the affected fields then report the documented
+        // "memory has been freed" error; cleanup must not throw or stop.
       }
     }
     for (const box of this.#retainedOptionBoxes) {

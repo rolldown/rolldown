@@ -49,11 +49,10 @@ function transformToMutableRollupOutputChunk(
     fileName: bindingChunk.getFileName(),
     name: bindingChunk.getName(),
     get modules() {
-      // Every getModules() call marshals fresh per-module native boxes, which
-      // only finalizers reclaim — never on the threadless flavor. Snapshot to
-      // plain data and release them immediately there (the proxy caches this
-      // map after the first read, and module edits are never sent back to
-      // Rust — collectChangedBundle always submits an empty modules map).
+      // Every getModules() call marshals fresh per-module boxes that only
+      // finalizers reclaim, so snapshot and release them on the threadless
+      // flavor. Safe because the proxy caches this map after the first read and
+      // `collectChangedBundle` always submits an empty modules map.
       const bindingModules = bindingChunk.getModules();
       return shouldEagerlyFreeOutputs()
         ? snapshotChunkModules(bindingModules)

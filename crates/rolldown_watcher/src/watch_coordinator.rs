@@ -61,11 +61,9 @@ async fn wait_for_debounce_input(
   rx: &mut mpsc::UnboundedReceiver<WatcherMsg>,
   timeout: impl Future<Output = ()>,
 ) -> DebounceWaitResult {
-  // `select_biased!` requires each branch future to be `Unpin + FusedFuture`.
-  // `rx.next()` (StreamExt::Next) already is, so it is used inline. The custom
-  // `Sleep` only impls `Future`, so fuse it (for `FusedFuture`) and pin it (for
-  // `Unpin`). The biased order matches tokio's `biased;`: message first, timeout
-  // second, so a queued change at the deadline still extends the debounce window.
+  // Biased order matters: a message queued at the deadline must win over the
+  // timeout so it extends the debounce window instead of forcing an avoidable
+  // intermediate build. `select_biased!` needs each branch `Unpin + FusedFuture`.
   let timeout = timeout.fuse();
   pin_mut!(timeout);
   select_biased! {
@@ -259,16 +257,11 @@ impl<H: WatcherEventHandler> WatchCoordinator<H> {
           }
         }
         WatcherState::Debouncing { deadline, .. } => {
-          // Runtime-aware timer facade: the async-runtime build has no tokio
-          // reactor, so `tokio::time::sleep_until` would panic here ("no
-          // reactor running"). Every rx arm below drops this future when it
-          // wins the select -- the facade's Sleep cancels on drop, matching
-          // tokio's semantics, so the deadline-extension loop is unchanged.
+          // Must go through the timer facade: the async-runtime build has no
+          // tokio reactor, so `tokio::time::sleep_until` would panic here.
           let timeout = rolldown_utils::time::sleep_until(*deadline);
 
-          // A queued file change observed at the deadline must extend the
-          // debounce window instead of producing an avoidable intermediate build.
-          // See internal-docs/watch-mode/implementation.md.
+          // Debounce extension rules: see internal-docs/watch-mode/implementation.md.
           match wait_for_debounce_input(&mut self.rx, timeout).await {
             DebounceWaitResult::Timeout => {
               let (new_state, changes) = mem::take(&mut self.state).on_debounce_timeout();
@@ -369,15 +362,12 @@ impl<H: WatcherEventHandler> WatchCoordinator<H> {
 
     // Step 5: Build each task that needs it.
     //
-    // A single filesystem save can fan out into multiple per-task
-    // `FileChanges` messages: every task's fs watcher reports the same path
-    // independently. The shared runtime's timer fires a 0ms debounce deadline
-    // immediately, where tokio's timer wheel rounded it up ~1ms — long enough
-    // for the sibling messages to win the debounce select and coalesce into
-    // one rebuild. Dispatching `End` while a sibling message is already queued
-    // would split one save into two rebuild envelopes, so before `End` the
-    // queue is drained and the build pass repeats while any task still needs a
-    // rebuild, keeping the whole save in a single Start..End envelope.
+    // One filesystem save fans out into one `FileChanges` message per task, and
+    // a 0ms debounce deadline can fire before the siblings arrive. Dispatching
+    // `End` with a sibling still queued would split one save into two rebuild
+    // envelopes, so before `End` the queue is drained and the build pass repeats
+    // while any task still needs a rebuild, keeping the save in one Start..End
+    // envelope.
     let mut dispatched_changes = changes;
     let mut rebuilt_tasks: IndexVec<WatchTaskIdx, bool> =
       self.tasks.iter().map(|_| false).collect();
@@ -395,9 +385,8 @@ impl<H: WatcherEventHandler> WatchCoordinator<H> {
         let Some(outcome) = self.build_task_with_registration_retries(task_index).await else {
           return false;
         };
-        // This task has now been rebuilt inside this envelope: any message it
-        // reports from here on cannot be its own report of the save that
-        // scheduled the rebuild — it is a genuinely new filesystem event.
+        // Rebuilt inside this envelope: any later message from this task is a
+        // new filesystem event, not its own report of the save being handled.
         rebuilt_tasks[task_index] = true;
         match outcome {
           BuildOutcome::Success(data) => {
@@ -415,12 +404,9 @@ impl<H: WatcherEventHandler> WatchCoordinator<H> {
         }
       }
 
-      // Pull the messages queued while the builds ran, remembering which paths
-      // were reported by a task that already rebuilt in this envelope: such a
-      // message cannot be a same-save sibling report — that task's report of
-      // the save was consumed before its build ran — so those paths are new
-      // saves that must be re-reported below even when their (path, kind) was
-      // already dispatched.
+      // Paths reported by a task that already rebuilt in this envelope are new
+      // saves, not same-save sibling reports, so they must be re-dispatched
+      // below even when their (path, kind) was already reported.
       let mut new_save_paths = FxIndexSet::default();
       if !self
         .drain_buffered_events_observing(|task_index, changes| {
@@ -438,10 +424,9 @@ impl<H: WatcherEventHandler> WatchCoordinator<H> {
         break;
       }
 
-      // Consume the drained changes so they don't schedule a duplicate
-      // envelope after `End`. Same-save sibling messages repeat a (path, kind)
-      // this envelope already reported and stay silent; a genuinely new save
-      // of an already-reported path re-dispatches `change`/`watchChange`.
+      // Consume the drained changes so they don't schedule a duplicate envelope
+      // after `End`. A repeated (path, kind) from a same-save sibling stays
+      // silent; a genuinely new save re-dispatches `change`/`watchChange`.
       let (new_state, drained_changes) = mem::take(&mut self.state).on_debounce_timeout();
       self.state = new_state;
       if let Some(drained_changes) = drained_changes {
@@ -536,12 +521,8 @@ impl<H: WatcherEventHandler> WatchCoordinator<H> {
     loop {
       let closed = Arc::clone(&self.closed);
       let close_notify = Arc::clone(&self.close_notify);
-      // Listen-before-check idiom for `event_listener::Event`, which (unlike
-      // tokio's `Notify`) stores no permit: create the listener first, then read
-      // `closed`. `publish_close` sets `closed` before `notify`, so a listener
-      // created before that notify is woken, and observing `closed == true` here
-      // means the close already happened and we skip an await that could
-      // otherwise miss the permit-less wake.
+      // Listen before checking `closed`: `event_listener::Event` stores no
+      // permit, so a listener created after the notify would wait forever.
       let wait_for_close = async move {
         let listener = close_notify.listen();
         if !closed.load(Ordering::Relaxed) {
@@ -552,11 +533,9 @@ impl<H: WatcherEventHandler> WatchCoordinator<H> {
       let timeout = rolldown_utils::time::sleep_until(deadline).fuse();
       pin_mut!(wait_for_close, timeout);
 
-      // The biased order matches tokio's `biased;` (close, message, timeout).
-      // The message is extracted from the select and handled *after* the select
-      // block ends, so the `&mut self.rx` borrow held by `rx.next()` is released
-      // before `process_file_changes` reborrows `&mut self`. The close and
-      // timeout arms only `return`, so they need no `self` access.
+      // Biased: close, then message, then timeout. The message is handled after
+      // the select block ends so the `&mut self.rx` borrow is released before
+      // `process_file_changes` reborrows `&mut self`.
       let msg = select_biased! {
         () = wait_for_close => return false,
         msg = self.rx.next() => msg,
@@ -607,10 +586,8 @@ impl<H: WatcherEventHandler> WatchCoordinator<H> {
   where
     F: Future<Output = anyhow::Result<()>>,
   {
-    // Listen-before-check idiom for `event_listener::Event` (no stored permit):
-    // create the listener before reading `closed`. `publish_close` sets `closed`
-    // before `notify`, so a listener created here before the notify is woken, and
-    // observing `closed == true` skips the permit-less await.
+    // Listen before checking `closed`: `event_listener::Event` stores no permit,
+    // so a listener created after the notify would wait forever.
     let wait_for_close = async {
       let listener = self.close_notify.listen();
       if !self.closed.load(Ordering::Relaxed) {
@@ -618,12 +595,10 @@ impl<H: WatcherEventHandler> WatchCoordinator<H> {
       }
     }
     .fuse();
-    // The custom `Sleep` and consumer callbacks only impl `Future`, so fuse the
-    // handler too and pin both for `select_biased!` (needs `Unpin + FusedFuture`).
     let handler = handler.fuse();
     pin_mut!(wait_for_close, handler);
 
-    // Biased order matches tokio's `biased;`: close first, then handler.
+    // Biased: close wins over the handler.
     select_biased! {
       () = wait_for_close => HandlerDispatchResult::CloseRequested,
       result = handler => {
@@ -679,12 +654,8 @@ impl<H: WatcherEventHandler> WatchCoordinator<H> {
     mut observe: impl FnMut(WatchTaskIdx, &[FileChangeEvent]),
   ) -> bool {
     loop {
-      // `futures`' non-deprecated `try_recv()` mirrors tokio's `try_recv()` shape
-      // exactly: `Ok(msg)` = a buffered message (still drained after close while
-      // any remain), `Err(TryRecvError::Empty)` = empty but open, and
-      // `Err(TryRecvError::Closed)` = closed and fully drained. tokio mapped both
-      // its `Empty` and `Disconnected` errors to `return true`, so the single
-      // `Err(_)` arm preserves the original semantics unchanged.
+      // Buffered messages are still handed out after close, so drain until
+      // `Err(_)` — which covers both "empty but open" and "closed and drained".
       match self.rx.try_recv() {
         Ok(WatcherMsg::FileChanges { task_index, changes }) => {
           observe(task_index, &changes);
@@ -769,10 +740,8 @@ impl<H: WatcherEventHandler> WatchCoordinator<H> {
 #[cfg(test)]
 mod tests {
   use super::*;
-  // The coordinator's shared production fields changed type: `close_notify` is now
-  // `Arc<event_listener::Event>` and the channel is `futures::channel::mpsc` (both
-  // reach here via `use super::*`, but are imported explicitly for clarity).
-  // `tokio::sync::Notify` is kept ONLY for the tests' internal end/stop signal.
+  // `tokio::sync::Notify` below is ONLY the tests' internal end/stop signal;
+  // production `close_notify` is `event_listener::Event`.
   use event_listener::Event;
   use rolldown::{BundlerConfig, BundlerOptions, plugin};
   use rolldown_error::BuildResult;
@@ -1334,10 +1303,9 @@ mod tests {
     }
   }
 
-  /// Simulates one filesystem save fanning out into two per-task
-  /// `FileChanges` messages: the sibling task's message is queued during the
-  /// rebuild's BundleEnd dispatch, i.e. strictly before the coordinator can
-  /// dispatch `End`.
+  /// One filesystem save fanning out into two per-task `FileChanges` messages:
+  /// the sibling's message is queued during the rebuild's BundleEnd dispatch,
+  /// strictly before the coordinator can dispatch `End`.
   struct SameSaveInjectingHandler {
     events: Arc<Mutex<Vec<String>>>,
     tx: mpsc::UnboundedSender<WatcherMsg>,
@@ -1422,10 +1390,9 @@ mod tests {
     }
   }
 
-  /// Simulates a genuinely new save of the same file (same change kind) that
-  /// lands while the previous save's rebuild is still inside its envelope: the
-  /// second save's message is queued during the rebuild's BundleEnd dispatch,
-  /// strictly before the coordinator can dispatch `End`.
+  /// A genuinely new save of the same file (same kind) landing while the
+  /// previous save's rebuild is still inside its envelope: queued during the
+  /// rebuild's BundleEnd dispatch, strictly before `End` can be dispatched.
   struct SecondSaveInjectingHandler {
     events: Arc<Mutex<Vec<String>>>,
     tx: mpsc::UnboundedSender<WatcherMsg>,
@@ -1583,7 +1550,7 @@ mod tests {
         "BUNDLE_END",
         "END",
         // One rebuild envelope covering both saves: save #2 lands after save
-        // #1's build pass, is reported, and triggers the second build pass.
+        // #1's build pass and triggers the second build pass.
         "CHANGE",
         "RESTART",
         "START",

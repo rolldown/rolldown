@@ -31,13 +31,10 @@ const WASI_CONTEXT_SUPPRESS_DESTROY = '__emnapiContext.suppressDestroy()';
 const WASI_CONTEXT_PREPARE_CLEANUP_FLAG = 'let __emnapiWasmEnvCleanupPrepared = false\n';
 const WASI_PREPARE_CLEANUP_HELPER = 'function __prepareWasmEnvCleanup() {';
 const WASI_CONTEXT_DESTROY_WRAP_HELPER = 'function __wrapEmnapiContextDestroyForSettlement(';
-// A raw destroy call on the emnapi context (bypassing the published dispose
-// symbol and the loader's own teardown) must still settle pending napi async
-// work: the wasm-side cleanup preparation cancels the runtime's tasks while
-// the environment can still call into JavaScript, so their deferreds reject
-// with the runtime's cancellation error instead of panicking on a dead
-// threadsafe function. The upstream template only guards its own destroy
-// paths, so the loader wraps the context it creates.
+// Upstream only guards its own destroy paths, but a raw `context.destroy()`
+// must also run the wasm-side cleanup preparation first: it cancels pending
+// napi async work while the env can still call into JavaScript, so deferreds
+// reject instead of panicking on a dead threadsafe function.
 const WASI_CONTEXT_DESTROY_WRAP = `function __wrapEmnapiContextDestroyForSettlement(context) {
   // oxlint-disable-next-line typescript/unbound-method -- invoked with the wrapper receiver below
   const __contextDestroy = context.destroy
@@ -49,9 +46,8 @@ const WASI_CONTEXT_DESTROY_WRAP = `function __wrapEmnapiContextDestroyForSettlem
 }
 
 `;
-// The pre-destroy settlement barrier: __destroyEmnapiContext must run the
-// wasm-side cleanup preparation before the context destroy so pending napi
-// async work settles instead of being discarded by the TSFN cleanup hook.
+// Settlement barrier: the cleanup preparation must precede the context
+// destroy, or the TSFN cleanup hook discards pending napi async work.
 const WASI_CONTEXT_DESTROY_SETTLEMENT = `  __prepareWasmEnvCleanup()
   const result = __emnapiContext.destroy()
 `;
@@ -107,10 +103,9 @@ export function resolveWasiBindingTarget(target: unknown): WasiBindingTarget {
 /**
  * Normalize the napi-rs pool environment before emnapi receives it.
  *
- * The upstream loader accepts any positive Number, after which emnapi applies
- * ToInt32 and a 1024 cap. Canonicalizing first keeps the actual pool and the
- * value visible to the WASI guest identical, including scientific and hex
- * input forms accepted by Number().
+ * Upstream accepts any positive Number, then emnapi applies ToInt32 and a 1024
+ * cap. Canonicalizing first keeps the actual pool and the value visible to the
+ * WASI guest identical, including Number()'s scientific and hex input forms.
  */
 export function normalizeEmnapiAsyncWorkPoolSize(value: unknown): number {
   const numeric = Number(value);
@@ -196,24 +191,11 @@ export function patchWasiBindingLoader(source: string, target: WasiBindingTarget
 }
 
 /**
- * Verify the generated loader carries the upstream (>= 3.8.4) context
- * lifecycle contract this repo relies on, then harden its raw destroy path.
+ * Assert the upstream (`@napi-rs/cli` >= 3.8.4) context lifecycle seams, then
+ * add the raw-destroy settlement wrapper (see `WASI_CONTEXT_DESTROY_WRAP`).
  *
- * `@napi-rs/cli` 3.8.4 ships the full lifecycle that earlier rolldown patch
- * layers injected: an isolated non-auto-destroying context, the
- * `napi_prepare_wasm_env_cleanup` settlement barrier guarded by
- * `__emnapiWasmEnvCleanupPrepared`, the macrotask-yield settlement drain
- * (`__drainWasmEnvCleanup` polling `napi_wasm_env_cleanup_pending`, rejecting
- * retryably with `ERR_NAPI_WASI_CLEANUP_PENDING`), a thenable-aware disposal
- * chain published as `Symbol.for('napi.rs.wasi.dispose')`, and an
- * initialization-failure rollback. This assertion set pins those seams so a
- * future CLI bump that drops or reshapes any of them fails the build loudly
- * instead of silently regressing teardown.
- *
- * The one remaining rolldown addition is the raw-destroy settlement wrapper:
- * upstream only runs the settlement barrier on its own destroy paths, while
- * rolldown's lifecycle suite pins that a direct `context.destroy()` call also
- * settles pending work (see `WASI_CONTEXT_DESTROY_WRAP`).
+ * The assertions make a CLI bump that drops or reshapes any teardown seam fail
+ * the build loudly instead of silently regressing teardown.
  */
 export function patchWasiBindingContextLifecycle(source: string): string {
   const cjsDirectImportCount = countOccurrences(source, WASI_CJS_CREATE_CONTEXT_IMPORT);
@@ -279,13 +261,8 @@ export function patchWasiBindingContextLifecycle(source: string): string {
 }
 
 /**
- * Verify the generated Node WASI loader spawns its threads through the
- * hardened worker factory and return it unchanged.
- *
- * `@napi-rs/cli` 3.8.4 ships the exec-argv sanitizing worker helpers this repo
- * previously injected (`__getWasiWorkerExecArgv` filtering eval/print
- * arguments, `__removeInvalidWasiWorkerExecArgv` retrying on
- * ERR_WORKER_INVALID_EXEC_ARGV, and the `__createWasiWorker` factory).
+ * Assert the Node WASI loader still spawns threads through upstream's
+ * exec-argv sanitizing worker factory, and return it unchanged.
  */
 export function patchWasiNodeWorkerExecArgv(source: string): string {
   for (const signature of WASI_NODE_WORKER_HELPER_SIGNATURES) {
@@ -345,13 +322,9 @@ const __rolldownWasiEnv = {
 }
 
 /**
- * Verify the generated browser WASI loader tears its context down through the
- * thenable-aware disposal chain and return it unchanged.
- *
- * `@napi-rs/cli` 3.8.4 routes every browser context destroy through
- * `__destroyEmnapiContext()` behind `__isThenable` checks, so a synchronous
- * emnapi destroy and a promise-returning one settle identically; there is no
- * bare `await __emnapiContext.destroy()` left to normalize.
+ * Assert the browser WASI loader routes every context destroy through the
+ * thenable-aware disposal chain (so sync and promise-returning emnapi destroys
+ * settle identically), and return it unchanged.
  */
 export function patchWasiBrowserContextDestroyAwait(source: string): string {
   assertExactlyOne(
@@ -370,13 +343,9 @@ export function patchWasiBrowserContextDestroyAwait(source: string): string {
 }
 
 /**
- * Verify the generated browser WASI loader collects worker termination
- * results uniformly and return it unchanged.
- *
- * `@napi-rs/cli` 3.8.4's `__terminateWasiWorkers` wraps thenable termination
- * results in `Promise.resolve` and funnels synchronous failures into the same
- * cleanup error aggregation, so mixed settled/unsettled termination entries
- * can no longer race the disposal.
+ * Assert the browser WASI loader collects worker termination results
+ * uniformly, so mixed settled/unsettled entries cannot race the disposal, and
+ * return it unchanged.
  */
 export function patchWasiBrowserWorkerTerminationAwait(source: string): string {
   assertExactlyOne(

@@ -132,11 +132,9 @@ function normalizeAsyncRuntimeConfig(
   exportName: string,
   result: Record<PropertyKey, unknown>,
 ): AsyncRuntimeConfig {
-  // The drainer budget is part of the CONFIG snapshot only; the binding's
-  // metrics snapshot deliberately omits it, so the shared topology
-  // normalization above stays field-exact for both reporters. Topology is
-  // validated first so a topology violation reports itself rather than a
-  // drainer-field error.
+  // Topology must be validated first so a topology violation reports itself
+  // rather than a drainer-field error. The drainer budget is config-only, so
+  // the shared topology normalization stays field-exact for both reporters.
   const topology = normalizeAsyncRuntimeTopology(exportName, result);
   const drainLingerUs = readAsyncRuntimeInteger(exportName, result, 'drainLingerUs', 0);
   return { ...topology, drainLingerUs };
@@ -152,14 +150,11 @@ export type AsyncRuntimeFlavor = 'CurrentThread' | 'MultiThread';
 /**
  * Configuration accepted before the binding starts its first async operation.
  *
- * On a native shared-runtime binding, `MultiThread` requires at least two
- * workers and reserves one worker from blocking admission. `CurrentThread`
- * always has one execution lane. Every shared-runtime WebAssembly build is
- * `CurrentThread` only and normalizes both thread-count fields to one.
- * MultiThread promotes one worker to two, applies the platform worker cap,
- * and limits blocking admission to `workerThreads - 1`.
- * Without overrides, native shared builds start from the smaller of physical
- * and process-available CPU counts.
+ * `MultiThread` promotes a requested single worker to two, applies the
+ * platform worker cap, and limits blocking admission to `workerThreads - 1`;
+ * `CurrentThread` normalizes both counts to one. Every WebAssembly build is
+ * `CurrentThread` only. Without overrides, native builds start from the
+ * smaller of physical and process-available CPU counts.
  *
  * @experimental
  */
@@ -198,20 +193,14 @@ export interface AsyncRuntimeConfig extends AsyncRuntimeTopology {
 }
 
 /**
- * Snapshot of shared-runtime scheduler activity.
+ * Snapshot of shared-runtime scheduler activity plus the executor topology,
+ * but not the config-only {@link AsyncRuntimeConfig.drainLingerUs} budget.
  *
- * Event counters are cumulative until {@link resetAsyncRuntimeMetrics} is
- * called. Active fields are live gauges. Maximum fields are lifetime
- * high-water marks and are not cleared while live work may still publish
- * updates. Each maximum is at least its corresponding live gauge in the same
- * snapshot.
- *
- * All counters are zero until the shared runtime schedules its first task.
- * A legacy Tokio-backed binding never installs the shared scheduler, so its
- * counters stay zero.
- *
- * The snapshot reports the executor topology but not the config-only
- * {@link AsyncRuntimeConfig.drainLingerUs} budget.
+ * Event counters are cumulative until {@link resetAsyncRuntimeMetrics}; active
+ * fields are live gauges; maximum fields are lifetime high-water marks, never
+ * cleared and always at least their live gauge in the same snapshot. A legacy
+ * Tokio-backed binding never installs the shared scheduler, so its counters
+ * stay zero.
  *
  * @experimental
  */
@@ -234,15 +223,14 @@ export interface AsyncRuntimeMetrics extends AsyncRuntimeTopology {
 /**
  * Configure the shared async runtime before its first async operation.
  *
- * Every current binding runs the shared runtime: native bindings support
- * both flavors, and every WebAssembly binding, including
+ * Native bindings support both flavors; every WebAssembly binding, including
  * `wasm32-wasip1-threads`, supports `CurrentThread` only. A legacy
  * Tokio-backed binding (`getRuntimeCapabilities().asyncRuntimeBuild ===
- * false`) throws when this function is called.
+ * false`) throws here.
  *
- * Configuration is process-wide for the loaded native binding and remains
- * immutable after the first real runtime generation starts. Environment
- * variables are resolved at binding load before this override:
+ * Configuration is process-wide for the loaded native binding and immutable
+ * once the first real runtime generation starts. These are resolved at
+ * binding load, before this override:
  *
  * - `ROLLDOWN_RUNTIME=single|current-thread|multi|multi-thread`
  * - `ROLLDOWN_WORKER_THREADS`
@@ -250,12 +238,8 @@ export interface AsyncRuntimeMetrics extends AsyncRuntimeTopology {
  * - `ROLLDOWN_PARK_DEADLINE_MS`
  * - `ROLLDOWN_DRAIN_LINGER_US`
  *
- * The drainer linger budget has no option here: `ROLLDOWN_DRAIN_LINGER_US`
- * is resolved once at binding load and reported by
- * {@link getAsyncRuntimeConfig} as `drainLingerUs`.
- *
- * Native `ROLLDOWN_*` worker counts are capped at 256. Explicit options
- * above their documented limits throw instead of being silently truncated.
+ * Those `ROLLDOWN_*` worker counts are capped at 256; explicit options above
+ * their documented limits throw instead of being silently truncated.
  *
  * @experimental
  */
@@ -265,12 +249,12 @@ export function configureAsyncRuntime(options: AsyncRuntimeOptions): void {
 }
 
 /**
- * Return the effective runtime configuration snapshotted by the binding.
+ * Return the runtime configuration snapshotted by the binding; this never
+ * re-reads environment variables.
  *
- * This never re-reads environment variables. A legacy Tokio-backed binding
- * predates the `drainLingerUs` field, so its three-field report fails this
- * package's contract check with reinstall guidance instead of returning a
- * partial snapshot.
+ * A legacy Tokio-backed binding predates the `drainLingerUs` field, so its
+ * three-field report fails the contract check with reinstall guidance instead
+ * of returning a partial snapshot.
  *
  * @experimental
  */

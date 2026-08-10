@@ -27,16 +27,13 @@ import { LoadPluginContextImpl } from './load-plugin-context';
 import { createPluginContext } from './plugin-context';
 import { TransformPluginContextImpl } from './transform-plugin-context';
 
-// Every hook invocation marshals a fresh `BindingPluginContext` box (plus,
-// per hook, module-info / normalized-options boxes and, for load/transform,
-// their specialized context boxes). Those boxes are normally reclaimed by GC
-// finalizers, which the threadless-WASI flavor cannot rely on (workerd never
-// runs them), so on that flavor the wrappers release each box once its hook
-// invocation settles. Arguments a callback may legally retain are handed over
-// as plain-data snapshots first (`snapshotModuleInfo`); a retained plugin
-// context used after its hook settles throws a clear post-release error on
-// this flavor only. Duplicate normalized-options boxes are handled inside
-// `PluginContextData`.
+// Every hook invocation marshals fresh boxes (plugin context, module info,
+// normalized options, and for load/transform their specialized contexts). On
+// the threadless-WASI flavor, where GC finalizers cannot be relied on, the
+// wrappers release each box once its hook settles. Arguments a callback may
+// legally retain are handed over as plain-data snapshots first; a retained
+// plugin context used after its hook settles throws a clear post-release
+// error on this flavor only.
 export function bindingifyBuildStart(
   args: BindingifyPluginArgs,
 ): PluginHookWithBindingExt<BindingPluginOptions['buildStart']> {
@@ -262,12 +259,10 @@ export function bindingifyTransform(
           if (fallbackSourcemap != undefined) {
             map = fallbackSourcemap;
           } else {
-            // `experimental.nativeMagicString` is enabled: the sourcemap is
-            // generated natively and delivered out-of-band via the magic-string
-            // channel. Signal `null` (an explicit "no map on this output object")
-            // rather than `undefined`, otherwise the Rust side treats this
-            // transform as a missing/broken sourcemap (`Omitted`) and the empty
-            // sentinel wipes out the real map produced by the channel.
+            // `experimental.nativeMagicString`: the map is delivered natively
+            // out-of-band. This must signal `null`, not `undefined` — Rust
+            // reads `undefined` as `Omitted` and its empty sentinel would wipe
+            // out the real map produced by the channel.
             mapHandledByNativeChannel = true;
           }
         }
@@ -283,10 +278,9 @@ export function bindingifyTransform(
         };
       } finally {
         if (shouldEagerlyFreeOutputs()) {
-          // `innerCtx` is a `BindingPluginContext` — a fire-and-forget
-          // `this.load()`/`this.resolve()` may still hold a borrow on it, so
-          // its release goes through the tracker. The specialized wrapper box
-          // (`ctx`) is sync-only and can be dropped directly.
+          // A fire-and-forget `this.load()`/`this.resolve()` may still hold a
+          // borrow on `innerCtx`, so its release goes through the tracker; the
+          // specialized wrapper box `ctx` is sync-only and drops directly.
           releaseOrDefer(innerCtx);
           ctx.dropInner();
         }
@@ -344,10 +338,8 @@ export function bindingifyLoad(
         };
       } finally {
         if (shouldEagerlyFreeOutputs()) {
-          // `innerCtx` is a `BindingPluginContext` — a fire-and-forget
-          // `this.load()`/`this.resolve()` may still hold a borrow on it, so
-          // its release goes through the tracker. The specialized wrapper box
-          // (`ctx`) is sync-only and can be dropped directly.
+          // Tracker release for `innerCtx`, direct drop for the sync-only
+          // wrapper box (see the load hook above).
           releaseOrDefer(innerCtx);
           ctx.dropInner();
         }
@@ -381,10 +373,9 @@ export function bindingifyModuleParsed(
   return bindingifyHook(args.plugin.moduleParsed, ({ handler }) => ({
     plugin: async (ctx, moduleInfo) => {
       try {
-        // The module-info box retains the module's full source (`code`) — the
-        // largest per-rebuild retention a hook argument carries. On the
-        // threadless flavor hand the callback a plain-data snapshot and
-        // release the box up front.
+        // The module-info box retains the module's full source, the largest
+        // per-rebuild retention a hook argument carries, so on the threadless
+        // flavor pass a plain-data snapshot and release the box up front.
         const moduleOption = args.pluginContextData.getModuleOption(moduleInfo.id);
         await handler.call(
           createPluginContext(args, ctx),

@@ -1,19 +1,16 @@
-// The worker half of `scripts/misc/check-workerd-suite.mjs`. Every line of
-// this file executes INSIDE real workerd (via Miniflare); the driver only
-// dispatches routes and asserts on the JSON reports produced here.
-//
-// The three sibling modules are supplied by the driver's explicit Miniflare
-// `modules` list, so these specifiers resolve to `@rolldown/browser`'s built
-// `dist/` artifacts without a bundler in between.
+// The worker half of `scripts/misc/check-workerd-suite.mjs`: every line here
+// executes INSIDE real workerd, the driver only dispatches routes and asserts on
+// the JSON reports. The sibling specifiers below are supplied by the driver's
+// explicit Miniflare `modules` list, so they resolve to `@rolldown/browser`'s
+// built `dist/` artifacts without a bundler in between.
 import * as workerdApi from './workerd.browser.mjs';
 import wasmModule from './rolldown-binding.wasm32-wasip1.wasm';
 
 const { build, createInstance, createWorkerdBundle, getWorkerdRuntimeStats } = workerdApi;
 
 const MiB = 1024 * 1024;
-// ESC (0x1B) and the 8-bit CSI introducer (0x9B) are the two ways an ANSI
-// escape sequence can start. Scanned by code point rather than with a regex
-// literal, which would otherwise need control characters in this source file.
+// ESC (0x1B) and the 8-bit CSI introducer (0x9B) are the two ways an ANSI escape
+// can start. Scanned by code point so this source needs no control characters.
 function hasAnsi(value) {
   if (typeof value !== 'string') return false;
   for (let i = 0; i < value.length; i += 1) {
@@ -66,9 +63,9 @@ function errInfo(error) {
 }
 
 /**
- * Await `work` and flatten the outcome. Resolved values are deliberately NOT
- * carried into the report (a `RolldownOutput` would blow up the response body);
- * pass `describe` to record a small summary instead.
+ * Await `work` and flatten the outcome. Resolved values are NOT carried into the
+ * report -- a `RolldownOutput` would blow up the response body -- so pass
+ * `describe` to record a small summary instead.
  */
 async function settle(work, describe = () => true) {
   try {
@@ -82,7 +79,6 @@ const isChunk = (result) => result?.output?.[0]?.type === 'chunk';
 
 // ---------------------------------------------------------------------------
 // Behaviour graph: a 26-module fan. 1 entry + 4 features * 5 leaves + 1 shared.
-//
 // Every hook is load-bearing by construction:
 //   * imports use a `~` prefix that ONLY resolveId can turn into a real id,
 //   * module bodies exist only in the plugin's map, so ONLY load can serve them,
@@ -92,9 +88,9 @@ const FEATURES = 4;
 const LEAVES = 5;
 const BASE = 7;
 
-// NOTE: workerd requires the entry module's ONLY export to be the default
-// handler, so the expected total (390) is asserted on the driver side instead
-// of being exported from here. Its derivation:
+// workerd requires this module's ONLY export to be the default handler, so the
+// expected total (390) is asserted on the driver side rather than exported here.
+// Its derivation:
 //   leaf(i, j) = BASE * (i + 1) + j
 //   feat(i)    = sum over j in 0..4 of leaf(i, j) = 5 * BASE * (i + 1) + 10
 //   total      = sum over i in 0..3 of feat(i)
@@ -130,9 +126,9 @@ function fanFiles() {
     ].join('\n') + '\n',
   );
   // Two more entries over the SAME fan, for the concurrency case. Each adds an
-  // offset only it supplies, so the two concurrent results are told apart by
-  // the value they compute: an empty, cross-wired or silently shared result
-  // cannot fake the other side's total.
+  // offset only it supplies, so the two concurrent results are told apart by the
+  // value they compute: an empty, cross-wired or silently shared result cannot
+  // fake the other side's total.
   for (const [tag, offset] of [
     ['a', 1000],
     ['b', 2000],
@@ -298,12 +294,10 @@ async function caseErrorSurface() {
   // each other.
   const callerOwnedLiveDelta = getWorkerdRuntimeStats().liveInstances - baseline;
 
-  // The half above is CALLER-owned, and its dispose() is explicit -- so its
-  // delta proves the failed build left the instance disposable, nothing more.
-  // `build({ module })` is the path that can genuinely leak: it creates a
-  // PRIVATE instance that only build() itself can ever dispose, so a failed
-  // build that forgets strands an entire Wasm instance in the isolate, every
-  // time. Nothing else in this suite would notice.
+  // The half above is CALLER-owned with an explicit dispose(), so its delta only
+  // proves the failed build left the instance disposable. `build({ module })` is
+  // the path that can genuinely leak: its PRIVATE instance can only ever be
+  // disposed by build() itself, and nothing else in this suite would notice.
   const ownedBaseline = getWorkerdRuntimeStats().liveInstances;
   let ownedCaught = null;
   try {
@@ -380,11 +374,9 @@ async function caseLifecycle() {
 
 /**
  * Flatten one half of the concurrent pair. "The promise fulfilled" is not
- * evidence of a build, so the chunk's `code` travels to the driver, which
- * executes it and checks the value it computes -- a build that resolved with
- * the other build's output, or with nothing at all, cannot pass as a success.
- * `entriesLoaded` does the same for the hooks: each build must have driven its
- * own trace over its own entry.
+ * evidence of a build, so `code` travels to the driver, which executes it and
+ * checks the value it computes; `entriesLoaded` does the same for the hooks.
+ * Fails if a build resolves with the other build's output or with nothing.
  */
 function describeConcurrent(settled, trace) {
   if (settled.status !== 'fulfilled') {
@@ -407,10 +399,8 @@ async function caseConcurrency() {
   const baseline = getWorkerdRuntimeStats().liveInstances;
   const out = {};
 
-  // (a) Two concurrent builds on ONE shared instance must both succeed -- and
-  //     each must produce ITS OWN result. They run distinct entries with
-  //     distinct computed totals so that empty output, cross-wiring, or one
-  //     build silently producing nothing fails here instead of passing.
+  // (a) Two concurrent builds on ONE shared instance must both succeed, each
+  //     with ITS OWN result -- hence distinct entries with distinct totals.
   {
     const shared = await createInstance(wasmModule);
     const traceA = newTrace();
@@ -453,8 +443,6 @@ async function caseConcurrency() {
     const enteredHook = new Promise((resolve) => {
       entered = resolve;
     });
-    // Park the first build inside its own load hook so the "busy" window is
-    // deterministic instead of timing-dependent.
     const holdPlugin = { ...fanPlugin(newTrace(), files), name: 'workerd-suite-hold' };
     holdPlugin.load = async (id) => {
       if (!files.has(id)) return null;
@@ -500,13 +488,11 @@ async function caseConcurrency() {
 
 // ---------------------------------------------------------------------------
 // CASE 6: fire-and-forget `this.load()` -- the documented un-awaited pattern
-// (docs/apis/plugin-api/inter-plugin-communication.md) plus the self-load
-// cycle shape of tests/fixtures/plugin/context/cycle-load-error. The
-// un-awaited native call keeps a napi borrow on the plugin-context box past
-// the hook's settle -- exactly when the eager-release wiring wants to drop it
-// -- so the release must defer to the call's completion: the build must stay
-// green and no late continuation may surface an error. An awaited load runs
-// alongside as the control.
+// (docs/apis/plugin-api/inter-plugin-communication.md) plus the self-load cycle
+// shape of tests/fixtures/plugin/context/cycle-load-error. The un-awaited native
+// call keeps a napi borrow on the plugin-context box past the hook's settle,
+// exactly when the eager-release wiring wants to drop it, so the release must
+// defer to the call's completion. An awaited load runs alongside as the control.
 async function caseFireAndForgetLoad() {
   const files = fanFiles();
   const before = getWorkerdRuntimeStats().liveInstances;
@@ -544,12 +530,11 @@ async function caseFireAndForgetLoad() {
   };
 }
 
-// Failed builds never reach the native invalidate callback (it only fires
-// after a successful generate), so the option boxes their hooks retained must
-// be released at the build's own settle instead. A ~1 MiB banner rides inside
-// the normalized options: a stranded per-build options box would grow the
-// arena by ~1 MiB per failed build, far above dlmalloc jitter, while the
-// fixed path stays near-flat. The same instance must also keep building.
+// CASE 7: failed builds never reach the native invalidate callback (it only
+// fires after a successful generate), so the option boxes their hooks retained
+// must be released at the build's own settle. The ~1 MiB banner rides inside the
+// normalized options: a stranded per-build box grows the arena by ~1 MiB per
+// failed build, far above dlmalloc jitter.
 async function caseFailedBuildReuse() {
   const banner = '/*' + 'x'.repeat(1024 * 1024) + '*/';
   const rounds = 10;
@@ -626,9 +611,9 @@ async function caseCapabilities() {
       devSupported: caps.devSupported,
       timers: caps.timers,
       blockOnJsThreadSafe: caps.blockOnJsThreadSafe,
-      // The workerd ENTRY must not offer a watch API. (`BindingWatcher` still
+      // The workerd ENTRY must not offer a watch API. `BindingWatcher` still
       // exists on the raw binding surface -- watch is gated by capability, not
-      // by deleting the class -- so that is reported, not asserted away.)
+      // by deleting the class -- so it is reported, not asserted away.
       entryExports: Object.keys(workerdApi).sort(),
       watchExported: 'watch' in workerdApi,
       bindingWatcherType: typeof instance.exports.BindingWatcher,
@@ -640,10 +625,9 @@ async function caseCapabilities() {
 }
 
 // ---------------------------------------------------------------------------
-// CASE 6: memory slope across identical rebuilds on ONE reusable instance.
-//
-// Graph shape is deliberately larger than the behaviour fan so the per-rebuild
-// retention is well above measurement noise.
+// PART 2: memory slope across identical rebuilds on ONE reusable instance. The
+// graph is deliberately larger than the behaviour fan so per-rebuild retention
+// stays well above measurement noise.
 function makeSlopeGraph(moduleCount) {
   const files = new Map();
   const utils = 4;
@@ -781,8 +765,8 @@ async function caseMemorySlope(url) {
   } finally {
     // Reported in its OWN field, never folded into `error` and never dropped:
     // the case that matters is every round SUCCEEDING and only the teardown
-    // breaking. Swallowing it there leaves `error` null and a full set of
-    // samples, and the driver passes the budget on a broken instance.
+    // breaking, where swallowing it would leave `error` null plus a full set of
+    // samples and the driver would pass the budget on a broken instance.
     try {
       instance.dispose();
     } catch (e) {
@@ -819,16 +803,13 @@ export default {
       if (url.pathname === '/memory') {
         payload = await caseMemorySlope(url);
       } else if (url.pathname === '/behavior') {
-        // A single warm-up build FIRST, so the cases below start from a warm
-        // isolate: it pays the one-time async-context provider lookup (a
-        // guarded dynamic `node:async_hooks` import, available here because
-        // this suite runs with the `nodejs_als` compatibility flag) and the
-        // first-touch Wasm growth, neither of which should land inside a
-        // measured case. It is NOT working around a concurrency bug:
-        // concurrent first builds on one instance were verified to succeed
-        // (10/10 fresh isolates), and two concurrent `build({ module })` calls
-        // are refused by the documented single-active-instance guard whether
-        // the isolate is cold or warm.
+        // One warm-up build FIRST, so the cases below start from a warm isolate:
+        // it pays the one-time async-context provider lookup (a guarded dynamic
+        // `node:async_hooks` import, available here via the `nodejs_als`
+        // compatibility flag) and the first-touch Wasm growth. NOT a concurrency
+        // workaround: concurrent first builds on one instance were verified to
+        // succeed (10/10 fresh isolates), and two concurrent `build({ module })`
+        // calls are refused by the single-active-instance guard, cold or warm.
         const files = fanFiles();
         await build({
           module: wasmModule,

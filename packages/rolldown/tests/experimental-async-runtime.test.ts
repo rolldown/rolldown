@@ -13,13 +13,9 @@ import {
 } from 'rolldown/experimental';
 import { describe, expect, test } from 'vitest';
 
-// The four `rolldown/experimental` async-runtime fns are honored by every
-// current binding: the shared runtime is the only backend, so
-// `configureAsyncRuntime` accepts pre-first-use options, and the
-// config/metrics reporters read the live scheduler on native and WASI
-// artifacts alike. This spec runs against whatever binding is built in the
-// worktree and derives its per-artifact expectations from the capability
-// report (wasi => CurrentThread-only, thread counts pinned to one).
+// Runs against whatever binding the worktree built and derives its
+// per-artifact expectations from the capability report (wasi =>
+// CurrentThread-only, thread counts pinned to one).
 
 const capabilities = getRuntimeCapabilities();
 const testsDir = fileURLToPath(new URL('.', import.meta.url));
@@ -36,8 +32,7 @@ const configValidationChildPath = nodePath.join(
   'child.mjs',
 );
 
-// The non-config, non-flavor metrics fields: the pure runtime counters that
-// rise as the scheduler runs binding work.
+// The pure runtime counters that rise as the scheduler runs binding work.
 type NumericMetricField = Exclude<keyof AsyncRuntimeMetrics, 'flavor'>;
 
 const RESETTABLE_EVENT_FIELDS: NumericMetricField[] = [
@@ -117,10 +112,9 @@ describe('experimental async runtime API', () => {
 
   test('getAsyncRuntimeConfig returns the build flavor with positive thread counts', () => {
     const config: AsyncRuntimeConfig = getAsyncRuntimeConfig();
-    // `BindingRuntimeFlavor` is a napi string_enum; its runtime representation
-    // is 'MultiThread' or 'CurrentThread'. Shared native builds report the
-    // configured flavor, while every shared WebAssembly build is
-    // CurrentThread-only.
+    // `BindingRuntimeFlavor` is a napi string_enum: 'MultiThread' or
+    // 'CurrentThread'. Native reports the configured flavor; every WebAssembly
+    // build is CurrentThread-only.
     if (capabilities.wasi) {
       expect(config).toMatchObject({
         flavor: 'CurrentThread',
@@ -135,17 +129,15 @@ describe('experimental async runtime API', () => {
     expect(Number.isInteger(config.workerThreads)).toBe(true);
     expect(config.maxBlockingTasks).toBeGreaterThan(0);
     expect(Number.isInteger(config.maxBlockingTasks)).toBe(true);
-    // The drainer budget is reported on every artifact; `0` (disabled) is a
-    // valid report, so assert shape only here — the env-driven values are
-    // pinned by the subprocess test below.
+    // `0` (drainer lingering disabled) is a valid report, so assert shape only
+    // here; the env-driven values are pinned by the subprocess test below.
     expect(Number.isInteger(config.drainLingerUs)).toBe(true);
     expect(config.drainLingerUs).toBeGreaterThanOrEqual(0);
   });
 
   // `ROLLDOWN_DRAIN_LINGER_US` is resolved once at module init, so each case
-  // needs a fresh process. The value is introspection-only: it has no
-  // `configureAsyncRuntime` option, making the config report the only way a
-  // caller can verify it took effect.
+  // needs a fresh process. It has no `configureAsyncRuntime` option, so the
+  // config report is the only way to verify it took effect.
   test.runIf(!capabilities.wasi)(
     'getAsyncRuntimeConfig reports the effective drain-linger budget',
     { timeout: 30_000 },
@@ -179,9 +171,8 @@ describe('experimental async runtime API', () => {
     },
   );
 
-  // The increment path: event counters rise after a bundle, then reset. The
-  // Rolldown scheduler is installed on every current binding, so async
-  // binding work is always counted.
+  // The scheduler is installed on every current binding, so binding work is
+  // always counted and this needs no flavor gate.
   test('event metrics reset without corrupting live gauges', async () => {
     resetAsyncRuntimeMetrics();
     const before = getAsyncRuntimeMetrics();

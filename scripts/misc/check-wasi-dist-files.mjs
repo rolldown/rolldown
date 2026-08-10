@@ -1,16 +1,8 @@
 // Guard that a built dist contains EXACTLY the expected WASI artifact set for
-// its flavor. The set is copied into dist by
-// packages/rolldown/copy-addon-plugin.ts; if that list ever drops a file (as
-// happened with the `wasip1-deferred` loader) the package silently
-// ships without it while every build stays green. This check holds its OWN
-// copy of the canonical per-flavor sets (the naming matrix in
-// internal-docs/async-runtime/implementation.md) so drift in the plugin's
-// list fails loudly here.
-//
-// NOTE on the `wasip1-deferred` loader: the single-flavor dists carry the raw
-// generated loader, while `@rolldown/browser/workerd` is the stable managed
-// package API and `@rolldown/browser/workerd/wasm` exposes the compiled module.
-// Binary-name-specific loader paths are compatibility details.
+// its flavor. packages/rolldown/copy-addon-plugin.ts copies that set into dist;
+// if its list drops a file (as happened with `wasip1-deferred`) the package
+// ships without it while every build stays green. This guard holds its OWN copy
+// of the canonical sets so that drift fails loudly here.
 //
 // Usage: node scripts/misc/check-wasi-dist-files.mjs <threaded|single> [distDir]
 //   flavor   threaded = wasm32-wasip1-threads dist (legacy `wasi` names)
@@ -44,15 +36,11 @@ const WASI_FILE_SETS = {
   ],
 };
 
-// WASI-artifact discriminator: a top-level dist entry belongs to the WASI
-// artifact family when its basename
-//   - starts with `rolldown-binding.` and contains `wasi` (loaders + wasm of
-//     BOTH flavors, incl. `.debug.wasm` leftovers), or
-//   - starts with `wasi-worker` (threaded worker scripts), or
-//   - ends with `.wasm` (any wasm in these dists is a WASI artifact).
+// WASI-artifact discriminator for top-level dist entries: `rolldown-binding.*`
+// loaders/wasm of BOTH flavors (incl. `.debug.wasm` leftovers), `wasi-worker*`
+// scripts, and any `.wasm` (every wasm in these dists is a WASI artifact).
 // Deliberately name-prefix-anchored so hashed chunk files (e.g.
 // `constructors-<hash>.js` in the browser dist) can never false-positive.
-// Canonical like the sets above — independent of copy-addon-plugin.ts.
 const WASI_ARTIFACT_RE = /^rolldown-binding\..*wasi|^wasi-worker|\.wasm$/;
 
 const [flavor, distDirArg] = process.argv.slice(2);
@@ -76,11 +64,9 @@ const supportFiles =
     ? ['workerd-wasm.d.ts']
     : [];
 
-// Strict set-equality between the expected set and the ACTUAL WASI-family
-// subset of the dist listing. Every build wipes dist first
-// (packages/rolldown/build.ts), so anything extra — the other flavor's files,
-// a debug wasm, a renamed leftover, an accidentally copied loader — is a
-// packaging bug, and the release workflow uploads dist/** so it would ship.
+// Strict set equality against the ACTUAL WASI-family subset of dist. Every
+// build wipes dist first (packages/rolldown/build.ts) and the release workflow
+// uploads dist/**, so anything extra is a packaging bug that would ship.
 const entries = fs.readdirSync(distDir, { withFileTypes: true });
 const wasiEntries = entries.filter((e) => WASI_ARTIFACT_RE.test(e.name));
 const nonFiles = wasiEntries.filter((e) => !e.isFile()).map((e) => e.name);

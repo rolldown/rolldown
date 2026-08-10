@@ -237,11 +237,10 @@ function createEventCallback(
         await emitter.emit('restart');
         break;
       case 'close':
-        // The native coordinator awaits this callback. Dispatching listeners
-        // here would make a close listener that calls `watcher.close()`
-        // self-await the coordinator. Start/observe the JS close lifecycle
-        // without awaiting listener dispatch; the public close promise emits
-        // after native cleanup and worker termination finish.
+        // The native coordinator awaits this callback, so dispatching
+        // listeners here would make a close listener calling `watcher.close()`
+        // self-await the coordinator. Start the JS close lifecycle without
+        // awaiting listener dispatch.
         onNativeClose();
         break;
     }
@@ -381,10 +380,9 @@ class Watcher {
   }
 
   onNativeClose(): void {
-    // Native close can be observed without a public caller (for example if
-    // the coordinator exits independently). Preserve undelivered worker
-    // diagnostics for a later `close()` call while avoiding an unhandled
-    // rejection.
+    // Native close can be observed without a public caller (the coordinator
+    // may exit on its own), so keep undelivered worker diagnostics for a later
+    // `close()` without producing an unhandled rejection.
     this.closeAutomatically();
   }
 
@@ -481,10 +479,9 @@ class Watcher {
     }
 
     errors.push(...this.retainedWorkerDiagnostics.map(({ error }) => error));
-    // The watch session is terminally closed: rebuild-cycle invalidates only
-    // ran after successful rebuilds, so any boxes stranded by failed rebuilds
-    // (and by hooks after the last invalidate) are released here (idempotent,
-    // no-op outside the threadless-WASI flavor).
+    // Rebuild-cycle invalidates only ran after successful rebuilds, so boxes
+    // stranded by failed rebuilds (and by hooks after the last invalidate) are
+    // released here. Idempotent, no-op outside the threadless-WASI flavor.
     for (const release of this.releaseOptionBoxes) {
       try {
         release();

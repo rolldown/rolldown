@@ -45,13 +45,10 @@ describe('loadConfig native configLoader', () => {
   });
 
   it('resolves runtime relative dynamic imports in a deferred config function against the config directory', async () => {
-    // Run in a plain Node child process — the environment the CLI actually
-    // loads configs in (vite-node would intercept the emitted entry's dynamic
-    // import). The CLI only invokes a deferred config function after
-    // `loadConfig` has already returned (and cleaned up its bundling
-    // artifacts), so the runtime-computed `import('./deferred-helper.mjs')`
-    // must resolve against the config file's own directory and must not
-    // depend on any transient bundling output that has been removed by then.
+    // Runs in a plain Node child process: the environment the CLI actually loads
+    // configs in, and vite-node would intercept the emitted entry's dynamic
+    // import. The CLI invokes a deferred config function only after `loadConfig`
+    // has already returned and cleaned up its bundling artifacts.
     const script = [
       `import { loadConfig } from 'rolldown/config';`,
       `const config = await loadConfig(${JSON.stringify(

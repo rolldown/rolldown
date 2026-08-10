@@ -189,11 +189,10 @@ export async function initializeParallelPlugins(
 }
 
 /**
- * @internal Initialize a pool while retaining every worker from construction onward.
- * Every initializer is invoked before failures are observed, so production workers
- * register synchronously after construction and can be terminated on the first failed
- * bootstrap without waiting for an unrelated bootstrap promise to settle.
- * See internal-docs/async-runtime/implementation.md.
+ * @internal Initialize a pool while retaining every worker from construction
+ * onward. Every initializer must be invoked before failures are observed, so a
+ * first failed bootstrap can terminate the pool without waiting on an
+ * unrelated bootstrap promise to settle.
  */
 export async function initializeWorkerPool<T extends TerminableWorker>(
   count: number,

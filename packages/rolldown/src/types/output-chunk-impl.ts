@@ -111,12 +111,11 @@ export class OutputChunkImpl extends PlainObjectLike implements OutputChunk {
     }
   }
 
-  // The cached `modules` map holds live-getter wrappers whose every read calls
-  // into a `BindingRenderedModule` box (its own native `Arc` clone, unaffected
-  // by this chunk's `dropInner()`). On the threadless-WASI flavor the GC
-  // finalizers that would reclaim those boxes never run (and reads after the
-  // owning instance is disposed would throw), so replace each wrapper with a
-  // plain snapshot of its three fields and release the boxes eagerly.
+  // The cached `modules` map holds live-getter wrappers reading through
+  // `BindingRenderedModule` boxes, each its own `Arc` clone unaffected by this
+  // chunk's `dropInner()`. On the threadless-WASI flavor those boxes are never
+  // reclaimed (and would throw once the owning instance is disposed), so swap
+  // in a plain snapshot and release them eagerly.
   #snapshotModules(): void {
     const modules = this.modules;
     for (const key of Object.keys(modules)) {

@@ -1,24 +1,8 @@
-// Runtime lifecycle regression test, WASI only.
-//
-// Origin: #10379 added this to cover the "Access tokio runtime failed in spawn"
-// crash class (#8411, #8747), where the wasm binding refcounted a shared *tokio*
-// runtime and an unbalanced release tore it down under a still-live consumer.
-//
-// This branch is tokio-free: the WASI binding runs the shared CurrentThread
-// runtime whose lifecycle is owned by the N-API environment, not by
-// JavaScript-held runtime leases (those are compatibility no-ops here). The
-// tokio refcount and its crash class therefore cannot exist, and dev()/watch()
-// are unsupported on the WASI artifact by design (CurrentThread has no
-// MultiThread executor; watch is unsupported on every WASI artifact).
-//
-// So the tokio-shaped sequences are replaced with their tokio-free equivalents:
-//   1. repeated sequential build+close — the shared runtime survives one
-//      consumer closing and stays usable for the next.
-//   2. two builds alive at once, close one — the other must keep working
-//      (the invariant behind #8411/#8747, expressed with the supported API).
-//   3. dev()/watch() reject per the WASI capability contract.
-// The WASI binding is still force-loaded and asserted, so the lane keeps
-// executing the real wasm binding (the reason #10379 added it).
+// Runtime lifecycle regression test, WASI only. The WASI binding runs the
+// shared CurrentThread runtime, whose lifecycle is owned by the N-API
+// environment rather than by JavaScript-held runtime leases (compatibility
+// no-ops here), and dev()/watch() are unsupported on the WASI artifact by
+// design.
 //
 // It must set NAPI_RS_FORCE_WASI before importing rolldown, and `error` mode is
 // required: with `true`, a missing wasi build silently falls back to the native
@@ -69,8 +53,6 @@ async function build(dir) {
   const first = await build(makeFixture('concurrent-a'));
   const second = await build(makeFixture('concurrent-b'));
   await first.close();
-  // `second` was built before `first` closed and must still be closable
-  // against a live runtime.
   await second.close();
   // A fresh build after both closes must still succeed.
   const third = await build(makeFixture('concurrent-c'));

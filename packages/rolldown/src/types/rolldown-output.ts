@@ -64,10 +64,9 @@ export interface RenderedModule {
  *
  * @category Plugin APIs
  */
-// `dropInner` is the binding-internal eager-release hook (threadless-WASI
-// flavor); it must not leak into the public plugin-facing type — hook
-// wrappers hand plugins live wrappers or plain-data snapshots, never the
-// releasable box itself.
+// `dropInner` is the binding-internal eager-release hook and must not leak
+// into the public plugin-facing type: hook wrappers hand plugins live wrappers
+// or plain-data snapshots, never the releasable box itself.
 export interface RenderedChunk extends Omit<BindingRenderedChunk, 'modules' | 'dropInner'> {
   type: 'chunk';
   /** Information about the modules included in this chunk. */

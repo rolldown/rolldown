@@ -233,9 +233,8 @@ impl Watcher {
     }
     // Wake the coordinator even when it is waiting for a user event callback. The mpsc message
     // remains the normal state-machine input when the coordinator is idle or debouncing.
-    // `event_listener::Event` stores no permit, so this must run after the `closed` flag is set
-    // above: any waiter that created its listener before this call is woken, and a waiter that
-    // created its listener after this call observes `closed == true` and skips waiting.
+    // `event_listener::Event` stores no permit, so this notify must come after the `closed`
+    // store above; waiters listen before checking the flag to close the race.
     self.close_notify.notify(usize::MAX);
     let _ = self.tx.unbounded_send(WatcherMsg::Close);
   }
@@ -303,8 +302,8 @@ mod tests {
     },
     time::Duration,
   };
-  // `event_listener::Event` backs the `Watcher::close_notify` production field.
-  // `tokio::sync::Notify` is kept ONLY for the tests' internal `end` signal.
+  // `tokio::sync::Notify` below is ONLY the tests' internal `end` signal;
+  // production `close_notify` is `event_listener::Event`.
   use event_listener::Event;
   use tokio::sync::Notify;
 

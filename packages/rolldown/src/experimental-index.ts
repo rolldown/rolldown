@@ -1,7 +1,5 @@
-// Every public entry that loads the binding must carry this side effect: the
-// shared runtime's CurrentThread flavor delegates timers to the host event
-// loop, and the capability contract (`getRuntimeCapabilities().timers`) must
-// not depend on WHICH entry a consumer imported first.
+// Required side effect on every entry that loads the binding: a driver must be
+// registered before the first CurrentThread sleep arms (see timer-host.ts).
 import './timer-host';
 
 export { dev } from './api/dev';

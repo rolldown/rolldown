@@ -131,14 +131,10 @@ export class RolldownBuild {
   }
 
   /**
-   * Whether the NATIVE terminal close has actually SETTLED.
-   *
-   * Unlike {@linkcode closed} (which flips at close-request time) and the
-   * native bundler's own `closed` flag (which flips synchronously when the
-   * terminal close STARTS, before its cleanup future runs), this becomes true
-   * only once `closeTerminal()` resolved — i.e. native cleanup ran to its
-   * terminal outcome. Lifecycle managers (the workerd wrapper) drive resource
-   * release from this signal.
+   * Whether the native terminal close has actually SETTLED — unlike
+   * {@linkcode closed} (flips at close-request time) and the native bundler's
+   * own `closed` flag (flips when the terminal close STARTS). Lifecycle
+   * managers drive resource release from this signal.
    *
    * @internal
    */
@@ -147,10 +143,9 @@ export class RolldownBuild {
   }
 
   /**
-   * Resolves once the native terminal close settles (see
-   * {@linkcode __nativeCloseSettled}). Never rejects. Needed because a close()
-   * issued from inside an active closeBundle callback is acknowledged early,
-   * while the real close is still running.
+   * Resolves once {@linkcode __nativeCloseSettled} is true; never rejects.
+   * Needed because a close() issued from inside an active closeBundle callback
+   * is acknowledged early, while the real close is still running.
    *
    * @internal
    */
@@ -353,9 +348,8 @@ export class RolldownBuild {
     let nativeBuildEntered = false;
     let supersededCleanupErrors: unknown[] = [];
     // The native invalidate callback only fires after a successful generate,
-    // so a failed build — and the boxes writeBundle-era hooks retain after
-    // that callback — must be released when this build settles, whichever way
-    // it settles (no-op outside the threadless-WASI flavor).
+    // so the option boxes must be released on every settlement path below
+    // (no-op outside the threadless-WASI flavor).
     try {
       const nativeBuild = await this.#enterNativeBuild(operation, isWrite, option.bundlerOptions);
       nativeBuildEntered = true;
@@ -368,9 +362,8 @@ export class RolldownBuild {
       if (this.#latestBuildOperation !== operation) {
         if (nativeBuildEntered) {
           // A contended native failure settles before its deferred closeBundle
-          // so a nested output can release the operation barrier. Keep that
-          // prompt rejection while retiring this superseded worker pool only
-          // after the native failure-close phase has completed.
+          // so a nested output can release the operation barrier; keep that
+          // prompt rejection and retire this pool after the failure close.
           operation.failureClosePending = true;
           void this.#startWorkerStop(operation);
         } else {
@@ -455,10 +448,10 @@ export class RolldownBuild {
       const supersededCleanupErrors: unknown[] = [];
       if (previous?.settled) {
         try {
-          // Native entry synchronously installs this operation's bundle
-          // handle. Retire the previous workers only after that replacement
-          // is visible, so a failed retirement cannot leave native closeBundle
-          // targeting a partially terminated worker pool.
+          // Native entry synchronously installed this operation's bundle
+          // handle; retiring the previous workers only now keeps a failed
+          // retirement from leaving native closeBundle pointed at a partially
+          // terminated worker pool.
           await this.#stopWorkerOwner(previous);
         } catch (error) {
           supersededCleanupErrors.push(error);

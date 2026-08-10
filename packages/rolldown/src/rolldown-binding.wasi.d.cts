@@ -1504,12 +1504,9 @@ export interface TypeScriptOptions {
   rewriteImportExtensions?: 'rewrite' | 'remove' | boolean
 }
 /**
- * One JavaScript-held async runtime lifecycle lease.
- *
- * Every artifact runs the shared tokio-free runtime, whose lifecycle is tied
- * to the napi environment hooks rather than JavaScript-held leases. The lease
- * API remains a compatibility no-op because the generated WASI loaders still
- * acquire a lease at import and release it at teardown.
+ * A compatibility no-op: the async runtime's lifecycle follows the N-API
+ * environment, so `release()` does nothing. Kept because the generated WASI
+ * loaders still acquire a lease at import and release it at teardown.
  */
 export declare class BindingAsyncRuntimeLease {
   release(): void
@@ -1912,11 +1909,8 @@ export declare class TsconfigCache {
 }
 
 /**
- * Acquire one async runtime lifecycle lease.
- *
- * Every artifact uses automatic N-API environment lifecycle for the shared
- * runtime, so the resolved lease's `release()` is a no-op; the generated WASI
- * loaders still acquire and release leases around module use.
+ * Acquire an async runtime lifecycle lease. See `BindingAsyncRuntimeLease`:
+ * the lease is a no-op.
  */
 export declare function acquireAsyncRuntime(): Promise<BindingAsyncRuntimeLease>
 
@@ -2845,23 +2839,18 @@ export interface BindingResolveOptions {
 }
 
 /**
- * What this Rolldown binding IS -- backend, flavor, target -- and the
- * capabilities that follow from it. Values are compile-time facts plus the
- * resolved runtime snapshot; nothing re-reads the environment. Tests and
- * embedders query the artifact instead of inferring the build flavor from
- * env vars or error-message probes.
+ * What this binding is -- backend, flavor, target -- and the capabilities
+ * that follow from it. Never re-read from the environment.
  */
 export interface BindingRuntimeCapabilities {
   /**
-   * The scheduler the binding was compiled with: always 'shared' (the
-   * tokio-free shared runtime). The 'tokio' member of the union survives
-   * only for LEGACY bindings, whose JS support layer synthesizes
-   * `backend: 'tokio'` capability objects.
+   * The scheduler this binding was compiled with: always `'shared'`.
+   * `'tokio'` appears only on legacy bindings.
    */
   backend: 'tokio' | 'shared'
   /**
-   * The executor flavor actually in effect (post-validation; this reflects
-   * a pre-first-use `configureAsyncRuntime` override).
+   * The executor flavor in effect, including any pre-first-use
+   * `configureAsyncRuntime` override.
    */
   flavor: BindingRuntimeFlavor
   /**
@@ -2869,60 +2858,40 @@ export interface BindingRuntimeCapabilities {
    * 'wasi-threads' (`wasm32-wasip1-threads`).
    */
   target: 'native' | 'wasi' | 'wasi-threads'
-  /**
-   * Convenience: the binding is a WebAssembly/WASI artifact (`target !==
-   * 'native'`).
-   */
+  /** The binding is a WebAssembly/WASI artifact (`target !== 'native'`). */
   wasi: boolean
   /**
-   * The binding runs the shared async runtime: always true. Survives for
-   * LEGACY bindings, whose JS support layer synthesizes `false`.
+   * The binding runs the shared async runtime: always true, and false only
+   * on legacy bindings.
    */
   asyncRuntimeBuild: boolean
   /**
-   * The shared scheduler executes its work across multiple executor threads
-   * (`flavor === 'MultiThread'`). This describes the scheduler's own
-   * topology, not the whole process: on the native artifact Rolldown's
-   * data-parallel compute (Rayon) runs on a separate process-global pool
-   * sized from the CPU count regardless of flavor -- exactly as on every
-   * Tokio-era binding -- so `threads: false` does not mean single-threaded
-   * execution. Only the WebAssembly artifacts, which compile without Rayon,
-   * execute on a single lane.
+   * The scheduler spreads its work over several executor threads (`flavor
+   * === 'MultiThread'`). This describes the scheduler alone: on native
+   * artifacts Rolldown's data-parallel compute runs on a separate pool sized
+   * from the CPU count, so `false` does not mean single-threaded execution.
    */
   threads: boolean
   /**
-   * A timer facility backs `sleep_until` (the watch-mode debounce). This is
-   * true on the MultiThread flavor (executor-owned timer heap). On the
-   * CurrentThread flavor timers are delegated to the host event loop, so
-   * this reads true while a LIVE `registerTimerHost` registrant exists.
-   * Every public package entry that loads the binding registers a host
-   * driver per importing env at import, so through any supported entry the
-   * answer is true; a registrant whose env died (an exited worker) is
-   * evicted and does NOT count. Only a raw binding loaded outside the
-   * supported entries can observe false.
+   * A timer facility backs `sleep_until`, which the watch-mode debounce
+   * needs. Always true on MultiThread; on CurrentThread it is true while a
+   * live `registerTimerHost` registrant exists, which every public package
+   * entry installs at import.
    */
   timers: boolean
   /**
-   * Binding dev mode is supported by THIS RUNTIME: true when native work can
-   * progress on a MultiThread executor, false on CurrentThread where
-   * `BindingDevEngine::run()` cannot complete its initial build.
+   * Dev mode is supported by this runtime: true on MultiThread, false on
+   * CurrentThread.
    */
   devSupported: boolean
   /**
-   * Watch mode is supported by THIS ARTIFACT: static per artifact, true on
-   * both native flavors, false on every wasm artifact (watch on WASI stalls
-   * on the initial build). Deliberately independent of the live `timers`
-   * registration state -- it describes what the artifact can do, and every
-   * public entry registers the timer host the watch debounce needs before
-   * exposing any API.
+   * Watch mode is supported by this artifact: true on native, false on every
+   * wasm artifact. Fixed per artifact, independent of the live `timers` state.
    */
   watchSupported: boolean
   /**
-   * An arbitrary `block_on` entered from the JavaScript host thread may await
-   * a JavaScript continuation without starving that continuation. Currently
-   * false on every artifact: MultiThread keeps native pool work progressing,
-   * but a foreign `block_on` still parks Node's main event-loop thread. This
-   * can become true only with a proven host-pumping/non-parking mechanism.
+   * A `block_on` entered from the JavaScript thread may await a JavaScript
+   * continuation without starving it. Currently false on every artifact.
    */
   blockOnJsThreadSafe: boolean
 }
@@ -2932,9 +2901,8 @@ export interface BindingRuntimeConfig {
   workerThreads: number
   maxBlockingTasks: number
   /**
-   * Effective MultiThread drainer idle-linger budget in microseconds
-   * (`0` = lingering disabled). Reported for introspection parity; not
-   * settable through `configureAsyncRuntime`.
+   * MultiThread drainer idle-linger budget in microseconds (`0` disables
+   * lingering). Read-only: not settable through `configureAsyncRuntime`.
    */
   drainLingerUs: number
 }
@@ -3211,9 +3179,8 @@ export interface BindingWatchOption {
 export declare function collapseSourcemaps(sourcemapChain: Array<BindingSourcemap>): BindingJsonSourcemap
 
 /**
- * Override the shared async runtime's flavor and thread counts.
- *
- * Must be called before the first async binding call.
+ * Override the async runtime's flavor and thread counts. Must be called
+ * before the first async binding call.
  */
 export declare function configureAsyncRuntime(options: BindingRuntimeOptions): void
 
@@ -3245,10 +3212,8 @@ export type FilterTokenKind =  'Id'|
 'QueryValue';
 
 /**
- * Return the effective async runtime configuration.
- *
- * Reports the controller's validated options, including a pre-first-use
- * `configureAsyncRuntime` override. The environment is never re-read.
+ * Return the async runtime configuration in effect, including any
+ * pre-first-use `configureAsyncRuntime` override.
  */
 export declare function getAsyncRuntimeConfig(): BindingRuntimeConfig
 
@@ -3256,27 +3221,19 @@ export declare function getAsyncRuntimeConfig(): BindingRuntimeConfig
 export declare function getAsyncRuntimeMetrics(): BindingRuntimeMetrics
 
 /**
- * Return the native CurrentThread task-host ABI expected by the JavaScript
- * package before it invokes either async-runtime host registration. Version 4
- * reserves and validates an exact registration capability before host
- * installation performs side effects.
+ * Return the CurrentThread task-host ABI version this binding implements.
+ * Check it before calling either async-runtime host registration.
  */
 export declare function getCurrentThreadTaskHostContractVersion(): number
 
-/**
- * Report the loaded binding's runtime capabilities (see
- * `BindingRuntimeCapabilities`). Derived from compile-time cfg plus the
- * resolved runtime snapshot -- never from re-reading the environment.
- */
+/** Report the loaded binding's runtime capabilities. */
 export declare function getRuntimeCapabilities(): BindingRuntimeCapabilities
 
 export declare function initTraceSubscriber(): TraceSubscriberGuard | null
 
 /**
- * Return whether one exact CurrentThread task- or timer-host registration is
- * still live. The JavaScript package revalidates its process-global marker on
- * every module evaluation so native eviction cannot leave a stale installed
- * bit that permanently suppresses replacement registration.
+ * Return whether the given CurrentThread task- or timer-host registration is
+ * still live. A registration already evicted natively reads false.
  */
 export declare function isCurrentThreadHostRegistrationActive(registrationHigh: number, registrationLow: number): boolean
 
@@ -3339,66 +3296,52 @@ export interface PreRenderedChunk {
 }
 
 /**
- * Install a native-owned host turn used to poll CurrentThread runnables
- * without re-entering arbitrary future waker locks. Called once per importing
- * environment. JavaScript callbacks are rejected synchronously.
+ * Install the native host turn that polls CurrentThread runnables. Call it
+ * once per importing environment; passing a JavaScript callback throws.
  */
 export declare function registerCurrentThreadTaskHost(registrationHigh: number, registrationLow: number, dispatch?: never): void
 
 export declare function registerPlugins(id: number, plugins: Array<BindingPluginWithIndex>): void
 
 /**
- * Install the host timer callback backing the shared async runtime's
- * CurrentThread timers (watch-mode debounce). Called at import by every
- * binding-loading JS entry with paired setTimeout/clearTimeout callbacks; each
- * importing env (main thread and workers alike) registers its own host, and
- * every live host receives each timer.
+ * Install the host timer callbacks (a `setTimeout`/`clearTimeout` pair) that
+ * back CurrentThread timers, such as the watch-mode debounce. Each importing
+ * environment registers its own host, and every live host receives each timer.
  */
 export declare function registerTimerHost(registrationHigh: number, registrationLow: number, schedule: (id: number, ms: number) => Promise<void>, cancel: (id: number) => void): void
 
 /**
- * Reserve an exact CurrentThread host registration capability before either
- * task or timer installation performs side effects. The JavaScript package
- * validates the returned words and passes them back to one registration call.
+ * Reserve a CurrentThread host registration capability. The returned words
+ * must be passed back to exactly one host registration call.
  */
 export declare function reserveCurrentThreadHostRegistration(): BindingHostRegistration
 
 /**
- * Reset cumulative async runtime event counters to zero.
- *
- * Live gauges and their lifetime high-water marks are preserved so active
- * task guards can complete without corrupting concurrent observations.
+ * Reset the cumulative async runtime counters to zero. Live gauges and their
+ * lifetime high-water marks are left untouched.
  */
 export declare function resetAsyncRuntimeMetrics(): void
 
 export declare function resolveTsconfig(filename: string, cache: TsconfigCache | undefined | null, yarnPnp: boolean): BindingTsconfigResult | null
 
 /**
- * Shutdown one manually retained async runtime owner.
- *
- * Every artifact uses automatic N-API environment lifecycle for the shared
- * runtime; this compatibility API remains a no-op.
+ * A no-op kept for compatibility; the async runtime follows the N-API
+ * environment lifecycle.
  */
 export declare function shutdownAsyncRuntime(): void
 
 /**
- * Start and manually retain one async runtime owner.
- *
- * Every artifact uses automatic N-API environment lifecycle for the shared
- * runtime; this compatibility API remains a no-op.
+ * A no-op kept for compatibility; the async runtime follows the N-API
+ * environment lifecycle.
  */
 export declare function startAsyncRuntime(): void
 
-/**
- * Evict exactly one native host installed by `registerCurrentThreadTaskHost`.
- * Managed workerd disposal uses this before environment cleanup so a later
- * throwing cleanup hook cannot leave the process-global driver selected.
- */
+/** Evict one host installed by `registerCurrentThreadTaskHost`. */
 export declare function unregisterCurrentThreadTaskHost(registrationHigh: number, registrationLow: number): void
 
 /**
- * Evict exactly one callback installed by `registerTimerHost`.
- * Pending sleeps are woken so they can reselect another live environment.
+ * Evict one callback installed by `registerTimerHost`; pending sleeps are
+ * woken so they can reselect another live environment.
  */
 export declare function unregisterTimerHost(registrationHigh: number, registrationLow: number): void
 

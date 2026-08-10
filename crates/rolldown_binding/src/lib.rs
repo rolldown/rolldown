@@ -57,12 +57,9 @@ pub mod worker_manager;
 pub use oxc_parser_napi;
 pub use oxc_resolver_napi;
 
-/// One JavaScript-held async runtime lifecycle lease.
-///
-/// Every artifact runs the shared tokio-free runtime, whose lifecycle is tied
-/// to the napi environment hooks rather than JavaScript-held leases. The lease
-/// API remains a compatibility no-op because the generated WASI loaders still
-/// acquire a lease at import and release it at teardown.
+/// A compatibility no-op: the async runtime's lifecycle follows the N-API
+/// environment, so `release()` does nothing. Kept because the generated WASI
+/// loaders still acquire a lease at import and release it at teardown.
 #[napi]
 pub struct BindingAsyncRuntimeLease {}
 
@@ -89,11 +86,8 @@ impl napi::Task for AcquireAsyncRuntimeTask {
 }
 
 #[napi]
-/// Acquire one async runtime lifecycle lease.
-///
-/// Every artifact uses automatic N-API environment lifecycle for the shared
-/// runtime, so the resolved lease's `release()` is a no-op; the generated WASI
-/// loaders still acquire and release leases around module use.
+/// Acquire an async runtime lifecycle lease. See `BindingAsyncRuntimeLease`:
+/// the lease is a no-op.
 pub fn acquire_async_runtime(
   _env: &napi::Env,
 ) -> napi::bindgen_prelude::AsyncTask<AcquireAsyncRuntimeTask> {
@@ -101,17 +95,13 @@ pub fn acquire_async_runtime(
 }
 
 #[napi]
-/// Shutdown one manually retained async runtime owner.
-///
-/// Every artifact uses automatic N-API environment lifecycle for the shared
-/// runtime; this compatibility API remains a no-op.
+/// A no-op kept for compatibility; the async runtime follows the N-API
+/// environment lifecycle.
 pub fn shutdown_async_runtime() {}
 
 #[napi]
-/// Start and manually retain one async runtime owner.
-///
-/// Every artifact uses automatic N-API environment lifecycle for the shared
-/// runtime; this compatibility API remains a no-op.
+/// A no-op kept for compatibility; the async runtime follows the N-API
+/// environment lifecycle.
 pub fn start_async_runtime() {}
 
 #[cfg(test)]

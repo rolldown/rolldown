@@ -168,9 +168,8 @@ pub struct BindingRuntimeConfig {
   pub flavor: BindingRuntimeFlavor,
   pub worker_threads: u32,
   pub max_blocking_tasks: u32,
-  /// Effective MultiThread drainer idle-linger budget in microseconds
-  /// (`0` = lingering disabled). Reported for introspection parity; not
-  /// settable through `configureAsyncRuntime`.
+  /// MultiThread drainer idle-linger budget in microseconds (`0` disables
+  /// lingering). Read-only: not settable through `configureAsyncRuntime`.
   pub drain_linger_us: u32,
 }
 
@@ -245,19 +244,16 @@ fn safe_js_number(value: u64) -> f64 {
 }
 
 #[napi]
-/// Override the shared async runtime's flavor and thread counts.
-///
-/// Must be called before the first async binding call.
+/// Override the async runtime's flavor and thread counts. Must be called
+/// before the first async binding call.
 pub fn configure_async_runtime(options: BindingRuntimeOptions) -> napi::Result<()> {
   configure_partial(options.try_into()?)
     .map_err(|error| napi::Error::from_reason(error.to_string()))
 }
 
 #[napi]
-/// Return the effective async runtime configuration.
-///
-/// Reports the controller's validated options, including a pre-first-use
-/// `configureAsyncRuntime` override. The environment is never re-read.
+/// Return the async runtime configuration in effect, including any
+/// pre-first-use `configureAsyncRuntime` override.
 pub fn get_async_runtime_config() -> BindingRuntimeConfig {
   configured_options().into()
 }
@@ -482,10 +478,8 @@ pub fn get_async_runtime_metrics() -> BindingRuntimeMetrics {
 }
 
 #[napi]
-/// Reset cumulative async runtime event counters to zero.
-///
-/// Live gauges and their lifetime high-water marks are preserved so active
-/// task guards can complete without corrupting concurrent observations.
+/// Reset the cumulative async runtime counters to zero. Live gauges and their
+/// lifetime high-water marks are left untouched.
 pub fn reset_async_runtime_metrics() {
   reset_metrics();
 }
@@ -555,9 +549,8 @@ fn release_host_registration_id(id: u64) {
 }
 
 #[napi]
-/// Reserve an exact CurrentThread host registration capability before either
-/// task or timer installation performs side effects. The JavaScript package
-/// validates the returned words and passes them back to one registration call.
+/// Reserve a CurrentThread host registration capability. The returned words
+/// must be passed back to exactly one host registration call.
 pub fn reserve_current_thread_host_registration() -> napi::Result<BindingHostRegistration> {
   reserve_host_registration_id().map(BindingHostRegistration::from_id)
 }
@@ -969,19 +962,15 @@ fn reject_current_thread_task_host_callback(dispatch: Option<Unknown<'_>>) -> na
 const CURRENT_THREAD_TASK_HOST_CONTRACT_VERSION: u32 = 4;
 
 #[napi]
-/// Return the native CurrentThread task-host ABI expected by the JavaScript
-/// package before it invokes either async-runtime host registration. Version 4
-/// reserves and validates an exact registration capability before host
-/// installation performs side effects.
+/// Return the CurrentThread task-host ABI version this binding implements.
+/// Check it before calling either async-runtime host registration.
 pub fn get_current_thread_task_host_contract_version() -> u32 {
   CURRENT_THREAD_TASK_HOST_CONTRACT_VERSION
 }
 
 #[napi]
-/// Return whether one exact CurrentThread task- or timer-host registration is
-/// still live. The JavaScript package revalidates its process-global marker on
-/// every module evaluation so native eviction cannot leave a stale installed
-/// bit that permanently suppresses replacement registration.
+/// Return whether the given CurrentThread task- or timer-host registration is
+/// still live. A registration already evicted natively reads false.
 pub fn is_current_thread_host_registration_active(
   registration_high: u32,
   registration_low: u32,
@@ -1033,9 +1022,8 @@ fn install_host_driver_registration<T>(
 }
 
 #[napi(ts_args_type = "registrationHigh: number, registrationLow: number, dispatch?: never")]
-/// Install a native-owned host turn used to poll CurrentThread runnables
-/// without re-entering arbitrary future waker locks. Called once per importing
-/// environment. JavaScript callbacks are rejected synchronously.
+/// Install the native host turn that polls CurrentThread runnables. Call it
+/// once per importing environment; passing a JavaScript callback throws.
 pub fn register_current_thread_task_host(
   env: &napi::Env,
   registration_high: u32,
@@ -1070,9 +1058,7 @@ pub fn register_current_thread_task_host(
 }
 
 #[napi]
-/// Evict exactly one native host installed by `registerCurrentThreadTaskHost`.
-/// Managed workerd disposal uses this before environment cleanup so a later
-/// throwing cleanup hook cannot leave the process-global driver selected.
+/// Evict one host installed by `registerCurrentThreadTaskHost`.
 pub fn unregister_current_thread_task_host(registration_high: u32, registration_low: u32) {
   let id = BindingHostRegistration::id(registration_high, registration_low);
   release_host_registration_id(id);
@@ -1942,11 +1928,9 @@ impl TimerDriver for JsTimerHost {
 #[napi(
   ts_args_type = "registrationHigh: number, registrationLow: number, schedule: (id: number, ms: number) => Promise<void>, cancel: (id: number) => void"
 )]
-/// Install the host timer callback backing the shared async runtime's
-/// CurrentThread timers (watch-mode debounce). Called at import by every
-/// binding-loading JS entry with paired setTimeout/clearTimeout callbacks; each
-/// importing env (main thread and workers alike) registers its own host, and
-/// every live host receives each timer.
+/// Install the host timer callbacks (a `setTimeout`/`clearTimeout` pair) that
+/// back CurrentThread timers, such as the watch-mode debounce. Each importing
+/// environment registers its own host, and every live host receives each timer.
 pub fn register_timer_host(
   env: &napi::Env,
   registration_high: u32,
@@ -2001,8 +1985,8 @@ pub fn register_timer_host(
 }
 
 #[napi]
-/// Evict exactly one callback installed by `registerTimerHost`.
-/// Pending sleeps are woken so they can reselect another live environment.
+/// Evict one callback installed by `registerTimerHost`; pending sleeps are
+/// woken so they can reselect another live environment.
 pub fn unregister_timer_host(registration_high: u32, registration_low: u32) {
   let id = BindingHostRegistration::id(registration_high, registration_low);
   release_host_registration_id(id);
@@ -2130,76 +2114,51 @@ pub fn start_async_runtime_for_submission_failure_test() -> napi::Result<()> {
   start().map_err(|error| napi::Error::from_reason(error.to_string()))
 }
 
-/// What this Rolldown binding IS -- backend, flavor, target -- and the
-/// capabilities that follow from it. Values are compile-time facts plus the
-/// resolved runtime snapshot; nothing re-reads the environment. Tests and
-/// embedders query the artifact instead of inferring the build flavor from
-/// env vars or error-message probes.
+/// What this binding is -- backend, flavor, target -- and the capabilities
+/// that follow from it. Never re-read from the environment.
 // Independent capability flags on a napi object consumed from JS, not state to model.
 #[expect(clippy::struct_excessive_bools)]
 #[napi(object)]
 pub struct BindingRuntimeCapabilities {
-  /// The scheduler the binding was compiled with: always 'shared' (the
-  /// tokio-free shared runtime). The 'tokio' member of the union survives
-  /// only for LEGACY bindings, whose JS support layer synthesizes
-  /// `backend: 'tokio'` capability objects.
+  /// The scheduler this binding was compiled with: always `'shared'`.
+  /// `'tokio'` appears only on legacy bindings.
   #[napi(ts_type = "'tokio' | 'shared'")]
   pub backend: String,
-  /// The executor flavor actually in effect (post-validation; this reflects
-  /// a pre-first-use `configureAsyncRuntime` override).
+  /// The executor flavor in effect, including any pre-first-use
+  /// `configureAsyncRuntime` override.
   pub flavor: BindingRuntimeFlavor,
   /// The compile target: 'native', 'wasi' (threadless `wasm32-wasip1`) or
   /// 'wasi-threads' (`wasm32-wasip1-threads`).
   #[napi(ts_type = "'native' | 'wasi' | 'wasi-threads'")]
   pub target: String,
-  /// Convenience: the binding is a WebAssembly/WASI artifact (`target !==
-  /// 'native'`).
+  /// The binding is a WebAssembly/WASI artifact (`target !== 'native'`).
   pub wasi: bool,
-  /// The binding runs the shared async runtime: always true. Survives for
-  /// LEGACY bindings, whose JS support layer synthesizes `false`.
+  /// The binding runs the shared async runtime: always true, and false only
+  /// on legacy bindings.
   pub async_runtime_build: bool,
-  /// The shared scheduler executes its work across multiple executor threads
-  /// (`flavor === 'MultiThread'`). This describes the scheduler's own
-  /// topology, not the whole process: on the native artifact Rolldown's
-  /// data-parallel compute (Rayon) runs on a separate process-global pool
-  /// sized from the CPU count regardless of flavor -- exactly as on every
-  /// Tokio-era binding -- so `threads: false` does not mean single-threaded
-  /// execution. Only the WebAssembly artifacts, which compile without Rayon,
-  /// execute on a single lane.
+  /// The scheduler spreads its work over several executor threads (`flavor
+  /// === 'MultiThread'`). This describes the scheduler alone: on native
+  /// artifacts Rolldown's data-parallel compute runs on a separate pool sized
+  /// from the CPU count, so `false` does not mean single-threaded execution.
   pub threads: bool,
-  /// A timer facility backs `sleep_until` (the watch-mode debounce). This is
-  /// true on the MultiThread flavor (executor-owned timer heap). On the
-  /// CurrentThread flavor timers are delegated to the host event loop, so
-  /// this reads true while a LIVE `registerTimerHost` registrant exists.
-  /// Every public package entry that loads the binding registers a host
-  /// driver per importing env at import, so through any supported entry the
-  /// answer is true; a registrant whose env died (an exited worker) is
-  /// evicted and does NOT count. Only a raw binding loaded outside the
-  /// supported entries can observe false.
+  /// A timer facility backs `sleep_until`, which the watch-mode debounce
+  /// needs. Always true on MultiThread; on CurrentThread it is true while a
+  /// live `registerTimerHost` registrant exists, which every public package
+  /// entry installs at import.
   pub timers: bool,
-  /// Binding dev mode is supported by THIS RUNTIME: true when native work can
-  /// progress on a MultiThread executor, false on CurrentThread where
-  /// `BindingDevEngine::run()` cannot complete its initial build.
+  /// Dev mode is supported by this runtime: true on MultiThread, false on
+  /// CurrentThread.
   pub dev_supported: bool,
-  /// Watch mode is supported by THIS ARTIFACT: static per artifact, true on
-  /// both native flavors, false on every wasm artifact (watch on WASI stalls
-  /// on the initial build). Deliberately independent of the live `timers`
-  /// registration state -- it describes what the artifact can do, and every
-  /// public entry registers the timer host the watch debounce needs before
-  /// exposing any API.
+  /// Watch mode is supported by this artifact: true on native, false on every
+  /// wasm artifact. Fixed per artifact, independent of the live `timers` state.
   pub watch_supported: bool,
-  /// An arbitrary `block_on` entered from the JavaScript host thread may await
-  /// a JavaScript continuation without starving that continuation. Currently
-  /// false on every artifact: MultiThread keeps native pool work progressing,
-  /// but a foreign `block_on` still parks Node's main event-loop thread. This
-  /// can become true only with a proven host-pumping/non-parking mechanism.
+  /// A `block_on` entered from the JavaScript thread may await a JavaScript
+  /// continuation without starving it. Currently false on every artifact.
   pub block_on_js_thread_safe: bool,
 }
 
 #[napi]
-/// Report the loaded binding's runtime capabilities (see
-/// `BindingRuntimeCapabilities`). Derived from compile-time cfg plus the
-/// resolved runtime snapshot -- never from re-reading the environment.
+/// Report the loaded binding's runtime capabilities.
 pub fn get_runtime_capabilities() -> BindingRuntimeCapabilities {
   let resolved = resolved_runtime_config();
   let target = match resolved.target {

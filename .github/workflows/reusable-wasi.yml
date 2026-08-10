@@ -38,7 +38,11 @@ jobs:
       - name: Add WASI targets
         run: rustup target add wasm32-wasip1 wasm32-wasip1-threads
 
-      - name: Check shared runtime on threadless WASI
+      # `napi-build` requires `EMNAPI_LINK_DIR`, and `RUSTC` must be the real binary rather
+      # than the rustup shim so it can locate `crt1-reactor.o`. Both are needed by every
+      # direct `cargo check` below, because build scripts run even without linking.
+      # `emnapi` is a transitive dependency of `@napi-rs/cli`, so resolve it through the CLI.
+      - name: Resolve emnapi link directory
         run: |
           emnapi_package_dir="$(
             cd packages/rolldown
@@ -49,12 +53,17 @@ jobs:
           console.log(dirname(cliRequire.resolve('emnapi/package.json')))
           NODE
           )"
-          RUSTC="$(rustup which rustc)" \
-            EMNAPI_LINK_DIR="$emnapi_package_dir/lib/wasm32-wasip1" \
+          {
+            echo "EMNAPI_DIR=$emnapi_package_dir"
+            echo "RUSTC_BIN=$(rustup which rustc)"
+          } >> "$GITHUB_ENV"
+
+      - name: Check shared runtime on threadless WASI
+        run: |
+          RUSTC="$RUSTC_BIN" EMNAPI_LINK_DIR="$EMNAPI_DIR/lib/wasm32-wasip1" \
             cargo check -p rolldown_binding --target wasm32-wasip1 \
               --no-default-features --features async-runtime --locked
-          RUSTC="$(rustup which rustc)" \
-            EMNAPI_LINK_DIR="$emnapi_package_dir/lib/wasm32-wasip1" \
+          RUSTC="$RUSTC_BIN" EMNAPI_LINK_DIR="$EMNAPI_DIR/lib/wasm32-wasip1" \
             cargo check -p rolldown_binding --target wasm32-wasip1 \
               --features async-runtime --locked
 
@@ -62,18 +71,8 @@ jobs:
       # a runtime-feature-less build must hit the `compile_error!` in its `src/lib.rs`.
       - name: Reject non-async-runtime builds on threadless WASI
         run: |
-          emnapi_package_dir="$(
-            cd packages/rolldown
-            node - <<'NODE'
-          const { createRequire } = require('node:module')
-          const { dirname } = require('node:path')
-          const cliRequire = createRequire(require.resolve('@napi-rs/cli/package.json'))
-          console.log(dirname(cliRequire.resolve('emnapi/package.json')))
-          NODE
-          )"
           if output="$(
-            RUSTC="$(rustup which rustc)" \
-              EMNAPI_LINK_DIR="$emnapi_package_dir/lib/wasm32-wasip1" \
+            RUSTC="$RUSTC_BIN" EMNAPI_LINK_DIR="$EMNAPI_DIR/lib/wasm32-wasip1" \
               cargo check -p rolldown_binding --target wasm32-wasip1 \
                 --no-default-features --features tokio-runtime --locked 2>&1
           )"; then
@@ -83,8 +82,7 @@ jobs:
           printf '%s\n' "$output"
           grep -F "does not contain this feature: tokio-runtime" <<<"$output"
           if output="$(
-            RUSTC="$(rustup which rustc)" \
-              EMNAPI_LINK_DIR="$emnapi_package_dir/lib/wasm32-wasip1" \
+            RUSTC="$RUSTC_BIN" EMNAPI_LINK_DIR="$EMNAPI_DIR/lib/wasm32-wasip1" \
               cargo check -p rolldown_binding --target wasm32-wasip1 \
                 --no-default-features --locked 2>&1
           )"; then
@@ -96,17 +94,7 @@ jobs:
 
       - name: Check shared runtime on threaded WASI
         run: |
-          emnapi_package_dir="$(
-            cd packages/rolldown
-            node - <<'NODE'
-          const { createRequire } = require('node:module')
-          const { dirname } = require('node:path')
-          const cliRequire = createRequire(require.resolve('@napi-rs/cli/package.json'))
-          console.log(dirname(cliRequire.resolve('emnapi/package.json')))
-          NODE
-          )"
-          RUSTC="$(rustup which rustc)" \
-            EMNAPI_LINK_DIR="$emnapi_package_dir/lib/wasm32-wasip1-threads" \
+          RUSTC="$RUSTC_BIN" EMNAPI_LINK_DIR="$EMNAPI_DIR/lib/wasm32-wasip1-threads" \
             cargo check -p rolldown_binding --target wasm32-wasip1-threads \
               --no-default-features --features async-runtime --locked
 

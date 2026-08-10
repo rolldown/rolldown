@@ -2459,12 +2459,16 @@ try {
       default: `./${generatedRootFiles.wasmEntry}`,
     },
   };
+  // The staged manifest declares `publishConfig.exports`, so pre-publish
+  // generates the facade subpaths only in that publish-effective map (pnpm
+  // replaces `exports` with it while packing) and must leave the raw dev
+  // `exports` map untouched.
+  assert.deepEqual(
+    generatedRootManifest.exports,
+    stagedRootManifest.exports,
+    'pre-publish must leave the raw dev exports map untouched when publishConfig.exports is declared',
+  );
   for (const [subpath, expectedExport] of Object.entries(expectedRootExports)) {
-    assert.deepEqual(
-      generatedRootManifest.exports?.[subpath],
-      expectedExport,
-      `pre-publish must generate exports[${JSON.stringify(subpath)}]`,
-    );
     assert.deepEqual(
       generatedRootManifest.publishConfig?.exports?.[subpath],
       expectedExport,
@@ -2479,6 +2483,16 @@ try {
     );
   }
   const rootTarball = await pack(stagedRootDir, packDir);
+  // pnpm's pack rewrite is what ships the generated facade subpaths: the
+  // packed manifest's `exports` must be exactly the publish-effective map.
+  const packedRootManifest = JSON.parse(
+    (await run('tar', ['-xzOf', rootTarball, 'package/package.json'])).stdout,
+  );
+  assert.deepEqual(
+    packedRootManifest.exports,
+    generatedRootManifest.publishConfig.exports,
+    'packed root manifest must ship publishConfig.exports as its exports map',
+  );
 
   const rootConsumer = path.join(tempDir, 'root-consumer');
   await mkdir(rootConsumer);

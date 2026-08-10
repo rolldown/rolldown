@@ -163,6 +163,7 @@
   },
   "napi": {
     "binaryName": "rolldown-binding",
+    "rootPublisher": "pnpm",
     "dtsHeader": "type MaybePromise<T> = T | Promise<T>\ntype Nullable<T> = T | null | undefined\ntype VoidNullable<T = void> = T | null | undefined | void\nexport type BindingStringOrRegex = string | RegExp\nexport type BindingResult<T> = { errors: BindingError[], isBindingErrors: boolean } | T\nexport type BindingErrorsOr<T> = BindingResult<T>\n\n",
     "packageName": "@rolldown/binding",
     "targets": [

@@ -49,21 +49,12 @@ impl PackageJson {
   pub fn check_side_effects_for(&self, module_path: &str) -> Option<bool> {
     let side_effects = self.side_effects.as_ref()?;
     // Is it necessary to convert module_path to relative path?
-    // `sideEffects` is a positive allowlist, so a leading-`!` entry never marks a module as
-    // side-effectful. Handing it to `fast_glob` would instead match nearly every path that
-    // does not match the remainder of the pattern.
     match side_effects {
       SideEffects::Bool(s) => Some(*s),
-      SideEffects::String(pattern) => Some(
-        !pattern.starts_with('!')
-          && glob_match_with_normalized_pattern(pattern.as_str(), module_path),
-      ),
-      SideEffects::Array(patterns) => Some(
-        patterns
-          .iter()
-          .filter(|pattern| !pattern.starts_with('!'))
-          .any(|pattern| glob_match_with_normalized_pattern(pattern, module_path)),
-      ),
+      SideEffects::String(p) => Some(glob_match_with_normalized_pattern(p.as_str(), module_path)),
+      SideEffects::Array(pats) => {
+        Some(pats.iter().any(|p| glob_match_with_normalized_pattern(p.as_str(), module_path)))
+      }
     }
   }
 }
@@ -107,5 +98,14 @@ mod tests {
     let negative_string =
       package_with_side_effects(SideEffects::String("!**/excluded/**".to_string()));
     assert_eq!(negative_string.check_side_effects_for("src/index.mjs"), Some(false));
+  }
+
+  #[test]
+  fn leading_bang_patterns_match_literally() {
+    let package =
+      package_with_side_effects(SideEffects::Array(vec!["!weird/dir/effect.js".to_string()]));
+
+    assert_eq!(package.check_side_effects_for("!weird/dir/effect.js"), Some(true));
+    assert_eq!(package.check_side_effects_for("weird/dir/effect.js"), Some(false));
   }
 }

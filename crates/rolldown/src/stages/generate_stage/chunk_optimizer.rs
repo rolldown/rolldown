@@ -716,8 +716,6 @@ impl GenerateStage<'_> {
   /// new exports to the entry chunk. A module is safe to merge if:
   /// 1. It has no exports of its own (purely internal implementation code), OR
   /// 2. All its exports are already part of the entry's resolved exports (re-exported by the entry)
-  ///
-  /// Re-exports owned by modules outside the merge cannot widen the chunk's signature.
   pub(super) fn can_merge_without_changing_entry_signature(
     &self,
     chunk: &Chunk,

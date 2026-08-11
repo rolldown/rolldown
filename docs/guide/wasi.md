@@ -151,7 +151,7 @@ instance-lifecycle data, not committed platform memory.
 Cloudflare Workers limits the JavaScript heap and Wasm allocations in an
 isolate to 128 MB. Before production use:
 
-1. Run `node scripts/misc/check-workerd-memory.mjs` as a local lifecycle and
+1. Run `node packages/workerd-tests/memory.mjs` as a local lifecycle and
    RSS regression canary.
 2. Exercise representative bundles with `wrangler dev`; open DevTools with
    `D` and take memory snapshots.

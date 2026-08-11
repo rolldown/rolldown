@@ -55,7 +55,7 @@
       // dist bundles these runtimes, so nothing imports them by name. They stay
       // declared on purpose: the .wasm links the emnapi 2.0.0-alpha C archives,
       // so a consumer resolving a v1 runtime is an ABI mismatch. These pins are
-      // the ABI line, and scripts/misc/check-workerd-packed-consumer.mjs asserts
+      // the ABI line, and scripts/wasi/check-workerd-packed-consumer.mjs asserts
       // the packed manifest still carries them at these exact versions.
       "ignoreDependencies": ["@emnapi/core", "@emnapi/runtime", "@napi-rs/wasm-runtime"],
     },
@@ -105,13 +105,15 @@
     "packages/browser-tests": {
       "ignore": ["tests/fixtures/**"], // mounted into the container and built there, not here
     },
-    "scripts": {
-      "entry": ["misc/**", "lint/index.ts"],
-      // misc/workerd-suite/worker.js runs inside workerd, not Node. Its two
-      // sibling specifiers are supplied at runtime by the Miniflare `modules`
-      // list in misc/check-workerd-suite.mjs (they point at
-      // packages/browser/dist), so they are deliberately unresolvable here.
+    "packages/workerd-tests": {
+      "entry": ["memory.mjs", "worker.js"],
+      // worker.js runs inside workerd, not Node. Its two sibling specifiers are
+      // supplied at runtime by the Miniflare `modules` list in suite.mjs (they
+      // point at packages/browser/dist), so they are deliberately unresolvable here.
       "ignoreUnresolved": ["./workerd.browser.mjs", "./rolldown-binding.wasm32-wasip1.wasm"],
+    },
+    "scripts": {
+      "entry": ["misc/**", "wasi/**", "lint/index.ts"],
     },
     "packages/test-dev-server/tests/fixtures/*": {
       "entry": ["dev.config.mjs", "src/*.js"], // no @rolldown/test-dev-server plugin

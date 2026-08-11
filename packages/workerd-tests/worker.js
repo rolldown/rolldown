@@ -1,4 +1,4 @@
-// The worker half of `scripts/misc/check-workerd-suite.mjs`: every line here
+// The worker half of `packages/workerd-tests/suite.mjs`: every line here
 // executes INSIDE real workerd, the driver only dispatches routes and asserts on
 // the JSON reports. The sibling specifiers below are supplied by the driver's
 // explicit Miniflare `modules` list, so they resolve to `@rolldown/browser`'s

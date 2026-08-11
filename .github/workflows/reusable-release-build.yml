@@ -260,16 +260,16 @@ jobs:
       # Publish-path guard: a dropped loader or wasm in the browser dist must fail here,
       # not after publish.
       - name: Assert `@rolldown/browser` WASI dist file set
-        run: node scripts/misc/check-wasi-dist-files.mjs single packages/browser/dist
+        run: node scripts/wasi/check-wasi-dist-files.mjs single packages/browser/dist
 
       - name: Assert browser CurrentThread timer registration
-        run: node scripts/misc/check-browser-runtime-contract.mjs packages/browser/dist
+        run: node packages/browser-tests/runtime-contract.mjs packages/browser/dist
 
       - name: Test packed browser package in Wrangler and Miniflare
-        run: node scripts/misc/check-workerd-packed-consumer.mjs
+        run: node scripts/wasi/check-workerd-packed-consumer.mjs
 
       - name: Exercise published workerd entry lifecycle and memory canary
-        run: node --expose-gc scripts/misc/check-workerd-memory.mjs --loader=packages/browser/dist/workerd.mjs --wasm=packages/browser/dist/rolldown-binding.wasm32-wasip1.wasm --max-rss-growth-mb=128
+        run: node --expose-gc packages/workerd-tests/memory.mjs --loader=packages/browser/dist/workerd.mjs --wasm=packages/browser/dist/rolldown-binding.wasm32-wasip1.wasm --max-rss-growth-mb=128
 
       - name: Upload `@rolldown/browser` Artifact
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1

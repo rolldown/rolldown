@@ -447,18 +447,18 @@ jobs:
         run: just build-browser
 
       - name: Assert browser CurrentThread timer registration
-        run: node scripts/misc/check-browser-runtime-contract.mjs packages/browser/dist
+        run: node packages/browser-tests/runtime-contract.mjs packages/browser/dist
 
       - name: Test packed browser package in Wrangler and Miniflare
-        run: node scripts/misc/check-workerd-packed-consumer.mjs
+        run: node scripts/wasi/check-workerd-packed-consumer.mjs
 
-      # Covers what `check-workerd-memory.mjs` cannot: the per-rebuild Wasm memory slope
+      # Covers what `packages/workerd-tests/memory.mjs` cannot: the per-rebuild Wasm memory slope
       # WITH plugin hooks. Deliberately not copied into reusable-release-build.yml —
       # that lane builds a RELEASE wasm and these budgets were measured on the DEBUG one.
       - name: Test @rolldown/browser/workerd end-to-end in real workerd
         # --rounds=20 shrinks the slope quantum to ~0.0037 MiB/rebuild, giving the
         # moduleBoxDelta control (threshold 0.014) margin; the budget bands are round-invariant.
-        run: node scripts/misc/check-workerd-suite.mjs --rounds=20
+        run: node packages/workerd-tests/suite.mjs --rounds=20
 
       # `just build-browser` regenerates the wasip1 loaders byte-identically, so the only
       # expected drift is binding.d.cts (feature-gated doc comments). Restore it so the

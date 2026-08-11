@@ -562,6 +562,9 @@ importers:
       '@webcontainer/test':
         specifier: ^0.3.0
         version: 0.3.0(vitest@4.1.10)
+      acorn:
+        specifier: 'catalog:'
+        version: 8.17.0
       playwright:
         specifier: ^1.62.0
         version: 1.62.1
@@ -1077,6 +1080,12 @@ importers:
       tinyexec:
         specifier: 'catalog:'
         version: 1.2.4
+
+  packages/workerd-tests:
+    devDependencies:
+      miniflare:
+        specifier: 'catalog:'
+        version: 4.20260701.0
 
   scripts:
     dependencies:

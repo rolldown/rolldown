@@ -4,7 +4,7 @@
 // ships without it while every build stays green. This guard holds its OWN copy
 // of the canonical sets so that drift fails loudly here.
 //
-// Usage: node scripts/misc/check-wasi-dist-files.mjs <threaded|single> [distDir]
+// Usage: node scripts/wasi/check-wasi-dist-files.mjs <threaded|single> [distDir]
 //   flavor   threaded = wasm32-wasip1-threads dist (legacy `wasi` names)
 //            single   = wasm32-wasip1 dist (`wasip1` names, deferred loader,
 //                       no worker scripts)
@@ -45,7 +45,7 @@ const WASI_ARTIFACT_RE = /^rolldown-binding\..*wasi|^wasi-worker|\.wasm$/;
 
 const [flavor, distDirArg] = process.argv.slice(2);
 if (flavor !== 'threaded' && flavor !== 'single') {
-  console.error('Usage: node scripts/misc/check-wasi-dist-files.mjs <threaded|single> [distDir]');
+  console.error('Usage: node scripts/wasi/check-wasi-dist-files.mjs <threaded|single> [distDir]');
   process.exit(2);
 }
 

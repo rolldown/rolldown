@@ -32,7 +32,7 @@ for (const bindingPkg of BINDING_PKGS) {
 
 if (failed) {
   console.error(
-    'Run scripts/misc/stage-wasi-packages.mjs after downloading both bundled loader artifacts.',
+    'Run scripts/wasi/stage-wasi-packages.mjs after downloading both bundled loader artifacts.',
   );
   process.exit(1);
 }

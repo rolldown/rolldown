@@ -6,7 +6,7 @@
 // collection, which statically scans the entry and rejects the workerd entry's
 // GUARDED dynamic `import('node:async_hooks')` at config time. The suite runs
 // against `packages/browser/dist` directly; the wrangler/packaging path is
-// covered by `scripts/misc/check-workerd-packed-consumer.mjs`.
+// covered by `scripts/wasi/check-workerd-packed-consumer.mjs`.
 import assert from 'node:assert/strict';
 import { existsSync } from 'node:fs';
 import { readFile } from 'node:fs/promises';
@@ -168,7 +168,7 @@ const SLOPE_FLOOR_RATIO = 0.75;
 // missing artifact is a hard failure that names the command that produces it.
 const workerdEntry = path.join(distDir, 'workerd.browser.mjs');
 const wasmBinary = path.join(distDir, 'rolldown-binding.wasm32-wasip1.wasm');
-const workerSource = path.join(repoRoot, 'scripts/misc/workerd-suite/worker.js');
+const workerSource = path.join(repoRoot, 'packages/workerd-tests/worker.js');
 
 for (const [label, file] of [
   ['@rolldown/browser workerd entry', workerdEntry],
@@ -192,7 +192,7 @@ const workerSourceText = await readFile(workerSource, 'utf8');
  * path relative to `modulesRoot`, so the worker's `./workerd.browser.mjs` /
  * `./rolldown-binding.wasm32-wasip1.wasm` specifiers resolve to the real dist
  * artifacts; `contents` is supplied only for the worker itself, letting its
- * source live in this scripts tree instead of being staged into `dist/`.
+ * source live in this package instead of being staged into `dist/`.
  */
 async function dispatch(route) {
   const miniflare = new Miniflare({

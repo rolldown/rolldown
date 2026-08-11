@@ -112,7 +112,7 @@ jobs:
 
       # Catches a dropped entry in copy-addon-plugin.ts, which otherwise ships silently.
       - name: Assert threaded WASI dist file set
-        run: node scripts/misc/check-wasi-dist-files.mjs threaded
+        run: node scripts/wasi/check-wasi-dist-files.mjs threaded
 
       - name: Stability Test (threaded WASI)
         run: vp run --filter rolldown-tests test:stability
@@ -130,24 +130,24 @@ jobs:
 
       # Same guard for the single-thread set, which ships the workerd `wasip1-deferred` loader.
       - name: Assert single-thread WASI dist file set
-        run: node scripts/misc/check-wasi-dist-files.mjs single
+        run: node scripts/wasi/check-wasi-dist-files.mjs single
 
       # Threadless means: no Worker creation, no shared memory, `asyncWorkPoolSize: 0`.
       - name: Assert single-thread WASI loaders are threadless
-        run: node scripts/misc/check-wasi-threadless.mjs
+        run: node scripts/wasi/check-wasi-threadless.mjs
 
       # Glue only — reuses the single-thread binding built above instead of recompiling WASI.
       - name: Build `@rolldown/browser` artifacts
         run: vp run --filter '@rolldown/browser' build-node
 
       - name: Stage self-contained WASI packages
-        run: node scripts/misc/stage-wasi-packages.mjs
+        run: node scripts/wasi/stage-wasi-packages.mjs
 
       - name: Check staged WASI binding dependencies
-        run: node scripts/misc/check-wasi-binding-deps.mjs
+        run: node scripts/wasi/check-wasi-binding-deps.mjs
 
       - name: Exercise concurrent workerd instance lifecycle and memory canary
-        run: node --expose-gc scripts/misc/check-workerd-memory.mjs --max-rss-growth-mb=128
+        run: node --expose-gc packages/workerd-tests/memory.mjs --max-rss-growth-mb=128
 
       # Needed at collection time: tests/dev/*.test.ts import it at module scope.
       - name: Build `@rolldown/test-dev-server`

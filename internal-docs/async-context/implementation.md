@@ -175,13 +175,13 @@ Node rejects configuration because its provider is fixed.
   cycles, and detached descendants.
 - Dev tests cover `close()` after an asynchronous continuation in `onOutput`
   and `onAdditionalAssets`, including the lazy `compileEntry()` path.
-- `scripts/misc/check-browser-runtime-contract.mjs` verifies callback-free
+- `packages/browser-tests/runtime-contract.mjs` verifies callback-free
   operation without a provider, fail-closed callback entry, a real
   `AsyncLocalStorage` provider, reentrancy and concurrency, configuration
   locking, and absence of `node:async_hooks` in browser artifacts.
 - Focused tests cover same-identity and fresh-proxy prototype chains in option
   discovery and built-in option access.
-- `scripts/misc/check-wasi-binding-packed-consumer.mjs` launches the packed
+- `scripts/wasi/check-wasi-binding-packed-consumer.mjs` launches the packed
   browser package in Chromium, verifies the public preflight error for a direct
   callback data property, proves provider state survives an `await`, and makes
   the reentrant build attempt after that continuation.

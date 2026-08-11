@@ -718,7 +718,7 @@ compatibility flags or pnpm's workspace-only `patchedDependencies` behavior.
 The same build
 emits the threadless CJS/browser/deferred loaders plus a dedicated release
 artifact containing the threaded CJS/browser/Node-worker/browser-worker graph.
-`scripts/misc/stage-wasi-packages.mjs` installs those bundles into both WASI
+`scripts/wasi/stage-wasi-packages.mjs` installs those bundles into both WASI
 binding packages, copies each package's declaration from the matching generated
 profile, and removes its now-vendored `buffer`/emnapi/wasm-runtime dependency
 closure. The released CLI's pre-publish validator accepts either that fully
@@ -1087,7 +1087,7 @@ build-order coupling in the WASI workflow) is gone:
   `just build-browser`, but the allowlist is down to `binding.d.cts`
   (feature-gated doc-comment drift only).
 - The threadless-ness of the single-thread loaders is guarded by
-  `scripts/misc/check-wasi-threadless.mjs` in the WASI workflow (it inspects
+  `scripts/wasi/check-wasi-threadless.mjs` in the WASI workflow (it inspects
   the committed/regenerated `rolldown-binding.wasip1.*` loaders); a wrong
   `hasThreads` resolution now additionally misnames the output, so imports
   fail loudly instead of silently swapping flavors.
@@ -1097,11 +1097,11 @@ build-order coupling in the WASI workflow) is gone:
   collecting managed-workerd tests that require the threadless Wasm file or
   child-process `--input-type` probes that file-based worker entrypoints cannot
   inherit.
-- `scripts/misc/check-workerd-memory.mjs` repeatedly creates concurrent
+- `packages/workerd-tests/memory.mjs` repeatedly creates concurrent
   managed instances, verifies memory isolation and idempotent disposal, and
   emits local RSS/address-space samples. Production committed-memory
   validation still requires Workers DevTools and platform metrics.
-- `scripts/misc/check-wasi-binding-packed-consumer.mjs` imports the published
+- `scripts/wasi/check-wasi-binding-packed-consumer.mjs` imports the published
   threadless package root through both its CJS and browser conditions, executes
   an async binding build, and requires the generated task/timer bootstrap to
   report `timers: true`. The threaded Chromium exercise raw-imports the packed

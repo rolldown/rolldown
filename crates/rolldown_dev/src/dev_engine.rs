@@ -4,6 +4,7 @@ use std::sync::{
 };
 
 use anyhow::Context;
+use arcstr::ArcStr;
 use async_lock::Mutex;
 use futures::channel::mpsc::unbounded;
 use futures::{FutureExt, future::Shared};
@@ -491,11 +492,20 @@ impl DevEngine {
     if result.is_ok() {
       // Notify that the proxy module has changed so build output gets updated.
       // This ensures future page loads get the fetched template directly.
-      // Published while the lock is still held: the `watch_files` entries added
-      // above live only on the current bundle handle, and a rebuild landing in
-      // this window replaces that handle and drops them, so a module reached
-      // only through a dynamic import would never be watched at all.
-      self.notify_module_changed(proxy_module_id);
+      //
+      // `compile_lazy_entry` added this module's sources to
+      // `plugin_driver.watch_files`, which lives on the current bundle handle
+      // only. Snapshot it here, under the same lock that produced it: a rebuild
+      // installs a fresh handle with an empty set, and the coordinator reads
+      // the handle asynchronously, so by then the entries can be gone. A module
+      // reached only through a dynamic import is added nowhere else, so losing
+      // this one snapshot means it is never watched and editing it produces no
+      // filesystem event at all.
+      //
+      // The send itself no longer needs the guard, since the paths now travel
+      // as data. Keeping it inside makes capture and publication one step.
+      let watch_files = bundler.watch_files().iter().map(|path| path.clone()).collect();
+      self.notify_module_changed(proxy_module_id, watch_files);
     }
     drop(bundler);
 
@@ -508,8 +518,13 @@ impl DevEngine {
 
   /// Notify the coordinator that a module has changed programmatically.
   /// This triggers a rebuild to update the build output.
-  fn notify_module_changed(&self, module_id: String) {
-    let _ = self.coordinator_sender.unbounded_send(CoordinatorMsg::ModuleChanged { module_id });
+  ///
+  /// `watch_files` must be snapshotted while holding the bundler lock; see
+  /// `CoordinatorMsg::ModuleChanged`.
+  fn notify_module_changed(&self, module_id: String, watch_files: Vec<ArcStr>) {
+    let _ = self
+      .coordinator_sender
+      .unbounded_send(CoordinatorMsg::ModuleChanged { module_id, watch_files });
   }
 
   pub async fn close(&self) -> Result<(), Arc<BatchedBuildDiagnostic>> {

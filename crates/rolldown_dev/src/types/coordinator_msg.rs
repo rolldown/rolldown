@@ -1,3 +1,4 @@
+use arcstr::ArcStr;
 use rolldown_dev_common::types::DevCallbackError;
 use rolldown_fs_watcher::FsEventResult;
 
@@ -54,6 +55,17 @@ pub enum CoordinatorMsg {
   /// Notify that a module has changed programmatically (e.g., lazy compilation executed)
   ModuleChanged {
     module_id: String,
+    /// `plugin_driver.watch_files` as it stood when the sender still held the
+    /// bundler lock, so the paths this change added cannot be lost.
+    ///
+    /// Those entries live on the current bundle handle only, and a rebuild
+    /// installs a fresh handle with an empty set. The coordinator reads the
+    /// handle asynchronously, long after the sender released the lock, so
+    /// re-reading it can observe a handle that never held these paths. They
+    /// ride along with the message instead, and the coordinator unions them
+    /// into whatever the live handle holds. See
+    /// `internal-docs/dev-engine/implementation.md`.
+    watch_files: Vec<ArcStr>,
   },
   Close {
     reply: CloseSender,

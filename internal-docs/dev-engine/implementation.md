@@ -142,7 +142,8 @@ pub enum CoordinatorMsg {
   EnsureLatestBundleOutput { reply: … },     // "I need a fresh full bundle"
   TriggerFullBuild,                           // unconditional full build (fire-and-forget)
   GetWatchedFiles { reply: … },              // list of watched paths
-  ModuleChanged { module_id: String },       // programmatic module change
+  ModuleChanged { module_id, watch_files },  // programmatic module change + the
+                                              // sender's watch-path snapshot
   Close { reply: … },                        // quiesce, close final bundle, reply
 }
 ```
@@ -1030,6 +1031,26 @@ Beyond `ensure_latest_bundle_output`, the public methods on `DevEngine`
 `ModuleChanged` handling (`bundle_coordinator.rs:123-140`): updates watch
 paths, queues a `TaskInput::Rebuild` for the changed module, sets
 `has_stale_bundle_output = true`, schedules.
+
+**Watch paths ride on the message.** `plugin_driver.watch_files` belongs to
+the current bundle handle, and `create_plugin_driver` gives every build —
+full or incremental — a fresh, empty set, so a rebuild drops whatever the
+previous handle collected. `compile_lazy_entry` is the only writer for a
+module reached solely through a dynamic import, and the coordinator reads
+the handle asynchronously, after the lock is gone: a rebuild landing in
+between leaves that module unwatched forever, since nothing re-derives it.
+So the sender snapshots `watch_files` under the same lock that produced the
+entries and ships it on `ModuleChanged`;
+`update_watch_paths_including(extra)` **unions** the snapshot with the live
+handle rather than choosing between them, because each covers what the
+other misses — the snapshot is blind to later producers, the live handle
+may already have been replaced. Registration is monotone (`watched_files`
+only grows, nothing is ever unwatched), so re-offering a registered path is
+free.
+
+Paths are never unwatched, including for a lazily compiled module that
+later leaves the graph. That is deliberate and predates this design: a
+stale watch can only cause a redundant rebuild trigger, never a missed one.
 
 The `#[cfg(feature = "testing")]` methods —
 `ensure_task_with_changed_files`, `get_watched_files`,

@@ -14,7 +14,10 @@ use rolldown_dev_common::types::{DevCallbackError, DevCallbackResult};
 use rolldown_error::BuildResult;
 use rolldown_fs_watcher::{DynFsWatcher, FsEventResult, RecursiveMode};
 use rolldown_utils::{
-  dashmap::FxDashSet, futures::spawn_detached, indexmap::FxIndexMap, pattern_filter,
+  dashmap::FxDashSet,
+  futures::spawn_detached,
+  indexmap::{FxIndexMap, FxIndexSet},
+  pattern_filter,
 };
 use rustc_hash::FxHashSet;
 use sugar_path::SugarPath;
@@ -174,8 +177,8 @@ impl BundleCoordinator {
           let result = self.watched_files.iter().map(|s| s.to_string()).collect();
           let _ = reply.send(result);
         }
-        CoordinatorMsg::ModuleChanged { module_id } => {
-          self.handle_module_changed(module_id).await;
+        CoordinatorMsg::ModuleChanged { module_id, watch_files } => {
+          self.handle_module_changed(module_id, &watch_files).await;
         }
         CoordinatorMsg::Close { reply } => {
           let result = self.close().await;
@@ -187,11 +190,16 @@ impl BundleCoordinator {
   }
 
   /// Handle programmatic module change (e.g., lazy compilation executed).
-  async fn handle_module_changed(&mut self, module_id: String) {
-    // `plugin_driver.watch_files` added in `bundler.compile_lazy_entry`
-    // will be removed when task rebuild starts, so publish those paths first.
-    // A failed publication must outlive the build that this message schedules.
-    let watch_paths_result = self.update_watch_paths().await;
+  ///
+  /// `watch_files` is the sender's snapshot of `plugin_driver.watch_files`,
+  /// taken under the bundler lock. The rebuild this message schedules installs
+  /// a fresh handle and drops those entries, and the live handle may already
+  /// have been replaced before we get here, so publish the snapshot first and
+  /// union it with whatever the handle holds now.
+  ///
+  /// A failed publication must outlive the build that this message schedules.
+  async fn handle_module_changed(&mut self, module_id: String, watch_files: &[ArcStr]) {
+    let watch_paths_result = self.update_watch_paths_including(watch_files).await;
 
     let mut changed_files = FxIndexMap::default();
     changed_files.insert(PathBuf::from(&module_id), WatcherChangeKind::Update);
@@ -738,13 +746,37 @@ impl BundleCoordinator {
 
   /// Update watcher paths based on current build output
   async fn update_watch_paths(&self) -> BuildResult<()> {
-    let (watch_files, cwd) = {
+    self.update_watch_paths_including(&[]).await
+  }
+
+  /// Register `extra` **in addition to** the current bundle handle's watch
+  /// files.
+  ///
+  /// The two sets are unioned, never substituted. Each covers what the other
+  /// can miss: `extra` is a snapshot one producer took under the bundler lock,
+  /// so it says nothing about the paths every other producer has contributed
+  /// since; the live handle is authoritative about those but may already have
+  /// been replaced by a rebuild, which installs a fresh, empty
+  /// `plugin_driver.watch_files` and drops whatever `extra` was capturing.
+  /// Taking either one alone loses registrations, in opposite directions.
+  ///
+  /// Registration is monotone: `watched_files` only grows and nothing is ever
+  /// unwatched, so re-offering a path that is already registered is free and a
+  /// path that arrives from both sources is added once.
+  async fn update_watch_paths_including(&self, extra: &[ArcStr]) -> BuildResult<()> {
+    let (mut watch_files, cwd) = {
       let bundler = self.bundler.lock().await;
       (
-        bundler.watch_files().iter().map(|watch_file| watch_file.clone()).collect::<Vec<_>>(),
+        bundler
+          .watch_files()
+          .iter()
+          .map(|watch_file| watch_file.clone())
+          .collect::<FxIndexSet<_>>(),
         bundler.options().cwd.to_string_lossy().into_owned(),
       )
     };
+    watch_files.extend(extra.iter().cloned());
+    let watch_files = watch_files.into_iter().collect::<Vec<_>>();
 
     let include = self.ctx.options.watch_include.as_deref();
     let exclude = self.ctx.options.watch_exclude.as_deref();
@@ -995,6 +1027,64 @@ mod tests {
         commit_attempts: Arc::clone(&self.commit_attempts),
         fail_commit: self.fail_commit,
       })
+    }
+  }
+
+  /// Records every path handed to the watcher so a test can assert what was
+  /// actually registered, rather than what the coordinator intended.
+  struct RecordingWatcher {
+    added: Arc<StdMutex<Vec<PathBuf>>>,
+  }
+
+  struct RecordingPaths {
+    added: Arc<StdMutex<Vec<PathBuf>>>,
+    pending: Vec<PathBuf>,
+  }
+
+  impl PathsMut for RecordingPaths {
+    fn add(&mut self, path: &Path, _recursive_mode: RecursiveMode) -> BuildResult<()> {
+      self.pending.push(path.to_path_buf());
+      Ok(())
+    }
+
+    fn remove(&mut self, _path: &Path) -> BuildResult<()> {
+      Ok(())
+    }
+
+    fn commit(self: Box<Self>) -> BuildResult<()> {
+      self.added.lock().expect("recording watcher lock").extend(self.pending);
+      Ok(())
+    }
+  }
+
+  impl FsWatcher for RecordingWatcher {
+    fn new<F: FsEventHandler>(_event_handler: F) -> BuildResult<Self>
+    where
+      Self: Sized,
+    {
+      unreachable!("test constructs the watcher directly")
+    }
+
+    fn with_config<F: FsEventHandler>(
+      _event_handler: F,
+      _config: FsWatcherConfig,
+    ) -> BuildResult<Self>
+    where
+      Self: Sized,
+    {
+      unreachable!("test constructs the watcher directly")
+    }
+
+    fn watch(&mut self, _path: &Path, _recursive_mode: RecursiveMode) -> BuildResult<()> {
+      unreachable!("test uses the batch path API")
+    }
+
+    fn unwatch(&mut self, _path: &Path) -> BuildResult<()> {
+      unreachable!("test never removes paths")
+    }
+
+    fn paths_mut<'me>(&'me mut self) -> Box<dyn PathsMut + 'me> {
+      Box::new(RecordingPaths { added: Arc::clone(&self.added), pending: Vec::new() })
     }
   }
 
@@ -1293,7 +1383,7 @@ mod tests {
     let second_observer = coordinator.begin_watch_registration_error_observation();
     coordinator.state = CoordinatorState::InProgress;
     coordinator.current_bundling_future = Some(BundlingFuture::new(async { Ok(()) }));
-    coordinator.handle_module_changed(input.to_string_lossy().into_owned()).await;
+    coordinator.handle_module_changed(input.to_string_lossy().into_owned(), &[]).await;
 
     assert_eq!(commit_attempts.load(Ordering::SeqCst), 1);
     assert_eq!(coordinator.queued_tasks.len(), 1);
@@ -1469,5 +1559,93 @@ mod tests {
     assert!(message.contains("intentional registration failure"));
     assert!(message.contains("intentional closeBundle failure"));
     assert_eq!(error.len(), 3);
+  }
+
+  /// A module reached only through a dynamic import is added to
+  /// `plugin_driver.watch_files` by `compile_lazy_entry` and by nothing else.
+  /// That set lives on the current bundle handle, so a rebuild landing between
+  /// the lazy compile and the coordinator's read replaces the handle and the
+  /// path is gone before it is ever registered — permanently, since no later
+  /// build reintroduces it. The snapshot carried on `ModuleChanged` has to
+  /// survive exactly that interleaving, which this test performs deterministically
+  /// instead of racing for it.
+  #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+  async fn module_changed_registers_snapshot_paths_dropped_by_a_handle_replacement() {
+    let test_dir = TestDir::new();
+    let input = test_dir.0.join("main.js");
+    fs::write(&input, "export const value = 1;").expect("write test input");
+
+    let mut bundler = Bundler::new(BundlerOptions {
+      cwd: Some(test_dir.0.clone()),
+      input: Some(vec![input.to_string_lossy().into_owned().into()]),
+      experimental: Some(ExperimentalOptions {
+        incremental_build: Some(true),
+        dev_mode: Some(DevModeOptions::default()),
+        ..Default::default()
+      }),
+      ..Default::default()
+    })
+    .expect("create test bundler");
+    bundler.generate().await.expect("generate initial bundle");
+
+    // Stand in for `compile_lazy_entry`, which records the lazily compiled
+    // module's sources on the handle it just built with.
+    let lazy = test_dir.0.join("lazy.css");
+    fs::write(&lazy, ".lazy { color: teal; }").expect("write lazy source");
+    let lazy = ArcStr::from(lazy.to_string_lossy().into_owned());
+    bundler.watch_files().insert(lazy.clone());
+    let snapshot = bundler.watch_files().iter().map(|path| path.clone()).collect::<Vec<_>>();
+    assert!(snapshot.contains(&lazy), "the snapshot must capture the lazily added path");
+
+    // Force the losing interleaving: a rebuild completes first and installs a
+    // fresh handle, whose `watch_files` never held the lazy path.
+    bundler.generate().await.expect("generate replacement bundle");
+    assert!(
+      !bundler.watch_files().contains(&lazy),
+      "the replacement handle must not carry the lazily added path, \
+       otherwise this test is not exercising the race"
+    );
+    let live = bundler.watch_files().iter().map(|path| path.clone()).collect::<Vec<_>>();
+    assert!(!live.is_empty(), "the replacement handle must still watch its own sources");
+
+    let added = Arc::new(StdMutex::new(Vec::new()));
+    let (coordinator_tx, coordinator_rx) = unbounded();
+    let ctx = Arc::new(DevContext {
+      options: normalize_dev_options(DevOptions {
+        watch: Some(DevWatchOptions { skip_write: Some(true), ..Default::default() }),
+        ..Default::default()
+      }),
+      coordinator_tx,
+      clients: SharedClients::default(),
+      stamp_table: Arc::new(Mutex::new(rolldown_common::HmrStampTable::default())),
+      pending_payloads: Arc::new(Mutex::new(rustc_hash::FxHashMap::default())),
+      top_level_evaluated: Mutex::new(Arc::new(rustc_hash::FxHashMap::default())),
+      last_task_errored: std::sync::atomic::AtomicBool::new(false),
+    });
+    let mut coordinator = BundleCoordinator::new(
+      Arc::new(Mutex::new(bundler)),
+      ctx,
+      coordinator_rx,
+      Box::new(RecordingWatcher { added: Arc::clone(&added) }),
+      Arc::new(AtomicU32::new(0)),
+    );
+    coordinator.state = CoordinatorState::InProgress;
+    coordinator.current_bundling_future = Some(BundlingFuture::new(async { Ok(()) }));
+
+    coordinator.handle_module_changed(lazy.to_string(), &snapshot).await;
+
+    let added = added.lock().expect("recording watcher lock").clone();
+    assert!(
+      added.contains(&PathBuf::from(lazy.as_str())),
+      "the snapshot's path must be registered even though the live handle lost it: {added:?}"
+    );
+    // Union, not substitution: taking only the snapshot would drop everything
+    // the replacement handle contributed after it was taken.
+    for path in &live {
+      assert!(
+        added.contains(&PathBuf::from(path.as_str())),
+        "the live handle's path {path} must still be registered: {added:?}"
+      );
+    }
   }
 }

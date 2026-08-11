@@ -86,8 +86,19 @@ configure a provider and retry the same build.
 
 ## Managed workerd loader
 
-Use the stable `@rolldown/browser/workerd` export instead of importing a
-generated, binary-name-specific loader:
+::: warning Not on the registry yet
+
+`@rolldown/browser` is not published while its loader depends on a patched
+`@napi-rs/wasm-runtime`, because a registry install would resolve the pristine
+package and fail at instantiate. The latest published version has no
+`./workerd` subpath, so the imports below throw
+`ERR_PACKAGE_PATH_NOT_EXPORTED`. Use a `pkg.pr.new` build until the patch is
+dropped.
+
+:::
+
+Use the `@rolldown/browser/workerd` export instead of importing a generated,
+binary-name-specific loader:
 
 ```js
 import { createInstance } from '@rolldown/browser/workerd';

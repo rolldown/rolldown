@@ -488,16 +488,19 @@ impl DevEngine {
     } else {
       None
     };
+    if result.is_ok() {
+      // Notify that the proxy module has changed so build output gets updated.
+      // This ensures future page loads get the fetched template directly.
+      // Published while the lock is still held: the `watch_files` entries added
+      // above live only on the current bundle handle, and a rebuild landing in
+      // this window replaces that handle and drops them, so a module reached
+      // only through a dynamic import would never be watched at all.
+      self.notify_module_changed(proxy_module_id);
+    }
     drop(bundler);
 
     if let Some((on_additional_assets, output)) = additional_assets {
       dev_callback_result_to_build_result(on_additional_assets(output).await)?;
-    }
-
-    if result.is_ok() {
-      // Notify that the proxy module has changed so build output gets updated.
-      // This ensures future page loads get the fetched template directly.
-      self.notify_module_changed(proxy_module_id);
     }
 
     result

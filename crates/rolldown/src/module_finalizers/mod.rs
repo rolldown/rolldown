@@ -1530,7 +1530,6 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
       VariableDeclarationKind::Var,
       [ast::VariableDeclarator::new(
         SPAN,
-        VariableDeclarationKind::Var,
         ast::BindingPattern::BindingIdentifier(oxc::allocator::Box::new_in(id, self)),
         None,
         Some(Expression::ClassExpression(class)),
@@ -2232,9 +2231,6 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
         if self.ctx.options.top_level_var {
           if let Statement::VariableDeclaration(var_decl) = &mut top_stmt {
             var_decl.kind = ast::VariableDeclarationKind::Var;
-            for decl in &mut var_decl.declarations {
-              decl.kind = VariableDeclarationKind::Var;
-            }
           }
           if let Statement::ClassDeclaration(class_decl) = top_stmt {
             top_stmt = match self.get_transformed_class_decl(class_decl) {

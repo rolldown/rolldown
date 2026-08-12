@@ -78,7 +78,6 @@ impl<'ast> Traverse<'ast, ()> for HmrAstFinalizer<'_, 'ast> {
           oxc::allocator::Vec::from_value_in(
             ast::VariableDeclarator::new(
               SPAN,
-              ast::VariableDeclarationKind::Var,
               ast::BindingPattern::new_binding_identifier(
                 SPAN,
                 CJS_ROLLDOWN_MODULE_REF_IDENT,
@@ -101,7 +100,6 @@ impl<'ast> Traverse<'ast, ()> for HmrAstFinalizer<'_, 'ast> {
           oxc::allocator::Vec::from_value_in(
             ast::VariableDeclarator::new(
               SPAN,
-              ast::VariableDeclarationKind::Var,
               ast::BindingPattern::new_binding_identifier(
                 SPAN,
                 CJS_ROLLDOWN_EXPORTS_REF_IDENT,

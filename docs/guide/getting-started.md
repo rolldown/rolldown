@@ -49,11 +49,16 @@ Prebuilt binaries are distributed for the following platforms (grouped by [Node.
 - Experimental
   - Linux x64 musl (`x86_64-unknown-linux-musl`)
   - Linux armv7 (`armv7-unknown-linux-gnueabihf`)
+  - Linux riscv64 glibc (`riscv64gc-unknown-linux-gnu`)
   - FreeBSD x64 (`x86_64-unknown-freebsd`)
   - OpenHarmony arm64 (`aarch64-unknown-linux-ohos`)
 - Other
   - Linux arm64 musl (`aarch64-unknown-linux-musl`)
+  - Linux armv7 musl (`armv7-unknown-linux-musleabihf`)
+  - Linux riscv64 musl (`riscv64gc-unknown-linux-musl`)
+  - Windows x86 (`i686-pc-windows-msvc`)
   - Android arm64 (`aarch64-linux-android`)
+  - Android armv7 (`armv7-linux-androideabi`)
   - Wasm + Wasi (`wasm32-wasip1-threads`)
 
 If you are using a platform that a prebuilt binary is not distributed, you have the following options:

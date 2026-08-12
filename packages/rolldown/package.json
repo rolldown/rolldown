@@ -142,6 +142,7 @@
     "@oxc-node/cli": "catalog:",
     "cac": "catalog:",
     "consola": "catalog:",
+    "emnapi": "catalog:",
     "execa": "catalog:",
     "fresh-import": "catalog:",
     "glob": "catalog:",

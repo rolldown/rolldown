@@ -1,2 +1,8 @@
-// injected by `define` in vitest.config.mts
-declare const __ROLLDOWN_VERSION__: string;
+declare module 'vitest' {
+  interface ProvidedContext {
+    /** version of the workspace `rolldown` package, supplied by `provide` in vitest.config.mts */
+    rolldownVersion: string;
+  }
+}
+
+export {};

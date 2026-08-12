@@ -4,9 +4,8 @@ import { existsSync, readdirSync, readFileSync, rmSync } from 'node:fs';
 import { join } from 'node:path';
 import { expect, test } from 'vitest';
 
-// `.rolldown` dir is generated based on real cwd instead of `InputOptions.cwd`. We might be able to solve this in the future.
-// For now, we just live with it.
-const dotRolldownFileName = join(process.cwd(), 'node_modules/.rolldown');
+// The `.rolldown` dir is generated under `InputOptions.cwd`, which `runBundle` sets to this directory.
+const dotRolldownFileName = join(import.meta.dirname, 'node_modules/.rolldown');
 
 function normalizePath(path) {
   return path.replaceAll('\\', '/');

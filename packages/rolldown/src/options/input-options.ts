@@ -768,8 +768,9 @@ export interface InputOptions {
    * Devtools integration options.
    *
    * When enabled, Rolldown writes JSON-lines devtools output under
-   * `node_modules/.rolldown/{session_id}/`. Consumers can parse the output with
-   * `@rolldown/debug` after `await bundle.close()` resolves.
+   * `node_modules/.rolldown/{session_id}/`, resolved against {@linkcode cwd}.
+   * Consumers can parse the output with `@rolldown/debug` after
+   * `await bundle.close()` resolves.
    *
    * @experimental
    */

@@ -93,6 +93,10 @@ test-node *args="": build-rolldown build-rolldown-test-dev-server
   just test-node-rolldown {{ args }}
   just test-node-rollup
 
+# Run Rolldown's tests against the WASI binding, mirroring the WASI CI lane. Replaces any native `dist`, so run `just build-rolldown` afterwards.
+test-wasi *args="": build-rolldown-wasi build-rolldown-test-dev-server
+  vp run --filter rolldown-tests test:wasi {{ args }}
+
 test-node-hmr *args: build build-test-dev-server
   just test-node-hmr-only {{ args }}
 
@@ -106,6 +110,10 @@ test-vite: # We don't use `test-node-vite` because it's not expected to run in `
 # Build the WASI artifacts and smoke test them inside a WebContainer. Opt-in only, needs network.
 test-webcontainer:
   vp run --filter browser-tests test:webcontainer
+
+# Build `@rolldown/browser` and smoke test the packed artifact inside a real browser page.
+test-browser:
+  vp run --filter browser-tests test:browser
 
 # --- `t` series commands provide scenario-specific shortcut commands for testing compared to `test` series commands.
 

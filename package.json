@@ -22,13 +22,13 @@
     "@oxc-project/runtime": "catalog:",
     "@types/node": "catalog:",
     "cjs-module-lexer": "^2.1.0",
-    "knip": "^6.29.0",
+    "knip": "^6.32.0",
     "playwright-chromium": "^1.62.0",
     "publint": "^0.3.21",
     "remove-unused-vars": "^0.0.14",
     "rolldown": "workspace:*",
     "typescript": "catalog:",
-    "vite-plus": "^0.2.7"
+    "vite-plus": "^0.2.9"
   },
   "engines": {
     "node": "^20.19.0 || >=22.12.0"

@@ -1,4 +1,4 @@
-const ESBUILD_VERSION = '0.28.1';
+const ESBUILD_VERSION = '0.28.2';
 
 const ESBUILD_RAW_BASE_URL = `https://raw.githubusercontent.com/evanw/esbuild/v${ESBUILD_VERSION}`;
 

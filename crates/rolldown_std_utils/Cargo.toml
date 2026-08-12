@@ -1,6 +1,6 @@
 [package]
 name = "rolldown_std_utils"
-version = "1.2.3"
+version = "1.2.4"
 edition.workspace = true
 homepage.workspace = true
 license.workspace = true

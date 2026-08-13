@@ -513,7 +513,13 @@ impl NestedScopeRenamer<'_, '_> {
   ///
   /// The same capture breaks a nested `var __filename`/`var __dirname` the same way
   /// (`pathToFileURL(__filename)` reads the still-undefined local and throws).
-  pub fn rename_bindings_shadowing_cjs_ambient_names(&mut self) {
+  ///
+  /// Only CommonJS output injects these names. The pass does nothing for the other formats.
+  pub fn rename_bindings_shadowing_cjs_ambient_names(&mut self, output_format: OutputFormat) {
+    if !matches!(output_format, OutputFormat::Cjs) {
+      return;
+    }
+
     // Skip root scope (index 0), check nested scopes only. Root-scope bindings are already covered
     // by the renamer's `manual_reserved` list for CommonJS output.
     for (_, bindings) in self.scoping.iter_bindings().skip(1) {

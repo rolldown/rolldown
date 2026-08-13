@@ -48,6 +48,10 @@
       ],
       "ignoreDependencies": [
         "buffer", // Workerd aliases the bare Node builtin name to this polyfill.
+        // Consumed by the WASI link step, never by an import: napi-build links
+        // emnapi's C archives, and reusable-wasi.yml resolves the directory
+        // through @napi-rs/cli. Nothing references the bare name.
+        "emnapi",
         "pathe",
       ],
     },

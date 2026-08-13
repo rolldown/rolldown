@@ -14,13 +14,11 @@ export async function asyncFlatten<T>(
   array: T[],
   runSynchronousCallback: SynchronousCallbackRunner = runDirectly,
 ): Promise<T[]> {
-  let pending = array.map(
-    (value): BoxedValue<T> => ({
-      arrayChain: undefined,
-      thenableChain: undefined,
-      value,
-    }),
-  );
+  let pending = array.map((value): BoxedValue<T> => ({
+    arrayChain: undefined,
+    thenableChain: undefined,
+    value,
+  }));
   while (true) {
     let requiresAnotherPass = false;
     const boxed = await Promise.all(

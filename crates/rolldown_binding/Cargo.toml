@@ -80,7 +80,7 @@ mimalloc-safe = { workspace = true, features = ["skip_collect_on_exit", "v3"] }
 [target.'cfg(all(any(target_os = "linux", target_os = "freebsd"), not(target_arch = "aarch64"), not(target_env = "ohos")))'.dependencies]
 mimalloc-safe = { workspace = true, features = ["skip_collect_on_exit", "local_dynamic_tls", "v3"] }
 
-[target.'cfg(all(target_os = "linux", target_arch = "aarch64"))'.dependencies]
+[target.'cfg(all(target_arch = "aarch64", any(target_os = "linux", target_os = "android", target_os = "freebsd")))'.dependencies]
 mimalloc-safe = { workspace = true, features = [
   "skip_collect_on_exit",
   "no_opt_arch",

@@ -480,6 +480,58 @@ impl NestedScopeRenamer<'_, '_> {
     }
   }
 
+  /// Rename nested bindings that would shadow the ambient names of CommonJS output.
+  ///
+  /// Several rewrites emit bare, renamer-invisible identifiers into the module body, at arbitrary
+  /// nesting depth:
+  /// - `require(...)` — external imports, dynamic-import lowering, and the `import.meta.url`
+  ///   polyfill (`require("url").pathToFileURL(__filename).href`)
+  /// - `__filename` — the argument of that polyfill, and the `import.meta.filename` rewrite
+  /// - `__dirname` — the `import.meta.dirname` rewrite
+  ///
+  /// Those identifiers mean the CommonJS ambient bindings, so a nested binding of the same name
+  /// must not capture them. `module`/`exports` are deliberately not in the set: nothing injects
+  /// them into nested scopes, and `rename_bindings_shadowing_wrapper_params` already covers the
+  /// CJS-wrapped-module case.
+  ///
+  /// A `var` binding is hoisted, so it shadows even an injected call inside its own initializer:
+  ///
+  /// ```js
+  /// // input, the shape emscripten emits with `-s EXPORT_ES6=1 -s ENVIRONMENT='node'`
+  /// function init() {
+  ///   var require = createRequire(import.meta.url);
+  ///   return require("node:path").sep;
+  /// }
+  /// ```
+  ///
+  /// Without renaming, the polyfill resolves to the still-undefined local and the module throws
+  /// `require is not a function` on first call:
+  ///
+  /// ```js
+  /// var require = createRequire(require("url").pathToFileURL(__filename).href);
+  /// ```
+  ///
+  /// The same capture breaks a nested `var __filename`/`var __dirname` the same way
+  /// (`pathToFileURL(__filename)` reads the still-undefined local and throws).
+  ///
+  /// Only CommonJS output injects these names. The pass does nothing for the other formats.
+  pub fn rename_bindings_shadowing_cjs_ambient_names(&mut self, output_format: OutputFormat) {
+    if !matches!(output_format, OutputFormat::Cjs) {
+      return;
+    }
+
+    // Skip root scope (index 0), check nested scopes only. Root-scope bindings are already covered
+    // by the renamer's `manual_reserved` list for CommonJS output.
+    for (_, bindings) in self.scoping.iter_bindings().skip(1) {
+      for (&name, symbol_id) in bindings {
+        if matches!(name.as_str(), "require" | "__filename" | "__dirname") {
+          let symbol_ref = (self.module_idx, *symbol_id).into();
+          self.renamer.register_nested_scope_symbols(symbol_ref, name.as_str());
+        }
+      }
+    }
+  }
+
   /// Rename a CJS-wrapped module's *root-scope* locals that shadow a chunk-root binding the closure
   /// actually references.
   ///

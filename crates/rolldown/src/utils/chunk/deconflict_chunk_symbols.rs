@@ -382,7 +382,7 @@ fn rename_shadowing_symbols_in_nested_scopes<'a>(
     ));
 
     if matches!(output_format, OutputFormat::Cjs) {
-      ctx.rename_bindings_shadowing_cjs_require();
+      ctx.rename_bindings_shadowing_cjs_ambient_names();
     }
 
     ctx.rename_cjs_locals_shadowing_referenced_chunk_bindings();

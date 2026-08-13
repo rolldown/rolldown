@@ -340,7 +340,7 @@ impl FileEmitter {
     if self
       .emitted_file_source_hashes
       .get(&reference_id)
-      .is_some_and(|flushed_hash| flushed_hash.as_str() != hash.as_str())
+      .is_some_and(|flushed_hash| &*flushed_hash != hash)
     {
       self.emitted_files.remove(&reference_id);
     }

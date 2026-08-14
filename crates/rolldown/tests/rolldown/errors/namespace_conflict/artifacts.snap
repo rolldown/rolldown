@@ -3,17 +3,11 @@ source: crates/rolldown_testing/src/integration_test.rs
 ---
 # warnings
 
-## AMBIGUOUS_REEXPORT
+## NAMESPACE_CONFLICT
 
 ```text
-[AMBIGUOUS_REEXPORT] Found ambiguous export.
-   ╭─[ main.js:1:1 ]
-   │
- 1 │ export * from './file.js'
-   │ │ 
-   │ ╰─ "main.js" re-exports "foo"
-   │
-   ├─[ file.js:1:12 ]
+[NAMESPACE_CONFLICT] Conflicting namespaces: "main.js" re-exports "foo" from one of the modules "file.js" and "file2.js" (will be ignored).
+   ╭─[ file.js:1:12 ]
    │
  1 │ export let foo = 1
    │            ─┬─  

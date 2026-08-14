@@ -47,7 +47,6 @@ use super::events::unsupported_tsconfig_option::UnsupportedTsconfigOption;
 use super::events::untranspiled_syntax::UntranspiledSyntax;
 use super::events::{
   ambiguous_external_namespace::{AmbiguousExternalNamespace, AmbiguousExternalNamespaceModule},
-  ambiguous_reexport::{AmbiguousReexport, AmbiguousReexportModule},
   circular_dependency::CircularDependency,
   circular_reexport::CircularReexport,
   commonjs_variable_in_esm::{CjsExportSpan, CommonJsVariableInEsm},
@@ -58,6 +57,7 @@ use super::events::{
   invalid_export_option::InvalidExportOption,
   missing_export::MissingExport,
   mixed_exports::MixedExports,
+  namespace_conflict::{NamespaceConflict, NamespaceConflictExporter},
   oxc_error::OxcError,
   unresolved_entry::UnresolvedEntry,
 };
@@ -82,13 +82,18 @@ impl BuildDiagnostic {
     })
   }
 
-  pub fn ambiguous_reexport(
-    ambiguous_export_name: String,
-    importee: String,
-    importer: AmbiguousReexportModule,
-    exporter: Vec<AmbiguousReexportModule>,
+  pub fn namespace_conflict(
+    binding: String,
+    reexporting_module_id: String,
+    reexporting_module_stable_id: String,
+    exporters: Vec<NamespaceConflictExporter>,
   ) -> Self {
-    Self::new_inner(AmbiguousReexport { ambiguous_export_name, importee, importer, exporter })
+    Self::new_inner(NamespaceConflict {
+      binding,
+      reexporting_module_id,
+      reexporting_module_stable_id,
+      exporters,
+    })
   }
 
   pub fn unresolved_entry(

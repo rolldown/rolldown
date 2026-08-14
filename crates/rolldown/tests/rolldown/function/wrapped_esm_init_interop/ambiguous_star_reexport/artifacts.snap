@@ -3,42 +3,11 @@ source: crates/rolldown_testing/src/integration_test.rs
 ---
 # warnings
 
-## AMBIGUOUS_REEXPORT
+## NAMESPACE_CONFLICT
 
 ```text
-[AMBIGUOUS_REEXPORT] Found ambiguous export.
-   ╭─[ barrel.js:1:1 ]
-   │
- 1 │ // Both leaves export `x`, so `x` is an ambiguous export on the barrel (resolves to undefined). The
-   │ │ 
-   │ ╰─ "barrel.js" re-exports "x"
-   │
-   ├─[ mod_a.js:2:14 ]
-   │
- 2 │ export const x = 'ax';
-   │              ┬  
-   │              ╰── One matching export is here.
-   │
-   ├─[ mod_b.js:2:14 ]
-   │
- 2 │ export const x = 'bx';
-   │              ┬  
-   │              ╰── One matching export is here.
-───╯
-
-```
-
-## AMBIGUOUS_REEXPORT
-
-```text
-[AMBIGUOUS_REEXPORT] Found ambiguous export.
-   ╭─[ main.js:1:1 ]
-   │
- 1 │ // The barrel's dynamic exports keep this IsExportStar record included while `x` remains ambiguous
-   │ │ 
-   │ ╰─ "main.js" re-exports "x"
-   │
-   ├─[ mod_a.js:2:14 ]
+[NAMESPACE_CONFLICT] Conflicting namespaces: "barrel.js" re-exports "x" from one of the modules "mod_a.js" and "mod_b.js" (will be ignored).
+   ╭─[ mod_a.js:2:14 ]
    │
  2 │ export const x = 'ax';
    │              ┬  

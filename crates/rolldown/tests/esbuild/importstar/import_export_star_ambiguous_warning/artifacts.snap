@@ -3,17 +3,11 @@ source: crates/rolldown_testing/src/integration_test.rs
 ---
 # warnings
 
-## AMBIGUOUS_REEXPORT
+## NAMESPACE_CONFLICT
 
 ```text
-[AMBIGUOUS_REEXPORT] Found ambiguous export.
-   ╭─[ common.js:1:1 ]
-   │
- 1 │ export * from './foo'
-   │ │ 
-   │ ╰─ "common.js" re-exports "y"
-   │
-   ├─[ foo.js:2:14 ]
+[NAMESPACE_CONFLICT] Conflicting namespaces: "common.js" re-exports "y" from one of the modules "foo.js" and "bar.js" (will be ignored).
+   ╭─[ foo.js:2:14 ]
    │
  2 │ export const y = 2
    │              ┬  

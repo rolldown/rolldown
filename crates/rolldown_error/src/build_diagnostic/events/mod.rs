@@ -13,7 +13,6 @@ pub mod napi_error;
 
 pub mod already_closed;
 pub mod ambiguous_external_namespace;
-pub mod ambiguous_reexport;
 pub mod assign_to_import;
 pub mod bundler_initialize_error;
 pub mod cannot_call_namespace;
@@ -43,6 +42,7 @@ pub mod missing_export;
 pub mod missing_global_name;
 pub mod missing_name_option_for_iife_export;
 pub mod mixed_exports;
+pub mod namespace_conflict;
 pub mod oxc_error;
 pub mod plugin_error;
 pub mod plugin_timings;

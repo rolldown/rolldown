@@ -3,17 +3,11 @@ source: crates/rolldown_testing/src/integration_test.rs
 ---
 # warnings
 
-## AMBIGUOUS_REEXPORT
+## NAMESPACE_CONFLICT
 
 ```text
-[AMBIGUOUS_REEXPORT] Found ambiguous export.
-   ╭─[ bridge.js:1:1 ]
-   │
- 1 │ export function ok() {
-   │ │ 
-   │ ╰─ "bridge.js" re-exports "collision"
-   │
-   ├─[ common-a.js:6:14 ]
+[NAMESPACE_CONFLICT] Conflicting namespaces: "bridge.js" re-exports "collision" from one of the modules "common-a.js" and "common-b.js" (will be ignored).
+   ╭─[ common-a.js:6:14 ]
    │
  6 │ export const collision = /* @__PURE__ */ mark();
    │              ────┬────  
@@ -131,17 +125,11 @@ export { __exportAll as n, __esmMin as t };
 
 ## warnings
 
-### AMBIGUOUS_REEXPORT
+### NAMESPACE_CONFLICT
 
 ```text
-[AMBIGUOUS_REEXPORT] Found ambiguous export.
-   ╭─[ bridge.js:1:1 ]
-   │
- 1 │ export function ok() {
-   │ │ 
-   │ ╰─ "bridge.js" re-exports "collision"
-   │
-   ├─[ common-a.js:6:14 ]
+[NAMESPACE_CONFLICT] Conflicting namespaces: "bridge.js" re-exports "collision" from one of the modules "common-a.js" and "common-b.js" (will be ignored).
+   ╭─[ common-a.js:6:14 ]
    │
  6 │ export const collision = /* @__PURE__ */ mark();
    │              ────┬────  

@@ -13,7 +13,8 @@ use rolldown_common::{
   SymbolRefDb, SymbolRefFlags,
 };
 use rolldown_error::{
-  AmbiguousExternalNamespaceModule, AmbiguousReexportModule, BuildDiagnostic, Diagnostics,
+  AmbiguousExternalNamespaceModule, BuildDiagnostic, Diagnostics, EventKindSwitcher,
+  NamespaceConflictExporter,
 };
 #[cfg(not(target_family = "wasm"))]
 use rolldown_utils::rayon::IndexedParallelIterator;
@@ -298,10 +299,97 @@ impl LinkStage<'_> {
       meta.sorted_and_non_ambiguous_resolved_exports =
         FxIndexMap::from_iter(sorted_and_non_ambiguous_resolved_exports);
     });
+    if self.options.checks.contains(EventKindSwitcher::NamespaceConflict) {
+      self.detect_namespace_conflicts();
+    }
     self.record_namespace_consumed_star_reexport_paths();
     self.update_cjs_module_meta();
     self.resolve_member_expr_refs(&side_effects_modules, &normal_symbol_exports_chain_map);
     self.normal_symbol_exports_chain_map = normal_symbol_exports_chain_map;
+  }
+
+  fn detect_namespace_conflicts(&mut self) {
+    let mut conflicts: FxHashMap<(CompactStr, Vec<SymbolRef>), (u32, ModuleIdx)> =
+      FxHashMap::default();
+    for (module_idx, meta) in self.metas.iter_enumerated() {
+      if meta.resolved_exports.len() == meta.sorted_and_non_ambiguous_resolved_exports.len() {
+        continue;
+      }
+      let Module::Normal(module) = &self.module_table[module_idx] else {
+        continue;
+      };
+      for (export_name, resolved_export) in &meta.resolved_exports {
+        let Some(potentially_ambiguous_symbol_refs) =
+          &resolved_export.potentially_ambiguous_symbol_refs
+        else {
+          continue;
+        };
+        let mut canonical_refs = std::iter::once(resolved_export.symbol_ref)
+          .chain(potentially_ambiguous_symbol_refs.iter().copied())
+          .map(|symbol_ref| self.symbols.canonical_ref_for(symbol_ref))
+          .collect::<Vec<_>>();
+        canonical_refs.sort_unstable();
+        canonical_refs.dedup();
+        if canonical_refs.len() < 2 {
+          continue;
+        }
+        let all_bound_local = canonical_refs.iter().all(|canonical_ref| {
+          match &self.module_table[canonical_ref.owner] {
+            Module::Normal(owner) => !owner.named_imports.contains_key(canonical_ref),
+            Module::External(_) => false,
+          }
+        });
+        if !all_bound_local {
+          continue;
+        }
+        let candidate = (module.exec_order, module_idx);
+        conflicts
+          .entry((export_name.clone(), canonical_refs))
+          .and_modify(|best| *best = (*best).min(candidate))
+          .or_insert(candidate);
+      }
+    }
+
+    let mut conflicts = conflicts.into_iter().collect::<Vec<_>>();
+    conflicts.sort_unstable_by(|((a_name, _), a_best), ((b_name, _), b_best)| {
+      a_best.cmp(b_best).then_with(|| a_name.cmp(b_name))
+    });
+    for ((export_name, _), (_, module_idx)) in conflicts {
+      let Module::Normal(module) = &self.module_table[module_idx] else {
+        continue;
+      };
+      let resolved_export = &self.metas[module_idx].resolved_exports[&export_name];
+      let exporters = std::iter::once(resolved_export.symbol_ref)
+        .chain(
+          resolved_export
+            .potentially_ambiguous_symbol_refs
+            .iter()
+            .flat_map(|refs| refs.iter().copied()),
+        )
+        .filter_map(|symbol_ref| {
+          let owner = self.module_table[symbol_ref.owner].as_normal()?;
+          let named_export = owner.named_exports.get(&export_name)?;
+          Some(NamespaceConflictExporter {
+            source: owner.source.clone(),
+            module_id: owner.id.to_string(),
+            stable_id: owner.stable_id.to_string(),
+            span_of_identifier: named_export.span,
+          })
+        })
+        .collect::<Vec<_>>();
+      if exporters.len() < 2 {
+        continue;
+      }
+      self.diagnostics.push(
+        BuildDiagnostic::namespace_conflict(
+          export_name.to_string(),
+          module.id.to_string(),
+          module.stable_id.to_string(),
+          exporters,
+        )
+        .with_severity_warning(),
+      );
+    }
   }
 
   /// Update the metadata of CommonJS modules.
@@ -1223,13 +1311,6 @@ impl BindImportsAndExportsContext<'_> {
         }
       }
     }
-
-    if module.named_imports.is_empty() {
-      let resolved_exports = self.metas[module_idx].resolved_exports.clone();
-      if !resolved_exports.is_empty() {
-        self.detect_ambiguous_reexport(module.as_ref(), &resolved_exports);
-      }
-    }
   }
 
   fn advance_import_tracker(&self, ctx: &MatchingContext) -> ImportStatus {
@@ -1569,93 +1650,6 @@ impl BindImportsAndExportsContext<'_> {
     }
 
     ret
-  }
-
-  fn detect_ambiguous_reexport(
-    &mut self,
-    module: &NormalModule,
-    resolved_export: &FxHashMap<CompactStr, ResolvedExport>,
-  ) {
-    for (export_name, resolved) in resolved_export {
-      if let Some(potentially_ambiguous_symbol_refs) = &resolved.potentially_ambiguous_symbol_refs {
-        if !potentially_ambiguous_symbol_refs.is_empty() {
-          let defined_symbols: FxHashSet<ModuleIdx> = std::iter::once(resolved.symbol_ref)
-            .chain(potentially_ambiguous_symbol_refs.iter().copied())
-            .filter_map(|symbol_ref| self.get_symbol_definition_module_id(symbol_ref))
-            .collect();
-
-          if defined_symbols.len() > 1 {
-            let mut exporter = Vec::with_capacity(potentially_ambiguous_symbol_refs.len() + 1);
-            if let Some(module) = self.index_modules[resolved.symbol_ref.owner].as_normal() {
-              let named_export = module.named_exports[export_name];
-              exporter.push(AmbiguousReexportModule {
-                source: module.source.clone(),
-                module_id: module.id.to_string(),
-                stable_id: module.stable_id.to_string(),
-                span_of_identifier: named_export.span,
-              });
-            }
-
-            for symbol in potentially_ambiguous_symbol_refs.iter() {
-              if let Some(module) = self.index_modules[symbol.owner].as_normal() {
-                let named_export = module.named_exports[export_name];
-                exporter.push(AmbiguousReexportModule {
-                  source: module.source.clone(),
-                  module_id: module.id.to_string(),
-                  stable_id: module.stable_id.to_string(),
-                  span_of_identifier: named_export.span,
-                });
-              }
-            }
-
-            self.diagnostics.push(
-              BuildDiagnostic::ambiguous_reexport(
-                export_name.to_string(),
-                module.stable_id.to_string(),
-                AmbiguousReexportModule {
-                  source: module.source.clone(),
-                  module_id: module.id.to_string(),
-                  stable_id: module.stable_id.to_string(),
-                  span_of_identifier: oxc::span::Span::default(),
-                },
-                exporter,
-              )
-              .with_severity_warning(),
-            );
-          }
-        }
-      }
-    }
-  }
-
-  // Get the module id where the symbol is originally defined
-  // This traces through imports to find the actual defining module
-  fn get_symbol_definition_module_id(&self, symbol_ref: SymbolRef) -> Option<ModuleIdx> {
-    if let Module::Normal(module) = &self.index_modules[symbol_ref.owner] {
-      if let Some(named_import) = module.named_imports.get(&symbol_ref) {
-        let rec = &module.import_records[named_import.record_idx];
-        let Some(resolved_module_id) = rec.resolved_module else {
-          return Some(symbol_ref.owner);
-        };
-        if matches!(self.index_modules[resolved_module_id], Module::External(_)) {
-          return Some(resolved_module_id);
-        }
-        if let Module::Normal(module) = &self.index_modules[resolved_module_id] {
-          match &named_import.imported {
-            Specifier::Star => return Some(resolved_module_id),
-            Specifier::Literal(name) => {
-              if let Some(export) = module.named_exports.get(name) {
-                return self.get_symbol_definition_module_id(export.referenced);
-              }
-            }
-          }
-        }
-      } else {
-        return Some(symbol_ref.owner);
-      }
-    }
-
-    Some(symbol_ref.owner)
   }
 }
 

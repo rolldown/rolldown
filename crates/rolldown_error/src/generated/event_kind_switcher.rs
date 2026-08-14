@@ -53,6 +53,6 @@ bitflags! {
     const RequireTlaError = 1 << 46;
     const LargeBarrelModules = 1 << 47;
     const SourcemapBroken = 1 << 48;
-    const AmbiguousReexportError = 1 << 49;
+    const NamespaceConflict = 1 << 49;
   }
 }

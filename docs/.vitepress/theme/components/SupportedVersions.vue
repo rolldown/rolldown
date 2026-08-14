@@ -31,7 +31,7 @@ const checkedResult = computed(() => {
     return parsedVersion.major === compared.major && parsedVersion.minor >= compared.minor;
   };
   const satisfiesOneSupportedVersion =
-    parsedVersion.major >= parsedRolldownVersion.major ||
+    parsedVersion.major > parsedRolldownVersion.major ||
     supportInfo.regularPatches.some(satisfies) ||
     supportInfo.importantFixes.some(satisfies) ||
     supportInfo.securityPatches.some(satisfies);
@@ -54,8 +54,9 @@ function computeSupportInfo(version: NonNullable<ReturnType<typeof parseVersion>
   const { major, minor } = version;
   const f = (versions: string[]) => {
     return versions
-      .map((v) => previousMajorLatestMinors[v] ?? v)
-      .filter((version) => {
+      .map((v) => (v.includes('.') ? v : previousMajorLatestMinors[v]))
+      .filter((version): version is string => {
+        if (version == null) return false;
         if (!isValidRolldownVersion(version)) return false;
         if (/-\d/.test(version)) return false;
         return true;

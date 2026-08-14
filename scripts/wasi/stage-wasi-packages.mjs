@@ -62,21 +62,26 @@ const unavailableExecutionIdentity = 'unavailable';
 let currentExecutionIdentityPromise;
 let currentProcessIncarnationPromise;
 
-// @napi-rs/wasm-runtime 1.2.2 ships dist/fs.js WITHOUT the inline source map
-// that 1.2.0 carried, so the embedded-package inventory can no longer always
-// be derived from the bundle itself. The 1.2.2 bundle is byte-identical to the
-// 1.2.0 bundle minus its sourceMappingURL line (verified by diff), so the
-// inventory derived from 1.2.0's source map still describes it exactly. Pin
-// each audited map-less bundle by content hash: a wasm-runtime bump that
-// changes the bundle must re-audit its embedded packages (diff against the
-// last audited bundle, or rebuild it upstream with source maps) and update
-// BOTH this table and the THIRD-PARTY-LICENSE inventory.
+// @napi-rs/wasm-runtime stopped shipping dist/fs.js with an inline source map
+// after 1.2.0, so the embedded-package inventory can no longer always be
+// derived from the bundle itself. Pin each audited map-less bundle by content
+// hash: a wasm-runtime bump that changes the bundle must re-audit its embedded
+// packages (diff against the last audited bundle, or rebuild it upstream with
+// source maps) and update BOTH this table and the THIRD-PARTY-LICENSE
+// inventory.
 const auditedRuntimeFsBundles = new Map([
   [
-    // dist/fs.js of @napi-rs/wasm-runtime 1.2.2 (== 1.2.0 minus the map line)
-    'efd9b172f08d00055e7475994df6698ef995070a41e408dfb9bdec074e2e5a60',
+    // dist/fs.js of @napi-rs/wasm-runtime 1.2.3. 1.2.3 rebuilt the bundle with
+    // rolldown instead of rollup, so it is not a byte-diff of the 1.2.2/1.2.0
+    // bundle and was re-audited from its `//#region ../node_modules/<pkg>/...`
+    // markers (every node_modules path in the bundle is covered by one). That
+    // derivation reproduces 1.2.0's source-map inventory exactly when replayed
+    // on 1.2.0, and yields the same package set here: `memfs` keeps no region
+    // marker of its own but is still a bundled devDependency (its API is
+    // re-exported through the @jsonjoy.com/fs-* modules), so it stays listed.
+    '7357c7859efc35d7b3cbe37d2cec912f12d554403fb6b48e1a7ac035c43cbb70',
     {
-      version: '1.2.2',
+      version: '1.2.3',
       packages: [
         '@jsonjoy.com/base64',
         '@jsonjoy.com/buffers',

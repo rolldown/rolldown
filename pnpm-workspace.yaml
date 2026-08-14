@@ -33,7 +33,7 @@ onlyBuiltDependencies:
 
 overrides:
   # napi-build 2.4.1 links the emnapi v2 C archives; pin the exact release so a range change cannot silently swap them.
-  emnapi: 2.0.0-alpha.3
+  emnapi: 2.0.0-alpha.4
   vitepress>vite: npm:rolldown-vite@latest
 
 catalog:
@@ -42,11 +42,14 @@ catalog:
   '@babel/preset-typescript': ^7.29.7
   # the .wasm links emnapi v2 C archives, so a v1 JS runtime is an ABI mismatch (see the `emnapi` override above).
   # scripts/wasi/check-workerd-packed-consumer.mjs asserts these exact versions, so bump both together.
-  '@emnapi/core': 2.0.0-alpha.3
-  '@emnapi/runtime': 2.0.0-alpha.3
+  '@emnapi/core': 2.0.0-alpha.4
+  '@emnapi/runtime': 2.0.0-alpha.4
   '@jridgewell/trace-mapping': ^0.3.31
-  '@napi-rs/cli': 3.8.5
-  '@napi-rs/wasm-runtime': ~1.2.2
+  # exact pin: `napi.rootPublisher` (napi-rs#3450) is honored only from 3.8.5, and
+  # pre-publish validation needs it, so a `^` range could resolve below that. 3.8.6
+  # peer-requires the emnapi 2.0.0-alpha.4 line, so it moves with the pins above.
+  '@napi-rs/cli': 3.8.6
+  '@napi-rs/wasm-runtime': ~1.2.3
   '@oxc-node/cli': ^0.1.0
   '@oxc-node/core': ^0.1.0
   '@oxc-project/runtime': '=0.144.0'
@@ -73,7 +76,7 @@ catalog:
   consola: ^3.4.2
   dedent: ^1.5.3
   diff: ^9.0.0
-  emnapi: 2.0.0-alpha.3
+  emnapi: 2.0.0-alpha.4
   esbuild: ^0.28.0
   estree-toolkit: ^1.7.8
   execa: ^9.2.0
@@ -144,10 +147,10 @@ trustPolicyExclude:
 verifyDepsBeforeRun: install
 
 minimumReleaseAgeExclude:
-  - '@napi-rs/cli@3.8.5'
-  - '@emnapi/core@1.11.2 || 2.0.0-alpha.3'
-  - '@emnapi/runtime@1.11.2 || 2.0.0-alpha.3'
-  - emnapi@1.11.2 || 2.0.0-alpha.3
+  - '@napi-rs/cli@3.8.6'
+  - '@emnapi/core@1.11.2 || 2.0.0-alpha.4'
+  - '@emnapi/runtime@1.11.2 || 2.0.0-alpha.4'
+  - emnapi@1.11.2 || 2.0.0-alpha.4
   - '@emnapi/wasi-threads@2.0.1'
   - '@oxc-minify/*'
   - '@oxc-parser/*'

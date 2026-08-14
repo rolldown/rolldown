@@ -41,9 +41,9 @@ const bundledRuntimePackages = [
 // future registry consumer must resolve; drift must fail CI until this script is
 // updated deliberately.
 const expectedRegistryRuntimeDependencies = {
-  '@emnapi/core': '2.0.0-alpha.3',
-  '@emnapi/runtime': '2.0.0-alpha.3',
-  '@napi-rs/wasm-runtime': '~1.2.2',
+  '@emnapi/core': '2.0.0-alpha.4',
+  '@emnapi/runtime': '2.0.0-alpha.4',
+  '@napi-rs/wasm-runtime': '~1.2.3',
 };
 const forbiddenRegistryRuntimeDependencies = ['buffer', 'node:buffer'];
 
@@ -369,7 +369,7 @@ export default {
   for (const [dependency, pinnedRange] of Object.entries(expectedRegistryRuntimeDependencies)) {
     // A virtual-store entry is `<name>@<version>`, plus a `_`-joined
     // peer-resolution suffix when the package declares peer dependencies
-    // (@napi-rs/wasm-runtime 1.2.2 peers on the emnapi runtimes, so its entry
+    // (@napi-rs/wasm-runtime 1.2.3 peers on the emnapi runtimes, so its entry
     // carries one). Match the version prefix the range guarantees: the major
     // for `^`, major.minor for `~`, and the exact version for pins.
     const storeName = dependency.replace('/', '+');

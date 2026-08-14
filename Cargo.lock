@@ -136,6 +136,7 @@ dependencies = [
  "mimalloc-safe",
  "oxc",
  "rolldown",
+ "rolldown_ecmascript",
  "rolldown_fs",
  "rolldown_resolver",
  "rolldown_sourcemap",

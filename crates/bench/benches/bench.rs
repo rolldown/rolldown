@@ -6,12 +6,14 @@ use std::fmt::Write as _;
 use bench::{BenchMode, DeriveOptions, bench_preset, rome_ts_preset, run_bench_group};
 use criterion::{BatchSize, Criterion, black_box, criterion_group, criterion_main};
 use oxc::{
-  allocator::Allocator,
+  allocator::{Allocator, CloneIn},
   codegen::{Codegen, CodegenOptions, CodegenReturn},
+  minifier::{CompressOptions, Minifier, MinifierOptions},
   parser::Parser,
   span::SourceType,
 };
 use rolldown::{BundlerOptions, ModuleType};
+use rolldown_ecmascript::{EcmaAst, EcmaCompiler};
 use rolldown_sourcemap::{SourceJoiner, SourceMap, SourceMapSource, collapse_sourcemaps};
 use rustc_hash::FxHashMap;
 
@@ -187,5 +189,109 @@ fn sourcemap_benches(c: &mut Criterion) {
   group.finish();
 }
 
-criterion_group!(benches, criterion_benchmark, sourcemap_benches);
+// ===========================================================================
+// Post-render chunk DCE micro-benchmarks
+//
+// `minify_chunks` receives one completed chunk string, then reparses it into a
+// fresh arena before running Oxc DCE. A large single-chunk build cannot benefit
+// from the chunk-level Rayon parallelism, so the roundtrip is directly on the
+// critical path. See internal-docs/chunk-minification-boundary/design.md.
+// ===========================================================================
+
+fn dce_codegen(source: &str, jsx: bool) -> String {
+  let allocator = Allocator::default();
+  dce_codegen_with_allocator(source, &allocator, jsx)
+}
+
+fn dce_codegen_with_allocator(source: &str, allocator: &Allocator, jsx: bool) -> String {
+  let parsed = Parser::new(allocator, source, SourceType::mjs().with_jsx(jsx)).parse();
+  let mut program = parsed.program;
+  let options = MinifierOptions { mangle: None, compress: Some(CompressOptions::dce()) };
+  let ret = Minifier::new(options).dce(allocator, &mut program);
+  Codegen::new().with_scoping(ret.scoping).build(&program).code
+}
+
+fn finalized_module_source(index: u32, module_count: u32) -> String {
+  let mut source = String::new();
+  for function_index in 0..10 {
+    let _ = writeln!(
+      source,
+      "function module_{index}_fn_{function_index}(input) {{ return input + {function_index}; }}"
+    );
+  }
+  if index == 0 {
+    source.push_str("const module_0_value = module_0_fn_0(0);\n");
+  } else {
+    let previous = index - 1;
+    let _ = writeln!(
+      source,
+      "const module_{index}_value = module_{index}_fn_0(module_{previous}_value);"
+    );
+  }
+  if index + 1 == module_count {
+    let _ = writeln!(source, "console.log(module_{index}_value);");
+  }
+  source
+}
+
+fn build_finalized_module_asts(module_count: u32) -> Vec<EcmaAst> {
+  (0..module_count)
+    .map(|index| {
+      EcmaCompiler::parse(
+        &format!("module_{index}.js"),
+        finalized_module_source(index, module_count),
+        SourceType::mjs(),
+      )
+      .expect("benchmark module should parse")
+    })
+    .collect()
+}
+
+fn dce_via_text_boundary(modules: &[EcmaAst]) -> String {
+  let mut chunk = String::new();
+  for module in modules {
+    chunk.push_str(&Codegen::new().build(module.program()).code);
+  }
+  let allocator = Allocator::default();
+  dce_codegen_with_allocator(&chunk, &allocator, true)
+}
+
+fn dce_via_ast_clone_boundary(modules: &[EcmaAst]) -> String {
+  let allocator = Allocator::default();
+  let mut chunk_program = modules[0].program().clone_in(&allocator);
+  chunk_program.body.clear();
+  chunk_program.comments.clear();
+  for module in modules {
+    chunk_program
+      .body
+      .extend(module.program().body.iter().map(|statement| statement.clone_in(&allocator)));
+  }
+  let options = MinifierOptions { mangle: None, compress: Some(CompressOptions::dce()) };
+  let ret = Minifier::new(options).dce(&allocator, &mut chunk_program);
+  Codegen::new().with_scoping(ret.scoping).build(&chunk_program).code
+}
+
+fn chunk_dce_benches(c: &mut Criterion) {
+  let source = program_source(BIG_CHUNK);
+  let mut group = c.benchmark_group("chunk_dce");
+  group.bench_function("single_chunk_text_roundtrip", |b| {
+    b.iter(|| black_box(dce_codegen(black_box(&source), true)));
+  });
+
+  // Lower-bound prototype for an AST-preserving chunk boundary. It deliberately
+  // excludes generated format glue, comments, plugin hooks, and sourcemaps; the
+  // benchmark answers whether replacing module codegen + chunk parse with AST
+  // cloning has enough headroom to justify solving those correctness constraints.
+  let modules = build_finalized_module_asts(256);
+  assert_eq!(dce_via_text_boundary(&modules), dce_via_ast_clone_boundary(&modules));
+  group.bench_function("boundary_text_roundtrip", |b| {
+    b.iter(|| black_box(dce_via_text_boundary(black_box(&modules))));
+  });
+  group.bench_function("boundary_ast_clone", |b| {
+    b.iter(|| black_box(dce_via_ast_clone_boundary(black_box(&modules))));
+  });
+  group.finish();
+}
+
+criterion_group!(benches, criterion_benchmark, sourcemap_benches, chunk_dce_benches);
 criterion_main!(benches);

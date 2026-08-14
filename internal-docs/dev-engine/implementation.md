@@ -132,6 +132,8 @@ pub enum CoordinatorMsg {
     error_stage: Option<ErrorStage>,         // None on success; see §10
     has_generated_bundle_output: bool,
     callback_error: Option<DevCallbackError>,// rejected/thrown consumer callback
+    watch_files: Vec<ArcStr>,                // the retired handle's watch-path
+                                             // snapshot; empty if no rebuild
   },
   ScheduleBuildIfStale { reply: … },         // ask coordinator to drain its queue
   GetState { reply: … },                     // snapshot of coordinator state
@@ -635,7 +637,7 @@ rebuilding task (`Rebuild`, `HmrRebuild`) produces `ScanMode::Partial`.
 
 ```rust
 current_bundling_future = None;
-update_watch_paths();                       // even on failure
+update_watch_paths_including(watch_files);  // even on failure
 if error_stage.is_some() {
   // FullBuildFailed always recovers via FullBuild on next file change,
   // so the originating stage is discarded here.
@@ -657,7 +659,7 @@ if error_stage.is_some() {
 
 ```rust
 current_bundling_future = None;
-update_watch_paths();                       // register newly-pulled-in files
+update_watch_paths_including(watch_files);  // register newly-pulled-in files
 if let Some(stage) = error_stage {
   state = Failed { last_error_stage: stage };
   has_stale_bundle_output = true;
@@ -671,6 +673,18 @@ schedule_build_if_stale();                  // ALWAYS — drain the queue
 The stage carried into `Failed` is the one reported by `BundleCompleted`
 (§10 precedence). It's read on the next file change by §7 to choose
 between `Hmr` and `HmrRebuild`.
+
+**Watch paths ride on `BundleCompleted` too**, for the same reason they ride
+on `ModuleChanged` (§ "Watch paths ride on the message"). In an `HmrRebuild`
+task both stages share one bundler: the HMR stage records the modules it
+pulls in on the current handle _and_ merges them into the scan cache, so the
+rebuild's partial rescan no longer refetches them and the fresh handle —
+`watch_files` starts empty — never records them. A new import is then on the
+outgoing handle and on no other, and nothing re-derives it. `rebuild()`
+snapshots `watch_files` under the lock immediately before the replacement;
+the coordinator unions that snapshot with the live handle. The same snapshot
+also covers `addWatchFile` calls made from the `watchChange` hook, which no
+scan re-derives at all.
 
 Key facts:
 

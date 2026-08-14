@@ -139,9 +139,15 @@ impl BundleCoordinator {
           error_stage,
           has_generated_bundle_output,
           callback_error,
+          watch_files,
         } => {
           self
-            .handle_bundle_completed(error_stage, has_generated_bundle_output, callback_error)
+            .handle_bundle_completed(
+              error_stage,
+              has_generated_bundle_output,
+              callback_error,
+              &watch_files,
+            )
             .await;
         }
         #[cfg(feature = "testing")]
@@ -346,11 +352,16 @@ impl BundleCoordinator {
   }
 
   /// Handle build completion notification
+  ///
+  /// `watch_files` is the task's snapshot of the handle its rebuild retired,
+  /// unioned with the live handle for the same reason `ModuleChanged` carries
+  /// one — see `CoordinatorMsg::BundleCompleted`.
   async fn handle_bundle_completed(
     &mut self,
     error_stage: Option<ErrorStage>,
     has_generated_bundle_output: bool,
     callback_error: Option<DevCallbackError>,
+    watch_files: &[ArcStr],
   ) {
     self.last_callback_error = callback_error;
     match self.state {
@@ -368,7 +379,7 @@ impl BundleCoordinator {
 
         // Even if the build failed, update the watch paths
         // so that a new full build is triggered by the change for those files
-        let watch_paths_result = self.update_watch_paths().await;
+        let watch_paths_result = self.update_watch_paths_including(watch_files).await;
         self.retain_watch_registration_result(watch_paths_result);
 
         if error_stage.is_some() {
@@ -396,7 +407,7 @@ impl BundleCoordinator {
 
         // Register any new files this rebuild pulled into `watch_files`
         // (e.g. an edit that introduced a new transitive import).
-        let watch_paths_result = self.update_watch_paths().await;
+        let watch_paths_result = self.update_watch_paths_including(watch_files).await;
         self.retain_watch_registration_result(watch_paths_result);
 
         if let Some(stage) = error_stage {
@@ -867,7 +878,10 @@ mod tests {
         NEXT_TEST_DIR.fetch_add(1, Ordering::Relaxed)
       ));
       fs::create_dir_all(&path).expect("create test directory");
-      Self(path)
+      // Module ids are canonical, so a `/var` -> `/private/var` temp dir would
+      // stop a changed path from resolving to its module and silently turn HMR
+      // into a no-op.
+      Self(path.canonicalize().expect("canonicalize test directory"))
     }
   }
 
@@ -1391,7 +1405,7 @@ mod tests {
     assert!(coordinator.watch_registration_errors[0].pending_observers.contains(&first_observer));
     assert!(coordinator.watch_registration_errors[0].pending_observers.contains(&second_observer));
 
-    coordinator.handle_bundle_completed(None, true, None).await;
+    coordinator.handle_bundle_completed(None, true, None, &[]).await;
     assert_eq!(commit_attempts.load(Ordering::SeqCst), 2);
     assert_eq!(coordinator.state, CoordinatorState::InProgress);
     assert!(coordinator.current_bundling_future.is_some());
@@ -1647,5 +1661,116 @@ mod tests {
         "the live handle's path {path} must still be registered: {added:?}"
       );
     }
+  }
+
+  /// An `HmrRebuild` task runs both stages against one bundler: the HMR stage
+  /// records the modules it pulls in on the current handle *and* merges them
+  /// into the scan cache, then the rebuild installs a fresh handle whose
+  /// `watch_files` starts empty and whose partial rescan no longer refetches
+  /// those now-cached modules. A new import is therefore on the outgoing handle
+  /// and on no other, and the coordinator only reads the handle after the task
+  /// released the lock — so it stays unwatched, and edits to it never reach a
+  /// client. `HmrRebuild` occurs on the default `RebuildStrategy::Never` through
+  /// the `ErrorStage::Rebuild` recovery branch of `handle_file_changes`.
+  #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+  async fn bundle_completed_registers_paths_dropped_by_the_rebuild_handle() {
+    let test_dir = TestDir::new();
+    let input = test_dir.0.join("main.js");
+    fs::write(&input, "export const value = 1;").expect("write test input");
+
+    let mut bundler = Bundler::new(BundlerOptions {
+      cwd: Some(test_dir.0.clone()),
+      input: Some(vec![input.to_string_lossy().into_owned().into()]),
+      experimental: Some(ExperimentalOptions {
+        incremental_build: Some(true),
+        dev_mode: Some(DevModeOptions::default()),
+        ..Default::default()
+      }),
+      ..Default::default()
+    })
+    .expect("create test bundler");
+    bundler.generate().await.expect("generate initial bundle");
+
+    // The edit introduces a module the initial build never saw, so only this
+    // task can register it.
+    let dependency = test_dir.0.join("dep.js");
+    fs::write(&dependency, "export const dep = 1;").expect("write the new dependency");
+    fs::write(&input, "import './dep.js';\nexport const value = 2;").expect("rewrite test input");
+
+    let added = Arc::new(StdMutex::new(Vec::new()));
+    let (coordinator_tx, coordinator_rx) = unbounded();
+    let ctx = Arc::new(DevContext {
+      options: normalize_dev_options(DevOptions {
+        watch: Some(DevWatchOptions { skip_write: Some(true), ..Default::default() }),
+        ..Default::default()
+      }),
+      coordinator_tx,
+      clients: SharedClients::default(),
+      stamp_table: Arc::new(Mutex::new(rolldown_common::HmrStampTable::default())),
+      pending_payloads: Arc::new(Mutex::new(rustc_hash::FxHashMap::default())),
+      top_level_evaluated: Mutex::new(Arc::new(rustc_hash::FxHashMap::default())),
+      last_task_errored: std::sync::atomic::AtomicBool::new(false),
+    });
+    // A registered client is what makes the HMR stage compute an update at all.
+    ctx
+      .clients
+      .lock()
+      .await
+      .insert("test-client".to_string(), crate::types::client_session::ClientSession::default());
+
+    let bundler = Arc::new(Mutex::new(bundler));
+    let mut coordinator = BundleCoordinator::new(
+      Arc::clone(&bundler),
+      Arc::clone(&ctx),
+      coordinator_rx,
+      Box::new(RecordingWatcher { added: Arc::clone(&added) }),
+      Arc::new(AtomicU32::new(0)),
+    );
+    coordinator.state = CoordinatorState::InProgress;
+
+    let mut changed_files = FxIndexMap::default();
+    changed_files.insert(input.clone(), WatcherChangeKind::Update);
+    BundlingTask::new(
+      TaskInput::HmrRebuild { changed_files },
+      Arc::clone(&bundler),
+      ctx,
+      Arc::new(AtomicU32::new(0)),
+    )
+    .run()
+    .await
+    .expect("the hmr-then-rebuild task must succeed");
+
+    assert!(
+      !bundler.lock().await.watch_files().contains(dependency.to_string_lossy().as_ref()),
+      "the rebuild's handle must have dropped the new dependency, \
+       otherwise this test is not exercising the hazard"
+    );
+
+    let completed = coordinator.rx.try_recv().expect("the task must report its completion");
+    let CoordinatorMsg::BundleCompleted {
+      error_stage,
+      has_generated_bundle_output,
+      callback_error,
+      watch_files,
+    } = completed
+    else {
+      panic!("a finished task must enqueue BundleCompleted");
+    };
+    coordinator
+      .handle_bundle_completed(
+        error_stage,
+        has_generated_bundle_output,
+        callback_error,
+        &watch_files,
+      )
+      .await;
+
+    let added = added.lock().expect("recording watcher lock").clone();
+    assert!(
+      added.contains(&dependency),
+      "the module the HMR stage pulled in must be watched: {added:?}"
+    );
+    // Union, not substitution: the replacement handle's own sources stay watched.
+    assert!(added.contains(&input), "the rescanned entry must still be watched: {added:?}");
   }
 }

@@ -23,6 +23,16 @@ pub enum CoordinatorMsg {
     /// Callback execution failure, retained separately from build diagnostics
     /// so lifecycle waiters can observe rejected/throwing consumer callbacks.
     callback_error: Option<DevCallbackError>,
+    /// `plugin_driver.watch_files` as it stood right before this task's rebuild
+    /// replaced the bundle handle — empty when the task never rebuilt.
+    ///
+    /// The HMR stage runs on the handle the rebuild is about to retire, and a
+    /// module it pulls in (a new import) is merged into the scan cache, so the
+    /// rebuild's partial scan no longer refetches it and the fresh handle never
+    /// records it. The coordinator reads the handle after the lock is gone, so
+    /// re-reading it observes only what the rebuild rescanned; the rest would go
+    /// unwatched forever. Same shape as `ModuleChanged::watch_files`.
+    watch_files: Vec<ArcStr>,
   },
   #[cfg(feature = "testing")]
   ScheduleBuildIfStale {

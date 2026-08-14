@@ -35,6 +35,9 @@ pub struct BundlingTask {
   /// when deriving the final stage — see `final_error_stage`.
   rebuild_errored: bool,
   has_rebuild_happen: bool,
+  /// Watch paths snapshotted off the handle this task's rebuild retired.
+  /// Empty when the task never rebuilt. See `CoordinatorMsg::BundleCompleted`.
+  retired_watch_files: Vec<ArcStr>,
 }
 
 impl Deref for BundlingTask {
@@ -66,6 +69,7 @@ impl BundlingTask {
       has_rebuild_happen: false,
       hmr_errored: false,
       rebuild_errored: false,
+      retired_watch_files: Vec::new(),
     }
   }
 
@@ -100,6 +104,7 @@ impl BundlingTask {
       error_stage,
       has_generated_bundle_output,
       callback_error,
+      watch_files: std::mem::take(&mut self.retired_watch_files),
     }).expect(
       "Coordinator channel closed while sending BundleCompleted - coordinator terminated unexpectedly"
     );
@@ -347,6 +352,15 @@ impl BundlingTask {
   #[tracing::instrument(level = "trace", skip_all)]
   async fn rebuild(&mut self) -> DevCallbackResult {
     let mut bundler = self.bundler.lock().await;
+
+    // Snapshot before the rebuild retires this handle: `create_plugin_driver`
+    // gives the replacement an empty `watch_files`, and a partial rescan only
+    // re-records what it refetched. Everything the earlier stages of this task
+    // put on the outgoing handle — the `watchChange` hook's `addWatchFile`
+    // calls, the modules the HMR stage pulled in — is otherwise gone before the
+    // coordinator reads it. Carried as data on `BundleCompleted`; see that
+    // message's doc.
+    self.retired_watch_files = bundler.watch_files().iter().map(|path| path.clone()).collect();
 
     // TODO: hyf0 `skip_write` in watch mode won't trigger generate stage, need to investigate why.
     let skip_write = self.dev_context.options.skip_write;

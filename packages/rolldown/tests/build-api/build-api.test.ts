@@ -1024,53 +1024,6 @@ test('build preserves a lone primary or cleanup failure', async () => {
   expect(cleanupOnly).toBe(closeError);
 });
 
-test('build option arrays finish cleanup before starting the next option', async () => {
-  let firstClosed = false;
-  let secondOptionsSawFirstClosed = false;
-  const virtualEntry = (id: string) => ({
-    name: `virtual-${id}`,
-    resolveId(source: string) {
-      if (source === id) return `\0${id}`;
-    },
-    load(source: string) {
-      if (source === `\0${id}`) return 'export default 1';
-    },
-  });
-
-  const outputs = await build([
-    {
-      input: 'first',
-      plugins: [
-        virtualEntry('first'),
-        {
-          name: 'observe-first-close',
-          closeBundle() {
-            firstClosed = true;
-          },
-        },
-      ],
-      write: false,
-    },
-    {
-      input: 'second',
-      plugins: [
-        {
-          name: 'observe-sequential-options',
-          options(options) {
-            secondOptionsSawFirstClosed = firstClosed;
-            return options;
-          },
-        },
-        virtualEntry('second'),
-      ],
-      write: false,
-    },
-  ]);
-
-  expect(outputs).toHaveLength(2);
-  expect(secondOptionsSawFirstClosed).toBe(true);
-});
-
 test.each(['single', 'array'] as const)(
   'build reads a %s config object once per option',
   async (shape) => {

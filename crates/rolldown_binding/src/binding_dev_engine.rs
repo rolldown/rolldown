@@ -48,6 +48,7 @@ impl BindingDevEngine {
       dev_options.as_ref().and_then(|opts| opts.rebuild_strategy).map(Into::into);
     // Take ownership of watch so we can consume Vec fields (include/exclude).
     let watch_options = dev_options.and_then(|opts| opts.watch);
+    let watcher_enabled = watch_options.as_ref().and_then(|watch| watch.enabled);
     let skip_write = watch_options.as_ref().and_then(|watch| watch.skip_write);
     let use_polling = watch_options.as_ref().and_then(|watch| watch.use_polling);
     let poll_interval = watch_options.as_ref().and_then(|watch| watch.poll_interval);
@@ -127,7 +128,8 @@ impl BindingDevEngine {
       }) as OnAdditionalAssetsCallback
     });
 
-    let dev_watch_options = if skip_write.is_some()
+    let dev_watch_options = if watcher_enabled.is_some()
+      || skip_write.is_some()
       || use_polling.is_some()
       || poll_interval.is_some()
       || use_debounce.is_some()
@@ -138,7 +140,7 @@ impl BindingDevEngine {
       || watch_exclude.is_some()
     {
       Some(rolldown_dev::DevWatchOptions {
-        disable_watcher: None,
+        disable_watcher: watcher_enabled.map(|enabled| !enabled),
         skip_write,
         use_polling,
         poll_interval: poll_interval.map(u64::from),
@@ -232,43 +234,32 @@ impl BindingDevEngine {
     self.inner.trigger_full_build().expect("Should handle this error");
   }
 
-  #[napi]
-  pub fn invalidate<'env>(
-    &self,
-    env: &'env Env,
-    caller: String,
-    first_invalidated_by: Option<String>,
-  ) -> napi::Result<PromiseRaw<'env, BindingResult<Vec<BindingClientHmrUpdate>>>> {
-    let inner = Arc::clone(&self.inner);
-    let cwd = Arc::clone(&self.cwd);
-    spawn_boxed_future(env, async move {
-      match inner.invalidate(caller, first_invalidated_by).await {
-        Ok(updates) => {
-          let binding_updates =
-            updates.into_iter().map(BindingClientHmrUpdate::from).collect::<Vec<_>>();
-          Ok(Either::B(binding_updates))
-        }
-        Err(errors) => {
-          let binding_errors: Vec<_> = errors
-            .iter()
-            .map(|diagnostic| to_binding_error(diagnostic, cwd.to_path_buf()))
-            .collect();
-          Ok(Either::A(BindingErrors::new(binding_errors)))
-        }
-      }
-    })
-  }
-
+  /// Client-connect signal (the clientId hello): creates the per-client session
+  /// with an empty ship map. Reconnects arrive as fresh clientIds.
   #[napi(ts_return_type = "Promise<void>")]
-  pub fn register_modules<'env>(
+  pub fn register_client<'env>(
     &self,
     env: &'env Env,
     client_id: String,
-    modules: Vec<String>,
   ) -> napi::Result<PromiseRaw<'env, ()>> {
     let inner = Arc::clone(&self.inner);
     spawn_boxed_future(env, async move {
-      inner.clients.lock().await.entry(client_id).or_default().executed_modules.extend(modules);
+      inner.register_client(client_id).await;
+      Ok(())
+    })
+  }
+
+  /// Delivery notification from the serving middleware: the response for
+  /// `filename` completed, so record its modules as shipped to that client.
+  #[napi(ts_return_type = "Promise<void>")]
+  pub fn notify_payload_delivered<'env>(
+    &self,
+    env: &'env Env,
+    filename: String,
+  ) -> napi::Result<PromiseRaw<'env, ()>> {
+    let inner = Arc::clone(&self.inner);
+    spawn_boxed_future(env, async move {
+      inner.notify_payload_delivered(&filename).await;
       Ok(())
     })
   }
@@ -281,7 +272,7 @@ impl BindingDevEngine {
   ) -> napi::Result<PromiseRaw<'env, ()>> {
     let inner = Arc::clone(&self.inner);
     spawn_boxed_future(env, async move {
-      inner.clients.lock().await.remove(&client_id);
+      inner.remove_client(&client_id).await;
       Ok(())
     })
   }
@@ -306,15 +297,34 @@ impl BindingDevEngine {
     env: &'env Env,
     module_id: String,
     client_id: String,
-  ) -> napi::Result<PromiseRaw<'env, String>> {
+  ) -> napi::Result<PromiseRaw<'env, BindingLazyChunkOutput>> {
     let inner = Arc::clone(&self.inner);
     spawn_boxed_future(env, async move {
       inner
         .compile_lazy_entry(module_id, client_id)
         .await
+        .map(|output| BindingLazyChunkOutput {
+          code: output.code,
+          filename: output.filename,
+          sourcemap: output.sourcemap,
+          sourcemap_filename: output.sourcemap_filename,
+        })
         .map_err(|e| napi::Error::from_reason(format!("Failed to compile lazy entry: {e:#?}")))
     })
   }
+}
+
+/// The client-facing slice of a lazy-compile result. The carried modules and
+/// stamps stay server-side as the engine's pending-payload entry.
+#[napi(object)]
+pub struct BindingLazyChunkOutput {
+  pub code: String,
+  pub filename: String,
+  /// The chunk's sourcemap, when `sourcemap` is `File` or `Hidden`. Serve it
+  /// under `sourcemapFilename`, which is what the chunk's `sourceMappingURL`
+  /// refers to.
+  pub sourcemap: Option<String>,
+  pub sourcemap_filename: Option<String>,
 }
 
 #[napi(object)]

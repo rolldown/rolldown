@@ -429,6 +429,12 @@ const ChecksOptionsSchema = v.strictObject({
       'Whether to emit warnings when a plugin transforms code without generating a sourcemap',
     ),
   ),
+  namespaceConflict: v.pipe(
+    v.optional(v.boolean()),
+    v.description(
+      'Whether to emit warnings when multiple star re-exports provide the same name from different modules',
+    ),
+  ),
 });
 isTypeTrue<IsSchemaSubType<typeof ChecksOptionsSchema, ChecksOptions>>();
 
@@ -476,6 +482,7 @@ isTypeTrue<IsSchemaSubType<typeof MangleOptionsKeepNamesSchema, MangleOptionsKee
 const MangleOptionsSchema = v.strictObject({
   toplevel: v.optional(v.boolean()),
   keepNames: v.optional(v.union([v.boolean(), MangleOptionsKeepNamesSchema])),
+  reserved: v.optional(v.array(v.string())),
   debug: v.optional(v.boolean()),
 }) satisfies v.GenericSchema<MangleOptions>;
 isTypeTrue<IsSchemaSubType<typeof MangleOptionsSchema, MangleOptions>>();
@@ -595,6 +602,7 @@ const DevModeSchema = v.union([
     port: v.optional(v.number()),
     host: v.optional(v.string()),
     implement: v.optional(v.string()),
+    skipCommonRuntimeInjection: v.optional(v.boolean()),
     lazy: v.optional(v.boolean()),
   }),
 ]);
@@ -893,6 +901,10 @@ const OutputOptionsSchema = v.strictObject({
     v.optional(v.string()),
     v.description('Base URL used to prefix sourcemap paths'),
   ),
+  sourcemapFileNames: v.pipe(
+    v.optional(ChunkFileNamesSchema),
+    v.description('Name pattern for emitted sourcemaps'),
+  ),
   sourcemapDebugIds: v.pipe(v.optional(v.boolean()), v.description('Inject sourcemap debug IDs')),
   sourcemapExcludeSources: v.pipe(
     v.optional(v.boolean()),
@@ -987,7 +999,7 @@ const OutputOptionsSchema = v.strictObject({
   ),
   strictExecutionOrder: v.pipe(
     v.optional(v.boolean()),
-    v.description('Lets modules be executed in the order they are declared.'),
+    v.description('Preserve source module execution order across generated chunks.'),
   ),
   strict: v.pipe(
     v.optional(v.union([v.boolean(), v.literal('auto')])),

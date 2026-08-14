@@ -2,11 +2,12 @@ use itertools::Itertools;
 use oxc::semantic::NodeId;
 use oxc_index::IndexVec;
 use rolldown_common::{
-  ConstExportMeta, EcmaModuleAstUsage, EcmaViewMeta, ExportsKind, ImportKind, ImportRecordMeta,
-  IndexModules, MemberExprRef, Module, ModuleIdx, ModuleNamespaceIncludedReason, ModuleType,
-  NormalModule, NormalizedBundlerOptions, RUNTIME_MODULE_ID, RuntimeHelper, StmtEvalFlags,
-  StmtInfo, StmtInfoIdx, StmtInfoMeta, StmtInfos, SymbolOrMemberExprRef, SymbolRef, SymbolRefDb,
-  UsedExternalSymbols, UsedSymbolRefsBuilder, WrapKind, side_effects::DeterminedSideEffects,
+  ConstExportMeta, EcmaModuleAstUsage, EcmaViewMeta, ExportsKind, ExternalInteropUse, ImportKind,
+  ImportRecordMeta, IndexModules, MemberExprRef, Module, ModuleIdx, ModuleNamespaceIncludedReason,
+  ModuleType, NormalModule, NormalizedBundlerOptions, RUNTIME_MODULE_ID, RuntimeHelper,
+  StmtEvalFlags, StmtInfo, StmtInfoIdx, StmtInfoMeta, StmtInfos, SymbolOrMemberExprRef, SymbolRef,
+  SymbolRefDb, UsedExternalSymbols, UsedSymbolRefsBuilder, WrapKind,
+  side_effects::DeterminedSideEffects,
 };
 #[cfg(not(target_family = "wasm"))]
 use rolldown_utils::rayon::IndexedParallelIterator;
@@ -21,6 +22,7 @@ use rustc_hash::{FxHashMap, FxHashSet};
 use crate::{
   stages::link_stage::LinkStage, type_alias::IndexStmtInfos,
   types::linking_metadata::LinkingMetadataVec,
+  utils::external_import_interop::import_record_needs_interop,
 };
 
 use super::{
@@ -79,6 +81,8 @@ pub struct IncludeContext<'a> {
   /// It is necessary since we can't mutate `module.meta` during the tree shaking process.
   /// see [rolldown_common::ecmascript::ecma_view::EcmaViewMeta]
   pub bailout_cjs_tree_shaking_modules: FxHashSet<ModuleIdx>,
+  /// Cache for [`external_importer_modes`], keyed by external module.
+  pub external_importer_modes: FxHashMap<ModuleIdx, ExternalInteropUse>,
   /// Tracks whether any new module was included during the current convergence iteration.
   /// Used to detect fixpoint without O(N) scanning of `is_module_included_vec`.
   pub module_inclusion_changed: bool,
@@ -142,6 +146,7 @@ impl<'a> IncludeContext<'a> {
       options,
       normal_symbol_exports_chain_map,
       bailout_cjs_tree_shaking_modules: FxHashSet::default(),
+      external_importer_modes: FxHashMap::default(),
       module_inclusion_changed: false,
       module_namespace_included_reason,
       json_module_none_self_reference_included_symbol: FxHashMap::default(),
@@ -428,11 +433,19 @@ impl LinkStage<'_> {
         meta.module_namespace_included_reason = module_namespace_included_reason[module.idx];
       });
 
-    let depended_runtime_helper = collect_depended_runtime_helpers(
+    let mut depended_runtime_helper = collect_depended_runtime_helpers(
       &self.module_table.modules,
       &self.metas,
       &is_module_included_vec,
     );
+    // `__toESM` is otherwise requested by the *statement* that wrote `import ... from 'external'`,
+    // so it dies with the module holding it — routinely a re-export shim that tree-shaking drops
+    // while the `<external_ns>.default` reference it produced lives on elsewhere (issue #10069).
+    // The recorded uses are the post-linking truth about who still reads the external as an ES
+    // module, so they keep the helper alive on their own.
+    if used_external_symbols.has_interop_use() {
+      depended_runtime_helper |= RuntimeHelper::ToEsm;
+    }
     let context = &mut IncludeContext::new(
       &self.module_table.modules,
       &self.stmt_infos,
@@ -656,7 +669,14 @@ fn handle_include_symbol(
     return;
   }
 
-  drain_body_demand_stmts(ctx, canonical_ref);
+  // A simulated-facade include only materializes the eliminated facade's namespace object
+  // as a chunk export; it is not a semantic observation of the module, so it must not
+  // body-demand it (the namespace statement's getters were already narrowed to link-time
+  // used symbols, mirroring the `WorkItem::Module` gate below). Resurrecting gated
+  // statements here would also let inclusion grow after chunk assignment finished (#10337).
+  if !include_reason.contains(SymbolIncludeReason::SimulatedFacadeChunk) {
+    drain_body_demand_stmts(ctx, canonical_ref);
+  }
 
   // Also include the symbol that points to the canonical ref.
   ctx.used_symbol_refs.insert(symbol_ref);
@@ -667,6 +687,9 @@ fn handle_include_symbol(
   // CJS bailout checks are handled by `include_symbol_and_check_cjs_bailout`
   // at most call sites. This keeps `include_symbol` focused on inclusion only.
 
+  // The alias holder is the module that wrote `import ... from 'external'`; keep it around,
+  // `follow_cjs_namespace_alias` rewrites `canonical_ref` past it.
+  let alias_holder_ref = canonical_ref;
   follow_cjs_namespace_alias(ctx, &mut canonical_ref);
 
   let is_simulated_facade_chunk =
@@ -675,6 +698,7 @@ fn handle_include_symbol(
   ctx.used_symbol_refs.insert(canonical_ref);
   if ctx.modules[canonical_ref.owner].is_external() {
     ctx.used_external_symbols.insert(canonical_ref);
+    note_external_interop_use(ctx, symbol_ref, alias_holder_ref, canonical_ref);
   }
   if let Module::Normal(module) = &ctx.modules[canonical_ref.owner] {
     demand_esm_init_wrapper(ctx, canonical_ref);
@@ -762,6 +786,116 @@ fn follow_cjs_namespace_alias(ctx: &mut IncludeContext, canonical_ref: &mut Symb
       });
     }
   }
+}
+
+/// Record whether this reference makes an external module observable *as an ES module*, which is
+/// what decides the `__toESM` wrapper in non-ESM formats (issue #10069).
+///
+/// See internal-docs/runtime-helpers/implementation.md.
+///
+/// The renderers cannot re-derive this from the static imports the chunk's own modules carry: a
+/// re-export shim (`import d from 'external'; export { d }`) is routinely tree-shaken away while
+/// the `<external_ns>.default` reference it produced survives in another module. So the inclusion
+/// pass — the one place that walks the reference *after* linking resolved it — records it.
+///
+/// - Reached through a `namespace_alias`, the alias names the property: only `default` needs the
+///   wrapper, a named import reads the CommonJS object directly.
+/// - Reached without one, the reference *is* the namespace object (`import * as ns`), which always
+///   needs it.
+fn note_external_interop_use(
+  ctx: &mut IncludeContext,
+  symbol_ref: SymbolRef,
+  alias_holder_ref: SymbolRef,
+  external_ref: SymbolRef,
+) {
+  if ctx.options.format.keep_esm_import_export_syntax() {
+    return;
+  }
+  // Only the module-level namespace binding is wrapped. The per-name facade symbols minted by the
+  // external import binding merger are read off that (already wrapped) namespace. Key the record
+  // by the canonical ref, which is what readers query with.
+  let Some(external) = ctx.modules[external_ref.owner].as_external() else {
+    return;
+  };
+  let namespace_ref = ctx.symbols.canonical_ref_for(external.namespace_ref);
+  if namespace_ref != ctx.symbols.canonical_ref_for(external_ref) {
+    return;
+  }
+
+  // `symbol_ref` is the binding as written in the module holding the surviving reference, so its
+  // owner is the observer whose chunk has to carry the wrapper. That is a different module from
+  // the importer whenever the import was written by a shim that tree-shaking then dropped.
+  let observer = symbol_ref.owner;
+
+  // `alias_holder_ref == external_ref` means no alias was followed.
+  if alias_holder_ref == external_ref {
+    // A whole-namespace reference (`import * as ns from 'external'`). The importing binding was
+    // linked straight to the external namespace, and `link` is a union-find parent rather than a
+    // provenance chain — resolving it path-compresses, so the shim that wrote the import may no
+    // longer appear between the reference and the external at all. Ask the import records who
+    // actually imported this external instead of trying to recover it from the symbol graph.
+    let modes = external_importer_modes(ctx, external_ref.owner);
+    // Writers disagreeing is genuinely mixed mode; the chunk renders whichever it needs.
+    if modes.node_esm {
+      ctx.used_external_symbols.note_interop_use(namespace_ref, true, observer);
+    }
+    // No recoverable importer only costs the node-mode flag — the use itself must still be
+    // recorded, because that is what keeps `__toESM` alive at all (issue #10069).
+    if modes.non_node_esm || !modes.node_esm {
+      ctx.used_external_symbols.note_interop_use(namespace_ref, false, observer);
+    }
+    return;
+  }
+
+  let imports_default = ctx
+    .symbols
+    .get(alias_holder_ref)
+    .namespace_alias
+    .as_ref()
+    .is_some_and(|alias| alias.property_name.as_str() == "default");
+  if !imports_default {
+    return;
+  }
+  // The alias holder is where the `namespace_alias` lives, which makes it the union-find root
+  // rather than an intermediate — so unlike the namespace case above, its owner really is the
+  // module that wrote the import, and path compression cannot move it.
+  let node_esm = ctx.modules[alias_holder_ref.owner]
+    .as_normal()
+    .is_some_and(NormalModule::should_consider_node_esm_spec_for_static_import);
+  ctx.used_external_symbols.note_interop_use(namespace_ref, node_esm, observer);
+}
+
+/// The interop modes implied by the modules that actually write `import ... from 'external'`.
+///
+/// Used where the symbol graph cannot name the importer (see the namespace case in
+/// [`note_external_interop_use`]). Import records survive linking untouched, so they are a stable
+/// source for provenance where `SymbolRefDb::link` is not.
+fn external_importer_modes(
+  ctx: &mut IncludeContext,
+  external_idx: ModuleIdx,
+) -> ExternalInteropUse {
+  if let Some(cached) = ctx.external_importer_modes.get(&external_idx) {
+    return *cached;
+  }
+  let mut modes = ExternalInteropUse::default();
+  for module in ctx.modules.iter().filter_map(Module::as_normal) {
+    let imports_it = module.import_records.iter_enumerated().any(|(rec_idx, rec)| {
+      rec.resolved_module == Some(external_idx) && import_record_needs_interop(module, rec_idx)
+    });
+    if !imports_it {
+      continue;
+    }
+    if module.should_consider_node_esm_spec_for_static_import() {
+      modes.node_esm = true;
+    } else {
+      modes.non_node_esm = true;
+    }
+    if modes.node_esm && modes.non_node_esm {
+      break;
+    }
+  }
+  ctx.external_importer_modes.insert(external_idx, modes);
+  modes
 }
 
 /// When the canonical is a module-namespace object, record *why* the namespace is included (the

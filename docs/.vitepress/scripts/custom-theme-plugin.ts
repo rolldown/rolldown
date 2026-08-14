@@ -2,7 +2,13 @@
 
 import fs from 'node:fs';
 import path from 'node:path';
-import { Converter, ReflectionKind, type Application, type Reflection } from 'typedoc';
+import {
+  Converter,
+  ReflectionKind,
+  type Application,
+  type Comment,
+  type Reflection,
+} from 'typedoc';
 import {
   type MarkdownPageEvent,
   MarkdownTheme,
@@ -64,7 +70,8 @@ class CustomThemeContext extends MarkdownThemeContext {
         return `<DefinedIn :sources="${escapeAttr(JSON.stringify(sources))}" />`;
       },
       comment: (model, options) => {
-        const result = superPartials.comment.call(this, model, options);
+        // `@kind` is rendered by `signatureTitle` / `declarationTitle` instead
+        const result = superPartials.comment.call(this, withoutKindTag(model), options);
         // Remove the `**`Experimental`**` text that comes from `@experimental` tag
         return result.replace(/\*\*`Experimental`\*\*/g, '');
       },
@@ -90,6 +97,12 @@ class CustomThemeContext extends MarkdownThemeContext {
         const returnType = model.type ? this.partials.someType(model.type) : '`void`';
 
         md.push(`- **Type**: (${params}) => ${returnType}`);
+
+        // The comment of a hook may live on the signature or on its parent declaration.
+        const kind = formatKindTag(model.comment) ?? formatKindTag(model.parent?.comment);
+        if (kind) {
+          md.push(`- **Kind**: ${kind}`);
+        }
 
         if (model.comment?.modifierTags?.has('@experimental')) {
           md.push('- **Experimental**');
@@ -134,6 +147,11 @@ class CustomThemeContext extends MarkdownThemeContext {
           md.push(`- **Type**: ${typeStr}`);
         }
 
+        const kind = formatKindTag(model.comment);
+        if (kind) {
+          md.push(`- **Kind**: ${kind}`);
+        }
+
         if (model.flags?.isOptional) {
           md.push('- **Optional**');
         }
@@ -158,4 +176,34 @@ class CustomThemeContext extends MarkdownThemeContext {
 
 function escapeAttr(str: string) {
   return str.replace(/"/g, '&quot;');
+}
+
+const KIND_TAG = '@kind';
+
+/**
+ * Formats a `@kind async parallel` tag as `` `async`, `parallel` ``.
+ */
+function formatKindTag(comment: Comment | undefined): string | undefined {
+  const tag = comment?.getTag(KIND_TAG);
+  if (!tag) return undefined;
+
+  const kinds = tag.content
+    .map((part) => part.text)
+    .join('')
+    .split(/[\s,]+/)
+    .filter(Boolean);
+  if (kinds.length === 0) return undefined;
+
+  return kinds.map((kind) => `\`${kind}\``).join(', ');
+}
+
+/**
+ * Returns a copy of `comment` without the `@kind` tag, so that the default comment
+ * partial does not render it a second time below the title.
+ */
+function withoutKindTag(comment: Comment): Comment {
+  if (!comment.getTag(KIND_TAG)) return comment;
+  const cloned = comment.clone();
+  cloned.removeTags(KIND_TAG);
+  return cloned;
 }

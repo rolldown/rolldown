@@ -6,6 +6,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## main.js
 
 ```js
+//#region main.js
 const url = new URL(`./foo.txt`, import.meta.url);
 //#endregion
 export { url };

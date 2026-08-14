@@ -1,0 +1,46 @@
+{
+  "configName": "on-demand",
+  "config": {
+    "input": [
+      {
+        "name": "e0",
+        "import": "./m0.js"
+      },
+      {
+        "name": "e1",
+        "import": "./m1.js"
+      }
+    ],
+    "format": "cjs",
+    "preserveEntrySignatures": "allow-extension",
+    "strictExecutionOrder": true,
+    "codeSplitting": {
+      "includeDependenciesRecursively": false,
+      "groups": [
+        {
+          "name": "g",
+          "test": "[\\\\/]m[12]\\.js$"
+        }
+      ]
+    },
+    "experimental": {
+      "onDemandWrapping": true
+    }
+  },
+  "configVariants": [
+    {
+      "_configName": "wrap-all",
+      "onDemandWrapping": false
+    },
+    {
+      "_configName": "minify-on-demand",
+      "minify": true
+    },
+    {
+      "_configName": "minify-wrap-all",
+      "minify": true,
+      "onDemandWrapping": false
+    }
+  ],
+  "hiddenRuntimeModule": false
+}

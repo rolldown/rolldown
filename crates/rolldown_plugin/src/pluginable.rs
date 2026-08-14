@@ -1,23 +1,25 @@
-use std::{any::Any, borrow::Cow, fmt::Debug, future::Future, pin::Pin, sync::Arc};
+use std::{any::Any, borrow::Cow, fmt, future::Future, pin::Pin, sync::Arc};
 
 use super::plugin_context::PluginContext;
 use crate::{
   HookAddonArgs, HookBuildEndArgs, HookBuildStartArgs, HookCloseBundleArgs, HookGenerateBundleArgs,
   HookInjectionOutputReturn, HookLoadArgs, HookRenderChunkArgs, HookRenderStartArgs,
-  HookResolveIdArgs, HookTransformArgs, HookUsage, Plugin, PluginHookMeta, SharedLoadPluginContext,
-  SharedTransformPluginContext,
+  HookResolveFileUrlArgs, HookResolveIdArgs, HookTransformArgs, HookUsage, Plugin, PluginHookMeta,
+  SharedLoadPluginContext, SharedTransformPluginContext,
   types::{
-    hook_render_error::HookRenderErrorArgs, hook_transform_ast_args::HookTransformAstArgs,
-    hook_write_bundle_args::HookWriteBundleArgs,
+    hook_hot_update_args::HookHotUpdateArgs, hook_render_error::HookRenderErrorArgs,
+    hook_transform_ast_args::HookTransformAstArgs, hook_write_bundle_args::HookWriteBundleArgs,
   },
 };
 use anyhow::Ok;
 use rolldown_common::{ModuleInfo, NormalModule, RollupRenderedChunk, WatcherChangeKind};
 
 pub use crate::plugin::HookAugmentChunkHashReturn;
+pub use crate::plugin::HookHotUpdateReturn;
 pub use crate::plugin::HookLoadReturn;
 pub use crate::plugin::HookNoopReturn;
 pub use crate::plugin::HookRenderChunkReturn;
+pub use crate::plugin::HookResolveFileUrlReturn;
 pub use crate::plugin::HookResolveIdReturn;
 pub use crate::plugin::HookTransformAstReturn;
 pub use crate::plugin::HookTransformReturn;
@@ -30,7 +32,12 @@ type HookFuture<'a, T> = Pin<Box<dyn Future<Output = T> + Send + 'a>>;
 ///
 /// The main reason we don't expose this trait is that its boxed futures make it harder for
 /// rust-analyzer to provide a good auto-completion experience.
-pub trait Pluginable: Any + Debug + Send + Sync + 'static {
+///
+/// `Debug` is deliberately implemented on the trait object below instead of being a supertrait.
+/// A `Debug` supertrait puts every concrete plugin's formatter in its erased vtable, retaining
+/// all of their nested formatting code in release binaries even though diagnostics only need the
+/// plugin name.
+pub trait Pluginable: Any + Send + Sync + 'static {
   fn call_name(&self) -> Cow<'static, str>;
 
   // The `option` hook consider call at node side.
@@ -163,6 +170,14 @@ pub trait Pluginable: Any + Debug + Send + Sync + 'static {
 
   fn call_augment_chunk_hash_meta(&self) -> Option<PluginHookMeta>;
 
+  fn call_resolve_file_url<'a>(
+    &'a self,
+    _ctx: &'a PluginContext,
+    _args: &'a HookResolveFileUrlArgs<'a>,
+  ) -> HookFuture<'a, HookResolveFileUrlReturn>;
+
+  fn call_resolve_file_url_meta(&self) -> Option<PluginHookMeta>;
+
   fn call_render_error<'a>(
     &'a self,
     _ctx: &'a PluginContext,
@@ -208,6 +223,18 @@ pub trait Pluginable: Any + Debug + Send + Sync + 'static {
     None
   }
 
+  fn call_hot_update<'a>(
+    &'a self,
+    _ctx: &'a PluginContext,
+    _args: &'a HookHotUpdateArgs,
+  ) -> HookFuture<'a, HookHotUpdateReturn> {
+    Box::pin(async { Ok(None) })
+  }
+
+  fn call_hot_update_meta(&self) -> Option<PluginHookMeta> {
+    None
+  }
+
   fn call_close_watcher<'a>(&'a self, _ctx: &'a PluginContext) -> HookFuture<'a, HookNoopReturn> {
     Box::pin(async { Ok(()) })
   }
@@ -217,6 +244,12 @@ pub trait Pluginable: Any + Debug + Send + Sync + 'static {
   }
 
   fn call_hook_usage(&self) -> HookUsage;
+}
+
+impl fmt::Debug for dyn Pluginable {
+  fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+    f.debug_struct("Plugin").field("name", &self.call_name()).finish_non_exhaustive()
+  }
 }
 
 impl<T: Plugin> Pluginable for T {
@@ -394,6 +427,18 @@ impl<T: Plugin> Pluginable for T {
     Plugin::augment_chunk_hash_meta(self)
   }
 
+  fn call_resolve_file_url<'a>(
+    &'a self,
+    ctx: &'a PluginContext,
+    args: &'a HookResolveFileUrlArgs<'a>,
+  ) -> HookFuture<'a, HookResolveFileUrlReturn> {
+    Box::pin(Plugin::resolve_file_url(self, ctx, args))
+  }
+
+  fn call_resolve_file_url_meta(&self) -> Option<PluginHookMeta> {
+    Plugin::resolve_file_url_meta(self)
+  }
+
   fn call_render_error<'a>(
     &'a self,
     ctx: &'a PluginContext,
@@ -453,6 +498,18 @@ impl<T: Plugin> Pluginable for T {
 
   fn call_watch_change_meta(&self) -> Option<PluginHookMeta> {
     Plugin::watch_change_meta(self)
+  }
+
+  fn call_hot_update<'a>(
+    &'a self,
+    ctx: &'a PluginContext,
+    args: &'a HookHotUpdateArgs,
+  ) -> HookFuture<'a, HookHotUpdateReturn> {
+    Box::pin(Plugin::hot_update(self, ctx, args))
+  }
+
+  fn call_hot_update_meta(&self) -> Option<PluginHookMeta> {
+    Plugin::hot_update_meta(self)
   }
 
   fn call_close_watcher<'a>(&'a self, ctx: &'a PluginContext) -> HookFuture<'a, HookNoopReturn> {

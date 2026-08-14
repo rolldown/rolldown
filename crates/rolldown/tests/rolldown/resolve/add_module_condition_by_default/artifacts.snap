@@ -7,6 +7,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 import assert from "node:assert";
+//#region node_modules/demo-lib/module.js
 //#endregion
 //#region main.js
 assert.strictEqual("module", "module");

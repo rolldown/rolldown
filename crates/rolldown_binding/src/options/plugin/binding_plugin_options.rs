@@ -21,9 +21,11 @@ use super::{
     binding_filter_expression::normalized_tokens, binding_hook_filter::BindingHookFilter,
     binding_hook_load_output::BindingHookLoadOutput,
     binding_hook_render_chunk_output::BindingHookRenderChunkOutput,
+    binding_hook_resolve_file_url_args::BindingHookResolveFileUrlArgs,
     binding_hook_resolve_id_extra_args::BindingHookResolveIdExtraArgs,
     binding_hook_resolve_id_output::BindingHookResolveIdOutput,
     binding_hook_transform_output::BindingHookTransformOutput,
+    binding_hot_update_args::BindingHotUpdateArgs,
     binding_plugin_transform_extra_args::BindingTransformHookExtraArgs,
     binding_render_chunk_meta_chunks::BindingRenderedChunkMeta,
     binding_shared_string::BindingSharedString,
@@ -135,6 +137,17 @@ pub struct BindingPluginOptions {
   >,
   pub augment_chunk_hash_meta: Option<BindingPluginHookMeta>,
 
+  #[napi(
+    ts_type = "(ctx: BindingPluginContext, args: BindingHookResolveFileUrlArgs) => MaybePromise<void | string | null>"
+  )]
+  pub resolve_file_url: Option<
+    MaybeAsyncJsCallback<
+      FnArgs<(BindingPluginContext, BindingHookResolveFileUrlArgs)>,
+      Option<String>,
+    >,
+  >,
+  pub resolve_file_url_meta: Option<BindingPluginHookMeta>,
+
   #[napi(ts_type = "(ctx: BindingPluginContext, opts: BindingNormalizedOptions) => void")]
   pub render_start:
     Option<MaybeAsyncJsCallback<FnArgs<(BindingPluginContext, BindingNormalizedOptions)>>>,
@@ -178,6 +191,14 @@ pub struct BindingPluginOptions {
   )]
   pub watch_change: Option<MaybeAsyncJsCallback<FnArgs<(BindingPluginContext, String, String)>>>,
   pub watch_change_meta: Option<BindingPluginHookMeta>,
+
+  #[napi(
+    ts_type = "(ctx: BindingPluginContext, args: BindingHotUpdateArgs) => MaybePromise<VoidNullable<Array<string>>>"
+  )]
+  pub hot_update: Option<
+    MaybeAsyncJsCallback<FnArgs<(BindingPluginContext, BindingHotUpdateArgs)>, Option<Vec<String>>>,
+  >,
+  pub hot_update_meta: Option<BindingPluginHookMeta>,
 
   #[napi(ts_type = "(ctx: BindingPluginContext) => MaybePromise<VoidNullable>")]
   pub close_watcher: Option<MaybeAsyncJsCallback<FnArgs<(BindingPluginContext,)>>>,

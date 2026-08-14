@@ -62,6 +62,11 @@ bower_components
 # Compiled binary addons (https://nodejs.org/api/addons.html)
 build/Release
 
+# Temporary files created by NAPI-RS
+.napi-rs-filesystem-reconciliation.*
+.napi-rs-filesystem-transaction.*
+.src.napi-stage-*
+
 # Dependency directories
 node_modules/
 jspm_packages/
@@ -192,6 +197,7 @@ nul
 # Zed local config
 .zed
 
-# Vendored Vite submodule (test-dev-server browser backend): the gitlink is
-# tracked, but repo tools must not lint/format the submodule contents.
-/packages/test-dev-server/vite/
+# Vite checkout (test-dev-server browser backend): a plain clone of
+# vitejs/vite created by `just setup-vite`, never tracked, and repo tools
+# must not lint/format its contents.
+/vite/

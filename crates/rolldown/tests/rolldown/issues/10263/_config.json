@@ -1,0 +1,11 @@
+{
+  "_comment": "https://github.com/rolldown/rolldown/issues/10263 - dependencies of a dynamic entry point can be merged into the common chunk even if this means adding more exports to it.",
+  "config": {
+    "input": [
+      {
+        "name": "main",
+        "import": "./main.js"
+      }
+    ]
+  }
+}

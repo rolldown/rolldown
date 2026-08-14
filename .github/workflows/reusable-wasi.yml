@@ -16,7 +16,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 45
     steps:
-      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
 
@@ -27,7 +27,7 @@ jobs:
           cache-key: debug-build-wasi
           save-cache: ${{ github.ref_name == 'main' }}
 
-      - uses: voidzero-dev/setup-vp@35171c92dd08b67d5a9d3f2a4327800e58396f2a # v1.13.0
+      - uses: voidzero-dev/setup-vp@313600b80b104eadebb9111787d37a2e83e014ca # v1.17.0
         with:
           version: '0.2.1'
           cache: true
@@ -38,11 +38,21 @@ jobs:
       - name: Build Rolldown with WASI Binding
         run: just build-rolldown-wasi
 
+      - name: Build `@rolldown/test-dev-server`
+        run: vp run --filter '@rolldown/test-dev-server' build
+
+      # `test:wasi` is `test:main` with `ROLLDOWN_WASI_TEST=1`, which skips the tests that the wasm binding cannot pass; every skip states its own reason.
+      - name: Node Test
+        run: vp run --filter rolldown-tests test:wasi
+
       - name: Stability Test
         run: vp run --filter rolldown-tests test:stability
 
-      # `@example/typescript` is excluded because its config enables `devtools`, which currently
-      # panics under WASI when the writer tries to open its log file (crates/rolldown_devtools/src/writer.rs).
+      # Runs against the WASI binding itself (NAPI_RS_FORCE_WASI), which no
+      # other CI test does. Regression coverage for #8411 and #8747.
+      - name: Tokio Runtime Lifecycle Test
+        run: vp run --filter rolldown-tests test:wasi-runtime
+
       # `@example/native-magic-string` is excluded because it depends on a native-only addon.
       - name: Build Examples
-        run: vp run --filter '@example/*' --filter '!@example/native-magic-string' --filter '!@example/typescript' build
+        run: vp run --filter '@example/*' --filter '!@example/native-magic-string' build

@@ -1,14 +1,14 @@
-use oxc::allocator::GetAllocator;
 use oxc::{
   allocator::TakeIn,
-  ast::{NONE, ast},
+  ast::ast::{self, Expression},
   span::SPAN,
 };
 use oxc_traverse::Traverse;
 use rolldown_ecmascript::{
   CJS_EXPORTS_REF_STR, CJS_MODULE_REF_STR, CJS_ROLLDOWN_EXPORTS_REF,
-  CJS_ROLLDOWN_EXPORTS_REF_IDENT, CJS_ROLLDOWN_MODULE_REF_IDENT,
+  CJS_ROLLDOWN_EXPORTS_REF_IDENT, CJS_ROLLDOWN_MODULE_REF, CJS_ROLLDOWN_MODULE_REF_IDENT,
 };
+use rolldown_ecmascript_utils::ExpressionFactoryExt as _;
 
 use crate::hmr::{
   hmr_ast_finalizer::HmrAstFinalizer,
@@ -21,7 +21,7 @@ impl<'ast> Traverse<'ast, ()> for HmrAstFinalizer<'_, 'ast> {
     node: &mut ast::Program<'ast>,
     ctx: &mut oxc_traverse::TraverseCtx<'ast, ()>,
   ) {
-    let taken_body = node.body.take_in(&self.ast_factory.allocator());
+    let taken_body = node.body.take_in(self);
     node.body.reserve_exact(taken_body.len());
     taken_body.into_iter().for_each(|top_level_stmt| {
       self.handle_top_level_stmt(&mut node.body, top_level_stmt, ctx.scoping());
@@ -33,119 +33,137 @@ impl<'ast> Traverse<'ast, ()> for HmrAstFinalizer<'_, 'ast> {
     node: &mut ast::Program<'ast>,
     ctx: &mut oxc_traverse::TraverseCtx<'ast, ()>,
   ) {
-    let mut try_block = ast::BlockStatement::boxed(
-      SPAN,
-      oxc::allocator::Vec::new_in(&self.ast_factory),
-      &self.ast_factory,
-    );
+    let mut try_block = ast::BlockStatement::boxed(SPAN, [], self);
 
+    // `initModule("<stable id>")` for EVERY static dep, uniformly registry-gated: a
+    // co-carried factory runs, a resident module short-circuits. No payload-membership
+    // split exists in the emitted bytes.
     let dependencies_init_fn_stmts: Vec<_> = self
       .dependencies
       .iter()
-      .filter_map(|dep| self.affected_module_idx_to_init_fn_name.get(dep))
-      .map(|fn_name| {
-        let call_expr = ast::Expression::new_call_expression(
-          SPAN,
-          self.ast_factory.make_id_ref_expr(SPAN, fn_name),
-          NONE,
-          oxc::allocator::Vec::new_in(&self.ast_factory),
-          false,
-          &self.ast_factory,
-        );
-        ast::Statement::new_expression_statement(SPAN, call_expr, &self.ast_factory)
+      .filter_map(|dep| {
+        let module = &self.modules[*dep];
+        module.as_normal().map(|_| {
+          ast::Statement::new_expression_statement(SPAN, self.make_init_module_call(module), self)
+        })
       })
       .collect();
 
     let runtime_module_register = self.generate_runtime_module_register_for_hmr(ctx.scoping());
 
+    // Factories uniformly take only `__rolldown_module_id__`; for CommonJS the
+    // module/exports objects become locals the body's rewritten `module`/`exports`
+    // references resolve to.
+    let cjs_module_locals: Vec<ast::Statement<'ast>> = if self.module.exports_kind.is_commonjs() {
+      let empty_exports_object = ast::Expression::new_object_expression(SPAN, [], self);
+      let module_object = ast::Expression::new_object_expression(
+        SPAN,
+        [ast::ObjectPropertyKind::new_object_property(
+          SPAN,
+          ast::PropertyKind::Init,
+          ast::PropertyKey::new_static_identifier(SPAN, "exports", self),
+          empty_exports_object,
+          true,
+          false,
+          false,
+          self,
+        )],
+        self,
+      );
+      vec![
+        // var __rolldown_module__ = { exports: {} };
+        ast::Statement::from(ast::Declaration::new_variable_declaration(
+          SPAN,
+          ast::VariableDeclarationKind::Var,
+          oxc::allocator::Vec::from_value_in(
+            ast::VariableDeclarator::new(
+              SPAN,
+              ast::BindingPattern::new_binding_identifier(
+                SPAN,
+                CJS_ROLLDOWN_MODULE_REF_IDENT,
+                self,
+              ),
+              None,
+              Some(module_object),
+              false,
+              self,
+            ),
+            self,
+          ),
+          false,
+          self,
+        )),
+        // var __rolldown_exports__ = __rolldown_module__.exports;
+        ast::Statement::from(ast::Declaration::new_variable_declaration(
+          SPAN,
+          ast::VariableDeclarationKind::Var,
+          oxc::allocator::Vec::from_value_in(
+            ast::VariableDeclarator::new(
+              SPAN,
+              ast::BindingPattern::new_binding_identifier(
+                SPAN,
+                CJS_ROLLDOWN_EXPORTS_REF_IDENT,
+                self,
+              ),
+              None,
+              Some(Expression::new_member_access_expr(CJS_ROLLDOWN_MODULE_REF, "exports", self)),
+              false,
+              self,
+            ),
+            self,
+          ),
+          false,
+          self,
+        )),
+      ]
+    } else {
+      vec![]
+    };
+
     try_block.body.reserve_exact(
-    runtime_module_register.len() + node.body.len() + dependencies_init_fn_stmts.len() + 1 /* import.meta.hot*/,
-  );
+      cjs_module_locals.len()
+        + runtime_module_register.len()
+        + node.body.len()
+        + dependencies_init_fn_stmts.len()
+        + 1, /* import.meta.hot*/
+    );
+    try_block.body.extend(cjs_module_locals);
     try_block.body.extend(runtime_module_register);
     try_block.body.extend(dependencies_init_fn_stmts);
     try_block.body.push(self.create_module_hot_context_initializer_stmt());
-    try_block.body.extend(node.body.take_in(&self.ast_factory.allocator()));
+    try_block.body.extend(node.body.take_in(self));
 
     node
       .body
       .extend(std::mem::take(&mut self.generated_static_import_stmts_from_external).into_values());
 
-    let final_block = ast::BlockStatement::boxed(
-      SPAN,
-      oxc::allocator::Vec::new_in(&self.ast_factory),
-      &self.ast_factory,
-    );
+    let final_block = ast::BlockStatement::boxed(SPAN, [], self);
 
     let try_stmt =
-      ast::TryStatement::boxed(SPAN, try_block, NONE, Some(final_block), &self.ast_factory);
+      ast::Statement::new_try_statement(SPAN, try_block, None, Some(final_block), self);
 
-    let init_fn_name = &self.affected_module_idx_to_init_fn_name[&self.module.idx];
-
-    // The runtime wrappers (createEsmInitializer / createCjsInitializer) call the body
-    // with the module's stable id as an extra argument, so it's available inside the body
-    // as `__rolldown_module_id__`. This lets registerModule / createModuleHotContext reference
-    // the id by identifier instead of duplicating the string literal.
+    // The runtime calls the factory with the module's stable id as its argument, so it's
+    // available inside the body as `__rolldown_module_id__`. This lets registerModule /
+    // createModuleHotContext reference the id by identifier instead of duplicating the
+    // string literal.
     let module_id_param = ast::FormalParameter::new(
       SPAN,
-      oxc::allocator::Vec::new_in(&self.ast_factory),
-      ast::BindingPattern::new_binding_identifier(SPAN, MODULE_ID_PARAM_FOR_HMR, &self.ast_factory),
-      NONE,
-      NONE,
+      [],
+      ast::BindingPattern::new_binding_identifier(SPAN, MODULE_ID_PARAM_FOR_HMR, self),
+      None,
+      None,
       false,
       None,
       false,
       false,
-      &self.ast_factory,
+      self,
     );
-    let params = ast::FormalParameters::new(
+    let params = ast::FormalParameters::boxed(
       SPAN,
       ast::FormalParameterKind::Signature,
-      {
-        if self.module.exports_kind.is_commonjs() {
-          oxc::allocator::Vec::from_array_in(
-            [
-              ast::FormalParameter::new(
-                SPAN,
-                oxc::allocator::Vec::new_in(&self.ast_factory),
-                ast::BindingPattern::new_binding_identifier(
-                  SPAN,
-                  CJS_ROLLDOWN_EXPORTS_REF_IDENT,
-                  &self.ast_factory,
-                ),
-                NONE,
-                NONE,
-                false,
-                None,
-                false,
-                false,
-                &self.ast_factory,
-              ),
-              ast::FormalParameter::new(
-                SPAN,
-                oxc::allocator::Vec::new_in(&self.ast_factory),
-                ast::BindingPattern::new_binding_identifier(
-                  SPAN,
-                  CJS_ROLLDOWN_MODULE_REF_IDENT,
-                  &self.ast_factory,
-                ),
-                NONE,
-                NONE,
-                false,
-                None,
-                false,
-                false,
-                &self.ast_factory,
-              ),
-              module_id_param,
-            ],
-            &self.ast_factory,
-          )
-        } else {
-          oxc::allocator::Vec::from_value_in(module_id_param, &self.ast_factory)
-        }
-      },
-      NONE,
-      &self.ast_factory,
+      [module_id_param],
+      None,
+      self,
     );
     // function () { [user code] }
     let mut user_code_wrapper = ast::Function::boxed(
@@ -155,88 +173,48 @@ impl<'ast> Traverse<'ast, ()> for HmrAstFinalizer<'_, 'ast> {
       false,
       false,
       false,
-      NONE,
-      NONE,
+      None,
+      None,
       params,
-      NONE,
-      Some(ast::FunctionBody::new(
-        SPAN,
-        oxc::allocator::Vec::new_in(&self.ast_factory),
-        oxc::allocator::Vec::from_value_in(
-          ast::Statement::TryStatement(try_stmt),
-          &self.ast_factory,
-        ),
-        &self.ast_factory,
-      )),
-      &self.ast_factory,
+      None,
+      Some(ast::FunctionBody::boxed(SPAN, [], [try_stmt], self)),
+      self,
     );
     // mark the callback as PIFE because the callback is executed when this chunk is loaded
     user_code_wrapper.pife = self.use_pife_for_module_wrappers;
 
-    // Initializer call arguments: always (stable_id, factory). For lazy-compilation
-    // chunks we append a truthy dedup flag so the runtime short-circuits re-execution
-    // when another lazy blob has already registered this module. HMR patches omit the
-    // flag so the runtime always re-executes the body to publish new exports.
-    let mut initializer_args = oxc::allocator::Vec::with_capacity_in(3, &self.ast_factory);
-    initializer_args.push(ast::Argument::StringLiteral(ast::StringLiteral::boxed(
+    // __rolldown_runtime__.registerFactory(stable_id, kind, function (__rolldown_module_id__) { [user code] })
+    // Every factory is id-addressed and registry-gated at runtime; re-execution policy
+    // is runtime data (evictions), never a per-payload flag.
+    let mut register_factory_args = oxc::allocator::Vec::with_capacity_in(3, self);
+    register_factory_args.push(ast::Argument::new_string_literal(
       SPAN,
-      oxc::ast::ast::Str::from_str_in(&self.module.stable_id, &self.ast_factory),
+      oxc::ast::ast::Str::from_str_in(&self.module.stable_id, self),
       None,
-      &self.ast_factory,
-    )));
-    initializer_args
-      .push(ast::Argument::from(ast::Expression::FunctionExpression(user_code_wrapper)));
-    if self.dedup_module_initializer {
-      initializer_args.push(ast::Argument::from(ast::Expression::new_numeric_literal(
-        SPAN,
-        1.0,
-        None,
-        ast::NumberBase::Decimal,
-        &self.ast_factory,
-      )));
-    }
-
-    let initializer_callee = if self.module.exports_kind.is_commonjs() {
-      // __rolldown__runtime.createCjsInitializer(stable_id, (function (exports, module) { [user code] })[, 1])
-      "__rolldown_runtime__.createCjsInitializer"
-    } else {
-      // __rolldown__runtime.createEsmInitializer(stable_id, (function () { [user code] })[, 1])
-      "__rolldown_runtime__.createEsmInitializer"
-    };
-    let initializer_call = ast::CallExpression::boxed(
+      self,
+    ));
+    register_factory_args.push(ast::Argument::new_string_literal(
       SPAN,
-      self.ast_factory.make_id_ref_expr(SPAN, initializer_callee),
-      NONE,
-      initializer_args,
-      false,
-      &self.ast_factory,
-    );
-
-    // var init_foo = __rolldown__runtime.createEsmInitializer((function () { [user code] }))
-    let var_decl = ast::VariableDeclaration::boxed(
-      SPAN,
-      ast::VariableDeclarationKind::Var,
-      oxc::allocator::Vec::from_value_in(
-        ast::VariableDeclarator::new(
-          SPAN,
-          ast::VariableDeclarationKind::Var,
-          ast::BindingPattern::new_binding_identifier(
-            SPAN,
-            oxc::ast::ast::Str::from_str_in(init_fn_name, &self.ast_factory),
-            &self.ast_factory,
-          ),
-          NONE,
-          Some(ast::Expression::CallExpression(initializer_call)),
-          false,
-          &self.ast_factory,
-        ),
-        &self.ast_factory,
+      oxc::ast::ast::Str::from_str_in(
+        if self.module.exports_kind.is_commonjs() { "cjs" } else { "esm" },
+        self,
       ),
+      None,
+      self,
+    ));
+    register_factory_args
+      .push(ast::Argument::from(ast::Expression::FunctionExpression(user_code_wrapper)));
+
+    let register_factory_call = ast::Expression::new_call_expression(
+      SPAN,
+      Expression::new_identifier(SPAN, "__rolldown_runtime__.registerFactory", self),
+      None,
+      register_factory_args,
       false,
-      &self.ast_factory,
+      self,
     );
 
-    node.body.push(ast::Statement::VariableDeclaration(var_decl));
+    node.body.push(ast::Statement::new_expression_statement(SPAN, register_factory_call, self));
   }
 
   fn enter_call_expression(
@@ -258,7 +236,7 @@ impl<'ast> Traverse<'ast, ()> for HmrAstFinalizer<'_, 'ast> {
       && self.module.exports_kind.is_commonjs()
       && self.module.ecma_view.this_expr_replace_map.contains_key(&this_expr.node_id())
     {
-      *node = self.ast_factory.make_id_ref_expr(SPAN, CJS_ROLLDOWN_EXPORTS_REF);
+      *node = Expression::new_id_ref_expr(SPAN, CJS_ROLLDOWN_EXPORTS_REF, self);
       return;
     }
 
@@ -291,8 +269,7 @@ impl<'ast> HmrAstFinalizer<'_, 'ast> {
     let reference = ctx.scoping().get_reference(reference_id);
     if let Some(symbol_id) = reference.symbol_id() {
       if let Some(binding_name) = self.import_bindings.get(&symbol_id) {
-        ident.name =
-          oxc::ast::ast::Str::from_str_in(binding_name.as_str(), &self.ast_factory).into();
+        ident.name = oxc::ast::ast::Str::from_str_in(binding_name.as_str(), self).into();
       }
     } else if ident.name == CJS_EXPORTS_REF_STR {
       ident.name = CJS_ROLLDOWN_EXPORTS_REF_IDENT;

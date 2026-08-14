@@ -1,3 +1,5 @@
+#[path = "./10183/mod.rs"]
+mod _10183;
 #[path = "./1733/mod.rs"]
 mod _1733;
 #[path = "./4895/mod.rs"]

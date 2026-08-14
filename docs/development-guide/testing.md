@@ -41,7 +41,7 @@ We use Rust's built-in test framework for writing and running tests. Test cases 
 
 A data-driven test case is a folder that contains a `_config.json` file. The test runner will read the configuration from `_config.json`, bundle the input files, and execute the output files to verify the behavior.
 
-`_config.json` contains the configuration for the test suite. If everything works right, you should be able to have auto-completion while editing `_config.json` due to the [config](https://github.com/rolldown/rolldown/blob/main/.vscode/settings.json#L36-L40).
+`_config.json` contains the configuration for the test suite. If everything works right, you should be able to have auto-completion while editing `_config.json` due to the [config](https://github.com/rolldown/rolldown/blob/main/.vscode/settings.json#L40-L43).
 
 For all available options, you could refer to
 
@@ -205,7 +205,7 @@ To run the `tests/fixtures/resolve/alias` test, you could use `just test-node-ro
 | **browser**  | `browser` | A real Chromium page against an **in-process Vite full-bundle-mode dev server**. Most dev-engine tests live here. |
 | **fixtures** | `node`    | A custom dev server building to **disk**, with the built artifact run as a `node` child process.                  |
 
-The browser suite runs on Vite itself (`experimental.bundledDev`), served from the vendored Vite submodule at `packages/test-dev-server/vite` with its `rolldown` dependency linked to the workspace's `packages/rolldown` — so the tests exercise the local rolldown binding through the real Vite integration. The architecture and the reasoning behind the harness are captured in the [Dev Server Test Harness design doc](https://github.com/rolldown/rolldown/blob/main/internal-docs/dev-server-test-harness/implementation.md) — read it before changing the harness itself.
+The browser suite runs on Vite itself (`experimental.bundledDev`), served from the Vite checkout at `vite/` (repo root, a gitignored clone of vitejs/vite `rolldown-canary` rebased onto `main`) with its `rolldown` dependency linked to the workspace's `packages/rolldown`, so the tests exercise the local rolldown binding through the real Vite integration. The architecture and the reasoning behind the harness are captured in the [Dev Server Test Harness design doc](https://github.com/rolldown/rolldown/blob/main/internal-docs/dev-server-test-harness/implementation.md). Read it before changing the harness itself.
 
 ### Browser playgrounds
 
@@ -264,10 +264,10 @@ just build-rolldown
 pnpm --filter @rolldown/test-dev-server build
 ```
 
-The browser suite also needs the Vite submodule set up once (init + install + build + link the workspace rolldown into it). Re-run this after bumping the submodule or after running an install inside it (an install resets the rolldown link):
+The browser suite also needs the Vite checkout set up (clone or update vitejs/vite `rolldown-canary` rebased onto `main`, then install + build + link the workspace rolldown into it). A checkout you took over (dirty, or switched to another branch) is built as-is. Re-run the setup after running an install inside the checkout (an install resets the rolldown link):
 
 ```sh
-just setup-test-dev-server-vite
+just setup-vite
 ```
 
 Then, from `packages/test-dev-server/tests/`:

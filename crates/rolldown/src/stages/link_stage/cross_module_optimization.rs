@@ -1,12 +1,13 @@
 use oxc::{
   ast::{
-    AstBuilder, AstKind,
+    AstKind,
     ast::{
-      BindingIdentifier, BindingPattern, Declaration, ExportDefaultDeclaration,
-      ExportDefaultDeclarationKind, ExportNamedDeclaration, Expression,
+      BindingIdentifier, BindingPattern, Declaration, ExportDeclaration, ExportDefaultDeclaration,
+      ExportDefaultDeclarationKind, Expression,
     },
+    builder::AstBuilder,
   },
-  ast_visit::{Visit, walk},
+  ast_visit::{VisitJs, walk_js},
   semantic::{NodeId, SymbolId},
 };
 use rolldown_common::{
@@ -207,7 +208,7 @@ impl LinkStage<'_> {
             .collect();
           let mut ctx = CrossModuleOptimizationRunnerContext {
             local_constant_symbol_map: FxHashMap::default(),
-            stmt_eval_flags_mutations: FxHashMap::default(),
+            tree_shaking_flags_mutations: FxHashMap::default(),
             side_effect_free_call_expr_node_ids: FxHashSet::default(),
             immutable_ctx: CrossModuleOptimizationImmutableCtx {
               eval_ctx: &eval_ctx,
@@ -231,19 +232,19 @@ impl LinkStage<'_> {
           };
           ctx.visit_program(&dep.program);
 
-          let eval_flags_mutations = if ctx.stmt_eval_flags_mutations.is_empty() {
+          let tree_shaking_flags_mutations = if ctx.tree_shaking_flags_mutations.is_empty() {
             None
           } else {
-            Some((module_idx, ctx.stmt_eval_flags_mutations))
+            Some((module_idx, ctx.tree_shaking_flags_mutations))
           };
-          if eval_flags_mutations.is_none()
+          if tree_shaking_flags_mutations.is_none()
             && ctx.local_constant_symbol_map.is_empty()
             && ctx.unreachable_import_expression_node_ids.is_empty()
           {
             return None;
           }
           Some((
-            eval_flags_mutations,
+            tree_shaking_flags_mutations,
             ctx.local_constant_symbol_map,
             ctx
               .unreachable_import_expression_node_ids
@@ -256,12 +257,12 @@ impl LinkStage<'_> {
       .collect();
 
     let mut new_constant_refs = FxHashSet::default();
-    for (eval_flags_mutations, local_constants, unreachable_node_ids) in mutation_result {
-      if let Some((module_idx, mutations)) = eval_flags_mutations
+    for (tree_shaking_flags_mutations, local_constants, unreachable_node_ids) in mutation_result {
+      if let Some((module_idx, mutations)) = tree_shaking_flags_mutations
         && self.module_table[module_idx].as_normal().is_some()
       {
-        for (stmt_info_idx, stmt_eval_flags) in mutations {
-          self.stmt_infos[module_idx][stmt_info_idx].eval_flags = stmt_eval_flags;
+        for (stmt_info_idx, tree_shaking_flags) in mutations {
+          self.stmt_infos[module_idx][stmt_info_idx].eval_flags = tree_shaking_flags;
         }
       }
 
@@ -299,7 +300,7 @@ struct CrossModuleOptimizationImmutableCtx<'a, 'ast: 'a> {
 
 struct CrossModuleOptimizationRunnerContext<'a, 'ast: 'a> {
   local_constant_symbol_map: FxHashMap<SymbolRef, ConstExportMeta>,
-  stmt_eval_flags_mutations: FxHashMap<StmtInfoIdx, StmtEvalFlags>,
+  tree_shaking_flags_mutations: FxHashMap<StmtInfoIdx, StmtEvalFlags>,
   side_effect_free_call_expr_node_ids: FxHashSet<NodeId>,
   immutable_ctx: CrossModuleOptimizationImmutableCtx<'a, 'ast>,
   toplevel_stmt_idx: StmtInfoIdx,
@@ -352,7 +353,7 @@ impl<'ast> CrossModuleOptimizationRunnerContext<'_, 'ast> {
   }
 }
 
-impl<'a, 'ast: 'a> Visit<'ast> for CrossModuleOptimizationRunnerContext<'a, 'ast> {
+impl<'a, 'ast: 'a> VisitJs<'ast> for CrossModuleOptimizationRunnerContext<'a, 'ast> {
   fn enter_node(&mut self, kind: AstKind<'ast>) {
     self.visit_path.push(kind);
   }
@@ -368,7 +369,7 @@ impl<'a, 'ast: 'a> Visit<'ast> for CrossModuleOptimizationRunnerContext<'a, 'ast
       self.visit_statement(stmt);
       if pre_node_id_len != self.side_effect_free_call_expr_node_ids.len() {
         let stmt_info_idx = StmtInfoIdx::new(idx + 1);
-        let stmt_eval_flags = StmtEvalAnalyzer::new(
+        let stmt_eval_facts = StmtEvalAnalyzer::new(
           self.immutable_ctx.ast_scope,
           self.immutable_ctx.flat_options,
           self.immutable_ctx.options,
@@ -376,7 +377,11 @@ impl<'a, 'ast: 'a> Visit<'ast> for CrossModuleOptimizationRunnerContext<'a, 'ast
           Some(self.immutable_ctx.namespace_object_symbol_ids),
         )
         .analyze_stmt(stmt);
-        self.stmt_eval_flags_mutations.insert(stmt_info_idx, stmt_eval_flags);
+        // Cross-module optimization only refreshes tree-shaking flags. Module-level
+        // execution-order sensitivity is recorded during AST scanning.
+        self
+          .tree_shaking_flags_mutations
+          .insert(stmt_info_idx, stmt_eval_facts.tree_shaking_flags());
       }
       self.toplevel_stmt_idx += 1;
     }
@@ -402,7 +407,7 @@ impl<'a, 'ast: 'a> Visit<'ast> for CrossModuleOptimizationRunnerContext<'a, 'ast
         }
       }
     }
-    walk::walk_import_expression(self, it);
+    walk_js::walk_import_expression(self, it);
   }
 
   fn visit_call_expression(&mut self, it: &oxc::ast::ast::CallExpression<'ast>) {
@@ -439,17 +444,15 @@ impl<'a, 'ast: 'a> Visit<'ast> for CrossModuleOptimizationRunnerContext<'a, 'ast
         pre_node_id = self.latest_side_effect_free_call_expr_node_id.replace(it.node_id());
       }
     }
-    walk::walk_call_expression(self, it);
+    walk_js::walk_call_expression(self, it);
     if let Some(node_id) = pre_node_id {
       self.latest_side_effect_free_call_expr_node_id = Some(node_id);
     }
   }
 
-  fn visit_export_named_declaration(&mut self, it: &ExportNamedDeclaration<'ast>) {
-    if it.source.is_none()
-      && self.immutable_ctx.config.inline_const_optimization
-      && let Some(ref decl) = it.declaration
-      && let Declaration::VariableDeclaration(var_decl) = decl
+  fn visit_export_declaration(&mut self, it: &ExportDeclaration<'ast>) {
+    if self.immutable_ctx.config.inline_const_optimization
+      && let Declaration::VariableDeclaration(var_decl) = &it.declaration
     {
       var_decl.declarations.iter().for_each(|declarator| {
         if let BindingPattern::BindingIdentifier(ref binding) = declarator.id {
@@ -477,7 +480,7 @@ impl<'a, 'ast: 'a> Visit<'ast> for CrossModuleOptimizationRunnerContext<'a, 'ast
         }
       });
     }
-    walk::walk_export_named_declaration(self, it);
+    walk_js::walk_export_declaration(self, it);
   }
 
   fn visit_export_default_declaration(&mut self, it: &ExportDefaultDeclaration<'ast>) {
@@ -489,7 +492,7 @@ impl<'a, 'ast: 'a> Visit<'ast> for CrossModuleOptimizationRunnerContext<'a, 'ast
     {
       return;
     }
-    walk::walk_export_default_declaration(self, it);
+    walk_js::walk_export_default_declaration(self, it);
     let Some(expr) = it.declaration.as_expression() else {
       return;
     };

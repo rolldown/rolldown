@@ -7,6 +7,27 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 // HIDDEN [\0rolldown/runtime.js]
+__rolldown_runtime__.registerGraph({
+	ids: [
+		"lib.js",
+		"accepter.js",
+		"adder.js",
+		"main.js"
+	],
+	localCount: 4,
+	edges: [
+		[],
+		[0],
+		[],
+		[1, 2]
+	],
+	dynamicEdges: [
+		[],
+		[],
+		[],
+		[]
+	]
+});
 //#region lib.js
 var lib_exports = /* @__PURE__ */ __exportAll({ value: () => "lib" });
 __rolldown_runtime__.createModuleHotContext("lib.js");
@@ -39,11 +60,13 @@ __rolldown_runtime__.registerModule("main.js", { exports: main_exports });
 ## Code
 
 ```js
+__rolldown_runtime__.registerGraph({ids:["adder.js","lib.js"],localCount:1,edges:[[1]],dynamicEdges:[[]]});
 //#region adder.js
-var init_adder_0 = __rolldown_runtime__.createEsmInitializer("adder.js", (function(__rolldown_module_id__) {
+__rolldown_runtime__.registerFactory("adder.js", "esm", (function(__rolldown_module_id__) {
 	try {
 		var __rolldown_exports__ = __rolldown_runtime__.__exportAll({ tag: () => tag });
 		__rolldown_runtime__.registerModule(__rolldown_module_id__, { exports: __rolldown_exports__ });
+		__rolldown_runtime__.initModule("lib.js");
 		const hot_adder = __rolldown_runtime__.createModuleHotContext(__rolldown_module_id__);
 		var import_lib_00 = __rolldown_runtime__.loadExports("lib.js");
 		const tag = `adder-${import_lib_00.value}`;
@@ -52,29 +75,28 @@ var init_adder_0 = __rolldown_runtime__.createEsmInitializer("adder.js", (functi
 }));
 
 //#endregion
-init_adder_0()
-__rolldown_runtime__.applyUpdates([['adder.js', 'adder.js']]);
 ```
 
 ## Meta
 
 - update type: patch
 
-### Hmr Boundaries
+### Changed Ids
 
-- boundary: adder.js, accepted_via: adder.js
+- adder.js
 
 # HMR Step 1
 
 ## Code
 
 ```js
+__rolldown_runtime__.registerGraph({ids:["accepter.js","adder.js","lib.js"],localCount:3,edges:[[2],[2],[]],dynamicEdges:[[],[],[]]});
 //#region accepter.js
-var init_accepter_0 = __rolldown_runtime__.createEsmInitializer("accepter.js", (function(__rolldown_module_id__) {
+__rolldown_runtime__.registerFactory("accepter.js", "esm", (function(__rolldown_module_id__) {
 	try {
 		var __rolldown_exports__ = __rolldown_runtime__.__exportAll({ read: () => read });
 		__rolldown_runtime__.registerModule(__rolldown_module_id__, { exports: __rolldown_exports__ });
-		init_lib_2();
+		__rolldown_runtime__.initModule("lib.js");
 		const hot_accepter = __rolldown_runtime__.createModuleHotContext(__rolldown_module_id__);
 		var import_lib_00 = __rolldown_runtime__.loadExports("lib.js");
 		const read = () => import_lib_00.value;
@@ -84,11 +106,11 @@ var init_accepter_0 = __rolldown_runtime__.createEsmInitializer("accepter.js", (
 
 //#endregion
 //#region adder.js
-var init_adder_1 = __rolldown_runtime__.createEsmInitializer("adder.js", (function(__rolldown_module_id__) {
+__rolldown_runtime__.registerFactory("adder.js", "esm", (function(__rolldown_module_id__) {
 	try {
 		var __rolldown_exports__ = __rolldown_runtime__.__exportAll({ tag: () => tag });
 		__rolldown_runtime__.registerModule(__rolldown_module_id__, { exports: __rolldown_exports__ });
-		init_lib_2();
+		__rolldown_runtime__.initModule("lib.js");
 		const hot_adder = __rolldown_runtime__.createModuleHotContext(__rolldown_module_id__);
 		var import_lib_10 = __rolldown_runtime__.loadExports("lib.js");
 		const tag = `adder-${import_lib_10.value}`;
@@ -98,7 +120,7 @@ var init_adder_1 = __rolldown_runtime__.createEsmInitializer("adder.js", (functi
 
 //#endregion
 //#region lib.js
-var init_lib_2 = __rolldown_runtime__.createEsmInitializer("lib.js", (function(__rolldown_module_id__) {
+__rolldown_runtime__.registerFactory("lib.js", "esm", (function(__rolldown_module_id__) {
 	try {
 		var __rolldown_exports__ = __rolldown_runtime__.__exportAll({ value: () => value });
 		__rolldown_runtime__.registerModule(__rolldown_module_id__, { exports: __rolldown_exports__ });
@@ -108,16 +130,12 @@ var init_lib_2 = __rolldown_runtime__.createEsmInitializer("lib.js", (function(_
 }));
 
 //#endregion
-init_accepter_0()
-init_adder_1()
-__rolldown_runtime__.applyUpdates([['accepter.js', 'accepter.js'],['adder.js', 'adder.js']]);
 ```
 
 ## Meta
 
 - update type: patch
 
-### Hmr Boundaries
+### Changed Ids
 
-- boundary: accepter.js, accepted_via: accepter.js
-- boundary: adder.js, accepted_via: adder.js
+- lib.js

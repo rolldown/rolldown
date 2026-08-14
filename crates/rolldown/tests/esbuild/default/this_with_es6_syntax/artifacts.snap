@@ -85,6 +85,10 @@ console.log(void 0);
 //#endregion
 //#region es6-export-star-as.js
 console.log(void 0);
+//#endregion
+//#region es6-export-assign.ts
+//#endregion
+//#region es6-export-import-assign.ts
 (/* @__PURE__ */ __commonJSMin(((exports, module) => {
 	module.exports = 123;
 	console.log(exports);

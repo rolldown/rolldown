@@ -9,6 +9,8 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 // HIDDEN [\0rolldown/runtime.js]
+//#region test.svg
+//#endregion
 //#region entry.js
 console.log((/* @__PURE__ */ __commonJSMin(((exports, module) => {
 	module.exports = "./assets/test-CmpSc5Ku.svg";

@@ -41,6 +41,12 @@ pub struct MagicString<'s> {
   chunk_by_end: FxHashMap<u32, ChunkIdx>,
   guessed_indentor: OnceLock<String>,
 
+  /// Original text of every range replaced with `keep_original`, mapped to its position in the
+  /// generated sourcemap's `names`. Mirrors `magic-string`'s `storedNames`: the name recorded
+  /// is the *whole* requested range, independent of how that range happens to be split into
+  /// chunks, so a range that spans a split boundary still stores its full original text.
+  stored_names: FxHashMap<String, u32>,
+
   // This is used to speed up the search for the chunk that contains a given index.
   last_searched_chunk_idx: ChunkIdx,
 }
@@ -78,6 +84,7 @@ impl<'text> MagicString<'text> {
       filename: options.filename,
       ignore_list: options.ignore_list,
       guessed_indentor: OnceLock::default(),
+      stored_names: FxHashMap::default(),
       last_searched_chunk_idx: initial_chunk_idx,
     };
 
@@ -99,11 +106,35 @@ impl<'text> MagicString<'text> {
     self.ignore_list
   }
 
-  /// Returns the length of the content within chunks (intro + content + outro per chunk),
-  /// excluding the global intro/outro from `prepend`/`append`.
+  /// Returns the length in UTF-8 bytes of the content within chunks (intro + content + outro
+  /// per chunk), excluding the global intro/outro from `prepend`/`append`.
   /// This aligns with the reference `magic-string` behavior.
+  ///
+  /// Note this counts *bytes*. Callers that need the length JavaScript would report (UTF-16
+  /// code units, as the reference `magic-string` returns) must use [`Self::len_utf16`].
   pub fn len(&self) -> usize {
     self.iter_chunks().flat_map(|c| c.fragments(&self.source)).map(|f| f.len()).sum()
+  }
+
+  /// Returns the length in UTF-16 code units of the content within chunks, excluding the
+  /// global intro/outro — the same range [`Self::len`] covers.
+  ///
+  /// This is what the reference `magic-string` `length()` returns, since JavaScript string
+  /// length is measured in UTF-16 code units.
+  pub fn len_utf16(&self) -> usize {
+    self
+      .iter_chunks()
+      .flat_map(|c| c.fragments(&self.source))
+      .map(|f| f.chars().map(char::len_utf16).sum::<usize>())
+      .sum()
+  }
+
+  /// Returns the length in UTF-8 bytes of the whole generated output, including the global
+  /// intro/outro. Equivalent to `self.to_string().len()` without the allocation.
+  fn output_len(&self) -> usize {
+    self.intro.iter().map(|f| f.len()).sum::<usize>()
+      + self.len()
+      + self.outro.iter().map(|f| f.len()).sum::<usize>()
   }
 
   /// Returns `true` if all chunk content (intro + content + outro) is whitespace or empty.
@@ -113,8 +144,13 @@ impl<'text> MagicString<'text> {
   }
 
   /// Indicates if the string has been changed.
+  ///
+  /// The length check is only a fast path for "definitely changed", so it has to measure the
+  /// same span as the string comparison below it: the whole output, global intro/outro
+  /// included. Comparing against [`Self::len`] instead would report a change for edits that
+  /// cancel out, e.g. `remove(0, 1)` followed by `prepend("a")`.
   pub fn has_changed(&self) -> bool {
-    self.source.len() != self.len() || self.source.as_ref() != self.to_string()
+    self.output_len() != self.source.len() || self.source.as_ref() != self.to_string()
   }
 
   /// Returns the last character of the generated string, or `None` if empty.
@@ -232,8 +268,36 @@ impl<'text> MagicString<'text> {
     self.intro.push_back(content.into());
   }
 
+  /// Records `source[start..end)` as a sourcemap name, keeping first-insertion order.
+  /// See [`Self::stored_names`].
+  pub(super) fn store_name(&mut self, start: u32, end: u32) {
+    let original = &self.source[start as usize..end as usize];
+    if !self.stored_names.contains_key(original) {
+      #[expect(clippy::cast_possible_truncation, reason = "a source has < u32::MAX edits")]
+      let next_id = self.stored_names.len() as u32;
+      self.stored_names.insert(original.to_string(), next_id);
+    }
+  }
+
+  /// Stored names in `names`-array order, paired with their index.
+  pub(super) fn stored_names_ordered(&self) -> Vec<(&str, u32)> {
+    let mut ordered: Vec<(&str, u32)> =
+      self.stored_names.iter().map(|(name, &id)| (name.as_str(), id)).collect();
+    ordered.sort_unstable_by_key(|&(_, id)| id);
+    ordered
+  }
+
   fn iter_chunks(&self) -> impl Iterator<Item = &Chunk<'_>> {
     IterChunks { next: Some(self.first_chunk_idx), chunks: &self.chunks }
+  }
+
+  /// Returns `true` if the byte range `[start, end)` lies within a single chunk that has
+  /// already been edited. Callers use this for split points that cannot be expressed as a
+  /// byte index (a UTF-16 position inside a surrogate pair): the split would land strictly
+  /// inside the character spanning `[start, end)`, so it hits an edited chunk exactly when
+  /// this returns `true`.
+  pub fn is_range_within_edited_chunk(&self, start: u32, end: u32) -> bool {
+    self.iter_chunks().any(|c| c.start() <= start && end <= c.end() && c.is_edited())
   }
 
   pub(crate) fn fragments(&'text self) -> impl Iterator<Item = &'text str> {
@@ -304,24 +368,27 @@ impl<'text> MagicString<'text> {
     Ok(())
   }
 
+  /// Returns the chunk starting at `text_index`, or `None` if no chunk does — in which case
+  /// the caller sends the content to the global outro.
+  ///
+  /// Do not short-circuit on `text_index == self.source.len()`: for an empty source the sole
+  /// `[0, 0)` chunk both starts *and* ends at 0, so index 0 has a chunk even though it is also
+  /// the end of the source. The map lookup already answers this correctly for both cases, and
+  /// matches the reference `magic-string`, which does a plain `byStart[index]` lookup.
   fn by_start_mut(&mut self, text_index: u32) -> Result<Option<&mut Chunk<'text>>, String> {
-    if text_index as usize == self.source.len() {
-      Ok(None)
-    } else {
-      self.split_at(text_index)?;
-      let idx = self.chunk_by_start.get(&text_index);
-      Ok(idx.map(|idx| &mut self.chunks[*idx]))
-    }
+    self.split_at(text_index)?;
+    let idx = self.chunk_by_start.get(&text_index);
+    Ok(idx.map(|idx| &mut self.chunks[*idx]))
   }
 
+  /// Returns the chunk ending at `text_index`, or `None` if no chunk does — in which case the
+  /// caller sends the content to the global intro.
+  ///
+  /// Do not short-circuit on `text_index == 0`: see [`Self::by_start_mut`].
   fn by_end_mut(&mut self, text_index: u32) -> Result<Option<&mut Chunk<'text>>, String> {
-    if text_index == 0 {
-      Ok(None)
-    } else {
-      self.split_at(text_index)?;
-      let idx = self.chunk_by_end.get(&text_index);
-      Ok(idx.map(|idx| &mut self.chunks[*idx]))
-    }
+    self.split_at(text_index)?;
+    let idx = self.chunk_by_end.get(&text_index);
+    Ok(idx.map(|idx| &mut self.chunks[*idx]))
   }
 }
 

@@ -1,6 +1,6 @@
 {
   "name": "@rolldown/browser",
-  "version": "1.1.4",
+  "version": "1.2.4",
   "description": "Fast JavaScript/TypeScript bundler in Rust with Rollup-compatible API.",
   "keywords": [
     "bundler",
@@ -23,14 +23,21 @@
   "files": [
     "bin",
     "dist",
+    "LICENSE",
+    "THIRD-PARTY-LICENSE",
     "!*/.tsbuildinfo"
   ],
   "type": "module",
   "main": "./dist/index.mjs",
   "module": "./dist/index.mjs",
   "types": "./dist/index.d.mts",
+  "imports": {
+    "#default-runtime": "./dist/experimental-default-runtime.mjs",
+    "#runtime": "./dist/experimental-runtime.mjs"
+  },
   "exports": {
     ".": {
+      "types": "./dist/index.d.mts",
       "browser": "./dist/index.browser.mjs",
       "default": "./dist/index.mjs"
     },
@@ -41,6 +48,10 @@
     },
     "./experimental/runtime-types": {
       "types": "./dist/experimental-runtime-types.d.ts"
+    },
+    "./experimental/runtime": {
+      "types": "./dist/experimental-runtime.d.ts",
+      "default": "./dist/experimental-runtime.mjs"
     },
     "./plugins": {
       "browser": "./dist/plugins-index.browser.mjs",
@@ -62,12 +73,11 @@
     "build:debug": "pnpm run --filter rolldown build-browser-pkg:debug",
     "build:release": "pnpm run --filter rolldown build-browser-pkg:release",
     "build-node": "TARGET='browser' pnpm run --filter rolldown build-node",
-    "preinstall": "npx only-allow pnpm",
     "publint": "publint ."
   },
   "dependencies": {
-    "@emnapi/core": "1.11.1",
-    "@emnapi/runtime": "1.11.1",
+    "@emnapi/core": "catalog:",
+    "@emnapi/runtime": "catalog:",
     "@napi-rs/wasm-runtime": "catalog:"
   }
 }

@@ -1,3 +1,4 @@
+use core::cmp::PartialEq;
 use std::{
   borrow::Cow,
   path::{Path, PathBuf},
@@ -16,13 +17,14 @@ pub mod types;
 
 use arcstr::ArcStr;
 use oxc_str::CompactStr;
-use rolldown_std_utils::{PathExt, strip_path_prefix_to_slash};
+use rolldown_std_utils::{path_buf_to_slash, relative_path_to_slash, strip_path_prefix_to_slash};
 use rolldown_utils::{
   BitSet,
   dashmap::FxDashMap,
   hash_placeholder::HashPlaceholderGenerator,
   indexmap::{FxIndexMap, FxIndexSet},
   make_unique_name::make_unique_name,
+  node_style_absolute,
 };
 use rustc_hash::FxHashMap;
 use sugar_path::SugarPath;
@@ -75,6 +77,7 @@ pub struct Chunk {
   // emitted chunk corresponding reference_id, used to `PluginContext#getFileName` to search the emitted chunk name
   pub pre_rendered_chunk: Option<RollupPreRenderedChunk>,
   pub preliminary_filename: Option<PreliminaryFilename>,
+  pub preliminary_sourcemap_filename: Option<PreliminaryFilename>,
   pub absolute_preliminary_filename: Option<String>,
   pub canonical_names: FxHashMap<SymbolRef, CompactStr>,
   /// For mixed-mode externals: maps external `namespace_ref` to the node-mode binding name.
@@ -83,6 +86,7 @@ pub struct Chunk {
   // Sorted by Chunk#exec_order of the imported chunks
   pub cross_chunk_imports: Vec<ChunkIdx>,
   pub cross_chunk_dynamic_imports: Vec<ChunkIdx>,
+  pub dynamic_imports_from_external_modules: Vec<ModuleIdx>,
   pub bits: BitSet,
   pub imports_from_other_chunks: FxIndexMap<ChunkIdx, Vec<CrossChunkImportItem>>,
   // Only meaningful for cjs format
@@ -158,7 +162,7 @@ impl Chunk {
       .as_path()
       .parent()
       .expect("absolute_preliminary_filename should have a parent directory");
-    target.relative(source_dir).as_path().expect_to_slash()
+    relative_path_to_slash(target, source_dir)
   }
 
   pub async fn filename_template(
@@ -177,7 +181,7 @@ impl Chunk {
       options.chunk_filenames.call(rollup_pre_rendered_chunk).await?
     };
 
-    let pattern_name = if is_entry { "entryFileNames" } else { "chunkFileNames" };
+    let pattern_name = if is_entry { "output.entryFileNames" } else { "output.chunkFileNames" };
 
     Ok(FilenameTemplate::new(ret, pattern_name))
   }
@@ -219,12 +223,60 @@ impl Chunk {
     let chunk_name = self.get_preserve_modules_chunk_name(options, chunk_name.as_str());
 
     let filename = filename_template
-      .render(Some(&chunk_name), Some(options.format.as_str()), None, hash_replacer)?
+      .render(Some(&chunk_name), Some(options.format.as_str()), None, None, hash_replacer)?
       .into();
 
     let name = make_unique_name(&filename, used_name_counts);
 
     Ok(PreliminaryFilename::new(name, hash_placeholder))
+  }
+  pub async fn generate_preliminary_sourcemap_filename(
+    &self,
+    options: &NormalizedBundlerOptions,
+    rollup_pre_rendered_chunk: &RollupPreRenderedChunk,
+    chunk_name: &ArcStr,
+    hash_placeholder_generator: &mut HashPlaceholderGenerator,
+    used_name_counts: &FxDashMap<ArcStr, u32>,
+  ) -> anyhow::Result<Option<PreliminaryFilename>> {
+    let Some(sourcemap_filename) = &options.sourcemap_filenames else {
+      return Ok(None);
+    };
+    let sourcemap_filename = sourcemap_filename.call(rollup_pre_rendered_chunk).await?;
+
+    let filename_template = FilenameTemplate::new(sourcemap_filename, "output.sourcemapFileNames");
+    let has_hash_pattern = filename_template.has_hash_pattern();
+
+    let mut hash_placeholder = has_hash_pattern.then_some(vec![]);
+    let hash_replacer = has_hash_pattern.then(|| {
+      let pattern_name = filename_template.pattern_name();
+      |len: Option<usize>| {
+        let hash = hash_placeholder_generator.generate(len, pattern_name)?;
+        if let Some(hash_placeholder) = hash_placeholder.as_mut() {
+          hash_placeholder.push(hash.clone());
+        }
+        Ok(hash)
+      }
+    });
+    let chunk_name = self.get_preserve_modules_chunk_name(options, chunk_name.as_str());
+    let chunkhash = self
+      .preliminary_filename
+      .as_ref()
+      .and_then(|filename| filename.hash_placeholder())
+      .and_then(|s| s.first())
+      .map(String::as_str)
+      .unwrap_or("")
+      .into();
+    let filename = filename_template
+      .render(Some(&chunk_name), Some(options.format.as_str()), None, chunkhash, hash_replacer)?
+      .into();
+
+    if options.sourcemap.is_none() {
+      return Ok(None);
+    }
+
+    let name = make_unique_name(&filename, used_name_counts);
+
+    Ok(Some(PreliminaryFilename::new(name, hash_placeholder)))
   }
 
   fn get_preserve_modules_chunk_name<'a, 'b: 'a>(
@@ -243,21 +295,28 @@ impl Chunk {
     }
 
     let p = PathBuf::from(chunk_name);
-    let p = if p.is_absolute() {
+    // Besides genuinely absolute paths, `node_style_absolute` anchors a
+    // rooted-but-volume-less id (`/favicon`, `\favicon`) to the cwd volume
+    // root (a drive or UNC share): Node and Rollup treat such ids as absolute,
+    // but Rust's `Path::is_absolute()`
+    // reports them as non-absolute on Windows, and letting them fall into the
+    // `virtual_dirname` join below would discard the prefix and leak the
+    // leading slash into `[name]`.
+    let p = if let Some(abs) = node_style_absolute(&p, &options.cwd) {
       if let Some(ref preserve_modules_root) = options.preserve_modules_root {
         // See internal-docs/module-id/implementation.md: output paths may normalize separators even when module
         // ids keep native separators.
         if let Some(relative_path) =
-          strip_path_prefix_to_slash(chunk_name.as_path(), preserve_modules_root.as_path())
+          strip_path_prefix_to_slash(&abs, preserve_modules_root.as_path())
         {
           return Cow::Owned(relative_path);
         }
       }
-      p.relative(self.input_base.as_str())
+      relative_path_to_slash(abs, self.input_base.as_str())
     } else {
-      PathBuf::from(options.virtual_dirname.as_str()).join(p)
+      path_buf_to_slash(PathBuf::from(options.virtual_dirname.as_str()).join(p))
     };
-    Cow::Owned(p.to_slash_lossy().into_owned())
+    Cow::Owned(p)
   }
 
   pub fn user_defined_entry_module_idx(&self) -> Option<ModuleIdx> {

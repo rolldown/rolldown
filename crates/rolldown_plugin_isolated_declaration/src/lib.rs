@@ -3,7 +3,7 @@ use std::{borrow::Cow, path::Path};
 use arcstr::ArcStr;
 use oxc::{
   allocator::IntoIn,
-  ast_visit::VisitMut,
+  ast_visit::VisitJsMut,
   codegen::Codegen,
   isolated_declarations::{IsolatedDeclarations, IsolatedDeclarationsOptions},
 };
@@ -53,7 +53,7 @@ impl Plugin for IsolatedDeclarationPlugin {
       });
 
       if !ret.diagnostics.is_empty() {
-        return Err(BatchedBuildDiagnostic::new(BuildDiagnostic::from_oxc_diagnostics(
+        Err(BatchedBuildDiagnostic::new(BuildDiagnostic::from_oxc_diagnostics(
           ret.diagnostics,
           &ArcStr::from(ret.program.source_text),
           args.id,

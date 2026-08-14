@@ -7,6 +7,7 @@ use anyhow::Context;
 use arcstr::ArcStr;
 use dashmap::{DashMap, DashSet, Entry};
 use rolldown_error::{BuildDiagnostic, InvalidOptionType};
+use rolldown_std_utils::normalize_path_buf_to_slash;
 use rolldown_utils::dashmap::{FxDashMap, FxDashSet};
 use rolldown_utils::make_unique_name::make_unique_name;
 use rolldown_utils::xxhash::{xxhash_base64_url, xxhash_with_base};
@@ -14,8 +15,7 @@ use std::ffi::OsStr;
 use std::path::Path;
 use std::sync::Arc;
 use std::sync::Mutex;
-use std::sync::atomic::{AtomicUsize, Ordering};
-use sugar_path::SugarPath;
+use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
 
 #[derive(Debug, Default)]
 pub struct EmittedAsset {
@@ -80,6 +80,10 @@ pub struct FileEmitter {
   chunks: FxDashMap<ArcStr, Arc<EmittedChunk>>,
   prebuilt_chunks: FxDashMap<ArcStr, Arc<EmittedPrebuiltChunk>>,
   base_reference_id: AtomicUsize,
+  /// True during the build phase (buildStart through buildEnd), false during the output
+  /// phase. Dedup only re-picks the shortest same-source name while this is true; see the
+  /// guard in `emit_file`.
+  is_build_phase: AtomicBool,
   options: Arc<NormalizedBundlerOptions>,
   /// Mark the files that have been emitted to bundle.
   emitted_files: FxDashSet<ArcStr>,
@@ -102,6 +106,7 @@ impl FileEmitter {
       prebuilt_chunks: DashMap::default(),
       emitted_chunks: DashMap::default(),
       base_reference_id: AtomicUsize::new(0),
+      is_build_phase: AtomicBool::new(false),
       options,
       emitted_files: DashSet::default(),
       emitted_filenames: FxDashSet::default(),
@@ -177,13 +182,18 @@ impl FileEmitter {
         Entry::Occupied(entry) => {
           let reference_id = entry.get().clone();
           if let Some(mut output) = self.files.get_mut(&reference_id) {
-            // Keep the shortest name (ties broken lexicographically), so the
-            // surviving file name is deterministic regardless of emission order
-            // and matches Rollup. Uses the same ordering as `names` below.
-            if file
-              .name
-              .as_deref()
-              .is_some_and(|n| output.names.iter().all(|e| (n.len(), n) < (e.len(), e.as_str())))
+            // Re-pick the shortest name (ties broken lexicographically) only while building and
+            // before the asset is flushed to a bundle. Afterwards its name may already have been
+            // read via `get_file_name` and cached by a consumer (Vite does this in renderChunk),
+            // so changing it would leave a stale filename (vitejs/vite#22856). `emitted_files`
+            // covers assets kept from an earlier incremental rebuild, since the emitter is reused.
+            // This matches Rollup: shortest-wins while building, first-wins once output started.
+            if self.is_build_phase.load(Ordering::Relaxed)
+              && !self.emitted_files.contains(&reference_id)
+              && file
+                .name
+                .as_deref()
+                .is_some_and(|n| output.names.iter().all(|e| (n.len(), n) < (e.len(), e.as_str())))
             {
               self.generate_file_name(
                 &mut file,
@@ -260,7 +270,7 @@ impl FileEmitter {
         })
         .as_bytes(),
     )
-    // The reference id can be used for import.meta.ROLLUP_FILE_URL_referenceId and therefore needs to be a valid identifier.
+    // The reference id can be used for import.meta.ROLLDOWN_FILE_URL_referenceId and therefore needs to only contain characters allowed in identifiers.
     .replace('-', "$")
     .into()
   }
@@ -283,7 +293,7 @@ impl FileEmitter {
       let name = path.file_stem().and_then(OsStr::to_str).map(|stem| {
         if let Some(parent) = path.parent().filter(|p| !p.as_os_str().is_empty()) {
           // Normalize to resolve ".." and "." where possible, then convert to forward slashes
-          parent.join(stem).normalize().to_slash_lossy().into_owned()
+          normalize_path_buf_to_slash(parent.join(stem))
         } else {
           stem.to_string()
         }
@@ -296,6 +306,7 @@ impl FileEmitter {
           name.as_deref(),
           None,
           Some(extension.unwrap_or_default()),
+          None,
           Some(|len: Option<usize>| Ok(&hash[..len.map_or(8, |len| len.clamp(1, 21))])),
         )?
         .into();
@@ -410,6 +421,16 @@ impl FileEmitter {
     Ok(())
   }
 
+  /// Enter the build phase, where dedup re-picks the shortest same-source name (see `emit_file`).
+  pub fn enter_build_phase(&self) {
+    self.is_build_phase.store(true, Ordering::Relaxed);
+  }
+
+  /// Enter the output phase, where dedup stops changing already-observed filenames (see `emit_file`).
+  pub fn enter_output_phase(&self) {
+    self.is_build_phase.store(false, Ordering::Relaxed);
+  }
+
   /// Associate a module ID with an emitted file reference ID.
   /// This allows the `new URL()` finalizer to look up asset filenames by module ID.
   pub fn associate_module_with_file_ref(&self, module_id: &str, reference_id: &str) {
@@ -428,6 +449,7 @@ impl FileEmitter {
     self.names.clear();
     self.source_hash_to_reference_id.clear();
     self.base_reference_id.store(0, Ordering::Relaxed);
+    self.is_build_phase.store(false, Ordering::Relaxed);
     self.emitted_files.clear();
     self.emitted_chunks.clear();
     self.emitted_filenames.clear();
@@ -436,3 +458,31 @@ impl FileEmitter {
 }
 
 pub type SharedFileEmitter = Arc<FileEmitter>;
+
+#[cfg(test)]
+mod tests {
+  use super::*;
+
+  /// Reference ids are the base64url encoding of a 128-bit xxhash (with `-` remapped to `$`),
+  /// which is always 22 characters. The `import.meta.ROLLDOWN_FILE_URL_<referenceId>_<urlId>`
+  /// parser depends on this: because a reference id can contain any identifier character
+  /// (`[A-Za-z0-9_$]`, including `$` and `_`), the `urlId` cannot be found by searching for a
+  /// separator, so it is split off by this fixed length instead.
+  ///
+  /// If this length ever changes, `REFERENCE_ID_LEN` in `rolldown/src/utils/file_url.rs` must
+  /// be updated in lockstep or urlId parsing will silently corrupt reference ids.
+  #[test]
+  fn assign_reference_id_is_always_22_chars() {
+    let emitter = FileEmitter::new(Arc::new(NormalizedBundlerOptions::default()));
+
+    // Counter-based ids: assets emitted without an explicit file name.
+    for _ in 0..1000 {
+      assert_eq!(emitter.assign_reference_id(None).len(), 22);
+    }
+
+    // Name/file-name-based ids: chunks and explicitly named files, including edge-case inputs.
+    for name in ["a", "index.js", "assets/deeply/nested/asset.name.txt", ""] {
+      assert_eq!(emitter.assign_reference_id(Some(ArcStr::from(name))).len(), 22, "name={name:?}");
+    }
+  }
+}

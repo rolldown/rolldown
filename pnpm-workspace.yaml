@@ -38,31 +38,29 @@ catalog:
   '@babel/core': ^7.29.7
   '@babel/preset-env': ^7.29.7
   '@babel/preset-typescript': ^7.29.7
-  '@napi-rs/cli': ^3.7.2
-  '@napi-rs/wasm-runtime': ^1.1.6
+  '@emnapi/core': 2.0.0-alpha.4
+  '@emnapi/runtime': 2.0.0-alpha.4
+  '@jridgewell/trace-mapping': ^0.3.31
+  '@napi-rs/cli': ^3.8.2
+  '@napi-rs/wasm-runtime': ~1.2.2
   '@oxc-node/cli': ^0.1.0
   '@oxc-node/core': ^0.1.0
-  '@oxc-project/runtime': '=0.138.0'
-  '@oxc-project/types': '=0.138.0'
+  '@oxc-project/runtime': '=0.144.0'
+  '@oxc-project/types': '=0.144.0'
   '@pnpm/find-workspace-packages': ^6.0.9
   '@rolldown/pluginutils': ^1.0.0
   '@rollup/plugin-commonjs': ^29.0.0
-  '@rollup/plugin-json': ^6.1.0
   '@rollup/plugin-node-resolve': ^16.0.0
   '@types/babel__core': 7.20.5
   '@types/connect': ^3.4.38
   '@types/fs-extra': ^11.0.4
   '@types/lodash-es': ^4.17.12
-  '@types/mocha': 10.0.10
   '@types/node': 24.10.3
-  '@types/semver': ^7.5.8
+  '@types/semver': ^7.8.0
   '@types/serve-static': ^2.0.0
-  '@types/strip-comments': ^2.0.4
   '@types/ws': ^8.18.0
   acorn: ^8.17.0
-  acorn-import-assertions: ^1.9.0
   astring: ^1.9.0
-  buble: ^0.20.0
   cac: ^7.0.0
   chalk: ^5.3.0
   change-case: ^5.4.4
@@ -70,35 +68,30 @@ catalog:
   consola: ^3.4.2
   dedent: ^1.5.3
   diff: ^9.0.0
+  emnapi: 2.0.0-alpha.4
   esbuild: ^0.28.0
   estree-toolkit: ^1.7.8
   execa: ^9.2.0
   fast-glob: ^3.3.3
-  fixturify: ^3.0.0
   follow-redirects: ^1.15.6
   fresh-import: ^0.2.1
-  fs-extra: ^11.3.2
+  fs-extra: ^11.4.0
   glob: ^13.0.0
   lodash-es: ^4.17.21
   micromatch: ^4.0.8
-  mocha: ^11.7.5
-  oxc-minify: '=0.138.0'
-  oxc-parser: '=0.138.0'
-  oxc-transform: '=0.138.0'
+  oxc-parser: '=0.144.0'
+  oxc-transform: '=0.144.0'
   pathe: ^2.0.3
   react: ^19.0.0
   react-dom: ^19.0.0
   remark-parse: ^11.0.0
   remeda: ^2.34.1
-  rolldown-plugin-dts: ^0.26.0
+  rolldown-plugin-dts: ^0.28.0
   rollup: ^4.60.4
   semver: ^7.8.0
   serve-static: ^2.0.0
   signal-exit: 4.1.0
-  source-map: 0.7.6
-  source-map-support: ^0.5.21
-  strip-comments: ^2.0.1
-  terser: ^5.44.1
+  source-map: 0.8.0
   tinybench: ^6.0.0
   tinyexec: ^1.0.1
   tsx: ^4.22.0
@@ -112,6 +105,26 @@ catalog:
   ws: ^8.20.1
   zx: ^8.1.2
 
+catalogs:
+  # deps used by `rollup-tests` package. these should be synced with `rollup`
+  rollup-tests:
+    '@jridgewell/sourcemap-codec': ^1.5.5
+    '@rollup/plugin-commonjs': ^29.0.0
+    '@rollup/plugin-json': ^6.1.0
+    '@rollup/plugin-node-resolve': ^16.0.0
+    '@types/mocha': 10.0.10
+    '@types/strip-comments': ^2.0.4
+    acorn-import-assertions: ^1.9.0
+    acorn-import-phases: ^1.0.4
+    acorn-jsx: ^5.3.2
+    buble: ^0.20.0
+    fixturify: ^3.0.0
+    magic-string: ^1.1.0
+    mocha: ^11.8.0
+    strip-comments: ^2.0.1
+    source-map-support: ^0.5.21
+    terser: ^5.49.0
+
 shellEmulator: true
 
 trustPolicy: no-downgrade
@@ -124,11 +137,7 @@ trustPolicyExclude:
 verifyDepsBeforeRun: install
 
 minimumReleaseAgeExclude:
-  - '@napi-rs/cli@3.7.2'
-  - '@napi-rs/wasm-runtime@1.1.6'
-  - '@emnapi/core@1.11.1'
-  - '@emnapi/runtime@1.11.1'
-  - emnapi@1.11.1
+  - '@napi-rs/cli'
   - '@oxc-minify/*'
   - '@oxc-parser/*'
   - '@oxc-transform/*'
@@ -139,3 +148,10 @@ minimumReleaseAgeExclude:
   - '@voidzero-dev/*'
   - vite-plus
   - vitepress-plugin-feedback-tracker@0.2.0-alpha.1
+  - void
+  - '@napi-rs/wasm-runtime'
+  - '@emnapi/*'
+  - emnapi
+
+# avoid accidentally relying on `NODE_PATH` env var
+extendNodePath: false

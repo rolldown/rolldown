@@ -3,11 +3,11 @@ use std::{borrow::Cow, path::Path};
 use cow_utils::CowUtils;
 use oxc::{
   ast::{Comment, ast::Expression},
-  ast_visit::{Visit, walk},
+  ast_visit::{VisitJs, walk_js},
 };
 use rolldown_plugin::{LogWithoutPlugin, PluginContext};
+use rolldown_std_utils::relative_path_to_slash;
 use string_wizard::MagicString;
-use sugar_path::SugarPath as _;
 
 use super::dynamic_import_to_glob::{
   has_special_query_param, should_ignore, template_literal_to_glob, to_valid_glob,
@@ -32,10 +32,10 @@ pub struct DynamicImportVarsVisit<'ast, 'b> {
   pub magic_string: Option<MagicString<'b>>,
 }
 
-impl<'ast> Visit<'ast> for DynamicImportVarsVisit<'ast, '_> {
+impl<'ast> VisitJs<'ast> for DynamicImportVarsVisit<'ast, '_> {
   fn visit_expression(&mut self, expr: &Expression<'ast>) {
     if self.rewrite_variable_dynamic_import(expr, None) {
-      walk::walk_expression(self, expr);
+      walk_js::walk_expression(self, expr);
     }
   }
 }
@@ -106,14 +106,12 @@ impl<'ast> DynamicImportVarsVisit<'ast, '_> {
 
       let base = self.importer.parent().unwrap_or(self.root);
       let normalized = if raw_pattern.as_bytes()[0] == b'/' {
-        self.root.join(&raw_pattern[1..]).relative(base)
+        relative_path_to_slash(self.root.join(&raw_pattern[1..]), base)
       } else {
-        base.join(raw_pattern.as_ref()).relative(base)
+        relative_path_to_slash(base.join(raw_pattern.as_ref()), base)
       };
-
-      let normalized = normalized.to_slash_lossy();
       let new_raw_pattern = if normalized.starts_with("./") || normalized.starts_with("../") {
-        normalized.into_owned()
+        normalized
       } else {
         rolldown_utils::concat_string!("./", normalized)
       };

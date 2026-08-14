@@ -5,8 +5,10 @@ import { LOG_LEVEL_WARN } from '../log/logging';
 import { logInputHookInOutputPlugin } from '../log/logs';
 import type { InputOptions } from '../options/input-options';
 import type { OutputOptions } from '../options/output-options';
-import type { RolldownOutputPlugin, RolldownPlugin } from '../plugin';
+import type { Plugin, RolldownOutputPlugin, RolldownPlugin } from '../plugin';
+import { INTERNAL_PLUGIN_HOOK_NAMES } from '../plugin/internal-hooks';
 import { asyncFlatten } from './async-flatten';
+import { getParallelPluginInfo } from './parallel-plugin';
 
 export const normalizePluginOption: {
   (plugins: OutputOptions['plugins']): Promise<RolldownOutputPlugin[]>;
@@ -19,7 +21,7 @@ export function checkOutputPluginOption(
   onLog: LogHandler,
 ): RolldownOutputPlugin[] {
   for (const plugin of plugins) {
-    for (const hook of ENUMERATED_INPUT_PLUGIN_HOOK_NAMES) {
+    for (const hook of [...ENUMERATED_INPUT_PLUGIN_HOOK_NAMES, ...INTERNAL_PLUGIN_HOOK_NAMES]) {
       if (hook in plugin) {
         // remove the hook from the plugin if it is not an output plugin hook, avoid the plugin to be called
         // @ts-expect-error Here the plugin typing should be RolldownPlugin
@@ -36,14 +38,15 @@ export function normalizePlugins<T extends RolldownPlugin>(
   anonymousPrefix: string,
 ): T[] {
   for (const [index, plugin] of plugins.entries()) {
-    if ('_parallel' in plugin) {
+    if (getParallelPluginInfo(plugin)) {
       continue;
     }
     if (plugin instanceof BuiltinPlugin) {
       continue;
     }
-    if (!plugin.name) {
-      plugin.name = `${anonymousPrefix}${index + 1}`;
+    const objectPlugin = plugin as Plugin;
+    if (!objectPlugin.name) {
+      objectPlugin.name = `${anonymousPrefix}${index + 1}`;
     }
   }
   return plugins;

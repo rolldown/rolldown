@@ -51,6 +51,13 @@ impl<'text> MagicString<'text> {
     self.split_at(start)?;
     self.split_at(end)?;
 
+    // Record the *whole* replaced range, not the start chunk's span: `start..end` may cross a
+    // boundary left by an earlier split, in which case the start chunk only covers part of it.
+    // Matches magic-string, which stores `original.slice(start, end)` here.
+    if opts.keep_original {
+      self.store_name(start, end);
+    }
+
     let start_idx = self.chunk_by_start.get(&start).copied().unwrap();
     let end_idx = self.chunk_by_end.get(&end).copied().unwrap();
 
@@ -74,7 +81,12 @@ impl<'text> MagicString<'text> {
           return Err("Cannot overwrite across a split point".to_string());
         }
 
-        chunk_idx = next_in_list.unwrap();
+        // Both are `None` when the walk runs off the end of the list without reaching
+        // `end_idx`, i.e. the range is not contiguous in the output — same failure as above.
+        let Some(next_idx) = next_in_list else {
+          return Err("Cannot overwrite across a split point".to_string());
+        };
+        chunk_idx = next_idx;
         // Interior chunks always clear intro/outro (`Default` has `overwrite: true`),
         // matching JS magic-string where `chunk.edit('', false)` passes
         // `contentOnly=undefined` (falsy), so intro/outro are always cleared.

@@ -43,7 +43,7 @@ impl<Fs: FileSystem + Clone + 'static> Bundle<Fs> {
   #[tracing::instrument(level = "debug", skip_all, parent = &self.bundle_span)]
   /// This method intentionally get the ownership of `self` to show that the method cannot be called multiple times.
   pub async fn write(mut self) -> BuildResult<BundleOutput> {
-    let start = self.plugin_driver.start_timing();
+    let start = self.plugin_driver.build_timings.start();
     let result = async {
       self.trace_action_session_meta();
       trace_action!(action::BuildStart { action: "BuildStart" });
@@ -54,14 +54,14 @@ impl<Fs: FileSystem + Clone + 'static> Bundle<Fs> {
       ret
     }
     .await;
-    self.plugin_driver.set_total_build_time(start);
-    self.append_plugin_timings_warning(result)
+    self.plugin_driver.build_timings.record_total(start);
+    result
   }
 
   #[tracing::instrument(level = "debug", skip_all, parent = &self.bundle_span)]
   /// This method intentionally get the ownership of `self` to show that the method cannot be called multiple times.
   pub async fn generate(mut self) -> BuildResult<BundleOutput> {
-    let start = self.plugin_driver.start_timing();
+    let start = self.plugin_driver.build_timings.start();
     let result = async {
       self.trace_action_session_meta();
       trace_action!(action::BuildStart { action: "BuildStart" });
@@ -75,8 +75,8 @@ impl<Fs: FileSystem + Clone + 'static> Bundle<Fs> {
       ret
     }
     .await;
-    self.plugin_driver.set_total_build_time(start);
-    self.append_plugin_timings_warning(result)
+    self.plugin_driver.build_timings.record_total(start);
+    result
   }
 
   #[tracing::instrument(level = "debug", skip_all, parent = &self.bundle_span)]
@@ -89,6 +89,19 @@ impl<Fs: FileSystem + Clone + 'static> Bundle<Fs> {
 
   #[tracing::instrument(level = "debug", skip_all, parent = &self.bundle_span)]
   pub async fn scan_modules(
+    &mut self,
+    scan_mode: ScanMode<ArcStr>,
+  ) -> BuildResult<NormalizedScanStageOutput> {
+    // The whole scan (buildStart through buildEnd) is the build phase. Resetting on every exit
+    // means a failed scan cannot leave the emitter stuck in the build phase, where a later emit
+    // (e.g. an HMR patch after a failed rebuild) could still change an already-emitted filename.
+    self.plugin_driver.file_emitter.enter_build_phase();
+    let result = self.scan_modules_impl(scan_mode).await;
+    self.plugin_driver.file_emitter.enter_output_phase();
+    result
+  }
+
+  async fn scan_modules_impl(
     &mut self,
     scan_mode: ScanMode<ArcStr>,
   ) -> BuildResult<NormalizedScanStageOutput> {
@@ -182,12 +195,12 @@ impl<Fs: FileSystem + Clone + 'static> Bundle<Fs> {
         let pattern_name = match chunk {
           rolldown_common::Output::Chunk(c) => {
             if c.is_entry {
-              "entryFileNames"
+              "output.entryFileNames"
             } else {
-              "chunkFileNames"
+              "output.chunkFileNames"
             }
           }
-          rolldown_common::Output::Asset(_) => "assetFileNames",
+          rolldown_common::Output::Asset(_) => "output.assetFileNames",
         };
         return Err(
           BuildDiagnostic::invalid_option(rolldown_error::InvalidOptionType::NulByteInFilename {
@@ -263,10 +276,12 @@ impl<Fs: FileSystem + Clone + 'static> Bundle<Fs> {
     scan_stage_output: NormalizedScanStageOutput,
     is_write: bool,
   ) -> BuildResult<BundleOutput> {
-    let start = self.plugin_driver.start_timing();
+    // The one stretch of a build with no plugin in it, which is what makes it a usable
+    // baseline for "was this build plugin-bound?" — see `BuildTimings`.
+    let link_start = self.plugin_driver.build_timings.start();
     let (mut link_stage_output, ast_table, used_symbol_refs) =
       LinkStage::new(scan_stage_output, &self.options).link();
-    self.plugin_driver.set_link_stage_time(start);
+    self.plugin_driver.build_timings.record_link_stage(link_start);
 
     let bundle_output =
       GenerateStage::new(&mut link_stage_output, ast_table, &self.options, &self.plugin_driver)
@@ -398,35 +413,90 @@ impl<Fs: FileSystem + Clone + 'static> Bundle<Fs> {
       });
     }
   }
-
-  /// Append plugin timings warning to result if applicable.
-  fn append_plugin_timings_warning(
-    &self,
-    result: BuildResult<BundleOutput>,
-  ) -> BuildResult<BundleOutput> {
-    result.map(|mut output| {
-      if let Some(plugins) = self.plugin_driver.get_plugin_timings_info() {
-        output.warnings.push(BuildDiagnostic::plugin_timings(plugins).with_severity_warning());
-      }
-      output
-    })
-  }
 }
 
 /// Check if a filename would escape the output directory.
 ///
-/// Rejects absolute paths and paths that normalize to a location outside the
-/// output directory (e.g. via `..` traversal).
+/// Rejects paths rooted in POSIX or Windows syntax and relative paths that
+/// normalize outside the output directory or to the directory itself.
 fn is_filename_outside_output_dir(filename: &str) -> bool {
-  if Path::new(filename).is_absolute() {
+  let bytes = filename.as_bytes();
+  let starts_with_path_root = bytes.first().is_some_and(|byte| matches!(*byte, b'/' | b'\\'));
+  let has_windows_drive_prefix =
+    bytes.len() >= 2 && bytes[0].is_ascii_alphabetic() && bytes[1] == b':';
+  // Drive-relative paths can escape only on Windows; absolute drive paths are
+  // rejected on every host for cross-platform consistency.
+  let has_disallowed_windows_drive_prefix = has_windows_drive_prefix
+    && (cfg!(windows) || bytes.get(2).is_some_and(|byte| matches!(*byte, b'/' | b'\\')));
+  if starts_with_path_root || has_disallowed_windows_drive_prefix {
     return true;
   }
 
   let normalized = filename.normalize();
-  let normalized = normalized.to_string_lossy();
 
-  normalized == "."
-    || normalized == ".."
-    || normalized.starts_with("../")
-    || normalized.starts_with("..\\")
+  normalized == Path::new(".")
+    || normalized.starts_with(Path::new(".."))
+    // Preserve the existing cross-platform guard for a leading Windows parent.
+    || normalized.to_string_lossy().starts_with("..\\")
+}
+
+#[cfg(test)]
+mod tests {
+  use super::is_filename_outside_output_dir;
+
+  #[test]
+  fn output_filename_cannot_resolve_to_or_escape_output_directory() {
+    for filename in [
+      "",
+      ".",
+      "./",
+      "foo/..",
+      "foo/../",
+      "foo/bar/../..",
+      "..",
+      "../file",
+      "..\\file",
+      "a/../../file",
+      "/file",
+      "\\file",
+      "C:/file",
+      "C:\\file",
+      "c:\\file",
+      "\\\\server\\share\\file",
+      "\\\\?\\C:\\file",
+    ] {
+      assert!(is_filename_outside_output_dir(filename), "expected {filename:?} to be rejected");
+    }
+
+    for filename in [
+      "file.js",
+      "dir/file.js",
+      "dir\\file.js",
+      "./asset.txt",
+      ".\\asset.txt",
+      "foo/",
+      "foo\\",
+      "..file.js",
+      ".hidden",
+      "foo/bar/../baz.js",
+    ] {
+      assert!(!is_filename_outside_output_dir(filename), "expected {filename:?} to be accepted");
+    }
+  }
+
+  #[cfg(windows)]
+  #[test]
+  fn windows_output_filename_cannot_use_drive_relative_or_backslash_traversal() {
+    for filename in [".\\", "C:", "C:file", "c:file", "foo\\..", "a\\..\\..\\file"] {
+      assert!(is_filename_outside_output_dir(filename), "expected {filename:?} to be rejected");
+    }
+  }
+
+  #[cfg(not(windows))]
+  #[test]
+  fn unix_output_filename_keeps_host_native_backslash_and_colon_semantics() {
+    for filename in [".\\", "C:", "C:file", "c:file", "foo\\..", "a\\..\\..\\file"] {
+      assert!(!is_filename_outside_output_dir(filename), "expected {filename:?} to be accepted");
+    }
+  }
 }

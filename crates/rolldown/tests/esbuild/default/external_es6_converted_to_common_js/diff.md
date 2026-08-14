@@ -66,6 +66,18 @@ init_e();
 import "x";
 import "x";
 // HIDDEN [\0rolldown/runtime.js]
+//#region a.js
+var init_a = __esmMin((() => {}));
+//#endregion
+//#region b.js
+var init_b = __esmMin((() => {}));
+//#endregion
+//#region c.js
+var init_c = __esmMin((() => {}));
+//#endregion
+//#region d.js
+var init_d = __esmMin((() => {}));
+//#endregion
 //#region e.js
 var e_exports = /* @__PURE__ */ __exportAll({});
 import * as import_x from "x";
@@ -86,7 +98,7 @@ init_e();
 ===================================================================
 --- esbuild	/out.js
 +++ rolldown	entry.js
-@@ -1,43 +1,10 @@
+@@ -1,43 +1,14 @@
 -var a_exports = {};
 -__export(a_exports, {
 -    ns: () => ns
@@ -128,6 +140,10 @@ init_e();
 -});
 +import "x";
 +import "x";
++var init_a = __esmMin(() => {});
++var init_b = __esmMin(() => {});
++var init_c = __esmMin(() => {});
++var init_d = __esmMin(() => {});
 +var e_exports = __exportAll({});
 +import * as import_x from "x";
 +__reExport(e_exports, import_x);

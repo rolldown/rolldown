@@ -15,16 +15,16 @@ import { getDevWatchOptionsForCi } from './utils/get-dev-watch-options-for-ci.js
  * (`experimental.bundledDev`).
  *
  * In-memory serving, HMR fan-out, the lazy-bundling endpoint, the error
- * overlay, and the fallback spinner all come from Vite itself. The vendored
- * submodule at `packages/test-dev-server/vite` resolves `rolldown` to the
- * workspace's `packages/rolldown` via a node_modules symlink swap (see
- * `scripts/setup-vite.mjs`; the submodule itself stays pristine), so running
- * these tests exercises the local rolldown binding through the real Vite
- * integration.
+ * overlay, and the fallback spinner all come from Vite itself. The Vite
+ * checkout at `vite/` (repo root, vitejs/vite `rolldown-canary` rebased onto
+ * `main`) resolves `rolldown` to the workspace's `packages/rolldown` via a
+ * node_modules symlink swap (see `just setup-vite`; the checkout itself
+ * stays unpatched), so running these tests exercises the local rolldown
+ * binding through the real Vite integration.
  *
  * What this file adds on top of Vite is only the test-harness surface the
  * specs rely on and Vite doesn't provide:
- * - the `/_dev/status` endpoint (`buildSeq` / `moduleRegistrationSeq` /
+ * - the `/_dev/status` endpoint (`buildSeq` /
  *   engine bundle state) used by `waitForBuildStable` and friends,
  * - the `Logger` → Vite `customLogger` adapter so `serverLogs` capture works,
  * - the old `createDevServer` contract that a resolved promise means the
@@ -39,10 +39,10 @@ import { getDevWatchOptionsForCi } from './utils/get-dev-watch-options-for-ci.js
 // with (poll watcher + content comparison so same-second rewrites aren't
 // missed — see get-dev-watch-options-for-ci.ts), reopening exactly the blind
 // spot that made the recovery specs hang on CI before rolldown#9736. The
-// vendored submodule stays pristine, so merge the options here instead:
+// Vite checkout stays unpatched, so merge the options here instead:
 // Vite's `dev()` helper looks up `DevEngine.create` at call time, and the
-// vendored dist resolves `rolldown` to this same workspace package (see
-// scripts/setup-vite.mjs), so wrapping the static covers Vite's engine too.
+// checkout's dist resolves `rolldown` to this same workspace package (see
+// `just setup-vite`), so wrapping the static covers Vite's engine too.
 // Vite's own options win the merge, keeping its `skipWrite: true`.
 const originalDevEngineCreate = DevEngine.create.bind(DevEngine);
 DevEngine.create = ((...args: Parameters<typeof DevEngine.create>) => {
@@ -55,11 +55,11 @@ DevEngine.create = ((...args: Parameters<typeof DevEngine.create>) => {
 
 // --- Vite loading -------------------------------------------------------------
 // `vite` is deliberately NOT a package.json dependency: it is loaded at
-// runtime from the vendored submodule's built dist. The node-platform
+// runtime from the Vite checkout's built dist. The node-platform
 // fixtures — and every CI job that never runs browser tests — must work
-// without the submodule being initialized or built, so nothing here may make
+// without the checkout being cloned or built, so nothing here may make
 // `pnpm install` or `tsc` depend on it (a `link:` dependency dangles when the
-// submodule is absent and breaks both). The interfaces below are minimal
+// checkout is absent and breaks both). The interfaces below are minimal
 // structural types for the slice of Vite's API the harness touches.
 
 interface ViteDevServerLike {
@@ -106,8 +106,11 @@ const packageRoot = nodePath.resolve(
   nodePath.dirname(nodeUrl.fileURLToPath(import.meta.url)),
   '..',
 );
+// The Vite checkout lives at the repo root: packages/test-dev-server resolves it via ../../vite.
 const viteDistEntry = nodePath.join(
   packageRoot,
+  '..',
+  '..',
   'vite',
   'packages',
   'vite',
@@ -121,7 +124,7 @@ async function loadVite(): Promise<{
 }> {
   if (!nodeFs.existsSync(viteDistEntry)) {
     throw new Error(
-      `Vite dist not found at ${viteDistEntry} — the browser platform runs on the vendored Vite submodule. Run \`just setup-test-dev-server-vite\` first.`,
+      `Vite dist not found at ${viteDistEntry}. The browser platform runs on the Vite checkout at vite/. Run \`just setup-vite\` first.`,
     );
   }
   return import(nodeUrl.pathToFileURL(viteDistEntry).href) as Promise<{
@@ -141,7 +144,6 @@ interface HarnessCounters {
    */
   buildSeq: number;
   /** Bumped per `vite:module-loaded` report from the client runtime. */
-  moduleRegistrationSeq: number;
 }
 
 /**
@@ -203,8 +205,8 @@ function createHarnessPlugin(counters: HarnessCounters): VitePluginLike {
   // `error` payloads. Backs the two error-recovery workarounds below — see
   // the `configureServer`/`generateBundle` comments. Vite's own bundled-dev
   // state (`BundledDev.lastBuildError`) is `private`, so the workarounds
-  // reach it with a cast; the vendored submodule pins the Vite version, so
-  // this stays stable until the submodule is bumped.
+  // reach it with a cast; the checkout tracks vitejs/vite `rolldown-canary`,
+  // so a canary update can move these internals.
   let sawBroadcastError = false;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   let getBundledDev: () => any = () => undefined;
@@ -248,10 +250,6 @@ function createHarnessPlugin(counters: HarnessCounters): VitePluginLike {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       getBundledDev = () => (clientEnv as any).bundledDev;
       sendFullReload = () => clientEnv.hot.send({ type: 'full-reload', path: '*' });
-
-      clientEnv.hot.on('vite:module-loaded', () => {
-        counters.moduleRegistrationSeq++;
-      });
 
       // WORKAROUND (upstream gap): Vite never clears `lastBuildError` when a
       // recovery arrives as an HMR patch (only `onOutput` clears it), and the
@@ -311,7 +309,6 @@ function createHarnessPlugin(counters: HarnessCounters): VitePluginLike {
             lastBuildErrored,
             buildSeq: counters.buildSeq,
             connectedClients: server.ws.clients.size,
-            moduleRegistrationSeq: counters.moduleRegistrationSeq,
           }),
         );
       });
@@ -362,7 +359,14 @@ function toViteConfig(
       // asset specs assert real asset requests. Same setting Vite's own
       // full-bundle-mode playground uses.
       assetsInlineLimit: 0,
-      rollupOptions: build.treeshake !== undefined ? { treeshake: build.treeshake } : {},
+      rollupOptions: {
+        ...(build.treeshake !== undefined ? { treeshake: build.treeshake } : {}),
+        // Forward the fixture's rolldown `experimental` (e.g. `devMode.lazy`) so a
+        // fixture can opt out of lazy compilation. `bundledDev.getRolldownOptions`
+        // builds `{ lazy: true, ...resolvedDevMode, implement }`, spreading the resolved
+        // devMode AFTER the default, so an explicit `lazy: false` here wins.
+        ...(build.experimental !== undefined ? { experimental: build.experimental } : {}),
+      },
     },
   };
 }
@@ -376,7 +380,7 @@ export async function createViteDevServer(
   opts?: { port?: number; logger?: Logger },
 ): Promise<DevServerHandle> {
   const logger = opts?.logger ?? console;
-  const counters: HarnessCounters = { buildSeq: 0, moduleRegistrationSeq: 0 };
+  const counters: HarnessCounters = { buildSeq: 0 };
   const { createServer } = await loadVite();
   const port = opts?.port || (await getFreePort());
 
@@ -407,7 +411,7 @@ export async function createViteDevServer(
     const bundledDev = (server.environments.client as any).bundledDev;
     if (!bundledDev || !('initialBuildCompleted' in bundledDev)) {
       throw new Error(
-        'vite internals moved: expected `environments.client.bundledDev.initialBuildCompleted` — re-check vite-server.ts against the new submodule pin',
+        'vite internals moved: expected `environments.client.bundledDev.initialBuildCompleted`. Re-check vite-server.ts against the current Vite checkout',
       );
     }
     while (!bundledDev.initialBuildCompleted) {

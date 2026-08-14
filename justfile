@@ -93,6 +93,10 @@ test-node *args="": build-rolldown build-rolldown-test-dev-server
   just test-node-rolldown {{ args }}
   just test-node-rollup
 
+# Run Rolldown's tests against the WASI binding, mirroring the WASI CI lane. Replaces any native `dist`, so run `just build-rolldown` afterwards.
+test-wasi *args="": build-rolldown-wasi build-rolldown-test-dev-server
+  vp run --filter rolldown-tests test:wasi {{ args }}
+
 test-node-hmr *args: build build-test-dev-server
   just test-node-hmr-only {{ args }}
 
@@ -102,6 +106,14 @@ test-node-hmr-only *args:
 # Run Vite's test suite to check Rolldown's behaviors.
 test-vite: # We don't use `test-node-vite` because it's not expected to run in `just test-node`.
   vp run --filter vite-tests test
+
+# Build the WASI artifacts and smoke test them inside a WebContainer. Opt-in only, needs network.
+test-webcontainer:
+  vp run --filter browser-tests test:webcontainer
+
+# Build `@rolldown/browser` and smoke test the packed artifact inside a real browser page.
+test-browser:
+  vp run --filter browser-tests test:browser
 
 # --- `t` series commands provide scenario-specific shortcut commands for testing compared to `test` series commands.
 
@@ -221,11 +233,13 @@ build-browser-release:
 build-test-dev-server:
   vp run --filter @rolldown/test-dev-server build
 
-# Set up the vendored Vite submodule for `@rolldown/test-dev-server` (init the
-# submodule, link the workspace rolldown into it, install + build vite).
-# Requires `just build-rolldown` first.
-setup-test-dev-server-vite:
-  vp run --filter @rolldown/test-dev-server setup-vite
+# Set up the Vite checkout at `vite/` (clone vitejs/vite rolldown-canary
+# rebased onto main, link the workspace rolldown into it, install + build
+# vite). It backs the `@rolldown/test-dev-server` browser tests, and
+# `packages/vite-tests` clones the same checkout. Requires
+# `just build-rolldown` first.
+setup-vite:
+  vp run --filter @rolldown-internal/scripts setup-vite
 
 # --- `bench` series commands aim to provide a easy way to run benchmarks.
 

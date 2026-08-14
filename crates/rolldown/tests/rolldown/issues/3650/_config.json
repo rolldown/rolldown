@@ -1,4 +1,5 @@
 {
+  "configName": "on-demand",
   "config": {
     "strictExecutionOrder": true,
     "codeSplitting": {
@@ -6,13 +7,22 @@
       "groups": [
         {
           "name": "first",
-          "test": "first"
+          "test": "[\\\\/]first\\.js$"
         },
         {
           "name": "second",
-          "test": "second|\\0rolldown/runtime\\.js"
+          "test": "[\\\\/]second\\.js$|^\\0rolldown/runtime\\.js$"
         }
       ]
+    },
+    "experimental": {
+      "onDemandWrapping": true
     }
-  }
+  },
+  "configVariants": [
+    {
+      "_configName": "wrap-all",
+      "onDemandWrapping": false
+    }
+  ]
 }

@@ -1,0 +1,171 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+import * as assertNS from "node:assert";
+import assert, { deepStrictEqual, ok as assertOk, default as assertDefault } from "node:assert";
+// HIDDEN [\0rolldown/runtime.js]
+__rolldown_runtime__.registerGraph({
+	ids: [
+		"dep.js",
+		"reexport.js",
+		"shadow.js",
+		"hmr.js",
+		"main.js"
+	],
+	localCount: 5,
+	edges: [
+		[],
+		[0],
+		[0],
+		[1, 2],
+		[3]
+	],
+	dynamicEdges: [
+		[],
+		[],
+		[],
+		[],
+		[]
+	]
+});
+//#region dep.js
+var dep_exports = /* @__PURE__ */ __exportAll({ value: () => value });
+__rolldown_runtime__.createModuleHotContext("dep.js");
+__rolldown_runtime__.registerModule("dep.js", { exports: dep_exports });
+const value = "from-dep";
+//#endregion
+//#region reexport.js
+var reexport_exports = /* @__PURE__ */ __exportAll({
+	assertDefault: () => assertDefault,
+	assertNS: () => assertNS,
+	assertOk: () => assertOk,
+	value: () => value
+});
+import * as import_node_util from "node:util";
+__reExport(reexport_exports, import_node_util);
+__rolldown_runtime__.createModuleHotContext("reexport.js");
+__rolldown_runtime__.registerModule("reexport.js", { exports: reexport_exports });
+//#endregion
+//#region shadow.js
+var shadow_exports = /* @__PURE__ */ __exportAll({
+	shadowWorks: () => shadowWorks,
+	value: () => value
+});
+import * as import_node_assert from "node:assert";
+__reExport(shadow_exports, import_node_assert);
+__rolldown_runtime__.createModuleHotContext("shadow.js");
+__rolldown_runtime__.registerModule("shadow.js", { exports: shadow_exports });
+const shadowWorks = typeof deepStrictEqual === "function";
+//#endregion
+//#region hmr.js
+var hmr_exports = /* @__PURE__ */ __exportAll({});
+const hmr_hot = __rolldown_runtime__.createModuleHotContext("hmr.js");
+__rolldown_runtime__.registerModule("hmr.js", { exports: hmr_exports });
+assert.strictEqual(value, "from-dep");
+assert.strictEqual(typeof assertOk, "function", "export { x } from external");
+assert.strictEqual(assertDefault, assert, "export { default as y } from external");
+assert.strictEqual(typeof assertNS?.ok, "function", "export * as ns from external");
+assert.strictEqual(typeof reexport_exports.format, "function", "export * from external");
+assert.strictEqual(shadowWorks, true, "import + export * from the same external");
+assert.strictEqual(typeof shadow_exports.strictEqual, "function");
+hmr_hot.accept();
+//#endregion
+//#region main.js
+var main_exports = /* @__PURE__ */ __exportAll({});
+__rolldown_runtime__.createModuleHotContext("main.js");
+__rolldown_runtime__.registerModule("main.js", { exports: main_exports });
+//#endregion
+
+```
+
+# HMR Step 0
+
+## Code
+
+```js
+__rolldown_runtime__.registerGraph({ids:["dep.js","hmr.js","reexport.js","shadow.js"],localCount:4,edges:[[],[2,3],[0],[0]],dynamicEdges:[[],[],[],[]]});
+//#region dep.js
+__rolldown_runtime__.registerFactory("dep.js", "esm", (function(__rolldown_module_id__) {
+	try {
+		var __rolldown_exports__ = __rolldown_runtime__.__exportAll({ value: () => value });
+		__rolldown_runtime__.registerModule(__rolldown_module_id__, { exports: __rolldown_exports__ });
+		const hot_dep = __rolldown_runtime__.createModuleHotContext(__rolldown_module_id__);
+		const value = "from-dep";
+		console.log("dep updated");
+	} finally {}
+}));
+
+//#endregion
+//#region hmr.js
+import * as import_node_assert_10 from "node:assert";
+__rolldown_runtime__.registerFactory("hmr.js", "esm", (function(__rolldown_module_id__) {
+	try {
+		var __rolldown_exports__ = __rolldown_runtime__.__exportAll({});
+		__rolldown_runtime__.registerModule(__rolldown_module_id__, { exports: __rolldown_exports__ });
+		__rolldown_runtime__.initModule("reexport.js");
+		__rolldown_runtime__.initModule("shadow.js");
+		const hot_hmr = __rolldown_runtime__.createModuleHotContext(__rolldown_module_id__);
+		var import_reexport_11 = __rolldown_runtime__.loadExports("reexport.js");
+		var import_shadow_12 = __rolldown_runtime__.loadExports("shadow.js");
+		import_node_assert_10.default.strictEqual(import_reexport_11.value, "from-dep");
+		import_node_assert_10.default.strictEqual(typeof import_reexport_11.assertOk, "function", "export { x } from external");
+		import_node_assert_10.default.strictEqual(import_reexport_11.assertDefault, import_node_assert_10.default, "export { default as y } from external");
+		import_node_assert_10.default.strictEqual(typeof import_reexport_11.assertNS?.ok, "function", "export * as ns from external");
+		import_node_assert_10.default.strictEqual(typeof import_reexport_11.format, "function", "export * from external");
+		import_node_assert_10.default.strictEqual(import_shadow_12.shadowWorks, true, "import + export * from the same external");
+		import_node_assert_10.default.strictEqual(typeof import_shadow_12.strictEqual, "function");
+		hot_hmr.accept();
+	} finally {}
+}));
+
+//#endregion
+//#region reexport.js
+import * as import_node_assert_21 from "node:assert";
+import * as import_node_util_24 from "node:util";
+__rolldown_runtime__.registerFactory("reexport.js", "esm", (function(__rolldown_module_id__) {
+	try {
+		var __rolldown_exports__ = __rolldown_runtime__.__exportAll({
+			assertOk: () => import_node_assert_21.ok,
+			assertDefault: () => import_node_assert_21.default,
+			assertNS: () => import_node_assert_21
+		});
+		__rolldown_runtime__.registerModule(__rolldown_module_id__, { exports: __rolldown_exports__ });
+		__rolldown_runtime__.initModule("dep.js");
+		const hot_reexport = __rolldown_runtime__.createModuleHotContext(__rolldown_module_id__);
+		var import_dep_20 = __rolldown_runtime__.loadExports("dep.js");
+		__rolldown_runtime__.__reExport(__rolldown_exports__, import_dep_20);
+		__rolldown_runtime__.__reExport(__rolldown_exports__, import_node_util_24);
+	} finally {}
+}));
+
+//#endregion
+//#region shadow.js
+import * as import_node_assert_30 from "node:assert";
+__rolldown_runtime__.registerFactory("shadow.js", "esm", (function(__rolldown_module_id__) {
+	try {
+		var __rolldown_exports__ = __rolldown_runtime__.__exportAll({ shadowWorks: () => shadowWorks });
+		__rolldown_runtime__.registerModule(__rolldown_module_id__, { exports: __rolldown_exports__ });
+		__rolldown_runtime__.initModule("dep.js");
+		const hot_shadow = __rolldown_runtime__.createModuleHotContext(__rolldown_module_id__);
+		var import_dep_31 = __rolldown_runtime__.loadExports("dep.js");
+		__rolldown_runtime__.__reExport(__rolldown_exports__, import_dep_31);
+		__rolldown_runtime__.__reExport(__rolldown_exports__, import_node_assert_30);
+		const shadowWorks = typeof import_node_assert_30.deepStrictEqual === "function";
+	} finally {}
+}));
+
+//#endregion
+```
+
+## Meta
+
+- update type: patch
+
+### Changed Ids
+
+- dep.js

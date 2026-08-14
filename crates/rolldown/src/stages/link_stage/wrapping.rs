@@ -1,10 +1,8 @@
 use rolldown_common::{
-  EcmaViewMeta, ExportsKind, ImportKind, IndexModules, Module, ModuleIdx, NormalModule,
-  NormalizedBundlerOptions, RuntimeModuleBrief, StmtInfo, StmtInfoMeta, StmtInfos, SymbolRefDb,
-  TaggedSymbolRef, WrapKind,
+  ExportsKind, ImportKind, IndexModules, Module, ModuleIdx, NormalModule, NormalizedBundlerOptions,
+  RuntimeModuleBrief, StmtInfo, StmtInfoMeta, StmtInfos, SymbolRefDb, TaggedSymbolRef, WrapKind,
 };
 use rolldown_utils::IndexBitSet;
-use rustc_hash::FxHashSet;
 use smallvec::smallvec;
 
 use crate::types::linking_metadata::{LinkingMetadata, LinkingMetadataVec};
@@ -16,7 +14,6 @@ struct Context<'a> {
   pub linking_infos: &'a mut LinkingMetadataVec,
   pub modules: &'a IndexModules,
   pub runtime_idx: ModuleIdx,
-  pub on_demand_wrapping: bool,
 }
 
 fn wrap_module_recursively(ctx: &mut Context, target: ModuleIdx) {
@@ -35,20 +32,12 @@ fn wrap_module_recursively(ctx: &mut Context, target: ModuleIdx) {
     return;
   }
 
-  // Check if the module really needs to be wrapped
-  if ctx.on_demand_wrapping
-    && matches!(module.exports_kind, ExportsKind::Esm | ExportsKind::None)
-    && !module.meta.contains(EcmaViewMeta::ExecutionOrderSensitive)
-    && module.import_records.is_empty()
-  {
-    return;
-  }
   if matches!(ctx.linking_infos[target].wrap_kind(), WrapKind::None) {
     let new_wrap_kind = match module.exports_kind {
       ExportsKind::Esm | ExportsKind::None => WrapKind::Esm,
       ExportsKind::CommonJs => WrapKind::Cjs,
     };
-    ctx.linking_infos[target].sync_wrap_kind(new_wrap_kind);
+    ctx.linking_infos[target].set_wrap_kind(new_wrap_kind);
   }
 
   module.import_records.iter().for_each(|rec| {
@@ -101,17 +90,8 @@ impl LinkStage<'_> {
     let mut visited_modules_for_wrapping = IndexBitSet::new(self.module_table.modules.len());
     let mut visited_modules_for_dynamic_exports = IndexBitSet::new(self.module_table.modules.len());
 
-    let mut cjs_exports_kind_modules = FxHashSet::default();
-
-    let is_strict_execution_order_enabled = self.options.is_strict_execution_order_enabled();
-    let on_demand_wrapping = self.options.experimental.is_on_demand_wrapping_enabled();
-
     for module in self.module_table.modules.iter().filter_map(Module::as_normal) {
       let module_id = module.idx;
-
-      if is_strict_execution_order_enabled && module.exports_kind == ExportsKind::CommonJs {
-        cjs_exports_kind_modules.insert(module_id);
-      }
 
       if module.has_star_export() {
         has_dynamic_exports_due_to_export_star(
@@ -131,7 +111,6 @@ impl LinkStage<'_> {
             linking_infos: &mut self.metas,
             modules: &self.module_table.modules,
             runtime_idx: self.runtime.id(),
-            on_demand_wrapping,
           },
           module_id,
         );
@@ -153,7 +132,6 @@ impl LinkStage<'_> {
                 linking_infos: &mut self.metas,
                 modules: &self.module_table.modules,
                 runtime_idx: self.runtime.id(),
-                on_demand_wrapping,
               },
               importee.idx,
             );
@@ -161,29 +139,28 @@ impl LinkStage<'_> {
         });
       }
     }
-    if is_strict_execution_order_enabled {
-      // Override wrap_kind if `strictExecutionOrder` is enabled.
-      for (idx, linking_info) in
-        self.metas.iter_mut_enumerated().filter(|(module_id, _)| *module_id != self.runtime.id())
-      {
+
+    // Under strict execution order every CommonJS module must stay behind its lazy `require_*`
+    // wrapper once a co-locating `codeSplitting` group is in play. The generate-stage order
+    // lowering only wraps ESM modules, and the interop rules above leave a CommonJS module that
+    // nothing imports (a CommonJS entry in cjs output) unwrapped — its body would run eagerly at
+    // the top level of whatever chunk hosts it, so a group capturing it would leak one entry's
+    // execution into another and let competing top-level `module.exports` assignments clobber
+    // each other. Without groups no chunking mechanism moves a never-imported CommonJS module out
+    // of its own entry chunk, and rendering it raw there is not only safe but load-bearing: the
+    // raw body keeps the entry's real Node module contract (`module.filename`,
+    // `require.main === module`, the `exports` object shape), which a wrapper's synthetic
+    // `module`/`exports` parameters cannot reproduce. The runtime module is ESM, so the
+    // `exports_kind` check below skips it.
+    if self.options.is_strict_execution_order_enabled()
+      && self.options.has_manual_code_splitting_groups()
+    {
+      for (idx, linking_info) in self.metas.iter_mut_enumerated() {
         let Some(module) = self.module_table[idx].as_normal() else {
           continue;
         };
-        if cjs_exports_kind_modules.contains(&idx) {
-          // If the module is CommonJs, we need to wrap it.
-          linking_info.update_wrap_kind(WrapKind::Cjs);
-        } else {
-          // If the module is a pure esm, only exports function or expression without side
-          // effects and is not execution order sensitive , we don't need to wrap it.
-          let avoid_wrapping = on_demand_wrapping
-            && !module.meta.contains(EcmaViewMeta::ExecutionOrderSensitive)
-            && module.import_records.is_empty()
-            && !linking_info.required_by_other_module;
-          linking_info.update_wrap_kind(if avoid_wrapping {
-            WrapKind::None
-          } else {
-            WrapKind::Esm
-          });
+        if matches!(module.exports_kind, ExportsKind::CommonJs) {
+          linking_info.set_wrap_kind(WrapKind::Cjs);
         }
       }
     }
@@ -205,7 +182,7 @@ impl LinkStage<'_> {
   }
 }
 
-pub fn create_wrapper(
+fn create_wrapper(
   module: &NormalModule,
   stmt_infos: &mut StmtInfos,
   linking_info: &mut LinkingMetadata,
@@ -222,8 +199,8 @@ pub fn create_wrapper(
     //   });
     //
     WrapKind::Cjs => {
-      let wrapper_ref = symbols
-        .create_facade_root_symbol_ref(module.idx, &format!("require_{}", &module.repr_name));
+      let wrapper_ref =
+        symbols.create_facade_root_symbol_ref(module.idx, &format!("require_{}", module.repr_name));
 
       let stmt_info = StmtInfo {
         declared_symbols: smallvec![TaggedSymbolRef::normal(wrapper_ref)],
@@ -254,7 +231,7 @@ pub fn create_wrapper(
     //
     WrapKind::Esm => {
       let wrapper_ref =
-        symbols.create_facade_root_symbol_ref(module.idx, &format!("init_{}", &module.repr_name));
+        symbols.create_facade_root_symbol_ref(module.idx, &format!("init_{}", module.repr_name));
 
       let stmt_info = StmtInfo {
         declared_symbols: smallvec![TaggedSymbolRef::normal(wrapper_ref)],

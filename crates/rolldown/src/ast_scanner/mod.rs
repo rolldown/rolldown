@@ -6,23 +6,23 @@ pub mod impl_visit;
 mod import_analyzer;
 mod new_url;
 pub mod stmt_eval_analyzer;
+mod top_level_import_read;
 
 use arcstr::ArcStr;
 use const_eval::{ConstEvalCtx, try_extract_const_literal};
 use oxc::ast::ast::{BindingPattern, Expression, ImportExpression};
 use oxc::ast::{AstKind, ast};
-use oxc::ast_visit::walk;
 use oxc::semantic::{NodeId, Reference, ScopeFlags, Scoping};
 use oxc::span::SPAN;
 use oxc::{
   ast::{
     Comment,
     ast::{
-      ExportAllDeclaration, ExportDefaultDeclaration, ExportNamedDeclaration, IdentifierReference,
-      ImportDeclaration, ModuleDeclaration, Program,
+      ExportAllDeclaration, ExportDeclaration, ExportDefaultDeclaration, ExportFromDeclaration,
+      ExportNamedDeclaration, IdentifierReference, ImportDeclaration, ModuleDeclaration, Program,
     },
   },
-  ast_visit::Visit,
+  ast_visit::{VisitJs, walk_js},
   semantic::SymbolId,
   span::{GetSpan, Span},
 };
@@ -33,9 +33,9 @@ use rolldown_common::{
   ConstExportMeta, ConstantValue, DynamicImportExprInfo, EcmaModuleAstUsage, EcmaViewMeta,
   ExportsKind, FlatOptions, HmrInfo, ImportAttribute, ImportKind, ImportRecordIdx,
   ImportRecordMeta, LocalExport, MemberExprProp, MemberExprRef, ModuleDefFormat, ModuleId,
-  ModuleIdx, NamedImport, RawImportRecord, Specifier, StmtEvalFlags, StmtInfo, StmtInfoIdx,
-  StmtInfoMeta, StmtInfos, SymbolRef, SymbolRefDbForModule, SymbolRefFlags, TaggedSymbolRef,
-  ThisExprReplaceKind, generate_replace_this_expr_map,
+  ModuleIdx, NamedImport, RawImportRecord, RolldownFileUrlReference, Specifier, StmtEvalFlags,
+  StmtInfo, StmtInfoIdx, StmtInfoMeta, StmtInfos, SymbolRef, SymbolRefDbForModule, SymbolRefFlags,
+  TaggedSymbolRef, ThisExprReplaceKind, generate_replace_this_expr_map,
 };
 use rolldown_ecmascript_utils::FunctionExt;
 use rolldown_error::{BuildDiagnostic, BuildResult, CjsExportSpan};
@@ -56,8 +56,7 @@ bitflags! {
   #[derive(Debug, Clone, Copy, Default)]
   /// Tracks untranspiled syntax encountered during scanning.
   pub(crate) struct UntranspiledSyntax: u8 {
-    const TypeScript = 1 << 0;
-    const Jsx = 1 << 1;
+    const Jsx = 1 << 0;
   }
 }
 
@@ -114,6 +113,8 @@ pub struct ScanResult {
   pub dynamic_import_rec_exports_usage: FxHashMap<ImportRecordIdx, DynamicImportExportsUsage>,
   /// `new URL('...', import.meta.url)`
   pub new_url_references: FxHashMap<NodeId, ImportRecordIdx>,
+  /// `import.meta.ROLLDOWN_FILE_URL_<referenceId>[_<urlId>]`, one entry per occurrence.
+  pub rolldown_file_url_references: Vec<RolldownFileUrlReference>,
   pub this_expr_replace_map: FxHashMap<NodeId, ThisExprReplaceKind>,
   pub hmr_info: HmrInfo,
   pub hmr_hot_ref: Option<SymbolRef>,
@@ -221,6 +222,7 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
       hashbang_range: None,
       dynamic_import_rec_exports_usage: FxHashMap::default(),
       new_url_references: FxHashMap::default(),
+      rolldown_file_url_references: Vec::new(),
       this_expr_replace_map: FxHashMap::default(),
       hmr_info: HmrInfo::default(),
       hmr_hot_ref,
@@ -444,7 +446,7 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
         let symbol_ref: SymbolRef = (self.immutable_ctx.idx, *symbol_id).into();
         let scope_id = self.result.symbol_ref_db.symbol_scope_id(*symbol_id);
         if !scanned_symbols_in_root_scope.remove(&symbol_ref) {
-          return Err(anyhow::format_err!(
+          Err(anyhow::format_err!(
             "Symbol ({name:?}, {symbol_id:?}, {scope_id:?}) is declared in the top-level scope but doesn't get scanned by the scanner",
           ))?;
         }
@@ -709,117 +711,114 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
 
   fn visit_function_decl(&mut self, it: &ast::Function<'ast>, flags: oxc::semantic::ScopeFlags) {
     self.current_stmt_info.meta.insert(StmtInfoMeta::KeepNamesType);
-    walk::walk_function(self, it, flags);
+    walk_js::walk_function(self, it, flags);
   }
 
   fn visit_class_decl(&mut self, it: &ast::Class<'ast>) {
     let previous_class_decl_id = self.cur_class_decl.take();
     self.cur_class_decl = self.get_class_id(it);
     self.current_stmt_info.meta.insert(StmtInfoMeta::KeepNamesType);
-    walk::walk_class(self, it);
+    walk_js::walk_class(self, it);
     self.cur_class_decl = previous_class_decl_id;
   }
 
-  fn scan_export_named_decl(&mut self, decl: &ExportNamedDeclaration<'ast>) {
-    if let Some(source) = &decl.source {
-      let record_idx = self.add_import_record(
-        source.value.as_str(),
-        ImportKind::Import,
-        source.span(),
-        decl.span,
-        if source.span().is_empty() {
-          ImportRecordMeta::IsUnspannedImport
-        } else {
-          ImportRecordMeta::empty()
-        },
-        None,
+  fn scan_export_from_decl(&mut self, decl: &ExportFromDeclaration<'ast>) {
+    let source = &decl.source;
+    let record_idx = self.add_import_record(
+      source.value.as_str(),
+      ImportKind::Import,
+      source.span(),
+      decl.span,
+      if source.span().is_empty() {
+        ImportRecordMeta::IsUnspannedImport
+      } else {
+        ImportRecordMeta::empty()
+      },
+      None,
+    );
+    decl.specifiers.iter().for_each(|spec| {
+      self.add_re_export(
+        spec.exported.name().as_str(),
+        spec.local.name().as_str(),
+        record_idx,
+        spec.local.span(),
       );
-      decl.specifiers.iter().for_each(|spec| {
-        self.add_re_export(
-          spec.exported.name().as_str(),
-          spec.local.name().as_str(),
-          record_idx,
-          spec.local.span(),
-        );
-      });
-      if let Some(ref with_clause) = decl.with_clause {
-        self
-          .result
-          .import_attribute_map
-          .insert(record_idx, ImportAttribute::from_with_clause(with_clause));
+    });
+    if let Some(ref with_clause) = decl.with_clause {
+      self
+        .result
+        .import_attribute_map
+        .insert(record_idx, ImportAttribute::from_with_clause(with_clause));
+    }
+    self.result.imports.insert(decl.node_id(), record_idx);
+    self.result.import_records[record_idx].meta.insert(ImportRecordMeta::IsReExportOnly);
+  }
+
+  fn scan_export_named_decl(&mut self, decl: &ExportNamedDeclaration<'ast>) {
+    decl.specifiers.iter().for_each(|spec| {
+      if let Some(local_symbol_id) = self.get_root_binding(spec.local.name().as_str()) {
+        self.add_local_export(spec.exported.name().as_str(), local_symbol_id, spec.span);
       }
-      self.result.imports.insert(decl.node_id(), record_idx);
-      self.result.import_records[record_idx].meta.insert(ImportRecordMeta::IsReExportOnly);
-    } else {
-      decl.specifiers.iter().for_each(|spec| {
-        if let Some(local_symbol_id) = self.get_root_binding(spec.local.name().as_str()) {
-          self.add_local_export(spec.exported.name().as_str(), local_symbol_id, spec.span);
-        }
-      });
-      if let Some(decl) = decl.declaration.as_ref() {
-        match decl {
-          ast::Declaration::VariableDeclaration(var_decl) => {
-            var_decl.declarations.iter().for_each(|decl| {
-              decl.id.get_binding_identifiers().into_iter().for_each(|id| {
-                self.add_local_export(&id.name, id.symbol_id(), id.span);
-              });
-              if let BindingPattern::BindingIdentifier(ref binding) = decl.id {
-                let symbol_id = binding.symbol_id();
-                if let Some(value) = self.extract_constant_value_from_expr(decl.init.as_ref()) {
-                  self.add_constant_symbol(symbol_id, ConstExportMeta::new(value, false));
+    });
+  }
+
+  fn scan_export_decl(&mut self, export_decl: &ExportDeclaration<'ast>) {
+    match &export_decl.declaration {
+      ast::Declaration::VariableDeclaration(var_decl) => {
+        var_decl.declarations.iter().for_each(|decl| {
+          decl.id.get_binding_identifiers().into_iter().for_each(|id| {
+            self.add_local_export(&id.name, id.symbol_id(), id.span);
+          });
+          if let BindingPattern::BindingIdentifier(ref binding) = decl.id {
+            let symbol_id = binding.symbol_id();
+            if let Some(value) = self.extract_constant_value_from_expr(decl.init.as_ref()) {
+              self.add_constant_symbol(symbol_id, ConstExportMeta::new(value, false));
+            }
+            let (is_side_effect_free_function, is_pure_annotation_only) = decl
+              .init
+              .as_ref()
+              .map(|expr| match expr {
+                Expression::FunctionExpression(func) => {
+                  let empty = func.is_side_effect_free();
+                  (empty || func.pure, func.pure && !empty)
                 }
-                let (is_side_effect_free_function, is_pure_annotation_only) = decl
-                  .init
-                  .as_ref()
-                  .map(|expr| match expr {
-                    Expression::FunctionExpression(func) => {
-                      let empty = func.is_side_effect_free();
-                      (empty || func.pure, func.pure && !empty)
-                    }
-                    Expression::ArrowFunctionExpression(func) => {
-                      let empty = func.is_side_effect_free();
-                      (empty || func.pure, func.pure && !empty)
-                    }
-                    _ => (false, false),
-                  })
-                  .unwrap_or((false, false));
-                if is_side_effect_free_function {
-                  self
-                    .result
-                    .ecma_view_meta
-                    .insert(EcmaViewMeta::TopExportedSideEffectsFreeFunction);
-                  let flags = self.result.symbol_ref_db.flags.entry(symbol_id).or_default();
-                  flags.insert(SymbolRefFlags::SideEffectsFreeFunction);
-                  if is_pure_annotation_only {
-                    flags.insert(SymbolRefFlags::PureAnnotationOnly);
-                  }
+                Expression::ArrowFunctionExpression(func) => {
+                  let empty = func.is_side_effect_free();
+                  (empty || func.pure, func.pure && !empty)
                 }
-              }
-            });
-          }
-          ast::Declaration::FunctionDeclaration(fn_decl) => {
-            let binding_id = fn_decl.id.as_ref().unwrap();
-            let symbol_id = binding_id.symbol_id();
-            self.add_local_export(binding_id.name.as_str(), symbol_id, binding_id.span);
-            let empty = fn_decl.is_side_effect_free();
-            if empty || fn_decl.pure {
+                _ => (false, false),
+              })
+              .unwrap_or((false, false));
+            if is_side_effect_free_function {
               self.result.ecma_view_meta.insert(EcmaViewMeta::TopExportedSideEffectsFreeFunction);
               let flags = self.result.symbol_ref_db.flags.entry(symbol_id).or_default();
               flags.insert(SymbolRefFlags::SideEffectsFreeFunction);
-              if fn_decl.pure && !empty {
+              if is_pure_annotation_only {
                 flags.insert(SymbolRefFlags::PureAnnotationOnly);
               }
             }
           }
-          ast::Declaration::ClassDeclaration(cls_decl) => {
-            let id = cls_decl.id.as_ref().unwrap();
-            self.add_local_export(id.name.as_str(), id.symbol_id(), id.span);
-          }
-          _ => {
-            self.untranspiled_syntax |= UntranspiledSyntax::TypeScript;
+        });
+      }
+      ast::Declaration::FunctionDeclaration(fn_decl) => {
+        let binding_id = fn_decl.id.as_ref().unwrap();
+        let symbol_id = binding_id.symbol_id();
+        self.add_local_export(binding_id.name.as_str(), symbol_id, binding_id.span);
+        let empty = fn_decl.is_side_effect_free();
+        if empty || fn_decl.pure {
+          self.result.ecma_view_meta.insert(EcmaViewMeta::TopExportedSideEffectsFreeFunction);
+          let flags = self.result.symbol_ref_db.flags.entry(symbol_id).or_default();
+          flags.insert(SymbolRefFlags::SideEffectsFreeFunction);
+          if fn_decl.pure && !empty {
+            flags.insert(SymbolRefFlags::PureAnnotationOnly);
           }
         }
       }
+      ast::Declaration::ClassDeclaration(cls_decl) => {
+        let id = cls_decl.id.as_ref().unwrap();
+        self.add_local_export(id.name.as_str(), id.symbol_id(), id.span);
+      }
+      _ => {}
     }
   }
 
@@ -835,7 +834,6 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
   }
 
   fn scan_export_default_decl(&mut self, decl: &ExportDefaultDeclaration) {
-    use oxc::ast::ast::ExportDefaultDeclarationKind;
     let local_binding_for_default_export = match &decl.declaration {
       ast::ExportDefaultDeclarationKind::Identifier(id) => {
         if let Some(symbol_id) = self.resolve_symbol_from_reference(id) {
@@ -888,11 +886,7 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
           (symbol_id, id.span)
         })
       }
-      ast::ExportDefaultDeclarationKind::TSInterfaceDeclaration(_) => {
-        self.untranspiled_syntax |= UntranspiledSyntax::TypeScript;
-        None
-      }
-      oxc::ast::match_expression!(ExportDefaultDeclarationKind) => None,
+      _ => None,
     };
     let (reference, span) = local_binding_for_default_export
       .unwrap_or((self.result.default_export_ref.symbol, Span::default()));
@@ -957,6 +951,14 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
       ast::ModuleDeclaration::ExportNamedDeclaration(decl) => {
         self.set_esm_export_keyword(Span::new(decl.span.start, decl.span.start + 6));
         self.scan_export_named_decl(decl);
+      }
+      ast::ModuleDeclaration::ExportDeclaration(decl) => {
+        self.set_esm_export_keyword(Span::new(decl.span.start, decl.span.start + 6));
+        self.scan_export_decl(decl);
+      }
+      ast::ModuleDeclaration::ExportFromDeclaration(decl) => {
+        self.set_esm_export_keyword(Span::new(decl.span.start, decl.span.start + 6));
+        self.scan_export_from_decl(decl);
       }
       ast::ModuleDeclaration::ExportDefaultDeclaration(decl) => {
         self.set_esm_export_keyword(Span::new(decl.span.start, decl.span.start + 6));
@@ -1098,7 +1100,7 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
   #[inline]
   pub fn create_constant_eval_ctx(&'me self) -> ConstEvalCtx<'me, 'ast> {
     ConstEvalCtx {
-      ast: oxc::ast::AstBuilder::new(self.immutable_ctx.allocator),
+      ast: oxc::ast::builder::AstBuilder::new(self.immutable_ctx.allocator),
       scope: self.result.symbol_ref_db.scoping(),
       constant_map: &self.result.constant_export_map,
       overrode_get_constant_value_from_reference_id: None,

@@ -1,0 +1,16 @@
+{
+  "name": "rolldown-starter",
+  "private": true,
+  "license": "MIT",
+  "type": "module",
+  "scripts": {
+    "build": "RD_LOG=error rolldown -c ./rolldown.config.mjs"
+  },
+  "dependencies": {
+    "rolldown": "file:./rolldown-browser.tgz"
+  },
+  "stackblitz": {
+    "installDependencies": false,
+    "startCommand": "pnpm install && pnpm build"
+  }
+}

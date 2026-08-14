@@ -2,7 +2,7 @@ use std::sync::Arc;
 
 use crate::types::hook_close_bundle_args::HookCloseBundleArgs;
 use crate::types::hook_render_error::HookRenderErrorArgs;
-use crate::{HookAddonArgs, PluginDriver};
+use crate::{HookAddonArgs, HookResolveFileUrlArgs, HookResolveFileUrlOutput, PluginDriver};
 use crate::{
   HookAugmentChunkHashReturn, HookNoopReturn, HookRenderChunkArgs, HookTransformOutputMap,
 };
@@ -20,16 +20,39 @@ impl PluginDriver {
     skip_all
   )]
   pub async fn render_start(&self, opts: &SharedNormalizedBundlerOptions) -> HookNoopReturn {
-    for (plugin_idx, plugin, ctx) in
-      self.iter_plugin_with_context_by_order(&self.order_by_render_start_meta)
+    for (_, plugin, ctx) in self.iter_plugin_with_context_by_order(&self.order_by_render_start_meta)
     {
-      let start = self.start_timing();
       let result =
         plugin.call_render_start(ctx, &crate::HookRenderStartArgs { options: opts }).await;
-      self.record_timing(plugin_idx, start);
       result.with_context(|| CausedPlugin::new(plugin.call_name()))?;
     }
     Ok(())
+  }
+
+  /// Resolves `import.meta.ROLLDOWN_FILE_URL_<referenceId>` via the `resolveFileUrl`
+  /// hook. The first plugin returning a non-null string wins.
+  ///
+  /// The returned code is not parsed here. It is parsed exactly once, later, into the
+  /// arena of the module that references the file. The winning plugin's name travels
+  /// with the code so that a parse failure there can still be attributed to it.
+  #[tracing::instrument(
+    level = "trace",
+    target = "rolldown_plugin::plugin_driver::output_hooks::total::resolve_file_url",
+    skip_all
+  )]
+  pub async fn resolve_file_url(
+    &self,
+    args: &HookResolveFileUrlArgs<'_>,
+  ) -> Result<Option<HookResolveFileUrlOutput>> {
+    for (_, plugin, ctx) in
+      self.iter_plugin_with_context_by_order(&self.order_by_resolve_file_url_meta)
+    {
+      let result = plugin.call_resolve_file_url(ctx, args).await;
+      if let Some(code) = result.with_context(|| CausedPlugin::new(plugin.call_name()))? {
+        return Ok(Some(HookResolveFileUrlOutput { code, plugin_name: plugin.call_name() }));
+      }
+    }
+    Ok(None)
   }
 
   #[tracing::instrument(
@@ -38,12 +61,8 @@ impl PluginDriver {
     skip_all
   )]
   pub async fn banner(&self, args: HookAddonArgs, mut banner: String) -> Result<Option<String>> {
-    for (plugin_idx, plugin, ctx) in
-      self.iter_plugin_with_context_by_order(&self.order_by_banner_meta)
-    {
-      let start = self.start_timing();
+    for (_, plugin, ctx) in self.iter_plugin_with_context_by_order(&self.order_by_banner_meta) {
       let result = plugin.call_banner(ctx, &args).await;
-      self.record_timing(plugin_idx, start);
       if let Some(r) = result.with_context(|| CausedPlugin::new(plugin.call_name()))? {
         if !banner.is_empty() {
           banner.push('\n');
@@ -63,12 +82,8 @@ impl PluginDriver {
     skip_all
   )]
   pub async fn footer(&self, args: HookAddonArgs, mut footer: String) -> Result<Option<String>> {
-    for (plugin_idx, plugin, ctx) in
-      self.iter_plugin_with_context_by_order(&self.order_by_footer_meta)
-    {
-      let start = self.start_timing();
+    for (_, plugin, ctx) in self.iter_plugin_with_context_by_order(&self.order_by_footer_meta) {
       let result = plugin.call_footer(ctx, &args).await;
-      self.record_timing(plugin_idx, start);
       if let Some(r) = result.with_context(|| CausedPlugin::new(plugin.call_name()))? {
         if !footer.is_empty() {
           footer.push('\n');
@@ -88,12 +103,8 @@ impl PluginDriver {
     skip_all
   )]
   pub async fn intro(&self, args: HookAddonArgs, mut intro: String) -> Result<Option<String>> {
-    for (plugin_idx, plugin, ctx) in
-      self.iter_plugin_with_context_by_order(&self.order_by_intro_meta)
-    {
-      let start = self.start_timing();
+    for (_, plugin, ctx) in self.iter_plugin_with_context_by_order(&self.order_by_intro_meta) {
       let result = plugin.call_intro(ctx, &args).await;
-      self.record_timing(plugin_idx, start);
       if let Some(r) = result.with_context(|| CausedPlugin::new(plugin.call_name()))? {
         if !intro.is_empty() {
           intro.push('\n');
@@ -113,12 +124,8 @@ impl PluginDriver {
     skip_all
   )]
   pub async fn outro(&self, args: HookAddonArgs, mut outro: String) -> Result<Option<String>> {
-    for (plugin_idx, plugin, ctx) in
-      self.iter_plugin_with_context_by_order(&self.order_by_outro_meta)
-    {
-      let start = self.start_timing();
+    for (_, plugin, ctx) in self.iter_plugin_with_context_by_order(&self.order_by_outro_meta) {
       let result = plugin.call_outro(ctx, &args).await;
-      self.record_timing(plugin_idx, start);
       if let Some(r) = result.with_context(|| CausedPlugin::new(plugin.call_name()))? {
         if !outro.is_empty() {
           outro.push('\n');
@@ -156,9 +163,7 @@ impl PluginDriver {
             content: args.code.as_str().to_string(),
           });
         }
-        let start = self.start_timing();
         let result = plugin.call_render_chunk(ctx, &args).await;
-        self.record_timing(plugin_idx, start);
         if let Some(r) = result.with_context(|| CausedPlugin::new(plugin.call_name()))? {
           if matches!(r.map, HookTransformOutputMap::Omitted) && args.options.is_sourcemap_enabled()
           {
@@ -211,12 +216,10 @@ impl PluginDriver {
     chunk: Arc<RollupRenderedChunk>,
   ) -> HookAugmentChunkHashReturn {
     let mut hash = None;
-    for (plugin_idx, plugin, ctx) in
+    for (_, plugin, ctx) in
       self.iter_plugin_with_context_by_order(&self.order_by_augment_chunk_hash_meta)
     {
-      let start = self.start_timing();
       let result = plugin.call_augment_chunk_hash(ctx, Arc::clone(&chunk)).await;
-      self.record_timing(plugin_idx, start);
       if let Some(plugin_hash) = result.with_context(|| CausedPlugin::new(plugin.call_name()))? {
         hash.get_or_insert_with(String::default).push_str(&plugin_hash);
       }
@@ -230,12 +233,9 @@ impl PluginDriver {
     skip_all
   )]
   pub async fn render_error(&self, args: &HookRenderErrorArgs<'_>) -> HookNoopReturn {
-    for (plugin_idx, plugin, ctx) in
-      self.iter_plugin_with_context_by_order(&self.order_by_render_error_meta)
+    for (_, plugin, ctx) in self.iter_plugin_with_context_by_order(&self.order_by_render_error_meta)
     {
-      let start = self.start_timing();
       let result = plugin.call_render_error(ctx, args).await;
-      self.record_timing(plugin_idx, start);
       result.with_context(|| CausedPlugin::new(plugin.call_name()))?;
     }
     Ok(())
@@ -253,13 +253,11 @@ impl PluginDriver {
     opts: &SharedNormalizedBundlerOptions,
     warnings: &mut Vec<BuildDiagnostic>,
   ) -> HookNoopReturn {
-    for (plugin_idx, plugin, ctx) in
+    for (_, plugin, ctx) in
       self.iter_plugin_with_context_by_order(&self.order_by_generate_bundle_meta)
     {
       let mut args = crate::HookGenerateBundleArgs { is_write, bundle, options: opts };
-      let start = self.start_timing();
       let result = plugin.call_generate_bundle(ctx, &mut args).await;
-      self.record_timing(plugin_idx, start);
       result.with_context(|| CausedPlugin::new(plugin.call_name()))?;
       ctx.file_emitter().add_additional_files(bundle, warnings);
     }
@@ -277,13 +275,10 @@ impl PluginDriver {
     opts: &SharedNormalizedBundlerOptions,
     warnings: &mut Vec<BuildDiagnostic>,
   ) -> HookNoopReturn {
-    for (plugin_idx, plugin, ctx) in
-      self.iter_plugin_with_context_by_order(&self.order_by_write_bundle_meta)
+    for (_, plugin, ctx) in self.iter_plugin_with_context_by_order(&self.order_by_write_bundle_meta)
     {
       let mut args = crate::HookWriteBundleArgs { bundle, options: opts };
-      let start = self.start_timing();
       let result = plugin.call_write_bundle(ctx, &mut args).await;
-      self.record_timing(plugin_idx, start);
       result.with_context(|| CausedPlugin::new(plugin.call_name()))?;
       ctx.file_emitter().add_additional_files(bundle, warnings);
     }
@@ -296,12 +291,9 @@ impl PluginDriver {
     skip_all
   )]
   pub async fn close_bundle(&self, args: Option<&HookCloseBundleArgs<'_>>) -> HookNoopReturn {
-    for (plugin_idx, plugin, ctx) in
-      self.iter_plugin_with_context_by_order(&self.order_by_close_bundle_meta)
+    for (_, plugin, ctx) in self.iter_plugin_with_context_by_order(&self.order_by_close_bundle_meta)
     {
-      let start = self.start_timing();
       let result = plugin.call_close_bundle(ctx, args).await;
-      self.record_timing(plugin_idx, start);
       result.with_context(|| CausedPlugin::new(plugin.call_name()))?;
     }
     Ok(())

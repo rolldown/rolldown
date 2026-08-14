@@ -33,7 +33,7 @@ fn resolve_tsconfig_from_cache(
     }
     Ok(None) => {}
     Err(err) => {
-      return Err(BuildDiagnostic::tsconfig_error(filename.to_string(), err));
+      return Err(BuildDiagnostic::tsconfig_error(err));
     }
   }
   Ok(())

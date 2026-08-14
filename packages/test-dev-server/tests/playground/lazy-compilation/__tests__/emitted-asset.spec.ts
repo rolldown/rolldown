@@ -1,6 +1,6 @@
 import type { Response } from 'playwright';
 import { describe, expect, test } from 'vitest';
-import { page, serverUrl } from '~utils';
+import { page, serverUrl, waitForBuildStable } from '~utils';
 
 // https://github.com/vitejs/vite/issues/22596
 // An asset that a lazily-loaded module pulls in (here a JS-imported image) must
@@ -30,6 +30,7 @@ describe('lazy-compilation: emitted-asset', () => {
 
     try {
       await page.goto(serverUrl, { waitUntil: 'domcontentloaded' });
+      await waitForBuildStable();
 
       // 1. The scenario's setup ran (its button listener is attached).
       await expect.poll(() => page.textContent('#emitted-asset-status')).toBe('ready');

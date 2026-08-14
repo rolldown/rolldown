@@ -69,7 +69,12 @@ pub fn extract_longest_common_path(path1: &str, path2: &str) -> String {
   }
   //Remove the last separator if it exists and the path is not just the root.
   if common_path.len() > 1 && common_path.ends_with(std::path::MAIN_SEPARATOR_STR) {
-    common_path.pop();
+    // On Windows, keep the separator when trimming would leave a bare drive
+    // prefix: `E:\` is the drive root, while `E:` is a drive-*relative* path.
+    let leaves_bare_drive = cfg!(windows) && common_path[..common_path.len() - 1].ends_with(':');
+    if !leaves_bare_drive {
+      common_path.pop();
+    }
   }
   common_path
 }
@@ -103,6 +108,18 @@ mod tests {
       let path_mixed1 = "C:\\Users\\user\\Documents\\report.txt";
       let path_mixed2 = "/Users/user/Documents/report.txt";
       assert_eq!(extract_longest_common_path(path_mixed1, path_mixed2), "");
+
+      // Paths that share only the drive -> the drive root, never the bare
+      // drive-relative `E:`.
+      assert_eq!(
+        extract_longest_common_path("E:\\Documents\\proj\\main.js", "E:\\favicon.ico"),
+        "E:\\"
+      );
+      // A forward-slash root normalizes to the native separator.
+      assert_eq!(
+        extract_longest_common_path("E:/favicon.ico", "E:\\Documents\\proj\\main.js"),
+        "E:\\"
+      );
     }
   }
 

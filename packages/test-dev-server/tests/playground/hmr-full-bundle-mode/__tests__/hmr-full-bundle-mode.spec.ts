@@ -252,7 +252,12 @@ describe('hmr-full-bundle-mode: rebuild-stage failure', () => {
 
     const overlay = errorOverlay();
     await expect.poll(() => overlay.count(), { timeout: 15_000 }).toBe(1);
-    expect(await errorOverlayText()).toContain('generateBundle broken by flag: broken-1');
+    // Poll the text too: the client's own full reload (non-accepted update) can
+    // land between the overlay appearing and this read — the overlay is then
+    // replayed to the new page.
+    await expect
+      .poll(errorOverlayText, { timeout: 15_000 })
+      .toContain('generateBundle broken by flag: broken-1');
     // The failed rebuild did not reload the page; it still runs the old bundle.
     expect(await page.textContent('.rebuild-error')).toBe('rebuild-error: ok');
     // Build errors also reach the terminal.

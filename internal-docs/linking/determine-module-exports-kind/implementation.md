@@ -10,7 +10,7 @@ Related code:
 
 - `crates/rolldown/src/stages/link_stage/generate_lazy_export.rs` — the one stage allowed to revise `exports_kind` after this pass (see §"Invariants").
 - `crates/rolldown/src/stages/link_stage/wrapping.rs` — consumes the `WrapKind` decisions made here.
-- `LinkingMetadata::sync_wrap_kind` — the writer used for wrap state.
+- `LinkingMetadata::set_wrap_kind` — the writer used for wrap state.
 
 ## Pipeline placement
 
@@ -37,7 +37,7 @@ Position is load-bearing: `wrap_modules` propagates wrap requirements transitive
 `determine_module_exports_kind` writes:
 
 - `module.exports_kind` for some normal modules (in-place via `addr_of!` cast — see §"The unsafe block").
-- `self.metas[idx].wrap_kind` (and `original_wrap_kind`) via `LinkingMetadata::sync_wrap_kind`. **Not idempotent** — the last writer wins, so call order is part of the contract.
+- `self.metas[idx].wrap_kind` via `LinkingMetadata::set_wrap_kind`. **Not idempotent** — the last writer wins, so call order is part of the contract.
 
 It does not touch symbol tables, tree-shaking flags, or chunk graph.
 
@@ -105,7 +105,7 @@ That refactor was previously merged and then reverted (#9237) after a hard-to-re
 
 Things that are easy to break and worth re-checking when changing this file:
 
-- **Order between `sync_wrap_kind` calls and `exports_kind` mutation.** Wrap decisions inside the `Require` / `DynamicImport` arms read `importee.exports_kind` _before_ any promotion would happen. Don't reorder.
+- **Order between `set_wrap_kind` calls and `exports_kind` mutation.** Wrap decisions inside the `Require` / `DynamicImport` arms read `importee.exports_kind` _before_ any promotion would happen. Don't reorder.
 - **The CJS-importer wrap rule** (after the per-record loop). The conjunction of conditions encodes three different output-format contracts; flattening it into a `match self.options.format` rewrite has tripped more than one reviewer. Add a regression test rather than refactoring blindly.
 - **Don't widen the unsafe block.** Anything that needs mutable access to other fields of `NormalModule` should go through a separate pass.
 - **Don't promote lazy-export modules here.** Leave `has_lazy_export()` modules to `generate_lazy_export`; promoting them prematurely will break the JSON-lazy and ESM-default code paths in that file.

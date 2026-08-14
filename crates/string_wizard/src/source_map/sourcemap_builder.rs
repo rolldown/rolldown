@@ -40,19 +40,19 @@ impl<'a> SourcemapBuilder<'a> {
     self.source_id = self.source_map_builder.set_source_and_content(id, content);
   }
 
+  /// Registers a sourcemap name up front and returns its index in `names`.
+  pub fn add_name(&mut self, name: &'a str) -> u32 {
+    self.source_map_builder.add_name(name)
+  }
+
   pub fn add_chunk(
     &mut self,
     chunk: &Chunk,
     chunk_start_utf16: u32,
     locator: &Locator,
     source: &str,
-    name: Option<&'a str>,
+    name_id: Option<u32>,
   ) {
-    let name_id = if chunk.keep_in_mappings {
-      name.map(|name| self.source_map_builder.add_name(name))
-    } else {
-      None
-    };
     let mut loc = locator.locate(chunk_start_utf16);
     if let Some(edited_content) = &chunk.edited_content {
       if !edited_content.is_empty() {

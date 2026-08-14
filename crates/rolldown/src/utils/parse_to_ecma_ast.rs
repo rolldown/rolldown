@@ -4,14 +4,15 @@ use json_escape_simd::escape;
 use oxc::{semantic::Scoping, span::SourceType as OxcSourceType};
 use oxc_str::CompactStr;
 use rolldown_common::{
-  ConstExportMeta, ModuleDefFormat, ModuleType, NormalizedBundlerOptions, RUNTIME_MODULE_KEY,
-  StrOrBytes, json_value_to_ecma_ast,
+  ConstExportMeta, ModuleDefFormat, ModuleId, ModuleType, NormalizedBundlerOptions,
+  RUNTIME_MODULE_KEY, StrOrBytes, json_value_to_ecma_ast,
 };
 use rolldown_ecmascript::{EcmaAst, EcmaCompiler};
-use rolldown_error::{BuildDiagnostic, BuildResult};
+use rolldown_error::{BuildDiagnostic, BuildResult, EventKindSwitcher};
 use rolldown_plugin::HookTransformAstArgs;
 use rolldown_utils::mime::guess_mime;
 use rustc_hash::FxHashMap;
+use sugar_path::SugarPath as _;
 
 use super::pre_process_ecma_ast::PreProcessEcmaAst;
 
@@ -113,15 +114,28 @@ pub async fn parse_to_ecma_ast(
     })
     .await?;
 
+  let is_local_project_file = is_local_project_file(&resolved_id.id, &options.normalized_cwd);
+  let should_warn_on_invalid_annotation =
+    options.checks.contains(EventKindSwitcher::InvalidAnnotation) && is_local_project_file;
+
   PreProcessEcmaAst::default().build(
     ecma_ast,
     stable_id,
     resolved_id.id.as_str(),
+    should_warn_on_invalid_annotation,
     &parsed_type,
     replace_global_define_config.as_ref(),
     options,
     has_lazy_export,
   )
+}
+
+fn is_local_project_file(id: &ModuleId, normalized_cwd: &Path) -> bool {
+  if id.is_in_node_modules() {
+    return false;
+  }
+
+  id.as_path().is_some_and(|path| path.normalize().starts_with(normalized_cwd))
 }
 
 fn pre_process_source(
@@ -199,4 +213,30 @@ fn pre_process_source(
   };
 
   Ok((has_lazy_export, source, module_type.into()))
+}
+
+#[cfg(test)]
+mod tests {
+  use rolldown_common::ModuleId;
+  use sugar_path::SugarPath as _;
+
+  use super::is_local_project_file;
+
+  #[test]
+  fn parent_dir_cannot_escape_cwd() {
+    let cwd = std::env::current_dir().unwrap().join("project");
+    let normalized_cwd = cwd.normalize();
+    let id = ModuleId::new(cwd.join("src/../../dependency.js").to_string_lossy().into_owned());
+
+    assert!(!is_local_project_file(&id, normalized_cwd.as_ref()));
+  }
+
+  #[test]
+  fn node_modules_component_is_excluded() {
+    let cwd = std::env::current_dir().unwrap().join("project");
+    let normalized_cwd = cwd.normalize();
+    let id = ModuleId::new(cwd.join("node_modules/pkg/index.js").to_string_lossy().into_owned());
+
+    assert!(!is_local_project_file(&id, normalized_cwd.as_ref()));
+  }
 }

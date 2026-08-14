@@ -1,0 +1,7 @@
+{
+  "snapshot": false,
+  "expectExecutionFailure": {
+    "reason": "exercise XPASS detection",
+    "outputContains": ["unused because execution succeeds"]
+  }
+}

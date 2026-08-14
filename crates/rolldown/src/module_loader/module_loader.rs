@@ -986,14 +986,23 @@ impl<'a, Fs: FileSystem + Clone + 'static> ModuleLoader<'a, Fs> {
       }
       visited.insert(idx);
 
-      let module_opt = self.intermediate_normal_modules.modules.get(idx);
-      if let Some(module) = module_opt {
-        if let Some(normal) = module.as_normal() {
-          chain.push(normal.id.to_string());
-        }
+      // A partial scan only holds re-scanned modules, so read unchanged ones
+      // from the last successful build's snapshot. An empty slot stays skipped
+      // to keep the failed module out of its own chain.
+      let module_opt = match self.intermediate_normal_modules.modules.try_get(idx) {
+        Some(slot) => slot.as_ref(),
+        None => self.cache.snapshot().and_then(|snapshot| snapshot.module_table.modules.get(idx)),
+      };
+      if let Some(normal) = module_opt.and_then(Module::as_normal) {
+        chain.push(normal.id.to_string());
       }
 
-      if user_defined_entry_ids.contains(&idx) {
+      if user_defined_entry_ids.contains(&idx)
+        || self
+          .cache
+          .snapshot()
+          .is_some_and(|snapshot| snapshot.user_defined_entry_modules.contains(&idx))
+      {
         break;
       }
 

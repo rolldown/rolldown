@@ -1,0 +1,12 @@
+{
+  "config": {
+    "input": [
+      {
+        "name": "index",
+        "import": "index.js"
+      }
+    ],
+    "preserveModules": true
+  },
+  "expectExecuted": false
+}

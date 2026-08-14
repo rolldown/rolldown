@@ -1,0 +1,41 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+//#region helper.js
+var __esmMin, helper;
+function init_helper() {
+	return (init_helper = __esmMin$1((() => {
+		__esmMin = globalThis.__x ?? "USERVAL";
+		helper = "H:" + __esmMin;
+	})))();
+}
+//#endregion
+//#region late.js
+var late;
+function init_late() {
+	return (init_late = __esmMin$1((() => {
+		late = "LATE:" + (globalThis.__y ?? "z");
+	})))();
+}
+//#endregion
+//#region main.js
+function init_main() {
+	return (init_main = __esmMin$1((() => {
+		init_helper();
+		init_late();
+		globalThis.__result = {
+			helper,
+			late
+		};
+	})))();
+}
+//#endregion
+init_main();
+
+```

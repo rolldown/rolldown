@@ -53,6 +53,37 @@ impl BuildEvent for InvalidAnnotation {
       ));
     }
 
-    diagnostic.add_help(String::from("For more information on how to use pure annotations correctly, check the documentation: https://rolldown.rs/in-depth/dead-code-elimination#pure"));
+    diagnostic.add_help(String::from(
+      "Correct annotation placement: https://rolldown.rs/in-depth/dead-code-elimination#pure",
+    ));
+    diagnostic.add_help(String::from("Disable with `checks.invalidAnnotation: false`."));
+  }
+}
+
+#[cfg(test)]
+mod tests {
+  use arcstr::ArcStr;
+  use oxc::span::Span;
+
+  use crate::BuildDiagnostic;
+
+  #[test]
+  fn renders_concise_guide_and_disable_help() {
+    let rendered = BuildDiagnostic::invalid_annotation(
+      "main.js".to_string(),
+      "/* #__PURE__ */".to_string(),
+      ArcStr::from("/* #__PURE__ */ foo;"),
+      Span::new(0, 15),
+      false,
+    )
+    .with_severity_warning()
+    .to_diagnostic()
+    .convert_to_string(false);
+
+    assert!(rendered.contains(
+      "Help 1: Correct annotation placement: https://rolldown.rs/in-depth/dead-code-elimination#pure"
+    ));
+    assert!(rendered.contains("Help 2: Disable with `checks.invalidAnnotation: false`."));
+    assert_eq!(rendered.matches("Help ").count(), 2);
   }
 }

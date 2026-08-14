@@ -1,0 +1,96 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## foo.js
+
+```js
+import { t as __exportAll } from "./main.js";
+__rolldown_runtime__.registerGraph({
+	ids: ["foo.js"],
+	localCount: 1,
+	edges: [[]],
+	dynamicEdges: [[]]
+});
+//#region foo.js
+var foo_exports = /* @__PURE__ */ __exportAll({ value: () => 1 });
+__rolldown_runtime__.createModuleHotContext("foo.js");
+__rolldown_runtime__.registerModule("foo.js", { exports: foo_exports });
+const value = 1;
+//#endregion
+export { value };
+
+```
+
+## main.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+__rolldown_runtime__.registerGraph({
+	ids: [
+		"app.js",
+		"main.js",
+		"foo.js"
+	],
+	localCount: 2,
+	edges: [[], [0]],
+	dynamicEdges: [[2], []]
+});
+//#region app.js
+var app_exports = /* @__PURE__ */ __exportAll({});
+const app_hot = __rolldown_runtime__.createModuleHotContext("app.js");
+__rolldown_runtime__.registerModule("app.js", { exports: app_exports });
+app_hot.accept();
+import("./foo.js").then((mod) => {
+	console.log(".app", mod.value);
+});
+//#endregion
+//#region main.js
+var main_exports = /* @__PURE__ */ __exportAll({});
+__rolldown_runtime__.createModuleHotContext("main.js");
+__rolldown_runtime__.registerModule("main.js", { exports: main_exports });
+//#endregion
+export { __exportAll as t };
+
+```
+
+# HMR Step 0
+
+## Code
+
+```js
+__rolldown_runtime__.registerGraph({ids:["app.js","foo.js"],localCount:2,edges:[[],[]],dynamicEdges:[[1],[]]});
+//#region app.js
+__rolldown_runtime__.registerFactory("app.js", "esm", (function(__rolldown_module_id__) {
+	try {
+		__rolldown_runtime__.registerModule(__rolldown_module_id__, {});
+		const hot_app = __rolldown_runtime__.createModuleHotContext(__rolldown_module_id__);
+		hot_app.accept();
+		(__rolldown_runtime__.initModule("foo.js"), Promise.resolve().then(() => __rolldown_runtime__.loadExports("foo.js"))).then((mod) => {
+			console.log(".app", mod.value);
+		});
+	} finally {}
+}));
+
+//#endregion
+//#region foo.js
+__rolldown_runtime__.registerFactory("foo.js", "esm", (function(__rolldown_module_id__) {
+	try {
+		var __rolldown_exports__ = __rolldown_runtime__.__exportAll({ value: () => value });
+		__rolldown_runtime__.registerModule(__rolldown_module_id__, { exports: __rolldown_exports__ });
+		const hot_foo = __rolldown_runtime__.createModuleHotContext(__rolldown_module_id__);
+		const value = 2;
+	} finally {}
+}));
+
+//#endregion
+```
+
+## Meta
+
+- update type: patch
+
+### Changed Ids
+
+- foo.js

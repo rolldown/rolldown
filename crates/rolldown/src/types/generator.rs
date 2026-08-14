@@ -1,15 +1,21 @@
 use oxc_index::IndexVec;
 use oxc_str::CompactStr;
 use rolldown_common::{
-  Chunk, ChunkIdx, InstantiatedChunk, ModuleRenderOutput, NormalizedBundlerOptions, OutputExports,
-  PathsOutputOption, SymbolRef, UsedSymbolRefs,
+  Chunk, ChunkIdx, InstantiatedChunk, ModuleIdx, ModuleRenderOutput, NormalizedBundlerOptions,
+  OutputExports, PathsOutputOption, SymbolRef, UsedSymbolRefs,
 };
 use rolldown_error::{BuildDiagnostic, BuildResult};
 use rolldown_plugin::SharedPluginDriver;
 use rolldown_utils::{ecmascript::property_access_str, indexmap::FxIndexMap};
 use rustc_hash::FxHashMap;
 
-use crate::{chunk_graph::ChunkGraph, stages::link_stage::LinkStageOutput};
+use crate::{
+  chunk_graph::ChunkGraph,
+  stages::{
+    generate_stage::order_wrap_state::{EsmInitTarget, OrderWrapState},
+    link_stage::LinkStageOutput,
+  },
+};
 
 pub struct GenerateContext<'a> {
   pub chunk_idx: ChunkIdx,
@@ -18,6 +24,7 @@ pub struct GenerateContext<'a> {
   pub link_output: &'a LinkStageOutput,
   /// Sealed record of inclusion-fixpoint liveness; see [`UsedSymbolRefs`].
   pub used_symbol_refs: &'a UsedSymbolRefs,
+  pub order_wrap_state: &'a OrderWrapState,
   pub chunk_graph: &'a ChunkGraph,
   pub plugin_driver: &'a SharedPluginDriver,
   pub module_id_to_codegen_ret: Vec<Option<ModuleRenderOutput>>,
@@ -35,6 +42,10 @@ pub struct GenerateContext<'a> {
 }
 
 impl GenerateContext<'_> {
+  pub fn esm_init_target(&self, module_idx: ModuleIdx) -> Option<EsmInitTarget> {
+    self.order_wrap_state.esm_init_target(module_idx, &self.link_output.metas[module_idx])
+  }
+
   /// A `SymbolRef` might be identifier or a property access. This function will return correct string pattern for the symbol.
   pub fn finalized_string_pattern_for_symbol_ref(
     &self,
@@ -52,10 +63,25 @@ impl GenerateContext<'_> {
     let canonical_symbol = symbol_db.get(canonical_ref);
     let namespace_alias = &canonical_symbol.namespace_alias;
     if let Some(ns_alias) = namespace_alias {
+      // The namespace itself may be declared in another chunk. This is normally hidden by the
+      // facade and namespace living together, but generated per-record interop carriers place the
+      // namespace beside the CJS importee while its re-export facade stays owned by the barrel.
+      // Resolve the namespace through the same cross-chunk path as an ordinary symbol before
+      // appending the property; otherwise CJS output renders a bare, undeclared local identifier.
       let canonical_ns_name =
-        symbol_db.canonical_name_for_or_original(ns_alias.namespace_ref, canonical_names);
+        if self.order_wrap_state.is_order_cjs_carrier_namespace(ns_alias.namespace_ref) {
+          self.finalized_string_pattern_for_symbol_ref(
+            ns_alias.namespace_ref,
+            cur_chunk_idx,
+            canonical_names,
+          )
+        } else {
+          symbol_db
+            .canonical_name_for_or_original(ns_alias.namespace_ref, canonical_names)
+            .to_string()
+        };
       let property_name = &ns_alias.property_name;
-      return property_access_str(canonical_ns_name, property_name);
+      return property_access_str(&canonical_ns_name, property_name);
     }
 
     if self.link_output.module_table[canonical_ref.owner].is_external() {

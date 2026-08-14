@@ -42,6 +42,9 @@ export interface ChecksOptions {
    * Annotations placed where they cannot annotate a call expression (e.g. before a non-call expression,
    * before a statement declaration, or between an identifier and `=` in a variable declarator) are
    * ignored by the parser. Matches Rollup's `INVALID_ANNOTATION` log code.
+   *
+   * By default, warnings are emitted only for local project files inside `cwd` and outside
+   * `node_modules`. Set this option to `false` to disable the warning entirely.
    * @default true
    * */
   invalidAnnotation?: boolean;
@@ -187,4 +190,10 @@ export interface ChecksOptions {
    * @default true
    * */
   sourcemapBroken?: boolean;
+
+  /**
+   * Whether to emit warnings when multiple star re-exports provide the same name from different modules.
+   * @default true
+   * */
+  namespaceConflict?: boolean;
 }

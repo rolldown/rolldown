@@ -24,6 +24,24 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```js
 import assert from "node:assert";
 // HIDDEN [\0rolldown/runtime.js]
+__rolldown_runtime__.registerGraph({
+	ids: [
+		"child.js",
+		"parent.js",
+		"main.js"
+	],
+	localCount: 3,
+	edges: [
+		[],
+		[0],
+		[1]
+	],
+	dynamicEdges: [
+		[],
+		[],
+		[]
+	]
+});
 //#region child.js
 var child_exports = /* @__PURE__ */ __exportAll({ foo: () => 0 });
 __rolldown_runtime__.createModuleHotContext("child.js");
@@ -55,12 +73,14 @@ main_hot.accept("parent.js", () => {});
 ## Code
 
 ```js
+__rolldown_runtime__.registerGraph({ids:["parent.js","child.js"],localCount:1,edges:[[1]],dynamicEdges:[[]]});
 //#region parent.js
 import * as import_node_assert_00 from "node:assert";
-var init_parent_0 = __rolldown_runtime__.createEsmInitializer("parent.js", (function(__rolldown_module_id__) {
+__rolldown_runtime__.registerFactory("parent.js", "esm", (function(__rolldown_module_id__) {
 	try {
 		var __rolldown_exports__ = __rolldown_runtime__.__exportAll({});
 		__rolldown_runtime__.registerModule(__rolldown_module_id__, { exports: __rolldown_exports__ });
+		__rolldown_runtime__.initModule("child.js");
 		const hot_parent = __rolldown_runtime__.createModuleHotContext(__rolldown_module_id__);
 		var import_child_01 = __rolldown_runtime__.loadExports("child.js");
 		hot_parent.accept("child.js", () => {
@@ -74,25 +94,24 @@ var init_parent_0 = __rolldown_runtime__.createEsmInitializer("parent.js", (func
 }));
 
 //#endregion
-init_parent_0()
-__rolldown_runtime__.applyUpdates([['main.js', 'parent.js']]);
 ```
 
 ## Meta
 
 - update type: patch
 
-### Hmr Boundaries
+### Changed Ids
 
-- boundary: main.js, accepted_via: parent.js
+- parent.js
 
 # HMR Step 1
 
 ## Code
 
 ```js
+__rolldown_runtime__.registerGraph({ids:["child.js"],localCount:1,edges:[[]],dynamicEdges:[[]]});
 //#region child.js
-var init_child_0 = __rolldown_runtime__.createEsmInitializer("child.js", (function(__rolldown_module_id__) {
+__rolldown_runtime__.registerFactory("child.js", "esm", (function(__rolldown_module_id__) {
 	try {
 		var __rolldown_exports__ = __rolldown_runtime__.__exportAll({ foo: () => foo });
 		__rolldown_runtime__.registerModule(__rolldown_module_id__, { exports: __rolldown_exports__ });
@@ -102,14 +121,12 @@ var init_child_0 = __rolldown_runtime__.createEsmInitializer("child.js", (functi
 }));
 
 //#endregion
-init_child_0()
-__rolldown_runtime__.applyUpdates([['parent.js', 'child.js']]);
 ```
 
 ## Meta
 
 - update type: patch
 
-### Hmr Boundaries
+### Changed Ids
 
-- boundary: parent.js, accepted_via: child.js
+- child.js

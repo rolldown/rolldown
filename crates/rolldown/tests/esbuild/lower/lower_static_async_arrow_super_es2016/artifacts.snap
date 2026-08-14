@@ -67,6 +67,8 @@ var baz2_default = class extends x {
 		return () => () => super.foo("baz2");
 	}
 };
+//#endregion
+//#region outer.js
 (async function() {
 	class y extends z {
 		static foo = async () => super.foo();

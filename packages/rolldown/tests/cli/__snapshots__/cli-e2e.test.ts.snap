@@ -40,6 +40,7 @@ OPTIONS
   --checks.missingGlobalName  Whether to emit warnings when the \`output.globals\` option is missing when needed.
   --checks.missingNameOptionForIifeExport Whether to emit warnings when the \`output.name\` option is missing when needed.
   --checks.mixedExports       Whether to emit warnings when the way to export values is ambiguous.
+  --checks.namespaceConflict  Whether to emit warnings when multiple star re-exports provide the same name from different modules.
   --checks.pluginTimings      Whether to emit warnings when plugins take significant time during the build process.
   --checks.preferBuiltinFeature Whether to emit warnings when a plugin that is covered by a built-in feature is used.
   --checks.sourcemapBroken    Whether to emit warnings when a plugin transforms code without generating a sourcemap.
@@ -92,8 +93,9 @@ OPTIONS
   --sourcemapBaseUrl <sourcemapBaseUrl>Base URL used to prefix sourcemap paths.
   --sourcemapDebugIds         Inject sourcemap debug IDs.
   --sourcemapExcludeSources   Exclude source content from sourcemaps.
+  --sourcemapFileNames <sourcemapFileNames>Name pattern for emitted sourcemaps.
   --strict <strict>           Whether to always output \`"use strict"\` directive in non-ES module outputs.
-  --strictExecutionOrder      Lets modules be executed in the order they are declared.
+  --strictExecutionOrder      Preserve source module execution order across generated chunks.
   --topLevelVar               Rewrite top-level declarations to use \`var\`.
   --transform.assumptions.ignoreFunctionLength .
   --transform.assumptions.noDocumentAll .
@@ -188,6 +190,7 @@ OPTIONS
   --checks.missingGlobalName  Whether to emit warnings when the \`output.globals\` option is missing when needed.
   --checks.missingNameOptionForIifeExport Whether to emit warnings when the \`output.name\` option is missing when needed.
   --checks.mixedExports       Whether to emit warnings when the way to export values is ambiguous.
+  --checks.namespaceConflict  Whether to emit warnings when multiple star re-exports provide the same name from different modules.
   --checks.pluginTimings      Whether to emit warnings when plugins take significant time during the build process.
   --checks.preferBuiltinFeature Whether to emit warnings when a plugin that is covered by a built-in feature is used.
   --checks.sourcemapBroken    Whether to emit warnings when a plugin transforms code without generating a sourcemap.
@@ -240,8 +243,9 @@ OPTIONS
   --sourcemapBaseUrl <sourcemapBaseUrl>Base URL used to prefix sourcemap paths.
   --sourcemapDebugIds         Inject sourcemap debug IDs.
   --sourcemapExcludeSources   Exclude source content from sourcemaps.
+  --sourcemapFileNames <sourcemapFileNames>Name pattern for emitted sourcemaps.
   --strict <strict>           Whether to always output \`"use strict"\` directive in non-ES module outputs.
-  --strictExecutionOrder      Lets modules be executed in the order they are declared.
+  --strictExecutionOrder      Preserve source module execution order across generated chunks.
   --topLevelVar               Rewrite top-level declarations to use \`var\`.
   --transform.assumptions.ignoreFunctionLength .
   --transform.assumptions.noDocumentAll .
@@ -336,6 +340,7 @@ OPTIONS
   --checks.missingGlobalName  Whether to emit warnings when the \`output.globals\` option is missing when needed.
   --checks.missingNameOptionForIifeExport Whether to emit warnings when the \`output.name\` option is missing when needed.
   --checks.mixedExports       Whether to emit warnings when the way to export values is ambiguous.
+  --checks.namespaceConflict  Whether to emit warnings when multiple star re-exports provide the same name from different modules.
   --checks.pluginTimings      Whether to emit warnings when plugins take significant time during the build process.
   --checks.preferBuiltinFeature Whether to emit warnings when a plugin that is covered by a built-in feature is used.
   --checks.sourcemapBroken    Whether to emit warnings when a plugin transforms code without generating a sourcemap.
@@ -388,8 +393,9 @@ OPTIONS
   --sourcemapBaseUrl <sourcemapBaseUrl>Base URL used to prefix sourcemap paths.
   --sourcemapDebugIds         Inject sourcemap debug IDs.
   --sourcemapExcludeSources   Exclude source content from sourcemaps.
+  --sourcemapFileNames <sourcemapFileNames>Name pattern for emitted sourcemaps.
   --strict <strict>           Whether to always output \`"use strict"\` directive in non-ES module outputs.
-  --strictExecutionOrder      Lets modules be executed in the order they are declared.
+  --strictExecutionOrder      Preserve source module execution order across generated chunks.
   --topLevelVar               Rewrite top-level declarations to use \`var\`.
   --transform.assumptions.ignoreFunctionLength .
   --transform.assumptions.noDocumentAll .
@@ -484,6 +490,7 @@ OPTIONS
   --checks.missingGlobalName  Whether to emit warnings when the \`output.globals\` option is missing when needed.
   --checks.missingNameOptionForIifeExport Whether to emit warnings when the \`output.name\` option is missing when needed.
   --checks.mixedExports       Whether to emit warnings when the way to export values is ambiguous.
+  --checks.namespaceConflict  Whether to emit warnings when multiple star re-exports provide the same name from different modules.
   --checks.pluginTimings      Whether to emit warnings when plugins take significant time during the build process.
   --checks.preferBuiltinFeature Whether to emit warnings when a plugin that is covered by a built-in feature is used.
   --checks.sourcemapBroken    Whether to emit warnings when a plugin transforms code without generating a sourcemap.
@@ -536,8 +543,9 @@ OPTIONS
   --sourcemapBaseUrl <sourcemapBaseUrl>Base URL used to prefix sourcemap paths.
   --sourcemapDebugIds         Inject sourcemap debug IDs.
   --sourcemapExcludeSources   Exclude source content from sourcemaps.
+  --sourcemapFileNames <sourcemapFileNames>Name pattern for emitted sourcemaps.
   --strict <strict>           Whether to always output \`"use strict"\` directive in non-ES module outputs.
-  --strictExecutionOrder      Lets modules be executed in the order they are declared.
+  --strictExecutionOrder      Preserve source module execution order across generated chunks.
   --topLevelVar               Rewrite top-level declarations to use \`var\`.
   --transform.assumptions.ignoreFunctionLength .
   --transform.assumptions.noDocumentAll .

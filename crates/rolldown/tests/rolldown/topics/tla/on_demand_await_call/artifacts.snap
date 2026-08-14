@@ -6,9 +6,12 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## main.js
 
 ```js
+//#region normal-dep.js
 //#endregion
 //#region normal-lib.js
 const value = "normal-dep+normal-lib";
+//#endregion
+//#region tla-dep.js
 //#endregion
 //#region tla-lib.js
 const value$1 = await Promise.resolve("tla-dep") + "+tla-lib";
@@ -17,7 +20,7 @@ export { value as normalLibValue, value$1 as tlaLibValue };
 
 ```
 
-# Variant: [strict_execution_order: true]
+# Variant: wrap-all: [strict_execution_order: true]
 
 ## Assets
 
@@ -27,66 +30,68 @@ export { value as normalLibValue, value$1 as tlaLibValue };
 // HIDDEN [\0rolldown/runtime.js]
 //#region normal-dep.js
 var value$3;
-var init_normal_dep = __esmMin((() => {
-	value$3 = "normal-dep";
-}));
+function init_normal_dep() {
+	return (init_normal_dep = __esmMin((() => {
+		value$3 = "normal-dep";
+	})))();
+}
 //#endregion
 //#region normal-lib.js
 var value;
-var init_normal_lib = __esmMin((() => {
-	init_normal_dep();
-	value = value$3 + "+normal-lib";
-}));
+function init_normal_lib() {
+	return (init_normal_lib = __esmMin((() => {
+		init_normal_dep();
+		value = value$3 + "+normal-lib";
+	})))();
+}
 //#endregion
 //#region tla-dep.js
 var value$2;
-var init_tla_dep = __esmMin((async () => {
-	value$2 = await Promise.resolve("tla-dep");
-}));
+function init_tla_dep() {
+	return (init_tla_dep = __esmMin((async () => {
+		value$2 = await Promise.resolve("tla-dep");
+	})))();
+}
 //#endregion
 //#region tla-lib.js
 var value$1;
-var init_tla_lib = __esmMin((async () => {
-	await init_tla_dep();
-	value$1 = value$2 + "+tla-lib";
-}));
+function init_tla_lib() {
+	return (init_tla_lib = __esmMin((async () => {
+		await init_tla_dep();
+		value$1 = value$2 + "+tla-lib";
+	})))();
+}
 //#endregion
-await __esmMin((async () => {
-	init_normal_lib();
-	await init_tla_lib();
-}))();
+//#region main.js
+function init_main() {
+	return (init_main = __esmMin((async () => {
+		init_normal_lib();
+		await init_tla_lib();
+	})))();
+}
+//#endregion
+await init_main();
 export { value as normalLibValue, value$1 as tlaLibValue };
 
 ```
 
-# Variant: [on_demand_wrapping: true] [strict_execution_order: true]
+# Variant: on-demand: [on_demand_wrapping: true] [strict_execution_order: true]
 
 ## Assets
 
 ### main.js
 
 ```js
-// HIDDEN [\0rolldown/runtime.js]
+//#region normal-dep.js
+//#endregion
 //#region normal-lib.js
-var value;
-var init_normal_lib = __esmMin((() => {
-	value = "normal-dep+normal-lib";
-}));
+const value = "normal-dep+normal-lib";
 //#endregion
-var value$2, value$1;
-var init_tla_lib = __esmMin((async () => {
-	//#region tla-dep.js
-	value$2 = await Promise.resolve("tla-dep");
-	//#endregion
-	//#region tla-lib.js
-	value$1 = value$2 + "+tla-lib";
-	//#endregion
-}));
+//#region tla-dep.js
 //#endregion
-await __esmMin((async () => {
-	init_normal_lib();
-	await init_tla_lib();
-}))();
+//#region tla-lib.js
+const value$1 = await Promise.resolve("tla-dep") + "+tla-lib";
+//#endregion
 export { value as normalLibValue, value$1 as tlaLibValue };
 
 ```

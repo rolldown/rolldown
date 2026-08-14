@@ -23,7 +23,8 @@ Hash computation lives in `crates/rolldown/src/utils/chunk/finalize_chunks.rs::f
   ├─ Phase 1 (parallel):  per-chunk standalone content hash
   ├─ Phase 2 (parallel):  per-chunk final hash = own standalone + transitive deps' standalone
   ├─ Phase 3 (sequential): deconflict file names by rehashing on collision
-  └─ replace placeholders in content + filename with final hashes
+  ├─ replace placeholders in content + filename with final hashes
+  └─ prepare sourcemaps, hash their final content, then emit them
 ```
 
 ## Hash Placeholders
@@ -100,6 +101,19 @@ This is the only sequential pass in the pipeline. It mirrors Rollup's `generateF
 A regression test for this exact case lives in Rollup as `test/chunking-form/samples/hashing/deconflict-hashes`: two byte-identical entries + `entryFileNames: 'entry-[hash].js'` → two distinct file names.
 
 In practice the collision case is rare because `experimental.attachDebugInfo` (defaulting to `Simple`) injects a `//#region <module.debug_id>` marker into rendered chunks, which differentiates content based on module path. Users who disable debug info via `experimental.attachDebugInfo: 'none'` are the ones who can trigger the collision and rely on this loop.
+
+## Sourcemap File Hashes
+
+`output.sourcemapFileNames` has its own `[hash]` placeholder. It is resolved after chunk hashes because the final sourcemap contains the final chunk file name in its `file` field.
+
+The sourcemap sequence is:
+
+1. Resolve chunk hashes and final chunk file names.
+2. Prepare each sourcemap by setting `file`, applying `sourcemapExcludeSources`, `sourcemapIgnoreList`, and `sourcemapPathTransform`, and making source paths relative to the final chunk directory.
+3. If the sourcemap file-name pattern contains `[hash]`, hash the prepared map's serialized JSON.
+4. Resolve the sourcemap file name, then add debug IDs and emit the inline comment or separate asset.
+
+Preparation and emission are separate so user callbacks run only once while every content-changing map option contributes to `[hash]`. Debug IDs are deliberately added after the sourcemap hash, matching Rollup. The path passed to sourcemap callbacks is the default `<chunk-file>.map` path, which avoids a circular dependency when the custom sourcemap file name itself contains `[hash]`.
 
 ## Why Not Hash the Preliminary Filename Directly
 

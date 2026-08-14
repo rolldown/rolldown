@@ -1,18 +1,16 @@
-use oxc::allocator::GetAllocator;
+use oxc::allocator::{Allocator, GetAllocator};
+use oxc::ast::builder::{AstBuilder, GetAstBuilder};
 use oxc::{
   allocator::CloneIn as _,
-  ast::{
-    NONE,
-    ast::{
-      BindingPattern, Expression, ImportDeclarationSpecifier, ImportOrExportKind,
-      ModuleDeclaration, ModuleExportName, Statement, StringLiteral, VariableDeclaration,
-    },
+  ast::ast::{
+    BindingIdentifier, BindingPattern, Expression, ImportDeclarationSpecifier, ImportOrExportKind,
+    ModuleExportName, Statement, StringLiteral, VariableDeclaration,
   },
-  ast_visit::{VisitMut, walk_mut},
+  ast_visit::{VisitJsMut, walk_js_mut},
   semantic::ScopeFlags,
   span::SPAN,
 };
-use rolldown_ecmascript_utils::AstFactory;
+use rolldown_ecmascript_utils::BindingIdentifierFactoryExt as _;
 
 use super::PRELOAD_HELPER_ID;
 
@@ -20,7 +18,7 @@ const PRELOAD_METHOD: &str = "__vitePreload";
 
 #[expect(clippy::struct_excessive_bools)]
 pub struct BuildImportAnalysisVisitor<'a> {
-  pub ast_factory: AstFactory<'a>,
+  pub ast_builder: AstBuilder<'a>,
   pub scope_stack: Vec<ScopeFlags>,
   pub insert_preload: bool,
   pub has_inserted_helper: bool,
@@ -30,28 +28,28 @@ pub struct BuildImportAnalysisVisitor<'a> {
   pub is_modern: bool,
 }
 
-impl<'a> VisitMut<'a> for BuildImportAnalysisVisitor<'a> {
+impl<'a> VisitJsMut<'a> for BuildImportAnalysisVisitor<'a> {
   fn visit_program(&mut self, it: &mut oxc::ast::ast::Program<'a>) {
-    walk_mut::walk_program(self, it);
+    walk_js_mut::walk_program(self, it);
     if self.need_prepend_helper && self.insert_preload && !self.has_inserted_helper {
-      it.body.push(Statement::from(ModuleDeclaration::new_import_declaration(
+      it.body.push(Statement::new_import_declaration(
         SPAN,
         Some(oxc::allocator::Vec::from_value_in(
           ImportDeclarationSpecifier::new_import_specifier(
             SPAN,
-            ModuleExportName::new_identifier_name(SPAN, PRELOAD_METHOD, &self.ast_factory),
-            self.ast_factory.make_id(SPAN, PRELOAD_METHOD),
+            ModuleExportName::new_identifier_name(SPAN, PRELOAD_METHOD, self),
+            BindingIdentifier::new_id(SPAN, PRELOAD_METHOD, self),
             ImportOrExportKind::Value,
-            &self.ast_factory,
+            self,
           ),
-          &self.ast_factory,
+          self,
         )),
-        StringLiteral::new(SPAN, PRELOAD_HELPER_ID, None, &self.ast_factory),
+        StringLiteral::new(SPAN, PRELOAD_HELPER_ID, None, self),
         None,
-        NONE,
+        None,
         ImportOrExportKind::Value,
-        &self.ast_factory,
-      )));
+        self,
+      ));
     }
   }
 
@@ -67,7 +65,7 @@ impl<'a> VisitMut<'a> for BuildImportAnalysisVisitor<'a> {
         return;
       }
     }
-    walk_mut::walk_expression(self, expr);
+    walk_js_mut::walk_expression(self, expr);
   }
 
   fn visit_import_declaration(&mut self, it: &mut oxc::ast::ast::ImportDeclaration<'a>) {
@@ -88,19 +86,19 @@ impl<'a> VisitMut<'a> for BuildImportAnalysisVisitor<'a> {
           decl.init = Some(Expression::new_await_expression(
             SPAN,
             self.construct_vite_preload_call(
-              object_pat.clone_in(self.ast_factory.allocator()),
+              object_pat.clone_in(self.ast_builder.allocator()),
               decl.init.take().unwrap(),
             ),
-            &self.ast_factory,
+            self,
           ));
           self.need_prepend_helper = true;
         } else {
-          walk_mut::walk_variable_declarator(self, decl);
+          walk_js_mut::walk_variable_declarator(self, decl);
         }
       }
       return;
     }
-    walk_mut::walk_variable_declaration(self, decl);
+    walk_js_mut::walk_variable_declaration(self, decl);
   }
 
   fn visit_variable_declarator(&mut self, it: &mut oxc::ast::ast::VariableDeclarator<'a>) {
@@ -110,7 +108,7 @@ impl<'a> VisitMut<'a> for BuildImportAnalysisVisitor<'a> {
         self.has_inserted_helper = id.name == PRELOAD_METHOD;
       }
     }
-    walk_mut::walk_variable_declarator(self, it);
+    walk_js_mut::walk_variable_declarator(self, it);
   }
 
   fn enter_scope(
@@ -123,5 +121,21 @@ impl<'a> VisitMut<'a> for BuildImportAnalysisVisitor<'a> {
 
   fn leave_scope(&mut self) {
     self.scope_stack.pop();
+  }
+}
+
+impl<'a> GetAstBuilder<'a> for BuildImportAnalysisVisitor<'a> {
+  type Builder = AstBuilder<'a>;
+
+  #[inline]
+  fn builder(&self) -> &AstBuilder<'a> {
+    &self.ast_builder
+  }
+}
+
+impl<'a> GetAllocator<'a> for BuildImportAnalysisVisitor<'a> {
+  #[inline]
+  fn allocator(&self) -> &'a Allocator {
+    self.ast_builder.allocator()
   }
 }

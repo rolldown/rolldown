@@ -6,6 +6,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## entry-outer.js
 
 ```js
+//#region inner.js
 function identity1(x) {
 	return x;
 }

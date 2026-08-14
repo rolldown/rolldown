@@ -9,7 +9,7 @@ use rolldown_common::{
   SymbolRef, UsedSymbolRefs,
 };
 use rolldown_devtools::{action, trace_action, trace_action_enabled};
-use rolldown_error::{BatchedBuildDiagnostic, BuildDiagnostic, BuildResult};
+use rolldown_error::{BatchedBuildDiagnostic, BuildResult, Diagnostics};
 use rolldown_utils::{
   indexmap::{FxIndexMap, FxIndexSet},
   rayon::{IntoParallelRefIterator, ParallelIterator},
@@ -44,20 +44,25 @@ impl GenerateStage<'_> {
     chunk_graph: &ChunkGraph,
     ast_table: IndexEcmaAst,
     used_symbol_refs: &UsedSymbolRefs,
+    order_state: &super::order_wrap_state::OrderWrapState,
   ) -> BuildResult<BundleOutput> {
-    let mut errors = std::mem::take(&mut self.link_output.errors);
-    let mut warnings = std::mem::take(&mut self.link_output.warnings);
+    // Move the mixed-severity accumulator out of `link_output` so it can be
+    // passed by `&mut` to `instantiate_chunks` (which borrows `&self`, and so
+    // cannot also borrow `self.link_output.diagnostics`). The split into
+    // warnings vs. errors is deferred to the end of the function, where their
+    // fates finally diverge (errors -> `Err`, warnings -> `BundleOutput`).
+    let mut diagnostics = std::mem::take(&mut self.link_output.diagnostics);
     // `ast_table` is threaded by value into `create_chunk_to_codegen_ret_map`
     // (the last reader), where it is dropped at scope exit by the compiler —
     // releasing the per-module bumpalo arenas before `minify_chunks` and
     // `finalize_assets` allocate.
     let (mut instantiated_chunks, index_chunk_to_instances) = self
-      .instantiate_chunks(chunk_graph, ast_table, &mut errors, &mut warnings, used_symbol_refs)
+      .instantiate_chunks(chunk_graph, ast_table, &mut diagnostics, used_symbol_refs, order_state)
       .await?;
 
     self.trace_action_package_graph_ready(chunk_graph, &instantiated_chunks);
 
-    warnings
+    diagnostics
       .extend(render_chunks(self.plugin_driver, &mut instantiated_chunks, self.options).await?);
 
     augment_chunk_hash(self.plugin_driver, &mut instantiated_chunks).await?;
@@ -134,10 +139,10 @@ impl GenerateStage<'_> {
       a_type.cmp(&b_type)
     });
 
-    if !errors.is_empty() {
-      return Err(errors.into());
-    }
-
+    // Now that all diagnostics are collected, drain by severity: any error
+    // aborts the build, otherwise the warnings ride out on the `BundleOutput`.
+    // `into_result` fast-paths the common no-error case, skipping the partition.
+    let warnings = diagnostics.into_result()?;
     Ok(BundleOutput { assets: output, warnings })
   }
 
@@ -146,9 +151,9 @@ impl GenerateStage<'_> {
     &self,
     chunk_graph: &ChunkGraph,
     ast_table: IndexEcmaAst,
-    errors: &mut Vec<BuildDiagnostic>,
-    warnings: &mut Vec<BuildDiagnostic>,
+    diagnostics: &mut Diagnostics,
     used_symbol_refs: &UsedSymbolRefs,
+    order_state: &super::order_wrap_state::OrderWrapState,
   ) -> BuildResult<(IndexInstantiatedChunks, IndexChunkToInstances)> {
     let mut index_chunk_to_instances: IndexChunkToInstances =
       index_vec![FxIndexSet::default(); chunk_graph.chunk_table.len()];
@@ -190,6 +195,7 @@ impl GenerateStage<'_> {
               options: self.options,
               link_output: self.link_output,
               used_symbol_refs,
+              order_wrap_state: order_state,
               chunk_graph,
               plugin_driver: self.plugin_driver,
               module_id_to_codegen_ret,
@@ -212,9 +218,9 @@ impl GenerateStage<'_> {
           let ins_chunk_idx = index_instantiated_chunks.push(ins_chunk);
           index_chunk_to_instances[base_chunk_idx].insert(ins_chunk_idx);
         });
-        warnings.extend(generate_output.warnings);
+        diagnostics.extend(generate_output.warnings);
       }
-      Err(e) => errors.extend(e.into_vec()),
+      Err(e) => diagnostics.extend(e.into_vec()),
     });
 
     index_chunk_to_instances.iter_mut().for_each(|instances| {

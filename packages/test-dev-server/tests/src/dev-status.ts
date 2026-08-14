@@ -23,7 +23,6 @@ export interface DevStatus {
   lastBuildErrored: boolean;
   buildSeq: number;
   connectedClients: number;
-  moduleRegistrationSeq: number;
 }
 
 async function fetchDevStatus(serverUrl: string): Promise<DevStatus> {
@@ -86,28 +85,29 @@ export async function waitForBuildStable(
   );
 }
 
-/** Poll until moduleRegistrationSeq exceeds the given value (i.e., a new module registration happened). */
-export async function waitForModuleRegistration(
+/** Get current module registration sequence number. */
+/** Poll until connectedClients exceeds the given count (i.e., a new client connected). */
+export async function waitForClientConnected(
   serverUrl: string,
-  currentSeq: number,
+  currentCount: number,
   timeoutMs = 30_000,
 ): Promise<DevStatus> {
   return vi.waitFor(
     async () => {
       const status = await fetchDevStatus(serverUrl);
-      if (status.moduleRegistrationSeq > currentSeq) return status;
+      if (status.connectedClients > currentCount) return status;
       throw new Error(
-        `moduleRegistrationSeq still at ${status.moduleRegistrationSeq}, waiting for > ${currentSeq}`,
+        `connectedClients still at ${status.connectedClients}, waiting for > ${currentCount}`,
       );
     },
     { timeout: timeoutMs, interval: 50 },
   );
 }
 
-/** Get current module registration sequence number. */
-export async function getModuleRegistrationSeq(serverUrl: string): Promise<number> {
+/** Read the current connected-client count. */
+export async function getConnectedClients(serverUrl: string): Promise<number> {
   const status = await fetchDevStatus(serverUrl);
-  return status.moduleRegistrationSeq;
+  return status.connectedClients;
 }
 
 /** Get current build sequence number. */

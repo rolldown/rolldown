@@ -7,14 +7,33 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 import assert from "node:assert";
+//#region main.js
+const A = { A: "A" };
+const { [A.A]: foo } = { A: "foo" };
+assert.strictEqual(foo, "foo");
+//#endregion
+
+```
+
+# Variant: wrap-all: [on_demand_wrapping: false]
+
+## Assets
+
+### main.js
+
+```js
+import assert from "node:assert";
 // HIDDEN [\0rolldown/runtime.js]
 //#region main.js
 var A, foo;
+function init_main() {
+	return (init_main = __esmMin((() => {
+		A = { A: "A" };
+		({[A.A]: foo} = { A: "foo" });
+		assert.strictEqual(foo, "foo");
+	})))();
+}
 //#endregion
-__esmMin((() => {
-	A = { A: "A" };
-	({[A.A]: foo} = { A: "foo" });
-	assert.strictEqual(foo, "foo");
-}))();
+init_main();
 
 ```

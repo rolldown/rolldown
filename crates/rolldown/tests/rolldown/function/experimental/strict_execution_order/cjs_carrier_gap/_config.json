@@ -1,0 +1,26 @@
+{
+  "configName": "on-demand",
+  "config": {
+    "input": [
+      {
+        "name": "main",
+        "import": "./main.js"
+      },
+      {
+        "name": "second",
+        "import": "./second.js"
+      }
+    ],
+    "strictExecutionOrder": true,
+    "experimental": {
+      "onDemandWrapping": true
+    }
+  },
+  "hiddenRuntimeModule": false,
+  "configVariants": [
+    {
+      "_configName": "wrap-all",
+      "onDemandWrapping": false
+    }
+  ]
+}

@@ -2,9 +2,9 @@ mod utils;
 
 use std::{borrow::Cow, path::PathBuf};
 
-use oxc::ast_visit::Visit;
-use rolldown_common::ModuleType;
+use oxc::ast_visit::VisitJs;
 use rolldown_plugin::{HookTransformOutput, HookTransformOutputMap, HookUsage, Plugin};
+use rolldown_plugin_utils::parse_program;
 use sugar_path::SugarPath as _;
 
 #[derive(Debug, Default)]
@@ -28,34 +28,12 @@ impl Plugin for ViteImportGlobPlugin {
     ctx: rolldown_plugin::SharedTransformPluginContext,
     args: &rolldown_plugin::HookTransformArgs<'_>,
   ) -> rolldown_plugin::HookTransformReturn {
-    if matches!(
-      args.module_type,
-      ModuleType::Js | ModuleType::Ts | ModuleType::Jsx | ModuleType::Tsx
-    ) && args.code.contains("import.meta.glob")
-    {
+    if args.code.contains("import.meta.glob") {
       let allocator = oxc::allocator::Allocator::default();
-      let source_type = match args.module_type {
-        ModuleType::Js => oxc::span::SourceType::mjs(),
-        ModuleType::Jsx => oxc::span::SourceType::jsx(),
-        ModuleType::Ts => oxc::span::SourceType::ts(),
-        ModuleType::Tsx => oxc::span::SourceType::tsx(),
-        _ => unreachable!(),
+      let Some(parser_ret) = parse_program(&allocator, args.code, args.module_type, args.id)?
+      else {
+        return Ok(None);
       };
-      let parser_ret = oxc::parser::Parser::new(&allocator, args.code, source_type)
-        .with_options(oxc::parser::ParseOptions {
-          preserve_parens: false,
-          ..oxc::parser::ParseOptions::default()
-        })
-        .parse();
-      if parser_ret.panicked
-        && let Some(err) =
-          parser_ret.diagnostics.iter().find(|e| e.severity == oxc::diagnostics::Severity::Error)
-      {
-        return Err(anyhow::anyhow!(format!(
-          "Failed to parse code in '{}': {:?}",
-          args.id, err.message
-        )));
-      }
       let id = args.id.to_slash_lossy();
       let root = self.root.as_ref().map(PathBuf::from);
       let root = root.as_ref().unwrap_or(ctx.cwd());

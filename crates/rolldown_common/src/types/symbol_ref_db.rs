@@ -370,7 +370,7 @@ impl SymbolRefDb {
   pub fn canonical_ref_for(&self, target: SymbolRef) -> SymbolRef {
     let mut canonical = target;
     while let Some(founded) = self.get(canonical).link {
-      debug_assert!(founded != target);
+      debug_assert_ne!(founded, target);
       canonical = founded;
     }
     canonical
@@ -424,14 +424,14 @@ impl GetLocalDbMut for SymbolRefDb {
 
 impl GetLocalDb for SymbolRefDbForModule {
   fn local_db(&self, owner: ModuleIdx) -> &SymbolRefDbForModule {
-    debug_assert!(self.owner_idx == owner);
+    debug_assert_eq!(self.owner_idx, owner);
     self
   }
 }
 
 impl GetLocalDbMut for SymbolRefDbForModule {
   fn local_db_mut(&mut self, owner: ModuleIdx) -> &mut SymbolRefDbForModule {
-    debug_assert!(self.owner_idx == owner);
+    debug_assert_eq!(self.owner_idx, owner);
     self
   }
 }

@@ -24,8 +24,9 @@ concurrency:
 
 jobs:
   # Builds/validates the docs and, on main, decides whether the content needs deploying. Runs
-  # untrusted PR code, so it has NO `environment` and NO access to VOID_TOKEN. The deploy is a
-  # separate main-only job below — we never deploy to Void from a PR.
+  # untrusted PR code, so it has NO `environment` and NO `id-token` permission — it cannot mint
+  # an OIDC token. The deploy is a separate main-only job below — we never deploy to Void from
+  # a PR.
   docs-validation:
     name: Docs Validation
     runs-on: ubuntu-latest
@@ -36,7 +37,7 @@ jobs:
     steps:
       - uses: taiki-e/checkout-action@7d1e50e93dc4fb3bba58f85018fadf77898aee8b # v1.4.2
 
-      - uses: voidzero-dev/setup-vp@35171c92dd08b67d5a9d3f2a4327800e58396f2a # v1.13.0
+      - uses: voidzero-dev/setup-vp@313600b80b104eadebb9111787d37a2e83e014ca # v1.17.0
         with:
           version: '0.2.1'
           cache: true
@@ -81,10 +82,15 @@ jobs:
     if: github.ref_name == 'main' && needs.docs-validation.outputs.deploy == 'true'
     runs-on: ubuntu-latest
     environment: void
+    # `void deploy` authenticates via GitHub OIDC: with id-token:write (and no VOID_TOKEN set)
+    # it mints an OIDC token (audience `void`) and exchanges it for a short-lived,
+    # project-scoped deploy token. No long-lived secret is stored in the repo.
+    permissions:
+      id-token: write
     steps:
       - uses: taiki-e/checkout-action@7d1e50e93dc4fb3bba58f85018fadf77898aee8b # v1.4.2
 
-      - uses: voidzero-dev/setup-vp@35171c92dd08b67d5a9d3f2a4327800e58396f2a # v1.13.0
+      - uses: voidzero-dev/setup-vp@313600b80b104eadebb9111787d37a2e83e014ca # v1.17.0
         with:
           version: '0.2.1'
           cache: true
@@ -92,7 +98,6 @@ jobs:
       - name: Deploy to Void
         run: vp run docs:void
         env:
-          VOID_TOKEN: ${{ secrets.VOID_TOKEN }}
           VOID_PROJECT: rolldown
           ALGOLIA_APP_ID: ${{ secrets.ALGOLIA_APP_ID }}
           ALGOLIA_API_KEY: ${{ secrets.ALGOLIA_API_KEY }}

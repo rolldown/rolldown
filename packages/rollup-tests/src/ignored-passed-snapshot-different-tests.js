@@ -38,6 +38,8 @@ module.exports = [
     "rollup@form@export-default-import: correctly exports a default import, even in ES mode (#513)@generates es", // convert reexport to import and export
     "rollup@form@export-default: single (default) exports@generates es",
     "rollup@form@export-internal-namespace-as: supports exporting and resolving internal namespaces as names",
+    "rollup@form@duplicated-var-declarations: does not remove duplicated var declarations (#716)@generates es", // rolldown splits top-level multi-declarator statements per declarator for tree-shaking
+    "rollup@form@string-indentation-b: handles multiple var declarations inited to strings (#166)@generates es", // rolldown splits top-level multi-declarator statements per declarator for tree-shaking
     "rollup@form@export-live-bindings: exported live bindings@generates es",
     "rollup@form@export-namespace-as: supports exporting namespaces as names in entry points@generates es",
     "rollup@form@external-deshadowing: Externals aliases with deshadowing@generates es",
@@ -106,6 +108,7 @@ module.exports = [
     "rollup@form@top-level-await: top-level await support@generates system",
     "rollup@form@undefined-default-export: handles default exporting undefined",
     "rollup@form@unmodified-default-exports-function-argument: passing unbound default export to function cannot rebind it",
+    "rollup@form@switch-cases@missing-space: Inserts space when simplifying switch cases without space",
     "rollup@form@yield-expression@missing-space: Inserts space when simplifying yield expression without space",
     "rollup@form@arbitrary-module-namespace-identifiers: renders exports that are not identifiers@generates es",
     "rollup@form@arbitrary-module-namespace-identifiers2: renders exports that are not identifiers@generates es",

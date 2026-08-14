@@ -270,6 +270,8 @@ const config = defineConfig({
     ['meta', { name: 'twitter:site', content: '@rolldown_rs' }],
   ],
 
+  ignoreDeadLinks: true,
+
   themeConfig: {
     variant: 'rolldown',
     search: {

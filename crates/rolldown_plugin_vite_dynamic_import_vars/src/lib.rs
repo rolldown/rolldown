@@ -4,13 +4,14 @@ mod utils;
 
 use std::{borrow::Cow, pin::Pin, sync::Arc};
 
-use oxc::ast_visit::Visit;
-use rolldown_common::ModuleType;
+use oxc::ast_visit::VisitJs;
 use rolldown_plugin::{
   HookLoadArgs, HookLoadOutput, HookLoadReturn, HookResolveIdArgs, HookResolveIdOutput,
   HookResolveIdReturn, HookTransformOutput, HookTransformOutputMap, HookUsage, Plugin,
   PluginContext, SharedLoadPluginContext,
 };
+use rolldown_plugin_utils::parse_program;
+use rolldown_std_utils::relative_path_as_js_specifier;
 use rolldown_utils::{
   futures::{block_on, block_on_spawn_all},
   pattern_filter::StringOrRegex,
@@ -67,34 +68,12 @@ impl Plugin for ViteDynamicImportVarsPlugin {
     if !self.filter(args.id, ctx.cwd()) {
       return Ok(None);
     }
-    if matches!(
-      args.module_type,
-      ModuleType::Js | ModuleType::Ts | ModuleType::Jsx | ModuleType::Tsx
-    ) && utils::has_dynamic_import(args.code)
-    {
+    if utils::has_dynamic_import(args.code) {
       let allocator = oxc::allocator::Allocator::default();
-      let source_type = match args.module_type {
-        ModuleType::Js => oxc::span::SourceType::mjs(),
-        ModuleType::Jsx => oxc::span::SourceType::jsx(),
-        ModuleType::Ts => oxc::span::SourceType::ts(),
-        ModuleType::Tsx => oxc::span::SourceType::tsx(),
-        _ => unreachable!(),
+      let Some(parser_ret) = parse_program(&allocator, args.code, args.module_type, args.id)?
+      else {
+        return Ok(None);
       };
-      let parser_ret = oxc::parser::Parser::new(&allocator, args.code, source_type)
-        .with_options(oxc::parser::ParseOptions {
-          preserve_parens: false,
-          ..oxc::parser::ParseOptions::default()
-        })
-        .parse();
-      if parser_ret.panicked
-        && let Some(err) =
-          parser_ret.diagnostics.iter().find(|e| e.severity == oxc::diagnostics::Severity::Error)
-      {
-        return Err(anyhow::anyhow!(format!(
-          "Failed to parse code in '{}': {:?}",
-          args.id, err.message
-        )));
-      }
       let mut visitor = ast_visit::DynamicImportVarsVisit {
         ctx: &ctx,
         source_text: args.code,
@@ -122,15 +101,10 @@ impl Plugin for ViteDynamicImportVarsPlugin {
         let result = block_on(block_on_spawn_all(task));
         for (i, item) in result.into_iter().enumerate() {
           if let Some(id) = item {
-            let id = id.relative(importer);
-            let id = id.to_slash_lossy();
-            let id = if id.is_empty() {
+            let id = relative_path_as_js_specifier(id, importer);
+            if id == "." {
               continue;
-            } else if id.as_bytes()[0] == b'.' {
-              id.into_owned()
-            } else {
-              rolldown_utils::concat_string!("./", id)
-            };
+            }
 
             let addr = visitor.async_imports_addrs[i];
             visitor.rewrite_variable_dynamic_import(unsafe { &*addr }, Some(&id));

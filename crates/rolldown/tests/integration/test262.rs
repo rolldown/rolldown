@@ -134,7 +134,7 @@ impl TestResult {
     actual: TestOutcome,
     cwd: &Path,
   ) -> Self {
-    let relative_path = path.relative(cwd);
+    let relative_path = path.relative(cwd).into_owned();
     let display_path = relative_path.to_slash_lossy();
     let clean_path = Self::clean_path(&display_path);
 

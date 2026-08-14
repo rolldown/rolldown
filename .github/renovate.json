@@ -9,6 +9,12 @@
       "matchManagers": ["npm"],
       "matchPackageNames": ["rolldown-plugin-dts"],
       "schedule": ["at any time"]
+    },
+    {
+      "description": "idna_adapter is pinned to 1.0.0 to keep the lighter unicode-rs backend (see #9811)",
+      "matchManagers": ["cargo"],
+      "matchPackageNames": ["idna_adapter"],
+      "enabled": false
     }
   ]
 }

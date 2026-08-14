@@ -5,6 +5,7 @@ use oxc::diagnostics::OxcDiagnostic;
 use oxc::{diagnostics::LabeledSpan, span::Span};
 use oxc_resolver::ResolveError;
 
+use crate::EmptyImportMetaKind;
 use crate::types::event_kind::EventKind;
 use crate::utils::ByteLocator;
 
@@ -32,7 +33,7 @@ use super::events::json_parse::JsonParse;
 use super::events::missing_global_name::MissingGlobalName;
 use super::events::missing_name_option_for_iife_export::MissingNameOptionForIifeExport;
 use super::events::plugin_error::{CausedPlugin, PluginError};
-use super::events::plugin_timings::{PluginTimingInfo, PluginTimings};
+use super::events::plugin_timings::PluginTimings;
 use super::events::prefer_builtin_feature::PreferBuiltinFeature;
 use super::events::require_tla::RequireTla;
 use super::events::resolve_error::DiagnosableResolveError;
@@ -51,10 +52,12 @@ use super::events::{
   commonjs_variable_in_esm::{CjsExportSpan, CommonJsVariableInEsm},
   eval::Eval,
   external_entry::ExternalEntry,
+  file_not_found::FileNotFound,
   forbid_const_assign::ForbidConstAssign,
   invalid_export_option::InvalidExportOption,
   missing_export::MissingExport,
   mixed_exports::MixedExports,
+  namespace_conflict::{NamespaceConflict, NamespaceConflictExporter},
   oxc_error::OxcError,
   unresolved_entry::UnresolvedEntry,
 };
@@ -79,6 +82,20 @@ impl BuildDiagnostic {
     })
   }
 
+  pub fn namespace_conflict(
+    binding: String,
+    reexporting_module_id: String,
+    reexporting_module_stable_id: String,
+    exporters: Vec<NamespaceConflictExporter>,
+  ) -> Self {
+    Self::new_inner(NamespaceConflict {
+      binding,
+      reexporting_module_id,
+      reexporting_module_stable_id,
+      exporters,
+    })
+  }
+
   pub fn unresolved_entry(
     unresolved_id: impl AsRef<Path>,
     resolve_error: Option<ResolveError>,
@@ -86,6 +103,20 @@ impl BuildDiagnostic {
     Self::new_inner(UnresolvedEntry {
       unresolved_id: unresolved_id.as_ref().to_path_buf(),
       resolve_error,
+    })
+  }
+
+  pub fn file_not_found(
+    reference_id: impl Into<String>,
+    module_id: impl Into<String>,
+    source: ArcStr,
+    span: Span,
+  ) -> Self {
+    Self::new_inner(FileNotFound {
+      reference_id: reference_id.into(),
+      module_id: module_id.into(),
+      source,
+      span,
     })
   }
 
@@ -239,14 +270,14 @@ impl BuildDiagnostic {
     source: ArcStr,
     span: Span,
     format: ArcStr,
-    is_import_meta_url: bool,
+    kind: EmptyImportMetaKind,
   ) -> Self {
     Self::new_inner(super::events::empty_import_meta::EmptyImportMeta {
       filename,
       source,
       span,
       format,
-      is_import_meta_url,
+      kind,
     })
   }
 
@@ -412,8 +443,8 @@ impl BuildDiagnostic {
     Self::new_inner(CouldNotCleanDirectory { dir, reason })
   }
 
-  pub fn plugin_timings(plugins: Vec<PluginTimingInfo>) -> Self {
-    Self::new_inner(PluginTimings { plugins })
+  pub fn plugin_timings(timings: PluginTimings) -> Self {
+    Self::new_inner(timings)
   }
 
   pub fn duplicate_shebang(filename: String, source: &str) -> Self {
@@ -424,8 +455,8 @@ impl BuildDiagnostic {
     Self::new_inner(SourcemapBroken { plugin_name, id })
   }
 
-  pub fn tsconfig_error(file_path: String, reason: ResolveError) -> Self {
-    Self::new_inner(TsConfigError { file_paths: vec![file_path], reason })
+  pub fn tsconfig_error(reason: ResolveError) -> Self {
+    Self::new_inner(TsConfigError { reason })
   }
 
   pub fn unsupported_tsconfig_option(message: String) -> Self {

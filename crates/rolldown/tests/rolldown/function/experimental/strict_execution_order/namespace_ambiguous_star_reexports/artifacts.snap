@@ -1,0 +1,234 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# warnings
+
+## NAMESPACE_CONFLICT
+
+```text
+[NAMESPACE_CONFLICT] Conflicting namespaces: "bridge.js" re-exports "collision" from one of the modules "common-a.js" and "common-b.js" (will be ignored).
+   ╭─[ common-a.js:6:14 ]
+   │
+ 6 │ export const collision = /* @__PURE__ */ mark();
+   │              ────┬────  
+   │                  ╰────── One matching export is here.
+   │
+   ├─[ common-b.js:6:14 ]
+   │
+ 6 │ export const collision = /* @__PURE__ */ mark();
+   │              ────┬────  
+   │                  ╰────── One matching export is here.
+───╯
+
+```
+
+# Assets
+
+## main.js
+
+```js
+import { t as __esmMin } from "./rolldown-runtime.js";
+//#region main.js
+function init_main() {
+	return (init_main = __esmMin((async () => {
+		await import("./page-b.js");
+		await import("./page-a.js");
+	})))();
+}
+//#endregion
+await init_main();
+
+```
+
+## page-a.js
+
+```js
+import { t as __esmMin } from "./rolldown-runtime.js";
+import assert from "node:assert";
+//#region common-a.js
+function mark$1() {
+	globalThis.valueA = typeof globalThis.valueA === "number" ? globalThis.valueA + 1 : 0;
+	return "a";
+}
+var collision$1;
+function init_common_a() {
+	return (init_common_a = __esmMin((() => {
+		collision$1 = /* @__PURE__ */ mark$1();
+	})))();
+}
+//#endregion
+//#region common-b.js
+function mark() {
+	globalThis.valueB = typeof globalThis.valueB === "number" ? globalThis.valueB + 1 : 0;
+	return "b";
+}
+var collision;
+function init_common_b() {
+	return (init_common_b = __esmMin((() => {
+		collision = /* @__PURE__ */ mark();
+	})))();
+}
+//#endregion
+//#region page-a.js
+function init_page_a() {
+	return (init_page_a = __esmMin((() => {
+		init_common_a();
+		init_common_b();
+		assert.strictEqual(globalThis.valueA, 0);
+		assert.strictEqual(globalThis.valueB, 0);
+		assert.strictEqual(collision$1, "a");
+		assert.strictEqual(collision, "b");
+	})))();
+}
+//#endregion
+init_page_a();
+
+```
+
+## page-b.js
+
+```js
+import { n as __exportAll, t as __esmMin } from "./rolldown-runtime.js";
+import assert from "node:assert";
+//#region bridge.js
+var bridge_exports = /* @__PURE__ */ __exportAll({ ok: () => ok });
+function ok() {
+	return 1;
+}
+function init_bridge() {
+	return (init_bridge = __esmMin((() => {})))();
+}
+//#endregion
+//#region page-b.js
+function init_page_b() {
+	return (init_page_b = __esmMin((() => {
+		init_bridge();
+		assert.strictEqual(bridge_exports[globalThis.__bridgeKey || "ok"](), 1);
+		assert.strictEqual(globalThis.valueA, void 0, "ambiguous namespace re-export must not initialize common-a before page-b");
+		assert.strictEqual(globalThis.valueB, void 0);
+	})))();
+}
+//#endregion
+init_page_b();
+
+```
+
+## rolldown-runtime.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+export { __exportAll as n, __esmMin as t };
+
+```
+
+# Variant: on-demand: [on_demand_wrapping: true]
+
+## warnings
+
+### NAMESPACE_CONFLICT
+
+```text
+[NAMESPACE_CONFLICT] Conflicting namespaces: "bridge.js" re-exports "collision" from one of the modules "common-a.js" and "common-b.js" (will be ignored).
+   ╭─[ common-a.js:6:14 ]
+   │
+ 6 │ export const collision = /* @__PURE__ */ mark();
+   │              ────┬────  
+   │                  ╰────── One matching export is here.
+   │
+   ├─[ common-b.js:6:14 ]
+   │
+ 6 │ export const collision = /* @__PURE__ */ mark();
+   │              ────┬────  
+   │                  ╰────── One matching export is here.
+───╯
+
+```
+
+## Assets
+
+### main.js
+
+```js
+//#region main.js
+await import("./page-b.js");
+await import("./page-a.js");
+//#endregion
+
+```
+
+### page-a.js
+
+```js
+import { t as __esmMin } from "./rolldown-runtime.js";
+import assert from "node:assert";
+//#region common-a.js
+function mark$1() {
+	globalThis.valueA = typeof globalThis.valueA === "number" ? globalThis.valueA + 1 : 0;
+	return "a";
+}
+var collision$1;
+function init_common_a() {
+	return (init_common_a = __esmMin((() => {
+		collision$1 = /* @__PURE__ */ mark$1();
+	})))();
+}
+//#endregion
+//#region common-b.js
+function mark() {
+	globalThis.valueB = typeof globalThis.valueB === "number" ? globalThis.valueB + 1 : 0;
+	return "b";
+}
+var collision;
+function init_common_b() {
+	return (init_common_b = __esmMin((() => {
+		collision = /* @__PURE__ */ mark();
+	})))();
+}
+//#endregion
+//#region page-a.js
+function init_page_a() {
+	return (init_page_a = __esmMin((() => {
+		init_common_a();
+		init_common_b();
+		assert.strictEqual(globalThis.valueA, 0);
+		assert.strictEqual(globalThis.valueB, 0);
+		assert.strictEqual(collision$1, "a");
+		assert.strictEqual(collision, "b");
+	})))();
+}
+//#endregion
+init_page_a();
+
+```
+
+### page-b.js
+
+```js
+import { n as __exportAll, t as __esmMin } from "./rolldown-runtime.js";
+import assert from "node:assert";
+//#region bridge.js
+var bridge_exports = /* @__PURE__ */ __exportAll({ ok: () => ok });
+function ok() {
+	return 1;
+}
+//#endregion
+//#region page-b.js
+function init_page_b() {
+	return (init_page_b = __esmMin((() => {
+		assert.strictEqual(bridge_exports[globalThis.__bridgeKey || "ok"](), 1);
+		assert.strictEqual(globalThis.valueA, void 0, "ambiguous namespace re-export must not initialize common-a before page-b");
+		assert.strictEqual(globalThis.valueB, void 0);
+	})))();
+}
+//#endregion
+init_page_b();
+
+```
+
+### rolldown-runtime.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+export { __exportAll as n, __esmMin as t };
+
+```

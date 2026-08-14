@@ -51,6 +51,7 @@ Rust Core (crates/rolldown)
 - `crates/rolldown_watcher`: Watch mode coordinator. See `internal-docs/watch-mode/implementation.md` for architecture, state machine, debounce/consolidation rules, and event lifecycle.
 - `docs/`: Documentation site built with VitePress.
 - `internal-docs/`: Internal design & implementation docs — one folder per feature (`design.md` + `implementation.md`). See the "Context Engineering" section above.
+- Path manipulation: read `internal-docs/path-manipulation/style-guide.md` before composing paths, and prefer its consuming `rolldown_std_utils` helpers for owned `PathBuf` values.
 
 ## Auto-generated or Submodule Files
 
@@ -83,6 +84,19 @@ IMPORTANT: The project uses `just` as a task runner. Always prefer `just` comman
 # Pull Requests
 
 - **Open PRs as drafts and keep them that way until the user says otherwise.** When you create a pull request, always create it as a **draft** (`gh pr create --draft`). Do NOT convert a draft to "ready for review", mark a PR ready, or request/assign reviewers unless the user has explicitly told you they are ready for team review. Publishing a PR for review pings reviewers and code owners and clutters their inboxes — never trigger that on the user's behalf prematurely. If you are unsure whether the user is ready, leave the PR as a draft and ask first.
+
+# Windows CI
+
+- For Windows coverage on a PR, add the `ci: windows` label, then rerun all jobs in the latest `CI` workflow run whose event is `pull_request` and whose head SHA matches the PR. Adding the label alone does not start a workflow. Keep the label so later PR pushes also run the Windows jobs.
+
+# Browser CI
+
+- The default CI's `Browser` job loads the packed `@rolldown/browser` in a real Chrome page: Vite serves an app that imports it through the `browser` export condition, and the test bundles with it. No label — it runs on every PR that touches node code, and it is what catches node builtins leaking into the browser build. Locally: `just test-browser`.
+
+# WebContainer CI
+
+- The `ci: webcontainer` label adds a second suite to that same `Browser` job: it installs and builds the packed `rolldown` / `@rolldown/browser` artifacts inside a WebContainer. Activation works exactly like `ci: windows` above. Locally: `just test-webcontainer` (needs network — WebContainer boots from StackBlitz's CDN).
+- **ALWAYS add this label when a PR touches anything napi-rs related** (napi / emnapi / wasm-runtime versions, the binding loader and glue, the `napi` config, `webcontainer-fallback.cjs`, binding packaging or publish steps). Pure wasm behavior changes don't need it — the default CI's `wasi` job already runs the test suite against the wasm binding; this label checks that the packed packages install and work inside WebContainer.
 
 # Common Pitfalls & Best Practices
 

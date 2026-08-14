@@ -1,6 +1,6 @@
 [package]
 name = "rolldown_plugin_utils"
-version = "1.1.4"
+version = "1.2.4"
 edition.workspace = true
 homepage.workspace = true
 license.workspace = true
@@ -18,7 +18,14 @@ doctest = false
 workspace = true
 
 [dependencies]
+anyhow = { workspace = true }
+arcstr = { workspace = true }
 memchr = { workspace = true }
+oxc = { workspace = true }
+rolldown_common = { workspace = true }
 rolldown_plugin = { workspace = true }
+rolldown_std_utils = { workspace = true }
 rolldown_utils = { workspace = true }
 serde_json = { workspace = true }
+string_wizard = { workspace = true }
+tokio = { workspace = true, features = ["fs"] }

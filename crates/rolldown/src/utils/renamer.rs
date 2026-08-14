@@ -7,7 +7,8 @@ use oxc::syntax::keyword::{GLOBAL_OBJECTS, RESERVED_KEYWORDS};
 use oxc_str::CompactStr;
 
 use rolldown_common::{
-  ModuleIdx, NormalModule, OutputFormat, SymbolRef, SymbolRefDb, SymbolRefDbForModule, WrapKind,
+  ExportsKind, ImportRecordMeta, ModuleIdx, NormalModule, OutputFormat, SymbolRef, SymbolRefDb,
+  SymbolRefDbForModule, WrapKind,
 };
 use rolldown_utils::concat_string;
 
@@ -479,6 +480,58 @@ impl NestedScopeRenamer<'_, '_> {
     }
   }
 
+  /// Rename nested bindings that would shadow the ambient names of CommonJS output.
+  ///
+  /// Several rewrites emit bare, renamer-invisible identifiers into the module body, at arbitrary
+  /// nesting depth:
+  /// - `require(...)` — external imports, dynamic-import lowering, and the `import.meta.url`
+  ///   polyfill (`require("url").pathToFileURL(__filename).href`)
+  /// - `__filename` — the argument of that polyfill, and the `import.meta.filename` rewrite
+  /// - `__dirname` — the `import.meta.dirname` rewrite
+  ///
+  /// Those identifiers mean the CommonJS ambient bindings, so a nested binding of the same name
+  /// must not capture them. `module`/`exports` are deliberately not in the set: nothing injects
+  /// them into nested scopes, and `rename_bindings_shadowing_wrapper_params` already covers the
+  /// CJS-wrapped-module case.
+  ///
+  /// A `var` binding is hoisted, so it shadows even an injected call inside its own initializer:
+  ///
+  /// ```js
+  /// // input, the shape emscripten emits with `-s EXPORT_ES6=1 -s ENVIRONMENT='node'`
+  /// function init() {
+  ///   var require = createRequire(import.meta.url);
+  ///   return require("node:path").sep;
+  /// }
+  /// ```
+  ///
+  /// Without renaming, the polyfill resolves to the still-undefined local and the module throws
+  /// `require is not a function` on first call:
+  ///
+  /// ```js
+  /// var require = createRequire(require("url").pathToFileURL(__filename).href);
+  /// ```
+  ///
+  /// The same capture breaks a nested `var __filename`/`var __dirname` the same way
+  /// (`pathToFileURL(__filename)` reads the still-undefined local and throws).
+  ///
+  /// Only CommonJS output injects these names. The pass does nothing for the other formats.
+  pub fn rename_bindings_shadowing_cjs_ambient_names(&mut self, output_format: OutputFormat) {
+    if !matches!(output_format, OutputFormat::Cjs) {
+      return;
+    }
+
+    // Skip root scope (index 0), check nested scopes only. Root-scope bindings are already covered
+    // by the renamer's `manual_reserved` list for CommonJS output.
+    for (_, bindings) in self.scoping.iter_bindings().skip(1) {
+      for (&name, symbol_id) in bindings {
+        if matches!(name.as_str(), "require" | "__filename" | "__dirname") {
+          let symbol_ref = (self.module_idx, *symbol_id).into();
+          self.renamer.register_nested_scope_symbols(symbol_ref, name.as_str());
+        }
+      }
+    }
+  }
+
   /// Rename a CJS-wrapped module's *root-scope* locals that shadow a chunk-root binding the closure
   /// actually references.
   ///
@@ -548,6 +601,39 @@ impl NestedScopeRenamer<'_, '_> {
       };
       if let Some(binding) = self.scoping.get_binding(root_scope_id, canonical_name.as_str().into())
         && binding != reference_symbol
+      {
+        let local_ref: SymbolRef = (self.module_idx, binding).into();
+        if self.link_output.symbol_db.canonical_ref_for(local_ref).owner == self.module_idx {
+          shadowing_locals.insert(local_ref);
+        }
+      }
+    }
+
+    // `require()` of a wrapped-ESM importee — the finalizer rewrites it to
+    // `(init_x(), __toCommonJS(xxx_exports))`, so a root-scope local sharing the importee's
+    // namespace-object final name shadows that read (issue #9882, require()/namespace channel).
+    // We mirror the finalizer's gate (`module_finalizers/mod.rs`): a non-CommonJS importee whose
+    // require is actually used. The namespace object lives in the importee module, never in
+    // `self.module`, so any same-named root-scope local here is a genuine shadowing local.
+    for rec in &self.module.import_records {
+      let Some(importee_idx) = rec.resolved_module else {
+        continue;
+      };
+      if rec.meta.contains(ImportRecordMeta::IsRequireUnused) {
+        continue;
+      }
+      let Some(importee) = self.link_output.module_table[importee_idx].as_normal() else {
+        continue;
+      };
+      if matches!(importee.exports_kind, ExportsKind::CommonJs) {
+        continue;
+      }
+      let Some(canonical_name) =
+        self.renamer.get_canonical_name(importee.namespace_object_ref).cloned()
+      else {
+        continue;
+      };
+      if let Some(binding) = self.scoping.get_binding(root_scope_id, canonical_name.as_str().into())
       {
         let local_ref: SymbolRef = (self.module_idx, binding).into();
         if self.link_output.symbol_db.canonical_ref_for(local_ref).owner == self.module_idx {

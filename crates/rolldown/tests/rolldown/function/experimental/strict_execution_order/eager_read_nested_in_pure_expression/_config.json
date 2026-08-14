@@ -1,0 +1,31 @@
+{
+  "_comment": "The reader's only statement is an IIFE that Oxc certifies side-effect-free, with a global read nested in its body. On-demand wrapping must still treat the reader as execution-order-sensitive: unwrapped, the reader chunk's ESM import is hoisted above the entry's statements and reads the global before patch.js assigns it.",
+  "configName": "on-demand",
+  "config": {
+    "input": [
+      {
+        "name": "main",
+        "import": "./main.js"
+      }
+    ],
+    "strictExecutionOrder": true,
+    "codeSplitting": {
+      "groups": [
+        {
+          "name": "reader",
+          "test": "[\\\\/]reader\\.js$",
+          "includeDependenciesRecursively": false
+        }
+      ]
+    },
+    "experimental": {
+      "onDemandWrapping": true
+    }
+  },
+  "configVariants": [
+    {
+      "_configName": "wrap-all",
+      "onDemandWrapping": false
+    }
+  ]
+}

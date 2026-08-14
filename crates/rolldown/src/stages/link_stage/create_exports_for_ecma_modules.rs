@@ -3,14 +3,14 @@ use rolldown_common::{
   PreserveEntrySignatures, SharedNormalizedBundlerOptions, StmtInfo, StmtInfoMeta, TaggedSymbolRef,
   WrapKind, dynamic_import_usage::DynamicImportExportsUsage,
 };
-use rustc_hash::FxHashMap;
+use rustc_hash::{FxHashMap, FxHashSet};
 use smallvec::smallvec;
 
 use crate::{
   types::linking_metadata::LinkingMetadata, utils::chunk::normalize_preserve_entry_signature,
 };
 
-use super::LinkStage;
+use super::{LinkStage, bind_imports_and_exports::record_star_reexport_path};
 
 fn init_entry_point_stmt_info(
   meta: &mut LinkingMetadata,
@@ -33,18 +33,14 @@ fn init_entry_point_stmt_info(
     normalize_preserve_entry_signature(overrode_preserve_entry_signature_map, options, entry.idx);
 
   if !matches!(normalized_entry_signature, PreserveEntrySignatures::False) || is_dynamic_imported {
-    referenced_symbols.extend(
-      meta
-        .referenced_canonical_exports_symbols(
-          entry.idx,
-          entry.kind,
-          dynamic_import_exports_usage_map,
-          true,
-        )
-        .map(|(_, resolved_export)| {
-          (resolved_export.symbol_ref, resolved_export.came_from_commonjs)
-        }),
-    );
+    for (_, resolved_export) in meta.referenced_canonical_exports_symbols(
+      entry.idx,
+      entry.kind,
+      dynamic_import_exports_usage_map,
+      true,
+    ) {
+      referenced_symbols.push((resolved_export.symbol_ref, resolved_export.came_from_commonjs));
+    }
   }
   // Entry chunk need to generate exports, so we need reference to all exports to make sure they are included in tree-shaking.
 
@@ -133,6 +129,45 @@ impl LinkStage<'_> {
           ..Default::default()
         };
         stmt_infos.replace_namespace_stmt_info(namespace_stmt_info);
+      }
+    }
+
+    if !self.options.is_strict_execution_order_enabled() {
+      return;
+    }
+    for (entry_idx, entries) in &self.entries {
+      let Some(entry) = entries.first() else {
+        continue;
+      };
+      let normalized_entry_signature = normalize_preserve_entry_signature(
+        &self.overrode_preserve_entry_signature_map,
+        self.options,
+        *entry_idx,
+      );
+      let is_dynamic_imported = self.module_table.modules[*entry_idx]
+        .as_normal()
+        .is_some_and(|module| !module.dynamic_importers.is_empty());
+      if matches!(normalized_entry_signature, PreserveEntrySignatures::False)
+        && !is_dynamic_imported
+      {
+        continue;
+      }
+      let meta = &self.metas[*entry_idx];
+      for (name, resolved_export) in meta.referenced_canonical_exports_symbols(
+        *entry_idx,
+        entry.kind,
+        &self.dynamic_import_exports_usage_map,
+        true,
+      ) {
+        record_star_reexport_path(
+          *entry_idx,
+          name,
+          resolved_export.symbol_ref,
+          &self.module_table.modules,
+          &self.metas,
+          &mut self.star_reexport_records_by_imported_symbol,
+          &mut FxHashSet::default(),
+        );
       }
     }
   }

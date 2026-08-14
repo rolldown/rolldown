@@ -1,8 +1,8 @@
 use oxc::allocator::Box;
-use oxc::ast::AstBuilder;
 use oxc::ast::ast::{
   Expression, JSXIdentifier, JSXMemberExpression, JSXMemberExpressionObject, StaticMemberExpression,
 };
+use oxc::ast::builder::AstBuilder;
 
 pub trait JsxExt<'ast> {
   type AstKind;

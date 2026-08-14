@@ -1,7 +1,6 @@
 pub mod binding_bundler_options;
 pub mod binding_client_hmr_update;
 pub mod binding_error_stage;
-pub mod binding_hmr_boundary_output;
 pub mod binding_hmr_update;
 pub mod binding_log;
 pub mod binding_log_level;
@@ -11,6 +10,7 @@ pub mod binding_normalized_options;
 pub mod binding_output_asset;
 pub mod binding_output_chunk;
 pub mod binding_outputs;
+pub mod binding_plugin_timings;
 pub mod binding_rebuild_strategy;
 pub mod binding_rendered_chunk;
 pub mod binding_rendered_module;

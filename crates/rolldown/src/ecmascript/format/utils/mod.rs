@@ -1,11 +1,11 @@
 use itertools::Itertools;
-use rolldown_common::{ExternalModule, NormalModule};
+use rolldown_common::ExternalModule;
 use rolldown_sourcemap::SourceJoiner;
 
 use crate::{
   ecmascript::ecma_generator::{RenderedModuleSource, RenderedModuleSources},
   types::generator::GenerateContext,
-  utils::external_import_interop::external_import_needs_interop,
+  utils::external_import_interop::{ChunkAssignments, chunk_external_interop_modes},
 };
 
 pub mod namespace;
@@ -67,9 +67,17 @@ pub fn render_chunk_external_imports<'a>(
         .canonical_name_for_or_original(importee.namespace_ref, &ctx.chunk.canonical_names);
 
       if ctx.link_output.used_external_symbols.contains(&importee.namespace_ref) {
-        // Check if this import needs __toESM
-        let needs_interop = external_import_needs_interop(named_imports);
-        if needs_interop {
+        // `named_imports` only covers imports written by modules that live in this chunk, so the
+        // mode set also folds in what the inclusion pass recorded for observers landing here.
+        // Deconflicting derives the mixed-mode binding names from this same call.
+        let interop_modes = chunk_external_interop_modes(
+          ctx.link_output,
+          ChunkAssignments::from_graph(ctx.chunk_graph),
+          ctx.chunk_idx,
+          importee.namespace_ref,
+          Some(named_imports.as_slice()),
+        );
+        if let Some(interop_modes) = interop_modes {
           let to_esm_fn_name = ctx.link_output.symbol_db.canonical_name_for_or_original(
             ctx.link_output.runtime.resolve_symbol("__toESM"),
             &ctx.chunk.canonical_names,
@@ -93,12 +101,10 @@ pub fn render_chunk_external_imports<'a>(
             import_code.push_str(external_module_symbol_name);
             import_code.push_str(");\n");
           } else {
-            // Single-mode: check if any importer is ESM for node-mode flag
-            let is_node_esm = named_imports.iter().any(|(importer_idx, _)| {
-              ctx.link_output.module_table[*importer_idx]
-                .as_normal()
-                .is_some_and(NormalModule::should_consider_node_esm_spec_for_static_import)
-            });
+            // Single-mode. Both flags can still be set: deconflicting suppresses the node binding
+            // when no ESM-format module in the chunk would read it (`chunk_has_node_esm_reader`).
+            // Those readers take this plain binding, so non-Node is the mode that matches them.
+            let is_node_esm = interop_modes.node_esm && !interop_modes.non_node_esm;
             import_code.push_str(external_module_symbol_name);
             import_code.push_str(" = ");
             import_code.push_str(to_esm_fn_name);
@@ -144,7 +150,11 @@ pub fn render_modules_with_peek_runtime_module_at_first<'a>(
     _ => {}
   }
 
-  source_joiner.append_source(import_code);
+  // An empty import prelude is not a source slot. Appending it would make `SourceJoiner` insert a
+  // separator line before the modules.
+  if !import_code.is_empty() {
+    source_joiner.append_source(import_code);
+  }
 
   // chunk content
   module_sources_peekable.for_each(

@@ -1,4 +1,5 @@
 use std::{
+  borrow::Cow,
   ffi::OsString,
   fs,
   path::{self, Path, PathBuf},
@@ -337,6 +338,33 @@ impl Resolver {
     } else {
       inner_resolver.resolve(&self.root, &path_with_prefix)
     }
+  }
+
+  /// Apply the tsconfig `paths`/`baseUrl` alias mapping to `specifier` without checking whether the mapped target exists
+  /// on disk. Used to resolve `import.meta.glob` specifiers, where the mapped path does not point at a real file.
+  pub fn resolve_tsconfig_path_alias(
+    &self,
+    importer: &str,
+    specifier: &str,
+  ) -> Result<Vec<String>, oxc_resolver::ResolveError> {
+    let _guard = self.lock.lock_for_update();
+
+    // check if `is_absolute` to avoid extra `join` overhead
+    let importer_path = if Path::new(importer).is_absolute() {
+      Cow::Borrowed(Path::new(importer))
+    } else {
+      Cow::Owned(self.root.join(importer))
+    };
+    let Some(tsconfig) = self.inner.find_tsconfig(importer_path.as_ref())? else {
+      return Ok(Vec::new());
+    };
+    Ok(
+      tsconfig
+        .resolve_path_alias_or_base_url(specifier)
+        .into_iter()
+        .map(|p| normalize_path(&p.to_string_lossy()).into_owned())
+        .collect(),
+    )
   }
 
   pub fn normalize_oxc_resolver_result(

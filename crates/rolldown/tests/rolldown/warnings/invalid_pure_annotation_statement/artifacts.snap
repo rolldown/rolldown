@@ -15,7 +15,9 @@ source: crates/rolldown_testing/src/integration_test.rs
    │ 
    │ Help 1: If you intended to mark all calls of this function as side-effect-free, use `/* @__NO_SIDE_EFFECTS__ */` before the function declaration.
    │ 
-   │ Help 2: For more information on how to use pure annotations correctly, check the documentation: https://rolldown.rs/in-depth/dead-code-elimination#pure
+   │ Help 2: Correct annotation placement: https://rolldown.rs/in-depth/dead-code-elimination#pure
+   │ 
+   │ Help 3: Disable with `checks.invalidAnnotation: false`.
 ───╯
 
 ```

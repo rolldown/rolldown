@@ -7,6 +7,24 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 // HIDDEN [\0rolldown/runtime.js]
+__rolldown_runtime__.registerGraph({
+	ids: [
+		"a.js",
+		"b.js",
+		"main.js"
+	],
+	localCount: 3,
+	edges: [
+		[],
+		[],
+		[0, 1]
+	],
+	dynamicEdges: [
+		[],
+		[],
+		[]
+	]
+});
 //#region a.js
 var a_exports = /* @__PURE__ */ __exportAll({});
 __rolldown_runtime__.createModuleHotContext("a.js");

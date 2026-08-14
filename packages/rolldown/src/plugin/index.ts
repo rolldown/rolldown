@@ -7,7 +7,10 @@ import type { DefinedHookNames } from '../constants/plugin';
 import type { DEFINED_HOOK_NAMES } from '../constants/plugin';
 import type { LogLevel, RolldownLog } from '../log/logging';
 import type { NormalizedInputOptions } from '../options/normalized-input-options';
-import type { NormalizedOutputOptions } from '../options/normalized-output-options';
+import type {
+  InternalModuleFormat,
+  NormalizedOutputOptions,
+} from '../options/normalized-output-options';
 import type { ModuleInfo } from '../types/module-info';
 import type { OutputBundle } from '../types/output-bundle';
 import type { RenderedChunk } from '../types/rolldown-output';
@@ -176,6 +179,46 @@ export interface SourceDescription
   moduleType?: ModuleType;
 }
 
+/**
+ * Argument passed to the {@linkcode FunctionPluginHooks.resolveFileUrl | resolveFileUrl} hook.
+ *
+ * @category Plugin APIs
+ */
+export interface ResolveFileUrlArgs {
+  /**
+   * The preliminary filename of the chunk containing the reference with hash placeholders.
+   * Similar to {@linkcode RenderedChunk.fileName | chunk.fileName}.
+   */
+  chunkId: string;
+  /** The filename of the emitted file, relative to the output directory. */
+  fileName: string;
+  /** The rendered output format. */
+  format: InternalModuleFormat;
+  /**
+   * The id of the original module this file was referenced by
+   * using the `import.meta.ROLLDOWN_FILE_URL_*` reference.
+   */
+  moduleId: string;
+  /** The reference id of this file. */
+  referenceId: string;
+  /**
+   * The path of the emitted file, relative to the chunk the file is referenced from.
+   *
+   * This path will contain no leading `./`, but may contain a leading `../`.
+   */
+  relativePath: string;
+  /**
+   * The `urlId` of an `import.meta.ROLLDOWN_FILE_URL_<referenceId>_<urlId>` reference,
+   * or `undefined` when the reference has no `urlId`.
+   *
+   * This is a rolldown-specific extension: the Rollup-compatible
+   * `import.meta.ROLLUP_FILE_URL_<referenceId>` form never carries a `urlId`.
+   *
+   * @experimental This API may change in minor versions.
+   */
+  urlId?: string | undefined;
+}
+
 /** @inline */
 export interface ResolveIdExtraOptions {
   /**
@@ -248,6 +291,7 @@ export interface FunctionPluginHooks {
    *
    * {@include ./docs/plugin-hooks-onlog.md}
    *
+   * @kind sync sequential
    * @group Build Hooks
    */
   [DEFINED_HOOK_NAMES.onLog]: (
@@ -265,6 +309,7 @@ export interface FunctionPluginHooks {
    * the {@linkcode buildStart} hook as that hook has access to the options
    * after the transformations from all `options` hooks have been taken into account.
    *
+   * @kind async sequential
    * @group Build Hooks
    */
   [DEFINED_HOOK_NAMES.options]: (
@@ -284,6 +329,7 @@ export interface FunctionPluginHooks {
    * the {@linkcode renderStart} hook as this hook has access to the output options
    * after the transformations from all `outputOptions` hooks have been taken into account.
    *
+   * @kind sync sequential
    * @group Build Hooks
    */
   [DEFINED_HOOK_NAMES.outputOptions]: (
@@ -296,6 +342,7 @@ export interface FunctionPluginHooks {
    *
    * This is the recommended hook to use when you need access to the options passed to {@linkcode rolldown | rolldown()} as it takes the transformations by all options hooks into account and also contains the right default values for unset options.
    *
+   * @kind async parallel
    * @group Build Hooks
    */
   [DEFINED_HOOK_NAMES.buildStart]: (this: PluginContext, options: NormalizedInputOptions) => void;
@@ -315,6 +362,7 @@ export interface FunctionPluginHooks {
    * Rolldown will continue with the {@linkcode load} and {@linkcode transform} hooks for that
    * module that may override these values and should take precedence if they do so.
    *
+   * @kind async first
    * @group Build Hooks
    */
   [DEFINED_HOOK_NAMES.resolveId]: (
@@ -347,6 +395,7 @@ export interface FunctionPluginHooks {
    * @deprecated
    * This hook exists only for Rollup compatibility. Please use {@linkcode resolveId} instead.
    *
+   * @kind async first
    * @group Build Hooks
    */
   [DEFINED_HOOK_NAMES.resolveDynamicImport]: (
@@ -374,6 +423,7 @@ export interface FunctionPluginHooks {
    *
    * You can use {@linkcode PluginContext.getModuleInfo | this.getModuleInfo()} to find out the previous values of `meta`, `moduleSideEffects` inside this hook.
    *
+   * @kind async first
    * @group Build Hooks
    */
   [DEFINED_HOOK_NAMES.load]: (this: PluginContext, id: string) => MaybePromise<LoadResult>;
@@ -387,6 +437,7 @@ export interface FunctionPluginHooks {
    *
    * {@include ./docs/plugin-hooks-transform.md}
    *
+   * @kind async sequential
    * @group Build Hooks
    */
   [DEFINED_HOOK_NAMES.transform]: (
@@ -410,6 +461,7 @@ export interface FunctionPluginHooks {
    * may be incomplete as additional importers could be discovered later.
    * If you need this information, use the {@linkcode buildEnd} hook.
    *
+   * @kind async parallel
    * @group Build Hooks
    */
   [DEFINED_HOOK_NAMES.moduleParsed]: (this: PluginContext, moduleInfo: ModuleInfo) => void;
@@ -418,6 +470,7 @@ export interface FunctionPluginHooks {
    * Called when Rolldown has finished bundling, but before Output Generation Hooks.
    * If an error occurred during the build, it is passed on to this hook.
    *
+   * @kind async parallel
    * @group Build Hooks
    */
   [DEFINED_HOOK_NAMES.buildEnd]: (
@@ -441,6 +494,7 @@ export interface FunctionPluginHooks {
    * plugins that can be used as output plugins, i.e. plugins that only use generate phase hooks,
    * can get access to them.
    *
+   * @kind async parallel
    * @group Output Generation Hooks
    */
   [DEFINED_HOOK_NAMES.renderStart]: (
@@ -459,6 +513,7 @@ export interface FunctionPluginHooks {
    * That means if you add or remove imports or exports in this hook, you should update
    * {@linkcode RenderedChunk.imports | imports}, {@linkcode RenderedChunk.importedBindings | importedBindings} and/or {@linkcode RenderedChunk.exports | exports} accordingly.
    *
+   * @kind async sequential
    * @group Output Generation Hooks
    */
   [DEFINED_HOOK_NAMES.renderChunk]: (
@@ -484,12 +539,23 @@ export interface FunctionPluginHooks {
    *
    * {@include ./docs/plugin-hooks-augmentchunkhash.md}
    *
+   * @kind sync sequential
    * @group Output Generation Hooks
    */
   [DEFINED_HOOK_NAMES.augmentChunkHash]: (
     this: PluginContext,
     chunk: RenderedChunk,
   ) => string | void;
+
+  /**
+   * {@include ./docs/plugin-hooks-resolvefileurl.md}
+   *
+   * @group Output Generation Hooks
+   */
+  [DEFINED_HOOK_NAMES.resolveFileUrl]: (
+    this: PluginContext,
+    args: ResolveFileUrlArgs,
+  ) => string | NullValue;
 
   /**
    * Called when Rolldown encounters an error during
@@ -499,6 +565,7 @@ export interface FunctionPluginHooks {
    * To get notified when generation completes successfully, use the
    * {@linkcode generateBundle} hook.
    *
+   * @kind async parallel
    * @group Output Generation Hooks
    */
   [DEFINED_HOOK_NAMES.renderError]: (
@@ -516,6 +583,7 @@ export interface FunctionPluginHooks {
    *
    * {@include ./docs/plugin-hooks-generatebundle.md}
    *
+   * @kind async sequential
    * @group Output Generation Hooks
    */
   [DEFINED_HOOK_NAMES.generateBundle]: (
@@ -530,6 +598,7 @@ export interface FunctionPluginHooks {
    * Called only at the end of {@linkcode RolldownBuild.write | bundle.write()} once
    * all files have been written.
    *
+   * @kind async parallel
    * @group Output Generation Hooks
    */
   [DEFINED_HOOK_NAMES.writeBundle]: (
@@ -552,6 +621,7 @@ export interface FunctionPluginHooks {
    * {@linkcode PluginContextMeta.watchMode | this.meta.watchMode} in this hook and perform
    * the necessary cleanup for watch mode in closeWatcher.
    *
+   * @kind async parallel
    * @group Output Generation Hooks
    */
   [DEFINED_HOOK_NAMES.closeBundle]: (
@@ -570,6 +640,7 @@ export interface FunctionPluginHooks {
    *
    * If you need to be notified immediately when a file changed, you can use the {@linkcode WatcherOptions.onInvalidate | watch.onInvalidate} option.
    *
+   * @kind async parallel
    * @group Build Hooks
    */
   [DEFINED_HOOK_NAMES.watchChange]: (
@@ -583,6 +654,7 @@ export interface FunctionPluginHooks {
    *
    * This hook cannot be used by output plugins.
    *
+   * @kind async parallel
    * @group Build Hooks
    */
   [DEFINED_HOOK_NAMES.closeWatcher]: (this: PluginContext) => void;
@@ -608,9 +680,12 @@ export type ObjectHookMeta = {
  * @category Plugin APIs
  */
 export type ObjectHook<T, O = {}> = T | ({ handler: T } & ObjectHookMeta & O);
-type SyncPluginHooks = DefinedHookNames['augmentChunkHash' | 'onLog' | 'outputOptions'];
+type SyncPluginHooks = DefinedHookNames[
+  | 'augmentChunkHash'
+  | 'onLog'
+  | 'outputOptions'
+  | 'resolveFileUrl'];
 // | 'renderDynamicImport'
-// | 'resolveFileUrl'
 // | 'resolveImportMeta'
 
 /** @category Plugin APIs */
@@ -620,7 +695,7 @@ type FirstPluginHooks = DefinedHookNames[
   | 'load'
   // | 'renderDynamicImport'
   | 'resolveDynamicImport'
-  // | 'resolveFileUrl'
+  | 'resolveFileUrl'
   | 'resolveId'];
 // | 'resolveImportMeta'
 // | 'shouldTransformCachedModule'
@@ -638,24 +713,28 @@ interface AddonHooks {
   /**
    * A hook equivalent to {@linkcode OutputOptions.banner | output.banner} option.
    *
+   * @kind async sequential
    * @group Output Generation Hooks
    */
   [DEFINED_HOOK_NAMES.banner]: AddonHook;
   /**
    * A hook equivalent to {@linkcode OutputOptions.footer | output.footer} option.
    *
+   * @kind async sequential
    * @group Output Generation Hooks
    */
   [DEFINED_HOOK_NAMES.footer]: AddonHook;
   /**
    * A hook equivalent to {@linkcode OutputOptions.intro | output.intro} option.
    *
+   * @kind async sequential
    * @group Output Generation Hooks
    */
   [DEFINED_HOOK_NAMES.intro]: AddonHook;
   /**
    * A hook equivalent to {@linkcode OutputOptions.outro | output.outro} option.
    *
+   * @kind async sequential
    * @group Output Generation Hooks
    */
   [DEFINED_HOOK_NAMES.outro]: AddonHook;
@@ -669,7 +748,7 @@ type OutputPluginHooks = DefinedHookNames[
   // | 'renderDynamicImport'
   | 'renderError'
   | 'renderStart'
-  // | 'resolveFileUrl'
+  | 'resolveFileUrl'
   // | 'resolveImportMeta'
   | 'writeBundle'];
 

@@ -88,6 +88,11 @@ function normalizeError(error, locExpected) {
 		// `logSourcemapBroken` is emitted at chunk-collapse time and carries no id.
 		delete clone.id;
 	}
+	if (clone.code === 'FILE_NOT_FOUND') {
+		// Rolldown points at the module containing the `import.meta.ROLLUP_FILE_URL_*` access,
+		// but Rollup's `logFileNotFound` is thrown from the plugin driver and carries no id.
+		delete clone.id;
+	}
 	for (const key in clone) {
 		if (clone[key] === undefined) {
 			delete clone[key];

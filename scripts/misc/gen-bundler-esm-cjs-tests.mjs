@@ -195,12 +195,16 @@ input.works = import('./foo.js').then(foo3 =>
   ////////////////////////////////////////////////////////////////////////////////
   // These should pass but fail
 
+  // NOTE: Upstream expects `foo.default` to be undefined here (Babel/esbuild
+  // behavior). Rolldown deliberately diverges: when a CJS module sets
+  // `__esModule` without an own `default` export, `default` falls back to
+  // `module.exports`, matching `@rollup/plugin-commonjs` (#10360).
   {
-    'entry.js': `import * as foo from './foo.js'\ninput.works = foo.default === void 0 &&\n  foo.bar === 123`,
+    'entry.js': `import * as foo from './foo.js'\ninput.works = foo.default.bar === 123 &&\n  foo.bar === 123`,
     'foo.js': `exports.__esModule = true\nexports.bar = 123`,
   },
   {
-    'entry.js': `import * as foo from './foo.js'\ninput.works =\n  foo[Math.random() < 1 && 'default'] === void 0 &&\n  foo.bar === 123`,
+    'entry.js': `import * as foo from './foo.js'\ninput.works =\n  foo[Math.random() < 1 && 'default'].bar === 123 &&\n  foo.bar === 123`,
     'foo.js': `exports.__esModule = true\nexports.bar = 123`,
   },
 
@@ -240,12 +244,16 @@ input.works = import('./foo.js').then(foo3 =>
     'foo.js': `export let __esModule = 0`,
   },
 
+  // NOTE: Upstream expects `foo` to be undefined here (Babel/esbuild behavior).
+  // Rolldown deliberately diverges: when a CJS module sets `__esModule` without
+  // an own `default` export, the default import falls back to `module.exports`,
+  // matching `@rollup/plugin-commonjs` (#10360).
   {
-    'entry.js': `import foo from './foo.js'\ninput.works = foo === void 0`,
+    'entry.js': `import foo from './foo.js'\ninput.works = foo.bar === 123 &&\n  foo.__esModule === true`,
     'foo.js': `module.exports = { bar: 123, __esModule: true }`,
   },
   {
-    'entry.js': `import foo from './foo.js'\ninput.works = foo === void 0`,
+    'entry.js': `import foo from './foo.js'\ninput.works = foo.bar === 123 &&\n  foo.__esModule === true`,
     'foo.js': `module[Math.random() < 1 && 'exports'] =\n  { bar: 123, __esModule: true }`,
   },
 
@@ -278,21 +286,25 @@ input.works = import('./foo.js').then(foo3 =>
     'foo.js': `module[Math.random() < 1 && 'exports'] =\n  { default: { bar: 123 }, __esModule: true }`,
   },
 
+  // NOTE: Upstream expects no `default` key here (Babel/esbuild behavior).
+  // Rolldown deliberately diverges: when a CJS module sets `__esModule` without
+  // an own `default` export, an enumerable `default` pointing at
+  // `module.exports` is added, matching `@rollup/plugin-commonjs` (#10360).
   {
-    'entry.js': `import * as ns from './foo.js'\nlet keys = Object.keys(ns)\ninput.works = ns.foo === 123 &&\n  keys.includes('foo') && !keys.includes('default')`,
+    'entry.js': `import * as ns from './foo.js'\nlet keys = Object.keys(ns)\ninput.works = ns.foo === 123 &&\n  keys.includes('foo') && keys.includes('default')`,
     'foo.js': `exports.__esModule = true\nexports.foo = 123`,
   },
   {
-    'entry.js': `import * as ns from './foo.js'\nlet keys = Object.keys(ns)\ninput.works = ns.foo === 123 &&\n  keys.includes('foo') && !keys.includes('default')`,
+    'entry.js': `import * as ns from './foo.js'\nlet keys = Object.keys(ns)\ninput.works = ns.foo === 123 &&\n  keys.includes('foo') && keys.includes('default')`,
     'foo.js': `exports[Math.random() < 1 && '__esModule'] = true\nexports[Math.random() < 1 && 'foo'] = 123`,
   },
 
   {
-    'entry.js': `import * as ns from './foo.js'\ninput.works = ns.foo === 123 &&\n  {}.hasOwnProperty.call(ns, 'foo') &&\n  !{}.hasOwnProperty.call(ns, 'default')`,
+    'entry.js': `import * as ns from './foo.js'\ninput.works = ns.foo === 123 &&\n  {}.hasOwnProperty.call(ns, 'foo') &&\n  {}.hasOwnProperty.call(ns, 'default')`,
     'foo.js': `exports.__esModule = true\nexports.foo = 123`,
   },
   {
-    'entry.js': `import * as ns from './foo.js'\ninput.works = ns.foo === 123 &&\n  {}.hasOwnProperty.call(ns, 'foo') &&\n  !{}.hasOwnProperty.call(ns, 'default')`,
+    'entry.js': `import * as ns from './foo.js'\ninput.works = ns.foo === 123 &&\n  {}.hasOwnProperty.call(ns, 'foo') &&\n  {}.hasOwnProperty.call(ns, 'default')`,
     'foo.js': `exports[Math.random() < 1 && '__esModule'] = true\nexports[Math.random() < 1 && 'foo'] = 123`,
   },
 

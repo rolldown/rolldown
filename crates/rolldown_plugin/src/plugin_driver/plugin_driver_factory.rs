@@ -4,7 +4,7 @@ use arcstr::ArcStr;
 use dashmap::DashMap;
 use oxc_index::IndexVec;
 use rolldown_common::{
-  ModuleIdx, SharedFileEmitter, SharedModuleInfoDashMap, SharedNormalizedBundlerOptions,
+  ModuleIdx, PluginIdx, SharedFileEmitter, SharedModuleInfoDashMap, SharedNormalizedBundlerOptions,
 };
 use rolldown_resolver::Resolver;
 use rolldown_utils::dashmap::FxDashSet;
@@ -15,9 +15,8 @@ use crate::{
   plugin_context::{NativePluginContextImpl, PluginContextMeta},
   plugin_driver::{ContextLoadCompletionManager, hook_orders::PluginHookOrders},
   type_aliases::{IndexPluginContext, IndexPluginable},
-  types::hook_timing::HookTimingCollector,
+  types::build_timings::BuildTimings,
 };
-use rolldown_error::EventKindSwitcher;
 
 pub struct PluginDriverFactory {
   plugins: Vec<SharedPluginable>,
@@ -52,27 +51,21 @@ impl PluginDriverFactory {
       CONTEXT_hook_resolve_id_trigger = "manual"
     );
 
-    // Create timing collector only if checks.pluginTimings is enabled
-    let hook_timing_collector = if options.checks.contains(EventKindSwitcher::PluginTimings) {
-      Some(Arc::new(HookTimingCollector::default()))
-    } else {
-      None
-    };
+    let should_skip_user_plugins_for_lazy_proxy_modules =
+      options.experimental.dev_mode.as_ref().and_then(|dev_mode| dev_mode.lazy) == Some(true);
 
     Arc::new_cyclic(|plugin_driver| {
       let mut index_plugins = IndexPluginable::with_capacity(self.plugins.len());
       let mut index_contexts = IndexPluginContext::with_capacity(self.plugins.len());
+      let mut lazy_compilation_plugin_idx: Option<PluginIdx> = None;
 
       self.plugins.iter().for_each(|plugin| {
         let plugin_idx = index_plugins.push(Arc::clone(plugin));
         plugin_usage_vec.push(plugin.call_hook_usage());
 
-        // Register plugin in timing collector if enabled (skip internal builtin plugins)
         let plugin_name = plugin.call_name();
-        if let Some(ref collector) = hook_timing_collector {
-          if !plugin_name.starts_with("builtin:") {
-            collector.register_plugin(plugin_idx, ArcStr::from(plugin_name.as_ref()));
-          }
+        if lazy_compilation_plugin_idx.is_none() && plugin_name == "lazy-compilation" {
+          lazy_compilation_plugin_idx = Some(plugin_idx);
         }
 
         index_contexts.push(PluginContext::Native(Arc::new(NativePluginContextImpl {
@@ -97,13 +90,17 @@ impl PluginDriverFactory {
         hook_orders: PluginHookOrders::new(&index_plugins, &plugin_usage_vec),
         plugins: index_plugins,
         contexts: index_contexts,
+        should_skip_user_plugins_for_lazy_proxy_modules,
+        lazy_compilation_plugin_idx,
         file_emitter: Arc::clone(file_emitter),
         watch_files,
         module_infos,
         transform_dependencies,
         context_load_completion_manager: ContextLoadCompletionManager::default(),
         tx,
-        hook_timing_collector: hook_timing_collector.clone(),
+        // The JavaScript side registers this callback only when it is measuring, so its
+        // presence is what says a report is coming and the clocks are worth keeping.
+        build_timings: BuildTimings::new(options.plugin_timings.is_some()),
       }
     })
   }

@@ -79,6 +79,11 @@ impl ScanStageCache {
     self.snapshot.as_ref().unwrap()
   }
 
+  /// Non-panicking variant of [`Self::get_snapshot`].
+  pub fn snapshot(&self) -> Option<&NormalizedScanStageOutput> {
+    self.snapshot.as_ref()
+  }
+
   /// Between builds the cache is either empty (no snapshot: only a full scan
   /// is possible) or a valid graph any partial scan can build on. A failed
   /// partial scan keeps the latter true by reverting its mutations
@@ -150,7 +155,7 @@ impl ScanStageCache {
       if let rolldown_common::Module::Normal(normal_module) = &new_module {
         self
           .module_idx_by_abs_path
-          .insert(normal_module.id.as_arc_str().to_slash().unwrap().into(), normal_module.idx);
+          .insert(ArcStr::from(normal_module.id.as_arc_str().to_slash()), normal_module.idx);
       }
       // Update `module_idx_by_stable_id`
       self.module_idx_by_stable_id.insert(new_module.stable_id().clone(), new_module.idx());
@@ -270,9 +275,12 @@ impl ScanStageCache {
         user_defined_entry_modules.insert(idx);
       }
     }
-    // Entries emitted via `emitFile(type: 'chunk')` are only discovered by
-    // full scans (partial scans skip `buildStart`); their rows persist in
-    // `entry_points`, so keep their modules flagged as entries too.
+    // Entries emitted via `emitFile(type: 'chunk')` may not be re-discovered by a
+    // partial scan. The HMR stage's partial scans bypass `ScanStage`, so `buildStart`
+    // never runs there. `ScanStage` partial scans do run it, but a plugin may emit
+    // from `resolveId`/`load`/`transform`/`moduleParsed`, and those only re-run for
+    // re-scanned modules. Their rows persist in `entry_points`, so keep their
+    // modules flagged as entries too.
     for entry in &cache.entry_points {
       if matches!(entry.kind, rolldown_common::EntryPointKind::EmittedUserDefined) {
         user_defined_entry_modules.insert(entry.idx);
@@ -301,7 +309,7 @@ impl ScanStageCache {
 
     for module in &build_snapshot.module_table.modules {
       if let rolldown_common::Module::Normal(normal_module) = module {
-        let filename = normal_module.id.as_arc_str().to_slash().unwrap().into();
+        let filename = ArcStr::from(normal_module.id.as_arc_str().to_slash());
         let module_idx = normal_module.idx;
         self.module_idx_by_abs_path.insert(filename, module_idx);
       }

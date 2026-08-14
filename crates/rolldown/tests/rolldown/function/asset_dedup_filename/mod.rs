@@ -3,7 +3,10 @@ use std::{borrow::Cow, sync::Arc};
 use arcstr::ArcStr;
 use rolldown::{AssetFilenamesOutputOption, Bundler, BundlerOptions, InputItem};
 use rolldown_common::{EmittedAsset, Output, OutputAsset};
-use rolldown_plugin::{HookUsage, Plugin, PluginContext};
+use rolldown_plugin::{
+  __inner::SharedPluginable, HookRenderChunkArgs, HookRenderChunkReturn, HookUsage, Plugin,
+  PluginContext,
+};
 
 /// Identical content shared by every deduplicated asset; only the name varies.
 const SHARED_SOURCE: &str = "shared";
@@ -82,8 +85,104 @@ impl Plugin for EmitPlugin {
   }
 }
 
+/// Emits the configured assets from `render_chunk`, i.e. during the output phase,
+/// exercising the first-emitted-wins path that keeps `get_file_name` stable for Vite.
+#[derive(Debug)]
+struct RenderChunkEmitPlugin {
+  emits: Vec<Emit>,
+}
+
+impl Plugin for RenderChunkEmitPlugin {
+  fn name(&self) -> Cow<'static, str> {
+    "render-chunk-emit".into()
+  }
+
+  fn register_hook_usage(&self) -> HookUsage {
+    HookUsage::RenderChunk
+  }
+
+  async fn render_chunk(
+    &self,
+    ctx: &PluginContext,
+    _args: &HookRenderChunkArgs<'_>,
+  ) -> HookRenderChunkReturn {
+    for emit in &self.emits {
+      ctx.emit_file(emit.to_emitted(), None, None)?;
+    }
+    Ok(None)
+  }
+}
+
+/// Emits the configured assets from `build_end`, the last build-phase hook. It runs after the
+/// module loader is torn down but is still the build phase, so dedup keeps shortest-name-wins.
+#[derive(Debug)]
+struct BuildEndEmitPlugin {
+  emits: Vec<Emit>,
+}
+
+impl Plugin for BuildEndEmitPlugin {
+  fn name(&self) -> Cow<'static, str> {
+    "build-end-emit".into()
+  }
+
+  fn register_hook_usage(&self) -> HookUsage {
+    HookUsage::BuildEnd
+  }
+
+  async fn build_end(
+    &self,
+    ctx: &PluginContext,
+    _args: Option<&rolldown_plugin::HookBuildEndArgs<'_>>,
+  ) -> rolldown_plugin::HookNoopReturn {
+    for emit in &self.emits {
+      ctx.emit_file(emit.to_emitted(), None, None)?;
+    }
+    Ok(())
+  }
+}
+
+/// Emits `build_emits` from `build_start` (build phase) and `render_emits` from `render_chunk`
+/// (output phase), to exercise cross-phase deduplication of same-source assets.
+#[derive(Debug)]
+struct CrossPhaseEmitPlugin {
+  build_emits: Vec<Emit>,
+  render_emits: Vec<Emit>,
+}
+
+impl Plugin for CrossPhaseEmitPlugin {
+  fn name(&self) -> Cow<'static, str> {
+    "cross-phase-emit".into()
+  }
+
+  fn register_hook_usage(&self) -> HookUsage {
+    HookUsage::BuildStart | HookUsage::RenderChunk
+  }
+
+  async fn build_start(
+    &self,
+    ctx: &PluginContext,
+    _args: &rolldown_plugin::HookBuildStartArgs<'_>,
+  ) -> rolldown_plugin::HookNoopReturn {
+    for emit in &self.build_emits {
+      ctx.emit_file(emit.to_emitted(), None, None)?;
+    }
+    Ok(())
+  }
+
+  async fn render_chunk(
+    &self,
+    ctx: &PluginContext,
+    _args: &HookRenderChunkArgs<'_>,
+  ) -> HookRenderChunkReturn {
+    for emit in &self.render_emits {
+      ctx.emit_file(emit.to_emitted(), None, None)?;
+    }
+    Ok(None)
+  }
+}
+
 /// Bundles a dummy entry with `plugin` and returns the emitted output assets.
-async fn bundle(plugin: EmitPlugin) -> Vec<Arc<OutputAsset>> {
+async fn bundle(plugin: SharedPluginable) -> Vec<Arc<OutputAsset>> {
   let mut bundler = Bundler::with_plugins(
     BundlerOptions {
       input: Some(vec![InputItem {
@@ -98,7 +197,7 @@ async fn bundle(plugin: EmitPlugin) -> Vec<Arc<OutputAsset>> {
       )),
       ..Default::default()
     },
-    vec![Arc::new(plugin)],
+    vec![plugin],
   )
   .expect("failed to create bundler");
 
@@ -116,11 +215,19 @@ async fn bundle(plugin: EmitPlugin) -> Vec<Arc<OutputAsset>> {
 }
 
 async fn emit_assets(emits: Vec<Emit>) -> Vec<Arc<OutputAsset>> {
-  bundle(EmitPlugin { emits, concurrent: false }).await
+  bundle(Arc::new(EmitPlugin { emits, concurrent: false })).await
 }
 
 async fn emit_assets_concurrently(emits: Vec<Emit>) -> Vec<Arc<OutputAsset>> {
-  bundle(EmitPlugin { emits, concurrent: true }).await
+  bundle(Arc::new(EmitPlugin { emits, concurrent: true })).await
+}
+
+async fn emit_assets_in_render_chunk(emits: Vec<Emit>) -> Vec<Arc<OutputAsset>> {
+  bundle(Arc::new(RenderChunkEmitPlugin { emits })).await
+}
+
+async fn emit_assets_in_build_end(emits: Vec<Emit>) -> Vec<Arc<OutputAsset>> {
+  bundle(Arc::new(BuildEndEmitPlugin { emits })).await
 }
 
 /// The surviving file name must be deterministic across emission orders and is
@@ -201,4 +308,63 @@ async fn concurrent_dedup_keeps_every_name() {
 
   assert_eq!(assets.len(), 1, "identical content deduplicates into one asset");
   assert_eq!(assets[0].names.len(), COUNT, "no concurrently-emitted name may be lost");
+}
+
+/// In the output phase a duplicate must not change the survivor filename, even a shorter one,
+/// so a name already read via `get_file_name` and cached by a consumer (Vite) stays valid.
+/// This is the vitejs/vite#22856 fix. Contrast with the build-phase shortest-wins tests above.
+#[tokio::test(flavor = "multi_thread")]
+async fn output_phase_keeps_first_emitted_name_not_shortest() {
+  // Emit the longer name first, then a strictly shorter one, during renderChunk.
+  let assets =
+    emit_assets_in_render_chunk(vec![Emit::dedup("aaaa.txt"), Emit::dedup("z.txt")]).await;
+
+  assert_eq!(assets.len(), 1, "identical content deduplicates into one asset");
+  assert!(
+    assets[0].filename.starts_with("assets/aaaa-"),
+    "first emitted name must win in the output phase and never be mutated to the shorter one, got: {}",
+    assets[0].filename
+  );
+  // Every duplicate's name is still collected on the survivor.
+  let names: Vec<&str> = assets[0].names.iter().map(String::as_str).collect();
+  assert_eq!(
+    names,
+    ["z.txt", "aaaa.txt"],
+    "all names collected, sorted shortest-then-lexicographic"
+  );
+}
+
+/// `buildEnd` is the last build-phase hook, so its emissions still get shortest-name dedup.
+/// Emitting the shorter name second must still win, unlike the output-phase test above.
+#[tokio::test(flavor = "multi_thread")]
+async fn build_end_emissions_still_use_shortest_name() {
+  let assets = emit_assets_in_build_end(vec![Emit::dedup("aaaa.txt"), Emit::dedup("z.txt")]).await;
+
+  assert_eq!(assets.len(), 1, "identical content deduplicates into one asset");
+  assert!(
+    assets[0].filename.starts_with("assets/z-"),
+    "buildEnd is still the build phase, so the shortest name must win, got: {}",
+    assets[0].filename
+  );
+}
+
+/// The real vitejs/vite#22856 shape: an asset emitted in the build phase, then a shorter
+/// same-source duplicate in renderChunk. The build-phase name may already be cached by a
+/// consumer, so the shorter output-phase name must not win or mutate the survivor.
+#[tokio::test(flavor = "multi_thread")]
+async fn build_then_output_phase_duplicate_keeps_build_name() {
+  let assets = bundle(Arc::new(CrossPhaseEmitPlugin {
+    build_emits: vec![Emit::dedup("aaaa.txt")],
+    render_emits: vec![Emit::dedup("z.txt")],
+  }))
+  .await;
+
+  assert_eq!(assets.len(), 1, "identical content deduplicates into one asset");
+  assert!(
+    assets[0].filename.starts_with("assets/aaaa-"),
+    "the build-phase name must survive; a shorter output-phase duplicate must not mutate it, got: {}",
+    assets[0].filename
+  );
+  let names: Vec<&str> = assets[0].names.iter().map(String::as_str).collect();
+  assert_eq!(names, ["z.txt", "aaaa.txt"], "both names collected on the survivor");
 }

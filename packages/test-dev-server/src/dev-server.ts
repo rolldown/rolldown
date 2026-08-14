@@ -6,7 +6,6 @@ import serveStatic from 'serve-static';
 import { WebSocketServer } from 'ws';
 import { FullBundleDevEnvironment } from './environments/full-bundle-dev-environment.js';
 import { statusMiddleware } from './middlewares/status.js';
-import { decodeClientMessage } from './utils/decode-client-message.js';
 import type { Logger } from './types/logger.js';
 import type { DevConfig } from './utils/define-dev-config.js';
 import { loadDevConfig } from './utils/load-dev-config.js';
@@ -200,21 +199,8 @@ class DevServer {
         env.disconnectClient(client.id);
         this.#logger.info(`Client ${client.id} disconnected`);
       });
-      ws.on('message', async (rawData) => {
-        const clientMessage = decodeClientMessage(rawData);
-        switch (clientMessage.type) {
-          case 'hmr:invalidate':
-            await env.invalidate(clientMessage.moduleId, client);
-            break;
-          case 'hmr:module-registered':
-            await env.registerModules(client.id, clientMessage.modules);
-            break;
-          default: {
-            const _never: never = clientMessage;
-            void _never;
-          }
-        }
-      });
+      // No 'message' handler on purpose: no upstream state exists under the client-side
+      // HMR design, so inbound messages are dropped without decoding.
     });
   }
 

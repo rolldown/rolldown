@@ -2,7 +2,7 @@ pub mod constructors;
 pub mod diagnostic;
 pub mod events;
 
-use rustc_hash::FxHashMap;
+use rustc_hash::FxHashSet;
 use std::{
   fmt::Display,
   ops::{Deref, DerefMut},
@@ -214,31 +214,110 @@ impl DerefMut for BatchedBuildDiagnostic {
   }
 }
 
+/// A mixed-severity diagnostic accumulator.
+///
+/// Unlike [`BatchedBuildDiagnostic`] — which is error-only and lives in the
+/// `Result` `Err` channel — `Diagnostics` holds warnings, infos, and errors
+/// together. Severity is read from each element via [`BuildDiagnostic::severity`],
+/// so callers no longer need to thread a separate `errors` and `warnings` `Vec`
+/// side by side.
+///
+/// At a drain checkpoint, [`Diagnostics::partition`] (or [`Diagnostics::into_result`])
+/// splits the error-severity subset back out to feed the `Result` channel.
+#[derive(Debug, Default)]
+pub struct Diagnostics {
+  diagnostics: Vec<BuildDiagnostic>,
+  /// Cached: `true` once any error-severity diagnostic has been stored. Kept in
+  /// sync by every mutator, so [`Diagnostics::has_errors`] is O(1) and
+  /// [`Diagnostics::into_result`] can skip the partition scan on the common
+  /// (no-error) path. A diagnostic's severity is frozen once stored — it is set
+  /// only by the consuming `with_severity*` builders before `push`, and this
+  /// type hands out no `&mut` to its elements — so the flag never goes stale.
+  has_error: bool,
+}
+
+impl Diagnostics {
+  pub fn new() -> Self {
+    Self::default()
+  }
+
+  pub fn push(&mut self, diagnostic: BuildDiagnostic) {
+    self.has_error |= diagnostic.severity() == Severity::Error;
+    self.diagnostics.push(diagnostic);
+  }
+
+  pub fn extend(&mut self, diagnostics: impl IntoIterator<Item = BuildDiagnostic>) {
+    // Route through `push` so `has_error` stays in sync for each element.
+    for diagnostic in diagnostics {
+      self.push(diagnostic);
+    }
+  }
+
+  pub fn is_empty(&self) -> bool {
+    self.diagnostics.is_empty()
+  }
+
+  pub fn has_errors(&self) -> bool {
+    self.has_error
+  }
+
+  /// Splits into `(warnings + infos, errors)`, preserving the relative order
+  /// within each group. Because error- and warning-severity diagnostics were
+  /// never interleaved into a single ordered stream before this type existed,
+  /// merging then re-splitting yields the same two `Vec`s callers used to hold.
+  pub fn partition(self) -> (Vec<BuildDiagnostic>, Vec<BuildDiagnostic>) {
+    self.diagnostics.into_iter().partition(|d| d.severity() != Severity::Error)
+  }
+
+  /// Extracts all error-severity diagnostics, leaving the rest in `self`.
+  pub fn extract_errors(&mut self) -> Vec<BuildDiagnostic> {
+    self.has_error = false;
+    self.diagnostics.extract_if(0.., |d| d.severity() == Severity::Error).collect()
+  }
+
+  /// Drain checkpoint: returns `Err(errors)` if any error-severity diagnostic is
+  /// present, otherwise `Ok(warnings + infos)`. Mirrors the existing
+  /// `if !errors.is_empty() { return Err(errors.into()) }` guard.
+  ///
+  /// When no error was ever stored, returns every diagnostic as-is without
+  /// partitioning — the cached `has_error` flag makes this the common fast path.
+  pub fn into_result(self) -> crate::BuildResult<Vec<BuildDiagnostic>> {
+    if !self.has_error {
+      return Ok(self.diagnostics);
+    }
+    let (warnings, errors) = self.partition();
+    if errors.is_empty() { Ok(warnings) } else { Err(errors.into()) }
+  }
+}
+
+impl From<Vec<BuildDiagnostic>> for Diagnostics {
+  fn from(diagnostics: Vec<BuildDiagnostic>) -> Self {
+    let has_error = diagnostics.iter().any(|d| d.severity() == Severity::Error);
+    Self { diagnostics, has_error }
+  }
+}
+
+impl IntoIterator for Diagnostics {
+  type Item = BuildDiagnostic;
+  type IntoIter = std::vec::IntoIter<BuildDiagnostic>;
+
+  fn into_iter(self) -> Self::IntoIter {
+    self.diagnostics.into_iter()
+  }
+}
+
 /// Consolidates diagnostics by merging those that can be grouped together.
 ///
 /// Currently consolidates:
 /// - `TsConfigError` diagnostics with the same reason into a single diagnostic
-///   listing all affected files
-pub fn consolidate_diagnostics(diagnostics: Vec<BuildDiagnostic>) -> Vec<BuildDiagnostic> {
-  let mut tsconfig_map = FxHashMap::<String, usize>::default();
-  let mut result: Vec<BuildDiagnostic> = Vec::new();
-  for mut diag in diagnostics {
-    if let Some(tsconfig_err) = diag.downcast_mut::<TsConfigError>() {
-      let reason_key = tsconfig_err.reason.to_string();
-
-      if let Some(&idx) = tsconfig_map.get(&reason_key) {
-        if let Some(existing_tsconfig) = result[idx].downcast_mut::<TsConfigError>() {
-          existing_tsconfig.merge(std::mem::take(&mut tsconfig_err.file_paths));
-        }
-      } else {
-        tsconfig_map.insert(reason_key, result.len());
-        result.push(diag);
-      }
-    } else {
-      result.push(diag);
-    }
-  }
-  result
+pub fn consolidate_diagnostics(mut diagnostics: Vec<BuildDiagnostic>) -> Vec<BuildDiagnostic> {
+  let mut seen_tsconfig_reasons = FxHashSet::<String>::default();
+  diagnostics.retain_mut(|diag| {
+    diag
+      .downcast_mut::<TsConfigError>()
+      .is_none_or(|tsconfig_err| seen_tsconfig_reasons.insert(tsconfig_err.reason.to_string()))
+  });
+  diagnostics
 }
 
 #[cfg(test)]

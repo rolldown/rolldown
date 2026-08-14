@@ -4,6 +4,7 @@ mod bundler;
 mod bundler_builder;
 mod chunk_graph;
 mod ecmascript;
+mod esm_init_obligations;
 mod hmr;
 mod module_finalizers;
 mod module_loader;

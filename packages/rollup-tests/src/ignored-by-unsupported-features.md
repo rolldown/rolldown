@@ -24,14 +24,11 @@
  - rollup@function@enforce-sequential-plugin-order: allows to enforce sequential plugin hook order for parallel plugin hooks
  - rollup@hooks@allows to enforce sequential plugin hook order in watch mode
 
-### The `renderDynamicImport/resolveFileUrl/resolveImportMeta/shouldTransformCachedModule` hooks not supported
+### The `renderDynamicImport/resolveImportMeta/shouldTransformCachedModule` hooks not supported
  - rollup@function@enforce-plugin-order: allows to enforce plugin hook order
  
 ### The `renderDynamicImport` hook not supported
  - rollup@form@custom-dynamic-import-no-interop: does not add any interop when using a custom dynamic import handler@generates es
-
-### The `resolveFileUrl` hook not supported
- - rollup@form@configure-file-url: allows to configure file urls@generates es
 
 ### The `PluginContext.parse` does not support `allowReturnOutsideFunction` option
  - rollup@function@parse-return-outside-function: supports parsing return statements outside functions via options
@@ -98,6 +95,10 @@
 - rollup@function@deprecated@emit-file@original-file-name: forwards the original file name to other hooks
 - rollup@function@emit-file@original-file-name: forwards the original file name to other hooks
 - rollup@function@emit-file@original-file-names: forwards the original file name to other hooks
+
+### `import.meta.ROLLUP_FILE_URL_OBJ_*` is not supported
+- rollup@chunking form@resolve-file-url-obj: allows to use ROLLUP_FILE_URL_OBJ to get URL objects directly@generates cjs
+- rollup@chunking form@resolve-file-url-obj: allows to use ROLLUP_FILE_URL_OBJ to get URL objects directly@generates es
 
 ## Options related
 
@@ -298,6 +299,9 @@
  - rollup@form@import-attributes@keeps-static-attributes-key-default: keeps any import attributes on input using import attributes with "with" key@generates es
  - rollup@form@import-attributes@keeps-static-attributes-key-with: keeps any import attributes on input using import attributes with "with" key@generates es
  - rollup@form@resolve-file-url-import-meta-attributes: adds attributes to file resolveFileUrl and resolveImportMeta hooks@generates es
+ - rollup@form@configure-file-url: allows to configure file urls@generates es
+ - rollup@chunking form@resolve-file-url: allows to configure file urls@generates es
+ - rollup@chunking form@resolve-file-url: allows to configure file urls@generates cjs
  - rollup@function@deprecated@load-attributes: does not allow returning attributes from the "load" hook
  - rollup@function@deprecated@transform-attributes: does not allow returning attributes from the "transform" hook
  - rollup@function@extend-more-hooks-to-include-import-attributes: extend load, transform and renderDynamicImport to include import attributes
@@ -369,7 +373,7 @@
  - rollup@function@can-import-self-treeshake: direct self import (`EMPTY_BUNDLE` warning)
  - rollup@function@external-conflict: external paths from custom resolver remain external (#633) (`INVALID_EXTERNAL_ID` error)
  - rollup@function@shims-missing-exports: shims missing exports (`SHIMMED_EXPORT` warning)
- - rollup@function@conflicting-reexports@named-import-external: warns when a conflicting binding is imported via a named import from external namespaces (`AMBIGUOUS_EXTERNAL_NAMESPACES`, `UNUSED_EXTERNAL_IMPORT` warning)
+ - rollup@function@conflicting-reexports@named-import-external: warns when a conflicting binding is imported via a named import from external namespaces (`AMBIGUOUS_EXTERNAL_NAMESPACES` warning)
  - rollup@function@cycles-pathological-2: resolves even more pathological cyclical dependencies gracefully
  - rollup@function@circular-missed-reexports: handles circular reexports (`MISSING_EXPORT` should be warning instead of error)
  - rollup@function@iife-code-splitting: throws when generating multiple chunks for an IIFE build (`INVALID_OPTION` error)
@@ -399,15 +403,11 @@
  - rollup@function@invalid-top-level-await: throws for invalid top-level-await format (`INVALID_TLA_FORMAT` error expected, but got `UNSUPPORTED_FEATURE`)
  - rollup@function@load-returns-string-or-null: throws error if load returns something wacky (`BAD_LOADER` error expected, but got `InvalidArg`)
  - rollup@function@vars-with-init-in-dead-branch: handles vars with init in dead branch (#1198) (`EMPTY_BUNDLE` warning)
- - rollup@function@unused-import: warns on unused imports ([#595]) (`UNUSED_EXTERNAL_IMPORT` warning)
- - rollup@function@unused-import-2: warns on unused imports ([#595]) (`UNUSED_EXTERNAL_IMPORT` warning)
  - rollup@function@module-level-directive: module level directives should produce warnings (`MODULE_LEVEL_DIRECTIVE` warning)
  - rollup@function@hashing@maximum-hash-size: throws when the maximum hash size is exceeded (`VALIDATION_ERROR` error)
  - rollup@function@hashing@minimum-hash-size: throws when the maximum hash size is exceeded (`VALIDATION_ERROR` error)
  - rollup@function@hashing@length-at-non-hash: throws when configuring a length for placeholder other than "hash" (`VALIDATION_ERROR` error)
  - rollup@function@emit-file@invalid-file-type: throws for invalid file types (`pluginCode":"VALIDATION_ERROR"` expected, but got `pluginCode:"InvalidArg"`)
- - rollup@function@emit-file@invalid-asset-name3: throws for invalid asset names with absolute path on Windows OS (`PLUGIN_ERROR`>`VALIDATION_ERROR` error)
- - rollup@function@emit-file@invalid-asset-name: throws for invalid asset names (`PLUGIN_ERROR`>`VALIDATION_ERROR` error)
  - rollup@function@emit-file@emit-same-file: warns if multiple files with the same name are emitted (`FILE_NAME_CONFLICT` error)
  - rollup@function@emit-file@emit-from-output-options: throws when trying to emit files from the outputOptions hook (`CANNOT_EMIT_FROM_OPTIONS_HOOK` error)
  - rollup@function@conflicting-reexports@namespace-import: warns when a conflicting binding is imported via a namespace import (`MISSING_EXPORT` warning)
@@ -419,9 +419,8 @@
  - rollup@function@emit-file@asset-source-missing2: throws when not setting the asset source (`ASSET_SOURCE_MISSING` error is expected, but `PLUGIN_ERROR` is thrown)
  - rollup@function@emit-file@asset-source-missing5: throws when not setting the asset source and accessing the asset URL (`ASSET_SOURCE_MISSING` error is expected, but `PLUGIN_ERROR` is thrown)
  - rollup@function@emit-file@asset-source-missing: throws when not setting the asset source (`ASSET_SOURCE_MISSING` error is expected, but `PLUGIN_ERROR` is thrown)
- - rollup@function@emit-file@invalid-reference-id: throws for invalid reference ids (missing error)
  - rollup@form@cycles-dependency-with-TLA-await-import: throw a warn when a cycle is detected which includes a top-level await import (`CIRCULAR_DEPENDENCY` warning)
- - rollup@function@optional-chaining-namespace: handles optional chaining with namespace (`UNUSED_EXTERNAL_IMPORT` warning)
+ - rollup@function@optional-chaining-namespace: handles optional chaining with namespace (expected `MISSING_EXPORT` warning, but got `IMPORT_IS_UNDEFINED` warning)
  - rollup@function@ast-validations@redeclare-import-var: throws when redeclaring an import with a var (https://github.com/oxc-project/oxc/issues/15961)
  - rollup@function@warn-on-top-level-this: warns on top-level this (#770) (`THIS_IS_UNDEFINED` warning)
  - rollup@sourcemaps@warning-with-coarse-sourcemap: get correct mapping location with coarse sourcemap@generates es (`THIS_IS_UNDEFINED` warning)

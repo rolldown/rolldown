@@ -2,7 +2,7 @@ use arcstr::ArcStr;
 use itertools::Itertools;
 use oxc_index::{IndexVec, index_vec};
 use rolldown_common::{
-  Chunk, ChunkIdx, ChunkModulesOrderBy, ChunkTable, EcmaViewMeta, ModuleIdx,
+  Chunk, ChunkIdx, ChunkKind, ChunkMeta, ChunkModulesOrderBy, ChunkTable, EcmaViewMeta, ModuleIdx,
   PostChunkOptimizationOperation, RuntimeHelper, SymbolRef,
 };
 use rustc_hash::{FxHashMap, FxHashSet};
@@ -58,6 +58,53 @@ impl ChunkGraph {
     let idx = self.chunk_table.push(chunk);
     self.finalized_cjs_ns_map_idx_vec.push(FxHashMap::default());
     idx
+  }
+
+  /// Not removed by post-chunk-optimization (order-wrap lowering can remove chunks).
+  pub fn chunk_is_live(&self, chunk_idx: ChunkIdx) -> bool {
+    self.post_chunk_optimization_operations.get(&chunk_idx)
+      != Some(&PostChunkOptimizationOperation::Removed)
+  }
+
+  /// The module is assigned to a live chunk that still contains it.
+  ///
+  /// O(1) on purpose: this is called for every canonical referenced symbol of every included
+  /// statement under strict execution order (`add_depended_symbol_with_wrapped_esm_init`), so the
+  /// former `chunk.modules.contains(&module_idx)` linear scan made the pass quadratic on large
+  /// chunks. Dropping the scan is sound because of this invariant:
+  ///
+  ///   whenever `module_to_chunk[m] == Some(c)` and `c` is live, `c.modules` contains `m`.
+  ///
+  /// `add_module_to_chunk` establishes it (it sets `module_to_chunk[m]` and pushes `m` onto
+  /// `c.modules` together). Every site that later removes a module from a chunk's `modules` list
+  /// preserves it by pairing the removal with one of:
+  ///   - clearing `module_to_chunk[m]` to `None` (unused-runtime sweep, `sweep_unused_runtime_module`);
+  ///   - reassigning `module_to_chunk[m]` to the destination chunk via `add_module_to_chunk`
+  ///     (runtime relocation in `ensure_runtime_module_for_order_wraps`, the runtime→target merge,
+  ///     and `apply_common_chunk_merges`);
+  ///   - marking the emptied source chunk `Removed` (so `chunk_is_live` returns false).
+  ///
+  /// No site removes a module while leaving `module_to_chunk[m]` pointed at a still-live chunk, so
+  /// there is no residual case that would need a separate removed-module set.
+  pub fn module_is_in_live_chunk(&self, module_idx: ModuleIdx) -> bool {
+    self.module_to_chunk[module_idx].is_some_and(|chunk_idx| self.chunk_is_live(chunk_idx))
+  }
+
+  /// Render order: user-defined entry chunks first (stable by index), everything else by
+  /// execution order.
+  pub fn rebuild_sorted_chunk_idx_vec(&mut self, only_live: bool) {
+    self.sorted_chunk_idx_vec = self
+      .chunk_table
+      .iter_enumerated()
+      .filter(|(chunk_idx, _)| !only_live || self.chunk_is_live(*chunk_idx))
+      .sorted_unstable_by_key(|(index, chunk)| match &chunk.kind {
+        ChunkKind::EntryPoint { meta, .. } if meta.contains(ChunkMeta::UserDefinedEntry) => {
+          (0, index.raw())
+        }
+        _ => (1, chunk.exec_order),
+      })
+      .map(|(idx, _)| idx)
+      .collect();
   }
 
   pub fn add_module_to_chunk(

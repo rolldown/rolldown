@@ -3,7 +3,10 @@
   "include": ["src/*", "src/**/*", "**/_config.ts", "**/*.test.ts", "**/*.test-d.ts"],
   "compilerOptions": {
     "types": ["node", "vite/client"],
-    "rootDir": "./",
+    // `../` rather than `./` so a test may unit-test the package's own internals, which
+    // are not on its public entry points. The project is `noEmit`, so this only widens
+    // which files may be referenced.
+    "rootDir": "../",
     "allowJs": true,
     "isolatedDeclarations": false
   }

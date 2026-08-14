@@ -10,26 +10,19 @@ A full changelog of past releases is [available on GitHub](https://github.com/ro
 
 ## Release Cycle
 
-Rolldown does not have a fixed release cycle.
+Rolldown releases a new version every Wednesday, cut from the tip of `main`. Code that lands in `main` must be compatible with the latest stable release, so the weekly release can be either a patch or a minor.
 
-- **Patch** releases are released as needed.
-- **Minor** releases contain new features and are released as needed. Code that lands in `main` must be compatible with the latest stable release, so a new minor can be cut from the tip of `main` at any time.
+- **Patch** releases contain bug fixes. Urgent fixes may also be released outside of the weekly cycle.
+- **Minor** releases contain new features.
 - **Major** releases will be announced ahead of time and discussed with the ecosystem before being released.
 
 ## Supported Versions
 
-In summary, the current supported Rolldown versions are:
+The currently supported Rolldown versions are:
 
 <SupportedVersions />
 
 <br>
-
-The supported version ranges are automatically determined by:
-
-- **Current Minor** gets regular fixes.
-- **Previous Major** (only for its latest minor) and **Previous Minor** receive important fixes and security patches.
-- **Second-to-last Major** (only for its latest minor) and **Second-to-last Minor** receive security patches.
-- All versions before these are no longer supported.
 
 We recommend updating Rolldown regularly.
 
@@ -43,9 +36,15 @@ We may ship incompatible changes to TypeScript definitions between minor version
 - Occasionally we may need to adopt features that are only available in a newer version of TypeScript, raising the minimum required version of TypeScript.
 - If you are using TypeScript, you can use a semver range that locks the current minor and manually upgrade when a new minor version of Rolldown is released.
 
+### Generated Output
+
+The exact bytes of the generated output are not covered by semantic versioning. Improvements to tree shaking, code splitting, and minification land continuously, so chunk shapes, file hashes, and the generated code may change in any release. Semantic versioning covers the public API and the runtime behavior of the output, not its exact content.
+
+For a given Rolldown version, the same input and configuration always produce the same output. If your tests snapshot build output, expect to update the snapshots when upgrading. Pin the Rolldown version if you need byte-identical output over time.
+
 ## Pre Releases
 
-Minor releases may go through a non-fixed number of beta releases. Major releases will go through alpha and beta phases (and, when appropriate, release candidates, as was the case for `1.0.0`).
+Patch and minor releases ship directly from the weekly cycle without pre-releases. Major releases will go through a pre-release phase (beta and, when appropriate, release candidates, as was the case for `1.0.0`).
 
 Pre-releases let early adopters and ecosystem maintainers do integration and stability testing and provide feedback. Do not use pre-releases in production. All pre-releases are considered unstable and may ship breaking changes between them. Always pin to exact versions when using pre-releases.
 
@@ -59,7 +58,7 @@ We periodically deprecate features that have been superseded by better alternati
 
 Some features are marked as experimental when released in a stable version of Rolldown. Experimental features let us gather real-world experience to influence their final design. The goal is to let users provide feedback by testing them in production. Experimental features themselves are considered unstable, and should only be used in a controlled manner. These features may change between minors, so users must pin their Rolldown version when they rely on them.
 
-Currently documented experimental features include:
+Experimental options live under the `experimental` config namespace, and experimental JavaScript APIs are exported from `rolldown/experimental`. Currently documented experimental features include:
 
 - [Module Types](./in-depth/module-types.md)
 - [Native MagicString](./in-depth/native-magic-string.md)

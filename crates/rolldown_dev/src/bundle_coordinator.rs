@@ -228,6 +228,12 @@ impl BundleCoordinator {
       // `BundlingTask::run` queued `BundleCompleted` before resolving, but the
       // coordinator cannot process that message while this close handler owns
       // the actor loop. Publish the final handle's watch paths here instead.
+      //
+      // This is the live handle only, so it is strictly narrower than the
+      // queued message: that task's `retired_watch_files` snapshot dies with
+      // the unprocessed message. Accepted, because registration at close only
+      // surfaces registration errors — no rebuild follows it, so a path missed
+      // here costs nothing.
       let watch_paths_result = self.update_watch_paths().await;
       self.retain_watch_registration_result(watch_paths_result);
       callback_result

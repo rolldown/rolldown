@@ -636,7 +636,7 @@ output configs into native configs, applies the maximum `buildDelay`, selects
 the first config with explicit watcher-backend settings for the shared native
 watcher, and creates the `NapiWatcherEventHandler`. `run()` and
 `waitForClose()` delegate directly. Shared-runtime builds attempt `run()`
-before entering a N-API future, allowing a stopped scheduler to return an
+before entering an N-API future, allowing a stopped scheduler to return an
 already-rejected JavaScript Promise while retaining the native coordinator for
 an explicit retry. Tokio builds perform the same checked call inside the N-API
 runtime context they require. `close()` publishes close synchronously,

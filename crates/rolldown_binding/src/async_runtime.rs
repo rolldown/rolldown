@@ -1171,7 +1171,7 @@ const HOST_TIMER_MAX_TRANSIENT_FAILURES: u32 = 3;
 /// callback failure on a live host (strike-counted)?
 ///
 /// The decision must stay STRING-FREE: a rejected JS promise coerces into
-/// `GenericFailure` carrying the JS rejection string (pinned napi 3.10, error.rs
+/// `GenericFailure` carrying the JS rejection string (pinned napi 3.12, error.rs
 /// `From<Unknown> for Error`), so any message match is forgeable by a live callback
 /// rejecting with a colliding string and would evict a live host. The two unforgeable
 /// authorities are `Status::Closing`, which only the TSFN layer produces, and the

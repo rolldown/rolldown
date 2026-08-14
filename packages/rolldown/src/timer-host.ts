@@ -249,7 +249,7 @@ function createAggregateError(
 // Host integration for the `--features async-runtime` binding: CurrentThread
 // runnable wakes enter through a fresh host turn instead of polling inline from
 // an arbitrary Rust Waker call, and timers delegate to setTimeout. Both are
-// no-ops on the default tokio build.
+// no-ops on a legacy Tokio-backed binding.
 //
 // A side-effect module because a driver must be registered before the first
 // CurrentThread `sleep_until` arms, and `getRuntimeCapabilities().timers` must

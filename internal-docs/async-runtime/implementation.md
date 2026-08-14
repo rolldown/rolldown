@@ -715,6 +715,15 @@ import to the npm polyfill and bundles that implementation too; packed
 validation rejects any remaining `buffer`, `node:buffer`, emnapi, or wasm
 runtime import. Managed workerd consumers therefore do not depend on Node
 compatibility flags or pnpm's workspace-only `patchedDependencies` behavior.
+`@rolldown/browser` nevertheless stays `private: true`, so `vp pm publish -r`
+skips it. The original reason (a pnpm-patched `@napi-rs/wasm-runtime` supplying
+the emnapi v2 plugin exports) is gone — the released `~1.2.3` exports
+`emnapiAsyncWorkPlugin` and `emnapiTSFNPlugin` itself. What remains is the
+prerelease ABI line recorded in
+`scripts/wasi/check-workerd-packed-consumer.mjs`: the `.wasm` links the emnapi
+`2.0.0-alpha` C archives and the manifest pins the matching `2.0.0-alpha`
+runtimes, so publishing is gated on emnapi v2 going stable, not on any
+repository-local tooling.
 The same build
 emits the threadless CJS/browser/deferred loaders plus a dedicated release
 artifact containing the threaded CJS/browser/Node-worker/browser-worker graph.

@@ -86,15 +86,29 @@ The following MagicString methods are currently available in the native implemen
 - `hasChanged()` - Checks if the string has been modified
 - `length()` - Returns the length of the transformed string
 - `isEmpty()` - Checks if the string is empty
+- `clone()` - Returns a clone of the MagicString instance
+- `trim(charType?)` - Trims whitespace or specified characters from both ends
+- `trimStart(charType?)` - Trims whitespace or specified characters from the start
+- `trimEnd(charType?)` - Trims whitespace or specified characters from the end
+- `trimLines()` - Trims newlines from both ends
+- `snip(start, end)` - Returns a clone with content outside the range removed
+- `slice(start?, end?)` - Returns content between positions
+- `reset(start, end)` - Resets a range to its original content
+- `lastChar()` - Returns the last character
+- `lastLine()` - Returns the content after the last newline
+
+**Source Map Generation:**
+
+- `generateMap(options?)` - Generates a source map as a JSON string
+  - `options.source` - Source file name
+  - `options.includeContent` - Include original source in the map
+  - `options.hires` - High-resolution mode: `true`, `false`, or `"boundary"`
 
 ### Not Yet Implemented
 
 The following features are planned for future releases:
 
-- Advanced source map options (`generateMap()`, `generateDecodedMap()`)
-- `clone()` method
-- `trim()` / `trimStart()` / `trimEnd()` methods
-- `snip()` method
+- `generateDecodedMap()` - Generate source map with decoded mappings
 
 ## Real-World Performance
 
@@ -145,10 +159,7 @@ export default defineConfig({
 
         // Example transformation: Add debug comments
         if (code.includes('console.log')) {
-          magicString.replace(
-            /console\.log\(/g,
-            'console.log("[DEBUG]", ',
-          );
+          magicString.replace(/console\.log\(/g, 'console.log("[DEBUG]", ');
         }
 
         // Example: Add file header
@@ -200,7 +211,7 @@ This feature is Rolldown-specific and not available in Rollup. For plugins that 
 
 ```javascript [plugin.js]
 function createTransform() {
-  return function(code, id, meta) {
+  return function (code, id, meta) {
     if (meta?.magicString) {
       // Rolldown with native MagicString
       return transformWithNativeMagicString(code, id, meta);
@@ -211,6 +222,12 @@ function createTransform() {
   };
 }
 ```
+
+::: tip
+
+You can use [`rolldown-string`](https://github.com/sxzz/rolldown-string), which provides a unified interface that works with both bundlers.
+
+:::
 
 ## When to Use Native MagicString
 

@@ -1,1 +1,1 @@
-export const value = 'e'
+export const value = 'e';

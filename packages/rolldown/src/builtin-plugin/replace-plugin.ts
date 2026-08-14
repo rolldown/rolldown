@@ -5,7 +5,7 @@ import { BuiltinPlugin, makeBuiltinPluginCallable } from './utils';
  * Replaces targeted strings in files while bundling.
  *
  * @example
- * // Basic usage
+ * **Basic usage**
  * ```js
  * replacePlugin({
  *   'process.env.NODE_ENV': JSON.stringify('production'),
@@ -13,7 +13,7 @@ import { BuiltinPlugin, makeBuiltinPluginCallable } from './utils';
  * })
  * ```
  * @example
- * // With options
+ * **With options**
  * ```js
  * replacePlugin({
  *   'process.env.NODE_ENV': JSON.stringify('production'),
@@ -22,6 +22,9 @@ import { BuiltinPlugin, makeBuiltinPluginCallable } from './utils';
  *   preventAssignment: false,
  * })
  * ```
+ *
+ * @see https://rolldown.rs/builtin-plugins/replace
+ * @category Builtin Plugins
  */
 export function replacePlugin(
   values: BindingReplacePluginConfig['values'] = {},
@@ -35,7 +38,5 @@ export function replacePlugin(
     }
   });
 
-  return makeBuiltinPluginCallable(
-    new BuiltinPlugin('builtin:replace', { ...options, values }),
-  );
+  return makeBuiltinPluginCallable(new BuiltinPlugin('builtin:replace', { ...options, values }));
 }

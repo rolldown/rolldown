@@ -1,1 +1,1 @@
-exports.a = 'basic-a'
+exports.a = 'basic-a';

@@ -1,13 +1,20 @@
 import { join } from 'node:path';
 import { defineTest } from 'rolldown-tests';
+import { isWasiTest } from 'rolldown-tests/utils';
 import { expect } from 'vitest';
 
 export default defineTest({
+  // Under the wasm binding the error arrives with a `wasm://` stack, without the `at errorFn1` / `at errorFn2` frames asserted below.
+  skip: isWasiTest,
   config: {
     plugins: [
       {
         name: 'my-plugin',
-        async transform() {
+        async transform(_, id) {
+          // Skip virtual modules (like \0rolldown/runtime.js)
+          if (id.startsWith('\0')) {
+            return;
+          }
           await errorFn1();
         },
       },

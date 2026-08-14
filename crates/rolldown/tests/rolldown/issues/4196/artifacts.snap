@@ -14,7 +14,7 @@ function main_default() {
 		NaN: NaN
 	});
 }
-
 //#endregion
 export { main_default as default };
+
 ```

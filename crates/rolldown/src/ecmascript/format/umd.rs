@@ -58,6 +58,7 @@ pub async fn render_umd<'code>(
 
   // It is similar to CJS.
   let (import_code, externals) = render_chunk_external_imports(ctx);
+  let externals: Vec<_> = externals.iter().map(super::utils::ExternalImportKind::module).collect();
 
   // The function argument and the external imports are passed as arguments to the wrapper function.
   let need_global = has_exports || named_exports || !externals.is_empty();
@@ -149,7 +150,7 @@ fn render_amd_dependencies(
   externals.iter().for_each(|external| {
     dependencies.push(concat_string!(
       "'",
-      external.get_import_path(ctx.chunk, ctx.options.paths.as_ref()),
+      external.get_import_path(ctx.chunk, ctx.resolved_paths),
       "'"
     ));
   });
@@ -169,7 +170,7 @@ fn render_cjs_dependencies(
   externals.iter().for_each(|external| {
     dependencies.push(concat_string!(
       "require('",
-      external.get_import_path(ctx.chunk, ctx.options.paths.as_ref()),
+      external.get_import_path(ctx.chunk, ctx.resolved_paths),
       "')"
     ));
   });
@@ -189,7 +190,7 @@ async fn render_iife_export(
   let mut dependencies = Vec::with_capacity(externals.len());
 
   for external in externals {
-    let global = ctx.options.globals.call(external.id.as_str()).await;
+    let global = ctx.options.globals.call(external.id.as_str()).await?;
     let target = match &global {
       Some(global_name) => global_name.split('.').map(render_property_access).collect::<String>(),
       None => {

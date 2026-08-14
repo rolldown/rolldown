@@ -6,15 +6,17 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## entry.js
 
 ```js
-'use 1';
-'use 2';
-'use 3';
-
+"use 1";
+"use 2";
+"use 3";
 //#region entry.js
 //! 1
 //! 2
 //! 3
 entry();
-
+//! 4
+//! 5
+//! 6
 //#endregion
+
 ```

@@ -1,6 +1,7 @@
 # Failed Cases
 # Passed Cases
 ## [class_super_this_issue242_no_bundle](../../../../../crates/rolldown/tests/esbuild/lower/class_super_this_issue242_no_bundle)
+## [for_await_with_optional_catch_issue4378](../../../../../crates/rolldown/tests/esbuild/lower/for_await_with_optional_catch_issue4378)
 ## [java_script_auto_accessor_es_next](../../../../../crates/rolldown/tests/esbuild/lower/java_script_auto_accessor_es_next)
 ## [java_script_auto_accessor_es2021](../../../../../crates/rolldown/tests/esbuild/lower/java_script_auto_accessor_es2021)
 ## [java_script_auto_accessor_es2022](../../../../../crates/rolldown/tests/esbuild/lower/java_script_auto_accessor_es2022)
@@ -19,6 +20,7 @@
 ## [lower_class_field_next_no_bundle](../../../../../crates/rolldown/tests/esbuild/lower/lower_class_field_next_no_bundle)
 ## [lower_class_field_strict_tsconfig_json2020](../../../../../crates/rolldown/tests/esbuild/lower/lower_class_field_strict_tsconfig_json2020)
 ## [lower_class_field2020_no_bundle](../../../../../crates/rolldown/tests/esbuild/lower/lower_class_field2020_no_bundle)
+## [lower_const_issue4448](../../../../../crates/rolldown/tests/esbuild/lower/lower_const_issue4448)
 ## [lower_exponentiation_operator_no_bundle](../../../../../crates/rolldown/tests/esbuild/lower/lower_exponentiation_operator_no_bundle)
 ## [lower_export_star_as_name_collision](../../../../../crates/rolldown/tests/esbuild/lower/lower_export_star_as_name_collision)
 ## [lower_export_star_as_name_collision_no_bundle](../../../../../crates/rolldown/tests/esbuild/lower/lower_export_star_as_name_collision_no_bundle)

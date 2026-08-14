@@ -1,8 +1,11 @@
 # Maintenance Guide
 
-A plugin for `rolldown-vite` that handles the transformation of JSON files into JavaScript modules, ported from `Vite`'s [jsonPlugin](https://github.com/vitejs/rolldown-vite/blob/fa33494/packages/vite/src/node/plugins/json.ts).
+A plugin for `vite` that handles the transformation of JSON files into JavaScript modules, ported from `Vite`'s [jsonPlugin](https://github.com/vitejs/rolldown-vite/blob/fa33494/packages/vite/src/node/plugins/json.ts).
 
-**This plugin is exclusive to `rolldown-vite` and is not recommended for external use.**
+> [!NOTE]
+> This plugin is exclusive to `vite`; external use is not recommended.
+> Its API may change between minor versions of `rolldown`, but
+> stays compatible within the same minor version.
 
 ## 📦 What it does
 
@@ -18,11 +21,13 @@ export default defineConfig({
   input: {
     entry: './main.ts',
   },
-  plugins: [viteJsonPlugin({
-    minify: false,
-    namedExports: false,
-    stringify: 'auto',
-  })],
+  plugins: [
+    viteJsonPlugin({
+      minify: false,
+      namedExports: false,
+      stringify: 'auto',
+    }),
+  ],
 });
 ```
 

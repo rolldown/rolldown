@@ -18,15 +18,16 @@ on:
 jobs:
   compile-time-and-binary-size:
     name: Compile Time and Binary Size
-    runs-on: ubuntu-latest
+    runs-on: namespace-profile-linux-x64-default
     outputs:
       time: ${{ steps.run.outputs.COMPILE_TIME }}
       binary_size: ${{ steps.run.outputs.BINARY_SIZE }}
     steps:
-      - uses: taiki-e/checkout-action@b13d20b7cda4e2f325ef19895128f7ff735c0b3d # v1.3.1
-      - uses: oxc-project/setup-rust@c8224157c0bf235aabc633e8cd50d344f087a7de # v1.0.12
+      - uses: taiki-e/checkout-action@7d1e50e93dc4fb3bba58f85018fadf77898aee8b # v1.4.2
+      - uses: oxc-project/setup-rust@3d6fb132fbe7cdcb66bf8ec193911c2945369d12 # v1.0.17
         with:
-          cache-key: release-build
+          cache-key: metric
+          save-cache: ${{ github.ref_name == 'main' }}
       - run: cargo clean # build from scratch using local system cache to avoid download from crates.io
       - id: run
         run: |
@@ -45,30 +46,61 @@ jobs:
   metric:
     name: Metric
     needs: [compile-time-and-binary-size]
-    runs-on: ubuntu-latest
+    runs-on: namespace-profile-linux-x64-default
     steps:
+      - uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0
+        id: app-token
+        with:
+          client-id: ${{ secrets.APP_ID }}
+          private-key: ${{ secrets.APP_PRIVATE_KEY }}
+          # the token defaults to the current repository, so `rolldown/metric` has to be requested explicitly
+          owner: rolldown
+          repositories: metric
+          permission-contents: write # all this job needs: clone `rolldown/metric` and push `metric.json`
+
       - name: Checkout rolldown metric repository
-        uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           repository: 'rolldown/metric'
           ref: 'main'
-          token: ${{ secrets.METRIC_SECRET_KEY }}
+          token: ${{ steps.app-token.outputs.token }}
           persist-credentials: true # required by `git push` below
 
-      - uses: oxc-project/setup-node@141eb77546de6702f92d320926403fe3f9f6a6f2 # v1.0.5
+      - uses: voidzero-dev/setup-vp@313600b80b104eadebb9111787d37a2e83e014ca # v1.17.0
+        with:
+          version: '0.2.1'
+          cache: true
 
       - name: Install dependencies and push metric
         run: |
           node ./scripts/compile-time-and-binary-size.mjs
-          git config --global user.name 'github-actions[bot]'
-          git config --global user.email 'github-actions[bot]@users.noreply.github.com'
+          git config --global user.name 'rolldown-guard[bot]'
+          git config --global user.email '278280044+rolldown-guard[bot]@users.noreply.github.com'
           git add metric.json
           git commit -m "Update benchmark results"
           git push
 
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           COMPILE_TIME: ${{ needs.compile-time-and-binary-size.outputs.time }}
           COMMIT_HASH: ${{ github.sha }}
           GIT_REPOSITORY_URL: ${{ github.repository }}
           BINARY_SIZE: ${{ needs.compile-time-and-binary-size.outputs.binary_size }}
+
+  # Nothing consumes this workflow's output, so a break here is invisible until
+  # someone notices the charts have gone flat — last time that took 11 days.
+  notify-failure:
+    name: Notify Failure
+    needs: [compile-time-and-binary-size, metric]
+    # `failure()` covers either job failing, and unlike `always()` it stays quiet
+    # on cancellation.
+    if: ${{ failure() && github.repository == 'rolldown/rolldown' }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Notify Discord
+        uses: tsickert/discord-webhook@b217a69502f52803de774ded2b1ab7c282e99645 # v7.0.0
+        with:
+          webhook-url: ${{ secrets.DISCORD_ROLLDOWN_CHANNEL }}
+          embed-title: Metric workflow failed
+          embed-description: |
+            Compile time and binary size are no longer being recorded to [rolldown/metric](https://github.com/rolldown/metric).
+          embed-url: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}

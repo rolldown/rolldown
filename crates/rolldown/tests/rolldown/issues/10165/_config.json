@@ -1,0 +1,4 @@
+{
+  "_comment": "Regression test for https://github.com/rolldown/rolldown/issues/10165 - `module.js` declares two three-declarator `let` statements where the last two declarators are mutually recursive arrow functions (`a = () => b(), b = () => a()`), and the entry re-exports only the first declarator of each. The inline-export form (`export let F, A, B`) was already split per declarator before scanning, so `A`/`B` were tree-shaken. The bare form exported via a list (`export { f, a, b }`) was NOT split, so demanding `f` kept the whole statement, and the default dce-only minifier cannot delete `a`/`b` because each is referenced by the other. The output must contain neither `A`/`B` nor `a`/`b`. The fixture also keeps a mixed destructuring/simple declaration intact when only the simple binding is exported, because destructuring can perform binding-time iterator/property work.",
+  "config": {}
+}

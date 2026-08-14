@@ -6,19 +6,17 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## entry.js
 
 ```js
-// HIDDEN [rolldown:runtime]
+// HIDDEN [\0rolldown/runtime.js]
 //#region src/foo-require.js
 var require_foo_require = /* @__PURE__ */ __commonJSMin(((exports, module) => {
 	module.exports = "foo";
 }));
-
 //#endregion
 //#region src/index.js
 var require_src = /* @__PURE__ */ __commonJSMin(((exports, module) => {
 	module.exports = "index";
 	console.log(require_src(), require_foo_require());
 }));
-
 //#endregion
 export default require_src();
 

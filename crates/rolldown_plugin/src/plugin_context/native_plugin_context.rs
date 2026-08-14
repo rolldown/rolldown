@@ -1,20 +1,19 @@
 use std::{
   borrow::Cow,
   path::{Path, PathBuf},
-  sync::{Arc, Weak},
+  sync::{Arc, Mutex, Weak},
 };
 
 use anyhow::Context;
 use arcstr::ArcStr;
 use derive_more::Debug;
 use rolldown_common::{
-  FilenameTemplate, LogLevel, LogWithoutPlugin, ModuleDefFormat, ModuleLoaderMsg, PackageJson,
-  PluginIdx, ResolvedId, SharedFileEmitter, SharedModuleInfoDashMap,
+  FilenameTemplate, LogLevel, LogWithoutPlugin, ModuleDefFormat, ModuleId, ModuleLoaderMsg,
+  PackageJson, PluginIdx, ResolvedId, SharedFileEmitter, SharedModuleInfoDashMap,
   SharedNormalizedBundlerOptions, side_effects::HookSideEffects,
 };
 use rolldown_resolver::{ResolveError, Resolver};
 use rolldown_utils::dashmap::FxDashSet;
-use tokio::sync::Mutex;
 use tracing::Instrument;
 
 use crate::{
@@ -41,13 +40,13 @@ pub struct NativePluginContextImpl {
   pub(crate) options: SharedNormalizedBundlerOptions,
   pub(crate) watch_files: Arc<FxDashSet<ArcStr>>,
   pub(crate) module_infos: SharedModuleInfoDashMap,
-  pub(crate) tx: Arc<Mutex<Option<tokio::sync::mpsc::Sender<ModuleLoaderMsg>>>>,
+  pub(crate) tx: Arc<Mutex<Option<tokio::sync::mpsc::UnboundedSender<ModuleLoaderMsg>>>>,
   pub(crate) session: rolldown_devtools::Session,
-  pub(crate) bundle_span: Arc<tracing::Span>,
+  pub(crate) bundle_span: tracing::Span,
   // `resolve_id` hook not only will be triggered by the rolldown's resolve process, but also could be triggered
   // by manual calls of `PluginContext.resolve()`. We use a dedicated span here to distinguish whether the call is
   // - automatic (by rolldown) or manual (by `PluginContext.resolve()`)
-  pub(crate) manual_resolve_span: Arc<tracing::Span>,
+  pub(crate) manual_resolve_span: tracing::Span,
 }
 
 impl NativePluginContextImpl {
@@ -59,18 +58,17 @@ impl NativePluginContextImpl {
   ) -> anyhow::Result<()> {
     // Clone out the sender under the lock, then drop the lock before awaiting.
     let sender = {
-      let guard = self.tx.lock().await.clone();
+      let guard = self.tx.lock().ok().context("Failed to acquire PluginDriver tx lock")?.clone();
       guard.context("The `PluginContext.load` only work at `resolveId/load/transform/moduleParsed` hooks. If you using it at resolveId hook, please make sure it could not load the entry module.")?
     };
     sender
       .send(ModuleLoaderMsg::FetchModule(Box::new(ResolvedId {
-        id: specifier.into(),
+        id: ModuleId::new(specifier),
         side_effects,
         module_def_format,
         ..Default::default()
       })))
-      .await
-      .context("PluginContext: failed to send FetchModule message - module loader shut down during plugin execution")?;
+      .map_err(|e| anyhow::Error::new(e).context("PluginContext: failed to send FetchModule message - module loader shut down during plugin execution"))?;
     let plugin_driver = self
       .plugin_driver
       .upgrade()
@@ -131,12 +129,12 @@ impl NativePluginContextImpl {
       )
       .await
     }
-    .instrument(self.manual_resolve_span.as_ref().clone())
+    .instrument(self.manual_resolve_span.clone())
     .await
   }
 
-  pub async fn emit_chunk(&self, chunk: rolldown_common::EmittedChunk) -> anyhow::Result<ArcStr> {
-    self.file_emitter.emit_chunk(Arc::new(chunk)).await
+  pub fn emit_chunk(&self, chunk: rolldown_common::EmittedChunk) -> anyhow::Result<ArcStr> {
+    self.file_emitter.emit_chunk(Arc::new(chunk))
   }
 
   pub fn emit_prebuilt_chunk(&self, chunk: rolldown_common::EmittedPrebuiltChunk) -> ArcStr {
@@ -151,7 +149,10 @@ impl NativePluginContextImpl {
   ) -> anyhow::Result<ArcStr> {
     let file_name_is_none = file.file_name.is_none();
     let asset_filename_template = file_name_is_none.then(|| {
-      FilenameTemplate::new(self.options.asset_filenames.value(fn_asset_filename), "assetFileNames")
+      FilenameTemplate::new(
+        self.options.asset_filenames.value(fn_asset_filename),
+        "output.assetFileNames",
+      )
     });
     let sanitized_file_name = file_name_is_none.then(|| {
       self.options.sanitize_filename.value(file.name_for_sanitize(), fn_sanitized_file_name)
@@ -171,6 +172,10 @@ impl NativePluginContextImpl {
 
   pub fn get_file_name(&self, reference_id: &str) -> anyhow::Result<ArcStr> {
     self.file_emitter.get_file_name(reference_id)
+  }
+
+  pub fn associate_module_with_file_ref(&self, module_id: &str, reference_id: &str) {
+    self.file_emitter.associate_module_with_file_ref(module_id, reference_id);
   }
 
   pub fn get_module_info(&self, module_id: &str) -> Option<Arc<rolldown_common::ModuleInfo>> {

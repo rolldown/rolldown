@@ -1,1 +1,1 @@
-console.log('share-by-3')
+console.log('share-by-3');

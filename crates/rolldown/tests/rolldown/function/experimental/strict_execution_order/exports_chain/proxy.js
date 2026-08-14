@@ -1,4 +1,4 @@
-import { foo } from './proxy-foo'
-import { bar } from './proxy-bar'
+import { foo } from './proxy-foo';
+import { bar } from './proxy-bar';
 
-export { foo, bar }
+export { foo, bar };

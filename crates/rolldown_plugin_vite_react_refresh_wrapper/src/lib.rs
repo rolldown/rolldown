@@ -3,7 +3,8 @@ use std::{borrow::Cow, fmt::Write, sync::LazyLock};
 use arcstr::ArcStr;
 use regex::Regex;
 use rolldown_plugin::{
-  HookResolveIdOutput, HookTransformOutput, HookUsage, Plugin, PluginHookMeta, PluginOrder,
+  HookResolveIdOutput, HookTransformOutput, HookTransformOutputMap, HookUsage, Plugin,
+  PluginHookMeta, PluginOrder,
 };
 use rolldown_plugin_utils::to_string_literal;
 use rolldown_utils::pattern_filter::{FilterResult, StringOrRegex, filter};
@@ -137,7 +138,11 @@ impl Plugin for ViteReactRefreshWrapperPlugin {
     let Some(new_code) = self.add_refresh_wrapper(args.code, args.id) else {
       return Ok(None);
     };
-    Ok(Some(HookTransformOutput { code: Some(new_code), map: None, ..Default::default() }))
+    Ok(Some(HookTransformOutput {
+      code: Some(new_code),
+      map: HookTransformOutputMap::Null,
+      ..Default::default()
+    }))
   }
 
   fn register_hook_usage(&self) -> HookUsage {

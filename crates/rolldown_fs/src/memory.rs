@@ -33,6 +33,10 @@ impl MemoryFileSystem {
   }
 
   pub fn add_file(&mut self, path: &Path, content: &str) {
+    self.add_file_bytes(path, content.as_bytes());
+  }
+
+  pub fn add_file_bytes(&mut self, path: &Path, content: &[u8]) {
     let fs = &mut self.fs;
     // Create all parent directories
     for path in path.ancestors().collect::<Vec<_>>().iter().rev() {
@@ -43,32 +47,26 @@ impl MemoryFileSystem {
     }
     // Create file
     let mut file = fs.create_file(path.to_string_lossy().as_ref()).unwrap();
-    file.write_all(content.as_bytes()).unwrap();
+    file.write_all(content).unwrap();
   }
 }
 
 impl FileSystem for MemoryFileSystem {
   fn remove_dir_all(&self, path: &Path) -> io::Result<()> {
-    self
-      .fs
-      .remove_dir(&path.to_string_lossy())
-      .map_err(|err| io::Error::new(io::ErrorKind::Other, err))
+    self.fs.remove_dir(&path.to_string_lossy()).map_err(io::Error::other)
   }
 
   fn create_dir_all(&self, path: &Path) -> io::Result<()> {
-    self
-      .fs
-      .create_dir(&path.to_string_lossy())
-      .map_err(|err| io::Error::new(io::ErrorKind::Other, err))
+    self.fs.create_dir(&path.to_string_lossy()).map_err(io::Error::other)
   }
 
   fn write(&self, path: &Path, content: &[u8]) -> io::Result<()> {
     _ = self
       .fs
       .create_file(&path.to_string_lossy())
-      .map_err(|err| io::Error::new(io::ErrorKind::Other, err))?
+      .map_err(io::Error::other)?
       .write(content)
-      .map_err(|err| io::Error::new(io::ErrorKind::Other, err))?;
+      .map_err(io::Error::other)?;
     Ok(())
   }
 
@@ -92,10 +90,7 @@ impl FileSystem for MemoryFileSystem {
   }
 
   fn remove_file(&self, path: &Path) -> io::Result<()> {
-    self
-      .fs
-      .remove_file(&path.to_string_lossy())
-      .map_err(|err| io::Error::new(io::ErrorKind::Other, err))
+    self.fs.remove_file(&path.to_string_lossy()).map_err(io::Error::other)
   }
 }
 

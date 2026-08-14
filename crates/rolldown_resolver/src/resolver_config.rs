@@ -20,7 +20,7 @@ impl ResolverConfig {
   pub fn build(
     cwd: &Path,
     platform: Platform,
-    tsconfig: Option<&TsConfig>,
+    tsconfig: &TsConfig,
     resolve_options: ResolveOptions,
   ) -> Self {
     // Build condition names
@@ -97,15 +97,15 @@ impl ResolverConfig {
     // Build base options
     let default_options = OxcResolverOptions {
       cwd: Some(cwd.to_path_buf()),
-      tsconfig: tsconfig.map(|tsconfig| match tsconfig {
-        TsConfig::Auto => oxc_resolver::TsconfigDiscovery::Auto,
+      tsconfig: match tsconfig {
+        TsConfig::Auto(v) => v.then_some(oxc_resolver::TsconfigDiscovery::Auto),
         TsConfig::Manual(config_file) => {
-          oxc_resolver::TsconfigDiscovery::Manual(oxc_resolver::TsconfigOptions {
+          Some(oxc_resolver::TsconfigDiscovery::Manual(oxc_resolver::TsconfigOptions {
             config_file: config_file.clone(),
             references: oxc_resolver::TsconfigReferences::Auto,
-          })
+          }))
         }
-      }),
+      },
       alias: alias.unwrap_or_default(),
       imports_fields: vec![vec!["imports".to_string()]],
       alias_fields,
@@ -123,6 +123,7 @@ impl ResolverConfig {
       main_fields,
       main_files: resolve_options.main_files.unwrap_or_else(|| vec!["index".to_string()]),
       modules: resolve_options.modules.unwrap_or_else(|| vec!["node_modules".into()]),
+      node_path: false,
       resolve_to_context: false,
       prefer_relative: false,
       prefer_absolute: false,
@@ -144,6 +145,6 @@ impl ResolverConfig {
     let css_options = default_options.clone().with_prefer_relative(true);
     let new_url_options = default_options.clone().with_prefer_relative(true);
 
-    Self { default_options, import_options, require_options, css_options, new_url_options }
+    Self { default_options, import_options, require_options, new_url_options, css_options }
   }
 }

@@ -6,7 +6,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## PLUGIN_ERROR
 
 ```text
-[plugin-error-test] Error: Something went wrong inside rolldown, please report this problem at https://github.com/rolldown/rolldown/issues.
+[plugin-error-test] Something went wrong inside rolldown, please report this problem at https://github.com/rolldown/rolldown/issues.
 A
 
 ```
@@ -14,7 +14,7 @@ A
 ## PLUGIN_ERROR
 
 ```text
-[plugin-error-test] Error: Something went wrong inside rolldown, please report this problem at https://github.com/rolldown/rolldown/issues.
+[plugin-error-test] Something went wrong inside rolldown, please report this problem at https://github.com/rolldown/rolldown/issues.
 B
 
 ```

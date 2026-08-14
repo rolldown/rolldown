@@ -3,14 +3,10 @@
     "composite": true,
     "baseUrl": "./",
     "paths": {
-      "@app/*": [
-        "bar/*"
-      ]
+      "@app/*": ["bar/*"]
     },
     "jsx": "react",
     "jsxFactory": "b"
   },
-  "include": [
-    "bar.tsx"
-  ]
+  "include": ["bar.tsx"]
 }

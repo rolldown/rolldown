@@ -360,7 +360,7 @@ switch (
 ```diff
 ===================================================================
 --- esbuild	/out/entry.js
-+++ rolldown	
++++ rolldown
 @@ -1,350 +0,0 @@
 -console.log(
 -  import(

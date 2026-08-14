@@ -1,7 +1,7 @@
 use std::sync::Arc;
 
 use derive_more::derive::Debug;
-use oxc::span::CompactStr;
+use oxc_str::CompactStr;
 use rolldown_sourcemap::{Source, SourceJoiner};
 
 #[derive(Clone, Default, Debug)]
@@ -30,6 +30,13 @@ impl RenderedModule {
       }
 
       joiner.join().0
+    })
+  }
+
+  pub fn rendered_length(&self) -> usize {
+    self.inner_code.as_ref().map_or(0, |sources| {
+      sources.iter().map(|source| source.content().len()).sum::<usize>()
+        + sources.len().saturating_sub(1)
     })
   }
 }

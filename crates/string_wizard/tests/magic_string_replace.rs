@@ -1,49 +1,10 @@
 use oxc_sourcemap::SourcemapVisualizer;
 use string_wizard::{MagicString, ReplaceOptions, SourceMapOptions};
 
-#[test]
-fn works_with_string_replace() {
-  let code = "1 2 1 2";
-  let mut s = MagicString::new(code);
-
-  s.replace("2", "3");
-
-  assert_eq!(s.to_string(), "1 3 1 2");
-}
-
-#[test]
-fn should_not_search_back() {
-  let code = "122121";
-  let mut s = MagicString::new(code);
-
-  s.replace("12", "21");
-
-  assert_eq!(s.to_string(), "212121");
-}
-
-mod replace_all {
-  use super::*;
-
-  #[test]
-  fn works_with_string_replace() {
-    let code = "1212";
-    let mut s = MagicString::new(code);
-
-    s.replace_all("2", "3");
-
-    assert_eq!(s.to_string(), "1313");
-  }
-
-  #[test]
-  fn should_not_search_back() {
-    let code = "121212";
-    let mut s = MagicString::new(code);
-
-    s.replace_all("12", "21");
-
-    assert_eq!(s.to_string(), "212121");
-  }
-}
+// NOTE: The plain `replace` / `replace_all` unit tests were moved to
+// `packages/rolldown/tests/magic-string/rolldown-magic-string.test.ts` so they
+// exercise the JS binding's UTF-16 -> UTF-8 conversion. The sourcemap snapshot
+// tests below stay here because they rely on `insta` + `SourcemapVisualizer`.
 
 #[test]
 fn replace_sourcemap_with_chinese() {
@@ -54,7 +15,8 @@ fn replace_sourcemap_with_chinese() {
     "测",
     "试",
     ReplaceOptions { count: usize::MAX, store_original_in_sourcemap: true },
-  );
+  )
+  .unwrap();
 
   let output = s.to_string();
   let sourcemap = s.source_map(SourceMapOptions {
@@ -74,7 +36,8 @@ fn replace_sourcemap() {
   let code = "* 2 * 4";
   let mut s = MagicString::new(code);
 
-  s.replace_with("*", "#", ReplaceOptions { count: usize::MAX, store_original_in_sourcemap: true });
+  s.replace_with("*", "#", ReplaceOptions { count: usize::MAX, store_original_in_sourcemap: true })
+    .unwrap();
 
   let output = s.to_string();
   let sourcemap = s.source_map(SourceMapOptions {

@@ -3,9 +3,10 @@ use crate::utils::chunk::render_chunk_exports::{
   get_chunk_export_names_with_ctx, render_wrapped_entry_chunk,
 };
 use crate::{
-  ecmascript::ecma_generator::RenderedModuleSources, types::generator::GenerateContext,
+  ecmascript::ecma_generator::RenderedModuleSources,
+  types::generator::GenerateContext,
   utils::chunk::render_chunk_exports::render_chunk_exports,
-  utils::external_import_interop::external_import_needs_interop,
+  utils::external_import_interop::{ChunkAssignments, chunk_external_interop_modes},
 };
 use rolldown_common::{AddonRenderContext, OutputExports};
 use rolldown_error::BuildDiagnostic;
@@ -129,37 +130,76 @@ fn render_cjs_chunk_imports(ctx: &GenerateContext<'_>) -> String {
 
       let require_path_str = concat_string!(
         "require(\"",
-        &importee.get_import_path(ctx.chunk, ctx.options.paths.as_ref()),
+        &importee.get_import_path(ctx.chunk, ctx.resolved_paths),
         "\")"
       );
 
-      if ctx.link_output.used_symbol_refs.contains(&importee.namespace_ref) {
-        let external_module_symbol_name = &ctx.chunk.canonical_names[&importee.namespace_ref];
-        // Check if this import needs __toESM
-        let needs_interop =
-          named_imports.is_some_and(|imports| external_import_needs_interop(imports));
-        if needs_interop {
-          // generate code like:
-          // let external_module_symbol_name = require("external-module");
-          // external_module_symbol_name = __toESM(external_module_symbol_name);
-          let require_external = concat_string!(
-            "let ",
-            external_module_symbol_name,
-            " = ",
-            require_path_str,
-            ";\n",
-            external_module_symbol_name,
-            " = ",
-            ctx.finalized_string_pattern_for_symbol_ref(
-              ctx.link_output.runtime.resolve_symbol("__toESM"),
-              ctx.chunk_idx,
-              &ctx.chunk.canonical_names,
-            ),
-            "(",
-            external_module_symbol_name,
-            ");\n"
+      if ctx.link_output.used_external_symbols.contains(&importee.namespace_ref) {
+        let external_module_symbol_name = ctx
+          .link_output
+          .symbol_db
+          .canonical_name_for_or_original(importee.namespace_ref, &ctx.chunk.canonical_names);
+        // `named_imports` only covers imports written by modules that live in this chunk, so the
+        // mode set also folds in what the inclusion pass recorded for observers landing here.
+        // Deconflicting derives the mixed-mode binding names from this same call.
+        let interop_modes = chunk_external_interop_modes(
+          ctx.link_output,
+          ChunkAssignments::from_graph(ctx.chunk_graph),
+          ctx.chunk_idx,
+          importee.namespace_ref,
+          named_imports.map(Vec::as_slice),
+        );
+        if let Some(interop_modes) = interop_modes {
+          let to_esm_fn = ctx.finalized_string_pattern_for_symbol_ref(
+            ctx.link_output.runtime.resolve_symbol("__toESM"),
+            ctx.chunk_idx,
+            &ctx.chunk.canonical_names,
           );
-          s.push_str(&require_external);
+          let canonical_ref = ctx.link_output.symbol_db.canonical_ref_for(importee.namespace_ref);
+          if let Some(node_mode_name) = ctx.chunk.node_mode_external_ns_names.get(&canonical_ref) {
+            // Mixed-mode: emit two __toESM bindings (node-mode and non-node-mode)
+            let require_external = concat_string!(
+              "let ",
+              external_module_symbol_name,
+              " = ",
+              require_path_str,
+              ";\nlet ",
+              node_mode_name,
+              " = ",
+              to_esm_fn,
+              "(",
+              external_module_symbol_name,
+              ", 1);\n",
+              external_module_symbol_name,
+              " = ",
+              to_esm_fn,
+              "(",
+              external_module_symbol_name,
+              ");\n"
+            );
+            s.push_str(&require_external);
+          } else {
+            // Single-mode. Both flags can still be set: deconflicting suppresses the node binding
+            // when no ESM-format module in the chunk would read it (`chunk_has_node_esm_reader`).
+            // Those readers take this plain binding, so non-Node is the mode that matches them.
+            let node_mode_arg =
+              if interop_modes.node_esm && !interop_modes.non_node_esm { ", 1" } else { "" };
+            let require_external = concat_string!(
+              "let ",
+              external_module_symbol_name,
+              " = ",
+              require_path_str,
+              ";\n",
+              external_module_symbol_name,
+              " = ",
+              to_esm_fn,
+              "(",
+              external_module_symbol_name,
+              node_mode_arg,
+              ");\n"
+            );
+            s.push_str(&require_external);
+          }
         } else {
           // generate code like:
           // let external_module_symbol_name = require("external-module");

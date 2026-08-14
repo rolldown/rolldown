@@ -1,2 +1,2 @@
-export function elem() {}
-export function frag() {}
+export function elem() {console.log()}
+export function frag() {console.log()}

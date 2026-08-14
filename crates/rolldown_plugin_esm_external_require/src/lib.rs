@@ -1,6 +1,7 @@
 use std::borrow::Cow;
 
-use rolldown_common::{ImportKind, ResolvedExternal, is_existing_node_builtin_modules};
+use nodejs_built_in_modules::is_nodejs_builtin_module;
+use rolldown_common::{ImportKind, OutputFormat, ResolvedExternal};
 use rolldown_plugin::{HookLoadOutput, HookResolveIdOutput, HookUsage, Plugin};
 use rolldown_utils::{concat_string, pattern_filter::StringOrRegex, rustc_hash::FxHashSetExt as _};
 use rustc_hash::FxHashSet;
@@ -108,7 +109,7 @@ impl Plugin for EsmExternalRequirePlugin {
     });
 
     if is_external {
-      if !ctx.options().format.is_esm() || args.kind != ImportKind::Require {
+      if matches!(ctx.options().format, OutputFormat::Cjs) || args.kind != ImportKind::Require {
         return Ok(Some(HookResolveIdOutput {
           id: args.specifier.into(),
           external: Some(ResolvedExternal::Bool(true)),
@@ -131,7 +132,7 @@ impl Plugin for EsmExternalRequirePlugin {
 
   async fn load(
     &self,
-    _ctx: &rolldown_plugin::PluginContext,
+    _ctx: rolldown_plugin::SharedLoadPluginContext,
     args: &rolldown_plugin::HookLoadArgs<'_>,
   ) -> rolldown_plugin::HookLoadReturn {
     Ok(args.id.strip_prefix(CJS_EXTERNAL_FACADE_PREFIX).map(|module_id| {
@@ -139,7 +140,7 @@ impl Plugin for EsmExternalRequirePlugin {
         "import * as m from '",
         module_id,
         "';module.exports = ",
-        if is_existing_node_builtin_modules(module_id) { "m.default" } else { "{ ...m }" },
+        if is_nodejs_builtin_module(module_id) { "m.default" } else { "{ ...m }" },
         ";"
       );
       HookLoadOutput { code: code.into(), ..Default::default() }

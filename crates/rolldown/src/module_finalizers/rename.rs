@@ -1,8 +1,20 @@
-use oxc::ast::ast::{self, Expression, IdentifierReference};
+use oxc::ast::ast::{self, Expression, IdentifierReference, MemberExpression};
 use rolldown_common::SymbolRef;
-use rolldown_ecmascript_utils::ExpressionExt;
+use rolldown_ecmascript_utils::{ExpressionExt, MemberExpressionFactoryExt as _};
 
 use super::ScopeHoistingFinalizer;
+
+fn finalized_reference_expr_mut<'a, 'ast>(
+  expr: &'a mut Expression<'ast>,
+) -> &'a mut Expression<'ast> {
+  match expr {
+    Expression::ParenthesizedExpression(expr) => finalized_reference_expr_mut(&mut expr.expression),
+    Expression::SequenceExpression(expr) => finalized_reference_expr_mut(
+      expr.expressions.last_mut().expect("sequence expression should not be empty"),
+    ),
+    expr => expr,
+  }
+}
 
 impl<'ast> ScopeHoistingFinalizer<'_, 'ast> {
   /// return `None` if
@@ -20,12 +32,15 @@ impl<'ast> ScopeHoistingFinalizer<'_, 'ast> {
     // we will hit this branch if the reference points to a global variable
     let symbol_id = self.scope.symbol_id_for(reference_id)?;
 
-    let symbol_ref: SymbolRef = (self.ctx.id, symbol_id).into();
+    let symbol_ref: SymbolRef = (self.ctx.idx, symbol_id).into();
     let (mut expr, _) = self.finalized_expr_for_symbol_ref(symbol_ref, is_callee, false);
 
     // See https://github.com/oxc-project/oxc/issues/4606
 
-    match &mut expr {
+    // A namespace member used as a callee is wrapped as `(0, namespace.member)` to avoid
+    // binding `this`. Apply the original identifier's span to the member expression inside
+    // that wrapper so codegen can map the generated callee back to the import reference.
+    match finalized_reference_expr_mut(&mut expr) {
       ast::Expression::Identifier(it) => {
         it.span = id_ref.span;
       }
@@ -56,22 +71,24 @@ impl<'ast> ScopeHoistingFinalizer<'_, 'ast> {
     // we will hit this branch if the reference points to a global variable
     let symbol_id = self.scope.symbol_id_for(reference_id)?;
 
-    let symbol_ref: SymbolRef = (self.ctx.id, symbol_id).into();
+    let symbol_ref: SymbolRef = (self.ctx.idx, symbol_id).into();
     let canonical_ref = self.ctx.symbol_db.canonical_ref_for(symbol_ref);
     let symbol = self.ctx.symbol_db.get(canonical_ref);
 
     if let Some(ns_alias) = &symbol.namespace_alias {
       let canonical_ns_name = self.canonical_name_for(ns_alias.namespace_ref);
       let prop_name = &ns_alias.property_name;
-      let access_expr = self.snippet.literal_prop_access_member_expr(canonical_ns_name, prop_name);
+      let access_expr = MemberExpression::new_member_access(canonical_ns_name, prop_name, self);
 
       return Some(ast::SimpleAssignmentTarget::from(access_expr));
     }
 
     let canonical_name = self.canonical_name_for(canonical_ref);
-    if id_ref.name != canonical_name.as_str() {
-      return Some(ast::SimpleAssignmentTarget::AssignmentTargetIdentifier(
-        self.snippet.alloc_id_ref(canonical_name, id_ref.span),
+    if id_ref.name != canonical_name {
+      return Some(ast::SimpleAssignmentTarget::new_assignment_target_identifier(
+        id_ref.span,
+        oxc::ast::ast::Str::from_str_in(canonical_name, self),
+        self,
       ));
     }
 
@@ -83,7 +100,7 @@ impl<'ast> ScopeHoistingFinalizer<'_, 'ast> {
     ident_ref: &ast::IdentifierReference<'ast>,
     is_callee: bool,
   ) -> Option<Expression<'ast>> {
-    if self.ctx.module.dummy_record_set.contains(&ident_ref.span) {
+    if self.ctx.module.dummy_record_set.contains(&ident_ref.node_id()) {
       // use `__require` instead of `require`
       return Some(self.finalized_expr_for_runtime_symbol("__require"));
     }
@@ -101,41 +118,55 @@ impl<'ast> ScopeHoistingFinalizer<'_, 'ast> {
     &self,
     target: &mut ast::SimpleAssignmentTarget<'ast>,
   ) -> Option<()> {
-    // Some `IdentifierReference`s constructed by bundler don't have `ReferenceId` and we just ignore them.
-    if let ast::SimpleAssignmentTarget::AssignmentTargetIdentifier(target_id_ref) = target {
-      let reference_id = target_id_ref.reference_id.get()?;
-      let symbol_id = self.scope.symbol_id_for(reference_id)?;
+    match target {
+      // Some `IdentifierReference`s constructed by bundler don't have `ReferenceId` and we just ignore them.
+      ast::SimpleAssignmentTarget::AssignmentTargetIdentifier(target_id_ref) => {
+        let reference_id = target_id_ref.reference_id.get()?;
+        let symbol_id = self.scope.symbol_id_for(reference_id)?;
 
-      let symbol_ref = (self.ctx.id, symbol_id).into();
-      let canonical_ref = self.ctx.symbol_db.canonical_ref_for(symbol_ref);
-      let symbol = self.ctx.symbol_db.get(canonical_ref);
+        let symbol_ref = (self.ctx.idx, symbol_id).into();
+        let canonical_ref = self.ctx.symbol_db.canonical_ref_for(symbol_ref);
+        let symbol = self.ctx.symbol_db.get(canonical_ref);
 
-      if let Some(ns_alias) = &symbol.namespace_alias {
-        *target = ast::SimpleAssignmentTarget::from(self.snippet.literal_prop_access_member_expr(
-          self.canonical_name_for(ns_alias.namespace_ref),
-          &ns_alias.property_name,
-        ));
-      } else {
-        let canonical_name = self.canonical_name_for(canonical_ref);
-        if target_id_ref.name != canonical_name.as_str() {
-          target_id_ref.name = self.snippet.atom(canonical_name);
+        if let Some(ns_alias) = &symbol.namespace_alias {
+          *target = ast::SimpleAssignmentTarget::from(MemberExpression::new_member_access(
+            self.canonical_name_for(ns_alias.namespace_ref),
+            &ns_alias.property_name,
+            self,
+          ));
+        } else {
+          let canonical_name = self.canonical_name_for(canonical_ref);
+          if target_id_ref.name != canonical_name {
+            target_id_ref.name = oxc::ast::ast::Str::from_str_in(canonical_name, self).into();
+          }
+          target_id_ref.reference_id.take();
         }
-        target_id_ref.reference_id.take();
       }
+      // Handle member expression assignment targets like `import_src.log = value`
+      // When the object is a default import from CJS (has namespace_alias with property_name "default"),
+      // we need to rewrite `import_src.log = value` to `import_src.default.log = value`
+      // because __toESM creates getter-only properties that can't be assigned to.
+      ast::SimpleAssignmentTarget::StaticMemberExpression(_)
+      | ast::SimpleAssignmentTarget::ComputedMemberExpression(_) => {
+        if let Some(new_target) = self.try_rewrite_cjs_member_expr_assignment_target(target) {
+          *target = new_target;
+        }
+      }
+      _ => {}
     }
     None
   }
 
   pub fn rewrite_object_pat_shorthand(&self, pat: &mut ast::ObjectPattern<'ast>) {
     for prop in &mut pat.properties {
-      match &mut prop.value.kind {
+      match &mut prop.value {
         // Ensure `const { a } = ...;` will be rewritten to `const { a: a } = ...` instead of `const { a } = ...`
         // Ensure `function foo({ a }) {}` will be rewritten to `function foo({ a: a }) {}` instead of `function foo({ a }) {}`
-        ast::BindingPatternKind::BindingIdentifier(ident) if prop.shorthand => {
+        ast::BindingPattern::BindingIdentifier(ident) if prop.shorthand => {
           if let Some(symbol_id) = ident.symbol_id.get() {
-            let canonical_name = self.canonical_name_for((self.ctx.id, symbol_id).into());
-            if ident.name != canonical_name.as_str() {
-              ident.name = self.snippet.atom(canonical_name);
+            let canonical_name = self.canonical_name_for((self.ctx.idx, symbol_id).into());
+            if ident.name != canonical_name {
+              ident.name = oxc::ast::ast::Str::from_str_in(canonical_name, self).into();
               prop.shorthand = false;
             }
             ident.symbol_id.get_mut().take();
@@ -143,14 +174,14 @@ impl<'ast> ScopeHoistingFinalizer<'_, 'ast> {
         }
         // Ensure `const { a = 1 } = ...;` will be rewritten to `const { a: a = 1 } = ...` instead of `const { a = 1 } = ...`
         // Ensure `function foo({ a = 1 }) {}` will be rewritten to `function foo({ a: a = 1 }) {}` instead of `function foo({ a = 1 }) {}`
-        ast::BindingPatternKind::AssignmentPattern(assign_pat) if prop.shorthand => {
-          let ast::BindingPatternKind::BindingIdentifier(ident) = &mut assign_pat.left.kind else {
+        ast::BindingPattern::AssignmentPattern(assign_pat) if prop.shorthand => {
+          let ast::BindingPattern::BindingIdentifier(ident) = &mut assign_pat.left else {
             continue;
           };
           if let Some(symbol_id) = ident.symbol_id.get() {
-            let canonical_name = self.canonical_name_for((self.ctx.id, symbol_id).into());
-            if ident.name != canonical_name.as_str() {
-              ident.name = self.snippet.atom(canonical_name);
+            let canonical_name = self.canonical_name_for((self.ctx.idx, symbol_id).into());
+            if ident.name != canonical_name {
+              ident.name = oxc::ast::ast::Str::from_str_in(canonical_name, self).into();
               prop.shorthand = false;
             }
             ident.symbol_id.get_mut().take();

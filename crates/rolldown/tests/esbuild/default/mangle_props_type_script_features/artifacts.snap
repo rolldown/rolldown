@@ -1,26 +1,59 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
 ---
+# warnings
+
+## TOLERATED_TRANSFORM
+
+```text
+[TOLERATED_TRANSFORM] Namespaces exporting non-const are not supported by Oxc. Change to const or see: https://oxc.rs/docs/guide/usage/transformer/typescript.html#partial-namespace-support
+   ╭─[ namespace-exports.ts:2:13 ]
+   │
+ 2 │     export var MANGLE_VAR_ = 1
+   │                ───────┬───────  
+   │                       ╰───────── 
+───╯
+
+```
+
+## TOLERATED_TRANSFORM
+
+```text
+[TOLERATED_TRANSFORM] Namespaces exporting non-const are not supported by Oxc. Change to const or see: https://oxc.rs/docs/guide/usage/transformer/typescript.html#partial-namespace-support
+   ╭─[ namespace-exports.ts:3:13 ]
+   │
+ 3 │     export let MANGLE_LET_ = 2
+   │                ───────┬───────  
+   │                       ╰───────── 
+───╯
+
+```
+
+## TOLERATED_TRANSFORM
+
+```text
+[TOLERATED_TRANSFORM] Namespaces exporting non-const are not supported by Oxc. Change to const or see: https://oxc.rs/docs/guide/usage/transformer/typescript.html#partial-namespace-support
+   ╭─[ namespace-exports.ts:5:13 ]
+   │
+ 5 │     export let { NESTED_: { DESTRUCTURING_ } } = 4
+   │                ─────────────────┬─────────────────  
+   │                                 ╰─────────────────── 
+───╯
+
+```
+
 # Assets
 
 ## enum-values.js
 
 ```js
 //#region enum-values.ts
-var TopLevelNumber = /* @__PURE__ */ function(TopLevelNumber$1) {
-	TopLevelNumber$1[TopLevelNumber$1["foo_"] = 0] = "foo_";
-	return TopLevelNumber$1;
-}(TopLevelNumber || {});
-var TopLevelString = /* @__PURE__ */ function(TopLevelString$1) {
-	TopLevelString$1["bar_"] = "";
-	return TopLevelString$1;
-}(TopLevelString || {});
 console.log({
-	foo: TopLevelNumber.foo_,
-	bar: TopLevelString.bar_
+	foo: 0,
+	bar: ""
 });
-
 //#endregion
+
 ```
 
 ## namespace-exports.js
@@ -29,30 +62,30 @@ console.log({
 //#region namespace-exports.ts
 let ns;
 (function(_ns) {
-	var MANGLE_VAR_$1 = _ns.MANGLE_VAR_ = 1;
-	let MANGLE_LET_$1 = _ns.MANGLE_LET_ = 2;
-	const MANGLE_CONST_$1 = _ns.MANGLE_CONST_ = 3;
-	let { NESTED_: { DESTRUCTURING_: DESTRUCTURING_$1 } } = 4;
-	_ns.DESTRUCTURING_ = DESTRUCTURING_$1;
-	function MANGLE_FUNCTION_$1() {}
-	_ns.MANGLE_FUNCTION_ = MANGLE_FUNCTION_$1;
-	class MANGLE_CLASS_$1 {}
-	_ns.MANGLE_CLASS_ = MANGLE_CLASS_$1;
-	let MANGLE_NAMESPACE_$1;
-	(function(_MANGLE_NAMESPACE_) {})(MANGLE_NAMESPACE_$1 || (MANGLE_NAMESPACE_$1 = _ns.MANGLE_NAMESPACE_ || (_ns.MANGLE_NAMESPACE_ = {})));
-	let MANGLE_ENUM_$1 = /* @__PURE__ */ function(MANGLE_ENUM_$2) {
-		return MANGLE_ENUM_$2;
+	var MANGLE_VAR_ = _ns.MANGLE_VAR_ = 1;
+	let MANGLE_LET_ = _ns.MANGLE_LET_ = 2;
+	const MANGLE_CONST_ = _ns.MANGLE_CONST_ = 3;
+	let { NESTED_: { DESTRUCTURING_ } } = 4;
+	_ns.DESTRUCTURING_ = DESTRUCTURING_;
+	function MANGLE_FUNCTION_() {}
+	_ns.MANGLE_FUNCTION_ = MANGLE_FUNCTION_;
+	class MANGLE_CLASS_ {}
+	_ns.MANGLE_CLASS_ = MANGLE_CLASS_;
+	let MANGLE_NAMESPACE_;
+	MANGLE_NAMESPACE_ || (MANGLE_NAMESPACE_ = _ns.MANGLE_NAMESPACE_ || (_ns.MANGLE_NAMESPACE_ = {}));
+	let MANGLE_ENUM_ = /* @__PURE__ */ function(MANGLE_ENUM_) {
+		return MANGLE_ENUM_;
 	}({});
-	_ns.MANGLE_ENUM_ = MANGLE_ENUM_$1;
+	_ns.MANGLE_ENUM_ = MANGLE_ENUM_;
 	console.log({
-		VAR: MANGLE_VAR_$1,
-		LET: MANGLE_LET_$1,
-		CONST: MANGLE_CONST_$1,
-		DESTRUCTURING: DESTRUCTURING_$1,
-		FUNCTION: MANGLE_FUNCTION_$1,
-		CLASS: MANGLE_CLASS_$1,
-		NAMESPACE: MANGLE_NAMESPACE_$1,
-		ENUM: MANGLE_ENUM_$1
+		VAR: MANGLE_VAR_,
+		LET: MANGLE_LET_,
+		CONST: MANGLE_CONST_,
+		DESTRUCTURING: DESTRUCTURING_,
+		FUNCTION: MANGLE_FUNCTION_,
+		CLASS: MANGLE_CLASS_,
+		NAMESPACE: MANGLE_NAMESPACE_,
+		ENUM: MANGLE_ENUM_
 	});
 })(ns || (ns = {}));
 console.log({
@@ -77,8 +110,8 @@ console.log({
 		ENUM: MANGLE_ENUM_
 	});
 })(ns || (ns = {}));
-
 //#endregion
+
 ```
 
 ## parameter-properties.js
@@ -93,6 +126,6 @@ var Foo = class {
 };
 let foo = new Foo();
 console.log(foo.KEEP_FIELD, foo.MANGLE_FIELD_);
-
 //#endregion
+
 ```

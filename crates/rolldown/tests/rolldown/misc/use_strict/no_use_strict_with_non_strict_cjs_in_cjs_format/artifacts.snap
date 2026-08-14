@@ -6,20 +6,17 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## main.js
 
 ```js
-// HIDDEN [rolldown:runtime]
-let node_assert = require("node:assert");
-node_assert = __toESM(node_assert);
-
+// HIDDEN [\0rolldown/runtime.js]
+let node_assert_strict = require("node:assert/strict");
+node_assert_strict = __toESM(node_assert_strict);
 //#region cjs.js
-var require_cjs = /* @__PURE__ */ __commonJSMin(((exports, module) => {
-	console.log("This chunk should not have \"use strict\" at the top.");
-	module.exports = {};
-}));
-
 //#endregion
 //#region main.js
-var import_cjs = /* @__PURE__ */ __toESM(require_cjs());
-node_assert.default.deepEqual(import_cjs.default, { default: {} });
-
+var import_cjs = /* @__PURE__ */ __toESM((/* @__PURE__ */ __commonJSMin(((exports, module) => {
+	console.log("This chunk should not have \"use strict\" at the top.");
+	module.exports = {};
+})))());
+node_assert_strict.default.deepEqual(import_cjs.default, { default: {} });
 //#endregion
+
 ```

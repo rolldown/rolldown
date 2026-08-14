@@ -1,15 +1,16 @@
-import type {
-  MinifyOptions as BindingMinifyOptions,
-  PreRenderedChunk,
-} from '../binding.cjs';
+import type { MinifyOptions as BindingMinifyOptions, PreRenderedChunk } from '../binding.cjs';
 import type { RolldownOutputPluginOption } from '../plugin';
-import type {
-  SourcemapIgnoreListOption,
-  SourcemapPathTransformOption,
-} from '../types/misc';
+import type { SourcemapIgnoreListOption, SourcemapPathTransformOption } from '../types/misc';
 import type { ModuleInfo } from '../types/module-info';
 import type { RenderedChunk } from '../types/rolldown-output';
 import type { NullValue, StringOrRegExp } from '../types/utils';
+import type { AssetSource } from '../utils/asset-source';
+// oxlint-disable-next-line no-unused-vars -- this is used in JSDoc links
+import type { InputOptions } from './input-options';
+// oxlint-disable-next-line no-unused-vars -- this is used in JSDoc links
+import type { InternalModuleFormat } from './normalized-output-options';
+// oxlint-disable-next-line no-unused-vars -- this is used in JSDoc links
+import type { Plugin } from '../plugin';
 
 export type GeneratedCodePreset = 'es5' | 'es2015';
 
@@ -32,6 +33,8 @@ export interface GeneratedCodeOptions {
    *   }
    * };
    * ```
+   *
+   * @default 'es2015'
    */
   preset?: GeneratedCodePreset;
   /**
@@ -40,97 +43,191 @@ export interface GeneratedCodeOptions {
    * When enabled, generated code will use descriptive variable names that correspond
    * to the original module names, making it easier to profile and debug the bundled code.
    *
-   * Note: Enabling this option makes the output more difficult to minify effectively.
-   *
    * @default false
+   *
+   * {@include ./docs/output-generated-code-profiler-names.md}
    */
   profilerNames?: boolean;
 }
 
-export type ModuleFormat =
-  | 'es'
-  | 'cjs'
-  | 'esm'
-  | 'module'
-  | 'commonjs'
-  | 'iife'
-  | 'umd';
+/** @inline */
+export type ModuleFormat = 'es' | 'cjs' | 'esm' | 'module' | 'commonjs' | 'iife' | 'umd';
 
+/** @inline */
 export type AddonFunction = (chunk: RenderedChunk) => string | Promise<string>;
 
+/** @inline */
 export type ChunkFileNamesFunction = (chunkInfo: PreRenderedChunk) => string;
 
+/** @inline */
 export type SanitizeFileNameFunction = (name: string) => string;
 
+/** @category Plugin APIs */
 export interface PreRenderedAsset {
   type: 'asset';
+  /** @deprecated Use {@linkcode names} instead. */
   name?: string;
   names: string[];
+  /** @deprecated Use {@linkcode originalFileNames} instead. */
   originalFileName?: string;
+  /** The list of the absolute paths to the original file of this asset. */
   originalFileNames: string[];
-  source: string | Uint8Array;
+  /** The content of this asset. */
+  source: AssetSource;
 }
 
+/** @inline */
 export type AssetFileNamesFunction = (chunkInfo: PreRenderedAsset) => string;
 
+/** @inline */
 export type PathsFunction = (id: string) => string;
 
+/** @inline */
 export type ManualChunksFunction = (
   moduleId: string,
   meta: { getModuleInfo: (moduleId: string) => ModuleInfo | null },
 ) => string | NullValue;
 
+/** @inline */
 export type GlobalsFunction = (name: string) => string;
 
-export type AdvancedChunksNameFunction = (
+/** @category Code Splitting */
+export type CodeSplittingNameFunction = (
   moduleId: string,
   ctx: ChunkingContext,
 ) => string | NullValue;
 
-export type AdvancedChunksTestFunction = (
-  id: string,
-) => boolean | undefined | void;
+/** @inline @category Code Splitting */
+export type CodeSplittingTestFunction = (id: string) => boolean | undefined | void;
 
 export type MinifyOptions = Omit<BindingMinifyOptions, 'module' | 'sourcemap'>;
 
+export interface CommentsOptions {
+  /**
+   * Comments that contain `@license`, `@preserve` or start with `//!` or `/*!`
+   */
+  legal?: boolean;
+  /**
+   * Comments that contain `@__PURE__`, `@__NO_SIDE_EFFECTS__` or `@vite-ignore`
+   */
+  annotation?: boolean;
+  /**
+   * JSDoc comments
+   */
+  jsdoc?: boolean;
+}
+
+/** @inline @category Code Splitting */
 export interface ChunkingContext {
   getModuleInfo(moduleId: string): ModuleInfo | null;
 }
 
 export interface OutputOptions {
+  /**
+   * The directory in which all generated chunks are placed.
+   *
+   * The {@linkcode file | output.file} option can be used instead if only a single chunk is generated.
+   *
+   * {@include ./docs/output-dir.md}
+   *
+   * @default 'dist'
+   */
   dir?: string;
+  /**
+   * The file path for the single generated chunk.
+   *
+   * The {@linkcode dir | output.dir} option should be used instead if multiple chunks are generated.
+   */
   file?: string;
+  /**
+   * Which exports mode to use.
+   *
+   * {@include ./docs/output-exports.md}
+   *
+   * @default 'auto'
+   */
   exports?: 'auto' | 'named' | 'default' | 'none';
+  /**
+   * Specify the character set that Rolldown is allowed to use in file hashes.
+   *
+   * - `'base64'`: Uses url-safe base64 characters (0-9, a-z, A-Z, -, _). This will produce the shortest hashes.
+   * - `'base36'`: Uses alphanumeric characters (0-9, a-z)
+   * - `'hex'`: Uses hexadecimal characters (0-9, a-f)
+   *
+   * @default 'base64'
+   */
   hashCharacters?: 'base64' | 'base36' | 'hex';
   /**
    * Expected format of generated code.
+   *
    * - `'es'`, `'esm'` and `'module'` are the same format, all stand for ES module.
    * - `'cjs'` and `'commonjs'` are the same format, all stand for CommonJS module.
    * - `'iife'` stands for [Immediately Invoked Function Expression](https://developer.mozilla.org/en-US/docs/Glossary/IIFE).
    * - `'umd'` stands for [Universal Module Definition](https://github.com/umdjs/umd).
    *
-   * @default 'esm'
+   * @default 'es'
+   *
+   * {@include ./docs/output-format.md}
    */
   format?: ModuleFormat;
+  /**
+   * Whether to generate sourcemaps.
+   *
+   * - `false`: No sourcemap will be generated.
+   * - `true`: A separate sourcemap file will be generated.
+   * - `'inline'`: The sourcemap will be appended to the output file as a data URL.
+   * - `'hidden'`: A separate sourcemap file will be generated, but the link to the sourcemap (`//# sourceMappingURL` comment) will not be included in the output file.
+   *
+   * @default false
+   */
   sourcemap?: boolean | 'inline' | 'hidden';
+  /**
+   * The base URL for the links to the sourcemap file in the output file.
+   *
+   * By default, relative URLs are generated. If this option is set, an absolute URL with that base URL will be generated. This is useful when deploying source maps to a different location than your code, such as a CDN or separate debugging server.
+   */
   sourcemapBaseUrl?: string;
+  /**
+   * The pattern to use for sourcemaps created from entry points, or a function that is called per entry chunk with {@linkcode PreRenderedChunk} to return such a pattern.
+   *
+   * Patterns support the following placeholders:
+   * - `[format]`: The rendering format defined in the output options. The value is any of {@linkcode InternalModuleFormat}.
+   * - `[hash]`: A hash based only on the content of the final generated sourcemap.  You can also set a specific hash length via e.g. `[hash:10]`. By default, it will create a base-64 hash. If you need a reduced character set, see {@linkcode hashCharacters | output.hashCharacters}.
+   * - `[chunkhash]`: The same hash as the one used for the corresponding generated chunk (if any).
+   * - `[name]`: The name of the corresponding chunk.
+   *
+   * Forward slashes (`/`) can be used to place files in sub-directories. This pattern will also be used for every file when setting the {@linkcode preserveModules | output.preserveModules} option.
+   *
+   * See also {@linkcode assetFileNames | output.assetFileNames}, {@linkcode chunkFileNames | output.chunkFileNames}.
+   *
+   * @default the corresponding chunk filename with `.map` appended
+   */
+  sourcemapFileNames?: string | ChunkFileNamesFunction;
+  /**
+   * Whether to include [debug IDs](https://github.com/tc39/ecma426/blob/main/proposals/debug-id.md) in the sourcemap.
+   *
+   * When `true`, a unique debug ID will be emitted in source and sourcemaps which streamlines identifying sourcemaps across different builds.
+   *
+   * @default false
+   */
   sourcemapDebugIds?: boolean;
   /**
    * Control which source files are included in the sourcemap ignore list.
+   *
    * Files in the ignore list are excluded from debugger stepping and error stack traces.
    *
-   * - `false`: Include all source files in the ignore list
-   * - `true`: Include no source files in the ignore list
+   * - `false`: Include no source files in the ignore list
+   * - `true`: Include all source files in the ignore list
    * - `string`: Files containing this string in their path will be included in the ignore list
    * - `RegExp`: Files matching this regular expression will be included in the ignore list
-   * - `function`: Custom function `(source: string, sourcemapPath: string) => boolean` to determine if a source should be ignored
+   * - `function`: Custom function to determine if a source should be ignored
    *
    * :::tip Performance
    * Using static values (`boolean`, `string`, or `RegExp`) is significantly more performant than functions.
    * Calling JavaScript functions from Rust has extremely high overhead, so prefer static patterns when possible.
    * :::
    *
-   * ## Examples
+   * @example
    * ```js
    * // ✅ Preferred: Use RegExp for better performance
    * sourcemapIgnoreList: /node_modules/
@@ -144,45 +241,226 @@ export interface OutputOptions {
    * }
    * ```
    *
-   * **default**: /node_modules/
+   * @default /node_modules/
    */
   sourcemapIgnoreList?: boolean | SourcemapIgnoreListOption | StringOrRegExp;
-  sourcemapPathTransform?: SourcemapPathTransformOption;
-  banner?: string | AddonFunction;
-  footer?: string | AddonFunction;
   /**
-   * Similar to `banner` option, but will run after the `renderChunk` hook and builtin minification.
-   */
-  postBanner?: string | AddonFunction;
-  /**
-   * Similar to `footer` option, but will run after the `renderChunk` hook and builtin minification.
-   */
-  postFooter?: string | AddonFunction;
-  intro?: string | AddonFunction;
-  outro?: string | AddonFunction;
-  extend?: boolean;
-  esModule?: boolean | 'if-default-prop';
-  assetFileNames?: string | AssetFileNamesFunction;
-  entryFileNames?: string | ChunkFileNamesFunction;
-  chunkFileNames?: string | ChunkFileNamesFunction;
-  cssEntryFileNames?: string | ChunkFileNamesFunction;
-  cssChunkFileNames?: string | ChunkFileNamesFunction;
-  sanitizeFileName?: boolean | SanitizeFileNameFunction;
-  /**
-   * Control code minification.
+   * A transformation to apply to each path in a sourcemap.
    *
-   * - `true`: Enable full minification including code compression and dead code elimination
-   * - `false`: Disable minification (default)
-   * - `'dce-only'`: Only perform dead code elimination without code compression
-   * - `MinifyOptions`: Fine-grained control over minification settings
+   * @example
+   * ```js
+   * export default defineConfig({
+   *   output: {
+   *     sourcemap: true,
+   *     sourcemapPathTransform: (source, sourcemapPath) => {
+   *       // Remove 'src/' prefix from all source paths
+   *       return source.replace(/^src\//, '');
+   *     },
+   *   },
+   * });
+   * ```
+   */
+  sourcemapPathTransform?: SourcemapPathTransformOption;
+  /**
+   * Whether to exclude the original source code from sourcemaps.
+   *
+   * When `true`, the `sourcesContent` field is omitted from the generated sourcemap,
+   * reducing the sourcemap file size. The sourcemap will still contain source file paths
+   * and mappings, so debugging works if the original files are available.
    *
    * @default false
    */
+  sourcemapExcludeSources?: boolean;
+  /**
+   * A string to prepend to the bundle before {@linkcode Plugin.renderChunk | renderChunk} hook.
+   *
+   * See {@linkcode intro | output.intro}, {@linkcode postBanner | output.postBanner} as well.
+   *
+   * {@include ./docs/output-banner.md}
+   */
+  banner?: string | AddonFunction;
+  /**
+   * A string to append to the bundle before {@linkcode Plugin.renderChunk | renderChunk} hook.
+   *
+   * See {@linkcode outro | output.outro}, {@linkcode postFooter | output.postFooter} as well.
+   *
+   * {@include ./docs/output-footer.md}
+   */
+  footer?: string | AddonFunction;
+  /**
+   * A string to prepend to the bundle after {@linkcode Plugin.renderChunk | renderChunk} hook and minification.
+   *
+   * See {@linkcode banner | output.banner}, {@linkcode intro | output.intro} as well.
+   *
+   * {@include ./docs/output-post-banner.md}
+   */
+  postBanner?: string | AddonFunction;
+  /**
+   * A string to append to the bundle after {@linkcode Plugin.renderChunk | renderChunk} hook and minification.
+   *
+   * See {@linkcode footer | output.footer}, {@linkcode outro | output.outro} as well.
+   *
+   * {@include ./docs/output-post-footer.md}
+   */
+  postFooter?: string | AddonFunction;
+  /**
+   * A string to prepend inside any {@link OutputOptions.format | format}-specific wrapper.
+   *
+   * See {@linkcode banner | output.banner}, {@linkcode postBanner | output.postBanner} as well.
+   *
+   * {@include ./docs/output-intro.md}
+   */
+  intro?: string | AddonFunction;
+  /**
+   * A string to append inside any {@link OutputOptions.format | format}-specific wrapper.
+   *
+   * See {@linkcode footer | output.footer}, {@linkcode postFooter | output.postFooter} as well.
+   *
+   * {@include ./docs/output-outro.md}
+   */
+  outro?: string | AddonFunction;
+  /**
+   * Whether to extend the global variable defined by the {@linkcode OutputOptions.name | name} option in `umd` or `iife` {@link OutputOptions.format | formats}.
+   *
+   * When `true`, the global variable will be defined as `global.name = global.name || {}`.
+   * When `false`, the global defined by name will be overwritten like `global.name = {}`.
+   *
+   * @default false
+   */
+  extend?: boolean;
+  /**
+   * Whether to add a `__esModule: true` property when generating exports for non-ES {@link OutputOptions.format | formats}.
+   *
+   * This property signifies that the exported value is the namespace of an ES module and that the default export of this module corresponds to the `.default` property of the exported object.
+   *
+   * - `true`: Always add the property when using {@link OutputOptions.exports | named exports mode}, which is similar to what other tools do.
+   * - `"if-default-prop"`: Only add the property when using {@link OutputOptions.exports | named exports mode} and there also is a default export. The subtle difference is that if there is no default export, consumers of the CommonJS version of your library will get all named exports as default export instead of an error or `undefined`.
+   * - `false`: Never add the property even if the default export would become a property `.default`.
+   *
+   * @default 'if-default-prop'
+   *
+   * {@include ./docs/output-es-module.md}
+   */
+  esModule?: boolean | 'if-default-prop';
+  /**
+   * The pattern to use for naming custom emitted assets to include in the build output, or a function that is called per asset with {@linkcode PreRenderedAsset} to return such a pattern.
+   *
+   * Patterns support the following placeholders:
+   * - `[extname]`: The file extension of the asset including a leading dot, e.g. `.css`.
+   * - `[ext]`: The file extension without a leading dot, e.g. css.
+   * - `[hash]`: A hash based on the content of the asset. You can also set a specific hash length via e.g. `[hash:10]`. By default, it will create a base-64 hash. If you need a reduced character set, see {@linkcode hashCharacters | output.hashCharacters}.
+   * - `[name]`: The file name of the asset excluding any extension.
+   *
+   * Forward slashes (`/`) can be used to place files in sub-directories.
+   *
+   * See also {@linkcode chunkFileNames | output.chunkFileNames}, {@linkcode entryFileNames | output.entryFileNames}.
+   *
+   * @default 'assets/[name]-[hash][extname]'
+   */
+  assetFileNames?: string | AssetFileNamesFunction;
+  /**
+   * The pattern to use for chunks created from entry points, or a function that is called per entry chunk with {@linkcode PreRenderedChunk} to return such a pattern.
+   *
+   * Patterns support the following placeholders:
+   * - `[format]`: The rendering format defined in the output options. The value is any of {@linkcode InternalModuleFormat}.
+   * - `[hash]`: A hash based only on the content of the final generated chunk, including transformations in `renderChunk` and any referenced file hashes. You can also set a specific hash length via e.g. `[hash:10]`. By default, it will create a base-64 hash. If you need a reduced character set, see {@linkcode hashCharacters | output.hashCharacters}.
+   * - `[name]`: The file name (without extension) of the entry point, unless the object form of input was used to define a different name.
+   *
+   * Forward slashes (`/`) can be used to place files in sub-directories. This pattern will also be used for every file when setting the {@linkcode preserveModules | output.preserveModules} option.
+   *
+   * See also {@linkcode assetFileNames | output.assetFileNames}, {@linkcode chunkFileNames | output.chunkFileNames}.
+   *
+   * @default '[name].js'
+   */
+  entryFileNames?: string | ChunkFileNamesFunction;
+  /**
+   * The pattern to use for naming shared chunks created when code-splitting, or a function that is called per chunk with {@linkcode PreRenderedChunk} to return such a pattern.
+   *
+   * Patterns support the following placeholders:
+   * - `[format]`: The rendering format defined in the output options. The value is any of {@linkcode InternalModuleFormat}.
+   * - `[hash]`: A hash based only on the content of the final generated chunk, including transformations in `renderChunk` and any referenced file hashes. You can also set a specific hash length via e.g. `[hash:10]`. By default, it will create a base-64 hash. If you need a reduced character set, see {@linkcode hashCharacters | output.hashCharacters}.
+   * - `[name]`: The name of the chunk. This can be explicitly set via the {@linkcode codeSplitting | output.codeSplitting} option or when the chunk is created by a plugin via `this.emitFile`. Otherwise, it will be derived from the chunk contents.
+   *
+   * Forward slashes (`/`) can be used to place files in sub-directories.
+   *
+   * See also {@linkcode assetFileNames | output.assetFileNames}, {@linkcode entryFileNames | output.entryFileNames}.
+   *
+   * @default '[name]-[hash].js'
+   */
+  chunkFileNames?: string | ChunkFileNamesFunction;
+  /**
+   * Whether to enable chunk name sanitization (removal of non-URL-safe characters like `\0`, `?` and `*`).
+   *
+   * Set `false` to disable the sanitization. You can also provide a custom sanitization function.
+   *
+   * @default true
+   */
+  sanitizeFileName?: boolean | SanitizeFileNameFunction;
+  /**
+   * Control code minification
+   *
+   * Rolldown uses Oxc Minifier under the hood. See Oxc's [minification documentation](https://oxc.rs/docs/guide/usage/minifier#features) for more details.
+   *
+   * - `true`: Enable full minification including code compression and dead code elimination
+   * - `false`: Disable minification
+   * - `'dce-only'`: Only perform dead code elimination without code compression (default)
+   * - `MinifyOptions`: Fine-grained control over minification settings
+   *
+   * @default 'dce-only'
+   */
   minify?: boolean | 'dce-only' | MinifyOptions;
+  /**
+   * Specifies the global variable name that contains the exports of `umd` / `iife` {@link OutputOptions.format | formats}.
+   *
+   * @example
+   * ```js
+   * export default defineConfig({
+   *   output: {
+   *     format: 'iife',
+   *     name: 'MyBundle',
+   *   }
+   * });
+   * ```
+   * ```js
+   * // output
+   * var MyBundle = (function () {
+   *   // ...
+   * })();
+   * ```
+   *
+   * {@include ./docs/output-name.md}
+   */
   name?: string;
+  /**
+   * Specifies `id: variableName` pairs necessary for {@link InputOptions.external | external} imports in `umd` / `iife` {@link OutputOptions.format | formats}.
+   *
+   * @example
+   * ```js
+   * export default defineConfig({
+   *   external: ['jquery'],
+   *   output: {
+   *     format: 'iife',
+   *     name: 'MyBundle',
+   *     globals: {
+   *       jquery: '$',
+   *     }
+   *   }
+   * });
+   * ```
+   * ```js
+   * // input
+   * import $ from 'jquery';
+   * ```
+   * ```js
+   * // output
+   * var MyBundle = (function ($) {
+   *   // ...
+   * })($);
+   * ```
+   */
   globals?: Record<string, string> | GlobalsFunction;
   /**
-   * Maps external module IDs to paths.
+   * Maps {@link InputOptions.external | external} module IDs to paths.
    *
    * Allows customizing the path used when importing external dependencies.
    * This is particularly useful for loading dependencies from CDNs or custom locations.
@@ -212,17 +490,45 @@ export interface OutputOptions {
    * ```
    */
   paths?: Record<string, string> | PathsFunction;
+  /**
+   * Which language features Rolldown can safely use in generated code.
+   *
+   * This will not transpile any user code but only change the code Rolldown uses in wrappers and helpers.
+   */
   generatedCode?: Partial<GeneratedCodeOptions>;
+  /**
+   * Whether to generate code to support live bindings for {@link InputOptions.external | external} imports.
+   *
+   * With the default value of `true`, Rolldown will generate code to support live bindings for external imports.
+   *
+   * When set to `false`, Rolldown will assume that exports from external modules do not change. This will allow Rolldown to generate smaller code. Note that this can cause issues when there are circular dependencies involving an external dependency.
+   *
+   * @default true
+   *
+   * {@include ./docs/output-external-live-bindings.md}
+   */
   externalLiveBindings?: boolean;
+  /**
+   * @deprecated Please use `codeSplitting: false` instead.
+   *
+   * Whether to inline dynamic imports instead of creating new chunks to create a single bundle.
+   *
+   * This option can be used only when a single input is provided.
+   *
+   * @default false
+   */
   inlineDynamicImports?: boolean;
   /**
-   * - Type: `((moduleId: string, meta: { getModuleInfo: (moduleId: string) => ModuleInfo | null }) => string | NullValue)`
-   * - Object form is not supported.
+   * Whether to keep external dynamic imports as `import(...)` expressions in CommonJS output.
    *
-   * :::warning
-   * - This option is deprecated. Please use `advancedChunks` instead.
-   * - If `manualChunks` and `advancedChunks` are both specified, `manualChunks` option will be ignored.
-   * :::
+   * If set to `false`, external dynamic imports will be rewritten to use `require(...)` calls.
+   * This may be necessary to support environments that do not support dynamic `import()` in CommonJS modules like old Node.js versions.
+   *
+   * @default true
+   */
+  dynamicImportInCjs?: boolean;
+  /**
+   * Allows you to do manual chunking. Provided for Rollup compatibility.
    *
    * You could use this option for migration purpose. Under the hood,
    *
@@ -241,7 +547,7 @@ export interface OutputOptions {
    *
    * ```js
    * {
-   *   advancedChunks: {
+   *   codeSplitting: {
    *     groups: [
    *       {
    *         name(moduleId) {
@@ -257,239 +563,459 @@ export interface OutputOptions {
    *
    * ```
    *
-   * @deprecated Please use `advancedChunks` instead.
+   * Note that unlike Rollup, object form is not supported.
+   *
+   * @deprecated
+   * Please use {@linkcode codeSplitting | output.codeSplitting} instead.
+   *
+   * :::warning
+   * If `manualChunks` and `codeSplitting` are both specified, `manualChunks` option will be ignored.
+   * :::
    */
   manualChunks?: ManualChunksFunction;
   /**
-   * Allows you to do manual chunking. For deeper understanding, please refer to the in-depth [documentation](https://rolldown.rs/in-depth/advanced-chunks).
+   * Controls how code splitting is performed.
+   *
+   * - `true`: Default behavior, automatic code splitting. **(default)**
+   * - `false`: Inline all dynamic imports into a single bundle (equivalent to deprecated `inlineDynamicImports: true`).
+   * - `object`: Advanced manual code splitting configuration.
+   *
+   * For deeper understanding, please refer to the in-depth [documentation](https://rolldown.rs/in-depth/manual-code-splitting).
+   *
+   * {@include ./docs/output-code-splitting.md}
+   *
+   * @example
+   * **Basic vendor chunk**
+   * ```js
+   * export default defineConfig({
+   *   output: {
+   *     codeSplitting: {
+   *       minSize: 20000,
+   *       groups: [
+   *         {
+   *           name: 'vendor',
+   *           test: /node_modules/,
+   *         },
+   *       ],
+   *     },
+   *   },
+   * });
+   * ```
+   * {@include ./docs/output-code-splitting-example.md}
+   *
+   * @default true
+   */
+  codeSplitting?: boolean | CodeSplittingOptions;
+  /**
+   * @deprecated Please use {@linkcode codeSplitting | output.codeSplitting} instead.
+   *
+   * Allows you to do manual chunking.
+   *
+   * :::warning
+   * If `advancedChunks` and `codeSplitting` are both specified, `advancedChunks` option will be ignored.
+   * :::
    */
   advancedChunks?: {
-    /**
-     * - Type: `boolean`
-     * - Default: `true`
-     *
-     * By default, each group will also include captured modules' dependencies. This reduces the chance of generating circular chunks.
-     *
-     * If you want to disable this behavior, it's recommended to both set
-     * - `preserveEntrySignatures: false | 'allow-extension'`
-     * - `strictExecutionOrder: true`
-     *
-     * to avoid generating invalid chunks.
-     */
     includeDependenciesRecursively?: boolean;
-    /**
-     * - Type: `number`
-     *
-     * Global fallback of [`{group}.minSize`](#advancedchunks-groups-minsize), if it's not specified in the group.
-     */
     minSize?: number;
-    /**
-     * - Type: `number`
-     *
-     * Global fallback of [`{group}.maxSize`](#advancedchunks-groups-maxsize), if it's not specified in the group.
-     */
     maxSize?: number;
-    /**
-     * - Type: `number`
-     *
-     * Global fallback of [`{group}.maxModuleSize`](#advancedchunks-groups-maxmodulesize), if it's not specified in the group.
-     */
     maxModuleSize?: number;
-    /**
-     * - Type: `number`
-     *
-     * Global fallback of [`{group}.minModuleSize`](#advancedchunks-groups-minmodulesize), if it's not specified in the group.
-     */
     minModuleSize?: number;
-    /**
-     * - Type: `number`
-     *
-     * Global fallback of [`{group}.minShareCount`](#advancedchunks-groups-minsharecount), if it's not specified in the group.
-     */
     minShareCount?: number;
-    /**
-     * Groups to be used for advanced chunking.
-     */
-    groups?: {
-      /**
-       * - Type: `string | ((moduleId: string, ctx: { getModuleInfo: (moduleId: string) => ModuleInfo | null }) => string | NullValue)`
-       *
-       * Name of the group. It will be also used as the name of the chunk and replaced the `[name]` placeholder in the `chunkFileNames` option.
-       *
-       * For example,
-       *
-       * ```js
-       * import { defineConfig } from 'rolldown';
-       *
-       * export default defineConfig({
-       *   advancedChunks: {
-       *     groups: [
-       *       {
-       *         name: 'libs',
-       *         test: /node_modules/,
-       *       },
-       *     ],
-       *   },
-       * });
-       * ```
-       * will create a chunk named `libs-[hash].js` in the end.
-       *
-       * It's ok to have the same name for different groups. Rolldown will deduplicate the chunk names if necessary.
-       *
-       * # Dynamic `name()`
-       *
-       * If `name` is a function, it will be called with the module id as the argument. The function should return a string or `null`. If it returns `null`, the module will be ignored by this group.
-       *
-       * Notice, each returned new name will be treated as a separate group.
-       *
-       * For example,
-       *
-       * ```js
-       * import { defineConfig } from 'rolldown';
-       *
-       * export default defineConfig({
-       *   advancedChunks: {
-       *     groups: [
-       *       {
-       *         name: (moduleId) => moduleId.includes('node_modules') ? 'libs' : 'app',
-       *         minSize: 100 * 1024,
-       *       },
-       *     ],
-       *   },
-       * });
-       * ```
-       *
-       * :::warning
-       * Constraints like `minSize`, `maxSize`, etc. are applied separately for different names returned by the function.
-       * :::
-       */
-      name:
-        | string
-        | AdvancedChunksNameFunction;
-      /**
-       * - Type: `string | RegExp | ((id: string) => boolean | undefined | void);`
-       *
-       * Controls which modules are captured in this group.
-       *
-       * - If `test` is a string, the module whose id contains the string will be captured.
-       * - If `test` is a regular expression, the module whose id matches the regular expression will be captured.
-       * - If `test` is a function, modules for which `test(id)` returns `true` will be captured.
-       * - If `test` is empty, any module will be considered as matched.
-       *
-       * :::warning
-       * When using regular expression, it's recommended to use `[\\/]` to match the path separator instead of `/` to avoid potential issues on Windows.
-       * - ✅ Recommended: `/node_modules[\\/]react/`
-       * - ❌ Not recommended: `/node_modules/react/`
-       * :::
-       */
-      test?: StringOrRegExp | AdvancedChunksTestFunction;
-      /**
-       * - Type: `number`
-       * - Default: `0`
-       *
-       * Priority of the group. Group with higher priority will be chosen first to match modules and create chunks. When converting the group to a chunk, modules of that group will be removed from other groups.
-       *
-       * If two groups have the same priority, the group whose index is smaller will be chosen.
-       *
-       * For example,
-       *
-       * ```js
-       * import { defineConfig } from 'rolldown';
-       *
-       * export default defineConfig({
-       *  advancedChunks: {
-       *   groups: [
-       *      {
-       *        name: 'react',
-       *        test: /node_modules[\\/]react/,
-       *        priority: 1,
-       *      },
-       *      {
-       *        name: 'other-libs',
-       *        test: /node_modules/,
-       *        priority: 2,
-       *      },
-       *   ],
-       * });
-       * ```
-       *
-       * This is a clearly __incorrect__ example. Though `react` group is defined before `other-libs`, it has a lower priority, so the modules in `react` group will be captured in `other-libs` group.
-       */
-      priority?: number;
-      /**
-       * - Type: `number`
-       * - Default: `0`
-       *
-       * Minimum size in bytes of the desired chunk. If the accumulated size of the captured modules by this group is smaller than this value, it will be ignored. Modules in this group will fall back to the `automatic chunking` if they are not captured by any other group.
-       */
-      minSize?: number;
-      /**
-       * - Type: `number`
-       * - Default: `1`
-       *
-       * Controls if a module should be captured based on how many entry chunks reference it.
-       */
-      minShareCount?: number;
-      /**
-       * - Type: `number`
-       * - Default: `Infinity`
-       *
-       * If the accumulated size in bytes of the captured modules by this group is larger than this value, this group will be split into multiple groups that each has size close to this value.
-       */
-      maxSize?: number;
-      /**
-       * - Type: `number`
-       * - Default: `Infinity`
-       *
-       * Controls a module could only be captured if its size in bytes is smaller or equal than this value.
-       */
-      maxModuleSize?: number;
-      /**
-       * - Type: `number`
-       * - Default: `0`
-       *
-       * Controls a module could only be captured if its size in bytes is larger or equal than this value.
-       */
-      minModuleSize?: number;
-    }[];
+    groups?: CodeSplittingGroup[];
   };
   /**
-   * Control comments in the output.
+   * Controls how legal comments are preserved in the output.
    *
-   * - `none`: no comments
-   * - `inline`: preserve comments that contain `@license`, `@preserve` or starts with `//!` `/*!`
+   * - `none`: no legal comments
+   * - `inline`: preserve legal comments that contain `@license`, `@preserve` or starts with `//!` `/*!`
+   *
+   * @deprecated Use `comments.legal` instead. When both `legalComments` and `comments.legal` are set, `comments.legal` takes priority.
    */
   legalComments?: 'none' | 'inline';
+  /**
+   * Control which comments are preserved in the output.
+   *
+   * - `true`: Preserve legal, annotation, and JSDoc comments (default)
+   * - `false`: Strip all comments
+   * - Object: Granular control over comment categories
+   *
+   * Note: Regular line and block comments without these markers
+   * are always removed regardless of this option.
+   *
+   * When both `legalComments` and `comments.legal` are set, `comments.legal` takes priority.
+   *
+   * @default true
+   */
+  comments?: boolean | CommentsOptions;
+  /**
+   * The list of plugins to use only for this output.
+   *
+   * @see {@linkcode InputOptions.plugins | plugins}
+   */
   plugins?: RolldownOutputPluginOption;
+  /**
+   * Whether to add a polyfill for `require()` function in non-CommonJS formats.
+   *
+   * This option is useful when you want to inject your own `require` implementation.
+   *
+   * @default true
+   */
   polyfillRequire?: boolean;
+  /**
+   * This option is not implemented yet.
+   * @hidden
+   */
   hoistTransitiveImports?: false;
+  /**
+   * Whether to use preserve modules mode.
+   *
+   * {@include ./docs/output-preserve-modules.md}
+   *
+   * @default false
+   */
   preserveModules?: boolean;
+  /**
+   * Specifies the directory name for "virtual" files that might be emitted by plugins when using {@link OutputOptions.preserveModules | preserve modules mode}.
+   *
+   * @default '_virtual'
+   */
   virtualDirname?: string;
+  /**
+   * A directory path to input modules that should be stripped away from {@linkcode dir | output.dir} when using {@link OutputOptions.preserveModules | preserve modules mode}.
+   *
+   * {@include ./docs/output-preserve-modules-root.md}
+   */
   preserveModulesRoot?: string;
+  /**
+   * Whether to convert top-level `let` and `const` declarations into `var` declarations.
+   *
+   * Enabling this option can improve runtime performance of the generated code in
+   * certain environments by avoiding Temporal Dead Zone (TDZ) checks. Only declarations
+   * in the module's top-level scope are rewritten — declarations inside nested scopes
+   * (functions, blocks, etc.) are left as-is.
+   *
+   * Note:
+   * - Top-level `class X {}` declarations are always emitted as `var X = class {}` so
+   *   rolldown can hoist them alongside other top-level bindings; this transform is
+   *   independent of `topLevelVar`.
+   * - Top-level `function` declarations are never rewritten.
+   *
+   * @default false
+   *
+   * {@include ./docs/output-top-level-var.md}
+   */
   topLevelVar?: boolean;
   /**
-   * - Type: `boolean`
-   * - Default: `true` for format `es` or if `output.minify` is `true` or object, `false` otherwise
+   * Whether to minify internal exports as single letter variables to allow for better minification.
    *
-   * Whether to minify internal exports.
+   * @default
+   * `true` for format `es` or if `output.minify` is `true` or object, `false` otherwise
+   *
+   * {@include ./docs/output-minify-internal-exports.md}
    */
   minifyInternalExports?: boolean;
   /**
-   * - Type: `boolean`
-   * - Default: `false`
+   * Clean output directory ({@linkcode dir | output.dir}) before emitting output.
    *
-   * Clean output directory before emitting output.
+   * @default false
+   *
+   * {@include ./docs/output-clean-dir.md}
    */
   cleanDir?: boolean;
-  /** Keep function and class names after bundling.
+  /**
+   * Keep `name` property of functions and classes after bundling.
    *
-   * When enabled, the bundler will preserve the original names of functions and classes
-   * in the output, which is useful for debugging and error stack traces.
+   * When enabled, the bundler will preserve the original `name` property value of functions and
+   * classes in the output. This is useful for debugging and some frameworks that rely on it for
+   * registration and binding purposes.
+   *
+   * {@include ./docs/output-keep-names.md}
    *
    * @default false
    */
   keepNames?: boolean;
+  /**
+   * Preserve source module execution order across generated chunks.
+   *
+   * When enabled, Rolldown wraps ESM modules so their bodies run in source order regardless of chunk placement. Interop wrappers for CommonJS and require-of-ESM modules are unchanged, and external modules are not affected. `experimental.onDemandWrapping` replaces wrap-all with a conservative plan derived from predicted chunk execution hazards.
+   *
+   * > [!WARNING]
+   * > Enabling this option increases bundle size because wrapped modules need runtime init helpers.
+   * @default false
+   */
+  strictExecutionOrder?: boolean;
+  /**
+   * Whether to always output `"use strict"` directive in non-ES module outputs.
+   *
+   * - `true` - Always emit `"use strict"` at the top of the output (not applicable for ESM format since ESM is always strict).
+   * - `false` - Never emit `"use strict"` in the output.
+   * - `'auto'` - Respect the `"use strict"` directives from the source code.
+   *
+   * See [In-depth directive guide](https://rolldown.rs/in-depth/directives) for more details.
+   *
+   * @default 'auto'
+   */
+  strict?: boolean | 'auto';
 }
+
+/**
+ * Built-in module tag names computed by rolldown.
+ *
+ * - `'$initial'` — the module is statically imported by at least one user-defined entry point, or is part of its static dependency chain.
+ *
+ * @category Code Splitting
+ */
+export type BuiltinModuleTag = '$initial';
+
+/** @category Code Splitting */
+export type CodeSplittingGroup = {
+  /**
+   * Name of the group. It will be also used as the name of the chunk and replace the `[name]` placeholder in the {@linkcode OutputOptions.chunkFileNames | output.chunkFileNames} option.
+   *
+   * For example,
+   *
+   * ```js
+   * import { defineConfig } from 'rolldown';
+   *
+   * export default defineConfig({
+   *   output: {
+   *     codeSplitting: {
+   *       groups: [
+   *         {
+   *           name: 'libs',
+   *           test: /node_modules/,
+   *         },
+   *       ],
+   *     },
+   *   },
+   * });
+   * ```
+   * will create a chunk named `libs-[hash].js` in the end.
+   *
+   * It's ok to have the same name for different groups. Rolldown will deduplicate the chunk names if necessary.
+   *
+   * #### Dynamic `name()`
+   *
+   * If `name` is a function, it will be called with the module id as the argument. The function should return a string or `null`. If it returns `null`, the module will be ignored by this group.
+   *
+   * Notice, each returned new name will be treated as a separate group.
+   *
+   * For example,
+   *
+   * ```js
+   * import { defineConfig } from 'rolldown';
+   *
+   * export default defineConfig({
+   *   output: {
+   *     codeSplitting: {
+   *       groups: [
+   *         {
+   *           name: (moduleId) => moduleId.includes('node_modules') ? 'libs' : 'app',
+   *           minSize: 100 * 1024,
+   *         },
+   *       ],
+   *     },
+   *   },
+   * });
+   * ```
+   *
+   * :::warning
+   * Constraints like `minSize`, `maxSize`, etc. are applied separately for different names returned by the function.
+   * :::
+   */
+  name: string | CodeSplittingNameFunction;
+  /**
+   * Controls which modules are captured in this group.
+   *
+   * - If `test` is a string, the module whose id contains the string will be captured.
+   * - If `test` is a regular expression, the module whose id matches the regular expression will be captured.
+   * - If `test` is a function, modules for which `test(id)` returns `true` will be captured.
+   * - If `test` is empty, any module will be considered as matched.
+   *
+   * :::warning
+   * When using regular expression, it's recommended to use `[\\/]` to match the path separator instead of `/` to avoid potential issues on Windows.
+   * - ✅ Recommended: `/node_modules[\\/]react/`
+   * - ❌ Not recommended: `/node_modules/react/`
+   * :::
+   */
+  test?: StringOrRegExp | CodeSplittingTestFunction;
+  /**
+   * Priority of the group. Group with higher priority will be chosen first to match modules and create chunks. When converting the group to a chunk, modules of that group will be removed from other groups.
+   *
+   * If two groups have the same priority, the group whose index is smaller will be chosen.
+   *
+   * @example
+   * ```js
+   * import { defineConfig } from 'rolldown';
+   *
+   * export default defineConfig({
+   *   output: {
+   *     codeSplitting: {
+   *       groups: [
+   *         {
+   *           name: 'react',
+   *           test: /node_modules[\\/]react/,
+   *           priority: 2,
+   *         },
+   *         {
+   *           name: 'other-libs',
+   *           test: /node_modules/,
+   *           priority: 1,
+   *         },
+   *       ],
+   *     },
+   *   },
+   * });
+   * ```
+   *
+   * @default 0
+   */
+  priority?: number;
+  /**
+   * Minimum size in bytes of the desired chunk. If the accumulated size of the captured modules by this group is smaller than this value, it will be ignored. Modules in this group will fall back to the `automatic chunking` if they are not captured by any other group.
+   *
+   * @default 0
+   */
+  minSize?: number;
+  /**
+   * Controls if a module should be captured based on how many entry chunks reference it.
+   *
+   * @default 1
+   */
+  minShareCount?: number;
+  /**
+   * If the accumulated size in bytes of the captured modules by this group is larger than this value, this group will be split into multiple groups that each has size close to this value.
+   *
+   * @default Infinity
+   */
+  maxSize?: number;
+  /**
+   * Controls whether a module can only be captured if its size in bytes is smaller than or equal to this value.
+   *
+   * @default Infinity
+   */
+  maxModuleSize?: number;
+  /**
+   * Controls whether a module can only be captured if its size in bytes is larger than or equal to this value.
+   *
+   * @default 0
+   */
+  minModuleSize?: number;
+  /**
+   * When `false` (default), all matching modules are merged into a single chunk.
+   * Every entry that uses any of these modules must load the entire chunk — even
+   * modules it doesn't need.
+   *
+   * When `true`, matching modules are grouped by which entries actually import them.
+   * Modules shared by the same set of entries go into the same chunk, while modules
+   * shared by a different set go into a separate chunk. This way, each entry only
+   * loads the code it actually uses.
+   *
+   * Example: entries A, B, C all match a `"vendor"` group.
+   * - `moduleX` is used by A, B, C
+   * - `moduleY` is used by A, B only
+   *
+   * With `entriesAware: false` → one `vendor.js` chunk with both modules; C loads `moduleY` unnecessarily.
+   * With `entriesAware: true`  → `vendor.js` (moduleX, loaded by all) + `vendor2.js` (moduleY, loaded by A and B only).
+   *
+   * @default false
+   */
+  entriesAware?: boolean;
+  /**
+   * Size threshold in bytes for merging small `entriesAware` subgroups into the
+   * closest neighboring subgroup.
+   *
+   * This option only works when {@linkcode CodeSplittingGroup.entriesAware | entriesAware}
+   * is `true`. Set to `0` to disable subgroup merging.
+   *
+   * @default 0
+   */
+  entriesAwareMergeThreshold?: number;
+  /**
+   * Whether to include captured modules' dependencies.
+   *
+   * Enabling this option reduces the chance of generating circular chunks.
+   *
+   * If you want to disable this behavior, it's recommended to both set
+   * - {@linkcode InputOptions.preserveEntrySignatures | preserveEntrySignatures}: `false | 'allow-extension'`
+   * - {@linkcode OutputOptions.strictExecutionOrder | strictExecutionOrder}: `true`
+   *
+   * to avoid generating invalid chunks.
+   *
+   * @default true
+   */
+  includeDependenciesRecursively?: boolean;
+  /**
+   * Filter modules by tags. Only modules that have **all** specified tags
+   * are captured by this group. Combines with `test` and other filters —
+   * a module must match all criteria.
+   *
+   * Built-in tags: `'$initial'` (module is statically imported by a user-defined entry or part of its dependency chain).
+   *
+   * @see {@link https://rolldown.rs/in-depth/manual-code-splitting | Manual Code Splitting}
+   *
+   * @example
+   * ```js
+   * { name: 'initial-deps', tags: ['$initial'], maxSize: 1048576 }
+   * ```
+   */
+  tags?: BuiltinModuleTag[];
+};
+
+/**
+ * Alias for {@linkcode CodeSplittingGroup}. Use this type for the `codeSplitting.groups` option.
+ *
+ * @deprecated Please use {@linkcode CodeSplittingGroup} instead.
+ *
+ * @category Code Splitting
+ */
+export type AdvancedChunksGroup = CodeSplittingGroup;
+
+/**
+ * Configuration options for advanced code splitting.
+ *
+ * @category Code Splitting
+ */
+export type CodeSplittingOptions = {
+  /**
+   * Global fallback of {@linkcode CodeSplittingGroup.includeDependenciesRecursively | group.includeDependenciesRecursively}, if it's not specified in the group.
+   */
+  includeDependenciesRecursively?: boolean;
+  /**
+   * Global fallback of {@linkcode CodeSplittingGroup.minSize | group.minSize}, if it's not specified in the group.
+   */
+  minSize?: number;
+  /**
+   * Global fallback of {@linkcode CodeSplittingGroup.maxSize | group.maxSize}, if it's not specified in the group.
+   */
+  maxSize?: number;
+  /**
+   * Global fallback of {@linkcode CodeSplittingGroup.maxModuleSize | group.maxModuleSize}, if it's not specified in the group.
+   */
+  maxModuleSize?: number;
+  /**
+   * Global fallback of {@linkcode CodeSplittingGroup.minModuleSize | group.minModuleSize}, if it's not specified in the group.
+   */
+  minModuleSize?: number;
+  /**
+   * Global fallback of {@linkcode CodeSplittingGroup.minShareCount | group.minShareCount}, if it's not specified in the group.
+   */
+  minShareCount?: number;
+  /**
+   * Groups to be used for code splitting.
+   */
+  groups?: CodeSplittingGroup[];
+};
+
+/**
+ * Alias for {@linkcode CodeSplittingOptions}. Use this type for the `codeSplitting` option.
+ *
+ * @deprecated Please use {@linkcode CodeSplittingOptions} instead.
+ *
+ * @category Code Splitting
+ */
+export type AdvancedChunksOptions = CodeSplittingOptions;
 
 interface OverwriteOutputOptionsForCli {
   banner?: string;
@@ -500,17 +1026,20 @@ interface OverwriteOutputOptionsForCli {
   outro?: string;
   esModule?: boolean;
   globals?: Record<string, string>;
+  codeSplitting?:
+    | boolean
+    | {
+        minSize?: number;
+        minShareCount?: number;
+      };
   advancedChunks?: {
     minSize?: number;
     minShareCount?: number;
   };
 }
 
-export type OutputCliOptions =
-  & Omit<
-    OutputOptions,
-    | keyof OverwriteOutputOptionsForCli
-    | 'sourcemapIgnoreList'
-    | 'sourcemapPathTransform'
-  >
-  & OverwriteOutputOptionsForCli;
+export type OutputCliOptions = Omit<
+  OutputOptions,
+  keyof OverwriteOutputOptionsForCli | 'sourcemapIgnoreList' | 'sourcemapPathTransform'
+> &
+  OverwriteOutputOptionsForCli;

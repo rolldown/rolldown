@@ -1,25 +1,26 @@
-use arcstr::ArcStr;
-use rolldown_common::ImportKind;
+use rolldown_common::ModuleId;
 use rolldown_common::side_effects::{DeterminedSideEffects, HookSideEffects};
-use rolldown_error::BuildResult;
+use rolldown_error::{BuildDiagnostic, BuildResult};
 use rustc_hash::FxHashMap;
 
 use crate::ecmascript::ecma_module_view_factory::normalize_side_effects;
 use crate::module_loader::module_loader::VisitState;
-use crate::{SharedOptions, SharedResolver, stages::scan_stage::NormalizedScanStageOutput};
+use crate::{SharedOptions, stages::scan_stage::NormalizedScanStageOutput};
 
 pub async fn defer_sync_scan_data(
   options: &SharedOptions,
-  resolver: &SharedResolver,
-  module_id_to_idx: &FxHashMap<ArcStr, VisitState>,
+  module_id_to_idx: &FxHashMap<ModuleId, VisitState>,
   scan_stage_output: &mut NormalizedScanStageOutput,
 ) -> BuildResult<()> {
   let Some(ref func) = options.defer_sync_scan_data else {
     return Ok(());
   };
 
-  for data in func.exec().await? {
-    let source_id = arcstr::ArcStr::from(data.id);
+  let result = func.exec().await?;
+
+  let mut errors: Vec<BuildDiagnostic> = vec![];
+  for data in result {
+    let source_id = ModuleId::new(data.id.as_str());
     let Some(state) = module_id_to_idx.get(&source_id) else {
       continue;
     };
@@ -32,28 +33,29 @@ pub async fn defer_sync_scan_data(
     };
     // TODO: Document this and recommend user to return `moduleSideEffects` in hook return
     // value rather than mutate the `ModuleInfo`
-    normal.ecma_view.side_effects = match data.side_effects {
+    let side_effects = match data.side_effects {
       Some(HookSideEffects::False) => DeterminedSideEffects::UserDefined(false),
       Some(HookSideEffects::NoTreeshake) => DeterminedSideEffects::NoTreeshake,
       _ => {
-        // for Some(HookSideEffects::True) and None, we need to re resolve module source_id,
-        // get package_json and re analyze the side effects
-        let resolved_id = resolver
-          // other params except `source_id` is not important, since we need `package_json`
-          // from `resolved_id` to re analyze the side effects
-          .resolve(None, source_id.as_str(), ImportKind::Import, normal.is_user_defined_entry)
-          .expect("Should have resolved id")
-          .into();
-        normalize_side_effects(
+        // for Some(HookSideEffects::True) and None,
+        // we need to re analyze the side effects
+        match normalize_side_effects(
           options,
-          &resolved_id,
-          Some(&normal.stmt_infos),
-          Some(&normal.module_type),
+          &normal.originative_resolved_id,
+          Some(&scan_stage_output.stmt_infos[module_idx]),
           data.side_effects,
         )
-        .await?
+        .await
+        {
+          Ok(side_effects) => side_effects,
+          Err(error) => {
+            errors.extend(error.into_vec());
+            continue;
+          }
+        }
       }
     };
+    normal.ecma_view.side_effects = side_effects;
   }
-  Ok(())
+  if errors.is_empty() { Ok(()) } else { Err(errors.into()) }
 }

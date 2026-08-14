@@ -10,11 +10,9 @@ source: crates/rolldown_testing/src/integration_test.rs
 function bar() {
 	throw new Error("test");
 }
-
 //#endregion
 //#region data.txt
 var data_default = "#2041";
-
 //#endregion
 //#region entry.js
 function foo() {
@@ -22,6 +20,6 @@ function foo() {
 }
 foo();
 console.log(data_default);
-
 //#endregion
+
 ```

@@ -4,6 +4,7 @@ export interface AnyFn {
   (...args: any[]): any;
 }
 
+/** @inline */
 export type NullValue<T = void> = T | undefined | null | void;
 
 export type PartialNull<T> = {
@@ -19,4 +20,5 @@ export type MakeAsync<Function_> = Function_ extends (
 
 export type MaybeArray<T> = T | T[];
 
+/** @inline */
 export type StringOrRegExp = string | RegExp;

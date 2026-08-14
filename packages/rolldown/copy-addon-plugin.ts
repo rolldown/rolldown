@@ -17,9 +17,11 @@ const WASM_FILE_LIST = [
   'wasi-worker.mjs',
 ];
 
-export const CopyAddonPlugin = (
-  { isCI, isReleasingPkgInCI, desireWasmFiles }: CopyAddonPluginOptions,
-): Plugin => {
+export const CopyAddonPlugin = ({
+  isCI,
+  isReleasingPkgInCI,
+  desireWasmFiles,
+}: CopyAddonPluginOptions): Plugin => {
   const addonsToEmit = new Map<string, string>();
   let outputDir = '';
   if (desireWasmFiles) {
@@ -48,9 +50,10 @@ export const CopyAddonPlugin = (
           if (importer) {
             const addonPath = join(dirname(importer), id);
             if (
-              await this.fs.stat(addonPath).then((s) => s.isFile()).catch(() =>
-                false
-              )
+              await this.fs
+                .stat(addonPath)
+                .then((s) => s.isFile())
+                .catch(() => false)
             ) {
               addonsToEmit.set(addonPath, importer);
               return {

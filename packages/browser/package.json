@@ -1,36 +1,43 @@
 {
   "name": "@rolldown/browser",
-  "version": "1.0.0-beta.57",
+  "version": "1.2.4",
   "description": "Fast JavaScript/TypeScript bundler in Rust with Rollup-compatible API.",
+  "keywords": [
+    "bundler",
+    "esbuild",
+    "parcel",
+    "rolldown",
+    "rollup",
+    "webpack"
+  ],
   "homepage": "https://rolldown.rs/",
-  "type": "module",
+  "license": "MIT",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/rolldown/rolldown.git",
     "directory": "packages/browser"
   },
-  "license": "MIT",
-  "keywords": [
-    "webpack",
-    "parcel",
-    "esbuild",
-    "rollup",
-    "bundler",
-    "rolldown"
-  ],
-  "files": [
-    "bin",
-    "dist",
-    "!*/.tsbuildinfo"
-  ],
   "bin": {
     "rolldown": "./bin/cli.mjs"
   },
+  "files": [
+    "bin",
+    "dist",
+    "LICENSE",
+    "THIRD-PARTY-LICENSE",
+    "!*/.tsbuildinfo"
+  ],
+  "type": "module",
   "main": "./dist/index.mjs",
   "module": "./dist/index.mjs",
   "types": "./dist/index.d.mts",
+  "imports": {
+    "#default-runtime": "./dist/experimental-default-runtime.mjs",
+    "#runtime": "./dist/experimental-runtime.mjs"
+  },
   "exports": {
     ".": {
+      "types": "./dist/index.d.mts",
       "browser": "./dist/index.browser.mjs",
       "default": "./dist/index.mjs"
     },
@@ -39,27 +46,38 @@
       "browser": "./dist/experimental-index.browser.mjs",
       "default": "./dist/experimental-index.mjs"
     },
+    "./experimental/runtime-types": {
+      "types": "./dist/experimental-runtime-types.d.ts"
+    },
+    "./experimental/runtime": {
+      "types": "./dist/experimental-runtime.d.ts",
+      "default": "./dist/experimental-runtime.mjs"
+    },
     "./plugins": {
       "browser": "./dist/plugins-index.browser.mjs",
       "default": "./dist/plugins-index.mjs"
     },
     "./filter": "./dist/filter-index.mjs",
+    "./getLogFilter": "./dist/get-log-filter.mjs",
     "./parallelPlugin": "./dist/parallel-plugin.mjs",
     "./parseAst": "./dist/parse-ast-index.mjs",
-    "./package.json": "./package.json"
+    "./package.json": "./package.json",
+    "./utils": "./dist/utils-index.mjs"
   },
   "publishConfig": {
-    "registry": "https://registry.npmjs.org/",
-    "access": "public"
+    "access": "public",
+    "registry": "https://registry.npmjs.org/"
   },
   "scripts": {
     "build": "pnpm run build:debug",
     "build:debug": "pnpm run --filter rolldown build-browser-pkg:debug",
     "build:release": "pnpm run --filter rolldown build-browser-pkg:release",
     "build-node": "TARGET='browser' pnpm run --filter rolldown build-node",
-    "preinstall": "npx only-allow pnpm"
+    "publint": "publint ."
   },
   "dependencies": {
+    "@emnapi/core": "catalog:",
+    "@emnapi/runtime": "catalog:",
     "@napi-rs/wasm-runtime": "catalog:"
   }
 }

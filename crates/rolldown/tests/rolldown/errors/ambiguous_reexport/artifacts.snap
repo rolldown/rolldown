@@ -6,7 +6,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## AMBIGUOUS_REEXPORT
 
 ```text
-[AMBIGUOUS_REEXPORT] Warning: Found ambiguous export.
+[AMBIGUOUS_REEXPORT] Found ambiguous export.
    ╭─[ main.js:1:1 ]
    │
  1 │ export * from './file.js'
@@ -35,6 +35,6 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```js
 //#region main.js
 console.log();
-
 //#endregion
+
 ```

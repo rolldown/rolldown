@@ -1,3 +1,3 @@
 export const fromWebToken = (init) => async () => {
-  return 1
+  return 1;
 };

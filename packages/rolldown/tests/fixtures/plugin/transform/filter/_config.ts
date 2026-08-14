@@ -6,6 +6,7 @@ const transformFn2 = vi.fn();
 const transformFn3 = vi.fn();
 
 export default defineTest({
+  sequential: true,
   config: {
     plugins: [
       {
@@ -56,7 +57,7 @@ export default defineTest({
   },
   afterTest: () => {
     expect(transformFn).toHaveBeenCalledTimes(1);
-    expect(transformFn2).toHaveBeenCalledTimes(2);
+    expect(transformFn2).toHaveBeenCalledTimes(3);
     expect(transformFn3).toHaveBeenCalledTimes(0);
   },
 });

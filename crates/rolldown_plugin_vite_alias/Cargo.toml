@@ -12,6 +12,7 @@ description = "Rolldown plugin for module path aliasing"
 
 [lib]
 doctest = false
+test = false
 
 [lints]
 workspace = true

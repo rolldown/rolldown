@@ -9,7 +9,7 @@ export default defineTest({
     plugins: [
       {
         name: 'test-plugin',
-        moduleParsed: function(moduleInfo) {
+        moduleParsed: function (moduleInfo) {
           expect(moduleInfo.code).not.toBeUndefined();
           expect(moduleInfo.id).not.toBeUndefined();
           if (moduleInfo.id.endsWith('main.js')) {

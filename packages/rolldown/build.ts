@@ -35,16 +35,12 @@ const buildMeta = (function makeBuildMeta() {
         case 'rolldown-wasi':
           return 'rolldown-pkg-wasi';
         default:
-          console.warn(
-            `Unknown target: ${process.env.TARGET}, defaulting to 'rolldown-pkg'`,
-          );
+          console.warn(`Unknown target: ${process.env.TARGET}, defaulting to 'rolldown-pkg'`);
           return 'rolldown-pkg';
       }
     })();
 
-  const pkgRoot = target === 'browser-pkg'
-    ? nodePath.resolve(__dirname, '../browser')
-    : __dirname;
+  const pkgRoot = target === 'browser-pkg' ? nodePath.resolve(__dirname, '../browser') : __dirname;
 
   return {
     isCI: !!process.env.CI,
@@ -52,22 +48,30 @@ const buildMeta = (function makeBuildMeta() {
     target,
     pkgRoot,
     buildOutputDir: nodePath.resolve(pkgRoot, 'dist'),
-    pkgJson: JSON.parse(
-      fs.readFileSync(nodePath.resolve(pkgRoot, 'package.json'), 'utf-8'),
-    ),
+    pkgJson: JSON.parse(fs.readFileSync(nodePath.resolve(pkgRoot, 'package.json'), 'utf-8')),
     desireWasmFiles: target === 'browser-pkg' || target === 'rolldown-pkg-wasi',
   };
 })();
 
 const bindingFile = nodePath.resolve('src/binding.cjs');
 const bindingFileWasi = nodePath.resolve('src/rolldown-binding.wasi.cjs');
-const bindingFileWasiBrowser = nodePath.resolve(
-  'src/rolldown-binding.wasi-browser.js',
+const bindingFileWasiBrowser = nodePath.resolve('src/rolldown-binding.wasi-browser.js');
+const commonRuntimeInputFile = nodePath.resolve(
+  __dirname,
+  '../../crates/rolldown_plugin_hmr/src/runtime/runtime-extra-dev-common.js',
+);
+const runtimeBaseInputFile = nodePath.resolve(
+  __dirname,
+  '../../crates/rolldown/src/runtime/runtime-base.js',
+);
+const defaultRuntimeInputFile = nodePath.resolve(
+  __dirname,
+  '../../crates/rolldown_plugin_hmr/src/runtime/runtime-extra-dev-default.js',
 );
 
 const configs: BuildOptions[] = [
   withShared({
-    plugins: [patchBindingJs(), dts()],
+    plugins: [patchBindingJs(), dts(), removeIncludeTagsFromDts()],
     output: {
       dir: buildMeta.buildOutputDir,
       format: 'esm',
@@ -93,9 +97,7 @@ if (buildMeta.target === 'browser-pkg') {
     // But in browser build, we don't have `process.`, so we polyfill them
     'process.env.ROLLDOWN_TEST': 'false',
   };
-  configs.push(
-    init,
-  );
+  configs.push(init);
 }
 
 (async () => {
@@ -106,31 +108,30 @@ if (buildMeta.target === 'browser-pkg') {
   for (const config of configs) {
     await build(config);
   }
-  generateRuntimeTypes();
+  generateRuntimeEntry();
 })();
 
-function withShared(
-  { browserBuild: isBrowserBuild, ...options }:
-    & { browserBuild?: boolean }
-    & BuildOptions,
-): BuildOptions {
+function withShared({
+  browserBuild: isBrowserBuild,
+  ...options
+}: { browserBuild?: boolean } & BuildOptions): BuildOptions {
   return {
     input: {
       index: './src/index',
       'plugins-index': './src/plugins-index',
+      'utils-index': './src/utils-index',
       'experimental-index': './src/experimental-index',
-      ...!isBrowserBuild
+      ...(!isBrowserBuild
         ? {
-          'cli-setup': './src/cli/setup-index',
-          cli: './src/cli/index',
-          config: './src/config',
-          'parallel-plugin': './src/parallel-plugin',
-          'parallel-plugin-worker': './src/parallel-plugin-worker',
-          'filter-index': './src/filter-index',
-          'parse-ast-index': './src/parse-ast-index',
-          'get-log-filter': './src/get-log-filter',
-        }
-        : {},
+            cli: './src/cli/index',
+            config: './src/config',
+            'parallel-plugin': './src/parallel-plugin',
+            'parallel-plugin-worker': './src/parallel-plugin-worker',
+            'filter-index': './src/filter-index',
+            'parse-ast-index': './src/parse-ast-index',
+            'get-log-filter': './src/get-log-filter',
+          }
+        : {}),
     },
     platform: isBrowserBuild ? 'browser' : 'node',
     resolve: {
@@ -144,8 +145,7 @@ function withShared(
     // Do not move this line up or down, it's here for a reason
     ...options,
     plugins: [
-      buildMeta.desireWasmFiles &&
-      resolveWasiBinding(isBrowserBuild),
+      buildMeta.desireWasmFiles && resolveWasiBinding(isBrowserBuild),
       CopyAddonPlugin({
         isCI: buildMeta.isCI,
         isReleasingPkgInCI: buildMeta.isReleasingPkgInCI,
@@ -155,25 +155,22 @@ function withShared(
       options.plugins,
     ],
     treeshake: {
-      moduleSideEffects: [
-        { test: /\/signal-exit\//, sideEffects: false },
-      ],
+      moduleSideEffects: [{ test: /\/signal-exit\//, sideEffects: false }],
     },
     transform: {
       target: 'node22',
-      decorator: {
-        // Legacy decorators are required for the @lazyProp decorator
-        legacy: true,
-      },
       define: {
         'import.meta.browserBuild': String(isBrowserBuild),
+        __RUNTIME_STRING__: isBrowserBuild
+          ? JSON.stringify(readDefaultDevRuntimeSource())
+          : 'undefined',
       },
     },
   };
 }
 
 // alias binding file to rolldown-binding.wasi.js and mark it as external
-// alias its dts file to rolldown-binding.d.ts without external
+// skip redirection for .d.ts importers so the dts plugin can bundle types
 function resolveWasiBinding(isBrowserBuild?: boolean): Plugin {
   return {
     name: 'resolve-wasi-binding',
@@ -183,9 +180,9 @@ function resolveWasiBinding(isBrowserBuild?: boolean): Plugin {
         const resolution = await this.resolve(id, importer, options);
 
         if (resolution?.id === bindingFile) {
-          const id = isBrowserBuild
-            ? bindingFileWasiBrowser
-            : bindingFileWasi;
+          // Let .d.ts importers resolve normally so binding types get bundled inline
+          if (importer && /\.d\.[cm]?ts$/.test(importer)) return resolution;
+          const id = isBrowserBuild ? bindingFileWasiBrowser : bindingFileWasi;
           return { id, external: 'relative' };
         }
 
@@ -205,8 +202,11 @@ function removeBuiltModules(): Plugin {
           return this.resolve('pathe');
         }
         if (
-          id === 'node:os' || id === 'node:worker_threads' ||
-          id === 'node:url' || id === 'node:fs/promises' || id === 'node:fs' ||
+          id === 'node:os' ||
+          id === 'node:worker_threads' ||
+          id === 'node:url' ||
+          id === 'node:fs/promises' ||
+          id === 'node:fs' ||
           id === 'node:util'
         ) {
           // conditional import
@@ -248,56 +248,72 @@ if (!nativeBinding && globalThis.process?.versions?.["webcontainer"]) {
   };
 }
 
-function generateRuntimeTypes() {
-  const inputFile = nodePath.resolve(
-    __dirname,
-    '../../crates/rolldown_plugin_hmr/src/runtime/runtime-extra-dev-common.js',
+// Prefix the common runtime with its canonical compiler-helper imports for standalone ESM use.
+// The default runtime loader removes this generated first line before injecting the source into a
+// bundle, where the same helpers are already in scope.
+function generateRuntimeEntry() {
+  const outputFile = nodePath.resolve(buildMeta.buildOutputDir, 'experimental-runtime.d.ts');
+
+  console.log(styleText('green', '[build:done]'), 'Generating dts from', commonRuntimeInputFile);
+
+  const { commonRuntimeSource, defaultRuntimeSource } = readDevRuntimeSources();
+  const runtimeHelperImport =
+    "import { __exportAll, __reExport, __toCommonJS, __toESM } from './experimental-runtime-base.mjs';\n";
+  fs.writeFileSync(
+    nodePath.resolve(buildMeta.buildOutputDir, 'experimental-runtime.mjs'),
+    runtimeHelperImport + commonRuntimeSource,
   );
-  const outputFile = nodePath.resolve(
-    buildMeta.buildOutputDir,
-    'experimental-runtime-types.d.ts',
+  fs.copyFileSync(
+    runtimeBaseInputFile,
+    nodePath.resolve(buildMeta.buildOutputDir, 'experimental-runtime-base.mjs'),
+  );
+  fs.writeFileSync(
+    nodePath.resolve(buildMeta.buildOutputDir, 'experimental-default-runtime.mjs'),
+    defaultRuntimeSource,
   );
 
-  console.log(
-    styleText('green', '[build:done]'),
-    'Generating dts from',
-    inputFile,
-  );
-
-  const jsCode = fs.readFileSync(inputFile, 'utf-8');
-  const result = ts.transpileDeclaration(jsCode, {
+  const result = ts.transpileDeclaration(commonRuntimeSource, {
     compilerOptions: {
-      ...getTsconfigCompilerOptionsForFile(inputFile),
+      ...getTsconfigCompilerOptionsForFile(commonRuntimeInputFile),
       noEmit: false,
       emitDeclarationOnly: true,
     },
-    fileName: inputFile,
+    fileName: commonRuntimeInputFile,
   });
 
   if (result && result.outputText) {
     fs.writeFileSync(outputFile, result.outputText, 'utf-8');
+    fs.copyFileSync(
+      outputFile,
+      nodePath.resolve(buildMeta.buildOutputDir, 'experimental-runtime-types.d.ts'),
+    );
   } else {
     throw new Error('Failed to generate d.ts from runtime-extra-dev.js');
   }
 }
 
+function readDevRuntimeSources() {
+  return {
+    commonRuntimeSource: fs.readFileSync(commonRuntimeInputFile, 'utf-8'),
+    defaultRuntimeSource: fs.readFileSync(defaultRuntimeInputFile, 'utf-8'),
+  };
+}
+
+function readDefaultDevRuntimeSource() {
+  const { commonRuntimeSource, defaultRuntimeSource } = readDevRuntimeSources();
+  return `${commonRuntimeSource}\n${defaultRuntimeSource}`;
+}
+
 function getTsconfigCompilerOptionsForFile(file: string) {
-  const tsconfigPath = ts.findConfigFile(
-    file,
-    (path) => ts.sys.fileExists(path),
-  );
+  const tsconfigPath = ts.findConfigFile(file, (path) => ts.sys.fileExists(path));
   let compilerOptions = ts.getDefaultCompilerOptions();
   if (tsconfigPath) {
-    const parsedConfig = ts.getParsedCommandLineOfConfigFile(
-      tsconfigPath,
-      undefined,
-      {
-        ...ts.sys,
-        onUnRecoverableConfigFileDiagnostic(diag) {
-          console.error(diag);
-        },
+    const parsedConfig = ts.getParsedCommandLineOfConfigFile(tsconfigPath, undefined, {
+      ...ts.sys,
+      onUnRecoverableConfigFileDiagnostic(diag) {
+        console.error(diag);
       },
-    );
+    });
     if (!parsedConfig) throw new Error();
     if (parsedConfig.errors.length > 0) {
       throw new AggregateError(parsedConfig.errors);
@@ -305,4 +321,33 @@ function getTsconfigCompilerOptionsForFile(file: string) {
     compilerOptions = parsedConfig.options;
   }
   return compilerOptions;
+}
+
+/**
+ * Removes {@include ...} tags from generated .d.ts files.
+ * These tags are only used for the docs site and should not appear in the published types.
+ */
+function removeIncludeTagsFromDts(): Plugin {
+  const includeTagRegex = /\s*\{@include\s+[^}]+\}/g;
+
+  return {
+    name: 'remove-include-tags-from-dts',
+    generateBundle(_options, bundle) {
+      for (const [fileName, output] of Object.entries(bundle)) {
+        if (!fileName.endsWith('.d.ts') && !fileName.endsWith('.d.mts')) {
+          continue;
+        }
+        if (output.type === 'asset') {
+          this.warn(
+            `Expected .d.ts files to be chunks, but found asset type for ${fileName} (type: ${output.type}).`,
+          );
+        } else if (output.type === 'chunk') {
+          const matches = output.code.match(includeTagRegex);
+          if (matches) {
+            output.code = output.code.replace(includeTagRegex, '');
+          }
+        }
+      }
+    },
+  };
 }

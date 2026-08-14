@@ -1,3 +1,27 @@
+use std::{
+  borrow::Cow,
+  env,
+  future::Future,
+  path::{Path, PathBuf},
+  pin::Pin,
+  sync::Arc,
+};
+
+use anyhow::anyhow;
+use arcstr::ArcStr;
+use derive_more::Debug;
+use owo_colors::OwoColorize;
+use rustc_hash::FxHashSet;
+use sugar_path::SugarPath;
+
+use rolldown_common::{ImportKind, WatcherChangeKind, side_effects::HookSideEffects};
+use rolldown_plugin::{
+  HookLoadArgs, HookLoadOutput, HookLoadReturn, HookResolveIdArgs, HookResolveIdOutput,
+  HookResolveIdReturn, HookUsage, Plugin, PluginContext, typedmap::TypedMapKey,
+};
+use rolldown_std_utils::PathExt as _;
+use rolldown_utils::{dataurl::is_data_url, pattern_filter::StringOrRegex};
+
 use crate::{
   ResolveOptionsExternal,
   builtin::{BuiltinChecker, is_node_like_builtin},
@@ -9,26 +33,6 @@ use crate::{
     normalize_leading_slashes, normalize_path,
   },
 };
-use anyhow::anyhow;
-use arcstr::ArcStr;
-use derive_more::Debug;
-use owo_colors::OwoColorize;
-use rolldown_common::{ImportKind, WatcherChangeKind, side_effects::HookSideEffects};
-use rolldown_plugin::{
-  HookLoadArgs, HookLoadOutput, HookLoadReturn, HookResolveIdArgs, HookResolveIdOutput,
-  HookResolveIdReturn, HookUsage, Plugin, PluginContext, typedmap::TypedMapKey,
-};
-use rolldown_utils::pattern_filter::StringOrRegex;
-use rustc_hash::FxHashSet;
-use std::{
-  borrow::Cow,
-  env,
-  future::Future,
-  path::{Path, PathBuf},
-  pin::Pin,
-  sync::Arc,
-};
-use sugar_path::SugarPath;
 
 const FS_PREFIX: &str = "/@fs/";
 
@@ -253,32 +257,36 @@ impl Plugin for ViteResolvePlugin {
       }
     };
 
-    if args.specifier.starts_with('#') {
-      if let Some(resolved_imports) =
+    if args.specifier.starts_with('#')
+      && let Some(resolved_imports) =
         (self.resolve_subpath_imports)(&id, args.importer, args.kind == ImportKind::Require, scan)
           .await?
+    {
+      id = Cow::Owned(resolved_imports);
+      if args
+        .custom
+        .get(&rolldown_plugin_utils::constants::ViteImportGlob)
+        .is_some_and(|v| v.is_sub_imports_pattern())
       {
-        id = Cow::Owned(resolved_imports);
-        if args
-          .custom
-          .get(&rolldown_plugin_utils::constants::ViteImportGlob)
-          .is_some_and(|v| v.is_sub_imports_pattern())
-        {
-          let path = Path::new(&self.resolve_options.root).join(id.as_ref()).normalize();
-          let package_json_path = (!self.legacy_inconsistent_cjs_interop)
-            .then(|| {
-              self
-                .resolvers
-                .get_nearest_package_json(path.to_str().unwrap())
-                .map(|pj| pj.realpath().to_str().unwrap().to_string())
-            })
-            .flatten();
-          return Ok(Some(HookResolveIdOutput {
-            id: path.to_slash_lossy().into(),
-            package_json_path,
-            ..Default::default()
-          }));
-        }
+        let base_dir = args
+          .importer
+          .and_then(|importer| Path::new(importer).parent())
+          .unwrap_or(Path::new(&self.resolve_options.root));
+        let joined = base_dir.join(id.as_ref());
+        let path = joined.normalize();
+        let package_json_path = (!self.legacy_inconsistent_cjs_interop)
+          .then(|| {
+            self
+              .resolvers
+              .get_nearest_package_json(path.to_str().unwrap())
+              .map(|pj| pj.realpath().to_str().unwrap().to_string())
+          })
+          .flatten();
+        return Ok(Some(HookResolveIdOutput {
+          id: ArcStr::from(path.to_slash()),
+          package_json_path,
+          ..Default::default()
+        }));
       }
     }
 
@@ -288,10 +296,10 @@ impl Plugin for ViteResolvePlugin {
       // We don't need to resolve these paths since they are already resolved
       // always return here even if res doesn't exist since /@fs/ is explicit
       // if the file doesn't exist it should be a 404.
-      if let Some(finalize_other_specifiers) = &self.finalize_other_specifiers {
-        if let Some(finalized) = finalize_other_specifiers(&res, &id).await? {
-          res = finalized.into();
-        }
+      if let Some(finalize_other_specifiers) = &self.finalize_other_specifiers
+        && let Some(finalized) = finalize_other_specifiers(&res, &id).await?
+      {
+        res = finalized.into();
       }
       self.debug_log(|| format!("[@fs] {} -> {}", id.cyan(), res.dimmed())).await?;
       return Ok(Some(HookResolveIdOutput { id: res.into(), ..Default::default() }));
@@ -301,10 +309,10 @@ impl Plugin for ViteResolvePlugin {
     if id.starts_with("file://") {
       let (path, postfix) = file_url_str_to_path_and_postfix(&id)?;
       let mut res = normalize_path(&path).into_owned() + &postfix;
-      if let Some(finalize_other_specifiers) = &self.finalize_other_specifiers {
-        if let Some(finalized) = finalize_other_specifiers(&res, &id).await? {
-          res = finalized;
-        }
+      if let Some(finalize_other_specifiers) = &self.finalize_other_specifiers
+        && let Some(finalized) = finalize_other_specifiers(&res, &id).await?
+      {
+        res = finalized;
       }
       let package_json_path = (!self.legacy_inconsistent_cjs_interop)
         .then(|| {
@@ -322,7 +330,7 @@ impl Plugin for ViteResolvePlugin {
     }
 
     // data uri: pass through (this only happens during build and will be handled by rolldown)
-    if id.trim_start().starts_with("data:") {
+    if is_data_url(&id) {
       return Ok(None);
     }
 
@@ -333,6 +341,38 @@ impl Plugin for ViteResolvePlugin {
         || args.importer.is_some_and(|i| i.ends_with(".html")),
     );
     let resolver = self.resolvers.get(additional_options);
+
+    let specifier = normalize_leading_slashes(&id);
+
+    // tsconfig `paths` mapping for `import.meta.glob`.
+    // The specifier is a glob pattern so we need to apply the mapping here,
+    // otherwise the mapping will be ignored as the mapped path does not point at a
+    // real file.
+    if self.resolve_options.tsconfig_paths
+      && args.custom.get(&rolldown_plugin_utils::constants::ViteImportGlob).is_some()
+      && let Some(importer) = args.importer
+    {
+      let mut candidates = resolver.resolve_tsconfig_path_alias(importer, specifier)?;
+      if candidates.len() > 1 {
+        self
+          .warn(
+            ctx,
+            format!(
+              "The glob \"{specifier}\" matches a tsconfig `paths` entry with multiple targets. \
+               Currently, multiple target `paths` is not supported for glob resolution. The first (\"{}\") is used unconditionally.",
+              candidates[0]
+            ),
+          )
+          .await?;
+      }
+      if !candidates.is_empty() {
+        let mapped = candidates.swap_remove(0);
+        self
+          .debug_log(|| format!("[glob-tsconfig-paths] {} -> {}", id.cyan(), mapped.dimmed()))
+          .await?;
+        return Ok(Some(HookResolveIdOutput { id: mapped.into(), ..Default::default() }));
+      }
+    }
 
     if is_bare_import(&id) {
       let external = self.resolve_options.is_build
@@ -346,14 +386,15 @@ impl Plugin for ViteResolvePlugin {
         self.legacy_inconsistent_cjs_interop,
       )?;
       if let Some(mut result) = result {
-        if let Some(finalize_bare_specifier) = &self.finalize_bare_specifier {
-          if !scan && rolldown_plugin_utils::is_in_node_modules(Path::new(result.id.as_str())) {
-            let finalized = finalize_bare_specifier(&result.id, &id, args.importer)
-              .await?
-              .map(Into::into)
-              .unwrap_or(result.id);
-            result.id = finalized;
-          }
+        if let Some(finalize_bare_specifier) = &self.finalize_bare_specifier
+          && !scan
+          && result.id.as_path().is_in_node_modules()
+        {
+          let finalized = finalize_bare_specifier(&result.id, &id, args.importer)
+            .await?
+            .map(Into::into)
+            .unwrap_or(result.id);
+          result.id = finalized;
         }
 
         self.debug_log(|| format!("[bare] {} -> {}", id.cyan(), result.id.dimmed())).await?;
@@ -373,7 +414,7 @@ impl Plugin for ViteResolvePlugin {
         if !(matches!(self.external, ResolveOptionsExternal::True)
           || self.external.is_external_explicitly(&id))
         {
-          let mut message = format!("Automatically externalized node built-in module \"{}\"", &id);
+          let mut message = format!("Automatically externalized node built-in module \"{}\"", id);
           if let Some(importer) = args.importer {
             let current_dir =
               env::current_dir().unwrap_or(PathBuf::from(&self.resolve_options.root));
@@ -450,20 +491,19 @@ impl Plugin for ViteResolvePlugin {
       }
     }
 
-    let specifier = normalize_leading_slashes(&id);
     let resolved = resolver.normalize_oxc_resolver_result(
+      specifier,
       args.importer,
       &self.dedupe,
       self.legacy_inconsistent_cjs_interop,
       &resolver.resolve_raw(specifier, args.importer, false),
     )?;
     if let Some(mut resolved) = resolved {
-      if !scan {
-        if let Some(finalize_other_specifiers) = &self.finalize_other_specifiers {
-          if let Some(finalized) = finalize_other_specifiers(&resolved.id, &id).await? {
-            resolved.id = finalized.into();
-          }
-        }
+      if !scan
+        && let Some(finalize_other_specifiers) = &self.finalize_other_specifiers
+        && let Some(finalized) = finalize_other_specifiers(&resolved.id, &id).await?
+      {
+        resolved.id = finalized.into();
       }
       self.debug_log(|| format!("[other] {} -> {}", id.cyan(), resolved.id.dimmed())).await?;
       return Ok(Some(resolved));
@@ -482,10 +522,19 @@ impl Plugin for ViteResolvePlugin {
     Ok(None)
   }
 
-  async fn load(&self, _ctx: &PluginContext, args: &HookLoadArgs<'_>) -> HookLoadReturn {
+  async fn load(
+    &self,
+    _ctx: rolldown_plugin::SharedLoadPluginContext,
+    args: &HookLoadArgs<'_>,
+  ) -> HookLoadReturn {
     if let Some(id_without_prefix) = args.id.strip_prefix(BROWSER_EXTERNAL_ID) {
+      // A bare `__vite-browser-external` (no `:name` suffix) is a `browser` field `false`
+      // mapping. Per the browser field spec it must resolve to an empty module, not the proxy
+      // that throws on property access.
+      let is_browser_field_false = id_without_prefix.is_empty();
+
       if self.resolve_options.is_build {
-        if self.resolve_options.is_production {
+        if self.resolve_options.is_production || is_browser_field_false {
           // rolldown treats missing export as an error, and will break build.
           // So use cjs to avoid it.
           return Ok(Some(HookLoadOutput {
@@ -494,18 +543,12 @@ impl Plugin for ViteResolvePlugin {
           }));
         } else {
           return Ok(Some(HookLoadOutput {
-            code: get_development_build_browser_external_module_code(
-              // trim leading `:` if it's not empty
-              if id_without_prefix.is_empty() {
-                id_without_prefix
-              } else {
-                &id_without_prefix[1..]
-              },
-            ),
+            // trim leading `:`
+            code: get_development_build_browser_external_module_code(&id_without_prefix[1..]),
             ..Default::default()
           }));
         }
-      } else if self.resolve_options.is_production {
+      } else if self.resolve_options.is_production || is_browser_field_false {
         // in dev, needs to return esm
         return Ok(Some(HookLoadOutput {
           code: arcstr::literal!("export default {}"),
@@ -513,10 +556,8 @@ impl Plugin for ViteResolvePlugin {
         }));
       } else {
         return Ok(Some(HookLoadOutput {
-          code: get_development_dev_browser_external_module_code(
-            // trim leading `:` if it's not empty
-            if id_without_prefix.is_empty() { id_without_prefix } else { &id_without_prefix[1..] },
-          ),
+          // trim leading `:`
+          code: get_development_dev_browser_external_module_code(&id_without_prefix[1..]),
           ..Default::default()
         }));
       }

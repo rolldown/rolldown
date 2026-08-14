@@ -4,14 +4,13 @@
  */
 import type { InputOptions } from '../../options/input-options';
 import type { OutputOptions } from '../../options/output-options';
-import {
-  getInputCliKeys,
-  getOutputCliKeys,
-  validateCliOptions,
-} from '../../utils/validator';
+import { getInputCliKeys, getOutputCliKeys, validateCliOptions } from '../../utils/validator';
 import { logger } from '../logger';
+import type { ConfigLoader } from '../../utils/load-config';
 import type { CliOptions } from './alias';
 import { setNestedProperty } from './utils';
+
+const reservedKeys = new Set(['help', 'version', 'config', 'watch', 'environment', 'configLoader']);
 
 export interface NormalizedCliOptions {
   input: InputOptions;
@@ -21,27 +20,15 @@ export interface NormalizedCliOptions {
   version: boolean;
   watch: boolean;
   environment?: string | string[];
+  configLoader?: ConfigLoader;
 }
 
 export function normalizeCliOptions(
   cliOptions: CliOptions,
   positionals: string[],
 ): NormalizedCliOptions {
-  const prototypePollutionKeys = ['__proto__', 'constructor', 'prototype'];
-  const unflattenedCliOptions: Record<string, any> = {};
-  for (let [key, value] of Object.entries(cliOptions)) {
-    if (prototypePollutionKeys.includes(key)) {
-      // ignore prototype pollution keys
-    } else if (key.includes('.')) {
-      const [parentKey] = key.split('.');
-      unflattenedCliOptions[parentKey] ??= {};
-      setNestedProperty(unflattenedCliOptions, key, value);
-    } else {
-      unflattenedCliOptions[key] = value;
-    }
-  }
-
-  const [data, errors] = validateCliOptions<CliOptions>(unflattenedCliOptions);
+  // cliOptions is already unflattened (cac's setDotProp) and prototype-safe (post-processing in arguments/index.ts)
+  const [data, errors] = validateCliOptions<CliOptions>(cliOptions);
   if (errors?.length) {
     errors.forEach((error) => {
       logger.error(`${error}. You can use \`rolldown -h\` to see the help.`);
@@ -60,24 +47,29 @@ export function normalizeCliOptions(
 
   if (typeof options.config === 'string') {
     result.config = options.config;
+  } else if (options.config === true) {
+    result.config = '';
   }
 
   if (options.environment !== undefined) {
     result.environment = options.environment;
   }
 
-  const keysOfInput = getInputCliKeys();
-  const keysOfOutput = getOutputCliKeys();
-  const reservedKeys = ['help', 'version', 'config', 'watch', 'environment'];
+  if (options.configLoader !== undefined) {
+    result.configLoader = options.configLoader;
+  }
+
+  const keysOfInput = new Set(getInputCliKeys());
+  const keysOfOutput = new Set(getOutputCliKeys());
 
   for (let [key, value] of Object.entries(options)) {
     const keys = key.split('.');
     const [primary] = keys;
-    if (keysOfInput.includes(primary)) {
+    if (keysOfInput.has(primary)) {
       setNestedProperty(result.input, key, value);
-    } else if (keysOfOutput.includes(primary)) {
+    } else if (keysOfOutput.has(primary)) {
       setNestedProperty(result.output, key, value);
-    } else if (!reservedKeys.includes(key)) {
+    } else if (!reservedKeys.has(key)) {
       logger.error(`Unknown option: ${key}`);
       process.exit(1);
     }

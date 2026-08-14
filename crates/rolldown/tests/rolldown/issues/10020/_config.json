@@ -1,0 +1,12 @@
+{
+  "_comment": "https://github.com/rolldown/rolldown/issues/10020 — under preserveModules, a default-imported JSON module must NOT emit a named export per top-level key. The per-key bindings are folded into the self-contained default object by `try_inline_json_module_prop`, so `export { Abel, aBeeZee, data_default as default }` referenced non-existent bindings and Node's ESM linker threw `Export 'Abel' is not defined in module`. Regression from #9934 (preserveModules emits the complete declared interface). `dist/data.js` should emit only `export { data_default as default }`; `_test.mjs` confirms the entry links and the default import still works.",
+  "config": {
+    "input": [
+      {
+        "name": "index",
+        "import": "./index.js"
+      }
+    ],
+    "preserveModules": true
+  }
+}

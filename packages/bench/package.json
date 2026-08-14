@@ -11,7 +11,7 @@
     "react": "catalog:",
     "react-dom": "catalog:",
     "vue": "catalog:",
-    "vue-router": "^4.3.2"
+    "vue-router": "^5.0.0"
   },
   "devDependencies": {
     "@babel/core": "catalog:",

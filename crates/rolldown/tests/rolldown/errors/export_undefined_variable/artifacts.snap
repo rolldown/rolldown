@@ -6,7 +6,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## PARSE_ERROR
 
 ```text
-[PARSE_ERROR] Error: Export 'bar' is not defined
+[PARSE_ERROR] Export 'bar' is not defined
    ╭─[ main.js:4:3 ]
    │
  4 │   bar

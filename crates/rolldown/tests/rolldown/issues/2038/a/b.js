@@ -1,7 +1,7 @@
 export function result() {
-  return 'result'
+  return 'result';
 }
 
 export function test() {
-  return 'test'
+  return 'test';
 }

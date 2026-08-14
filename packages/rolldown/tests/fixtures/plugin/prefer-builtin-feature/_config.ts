@@ -4,6 +4,7 @@ import { expect } from 'vitest';
 
 let warnings: string[] = [];
 export default defineTest({
+  sequential: true,
   config: {
     plugins: [
       {
@@ -13,22 +14,22 @@ export default defineTest({
         name: 'inject',
       },
     ],
-    onwarn(warning, ctx) {
+    onwarn(warning, _ctx) {
       warnings.push(stripAnsi(warning.message));
     },
   },
   afterTest() {
     expect(warnings).toMatchInlineSnapshot(`
-			[
-			  "[PREFER_BUILTIN_FEATURE] Warning: The functionality provided by \`@rollup/plugin-json\` is already covered natively, maybe you could remove the plugin from your configuration.
-			  │ 
-			  │ Help: This diagnostic may be false positive, you could turn it off via \`checks.preferBuiltinFeature\`
-			",
-			  "[PREFER_BUILTIN_FEATURE] Warning: Rolldown supports \`inject\` natively, please refer https://rolldown.rs/apis/config-options for more details, this is performant than passing \`@rollup/plugin-inject\` to plugins option.
-			  │ 
-			  │ Help: This diagnostic may be false positive, you could turn it off via \`checks.preferBuiltinFeature\`
-			",
-			]
-		`);
+      [
+        "[PREFER_BUILTIN_FEATURE] The functionality provided by \`@rollup/plugin-json\` is already covered natively, maybe you could remove the plugin from your configuration.
+        │ 
+        │ Help: This diagnostic may be false positive, you could turn it off via \`checks.preferBuiltinFeature\`
+      ",
+        "[PREFER_BUILTIN_FEATURE] Rolldown supports \`inject\` natively. Please refer https://rolldown.rs/reference/ for more details. It is more performant than passing \`@rollup/plugin-inject\` to plugins option.
+        │ 
+        │ Help: This diagnostic may be false positive, you could turn it off via \`checks.preferBuiltinFeature\`
+      ",
+      ]
+    `);
   },
 });

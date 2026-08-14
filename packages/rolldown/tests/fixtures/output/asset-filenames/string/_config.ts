@@ -1,5 +1,5 @@
 import { defineTest } from 'rolldown-tests';
-import { getOutputAssetNames, getOutputFileNames } from 'rolldown-tests/utils';
+import { getOutputAssetNames } from 'rolldown-tests/utils';
 import { expect } from 'vitest';
 
 export default defineTest({
@@ -33,9 +33,6 @@ export default defineTest({
     ],
   },
   afterTest: (output) => {
-    expect(getOutputAssetNames(output)).toStrictEqual([
-      'emitted.txt',
-      'emitted2.txt',
-    ]);
+    expect(getOutputAssetNames(output)).toStrictEqual(['emitted.txt', 'emitted2.txt']);
   },
 });

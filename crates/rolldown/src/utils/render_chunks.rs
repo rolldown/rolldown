@@ -6,9 +6,10 @@ use futures::future::try_join_all;
 use rolldown_common::{
   InsChunkIdx, InstantiationKind, RollupRenderedChunk, SharedNormalizedBundlerOptions,
 };
+use rolldown_error::BuildDiagnostic;
 use rolldown_plugin::{HookRenderChunkArgs, SharedPluginDriver};
 use rolldown_sourcemap::{SourceMap, collapse_sourcemaps};
-use rustc_hash::FxHashMap;
+use rolldown_utils::indexmap::FxIndexMap;
 
 use crate::type_alias::IndexInstantiatedChunks;
 
@@ -17,7 +18,7 @@ pub async fn render_chunks(
   plugin_driver: &SharedPluginDriver,
   assets: &mut IndexInstantiatedChunks,
   options: &SharedNormalizedBundlerOptions,
-) -> Result<()> {
+) -> Result<Vec<BuildDiagnostic>> {
   let chunks = Arc::new(
     assets
       .iter()
@@ -28,7 +29,7 @@ pub async fn render_chunks(
           None
         }
       })
-      .collect::<FxHashMap<ArcStr, Arc<RollupRenderedChunk>>>(),
+      .collect::<FxIndexMap<ArcStr, Arc<RollupRenderedChunk>>>(),
   );
 
   let result = try_join_all(assets.iter_mut().enumerate().map(|(index, asset)| {
@@ -37,7 +38,7 @@ pub async fn render_chunks(
       if let InstantiationKind::Ecma(ecma_meta) = &asset.kind {
         let render_chunk_ret = plugin_driver
           .render_chunk(HookRenderChunkArgs {
-            code: std::mem::take(&mut asset.content).try_into_inner_string()?,
+            code: Arc::new(std::mem::take(&mut asset.content).try_into_inner_string()?),
             chunk: Arc::clone(
               chunks.get(&ecma_meta.rendered_chunk.filename).expect("should have chunk"),
             ),
@@ -48,12 +49,15 @@ pub async fn render_chunks(
         return Ok(Some((index.into(), render_chunk_ret)));
       }
 
-      Ok::<Option<(InsChunkIdx, (String, Vec<SourceMap>))>, anyhow::Error>(None)
+      Ok::<Option<(InsChunkIdx, (String, Vec<SourceMap>, Vec<BuildDiagnostic>))>, anyhow::Error>(
+        None,
+      )
     }
   }))
   .await?;
 
-  for (index, (code, sourcemaps)) in result.into_iter().flatten() {
+  let mut warnings = vec![];
+  for (index, (code, sourcemaps, chunk_warnings)) in result.into_iter().flatten() {
     let asset = &mut assets[index];
     asset.content = code.into();
     if !sourcemaps.is_empty() {
@@ -64,7 +68,8 @@ pub async fn render_chunks(
         asset.map = Some(collapse_sourcemaps(&sourcemap_chain));
       }
     }
+    warnings.extend(chunk_warnings);
   }
 
-  Ok(())
+  Ok(warnings)
 }

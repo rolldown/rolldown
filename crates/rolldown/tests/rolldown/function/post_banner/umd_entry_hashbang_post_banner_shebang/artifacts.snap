@@ -1,0 +1,18 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+#!/usr/bin/env node
+(function(factory) {
+	typeof define === "function" && define.amd ? define([], factory) : factory();
+})(function() {
+	//#region main.js
+	console.log("umd entry hashbang");
+	//#endregion
+});
+
+```

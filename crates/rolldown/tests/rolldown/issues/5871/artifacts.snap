@@ -6,28 +6,20 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## 1.js
 
 ```js
-import "./2.js";
-
-```
-
-## 2.js
-
-```js
 //#region 2.js
 import("./3.js");
-
 //#endregion
+
 ```
 
 ## 3.js
 
 ```js
-import "./2.js";
-
+import "./1.js";
 //#region 4.js
 import("./1.js");
-
 //#endregion
+
 ```
 
 ## main.js
@@ -35,6 +27,6 @@ import("./1.js");
 ```js
 //#region main.js
 import("./1.js");
-
 //#endregion
+
 ```

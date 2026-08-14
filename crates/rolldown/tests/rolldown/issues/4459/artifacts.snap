@@ -6,7 +6,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## MISSING_GLOBAL_NAME
 
 ```text
-[MISSING_GLOBAL_NAME] Warning: No name was provided for external module "es-toolkit" in "output.globals" – guessing "es_toolkit".
+[MISSING_GLOBAL_NAME] No name was provided for external module "es-toolkit" in "output.globals" – guessing "es_toolkit".
 
 ```
 
@@ -16,24 +16,23 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 (function(global, factory) {
-  typeof exports === 'object' && typeof module !== 'undefined' ?  factory(exports, require('es-toolkit')) :
-  typeof define === 'function' && define.amd ? define(['exports', 'es-toolkit'], factory) :
-  (global = typeof globalThis !== 'undefined' ? globalThis : global || self, factory((global.Lib = {}), global.es_toolkit));
+	typeof exports === "object" && typeof module !== "undefined" ? factory(exports, require("es-toolkit")) : typeof define === "function" && define.amd ? define(["exports", "es-toolkit"], factory) : (global = typeof globalThis !== "undefined" ? globalThis : global || self, factory(global.Lib = {}, global.es_toolkit));
 })(this, function(exports, es_toolkit) {
-
-//#region main.js
+	Object.defineProperty(exports, Symbol.toStringTag, { value: "Module" });
+	//#region main.js
 	function test(str) {
 		return (0, es_toolkit.camelCase)(str);
 	}
-
-//#endregion
-exports.test = test;
-Object.keys(es_toolkit).forEach(function (k) {
-  if (k !== 'default' && !Object.prototype.hasOwnProperty.call(exports, k)) Object.defineProperty(exports, k, {
-    enumerable: true,
-    get: function () { return es_toolkit[k]; }
-  });
+	//#endregion
+	exports.test = test;
+	Object.keys(es_toolkit).forEach(function(k) {
+		if (k !== "default" && !Object.prototype.hasOwnProperty.call(exports, k)) Object.defineProperty(exports, k, {
+			enumerable: true,
+			get: function() {
+				return es_toolkit[k];
+			}
+		});
+	});
 });
 
-});
 ```

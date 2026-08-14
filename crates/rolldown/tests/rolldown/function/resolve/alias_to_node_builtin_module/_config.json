@@ -2,9 +2,7 @@
   "config": {
     "platform": "node",
     "resolve": {
-      "alias": [
-        ["shouldRenamedToFs", ["fs"]]
-      ]
+      "alias": [["shouldRenamedToFs", ["fs"]]]
     }
   },
   "expectExecuted": false

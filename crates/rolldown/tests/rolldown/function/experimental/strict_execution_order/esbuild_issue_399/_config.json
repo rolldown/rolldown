@@ -1,0 +1,26 @@
+{
+  "config": {
+    "input": [
+      {
+        "name": "entry1",
+        "import": "./entry1.js"
+      },
+      {
+        "name": "entry2",
+        "import": "./entry2.js"
+      }
+    ]
+  },
+  "configVariants": [
+    {
+      "_configName": "wrap-all",
+      "strictExecutionOrder": true
+    },
+    {
+      "_configName": "on-demand",
+      "strictExecutionOrder": true,
+      "onDemandWrapping": true
+    }
+  ],
+  "expectExecuted": false
+}

@@ -8,16 +8,13 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```js
 import { re_export } from "external-pkg";
 import { "reexpo.rt" as reexpo_rt } from "external-pkg2";
-
 //#region replacement.js
 let replace = { test() {} };
 let replaceDot = { test() {} };
-
 //#endregion
 //#region inject.js
 let obj = {};
-let sideEffects = console.log("this should be renamed");
-
+console.log("this should be renamed");
 //#endregion
 //#region entry.js
 console.log("side effects");
@@ -31,6 +28,6 @@ console.log(replaceDot.test);
 console.log(collide);
 console.log(re_export);
 console.log(reexpo_rt);
-
 //#endregion
+
 ```

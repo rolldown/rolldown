@@ -1,0 +1,7 @@
+{
+  "expectExecuted": false,
+  "config": {
+    "external": ["external"],
+    "format": "cjs"
+  }
+}

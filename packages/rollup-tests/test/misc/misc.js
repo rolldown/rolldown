@@ -1,4 +1,4 @@
-const assert = require('node:assert');
+const assert = require('node:assert/strict');
 const rollup = require('../../dist/rollup');
 const { loader } = require('../utils.js');
 
@@ -271,7 +271,7 @@ console.log(x);
 			});
 		} catch (error) {
 			assert.notDeepStrictEqual(error.message, 'Maximum call stack size exceeded');
-			assert.strictEqual(error.name, 'RollupError');
+			assert.strictEqual(error.name, 'RolldownError');
 		}
 	});
 

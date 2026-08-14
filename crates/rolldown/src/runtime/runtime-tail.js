@@ -15,6 +15,6 @@ export var __require = /* @__PURE__ */ (x =>
     if (typeof require !== 'undefined') return require.apply(this, arguments);
     throw Error(
       'Calling `require` for "' + x +
-        '" in an environment that doesn\'t expose the `require` function.',
+        '" in an environment that doesn\'t expose the `require` function. See https://rolldown.rs/in-depth/bundling-cjs#require-external-modules for more details.',
     );
   });

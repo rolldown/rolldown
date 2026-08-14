@@ -3,10 +3,10 @@ import path from 'node:path';
 import { styleText } from 'node:util';
 import { x } from 'tinyexec';
 
+const VITE_DIR = path.resolve(import.meta.dirname, '../../vite');
 const REPO_PATH = path.resolve(import.meta.dirname, './repo');
 const OVERRIDES = [
-  `  rolldown: ${path.resolve(import.meta.dirname, '../rolldown')}`,
-  `  "@rolldown/pluginutils": ${path.resolve(import.meta.dirname, '../pluginutils')}`
+  `  rolldown: ${path.resolve(import.meta.dirname, '../rolldown')}`
 ];
 
 function printTitle(title: string) {
@@ -44,14 +44,23 @@ async function runCmdAndPipeOrExit(title: string, cmdOptions: Parameters<typeof 
 
 fs.rmSync(REPO_PATH, { recursive: true, force: true });
 
+// Reuse the shared `vite/` checkout at the repo root, prepared by
+// `just setup-vite` (the latest `rolldown-canary` rebased onto the latest
+// `main`), the same code the dev-server tests run on. Setup happens only
+// there, never here, so the checkout and the dev-server's built vite dist
+// cannot drift apart. The tests run on a throwaway LOCAL clone of the
+// checkout, never on the checkout itself: this suite edits tracked files
+// (pnpm overrides) and the checkout must stay unpatched. The clone shares
+// objects via hardlinks, so it needs no network.
+if (!fs.existsSync(path.join(VITE_DIR, 'package.json'))) {
+  console.error(
+    styleText(['red', 'bold'], `Vite checkout not found at ${VITE_DIR}. Run \`just setup-vite\` first.`),
+  );
+  process.exit(1);
+}
 await runCmdAndPipeOrExit(
-  '# Cloning vite repo (rolldown-canary branch)...',
-  ['git', ['clone', '--branch', 'rolldown-canary', 'https://github.com/vitejs/vite.git', REPO_PATH]],
-);
-
-await runCmdAndPipeOrExit(
-  '# Rebasing rolldown-canary onto main...',
-  ['git', ['rebase', 'origin/main'], { nodeOptions: { cwd: REPO_PATH } }],
+  '# Cloning the local vite checkout...',
+  ['git', ['clone', VITE_DIR, REPO_PATH]],
 );
 
 printTitle('# Updating pnpm-workspace.yaml to link to local rolldown...');
@@ -76,50 +85,38 @@ await runCmdAndPipeOrExit(
   ['pnpm', ['run', 'build'], { nodeOptions: { cwd: REPO_PATH } }],
 );
 
+// Remove VITE_PLUS_* env vars to prevent leaking into loadEnv() test snapshots
+for (const key of Object.keys(process.env)) {
+  if (key.startsWith('VITE_PLUS_')) {
+    delete process.env[key];
+  }
+}
+
 const failed = []
 
-const failedNormalTestUnit = await runCmdAndPipe(
+const failedTestUnit = await runCmdAndPipe(
   '# Running `pnpm test-unit`...',
   ['pnpm', ['run', 'test-unit'], { nodeOptions: { cwd: REPO_PATH } }],
 );
-if (failedNormalTestUnit) failed.push('test-unit');
+if (failedTestUnit) failed.push('test-unit');
 
-const failedNormalTestServe = await runCmdAndPipe(
+const failedTestServe = await runCmdAndPipe(
   '# Running `pnpm test-serve`...',
   ['pnpm', ['run', 'test-serve'], { nodeOptions: { cwd: REPO_PATH } }],
 );
-if (failedNormalTestServe) failed.push('test-serve');
+if (failedTestServe) failed.push('test-serve');
 
-const failedNormalTestBuild = await runCmdAndPipe(
+const failedTestServeBundled = await runCmdAndPipe(
+  '# Running `pnpm test-serve-bundled`...',
+  ['pnpm', ['run', 'test-serve-bundled'], { nodeOptions: { cwd: REPO_PATH } }],
+);
+if (failedTestServeBundled) failed.push('test-serve-bundled');
+
+const failedTestBuild = await runCmdAndPipe(
   '# Running `pnpm test-build`...',
   ['pnpm', ['run', 'test-build'], { nodeOptions: { cwd: REPO_PATH } }],
 );
-if (failedNormalTestBuild) failed.push('test-build');
-
-const failedJsTestUnit = await runCmdAndPipe(
-  '# Running `_VITE_TEST_JS_PLUGIN=1 pnpm test-unit`...',
-  ['pnpm', ['run', 'test-unit'], { nodeOptions: {
-    cwd: REPO_PATH,
-    env: { _VITE_TEST_JS_PLUGIN: '1' },
-  } }],
-);
-if (failedJsTestUnit) failed.push('[JS] test-unit');
-const failedJsTestServe = await runCmdAndPipe(
-  '# Running `_VITE_TEST_JS_PLUGIN=1 pnpm test-serve`...',
-  ['pnpm', ['run', 'test-serve'], { nodeOptions: {
-    cwd: REPO_PATH,
-    env: { _VITE_TEST_JS_PLUGIN: '1' },
-  } }],
-);
-if (failedJsTestServe) failed.push('[JS] test-serve');
-const failedJsTestBuild = await runCmdAndPipe(
-  '# Running `_VITE_TEST_JS_PLUGIN=1 pnpm test-build`...',
-  ['pnpm', ['run', 'test-build'], { nodeOptions: {
-    cwd: REPO_PATH,
-    env: { _VITE_TEST_JS_PLUGIN: '1' },
-  } }],
-);
-if (failedJsTestBuild) failed.push('[JS] test-build');
+if (failedTestBuild) failed.push('test-build');
 
 if (failed.length > 0) {
   console.error(styleText(['red', 'bold'], 'The following test suites failed:'));

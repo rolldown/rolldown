@@ -1,7 +1,8 @@
-import assert from "node:assert"
+import assert from 'node:assert';
 
-export const foo = 'foo3'
+export const foo = 'foo3';
 
-import.meta.hot.accept(mod => {
-  assert.strictEqual(mod.foo, 'foo3')
-})
+// the last generation: no further edit ever applies, so this must never fire
+import.meta.hot.accept(() => {
+  assert.fail('the last generation has no further edit to accept');
+});

@@ -1,0 +1,1 @@
+The output directory will be generated if it does not already exist, but it will not be cleared if it already contains some files. Any generated files will silently overwrite existing files with the same name. If you want the output directory to only contain files from the current run, you can use [`output.cleanDir`](/reference/OutputOptions.cleanDir) option.

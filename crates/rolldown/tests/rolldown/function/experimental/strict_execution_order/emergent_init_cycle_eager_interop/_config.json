@@ -1,0 +1,35 @@
+{
+  "configName": "on-demand",
+  "config": {
+    "input": [
+      {
+        "name": "main",
+        "import": "./main.js"
+      }
+    ],
+    "strictExecutionOrder": true,
+    "preserveEntrySignatures": "allow-extension",
+    "experimental": {
+      "onDemandWrapping": true
+    },
+    "codeSplitting": {
+      "includeDependenciesRecursively": false,
+      "groups": [
+        {
+          "name": "s",
+          "test": "[\\\\/]emergent_init_cycle_eager_interop[\\\\/]s[\\\\/]"
+        },
+        {
+          "name": "h",
+          "test": "[\\\\/]emergent_init_cycle_eager_interop[\\\\/]h[\\\\/]"
+        }
+      ]
+    }
+  },
+  "configVariants": [
+    {
+      "_configName": "wrap-all",
+      "onDemandWrapping": false
+    }
+  ]
+}

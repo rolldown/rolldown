@@ -1,17 +1,18 @@
 import path from 'node:path';
-import type { InputOptions } from 'rolldown';
-import { rolldown } from 'rolldown';
 import { test } from 'vitest';
+import { compileFixture } from './src/fixture-utils';
 import type { TestConfig } from './src/types';
 
 main();
 
 function main() {
-  const testConfigPaths = import.meta.glob<TestConfig>(
-    './fixtures/**/_config.ts',
-    { import: 'default', eager: true },
-  );
+  const testConfigPaths = import.meta.glob<TestConfig>('./fixtures/**/_config.ts', {
+    import: 'default',
+    eager: true,
+  });
   for (const [testConfigPath, testConfig] of Object.entries(testConfigPaths)) {
+    if (!testConfig.sequential) continue;
+
     const dirPath = path.dirname(testConfigPath);
     const testName = dirPath.replace('./fixtures/', '');
 
@@ -20,7 +21,6 @@ function main() {
       {
         skip: testConfig.skip,
         retry: testConfig.retry,
-        // Specify a longer timeout than default 20_000ms.
         timeout: 60_000,
       },
       async () => {
@@ -47,25 +47,4 @@ function main() {
       },
     );
   }
-}
-
-async function compileFixture(fixturePath: string, config: TestConfig) {
-  const inputOptions: InputOptions = {
-    input: 'main.js',
-    cwd: fixturePath,
-    ...config.config,
-  };
-  // Ensure pluginTimings is false to avoid snapshot noise
-  inputOptions.checks ??= {};
-  inputOptions.checks.pluginTimings ??= false;
-  const build = await rolldown(inputOptions);
-  if (Array.isArray(config.config?.output)) {
-    const outputs = [];
-    for (const output of config.config.output) {
-      outputs.push(await build.write(output));
-    }
-    return outputs;
-  }
-  const outputOptions = config.config?.output ?? {};
-  return await build.write(outputOptions);
 }

@@ -1,1 +1,1 @@
-import('./async-entry.js')
+import('./async-entry.js');

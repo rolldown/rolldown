@@ -6,7 +6,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## AMBIGUOUS_REEXPORT
 
 ```text
-[AMBIGUOUS_REEXPORT] Warning: Found ambiguous export.
+[AMBIGUOUS_REEXPORT] Found ambiguous export.
    ╭─[ re-export.ts:1:1 ]
    │
  1 │ export * from './types1'
@@ -35,22 +35,15 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```js
 //#region types1.ts
 console.log("some code");
-
 //#endregion
 //#region types2.ts
 console.log("some code");
-
 //#endregion
 //#region types3.ts
 console.log("some code");
-
-//#endregion
-//#region values.ts
-let foo = 123;
-
 //#endregion
 //#region entry.ts
-console.log(foo);
-
+console.log(123);
 //#endregion
+
 ```

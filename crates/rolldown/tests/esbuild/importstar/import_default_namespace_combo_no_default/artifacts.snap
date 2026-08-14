@@ -6,7 +6,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## MISSING_EXPORT
 
 ```text
-[MISSING_EXPORT] Error: "default" is not exported by "foo.js".
+[MISSING_EXPORT] "default" is not exported by "foo.js".
    ╭─[ entry-default-ns-prop.js:1:8 ]
    │
  1 │ import def, * as ns from './foo'; console.log(def, ns, ns.default)
@@ -19,7 +19,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## MISSING_EXPORT
 
 ```text
-[MISSING_EXPORT] Error: "default" is not exported by "foo.js".
+[MISSING_EXPORT] "default" is not exported by "foo.js".
    ╭─[ entry-default-ns.js:1:8 ]
    │
  1 │ import def, * as ns from './foo'; console.log(def, ns)
@@ -32,7 +32,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## MISSING_EXPORT
 
 ```text
-[MISSING_EXPORT] Error: "default" is not exported by "foo.js".
+[MISSING_EXPORT] "default" is not exported by "foo.js".
    ╭─[ entry-default-prop.js:1:8 ]
    │
  1 │ import def, * as ns from './foo'; console.log(def, ns.default)
@@ -45,7 +45,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## MISSING_EXPORT
 
 ```text
-[MISSING_EXPORT] Error: "default" is not exported by "foo.js".
+[MISSING_EXPORT] "default" is not exported by "foo.js".
    ╭─[ entry-default.js:1:8 ]
    │
  1 │ import def from './foo'; console.log(def)

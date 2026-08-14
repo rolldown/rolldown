@@ -1,0 +1,15 @@
+{
+  "expectExecuted": false,
+  "config": {
+    "input": [
+      {
+        "name": "entry",
+        "import": "./entry.js"
+      }
+    ],
+    "experimental": {
+      "attachDebugInfo": "full"
+    }
+  },
+  "snapshotOutputStats": true
+}

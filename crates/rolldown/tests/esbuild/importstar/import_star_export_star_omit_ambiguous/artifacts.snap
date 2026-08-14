@@ -6,7 +6,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## AMBIGUOUS_REEXPORT
 
 ```text
-[AMBIGUOUS_REEXPORT] Warning: Found ambiguous export.
+[AMBIGUOUS_REEXPORT] Found ambiguous export.
    ╭─[ common.js:1:1 ]
    │
  1 │ export * from './foo'
@@ -33,29 +33,19 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## entry.js
 
 ```js
-import assert from "node:assert";
-
-// HIDDEN [rolldown:runtime]
-//#region foo.js
-const x = 1;
-
-//#endregion
-//#region bar.js
-const z = 4;
-
-//#endregion
+import assert from "node:assert/strict";
+// HIDDEN [\0rolldown/runtime.js]
 //#region common.js
 var common_exports = /* @__PURE__ */ __exportAll({
-	x: () => x,
-	z: () => z
+	x: () => 1,
+	z: () => 4
 });
-
 //#endregion
 //#region entry.js
-assert.deepEqual(common_exports, {
+assert.deepEqual(common_exports, Object.defineProperty({
 	x: 1,
 	z: 4
-});
-
+}, Symbol.toStringTag, { value: "Module" }));
 //#endregion
+
 ```

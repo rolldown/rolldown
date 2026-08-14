@@ -1,5 +1,5 @@
-import a from './class.js'
-import foo from './default.js'
-import bar from './function.js'
+import a from './class.js';
+import foo from './default.js';
+import bar from './function.js';
 
-console.log(a, foo, bar)
+console.log(a, foo, bar);

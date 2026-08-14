@@ -6,7 +6,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## MIXED_EXPORTS
 
 ```text
-[MIXED_EXPORTS] Warning: Entry module "main" is using named (including "a", "default") and default exports together. Consumers of your bundle will have to use `main.js.default` to access the default export, which may not be what you want. Use `output.exports: "named"` to disable this warning.
+[MIXED_EXPORTS] Entry module "main.js" is using named (including "a", "default") and default exports together. Consumers of your bundle will have to use `bundle.default` to access the default export, which may not be what you want. Use `output.exports: "named"` to disable this warning.
 
 ```
 
@@ -16,16 +16,16 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 var bundle = (function(exports) {
-
-Object.defineProperty(exports, '__esModule', { value: true });
-
-//#region main.js
+	Object.defineProperties(exports, {
+		__esModule: { value: true },
+		[Symbol.toStringTag]: { value: "Module" }
+	});
+	//#region main.js
 	var main_default = 1;
-	const a = 2;
-
-//#endregion
-exports.a = a;
-exports.default = main_default;
-return exports;
+	//#endregion
+	exports.a = 2;
+	exports.default = main_default;
+	return exports;
 })({});
+
 ```

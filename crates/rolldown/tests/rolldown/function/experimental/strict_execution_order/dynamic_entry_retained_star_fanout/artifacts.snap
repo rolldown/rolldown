@@ -1,0 +1,188 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+//#region main.js
+await import("./page-b.js").then((n) => (n.t(), n.n));
+const pageA = await import("./page-a.js");
+console.log(pageA.commonA, pageA.commonB);
+//#endregion
+
+```
+
+## page-a.js
+
+```js
+import "./page-b.js";
+import { t as __esmMin } from "./rolldown-runtime.js";
+import assert from "node:assert";
+//#region common-a.js
+function init$1() {
+	globalThis.valueA = typeof globalThis.valueA === "number" ? globalThis.valueA + 1 : 0;
+}
+var commonA;
+function init_common_a() {
+	return (init_common_a = __esmMin((() => {
+		commonA = /* @__PURE__ */ init$1();
+	})))();
+}
+//#endregion
+//#region common-b.js
+function init() {
+	globalThis.valueB = typeof globalThis.valueB === "number" ? globalThis.valueB + 1 : 0;
+}
+var commonB;
+function init_common_b() {
+	return (init_common_b = __esmMin((() => {
+		commonB = /* @__PURE__ */ init();
+	})))();
+}
+//#endregion
+//#region page-a.js
+function init_page_a() {
+	return (init_page_a = __esmMin((() => {
+		init_common_a();
+		init_common_b();
+		assert.strictEqual(globalThis.valueA, 0);
+		assert.strictEqual(globalThis.valueB, 0);
+	})))();
+}
+//#endregion
+init_page_a();
+export { commonA, commonB };
+
+```
+
+## page-b.js
+
+```js
+import { n as __exportAll, t as __esmMin } from "./rolldown-runtime.js";
+import assert from "node:assert";
+//#region bridge.js
+function x() {
+	return 1;
+}
+//#endregion
+//#region page-b.js
+var page_b_exports = /* @__PURE__ */ __exportAll({});
+function init_page_b() {
+	return (init_page_b = __esmMin((() => {
+		assert.strictEqual(globalThis.valueA, void 0, "dynamic retained-star fanout must not initialize common-a before page-b");
+		assert.strictEqual(globalThis.valueB, void 0);
+	})))();
+}
+//#endregion
+export { page_b_exports as n, x as r, init_page_b as t };
+
+```
+
+## rolldown-runtime.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+export { __exportAll as n, __esmMin as t };
+
+```
+
+# Variant: wrap-all: [on_demand_wrapping: false]
+
+## Assets
+
+### main.js
+
+```js
+import { t as __esmMin } from "./rolldown-runtime.js";
+//#region main.js
+var pageA;
+function init_main() {
+	return (init_main = __esmMin((async () => {
+		await import("./page-b.js").then((n) => (n.t(), n.n));
+		pageA = await import("./page-a.js");
+		console.log(pageA.commonA, pageA.commonB);
+	})))();
+}
+//#endregion
+await init_main();
+
+```
+
+### page-a.js
+
+```js
+import "./page-b.js";
+import { t as __esmMin } from "./rolldown-runtime.js";
+import assert from "node:assert";
+//#region common-a.js
+function init$1() {
+	globalThis.valueA = typeof globalThis.valueA === "number" ? globalThis.valueA + 1 : 0;
+}
+var commonA;
+function init_common_a() {
+	return (init_common_a = __esmMin((() => {
+		commonA = /* @__PURE__ */ init$1();
+	})))();
+}
+//#endregion
+//#region common-b.js
+function init() {
+	globalThis.valueB = typeof globalThis.valueB === "number" ? globalThis.valueB + 1 : 0;
+}
+var commonB;
+function init_common_b() {
+	return (init_common_b = __esmMin((() => {
+		commonB = /* @__PURE__ */ init();
+	})))();
+}
+//#endregion
+//#region page-a.js
+function init_page_a() {
+	return (init_page_a = __esmMin((() => {
+		init_common_a();
+		init_common_b();
+		assert.strictEqual(globalThis.valueA, 0);
+		assert.strictEqual(globalThis.valueB, 0);
+	})))();
+}
+//#endregion
+init_page_a();
+export { commonA, commonB };
+
+```
+
+### page-b.js
+
+```js
+import { n as __exportAll, t as __esmMin } from "./rolldown-runtime.js";
+import assert from "node:assert";
+//#region bridge.js
+function x() {
+	return 1;
+}
+function init_bridge() {
+	return (init_bridge = __esmMin((() => {})))();
+}
+//#endregion
+//#region page-b.js
+var page_b_exports = /* @__PURE__ */ __exportAll({});
+function init_page_b() {
+	return (init_page_b = __esmMin((() => {
+		assert.strictEqual(globalThis.valueA, void 0, "dynamic retained-star fanout must not initialize common-a before page-b");
+		assert.strictEqual(globalThis.valueB, void 0);
+	})))();
+}
+//#endregion
+export { x as i, page_b_exports as n, init_bridge as r, init_page_b as t };
+
+```
+
+### rolldown-runtime.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+export { __exportAll as n, __esmMin as t };
+
+```

@@ -1,0 +1,6 @@
+{
+  "config": {
+    "keepNames": true
+  },
+  "_comment": "Tests that __name is called after the variable is defined, not before"
+}

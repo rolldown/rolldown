@@ -7,11 +7,12 @@ use anyhow::Context;
 use arcstr::ArcStr;
 use dashmap::DashMap;
 use oxc_resolver::{
-  ModuleType, PackageJson as OxcPackageJson, Resolution, ResolveError, ResolverGeneric,
-  TsConfig as OxcTsConfig,
+  ModuleType, PackageJson as OxcPackageJson, PackageType, Resolution, ResolveError,
+  ResolverGeneric, TsConfig as OxcTsConfig,
 };
 use rolldown_common::{
-  ImportKind, ModuleDefFormat, PackageJson, Platform, ResolveOptions, ResolvedId, TsConfig,
+  ImportKind, ModuleDefFormat, ModuleId, PackageJson, Platform, ResolveOptions, ResolvedId,
+  TsConfig,
 };
 use rolldown_fs::{FileSystem, OsFileSystem};
 use rolldown_utils::dashmap::FxDashMap;
@@ -36,13 +37,13 @@ pub struct Resolver<Fs: FileSystem = OsFileSystem> {
   package_json_cache: FxDashMap<PathBuf, Arc<PackageJson>>,
 }
 
-impl<Fs: FileSystem + Clone> Resolver<Fs> {
+impl<Fs: FileSystem + Clone + 'static> Resolver<Fs> {
   /// Creates a new resolver with the specified options.
   pub fn new(
     fs: Fs,
     cwd: PathBuf,
     platform: Platform,
-    tsconfig: Option<&TsConfig>,
+    tsconfig: &TsConfig,
     resolve_options: ResolveOptions,
   ) -> Self {
     let config = ResolverConfig::build(&cwd, platform, tsconfig, resolve_options);
@@ -65,6 +66,12 @@ impl<Fs: FileSystem + Clone> Resolver<Fs> {
       package_json_cache: DashMap::default(),
     }
   }
+
+  /// The clone shares this resolver's cache, so tsconfig lookups and cache
+  /// clearing stay consistent with module resolution.
+  pub fn clone_default_resolver(&self) -> ResolverGeneric<Fs> {
+    self.default_resolver.clone_with_options(self.default_resolver.options().clone())
+  }
 }
 
 #[derive(Debug)]
@@ -77,7 +84,7 @@ pub struct ResolveReturn {
 impl From<ResolveReturn> for ResolvedId {
   fn from(resolved_return: ResolveReturn) -> Self {
     ResolvedId {
-      id: resolved_return.path,
+      id: ModuleId::new(resolved_return.path),
       module_def_format: resolved_return.module_def_format,
       package_json: resolved_return.package_json,
       ..Default::default()
@@ -150,12 +157,22 @@ impl<Fs: FileSystem> Resolver<Fs> {
     };
 
     let mut resolution = if let Some(importer) = importer {
-      selected_resolver.resolve_file(self.cwd.join(importer), specifier)
+      // check if `is_absolute` to avoid extra `join` overhead
+      if importer.is_absolute() {
+        selected_resolver.resolve_file(importer, specifier)
+      } else {
+        selected_resolver.resolve_file(self.cwd.join(importer), specifier)
+      }
     } else {
       selected_resolver.resolve(self.cwd.as_path(), specifier)
     };
 
-    if resolution.is_err() && is_user_defined_entry {
+    // Apply Rollup compatibility resolve when resolution fails and either:
+    // 1. It's a user-defined entry (e.g. `{ input: 'main' }` in rolldown config), or
+    // 2. There is no importer (e.g. `this.resolve('src/index.ts')` called from a plugin
+    //    without an importer), matching Rollup's behavior of resolving bare relative paths
+    //    against CWD when no importer is present.
+    if resolution.is_err() && (is_user_defined_entry || importer.is_none()) {
       resolution =
         self.try_rollup_compatibility_resolve(selected_resolver, importer, specifier, resolution);
     }
@@ -208,7 +225,8 @@ impl<Fs: FileSystem> Resolver<Fs> {
       .unwrap_or(self.cwd.as_path());
 
     // Try resolving relative to cwd as a fallback
-    let specifier_path = self.cwd.join(specifier).normalize();
+    let joined = self.cwd.join(specifier);
+    let specifier_path = joined.normalize();
     let fallback = resolver.resolve(importer_dir, &specifier_path.to_string_lossy());
     if fallback.is_ok() { fallback } else { original_resolution }
   }
@@ -231,6 +249,17 @@ fn infer_module_def_format(info: &Resolution) -> ModuleDefFormat {
         ModuleType::CommonJs => ModuleDefFormat::CjsPackageJson,
         ModuleType::Module => ModuleDefFormat::EsmPackageJson,
         ModuleType::Json | ModuleType::Wasm | ModuleType::Addon => ModuleDefFormat::Unknown,
+      };
+    }
+    // `oxc_resolver` only resolves `module_type` from `package.json#type` for `.js`/`.ts`
+    // extensions, following the Node.js ESM spec which has no native `.jsx`/`.tsx`. As a bundler,
+    // rolldown also treats `.jsx`/`.tsx` according to the nearest `package.json#type`, so fall back
+    // to reading it directly here to keep all js-like extensions consistent.
+    // See https://github.com/rolldown/rolldown/issues/9690
+    if let Some(ty) = info.package_json().and_then(|pkg_json| pkg_json.r#type()) {
+      return match ty {
+        PackageType::CommonJs => ModuleDefFormat::CjsPackageJson,
+        PackageType::Module => ModuleDefFormat::EsmPackageJson,
       };
     }
   }

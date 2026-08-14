@@ -1,0 +1,7 @@
+{
+  "_comment": "`import.meta.url` and friends are only polyfilled for `cjs` on the `node` platform, so every `import.meta` access has to be warned about here.",
+  "config": {
+    "format": "cjs",
+    "platform": "neutral"
+  }
+}

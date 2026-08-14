@@ -6,16 +6,15 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## a.js
 
 ```js
-// HIDDEN [rolldown:runtime]
+// HIDDEN [\0rolldown/runtime.js]
 //#region b.js
 var require_b = /* @__PURE__ */ __commonJSMin(((exports) => {
 	exports.x = 123;
 }));
-
 //#endregion
 //#region a.js
 Promise.resolve().then(() => /* @__PURE__ */ __toESM(require_b())).then((ns) => console.log(ns));
 Promise.resolve().then(() => /* @__PURE__ */ __toESM(require_b())).then((ns) => console.log(ns));
-
 //#endregion
+
 ```

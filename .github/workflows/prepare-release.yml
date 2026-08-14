@@ -4,8 +4,11 @@ permissions: {}
 
 on:
   workflow_dispatch:
-  schedule:
-    - cron: '0 0 * * 3' # Every Wednesday at 8am Shanghai time (UTC+8 = 00:00 UTC)
+    inputs:
+      version:
+        description: 'New version (e.g. 1.0.1)'
+        required: true
+        type: string
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref_name }}-${{ github.event.pull_request.number || github.sha }}
@@ -14,39 +17,52 @@ concurrency:
 jobs:
   prepare:
     name: Prepare Release
+    if: github.repository == 'rolldown/rolldown'
     runs-on: ubuntu-latest
     permissions:
       contents: write # for create-pull-request
       pull-requests: write # for create-pull-request
     steps:
-      - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0 # for changelog
           persist-credentials: true # for create-pull-request
 
-      - uses: taiki-e/install-action@b9c5db3aef04caffaf95a1d03931de10fb2a140f # v2.65.1
+      - uses: taiki-e/install-action@91ddec75689c4c78665b598d188dc821c5a43e5c # v2.85.9
         with:
           tool: just
 
-      - uses: oxc-project/setup-node@141eb77546de6702f92d320926403fe3f9f6a6f2 # v1.0.5
+      - uses: voidzero-dev/setup-vp@313600b80b104eadebb9111787d37a2e83e014ca # v1.17.0
+        with:
+          version: '0.2.1'
+          cache: true
 
-      - name: Get and bump version
+      - uses: oxc-project/setup-rust@3d6fb132fbe7cdcb66bf8ec193911c2945369d12 # v1.0.17
+        with:
+          cache-key: warm
+          tools: cargo-release-oxc
+
+      - name: Set version
+        env:
+          INPUT_VERSION: ${{ inputs.version }}
+        run: echo "VERSION=$INPUT_VERSION" >> "$GITHUB_ENV"
+
+      - name: Bump crate versions
         run: |
-          VERSION=$(node -e "
-            const pkg = require('./packages/rolldown/package.json');
-            const [, base, beta] = pkg.version.match(/^(\d+\.\d+\.\d+)-beta\.(\d+)$/);
-            console.log(\`\${base}-beta.\${parseInt(beta) + 1}\`);
-          ")
-          echo "VERSION=$VERSION" >> $GITHUB_ENV
+          mkdir -p target
+          cargo release-oxc update --release crates --version ${VERSION}
+
+      - name: Update Cargo.lock after crate bump
+        run: cargo check
 
       - run: just bump-packages ${VERSION}
 
       - name: Regenerate binding.js after version bump
-        run: pnpm --filter rolldown build-binding
+        run: vp run --filter rolldown build-binding
 
       - name: Generate changelog via git cliff
         id: changelog
-        uses: orhun/git-cliff-action@e16f179f0be49ecdfe63753837f20b9531642772 # v4.7.0
+        uses: orhun/git-cliff-action@f50e11560dce63f7c33227798f90b924471a88b5 # v4.8.0
         env:
           # Used to make request to GitHub without ratelimits.
           # `secrets.GIT_CLIFF_TOKEN` only has read permission.
@@ -56,13 +72,23 @@ jobs:
           config: cliff.toml
           args: --unreleased --prepend CHANGELOG.md --tag ${{ env.VERSION }}
 
-      - uses: peter-evans/create-pull-request@98357b18bf14b5342f975ff684046ec3b2a07725 # v8.0.0
+      - uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0
+        id: app-token
+        with:
+          client-id: ${{ secrets.APP_ID }}
+          private-key: ${{ secrets.APP_PRIVATE_KEY }}
+
+      - uses: peter-evans/create-pull-request@5f6978faf089d4d20b00c7766989d076bb2fc7f1 # v8.1.1
         if: ${{ steps.changelog.outputs.content }}
         with:
+          token: ${{ steps.app-token.outputs.token }}
           add-paths: |
             CHANGELOG.md
             packages/**/package.json
             packages/rolldown/src/binding.cjs
+            Cargo.toml
+            Cargo.lock
+            crates/**/Cargo.toml
           commit-message: 'release: v${{ env.VERSION }}'
           body: ${{ steps.changelog.outputs.content }}
           branch: release-v${{ env.VERSION }}

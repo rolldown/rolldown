@@ -1,0 +1,13 @@
+{
+  "config": {
+    "input": [
+      {
+        "name": "server",
+        "import": "./index.ts"
+      }
+    ],
+    "experimental": {
+      "chunkOptimization": true
+    }
+  }
+}

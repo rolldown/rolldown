@@ -6,14 +6,14 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## RESOLVE_ERROR
 
 ```text
-[RESOLVE_ERROR] Error: Could not resolve '@vue/test-utils' in main.js
+[RESOLVE_ERROR] Could not resolve '@vue/test-utils' in main.js
    ╭─[ main.js:1:8 ]
    │
  1 │ import '@vue/test-utils';
    │        ────────┬────────  
    │                ╰────────── Matched alias not found for '@vue/test-utils'
    │ 
-   │ Help: May be you expected `resolve.alias` to call other plugins resolveId hook? see the docs https://rolldown.rs/apis/config-options#resolve-alias for more details
+   │ Help: Maybe you expected `resolve.alias` to call other plugins resolveId hook? see the docs https://rolldown.rs/reference/InputOptions.resolve#alias for more details
 ───╯
 
 ```

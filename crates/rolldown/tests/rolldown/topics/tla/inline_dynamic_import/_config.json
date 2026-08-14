@@ -1,5 +1,5 @@
 {
   "config": {
-    "inlineDynamicImports": true
+    "codeSplitting": false
   }
 }

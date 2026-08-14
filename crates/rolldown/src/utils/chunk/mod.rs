@@ -8,6 +8,7 @@ use rustc_hash::FxHashMap;
 
 use crate::{stages::link_stage::LinkStageOutput, types::generator::GenerateContext};
 
+pub mod conflict_resolver;
 pub mod deconflict_chunk_symbols;
 pub mod determine_export_mode;
 pub mod finalize_chunks;
@@ -20,15 +21,24 @@ pub fn generate_pre_rendered_chunk(
   chunk_name: &ArcStr,
   graph: &LinkStageOutput,
 ) -> RollupPreRenderedChunk {
+  let is_entry = matches!(&chunk.kind, ChunkKind::EntryPoint { meta, .. } if meta.intersects(ChunkMeta::UserDefinedEntry | ChunkMeta::EmittedChunk));
+  let is_dynamic_entry = matches!(&chunk.kind, ChunkKind::EntryPoint { meta, .. } if !meta.intersects(ChunkMeta::UserDefinedEntry | ChunkMeta::EmittedChunk));
+
   RollupPreRenderedChunk {
     name: chunk_name.clone(),
-    is_entry: matches!(&chunk.kind, ChunkKind::EntryPoint { meta, .. } if meta.contains(ChunkMeta::UserDefinedEntry)),
-    is_dynamic_entry: matches!(&chunk.kind, ChunkKind::EntryPoint { meta, .. } if !meta.contains(ChunkMeta::UserDefinedEntry)),
+    is_entry,
+    is_dynamic_entry,
     facade_module_id: match &chunk.kind {
-      ChunkKind::EntryPoint { module, .. } => Some(graph.module_table[*module].id().into()),
+      ChunkKind::EntryPoint { module, .. } => {
+        Some(graph.module_table[*module].id().as_str().into())
+      }
       ChunkKind::Common => None,
     },
-    module_ids: chunk.modules.iter().map(|id| graph.module_table[*id].id().into()).collect(),
+    module_ids: chunk
+      .modules
+      .iter()
+      .map(|id| graph.module_table[*id].id().as_str().into())
+      .collect(),
     exports: get_chunk_export_names(chunk, graph),
   }
 }
@@ -37,7 +47,7 @@ pub fn generate_rendered_chunk(
   chunk: &GenerateContext<'_>,
   render_modules: FxHashMap<ModuleId, RenderedModule>,
 ) -> RollupRenderedChunk {
-  let GenerateContext { chunk_graph, chunk, link_output, options, .. } = chunk;
+  let GenerateContext { chunk_graph, chunk, link_output, resolved_paths, .. } = chunk;
   let pre_rendered_chunk =
     chunk.pre_rendered_chunk.as_ref().expect("Should have pre-rendered chunk");
   RollupRenderedChunk {
@@ -67,7 +77,7 @@ pub fn generate_rendered_chunk(
         link_output.module_table[*idx]
           .as_external()
           .expect("direct_imports_from_external_modules should only contain external modules")
-          .get_file_name(options.paths.as_ref())
+          .get_file_name(*resolved_paths)
       }))
       .collect(),
     dynamic_imports: chunk
@@ -80,6 +90,12 @@ pub fn generate_rendered_chunk(
           .expect("should have preliminary_filename")
           .clone()
       })
+      .chain(chunk.dynamic_imports_from_external_modules.iter().map(|idx| {
+        link_output.module_table[*idx]
+          .as_external()
+          .expect("dynamic_imports_from_external_modules should only contain external modules")
+          .get_file_name(*resolved_paths)
+      }))
       .collect(),
   }
 }

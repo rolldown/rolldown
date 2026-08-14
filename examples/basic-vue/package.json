@@ -5,10 +5,10 @@
   "scripts": {
     "build": "rolldown --config ./rolldown.config.js"
   },
-  "devDependencies": {
-    "rolldown": "workspace:*"
-  },
   "dependencies": {
     "vue": "catalog:"
+  },
+  "devDependencies": {
+    "rolldown": "workspace:*"
   }
 }

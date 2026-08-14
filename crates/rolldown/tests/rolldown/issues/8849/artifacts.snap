@@ -1,0 +1,54 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## admin.js
+
+```js
+import { t as value_default } from "./value.js";
+//#region admin.js
+const m = import("./common.js");
+console.log("rendering admin");
+console.log(m, value_default);
+//#endregion
+
+```
+
+## common.js
+
+```js
+import { t as value_default } from "./value.js";
+//#region common.js
+console.log(value_default);
+//#endregion
+
+```
+
+## main.js
+
+```js
+//#region main.js
+const m = import("./common.js");
+console.log("rendering main");
+console.log(m);
+//#endregion
+
+```
+
+## value.js
+
+```js
+//#region value.js
+var value_default = { value: 42 };
+//#endregion
+export { value_default as t };
+
+```
+
+# Output Stats
+
+- admin.js, is_entry true, is_dynamic_entry false, exports []
+- common.js, is_entry false, is_dynamic_entry true, exports []
+- main.js, is_entry true, is_dynamic_entry false, exports []
+- value.js, is_entry false, is_dynamic_entry false, exports ["t"]

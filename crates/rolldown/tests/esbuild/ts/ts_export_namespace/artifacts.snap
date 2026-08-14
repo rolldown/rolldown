@@ -1,6 +1,34 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
 ---
+# warnings
+
+## TOLERATED_TRANSFORM
+
+```text
+[TOLERATED_TRANSFORM] Namespaces exporting non-const are not supported by Oxc. Change to const or see: https://oxc.rs/docs/guide/usage/transformer/typescript.html#partial-namespace-support
+   ╭─[ b.ts:3:13 ]
+   │
+ 3 │     export let foo = 1
+   │                ───┬───  
+   │                   ╰───── 
+───╯
+
+```
+
+## TOLERATED_TRANSFORM
+
+```text
+[TOLERATED_TRANSFORM] Namespaces exporting non-const are not supported by Oxc. Change to const or see: https://oxc.rs/docs/guide/usage/transformer/typescript.html#partial-namespace-support
+   ╭─[ b.ts:6:13 ]
+   │
+ 6 │     export let bar = 2
+   │                ───┬───  
+   │                   ╰───── 
+───╯
+
+```
+
 # Assets
 
 ## a.js
@@ -14,10 +42,9 @@ var Foo = class {};
 (function(_Foo2) {
 	_Foo2.bar = 2;
 })(Foo || (Foo = {}));
-
 //#endregion
 //#region a.ts
 console.log(new Foo());
-
 //#endregion
+
 ```

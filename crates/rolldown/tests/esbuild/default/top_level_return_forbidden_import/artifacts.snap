@@ -6,7 +6,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## UNRESOLVED_IMPORT
 
 ```text
-[UNRESOLVED_IMPORT] Warning: Could not resolve 'foo' in entry.js
+[UNRESOLVED_IMPORT] Could not resolve 'foo' in entry.js
    ╭─[ entry.js:2:8 ]
    │
  2 │ import 'foo'
@@ -22,11 +22,9 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 import "foo";
-
-// HIDDEN [rolldown:runtime]
+// HIDDEN [\0rolldown/runtime.js]
 //#region entry.js
 var require_entry = /* @__PURE__ */ __commonJSMin((() => {}));
-
 //#endregion
 export default require_entry();
 

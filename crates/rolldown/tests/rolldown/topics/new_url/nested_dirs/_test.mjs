@@ -1,7 +1,6 @@
-import assert from 'node:assert'
-import { url, dep } from './dist/main.js'
+import assert from 'node:assert';
+import { url, dep } from './dist/main.js';
 
-const depExports = await dep
+const depExports = await dep;
 
-assert.equal(url.href, depExports.url.href)
-
+assert.equal(url.href, depExports.url.href);

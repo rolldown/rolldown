@@ -4,6 +4,7 @@ import { expect, vi } from 'vitest';
 const resolveIdFn = vi.fn();
 
 export default defineTest({
+  sequential: true,
   config: {
     input: './main.js',
     plugins: [

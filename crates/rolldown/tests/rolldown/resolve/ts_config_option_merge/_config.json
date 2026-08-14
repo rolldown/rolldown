@@ -1,7 +1,11 @@
 {
   "config": {
     "tsconfig": "tsconfig.json",
-    "external": ["preact/jsx-runtime", "@babel/runtime/helpers/decorateParam", "@babel/runtime/helpers/decorate"]
+    "external": [
+      "preact/jsx-runtime",
+      "@babel/runtime/helpers/decorateParam",
+      "@babel/runtime/helpers/decorate"
+    ]
   },
   "expectExecuted": false
 }

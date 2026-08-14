@@ -14,7 +14,7 @@ var Foo = class extends Object {
 	}
 	#foo;
 };
-
 //#endregion
 export { Foo };
+
 ```

@@ -1,0 +1,23 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+//#region dep.js
+var dep_exports = /* @__PURE__ */ __exportAll({ a: () => 1 });
+//#endregion
+//#region main.js
+let called = false;
+function key() {
+	called = true;
+	return "a";
+}
+dep_exports[key()];
+if (!called) throw new Error("side effect in the computed namespace key was dropped");
+//#endregion
+
+```

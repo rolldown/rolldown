@@ -6,14 +6,14 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## MISSING_NAME_OPTION_FOR_IIFE_EXPORT
 
 ```text
-[MISSING_NAME_OPTION_FOR_IIFE_EXPORT] Warning: If you do not supply "output.name", you may not be able to access the exports of an IIFE bundle.
+[MISSING_NAME_OPTION_FOR_IIFE_EXPORT] If you do not supply "output.name", you may not be able to access the exports of an IIFE bundle.
 
 ```
 
 ## MIXED_EXPORTS
 
 ```text
-[MIXED_EXPORTS] Warning: Entry module "test" is using named (including "default", "invalid-identifier", "test") and default exports together. Consumers of your bundle will have to use `test.json.default` to access the default export, which may not be what you want. Use `output.exports: "named"` to disable this warning.
+[MIXED_EXPORTS] Entry module "test.json" is using named (including "default", "invalid-identifier", "test") and default exports together. Consumers of your bundle will have to use `chunk.default` to access the default export, which may not be what you want. Use `output.exports: "named"` to disable this warning.
 
 ```
 
@@ -23,36 +23,37 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 (function(exports) {
-
-Object.defineProperty(exports, '__esModule', { value: true });
-
-//#region test.json
+	Object.defineProperties(exports, {
+		__esModule: { value: true },
+		[Symbol.toStringTag]: { value: "Module" }
+	});
+	//#region test.json
 	var test = 123;
 	var invalid_identifier = true;
 	var test_default = {
 		test,
 		"invalid-identifier": invalid_identifier
 	};
-
-//#endregion
-Object.defineProperty(exports, 'default', {
-  enumerable: true,
-  get: function () {
-    return test_default;
-  }
-});
-Object.defineProperty(exports, 'invalid-identifier', {
-  enumerable: true,
-  get: function () {
-    return invalid_identifier;
-  }
-});
-Object.defineProperty(exports, 'test', {
-  enumerable: true,
-  get: function () {
-    return test;
-  }
-});
-return exports;
+	//#endregion
+	Object.defineProperty(exports, "default", {
+		enumerable: true,
+		get: function() {
+			return test_default;
+		}
+	});
+	Object.defineProperty(exports, "invalid-identifier", {
+		enumerable: true,
+		get: function() {
+			return invalid_identifier;
+		}
+	});
+	Object.defineProperty(exports, "test", {
+		enumerable: true,
+		get: function() {
+			return test;
+		}
+	});
+	return exports;
 })({});
+
 ```

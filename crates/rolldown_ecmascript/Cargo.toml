@@ -1,17 +1,14 @@
 [package]
 name = "rolldown_ecmascript"
-version = "0.1.0"
+version = "1.2.4"
 publish = true
 description = "ECMAScript AST and parsing utilities for Rolldown"
+readme = "../../README.md"
 
 edition.workspace = true
 homepage.workspace = true
 license.workspace = true
 repository.workspace = true
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
-
-[lib]
-doctest = false
 
 [lints]
 workspace = true
@@ -20,5 +17,9 @@ workspace = true
 arcstr = { workspace = true }
 oxc = { workspace = true }
 oxc_sourcemap = { workspace = true }
+oxc_str = { workspace = true }
 rolldown_error = { workspace = true }
 self_cell = { workspace = true }
+
+[lib]
+doctest = false

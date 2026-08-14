@@ -9,7 +9,7 @@ export default defineTest({
       sourcemap: false,
     },
   },
-  afterTest: function(output) {
+  afterTest: function (output) {
     expect(getOutputFileNames(output)).toStrictEqual(['main.js']);
   },
 });

@@ -49,8 +49,7 @@ export async function runEsbuild(suite: BenchSuite) {
 }
 
 export async function runRollup(suite: BenchSuite) {
-  const { output: outputOptions = {}, ...inputOptions } = suite.rollupOptions ??
-    {};
+  const { output: outputOptions = {}, ...inputOptions } = suite.rollupOptions ?? {};
   const build = await rollup.rollup({
     input: suite.inputs,
     onwarn: (_warning, _defaultHandler) => {

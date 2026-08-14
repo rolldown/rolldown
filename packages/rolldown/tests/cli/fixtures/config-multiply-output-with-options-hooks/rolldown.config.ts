@@ -14,10 +14,11 @@ export default defineConfig({
   ],
   plugins: [
     {
-      options: function() {
+      name: 'test-hooks',
+      options: function () {
         console.log('called options hook');
       },
-      outputOptions: function() {
+      outputOptions: function () {
         console.log('called output options hook');
       },
     },

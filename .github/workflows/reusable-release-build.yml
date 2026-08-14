@@ -17,89 +17,98 @@ jobs:
         include:
           - os: macos-latest
             target: x86_64-apple-darwin
-            build: pnpm ci:build-release-binding --target x86_64-apple-darwin
+            build: vp run ci:build-release-binding --target x86_64-apple-darwin
 
           - os: macos-latest
             target: aarch64-apple-darwin
-            build: pnpm ci:build-release-binding --target aarch64-apple-darwin
+            build: vp run ci:build-release-binding --target aarch64-apple-darwin
 
           - os: windows-latest
             target: x86_64-pc-windows-msvc
-            build: pnpm ci:build-release-binding --target x86_64-pc-windows-msvc
+            build: vp run ci:build-release-binding --target x86_64-pc-windows-msvc
 
           - os: windows-latest
             target: aarch64-pc-windows-msvc
-            build: pnpm ci:build-release-binding --target aarch64-pc-windows-msvc
+            build: vp run ci:build-release-binding --target aarch64-pc-windows-msvc
 
           - os: ubuntu-latest
             target: x86_64-unknown-linux-gnu
-            build: pnpm ci:build-release-binding --target x86_64-unknown-linux-gnu --use-napi-cross
+            build: vp run ci:build-release-binding --target x86_64-unknown-linux-gnu --use-napi-cross
 
           - os: ubuntu-latest
             target: x86_64-unknown-linux-musl
-            build: pnpm ci:build-release-binding --target x86_64-unknown-linux-musl -x
+            build: vp run ci:build-release-binding --target x86_64-unknown-linux-musl -x
 
           - os: ubuntu-latest
             target: aarch64-unknown-linux-gnu
-            build: pnpm ci:build-release-binding --use-napi-cross --target aarch64-unknown-linux-gnu
+            build: vp run ci:build-release-binding --use-napi-cross --target aarch64-unknown-linux-gnu
 
           - os: ubuntu-latest
             target: aarch64-unknown-linux-ohos
-            build: pnpm ci:build-release-binding --target aarch64-unknown-linux-ohos
+            build: vp run ci:build-release-binding --target aarch64-unknown-linux-ohos
 
           - os: ubuntu-latest
             target: armv7-unknown-linux-gnueabihf
-            build: pnpm ci:build-release-binding --target armv7-unknown-linux-gnueabihf --use-napi-cross
+            build: vp run ci:build-release-binding --target armv7-unknown-linux-gnueabihf --use-napi-cross
 
           - os: ubuntu-latest
             target: aarch64-linux-android
-            build: pnpm ci:build-release-binding --target aarch64-linux-android
+            build: vp run ci:build-release-binding --target aarch64-linux-android
 
           - os: ubuntu-latest
             target: aarch64-unknown-linux-musl
+            build: vp run ci:build-release-binding -x --target aarch64-unknown-linux-musl
+
+          - os: ubuntu-latest
+            target: s390x-unknown-linux-gnu
             build: |
-              pnpm ci:build-release-binding -x --target aarch64-unknown-linux-musl
+              export CFLAGS="-fuse-ld=lld"
+              vp run ci:build-release-binding --target s390x-unknown-linux-gnu --use-napi-cross
+
+          - os: ubuntu-latest
+            target: powerpc64le-unknown-linux-gnu
+            build: vp run ci:build-release-binding --target powerpc64le-unknown-linux-gnu --use-napi-cross
+
           - os: ubuntu-latest
             target: wasm32-wasip1-threads
             build: |
-              pnpm --filter rolldown build-binding:wasi:release
+              vp run --filter rolldown build-binding:wasi:release
 
     name: Build ${{ matrix.target }}
     runs-on: ${{ matrix.os }}
     steps:
-      - uses: taiki-e/checkout-action@b13d20b7cda4e2f325ef19895128f7ff735c0b3d # v1.3.1
+      - uses: taiki-e/checkout-action@7d1e50e93dc4fb3bba58f85018fadf77898aee8b # v1.4.2
 
       - name: Setup Rust
-        uses: oxc-project/setup-rust@c8224157c0bf235aabc633e8cd50d344f087a7de # v1.0.12
+        uses: oxc-project/setup-rust@3d6fb132fbe7cdcb66bf8ec193911c2945369d12 # v1.0.17
         with:
-          cache-key: release-${{ matrix.target }}
-          save-cache: ${{ github.ref_name == 'main' }}
+          # No caching to avoid cache poisoning in release artifacts
+          restore-cache: false
+          save-cache: false
 
       - name: Rustup Adds Target
         run: rustup target add ${{ matrix.target }}
 
-      - uses: mlugg/setup-zig@fa65c4058643678a4e4a9a60513944a7d8d35440 # v2.1.0
+      - uses: mlugg/setup-zig@d1434d08867e3ee9daa34448df10607b98908d29 # v2.2.1
         if: ${{ contains(matrix.target, 'musl') }}
         with:
-          version: 0.14.1
+          version: 0.15.2
 
       - name: Setup OpenHarmony SDK
         if: ${{ contains(matrix.target, 'ohos') }}
         uses: Boshen/setup-ohos-sdk@edb865a89a712f1f15dbad932dfa9cfce849d95c # v1.0.0
 
-      - uses: taiki-e/install-action@b9c5db3aef04caffaf95a1d03931de10fb2a140f # v2.65.1
+      - uses: taiki-e/install-action@91ddec75689c4c78665b598d188dc821c5a43e5c # v2.85.9
         if: ${{ contains(matrix.target, 'musl') }}
         env:
           GITHUB_TOKEN: ${{ github.token }}
         with:
           tool: cargo-zigbuild
 
-      # https://github.com/nodejs/node-gyp/issues/2869
-      - name: Setup python
-        run: pip install setuptools
-        if: ${{ matrix.os == 'macos-latest' }}
-
-      - uses: oxc-project/setup-node@141eb77546de6702f92d320926403fe3f9f6a6f2 # v1.0.5
+      - uses: voidzero-dev/setup-vp@313600b80b104eadebb9111787d37a2e83e014ca # v1.17.0
+        with:
+          version: '0.2.1'
+          cache: true
 
       - name: Build Binding
         run: ${{ matrix.build }}
@@ -108,7 +117,7 @@ jobs:
           TARGET_CC: clang # for mimalloc
 
       - name: Upload Binding Artifact
-        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           if-no-files-found: error
           name: bindings-${{ matrix.target }}
@@ -120,16 +129,16 @@ jobs:
     name: Build FreeBSD
     runs-on: ubuntu-latest
     steps:
-      - uses: taiki-e/checkout-action@b13d20b7cda4e2f325ef19895128f7ff735c0b3d # v1.3.1
+      - uses: taiki-e/checkout-action@7d1e50e93dc4fb3bba58f85018fadf77898aee8b # v1.4.2
       - name: Build
         id: build
-        uses: cross-platform-actions/action@492b0c80085400348c599edace11141a4ee73524 # v0.32.0
+        uses: cross-platform-actions/action@5ea7e8e4677bd726033a10b094ba1c5762b15dee # v1.3.0
         env:
           DEBUG: napi:*
           RUSTUP_IO_THREADS: 1
         with:
           operating_system: freebsd
-          version: '14.2'
+          version: '15.0'
           memory: 8G
           cpu_count: 3
           environment_variables: 'DEBUG RUSTUP_IO_THREADS'
@@ -151,53 +160,34 @@ jobs:
             sudo corepack enable
             sudo npm i -g corepack@latest # use a newer corepack due to https://github.com/nodejs/corepack/issues/612
             pnpm install --ignore-scripts
-            pnpm ci:build-release-binding --target x86_64-unknown-freebsd
+            pnpm run ci:build-release-binding --target x86_64-unknown-freebsd
             rm -rf node_modules
             rm -rf target
       - name: Upload artifact
-        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: bindings-x86_64-unknown-freebsd
           path: ./packages/rolldown/src/rolldown-binding.*.node
           if-no-files-found: error
 
-  build-rolldown-pluginutils:
-    strategy:
-      fail-fast: false
-    name: Build `@rolldown/pluginutils` Package
-    runs-on: ubuntu-latest
-    steps:
-      - uses: taiki-e/checkout-action@b13d20b7cda4e2f325ef19895128f7ff735c0b3d # v1.3.1
-
-      - uses: oxc-project/setup-node@141eb77546de6702f92d320926403fe3f9f6a6f2 # v1.0.5
-
-      - name: Build `@rolldown/pluginutils`
-        run: pnpm --filter '@rolldown/pluginutils' build
-
-      - name: Upload `@rolldown/pluginutils` Artifact
-        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
-        with:
-          if-no-files-found: error
-          name: pluginutils-artifact
-          path: |
-            packages/pluginutils/dist/**
-
   build-node-packages:
-    needs: build-rolldown-pluginutils
     strategy:
       fail-fast: false
     name: Build Node Package
-    runs-on: ubuntu-latest
+    runs-on: namespace-profile-linux-x64-default
     env:
       RELEASING: 'true'
     steps:
-      - uses: taiki-e/checkout-action@b13d20b7cda4e2f325ef19895128f7ff735c0b3d # v1.3.1
+      - uses: taiki-e/checkout-action@7d1e50e93dc4fb3bba58f85018fadf77898aee8b # v1.4.2
 
-      - uses: oxc-project/setup-node@141eb77546de6702f92d320926403fe3f9f6a6f2 # v1.0.5
+      - uses: voidzero-dev/setup-vp@313600b80b104eadebb9111787d37a2e83e014ca # v1.17.0
+        with:
+          version: '0.2.1'
+          cache: true
 
       - name: Build Node binding
         # This binary is only used to build the node package itself. It's won't be published.
-        run: pnpm --filter rolldown build-binding
+        run: vp run --filter rolldown build-binding
 
       - name: Determine Version
         if: ${{ inputs.version != 'noop' }}
@@ -205,18 +195,12 @@ jobs:
         env:
           ROLLDOWN_VERSION: ${{ inputs.version }}
 
-      - name: Download Pluginutils Artifacts
-        uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7.0.0
-        with:
-          path: packages/pluginutils/dist
-          name: pluginutils-artifact
-
       - name: Build Node Packages
         # Binaries are built in the previous steps. Unlike in local development, we only need to build the node package itself.
-        run: pnpm --filter rolldown build-node
+        run: vp run --filter rolldown build-node
 
       - name: Upload Node Artifact
-        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           if-no-files-found: error
           name: node-artifact
@@ -224,7 +208,7 @@ jobs:
             packages/rolldown/dist/**
 
       - name: Upload `rolldown-version.txt`
-        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           if-no-files-found: warn
           name: rolldown-version
@@ -232,28 +216,31 @@ jobs:
             rolldown-version.txt
 
   build-rolldown-browser:
-    needs: build-rolldown-pluginutils
     strategy:
       fail-fast: false
     name: Build `@rolldown/browser` Package
-    runs-on: ubuntu-latest
+    runs-on: namespace-profile-linux-x64-default
     steps:
-      - uses: taiki-e/checkout-action@b13d20b7cda4e2f325ef19895128f7ff735c0b3d # v1.3.1
+      - uses: taiki-e/checkout-action@7d1e50e93dc4fb3bba58f85018fadf77898aee8b # v1.4.2
 
       - name: Setup Rust
-        uses: oxc-project/setup-rust@c8224157c0bf235aabc633e8cd50d344f087a7de # v1.0.12
+        uses: oxc-project/setup-rust@3d6fb132fbe7cdcb66bf8ec193911c2945369d12 # v1.0.17
         with:
-          cache-key: release-wasm32-wasip1-threads
-          save-cache: ${{ github.ref_name == 'main' }}
+          # No caching to avoid cache poisoning in release artifacts
+          restore-cache: false
+          save-cache: false
 
       - name: Add WASI target
         run: rustup target add wasm32-wasip1-threads
 
-      - uses: oxc-project/setup-node@141eb77546de6702f92d320926403fe3f9f6a6f2 # v1.0.5
+      - uses: voidzero-dev/setup-vp@313600b80b104eadebb9111787d37a2e83e014ca # v1.17.0
+        with:
+          version: '0.2.1'
+          cache: true
 
       - name: Build Node binding
         # This binary is only used to build the node package itself. It's won't be published.
-        run: pnpm --filter rolldown build-binding
+        run: vp run --filter rolldown build-binding
 
       - name: Determine Version
         if: ${{ inputs.version != 'noop' }}
@@ -261,18 +248,12 @@ jobs:
         env:
           ROLLDOWN_VERSION: ${{ inputs.version }}
 
-      - name: Download Pluginutils Artifacts
-        uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7.0.0
-        with:
-          path: packages/pluginutils/dist
-          name: pluginutils-artifact
-
       - name: Build `@rolldown/browser`
         # Binaries are built in the previous steps. Unlike in local development, we only need to build the node package itself.
-        run: pnpm --filter "@rolldown/browser" build:release
+        run: vp run --filter "@rolldown/browser" build:release
 
       - name: Upload `@rolldown/browser` Artifact
-        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           if-no-files-found: error
           name: browser-artifact
@@ -283,24 +264,28 @@ jobs:
     strategy:
       fail-fast: false
     name: Build `@rolldown/debug` Package
-    runs-on: ubuntu-latest
+    runs-on: namespace-profile-linux-x64-default
     steps:
-      - uses: taiki-e/checkout-action@b13d20b7cda4e2f325ef19895128f7ff735c0b3d # v1.3.1
+      - uses: taiki-e/checkout-action@7d1e50e93dc4fb3bba58f85018fadf77898aee8b # v1.4.2
 
       - name: Setup Rust
-        uses: oxc-project/setup-rust@c8224157c0bf235aabc633e8cd50d344f087a7de # v1.0.12
+        uses: oxc-project/setup-rust@3d6fb132fbe7cdcb66bf8ec193911c2945369d12 # v1.0.17
         with:
-          # `@rolldown/debug` only rely on debug build to produce code in `src/generated`.
-          cache-key: debug-build
+          # No caching to avoid cache poisoning in release artifacts
+          restore-cache: false
+          save-cache: false
 
-      - uses: oxc-project/setup-node@141eb77546de6702f92d320926403fe3f9f6a6f2 # v1.0.5
+      - uses: voidzero-dev/setup-vp@313600b80b104eadebb9111787d37a2e83e014ca # v1.17.0
+        with:
+          version: '0.2.1'
+          cache: true
 
       - name: Build `@rolldown/debug`
         # This binary is only used to build the node package itself. It's won't be published.
-        run: pnpm --filter "@rolldown/debug" build
+        run: vp run --filter "@rolldown/debug" build
 
       - name: Upload `@rolldown/debug` Artifact
-        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           if-no-files-found: error
           name: debug-artifact

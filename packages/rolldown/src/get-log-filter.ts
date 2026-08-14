@@ -1,7 +1,35 @@
-import type { RollupLog } from './log/logging';
+import type { RolldownLog } from './log/logging';
 
-export type GetLogFilter = (filters: string[]) => (log: RollupLog) => boolean;
+/**
+ * @param filters A list of log filters to apply
+ * @returns A function that tests whether a log should be output
+ *
+ * @category Config
+ */
+export type GetLogFilter = (filters: string[]) => (log: RolldownLog) => boolean;
 
+/**
+ * A helper function to generate log filters using the same syntax as the CLI.
+ *
+ * @example
+ * ```ts
+ * import { defineConfig } from 'rolldown';
+ * import { getLogFilter } from 'rolldown/getLogFilter';
+ *
+ * const logFilter = getLogFilter(['code:FOO', 'code:BAR']);
+ *
+ * export default defineConfig({
+ * 	input: 'main.js',
+ * 	onLog(level, log, handler) {
+ * 		if (logFilter(log)) {
+ * 			handler(level, log);
+ * 		}
+ * 	}
+ * });
+ * ```
+ *
+ * @category Config
+ */
 const getLogFilter: GetLogFilter = (filters) => {
   if (filters.length === 0) return () => true;
   const normalizedFilters = filters.map((filter) =>
@@ -14,9 +42,9 @@ const getLogFilter: GetLogFilter = (filters) => {
         key: key.split('.'),
         parts: value.join(':').split('*'),
       };
-    })
+    }),
   );
-  return (log: RollupLog): boolean => {
+  return (log: RolldownLog): boolean => {
     nextIntersectedFilter: for (const intersectedFilters of normalizedFilters) {
       for (const { inverted, key, parts } of intersectedFilters) {
         const isFilterSatisfied = testFilter(log, key, parts);
@@ -30,11 +58,7 @@ const getLogFilter: GetLogFilter = (filters) => {
   };
 };
 
-const testFilter = (
-  log: RollupLog,
-  key: string[],
-  parts: string[],
-): boolean => {
+const testFilter = (log: RolldownLog, key: string[], parts: string[]): boolean => {
   let rawValue: any = log;
   for (let index = 0; index < key.length; index++) {
     if (!rawValue) {
@@ -46,9 +70,7 @@ const testFilter = (
     }
     rawValue = rawValue[part];
   }
-  let value = typeof rawValue === 'object'
-    ? JSON.stringify(rawValue)
-    : String(rawValue);
+  let value = typeof rawValue === 'object' ? JSON.stringify(rawValue) : String(rawValue);
   if (parts.length === 1) {
     return value === parts[0];
   }
@@ -68,4 +90,4 @@ const testFilter = (
 };
 
 export default getLogFilter;
-export type { RollupLog };
+export type { RolldownLog, RolldownLog as RollupLog };

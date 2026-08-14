@@ -7,7 +7,7 @@
       }
     ],
     "preserveEntrySignatures": "strict",
-    "advancedChunks": {
+    "codeSplitting": {
       "includeDependenciesRecursively": false
     }
   },

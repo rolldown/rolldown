@@ -1,7 +1,23 @@
 use std::io::{StdoutLock, Write};
 
 use flate2::{Compression, write::GzEncoder};
-use num_format::{Locale, ToFormattedString as _};
+use owo_colors::{Style, Styled};
+
+/// Apply `style` to `text` only when stdout supports color.
+///
+/// This is what owo-colors' `if_supports_color` does internally, but without its
+/// `supports-colors` feature (which would pull a duplicate `supports-color` into
+/// the tree). Like miette, the no-color path applies an empty [`Style`], which
+/// emits no escape codes. `on_cached` caches detection, so this is cheap per call.
+#[inline]
+pub fn paint<T: std::fmt::Display>(text: T, style: Style) -> Styled<T> {
+  let style = if supports_color::on_cached(supports_color::Stream::Stdout).is_some() {
+    style
+  } else {
+    Style::new()
+  };
+  style.style(text)
+}
 
 pub const COMPRESSIBLE_ASSETS: [&str; 7] =
   [".html", ".json", ".svg", ".txt", ".xml", ".xhtml", ".wasm"];
@@ -25,7 +41,23 @@ pub struct LogEntry<'a> {
 
 pub fn display_size(size: usize) -> String {
   let (quotient, remainder) = (size / 1000, (size % 1000) / 10);
-  format!("{}.{:02} kB", quotient.to_formatted_string(&Locale::en), remainder)
+  format!("{}.{:02} kB", group_thousands(quotient), remainder)
+}
+
+/// Inserts a `,` thousands separator every three digits from the right,
+/// matching `num_format`'s `Locale::en` formatting (standard 3-digit grouping).
+fn group_thousands(n: usize) -> String {
+  let digits = itoa::Buffer::new().format(n).to_string();
+  let len = digits.len();
+  // 1 separator for every 3 digits beyond the first group.
+  let mut out = String::with_capacity(len + (len.saturating_sub(1)) / 3);
+  for (i, ch) in digits.bytes().enumerate() {
+    if i != 0 && (len - i).is_multiple_of(3) {
+      out.push(',');
+    }
+    out.push(ch as char);
+  }
+  out
 }
 
 struct CountingWriter {
@@ -78,51 +110,24 @@ pub fn log_info(message: &str) {
   let _ = lock.flush();
 }
 
-/// Joins a vector of items with a separator, showing only the first `limit` items
-/// and adding "..." if there are more.
-pub fn join_with_limit<T: AsRef<str>>(items: &[T], separator: &str, limit: usize) -> String {
-  debug_assert!(limit > 0, "limit must be greater than 0");
-  if items.len() <= limit {
-    items.iter().map(AsRef::as_ref).collect::<Vec<_>>().join(separator)
-  } else {
-    let mut result = items[..limit].iter().map(AsRef::as_ref).collect::<Vec<_>>().join(separator);
-    result.push_str(separator);
-    result.push_str("...");
-    result
-  }
-}
-
 #[cfg(test)]
 mod tests {
-  use super::*;
+  use super::{display_size, group_thousands};
 
   #[test]
-  fn test_join_with_limit_less_than_limit() {
-    let items = vec!["a", "b", "c"];
-    assert_eq!(join_with_limit(&items, ", ", 5), "a, b, c");
+  fn test_group_thousands() {
+    assert_eq!(group_thousands(0), "0");
+    assert_eq!(group_thousands(5), "5");
+    assert_eq!(group_thousands(999), "999");
+    assert_eq!(group_thousands(1000), "1,000");
+    assert_eq!(group_thousands(12345), "12,345");
+    assert_eq!(group_thousands(1_234_567), "1,234,567");
+    assert_eq!(group_thousands(1_000_000), "1,000,000");
   }
 
   #[test]
-  fn test_join_with_limit_equal_to_limit() {
-    let items = vec!["a", "b", "c", "d", "e"];
-    assert_eq!(join_with_limit(&items, ", ", 5), "a, b, c, d, e");
-  }
-
-  #[test]
-  fn test_join_with_limit_more_than_limit() {
-    let items = vec!["a", "b", "c", "d", "e", "f", "g"];
-    assert_eq!(join_with_limit(&items, ", ", 5), "a, b, c, d, e, ...");
-  }
-
-  #[test]
-  fn test_join_with_limit_custom_separator() {
-    let items = vec!["a", "b", "c", "d", "e", "f"];
-    assert_eq!(join_with_limit(&items, " | ", 3), "a | b | c | ...");
-  }
-
-  #[test]
-  fn test_join_with_limit_empty_vector() {
-    let items: Vec<&str> = vec![];
-    assert_eq!(join_with_limit(&items, ", ", 5), "");
+  fn test_display_size() {
+    assert_eq!(display_size(0), "0.00 kB");
+    assert_eq!(display_size(1_234_560), "1,234.56 kB");
   }
 }

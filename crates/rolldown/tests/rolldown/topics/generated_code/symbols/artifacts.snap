@@ -6,13 +6,12 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## main.js
 
 ```js
-Object.defineProperty(exports, Symbol.toStringTag, { value: 'Module' });
-
+Object.defineProperty(exports, Symbol.toStringTag, { value: "Module" });
 //#region main.js
 const a = 1;
-
 //#endregion
 exports.a = a;
+
 ```
 
 # Variant: [format: Esm]
@@ -24,9 +23,9 @@ exports.a = a;
 ```js
 //#region main.js
 const a = 1;
-
 //#endregion
 export { a };
+
 ```
 
 # Variant: [format: Iife]
@@ -36,7 +35,7 @@ export { a };
 ### MISSING_NAME_OPTION_FOR_IIFE_EXPORT
 
 ```text
-[MISSING_NAME_OPTION_FOR_IIFE_EXPORT] Warning: If you do not supply "output.name", you may not be able to access the exports of an IIFE bundle.
+[MISSING_NAME_OPTION_FOR_IIFE_EXPORT] If you do not supply "output.name", you may not be able to access the exports of an IIFE bundle.
 
 ```
 
@@ -46,14 +45,11 @@ export { a };
 
 ```js
 (function(exports) {
-
-Object.defineProperty(exports, Symbol.toStringTag, { value: 'Module' });
-
-//#region main.js
-	const a = 1;
-
-//#endregion
-exports.a = a;
-return exports;
+	Object.defineProperty(exports, Symbol.toStringTag, { value: "Module" });
+	//#region main.js
+	//#endregion
+	exports.a = 1;
+	return exports;
 })({});
+
 ```

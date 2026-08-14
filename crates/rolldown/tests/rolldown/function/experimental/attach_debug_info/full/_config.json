@@ -2,15 +2,15 @@
   "config": {
     "input": [
       {
-      "name": "A",
-      "import": "./entry-a.js"
+        "name": "A",
+        "import": "./entry-a.js"
       },
       {
         "name": "B",
         "import": "./entry-b.js"
       }
     ],
-    "advancedChunks": {
+    "codeSplitting": {
       "groups": [
         {
           "name": "Splitted",

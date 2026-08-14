@@ -26,6 +26,7 @@ export class PluginContextData {
   constructor(
     private onLog: LogHandler,
     private outputOptions: OutputOptions,
+    private normalizedInputPlugins: RolldownPlugin[],
     private normalizedOutputPlugins: RolldownPlugin[],
   ) {}
 
@@ -99,9 +100,7 @@ export class PluginContextData {
     return index;
   }
 
-  getSavedResolveOptions(
-    receipt: number,
-  ): PluginContextResolveOptions | undefined {
+  getSavedResolveOptions(receipt: number): PluginContextResolveOptions | undefined {
     return this.resolveOptionsMap.get(receipt);
   }
 
@@ -121,6 +120,7 @@ export class PluginContextData {
     this.normalizedInputOptions ??= new NormalizedInputOptionsImpl(
       opts,
       this.onLog,
+      this.normalizedInputPlugins,
     );
     return this.normalizedInputOptions;
   }

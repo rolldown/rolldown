@@ -1,7 +1,6 @@
 ---
 source: crates/string_wizard/tests/magic_string_source_map.rs
 expression: "visualize(&s, Hires::False, &output)"
-snapshot_kind: text
 ---
 - 
 (1:0) "function test() {\n" --> (1:0) "function test() {\n"

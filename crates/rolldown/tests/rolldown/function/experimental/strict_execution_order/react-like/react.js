@@ -1,6 +1,5 @@
 exports.createReactElement = function () {
-	return "div";
+  return 'div';
 };
-
 
 exports.version = 1;

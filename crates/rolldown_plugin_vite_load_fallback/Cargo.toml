@@ -12,6 +12,7 @@ description = "Rolldown plugin for load fallback handling"
 
 [lib]
 doctest = false
+test = false
 
 [lints]
 workspace = true
@@ -19,3 +20,4 @@ workspace = true
 [dependencies]
 memchr = { workspace = true }
 rolldown_plugin = { workspace = true }
+rolldown_utils = { workspace = true }

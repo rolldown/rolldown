@@ -6,7 +6,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## UNRESOLVED_IMPORT
 
 ```text
-[UNRESOLVED_IMPORT] Warning: Could not resolve 'foo' in entry.js
+[UNRESOLVED_IMPORT] Could not resolve 'foo' in entry.js
    ╭─[ entry.js:1:22 ]
    │
  1 │ export * as out from "foo"
@@ -21,14 +21,15 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## entry.js
 
 ```js
-// HIDDEN [rolldown:runtime]
+Object.defineProperty(exports, Symbol.toStringTag, { value: "Module" });
+// HIDDEN [\0rolldown/runtime.js]
 let foo = require("foo");
 foo = __toESM(foo);
-
-Object.defineProperty(exports, 'out', {
-  enumerable: true,
-  get: function () {
-    return foo;
-  }
+Object.defineProperty(exports, "out", {
+	enumerable: true,
+	get: function() {
+		return foo;
+	}
 });
+
 ```

@@ -4,18 +4,19 @@ import { expect, vi } from 'vitest';
 const loadFn = vi.fn();
 
 export default defineTest({
+  sequential: true,
   config: {
     plugins: [
       {
         name: 'test-plugin',
-        resolveId: function(id, importer, options) {
+        resolveId: function (id, _importer, _options) {
           if (id === 'foo') {
             return {
               id,
             };
           }
         },
-        load: function(id) {
+        load: function (id) {
           loadFn();
           if (id === 'foo') {
             return {
@@ -23,7 +24,7 @@ export default defineTest({
             };
           }
         },
-        transform: function(id, code) {
+        transform: function (id, code) {
           if (id === 'foo') {
             expect(code).toStrictEqual('');
           }
@@ -31,7 +32,7 @@ export default defineTest({
       },
     ],
   },
-  afterTest: (output) => {
+  afterTest: (_output) => {
     expect(loadFn).toHaveBeenCalledTimes(2);
   },
 });

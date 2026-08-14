@@ -48,7 +48,7 @@ Plugins extend Rolldown's functionality, but can also introduce performance over
 
 #### Plugin Hook Filters
 
-Rolldown provides a feature called **Plugin Hook Filters**. This allows you to specify precisely which modules a plugin hook should process, reducing the communication overhead between JavaScript and Rust. For detailed information on how filters work internally, refer to the [Plugin Development Guide - Hook Filters](/apis/plugin-hook-filters).
+Rolldown provides a feature called **Plugin Hook Filters**. This allows you to specify precisely which modules a plugin hook should process, reducing the communication overhead between JavaScript and Rust. For detailed information on how filters work internally, refer to the [Hook Filters](/apis/plugin-api/hook-filters) page.
 
 If you are a plugin user and the plugin you use does not have hook filters specified, you can apply them by using the `withFilter` utility function exported by Rolldown.
 
@@ -60,12 +60,7 @@ import { withFilter } from 'rolldown/filter';
 export default defineConfig({
   plugins: [
     // Run the transform hook of the `yaml` plugin only for modules which end in `.yaml`
-    withFilter(
-      yaml({
-        /*...*/
-      }),
-      { transform: { id: /\.yaml$/ } },
-    ),
+    withFilter(yaml({/*...*/}), { transform: { id: /\.yaml$/ } }),
   ],
 });
 ```
@@ -78,7 +73,7 @@ Check the [Rolldown Features](/guide/notable-features) page for capabilities tha
 
 For example, the following common Rollup plugins may be replaced with Rolldown's built-in features:
 
-- `@rollup/plugin-alias`: [`resolve.alias`](/options/resolve#alias) option
+- `@rollup/plugin-alias`: [`resolve.alias`](/reference/InputOptions.resolve#alias) option
 - `@rollup/plugin-commonjs`: supported out of the box
 - `@rollup/plugin-inject`: [`inject`](/guide/notable-features#inject) option
 - `@rollup/plugin-replace`: [`replacePlugin`](/builtin-plugins/replace)
@@ -149,3 +144,60 @@ The reason for this behavior is because preserving the value of `this` limits th
 Similar to the issue described above, Rolldown does not necessarily preserve the value of `this` of exported functions when outputting your code as CJS. In this case, `this` that should be `undefined` may be bound to the `module.exports` object instead.
 
 :::
+
+## Avoid relying on Temporal Dead Zone (TDZ) errors
+
+In ECMAScript, `let`, `const`, and `class` declarations create a binding that exists from the start of its scope but is uninitialized until the declaration itself is evaluated. Reading the binding during this window, even via `typeof`, throws a `ReferenceError`. This window is known as the "Temporal Dead Zone (TDZ)".
+
+```js
+typeof x; // ReferenceError: Cannot access 'x' before initialization
+let x = 1;
+```
+
+However, **Rolldown does not necessarily preserve TDZ semantics**, for a mix of correctness and performance reasons. Code that relies on a TDZ access throwing may behave differently in the bundled output, and should be avoided.
+
+For example, Rolldown always rewrites a module top-level `class X {}` to `var X = class {}` so that the binding can be hoisted alongside other top-level declarations. As a result, the binding is observable as `undefined` (rather than throwing) before the declaration is reached. Setting [`output.topLevelVar`](/reference/OutputOptions.topLevelVar) to `true` extends the same rewriting to top-level `let` and `const`.
+
+```js
+// In ESM, this throws ReferenceError.
+// In Rolldown's bundled output, `typeof X` evaluates to `"undefined"`.
+console.log(typeof X);
+class X {}
+```
+
+As another example, Rolldown may inline exported `const` values at their use sites, even across an import cycle. When the cycle causes the constant to be read before its declaration runs, ESM would throw, but Rolldown returns the inlined value instead.
+
+::: code-group
+
+```js [entry.js]
+import './constants.js';
+```
+
+```js [constants.js]
+export const foo = 123;
+export function bar() {
+  return foo;
+}
+import './cycle.js';
+```
+
+```js [cycle.js]
+import { bar } from './constants.js';
+// In ESM, `bar()` throws ReferenceError because `foo` is in TDZ.
+// In Rolldown's bundled output, `bar()` returns `123`.
+console.log(bar());
+```
+
+:::
+
+## Warning: "Sourcemap is likely to be incorrect"
+
+You'll see this warning if you generate a sourcemap with your bundle ([`sourcemap: true`](/reference/OutputOptions.sourcemap) or `sourcemap: 'inline'`) but you're using one or more plugins that transformed code without generating a sourcemap for the transformation.
+
+Usually, a plugin will only omit the sourcemap if it (the plugin, not the bundle) was configured with `sourcemap: false` - so all you need to do is change that. If the plugin doesn't generate a sourcemap, consider raising an issue with the plugin author.
+
+## Error: "Cannot find module '@rolldown/binding-...'"
+
+This error means Node.js found the `rolldown` package but not the platform-specific native package. It is usually caused by a known npm bug with optional dependencies ([npm/cli#4828](https://github.com/npm/cli/issues/4828)); if you installed with npm, removing `node_modules` and `package-lock.json` and reinstalling fixes it.
+
+It can also happen when the config file lives in a symlinked directory that points into another project, for example one shared between Windows and WSL ([#9854](https://github.com/rolldown/rolldown/issues/9854)). Node.js resolves the config to its real path before resolving its imports, so `import ... from 'rolldown'` can pick up a `node_modules` installed for a different platform. Keep the config outside the symlinked directory, or run with the `NODE_OPTIONS=--preserve-symlinks` environment variable set (not compatible with pnpm, whose `node_modules` layout relies on symlinks).

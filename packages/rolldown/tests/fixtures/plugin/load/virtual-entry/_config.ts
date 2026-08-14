@@ -27,6 +27,10 @@ export default defineTest({
           }
         },
         transform(_, id) {
+          // Skip virtual modules (like \0rolldown/runtime.js)
+          if (id.startsWith('\0')) {
+            return;
+          }
           idList.push(id);
         },
       },
@@ -36,9 +40,6 @@ export default defineTest({
     idList.length = 0;
   },
   afterTest: () => {
-    expect(idList).toStrictEqual([
-      entryName,
-      path.join(__dirname, './main.js'),
-    ]);
+    expect(idList).toStrictEqual([entryName, path.join(__dirname, './main.js')]);
   },
 });

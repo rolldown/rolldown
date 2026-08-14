@@ -1,4 +1,4 @@
-mod binding_debug_options;
+mod binding_devtools_options;
 mod binding_experimental_options;
 mod binding_input_item;
 mod binding_make_absolute_externals_relative;
@@ -9,12 +9,12 @@ mod binding_watch_option;
 
 pub mod binding_inject_import;
 
-use binding_debug_options::BindingDebugOptions;
+use binding_devtools_options::BindingDevtoolsOptions;
 use binding_make_absolute_externals_relative::BindingMakeAbsoluteExternalsRelative;
 use binding_optimization::BindingOptimization;
 use derive_more::Debug;
 use napi::Either;
-use napi::bindgen_prelude::{FnArgs, Promise};
+use napi::bindgen_prelude::FnArgs;
 use rustc_hash::FxBuildHasher;
 use std::collections::HashMap;
 
@@ -25,6 +25,7 @@ use binding_watch_option::BindingWatchOption;
 
 use super::plugin::BindingPluginOrParallelJsPluginPlaceholder;
 use crate::generated::binding_checks_options;
+use crate::types::binding_plugin_timings::BindingPluginTimingsMeasurement;
 use crate::types::binding_string_or_regex::BindingStringOrRegex;
 use crate::types::defer_sync_scan_data::BindingDeferSyncScanData;
 use crate::types::preserve_entry_signatures::BindingPreserveEntrySignatures;
@@ -32,7 +33,7 @@ use crate::types::{
   binding_log::BindingLog, binding_log_level::BindingLogLevel, js_callback::JsCallback,
 };
 
-pub type BindingOnLog = Option<JsCallback<FnArgs<(String, BindingLog)>, Promise<()>>>;
+pub type BindingOnLog = Option<JsCallback<FnArgs<(String, BindingLog)>, ()>>;
 
 #[napi_derive::napi(object, object_to_js = false)]
 #[derive(Default, Debug)]
@@ -76,7 +77,7 @@ pub struct BindingInputOptions<'env> {
   pub platform: Option<String>,
   pub log_level: BindingLogLevel,
   #[debug(skip)]
-  #[napi(ts_type = "(logLevel: 'debug' | 'warn' | 'info', log: BindingLog) => Promise<void>")]
+  #[napi(ts_type = "(logLevel: 'debug' | 'warn' | 'info', log: BindingLog) => void")]
   pub on_log: BindingOnLog,
   // extra
   pub cwd: String,
@@ -86,7 +87,6 @@ pub struct BindingInputOptions<'env> {
   pub module_types: Option<HashMap<String, String, FxBuildHasher>>,
   pub define: Option<Vec<(/* Target to be replaced */ String, /* Replacement */ String)>>,
   pub drop_labels: Option<Vec<String>>,
-  #[napi(ts_type = "Array<BindingInjectImportNamed | BindingInjectImportNamespace>")]
   pub inject: Option<Vec<BindingInjectImport>>,
   pub experimental: Option<binding_experimental_options::BindingExperimentalOptions>,
   pub profiler_names: Option<bool>,
@@ -98,14 +98,17 @@ pub struct BindingInputOptions<'env> {
   #[debug(skip)]
   #[napi(ts_type = "undefined | (() => BindingDeferSyncScanData[])")]
   pub defer_sync_scan_data: Option<JsCallback<(), Vec<BindingDeferSyncScanData>>>,
+  /// Asked for while the build is closing, so what it returns includes `closeBundle`.
+  #[debug(skip)]
+  #[napi(ts_type = "undefined | (() => BindingPluginTimingsMeasurement)")]
+  pub plugin_timings: Option<JsCallback<(), BindingPluginTimingsMeasurement>>,
   pub make_absolute_externals_relative: Option<BindingMakeAbsoluteExternalsRelative>,
-  pub debug: Option<BindingDebugOptions>,
+  pub devtools: Option<BindingDevtoolsOptions>,
   #[debug(skip)]
   #[napi(ts_type = "() => void")]
   pub invalidate_js_side_cache: Option<JsCallback>,
   pub preserve_entry_signatures: Option<BindingPreserveEntrySignatures>,
   pub optimization: Option<BindingOptimization>,
   pub context: Option<String>,
-  #[napi(ts_type = "true | string")]
   pub tsconfig: Option<Either<bool, String>>,
 }

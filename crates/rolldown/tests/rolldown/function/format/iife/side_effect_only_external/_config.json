@@ -1,0 +1,8 @@
+{
+  "config": {
+    "format": "iife",
+    "external": ["external"],
+    "name": "module"
+  },
+  "expectExecuted": false
+}

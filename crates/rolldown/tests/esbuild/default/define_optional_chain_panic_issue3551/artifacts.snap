@@ -21,28 +21,28 @@ delete 1 .c;
 delete 1 .c;
 delete 1["c"];
 delete 1["c"];
-
 //#endregion
+
 ```
 
 ## id-define.js
 
 ```js
 //#region id-define.js
-1?.y.z;
-(1?.y).z;
-1?.y["z"];
-(1?.y)["z"];
-1?.y();
-(1?.y)();
-1?.y.z();
-(1?.y).z();
-1?.y["z"]();
-(1?.y)["z"]();
-delete 1?.y.z;
-delete (1?.y).z;
-delete 1?.y["z"];
-delete (1?.y)["z"];
-
+1 .y.z;
+1 .y.z;
+1 .y["z"];
+1 .y["z"];
+1 .y();
+1 .y();
+1 .y.z();
+1 .y.z();
+1 .y["z"]();
+1 .y["z"]();
+delete 1 .y.z;
+delete 1 .y.z;
+delete 1 .y["z"];
+delete 1 .y["z"];
 //#endregion
+
 ```

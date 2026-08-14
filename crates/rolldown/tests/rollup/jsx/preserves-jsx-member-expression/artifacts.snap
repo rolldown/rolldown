@@ -13,7 +13,7 @@ const obj = {
 };
 const result1 = <obj.Foo></obj.Foo>;
 const result2 = <obj.bar.Baz></obj.bar.Baz>;
-
 //#endregion
 export { result1, result2 };
+
 ```

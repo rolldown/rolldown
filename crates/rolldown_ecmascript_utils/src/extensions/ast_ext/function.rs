@@ -12,17 +12,21 @@ impl FunctionExt for oxc::ast::ast::FormalParameters<'_> {
       // No need to check for them
 
       // Check for destructuring patterns that might have side effects
-      match &param.pattern.kind {
+      // Also check for initializers (default parameter values) which might have side effects
+      match &param.pattern {
         // `function foo({ x } ) {}` probably has trigger side effects if x is a getter
-        | oxc::ast::ast::BindingPatternKind::ObjectPattern(_)
+        | oxc::ast::ast::BindingPattern::ObjectPattern(_)
         // `function foo([x]) {}` probably has trigger side effects if x is a getter
-        | oxc::ast::ast::BindingPatternKind::ArrayPattern(_)
-        | oxc::ast::ast::BindingPatternKind::AssignmentPattern(_) => {
+        | oxc::ast::ast::BindingPattern::ArrayPattern(_)
+        | oxc::ast::ast::BindingPattern::AssignmentPattern(_) => {
           // `function foo(x = global()) {}`
           // Default parameter values might have side effects
           false
         }
-        oxc::ast::ast::BindingPatternKind::BindingIdentifier(_) => true, // Simple identifiers are safe
+        oxc::ast::ast::BindingPattern::BindingIdentifier(_) => {
+          // Simple identifiers are safe, but check if there's an initializer
+          param.initializer.is_none()
+        }
       }
     })
   }

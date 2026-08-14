@@ -17,7 +17,7 @@ impl BuildEvent for PreferBuiltinFeature {
   fn message(&self, _opts: &DiagnosticOptions) -> String {
     if let Some(feature) = &self.builtin_feature {
       format!(
-        "Rolldown supports `{feature}` natively, please refer https://rolldown.rs/apis/config-options for more details, this is performant than passing `{}` to plugins option.{}",
+        "Rolldown supports `{feature}` natively. Please refer https://rolldown.rs/reference/ for more details. It is more performant than passing `{}` to plugins option.{}",
         self.plugin_name,
         self.additional_message.unwrap_or_default()
       )

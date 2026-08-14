@@ -1,14 +1,13 @@
-import assert from 'node:assert'
+import assert from 'node:assert';
 function MyDecorator(): ClassDecorator {
-  return (target) => {}
+  return (target) => {};
 }
 
 @MyDecorator()
-class MyClass { 
+class MyClass {
   myName = MyClass.name;
 }
 
 export const myName = new MyClass().myName;
-
 
 assert.strictEqual(myName, 'MyClass');

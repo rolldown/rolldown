@@ -1,3 +1,3 @@
 exports.share = function share() {
-    return 1
-}
+  return 1;
+};

@@ -42,17 +42,9 @@ pub fn has_dynamic_import(code: &str) -> bool {
         j += 1;
       }
 
-      // Check for '('
-      if j < bytes.len() && bytes[j] == b'(' {
-        // Skip whitespace after "("
-        j += 1;
-        while j < bytes.len() && bytes[j].is_ascii_whitespace() {
-          j += 1;
-        }
-        // Check for template literal
-        if j < bytes.len() && bytes[j] == b'`' {
-          return true;
-        }
+      // Check for '(' or '/' (slash covers comments between import and '(')
+      if j < bytes.len() && (bytes[j] == b'(' || bytes[j] == b'/') {
+        return true;
       }
 
       i = j;

@@ -1,0 +1,6 @@
+{
+  "config": {
+    "external": ["ext-json"]
+  },
+  "expectExecuted": false
+}

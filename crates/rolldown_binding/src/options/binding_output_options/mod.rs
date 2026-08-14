@@ -1,5 +1,6 @@
-pub mod binding_advanced_chunks_options;
+mod binding_comments_options;
 mod binding_generated_code_options;
+pub mod binding_manual_code_splitting_options;
 mod binding_pre_rendered_asset;
 mod binding_pre_rendered_chunk;
 use binding_pre_rendered_asset::BindingPreRenderedAsset;
@@ -8,8 +9,9 @@ use napi::Either;
 use napi::bindgen_prelude::{Either3, FnArgs};
 use rustc_hash::FxHashMap;
 
-use binding_advanced_chunks_options::BindingAdvancedChunksOptions;
+pub use binding_comments_options::BindingCommentsOptions;
 pub use binding_generated_code_options::BindingGeneratedCodeOptions;
+use binding_manual_code_splitting_options::BindingManualCodeSplittingOptions;
 use binding_pre_rendered_chunk::PreRenderedChunk;
 
 use super::plugin::BindingPluginOrParallelJsPluginPlaceholder;
@@ -51,12 +53,6 @@ pub struct BindingOutputOptions<'env> {
   #[napi(ts_type = "string | ((chunk: PreRenderedChunk) => string)")]
   pub chunk_file_names: Option<ChunkFileNamesOutputOption>,
   #[debug(skip)]
-  #[napi(ts_type = "string | ((chunk: PreRenderedChunk) => string)")]
-  pub css_entry_file_names: Option<ChunkFileNamesOutputOption>,
-  #[debug(skip)]
-  #[napi(ts_type = "string | ((chunk: PreRenderedChunk) => string)")]
-  pub css_chunk_file_names: Option<ChunkFileNamesOutputOption>,
-  #[debug(skip)]
   #[napi(ts_type = "boolean | ((name: string) => string)")]
   pub sanitize_file_name: Option<SanitizeFileName>,
   // amd: NormalizedAmdOptions;
@@ -92,7 +88,6 @@ pub struct BindingOutputOptions<'env> {
   #[napi(ts_type = "'es' | 'cjs' | 'iife' | 'umd'")]
   pub format: Option<String>,
   // freeze: boolean;
-  #[napi(ts_type = "BindingGeneratedCodeOptions")]
   pub generated_code: Option<BindingGeneratedCodeOptions>,
   #[debug(skip)]
   #[napi(ts_type = "Record<string, string> | ((name: string) => string)")]
@@ -102,6 +97,7 @@ pub struct BindingOutputOptions<'env> {
   // hoistTransitiveImports: boolean;
   // indent: true | string;
   pub inline_dynamic_imports: Option<bool>,
+  pub dynamic_import_in_cjs: Option<bool>,
   // interop: GetInterop;
   #[debug(skip)]
   #[napi(
@@ -125,6 +121,9 @@ pub struct BindingOutputOptions<'env> {
   // preferConst: boolean;
   #[napi(ts_type = "'file' | 'inline' | 'hidden'")]
   pub sourcemap: Option<String>,
+  #[debug(skip)]
+  #[napi(ts_type = "string | ((chunk: PreRenderedChunk) => string)")]
+  pub sourcemap_file_names: Option<ChunkFileNamesOutputOption>,
   pub sourcemap_base_url: Option<String>,
   #[debug(skip)]
   #[napi(
@@ -135,9 +134,10 @@ pub struct BindingOutputOptions<'env> {
   #[debug(skip)]
   #[napi(ts_type = "(source: string, sourcemapPath: string) => string")]
   pub sourcemap_path_transform: Option<JsCallback<FnArgs<(String, String)>, String>>,
-  // sourcemapExcludeSources: boolean;
+  pub sourcemap_exclude_sources: Option<bool>,
   // sourcemapFile: string | undefined;
-  // strict: boolean;
+  #[napi(ts_type = "boolean | 'auto'")]
+  pub strict: Option<Either<bool, String>>,
   // systemNullSetters: boolean;
   // validate: boolean;
 
@@ -145,9 +145,10 @@ pub struct BindingOutputOptions<'env> {
   #[debug(skip)]
   #[napi(ts_type = "boolean | 'dce-only' | MinifyOptions")]
   pub minify: Option<Either3<bool, String, oxc_minify_napi::MinifyOptions>>,
-  pub advanced_chunks: Option<BindingAdvancedChunksOptions>,
+  pub manual_code_splitting: Option<BindingManualCodeSplittingOptions>,
   #[napi(ts_type = "'none' | 'inline'")]
   pub legal_comments: Option<String>,
+  pub comments: Option<Either<bool, BindingCommentsOptions>>,
   pub polyfill_require: Option<bool>,
   pub preserve_modules: Option<bool>,
   pub virtual_dirname: Option<String>,
@@ -155,4 +156,5 @@ pub struct BindingOutputOptions<'env> {
   pub top_level_var: Option<bool>,
   pub minify_internal_exports: Option<bool>,
   pub clean_dir: Option<bool>,
+  pub strict_execution_order: Option<bool>,
 }

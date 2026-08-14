@@ -1,8 +1,0 @@
-{
-  "config": {
-    "format": "cjs",
-    "experimental": {
-      "disableLiveBindings": true
-    }
-  }
-}

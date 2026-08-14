@@ -52,7 +52,7 @@ export default defineTest({
   beforeTest: () => {
     fooHookCalls = 0;
   },
-  afterTest: async (output) => {
+  afterTest: async (_output) => {
     // @ts-ignore
     await import('./dist/main');
   },

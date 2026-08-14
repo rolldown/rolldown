@@ -13,6 +13,7 @@
     "minify": "dceOnly",
     "optimization": {
       "inlineConst": {
+        "mode": "all",
         "pass": 1
       }
     }
@@ -21,6 +22,7 @@
     {
       "_configName": "inlineConstPass2",
       "inlineConst": {
+        "mode": "all",
         "pass": 2
       }
     }

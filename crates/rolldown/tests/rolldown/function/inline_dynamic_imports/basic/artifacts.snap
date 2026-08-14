@@ -6,31 +6,22 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## main.js
 
 ```js
-// HIDDEN [rolldown:runtime]
+// HIDDEN [\0rolldown/runtime.js]
 //#region foo.js
-var require_foo = /* @__PURE__ */ __commonJSMin((() => {}));
-
 //#endregion
 //#region cjs.js
 var require_cjs = /* @__PURE__ */ __commonJSMin(((exports, module) => {
 	module.exports = 1;
 }));
-
 //#endregion
 //#region esm.js
-var esm_exports = /* @__PURE__ */ __exportAll({ value: () => value });
-var value;
-var init_esm = __esmMin((() => {
-	value = 1;
-}));
-
 //#endregion
 //#region main.js
 Promise.resolve().then(() => /* @__PURE__ */ Object.freeze({ __proto__: null }));
 Promise.resolve().then(() => /* @__PURE__ */ __toESM(require_cjs()));
 Promise.resolve().then(() => /* @__PURE__ */ Object.freeze({ __proto__: null }));
-
 //#endregion
+
 ```
 
 # Variant: [format: Cjs]
@@ -40,32 +31,22 @@ Promise.resolve().then(() => /* @__PURE__ */ Object.freeze({ __proto__: null }))
 ### main.js
 
 ```js
-// HIDDEN [rolldown:runtime]
-
+// HIDDEN [\0rolldown/runtime.js]
 //#region foo.js
-var require_foo = /* @__PURE__ */ __commonJSMin((() => {}));
-
 //#endregion
 //#region cjs.js
 var require_cjs = /* @__PURE__ */ __commonJSMin(((exports, module) => {
 	module.exports = 1;
 }));
-
 //#endregion
 //#region esm.js
-var esm_exports = /* @__PURE__ */ __exportAll({ value: () => value });
-var value;
-var init_esm = __esmMin((() => {
-	value = 1;
-}));
-
 //#endregion
 //#region main.js
 Promise.resolve().then(() => /* @__PURE__ */ Object.freeze({ __proto__: null }));
 Promise.resolve().then(() => /* @__PURE__ */ __toESM(require_cjs()));
 Promise.resolve().then(() => /* @__PURE__ */ Object.freeze({ __proto__: null }));
-
 //#endregion
+
 ```
 
 # Variant: [format: Iife]
@@ -76,32 +57,21 @@ Promise.resolve().then(() => /* @__PURE__ */ Object.freeze({ __proto__: null }))
 
 ```js
 (function() {
-
-// HIDDEN [rolldown:runtime]
-
-//#region foo.js
-	var require_foo = /* @__PURE__ */ __commonJSMin((() => {}));
-
-//#endregion
-//#region cjs.js
+	// HIDDEN [\0rolldown/runtime.js]
+	//#region foo.js
+	//#endregion
+	//#region cjs.js
 	var require_cjs = /* @__PURE__ */ __commonJSMin(((exports, module) => {
 		module.exports = 1;
 	}));
-
-//#endregion
-//#region esm.js
-	var esm_exports = /* @__PURE__ */ __exportAll({ value: () => value });
-	var value;
-	var init_esm = __esmMin((() => {
-		value = 1;
-	}));
-
-//#endregion
-//#region main.js
+	//#endregion
+	//#region esm.js
+	//#endregion
+	//#region main.js
 	Promise.resolve().then(() => /* @__PURE__ */ Object.freeze({ __proto__: null }));
 	Promise.resolve().then(() => /* @__PURE__ */ __toESM(require_cjs()));
 	Promise.resolve().then(() => /* @__PURE__ */ Object.freeze({ __proto__: null }));
-
-//#endregion
+	//#endregion
 })();
+
 ```

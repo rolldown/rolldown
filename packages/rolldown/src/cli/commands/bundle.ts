@@ -22,17 +22,18 @@ export async function bundleWithConfig(
     process.env.ROLLDOWN_WATCH = 'true';
   }
 
-  const config = await loadConfig(configPath);
+  const config = await loadConfig(configPath, {
+    configLoader: cliOptions.configLoader,
+  });
+  // If config is a function, call it with raw command line arguments
+  const resolvedConfig = typeof config === 'function' ? await config(rawArgs) : config;
 
-  if (!config) {
-    logger.error(`No configuration found at ${configPath}`);
+  if (typeof resolvedConfig !== 'object' || resolvedConfig === null) {
+    logger.error(
+      `Invalid configuration from ${configPath}: expected object or array, got ${resolvedConfig}`,
+    );
     process.exit(1);
   }
-
-  // If config is a function, call it with raw command line arguments
-  const resolvedConfig = typeof config === 'function'
-    ? await config(rawArgs)
-    : config;
 
   // TODO: Could add more validation/diagnostics here to emit a nice error message
   if (cliOptions.watch) {
@@ -42,9 +43,7 @@ export async function bundleWithConfig(
   }
 }
 
-export async function bundleWithCliOptions(
-  cliOptions: NormalizedCliOptions,
-): Promise<void> {
+export async function bundleWithCliOptions(cliOptions: NormalizedCliOptions): Promise<void> {
   if (cliOptions.output.dir || cliOptions.output.file) {
     const operation = cliOptions.watch ? watchInner : bundleInner;
     await operation({}, cliOptions);
@@ -62,7 +61,8 @@ export async function bundleWithCliOptions(
 
   if (outputs.length === 0) {
     logger.error('No output generated');
-    process.exit(1);
+    process.exitCode = 1;
+    return;
   }
 
   for (const file of outputs) {
@@ -117,9 +117,10 @@ async function watchInner(
       case 'BUNDLE_START':
         if (changedFile.length > 0) {
           logger.log(
-            `Found ${
-              styleText('bold', changedFile.map(relativeId).join(', '))
-            } changed, rebuilding...`,
+            `Found ${styleText(
+              'bold',
+              changedFile.map(relativeId).join(', '),
+            )} changed, rebuilding...`,
           );
         }
         changedFile.length = 0;
@@ -128,9 +129,10 @@ async function watchInner(
       case 'BUNDLE_END':
         await event.result.close();
         logger.success(
-          `Rebuilt ${styleText('bold', relativeId(event.output[0]))} in ${
-            styleText('green', ms(event.duration))
-          }.`,
+          `Rebuilt ${styleText('bold', relativeId(event.output[0]))} in ${styleText(
+            'green',
+            ms(event.duration),
+          )}.`,
         );
         break;
 
@@ -181,9 +183,7 @@ async function bundleInner(
   const duration = endTime - startTime;
   // If the build time is more than 1s, we should display it in seconds.
 
-  logger.success(
-    `rolldown v${version} Finished in ${styleText('green', ms(duration))}`,
-  );
+  logger.success(`rolldown v${version} Finished in ${styleText('green', ms(duration))}`);
 }
 
 function printBundleOutputPretty(output: RolldownOutput) {
@@ -203,9 +203,7 @@ function collectOutputEntries(output: RolldownOutput['output']): OutputEntry[] {
   return output.map((chunk) => ({
     type: chunk.type,
     fileName: chunk.fileName,
-    size: chunk.type === 'chunk'
-      ? Buffer.byteLength(chunk.code)
-      : Buffer.byteLength(chunk.source),
+    size: chunk.type === 'chunk' ? Buffer.byteLength(chunk.code) : Buffer.byteLength(chunk.source),
   }));
 }
 
@@ -257,10 +255,7 @@ function printOutputEntries(
     for (const entry of filtered.sort((a, z) => a.size - z.size)) {
       // output format: `path/to/xxx type | size: y.yy kB`
       let log = styleText('dim', withTrailingSlash(distPath));
-      log += styleText(
-        group.color,
-        entry.fileName.padEnd(sizeAdjustment.longest + 2),
-      );
+      log += styleText(group.color, entry.fileName.padEnd(sizeAdjustment.longest + 2));
       log += styleText('dim', entry.type);
       log += styleText(
         'dim',
@@ -279,9 +274,7 @@ function withTrailingSlash(path: string): string {
 }
 
 function ms(duration: number) {
-  return duration < 1000
-    ? `${duration.toFixed(2)} ms`
-    : `${(duration / 1000).toFixed(2)} s`;
+  return duration < 1000 ? `${duration.toFixed(2)} ms` : `${(duration / 1000).toFixed(2)} s`;
 }
 
 function relativeId(id: string): string {

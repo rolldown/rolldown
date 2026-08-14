@@ -1,0 +1,1 @@
+exports.a = 'cjs-a';

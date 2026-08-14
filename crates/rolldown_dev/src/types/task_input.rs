@@ -29,15 +29,6 @@ impl TaskInput {
     }
   }
 
-  pub fn changed_files_mut(&mut self) -> Option<&mut FxIndexMap<PathBuf, WatcherChangeKind>> {
-    match self {
-      Self::FullBuild => None,
-      Self::Rebuild { changed_files }
-      | Self::Hmr { changed_files }
-      | Self::HmrRebuild { changed_files } => Some(changed_files),
-    }
-  }
-
   pub fn requires_full_rebuild(&self) -> bool {
     matches!(self, Self::FullBuild)
   }
@@ -92,7 +83,7 @@ impl TaskInput {
       }
       // All other combinations should have been filtered by is_mergeable_with
       _ => {
-        eprintln!("Debug: Attempted to merge incompatible tasks. This should be unreachable.");
+        tracing::debug!("Attempted to merge incompatible tasks. This should be unreachable.");
       }
     }
   }

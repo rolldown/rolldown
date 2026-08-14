@@ -6,7 +6,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## UNRESOLVED_IMPORT
 
 ```text
-[UNRESOLVED_IMPORT] Warning: Could not resolve 'react/jsx-runtime' in entry.js
+[UNRESOLVED_IMPORT] Could not resolve 'react/jsx-runtime' in entry.js
 
 ```
 
@@ -16,9 +16,8 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 import { jsx } from "react/jsx-runtime";
-
 //#region entry.js
 console.log(/* @__PURE__ */ jsx("div", {}));
-
 //#endregion
+
 ```

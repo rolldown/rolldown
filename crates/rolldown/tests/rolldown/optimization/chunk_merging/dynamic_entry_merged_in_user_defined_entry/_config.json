@@ -1,0 +1,30 @@
+{
+  "configName": "on-demand",
+  "config": {
+    "input": [
+      {
+        "name": "entry",
+        "import": "entry.js"
+      }
+    ],
+    "strictExecutionOrder": true,
+    "experimental": {
+      "onDemandWrapping": true
+    }
+  },
+  "configVariants": [
+    {
+      "_configName": "cjs-on-demand",
+      "format": "cjs"
+    },
+    {
+      "_configName": "cjs-wrap-all",
+      "format": "cjs",
+      "onDemandWrapping": false
+    },
+    {
+      "_configName": "wrap-all",
+      "onDemandWrapping": false
+    }
+  ]
+}

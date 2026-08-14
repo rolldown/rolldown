@@ -14,6 +14,11 @@ console.log(10);
 console.log(1e6);
 
 //#endregion
+```
+
+## 40max-size2.js
+
+```js
 //#region size-41.js
 console.log(1e6);
 console.log(1e6);
@@ -25,5 +30,6 @@ console.log(1e6);
 
 ```js
 import "./40max-size.js";
+import "./40max-size2.js";
 
 ```

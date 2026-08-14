@@ -1,0 +1,12 @@
+{
+  "_comment": "Regression test for https://github.com/rolldown/rolldown/issues/10099 - the barrel `index.js` default-imports `defaults.js` and reads `defaults_default.install`/`.version` at the top level, while re-exporting an EXTERNAL module's default (`extdep`, real-world `dayjs` in element-plus). The entry imports ONLY that external passthrough, which force-includes the barrel (an external default re-export is not resolvable from sub-modules). Under `experimental.lazyBarrel` + `moduleSideEffects: false`, tree-shaking dropped the `defaults_default` import AND its definition in `defaults.js`, yet kept the `defaults_default.install/.version` property-read statements -> `ReferenceError: defaults_default is not defined` when the compiled entry runs. Fixed by #10080 (gate a declared-pure module's side-effect statements on body demand); executing the entry must not throw.",
+  "config": {
+    "external": ["extdep"],
+    "experimental": {
+      "lazyBarrel": true
+    },
+    "treeshake": {
+      "moduleSideEffects": false
+    }
+  }
+}

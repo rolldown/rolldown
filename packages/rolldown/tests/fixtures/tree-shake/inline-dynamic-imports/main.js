@@ -1,3 +1,3 @@
-import('./lib').then(res => {
+import('./lib').then((res) => {
   return res.a;
 });

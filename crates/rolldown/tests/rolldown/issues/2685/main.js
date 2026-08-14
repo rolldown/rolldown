@@ -1,2 +1,1 @@
-
-export default require('path').join
+export default require('path').join;

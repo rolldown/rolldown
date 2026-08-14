@@ -1,5 +1,5 @@
 export const Globals = Object;
 
-export const value = 'lib'
+export const value = 'lib';
 
-import 'trigger-dep'
+import 'trigger-dep';

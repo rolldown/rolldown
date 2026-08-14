@@ -1,0 +1,34 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+//#region react.cjs
+var require_react = /* @__PURE__ */ __commonJSMin(((exports) => {
+	exports.x = 1;
+}));
+
+//#endregion
+//#region createStyled.cjs
+var require_createStyled = /* @__PURE__ */ __commonJSMin(((exports) => {
+	exports.default = createStyled;
+	function createStyled() {}
+}));
+
+//#endregion
+//#region bar.mjs
+var import_react = /* @__PURE__ */ __toESM(require_react(), 1);
+var import_createStyled = /* @__PURE__ */ __toESM(require_createStyled(), 1);
+const Root = (0, import_createStyled.default)();
+var bar_default = 1;
+
+//#endregion
+//#region main.js
+console.log(bar_default, Root);
+
+//#endregion
+```

@@ -1,7 +1,3 @@
 {
-  "recommendations": [
-    "editorconfig.editorconfig",
-    "rust-lang.rust-analyzer",
-    "dprint.dprint"
-  ]
+  "recommendations": ["editorconfig.editorconfig", "rust-lang.rust-analyzer", "oxc.oxc-vscode"]
 }

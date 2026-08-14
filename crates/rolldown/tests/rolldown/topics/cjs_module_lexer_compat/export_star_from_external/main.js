@@ -1,2 +1,2 @@
-export * from 'node:fs'
-export * from 'node:path'
+export * from 'node:fs';
+export * from 'node:path';

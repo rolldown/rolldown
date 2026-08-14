@@ -5,6 +5,7 @@ import { getLogger, getOnLog } from '../log/logger';
 import { LOG_LEVEL_INFO, type LogLevelOption } from '../log/logging';
 import { normalizeHook } from '../utils/normalize-hook';
 import { normalizePluginOption } from '../utils/normalize-plugin-option';
+import { getParallelPluginInfo } from '../utils/parallel-plugin';
 import type { Plugin } from './';
 import { MinimalPluginContextImpl } from './minimal-plugin-context';
 
@@ -18,12 +19,7 @@ export class PluginDriver {
       'options',
       getObjectPlugins(await normalizePluginOption(inputOptions.plugins)),
     );
-    const logger = getLogger(
-      plugins,
-      getOnLog(inputOptions, logLevel),
-      logLevel,
-      watchMode,
-    );
+    const logger = getLogger(plugins, getOnLog(inputOptions, logLevel), logLevel, watchMode);
 
     for (const plugin of plugins) {
       const name = plugin.name || 'unknown';
@@ -31,13 +27,7 @@ export class PluginDriver {
       if (options) {
         const { handler } = normalizeHook(options);
         const result = await handler.call(
-          new MinimalPluginContextImpl(
-            logger,
-            logLevel,
-            name,
-            watchMode,
-            'onLog',
-          ),
+          new MinimalPluginContextImpl(logger, logLevel, name, watchMode, 'onLog'),
           inputOptions,
         );
 
@@ -57,10 +47,7 @@ export class PluginDriver {
     logLevel: LogLevelOption,
     watchMode: boolean,
   ): OutputOptions {
-    const sortedPlugins = getSortedPlugins(
-      'outputOptions',
-      getObjectPlugins(rawPlugins),
-    );
+    const sortedPlugins = getSortedPlugins('outputOptions', getObjectPlugins(rawPlugins));
 
     for (const plugin of sortedPlugins) {
       const name = plugin.name || 'unknown';
@@ -87,7 +74,7 @@ export function getObjectPlugins(plugins: RolldownPlugin[]): Plugin[] {
     if (!plugin) {
       return undefined;
     }
-    if ('_parallel' in plugin) {
+    if (getParallelPluginInfo(plugin)) {
       return undefined;
     }
     if (plugin instanceof BuiltinPlugin) {

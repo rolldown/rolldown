@@ -6,7 +6,7 @@ pub enum ModuleDefFormat {
   #[default]
   Unknown,
   // ".cjs"
-  CJS,
+  Cjs,
   // ".cts"
   Cts,
   // "type: commonjs" in package.json
@@ -25,7 +25,7 @@ impl ModuleDefFormat {
 
     match p.extension().and_then(|ext| ext.to_str()) {
       Some("mjs") => Self::EsmMjs,
-      Some("cjs") => Self::CJS,
+      Some("cjs") => Self::Cjs,
       Some("cts") => Self::Cts,
       Some("mts") => Self::EsmMts,
       _ => Self::Unknown,
@@ -41,6 +41,6 @@ impl ModuleDefFormat {
 
   /// Same as `is_esm`, but for CommonJS modules.
   pub fn is_commonjs(&self) -> bool {
-    matches!(self, Self::CJS | Self::CjsPackageJson | Self::Cts)
+    matches!(self, Self::Cjs | Self::CjsPackageJson | Self::Cts)
   }
 }

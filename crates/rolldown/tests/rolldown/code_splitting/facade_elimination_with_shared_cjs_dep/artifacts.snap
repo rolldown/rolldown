@@ -1,0 +1,95 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## i18n-ar.js
+
+```js
+import { n as __exportAll, t as __commonJSMin } from "./rolldown-runtime.js";
+//#region vendor/rc-picker/locale/common.js
+var require_common = /* @__PURE__ */ __commonJSMin(((exports) => {
+	exports.commonLocale = {
+		yearFormat: "YYYY",
+		dayFormat: "D",
+		monthBeforeYear: true
+	};
+}));
+//#endregion
+//#region vendor/rc-picker/locale/ar_EG.js
+var import_common = require_common();
+var locale$1 = Object.assign({}, import_common.commonLocale, {
+	locale: "ar",
+	today: "اليوم"
+});
+//#endregion
+//#region vendor/antd/locale/ar_EG.js
+var ar_EG_exports = /* @__PURE__ */ __exportAll({
+	DatePicker: () => locale$1,
+	locale: () => "ar"
+});
+//#endregion
+export { require_common as n, ar_EG_exports as t };
+
+```
+
+## i18n-en-US.js
+
+```js
+import { n as __exportAll } from "./rolldown-runtime.js";
+import { n as require_common } from "./i18n-ar.js";
+//#region vendor/rc-picker/locale/en_US.js
+var import_common = require_common();
+var locale$1 = Object.assign({}, import_common.commonLocale, {
+	locale: "en_US",
+	today: "Today"
+});
+//#endregion
+//#region vendor/antd/locale/en_US.js
+var en_US_exports = /* @__PURE__ */ __exportAll({
+	DatePicker: () => locale$1,
+	locale: () => "en"
+});
+//#endregion
+export { en_US_exports as t };
+
+```
+
+## main.js
+
+```js
+import assert from "node:assert";
+//#region main.js
+const loaders = {
+	ar: () => import("./i18n-ar.js").then((n) => n.t),
+	"en-US": () => import("./i18n-en-US.js").then((n) => n.t)
+};
+async function main() {
+	const ar = await loaders.ar();
+	const enUS = await loaders["en-US"]();
+	assert.strictEqual(ar.locale, "ar");
+	assert.strictEqual(ar.DatePicker.locale, "ar");
+	assert.strictEqual(ar.DatePicker.yearFormat, "YYYY");
+	assert.strictEqual(enUS.locale, "en");
+	assert.strictEqual(enUS.DatePicker.locale, "en_US");
+	assert.strictEqual(enUS.DatePicker.yearFormat, "YYYY");
+}
+main();
+//#endregion
+
+```
+
+## rolldown-runtime.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+export { __exportAll as n, __commonJSMin as t };
+
+```
+
+# Output Stats
+
+- i18n-ar.js, is_entry false, is_dynamic_entry false, exports ["n", "t"]
+- i18n-en-US.js, is_entry false, is_dynamic_entry false, exports ["t"]
+- main.js, is_entry true, is_dynamic_entry false, exports []
+- rolldown-runtime.js, is_entry false, is_dynamic_entry false, exports ["n", "t"]

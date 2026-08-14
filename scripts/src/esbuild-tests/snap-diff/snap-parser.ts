@@ -64,10 +64,7 @@ export function parseRolldownSnap(source: string | undefined) {
   while (i < tree.children.length) {
     let child = tree.children[i];
     if (child.type === 'heading' && child.depth === 1) {
-      let content = source.slice(
-        child.position.start.offset,
-        child.position.end.offset,
-      );
+      let content = source.slice(child.position.start.offset, child.position.end.offset);
       if (content.trim().slice(1).trim() === 'Assets') {
         inAsset = true;
       } else {
@@ -75,10 +72,7 @@ export function parseRolldownSnap(source: string | undefined) {
       }
     }
     if (inAsset && child.type === 'heading' && child.depth === 2) {
-      let content = source.slice(
-        child.position.start.offset,
-        child.position.end.offset,
-      );
+      let content = source.slice(child.position.start.offset, child.position.end.offset);
       let filename = content.trim().slice(2).trim();
       let codeBlock = tree.children[i + 1];
       if (codeBlock.type === 'code') {

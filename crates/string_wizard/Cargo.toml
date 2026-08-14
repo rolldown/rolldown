@@ -1,10 +1,11 @@
 [package]
 name = "string_wizard"
-version = "0.0.27"
-edition = "2021"
+version = "1.2.4"
+edition.workspace = true
 license = "MIT"
 publish = true
 description = "manipulate string like a wizard"
+readme = "../../README.md"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
@@ -12,6 +13,7 @@ description = "manipulate string like a wizard"
 memchr = { workspace = true }
 oxc_index = { workspace = true }
 oxc_sourcemap = { workspace = true, optional = true }
+regex = { workspace = true }
 rustc-hash = { workspace = true }
 serde = { workspace = true, optional = true }
 

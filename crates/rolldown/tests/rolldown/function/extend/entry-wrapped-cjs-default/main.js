@@ -1,1 +1,1 @@
-require('./main.js')
+require('./main.js');

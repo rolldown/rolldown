@@ -6,12 +6,12 @@ use std::{
 
 use arcstr::ArcStr;
 use rolldown_common::{EmittedAsset, Output};
-use rolldown_plugin::{HookRenderChunkOutput, HookUsage, Plugin};
+use rolldown_plugin::{HookRenderChunkOutput, HookTransformOutputMap, HookUsage, Plugin};
 use rolldown_utils::{
   dashmap::FxDashMap,
   hash_placeholder::{HASH_PLACEHOLDER_LEFT_FINDER, find_hash_placeholders},
   rustc_hash::FxHashMapExt as _,
-  xxhash::xxhash_with_base,
+  xxhash::encode_hash_with_base,
 };
 use rustc_hash::{FxHashMap, FxHashSet};
 use xxhash_rust::xxh3::Xxh3;
@@ -42,15 +42,15 @@ impl Plugin for ChunkImportMapPlugin {
       let base = args.options.hash_characters.base();
       let mut used_names = FxHashSet::default();
       for chunk in args.chunks.values() {
-        let hash_placeholders =
-          find_hash_placeholders(&chunk.filename, &HASH_PLACEHOLDER_LEFT_FINDER);
-        if hash_placeholders.is_empty() {
+        let mut hash_placeholders =
+          find_hash_placeholders(&chunk.filename, &HASH_PLACEHOLDER_LEFT_FINDER).peekable();
+        if hash_placeholders.peek().is_none() {
           continue;
         }
         let hasher = match &chunk.facade_module_id {
           Some(module_id) => {
             let mut hasher = Xxh3::with_seed(0);
-            module_id.resource_id().as_str().hash(&mut hasher);
+            module_id.as_str().hash(&mut hasher);
             hasher
           }
           None => {
@@ -59,7 +59,7 @@ impl Plugin for ChunkImportMapPlugin {
             if used_names.contains(&chunk.name) {
               // Reduce the impact factor
               let Some(module_id) = chunk.module_ids.iter().min() else { continue };
-              module_id.resource_id().as_str().hash(&mut hasher);
+              module_id.as_str().hash(&mut hasher);
             } else {
               used_names.insert(chunk.name.clone());
               chunk.name.hash(&mut hasher);
@@ -67,7 +67,7 @@ impl Plugin for ChunkImportMapPlugin {
             hasher
           }
         };
-        let hash = xxhash_with_base(&hasher.digest128().to_le_bytes(), base);
+        let hash = encode_hash_with_base(&hasher.digest128().to_le_bytes(), base);
         let mut chunk_id = chunk.filename.to_string();
         for (start, end, placeholder) in hash_placeholders {
           let hash = hash[..end - start].to_string();
@@ -78,14 +78,15 @@ impl Plugin for ChunkImportMapPlugin {
       }
     }
 
-    let mut placeholders = find_hash_placeholders(&args.code, &HASH_PLACEHOLDER_LEFT_FINDER);
-    placeholders.retain(|placeholder| self.chunk_import_map.contains_key(placeholder.2));
+    let placeholders: Vec<_> = find_hash_placeholders(&args.code, &HASH_PLACEHOLDER_LEFT_FINDER)
+      .filter(|placeholder| self.chunk_import_map.contains_key(placeholder.2))
+      .collect();
 
     if placeholders.is_empty() {
       return Ok(None);
     }
 
-    let mut code = args.code.clone();
+    let mut code = args.code.as_ref().clone();
     for (start, end, placeholder) in placeholders {
       let hash = self.chunk_import_map.get(placeholder).expect("hash placeholder must exist");
       debug_assert_eq!(hash.len(), end - start, "hash length doesn't match placeholder size");
@@ -93,11 +94,11 @@ impl Plugin for ChunkImportMapPlugin {
         code.as_bytes_mut()[start..end].copy_from_slice(hash.as_bytes());
       }
     }
-    Ok(Some(HookRenderChunkOutput { code, map: None }))
+    Ok(Some(HookRenderChunkOutput { code, map: HookTransformOutputMap::Null }))
   }
 
   fn render_chunk_meta(&self) -> Option<rolldown_plugin::PluginHookMeta> {
-    Some(rolldown_plugin::PluginHookMeta { order: Some(rolldown_plugin::PluginOrder::Post) })
+    Some(rolldown_plugin::PluginHookMeta { order: Some(rolldown_plugin::PluginOrder::PinPost) })
   }
 
   async fn generate_bundle(
@@ -126,10 +127,8 @@ impl Plugin for ChunkImportMapPlugin {
         file_name: Some(
           self.file_name.as_ref().map_or(arcstr::literal!("importmap.json"), ArcStr::from),
         ),
-        source: (serde_json::to_string_pretty(
-          &serde_json::json!({ "imports": chunk_import_map }),
-        )?)
-        .into(),
+        source: (serde_json::to_string(&serde_json::json!({ "imports": chunk_import_map }))?)
+          .into(),
         ..Default::default()
       })
       .await?;

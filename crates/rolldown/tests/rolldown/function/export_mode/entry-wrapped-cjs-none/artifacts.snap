@@ -1,0 +1,32 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+(function() {
+	//#region main.cjs
+	console.log("side effect");
+	//#endregion
+})();
+
+```
+
+# Variant: [format: Umd]
+
+## Assets
+
+### main.js
+
+```js
+(function(factory) {
+	typeof define === "function" && define.amd ? define([], factory) : factory();
+})(function() {
+	//#region main.cjs
+	console.log("side effect");
+	//#endregion
+});
+
+```

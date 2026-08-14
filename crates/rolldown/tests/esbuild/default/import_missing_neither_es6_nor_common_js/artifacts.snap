@@ -6,7 +6,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## IMPORT_IS_UNDEFINED
 
 ```text
-[IMPORT_IS_UNDEFINED] Warning: Import `default` will always be undefined because there is no matching export in 'foo.js'
+[IMPORT_IS_UNDEFINED] Import `default` will always be undefined because there is no matching export in 'foo.js'
    ╭─[ star.js:2:13 ]
    │
  2 │ console.log(ns.default(ns.x, ns.y))
@@ -19,7 +19,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## IMPORT_IS_UNDEFINED
 
 ```text
-[IMPORT_IS_UNDEFINED] Warning: Import `x` will always be undefined because there is no matching export in 'foo.js'
+[IMPORT_IS_UNDEFINED] Import `x` will always be undefined because there is no matching export in 'foo.js'
    ╭─[ star.js:2:24 ]
    │
  2 │ console.log(ns.default(ns.x, ns.y))
@@ -32,7 +32,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## IMPORT_IS_UNDEFINED
 
 ```text
-[IMPORT_IS_UNDEFINED] Warning: Import `y` will always be undefined because there is no matching export in 'foo.js'
+[IMPORT_IS_UNDEFINED] Import `y` will always be undefined because there is no matching export in 'foo.js'
    ╭─[ star.js:2:30 ]
    │
  2 │ console.log(ns.default(ns.x, ns.y))
@@ -48,19 +48,18 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 import { r as init_foo } from "./foo.js";
-
 //#region bare.js
 init_foo();
-
 //#endregion
+
 ```
 
 ## foo.js
 
 ```js
-// HIDDEN [rolldown:runtime]
+// HIDDEN [\0rolldown/runtime.js]
 //#region foo.js
-var foo_exports = {};
+var foo_exports = /* @__PURE__ */ __exportAll({});
 var default$1, x, y;
 var init_foo = __esmMin((() => {
 	console.log("no exports here");
@@ -68,71 +67,59 @@ var init_foo = __esmMin((() => {
 	x = void 0;
 	y = void 0;
 }));
-
 //#endregion
 export { y as a, x as i, foo_exports as n, __toCommonJS as o, init_foo as r, default$1 as t };
-```
 
-## foo2.js
-
-```js
-import { r as init_foo } from "./foo.js";
-
-init_foo();
 ```
 
 ## import.js
 
 ```js
 //#region import.js
-console.log(import("./foo2.js"));
-
+console.log(import("./foo.js").then((n) => (n.r(), n.n)));
 //#endregion
+
 ```
 
 ## named.js
 
 ```js
 import { a as y, i as x, r as init_foo, t as default$1 } from "./foo.js";
-
 //#region named.js
 init_foo();
 console.log(default$1(x, y));
-
 //#endregion
+
 ```
 
 ## require.js
 
 ```js
 import { n as foo_exports, o as __toCommonJS, r as init_foo } from "./foo.js";
-
 //#region require.js
 console.log((init_foo(), __toCommonJS(foo_exports)));
-
 //#endregion
+
 ```
 
 ## star-capture.js
 
 ```js
 import { n as foo_exports, r as init_foo } from "./foo.js";
-
 //#region star-capture.js
 init_foo();
 console.log(foo_exports);
-
 //#endregion
+
 ```
 
 ## star.js
 
 ```js
 import { r as init_foo } from "./foo.js";
-
 //#region star.js
 init_foo();
 console.log((void 0)(void 0, void 0));
-
 //#endregion
+
 ```

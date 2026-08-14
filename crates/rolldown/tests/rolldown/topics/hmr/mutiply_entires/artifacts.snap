@@ -6,34 +6,42 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## entry.js
 
 ```js
-import "./rolldown_hmr.js";
-
+import "./rolldown-runtime.js";
+__rolldown_runtime__.registerGraph({
+	ids: ["entry.js"],
+	localCount: 1,
+	edges: [[]],
+	dynamicEdges: [[]]
+});
 //#region entry.js
-var entry_exports = {};
-const entry_hot = __rolldown_runtime__.createModuleHotContext("entry.js");
-__rolldown_runtime__.registerModule("entry.js", { exports: entry_exports });
+__rolldown_runtime__.createModuleHotContext("entry.js");
+__rolldown_runtime__.registerModule("entry.js", {});
 console.log("entry");
-
 //#endregion
+
 ```
 
 ## index.js
 
 ```js
-import "./rolldown_hmr.js";
-
+import "./rolldown-runtime.js";
+__rolldown_runtime__.registerGraph({
+	ids: ["index.js"],
+	localCount: 1,
+	edges: [[]],
+	dynamicEdges: [[]]
+});
 //#region index.js
-var mutiply_entires_exports = {};
-const mutiply_entires_hot = __rolldown_runtime__.createModuleHotContext("index.js");
-__rolldown_runtime__.registerModule("index.js", { exports: mutiply_entires_exports });
+__rolldown_runtime__.createModuleHotContext("index.js");
+__rolldown_runtime__.registerModule("index.js", {});
 console.log("index");
-
 //#endregion
+
 ```
 
-## rolldown_hmr.js
+## rolldown-runtime.js
 
 ```js
-// HIDDEN [rolldown:runtime]
-// HIDDEN [rolldown:hmr]
+// HIDDEN [\0rolldown/runtime.js]
+
 ```

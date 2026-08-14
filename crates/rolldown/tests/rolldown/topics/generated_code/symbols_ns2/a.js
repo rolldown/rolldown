@@ -1,1 +1,1 @@
-export * as ns from "./lib.js";
+export * as ns from './lib.js';

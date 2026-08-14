@@ -11,6 +11,7 @@ const renderStartFn = vi.fn();
 let buildStartInputOptions: NormalizedInputOptions;
 
 export default defineTest({
+  sequential: true,
   config: {
     input: entry,
     output: {

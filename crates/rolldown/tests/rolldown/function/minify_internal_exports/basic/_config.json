@@ -1,12 +1,15 @@
 {
   "config": {
-    "input": [{
-      "name": "main",
-      "import": "./main.js"
-    }, {
-      "name": "main2",
-      "import": "./main2.js"
-    }],
+    "input": [
+      {
+        "name": "main",
+        "import": "./main.js"
+      },
+      {
+        "name": "main2",
+        "import": "./main2.js"
+      }
+    ],
     "minifyInternalExports": true
   }
 }

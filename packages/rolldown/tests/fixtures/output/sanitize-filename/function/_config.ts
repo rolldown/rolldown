@@ -3,6 +3,7 @@ import { getOutputFileNames } from 'rolldown-tests/utils';
 import { expect } from 'vitest';
 
 export default defineTest({
+  sequential: true,
   config: {
     input: ['main.js'],
     output: {
@@ -32,7 +33,7 @@ export default defineTest({
       [
         "assets/sanitized-+emitted-C6bBH0W1.txt",
         "assets/sanitized-asset-BIR0xpQL",
-        "sanitized-dynamic-B5x-7dgY.js",
+        "sanitized-dynamic-CbuwsviY.js",
         "sanitized-main.js",
       ]
     `);

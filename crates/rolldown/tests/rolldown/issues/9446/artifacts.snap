@@ -1,0 +1,36 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## route.js
+
+```js
+//#region route.js
+var route_default = { loadString: () => import("./server.js").then((n) => n.t).then((r) => r.default || r) };
+//#endregion
+export { route_default as default };
+
+```
+
+## server.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+//#region client-only.js
+var client_only_exports = /* @__PURE__ */ __exportAll({
+	default: () => client_only_default,
+	sym: () => sym
+});
+const sym = Symbol("client-only");
+var client_only_default = "default export";
+//#endregion
+//#region index.ts
+function entry() {
+	return "server-entry-default " + String(sym);
+}
+const routes = { "/": () => import("./route.js") };
+//#endregion
+export { entry as default, routes, client_only_exports as t };
+
+```

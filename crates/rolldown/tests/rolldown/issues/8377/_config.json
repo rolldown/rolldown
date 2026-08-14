@@ -1,0 +1,6 @@
+{
+  "config": {
+    "input": [{ "name": "main", "import": "./main.jsx" }]
+  },
+  "expectExecuted": false
+}

@@ -27,7 +27,7 @@ export default defineTest({
   },
   catchError(err: any) {
     expect(stripAnsi(err.toString())).toContain(
-      `[UNLOADABLE_DEPENDENCY] Error: Could not load foo.js?test=hello`,
+      `[UNLOADABLE_DEPENDENCY] Could not load foo.js?test=hello`,
     );
   },
 });

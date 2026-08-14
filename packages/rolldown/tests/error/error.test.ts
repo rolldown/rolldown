@@ -1,5 +1,6 @@
 import type { Plugin } from 'rolldown';
 import { rolldown } from 'rolldown';
+import { isWasiTest } from 'rolldown-tests/utils';
 import { describe, expect, test, vi } from 'vitest';
 
 async function buildWithPlugin(plugin: Plugin) {
@@ -80,6 +81,41 @@ describe('Plugin closeBundle hook', async () => {
     expect(closeBundleFn).toHaveBeenCalledTimes(1);
   });
 
+  test('call closeBundle hook with error argument when build fails', async () => {
+    let receivedError: Error | undefined;
+    const error = await buildWithPlugin({
+      name: 'test',
+      load() {
+        throw new Error('load error');
+      },
+      closeBundle(error) {
+        receivedError = error;
+      },
+    });
+    expect(error!.message).toContain('load error');
+    expect(receivedError).toBeDefined();
+    expect(receivedError!.message).toContain('load error');
+  });
+
+  test('call closeBundle hook without error argument when build succeeds', async () => {
+    let receivedError: Error | undefined = new Error('should be cleared');
+    const build = await rolldown({
+      input: './main.js',
+      cwd: import.meta.dirname,
+      plugins: [
+        {
+          name: 'test',
+          closeBundle(error) {
+            receivedError = error;
+          },
+        },
+      ],
+    });
+    await build.generate();
+    await build.close();
+    expect(receivedError).toBeUndefined();
+  });
+
   test('call closeBundle with bundle close', async () => {
     const closeBundleFn = vi.fn();
     const build = await rolldown({
@@ -110,7 +146,7 @@ describe('Plugin closeBundle hook', async () => {
     } catch (error: any) {
       expect(error.message).toMatchInlineSnapshot(
         `
-        "[ALREADY_CLOSED] Error: Bundle is already closed, no more calls to "generate" or "write" are allowed.
+        "[ALREADY_CLOSED] Bundle is already closed, no more calls to "generate" or "write" are allowed.
         "
       `,
       );
@@ -129,7 +165,8 @@ test('call transformContext error', async () => {
 });
 
 // #4141
-test('should print original error if it can not be assigned', async () => {
+// Under the wasm binding the `structuredClone` failure degrades to a plain `Error`, losing the `DataCloneError` name.
+test.skipIf(isWasiTest)('should print original error if it can not be assigned', async () => {
   const error = await buildWithPlugin({
     name: 'test',
     transform() {
@@ -137,9 +174,7 @@ test('should print original error if it can not be assigned', async () => {
       structuredClone(proxy);
     },
   });
-  expect(error!.message).toContain(
-    'DataCloneError: #<Object> could not be cloned',
-  );
+  expect(error!.message).toContain('DataCloneError: #<Object> could not be cloned');
 });
 
 describe('Error output format', () => {

@@ -1,4 +1,4 @@
-use std::{sync::Arc, time::Duration};
+use std::sync::Arc;
 
 use derive_more::Debug;
 
@@ -14,9 +14,16 @@ use serde::{Deserialize, Deserializer};
   derive(Deserialize, JsonSchema),
   serde(rename_all = "camelCase", deny_unknown_fields)
 )]
+#[expect(clippy::struct_excessive_bools)]
 pub struct WatchOption {
   pub skip_write: bool,
   pub build_delay: Option<u32>,
+  pub use_polling: bool,
+  pub poll_interval: Option<u64>,
+  pub compare_contents_for_polling: bool,
+  pub use_debounce: bool,
+  pub debounce_delay: Option<u64>,
+  pub debounce_tick_rate: Option<u64>,
   #[cfg_attr(
     feature = "deserialize_bundler_options",
     serde(default, deserialize_with = "deserialize_string_or_regex"),
@@ -43,17 +50,6 @@ where
 {
   let deserialized = Option::<Vec<String>>::deserialize(deserializer)?;
   Ok(deserialized.map(|v| v.into_iter().map(StringOrRegex::String).collect::<Vec<_>>()))
-}
-
-#[derive(Debug, Default, Clone)]
-#[cfg_attr(
-  feature = "deserialize_bundler_options",
-  derive(Deserialize, JsonSchema),
-  serde(rename_all = "camelCase", deny_unknown_fields)
-)]
-pub struct NotifyOption {
-  pub poll_interval: Option<Duration>,
-  pub compare_contents: bool,
 }
 
 // TODO should it be just placed here?

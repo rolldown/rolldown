@@ -1,4 +1,4 @@
 import assert from 'node:assert';
-import value from './example.base64'
+import value from './example.base64';
 
-assert(typeof value === 'string')
+assert(typeof value === 'string');

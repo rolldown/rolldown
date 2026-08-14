@@ -1,0 +1,32 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+//#region main.js
+console.log(42);
+//#endregion
+
+```
+
+# Variant: wrap-all: [on_demand_wrapping: false]
+
+## Assets
+
+### main.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+//#region main.js
+function init_main() {
+	return (init_main = __esmMin((() => {
+		console.log(42);
+	})))();
+}
+//#endregion
+init_main();
+
+```

@@ -1,38 +1,72 @@
 use std::sync::Arc;
 
+use crate::types::hook_close_bundle_args::HookCloseBundleArgs;
 use crate::types::hook_render_error::HookRenderErrorArgs;
-use crate::{HookAddonArgs, PluginDriver};
-use crate::{HookAugmentChunkHashReturn, HookNoopReturn, HookRenderChunkArgs};
+use crate::{HookAddonArgs, HookResolveFileUrlArgs, HookResolveFileUrlOutput, PluginDriver};
+use crate::{
+  HookAugmentChunkHashReturn, HookNoopReturn, HookRenderChunkArgs, HookTransformOutputMap,
+};
 use anyhow::{Context, Ok, Result};
 use rolldown_common::{Output, RollupRenderedChunk, SharedNormalizedBundlerOptions};
-use rolldown_devtools::{action, trace_action};
+use rolldown_devtools::{action, trace_action, trace_action_enabled};
 use rolldown_error::{BuildDiagnostic, CausedPlugin};
 use rolldown_sourcemap::SourceMap;
 use tracing::Instrument;
 
 impl PluginDriver {
+  #[tracing::instrument(
+    level = "trace",
+    target = "rolldown_plugin::plugin_driver::output_hooks::total::render_start",
+    skip_all
+  )]
   pub async fn render_start(&self, opts: &SharedNormalizedBundlerOptions) -> HookNoopReturn {
-    for (plugin_idx, plugin, ctx) in
-      self.iter_plugin_with_context_by_order(&self.order_by_render_start_meta)
+    for (_, plugin, ctx) in self.iter_plugin_with_context_by_order(&self.order_by_render_start_meta)
     {
-      let start = self.start_timing();
       let result =
         plugin.call_render_start(ctx, &crate::HookRenderStartArgs { options: opts }).await;
-      self.record_timing(plugin_idx, start);
       result.with_context(|| CausedPlugin::new(plugin.call_name()))?;
     }
     Ok(())
   }
 
-  pub async fn banner(&self, args: HookAddonArgs, mut banner: String) -> Result<Option<String>> {
-    for (plugin_idx, plugin, ctx) in
-      self.iter_plugin_with_context_by_order(&self.order_by_banner_meta)
+  /// Resolves `import.meta.ROLLDOWN_FILE_URL_<referenceId>` via the `resolveFileUrl`
+  /// hook. The first plugin returning a non-null string wins.
+  ///
+  /// The returned code is not parsed here. It is parsed exactly once, later, into the
+  /// arena of the module that references the file. The winning plugin's name travels
+  /// with the code so that a parse failure there can still be attributed to it.
+  #[tracing::instrument(
+    level = "trace",
+    target = "rolldown_plugin::plugin_driver::output_hooks::total::resolve_file_url",
+    skip_all
+  )]
+  pub async fn resolve_file_url(
+    &self,
+    args: &HookResolveFileUrlArgs<'_>,
+  ) -> Result<Option<HookResolveFileUrlOutput>> {
+    for (_, plugin, ctx) in
+      self.iter_plugin_with_context_by_order(&self.order_by_resolve_file_url_meta)
     {
-      let start = self.start_timing();
+      let result = plugin.call_resolve_file_url(ctx, args).await;
+      if let Some(code) = result.with_context(|| CausedPlugin::new(plugin.call_name()))? {
+        return Ok(Some(HookResolveFileUrlOutput { code, plugin_name: plugin.call_name() }));
+      }
+    }
+    Ok(None)
+  }
+
+  #[tracing::instrument(
+    level = "trace",
+    target = "rolldown_plugin::plugin_driver::output_hooks::total::banner",
+    skip_all
+  )]
+  pub async fn banner(&self, args: HookAddonArgs, mut banner: String) -> Result<Option<String>> {
+    for (_, plugin, ctx) in self.iter_plugin_with_context_by_order(&self.order_by_banner_meta) {
       let result = plugin.call_banner(ctx, &args).await;
-      self.record_timing(plugin_idx, start);
       if let Some(r) = result.with_context(|| CausedPlugin::new(plugin.call_name()))? {
-        banner.push('\n');
+        if !banner.is_empty() {
+          banner.push('\n');
+        }
         banner.push_str(r.as_str());
       }
     }
@@ -42,15 +76,18 @@ impl PluginDriver {
     Ok(Some(banner))
   }
 
+  #[tracing::instrument(
+    level = "trace",
+    target = "rolldown_plugin::plugin_driver::output_hooks::total::footer",
+    skip_all
+  )]
   pub async fn footer(&self, args: HookAddonArgs, mut footer: String) -> Result<Option<String>> {
-    for (plugin_idx, plugin, ctx) in
-      self.iter_plugin_with_context_by_order(&self.order_by_footer_meta)
-    {
-      let start = self.start_timing();
+    for (_, plugin, ctx) in self.iter_plugin_with_context_by_order(&self.order_by_footer_meta) {
       let result = plugin.call_footer(ctx, &args).await;
-      self.record_timing(plugin_idx, start);
       if let Some(r) = result.with_context(|| CausedPlugin::new(plugin.call_name()))? {
-        footer.push('\n');
+        if !footer.is_empty() {
+          footer.push('\n');
+        }
         footer.push_str(r.as_str());
       }
     }
@@ -60,15 +97,18 @@ impl PluginDriver {
     Ok(Some(footer))
   }
 
+  #[tracing::instrument(
+    level = "trace",
+    target = "rolldown_plugin::plugin_driver::output_hooks::total::intro",
+    skip_all
+  )]
   pub async fn intro(&self, args: HookAddonArgs, mut intro: String) -> Result<Option<String>> {
-    for (plugin_idx, plugin, ctx) in
-      self.iter_plugin_with_context_by_order(&self.order_by_intro_meta)
-    {
-      let start = self.start_timing();
+    for (_, plugin, ctx) in self.iter_plugin_with_context_by_order(&self.order_by_intro_meta) {
       let result = plugin.call_intro(ctx, &args).await;
-      self.record_timing(plugin_idx, start);
       if let Some(r) = result.with_context(|| CausedPlugin::new(plugin.call_name()))? {
-        intro.push('\n');
+        if !intro.is_empty() {
+          intro.push('\n');
+        }
         intro.push_str(r.as_str());
       }
     }
@@ -78,15 +118,18 @@ impl PluginDriver {
     Ok(Some(intro))
   }
 
+  #[tracing::instrument(
+    level = "trace",
+    target = "rolldown_plugin::plugin_driver::output_hooks::total::outro",
+    skip_all
+  )]
   pub async fn outro(&self, args: HookAddonArgs, mut outro: String) -> Result<Option<String>> {
-    for (plugin_idx, plugin, ctx) in
-      self.iter_plugin_with_context_by_order(&self.order_by_outro_meta)
-    {
-      let start = self.start_timing();
+    for (_, plugin, ctx) in self.iter_plugin_with_context_by_order(&self.order_by_outro_meta) {
       let result = plugin.call_outro(ctx, &args).await;
-      self.record_timing(plugin_idx, start);
       if let Some(r) = result.with_context(|| CausedPlugin::new(plugin.call_name()))? {
-        outro.push('\n');
+        if !outro.is_empty() {
+          outro.push('\n');
+        }
         outro.push_str(r.as_str());
       }
     }
@@ -96,38 +139,53 @@ impl PluginDriver {
     Ok(Some(outro))
   }
 
+  #[tracing::instrument(
+    level = "trace",
+    target = "rolldown_plugin::plugin_driver::output_hooks::total::render_chunk",
+    skip_all
+  )]
   pub async fn render_chunk(
     &self,
     mut args: HookRenderChunkArgs<'_>,
-  ) -> Result<(String, Vec<SourceMap>)> {
+  ) -> Result<(String, Vec<SourceMap>, Vec<BuildDiagnostic>)> {
     let mut sourcemap_chain = vec![];
+    let mut warnings = vec![];
     for (plugin_idx, plugin, ctx) in
       self.iter_plugin_with_context_by_order(&self.order_by_render_chunk_meta)
     {
       async {
-        trace_action!(action::HookRenderChunkStart {
-          action: "HookRenderChunkStart",
-          plugin_name: plugin.call_name().to_string(),
-          plugin_id: plugin_idx.raw(),
-          call_id: "${call_id}",
-          content: args.code.clone(),
-        });
-        let start = self.start_timing();
-        let result = plugin.call_render_chunk(ctx, &args).await;
-        self.record_timing(plugin_idx, start);
-        if let Some(r) = result.with_context(|| CausedPlugin::new(plugin.call_name()))? {
-          args.code = r.code;
-          if let Some(map) = r.map {
-            sourcemap_chain.push(map);
-          }
-          trace_action!(action::HookRenderChunkEnd {
-            action: "HookRenderChunkEnd",
+        if trace_action_enabled!() {
+          trace_action!(action::HookRenderChunkStart {
+            action: "HookRenderChunkStart",
             plugin_name: plugin.call_name().to_string(),
             plugin_id: plugin_idx.raw(),
             call_id: "${call_id}",
-            content: Some(args.code.clone()),
+            content: args.code.as_str().to_string(),
           });
-        } else {
+        }
+        let result = plugin.call_render_chunk(ctx, &args).await;
+        if let Some(r) = result.with_context(|| CausedPlugin::new(plugin.call_name()))? {
+          if matches!(r.map, HookTransformOutputMap::Omitted) && args.options.is_sourcemap_enabled()
+          {
+            warnings.push(
+              BuildDiagnostic::sourcemap_broken(plugin.call_name().to_string(), None)
+                .with_severity_warning(),
+            );
+          }
+          args.code = Arc::new(r.code);
+          if let Some(map) = r.map.into_sourcemap() {
+            sourcemap_chain.push(map);
+          }
+          if trace_action_enabled!() {
+            trace_action!(action::HookRenderChunkEnd {
+              action: "HookRenderChunkEnd",
+              plugin_name: plugin.call_name().to_string(),
+              plugin_id: plugin_idx.raw(),
+              call_id: "${call_id}",
+              content: Some(args.code.as_str().to_string()),
+            });
+          }
+        } else if trace_action_enabled!() {
           trace_action!(action::HookRenderChunkEnd {
             action: "HookRenderChunkEnd",
             plugin_name: plugin.call_name().to_string(),
@@ -145,20 +203,23 @@ impl PluginDriver {
       ))
       .await?;
     }
-    Ok((args.code, sourcemap_chain))
+    Ok((args.into_code(), sourcemap_chain, warnings))
   }
 
+  #[tracing::instrument(
+    level = "trace",
+    target = "rolldown_plugin::plugin_driver::output_hooks::total::augment_chunk_hash",
+    skip_all
+  )]
   pub async fn augment_chunk_hash(
     &self,
     chunk: Arc<RollupRenderedChunk>,
   ) -> HookAugmentChunkHashReturn {
     let mut hash = None;
-    for (plugin_idx, plugin, ctx) in
+    for (_, plugin, ctx) in
       self.iter_plugin_with_context_by_order(&self.order_by_augment_chunk_hash_meta)
     {
-      let start = self.start_timing();
       let result = plugin.call_augment_chunk_hash(ctx, Arc::clone(&chunk)).await;
-      self.record_timing(plugin_idx, start);
       if let Some(plugin_hash) = result.with_context(|| CausedPlugin::new(plugin.call_name()))? {
         hash.get_or_insert_with(String::default).push_str(&plugin_hash);
       }
@@ -166,18 +227,25 @@ impl PluginDriver {
     Ok(hash)
   }
 
+  #[tracing::instrument(
+    level = "trace",
+    target = "rolldown_plugin::plugin_driver::output_hooks::total::render_error",
+    skip_all
+  )]
   pub async fn render_error(&self, args: &HookRenderErrorArgs<'_>) -> HookNoopReturn {
-    for (plugin_idx, plugin, ctx) in
-      self.iter_plugin_with_context_by_order(&self.order_by_render_error_meta)
+    for (_, plugin, ctx) in self.iter_plugin_with_context_by_order(&self.order_by_render_error_meta)
     {
-      let start = self.start_timing();
       let result = plugin.call_render_error(ctx, args).await;
-      self.record_timing(plugin_idx, start);
       result.with_context(|| CausedPlugin::new(plugin.call_name()))?;
     }
     Ok(())
   }
 
+  #[tracing::instrument(
+    level = "trace",
+    target = "rolldown_plugin::plugin_driver::output_hooks::total::generate_bundle",
+    skip_all
+  )]
   pub async fn generate_bundle(
     &self,
     bundle: &mut Vec<Output>,
@@ -185,45 +253,47 @@ impl PluginDriver {
     opts: &SharedNormalizedBundlerOptions,
     warnings: &mut Vec<BuildDiagnostic>,
   ) -> HookNoopReturn {
-    for (plugin_idx, plugin, ctx) in
+    for (_, plugin, ctx) in
       self.iter_plugin_with_context_by_order(&self.order_by_generate_bundle_meta)
     {
       let mut args = crate::HookGenerateBundleArgs { is_write, bundle, options: opts };
-      let start = self.start_timing();
       let result = plugin.call_generate_bundle(ctx, &mut args).await;
-      self.record_timing(plugin_idx, start);
       result.with_context(|| CausedPlugin::new(plugin.call_name()))?;
       ctx.file_emitter().add_additional_files(bundle, warnings);
     }
     Ok(())
   }
 
+  #[tracing::instrument(
+    level = "trace",
+    target = "rolldown_plugin::plugin_driver::output_hooks::total::write_bundle",
+    skip_all
+  )]
   pub async fn write_bundle(
     &self,
     bundle: &mut Vec<Output>,
     opts: &SharedNormalizedBundlerOptions,
     warnings: &mut Vec<BuildDiagnostic>,
   ) -> HookNoopReturn {
-    for (plugin_idx, plugin, ctx) in
-      self.iter_plugin_with_context_by_order(&self.order_by_write_bundle_meta)
+    for (_, plugin, ctx) in self.iter_plugin_with_context_by_order(&self.order_by_write_bundle_meta)
     {
       let mut args = crate::HookWriteBundleArgs { bundle, options: opts };
-      let start = self.start_timing();
       let result = plugin.call_write_bundle(ctx, &mut args).await;
-      self.record_timing(plugin_idx, start);
       result.with_context(|| CausedPlugin::new(plugin.call_name()))?;
       ctx.file_emitter().add_additional_files(bundle, warnings);
     }
     Ok(())
   }
 
-  pub async fn close_bundle(&self) -> HookNoopReturn {
-    for (plugin_idx, plugin, ctx) in
-      self.iter_plugin_with_context_by_order(&self.order_by_close_bundle_meta)
+  #[tracing::instrument(
+    level = "trace",
+    target = "rolldown_plugin::plugin_driver::output_hooks::total::close_bundle",
+    skip_all
+  )]
+  pub async fn close_bundle(&self, args: Option<&HookCloseBundleArgs<'_>>) -> HookNoopReturn {
+    for (_, plugin, ctx) in self.iter_plugin_with_context_by_order(&self.order_by_close_bundle_meta)
     {
-      let start = self.start_timing();
-      let result = plugin.call_close_bundle(ctx).await;
-      self.record_timing(plugin_idx, start);
+      let result = plugin.call_close_bundle(ctx, args).await;
       result.with_context(|| CausedPlugin::new(plugin.call_name()))?;
     }
     Ok(())

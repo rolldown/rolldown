@@ -35,12 +35,15 @@ jobs:
       !contains(github.event.pull_request.labels.*.name, 'graphite: merge-when-ready'))
     runs-on: ubuntu-latest
     steps:
-      - uses: taiki-e/checkout-action@b13d20b7cda4e2f325ef19895128f7ff735c0b3d # v1.3.1
+      - uses: taiki-e/checkout-action@7d1e50e93dc4fb3bba58f85018fadf77898aee8b # v1.4.2
 
-      - uses: oxc-project/setup-node@141eb77546de6702f92d320926403fe3f9f6a6f2 # v1.0.5
+      - uses: voidzero-dev/setup-vp@313600b80b104eadebb9111787d37a2e83e014ca # v1.17.0
+        with:
+          version: '0.2.1'
+          cache: true
 
       - name: Setup Rust
-        uses: oxc-project/setup-rust@c8224157c0bf235aabc633e8cd50d344f087a7de # v1.0.12
+        uses: oxc-project/setup-rust@3d6fb132fbe7cdcb66bf8ec193911c2945369d12 # v1.0.17
         with:
           tools: just, cargo-codspeed
           cache-key: codspeed
@@ -49,93 +52,18 @@ jobs:
       - name: Setup Benchmark Input
         run: just setup-bench
 
-      - name: Build the benchmark target(s)
-        run: cargo codspeed build -p bench --features codspeed
+      - name: Build benchmark
+        env:
+          RUSTFLAGS: '-C debuginfo=1 -C strip=none -g -C lto=false -C codegen-units=16 --cfg codspeed'
+        run: |
+          cargo build --release -p bench --bench bench --features codspeed
+          mkdir -p target/codspeed/analysis/bench
+          mv target/release/deps/bench-* target/codspeed/analysis/bench
+          rm target/codspeed/analysis/bench/*.d
 
       - name: Run the benchmarks
-        uses: CodSpeedHQ/action@346a2d8a8d9d38909abd0bc3d23f773110f076ad # v4.4.1
+        uses: CodSpeedHQ/action@0ca9cbbf4623b599a6c3ed4fc8a922942705d9f1 # v5.0.2
         with:
           run: cargo codspeed run -p bench
           token: ${{ secrets.CODSPEED_TOKEN }}
-          mode: 'instrumentation'
-        env:
-          # ensure that `root_dir()` from `crates/rolldown_testing/src/workspace.rs` works during the benchmark
-          # see https://github.com/adriencaccia/rolldown/pull/1 for explanation
-          CARGO_MANIFEST_DIR: ${{ github.workspace }}/target/codspeed
-
-  benchmark-rust:
-    permissions:
-      pull-requests: write
-    name: Benchmark Rust
-    if: >
-      github.event_name == 'pull_request' &&
-      github.event.pull_request.draft != true &&
-      !contains(github.event.pull_request.labels.*.name, 'graphite: merge-when-ready')
-    runs-on: ubuntu-latest
-    steps:
-      - uses: taiki-e/checkout-action@b13d20b7cda4e2f325ef19895128f7ff735c0b3d # v1.3.1
-
-      - uses: oxc-project/setup-node@141eb77546de6702f92d320926403fe3f9f6a6f2 # v1.0.5
-
-      - name: Setup Rust
-        uses: oxc-project/setup-rust@c8224157c0bf235aabc633e8cd50d344f087a7de # v1.0.12
-        with:
-          tools: just, critcmp
-          cache-key: rust-benchmark
-
-      - name: Setup Benchmark Input
-        run: just setup-bench
-
-      - name: Run Bench on PR Branch
-        run: cargo bench -p bench -- --save-baseline pr
-
-      - name: Checkout Target Branch
-        uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
-        with:
-          clean: false
-          ref: ${{ github.event.pull_request.base.ref }}
-          persist-credentials: false
-
-      - name: Run Bench on Target Branch
-        run: cargo bench -p bench -- --save-baseline target
-
-      - name: Compare Bench Results
-        id: bench_comparison
-        shell: bash
-        env:
-          BASE_REF: ${{ github.event.pull_request.base.ref }}
-          BASE_SHA: ${{ github.event.pull_request.base.sha }}
-          HEAD_REF: ${{ github.event.pull_request.head.ref }}
-          HEAD_SHA: ${{ github.event.pull_request.head.sha  }}
-        run: |
-          echo "### Benchmarks Rust" > output
-          echo "- target: \`${BASE_REF}\`(${BASE_SHA})" >> output
-          echo "- pr: \`${HEAD_REF}\`(${HEAD_SHA})" >> output
-          echo "\`\`\`"  >> output
-          critcmp target pr >> output
-          echo "\`\`\`" >> output
-          cat output
-          comment="$(cat output)"
-          comment="${comment//'%'/%25}"
-          comment="${comment//$'\n'/%0A}"
-          comment="${comment//$'\r'/%0D}"
-          echo "::set-output name=comment::$comment"
-
-      - name: Find Comment
-        uses: peter-evans/find-comment@b30e6a3c0ed37e7c023ccd3f1db5c6c0b0c23aad # v4.0.0
-        id: find-comment
-        with:
-          issue-number: ${{ github.event.pull_request.number }}
-          comment-author: 'github-actions[bot]'
-          body-includes: Benchmarks Rust
-
-      - name: Write a new comment
-        uses: peter-evans/create-or-update-comment@e8674b075228eee787fea43ef493e45ece1004c9 # v5.0.0
-        continue-on-error: true
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          comment-id: ${{ steps.find-comment.outputs.comment-id }}
-          issue-number: ${{ github.event.pull_request.number }}
-          body: ${{ steps.bench_comparison.outputs.comment }}
-          reactions-edit-mode: 'replace'
-          edit-mode: replace
+          mode: simulation

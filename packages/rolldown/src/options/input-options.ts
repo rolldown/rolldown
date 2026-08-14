@@ -2,27 +2,63 @@ import type {
   LogLevel,
   LogLevelOption,
   LogOrStringHandler,
-  RollupLog,
-  RollupLogWithString,
+  RolldownLog,
+  RolldownLogWithString,
 } from '../log/logging';
 import type { RolldownPluginOption } from '../plugin';
 import type { TreeshakingOptions } from '../types/module-side-effects';
 import type { NullValue, StringOrRegExp } from '../types/utils';
 import type { ChecksOptions } from './generated/checks-options';
 import type { TransformOptions } from './transform-options';
+// oxlint-disable-next-line no-unused-vars -- this is used in JSDoc links
+import type { watch } from '../api/watch/index';
+// oxlint-disable-next-line no-unused-vars -- this is used in JSDoc links
+import type { Plugin } from '../plugin';
+// oxlint-disable-next-line no-unused-vars -- this is used in JSDoc links
+import type { RolldownBuild } from '../api/rolldown/rolldown-build';
 
+/**
+ * @inline
+ */
 export type InputOption = string | string[] | Record<string, string>;
 
+/**
+ * @param id The id of the module being checked.
+ * @param parentId The id of the module importing the id being checked.
+ * @param isResolved Whether the id has been resolved.
+ * @returns Whether the module should be treated as external.
+ */
 export type ExternalOptionFunction = (
   id: string,
   parentId: string | undefined,
   isResolved: boolean,
 ) => NullValue<boolean>;
 
-export type ExternalOption =
-  | StringOrRegExp
-  | StringOrRegExp[]
-  | ExternalOptionFunction;
+/** @inline */
+export type ExternalOption = StringOrRegExp | StringOrRegExp[] | ExternalOptionFunction;
+
+export interface ChunkOptimizationOptions {
+  /**
+   * Merge common chunks into existing entry chunks when it is safe.
+   *
+   * This can reduce the number of emitted chunks by moving shared/common modules
+   * into an entry chunk that already depends on them. Rolldown only applies the
+   * merge when it does not create a circular chunk dependency or change strict
+   * entry export signatures. This pass also covers safe empty-facade cleanup.
+   *
+   * @default true
+   */
+  mergeCommonChunks?: boolean;
+  /**
+   * Avoid emitting redundant chunk loads for dynamic entries.
+   *
+   * This pass can reduce dynamic-entry dependent chunks when the shared modules
+   * are guaranteed to be loaded by every importer of that dynamic entry.
+   *
+   * @default true
+   */
+  avoidRedundantChunkLoads?: boolean;
+}
 
 export type ModuleTypes = Record<
   string,
@@ -38,29 +74,157 @@ export type ModuleTypes = Record<
   | 'empty'
   | 'css'
   | 'asset'
+  | 'copy'
 >;
 
+export interface WatcherFileWatcherOptions {
+  /**
+   * Whether to use polling-based file watching instead of native OS events.
+   *
+   * Polling is useful for environments where native FS events are unreliable,
+   * such as network mounts, Docker volumes, or WSL2.
+   *
+   * @default false
+   */
+  usePolling?: boolean;
+  /**
+   * Interval between each poll in milliseconds.
+   *
+   * This option is only used when {@linkcode usePolling} is `true`.
+   *
+   * @default 100
+   */
+  pollInterval?: number;
+  /**
+   * Whether to compare file contents for poll-based watchers.
+   * When enabled, poll watchers will check file contents to determine if they actually changed.
+   *
+   * This option is only used when {@linkcode usePolling} is `true`.
+   *
+   * @default false
+   */
+  compareContentsForPolling?: boolean;
+  /**
+   * Whether to use debounced event delivery at the filesystem level.
+   * This coalesces rapid filesystem events before they reach the build coordinator.
+   * @default false
+   */
+  useDebounce?: boolean;
+  /**
+   * Debounce delay in milliseconds for fs-level debounced watchers.
+   * Only used when {@linkcode useDebounce} is `true`.
+   * @default 10
+   */
+  debounceDelay?: number;
+  /**
+   * Tick rate in milliseconds for the debouncer's internal polling.
+   * Only used when {@linkcode useDebounce} is `true`.
+   * When undefined, auto-selects 1/4 of debounceDelay.
+   */
+  debounceTickRate?: number;
+}
+
 export interface WatcherOptions {
+  /**
+   * Whether to skip the {@linkcode RolldownBuild.write | bundle.write()} step when a rebuild is triggered.
+   * @default false
+   */
   skipWrite?: boolean;
+  /**
+   * Configures how long Rolldown will wait for further changes until it triggers
+   * a rebuild in milliseconds.
+   *
+   * Even if this value is set to 0, there's a small debounce timeout configured
+   * in the file system watcher. Setting this to a value greater than 0 will mean
+   * that Rolldown will only trigger a rebuild if there was no change for the
+   * configured number of milliseconds. If several configurations are watched,
+   * Rolldown will use the largest configured build delay.
+   *
+   * This option is useful if you use a tool that regenerates multiple source files
+   * very slowly. Rebuilding immediately after the first change could cause Rolldown
+   * to generate a broken intermediate build before generating a successful final
+   * build, which can be confusing and distracting.
+   *
+   * @default 0
+   */
   buildDelay?: number;
-  notify?: {
-    pollInterval?: number;
-    compareContents?: boolean;
-  };
+  /**
+   * File watcher options for configuring how file changes are detected.
+   */
+  watcher?: WatcherFileWatcherOptions;
+  /**
+   * Filter to limit the file-watching to certain files.
+   *
+   * Strings are treated as glob patterns.
+   * Note that this only filters the module graph but does not allow adding
+   * additional watch files.
+   *
+   * @example
+   * ```js
+   * export default defineConfig({
+   *   watch: {
+   *     include: 'src/**',
+   *   },
+   * })
+   * ```
+   * @default []
+   */
   include?: StringOrRegExp | StringOrRegExp[];
+  /**
+   * Filter to prevent files from being watched.
+   *
+   * Strings are treated as glob patterns.
+   *
+   * @example
+   * ```js
+   * export default defineConfig({
+   *   watch: {
+   *     exclude: 'node_modules/**',
+   *   },
+   * })
+   * ```
+   * @default []
+   */
   exclude?: StringOrRegExp | StringOrRegExp[];
+  /**
+   * An optional function that will be called immediately every time
+   * a module changes that is part of the build.
+   *
+   * This is different from the {@linkcode Plugin.watchChange | watchChange} plugin hook, which is
+   * only called once the running build has finished. This may for
+   * instance be used to prevent additional steps from being performed
+   * if we know another build will be started anyway once the current
+   * build finished. This callback may be called multiple times per
+   * build as it tracks every change.
+   *
+   * @param id The id of the changed module.
+   */
   onInvalidate?: (id: string) => void;
+  /**
+   * Whether to clear the screen when a rebuild is triggered.
+   * @default true
+   */
   clearScreen?: boolean;
 }
 
+/** @inline */
 type MakeAbsoluteExternalsRelative = boolean | 'ifRelativeSource';
 
-export type DevModeOptions = boolean | {
-  host?: string;
-  port?: number;
-  implement?: string;
-  lazy?: boolean;
-};
+export type DevModeOptions =
+  | boolean
+  | {
+      host?: string;
+      port?: number;
+      implement?: string;
+      /**
+       * Prevent Rolldown from prepending its common dev runtime to {@link implement}.
+       * @deprecated Common runtime injection will be disabled by default in the future.
+       * Include the common runtime in {@link implement} instead.
+       * @default false
+       */
+      skipCommonRuntimeInjection?: boolean;
+      lazy?: boolean;
+    };
 
 export type OptimizationOptions = {
   /**
@@ -68,7 +232,8 @@ export type OptimizationOptions = {
    *
    * When enabled, constant values from imported modules will be inlined at their usage sites,
    * potentially reducing bundle size and improving runtime performance by eliminating variable lookups.
-   * **options**:
+   *
+   * **Options:**
    * - `true`: equivalent to `{ mode: 'all', pass: 1 }`, enabling constant inlining for all eligible constants with a single pass.
    * - `false`: Disable constant inlining
    * - `{ mode: 'smart' | 'all', pass?: number }`:
@@ -82,7 +247,7 @@ export type OptimizationOptions = {
    *  - `mode: 'all'`: Inline all imported constants wherever they are used.
    *  - `pass`: Number of passes to perform for inlining constants.
    *
-   * **example**
+   * @example
    * ```js
    * // Input files:
    * // constants.js
@@ -100,46 +265,124 @@ export type OptimizationOptions = {
    * console.log(API_URL);
    * ```
    *
-   * @default false
+   * @default { mode: 'smart', pass: 1 }
    */
   inlineConst?: boolean | { mode?: 'all' | 'smart'; pass?: number };
 
   /**
-   * Use PIFE pattern for module wrappers
+   * Use PIFE pattern for module wrappers.
+   *
+   * Enabling this option improves the start up performance of the generated bundle with the cost of a slight increase in bundle size.
+   *
+   * {@include ./docs/optimization-pife-for-module-wrappers.md}
+   *
+   * @default true
    */
   pifeForModuleWrappers?: boolean;
 };
 
+/** @inline */
 export type AttachDebugOptions = 'none' | 'simple' | 'full';
 
+/** @inline */
 type ChunkModulesOrder = 'exec-order' | 'module-id';
 
+/** @inline */
 export type OnLogFunction = (
   level: LogLevel,
-  log: RollupLog,
+  log: RolldownLog,
   defaultHandler: LogOrStringHandler,
 ) => void;
 
+/** @inline */
 export type OnwarnFunction = (
-  warning: RollupLog,
-  defaultHandler: (
-    warning: RollupLogWithString | (() => RollupLogWithString),
-  ) => void,
+  warning: RolldownLog,
+  defaultHandler: (warning: RolldownLogWithString | (() => RolldownLogWithString)) => void,
 ) => void;
 
 export interface InputOptions {
+  /**
+   * Defines entries and location(s) of entry modules for the bundle. Relative paths are resolved based on the {@linkcode cwd} option.
+   * {@include ./docs/input.md}
+   */
   input?: InputOption;
+  /**
+   * The list of plugins to use.
+   *
+   * Falsy plugins will be ignored, which can be used to easily activate or deactivate plugins. Nested plugins will be flattened. Async plugins will be awaited and resolved.
+   *
+   * See [Plugin API document](https://rolldown.rs/apis/plugin-api) for more details about creating plugins.
+   *
+   * @example
+   * ```js
+   * import { defineConfig } from 'rolldown'
+   *
+   * export default defineConfig({
+   *   plugins: [
+   *     examplePlugin1(),
+   *     // Conditional plugins
+   *     process.env.ENV1 && examplePlugin2(),
+   *     // Nested plugins arrays are flattened
+   *     [examplePlugin3(), examplePlugin4()],
+   *   ]
+   * })
+   * ```
+   */
   plugins?: RolldownPluginOption;
+  /**
+   * Specifies which modules should be treated as external and not bundled. External modules will be left as import statements in the output.
+   * {@include ./docs/external.md}
+   */
   external?: ExternalOption;
+  /**
+   * Options for built-in module resolution feature.
+   */
   resolve?: {
     /**
+     * Substitute one package for another.
+     *
+     * One use case for this feature is replacing a node-only package with a browser-friendly package in third-party code that you don't control.
+     *
+     * @example
+     * ```js
+     * resolve: {
+     *   alias: {
+     *     '@': '/src',
+     *     'utils': './src/utils',
+     *   }
+     * }
+     * ```
      * > [!WARNING]
-     * > `resolve.alias` will not call `resolveId` hooks of other plugin.
+     * > `resolve.alias` will not call [`resolveId`](/reference/Interface.Plugin#resolveid) hooks of other plugin.
      * > If you want to call `resolveId` hooks of other plugin, use `viteAliasPlugin` from `rolldown/experimental` instead.
      * > You could find more discussion in [this issue](https://github.com/rolldown/rolldown/issues/3615)
      */
     alias?: Record<string, string[] | string | false>;
+    /**
+     * Fields in package.json to check for aliased paths.
+     *
+     * This option is expected to be used for `browser` field support.
+     *
+     * @default
+     * - `[['browser']]` for `browser` platform
+     * - `[]` for other platforms
+     */
     aliasFields?: string[][];
+    /**
+     * Condition names to use when resolving exports in package.json.
+     *
+     * @default
+     * Defaults based on platform and import kind:
+     * - `browser` platform
+     *   - `["import", "browser", "default"]` for import statements
+     *   - `["require", "browser", "default"]` for require() calls
+     * - `node` platform
+     *   - `["import", "node", "default"]` for import statements
+     *   - `["require", "node", "default"]` for require() calls
+     * - `neutral` platform
+     *   - `["import", "default"]` for import statements
+     *   - `["require", "default"]` for require() calls
+     */
     conditionNames?: string[];
     /**
      * Map of extensions to alternative extensions.
@@ -148,17 +391,52 @@ export interface InputOptions {
      * You can achieve this by setting: `extensionAlias: { '.js': ['.ts', '.js'] }`.
      */
     extensionAlias?: Record<string, string[]>;
+    /**
+     * Fields in package.json to check for exports.
+     *
+     * @default `[['exports']]`
+     */
     exportsFields?: string[][];
+    /**
+     * Extensions to try when resolving files. These are tried in order from first to last.
+     *
+     * @default `['.tsx', '.ts', '.jsx', '.js', '.json']`
+     */
     extensions?: string[];
+    /**
+     * Fields in package.json to check for entry points.
+     *
+     * @default
+     * Defaults based on platform:
+     * - `node` platform: `['main', 'module']`
+     * - `browser` platform: `['browser', 'module', 'main']`
+     * - `neutral` platform: `[]`
+     */
     mainFields?: string[];
+    /**
+     * Filenames to try when resolving directories.
+     * @default ['index']
+     */
     mainFiles?: string[];
+    /**
+     * Directories to search for modules.
+     * @default ['node_modules']
+     */
     modules?: string[];
+    /**
+     * Whether to follow symlinks when resolving modules.
+     * @default true
+     */
     symlinks?: boolean;
     /**
-     * @deprecated Use the top-level `tsconfig` option instead.
+     * @deprecated Use the top-level {@linkcode tsconfig} option instead.
      */
     tsconfigFilename?: string;
   };
+  /**
+   * The working directory to use when resolving relative paths in the configuration.
+   * @default process.cwd()
+   */
   cwd?: string;
   /**
    * Expected platform where the code run.
@@ -169,57 +447,155 @@ export interface InputOptions {
    *    - The conditions setting does not automatically include any platform-specific values.
    *
    * @default
-   * - 'node' if the format is 'cjs'
-   * - 'browser' for other formats
+   * - `'node'` if the format is `'cjs'`
+   * - `'browser'` for other formats
+   * {@include ./docs/platform.md}
    */
   platform?: 'node' | 'browser' | 'neutral';
+  /**
+   * When `true`, creates shim variables for missing exports instead of throwing an error.
+   * @default false
+   * {@include ./docs/shim-missing-exports.md}
+   */
   shimMissingExports?: boolean;
+  /**
+   * Controls tree-shaking (dead code elimination).
+   *
+   * See the [In-depth Dead Code Elimination Guide](https://rolldown.rs/in-depth/dead-code-elimination) for more details.
+   *
+   * When `false`, tree-shaking will be disabled.
+   * When `true`, it is equivalent to setting each options to the default value.
+   *
+   * @default true
+   */
   treeshake?: boolean | TreeshakingOptions;
+  /**
+   * Controls the verbosity of console logging during the build.
+   *
+   * {@include ./docs/log-level.md}
+   *
+   * @default 'info'
+   */
   logLevel?: LogLevelOption;
+  /**
+   * A function that intercepts log messages. If not supplied, logs are printed to the console.
+   *
+   * {@include ./docs/on-log.md}
+   *
+   * @example
+   * ```js
+   * export default defineConfig({
+   *   onLog(level, log, defaultHandler) {
+   *     if (log.code === 'CIRCULAR_DEPENDENCY') {
+   *       return; // Ignore circular dependency warnings
+   *     }
+   *     if (level === 'warn') {
+   *       defaultHandler('error', log); // turn other warnings into errors
+   *     } else {
+   *       defaultHandler(level, log); // otherwise, just print the log
+   *     }
+   *   }
+   * })
+   * ```
+   */
   onLog?: OnLogFunction;
+  /**
+   * A function that will intercept warning messages.
+   *
+   * {@include ./docs/on-warn.md}
+   *
+   * @deprecated
+   * This is a legacy API. Consider using {@linkcode onLog} instead for better control over all log types.
+   *
+   * {@include ./docs/on-warn-deprecation.md}
+   */
   onwarn?: OnwarnFunction;
+  /**
+   * Maps file patterns to module types, controlling how files are processed.
+   *
+   * This is conceptually similar to [esbuild's `loader`](https://esbuild.github.io/api/#loader) option, allowing you to specify how each file extensions should be handled.
+   *
+   * See [the In-Depth Guide](https://rolldown.rs/in-depth/module-types) for more details.
+   *
+   * @example
+   * ```js
+   * import { defineConfig } from 'rolldown'
+   *
+   * export default defineConfig({
+   *   moduleTypes: {
+   *     '.frag': 'text',
+   *   }
+   * })
+   * ```
+   */
   moduleTypes?: ModuleTypes;
+  /**
+   * Experimental features that may change in future releases and can introduce behavior change without a major version bump.
+   * @experimental
+   */
   experimental?: {
     /**
-     * Lets modules be executed in the order they are declared.
-     *
-     * - Type: `boolean`
-     * - Default: `false`
-     *
-     * This is done by injecting runtime helpers to ensure that modules are executed in the order they are imported. External modules won't be affected.
-     *
-     * > [!WARNING]
-     * > Enabling this option may negatively increase bundle size. It is recommended to use this option only when absolutely necessary.
+     * Enable Vite compatible mode.
+     * @default false
+     * @hidden This option is only meant to be used by Vite. It is not recommended to use this option directly.
      */
-    strictExecutionOrder?: boolean;
-    disableLiveBindings?: boolean;
     viteMode?: boolean;
+    /**
+     * When enabled, `new URL()` calls will be transformed to a stable asset URL which includes the updated name and content hash.
+     * It is necessary to pass `import.meta.url` as the second argument to the
+     * `new URL` constructor, otherwise no transform will be applied.
+     * :::warning
+     * JavaScript and TypeScript files referenced via `new URL('./file.js', import.meta.url)` or `new URL('./file.ts', import.meta.url)` will **not** be transformed or bundled. The file will be copied as-is, meaning TypeScript files remain untransformed and dependencies are not resolved.
+     *
+     * The expected behavior for JS/TS files is still being discussed and may
+     * change in future releases. See [#7258](https://github.com/rolldown/rolldown/issues/7258) for more context.
+     * :::
+     * @example
+     * ```js
+     * // main.js
+     * const url = new URL('./styles.css', import.meta.url);
+     * console.log(url);
+     *
+     * // Example output after bundling WITHOUT the option (default)
+     * const url = new URL('./styles.css', import.meta.url);
+     * console.log(url);
+     *
+     * // Example output after bundling WITH `experimental.resolveNewUrlToAsset` set to `true`
+     * const url = new URL('assets/styles-CjdrdY7X.css', import.meta.url);
+     * console.log(url);
+     * ```
+     * @default false
+     */
     resolveNewUrlToAsset?: boolean;
+    /**
+     * Dev mode related options.
+     * @hidden not ready for public usage yet
+     */
     devMode?: DevModeOptions;
     /**
-     * Control which order should use when rendering modules in chunk
+     * Control which order should be used when rendering modules in a chunk.
      *
-     * - Type: `'exec-order' | 'module-id'
-     * - Default: `'exec-order'`
-     *
+     * Available options:
      * - `exec-order`: Almost equivalent to the topological order of the module graph, but specially handling when module graph has cycle.
      * - `module-id`: This is more friendly for gzip compression, especially for some javascript static asset lib (e.g. icon library)
+     *
      * > [!NOTE]
-     * > Try to sort the modules by their module id if possible(Since rolldown scope hoist all modules in the chunk, we only try to sort those modules by module id if we could ensure runtime behavior is correct after sorting).
+     * > Try to sort the modules by their module id if possible (Since rolldown scope hoist all modules in the chunk, we only try to sort those modules by module id if we could ensure runtime behavior is correct after sorting).
+     *
+     * @default 'exec-order'
      */
     chunkModulesOrder?: ChunkModulesOrder;
     /**
      * Attach debug information to the output bundle.
      *
-     * - Type: `'none' | 'simple' | 'full'`
-     * - Default: `'simple'`
-     *
+     * Available modes:
      * - `none`: No debug information is attached.
      * - `simple`: Attach comments indicating which files the bundled code comes from. These comments could be removed by the minifier.
      * - `full`: Attach detailed debug information to the output bundle. These comments are using legal comment syntax, so they won't be removed by the minifier.
      *
-     * > [!WARNING]
-     * > You shouldn't use `full` in the production build.
+     * @default 'simple'
+     *
+     * {@include ./docs/experimental-attach-debug-info.md}
      */
     attachDebugInfo?: AttachDebugOptions;
     /**
@@ -233,8 +609,7 @@ export interface InputOptions {
      * (default `"/"`) can be applied to all paths. The resulting JSON is a valid import map and can be
      * directly injected into HTML via `<script type="importmap">`.
      *
-     * Example configuration snippet:
-     *
+     * @example
      * ```js
      * {
      *   experimental: {
@@ -266,28 +641,34 @@ export interface InputOptions {
      * }
      * ```
      *
-     * > [!NOTE]
+     * > [!TIP]
      * > If you want to learn more, you can check out the example here: [examples/chunk-import-map](https://github.com/rolldown/rolldown/tree/main/examples/chunk-import-map)
+     *
+     * @default false
      */
     chunkImportMap?: boolean | { baseUrl?: string; fileName?: string };
+
+    /**
+     * Under `output.strictExecutionOrder`, derive a conservative wrapping plan from predicted
+     * chunk execution hazards instead of wrapping every eligible module.
+     * @default false
+     * @hidden not ready for public usage yet
+     */
     onDemandWrapping?: boolean;
     /**
-     * Required to be used with `watch` mode.
+     * Enable incremental build support. Required to be used with `watch` mode.
+     * @default false
      */
     incrementalBuild?: boolean;
-    transformHiresSourcemap?: boolean | 'boundary';
     /**
      * Use native Rust implementation of MagicString for source map generation.
-     *
-     * - Type: `boolean`
-     * - Default: `false`
      *
      * [MagicString](https://github.com/rich-harris/magic-string) is a JavaScript library commonly used by bundlers
      * for string manipulation and source map generation. When enabled, rolldown will use a native Rust
      * implementation of MagicString instead of the JavaScript version, providing significantly better performance
      * during source map generation and code transformation.
      *
-     * ## Benefits
+     * **Benefits**
      *
      * - **Improved Performance**: The native Rust implementation is typically faster than the JavaScript version,
      *   especially for large codebases with extensive source maps.
@@ -296,8 +677,7 @@ export interface InputOptions {
      *   reduce overall build times when working with JavaScript transform hooks.
      * - **Better Integration**: Seamless integration with rolldown's native Rust architecture.
      *
-     * ## Example
-     *
+     * @example
      * ```js
      * export default {
      *   experimental: {
@@ -313,14 +693,41 @@ export interface InputOptions {
      * > This is an experimental feature. While it aims to provide identical behavior to the JavaScript
      * > implementation, there may be edge cases. Please report any discrepancies you encounter.
      * > For a complete working example, see [examples/native-magic-string](https://github.com/rolldown/rolldown/tree/main/examples/native-magic-string)
+     * @default false
      */
     nativeMagicString?: boolean;
+    /**
+     * Control chunk optimizations.
+     *
+     * `true` enables both common-chunk merging and redundant dynamic chunk-load avoidance.
+     * `false` disables all chunk optimizations. Use the object form to control
+     * `mergeCommonChunks` and `avoidRedundantChunkLoads` separately.
+     *
+     * These optimizations are automatically disabled when any module uses top-level await (TLA) or contains TLA dependencies,
+     * as they could affect execution order guarantees.
+     *
+     * @default true
+     */
+    chunkOptimization?: boolean | ChunkOptimizationOptions;
+    /**
+     * Control whether to enable lazy barrel optimization.
+     *
+     * Lazy barrel optimization avoids compiling unused re-export modules in side-effect-free barrel modules,
+     * significantly improving build performance for large codebases with many barrel modules.
+     *
+     * This option is planned to be removed in the future. If you need to opt out, please open an issue
+     * describing your use case so we can address it before the option is gone.
+     *
+     * @see {@link https://rolldown.rs/in-depth/lazy-barrel-optimization | Lazy Barrel Documentation}
+     * @default false
+     */
+    lazyBarrel?: boolean;
   };
   /**
    * Configure how the code is transformed. This process happens after the `transform` hook.
    *
-   * To transpile [legacy decorators](https://github.com/tc39/proposal-decorators/tree/4ac0f4cd31bd0f2e8170cb4c5136e51671e46c8d), you could use
-   *
+   * @example
+   * **Enable legacy decorators**
    * ```js
    * export default defineConfig({
    *   transform: {
@@ -330,45 +737,81 @@ export interface InputOptions {
    *   },
    * })
    * ```
+   * Note that if you have correct `tsconfig.json` file, Rolldown will automatically detect and enable legacy decorators support.
    *
-   * For latest decorators proposal, rolldown is able to bundle them but doesn't support transpiling them yet.
+   * {@include ./docs/transform.md}
    */
   transform?: TransformOptions;
+  /**
+   * Watch mode related options.
+   *
+   * These options only take effect when running with the [`--watch`](/apis/cli#w-watch) flag, or using {@linkcode watch | watch()} API.
+   *
+   * {@include ./docs/watch.md}
+   *
+   * @experimental
+   */
   watch?: WatcherOptions | false;
+  /**
+   * Controls which warnings are emitted during the build process. Each option can be set to `true` (emit warning) or `false` (suppress warning).
+   */
   checks?: ChecksOptions;
+  /**
+   * Determines if absolute external paths should be converted to relative paths in the output.
+   *
+   * This does not only apply to paths that are absolute in the source but also to paths that are resolved to an absolute path by either a plugin or Rolldown core.
+   *
+   * {@include ./docs/make-absolute-externals-relative.md}
+   */
   makeAbsoluteExternalsRelative?: MakeAbsoluteExternalsRelative;
-  debug?: {
+  /**
+   * Devtools integration options.
+   *
+   * When enabled, Rolldown writes JSON-lines devtools output under
+   * `node_modules/.rolldown/{session_id}/`, resolved against {@linkcode cwd}.
+   * Consumers can parse the output with `@rolldown/debug` after
+   * `await bundle.close()` resolves.
+   *
+   * @experimental
+   */
+  devtools?: {
     sessionId?: string;
   };
-  preserveEntrySignatures?:
-    | false
-    | 'strict'
-    | 'allow-extension'
-    | 'exports-only';
+  /**
+   * Controls how entry chunk exports are preserved.
+   *
+   * This determines whether Rolldown needs to create facade chunks (additional wrapper chunks) to maintain the exact export signatures of entry modules, or whether it can combine entry modules with other chunks for optimization.
+   *
+   * @default `'exports-only'`
+   * {@include ./docs/preserve-entry-signatures.md}
+   */
+  preserveEntrySignatures?: false | 'strict' | 'allow-extension' | 'exports-only';
+  /**
+   * Configure optimization features for the bundler.
+   */
   optimization?: OptimizationOptions;
+  /**
+   * The value of `this` at the top level of each module. **Normally, you don't need to set this option.**
+   * @default undefined
+   * @example
+   * **Set custom context**
+   * ```js
+   * export default {
+   *   context: 'globalThis',
+   *   output: {
+   *     format: 'iife',
+   *   },
+   * };
+   * ```
+   * {@include ./docs/context.md}
+   */
   context?: string;
   /**
    * Configures TypeScript configuration file resolution and usage.
-   *
-   * ## Options
-   *
-   * - `true`: Auto-discovery mode (similar to Vite). For each module, both resolver and transformer
-   *   will find the nearest tsconfig.json. If the tsconfig has `references`, the file extension is
-   *   allowed, and the tsconfig's `include`/`exclude` patterns don't match the file, the referenced
-   *   tsconfigs will be searched for a match. Falls back to the original tsconfig if no match is found.
-   * - `string`: Path to a specific tsconfig.json file (relative to cwd or absolute path).
-   *
-   * ## What's used from tsconfig
-   *
-   * - **Resolver**: Uses `compilerOptions.paths` and `compilerOptions.baseUrl` for path mapping
-   * - **Transformer**: Uses select compiler options (jsx, decorators, typescript, etc.)
-   *
-   * > [!NOTE]
-   * > Priority: Top-level `transform` options always take precedence over tsconfig settings.
-   *
-   * @default undefined (no tsconfig resolution)
+   * {@include ./docs/tsconfig.md}
+   * @default true
    */
-  tsconfig?: true | string;
+  tsconfig?: boolean | string;
 }
 
 interface OverwriteInputOptionsForCli {
@@ -377,16 +820,15 @@ interface OverwriteInputOptionsForCli {
   treeshake?: boolean;
 }
 
-export type InputCliOptions =
-  & Omit<
-    InputOptions,
-    | keyof OverwriteInputOptionsForCli
-    | 'input'
-    | 'plugins'
-    | 'onwarn'
-    | 'onLog'
-    | 'resolve'
-    | 'experimental'
-    | 'watch'
-  >
-  & OverwriteInputOptionsForCli;
+export type InputCliOptions = Omit<
+  InputOptions,
+  | keyof OverwriteInputOptionsForCli
+  | 'input'
+  | 'plugins'
+  | 'onwarn'
+  | 'onLog'
+  | 'resolve'
+  | 'experimental'
+  | 'watch'
+> &
+  OverwriteInputOptionsForCli;

@@ -1,3 +1,4 @@
+use core::cmp::PartialEq;
 use std::{
   borrow::Cow,
   path::{Path, PathBuf},
@@ -7,20 +8,23 @@ use crate::{
   ChunkIdx, ChunkKind, FilenameTemplate, ImportRecordIdx, ModuleIdx, ModuleTable, NamedImport,
   NormalModule, NormalizedBundlerOptions, OutputExports, PreserveEntrySignatures,
   RenderedConcatenatedModuleParts, RollupPreRenderedChunk, RuntimeHelper, SymbolRef,
-  chunk::types::{chunk_reason_type::ChunkReasonType, module_group::ModuleGroup},
+  chunk::types::{
+    chunk_debug_info::ChunkDebugInfo, chunk_reason_type::ChunkReasonType, module_group::ModuleGroup,
+  },
 };
 pub mod chunk_table;
 pub mod types;
 
 use arcstr::ArcStr;
-use oxc::span::CompactStr;
-use rolldown_std_utils::PathExt;
+use oxc_str::CompactStr;
+use rolldown_std_utils::{path_buf_to_slash, relative_path_to_slash, strip_path_prefix_to_slash};
 use rolldown_utils::{
   BitSet,
   dashmap::FxDashMap,
   hash_placeholder::HashPlaceholderGenerator,
   indexmap::{FxIndexMap, FxIndexSet},
   make_unique_name::make_unique_name,
+  node_style_absolute,
 };
 use rustc_hash::FxHashMap;
 use sugar_path::SugarPath;
@@ -40,6 +44,28 @@ bitflags::bitflags! {
         const EmittedChunk = 1 << 2;
     }
 }
+
+/// Tracks post-optimization operations applied to chunks during code splitting.
+/// A chunk present in the map has been removed and merged into another chunk.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum PostChunkOptimizationOperation {
+  /// The chunk has been removed and merged into another chunk.
+  /// e.g., a dynamic chunk merged into a common chunk or user-defined entry chunk.
+  Removed,
+  /// The chunk has been removed, but its exports should be preserved in the target chunk.
+  /// e.g., an emitted chunk with `preserveEntrySignatures: 'allow-extension'` merged into
+  /// a manual chunks group - all exports should be preserved even though the original
+  /// emitted chunk is removed.
+  RemovedWithPreservedExports,
+}
+
+impl ChunkMeta {
+  #[inline]
+  pub fn is_pure_user_defined_entry(&self) -> bool {
+    *self == ChunkMeta::UserDefinedEntry
+  }
+}
+
 #[derive(Debug, Default)]
 pub struct Chunk {
   pub exec_order: u32,
@@ -51,15 +77,16 @@ pub struct Chunk {
   // emitted chunk corresponding reference_id, used to `PluginContext#getFileName` to search the emitted chunk name
   pub pre_rendered_chunk: Option<RollupPreRenderedChunk>,
   pub preliminary_filename: Option<PreliminaryFilename>,
+  pub preliminary_sourcemap_filename: Option<PreliminaryFilename>,
   pub absolute_preliminary_filename: Option<String>,
-  pub css_preliminary_filename: Option<PreliminaryFilename>,
-  pub css_absolute_preliminary_filename: Option<String>,
-  pub asset_preliminary_filenames: FxIndexMap<ModuleIdx, PreliminaryFilename>,
-  pub asset_absolute_preliminary_filenames: FxIndexMap<ModuleIdx, String>,
   pub canonical_names: FxHashMap<SymbolRef, CompactStr>,
-  // Sorted by Module#stable_id of modules in the chunk
+  /// For mixed-mode externals: maps external `namespace_ref` to the node-mode binding name.
+  /// Only populated when an external has both ESM and non-ESM importers needing interop.
+  pub node_mode_external_ns_names: FxHashMap<SymbolRef, CompactStr>,
+  // Sorted by Chunk#exec_order of the imported chunks
   pub cross_chunk_imports: Vec<ChunkIdx>,
   pub cross_chunk_dynamic_imports: Vec<ChunkIdx>,
+  pub dynamic_imports_from_external_modules: Vec<ModuleIdx>,
   pub bits: BitSet,
   pub imports_from_other_chunks: FxIndexMap<ChunkIdx, Vec<CrossChunkImportItem>>,
   // Only meaningful for cjs format
@@ -74,7 +101,7 @@ pub struct Chunk {
   pub import_symbol_from_external_modules: FxIndexSet<ModuleIdx>,
   pub exports_to_other_chunks: FxHashMap<SymbolRef, Vec<CompactStr>>,
   pub input_base: ArcStr,
-  pub create_reasons: Vec<String>,
+  pub debug_info: Vec<ChunkDebugInfo>,
   pub chunk_reason_type: Box<ChunkReasonType>,
   pub preserve_entry_signature: Option<PreserveEntrySignatures>,
   pub depended_runtime_helper: RuntimeHelper,
@@ -135,7 +162,7 @@ impl Chunk {
       .as_path()
       .parent()
       .expect("absolute_preliminary_filename should have a parent directory");
-    target.relative(source_dir).as_path().expect_to_slash()
+    relative_path_to_slash(target, source_dir)
   }
 
   pub async fn filename_template(
@@ -154,32 +181,13 @@ impl Chunk {
       options.chunk_filenames.call(rollup_pre_rendered_chunk).await?
     };
 
-    let pattern_name = if is_entry { "entryFileNames" } else { "chunkFileNames" };
-
-    Ok(FilenameTemplate::new(ret, pattern_name))
-  }
-
-  pub async fn css_filename_template(
-    &self,
-    options: &NormalizedBundlerOptions,
-    rollup_pre_rendered_chunk: &RollupPreRenderedChunk,
-  ) -> anyhow::Result<FilenameTemplate> {
-    // Emitted chunks should always use chunk_filenames, not entry_filenames
-    let is_entry = matches!(self.kind, ChunkKind::EntryPoint { meta, .. } if meta.contains(ChunkMeta::UserDefinedEntry) && !meta.contains(ChunkMeta::EmittedChunk));
-
-    let ret = if is_entry {
-      options.css_entry_filenames.call(rollup_pre_rendered_chunk).await?
-    } else {
-      options.css_chunk_filenames.call(rollup_pre_rendered_chunk).await?
-    };
-
-    let pattern_name = if is_entry { "cssEntryFileNames" } else { "cssChunkFileNames" };
+    let pattern_name = if is_entry { "output.entryFileNames" } else { "output.chunkFileNames" };
 
     Ok(FilenameTemplate::new(ret, pattern_name))
   }
 
   pub async fn generate_preliminary_filename(
-    &mut self,
+    &self,
     options: &NormalizedBundlerOptions,
     rollup_pre_rendered_chunk: &RollupPreRenderedChunk,
     chunk_name: &ArcStr,
@@ -202,24 +210,73 @@ impl Chunk {
     let has_hash_pattern = filename_template.has_hash_pattern();
 
     let mut hash_placeholder = has_hash_pattern.then_some(vec![]);
-    let hash_replacer = has_hash_pattern.then_some({
+    let hash_replacer = has_hash_pattern.then(|| {
+      let pattern_name = filename_template.pattern_name();
       |len: Option<usize>| {
-        let hash = hash_placeholder_generator.generate(len);
+        let hash = hash_placeholder_generator.generate(len, pattern_name)?;
         if let Some(hash_placeholder) = hash_placeholder.as_mut() {
           hash_placeholder.push(hash.clone());
         }
-        hash
+        Ok(hash)
       }
     });
     let chunk_name = self.get_preserve_modules_chunk_name(options, chunk_name.as_str());
 
     let filename = filename_template
-      .render(Some(&chunk_name), Some(options.format.as_str()), None, hash_replacer)?
+      .render(Some(&chunk_name), Some(options.format.as_str()), None, None, hash_replacer)?
       .into();
 
     let name = make_unique_name(&filename, used_name_counts);
 
     Ok(PreliminaryFilename::new(name, hash_placeholder))
+  }
+  pub async fn generate_preliminary_sourcemap_filename(
+    &self,
+    options: &NormalizedBundlerOptions,
+    rollup_pre_rendered_chunk: &RollupPreRenderedChunk,
+    chunk_name: &ArcStr,
+    hash_placeholder_generator: &mut HashPlaceholderGenerator,
+    used_name_counts: &FxDashMap<ArcStr, u32>,
+  ) -> anyhow::Result<Option<PreliminaryFilename>> {
+    let Some(sourcemap_filename) = &options.sourcemap_filenames else {
+      return Ok(None);
+    };
+    let sourcemap_filename = sourcemap_filename.call(rollup_pre_rendered_chunk).await?;
+
+    let filename_template = FilenameTemplate::new(sourcemap_filename, "output.sourcemapFileNames");
+    let has_hash_pattern = filename_template.has_hash_pattern();
+
+    let mut hash_placeholder = has_hash_pattern.then_some(vec![]);
+    let hash_replacer = has_hash_pattern.then(|| {
+      let pattern_name = filename_template.pattern_name();
+      |len: Option<usize>| {
+        let hash = hash_placeholder_generator.generate(len, pattern_name)?;
+        if let Some(hash_placeholder) = hash_placeholder.as_mut() {
+          hash_placeholder.push(hash.clone());
+        }
+        Ok(hash)
+      }
+    });
+    let chunk_name = self.get_preserve_modules_chunk_name(options, chunk_name.as_str());
+    let chunkhash = self
+      .preliminary_filename
+      .as_ref()
+      .and_then(|filename| filename.hash_placeholder())
+      .and_then(|s| s.first())
+      .map(String::as_str)
+      .unwrap_or("")
+      .into();
+    let filename = filename_template
+      .render(Some(&chunk_name), Some(options.format.as_str()), None, chunkhash, hash_replacer)?
+      .into();
+
+    if options.sourcemap.is_none() {
+      return Ok(None);
+    }
+
+    let name = make_unique_name(&filename, used_name_counts);
+
+    Ok(Some(PreliminaryFilename::new(name, hash_placeholder)))
   }
 
   fn get_preserve_modules_chunk_name<'a, 'b: 'a>(
@@ -238,60 +295,28 @@ impl Chunk {
     }
 
     let p = PathBuf::from(chunk_name);
-    let p = if p.is_absolute() {
+    // Besides genuinely absolute paths, `node_style_absolute` anchors a
+    // rooted-but-volume-less id (`/favicon`, `\favicon`) to the cwd volume
+    // root (a drive or UNC share): Node and Rollup treat such ids as absolute,
+    // but Rust's `Path::is_absolute()`
+    // reports them as non-absolute on Windows, and letting them fall into the
+    // `virtual_dirname` join below would discard the prefix and leak the
+    // leading slash into `[name]`.
+    let p = if let Some(abs) = node_style_absolute(&p, &options.cwd) {
       if let Some(ref preserve_modules_root) = options.preserve_modules_root {
-        if chunk_name.starts_with(preserve_modules_root) {
-          return Cow::Borrowed(
-            chunk_name[preserve_modules_root.len()..].trim_start_matches(['/', '\\']),
-          );
+        // See internal-docs/module-id/implementation.md: output paths may normalize separators even when module
+        // ids keep native separators.
+        if let Some(relative_path) =
+          strip_path_prefix_to_slash(&abs, preserve_modules_root.as_path())
+        {
+          return Cow::Owned(relative_path);
         }
       }
-      p.relative(self.input_base.as_str())
+      relative_path_to_slash(abs, self.input_base.as_str())
     } else {
-      PathBuf::from(options.virtual_dirname.as_str()).join(p)
+      path_buf_to_slash(PathBuf::from(options.virtual_dirname.as_str()).join(p))
     };
-    Cow::Owned(p.to_slash_lossy().into_owned())
-  }
-
-  pub async fn generate_css_preliminary_filename(
-    &self,
-    options: &NormalizedBundlerOptions,
-    rollup_pre_rendered_chunk: &RollupPreRenderedChunk,
-    chunk_name: &ArcStr,
-    hash_placeholder_generator: &mut HashPlaceholderGenerator,
-    used_name_counts: &FxDashMap<ArcStr, u32>,
-  ) -> anyhow::Result<PreliminaryFilename> {
-    if let Some(file) = &options.file {
-      let mut file = PathBuf::from(file);
-      file.set_extension("css");
-      return Ok(PreliminaryFilename::new(
-        file.into_os_string().into_string().unwrap().into(),
-        None,
-      ));
-    }
-
-    let filename_template = self.css_filename_template(options, rollup_pre_rendered_chunk).await?;
-    let has_hash_pattern = filename_template.has_hash_pattern();
-
-    let mut hash_placeholder = has_hash_pattern.then_some(vec![]);
-    let hash_replacer = has_hash_pattern.then_some({
-      |len: Option<usize>| {
-        let hash = hash_placeholder_generator.generate(len);
-        if let Some(hash_placeholder) = hash_placeholder.as_mut() {
-          hash_placeholder.push(hash.clone());
-        }
-        hash
-      }
-    });
-    let chunk_name = self.get_preserve_modules_chunk_name(options, chunk_name.as_str());
-
-    let filename = filename_template
-      .render(Some(&chunk_name), Some(options.format.as_str()), None, hash_replacer)?
-      .into();
-
-    let name = make_unique_name(&filename, used_name_counts);
-
-    Ok(PreliminaryFilename::new(name, hash_placeholder))
+    Cow::Owned(p)
   }
 
   pub fn user_defined_entry_module_idx(&self) -> Option<ModuleIdx> {

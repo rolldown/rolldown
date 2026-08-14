@@ -6,7 +6,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## MISSING_NAME_OPTION_FOR_IIFE_EXPORT
 
 ```text
-[MISSING_NAME_OPTION_FOR_IIFE_EXPORT] Warning: If you do not supply "output.name", you may not be able to access the exports of an IIFE bundle.
+[MISSING_NAME_OPTION_FOR_IIFE_EXPORT] If you do not supply "output.name", you may not be able to access the exports of an IIFE bundle.
 
 ```
 
@@ -16,14 +16,13 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 (function(exports) {
-
-
-//#region main.js
+	Object.defineProperty(exports, Symbol.toStringTag, { value: "Module" });
+	//#region main.js
 	const a = 1;
 	const b = 2;
-
-//#endregion
-exports.a = a;
-exports.b = b;
+	//#endregion
+	exports.a = a;
+	exports.b = b;
 })(this[""] = this[""] || {});
+
 ```

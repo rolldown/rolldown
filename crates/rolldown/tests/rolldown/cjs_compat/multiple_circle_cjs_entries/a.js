@@ -1,2 +1,2 @@
-import './b'
-module.exports = 'a'
+import './b';
+module.exports = 'a';

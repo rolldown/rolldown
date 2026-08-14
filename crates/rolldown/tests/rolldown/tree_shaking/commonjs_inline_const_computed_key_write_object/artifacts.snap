@@ -1,0 +1,25 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+import assert from "node:assert";
+// HIDDEN [\0rolldown/runtime.js]
+//#region src/cjs.js
+//#endregion
+//#region main.js
+(/* @__PURE__ */ __commonJSMin(((exports) => {
+	exports.a = "cjs-a";
+})))();
+const obj = {};
+obj["cjs-a"] = 1;
+obj["cjs-a"] = 2;
+assert.equal("cjs-a", "cjs-a");
+assert.equal("cjs-a", "cjs-a");
+assert.equal(obj["cjs-a"], 2);
+//#endregion
+
+```

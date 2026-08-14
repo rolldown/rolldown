@@ -1,0 +1,27 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+import assert from "node:assert";
+
+//#region dep.js
+function clashingIdentifier() {
+	return "middle";
+}
+
+//#endregion
+//#region main.js
+function test(head, tail) {
+	let clashingIdentifier$2 = head;
+	let middle = clashingIdentifier();
+	let clashingIdentifier$1 = tail;
+	return clashingIdentifier$2 + middle + clashingIdentifier$1;
+}
+assert.strictEqual(test("head", "tail"), "headmiddletail");
+
+//#endregion
+```

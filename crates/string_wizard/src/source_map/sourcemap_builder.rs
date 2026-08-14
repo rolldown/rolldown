@@ -10,16 +10,16 @@ pub enum Hires {
   Boundary,
 }
 
-pub struct SourcemapBuilder {
+pub struct SourcemapBuilder<'a> {
   hires: Hires,
-  generated_code_line: usize,
+  generated_code_line: u32,
   /// `generated_code_column` is calculated based on utf-16.
-  generated_code_column: usize,
+  generated_code_column: u32,
   source_id: u32,
-  source_map_builder: oxc_sourcemap::SourceMapBuilder,
+  source_map_builder: oxc_sourcemap::SourceMapBuilder<'a>,
 }
 
-impl SourcemapBuilder {
+impl<'a> SourcemapBuilder<'a> {
   pub fn new(hires: Hires) -> Self {
     Self {
       hires,
@@ -30,35 +30,37 @@ impl SourcemapBuilder {
     }
   }
 
-  pub fn into_source_map(self) -> oxc_sourcemap::SourceMap {
-    self.source_map_builder.into_sourcemap()
+  pub fn into_source_map(self) -> oxc_sourcemap::SourceMap<'static> {
+    // The oxc builder borrows its strings for `'a`; copy them once into a
+    // `'static` sourcemap so the result can be stored independently.
+    self.source_map_builder.into_owned_sourcemap().into_inner()
   }
 
-  pub fn set_source_and_content(&mut self, id: &str, content: &str) {
+  pub fn set_source_and_content(&mut self, id: &'a str, content: &'a str) {
     self.source_id = self.source_map_builder.set_source_and_content(id, content);
+  }
+
+  /// Registers a sourcemap name up front and returns its index in `names`.
+  pub fn add_name(&mut self, name: &'a str) -> u32 {
+    self.source_map_builder.add_name(name)
   }
 
   pub fn add_chunk(
     &mut self,
     chunk: &Chunk,
-    chunk_start_utf16: usize,
+    chunk_start_utf16: u32,
     locator: &Locator,
     source: &str,
-    name: Option<&str>,
+    name_id: Option<u32>,
   ) {
-    let name_id = if chunk.keep_in_mappings {
-      name.map(|name| self.source_map_builder.add_name(name))
-    } else {
-      None
-    };
     let mut loc = locator.locate(chunk_start_utf16);
     if let Some(edited_content) = &chunk.edited_content {
       if !edited_content.is_empty() {
         self.source_map_builder.add_token(
-          self.generated_code_line as u32,
-          self.generated_code_column as u32,
-          loc.line as u32,
-          loc.column as u32,
+          self.generated_code_line,
+          self.generated_code_column,
+          loc.line,
+          loc.column,
           Some(self.source_id),
           name_id,
         );
@@ -74,6 +76,8 @@ impl SourcemapBuilder {
             loc.bump_line();
             self.bump_line();
             new_line = true;
+            // A newline ends the current word run.
+            char_in_hires_boundary = false;
           }
           _ => {
             if new_line || !matches!(self.hires, Hires::False) {
@@ -81,10 +85,10 @@ impl SourcemapBuilder {
                 if char.is_alphanumeric() || char == '_' {
                   if !char_in_hires_boundary {
                     self.source_map_builder.add_token(
-                      self.generated_code_line as u32,
-                      self.generated_code_column as u32,
-                      loc.line as u32,
-                      loc.column as u32,
+                      self.generated_code_line,
+                      self.generated_code_column,
+                      loc.line,
+                      loc.column,
                       Some(self.source_id),
                       name_id,
                     );
@@ -92,10 +96,10 @@ impl SourcemapBuilder {
                   }
                 } else {
                   self.source_map_builder.add_token(
-                    self.generated_code_line as u32,
-                    self.generated_code_column as u32,
-                    loc.line as u32,
-                    loc.column as u32,
+                    self.generated_code_line,
+                    self.generated_code_column,
+                    loc.line,
+                    loc.column,
                     Some(self.source_id),
                     name_id,
                   );
@@ -103,16 +107,16 @@ impl SourcemapBuilder {
                 }
               } else {
                 self.source_map_builder.add_token(
-                  self.generated_code_line as u32,
-                  self.generated_code_column as u32,
-                  loc.line as u32,
-                  loc.column as u32,
+                  self.generated_code_line,
+                  self.generated_code_column,
+                  loc.line,
+                  loc.column,
                   Some(self.source_id),
                   name_id,
                 );
               }
             }
-            let char_utf16_len = char.len_utf16();
+            let char_utf16_len = char.len_utf16() as u32;
             loc.column += char_utf16_len;
             self.generated_code_column += char_utf16_len;
             new_line = false;
@@ -135,7 +139,12 @@ impl SourcemapBuilder {
     for _ in lines {
       self.bump_line();
     }
-    self.generated_code_column += last_line.chars().map(|c| c.len_utf16()).sum::<usize>();
+    // Fast path: ASCII strings have 1:1 byte-to-UTF-16 mapping
+    self.generated_code_column += if last_line.is_ascii() {
+      last_line.len() as u32
+    } else {
+      last_line.chars().map(|c| c.len_utf16() as u32).sum::<u32>()
+    };
   }
 
   fn bump_line(&mut self) {

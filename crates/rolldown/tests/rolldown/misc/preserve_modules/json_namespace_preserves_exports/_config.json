@@ -1,0 +1,12 @@
+{
+  "_comment": "Regression coverage for preserveModules + JSON namespace imports. When a JSON module is used opaquely as a namespace, the JSON finalizer keeps the key/default declarations materialized; the preserved JSON chunk must still export default and top-level keys from data.js.",
+  "config": {
+    "input": [
+      {
+        "name": "index",
+        "import": "./index.js"
+      }
+    ],
+    "preserveModules": true
+  }
+}

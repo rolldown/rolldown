@@ -10,7 +10,8 @@ use rolldown::ModuleType;
 use rolldown_common::WatcherChangeKind;
 use rolldown_plugin::{
   CustomField, HookLoadArgs, HookLoadOutput, HookResolveIdArgs, HookResolveIdOutput,
-  HookTransformArgs, PluginIdx, Pluginable, SharedTransformPluginContext, TransformPluginContext,
+  HookTransformArgs, LoadPluginContext, PluginIdx, PluginOrder, Pluginable,
+  SharedTransformPluginContext, TransformPluginContext,
 };
 use rolldown_plugin_vite_resolve::ResolveIdOptionsScan;
 use rolldown_utils::unique_arc::UniqueArc;
@@ -19,6 +20,7 @@ use crate::options::plugin::types::{
   binding_hook_side_effects::BindingHookSideEffects,
   binding_hook_transform_output::BindingHookTransformOutput,
   binding_plugin_transform_extra_args::BindingTransformHookExtraArgs,
+  binding_shared_string::BindingSharedString,
 };
 
 use super::{
@@ -54,6 +56,30 @@ impl BindingCallableBuiltinPlugin {
   }
 
   #[napi]
+  pub fn get_order(&self, hook_name: String) -> Option<String> {
+    let meta = match hook_name.as_str() {
+      "resolveId" => self.inner.call_resolve_id_meta(),
+      "load" => self.inner.call_load_meta(),
+      "transform" => self.inner.call_transform_meta(),
+      "watchChange" => self.inner.call_watch_change_meta(),
+      _ => None,
+    };
+    meta.and_then(|meta| {
+      meta.order.map(|order| {
+        (match order {
+          PluginOrder::Pre => "pre",
+          PluginOrder::Post => "post",
+          PluginOrder::PinPost => {
+            debug_assert!(false, "PinPost order is not supported in BindingCallableBuiltinPlugin");
+            "pre"
+          }
+        })
+        .to_string()
+      })
+    })
+  }
+
+  #[napi]
   pub fn resolve_id(
     &self,
     env: Env,
@@ -61,6 +87,11 @@ impl BindingCallableBuiltinPlugin {
     importer: Option<String>,
     options: Option<BindingHookJsResolveIdOptions>,
   ) -> napi::Result<AsyncBlock<Option<BindingHookJsResolveIdOutput>>> {
+    let kind = options
+      .as_ref()
+      .and_then(|options| options.kind.as_deref())
+      .map_or(Ok(rolldown_common::ImportKind::Import), TryInto::try_into)
+      .map_err(|err| napi::Error::new(napi::Status::InvalidArg, err))?;
     let plugin = Arc::clone(&self.inner);
     let context = Arc::clone(&self.context);
     crate::start_async_runtime();
@@ -72,7 +103,7 @@ impl BindingCallableBuiltinPlugin {
             specifier: &id,
             importer: importer.as_deref(),
             is_entry: options.as_ref().is_some_and(|options| options.is_entry.unwrap_or_default()),
-            kind: rolldown_common::ImportKind::Import,
+            kind,
             custom: options.map(Into::into).unwrap_or_default(),
           },
         )
@@ -97,8 +128,10 @@ impl BindingCallableBuiltinPlugin {
     let context = Arc::clone(&self.context);
     crate::start_async_runtime();
     AsyncBlockBuilder::with(async move {
+      let module_idx = rolldown_common::ModuleIdx::new(0);
+      let load_ctx = Arc::new(LoadPluginContext::new(context.inner.clone(), module_idx));
       plugin
-        .call_load(&context.inner, &HookLoadArgs { id: &id })
+        .call_load(load_ctx, &HookLoadArgs { id: &id, module_idx, asserted_module_type: None })
         .await
         .map_err(AnyHowMaybeNapiError::into_napi_error)
         .map(|result| result.map(Into::into))
@@ -123,10 +156,11 @@ impl BindingCallableBuiltinPlugin {
     let context = Arc::clone(&self.context);
     crate::start_async_runtime();
     AsyncBlockBuilder::with(async move {
+      let code_arc = ArcStr::from(code.as_str());
       plugin
         .call_transform(
           context,
-          &HookTransformArgs { id: &id, code: &code, module_type: &module_type },
+          &HookTransformArgs { id: &id, code: &code_arc, module_type: &module_type },
         )
         .await
         .map_err(AnyHowMaybeNapiError::into_napi_error)
@@ -168,20 +202,34 @@ impl BindingCallableBuiltinPlugin {
 #[napi_derive::napi(object, object_to_js = false)]
 pub struct BindingHookJsResolveIdOptions {
   pub is_entry: Option<bool>,
+  // Refer to crates/rolldown_common/src/types/import_kind.rs
+  /// - `import-statement`: `import { foo } from './lib.js';`
+  /// - `dynamic-import`: `import('./lib.js')`
+  /// - `require-call`: `require('./lib.js')`
+  /// - `import-rule`: `@import 'bg-color.css'`
+  /// - `url-token`: `url('./icon.png')`
+  /// - `new-url`: `new URL('./worker.js', import.meta.url)`
+  /// - `hot-accept`: `import.meta.hot.accept('./lib.js', () => {})`
+  #[napi(
+    ts_type = "'import-statement' | 'dynamic-import' | 'require-call' | 'import-rule' | 'url-token' | 'new-url' | 'hot-accept'"
+  )]
+  pub kind: Option<String>,
   pub scan: Option<bool>,
   pub custom: Option<BindingVitePluginCustom>,
 }
 
 impl From<BindingHookJsResolveIdOptions> for Arc<CustomField> {
   fn from(value: BindingHookJsResolveIdOptions) -> Self {
-    let map = CustomField::default();
+    let mut map = CustomField::default();
     map.insert(ResolveIdOptionsScan, value.scan.unwrap_or(false));
-    if let Some(is_sub_imports_pattern) =
-      value.custom.and_then(|v| v.vite_import_glob.and_then(|v| v.is_sub_imports_pattern))
-    {
+    if let Some(vite_plugin_custom) = value.custom {
+      let is_sub_imports_pattern =
+        vite_plugin_custom.vite_import_glob.and_then(|meta| meta.is_sub_imports_pattern);
       map.insert(
         rolldown_plugin_utils::constants::ViteImportGlob,
-        rolldown_plugin_utils::constants::ViteImportGlobValue(is_sub_imports_pattern),
+        rolldown_plugin_utils::constants::ViteImportGlobValue(
+          is_sub_imports_pattern.unwrap_or(false),
+        ),
       );
     }
     Arc::new(map)
@@ -209,7 +257,8 @@ impl From<HookResolveIdOutput> for BindingHookJsResolveIdOutput {
 
 #[napi_derive::napi(object, object_from_js = false)]
 pub struct BindingHookJsLoadOutput {
-  pub code: String,
+  #[napi(ts_type = "string")]
+  pub code: BindingSharedString,
   pub map: Option<String>,
   #[napi(ts_type = "boolean | 'no-treeshake'")]
   pub module_side_effects: Option<BindingHookSideEffects>,
@@ -218,7 +267,7 @@ pub struct BindingHookJsLoadOutput {
 impl From<HookLoadOutput> for BindingHookJsLoadOutput {
   fn from(value: HookLoadOutput) -> Self {
     Self {
-      code: value.code.to_string(),
+      code: BindingSharedString::from(value.code),
       map: value.map.map(|map| map.to_json_string()),
       module_side_effects: value.side_effects.map(Into::into),
     }

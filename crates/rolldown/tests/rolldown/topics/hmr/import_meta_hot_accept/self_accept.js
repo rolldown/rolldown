@@ -1,7 +1,8 @@
-import assert from "node:assert"
+import assert from 'node:assert';
 
-export const foo = 'foo'
+export const foo = 'foo';
 
-import.meta.hot.accept(mod => {
-  assert.strictEqual(mod.foo, 'foo')
-})
+// this generation's callback fires when the FIRST edit applies, with the new exports
+import.meta.hot.accept((mod) => {
+  assert.strictEqual(mod.foo, 'foo2');
+});

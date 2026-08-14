@@ -1,1 +1,1 @@
-import './shared'
+import './shared';

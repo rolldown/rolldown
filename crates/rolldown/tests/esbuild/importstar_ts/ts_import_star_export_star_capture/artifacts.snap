@@ -6,17 +6,11 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## entry.js
 
 ```js
-// HIDDEN [rolldown:runtime]
-//#region foo.ts
-const foo = 123;
-
-//#endregion
+// HIDDEN [\0rolldown/runtime.js]
 //#region bar.ts
-var bar_exports = /* @__PURE__ */ __exportAll({ foo: () => foo });
-
 //#endregion
 //#region entry.ts
-console.log(bar_exports, foo, 234);
-
+console.log(/* @__PURE__ */ __exportAll({ foo: () => 123 }), 123, 234);
 //#endregion
+
 ```

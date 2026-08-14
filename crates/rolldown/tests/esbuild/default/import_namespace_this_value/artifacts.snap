@@ -6,7 +6,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## UNRESOLVED_IMPORT
 
 ```text
-[UNRESOLVED_IMPORT] Warning: Could not resolve 'external' in a.js
+[UNRESOLVED_IMPORT] Could not resolve 'external' in a.js
    ╭─[ a.js:1:26 ]
    │
  1 │ import def, * as ns from 'external'
@@ -19,7 +19,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## UNRESOLVED_IMPORT
 
 ```text
-[UNRESOLVED_IMPORT] Warning: Could not resolve 'external' in b.js
+[UNRESOLVED_IMPORT] Could not resolve 'external' in b.js
    ╭─[ b.js:1:26 ]
    │
  1 │ import def, * as ns from 'external'
@@ -32,7 +32,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## UNRESOLVED_IMPORT
 
 ```text
-[UNRESOLVED_IMPORT] Warning: Could not resolve 'external' in c.js
+[UNRESOLVED_IMPORT] Could not resolve 'external' in c.js
    ╭─[ c.js:1:24 ]
    │
  1 │ import def, {foo} from 'external'
@@ -47,52 +47,49 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## a.js
 
 ```js
-const require_chunk = require('./chunk.js');
+const require_rolldown_runtime = require("./rolldown-runtime.js");
 let external = require("external");
-external = require_chunk.__toESM(external);
-
+external = require_rolldown_runtime.__toESM(external);
 //#region a.js
 console.log(external[foo](), new external[foo]());
-
 //#endregion
+
 ```
 
 ## b.js
 
 ```js
-const require_chunk = require('./chunk.js');
+const require_rolldown_runtime = require("./rolldown-runtime.js");
 let external = require("external");
-external = require_chunk.__toESM(external);
-
+external = require_rolldown_runtime.__toESM(external);
 //#region b.js
 console.log(external.foo(), new external.foo());
-
 //#endregion
+
 ```
 
 ## c.js
 
 ```js
-const require_chunk = require('./chunk.js');
+const require_rolldown_runtime = require("./rolldown-runtime.js");
 let external = require("external");
-external = require_chunk.__toESM(external);
-
+external = require_rolldown_runtime.__toESM(external);
 //#region c.js
 console.log((0, external.default)(), (0, external.foo)());
 console.log(new external.default(), new external.foo());
-
 //#endregion
+
 ```
 
-## chunk.js
+## rolldown-runtime.js
 
 ```js
-// HIDDEN [rolldown:runtime]
-
-Object.defineProperty(exports, '__toESM', {
-  enumerable: true,
-  get: function () {
-    return __toESM;
-  }
+// HIDDEN [\0rolldown/runtime.js]
+Object.defineProperty(exports, "__toESM", {
+	enumerable: true,
+	get: function() {
+		return __toESM;
+	}
 });
+
 ```

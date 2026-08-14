@@ -1,0 +1,16 @@
+{
+  "config": {
+    "input": [
+      {
+        "name": "main",
+        "import": "./main.js"
+      }
+    ],
+    "optimization": {
+      "inlineConst": {
+        "mode": "smart"
+      }
+    },
+    "platform": "node"
+  }
+}

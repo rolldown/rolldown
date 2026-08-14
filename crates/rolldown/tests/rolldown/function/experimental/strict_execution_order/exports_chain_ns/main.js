@@ -1,4 +1,4 @@
-import nodeAssert from 'node:assert'
-import * as star from './proxy'
+import nodeAssert from 'node:assert';
+import * as star from './proxy';
 
-nodeAssert.equal(star.foo, 'foo')
+nodeAssert.equal(star.foo, 'foo');

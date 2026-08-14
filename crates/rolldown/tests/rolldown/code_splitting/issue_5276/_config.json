@@ -1,6 +1,6 @@
 {
   "config": {
-    "advancedChunks": {
+    "codeSplitting": {
       "groups": [
         {
           "name": "imp",
@@ -8,5 +8,14 @@
         }
       ]
     }
-  }
+  },
+  "configVariants": [
+    {
+      "_configName": "disableChunkOptimization",
+      "chunkOptimization": false
+    },
+    {
+      "format": "cjs"
+    }
+  ]
 }

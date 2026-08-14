@@ -22,6 +22,25 @@
       "type": "boolean",
       "default": false
     },
+    "expectExecutionFailure": {
+      "description": "If set, the base configuration must fail while executing its generated output. A successful\nexecution is treated as an unexpected pass so stale markers cannot hide a fix.",
+      "anyOf": [
+        {
+          "$ref": "#/$defs/ExpectedExecutionFailure"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "expectWarning": {
+      "description": "If `true`, the fixture are expected to produce warnings. If `false`, the fixture are expected\nto produce no warnings. If not set, no assertion is made on warnings.",
+      "type": [
+        "boolean",
+        "null"
+      ],
+      "default": null
+    },
     "_comment": {
       "description": "A workaround for writing comments in JSON.",
       "type": "string",
@@ -141,18 +160,6 @@
           ]
         },
         "chunkFilenames": {
-          "type": [
-            "string",
-            "null"
-          ]
-        },
-        "cssEntryFilenames": {
-          "type": [
-            "string",
-            "null"
-          ]
-        },
-        "cssChunkFilenames": {
           "type": [
             "string",
             "null"
@@ -311,7 +318,19 @@
             "null"
           ]
         },
+        "sourcemapFilenames": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
         "sourcemapDebugIds": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "sourcemapExcludeSources": {
           "type": [
             "boolean",
             "null"
@@ -395,20 +414,21 @@
             "null"
           ]
         },
-        "inlineDynamicImports": {
-          "type": [
-            "boolean",
-            "null"
-          ]
-        },
-        "advancedChunks": {
+        "codeSplitting": {
+          "description": "Mirrors the public `codeSplitting: boolean | CodeSplittingOptions`. The object\nform (`Advanced`) carries the manual chunk grouping config; it is decomposed into\nthe gate + `NormalizedBundlerOptions::manual_code_splitting` during normalization.",
           "anyOf": [
             {
-              "$ref": "#/$defs/AdvancedChunksOptions"
+              "$ref": "#/$defs/CodeSplittingMode"
             },
             {
               "type": "null"
             }
+          ]
+        },
+        "dynamicImportInCjs": {
+          "type": [
+            "boolean",
+            "null"
           ]
         },
         "checks": {
@@ -448,6 +468,16 @@
             }
           ]
         },
+        "comments": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/CommentsOptions"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
         "polyfillRequire": {
           "type": [
             "boolean",
@@ -464,10 +494,10 @@
             }
           ]
         },
-        "debug": {
+        "devtools": {
           "anyOf": [
             {
-              "$ref": "#/$defs/DebugOptions"
+              "$ref": "#/$defs/DevtoolsOptions"
             },
             {
               "type": "null"
@@ -555,6 +585,22 @@
               "type": "null"
             }
           ]
+        },
+        "strictExecutionOrder": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "strict": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/StrictMode"
+            },
+            {
+              "type": "null"
+            }
+          ]
         }
       },
       "additionalProperties": false
@@ -613,29 +659,12 @@
     "GeneratedCodeOptions": {
       "type": "object",
       "properties": {
-        "preset": {
-          "anyOf": [
-            {
-              "$ref": "#/$defs/GeneratedCodePreset"
-            },
-            {
-              "type": "null"
-            }
-          ]
-        },
         "symbols": {
           "type": "boolean"
         }
       },
       "required": [
         "symbols"
-      ]
-    },
-    "GeneratedCodePreset": {
-      "type": "string",
-      "enum": [
-        "es5",
-        "es2015"
       ]
     },
     "SourceMapType": {
@@ -690,7 +719,8 @@
             "binary",
             "empty",
             "css",
-            "asset"
+            "asset",
+            "copy"
           ]
         },
         {
@@ -908,6 +938,12 @@
               "type": "null"
             }
           ]
+        },
+        "invalidImportSideEffects": {
+          "type": [
+            "boolean",
+            "null"
+          ]
         }
       },
       "additionalProperties": false
@@ -929,18 +965,6 @@
     "ExperimentalOptions": {
       "type": "object",
       "properties": {
-        "strictExecutionOrder": {
-          "type": [
-            "boolean",
-            "null"
-          ]
-        },
-        "disableLiveBindings": {
-          "type": [
-            "boolean",
-            "null"
-          ]
-        },
         "viteMode": {
           "type": [
             "boolean",
@@ -1005,17 +1029,23 @@
             "null"
           ]
         },
-        "transformHiresSourcemap": {
+        "nativeMagicString": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "chunkOptimization": {
           "anyOf": [
             {
-              "$ref": "#/$defs/SourcemapHires"
+              "$ref": "#/$defs/ChunkOptimizationOption"
             },
             {
               "type": "null"
             }
           ]
         },
-        "nativeMagicString": {
+        "lazyBarrel": {
           "type": [
             "boolean",
             "null"
@@ -1048,6 +1078,13 @@
           "description": "Custom dev mode runtime implementation.",
           "type": [
             "string",
+            "null"
+          ]
+        },
+        "skipCommonRuntimeInjection": {
+          "description": "Do not inject the common dev runtime before the custom implementation.\n\nDeprecated: common runtime injection will be disabled by default in the future.",
+          "type": [
+            "boolean",
             "null"
           ]
         },
@@ -1094,27 +1131,29 @@
         "moduleId"
       ]
     },
-    "SourcemapHires": {
-      "oneOf": [
+    "ChunkOptimizationOption": {
+      "anyOf": [
         {
-          "type": "string",
-          "enum": [
-            "boundary"
-          ]
+          "type": "boolean"
         },
         {
-          "type": "object",
-          "properties": {
-            "boolean": {
-              "type": "boolean"
-            }
-          },
-          "required": [
-            "boolean"
-          ],
-          "additionalProperties": false
+          "$ref": "#/$defs/ChunkOptimizationOptions"
         }
       ]
+    },
+    "ChunkOptimizationOptions": {
+      "type": "object",
+      "properties": {
+        "mergeCommonChunks": {
+          "type": "boolean",
+          "default": true
+        },
+        "avoidRedundantChunkLoads": {
+          "type": "boolean",
+          "default": true
+        }
+      },
+      "additionalProperties": false
     },
     "SimpleMinifyOptions": {
       "description": "A simple minify option that can be either a boolean or a string, used for rolldown rust testing.",
@@ -1181,7 +1220,18 @@
         }
       ]
     },
-    "AdvancedChunksOptions": {
+    "CodeSplittingMode": {
+      "description": "Controls how code splitting is performed. Mirrors the public\n`codeSplitting: boolean | CodeSplittingOptions` option.\n\n- `Bool(true)`: Default behavior, automatic code splitting with lazy-loaded dynamic imports.\n- `Bool(false)`: Inline all dynamic imports into a single bundle (no code splitting).\n- `Advanced(..)`: Automatic code splitting enabled, with user-directed chunk grouping\n  (the object form). During normalization this is decomposed into the gate\n  (`code_splitting`) plus the grouping config (`manual_code_splitting`).",
+      "anyOf": [
+        {
+          "type": "boolean"
+        },
+        {
+          "$ref": "#/$defs/ManualCodeSplittingOptions"
+        }
+      ]
+    },
+    "ManualCodeSplittingOptions": {
       "type": "object",
       "properties": {
         "minShareCount": {
@@ -1293,11 +1343,48 @@
             "null"
           ],
           "format": "double"
+        },
+        "entriesAware": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "entriesAwareMergeThreshold": {
+          "description": "Only effective when `entriesAware` is set to `true`.",
+          "type": [
+            "number",
+            "null"
+          ],
+          "format": "double"
+        },
+        "tags": {
+          "description": "Filter modules by tags. Only modules with all specified tags are captured.\nSee internal-docs/module-tags/implementation.md",
+          "type": [
+            "array",
+            "null"
+          ],
+          "items": {
+            "$ref": "#/$defs/BuiltinModuleTag"
+          }
+        },
+        "includeDependenciesRecursively": {
+          "type": [
+            "boolean",
+            "null"
+          ]
         }
       },
       "additionalProperties": false,
       "required": [
         "name"
+      ]
+    },
+    "BuiltinModuleTag": {
+      "description": "Schema-only enum for built-in module tags. Used by `schemars` to generate\na restricted JSON Schema for the `tags` field. Not used at runtime.",
+      "type": "string",
+      "enum": [
+        "$initial"
       ]
     },
     "ChecksOptions": {
@@ -1322,6 +1409,12 @@
           ]
         },
         "missingNameOptionForIifeExport": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "invalidAnnotation": {
           "type": [
             "boolean",
             "null"
@@ -1369,6 +1462,12 @@
             "null"
           ]
         },
+        "toleratedTransform": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
         "cannotCallNamespace": {
           "type": [
             "boolean",
@@ -1398,6 +1497,36 @@
             "boolean",
             "null"
           ]
+        },
+        "duplicateShebang": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "unsupportedTsconfigOption": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "ineffectiveDynamicImport": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "largeBarrelModules": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "sourcemapBroken": {
+          "type": [
+            "boolean",
+            "null"
+          ]
         }
       },
       "additionalProperties": false
@@ -1414,6 +1543,39 @@
             "null"
           ],
           "format": "uint32",
+          "minimum": 0
+        },
+        "usePolling": {
+          "type": "boolean"
+        },
+        "pollInterval": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "format": "uint64",
+          "minimum": 0
+        },
+        "compareContentsForPolling": {
+          "type": "boolean"
+        },
+        "useDebounce": {
+          "type": "boolean"
+        },
+        "debounceDelay": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "format": "uint64",
+          "minimum": 0
+        },
+        "debounceTickRate": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "format": "uint64",
           "minimum": 0
         },
         "include": {
@@ -1437,7 +1599,10 @@
       },
       "additionalProperties": false,
       "required": [
-        "skipWrite"
+        "skipWrite",
+        "usePolling",
+        "compareContentsForPolling",
+        "useDebounce"
       ]
     },
     "LegalComments": {
@@ -1453,6 +1618,41 @@
           "const": "inline"
         }
       ]
+    },
+    "CommentsOptions": {
+      "description": "Resolved comments options with explicit boolean flags.",
+      "anyOf": [
+        {
+          "type": "boolean"
+        },
+        {
+          "$ref": "#/$defs/RawCommentsObject"
+        }
+      ]
+    },
+    "RawCommentsObject": {
+      "type": "object",
+      "properties": {
+        "legal": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "annotation": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "jsdoc": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        }
+      },
+      "additionalProperties": false
     },
     "MakeAbsoluteExternalsRelative": {
       "oneOf": [
@@ -1476,7 +1676,7 @@
         }
       ]
     },
-    "DebugOptions": {
+    "DevtoolsOptions": {
       "type": "object",
       "properties": {
         "sessionId": {
@@ -1572,11 +1772,30 @@
     "TsConfig": {
       "anyOf": [
         {
-          "type": "boolean",
-          "const": true
+          "type": "boolean"
         },
         {
           "type": "string"
+        }
+      ]
+    },
+    "StrictMode": {
+      "description": "Controls whether `\"use strict\"` is emitted in the output.\n\nSee [`rollupjs.org/configuration-options/#output-strict`](https://rollupjs.org/configuration-options/#output-strict).",
+      "oneOf": [
+        {
+          "description": "Respect the `\"use strict\"` directives from the source code.\nThis is the default behavior.",
+          "type": "string",
+          "const": "auto"
+        },
+        {
+          "description": "Always emit `\"use strict\"` at the top of the output (not applicable for ESM format).",
+          "type": "string",
+          "const": "always"
+        },
+        {
+          "description": "Never emit `\"use strict\"` in the output.",
+          "type": "string",
+          "const": "never"
         }
       ]
     },
@@ -1622,13 +1841,33 @@
             "null"
           ]
         },
+        "strict": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/StrictMode"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
         "entryFilenames": {
           "type": [
             "string",
             "null"
           ]
         },
-        "inlineDynamicImports": {
+        "codeSplitting": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/CodeSplittingMode"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "dynamicImportInCjs": {
           "type": [
             "boolean",
             "null"
@@ -1730,6 +1969,26 @@
             "null"
           ]
         },
+        "comments": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/CommentsOptions"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "chunkOptimization": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ChunkOptimizationOption"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
         "_snapshot": {
           "description": "Whether to include the output in the snapshot for this config variant.",
           "type": [
@@ -1742,11 +2001,59 @@
             "string",
             "null"
           ]
+        },
+        "_expectExecutionFailure": {
+          "description": "If set, this configuration must fail while executing its generated output. This is not\ninherited from the base configuration so each variant's known failure stays explicit.",
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ExpectedExecutionFailure"
+            },
+            {
+              "type": "null"
+            }
+          ]
         }
       },
       "additionalProperties": false
     },
+    "ExpectedExecutionFailure": {
+      "type": "object",
+      "properties": {
+        "reason": {
+          "description": "Why this failure is temporarily accepted, normally an issue or PR reference.",
+          "type": "string",
+          "minLength": 1
+        },
+        "outputContains": {
+          "description": "Every string must occur in the spawned process output. This prevents an unrelated runtime\nfailure from satisfying the marker.",
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "minItems": 1
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "reason",
+        "outputContains"
+      ]
+    },
     "ExtendedTests": {
+      "description": "Controls which extended test variants are generated.\nCan be `false` to disable all, `true` to enable all (default), or an object to control each individually.",
+      "anyOf": [
+        {
+          "description": "`false` disables all extended tests, `true` enables all (default).",
+          "type": "boolean"
+        },
+        {
+          "$ref": "#/$defs/ExtendedTestsConfig"
+        }
+      ]
+    },
+    "ExtendedTestsConfig": {
+      "description": "Inner struct for deserializing the object form and generating JSON Schema.",
       "type": "object",
       "properties": {
         "oppositeMinifyInternalExports": {
@@ -1784,6 +2091,11 @@
           "description": "If `true`, the test will call `ensure_latest_build_output()` after each HMR step to wait for async builds.\nThis allows capturing all build outputs triggered by each step.\nDefault is `false` for backwards compatibility and performance.",
           "type": "boolean",
           "default": false
+        },
+        "checkStateParity": {
+          "description": "After each HMR step, run a fresh full build of the current file state\nand assert the incremental scan state matches it. Skipped automatically\nfor steps whose state does not build and for steps whose incremental\nbuild failed (a failed scan is reverted, so the state intentionally\nstays at the last good build). Default is `true`.",
+          "type": "boolean",
+          "default": true
         }
       },
       "additionalProperties": false
@@ -1822,12 +2134,7 @@
           "const": "always"
         },
         {
-          "description": "Incremental rebuild will be issued automatically if the hmr updates contains full reload updates.",
-          "type": "string",
-          "const": "auto"
-        },
-        {
-          "description": "Never issue rebuilds after HMR.",
+          "description": "Never issue rebuilds after HMR. The server no longer decides full reloads, so\nthere is no `auto` upgrade anymore; consumers that want fresh bundle output pull\nit explicitly (e.g. `ensure_latest_bundle_output`).",
           "type": "string",
           "const": "never"
         }
@@ -1897,6 +2204,26 @@
           ],
           "format": "uint64",
           "minimum": 0
+        },
+        "include": {
+          "description": "Filter to limit which discovered files are registered with the file watcher.\nStrings are treated as glob patterns.",
+          "type": [
+            "array",
+            "null"
+          ],
+          "items": {
+            "type": "string"
+          }
+        },
+        "exclude": {
+          "description": "Filter to prevent discovered files from being registered with the file watcher.\nStrings are treated as glob patterns.",
+          "type": [
+            "array",
+            "null"
+          ],
+          "items": {
+            "type": "string"
+          }
         }
       },
       "additionalProperties": false

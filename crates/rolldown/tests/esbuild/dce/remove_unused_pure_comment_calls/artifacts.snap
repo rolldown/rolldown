@@ -1,6 +1,42 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
 ---
+# warnings
+
+## INVALID_ANNOTATION
+
+```text
+[INVALID_ANNOTATION] A comment "/* @__PURE__ */" in "entry.js" contains an annotation that Rolldown cannot interpret due to the position of the comment.
+    ╭─[ entry.js:55:18 ]
+    │
+ 55 │ let parens_no = (/* @__PURE__ */ foo)(bar);
+    │                  ───────┬───────  
+    │                         ╰───────── comment ignored due to position
+    │ 
+    │ Help 1: Correct annotation placement: https://rolldown.rs/in-depth/dead-code-elimination#pure
+    │ 
+    │ Help 2: Disable with `checks.invalidAnnotation: false`.
+────╯
+
+```
+
+## INVALID_ANNOTATION
+
+```text
+[INVALID_ANNOTATION] A comment "/* @__PURE__ */" in "entry.js" contains an annotation that Rolldown cannot interpret due to the position of the comment.
+    ╭─[ entry.js:56:26 ]
+    │
+ 56 │ let new_parens_no = new (/* @__PURE__ */ foo)(bar);
+    │                          ───────┬───────  
+    │                                 ╰───────── comment ignored due to position
+    │ 
+    │ Help 1: Correct annotation placement: https://rolldown.rs/in-depth/dead-code-elimination#pure
+    │ 
+    │ Help 2: Disable with `checks.invalidAnnotation: false`.
+────╯
+
+```
+
 # Assets
 
 ## entry.js
@@ -9,28 +45,12 @@ source: crates/rolldown_testing/src/integration_test.rs
 //#region entry.js
 function bar() {}
 foo(bar);
-bar();
-bar();
-bar();
-bar();
-bar();
-bar();
-bar();
-bar();
-bar();
-bar();
-bar();
-bar();
-bar();
-bar();
-bar();
-bar();
 foo(bar);
 new foo(bar);
 foo(bar);
 new foo(bar);
 /* @__PURE__ */ foo() ** foo();
 /* @__PURE__ */ new foo() ** foo();
-
 //#endregion
+
 ```

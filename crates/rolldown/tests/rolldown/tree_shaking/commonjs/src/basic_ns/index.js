@@ -1,2 +1,2 @@
-exports.a = 'basic-a'
-exports.b = 'basic-unused'
+exports.a = 'basic-a';
+exports.b = 'basic-unused';

@@ -1,63 +1,37 @@
 {
   "name": "monorepo",
-  "description": "Rollup in Rust",
-  "type": "module",
   "private": true,
-  "packageManager": "pnpm@10.23.0",
-  "engines": {
-    "node": "^20.19.0 || >=22.12.0"
-  },
+  "description": "Rollup in Rust",
+  "license": "MIT",
+  "type": "module",
   "scripts": {
-    "lint-code": "oxlint -c .oxlintrc.json --ignore-path=.oxlintignore --deny-warnings --type-aware",
+    "prepare": "vp config",
     "lint-knip": "knip",
-    "fmt": "dprint fmt",
-    "fmt-check": "dprint check",
+    "lint-publint": "pnpm run -r --aggregate-output publint",
     "build": "echo \"Use just build\"",
     "build:release": "echo \"Use just build native release\"",
     "test": "echo \"Use just test-node\"",
     "ci:build-release-binding": "pnpm --filter rolldown run build-binding:release",
-    "type-check": "tsc -b tsconfig.json",
     "docs": "pnpm --filter rolldown-docs run dev",
-    "docs:build": "pnpm --filter rolldown-docs run build",
-    "docs:preview": "pnpm --filter rolldown-docs run preview",
-    "prepare": "husky",
-    "preinstall": "npx only-allow pnpm"
+    "docs:build": "pnpm --filter rolldown-docs run generate && pnpm --filter rolldown-docs run build",
+    "docs:void": "pnpm --filter rolldown-docs run generate && pnpm --filter rolldown-docs run void deploy",
+    "docs:preview": "pnpm --filter rolldown-docs run preview"
   },
-  "license": "MIT",
   "devDependencies": {
     "@oxc-node/core": "catalog:",
     "@oxc-project/runtime": "catalog:",
     "@types/node": "catalog:",
     "cjs-module-lexer": "^2.1.0",
-    "dprint": "^0.50.1",
-    "husky": "^9.1.7",
-    "knip": "^5.61.3",
-    "lint-staged": "^16.1.2",
-    "oxlint": "^1.31.0",
-    "oxlint-tsgolint": "0.10.0",
-    "remove-unused-vars": "^0.0.11",
+    "knip": "^6.32.0",
+    "playwright-chromium": "^1.62.0",
+    "publint": "^0.3.21",
+    "remove-unused-vars": "^0.0.14",
     "rolldown": "workspace:*",
-    "playwright-chromium": "^1.56.1",
-    "typescript": "catalog:"
+    "typescript": "catalog:",
+    "vite-plus": "^0.2.9"
   },
-  "pnpm": {
-    "overrides": {
-      "vitepress>vite": "npm:rolldown-vite@latest"
-    },
-    "onlyBuiltDependencies": [
-      "@parcel/watcher",
-      "dprint",
-      "esbuild",
-      "oxc-resolver",
-      "tree-sitter"
-    ]
+  "engines": {
+    "node": "^20.19.0 || >=22.12.0"
   },
-  "lint-staged": {
-    "*.@(js|ts|tsx|yml|yaml|md|json|html|toml)": [
-      "dprint fmt --staged"
-    ],
-    "*.@(js|ts|tsx)": [
-      "pnpm lint-code -- --fix"
-    ]
-  }
+  "packageManager": "pnpm@11.17.0"
 }

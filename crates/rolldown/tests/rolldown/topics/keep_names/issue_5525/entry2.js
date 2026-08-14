@@ -1,7 +1,5 @@
-import { Foo as Bar } from './foo.js'
+import { Foo as Bar } from './foo.js';
 
-export class Foo {
+export class Foo {}
 
-}
-
-export { Bar }
+export { Bar };

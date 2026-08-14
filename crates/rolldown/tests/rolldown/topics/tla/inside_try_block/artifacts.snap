@@ -11,35 +11,54 @@ let foo;
 try {
 	foo = await Promise.resolve("foo");
 } catch (_e) {}
-
 //#endregion
 export { foo };
+
 ```
 
-# Variant: [strict_execution_order: true]
+# Variant: wrap-all: [strict_execution_order: true]
 
 ## Assets
 
 ### main.js
 
 ```js
-// HIDDEN [rolldown:runtime]
+// HIDDEN [\0rolldown/runtime.js]
 //#region lib.js
 var foo;
-var init_lib = __esmMin((async () => {
-	;
-	try {
-		foo = await Promise.resolve("foo");
-	} catch (_e) {}
-}));
-
+function init_lib() {
+	return (init_lib = __esmMin((async () => {
+		try {
+			foo = await Promise.resolve("foo");
+		} catch (_e) {}
+	})))();
+}
 //#endregion
 //#region main.js
-var init_main = __esmMin((async () => {
-	await init_lib();
-}));
-
+function init_main() {
+	return (init_main = __esmMin((async () => {
+		await init_lib();
+	})))();
+}
 //#endregion
 await init_main();
 export { foo };
+
+```
+
+# Variant: on-demand: [on_demand_wrapping: true] [strict_execution_order: true]
+
+## Assets
+
+### main.js
+
+```js
+//#region lib.js
+let foo;
+try {
+	foo = await Promise.resolve("foo");
+} catch (_e) {}
+//#endregion
+export { foo };
+
 ```

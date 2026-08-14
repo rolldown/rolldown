@@ -7,8 +7,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 import assert from "node:assert";
-
-// HIDDEN [rolldown:runtime]
+// HIDDEN [\0rolldown/runtime.js]
 //#region main.js
 var require_main = /* @__PURE__ */ __commonJSMin(((exports, module) => {
 	module.exports = "main";
@@ -16,7 +15,6 @@ var require_main = /* @__PURE__ */ __commonJSMin(((exports, module) => {
 	__commonJS = 1;
 	assert.equal(__commonJS, 1);
 }));
-
 //#endregion
 export default require_main();
 

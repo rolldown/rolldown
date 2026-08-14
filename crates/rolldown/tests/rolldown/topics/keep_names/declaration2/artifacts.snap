@@ -7,8 +7,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 import assert from "node:assert";
-
-// HIDDEN [rolldown:runtime]
+// HIDDEN [\0rolldown/runtime.js]
 //#region a.js
 var a_exports = /* @__PURE__ */ __exportAll({
 	delay: () => delay$1,
@@ -19,18 +18,15 @@ function random64$1() {
 	return BigInt(Math.random() * 4294967295 & 4294967295) << 32n & BigInt(Math.random() * 4294967295 & 4294967295);
 }
 __name(random64$1, "random64");
-
 //#endregion
 //#region main.js
 console.log(`namespace: `, a_exports);
 var delay = function(time) {};
-delay();
 function random64() {}
-random64();
 assert.strictEqual(delay$1.name, "delay");
 assert.strictEqual(random64$1.name, "random64");
 assert.strictEqual(delay.name, "delay");
 assert.strictEqual(random64.name, "random64");
-
 //#endregion
+
 ```

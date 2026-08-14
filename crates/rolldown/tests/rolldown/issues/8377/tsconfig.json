@@ -1,0 +1,6 @@
+{
+  "files": ["main.jsx"],
+  "compilerOptions": {
+    "jsx": "preserve"
+  }
+}

@@ -4,13 +4,14 @@ import { expect, vi } from 'vitest';
 const transformFn = vi.fn();
 
 export default defineTest({
+  sequential: true,
   config: {
     plugins: [
       {
         name: 'test-plugin',
         transform: {
           filter: { code: 'import.meta' },
-          handler: function() {
+          handler: function () {
             transformFn();
           },
         },

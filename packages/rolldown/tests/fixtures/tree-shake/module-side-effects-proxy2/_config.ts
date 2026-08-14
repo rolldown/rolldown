@@ -10,6 +10,7 @@ export default defineTest({
         async transform(code, id) {
           if (id.includes('bar.js')) {
             const resolved = await this.resolve('./foo.js', id);
+            await this.load({ id: resolved!.id }); // ensure moduleInfo for `foo.js` exists
             const moduleInfo = this.getModuleInfo(resolved!.id);
             moduleInfo!.moduleSideEffects = true;
 

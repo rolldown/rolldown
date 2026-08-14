@@ -1,8 +1,8 @@
 use oxc::{
-  ast::ast::{self},
+  ast::ast::{self, Expression},
   span::SPAN,
 };
-use rolldown_ecmascript_utils::ExpressionExt;
+use rolldown_ecmascript_utils::{ExpressionExt, ExpressionFactoryExt as _};
 
 use crate::hmr::utils::HmrAstBuilder;
 
@@ -11,9 +11,7 @@ use super::ScopeHoistingFinalizer;
 impl<'ast> ScopeHoistingFinalizer<'_, 'ast> {
   pub fn generate_hmr_header(&self) -> Vec<ast::Statement<'ast>> {
     let mut ret = vec![];
-    if !self.ctx.options.is_dev_mode_enabled()
-      || self.ctx.module.id.as_ref() == rolldown_plugin_hmr::HMR_RUNTIME_MODULE_SPECIFIER
-    {
+    if !self.ctx.options.is_dev_mode_enabled() {
       return ret;
     }
 
@@ -29,7 +27,7 @@ impl<'ast> ScopeHoistingFinalizer<'_, 'ast> {
     if expr.is_import_meta_hot() {
       if let Some(hmr_hot_ref) = self.ctx.module.ecma_view.hmr_hot_ref {
         let hot_name = self.canonical_name_for(hmr_hot_ref);
-        *expr = self.snippet.id_ref_expr(hot_name, SPAN);
+        *expr = Expression::new_id_ref_expr(SPAN, hot_name, self);
       }
     }
   }
@@ -57,8 +55,11 @@ impl<'ast> ScopeHoistingFinalizer<'_, 'ast> {
           .module
           .hmr_info
           .module_request_to_import_record_idx[string_literal.value.as_str()]];
-        string_literal.value =
-          self.snippet.builder.atom(self.ctx.modules[import_record.resolved_module].stable_id());
+        // Use stable module ID for consistent runtime lookup
+        string_literal.value = oxc::ast::ast::Str::from_str_in(
+          self.ctx.modules[import_record.into_resolved_module()].stable_id(),
+          self,
+        );
       }
       ast::Argument::ArrayExpression(array_expression) => {
         // `import.meta.hot.accept(['./dep1.js', './dep2.js'], ...)`
@@ -69,10 +70,11 @@ impl<'ast> ScopeHoistingFinalizer<'_, 'ast> {
               .module
               .hmr_info
               .module_request_to_import_record_idx[string_literal.value.as_str()]];
-            string_literal.value = self
-              .snippet
-              .builder
-              .atom(self.ctx.modules[import_record.resolved_module].stable_id());
+            // Use stable module ID for consistent runtime lookup
+            string_literal.value = oxc::ast::ast::Str::from_str_in(
+              self.ctx.modules[import_record.into_resolved_module()].stable_id(),
+              self,
+            );
           }
         });
       }

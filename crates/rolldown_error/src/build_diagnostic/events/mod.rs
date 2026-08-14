@@ -1,4 +1,4 @@
-use std::{any::Any, fmt::Debug};
+use std::any::Any;
 
 use arcstr::ArcStr;
 use oxc::span::Span;
@@ -22,33 +22,44 @@ pub mod circular_reexport;
 pub mod commonjs_variable_in_esm;
 pub mod configuration_field_conflict;
 pub mod could_not_clean_directory;
+pub mod duplicate_shebang;
 pub mod empty_import_meta;
 pub mod eval;
-pub mod export_undefined_variable;
 pub mod external_entry;
+pub mod file_not_found;
 pub mod filename_conflict;
+pub mod filename_outside_output_directory;
 pub mod forbid_const_assign;
 pub mod illegal_identifier_as_name;
 pub mod import_is_undefined;
+pub mod ineffective_dynamic_import;
+pub mod invalid_annotation;
 pub mod invalid_define_config;
 pub mod invalid_export_option;
 pub mod invalid_option;
 pub mod json_parse;
+pub mod large_barrel_modules;
 pub mod missing_export;
 pub mod missing_global_name;
 pub mod missing_name_option_for_iife_export;
 pub mod mixed_exports;
-pub mod parse_error;
+pub mod oxc_error;
 pub mod plugin_error;
 pub mod plugin_timings;
 pub mod prefer_builtin_feature;
+pub mod require_tla;
 pub mod resolve_error;
+pub mod runtime_module_symbol_not_found;
+pub mod sourcemap_broken;
+pub mod tsconfig_error;
 pub mod unhandleable_error;
 pub mod unloadable_dependency;
 pub mod unresolved_entry;
 pub mod unsupported_feature;
+pub mod unsupported_tsconfig_option;
+pub mod untranspiled_syntax;
 
-pub trait BuildEvent: Debug + Sync + Send + AsAnyMut {
+pub trait BuildEvent: Sync + Send + AsAny + AsAnyMut {
   fn kind(&self) -> EventKind;
 
   fn message(&self, opts: &DiagnosticOptions) -> String;
@@ -58,6 +69,10 @@ pub trait BuildEvent: Debug + Sync + Send + AsAnyMut {
   // extra properties to match RollupLog interface
   // https://rollupjs.org/configuration-options/#onlog
   fn id(&self) -> Option<String> {
+    None
+  }
+
+  fn plugin(&self) -> Option<String> {
     None
   }
 
@@ -81,6 +96,16 @@ where
 {
   fn from(e: T) -> Self {
     Box::new(e)
+  }
+}
+
+pub trait AsAny {
+  fn as_any(&self) -> &dyn Any;
+}
+
+impl<T: 'static + BuildEvent> AsAny for T {
+  fn as_any(&self) -> &dyn Any {
+    self
   }
 }
 

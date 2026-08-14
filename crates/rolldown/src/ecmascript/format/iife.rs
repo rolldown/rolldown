@@ -84,6 +84,13 @@ pub async fn render_iife<'code>(
 
   // It is similar to CJS.
   let (import_code, externals) = render_chunk_external_imports(ctx);
+  // For IIFE, we only include externals with used exports in factory parameters/arguments
+  // because we don't have a way to trigger side effects.
+  let externals: Vec<_> = externals
+    .iter()
+    .filter(|e| e.is_used())
+    .map(super::utils::ExternalImportKind::module)
+    .collect();
 
   // Generate the identifier for the IIFE wrapper function.
   // You can refer to the function for more details.
@@ -166,7 +173,7 @@ pub async fn render_iife<'code>(
 
   // iife wrapper end
   let factory_arguments =
-    render_iife_factory_arguments(warnings, ctx, &externals, exports_prefix).await;
+    render_iife_factory_arguments(warnings, ctx, &externals, exports_prefix).await?;
   source_joiner.append_source(concat_string!("})(", factory_arguments, ");"));
 
   if let Some(footer) = footer {
@@ -181,7 +188,7 @@ async fn render_iife_factory_arguments(
   ctx: &GenerateContext<'_>,
   externals: &[&ExternalModule],
   exports_prefix: Option<&str>,
-) -> String {
+) -> BuildResult<String> {
   let mut factory_arguments = if let Some(exports_prefix) = exports_prefix {
     vec![exports_prefix.to_string()]
   } else {
@@ -189,7 +196,7 @@ async fn render_iife_factory_arguments(
   };
   let globals = &ctx.options.globals;
   for external in externals {
-    let global = globals.call(external.id.as_str()).await;
+    let global = globals.call(external.id.as_str()).await?;
     let target = match &global {
       Some(global_name) => global_name.clone(),
       None => {
@@ -206,5 +213,5 @@ async fn render_iife_factory_arguments(
     };
     factory_arguments.push(target);
   }
-  factory_arguments.join(", ")
+  Ok(factory_arguments.join(", "))
 }

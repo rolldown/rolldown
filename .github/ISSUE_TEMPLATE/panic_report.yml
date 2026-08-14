@@ -1,0 +1,50 @@
+name: "\U0001F4A5 Panic report"
+title: '[Panic]: '
+labels: ['panic', 'needs-triage']
+type: 'Bug'
+description: Report a Rolldown panic
+body:
+  - type: markdown
+    attributes:
+      value: |
+        **Thank you for reporting a panic!**
+
+        Rolldown panics are always bugs on our side, not yours. Please fill out the information below to help us fix the issue.
+  - type: textarea
+    id: panic-message
+    attributes:
+      label: Panic message
+      description: |
+        Please paste the full panic message you saw in the console.
+      placeholder: |
+        Rolldown panicked. This is a bug in Rolldown, not your code.
+        thread 'tokio-runtime-worker' panicked at ...
+      render: Shell
+    validations:
+      required: true
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Reproduction
+      description: |
+        Please provide steps to reproduce, or a link to a minimal reproduction:
+        - Using the [REPL](https://repl.rolldown.rs/), or
+        - Using the [stackblitz template](https://stackblitz.com/fork/github/rolldown/rolldown-starter-stackblitz), or
+        - A minimal repository on GitHub
+      placeholder: Steps to reproduce or reproduction link
+    validations:
+      required: true
+  - type: textarea
+    id: system-info
+    attributes:
+      label: System Info
+      description: Output of `npx envinfo --system --npmPackages rolldown --binaries --browsers`
+      render: Shell
+      placeholder: System, Binaries, Browsers
+    validations:
+      required: true
+  - type: textarea
+    id: additional-comments
+    attributes:
+      label: Additional context
+      description: Any additional information that might help us debug the panic.

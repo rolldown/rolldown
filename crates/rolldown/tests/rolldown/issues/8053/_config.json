@@ -1,0 +1,11 @@
+{
+  "config": {
+    "external": ["node:assert"],
+    "input": [{ "name": "main", "import": "./main.js" }]
+  },
+  "configVariants": [
+    {
+      "format": "cjs"
+    }
+  ]
+}

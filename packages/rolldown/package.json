@@ -1,35 +1,42 @@
 {
   "name": "rolldown",
-  "version": "1.0.0-beta.57",
+  "version": "1.2.4",
   "description": "Fast JavaScript/TypeScript bundler in Rust with Rollup-compatible API.",
-  "type": "module",
+  "keywords": [
+    "bundler",
+    "esbuild",
+    "parcel",
+    "rolldown",
+    "rollup",
+    "webpack"
+  ],
   "homepage": "https://rolldown.rs/",
+  "license": "MIT",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/rolldown/rolldown.git",
     "directory": "packages/rolldown"
   },
-  "license": "MIT",
-  "keywords": [
-    "webpack",
-    "parcel",
-    "esbuild",
-    "rollup",
-    "bundler",
-    "rolldown"
-  ],
+  "bin": {
+    "rolldown": "./bin/cli.mjs"
+  },
   "files": [
     "bin",
     "cli",
     "dist",
+    "LICENSE",
+    "THIRD-PARTY-LICENSE",
     "!dist/*.node"
   ],
-  "bin": {
-    "rolldown": "./bin/cli.mjs"
-  },
+  "type": "module",
   "main": "./dist/index.mjs",
   "module": "./dist/index.mjs",
   "types": "./dist/index.d.mts",
+  "imports": {
+    "#default-runtime": "./dist/experimental-default-runtime.mjs",
+    "#runtime": "./dist/experimental-runtime.mjs",
+    "#parallel-plugin-worker": "./dist/parallel-plugin-worker.mjs"
+  },
   "exports": {
     ".": {
       "dev": "./src/index.ts",
@@ -45,6 +52,10 @@
     },
     "./experimental/runtime-types": {
       "types": "./dist/experimental-runtime-types.d.ts"
+    },
+    "./experimental/runtime": {
+      "types": "./dist/experimental-runtime.d.ts",
+      "default": "./dist/experimental-runtime.mjs"
     },
     "./filter": {
       "dev": "./src/filter-index.ts",
@@ -66,14 +77,13 @@
     "./plugins": {
       "dev": "./src/plugins-index.ts",
       "default": "./dist/plugins-index.mjs"
+    },
+    "./utils": {
+      "dev": "./src/utils-index.ts",
+      "default": "./dist/utils-index.mjs"
     }
   },
-  "imports": {
-    "#parallel-plugin-worker": "./dist/parallel-plugin-worker.mjs"
-  },
   "publishConfig": {
-    "registry": "https://registry.npmjs.org/",
-    "access": "public",
     "exports": {
       ".": "./dist/index.mjs",
       "./config": "./dist/config.mjs",
@@ -81,24 +91,31 @@
       "./experimental/runtime-types": {
         "types": "./dist/experimental-runtime-types.d.ts"
       },
+      "./experimental/runtime": {
+        "types": "./dist/experimental-runtime.d.ts",
+        "default": "./dist/experimental-runtime.mjs"
+      },
       "./filter": "./dist/filter-index.mjs",
       "./getLogFilter": "./dist/get-log-filter.mjs",
       "./parallelPlugin": "./dist/parallel-plugin.mjs",
       "./parseAst": "./dist/parse-ast-index.mjs",
       "./package.json": "./package.json",
-      "./plugins": "./dist/plugins-index.mjs"
-    }
+      "./plugins": "./dist/plugins-index.mjs",
+      "./utils": "./dist/utils-index.mjs"
+    },
+    "access": "public",
+    "registry": "https://registry.npmjs.org/"
   },
   "scripts": {
     "# Scrips for binding #": "_",
     "artifacts": "napi artifacts --cwd ./src --package-json-path ../package.json -o=../artifacts --npm-dir ../npm",
     "build-binding": "oxnode ./build-binding.ts",
     "build-binding:release": "pnpm build-binding --release",
-    "build-binding:profile": "pnpm build-binding --profile profile",
+    "build-binding:profile": "pnpm build-binding --profile profile --features chrome-tracing",
     "build-binding:wasi": "pnpm build-binding --target wasm32-wasip1-threads",
     "build-binding:wasi:release": "pnpm build-binding --profile release-wasi --target wasm32-wasip1-threads",
     "# Scrips for node #": "_",
-    "build-node": "oxnode -C dev ./build.ts",
+    "build-node": "node --enable-source-maps --import @oxc-node/core/register -C dev ./build.ts",
     "build-types-check": "tsc -p ./tsconfig.check.json",
     "build-js-glue": "pnpm run --sequential '/^build-(node|types-check)$/'",
     "build-native:debug": "pnpm run --sequential '/^build-(binding|js-glue)$/'",
@@ -107,13 +124,42 @@
     "build-native:memory-profile": "pnpm run build-binding:profile --features default_global_allocator && pnpm run build-js-glue",
     "build-wasi:debug": "TARGET='rolldown-wasi' pnpm run --sequential '/^build-(binding|binding:wasi|node)$/'",
     "build-wasi:release": "TARGET='rolldown-wasi' pnpm run --sequential '/^build-(binding|binding:wasi:release|node)$/'",
-    "build-browser-pkg:debug": "TARGET='browser' pnpm run --sequential '/^build-(binding|binding:wasi|node)$/'",
-    "build-browser-pkg:release": "TARGET='browser' pnpm run --sequential '/^build-(binding|binding:wasi:release|node)$/'",
+    "build-browser-pkg:debug": "TARGET='browser' pnpm run --sequential '/^build-(binding:wasi|node)$/'",
+    "build-browser-pkg:release": "TARGET='browser' pnpm run --sequential '/^build-(binding:wasi:release|node)$/'",
     "# Scrips for docs #": "_",
-    "prepublishOnly": "napi pre-publish -t npm --no-gh-release"
+    "prepublishOnly": "napi pre-publish -t npm --no-gh-release ${NAPI_DRY_RUN:+--dry-run}",
+    "publint": "publint ."
+  },
+  "dependencies": {
+    "@oxc-project/types": "catalog:",
+    "@rolldown/pluginutils": "catalog:"
+  },
+  "devDependencies": {
+    "@emnapi/core": "catalog:",
+    "@emnapi/runtime": "catalog:",
+    "@napi-rs/cli": "catalog:",
+    "@napi-rs/wasm-runtime": "catalog:",
+    "@oxc-node/cli": "catalog:",
+    "cac": "catalog:",
+    "consola": "catalog:",
+    "emnapi": "catalog:",
+    "execa": "catalog:",
+    "fresh-import": "catalog:",
+    "glob": "catalog:",
+    "oxc-parser": "catalog:",
+    "pathe": "catalog:",
+    "remeda": "catalog:",
+    "rolldown": "workspace:*",
+    "rolldown-plugin-dts": "catalog:",
+    "rollup": "catalog:",
+    "signal-exit": "catalog:",
+    "source-map": "catalog:",
+    "typescript": "catalog:",
+    "valibot": "catalog:"
   },
   "napi": {
     "binaryName": "rolldown-binding",
+    "dtsHeader": "type MaybePromise<T> = T | Promise<T>\ntype Nullable<T> = T | null | undefined\ntype VoidNullable<T = void> = T | null | undefined | void\nexport type BindingStringOrRegex = string | RegExp\nexport type BindingResult<T> = { errors: BindingError[], isBindingErrors: boolean } | T\n\n",
     "packageName": "@rolldown/binding",
     "targets": [
       "x86_64-apple-darwin",
@@ -128,40 +174,18 @@
       "aarch64-unknown-linux-ohos",
       "aarch64-pc-windows-msvc",
       "aarch64-linux-android",
-      "wasm32-wasip1-threads"
+      "wasm32-wasip1-threads",
+      "s390x-unknown-linux-gnu",
+      "powerpc64le-unknown-linux-gnu"
     ],
     "wasm": {
       "initialMemory": 16384,
       "browser": {
         "fs": true,
-        "asyncInit": true
+        "asyncInit": true,
+        "errorEvent": true
       }
-    },
-    "dtsHeader": "type MaybePromise<T> = T | Promise<T>\ntype Nullable<T> = T | null | undefined\ntype VoidNullable<T = void> = T | null | undefined | void\nexport type BindingStringOrRegex = string | RegExp\ntype BindingResult<T> = { errors: BindingError[], isBindingErrors: boolean } | T\n\n"
-  },
-  "dependencies": {
-    "@oxc-project/types": "catalog:",
-    "@rolldown/pluginutils": "workspace:*"
-  },
-  "devDependencies": {
-    "@napi-rs/cli": "catalog:",
-    "@napi-rs/wasm-runtime": "catalog:",
-    "@oxc-node/cli": "catalog:",
-    "@rollup/plugin-json": "catalog:",
-    "buble": "catalog:",
-    "consola": "catalog:",
-    "execa": "catalog:",
-    "glob": "catalog:",
-    "oxc-parser": "catalog:",
-    "pathe": "catalog:",
-    "remeda": "catalog:",
-    "rolldown": "workspace:*",
-    "rolldown-plugin-dts": "catalog:",
-    "rollup": "catalog:",
-    "signal-exit": "catalog:",
-    "source-map": "catalog:",
-    "typescript": "catalog:",
-    "valibot": "catalog:"
+    }
   },
   "engines": {
     "node": "^20.19.0 || >=22.12.0"

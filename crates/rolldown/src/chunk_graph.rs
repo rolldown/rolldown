@@ -2,8 +2,8 @@ use arcstr::ArcStr;
 use itertools::Itertools;
 use oxc_index::{IndexVec, index_vec};
 use rolldown_common::{
-  Chunk, ChunkIdx, ChunkModulesOrderBy, ChunkTable, EcmaViewMeta, ModuleIdx, RuntimeHelper,
-  SymbolRef,
+  Chunk, ChunkIdx, ChunkKind, ChunkMeta, ChunkModulesOrderBy, ChunkTable, EcmaViewMeta, ModuleIdx,
+  PostChunkOptimizationOperation, RuntimeHelper, SymbolRef,
 };
 use rustc_hash::{FxHashMap, FxHashSet};
 
@@ -21,6 +21,9 @@ pub struct ChunkGraph {
   pub finalized_cjs_ns_map_idx_vec: IndexVec<ChunkIdx, FxHashMap<SymbolRef, SymbolRef>>,
   pub chunk_idx_to_reference_ids: FxHashMap<ChunkIdx, Vec<ArcStr>>,
   pub common_chunk_exported_facade_chunk_namespace: FxHashMap<ChunkIdx, FxHashSet<ModuleIdx>>,
+  /// Modules from emitted chunks with AllowExtension that were merged into common chunks.
+  /// Their export names should be preserved (not minified).
+  pub common_chunk_preserve_export_names_modules: FxHashMap<ChunkIdx, FxHashSet<ModuleIdx>>,
   /// Tracks chunks that have been removed during post-optimization of code splitting.
   ///
   /// Since chunks are stored in an `IndexVec`, we have two options when removing chunks:
@@ -28,7 +31,7 @@ pub struct ChunkGraph {
   /// 2. Keep them in place and mark them as dead
   ///
   /// We use the second approach to avoid the overhead of re-indexing at the cost of some extra memory.
-  pub removed_chunk_idx: FxHashSet<ChunkIdx>,
+  pub post_chunk_optimization_operations: FxHashMap<ChunkIdx, PostChunkOptimizationOperation>,
 }
 
 impl ChunkGraph {
@@ -41,12 +44,13 @@ impl ChunkGraph {
       finalized_cjs_ns_map_idx_vec: index_vec![],
       chunk_idx_to_reference_ids: FxHashMap::default(),
       common_chunk_exported_facade_chunk_namespace: FxHashMap::default(),
-      removed_chunk_idx: FxHashSet::default(),
+      common_chunk_preserve_export_names_modules: FxHashMap::default(),
+      post_chunk_optimization_operations: FxHashMap::default(),
     }
   }
 
   #[expect(unused)]
-  pub fn sorted_chunks(&self) -> impl Iterator<Item = &Chunk> {
+  pub fn sorted_chunks(&self) -> impl ExactSizeIterator<Item = &Chunk> {
     self.sorted_chunk_idx_vec.iter().map(move |&id| &self.chunk_table.chunks[id])
   }
 
@@ -54,6 +58,53 @@ impl ChunkGraph {
     let idx = self.chunk_table.push(chunk);
     self.finalized_cjs_ns_map_idx_vec.push(FxHashMap::default());
     idx
+  }
+
+  /// Not removed by post-chunk-optimization (order-wrap lowering can remove chunks).
+  pub fn chunk_is_live(&self, chunk_idx: ChunkIdx) -> bool {
+    self.post_chunk_optimization_operations.get(&chunk_idx)
+      != Some(&PostChunkOptimizationOperation::Removed)
+  }
+
+  /// The module is assigned to a live chunk that still contains it.
+  ///
+  /// O(1) on purpose: this is called for every canonical referenced symbol of every included
+  /// statement under strict execution order (`add_depended_symbol_with_wrapped_esm_init`), so the
+  /// former `chunk.modules.contains(&module_idx)` linear scan made the pass quadratic on large
+  /// chunks. Dropping the scan is sound because of this invariant:
+  ///
+  ///   whenever `module_to_chunk[m] == Some(c)` and `c` is live, `c.modules` contains `m`.
+  ///
+  /// `add_module_to_chunk` establishes it (it sets `module_to_chunk[m]` and pushes `m` onto
+  /// `c.modules` together). Every site that later removes a module from a chunk's `modules` list
+  /// preserves it by pairing the removal with one of:
+  ///   - clearing `module_to_chunk[m]` to `None` (unused-runtime sweep, `sweep_unused_runtime_module`);
+  ///   - reassigning `module_to_chunk[m]` to the destination chunk via `add_module_to_chunk`
+  ///     (runtime relocation in `ensure_runtime_module_for_order_wraps`, the runtime→target merge,
+  ///     and `apply_common_chunk_merges`);
+  ///   - marking the emptied source chunk `Removed` (so `chunk_is_live` returns false).
+  ///
+  /// No site removes a module while leaving `module_to_chunk[m]` pointed at a still-live chunk, so
+  /// there is no residual case that would need a separate removed-module set.
+  pub fn module_is_in_live_chunk(&self, module_idx: ModuleIdx) -> bool {
+    self.module_to_chunk[module_idx].is_some_and(|chunk_idx| self.chunk_is_live(chunk_idx))
+  }
+
+  /// Render order: user-defined entry chunks first (stable by index), everything else by
+  /// execution order.
+  pub fn rebuild_sorted_chunk_idx_vec(&mut self, only_live: bool) {
+    self.sorted_chunk_idx_vec = self
+      .chunk_table
+      .iter_enumerated()
+      .filter(|(chunk_idx, _)| !only_live || self.chunk_is_live(*chunk_idx))
+      .sorted_unstable_by_key(|(index, chunk)| match &chunk.kind {
+        ChunkKind::EntryPoint { meta, .. } if meta.contains(ChunkMeta::UserDefinedEntry) => {
+          (0, index.raw())
+        }
+        _ => (1, chunk.exec_order),
+      })
+      .map(|(idx, _)| idx)
+      .collect();
   }
 
   pub fn add_module_to_chunk(
@@ -84,7 +135,9 @@ impl ChunkGraph {
       let mut runtime_related = vec![];
       for &module_idx in &chunk.modules {
         let module = &link_output.module_table[module_idx];
-        if module.id().starts_with("rolldown:") {
+        if module.id().as_str().starts_with("rolldown:")
+          || module.id().as_str().starts_with("\0rolldown/")
+        {
           runtime_related.push(module_idx);
           continue;
         }
@@ -97,7 +150,8 @@ impl ChunkGraph {
           rest.push(module_idx);
         }
       }
-      side_effects_free_leaf_modules.sort_by_key(|idx| link_output.module_table[*idx].id());
+      side_effects_free_leaf_modules
+        .sort_unstable_by_key(|idx| link_output.module_table[*idx].id().as_str());
       rest.sort_unstable_by_key(|idx| link_output.module_table[*idx].exec_order());
       runtime_related.sort_unstable_by_key(|idx| link_output.module_table[*idx].exec_order());
 

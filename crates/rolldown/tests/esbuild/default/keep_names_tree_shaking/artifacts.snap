@@ -13,6 +13,6 @@ x = function keep() {};
 var clsStmtKeep = class {};
 new clsStmtKeep();
 new class keep {}();
-
 //#endregion
+
 ```

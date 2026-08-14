@@ -1,17 +1,14 @@
 import type {
   BindingEsmExternalRequirePluginConfig,
   BindingIsolatedDeclarationPluginConfig,
-  BindingViteAssetImportMetaUrlPluginConfig,
   BindingViteBuildImportAnalysisPluginConfig,
   BindingViteDynamicImportVarsPluginConfig,
-  BindingViteHtmlInlineProxyPluginConfig,
   BindingViteImportGlobPluginConfig,
   BindingViteJsonPluginConfig,
   BindingViteModulePreloadPolyfillPluginConfig,
   BindingViteReactRefreshWrapperPluginConfig,
   BindingViteReporterPluginConfig,
   BindingViteResolvePluginConfig,
-  BindingViteWasmHelperPluginConfig,
 } from '../binding.cjs';
 import type { StringOrRegExp } from '../types/utils';
 import { normalizedStringOrRegex } from '../utils/normalize-string-or-regex';
@@ -23,19 +20,15 @@ export function viteModulePreloadPolyfillPlugin(
   return new BuiltinPlugin('builtin:vite-module-preload-polyfill', config);
 }
 
-type DynamicImportVarsPluginConfig =
-  & Omit<
-    BindingViteDynamicImportVarsPluginConfig,
-    'include' | 'exclude'
-  >
-  & {
-    include?: StringOrRegExp | StringOrRegExp[];
-    exclude?: StringOrRegExp | StringOrRegExp[];
-  };
+type DynamicImportVarsPluginConfig = Omit<
+  BindingViteDynamicImportVarsPluginConfig,
+  'include' | 'exclude'
+> & {
+  include?: StringOrRegExp | StringOrRegExp[];
+  exclude?: StringOrRegExp | StringOrRegExp[];
+};
 
-export function viteDynamicImportVarsPlugin(
-  config?: DynamicImportVarsPluginConfig,
-): BuiltinPlugin {
+export function viteDynamicImportVarsPlugin(config?: DynamicImportVarsPluginConfig): BuiltinPlugin {
   if (config) {
     config.include = normalizedStringOrRegex(config.include);
     config.exclude = normalizedStringOrRegex(config.exclude);
@@ -43,36 +36,19 @@ export function viteDynamicImportVarsPlugin(
   return new BuiltinPlugin('builtin:vite-dynamic-import-vars', config);
 }
 
-export function viteImportGlobPlugin(
-  config?: BindingViteImportGlobPluginConfig,
-): BuiltinPlugin {
+export function viteImportGlobPlugin(config?: BindingViteImportGlobPluginConfig): BuiltinPlugin {
   return new BuiltinPlugin('builtin:vite-import-glob', config);
 }
 
-export function viteReporterPlugin(
-  config: BindingViteReporterPluginConfig,
-): BuiltinPlugin {
+export function viteReporterPlugin(config: BindingViteReporterPluginConfig): BuiltinPlugin {
   return new BuiltinPlugin('builtin:vite-reporter', config);
-}
-
-export function viteWasmHelperPlugin(
-  config: BindingViteWasmHelperPluginConfig,
-): BuiltinPlugin {
-  return new BuiltinPlugin('builtin:vite-wasm-helper', config);
-}
-
-export function viteWasmFallbackPlugin(): BuiltinPlugin {
-  const builtinPlugin = new BuiltinPlugin('builtin:vite-wasm-fallback');
-  return makeBuiltinPluginCallable(builtinPlugin);
 }
 
 export function viteLoadFallbackPlugin(): BuiltinPlugin {
   return new BuiltinPlugin('builtin:vite-load-fallback');
 }
 
-export function viteJsonPlugin(
-  config: BindingViteJsonPluginConfig,
-): BuiltinPlugin {
+export function viteJsonPlugin(config: BindingViteJsonPluginConfig): BuiltinPlugin {
   const builtinPlugin = new BuiltinPlugin('builtin:vite-json', config);
   return makeBuiltinPluginCallable(builtinPlugin);
 }
@@ -104,6 +80,12 @@ export function viteWebWorkerPostPlugin(): BuiltinPlugin {
   return new BuiltinPlugin('builtin:vite-web-worker-post');
 }
 
+/**
+ * A plugin that converts CommonJS require() calls for external dependencies into ESM import statements.
+ *
+ * @see https://rolldown.rs/builtin-plugins/esm-external-require
+ * @category Builtin Plugins
+ */
 export function esmExternalRequirePlugin(
   config?: BindingEsmExternalRequirePluginConfig,
 ): BuiltinPlugin {
@@ -113,15 +95,21 @@ export function esmExternalRequirePlugin(
   return plugin;
 }
 
-type ViteReactRefreshWrapperPluginConfig =
-  & Omit<
-    BindingViteReactRefreshWrapperPluginConfig,
-    'include' | 'exclude'
-  >
-  & {
-    include?: StringOrRegExp | StringOrRegExp[];
-    exclude?: StringOrRegExp | StringOrRegExp[];
-  };
+type ViteReactRefreshWrapperPluginConfig = Omit<
+  BindingViteReactRefreshWrapperPluginConfig,
+  'include' | 'exclude'
+> & {
+  include?: StringOrRegExp | StringOrRegExp[];
+  exclude?: StringOrRegExp | StringOrRegExp[];
+};
+
+/**
+ * This plugin should not be used for Rolldown.
+ */
+export function oxcRuntimePlugin(): BuiltinPlugin {
+  const builtinPlugin = new BuiltinPlugin('builtin:oxc-runtime');
+  return makeBuiltinPluginCallable(builtinPlugin);
+}
 
 export function viteReactRefreshWrapperPlugin(
   config: ViteReactRefreshWrapperPluginConfig,
@@ -130,21 +118,6 @@ export function viteReactRefreshWrapperPlugin(
     config.include = normalizedStringOrRegex(config.include);
     config.exclude = normalizedStringOrRegex(config.exclude);
   }
-  const builtinPlugin = new BuiltinPlugin(
-    'builtin:vite-react-refresh-wrapper',
-    config,
-  );
+  const builtinPlugin = new BuiltinPlugin('builtin:vite-react-refresh-wrapper', config);
   return makeBuiltinPluginCallable(builtinPlugin);
-}
-
-export function viteHtmlInlineProxyPlugin(
-  config: BindingViteHtmlInlineProxyPluginConfig,
-): BuiltinPlugin {
-  return new BuiltinPlugin('builtin:vite-html-inline-proxy', config);
-}
-
-export function viteAssetImportMetaUrlPlugin(
-  config: BindingViteAssetImportMetaUrlPluginConfig,
-): BuiltinPlugin {
-  return new BuiltinPlugin('builtin:vite-asset-import-meta-url', config);
 }

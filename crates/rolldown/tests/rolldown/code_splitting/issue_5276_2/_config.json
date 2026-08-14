@@ -1,0 +1,17 @@
+{
+  "config": {
+    "codeSplitting": {
+      "groups": [
+        {
+          "name": "imp",
+          "test": "imp"
+        }
+      ]
+    }
+  },
+  "configVariants": [
+    {
+      "format": "cjs"
+    }
+  ]
+}

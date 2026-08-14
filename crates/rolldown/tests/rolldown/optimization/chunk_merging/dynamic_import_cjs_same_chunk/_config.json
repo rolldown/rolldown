@@ -1,0 +1,11 @@
+{
+  "config": {
+    "external": ["node:assert"]
+  },
+  "configVariants": [
+    {
+      "format": "cjs"
+    }
+  ],
+  "snapshotOutputStats": true
+}

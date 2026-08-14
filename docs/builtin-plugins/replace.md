@@ -37,7 +37,12 @@ export default defineConfig({
 - **Type:** `[string, string]`
 - **Default:** `["\\b", "\\b(?!\\.)"]`
 
-Customizes how strings are matched. The default ensures word boundaries and prevents replacing property access (e.g., won't replace `process` in `process.env`).
+Customizes how each key is matched. A key only matches when it's surrounded by these two patterns:
+
+- `delimiters[0]` (**left**): what must come right before the key.
+- `delimiters[1]` (**right**): what must come right after the key.
+
+Both are regular expressions. The default `["\\b", "\\b(?!\\.)"]` matches a key only at word boundaries and skips property accesses, so `process` in `process.env` is left untouched.
 
 ### `preventAssignment`
 
@@ -47,10 +52,7 @@ Customizes how strings are matched. The default ensures word boundaries and prev
 Prevents replacing strings in variable declarations.
 
 ```js
-replacePlugin(
-  { 'DEBUG': 'false' },
-  { preventAssignment: true },
-);
+replacePlugin({ DEBUG: 'false' }, { preventAssignment: true });
 
 // const DEBUG = true;  // Not replaced (assignment)
 // console.log(DEBUG);  // Replaced with `false`
@@ -64,10 +66,7 @@ replacePlugin(
 Automatically replaces `typeof` checks for object paths.
 
 ```js
-replacePlugin(
-  { 'process.env.NODE_ENV': JSON.stringify('production') },
-  { objectGuards: true },
-);
+replacePlugin({ 'process.env.NODE_ENV': JSON.stringify('production') }, { objectGuards: true });
 
 // Also replaces:
 // typeof process → "object"
@@ -95,8 +94,8 @@ const apiV2 = API_URL_V2;
 const api = API_URL;
 
 replacePlugin({
-  'API_URL': '"https://api.example.com"',
-  'API_URL_V2': '"https://api.example.com/v2"',
+  API_URL: '"https://api.example.com"',
+  API_URL_V2: '"https://api.example.com/v2"',
 });
 
 // Without length sorting (❌ wrong):
@@ -122,7 +121,7 @@ const currentEnv = env;
 const environment = getEnvironment();
 const config = process.env.NODE_ENV;
 
-replacePlugin({ 'env': '"production"' });
+replacePlugin({ env: '"production"' });
 
 // Output:
 // const currentEnv = "production";           ✅ 'env' as standalone word
@@ -148,12 +147,12 @@ This behavior ensures that replacing `env` doesn't accidentally break `environme
 ```js
 // Before (@rollup/plugin-replace)
 replace({
-  values: { '__VERSION__': () => getVersion() },
+  values: { __VERSION__: () => getVersion() },
   include: ['src/**/*.js'],
 });
 
 // After (rolldown)
 replacePlugin({
-  '__VERSION__': JSON.stringify(getVersion()),
+  __VERSION__: JSON.stringify(getVersion()),
 });
 ```

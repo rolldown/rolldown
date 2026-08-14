@@ -1,4 +1,4 @@
-import assert from 'node:assert'
+import assert from 'node:assert/strict'
 assert.deepEqual(require('./cjs'), {
   foo: process
 })

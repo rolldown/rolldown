@@ -41,7 +41,7 @@ function test5() {
 ```diff
 ===================================================================
 --- esbuild	/out.js
-+++ rolldown	
++++ rolldown
 @@ -1,31 +0,0 @@
 -function test1() {
 -  function add(n, t) {

@@ -1,6 +1,6 @@
 if (true) {
-  const foo = 'foo' + globalThis.foo
+  const foo = 'foo' + globalThis.foo;
   setTimeout(() => {
-    globalThis.array.push(foo)
-  }, 100)
+    globalThis.array.push(foo);
+  }, 100);
 }

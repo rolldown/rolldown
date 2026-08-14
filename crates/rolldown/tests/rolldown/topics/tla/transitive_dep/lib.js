@@ -1,3 +1,3 @@
-import { value as tlaValue } from './tla'
+import { value as tlaValue } from './tla';
 
-export const value = tlaValue + '+lib'
+export const value = tlaValue + '+lib';

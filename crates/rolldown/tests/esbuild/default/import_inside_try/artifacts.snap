@@ -11,6 +11,6 @@ try {
 	import("nope1");
 	await import("nope2");
 } catch {}
-
 //#endregion
+
 ```

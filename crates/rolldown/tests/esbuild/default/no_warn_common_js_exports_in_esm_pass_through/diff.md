@@ -11,9 +11,9 @@ module.exports = 3;
 let foo = 1;
 exports.foo = 2;
 module.exports = 3;
-
 //#endregion
 export { foo };
+
 ```
 ### diff
 ```diff
@@ -37,15 +37,13 @@ module.exports = foo;
 ```
 ### rolldown
 ```js
-import { t as __commonJSMin } from "./chunk.js";
+import { t as __commonJSMin } from "./rolldown-runtime.js";
 import { foo } from "bar";
-
 //#region import-in-cjs.js
 var require_import_in_cjs = /* @__PURE__ */ __commonJSMin(((exports, module) => {
 	exports.foo = foo;
 	module.exports = foo;
 }));
-
 //#endregion
 export default require_import_in_cjs();
 
@@ -56,7 +54,7 @@ export default require_import_in_cjs();
 --- esbuild	/out/import-in-cjs.js
 +++ rolldown	import-in-cjs.js
 @@ -1,3 +1,7 @@
-+import {t as __commonJSMin} from "./chunk.js";
++import {t as __commonJSMin} from "./rolldown-runtime.js";
  import {foo} from "bar";
 -exports.foo = foo;
 -module.exports = foo;
@@ -74,13 +72,11 @@ console.log(module, exports);
 ```
 ### rolldown
 ```js
-import { t as __commonJSMin } from "./chunk.js";
-
+import { t as __commonJSMin } from "./rolldown-runtime.js";
 //#region no-warnings-here.js
 var require_no_warnings_here = /* @__PURE__ */ __commonJSMin(((exports, module) => {
 	console.log(module, exports);
 }));
-
 //#endregion
 export default require_no_warnings_here();
 
@@ -92,7 +88,7 @@ export default require_no_warnings_here();
 +++ rolldown	no-warnings-here.js
 @@ -1,1 +1,5 @@
 -console.log(module, exports);
-+import {t as __commonJSMin} from "./chunk.js";
++import {t as __commonJSMin} from "./rolldown-runtime.js";
 +var require_no_warnings_here = __commonJSMin((exports, module) => {
 +    console.log(module, exports);
 +});

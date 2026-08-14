@@ -1,0 +1,253 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## barrel.js
+
+```js
+//#region barrel.js
+var init_barrel = require("./rolldown-runtime.js").__esmMin((() => {}));
+//#endregion
+Object.defineProperty(exports, "init_barrel", {
+	enumerable: true,
+	get: function() {
+		return init_barrel;
+	}
+});
+
+```
+
+## entry-a.js
+
+```js
+const require_rolldown_runtime = require("./rolldown-runtime.js");
+require("./barrel.js");
+//#region a.cjs
+var require_a = /* @__PURE__ */ require_rolldown_runtime.__commonJSMin(((exports) => {
+	exports.a = "a";
+}));
+var import_a;
+function init_barrel_cjs_0() {
+	return (init_barrel_cjs_0 = require_rolldown_runtime.__esmMin((() => {
+		import_a = require_a();
+	})))();
+}
+//#endregion
+//#region forwarder-a.mjs
+var forwarder_a_exports = /* @__PURE__ */ require_rolldown_runtime.__exportAll({ a: () => import_a.a });
+//#endregion
+//#region entry-a.cjs
+const { a } = (require_rolldown_runtime.__esmMin((() => {
+	init_barrel_cjs_0();
+}))(), require_rolldown_runtime.__toCommonJS(forwarder_a_exports));
+module.exports = { a };
+//#endregion
+
+```
+
+## entry-b.js
+
+```js
+const require_rolldown_runtime = require("./rolldown-runtime.js");
+require("./barrel.js");
+//#region b.cjs
+var require_b = /* @__PURE__ */ require_rolldown_runtime.__commonJSMin(((exports) => {
+	exports.b = "b";
+}));
+var import_b;
+function init_barrel_cjs_1() {
+	return (init_barrel_cjs_1 = require_rolldown_runtime.__esmMin((() => {
+		import_b = require_b();
+	})))();
+}
+//#endregion
+//#region forwarder-b.mjs
+var forwarder_b_exports = /* @__PURE__ */ require_rolldown_runtime.__exportAll({ b: () => import_b.b });
+//#endregion
+//#region entry-b.cjs
+const { b } = (require_rolldown_runtime.__esmMin((() => {
+	init_barrel_cjs_1();
+}))(), require_rolldown_runtime.__toCommonJS(forwarder_b_exports));
+module.exports = { b };
+//#endregion
+
+```
+
+## entry-c.js
+
+```js
+Object.defineProperty(exports, Symbol.toStringTag, { value: "Module" });
+const require_rolldown_runtime = require("./rolldown-runtime.js");
+//#region side.js
+var s;
+function init_side() {
+	return (init_side = require_rolldown_runtime.__esmMin((() => {
+		s = "side";
+	})))();
+}
+//#endregion
+//#region entry-c.mjs
+var c;
+function init_entry_c() {
+	return (init_entry_c = require_rolldown_runtime.__esmMin((() => {
+		init_side();
+		c = s;
+	})))();
+}
+//#endregion
+init_entry_c();
+exports.c = c;
+
+```
+
+## rolldown-runtime.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+Object.defineProperty(exports, "__commonJSMin", {
+	enumerable: true,
+	get: function() {
+		return __commonJSMin;
+	}
+});
+Object.defineProperty(exports, "__esmMin", {
+	enumerable: true,
+	get: function() {
+		return __esmMin;
+	}
+});
+Object.defineProperty(exports, "__exportAll", {
+	enumerable: true,
+	get: function() {
+		return __exportAll;
+	}
+});
+Object.defineProperty(exports, "__toCommonJS", {
+	enumerable: true,
+	get: function() {
+		return __toCommonJS;
+	}
+});
+
+```
+
+# Variant: on-demand: [on_demand_wrapping: true]
+
+## Assets
+
+### barrel.js
+
+```js
+//#region barrel.js
+var init_barrel = require("./rolldown-runtime.js").__esmMin((() => {}));
+//#endregion
+Object.defineProperty(exports, "init_barrel", {
+	enumerable: true,
+	get: function() {
+		return init_barrel;
+	}
+});
+
+```
+
+### entry-a.js
+
+```js
+const require_rolldown_runtime = require("./rolldown-runtime.js");
+require("./barrel.js");
+//#region a.cjs
+var require_a = /* @__PURE__ */ require_rolldown_runtime.__commonJSMin(((exports) => {
+	exports.a = "a";
+}));
+var import_a;
+function init_barrel_cjs_0() {
+	return (init_barrel_cjs_0 = require_rolldown_runtime.__esmMin((() => {
+		import_a = require_a();
+	})))();
+}
+//#endregion
+//#region forwarder-a.mjs
+var forwarder_a_exports = /* @__PURE__ */ require_rolldown_runtime.__exportAll({ a: () => import_a.a });
+//#endregion
+//#region entry-a.cjs
+const { a } = (require_rolldown_runtime.__esmMin((() => {
+	init_barrel_cjs_0();
+}))(), require_rolldown_runtime.__toCommonJS(forwarder_a_exports));
+module.exports = { a };
+//#endregion
+
+```
+
+### entry-b.js
+
+```js
+const require_rolldown_runtime = require("./rolldown-runtime.js");
+require("./barrel.js");
+//#region b.cjs
+var require_b = /* @__PURE__ */ require_rolldown_runtime.__commonJSMin(((exports) => {
+	exports.b = "b";
+}));
+var import_b;
+function init_barrel_cjs_1() {
+	return (init_barrel_cjs_1 = require_rolldown_runtime.__esmMin((() => {
+		import_b = require_b();
+	})))();
+}
+//#endregion
+//#region forwarder-b.mjs
+var forwarder_b_exports = /* @__PURE__ */ require_rolldown_runtime.__exportAll({ b: () => import_b.b });
+//#endregion
+//#region entry-b.cjs
+const { b } = (require_rolldown_runtime.__esmMin((() => {
+	init_barrel_cjs_1();
+}))(), require_rolldown_runtime.__toCommonJS(forwarder_b_exports));
+module.exports = { b };
+//#endregion
+
+```
+
+### entry-c.js
+
+```js
+Object.defineProperty(exports, Symbol.toStringTag, { value: "Module" });
+require("./rolldown-runtime.js");
+//#region side.js
+//#endregion
+//#region entry-c.mjs
+const c = "side";
+//#endregion
+exports.c = c;
+
+```
+
+### rolldown-runtime.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+Object.defineProperty(exports, "__commonJSMin", {
+	enumerable: true,
+	get: function() {
+		return __commonJSMin;
+	}
+});
+Object.defineProperty(exports, "__esmMin", {
+	enumerable: true,
+	get: function() {
+		return __esmMin;
+	}
+});
+Object.defineProperty(exports, "__exportAll", {
+	enumerable: true,
+	get: function() {
+		return __exportAll;
+	}
+});
+Object.defineProperty(exports, "__toCommonJS", {
+	enumerable: true,
+	get: function() {
+		return __toCommonJS;
+	}
+});
+
+```

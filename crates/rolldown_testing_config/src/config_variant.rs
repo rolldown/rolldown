@@ -1,10 +1,13 @@
 use rolldown_common::{
-  AddonOutputOption, BundlerOptions, ExperimentalOptions, InlineConstOption, OptimizationOption,
-  OutputExports, OutputFormat, PreserveEntrySignatures, TreeshakeOptions, deserialize_inline_const,
+  AddonOutputOption, BundlerOptions, ChunkOptimizationOption, CodeSplittingMode, CommentsOptions,
+  ExperimentalOptions, InlineConstOption, OptimizationOption, OutputExports, OutputFormat,
+  PreserveEntrySignatures, StrictMode, TreeshakeOptions, deserialize_inline_const,
 };
 use schemars::JsonSchema;
 use serde::Deserialize;
 use std::fmt::Write;
+
+use crate::test_meta::ExpectedExecutionFailure;
 
 #[derive(Deserialize, JsonSchema, Default)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
@@ -15,8 +18,10 @@ pub struct ConfigVariant {
   pub name: Option<String>,
   pub exports: Option<OutputExports>,
   pub strict_execution_order: Option<bool>,
+  pub strict: Option<StrictMode>,
   pub entry_filenames: Option<String>,
-  pub inline_dynamic_imports: Option<bool>,
+  pub code_splitting: Option<CodeSplittingMode>,
+  pub dynamic_import_in_cjs: Option<bool>,
   pub preserve_entry_signatures: Option<PreserveEntrySignatures>,
   pub treeshake: Option<TreeshakeOptions>,
   pub minify_internal_exports: Option<bool>,
@@ -32,12 +37,18 @@ pub struct ConfigVariant {
   pub footer: Option<String>,
   pub intro: Option<String>,
   pub outro: Option<String>,
+  pub comments: Option<CommentsOptions>,
+  pub chunk_optimization: Option<ChunkOptimizationOption>,
   // --- non-bundler options are start with `_`
   /// Whether to include the output in the snapshot for this config variant.
   #[serde(rename = "_snapshot")]
   pub snapshot: Option<bool>,
   #[serde(rename = "_configName")]
   pub config_name: Option<String>,
+  /// If set, this configuration must fail while executing its generated output. This is not
+  /// inherited from the base configuration so each variant's known failure stays explicit.
+  #[serde(rename = "_expectExecutionFailure")]
+  pub expect_execution_failure: Option<ExpectedExecutionFailure>,
 }
 
 impl ConfigVariant {
@@ -56,14 +67,19 @@ impl ConfigVariant {
       config.name = Some(name.clone());
     }
     if let Some(strict_execution_order) = &self.strict_execution_order {
-      config.experimental.get_or_insert_default().strict_execution_order =
-        Some(*strict_execution_order);
+      config.strict_execution_order = Some(*strict_execution_order);
+    }
+    if let Some(strict) = &self.strict {
+      config.strict = Some(*strict);
     }
     if let Some(entry_filenames) = &self.entry_filenames {
       config.entry_filenames = Some(entry_filenames.clone().into());
     }
-    if let Some(inline_dynamic_imports) = &self.inline_dynamic_imports {
-      config.inline_dynamic_imports = Some(*inline_dynamic_imports);
+    if let Some(code_splitting) = &self.code_splitting {
+      config.code_splitting = Some(code_splitting.clone());
+    }
+    if let Some(dynamic_import_in_cjs) = &self.dynamic_import_in_cjs {
+      config.dynamic_import_in_cjs = Some(*dynamic_import_in_cjs);
     }
     if let Some(preserve_entry_signatures) = &self.preserve_entry_signatures {
       config.preserve_entry_signatures = Some(*preserve_entry_signatures);
@@ -118,6 +134,15 @@ impl ConfigVariant {
     if let Some(outro) = &self.outro {
       config.outro = Some(AddonOutputOption::String(Some(outro.clone())));
     }
+    if let Some(comments) = &self.comments {
+      config.comments = Some(*comments);
+    }
+    if let Some(chunk_optimization) = &self.chunk_optimization {
+      config.experimental = Some(ExperimentalOptions {
+        chunk_optimization: Some(*chunk_optimization),
+        ..config.experimental.unwrap_or_default()
+      });
+    }
     config
   }
 
@@ -138,8 +163,14 @@ impl ConfigVariant {
     if let Some(strict_execution_order) = &self.strict_execution_order {
       fields.push(format!("strict_execution_order: {strict_execution_order:?}"));
     }
-    if let Some(inline_dynamic_imports) = &self.inline_dynamic_imports {
-      fields.push(format!("inline_dynamic_imports: {inline_dynamic_imports:?}"));
+    if let Some(strict) = &self.strict {
+      fields.push(format!("strict: {strict:?}"));
+    }
+    if let Some(code_splitting) = &self.code_splitting {
+      fields.push(format!("code_splitting: {code_splitting}"));
+    }
+    if let Some(dynamic_import_in_cjs) = &self.dynamic_import_in_cjs {
+      fields.push(format!("dynamic_import_in_cjs: {dynamic_import_in_cjs:?}"));
     }
     if let Some(preserve_entry_signatures) = &self.preserve_entry_signatures {
       fields.push(format!("preserve_entry_signatures: {preserve_entry_signatures:?}"));
@@ -170,6 +201,12 @@ impl ConfigVariant {
     }
     if let Some(minify) = &self.minify {
       fields.push(format!("minify: {minify:?}"));
+    }
+    if let Some(comments) = &self.comments {
+      fields.push(format!("comments: {comments}"));
+    }
+    if let Some(chunk_optimization) = &self.chunk_optimization {
+      fields.push(format!("chunk_optimization: {chunk_optimization:?}"));
     }
     let mut result = String::new();
     self.config_name.as_ref().inspect(|config_name| {

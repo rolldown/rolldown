@@ -1,6 +1,10 @@
-use oxc::ast::{Comment, ast::NewExpression};
+use oxc::ast::{
+  Comment,
+  ast::{Expression, NewExpression},
+};
 use rolldown_common::{ImportKind, ImportRecordMeta, ModuleType, get_leading_comment};
 use rolldown_ecmascript_utils::ExpressionExt;
+use rolldown_utils::dataurl::is_data_url;
 
 use super::AstScanner;
 
@@ -25,31 +29,44 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
       return;
     }
 
-    let Some(first_arg_string_literal) = expr
-      .arguments
-      .first()
-      .and_then(|arg| arg.as_expression().and_then(|expr| expr.as_string_literal()))
-    else {
+    let Some(first_arg) = expr.arguments.first().and_then(|arg| arg.as_expression()) else {
       return;
     };
+
+    let (path, first_arg_span) = match first_arg {
+      Expression::StringLiteral(lit) => (&lit.value, lit.span),
+      Expression::TemplateLiteral(tpl) if tpl.is_no_substitution_template() => {
+        let Some(value) = &tpl.quasis[0].value.cooked else {
+          return;
+        };
+        (value, tpl.span)
+      }
+      _ => return,
+    };
+
     let has_leading_ignore_comment = get_leading_comment(
       self.immutable_ctx.comments,
-      first_arg_string_literal.span,
+      first_arg_span,
       Some(|comment: &Comment| comment.is_vite()),
     )
     .is_some();
     if has_leading_ignore_comment {
       return;
     }
-    let path = &first_arg_string_literal.value;
 
-    if path.starts_with("data:") {
+    if is_data_url(path) {
       return;
     }
 
-    let idx =
-      self.add_import_record(path, ImportKind::NewUrl, expr.span, ImportRecordMeta::empty(), None);
+    let idx = self.add_import_record(
+      path,
+      ImportKind::NewUrl,
+      first_arg_span,
+      expr.span,
+      ImportRecordMeta::empty(),
+      None,
+    );
     self.result.import_records[idx].asserted_module_type = Some(ModuleType::Asset);
-    self.result.new_url_references.insert(expr.span, idx);
+    self.result.new_url_references.insert(expr.node_id(), idx);
   }
 }

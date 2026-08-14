@@ -24,6 +24,6 @@ __decorate([
 	__decorateMetadata("design:returntype", void 0)
 ], Demo.prototype, "foo", null);
 new Demo();
-
 //#endregion
+
 ```

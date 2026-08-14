@@ -62,7 +62,7 @@ impl Plugin for ViteJsonPlugin {
           serde_json::to_string(&json)?,
           ")"
         )),
-        map: Some(SourceMap::default()),
+        map: SourceMap::default().into(),
         module_type: Some(ModuleType::Js),
         ..Default::default()
       }));
@@ -71,7 +71,7 @@ impl Plugin for ViteJsonPlugin {
     let value = serde_json::from_str(code)?;
     Ok(Some(HookTransformOutput {
       code: Some(data_to_esm(&value, self.named_exports)),
-      map: Some(SourceMap::default()),
+      map: SourceMap::default().into(),
       module_type: Some(ModuleType::Js),
       ..Default::default()
     }))

@@ -1,5 +1,6 @@
-use oxc_sourcemap::{ConcatSourceMapBuilder, SourceMap};
+use oxc_sourcemap::ConcatSourceMapBuilder;
 
+use crate::SourceMap;
 use crate::source::Source;
 
 #[derive(Default)]
@@ -35,16 +36,17 @@ impl<'source> SourceJoiner<'source> {
     self.prepend_source.push(Box::new(source));
   }
 
-  pub fn join(&self) -> (String, Option<SourceMap>) {
+  pub fn join(&mut self) -> (String, Option<SourceMap>) {
     let sources_len = self.prepend_source.len() + self.inner.len();
-    let sources_iter = self.prepend_source.iter().chain(self.inner.iter()).enumerate();
 
-    let size_hint_of_ret_source =
-      sources_iter.clone().map(|(_idx, source)| source.content().len()).sum::<usize>()
-        + sources_len;
+    let size_hint_of_ret_source = self
+      .prepend_source
+      .iter()
+      .chain(self.inner.iter())
+      .map(|source| source.content().len())
+      .sum::<usize>()
+      + sources_len;
     let mut ret_source = String::with_capacity(size_hint_of_ret_source);
-
-    let mut line_offset = 0;
 
     let mut sourcemap_builder = self.enable_sourcemap.then(|| {
       ConcatSourceMapBuilder::with_capacity(
@@ -54,19 +56,38 @@ impl<'source> SourceJoiner<'source> {
         self.token_chunks_len,
       )
     });
-    for (index, source) in sources_iter {
-      if let Some(sourcemap_builder) = &mut sourcemap_builder {
-        source.sourcemap().inspect(|map| {
+    if let Some(sourcemap_builder) = &mut sourcemap_builder {
+      let mut line_offset = 0;
+      // Move exclusively owned maps into the builder. A caller may still pass
+      // a shared source by reference; keep borrowing that map so its mappings
+      // are preserved, then copy only its borrowed strings when detaching.
+      for (index, source) in self.prepend_source.iter_mut().chain(self.inner.iter_mut()).enumerate()
+      {
+        ret_source.push_str(source.content());
+        if let Some(map) = source.take_sourcemap() {
+          sourcemap_builder.add_sourcemap_owned(map, line_offset);
+        } else if let Some(map) = source.sourcemap() {
           sourcemap_builder.add_sourcemap(map, line_offset);
-        });
+        }
+        // The line count only advances the offset for a *following* source, so
+        // scan it inside this branch — never for the final source, which can be
+        // a whole chunk appended without a pre-computed count.
+        if index < sources_len - 1 {
+          ret_source.push('\n');
+          line_offset += source.lines_count() + 1; // +1 for the newline
+        }
       }
-      ret_source.push_str(source.content());
-      if index < sources_len - 1 {
-        ret_source.push('\n');
-        line_offset += source.lines_count() + 1; // +1 for the newline
+    } else {
+      // Without a sourcemap there is no line offset to maintain. Avoid scanning
+      // every source for newlines on this common path.
+      for (index, source) in self.prepend_source.iter().chain(self.inner.iter()).enumerate() {
+        ret_source.push_str(source.content());
+        if index < sources_len - 1 {
+          ret_source.push('\n');
+        }
       }
     }
-    (ret_source, sourcemap_builder.map(ConcatSourceMapBuilder::into_sourcemap))
+    (ret_source, sourcemap_builder.map(|builder| builder.into_owned_sourcemap().into_inner()))
   }
 
   fn accumulate_sourcemap_data_size(&mut self, hint: &SourceMap) {
@@ -106,7 +127,7 @@ fn test_concat_sourcemaps() {
       ..CodegenOptions::default()
     })
     .build(&ret1.program);
-  source_joiner.append_source(SourceMapSource::new(code, map.as_ref().unwrap().clone()));
+  source_joiner.append_source(SourceMapSource::new(code, map.unwrap().into_owned()));
 
   let (content, map) = source_joiner.join();
 
@@ -127,8 +148,50 @@ console.log(foo);
 (0:12) "1; " --> (3:12) "1;\n"
 (0:15) "console." --> (4:0) "console."
 (0:23) "log(" --> (4:8) "log("
-(0:27) "foo)" --> (4:12) "foo)"
-(0:31) ";\n" --> (4:16) ";\n"
+(0:27) "foo" --> (4:12) "foo"
+(0:30) ");\n" --> (4:15) ");\n"
 "#
   );
+}
+
+#[test]
+fn test_concat_mixed_owned_and_borrowed_sourcemaps() {
+  use std::borrow::Cow;
+
+  use crate::{Source, SourceJoiner, SourceMap, SourceMapSource};
+  use oxc_sourcemap::Token;
+
+  fn map(filename: &str, source_content: &str) -> SourceMap {
+    SourceMap::new(
+      None,
+      vec![],
+      None,
+      vec![Cow::Owned(filename.to_string())],
+      vec![Some(Cow::Owned(source_content.to_string()))],
+      vec![Token::new(0, 0, 0, 0, Some(0), None)].into_boxed_slice(),
+      None,
+    )
+  }
+
+  // Callers may still pass a shared source that cannot yield ownership of its map.
+  let borrowed_source: Box<dyn Source + Send + Sync> = Box::new(SourceMapSource::new(
+    "borrowed();".to_string(),
+    map("borrowed.js", "borrowed source"),
+  ));
+
+  let mut joiner = SourceJoiner::default();
+  joiner.append_source(&borrowed_source);
+  joiner
+    .append_source(SourceMapSource::new("owned();".to_string(), map("owned.js", "owned source")));
+
+  let (content, map) = joiner.join();
+  let map = map.expect("both input sourcemaps should be preserved");
+
+  assert_eq!(content, "borrowed();\nowned();");
+  assert_eq!(map.get_sources().collect::<Vec<_>>(), ["borrowed.js", "owned.js"]);
+  assert_eq!(map.get_source_content(0), Some("borrowed source"));
+  assert_eq!(map.get_source_content(1), Some("owned source"));
+  assert_eq!(map.get_token(0).and_then(|token| token.get_source_id()), Some(0));
+  assert_eq!(map.get_token(1).map(|token| token.get_dst_line()), Some(1));
+  assert_eq!(map.get_token(1).and_then(|token| token.get_source_id()), Some(1));
 }

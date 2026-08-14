@@ -28,12 +28,12 @@ concurrency:
 jobs:
   update-rollup:
     name: Update Rollup Submodule
-    runs-on: ubuntu-latest
+    runs-on: namespace-profile-linux-x64-default
     permissions:
       contents: write # for create-pull-request
       pull-requests: write # for create-pull-request
     steps:
-      - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           submodules: true
           fetch-depth: 0
@@ -99,13 +99,17 @@ jobs:
 
       - name: Setup Rust
         if: steps.check-update.outputs.update_needed == 'true'
-        uses: oxc-project/setup-rust@c8224157c0bf235aabc633e8cd50d344f087a7de # v1.0.12
+        uses: oxc-project/setup-rust@3d6fb132fbe7cdcb66bf8ec193911c2945369d12 # v1.0.17
         with:
           tools: just
-          cache-key: debug-build
+          cache-key: native-build
+          save-cache: false
 
       - if: steps.check-update.outputs.update_needed == 'true'
-        uses: oxc-project/setup-node@141eb77546de6702f92d320926403fe3f9f6a6f2 # v1.0.5
+        uses: voidzero-dev/setup-vp@313600b80b104eadebb9111787d37a2e83e014ca # v1.17.0
+        with:
+          version: '0.2.1'
+          cache: true
 
       - if: steps.check-update.outputs.update_needed == 'true'
         name: Build Native Rolldown
@@ -114,14 +118,20 @@ jobs:
       - name: Update rollup snapshots
         if: steps.check-update.outputs.update_needed == 'true'
         run: |
-          pnpm install
-          pnpm run --filter rollup-tests test --update
+          vp install
+          vp run --filter rollup-tests test --update
+
+      - uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0
+        id: app-token
+        with:
+          client-id: ${{ secrets.APP_ID }}
+          private-key: ${{ secrets.APP_PRIVATE_KEY }}
 
       - name: Create Pull Request
         if: steps.check-update.outputs.update_needed == 'true'
-        uses: peter-evans/create-pull-request@98357b18bf14b5342f975ff684046ec3b2a07725 # v8.0.0
+        uses: peter-evans/create-pull-request@5f6978faf089d4d20b00c7766989d076bb2fc7f1 # v8.1.1
         with:
-          token: ${{ secrets.ROLLDOWN_UPDATE_TEST_DEP_PAT }}
+          token: ${{ steps.app-token.outputs.token }}
           commit-message: 'chore(deps): update rollup submodule for tests to ${{ steps.get-latest-tag.outputs.LATEST_TAG }}'
           branch: update-rollup-submodule
           branch-suffix: timestamp
@@ -144,12 +154,12 @@ jobs:
 
   update-test262:
     name: Update Test262 Submodule
-    runs-on: ubuntu-latest
+    runs-on: namespace-profile-linux-x64-default
     permissions:
       contents: write # for create-pull-request
       pull-requests: write # for create-pull-request
     steps:
-      - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           submodules: true
           fetch-depth: 0
@@ -209,13 +219,17 @@ jobs:
 
       - name: Setup Rust
         if: steps.check-update.outputs.update_needed == 'true'
-        uses: oxc-project/setup-rust@c8224157c0bf235aabc633e8cd50d344f087a7de # v1.0.12
+        uses: oxc-project/setup-rust@3d6fb132fbe7cdcb66bf8ec193911c2945369d12 # v1.0.17
         with:
           tools: just
-          cache-key: debug-build
+          cache-key: native-build
+          save-cache: false
 
       - if: steps.check-update.outputs.update_needed == 'true'
-        uses: oxc-project/setup-node@141eb77546de6702f92d320926403fe3f9f6a6f2 # v1.0.5
+        uses: voidzero-dev/setup-vp@313600b80b104eadebb9111787d37a2e83e014ca # v1.17.0
+        with:
+          version: '0.2.1'
+          cache: true
 
       - name: Run Test
         if: steps.check-update.outputs.update_needed == 'true'
@@ -224,11 +238,17 @@ jobs:
           # Update snapshots https://insta.rs/docs/advanced/#controlling-snapshot-updating
           INSTA_UPDATE: always
 
+      - uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0
+        id: app-token
+        with:
+          client-id: ${{ secrets.APP_ID }}
+          private-key: ${{ secrets.APP_PRIVATE_KEY }}
+
       - name: Create Pull Request
         if: steps.check-update.outputs.update_needed == 'true'
-        uses: peter-evans/create-pull-request@98357b18bf14b5342f975ff684046ec3b2a07725 # v8.0.0
+        uses: peter-evans/create-pull-request@5f6978faf089d4d20b00c7766989d076bb2fc7f1 # v8.1.1
         with:
-          token: ${{ secrets.ROLLDOWN_UPDATE_TEST_DEP_PAT }}
+          token: ${{ steps.app-token.outputs.token }}
           commit-message: 'chore(deps): update test262 submodule for tests'
           branch: update-test262-submodule
           branch-suffix: timestamp
@@ -251,12 +271,12 @@ jobs:
 
   update-esbuild:
     name: Update esbuild Version
-    runs-on: ubuntu-latest
+    runs-on: namespace-profile-linux-x64-default
     permissions:
       contents: write # for create-pull-request
       pull-requests: write # for create-pull-request
     steps:
-      - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: true # for create-pull-request
 
@@ -305,6 +325,16 @@ jobs:
             echo "Update needed: $CURRENT_VERSION -> $LATEST_VERSION"
           fi
 
+      # make sure to run this step before updating the version in urls.ts
+      # as this step will call `git restore .` which will reset the changes to urls.ts
+      - name: Setup Rust
+        if: steps.check-update.outputs.update_needed == 'true'
+        uses: oxc-project/setup-rust@3d6fb132fbe7cdcb66bf8ec193911c2945369d12 # v1.0.17
+        with:
+          tools: just
+          cache-key: native-build
+          save-cache: false
+
       - name: Update esbuild version in urls.ts
         if: steps.check-update.outputs.update_needed == 'true'
         env:
@@ -316,27 +346,29 @@ jobs:
           echo "Updated ESBUILD_VERSION from $CURRENT_VERSION to $LATEST_VERSION"
           grep "const ESBUILD_VERSION = " scripts/src/esbuild-tests/urls.ts
 
-      - name: Setup Rust
-        if: steps.check-update.outputs.update_needed == 'true'
-        uses: oxc-project/setup-rust@c8224157c0bf235aabc633e8cd50d344f087a7de # v1.0.12
-        with:
-          tools: just
-          cache-key: debug-build
-
       - if: steps.check-update.outputs.update_needed == 'true'
-        uses: oxc-project/setup-node@141eb77546de6702f92d320926403fe3f9f6a6f2 # v1.0.5
+        uses: voidzero-dev/setup-vp@313600b80b104eadebb9111787d37a2e83e014ca # v1.17.0
+        with:
+          version: '0.2.1'
+          cache: true
 
       - name: Generate esbuild tests
         if: steps.check-update.outputs.update_needed == 'true'
         run: |
-          pnpm install
-          pnpm run --filter scripts gen-esbuild-tests all
+          vp install
+          vp run --filter scripts gen-esbuild-tests all
+
+      - uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0
+        id: app-token
+        with:
+          client-id: ${{ secrets.APP_ID }}
+          private-key: ${{ secrets.APP_PRIVATE_KEY }}
 
       - name: Create Pull Request
         if: steps.check-update.outputs.update_needed == 'true'
-        uses: peter-evans/create-pull-request@98357b18bf14b5342f975ff684046ec3b2a07725 # v8.0.0
+        uses: peter-evans/create-pull-request@5f6978faf089d4d20b00c7766989d076bb2fc7f1 # v8.1.1
         with:
-          token: ${{ secrets.ROLLDOWN_UPDATE_TEST_DEP_PAT }}
+          token: ${{ steps.app-token.outputs.token }}
           commit-message: 'chore(deps): update esbuild for tests to ${{ steps.get-latest-version.outputs.LATEST_VERSION }}'
           branch: update-esbuild-version
           branch-suffix: timestamp

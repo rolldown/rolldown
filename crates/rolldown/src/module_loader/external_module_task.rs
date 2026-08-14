@@ -2,20 +2,22 @@ use std::{path::Path, sync::Arc};
 
 use arcstr::ArcStr;
 use rolldown_common::{
-  ExternalModuleTaskResult, ModuleId, ModuleIdx, ModuleInfo, ModuleLoaderMsg, ResolvedExternal,
+  ExportsKind, ExternalModuleTaskResult, ModuleIdx, ModuleInfo, ModuleLoaderMsg, ResolvedExternal,
   ResolvedId,
 };
 use rolldown_error::BuildResult;
-use rolldown_utils::{ecmascript::legitimize_identifier_name, indexmap::FxIndexSet};
+use rolldown_utils::{commondir, ecmascript::legitimize_identifier_name, indexmap::FxIndexSet};
 use sugar_path::SugarPath;
+
+use rolldown_fs::FileSystem;
 
 use crate::ecmascript::ecma_module_view_factory::normalize_side_effects;
 
 use super::task_context::TaskContext;
 
 #[expect(clippy::rc_buffer)]
-pub struct ExternalModuleTask {
-  ctx: Arc<TaskContext>,
+pub struct ExternalModuleTask<Fs: FileSystem> {
+  ctx: Arc<TaskContext<Fs>>,
   module_idx: ModuleIdx,
   resolved_id: ResolvedId,
   user_defined_entries: Arc<Vec<(Option<ArcStr>, ResolvedId)>>,
@@ -23,9 +25,9 @@ pub struct ExternalModuleTask {
 }
 
 #[expect(clippy::rc_buffer)]
-impl ExternalModuleTask {
+impl<Fs: FileSystem> ExternalModuleTask<Fs> {
   pub fn new(
-    ctx: Arc<TaskContext>,
+    ctx: Arc<TaskContext<Fs>>,
     idx: ModuleIdx,
     resolved_id: ResolvedId,
     user_defined_entries: Arc<Vec<(Option<ArcStr>, ResolvedId)>>,
@@ -40,7 +42,6 @@ impl ExternalModuleTask {
         .ctx
         .tx
         .send(ModuleLoaderMsg::BuildErrors(errs.into_vec().into_boxed_slice()))
-        .await
         .expect("ModuleLoader: failed to send external module build errors - main thread terminated while processing errors");
     }
   }
@@ -48,9 +49,9 @@ impl ExternalModuleTask {
   async fn run_inner(&self) -> BuildResult<()> {
     let resolved_id = &self.resolved_id;
     let external_module_side_effects =
-      normalize_side_effects(&self.ctx.options, resolved_id, None, None, resolved_id.side_effects)
+      normalize_side_effects(&self.ctx.options, resolved_id, None, resolved_id.side_effects)
         .await?;
-    let id = ModuleId::new(&resolved_id.id);
+    let id = resolved_id.id.clone();
     self.ctx.plugin_driver.set_module_info(
       &id.clone(),
       Arc::new(ModuleInfo {
@@ -62,32 +63,29 @@ impl ExternalModuleTask {
         imported_ids: FxIndexSet::default(),
         dynamically_imported_ids: FxIndexSet::default(),
         exports: vec![],
+        input_format: ExportsKind::None,
       }),
     );
 
-    let need_renormalize_render_path = !matches!(resolved_id.external, ResolvedExternal::Absolute)
-      && Path::new(resolved_id.id.as_str()).is_absolute();
+    let need_renormalize_render_path =
+      !matches!(resolved_id.external, ResolvedExternal::Absolute) && resolved_id.id.is_path();
 
-    let file_name = if need_renormalize_render_path {
-      let entries_common_dir = commondir::CommonDir::try_new(
+    let file_name: ArcStr = if need_renormalize_render_path {
+      let entries_common_dir = commondir::common_dir(
         self.user_defined_entries.iter().map(|(_, resolved_id)| resolved_id.id.as_str()),
       )
       .expect("should have common dir for entries");
-      let relative_path =
-        Path::new(resolved_id.id.as_str()).relative(entries_common_dir.common_root());
-      relative_path.to_slash_lossy().into()
+      let relative_path = Path::new(resolved_id.id.as_str()).relative(&entries_common_dir);
+      ArcStr::from(relative_path.to_slash())
     } else {
-      resolved_id.id.clone()
+      resolved_id.id.as_arc_str().clone()
     };
 
-    let identifier_name = if need_renormalize_render_path {
-      Path::new(resolved_id.id.as_str())
-        .relative(&self.ctx.options.cwd)
-        .normalize()
-        .to_slash_lossy()
-        .into()
+    let identifier_name: ArcStr = if need_renormalize_render_path {
+      let relative_path = Path::new(resolved_id.id.as_str()).relative(&self.ctx.options.cwd);
+      ArcStr::from(relative_path.to_slash())
     } else {
-      resolved_id.id.clone()
+      resolved_id.id.as_arc_str().clone()
     };
     let legitimized_identifier_name = legitimize_identifier_name(&identifier_name);
     let msg = ModuleLoaderMsg::ExternalModuleDone(Box::new(ExternalModuleTaskResult {
@@ -98,7 +96,7 @@ impl ExternalModuleTask {
       side_effects: external_module_side_effects,
       need_renormalize_render_path,
     }));
-    self.ctx.tx.send(msg).await.expect(
+    self.ctx.tx.send(msg).expect(
       "ModuleLoader channel closed while sending external module completion - main thread terminated unexpectedly"
     );
     Ok(())

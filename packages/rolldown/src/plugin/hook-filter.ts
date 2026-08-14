@@ -1,24 +1,38 @@
-import type { TopLevelFilterExpression } from '@rolldown/pluginutils';
 import type { ModuleType } from '../index';
 import type { MaybeArray } from '../types/utils';
 import type { StringOrRegExp } from '../types/utils';
 
+/** @category Plugin APIs */
 export type GeneralHookFilter<Value = StringOrRegExp> =
   | MaybeArray<Value>
   | {
-    include?: MaybeArray<Value>;
-    exclude?: MaybeArray<Value>;
-  };
+      include?: MaybeArray<Value>;
+      exclude?: MaybeArray<Value>;
+    };
 
 interface FormalModuleTypeFilter {
   include?: ModuleType[];
 }
 
+/** @category Plugin APIs */
 export type ModuleTypeFilter = ModuleType[] | FormalModuleTypeFilter;
 
+/**
+ * A filter to be used to do a pre-test to determine whether the hook should be called.
+ *
+ * See [Plugin Hook Filters page](https://rolldown.rs/apis/plugin-api/hook-filters) for more details.
+ *
+ * @category Plugin APIs
+ */
 export interface HookFilter {
   /**
-   * This filter is used to do a pre-test to determine whether the hook should be called.
+   * A filter based on the module `id`.
+   *
+   * If the value is a string, it is treated as a glob pattern.
+   * The string type is not available for {@linkcode Plugin.resolveId | resolveId} hook.
+   *
+   * If the value is a regular expression, it is tested after the `id`'s path separators are normalized to forward slashes (`/`).
+   * This keeps the filter portable across operating systems without requiring the regular expression to match both `/` and `\`.
    *
    * @example
    * Include all `id`s that contain `node_modules` in the path.
@@ -42,7 +56,7 @@ export interface HookFilter {
    * ```
    * @example
    * Formal pattern to define includes and excludes.
-   * ```
+   * ```js
    * { id : {
    *   include: ['**'+'/foo/**', /bar/],
    *   exclude: ['**'+'/baz/**', /qux/]
@@ -50,10 +64,16 @@ export interface HookFilter {
    * ```
    */
   id?: GeneralHookFilter;
+  /**
+   * A filter based on the module's `moduleType`.
+   *
+   * Only available for {@linkcode Plugin.transform | transform} hook.
+   */
   moduleType?: ModuleTypeFilter;
+  /**
+   * A filter based on the module's code.
+   *
+   * Only available for {@linkcode Plugin.transform | transform} hook.
+   */
   code?: GeneralHookFilter;
 }
-
-export type TUnionWithTopLevelFilterExpressionArray<T> =
-  | T
-  | TopLevelFilterExpression[];

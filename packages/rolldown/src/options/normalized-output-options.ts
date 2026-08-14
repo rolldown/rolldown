@@ -1,70 +1,118 @@
 import type { RolldownPlugin } from '..';
 import type { BindingNormalizedOptions } from '../binding.cjs';
 import { lazyProp } from '../decorators/lazy';
-import type {
-  SourcemapIgnoreListOption,
-  SourcemapPathTransformOption,
-} from '../types/misc';
+import type { SourcemapIgnoreListOption, SourcemapPathTransformOption } from '../types/misc';
 import { PlainObjectLike } from '../types/plain-object-like';
 import type { StringOrRegExp } from '../types/utils';
 import type {
   AddonFunction,
   AssetFileNamesFunction,
   ChunkFileNamesFunction,
+  CommentsOptions,
   GlobalsFunction,
   MinifyOptions,
   OutputOptions,
 } from './output-options';
+// oxlint-disable-next-line no-unused-vars -- this is used in JSDoc links
+import type { ModuleFormat } from './output-options';
 
 type PathsFunction = (id: string) => string;
 
+/**
+ * A normalized version of {@linkcode ModuleFormat}.
+ * @category Plugin APIs
+ */
 export type InternalModuleFormat = 'es' | 'cjs' | 'iife' | 'umd';
 
+/** @category Plugin APIs */
 export interface NormalizedOutputOptions {
+  /** @see {@linkcode OutputOptions.name | name} */
   name: string | undefined;
+  /** @see {@linkcode OutputOptions.file | file} */
   file: string | undefined;
+  /** @see {@linkcode OutputOptions.dir | dir} */
   dir: string | undefined;
+  /** @see {@linkcode OutputOptions.entryFileNames | entryFileNames} */
   entryFileNames: string | ChunkFileNamesFunction;
+  /** @see {@linkcode OutputOptions.sourcemapFileNames | sourcemapFileNames} */
+  sourcemapFileNames: string | ChunkFileNamesFunction | undefined;
+  /** @see {@linkcode OutputOptions.chunkFileNames | chunkFileNames} */
   chunkFileNames: string | ChunkFileNamesFunction;
+  /** @see {@linkcode OutputOptions.assetFileNames | assetFileNames} */
   assetFileNames: string | AssetFileNamesFunction;
+  /** @see {@linkcode OutputOptions.format | format} */
   format: InternalModuleFormat;
+  /** @see {@linkcode OutputOptions.exports | exports} */
   exports: NonNullable<OutputOptions['exports']>;
+  /** @see {@linkcode OutputOptions.sourcemap | sourcemap} */
   sourcemap: boolean | 'inline' | 'hidden';
+  /** @see {@linkcode OutputOptions.sourcemapBaseUrl | sourcemapBaseUrl} */
   sourcemapBaseUrl: string | undefined;
-  cssEntryFileNames: string | ChunkFileNamesFunction;
-  cssChunkFileNames: string | ChunkFileNamesFunction;
+  /** @see {@linkcode OutputOptions.codeSplitting | codeSplitting} */
+  codeSplitting: boolean;
+  /** @deprecated Use `codeSplitting` instead. */
   inlineDynamicImports: boolean;
+  /** @see {@linkcode OutputOptions.dynamicImportInCjs | dynamicImportInCjs} */
+  dynamicImportInCjs: boolean;
+  /** @see {@linkcode OutputOptions.externalLiveBindings | externalLiveBindings} */
   externalLiveBindings: boolean;
+  /** @see {@linkcode OutputOptions.banner | banner} */
   banner: AddonFunction;
+  /** @see {@linkcode OutputOptions.footer | footer} */
   footer: AddonFunction;
+  /** @see {@linkcode OutputOptions.postBanner | postBanner} */
   postBanner: AddonFunction;
+  /** @see {@linkcode OutputOptions.postFooter | postFooter} */
   postFooter: AddonFunction;
+  /** @see {@linkcode OutputOptions.intro | intro} */
   intro: AddonFunction;
+  /** @see {@linkcode OutputOptions.outro | outro} */
   outro: AddonFunction;
+  /** @see {@linkcode OutputOptions.esModule | esModule} */
   esModule: boolean | 'if-default-prop';
+  /** @see {@linkcode OutputOptions.extend | extend} */
   extend: boolean;
+  /** @see {@linkcode OutputOptions.globals | globals} */
   globals: Record<string, string> | GlobalsFunction;
+  /** @see {@linkcode OutputOptions.paths | paths} */
   paths: Record<string, string> | PathsFunction | undefined;
+  /** @see {@linkcode OutputOptions.hashCharacters | hashCharacters} */
   hashCharacters: 'base64' | 'base36' | 'hex';
+  /** @see {@linkcode OutputOptions.sourcemapDebugIds | sourcemapDebugIds} */
   sourcemapDebugIds: boolean;
-  sourcemapIgnoreList:
-    | boolean
-    | SourcemapIgnoreListOption
-    | StringOrRegExp
-    | undefined;
+  /** @see {@linkcode OutputOptions.sourcemapExcludeSources | sourcemapExcludeSources} */
+  sourcemapExcludeSources: boolean;
+  /** @see {@linkcode OutputOptions.sourcemapIgnoreList | sourcemapIgnoreList} */
+  sourcemapIgnoreList: boolean | SourcemapIgnoreListOption | StringOrRegExp | undefined;
+  /** @see {@linkcode OutputOptions.sourcemapPathTransform | sourcemapPathTransform} */
   sourcemapPathTransform: SourcemapPathTransformOption | undefined;
+  /** @see {@linkcode OutputOptions.minify | minify} */
   minify: false | MinifyOptions | 'dce-only';
+  /**
+   * @deprecated Use `comments.legal` instead.
+   * @see {@linkcode OutputOptions.legalComments | legalComments}
+   */
   legalComments: 'none' | 'inline';
+  /** @see {@linkcode OutputOptions.comments | comments} */
+  comments: Required<CommentsOptions>;
+  /** @see {@linkcode OutputOptions.polyfillRequire | polyfillRequire} */
   polyfillRequire: boolean;
+  /** @see {@linkcode OutputOptions.plugins | plugins} */
   plugins: RolldownPlugin[];
+  /** @see {@linkcode OutputOptions.preserveModules | preserveModules} */
   preserveModules: boolean;
+  /** @see {@linkcode OutputOptions.virtualDirname | virtualDirname} */
   virtualDirname: string;
+  /** @see {@linkcode OutputOptions.preserveModulesRoot | preserveModulesRoot} */
   preserveModulesRoot?: string;
+  /** @see {@linkcode OutputOptions.topLevelVar | topLevelVar} */
   topLevelVar?: boolean;
+  /** @see {@linkcode OutputOptions.minifyInternalExports | minifyInternalExports} */
   minifyInternalExports?: boolean;
 }
 
-export class NormalizedOutputOptionsImpl extends PlainObjectLike
+export class NormalizedOutputOptionsImpl
+  extends PlainObjectLike
   implements NormalizedOutputOptions
 {
   constructor(
@@ -111,20 +159,12 @@ export class NormalizedOutputOptionsImpl extends PlainObjectLike
   }
 
   @lazyProp
+  get sourcemapFileNames(): string | ChunkFileNamesFunction | undefined {
+    return this.inner.sourcemapFilenames || this.outputOptions.sourcemapFileNames;
+  }
+  @lazyProp
   get sourcemapBaseUrl(): string | undefined {
     return this.inner.sourcemapBaseUrl ?? undefined;
-  }
-
-  @lazyProp
-  get cssEntryFileNames(): string | ChunkFileNamesFunction {
-    return this.inner.cssEntryFilenames ||
-      this.outputOptions.cssEntryFileNames!;
-  }
-
-  @lazyProp
-  get cssChunkFileNames(): string | ChunkFileNamesFunction {
-    return this.inner.cssChunkFilenames ||
-      this.outputOptions.cssChunkFileNames!;
   }
 
   @lazyProp
@@ -143,8 +183,21 @@ export class NormalizedOutputOptionsImpl extends PlainObjectLike
   }
 
   @lazyProp
+  get codeSplitting(): boolean {
+    return this.inner.codeSplitting;
+  }
+
+  /**
+   * @deprecated Use `codeSplitting` instead.
+   */
+  @lazyProp
   get inlineDynamicImports(): boolean {
-    return this.inner.inlineDynamicImports;
+    return !this.inner.codeSplitting;
+  }
+
+  @lazyProp
+  get dynamicImportInCjs(): boolean {
+    return this.inner.dynamicImportInCjs;
   }
 
   @lazyProp
@@ -213,12 +266,12 @@ export class NormalizedOutputOptionsImpl extends PlainObjectLike
   }
 
   @lazyProp
-  get sourcemapIgnoreList():
-    | boolean
-    | SourcemapIgnoreListOption
-    | StringOrRegExp
-    | undefined
-  {
+  get sourcemapExcludeSources(): boolean {
+    return this.inner.sourcemapExcludeSources;
+  }
+
+  @lazyProp
+  get sourcemapIgnoreList(): boolean | SourcemapIgnoreListOption | StringOrRegExp | undefined {
     return this.outputOptions.sourcemapIgnoreList;
   }
 
@@ -242,6 +295,16 @@ export class NormalizedOutputOptionsImpl extends PlainObjectLike
   @lazyProp
   get legalComments(): 'none' | 'inline' {
     return this.inner.legalComments;
+  }
+
+  @lazyProp
+  get comments(): Required<CommentsOptions> {
+    const c = this.inner.comments;
+    return {
+      legal: c.legal ?? true,
+      annotation: c.annotation ?? true,
+      jsdoc: c.jsdoc ?? true,
+    };
   }
 
   @lazyProp

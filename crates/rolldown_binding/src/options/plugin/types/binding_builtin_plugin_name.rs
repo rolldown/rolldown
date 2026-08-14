@@ -3,6 +3,8 @@ use napi_derive::napi;
 #[derive(Debug)]
 #[napi(string_enum)]
 pub enum BindingBuiltinPluginName {
+  #[napi(value = "builtin:bundle-analyzer")]
+  BundleAnalyzer,
   #[napi(value = "builtin:esm-external-require")]
   EsmExternalRequire,
   #[napi(value = "builtin:isolated-declaration")]
@@ -11,22 +13,10 @@ pub enum BindingBuiltinPluginName {
   Replace,
   #[napi(value = "builtin:vite-alias")]
   ViteAlias,
-  #[napi(value = "builtin:vite-asset")]
-  ViteAsset,
-  #[napi(value = "builtin:vite-asset-import-meta-url")]
-  ViteAssetImportMetaUrl,
   #[napi(value = "builtin:vite-build-import-analysis")]
   ViteBuildImportAnalysis,
-  #[napi(value = "builtin:vite-css")]
-  ViteCSS,
-  #[napi(value = "builtin:vite-css-post")]
-  ViteCSSPost,
   #[napi(value = "builtin:vite-dynamic-import-vars")]
   ViteDynamicImportVars,
-  #[napi(value = "builtin:vite-html")]
-  ViteHtml,
-  #[napi(value = "builtin:vite-html-inline-proxy")]
-  ViteHtmlInlineProxy,
   #[napi(value = "builtin:vite-import-glob")]
   ViteImportGlob,
   #[napi(value = "builtin:vite-json")]
@@ -45,10 +35,8 @@ pub enum BindingBuiltinPluginName {
   ViteResolve,
   #[napi(value = "builtin:vite-transform")]
   ViteTransform,
-  #[napi(value = "builtin:vite-wasm-fallback")]
-  ViteWasmFallback,
-  #[napi(value = "builtin:vite-wasm-helper")]
-  ViteWasmHelper,
   #[napi(value = "builtin:vite-web-worker-post")]
   ViteWebWorkerPost,
+  #[napi(value = "builtin:oxc-runtime")]
+  OxcRuntime,
 }

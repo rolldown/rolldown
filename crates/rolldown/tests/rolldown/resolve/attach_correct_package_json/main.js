@@ -1,6 +1,4 @@
-import assert from 'node:assert'
-import { value } from 'demo-lib'
+import assert from 'node:assert';
+import { value } from 'demo-lib';
 
-
-assert.strictEqual(value, 'yes')
-
+assert.strictEqual(value, 'yes');

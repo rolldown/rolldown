@@ -13,59 +13,95 @@ impl<'text> MagicString<'text> {
   /// A shorthand for `update_with(start, end, content, Default::default())`;
   pub fn update(
     &mut self,
-    start: usize,
-    end: usize,
+    start: u32,
+    end: u32,
     content: impl Into<CowStr<'text>>,
-  ) -> &mut Self {
+  ) -> Result<&mut Self, String> {
     self.update_with(start, end, content, Default::default())
   }
 
   pub fn update_with(
     &mut self,
-    start: usize,
-    end: usize,
+    start: u32,
+    end: u32,
     content: impl Into<CowStr<'text>>,
     opts: UpdateOptions,
-  ) -> &mut Self {
-    self.inner_update_with(start, end, content.into(), opts, true);
-    self
+  ) -> Result<&mut Self, String> {
+    self.inner_update_with(start, end, content.into(), opts, true)
   }
 
   // --- private
 
   pub(super) fn inner_update_with(
     &mut self,
-    start: usize,
-    end: usize,
+    start: u32,
+    end: u32,
     content: CowStr<'text>,
     opts: UpdateOptions,
-    panic_if_start_equal_end: bool,
-  ) -> &mut Self {
-    if panic_if_start_equal_end && start == end {
-      panic!("Cannot overwrite a zero-length range – use append_left or prepend_right instead")
+    error_if_start_equal_end: bool,
+  ) -> Result<&mut Self, String> {
+    if error_if_start_equal_end && start == end {
+      return Err(
+        "Cannot overwrite a zero-length range – use appendLeft or prependRight instead".to_string(),
+      );
     }
-    assert!(start < end);
-    self.split_at(start);
-    self.split_at(end);
+    if start >= end {
+      return Err(format!("end must be greater than start, got start: {start}, end: {end}"));
+    }
+    self.split_at(start)?;
+    self.split_at(end)?;
+
+    // Record the *whole* replaced range, not the start chunk's span: `start..end` may cross a
+    // boundary left by an earlier split, in which case the start chunk only covers part of it.
+    // Matches magic-string, which stores `original.slice(start, end)` here.
+    if opts.keep_original {
+      self.store_name(start, end);
+    }
 
     let start_idx = self.chunk_by_start.get(&start).copied().unwrap();
     let end_idx = self.chunk_by_end.get(&end).copied().unwrap();
 
-    let start_chunk = &mut self.chunks[start_idx];
-    start_chunk
-      .edit(content, EditOptions { overwrite: opts.overwrite, store_name: opts.keep_original });
+    if start_idx != end_idx {
+      // When the update range spans multiple chunks, we need to:
+      // 1. Detect if any chunk within the range has been moved (via `move()`). A moved
+      //    chunk's linked-list successor (`chunk.next`) will differ from its positional
+      //    successor (`chunk_by_start[chunk.end]`). Overwriting across such a boundary
+      //    is invalid because the chunks are no longer contiguous in the output.
+      // 2. Clear each interior/end chunk's content (set to "").
+      //
+      // This mirrors the JS magic-string `update()` implementation:
+      //   https://github.com/Rich-Harris/magic-string/blob/410fd4d/src/MagicString.js#L420-L428
+      let mut chunk_idx = start_idx;
+      loop {
+        let next_in_list = self.chunks[chunk_idx].next;
+        let chunk_end = self.chunks[chunk_idx].end();
+        let next_by_position = self.chunk_by_start.get(&chunk_end).copied();
 
-    let mut rest_chunk_idx = if start_idx != end_idx {
-      start_chunk.next.unwrap()
-    } else {
-      return self;
-    };
+        if next_in_list != next_by_position {
+          return Err("Cannot overwrite across a split point".to_string());
+        }
 
-    while rest_chunk_idx != end_idx {
-      let rest_chunk = &mut self.chunks[rest_chunk_idx];
-      rest_chunk.edit("".into(), Default::default());
-      rest_chunk_idx = rest_chunk.next.unwrap();
+        // Both are `None` when the walk runs off the end of the list without reaching
+        // `end_idx`, i.e. the range is not contiguous in the output — same failure as above.
+        let Some(next_idx) = next_in_list else {
+          return Err("Cannot overwrite across a split point".to_string());
+        };
+        chunk_idx = next_idx;
+        // Interior chunks always clear intro/outro (`Default` has `overwrite: true`),
+        // matching JS magic-string where `chunk.edit('', false)` passes
+        // `contentOnly=undefined` (falsy), so intro/outro are always cleared.
+        self.chunks[chunk_idx].edit("".into(), Default::default());
+
+        if chunk_idx == end_idx {
+          break;
+        }
+      }
     }
-    self
+
+    // Edit the start chunk last — only this chunk receives the replacement content
+    // and respects the caller's `overwrite` option (JS `contentOnly`).
+    self.chunks[start_idx]
+      .edit(content, EditOptions { overwrite: opts.overwrite, store_name: opts.keep_original });
+    Ok(self)
   }
 }

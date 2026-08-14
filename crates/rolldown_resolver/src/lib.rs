@@ -3,8 +3,6 @@
 mod resolver;
 mod resolver_config;
 
-pub mod error;
-
 pub use crate::resolver::{ResolveReturn, Resolver};
 
 pub use oxc_resolver::{ResolveError, TsConfig, TsconfigReferences};

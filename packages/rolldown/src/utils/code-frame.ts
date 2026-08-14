@@ -12,11 +12,7 @@ const LINE_TRUNCATE_LENGTH = 120;
 const MIN_CHARACTERS_SHOWN_AFTER_LOCATION = 10;
 const ELLIPSIS = '...';
 
-export function getCodeFrame(
-  source: string,
-  line: number,
-  column: number,
-): string {
+export function getCodeFrame(source: string, line: number, column: number): string {
   let lines = source.split('\n');
   // Needed if a plugin did not generate correct sourcemaps
   if (line > lines.length) return '';
@@ -47,14 +43,11 @@ export function getCodeFrame(
 
       let displayedLine = tabsToSpaces(sourceLine);
       if (displayedLine.length > maxLineLength) {
-        displayedLine = `${
-          displayedLine.slice(0, maxLineLength - ELLIPSIS.length)
-        }${ELLIPSIS}`;
+        displayedLine = `${displayedLine.slice(0, maxLineLength - ELLIPSIS.length)}${ELLIPSIS}`;
       }
       if (isErrorLine) {
-        const indicator = spaces(
-          digits + 2 + tabsToSpaces(sourceLine.slice(0, column)).length,
-        ) + '^';
+        const indicator =
+          spaces(digits + 2 + tabsToSpaces(sourceLine.slice(0, column)).length) + '^';
         return `${lineNumber}: ${displayedLine}\n${indicator}`;
       }
 

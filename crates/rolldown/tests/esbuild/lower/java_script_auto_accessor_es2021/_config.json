@@ -13,7 +13,10 @@
         "name": "ts-assign_ts-assign",
         "import": "ts-assign/ts-assign.ts"
       }
-    ]
+    ],
+    "transform": {
+      "target": "es2021"
+    }
   },
   "expectExecuted": false
 }

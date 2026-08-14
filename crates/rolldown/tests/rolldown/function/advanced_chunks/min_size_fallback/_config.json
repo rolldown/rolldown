@@ -1,6 +1,6 @@
 {
   "config": {
-    "advancedChunks": {
+    "codeSplitting": {
       "minSize": 1024,
       "groups": [
         {

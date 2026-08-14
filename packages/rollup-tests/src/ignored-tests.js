@@ -21,6 +21,7 @@ const ignoreTests = [
   "rollup@form@jsx@preserves-react: preserves React variable when preserving JSX output",
   "rollup@form@jsx@preserves-react-global: preserves React variable when preserving JSX output",
   "rollup@form@jsx@preserves-react-internal: preserves internal React variable when preserving JSX output",
+  "rollup@form@jsx@react-jsx-declarations-with-key-attribute: JSX with react-jsx uses correct semicolon positions in variable declarations with key attributes",
   "rollup@form@jsx@transpiles-automatic-with-defaults: transpiles JSX for react",
   "rollup@form@jsx@transpiles-classic-with-defaults: transpiles JSX for react",
   "rollup@form@jsx@transpiles-empty-fragment: transpiles JSX for react",
@@ -69,6 +70,16 @@ const ignoreTests = [
   "rollup@function@error-parse-unknown-extension: throws with an extended error message when failing to parse a file without .(m)js extension",
   "rollup@function@error-parse-json: throws with an extended error message when failing to parse a file with \".json\" extension",
 
+  // ## Assigning to bundle is not supported
+  "rollup@function@error-file-name-absolute-path: throws when a plugin adds an absolute file name to the output bundle",
+  "rollup@function@error-file-name-deep-traversal: throws when a file name resolves outside the output directory after normalizing deep \"..\" segments",
+  "rollup@function@error-file-name-dot-dot: throws when a plugin adds \"..\" as a file name to the output bundle",
+  "rollup@function@error-file-name-escaped-via-filename-property: throws when a plugin sets a safe bundle key but an escaping fileName property",
+  "rollup@function@error-file-name-path-traversal-plugin: throws when a plugin adds a path traversal file name to the output bundle",
+  "rollup@function@error-file-name-windows-absolute-path: throws when a plugin adds a Windows-style absolute file name to the output bundle",
+  "rollup@function@file-name-double-dot-prefix-is-valid: allows file names that start with \"..\" but are not path traversal sequences",
+  "rollup@function@file-name-leading-dot-slash-is-valid: allows file names with a leading \"./\" prefix",
+
   // ## warning / error differences
   "rollup@function@plugin-hook-filters: plugin hook filter is supported", // Rolldown has additional `EMPTY_IMPORT_META` warning
   "rollup@function@generate-bundle-mutation: handles adding or deleting symbols in generateBundle", // rolldown outputs a warning when assigning to bundle[foo]
@@ -96,6 +107,9 @@ const ignoreTests = [
   "rollup@function@warning-const-reassign: Cannot reassign a variable declared with `const`",
   "rollup@function@namespace-reassign-import-fails: warns for reassignments to namespace exports",
   "rollup@function@namespace-update-import-fails: disallows updates to namespace exports",
+  // ### Rolldown does not support `UNUSED_EXTERNAL_IMPORT` warning
+  "rollup@function@unused-import: warns on unused imports ([#595])",
+  "rollup@function@unused-import-2: warns on unused imports ([#595])",
 
   // ## tests relying on plugins
   "rollup@function@no-treeshake-react: passes when bundling React without tree-shaking", // relies on @rollup/plugin-node-resolve
@@ -122,6 +136,8 @@ const ignoreTests = [
   "rollup@function@jsx@unnecessary-import-source: throws when preserving JSX syntax with an unnecessary import source", // `jsx.importSource` cannot be set with `jsx: 'preserve'`
   "rollup@function@catch-rust-panic: Catch Rust panics and then throw them in Node", // specific to Rollup's implementation
   "rollup@function@exports-are-not-defined: Throw descriptive error message for used export is not defined", // the input code triggers a different error in rolldown
+  "rollup@function@dynamic-import-call-method-with-this-await: includes the correct \"this\" context when calling a method on a dynamically imported module via \"await\"", // Rolldown does not necessarily keep the `this` value for exported functions
+  "rollup@sourcemaps@names-transformed-render-chunk: names are recovered if transforms are used@generates es", // the assertion expects spaces not to be injected, but the default `minify: 'dce-only'` injects it
 ]
 
 module.exports = {

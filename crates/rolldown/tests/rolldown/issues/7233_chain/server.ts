@@ -1,4 +1,1 @@
-export {
-  string,
-  object
-} from 'zod';
+export { string, object } from 'zod';

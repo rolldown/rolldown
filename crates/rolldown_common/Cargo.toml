@@ -1,18 +1,14 @@
 [package]
 name = "rolldown_common"
-version = "0.1.0"
+version = "1.2.4"
 publish = true
 description = "This crate is mostly for sharing code between rolldwon crates."
+readme = "../../README.md"
 
 edition.workspace = true
 homepage.workspace = true
 license.workspace = true
 repository.workspace = true
-
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
-
-[lib]
-doctest = false
 
 [lints]
 workspace = true
@@ -28,17 +24,21 @@ itertools = { workspace = true }
 oxc = { workspace = true }
 oxc_ecmascript = { workspace = true }
 oxc_index = { workspace = true }
+oxc_str = { workspace = true }
 oxc_resolver = { workspace = true }
+oxc_sourcemap = { workspace = true }
 rolldown_ecmascript = { workspace = true }
 rolldown_error = { workspace = true }
+rolldown_fs = { workspace = true, features = ["os"] }
 rolldown_sourcemap = { workspace = true }
 rolldown_std_utils = { workspace = true }
 rolldown_utils = { workspace = true }
 rustc-hash = { workspace = true }
 schemars = { workspace = true, optional = true }
 serde = { workspace = true, features = ["derive"], optional = true }
-serde_json = { workspace = true }
+serde_json = { workspace = true, features = ["arbitrary_precision"] }
 simdutf8 = { workspace = true }
+smallvec = { workspace = true }
 string_wizard = { workspace = true }
 sugar_path = { workspace = true }
 tokio = { workspace = true }
@@ -52,3 +52,6 @@ insta = { workspace = true }
 default = ["serde"]
 deserialize_bundler_options = ["dep:schemars", "dep:serde"]
 serde = ["dep:serde", "oxc_index/serde"]
+
+[lib]
+doctest = false

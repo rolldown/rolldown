@@ -8,16 +8,12 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```js
 //#region entry.ts
 function before() {
-	console.log(Foo.FOO);
+	console.log(0);
 }
-var Foo = /* @__PURE__ */ function(Foo$1) {
-	Foo$1[Foo$1["FOO"] = 0] = "FOO";
-	return Foo$1;
-}(Foo || {});
 function after() {
-	console.log(Foo.FOO);
+	console.log(0);
 }
-
 //#endregion
 export { after, before };
+
 ```

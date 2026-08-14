@@ -1,0 +1,25 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## index.js
+
+```js
+Object.defineProperty(exports, Symbol.toStringTag, { value: "Module" });
+const require_v4 = require("./v4.js");
+exports.v4 = require_v4.default;
+
+```
+
+## v4.js
+
+```js
+//#region v4.ts
+function v4() {
+	return "uuid-here";
+}
+//#endregion
+exports.default = v4;
+
+```

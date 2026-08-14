@@ -5,10 +5,10 @@
   "scripts": {
     "build": "rolldown --config ./rolldown.config.js"
   },
-  "devDependencies": {
-    "rolldown": "workspace:*"
-  },
   "dependencies": {
     "rollup-plugin-esbuild": "^6.1.1"
+  },
+  "devDependencies": {
+    "rolldown": "workspace:*"
   }
 }

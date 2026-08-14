@@ -1,3 +1,3 @@
-export const foo = 'foo'
+export const foo = 'foo';
 
-import 'trigger-dep'
+import 'trigger-dep';

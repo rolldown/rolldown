@@ -27,6 +27,7 @@ module.exports = [
     "rollup@form@default-export-anonymous-class-extends: handles default exported classes extending a regular expression argument (#4783)",
     "rollup@form@default-export-class: puts the export after the declaration for default exported classes in SystemJS@generates es",
     "rollup@form@default-export-mode: allows specifying the export mode to be \"default\"@generates es",
+    "rollup@form@comment-start-inside-comment: properly remove comments above import statements@generates es",
     "rollup@form@effect-in-for-of-loop-in-functions: includes effects in for-of loop (#870)@generates es",
     "rollup@form@exponentiation-operator: folds exponentiation operator when considering dead code@generates es",
     "rollup@form@export-default-2: re-exporting a default export@generates es",
@@ -37,6 +38,8 @@ module.exports = [
     "rollup@form@export-default-import: correctly exports a default import, even in ES mode (#513)@generates es", // convert reexport to import and export
     "rollup@form@export-default: single (default) exports@generates es",
     "rollup@form@export-internal-namespace-as: supports exporting and resolving internal namespaces as names",
+    "rollup@form@duplicated-var-declarations: does not remove duplicated var declarations (#716)@generates es", // rolldown splits top-level multi-declarator statements per declarator for tree-shaking
+    "rollup@form@string-indentation-b: handles multiple var declarations inited to strings (#166)@generates es", // rolldown splits top-level multi-declarator statements per declarator for tree-shaking
     "rollup@form@export-live-bindings: exported live bindings@generates es",
     "rollup@form@export-namespace-as: supports exporting namespaces as names in entry points@generates es",
     "rollup@form@external-deshadowing: Externals aliases with deshadowing@generates es",
@@ -65,6 +68,7 @@ module.exports = [
     "rollup@form@namespace-import-reexport-2: properly associate or shadow variables in and around functions@generates es",
     "rollup@form@namespace-import-reexport: properly associate or shadow variables in and around functions@generates es",
     "rollup@form@namespace-object-import: properly encodes reserved names if namespace import is used@generates es",
+    "rollup@form@namespace-optimization: it does static lookup optimization of internal namespaces",
     "rollup@form@namespace-optimization-b: it does static lookup optimization of internal namespaces, coping with multiple namespaces in one function@generates es",
     "rollup@form@namespace-reexport-name: uses correct names when reexporting from namespace reexports (#4049)@generates es", // the rollup result is simply
     "rollup@form@namespace-self-import: namespace early import hoisting@generates es",
@@ -104,6 +108,7 @@ module.exports = [
     "rollup@form@top-level-await: top-level await support@generates system",
     "rollup@form@undefined-default-export: handles default exporting undefined",
     "rollup@form@unmodified-default-exports-function-argument: passing unbound default export to function cannot rebind it",
+    "rollup@form@switch-cases@missing-space: Inserts space when simplifying switch cases without space",
     "rollup@form@yield-expression@missing-space: Inserts space when simplifying yield expression without space",
     "rollup@form@arbitrary-module-namespace-identifiers: renders exports that are not identifiers@generates es",
     "rollup@form@arbitrary-module-namespace-identifiers2: renders exports that are not identifiers@generates es",
@@ -152,6 +157,7 @@ module.exports = [
     "rollup@function@sourcemap-inline-generatebundle: includes inline sourcemap comments in generateBundle hook",
     "rollup@form@sourcemaps-external: correct sourcemaps are written (separate file)@generates es", // the mappping is not same as rollup
     "rollup@form@sourcemaps-hidden: correct sourcemaps are written (separate file) without comment@generates es", // the mappping is not same as rollup
+    "rollup@form@sourcemaps-excludesources: correct sourcemaps are written (excluding sourceContent)@generates es", // the mapping is not same as rollup
     "rollup@sourcemaps@render-chunk-babili: generates valid sourcemap when source could not be determined@generates es", // The rolldown output chunk including `module comment` caused line offset, the rollup provider the fake sourcemap can't remapping.
     "rollup@form@render-chunk-plugin-sourcemaps: supports returning undefined source maps from render chunk hooks, when source maps are enabled@generates es", // the mappping is not same as rollup, the `sources/sourcesContent` perseved original sourcemap is correct
     "rollup@sourcemaps@transform-low-resolution: handles combining low-resolution and high-resolution source-maps when transforming@generates es",// the input string `'bar'`, the rolldown output `"bar"`, caused search original position failed

@@ -1,3 +1,4 @@
+pub mod chunk_debug_info;
 pub mod chunk_reason_type;
 pub mod cross_chunk_import_item;
 pub mod module_group;

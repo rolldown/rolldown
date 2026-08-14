@@ -3,14 +3,17 @@ use std::path::PathBuf;
 use arcstr::ArcStr;
 use oxc::{
   allocator::Allocator,
-  ast::AstBuilder,
+  ast::{
+    ast::{Program, Statement},
+    builder::AstBuilder,
+  },
   codegen::{Codegen, CodegenOptions, CodegenReturn, CommentOptions, LegalComment},
   minifier::{Minifier, MinifierOptions},
   parser::{ParseOptions, Parser},
   span::{SPAN, SourceType},
 };
 use oxc_sourcemap::SourceMap;
-use rolldown_error::{BuildDiagnostic, BuildResult, Severity};
+use rolldown_error::{BuildDiagnostic, BuildResult, EventKind, Severity};
 
 use crate::ecma_ast::{
   EcmaAst,
@@ -26,15 +29,17 @@ impl EcmaCompiler {
       ProgramCell::try_new(ProgramCellOwner { source: source.clone(), allocator }, |owner| {
         let parser = Parser::new(&owner.allocator, &owner.source, ty).with_options(ParseOptions {
           allow_return_outside_function: true,
+          preserve_parens: false,
           ..ParseOptions::default()
         });
         let ret = parser.parse();
-        if ret.panicked || !ret.errors.is_empty() {
+        if ret.panicked || !ret.diagnostics.is_empty() {
           Err(BuildDiagnostic::from_oxc_diagnostics(
-            ret.errors,
+            ret.diagnostics,
             &source.clone(),
             id,
-            &Severity::Error,
+            Severity::Error,
+            EventKind::ParseError,
           ))
         } else {
           Ok(ProgramCellDependent { program: ret.program })
@@ -53,18 +58,20 @@ impl EcmaCompiler {
     let inner =
       ProgramCell::try_new(ProgramCellOwner { source: source.clone(), allocator }, |owner| {
         let builder = AstBuilder::new(&owner.allocator);
-        let parser = Parser::new(&owner.allocator, &owner.source, ty);
+        let parser = Parser::new(&owner.allocator, &owner.source, ty)
+          .with_options(ParseOptions { preserve_parens: false, ..ParseOptions::default() });
         let ret = parser.parse_expression();
         match ret {
           Ok(expr) => {
-            let program = builder.program(
+            let program = Program::new(
               SPAN,
               SourceType::default().with_module(true),
               owner.source.as_str(),
-              builder.vec(),
+              [],
               None,
-              builder.vec(),
-              builder.vec1(builder.statement_expression(SPAN, expr)),
+              [],
+              [Statement::new_expression_statement(SPAN, expr, &builder)],
+              &builder,
             );
             Ok(ProgramCellDependent { program })
           }
@@ -72,25 +79,23 @@ impl EcmaCompiler {
             errors,
             &source.clone(),
             id,
-            &Severity::Error,
+            Severity::Error,
+            EventKind::ParseError,
           )),
         }
       })?;
     Ok(EcmaAst { program: inner, source_type: ty })
   }
 
-  pub fn print_with(ast: &EcmaAst, options: PrintOptions) -> CodegenReturn {
-    let legal =
-      if options.print_legal_comments { LegalComment::Inline } else { LegalComment::None };
+  pub fn print_with(ast: &EcmaAst, options: PrintOptions) -> CodegenReturn<'_> {
+    let legal = if options.comments.legal { LegalComment::Inline } else { LegalComment::None };
     Codegen::new()
       .with_options(CodegenOptions {
         comments: CommentOptions {
           normal: false,
           legal,
-          // These option will be configurable when we begin to support `ignore-annotations`
-          // https://esbuild.github.io/api/#ignore-annotations
-          jsdoc: true,
-          annotation: true,
+          jsdoc: options.comments.jsdoc,
+          annotation: options.comments.annotation,
         },
         initial_indent: options.initial_indent,
         source_map_path: options.sourcemap.then(|| PathBuf::from(options.filename)),
@@ -99,18 +104,24 @@ impl EcmaCompiler {
       .build(ast.program())
   }
 
+  /// The returned map borrows `source_text` (its `sourcesContent` and token names are slices
+  /// of it) — callers that keep it beyond the borrow must `into_owned` it; callers that only
+  /// feed it to `collapse_sourcemaps` can use it as-is and skip that copy.
   #[expect(clippy::too_many_arguments)]
-  pub fn dce_or_minify(
-    allocator: &Allocator,
-    source_text: &str,
+  pub fn dce_or_minify<'a>(
+    allocator: &'a Allocator,
+    source_text: &'a str,
     source_type: SourceType,
     enable_sourcemap: bool,
     filename: &str,
     compress: bool,
     minify_options: MinifierOptions,
     codegen_options: CodegenOptions,
-  ) -> (String, Option<SourceMap>) {
-    let mut program = Parser::new(allocator, source_text, source_type).parse().program;
+  ) -> (String, Option<SourceMap<'a>>) {
+    let mut program = Parser::new(allocator, source_text, source_type)
+      .with_options(ParseOptions { preserve_parens: false, ..ParseOptions::default() })
+      .parse()
+      .program;
     let minifier = Minifier::new(minify_options);
     let ret = if compress {
       minifier.minify(allocator, &mut program)
@@ -138,8 +149,15 @@ fn basic_test() {
 #[derive(Debug, Default)]
 
 pub struct PrintOptions {
-  pub print_legal_comments: bool,
+  pub comments: PrintCommentsOptions,
   pub filename: String,
   pub sourcemap: bool,
   pub initial_indent: u32,
+}
+
+#[derive(Debug, Default, Clone, Copy)]
+pub struct PrintCommentsOptions {
+  pub legal: bool,
+  pub annotation: bool,
+  pub jsdoc: bool,
 }

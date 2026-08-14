@@ -1,15 +1,23 @@
 {
+  "configName": "on-demand",
   "config": {
-    "experimental": {
-      "strictExecutionOrder": true
-    },
-    "advancedChunks": {
+    "strictExecutionOrder": true,
+    "codeSplitting": {
       "groups": [
         {
           "test": "foo\\.js",
           "name": "vendor"
         }
       ]
+    },
+    "experimental": {
+      "onDemandWrapping": true
     }
-  }
+  },
+  "configVariants": [
+    {
+      "_configName": "wrap-all",
+      "onDemandWrapping": false
+    }
+  ]
 }

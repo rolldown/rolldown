@@ -6,16 +6,15 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## entry1.js
 
 ```js
-
 //#region main.js
 console.log("share");
-
 //#endregion
+
 ```
 
 ## entry2.js
 
 ```js
-require('./entry1.js');
+require("./entry1.js");
 
 ```

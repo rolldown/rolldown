@@ -1,6 +1,7 @@
 use derive_more::Debug;
 use rolldown_common::ClientHmrUpdate;
 use rolldown_error::BuildResult;
+use rolldown_utils::pattern_filter::StringOrRegex;
 use std::sync::Arc;
 
 #[cfg(feature = "deserialize_dev_options")]
@@ -15,6 +16,14 @@ use super::rebuild_strategy::RebuildStrategy;
 pub type OnHmrUpdatesCallback =
   Arc<dyn Fn(BuildResult<(Vec<ClientHmrUpdate>, Vec<String>)>) + Send + Sync>;
 pub type OnOutputCallback = Arc<dyn Fn(BuildResult<BundleOutput>) + Send + Sync>;
+/// Assets emitted while generating an HMR patch or compiling a lazy entry (e.g.
+/// an image newly imported by the changed/lazy module). A pure HMR patch and a
+/// lazy compile never go through `on_output`, so this callback is the consumer's
+/// only chance to receive — and e.g. serve — those assets.
+///
+/// Carries a `BundleOutput` so `add_additional_files` warnings ride along, as
+/// they would through `on_output`.
+pub type OnAdditionalAssetsCallback = Arc<dyn Fn(BundleOutput) + Send + Sync>;
 
 pub type SharedNormalizedDevOptions = Arc<NormalizedDevOptions>;
 
@@ -31,6 +40,9 @@ pub struct DevOptions {
   #[debug(skip)]
   #[cfg_attr(feature = "deserialize_dev_options", serde(skip))]
   pub on_output: Option<OnOutputCallback>,
+  #[debug(skip)]
+  #[cfg_attr(feature = "deserialize_dev_options", serde(skip))]
+  pub on_additional_assets: Option<OnAdditionalAssetsCallback>,
   pub rebuild_strategy: Option<RebuildStrategy>,
   pub watch: Option<DevWatchOptions>,
 }
@@ -42,6 +54,8 @@ pub struct NormalizedDevOptions {
   pub on_hmr_updates: Option<OnHmrUpdatesCallback>,
   #[debug(skip)]
   pub on_output: Option<OnOutputCallback>,
+  #[debug(skip)]
+  pub on_additional_assets: Option<OnAdditionalAssetsCallback>,
   pub disable_watcher: bool,
   pub skip_write: bool,
   pub rebuild_strategy: RebuildStrategy,
@@ -51,6 +65,8 @@ pub struct NormalizedDevOptions {
   pub debounce_duration: u64,
   pub compare_contents_for_polling: bool,
   pub debounce_tick_rate: Option<u64>,
+  pub watch_include: Option<Vec<StringOrRegex>>,
+  pub watch_exclude: Option<Vec<StringOrRegex>>,
 }
 
 pub fn normalize_dev_options(options: DevOptions) -> NormalizedDevOptions {
@@ -58,6 +74,7 @@ pub fn normalize_dev_options(options: DevOptions) -> NormalizedDevOptions {
   NormalizedDevOptions {
     on_hmr_updates: options.on_hmr_updates,
     on_output: options.on_output,
+    on_additional_assets: options.on_additional_assets,
     disable_watcher: watch_options.disable_watcher.unwrap_or_default(),
     skip_write: watch_options.skip_write.unwrap_or_default(),
     rebuild_strategy: options.rebuild_strategy.unwrap_or_default(),
@@ -67,5 +84,7 @@ pub fn normalize_dev_options(options: DevOptions) -> NormalizedDevOptions {
     debounce_duration: watch_options.debounce_duration.unwrap_or(10),
     compare_contents_for_polling: watch_options.compare_contents_for_polling.unwrap_or(false),
     debounce_tick_rate: watch_options.debounce_tick_rate,
+    watch_include: watch_options.include,
+    watch_exclude: watch_options.exclude,
   }
 }

@@ -1,22 +1,9 @@
 {
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
-  "extends": [
-    "github>Boshen/renovate",
-    "helpers:pinGitHubActionDigestsToSemver"
-  ],
-  "ignorePaths": [
-    "**/node_modules/**",
-    "**/examples/**",
-    "**/crates/rolldown/tests/**"
-  ],
-  "ignoreDeps": [
-    "kill-port"
-  ],
+  "extends": ["github>Boshen/renovate"],
+  "automerge": false,
+  "ignorePaths": ["**/node_modules/**", "**/examples/**", "**/crates/rolldown/tests/**"],
   "packageRules": [
-    {
-      "matchPackageNames": ["pnpm"],
-      "allowedVersions": "10.23.0"
-    },
     {
       "groupName": "rolldown-plugin-dts",
       "matchManagers": ["npm"],
@@ -24,10 +11,10 @@
       "schedule": ["at any time"]
     },
     {
-      "groupName": "oxc-node",
-      "matchManagers": ["npm"],
-      "matchPackageNames": ["oxc-node"],
-      "schedule": ["at any time"]
+      "description": "idna_adapter is pinned to 1.0.0 to keep the lighter unicode-rs backend (see #9811)",
+      "matchManagers": ["cargo"],
+      "matchPackageNames": ["idna_adapter"],
+      "enabled": false
     }
   ]
 }

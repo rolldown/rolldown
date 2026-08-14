@@ -16,6 +16,12 @@ pub struct Fixture {
   fixture_path: PathBuf,
 }
 
+static RUNTIME: OnceLock<tokio::runtime::Runtime> = OnceLock::new();
+
+fn shared_runtime() -> &'static tokio::runtime::Runtime {
+  RUNTIME.get_or_init(|| tokio::runtime::Runtime::new().unwrap())
+}
+
 // Using std once lock to store env variable
 static NEEDS_EXTENDED_TESTS: OnceLock<bool> = OnceLock::new();
 /// A function to get the API key.
@@ -36,11 +42,11 @@ impl Fixture {
   }
 
   pub fn run_integration_test(self) {
-    tokio::runtime::Runtime::new().unwrap().block_on(self.run_inner(vec![]));
+    shared_runtime().block_on(self.run_inner(vec![]));
   }
 
   pub fn run_integration_test_with_plugins(self, plugins: Vec<SharedPluginable>) {
-    tokio::runtime::Runtime::new().unwrap().block_on(self.run_inner(plugins));
+    shared_runtime().block_on(self.run_inner(plugins));
   }
 
   async fn run_inner(self, plugins: Vec<SharedPluginable>) {
@@ -60,12 +66,14 @@ impl Fixture {
       description: None,
       snapshot: None,
       config_name: None,
+      expect_execution_failure: meta.expect_execution_failure.clone(),
     })
     .chain(config_variants.into_iter().map(|variant| NamedBundlerOptions {
       options: variant.apply(&options),
       description: Some(variant.description()),
       snapshot: variant.snapshot,
       config_name: variant.config_name,
+      expect_execution_failure: variant.expect_execution_failure,
     }))
     .collect::<Vec<_>>();
 
@@ -96,6 +104,7 @@ impl Fixture {
         config_name: Some("extended-minify-internal-exports".to_string()),
         minify_internal_exports: Some(test_value),
         snapshot: Some(false),
+        expect_execution_failure: meta.expect_execution_failure.clone(),
         ..Default::default()
       });
     }
@@ -107,6 +116,7 @@ impl Fixture {
         config_name: Some("extended-preserve-entry-signatures-strict".to_string()),
         preserve_entry_signatures: Some(PreserveEntrySignatures::Strict),
         snapshot: Some(false),
+        expect_execution_failure: meta.expect_execution_failure.clone(),
         ..Default::default()
       });
     }
@@ -118,6 +128,7 @@ impl Fixture {
         config_name: Some("extended-preserve-entry-signatures-allow-extension".to_string()),
         preserve_entry_signatures: Some(PreserveEntrySignatures::AllowExtension),
         snapshot: Some(false),
+        expect_execution_failure: meta.expect_execution_failure.clone(),
         ..Default::default()
       });
     }

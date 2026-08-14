@@ -7,15 +7,15 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 //#region namespace-after.ts
-var x = /* @__PURE__ */ function(x$1) {
-	x$1[x$1["y"] = 123] = "y";
-	return x$1;
+var x = /* @__PURE__ */ function(x) {
+	x[x["y"] = 123] = "y";
+	return x;
 }(x || {});
 (function(_x) {
 	console.log(x, y);
 })(x || (x = {}));
-
 //#endregion
+
 ```
 
 ## namespace-before.js
@@ -26,29 +26,29 @@ let x;
 (function(_x) {
 	console.log(x, y);
 })(x || (x = {}));
-x = /* @__PURE__ */ function(x$1) {
-	x$1[x$1["y"] = 123] = "y";
-	return x$1;
+x = /* @__PURE__ */ function(x) {
+	x[x["y"] = 123] = "y";
+	return x;
 }(x || {});
-
 //#endregion
+
 ```
 
 ## sibling-enum-after.js
 
 ```js
 //#region sibling-enum-after.ts
-var x = /* @__PURE__ */ function(x$1) {
-	x$1[x$1["y"] = 123] = "y";
-	return x$1;
+var x = /* @__PURE__ */ function(x) {
+	x[x["y"] = 123] = "y";
+	return x;
 }(x || {});
-x = /* @__PURE__ */ function(x$1) {
-	x$1[x$1["z"] = 246] = "z";
-	return x$1;
+x = /* @__PURE__ */ function(x) {
+	x[x["z"] = 246] = "z";
+	return x;
 }(x || {});
 console.log(x);
-
 //#endregion
+
 ```
 
 ## sibling-enum-before.js
@@ -56,74 +56,62 @@ console.log(x);
 ```js
 //#region sibling-enum-before.ts
 console.log(x);
-var x = /* @__PURE__ */ function(x$1) {
-	x$1[x$1["y"] = 123] = "y";
-	return x$1;
+var x = /* @__PURE__ */ function(x) {
+	x[x["y"] = 123] = "y";
+	return x;
 }(x || {});
-x = /* @__PURE__ */ function(x$1) {
-	x$1[x$1["z"] = 246] = "z";
-	return x$1;
+x = /* @__PURE__ */ function(x) {
+	x[x["z"] = 246] = "z";
+	return x;
 }(x || {});
-
 //#endregion
+
 ```
 
 ## sibling-enum-middle.js
 
 ```js
 //#region sibling-enum-middle.ts
-var x = /* @__PURE__ */ function(x$1) {
-	x$1[x$1["y"] = 123] = "y";
-	return x$1;
+var x = /* @__PURE__ */ function(x) {
+	x[x["y"] = 123] = "y";
+	return x;
 }(x || {});
 console.log(x);
-x = /* @__PURE__ */ function(x$1) {
-	x$1[x$1["z"] = 246] = "z";
-	return x$1;
+x = /* @__PURE__ */ function(x) {
+	x[x["z"] = 246] = "z";
+	return x;
 }(x || {});
-
 //#endregion
+
 ```
 
 ## sibling-member.js
 
 ```js
 //#region sibling-member.ts
-var x = /* @__PURE__ */ function(x$1) {
-	x$1[x$1["y"] = 123] = "y";
-	return x$1;
-}(x || {});
-x = /* @__PURE__ */ function(x$1) {
-	x$1[x$1["z"] = 246] = "z";
-	return x$1;
-}(x || {});
-console.log(x.y, x.z);
-
+console.log(123, 246);
 //#endregion
+
 ```
 
 ## simple-enum.js
 
 ```js
 //#region simple-enum.ts
-var x = /* @__PURE__ */ function(x$1) {
-	x$1[x$1["y"] = 123] = "y";
-	return x$1;
+var x = /* @__PURE__ */ function(x) {
+	x[x["y"] = 123] = "y";
+	return x;
 }(x || {});
 console.log(x);
-
 //#endregion
+
 ```
 
 ## simple-member.js
 
 ```js
 //#region simple-member.ts
-var x = /* @__PURE__ */ function(x$1) {
-	x$1[x$1["y"] = 123] = "y";
-	return x$1;
-}(x || {});
-console.log(x.y);
-
+console.log(123);
 //#endregion
+
 ```

@@ -1,0 +1,10 @@
+{
+  "config": {
+    "input": [
+      { "name": "index", "import": "./index.js" },
+      { "name": "sorter", "import": "./sorter.js" }
+    ],
+    "treeshake": true
+  },
+  "expectExecuted": false
+}

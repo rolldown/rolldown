@@ -1,0 +1,129 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Errors
+
+## AMBIGUOUS_EXTERNAL_NAMESPACES
+
+```text
+[AMBIGUOUS_EXTERNAL_NAMESPACES] Found ambiguous export.
+   ╭─[ b.js:1:10 ]
+   │
+ 1 │ export { x } from './t2.js';
+   │          ┬  
+   │          ╰── "t2.js" re-exports "x"
+   │
+   ├─[ a.js:1:12 ]
+   │
+ 1 │ export let x = 1;
+   │            ┬  
+   │            ╰── One matching export is here.
+   │
+   ├─[ d.js:1:12 ]
+   │
+ 1 │ export let x = 2;
+   │            ┬  
+   │            ╰── One matching export is here.
+───╯
+
+```
+
+## AMBIGUOUS_EXTERNAL_NAMESPACES
+
+```text
+[AMBIGUOUS_EXTERNAL_NAMESPACES] Found ambiguous export.
+   ╭─[ c.js:1:10 ]
+   │
+ 1 │ export { x } from './m.js';
+   │          ┬  
+   │          ╰── "m.js" re-exports "x"
+   │
+   ├─[ a.js:1:12 ]
+   │
+ 1 │ export let x = 1;
+   │            ┬  
+   │            ╰── One matching export is here.
+   │
+   ├─[ d.js:1:12 ]
+   │
+ 1 │ export let x = 2;
+   │            ┬  
+   │            ╰── One matching export is here.
+───╯
+
+```
+
+## AMBIGUOUS_EXTERNAL_NAMESPACES
+
+```text
+[AMBIGUOUS_EXTERNAL_NAMESPACES] Found ambiguous export.
+   ╭─[ index.js:1:10 ]
+   │
+ 1 │ import { x } from './m.js';
+   │          ┬  
+   │          ╰── "m.js" re-exports "x"
+   │
+   ├─[ a.js:1:12 ]
+   │
+ 1 │ export let x = 1;
+   │            ┬  
+   │            ╰── One matching export is here.
+   │
+   ├─[ d.js:1:12 ]
+   │
+ 1 │ export let x = 2;
+   │            ┬  
+   │            ╰── One matching export is here.
+───╯
+
+```
+
+## AMBIGUOUS_EXTERNAL_NAMESPACES
+
+```text
+[AMBIGUOUS_EXTERNAL_NAMESPACES] Found ambiguous export.
+   ╭─[ index.js:2:10 ]
+   │
+ 2 │ import { x as xt2 } from './t2.js';
+   │          ┬  
+   │          ╰── "t2.js" re-exports "x"
+   │
+   ├─[ a.js:1:12 ]
+   │
+ 1 │ export let x = 1;
+   │            ┬  
+   │            ╰── One matching export is here.
+   │
+   ├─[ d.js:1:12 ]
+   │
+ 1 │ export let x = 2;
+   │            ┬  
+   │            ╰── One matching export is here.
+───╯
+
+```
+
+## AMBIGUOUS_EXTERNAL_NAMESPACES
+
+```text
+[AMBIGUOUS_EXTERNAL_NAMESPACES] Found ambiguous export.
+   ╭─[ m.js:1:10 ]
+   │
+ 1 │ export { x } from './t.js';
+   │          ┬  
+   │          ╰── "t.js" re-exports "x"
+   │
+   ├─[ a.js:1:12 ]
+   │
+ 1 │ export let x = 1;
+   │            ┬  
+   │            ╰── One matching export is here.
+   │
+   ├─[ d.js:1:12 ]
+   │
+ 1 │ export let x = 2;
+   │            ┬  
+   │            ╰── One matching export is here.
+───╯
+
+```

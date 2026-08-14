@@ -7,34 +7,24 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 import assert from "assert";
-
-//#region foo.js
-var foo_default = "foo";
-
-//#endregion
 //#region main.js
-const value = { foo: foo_default };
-assert.strictEqual(value.foo, "foo");
-
+assert.strictEqual({ foo: "foo" }.foo, "foo");
 //#endregion
+
 //# sourceMappingURL=main.js.map
 ```
 
 # Sourcemap Visualizer
 
 ```
-- ../foo.js
-(0:0) "export default " --> (3:0) "var foo_default = "
-(0:15) "'foo'" --> (3:18) "\"foo\";\n"
 - ../main.js
-(3:0) "const " --> (7:0) "const "
-(3:6) "value = " --> (7:6) "value = "
-(3:14) "{ " --> (7:14) "{ "
-(3:16) "foo }" --> (7:16) "foo: foo_default }"
-(3:21) "\n" --> (7:34) ";\n"
-(5:0) "assert." --> (8:0) "assert."
-(5:7) "strictEqual(" --> (8:7) "strictEqual("
-(5:19) "value." --> (8:19) "value."
-(5:25) "foo, " --> (8:25) "foo, "
-(5:30) "'foo')" --> (8:30) "\"foo\");\n"
+(5:0) "assert." --> (2:0) "assert."
+(5:7) "strictEqual(" --> (2:7) "strictEqual("
+(5:19) "value.foo, 'foo');\n" --> (2:19) "{ "
+(3:16) "foo };\n" --> (2:21) "foo: "
+(3:16) "foo };\n" --> (2:26) "\"foo\" "
+(5:19) "value." --> (2:32) "}."
+(5:25) "foo, " --> (2:34) "foo, "
+(5:30) "'foo'" --> (2:39) "\"foo\""
+(5:35) ");\n" --> (2:44) ");\n"
 ```

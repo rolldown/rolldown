@@ -6,27 +6,23 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## entry.js
 
 ```js
-import assert from "node:assert";
-
-// HIDDEN [rolldown:runtime]
+import assert from "node:assert/strict";
+// HIDDEN [\0rolldown/runtime.js]
 //#region node_modules/demo-pkg/lib/util-browser.js
 var require_util_browser = /* @__PURE__ */ __commonJSMin(((exports, module) => {
 	module.exports = "util-browser";
 }));
-
 //#endregion
 //#region node_modules/demo-pkg/main-browser.js
-var require_main_browser = /* @__PURE__ */ __commonJSMin(((exports, module) => {
+//#endregion
+//#region src/entry.js
+var import_main_browser = /* @__PURE__ */ __toESM((/* @__PURE__ */ __commonJSMin(((exports, module) => {
 	const util = require_util_browser();
 	module.exports = function() {
 		return ["main-browser", util];
 	};
-}));
-
-//#endregion
-//#region src/entry.js
-var import_main_browser = /* @__PURE__ */ __toESM(require_main_browser());
+})))());
 assert.deepEqual((0, import_main_browser.default)(), ["main-browser", "util-browser"]);
-
 //#endregion
+
 ```

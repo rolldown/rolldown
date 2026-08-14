@@ -116,13 +116,48 @@ impl ClassicBundler {
     if !is_closed {
       self.closed = true;
     }
+    // When devtools is active, ask the writer thread to drain this session and
+    // receive an ack. Consumers rely on "files are readable after
+    // `bundle.close()` resolves" — see `internal-docs/devtools/implementation.md`.
+    let devtools_flush_rx = self
+      .debug_tracer
+      .as_ref()
+      .map(|_| rolldown_devtools::flush_session(self.session_id.as_ref().to_string()));
     // - The code is written in a non-intuitive way to satisfy the rustc and the upper usage of `BindingBundler#close`.
     // - We need the future to be `Send + 'static` for napi-rs, so we can't use `async fn` directly here.
     // - Read `BindingBundler#close` in `crates/rolldown_binding/src/binding_bundler.rs` for more details.
     async move {
       if let Some(handle) = last_bundle_handle {
         let plugin_driver = handle.plugin_driver();
-        plugin_driver.close_bundle().await?;
+        plugin_driver.close_bundle(None).await?;
+      }
+      if let Some(rx) = devtools_flush_rx {
+        // Block on the writer-thread ack in a blocking task so we don't stall
+        // a tokio worker. Bounded wait so a hung writer thread (e.g. stalled
+        // fs I/O on an NFS disconnect) can't wedge `bundle.close()` forever.
+        // All three failure modes (timeout, writer disconnected, blocking task
+        // panicked) are surfaced as errors so the documented "logs readable
+        // after close()" contract does not silently break.
+        let join_result = napi::tokio::task::spawn_blocking(move || {
+          rx.recv_timeout(std::time::Duration::from_secs(30))
+        })
+        .await
+        .map_err(|err| anyhow::anyhow!("devtools flush task failed to join: {err}"))?;
+        match join_result {
+          Ok(()) => {}
+          Err(std::sync::mpsc::RecvTimeoutError::Timeout) => {
+            return Err(anyhow::anyhow!(
+              "devtools writer did not acknowledge session flush within 30s; \
+               node_modules/.rolldown log files may be truncated"
+            ));
+          }
+          Err(std::sync::mpsc::RecvTimeoutError::Disconnected) => {
+            return Err(anyhow::anyhow!(
+              "devtools writer thread disconnected before acknowledging flush; \
+               node_modules/.rolldown log files may be truncated"
+            ));
+          }
+        }
       }
       Ok(())
     }
@@ -133,8 +168,14 @@ impl ClassicBundler {
   }
 
   fn enable_debug_tracing_if_needed(&mut self, options: &BundlerOptions) {
-    if self.debug_tracer.is_none() && options.debug.is_some() {
-      self.debug_tracer = Some(rolldown_devtools::DebugTracer::init(Arc::clone(&self.session_id)));
+    if self.debug_tracer.is_none() && options.devtools.is_some() {
+      // Mirrors the `cwd` default in `prepare_build_context`; the wasm binding always supplies one because it has no process working directory.
+      let cwd = options
+        .cwd
+        .clone()
+        .unwrap_or_else(|| std::env::current_dir().expect("Failed to get current dir"));
+      self.debug_tracer =
+        Some(rolldown_devtools::DebugTracer::init(Arc::clone(&self.session_id), cwd));
       // Caveat: `Span` must be created after initialization of `DebugTracer`, we need it to inject data to the tracking system.
       let session_span =
         tracing::debug_span!("session", CONTEXT_session_id = self.session_id.as_ref());

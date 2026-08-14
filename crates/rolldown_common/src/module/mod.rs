@@ -1,11 +1,12 @@
 pub mod external_module;
 pub mod normal_module;
 
-use arcstr::ArcStr;
 use oxc_index::IndexVec;
-use rolldown_std_utils::OptionExt;
 
-use crate::{ExternalModule, ImportRecordIdx, ModuleIdx, NormalModule, ResolvedImportRecord};
+use crate::{
+  ExternalModule, ImportRecordIdx, ModuleId, ModuleIdx, NormalModule, ResolvedImportRecord,
+  StableModuleId, SymbolRef,
+};
 
 #[derive(Debug, Clone)]
 pub enum Module {
@@ -29,16 +30,9 @@ impl Module {
     }
   }
 
-  pub fn id(&self) -> &str {
+  pub fn id(&self) -> &ModuleId {
     match self {
       Module::Normal(v) => &v.id,
-      Module::External(v) => &v.id,
-    }
-  }
-
-  pub fn id_clone(&self) -> &ArcStr {
-    match self {
-      Module::Normal(v) => v.id.resource_id(),
       Module::External(v) => &v.id,
     }
   }
@@ -50,10 +44,10 @@ impl Module {
     }
   }
 
-  pub fn stable_id(&self) -> &str {
+  pub fn stable_id(&self) -> &StableModuleId {
     match self {
       Module::Normal(v) => &v.stable_id,
-      Module::External(v) => &v.name,
+      Module::External(v) => &v.stable_id,
     }
   }
 
@@ -93,31 +87,23 @@ impl Module {
     }
   }
 
-  pub fn as_external_mut(&mut self) -> Option<&mut ExternalModule> {
-    match self {
-      Module::External(v) => Some(v),
-      Module::Normal(_) => None,
-    }
-  }
-
   pub fn import_records(&self) -> &IndexVec<ImportRecordIdx, ResolvedImportRecord> {
     match self {
-      Module::Normal(v) => match v.module_type {
-        crate::ModuleType::Css => &v.css_view.unpack_ref().import_records,
-        _ => &v.ecma_view.import_records,
-      },
+      Module::Normal(v) => &v.ecma_view.import_records,
       Module::External(v) => &v.import_records,
     }
   }
 
   pub fn set_import_records(&mut self, records: IndexVec<ImportRecordIdx, ResolvedImportRecord>) {
     match self {
-      Module::Normal(v) => match v.module_type {
-        crate::ModuleType::Css => v.css_view.unpack_ref_mut().import_records = records,
-        _ => v.ecma_view.import_records = records,
-      },
+      Module::Normal(v) => v.ecma_view.import_records = records,
       Module::External(v) => v.import_records = records,
     }
+  }
+
+  /// Returns the namespace object ref if this is a normal module.
+  pub fn namespace_object_ref(&self) -> Option<SymbolRef> {
+    self.as_normal().map(|m| m.namespace_object_ref)
   }
 
   /// Returns `true` if the module is [`Ecma`].

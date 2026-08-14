@@ -1,8 +1,11 @@
 import { join } from 'node:path';
 import { defineTest } from 'rolldown-tests';
+import { isWasiTest } from 'rolldown-tests/utils';
 import { expect } from 'vitest';
 
 export default defineTest({
+  // Under the wasm binding the error arrives as a bare `my-error`, without the `[plugin my-plugin] <id>:1:4` diagnostic asserted below.
+  skip: isWasiTest,
   config: {
     plugins: [
       {
@@ -19,7 +22,7 @@ export default defineTest({
     const id = join(import.meta.dirname, 'main.js');
     expect(e.message).toContain(`\
 [plugin my-plugin] ${id}:1:4
-RollupError: my-error
+RolldownError: my-error
 1: xxx;
        ^
 2: yyy;

@@ -1,6 +1,7 @@
 use std::fmt::Display;
 
-use oxc::span::{CompactStr, Span};
+use oxc::span::Span;
+use oxc_str::CompactStr;
 
 use crate::SymbolRef;
 
@@ -21,7 +22,7 @@ pub struct NamedImport {
   /// For case B, the `imported_as` is a `SymbolRef` from `fooNs`.
   /// For case C, the `imported_as` is a `SymbolRef` from `foo2`.
   pub imported_as: SymbolRef,
-  pub record_id: ImportRecordIdx,
+  pub record_idx: ImportRecordIdx,
 }
 
 #[derive(Debug, Clone, Hash, PartialEq, Eq)]

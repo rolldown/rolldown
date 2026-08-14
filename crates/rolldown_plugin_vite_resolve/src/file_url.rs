@@ -66,7 +66,7 @@ fn get_path_from_url_windows(url: Url) -> anyhow::Result<String> {
   }
 
   let pathname = pathname.cow_replace('/', "\\");
-  let pathname = urlencoding::decode(&pathname)?;
+  let pathname = percent_encoding::percent_decode_str(&pathname).decode_utf8()?;
 
   if url.host_str().is_some() {
     // NOTE: this is supported by Node.js, but is not supported by Vite.
@@ -93,6 +93,6 @@ fn get_path_from_url_posix(url: Url) -> anyhow::Result<String> {
     ));
   }
 
-  let pathname = urlencoding::decode(pathname)?;
+  let pathname = percent_encoding::percent_decode_str(pathname).decode_utf8()?;
   Ok(pathname.into_owned())
 }

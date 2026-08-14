@@ -1,0 +1,144 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## a.js
+
+```js
+import { o as aTargetPromise, s as init_a } from "./ga.js";
+init_a();
+export { aTargetPromise };
+
+```
+
+## b.js
+
+```js
+import { a as value, i as unrelated, r as setValue } from "./ga.js";
+//#region b.js
+(globalThis.log ??= []).push("b");
+setValue(1);
+if (value !== 1 || unrelated() !== "unrelated") throw new Error("retained barrel exports have the wrong value");
+const bTargetPromise = import("./ga.js").then((n) => (n.t(), n.n)).then(({ value }) => ({ value }));
+//#endregion
+export { bTargetPromise };
+
+```
+
+## ga.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+//#region a.js
+var aTargetPromise;
+function init_a() {
+	return (init_a = __esmMin((() => {
+		(globalThis.log ??= []).push("a");
+		aTargetPromise = Promise.resolve().then(() => (init_target(), target_exports)).then(({ value }) => ({ value }));
+	})))();
+}
+//#endregion
+//#region leaf.js
+let value = 1;
+function setValue(next) {
+	value = next;
+}
+function unrelated() {
+	return "unrelated";
+}
+//#endregion
+//#region target.js
+var target_exports = /* @__PURE__ */ __exportAll({ value: () => value });
+function init_target() {
+	return (init_target = __esmMin((() => {
+		(globalThis.log ??= []).push("target");
+	})))();
+}
+//#endregion
+export { value as a, unrelated as i, target_exports as n, aTargetPromise as o, setValue as r, init_a as s, init_target as t };
+
+```
+
+# Variant: wrap-all: [on_demand_wrapping: false]
+
+## Assets
+
+### a.js
+
+```js
+import { c as init_a, s as aTargetPromise } from "./ga.js";
+init_a();
+export { aTargetPromise };
+
+```
+
+### b.js
+
+```js
+import { a as unrelated, i as setValue, o as value, r as init_leaf } from "./ga.js";
+import { t as __esmMin } from "./rolldown-runtime.js";
+//#region b.js
+var bTargetPromise;
+function init_b() {
+	return (init_b = __esmMin((() => {
+		init_leaf();
+		(globalThis.log ??= []).push("b");
+		setValue(1);
+		if (value !== 1 || unrelated() !== "unrelated") throw new Error("retained barrel exports have the wrong value");
+		bTargetPromise = import("./ga.js").then((n) => (n.t(), n.n)).then(({ value }) => ({ value }));
+	})))();
+}
+//#endregion
+init_b();
+export { bTargetPromise };
+
+```
+
+### ga.js
+
+```js
+import { n as __exportAll, t as __esmMin } from "./rolldown-runtime.js";
+//#region a.js
+var aTargetPromise;
+function init_a() {
+	return (init_a = __esmMin((() => {
+		(globalThis.log ??= []).push("a");
+		aTargetPromise = Promise.resolve().then(() => (init_target(), target_exports)).then(({ value }) => ({ value }));
+	})))();
+}
+//#endregion
+//#region leaf.js
+function setValue(next) {
+	value = next;
+}
+function unrelated() {
+	return "unrelated";
+}
+var value;
+function init_leaf() {
+	return (init_leaf = __esmMin((() => {
+		value = 1;
+	})))();
+}
+//#endregion
+//#region target.js
+var target_exports = /* @__PURE__ */ __exportAll({ value: () => value });
+function init_target() {
+	return (init_target = __esmMin((() => {
+		init_leaf();
+		(globalThis.log ??= []).push("target");
+	})))();
+}
+//#endregion
+export { unrelated as a, init_a as c, setValue as i, target_exports as n, value as o, init_leaf as r, aTargetPromise as s, init_target as t };
+
+```
+
+### rolldown-runtime.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+export { __exportAll as n, __esmMin as t };
+
+```

@@ -29,12 +29,12 @@ pub enum SideEffects {
 }
 
 impl SideEffects {
-  pub fn from_resolver(value: &oxc_resolver::SideEffects) -> Option<Self> {
+  pub fn from_resolver(value: &oxc_resolver::SideEffects) -> Self {
     match value {
-      oxc_resolver::SideEffects::Bool(v) => Some(SideEffects::Bool(*v)),
-      oxc_resolver::SideEffects::String(v) => Some(SideEffects::String((*v).to_string())),
+      oxc_resolver::SideEffects::Bool(v) => SideEffects::Bool(*v),
+      oxc_resolver::SideEffects::String(v) => SideEffects::String((*v).to_string()),
       oxc_resolver::SideEffects::Array(v) => {
-        Some(SideEffects::Array(v.iter().map(ToString::to_string).collect_vec()))
+        SideEffects::Array(v.iter().map(ToString::to_string).collect_vec())
       }
     }
   }
@@ -42,13 +42,18 @@ impl SideEffects {
 
 pub(crate) fn glob_match_with_normalized_pattern(pattern: &str, path: &str) -> bool {
   let trimmed_str = pattern.trim_start_matches("./");
-  let normalized_glob = if trimmed_str.len() != pattern.len() {
+  let mut normalized_glob = if trimmed_str.len() != pattern.len() {
     String::from("**/") + trimmed_str
   } else if trimmed_str.contains('/') {
     trimmed_str.to_string()
   } else {
     String::from("**/") + trimmed_str
   };
+  // `fast_glob` reads a leading `!` as a negation, but `sideEffects` is a positive allowlist and
+  // `!foo.js` is a legal path. Escape it so the pattern keeps matching literally.
+  if normalized_glob.starts_with('!') {
+    normalized_glob.insert(0, '\\');
+  }
   fast_glob::glob_match(&normalized_glob, path.trim_start_matches("./"))
 }
 

@@ -6,7 +6,7 @@
         "import": "a.js"
       }
     ],
-    "inlineDynamicImports": true
+    "codeSplitting": false
   },
   "expectExecuted": false
 }

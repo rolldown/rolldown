@@ -1,1 +1,1 @@
-export const value = 'child'
+export const value = 'child';

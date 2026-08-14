@@ -1,6 +1,19 @@
-use oxc::span::{CompactStr, Span};
+use oxc::{
+  semantic::{NodeId, ReferenceId},
+  span::Span,
+};
+use oxc_str::CompactStr;
 
 use crate::{MemberExprRefResolution, SymbolRef, type_aliases::MemberExprRefResolutionMap};
+
+/// A single property access in a member expression chain.
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub struct MemberExprProp {
+  pub name: CompactStr,
+  pub span: Span,
+  /// Whether this property access uses optional chaining (`?.`).
+  pub optional: bool,
+}
 
 /// For member expression, e.g. `foo_ns.bar_ns.c`
 /// - `object_ref` is the `SymbolRef` that represents `foo_ns`
@@ -8,12 +21,18 @@ use crate::{MemberExprRefResolution, SymbolRef, type_aliases::MemberExprRefResol
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct MemberExprRef {
   pub object_ref: SymbolRef,
-  pub prop_and_span_list: Box<Vec<(CompactStr, Span)>>,
-  /// Span of the whole member expression
-  /// FIXME: use `AstNodeId` to identify the MemberExpr instead of `Span`
-  /// related discussion: https://github.com/rolldown/rolldown/pull/1818#discussion_r1699374441
+  pub prop_and_span_list: Vec<MemberExprProp>,
+  /// Node ID of the whole member expression.
+  pub node_id: NodeId,
+  /// Span of the whole member expression, used for diagnostics and generated replacement spans.
   pub span: Span,
   pub object_ref_type: MemberExprObjectReferencedType,
+  /// The semantic reference ID for the object identifier of this member expression.
+  /// Used during symbol renaming to find the scope where the reference occurs,
+  /// enabling detection of potential shadowing by nested scope bindings.
+  pub reference_id: Option<ReferenceId>,
+  /// Whether this member expression is in a write context (assignment target).
+  pub is_write: bool,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
@@ -26,15 +45,21 @@ pub enum MemberExprObjectReferencedType {
 impl MemberExprRef {
   pub fn new(
     object_ref: SymbolRef,
-    prop_and_span_list: Vec<(CompactStr, Span)>,
+    prop_and_span_list: Vec<MemberExprProp>,
+    node_id: NodeId,
     span: Span,
     obj_ref_type: MemberExprObjectReferencedType,
+    reference_id: Option<ReferenceId>,
+    is_write: bool,
   ) -> Self {
     Self {
       object_ref,
-      prop_and_span_list: Box::new(prop_and_span_list),
+      prop_and_span_list,
+      node_id,
       span,
       object_ref_type: obj_ref_type,
+      reference_id,
+      is_write,
     }
   }
 
@@ -48,7 +73,7 @@ impl MemberExprRef {
     &self,
     resolved_map: &MemberExprRefResolutionMap,
   ) -> Option<SymbolRef> {
-    if let Some(resolution) = resolved_map.get(&self.span) {
+    if let Some(resolution) = resolved_map.get(&self.node_id) {
       // If the map does have the resolution, it either produces two results:
       // 1. The member expr points to a exist variable/export, which is `MemberExprRefResolution#resolved`
       // 2. The member expr points to a non-exist variable/export, which means `MemberExprRefResolution#resolved` is `None`.
@@ -63,6 +88,6 @@ impl MemberExprRef {
     &self,
     resolved_map: &'a MemberExprRefResolutionMap,
   ) -> Option<&'a MemberExprRefResolution> {
-    resolved_map.get(&self.span)
+    resolved_map.get(&self.node_id)
   }
 }

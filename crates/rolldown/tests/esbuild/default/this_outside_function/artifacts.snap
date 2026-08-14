@@ -39,6 +39,6 @@ if (shouldBeThisNotExports) {
 		static foo() {}
 	});
 }
-
 //#endregion
+
 ```

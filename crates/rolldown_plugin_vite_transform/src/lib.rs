@@ -3,14 +3,13 @@ mod utils;
 use std::borrow::Cow;
 use std::path::{Path, PathBuf};
 
-use arcstr::ArcStr;
 use oxc::codegen::{Codegen, CodegenOptions, CodegenReturn, CommentOptions};
-use oxc::parser::Parser;
-use oxc::semantic::SemanticBuilder;
+use oxc::parser::{ParseOptions, Parser};
 use oxc::transformer::Transformer;
 use rolldown_common::{BundlerTransformOptions, ModuleType};
-use rolldown_error::{BatchedBuildDiagnostic, BuildDiagnostic, Severity};
-use rolldown_plugin::{HookUsage, Plugin, SharedTransformPluginContext};
+use rolldown_ecmascript::semantic_builder_for_transform;
+use rolldown_error::{BatchedBuildDiagnostic, BuildDiagnostic, EventKind, Severity};
+use rolldown_plugin::{HookTransformOutputMap, HookUsage, Plugin, SharedTransformPluginContext};
 use rolldown_utils::{concat_string, pattern_filter::StringOrRegex, url::clean_url};
 
 #[derive(Debug, Default)]
@@ -52,7 +51,7 @@ impl Plugin for ViteTransformPlugin {
     let extension = Path::new(args.id).extension().map(|s| s.to_string_lossy());
     let extension = extension.as_ref().map(|s| clean_url(s));
     let module_type = extension.map(ModuleType::from_str_with_fallback);
-    if !self.filter(args.id, &cwd, &module_type) {
+    if !self.filter(args.id, &cwd, module_type.as_ref()) {
       return Ok(None);
     }
 
@@ -60,26 +59,30 @@ impl Plugin for ViteTransformPlugin {
       self.get_modified_transform_options(&ctx, args.id, &cwd, extension, args.code)?;
 
     let allocator = oxc::allocator::Allocator::default();
-    let ret = Parser::new(&allocator, args.code, source_type).parse();
-    if ret.panicked || !ret.errors.is_empty() {
-      return Err(BatchedBuildDiagnostic::new(BuildDiagnostic::from_oxc_diagnostics(
-        ret.errors,
-        &ArcStr::from(args.code.as_str()),
+    let ret = Parser::new(&allocator, args.code, source_type)
+      .with_options(ParseOptions { preserve_parens: false, ..ParseOptions::default() })
+      .parse();
+    if ret.panicked || !ret.diagnostics.is_empty() {
+      Err(BatchedBuildDiagnostic::new(BuildDiagnostic::from_oxc_diagnostics(
+        ret.diagnostics,
+        args.code,
         args.id,
-        &Severity::Error,
+        Severity::Error,
+        EventKind::ParseError,
       )))?;
     }
 
     let mut program = ret.program;
-    let scoping = SemanticBuilder::new().build(&program).semantic.into_scoping();
+    let scoping = semantic_builder_for_transform().build(&program).semantic.into_scoping();
     let transformer = Transformer::new(&allocator, Path::new(args.id), &transform_options);
     let transformer_return = transformer.build_with_scoping(scoping, &mut program);
-    if !transformer_return.errors.is_empty() {
-      return Err(BatchedBuildDiagnostic::new(BuildDiagnostic::from_oxc_diagnostics(
-        transformer_return.errors,
-        &ArcStr::from(args.code.as_str()),
+    if !transformer_return.diagnostics.is_empty() {
+      Err(BatchedBuildDiagnostic::new(BuildDiagnostic::from_oxc_diagnostics(
+        transformer_return.diagnostics,
+        args.code,
         args.id,
-        &Severity::Error,
+        Severity::Error,
+        EventKind::ParseError,
       )))?;
     }
 
@@ -96,7 +99,11 @@ impl Plugin for ViteTransformPlugin {
     }
 
     Ok(Some(rolldown_plugin::HookTransformOutput {
-      map,
+      map: if let Some(map) = map {
+        map.into_owned().into()
+      } else {
+        HookTransformOutputMap::Omitted
+      },
       code: Some(code),
       module_type: Some(ModuleType::Js),
       ..Default::default()

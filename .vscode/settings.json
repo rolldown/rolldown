@@ -5,19 +5,23 @@
   },
   "[toml]": {
     "editor.formatOnSave": true,
-    "editor.defaultFormatter": "dprint.dprint"
+    "editor.defaultFormatter": "oxc.oxc-vscode"
   },
   "[json]": {
     "editor.formatOnSave": true,
-    "editor.defaultFormatter": "dprint.dprint"
+    "editor.defaultFormatter": "oxc.oxc-vscode"
   },
   "[javascript]": {
     "editor.formatOnSave": true,
-    "editor.defaultFormatter": "dprint.dprint"
+    "editor.defaultFormatter": "oxc.oxc-vscode"
   },
   "[typescript]": {
     "editor.formatOnSave": true,
-    "editor.defaultFormatter": "dprint.dprint"
+    "editor.defaultFormatter": "oxc.oxc-vscode"
+  },
+  "[markdown]": {
+    "editor.formatOnSave": true,
+    "editor.defaultFormatter": "oxc.oxc-vscode"
   },
   "files.associations": {
     "*.snap": "markdown",
@@ -28,7 +32,8 @@
     "**/CHANGELOG-*.md": true,
     "**/CHANGELOG.md": true,
     "**/generated/**": true,
-    "packages/rolldown/src/*{binding,worker}*.*{j,d.t}s": true
+    "packages/rolldown/src/*{binding,worker}*.*{j,d.t}s": true,
+    "docs/reference/**": true
   },
   "git.ignoreLimitWarning": true,
   "json.schemas": [

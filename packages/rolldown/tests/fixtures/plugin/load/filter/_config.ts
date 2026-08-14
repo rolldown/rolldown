@@ -4,6 +4,7 @@ import { expect, vi } from 'vitest';
 const loadFn = vi.fn();
 
 export default defineTest({
+  sequential: true,
   config: {
     plugins: [
       {
@@ -30,7 +31,7 @@ export default defineTest({
             }
           },
         },
-        transform: function(id, code) {
+        transform: function (id, code) {
           if (id === 'foo') {
             expect(code).toStrictEqual('');
           }

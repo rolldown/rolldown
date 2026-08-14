@@ -1,9 +1,6 @@
 import path from 'node:path';
 import { defineTest } from 'rolldown-tests';
-import {
-  viteDynamicImportVarsPlugin,
-  viteImportGlobPlugin,
-} from 'rolldown/experimental';
+import { viteDynamicImportVarsPlugin, viteImportGlobPlugin } from 'rolldown/experimental';
 
 export default defineTest({
   config: {
@@ -13,9 +10,7 @@ export default defineTest({
           return id.replace('@', path.resolve(import.meta.dirname, './dir/a'));
         },
       }),
-      viteImportGlobPlugin({
-        root: path.resolve(import.meta.dirname),
-      }),
+      viteImportGlobPlugin(),
     ],
   },
   async afterTest() {

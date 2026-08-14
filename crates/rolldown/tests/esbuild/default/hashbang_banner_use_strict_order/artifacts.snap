@@ -1,21 +1,20 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
 ---
+# warnings
+
+## DUPLICATE_SHEBANG
+
+```text
+[DUPLICATE_SHEBANG] Both the code and banner contain shebang in "entry.js". This will cause a syntax error.
+
+```
+
 # Assets
 
 ## entry.js
 
 ```js
 #! in file
-#! from banner
-'use strict';
 
-(function() {
-
-
-//#region entry.js
-	foo();
-
-//#endregion
-})();
 ```

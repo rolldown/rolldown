@@ -1,8 +1,9 @@
 use rolldown_utils::indexmap::FxIndexMap;
 use rustc_hash::FxHashMap;
 use std::{fmt::Debug, path::PathBuf};
-use types::advanced_chunks_options::AdvancedChunksOptions;
-use types::debug_options::DebugOptions;
+use types::code_splitting_mode::CodeSplittingMode;
+use types::comments::CommentsOptions;
+use types::devtools_options::DevtoolsOptions;
 use types::generated_code_options::GeneratedCodeOptions;
 use types::inject_import::InjectImport;
 use types::invalidate_js_side_cache::InvalidateJsSideCache;
@@ -33,8 +34,9 @@ use self::types::{
   defer_sync_scan_data_option::DeferSyncScanDataOption, es_module_flag::EsModuleFlag,
   hash_characters::HashCharacters, input_item::InputItem, is_external::IsExternal,
   output_exports::OutputExports, output_format::OutputFormat, output_option::AddonOutputOption,
-  platform::Platform, resolve_options::ResolveOptions, source_map_type::SourceMapType,
-  sourcemap_path_transform::SourceMapPathTransform, tsconfig::TsConfig,
+  platform::Platform, plugin_timings_option::PluginTimingsOption, resolve_options::ResolveOptions,
+  source_map_type::SourceMapType, sourcemap_path_transform::SourceMapPathTransform,
+  strict_mode::StrictMode, tsconfig::TsConfig,
 };
 
 use crate::{
@@ -76,18 +78,6 @@ pub struct BundlerOptions {
     schemars(with = "Option<String>")
   )]
   pub chunk_filenames: Option<ChunkFilenamesOutputOption>,
-  #[cfg_attr(
-    feature = "deserialize_bundler_options",
-    serde(default, deserialize_with = "deserialize_chunk_filenames"),
-    schemars(with = "Option<String>")
-  )]
-  pub css_entry_filenames: Option<ChunkFilenamesOutputOption>,
-  #[cfg_attr(
-    feature = "deserialize_bundler_options",
-    serde(default, deserialize_with = "deserialize_chunk_filenames"),
-    schemars(with = "Option<String>")
-  )]
-  pub css_chunk_filenames: Option<ChunkFilenamesOutputOption>,
   #[cfg_attr(
     feature = "deserialize_bundler_options",
     serde(default, deserialize_with = "deserialize_asset_filenames"),
@@ -160,6 +150,12 @@ pub struct BundlerOptions {
   pub sourcemap_base_url: Option<String>,
   #[cfg_attr(
     feature = "deserialize_bundler_options",
+    serde(default, deserialize_with = "deserialize_chunk_filenames"),
+    schemars(with = "Option<String>")
+  )]
+  pub sourcemap_filenames: Option<ChunkFilenamesOutputOption>,
+  #[cfg_attr(
+    feature = "deserialize_bundler_options",
     serde(default, skip_deserializing),
     schemars(skip)
   )]
@@ -171,6 +167,7 @@ pub struct BundlerOptions {
   )]
   pub sourcemap_path_transform: Option<SourceMapPathTransform>,
   pub sourcemap_debug_ids: Option<bool>,
+  pub sourcemap_exclude_sources: Option<bool>,
 
   /// Key is the file extension. The extension should start with a `.`. E.g. `".txt"`.
   pub module_types: Option<FxHashMap<String, ModuleType>>,
@@ -198,8 +195,11 @@ pub struct BundlerOptions {
   pub keep_names: Option<bool>,
   pub inject: Option<Vec<InjectImport>>,
   pub external_live_bindings: Option<bool>,
-  pub inline_dynamic_imports: Option<bool>,
-  pub advanced_chunks: Option<AdvancedChunksOptions>,
+  /// Mirrors the public `codeSplitting: boolean | CodeSplittingOptions`. The object
+  /// form (`Advanced`) carries the manual chunk grouping config; it is decomposed into
+  /// the gate + `NormalizedBundlerOptions::manual_code_splitting` during normalization.
+  pub code_splitting: Option<CodeSplittingMode>,
+  pub dynamic_import_in_cjs: Option<bool>,
   pub checks: Option<ChecksOptions>,
   #[cfg_attr(
     feature = "deserialize_bundler_options",
@@ -209,6 +209,7 @@ pub struct BundlerOptions {
   pub transform: Option<BundlerTransformOptions>,
   pub watch: Option<WatchOption>,
   pub legal_comments: Option<LegalComments>,
+  pub comments: Option<CommentsOptions>,
   pub polyfill_require: Option<bool>,
   #[cfg_attr(
     feature = "deserialize_bundler_options",
@@ -216,8 +217,14 @@ pub struct BundlerOptions {
     schemars(skip)
   )]
   pub defer_sync_scan_data: Option<DeferSyncScanDataOption>,
+  #[cfg_attr(
+    feature = "deserialize_bundler_options",
+    serde(default, skip_deserializing),
+    schemars(skip)
+  )]
+  pub plugin_timings: Option<PluginTimingsOption>,
   pub make_absolute_externals_relative: Option<MakeAbsoluteExternalsRelative>,
-  pub debug: Option<DebugOptions>,
+  pub devtools: Option<DevtoolsOptions>,
   #[cfg_attr(
     feature = "deserialize_bundler_options",
     serde(default, skip_deserializing),
@@ -241,6 +248,8 @@ pub struct BundlerOptions {
   pub clean_dir: Option<bool>,
   pub context: Option<String>,
   pub tsconfig: Option<TsConfig>,
+  pub strict_execution_order: Option<bool>,
+  pub strict: Option<StrictMode>,
 }
 
 #[cfg(feature = "deserialize_bundler_options")]
@@ -348,6 +357,7 @@ where
         commonjs: Some(true),
         property_read_side_effects: None,
         property_write_side_effects: None,
+        invalid_import_side_effects: None,
       }))
     }
     Some(Value::Object(obj)) => {
@@ -372,12 +382,21 @@ where
           _ => Err(serde::de::Error::custom("commonjs should be a `true` or `false`")),
         },
       )?;
-      let unknown_global_side_effects = obj.get("unknown_global_side_effects").map_or_else(
+      let unknown_global_side_effects = obj.get("unknownGlobalSideEffects").map_or_else(
+        || Ok(Some(true)),
+        |v| match v {
+          Value::Bool(b) => Ok(Some(*b)),
+          _ => {
+            Err(serde::de::Error::custom("unknownGlobalSideEffects should be a `true` or `false`"))
+          }
+        },
+      )?;
+      let invalid_import_side_effects = obj.get("invalidImportSideEffects").map_or_else(
         || Ok(Some(true)),
         |v| match v {
           Value::Bool(b) => Ok(Some(*b)),
           _ => Err(serde::de::Error::custom(
-            "unknown_global_side_effects should be a `true` or `false`",
+            "invalid_import_side_effects should be a `true` or `false`",
           )),
         },
       )?;
@@ -431,6 +450,7 @@ where
         commonjs,
         property_read_side_effects,
         property_write_side_effects,
+        invalid_import_side_effects,
       }))
     }
     _ => Err(serde::de::Error::custom("treeshake should be a boolean or an object")),
@@ -507,7 +527,7 @@ where
                       })?;
                       default_jsx_option.pragma_frag = Some(pragma_frag.to_owned());
                     }
-                    _ => return Err(serde::de::Error::custom(format!("unknown jsx option: {k}",))),
+                    _ => return Err(serde::de::Error::custom(format!("unknown jsx option: {k}"))),
                   }
                 }
                 Some(Either::Right(default_jsx_option))
@@ -519,7 +539,7 @@ where
               }
             };
           }
-          _ => return Err(serde::de::Error::custom(format!("unknown transform option: {k}",))),
+          _ => return Err(serde::de::Error::custom(format!("unknown transform option: {k}"))),
         }
       }
       Ok(Some(transform_options))

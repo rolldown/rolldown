@@ -27,12 +27,15 @@ const { registryId, pluginInfos, threadNumber } = workerData as WorkerData;
             {} as InputOptions,
             {} as OutputOptions,
             // TODO need to find a way to share pluginContextData
-            new PluginContextData(() => {}, {} as OutputOptions, []),
+            new PluginContextData(() => {}, {} as OutputOptions, [], []),
             [],
             () => {},
             'info' as const,
             // TODO: support this.meta.watchMode
             false,
+            // Not measured: these hooks run on a worker thread, so their spans could not
+            // be summed with the main thread's or reported through its log handler.
+            undefined,
           ),
         };
       }),

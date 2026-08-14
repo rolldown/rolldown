@@ -1,0 +1,6 @@
+{
+  "config": {
+    "treeshake": true,
+    "external": ["node:assert"]
+  }
+}

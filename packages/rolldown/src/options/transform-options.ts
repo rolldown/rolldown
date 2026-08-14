@@ -1,33 +1,22 @@
-import type {
-  JsxOptions,
-  TransformOptions as OxcTransformOptions,
-} from '../binding.cjs';
+import type { JsxOptions, TransformOptions as OxcTransformOptions } from '../binding.cjs';
 
-export interface TransformOptions extends
-  Omit<
-    OxcTransformOptions,
-    | 'sourceType'
-    | 'lang'
-    | 'cwd'
-    | 'sourcemap'
-    | 'define'
-    | 'inject'
-    | 'jsx'
-  >
-{
+export interface TransformOptions extends Omit<
+  OxcTransformOptions,
+  'sourceType' | 'lang' | 'cwd' | 'sourcemap' | 'define' | 'inject' | 'jsx'
+> {
   /**
    * Replace global variables or [property accessors](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Operators/Property_accessors) with the provided values.
    *
-   * # Examples
+   * See Oxc's [`define` option](https://oxc.rs/docs/guide/usage/transformer/global-variable-replacement.html#define) for more details.
    *
-   * - Replace the global variable `IS_PROD` with `true`
-   *
-   * ```js rolldown.config.js
-   * export default defineConfig({ transform: { define: { IS_PROD: 'true' } } })
+   * @example
+   * **Replace the global variable `IS_PROD` with `true`**
+   * ```js [rolldown.config.js]
+   * export default defineConfig({
+   *   transform: { define: { IS_PROD: 'true' } }
+   * })
    * ```
-   *
    * Result:
-   *
    * ```js
    * // Input
    * if (IS_PROD) {
@@ -40,25 +29,23 @@ export interface TransformOptions extends
    * }
    * ```
    *
-   * - Replace the property accessor `process.env.NODE_ENV` with `'production'`
-   *
-   * ```js rolldown.config.js
-   * export default defineConfig({ transform: { define: { 'process.env.NODE_ENV': "'production'" } } })
+   * **Replace the property accessor `process.env.NODE_ENV` with `'production'`**
+   * ```js [rolldown.config.js]
+   * export default defineConfig({
+   *   transform: { define: { 'process.env.NODE_ENV': "'production'" } }
+   * })
    * ```
-   *
    * Result:
-   *
    * ```js
    * // Input
    * if (process.env.NODE_ENV === 'production') {
-   *  console.log('Production mode')
+   *   console.log('Production mode')
    * }
    *
    * // After bundling
    * if ('production' === 'production') {
-   * console.log('Production mode')
+   *   console.log('Production mode')
    * }
-   *
    * ```
    */
   define?: Record<string, string>;
@@ -67,7 +54,9 @@ export interface TransformOptions extends
    *
    * The API is aligned with `@rollup/plugin-inject`.
    *
-   * ## Supported patterns
+   * See Oxc's [`inject` option](https://oxc.rs/docs/guide/usage/transformer/global-variable-replacement.html#inject) for more details.
+   *
+   * #### Supported patterns
    * ```js
    * {
    *   // import { Promise } from 'es6-promise'
@@ -95,14 +84,13 @@ export interface TransformOptions extends
    * This option allows you to strip specific labeled statements from the output,
    * which is useful for removing debug-only code in production builds.
    *
-   * ## Example
-   *
+   * @example
    * ```js rolldown.config.js
-   * export default defineConfig({ transform: { dropLabels: ['DEBUG', 'DEV'] } })
+   * export default defineConfig({
+   *   transform: { dropLabels: ['DEBUG', 'DEV'] }
+   * })
    * ```
-   *
    * Result:
-   *
    * ```js
    * // Input
    * DEBUG: console.log('Debug info');
@@ -116,5 +104,13 @@ export interface TransformOptions extends
    * ```
    */
   dropLabels?: string[];
+  /**
+   * Controls how JSX syntax is transformed.
+   *
+   * - If set to `false`, an error will be thrown if JSX syntax is encountered.
+   * - If set to `'react'`, JSX syntax will be transformed to classic runtime React code.
+   * - If set to `'react-jsx'`, JSX syntax will be transformed to automatic runtime React code.
+   * - If set to `'preserve'`, JSX syntax will be preserved as-is.
+   */
   jsx?: false | 'react' | 'react-jsx' | 'preserve' | JsxOptions;
 }

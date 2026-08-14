@@ -1,3 +1,3 @@
-export const foo = 'hello'
+export const foo = 'hello';
 
-import.meta.hot.accept(() => {})
+import.meta.hot.accept(() => {});

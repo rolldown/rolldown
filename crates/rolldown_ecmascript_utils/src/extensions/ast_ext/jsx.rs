@@ -1,11 +1,11 @@
 use oxc::allocator::Box;
 use oxc::ast::ast::{
-  Expression, JSXMemberExpression, JSXMemberExpressionObject, StaticMemberExpression,
+  Expression, JSXIdentifier, JSXMemberExpression, JSXMemberExpressionObject, StaticMemberExpression,
 };
+use oxc::ast::builder::AstBuilder;
 
 pub trait JsxExt<'ast> {
   type AstKind;
-  fn rewrite_ident_reference(&mut self, ident_ref: JSXMemberExpressionObject<'ast>);
   fn from_ast(
     member_expr: Self::AstKind,
     allocator: &'ast oxc::allocator::Allocator,
@@ -14,8 +14,11 @@ pub trait JsxExt<'ast> {
     Self: Sized;
 }
 
-impl<'ast> JsxExt<'ast> for JSXMemberExpressionObject<'ast> {
-  type AstKind = Expression<'ast>;
+pub trait JsxMemberExpressionObjectExt<'ast> {
+  fn rewrite_ident_reference(&mut self, ident_ref: JSXMemberExpressionObject<'ast>);
+}
+
+impl<'ast> JsxMemberExpressionObjectExt<'ast> for JSXMemberExpressionObject<'ast> {
   fn rewrite_ident_reference(&mut self, ident_ref: JSXMemberExpressionObject<'ast>) {
     let mut object = self;
     loop {
@@ -31,6 +34,10 @@ impl<'ast> JsxExt<'ast> for JSXMemberExpressionObject<'ast> {
       }
     }
   }
+}
+
+impl<'ast> JsxExt<'ast> for JSXMemberExpressionObject<'ast> {
+  type AstKind = Expression<'ast>;
 
   fn from_ast(
     member_expr: Expression<'ast>,
@@ -41,7 +48,7 @@ impl<'ast> JsxExt<'ast> for JSXMemberExpressionObject<'ast> {
       Expression::StaticMemberExpression(member_expr) => {
         Some(JSXMemberExpressionObject::MemberExpression(Box::new_in(
           JSXMemberExpression::from_ast(member_expr.unbox(), allocator)?,
-          allocator,
+          &allocator,
         )))
       }
       Expression::ThisExpression(expr) => Some(JSXMemberExpressionObject::ThisExpression(expr)),
@@ -52,9 +59,6 @@ impl<'ast> JsxExt<'ast> for JSXMemberExpressionObject<'ast> {
 
 impl<'ast> JsxExt<'ast> for JSXMemberExpression<'ast> {
   type AstKind = StaticMemberExpression<'ast>;
-  fn rewrite_ident_reference(&mut self, _ident_ref: JSXMemberExpressionObject<'ast>) {
-    todo!()
-  }
 
   fn from_ast(
     member_expr: StaticMemberExpression<'ast>,
@@ -63,13 +67,12 @@ impl<'ast> JsxExt<'ast> for JSXMemberExpression<'ast> {
   where
     Self: Sized,
   {
-    Some(JSXMemberExpression {
-      span: member_expr.span,
-      object: JSXMemberExpressionObject::from_ast(member_expr.object, allocator)?,
-      property: oxc::ast::ast::JSXIdentifier {
-        span: member_expr.span,
-        name: member_expr.property.name,
-      },
-    })
+    let builder = AstBuilder::new(allocator);
+    Some(JSXMemberExpression::new(
+      member_expr.span,
+      JSXMemberExpressionObject::from_ast(member_expr.object, allocator)?,
+      JSXIdentifier::new(member_expr.span, member_expr.property.name, &builder),
+      &builder,
+    ))
   }
 }

@@ -1,12 +1,6 @@
 {
   "extends": "../tsconfig.json",
-  "include": [
-    "ci/**/*.js",
-    "meta/**/*.js",
-    "misc/**/*.js",
-    "misc/**/*.d.ts",
-    "src/**/*.ts"
-  ],
+  "include": ["ci/**/*.js", "meta/**/*.js", "misc/**/*.js", "misc/**/*.d.ts", "src/**/*.ts"],
   "compilerOptions": {
     "moduleResolution": "Bundler",
     "module": "ESNext",

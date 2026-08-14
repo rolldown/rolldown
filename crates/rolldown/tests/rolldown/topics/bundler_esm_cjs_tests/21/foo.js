@@ -1,1 +1,1 @@
-export let bar = 123
+export let bar = 123;

@@ -1,5 +1,4 @@
 /**
  * default export class
  */
-export default class b{}
-
+export default class b {}

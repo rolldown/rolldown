@@ -11,8 +11,8 @@ console.log([/* @__PURE__ */ import.meta.factory("x", null), /* @__PURE__ */ {}.
 f = function() {
 	console.log([/* @__PURE__ */ import.meta.factory("y", null), /* @__PURE__ */ {}.factory("y", null)]);
 };
-
 //#endregion
+
 ```
 
 ## fragment.js
@@ -22,6 +22,6 @@ f = function() {
 console.log([/* @__PURE__ */ import.meta.factory(import.meta.fragment, null, "x"), /* @__PURE__ */ {}.factory({}.fragment, null, "x")]), f = function() {
 	console.log([/* @__PURE__ */ import.meta.factory(import.meta.fragment, null, "y"), /* @__PURE__ */ {}.factory({}.fragment, null, "y")]);
 };
-
 //#endregion
+
 ```

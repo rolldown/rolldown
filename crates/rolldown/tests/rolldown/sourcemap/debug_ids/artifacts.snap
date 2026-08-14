@@ -8,8 +8,8 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```js
 //#region main.js
 console.log(1);
-
 //#endregion
-//# debugId=535b0fdd-74be-4342-8924-c8166fd01be3
+
+//# debugId=cceb17c1-9997-454c-a466-bbe4a06b58eb
 //# sourceMappingURL=main.js.map
 ```

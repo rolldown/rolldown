@@ -83,9 +83,7 @@ export class OutputChunkImpl extends PlainObjectLike implements OutputChunk {
     return mapString ? transformToRollupSourceMap(mapString) : null;
   }
 
-  __rolldown_external_memory_handle__(
-    keepDataAlive?: boolean,
-  ): ExternalMemoryStatus {
+  __rolldown_external_memory_handle__(keepDataAlive?: boolean): ExternalMemoryStatus {
     if (keepDataAlive) {
       this.#evaluateAllLazyFields();
     }

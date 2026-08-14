@@ -1,0 +1,6 @@
+{
+  "config": {
+    "external": ["node:url"],
+    "keepNames": true
+  }
+}

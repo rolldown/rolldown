@@ -1,10 +1,4 @@
-import {
-  existsSync,
-  mkdirSync,
-  readFileSync,
-  rmSync,
-  writeFileSync,
-} from 'node:fs';
+import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import type { RolldownPlugin } from 'rolldown';
 import { rolldown } from 'rolldown';
@@ -85,10 +79,7 @@ test('clean outdir hooks', async () => {
         const outputDir = outputOptions.dir;
         if (!outputDir) throw new Error('cannot get outdir in plugin');
         mkdirSync(outputDir, { recursive: true });
-        writeFileSync(
-          join(outputDir, generateBundleFile),
-          generateBundleContent,
-        );
+        writeFileSync(join(outputDir, generateBundleFile), generateBundleContent);
       },
       writeBundle(outputOptions) {
         const outputDir = outputOptions.dir;
@@ -116,14 +107,10 @@ test('clean outdir hooks', async () => {
   });
 
   expect(existsSync(join(outdir, generateBundleFile))).toBe(true);
-  expect(readFileSync(join(outdir, generateBundleFile), 'utf-8')).toBe(
-    generateBundleContent,
-  );
+  expect(readFileSync(join(outdir, generateBundleFile), 'utf-8')).toBe(generateBundleContent);
 
   expect(existsSync(join(outdir, writeBundleFile))).toBe(true);
-  expect(readFileSync(join(outdir, writeBundleFile), 'utf-8')).toBe(
-    writeBundleContent,
-  );
+  expect(readFileSync(join(outdir, writeBundleFile), 'utf-8')).toBe(writeBundleContent);
 
   rmSync(outdir, { recursive: true });
 });

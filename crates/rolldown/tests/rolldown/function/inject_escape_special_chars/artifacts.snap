@@ -6,14 +6,14 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## UNRESOLVED_IMPORT
 
 ```text
-[UNRESOLVED_IMPORT] Warning: Could not resolve 'foo"' in main.js
+[UNRESOLVED_IMPORT] Could not resolve 'foo"' in main.js
 
 ```
 
 ## UNRESOLVED_IMPORT
 
 ```text
-[UNRESOLVED_IMPORT] Warning: Could not resolve 'foo\bar' in main.js
+[UNRESOLVED_IMPORT] Could not resolve 'foo\bar' in main.js
 
 ```
 
@@ -24,10 +24,9 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```js
 import a from "foo\"";
 import b from "foo\\bar";
-
 //#region main.js
 console.log(a);
 console.log(b);
-
 //#endregion
+
 ```

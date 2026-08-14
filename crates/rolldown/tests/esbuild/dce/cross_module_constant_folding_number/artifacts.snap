@@ -6,126 +6,101 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## const-entry.js
 
 ```js
-//#region const-constants.js
-const a = 3;
-const b = 6;
-
-//#endregion
 //#region const-entry.js
 console.log([
-	+b,
-	-b,
-	~b,
-	!b,
-	typeof b
+	6,
+	-6,
+	-7,
+	false,
+	"number"
 ], [
-	a + b,
-	a - b,
-	a * b,
-	a / b,
-	a % b,
-	a ** b
+	9,
+	-3,
+	18,
+	3 / 6,
+	3,
+	729
 ], [
-	a < b,
-	a > b,
-	a <= b,
-	a >= b,
-	a == b,
-	a != b,
-	a === b,
-	a !== b
+	true,
+	false,
+	true,
+	false,
+	false,
+	true,
+	false,
+	true
 ], [
-	b << 1,
-	b >> 1,
-	b >>> 1
+	12,
+	3,
+	3
 ], [
-	a & b,
-	a | b,
-	a ^ b
+	2,
+	7,
+	5
 ], [
-	a && b,
-	a || b,
-	a ?? b,
-	a ? "y" : "n",
-	!b ? "y" : "n"
+	6,
+	3,
+	3,
+	"y",
+	"n"
 ]);
-
 //#endregion
+
 ```
 
 ## enum-entry.js
 
 ```js
-//#region enum-constants.ts
-let x = /* @__PURE__ */ function(x$1) {
-	x$1[x$1["a"] = 3] = "a";
-	x$1[x$1["b"] = 6] = "b";
-	return x$1;
-}({});
-
-//#endregion
 //#region enum-entry.ts
 console.log([
-	+x.b,
-	-x.b,
-	~x.b,
-	!x.b,
-	typeof x.b
+	6,
+	-6,
+	-7,
+	false,
+	"number"
 ], [
-	x.a + x.b,
-	x.a - x.b,
-	x.a * x.b,
-	x.a / x.b,
-	x.a % x.b,
-	x.a ** x.b
+	9,
+	-3,
+	18,
+	3 / 6,
+	3,
+	729
 ], [
-	x.a < x.b,
-	x.a > x.b,
-	x.a <= x.b,
-	x.a >= x.b,
-	x.a == x.b,
-	x.a != x.b,
-	x.a === x.b,
-	x.a !== x.b
+	true,
+	false,
+	true,
+	false,
+	false,
+	true,
+	false,
+	true
 ], [
-	x.b << 1,
-	x.b >> 1,
-	x.b >>> 1
+	12,
+	3,
+	3
 ], [
-	x.a & x.b,
-	x.a | x.b,
-	x.a ^ x.b
+	2,
+	7,
+	5
 ], [
-	x.a && x.b,
-	x.a || x.b,
-	x.a ?? x.b,
-	x.a ? "y" : "n",
-	!x.b ? "y" : "n"
+	6,
+	3,
+	3,
+	"y",
+	"n"
 ]);
-
 //#endregion
+
 ```
 
 ## nested-entry.js
 
 ```js
-//#region nested-constants.ts
-const a = 2;
-const b = 4;
-const c = 8;
-let x = /* @__PURE__ */ function(x$1) {
-	x$1[x$1["a"] = 16] = "a";
-	x$1[x$1["b"] = 32] = "b";
-	x$1[x$1["c"] = 64] = "c";
-	return x$1;
-}({});
-
-//#endregion
 //#region nested-entry.ts
 console.log({
-	"should be 4": ~(~a & ~b) & (b | c),
-	"should be 32": ~(~x.a & ~x.b) & (x.b | x.c)
+	"should be 4": 4,
+	"should be 32": 32
 });
-
 //#endregion
+
 ```

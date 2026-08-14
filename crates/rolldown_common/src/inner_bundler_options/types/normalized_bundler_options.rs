@@ -10,10 +10,12 @@ use oxc::transformer_plugins::InjectGlobalVariablesConfig;
 use rolldown_error::EventKindSwitcher;
 use rustc_hash::{FxHashMap, FxHashSet};
 
-use super::advanced_chunks_options::AdvancedChunksOptions;
+use super::code_splitting_mode::CodeSplittingMode;
+use super::comments::CommentsOptions;
 use super::experimental_options::ExperimentalOptions;
 use super::generated_code_options::GeneratedCodeOptions;
 use super::legal_comments::LegalComments;
+use super::manual_code_splitting_options::ManualCodeSplittingOptions;
 use super::minify_options::MinifyOptions;
 use super::output_option::{
   AssetFilenamesOutputOption, ChunkFilenamesOutputOption, PathsOutputOption,
@@ -31,7 +33,8 @@ use crate::inner_bundler_options::types::optimization::NormalizedOptimizationCon
 use crate::{
   DeferSyncScanDataOption, EmittedAsset, EsModuleFlag, FilenameTemplate, GlobalsOutputOption,
   HashCharacters, InjectImport, InputItem, InvalidateJsSideCache, LogLevel,
-  MakeAbsoluteExternalsRelative, ModuleType, OnLog, RollupPreRenderedAsset, TransformOptions,
+  MakeAbsoluteExternalsRelative, ModuleType, OnLog, PluginTimingsOption, RollupPreRenderedAsset,
+  StrictMode, TransformOptions,
 };
 
 #[expect(clippy::struct_excessive_bools)] // Using raw booleans is more clear in this case
@@ -40,6 +43,7 @@ pub struct NormalizedBundlerOptions {
   // --- Input
   pub input: Vec<InputItem>,
   pub cwd: PathBuf,
+  pub normalized_cwd: PathBuf,
   pub external: IsExternal,
   /// corresponding to `false | NormalizedTreeshakeOption`
   pub treeshake: NormalizedTreeshakeOptions,
@@ -49,8 +53,6 @@ pub struct NormalizedBundlerOptions {
   pub module_types: FxHashMap<Cow<'static, str>, ModuleType>,
   // --- Output
   pub name: Option<String>,
-  pub css_entry_filenames: ChunkFilenamesOutputOption,
-  pub css_chunk_filenames: ChunkFilenamesOutputOption,
   pub entry_filenames: ChunkFilenamesOutputOption,
   pub chunk_filenames: ChunkFilenamesOutputOption,
   pub asset_filenames: AssetFilenamesOutputOption,
@@ -77,7 +79,9 @@ pub struct NormalizedBundlerOptions {
   pub sourcemap_ignore_list: Option<SourceMapIgnoreList>,
   pub sourcemap_path_transform: Option<SourceMapPathTransform>,
   pub sourcemap_debug_ids: bool,
+  pub sourcemap_exclude_sources: bool,
   pub sourcemap_base_url: Option<String>,
+  pub sourcemap_filenames: Option<ChunkFilenamesOutputOption>,
   pub experimental: ExperimentalOptions,
   pub minify: MinifyOptions,
   pub extend: bool,
@@ -86,15 +90,19 @@ pub struct NormalizedBundlerOptions {
   pub inject: Vec<InjectImport>,
   pub oxc_inject_global_variables_config: InjectGlobalVariablesConfig,
   pub external_live_bindings: bool,
-  pub inline_dynamic_imports: bool,
-  pub advanced_chunks: Option<AdvancedChunksOptions>,
+  pub code_splitting: CodeSplittingMode,
+  pub dynamic_import_in_cjs: bool,
+  pub manual_code_splitting: Option<ManualCodeSplittingOptions>,
   pub checks: EventKindSwitcher,
   pub profiler_names: bool,
   pub watch: WatchOption,
   pub legal_comments: LegalComments,
+  pub comments: CommentsOptions,
   pub drop_labels: FxHashSet<String>,
   pub polyfill_require: bool,
   pub defer_sync_scan_data: Option<DeferSyncScanDataOption>,
+  /// Pulled at close so the measurement includes `closeBundle`.
+  pub plugin_timings: Option<PluginTimingsOption>,
   pub transform_options: Box<TransformOptions>,
   pub make_absolute_externals_relative: MakeAbsoluteExternalsRelative,
   pub invalidate_js_side_cache: Option<InvalidateJsSideCache>,
@@ -104,12 +112,14 @@ pub struct NormalizedBundlerOptions {
   pub virtual_dirname: ArcStr,
   pub preserve_modules_root: Option<String>,
   pub preserve_entry_signatures: PreserveEntrySignatures,
-  pub debug: bool,
+  pub devtools: bool,
   pub optimization: NormalizedOptimizationConfig,
   pub top_level_var: bool,
   pub minify_internal_exports: bool,
   pub clean_dir: bool,
   pub context: String,
+  pub strict_execution_order: bool,
+  pub strict: StrictMode,
 }
 
 // This is only used for testing
@@ -119,14 +129,13 @@ impl Default for NormalizedBundlerOptions {
     Self {
       input: Default::default(),
       cwd: Default::default(),
+      normalized_cwd: Default::default(),
       external: Default::default(),
       treeshake: Default::default(),
       platform: Platform::Neutral,
       shim_missing_exports: Default::default(),
       module_types: Default::default(),
       name: Default::default(),
-      css_entry_filenames: ChunkFilenamesOutputOption::String(String::new()),
-      css_chunk_filenames: ChunkFilenamesOutputOption::String(String::new()),
       entry_filenames: ChunkFilenamesOutputOption::String(String::new()),
       chunk_filenames: ChunkFilenamesOutputOption::String(String::new()),
       asset_filenames: AssetFilenamesOutputOption::String(String::new()),
@@ -151,7 +160,9 @@ impl Default for NormalizedBundlerOptions {
       sourcemap_ignore_list: Default::default(),
       sourcemap_path_transform: Default::default(),
       sourcemap_debug_ids: Default::default(),
+      sourcemap_exclude_sources: false,
       sourcemap_base_url: Default::default(),
+      sourcemap_filenames: None,
       experimental: Default::default(),
       minify: MinifyOptions::Disabled,
       extend: Default::default(),
@@ -160,15 +171,18 @@ impl Default for NormalizedBundlerOptions {
       inject: Default::default(),
       oxc_inject_global_variables_config: InjectGlobalVariablesConfig::new(vec![]),
       external_live_bindings: Default::default(),
-      inline_dynamic_imports: Default::default(),
-      advanced_chunks: Default::default(),
+      code_splitting: CodeSplittingMode::default(),
+      dynamic_import_in_cjs: true,
+      manual_code_splitting: Default::default(),
       checks: Default::default(),
       profiler_names: Default::default(),
       watch: Default::default(),
       legal_comments: LegalComments::None,
+      comments: CommentsOptions::default(),
       drop_labels: Default::default(),
       polyfill_require: Default::default(),
       defer_sync_scan_data: Default::default(),
+      plugin_timings: Default::default(),
       transform_options: Default::default(),
       make_absolute_externals_relative: Default::default(),
       invalidate_js_side_cache: Default::default(),
@@ -178,12 +192,14 @@ impl Default for NormalizedBundlerOptions {
       virtual_dirname: "_virtual".into(),
       preserve_modules_root: Default::default(),
       preserve_entry_signatures: PreserveEntrySignatures::default(),
-      debug: false,
+      devtools: false,
       optimization: NormalizedOptimizationConfig::default(),
       top_level_var: false,
       minify_internal_exports: Default::default(),
       clean_dir: false,
       context: Default::default(),
+      strict_execution_order: false,
+      strict: StrictMode::default(),
     }
   }
 }
@@ -203,6 +219,24 @@ impl NormalizedBundlerOptions {
     self.experimental.dev_mode.is_some()
   }
 
+  pub fn is_strict_execution_order_enabled(&self) -> bool {
+    self.strict_execution_order
+  }
+
+  /// Strict execution order with on-demand wrapping — the selective mode that derives its wrapping
+  /// plan from the execution-order analysis instead of deferring every eligible module.
+  pub fn is_strict_on_demand_wrapping_enabled(&self) -> bool {
+    self.strict_execution_order && self.experimental.is_on_demand_wrapping_enabled()
+  }
+
+  pub fn has_manual_code_splitting_groups(&self) -> bool {
+    self
+      .manual_code_splitting
+      .as_ref()
+      .and_then(|options| options.groups.as_ref())
+      .is_some_and(|groups| !groups.is_empty())
+  }
+
   /// make sure the `polyfill_require` is only valid for `esm` format with `node` platform
   #[inline]
   pub fn polyfill_require_for_esm_format_with_node_platform(&self) -> bool {
@@ -218,7 +252,7 @@ impl NormalizedBundlerOptions {
   ) -> anyhow::Result<FilenameTemplate> {
     Ok(FilenameTemplate::new(
       self.asset_filenames.call(rollup_pre_rendered_asset).await?,
-      "assetFileNames",
+      "output.assetFileNames",
     ))
   }
 
@@ -239,7 +273,7 @@ impl NormalizedBundlerOptions {
         .map_or(vec![], |original_file_name| vec![original_file_name.into()]),
     };
     let asset_filename = self.asset_filenames.call(&rollup_pre_rendered_asset).await?;
-    Ok(Some(FilenameTemplate::new(asset_filename, "assetFileNames")))
+    Ok(Some(FilenameTemplate::new(asset_filename, "output.assetFileNames")))
   }
 
   pub async fn sanitize_file_name_with_file(

@@ -1,2 +1,2 @@
-import foo from './commonjs.js'
-console.log(foo)
+import foo from './commonjs.js';
+console.log(foo);

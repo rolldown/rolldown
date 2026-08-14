@@ -10,7 +10,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 const Foo = () => {};
 const element = <Foo>some&amp;\text</Foo>;
 const fragment = <>other&amp;\text</>;
-
 //#endregion
 export { element, fragment };
+
 ```

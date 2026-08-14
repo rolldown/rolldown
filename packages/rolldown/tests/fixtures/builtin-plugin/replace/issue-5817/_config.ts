@@ -3,6 +3,7 @@ import { replacePlugin } from 'rolldown/plugins';
 import { expect } from 'vitest';
 
 export default defineTest({
+  sequential: true,
   config: {
     plugins: [
       replacePlugin({
@@ -34,8 +35,8 @@ export default defineTest({
       console.log(null);
       console.log(void 0);
       console.log(123);
-
-      //#endregion"
+      //#endregion
+      "
     `);
   },
 });

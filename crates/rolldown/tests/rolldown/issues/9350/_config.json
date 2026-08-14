@@ -1,0 +1,17 @@
+{
+  "snapshot": false,
+  "config": {
+    "input": [
+      {
+        "name": "main",
+        "import": "./main.js"
+      }
+    ],
+    "experimental": {
+      "chunkOptimization": {
+        "mergeCommonChunks": true,
+        "avoidRedundantChunkLoads": false
+      }
+    }
+  }
+}

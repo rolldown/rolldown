@@ -11,14 +11,12 @@ source: crates/rolldown_testing/src/integration_test.rs
 * default export function
 */
 function a() {}
-
 //#endregion
 //#region b.js
 /**
 * default export class
 */
 var b = class {};
-
 //#endregion
 //#region main.js
 /**
@@ -36,14 +34,10 @@ var Bar = class {};
 */
 var Baz = "baz";
 /**
-* default export expr
-*/
-var main_default = Baz;
-/**
 * stmt
 */
 console.log(666);
-
 //#endregion
-export { Bar, Baz, main_default as default, foo };
+export { Bar, Baz, Baz as default, foo };
+
 ```

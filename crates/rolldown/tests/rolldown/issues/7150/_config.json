@@ -10,9 +10,7 @@
         "name": "main2"
       }
     ],
-    "external": [
-      "node:assert"
-    ],
+    "external": ["node:assert"],
     "keepNames": true
   }
 }

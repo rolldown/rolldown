@@ -1,4 +1,4 @@
-import nodeAssert from 'node:assert'
-import { value } from './foo.cjs'
+import nodeAssert from 'node:assert';
+import { value } from './foo.cjs';
 
-nodeAssert.strictEqual(value, 'foo')
+nodeAssert.strictEqual(value, 'foo');

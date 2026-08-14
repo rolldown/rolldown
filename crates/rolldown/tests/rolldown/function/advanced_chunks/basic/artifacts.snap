@@ -7,16 +7,16 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 import { n as a } from "./common.js";
-
 export { a };
+
 ```
 
 ## b.js
 
 ```js
 import { t as b } from "./common.js";
-
 export { b };
+
 ```
 
 ## common.js
@@ -24,13 +24,12 @@ export { b };
 ```js
 //#region a.js
 const a = "a";
-
 //#endregion
 //#region b.js
 const b = "a";
-
 //#endregion
 export { a as n, b as t };
+
 ```
 
 # Variant: no-profiler-names: [profiler_names: false]
@@ -41,16 +40,16 @@ export { a as n, b as t };
 
 ```js
 import { n as a } from "./common.js";
-
 export { a };
+
 ```
 
 ### b.js
 
 ```js
 import { t as b } from "./common.js";
-
 export { b };
+
 ```
 
 ### common.js
@@ -58,11 +57,10 @@ export { b };
 ```js
 //#region a.js
 const a = "a";
-
 //#endregion
 //#region b.js
 const b = "a";
-
 //#endregion
 export { a as n, b as t };
+
 ```

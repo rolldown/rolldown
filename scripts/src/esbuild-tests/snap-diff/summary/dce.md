@@ -1,8 +1,6 @@
 # Failed Cases
 ## [dce_of_iife](../../../../../crates/rolldown/tests/esbuild/dce/dce_of_iife/diff.md)
-  sub optimal: IIFEs are not unwrapped
-## [dce_of_symbol_ctor_call](../../../../../crates/rolldown/tests/esbuild/dce/dce_of_symbol_ctor_call/diff.md)
-  `new Symbol("abc")` should not be removed as it has side effects
+  https://github.com/oxc-project/oxc/issues/17480 and sub optimal: IIFEs are not unwrapped in some cases
 ## [tree_shaking_lowered_class_static_field](../../../../../crates/rolldown/tests/esbuild/dce/tree_shaking_lowered_class_static_field/diff.md)
   sub optimal: REMOVE_ME class can be removed
 ## [tree_shaking_react_elements](../../../../../crates/rolldown/tests/esbuild/dce/tree_shaking_react_elements/diff.md)
@@ -26,6 +24,7 @@
 ## [dce_of_expr_after_keep_names_issue3195](../../../../../crates/rolldown/tests/esbuild/dce/dce_of_expr_after_keep_names_issue3195)
 ## [dce_of_iterator_superclass_issue4310](../../../../../crates/rolldown/tests/esbuild/dce/dce_of_iterator_superclass_issue4310)
 ## [dce_of_negated_bigints](../../../../../crates/rolldown/tests/esbuild/dce/dce_of_negated_bigints)
+## [dce_of_symbol_ctor_call](../../../../../crates/rolldown/tests/esbuild/dce/dce_of_symbol_ctor_call)
 ## [dce_of_symbol_for_call](../../../../../crates/rolldown/tests/esbuild/dce/dce_of_symbol_for_call)
 ## [dce_of_symbol_instances](../../../../../crates/rolldown/tests/esbuild/dce/dce_of_symbol_instances)
 ## [dce_of_using_declarations](../../../../../crates/rolldown/tests/esbuild/dce/dce_of_using_declarations)
@@ -107,13 +106,6 @@
 ## [tree_shaking_class_static_property](../../../../../crates/rolldown/tests/esbuild/dce/tree_shaking_class_static_property)
 ## [tree_shaking_import_identifier](../../../../../crates/rolldown/tests/esbuild/dce/tree_shaking_import_identifier)
 ## [tree_shaking_in_esm_wrapper](../../../../../crates/rolldown/tests/esbuild/dce/tree_shaking_in_esm_wrapper)
-## [tree_shaking_js_with_associated_css](../../../../../crates/rolldown/tests/esbuild/dce/tree_shaking_js_with_associated_css)
-## [tree_shaking_js_with_associated_css_export_star_side_effects_false](../../../../../crates/rolldown/tests/esbuild/dce/tree_shaking_js_with_associated_css_export_star_side_effects_false)
-## [tree_shaking_js_with_associated_css_export_star_side_effects_false_only_js](../../../../../crates/rolldown/tests/esbuild/dce/tree_shaking_js_with_associated_css_export_star_side_effects_false_only_js)
-## [tree_shaking_js_with_associated_css_re_export_side_effects_false](../../../../../crates/rolldown/tests/esbuild/dce/tree_shaking_js_with_associated_css_re_export_side_effects_false)
-## [tree_shaking_js_with_associated_css_re_export_side_effects_false_only_js](../../../../../crates/rolldown/tests/esbuild/dce/tree_shaking_js_with_associated_css_re_export_side_effects_false_only_js)
-## [tree_shaking_js_with_associated_css_unused_nested_import_side_effects_false](../../../../../crates/rolldown/tests/esbuild/dce/tree_shaking_js_with_associated_css_unused_nested_import_side_effects_false)
-## [tree_shaking_js_with_associated_css_unused_nested_import_side_effects_false_only_js](../../../../../crates/rolldown/tests/esbuild/dce/tree_shaking_js_with_associated_css_unused_nested_import_side_effects_false_only_js)
 ## [tree_shaking_lowered_class_static_field_assignment](../../../../../crates/rolldown/tests/esbuild/dce/tree_shaking_lowered_class_static_field_assignment)
 ## [tree_shaking_lowered_class_static_field_minified](../../../../../crates/rolldown/tests/esbuild/dce/tree_shaking_lowered_class_static_field_minified)
 ## [tree_shaking_no_bundle_cjs](../../../../../crates/rolldown/tests/esbuild/dce/tree_shaking_no_bundle_cjs)
@@ -129,6 +121,20 @@
   this is a hacky behavior of esbuild, https://github.com/evanw/esbuild/commit/a766bdff31634c6ba3c659055632588f41416ef5
 ## [remove_unused_no_side_effects_tagged_templates](../../../../../crates/rolldown/tests/esbuild/dce/remove_unused_no_side_effects_tagged_templates)
   https://github.com/javascript-compiler-hints/compiler-notations-spec/issues/8
+## [tree_shaking_js_with_associated_css](../../../../../crates/rolldown/tests/esbuild/dce/tree_shaking_js_with_associated_css)
+  CSS bundling is not supported (https://github.com/rolldown/rolldown/issues/4271)
+## [tree_shaking_js_with_associated_css_export_star_side_effects_false](../../../../../crates/rolldown/tests/esbuild/dce/tree_shaking_js_with_associated_css_export_star_side_effects_false)
+  CSS bundling is not supported (https://github.com/rolldown/rolldown/issues/4271)
+## [tree_shaking_js_with_associated_css_export_star_side_effects_false_only_js](../../../../../crates/rolldown/tests/esbuild/dce/tree_shaking_js_with_associated_css_export_star_side_effects_false_only_js)
+  CSS bundling is not supported (https://github.com/rolldown/rolldown/issues/4271)
+## [tree_shaking_js_with_associated_css_re_export_side_effects_false](../../../../../crates/rolldown/tests/esbuild/dce/tree_shaking_js_with_associated_css_re_export_side_effects_false)
+  CSS bundling is not supported (https://github.com/rolldown/rolldown/issues/4271)
+## [tree_shaking_js_with_associated_css_re_export_side_effects_false_only_js](../../../../../crates/rolldown/tests/esbuild/dce/tree_shaking_js_with_associated_css_re_export_side_effects_false_only_js)
+  CSS bundling is not supported (https://github.com/rolldown/rolldown/issues/4271)
+## [tree_shaking_js_with_associated_css_unused_nested_import_side_effects_false](../../../../../crates/rolldown/tests/esbuild/dce/tree_shaking_js_with_associated_css_unused_nested_import_side_effects_false)
+  CSS bundling is not supported (https://github.com/rolldown/rolldown/issues/4271)
+## [tree_shaking_js_with_associated_css_unused_nested_import_side_effects_false_only_js](../../../../../crates/rolldown/tests/esbuild/dce/tree_shaking_js_with_associated_css_unused_nested_import_side_effects_false_only_js)
+  CSS bundling is not supported (https://github.com/rolldown/rolldown/issues/4271)
 # Ignored Cases (not supported)
 ## [dead_code_inside_unused_cases](../../../../../crates/rolldown/tests/esbuild/dce/dead_code_inside_unused_cases)
   dce inside unused switch cases is not supported

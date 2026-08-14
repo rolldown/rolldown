@@ -1,6 +1,12 @@
-import { BindingWatcher, shutdownAsyncRuntime } from '../../binding.cjs';
+import {
+  type BindingWatcherEvent,
+  BindingWatcher,
+  shutdownAsyncRuntime,
+  startAsyncRuntime,
+} from '../../binding.cjs';
 import { LOG_LEVEL_WARN } from '../../log/logging';
-import { logMultiplyNotifyOption } from '../../log/logs';
+import { logMultipleWatcherOption } from '../../log/logs';
+import { aggregateBindingErrorsIntoJsError } from '../../utils/error';
 import type { WatchOptions } from '../../options/watch-options';
 import { PluginDriver } from '../../plugin/plugin-driver';
 import {
@@ -9,6 +15,50 @@ import {
 } from '../../utils/create-bundler-option';
 import { arraify } from '../../utils/misc';
 import type { WatcherEmitter } from './watch-emitter';
+
+function createEventCallback(
+  emitter: WatcherEmitter,
+): (event: BindingWatcherEvent) => Promise<void> {
+  return async (event: BindingWatcherEvent) => {
+    switch (event.eventKind()) {
+      case 'event': {
+        const code = event.bundleEventKind();
+        if (code === 'BUNDLE_END') {
+          const { duration, output, result } = event.bundleEndData();
+          await emitter.emit('event', {
+            code: 'BUNDLE_END',
+            duration,
+            output: [output],
+            result,
+          });
+        } else if (code === 'ERROR') {
+          const data = event.bundleErrorData();
+          await emitter.emit('event', {
+            code: 'ERROR',
+            error: aggregateBindingErrorsIntoJsError(data.error),
+            result: data.result,
+          });
+        } else {
+          await emitter.emit('event', { code: code as 'START' | 'BUNDLE_START' | 'END' });
+        }
+        break;
+      }
+      case 'change': {
+        const { path, kind } = event.watchChangeData();
+        await emitter.emit('change', path, {
+          event: kind as 'create' | 'update' | 'delete',
+        });
+        break;
+      }
+      case 'restart':
+        await emitter.emit('restart');
+        break;
+      case 'close':
+        await emitter.emit('close');
+        break;
+    }
+  };
+}
 
 class Watcher {
   closed: boolean;
@@ -24,29 +74,37 @@ class Watcher {
     this.closed = false;
     this.inner = inner;
     this.emitter = emitter;
+    startAsyncRuntime();
     const originClose = emitter.close.bind(emitter);
     emitter.close = async () => {
       await this.close();
       originClose();
     };
     this.stopWorkers = stopWorkers;
+
+    // Defer so watch() returns the emitter before the first build,
+    // giving the caller a chance to attach .on() handlers.
+    // This matches Rollup's constructor: process.nextTick(() => this.run())
+    process.nextTick(() => this.run());
   }
 
   async close(): Promise<void> {
     if (this.closed) return;
     this.closed = true;
-    for (const stop of this.stopWorkers) {
-      await stop?.();
+    try {
+      for (const stop of this.stopWorkers) {
+        await stop?.();
+      }
+      await this.inner.close();
+    } finally {
+      shutdownAsyncRuntime();
     }
-    await this.inner.close();
-    shutdownAsyncRuntime();
   }
 
-  start(): void {
-    // run first build after listener is attached
-    process.nextTick(() =>
-      this.inner.start(this.emitter.onEvent.bind(this.emitter))
-    );
+  private async run(): Promise<void> {
+    await this.inner.run();
+    // No `.await`: Create pending Promise to keep Node.js event loop alive
+    this.inner.waitForClose();
   }
 }
 
@@ -61,36 +119,34 @@ export async function createWatcher(
         arraify(option.output || {}).map(async (output) => {
           const inputOptions = await PluginDriver.callOptionsHook(option, true);
           return createBundlerOptions(inputOptions, output, true);
-        })
+        }),
       )
       .flat(),
   );
-  const notifyOptions = getValidNotifyOption(bundlerOptions);
+  warnMultiplePollingOptions(bundlerOptions);
+  const callback = createEventCallback(emitter);
   const bindingWatcher = new BindingWatcher(
     bundlerOptions.map((option) => option.bundlerOptions),
-    notifyOptions,
+    callback,
   );
-  const watcher = new Watcher(
+  new Watcher(
     emitter,
     bindingWatcher,
     bundlerOptions.map((option) => option.stopWorkers),
   );
-  watcher.start();
 }
 
-function getValidNotifyOption(bundlerOptions: BundlerOptionWithStopWorker[]) {
-  let result;
+function warnMultiplePollingOptions(bundlerOptions: BundlerOptionWithStopWorker[]) {
+  let found = false;
   for (const option of bundlerOptions) {
-    if (option.inputOptions.watch) {
-      const notifyOption = option.inputOptions.watch.notify;
-      if (notifyOption) {
-        if (result) {
-          option.onLog(LOG_LEVEL_WARN, logMultiplyNotifyOption());
-          return result;
-        } else {
-          result = notifyOption;
-        }
+    const watch = option.inputOptions.watch;
+    const watcher = watch && typeof watch === 'object' ? watch.watcher : undefined;
+    if (watcher && (watcher.usePolling != null || watcher.pollInterval != null)) {
+      if (found) {
+        option.onLog(LOG_LEVEL_WARN, logMultipleWatcherOption());
+        return;
       }
+      found = true;
     }
   }
 }

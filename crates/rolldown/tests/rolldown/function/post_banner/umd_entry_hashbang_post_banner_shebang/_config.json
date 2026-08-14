@@ -1,0 +1,8 @@
+{
+  "config": {
+    "format": "umd",
+    "postBanner": "#!/usr/bin/env node"
+  },
+  "expectExecuted": false,
+  "expectWarning": false
+}

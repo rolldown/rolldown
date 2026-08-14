@@ -2,7 +2,7 @@
 
 use crate::mime::MimeExt;
 
-#[derive(Debug, Clone, Copy, PartialEq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct RawMimeExt {
   pub mime_str: &'static str,
   pub is_utf8_encoded: bool,

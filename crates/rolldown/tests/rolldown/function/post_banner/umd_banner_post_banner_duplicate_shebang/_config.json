@@ -1,0 +1,10 @@
+{
+  "config": {
+    "format": "umd",
+    "banner": "#! from banner",
+    "postBanner": "#! from postBanner"
+  },
+  "expectExecuted": false,
+  "expectWarning": true,
+  "skipSyntaxValidation": true
+}

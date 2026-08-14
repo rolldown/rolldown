@@ -1,24 +1,29 @@
+use std::collections::VecDeque;
 use std::collections::hash_map::Entry;
 use std::sync::Arc;
 
 use arcstr::ArcStr;
+use futures::future::join_all;
 use itertools::Itertools;
+use oxc::semantic::NodeId;
 use oxc::semantic::{ScopeId, Scoping};
+use oxc::span::Span;
 use oxc::transformer_plugins::ReplaceGlobalDefinesConfig;
-use oxc_allocator::Address;
 use oxc_index::IndexVec;
-use rolldown_common::SourceMapGenMsg;
 use rolldown_common::dynamic_import_usage::DynamicImportExportsUsage;
 use rolldown_common::{
-  EcmaRelated, EntryPoint, EntryPointKind, ExternalModule, ExternalModuleTaskResult, FlatOptions,
-  HybridIndexVec, ImportKind, ImportRecordIdx, ImportRecordMeta, ImporterRecord, Module, ModuleId,
-  ModuleIdx, ModuleLoaderMsg, ModuleType, NormalModuleTaskResult, PreserveEntrySignatures,
-  RUNTIME_MODULE_KEY, ResolvedId, RuntimeModuleBrief, RuntimeModuleTaskResult, ScanMode,
-  StmtInfoIdx, SymbolRefDb, SymbolRefDbForModule,
+  EcmaModuleAstUsage, EcmaRelated, EntryPoint, EntryPointKind, ExternalModule,
+  ExternalModuleTaskResult, FlatOptions, HybridIndexVec, ImportKind, ImportRecordIdx,
+  ImportRecordMeta, ImportedExports, ImporterRecord, Module, ModuleId, ModuleIdx, ModuleLoaderMsg,
+  ModuleType, NormalModuleTaskResult, PreserveEntrySignatures, RUNTIME_MODULE_ID, ResolvedId,
+  RuntimeModuleBrief, RuntimeModuleTaskResult, ScanMode, SourceMapGenMsg, StmtInfoIdx, StmtInfos,
+  SymbolRefDb, SymbolRefDbForModule,
 };
 use rolldown_ecmascript::EcmaAst;
-use rolldown_error::{BuildDiagnostic, BuildResult, DiagnosableResolveError};
-use rolldown_fs::OsFileSystem;
+use rolldown_error::{
+  BuildDiagnostic, BuildResult, DiagnosableResolveError, consolidate_diagnostics,
+};
+use rolldown_fs::FileSystem;
 use rolldown_plugin::SharedPluginDriver;
 use rolldown_utils::indexmap::FxIndexSet;
 use rolldown_utils::rayon::{IntoParallelIterator, ParallelIterator};
@@ -26,21 +31,24 @@ use rolldown_utils::rustc_hash::FxHashSetExt;
 use rustc_hash::{FxHashMap, FxHashSet};
 use tracing::Instrument;
 
-use crate::module_loader::task_context::TaskContext;
-use crate::stages::scan_stage::resolve_user_defined_entries;
+use crate::module_loader::module_task::ModuleTaskOwner;
 use crate::types::scan_stage_cache::ScanStageCache;
 use crate::utils::load_entry_module::load_entry_module;
 use crate::{SharedOptions, SharedResolver};
 
 use super::external_module_task::ExternalModuleTask;
-use super::module_task::{ModuleTask, ModuleTaskOwner};
+use super::module_task::ModuleTask;
 use super::runtime_module_task::RuntimeModuleTask;
-use super::task_context::TaskContextMeta;
+use super::task_context::{TaskContext, TaskContextMeta};
 
 pub struct IntermediateNormalModules {
   pub modules: HybridIndexVec<ModuleIdx, Option<Module>>,
   pub importers: IndexVec<ModuleIdx, Vec<ImporterRecord>>,
   pub index_ecma_ast: HybridIndexVec<ModuleIdx, Option<EcmaAst>>,
+  /// Per-module statement-info table collected as modules complete. Held here
+  /// instead of on `EcmaView` so the link stage can carry it as a side
+  /// `IndexVec<ModuleIdx, StmtInfos>` without a `mem::replace`.
+  pub stmt_infos: HybridIndexVec<ModuleIdx, Option<StmtInfos>>,
 }
 
 impl IntermediateNormalModules {
@@ -57,12 +65,18 @@ impl IntermediateNormalModules {
       } else {
         HybridIndexVec::Map(FxHashMap::default())
       },
+      stmt_infos: if is_full_scan {
+        HybridIndexVec::IndexVec(IndexVec::default())
+      } else {
+        HybridIndexVec::Map(FxHashMap::default())
+      },
     }
   }
 
   pub fn alloc_ecma_module_idx(&mut self) -> ModuleIdx {
     let id = self.modules.push(None);
     self.index_ecma_ast.push(None);
+    self.stmt_infos.push(None);
     self.importers.push(Vec::new());
     id
   }
@@ -70,15 +84,11 @@ impl IntermediateNormalModules {
   pub fn alloc_ecma_module_idx_sparse(&mut self, i: ModuleIdx) -> ModuleIdx {
     self.modules.insert(i, None);
     self.index_ecma_ast.insert(i, None);
+    self.stmt_infos.insert(i, None);
     if i >= self.importers.len() {
       self.importers.push(Vec::new());
     }
     i
-  }
-
-  pub fn reset_ecma_module_idx(&mut self) {
-    self.modules.clear();
-    self.index_ecma_ast.clear();
   }
 }
 
@@ -96,26 +106,36 @@ impl VisitState {
   }
 }
 
-pub struct ModuleLoader<'a> {
-  options: SharedOptions,
-  shared_context: Arc<TaskContext>,
-  pub tx: tokio::sync::mpsc::Sender<ModuleLoaderMsg>,
-  rx: tokio::sync::mpsc::Receiver<ModuleLoaderMsg>,
-  runtime_id: ModuleIdx,
+pub struct ModuleLoader<'a, Fs: FileSystem + Clone + 'static> {
+  pub shared_context: Arc<TaskContext<Fs>>,
+  rx: tokio::sync::mpsc::UnboundedReceiver<ModuleLoaderMsg>,
   remaining: u32,
   intermediate_normal_modules: IntermediateNormalModules,
   symbol_ref_db: SymbolRefDb,
   is_full_scan: bool,
   new_added_modules_from_partial_scan: FxIndexSet<ModuleIdx>,
+  /// Ids inserted into `module_id_to_idx` by this partial scan;
+  /// `revert_partial_scan` removes them again on failure.
+  new_module_ids: Vec<ModuleId>,
   cache: &'a mut ScanStageCache,
   pub flat_options: FlatOptions,
-  pub magic_string_tx: Option<Arc<std::sync::mpsc::Sender<SourceMapGenMsg>>>,
+  pub magic_string_tx: Option<std::sync::mpsc::Sender<SourceMapGenMsg>>,
+  tla_module_count: usize,
+  /// Centralized map from modules that contain top-level `await` to the span
+  /// of the first TLA keyword. Stored here instead of on every `EcmaView`
+  /// because top-level await is rarely used in real-world apps.
+  tla_keyword_span_map: FxHashMap<ModuleIdx, Span>,
 }
 
 pub struct ModuleLoaderOutput {
   // Stored all modules
   pub module_table: HybridIndexVec<ModuleIdx, Module>,
   pub index_ecma_ast: HybridIndexVec<ModuleIdx, Option<EcmaAst>>,
+  /// Side table of per-module `StmtInfos` (one slot per module index, with
+  /// `StmtInfos::new()` placeholder for external modules). Threaded through
+  /// `ScanStageOutput`/`NormalizedScanStageOutput` to the link stage instead
+  /// of living on each `EcmaView`.
+  pub stmt_infos: HybridIndexVec<ModuleIdx, StmtInfos>,
   pub symbol_ref_db: SymbolRefDb,
   // Entries that user defined + dynamic import entries
   pub entry_points: Vec<EntryPoint>,
@@ -130,23 +150,26 @@ pub struct ModuleLoaderOutput {
   /// e.g. https://stackblitz.com/edit/rolldown-rolldown-starter-stackblitz-jqg7vnkw?file=rolldown.config.mjs,src%2Findex.js,package.json
   pub entry_point_to_reference_ids: FxHashMap<EntryPoint, Vec<ArcStr>>,
   pub flat_options: FlatOptions,
+  pub user_defined_entry_modules: FxHashSet<ModuleIdx>,
+  pub tla_module_count: usize,
+  pub tla_keyword_span_map: FxHashMap<ModuleIdx, Span>,
 }
 
-impl Drop for ModuleLoader<'_> {
+impl<Fs: FileSystem + Clone> Drop for ModuleLoader<'_, Fs> {
   fn drop(&mut self) {
     self.cache.importers = std::mem::take(&mut self.intermediate_normal_modules.importers);
   }
 }
 
-impl<'a> ModuleLoader<'a> {
+impl<'a, Fs: FileSystem + Clone + 'static> ModuleLoader<'a, Fs> {
   pub fn new(
-    fs: OsFileSystem,
+    fs: Fs,
     options: SharedOptions,
-    resolver: SharedResolver,
+    resolver: SharedResolver<Fs>,
     plugin_driver: SharedPluginDriver,
     cache: &'a mut ScanStageCache,
     is_full_scan: bool,
-    magic_string_tx: Option<Arc<std::sync::mpsc::Sender<SourceMapGenMsg>>>,
+    magic_string_tx: Option<std::sync::mpsc::Sender<SourceMapGenMsg>>,
   ) -> BuildResult<Self> {
     if is_full_scan {
       // TODO: drop the cache in another thread
@@ -156,62 +179,133 @@ impl<'a> ModuleLoader<'a> {
     }
 
     let flat_options = FlatOptions::from_shared_options(&options);
-
-    // 1024 should be enough for most cases
-    // over 1024 pending tasks are insane
-    let (tx, rx) = tokio::sync::mpsc::channel(1024);
-    let shared_context = Arc::new(TaskContext {
-      fs,
-      resolver,
-      plugin_driver,
-      options: Arc::clone(&options),
-      tx: tx.clone(),
-      meta: TaskContextMeta {
-        replace_global_define_config: if options.define.is_empty() {
-          None
-        } else {
-          ReplaceGlobalDefinesConfig::new(&options.define).map(Some).map_err(|errs| {
-            errs
-              .into_iter()
-              .map(|err| BuildDiagnostic::invalid_define_config(err.message.to_string()))
-              .collect::<Vec<BuildDiagnostic>>()
-          })?
-        },
+    let symbol_ref_db = SymbolRefDb::new();
+    let meta = TaskContextMeta {
+      replace_global_define_config: if options.define.is_empty() {
+        None
+      } else {
+        ReplaceGlobalDefinesConfig::new(&options.define).map(Some).map_err(|errs| {
+          errs
+            .into_iter()
+            .map(|err| BuildDiagnostic::invalid_define_config(err.message.to_string()))
+            .collect::<Vec<BuildDiagnostic>>()
+        })?
       },
-    });
-
-    let importers = std::mem::take(&mut cache.importers);
-    let mut intermediate_normal_modules = IntermediateNormalModules::new(is_full_scan, importers);
-
-    let runtime_id = intermediate_normal_modules.alloc_ecma_module_idx();
-    let remaining = if cache.module_id_to_idx.contains_key(RUNTIME_MODULE_KEY) {
-      // the first alloc just want to allocate the runtime module id
-      intermediate_normal_modules.reset_ecma_module_idx();
-      0
-    } else {
-      let task = RuntimeModuleTask::new(runtime_id, Arc::clone(&shared_context), flat_options);
-      tokio::spawn(task.run());
-      cache.module_id_to_idx.insert(RUNTIME_MODULE_KEY.into(), VisitState::Seen(runtime_id));
-      1
     };
 
-    let symbol_ref_db = SymbolRefDb::new(options.transform_options.is_jsx_preserve());
+    // Unbounded as defense in depth. If any sender ends up driven from a sync
+    // napi binding through `block_on`, a bounded channel could deadlock: the
+    // send future would wait on capacity that only the consumer can free, but
+    // the consumer may need the JS thread — pinned by `block_on` — to run
+    // plugin hooks first. Keeping the channel unbounded removes that edge.
+    let (tx, rx) = tokio::sync::mpsc::unbounded_channel();
+    let shared_context = Arc::new(TaskContext { options, tx, resolver, fs, plugin_driver, meta });
+
+    let importers = std::mem::take(&mut cache.importers);
+    let intermediate_normal_modules = IntermediateNormalModules::new(is_full_scan, importers);
 
     Ok(Self {
-      tx,
       rx,
       cache,
-      options,
-      remaining,
-      runtime_id,
+      remaining: 0,
       is_full_scan,
       shared_context,
       symbol_ref_db,
       intermediate_normal_modules,
       new_added_modules_from_partial_scan: FxIndexSet::default(),
+      new_module_ids: Vec::new(),
       flat_options,
       magic_string_tx,
+      tla_module_count: 0,
+      tla_keyword_span_map: FxHashMap::default(),
     })
+  }
+
+  /// Restores the cache to its pre-scan state so the next build can stay
+  /// incremental. The snapshot is never touched by a scan; everything else
+  /// is re-derived from it or reset. Existing `module_id_to_idx` entries are
+  /// self-healing (`Seen` -> `Invalidate` -> `Seen`), so only new keys need
+  /// removal. A failed full scan needs nothing: its cache reset already
+  /// forces a full retry.
+  /// See internal-docs/bundler-data-lifecycle/implementation.md ("Cache integrity on a failed build").
+  fn revert_partial_scan(
+    &mut self,
+    scanned_resolved_ids: Vec<ResolvedId>,
+    barrel_state_backup: Option<rolldown_common::BarrelState>,
+  ) {
+    if self.is_full_scan {
+      return;
+    }
+    for module_id in std::mem::take(&mut self.new_module_ids) {
+      self.cache.module_id_to_idx.remove(&module_id);
+    }
+    // New indices are freed for reuse above; drop the `ModuleIdx`-keyed
+    // transform dependencies recorded for them, or a later module reusing the
+    // index would inherit them.
+    for idx in &self.new_added_modules_from_partial_scan {
+      self.shared_context.plugin_driver.transform_dependencies.remove(idx);
+    }
+    // Retry only files the graph still needs: entries, or files something
+    // still imports (judged on the freshest edge state, where modules
+    // re-scanned by this failed scan already updated their edges). A broken
+    // file whose last import was removed must not fail every later build;
+    // a fresh build of the same tree would succeed without it.
+    let pending_rescans = scanned_resolved_ids
+      .into_iter()
+      .filter(|resolved_id| {
+        if self.cache.user_defined_entry.contains(&resolved_id.id) {
+          return true;
+        }
+        let Some(state) = self.cache.module_id_to_idx.get(&resolved_id.id) else {
+          return false;
+        };
+        let idx = state.idx();
+        self.cache.get_snapshot().user_defined_entry_modules.contains(&idx)
+          || self
+            .intermediate_normal_modules
+            .importers
+            .get(idx)
+            .is_some_and(|records| !records.is_empty())
+      })
+      .collect();
+    self.intermediate_normal_modules.importers = self.cache.derive_importers_from_snapshot();
+    self.cache.modules_with_changed_importers.clear();
+    if let Some(backup) = barrel_state_backup {
+      self.cache.barrel_state = backup;
+    }
+    self.cache.pending_rescans = pending_rescans;
+  }
+
+  /// Marks `idx` for importer-set re-derivation in `ScanStageCache::merge`;
+  /// call it next to every mutation of `intermediate_normal_modules.importers`.
+  /// No-op in full scan mode, which rebuilds every module's sets anyway.
+  fn mark_module_importers_changed(&mut self, idx: ModuleIdx) {
+    if !self.is_full_scan {
+      self.cache.modules_with_changed_importers.insert(idx);
+    }
+  }
+
+  /// Lazy barrel must not skip any of an entry's re-exports — an entry has to
+  /// preserve all of its exports. Request `All` from it: if it has already been
+  /// loaded as a barrel, load its remaining (deferred) records now; otherwise
+  /// record the request so they get loaded once it finishes loading.
+  #[expect(clippy::rc_buffer)]
+  fn request_all_exports_for_entry(
+    &mut self,
+    idx: ModuleIdx,
+    user_defined_entries: &Arc<Vec<(Option<ArcStr>, ResolvedId)>>,
+  ) {
+    if let Some(barrel_module_state) = self.cache.barrel_state.barrel_infos.get(&idx) {
+      // If the module is already a barrel module, we need to load its remaining re-export import records
+      if barrel_module_state.is_some() {
+        self.process_barrel_import_record(
+          &mut VecDeque::from_iter([(idx, ImportedExports::All)]),
+          user_defined_entries,
+        );
+      }
+    } else {
+      self.cache.barrel_state.requested_exports.insert(idx, ImportedExports::All);
+    }
   }
 
   #[expect(clippy::rc_buffer)]
@@ -220,15 +314,18 @@ impl<'a> ModuleLoader<'a> {
     resolved_id: ResolvedId,
     owner: Option<ModuleTaskOwner>,
     is_user_defined_entry: bool,
-    assert_module_type: Option<ModuleType>,
-    user_defined_entries: Arc<Vec<(Option<ArcStr>, ResolvedId)>>,
+    assert_module_type: Option<&ModuleType>,
+    user_defined_entries: &Arc<Vec<(Option<ArcStr>, ResolvedId)>>,
   ) -> ModuleIdx {
-    let ctx = Arc::clone(&self.shared_context);
-    let idx = match self.cache.module_id_to_idx.get(&resolved_id.id) {
-      Some(VisitState::Seen(idx)) => return *idx,
+    let idx = match self.cache.module_id_to_idx.get(&resolved_id.id).copied() {
+      Some(VisitState::Seen(idx)) => {
+        if self.flat_options.is_lazy_barrel_enabled() && owner.is_none() {
+          self.request_all_exports_for_entry(idx, user_defined_entries);
+        }
+        return idx;
+      }
       Some(VisitState::Invalidate(idx)) => {
         // Full scan mode the idx will never be invalidated right?
-        let idx = *idx;
         self.intermediate_normal_modules.alloc_ecma_module_idx_sparse(idx);
         self.cache.module_id_to_idx.insert(resolved_id.id.clone(), VisitState::Seen(idx));
         idx
@@ -238,6 +335,7 @@ impl<'a> ModuleLoader<'a> {
         let len = self.cache.module_id_to_idx.len();
         let idx = self.intermediate_normal_modules.alloc_ecma_module_idx_sparse(len.into());
         self.new_added_modules_from_partial_scan.insert(idx);
+        self.new_module_ids.push(resolved_id.id.clone());
         self.cache.module_id_to_idx.insert(resolved_id.id.clone(), VisitState::Seen(idx));
         idx
       }
@@ -247,8 +345,12 @@ impl<'a> ModuleLoader<'a> {
         idx
       }
     };
+    if self.flat_options.is_lazy_barrel_enabled() && owner.is_none() {
+      self.request_all_exports_for_entry(idx, user_defined_entries);
+    }
+    let ctx = Arc::clone(&self.shared_context);
     if resolved_id.external.is_external() {
-      let task = ExternalModuleTask::new(ctx, idx, resolved_id, user_defined_entries);
+      let task = ExternalModuleTask::new(ctx, idx, resolved_id, Arc::clone(user_defined_entries));
       tokio::spawn(task.run().instrument(tracing::info_span!("external_module_task")));
     } else {
       let task = ModuleTask::new(
@@ -257,7 +359,7 @@ impl<'a> ModuleLoader<'a> {
         resolved_id,
         owner,
         is_user_defined_entry,
-        assert_module_type,
+        assert_module_type.cloned(),
         self.flat_options,
         self.magic_string_tx.clone(),
       );
@@ -274,7 +376,6 @@ impl<'a> ModuleLoader<'a> {
   /// - Full scan mode in watch mode, scan all modules from user defined entries, it maybe first
   /// time build in watch mode or edgecase in HMR(User update `node_modules` too much modules are
   /// updated at same time, patch them one by one is not efficient, so we do full scan directly)
-  ///
   #[tracing::instrument(level = "debug", skip_all)]
   #[expect(clippy::too_many_lines)]
   pub async fn fetch_modules(
@@ -282,19 +383,26 @@ impl<'a> ModuleLoader<'a> {
     fetch_mode: ScanMode<ResolvedId>,
   ) -> BuildResult<ModuleLoaderOutput> {
     let mut errors = vec![];
-    let mut all_warnings: Vec<BuildDiagnostic> = vec![];
+    let mut all_warnings = vec![];
 
-    let user_defined_entries = match fetch_mode {
-      ScanMode::Full => {
-        resolve_user_defined_entries(
-          &self.options,
-          &self.shared_context.resolver,
-          &self.shared_context.plugin_driver,
-        )
-        .await?
-      }
+    // Barrel state is accumulated demand, not derivable from the snapshot;
+    // back it up for `revert_partial_scan`. Disabled means empty and untouched.
+    let barrel_state_backup = (!self.is_full_scan && self.flat_options.is_lazy_barrel_enabled())
+      .then(|| self.cache.barrel_state.clone());
+
+    // Initialize runtime module task if not yet started
+    if let Entry::Vacant(e) = self.cache.module_id_to_idx.entry(RUNTIME_MODULE_ID) {
+      let idx = self.intermediate_normal_modules.alloc_ecma_module_idx();
+      let task = RuntimeModuleTask::new(idx, Arc::clone(&self.shared_context), self.flat_options);
+      tokio::spawn(task.run().instrument(tracing::info_span!("runtime_module_task")));
+      e.insert(VisitState::Seen(idx));
+      self.remaining += 1;
+    }
+
+    let user_defined_entries = Arc::new(match fetch_mode {
+      ScanMode::Full => self.resolve_user_defined_entries().await?,
       ScanMode::Partial(_) => vec![],
-    };
+    });
 
     let entries_count = user_defined_entries.len() + /* runtime */ 1;
     self.intermediate_normal_modules.modules.reserve(entries_count);
@@ -303,26 +411,20 @@ impl<'a> ModuleLoader<'a> {
     // Store the already consider as entry module
     let mut entry_points = FxIndexSet::default();
     let mut user_defined_entry_ids = FxHashSet::with_capacity(user_defined_entries.len());
-    let user_defined_entries = Arc::new(user_defined_entries);
-    for (defined_name, resolved_id) in user_defined_entries.iter() {
-      let idx = self.try_spawn_new_task(
-        resolved_id.clone(),
-        None,
-        true,
-        None,
-        Arc::clone(&user_defined_entries),
-      );
+    for (name, resolved_id) in user_defined_entries.iter().cloned() {
+      let idx = self.try_spawn_new_task(resolved_id, None, true, None, &user_defined_entries);
       user_defined_entry_ids.insert(idx);
       entry_points.insert(EntryPoint {
-        name: defined_name.clone(),
         idx,
+        name,
         kind: EntryPointKind::UserDefined,
         file_name: None,
         related_stmt_infos: vec![],
       });
     }
 
-    if self.is_full_scan && self.options.experimental.is_incremental_build_enabled() {
+    if self.is_full_scan && self.shared_context.options.experimental.is_incremental_build_enabled()
+    {
       self
         .cache
         .user_defined_entry
@@ -330,36 +432,43 @@ impl<'a> ModuleLoader<'a> {
     }
 
     // If it is in partial scan mode, we need to invalidate the changed modules
-    // and re-fetch them, do nothing in full scan mode
-    //
-    for resolved_id in fetch_mode.iter() {
-      let resolved_id = resolved_id.clone();
-      self
-        .shared_context
-        .plugin_driver
-        .invalidate_context_load_module(&resolved_id.id.clone().into());
+    // and re-fetch them, do nothing in full scan mode. Files re-queued by a
+    // previous aborted scan (`pending_rescans`) are retried alongside.
+    let mut changed_resolved_ids = Vec::new();
+    let mut seen_changed_ids = FxHashSet::default();
+    for resolved_id in
+      fetch_mode.iter().cloned().chain(std::mem::take(&mut self.cache.pending_rescans))
+    {
+      if seen_changed_ids.insert(resolved_id.id.clone()) {
+        changed_resolved_ids.push(resolved_id);
+      }
+    }
+    for resolved_id in changed_resolved_ids.iter().cloned() {
+      self.shared_context.plugin_driver.invalidate_context_load_module(&resolved_id.id);
       if let Entry::Occupied(mut occ) = self.cache.module_id_to_idx.entry(resolved_id.id.clone()) {
         let idx = occ.get().idx();
         occ.insert(VisitState::Invalidate(idx));
+        self.cache.barrel_state.barrel_infos.remove(&idx);
       }
       // User may update the entry module in incremental mode, so we need to make sure
       // if it is a user defined entry to avoid generate wrong asset file
       let is_user_defined_entry = self.cache.user_defined_entry.contains(&resolved_id.id);
-      // set `Owner` to `None` is safe, since it is used to emit `Unloadable` diagnostic, we know this is
-      // exists in fs system, which is loadable.
+      // Setting `Owner` to `None` is safe here since `Owner` is only used to emit
+      // `Unloadable` diagnostics, and we know this module exists in the filesystem.
       // TODO: copy assert_module_type
       self.try_spawn_new_task(
         resolved_id,
         None,
         is_user_defined_entry,
         None,
-        Arc::clone(&user_defined_entries),
+        &user_defined_entries,
       );
     }
 
+    let mut work_queue: VecDeque<(ModuleIdx, ImportedExports)> = VecDeque::new();
     let mut dynamic_import_entry_ids: FxHashMap<
       ModuleIdx,
-      Vec<(ModuleIdx, StmtInfoIdx, Address, ImportRecordIdx)>,
+      Vec<(ModuleIdx, StmtInfoIdx, NodeId, ImportRecordIdx)>,
     > = FxHashMap::default();
 
     let mut dynamic_import_exports_usage_pairs = vec![];
@@ -377,70 +486,131 @@ impl<'a> ModuleLoader<'a> {
         ModuleLoaderMsg::NormalModuleDone(task_result) => {
           let NormalModuleTaskResult {
             mut module,
-            ecma_related: EcmaRelated { ast, symbols, mut dynamic_import_rec_exports_usage },
+            mut barrel_info,
+            ecma_related:
+              EcmaRelated {
+                ast,
+                symbols,
+                mut dynamic_import_rec_exports_usage,
+                preserve_jsx,
+                stmt_infos,
+              },
             resolved_deps,
             raw_import_records,
             warnings,
+            tla_keyword_span,
           } = *task_result;
           all_warnings.extend(warnings);
+
+          let module_idx = module.idx();
 
           // remove importers from previous scan
           if !self.is_full_scan
             && let Some(previous_module) =
-              self.cache.get_snapshot().module_table.modules.get(module.idx())
+              self.cache.get_snapshot().module_table.modules.get(module_idx)
           {
-            for rec in previous_module.import_records() {
-              self.intermediate_normal_modules.importers[rec.resolved_module]
-                .retain(|v| v.importer_idx != module.idx());
+            let resolved_deps = previous_module
+              .import_records()
+              .into_iter()
+              .filter_map(|r| r.resolved_module)
+              .collect::<Vec<_>>();
+            for dep_idx in resolved_deps {
+              self.intermediate_normal_modules.importers[dep_idx]
+                .retain(|v| v.importer_idx != module_idx);
+              self.mark_module_importers_changed(dep_idx);
             }
           }
 
+          let normal_module = module.as_normal().unwrap();
+          if normal_module.ast_usage.contains(EcmaModuleAstUsage::TopLevelAwait) {
+            self.tla_module_count += 1;
+          }
+          if let Some(span) = tla_keyword_span {
+            self.tla_keyword_span_map.insert(module_idx, span);
+          }
           let mut import_records = IndexVec::with_capacity(raw_import_records.len());
+
+          let mut tracked_records = FxHashMap::default();
+          let mut initialized_barrel_tracking =
+            self.flat_options.is_lazy_barrel_enabled().then(|| {
+              self.cache.barrel_state.initialize_barrel_tracking(
+                normal_module,
+                &raw_import_records,
+                &mut barrel_info,
+              )
+            });
+
           for ((rec_idx, mut raw_rec), resolved_id) in
             raw_import_records.into_iter_enumerated().zip(resolved_deps)
           {
-            if self.options.experimental.vite_mode.unwrap_or_default()
+            if self.shared_context.options.experimental.vite_mode.unwrap_or_default()
               && resolved_id.id.as_str().ends_with(".json")
             {
               raw_rec.meta.insert(ImportRecordMeta::JsonModule);
             }
 
-            let idx = if let Some(idx) = self.try_spawn_with_cache(&resolved_id) {
-              idx
-            } else {
-              let normal_module = module.as_normal().unwrap();
-              let owner = ModuleTaskOwner::new(
-                normal_module.source.clone(),
-                normal_module.stable_id.as_str().into(),
-                raw_rec.span,
-              );
-              self.try_spawn_new_task(
-                resolved_id,
-                Some(owner),
-                false,
-                raw_rec.asserted_module_type.clone(),
-                Arc::clone(&user_defined_entries),
-              )
-            };
+            // Lazy barrel optimization: skip loading modules that are not needed yet.
+            // - `imported_exports_per_record`: maps all import records to their required imported exports
+            // - `initial_needed_records`: subset of records that need to be loaded initially
+            if let Some((ref imported_exports_per_record, ref initial_needed_records)) =
+              initialized_barrel_tracking
+              && raw_rec.kind == ImportKind::Import
+            {
+              // Track remaining import records for later on-demand loading
+              if imported_exports_per_record.contains_key(&rec_idx) {
+                tracked_records.insert(rec_idx, (raw_rec.state.clone(), resolved_id.clone()));
+              }
+              // Skip records not in initial_needed_records - they may be loaded later if needed
+              if !initial_needed_records.contains_key(&rec_idx) {
+                import_records.push(raw_rec.into_resolved(None));
+                continue;
+              }
+            }
+
+            let is_external = resolved_id.external.is_external();
+            let idx = self.try_spawn_new_task(
+              resolved_id,
+              Some(ModuleTaskOwner::new(normal_module, raw_rec.span)),
+              false,
+              raw_rec.asserted_module_type.as_ref(),
+              &user_defined_entries,
+            );
+
+            if let Some((_, ref mut initial_needed_records)) = initialized_barrel_tracking {
+              let imported_exports = if raw_rec.kind == ImportKind::Import {
+                initial_needed_records.remove(&rec_idx).expect(
+                  "If initial_needed_records does not contain the record idx, it should have been skipped above"
+                )
+              } else {
+                ImportedExports::All
+              };
+              work_queue.push_back((idx, imported_exports));
+            }
 
             // Dynamic imported module will be considered as an entry
             self.intermediate_normal_modules.importers[idx].push(ImporterRecord {
               kind: raw_rec.kind,
-              importer_path: ModuleId::new(module.id()),
-              importer_idx: module.idx(),
+              importer_path: module.id().clone(),
+              importer_idx: module_idx,
             });
-            // defer usage merging, since we only have one consumer, we should keep action during fetching as simple
-            // as possible
+            self.mark_module_importers_changed(idx);
+
+            // Defer usage merging - with only one consumer, keep fetch actions simple
             if let Some(usage) = dynamic_import_rec_exports_usage.remove(&rec_idx) {
               dynamic_import_exports_usage_pairs.push((idx, usage));
             }
+            // External modules are excluded here to preserve the bit-position-to-ChunkIdx
+            // invariant in code splitting. User-defined and emitted entries are already
+            // guaranteed non-external by `load_entry_module()` which rejects them with
+            // `entry_cannot_be_external`.
             if matches!(raw_rec.kind, ImportKind::DynamicImport)
+              && !is_external
               && !user_defined_entry_ids.contains(&idx)
             {
               match dynamic_import_entry_ids.entry(idx) {
                 Entry::Vacant(vac) => match raw_rec.dynamic_import_expr_info.as_ref() {
                   Some(info) => {
-                    vac.insert(vec![(module.idx(), info.stmt_info_idx, info.address, rec_idx)]);
+                    vac.insert(vec![(module_idx, info.stmt_info_idx, info.node_id, rec_idx)]);
                   }
                   None => {
                     vac.insert(vec![]);
@@ -448,25 +618,37 @@ impl<'a> ModuleLoader<'a> {
                 },
                 Entry::Occupied(mut occ) => {
                   if let Some(info) = raw_rec.dynamic_import_expr_info.as_ref() {
-                    occ.get_mut().push((module.idx(), info.stmt_info_idx, info.address, rec_idx));
+                    occ.get_mut().push((module_idx, info.stmt_info_idx, info.node_id, rec_idx));
                   }
                 }
               }
             }
-            import_records.push(raw_rec.into_resolved(idx));
+            import_records.push(raw_rec.into_resolved(Some(idx)));
           }
 
           module.set_import_records(import_records);
+          *self.intermediate_normal_modules.index_ecma_ast.get_mut(module_idx) = Some(ast);
+          *self.intermediate_normal_modules.stmt_infos.get_mut(module_idx) = Some(stmt_infos);
+          *self.intermediate_normal_modules.modules.get_mut(module_idx) = Some(module);
 
-          let module_idx = module.idx();
-          if user_defined_entry_ids.contains(&module_idx) {
-            let normal_module = module.as_normal_mut().expect("should be normal module");
-            normal_module.is_user_defined_entry = true;
+          if let Some((imported_exports_per_record, _)) = initialized_barrel_tracking {
+            self.cache.barrel_state.barrel_infos.insert(
+              module_idx,
+              if tracked_records.is_empty() {
+                None
+              } else {
+                barrel_info.map(|info| {
+                  info.into_barrel_module_state(tracked_records, imported_exports_per_record)
+                })
+              },
+            );
+            self.process_barrel_import_record(&mut work_queue, &user_defined_entries);
           }
 
-          *self.intermediate_normal_modules.index_ecma_ast.get_mut(module_idx) = Some(ast);
-          *self.intermediate_normal_modules.modules.get_mut(module_idx) = Some(module);
           self.symbol_ref_db.store_local_db(module_idx, symbols);
+          if preserve_jsx {
+            self.symbol_ref_db.set_has_module_preserve_jsx();
+          }
           self.remaining -= 1;
         }
         ModuleLoaderMsg::ExternalModuleDone(task_result) => {
@@ -480,11 +662,11 @@ impl<'a> ModuleLoader<'a> {
           } = *task_result;
 
           self.symbol_ref_db.store_local_db(
-            task_result.idx,
-            SymbolRefDbForModule::new(Scoping::default(), task_result.idx, ScopeId::new(0)),
+            idx,
+            SymbolRefDbForModule::new(Scoping::default(), idx, ScopeId::new(0)),
           );
           let symbol_ref = self.symbol_ref_db.create_facade_root_symbol_ref(idx, &identifier_name);
-          let ext = ExternalModule::new(
+          let external_module = Module::External(Box::new(ExternalModule::new(
             idx,
             id,
             name,
@@ -492,77 +674,55 @@ impl<'a> ModuleLoader<'a> {
             side_effects,
             symbol_ref,
             need_renormalize_render_path,
-          );
-          *self.intermediate_normal_modules.modules.get_mut(task_result.idx) = Some(ext.into());
+          )));
 
+          *self.intermediate_normal_modules.modules.get_mut(idx) = Some(external_module);
           self.remaining -= 1;
         }
         ModuleLoaderMsg::RuntimeNormalModuleDone(task_result) => {
           let RuntimeModuleTaskResult {
             local_symbol_ref_db,
             mut module,
+            stmt_infos,
             runtime,
             ast,
             raw_import_records,
             resolved_deps,
+            warnings,
           } = *task_result;
-          let mut import_records = IndexVec::with_capacity(raw_import_records.len());
+          all_warnings.extend(warnings);
 
-          for ((rec_idx, raw_rec), info) in
-            raw_import_records.into_iter_enumerated().zip(resolved_deps)
-          {
-            let id = self.try_spawn_new_task(
+          let mut import_records = IndexVec::with_capacity(raw_import_records.len());
+          for (raw_rec, info) in raw_import_records.into_iter().zip(resolved_deps) {
+            let idx = self.try_spawn_new_task(
               info,
               None,
               false,
-              raw_rec.asserted_module_type.clone(),
-              Arc::clone(&user_defined_entries),
+              raw_rec.asserted_module_type.as_ref(),
+              &user_defined_entries,
             );
-            // Dynamic imported module will be considered as an entry
-            self.intermediate_normal_modules.importers[id].push(ImporterRecord {
+            self.intermediate_normal_modules.importers[idx].push(ImporterRecord {
               kind: raw_rec.kind,
               importer_path: module.id.clone(),
               importer_idx: module.idx,
             });
-
-            if matches!(raw_rec.kind, ImportKind::DynamicImport)
-              && !user_defined_entry_ids.contains(&id)
-            {
-              match dynamic_import_entry_ids.entry(id) {
-                Entry::Vacant(vac) => match raw_rec.dynamic_import_expr_info.as_ref() {
-                  Some(info) => {
-                    vac.insert(vec![(module.idx, info.stmt_info_idx, info.address, rec_idx)]);
-                  }
-                  None => {
-                    vac.insert(vec![]);
-                  }
-                },
-                Entry::Occupied(mut occ) => {
-                  if let Some(info) = raw_rec.dynamic_import_expr_info.as_ref() {
-                    occ.get_mut().push((module.idx, info.stmt_info_idx, info.address, rec_idx));
-                  }
-                }
-              }
-            }
-
-            import_records.push(raw_rec.into_resolved(id));
+            self.mark_module_importers_changed(idx);
+            import_records.push(raw_rec.into_resolved(Some(idx)));
           }
           module.import_records = import_records;
-          *self.intermediate_normal_modules.modules.get_mut(self.runtime_id) = Some(module.into());
-          *self.intermediate_normal_modules.index_ecma_ast.get_mut(self.runtime_id) = Some(ast);
 
-          self.symbol_ref_db.store_local_db(self.runtime_id, local_symbol_ref_db);
-          runtime_brief = Some(runtime);
+          *self.intermediate_normal_modules.modules.get_mut(runtime.id()) = Some(module.into());
+          *self.intermediate_normal_modules.index_ecma_ast.get_mut(runtime.id()) = Some(ast);
+          *self.intermediate_normal_modules.stmt_infos.get_mut(runtime.id()) = Some(stmt_infos);
+
+          self.symbol_ref_db.store_local_db(runtime.id(), local_symbol_ref_db);
           self.remaining -= 1;
+
+          errors.extend(runtime.validate_symbols(&rolldown_common::RUNTIME_HELPER_NAMES));
+          runtime_brief = Some(runtime);
         }
         ModuleLoaderMsg::FetchModule(resolve_id) => {
-          self.try_spawn_new_task(
-            *resolve_id,
-            None,
-            false,
-            None,
-            Arc::clone(&user_defined_entries),
-          );
+          self.try_spawn_new_task(*resolve_id, None, false, None, &user_defined_entries);
         }
         ModuleLoaderMsg::AddEntryModule(msg) => {
           let data = msg.chunk;
@@ -573,20 +733,17 @@ impl<'a> ModuleLoader<'a> {
             data.importer.as_deref(),
           )
           .await;
-          let resolved_id = match result {
-            Ok(result) => result,
+
+          let module_idx = match result {
+            Ok(resolved_id) => {
+              self.try_spawn_new_task(resolved_id, None, true, None, &user_defined_entries)
+            }
             Err(e) => {
               errors.push(e);
               continue;
             }
           };
-          let module_idx = self.try_spawn_new_task(
-            resolved_id,
-            None,
-            true,
-            None,
-            Arc::clone(&user_defined_entries),
-          );
+
           if let Some(preserve_entry_signatures) = data.preserve_entry_signatures {
             overrode_preserve_entry_signature_map.insert(module_idx, preserve_entry_signatures);
           }
@@ -616,7 +773,9 @@ impl<'a> ModuleLoader<'a> {
     }
 
     if !errors.is_empty() {
-      // Enrich UNRESOLVED_IMPORT errors with import chain
+      // Enrich UNRESOLVED_IMPORT errors with import chain. Must run before
+      // the revert below, which erases the failed scan's modules from the
+      // lookup structures the trace walks.
       for error in &mut errors {
         if let Some(resolve_error) = error.downcast_mut::<DiagnosableResolveError>() {
           let chain = self
@@ -627,6 +786,9 @@ impl<'a> ModuleLoader<'a> {
         }
       }
 
+      self.revert_partial_scan(changed_resolved_ids, barrel_state_backup);
+
+      let errors = consolidate_diagnostics(errors);
       return Err(errors.into());
     }
     if let Some(tx) = self.magic_string_tx.as_ref() {
@@ -662,14 +824,7 @@ impl<'a> ModuleLoader<'a> {
           // Note: (Compat to rollup)
           // The `dynamic_importers/importers` should be added after `module_parsed` hook.
           let importers = &self.intermediate_normal_modules.importers[idx];
-          for importer in importers {
-            if importer.kind.is_static() {
-              module.importers.insert(importer.importer_path.clone());
-              module.importers_idx.insert(importer.importer_idx);
-            } else {
-              module.dynamic_importers.insert(importer.importer_path.clone());
-            }
-          }
+          module.ecma_view.rebuild_importer_sets(importers);
           if !importers.is_empty() {
             idx_of_module_info_need_update.push(idx);
           }
@@ -685,6 +840,21 @@ impl<'a> ModuleLoader<'a> {
       HybridIndexVec::Map(map)
     };
 
+    // Build the side `stmt_infos` table parallel to `module_table`. Slots that
+    // never received a `Some(stmt_infos)` (external modules, or normal modules
+    // not produced by tasks) get a fresh empty `StmtInfos` placeholder.
+    let stmt_infos_iter = std::mem::take(&mut self.intermediate_normal_modules.stmt_infos)
+      .into_iter_enumerated()
+      .into_iter()
+      .map(|(idx, stmt_infos)| (idx, stmt_infos.unwrap_or_else(StmtInfos::new)));
+    let stmt_infos = if is_dense_index_vec {
+      let vec = stmt_infos_iter.map(|(_, s)| s).collect();
+      HybridIndexVec::IndexVec(IndexVec::from_vec(vec))
+    } else {
+      let map = stmt_infos_iter.collect::<FxHashMap<_, _>>();
+      HybridIndexVec::Map(map)
+    };
+
     // Some module was not treated as an entry, but was emitted by `this.emitFile` during
     // processing, those module info also need to be updated
     // see https://github.com/rolldown/rolldown/issues/5030 as an example
@@ -694,26 +864,31 @@ impl<'a> ModuleLoader<'a> {
       let Some(module) = module.as_normal() else {
         return;
       };
-      self
-        .shared_context
-        .plugin_driver
-        .set_module_info(&module.id, Arc::new(module.to_module_info(None)));
+      self.shared_context.plugin_driver.set_module_info(
+        &module.id,
+        Arc::new(module.to_module_info(None, user_defined_entry_ids.contains(&module.idx))),
+      );
     });
 
-    // if `inline_dynamic_imports` is set to be true, here we should not put dynamic imports to entries
-    let dynamic_import_entry_ids = dynamic_import_entry_ids.into_iter().collect::<Vec<_>>();
-    entry_points.extend(dynamic_import_entry_ids.into_iter().map(|(idx, related_stmt_infos)| {
-      EntryPoint {
-        name: None,
-        idx,
-        kind: EntryPointKind::DynamicImport,
-        file_name: None,
-        related_stmt_infos,
+    // Collect module indices from emitted entries to filter dynamic imports
+    // When a module is both dynamically imported AND emitted via this.emitFile,
+    // the emitted entry takes priority (it has user-specified name, fileName, preserveSignature)
+    let emitted_entry_indices: FxHashSet<ModuleIdx> =
+      extra_entry_points.iter().map(|e| e.idx).collect();
+
+    for (idx, related_stmt_infos) in dynamic_import_entry_ids {
+      if !emitted_entry_indices.contains(&idx) {
+        entry_points.insert(EntryPoint {
+          name: None,
+          idx,
+          kind: EntryPointKind::DynamicImport,
+          file_name: None,
+          related_stmt_infos,
+        });
       }
-    }));
+    }
 
     entry_points.extend(extra_entry_points);
-
     if entry_points.is_empty() && self.is_full_scan {
       Err(BuildDiagnostic::invalid_option(rolldown_error::InvalidOptionType::NoEntryPoint))?;
     }
@@ -738,11 +913,53 @@ impl<'a> ModuleLoader<'a> {
       entry_point_to_reference_ids,
       symbol_ref_db: std::mem::take(&mut self.symbol_ref_db),
       index_ecma_ast: std::mem::take(&mut self.intermediate_normal_modules.index_ecma_ast),
+      stmt_infos,
       new_added_modules_from_partial_scan: std::mem::take(
         &mut self.new_added_modules_from_partial_scan,
       ),
       flat_options: self.flat_options,
+      user_defined_entry_modules: user_defined_entry_ids,
+      tla_module_count: self.tla_module_count,
+      tla_keyword_span_map: std::mem::take(&mut self.tla_keyword_span_map),
     })
+  }
+
+  #[tracing::instrument(target = "devtool", level = "debug", skip_all)]
+  pub async fn resolve_user_defined_entries(
+    &self,
+  ) -> BuildResult<Vec<(Option<ArcStr>, ResolvedId)>> {
+    let resolved_ids =
+      join_all(self.shared_context.options.input.iter().map(|input_item| async move {
+        let resolved = load_entry_module(
+          &self.shared_context.resolver,
+          &self.shared_context.plugin_driver,
+          &input_item.import,
+          None,
+        )
+        .await;
+
+        resolved.map(|info| (input_item.name.as_ref().map(Into::into), info))
+      }))
+      .await;
+
+    let mut ret = Vec::with_capacity(self.shared_context.options.input.len());
+
+    let mut errors = vec![];
+
+    for resolve_id in resolved_ids {
+      match resolve_id {
+        Ok(item) => {
+          ret.push(item);
+        }
+        Err(e) => errors.push(e),
+      }
+    }
+
+    if !errors.is_empty() {
+      Err(errors)?;
+    }
+
+    Ok(ret)
   }
 
   /// Traces the import chain from a module back to an entry point.
@@ -753,7 +970,8 @@ impl<'a> ModuleLoader<'a> {
     importer_id: &str,
     user_defined_entry_ids: &FxHashSet<ModuleIdx>,
   ) -> Vec<String> {
-    let Some(visit_state) = self.cache.module_id_to_idx.get(importer_id) else {
+    let importer_module_id = ModuleId::new(importer_id);
+    let Some(visit_state) = self.cache.module_id_to_idx.get(&importer_module_id) else {
       return vec![];
     };
     let start_idx = visit_state.idx();
@@ -768,14 +986,23 @@ impl<'a> ModuleLoader<'a> {
       }
       visited.insert(idx);
 
-      let module_opt = self.intermediate_normal_modules.modules.get(idx);
-      if let Some(module) = module_opt {
-        if let Some(normal) = module.as_normal() {
-          chain.push(normal.id.to_string());
-        }
+      // A partial scan only holds re-scanned modules, so read unchanged ones
+      // from the last successful build's snapshot. An empty slot stays skipped
+      // to keep the failed module out of its own chain.
+      let module_opt = match self.intermediate_normal_modules.modules.try_get(idx) {
+        Some(slot) => slot.as_ref(),
+        None => self.cache.snapshot().and_then(|snapshot| snapshot.module_table.modules.get(idx)),
+      };
+      if let Some(normal) = module_opt.and_then(Module::as_normal) {
+        chain.push(normal.id.to_string());
       }
 
-      if user_defined_entry_ids.contains(&idx) {
+      if user_defined_entry_ids.contains(&idx)
+        || self
+          .cache
+          .snapshot()
+          .is_some_and(|snapshot| snapshot.user_defined_entry_modules.contains(&idx))
+      {
         break;
       }
 
@@ -788,17 +1015,154 @@ impl<'a> ModuleLoader<'a> {
     chain
   }
 
-  /// If the module is already exists in module graph in partial scan mode, we could
-  /// return the module idx directly.
-  fn try_spawn_with_cache(&self, resolved_dep: &ResolvedId) -> Option<ModuleIdx> {
-    if !self.options.experimental.is_incremental_build_enabled() {
-      return None;
+  #[expect(clippy::rc_buffer)]
+  fn process_barrel_import_record(
+    &mut self,
+    work_queue: &mut VecDeque<(ModuleIdx, ImportedExports)>,
+    user_defined_entries: &Arc<Vec<(Option<ArcStr>, ResolvedId)>>,
+  ) {
+    while let Some((idx, imported_exports)) = work_queue.pop_front() {
+      // No entry in `barrel_infos` means this module hasn't been loaded and processed yet.
+      // Record it for now and process later when loading is complete.
+      let Some(barrel_module_state) = self.cache.barrel_state.barrel_infos.get_mut(&idx) else {
+        match self.cache.barrel_state.requested_exports.entry(idx) {
+          Entry::Occupied(mut occ) => {
+            imported_exports.subtract_and_merge_into(occ.get_mut());
+          }
+          Entry::Vacant(vac) => {
+            vac.insert(imported_exports);
+          }
+        }
+        continue;
+      };
+
+      // Not a barrel module, clean up and skip
+      let Some(barrel_module_state) = barrel_module_state else {
+        self.cache.barrel_state.requested_exports.remove(&idx);
+        continue;
+      };
+
+      // No tracked records, skip
+      if barrel_module_state.tracked_records.is_empty() {
+        continue;
+      }
+
+      // Calculate new exports to process (subtract already processed)
+      let new_exports = match self.cache.barrel_state.requested_exports.entry(idx) {
+        Entry::Occupied(mut occ) => {
+          let Some(diff) = imported_exports.subtract_and_merge_into(occ.get_mut()) else {
+            continue;
+          };
+          diff
+        }
+        Entry::Vacant(vac) => {
+          vac.insert(imported_exports.clone());
+          imported_exports
+        }
+      };
+
+      let mut tracked_records = std::mem::take(&mut barrel_module_state.tracked_records);
+      let mut remaining_imported_specifiers =
+        std::mem::take(&mut barrel_module_state.remaining_imported_specifiers);
+
+      // Below repeats the post-module-load processing logic, but only for the remaining `tracked_records`.
+      // Additionally, we check whether each record in `tracked_records` still needs to be retained.
+      let mut needed_records = barrel_module_state
+        .info
+        .take_needed_records(&new_exports, &mut remaining_imported_specifiers);
+
+      tracked_records.retain(|&rec_idx, (import_record_state, resolved_id)| {
+        let Some(needed_record) = needed_records.remove(&rec_idx) else {
+          return true;
+        };
+
+        let mut is_module_from_cache_snapshot = false;
+        let barrel_normal_module = match &self.intermediate_normal_modules.modules {
+          HybridIndexVec::IndexVec(modules) => modules[idx]
+            .as_ref()
+            .expect("Barrel module should exists in full build")
+            .as_normal()
+            .unwrap(),
+          HybridIndexVec::Map(modules) => {
+            if let Some(module) = modules.get(&idx) {
+              module
+                .as_ref()
+                .expect("Barrel module should exists in partial build")
+                .as_normal()
+                .unwrap()
+            } else {
+              is_module_from_cache_snapshot = true;
+              self
+                .cache
+                .get_snapshot()
+                .module_table
+                .get(idx)
+                .expect("Barrel module should exist in cache snapshot in partial scan mode")
+                .as_normal()
+                .unwrap()
+            }
+          }
+        };
+
+        let target_idx = match barrel_normal_module.import_records[rec_idx].resolved_module {
+          Some(existing_idx) => existing_idx,
+          None => {
+            let importer_record = ImporterRecord {
+              kind: barrel_normal_module.import_records[rec_idx].kind,
+              importer_path: barrel_normal_module.id.clone(),
+              importer_idx: barrel_normal_module.idx,
+            };
+            let new_idx = self.try_spawn_new_task(
+              resolved_id.clone(),
+              Some(ModuleTaskOwner::new(barrel_normal_module, import_record_state.span)),
+              false,
+              import_record_state.asserted_module_type.as_ref(),
+              user_defined_entries,
+            );
+            self.intermediate_normal_modules.importers[new_idx].push(importer_record);
+            self.mark_module_importers_changed(new_idx);
+            // Update resolved module in either cache snapshot or intermediate modules
+            if is_module_from_cache_snapshot {
+              self
+                .cache
+                .barrel_state
+                .resolved_barrel_modules
+                .entry(idx)
+                .or_default()
+                .push((rec_idx, new_idx));
+            } else {
+              self
+                .intermediate_normal_modules
+                .modules
+                .get_mut(idx)
+                .as_mut()
+                .expect("barrel module should exist")
+                .as_normal_mut()
+                .unwrap()
+                .import_records[rec_idx]
+                .resolved_module = Some(new_idx);
+            }
+            new_idx
+          }
+        };
+        let keep_tracking = match self.cache.barrel_state.barrel_infos.get(&target_idx) {
+          Some(Some(s)) => target_idx == idx || !s.tracked_records.is_empty(),
+          Some(None) => false,
+          None => true,
+        };
+        work_queue.push_back((target_idx, needed_record));
+        if keep_tracking {
+          remaining_imported_specifiers.contains_key(&rec_idx)
+        } else {
+          remaining_imported_specifiers.remove(&rec_idx);
+          false
+        }
+      });
+
+      let barrel_module_state =
+        self.cache.barrel_state.barrel_infos.get_mut(&idx).unwrap().as_mut().unwrap();
+      barrel_module_state.tracked_records = tracked_records;
+      barrel_module_state.remaining_imported_specifiers = remaining_imported_specifiers;
     }
-    // We don't care about if it is invalidate, because
-    // - if it needs invalidate, which means one invalidate module depends on another invalidate
-    // module, but since all invalidate files is already processed in https://github.com/rolldown/rolldown/blob/88af0e2a29decd239b5555bff43e6499cae17ddc/crates/rolldown/src/module_loader/module_loader.rs?plain=1#L343
-    // we could just skip to invalidate it again.
-    // - if it does not need invalidate, we could just return the idx
-    self.cache.module_id_to_idx.get(&resolved_dep.id).map(|state| state.idx())
   }
 }

@@ -1,2 +1,2 @@
-require('./foo')
+require('./foo');
 export const value = 1;

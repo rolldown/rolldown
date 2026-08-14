@@ -5,10 +5,10 @@ export default defineConfig({
   plugins: [
     {
       name: 'test-input-plugin',
-      options: function(options) {
+      options: function (options) {
         console.log('input cli default options', options);
       },
-      outputOptions: function(outputOptions) {
+      outputOptions: function (outputOptions) {
         console.log('output cli default options', outputOptions);
       },
     },

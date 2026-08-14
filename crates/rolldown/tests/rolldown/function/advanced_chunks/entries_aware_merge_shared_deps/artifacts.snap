@@ -1,0 +1,33 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## entry-a.js
+
+```js
+import "./vendor~entry-a~entry-b.js";
+
+```
+
+## entry-b.js
+
+```js
+import "./vendor~entry-a~entry-b.js";
+
+```
+
+## vendor~entry-a~entry-b.js
+
+```js
+//#region shared-dep.js
+console.log("shared-dependency-padding-to-make-this-module-large-enough-to-exceed-merge-threshold-when-duplicated");
+//#endregion
+//#region lib-a.js
+console.log("lib-a");
+//#endregion
+//#region lib-b.js
+console.log("lib-b");
+//#endregion
+
+```

@@ -8,6 +8,7 @@ pub struct BindingChecksOptions {
   pub eval: Option<bool>,
   pub missing_global_name: Option<bool>,
   pub missing_name_option_for_iife_export: Option<bool>,
+  pub invalid_annotation: Option<bool>,
   pub mixed_exports: Option<bool>,
   pub unresolved_entry: Option<bool>,
   pub unresolved_import: Option<bool>,
@@ -15,11 +16,17 @@ pub struct BindingChecksOptions {
   pub common_js_variable_in_esm: Option<bool>,
   pub import_is_undefined: Option<bool>,
   pub empty_import_meta: Option<bool>,
+  pub tolerated_transform: Option<bool>,
   pub cannot_call_namespace: Option<bool>,
   pub configuration_field_conflict: Option<bool>,
   pub prefer_builtin_feature: Option<bool>,
   pub could_not_clean_directory: Option<bool>,
   pub plugin_timings: Option<bool>,
+  pub duplicate_shebang: Option<bool>,
+  pub unsupported_tsconfig_option: Option<bool>,
+  pub ineffective_dynamic_import: Option<bool>,
+  pub large_barrel_modules: Option<bool>,
+  pub sourcemap_broken: Option<bool>,
 }
 impl From<BindingChecksOptions> for rolldown_common::ChecksOptions {
   fn from(value: BindingChecksOptions) -> Self {
@@ -28,6 +35,7 @@ impl From<BindingChecksOptions> for rolldown_common::ChecksOptions {
       eval: value.eval,
       missing_global_name: value.missing_global_name,
       missing_name_option_for_iife_export: value.missing_name_option_for_iife_export,
+      invalid_annotation: value.invalid_annotation,
       mixed_exports: value.mixed_exports,
       unresolved_entry: value.unresolved_entry,
       unresolved_import: value.unresolved_import,
@@ -35,11 +43,17 @@ impl From<BindingChecksOptions> for rolldown_common::ChecksOptions {
       common_js_variable_in_esm: value.common_js_variable_in_esm,
       import_is_undefined: value.import_is_undefined,
       empty_import_meta: value.empty_import_meta,
+      tolerated_transform: value.tolerated_transform,
       cannot_call_namespace: value.cannot_call_namespace,
       configuration_field_conflict: value.configuration_field_conflict,
       prefer_builtin_feature: value.prefer_builtin_feature,
       could_not_clean_directory: value.could_not_clean_directory,
       plugin_timings: value.plugin_timings,
+      duplicate_shebang: value.duplicate_shebang,
+      unsupported_tsconfig_option: value.unsupported_tsconfig_option,
+      ineffective_dynamic_import: value.ineffective_dynamic_import,
+      large_barrel_modules: value.large_barrel_modules,
+      sourcemap_broken: value.sourcemap_broken,
     }
   }
 }

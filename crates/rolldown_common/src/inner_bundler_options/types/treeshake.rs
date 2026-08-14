@@ -69,6 +69,10 @@ impl NormalizedTreeshakeOptions {
     self.as_ref().and_then(|item| item.unknown_global_side_effects).unwrap_or(true)
   }
 
+  pub fn invalid_import_side_effects(&self) -> bool {
+    self.as_ref().and_then(|item| item.invalid_import_side_effects).unwrap_or(false)
+  }
+
   pub fn commonjs(&self) -> bool {
     self.as_ref().and_then(|item| item.commonjs).unwrap_or(true)
   }
@@ -105,8 +109,8 @@ impl Default for TreeshakeOptions {
 
 #[derive(Clone, Debug)]
 pub enum ModuleSideEffects {
-  #[debug("ModuleSideEffectsRules({_0:?})")]
-  ModuleSideEffectsRules(Vec<ModuleSideEffectsRule>),
+  #[debug("Rules({_0:?})")]
+  Rules(Vec<ModuleSideEffectsRule>),
   #[debug("IdSet({_0:?})")]
   IdSet(FxHashSet<String>),
   #[debug("Boolean({_0})")]
@@ -139,7 +143,7 @@ impl ModuleSideEffects {
   /// Panics if the side effects are defined as a function
   pub fn native_resolve(&self, path: &str, is_external: bool) -> Option<bool> {
     match self {
-      ModuleSideEffects::ModuleSideEffectsRules(rules) => {
+      ModuleSideEffects::Rules(rules) => {
         for ModuleSideEffectsRule { test, external, side_effects } in rules {
           let is_match_rule = match (test, external) {
             (Some(test), Some(external)) => test.matches(path) && *external == is_external,
@@ -206,6 +210,7 @@ pub struct InnerOptions {
   pub commonjs: Option<bool>,
   pub property_read_side_effects: Option<PropertyReadSideEffects>,
   pub property_write_side_effects: Option<PropertyWriteSideEffects>,
+  pub invalid_import_side_effects: Option<bool>,
 }
 
 impl Default for InnerOptions {
@@ -218,6 +223,7 @@ impl Default for InnerOptions {
       commonjs: None,
       property_read_side_effects: None,
       property_write_side_effects: None,
+      invalid_import_side_effects: None,
     }
   }
 }
@@ -246,12 +252,12 @@ impl From<&NormalizedTreeshakeOptions> for oxc::minifier::TreeShakeOptions {
         PropertyReadSideEffects::Always => oxc::minifier::PropertyReadSideEffects::All,
         PropertyReadSideEffects::False => oxc::minifier::PropertyReadSideEffects::None,
       },
-      // TODO: Add property_write_side_effects when oxc::minifier supports it
-      // property_write_side_effects: match value.property_write_side_effects() {
-      //   PropertyWriteSideEffects::Always => oxc::minifier::PropertyWriteSideEffects::All,
-      //   PropertyWriteSideEffects::False => oxc::minifier::PropertyWriteSideEffects::None,
-      // },
+      property_write_side_effects: match value.property_write_side_effects() {
+        PropertyWriteSideEffects::Always => true,
+        PropertyWriteSideEffects::False => false,
+      },
       unknown_global_side_effects: value.unknown_global_side_effects(),
+      invalid_import_side_effects: value.invalid_import_side_effects(),
     }
   }
 }

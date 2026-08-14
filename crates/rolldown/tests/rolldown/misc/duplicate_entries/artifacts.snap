@@ -8,15 +8,15 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```js
 //#region main.js
 var main_default = {};
-
 //#endregion
 export { main_default as default };
+
 ```
 
 ## main2.js
 
 ```js
 import main_default from "./main.js";
-
 export { main_default as default };
+
 ```

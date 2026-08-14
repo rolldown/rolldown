@@ -1,0 +1,57 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# warnings
+
+## INEFFECTIVE_DYNAMIC_IMPORT
+
+```text
+[INEFFECTIVE_DYNAMIC_IMPORT] a.js is dynamically imported by c.js but also statically imported by b.js, dbp-1.js, dynamic import will not move module into another chunk.
+
+```
+
+# Assets
+
+## a.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+//#region c.js
+Promise.resolve().then(() => a_exports);
+//#endregion
+//#region a.js
+var a_exports = /* @__PURE__ */ __exportAll({});
+//#endregion
+export { __commonJSMin as t };
+
+```
+
+## dbp-1.js
+
+```js
+import "./a.js";
+
+```
+
+## dbp-2.js
+
+```js
+import { t as __commonJSMin } from "./a.js";
+//#region x.js
+//#endregion
+//#region b.js
+(/* @__PURE__ */ __commonJSMin(((exports, module) => {
+	module.exports = 42;
+})))();
+//#endregion
+
+```
+
+## dbp-activity-showcase.js
+
+```js
+//#region dbp-activity-showcase.js
+import("./dbp-2.js");
+//#endregion
+
+```

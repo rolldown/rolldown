@@ -1,1 +1,1 @@
-console.log('b/foo')
+console.log('b/foo');

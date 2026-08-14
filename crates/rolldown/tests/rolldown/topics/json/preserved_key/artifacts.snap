@@ -7,7 +7,6 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 import assert from "assert";
-
 //#region a.json
 var __let = "result";
 var a_default = {
@@ -18,7 +17,6 @@ var a_default = {
 	"_let": __let,
 	"globalThis": false
 };
-
 //#endregion
 //#region main.js
 assert.deepStrictEqual(a_default, {
@@ -30,6 +28,6 @@ assert.deepStrictEqual(a_default, {
 	globalThis: false
 });
 assert.strictEqual(__let, "result");
-
 //#endregion
+
 ```

@@ -6,9 +6,13 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## main.js
 
 ```js
+//#region a.js
+//#endregion
+//#region main.js
 function _page($$payload, $$props) {
 	res();
 }
+//#endregion
 export { _page as default };
 
 ```

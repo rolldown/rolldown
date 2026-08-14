@@ -1,0 +1,103 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## heavy.js
+
+```js
+import { t as __exportAll } from "./main.js";
+__rolldown_runtime__.registerGraph({
+	ids: ["heavy.js"],
+	localCount: 1,
+	edges: [[]],
+	dynamicEdges: [[]]
+});
+//#region heavy.js
+var heavy_exports = /* @__PURE__ */ __exportAll({ heavy: () => heavy });
+__rolldown_runtime__.createModuleHotContext("heavy.js");
+__rolldown_runtime__.registerModule("heavy.js", { exports: heavy_exports });
+const heavy = "heavy";
+//#endregion
+export { heavy };
+
+```
+
+## main.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+__rolldown_runtime__.registerGraph({
+	ids: [
+		"hmr.js",
+		"lazy-holder.js",
+		"main.js",
+		"heavy.js"
+	],
+	localCount: 3,
+	edges: [
+		[],
+		[],
+		[0, 1]
+	],
+	dynamicEdges: [
+		[],
+		[3],
+		[]
+	]
+});
+//#region hmr.js
+var hmr_exports = /* @__PURE__ */ __exportAll({ value: () => "v1" });
+const hmr_hot = __rolldown_runtime__.createModuleHotContext("hmr.js");
+__rolldown_runtime__.registerModule("hmr.js", { exports: hmr_exports });
+console.log("hmr", "v1");
+hmr_hot.accept();
+//#endregion
+//#region lazy-holder.js
+var lazy_holder_exports = /* @__PURE__ */ __exportAll({ load: () => load });
+__rolldown_runtime__.createModuleHotContext("lazy-holder.js");
+__rolldown_runtime__.registerModule("lazy-holder.js", { exports: lazy_holder_exports });
+function load() {
+	return import("./heavy.js");
+}
+//#endregion
+//#region main.js
+var main_exports = /* @__PURE__ */ __exportAll({});
+__rolldown_runtime__.createModuleHotContext("main.js");
+__rolldown_runtime__.registerModule("main.js", { exports: main_exports });
+console.log(typeof load);
+//#endregion
+export { __exportAll as t };
+
+```
+
+# HMR Step 0
+
+## Code
+
+```js
+__rolldown_runtime__.registerGraph({ids:["hmr.js","heavy.js"],localCount:1,edges:[[1]],dynamicEdges:[[]]});
+//#region hmr.js
+__rolldown_runtime__.registerFactory("hmr.js", "esm", (function(__rolldown_module_id__) {
+	try {
+		var __rolldown_exports__ = __rolldown_runtime__.__exportAll({ value: () => value });
+		__rolldown_runtime__.registerModule(__rolldown_module_id__, { exports: __rolldown_exports__ });
+		__rolldown_runtime__.initModule("heavy.js");
+		const hot_hmr = __rolldown_runtime__.createModuleHotContext(__rolldown_module_id__);
+		var import_heavy_00 = __rolldown_runtime__.loadExports("heavy.js");
+		const value = "v2";
+		console.log("hmr", value, import_heavy_00.heavy);
+		hot_hmr.accept();
+	} finally {}
+}));
+
+//#endregion
+```
+
+## Meta
+
+- update type: patch
+
+### Changed Ids
+
+- hmr.js

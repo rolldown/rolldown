@@ -1,8 +1,9 @@
 [package]
 name = "rolldown_utils"
-version = "0.1.0"
+version = "1.2.4"
 publish = true
 description = "General-purpose utilities for Rolldown"
+readme = "../../README.md"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
@@ -12,7 +13,6 @@ license.workspace = true
 repository.workspace = true
 
 [lib]
-doctest = false
 
 [[bench]]
 harness = false
@@ -40,9 +40,10 @@ mime = { workspace = true }
 nom = { workspace = true }
 oxc = { workspace = true }
 oxc_index = { workspace = true }
-phf = { workspace = true, features = ["macros"] }
+oxc_str = { workspace = true }
 regex = { workspace = true }
 regress = { workspace = true }
+rolldown_error = { workspace = true }
 rolldown_std_utils = { workspace = true }
 rustc-hash = { workspace = true }
 serde_json = { workspace = true }

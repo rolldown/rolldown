@@ -15,8 +15,6 @@
   should rename `require` when it is appear in param position
 ## [jsx_dev_self_edge_cases](../../../../../crates/rolldown/tests/esbuild/default/jsx_dev_self_edge_cases/diff.md)
   https://github.com/oxc-project/oxc/issues/16654
-## [legal_comments_inline](../../../../../crates/rolldown/tests/esbuild/default/legal_comments_inline/diff.md)
-  legal comments are not kept properly (https://github.com/rolldown/rolldown/issues/7387)
 ## [mangle_props_import_export](../../../../../crates/rolldown/tests/esbuild/default/mangle_props_import_export/diff.md)
   sub optimal: for `__require` diff, we don't have ModePassThrough
 ## [no_warn_common_js_exports_in_esm_pass_through](../../../../../crates/rolldown/tests/esbuild/default/no_warn_common_js_exports_in_esm_pass_through/diff.md)
@@ -58,7 +56,6 @@
 ## [dynamic_import_with_expression_cjs](../../../../../crates/rolldown/tests/esbuild/default/dynamic_import_with_expression_cjs)
 ## [dynamic_import_with_template_iife](../../../../../crates/rolldown/tests/esbuild/default/dynamic_import_with_template_iife)
 ## [empty_export_clause_bundle_as_common_js_issue910](../../../../../crates/rolldown/tests/esbuild/default/empty_export_clause_bundle_as_common_js_issue910)
-## [entry_names_chunk_names_ext_placeholder](../../../../../crates/rolldown/tests/esbuild/default/entry_names_chunk_names_ext_placeholder)
 ## [es6_from_common_js](../../../../../crates/rolldown/tests/esbuild/default/es6_from_common_js)
 ## [export_chain](../../../../../crates/rolldown/tests/esbuild/default/export_chain)
 ## [export_forms_common_js](../../../../../crates/rolldown/tests/esbuild/default/export_forms_common_js)
@@ -99,6 +96,7 @@
 ## [inject_jsx_dot_names](../../../../../crates/rolldown/tests/esbuild/default/inject_jsx_dot_names)
 ## [inject_no_bundle](../../../../../crates/rolldown/tests/esbuild/default/inject_no_bundle)
 ## [inject_with_define](../../../../../crates/rolldown/tests/esbuild/default/inject_with_define)
+## [inject_with_string_re_export_name_no_bundle](../../../../../crates/rolldown/tests/esbuild/default/inject_with_string_re_export_name_no_bundle)
 ## [jsx_automatic_imports_common_js](../../../../../crates/rolldown/tests/esbuild/default/jsx_automatic_imports_common_js)
 ## [jsx_automatic_imports_es6](../../../../../crates/rolldown/tests/esbuild/default/jsx_automatic_imports_es6)
 ## [jsx_constant_fragments](../../../../../crates/rolldown/tests/esbuild/default/jsx_constant_fragments)
@@ -111,8 +109,8 @@
 ## [keep_names_all_forms](../../../../../crates/rolldown/tests/esbuild/default/keep_names_all_forms)
 ## [keep_names_class_static_name](../../../../../crates/rolldown/tests/esbuild/default/keep_names_class_static_name)
 ## [keep_names_tree_shaking](../../../../../crates/rolldown/tests/esbuild/default/keep_names_tree_shaking)
+## [legal_comments_inline](../../../../../crates/rolldown/tests/esbuild/default/legal_comments_inline)
 ## [legal_comments_merge_duplicates_issue4139](../../../../../crates/rolldown/tests/esbuild/default/legal_comments_merge_duplicates_issue4139)
-## [legal_comments_modify_indent](../../../../../crates/rolldown/tests/esbuild/default/legal_comments_modify_indent)
 ## [mangle_no_quoted_props](../../../../../crates/rolldown/tests/esbuild/default/mangle_no_quoted_props)
 ## [mangle_no_quoted_props_minify_syntax](../../../../../crates/rolldown/tests/esbuild/default/mangle_no_quoted_props_minify_syntax)
 ## [mangle_props](../../../../../crates/rolldown/tests/esbuild/default/mangle_props)
@@ -133,7 +131,6 @@
 ## [mangle_quoted_props](../../../../../crates/rolldown/tests/esbuild/default/mangle_quoted_props)
 ## [mangle_quoted_props_minify_syntax](../../../../../crates/rolldown/tests/esbuild/default/mangle_quoted_props_minify_syntax)
 ## [many_entry_points](../../../../../crates/rolldown/tests/esbuild/default/many_entry_points)
-## [metafile_no_bundle](../../../../../crates/rolldown/tests/esbuild/default/metafile_no_bundle)
 ## [minified_bundle_common_js](../../../../../crates/rolldown/tests/esbuild/default/minified_bundle_common_js)
 ## [minified_bundle_ending_with_important_semicolon](../../../../../crates/rolldown/tests/esbuild/default/minified_bundle_ending_with_important_semicolon)
 ## [minified_bundle_es6](../../../../../crates/rolldown/tests/esbuild/default/minified_bundle_es6)
@@ -171,6 +168,7 @@
 ## [re_export_default_no_bundle_es6](../../../../../crates/rolldown/tests/esbuild/default/re_export_default_no_bundle_es6)
 ## [re_export_fs_node](../../../../../crates/rolldown/tests/esbuild/default/re_export_fs_node)
 ## [rename_labels_no_bundle](../../../../../crates/rolldown/tests/esbuild/default/rename_labels_no_bundle)
+## [rename_nested_var](../../../../../crates/rolldown/tests/esbuild/default/rename_nested_var)
 ## [rename_private_identifiers_no_bundle](../../../../../crates/rolldown/tests/esbuild/default/rename_private_identifiers_no_bundle)
 ## [require_bad_argument_count](../../../../../crates/rolldown/tests/esbuild/default/require_bad_argument_count)
 ## [require_child_dir_common_js](../../../../../crates/rolldown/tests/esbuild/default/require_child_dir_common_js)
@@ -207,6 +205,7 @@
 ## [to_esm_wrapper_omission](../../../../../crates/rolldown/tests/esbuild/default/to_esm_wrapper_omission)
 ## [top_level_await_allowed_import_without_splitting](../../../../../crates/rolldown/tests/esbuild/default/top_level_await_allowed_import_without_splitting)
 ## [top_level_await_cjs_dead_branch](../../../../../crates/rolldown/tests/esbuild/default/top_level_await_cjs_dead_branch)
+## [top_level_await_cyclic_dependencies_issue4498](../../../../../crates/rolldown/tests/esbuild/default/top_level_await_cyclic_dependencies_issue4498)
 ## [top_level_await_esm](../../../../../crates/rolldown/tests/esbuild/default/top_level_await_esm)
 ## [top_level_await_esm_dead_branch](../../../../../crates/rolldown/tests/esbuild/default/top_level_await_esm_dead_branch)
 ## [top_level_await_forbidden_require_dead_branch](../../../../../crates/rolldown/tests/esbuild/default/top_level_await_forbidden_require_dead_branch)
@@ -230,6 +229,8 @@
 # Ignored Cases
 ## [define_import_meta_es5](../../../../../crates/rolldown/tests/esbuild/default/define_import_meta_es5)
   target: 'es5' is not supported
+## [entry_names_chunk_names_ext_placeholder](../../../../../crates/rolldown/tests/esbuild/default/entry_names_chunk_names_ext_placeholder)
+  CSS bundling is not supported (https://github.com/rolldown/rolldown/issues/4271)
 ## [entry_names_no_slash_after_dir](../../../../../crates/rolldown/tests/esbuild/default/entry_names_no_slash_after_dir)
   irrelevant: Rolldown does not have [dir] placeholder for `entryFileNames`
 ## [entry_names_non_portable_character](../../../../../crates/rolldown/tests/esbuild/default/entry_names_non_portable_character)
@@ -254,10 +255,14 @@
   due to multi pass transformer arch, `import.meta` injected by JSX transform cannot be replaced by the define plugin (define runs before JSX transform)
 ## [jsx_import_meta_value](../../../../../crates/rolldown/tests/esbuild/default/jsx_import_meta_value)
   due to multi pass transformer arch, `import.meta` injected by JSX transform cannot be replaced by the define plugin (define runs before JSX transform)
+## [legal_comments_modify_indent](../../../../../crates/rolldown/tests/esbuild/default/legal_comments_modify_indent)
+  CSS bundling is not supported (https://github.com/rolldown/rolldown/issues/4271)
 ## [line_limit_minified](../../../../../crates/rolldown/tests/esbuild/default/line_limit_minified)
   irrelevant: lineLimit option will not be supported
 ## [line_limit_not_minified](../../../../../crates/rolldown/tests/esbuild/default/line_limit_not_minified)
   irrelevant: lineLimit option will not be supported
+## [metafile_no_bundle](../../../../../crates/rolldown/tests/esbuild/default/metafile_no_bundle)
+  CSS bundling is not supported (https://github.com/rolldown/rolldown/issues/4271)
 ## [package_alias](../../../../../crates/rolldown/tests/esbuild/default/package_alias)
   resolve alias behavior difference
 ## [package_alias_match_longest](../../../../../crates/rolldown/tests/esbuild/default/package_alias_match_longest)

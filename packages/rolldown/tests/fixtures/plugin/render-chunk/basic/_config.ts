@@ -1,5 +1,5 @@
 import path from 'node:path';
-import { RenderedChunk } from 'rolldown';
+import type { RenderedChunk } from 'rolldown';
 import { defineTest } from 'rolldown-tests';
 import { expect, vi } from 'vitest';
 
@@ -9,6 +9,7 @@ const foo = path.join(__dirname, './foo.js');
 const renderChunkFn = vi.fn();
 
 export default defineTest({
+  sequential: true,
   config: {
     input: entry,
     plugins: [
@@ -34,9 +35,7 @@ export default defineTest({
             for (const [moduleId, module] of Object.entries(chunk.modules)) {
               switch (moduleId) {
                 case entry:
-                  expect(module.code).toBe(
-                    '//#region main.js\nconsole.log(foo);\n\n//#endregion',
-                  );
+                  expect(module.code).toBe('//#region main.js\nconsole.log(foo);\n\n//#endregion');
                   expect(module.renderedLength).toBe(49);
                   break;
 
@@ -54,6 +53,7 @@ export default defineTest({
       },
     ],
     output: {
+      minify: false,
       sourcemap: true,
     },
   },

@@ -1,4 +1,4 @@
-import assert from 'assert'
-import { esm } from './dist/main.js'
+import assert from 'assert';
+import { esm } from './dist/main.js';
 
-assert.equal(esm.default, 'esm')
+assert.equal(esm.default, 'esm');

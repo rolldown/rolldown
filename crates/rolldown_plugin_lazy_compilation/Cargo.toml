@@ -1,16 +1,25 @@
 [package]
 name = "rolldown_plugin_lazy_compilation"
-version = "0.1.0"
+version = "1.2.4"
 edition.workspace = true
 homepage.workspace = true
 license.workspace = true
 repository.workspace = true
+description = "Lazy-compilation plugin for Rolldown"
+readme = "../../README.md"
+publish = true
 
 [dependencies]
 arcstr = { workspace = true }
+oxc = { workspace = true }
 rolldown_common = { workspace = true }
 rolldown_plugin = { workspace = true }
 rolldown_utils = { workspace = true }
+anyhow = { workspace = true }
+serde_json = { workspace = true }
 
 [lints]
 workspace = true
+
+[lib]
+doctest = false

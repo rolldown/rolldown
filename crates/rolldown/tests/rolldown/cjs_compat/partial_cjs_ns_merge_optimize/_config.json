@@ -1,14 +1,7 @@
 {
   "config": {
     "resolve": {
-      "alias": [
-        [
-          "this-is-only-used-for-testing",
-          [
-            "./cjs.js"
-          ]
-        ]
-      ]
+      "alias": [["this-is-only-used-for-testing", ["./cjs.js"]]]
     }
   }
 }

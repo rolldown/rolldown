@@ -1,10 +1,11 @@
 export class Foo {}
 export function foo() {}
 
-export const baz = function() {
+export const baz = function () {};
 
+function __name() {
+  // Prevent removal by oxc minifier
+  console.log();
 }
-
-function __name() {}
 // rolldown to deconflict `__name` function
 __name();

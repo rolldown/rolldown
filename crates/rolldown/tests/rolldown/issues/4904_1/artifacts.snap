@@ -8,21 +8,20 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```js
 //#region lib.js
 const a = 42;
-
 //#endregion
 export { a };
+
 ```
 
 ## main.js
 
 ```js
 import { a } from "./lib.js";
-
 //#region main.js
 const b = 42;
-
 //#endregion
 export { a, b };
+
 ```
 
 # Variant: [preserve_entry_signatures: Strict]
@@ -34,19 +33,18 @@ export { a, b };
 ```js
 //#region lib.js
 const a = 42;
-
 //#endregion
 export { a };
+
 ```
 
 ### main.js
 
 ```js
 import { a } from "./lib.js";
-
 //#region main.js
 const b = 42;
-
 //#endregion
 export { a, b };
+
 ```

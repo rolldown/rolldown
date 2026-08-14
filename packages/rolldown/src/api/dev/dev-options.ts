@@ -1,18 +1,27 @@
 import type { BindingClientHmrUpdate } from '../../binding.cjs';
 import type { RolldownOutput } from '../../types/rolldown-output';
+import type { StringOrRegExp } from '../../types/utils';
 
 type DevOnHmrUpdates = (
-  result: Error | {
-    updates: BindingClientHmrUpdate[];
-    changedFiles: string[];
-  },
+  result:
+    | Error
+    | {
+        updates: BindingClientHmrUpdate[];
+        changedFiles: string[];
+      },
 ) => void | Promise<void>;
 
-type DevOnOutput = (
-  result: Error | RolldownOutput,
-) => void | Promise<void>;
+type DevOnOutput = (result: Error | RolldownOutput) => void | Promise<void>;
+
+type DevOnAdditionalAssets = (output: RolldownOutput) => void | Promise<void>;
 
 export interface DevWatchOptions {
+  /**
+   * If `false`, no file system watcher is started, so file changes are never
+   * picked up and no rebuild or HMR update is triggered on their own.
+   * @default true
+   */
+  enabled?: boolean;
   /**
    * If `true`, files are not written to disk.
    * @default false
@@ -51,18 +60,44 @@ export interface DevWatchOptions {
    * @default undefined (auto-select)
    */
   debounceTickRate?: number;
+  /**
+   * Filter to limit which discovered files are registered with the file watcher.
+   *
+   * Strings are treated as glob patterns.
+   *
+   * @default []
+   */
+  include?: StringOrRegExp | StringOrRegExp[];
+  /**
+   * Filter to prevent discovered files from being registered with the file watcher.
+   *
+   * Strings are treated as glob patterns.
+   *
+   * @default []
+   */
+  exclude?: StringOrRegExp | StringOrRegExp[];
 }
 
 export interface DevOptions {
   onHmrUpdates?: DevOnHmrUpdates;
   onOutput?: DevOnOutput;
   /**
+   * Called with assets emitted while generating an HMR patch or compiling a
+   * lazy entry (e.g. an image newly imported by the changed/lazy module).
+   *
+   * These never go through {@link onOutput}, so a consumer that serves built
+   * files (e.g. Vite's bundled dev server) must register this to receive them
+   * and write them to its in-memory file store before the client requests them.
+   */
+  onAdditionalAssets?: DevOnAdditionalAssets;
+  /**
    * Strategy for triggering rebuilds after HMR updates.
    * - `'always'`: Always trigger a rebuild after HMR updates
-   * - `'auto'`: Trigger rebuild only if HMR updates contain full reload updates
-   * - `'never'`: Never trigger rebuild after HMR updates (default)
-   * @default 'auto'
+   * - `'never'`: Never trigger rebuild after HMR updates. The server no longer
+   *   decides full reloads, so there is no `'auto'` upgrade anymore; pull fresh
+   *   bundle output explicitly (e.g. `ensureLatestBuildOutput`) when needed.
+   * @default 'never'
    */
-  rebuildStrategy?: 'always' | 'auto' | 'never';
+  rebuildStrategy?: 'always' | 'never';
   watch?: DevWatchOptions;
 }

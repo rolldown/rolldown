@@ -5,12 +5,8 @@ export interface ModuleType {
 }
 
 export const basic = import.meta.glob<ModuleType>('./modules/*.ts');
-export const basicWithObjectKeys = Object.keys(
-  import.meta.glob<ModuleType>('./modules/*.ts'),
-);
-export const basicWithObjectValues = Object.values(
-  import.meta.glob<ModuleType>('./modules/*.ts'),
-);
+export const basicWithObjectKeys = Object.keys(import.meta.glob<ModuleType>('./modules/*.ts'));
+export const basicWithObjectValues = Object.values(import.meta.glob<ModuleType>('./modules/*.ts'));
 
 export const basicEager = import.meta.glob<ModuleType>('./modules/*.ts', {
   eager: true,
@@ -65,15 +61,16 @@ export const namedDefaultWithObjectValues = Object.values(
   }),
 );
 
-export const eagerAs = import.meta.glob<ModuleType>(
-  ['./modules/*.ts', '!**/index.ts'],
-  { eager: true, query: '?raw', import: 'default' },
-);
+export const eagerAs = import.meta.glob<ModuleType>(['./modules/*.ts', '!**/index.ts'], {
+  eager: true,
+  query: '?raw',
+  import: 'default',
+});
 
-export const rawImportModule = import.meta.glob(
-  ['./modules/*.ts', '!**/index.ts'],
-  { query: '?raw', import: '*' },
-);
+export const rawImportModule = import.meta.glob(['./modules/*.ts', '!**/index.ts'], {
+  query: '?raw',
+  import: '*',
+});
 
 export const excludeSelf = import.meta.glob(
   './*.ts',
@@ -98,15 +95,9 @@ export const rootMixedRelative = import.meta.glob(['/*.ts', '../b/*.ts'], {
   import: 'default',
 });
 
-export const cleverCwd1 = import.meta.glob(
-  './node_modules/framework/**/*.page.js',
-);
+export const cleverCwd1 = import.meta.glob('./node_modules/framework/**/*.page.js');
 
-export const cleverCwd2 = import.meta.glob([
-  './modules/*.ts',
-  '../b/*.ts',
-  '!**/index.ts',
-]);
+export const cleverCwd2 = import.meta.glob(['./modules/*.ts', '../b/*.ts', '!**/index.ts']);
 
 export const customBase = import.meta.glob('./**/*.ts', { base: './' });
 

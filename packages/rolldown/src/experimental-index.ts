@@ -5,36 +5,25 @@ export { freeExternalMemory, scan } from './api/experimental';
 export {
   type BindingClientHmrUpdate,
   BindingRebuildStrategy,
-  createTokioRuntime,
   isolatedDeclaration,
   type IsolatedDeclarationsOptions,
   type IsolatedDeclarationsResult,
   isolatedDeclarationSync,
-  minify,
-  type MinifyOptions,
-  type MinifyResult,
-  minifySync,
   moduleRunnerTransform,
   type NapiResolveOptions as ResolveOptions,
-  type ParseResult,
-  type ParserOptions,
   type ResolveResult,
   ResolverFactory,
-  transform,
-  type TransformOptions,
-  type TransformResult,
-  transformSync,
 } from './binding.cjs';
+export { resolveTsconfig } from './utils/resolve-tsconfig';
 
 export { defineParallelPlugin } from './plugin/parallel-plugin';
-export { parse, parseSync } from './utils/parse';
+
 // Builtin plugin factory
 export {
   isolatedDeclarationPlugin,
-  viteAssetImportMetaUrlPlugin,
+  oxcRuntimePlugin,
   viteBuildImportAnalysisPlugin,
   viteDynamicImportVarsPlugin,
-  viteHtmlInlineProxyPlugin,
   viteImportGlobPlugin,
   viteJsonPlugin,
   viteLoadFallbackPlugin,
@@ -42,8 +31,6 @@ export {
   viteReactRefreshWrapperPlugin,
   viteReporterPlugin,
   viteResolvePlugin,
-  viteWasmFallbackPlugin,
-  viteWasmHelperPlugin,
   viteWebWorkerPostPlugin,
 } from './builtin-plugin/constructors';
 
@@ -59,14 +46,8 @@ export {
 } from './builtin-plugin/constructors';
 
 export { viteAliasPlugin } from './builtin-plugin/alias-plugin';
-export { viteAssetPlugin } from './builtin-plugin/asset-plugin';
+export { bundleAnalyzerPlugin } from './builtin-plugin/bundle-analyzer-plugin';
 export { viteTransformPlugin } from './builtin-plugin/transform-plugin';
-export { viteCSSPlugin } from './builtin-plugin/vite-css-plugin';
-export { viteCSSPostPlugin } from './builtin-plugin/vite-css-post-plugin';
-export {
-  viteHtmlPlugin,
-  type ViteHtmlPluginOptions,
-} from './builtin-plugin/vite-html-plugin';
 export { viteManifestPlugin } from './builtin-plugin/vite-manifest-plugin';
 
 // `__volume` and `__fs` only exist in `rolldown-binding.wasi-browser.js`, so we need to use namespace import to prevent static import error.
@@ -98,8 +79,64 @@ import * as binding from './binding.cjs';
  *
  * @see {@link https://github.com/streamich/memfs} for more information on the memfs API.
  */
-export const memfs: { fs: any; volume: any } | undefined =
-  import.meta.browserBuild
-    // @ts-expect-error - __fs and __volume are only available in browser builds
-    ? { fs: binding.__fs, volume: binding.__volume }
-    : undefined;
+export const memfs: { fs: any; volume: any } | undefined = import.meta.browserBuild
+  ? // @ts-expect-error - __fs and __volume are only available in browser builds
+    { fs: binding.__fs, volume: binding.__volume }
+  : undefined;
+
+// #region util exports
+import {
+  parse as parse_,
+  parseSync as parseSync_,
+  type ParseResult as ParseResult_,
+  type ParserOptions as ParserOptions_,
+} from './utils/parse';
+/** @deprecated Use from `rolldown/utils` instead. */
+export const parse: typeof parse_ = parse_;
+/** @deprecated Use from `rolldown/utils` instead. */
+export const parseSync: typeof parseSync_ = parseSync_;
+/** @deprecated Use from `rolldown/utils` instead. */
+export type ParseResult = ParseResult_;
+/** @deprecated Use from `rolldown/utils` instead. */
+export type ParserOptions = ParserOptions_;
+
+import {
+  minify as minify_,
+  minifySync as minifySync_,
+  type MinifyOptions as MinifyOptions_,
+  type MinifyResult as MinifyResult_,
+} from './utils/minify';
+/** @deprecated Use from `rolldown/utils` instead. */
+export const minify: typeof minify_ = minify_;
+/** @deprecated Use from `rolldown/utils` instead. */
+export const minifySync: typeof minifySync_ = minifySync_;
+/** @deprecated Use from `rolldown/utils` instead. */
+export type MinifyOptions = MinifyOptions_;
+/** @deprecated Use from `rolldown/utils` instead. */
+export type MinifyResult = MinifyResult_;
+
+import {
+  transform as transform_,
+  transformSync as transformSync_,
+  type TransformOptions as TransformOptions_,
+  type TransformResult as TransformResult_,
+  type TsconfigCompilerOptions as TsconfigCompilerOptions_,
+  type TsconfigRawOptions as TsconfigRawOptions_,
+} from './utils/transform';
+import { TsconfigCache as TsconfigCache_ } from './utils/resolve-tsconfig';
+/** @deprecated Use from `rolldown/utils` instead. */
+export const transform: typeof transform_ = transform_;
+/** @deprecated Use from `rolldown/utils` instead. */
+export const transformSync: typeof transformSync_ = transformSync_;
+/** @deprecated Use from `rolldown/utils` instead. */
+export type TransformOptions = TransformOptions_;
+/** @deprecated Use from `rolldown/utils` instead. */
+export type TransformResult = TransformResult_;
+/** @deprecated Use from `rolldown/utils` instead. */
+export const TsconfigCache: typeof TsconfigCache_ = TsconfigCache_;
+/** @deprecated Use from `rolldown/utils` instead. */
+export type TsconfigRawOptions = TsconfigRawOptions_;
+/** @deprecated Use from `rolldown/utils` instead. */
+export type TsconfigCompilerOptions = TsconfigCompilerOptions_;
+
+// #endregion

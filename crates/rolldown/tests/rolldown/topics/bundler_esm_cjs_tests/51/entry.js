@@ -1,3 +1,2 @@
-import foo from './foo.cjs'
-input.works =
-  foo[Math.random() < 1 && 'default'].bar === 123
+import foo from './foo.cjs';
+input.works = foo[Math.random() < 1 && 'default'].bar === 123;

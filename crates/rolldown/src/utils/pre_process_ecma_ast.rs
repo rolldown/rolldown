@@ -1,19 +1,25 @@
 use std::path::Path;
 
-use itertools::Itertools;
+use arcstr::ArcStr;
+use oxc::ast::ast::CommentContent;
 use oxc::ast::ast::Program;
-use oxc::ast_visit::VisitMut;
-use oxc::diagnostics::Severity as OxcSeverity;
+use oxc::ast::ast::{Declaration, ExportDefaultDeclarationKind, Statement};
+use oxc::ast_visit::{VisitJs, VisitJsMut, walk_js};
+use oxc::diagnostics::{LabeledSpan, Severity as OxcSeverity};
 use oxc::minifier::{CompressOptions, Compressor, TreeShakeOptions};
-use oxc::semantic::{Scoping, SemanticBuilder, Stats};
+use oxc::semantic::{Scoping, Stats};
+use oxc::syntax::symbol::SymbolFlags;
 use oxc::transformer::Transformer;
 use oxc::transformer_plugins::{
   InjectGlobalVariables, ReplaceGlobalDefines, ReplaceGlobalDefinesConfig,
 };
+use oxc_str::CompactStr;
 
-use rolldown_common::NormalizedBundlerOptions;
-use rolldown_ecmascript::{EcmaAst, WithMutFields};
-use rolldown_error::{BatchedBuildDiagnostic, BuildDiagnostic, BuildResult, Severity};
+use rolldown_common::{ConstExportMeta, ConstantValue, NormalizedBundlerOptions};
+use rolldown_ecmascript::{EcmaAst, WithMutFields, semantic_builder_for_transform};
+use rolldown_ecmascript_utils::contains_script_closing_tag;
+use rolldown_error::{BatchedBuildDiagnostic, BuildDiagnostic, BuildResult, EventKind, Severity};
+use rustc_hash::{FxHashMap, FxHashSet};
 
 use crate::types::oxc_parse_type::OxcParseType;
 
@@ -33,6 +39,7 @@ impl PreProcessEcmaAst {
     mut ast: EcmaAst,
     stable_id: &str,
     resolved_id: &str,
+    should_warn_on_invalid_annotation: bool,
     parsed_type: &OxcParseType,
     replace_global_define_config: Option<&ReplaceGlobalDefinesConfig>,
     bundle_options: &NormalizedBundlerOptions,
@@ -60,25 +67,90 @@ impl PreProcessEcmaAst {
 
     // Step 1: Build initial semantic data and check for semantic errors.
     let semantic_ret = ast.program.with_dependent(|_owner, dep| {
-      SemanticBuilder::new().with_check_syntax_error(true).build(&dep.program)
+      semantic_builder_for_transform().with_check_syntax_error(true).build(&dep.program)
     });
 
     let (errors, warnings): (Vec<_>, Vec<_>) =
-      semantic_ret.errors.into_iter().partition(|w| w.severity == OxcSeverity::Error);
+      semantic_ret.diagnostics.into_iter().partition(|w| w.severity == OxcSeverity::Error);
 
     let mut warnings = if errors.is_empty() {
-      BuildDiagnostic::from_oxc_diagnostics(warnings, &source, resolved_id, &Severity::Warning)
+      BuildDiagnostic::from_oxc_diagnostics(
+        warnings,
+        &source,
+        resolved_id,
+        Severity::Warning,
+        EventKind::ParseError,
+      )
     } else {
       return Err(BuildDiagnostic::from_oxc_diagnostics(
         errors,
         &source,
         resolved_id,
-        &Severity::Error,
+        Severity::Error,
+        EventKind::ParseError,
       ))?;
     };
+    // Surface invalid pure annotations flagged by oxc (issue #8898).
+    // oxc marks `/* #__PURE__ */` / `/* @__PURE__ */` comments with
+    // `CommentContent::PureNotApplied` when their position prevents the parser
+    // from applying them (expression-level, statement-level, or variable declarator).
+    // Aligns with Rollup's `INVALID_ANNOTATION` log code.
+    if should_warn_on_invalid_annotation {
+      warnings.extend(ast.program.with_dependent(|_owner, dep| {
+        invalid_pure_annotation_warnings(&dep.program, &source, resolved_id)
+      }));
+    }
 
     self.stats = semantic_ret.semantic.stats();
     let mut scoping = Some(semantic_ret.semantic.into_scoping());
+
+    // Extract enum member values before the transformer converts enums.
+    // This runs before Step 3 (transformer) because `optimize_const_enums` / `optimize_enums`
+    // remove or rewrite enum declarations, making member values unrecoverable afterward.
+    //
+    // Both const and regular enums are extracted so member accesses can be inlined.
+    // Tree-shaking in `include_statements.rs` skips including the enum declaration
+    // when a member access will be inlined. Regular enum IIFEs are `@__PURE__`, so
+    // they are naturally tree-shaken if no other references keep them alive.
+    // Enums are a TypeScript-only construct, so only Ts/Tsx modules can declare
+    // them. For plain JS/JSX modules, skip the full symbol-table walk and the map
+    // allocation entirely (the result would always be empty).
+    let enum_member_value_map = if matches!(parsed_type, OxcParseType::Ts | OxcParseType::Tsx) {
+      let scoping_ref = scoping.as_mut().unwrap();
+      let mut enum_values: FxHashMap<CompactStr, FxHashMap<CompactStr, ConstExportMeta>> =
+        FxHashMap::default();
+
+      // Walk enum declarations → body scopes → member bindings to collect values.
+      for symbol_id in scoping_ref.symbol_ids() {
+        let flags = scoping_ref.symbol_flags(symbol_id);
+        if !(flags.is_const_enum() || flags.contains(SymbolFlags::RegularEnum)) {
+          continue;
+        }
+        let Some(body_scopes) = scoping_ref.get_enum_body_scopes(symbol_id) else { continue };
+        let members =
+          enum_values.entry(CompactStr::from(scoping_ref.symbol_name(symbol_id))).or_default();
+
+        for &body_scope in body_scopes {
+          for (member_name, &member_sym) in scoping_ref.get_bindings(body_scope) {
+            if let Some(value) = scoping_ref.get_enum_member_value(member_sym) {
+              let rolldown_value = match value {
+                oxc::syntax::constant_value::ConstantValue::Number(n) => ConstantValue::Number(*n),
+                oxc::syntax::constant_value::ConstantValue::String(s) => {
+                  ConstantValue::String(s.to_string())
+                }
+              };
+              members.insert(
+                CompactStr::from(member_name.as_str()),
+                ConstExportMeta::new(rolldown_value, false),
+              );
+            }
+          }
+        }
+      }
+      enum_values
+    } else {
+      FxHashMap::default()
+    };
 
     // Step 2: Run define plugin.
     if let Some(replace_global_define_config) = replace_global_define_config {
@@ -92,42 +164,62 @@ impl PreProcessEcmaAst {
     }
 
     // Step 3: Transform TypeScript and jsx.
-    // Note: Currently, oxc_transform supports es syntax up to ES2024 (unicode-sets-regex).
+    // Note: Currently, the newest syntax oxc_transform can lower is ES2026
+    // explicit resource management (`using`); the ES2025 regexp features are
+    // not transformed. `LOWERABLE_ES_FEATURES` in `rolldown_common` holds the
+    // full list `should_transform_js` is decided from.
     let is_not_js = !matches!(parsed_type, OxcParseType::Js);
-    if is_not_js || bundle_options.transform_options.should_transform_js() {
+    let mut preserve_jsx = false;
+    if is_not_js
+      || bundle_options.transform_options.should_transform_js
+      // Run transformer on JS files containing `</script` to handle tagged template literals.
+      || contains_script_closing_tag(ast.source().as_bytes())
+    {
       ast.program.with_mut(|WithMutFields { program, allocator, .. }| {
         // Pass file path only for non-JS modules (TS/TSX/JSX) to enable tsconfig discovery.
         // For plain JS files, we skip tsconfig lookup since they don't need TS-specific transformations.
         let transform_options = bundle_options
           .transform_options
           .options_for_file(is_not_js.then_some(Path::new(resolved_id)), &mut warnings)?;
+        if !transform_options.jsx.jsx_plugin {
+          preserve_jsx = true;
+        }
 
-        let scoping = self.recreate_scoping(&mut scoping, program, false);
+        let scoping = self.recreate_scoping(&mut scoping, program);
         let ret = Transformer::new(allocator, Path::new(stable_id), &transform_options)
           .build_with_scoping(scoping, program);
-        // TODO: emit diagnostic, aiming to pass more tests,
-        // we ignore warning for now
-        if ret.errors.iter().any(|error| error.severity == OxcSeverity::Error) {
-          let errors = ret
-            .errors
-            .into_iter()
-            .filter(|item| matches!(item.severity, OxcSeverity::Error))
-            .collect_vec();
+
+        let (errors, transformer_warnings): (Vec<_>, Vec<_>) =
+          ret.diagnostics.into_iter().partition(|error| error.severity == OxcSeverity::Error);
+        if !errors.is_empty() {
           return Err(BatchedBuildDiagnostic::from(BuildDiagnostic::from_oxc_diagnostics(
             errors,
             &source,
             resolved_id,
-            &Severity::Error,
+            Severity::Error,
+            EventKind::TransformError,
           )));
         }
+        warnings.extend(BuildDiagnostic::from_oxc_diagnostics(
+          transformer_warnings,
+          &source,
+          resolved_id,
+          Severity::Warning,
+          EventKind::ToleratedTransform,
+        ));
         Ok(())
       })?;
     }
 
+    debug_assert!(
+      ast.program().source_type.is_javascript(),
+      "ECMAScript transform must produce a JavaScript AST"
+    );
+
     // Step 4: Run inject plugin.
     if !bundle_options.inject.is_empty() {
       ast.program.with_mut(|WithMutFields { program, allocator, .. }| {
-        let new_scoping = self.recreate_scoping(&mut scoping, program, false);
+        let new_scoping = self.recreate_scoping(&mut scoping, program);
         let inject_config = bundle_options.oxc_inject_global_variables_config.clone();
         let ret = InjectGlobalVariables::new(allocator, inject_config).build(new_scoping, program);
         if !ret.changed {
@@ -140,11 +232,12 @@ impl PreProcessEcmaAst {
     // Avoid DCE for lazy export.
     if bundle_options.treeshake.is_some() && !has_lazy_export {
       ast.program.with_mut(|WithMutFields { program, allocator, .. }| {
-        let scoping = self.recreate_scoping(&mut scoping, program, false);
-        // NOTE: `CompressOptions::dead_code_elimination` will remove `ParenthesizedExpression`s from the AST.
+        let scoping = self.recreate_scoping(&mut scoping, program);
+        let mut treeshake = TreeShakeOptions::from(&bundle_options.treeshake);
+        treeshake.invalid_import_side_effects = true;
         let options = CompressOptions {
           target: bundle_options.transform_options.target.clone(),
-          treeshake: TreeShakeOptions::from(&bundle_options.treeshake),
+          treeshake,
           ..CompressOptions::dce()
         };
         Compressor::new(allocator).dead_code_elimination_with_scoping(program, scoping, options);
@@ -152,32 +245,172 @@ impl PreProcessEcmaAst {
     }
 
     // Step 6: Modify AST for Rolldown.
-    let scoping = ast.program.with_mut(|WithMutFields { program, allocator, .. }| {
-      let mut pre_processor = PreProcessor::new(allocator, bundle_options.keep_names);
-      pre_processor.visit_program(program);
-      self.recreate_scoping(&mut None, program, true)
-    });
+    let (scoping, import_defer_spans) =
+      ast.program.with_mut(|WithMutFields { program, allocator, .. }| {
+        let mut pre_processor = PreProcessor::new(
+          allocator,
+          bundle_options.keep_names,
+          Some(&bundle_options.drop_labels),
+        );
+        pre_processor.visit_program(program);
+        let defer_spans = pre_processor.take_defer_spans();
+        (self.recreate_scoping(&mut None, program), defer_spans)
+      });
 
-    Ok(ParseToEcmaAstResult { ast, scoping, has_lazy_export, warnings })
+    warnings.extend(import_defer_spans.into_iter().map(|span| {
+      BuildDiagnostic::oxc_error(
+        source.clone(),
+        resolved_id.to_string(),
+        String::new(),
+        "`import defer` is currently lowered to a normal import. This changes execution timing because side effects run immediately instead of when the deferred import is first used.".to_string(),
+        vec![LabeledSpan::at(
+          span.start..span.end,
+          "The deferred phase is removed here.",
+        )],
+        EventKind::UnsupportedFeatureError,
+      )
+      .with_severity_warning()
+    }));
+
+    Ok(ParseToEcmaAstResult {
+      ast,
+      scoping,
+      has_lazy_export,
+      warnings,
+      preserve_jsx,
+      enum_member_value_map,
+    })
   }
 
-  fn recreate_scoping(
-    &mut self,
-    scoping: &mut Option<Scoping>,
-    program: &Program<'_>,
-    with_scope_tree_child_ids: bool,
-  ) -> Scoping {
+  fn recreate_scoping(&mut self, scoping: &mut Option<Scoping>, program: &Program<'_>) -> Scoping {
     if let Some(scoping) = scoping.take() {
       return scoping;
     }
-    let ret = SemanticBuilder::new()
-      // Required by `module.scope.get_child_ids` in `crates/rolldown/src/utils/renamer.rs`.
-      .with_scope_tree_child_ids(with_scope_tree_child_ids)
+    let ret = semantic_builder_for_transform()
       // Preallocate memory for the underlying data structures.
       .with_stats(self.stats)
       .build(program)
       .semantic;
     self.stats = ret.stats();
     ret.into_scoping()
+  }
+}
+
+fn function_declaration_stmt_start(stmt: &Statement<'_>) -> Option<u32> {
+  match stmt {
+    Statement::FunctionDeclaration(decl) => Some(decl.span.start),
+    Statement::ExportDeclaration(e) => match &e.declaration {
+      Declaration::FunctionDeclaration(decl) => Some(decl.span.start),
+      _ => None,
+    },
+    Statement::ExportDefaultDeclaration(e) => match &e.declaration {
+      ExportDefaultDeclarationKind::FunctionDeclaration(decl) => Some(decl.span.start),
+      _ => None,
+    },
+    _ => None,
+  }
+}
+
+struct FunctionDeclarationStartMatcher {
+  target_statement_starts: FxHashSet<u32>,
+  matched_statement_starts: FxHashSet<u32>,
+  remaining_target_count: usize,
+}
+
+impl FunctionDeclarationStartMatcher {
+  fn new(target_statement_starts: FxHashSet<u32>) -> Self {
+    let remaining_target_count = target_statement_starts.len();
+    Self {
+      target_statement_starts,
+      matched_statement_starts: FxHashSet::default(),
+      remaining_target_count,
+    }
+  }
+}
+
+impl<'ast> VisitJs<'ast> for FunctionDeclarationStartMatcher {
+  fn visit_program(&mut self, program: &Program<'ast>) {
+    for stmt in &program.body {
+      if self.remaining_target_count == 0 {
+        break;
+      }
+      self.visit_statement(stmt);
+    }
+  }
+
+  fn visit_statement(&mut self, stmt: &Statement<'ast>) {
+    if self.remaining_target_count == 0 {
+      return;
+    }
+    if let Some(start) = function_declaration_stmt_start(stmt) {
+      if self.target_statement_starts.contains(&start)
+        && self.matched_statement_starts.insert(start)
+      {
+        self.remaining_target_count -= 1;
+      }
+    }
+    if self.remaining_target_count > 0 {
+      walk_js::walk_statement(self, stmt);
+    }
+  }
+}
+
+fn invalid_pure_annotation_warnings(
+  program: &Program<'_>,
+  source: &ArcStr,
+  resolved_id: &str,
+) -> Vec<BuildDiagnostic> {
+  let pure_not_applied_comments: Vec<_> =
+    program.comments.iter().filter(|c| c.content == CommentContent::PureNotApplied).collect();
+
+  if pure_not_applied_comments.is_empty() {
+    return Vec::new();
+  }
+
+  let target_statement_starts: FxHashSet<u32> =
+    pure_not_applied_comments.iter().map(|comment| comment.attached_to).collect();
+  let mut function_declaration_start_matcher =
+    FunctionDeclarationStartMatcher::new(target_statement_starts);
+  function_declaration_start_matcher.visit_program(program);
+
+  pure_not_applied_comments
+    .into_iter()
+    .map(|comment| {
+      let span = comment.span;
+      let annotation = source[span.start as usize..span.end as usize].to_string();
+      let is_before_function_declaration =
+        function_declaration_start_matcher.matched_statement_starts.contains(&comment.attached_to);
+      BuildDiagnostic::invalid_annotation(
+        resolved_id.to_string(),
+        annotation,
+        source.clone(),
+        span,
+        is_before_function_declaration,
+      )
+      .with_severity_warning()
+    })
+    .collect()
+}
+
+#[cfg(test)]
+mod tests {
+  use oxc::span::SourceType;
+  use rolldown_ecmascript::EcmaCompiler;
+  use rolldown_error::Severity;
+
+  use super::invalid_pure_annotation_warnings;
+
+  #[test]
+  fn invalid_pure_annotations_are_warning_severity() {
+    let ast =
+      EcmaCompiler::parse("main.js", "/* #__PURE__ */ globalThis.foo;", SourceType::default())
+        .unwrap();
+    let source = ast.source().clone();
+    let warnings = ast.program.with_dependent(|_owner, dep| {
+      invalid_pure_annotation_warnings(&dep.program, &source, "main.js")
+    });
+
+    assert_eq!(warnings.len(), 1);
+    assert_eq!(warnings[0].severity(), Severity::Warning);
   }
 }

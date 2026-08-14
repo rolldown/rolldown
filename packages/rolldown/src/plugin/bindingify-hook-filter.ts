@@ -1,7 +1,4 @@
-import type {
-  FilterExpression,
-  TopLevelFilterExpression,
-} from '@rolldown/pluginutils';
+import type { FilterExpression, TopLevelFilterExpression } from '@rolldown/pluginutils';
 import * as filter from '@rolldown/pluginutils';
 import * as R from 'remeda';
 import type { BindingFilterToken, BindingHookFilter } from '../binding.cjs';
@@ -21,23 +18,17 @@ function generalHookFilterMatcherToFilterExprs<T extends StringOrRegExp>(
     return [filter.include(generateAtomMatcher(stringKind, matcher))];
   }
   if (Array.isArray(matcher)) {
-    return matcher.map((m) =>
-      filter.include(generateAtomMatcher(stringKind, m))
-    );
+    return matcher.map((m) => filter.include(generateAtomMatcher(stringKind, m)));
   }
   let ret: filter.TopLevelFilterExpression[] = [];
   if (matcher.exclude) {
     ret.push(
-      ...arraify(matcher.exclude).map((m) =>
-        filter.exclude(generateAtomMatcher(stringKind, m))
-      ),
+      ...arraify(matcher.exclude).map((m) => filter.exclude(generateAtomMatcher(stringKind, m))),
     );
   }
   if (matcher.include) {
     ret.push(
-      ...arraify(matcher.include).map((m) =>
-        filter.include(generateAtomMatcher(stringKind, m))
-      ),
+      ...arraify(matcher.include).map((m) => filter.include(generateAtomMatcher(stringKind, m))),
     );
   }
   return ret;
@@ -80,12 +71,8 @@ function transformFilterMatcherToFilterExprs(
 
   let andExprList: FilterExpression[] = [];
   if (moduleType) {
-    let moduleTypes = Array.isArray(moduleType)
-      ? moduleType
-      : moduleType.include ?? [];
-    andExprList.push(
-      filter.or(...moduleTypes.map((m) => filter.moduleType(m))),
-    );
+    let moduleTypes = Array.isArray(moduleType) ? moduleType : (moduleType.include ?? []);
+    andExprList.push(filter.or(...moduleTypes.map((m) => filter.moduleType(m))));
   }
   if (idIncludes.length) {
     andExprList.push(filter.or(...idIncludes.map((item) => item.expr)));
@@ -101,10 +88,10 @@ function transformFilterMatcherToFilterExprs(
   return ret;
 }
 
-function bindingifyGeneralHookFilter<
-  T extends StringOrRegExp,
-  F extends GeneralHookFilter<T>,
->(stringKind: 'code' | 'id', pattern: F): BindingHookFilter | undefined {
+function bindingifyGeneralHookFilter<T extends StringOrRegExp, F extends GeneralHookFilter<T>>(
+  stringKind: 'code' | 'id',
+  pattern: F,
+): BindingHookFilter | undefined {
   let filterExprs = generalHookFilterMatcherToFilterExprs(pattern, stringKind);
   let ret: BindingFilterToken[][] = [];
   if (filterExprs) {
@@ -112,8 +99,8 @@ function bindingifyGeneralHookFilter<
   }
   return ret.length > 0
     ? {
-      value: ret,
-    }
+        value: ret,
+      }
     : undefined;
 }
 
@@ -124,9 +111,7 @@ function bindingifyFilterExpr(
   bindingifyFilterExprImpl(expr, list);
   return list;
 }
-function containsImporterId(
-  expr: FilterExpression | TopLevelFilterExpression,
-): boolean {
+function containsImporterId(expr: FilterExpression | TopLevelFilterExpression): boolean {
   switch (expr.kind) {
     case 'and':
     case 'or':
@@ -149,6 +134,33 @@ function assertNoImporterId(
   if (filterExprs?.some(containsImporterId)) {
     throw new Error(
       `The \`importerId\` filter can only be used with the \`resolveId\` hook, but it was used with the \`${hookName}\` hook.`,
+    );
+  }
+}
+
+function containsStringId(expr: FilterExpression | TopLevelFilterExpression): boolean {
+  switch (expr.kind) {
+    case 'and':
+    case 'or':
+      return expr.args.some(containsStringId);
+    case 'not':
+    case 'include':
+    case 'exclude':
+      return containsStringId(expr.expr);
+    case 'id':
+      return typeof expr.pattern === 'string';
+    default:
+      return false;
+  }
+}
+
+function assertNoStringId(
+  filterExprs: filter.TopLevelFilterExpression[] | undefined,
+  hookName: string,
+): void {
+  if (filterExprs?.some(containsStringId)) {
+    throw new Error(
+      `A string \`id\` filter is not supported for the \`${hookName}\` hook, because its \`id\` is the import specifier rather than a resolved path. Use a RegExp instead.`,
     );
   }
 }
@@ -235,14 +247,20 @@ export function bindingifyResolveIdFilter(
   if (!filterOption) {
     return undefined;
   }
-  if (Array.isArray(filterOption)) {
-    return {
-      value: filterOption.map(bindingifyFilterExpr),
-    };
+  const filterExprs = Array.isArray(filterOption)
+    ? filterOption
+    : filterOption.id
+      ? generalHookFilterMatcherToFilterExprs(filterOption.id, 'id')
+      : undefined;
+  // In `resolveId`, `id` is the raw import specifier, not a resolved path, so a
+  // string (glob) `id` is meaningless there -- it must be a RegExp. (`importerId`
+  // may still be a string: it matches the importer's resolved id, which is a path.)
+  assertNoStringId(filterExprs, 'resolveId');
+  if (!filterExprs) {
+    return undefined;
   }
-  return filterOption.id
-    ? bindingifyGeneralHookFilter('id', filterOption.id)
-    : undefined;
+  const value = filterExprs.map(bindingifyFilterExpr);
+  return value.length > 0 ? { value } : undefined;
 }
 
 export function bindingifyLoadFilter(
@@ -257,9 +275,7 @@ export function bindingifyLoadFilter(
       value: filterOption.map(bindingifyFilterExpr),
     };
   }
-  return filterOption.id
-    ? bindingifyGeneralHookFilter('id', filterOption.id)
-    : undefined;
+  return filterOption.id ? bindingifyGeneralHookFilter('id', filterOption.id) : undefined;
 }
 
 export function bindingifyTransformFilter(
@@ -293,7 +309,5 @@ export function bindingifyRenderChunkFilter(
       value: filterOption.map(bindingifyFilterExpr),
     };
   }
-  return filterOption.code
-    ? bindingifyGeneralHookFilter('code', filterOption.code)
-    : undefined;
+  return filterOption.code ? bindingifyGeneralHookFilter('code', filterOption.code) : undefined;
 }

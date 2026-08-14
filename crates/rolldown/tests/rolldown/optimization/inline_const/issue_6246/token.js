@@ -1,14 +1,13 @@
-export var character = 0
+export var character = 0;
 
 export function next() {
-  character++
-  return character
+  character++;
+  return character;
 }
 
 export function noop() {}
 
-export let immutable_let = "immutable_let";
-export let mutable_let = "mutable_let";
+export let immutable_let = 'immutable_let';
+export let mutable_let = 'mutable_let';
 
-
-mutable_let = "mutable_let1";
+mutable_let = 'mutable_let1';

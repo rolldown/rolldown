@@ -16,7 +16,7 @@ enum Status {
 impl LinkStage<'_> {
   /// Some notes about the module execution order:
   /// - We assume user-defined entries are always executed orderly.
-  /// - Async entries is sorted by `Module#debug_id` of entry module to ensure deterministic output.
+  /// - Non-user-defined entries (dynamic-import and emitted entries) are canonicalized in `LinkStage::new` by sorting on `(entry.kind, module.id().as_str())` to ensure deterministic output.
   /// - `require(...)` is treated as implicit static `import`, which required modules are executed before the module that requires them.
   /// - Since import statements are hoisted, `require(...)` is always placed after static `import` statements.
   /// - Order of `require(...)` is determined by who shows up first while scanning ast. For such code
@@ -34,9 +34,9 @@ impl LinkStage<'_> {
     // The runtime module should always be the first module to be executed
     let mut execution_stack = self
       .entries
-      .iter()
+      .keys()
       .rev()
-      .map(|entry| Status::ToBeExecuted(entry.idx))
+      .map(|&module_idx| Status::ToBeExecuted(module_idx))
       .chain(iter::once(Status::ToBeExecuted(self.runtime.id())))
       .collect::<Vec<_>>();
 
@@ -84,9 +84,9 @@ impl LinkStage<'_> {
                 .iter()
                 .filter(|rec| {
                   rec.kind.is_static()
-                    || (self.options.inline_dynamic_imports && rec.kind.is_dynamic())
+                    || (self.options.code_splitting.is_disabled() && rec.kind.is_dynamic())
                 })
-                .map(|rec| rec.resolved_module)
+                .filter_map(|rec| rec.resolved_module)
                 .rev()
                 .map(Status::ToBeExecuted),
             );
@@ -95,12 +95,12 @@ impl LinkStage<'_> {
         Status::WaitForExit(id) => {
           match &mut self.module_table[id] {
             Module::Normal(module) => {
-              debug_assert!(module.exec_order == u32::MAX);
+              debug_assert_eq!(module.exec_order, u32::MAX);
               module.exec_order = next_exec_order;
               sorted_modules.push(id);
             }
             Module::External(module) => {
-              debug_assert!(module.exec_order == u32::MAX);
+              debug_assert_eq!(module.exec_order, u32::MAX);
               module.exec_order = next_exec_order;
             }
           }
@@ -117,7 +117,7 @@ impl LinkStage<'_> {
           .iter()
           .filter_map(|id| self.module_table[*id].as_normal().map(|module| module.id.to_string()))
           .collect::<Vec<_>>();
-        self.warnings.push(BuildDiagnostic::circular_dependency(paths).with_severity_warning());
+        self.diagnostics.push(BuildDiagnostic::circular_dependency(paths).with_severity_warning());
       }
     }
 

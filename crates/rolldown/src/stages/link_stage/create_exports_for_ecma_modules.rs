@@ -1,15 +1,16 @@
 use rolldown_common::{
-  EntryPoint, ExportsKind, ImportRecordMeta, ModuleIdx, OutputFormat, PreserveEntrySignatures,
-  SharedNormalizedBundlerOptions, StmtInfo, StmtInfoMeta, TaggedSymbolRef, WrapKind,
-  dynamic_import_usage::DynamicImportExportsUsage,
+  DeclaredSymbols, EntryPoint, ExportsKind, ImportRecordMeta, ModuleIdx, OutputFormat,
+  PreserveEntrySignatures, SharedNormalizedBundlerOptions, StmtInfo, StmtInfoMeta, TaggedSymbolRef,
+  WrapKind, dynamic_import_usage::DynamicImportExportsUsage,
 };
-use rustc_hash::FxHashMap;
+use rustc_hash::{FxHashMap, FxHashSet};
+use smallvec::smallvec;
 
 use crate::{
   types::linking_metadata::LinkingMetadata, utils::chunk::normalize_preserve_entry_signature,
 };
 
-use super::LinkStage;
+use super::{LinkStage, bind_imports_and_exports::record_star_reexport_path};
 
 fn init_entry_point_stmt_info(
   meta: &mut LinkingMetadata,
@@ -32,16 +33,14 @@ fn init_entry_point_stmt_info(
     normalize_preserve_entry_signature(overrode_preserve_entry_signature_map, options, entry.idx);
 
   if !matches!(normalized_entry_signature, PreserveEntrySignatures::False) || is_dynamic_imported {
-    referenced_symbols.extend(
-      meta
-        .referenced_canonical_exports_symbols(
-          entry.idx,
-          entry.kind,
-          dynamic_import_exports_usage_map,
-          true,
-        )
-        .map(|(_, resolved_export)| (resolved_export.symbol_ref, resolved_export.came_from_cjs)),
-    );
+    for (_, resolved_export) in meta.referenced_canonical_exports_symbols(
+      entry.idx,
+      entry.kind,
+      dynamic_import_exports_usage_map,
+      true,
+    ) {
+      referenced_symbols.push((resolved_export.symbol_ref, resolved_export.came_from_commonjs));
+    }
   }
   // Entry chunk need to generate exports, so we need reference to all exports to make sure they are included in tree-shaking.
 
@@ -51,86 +50,125 @@ fn init_entry_point_stmt_info(
 impl LinkStage<'_> {
   #[tracing::instrument(level = "debug", skip_all)]
   pub(super) fn create_exports_for_ecma_modules(&mut self) {
-    self.module_table.modules.iter_mut().filter_map(|m| m.as_normal_mut()).for_each(
-      |ecma_module| {
-        let linking_info = &mut self.metas[ecma_module.idx];
+    for m in &mut self.module_table.modules {
+      let Some(ecma_module) = m.as_normal_mut() else { continue };
+      let idx = ecma_module.idx;
+      let linking_info = &mut self.metas[idx];
+      let stmt_infos = &mut self.stmt_infos[idx];
 
-        if let Some(entry) = self.entries.iter().find(|entry| entry.idx == ecma_module.idx) {
-          init_entry_point_stmt_info(
-            linking_info,
-            entry,
-            &self.dynamic_import_exports_usage_map,
-            self.options,
-            &self.overrode_preserve_entry_signature_map,
-            !ecma_module.dynamic_importers.is_empty(),
-          );
+      if let Some(entry) = self.entries.get(&idx).and_then(|entries| entries.first()) {
+        init_entry_point_stmt_info(
+          linking_info,
+          entry,
+          &self.dynamic_import_exports_usage_map,
+          self.options,
+          &self.overrode_preserve_entry_signature_map,
+          !ecma_module.dynamic_importers.is_empty(),
+        );
+      }
+
+      // Create facade StmtInfo that declares variables based on the missing exports, so they can participate in the symbol de-conflict and
+      // tree-shaking process.
+      linking_info.shimmed_missing_exports.iter().for_each(|(_name, symbol_ref)| {
+        let stmt_info = StmtInfo {
+          declared_symbols: smallvec![TaggedSymbolRef::normal(*symbol_ref)],
+          referenced_symbols: vec![],
+          eval_flags: false.into(),
+          import_records: Vec::new(),
+          #[cfg(debug_assertions)]
+          debug_label: None,
+          meta: StmtInfoMeta::default(),
+          ..Default::default()
+        };
+        stmt_infos.add_stmt_info(stmt_info);
+      });
+
+      // Generate export of Module Namespace Object for Namespace Import
+      // - Namespace import: https://tc39.es/ecma262/#prod-NameSpaceImport
+      // - Module Namespace Object: https://tc39.es/ecma262/#sec-module-namespace-exotic-objects
+      // Though Module Namespace Object is created in runtime, as a bundler, we have stimulus the behavior in compile-time and generate a
+      // real statement to construct the Module Namespace Object and assign it to a variable.
+      // This is only a concept of esm, so no need to care about this in commonjs.
+      if matches!(ecma_module.exports_kind, ExportsKind::Esm) {
+        let meta = &mut self.metas[ecma_module.idx];
+        let mut referenced_symbols = vec![];
+        let mut declared_symbols: DeclaredSymbols = smallvec![];
+        if !meta.is_canonical_exports_empty() || self.options.generated_code.symbols {
+          referenced_symbols.push(self.runtime.resolve_symbol("__exportAll").into());
+          referenced_symbols
+            .extend(meta.canonical_exports(false).map(|(_, export)| export.symbol_ref.into()));
         }
-
-        // Create facade StmtInfo that declares variables based on the missing exports, so they can participate in the symbol de-conflict and
-        // tree-shaking process.
-        linking_info.shimmed_missing_exports.iter().for_each(|(_name, symbol_ref)| {
-          let stmt_info = StmtInfo {
-            declared_symbols: vec![TaggedSymbolRef::Normal(*symbol_ref)],
-            referenced_symbols: vec![],
-            side_effect: false.into(),
-            import_records: Vec::new(),
-            #[cfg(debug_assertions)]
-            debug_label: None,
-            meta: StmtInfoMeta::default(),
-            ..Default::default()
-          };
-          ecma_module.stmt_infos.add_stmt_info(stmt_info);
-        });
-
-        // Generate export of Module Namespace Object for Namespace Import
-        // - Namespace import: https://tc39.es/ecma262/#prod-NameSpaceImport
-        // - Module Namespace Object: https://tc39.es/ecma262/#sec-module-namespace-exotic-objects
-        // Though Module Namespace Object is created in runtime, as a bundler, we have stimulus the behavior in compile-time and generate a
-        // real statement to construct the Module Namespace Object and assign it to a variable.
-        // This is only a concept of esm, so no need to care about this in commonjs.
-        if matches!(ecma_module.exports_kind, ExportsKind::Esm) {
-          let meta = &mut self.metas[ecma_module.idx];
-          let mut referenced_symbols = vec![];
-          let mut declared_symbols = vec![];
-          if !meta.is_canonical_exports_empty() || self.options.generated_code.symbols {
-            referenced_symbols.push(self.runtime.resolve_symbol("__exportAll").into());
-            referenced_symbols
-              .extend(meta.canonical_exports(false).map(|(_, export)| export.symbol_ref.into()));
-          }
-          if !meta.star_exports_from_external_modules.is_empty() {
-            referenced_symbols.push(self.runtime.resolve_symbol("__reExport").into());
-            match self.options.format {
-              OutputFormat::Esm => {
-                meta.star_exports_from_external_modules.iter().copied().for_each(|rec_idx| {
-                  let rec = &ecma_module.import_records[rec_idx];
-                  if rec.meta.contains(ImportRecordMeta::EntryLevelExternal) {
-                    return;
-                  }
-                  referenced_symbols.push(rec.namespace_ref.into());
-                  declared_symbols.push(TaggedSymbolRef::Normal(
-                    ecma_module.import_records[rec_idx].namespace_ref,
-                  ));
-                });
-              }
-              OutputFormat::Cjs | OutputFormat::Iife | OutputFormat::Umd => {}
+        if !meta.star_exports_from_external_modules.is_empty() {
+          referenced_symbols.push(self.runtime.resolve_symbol("__reExport").into());
+          match self.options.format {
+            OutputFormat::Esm => {
+              meta.star_exports_from_external_modules.iter().copied().for_each(|rec_idx| {
+                let rec = &ecma_module.import_records[rec_idx];
+                if rec.meta.contains(ImportRecordMeta::EntryLevelExternal) {
+                  return;
+                }
+                referenced_symbols.push(rec.namespace_ref.into());
+                declared_symbols
+                  .push(TaggedSymbolRef::normal(ecma_module.import_records[rec_idx].namespace_ref));
+              });
             }
+            OutputFormat::Cjs | OutputFormat::Iife | OutputFormat::Umd => {}
           }
-          // Create a StmtInfo to represent the statement that declares and constructs the Module Namespace Object.
-          // Corresponding AST for this statement will be created by the finalizer.
-          declared_symbols.push(TaggedSymbolRef::Normal(ecma_module.namespace_object_ref));
-          let namespace_stmt_info = StmtInfo {
-            declared_symbols,
-            referenced_symbols,
-            side_effect: false.into(),
-            import_records: Vec::new(),
-            #[cfg(debug_assertions)]
-            debug_label: None,
-            meta: StmtInfoMeta::default(),
-            ..Default::default()
-          };
-          ecma_module.stmt_infos.replace_namespace_stmt_info(namespace_stmt_info);
         }
-      },
-    );
+        // Create a StmtInfo to represent the statement that declares and constructs the Module Namespace Object.
+        // Corresponding AST for this statement will be created by the finalizer.
+        declared_symbols.push(TaggedSymbolRef::normal(ecma_module.namespace_object_ref));
+        let namespace_stmt_info = StmtInfo {
+          declared_symbols,
+          referenced_symbols,
+          eval_flags: false.into(),
+          import_records: Vec::new(),
+          #[cfg(debug_assertions)]
+          debug_label: None,
+          meta: StmtInfoMeta::default(),
+          ..Default::default()
+        };
+        stmt_infos.replace_namespace_stmt_info(namespace_stmt_info);
+      }
+    }
+
+    if !self.options.is_strict_execution_order_enabled() {
+      return;
+    }
+    for (entry_idx, entries) in &self.entries {
+      let Some(entry) = entries.first() else {
+        continue;
+      };
+      let normalized_entry_signature = normalize_preserve_entry_signature(
+        &self.overrode_preserve_entry_signature_map,
+        self.options,
+        *entry_idx,
+      );
+      let is_dynamic_imported = self.module_table.modules[*entry_idx]
+        .as_normal()
+        .is_some_and(|module| !module.dynamic_importers.is_empty());
+      if matches!(normalized_entry_signature, PreserveEntrySignatures::False)
+        && !is_dynamic_imported
+      {
+        continue;
+      }
+      let meta = &self.metas[*entry_idx];
+      for (name, resolved_export) in meta.referenced_canonical_exports_symbols(
+        *entry_idx,
+        entry.kind,
+        &self.dynamic_import_exports_usage_map,
+        true,
+      ) {
+        record_star_reexport_path(
+          *entry_idx,
+          name,
+          resolved_export.symbol_ref,
+          &self.module_table.modules,
+          &self.metas,
+          &mut self.star_reexport_records_by_imported_symbol,
+          &mut FxHashSet::default(),
+        );
+      }
+    }
   }
 }

@@ -1,2 +1,2 @@
-import { readFile } from 'shouldRenamedToFs'
-require('shouldRenamedToFs')
+import { readFile } from 'shouldRenamedToFs';
+require('shouldRenamedToFs');

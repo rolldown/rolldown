@@ -17,6 +17,10 @@ export default defineTest({
       {
         name: 'test',
         transform(_, id, meta) {
+          // Skip virtual modules (like \0rolldown/runtime.js)
+          if (id.startsWith('\0')) {
+            return null;
+          }
           if (meta.moduleType === 'js') {
             transformed.push(id);
           }

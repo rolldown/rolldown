@@ -1,0 +1,49 @@
+{
+  "configName": "on-demand",
+  "config": {
+    "input": [
+      {
+        "name": "main",
+        "import": "./main.js"
+      },
+      {
+        "name": "hub",
+        "import": "./hub.js"
+      }
+    ],
+    "strictExecutionOrder": true,
+    "preserveEntrySignatures": "allow-extension",
+    "codeSplitting": {
+      "includeDependenciesRecursively": false,
+      "groups": [
+        {
+          "name": "dep",
+          "test": "[\\\\/]dep\\.js$"
+        },
+        {
+          "name": "hub",
+          "test": "[\\\\/](?:hub\\.js|interop\\.cjs|shared\\.js)$"
+        }
+      ]
+    },
+    "experimental": {
+      "onDemandWrapping": true
+    }
+  },
+  "configVariants": [
+    {
+      "_configName": "cjs-on-demand",
+      "format": "cjs"
+    },
+    {
+      "_configName": "cjs-wrap-all",
+      "format": "cjs",
+      "onDemandWrapping": false
+    },
+    {
+      "_configName": "wrap-all",
+      "onDemandWrapping": false
+    }
+  ],
+  "hiddenRuntimeModule": false
+}

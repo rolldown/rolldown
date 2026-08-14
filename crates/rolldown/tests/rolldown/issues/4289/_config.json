@@ -1,5 +1,6 @@
 {
   "config": {
+    "platform": "node",
     "external": ["node:assert"]
   },
   "configVariants": [
@@ -7,7 +8,7 @@
       "format": "cjs"
     },
     {
-      "inlineDynamicImports": true
+      "codeSplitting": false
     }
   ]
 }

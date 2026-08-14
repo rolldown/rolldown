@@ -1,9 +1,11 @@
 /* comments1 */
 /* comments2 */
-foo;bar;
+foo;
+bar;
 
 //! Legal comments1
 /*! Legal comments2 */
-foo;bar;
+foo;
+bar;
 
 /* comments */ foo(a, b);

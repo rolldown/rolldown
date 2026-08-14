@@ -8,7 +8,6 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```js
 import { count, inc, reset } from "./main.js";
 import assert from "node:assert";
-
 //#region async-entry.js
 reset();
 assert.strictEqual(count, 0);
@@ -19,8 +18,8 @@ assert.strictEqual(count, count);
 inc();
 assert.strictEqual(count, 2);
 assert.strictEqual(count, count);
-
 //#endregion
+
 ```
 
 ## main.js
@@ -34,11 +33,10 @@ function reset() {
 function inc() {
 	count += 1;
 }
-
 //#endregion
 //#region main.js
 import("./async-entry.js");
-
 //#endregion
 export { count, inc, reset };
+
 ```

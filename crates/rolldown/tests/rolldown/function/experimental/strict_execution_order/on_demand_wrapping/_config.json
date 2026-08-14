@@ -1,4 +1,5 @@
 {
+  "configName": "on-demand",
   "config": {
     "input": [
       {
@@ -10,10 +11,16 @@
         "import": "./dynamic.js"
       }
     ],
+    "strictExecutionOrder": true,
     "experimental": {
-      "strictExecutionOrder": true,
       "onDemandWrapping": true
     }
   },
-  "expectExecuted": false
+  "expectExecuted": false,
+  "configVariants": [
+    {
+      "_configName": "wrap-all",
+      "onDemandWrapping": false
+    }
+  ]
 }

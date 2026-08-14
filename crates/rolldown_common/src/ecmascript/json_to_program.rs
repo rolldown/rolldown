@@ -1,7 +1,7 @@
 use arcstr::ArcStr;
 use oxc::{
   allocator::Allocator,
-  ast::AstBuilder,
+  ast::builder::AstBuilder,
   span::{SPAN, SourceType},
 };
 use rolldown_ecmascript::EcmaAst;
@@ -32,17 +32,18 @@ pub fn json_value_to_ecma_ast(value: &Value) -> EcmaAst {
 
   EcmaAst::from_allocator_and_source(source, allocator, |allocator| {
     let builder = AstBuilder::new(allocator);
-    let expr = json_value_to_expression(value, builder);
-    let stmt = builder.statement_expression(SPAN, expr);
+    let expr = json_value_to_expression(value, &builder);
+    let stmt = oxc::ast::ast::Statement::new_expression_statement(SPAN, expr, &builder);
 
-    builder.program(
+    oxc::ast::ast::Program::new(
       SPAN,
       SourceType::default().with_module(true),
       "",
-      builder.vec(),
+      [],
       None,
-      builder.vec(),
-      builder.vec1(stmt),
+      [],
+      [stmt],
+      &builder,
     )
   })
 }
@@ -59,46 +60,72 @@ pub fn json_value_to_ecma_ast(value: &Value) -> EcmaAst {
 /// An `Expression` representing the JSON value
 pub fn json_value_to_expression<'a>(
   value: &Value,
-  builder: AstBuilder<'a>,
+  builder: &AstBuilder<'a>,
 ) -> oxc::ast::ast::Expression<'a> {
   match value {
-    Value::Null => builder.expression_null_literal(SPAN),
+    Value::Null => oxc::ast::ast::Expression::new_null_literal(SPAN, builder),
 
-    Value::Bool(b) => builder.expression_boolean_literal(SPAN, *b),
+    Value::Bool(b) => oxc::ast::ast::Expression::new_boolean_literal(SPAN, *b, builder),
 
     Value::Number(n) => {
-      // serde_json::Number can always be represented as f64 for JSON numbers.
-      // Large integers may lose precision, matching JavaScript's JSON.parse behavior.
-      let f = n.as_f64().expect("JSON numbers are always representable as f64");
-      builder.expression_numeric_literal(SPAN, f, None, oxc::ast::ast::NumberBase::Decimal)
+      // A JSON number string is always a valid f64 literal, so parsing it never fails:
+      // in-range values parse exactly (large integers may lose precision, like JS
+      // `JSON.parse`), and out-of-range values like `1e400` saturate to a correctly
+      // signed `±Infinity`. `as_f64` can't be used here because it filters out those
+      // non-finite results and returns `None`, which is what used to panic.
+      let f = n.as_str().parse::<f64>().expect("a JSON number is always a valid f64 literal");
+      oxc::ast::ast::Expression::new_numeric_literal(
+        SPAN,
+        f,
+        None,
+        oxc::ast::ast::NumberBase::Decimal,
+        builder,
+      )
     }
 
-    Value::String(s) => builder.expression_string_literal(SPAN, builder.atom(s), None),
+    Value::String(s) => oxc::ast::ast::Expression::new_string_literal(
+      SPAN,
+      oxc::ast::ast::Str::from_str_in(s, builder),
+      None,
+      builder,
+    ),
 
     Value::Array(arr) => {
-      let elements = builder.vec_from_iter(arr.iter().map(|item| {
-        let expr = json_value_to_expression(item, builder);
-        oxc::ast::ast::ArrayExpressionElement::from(expr)
-      }));
-      builder.expression_array(SPAN, elements)
+      let elements = oxc::allocator::Vec::from_iter_in(
+        arr.iter().map(|item| {
+          let expr = json_value_to_expression(item, builder);
+          oxc::ast::ast::ArrayExpressionElement::from(expr)
+        }),
+        builder,
+      );
+      oxc::ast::ast::Expression::new_array_expression(SPAN, elements, builder)
     }
 
     Value::Object(obj) => {
-      let properties = builder.vec_from_iter(obj.iter().map(|(key, val)| {
-        let key_expr = builder.expression_string_literal(SPAN, builder.atom(key), None);
-        let value_expr = json_value_to_expression(val, builder);
+      let properties = oxc::allocator::Vec::from_iter_in(
+        obj.iter().map(|(key, val)| {
+          let key_expr = oxc::ast::ast::PropertyKey::new_string_literal(
+            SPAN,
+            oxc::ast::ast::Str::from_str_in(key, builder),
+            None,
+            builder,
+          );
+          let value_expr = json_value_to_expression(val, builder);
 
-        builder.object_property_kind_object_property(
-          SPAN,
-          oxc::ast::ast::PropertyKind::Init,
-          oxc::ast::ast::PropertyKey::from(key_expr),
-          value_expr,
-          false, // shorthand
-          false, // computed
-          false, // method
-        )
-      }));
-      builder.expression_object(SPAN, properties)
+          oxc::ast::ast::ObjectPropertyKind::new_object_property(
+            SPAN,
+            oxc::ast::ast::PropertyKind::Init,
+            key_expr,
+            value_expr,
+            false, // method
+            false, // shorthand
+            false, // computed
+            builder,
+          )
+        }),
+        builder,
+      );
+      oxc::ast::ast::Expression::new_object_expression(SPAN, properties, builder)
     }
   }
 }
@@ -140,6 +167,21 @@ mod tests {
     assert_snapshot!(to_code(&json), @r#"({ "v": 9007199254740996 });"#);
   }
 
+  /// Regression test: numbers outside f64's finite range must not panic. With serde_json's
+  /// `arbitrary_precision` feature they parse successfully but `as_f64` returns `None`; we
+  /// saturate to a correctly-signed `±Infinity`, matching JS
+  /// `JSON.parse('{ "v": 1e400 }').v === Infinity`.
+  #[test]
+  fn test_out_of_range_number_saturates_to_infinity() {
+    let json: Value = serde_json::from_str(r#"{ "pos": 1e400, "neg": -1e400 }"#).unwrap();
+    assert_snapshot!(to_code(&json), @r#"
+    ({
+    	"pos": Infinity,
+    	"neg": -Infinity
+    });
+    "#);
+  }
+
   #[test]
   fn test_array() {
     assert_snapshot!(to_code(&serde_json::json!([])), @"[];");
@@ -169,6 +211,24 @@ mod tests {
     assert_snapshot!(to_code(&serde_json::json!({"true": 1})), @r#"({ "true": 1 });"#);
     // Note: serde_json deduplicates keys, keeping the last value
     assert_snapshot!(to_code(&serde_json::from_str::<Value>(r#"{"a": 1, "a": 2}"#).unwrap()), @r#"({ "a": 2 });"#);
+  }
+
+  /// Regression test for https://github.com/vitejs/vite/issues/21982
+  #[test]
+  fn test_float_17_significant_digits() {
+    let inputs = [
+      114.351_437_992_579_97_f64,
+      406.314_867_132_489_95_f64,
+      163.414_980_184_984_98_f64,
+      364.094_987_249_009_9_f64,
+    ];
+    let json: Value = serde_json::from_str(
+      r"[114.35143799257997, 406.31486713248995, 163.41498018498498, 364.09498724900986]",
+    )
+    .unwrap();
+    let code: String = to_code(&json).chars().filter(|c| !c.is_whitespace()).collect();
+    let expected = format!("[{}];", inputs.map(|v| v.to_string()).join(","));
+    assert_eq!(code, expected);
   }
 
   #[test]

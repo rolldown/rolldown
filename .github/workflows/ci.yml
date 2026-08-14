@@ -26,26 +26,53 @@ jobs:
     permissions:
       pull-requests: read
     outputs:
-      rust-changes: ${{ (steps.filter.outputs.rust-changes == 'true') || (github.ref_name == 'main') }}
-      node-changes: ${{ (steps.filter.outputs.node-changes == 'true') || (github.ref_name == 'main') }}
-      pluginutils-changes: ${{ (steps.filter.outputs.pluginutils-changes == 'true') || (github.ref_name == 'main') }}
+      # A Windows CI request runs the complete Windows suite, even for paths outside the normal filters.
+      rust-changes: "${{ (steps.filter.outputs.rust-changes == 'true') || (github.ref_name == 'main') || (steps.pr-labels.outputs.run-windows == 'true') }}"
+      node-changes: "${{ (steps.filter.outputs.node-changes == 'true') || (github.ref_name == 'main') || (steps.pr-labels.outputs.run-windows == 'true') }}"
+      # Allows opting into Windows CI per-PR by adding the `ci: windows` label.
+      run-windows: "${{ steps.pr-labels.outputs.run-windows == 'true' }}"
+      # Allows opting into the WebContainer smoke test per-PR by adding the `ci: webcontainer` label.
+      run-webcontainer: "${{ steps.pr-labels.outputs.run-webcontainer == 'true' }}"
     steps:
-      - uses: taiki-e/checkout-action@b13d20b7cda4e2f325ef19895128f7ff735c0b3d # v1.3.1
+      # Reruns keep the original event payload, so query the current labels instead.
+      - name: Read pull request labels
+        if: github.event_name == 'pull_request'
+        id: pr-labels
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+        run: |
+          if ! labels="$(gh api "repos/${GITHUB_REPOSITORY}/pulls/${PR_NUMBER}" --jq '[.labels[].name]')"; then
+            echo "::warning::Could not read pull request labels; running Windows CI and skipping the WebContainer smoke test."
+            run_windows=true
+            # fail closed: the WebContainer suite runs third-party code fetched at test time, so never opt in without a maintainer label
+            run_webcontainer=false
+          else
+            run_windows="$(jq 'any(. == "ci: windows")' <<< "$labels")"
+            run_webcontainer="$(jq 'any(. == "ci: webcontainer")' <<< "$labels")"
+          fi
+          echo "run-windows=${run_windows}" >> "$GITHUB_OUTPUT"
+          echo "run-webcontainer=${run_webcontainer}" >> "$GITHUB_OUTPUT"
 
-      - uses: dorny/paths-filter@de90cc6fb38fc0963ad72b210f1f284cd68cea36 # v3.0.2
+      - uses: taiki-e/checkout-action@7d1e50e93dc4fb3bba58f85018fadf77898aee8b # v1.4.2
+
+      - uses: dorny/paths-filter@ceb8a2b8f2d89434be7ff52d3de7ec3738c5cc9d # v4.0.3
         id: filter
         with:
           filters: |
-            rust-changes: &rust-changes
+            infra-changes: &infra-changes
               - '.github/workflows/**'
+              - 'package.json'
+              - 'pnpm-lock.yaml'
+              - 'pnpm-workspace.yaml'
+            rust-changes: &rust-changes
+              - *infra-changes
               - 'crates/**'
               - 'tasks/**'
               - 'scripts/src/esbuild-tests/**'
               - 'Cargo.toml'
               - 'Cargo.lock'
               - 'rust-toolchain.toml'
-              - 'pnpm-lock.yaml'
-              - 'pnpm-workspace.yaml'
               - '.gitattributes'
               - 'justfile'
               - 'test262'
@@ -54,42 +81,44 @@ jobs:
               - 'packages/**'
               - 'examples/**'
               - 'scripts/**'
-              - 'package.json'
-              - 'justfile'
               - 'rollup'
-            pluginutils-changes:
-              - 'packages/pluginutils/**'
-              - 'package.json'
-              - 'pnpm-lock.yaml'
-              - 'pnpm-workspace.yaml'
       - name: Show outputs
         run: |
-          echo "Rust changes: ${{ (steps.filter.outputs.rust-changes == 'true') || (github.ref_name == 'main') }}"
-          echo "Node changes: ${{ (steps.filter.outputs.node-changes == 'true') || (github.ref_name == 'main') }}"
-          echo "PluginUtils changes: ${{ (steps.filter.outputs.pluginutils-changes == 'true') || (github.ref_name == 'main') }}"
+          echo "Rust changes: ${{ (steps.filter.outputs.rust-changes == 'true') || (github.ref_name == 'main') || (steps.pr-labels.outputs.run-windows == 'true') }}"
+          echo "Node changes: ${{ (steps.filter.outputs.node-changes == 'true') || (github.ref_name == 'main') || (steps.pr-labels.outputs.run-windows == 'true') }}"
 
   rust-validation:
     name: Rust Validation
     needs: changes
     if: ${{ needs.changes.outputs.rust-changes == 'true' }}
-    runs-on: ubuntu-latest
+    runs-on: namespace-profile-linux-x64-default
     steps:
-      - uses: taiki-e/checkout-action@b13d20b7cda4e2f325ef19895128f7ff735c0b3d # v1.3.1
+      - uses: taiki-e/checkout-action@7d1e50e93dc4fb3bba58f85018fadf77898aee8b # v1.4.2
 
       - name: Setup Rust
-        uses: oxc-project/setup-rust@c8224157c0bf235aabc633e8cd50d344f087a7de # v1.0.12
+        uses: oxc-project/setup-rust@3d6fb132fbe7cdcb66bf8ec193911c2945369d12 # v1.0.17
         with:
           tools: just
-          cache-key: debug-build
+          cache-key: lint
+          save-cache: ${{ github.ref_name == 'main' }}
           components: clippy rustfmt
 
       - run: just lint-rust
+
+      - name: Check allocations
+        run: |
+          cargo allocs
+          git diff --exit-code -- tasks/track_memory_allocations/allocs.snap ||
+          (echo 'Allocations have changed. Run `just allocs` to update the snapshot, otherwise please fix the regression.' && exit 1)
 
   cargo-test:
     needs: changes
     strategy:
       matrix:
-        target: [ubuntu-latest, macos-latest, windows-latest]
+        target: >-
+          ${{ (github.ref_name == 'main') && fromJSON('["ubuntu-latest","macos-latest","windows-latest"]')
+              || (needs.changes.outputs.run-windows == 'true') && fromJSON('["ubuntu-latest","windows-latest"]')
+              || fromJSON('["ubuntu-latest"]') }}
     uses: ./.github/workflows/reusable-cargo-test.yml
     with:
       os: ${{ matrix.target }}
@@ -99,70 +128,190 @@ jobs:
     needs: [changes, build-rolldown-windows]
     uses: ./.github/workflows/reusable-node-test.yml
     if: |
+      (github.ref_name == 'main' || needs.changes.outputs.run-windows == 'true') &&
       always() &&
       (needs.build-rolldown-windows.result == 'success' || needs.build-rolldown-windows.result == 'skipped')
     with:
       os: windows-latest
+      node-version: 24
       changed: ${{ needs.changes.outputs.node-changes == 'true' }}
 
   node-test-macos:
     needs: [changes, build-rolldown-macos]
     uses: ./.github/workflows/reusable-node-test.yml
     if: |
+      github.ref_name == 'main' &&
       always() &&
       (needs.build-rolldown-macos.result == 'success' || needs.build-rolldown-macos.result == 'skipped')
     with:
       os: macos-latest
+      node-version: 24
       changed: ${{ needs.changes.outputs.node-changes == 'true' }}
 
   node-test-ubuntu:
     needs: [changes, build-rolldown-ubuntu]
+    # Matrix is defined here (not inside reusable-node-test.yml) because when the
+    # reusable workflow's job is skipped via `if: inputs.changed`, an internal matrix
+    # would never expand — producing zero jobs instead of skipped ones. GitHub required
+    # status checks need the job names to exist (even as "skipped") to pass.
+    strategy:
+      fail-fast: false
+      matrix:
+        node-version: [20, 22, 24]
     uses: ./.github/workflows/reusable-node-test.yml
     if: |
       always() &&
       (needs.build-rolldown-ubuntu.result == 'success' || needs.build-rolldown-ubuntu.result == 'skipped')
     with:
       os: ubuntu-latest
+      node-version: ${{ matrix.node-version }}
       changed: ${{ needs.changes.outputs.node-changes == 'true' }}
+
+  wasi:
+    needs: changes
+    uses: ./.github/workflows/reusable-wasi.yml
+    with:
+      changed: ${{ needs.changes.outputs.node-changes == 'true' }}
+
+  # Runs the packed @rolldown/browser in a real browser page on every PR that touches node code. The
+  # `ci: webcontainer` label adds the WebContainer suite to the same job; it never runs on path
+  # changes or on main.
+  browser:
+    needs: changes
+    uses: ./.github/workflows/reusable-browser.yml
+    with:
+      changed: ${{ needs.changes.outputs.node-changes == 'true' }}
+      webcontainer: ${{ needs.changes.outputs.run-webcontainer == 'true' }}
 
   node-dev-server-test-windows:
     needs: [changes, build-rolldown-windows]
     uses: ./.github/workflows/reusable-node-dev-server-test.yml
     if: |
+      (github.ref_name == 'main' || needs.changes.outputs.run-windows == 'true') &&
       always() &&
       (needs.build-rolldown-windows.result == 'success' || needs.build-rolldown-windows.result == 'skipped')
     with:
       os: windows-latest
+      node-version: 24
       changed: ${{ needs.changes.outputs.node-changes == 'true' }}
 
   node-dev-server-test-macos:
     needs: [changes, build-rolldown-macos]
     uses: ./.github/workflows/reusable-node-dev-server-test.yml
     if: |
+      github.ref_name == 'main' &&
       always() &&
       (needs.build-rolldown-macos.result == 'success' || needs.build-rolldown-macos.result == 'skipped')
     with:
       os: macos-latest
+      node-version: 24
       changed: ${{ needs.changes.outputs.node-changes == 'true' }}
 
   node-dev-server-test-ubuntu:
     needs: [changes, build-rolldown-ubuntu]
+    # Matrix is defined here (not inside reusable-node-dev-server-test.yml) because when the
+    # reusable workflow's job is skipped via `if: inputs.changed`, an internal matrix
+    # would never expand — producing zero jobs instead of skipped ones. GitHub required
+    # status checks need the job names to exist (even as "skipped") to pass.
+    strategy:
+      fail-fast: false
+      matrix:
+        node-version: [20, 22, 24]
     uses: ./.github/workflows/reusable-node-dev-server-test.yml
     if: |
       always() &&
       (needs.build-rolldown-ubuntu.result == 'success' || needs.build-rolldown-ubuntu.result == 'skipped')
     with:
       os: ubuntu-latest
+      node-version: ${{ matrix.node-version }}
       changed: ${{ needs.changes.outputs.node-changes == 'true' }}
 
-  build-rolldown-wasi:
-    needs: changes
-    uses: ./.github/workflows/reusable-wasi-build.yml
-    with:
-      changed: ${{ needs.changes.outputs.node-changes == 'true' }}
+  vite-test-ubuntu:
+    name: Vite Test Ubuntu
+    needs: [changes, build-rolldown-ubuntu]
+    if: |
+      always() &&
+      (needs.build-rolldown-ubuntu.result == 'success' || needs.build-rolldown-ubuntu.result == 'skipped')
+    runs-on: namespace-profile-linux-x64-default
+    timeout-minutes: 30
+    steps:
+      - uses: taiki-e/checkout-action@7d1e50e93dc4fb3bba58f85018fadf77898aee8b # v1.4.2
+
+      - uses: voidzero-dev/setup-vp@313600b80b104eadebb9111787d37a2e83e014ca # v1.17.0
+        with:
+          version: '0.2.1'
+          cache: true
+
+      - name: Download Native Rolldown Build
+        if: ${{ needs.changes.outputs.node-changes == 'true' }}
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: rolldown-native-ubuntu-latest
+          path: packages/rolldown/dist
+
+      - name: Configure Git
+        run: |
+          git config --global user.name 'github-actions[bot]'
+          git config --global user.email 'github-actions[bot]@users.noreply.github.com'
+
+      # `just setup-vite` is the only entry point that touches `vite/`;
+      # run.ts only clones the prepared checkout.
+      - name: Setup Vite checkout
+        if: ${{ needs.changes.outputs.node-changes == 'true' }}
+        run: vp run --filter '@rolldown-internal/scripts' setup-vite
+
+      - name: Run Vite Tests
+        if: ${{ needs.changes.outputs.node-changes == 'true' }}
+        run: vp run --filter vite-tests test
+
+  vite-test-windows:
+    name: Vite Test Windows
+    needs: [changes, build-rolldown-windows]
+    if: |
+      (github.ref_name == 'main' || needs.changes.outputs.run-windows == 'true') &&
+      always() &&
+      (needs.build-rolldown-windows.result == 'success' || needs.build-rolldown-windows.result == 'skipped')
+    runs-on: windows-latest
+    timeout-minutes: 30
+    steps:
+      - uses: taiki-e/checkout-action@7d1e50e93dc4fb3bba58f85018fadf77898aee8b # v1.4.2
+
+      - uses: samypr100/setup-dev-drive@562171fe8df7401fdf582d766cd3b6ab80d5b1a0 # v4.1.0
+        with:
+          drive-size: 12GB
+          drive-format: ReFS
+          env-mapping: |
+            PNPM_HOME,{{ DEV_DRIVE }}/.pnpm
+
+      - uses: voidzero-dev/setup-vp@313600b80b104eadebb9111787d37a2e83e014ca # v1.17.0
+        with:
+          version: '0.2.1'
+          cache: true
+
+      - name: Download Native Rolldown Build
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: rolldown-native-windows-latest
+          path: packages/rolldown/dist
+
+      - name: Configure Git
+        run: |
+          git config --global user.name 'github-actions[bot]'
+          git config --global user.email 'github-actions[bot]@users.noreply.github.com'
+
+      # `just setup-vite` is the only entry point that touches `vite/`;
+      # run.ts only clones the prepared checkout.
+      - name: Setup Vite checkout
+        if: ${{ needs.changes.outputs.node-changes == 'true' }}
+        run: vp run --filter '@rolldown-internal/scripts' setup-vite
+
+      - name: Run Vite Tests
+        if: ${{ needs.changes.outputs.node-changes == 'true' }}
+        run: vp run --filter vite-tests test
 
   build-rolldown-windows:
     needs: changes
+    if: github.ref_name == 'main' || needs.changes.outputs.run-windows == 'true'
     uses: ./.github/workflows/reusable-native-build.yml
     with:
       changed: ${{ needs.changes.outputs.node-changes == 'true' }}
@@ -170,6 +319,7 @@ jobs:
 
   build-rolldown-macos:
     needs: changes
+    if: github.ref_name == 'main'
     uses: ./.github/workflows/reusable-native-build.yml
     with:
       changed: ${{ needs.changes.outputs.node-changes == 'true' }}
@@ -182,99 +332,79 @@ jobs:
       changed: ${{ needs.changes.outputs.node-changes == 'true' }}
       os: ubuntu-latest
 
-  build-browser:
-    name: Build `@rolldown/browser`
-    needs: [changes]
+  node-validation:
+    name: Node Validation
+    needs: [changes, build-rolldown-ubuntu]
     if: ${{ needs.changes.outputs.node-changes == 'true' }}
-    runs-on: ubuntu-latest
+    runs-on: namespace-profile-linux-x64-default
     steps:
-      - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
-        with:
-          submodules: true # Pull submodules for additional files
-          persist-credentials: false
+      - uses: taiki-e/checkout-action@7d1e50e93dc4fb3bba58f85018fadf77898aee8b # v1.4.2
 
       - name: Setup Rust
-        uses: oxc-project/setup-rust@c8224157c0bf235aabc633e8cd50d344f087a7de # v1.0.12
+        uses: oxc-project/setup-rust@3d6fb132fbe7cdcb66bf8ec193911c2945369d12 # v1.0.17
         with:
           tools: just
-          cache-key: debug-build-wasi
+          cache-key: native-build
+          save-cache: false
 
-      - uses: oxc-project/setup-node@141eb77546de6702f92d320926403fe3f9f6a6f2 # v1.0.5
+      - uses: voidzero-dev/setup-vp@313600b80b104eadebb9111787d37a2e83e014ca # v1.17.0
+        with:
+          version: '0.2.1'
+          cache: true
+
+      - name: Download Native Rolldown Build
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: rolldown-native-ubuntu-latest
+          path: packages/rolldown/dist
 
       - name: Add WASI target
         run: rustup target add wasm32-wasip1-threads
 
-      - name: Build `@rolldown/browser`
+      - name: Build @rolldown/browser
         run: just build-browser
 
-  wasi-test:
-    needs: [changes, build-rolldown-wasi]
-    # run this even if build-rolldown-wasi is skipped
-    # Normally, if `build-rolldown-wasi` is skipped, this job won't run, which makes status checks failed.
-    # By using such syntax, https://docs.github.com/en/actions/reference/workflows-and-actions/workflow-syntax#example-not-requiring-successful-dependent-jobs
-    # we always run this job even when `build-rolldown-wasi` is skipped. We'll handle/skip unnecessary runs in `reusable-wasi-test.yml`.
-    if: |
-      always() &&
-      (needs.build-rolldown-wasi.result == 'success' || needs.build-rolldown-wasi.result == 'skipped')
-    strategy:
-      matrix:
-        target: [ubuntu-latest, macos-latest, windows-latest]
-    uses: ./.github/workflows/reusable-wasi-test.yml
-    with:
-      os: ${{ matrix.target }}
-      changed: ${{ needs.changes.outputs.node-changes == 'true' }}
+      - name: Build @rolldown/debug
+        run: just build-rolldown-debug
 
-  pluginutils-test:
-    name: Pluginutils Test
-    needs: changes
-    if: ${{ needs.changes.outputs.pluginutils-changes == 'true' }}
-    runs-on: ubuntu-latest
-    steps:
-      - uses: taiki-e/checkout-action@b13d20b7cda4e2f325ef19895128f7ff735c0b3d # v1.3.1
+      - name: Build `@rolldown/test-dev-server`
+        run: vp run --filter '@rolldown/test-dev-server' build
 
-      - uses: oxc-project/setup-node@141eb77546de6702f92d320926403fe3f9f6a6f2 # v1.0.5
-
-      - name: Test `@rolldown/pluginutils`
-        run: pnpm --filter '@rolldown/pluginutils' test
-
-  node-validation:
-    name: Node Validation
-    needs: changes
-    if: ${{ needs.changes.outputs.node-changes == 'true' }}
-    runs-on: ubuntu-latest
-    steps:
-      - uses: taiki-e/checkout-action@b13d20b7cda4e2f325ef19895128f7ff735c0b3d # v1.3.1
-
-      - name: Setup Rust
-        uses: oxc-project/setup-rust@c8224157c0bf235aabc633e8cd50d344f087a7de # v1.0.12
-        with:
-          tools: just
-          cache-key: debug-build
-
-      - uses: oxc-project/setup-node@141eb77546de6702f92d320926403fe3f9f6a6f2 # v1.0.5
-
-      - name: Build Native Rolldown
-        run: just build-rolldown
-
-      - name: Build @rolldown/pluginutils
-        run: pnpm --filter '@rolldown/pluginutils' build
+      - name: Make sure generated code of `@rolldown/debug` is up-to-date
+        run: git diff --exit-code
 
       - name: Lint Code
-        run: pnpm lint-code
+        run: vp lint
+
+      - name: Node Type Test
+        run: vp run --filter rolldown-tests test:types
+
+      - name: Lint publint
+        run: vp run lint-publint
 
       - name: Lint exports & dependencies
-        run: pnpm lint-knip
+        run: vp run lint-knip
 
       - name: Validate workspace package
         run: node scripts/misc/published-package-check.mjs
 
   repo-validation:
     name: Repo Validation
-    runs-on: ubuntu-latest
+    runs-on: namespace-profile-linux-x64-default
     steps:
-      - uses: taiki-e/checkout-action@b13d20b7cda4e2f325ef19895128f7ff735c0b3d # v1.3.1
+      - uses: taiki-e/checkout-action@7d1e50e93dc4fb3bba58f85018fadf77898aee8b # v1.4.2
 
-      - uses: oxc-project/setup-node@141eb77546de6702f92d320926403fe3f9f6a6f2 # v1.0.5
+      - name: Setup Rust
+        uses: oxc-project/setup-rust@3d6fb132fbe7cdcb66bf8ec193911c2945369d12 # v1.0.17
+        with:
+          cache-key: repo-validation
+          save-cache: ${{ github.ref_name == 'main' }}
+          components: rustfmt
+
+      - uses: voidzero-dev/setup-vp@313600b80b104eadebb9111787d37a2e83e014ca # v1.17.0
+        with:
+          version: '0.2.1'
+          cache: true
 
       - name: Lint Filename
         run: cargo ls-lint
@@ -288,7 +418,7 @@ jobs:
     name: Spell Check
     runs-on: ubuntu-latest
     steps:
-      - uses: taiki-e/checkout-action@b13d20b7cda4e2f325ef19895128f7ff735c0b3d # v1.3.1
-      - uses: crate-ci/typos@2d0ce569feab1f8752f1dde43cc2f2aa53236e06 # v1.40.0
+      - uses: taiki-e/checkout-action@7d1e50e93dc4fb3bba58f85018fadf77898aee8b # v1.4.2
+      - uses: crate-ci/typos@8a48f81b6c64dcfea44b3633223084c4be58ac5f # v1.49.0
         with:
           files: .

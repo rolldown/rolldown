@@ -29,7 +29,7 @@ impl Plugin for TestPluginCaller {
     args: &HookResolveIdArgs<'_>,
   ) -> HookResolveIdReturn {
     if args.specifier == "foo" {
-      let custom = CustomField::default();
+      let mut custom = CustomField::default();
       custom.insert(MyArg { id: 0 }, "hello, world".to_string());
       let custom_resolve_ret = ctx
         .resolve(
@@ -39,7 +39,7 @@ impl Plugin for TestPluginCaller {
         )
         .await??;
 
-      if custom_resolve_ret.id == "hello, world" {
+      if custom_resolve_ret.id.as_str() == "hello, world" {
         Ok(Some(HookResolveIdOutput {
           id: arcstr::literal!("hello, world"),
           external: Some(true.into()),

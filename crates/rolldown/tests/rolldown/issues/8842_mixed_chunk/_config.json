@@ -1,0 +1,8 @@
+{
+  "expectExecuted": true,
+  "config": {
+    "input": [{ "name": "entry", "import": "./entry.js" }],
+    "external": ["foo"],
+    "format": "cjs"
+  }
+}

@@ -5,6 +5,8 @@ use oxc::diagnostics::OxcDiagnostic;
 use oxc::{diagnostics::LabeledSpan, span::Span};
 use oxc_resolver::ResolveError;
 
+use crate::EmptyImportMetaKind;
+use crate::types::event_kind::EventKind;
 use crate::utils::ByteLocator;
 
 #[cfg(feature = "napi")]
@@ -19,22 +21,30 @@ use super::events::bundler_initialize_error::BundlerInitializeError;
 use super::events::cannot_call_namespace::CannotCallNamespace;
 use super::events::configuration_field_conflict::ConfigurationFieldConflict;
 use super::events::could_not_clean_directory::CouldNotCleanDirectory;
-use super::events::export_undefined_variable::ExportUndefinedVariable;
+use super::events::duplicate_shebang::DuplicateShebang;
 use super::events::filename_conflict::FilenameConflict;
+use super::events::filename_outside_output_directory::FilenameOutsideOutputDirectory;
 use super::events::illegal_identifier_as_name::IllegalIdentifierAsName;
 use super::events::import_is_undefined::ImportIsUndefined;
+use super::events::invalid_annotation::InvalidAnnotation;
 use super::events::invalid_define_config::InvalidDefineConfig;
 use super::events::invalid_option::{InvalidOption, InvalidOptionType};
 use super::events::json_parse::JsonParse;
 use super::events::missing_global_name::MissingGlobalName;
 use super::events::missing_name_option_for_iife_export::MissingNameOptionForIifeExport;
 use super::events::plugin_error::{CausedPlugin, PluginError};
-use super::events::plugin_timings::{PluginTimingInfo, PluginTimings};
+use super::events::plugin_timings::PluginTimings;
 use super::events::prefer_builtin_feature::PreferBuiltinFeature;
+use super::events::require_tla::RequireTla;
 use super::events::resolve_error::DiagnosableResolveError;
+use super::events::sourcemap_broken::SourcemapBroken;
+
+use super::events::tsconfig_error::TsConfigError;
 use super::events::unhandleable_error::UnhandleableError;
 use super::events::unloadable_dependency::{UnloadableDependency, UnloadableDependencyContext};
 use super::events::unsupported_feature::UnsupportedFeature;
+use super::events::unsupported_tsconfig_option::UnsupportedTsconfigOption;
+use super::events::untranspiled_syntax::UntranspiledSyntax;
 use super::events::{
   ambiguous_external_namespace::{AmbiguousExternalNamespace, AmbiguousExternalNamespaceModule},
   ambiguous_reexport::{AmbiguousReexport, AmbiguousReexportModule},
@@ -43,11 +53,12 @@ use super::events::{
   commonjs_variable_in_esm::{CjsExportSpan, CommonJsVariableInEsm},
   eval::Eval,
   external_entry::ExternalEntry,
+  file_not_found::FileNotFound,
   forbid_const_assign::ForbidConstAssign,
   invalid_export_option::InvalidExportOption,
   missing_export::MissingExport,
   mixed_exports::MixedExports,
-  parse_error::ParseError,
+  oxc_error::OxcError,
   unresolved_entry::UnresolvedEntry,
 };
 
@@ -90,6 +101,36 @@ impl BuildDiagnostic {
     })
   }
 
+  pub fn file_not_found(
+    reference_id: impl Into<String>,
+    module_id: impl Into<String>,
+    source: ArcStr,
+    span: Span,
+  ) -> Self {
+    Self::new_inner(FileNotFound {
+      reference_id: reference_id.into(),
+      module_id: module_id.into(),
+      source,
+      span,
+    })
+  }
+
+  pub fn invalid_annotation(
+    module_id: String,
+    annotation: String,
+    source: ArcStr,
+    span: oxc::span::Span,
+    is_before_function_declaration: bool,
+  ) -> Self {
+    Self::new_inner(InvalidAnnotation {
+      module_id,
+      annotation,
+      source,
+      span,
+      is_before_function_declaration,
+    })
+  }
+
   pub fn resolve_error(
     source: ArcStr,
     importer_id: ArcStr,
@@ -114,7 +155,7 @@ impl BuildDiagnostic {
     context: Option<UnloadableDependencyContext>,
     reason: ArcStr,
   ) -> Self {
-    Self::new_inner(UnloadableDependency { resolved, context, reason })
+    Self::new_inner(UnloadableDependency { reason, resolved, context })
   }
 
   pub fn circular_dependency(paths: Vec<String>) -> Self {
@@ -174,11 +215,15 @@ impl BuildDiagnostic {
     entry_module: ArcStr,
     export_keys: Vec<ArcStr>,
   ) -> Self {
-    Self::new_inner(InvalidExportOption { export_mode, export_keys, entry_module })
+    Self::new_inner(InvalidExportOption { export_mode, entry_module, export_keys })
   }
 
   pub fn filename_conflict(filename: ArcStr) -> Self {
     Self::new_inner(FilenameConflict { filename })
+  }
+
+  pub fn filename_outside_output_directory(filename: String) -> Self {
+    Self::new_inner(FilenameOutsideOutputDirectory { filename })
   }
 
   // Esbuild
@@ -212,7 +257,7 @@ impl BuildDiagnostic {
     span: Span,
     error_message: String,
   ) -> Self {
-    Self::new_inner(UnsupportedFeature { filename, source, span, error_message })
+    Self::new_inner(UnsupportedFeature { source, filename, span, error_message })
   }
 
   pub fn empty_import_meta(
@@ -220,34 +265,40 @@ impl BuildDiagnostic {
     source: ArcStr,
     span: Span,
     format: ArcStr,
-    is_import_meta_url: bool,
+    kind: EmptyImportMetaKind,
   ) -> Self {
     Self::new_inner(super::events::empty_import_meta::EmptyImportMeta {
       filename,
       source,
       span,
       format,
-      is_import_meta_url,
+      kind,
     })
   }
 
   // --- Rolldown related
 
-  pub fn oxc_parse_error(
+  pub fn require_tla(inner: RequireTla) -> Self {
+    Self::new_inner(inner)
+  }
+
+  pub fn oxc_error(
     source: ArcStr,
     id: String,
     error_help: String,
     error_message: String,
     error_labels: Vec<LabeledSpan>,
+    event_kind: EventKind,
   ) -> Self {
-    Self::new_inner(ParseError { source, id, error_help, error_message, error_labels })
+    Self::new_inner(OxcError { source, id, error_help, error_message, error_labels, event_kind })
   }
 
   pub fn from_oxc_diagnostics<T>(
     diagnostics: T,
     source: &ArcStr,
     id: &str,
-    severity: &Severity,
+    severity: Severity,
+    event_kind: EventKind,
   ) -> Vec<Self>
   where
     T: IntoIterator<Item = OxcDiagnostic>,
@@ -255,12 +306,13 @@ impl BuildDiagnostic {
     diagnostics
       .into_iter()
       .map(|mut error| {
-        let diagnostic = BuildDiagnostic::oxc_parse_error(
+        let diagnostic = BuildDiagnostic::oxc_error(
           source.clone(),
           id.to_string(),
           error.help.take().unwrap_or_default().into(),
           error.message.to_string(),
-          error.labels.take().unwrap_or_default(),
+          error.labels.to_vec(),
+          event_kind,
         );
         if matches!(severity, Severity::Warning) {
           diagnostic.with_severity_warning()
@@ -290,7 +342,7 @@ impl BuildDiagnostic {
   }
 
   pub fn eval(filename: String, source: ArcStr, span: Span) -> Self {
-    Self::new_inner(Eval { filename, span, source })
+    Self::new_inner(Eval { span, source, filename })
   }
 
   pub fn configuration_field_conflict(
@@ -307,21 +359,32 @@ impl BuildDiagnostic {
     })
   }
 
-  pub fn export_undefined_variable(
-    filename: String,
+  pub fn assign_to_import(
+    filename: ArcStr,
     source: ArcStr,
     span: Span,
     name: ArcStr,
+    import_decl_span: Option<Span>,
+    imported_name: Option<ArcStr>,
   ) -> Self {
-    Self::new_inner(ExportUndefinedVariable { filename, source, span, name })
+    Self::new_inner(AssignToImport {
+      filename,
+      source,
+      span,
+      name,
+      import_decl_span,
+      imported_name,
+    })
   }
 
-  pub fn assign_to_import(filename: ArcStr, source: ArcStr, span: Span, name: ArcStr) -> Self {
-    Self::new_inner(AssignToImport { filename, source, span, name })
-  }
-
-  pub fn cannot_call_namespace(filename: ArcStr, source: ArcStr, span: Span, name: ArcStr) -> Self {
-    Self::new_inner(CannotCallNamespace { filename, source, span, name })
+  pub fn cannot_call_namespace(
+    filename: ArcStr,
+    source: ArcStr,
+    span: Span,
+    name: ArcStr,
+    declaration_span: Span,
+  ) -> Self {
+    Self::new_inner(CannotCallNamespace { filename, source, span, name, declaration_span })
   }
 
   pub fn prefer_builtin_feature(
@@ -359,6 +422,10 @@ impl BuildDiagnostic {
     Self::new_inner(UnhandleableError(err))
   }
 
+  pub fn untranspiled_syntax(filename: String, syntax_kind: &'static str) -> Self {
+    Self::new_inner(UntranspiledSyntax { filename, syntax_kind })
+  }
+
   pub fn bundler_initialize_error(message: String, hint: Option<String>) -> Self {
     Self::new_inner(BundlerInitializeError { message, hint })
   }
@@ -371,7 +438,54 @@ impl BuildDiagnostic {
     Self::new_inner(CouldNotCleanDirectory { dir, reason })
   }
 
-  pub fn plugin_timings(plugins: Vec<PluginTimingInfo>) -> Self {
-    Self::new_inner(PluginTimings { plugins })
+  pub fn plugin_timings(timings: PluginTimings) -> Self {
+    Self::new_inner(timings)
+  }
+
+  pub fn duplicate_shebang(filename: String, source: &str) -> Self {
+    Self::new_inner(DuplicateShebang { filename, source: source.to_string() })
+  }
+
+  pub fn sourcemap_broken(plugin_name: String, id: Option<String>) -> Self {
+    Self::new_inner(SourcemapBroken { plugin_name, id })
+  }
+
+  pub fn tsconfig_error(reason: ResolveError) -> Self {
+    Self::new_inner(TsConfigError { reason })
+  }
+
+  pub fn unsupported_tsconfig_option(message: String) -> Self {
+    Self::new_inner(UnsupportedTsconfigOption { message })
+  }
+
+  pub fn runtime_module_symbol_not_found(
+    symbol_names: Vec<String>,
+    modified_by_plugins: Vec<String>,
+  ) -> Self {
+    Self::new_inner(super::events::runtime_module_symbol_not_found::RuntimeModuleSymbolNotFound {
+      symbol_names,
+      modified_by_plugins,
+    })
+  }
+
+  pub fn ineffective_dynamic_import(
+    module_id: String,
+    mut static_importers: Vec<String>,
+    mut dynamic_importers: Vec<String>,
+  ) -> Self {
+    static_importers.sort_unstable();
+    dynamic_importers.sort_unstable();
+    Self::new_inner(super::events::ineffective_dynamic_import::IneffectiveDynamicImport {
+      module_id,
+      static_importers,
+      dynamic_importers,
+    })
+  }
+
+  pub fn large_barrel_modules(module_id: String, reexport_count: usize) -> Self {
+    Self::new_inner(super::events::large_barrel_modules::LargeBarrelModules {
+      module_id,
+      reexport_count,
+    })
   }
 }

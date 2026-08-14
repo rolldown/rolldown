@@ -1,3 +1,3 @@
-import 'foo'
-import {} from 'bar'
-export {} from 'baz'
+import 'foo';
+import {} from 'bar';
+export {} from 'baz';

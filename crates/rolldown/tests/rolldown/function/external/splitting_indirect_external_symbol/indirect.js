@@ -1,1 +1,1 @@
-export { read } from "node:fs";
+export { read } from 'node:fs';

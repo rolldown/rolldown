@@ -74,24 +74,6 @@ impl BindingNormalizedOptions {
     self.inner.name.as_deref()
   }
 
-  // Some options can be set to `None`, and these values are converted to `null` in JavaScript.
-  // To distinguish them from regular None values, `undefined` is used to represent unsupported functions
-  #[napi(getter)]
-  pub fn css_entry_filenames(&self) -> Either<&str, Undefined> {
-    match &self.inner.css_entry_filenames {
-      rolldown::ChunkFilenamesOutputOption::String(inner) => Either::A(inner),
-      rolldown::ChunkFilenamesOutputOption::Fn(_) => Either::B(()),
-    }
-  }
-
-  #[napi(getter)]
-  pub fn css_chunk_filenames(&self) -> Either<&str, Undefined> {
-    match &self.inner.css_chunk_filenames {
-      rolldown::ChunkFilenamesOutputOption::String(inner) => Either::A(inner),
-      rolldown::ChunkFilenamesOutputOption::Fn(_) => Either::B(()),
-    }
-  }
-
   #[napi(getter)]
   pub fn entry_filenames(&self) -> Either<&str, Undefined> {
     match &self.inner.entry_filenames {
@@ -105,6 +87,14 @@ impl BindingNormalizedOptions {
     match &self.inner.chunk_filenames {
       rolldown::ChunkFilenamesOutputOption::String(inner) => Either::A(inner),
       rolldown::ChunkFilenamesOutputOption::Fn(_) => Either::B(()),
+    }
+  }
+
+  #[napi(getter)]
+  pub fn sourcemap_filenames(&self) -> Either<&str, Undefined> {
+    match &self.inner.sourcemap_filenames {
+      Some(rolldown::ChunkFilenamesOutputOption::String(inner)) => Either::A(inner),
+      Some(rolldown::ChunkFilenamesOutputOption::Fn(_)) | None => Either::B(()),
     }
   }
 
@@ -128,12 +118,7 @@ impl BindingNormalizedOptions {
 
   #[napi(getter, ts_return_type = "'es' | 'cjs' | 'iife' | 'umd'")]
   pub fn format(&self) -> &'static str {
-    match self.inner.format {
-      rolldown::OutputFormat::Esm => "es",
-      rolldown::OutputFormat::Cjs => "cjs",
-      rolldown::OutputFormat::Iife => "iife",
-      rolldown::OutputFormat::Umd => "umd",
-    }
+    self.inner.format.as_str()
   }
 
   #[napi(getter, ts_return_type = "'default' | 'named' | 'none' | 'auto'")]
@@ -156,8 +141,19 @@ impl BindingNormalizedOptions {
   }
 
   #[napi(getter)]
-  pub fn inline_dynamic_imports(&self) -> bool {
-    self.inner.inline_dynamic_imports
+  pub fn code_splitting(&self) -> bool {
+    // The normalized layer never holds the `Advanced` object form (it is decomposed
+    // into the gate + `manual_code_splitting` during normalization), but match it
+    // exhaustively as "enabled" for completeness.
+    match &self.inner.code_splitting {
+      rolldown_common::CodeSplittingMode::Bool(v) => *v,
+      rolldown_common::CodeSplittingMode::Advanced(_) => true,
+    }
+  }
+
+  #[napi(getter)]
+  pub fn dynamic_import_in_cjs(&self) -> bool {
+    self.inner.dynamic_import_in_cjs
   }
 
   #[napi(getter, ts_return_type = "boolean | 'inline' | 'hidden'")]
@@ -262,6 +258,11 @@ impl BindingNormalizedOptions {
   }
 
   #[napi(getter)]
+  pub fn sourcemap_exclude_sources(&self) -> bool {
+    self.inner.sourcemap_exclude_sources
+  }
+
+  #[napi(getter)]
   pub fn polyfill_require(&self) -> bool {
     self.inner.polyfill_require
   }
@@ -293,6 +294,15 @@ impl BindingNormalizedOptions {
     match self.inner.legal_comments {
       rolldown::LegalComments::None => "none",
       rolldown::LegalComments::Inline => "inline",
+    }
+  }
+
+  #[napi(getter)]
+  pub fn comments(&self) -> crate::options::BindingCommentsOptions {
+    crate::options::BindingCommentsOptions {
+      legal: Some(self.inner.comments.legal),
+      annotation: Some(self.inner.comments.annotation),
+      jsdoc: Some(self.inner.comments.jsdoc),
     }
   }
 

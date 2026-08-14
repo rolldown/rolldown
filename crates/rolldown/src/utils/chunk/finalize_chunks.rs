@@ -5,31 +5,33 @@ use futures::future::try_join_all;
 use itertools::Itertools;
 use oxc_index::IndexVec;
 use rolldown_common::{
-  Asset, HashCharacters, InsChunkIdx, InstantiationKind, NormalizedBundlerOptions, SourceMapType,
-  StrOrBytes,
+  Asset, HashCharacters, InsChunkIdx, InstantiationKind, NormalizedBundlerOptions,
+  PathsOutputOption, SourceMapType, StrOrBytes,
 };
 use rolldown_error::BuildResult;
 #[cfg(not(target_family = "wasm"))]
 use rolldown_utils::rayon::IndexedParallelIterator;
 use rolldown_utils::{
-  concat_string,
+  base64::to_url_safe_base64,
   hash_placeholder::{
     HASH_PLACEHOLDER_LEFT_FINDER, extract_hash_placeholders, replace_placeholder_with_hash,
+    visit_with_placeholders_defaulted,
   },
   indexmap::FxIndexSet,
   rayon::{
     IntoParallelIterator, IntoParallelRefIterator, IntoParallelRefMutIterator, ParallelIterator,
   },
-  xxhash::{xxhash_base64_url, xxhash_with_base},
+  rustc_hash::FxHashSetExt,
+  xxhash::{encode_hash_with_base, xxhash_base64_url},
 };
-use rustc_hash::FxHashMap;
+use rustc_hash::{FxHashMap, FxHashSet};
 use xxhash_rust::xxh3::Xxh3;
 
 use crate::{
   chunk_graph::ChunkGraph,
   stages::link_stage::LinkStageOutput,
   type_alias::{AssetVec, IndexChunkToInstances, IndexInstantiatedChunks},
-  utils::process_code_and_sourcemap::process_code_and_sourcemap,
+  utils::process_code_and_sourcemap::{emit_sourcemap, prepare_sourcemap},
 };
 
 #[tracing::instrument(level = "debug", skip_all)]
@@ -40,6 +42,7 @@ pub async fn finalize_assets(
   index_chunk_to_instances: &IndexChunkToInstances,
   hash_characters: HashCharacters,
   options: &NormalizedBundlerOptions,
+  resolved_paths: Option<&PathsOutputOption>,
 ) -> BuildResult<AssetVec> {
   let ins_chunk_idx_by_placeholder = index_instantiated_chunks
     .iter_enumerated()
@@ -67,17 +70,38 @@ pub async fn finalize_assets(
       .collect::<Vec<_>>()
       .into();
 
-  // Instead of using `index_direct_dependencies`, we are gonna use `index_transitive_dependencies` to calculate the hash.
-  // The reason is that we want to make sure, in `a -> b -> c`, if `c` is changed, not only the direct dependency `b` is changed, but also the indirect dependency `a` is changed.
-  let index_transitive_dependencies: IndexVec<InsChunkIdx, FxIndexSet<InsChunkIdx>> =
-    collect_transitive_dependencies(&index_direct_dependencies);
+  let index_sourcemap_hash_placeholders: IndexVec<InsChunkIdx, Option<Vec<String>>> =
+    index_instantiated_chunks
+      .iter()
+      .map(|chunk| {
+        chunk
+          .preliminary_sourcemap_filename
+          .as_ref()
+          .and_then(|filename| filename.hash_placeholder())
+          .map(<[String]>::to_vec)
+      })
+      .collect::<Vec<_>>()
+      .into();
 
   let hash_base = hash_characters.base();
   let index_standalone_content_hashes: IndexVec<InsChunkIdx, String> = index_instantiated_chunks
     .par_iter()
     .map(|chunk| {
-      let mut hash = xxhash_base64_url(chunk.content.as_bytes());
-      // Hash content that provided by users if it's exist
+      // Normalize rolldown-generated placeholders before hashing so the hash is stable across
+      // their (transient) index drift. See `internal-docs/chunk-hash/implementation.md` for the full reasoning.
+      let mut hash = match &chunk.content {
+        StrOrBytes::Str(content) => {
+          let mut hasher = Xxh3::default();
+          visit_with_placeholders_defaulted(
+            content,
+            &HASH_PLACEHOLDER_LEFT_FINDER,
+            |placeholder| ins_chunk_idx_by_placeholder.contains_key(placeholder),
+            |bytes| hasher.update(bytes),
+          );
+          to_url_safe_base64(hasher.digest128().to_le_bytes())
+        }
+        StrOrBytes::Bytes(_) => xxhash_base64_url(chunk.content.as_bytes()),
+      };
       if let Some(augment_chunk_hash) = &chunk.augment_chunk_hash {
         hash.push_str(augment_chunk_hash);
         hash = xxhash_base64_url(hash.as_bytes());
@@ -87,30 +111,30 @@ pub async fn finalize_assets(
     .collect::<Vec<_>>()
     .into();
 
-  let index_final_hashes: IndexVec<InsChunkIdx, (String, u128)> = (0..index_instantiated_chunks
-    .len())
+  let mut index_final_hashes: IndexVec<InsChunkIdx, (String, u128)> = (0
+    ..index_instantiated_chunks.len())
     .into_par_iter()
     .map(|asset_idx| {
       let mut hasher = Xxh3::default();
       let asset_idx = InsChunkIdx::from(asset_idx);
-      // Start to calculate hash, first we hash itself
       index_standalone_content_hashes[asset_idx].hash(&mut hasher);
 
-      // hash itself's preliminary filename to prevent different chunks that have the same content from having the same hash
-      index_instantiated_chunks[asset_idx].preliminary_filename.hash(&mut hasher);
-
-      let dependencies = &index_transitive_dependencies[asset_idx];
-      dependencies.iter().copied().for_each(|dep_id| {
+      // Calculate this asset's transitive closure only for the duration of its hash. Retaining
+      // every closure at once makes memory quadratic for output graphs with many shared chunks.
+      let dependencies = collect_transitive_dependencies(asset_idx, &index_direct_dependencies);
+      dependencies.into_iter().for_each(|dep_id| {
         index_standalone_content_hashes[dep_id].hash(&mut hasher);
       });
 
       let digested = hasher.digest128();
-      (xxhash_with_base(&digested.to_le_bytes(), hash_base), digested)
+      (encode_hash_with_base(&digested.to_le_bytes(), hash_base), digested)
     })
     .collect::<Vec<_>>()
     .into();
 
-  let final_hashes_by_placeholder = index_final_hashes
+  deconflict_filenames(&index_instantiated_chunks, &mut index_final_hashes, hash_base);
+
+  let chunk_hashes_by_placeholder = index_final_hashes
     .iter_enumerated()
     .filter_map(|(idx, (hash, _))| {
       index_instantiated_chunks[idx].preliminary_filename.hash_placeholder().map(|placeholders| {
@@ -128,25 +152,35 @@ pub async fn finalize_assets(
 
       let filename: ArcStr = replace_placeholder_with_hash(
         instantiated_chunk.preliminary_filename.as_str(),
-        &final_hashes_by_placeholder,
+        &chunk_hashes_by_placeholder,
         &HASH_PLACEHOLDER_LEFT_FINDER,
       )
       .into();
 
+      // Only chunks that actually produced a map report a sourcemap filename; Rollup reports
+      // `sourcemapFileName: null` otherwise.
+      let preliminary_filename_str = if instantiated_chunk.map.is_some() {
+        instantiated_chunk.preliminary_sourcemap_filename.as_ref().map(|f| f.as_str())
+      } else {
+        None
+      };
+
       if let InstantiationKind::Ecma(ecma_meta) = &mut instantiated_chunk.kind {
         let (_, debug_id) = index_final_hashes[asset_idx];
         ecma_meta.debug_id = debug_id;
+        ecma_meta.sourcemap_filename = preliminary_filename_str.map(|str| {
+          replace_placeholder_with_hash(
+            str,
+            &chunk_hashes_by_placeholder,
+            &HASH_PLACEHOLDER_LEFT_FINDER,
+          )
+          .into()
+        });
       }
-      if let InstantiationKind::Css(css_meta) = &mut instantiated_chunk.kind {
-        css_meta.filename = filename.clone();
-        let (_, debug_id) = index_final_hashes[asset_idx];
-        css_meta.debug_id = debug_id;
-      }
-
       if let StrOrBytes::Str(content) = &mut instantiated_chunk.content {
         if let Cow::Owned(replaced) = replace_placeholder_with_hash(
           content,
-          &final_hashes_by_placeholder,
+          &chunk_hashes_by_placeholder,
           &HASH_PLACEHOLDER_LEFT_FINDER,
         ) {
           *content = replaced;
@@ -174,7 +208,7 @@ pub async fn finalize_assets(
           link_output.module_table[*idx]
             .as_external()
             .expect("direct_imports_from_external_modules should only contain external modules")
-            .get_file_name(options.paths.as_ref())
+            .get_file_name(resolved_paths)
         }))
         .collect();
 
@@ -183,31 +217,80 @@ pub async fn finalize_assets(
         .iter()
         .flat_map(|importee_idx| &index_chunk_to_instances[*importee_idx])
         .map(|importee_asset_idx| index_ins_chunk_to_filename[*importee_asset_idx].clone())
+        .chain(chunk.dynamic_imports_from_external_modules.iter().map(|idx| {
+          link_output.module_table[*idx]
+            .as_external()
+            .expect("dynamic_imports_from_external_modules should only contain external modules")
+            .get_file_name(resolved_paths)
+        }))
         .collect();
     }
   });
 
-  // apply sourcemap related logic
+  finalize_sourcemaps(&mut assets, &index_sourcemap_hash_placeholders, options, hash_base).await?;
 
-  let derived_assets = try_join_all(assets.iter_mut().map(async |asset| {
-    let mut derived_asset: Result<Option<Asset>, anyhow::Error> = Ok(None::<Asset>);
+  Ok(assets)
+}
+
+async fn finalize_sourcemaps(
+  assets: &mut AssetVec,
+  index_sourcemap_hash_placeholders: &IndexVec<InsChunkIdx, Option<Vec<String>>>,
+  options: &NormalizedBundlerOptions,
+  hash_base: u8,
+) -> BuildResult<()> {
+  try_join_all(assets.iter_mut().map(async |asset| {
+    let filename = asset.filename.clone();
+    if let (InstantiationKind::Ecma(ecma_meta), Some(map)) = (&mut asset.meta, asset.map.as_mut()) {
+      let file_path = options.cwd.as_path().join(&options.out_dir).join(filename.as_str());
+      ecma_meta.file_dir =
+        file_path.parent().expect("chunk file name should have a parent").to_path_buf();
+      prepare_sourcemap(options, map, &ecma_meta.file_dir, filename.as_str()).await?;
+    }
+    Ok::<(), anyhow::Error>(())
+  }))
+  .await?;
+
+  // Inline sourcemaps also resolve `[hash]`: the name is still reported on the output chunk
+  // even though no `.map` asset is written.
+  let sourcemap_final_hashes =
+    generate_sourcemap_hashes_by_idx(assets, index_sourcemap_hash_placeholders, hash_base);
+  let sourcemap_hashes_by_placeholder =
+    get_sourcemap_hashes_by_placeholder(&sourcemap_final_hashes, index_sourcemap_hash_placeholders)
+      .collect::<FxHashMap<_, _>>();
+
+  assets.par_iter_mut().for_each(|asset| {
+    if let InstantiationKind::Ecma(ecma_meta) = &mut asset.meta
+      && let Some(sourcemap_filename) = &mut ecma_meta.sourcemap_filename
+      && let Cow::Owned(replaced) = replace_placeholder_with_hash(
+        sourcemap_filename,
+        &sourcemap_hashes_by_placeholder,
+        &HASH_PLACEHOLDER_LEFT_FINDER,
+      )
+    {
+      *sourcemap_filename = replaced;
+    }
+  });
+
+  let mut derived_assets = Vec::new();
+  for asset in assets.iter_mut() {
     match &mut asset.meta {
       InstantiationKind::Ecma(ecma_meta) => {
         let asset_code = mem::take(&mut asset.content);
         let mut code = asset_code.try_into_string()?;
         if let Some(map) = asset.map.as_mut() {
-          if let Some(sourcemap_asset) = process_code_and_sourcemap(
+          let map_filename = ecma_meta
+            .sourcemap_filename
+            .clone()
+            .unwrap_or_else(|| format!("{}.map", asset.filename));
+          if let Some(sourcemap_asset) = emit_sourcemap(
             options,
             &mut code,
             map,
-            &ecma_meta.file_dir,
-            asset.filename.as_str(),
+            &map_filename,
             ecma_meta.debug_id,
             /*is_css*/ false,
-          )
-          .await?
-          {
-            derived_asset = Ok(Some(Asset {
+          )? {
+            derived_assets.push(Asset {
               originate_from: None,
               content: sourcemap_asset.source,
               filename: sourcemap_asset.filename.clone(),
@@ -216,60 +299,69 @@ pub async fn finalize_assets(
                 names: sourcemap_asset.names,
                 original_file_names: sourcemap_asset.original_file_names,
               })),
-            }));
+            });
+            if ecma_meta.sourcemap_filename.is_none() {
+              let sourcemap_filename =
+                if matches!(options.sourcemap, Some(SourceMapType::Inline) | None) {
+                  None
+                } else {
+                  Some(sourcemap_asset.filename.to_string())
+                };
+              ecma_meta.sourcemap_filename = sourcemap_filename;
+            }
           }
         }
-
-        let sourcemap_filename = if matches!(options.sourcemap, Some(SourceMapType::Inline) | None)
-        {
-          None
-        } else {
-          Some(concat_string!(asset.filename, ".map"))
-        };
-        ecma_meta.sourcemap_filename = sourcemap_filename;
-        asset.content = code.into();
-      }
-      InstantiationKind::Css(css_meta) => {
-        let asset_code = mem::take(&mut asset.content);
-        let mut code = asset_code.try_into_string()?;
-        if let Some(map) = asset.map.as_mut() {
-          if let Some(sourcemap_asset) = process_code_and_sourcemap(
-            options,
-            &mut code,
-            map,
-            &css_meta.file_dir,
-            asset.filename.as_str(),
-            css_meta.debug_id,
-            /*is_css*/ true,
-          )
-          .await?
-          {
-            derived_asset = Ok(Some(Asset {
-              originate_from: None,
-              content: sourcemap_asset.source,
-              filename: sourcemap_asset.filename,
-              map: None,
-              meta: InstantiationKind::None,
-            }));
-          }
-        }
-
         asset.content = code.into();
       }
       InstantiationKind::None | InstantiationKind::Sourcemap(_) => {}
     }
-    derived_asset
-  }))
-  .await?;
+  }
 
-  assets.extend(derived_assets.into_iter().flatten());
+  assets.extend(derived_assets);
 
-  Ok(assets)
+  Ok(())
+}
+
+fn generate_sourcemap_hashes_by_idx(
+  assets: &AssetVec,
+  index_sourcemap_hash_placeholders: &IndexVec<InsChunkIdx, Option<Vec<String>>>,
+  hash_base: u8,
+) -> Vec<(InsChunkIdx, String)> {
+  assets
+    .par_iter()
+    .enumerate()
+    .filter_map(|(idx, asset)| {
+      let idx = InsChunkIdx::from(idx);
+      let (Some(map), InstantiationKind::Ecma(_)) = (&asset.map, &asset.meta) else {
+        return None;
+      };
+      index_sourcemap_hash_placeholders[idx].as_ref()?;
+      let mut hasher = Xxh3::default();
+      hasher.update(map.to_json_string().as_bytes());
+      let hash = encode_hash_with_base(&hasher.digest128().to_le_bytes(), hash_base);
+      Some((idx, hash))
+    })
+    .collect()
+}
+
+fn get_sourcemap_hashes_by_placeholder<'a>(
+  sourcemap_final_hashes: &'a [(InsChunkIdx, String)],
+  index_sourcemap_hash_placeholders: &IndexVec<InsChunkIdx, Option<Vec<String>>>,
+) -> impl Iterator<Item = (String, &'a str)> {
+  sourcemap_final_hashes
+    .iter()
+    .filter_map(|(idx, hash)| {
+      index_sourcemap_hash_placeholders[*idx].as_ref().map(|placeholders| {
+        placeholders.iter().map(|placeholder| (placeholder.clone(), &hash[..placeholder.len()]))
+      })
+    })
+    .flatten()
 }
 
 fn collect_transitive_dependencies(
+  index: InsChunkIdx,
   index_direct_dependencies: &IndexVec<InsChunkIdx, Vec<InsChunkIdx>>,
-) -> IndexVec<InsChunkIdx, FxIndexSet<InsChunkIdx>> {
+) -> FxIndexSet<InsChunkIdx> {
   fn traverse(
     index: InsChunkIdx,
     dep_map: &IndexVec<InsChunkIdx, Vec<InsChunkIdx>>,
@@ -283,18 +375,50 @@ fn collect_transitive_dependencies(
     }
   }
 
-  let index_transitive_dependencies: IndexVec<InsChunkIdx, FxIndexSet<InsChunkIdx>> =
-    index_direct_dependencies
-      .par_iter()
-      .enumerate()
-      .map(|(idx, _deps)| {
-        let idx = InsChunkIdx::from(idx);
-        let mut visited_deps = FxIndexSet::default();
-        traverse(idx, index_direct_dependencies, &mut visited_deps);
-        visited_deps
-      })
-      .collect::<Vec<_>>()
-      .into();
+  let mut visited_deps = FxIndexSet::default();
+  traverse(index, index_direct_dependencies, &mut visited_deps);
+  visited_deps
+}
 
-  index_transitive_dependencies
+/// Walks chunks in a deterministic order and rehashes any chunk whose resolved file name would
+/// collide with a previously assigned one. Comparison is case-insensitive so the output is safe
+/// to write on case-insensitive filesystems (macOS HFS+, Windows NTFS).
+///
+/// Mirrors Rollup's `generateFinalHashes` rehash loop.
+fn deconflict_filenames(
+  index_instantiated_chunks: &IndexInstantiatedChunks,
+  index_final_hashes: &mut IndexVec<InsChunkIdx, (String, u128)>,
+  hash_base: u8,
+) {
+  let mut taken: FxHashSet<String> = FxHashSet::with_capacity(index_instantiated_chunks.len());
+  for (asset_idx, chunk) in index_instantiated_chunks.iter_enumerated() {
+    let preliminary_filename = chunk.preliminary_filename.as_str();
+    let Some(placeholders) = chunk.preliminary_filename.hash_placeholder() else {
+      taken.insert(preliminary_filename.to_lowercase());
+      continue;
+    };
+    loop {
+      let candidate =
+        resolve_filename(preliminary_filename, placeholders, &index_final_hashes[asset_idx].0);
+      if taken.insert(candidate.to_lowercase()) {
+        break;
+      }
+      index_final_hashes[asset_idx] = rehash(&index_final_hashes[asset_idx].0, hash_base);
+    }
+  }
+}
+
+fn resolve_filename(preliminary_filename: &str, placeholders: &[String], hash_str: &str) -> String {
+  let mut result = preliminary_filename.to_string();
+  for placeholder in placeholders {
+    result = result.replace(placeholder.as_str(), &hash_str[..placeholder.len()]);
+  }
+  result
+}
+
+fn rehash(prev_hash_str: &str, hash_base: u8) -> (String, u128) {
+  let mut hasher = Xxh3::default();
+  hasher.update(prev_hash_str.as_bytes());
+  let digest = hasher.digest128();
+  (encode_hash_with_base(&digest.to_le_bytes(), hash_base), digest)
 }

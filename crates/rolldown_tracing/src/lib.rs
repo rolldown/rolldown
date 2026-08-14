@@ -4,10 +4,14 @@
 ///   - https://docs.rs/tracing-subscriber/latest/tracing_subscriber/filter/struct.EnvFilter.html#directives
 /// - Using `RD_LOG=trace RD_LOG_OUTPUT=chrome-json` to collect tracing events into a json file.
 ///   - Using `RD_LOG_OUTPUT_STYLE=async` to record traces as a group of asynchronous operations.
+///   - Requires building with the `chrome-tracing` feature, which is enabled for profile
+///     builds but disabled in release builds to keep the shipped binary smaller.
 use std::sync::atomic::AtomicBool;
 use std::{any::Any, str::FromStr};
 
+#[cfg(feature = "chrome-tracing")]
 use tracing_chrome::ChromeLayerBuilder;
+#[cfg(feature = "chrome-tracing")]
 use tracing_chrome::TraceStyle;
 use tracing_subscriber::filter::filter_fn;
 use tracing_subscriber::{
@@ -31,6 +35,13 @@ pub fn try_init_tracing() -> Option<Box<dyn Any + Send>> {
   }
 
   let output_mode = std::env::var(LOG_OUTPUT_ENV_NAME).unwrap_or_else(|_| "stdout".to_string());
+  let targets = match Targets::from_str(&env_var) {
+    Ok(targets) => targets,
+    Err(error) => {
+      report_tracing_init_failure(&format!("invalid `{LOG_ENV_NAME}` filter: {error}"));
+      return None;
+    }
+  };
 
   // Remove events that have `devtoolsAction` field, as those events are only for devtools.
   let filter_for_removing_devtools_event = filter_fn(|metadata| {
@@ -44,25 +55,57 @@ pub fn try_init_tracing() -> Option<Box<dyn Any + Send>> {
 
   match output_mode.as_str() {
     "chrome-json" | "chrome-json-threaded" => {
-      let trace_style =
-        if output_mode == "chrome-json" { TraceStyle::Async } else { TraceStyle::Threaded };
-      let (chrome_layer, guard) =
-        ChromeLayerBuilder::new().trace_style(trace_style).include_args(true).build();
-      tracing_subscriber::registry()
-        .with(Targets::from_str(&env_var).unwrap())
-        .with(chrome_layer.with_filter(filter_for_removing_devtools_event))
-        .init();
-      Some(Box::new(guard))
+      #[cfg(feature = "chrome-tracing")]
+      {
+        let trace_style =
+          if output_mode == "chrome-json" { TraceStyle::Async } else { TraceStyle::Threaded };
+        let (chrome_layer, guard) =
+          ChromeLayerBuilder::new().trace_style(trace_style).include_args(true).build();
+        tracing_subscriber::registry()
+          .with(targets)
+          .with(chrome_layer.with_filter(filter_for_removing_devtools_event))
+          .init();
+        Some(Box::new(guard))
+      }
+      #[cfg(not(feature = "chrome-tracing"))]
+      {
+        #![expect(clippy::print_stderr, reason = "Warn before tracing is initialized")]
+        eprintln!(
+          "`RD_LOG_OUTPUT={output_mode}` requires building with the `chrome-tracing` feature, \
+           which is disabled in release builds. Falling back to readable stdout output. \
+           Build a profile binary (`pnpm build-binding:profile`) to enable chrome tracing."
+        );
+        tracing_subscriber::registry()
+          .with(filter_for_removing_devtools_event)
+          .with(targets)
+          .with(
+            fmt::layer()
+              .pretty()
+              .with_span_events(FmtSpan::NONE)
+              .with_level(true)
+              .with_target(false),
+          )
+          .init();
+        None
+      }
     }
     "json" => {
-      // We gonna use this feature to implement something like https://github.com/antfu-collective/vite-plugin-inspect
-      // See `crates/rolldown_devtools`
-      unimplemented!()
+      report_tracing_init_failure(
+        "`RD_LOG_OUTPUT=json` is not implemented; falling back to readable output",
+      );
+      tracing_subscriber::registry()
+        .with(filter_for_removing_devtools_event)
+        .with(targets)
+        .with(
+          fmt::layer().pretty().with_span_events(FmtSpan::NONE).with_level(true).with_target(false),
+        )
+        .init();
+      None
     }
     "readable" => {
       tracing_subscriber::registry()
         .with(filter_for_removing_devtools_event)
-        .with(Targets::from_str(&env_var).unwrap())
+        .with(targets)
         .with(
           fmt::layer().pretty().with_span_events(FmtSpan::NONE).with_level(true).with_target(false),
         )
@@ -73,11 +116,19 @@ pub fn try_init_tracing() -> Option<Box<dyn Any + Send>> {
     _ => {
       tracing_subscriber::registry()
         .with(filter_for_removing_devtools_event)
-        .with(Targets::from_str(&env_var).unwrap())
+        .with(targets)
         .with(fmt::layer().pretty().with_span_events(FmtSpan::CLOSE | FmtSpan::ENTER))
         .init();
       tracing::debug!("Tracing initialized");
       None
     }
   }
+}
+
+#[expect(
+  clippy::print_stderr,
+  reason = "tracing is unavailable for reporting its own init failure"
+)]
+fn report_tracing_init_failure(message: &str) {
+  eprintln!("Rolldown tracing disabled: {message}");
 }

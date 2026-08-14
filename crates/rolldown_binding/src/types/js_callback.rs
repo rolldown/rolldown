@@ -1,12 +1,46 @@
-use std::sync::{Arc, Condvar, Mutex};
+use std::{ptr, sync::Arc};
 
 use futures::Future;
 use napi::{
-  Either, Status,
-  bindgen_prelude::{FromNapiValue, JsValuesTupleIntoVec, Promise},
-  threadsafe_function::{ThreadsafeFunction, UnknownReturnValue},
+  Either, Status, ValueType,
+  bindgen_prelude::{FromNapiValue, JsValuesTupleIntoVec, Promise, TypeName, ValidateNapiValue},
+  sys,
+  threadsafe_function::ThreadsafeFunction,
 };
-use rolldown_utils::debug::pretty_type_name;
+
+/// Used as the fallback branch in `Either<Ret, InvalidReturnValue>` to catch
+/// type mismatches from JS function options. Always passes NAPI validation so
+/// that when `Ret` validation fails, the error is handled in Rust with a clear
+/// message instead of becoming an uncatchable `napi_fatal_exception`.
+pub struct InvalidReturnValue {
+  pub value_type: ValueType,
+}
+
+impl TypeName for InvalidReturnValue {
+  fn type_name() -> &'static str {
+    "InvalidReturnValue"
+  }
+
+  fn value_type() -> ValueType {
+    ValueType::Unknown
+  }
+}
+
+impl ValidateNapiValue for InvalidReturnValue {
+  unsafe fn validate(
+    _env: sys::napi_env,
+    _napi_val: sys::napi_value,
+  ) -> napi::Result<sys::napi_value> {
+    Ok(ptr::null_mut())
+  }
+}
+
+impl FromNapiValue for InvalidReturnValue {
+  unsafe fn from_napi_value(env: sys::napi_env, napi_val: sys::napi_value) -> napi::Result<Self> {
+    let value_type = napi::type_of!(env, napi_val)?;
+    Ok(InvalidReturnValue { value_type })
+  }
+}
 
 /// `JsCallback`  is a type alias for `ThreadsafeFunction`. It represents a JavaScript function that passed to Rust side.
 /// Related concepts are complex, so we use `JsCallback` to simplify the mental model. For details, please refer to:
@@ -68,73 +102,75 @@ use rolldown_utils::debug::pretty_type_name;
 /// - Js: `(a: string | null | undefined, b: number) => Promise<number | null | undefined | void> | number | null | undefined | void`
 /// - Js(Simplified): `(a: Nullable<string>, b: number) => MaybePromise<VoidNullable<number>>`
 pub type JsCallback<Args = (), Ret = ()> =
-  Arc<ThreadsafeFunction<Args, Either<Ret, UnknownReturnValue>, Args, Status, false, true>>;
+  Arc<ThreadsafeFunction<Args, Either<Ret, InvalidReturnValue>, Args, Status, false, true>>;
 
 /// Shortcut for `JsCallback<FnArgs<..., Either<Promise<Ret>, Ret>>`, which could be simplified to `MaybeAsyncJsCallback<...>, Ret>`.
 pub type MaybeAsyncJsCallback<Args = (), Ret = ()> = JsCallback<Args, Either<Promise<Ret>, Ret>>;
 
 pub trait JsCallbackExt<Args, Ret> {
   fn invoke_async(&self, args: Args) -> impl Future<Output = Result<Ret, napi::Error>> + Send;
-  fn invoke_sync(&self, args: Args) -> Result<Ret, napi::Error>;
 }
 
 impl<Args, Ret> JsCallbackExt<Args, Ret> for JsCallback<Args, Ret>
 where
   Args: 'static + Send + JsValuesTupleIntoVec,
-  Ret: 'static + Send + FromNapiValue,
-  napi::Either<Ret, UnknownReturnValue>: FromNapiValue,
+  Ret: 'static + Send + FromNapiValue + TypeName,
+  napi::Either<Ret, InvalidReturnValue>: FromNapiValue,
 {
   async fn invoke_async(&self, args: Args) -> Result<Ret, napi::Error> {
-    match self.call_async(args).await? {
+    match self.call_async_catch(args).await? {
       Either::A(ret) => Ok(ret),
-      Either::B(_unknown) => create_unknown_return_error::<Ret, Self>(),
-    }
-  }
-
-  fn invoke_sync(&self, args: Args) -> Result<Ret, napi::Error> {
-    let init_value = Ok(Either::B(UnknownReturnValue));
-    let pair = Arc::new((Mutex::new(init_value), Condvar::new()));
-    let pair_clone = Arc::clone(&pair);
-
-    self.call_with_return_value(
-      args,
-      napi::threadsafe_function::ThreadsafeFunctionCallMode::Blocking,
-      move |ret, _env| {
-        let (lock, cvar) = &*pair;
-        *lock.lock().unwrap() = ret;
-        cvar.notify_one();
-        Ok(())
-      },
-    );
-
-    let (lock, cvar) = &*pair_clone;
-    let notified = lock.lock().unwrap();
-    let mut res = cvar.wait(notified).map_err(|err| {
-      napi::Error::new(napi::Status::GenericFailure, format!("PoisonError: {err:?}",))
-    })?;
-    let res = res
-      .as_mut()
-      .map_err(|err| napi::Error::new(napi::Status::GenericFailure, format!("{err:?}",)))?;
-
-    match std::mem::replace(res, Either::B(UnknownReturnValue)) {
-      Either::A(ret) => Ok(ret),
-      Either::B(_unknown) => create_unknown_return_error::<Ret, Self>(),
+      Either::B(invalid) => Err(create_invalid_return_error(invalid.value_type, Ret::value_type())),
     }
   }
 }
 
-fn create_unknown_return_error<Ret, T>() -> Result<Ret, napi::Error> {
-  // TODO: should provide more information about the unknown return value
-  let js_type = "unknown";
-  let expected_rust_type = pretty_type_name::<Ret>();
+/// Extension trait for attaching a human-readable name (e.g. the option or hook
+/// name) to errors returned by [`JsCallbackExt::invoke_async`] /
+/// [`MaybeAsyncJsCallbackExt::await_call`].
+///
+/// Errors that cross the JS boundary (such as the "invalid return value" error
+/// from [`create_invalid_return_error`]) have no knowledge of the user-facing
+/// option/hook they belong to. Call `.context("external option")` on the result
+/// to prefix the name so the message points at the option instead of the
+/// internal callback type.
+pub trait JsCallbackResultExt<T> {
+  fn context(self, name: &str) -> napi::Result<T>;
+}
 
-  Err(napi::Error::new(
-    napi::Status::InvalidArg,
+impl<T> JsCallbackResultExt<T> for napi::Result<T> {
+  fn context(self, name: &str) -> napi::Result<T> {
+    self.map_err(|mut err| {
+      err.reason = format!("{name}: {}", err.reason);
+      err
+    })
+  }
+}
+
+fn js_type_name(value_type: ValueType) -> &'static str {
+  match value_type {
+    ValueType::Undefined => "undefined",
+    ValueType::Null => "null",
+    ValueType::Boolean => "boolean",
+    ValueType::Number => "number",
+    ValueType::String => "string",
+    ValueType::Symbol => "symbol",
+    ValueType::Object => "object",
+    ValueType::Function => "function",
+    ValueType::External => "external",
+    ValueType::Unknown => "unknown",
+  }
+}
+
+fn create_invalid_return_error(received: ValueType, expected: ValueType) -> napi::Error {
+  napi::Error::new(
+    Status::InvalidArg,
     format!(
-      "UNKNOWN_RETURN_VALUE. Cannot convert {js_type} to `{expected_rust_type}` in {}.",
-      pretty_type_name::<T>(),
+      "The function returned `{}`, but expected `{}`.",
+      js_type_name(received),
+      js_type_name(expected),
     ),
-  ))
+  )
 }
 
 pub trait MaybeAsyncJsCallbackExt<Args, Ret> {
@@ -145,29 +181,14 @@ pub trait MaybeAsyncJsCallbackExt<Args, Ret> {
 impl<Args, Ret> MaybeAsyncJsCallbackExt<Args, Ret> for JsCallback<Args, Either<Promise<Ret>, Ret>>
 where
   Args: 'static + Send + JsValuesTupleIntoVec,
-  Ret: 'static + Send + FromNapiValue,
-  napi::Either<napi::Either<Promise<Ret>, Ret>, UnknownReturnValue>: FromNapiValue,
+  Ret: 'static + Send + FromNapiValue + TypeName,
+  napi::Either<napi::Either<Promise<Ret>, Ret>, InvalidReturnValue>: FromNapiValue,
 {
-  #[expect(clippy::manual_async_fn)]
-  fn await_call(&self, args: Args) -> impl Future<Output = Result<Ret, napi::Error>> + Send {
-    async move {
-      match self.call_async(args).await? {
-        Either::A(Either::A(promise)) => promise.await,
-        Either::A(Either::B(ret)) => Ok(ret),
-        Either::B(_unknown) => {
-          // TODO: should provide more information about the unknown return value
-          let js_type = "unknown";
-          let expected_rust_type = pretty_type_name::<Ret>();
-
-          Err(napi::Error::new(
-            napi::Status::InvalidArg,
-            format!(
-              "UNKNOWN_RETURN_VALUE. Cannot convert {js_type} to `{expected_rust_type}` in {}.",
-              pretty_type_name::<Self>(),
-            ),
-          ))
-        }
-      }
+  async fn await_call(&self, args: Args) -> Result<Ret, napi::Error> {
+    match self.call_async_catch(args).await? {
+      Either::A(Either::A(promise)) => promise.await,
+      Either::A(Either::B(ret)) => Ok(ret),
+      Either::B(invalid) => Err(create_invalid_return_error(invalid.value_type, Ret::value_type())),
     }
   }
 }

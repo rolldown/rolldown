@@ -1,1 +1,1 @@
-export default import('./cjs.js')
+export default import('./cjs.js');

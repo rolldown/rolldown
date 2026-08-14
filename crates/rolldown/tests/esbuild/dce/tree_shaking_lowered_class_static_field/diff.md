@@ -34,8 +34,8 @@ _defineProperty(KeepMe2, "x", "x");
 _defineProperty(KeepMe2, "y", "y");
 _defineProperty(KeepMe2, "z", "z");
 new KeepMe2();
-
 //#endregion
+
 ```
 ### diff
 ```diff

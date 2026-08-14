@@ -21,6 +21,7 @@ const ENUMERATED_OUTPUT_PLUGIN_HOOK_NAMES = [
   'renderError',
   'writeBundle',
   'generateBundle',
+  'resolveFileUrl',
 ] as const;
 
 const ENUMERATED_PLUGIN_HOOK_NAMES: [
@@ -53,7 +54,7 @@ const ENUMERATED_PLUGIN_HOOK_NAMES: [
  * ```
  */
 export type DefinedHookNames = {
-  readonly [K in typeof ENUMERATED_PLUGIN_HOOK_NAMES[number]]: K;
+  readonly [K in (typeof ENUMERATED_PLUGIN_HOOK_NAMES)[number]]: K;
 };
 
 /**
@@ -90,4 +91,5 @@ export const DEFINED_HOOK_NAMES: DefinedHookNames = {
   [ENUMERATED_PLUGIN_HOOK_NAMES[20]]: ENUMERATED_PLUGIN_HOOK_NAMES[20],
   [ENUMERATED_PLUGIN_HOOK_NAMES[21]]: ENUMERATED_PLUGIN_HOOK_NAMES[21],
   [ENUMERATED_PLUGIN_HOOK_NAMES[22]]: ENUMERATED_PLUGIN_HOOK_NAMES[22],
+  [ENUMERATED_PLUGIN_HOOK_NAMES[23]]: ENUMERATED_PLUGIN_HOOK_NAMES[23],
 } as const;

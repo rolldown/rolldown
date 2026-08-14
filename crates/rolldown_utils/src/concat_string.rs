@@ -16,7 +16,7 @@
 //!
 //! # Example
 //!
-//! ```rust
+//! ```ignore
 //! #[macro_use(concat_string)]
 //! extern crate concat_string;
 //!

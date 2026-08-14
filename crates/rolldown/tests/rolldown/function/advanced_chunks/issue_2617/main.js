@@ -1,2 +1,2 @@
-import lib from './lib'
-console.log('lib', lib)
+import lib from './lib';
+console.log('lib', lib);

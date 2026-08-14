@@ -6,7 +6,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## UNRESOLVED_IMPORT
 
 ```text
-[UNRESOLVED_IMPORT] Warning: Could not resolve 'some-path' in entry.js
+[UNRESOLVED_IMPORT] Could not resolve 'some-path' in entry.js
     ╭─[ entry.js:12:9 ]
     │
  12 │     import('some-path'),
@@ -21,12 +21,11 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## entry.js
 
 ```js
-// HIDDEN [rolldown:runtime]
+// HIDDEN [\0rolldown/runtime.js]
 //#region example.json
 var require_example = /* @__PURE__ */ __commonJSMin(((exports, module) => {
 	module.exports = { "works": true };
 }));
-
 //#endregion
 //#region entry.js
 var require_entry = /* @__PURE__ */ __commonJSMin(((exports, module) => {
@@ -45,7 +44,6 @@ var require_entry = /* @__PURE__ */ __commonJSMin(((exports, module) => {
 		import(window.SOME_PATH)
 	]);
 }));
-
 //#endregion
 export default require_entry();
 

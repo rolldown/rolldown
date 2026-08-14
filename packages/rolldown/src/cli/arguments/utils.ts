@@ -1,8 +1,4 @@
-export function setNestedProperty<T extends object, K>(
-  obj: T,
-  path: string,
-  value: K,
-): void {
+export function setNestedProperty<T extends object, K>(obj: T, path: string, value: K): void {
   const keys = path.split('.') as (keyof T)[];
   let current: any = obj;
 
@@ -24,8 +20,4 @@ export function setNestedProperty<T extends object, K>(
 
 export function camelCaseToKebabCase(str: string): string {
   return str.replace(/[A-Z]/g, (match) => `-${match.toLowerCase()}`);
-}
-
-export function kebabCaseToCamelCase(str: string): string {
-  return str.replace(/-./g, (match) => match[1].toUpperCase());
 }

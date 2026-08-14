@@ -1,2 +1,2 @@
-export const bar = 'bar'
-export const named = 'bar'
+export const bar = 'bar';
+export const named = 'bar';

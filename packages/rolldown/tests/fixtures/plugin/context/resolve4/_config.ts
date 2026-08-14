@@ -5,26 +5,19 @@ const fnA = vi.fn();
 const fnB = vi.fn();
 
 export default defineTest({
+  sequential: true,
   config: {
     plugins: [
       {
         name: 'tester',
         async buildEnd() {
-          const skipSelfTrue = await this.resolve(
-            'test-skip-self-true',
-            undefined,
-            {
-              skipSelf: true,
-            },
-          );
+          const skipSelfTrue = await this.resolve('test-skip-self-true', undefined, {
+            skipSelf: true,
+          });
           expect(skipSelfTrue?.id).toBe('return-by-tester2');
-          const skipSelfFalse = await this.resolve(
-            'test-skip-self-false',
-            undefined,
-            {
-              skipSelf: false,
-            },
-          );
+          const skipSelfFalse = await this.resolve('test-skip-self-false', undefined, {
+            skipSelf: false,
+          });
           expect(skipSelfFalse?.id).toBe('return-by-tester');
         },
         async resolveId(id) {

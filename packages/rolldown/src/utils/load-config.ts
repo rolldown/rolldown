@@ -4,13 +4,10 @@ import path from 'node:path';
 import { cwd } from 'node:process';
 import { pathToFileURL } from 'node:url';
 import { rolldown } from '../api/rolldown';
-import type { ConfigExport } from '../types/config-export';
+import type { ConfigExport } from './define-config';
 import type { OutputChunk } from '../types/rolldown-output';
 
-async function bundleTsConfig(
-  configFile: string,
-  isEsm: boolean,
-): Promise<string> {
+async function bundleTsConfig(configFile: string, isEsm: boolean): Promise<string> {
   const dirnameVarName = 'injected_original_dirname';
   const filenameVarName = 'injected_original_filename';
   const importMetaUrlVarName = 'injected_original_import_meta_url';
@@ -40,11 +37,7 @@ async function bundleTsConfig(
             const injectValues =
               `const ${dirnameVarName} = ${JSON.stringify(path.dirname(id))};` +
               `const ${filenameVarName} = ${JSON.stringify(id)};` +
-              `const ${importMetaUrlVarName} = ${
-                JSON.stringify(
-                  pathToFileURL(id).href,
-                )
-              };`;
+              `const ${importMetaUrlVarName} = ${JSON.stringify(pathToFileURL(id).href)};`;
             return { code: injectValues + code, map: null };
           },
         },
@@ -58,9 +51,7 @@ async function bundleTsConfig(
     sourcemap: 'inline',
     // respect the original file extension, mts -> mjs, cts -> cjs
     // mts should be generate mjs, it avoid add `type: module` at package.json
-    entryFileNames: `rolldown.config.[hash]${
-      path.extname(configFile).replace('ts', 'js')
-    }`,
+    entryFileNames: `rolldown.config.[hash]${path.extname(configFile).replace('ts', 'js')}`,
   });
   const fileName = result.output.find(
     (chunk): chunk is OutputChunk => chunk.type === 'chunk' && chunk.isEntry,
@@ -70,10 +61,7 @@ async function bundleTsConfig(
 
 const SUPPORTED_JS_CONFIG_FORMATS = ['.js', '.mjs', '.cjs'];
 const SUPPORTED_TS_CONFIG_FORMATS = ['.ts', '.mts', '.cts'];
-const SUPPORTED_CONFIG_FORMATS = [
-  ...SUPPORTED_JS_CONFIG_FORMATS,
-  ...SUPPORTED_TS_CONFIG_FORMATS,
-];
+const SUPPORTED_CONFIG_FORMATS = [...SUPPORTED_JS_CONFIG_FORMATS, ...SUPPORTED_TS_CONFIG_FORMATS];
 
 const DEFAULT_CONFIG_BASE = 'rolldown.config';
 
@@ -138,12 +126,54 @@ function tryStatSync(file: string): fs.Stats | undefined {
   }
 }
 
-export async function loadConfig(configPath: string): Promise<ConfigExport> {
-  const ext = path.extname(
-    configPath = configPath || (await findConfigFileNameInCwd()),
-  );
+export type ConfigLoader = 'bundle' | 'native';
+
+export interface LoadConfigOptions {
+  /**
+   * How to load the config file.
+   * - `'bundle'` (default): bundle the config with Rolldown, then import it.
+   * - `'native'`: import the config directly, delegating TypeScript/loader
+   *   handling to the runtime. Faster, but requires runtime support.
+   *
+   * @default 'bundle'
+   */
+  configLoader?: ConfigLoader;
+}
+
+async function loadNativeConfig(resolvedPath: string): Promise<ConfigExport> {
+  const url = pathToFileURL(resolvedPath).href;
+  const { freshImport } = await import('fresh-import');
+  const freshImported = freshImport(url);
+  if (freshImported) {
+    const { result } = await freshImported;
+    return (result as { [Symbol.toStringTag]: 'Module'; default: ConfigExport }).default;
+  }
+  // Runtimes without Module-hook support (e.g. Bun/Deno)
+  const mod = await import(url + '?t=' + Date.now());
+  return mod.default;
+}
+
+/**
+ * Load config from a file in a way that Rolldown does.
+ *
+ * @param configPath The path to the config file. If empty, it will look for `rolldown.config` with supported extensions in the current working directory.
+ * @param options Loading options. `configLoader` selects `'bundle'` (default) or `'native'`.
+ * @returns The loaded config export
+ *
+ * @category Config
+ */
+export async function loadConfig(
+  configPath: string,
+  options: LoadConfigOptions = {},
+): Promise<ConfigExport> {
+  const configLoader = options.configLoader ?? 'bundle';
+  const ext = path.extname((configPath = configPath || (await findConfigFileNameInCwd())));
 
   try {
+    if (configLoader === 'native') {
+      return await loadNativeConfig(path.resolve(configPath));
+    }
+
     if (
       SUPPORTED_JS_CONFIG_FORMATS.includes(ext) ||
       (process.env.NODE_OPTIONS?.includes('--import=tsx') &&
@@ -155,12 +185,24 @@ export async function loadConfig(configPath: string): Promise<ConfigExport> {
       return await loadTsConfig(rawConfigPath);
     } else {
       throw new Error(
-        `Unsupported config format. Expected: \`${
-          SUPPORTED_CONFIG_FORMATS.join(',')
-        }\` but got \`${ext}\``,
+        `Unsupported config format. Expected: \`${SUPPORTED_CONFIG_FORMATS.join(
+          ',',
+        )}\` but got \`${ext}\``,
       );
     }
   } catch (err) {
+    if (configLoader === 'native') {
+      const isTsConfig = SUPPORTED_TS_CONFIG_FORMATS.includes(ext);
+      const tsHint =
+        isTsConfig && !process.features.typescript
+          ? ' This runtime does not natively support TypeScript config files.'
+          : '';
+      throw new Error(
+        `Failed to load the config file "${configPath}" using the "native" config loader.${tsHint} ` +
+          `Try "--configLoader bundle", or register a loader such as "--import tsx".`,
+        { cause: err },
+      );
+    }
     throw new Error('Error happened while loading config.', { cause: err });
   }
 }

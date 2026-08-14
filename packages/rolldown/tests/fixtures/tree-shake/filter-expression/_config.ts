@@ -4,6 +4,7 @@ import { expect, vi } from 'vitest';
 
 const transformHookFunction = vi.fn(() => {});
 export default defineTest({
+  sequential: true,
   config: {
     plugins: [
       {
@@ -18,6 +19,6 @@ export default defineTest({
     ],
   },
   afterTest: (_) => {
-    expect(transformHookFunction).toBeCalledTimes(2);
+    expect(transformHookFunction).toBeCalledTimes(3);
   },
 });

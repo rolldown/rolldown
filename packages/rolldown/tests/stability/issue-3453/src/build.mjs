@@ -45,8 +45,14 @@ function rolldownImportMapsPlugin() {
     },
   };
 }
+// Runs sequentially: this test only needs deterministic output across
+// repeated builds. Concurrent in-process builds deadlock or fail with
+// EINVAL on `wasm32-wasip1-threads` (shared napi-rs async work pool +
+// per-worker `node:wasi` fd tables), so awaiting each build keeps the
+// smoke test working under the WASI binding without losing coverage of
+// the original determinism check.
 for (let i = 0; i < 10; i++) {
-  build({
+  await build({
     input: path.join(__dirname, 'main-script.js'),
     cwd: path.resolve(__dirname, '../'),
     output: {

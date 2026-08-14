@@ -1,22 +1,11 @@
 import * as fs from 'node:fs';
 import * as path from 'node:path';
-import {
-  failedReasons,
-  ignoreReasons,
-  notSupportedReasons,
-} from '../reasons.js';
+import { failedReasons, ignoreReasons, notSupportedReasons } from '../reasons.js';
 import { diffCase } from './diff.js';
-import {
-  ensureSnapshot,
-  SNAPSHOT_FILES,
-  type SnapshotFileName,
-} from './download-snapshots.js';
+import { ensureSnapshot, SNAPSHOT_FILES, type SnapshotFileName } from './download-snapshots.js';
 import { parseEsbuildSnap, parseRolldownSnap } from './snap-parser.js';
 import type { DebugConfig, UnwrapPromise } from './types.js';
-const esbuildTestDir = path.join(
-  import.meta.dirname,
-  '../../../../crates/rolldown/tests/esbuild',
-);
+const esbuildTestDir = path.join(import.meta.dirname, '../../../../crates/rolldown/tests/esbuild');
 
 function getTestCaseKey(category: string, name: string): string {
   return `${category}/${name}`;
@@ -35,9 +24,7 @@ function getActualTestPath(
   return { path: normalPath, isSkipped: false };
 }
 
-async function getEsbuildSnapFile(): Promise<
-  Array<{ normalizedName: string; content: string }>
-> {
+async function getEsbuildSnapFile(): Promise<Array<{ normalizedName: string; content: string }>> {
   const ret: Array<{ normalizedName: string; content: string }> = [];
 
   for (const filename of SNAPSHOT_FILES) {
@@ -92,10 +79,7 @@ export async function run(debugConfig: DebugConfig) {
     // singleEsbuildSnapshot
     let diffList = [];
     for (let snap of parsedEsbuildSnap) {
-      if (
-        debugConfig.caseNames?.length > 0 &&
-        !debugConfig.caseNames.includes(snap.name)
-      ) {
+      if (debugConfig.caseNames?.length > 0 && !debugConfig.caseNames.includes(snap.name)) {
         continue;
       }
       if (debugConfig.debug) {
@@ -114,8 +98,8 @@ export async function run(debugConfig: DebugConfig) {
 
       // Validate that skipped tests have documented reasons
       if (isSkipped) {
-        const hasDocumentedReason = isInIgnoreReasons ||
-          isInNotSupportedReasons || isInFailedReasons;
+        const hasDocumentedReason =
+          isInIgnoreReasons || isInNotSupportedReasons || isInFailedReasons;
         if (!hasDocumentedReason) {
           undocumentedSkippedTests.push(testKey);
         }
@@ -123,12 +107,7 @@ export async function run(debugConfig: DebugConfig) {
 
       let rolldownSnap = getRolldownSnap(rolldownTestPath);
       let parsedRolldownSnap = parseRolldownSnap(rolldownSnap);
-      let diffResult = await diffCase(
-        snap,
-        parsedRolldownSnap,
-        rolldownTestPath,
-        debugConfig,
-      );
+      let diffResult = await diffCase(snap, parsedRolldownSnap, rolldownTestPath, debugConfig);
 
       // Only generate diff.md if test is in failedReasons
       let diffMarkdownPath = path.join(rolldownTestPath, 'diff.md');
@@ -148,10 +127,10 @@ export async function run(debugConfig: DebugConfig) {
         reason: isInFailedReasons
           ? failedReasons[testKey]
           : isInIgnoreReasons
-          ? ignoreReasons[testKey]
-          : isInNotSupportedReasons
-          ? notSupportedReasons[testKey]
-          : undefined,
+            ? ignoreReasons[testKey]
+            : isInNotSupportedReasons
+              ? notSupportedReasons[testKey]
+              : undefined,
       });
     }
     diffList.sort((a, b) => {
@@ -200,9 +179,7 @@ function getRolldownSnap(caseDir: string) {
   }
 }
 
-function getDiffMarkdown(
-  diffResult: UnwrapPromise<ReturnType<typeof diffCase>>,
-) {
+function getDiffMarkdown(diffResult: UnwrapPromise<ReturnType<typeof diffCase>>) {
   if (typeof diffResult === 'string') {
     throw new Error('diffResult should not be string');
   }
@@ -216,9 +193,7 @@ function getDiffMarkdown(
   return markdown;
 }
 
-function generateStatsMarkdown(
-  aggregateStats: AggregateStats,
-) {
+function generateStatsMarkdown(aggregateStats: AggregateStats) {
   const { stats, details } = aggregateStats;
   let markdown = '';
 
@@ -232,17 +207,13 @@ function generateStatsMarkdown(
   markdown += `- total: ${stats.total}\n`;
   markdown += `- ignored: ${stats.ignored}\n`;
   markdown += `- passed: ${passed}\n`;
-  markdown += `- passed ratio: ${
-    ((passed / totalForRatio) * 100).toFixed(2)
-  }%\n`;
+  markdown += `- passed ratio: ${((passed / totalForRatio) * 100).toFixed(2)}%\n`;
 
   let totalWithoutNotSupport = totalForRatio - unsupportedCaseCount;
   markdown += `# Compatibility metric without not supported case\n`;
   markdown += `- total: ${totalWithoutNotSupport}\n`;
   markdown += `- passed: ${passed}\n`;
-  markdown += `- passed ratio: ${
-    ((passed / totalWithoutNotSupport) * 100).toFixed(2)
-  }%\n`;
+  markdown += `- passed ratio: ${((passed / totalWithoutNotSupport) * 100).toFixed(2)}%\n`;
 
   markdown += `# Compatibility metric details\n`;
   Object.entries(details).forEach(([category, categoryStats]) => {
@@ -251,14 +222,11 @@ function generateStatsMarkdown(
     markdown += `- total: ${categoryStats.total}\n`;
     markdown += `- ignored: ${categoryStats.ignored}\n`;
     markdown += `- passed: ${categoryStats.pass}\n`;
-    markdown += `- passed ratio: ${
-      ((categoryStats.pass / categoryTotalForRatio) * 100).toFixed(2)
-    }%\n`;
+    markdown += `- passed ratio: ${((categoryStats.pass / categoryTotalForRatio) * 100).toFixed(
+      2,
+    )}%\n`;
   });
-  fs.writeFileSync(
-    path.resolve(import.meta.dirname, './stats/stats.md'),
-    markdown,
-  );
+  fs.writeFileSync(path.resolve(import.meta.dirname, './stats/stats.md'), markdown);
 }
 
 type Summary = {
@@ -295,10 +263,7 @@ function getSummaryMarkdownAndStats(
   let markdown = `# Failed Cases\n`;
   for (let diff of failedList) {
     let testDir = path.join(esbuildTestDir, snapshotCategory, diff.name);
-    let relativePath = path.relative(
-      path.join(import.meta.dirname, 'summary'),
-      testDir,
-    );
+    let relativePath = path.relative(path.join(import.meta.dirname, 'summary'), testDir);
     const posixPath = relativePath.replaceAll('\\', '/');
     if (diff.diffResult === 'missing') {
       markdown += `## ${diff.name}\n`;
@@ -312,10 +277,7 @@ function getSummaryMarkdownAndStats(
   markdown += `# Passed Cases\n`;
   for (let diff of passList) {
     let testDir = path.join(esbuildTestDir, snapshotCategory, diff.name);
-    let relativePath = path.relative(
-      path.join(import.meta.dirname, 'summary'),
-      testDir,
-    );
+    let relativePath = path.relative(path.join(import.meta.dirname, 'summary'), testDir);
     const posixPath = relativePath.replaceAll('\\', '/');
     markdown += `## [${diff.name}](${posixPath})\n`;
   }
@@ -323,10 +285,7 @@ function getSummaryMarkdownAndStats(
   markdown += `# Ignored Cases\n`;
   for (let diff of ignoredList) {
     let testDir = path.join(esbuildTestDir, snapshotCategory, diff.name);
-    let relativePath = path.relative(
-      path.join(import.meta.dirname, 'summary'),
-      testDir,
-    );
+    let relativePath = path.relative(path.join(import.meta.dirname, 'summary'), testDir);
     const posixPath = relativePath.replaceAll('\\', '/');
     markdown += `## [${diff.name}](${posixPath})\n`;
     markdown += `  ${diff.reason || 'unknown reason'}\n`;
@@ -335,10 +294,7 @@ function getSummaryMarkdownAndStats(
   markdown += `# Ignored Cases (not supported)\n`;
   for (let diff of notSupportedList) {
     let testDir = path.join(esbuildTestDir, snapshotCategory, diff.name);
-    let relativePath = path.relative(
-      path.join(import.meta.dirname, 'summary'),
-      testDir,
-    );
+    let relativePath = path.relative(path.join(import.meta.dirname, 'summary'), testDir);
     const posixPath = relativePath.replaceAll('\\', '/');
     markdown += `## [${diff.name}](${posixPath})\n`;
     markdown += `  ${diff.reason || 'unknown reason'}\n`;

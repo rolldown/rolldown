@@ -1,0 +1,16 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## assets/foo-u1ylrPOy.bin
+
+## main.js
+
+```js
+//#region main.js
+const url = new URL("assets/foo-u1ylrPOy.bin", import.meta.url);
+//#endregion
+export { url };
+
+```

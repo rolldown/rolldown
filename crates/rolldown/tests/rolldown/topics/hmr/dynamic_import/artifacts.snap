@@ -7,14 +7,18 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 import { t as __commonJSMin } from "./main.js";
-
+__rolldown_runtime__.registerGraph({
+	ids: ["exist-dep-cjs.js"],
+	localCount: 1,
+	edges: [[]],
+	dynamicEdges: [[]]
+});
 //#region exist-dep-cjs.js
 var require_exist_dep_cjs = /* @__PURE__ */ __commonJSMin(((exports, module) => {
-	const exist_dep_cjs_hot = __rolldown_runtime__.createModuleHotContext("exist-dep-cjs.js");
+	__rolldown_runtime__.createModuleHotContext("exist-dep-cjs.js");
 	__rolldown_runtime__.registerModule("exist-dep-cjs.js", module);
 	exports.value = "exist-cjs";
 }));
-
 //#endregion
 export default require_exist_dep_cjs();
 
@@ -24,44 +28,56 @@ export default require_exist_dep_cjs();
 
 ```js
 import { n as __exportAll } from "./main.js";
-
+__rolldown_runtime__.registerGraph({
+	ids: ["exist-dep-esm.js"],
+	localCount: 1,
+	edges: [[]],
+	dynamicEdges: [[]]
+});
 //#region exist-dep-esm.js
 var exist_dep_esm_exports = /* @__PURE__ */ __exportAll({ value: () => value });
-const exist_dep_esm_hot = __rolldown_runtime__.createModuleHotContext("exist-dep-esm.js");
+__rolldown_runtime__.createModuleHotContext("exist-dep-esm.js");
 __rolldown_runtime__.registerModule("exist-dep-esm.js", { exports: exist_dep_esm_exports });
 const value = "exist-esm";
-
 //#endregion
 export { value };
+
 ```
 
 ## main.js
 
 ```js
-// HIDDEN [rolldown:runtime]
-// HIDDEN [rolldown:hmr]
+// HIDDEN [\0rolldown/runtime.js]
+__rolldown_runtime__.registerGraph({
+	ids: [
+		"hmr.js",
+		"main.js",
+		"exist-dep-cjs.js",
+		"exist-dep-esm.js"
+	],
+	localCount: 2,
+	edges: [[], [0]],
+	dynamicEdges: [[2, 3], []]
+});
 //#region hmr.js
 var hmr_exports = /* @__PURE__ */ __exportAll({ foo: () => foo });
 const hmr_hot = __rolldown_runtime__.createModuleHotContext("hmr.js");
 __rolldown_runtime__.registerModule("hmr.js", { exports: hmr_exports });
 async function foo() {
-	await import("./exist-dep-cjs.js").then(__toDynamicImportESM()).then(console.log);
+	await import("./exist-dep-cjs.js").then((m) => /* @__PURE__ */ __toESM(m.default)).then(console.log);
 	await import("./exist-dep-esm.js").then(console.log);
 }
 hmr_hot.accept((mod) => {
-	if (mod) {
-		console.log(".hmr", mod.foo);
-	}
+	if (mod) console.log(".hmr", mod.foo);
 });
-
 //#endregion
 //#region main.js
-var main_exports = {};
-const main_hot = __rolldown_runtime__.createModuleHotContext("main.js");
+var main_exports = /* @__PURE__ */ __exportAll({});
+__rolldown_runtime__.createModuleHotContext("main.js");
 __rolldown_runtime__.registerModule("main.js", { exports: main_exports });
-
 //#endregion
 export { __exportAll as n, __commonJSMin as t };
+
 ```
 
 # HMR Step 0
@@ -69,22 +85,23 @@ export { __exportAll as n, __commonJSMin as t };
 ## Code
 
 ```js
+__rolldown_runtime__.registerGraph({ids:["hmr.js","new-dep-cjs.js","new-dep-esm.js","exist-dep-cjs.js","exist-dep-esm.js"],localCount:3,edges:[[],[],[]],dynamicEdges:[[3,4,1,2],[],[]]});
 //#region hmr.js
-var init_hmr_0 = __rolldown_runtime__.createEsmInitializer((function() {
+__rolldown_runtime__.registerFactory("hmr.js", "esm", (function(__rolldown_module_id__) {
 	try {
 		var __rolldown_exports__ = __rolldown_runtime__.__exportAll({
 			foo: () => foo,
 			bar: () => bar
 		});
-		__rolldown_runtime__.registerModule("hmr.js", { exports: __rolldown_exports__ });
-		const hot_hmr = __rolldown_runtime__.createModuleHotContext("hmr.js");
+		__rolldown_runtime__.registerModule(__rolldown_module_id__, { exports: __rolldown_exports__ });
+		const hot_hmr = __rolldown_runtime__.createModuleHotContext(__rolldown_module_id__);
 		async function foo() {
-			await Promise.resolve().then(() => __rolldown_runtime__.__toDynamicImportESM(__rolldown_runtime__.loadExports("exist-dep-cjs.js"))).then(console.log);
-			await Promise.resolve().then(() => __rolldown_runtime__.loadExports("exist-dep-esm.js")).then(console.log);
+			await (__rolldown_runtime__.initModule("exist-dep-cjs.js"), Promise.resolve().then(() => __rolldown_runtime__.__toDynamicImportESM(__rolldown_runtime__.loadExports("exist-dep-cjs.js")))).then(console.log);
+			await (__rolldown_runtime__.initModule("exist-dep-esm.js"), Promise.resolve().then(() => __rolldown_runtime__.loadExports("exist-dep-esm.js"))).then(console.log);
 		}
 		async function bar() {
-			await (require_new_dep_cjs_1(), Promise.resolve().then(() => __rolldown_runtime__.__toDynamicImportESM(__rolldown_runtime__.loadExports("new-dep-cjs.js")))).then(console.log);
-			await (init_new_dep_esm_2(), Promise.resolve().then(() => __rolldown_runtime__.loadExports("new-dep-esm.js"))).then(console.log);
+			await (__rolldown_runtime__.initModule("new-dep-cjs.js"), Promise.resolve().then(() => __rolldown_runtime__.__toDynamicImportESM(__rolldown_runtime__.loadExports("new-dep-cjs.js")))).then(console.log);
+			await (__rolldown_runtime__.initModule("new-dep-esm.js"), Promise.resolve().then(() => __rolldown_runtime__.loadExports("new-dep-esm.js"))).then(console.log);
 		}
 		hot_hmr.accept((mod) => {
 			if (mod) {
@@ -96,34 +113,34 @@ var init_hmr_0 = __rolldown_runtime__.createEsmInitializer((function() {
 
 //#endregion
 //#region new-dep-cjs.js
-var require_new_dep_cjs_1 = __rolldown_runtime__.createCjsInitializer((function(__rolldown_exports__, __rolldown_module__) {
+__rolldown_runtime__.registerFactory("new-dep-cjs.js", "cjs", (function(__rolldown_module_id__) {
 	try {
-		__rolldown_runtime__.registerModule("new-dep-cjs.js", __rolldown_module__);
-		const hot_new_dep_cjs = __rolldown_runtime__.createModuleHotContext("new-dep-cjs.js");
+		var __rolldown_module__ = { exports: {} };
+		var __rolldown_exports__ = __rolldown_module__.exports;
+		__rolldown_runtime__.registerModule(__rolldown_module_id__, __rolldown_module__);
+		const hot_new_dep_cjs = __rolldown_runtime__.createModuleHotContext(__rolldown_module_id__);
 		__rolldown_exports__.value = "new-cjs";
 	} finally {}
 }));
 
 //#endregion
 //#region new-dep-esm.js
-var init_new_dep_esm_2 = __rolldown_runtime__.createEsmInitializer((function() {
+__rolldown_runtime__.registerFactory("new-dep-esm.js", "esm", (function(__rolldown_module_id__) {
 	try {
 		var __rolldown_exports__ = __rolldown_runtime__.__exportAll({ value: () => value });
-		__rolldown_runtime__.registerModule("new-dep-esm.js", { exports: __rolldown_exports__ });
-		const hot_new_dep_esm = __rolldown_runtime__.createModuleHotContext("new-dep-esm.js");
+		__rolldown_runtime__.registerModule(__rolldown_module_id__, { exports: __rolldown_exports__ });
+		const hot_new_dep_esm = __rolldown_runtime__.createModuleHotContext(__rolldown_module_id__);
 		const value = "new-esm";
 	} finally {}
 }));
 
 //#endregion
-init_hmr_0()
-__rolldown_runtime__.applyUpdates([['hmr.js', 'hmr.js']]);
 ```
 
 ## Meta
 
 - update type: patch
 
-### Hmr Boundaries
+### Changed Ids
 
-- boundary: hmr.js, accepted_via: hmr.js
+- hmr.js

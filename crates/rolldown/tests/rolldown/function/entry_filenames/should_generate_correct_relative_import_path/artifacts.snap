@@ -8,9 +8,9 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```js
 //#region async.js
 const value = "async";
-
 //#endregion
 export { value };
+
 ```
 
 ## chunks/shared.mjs
@@ -18,31 +18,29 @@ export { value };
 ```js
 //#region shared.js
 const value = "shared";
-
 //#endregion
 export { value as t };
+
 ```
 
 ## entries/a.mjs
 
 ```js
 import { t as value } from "../chunks/shared.mjs";
-
 //#region a.js
 const asyncValue = import("../chunks/async.mjs");
-
 //#endregion
 export { asyncValue, value };
+
 ```
 
 ## entries/b.mjs
 
 ```js
 import { t as value } from "../chunks/shared.mjs";
-
 //#region b.js
 const asyncValue = import("../chunks/async.mjs");
-
 //#endregion
 export { asyncValue, value };
+
 ```

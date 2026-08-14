@@ -1,16 +1,19 @@
 use oxc::{
   allocator::TakeIn,
-  ast::{NONE, ast},
+  ast::ast::{self, Expression},
   span::SPAN,
 };
 use oxc_traverse::Traverse;
 use rolldown_ecmascript::{
-  CJS_EXPORTS_REF_ATOM, CJS_MODULE_REF_ATOM, CJS_ROLLDOWN_EXPORTS_REF,
-  CJS_ROLLDOWN_EXPORTS_REF_ATOM, CJS_ROLLDOWN_MODULE_REF_ATOM,
+  CJS_EXPORTS_REF_STR, CJS_MODULE_REF_STR, CJS_ROLLDOWN_EXPORTS_REF,
+  CJS_ROLLDOWN_EXPORTS_REF_IDENT, CJS_ROLLDOWN_MODULE_REF, CJS_ROLLDOWN_MODULE_REF_IDENT,
 };
-use rolldown_ecmascript_utils::ExpressionExt;
+use rolldown_ecmascript_utils::ExpressionFactoryExt as _;
 
-use crate::hmr::{hmr_ast_finalizer::HmrAstFinalizer, utils::HmrAstBuilder};
+use crate::hmr::{
+  hmr_ast_finalizer::HmrAstFinalizer,
+  utils::{HmrAstBuilder, MODULE_ID_PARAM_FOR_HMR},
+};
 
 impl<'ast> Traverse<'ast, ()> for HmrAstFinalizer<'_, 'ast> {
   fn enter_program(
@@ -18,7 +21,7 @@ impl<'ast> Traverse<'ast, ()> for HmrAstFinalizer<'_, 'ast> {
     node: &mut ast::Program<'ast>,
     ctx: &mut oxc_traverse::TraverseCtx<'ast, ()>,
   ) {
-    let taken_body = node.body.take_in(self.alloc);
+    let taken_body = node.body.take_in(self);
     node.body.reserve_exact(taken_body.len());
     taken_body.into_iter().for_each(|top_level_stmt| {
       self.handle_top_level_stmt(&mut node.body, top_level_stmt, ctx.scoping());
@@ -30,149 +33,188 @@ impl<'ast> Traverse<'ast, ()> for HmrAstFinalizer<'_, 'ast> {
     node: &mut ast::Program<'ast>,
     ctx: &mut oxc_traverse::TraverseCtx<'ast, ()>,
   ) {
-    let mut try_block =
-      self.snippet.builder.alloc_block_statement(SPAN, self.snippet.builder.vec());
+    let mut try_block = ast::BlockStatement::boxed(SPAN, [], self);
 
+    // `initModule("<stable id>")` for EVERY static dep, uniformly registry-gated: a
+    // co-carried factory runs, a resident module short-circuits. No payload-membership
+    // split exists in the emitted bytes.
     let dependencies_init_fn_stmts: Vec<_> = self
       .dependencies
       .iter()
-      .filter_map(|dep| self.affected_module_idx_to_init_fn_name.get(dep))
-      .map(|fn_name| {
-        let call_expr = self.snippet.call_expr_expr(fn_name);
-        self.snippet.builder.statement_expression(SPAN, call_expr)
+      .filter_map(|dep| {
+        let module = &self.modules[*dep];
+        module.as_normal().map(|_| {
+          ast::Statement::new_expression_statement(SPAN, self.make_init_module_call(module), self)
+        })
       })
       .collect();
 
     let runtime_module_register = self.generate_runtime_module_register_for_hmr(ctx.scoping());
 
+    // Factories uniformly take only `__rolldown_module_id__`; for CommonJS the
+    // module/exports objects become locals the body's rewritten `module`/`exports`
+    // references resolve to.
+    let cjs_module_locals: Vec<ast::Statement<'ast>> = if self.module.exports_kind.is_commonjs() {
+      let empty_exports_object = ast::Expression::new_object_expression(SPAN, [], self);
+      let module_object = ast::Expression::new_object_expression(
+        SPAN,
+        [ast::ObjectPropertyKind::new_object_property(
+          SPAN,
+          ast::PropertyKind::Init,
+          ast::PropertyKey::new_static_identifier(SPAN, "exports", self),
+          empty_exports_object,
+          true,
+          false,
+          false,
+          self,
+        )],
+        self,
+      );
+      vec![
+        // var __rolldown_module__ = { exports: {} };
+        ast::Statement::from(ast::Declaration::new_variable_declaration(
+          SPAN,
+          ast::VariableDeclarationKind::Var,
+          oxc::allocator::Vec::from_value_in(
+            ast::VariableDeclarator::new(
+              SPAN,
+              ast::BindingPattern::new_binding_identifier(
+                SPAN,
+                CJS_ROLLDOWN_MODULE_REF_IDENT,
+                self,
+              ),
+              None,
+              Some(module_object),
+              false,
+              self,
+            ),
+            self,
+          ),
+          false,
+          self,
+        )),
+        // var __rolldown_exports__ = __rolldown_module__.exports;
+        ast::Statement::from(ast::Declaration::new_variable_declaration(
+          SPAN,
+          ast::VariableDeclarationKind::Var,
+          oxc::allocator::Vec::from_value_in(
+            ast::VariableDeclarator::new(
+              SPAN,
+              ast::BindingPattern::new_binding_identifier(
+                SPAN,
+                CJS_ROLLDOWN_EXPORTS_REF_IDENT,
+                self,
+              ),
+              None,
+              Some(Expression::new_member_access_expr(CJS_ROLLDOWN_MODULE_REF, "exports", self)),
+              false,
+              self,
+            ),
+            self,
+          ),
+          false,
+          self,
+        )),
+      ]
+    } else {
+      vec![]
+    };
+
     try_block.body.reserve_exact(
-    runtime_module_register.len() + node.body.len() + dependencies_init_fn_stmts.len() + 1 /* import.meta.hot*/,
-  );
+      cjs_module_locals.len()
+        + runtime_module_register.len()
+        + node.body.len()
+        + dependencies_init_fn_stmts.len()
+        + 1, /* import.meta.hot*/
+    );
+    try_block.body.extend(cjs_module_locals);
     try_block.body.extend(runtime_module_register);
     try_block.body.extend(dependencies_init_fn_stmts);
     try_block.body.push(self.create_module_hot_context_initializer_stmt());
-    try_block.body.extend(node.body.take_in(self.alloc));
+    try_block.body.extend(node.body.take_in(self));
 
     node
       .body
       .extend(std::mem::take(&mut self.generated_static_import_stmts_from_external).into_values());
 
-    let final_block = self.snippet.builder.alloc_block_statement(SPAN, self.snippet.builder.vec());
+    let final_block = ast::BlockStatement::boxed(SPAN, [], self);
 
     let try_stmt =
-      self.snippet.builder.alloc_try_statement(SPAN, try_block, NONE, Some(final_block));
+      ast::Statement::new_try_statement(SPAN, try_block, None, Some(final_block), self);
 
-    let init_fn_name = &self.affected_module_idx_to_init_fn_name[&self.module.idx];
-
-    let mut params = self.snippet.builder.formal_parameters(
+    // The runtime calls the factory with the module's stable id as its argument, so it's
+    // available inside the body as `__rolldown_module_id__`. This lets registerModule /
+    // createModuleHotContext reference the id by identifier instead of duplicating the
+    // string literal.
+    let module_id_param = ast::FormalParameter::new(
+      SPAN,
+      [],
+      ast::BindingPattern::new_binding_identifier(SPAN, MODULE_ID_PARAM_FOR_HMR, self),
+      None,
+      None,
+      false,
+      None,
+      false,
+      false,
+      self,
+    );
+    let params = ast::FormalParameters::boxed(
       SPAN,
       ast::FormalParameterKind::Signature,
-      self.snippet.builder.vec_with_capacity(2),
-      NONE,
+      [module_id_param],
+      None,
+      self,
     );
-    if self.module.exports_kind.is_commonjs() {
-      params.items.push(self.snippet.builder.formal_parameter(
-        SPAN,
-        self.builder.vec(),
-        self.snippet.builder.binding_pattern(
-          ast::BindingPatternKind::BindingIdentifier(
-            self.snippet.builder.alloc_binding_identifier(SPAN, CJS_ROLLDOWN_EXPORTS_REF_ATOM),
-          ),
-          NONE,
-          false,
-        ),
-        None,
-        false,
-        false,
-      ));
-      params.items.push(self.snippet.builder.formal_parameter(
-        SPAN,
-        self.builder.vec(),
-        self.snippet.builder.binding_pattern(
-          ast::BindingPatternKind::BindingIdentifier(
-            self.snippet.builder.alloc_binding_identifier(SPAN, CJS_ROLLDOWN_MODULE_REF_ATOM),
-          ),
-          NONE,
-          false,
-        ),
-        None,
-        false,
-        false,
-      ));
-    }
     // function () { [user code] }
-    let mut user_code_wrapper = self.snippet.builder.alloc_function(
+    let mut user_code_wrapper = ast::Function::boxed(
       SPAN,
       ast::FunctionType::FunctionExpression,
       None,
       false,
       false,
       false,
-      NONE,
-      NONE,
+      None,
+      None,
       params,
-      NONE,
-      Some(self.snippet.builder.function_body(
-        SPAN,
-        self.snippet.builder.vec(),
-        self.snippet.builder.vec1(ast::Statement::TryStatement(try_stmt)),
-      )),
+      None,
+      Some(ast::FunctionBody::boxed(SPAN, [], [try_stmt], self)),
+      self,
     );
     // mark the callback as PIFE because the callback is executed when this chunk is loaded
     user_code_wrapper.pife = self.use_pife_for_module_wrappers;
 
-    let initializer_call = if self.module.exports_kind.is_commonjs() {
-      // __rolldown__runtime.createCjsInitializer((function (exports, module) { [user code] }))
-      self.snippet.builder.alloc_call_expression(
-        SPAN,
-        self.snippet.id_ref_expr("__rolldown_runtime__.createCjsInitializer", SPAN),
-        NONE,
-        self
-          .snippet
-          .builder
-          .vec1(ast::Argument::from(ast::Expression::FunctionExpression(user_code_wrapper))),
-        false,
-      )
-    } else {
-      // __rolldown__runtime.createEsmInitializer((function () { [user code] }))
-      self.snippet.builder.alloc_call_expression(
-        SPAN,
-        self.snippet.id_ref_expr("__rolldown_runtime__.createEsmInitializer", SPAN),
-        NONE,
-        self
-          .snippet
-          .builder
-          .vec1(ast::Argument::from(ast::Expression::FunctionExpression(user_code_wrapper))),
-        false,
-      )
-    };
-
-    // var init_foo = __rolldown__runtime.createEsmInitializer((function () { [user code] }))
-    let var_decl = self.snippet.builder.alloc_variable_declaration(
+    // __rolldown_runtime__.registerFactory(stable_id, kind, function (__rolldown_module_id__) { [user code] })
+    // Every factory is id-addressed and registry-gated at runtime; re-execution policy
+    // is runtime data (evictions), never a per-payload flag.
+    let mut register_factory_args = oxc::allocator::Vec::with_capacity_in(3, self);
+    register_factory_args.push(ast::Argument::new_string_literal(
       SPAN,
-      ast::VariableDeclarationKind::Var,
-      self.snippet.builder.vec1(
-        self.snippet.builder.variable_declarator(
-          SPAN,
-          ast::VariableDeclarationKind::Var,
-          self.snippet.builder.binding_pattern(
-            ast::BindingPatternKind::BindingIdentifier(
-              self
-                .snippet
-                .builder
-                .alloc_binding_identifier(SPAN, self.snippet.builder.atom(init_fn_name)),
-            ),
-            NONE,
-            false,
-          ),
-          Some(ast::Expression::CallExpression(initializer_call)),
-          false,
-        ),
+      oxc::ast::ast::Str::from_str_in(&self.module.stable_id, self),
+      None,
+      self,
+    ));
+    register_factory_args.push(ast::Argument::new_string_literal(
+      SPAN,
+      oxc::ast::ast::Str::from_str_in(
+        if self.module.exports_kind.is_commonjs() { "cjs" } else { "esm" },
+        self,
       ),
+      None,
+      self,
+    ));
+    register_factory_args
+      .push(ast::Argument::from(ast::Expression::FunctionExpression(user_code_wrapper)));
+
+    let register_factory_call = ast::Expression::new_call_expression(
+      SPAN,
+      Expression::new_identifier(SPAN, "__rolldown_runtime__.registerFactory", self),
+      None,
+      register_factory_args,
       false,
+      self,
     );
 
-    node.body.push(ast::Statement::VariableDeclaration(var_decl));
+    node.body.push(ast::Statement::new_expression_statement(SPAN, register_factory_call, self));
   }
 
   fn enter_call_expression(
@@ -188,51 +230,51 @@ impl<'ast> Traverse<'ast, ()> for HmrAstFinalizer<'_, 'ast> {
     node: &mut oxc::ast::ast::Expression<'ast>,
     ctx: &mut oxc_traverse::TraverseCtx<'ast, ()>,
   ) {
-    if matches!(node, ast::Expression::ThisExpression(_)) && ctx.is_current_scope_valid_for_tla() {
-      // Rewrite this to `undefined` or `exports`
-      if self.module.exports_kind.is_commonjs() {
-        // Rewrite this to `exports`
-        *node = self.snippet.id_ref_expr(CJS_ROLLDOWN_EXPORTS_REF, SPAN);
-      } else {
-        // Rewrite this to `undefined`
-        *node = self.snippet.void_zero();
-      }
-    }
-
-    if let Some(ident) = node.as_identifier_mut() {
-      if let Some(reference_id) = ident.reference_id.get() {
-        let reference = ctx.scoping().get_reference(reference_id);
-        if let Some(symbol_id) = reference.symbol_id() {
-          if let Some(binding_name) = self.import_bindings.get(&symbol_id) {
-            *node = self.snippet.id_ref_expr(binding_name.as_str(), ident.span);
-            return;
-          }
-        } else if ident.name == CJS_EXPORTS_REF_ATOM {
-          // Rewrite `exports` to `__rolldown_exports__`
-          ident.name = CJS_ROLLDOWN_EXPORTS_REF_ATOM;
-        } else if ident.name == CJS_MODULE_REF_ATOM {
-          // Rewrite `module` to `__rolldown_module__`
-          ident.name = CJS_ROLLDOWN_MODULE_REF_ATOM;
-        }
-      }
+    // Rewrite top-level `this` to `exports` for CommonJS modules
+    // Use `this_expr_replace_map` from scanning to avoid rewriting `this` inside classes
+    if let ast::Expression::ThisExpression(this_expr) = node
+      && self.module.exports_kind.is_commonjs()
+      && self.module.ecma_view.this_expr_replace_map.contains_key(&this_expr.node_id())
+    {
+      *node = Expression::new_id_ref_expr(SPAN, CJS_ROLLDOWN_EXPORTS_REF, self);
+      return;
     }
 
     self.try_rewrite_dynamic_import(node);
     self.try_rewrite_require(node, ctx);
     self.rewrite_import_meta_hot(node);
   }
+
+  fn exit_identifier_reference(
+    &mut self,
+    node: &mut ast::IdentifierReference<'ast>,
+    ctx: &mut oxc_traverse::TraverseCtx<'ast, ()>,
+  ) {
+    self.rewrite_identifier_reference(node, ctx);
+  }
 }
 
-trait TraverseCtxExt<'ast> {
-  fn is_current_scope_valid_for_tla(&self) -> bool;
-}
-
-impl<'ast> TraverseCtxExt<'ast> for oxc_traverse::TraverseCtx<'ast, ()> {
-  fn is_current_scope_valid_for_tla(&self) -> bool {
-    let scoping = self.scoping();
-    scoping
-      .scope_ancestors(self.current_scope_id())
-      .map(|scope_id| scoping.scope_flags(scope_id))
-      .all(|scope_flags| scope_flags.is_block() || scope_flags.is_top())
+impl<'ast> HmrAstFinalizer<'_, 'ast> {
+  /// Rewrite a bare `exports` / `module` identifier to the wrapper-parameter
+  /// name (`__rolldown_exports__` / `__rolldown_module__`), or an import-binding
+  /// identifier to its generated binding name.
+  fn rewrite_identifier_reference(
+    &self,
+    ident: &mut ast::IdentifierReference<'ast>,
+    ctx: &oxc_traverse::TraverseCtx<'ast, ()>,
+  ) {
+    let Some(reference_id) = ident.reference_id.get() else {
+      return;
+    };
+    let reference = ctx.scoping().get_reference(reference_id);
+    if let Some(symbol_id) = reference.symbol_id() {
+      if let Some(binding_name) = self.import_bindings.get(&symbol_id) {
+        ident.name = oxc::ast::ast::Str::from_str_in(binding_name.as_str(), self).into();
+      }
+    } else if ident.name == CJS_EXPORTS_REF_STR {
+      ident.name = CJS_ROLLDOWN_EXPORTS_REF_IDENT;
+    } else if ident.name == CJS_MODULE_REF_STR {
+      ident.name = CJS_ROLLDOWN_MODULE_REF_IDENT;
+    }
   }
 }

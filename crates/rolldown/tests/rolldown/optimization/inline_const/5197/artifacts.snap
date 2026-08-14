@@ -1,37 +1,29 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
 ---
+# warnings
+
+## INEFFECTIVE_DYNAMIC_IMPORT
+
+```text
+[INEFFECTIVE_DYNAMIC_IMPORT] bar.mjs is dynamically imported by main.js but also statically imported by main.js, dynamic import will not move module into another chunk.
+
+```
+
 # Assets
-
-## bar.js
-
-```js
-import { t as bar_default } from "./bar2.js";
-
-export { bar_default as default };
-```
-
-## bar2.js
-
-```js
-//#region bar.mjs
-var bar_default = "bar";
-
-//#endregion
-export { bar_default as t };
-```
 
 ## main.js
 
 ```js
-import { t as bar_default } from "./bar2.js";
 import assert from "node:assert";
-
+// HIDDEN [\0rolldown/runtime.js]
+//#region bar.mjs
+var bar_exports = /* @__PURE__ */ __exportAll({ default: () => "bar" });
+//#endregion
 //#region main.js
-const glob = { "./bar.css": () => import("./bar.js") };
-const globEager = { "./bar.css": "bar" };
-assert.strictEqual(globEager["./bar.css"], "bar");
-
+const glob = { "./bar.css": () => Promise.resolve().then(() => bar_exports) };
+assert.strictEqual({ "./bar.css": "bar" }["./bar.css"], "bar");
 //#endregion
 export { glob };
+
 ```

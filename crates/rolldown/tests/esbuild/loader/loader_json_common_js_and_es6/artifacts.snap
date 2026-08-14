@@ -6,28 +6,24 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## entry.js
 
 ```js
-// HIDDEN [rolldown:runtime]
+// HIDDEN [\0rolldown/runtime.js]
 //#region y.json
 var y_default = {
 	y1: true,
 	y2: false
 };
-
 //#endregion
 //#region z.json
 var small = "some small text";
 var _if = "test keyword imports";
-
 //#endregion
 //#region x.json
-var require_x = /* @__PURE__ */ __commonJSMin(((exports, module) => {
-	module.exports = { "x": true };
-}));
-
 //#endregion
 //#region entry.js
-const x_json = require_x();
+const x_json = (/* @__PURE__ */ __commonJSMin(((exports, module) => {
+	module.exports = { "x": true };
+})))();
 console.log(x_json, y_default, small, _if);
-
 //#endregion
+
 ```

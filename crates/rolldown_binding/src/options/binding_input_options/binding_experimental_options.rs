@@ -3,8 +3,6 @@ use napi::bindgen_prelude::Either;
 #[napi_derive::napi(object, object_to_js = false)]
 #[derive(Debug, Default)]
 pub struct BindingExperimentalOptions {
-  pub strict_execution_order: Option<bool>,
-  pub disable_live_bindings: Option<bool>,
   pub vite_mode: Option<bool>,
   pub resolve_new_url_to_asset: Option<bool>,
   pub dev_mode: Option<BindingExperimentalDevModeOptions>,
@@ -13,9 +11,9 @@ pub struct BindingExperimentalOptions {
   pub chunk_import_map: Option<Either<bool, BindingChunkImportMap>>,
   pub on_demand_wrapping: Option<bool>,
   pub incremental_build: Option<bool>,
-  #[napi(ts_type = "boolean | 'boundary'")]
-  pub transform_hires_sourcemap: Option<Either<bool, String>>,
   pub native_magic_string: Option<bool>,
+  pub chunk_optimization: Option<Either<bool, BindingChunkOptimizationOptions>>,
+  pub lazy_barrel: Option<bool>,
 }
 
 impl TryFrom<BindingExperimentalOptions> for rolldown_common::ExperimentalOptions {
@@ -23,8 +21,6 @@ impl TryFrom<BindingExperimentalOptions> for rolldown_common::ExperimentalOption
 
   fn try_from(value: BindingExperimentalOptions) -> Result<Self, Self::Error> {
     Ok(Self {
-      strict_execution_order: value.strict_execution_order,
-      disable_live_bindings: value.disable_live_bindings,
       vite_mode: value.vite_mode,
       resolve_new_url_to_asset: value.resolve_new_url_to_asset,
       incremental_build: value.incremental_build,
@@ -36,25 +32,29 @@ impl TryFrom<BindingExperimentalOptions> for rolldown_common::ExperimentalOption
         Either::B(v) => Some(v.into()),
       }),
       on_demand_wrapping: value.on_demand_wrapping,
-      transform_hires_sourcemap: if let Some(v) = value.transform_hires_sourcemap {
-        match v {
-          Either::A(v) => Some(rolldown_common::SourcemapHires::Boolean(v)),
-          Either::B(v) => {
-            if v == "boundary" {
-              Some(rolldown_common::SourcemapHires::Boundary)
-            } else {
-              return Err(napi::Error::new(
-                napi::Status::InvalidArg,
-                format!("Invalid transform hires sourcemap: {v}"),
-              ));
-            }
-          }
-        }
-      } else {
-        Some(rolldown_common::SourcemapHires::Boundary)
-      },
       native_magic_string: value.native_magic_string,
+      chunk_optimization: value.chunk_optimization.map(|v| match v {
+        Either::A(v) => rolldown_common::ChunkOptimizationOption::Bool(v),
+        Either::B(v) => rolldown_common::ChunkOptimizationOption::Options(v.into()),
+      }),
+      lazy_barrel: value.lazy_barrel,
     })
+  }
+}
+
+#[napi_derive::napi(object, object_to_js = false)]
+#[derive(Debug, Default)]
+pub struct BindingChunkOptimizationOptions {
+  pub merge_common_chunks: Option<bool>,
+  pub avoid_redundant_chunk_loads: Option<bool>,
+}
+
+impl From<BindingChunkOptimizationOptions> for rolldown_common::ChunkOptimizationOptions {
+  fn from(value: BindingChunkOptimizationOptions) -> Self {
+    Self {
+      merge_common_chunks: value.merge_common_chunks.unwrap_or(true),
+      avoid_redundant_chunk_loads: value.avoid_redundant_chunk_loads.unwrap_or(true),
+    }
   }
 }
 
@@ -63,13 +63,21 @@ impl TryFrom<BindingExperimentalOptions> for rolldown_common::ExperimentalOption
 pub struct BindingExperimentalDevModeOptions {
   pub host: Option<String>,
   pub port: Option<u16>,
-  pub implement: Option<String>,
+  pub implement: String,
+  /// @deprecated Common runtime injection will be disabled by default in the future.
+  pub skip_common_runtime_injection: Option<bool>,
   pub lazy: Option<bool>,
 }
 
 impl From<BindingExperimentalDevModeOptions> for rolldown_common::DevModeOptions {
   fn from(value: BindingExperimentalDevModeOptions) -> Self {
-    Self { host: value.host, port: value.port, implement: value.implement, lazy: value.lazy }
+    Self {
+      host: value.host,
+      port: value.port,
+      implement: Some(value.implement),
+      skip_common_runtime_injection: value.skip_common_runtime_injection,
+      lazy: value.lazy,
+    }
   }
 }
 

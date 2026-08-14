@@ -3,13 +3,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ---
 # Assets
 
-## assets/test-1P-S1VxP.txt
-
-```txt
-test
-```
-
-## assets/test-BrHGE6Cv.txt
+## assets/test-C4X7hChn.txt
 
 ```txt
 test
@@ -18,21 +12,19 @@ test
 ## entry.js
 
 ```js
-// HIDDEN [rolldown:runtime]
+// HIDDEN [\0rolldown/runtime.js]
 //#region a/test.txt
 var require_test$1 = /* @__PURE__ */ __commonJSMin(((exports, module) => {
-	module.exports = "assets/test-BrHGE6Cv.txt";
+	module.exports = "./assets/test-C4X7hChn.txt";
 }));
-
 //#endregion
 //#region b/test.txt
 var require_test = /* @__PURE__ */ __commonJSMin(((exports, module) => {
-	module.exports = "assets/test-1P-S1VxP.txt";
+	module.exports = "./assets/test-C4X7hChn.txt";
 }));
-
 //#endregion
 //#region entry.js
 console.log(require_test$1(), require_test());
-
 //#endregion
+
 ```

@@ -3,42 +3,29 @@ source: crates/rolldown_testing/src/integration_test.rs
 ---
 # Assets
 
-## assets/foo-DX_UVeUe.txt
+## assets/foo-CKfX4HZF.txt
 
 ```txt
 foo
 ```
 
-## chunks/dep-DGfnxe7V.js
+## chunks/dep-DvJlI0iL.js
 
 ```js
-import "./foo-GNO-ZiAj.js";
-
 //#region dep.js
-const url = new URL("../assets/foo-DX_UVeUe.txt", import.meta.url);
-
+const url = new URL("../assets/foo-CKfX4HZF.txt", import.meta.url);
 //#endregion
 export { url };
-```
 
-## chunks/foo-GNO-ZiAj.js
-
-```js
-//#region foo.txt
-var foo_default = "assets/foo-DX_UVeUe.txt";
-
-//#endregion
 ```
 
 ## main.js
 
 ```js
-import "./chunks/foo-GNO-ZiAj.js";
-
 //#region main.js
-const url = new URL("assets/foo-DX_UVeUe.txt", import.meta.url);
-const dep = import("./chunks/dep-DGfnxe7V.js");
-
+const url = new URL("assets/foo-CKfX4HZF.txt", import.meta.url);
+const dep = import("./chunks/dep-DvJlI0iL.js");
 //#endregion
 export { dep, url };
+
 ```

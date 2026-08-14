@@ -1,10 +1,8 @@
-use oxc::{
-  ast::{
-    AstKind, MemberExpressionKind,
-    ast::{self, Argument, IdentifierReference},
-  },
-  span::CompactStr,
+use oxc::ast::{
+  AstKind,
+  ast::{self, Argument, IdentifierReference},
 };
+use oxc_str::CompactStr;
 use rolldown_common::{ImportRecordIdx, dynamic_import_usage::DynamicImportExportsUsage};
 use rustc_hash::FxHashSet;
 
@@ -29,45 +27,67 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
     // IdentifierReference, but IdentifierReference did not saved the related `SymbolId`
     // Something wrong with semantic analyze
     let symbol_id = reference.symbol_id().expect("should have symbol id");
-    let parent = self.visit_path.last()?;
+    let parent = *self.visit_path.last()?;
     // if the property could be converted as a static property name, e.g.
     // a.b // static
-    // a.['b'] // static
+    // a['b'] // static
     // a[b] // dynamic
     let partial_name =
       parent.as_member_expression_kind().and_then(|expr| expr.static_property_name());
-    let rec_idx =
-      *self.dynamic_import_usage_info.dynamic_import_binding_to_import_record_id.get(&symbol_id)?;
-
+    let rec_idx = *self
+      .dynamic_import_usage_info
+      .dynamic_import_binding_to_import_record_idx
+      .get(&symbol_id)?;
+    let usage = match partial_name {
+      Some(name) => DynamicImportExportsUsage::Single(name.into()),
+      None => match parent {
+        // The binding is destructured in a later statement rather than accessed as a
+        // member, e.g. `import('mod').then(ns => { const { a } = ns })`.
+        // Treat the destructured keys the same as `ns.a` member accesses instead of bailing.
+        AstKind::VariableDeclarator(var_decl)
+          if matches!(&var_decl.id, ast::BindingPattern::ObjectPattern(_)) =>
+        {
+          // A re-exported key (`export const { a } = ns`) must be kept even when it
+          // is never read locally, so detect the enclosing export declaration
+          // (VariableDeclarator -> VariableDeclaration -> Export*) and forward it.
+          let is_exported = self
+            .visit_path
+            .len()
+            .checked_sub(3)
+            .and_then(|idx| self.visit_path.get(idx))
+            .is_some_and(|kind| {
+              matches!(kind, AstKind::ExportDeclaration(_) | AstKind::ExportDefaultDeclaration(_))
+            });
+          match self.update_dynamic_import_usage_info_from_binding_pattern(
+            &var_decl.id,
+            rec_idx,
+            is_exported,
+          ) {
+            Some(set) => DynamicImportExportsUsage::Partial(set),
+            None => DynamicImportExportsUsage::Complete,
+          }
+        }
+        _ => DynamicImportExportsUsage::Complete,
+      },
+    };
     match self.dynamic_import_usage_info.dynamic_import_exports_usage.entry(rec_idx) {
-      std::collections::hash_map::Entry::Occupied(mut occ) => match partial_name {
-        Some(name) => occ.get_mut().merge(DynamicImportExportsUsage::Single(name.into())),
-        None => occ.get_mut().merge(DynamicImportExportsUsage::Complete),
-      },
-      std::collections::hash_map::Entry::Vacant(vac) => match partial_name {
-        Some(name) => {
-          vac.insert(DynamicImportExportsUsage::Single(name.into()));
-        }
-        None => {
-          vac.insert(DynamicImportExportsUsage::Complete);
-        }
-      },
+      std::collections::hash_map::Entry::Occupied(mut occ) => occ.get_mut().merge(usage),
+      std::collections::hash_map::Entry::Vacant(vac) => {
+        vac.insert(usage);
+      }
     }
 
     None
   }
 
-  pub fn init_dynamic_import_binding_usage_info(
-    &mut self,
-    import_record_idx: ImportRecordIdx,
-  ) -> Option<()> {
-    let ancestor_len = self.visit_path.len();
-    let init_set = match self.visit_path.last()? {
-      kind if kind.is_member_expression_kind() => self.init_dynamic_import_usage_with_member_expr(
-        &kind.as_member_expression_kind().unwrap(),
-        ancestor_len,
-        import_record_idx,
-      ),
+  pub fn init_dynamic_import_binding_usage_info(&mut self, import_record_idx: ImportRecordIdx) {
+    let Some(last_visit_path) = self.visit_path.last() else {
+      return;
+    };
+    let init_set = match last_visit_path {
+      AstKind::StaticMemberExpression(expr) if expr.property.name == "then" => {
+        self.init_dynamic_import_usage_with_static_member_expr(import_record_idx)
+      }
       AstKind::AwaitExpression(_) => {
         self.extract_init_set_from_await_expr_ancestor(import_record_idx)
       }
@@ -77,27 +97,17 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
       _ => None,
     };
 
-    match init_set {
-      Some(init_set) => {
-        self
-          .dynamic_import_usage_info
-          .dynamic_import_exports_usage
-          .insert(import_record_idx, DynamicImportExportsUsage::Partial(init_set));
-      }
-      None => {
-        self
-          .dynamic_import_usage_info
-          .dynamic_import_exports_usage
-          .insert(import_record_idx, DynamicImportExportsUsage::Complete);
-      }
-    }
-    None
+    let usage = match init_set {
+      Some(init_set) => DynamicImportExportsUsage::Partial(init_set),
+      None => DynamicImportExportsUsage::Complete,
+    };
+    self.dynamic_import_usage_info.dynamic_import_exports_usage.insert(import_record_idx, usage);
   }
 
   fn extract_init_set_from_await_expr_ancestor(
     &mut self,
     import_record_idx: ImportRecordIdx,
-  ) -> Option<std::collections::HashSet<CompactStr, rustc_hash::FxBuildHasher>> {
+  ) -> Option<FxHashSet<CompactStr>> {
     let ast_after_remove_paren_idx = self
       .visit_path
       .iter()
@@ -112,7 +122,7 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
         // parent
         let is_exported = matches!(
           self.visit_path.get(ast_after_remove_paren_idx.saturating_sub(2)),
-          Some(AstKind::ExportDefaultDeclaration(_) | AstKind::ExportNamedDeclaration(_))
+          Some(AstKind::ExportDeclaration(_) | AstKind::ExportDefaultDeclaration(_))
         );
         self.update_dynamic_import_usage_info_from_binding_pattern(
           &var_decl.id,
@@ -130,7 +140,7 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
           AstKind::ReturnStatement(_) => None,
           AstKind::FunctionBody(_) => {
             match self.visit_path.get(ast_after_remove_paren_idx.saturating_sub(2))? {
-              AstKind::ArrowFunctionExpression(expr) if expr.expression => None,
+              AstKind::ArrowFunctionExpression(expr) if expr.is_expression() => None,
               _ => Some(FxHashSet::default()),
             }
           }
@@ -148,37 +158,24 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
     }
   }
 
-  fn init_dynamic_import_usage_with_member_expr(
+  fn init_dynamic_import_usage_with_static_member_expr(
     &mut self,
-    parent: &MemberExpressionKind<'ast>,
-    ancestor_len: usize,
-    import_record_id: ImportRecordIdx,
+    import_record_idx: ImportRecordIdx,
   ) -> Option<FxHashSet<CompactStr>> {
-    let MemberExpressionKind::Static(parent) = parent else {
-      return None;
-    };
-    if parent.property.name != "then" {
-      return None;
-    }
-    let parent_parent = self.visit_path.get(ancestor_len - 2)?.as_call_expression()?;
+    let parent_parent_idx = self.visit_path.len().saturating_sub(2);
+    let parent_parent = self.visit_path.get(parent_parent_idx)?.as_call_expression()?;
     let first_arg = parent_parent.arguments.first()?;
     let dynamic_import_binding = match first_arg {
-      Argument::FunctionExpression(func) => func.params.items.first()?,
-      Argument::ArrowFunctionExpression(func) => func.params.items.first()?,
-      _ => {
-        return None;
-      }
+      Argument::FunctionExpression(func) => func.params.items.first(),
+      Argument::ArrowFunctionExpression(func) => func.params.items.first(),
+      _ => return None,
     };
-    // for now only handle
-    // ```js
-    // import('mod').then(mod => {
-    //   mod.a;
-    //   mod;
-    // })
-    // ```
+    let Some(dynamic_import_binding) = dynamic_import_binding else {
+      return Some(FxHashSet::default());
+    };
     self.update_dynamic_import_usage_info_from_binding_pattern(
       &dynamic_import_binding.pattern,
-      import_record_id,
+      import_record_idx,
       false,
     )
   }
@@ -186,18 +183,18 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
   fn update_dynamic_import_usage_info_from_binding_pattern(
     &mut self,
     binding_pattern: &ast::BindingPattern<'_>,
-    import_record_id: ImportRecordIdx,
+    import_record_idx: ImportRecordIdx,
     is_exported: bool,
   ) -> Option<FxHashSet<CompactStr>> {
-    let symbol_id = match &binding_pattern.kind {
-      ast::BindingPatternKind::BindingIdentifier(id) => {
+    let symbol_id = match binding_pattern {
+      ast::BindingPattern::BindingIdentifier(id) => {
         if is_exported {
           return None;
         }
         id.symbol_id()
       }
       // only care about first level destructuring, if it is nested just assume it is used
-      ast::BindingPatternKind::ObjectPattern(obj) => {
+      ast::BindingPattern::ObjectPattern(obj) => {
         let mut set = FxHashSet::default();
         for binding in &obj.properties {
           let binding_name = match &binding.key {
@@ -205,8 +202,8 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
             ast::PropertyKey::StaticIdentifier(id) => id.name.as_str(),
             _ => return None,
           };
-          let binding_symbol_id = match &binding.value.kind {
-            ast::BindingPatternKind::BindingIdentifier(id) => id.symbol_id(),
+          let binding_symbol_id = match &binding.value {
+            ast::BindingPattern::BindingIdentifier(id) => id.symbol_id(),
             _ => {
               // for complex alias pattern, assume the key is used
               // import('mod').then(({a: {b: {c: d}}}) => {})
@@ -226,13 +223,13 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
         }
 
         if let Some(rest) = &obj.rest {
-          match &rest.argument.kind {
-            ast::BindingPatternKind::BindingIdentifier(id) => {
+          match &rest.argument {
+            ast::BindingPattern::BindingIdentifier(id) => {
               let symbol_id = id.symbol_id();
               self
                 .dynamic_import_usage_info
-                .dynamic_import_binding_to_import_record_id
-                .insert(symbol_id, import_record_id);
+                .dynamic_import_binding_to_import_record_idx
+                .insert(symbol_id, import_record_idx);
               self
                 .dynamic_import_usage_info
                 .dynamic_import_binding_reference_id
@@ -246,15 +243,15 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
 
         return Some(set);
       }
-      ast::BindingPatternKind::ArrayPattern(_) | ast::BindingPatternKind::AssignmentPattern(_) => {
+      ast::BindingPattern::ArrayPattern(_) | ast::BindingPattern::AssignmentPattern(_) => {
         // TODO: handle advance pattern
         return None;
       }
     };
     self
       .dynamic_import_usage_info
-      .dynamic_import_binding_to_import_record_id
-      .insert(symbol_id, import_record_id);
+      .dynamic_import_binding_to_import_record_idx
+      .insert(symbol_id, import_record_idx);
     self
       .dynamic_import_usage_info
       .dynamic_import_binding_reference_id

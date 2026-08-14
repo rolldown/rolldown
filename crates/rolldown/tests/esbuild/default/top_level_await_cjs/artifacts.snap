@@ -6,7 +6,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## UNSUPPORTED_FEATURE
 
 ```text
-[UNSUPPORTED_FEATURE] Error: Top-level await is currently not supported with the 'cjs' output format
+[UNSUPPORTED_FEATURE] Top-level await is currently not supported with the 'cjs' output format
    ╭─[ entry.js:1:1 ]
    │
  1 │ await foo;
@@ -19,7 +19,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## UNSUPPORTED_FEATURE
 
 ```text
-[UNSUPPORTED_FEATURE] Error: Top-level await is currently not supported with the 'cjs' output format
+[UNSUPPORTED_FEATURE] Top-level await is currently not supported with the 'cjs' output format
    ╭─[ entry.js:2:1 ]
    │
  2 │ for await (foo of bar) ;

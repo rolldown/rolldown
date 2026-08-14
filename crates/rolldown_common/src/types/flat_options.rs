@@ -7,6 +7,9 @@ bitflags! {
   /// which also make accessing frequently used options faster.
   pub struct FlatOptions: u16 {
     const IgnoreAnnotations = 1 << 0;
+    /// If set, JSX syntax is preserved in the output rather than being transformed.
+    /// Determined per-module during transformation based on the resolved tsconfig
+    /// (e.g. a module's `tsconfig.json` specifies `"jsx": "preserve"`).
     const JsxPreserve = 1 << 1;
     const IsManualPureFunctionsEmpty = 1 << 2;
     /// If the flag is set, it means the `treeshake.property_read_side_effects` is `Always`.
@@ -30,6 +33,9 @@ bitflags! {
     /// If set, inline const optimization is enabled.
     /// Usage: `self.options.optimization.is_inline_const_enabled()`
     const InlineConstEnabled = 1 << 9;
+    /// If set, lazy barrel optimization is enabled.
+    /// Usage: `self.options.experimental.is_lazy_barrel_enabled()`
+    const LazyBarrelEnabled = 1 << 10;
   }
 }
 
@@ -37,7 +43,6 @@ impl FlatOptions {
   pub fn from_shared_options(options: &SharedNormalizedBundlerOptions) -> Self {
     let mut flags = Self::empty();
     flags.set(Self::IgnoreAnnotations, !options.treeshake.annotations());
-    flags.set(Self::JsxPreserve, options.transform_options.is_jsx_preserve());
     flags
       .set(Self::IsManualPureFunctionsEmpty, options.treeshake.manual_pure_functions().is_none());
     flags.set(
@@ -65,6 +70,7 @@ impl FlatOptions {
       options.experimental.is_resolve_new_url_to_asset_enabled(),
     );
     flags.set(Self::InlineConstEnabled, options.optimization.is_inline_const_enabled());
+    flags.set(Self::LazyBarrelEnabled, options.experimental.is_lazy_barrel_enabled());
     flags
   }
 
@@ -116,5 +122,10 @@ impl FlatOptions {
   #[inline]
   pub fn inline_const_enabled(self) -> bool {
     self.contains(Self::InlineConstEnabled)
+  }
+
+  #[inline]
+  pub fn is_lazy_barrel_enabled(self) -> bool {
+    self.contains(Self::LazyBarrelEnabled)
   }
 }

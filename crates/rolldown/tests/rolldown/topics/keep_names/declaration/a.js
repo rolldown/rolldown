@@ -1,11 +1,4 @@
-export function test() {
+export function test() {}
+export function a() {}
 
-}
-export function a() {
-
-}
-
-export class Foo {
-
-}
-
+export class Foo {}

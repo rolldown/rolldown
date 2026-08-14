@@ -32,19 +32,17 @@ However, Rolldown's feature scope is more similar to esbuild, offering these [ad
 - ESM / CJS module interop
 - `define`
 - `inject`
-- CSS bundling (Experimental)
 - Minification (WIP)
 
 Rolldown also has a few concepts that have close equivalents in esbuild, but do not exist in Rollup:
 
 - [Module Types](./notable-features#module-types) (Experimental)
-- [Plugin hook filters](/apis/plugin-hook-filters)
+- [Plugin hook filters](/apis/plugin-api/hook-filters)
 
 Finally, Rolldown provides some features that esbuild and Rollup do not (and may not intend to) implement:
 
-- [Advanced chunk splitting control](./notable-features#advanced-chunks) (Experimental)
+- [Manual code splitting](./notable-features#manual-code-splitting)
 - HMR support (WIP)
-- Module Federation (planned)
 
 ## Credits
 

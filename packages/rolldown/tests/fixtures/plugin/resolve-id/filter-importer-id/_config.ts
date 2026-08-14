@@ -3,8 +3,9 @@ import { defineTest } from 'rolldown-tests';
 import { expect, vi } from 'vitest';
 
 const resolveIdFn = vi.fn();
-let calledArgs = [];
+
 export default defineTest({
+  sequential: true,
   config: {
     input: './main.js',
     plugins: [
@@ -26,14 +27,8 @@ export default defineTest({
     // foo.js imports baz.js (0 calls because foo.js doesn't match the filter)
     // So we expect 2 calls total
     expect(resolveIdFn).toHaveBeenCalledTimes(2);
-    expect(resolveIdFn).toHaveBeenCalledWith(
-      './foo.js',
-      expect.stringContaining('main.js'),
-    );
-    expect(resolveIdFn).toHaveBeenCalledWith(
-      './bar.js',
-      expect.stringContaining('main.js'),
-    );
+    expect(resolveIdFn).toHaveBeenCalledWith('./foo.js', expect.stringContaining('main.js'));
+    expect(resolveIdFn).toHaveBeenCalledWith('./bar.js', expect.stringContaining('main.js'));
     resolveIdFn.mockReset();
   },
 });

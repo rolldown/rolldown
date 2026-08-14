@@ -1,4 +1,4 @@
-import assert from "node:assert";
+import assert from 'node:assert';
 var _Test;
 let Test = (_Test = class {});
 
@@ -13,9 +13,9 @@ let ArrowFn = (_ArrowFn = () => {
 });
 
 console.log(_Test, Test, _Fn, Fn, _ArrowFn, ArrowFn);
-assert.strictEqual(_Test.name, "_Test");
-assert.strictEqual(_Fn.name, "_Fn");
-assert.strictEqual(_ArrowFn.name, "_ArrowFn");
+assert.strictEqual(_Test.name, '_Test');
+assert.strictEqual(_Fn.name, '_Fn');
+assert.strictEqual(_ArrowFn.name, '_ArrowFn');
 
 assert.strictEqual(new _Test() instanceof Test, true);
 assert.strictEqual(Fn(), 1);

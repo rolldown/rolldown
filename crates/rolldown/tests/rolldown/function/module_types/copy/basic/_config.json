@@ -1,0 +1,10 @@
+{
+  "config": {
+    "moduleTypes": {
+      ".txt": "copy"
+    }
+  },
+  "expectExecuted": false,
+  "snapshotOutputStats": true,
+  "visualizeSourcemap": true
+}

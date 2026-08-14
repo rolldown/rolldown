@@ -1,0 +1,299 @@
+#!/usr/bin/env node
+
+/**
+ * Script to download and adapt magic-string tests for rolldown's BindingMagicString
+ *
+ * Usage: node download-tests.mjs
+ *
+ * This script:
+ * 1. Downloads test files from https://github.com/Rich-Harris/magic-string/tree/master/test
+ * 2. Adapts imports to use rolldown's BindingMagicString
+ * 3. Skips tests that use unsupported features
+ *
+ * BindingMagicString API (supported methods):
+ *   - constructor(source: string, options?: { filename?, offset?, indentExclusionRanges? })
+ *   - offset: number (getter/setter — shifts all position-based operations)
+ *   - replace(from: string, to: string): this
+ *   - replaceAll(from: string, to: string): this
+ *   - prepend(content: string): this
+ *   - append(content: string): this
+ *   - prependLeft(index: number, content: string): this
+ *   - prependRight(index: number, content: string): this
+ *   - appendLeft(index: number, content: string): this
+ *   - appendRight(index: number, content: string): this
+ *   - overwrite(start: number, end: number, content: string, options?: { contentOnly? }): this
+ *   - toString(): string
+ *   - hasChanged(): boolean
+ *   - length(): number
+ *   - isEmpty(): boolean
+ *   - remove(start: number, end: number): this
+ *   - update(start: number, end: number, content: string, options?: { overwrite? }): this
+ *   - relocate(start: number, end: number, to: number): this
+ *   - move(start: number, end: number, index: number): this (alias for relocate)
+ *   - indent(indentor?: string | undefined | null, options?: { exclude? }): this
+ *   - slice(start?: number, end?: number): string
+ *   - insert(index: number, content: string): throws Error (deprecated)
+ *   - clone(): BindingMagicString
+ *   - snip(start: number, end: number): BindingMagicString
+ *   - lastChar(): string
+ *   - lastLine(): string
+ *   - reset(start: number, end: number): this (partial - can't split edited chunks)
+ *   - generateMap(options?): BindingSourceMap (returns object with version, file, sources, etc.)
+ *   - generateDecodedMap(options?): BindingDecodedMap (returns object with decoded mappings array)
+ *
+ * NOT supported (will be skipped):
+ *   - constructor options: filename, offset, indentExclusionRanges, and ignoreList ARE supported
+ *   - addSourcemapLocation (not in string_wizard)
+ *   - storeName option in overwrite/update (not exposed in binding)
+ *   - Note: overwrite option in update and contentOnly option in overwrite ARE now supported
+ *   - x_google_ignoreList / ignoreList in generateMap output is now supported
+ *   - replace/replaceAll with regex or function replacer
+ */
+
+import { execSync } from 'node:child_process';
+import { writeFileSync } from 'node:fs';
+import { dirname, join } from 'node:path';
+import { fileURLToPath } from 'node:url';
+
+const __dirname = dirname(fileURLToPath(import.meta.url));
+
+const TEST_FILES = ['MagicString.test.js'];
+
+const BASE_URL = 'https://raw.githubusercontent.com/Rich-Harris/magic-string/master/test';
+
+// Describe blocks to skip entirely (unsupported features)
+const SKIP_DESCRIBE_BLOCKS = [
+  'addSourcemapLocation', // not in string_wizard
+  // Note: 'getIndentString' is now supported
+  'original', // not supported
+  // Note: 'generateMap' is now supported (returns BindingSourceMap object)
+  // Note: 'generateDecodedMap' is now supported (returns BindingDecodedMap object)
+  // Note: 'reset' is now supported but most tests are skipped individually
+  // Note: 'snip' is now supported
+  // Note: 'lastChar' is now supported
+  // Note: 'lastLine' is now supported
+  // Note: 'options' is now supported (filename, offset, indentExclusionRanges, ignoreList)
+  // Note: 'insert' is now supported (throws deprecated error as expected)
+  // Note: 'slice' is now supported
+  // Note: 'clone' is now supported (some individual tests skipped)
+  // Note: hasChanged, replace, replaceAll, isEmpty, length, remove, update, overwrite
+  // are now enabled with individual test skips for problematic cases
+];
+
+// Individual tests to skip (by partial match of test name)
+const SKIP_TESTS = [
+  // Note: 'should throw when given non-string content' now works via JS-side TypeError wrapper
+  // Note: 'should throw' broad pattern removed — overlapping replacement error tests now pass
+  // Remaining 'should throw' tests are covered by specific patterns (non-string content, negative indices)
+  // options-specific skips
+  // Note: 'stores ignore-list hint' is now supported (ignoreList option)
+  // Note: 'indentExclusionRanges' is now supported (constructor option + getter + clone)
+  'sourcemapLocations', // not supported
+  'should return cloned content', // clone-related
+  'should noop', // edge cases that may differ
+  // Note: 'negative indices' now works in remove (normalize_index handles them correctly)
+  'should split original chunk', // internal behavior
+  // Note: 'out of upper bound' and 'out of bounds' are now supported (indices clamp to intro/outro)
+  'replaces an empty string', // empty string edge case
+  'empty string should be movable', // empty string edge case
+  'split point', // split point errors cause panic
+  'storeName', // storeName option not supported
+  // Note: 'should remove overlapping ranges' now works (empty-edited chunks can be split)
+  // Note: 'should allow contiguous but non-overlapping replacements' now works
+  'already been edited', // Cannot split a chunk that has already been edited
+  // Note: 'should remove modified ranges' now works (remove correctly overwrites edited chunks)
+
+  'should replace then remove', // causes split chunk panic
+  // Note: 'preserves intended order' now works (append/prepend ordering with slice)
+  // Note: 'excluded characters' (indent exclude option) is now supported
+  // Note: 'should treat zero-length removals as a no-op' now works (zero-length is no-op)
+  // Note: update/overwrite options (overwrite, contentOnly) are now supported
+  // Note: split-point detection is now implemented for update/overwrite across moved content
+  // Note: non-zero-length and zero-length inserts inside update/overwrite now work
+  // Note: interior inserts with overwrite/contentOnly now work
+  // Note: later insertions at the end now work
+  // Note: "removes across moved content" now works in both remove and reset sections
+  // Note: 'should not remove content inserted after the end of removed range' now works
+  // Note: 'should remove interior inserts' now works (overwrite:true clears intro/outro correctly)
+  // Note: 'should provide a useful error' now works — errors are properly thrown, not panicked
+  // slice-specific skips
+  // Note: 'should return the generated content between the specified original characters' now works
+  // Note: 'supports characters moved opposing' now works (reversed slice range fix)
+  // clone-specific skips (tests that use unsupported constructor options)
+  // Note: 'should clone filename info' now works since filename is supported
+  // Note: 'should clone indentExclusionRanges' now works since indentExclusionRanges is supported
+  'should clone sourcemapLocations', // uses sourcemapLocations
+  // Note: 'should works' (hasChanged) now works — clone preserves hasChanged state
+  // Note: 'should not report change if content is identical' no longer in upstream tests
+  // replace/replaceAll — regex with string replacement now supported in Rust binding
+  // Note: 'works with global regex replace' now works
+  // Note: 'works with global regex replace $$' now works
+  'rejects with non-global regexp', // napi-rs can't throw TypeError (only Error), test expects TypeError
+  // Note: 'global regex result the same as .replace' — has function replacer parts, kept skipped
+  'works with global regex replace function', // function replacer not supported
+  'replace function offset', // function replacer not supported
+  'works with string replace and function replacer', // function replacer not supported
+  'should ignore non-changed replacements', // uses function replacer
+  'global regex result the same as .replace', // uses function replacer in one assertion
+  // Note: 'should support length' and 'should support isEmpty' now work correctly
+  // generateMap-specific skips (features not in string_wizard)
+  'should generate a correct sourcemap including correct lines', // uses generateDecodedMap which has different mappings count
+  'should generate a sourcemap using specified locations', // addSourcemapLocation not implemented
+  'generates a map with trimmed content', // trim sourcemap behavior differs
+  // Note: 'generates x_google_ignoreList' is now supported
+  'generates segments per word boundary with hires "boundary" in the next line', // multiline boundary mappings differ
+  'generates a correct source map with update using a content containing a new line', // multiline update mappings differ
+  'generates a correct source map with update using content ending with a new line', // multiline update mappings differ
+];
+
+async function downloadFile(filename) {
+  const url = `${BASE_URL}/${filename}`;
+  console.log(`Downloading ${url}...`);
+  const response = await fetch(url);
+  if (!response.ok) {
+    throw new Error(`Failed to download ${url}: ${response.statusText}`);
+  }
+  return response.text();
+}
+
+function transformTestFile(content, filename) {
+  let transformed = content;
+
+  // Add ts-nocheck to skip TypeScript checking for the test file
+  transformed = '// @ts-nocheck\n' + transformed;
+
+  // Replace imports
+  transformed = transformed.replace(
+    /import MagicString from ['"]\.\/utils\/IntegrityCheckingMagicString['"];?/g,
+    "import { RolldownMagicString as MagicString } from 'rolldown';",
+  );
+
+  transformed = transformed.replace(
+    /import MagicString from ['"]\.\.\/src\/MagicString['"];?/g,
+    "import { RolldownMagicString as MagicString } from 'rolldown';",
+  );
+
+  // Handle Bundle import - Bundle is not supported, so we import MagicString and skip all Bundle tests
+  transformed = transformed.replace(
+    /import MagicString,\s*\{\s*Bundle\s*\}\s*from\s*['"]\.\.\/['"];?/g,
+    "import { BindingMagicString as MagicString } from 'rolldown';\n// Bundle is not supported in BindingMagicString\nconst Bundle = null;",
+  );
+
+  // Handle SourceMap import - SourceMap class is not supported
+  transformed = transformed.replace(
+    /import\s*\{\s*SourceMap\s*\}\s*from\s*['"]\.\.\/['"];?/g,
+    '// SourceMap class is not supported in BindingMagicString\nconst SourceMap = null;',
+  );
+
+  // Keep SourceMapConsumer import for generateMap tests
+  // (source-map-js package needs to be installed in the tests package)
+
+  // Fix assert import
+  transformed = transformed.replace(
+    /import assert from ['"]assert['"];?/g,
+    "import assert from 'node:assert';",
+  );
+
+  // For Bundle.test.js, skip all tests since Bundle is not supported
+  if (filename === 'Bundle.test.js') {
+    transformed = transformed.replace(
+      /describe\(['"]Bundle['"]/g,
+      "describe.skip('Bundle [Bundle class not supported]'",
+    );
+  }
+
+  // For SourceMap.test.js, skip all tests since SourceMap class is not supported
+  if (filename === 'SourceMap.test.js') {
+    transformed = transformed.replace(
+      /describe\(['"]MagicString\.SourceMap['"]/g,
+      "describe.skip('MagicString.SourceMap [SourceMap class not supported]'",
+    );
+  }
+
+  // Skip entire describe blocks for unsupported features
+  for (const block of SKIP_DESCRIBE_BLOCKS) {
+    // Match describe('blockName', () => { ... }); with proper brace matching
+    const describeRegex = new RegExp(
+      `(\\t*)describe\\(['"]${escapeRegex(block)}['"],\\s*\\(\\)\\s*=>\\s*\\{`,
+      'g',
+    );
+
+    transformed = transformed.replace(describeRegex, (match, indent) => {
+      return `${indent}describe.skip('${block}', () => {`;
+    });
+  }
+
+  // Skip individual tests that won't work
+  for (const testPattern of SKIP_TESTS) {
+    const testRegex = new RegExp(
+      `(\\t*)it\\((['"])([^'"]*${escapeRegex(testPattern)}[^'"]*)\\2`,
+      'g',
+    );
+
+    transformed = transformed.replace(testRegex, (match, indent, quote, testName) => {
+      return `${indent}it.skip(${quote}${testName}${quote}`;
+    });
+  }
+
+  // Note: We don't modify assert.strictEqual(s.method(), s) since these tests
+  // are already skipped via the 'should return this' pattern in SKIP_TESTS
+
+  // Note: We don't add [constructor options not supported] suffix since tests
+  // using constructor options are inside describe blocks that are already skipped
+  // (e.g., 'options', 'clone', etc.) or matched by SKIP_TESTS patterns
+
+  // Note: "should reset modified ranges" now passes (overwrite+remove+reset works correctly)
+
+  return transformed;
+}
+
+function escapeRegex(string) {
+  return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+function formatWithVpFmt(content, filepath) {
+  try {
+    const vp = process.platform === 'win32' ? 'vp.cmd' : 'vp';
+    const banner = 'VITE+ - The Unified Toolchain for the Web\n\n';
+    const output = execSync(`${vp} fmt --stdin-filepath ${filepath}`, {
+      input: content,
+      encoding: 'utf-8',
+      maxBuffer: 10 * 1024 * 1024, // 10MB buffer for large files
+    });
+    return output.startsWith(banner) ? output.slice(banner.length) : output;
+  } catch (error) {
+    console.warn(
+      `  Warning: vp fmt formatting failed, using unformatted content: ${error.message}`,
+    );
+    return content;
+  }
+}
+
+async function main() {
+  console.log('Downloading and adapting magic-string tests...\n');
+
+  for (const filename of TEST_FILES) {
+    try {
+      const content = await downloadFile(filename);
+      const transformed = transformTestFile(content, filename);
+
+      // Save as .test.ts
+      const outputFilename = filename.replace('.test.js', '.test.ts');
+      const outputPath = join(__dirname, outputFilename);
+
+      // Format with vp fmt before saving
+      const formatted = formatWithVpFmt(transformed, outputFilename);
+
+      writeFileSync(outputPath, formatted, 'utf-8');
+      console.log(`  Saved: ${outputFilename}`);
+    } catch (error) {
+      console.error(`  Error processing ${filename}:`, error.message);
+    }
+  }
+
+  console.log('\nDone!');
+  console.log('\nSkipped describe blocks:', SKIP_DESCRIBE_BLOCKS.join(', '));
+  console.log('Skipped test patterns:', SKIP_TESTS.join(', '));
+}
+
+main().catch(console.error);

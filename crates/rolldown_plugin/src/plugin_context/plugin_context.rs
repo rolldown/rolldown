@@ -62,8 +62,8 @@ impl PluginContext {
         module_infos: Arc::clone(&ctx.module_infos),
         tx: Arc::clone(&ctx.tx),
         session: ctx.session.clone(),
-        bundle_span: Arc::clone(&ctx.bundle_span),
-        manual_resolve_span: Arc::clone(&ctx.manual_resolve_span),
+        bundle_span: ctx.bundle_span.clone(),
+        manual_resolve_span: ctx.manual_resolve_span.clone(),
       })),
     }
   }
@@ -86,8 +86,8 @@ impl PluginContext {
     call_native_only!(self, "resolve", ctx => ctx.resolve(specifier, importer, extra_options).await)
   }
 
-  pub async fn emit_chunk(&self, chunk: rolldown_common::EmittedChunk) -> anyhow::Result<ArcStr> {
-    call_native_only!(self, "emit_chunk", ctx => ctx.emit_chunk(chunk).await)
+  pub fn emit_chunk(&self, chunk: rolldown_common::EmittedChunk) -> anyhow::Result<ArcStr> {
+    call_native_only!(self, "emit_chunk", ctx => ctx.emit_chunk(chunk))
   }
 
   pub fn emit_file(
@@ -108,6 +108,10 @@ impl PluginContext {
 
   pub fn get_file_name(&self, reference_id: &str) -> anyhow::Result<ArcStr> {
     call_native_only!(self, "get_file_name", ctx => ctx.get_file_name(reference_id))
+  }
+
+  pub fn associate_module_with_file_ref(&self, module_id: &str, reference_id: &str) {
+    call_native_only!(self, "associate_module_with_file_ref", ctx => ctx.associate_module_with_file_ref(module_id, reference_id));
   }
 
   pub fn get_module_info(&self, module_id: &str) -> Option<Arc<rolldown_common::ModuleInfo>> {

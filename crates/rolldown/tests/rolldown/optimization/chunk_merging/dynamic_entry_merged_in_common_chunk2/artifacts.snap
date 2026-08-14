@@ -1,0 +1,103 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## imp.js
+
+```js
+import { n as __esmMin, r as __exportAll, t as __commonJSMin } from "./main.js";
+//#region imp2.js
+var imp2_exports = /* @__PURE__ */ __exportAll({ imp2: () => 2 });
+var init_imp2 = __esmMin((() => {}));
+//#endregion
+//#region imp.js
+var require_imp = /* @__PURE__ */ __commonJSMin(((exports) => {
+	exports.imp = 1;
+}));
+//#endregion
+export { imp2_exports as n, init_imp2 as r, require_imp as t };
+
+```
+
+## main.js
+
+```js
+import assert from "node:assert";
+// HIDDEN [\0rolldown/runtime.js]
+//#region main.js
+const load = async () => {
+	import("./imp.js").then((n) => /* @__PURE__ */ __toESM(n.t())).then((m) => {
+		assert.strictEqual(m.imp, 1);
+	});
+	import("./imp.js").then((n) => (n.r(), n.n)).then((m) => {
+		assert.strictEqual(m.imp2, 2);
+	});
+};
+load();
+//#endregion
+export { __esmMin as n, __exportAll as r, __commonJSMin as t };
+
+```
+
+# Variant: [format: Cjs]
+
+## Assets
+
+### imp.js
+
+```js
+const require_main = require("./main.js");
+//#region imp2.js
+var imp2_exports = /* @__PURE__ */ require_main.__exportAll({ imp2: () => 2 });
+var init_imp2 = require_main.__esmMin((() => {}));
+//#endregion
+//#region imp.js
+var require_imp = /* @__PURE__ */ require_main.__commonJSMin(((exports) => {
+	exports.imp = 1;
+}));
+//#endregion
+Object.defineProperty(exports, "imp2_exports", {
+	enumerable: true,
+	get: function() {
+		return imp2_exports;
+	}
+});
+Object.defineProperty(exports, "init_imp2", {
+	enumerable: true,
+	get: function() {
+		return init_imp2;
+	}
+});
+Object.defineProperty(exports, "require_imp", {
+	enumerable: true,
+	get: function() {
+		return require_imp;
+	}
+});
+
+```
+
+### main.js
+
+```js
+Object.defineProperty(exports, Symbol.toStringTag, { value: "Module" });
+// HIDDEN [\0rolldown/runtime.js]
+let node_assert = require("node:assert");
+node_assert = __toESM(node_assert);
+//#region main.js
+const load = async () => {
+	Promise.resolve().then(() => require("./imp.js")).then((n) => /* @__PURE__ */ __toESM(n.require_imp())).then((m) => {
+		node_assert.default.strictEqual(m.imp, 1);
+	});
+	Promise.resolve().then(() => require("./imp.js")).then((n) => (n.init_imp2(), n.imp2_exports)).then((m) => {
+		node_assert.default.strictEqual(m.imp2, 2);
+	});
+};
+load();
+//#endregion
+exports.__commonJSMin = __commonJSMin;
+exports.__esmMin = __esmMin;
+exports.__exportAll = __exportAll;
+
+```

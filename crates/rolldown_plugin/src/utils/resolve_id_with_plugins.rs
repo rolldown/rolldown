@@ -2,19 +2,16 @@ use crate::{
   HookResolveIdArgs, PluginDriver,
   types::{custom_field::CustomField, hook_resolve_id_skipped::HookResolveIdSkipped},
 };
-use rolldown_common::{
-  ImportKind, ModuleDefFormat, PackageJson, ResolvedId, is_existing_node_builtin_modules,
-};
+use nodejs_built_in_modules::is_nodejs_builtin_module;
+use rolldown_common::{ImportKind, ModuleDefFormat, ModuleId, PackageJson, ResolvedId};
+use rolldown_fs::FileSystem;
 use rolldown_resolver::{ResolveError, Resolver};
+use rolldown_utils::dataurl::is_data_url;
 use std::{path::Path, sync::Arc};
 use sugar_path::SugarPath;
 
 fn is_http_url(s: &str) -> bool {
   s.starts_with("http://") || s.starts_with("https://") || s.starts_with("//")
-}
-
-pub fn is_data_url(s: &str) -> bool {
-  s.trim_start().starts_with("data:")
 }
 
 /// Infers ModuleDefFormat from file path and optional package.json.
@@ -51,8 +48,8 @@ pub fn infer_module_def_format(
 }
 
 #[expect(clippy::too_many_arguments)]
-pub async fn resolve_id_with_plugins(
-  resolver: &Resolver,
+pub async fn resolve_id_with_plugins<Fs: FileSystem>(
+  resolver: &Resolver<Fs>,
   plugin_driver: &PluginDriver,
   specifier: &str,
   importer: Option<&str>,
@@ -83,7 +80,7 @@ pub async fn resolve_id_with_plugins(
         .transpose()?;
       return Ok(Ok(ResolvedId {
         module_def_format: infer_module_def_format(r.id.as_str(), package_json.as_ref()),
-        id: r.id,
+        id: ModuleId::new(r.id),
         external: r.external.unwrap_or_default(),
         normalize_external_id: r.normalize_external_id,
         side_effects: r.side_effects,
@@ -113,7 +110,7 @@ pub async fn resolve_id_with_plugins(
       .transpose()?;
     return Ok(Ok(ResolvedId {
       module_def_format: infer_module_def_format(r.id.as_str(), package_json.as_ref()),
-      id: r.id,
+      id: ModuleId::new(r.id),
       external: r.external.unwrap_or_default(),
       normalize_external_id: r.normalize_external_id,
       side_effects: r.side_effects,
@@ -125,7 +122,7 @@ pub async fn resolve_id_with_plugins(
   // Auto external http url or data url
   if is_http_url(specifier) || is_data_url(specifier) {
     return Ok(Ok(ResolvedId {
-      id: specifier.into(),
+      id: ModuleId::new(specifier),
       external: true.into(),
       ..Default::default()
     }));
@@ -134,13 +131,17 @@ pub async fn resolve_id_with_plugins(
   Ok(resolve_id(resolver, specifier, importer, import_kind, is_user_defined_entry))
 }
 
-fn resolve_id(
-  resolver: &Resolver,
+fn resolve_id<Fs: FileSystem>(
+  resolver: &Resolver<Fs>,
   specifier: &str,
   importer: Option<&str>,
   import_kind: ImportKind,
   is_user_defined_entry: bool,
 ) -> Result<ResolvedId, ResolveError> {
+  // Data URL modules have no filesystem location, so imports from them cannot be resolved.
+  if importer.is_some_and(|id| id.starts_with("\0rolldown/data-url:")) {
+    return Err(ResolveError::NotFound(specifier.to_string()));
+  }
   let resolved =
     resolver.resolve(importer.map(Path::new), specifier, import_kind, is_user_defined_entry);
 
@@ -150,19 +151,17 @@ fn resolve_id(
       ResolveError::Builtin { resolved, is_runtime_module } => Ok(ResolvedId {
         // `resolved` is always prefixed with "node:" in compliance with the ESM specification.
         // we needs to use `is_runtime_module` to get the original specifier
-        is_external_without_side_effects: is_existing_node_builtin_modules(&resolved),
-        id: if resolved.starts_with("node:") && !is_runtime_module {
-          resolved[5..].into()
+        is_external_without_side_effects: is_nodejs_builtin_module(&resolved),
+        id: ModuleId::new(if resolved.starts_with("node:") && !is_runtime_module {
+          &resolved[5..]
         } else {
-          resolved.into()
-        },
+          &resolved
+        }),
         external: true.into(),
         ..Default::default()
       }),
       ResolveError::Ignored(p) => Ok(ResolvedId {
-        //(hyf0) TODO: This `p` doesn't seem to contains `query` or `fragment` of the input. We need to make sure this is ok
-        id: p.to_str().expect("Should be valid utf8").into(),
-        ignored: true,
+        id: ModuleId::new_empty(p.to_str().expect("Should be valid utf8")),
         ..Default::default()
       }),
       _ => Err(err),

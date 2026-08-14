@@ -1,0 +1,35 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## a.js
+
+```js
+//#region a.js
+var require_a = /* @__PURE__ */ require("./main.js").__commonJSMin(((exports, module) => {
+	module.exports = {
+		value: 42,
+		hello: "world"
+	};
+}));
+//#endregion
+Object.defineProperty(exports, "default", {
+	enumerable: true,
+	get: function() {
+		return require_a();
+	}
+});
+
+```
+
+## main.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+//#region main.js
+Promise.resolve().then(() => /* @__PURE__ */ __toESM(require("./a.js").default)).then((m) => console.log(m.default));
+//#endregion
+exports.__commonJSMin = __commonJSMin;
+
+```

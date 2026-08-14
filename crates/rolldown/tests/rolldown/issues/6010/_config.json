@@ -1,0 +1,12 @@
+{
+  "_comment": "Test for issue #6010: With preserveModules, a named export (`myVariable`) is dropped from the emitted chunk when the module is only consumed through a namespace re-export (`export * as three`). `dist/three.js` should keep `export { myVariable, three_exports }`.",
+  "config": {
+    "input": [
+      {
+        "name": "index",
+        "import": "./index.js"
+      }
+    ],
+    "preserveModules": true
+  }
+}

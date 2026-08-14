@@ -8,7 +8,7 @@ use sugar_path::SugarPath;
 async fn main() {
   let mut bundler = Bundler::new(BundlerOptions {
     input: Some(vec!["./entry-a.js".to_string().into(), "./entry-b.js".to_string().into()]),
-    cwd: Some(workspace::crate_dir("rolldown").join("./examples/lazy").normalize()),
+    cwd: Some(workspace::crate_dir("rolldown").join("./examples/lazy").normalize().into_owned()),
     sourcemap: None,
     experimental: Some(ExperimentalOptions {
       dev_mode: Some(DevModeOptions { lazy: Some(true), ..Default::default() }),

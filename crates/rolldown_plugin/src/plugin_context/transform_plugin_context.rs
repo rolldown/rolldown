@@ -2,10 +2,8 @@ use std::{ops::Deref, sync::Arc};
 
 use crate::PluginContext;
 use arcstr::ArcStr;
-use rolldown_common::{
-  ModuleIdx, PluginIdx, SourceMapGenMsg, SourcemapChainElement, SourcemapHires,
-};
-use rolldown_sourcemap::{SourceMap, collapse_sourcemaps};
+use rolldown_common::{ModuleIdx, PluginIdx, SourceMapGenMsg, SourcemapChainElement};
+use rolldown_sourcemap::{SourceMap, collapse_sourcemaps, empty_sourcemap};
 use rolldown_utils::unique_arc::WeakRef;
 use std::sync::mpsc;
 use string_wizard::{MagicString, SourceMapOptions};
@@ -18,7 +16,7 @@ pub struct TransformPluginContext {
   id: ArcStr,
   module_idx: ModuleIdx,
   plugin_idx: PluginIdx,
-  magic_string_tx: Option<Arc<mpsc::Sender<SourceMapGenMsg>>>,
+  magic_string_tx: Option<mpsc::Sender<SourceMapGenMsg>>,
 }
 
 impl TransformPluginContext {
@@ -29,44 +27,36 @@ impl TransformPluginContext {
     id: ArcStr,
     module_idx: ModuleIdx,
     plugin_idx: PluginIdx,
-    magic_string_tx: Option<Arc<mpsc::Sender<SourceMapGenMsg>>>,
+    magic_string_tx: Option<mpsc::Sender<SourceMapGenMsg>>,
   ) -> Self {
     Self { inner, sourcemap_chain, original_code, id, module_idx, plugin_idx, magic_string_tx }
   }
 
   pub fn get_combined_sourcemap(&self) -> SourceMap {
     self.sourcemap_chain.with_inner(|sourcemap_chain| {
-      if sourcemap_chain.is_empty() {
-        self.create_sourcemap()
-      } else if sourcemap_chain.len() == 1 {
-        match sourcemap_chain.first().expect("should have one sourcemap") {
+      let empty_map = empty_sourcemap();
+      let chain: Vec<&SourceMap> = sourcemap_chain
+        .iter()
+        .filter_map(|element| match element {
           SourcemapChainElement::Transform((_, sourcemap))
-          | SourcemapChainElement::Load(sourcemap) => sourcemap.clone(),
-        }
-      } else {
-        let sourcemap_chain = sourcemap_chain
-          .iter()
-          .map(|element| match element {
-            SourcemapChainElement::Transform((_, sourcemap))
-            | SourcemapChainElement::Load(sourcemap) => sourcemap,
-          })
-          .collect::<Vec<_>>();
+          | SourcemapChainElement::Load(sourcemap) => Some(sourcemap),
+          SourcemapChainElement::Omitted { .. } => Some(&empty_map),
+          SourcemapChainElement::Null { .. } => None,
+        })
+        .collect();
+      match chain.as_slice() {
+        [] => self.create_sourcemap(),
+        [single] => (*single).clone(),
         // TODO Here could be cache result for pervious sourcemap_chain, only remapping new sourcemap chain
-        collapse_sourcemaps(&sourcemap_chain)
+        _ => collapse_sourcemaps(&chain),
       }
     })
   }
 
   fn create_sourcemap(&self) -> SourceMap {
     let magic_string = MagicString::new(self.original_code.as_str());
-    let hires = self
-      .inner
-      .options()
-      .experimental
-      .transform_hires_sourcemap
-      .unwrap_or(SourcemapHires::Boundary);
     magic_string.source_map(SourceMapOptions {
-      hires: hires.into(),
+      hires: string_wizard::Hires::Boundary,
       include_content: true,
       source: self.id.as_str().into(),
     })
@@ -76,10 +66,16 @@ impl TransformPluginContext {
   ///
   /// * file - The file to add as a watch dependency. This should be a normalized absolute path.
   pub fn add_watch_file(&self, file: &str) {
-    // Call the parent method to add to global watch files
+    // Skip all operations for virtual modules (starting with \0)
+    // Virtual modules can't be refetched from disk during HMR
+    if self.id.starts_with('\0') {
+      return;
+    }
+
+    // Add to global watch files
     self.inner.add_watch_file(file);
 
-    // Also add to this module's transform dependencies
+    // Add to this module's transform dependencies
     if let crate::PluginContext::Native(ctx) = &self.inner {
       if let Some(plugin_driver) = ctx.plugin_driver.upgrade() {
         plugin_driver.add_transform_dependency(self.module_idx, file);
@@ -95,6 +91,7 @@ impl TransformPluginContext {
       tx.send(SourceMapGenMsg::MagicString(Box::new((
         self.module_idx,
         self.plugin_idx,
+        self.id.clone(),
         magic_string,
       ))))
       .map(|()| None)

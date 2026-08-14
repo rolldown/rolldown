@@ -1,4 +1,4 @@
 function Something() {
-  return <div>Something</div>
+  return <div>Something</div>;
 }
-console.log(`<Something/>: `, <Something/>)
+console.log(`<Something/>: `, <Something />);

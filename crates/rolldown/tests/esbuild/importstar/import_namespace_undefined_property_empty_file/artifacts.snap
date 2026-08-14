@@ -6,7 +6,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## IMPORT_IS_UNDEFINED
 
 ```text
-[IMPORT_IS_UNDEFINED] Warning: Import `default` will always be undefined because there is no matching export in 'empty.js'
+[IMPORT_IS_UNDEFINED] Import `default` will always be undefined because there is no matching export in 'empty.js'
    ╭─[ entry-default.js:5:2 ]
    │
  5 │     js.default,
@@ -19,7 +19,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## IMPORT_IS_UNDEFINED
 
 ```text
-[IMPORT_IS_UNDEFINED] Warning: Import `default` will always be undefined because there is no matching export in 'empty.mjs'
+[IMPORT_IS_UNDEFINED] Import `default` will always be undefined because there is no matching export in 'empty.mjs'
    ╭─[ entry-default.js:6:2 ]
    │
  6 │     mjs.default,
@@ -32,7 +32,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## IMPORT_IS_UNDEFINED
 
 ```text
-[IMPORT_IS_UNDEFINED] Warning: Import `nope` will always be undefined because there is no matching export in 'empty.js'
+[IMPORT_IS_UNDEFINED] Import `nope` will always be undefined because there is no matching export in 'empty.js'
    ╭─[ entry-nope.js:5:2 ]
    │
  5 │     js.nope,
@@ -45,7 +45,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## IMPORT_IS_UNDEFINED
 
 ```text
-[IMPORT_IS_UNDEFINED] Warning: Import `nope` will always be undefined because there is no matching export in 'empty.mjs'
+[IMPORT_IS_UNDEFINED] Import `nope` will always be undefined because there is no matching export in 'empty.mjs'
    ╭─[ entry-nope.js:6:2 ]
    │
  6 │     mjs.nope,
@@ -60,34 +60,32 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## empty.js
 
 ```js
-// HIDDEN [rolldown:runtime]
+// HIDDEN [\0rolldown/runtime.js]
 //#region empty.cjs
 var require_empty = /* @__PURE__ */ __commonJSMin((() => {}));
-
 //#endregion
 export { __toESM as n, require_empty as t };
+
 ```
 
 ## entry-default.js
 
 ```js
 import { n as __toESM, t as require_empty } from "./empty.js";
-
 //#region entry-default.js
 var import_empty = /* @__PURE__ */ __toESM(require_empty());
 console.log(void 0, void 0, import_empty.default);
-
 //#endregion
+
 ```
 
 ## entry-nope.js
 
 ```js
 import { n as __toESM, t as require_empty } from "./empty.js";
-
 //#region entry-nope.js
 var import_empty = /* @__PURE__ */ __toESM(require_empty());
 console.log(void 0, void 0, import_empty.nope);
-
 //#endregion
+
 ```

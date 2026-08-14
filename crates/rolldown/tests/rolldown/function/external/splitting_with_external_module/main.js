@@ -1,5 +1,4 @@
+import assert from 'node:assert';
+import { value } from './share';
 
-import assert from "node:assert"
-import { value } from "./share"
-
-assert(value === 1)
+assert(value === 1);

@@ -6,25 +6,17 @@ import { normalizedStringOrRegex } from '../utils/normalize-string-or-regex';
 type TransformPattern = string | RegExp | readonly (RegExp | string)[];
 
 // A temp config type for giving better user experience
-type TransformPluginConfig =
-  & Omit<
-    BindingViteTransformPluginConfig,
-    | 'include'
-    | 'exclude'
-    | 'jsxRefreshInclude'
-    | 'jsxRefreshExclude'
-    | 'yarnPnp'
-  >
-  & {
-    include?: TransformPattern;
-    exclude?: TransformPattern;
-    jsxRefreshInclude?: TransformPattern;
-    jsxRefreshExclude?: TransformPattern;
-  };
+type TransformPluginConfig = Omit<
+  BindingViteTransformPluginConfig,
+  'include' | 'exclude' | 'jsxRefreshInclude' | 'jsxRefreshExclude' | 'yarnPnp'
+> & {
+  include?: TransformPattern;
+  exclude?: TransformPattern;
+  jsxRefreshInclude?: TransformPattern;
+  jsxRefreshExclude?: TransformPattern;
+};
 
-export function viteTransformPlugin(
-  config: TransformPluginConfig,
-): BuiltinPlugin {
+export function viteTransformPlugin(config: TransformPluginConfig): BuiltinPlugin {
   return new BuiltinPlugin('builtin:vite-transform', {
     ...config,
     include: normalizedStringOrRegex(config.include),

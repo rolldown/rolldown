@@ -1,7 +1,8 @@
 {
   // Unsplitable max size shouldn't make the group invalid/ignored
   "config": {
-    "advancedChunks": {
+    "minify": false,
+    "codeSplitting": {
       "groups": [
         {
           // `size-15.js`, `size-20` and `size-41.js` will be captured

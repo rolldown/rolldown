@@ -2,6 +2,7 @@ import { defineTest } from 'rolldown-tests';
 import { expect } from 'vitest';
 
 export default defineTest({
+  sequential: true,
   config: {
     treeshake: {
       unknownGlobalSideEffects: false,
@@ -13,8 +14,8 @@ export default defineTest({
     expect(code).toMatchInlineSnapshot(`
       "//#region main.js
       angular.element;
-
-      //#endregion"
+      //#endregion
+      "
     `);
   },
 });

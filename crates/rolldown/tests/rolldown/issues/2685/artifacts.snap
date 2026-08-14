@@ -7,14 +7,11 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 import { createRequire } from "node:module";
-
-//#region rolldown:runtime
-var __require = /* @__PURE__ */ createRequire(import.meta.url);
-
+//#region \0rolldown/runtime.js
 //#endregion
 //#region main.js
-var main_default = __require("path").join;
-
+var main_default = (/* @__PURE__ */ (() => createRequire(import.meta.url))())("path").join;
 //#endregion
 export { main_default as default };
+
 ```

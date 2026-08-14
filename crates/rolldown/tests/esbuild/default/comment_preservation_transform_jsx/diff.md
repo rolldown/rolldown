@@ -44,8 +44,8 @@ console.log(
 ```js
 //#region entry.jsx
 console.log(/* @__PURE__ */ React.createElement("div", { x }), /* @__PURE__ */ React.createElement("div", { x: "y" }), /* @__PURE__ */ React.createElement("div", { x: true }), /* @__PURE__ */ React.createElement("div", x), /* @__PURE__ */ React.createElement("div", null, x), /* @__PURE__ */ React.createElement(React.Fragment, null, x), /* @__PURE__ */ React.createElement("div", null, "before", "after"), /* @__PURE__ */ React.createElement("div", null, "before", "after"), /* @__PURE__ */ React.createElement("div", null, "before", "after"), /* @__PURE__ */ React.createElement(React.Fragment, null, "before", "after"), /* @__PURE__ */ React.createElement(React.Fragment, null, "before", "after"), /* @__PURE__ */ React.createElement(React.Fragment, null, "before", "after"));
-
 //#endregion
+
 ```
 ### diff
 ```diff

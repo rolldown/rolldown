@@ -1,1 +1,1 @@
-module.exports = 'cjs-default'
+module.exports = 'cjs-default';

@@ -3,17 +3,19 @@ source: crates/rolldown_testing/src/integration_test.rs
 ---
 # Assets
 
-## assets/image-Dq1zDy-k.png
+## assets/image-RzbKAZGz.png
 
 ## entries/entry.js
 
 ```js
+// HIDDEN [\0rolldown/runtime.js]
 //#region images/image.png
-var image_default = "assets/image-Dq1zDy-k.png";
-
 //#endregion
 //#region entries/entry.js
-console.log(image_default);
-
+var import_image = /* @__PURE__ */ __toESM((/* @__PURE__ */ __commonJSMin(((exports, module) => {
+	module.exports = "../assets/image-RzbKAZGz.png";
+})))());
+console.log(import_image.default);
 //#endregion
+
 ```

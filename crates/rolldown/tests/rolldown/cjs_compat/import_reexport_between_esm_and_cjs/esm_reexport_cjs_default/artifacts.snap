@@ -6,17 +6,14 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## main.js
 
 ```js
-// HIDDEN [rolldown:runtime]
+// HIDDEN [\0rolldown/runtime.js]
 //#region commonjs.js
-var require_commonjs = /* @__PURE__ */ __commonJSMin(((exports, module) => {
-	module.exports = "foo";
-}));
-
 //#endregion
 //#region main.js
-var import_commonjs = /* @__PURE__ */ __toESM(require_commonjs());
-
 //#endregion
-var commonjs_default = import_commonjs.default;
+var commonjs_default = (/* @__PURE__ */ __toESM((/* @__PURE__ */ __commonJSMin(((exports, module) => {
+	module.exports = "foo";
+})))())).default;
 export { commonjs_default as default };
+
 ```

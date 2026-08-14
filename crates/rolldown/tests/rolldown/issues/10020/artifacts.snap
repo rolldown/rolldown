@@ -1,0 +1,44 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## data.js
+
+```js
+//#region data.json
+var data_default = {
+	aBeeZee: [
+		0,
+		920,
+		-262,
+		0,
+		1e3,
+		481
+	],
+	Abel: [
+		0,
+		750,
+		-250,
+		0,
+		1e3,
+		500
+	]
+};
+//#endregion
+export { data_default as default };
+
+```
+
+## index.js
+
+```js
+import data_default from "./data.js";
+//#region index.js
+function get(name) {
+	return data_default[name];
+}
+//#endregion
+export { get };
+
+```

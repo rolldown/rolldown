@@ -1,0 +1,71 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## entry-a.js
+
+```js
+import { n as import_fake_core, t as useCore } from "./utils.js";
+//#region entry-a.js
+console.log("Entry A:", import_fake_core.default, useCore());
+//#endregion
+
+```
+
+## entry-b.js
+
+```js
+import { n as import_fake_core, t as useCore } from "./utils.js";
+//#region entry-b.js
+console.log("Entry B:", import_fake_core.default, useCore());
+//#endregion
+
+```
+
+## utils.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+//#region fake-core.cjs
+var require_fake_core = /* @__PURE__ */ __commonJSMin(((exports, module) => {
+	(function() {
+		"use strict";
+		var fakeCore = {
+			registry: [],
+			register: function(name) {
+				this.registry.push(name);
+			}
+		};
+		globalThis.fakeCore = fakeCore;
+		if (typeof module === "object") try {
+			module.exports = fakeCore;
+		} catch (_e) {}
+	})();
+}));
+//#endregion
+//#region fake-plugin-model.cjs
+var require_fake_plugin_model = /* @__PURE__ */ __commonJSMin((() => {
+	(function() {
+		"use strict";
+		globalThis.fakeCore.register("dom-model");
+	})();
+}));
+//#endregion
+//#region fake-plugin.cjs
+var require_fake_plugin = /* @__PURE__ */ __commonJSMin((() => {
+	require_fake_plugin_model();
+}));
+//#endregion
+//#region wrapper.js
+var import_fake_core = /* @__PURE__ */ __toESM(require_fake_core());
+require_fake_plugin();
+//#endregion
+//#region utils.js
+function useCore() {
+	return import_fake_core.default.registry;
+}
+//#endregion
+export { import_fake_core as n, useCore as t };
+
+```

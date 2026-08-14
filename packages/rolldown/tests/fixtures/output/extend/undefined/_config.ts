@@ -2,6 +2,7 @@ import { defineTest } from 'rolldown-tests';
 import { expect } from 'vitest';
 
 export default defineTest({
+  sequential: true,
   config: {
     output: {
       exports: 'named',
@@ -12,15 +13,12 @@ export default defineTest({
   afterTest: (output) => {
     expect(output.output[0].code).toMatchInlineSnapshot(`
       "var module = (function(exports) {
-
-
-      //#region main.js
-      	const main = "main";
-
-      //#endregion
-      exports.main = main;
-      return exports;
-      })({});"
+      	Object.defineProperty(exports, Symbol.toStringTag, { value: "Module" });
+      	//#endregion
+      	exports.main = "main";
+      	return exports;
+      })({});
+      "
     `);
   },
 });

@@ -1,0 +1,22 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+//#region module_with_conflict.js
+const a$1 = "from-this-module";
+function test(a) {
+	return a + "-test";
+}
+console.log(a$1);
+//#endregion
+//#region other.js
+//#endregion
+//#region main.js
+console.log("from-other", test("x"));
+//#endregion
+
+```

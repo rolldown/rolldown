@@ -3,46 +3,31 @@ source: crates/rolldown_testing/src/integration_test.rs
 ---
 # Assets
 
-## _virtual/rolldown_runtime.js
-
-```js
-// HIDDEN [rolldown:runtime]
-
-exports.__exportAll = __exportAll;
-exports.__reExport = __reExport;
-```
-
 ## index.js
 
 ```js
-const require_rolldown_runtime = require('./_virtual/rolldown_runtime.js');
-require('./middle.js');
+Object.defineProperty(exports, Symbol.toStringTag, { value: "Module" });
+require("./middle.js");
 let zod = require("zod");
-
-//#region index.ts
-var _7233_chain_exports = /* @__PURE__ */ require_rolldown_runtime.__exportAll({
-	object: () => zod.object,
-	string: () => zod.string
+Object.defineProperty(exports, "object", {
+	enumerable: true,
+	get: function() {
+		return zod.object;
+	}
 });
-
-//#endregion
-Object.defineProperty(exports, 'object', {
-  enumerable: true,
-  get: function () {
-    return zod.object;
-  }
+Object.defineProperty(exports, "string", {
+	enumerable: true,
+	get: function() {
+		return zod.string;
+	}
 });
-Object.defineProperty(exports, 'string', {
-  enumerable: true,
-  get: function () {
-    return zod.string;
-  }
-});
-Object.keys(zod).forEach(function (k) {
-  if (k !== 'default' && !Object.prototype.hasOwnProperty.call(exports, k)) Object.defineProperty(exports, k, {
-    enumerable: true,
-    get: function () { return zod[k]; }
-  });
+Object.keys(zod).forEach(function(k) {
+	if (k !== "default" && !Object.prototype.hasOwnProperty.call(exports, k)) Object.defineProperty(exports, k, {
+		enumerable: true,
+		get: function() {
+			return zod[k];
+		}
+	});
 });
 
 ```
@@ -50,16 +35,27 @@ Object.keys(zod).forEach(function (k) {
 ## middle.js
 
 ```js
-const require_rolldown_runtime = require('./_virtual/rolldown_runtime.js');
-require('./server.js');
+require("./server.js");
 let zod = require("zod");
-
-
-Object.keys(zod).forEach(function (k) {
-  if (k !== 'default' && !Object.prototype.hasOwnProperty.call(exports, k)) Object.defineProperty(exports, k, {
-    enumerable: true,
-    get: function () { return zod[k]; }
-  });
+Object.defineProperty(exports, "object", {
+	enumerable: true,
+	get: function() {
+		return zod.object;
+	}
+});
+Object.defineProperty(exports, "string", {
+	enumerable: true,
+	get: function() {
+		return zod.string;
+	}
+});
+Object.keys(zod).forEach(function(k) {
+	if (k !== "default" && !Object.prototype.hasOwnProperty.call(exports, k)) Object.defineProperty(exports, k, {
+		enumerable: true,
+		get: function() {
+			return zod[k];
+		}
+	});
 });
 
 ```
@@ -68,5 +64,17 @@ Object.keys(zod).forEach(function (k) {
 
 ```js
 let zod = require("zod");
+Object.defineProperty(exports, "object", {
+	enumerable: true,
+	get: function() {
+		return zod.object;
+	}
+});
+Object.defineProperty(exports, "string", {
+	enumerable: true,
+	get: function() {
+		return zod.string;
+	}
+});
 
 ```

@@ -9,14 +9,18 @@ inlined = [
 
 	a_str.x,
 	b_str['x'],
-]
 
-not_inlined = [
+	// Optional chain — enum bindings are always defined (the IIFE produces
+	// `{}`, never null/undefined), so `?.` is equivalent to `.` here.
 	c_num?.x,
 	d_num?.['x'],
-	e_num,
 
 	c_str?.x,
 	d_str?.['x'],
+]
+
+not_inlined = [
+	// Bare references — used opaquely, keep declarations alive.
+	e_num,
 	e_str,
 ]

@@ -1,11 +1,13 @@
 use crate::stages::link_stage::{ModuleInclusionVec, ModuleNamespaceReasonVec, StmtInclusionVec};
-use oxc::span::CompactStr;
 use oxc_index::IndexVec;
+use oxc_str::CompactStr;
 use rolldown_common::{
-  ConcatenateWrappedModuleKind, EntryPointKind, ImportRecordIdx, MemberExprRefResolutionMap,
-  ModuleIdx, ModuleNamespaceIncludedReason, ResolvedExport, RuntimeHelper, StmtInfoIdx, SymbolRef,
-  WrapKind, dynamic_import_usage::DynamicImportExportsUsage,
+  ConcatenateWrappedModuleKind, EntryPointKind, ImportRecordIdx, ImportRecordMeta,
+  MemberExprRefResolutionMap, ModuleIdx, ModuleNamespaceIncludedReason, OutputFormat,
+  ResolvedExport, RuntimeHelper, StmtInfoIdx, SymbolRef, WrapKind,
+  dynamic_import_usage::DynamicImportExportsUsage,
 };
+use rolldown_utils::IndexBitSet;
 use rolldown_utils::indexmap::{FxIndexMap, FxIndexSet};
 use rustc_hash::{FxHashMap, FxHashSet};
 
@@ -38,21 +40,16 @@ pub struct LinkingMetadata {
   /// `wrapper_ref` is the `require_cjs` identifier in above example.
   pub wrapper_ref: Option<SymbolRef>,
   pub wrapper_stmt_info: Option<StmtInfoIdx>,
-  /// Because when `strictExecutionOrder` is enabled, all modules will be wrapped
-  /// we need to store the original wrap kind that used for
-  /// [rolldown::stages::generate_stage::code_splitting::GenerateStage::ensure_lazy_module_initialization_order] analysis
-  original_wrap_kind: WrapKind,
-  /// The `wrap_kind` used for linking and code generation.
-  /// Intent to make those two fields private, so that we could ensure they are mutated in a more
-  /// safe way.
+  /// The module representation decided during linking.
   wrap_kind: WrapKind,
   // Store the export info for each module, including export named declaration and export star declaration.
   pub resolved_exports: FxHashMap<CompactStr, ResolvedExport>,
-  // pub re_export_all_names: FxHashSet<CompactStr>,
   /// Store the names of exclude ambiguous resolved exports.
   /// It will be used to generate chunk exports and module namespace binding.
   /// The second element means if the export is came from commonjs module.
   pub sorted_and_non_ambiguous_resolved_exports: FxIndexMap<CompactStr, bool>,
+  /// Direct `export *` record that first contributed each flattened resolved export.
+  pub star_export_record_by_name: FxHashMap<CompactStr, ImportRecordIdx>,
   // If a esm module has export star from commonjs, it will be marked as ESMWithDynamicFallback at linker.
   // The unknown export name will be resolved at runtime.
   // esbuild add it to `ExportKind`, but the linker shouldn't mutate the module.
@@ -67,6 +64,24 @@ pub struct LinkingMetadata {
 
   /// The dependencies of the module. It means if you want include this module, you need to include these dependencies too.
   pub dependencies: FxIndexSet<ModuleIdx>,
+  /// The subset of module graph edges that force the target module to be loaded when this module
+  /// executes, used by code splitting to compute per-entry reachability
+  /// (`determine_reachable_modules_for_entry`):
+  ///
+  /// - modules owning the canonical symbols referenced by this module's included statements
+  ///   (these are what become cross-chunk symbol imports), and
+  /// - import-record targets whose evaluation has side effects, mirroring both
+  ///   `include_side_effectful_dependencies` in tree-shaking and the bare-import emission in
+  ///   `compute_cross_chunk_links`.
+  ///
+  /// Unlike [`Self::dependencies`], a side-effect-free module imported only for bindings that
+  /// canonically resolve elsewhere (e.g. a pure barrel re-exporting them) is *not* a load
+  /// dependency, so an entry that never uses the barrel's own code doesn't pull the barrel (or
+  /// its subtree) into its chunk group (#8920). Populated by `patch_module_dependencies`; with
+  /// tree-shaking disabled it equals [`Self::dependencies`].
+  pub load_dependencies: FxIndexSet<ModuleIdx>,
+  /// Retained evaluation dependencies, excluding entry targets kept only for placement.
+  pub execution_dependencies: FxIndexSet<ModuleIdx>,
   // `None` the member expression resolve to a ambiguous export.
   pub resolved_member_expr_refs: MemberExprRefResolutionMap,
   pub star_exports_from_external_modules: Vec<ImportRecordIdx>,
@@ -81,10 +96,18 @@ pub struct LinkingMetadata {
   /// also need to link the exported facade symbol.
   pub included_commonjs_export_symbol: FxHashSet<SymbolRef>,
   pub depended_runtime_helper: RuntimeHelper,
+  /// Whether this module needs the runtime chunk loaded for its side effects.
+  /// Set when the runtime module has side effects (e.g. dev/HMR mode).
+  pub has_side_effectful_runtime_dep: bool,
   pub module_namespace_included_reason: ModuleNamespaceIncludedReason,
+  /// Final decision on whether this module's namespace object is retained in the output.
+  /// Computed by [`crate::stages::generate_stage`]'s `finalized_module_namespace_ref_usage`
+  /// from `module_namespace_included_reason` together with the module's `exports_kind` and
+  /// `has_dynamic_exports`; only meaningful for passes that run after it.
+  pub namespace_included: bool,
   /// Tracks which statements in this module are included after tree-shaking.
   /// Each entry corresponds to a statement in the module's `stmt_infos`.
-  pub stmt_info_included: IndexVec<StmtInfoIdx, bool>,
+  pub stmt_info_included: IndexBitSet<StmtInfoIdx>,
   /// Tracks whether the module is included after tree-shaking.
   pub is_included: bool,
 }
@@ -111,22 +134,32 @@ impl LinkingMetadata {
   }
 
   #[inline]
-  pub fn original_wrap_kind(&self) -> WrapKind {
-    self.original_wrap_kind
-  }
-
-  /// Synchronize the `wrap_kind` with the original wrap kind.
-  #[inline]
-  pub fn sync_wrap_kind(&mut self, wrap_kind: WrapKind) {
-    self.original_wrap_kind = wrap_kind;
+  pub fn set_wrap_kind(&mut self, wrap_kind: WrapKind) {
     self.wrap_kind = wrap_kind;
   }
 
-  /// Use this api with caution, ideally it should be only used for https://github.com/rolldown/rolldown/blob/76350f2b77364dbba29ba93562589a6eba6211dd/crates/rolldown/src/stages/link_stage/wrapping.rs?plain=1#L165-L185
-  /// override the wrapping kind when `strictExecutionOrder` is enabled.
-  #[inline]
-  pub fn update_wrap_kind(&mut self, wrap_kind: WrapKind) {
-    self.wrap_kind = wrap_kind;
+  /// Whether the namespace-object declaration will emit a `__reExport(ns, <external>)` call for
+  /// this `export * from <external>` record when the namespace is rendered.
+  ///
+  /// This is the single source of truth for the emission decision: the module finalizer emits
+  /// the call through it, and any pass that needs to predict the emission must call it instead
+  /// of re-deriving the condition. In ESM output an entry-level external star
+  /// re-export is flattened to a chunk-level `export * from '<external>'` statement instead, so
+  /// no runtime call is needed — unless the namespace object is genuinely observed
+  /// ([`ModuleNamespaceIncludedReason::Unknown`]), in which case the namespace must still merge
+  /// the external's exports at runtime.
+  pub fn ns_star_external_re_export_emitted(
+    &self,
+    rec_meta: ImportRecordMeta,
+    format: OutputFormat,
+  ) -> bool {
+    match format {
+      OutputFormat::Esm => {
+        !rec_meta.contains(ImportRecordMeta::EntryLevelExternal)
+          || self.module_namespace_included_reason.contains(ModuleNamespaceIncludedReason::Unknown)
+      }
+      OutputFormat::Cjs | OutputFormat::Iife | OutputFormat::Umd => true,
+    }
   }
 
   pub fn referenced_canonical_exports_symbols<'b, 'a: 'b>(
@@ -158,20 +191,24 @@ impl LinkingMetadata {
 
 pub type LinkingMetadataVec = IndexVec<ModuleIdx, LinkingMetadata>;
 
-/// Extracts and takes ownership of inclusion information from all module metas.
+/// Extracts inclusion information from all module metas.
 ///
 /// # Warning
-/// This function uses `mem::take` to move the inclusion info out of each meta,
-/// leaving the original fields with their default values. After calling this function,
-/// `stmt_info_included`, `is_included`, and `module_namespace_included_reason` in each
-/// meta will be reset to their defaults.
+/// This function uses `mem::take` to move `stmt_info_included` out of each meta,
+/// leaving it with its default value. `is_included` and `module_namespace_included_reason`
+/// are copied but not reset.
 pub fn linking_metadata_vec_to_included_info(
   metas: &mut LinkingMetadataVec,
 ) -> (StmtInclusionVec, ModuleInclusionVec, ModuleNamespaceReasonVec) {
   let stmt_info_included_vec: StmtInclusionVec =
     metas.iter_mut().map(|meta| std::mem::take(&mut meta.stmt_info_included)).collect();
 
-  let module_included_vec: ModuleInclusionVec = metas.iter().map(|meta| meta.is_included).collect();
+  let mut module_included_vec: ModuleInclusionVec = IndexBitSet::new(metas.len());
+  for (idx, meta) in metas.iter_enumerated() {
+    if meta.is_included {
+      module_included_vec.set_bit(idx);
+    }
+  }
 
   let module_namespace_reason_vec: ModuleNamespaceReasonVec =
     metas.iter().map(|meta| meta.module_namespace_included_reason).collect();
@@ -191,7 +228,7 @@ pub fn included_info_to_linking_metadata_vec(
 ) {
   for (idx, meta) in metas.iter_mut_enumerated() {
     meta.stmt_info_included = std::mem::take(&mut stmt_info_included_vec[idx]);
-    meta.is_included = module_included_vec[idx];
+    meta.is_included = module_included_vec.has_bit(idx);
     meta.module_namespace_included_reason = module_namespace_reason_vec[idx];
   }
 }

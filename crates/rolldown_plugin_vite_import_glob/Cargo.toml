@@ -12,6 +12,7 @@ description = "Rolldown plugin for glob imports"
 
 [lib]
 doctest = false
+test = false
 
 [lints]
 workspace = true
@@ -21,10 +22,11 @@ anyhow = { workspace = true }
 fast-glob = { workspace = true }
 itoa = { workspace = true }
 oxc = { workspace = true }
-rolldown_common = { workspace = true }
+path-posix = { workspace = true }
 rolldown_ecmascript_utils = { workspace = true }
 rolldown_plugin = { workspace = true }
 rolldown_plugin_utils = { workspace = true }
+rolldown_std_utils = { workspace = true }
 rolldown_utils = { workspace = true }
 string_wizard = { workspace = true }
 sugar_path = { workspace = true }

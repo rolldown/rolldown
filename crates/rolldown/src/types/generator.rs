@@ -1,24 +1,32 @@
-use oxc::span::CompactStr;
 use oxc_index::IndexVec;
+use oxc_str::CompactStr;
 use rolldown_common::{
-  Chunk, ChunkIdx, InstantiatedChunk, ModuleRenderOutput, NormalizedBundlerOptions, OutputExports,
-  SymbolRef,
+  Chunk, ChunkIdx, InstantiatedChunk, ModuleIdx, ModuleRenderOutput, NormalizedBundlerOptions,
+  OutputExports, PathsOutputOption, SymbolRef, UsedSymbolRefs,
 };
 use rolldown_error::{BuildDiagnostic, BuildResult};
 use rolldown_plugin::SharedPluginDriver;
 use rolldown_utils::{ecmascript::property_access_str, indexmap::FxIndexMap};
 use rustc_hash::FxHashMap;
 
-use crate::{chunk_graph::ChunkGraph, stages::link_stage::LinkStageOutput};
+use crate::{
+  chunk_graph::ChunkGraph,
+  stages::{
+    generate_stage::order_wrap_state::{EsmInitTarget, OrderWrapState},
+    link_stage::LinkStageOutput,
+  },
+};
 
 pub struct GenerateContext<'a> {
   pub chunk_idx: ChunkIdx,
   pub chunk: &'a Chunk,
   pub options: &'a NormalizedBundlerOptions,
   pub link_output: &'a LinkStageOutput,
+  /// Sealed record of inclusion-fixpoint liveness; see [`UsedSymbolRefs`].
+  pub used_symbol_refs: &'a UsedSymbolRefs,
+  pub order_wrap_state: &'a OrderWrapState,
   pub chunk_graph: &'a ChunkGraph,
   pub plugin_driver: &'a SharedPluginDriver,
-  pub warnings: Vec<BuildDiagnostic>,
   pub module_id_to_codegen_ret: Vec<Option<ModuleRenderOutput>>,
   /// The key of the map is exported item symbol,
   /// the value of the map is optional alias. e.g.
@@ -28,9 +36,16 @@ pub struct GenerateContext<'a> {
   /// export {a as b}; // symbol_ref points to `a`, and alias is `b`
   /// ```
   pub render_export_items_index_vec: &'a IndexVec<ChunkIdx, FxIndexMap<SymbolRef, Vec<CompactStr>>>,
+  /// Pre-resolved paths for external modules (always a `FxHashMap` variant).
+  /// Used instead of `options.paths` in sync rendering code to avoid deadlocks.
+  pub resolved_paths: Option<&'a PathsOutputOption>,
 }
 
 impl GenerateContext<'_> {
+  pub fn esm_init_target(&self, module_idx: ModuleIdx) -> Option<EsmInitTarget> {
+    self.order_wrap_state.esm_init_target(module_idx, &self.link_output.metas[module_idx])
+  }
+
   /// A `SymbolRef` might be identifier or a property access. This function will return correct string pattern for the symbol.
   pub fn finalized_string_pattern_for_symbol_ref(
     &self,
@@ -48,23 +63,39 @@ impl GenerateContext<'_> {
     let canonical_symbol = symbol_db.get(canonical_ref);
     let namespace_alias = &canonical_symbol.namespace_alias;
     if let Some(ns_alias) = namespace_alias {
-      let canonical_ns_name = &canonical_names[&ns_alias.namespace_ref];
+      // The namespace itself may be declared in another chunk. This is normally hidden by the
+      // facade and namespace living together, but generated per-record interop carriers place the
+      // namespace beside the CJS importee while its re-export facade stays owned by the barrel.
+      // Resolve the namespace through the same cross-chunk path as an ordinary symbol before
+      // appending the property; otherwise CJS output renders a bare, undeclared local identifier.
+      let canonical_ns_name =
+        if self.order_wrap_state.is_order_cjs_carrier_namespace(ns_alias.namespace_ref) {
+          self.finalized_string_pattern_for_symbol_ref(
+            ns_alias.namespace_ref,
+            cur_chunk_idx,
+            canonical_names,
+          )
+        } else {
+          symbol_db
+            .canonical_name_for_or_original(ns_alias.namespace_ref, canonical_names)
+            .to_string()
+        };
       let property_name = &ns_alias.property_name;
-      return property_access_str(canonical_ns_name, property_name);
+      return property_access_str(&canonical_ns_name, property_name);
     }
 
     if self.link_output.module_table[canonical_ref.owner].is_external() {
-      let namespace = &canonical_names[&canonical_ref];
+      let namespace = symbol_db.canonical_name_for_or_original(canonical_ref, canonical_names);
       return namespace.to_string();
     }
 
     match self.options.format {
       rolldown_common::OutputFormat::Cjs => {
-        let chunk_idx_of_canonical_symbol = canonical_symbol.chunk_id.unwrap_or_else(|| {
-          // Scoped symbols don't get assigned a `ChunkId`. There are skipped for performance reason, because they are surely
+        let chunk_idx_of_canonical_symbol = canonical_symbol.chunk_idx.unwrap_or_else(|| {
+          // Scoped symbols don't get assigned a `ChunkIdx`. There are skipped for performance reason, because they are surely
           // belong to the chunk they are declared in and won't link to other chunks.
           let symbol_name = canonical_ref.name(symbol_db);
-          panic!("{canonical_ref:?} {symbol_name:?} is not in any chunk, which isn't unexpected");
+          panic!("{canonical_ref:?} {symbol_name:?} is not in any chunk, which is unexpected");
         });
 
         let is_symbol_in_other_chunk = cur_chunk_idx != chunk_idx_of_canonical_symbol;
@@ -76,16 +107,26 @@ impl GenerateContext<'_> {
           let require_binding = &self.chunk_graph.chunk_table[cur_chunk_idx]
             .require_binding_names_for_other_chunks[&chunk_idx_of_canonical_symbol];
 
-          let exported_name = &self.chunk_graph.chunk_table[chunk_idx_of_canonical_symbol]
-            .exports_to_other_chunks[&canonical_ref][0];
+          let exporter_chunk = &self.chunk_graph.chunk_table[chunk_idx_of_canonical_symbol];
+          let exported_name = &exporter_chunk.exports_to_other_chunks[&canonical_ref][0];
           if exported_name == "default" {
-            match self.options.exports {
-              OutputExports::Auto => require_binding.clone(),
-              OutputExports::Default | OutputExports::Named => {
+            // Use the exporter chunk's actual `output_exports`, not the user-level
+            // `options.exports`. Each chunk decides its own export mode (e.g. under
+            // `preserveModules`, non-input modules are forced to `Named` and emit
+            // `exports.default = ...`), so the access pattern must match what the
+            // exporter actually renders.
+            match exporter_chunk.output_exports {
+              OutputExports::Default => require_binding.clone(),
+              OutputExports::Named => {
                 rolldown_utils::ecmascript::property_access_str(require_binding, exported_name)
               }
-              // Already validated at https://github.com/rolldown/rolldown/blob/e50d4419df86af63b25b4b8d40035dad2478a3fe/crates/rolldown/src/utils/chunk/determine_export_mode.rs#L8-L66
-              OutputExports::None => unreachable!(),
+              // `Auto` is always resolved away by `determine_export_mode`. `None`
+              // is unreachable here because we just indexed
+              // `exports_to_other_chunks[canonical_ref]` successfully — a non-empty
+              // entry means the chunk has at least one cross-chunk export, which
+              // forces `output_exports` to `Default` or `Named` (entry chunks via
+              // `determine_export_mode`; common chunks are unconditionally `Named`).
+              OutputExports::Auto | OutputExports::None => unreachable!(),
             }
           } else {
             rolldown_utils::ecmascript::property_access_str(require_binding, exported_name)
@@ -99,21 +140,16 @@ impl GenerateContext<'_> {
   }
 
   fn canonical_name_for<'name>(
-    &self,
+    &'name self,
     canonical_names: &'name FxHashMap<SymbolRef, CompactStr>,
     symbol: SymbolRef,
-  ) -> &'name CompactStr {
+  ) -> &'name str {
     let symbol_db = &self.link_output.symbol_db;
-    symbol_db.canonical_name_for(symbol, canonical_names).unwrap_or_else(|| {
-      panic!(
-        "canonical name not found for {symbol:?}, original_name: {:?} in module {:?}",
-        symbol.name(symbol_db),
-        self.link_output.module_table.get(symbol.owner).map_or("unknown", |module| module.id())
-      );
-    })
+    symbol_db.canonical_name_for_or_original(symbol, canonical_names)
   }
 }
 
+#[derive(Default)]
 pub struct GenerateOutput {
   pub chunks: Vec<InstantiatedChunk>,
   pub warnings: Vec<BuildDiagnostic>,

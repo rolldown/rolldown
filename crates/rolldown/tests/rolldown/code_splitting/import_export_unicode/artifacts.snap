@@ -1,34 +1,28 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
 ---
+# warnings
+
+## INEFFECTIVE_DYNAMIC_IMPORT
+
+```text
+[INEFFECTIVE_DYNAMIC_IMPORT] foo.js is dynamically imported by main.js but also statically imported by main.js, dynamic import will not move module into another chunk.
+
+```
+
 # Assets
-
-## foo.js
-
-```js
-import { t as devil } from "./foo2.js";
-
-export { devil as "😈" };
-```
-
-## foo2.js
-
-```js
-//#region foo.js
-const devil = "devil";
-
-//#endregion
-export { devil as t };
-```
 
 ## main.js
 
 ```js
-import { t as devil } from "./foo2.js";
-
+// HIDDEN [\0rolldown/runtime.js]
+//#region foo.js
+var foo_exports = /* @__PURE__ */ __exportAll({ "😈": () => devil });
+const devil = "devil";
+//#endregion
 //#region main.js
-const moduleFoo = import("./foo.js");
-
+const moduleFoo = Promise.resolve().then(() => foo_exports);
 //#endregion
 export { moduleFoo, devil as "😈" };
+
 ```

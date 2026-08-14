@@ -7,9 +7,7 @@ export default defineTest({
     plugins: [viteJsonPlugin({ stringify: true, minify: true })],
   },
   async afterTest(output) {
-    expect(output.output[0].code).toContain(
-      `JSON.parse("{\\"name\\":\\"@test-fixture/build\\"`,
-    );
+    expect(output.output[0].code).toContain(`JSON.parse("{\\"name\\":\\"@test-fixture/build\\"`);
     await import('./assert.mjs');
   },
 });

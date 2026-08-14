@@ -24,8 +24,6 @@ export default defineTest({
     ],
   },
   catchError: (err: any) => {
-    expect(err.message).toMatch(
-      'load foo.js error',
-    );
+    expect(err.message).toMatch('load foo.js error');
   },
 });

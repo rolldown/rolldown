@@ -1,2 +1,1 @@
-export const foo = 0
-
+export const foo = 0;

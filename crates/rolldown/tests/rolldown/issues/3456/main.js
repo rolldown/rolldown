@@ -1,2 +1,2 @@
-import { "\n\"\\'" as test } from "external";
-export { test as '\n"\\\'' }
+import { '\n"\\\'' as test } from 'external';
+export { test as '\n"\\\'' };

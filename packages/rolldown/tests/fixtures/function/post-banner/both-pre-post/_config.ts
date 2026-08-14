@@ -14,8 +14,6 @@ export default defineTest({
     },
   },
   afterTest: (output) => {
-    expect(
-      output.output[0].code.startsWith(postBannerTxt + '\n' + bannerTxt),
-    ).toBe(true);
+    expect(output.output[0].code.startsWith(postBannerTxt + '\n' + bannerTxt)).toBe(true);
   },
 });

@@ -1,3 +1,3 @@
-import { internal } from './internal'
+import { internal } from './internal';
 
-export const main2 = internal
+export const main2 = internal;

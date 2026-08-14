@@ -1,1 +1,1 @@
-module.exports = (mod) => require(mod)
+module.exports = (mod) => require(mod);

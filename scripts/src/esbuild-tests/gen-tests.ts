@@ -9,12 +9,7 @@ import * as nodeFs from 'node:fs';
 import * as fsp from 'node:fs/promises';
 import * as nodeHttps from 'node:https';
 import * as path from 'node:path';
-import {
-  Language,
-  type Node as SyntaxNode,
-  Parser,
-  Query,
-} from 'web-tree-sitter';
+import { Language, type Node as SyntaxNode, Parser, Query } from 'web-tree-sitter';
 // import Go from 'tree-sitter-go';
 import { ESBUILD_BUNDLER_TESTS_URL } from './urls.js';
 
@@ -23,10 +18,7 @@ const TREE_SITTER_WASM_GO_FILENAME = path.resolve(
   '../../tmp/tree-sitter-go.wasm',
 );
 
-const GO_FILES_DIR = path.resolve(
-  import.meta.dirname,
-  '../../tmp/esbuild-tests',
-);
+const GO_FILES_DIR = path.resolve(import.meta.dirname, '../../tmp/esbuild-tests');
 
 /**
  * Each test suite is represented by a key-value pair where the key is the name of the test suite,
@@ -70,11 +62,14 @@ const suites = {
     name: 'glob',
     sourceFile: 'bundler_glob_test.go',
   },
-} as const satisfies Record<string, {
-  name: string;
-  sourceFile: string;
-  ignoreCases?: string[];
-}>;
+} as const satisfies Record<
+  string,
+  {
+    name: string;
+    sourceFile: string;
+    ignoreCases?: string[];
+  }
+>;
 
 type TestSuiteName = keyof typeof suites;
 type SuiteArg = TestSuiteName | 'all';
@@ -104,23 +99,18 @@ interface Config {
 }
 
 if (process.argv.length < 3) {
-  throw new Error(
-    `Please provide the test suite name: ${Object.keys(suites).join(', ')}`,
-  );
+  throw new Error(`Please provide the test suite name: ${Object.keys(suites).join(', ')}`);
 }
 
 const SUITE_ARG = process.argv[2] as SuiteArg;
 if (SUITE_ARG !== 'all' && !(SUITE_ARG in suites)) {
   throw new Error(
-    `Unknown test suite name: ${SUITE_ARG}. Available suites: ${
-      Object.keys(suites).join(', ')
-    }`,
+    `Unknown test suite name: ${SUITE_ARG}. Available suites: ${Object.keys(suites).join(', ')}`,
   );
 }
 
-const SUITE_NAMES: TestSuiteName[] = SUITE_ARG === 'all'
-  ? (Object.keys(suites) as TestSuiteName[])
-  : [SUITE_ARG];
+const SUITE_NAMES: TestSuiteName[] =
+  SUITE_ARG === 'all' ? (Object.keys(suites) as TestSuiteName[]) : [SUITE_ARG];
 
 console.log(`Processing test suite: ${SUITE_NAMES.join(', ')}`);
 
@@ -149,13 +139,10 @@ const queryString = `
  * ## Panics
  * Performs {@link process.exit} if it cannot find (and then download) .go source file based on test suite name {@link suites}
  */
-async function readTestSuiteSource(
-  testSuiteName: TestSuiteName,
-): Promise<string> {
+async function readTestSuiteSource(testSuiteName: TestSuiteName): Promise<string> {
   const testSuite = suites[testSuiteName];
   const sourcePath = path.join(GO_FILES_DIR, testSuite.sourceFile);
-  const sourceGithubUrl =
-    `${ESBUILD_BUNDLER_TESTS_URL}/${testSuite.sourceFile}`;
+  const sourceGithubUrl = `${ESBUILD_BUNDLER_TESTS_URL}/${testSuite.sourceFile}`;
 
   try {
     return fs.readFileSync(sourcePath).toString();
@@ -176,10 +163,7 @@ async function readTestSuiteSource(
         throw new Error('Unexpected shape of source file');
       }
     } catch (err2) {
-      console.log(
-        'Could not download .go source file. Please download it manually.',
-        err2,
-      );
+      console.log('Could not download .go source file. Please download it manually.', err2);
       console.log(`Download link: ${sourceGithubUrl}`);
       process.exit(1);
     }
@@ -199,6 +183,47 @@ function getTopLevelBinding(root: SyntaxNode): Record<string, SyntaxNode> {
       binding[name] = decl;
     }
   });
+  return binding;
+}
+
+function collectFunctionLocalBindings(
+  root: SyntaxNode,
+  base: Record<string, SyntaxNode>,
+): Record<string, SyntaxNode> {
+  const binding: Record<string, SyntaxNode> = { ...base };
+  const stack: SyntaxNode[] = [root];
+  while (stack.length > 0) {
+    const node = stack.pop()!;
+    if (node.type === 'short_var_declaration') {
+      const lhs = node.namedChild(0);
+      const rhs = node.namedChild(1);
+      if (lhs && rhs) {
+        const names = lhs.namedChildren;
+        const values = rhs.namedChildren;
+        for (let i = 0; i < names.length && i < values.length; i++) {
+          const name = names[i]?.text;
+          const value = values[i];
+          if (name && value) {
+            binding[name] = value;
+          }
+        }
+      }
+    } else if (node.type === 'var_declaration') {
+      node.namedChildren.forEach((spec) => {
+        if (!spec || spec.type !== 'var_spec') {
+          return;
+        }
+        const name = spec.namedChild(0)?.text;
+        const decl = spec.namedChild(1);
+        if (name && decl) {
+          binding[name] = decl;
+        }
+      });
+    }
+    node.namedChildren.forEach((c) => {
+      if (c) stack.push(c);
+    });
+  }
   return binding;
 }
 
@@ -227,30 +252,50 @@ function calculatePrefixDir(paths: string[]): string {
   return commonPrefix.join('/');
 }
 
-function extractStringLiteral(node: SyntaxNode | null | undefined): string {
+function extractStringLiteral(
+  node: SyntaxNode | null | undefined,
+  binding: Record<string, SyntaxNode> = {},
+): string {
   if (!node) {
     return '';
   }
-  let ret = '';
   switch (node.type) {
+    case 'parenthesized_expression':
+      return extractStringLiteral(node.namedChild(0), binding);
     case 'binary_expression':
-      ret += extractStringLiteral(node.namedChild(0));
-      ret += extractStringLiteral(node.namedChild(1));
-      break;
+      return (
+        extractStringLiteral(node.namedChild(0), binding) +
+        extractStringLiteral(node.namedChild(1), binding)
+      );
     case 'raw_string_literal':
     case 'interpreted_string_literal':
-      ret += node.text.slice(1, -1);
-      break;
+      return node.text.slice(1, -1);
+    case 'identifier': {
+      const resolved = binding[node.text];
+      if (resolved) {
+        return extractStringLiteral(resolved, binding);
+      }
+      throw new Error(`Unbound identifier: ${node.text}`);
+    }
+    case 'call_expression': {
+      const fn = node.namedChild(0);
+      const args = node.namedChild(1);
+      if (fn?.text === 'strings.Repeat' && args) {
+        const s = extractStringLiteral(args.namedChild(0), binding);
+        const countText = args.namedChild(1)?.text;
+        const count = countText ? Number.parseInt(countText, 10) : Number.NaN;
+        if (Number.isFinite(count)) {
+          return s.repeat(count);
+        }
+      }
+      throw new Error(`Unsupported call expression: ${node.text}`);
+    }
     default:
       throw new Error(`Unexpected node type: ${node.type}`);
   }
-  return ret;
 }
 
-function processFiles(
-  node: SyntaxNode,
-  binding: Record<string, SyntaxNode>,
-): FileEntry[] {
+function processFiles(node: SyntaxNode, binding: Record<string, SyntaxNode>): FileEntry[] {
   if (node.firstChild?.type === 'identifier') {
     const name = node.firstChild.text;
     if (binding[name]) {
@@ -258,38 +303,30 @@ function processFiles(
     }
   }
   const fileList: FileEntry[] = [];
-  const compositeLiteral = node.namedChild(0);
+  const compositeLiteral = node.type === 'composite_literal' ? node : node.namedChild(0);
   const body = compositeLiteral?.namedChild(1);
-  try {
-    if (!body) {
-      throw new Error('No body');
-    }
-    body.namedChildren.forEach((child) => {
-      if (child!.type !== 'keyed_element') {
-        return;
-      }
-      const name = child!.namedChild(0)?.text.slice(1, -1);
-      if (!name) {
-        throw new Error(`File has no name`);
-      }
-      let content = extractStringLiteral(child!.namedChild(1)?.namedChild?.(0));
-      content = dedent.default(content);
-      fileList.push({
-        name,
-        content,
-      });
-    });
-    return fileList;
-  } catch (err) {
-    console.error(`Error occurred when processFiles: ${chalk.red(err)}`);
-    return [];
+  if (!body) {
+    throw new Error('No body');
   }
+  body.namedChildren.forEach((child) => {
+    if (child!.type !== 'keyed_element') {
+      return;
+    }
+    const name = extractStringLiteral(child!.namedChild(0)?.namedChild?.(0), binding);
+    if (!name) {
+      throw new Error(`File has no name`);
+    }
+    let content = extractStringLiteral(child!.namedChild(1)?.namedChild?.(0), binding);
+    content = dedent.default(content);
+    fileList.push({
+      name,
+      content,
+    });
+  });
+  return fileList;
 }
 
-function processEntryPath(
-  node: SyntaxNode,
-  binding: Record<string, SyntaxNode>,
-): string[] {
+function processEntryPath(node: SyntaxNode, binding: Record<string, SyntaxNode>): string[] {
   if (node.firstChild?.type === 'identifier') {
     const name = node.firstChild.text;
     if (binding[name]) {
@@ -297,25 +334,20 @@ function processEntryPath(
     }
   }
   const entryList: string[] = [];
-  const compositeLiteral = node.namedChild(0);
+  const compositeLiteral = node.type === 'composite_literal' ? node : node.namedChild(0);
   const body = compositeLiteral?.namedChild(1);
-  try {
-    if (!body) {
-      throw new Error('No body');
-    }
-    body.namedChildren.forEach((child) => {
-      const entry = child!.namedChild(0)?.text.slice(1, -1);
-      if (!entry) {
-        throw new Error('No entry');
-      }
-      entryList.push(entry);
-    });
-
-    return entryList;
-  } catch (err) {
-    console.error(`Error occurred when processEntryPath: ${chalk.red(err)}`);
-    return [];
+  if (!body) {
+    throw new Error('No body');
   }
+  body.namedChildren.forEach((child) => {
+    const entry = child!.namedChild(0)?.text.slice(1, -1);
+    if (!entry) {
+      throw new Error('No entry');
+    }
+    entryList.push(entry);
+  });
+
+  return entryList;
 }
 
 // TODO: only preserve mode ModeBundle test case
@@ -362,17 +394,14 @@ function ensureTreeSitterWasmGo(): Promise<void> | undefined {
   }
   fs.ensureDirSync(path.dirname(TREE_SITTER_WASM_GO_FILENAME));
   return new Promise((rsl, rej) => {
-    nodeHttps.get(
-      'https://tree-sitter.github.io/tree-sitter-go.wasm',
-      (resp) => {
-        resp.on('end', () => {
-          console.log('saved', TREE_SITTER_WASM_GO_FILENAME);
-          rsl();
-        });
-        resp.on('error', rej);
-        resp.pipe(nodeFs.createWriteStream(TREE_SITTER_WASM_GO_FILENAME));
-      },
-    );
+    nodeHttps.get('https://tree-sitter.github.io/tree-sitter-go.wasm', (resp) => {
+      resp.on('end', () => {
+        console.log('saved', TREE_SITTER_WASM_GO_FILENAME);
+        rsl();
+      });
+      resp.on('error', rej);
+      resp.pipe(nodeFs.createWriteStream(TREE_SITTER_WASM_GO_FILENAME));
+    });
   });
 }
 
@@ -386,11 +415,7 @@ const query = new Query(Lang, queryString);
 
 for (const suiteName of SUITE_NAMES) {
   console.log(`Processing test suite: ${suiteName}`);
-  const testsRootDir = path.resolve(
-    __dirname,
-    '../../../crates/rolldown/tests/esbuild',
-    suiteName,
-  );
+  const testsRootDir = path.resolve(__dirname, '../../../crates/rolldown/tests/esbuild', suiteName);
 
   const source = await readTestSuiteSource(suiteName);
   const tree = parser.parse(source)!;
@@ -412,10 +437,20 @@ for (const suiteName of SUITE_NAMES) {
       const bundle_field_list = query.captures(child).filter((item) => {
         return item.name === 'element_list';
       });
+      const functionBindingMap = collectFunctionLocalBindings(child, topLevelBindingMap);
       const jsConfig: JsConfig = Object.create(null);
-      bundle_field_list.forEach((cap) => {
-        processKeyElement(cap.node, jsConfig, topLevelBindingMap);
-      });
+      try {
+        bundle_field_list.forEach((cap) => {
+          processKeyElement(cap.node, jsConfig, functionBindingMap);
+        });
+      } catch (err) {
+        throw new Error(
+          `while processing test case "${testCaseName}" in ${suiteName}: ${
+            err instanceof Error ? err.message : String(err)
+          }`,
+          { cause: err },
+        );
+      }
 
       const fileList = jsConfig.files;
 
@@ -458,12 +493,7 @@ for (const suiteName of SUITE_NAMES) {
           normalizedName = normalizedName.slice(1);
         }
         return {
-          name: normalizedName
-            .split('/')
-            .filter(Boolean)
-            .join('_')
-            .split('.')
-            .join('_'),
+          name: normalizedName.split('/').filter(Boolean).join('_').split('.').join('_'),
           import: normalizedName,
         };
       });

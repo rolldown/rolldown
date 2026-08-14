@@ -43,6 +43,8 @@ runTestSuiteWithSamples(
 							bundle ||
 							(await rollup({
 								input: directory + '/main.js',
+								// Disable inlineConst for rollup tests, see https://github.com/rolldown/rolldown/issues/8100
+								optimization: { inlineConst: false },
 								onLog: (level, log) => {
 									logs.push({ level, ...log });
 									if (level === 'warn' && !config.expectedWarnings?.includes(log.code)) {
@@ -51,7 +53,8 @@ runTestSuiteWithSamples(
 								},
 								strictDeprecations: true,
 								...config.options,
-								plugins: config.options?.plugins
+								// skip JSON plugin as it's incompatible with Rolldown and is not needed
+								plugins: config.options?.plugins?.filter(plugin => plugin.name !== 'json')
 									// config.verifyAst === false
 									// 	? config.options?.plugins
 									// 	: config.options?.plugins === undefined
@@ -68,7 +71,9 @@ runTestSuiteWithSamples(
 								format: defaultFormat,
 								validate: true,
 								keepNames: directory.includes('assignment-to-exports-class-declaration') ? true : false,
-								...(config.options || {}).output
+								...(config.options || {}).output,
+								// Rolldown uses `generatedCode.preset: 'es2015'` by default
+								generatedCode: { preset: 'es5', ...config.options?.output?.generatedCode },
 							},
 							bundleFile,
 							config

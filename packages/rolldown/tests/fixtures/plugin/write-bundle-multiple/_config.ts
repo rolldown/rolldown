@@ -6,9 +6,8 @@ import { expect } from 'vitest';
 
 const entry = path.join(__dirname, './main.js');
 
-let generateBundleOutputOptions: Partial<
-  Record<InternalModuleFormat, NormalizedOutputOptions>
-> = {};
+let generateBundleOutputOptions: Partial<Record<InternalModuleFormat, NormalizedOutputOptions>> =
+  {};
 
 export default defineTest({
   config: {
@@ -17,8 +16,7 @@ export default defineTest({
       {
         name: 'test-plugin',
         writeBundle: async (options) => {
-          expect(generateBundleOutputOptions[options.format]).not
-            .toBeUndefined();
+          expect(generateBundleOutputOptions[options.format]).not.toBeUndefined();
           // ensure same reference
           expect(options).toBe(generateBundleOutputOptions[options.format]);
         },
@@ -30,9 +28,6 @@ export default defineTest({
         },
       },
     ],
-    output: [
-      { format: 'es' },
-      { format: 'cjs' },
-    ],
+    output: [{ format: 'es' }, { format: 'cjs' }],
   },
 });

@@ -6,7 +6,7 @@
         "import": "entry.js"
       }
     ],
-    "inlineDynamicImports": true
+    "codeSplitting": false
   },
   "expectExecuted": false
 }

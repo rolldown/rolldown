@@ -1,2 +1,2 @@
-const value = require('./foo')
-module.exports = value
+const value = require('./foo');
+module.exports = value;

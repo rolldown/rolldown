@@ -1,0 +1,10 @@
+{
+  "_comment": "Regression test for #9691 (ReferenceError in @aws-sdk/client-s3). main.js dynamically imports ./trigger.js; under `codeSplitting: false` the dynamic import is inlined and wraps its target, propagating through the barrel's `export *` to the unused `sideEffects: false` star source lib/handler-b.js. The entry only uses HandlerA, so handler-b's binding-reading body and its dep-b import must stay dropped even when the module is wrapped; the bundle should load cleanly with lazyBarrel enabled.",
+  "config": {
+    "codeSplitting": false,
+    "experimental": {
+      "lazyBarrel": true
+    }
+  },
+  "configVariants": []
+}

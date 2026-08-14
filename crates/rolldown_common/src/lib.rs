@@ -1,6 +1,4 @@
-mod asset;
 mod chunk;
-mod css;
 mod ecmascript;
 mod file_emitter;
 mod generated;
@@ -11,6 +9,7 @@ mod module_loader;
 mod source_map_gen_msg;
 mod type_aliases;
 mod types;
+mod utils;
 
 /// This module is to help `rolldown` crate could export types related bundler options easily.
 /// `rolldown` crate could use `pub use rolldown_common::bundler_options::*;` to export all types, so we don't need write
@@ -18,9 +17,7 @@ mod types;
 pub mod bundler_options {
   pub use crate::generated::{
     checks_options::ChecksOptions,
-    runtime_helper::{
-      DependedRuntimeHelperMap, DependedRuntimeHelperMapExt, RUNTIME_HELPER_NAMES, RuntimeHelper,
-    },
+    runtime_helper::{DependedRuntimeHelperMap, RUNTIME_HELPER_NAMES, RuntimeHelper},
   };
 
   #[cfg(feature = "deserialize_bundler_options")]
@@ -28,18 +25,19 @@ pub mod bundler_options {
   pub use crate::inner_bundler_options::{
     BundlerOptions,
     types::{
-      advanced_chunks_options::{
-        AdvancedChunksOptions, ChunkingContext, MatchGroup, MatchGroupName, MatchGroupTest,
-      },
       attach_debug_info::AttachDebugInfo,
       chunk_import_map::ChunkImportMap,
       chunk_modules_order::ChunkModulesOrderBy,
-      debug_options::DebugOptions,
+      code_splitting_mode::CodeSplittingMode,
+      comments::CommentsOptions,
       defer_sync_scan_data_option::DeferSyncScanDataOption,
       dev_mode_options::DevModeOptions,
+      devtools_options::DevtoolsOptions,
       es_module_flag::EsModuleFlag,
-      experimental_options::{ExperimentalOptions, SourcemapHires},
-      filename_template::FilenameTemplate,
+      experimental_options::{
+        ChunkOptimizationOption, ChunkOptimizationOptions, ExperimentalOptions,
+      },
+      filename_template::{FilenameTemplate, is_path_fragment},
       generated_code_options::GeneratedCodeOptions,
       hash_characters::HashCharacters,
       inject_import::InjectImport,
@@ -49,7 +47,13 @@ pub mod bundler_options {
       legal_comments::LegalComments,
       log_level::LogLevel,
       make_absolute_externals_relative::MakeAbsoluteExternalsRelative,
-      minify_options::{MinifyOptions, RawMinifyOptions, RawMinifyOptionsDetailed},
+      manual_code_splitting_options::{
+        ChunkingContext, ManualCodeSplittingOptions, MatchGroup, MatchGroupName, MatchGroupTest,
+      },
+      minify_options::{
+        MinifyOptions, RawCompressOptions, RawMangleOptions, RawMinifyOptions,
+        RawMinifyOptionsDetailed,
+      },
       module_type::ModuleType,
       normalized_bundler_options::{NormalizedBundlerOptions, SharedNormalizedBundlerOptions},
       on_log::{Log, LogLocation, LogWithoutPlugin, OnLog},
@@ -64,11 +68,13 @@ pub mod bundler_options {
         GlobalsOutputOption, PathsOutputOption, PreserveEntrySignatures,
       },
       platform::Platform,
+      plugin_timings_option::PluginTimingsOption,
       resolve_options::ResolveOptions,
       sanitize_filename::SanitizeFilename,
       source_map_type::SourceMapType,
       sourcemap_ignore_list::SourceMapIgnoreList,
       sourcemap_path_transform::SourceMapPathTransform,
+      strict_mode::StrictMode,
       target::ESTarget,
       transform_option::{
         CompilerAssumptions, DecoratorOptions, Either, IsolatedDeclarationsOptions, JsxOptions,
@@ -84,39 +90,40 @@ pub mod bundler_options {
         PropertyWriteSideEffects, TreeshakeOptions,
       },
       tsconfig::TsConfig,
-      watch_option::{NotifyOption, OnInvalidate, WatchOption},
+      tsconfig_merge::merge_transform_options_with_tsconfig as merge_tsconfig,
+      watch_option::{OnInvalidate, WatchOption},
     },
+  };
+
+  pub use crate::utils::enhanced_transform::{
+    EnhancedTransformOptions, EnhancedTransformResult, TsconfigOption, enhanced_transform,
   };
 }
 
 // We don't want internal position adjustment of files affect users, so all items are exported in the root.
 pub use crate::{
-  asset::asset_view::AssetView,
   chunk::{
-    Chunk, ChunkMeta,
+    Chunk, ChunkMeta, PostChunkOptimizationOperation,
     chunk_table::ChunkTable,
     types::{
-      AddonRenderContext, chunk_reason_type::ChunkReasonType,
-      cross_chunk_import_item::CrossChunkImportItem, module_group::ModuleGroup,
+      AddonRenderContext,
+      chunk_debug_info::{ChunkDebugInfo, FacadeChunkEliminationReason},
+      chunk_reason_type::ChunkReasonType,
+      cross_chunk_import_item::CrossChunkImportItem,
+      module_group::ModuleGroup,
       preliminary_filename::PreliminaryFilename,
     },
-  },
-  css::{
-    css_asset_meta::CssAssetMeta,
-    css_view::{CssAssetNameReplacer, CssRenderer, CssView},
   },
   ecmascript::{
     comment_annotation::get_leading_comment,
     dynamic_import_usage,
     ecma_asset_meta::EcmaAssetMeta,
     ecma_view::{
-      EcmaModuleAstUsage, EcmaView, EcmaViewMeta, ImportMetaRolldownAssetReplacer,
-      PrependRenderedImport, ThisExprReplaceKind, generate_replace_this_expr_map,
+      EcmaModuleAstUsage, EcmaView, EcmaViewMeta, ExportOrigin, PrependRenderedImport,
+      RolldownFileUrlReference, ThisExprReplaceKind, generate_replace_this_expr_map,
     },
     json_to_program::{json_value_to_ecma_ast, json_value_to_expression},
     module_idx::ModuleIdx,
-    node_builtin_modules::is_existing_node_builtin_modules,
-    symbol_id_ext::SymbolIdExt,
   },
   file_emitter::{
     EmittedAsset, EmittedChunk, EmittedChunkInfo, EmittedPrebuiltChunk, FileEmitter,
@@ -124,8 +131,8 @@ pub use crate::{
   },
   hmr::{
     client_hmr_input::ClientHmrInput, client_hmr_update::ClientHmrUpdate,
-    hmr_boundary::HmrBoundary, hmr_boundary_output::HmrBoundaryOutput, hmr_patch::HmrPatch,
-    hmr_update::HmrUpdate,
+    hmr_boundary::HmrBoundary, hmr_patch::HmrPatch, hmr_stamp_table::HmrStampTable,
+    hmr_update::HmrUpdate, lazy_chunk_output::HmrLazyChunkOutput,
   },
   module::{
     Module,
@@ -162,21 +169,26 @@ pub use crate::{
   types::import_attribute::ImportAttribute,
   types::import_kind::ImportKind,
   types::import_record::{
-    DynamicImportExprInfo, ImportRecordIdx, ImportRecordMeta, RawImportRecord, ResolvedImportRecord,
+    DynamicImportExprInfo, ImportRecordIdx, ImportRecordMeta, ImportRecordStateInit,
+    RawImportRecord, ResolvedImportRecord,
   },
   types::importer_record::ImporterRecord,
   types::ins_chunk_idx::InsChunkIdx,
   types::instantiated_chunk::InstantiatedChunk,
   types::interop::Interop,
-  types::member_expr_ref::{MemberExprObjectReferencedType, MemberExprRef},
+  types::lazy_barrel::{
+    BarrelInfo, BarrelState, ExportSource, ImportedExports, LazyBarrelInfo,
+    try_extract_lazy_barrel_info,
+  },
+  types::member_expr_ref::{MemberExprObjectReferencedType, MemberExprProp, MemberExprRef},
   types::member_expr_ref_resolution::MemberExprRefResolution,
   types::module_def_format::ModuleDefFormat,
-  types::module_id::ModuleId,
-  types::module_idx::LegacyModuleIdx,
+  types::module_id::{ModuleId, ModuleIdKind},
   types::module_info::ModuleInfo,
   types::module_namespace_included_reason::ModuleNamespaceIncludedReason,
   types::module_render_output::ModuleRenderOutput,
   types::module_table::{IndexModules, ModuleTable},
+  types::module_tag::{ModuleTag, ModuleTagBitSet, ModuleTagRegistry},
   types::named_export::LocalExport,
   types::named_import::{NamedImport, Specifier},
   types::namespace_alias::NamespaceAlias,
@@ -187,23 +199,31 @@ pub use crate::{
   types::plugin_idx::PluginIdx,
   types::rendered_module::RenderedModule,
   types::resolved_export::ResolvedExport,
-  types::resolved_request_info::{ResolvedExternal, ResolvedId},
+  types::resolved_id::{ResolvedExternal, ResolvedId},
+  types::retained_export_symbols::RetainedExportSymbols,
   types::rollup_pre_rendered_asset::RollupPreRenderedAsset,
   types::rollup_pre_rendered_chunk::RollupPreRenderedChunk,
   types::rollup_rendered_chunk::RollupRenderedChunk,
   types::scan_mode::ScanMode,
-  types::side_effect_detail::SideEffectDetail,
   types::side_effects,
   types::source_mutation::SourceMutation,
   types::sourcemap_chain_element::SourcemapChainElement,
-  types::stmt_info::{DebugStmtInfoForTreeShaking, StmtInfo, StmtInfoIdx, StmtInfoMeta, StmtInfos},
+  types::stable_module_id::StableModuleId,
+  types::stmt_eval_flags::StmtEvalFlags,
+  types::stmt_info::{
+    DebugStmtInfoForTreeShaking, DeclaredSymbols, StmtInfo, StmtInfoIdx, StmtInfoMeta, StmtInfos,
+  },
   types::str_or_bytes::StrOrBytes,
   types::symbol_or_member_expr_ref::{SymbolOrMemberExprRef, TaggedSymbolRef},
   types::symbol_ref::{SymbolRef, common_debug_symbol_ref},
   types::symbol_ref_db::{
     GetLocalDb, GetLocalDbMut, SymbolRefDb, SymbolRefDbForModule, SymbolRefFlags,
   },
+  types::used_external_symbols::{ExternalInteropUse, UsedExternalSymbols},
+  types::used_symbol_refs::{UsedSymbolRefs, UsedSymbolRefsBuilder},
   types::watch::WatcherChangeKind,
   types::wrap_kind::WrapKind,
 };
 pub use bundler_options::*;
+#[cfg(debug_assertions)]
+pub use types::idx_ext::IdxDebugExt;

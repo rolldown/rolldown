@@ -1,0 +1,77 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# warnings
+
+## INEFFECTIVE_DYNAMIC_IMPORT
+
+```text
+[INEFFECTIVE_DYNAMIC_IMPORT] cjs-module.js is dynamically imported by main.js but also statically imported by main.js, dynamic import will not move module into another chunk.
+
+```
+
+# Assets
+
+## main.js
+
+```js
+import assert from "node:assert";
+// HIDDEN [\0rolldown/runtime.js]
+//#region cjs-module.js
+var require_cjs_module = /* @__PURE__ */ __commonJSMin(((exports) => {
+	exports.value = 42;
+}));
+//#endregion
+//#region main.js
+require_cjs_module();
+assert.strictEqual(42, 42);
+Promise.resolve().then(() => /* @__PURE__ */ __toESM(require_cjs_module())).then((mod) => {
+	assert.strictEqual(mod.value, 42);
+	assert.strictEqual(mod.default.value, 42);
+});
+//#endregion
+
+```
+
+# Output Stats
+
+- main.js, is_entry true, is_dynamic_entry false, exports []
+
+# Variant: [format: Cjs]
+
+## warnings
+
+### INEFFECTIVE_DYNAMIC_IMPORT
+
+```text
+[INEFFECTIVE_DYNAMIC_IMPORT] cjs-module.js is dynamically imported by main.js but also statically imported by main.js, dynamic import will not move module into another chunk.
+
+```
+
+## Assets
+
+### main.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+let node_assert = require("node:assert");
+node_assert = __toESM(node_assert);
+//#region cjs-module.js
+var require_cjs_module = /* @__PURE__ */ __commonJSMin(((exports) => {
+	exports.value = 42;
+}));
+//#endregion
+//#region main.js
+require_cjs_module();
+node_assert.default.strictEqual(42, 42);
+Promise.resolve().then(() => /* @__PURE__ */ __toESM(require_cjs_module())).then((mod) => {
+	node_assert.default.strictEqual(mod.value, 42);
+	node_assert.default.strictEqual(mod.default.value, 42);
+});
+//#endregion
+
+```
+
+## Output Stats
+
+- main.js, is_entry true, is_dynamic_entry false, exports []

@@ -26,9 +26,7 @@ export function group(
           console.log(`${chalk.yellow(name)}:`);
           let resultsForDisplay = bench.tasks.map((task) => {
             if (!task.result || !('latency' in task.result)) {
-              throw new Error(
-                `No benchmark result found for ${name} ${task.name}`,
-              );
+              throw new Error(`No benchmark result found for ${name} ${task.name}`);
             }
 
             return {
@@ -48,9 +46,7 @@ export function group(
           });
 
           // Show how much faster it is compared to others
-          console.log(
-            `${chalk.blueBright('Summary')}${chalk.gray(`(${name})`)}:`,
-          );
+          console.log(`${chalk.blueBright('Summary')}${chalk.gray(`(${name})`)}:`);
           const [fastest, ...others] = resultsForDisplay;
           const fastestMean = fastest.mean;
           if (fastest == null || others.length === 0) {
@@ -60,9 +56,7 @@ export function group(
           others.forEach((other) => {
             const times = (other.mean / fastestMean).toFixed(2);
             // Example: xxxx is 1.5 times faster than yyyy
-            console.log(
-              `  - ${chalk.green(times)} times faster than ${other.name}`,
-            );
+            console.log(`  - ${chalk.green(times)} times faster than ${other.name}`);
           });
         },
       };

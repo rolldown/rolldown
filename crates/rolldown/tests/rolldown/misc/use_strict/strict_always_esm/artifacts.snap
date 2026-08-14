@@ -1,0 +1,13 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+//#region main.js
+console.log("This ESM chunk should not have \"use strict\" at the top even with strict: always.");
+//#endregion
+
+```

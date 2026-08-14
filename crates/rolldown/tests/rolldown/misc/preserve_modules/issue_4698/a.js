@@ -1,1 +1,1 @@
-export const A = 10
+export const A = 10;

@@ -1,0 +1,14 @@
+{
+  "config": {
+    "input": [
+      {
+        "name": "component",
+        "import": "component.js"
+      },
+      {
+        "name": "safehtml",
+        "import": "safehtml.js"
+      }
+    ]
+  }
+}

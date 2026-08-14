@@ -1,4 +1,4 @@
-import nodeAssert from 'node:assert'
+import nodeAssert from 'node:assert';
 
 import { setup } from './setup.js';
 setup();
@@ -8,5 +8,4 @@ read();
 
 import('./dynamic.js');
 
-
-nodeAssert.strictEqual(globalThis.foo, 'foo')
+nodeAssert.strictEqual(globalThis.foo, 'foo');

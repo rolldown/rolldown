@@ -1,0 +1,14 @@
+{
+  "config": {
+    "input": [
+      {
+        "name": "index",
+        "import": "index.js"
+      },
+      {
+        "name": "chunk",
+        "import": "chunk.js"
+      }
+    ]
+  }
+}

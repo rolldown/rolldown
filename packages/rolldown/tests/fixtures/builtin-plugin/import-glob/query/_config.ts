@@ -1,14 +1,15 @@
 import * as fs from 'node:fs';
-import * as path from 'path';
-import { RolldownOutput } from 'rolldown';
+import * as path from 'node:path';
+import type { RolldownOutput } from 'rolldown';
 import { defineTest } from 'rolldown-tests';
 import { viteImportGlobPlugin } from 'rolldown/experimental';
 import { expect } from 'vitest';
 
 export default defineTest({
+  sequential: true,
   config: {
     plugins: [
-      viteImportGlobPlugin({}),
+      viteImportGlobPlugin(),
       {
         name: 'load-file-with-query',
         load(id: string) {

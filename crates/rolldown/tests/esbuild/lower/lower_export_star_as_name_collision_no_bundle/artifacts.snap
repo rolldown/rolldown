@@ -6,7 +6,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## UNRESOLVED_IMPORT
 
 ```text
-[UNRESOLVED_IMPORT] Warning: Could not resolve 'path' in entry.js
+[UNRESOLVED_IMPORT] Could not resolve 'path' in entry.js
    ╭─[ entry.js:1:21 ]
    │
  1 │ export * as ns from 'path'
@@ -22,10 +22,9 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 import * as ns from "path";
-
 //#region entry.js
 let ns$1 = 123;
-
 //#endregion
 export { ns, ns$1 as sn };
+
 ```

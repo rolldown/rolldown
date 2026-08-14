@@ -47,9 +47,7 @@ test('output hash changes when minify options change', async () => {
   }
 
   // Most importantly: verify the hashes are different
-  expect(chunkDisableDropConsole.fileName).not.toBe(
-    chunkEnableDropConsole.fileName,
-  );
+  expect(chunkDisableDropConsole.fileName).not.toBe(chunkEnableDropConsole.fileName);
 
   await bundle.close();
 });

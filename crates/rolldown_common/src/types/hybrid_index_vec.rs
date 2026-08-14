@@ -57,7 +57,20 @@ impl<I: Idx, T> HybridIndexVec<I, T> {
   pub fn get_mut(&mut self, i: I) -> &mut T {
     match self {
       HybridIndexVec::IndexVec(index_vec) => &mut index_vec[i],
-      HybridIndexVec::Map(map) => map.get_mut(&i).expect("should have idx"),
+      HybridIndexVec::Map(map) => {
+        let len = map.len();
+        map
+          .get_mut(&i)
+          .unwrap_or_else(|| panic!("HybridIndexVec::Map missing idx {i:?} (len={len})"))
+      }
+    }
+  }
+
+  /// Non-panicking lookup. Absence is a normal outcome for the sparse `Map` variant.
+  pub fn try_get(&self, i: I) -> Option<&T> {
+    match self {
+      HybridIndexVec::IndexVec(index_vec) => index_vec.get(i),
+      HybridIndexVec::Map(map) => map.get(&i),
     }
   }
 
@@ -66,7 +79,9 @@ impl<I: Idx, T> HybridIndexVec<I, T> {
   pub fn get(&self, i: I) -> &T {
     match self {
       HybridIndexVec::IndexVec(index_vec) => &index_vec[i],
-      HybridIndexVec::Map(map) => map.get(&i).expect("should have idx"),
+      HybridIndexVec::Map(map) => map
+        .get(&i)
+        .unwrap_or_else(|| panic!("HybridIndexVec::Map missing idx {i:?} (len={})", map.len())),
     }
   }
 
@@ -86,7 +101,7 @@ impl<I: Idx, T> HybridIndexVec<I, T> {
     }
   }
 
-  pub fn iter(&self) -> impl Iterator<Item = &T> {
+  pub fn iter(&self) -> impl ExactSizeIterator<Item = &T> {
     match self {
       HybridIndexVec::IndexVec(index_vec) => itertools::Either::Left(index_vec.iter()),
       HybridIndexVec::Map(hash_map) => itertools::Either::Right(hash_map.values()),

@@ -1,8 +1,9 @@
 [package]
 name = "rolldown_dev_common"
-version = "0.1.0"
+version = "1.2.4"
 publish = true
 description = "Common types for rolldown dev mode"
+readme = "../../README.md"
 
 edition.workspace = true
 homepage.workspace = true
@@ -13,6 +14,7 @@ repository.workspace = true
 
 [lib]
 doctest = false
+test = false
 
 [lints]
 workspace = true
@@ -24,5 +26,6 @@ deserialize_dev_options = ["dep:schemars", "dep:serde"]
 derive_more = { workspace = true }
 rolldown_common = { workspace = true }
 rolldown_error = { workspace = true }
+rolldown_utils = { workspace = true }
 schemars = { workspace = true, optional = true }
 serde = { workspace = true, features = ["derive"], optional = true }

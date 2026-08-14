@@ -6,14 +6,14 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## entry.js
 
 ```js
-
-
 var node_fs = require("node:fs");
-Object.keys(node_fs).forEach(function (k) {
-  if (k !== 'default' && !Object.prototype.hasOwnProperty.call(exports, k)) Object.defineProperty(exports, k, {
-    enumerable: true,
-    get: function () { return node_fs[k]; }
-  });
+Object.keys(node_fs).forEach(function(k) {
+	if (k !== "default" && !Object.prototype.hasOwnProperty.call(exports, k)) Object.defineProperty(exports, k, {
+		enumerable: true,
+		get: function() {
+			return node_fs[k];
+		}
+	});
 });
 
 ```
@@ -21,15 +21,15 @@ Object.keys(node_fs).forEach(function (k) {
 ## entry2.js
 
 ```js
-require('./entry.js');
-
-
+require("./entry.js");
 var node_fs = require("node:fs");
-Object.keys(node_fs).forEach(function (k) {
-  if (k !== 'default' && !Object.prototype.hasOwnProperty.call(exports, k)) Object.defineProperty(exports, k, {
-    enumerable: true,
-    get: function () { return node_fs[k]; }
-  });
+Object.keys(node_fs).forEach(function(k) {
+	if (k !== "default" && !Object.prototype.hasOwnProperty.call(exports, k)) Object.defineProperty(exports, k, {
+		enumerable: true,
+		get: function() {
+			return node_fs[k];
+		}
+	});
 });
 
 ```

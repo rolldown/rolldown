@@ -1,6 +1,6 @@
 use oxc::codegen::{self, CodegenOptions, CommentOptions};
 use oxc_allocator::AllocatorPool;
-use rolldown_common::{LegalComments, MinifyOptions, NormalizedBundlerOptions};
+use rolldown_common::{MinifyOptions, NormalizedBundlerOptions};
 use rolldown_ecmascript::EcmaCompiler;
 use rolldown_error::BuildResult;
 use rolldown_sourcemap::collapse_sourcemaps;
@@ -31,12 +31,10 @@ impl GenerateStage<'_> {
           let codegen_options = CodegenOptions {
             minify: remove_whitespace,
             comments: CommentOptions {
-              normal: false,
-              jsdoc: false,
-              annotation: !remove_whitespace,
-              legal: if matches!(options.legal_comments, LegalComments::Inline)
-                || !remove_whitespace
-              {
+              normal: !remove_whitespace,
+              jsdoc: options.comments.jsdoc && !remove_whitespace,
+              annotation: options.comments.annotation && !remove_whitespace,
+              legal: if options.comments.legal || !remove_whitespace {
                 codegen::LegalComment::Inline
               } else {
                 codegen::LegalComment::None
@@ -46,29 +44,38 @@ impl GenerateStage<'_> {
           };
 
           let allocator_guard = allocator_pool.get();
-          // TODO: Do we need to ensure `chunk.preliminary_filename` to be absolute path?
-          let (minified_content, new_map) = EcmaCompiler::dce_or_minify(
-            &allocator_guard,
-            chunk.content.try_as_inner_str()?,
-            options.format.source_type().with_jsx(true),
-            chunk.map.is_some(),
-            chunk.preliminary_filename.as_str(),
-            compress,
-            minify_option.clone(),
-            codegen_options,
-          );
+          // The minify map borrows the pre-minify `chunk.content` (as `sourcesContent`,
+          // which the collapse discards), so collapse before swapping in the minified
+          // content instead of paying an `into_owned` copy of the whole chunk text.
+          let (minified_content, collapsed_map) = {
+            // TODO: Do we need to ensure `chunk.preliminary_filename` to be absolute path?
+            let (minified_content, new_map) = EcmaCompiler::dce_or_minify(
+              &allocator_guard,
+              chunk.content.try_as_inner_str()?,
+              options.format.source_type().with_jsx(true),
+              chunk.map.is_some(),
+              chunk.preliminary_filename.as_str(),
+              compress,
+              minify_option.clone(),
+              codegen_options,
+            );
+            let collapsed_map = match (&chunk.map, &new_map) {
+              (Some(origin_map), Some(new_map)) => {
+                Some(collapse_sourcemaps(&[origin_map, new_map]))
+              }
+              _ => {
+                // TODO: Map is dirty. Should we reset the `chunk.map` to `None`?
+                None
+              }
+            };
+            (minified_content, collapsed_map)
+          };
           chunk.content = minified_content.into();
-          match (&chunk.map, &new_map) {
-            (Some(origin_map), Some(new_map)) => {
-              chunk.map = Some(collapse_sourcemaps(&[origin_map, new_map]));
-            }
-            _ => {
-              // TODO: Map is dirty. Should we reset the `chunk.map` to `None`?
-            }
+          if let Some(map) = collapsed_map {
+            chunk.map = Some(map);
           }
         }
-        rolldown_common::InstantiationKind::Css(_)
-        | rolldown_common::InstantiationKind::None
+        rolldown_common::InstantiationKind::None
         | rolldown_common::InstantiationKind::Sourcemap(_) => {}
       }
       Ok(())

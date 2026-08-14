@@ -3,6 +3,7 @@ use std::{borrow::Cow, path::Path};
 
 use crate::js_regex::HybridRegex;
 use fast_glob::glob_match;
+use rolldown_std_utils::normalize_path_buf_to_slash;
 
 #[derive(Debug, Clone)]
 pub enum StringOrRegex {
@@ -11,17 +12,17 @@ pub enum StringOrRegex {
 }
 
 impl StringOrRegex {
-  pub fn expect_string(self) -> String {
+  pub fn try_into_string(self) -> anyhow::Result<String> {
     match self {
-      StringOrRegex::String(s) => s,
-      StringOrRegex::Regex(_) => unreachable!("Expected a string, but got {:?}", self),
+      StringOrRegex::String(s) => Ok(s),
+      StringOrRegex::Regex(_) => anyhow::bail!("expected a string, but got a regex"),
     }
   }
 
-  pub fn expect_regex(self) -> HybridRegex {
+  pub fn try_into_regex(self) -> anyhow::Result<HybridRegex> {
     match self {
-      StringOrRegex::Regex(s) => s,
-      StringOrRegex::String(_) => unreachable!("Expected a regex, but got {:?}", self),
+      StringOrRegex::Regex(s) => Ok(s),
+      StringOrRegex::String(_) => anyhow::bail!("expected a regex, but got a string"),
     }
   }
 }
@@ -38,7 +39,7 @@ pub enum StringOrRegexMatchKind<'a> {
 }
 
 impl StringOrRegex {
-  pub fn new(value: String, flag: &Option<String>) -> anyhow::Result<Self> {
+  pub fn new(value: String, flag: Option<&String>) -> anyhow::Result<Self> {
     if let Some(flag) = flag {
       let regex = HybridRegex::with_flags(&value, flag)?;
       Ok(Self::Regex(regex))
@@ -99,13 +100,19 @@ pub fn filter(
   }
 }
 
+/// Whether resolving `glob` into a matcher depends on `cwd`. Relative globs are
+/// joined onto `cwd`; `**`-prefixed and absolute globs are used as-is (so their
+/// resolution is independent of `cwd`).
+pub(crate) fn glob_matcher_depends_on_cwd(glob: &str) -> bool {
+  !(glob.starts_with("**") || Path::new(glob).is_absolute())
+}
+
 /// https://github.com/rollup/plugins/blob/e1a5ef99f1578eb38a8c87563cb9651db228f3bd/packages/pluginutils/src/createFilter.ts#L10
-fn get_matcher_string<'a>(glob: &'a str, cwd: &'a str) -> Cow<'a, str> {
-  if glob.starts_with("**") || Path::new(glob).is_absolute() {
-    normalize_path(glob)
+pub(crate) fn get_matcher_string<'a>(glob: &'a str, cwd: &'a str) -> Cow<'a, str> {
+  if glob_matcher_depends_on_cwd(glob) {
+    Cow::Owned(normalize_path_buf_to_slash(Path::new(cwd).join(glob)))
   } else {
-    let final_path = Path::new(cwd).join(glob);
-    Cow::Owned(normalize_path(&final_path.to_string_lossy()).into_owned())
+    normalize_path(glob)
   }
 }
 
@@ -121,7 +128,7 @@ pub fn normalize_path(path: &str) -> Cow<'_, str> {
   }
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Eq)]
 pub enum FilterResult {
   /// `Match(true)` means it is matched by `included`,
   /// `Match(false)` means it is matched by `excluded`
@@ -197,11 +204,11 @@ mod tests {
 
     #[expect(clippy::unnecessary_wraps)]
     fn glob_filter(value: &str) -> Option<[StringOrRegex; 1]> {
-      Some([StringOrRegex::new(value.to_string(), &None).unwrap()])
+      Some([StringOrRegex::new(value.to_string(), None).unwrap()])
     }
     #[expect(clippy::unnecessary_wraps)]
     fn regex_filter(value: &str) -> Option<[StringOrRegex; 1]> {
-      Some([StringOrRegex::new(value.to_string(), &Some(String::new())).unwrap()])
+      Some([StringOrRegex::new(value.to_string(), Some(&String::new())).unwrap()])
     }
 
     let foo_js = "foo.js";
@@ -301,12 +308,34 @@ mod tests {
         );
         assert_eq!(
           result, expected,
-          r"Failed at case {i}, 
+          r"Failed at case {i},
 subcase: {si},
 filter: {:?}, id: {id}",
           test_case.input_filter
         );
       }
+    }
+  }
+
+  #[test]
+  fn relative_current_dir_globs_match_like_clean_globs() {
+    #[cfg(windows)]
+    let (cwd, matching_id, nonmatching_id) =
+      (r"C:\home\rolldown", r"C:\home\rolldown\foo\file.txt", r"C:\home\rolldown\bar\file.txt");
+    #[cfg(not(windows))]
+    let (cwd, matching_id, nonmatching_id) =
+      ("/home/rolldown", "/home/rolldown/foo/file.txt", "/home/rolldown/bar/file.txt");
+
+    let dirty = get_matcher_string("./foo/*.txt", cwd);
+    let clean = get_matcher_string("foo/*.txt", cwd);
+    assert_eq!(dirty, clean);
+
+    for glob in ["./foo/*.txt", "foo/*.txt"] {
+      let pattern = [StringOrRegex::new(glob.to_string(), None).unwrap()];
+      assert_eq!(filter(None, Some(&pattern), matching_id, cwd), FilterResult::Match(true));
+      assert_eq!(filter(None, Some(&pattern), nonmatching_id, cwd), FilterResult::NoneMatch(false),);
+      assert_eq!(filter(Some(&pattern), None, matching_id, cwd), FilterResult::Match(false));
+      assert_eq!(filter(Some(&pattern), None, nonmatching_id, cwd), FilterResult::NoneMatch(true),);
     }
   }
 
@@ -326,11 +355,11 @@ filter: {:?}, id: {id}",
 
     #[expect(clippy::unnecessary_wraps)]
     fn string_filter(value: &str) -> Option<[StringOrRegex; 1]> {
-      Some([StringOrRegex::new(value.to_string(), &None).unwrap()])
+      Some([StringOrRegex::new(value.to_string(), None).unwrap()])
     }
     #[expect(clippy::unnecessary_wraps)]
     fn regex_filter(value: &str) -> Option<[StringOrRegex; 1]> {
-      Some([StringOrRegex::new(value.to_string(), &Some(String::new())).unwrap()])
+      Some([StringOrRegex::new(value.to_string(), Some(&String::new())).unwrap()])
     }
 
     let cases = [

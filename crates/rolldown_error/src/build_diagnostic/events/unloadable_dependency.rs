@@ -1,6 +1,7 @@
-use crate::types::diagnostic_options::DiagnosticOptions;
 use arcstr::ArcStr;
 use oxc::span::Span;
+
+use crate::types::diagnostic_options::DiagnosticOptions;
 
 use super::BuildEvent;
 
@@ -61,6 +62,12 @@ impl BuildEvent for UnloadableDependency {
       _ => {
         diagnostic.title = self.message(opts);
       }
+    }
+
+    if self.resolved.starts_with("\\0") {
+      diagnostic.add_help(String::from(
+        "This module seems to be a virtual module, but no plugin handled it via the load hook.",
+      ));
     }
   }
 }

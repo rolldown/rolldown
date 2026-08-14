@@ -1,4 +1,4 @@
-import assert from 'assert'
-import main from './dist/main.js'
+import assert from 'assert';
+import main from './dist/main.js';
 
-assert.equal((await main).default, 'cjs')
+assert.equal((await main).default, 'cjs');

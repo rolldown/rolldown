@@ -1,3 +1,2 @@
-export let foo
-export * from './dep.js'
-
+export let foo;
+export * from './dep.js';

@@ -1,3 +1,4 @@
+use std::path::PathBuf;
 use std::sync::Arc;
 use std::sync::atomic::AtomicBool;
 
@@ -5,9 +6,7 @@ use tracing_subscriber::{filter::FilterFn, fmt, prelude::*};
 
 use crate::devtools_formatter::DevtoolsFormatter;
 use crate::devtools_layer::DevtoolsLayer;
-use crate::static_data::EXIST_HASH_BY_SESSION;
-use crate::static_data::OPENED_FILE_HANDLES;
-use crate::static_data::OPENED_FILES_BY_SESSION;
+use crate::writer::{self, LogCommand};
 
 static IS_INITIALIZED: AtomicBool = AtomicBool::new(false);
 
@@ -18,7 +17,10 @@ pub struct DebugTracer {
 
 impl DebugTracer {
   #[must_use]
-  pub fn init(session_id: Arc<str>) -> Self {
+  pub fn init(session_id: Arc<str>, cwd: PathBuf) -> Self {
+    // Registered per session, before the process-wide subscriber guard, so every session resolves its own log paths.
+    writer::send(LogCommand::SetSessionCwd { session_id: session_id.as_ref().to_string(), cwd });
+
     let tracer = Self { session_id };
     if IS_INITIALIZED.swap(true, std::sync::atomic::Ordering::SeqCst) {
       return tracer;
@@ -46,12 +48,13 @@ impl DebugTracer {
 
 impl Drop for DebugTracer {
   fn drop(&mut self) {
-    if let Some((_session_id, files)) = OPENED_FILES_BY_SESSION.remove(self.session_id.as_ref()) {
-      for file in files {
-        OPENED_FILE_HANDLES.remove(&file);
-      }
-    }
-    EXIST_HASH_BY_SESSION.remove(self.session_id.as_ref());
+    // Best-effort cleanup path. Callers that need "file readable after this
+    // call" semantics should use `flush_session(...)` instead, which returns a
+    // receiver signalled after the writer thread drains this session.
+    writer::send(LogCommand::CloseSession {
+      session_id: self.session_id.as_ref().to_string(),
+      ack: None,
+    });
   }
 }
 

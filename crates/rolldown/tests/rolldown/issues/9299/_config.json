@@ -1,0 +1,14 @@
+{
+  "_comment": "Test for issue #9299: With preserveModules, CJS emit should forward `.default` for `export { default as X } from './X.js'`, not the namespace wrapper",
+  "expectExecuted": false,
+  "config": {
+    "input": [
+      {
+        "name": "index",
+        "import": "./index.ts"
+      }
+    ],
+    "format": "cjs",
+    "preserveModules": true
+  }
+}

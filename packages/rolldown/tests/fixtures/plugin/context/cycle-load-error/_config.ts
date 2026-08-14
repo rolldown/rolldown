@@ -4,6 +4,7 @@ import { expect, vi } from 'vitest';
 const onLogFn = vi.fn();
 
 export default defineTest({
+  sequential: true,
   config: {
     plugins: [
       {
@@ -16,9 +17,7 @@ export default defineTest({
     onLog(level, log) {
       expect(level).toBe('warn');
       expect(log.code).toBe('CYCLE_LOADING');
-      expect(log.message).toContain(
-        'cycle loading at test-plugin-context plugin',
-      );
+      expect(log.message).toContain('cycle loading at test-plugin-context plugin');
       expect(log.plugin).toBeUndefined();
       onLogFn();
     },

@@ -1,9 +1,5 @@
 import { defineTest } from 'rolldown-tests';
-import {
-  getLocation,
-  getOutputAsset,
-  getOutputChunk,
-} from 'rolldown-tests/utils';
+import { getLocation, getOutputAsset, getOutputChunk } from 'rolldown-tests/utils';
 import { SourceMapConsumer } from 'source-map';
 import { expect } from 'vitest';
 
@@ -12,7 +8,11 @@ export default defineTest({
     plugins: [
       {
         name: 'test-plugin',
-        transform() {
+        transform(_, id) {
+          // Skip virtual modules (like \0rolldown/runtime.js)
+          if (id.startsWith('\0')) {
+            return null;
+          }
           return {
             code: `
 console.log('bar');
@@ -23,13 +23,9 @@ console.log('foo');
               version: 3,
               file: 'foo.js',
               sources: ['bar.js', 'foo.js'],
-              sourcesContent: [
-                "console.log('bar')",
-                "import './bar'\nconsole.log('foo')",
-              ],
+              sourcesContent: ["console.log('bar')", "import './bar'\nconsole.log('foo')"],
               names: [],
-              mappings:
-                'AAAA,OAAO,CAAC,GAAG,CAAC,KAAK;;ACCjB,OAAO,CAAC,GAAG,CAAC,KAAK',
+              mappings: 'AAAA,OAAO,CAAC,GAAG,CAAC,KAAK;;ACCjB,OAAO,CAAC,GAAG,CAAC,KAAK',
             },
           };
         },

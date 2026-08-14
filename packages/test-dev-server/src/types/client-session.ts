@@ -1,12 +1,11 @@
 import type { WebSocket } from 'ws';
 
-let id = 0;
-
 export class ClientSession {
-  id = `${id++}`;
+  id: string;
   ws: WebSocket;
 
-  constructor(ws: WebSocket) {
+  constructor(ws: WebSocket, id: string) {
+    this.id = id;
     this.ws = ws;
   }
 }

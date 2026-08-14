@@ -5,7 +5,6 @@ outline: false
 <script setup>
 
 const contributors = [
-  ['Hana', 'https://github.com/h-a-n-a'],
   ['Kui Li (underfin)', 'https://github.com/underfin'],
 ].sort((a, b) => a[0].localeCompare(b[0])); // Sort alphabetically by name
 

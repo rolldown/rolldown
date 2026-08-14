@@ -9,4 +9,4 @@ parsed.reexports.sort();
 assert.deepStrictEqual(parsed, {
   exports: [],
   reexports: ['node:fs', 'node:path'].sort(),
-})
+});

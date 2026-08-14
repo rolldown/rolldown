@@ -16,29 +16,47 @@ jobs:
   run:
     if: ${{ inputs.changed }}
     name: Cargo Test
-    runs-on: ${{ inputs.os }}
+    runs-on: ${{ inputs.os == 'ubuntu-latest' && 'namespace-profile-linux-x64-default' || inputs.os == 'macos-latest' && 'namespace-profile-mac-default' || inputs.os }}
     steps:
-      - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           submodules: true # Pull submodules for additional files
           persist-credentials: false
 
+      - uses: samypr100/setup-dev-drive@562171fe8df7401fdf582d766cd3b6ab80d5b1a0 # v4.1.0
+        if: runner.os == 'Windows'
+        with:
+          drive-size: 20GB
+          drive-format: ReFS
+          env-mapping: |
+            CARGO_HOME,{{ DEV_DRIVE }}/.cargo
+            RUSTUP_HOME,{{ DEV_DRIVE }}/.rustup
+            PNPM_HOME,{{ DEV_DRIVE }}/.pnpm
+
       - name: Setup Rust
-        uses: oxc-project/setup-rust@c8224157c0bf235aabc633e8cd50d344f087a7de # v1.0.12
+        uses: oxc-project/setup-rust@3d6fb132fbe7cdcb66bf8ec193911c2945369d12 # v1.0.17
         with:
           tools: just
-          cache-key: debug-build
+          cache-key: cargo-test
+          save-cache: ${{ github.ref_name == 'main' }}
+          target-dir: ${{ runner.os == 'Windows' && format('{0}/target', env.DEV_DRIVE) || '' }}
 
-      - uses: oxc-project/setup-node@141eb77546de6702f92d320926403fe3f9f6a6f2 # v1.0.5
-
-      - name: Build
-        run: cargo test --workspace --exclude rolldown_binding --no-run
+      - uses: voidzero-dev/setup-vp@313600b80b104eadebb9111787d37a2e83e014ca # v1.17.0
+        with:
+          version: '0.2.1'
+          cache: true
 
       - name: Run Test
         run: just test-rust
         env:
           # Reject updated snapshots https://insta.rs/docs/advanced/#controlling-snapshot-updating
           INSTA_UPDATE: no
+
+      - name: Cache esbuild snapshots
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: scripts/tmp/esbuild-tests/snapshots
+          key: esbuild-snapshots-${{ hashFiles('scripts/src/esbuild-tests/urls.ts') }}
 
       - name: Check if esbuild tests diff has changed
         run: |

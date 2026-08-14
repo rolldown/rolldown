@@ -1,9 +1,5 @@
 import { defineTest } from 'rolldown-tests';
-import {
-  getLocation,
-  getOutputAsset,
-  getOutputChunk,
-} from 'rolldown-tests/utils';
+import { getLocation, getOutputAsset, getOutputChunk } from 'rolldown-tests/utils';
 import { SourceMapConsumer } from 'source-map';
 import { expect } from 'vitest';
 

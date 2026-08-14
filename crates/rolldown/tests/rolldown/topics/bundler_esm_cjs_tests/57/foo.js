@@ -1,2 +1,2 @@
-exports[Math.random() < 1 && '__esModule'] = true
-exports[Math.random() < 1 && 'foo'] = 123
+exports[Math.random() < 1 && '__esModule'] = true;
+exports[Math.random() < 1 && 'foo'] = 123;

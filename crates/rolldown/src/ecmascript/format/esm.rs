@@ -1,8 +1,10 @@
+use std::collections::VecDeque;
+
 use arcstr::ArcStr;
 use itertools::Itertools;
 use rolldown_common::{
-  AddonRenderContext, ExportsKind, ExternalModule, ImportRecordIdx, ModuleIdx, ModuleTable,
-  Specifier,
+  AddonRenderContext, ExportsKind, ExternalModule, ImportAttribute, ImportRecordIdx,
+  ImportRecordMeta, ModuleIdx, ModuleTable, RUNTIME_MODULE_KEY, Specifier, SymbolRef,
 };
 use rolldown_sourcemap::SourceJoiner;
 use rolldown_utils::{concat_string, ecmascript::to_module_import_export_name};
@@ -15,7 +17,7 @@ use crate::{
 };
 use json_escape_simd::escape;
 
-use super::utils::render_chunk_directives;
+use super::utils::{is_use_strict_directive, render_chunk_directives};
 
 #[expect(clippy::needless_pass_by_value)]
 pub fn render_esm<'code>(
@@ -37,11 +39,8 @@ pub fn render_esm<'code>(
 
   // https://github.com/evanw/esbuild/blob/d34e79e2a998c21bb71d57b92b0017ca11756912/internal/linker/linker.go#L5686-L5698
   if !directives.is_empty() {
-    let rendered_chunk_directives = render_chunk_directives(directives.iter().filter(|d| {
-      let normalized_directive =
-        d.trim_start_matches(['\'', '"']).trim_end_matches(['\'', '"', ';']);
-      normalized_directive != "use strict"
-    }));
+    let rendered_chunk_directives =
+      render_chunk_directives(directives.iter().filter(|d| !is_use_strict_directive(d)));
     if !rendered_chunk_directives.is_empty() {
       source_joiner.append_source(rendered_chunk_directives);
     }
@@ -60,8 +59,29 @@ pub fn render_esm<'code>(
       for importee_idx in ctx.chunk.entry_level_external_module_idx.iter().copied() {
         let importee = &ctx.link_output.module_table[importee_idx];
         if let Some(m) = importee.as_external() {
-          let ext_name = m.get_import_path(ctx.chunk, ctx.options.paths.as_ref());
-          source_joiner.append_source(concat_string!("export * from \"", ext_name, "\"\n"));
+          let ext_name = m.get_import_path(ctx.chunk, ctx.resolved_paths);
+          // Preserve the `with { ... }` import attribute from the originating
+          // `export * from "..." with { ... }` record (issue #9160) instead of dropping it.
+          // Follow this entry's export-star chain to the record that resolved to this external and
+          // reuse its attribute. This remains entry-specific when several facades share one
+          // implementation chunk. Notes:
+          // - If no such record carries an attribute, `with_clause` is `None` and we emit the
+          //   plain `export * from` exactly as before (safe degradation, no regression). This is
+          //   also what happens if the originating record is unavailable.
+          // - If several records re-export the same external with *different* attributes (a
+          //   pathological, conflicting input), the first attributed record in the entry's
+          //   breadth-first export-star traversal wins.
+          let with_clause =
+            find_entry_level_external_import_attribute(ctx, entry_module.idx, importee_idx);
+          // An absent attribute is just an empty suffix, so both cases collapse to a
+          // single `append_source` (same shape `create_import_declaration` uses below).
+          source_joiner.append_source(concat_string!(
+            "export * from \"",
+            ext_name,
+            "\"",
+            with_clause.map(|attr| concat_string!(" ", attr.to_string())).unwrap_or_default(),
+            "\n"
+          ));
         }
       }
     }
@@ -89,19 +109,104 @@ pub fn render_esm<'code>(
   source_joiner
 }
 
+fn find_entry_level_external_import_attribute<'a>(
+  ctx: &'a GenerateContext<'_>,
+  entry_module_idx: ModuleIdx,
+  external_module_idx: ModuleIdx,
+) -> Option<&'a ImportAttribute> {
+  let module_table = &ctx.link_output.module_table;
+  // Order-wrap entry facades render entry-level re-exports while the owning record lives in
+  // another chunk, so strict follows the export-star chain from the entry. Flag-off keeps
+  // main's same-chunk scan so its output stays byte-identical.
+  if !ctx.options.is_strict_execution_order_enabled() {
+    return ctx.chunk.modules.iter().find_map(|module_idx| {
+      let module = module_table[*module_idx].as_normal()?;
+      module.import_records.iter_enumerated().find_map(|(rec_idx, rec)| {
+        (rec.resolved_module == Some(external_module_idx)
+          && rec.meta.contains(ImportRecordMeta::IsExportStar)
+          && rec.meta.contains(ImportRecordMeta::EntryLevelExternal))
+        .then(|| module.import_attribute_map.get(&rec_idx))
+        .flatten()
+      })
+    });
+  }
+
+  let mut queue = VecDeque::from([entry_module_idx]);
+  let mut visited = FxHashSet::default();
+
+  while let Some(module_idx) = queue.pop_front() {
+    if !visited.insert(module_idx) {
+      continue;
+    }
+    let Some(module) = module_table[module_idx].as_normal() else {
+      continue;
+    };
+
+    for (rec_idx, rec) in module.import_records.iter_enumerated() {
+      if !rec.meta.contains(ImportRecordMeta::IsExportStar) {
+        continue;
+      }
+      let Some(importee_idx) = rec.resolved_module else {
+        continue;
+      };
+      if importee_idx == external_module_idx
+        && rec.meta.contains(ImportRecordMeta::EntryLevelExternal)
+      {
+        if let Some(import_attribute) = module.import_attribute_map.get(&rec_idx) {
+          return Some(import_attribute);
+        }
+        continue;
+      }
+      if module_table[importee_idx].is_normal() {
+        queue.push_back(importee_idx);
+      }
+    }
+  }
+
+  None
+}
+
 fn render_chunk_content<'code>(
   ctx: &GenerateContext<'_>,
   module_sources: &'code [RenderedModuleSource],
   source_joiner: &mut SourceJoiner<'code>,
 ) {
+  // Dev mode: every chunk carries a graph-rows prelude for the client-side HMR walk.
+  // It references `__rolldown_runtime__`, so in the chunk that defines the runtime it
+  // must land right after the runtime module; everywhere else it comes first (the
+  // global is guaranteed by the chunk's ESM import of the runtime-carrying chunk).
+  let mut dev_graph_prelude = if ctx.options.is_dev_mode_enabled() {
+    crate::hmr::module_graph_delta::render_register_graph_source(
+      &ctx.link_output.module_table,
+      ctx.chunk.modules.iter().copied(),
+    )
+  } else {
+    None
+  };
+  // The per-module runtime checks below are reached through `take_if`, so they run only
+  // while a prelude is still pending — never in production, and at most until the runtime
+  // module is found in dev.
+  let is_runtime_module =
+    |idx: ModuleIdx| ctx.link_output.module_table[idx].id().as_str() == RUNTIME_MODULE_KEY;
+  let chunk_carries_runtime =
+    dev_graph_prelude.is_some() && ctx.chunk.modules.iter().copied().any(is_runtime_module);
+  if !chunk_carries_runtime {
+    if let Some(prelude) = dev_graph_prelude.take() {
+      source_joiner.append_source(prelude);
+    }
+  }
+
   // If there is no concatenate_wrapping_modules, just concate all modules by exec order.
   if ctx.chunk.module_groups.is_empty() {
     module_sources.iter().for_each(
-      |RenderedModuleSource { sources: module_render_output, .. }| {
+      |RenderedModuleSource { sources: module_render_output, module_idx, .. }| {
         if let Some(emitted_sources) = module_render_output {
           for source in emitted_sources.as_ref() {
             source_joiner.append_source(source);
           }
+        }
+        if let Some(prelude) = dev_graph_prelude.take_if(|_| is_runtime_module(*module_idx)) {
+          source_joiner.append_source(prelude);
         }
       },
     );
@@ -127,29 +232,32 @@ fn render_chunk_content<'code>(
           source_joiner.append_source(source);
         }
       }
+      if let Some(prelude) = dev_graph_prelude.take_if(|_| is_runtime_module(group.entry)) {
+        source_joiner.append_source(prelude);
+      }
       continue;
     }
-    let (hoisted_fns, hoisted_vars) = group
-      .modules
-      .iter()
-      .filter_map(|idx| {
-        let render_concatenated_module =
-          ctx.chunk.module_idx_to_render_concatenated_module.get(idx)?;
-        let hoisted_fns = render_concatenated_module.hoisted_functions_or_module_ns_decl.join("");
-        let hoisted_vars = render_concatenated_module.hoisted_vars.join(", ");
-        Some((hoisted_fns, hoisted_vars))
-      })
-      .fold(
-        (String::new(), String::new()),
-        |(mut acc_hoisted_fns, mut acc_hoisted_vars), (hoisted_fn, hoisted_vars)| {
-          acc_hoisted_fns += &hoisted_fn;
-          if !hoisted_vars.is_empty() && !acc_hoisted_vars.is_empty() {
-            acc_hoisted_vars += ", ";
-          }
-          acc_hoisted_vars += &hoisted_vars;
-          (acc_hoisted_fns, acc_hoisted_vars)
-        },
-      );
+    // Concatenate hoisted functions and comma-join hoisted vars across the group's modules by
+    // appending each element directly into the accumulators, instead of allocating a temporary
+    // joined `String` per module just to append it.
+    let mut hoisted_fns = String::new();
+    let mut hoisted_vars = String::new();
+    for idx in &group.modules {
+      let Some(render_concatenated_module) =
+        ctx.chunk.module_idx_to_render_concatenated_module.get(idx)
+      else {
+        continue;
+      };
+      for hoisted_fn in &render_concatenated_module.hoisted_functions_or_module_ns_decl {
+        hoisted_fns.push_str(hoisted_fn);
+      }
+      for hoisted_var in &render_concatenated_module.hoisted_vars {
+        if !hoisted_vars.is_empty() {
+          hoisted_vars.push_str(", ");
+        }
+        hoisted_vars.push_str(hoisted_var);
+      }
+    }
 
     let entry_module_stable_id = ctx.link_output.module_table[group.entry].stable_id();
     // render var init_entry = __esm("", () => {
@@ -164,7 +272,15 @@ fn render_chunk_content<'code>(
       .as_ref()
       .unwrap();
 
-    source_joiner.append_source(hoisted_fns);
+    // The concatenated closure holds the bodies of every module in the group. If the group's
+    // entry is TLA-tainted (has top-level `await`, or awaits a TLA importee's `init` call), those
+    // `await`s land inside this closure, so it must be `async`. This mirrors the flag threaded
+    // into `new_esm_wrapper_stmt` for the non-concatenated wrapper.
+    let is_async = ctx.link_output.metas[group.entry].is_tla_or_contains_tla_dependency;
+
+    if !hoisted_fns.is_empty() {
+      source_joiner.append_source(hoisted_fns);
+    }
     if !hoisted_vars.is_empty() {
       source_joiner.append_source(concat_string!("var ", hoisted_vars, ";"));
     }
@@ -181,7 +297,7 @@ fn render_chunk_content<'code>(
         String::new()
       },
       if is_pife_for_module_wrappers_enabled { "(" } else { "" },
-      "() => {"
+      if is_async { "async () => {" } else { "() => {" }
     ));
     // we render each module in the group by exec order.
     group.modules.iter().for_each(|module_idx| {
@@ -202,6 +318,14 @@ fn render_chunk_content<'code>(
     }
     postfix += ");\n";
     source_joiner.append_source(postfix);
+    if let Some(prelude) =
+      dev_graph_prelude.take_if(|_| group.modules.iter().copied().any(is_runtime_module))
+    {
+      source_joiner.append_source(prelude);
+    }
+  }
+  if let Some(prelude) = dev_graph_prelude.take() {
+    source_joiner.append_source(prelude);
   }
 }
 
@@ -210,19 +334,30 @@ fn render_esm_chunk_imports(ctx: &GenerateContext<'_>) -> Option<String> {
   ctx.chunk.imports_from_other_chunks.iter().for_each(|(exporter_id, items)| {
     let importee_chunk = &ctx.chunk_graph.chunk_table[*exporter_id];
     let mut default_alias = vec![];
+    // Track seen canonical refs to avoid duplicate imports.
+    // Multiple import_refs can resolve to the same canonical_ref (e.g., re-exports from CJS modules),
+    // and we only need to import once per unique canonical symbol.
+    let mut seen_canonical_refs: FxHashSet<SymbolRef> = FxHashSet::default();
     let mut specifiers = items
       .iter()
       .filter_map(|item| {
         let canonical_ref = ctx.link_output.symbol_db.canonical_ref_for(item.import_ref);
-        let imported = &ctx.chunk.canonical_names[&canonical_ref];
+        // Skip if we've already processed this canonical symbol
+        if !seen_canonical_refs.insert(canonical_ref) {
+          return None;
+        }
+        let imported = ctx
+          .link_output
+          .symbol_db
+          .canonical_name_for_or_original(canonical_ref, &ctx.chunk.canonical_names);
         let alias = &ctx.render_export_items_index_vec[*exporter_id]
           .get(&item.import_ref)
           .expect("should have export item index")[0];
-        if alias == imported {
+        if alias.as_str() == imported {
           Some(to_module_import_export_name(alias.as_str()))
         } else {
           if alias.as_str() == "default" {
-            default_alias.push(imported.as_str().into());
+            default_alias.push(imported.into());
             return None;
           }
           Some(concat_string!(to_module_import_export_name(alias), " as ", imported))
@@ -250,9 +385,9 @@ fn render_esm_chunk_imports(ctx: &GenerateContext<'_>) -> Option<String> {
     // TODO: Warning same import record has different import attributes. https://tinyurl.com/2ddnbbc8
     named_imports.iter().for_each(|(idx, named_import)| {
       let module = ctx.link_output.module_table[*idx].as_normal().unwrap();
-      if module.import_attribute_map.contains_key(&named_import.record_id) {
+      if module.import_attribute_map.contains_key(&named_import.record_idx) {
         if import_attribute.is_none() {
-          import_attribute = Some((module.idx, named_import.record_id));
+          import_attribute = Some((module.idx, named_import.record_idx));
         }
       }
     });
@@ -333,11 +468,22 @@ where
   let mut default_alias = vec![];
   let specifiers = named_imports
     .filter_map(|(_importer, named_import)| {
-      let canonical_ref = &ctx.link_output.symbol_db.canonical_ref_for(named_import.imported_as);
-      if !ctx.link_output.used_symbol_refs.contains(canonical_ref) {
+      let canonical_ref = ctx.link_output.symbol_db.canonical_ref_for(named_import.imported_as);
+      // A named import that is itself re-exported skips the external binding merger
+      // (`bind_imports_and_exports`), so its canonical ref stays importer-local; its usage
+      // is still answered by `used_symbol_refs` until exports get their own tracking.
+      let is_used = if ctx.link_output.module_table[canonical_ref.owner].is_external() {
+        ctx.link_output.used_external_symbols.contains(&canonical_ref)
+      } else {
+        ctx.used_symbol_refs.contains(&canonical_ref)
+      };
+      if !is_used {
         return None;
       }
-      let alias = &ctx.chunk.canonical_names[canonical_ref];
+      let alias = ctx
+        .link_output
+        .symbol_db
+        .canonical_name_for_or_original(canonical_ref, &ctx.chunk.canonical_names);
       match &named_import.imported {
         Specifier::Star => {
           if rendered_external_import_namespace_modules.contains(&importee.idx) {
@@ -348,16 +494,16 @@ where
           s.push_str("import * as ");
           s.push_str(alias);
           s.push_str(" from ");
-          s.push_str(&escape(&importee.get_import_path(ctx.chunk, ctx.options.paths.as_ref())));
+          s.push_str(&escape(&importee.get_import_path(ctx.chunk, ctx.resolved_paths)));
           s.push_str(";\n");
           None
         }
         Specifier::Literal(imported) => {
-          if alias == imported {
-            Some(alias.as_str().into())
+          if alias == imported.as_str() {
+            Some(alias.into())
           } else {
             if imported.as_str() == "default" {
-              default_alias.push(alias.as_str().into());
+              default_alias.push(alias.into());
               return None;
             }
             let imported = to_module_import_export_name(imported);
@@ -381,7 +527,7 @@ where
       &ctx.link_output.module_table,
       specifiers,
       &default_alias,
-      &importee.get_import_path(ctx.chunk, ctx.options.paths.as_ref()),
+      &importee.get_import_path(ctx.chunk, ctx.resolved_paths),
       with_clause,
     ));
   }

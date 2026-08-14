@@ -1,1 +1,1 @@
-module.exports.sub = "sub";
+module.exports.sub = 'sub';

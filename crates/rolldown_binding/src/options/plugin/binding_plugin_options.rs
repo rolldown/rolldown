@@ -1,4 +1,3 @@
-use itertools::Itertools;
 use napi::bindgen_prelude::{Either, FnArgs};
 use rolldown_utils::filter_expression::{self, FilterExprKind};
 use std::fmt::Debug;
@@ -14,6 +13,7 @@ use crate::types::{
 
 use super::{
   binding_builtin_plugin::BindingBuiltinPlugin,
+  binding_load_context::BindingLoadPluginContext,
   binding_plugin_context::BindingPluginContext,
   binding_plugin_hook_meta::BindingPluginHookMeta,
   binding_transform_context::BindingTransformPluginContext,
@@ -21,11 +21,14 @@ use super::{
     binding_filter_expression::normalized_tokens, binding_hook_filter::BindingHookFilter,
     binding_hook_load_output::BindingHookLoadOutput,
     binding_hook_render_chunk_output::BindingHookRenderChunkOutput,
+    binding_hook_resolve_file_url_args::BindingHookResolveFileUrlArgs,
     binding_hook_resolve_id_extra_args::BindingHookResolveIdExtraArgs,
     binding_hook_resolve_id_output::BindingHookResolveIdOutput,
     binding_hook_transform_output::BindingHookTransformOutput,
+    binding_hot_update_args::BindingHotUpdateArgs,
     binding_plugin_transform_extra_args::BindingTransformHookExtraArgs,
     binding_render_chunk_meta_chunks::BindingRenderedChunkMeta,
+    binding_shared_string::BindingSharedString,
   },
 };
 
@@ -69,10 +72,10 @@ pub struct BindingPluginOptions {
   pub resolve_dynamic_import_meta: Option<BindingPluginHookMeta>,
 
   #[napi(
-    ts_type = "(ctx: BindingPluginContext, id: string) => MaybePromise<VoidNullable<BindingHookLoadOutput>>"
+    ts_type = "(ctx: BindingLoadPluginContext, id: string) => MaybePromise<VoidNullable<BindingHookLoadOutput>>"
   )]
   pub load: Option<
-    MaybeAsyncJsCallback<FnArgs<(BindingPluginContext, String)>, Option<BindingHookLoadOutput>>,
+    MaybeAsyncJsCallback<FnArgs<(BindingLoadPluginContext, String)>, Option<BindingHookLoadOutput>>,
   >,
   pub load_meta: Option<BindingPluginHookMeta>,
   pub load_filter: Option<BindingHookFilter>,
@@ -82,7 +85,12 @@ pub struct BindingPluginOptions {
   )]
   pub transform: Option<
     MaybeAsyncJsCallback<
-      FnArgs<(BindingTransformPluginContext, String, String, BindingTransformHookExtraArgs)>,
+      FnArgs<(
+        BindingTransformPluginContext,
+        BindingSharedString,
+        String,
+        BindingTransformHookExtraArgs,
+      )>,
       Option<BindingHookTransformOutput>,
     >,
   >,
@@ -110,7 +118,7 @@ pub struct BindingPluginOptions {
     MaybeAsyncJsCallback<
       FnArgs<(
         BindingPluginContext,
-        String,
+        BindingSharedString,
         BindingRenderedChunk,
         BindingNormalizedOptions,
         BindingRenderedChunkMeta,
@@ -128,6 +136,17 @@ pub struct BindingPluginOptions {
     MaybeAsyncJsCallback<FnArgs<(BindingPluginContext, BindingRenderedChunk)>, Option<String>>,
   >,
   pub augment_chunk_hash_meta: Option<BindingPluginHookMeta>,
+
+  #[napi(
+    ts_type = "(ctx: BindingPluginContext, args: BindingHookResolveFileUrlArgs) => MaybePromise<void | string | null>"
+  )]
+  pub resolve_file_url: Option<
+    MaybeAsyncJsCallback<
+      FnArgs<(BindingPluginContext, BindingHookResolveFileUrlArgs)>,
+      Option<String>,
+    >,
+  >,
+  pub resolve_file_url_meta: Option<BindingPluginHookMeta>,
 
   #[napi(ts_type = "(ctx: BindingPluginContext, opts: BindingNormalizedOptions) => void")]
   pub render_start:
@@ -160,8 +179,11 @@ pub struct BindingPluginOptions {
   >,
   pub write_bundle_meta: Option<BindingPluginHookMeta>,
 
-  #[napi(ts_type = "(ctx: BindingPluginContext) => MaybePromise<VoidNullable>")]
-  pub close_bundle: Option<MaybeAsyncJsCallback<FnArgs<(BindingPluginContext,)>>>,
+  #[napi(
+    ts_type = "(ctx: BindingPluginContext, error?: BindingError[]) => MaybePromise<VoidNullable>"
+  )]
+  pub close_bundle:
+    Option<MaybeAsyncJsCallback<FnArgs<(BindingPluginContext, Option<Vec<BindingError>>)>>>,
   pub close_bundle_meta: Option<BindingPluginHookMeta>,
 
   #[napi(
@@ -169,6 +191,14 @@ pub struct BindingPluginOptions {
   )]
   pub watch_change: Option<MaybeAsyncJsCallback<FnArgs<(BindingPluginContext, String, String)>>>,
   pub watch_change_meta: Option<BindingPluginHookMeta>,
+
+  #[napi(
+    ts_type = "(ctx: BindingPluginContext, args: BindingHotUpdateArgs) => MaybePromise<VoidNullable<Array<string>>>"
+  )]
+  pub hot_update: Option<
+    MaybeAsyncJsCallback<FnArgs<(BindingPluginContext, BindingHotUpdateArgs)>, Option<Vec<String>>>,
+  >,
+  pub hot_update_meta: Option<BindingPluginHookMeta>,
 
   #[napi(ts_type = "(ctx: BindingPluginContext) => MaybePromise<VoidNullable>")]
   pub close_watcher: Option<MaybeAsyncJsCallback<FnArgs<(BindingPluginContext,)>>>,
@@ -213,45 +243,43 @@ pub struct FilterExprCache {
   pub render_chunk: Option<Vec<FilterExprKind>>,
 }
 impl BindingPluginOptions {
-  pub fn pre_compile_filter_expr(&self) -> FilterExprCache {
+  pub fn pre_compile_filter_expr(&self) -> napi::Result<FilterExprCache> {
+    let plugin_name = &self.name;
+    let make_err = |err: anyhow::Error| {
+      napi::Error::new(
+        napi::Status::InvalidArg,
+        format!("Invalid filter expression in plugin '{plugin_name}': {err}"),
+      )
+    };
+    let compile = |tokenss: &[Vec<_>]| -> napi::Result<Vec<FilterExprKind>> {
+      tokenss
+        .iter()
+        .cloned()
+        .map(|tokens| {
+          let normalized = normalized_tokens(tokens).map_err(&make_err)?;
+          filter_expression::parse(normalized).map_err(&make_err)
+        })
+        .collect()
+    };
+
     let mut cache = FilterExprCache::default();
     if let Some(tokenss) = self.resolve_id_filter.as_ref().and_then(|item| item.value.as_ref()) {
-      let filter_kind = tokenss
-        .clone()
-        .into_iter()
-        .map(|tokens| filter_expression::parse(normalized_tokens(tokens)))
-        .collect_vec();
-      cache.resolve_id = Some(filter_kind);
+      cache.resolve_id = Some(compile(tokenss)?);
     }
 
     if let Some(filter) = self.load_filter.as_ref().and_then(|item| item.value.as_ref()) {
-      let filter_kind = filter
-        .clone()
-        .into_iter()
-        .map(|tokens| filter_expression::parse(normalized_tokens(tokens)))
-        .collect_vec();
-      cache.load = Some(filter_kind);
+      cache.load = Some(compile(filter)?);
     }
 
     if let Some(filter) = self.transform_filter.as_ref().and_then(|item| item.value.as_ref()) {
-      let filter_kind = filter
-        .clone()
-        .into_iter()
-        .map(|tokens| filter_expression::parse(normalized_tokens(tokens)))
-        .collect_vec();
-      cache.transform = Some(filter_kind);
+      cache.transform = Some(compile(filter)?);
     }
 
     if let Some(filter) = self.render_chunk_filter.as_ref().and_then(|item| item.value.as_ref()) {
-      let filter_kind = filter
-        .clone()
-        .into_iter()
-        .map(|tokens| filter_expression::parse(normalized_tokens(tokens)))
-        .collect_vec();
-      cache.render_chunk = Some(filter_kind);
+      cache.render_chunk = Some(compile(filter)?);
     }
 
-    cache
+    Ok(cache)
   }
 }
 

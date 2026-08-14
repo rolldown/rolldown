@@ -2,28 +2,37 @@ use std::{borrow::Cow, path::Path};
 
 use json_escape_simd::escape;
 use oxc::{semantic::Scoping, span::SourceType as OxcSourceType};
+use oxc_str::CompactStr;
 use rolldown_common::{
-  ModuleType, NormalizedBundlerOptions, RUNTIME_MODULE_KEY, StrOrBytes, json_value_to_ecma_ast,
+  ConstExportMeta, ModuleDefFormat, ModuleId, ModuleType, NormalizedBundlerOptions,
+  RUNTIME_MODULE_KEY, StrOrBytes, json_value_to_ecma_ast,
 };
 use rolldown_ecmascript::{EcmaAst, EcmaCompiler};
-use rolldown_error::{BuildDiagnostic, BuildResult};
+use rolldown_error::{BuildDiagnostic, BuildResult, EventKindSwitcher};
 use rolldown_plugin::HookTransformAstArgs;
 use rolldown_utils::mime::guess_mime;
-use sugar_path::SugarPath;
+use rustc_hash::FxHashMap;
+use sugar_path::SugarPath as _;
 
 use super::pre_process_ecma_ast::PreProcessEcmaAst;
 
 use crate::types::{module_factory::CreateModuleContext, oxc_parse_type::OxcParseType};
 
 #[inline]
-fn pure_esm_js_oxc_source_type() -> OxcSourceType {
-  let pure_esm_js = OxcSourceType::default().with_module(true);
-  debug_assert!(pure_esm_js.is_javascript());
-  debug_assert!(!pure_esm_js.is_jsx());
-  debug_assert!(pure_esm_js.is_module());
-  debug_assert!(pure_esm_js.is_strict());
-
-  pure_esm_js
+fn pure_esm_js_oxc_source_type(module_def_format: ModuleDefFormat) -> OxcSourceType {
+  let default_source_type = OxcSourceType::default();
+  debug_assert!(default_source_type.is_javascript());
+  debug_assert!(!default_source_type.is_jsx());
+  match module_def_format {
+    ModuleDefFormat::Cjs | ModuleDefFormat::Cts => default_source_type.with_commonjs(true),
+    ModuleDefFormat::EsmMjs | ModuleDefFormat::EsmMts | ModuleDefFormat::EsmPackageJson => {
+      default_source_type.with_module(true)
+    }
+    ModuleDefFormat::CjsPackageJson | ModuleDefFormat::Unknown => {
+      // treat unknown format as ESM for now: https://github.com/rolldown/rolldown/issues/7009
+      default_source_type.with_module(true)
+    }
+  }
 }
 
 pub struct ParseToEcmaAstResult {
@@ -31,6 +40,12 @@ pub struct ParseToEcmaAstResult {
   pub scoping: Scoping,
   pub has_lazy_export: bool,
   pub warnings: Vec<BuildDiagnostic>,
+  /// Whether JSX syntax should be preserved in the output, determined per-module
+  /// during transformation based on the resolved tsconfig.
+  pub preserve_jsx: bool,
+  /// Enum member constant values, keyed by enum name → member name → value.
+  /// Used by the finalizer to inline cross-module enum member accesses (e.g., `Direction.Up` → `0`).
+  pub enum_member_value_map: FxHashMap<CompactStr, FxHashMap<CompactStr, ConstExportMeta>>,
 }
 
 pub async fn parse_to_ecma_ast(
@@ -47,14 +62,14 @@ pub async fn parse_to_ecma_ast(
     ..
   } = ctx;
 
-  let path = resolved_id.id.as_path();
+  let path = Path::new(resolved_id.id.as_str());
   let is_user_defined_entry = ctx.is_user_defined_entry;
 
   let (has_lazy_export, source, parsed_type) =
-    pre_process_source(path, source, module_type, is_user_defined_entry, options)?;
+    pre_process_source(path, source, module_type, options)?;
 
   let oxc_source_type = {
-    let default = pure_esm_js_oxc_source_type();
+    let default = pure_esm_js_oxc_source_type(resolved_id.module_def_format);
     match parsed_type {
       OxcParseType::Js => default,
       OxcParseType::Jsx => default.with_jsx(!options.transform_options.is_jsx_disabled()),
@@ -99,10 +114,15 @@ pub async fn parse_to_ecma_ast(
     })
     .await?;
 
+  let is_local_project_file = is_local_project_file(&resolved_id.id, &options.normalized_cwd);
+  let should_warn_on_invalid_annotation =
+    options.checks.contains(EventKindSwitcher::InvalidAnnotation) && is_local_project_file;
+
   PreProcessEcmaAst::default().build(
     ecma_ast,
     stable_id,
     resolved_id.id.as_str(),
+    should_warn_on_invalid_annotation,
     &parsed_type,
     replace_global_define_config.as_ref(),
     options,
@@ -110,20 +130,23 @@ pub async fn parse_to_ecma_ast(
   )
 }
 
+fn is_local_project_file(id: &ModuleId, normalized_cwd: &Path) -> bool {
+  if id.is_in_node_modules() {
+    return false;
+  }
+
+  id.as_path().is_some_and(|path| path.normalize().starts_with(normalized_cwd))
+}
+
 fn pre_process_source(
   path: &Path,
   source: StrOrBytes,
   module_type: &ModuleType,
-  is_user_defined_entry: bool,
   options: &NormalizedBundlerOptions,
 ) -> BuildResult<(bool, Cow<'static, str>, OxcParseType)> {
-  let mut has_lazy_export = matches!(
+  let has_lazy_export = matches!(
     module_type,
-    ModuleType::Json
-      | ModuleType::Text
-      | ModuleType::Base64
-      | ModuleType::Dataurl
-      | ModuleType::Asset
+    ModuleType::Json | ModuleType::Text | ModuleType::Base64 | ModuleType::Dataurl
   );
 
   let source = match module_type {
@@ -131,12 +154,7 @@ fn pre_process_source(
       Cow::Owned(source.try_into_string()?)
     }
     ModuleType::Css => {
-      if is_user_defined_entry {
-        Cow::Borrowed("export {}")
-      } else {
-        has_lazy_export = true;
-        Cow::Borrowed("({})")
-      }
+      unreachable!("CSS modules should error before reaching parse_to_ecma_ast")
     }
     ModuleType::Text => {
       let text = source.try_into_string()?;
@@ -144,7 +162,13 @@ fn pre_process_source(
       let text = text.strip_prefix('\u{FEFF}').unwrap_or(&text);
       Cow::Owned(escape(text))
     }
-    ModuleType::Asset => Cow::Borrowed("__ROLLDOWN_ASSET_FILENAME__"),
+    ModuleType::Asset => {
+      return Err(anyhow::format_err!(
+        "Encountered a module with type `asset` during AST parsing. \
+         Modules with type `asset` must be handled by the builtin AssetModulePlugin before this stage; \
+         please check your plugin and loader configuration."
+      ))?;
+    }
     ModuleType::Base64 => {
       let encoded = rolldown_utils::base64::to_standard_base64(source.as_bytes());
       Cow::Owned(escape(&encoded))
@@ -174,6 +198,13 @@ fn pre_process_source(
       ))
     }
     ModuleType::Empty => Cow::Borrowed(""),
+    ModuleType::Copy => {
+      return Err(anyhow::format_err!(
+        "Encountered a module with type `copy` during AST parsing. \
+         Modules with type `copy` must be handled by the builtin CopyModulePlugin before this stage; \
+         please check your plugin and loader configuration."
+      ))?;
+    }
     ModuleType::Custom(custom_type) => {
       // TODO: should provide friendly error message to say that this type is not supported by rolldown.
       // Users should handle this type in load/transform hooks
@@ -182,4 +213,30 @@ fn pre_process_source(
   };
 
   Ok((has_lazy_export, source, module_type.into()))
+}
+
+#[cfg(test)]
+mod tests {
+  use rolldown_common::ModuleId;
+  use sugar_path::SugarPath as _;
+
+  use super::is_local_project_file;
+
+  #[test]
+  fn parent_dir_cannot_escape_cwd() {
+    let cwd = std::env::current_dir().unwrap().join("project");
+    let normalized_cwd = cwd.normalize();
+    let id = ModuleId::new(cwd.join("src/../../dependency.js").to_string_lossy().into_owned());
+
+    assert!(!is_local_project_file(&id, normalized_cwd.as_ref()));
+  }
+
+  #[test]
+  fn node_modules_component_is_excluded() {
+    let cwd = std::env::current_dir().unwrap().join("project");
+    let normalized_cwd = cwd.normalize();
+    let id = ModuleId::new(cwd.join("node_modules/pkg/index.js").to_string_lossy().into_owned());
+
+    assert!(!is_local_project_file(&id, normalized_cwd.as_ref()));
+  }
 }

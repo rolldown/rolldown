@@ -7,12 +7,11 @@ import { bar_ } from "xyz";
 ### rolldown
 ```js
 import "xyz";
-
 //#region esm.js
 let foo_ = 123;
-
 //#endregion
 export { foo_ };
+
 ```
 ### diff
 ```diff
@@ -35,13 +34,12 @@ let bar_ = require("xyz").b;
 ```
 ### rolldown
 ```js
-// HIDDEN [rolldown:runtime]
+// HIDDEN [\0rolldown/runtime.js]
 //#region cjs.js
 var require_cjs = /* @__PURE__ */ __commonJSMin(((exports) => {
 	exports.foo_ = 123;
 	__require("xyz").bar_;
 }));
-
 //#endregion
 export default require_cjs();
 

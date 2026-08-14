@@ -1,10 +1,24 @@
 use bitflags::bitflags;
 use oxc_index::IndexVec;
 use rustc_hash::FxHashMap;
+use smallvec::SmallVec;
 
-use crate::{ImportRecordIdx, SideEffectDetail, SymbolOrMemberExprRef, SymbolRef};
+use crate::{ImportRecordIdx, StmtEvalFlags, SymbolOrMemberExprRef, SymbolRef};
 
 use super::symbol_or_member_expr_ref::TaggedSymbolRef;
+
+/// Storage for the symbols a statement declares.
+///
+/// The overwhelming majority of statements declare zero, one, or two top-level symbols, so the
+/// elements are kept inline (no heap allocation) for up to two and only spill to the heap beyond
+/// that. With [`TaggedSymbolRef`] packed to 8 bytes this matches the 24-byte footprint of a `Vec`
+/// on 64-bit targets, so `StmtInfo` doesn't grow there. On 32-bit targets (e.g. wasm32) the inline
+/// buffer makes it 8 bytes larger than a `Vec`, which we accept in exchange for eliding the
+/// per-statement heap allocation.
+pub type DeclaredSymbols = SmallVec<[TaggedSymbolRef; 2]>;
+
+#[cfg(target_pointer_width = "64")]
+const _: () = assert!(size_of::<DeclaredSymbols>() == size_of::<Vec<TaggedSymbolRef>>());
 
 #[derive(Debug, Clone)]
 pub struct StmtInfos {
@@ -59,16 +73,10 @@ impl StmtInfos {
     self.symbol_ref_to_referenced_stmt_idx.entry(symbol_ref).or_default().push(id);
   }
 
-  pub fn get_namespace_stmt_info(&self) -> &StmtInfo {
-    &self.infos[Self::NAMESPACE_STMT_IDX]
-  }
-
   pub fn replace_namespace_stmt_info(&mut self, info: StmtInfo) -> StmtInfoIdx {
     self.infos[Self::NAMESPACE_STMT_IDX] = info;
-    for symbol_ref in self.infos[Self::NAMESPACE_STMT_IDX]
-      .declared_symbols
-      .iter()
-      .filter(|item| matches!(item, TaggedSymbolRef::Normal(_)))
+    for symbol_ref in
+      self.infos[Self::NAMESPACE_STMT_IDX].declared_symbols.iter().filter(|item| item.is_normal())
     {
       self
         .symbol_ref_to_declared_stmt_idx
@@ -85,7 +93,7 @@ impl StmtInfos {
 
   pub fn iter_enumerated_without_namespace_stmt(
     &self,
-  ) -> impl Iterator<Item = (StmtInfoIdx, &StmtInfo)> {
+  ) -> impl ExactSizeIterator<Item = (StmtInfoIdx, &StmtInfo)> {
     self.infos.iter_enumerated().skip(1)
   }
 
@@ -122,18 +130,20 @@ bitflags! {
         const HasDummyRecord = 1 << 1;
         /// see `has_dynamic_exports` in https://github.com/rolldown/rolldown/blob/8bc7dca5a09047b6b494e3fa7b6b7564aa465372/crates/rolldown/src/types/linking_metadata.rs?plain=1#L49
         const ReExportDynamicExports = 1 << 2;
+        /// Statement contains non-static dynamic import like `import(foo)` or `import('a' + 'b')`
+        const NonStaticDynamicImport = 1 << 3;
     }
 }
 
 #[derive(Default, Debug, Clone)]
 pub struct StmtInfo {
   // currently, we only store top level symbols
-  pub declared_symbols: Vec<TaggedSymbolRef>,
+  pub declared_symbols: DeclaredSymbols,
   // We will add symbols of other modules to `referenced_symbols`, so we need `SymbolRef`
   // here instead of `SymbolId`.
   /// Top level symbols referenced by this statement.
   pub referenced_symbols: Vec<SymbolOrMemberExprRef>,
-  pub side_effect: SideEffectDetail,
+  pub eval_flags: StmtEvalFlags,
   pub import_records: Vec<ImportRecordIdx>,
   #[cfg(debug_assertions)]
   pub debug_label: Option<String>,
@@ -155,14 +165,14 @@ impl StmtInfo {
   ) -> DebugStmtInfoForTreeShaking {
     DebugStmtInfoForTreeShaking {
       is_included,
-      side_effect: self.side_effect,
+      eval_flags: self.eval_flags,
       #[cfg(debug_assertions)]
       source: self.debug_label.clone().unwrap_or_else(|| "<Noop>".into()),
     }
   }
 
   #[must_use]
-  pub fn with_declared_symbols(mut self, declared_symbols: Vec<TaggedSymbolRef>) -> Self {
+  pub fn with_declared_symbols(mut self, declared_symbols: DeclaredSymbols) -> Self {
     self.declared_symbols = declared_symbols;
     self
   }
@@ -189,7 +199,7 @@ impl StmtInfo {
 #[derive(Debug)]
 pub struct DebugStmtInfoForTreeShaking {
   pub is_included: bool,
-  pub side_effect: SideEffectDetail,
+  pub eval_flags: StmtEvalFlags,
   #[cfg(debug_assertions)]
   pub source: String,
 }

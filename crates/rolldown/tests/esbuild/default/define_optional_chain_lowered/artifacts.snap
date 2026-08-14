@@ -7,7 +7,8 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 //#region entry.js
-var _a, _a$b;
+var _a;
+var _a$b;
 console.log([
 	1,
 	1,
@@ -21,6 +22,6 @@ console.log([
 	(_a = a) === null || _a === void 0 ? void 0 : _a[b][c],
 	(_a$b = a[b]) === null || _a$b === void 0 ? void 0 : _a$b[c]
 ]);
-
 //#endregion
+
 ```

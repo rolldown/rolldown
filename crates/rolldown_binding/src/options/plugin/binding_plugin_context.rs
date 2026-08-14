@@ -89,12 +89,14 @@ impl BindingPluginContext {
   }
 
   #[napi]
+  // Must stay sync — making this `async` would require `block_on` again
+  // and reopen the emit-chunk deadlock. See `FileEmitter::emit_chunk`.
   pub fn emit_chunk<'env>(
     &self,
     env: &'env Env,
     file: BindingEmittedChunk,
   ) -> napi::Result<napi::JsString<'env>> {
-    let arc_str = napi::bindgen_prelude::block_on(self.inner.emit_chunk(file.try_into()?))?;
+    let arc_str = self.inner.emit_chunk(file.try_into()?)?;
     env.create_string(arc_str)
   }
 

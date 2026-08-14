@@ -1,3 +1,3 @@
-import a from './foo.js'
+import a from './foo.js';
 
-console.log(`a: `, a)
+console.log(`a: `, a);

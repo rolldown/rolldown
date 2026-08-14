@@ -12,28 +12,26 @@ concurrency:
 
 jobs:
   autofix:
-    runs-on: ubuntu-latest
+    runs-on: namespace-profile-linux-x64-default
     steps:
-      - uses: taiki-e/checkout-action@b13d20b7cda4e2f325ef19895128f7ff735c0b3d # v1.3.1
+      - uses: taiki-e/checkout-action@7d1e50e93dc4fb3bba58f85018fadf77898aee8b # v1.4.2
 
-      - name: Restore dprint plugin cache
-        id: cache-restore
-        uses: actions/cache/restore@9255dc7a253b0ccc959486e2bca901246202afeb # v5.0.1
+      - uses: voidzero-dev/setup-vp@313600b80b104eadebb9111787d37a2e83e014ca # v1.17.0
         with:
-          key: dprint-${{ hashFiles('dprint.json') }}
-          path: ~/.cache/dprint
+          version: '0.2.1'
+          cache: true
 
-      - uses: oxc-project/setup-rust@c8224157c0bf235aabc633e8cd50d344f087a7de # v1.0.12
+      - uses: oxc-project/setup-rust@3d6fb132fbe7cdcb66bf8ec193911c2945369d12 # v1.0.17
         with:
           restore-cache: false
-          tools: dprint,cargo-shear@1.9.0
+          tools: cargo-shear@1.12.4
           components: rustfmt
 
       - name: cargo-shear
         id: shear
         shell: bash
         run: |
-          if ! cargo shear --fix; then
+          if ! cargo shear --fix --check-test-targets --deny-warnings --format=github; then
             echo "shear=true" >> $GITHUB_OUTPUT
           fi
 
@@ -41,10 +39,10 @@ jobs:
         run: cargo check --workspace --all-features --all-targets
         if: ${{ steps.shear.outputs.shear == 'true' }}
 
-      - run: dprint fmt
+      - run: vp fmt
 
       - run: cargo fmt --all
 
-      - uses: autofix-ci/action@635ffb0c9798bd160680f18fd73371e355b85f27 # v1.3.2
+      - uses: autofix-ci/action@c5b2d67aa2274e7b5a18224e8171550871fc7e4a # v1.3.4
         with:
           fail-fast: false

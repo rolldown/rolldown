@@ -11,13 +11,7 @@ export type Context = {
 };
 
 export function defineParallelPluginImplementation<Options>(
-  plugin: (
-    Options: Options,
-    context: Context,
-  ) => MaybePromise<ParallelPluginImplementation>,
-): (
-  Options: Options,
-  context: Context,
-) => MaybePromise<ParallelPluginImplementation> {
+  plugin: (Options: Options, context: Context) => MaybePromise<ParallelPluginImplementation>,
+): (Options: Options, context: Context) => MaybePromise<ParallelPluginImplementation> {
   return plugin;
 }

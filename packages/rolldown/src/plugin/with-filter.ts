@@ -24,10 +24,7 @@ function withFilterImpl<A, T extends RolldownPluginOption<A>>(
   }
   // TODO: check builtin plugin and parallel plugin
   let plugin = pluginOption as Plugin<A>;
-  let filterObjectIndex = findMatchedFilterObject(
-    plugin.name,
-    filterObjectList,
-  );
+  let filterObjectIndex = findMatchedFilterObject(plugin.name, filterObjectList);
   if (filterObjectIndex === -1) {
     return plugin as T;
   }
@@ -61,6 +58,29 @@ function withFilterImpl<A, T extends RolldownPluginOption<A>>(
   return plugin as T;
 }
 
+/**
+ * A helper function to add plugin hook filters to a plugin or an array of plugins.
+ *
+ * @example
+ * ```ts
+ * import yaml from '@rollup/plugin-yaml';
+ * import { defineConfig } from 'rolldown';
+ * import { withFilter } from 'rolldown/filter';
+ *
+ * export default defineConfig({
+ *   plugins: [
+ *     // Run the transform hook of the `yaml` plugin
+ *     // only for modules which end in `.yaml`
+ *     withFilter(
+ *       yaml({}),
+ *       { transform: { id: /\.yaml$/ } },
+ *     ),
+ *   ],
+ * });
+ * ```
+ *
+ * @category Config
+ */
 export function withFilter<A, T extends RolldownPluginOption<A>>(
   pluginOption: T,
   filterObject: OverrideFilterObject | OverrideFilterObject[],
@@ -80,11 +100,7 @@ function findMatchedFilterObject(
   }
 
   for (let i = 0; i < overrideFilterObjectList.length; i++) {
-    for (
-      let j = 0;
-      j < (overrideFilterObjectList[i].pluginNamePattern ?? []).length;
-      j++
-    ) {
+    for (let j = 0; j < (overrideFilterObjectList[i].pluginNamePattern ?? []).length; j++) {
       let pattern = overrideFilterObjectList[i].pluginNamePattern![j];
       if (typeof pattern === 'string' && pattern === pluginName) {
         return i;

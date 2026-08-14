@@ -1,0 +1,7 @@
+{
+  "config": {
+    "optimization": {
+      "inlineConst": true
+    }
+  }
+}

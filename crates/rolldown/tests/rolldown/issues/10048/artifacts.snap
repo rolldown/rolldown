@@ -1,0 +1,69 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## entry.js
+
+```js
+//#region data.js
+//#endregion
+//#region entry.js
+globalThis.__themes = {
+	light: {
+		base: "light",
+		appBg: "#ffffff"
+	},
+	dark: {
+		base: "dark",
+		appBg: "#000000"
+	}
+};
+function getProjectAnnotations() {
+	return [globalThis.__themes];
+}
+//#endregion
+export { getProjectAnnotations };
+
+```
+
+# Variant: wrap-all: [on_demand_wrapping: false]
+
+## Assets
+
+### entry.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+//#region data.js
+var themes;
+function init_data() {
+	return (init_data = __esmMin((() => {
+		themes = {
+			light: {
+				base: "light",
+				appBg: "#ffffff"
+			},
+			dark: {
+				base: "dark",
+				appBg: "#000000"
+			}
+		};
+	})))();
+}
+//#endregion
+//#region entry.js
+function getProjectAnnotations() {
+	return [globalThis.__themes];
+}
+function init_entry() {
+	return (init_entry = __esmMin((() => {
+		init_data();
+		globalThis.__themes = themes;
+	})))();
+}
+//#endregion
+init_entry();
+export { getProjectAnnotations };
+
+```

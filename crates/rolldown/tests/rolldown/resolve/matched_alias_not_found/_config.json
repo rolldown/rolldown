@@ -7,14 +7,7 @@
       }
     ],
     "resolve": {
-      "alias": [
-        [
-          "react",
-          [
-            ""
-          ]
-        ]
-      ]
+      "alias": [["react", [""]]]
     }
   },
   "expectError": true

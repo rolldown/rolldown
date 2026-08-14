@@ -1,0 +1,11 @@
+{
+  "config": {
+    "platform": "node",
+    "input": [
+      {
+        "name": "entry",
+        "import": "./entry.js"
+      }
+    ]
+  }
+}

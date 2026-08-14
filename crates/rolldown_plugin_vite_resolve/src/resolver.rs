@@ -1,4 +1,5 @@
 use std::{
+  borrow::Cow,
   ffi::OsString,
   fs,
   path::{self, Path, PathBuf},
@@ -8,7 +9,7 @@ use std::{
 use oxc_resolver::{PackageJson, ResolveOptions, TsconfigDiscovery};
 use rolldown_common::side_effects::HookSideEffects;
 use rolldown_plugin::{HookResolveIdOutput, HookResolveIdReturn};
-use rolldown_utils::url::clean_url;
+use rolldown_utils::{dashmap::FxDashSet, url::clean_url};
 use rustc_hash::FxHashSet;
 use sugar_path::SugarPath;
 
@@ -73,10 +74,17 @@ impl From<u8> for AdditionalOptions {
   }
 }
 
+#[derive(Debug, Default)]
+struct ResolverCaches {
+  package_json: PackageJsonCache,
+  importer_exists: FxDashSet<String>,
+}
+
 #[derive(Debug)]
 pub struct Resolvers {
   resolvers: [Resolver; RESOLVER_COUNT as usize],
   external_resolver: Arc<Resolver>,
+  resolver_caches: Arc<ResolverCaches>,
   lock: Arc<ResolverLock>,
 }
 
@@ -86,7 +94,7 @@ impl Resolvers {
     external_conditions: &Vec<String>,
     builtin_checker: Arc<BuiltinChecker>,
   ) -> Self {
-    let package_json_cache = Arc::new(PackageJsonCache::default());
+    let resolver_caches = Arc::new(ResolverCaches::default());
 
     let resolver_lock = Arc::new(ResolverLock::new());
 
@@ -105,7 +113,7 @@ impl Resolvers {
           external_conditions,
           Arc::clone(&resolver_lock),
           Arc::clone(&builtin_checker),
-          Arc::clone(&package_json_cache),
+          Arc::clone(&resolver_caches),
         )
       })
       .collect::<Vec<_>>()
@@ -123,10 +131,15 @@ impl Resolvers {
       external_conditions,
       Arc::clone(&resolver_lock),
       Arc::clone(&builtin_checker),
-      Arc::clone(&package_json_cache),
+      Arc::clone(&resolver_caches),
     );
 
-    Self { resolvers, external_resolver: Arc::new(external_resolver), lock: resolver_lock }
+    Self {
+      resolvers,
+      external_resolver: Arc::new(external_resolver),
+      resolver_caches,
+      lock: resolver_lock,
+    }
   }
 
   pub fn get(&self, additional_options: AdditionalOptions) -> &Resolver {
@@ -145,6 +158,7 @@ impl Resolvers {
     let _guard = self.lock.lock_for_clear();
     self.resolvers.iter().for_each(|v| v.clear_cache());
     self.external_resolver.clear_cache();
+    self.resolver_caches.importer_exists.clear();
   }
 }
 
@@ -185,6 +199,7 @@ fn get_resolve_options(
     } else {
       vec!["index".to_string()]
     },
+    node_path: false,
     prefer_relative: additional_options.prefer_relative,
     roots: if base_options.as_src { vec![base_options.root.clone()] } else { vec![] },
     symlinks: !base_options.preserve_symlinks,
@@ -237,20 +252,20 @@ pub struct Resolver {
   inner_for_external: oxc_resolver::Resolver,
   lock: Arc<ResolverLock>,
   built_in_checker: Arc<BuiltinChecker>,
-  package_json_cache: Arc<PackageJsonCache>,
+  resolver_caches: Arc<ResolverCaches>,
   root: PathBuf,
   try_prefix: Option<String>,
 }
 
 impl Resolver {
-  pub fn new(
+  fn new(
     base_resolver: &oxc_resolver::Resolver,
     base_options: &BaseOptions,
     additional_options: AdditionalOptions,
     external_conditions: &[String],
     resolver_lock: Arc<ResolverLock>,
     built_in_checker: Arc<BuiltinChecker>,
-    package_json_cache: Arc<PackageJsonCache>,
+    resolver_caches: Arc<ResolverCaches>,
   ) -> Self {
     let external_condition_names =
       get_conditions(external_conditions, base_options.is_production, &additional_options);
@@ -265,7 +280,7 @@ impl Resolver {
       inner_for_external,
       lock: resolver_lock,
       built_in_checker,
-      package_json_cache,
+      resolver_caches,
       root: base_options.root.clone(),
       try_prefix: base_options.try_prefix.clone(),
     }
@@ -281,7 +296,12 @@ impl Resolver {
 
     let inner_resolver = if external { &self.inner_for_external } else { &self.inner };
     let result = if let Some(importer) = importer {
-      inner_resolver.resolve_file(self.root.join(importer), specifier)
+      // check if `is_absolute` to avoid extra `join` overhead
+      if Path::new(importer).is_absolute() {
+        inner_resolver.resolve_file(importer, specifier)
+      } else {
+        inner_resolver.resolve_file(self.root.join(importer), specifier)
+      }
     } else {
       inner_resolver.resolve(&self.root, specifier)
     };
@@ -300,35 +320,56 @@ impl Resolver {
     }
 
     // try with prefix if exists
-    let Some(path_with_prefix) = self.try_prefix.as_ref().and_then(|try_prefix| {
-      let mut path = Path::new(specifier).components();
-      let filename = path.next_back()?;
-      let path::Component::Normal(filename) = filename else {
-        return None;
-      };
-      let mut filename_with_prefix = OsString::with_capacity(try_prefix.len() + filename.len());
-      filename_with_prefix.push(try_prefix);
-      filename_with_prefix.push(filename);
-
-      Some(path.as_path().join(filename_with_prefix))
-    }) else {
-      return result;
-    };
-    let Some(path_with_prefix) = path_with_prefix.to_str() else {
+    let Some(path_with_prefix) =
+      self.try_prefix.as_ref().and_then(|try_prefix| get_path_with_prefix(specifier, try_prefix))
+    else {
       return result;
     };
 
     // this allows resolving `@pkg/pkg/foo.scss` to `@pkg/pkg/_foo.scss`, which is probably not allowed by sass's resolver
     // but that's an edge case so we ignore it here
     if let Some(importer) = importer {
-      inner_resolver.resolve_file(self.root.join(importer), path_with_prefix)
+      // check if `is_absolute` to avoid extra `join` overhead
+      if Path::new(importer).is_absolute() {
+        inner_resolver.resolve_file(importer, &path_with_prefix)
+      } else {
+        inner_resolver.resolve_file(self.root.join(importer), &path_with_prefix)
+      }
     } else {
-      inner_resolver.resolve(&self.root, path_with_prefix)
+      inner_resolver.resolve(&self.root, &path_with_prefix)
     }
+  }
+
+  /// Apply the tsconfig `paths`/`baseUrl` alias mapping to `specifier` without checking whether the mapped target exists
+  /// on disk. Used to resolve `import.meta.glob` specifiers, where the mapped path does not point at a real file.
+  pub fn resolve_tsconfig_path_alias(
+    &self,
+    importer: &str,
+    specifier: &str,
+  ) -> Result<Vec<String>, oxc_resolver::ResolveError> {
+    let _guard = self.lock.lock_for_update();
+
+    // check if `is_absolute` to avoid extra `join` overhead
+    let importer_path = if Path::new(importer).is_absolute() {
+      Cow::Borrowed(Path::new(importer))
+    } else {
+      Cow::Owned(self.root.join(importer))
+    };
+    let Some(tsconfig) = self.inner.find_tsconfig(importer_path.as_ref())? else {
+      return Ok(Vec::new());
+    };
+    Ok(
+      tsconfig
+        .resolve_path_alias_or_base_url(specifier)
+        .into_iter()
+        .map(|p| normalize_path(&p.to_string_lossy()).into_owned())
+        .collect(),
+    )
   }
 
   pub fn normalize_oxc_resolver_result(
     &self,
+    id: &str,
     importer: Option<&str>,
     dedupe: &FxHashSet<String>,
     legacy_inconsistent_cjs_interop: bool,
@@ -347,7 +388,8 @@ impl Resolver {
             let module_path_relative_to_package =
               raw_path.as_path().relative(pkg_json.realpath.parent()?);
             self
-              .package_json_cache
+              .resolver_caches
+              .package_json
               .cached_package_json_side_effects(pkg_json)
               .check_side_effects_for(module_path_relative_to_package.to_str()?)
           })
@@ -365,34 +407,46 @@ impl Resolver {
           ..Default::default()
         }))
       }
-      Err(oxc_resolver::ResolveError::NotFound(id)) => {
+      Err(
+        oxc_resolver::ResolveError::YarnPnpError(
+          pnp::Error::BadSpecifier(_)
+          | pnp::Error::MissingPeerDependency(_)
+          | pnp::Error::UndeclaredDependency(_)
+          | pnp::Error::MissingDependency(_),
+        )
+        | oxc_resolver::ResolveError::NotFound(_),
+      ) => {
         // if import can't be found, check if it's an optional peer dep.
         // if so, we can resolve to a special id that errors only when imported.
-        if is_bare_import(id) && !self.built_in_checker.is_builtin(id) && !id.contains('\0') {
-          if let Some(pkg_name) = get_npm_package_name(id) {
-            let resolved_importer_dir = should_use_importer(id, importer, dedupe)
-              .then(|| {
-                importer.map(|importer| {
-                  Path::new(importer).parent().map(|i| i.to_str().unwrap()).unwrap_or(importer)
-                })
+        if is_bare_import(id)
+          && !self.built_in_checker.is_builtin(id)
+          && !id.contains('\0')
+          && let Some(pkg_name) = get_npm_package_name(id)
+        {
+          let resolved_importer_dir = self
+            .should_use_importer(id, importer, dedupe)
+            .then(|| {
+              importer.map(|importer| {
+                Path::new(importer).parent().map(|i| i.to_str().unwrap()).unwrap_or(importer)
               })
-              .flatten();
-            if resolved_importer_dir.is_some_and(|dir| dir != self.root.to_str().unwrap()) {
-              if let Some(package_json) =
-                self.get_nearest_package_json_optional_peer_deps(importer.unwrap())
-              {
-                if package_json.optional_peer_dependencies.contains(pkg_name) {
-                  return Ok(Some(HookResolveIdOutput {
-                    id: format!("{OPTIONAL_PEER_DEP_ID}:{id}:{}", package_json.name).into(),
-                    ..Default::default()
-                  }));
-                }
-              }
-            }
+            })
+            .flatten();
+          if resolved_importer_dir.is_some_and(|dir| dir != self.root.to_str().unwrap())
+            && let Some(package_json) =
+              self.get_nearest_package_json_optional_peer_deps(importer.unwrap())
+            && package_json.optional_peer_dependencies.contains(pkg_name)
+          {
+            return Ok(Some(HookResolveIdOutput {
+              id: format!("{OPTIONAL_PEER_DEP_ID}:{id}:{}", package_json.name).into(),
+              ..Default::default()
+            }));
           }
         }
         Ok(None)
       }
+      // A module mapped to `false` in the `browser` field. It resolves to a bare
+      // `__vite-browser-external` id (no `:name` suffix, unlike externalized `node:*` builtins),
+      // which the load hook turns into an empty module per the browser field spec.
       Err(oxc_resolver::ResolveError::Ignored(_)) => Ok(Some(HookResolveIdOutput {
         id: arcstr::literal!(BROWSER_EXTERNAL_ID),
         ..Default::default()
@@ -421,7 +475,7 @@ impl Resolver {
     p: &str,
   ) -> Option<Arc<PackageJsonWithOptionalPeerDependencies>> {
     let pj = self.get_nearest_package_json(p)?;
-    Some(self.package_json_cache.cached_package_json_optional_peer_dep(&pj))
+    Some(self.resolver_caches.package_json.cached_package_json_optional_peer_dep(&pj))
   }
 
   pub fn resolve_bare_import(
@@ -434,10 +488,11 @@ impl Resolver {
   ) -> HookResolveIdReturn {
     let oxc_resolved_result = self.resolve_raw(
       specifier,
-      if should_use_importer(specifier, importer, dedupe) { importer } else { None },
+      if self.should_use_importer(specifier, importer, dedupe) { importer } else { None },
       external,
     );
     let resolved = self.normalize_oxc_resolver_result(
+      specifier,
       importer,
       dedupe,
       legacy_inconsistent_cjs_interop,
@@ -450,15 +505,16 @@ impl Resolver {
 
       let id = specifier;
       let mut resolved_id = id;
-      if is_deep_import(id) && get_extension(id) != get_extension(&resolved.id) {
-        if let Some(pkg_json) = oxc_resolved_result.unwrap().package_json() {
-          let has_exports_field = pkg_json.exports().is_some();
-          if !has_exports_field {
-            // id date-fns/locale
-            // resolve.id ...date-fns/esm/locale/index.js
-            if let Some(index) = resolved.id.find(id) {
-              resolved_id = &resolved.id[index..];
-            }
+      if is_deep_import(id)
+        && get_extension(id) != get_extension(&resolved.id)
+        && let Some(pkg_json) = oxc_resolved_result.unwrap().package_json()
+      {
+        let has_exports_field = pkg_json.exports().is_some();
+        if !has_exports_field {
+          // id date-fns/locale
+          // resolve.id ...date-fns/esm/locale/index.js
+          if let Some(index) = resolved.id.find(id) {
+            resolved_id = &resolved.id[index..];
           }
         }
       }
@@ -473,29 +529,39 @@ impl Resolver {
   pub fn clear_cache(&self) {
     self.inner.clear_cache();
   }
-}
 
-fn should_use_importer(
-  specifier: &'_ str,
-  importer: Option<&'_ str>,
-  dedupe: &FxHashSet<String>,
-) -> bool {
-  if should_dedupe(specifier, dedupe) {
-    return false;
-  }
-
-  if let Some(importer) = importer {
-    let imp = Path::new(importer);
-    if imp.is_absolute()
-      && (
-        // css processing appends `*` for importer
-        importer.ends_with('*') || fs::exists(clean_url(importer)).unwrap_or(false)
-      )
-    {
-      return true;
+  fn should_use_importer(
+    &self,
+    specifier: &'_ str,
+    importer: Option<&'_ str>,
+    dedupe: &FxHashSet<String>,
+  ) -> bool {
+    if should_dedupe(specifier, dedupe) {
+      return false;
     }
+
+    if let Some(importer) = importer {
+      let imp = Path::new(importer);
+      if imp.is_absolute() {
+        // css processing appends `*` for importer
+        if importer.ends_with('*') {
+          return true;
+        }
+
+        let importer = clean_url(importer);
+        if self.resolver_caches.importer_exists.contains(importer) {
+          return true;
+        }
+
+        let exists = fs::exists(importer).unwrap_or(false);
+        if exists {
+          self.resolver_caches.importer_exists.insert(importer.to_string());
+        }
+        return exists;
+      }
+    }
+    false
   }
-  false
 }
 
 fn should_dedupe(specifier: &str, dedupe: &FxHashSet<String>) -> bool {
@@ -505,6 +571,27 @@ fn should_dedupe(specifier: &str, dedupe: &FxHashSet<String>) -> bool {
 
   let pkg_id = get_npm_package_name(specifier).unwrap_or(clean_url(specifier));
   dedupe.contains(pkg_id)
+}
+
+fn get_path_with_prefix(specifier: &str, try_prefix: &str) -> Option<String> {
+  if is_bare_import(specifier)
+    && is_deep_import(specifier)
+    && let Some((path, filename)) = specifier.rsplit_once('/')
+    && !filename.is_empty()
+  {
+    return Some(format!("{path}/{try_prefix}{filename}"));
+  }
+
+  let mut path = Path::new(specifier).components();
+  let filename = path.next_back()?;
+  let path::Component::Normal(filename) = filename else {
+    return None;
+  };
+  let mut filename_with_prefix = OsString::with_capacity(try_prefix.len() + filename.len());
+  filename_with_prefix.push(try_prefix);
+  filename_with_prefix.push(filename);
+
+  path.as_path().join(filename_with_prefix).to_str().map(|p| normalize_path(p).into_owned())
 }
 
 #[derive(Debug)]
@@ -524,5 +611,37 @@ impl ResolverLock {
 
   pub fn lock_for_clear(&self) -> parking_lot::RwLockWriteGuard<'_, ()> {
     self.0.write()
+  }
+}
+
+#[cfg(test)]
+mod tests {
+  use super::get_path_with_prefix;
+
+  #[test]
+  fn prefixes_bare_deep_imports_with_posix_separators() {
+    assert_eq!(
+      get_path_with_prefix("@scope/pkg/styles/mixins", "_").as_deref(),
+      Some("@scope/pkg/styles/_mixins"),
+    );
+    assert_eq!(
+      get_path_with_prefix("pkg/styles/mixins", "_").as_deref(),
+      Some("pkg/styles/_mixins"),
+    );
+  }
+
+  #[cfg(windows)]
+  #[test]
+  fn prefixes_bare_deep_imports_with_windows_separators() {
+    assert_eq!(
+      get_path_with_prefix("C:\\pkg\\styles\\mixins", "_").as_deref(),
+      Some("C:/pkg/styles/_mixins"),
+    );
+  }
+
+  #[test]
+  fn preserves_existing_package_root_prefix_behavior() {
+    assert_eq!(get_path_with_prefix("pkg", "_").as_deref(), Some("_pkg"));
+    assert_eq!(get_path_with_prefix("@scope/pkg", "_").as_deref(), Some("@scope/_pkg"));
   }
 }

@@ -8,10 +8,7 @@ import {
 
 export const babelPlugin = (): Plugin => {
   const partialConfig = babel.loadPartialConfig({
-    presets: [
-      ['@babel/preset-env', { bugfixes: true }],
-      '@babel/preset-typescript',
-    ],
+    presets: [['@babel/preset-env', { bugfixes: true }], '@babel/preset-typescript'],
     targets: 'chrome >= 80',
     sourceMaps: true,
     configFile: false,
@@ -32,25 +29,12 @@ export const babelPlugin = (): Plugin => {
           throw new Error('failed to parse');
         }
         let diffAst = performance.now() - now;
-        const ret = /** @type {babel.BabelFileResult} */ babel
-          .transformFromAstSync(
-            ast,
-            code,
-            {
-              ...partialConfig?.options,
-              filename: id,
-            },
-          );
+        const ret = /** @type {babel.BabelFileResult} */ babel.transformFromAstSync(ast, code, {
+          ...partialConfig?.options,
+          filename: id,
+        });
         let diffTrans = performance.now() - now - diffAst;
-        console.log(
-          id,
-          'total',
-          diffAst + diffTrans,
-          'parse: ',
-          diffAst,
-          'trans: ',
-          diffTrans,
-        );
+        console.log(id, 'total', diffAst + diffTrans, 'parse: ', diffAst, 'trans: ', diffTrans);
         return { code: /** @type {string} */ ret?.code ?? void 0 };
       }
     },

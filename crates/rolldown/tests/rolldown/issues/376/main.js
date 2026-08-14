@@ -1,3 +1,3 @@
-const test = 'hello world'
+const test = 'hello world';
 
-export default test
+export default test;

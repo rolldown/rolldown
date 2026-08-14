@@ -1,1 +1,1 @@
-export { default as value } from "./dep";
+export { default as value } from './dep';

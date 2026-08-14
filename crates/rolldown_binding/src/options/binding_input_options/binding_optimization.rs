@@ -11,7 +11,6 @@ pub struct BindingInlineConstConfig {
 #[napi_derive::napi(object, object_to_js = false)]
 #[derive(Debug, Default)]
 pub struct BindingOptimization {
-  #[napi(ts_type = "boolean | BindingInlineConstConfig")]
   pub inline_const: Option<Either<bool, BindingInlineConstConfig>>,
   pub pife_for_module_wrappers: Option<bool>,
 }
@@ -22,6 +21,8 @@ impl TryFrom<BindingOptimization> for rolldown_common::OptimizationOption {
   fn try_from(value: BindingOptimization) -> std::result::Result<Self, Self::Error> {
     let inline_const = match value.inline_const {
       Some(Either::A(bool_val)) => Some(InlineConstOption::Bool(bool_val)),
+      // An empty object is treated as `undefined` so its defaults match the omitted case.
+      Some(Either::B(config_val)) if config_val.mode.is_none() && config_val.pass.is_none() => None,
       Some(Either::B(config_val)) => {
         let mode = if let Some(mode_str) = config_val.mode.as_ref() {
           match mode_str.as_str() {
@@ -34,7 +35,7 @@ impl TryFrom<BindingOptimization> for rolldown_common::OptimizationOption {
             }
           }
         } else {
-          None
+          Some(InlineConstMode::Smart)
         };
 
         Some(InlineConstOption::Config(InlineConstConfig {

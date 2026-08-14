@@ -6,25 +6,21 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## entry.js
 
 ```js
-import assert from "node:assert";
-
-// HIDDEN [rolldown:runtime]
+import assert from "node:assert/strict";
+// HIDDEN [\0rolldown/runtime.js]
 //#region (ignored) node_modules/demo-pkg/util-node.js
 var require_util_node = /* @__PURE__ */ __commonJSMin((() => {}));
-
 //#endregion
 //#region node_modules/demo-pkg/main.js
-var require_main = /* @__PURE__ */ __commonJSMin(((exports, module) => {
+//#endregion
+//#region src/entry.js
+var import_main = /* @__PURE__ */ __toESM((/* @__PURE__ */ __commonJSMin(((exports, module) => {
 	const util = require_util_node();
 	module.exports = function(obj) {
 		return util.inspect(obj);
 	};
-}));
-
-//#endregion
-//#region src/entry.js
-var import_main = /* @__PURE__ */ __toESM(require_main());
+})))());
 assert.deepEqual((0, import_main.default)(), {});
-
 //#endregion
+
 ```

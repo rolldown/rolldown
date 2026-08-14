@@ -15,7 +15,7 @@ export default defineTest({
             id: /^node:module$/,
           },
           handler(id, importer) {
-            if (importer == 'rolldown:runtime') {
+            if (importer == '\0rolldown/runtime.js') {
               return {
                 moduleSideEffects: false,
                 id: 'module',

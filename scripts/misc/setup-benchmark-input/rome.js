@@ -13,10 +13,7 @@ if (fsExtra.existsSync('./tmp/bench/rome')) {
       return !src.includes('.bin');
     },
   });
-  fsExtra.writeFileSync(
-    './tmp/bench/rome/src/entry.ts',
-    'import "rome/bin/rome"',
-  );
+  fsExtra.writeFileSync('./tmp/bench/rome/src/entry.ts', 'import "rome/bin/rome"');
   fsExtra.writeFileSync(
     './tmp/bench/rome/src/tsconfig.json',
     JSON.stringify(
@@ -47,10 +44,7 @@ if (fsExtra.existsSync('./tmp/bench/rome')) {
     // https://github.com/evanw/esbuild/blob/fc37c2fa9de2ad77476a6d4a8f1516196b90187e/Makefile#L1007-L1009
     if (importEqualRE.test(content)) {
       hasReplaced = true;
-      content = content.replaceAll(
-        /import (\w+) = require\('(.+)'\)/g,
-        "const $1 = require('$2')",
-      );
+      content = content.replaceAll(/import (\w+) = require\('(.+)'\)/g, "const $1 = require('$2')");
       console.log('Fixing import equal in', file);
     }
 
@@ -58,10 +52,7 @@ if (fsExtra.existsSync('./tmp/bench/rome')) {
     // rome uses a same identifier as a type and a value and that chokes babel
     if (problematicExportDefaultRE.test(content)) {
       hasReplaced = true;
-      content = content.replace(
-        problematicExportDefaultRE,
-        'export default function(',
-      );
+      content = content.replace(problematicExportDefaultRE, 'export default function(');
     }
 
     if (hasReplaced) {
@@ -70,8 +61,7 @@ if (fsExtra.existsSync('./tmp/bench/rome')) {
   }
   // also replace some additional things in `@romejs/js-formatter/node/parentheses.ts`
   {
-    const file =
-      './tmp/bench/rome/src/@romejs/js-formatter/node/parentheses.ts';
+    const file = './tmp/bench/rome/src/@romejs/js-formatter/node/parentheses.ts';
     const content = await fsExtra.readFile(file, 'utf8');
     const newContent = content.replace(
       /import \{((?:.|\n)*)\} from '@romejs\/js-ast';/,

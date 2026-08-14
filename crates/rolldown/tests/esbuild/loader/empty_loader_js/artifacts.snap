@@ -1,31 +1,27 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
-snapshot_kind: text
 ---
 # Assets
 
 ## entry.js
 
 ```js
-import assert from "node:assert";
-
+import assert from "node:assert/strict";
+// HIDDEN [\0rolldown/runtime.js]
 //#region b.empty
-var b_exports = {};
-
+var b_exports = /* @__PURE__ */ __exportAll({});
 //#endregion
 //#region c.empty
 var default$1 = void 0;
-
 //#endregion
 //#region d.empty
 var named = void 0;
-
 //#endregion
 //#region entry.js
-assert.deepEqual(b_exports, {});
+assert.deepEqual(b_exports, Object.defineProperty({}, Symbol.toStringTag, { value: "Module" }));
 assert.deepEqual(default$1, void 0);
 assert.equal(named, void 0);
-
 //#endregion
+
 //# sourceMappingURL=entry.js.map
 ```

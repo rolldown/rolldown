@@ -6,18 +6,15 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## entry_js.js
 
 ```js
-// HIDDEN [rolldown:runtime]
+// HIDDEN [\0rolldown/runtime.js]
 //#region a.js
 var require_a = /* @__PURE__ */ __commonJSMin((() => {}));
-
 //#endregion
 //#region b.js
 var require_b = /* @__PURE__ */ __commonJSMin((() => {}));
-
 //#endregion
 //#region d.js
 var require_d = /* @__PURE__ */ __commonJSMin((() => {}));
-
 //#endregion
 //#region entry.js
 try {
@@ -28,6 +25,6 @@ try {
 	require_b();
 }
 require_d();
-
 //#endregion
+
 ```

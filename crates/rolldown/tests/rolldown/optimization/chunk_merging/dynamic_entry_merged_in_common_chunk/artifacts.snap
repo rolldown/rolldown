@@ -1,0 +1,74 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## imp.js
+
+```js
+import { t as __commonJSMin } from "./main.js";
+//#region imp.js
+var require_imp = /* @__PURE__ */ __commonJSMin(((exports) => {
+	exports.imp = 1;
+}));
+//#endregion
+export { require_imp as t };
+
+```
+
+## main.js
+
+```js
+import assert from "node:assert";
+// HIDDEN [\0rolldown/runtime.js]
+//#region main.js
+const load = async () => {
+	import("./imp.js").then((n) => /* @__PURE__ */ __toESM(n.t())).then((m) => {
+		assert.strictEqual(m.imp, 1);
+	});
+};
+load();
+//#endregion
+export { __commonJSMin as t };
+
+```
+
+# Variant: [format: Cjs]
+
+## Assets
+
+### imp.js
+
+```js
+//#region imp.js
+var require_imp = /* @__PURE__ */ require("./main.js").__commonJSMin(((exports) => {
+	exports.imp = 1;
+}));
+//#endregion
+Object.defineProperty(exports, "require_imp", {
+	enumerable: true,
+	get: function() {
+		return require_imp;
+	}
+});
+
+```
+
+### main.js
+
+```js
+Object.defineProperty(exports, Symbol.toStringTag, { value: "Module" });
+// HIDDEN [\0rolldown/runtime.js]
+let node_assert = require("node:assert");
+node_assert = __toESM(node_assert);
+//#region main.js
+const load = async () => {
+	Promise.resolve().then(() => require("./imp.js")).then((n) => /* @__PURE__ */ __toESM(n.require_imp())).then((m) => {
+		node_assert.default.strictEqual(m.imp, 1);
+	});
+};
+load();
+//#endregion
+exports.__commonJSMin = __commonJSMin;
+
+```

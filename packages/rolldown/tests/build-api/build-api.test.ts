@@ -11,9 +11,7 @@ test('rolldown write twice', async () => {
     format: 'esm',
     entryFileNames: 'main.mjs',
   });
-  expect(await bundle.watchFiles).toStrictEqual([
-    path.join(import.meta.dirname, 'main.js'),
-  ]);
+  expect(await bundle.watchFiles).toStrictEqual([path.join(import.meta.dirname, 'main.js')]);
   expect(esmOutput.output[0].fileName).toBe('main.mjs');
   expect(esmOutput.output[0].code).toBeDefined();
 
@@ -144,4 +142,27 @@ test('output properties are enumerable and can be spread', async () => {
   // Ensure other lazy properties are also enumerable
   expect(Object.keys(result.output[0])).toContain('code');
   expect(Object.keys(result.output[0])).toContain('exports');
+});
+
+test('plugins are accessible in buildStart hook', async () => {
+  let pluginsInBuildStart: unknown;
+  const pluginA = {
+    name: 'plugin-a',
+    buildStart({ plugins }: { plugins: unknown }) {
+      pluginsInBuildStart = plugins;
+    },
+  };
+  const pluginB = { name: 'plugin-b' };
+  const pluginC = { name: 'plugin-c' };
+  const bundle = await rolldown({
+    input: './main.js',
+    cwd: import.meta.dirname,
+    plugins: [pluginA, pluginB],
+  });
+  await bundle.generate({ format: 'esm', plugins: [pluginC] });
+  expect(Array.isArray(pluginsInBuildStart)).toBe(true);
+  const names = (pluginsInBuildStart as Array<{ name: string }>).map((p) => p.name);
+  expect(names).toContain('plugin-a');
+  expect(names).toContain('plugin-b');
+  expect(names).not.toContain('plugin-c');
 });

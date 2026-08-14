@@ -1,0 +1,37 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## entry-heavy.js
+
+```js
+//#region heavy.js
+var HeavyService = class {
+	run() {
+		return "heavy";
+	}
+};
+//#endregion
+//#region barrel.js
+const createService = () => new HeavyService();
+//#endregion
+//#region entry-heavy.js
+console.log(createService().run());
+//#endregion
+
+```
+
+## entry-light.js
+
+```js
+//#region light.js
+function light() {
+	return "light";
+}
+//#endregion
+//#region entry-light.js
+console.log(light());
+//#endregion
+
+```

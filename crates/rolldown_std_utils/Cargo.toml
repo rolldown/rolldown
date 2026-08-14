@@ -1,18 +1,20 @@
 [package]
 name = "rolldown_std_utils"
-version = "0.1.0"
+version = "1.2.4"
 edition.workspace = true
 homepage.workspace = true
 license.workspace = true
 publish = true
 repository.workspace = true
 description = "Standard library utilities for Rolldown"
-
-[lib]
-doctest = false
+readme = "../../README.md"
 
 [lints]
 workspace = true
 
 [dependencies]
 regex = { workspace = true }
+sugar_path = { workspace = true }
+
+[lib]
+doctest = false

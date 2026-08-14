@@ -1,3 +1,3 @@
-const a = 'a.js'
+const a = 'a.js';
 
-export { a }
+export { a };

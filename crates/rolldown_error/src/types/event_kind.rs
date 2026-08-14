@@ -2,53 +2,138 @@
 //! - All kinds that will terminate the build process should be named with a postfix "Error".
 use std::fmt::Display;
 
-#[derive(Clone, Copy)]
+#[derive(Debug, Clone, Copy)]
 pub enum EventKind {
   // --- These kinds are copied from rollup: https://github.com/rollup/rollup/blob/0b665c31833525c923c0fc20f43ebfca748c6670/src/utils/logs.ts#L102-L179
   AmbiguousExternalNamespaceError = 0,
-  /// Whether to emit warning when detecting circular dependency
-  AmbiguousReexportError = 37,
+  /// Whether to emit warnings when detecting circular dependency.
+  ///
+  /// Circular dependencies lead to a bigger bundle size and sometimes cause execution order issues and are better to avoid.
+  ///
+  /// {@include ../docs/checks-circular-dependency.md}
   CircularDependency = 1,
   CircularReexportError = 2,
+  /// Whether to emit warnings when detecting uses of direct `eval`s.
+  ///
+  /// See [Avoiding Direct `eval` in Troubleshooting page](https://rolldown.rs/guide/troubleshooting#avoiding-direct-eval) for more details.
   Eval = 3,
   IllegalIdentifierAsNameError = 4,
   InvalidExportOptionError = 5,
   InvalidOptionError = 6,
   MissingExportError = 7,
+  /// Whether to emit warnings when the `output.globals` option is missing when needed.
+  ///
+  /// See [`output.globals`](https://rolldown.rs/reference/OutputOptions.globals).
   MissingGlobalName = 8,
+  /// Whether to emit warnings when the `output.name` option is missing when needed.
+  ///
+  /// See [`output.name`](https://rolldown.rs/reference/OutputOptions.name).
   MissingNameOptionForIifeExport = 9,
+  /// Whether to emit warnings when a `#__PURE__` / `@__PURE__` annotation has no effect due to its position.
+  ///
+  /// Annotations placed where they cannot annotate a call expression (e.g. before a non-call expression,
+  /// before a statement declaration, or between an identifier and `=` in a variable declarator) are
+  /// ignored by the parser. Matches Rollup's `INVALID_ANNOTATION` log code.
+  ///
+  /// By default, warnings are emitted only for local project files inside `cwd` and outside
+  /// `node_modules`. Set this option to `false` to disable the warning entirely.
+  InvalidAnnotation = 10,
+  /// Whether to emit warnings when the way to export values is ambiguous.
+  ///
+  /// See [`output.exports`](https://rolldown.rs/reference/OutputOptions.exports).
   MixedExports = 11,
   ParseError = 12,
+  /// Whether to emit warnings when an entrypoint cannot be resolved.
   UnresolvedEntry = 13,
+  /// Whether to emit warnings when an import cannot be resolved.
   UnresolvedImport = 14,
+  /// Whether to emit warnings when files generated have the same name with different contents.
+  ///
+  /// {@include ../docs/checks-filename-conflict.md}
   FilenameConflict = 15,
+  FilenameOutsideOutputDirectoryError = 16,
+  FileNotFoundError = 17,
   // !! Only add new kind if it's not covered by the kinds from rollup !!
 
   // --- These kinds are derived from esbuild
-  AssignToImportError = 16,
-  CommonJsVariableInEsm = 17,
-  ExportUndefinedVariableError = 18,
-  ImportIsUndefined = 19,
-  UnsupportedFeatureError = 20,
-  EmptyImportMeta = 21,
+  AssignToImportError = 18,
+  /// Whether to emit warnings when a CommonJS variable is used in an ES module.
+  ///
+  /// CommonJS variables like `module` and `exports` are treated as global variables in ES modules and may not work as expected.
+  ///
+  /// {@include ../docs/checks-commonjs-variable-in-esm.md}
+  CommonJsVariableInEsm = 19,
+  /// Whether to emit warnings when an imported variable is not exported.
+  ///
+  /// If the code is importing a variable that is not exported by the imported module, the value will always be `undefined`. This might be a mistake in the code.
+  ///
+  /// {@include ../docs/checks-import-is-undefined.md}
+  ImportIsUndefined = 20,
+  UnsupportedFeatureError = 21,
+  /// Whether to emit warnings when `import.meta` is not supported with the output format and is replaced with an empty object (`{}`).
+  ///
+  /// See [`import.meta` in Non-ESM Output Formats page](https://rolldown.rs/in-depth/non-esm-output-formats#import-meta) for more details.
+  EmptyImportMeta = 22,
 
   // --- These kinds are rolldown specific
-  JsonParseError = 22,
-  IllegalReassignmentError = 23,
-  InvalidDefineConfigError = 24,
-  ResolveError = 25,
-  UnhandleableError = 26,
-  UnloadableDependencyError = 27,
+  JsonParseError = 23,
+  IllegalReassignmentError = 24,
+  InvalidDefineConfigError = 25,
+  ResolveError = 26,
+  UnhandleableError = 27,
+  UnloadableDependencyError = 28,
+  TransformError = 29,
+  ToleratedTransform = 30,
 
-  NapiError = 28,
-  CannotCallNamespace = 29,
-  ConfigurationFieldConflict = 30,
-  PreferBuiltinFeature = 31,
-  BundlerInitializeError = 32,
-  PluginError = 33,
-  AlreadyClosedError = 34,
-  CouldNotCleanDirectory = 35,
-  PluginTimings = 36,
+  NapiError = 31,
+  /// Whether to emit warnings when a namespace is called as a function.
+  ///
+  /// A module namespace object is an object and not a function. Calling it as a function will cause a runtime error.
+  ///
+  /// {@include ../docs/checks-cannot-call-namespace.md}
+  CannotCallNamespace = 32,
+  /// Whether to emit warnings when a config value is overridden by another config value with a higher priority.
+  ///
+  /// {@include ../docs/checks-configuration-field-conflict.md}
+  ConfigurationFieldConflict = 33,
+  /// Whether to emit warnings when a plugin that is covered by a built-in feature is used.
+  ///
+  /// Using built-in features is generally more performant than using plugins.
+  PreferBuiltinFeature = 34,
+  BundlerInitializeError = 35,
+  PluginError = 36,
+  AlreadyClosedError = 37,
+  /// Whether to emit warnings when Rolldown could not clean the output directory.
+  ///
+  /// See [`output.cleanDir`](https://rolldown.rs/reference/OutputOptions.cleanDir).
+  CouldNotCleanDirectory = 38,
+  /// Whether to emit warnings when plugins take significant time during the build process.
+  ///
+  /// {@include ../docs/checks-plugin-timings.md}
+  PluginTimings = 39,
+  /// Whether to emit warnings when both the code and postBanner contain shebang
+  ///
+  /// Having multiple shebangs in a file is a syntax error.
+  DuplicateShebang = 40,
+  TsConfigError = 41,
+  /// Whether to emit warnings when a tsconfig option or combination of options is not supported.
+  UnsupportedTsconfigOption = 42,
+  RuntimeModuleSymbolNotFoundError = 43,
+  /// Whether to emit warnings when a module is dynamically imported but also statically imported, making the dynamic import ineffective for code splitting.
+  IneffectiveDynamicImport = 45,
+  RequireTlaError = 46,
+  /// Whether to emit info logs when a barrel module has a very large number of re-exports (more than 5000).
+  ///
+  /// Such modules can significantly slow down module resolution. Consider using
+  /// [`@rolldown/plugin-transform-imports`](https://github.com/rolldown/plugins/tree/main/packages/transform-imports)
+  /// to rewrite barrel imports at the source level so the barrel file is never loaded.
+  ///
+  /// See [Large barrel modules](https://rolldown.rs/in-depth/lazy-barrel-optimization#large-barrel-modules) for more details.
+  LargeBarrelModules = 47,
+  /// Whether to emit warnings when a plugin transforms code without generating a sourcemap.
+  SourcemapBroken = 48,
+  /// Whether to emit warnings when a re-exported name is ambiguous because multiple star re-exports provide it.
+  AmbiguousReexportError = 49,
 }
 
 impl Display for EventKind {
@@ -66,16 +151,20 @@ impl Display for EventKind {
       EventKind::MixedExports => write!(f, "MIXED_EXPORTS"),
       EventKind::MissingGlobalName => write!(f, "MISSING_GLOBAL_NAME"),
       EventKind::MissingNameOptionForIifeExport => write!(f, "MISSING_NAME_OPTION_FOR_IIFE_EXPORT"),
+      EventKind::InvalidAnnotation => write!(f, "INVALID_ANNOTATION"),
       EventKind::MissingExportError => write!(f, "MISSING_EXPORT"),
       EventKind::ParseError => write!(f, "PARSE_ERROR"),
       EventKind::UnresolvedEntry => write!(f, "UNRESOLVED_ENTRY"),
       EventKind::UnresolvedImport => write!(f, "UNRESOLVED_IMPORT"),
       EventKind::FilenameConflict => write!(f, "FILE_NAME_CONFLICT"),
+      EventKind::FilenameOutsideOutputDirectoryError => {
+        write!(f, "FILE_NAME_OUTSIDE_OUTPUT_DIRECTORY")
+      }
+      EventKind::FileNotFoundError => write!(f, "FILE_NOT_FOUND"),
 
       // --- Derived from esbuild
       EventKind::AssignToImportError => write!(f, "ASSIGN_TO_IMPORT"),
       EventKind::CommonJsVariableInEsm => write!(f, "COMMONJS_VARIABLE_IN_ESM"),
-      EventKind::ExportUndefinedVariableError => write!(f, "EXPORT_UNDEFINED_VARIABLE"),
       EventKind::ImportIsUndefined => write!(f, "IMPORT_IS_UNDEFINED"),
       EventKind::UnsupportedFeatureError => write!(f, "UNSUPPORTED_FEATURE"),
       EventKind::EmptyImportMeta => write!(f, "EMPTY_IMPORT_META"),
@@ -87,6 +176,8 @@ impl Display for EventKind {
       EventKind::ResolveError => write!(f, "RESOLVE_ERROR"),
       EventKind::UnhandleableError => write!(f, "UNHANDLEABLE_ERROR"),
       EventKind::UnloadableDependencyError => write!(f, "UNLOADABLE_DEPENDENCY"),
+      EventKind::TransformError => write!(f, "TRANSFORM_ERROR"),
+      EventKind::ToleratedTransform => write!(f, "TOLERATED_TRANSFORM"),
 
       EventKind::NapiError => write!(f, "NAPI_ERROR"),
       EventKind::CannotCallNamespace => write!(f, "CANNOT_CALL_NAMESPACE"),
@@ -97,6 +188,16 @@ impl Display for EventKind {
       EventKind::AlreadyClosedError => write!(f, "ALREADY_CLOSED"),
       EventKind::CouldNotCleanDirectory => write!(f, "COULD_NOT_CLEAN_DIRECTORY"),
       EventKind::PluginTimings => write!(f, "PLUGIN_TIMINGS"),
+      EventKind::DuplicateShebang => write!(f, "DUPLICATE_SHEBANG"),
+      EventKind::TsConfigError => write!(f, "TSCONFIG_ERROR"),
+      EventKind::UnsupportedTsconfigOption => write!(f, "UNSUPPORTED_TSCONFIG_OPTION"),
+      EventKind::RuntimeModuleSymbolNotFoundError => {
+        write!(f, "RUNTIME_MODULE_SYMBOL_NOT_FOUND")
+      }
+      EventKind::IneffectiveDynamicImport => write!(f, "INEFFECTIVE_DYNAMIC_IMPORT"),
+      EventKind::RequireTlaError => write!(f, "REQUIRE_TLA"),
+      EventKind::LargeBarrelModules => write!(f, "LARGE_BARREL_MODULES"),
+      EventKind::SourcemapBroken => write!(f, "SOURCEMAP_BROKEN"),
     }
   }
 }

@@ -1,6 +1,10 @@
-import { read } from './indirect'
-import "./read";
+import { read } from './indirect';
+import './read';
+import assert from 'node:assert';
 
-console.log(read)
+assert.strictEqual(typeof read, 'function');
 
-import('./indirect').then(console.log)
+import('./indirect').then((mod) => {
+  assert.strictEqual(typeof mod.read, 'function');
+  console.log(mod);
+});

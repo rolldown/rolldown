@@ -1,1 +1,1 @@
-require("./b.js");
+require('./b.js');

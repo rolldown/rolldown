@@ -1,17 +1,13 @@
 [package]
 name = "rolldown"
-version = "0.1.0"
+version = "1.2.4"
 edition.workspace = true
 homepage.workspace = true
 license.workspace = true
 publish = true
 repository.workspace = true
 description = "Fast JavaScript bundler in Rust, designed for the future of Vite"
-
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
-
-[lib]
-doctest = false
+readme = "../../README.md"
 
 [lints]
 workspace = true
@@ -26,9 +22,8 @@ experimental = []
 anyhow = { workspace = true }
 append-only-vec = { workspace = true }
 arcstr = { workspace = true }
+dashmap = { workspace = true }
 bitflags = { workspace = true }
-commondir = { workspace = true }
-css-module-lexer = { workspace = true }
 futures = { workspace = true }
 indexmap = { workspace = true }
 itertools = { workspace = true }
@@ -39,10 +34,10 @@ oxc = { workspace = true }
 oxc_allocator = { workspace = true }
 oxc_ecmascript = { workspace = true }
 oxc_index = { workspace = true }
+oxc_str = { workspace = true }
 oxc_traverse = { workspace = true }
 petgraph = { workspace = true }
 rayon = { workspace = true }
-rolldown-notify = { workspace = true }
 rolldown_common = { workspace = true }
 rolldown_dev_common = { workspace = true }
 rolldown_devtools = { workspace = true }
@@ -52,7 +47,9 @@ rolldown_error = { workspace = true }
 rolldown_fs = { workspace = true, features = ["os"] }
 rolldown_plugin = { workspace = true }
 rolldown_plugin_chunk_import_map = { workspace = true }
-rolldown_plugin_data_uri = { workspace = true }
+rolldown_plugin_asset_module = { workspace = true }
+rolldown_plugin_copy_module = { workspace = true }
+rolldown_plugin_data_url = { workspace = true }
 rolldown_plugin_hmr = { workspace = true }
 rolldown_plugin_lazy_compilation = { workspace = true }
 rolldown_plugin_oxc_runtime = { workspace = true }
@@ -64,6 +61,7 @@ rolldown_utils = { workspace = true }
 rustc-hash = { workspace = true }
 serde = { workspace = true, optional = true }
 serde_json = { workspace = true, features = ["preserve_order"] }
+smallvec = { workspace = true }
 string_wizard = { workspace = true }
 sugar_path = { workspace = true }
 tokio = { workspace = true, features = ["rt", "macros", "sync", "time"] }
@@ -74,10 +72,9 @@ xxhash-rust = { workspace = true, features = ["xxh3"] }
 [dev-dependencies]
 cow-utils = { workspace = true }
 dunce = { workspace = true }
-glob = { workspace = true }
 insta = { workspace = true }
 regex = { workspace = true }
-rolldown_dev = { path = "../rolldown_dev" }
+rolldown_common = { workspace = true }
 rolldown_testing = { path = "../rolldown_testing" }
 rolldown_workspace = { workspace = true }
 serde = { workspace = true, features = ["derive"] }
@@ -87,6 +84,9 @@ sugar_path = { workspace = true }
 testing_macros = { workspace = true }
 tokio = { workspace = true, features = ["rt", "macros", "sync", "rt-multi-thread"] }
 walkdir = { workspace = true }
+
+[lib]
+doctest = false
 
 [package.metadata.cargo-shear]
 # `serde` is used via feature flag.

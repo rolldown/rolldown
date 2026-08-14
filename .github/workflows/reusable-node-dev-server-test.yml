@@ -11,66 +11,55 @@ on:
       changed:
         required: true
         type: boolean
+      node-version:
+        required: true
+        type: number
 
 jobs:
   run:
     name: Node Dev Server Test
     if: ${{ inputs.changed }}
-    runs-on: ${{ inputs.os }}
+    runs-on: ${{ inputs.os == 'ubuntu-latest' && 'namespace-profile-linux-x64-default' || inputs.os == 'macos-latest' && 'namespace-profile-mac-default' || inputs.os }}
     timeout-minutes: 15
-    strategy:
-      fail-fast: false
     steps:
-      - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
-        with:
-          submodules: true # Pull submodules for additional files
-          persist-credentials: false
+      - uses: taiki-e/checkout-action@7d1e50e93dc4fb3bba58f85018fadf77898aee8b # v1.4.2
 
-      - name: Setup Rust
-        uses: oxc-project/setup-rust@c8224157c0bf235aabc633e8cd50d344f087a7de # v1.0.12
-        with:
-          tools: just
+      # pnpm v11 requires Node >=22.13, so fall back to pnpm 10 when testing on Node 20.
+      - name: Pin pnpm 10 for Node 20
+        if: ${{ inputs.node-version == 20 }}
+        run: npm pkg set packageManager=pnpm@10.33.4
 
-      - uses: oxc-project/setup-node@141eb77546de6702f92d320926403fe3f9f6a6f2 # v1.0.5
+      - uses: voidzero-dev/setup-vp@313600b80b104eadebb9111787d37a2e83e014ca # v1.17.0
+        with:
+          version: '0.2.1'
+          node-version: ${{ inputs.node-version }}
+          cache: true
 
       - name: Download Native Rolldown Build
-        uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7.0.0
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
         with:
           name: rolldown-native-${{ inputs.os }}
-          path: ./packages
+          path: packages/rolldown/dist
 
       - name: Build `@rolldown/test-dev-server`
-        run: pnpm --filter '@rolldown/test-dev-server' build
+        run: vp run --filter '@rolldown/test-dev-server' build
 
-      - name: Type Check
-        run: pnpm type-check
+      # The rebase in setup-vite needs a committer identity.
+      - name: Configure Git
+        run: |
+          git config --global user.name 'github-actions[bot]'
+          git config --global user.email 'github-actions[bot]@users.noreply.github.com'
+
+      # The browser-platform tests run on Vite's full bundle mode, served from
+      # a clone of vitejs/vite at the latest rolldown-canary rebased onto the
+      # latest main (kept unpatched, no rolldown-side edits). setup-vite
+      # creates the checkout, installs its pinned deps, builds vite, and
+      # points its runtime `rolldown` resolution at packages/rolldown.
+      - name: Setup Vite checkout (browser-platform backend)
+        run: vp run --filter '@rolldown-internal/scripts' setup-vite
 
       - name: Install Playwright
-        run: pnpm playwright install chromium
+        run: vp exec playwright install chromium
 
-      - name: Setup Node20 For Testing
-        uses: actions/setup-node@395ad3262231945c25e8478fd5baf05154b1d79f # v6.1.0
-        with:
-          node-version: 20
-          package-manager-cache: false
-
-      - name: Dev Server Test For Node20
-        run: pnpm run --filter '@rolldown/test-dev-server-tests' test
-
-      - name: Setup Node22 For Testing
-        uses: actions/setup-node@395ad3262231945c25e8478fd5baf05154b1d79f # v6.1.0
-        with:
-          node-version: 22
-          package-manager-cache: false
-
-      - name: Dev Server Test For Node22
-        run: pnpm run --filter '@rolldown/test-dev-server-tests' test
-
-      - name: Setup Node24 For Testing
-        uses: actions/setup-node@395ad3262231945c25e8478fd5baf05154b1d79f # v6.1.0
-        with:
-          node-version: 24
-          package-manager-cache: false
-
-      - name: Dev Server Test For Node24
-        run: pnpm run --filter '@rolldown/test-dev-server-tests' test
+      - name: Dev Server Test
+        run: vp run --filter '@rolldown/test-dev-server-tests' test

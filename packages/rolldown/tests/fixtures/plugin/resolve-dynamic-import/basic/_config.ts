@@ -7,12 +7,13 @@ const entry = path.join(__dirname, './main.js');
 const resolveDynamicImport = vi.fn();
 
 export default defineTest({
+  sequential: true,
   config: {
     input: entry,
     plugins: [
       {
         name: 'test-plugin',
-        resolveDynamicImport: function(id, importer) {
+        resolveDynamicImport: function (id, importer) {
           resolveDynamicImport();
           if (id === 'foo') {
             expect(importer).toStrictEqual(entry);
@@ -24,7 +25,7 @@ export default defineTest({
       },
     ],
   },
-  afterTest: (output) => {
+  afterTest: (_output) => {
     expect(resolveDynamicImport).toHaveBeenCalledTimes(1);
   },
 });

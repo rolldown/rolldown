@@ -1,6 +1,6 @@
 {
   "config": {
-    "inlineDynamicImports": true
+    "codeSplitting": false
   },
   "configVariants": [
     {
@@ -11,4 +11,3 @@
     }
   ]
 }
-

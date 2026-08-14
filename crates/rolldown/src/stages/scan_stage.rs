@@ -2,79 +2,49 @@ use std::{sync::Arc, thread};
 
 use arcstr::ArcStr;
 use futures::future::join_all;
+use oxc::span::Span;
 use oxc_index::IndexVec;
-#[cfg(not(target_os = "macos"))]
 use rayon::iter::{IntoParallelRefIterator, ParallelIterator};
 use rolldown_common::SourceMapGenMsg;
 use rolldown_common::{
   EntryPoint, FlatOptions, HybridIndexVec, Module, ModuleIdx, ModuleTable, PreserveEntrySignatures,
-  ResolvedId, RuntimeModuleBrief, ScanMode, SourcemapChainElement, SymbolRefDb,
+  ResolvedId, RuntimeModuleBrief, ScanMode, SourcemapChainElement, StmtInfos, SymbolRefDb,
   dynamic_import_usage::DynamicImportExportsUsage,
 };
 use rolldown_ecmascript::EcmaAst;
 use rolldown_error::{BuildDiagnostic, BuildResult};
-use rolldown_fs::OsFileSystem;
+use rolldown_fs::FileSystem;
 use rolldown_plugin::SharedPluginDriver;
-use rustc_hash::FxHashMap;
+use rustc_hash::{FxHashMap, FxHashSet};
 
 use crate::{
   SharedOptions, SharedResolver,
   module_loader::{ModuleLoader, module_loader::ModuleLoaderOutput},
-  type_alias::IndexEcmaAst,
+  type_alias::{IndexEcmaAst, IndexStmtInfos},
   types::scan_stage_cache::ScanStageCache,
   utils::load_entry_module::load_entry_module,
 };
 
 type SourcemapChannel = (
-  Option<Arc<std::sync::mpsc::Sender<SourceMapGenMsg>>>,
+  Option<std::sync::mpsc::Sender<SourceMapGenMsg>>,
   Option<thread::JoinHandle<FxHashMap<ModuleIdx, Vec<SourcemapChainElement>>>>,
 );
 
-/// Resolve `InputOptions.input`
-#[tracing::instrument(target = "devtool", level = "debug", skip_all)]
-pub async fn resolve_user_defined_entries(
-  options: &SharedOptions,
-  resolver: &SharedResolver,
-  plugin_driver: &SharedPluginDriver,
-) -> BuildResult<Vec<(Option<ArcStr>, ResolvedId)>> {
-  let resolved_ids = join_all(options.input.iter().map(|input_item| async move {
-    let resolved = load_entry_module(resolver, plugin_driver, &input_item.import, None).await;
-
-    resolved.map(|info| (input_item.name.as_ref().map(Into::into), info))
-  }))
-  .await;
-
-  let mut ret = Vec::with_capacity(options.input.len());
-
-  let mut errors = vec![];
-
-  for resolve_id in resolved_ids {
-    match resolve_id {
-      Ok(item) => {
-        ret.push(item);
-      }
-      Err(e) => errors.push(e),
-    }
-  }
-
-  if !errors.is_empty() {
-    Err(errors)?;
-  }
-
-  Ok(ret)
-}
-
-pub struct ScanStage {
+pub struct ScanStage<Fs: FileSystem + Clone + 'static> {
   options: SharedOptions,
   plugin_driver: SharedPluginDriver,
-  fs: OsFileSystem,
-  resolver: SharedResolver,
+  fs: Fs,
+  resolver: SharedResolver<Fs>,
 }
 
 #[derive(Debug)]
 pub struct NormalizedScanStageOutput {
   pub module_table: ModuleTable,
   pub index_ecma_ast: IndexEcmaAst,
+  /// Per-module `StmtInfos` side table, parallel to `module_table.modules`.
+  /// External modules get an empty `StmtInfos::new()` placeholder. Routed
+  /// directly into `LinkStage.stmt_infos` instead of living on `EcmaView`.
+  pub stmt_infos: IndexStmtInfos,
   pub entry_points: Vec<EntryPoint>,
   pub symbol_ref_db: SymbolRefDb,
   pub runtime: RuntimeModuleBrief,
@@ -84,6 +54,9 @@ pub struct NormalizedScanStageOutput {
   pub overrode_preserve_entry_signature_map: FxHashMap<ModuleIdx, PreserveEntrySignatures>,
   pub entry_point_to_reference_ids: FxHashMap<EntryPoint, Vec<ArcStr>>,
   pub flat_options: FlatOptions,
+  pub user_defined_entry_modules: FxHashSet<ModuleIdx>,
+  pub tla_module_count: usize,
+  pub tla_keyword_span_map: FxHashMap<ModuleIdx, Span>,
 }
 
 impl NormalizedScanStageOutput {
@@ -93,16 +66,14 @@ impl NormalizedScanStageOutput {
     Self {
       module_table: self.module_table.clone(),
       index_ecma_ast: {
-        #[cfg(not(target_os = "macos"))]
         let iter = self.index_ecma_ast.raw.par_iter();
-        #[cfg(target_os = "macos")]
-        let iter = self.index_ecma_ast.raw.iter();
 
         let index_ecma_ast = iter
           .map(|ast| ast.as_ref().map(rolldown_ecmascript::EcmaAst::clone_with_another_arena))
           .collect::<Vec<_>>();
         IndexVec::from_vec(index_ecma_ast)
       },
+      stmt_infos: self.stmt_infos.clone(),
       entry_points: self.entry_points.clone(),
       symbol_ref_db: self.symbol_ref_db.clone_without_scoping(),
       runtime: self.runtime.clone(),
@@ -111,6 +82,9 @@ impl NormalizedScanStageOutput {
       overrode_preserve_entry_signature_map: self.overrode_preserve_entry_signature_map.clone(),
       entry_point_to_reference_ids: self.entry_point_to_reference_ids.clone(),
       flat_options: self.flat_options,
+      user_defined_entry_modules: self.user_defined_entry_modules.clone(),
+      tla_module_count: self.tla_module_count,
+      tla_keyword_span_map: self.tla_keyword_span_map.clone(),
     }
   }
 }
@@ -129,9 +103,15 @@ impl TryFrom<ScanStageOutput> for NormalizedScanStageOutput {
       HybridIndexVec::Map(_) => return Err("index_ecma_ast must be normalized to IndexVec first"),
     };
 
+    let stmt_infos = match value.stmt_infos {
+      HybridIndexVec::IndexVec(stmt_infos) => stmt_infos,
+      HybridIndexVec::Map(_) => return Err("stmt_infos must be normalized to IndexVec first"),
+    };
+
     Ok(Self {
       module_table,
       index_ecma_ast,
+      stmt_infos,
       entry_points: value.entry_points,
       symbol_ref_db: value.symbol_ref_db,
       runtime: value.runtime,
@@ -140,6 +120,9 @@ impl TryFrom<ScanStageOutput> for NormalizedScanStageOutput {
       overrode_preserve_entry_signature_map: value.overrode_preserve_entry_signature_map,
       entry_point_to_reference_ids: value.entry_point_to_reference_ids,
       flat_options: value.flat_options,
+      user_defined_entry_modules: value.user_defined_entry_modules,
+      tla_module_count: value.tla_module_count,
+      tla_keyword_span_map: value.tla_keyword_span_map,
     })
   }
 }
@@ -148,6 +131,7 @@ impl TryFrom<ScanStageOutput> for NormalizedScanStageOutput {
 pub struct ScanStageOutput {
   pub module_table: HybridIndexVec<ModuleIdx, Module>,
   pub index_ecma_ast: HybridIndexVec<ModuleIdx, Option<EcmaAst>>,
+  pub stmt_infos: HybridIndexVec<ModuleIdx, StmtInfos>,
   pub entry_points: Vec<EntryPoint>,
   pub symbol_ref_db: SymbolRefDb,
   pub runtime: RuntimeModuleBrief,
@@ -156,14 +140,17 @@ pub struct ScanStageOutput {
   pub overrode_preserve_entry_signature_map: FxHashMap<ModuleIdx, PreserveEntrySignatures>,
   pub entry_point_to_reference_ids: FxHashMap<EntryPoint, Vec<ArcStr>>,
   pub flat_options: FlatOptions,
+  pub user_defined_entry_modules: FxHashSet<ModuleIdx>,
+  pub tla_module_count: usize,
+  pub tla_keyword_span_map: FxHashMap<ModuleIdx, Span>,
 }
 
-impl ScanStage {
+impl<Fs: FileSystem + Clone + 'static> ScanStage<Fs> {
   pub fn new(
     options: SharedOptions,
     plugin_driver: SharedPluginDriver,
-    fs: OsFileSystem,
-    resolver: SharedResolver,
+    fs: Fs,
+    resolver: SharedResolver<Fs>,
   ) -> Self {
     Self { options, plugin_driver, fs, resolver }
   }
@@ -196,13 +183,14 @@ impl ScanStage {
     self
       .plugin_driver
       .file_emitter
-      .set_context_load_modules_tx(Some(module_loader.tx.clone()))
-      .await;
+      .set_context_load_modules_tx(Some(module_loader.shared_context.tx.clone()))?;
 
     self.plugin_driver.build_start(&self.options).await?;
 
     // For `await pluginContext.load`, if support it at buildStart hook, it could be caused stuck.
-    self.plugin_driver.set_context_load_modules_tx(Some(module_loader.tx.clone())).await;
+    self
+      .plugin_driver
+      .set_context_load_modules_tx(Some(module_loader.shared_context.tx.clone()))?;
 
     let mut module_loader_output = module_loader.fetch_modules(fetch_mode).await?;
 
@@ -210,36 +198,11 @@ impl ScanStage {
       self.process_sourcemap_handler(handler, &mut module_loader_output);
     }
 
-    let ModuleLoaderOutput {
-      module_table,
-      entry_points,
-      symbol_ref_db,
-      runtime,
-      warnings,
-      index_ecma_ast,
-      dynamic_import_exports_usage_map,
-      new_added_modules_from_partial_scan: _,
-      overrode_preserve_entry_signature_map,
-      entry_point_to_reference_ids,
-      flat_options,
-    } = module_loader_output;
+    self.plugin_driver.file_emitter.set_context_load_modules_tx(None)?;
 
-    self.plugin_driver.file_emitter.set_context_load_modules_tx(None).await;
+    self.plugin_driver.set_context_load_modules_tx(None)?;
 
-    self.plugin_driver.set_context_load_modules_tx(None).await;
-
-    Ok(ScanStageOutput {
-      entry_points,
-      symbol_ref_db,
-      runtime,
-      warnings,
-      index_ecma_ast,
-      dynamic_import_exports_usage_map,
-      module_table,
-      overrode_preserve_entry_signature_map,
-      entry_point_to_reference_ids,
-      flat_options,
-    })
+    Ok(module_loader_output.into())
   }
 
   fn create_sourcemap_channel(&self) -> SourcemapChannel {
@@ -252,9 +215,11 @@ impl ScanStage {
         while let Ok(msg) = rx.recv() {
           match msg {
             SourceMapGenMsg::MagicString(v) => {
-              let (module_idx, plugin_idx, magic_string) = *v;
-              let generated_sourcemap =
-                magic_string.source_map(string_wizard::SourceMapOptions::default());
+              let (module_idx, plugin_idx, id, magic_string) = *v;
+              let generated_sourcemap = magic_string.source_map(string_wizard::SourceMapOptions {
+                source: id.as_str().into(),
+                ..Default::default()
+              });
               map
                 .entry(module_idx)
                 .or_default()
@@ -267,7 +232,7 @@ impl ScanStage {
         }
         map
       });
-      (Some(Arc::new(tx)), Some(handler))
+      (Some(tx), Some(handler))
     } else {
       (None, None)
     }
@@ -302,21 +267,27 @@ impl ScanStage {
         for element in module.sourcemap_chain.drain(..) {
           match element {
             SourcemapChainElement::Load(_) => load_elements.push(element),
-            SourcemapChainElement::Transform(_) => transform_elements.push(element),
+            SourcemapChainElement::Transform(_)
+            | SourcemapChainElement::Omitted { .. }
+            | SourcemapChainElement::Null { .. } => {
+              transform_elements.push(element);
+            }
           }
         }
 
         // Sort only Transform elements by plugin order
         transform_elements.sort_by(|a, b| {
-          if let (
-            SourcemapChainElement::Transform((a_plugin_idx, _)),
-            SourcemapChainElement::Transform((b_plugin_idx, _)),
-          ) = (a, b)
-          {
+          let plugin_idx_of = |el: &SourcemapChainElement| match el {
+            SourcemapChainElement::Transform((plugin_idx, _))
+            | SourcemapChainElement::Omitted { plugin_idx, .. }
+            | SourcemapChainElement::Null { plugin_idx, .. } => Some(*plugin_idx),
+            SourcemapChainElement::Load(_) => None,
+          };
+          if let (Some(a_plugin_idx), Some(b_plugin_idx)) = (plugin_idx_of(a), plugin_idx_of(b)) {
             let a_order =
-              transform_plugin_order_map.get(a_plugin_idx).copied().unwrap_or(usize::MAX);
+              transform_plugin_order_map.get(&a_plugin_idx).copied().unwrap_or(usize::MAX);
             let b_order =
-              transform_plugin_order_map.get(b_plugin_idx).copied().unwrap_or(usize::MAX);
+              transform_plugin_order_map.get(&b_plugin_idx).copied().unwrap_or(usize::MAX);
             a_order.cmp(&b_order)
           } else {
             std::cmp::Ordering::Equal
@@ -372,23 +343,31 @@ impl From<ModuleLoaderOutput> for ScanStageOutput {
       runtime,
       warnings,
       index_ecma_ast,
+      stmt_infos,
       dynamic_import_exports_usage_map,
       new_added_modules_from_partial_scan: _,
       overrode_preserve_entry_signature_map,
       entry_point_to_reference_ids,
       flat_options,
+      user_defined_entry_modules,
+      tla_module_count,
+      tla_keyword_span_map,
     } = module_loader_output;
     ScanStageOutput {
+      module_table,
+      index_ecma_ast,
+      stmt_infos,
       entry_points,
       symbol_ref_db,
       runtime,
       warnings,
-      index_ecma_ast,
       dynamic_import_exports_usage_map,
-      module_table,
       overrode_preserve_entry_signature_map,
       entry_point_to_reference_ids,
       flat_options,
+      user_defined_entry_modules,
+      tla_module_count,
+      tla_keyword_span_map,
     }
   }
 }

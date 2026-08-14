@@ -24,12 +24,22 @@ impl Default for SourceMapOptions {
 }
 
 impl MagicString<'_> {
-  pub fn source_map(&self, opts: SourceMapOptions) -> oxc_sourcemap::SourceMap {
+  pub fn source_map(&self, opts: SourceMapOptions) -> oxc_sourcemap::SourceMap<'static> {
     let mut source_builder = SourcemapBuilder::new(opts.hires);
 
     source_builder.set_source_and_content(&opts.source, &self.source);
 
     let locator = Locator::new(&self.source);
+
+    // Seed `names` with every stored range up front, so the array reflects what was replaced
+    // rather than whatever chunks happen to line up. A chunk only carries a name when its own
+    // span is exactly one of those ranges — a range split across chunks stays in `names` with
+    // no mapping pointing at it, which is what magic-string does.
+    let name_ids: FxHashMap<&str, u32> = self
+      .stored_names_ordered()
+      .into_iter()
+      .map(|(name, _)| (name, source_builder.add_name(name)))
+      .collect();
 
     self.intro.iter().for_each(|frag| {
       source_builder.advance(frag);
@@ -42,15 +52,16 @@ impl MagicString<'_> {
       chunk.intro.iter().for_each(|frag| {
         source_builder.advance(frag);
       });
-      let name =
-        (chunk.keep_in_mappings && chunk.is_edited()).then(|| chunk.span.text(&self.source));
+      let name_id = (chunk.keep_in_mappings && chunk.is_edited())
+        .then(|| name_ids.get(chunk.span.text(&self.source)).copied())
+        .flatten();
 
       source_builder.add_chunk(
         chunk,
         utf16_index_map[&chunk.start()],
         &locator,
         &self.source,
-        name,
+        name_id,
       );
 
       chunk.outro.iter().for_each(|frag| {
@@ -58,21 +69,36 @@ impl MagicString<'_> {
       });
     });
 
-    source_builder.into_source_map()
+    let mut source_map = source_builder.into_source_map();
+
+    if self.ignore_list {
+      // The source is always at index 0 for a single MagicString instance.
+      source_map.set_x_google_ignore_list(vec![0]);
+    }
+
+    source_map
   }
 }
 
 fn precompute_utf16_index_map(
   source: &str,
-  byte_indices: impl Iterator<Item = usize>,
-) -> FxHashMap<usize, usize> {
-  let mut byte_indices: Vec<usize> = byte_indices.collect();
-  byte_indices.sort();
-  let mut index = 0;
-  let mut index_utf16 = 0;
-  let mut map: FxHashMap<usize, usize> = Default::default();
+  byte_indices: impl Iterator<Item = u32>,
+) -> FxHashMap<u32, u32> {
+  // Chunk traversal order may not be sorted (e.g. after relocate()), so sort is required.
+  let mut byte_indices: Vec<u32> = byte_indices.collect();
+  byte_indices.sort_unstable();
+  let mut index: u32 = 0;
+  let mut index_utf16: u32 = 0;
+  let mut map: FxHashMap<u32, u32> =
+    FxHashMap::with_capacity_and_hasher(byte_indices.len(), Default::default());
   for &i in &byte_indices {
-    index_utf16 += source[index..i].chars().map(|c| c.len_utf16()).sum::<usize>();
+    let slice = &source[index as usize..i as usize];
+    // Fast path: ASCII strings have 1:1 byte-to-UTF-16 mapping
+    index_utf16 += if slice.is_ascii() {
+      slice.len() as u32
+    } else {
+      slice.chars().map(|c| c.len_utf16() as u32).sum::<u32>()
+    };
     index = i;
     map.insert(i, index_utf16);
   }

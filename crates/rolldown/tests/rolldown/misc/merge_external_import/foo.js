@@ -1,2 +1,2 @@
-import { parse } from 'ext'
-console.log(parse)
+import { parse } from 'ext';
+console.log(parse);

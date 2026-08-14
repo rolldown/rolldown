@@ -1,11 +1,22 @@
 use super::normalize_binding_transform_options;
 use crate::options::BindingGeneratedCodeOptions;
-use crate::options::binding_advanced_chunks_options::BindingChunkingContext;
-use crate::options::{AssetFileNamesOutputOption, ChunkFileNamesOutputOption, SanitizeFileName};
-use crate::types::binding_string_or_regex::bindingify_string_or_regex_array;
+use crate::options::binding_manual_code_splitting_options::{
+  BindingChunkingContext, BindingManualCodeSplittingOptions,
+};
+use crate::options::{
+  AssetFileNamesOutputOption, BindingOnLog, ChunkFileNamesOutputOption, SanitizeFileName,
+  SourcemapIgnoreListOutputOption,
+};
+use crate::types::binding_plugin_timings::BindingPluginTimingsMeasurement;
+use crate::types::binding_string_or_regex::{
+  BindingStringOrRegex, bindingify_string_or_regex_array,
+};
+use crate::types::defer_sync_scan_data::BindingDeferSyncScanData;
 use crate::{
   options::binding_inject_import::normalize_binding_inject_import,
-  types::js_callback::JsCallbackExt,
+  types::js_callback::{
+    JsCallbackResultExt, {JsCallback, JsCallbackExt},
+  },
 };
 #[cfg_attr(target_family = "wasm", allow(unused))]
 use crate::{
@@ -13,14 +24,18 @@ use crate::{
   types::{binding_rendered_chunk::BindingRenderedChunk, js_callback::MaybeAsyncJsCallbackExt},
 };
 use napi::bindgen_prelude::{Either, Either3, FnArgs};
+use oxc::transformer::EngineTargets;
 use rolldown::{
-  AddonOutputOption, AdvancedChunksOptions, AssetFilenamesOutputOption, BundlerConfig,
-  BundlerOptions, ChunkFilenamesOutputOption, DeferSyncScanDataOption, HashCharacters, IsExternal,
-  MatchGroup, MatchGroupName, ModuleType, OptimizationOption, OutputExports, OutputFormat,
-  Platform, RawMinifyOptions, RawMinifyOptionsDetailed, SanitizeFilename, TsConfig,
+  AddonOutputOption, AssetFilenamesOutputOption, BundlerConfig, BundlerOptions,
+  ChunkFilenamesOutputOption, CodeSplittingMode, DeferSyncScanDataOption, HashCharacters,
+  IsExternal, ManualCodeSplittingOptions, MatchGroup, MatchGroupName, ModuleType,
+  OptimizationOption, OutputExports, OutputFormat, Platform, PluginTimingsOption,
+  RawCompressOptions, RawMangleOptions, RawMinifyOptions, RawMinifyOptionsDetailed,
+  SanitizeFilename, StrictMode, TsConfig,
 };
 use rolldown_common::DeferSyncScanData;
 use rolldown_common::GeneratedCodeOptions;
+use rolldown_common::ModuleTag;
 use rolldown_plugin::__inner::SharedPluginable;
 use rolldown_utils::indexmap::FxIndexMap;
 use rolldown_utils::rustc_hash::FxHashMapExt;
@@ -46,11 +61,12 @@ fn normalize_generated_code_option(
     }
     None => GeneratedCodeOptions::default(),
   };
-  Ok(GeneratedCodeOptions { symbols: value.symbols.unwrap_or(v.symbols), ..v })
+  Ok(GeneratedCodeOptions { symbols: value.symbols.unwrap_or(v.symbols) })
 }
 
 fn normalize_addon_option(
   addon_option: Option<crate::options::AddonOutputOption>,
+  name: &'static str,
 ) -> Option<AddonOutputOption> {
   addon_option.map(move |value| match value {
     // Static string - no JS function call needed
@@ -62,6 +78,7 @@ fn normalize_addon_option(
         fn_js
           .await_call(FnArgs { data: (BindingRenderedChunk::new(chunk),) })
           .await
+          .context(name)
           .map_err(anyhow::Error::from)
       })
     })),
@@ -70,6 +87,7 @@ fn normalize_addon_option(
 
 fn normalize_chunk_file_names_option(
   option: Option<ChunkFileNamesOutputOption>,
+  name: &'static str,
 ) -> napi::Result<Option<ChunkFilenamesOutputOption>> {
   option
     .map(move |value| match value {
@@ -78,7 +96,7 @@ fn normalize_chunk_file_names_option(
         let func = Arc::clone(&func);
         let chunk = (chunk.clone().into(),);
         Box::pin(async move {
-          func.invoke_async(FnArgs { data: chunk }).await.map_err(anyhow::Error::from)
+          func.invoke_async(FnArgs { data: chunk }).await.context(name).map_err(anyhow::Error::from)
         })
       }))),
     })
@@ -95,7 +113,11 @@ fn normalize_sanitize_filename(
         let func = Arc::clone(&func);
         let name = name.to_string();
         Box::pin(async move {
-          func.invoke_async(FnArgs { data: (name,) }).await.map_err(anyhow::Error::from)
+          func
+            .invoke_async(FnArgs { data: (name,) })
+            .await
+            .context("sanitizeFileName option")
+            .map_err(anyhow::Error::from)
         })
       }))),
     })
@@ -112,7 +134,11 @@ fn normalize_asset_file_names_option(
         let func = Arc::clone(&func);
         let asset = (asset.clone().into(),);
         Box::pin(async move {
-          func.invoke_async(FnArgs { data: asset }).await.map_err(anyhow::Error::from)
+          func
+            .invoke_async(FnArgs { data: asset })
+            .await
+            .context("assetFileNames option")
+            .map_err(anyhow::Error::from)
         })
       }))),
     })
@@ -127,7 +153,13 @@ fn normalize_globals_option(
     Either::B(func) => rolldown_common::GlobalsOutputOption::Fn(Arc::new(move |name| {
       let func = Arc::clone(&func);
       let name = name.to_string();
-      Box::pin(async move { func.invoke_async((name,).into()).await.map_err(anyhow::Error::from) })
+      Box::pin(async move {
+        func
+          .invoke_async((name,).into())
+          .await
+          .context("globals option")
+          .map_err(anyhow::Error::from)
+      })
     })),
   })
 }
@@ -140,8 +172,287 @@ fn normalize_paths_option(
     Either::B(func) => rolldown_common::PathsOutputOption::Fn(Arc::new(move |id| {
       let func = Arc::clone(&func);
       let id = id.to_string();
-      func.invoke_sync((id,).into()).map_err(anyhow::Error::from)
+      Box::pin(async move {
+        func.invoke_async((id,).into()).await.context("paths option").map_err(anyhow::Error::from)
+      })
     })),
+  })
+}
+
+fn napi_compress_options_to_raw_compress_options(
+  o: &oxc_minify_napi::CompressOptions,
+) -> Result<RawCompressOptions, String> {
+  Ok(RawCompressOptions {
+    target: o
+      .target
+      .as_ref()
+      .map(|t| -> Result<EngineTargets, String> {
+        match t {
+          Either::A(s) => Ok(EngineTargets::from_target(s)?),
+          Either::B(list) => Ok(EngineTargets::from_target_list(list)?),
+        }
+      })
+      .transpose()?,
+    drop_console: o.drop_console,
+    drop_debugger: o.drop_debugger,
+    join_vars: o.join_vars,
+    sequences: o.sequences,
+    unused: o
+      .unused
+      .as_ref()
+      .map(|u| {
+        Ok(match u {
+          Either::A(true) => oxc::minifier::CompressOptionsUnused::Remove,
+          Either::A(false) => oxc::minifier::CompressOptionsUnused::Keep,
+          Either::B(s) => match s.as_str() {
+            "keep_assign" => oxc::minifier::CompressOptionsUnused::KeepAssign,
+            _ => return Err(format!("Invalid unused option: `{s}`.")),
+          },
+        })
+      })
+      .transpose()?,
+    keep_names: o.keep_names.as_ref().map(Into::into),
+    treeshake: o.treeshake.as_ref().map(TryFrom::try_from).transpose()?,
+    drop_labels: o.drop_labels.as_ref().map(|labels| labels.iter().cloned().collect()),
+    max_iterations: o.max_iterations,
+  })
+}
+
+fn normalize_external_option(
+  external: Option<
+    Either<Vec<BindingStringOrRegex>, JsCallback<FnArgs<(String, Option<String>, bool)>, bool>>,
+  >,
+) -> Option<IsExternal> {
+  external.map(|external| match external {
+    Either::A(patterns) => IsExternal::StringOrRegex(bindingify_string_or_regex_array(patterns)),
+    Either::B(is_external) => {
+      IsExternal::Fn(Some(Arc::new(move |source, importer, is_resolved| {
+        let source = source.to_string();
+        let importer = importer.map(ToString::to_string);
+        let is_external = Arc::clone(&is_external);
+        Box::pin(async move {
+          is_external
+            .invoke_async((source.clone(), importer, is_resolved).into())
+            .await
+            .context("external option")
+            .map_err(anyhow::Error::from)
+        })
+      })))
+    }
+  })
+}
+
+fn normalize_plugin_timings_option(
+  plugin_timings: Option<JsCallback<(), BindingPluginTimingsMeasurement>>,
+) -> Option<PluginTimingsOption> {
+  plugin_timings.map(|ts_fn| {
+    PluginTimingsOption::new(move || {
+      let ts_fn = Arc::clone(&ts_fn);
+      Box::pin(async move {
+        ts_fn
+          .invoke_async(())
+          .await
+          .context("pluginTimings option")
+          .map(Into::into)
+          .map_err(anyhow::Error::from)
+      })
+    })
+  })
+}
+
+fn normalize_defer_sync_scan_data_option(
+  defer_sync_scan_data: Option<JsCallback<(), Vec<BindingDeferSyncScanData>>>,
+) -> Option<DeferSyncScanDataOption> {
+  defer_sync_scan_data.map(|ts_fn| {
+    DeferSyncScanDataOption::new(move || {
+      let ts_fn = Arc::clone(&ts_fn);
+      Box::pin(async move {
+        ts_fn
+          .invoke_async(())
+          .await
+          .context("deferSyncScanData option")
+          .and_then(|ret| {
+            ret.into_iter().map(TryInto::try_into).collect::<Result<Vec<DeferSyncScanData>, _>>()
+          })
+          .map_err(anyhow::Error::from)
+      })
+    })
+  })
+}
+
+fn normalize_sourcemap_ignore_list_option(
+  sourcemap_ignore_list: Option<SourcemapIgnoreListOutputOption>,
+) -> Option<rolldown::SourceMapIgnoreList> {
+  sourcemap_ignore_list.map(|option| match option {
+    Either3::A(bool_val) => rolldown::SourceMapIgnoreList::from_bool(bool_val),
+    Either3::B(string_or_regex) => {
+      rolldown::SourceMapIgnoreList::from_string_or_regex(string_or_regex.inner())
+    }
+    Either3::C(ts_fn) => {
+      rolldown::SourceMapIgnoreList::new(Arc::new(move |source, sourcemap_path| {
+        let ts_fn = Arc::clone(&ts_fn);
+        let source = source.to_string();
+        let sourcemap_path = sourcemap_path.to_string();
+        Box::pin(async move {
+          ts_fn
+            .invoke_async((source, sourcemap_path).into())
+            .await
+            .context("sourcemapIgnoreList option")
+            .map_err(anyhow::Error::from)
+        })
+      }))
+    }
+  })
+}
+
+fn normalize_sourcemap_path_transform_option(
+  sourcemap_path_transform: Option<JsCallback<FnArgs<(String, String)>, String>>,
+) -> Option<rolldown::SourceMapPathTransform> {
+  sourcemap_path_transform.map(|ts_fn| {
+    rolldown::SourceMapPathTransform::new(Arc::new(move |source, sourcemap_path| {
+      let ts_fn = Arc::clone(&ts_fn);
+      let source = source.to_string();
+      let sourcemap_path = sourcemap_path.to_string();
+      Box::pin(async move {
+        ts_fn
+          .invoke_async((source, sourcemap_path).into())
+          .await
+          .context("sourcemapPathTransform option")
+          .map_err(anyhow::Error::from)
+      })
+    }))
+  })
+}
+
+fn normalize_invalidate_js_side_cache_option(
+  invalidate_js_side_cache: Option<JsCallback>,
+) -> Option<rolldown::InvalidateJsSideCache> {
+  invalidate_js_side_cache.map(|ts_fn| {
+    rolldown::InvalidateJsSideCache::new(Arc::new(move || {
+      let ts_fn = Arc::clone(&ts_fn);
+      Box::pin(async move {
+        ts_fn
+          .invoke_async(())
+          .await
+          .context("invalidateJsSideCache option")
+          .map_err(anyhow::Error::from)
+      })
+    }))
+  })
+}
+
+fn normalize_on_log_option(on_log: BindingOnLog) -> Option<rolldown::OnLog> {
+  on_log.map(|ts_fn| {
+    rolldown::OnLog::new(Arc::new(move |level, log| {
+      let ts_fn = Arc::clone(&ts_fn);
+      Box::pin(async move {
+        ts_fn
+          .invoke_async((level.to_string(), log.into()).into())
+          .await
+          .context("onLog option")
+          .map_err(anyhow::Error::from)
+      })
+    }))
+  })
+}
+
+fn normalize_code_splitting(
+  manual_code_splitting: Option<BindingManualCodeSplittingOptions>,
+  inline_dynamic_imports: Option<bool>,
+) -> napi::Result<Option<CodeSplittingMode>> {
+  // Reconcile the two still-separate binding inputs — `inlineDynamicImports` and the
+  // grouping config (`manualCodeSplitting`, fed from JS `advancedChunks` / `manualChunks`)
+  // — into the core's single `codeSplitting` option, whose object form (`Advanced`)
+  // carries the groups.
+  let manual_code_splitting = manual_code_splitting
+    .map(|inner| -> napi::Result<ManualCodeSplittingOptions> {
+      Ok(ManualCodeSplittingOptions {
+        min_size: inner.min_size,
+        min_share_count: inner.min_share_count,
+        min_module_size: inner.min_module_size,
+        max_module_size: inner.max_module_size,
+        max_size: inner.max_size,
+        groups: inner
+          .groups
+          .map(|inner| {
+            inner
+              .into_iter()
+              .map(|item| -> napi::Result<MatchGroup> {
+                Ok(MatchGroup {
+                  name: match item.name {
+                    Either::A(name) => MatchGroupName::Static(name),
+                    Either::B(func) => {
+                      let func = Arc::clone(&func);
+                      MatchGroupName::Dynamic(Arc::new(move |module_id, ctx| {
+                        let module_id = module_id.to_string();
+                        let func = Arc::clone(&func);
+                        let owned_ctx = ctx.clone();
+                        Box::pin(async move {
+                          func
+                            .invoke_async(
+                              (module_id, BindingChunkingContext::new(owned_ctx)).into(),
+                            )
+                            .await
+                            .context("advancedChunks group name option")
+                            .map_err(anyhow::Error::from)
+                        })
+                      }))
+                    }
+                  },
+                  test: item
+                    .test
+                    .map(|inner| -> napi::Result<rolldown::MatchGroupTest> {
+                      match inner {
+                        Either::A(reg) => {
+                          Ok(rolldown::MatchGroupTest::Regex(reg.try_into().map_err(|err| {
+                            napi::Error::from_reason(format!(
+                              "Invalid regex in `manualCodeSplitting` group `test`: {err}"
+                            ))
+                          })?))
+                        }
+                        Either::B(func) => {
+                          Ok(rolldown::MatchGroupTest::Function(Arc::new(move |id: &str| {
+                            let id = id.to_string();
+                            let func = Arc::clone(&func);
+                            Box::pin(async move {
+                              func
+                                .invoke_async((id,).into())
+                                .await
+                                .context("advancedChunks group test option")
+                                .map_err(anyhow::Error::from)
+                            })
+                          })))
+                        }
+                      }
+                    })
+                    .transpose()?,
+                  priority: item.priority,
+                  min_size: item.min_size,
+                  min_share_count: item.min_share_count,
+                  max_module_size: item.max_module_size,
+                  min_module_size: item.min_module_size,
+                  max_size: item.max_size,
+                  entries_aware: item.entries_aware,
+                  entries_aware_merge_threshold: item.entries_aware_merge_threshold,
+                  tags: item.tags.map(|tags| tags.into_iter().map(ModuleTag::from).collect()),
+                  include_dependencies_recursively: item.include_dependencies_recursively,
+                })
+              })
+              .collect::<napi::Result<Vec<_>>>()
+          })
+          .transpose()?,
+        include_dependencies_recursively: inner.include_dependencies_recursively,
+      })
+    })
+    .transpose()?;
+  // `inlineDynamicImports: true` wins and disables splitting. The JS layer already drops
+  // (and warns about) any grouping config in this case, so groups normally reach here only
+  // when a caller sets the binding fields directly; the `_` drops them to stay consistent.
+  Ok(match (inline_dynamic_imports, manual_code_splitting) {
+    (Some(true), _) => Some(CodeSplittingMode::Bool(false)),
+    (_, Some(groups)) => Some(CodeSplittingMode::Advanced(groups)),
+    (Some(false), None) => Some(CodeSplittingMode::Bool(true)),
+    (None, None) => None,
   })
 }
 
@@ -156,85 +467,17 @@ pub fn normalize_binding_options(
 ) -> napi::Result<BundlerConfig> {
   let cwd = PathBuf::from(input_options.cwd);
 
-  let external = input_options.external.map(|external| match external {
-    Either::A(patterns) => IsExternal::StringOrRegex(bindingify_string_or_regex_array(patterns)),
-    Either::B(is_external) => {
-      IsExternal::Fn(Some(Arc::new(move |source, importer, is_resolved| {
-        let source = source.to_string();
-        let importer = importer.map(ToString::to_string);
-        let is_external = Arc::clone(&is_external);
-        Box::pin(async move {
-          is_external
-            .invoke_async((source.clone(), importer, is_resolved).into())
-            .await
-            .map_err(anyhow::Error::from)
-        })
-      })))
-    }
-  });
-
-  let get_defer_sync_scan_data = input_options.defer_sync_scan_data.map(|ts_fn| {
-    DeferSyncScanDataOption::new(move || {
-      let ts_fn = Arc::clone(&ts_fn);
-      Box::pin(async move {
-        ts_fn
-          .invoke_async(())
-          .await
-          .and_then(|ret| {
-            ret.into_iter().map(TryInto::try_into).collect::<Result<Vec<DeferSyncScanData>, _>>()
-          })
-          .map_err(anyhow::Error::from)
-      })
-    })
-  });
-
-  let sourcemap_ignore_list = output_options.sourcemap_ignore_list.map(|option| match option {
-    Either3::A(bool_val) => rolldown::SourceMapIgnoreList::from_bool(bool_val),
-    Either3::B(string_or_regex) => {
-      rolldown::SourceMapIgnoreList::from_string_or_regex(string_or_regex.inner())
-    }
-    Either3::C(ts_fn) => {
-      rolldown::SourceMapIgnoreList::new(Arc::new(move |source, sourcemap_path| {
-        let ts_fn = Arc::clone(&ts_fn);
-        let source = source.to_string();
-        let sourcemap_path = sourcemap_path.to_string();
-        Box::pin(async move {
-          ts_fn.invoke_async((source, sourcemap_path).into()).await.map_err(anyhow::Error::from)
-        })
-      }))
-    }
-  });
-
-  let sourcemap_path_transform = output_options.sourcemap_path_transform.map(|ts_fn| {
-    rolldown::SourceMapPathTransform::new(Arc::new(move |source, sourcemap_path| {
-      let ts_fn = Arc::clone(&ts_fn);
-      let source = source.to_string();
-      let sourcemap_path = sourcemap_path.to_string();
-      Box::pin(async move {
-        ts_fn.invoke_async((source, sourcemap_path).into()).await.map_err(anyhow::Error::from)
-      })
-    }))
-  });
-
-  let invalidate_js_side_cache = input_options.invalidate_js_side_cache.map(|ts_fn| {
-    rolldown::InvalidateJsSideCache::new(Arc::new(move || {
-      let ts_fn = Arc::clone(&ts_fn);
-      Box::pin(async move { ts_fn.invoke_async(()).await.map_err(anyhow::Error::from) })
-    }))
-  });
-
-  let on_log = input_options.on_log.map(|ts_fn| {
-    rolldown::OnLog::new(Arc::new(move |level, log| {
-      let ts_fn = Arc::clone(&ts_fn);
-      Box::pin(async move {
-        ts_fn
-          .invoke_async((level.to_string(), log.into()).into())
-          .await?
-          .await
-          .map_err(anyhow::Error::from)
-      })
-    }))
-  });
+  let external = normalize_external_option(input_options.external);
+  let get_defer_sync_scan_data =
+    normalize_defer_sync_scan_data_option(input_options.defer_sync_scan_data);
+  let get_plugin_timings = normalize_plugin_timings_option(input_options.plugin_timings);
+  let sourcemap_ignore_list =
+    normalize_sourcemap_ignore_list_option(output_options.sourcemap_ignore_list);
+  let sourcemap_path_transform =
+    normalize_sourcemap_path_transform_option(output_options.sourcemap_path_transform);
+  let invalidate_js_side_cache =
+    normalize_invalidate_js_side_cache_option(input_options.invalidate_js_side_cache);
+  let on_log = normalize_on_log_option(input_options.on_log);
 
   let mut module_types = None;
   if let Some(raw) = input_options.module_types {
@@ -269,10 +512,14 @@ pub fn normalize_binding_options(
     shim_missing_exports: input_options.shim_missing_exports,
     name: output_options.name,
     asset_filenames: normalize_asset_file_names_option(output_options.asset_file_names)?,
-    entry_filenames: normalize_chunk_file_names_option(output_options.entry_file_names)?,
-    chunk_filenames: normalize_chunk_file_names_option(output_options.chunk_file_names)?,
-    css_entry_filenames: normalize_chunk_file_names_option(output_options.css_entry_file_names)?,
-    css_chunk_filenames: normalize_chunk_file_names_option(output_options.css_chunk_file_names)?,
+    entry_filenames: normalize_chunk_file_names_option(
+      output_options.entry_file_names,
+      "entryFileNames option",
+    )?,
+    chunk_filenames: normalize_chunk_file_names_option(
+      output_options.chunk_file_names,
+      "chunkFileNames option",
+    )?,
     sanitize_filename: normalize_sanitize_filename(output_options.sanitize_file_name)?,
     dir: output_options.dir,
     file: output_options.file,
@@ -281,12 +528,16 @@ pub fn normalize_binding_options(
       Either::A(es_module_bool) => es_module_bool.into(),
       Either::B(es_module_string) => es_module_string.into(),
     }),
-    banner: normalize_addon_option(output_options.banner),
-    footer: normalize_addon_option(output_options.footer),
-    post_banner: normalize_addon_option(output_options.post_banner),
-    post_footer: normalize_addon_option(output_options.post_footer),
-    intro: normalize_addon_option(output_options.intro),
-    outro: normalize_addon_option(output_options.outro),
+    banner: normalize_addon_option(output_options.banner, "banner option"),
+    footer: normalize_addon_option(output_options.footer, "footer option"),
+    post_banner: normalize_addon_option(output_options.post_banner, "post_banner option"),
+    post_footer: normalize_addon_option(output_options.post_footer, "post_footer option"),
+    intro: normalize_addon_option(output_options.intro, "intro option"),
+    outro: normalize_addon_option(output_options.outro, "outro option"),
+    sourcemap_filenames: normalize_chunk_file_names_option(
+      output_options.sourcemap_file_names,
+      "sourcemapFileNames option",
+    )?,
     sourcemap_base_url: output_options
       .sourcemap_base_url
       .map(|maybe_url| {
@@ -310,6 +561,7 @@ pub fn normalize_binding_options(
     sourcemap_ignore_list,
     sourcemap_path_transform,
     sourcemap_debug_ids: output_options.sourcemap_debug_ids,
+    sourcemap_exclude_sources: output_options.sourcemap_exclude_sources,
     exports: output_options
       .exports
       .map(|format_str| {
@@ -384,21 +636,41 @@ pub fn normalize_binding_options(
           }
         }
         napi::bindgen_prelude::Either3::C(opts) => {
-          Ok(RawMinifyOptions::Object(RawMinifyOptionsDetailed {
-            options: oxc::minifier::MinifierOptions::try_from(&opts)
-              .map_err(|_| napi::Error::new(napi::Status::InvalidArg, "Invalid minify option"))?,
-            default_target: matches!(
-              opts.compress,
-              Some(
-                Either::A(true) | Either::B(oxc_minify_napi::CompressOptions { target: None, .. })
-              )
-            ),
-            remove_whitespace: match &opts.codegen {
-              None => true,
-              Some(Either::A(bool)) => *bool,
-              Some(Either::B(codegen_opts)) => codegen_opts.remove_whitespace.unwrap_or(true),
-            },
-          }))
+          {
+            let mangle = match &opts.mangle {
+              Some(Either::A(false)) => None,
+              None | Some(Either::A(true)) => Some(RawMangleOptions::default()),
+              Some(Either::B(o)) => Some(RawMangleOptions {
+                top_level: o.toplevel,
+                keep_names: o.keep_names.as_ref().map(|k| match k {
+                    Either::A(false) => oxc::mangler::MangleOptionsKeepNames::all_false(),
+                    Either::A(true) => oxc::mangler::MangleOptionsKeepNames::all_true(),
+                    Either::B(o) => oxc::mangler::MangleOptionsKeepNames {
+                      function: o.function,
+                      class: o.class,
+                    },
+                }),
+                reserved: o
+                  .reserved
+                  .as_ref()
+                  .map(|names| names.iter().map(|name| name.as_str().into()).collect()),
+              }),
+            };
+            let compress = match &opts.compress {
+              Some(Either::A(false)) => None,
+              None | Some(Either::A(true)) => Some(RawCompressOptions::default()),
+              Some(Either::B(o)) => Some(napi_compress_options_to_raw_compress_options(o).map_err(|err| napi::Error::new(napi::Status::InvalidArg, err))?),
+            };
+            Ok(RawMinifyOptions::Object(RawMinifyOptionsDetailed {
+              mangle,
+              compress,
+              remove_whitespace: match &opts.codegen {
+                None => true,
+                Some(Either::A(bool)) => *bool,
+                Some(Either::B(codegen_opts)) => codegen_opts.remove_whitespace.unwrap_or(true),
+              },
+            }))
+          }
         }
       })
       .transpose()?,
@@ -408,57 +680,11 @@ pub fn normalize_binding_options(
       .inject
       .map(|inner| inner.into_iter().map(normalize_binding_inject_import).collect()),
     external_live_bindings: output_options.external_live_bindings,
-    inline_dynamic_imports: output_options.inline_dynamic_imports,
-    advanced_chunks: output_options.advanced_chunks.map(|inner| AdvancedChunksOptions {
-      min_size: inner.min_size,
-      min_share_count: inner.min_share_count,
-      min_module_size: inner.min_module_size,
-      max_module_size: inner.max_module_size,
-      max_size: inner.max_size,
-      groups: inner.groups.map(|inner| {
-        inner
-          .into_iter()
-          .map(|item| MatchGroup {
-            name: match item.name {
-              Either::A(name) => MatchGroupName::Static(name),
-              Either::B(func) => {
-                let func = Arc::clone(&func);
-                MatchGroupName::Dynamic(Arc::new(move |module_id, ctx| {
-                  let module_id = module_id.to_string();
-                  let func = Arc::clone(&func);
-                  let owned_ctx = ctx.clone();
-                  Box::pin(async move {
-                    func
-                      .invoke_async((module_id, BindingChunkingContext::new(owned_ctx)).into())
-                      .await
-                      .map_err(anyhow::Error::from)
-                  })
-                }))
-              }
-            },
-            test: item.test.map(|inner| match inner {
-              Either::A(reg) => {
-                rolldown::MatchGroupTest::Regex(reg.try_into().expect("Invalid regex pass to test"))
-              }
-              Either::B(func) => rolldown::MatchGroupTest::Function(Arc::new(move |id: &str| {
-                let id = id.to_string();
-                let func = Arc::clone(&func);
-                Box::pin(async move {
-                  func.invoke_async((id,).into()).await.map_err(anyhow::Error::from)
-                })
-              })),
-            }),
-            priority: item.priority,
-            min_size: item.min_size,
-            min_share_count: item.min_share_count,
-            max_module_size: item.max_module_size,
-            min_module_size: item.min_module_size,
-            max_size: item.max_size,
-          })
-          .collect::<Vec<_>>()
-      }),
-      include_dependencies_recursively: inner.include_dependencies_recursively,
-    }),
+    code_splitting: normalize_code_splitting(
+      output_options.manual_code_splitting,
+      output_options.inline_dynamic_imports,
+    )?,
+    dynamic_import_in_cjs: output_options.dynamic_import_in_cjs,
     checks: input_options.checks.map(Into::into),
     profiler_names: input_options.profiler_names,
     watch: input_options.watch.map(TryInto::try_into).transpose()?,
@@ -473,15 +699,24 @@ pub fn normalize_binding_options(
         )),
       })
       .transpose()?,
+    comments: output_options.comments.map(|c| match c {
+      napi::Either::A(b) => rolldown::CommentsOptions { legal: b, annotation: b, jsdoc: b },
+      napi::Either::B(obj) => rolldown::CommentsOptions {
+        legal: obj.legal.unwrap_or(true),
+        annotation: obj.annotation.unwrap_or(true),
+        jsdoc: obj.jsdoc.unwrap_or(true),
+      },
+    }),
     drop_labels: input_options.drop_labels,
     keep_names: input_options.keep_names,
     polyfill_require: output_options.polyfill_require,
     defer_sync_scan_data: get_defer_sync_scan_data,
+    plugin_timings: get_plugin_timings,
     transform: transform_options,
     make_absolute_externals_relative: input_options
       .make_absolute_externals_relative
       .map(Into::into),
-    debug: input_options.debug.map(|inner| rolldown::DebugOptions { session_id: inner.session_id }),
+    devtools: input_options.devtools.map(|inner| rolldown::DevtoolsOptions { session_id: inner.session_id }),
     invalidate_js_side_cache,
     log_level: Some(input_options.log_level.into()),
     on_log,
@@ -496,14 +731,22 @@ pub fn normalize_binding_options(
     top_level_var: output_options.top_level_var,
     minify_internal_exports: output_options.minify_internal_exports,
     clean_dir: output_options.clean_dir,
-    context: input_options.context,
-    tsconfig: input_options.tsconfig.and_then(|v| {
-      Some(match v {
-        Either::A(false) => return None,
-        Either::A(true) => TsConfig::Auto,
-        Either::B(s) => TsConfig::Manual(s.into()),
+    strict_execution_order: output_options.strict_execution_order,
+    strict: output_options
+      .strict
+      .map(|strict| match strict {
+        Either::A(v) => Ok(StrictMode::from(v)),
+        Either::B(v) => {
+          StrictMode::try_from(v)
+            .map_err(napi::Error::from_reason)
+        }
       })
-    }),
+      .transpose()?,
+    context: input_options.context,
+    tsconfig: input_options.tsconfig.map(|v| match v {
+      Either::A(v) => TsConfig::Auto(v),
+      Either::B(s) => TsConfig::Manual(s.into()),
+    })
   };
 
   #[cfg(not(target_family = "wasm"))]
@@ -531,14 +774,17 @@ pub fn normalize_binding_options(
           Either::B(builtin) => {
             // Needs to save the name, since `try_into` will consume the ownership
             let name = format!("{:?}", builtin.__name);
-            builtin
-              .try_into()
-              .unwrap_or_else(|err| panic!("Should convert to builtin plugin: {name} \n {err}"))
+            builtin.try_into().map_err(|err| {
+              napi::Error::new(
+                napi::Status::InvalidArg,
+                format!("Failed to convert builtin plugin '{name}': {err}"),
+              )
+            })
           }
         },
       )
     })
-    .collect::<Vec<_>>();
+    .collect::<Result<Vec<_>, _>>()?;
 
   #[cfg(target_family = "wasm")]
   let plugins: Vec<SharedPluginable> = input_options
@@ -551,13 +797,16 @@ pub fn normalize_binding_options(
         Either::B(builtin) => {
           // Needs to save the name, since `try_into` will consume the ownership
           let name = format!("{:?}", builtin.__name);
-          builtin
-            .try_into()
-            .unwrap_or_else(|err| panic!("Should convert to builtin plugin: {name} \n {err}"))
+          builtin.try_into().map_err(|err| {
+            napi::Error::new(
+              napi::Status::InvalidArg,
+              format!("Failed to convert builtin plugin '{name}': {err}"),
+            )
+          })
         }
       })
     })
-    .collect::<Vec<_>>();
+    .collect::<Result<Vec<_>, _>>()?;
 
   Ok(BundlerConfig::new(bundler_options, plugins))
 }

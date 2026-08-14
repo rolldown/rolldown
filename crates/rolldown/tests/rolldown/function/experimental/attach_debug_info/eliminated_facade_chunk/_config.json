@@ -1,0 +1,12 @@
+{
+  "config": {
+    "experimental": {
+      "attachDebugInfo": "full"
+    }
+  },
+  "configVariants": [
+    {
+      "chunkOptimization": false
+    }
+  ]
+}

@@ -1,20 +1,20 @@
 use std::{fmt::Debug, sync::Arc};
 
-use crate::css::css_view::CssView;
 use crate::types::module_render_output::ModuleRenderOutput;
 use crate::{
-  AssetView, DebugStmtInfoForTreeShaking, EcmaModuleAstUsage, ExportsKind, ImportRecordIdx,
-  ImportRecordMeta, LegalComments, ModuleId, ModuleIdx, ModuleInfo, NormalizedBundlerOptions,
-  RawImportRecord, ResolvedId, StmtInfoIdx,
+  DebugStmtInfoForTreeShaking, EcmaModuleAstUsage, ExportsKind, ImportRecordIdx, ImportRecordMeta,
+  ModuleId, ModuleIdx, ModuleInfo, NormalizedBundlerOptions, RawImportRecord, ResolvedId,
+  StableModuleId, StmtInfoIdx,
 };
 use crate::{EcmaView, IndexModules, Interop, Module, ModuleType};
 use std::ops::{Deref, DerefMut};
 
 use itertools::Itertools;
-use oxc::span::CompactStr;
 use oxc_index::IndexVec;
+use oxc_str::CompactStr;
 use rolldown_ecmascript::{EcmaAst, EcmaCompiler, PrintOptions};
 use rolldown_sourcemap::collapse_sourcemaps;
+use rolldown_utils::IndexBitSet;
 use rustc_hash::FxHashSet;
 use string_wizard::SourceMapOptions;
 
@@ -22,34 +22,30 @@ use string_wizard::SourceMapOptions;
 pub struct NormalModule {
   pub exec_order: u32,
   pub idx: ModuleIdx,
-  pub is_user_defined_entry: bool,
   pub id: ModuleId,
   /// `stable_id` is calculated based on `id` to be stable across machine and os.
-  pub stable_id: String,
+  pub stable_id: StableModuleId,
   // Pretty resource id for debug
   pub debug_id: String,
   pub repr_name: String,
   pub module_type: ModuleType,
   pub ecma_view: EcmaView,
-  pub css_view: Option<CssView>,
-  pub asset_view: Option<AssetView>,
   pub originative_resolved_id: ResolvedId,
 }
 
 impl NormalModule {
+  pub fn star_export_records(&self) -> impl Iterator<Item = (ImportRecordIdx, ModuleIdx)> + '_ {
+    self.ecma_view.import_records.iter_enumerated().filter_map(|(rec_idx, rec)| {
+      rec
+        .meta
+        .contains(ImportRecordMeta::IsExportStar)
+        .then(|| rec.resolved_module.map(|module_idx| (rec_idx, module_idx)))
+        .flatten()
+    })
+  }
+
   pub fn star_export_module_ids(&self) -> impl Iterator<Item = ModuleIdx> + '_ {
-    if self.has_star_export() {
-      itertools::Either::Left(
-        self
-          .ecma_view
-          .import_records
-          .iter()
-          .filter(|&rec| rec.meta.contains(ImportRecordMeta::IsExportStar))
-          .map(|rec| rec.resolved_module),
-      )
-    } else {
-      itertools::Either::Right(std::iter::empty())
-    }
+    self.star_export_records().map(|(_, module_idx)| module_idx)
   }
 
   pub fn has_star_export(&self) -> bool {
@@ -58,17 +54,18 @@ impl NormalModule {
 
   pub fn to_debug_normal_module_for_tree_shaking(
     &self,
+    stmt_infos: &crate::StmtInfos,
     is_included: bool,
-    stmt_info_included: &IndexVec<StmtInfoIdx, bool>,
+    stmt_info_included: &IndexBitSet<StmtInfoIdx>,
   ) -> DebugNormalModuleForTreeShaking {
     DebugNormalModuleForTreeShaking {
       id: self.repr_name.clone(),
       is_included,
-      stmt_infos: self
-        .ecma_view
-        .stmt_infos
+      stmt_infos: stmt_infos
         .iter_enumerated()
-        .map(|(idx, stmt)| stmt.to_debug_stmt_info_for_tree_shaking(stmt_info_included[idx]))
+        .map(|(idx, stmt)| {
+          stmt.to_debug_stmt_info_for_tree_shaking(stmt_info_included.has_bit(idx))
+        })
         .collect(),
     }
   }
@@ -76,11 +73,12 @@ impl NormalModule {
   pub fn to_module_info(
     &self,
     raw_import_records: Option<&IndexVec<ImportRecordIdx, RawImportRecord>>,
+    is_entry: bool,
   ) -> ModuleInfo {
     ModuleInfo {
       code: Some(self.ecma_view.source.clone()),
       id: self.id.clone(),
-      is_entry: self.is_user_defined_entry,
+      is_entry,
       importers: {
         let mut value = self.ecma_view.importers.clone();
         value.sort_unstable();
@@ -114,6 +112,7 @@ impl NormalModule {
         }
         exports
       },
+      input_format: self.ecma_view.exports_kind,
     }
   }
 
@@ -155,7 +154,7 @@ impl NormalModule {
       if !rec.meta.contains(ImportRecordMeta::IsExportStar) {
         return None;
       }
-      match modules[rec.resolved_module] {
+      match modules[rec.resolved_module?] {
         Module::External(_) => Some(rec_id),
         Module::Normal(_) => None,
       }
@@ -195,12 +194,10 @@ impl NormalModule {
     options: &NormalizedBundlerOptions,
     args: &ModuleRenderArgs,
     initial_indent: u32,
-  ) -> Option<ModuleRenderOutput> {
+  ) -> ModuleRenderOutput {
     match args {
       ModuleRenderArgs::Ecma { ast } => {
         let enable_sourcemap = options.sourcemap.is_some() && !self.is_virtual();
-
-        let print_legal_comments = matches!(options.legal_comments, LegalComments::Inline);
 
         // Because oxc codegen sourcemap is last of sourcemap chain,
         // If here no extra sourcemap need remapping, we using it as final module sourcemap.
@@ -210,7 +207,18 @@ impl NormalModule {
           PrintOptions {
             sourcemap: enable_sourcemap,
             filename: self.id.to_string(),
-            print_legal_comments,
+            comments: {
+              let mut c: rolldown_ecmascript::PrintCommentsOptions = options.comments.into();
+              // Annotation comments must survive into the rendered text because
+              // `minify_chunks` re-parses it; without them the parser won't set
+              // `expr.pure` and DCE can't eliminate unused pure calls.
+              // `minify_chunks` codegen will honour the user's `comments.annotation`
+              // setting when it emits the final output.
+              // Only `annotation` needs this override — `legal` and `jsdoc` comments
+              // have no effect on DCE behaviour.
+              c.annotation = true;
+              c
+            },
             initial_indent,
           },
         );
@@ -221,15 +229,24 @@ impl NormalModule {
             mutation.apply(&mut magic_string);
           }
           let code = magic_string.to_string();
+          // `collapse_sourcemaps` walks this map's tokens, so it must match the codegen map's
+          // granularity — the default `Hires::False` maps only each line's column 0 and drops
+          // indented lines' mappings (rolldown#10070).
           let mutated_map = magic_string.source_map(SourceMapOptions {
             source: Arc::clone(&original_code),
+            hires: string_wizard::Hires::Boundary,
             ..Default::default()
           });
+          // `original` borrows the module source; `collapse_sourcemaps` copies what it
+          // keeps from it, so no `into_owned` detach is needed.
           let map =
             render_output.map.map(|original| collapse_sourcemaps(&[&original, &mutated_map]));
-          return Some(ModuleRenderOutput { code, map });
+          return ModuleRenderOutput { code, map };
         }
-        Some(ModuleRenderOutput { code: render_output.code, map: render_output.map })
+        ModuleRenderOutput {
+          code: render_output.code,
+          map: render_output.map.map(oxc_sourcemap::SourceMap::into_owned),
+        }
       }
     }
   }

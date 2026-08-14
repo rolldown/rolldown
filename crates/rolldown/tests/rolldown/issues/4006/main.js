@@ -4,7 +4,7 @@ import b from './b.js';
  * named export function
  */
 export function foo() {
-  return a + b
+  return a + b;
 }
 /**
  * named export class
@@ -22,4 +22,3 @@ export default Baz;
  * stmt
  */
 console.log(666);
-

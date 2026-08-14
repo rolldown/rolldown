@@ -1,0 +1,6 @@
+.triangle {
+	width: 10px;
+	height: 10px;
+	background: currentColor;
+	clip-path: url(./triangle.svg#x);
+}

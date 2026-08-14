@@ -1,10 +1,10 @@
 import { defineTest } from 'rolldown-tests';
-import { getOutputChunkNames } from 'rolldown-tests/utils';
 import { expect, vi } from 'vitest';
 
 let names: string[] = [];
 let fn = vi.fn(() => {});
 export default defineTest({
+  sequential: true,
   config: {
     input: ['./main.js'],
     plugins: [
@@ -33,7 +33,7 @@ export default defineTest({
       },
     ],
   },
-  afterTest: function() {
+  afterTest: function () {
     // entry, main.d.ts and a shared chunk
     expect(fn).toHaveBeenCalledTimes(2);
   },

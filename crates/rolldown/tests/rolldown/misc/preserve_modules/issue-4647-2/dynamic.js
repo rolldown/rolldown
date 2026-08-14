@@ -1,5 +1,3 @@
-import {a} from './mod.js'
+import { a } from './mod.js';
 
-export {
-  a
-}
+export { a };

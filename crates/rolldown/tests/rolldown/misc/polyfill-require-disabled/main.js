@@ -1,1 +1,1 @@
-require('path')
+require('path');

@@ -1,1 +1,1 @@
-export { x } from './c.js'
+export { x } from './c.js';

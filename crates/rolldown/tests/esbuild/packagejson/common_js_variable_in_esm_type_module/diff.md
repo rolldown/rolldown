@@ -6,12 +6,11 @@ module.exports = null;
 ```
 ### rolldown
 ```js
-// HIDDEN [rolldown:runtime]
+// HIDDEN [\0rolldown/runtime.js]
 //#region entry.js
 var require_entry = /* @__PURE__ */ __commonJSMin(((exports, module) => {
 	module.exports = null;
 }));
-
 //#endregion
 export default require_entry();
 

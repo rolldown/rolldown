@@ -2,6 +2,10 @@
 
 Common terms and concepts used in Rolldown documentation.
 
+## B
+
+- [Barrel Module](./barrel-module.md)
+
 ## E
 
 - [Entry](./entry.md)

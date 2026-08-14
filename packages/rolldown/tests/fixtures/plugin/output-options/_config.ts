@@ -5,11 +5,12 @@ import { expect, vi } from 'vitest';
 const fn = vi.fn();
 
 export default defineTest({
+  sequential: true,
   config: {
     plugins: [
       {
         name: 'test-plugin',
-        outputOptions: function(options) {
+        outputOptions: function (options) {
           expect(options.banner).toBeUndefined();
           options.banner = '/* banner */';
           fn();

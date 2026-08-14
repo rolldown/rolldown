@@ -5,14 +5,10 @@ import type {
   BindingHookResolveIdOutput,
   BindingPluginOptions,
 } from '../binding.cjs';
-import { BindingMagicString } from '../binding.cjs';
+import { RolldownMagicString } from '../binding-magic-string';
 import { parseAst } from '../parse-ast-index';
-import {
-  bindingifySourcemap,
-  type ExistingRawSourceMap,
-} from '../types/sourcemap';
+import { bindingifySourcemap, type ExistingRawSourceMap } from '../types/sourcemap';
 import { aggregateBindingErrorsIntoJsError } from '../utils/error';
-import { normalizeHook } from '../utils/normalize-hook';
 import { transformModuleInfo } from '../utils/transform-module-info';
 import {
   isEmptySourcemapFiled,
@@ -24,97 +20,50 @@ import {
   bindingifyTransformFilter,
 } from './bindingify-hook-filter';
 import type { BindingifyPluginArgs } from './bindingify-plugin';
-import {
-  bindingifyPluginHookMeta,
-  type PluginHookWithBindingExt,
-} from './bindingify-plugin-hook-meta';
+import { bindingifyHook, type PluginHookWithBindingExt } from './bindingify-plugin-hook-meta';
 import type { PluginHooks, SourceDescription } from './index';
-import { PluginContextImpl } from './plugin-context';
+import { LoadPluginContextImpl } from './load-plugin-context';
+import { createPluginContext } from './plugin-context';
 import { TransformPluginContextImpl } from './transform-plugin-context';
 
 export function bindingifyBuildStart(
   args: BindingifyPluginArgs,
 ): PluginHookWithBindingExt<BindingPluginOptions['buildStart']> {
-  const hook = args.plugin.buildStart;
-  if (!hook) {
-    return {};
-  }
-  const { handler, meta } = normalizeHook(hook);
-
-  return {
+  return bindingifyHook(args.plugin.buildStart, ({ handler }) => ({
     plugin: async (ctx, opts) => {
       await handler.call(
-        new PluginContextImpl(
-          args.outputOptions,
-          ctx,
-          args.plugin,
-          args.pluginContextData,
-          args.onLog,
-          args.logLevel,
-          args.watchMode,
-        ),
+        createPluginContext(args, ctx),
         args.pluginContextData.getInputOptions(opts),
       );
     },
-    meta: bindingifyPluginHookMeta(meta),
-  };
+  }));
 }
 export function bindingifyBuildEnd(
   args: BindingifyPluginArgs,
 ): PluginHookWithBindingExt<BindingPluginOptions['buildEnd']> {
-  const hook = args.plugin.buildEnd;
-  if (!hook) {
-    return {};
-  }
-  const { handler, meta } = normalizeHook(hook);
-
-  return {
+  return bindingifyHook(args.plugin.buildEnd, ({ handler }) => ({
     plugin: async (ctx, err) => {
       await handler.call(
-        new PluginContextImpl(
-          args.outputOptions,
-          ctx,
-          args.plugin,
-          args.pluginContextData,
-          args.onLog,
-          args.logLevel,
-          args.watchMode,
-        ),
+        createPluginContext(args, ctx),
         err ? aggregateBindingErrorsIntoJsError(err) : undefined,
       );
     },
-    meta: bindingifyPluginHookMeta(meta),
-  };
+  }));
 }
 
 export function bindingifyResolveId(
   args: BindingifyPluginArgs,
-): PluginHookWithBindingExt<
-  BindingPluginOptions['resolveId'],
-  BindingHookFilter | undefined
-> {
+): PluginHookWithBindingExt<BindingPluginOptions['resolveId'], BindingHookFilter | undefined> {
   const hook = args.plugin.resolveId as unknown as PluginHooks['resolveId'];
-  if (!hook) {
-    return {};
-  }
-  const { handler, meta, options } = normalizeHook(hook);
-
-  return {
+  return bindingifyHook(hook, ({ handler, options }) => ({
     plugin: async (ctx, specifier, importer, extraOptions) => {
-      const contextResolveOptions = extraOptions.custom != null
-        ? args.pluginContextData.getSavedResolveOptions(extraOptions.custom)
-        : undefined;
+      const contextResolveOptions =
+        extraOptions.custom != null
+          ? args.pluginContextData.getSavedResolveOptions(extraOptions.custom)
+          : undefined;
 
       const ret = await handler.call(
-        new PluginContextImpl(
-          args.outputOptions,
-          ctx,
-          args.plugin,
-          args.pluginContextData,
-          args.onLog,
-          args.logLevel,
-          args.watchMode,
-        ),
+        createPluginContext(args, ctx),
         specifier,
         importer ?? undefined,
         {
@@ -151,32 +100,17 @@ export function bindingifyResolveId(
         packageJsonPath: ret.packageJsonPath,
       };
     },
-    meta: bindingifyPluginHookMeta(meta),
     filter: bindingifyResolveIdFilter(options.filter),
-  };
+  }));
 }
 
 export function bindingifyResolveDynamicImport(
   args: BindingifyPluginArgs,
 ): PluginHookWithBindingExt<BindingPluginOptions['resolveDynamicImport']> {
-  const hook = args.plugin.resolveDynamicImport;
-  if (!hook) {
-    return {};
-  }
-  const { handler, meta } = normalizeHook(hook);
-
-  return {
+  return bindingifyHook(args.plugin.resolveDynamicImport, ({ handler }) => ({
     plugin: async (ctx, specifier, importer) => {
       const ret = await handler.call(
-        new PluginContextImpl(
-          args.outputOptions,
-          ctx,
-          args.plugin,
-          args.pluginContextData,
-          args.onLog,
-          args.logLevel,
-          args.watchMode,
-        ),
+        createPluginContext(args, ctx),
         specifier,
         importer ?? undefined,
       );
@@ -213,32 +147,22 @@ export function bindingifyResolveDynamicImport(
 
       return result;
     },
-    meta: bindingifyPluginHookMeta(meta),
-  };
+  }));
 }
 
 export function bindingifyTransform(
   args: BindingifyPluginArgs,
-): PluginHookWithBindingExt<
-  BindingPluginOptions['transform'],
-  BindingHookFilter | undefined
-> {
-  const hook = args.plugin.transform;
-  if (!hook) {
-    return {};
-  }
-  const { handler, meta, options } = normalizeHook(hook);
-
-  return {
+): PluginHookWithBindingExt<BindingPluginOptions['transform'], BindingHookFilter | undefined> {
+  return bindingifyHook(args.plugin.transform, ({ handler, options }) => ({
     plugin: async (ctx, code, id, meta) => {
-      let magicStringInstance: BindingMagicString, astInstance: Program;
+      let magicStringInstance: RolldownMagicString, astInstance: Program;
       Object.defineProperties(meta, {
         magicString: {
           get() {
             if (magicStringInstance) {
               return magicStringInstance;
             }
-            magicStringInstance = new BindingMagicString(code);
+            magicStringInstance = new RolldownMagicString(code);
             return magicStringInstance;
           },
         },
@@ -296,56 +220,57 @@ export function bindingifyTransform(
 
       let normalizedCode: string | undefined = undefined;
       let map = ret.map;
+      let mapHandledByNativeChannel = false;
       if (typeof ret.code === 'string') {
         normalizedCode = ret.code;
-      } else if (ret.code instanceof BindingMagicString) {
-        let magicString = ret.code as BindingMagicString;
+      } else if (ret.code instanceof RolldownMagicString) {
+        let magicString = ret.code as RolldownMagicString;
         normalizedCode = magicString.toString();
         // If the option is not enable we should just return soucemapJsonString
         let fallbackSourcemap = ctx.sendMagicString(magicString);
         if (fallbackSourcemap != undefined) {
           map = fallbackSourcemap;
+        } else {
+          // `experimental.nativeMagicString` is enabled: the sourcemap is
+          // generated natively and delivered out-of-band via the magic-string
+          // channel. Signal `null` (an explicit "no map on this output object")
+          // rather than `undefined`, otherwise the Rust side treats this
+          // transform as a missing/broken sourcemap (`Omitted`) and the empty
+          // sentinel wipes out the real map produced by the channel.
+          mapHandledByNativeChannel = true;
         }
       }
 
       return {
         code: normalizedCode,
-        map: bindingifySourcemap(
-          normalizeTransformHookSourcemap(id, code, map),
-        ),
+        // Preserve the `map: null` (intentional opt-out) vs `map: undefined`
+        map:
+          bindingifySourcemap(normalizeTransformHookSourcemap(id, code, map)) ??
+          (mapHandledByNativeChannel || ret.map === null ? null : undefined),
         moduleSideEffects: moduleOption.moduleSideEffects ?? undefined,
         moduleType: ret.moduleType,
       };
     },
-    meta: bindingifyPluginHookMeta(meta),
     filter: bindingifyTransformFilter(options.filter),
-  };
+  }));
 }
 
 export function bindingifyLoad(
   args: BindingifyPluginArgs,
-): PluginHookWithBindingExt<
-  BindingPluginOptions['load'],
-  BindingHookFilter | undefined
-> {
-  const hook = args.plugin.load;
-  if (!hook) {
-    return {};
-  }
-  const { handler, meta, options } = normalizeHook(hook);
-
-  return {
+): PluginHookWithBindingExt<BindingPluginOptions['load'], BindingHookFilter | undefined> {
+  return bindingifyHook(args.plugin.load, ({ handler, options }) => ({
     plugin: async (ctx, id) => {
       const ret = await handler.call(
-        new PluginContextImpl(
+        new LoadPluginContextImpl(
           args.outputOptions,
-          ctx,
+          ctx.inner(),
           args.plugin,
           args.pluginContextData,
+          ctx,
+          id,
           args.onLog,
           args.logLevel,
           args.watchMode,
-          id,
         ),
         id,
       );
@@ -373,9 +298,8 @@ export function bindingifyLoad(
         moduleSideEffects: moduleOption.moduleSideEffects ?? undefined,
       };
     },
-    meta: bindingifyPluginHookMeta(meta),
     filter: bindingifyLoadFilter(options.filter),
-  };
+  }));
 }
 
 function preProcessSourceMap(
@@ -385,17 +309,13 @@ function preProcessSourceMap(
   if (!ret.map) {
     return;
   }
-  let map = typeof ret.map === 'object'
-    ? ret.map
-    : (JSON.parse(ret.map) as ExistingRawSourceMap);
+  let map = typeof ret.map === 'object' ? ret.map : (JSON.parse(ret.map) as ExistingRawSourceMap);
   if (!isEmptySourcemapFiled(map.sources)) {
     // normalize original sourcemap sources
     // Port form https://github.com/rollup/rollup/blob/master/src/utils/collapseSourcemaps.ts#L180-L188.
     const directory = path.dirname(id) || '.';
     const sourceRoot = map.sourceRoot || '.';
-    map.sources = map.sources!.map((source) =>
-      path.resolve(directory, sourceRoot, source!)
-    );
+    map.sources = map.sources!.map((source) => path.resolve(directory, sourceRoot, source!));
   }
   return map;
 }
@@ -403,30 +323,12 @@ function preProcessSourceMap(
 export function bindingifyModuleParsed(
   args: BindingifyPluginArgs,
 ): PluginHookWithBindingExt<BindingPluginOptions['moduleParsed']> {
-  const hook = args.plugin.moduleParsed;
-  if (!hook) {
-    return {};
-  }
-  const { handler, meta } = normalizeHook(hook);
-
-  return {
+  return bindingifyHook(args.plugin.moduleParsed, ({ handler }) => ({
     plugin: async (ctx, moduleInfo) => {
       await handler.call(
-        new PluginContextImpl(
-          args.outputOptions,
-          ctx,
-          args.plugin,
-          args.pluginContextData,
-          args.onLog,
-          args.logLevel,
-          args.watchMode,
-        ),
-        transformModuleInfo(
-          moduleInfo,
-          args.pluginContextData.getModuleOption(moduleInfo.id),
-        ),
+        createPluginContext(args, ctx),
+        transformModuleInfo(moduleInfo, args.pluginContextData.getModuleOption(moduleInfo.id)),
       );
     },
-    meta: bindingifyPluginHookMeta(meta),
-  };
+  }));
 }

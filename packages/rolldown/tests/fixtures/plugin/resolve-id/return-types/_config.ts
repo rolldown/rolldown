@@ -1,7 +1,6 @@
 // Rolldown should able to recognize kind of return types of the `resolveId` plugin hook.
 
 import path from 'node:path';
-import type { Plugin } from 'rolldown';
 import { defineTest } from 'rolldown-tests';
 import { expect, vi } from 'vitest';
 
@@ -13,6 +12,7 @@ const returnString = vi.fn();
 const returnObjId = vi.fn();
 
 export default defineTest({
+  sequential: true,
   config: {
     input: entry,
     plugins: [

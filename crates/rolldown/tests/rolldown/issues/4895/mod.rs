@@ -18,37 +18,29 @@ impl Plugin for Test {
     ctx: &PluginContext,
     _args: &rolldown_plugin::HookBuildStartArgs<'_>,
   ) -> Result<(), anyhow::Error> {
-    ctx
-      .emit_chunk(EmittedChunk {
-        id: "./strict/main.js".into(),
-        name: Some("strict".into()),
-        preserve_entry_signatures: Some(PreserveEntrySignatures::Strict),
-        ..Default::default()
-      })
-      .await?;
-    ctx
-      .emit_chunk(EmittedChunk {
-        id: "./not-specified/main.js".into(),
-        name: Some("not-specified".into()),
-        ..Default::default()
-      })
-      .await?;
-    ctx
-      .emit_chunk(EmittedChunk {
-        id: "./allow-extension/main.js".into(),
-        name: Some("allow-extension".into()),
-        preserve_entry_signatures: Some(PreserveEntrySignatures::AllowExtension),
-        ..Default::default()
-      })
-      .await?;
-    ctx
-      .emit_chunk(EmittedChunk {
-        id: "./false/main.js".into(),
-        name: Some("false".into()),
-        preserve_entry_signatures: Some(PreserveEntrySignatures::False),
-        ..Default::default()
-      })
-      .await?;
+    ctx.emit_chunk(EmittedChunk {
+      id: "./strict/main.js".into(),
+      name: Some("strict".into()),
+      preserve_entry_signatures: Some(PreserveEntrySignatures::Strict),
+      ..Default::default()
+    })?;
+    ctx.emit_chunk(EmittedChunk {
+      id: "./not-specified/main.js".into(),
+      name: Some("not-specified".into()),
+      ..Default::default()
+    })?;
+    ctx.emit_chunk(EmittedChunk {
+      id: "./allow-extension/main.js".into(),
+      name: Some("allow-extension".into()),
+      preserve_entry_signatures: Some(PreserveEntrySignatures::AllowExtension),
+      ..Default::default()
+    })?;
+    ctx.emit_chunk(EmittedChunk {
+      id: "./false/main.js".into(),
+      name: Some("false".into()),
+      preserve_entry_signatures: Some(PreserveEntrySignatures::False),
+      ..Default::default()
+    })?;
     Ok(())
   }
 

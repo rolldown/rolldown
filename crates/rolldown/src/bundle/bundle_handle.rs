@@ -1,4 +1,7 @@
-use std::sync::Arc;
+use std::sync::{
+  Arc,
+  atomic::{AtomicBool, Ordering},
+};
 
 use rolldown_common::SharedNormalizedBundlerOptions;
 use rolldown_plugin::SharedPluginDriver;
@@ -41,6 +44,7 @@ use rolldown_plugin::SharedPluginDriver;
 pub struct BundleHandle {
   pub(crate) options: SharedNormalizedBundlerOptions,
   pub(crate) plugin_driver: SharedPluginDriver,
+  pub(crate) closed: Arc<AtomicBool>,
 }
 
 impl BundleHandle {
@@ -61,5 +65,15 @@ impl BundleHandle {
   /// Primarily used to call cleanup hooks like `close_bundle()` after the build completes.
   pub fn plugin_driver(&self) -> &SharedPluginDriver {
     &self.plugin_driver
+  }
+
+  /// Close this bundle handle, calling the `closeBundle` plugin hook.
+  pub async fn close(&self) -> anyhow::Result<()> {
+    if self.closed.swap(true, Ordering::SeqCst) {
+      return Ok(());
+    }
+    self.plugin_driver.close_bundle(None).await?;
+    self.plugin_driver.clear();
+    Ok(())
   }
 }

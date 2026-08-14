@@ -1,2 +1,2 @@
-import * as entry from './entry.js'
-input.works = entry.__esModule === void 0
+import * as entry from './entry.js';
+input.works = entry.__esModule === void 0;

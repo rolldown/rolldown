@@ -1,0 +1,11 @@
+{
+  "snapshot": false,
+  "config": {
+    "input": [{ "name": "entry-0", "import": "./node0.cjs" }],
+    "external": ["external-0"],
+    "treeshake": false,
+    "preserveEntrySignatures": "allow-extension",
+    "strictExecutionOrder": false,
+    "minifyInternalExports": false
+  }
+}

@@ -7,23 +7,30 @@ pub type BuildResult<T> = Result<T, BatchedBuildDiagnostic>;
 pub type SingleBuildResult<T> = std::result::Result<T, BuildDiagnostic>;
 
 pub use crate::{
+  build_diagnostic::consolidate_diagnostics,
+  build_diagnostic::diagnostic::{Diagnostic, DiagnosticPrimaryLocation, RenderedDiagnostic},
   build_diagnostic::events::DiagnosableArcstr,
   build_diagnostic::events::ambiguous_external_namespace::AmbiguousExternalNamespaceModule,
   build_diagnostic::events::ambiguous_reexport::AmbiguousReexportModule,
   build_diagnostic::events::bundler_initialize_error::BundlerInitializeError,
   build_diagnostic::events::commonjs_variable_in_esm::CjsExportSpan,
+  build_diagnostic::events::empty_import_meta::EmptyImportMetaKind,
   build_diagnostic::events::invalid_option::InvalidOptionType,
   build_diagnostic::events::plugin_error::CausedPlugin,
-  build_diagnostic::events::plugin_timings::PluginTimingInfo,
+  build_diagnostic::events::plugin_timings::{
+    PluginTiming, PluginTimingKind, PluginTimings, PluginTimingsMeasurement,
+  },
+  build_diagnostic::events::require_tla::{ImportChainNote, RequireTla},
   build_diagnostic::events::resolve_error::DiagnosableResolveError,
   build_diagnostic::events::unloadable_dependency::UnloadableDependencyContext,
-  build_diagnostic::{BatchedBuildDiagnostic, BuildDiagnostic, Severity},
+  build_diagnostic::{BatchedBuildDiagnostic, BuildDiagnostic, Diagnostics, Severity},
   generated::event_kind_switcher::EventKindSwitcher,
   types::diagnostic_options::DiagnosticOptions,
   types::event_kind::EventKind,
   utils::ResultExt,
   utils::downcast_napi_error_diagnostics,
   utils::filter_out_disabled_diagnostics,
+  utils::resolve_error_to_message,
 };
 
 fn _usage_should_able_to_auto_convert_outside_errors() -> BuildResult<()> {

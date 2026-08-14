@@ -9,8 +9,16 @@ impl Bundler {
     &self.bundle_factory.options
   }
 
-  pub fn closed(&self) -> bool {
-    self.closed
+  /// Clear the resolver cache so that previously-failed lookups (e.g. missing
+  /// files that have since been created) are re-evaluated on the next build.
+  pub fn clear_resolver_cache(&self) {
+    self.bundle_factory.resolver.clear_cache();
+  }
+
+  /// Clear the transform options merged from tsconfig files so the next
+  /// build picks up tsconfig edits.
+  pub fn clear_transform_tsconfig_cache(&self) {
+    self.bundle_factory.options.transform_options.clear_transform_tsconfig_cache();
   }
 
   pub fn watch_files(&self) -> &Arc<FxDashSet<ArcStr>> {

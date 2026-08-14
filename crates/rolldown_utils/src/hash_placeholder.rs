@@ -2,6 +2,7 @@ use std::borrow::Cow;
 use std::sync::LazyLock;
 
 use memchr::memmem::Finder;
+use rolldown_error::{BuildDiagnostic, InvalidOptionType, SingleBuildResult};
 use rustc_hash::FxHashMap;
 
 use crate::indexmap::FxIndexSet;
@@ -10,12 +11,8 @@ const HASH_PLACEHOLDER_LEFT: &str = "!~{";
 const HASH_PLACEHOLDER_RIGHT: &str = "}~";
 const HASH_PLACEHOLDER_OVERHEAD: usize = HASH_PLACEHOLDER_LEFT.len() + HASH_PLACEHOLDER_RIGHT.len();
 
-// This is the size of a 128-bit xxhash with `base_encode::to_string`
-const MIN_HASH_SIZE: usize = 6;
 const MAX_HASH_SIZE: usize = 21;
 const DEFAULT_HASH_SIZE: usize = 8;
-
-const MINIMUM_HASH_PLACEHOLDER_LENGTH: usize = HASH_PLACEHOLDER_OVERHEAD + MIN_HASH_SIZE;
 
 pub static HASH_PLACEHOLDER_LEFT_FINDER: LazyLock<Finder<'static>> =
   LazyLock::new(|| Finder::new(HASH_PLACEHOLDER_LEFT));
@@ -40,32 +37,48 @@ fn is_hash_placeholder(s: &str) -> bool {
   content.bytes().all(|c| c.is_ascii_alphanumeric() || c == b'_' || c == b'$')
 }
 
-/// Finds all hash placeholders in a string and returns their positions and values
-pub fn find_hash_placeholders<'a>(
+/// A lazy iterator over hash placeholders in a string.
+pub struct HashPlaceholderIter<'a> {
   s: &'a str,
-  finder: &Finder<'static>,
-) -> Vec<(usize, usize, &'a str)> {
-  // pre-allocate, the max number of placeholders
-  let mut results = Vec::with_capacity(s.len() / MINIMUM_HASH_PLACEHOLDER_LENGTH);
-  let mut start = 0;
+  finder: &'a Finder<'static>,
+  start: usize,
+}
 
-  while let Some(left_pos) = finder.find(&s.as_bytes()[start..]) {
-    let left_pos = start + left_pos;
-    if let Some(right_pos) = s[left_pos..].find(HASH_PLACEHOLDER_RIGHT) {
-      let right_pos = left_pos + right_pos + HASH_PLACEHOLDER_RIGHT.len();
-      let placeholder = &s[left_pos..right_pos];
+impl<'a> Iterator for HashPlaceholderIter<'a> {
+  type Item = (usize, usize, &'a str);
 
-      if is_hash_placeholder(placeholder) {
-        results.push((left_pos, right_pos, placeholder));
+  fn next(&mut self) -> Option<Self::Item> {
+    loop {
+      let left_pos = self.finder.find(&self.s.as_bytes()[self.start..])?;
+      let left_pos = self.start + left_pos;
+      // Bound the search for `}~` to the maximum possible placeholder length.
+      // Use byte-level slicing to avoid panics when `search_end` falls inside a
+      // multi-byte UTF-8 character (e.g. Chinese/Japanese characters in the source).
+      let search_end = (left_pos + MAX_HASH_SIZE + HASH_PLACEHOLDER_OVERHEAD).min(self.s.len());
+      if let Some(right_pos) = memchr::memmem::find(
+        &self.s.as_bytes()[left_pos..search_end],
+        HASH_PLACEHOLDER_RIGHT.as_bytes(),
+      ) {
+        let right_pos = left_pos + right_pos + HASH_PLACEHOLDER_RIGHT.len();
+        let placeholder = &self.s[left_pos..right_pos];
+        self.start = right_pos;
+        if is_hash_placeholder(placeholder) {
+          return Some((left_pos, right_pos, placeholder));
+        }
+      } else {
+        // No `}~` found within bound; skip past `!~{` and continue
+        self.start = left_pos + HASH_PLACEHOLDER_LEFT.len();
       }
-
-      start = right_pos;
-    } else {
-      break;
     }
   }
+}
 
-  results
+/// Finds all hash placeholders in a string and returns a lazy iterator over their positions and values.
+pub fn find_hash_placeholders<'a>(
+  s: &'a str,
+  finder: &'a Finder<'static>,
+) -> HashPlaceholderIter<'a> {
+  HashPlaceholderIter { s, finder, start: 0 }
 }
 
 const BASE: u32 = 64;
@@ -97,36 +110,42 @@ pub struct HashPlaceholderGenerator {
 
 impl HashPlaceholderGenerator {
   // Refer to https://github.com/rollup/rollup/blob/1f2d579ccd4b39f223fed14ac7d031a6c848cd80/src/utils/hashPlaceholders.ts#L16-L17
-  pub fn generate(&mut self, len: Option<usize>) -> String {
-    // Ensure the generated hash length is within the valid range (6-21).
-    // If `len` is `None`, default to 8.
-    let len = len.map_or(DEFAULT_HASH_SIZE, |len| len.clamp(MIN_HASH_SIZE, MAX_HASH_SIZE));
+  pub fn generate(&mut self, len: Option<usize>, pattern_name: &str) -> SingleBuildResult<String> {
+    let len = len.unwrap_or(DEFAULT_HASH_SIZE);
 
-    let allow_middle_len = len - HASH_PLACEHOLDER_OVERHEAD;
+    if len > MAX_HASH_SIZE {
+      return Err(BuildDiagnostic::invalid_option(InvalidOptionType::HashLengthTooLong {
+        pattern_name: pattern_name.to_string(),
+        received: len,
+        max: MAX_HASH_SIZE,
+      }));
+    }
+
     let index_in_base64 = to_base64(self.next_index);
+    let placeholder_size = index_in_base64.len() + HASH_PLACEHOLDER_OVERHEAD;
 
     let mut placeholder =
       String::with_capacity(len + HASH_PLACEHOLDER_LEFT.len() + HASH_PLACEHOLDER_RIGHT.len());
 
-    // If the allowed middle length is 3, the pattern would looks like `!~{^^^}~`.
-    // If the index reaches to `100_000_000`, the base64 string is `5Zu40`. In this case, we can't safely create a hash placeholder satisfying the length.
-    // TODO(hyf0): return error instead of panic
-    assert!(
-      index_in_base64.len() <= allow_middle_len,
-      "To generate hashes for this number of chunks (currently ${}), you need a minimum hash size of {}, received ${}.",
-      self.next_index,
-      placeholder.len(),
-      len,
-    );
+    // The placeholder format is `!~{index}~`, requiring at least `HASH_PLACEHOLDER_OVERHEAD + index_in_base64.len()` characters.
+    // For example, with index 0 the placeholder is `!~{0}~` (6 chars), with index 100_000_000 it's `!~{5Zu40}~` (10 chars).
+    if placeholder_size > len {
+      return Err(BuildDiagnostic::invalid_option(InvalidOptionType::HashLengthTooShort {
+        pattern_name: pattern_name.to_string(),
+        received: len,
+        min: placeholder_size,
+        chunk_count: self.next_index + 1,
+      }));
+    }
 
     placeholder.push_str(HASH_PLACEHOLDER_LEFT);
-    placeholder.extend(std::iter::repeat_n('0', allow_middle_len - index_in_base64.len()));
+    placeholder.extend(std::iter::repeat_n('0', len - placeholder_size));
     placeholder.push_str(&index_in_base64);
     placeholder.push_str(HASH_PLACEHOLDER_RIGHT);
 
     self.next_index += 1;
 
-    placeholder
+    Ok(placeholder)
   }
 }
 
@@ -142,11 +161,11 @@ impl HashPlaceholderGenerator {
 pub fn replace_placeholder_with_hash<'a>(
   source: &'a str,
   final_hashes_by_placeholder: &FxHashMap<String, &'a str>,
-  finder: &Finder<'static>,
+  finder: &'a Finder<'static>,
 ) -> Cow<'a, str> {
   // Check for placeholders directly
-  let placeholders = find_hash_placeholders(source, finder);
-  if placeholders.is_empty() {
+  let mut placeholders = find_hash_placeholders(source, finder).peekable();
+  if placeholders.peek().is_none() {
     return Cow::Borrowed(source);
   }
 
@@ -175,19 +194,52 @@ pub fn replace_placeholder_with_hash<'a>(
 
 pub fn extract_hash_placeholders<'a>(
   source: &'a str,
-  finder: &Finder<'static>,
+  finder: &'a Finder<'static>,
 ) -> FxIndexSet<&'a str> {
-  find_hash_placeholders(source, finder)
-    .into_iter()
-    .map(|(_, _, placeholder)| placeholder)
-    .collect()
+  find_hash_placeholders(source, finder).map(|(_, _, placeholder)| placeholder).collect()
+}
+
+const NORMALIZED_PLACEHOLDER_INNER: [u8; MAX_HASH_SIZE] = [b'0'; MAX_HASH_SIZE];
+
+/// Walks `source` and feeds it through `visit` byte-slice by byte-slice, replacing each hash
+/// placeholder accepted by `is_known_placeholder` with a zero-filled placeholder of the same
+/// shape (`!~{000...}~`). Lets a caller stream a content-stable representation into a hasher
+/// (or any other sink) without materializing the normalized string in memory — important for
+/// chunk content, which can be megabytes.
+///
+/// Placeholders not recognized by `is_known_placeholder` (typically user source code that just
+/// happens to contain a syntactically valid placeholder literal) are emitted verbatim, so a
+/// change in their bytes still flows into the hash. Matches Rollup's
+/// `replacePlaceholdersWithDefaultAndGetContainedPlaceholders`.
+pub fn visit_with_placeholders_defaulted<F, P>(
+  source: &str,
+  finder: &Finder<'static>,
+  is_known_placeholder: P,
+  mut visit: F,
+) where
+  F: FnMut(&[u8]),
+  P: Fn(&str) -> bool,
+{
+  let bytes = source.as_bytes();
+  let mut last_end = 0;
+  for (start, end, placeholder) in find_hash_placeholders(source, finder) {
+    if !is_known_placeholder(placeholder) {
+      continue;
+    }
+    visit(&bytes[last_end..start]);
+    visit(HASH_PLACEHOLDER_LEFT.as_bytes());
+    visit(&NORMALIZED_PLACEHOLDER_INNER[..placeholder.len() - HASH_PLACEHOLDER_OVERHEAD]);
+    visit(HASH_PLACEHOLDER_RIGHT.as_bytes());
+    last_end = end;
+  }
+  visit(&bytes[last_end..]);
 }
 
 #[test]
 fn test_facade_hash_generator() {
   let mut r#gen = HashPlaceholderGenerator::default();
-  assert_eq!(r#gen.generate(None), "!~{000}~");
-  assert_eq!(r#gen.generate(None), "!~{001}~");
+  assert_eq!(r#gen.generate(None, "").unwrap(), "!~{000}~");
+  assert_eq!(r#gen.generate(None, "").unwrap(), "!~{001}~");
 }
 
 #[test]
@@ -219,18 +271,61 @@ fn test_is_hash_placeholder() {
 #[test]
 fn test_find_hash_placeholders() {
   let s = "prefix!~{000}~middle!~{abc}~suffix";
-  let placeholders = find_hash_placeholders(s, &HASH_PLACEHOLDER_LEFT_FINDER);
+  let placeholders: Vec<_> = find_hash_placeholders(s, &HASH_PLACEHOLDER_LEFT_FINDER).collect();
   assert_eq!(placeholders.len(), 2);
   assert_eq!(placeholders[0], (6, 14, "!~{000}~"));
   assert_eq!(placeholders[1], (20, 28, "!~{abc}~"));
 
   let s = "no placeholders here";
-  let placeholders = find_hash_placeholders(s, &HASH_PLACEHOLDER_LEFT_FINDER);
+  let placeholders: Vec<_> = find_hash_placeholders(s, &HASH_PLACEHOLDER_LEFT_FINDER).collect();
   assert_eq!(placeholders.len(), 0);
 
   let s = "!~{000}~!~{001}~";
-  let placeholders = find_hash_placeholders(s, &HASH_PLACEHOLDER_LEFT_FINDER);
+  let placeholders: Vec<_> = find_hash_placeholders(s, &HASH_PLACEHOLDER_LEFT_FINDER).collect();
   assert_eq!(placeholders.len(), 2);
   assert_eq!(placeholders[0], (0, 8, "!~{000}~"));
   assert_eq!(placeholders[1], (8, 16, "!~{001}~"));
+}
+
+#[test]
+fn test_find_hash_placeholders_multi_byte_chars() {
+  // Multi-byte UTF-8 chars near placeholders must not cause a panic.
+  let s = "import{C as e}from\"./vue.runtime.esm-bundler-!~{001}~.js\";// 中文级别文字";
+  let placeholders: Vec<_> = find_hash_placeholders(s, &HASH_PLACEHOLDER_LEFT_FINDER).collect();
+  assert_eq!(placeholders.len(), 1);
+  assert_eq!(placeholders[0].2, "!~{001}~");
+}
+
+#[test]
+fn test_visit_with_placeholders_defaulted() {
+  use rustc_hash::FxHashSet;
+  fn collect(source: &str, known: &FxHashSet<&str>) -> Vec<u8> {
+    let mut buf = Vec::new();
+    visit_with_placeholders_defaulted(
+      source,
+      &HASH_PLACEHOLDER_LEFT_FINDER,
+      |p| known.contains(p),
+      |bytes| buf.extend_from_slice(bytes),
+    );
+    buf
+  }
+
+  // All placeholders are known and get normalized to their zero-filled shape.
+  let all_known: FxHashSet<&str> = ["!~{000}~", "!~{abc12}~"].into_iter().collect();
+  assert_eq!(
+    collect("prefix!~{000}~middle!~{abc12}~suffix", &all_known),
+    b"prefix!~{000}~middle!~{00000}~suffix",
+  );
+
+  // An unknown placeholder (e.g. a literal in user source) is emitted verbatim so the hash
+  // still reflects changes to its bytes. Only the known one is normalized.
+  let only_known: FxHashSet<&str> = std::iter::once("!~{000}~").collect();
+  assert_eq!(
+    collect("prefix!~{000}~middle!~{user}~suffix", &only_known),
+    b"prefix!~{000}~middle!~{user}~suffix",
+  );
+
+  let empty: FxHashSet<&str> = FxHashSet::default();
+  assert_eq!(collect("no placeholders here", &empty), b"no placeholders here");
+  assert_eq!(collect("", &empty), b"");
 }

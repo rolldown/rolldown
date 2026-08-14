@@ -1,2 +1,2 @@
-exports.a = 'react-like-a'
-exports.b = 'react-like-unused'
+exports.a = 'react-like-a';
+exports.b = 'react-like-unused';

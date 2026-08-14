@@ -1,16 +1,14 @@
-import { fileURLToPath } from 'node:url';
-import type { UserConfig } from 'vitepress';
-import { defineConfig } from 'vitepress';
-import {
-  groupIconMdPlugin,
-  groupIconVitePlugin,
-  localIconLoader,
-} from 'vitepress-plugin-group-icons';
+import { extendConfig } from '@voidzero-dev/vitepress-theme/config';
+import { existsSync, readFileSync } from 'node:fs';
+import path from 'node:path';
+import { type DefaultTheme, defineConfig } from 'vitepress';
+import { groupIconMdPlugin, groupIconVitePlugin } from 'vitepress-plugin-group-icons';
 import llmstxt from 'vitepress-plugin-llms';
+import { addOgImage } from 'vitepress-plugin-og';
+import { graphvizMarkdownPlugin } from 'vitepress-plugin-graphviz';
+import { createHooksGraphProcessor } from './markdown-hooks-graph.ts';
 
-const CONFIG_LINK = '/options/input.md';
-
-const sidebarForUserGuide: UserConfig['themeConfig']['sidebar'] = [
+const sidebarForGuide: DefaultTheme.SidebarItem[] = [
   {
     text: 'Guide',
     items: [
@@ -24,21 +22,78 @@ const sidebarForUserGuide: UserConfig['themeConfig']['sidebar'] = [
     ],
   },
   {
-    text: 'APIs',
+    text: 'In-Depth',
+    collapsed: true,
     items: [
-      { text: 'Configuration Options', link: CONFIG_LINK },
-      { text: 'Bundler API', link: '/apis/bundler-api.md' },
-      { text: 'Plugin API', link: '/apis/plugin-api.md' },
-      { text: 'Plugin Hook Filters', link: '/apis/plugin-hook-filters.md' },
-      { text: 'Command Line Interface', link: '/apis/cli.md' },
+      { text: 'Why Bundlers', link: '/in-depth/why-bundlers.md' },
+      {
+        text: 'Why Plugin Hook Filter',
+        link: '/in-depth/why-plugin-hook-filter.md',
+      },
+      { text: 'Module Types', link: '/in-depth/module-types.md' },
+      { text: 'External Modules', link: '/in-depth/external-modules.md' },
+      { text: 'Directives', link: '/in-depth/directives.md' },
+      { text: 'Automatic Code Splitting', link: '/in-depth/automatic-code-splitting.md' },
+      { text: 'Manual Code Splitting', link: '/in-depth/manual-code-splitting.md' },
+      { text: 'Bundling CJS', link: '/in-depth/bundling-cjs.md' },
+      {
+        text: 'Non ESM Output Formats',
+        link: '/in-depth/non-esm-output-formats.md',
+      },
+      { text: 'Top Level Await', link: '/in-depth/tla-in-rolldown.md' },
+      { text: 'Dead Code Elimination', link: '/in-depth/dead-code-elimination.md' },
+      { text: 'Lazy Barrel Optimization', link: '/in-depth/lazy-barrel-optimization.md' },
+      { text: 'Native MagicString', link: '/in-depth/native-magic-string.md' },
     ],
   },
   {
-    text: 'Builtin Plugins',
+    text: 'Glossary',
+    collapsed: true,
+    items: [
+      { text: 'Barrel Module', link: '/glossary/barrel-module.md' },
+      { text: 'Entry', link: '/glossary/entry.md' },
+      { text: 'Entry Chunk', link: '/glossary/entry-chunk.md' },
+      { text: 'Entry Name', link: '/glossary/entry-name.md' },
+      { text: 'User-defined Entry', link: '/glossary/user-defined-entry.md' },
+    ],
+  },
+];
+
+const sidebarForApi: DefaultTheme.SidebarItem[] = [
+  {
+    text: 'API',
+    items: [
+      { text: 'Bundler API', link: '/apis/bundler-api.md' },
+      {
+        text: 'Plugin API',
+        link: '/apis/plugin-api.md',
+        items: [
+          { text: 'Hook Filters', link: '/apis/plugin-api/hook-filters.md' },
+          { text: 'File URLs', link: '/apis/plugin-api/file-urls.md' },
+          { text: 'Source Code Transformations', link: '/apis/plugin-api/transformations.md' },
+          {
+            text: 'Inter-plugin communication',
+            link: '/apis/plugin-api/inter-plugin-communication.md',
+          },
+        ],
+      },
+      { text: 'Command Line Interface', link: '/apis/cli.md' },
+      { text: 'Rust Crates', link: '/apis/rust-crates.md' },
+    ],
+  },
+];
+
+const sidebarForPlugins: DefaultTheme.SidebarItem[] = [
+  {
+    text: 'Built-in Plugins',
     items: [
       {
         text: 'Introduction',
         link: '/builtin-plugins/',
+      },
+      {
+        text: 'builtin:bundle-analyzer',
+        link: '/builtin-plugins/bundle-analyzer.md',
       },
       {
         text: 'builtin:esm-external-require',
@@ -52,74 +107,70 @@ const sidebarForUserGuide: UserConfig['themeConfig']['sidebar'] = [
   },
 ];
 
-const sidebarForInDepth: UserConfig['themeConfig']['sidebar'] = [{
-  text: 'In-Depth',
-  items: [
-    { text: 'Why Bundlers', link: '/in-depth/why-bundlers.md' },
-    { text: 'Module Types', link: '/in-depth/module-types.md' },
-    { text: 'Top Level Await', link: '/in-depth/tla-in-rolldown.md' },
-    { text: 'Advanced Chunks', link: '/in-depth/advanced-chunks.md' },
-    { text: 'Bundling CJS', link: '/in-depth/bundling-cjs.md' },
-    {
-      text: 'Non ESM Output Formats',
-      link: '/in-depth/non-esm-output-formats.md',
-    },
-    { text: 'Native MagicString', link: '/in-depth/native-magic-string.md' },
-    {
-      text: 'Why Plugin Hook Filter',
-      link: '/in-depth/why-plugin-hook-filter.md',
-    },
-    // { text: 'Code Splitting', link: '/in-depth/code-splitting.md' },
-    { text: 'Directives', link: '/in-depth/directives.md' },
-  ],
-}];
-
-const sidebarForOptions: UserConfig['themeConfig']['sidebar'] = [
-  {
-    text: 'Rolldown Options',
-    items: [
-      { text: 'input', link: '/options/input.md' },
-      { text: 'external', link: '/options/external.md' },
-      { text: 'resolve', link: '/options/resolve.md' },
-      { text: 'cwd', link: '/options/cwd.md' },
-      { text: 'platform', link: '/options/platform.md' },
-      { text: 'shimMissingExports', link: '/options/shim-missing-exports.md' },
-      { text: 'treeshake', link: '/options/treeshake.md' },
-      { text: 'logLevel', link: '/options/log-level.md' },
-      { text: 'onLog', link: '/options/on-log.md' },
-      { text: 'onwarn', link: '/options/onwarn.md' },
-      { text: 'moduleTypes', link: '/options/module-types.md' },
-      {
-        text: 'preserveEntrySignatures',
-        link: '/options/preserve-entry-signatures.md',
-      },
-      { text: 'optimization', link: '/options/optimization.md' },
-      { text: 'context', link: '/options/context.md' },
-      { text: 'tsconfig', link: '/options/tsconfig.md' },
-      { text: 'checks', link: '/options/checks.md' },
-      { text: 'experimental', link: '/options/experimental.md' },
-      { text: 'output', link: '/options/output.md' },
-      {
-        text: 'output.sourcemap',
-        link: '/options/output-sourcemap.md',
-      },
-      {
-        text: 'output.generatedCode',
-        link: '/options/output-generated-code.md',
-      },
-      {
-        text: 'output.advancedChunks',
-        link: '/options/output-advanced-chunks.md',
-      },
-      {
-        text: 'output.cleanDir',
-        link: '/options/output-clean-dir.md',
-      },
-    ],
-  },
+const importantAPIs: (string | undefined)[] = [
+  '/Function.build.md',
+  '/Function.rolldown.md',
+  '/Function.watch.md',
+  '/Interface.Plugin.md',
+  '/Interface.PluginContext.md',
+  '/Variable.VERSION.md',
+  '/Function.defineConfig.md',
+  '/Function.minify.md',
+  '/Function.parse.md',
+  '/Function.transform.md',
+  '/Class.Visitor.md',
 ];
 
-const sidebarForDevGuide: UserConfig['themeConfig']['sidebar'] = [
+function getTypedocSidebar() {
+  const filepath = path.resolve(import.meta.dirname, '../reference/typedoc-sidebar.json');
+  if (!existsSync(filepath)) return [];
+
+  try {
+    return JSON.parse(readFileSync(filepath, 'utf-8')) as DefaultTheme.SidebarItem[];
+  } catch (error) {
+    console.error('Failed to load typedoc sidebar:', error);
+    return [];
+  }
+}
+
+const typedocSidebar = getTypedocSidebar().map((item) => {
+  const stringifyForSort = (item: DefaultTheme.SidebarItem) =>
+    (importantAPIs.includes(item.link) ? '0' : '1') + (item.text ?? '');
+  return {
+    ...item,
+    base: '/reference',
+    items: item.items
+      ?.map((item) => ({
+        ...item,
+        text: (importantAPIs.includes(item.link) ? '★ ' : '') + item.text,
+      }))
+      .toSorted((a, b) => stringifyForSort(a).localeCompare(stringifyForSort(b))),
+  };
+});
+
+function getOptionsSidebar() {
+  const filepath = path.resolve(import.meta.dirname, '../reference/options-sidebar.json');
+  if (!existsSync(filepath)) return [];
+
+  try {
+    return JSON.parse(readFileSync(filepath, 'utf-8')) as DefaultTheme.SidebarItem[];
+  } catch (error) {
+    console.error('Failed to load options sidebar:', error);
+    return [];
+  }
+}
+
+const sidebarForReference: DefaultTheme.SidebarItem[] = [
+  {
+    text: 'Options',
+    base: '/reference',
+    items: getOptionsSidebar(),
+    collapsed: false,
+  },
+  ...typedocSidebar,
+];
+
+const sidebarForDevGuide: DefaultTheme.SidebarItem[] = [
   {
     text: 'Contribution Guide',
     items: [
@@ -129,8 +180,7 @@ const sidebarForDevGuide: UserConfig['themeConfig']['sidebar'] = [
       },
       {
         text: 'Etiquette',
-        link:
-          'https://developer.mozilla.org/en-US/docs/MDN/Community/Open_source_etiquette',
+        link: 'https://developer.mozilla.org/en-US/docs/MDN/Community/Open_source_etiquette',
       },
     ],
   },
@@ -167,19 +217,7 @@ const sidebarForDevGuide: UserConfig['themeConfig']['sidebar'] = [
   },
 ];
 
-const sidebarForGlossary: UserConfig['themeConfig']['sidebar'] = [
-  {
-    text: 'Glossary',
-    items: [
-      { text: 'Entry', link: '/glossary/entry.md' },
-      { text: 'Entry Chunk', link: '/glossary/entry-chunk.md' },
-      { text: 'Entry Name', link: '/glossary/entry-name.md' },
-      { text: 'User-defined Entry', link: '/glossary/user-defined-entry.md' },
-    ],
-  },
-];
-
-const sidebarForResources: UserConfig['themeConfig']['sidebar'] = [
+const sidebarForResources: DefaultTheme.SidebarItem[] = [
   {
     text: 'Team',
     link: '/team.md',
@@ -191,10 +229,9 @@ const sidebarForResources: UserConfig['themeConfig']['sidebar'] = [
 ];
 
 // https://vitepress.dev/reference/site-config
-export default defineConfig({
+const config = defineConfig({
   title: 'Rolldown',
-  description:
-    'Fast Rust-based bundler for JavaScript with Rollup-compatible API',
+  description: 'Fast Rust-based bundler for JavaScript with Rollup-compatible API',
   lastUpdated: true,
   cleanUrls: true,
   sitemap: {
@@ -206,7 +243,7 @@ export default defineConfig({
       {
         rel: 'icon',
         type: 'image/svg+xml',
-        href: '/lightning-down.svg',
+        href: '/logo-without-border.svg',
       },
     ],
     ['meta', { name: 'theme-color', content: '#ff7e17' }],
@@ -223,7 +260,7 @@ export default defineConfig({
       'meta',
       {
         property: 'og:image',
-        content: 'https://rolldown.rs/og-image.png',
+        content: 'https://rolldown.rs/og.jpg',
       },
     ],
     ['meta', { property: 'og:site_name', content: 'Rolldown' }],
@@ -232,7 +269,10 @@ export default defineConfig({
     ['meta', { name: 'twitter:site', content: '@rolldown_rs' }],
   ],
 
+  ignoreDeadLinks: true,
+
   themeConfig: {
+    variant: 'rolldown',
     search: {
       provider: 'algolia',
       options: {
@@ -241,37 +281,35 @@ export default defineConfig({
         indexName: 'rolldown',
       },
     },
-    logo: { src: '/lightning-down.svg', width: 24, height: 24 },
+
+    // banner: {
+    //   id: 'viteplus-alpha',
+    //   text: 'Announcing Vite+ Alpha: Open source. Unified. Next-gen.',
+    //   url: 'https://voidzero.dev/posts/announcing-vite-plus-alpha?utm_source=rolldown&utm_content=top_banner',
+    // },
 
     // https://vitepress.dev/reference/default-theme-config
     nav: [
       {
-        text: 'Docs',
-        activeMatch: '/(guide|in-depth|glossary|apis|builtin-plugins)',
-        items: [
-          {
-            text: 'Guide',
-            activeMatch: '/(guide|apis|builtin-plugins)',
-            link: '/guide/getting-started.md',
-          },
-          {
-            text: 'In-Depth',
-            activeMatch: '/in-depth',
-            link: '/in-depth/why-bundlers.md',
-          },
-          {
-            text: 'Glossary',
-            activeMatch: '/glossary',
-            link: '/glossary/',
-          },
-        ],
+        text: 'Guide',
+        activeMatch: '/(guide|in-depth|glossary)',
+        link: '/guide/getting-started.md',
       },
-      { text: 'Options & APIs', activeMatch: '/options', link: CONFIG_LINK },
+      { text: 'Reference', activeMatch: '/reference', link: '/reference' },
+      {
+        text: 'Plugins',
+        activeMatch: '/builtin-plugins',
+        link: '/builtin-plugins/',
+      },
+      {
+        text: 'API',
+        activeMatch: '/apis',
+        link: '/apis/bundler-api.md',
+      },
       { text: 'REPL', link: 'https://repl.rolldown.rs/' },
       {
         text: 'Resources',
-        activeMatch:
-          '/(team|acknowledgements|contribution-guide|development-guide)',
+        activeMatch: '/(team|acknowledgements|contribution-guide|development-guide)',
         items: [
           {
             text: 'Team',
@@ -281,10 +319,8 @@ export default defineConfig({
           {
             text: 'Contribute',
             activeMatch: '/(contribution-guide|development-guide)',
-
             link: '/contribution-guide/',
           },
-
           {
             text: 'Roadmap',
             link: 'https://github.com/rolldown/rolldown/discussions/153',
@@ -294,16 +330,16 @@ export default defineConfig({
     ],
 
     sidebar: {
-      // --- Guide ---
-      '/guide/': sidebarForUserGuide,
-      '/apis/': sidebarForUserGuide,
-      '/builtin-plugins/': sidebarForUserGuide,
-      // --- In-Depth ---
-      '/in-depth/': sidebarForInDepth,
-      // --- Options ---
-      '/options/': sidebarForOptions,
-      // --- Glossary ---
-      '/glossary/': sidebarForGlossary,
+      // --- Guide (includes In-Depth and Glossary as collapsed sections) ---
+      '/guide/': sidebarForGuide,
+      '/in-depth/': sidebarForGuide,
+      '/glossary/': sidebarForGuide,
+      // --- Reference (options + typedoc dictionary) ---
+      '/reference/': sidebarForReference,
+      // --- Plugins ---
+      '/builtin-plugins/': sidebarForPlugins,
+      // --- API ---
+      '/apis/': sidebarForApi,
       // --- Contribute ---
       '/contribution-guide/': sidebarForDevGuide,
       '/development-guide/': sidebarForDevGuide,
@@ -323,8 +359,36 @@ export default defineConfig({
     ],
 
     footer: {
-      message: 'Released under the MIT License.',
-      copyright: 'Copyright © 2023-present VoidZero Inc.',
+      copyright: `© 2025-present VoidZero Inc. and Rolldown contributors.`,
+      nav: [
+        {
+          title: 'Rolldown',
+          items: [
+            { text: 'Guide', link: '/guide/getting-started' },
+            { text: 'Reference', link: '/reference' },
+            { text: 'Plugins', link: '/builtin-plugins/' },
+            { text: 'API', link: '/apis/bundler-api' },
+            { text: 'Contribute', link: '/contribution-guide/' },
+            { text: 'REPL', link: 'https://repl.rolldown.rs/' },
+          ],
+        },
+        {
+          title: 'Resources',
+          items: [
+            {
+              text: 'Roadmap',
+              link: 'https://github.com/rolldown/rolldown/discussions/153',
+            },
+            { text: 'Team', link: '/team' },
+          ],
+        },
+      ],
+      social: [
+        { icon: 'github', link: 'https://github.com/rolldown/rolldown' },
+        { icon: 'discord', link: 'https://chat.rolldown.rs' },
+        { icon: 'bluesky', link: 'https://bsky.app/profile/rolldown.rs' },
+        { icon: 'x', link: 'https://x.com/rolldown_rs' },
+      ],
     },
 
     editLink: {
@@ -334,43 +398,45 @@ export default defineConfig({
   },
 
   vite: {
+    optimizeDeps: {
+      exclude: ['@docsearch/css', 'vitepress-plugin-feedback-tracker'],
+    },
     plugins: [
       groupIconVitePlugin({
         customIcon: {
           homebrew: 'logos:homebrew',
           cargo: 'vscode-icons:file-type-cargo',
-          rolldown: localIconLoader(
-            import.meta.url,
-            '../public/lightning-down.svg',
-          ),
         },
       }) as any,
       llmstxt({
-        ignoreFiles: [
-          'development-guide/**/*',
-          'index.md',
-          'README.md',
-          'team.md',
-        ],
-        description:
-          'Fast Rust-based bundler for JavaScript with Rollup-compatible API',
+        ignoreFiles: ['development-guide/**/*', 'index.md', 'README.md', 'team.md'],
+        description: 'Fast Rust-based bundler for JavaScript with Rollup-compatible API',
         details: '',
       }),
     ],
-    resolve: {
-      alias: [
-        {
-          find: /^.*\/VPHero\.vue$/,
-          replacement: fileURLToPath(
-            new URL('./theme/components/overrides/VPHero.vue', import.meta.url),
-          ),
-        },
-      ],
-    },
   },
   markdown: {
-    config(md) {
+    async config(md) {
       md.use(groupIconMdPlugin);
+      await graphvizMarkdownPlugin(md as any, {
+        processors: { 'hooks-graph': createHooksGraphProcessor() },
+      });
     },
   },
+  async transformPageData(pageData, ctx) {
+    // Disable "Edit this page on GitHub" for auto-generated reference docs
+    if (pageData.relativePath.startsWith('reference/')) {
+      pageData.frontmatter.editLink = false;
+    }
+
+    // Automatically handle OG images for all markdown files.
+    if (!pageData.frontmatter.image && pageData.relativePath !== 'index.md') {
+      await addOgImage(pageData, ctx, {
+        domain: 'https://rolldown.rs',
+        maxTitleSizePerLine: 16,
+      });
+    }
+  },
 });
+
+export default extendConfig(config);

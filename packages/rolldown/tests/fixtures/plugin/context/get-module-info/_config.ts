@@ -1,5 +1,5 @@
 import path from 'node:path';
-import { GetModuleInfo } from 'rolldown';
+import type { GetModuleInfo } from 'rolldown';
 import { defineTest } from 'rolldown-tests';
 import { expect } from 'vitest';
 

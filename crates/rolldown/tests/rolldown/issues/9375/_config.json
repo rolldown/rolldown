@@ -1,0 +1,17 @@
+{
+  "config": {
+    "input": [{ "name": "index", "import": "./index.ts" }],
+    "external": ["pinia"],
+    "format": "iife",
+    "name": "__expose__",
+    "globals": {
+      "pinia": "Pinia"
+    }
+  },
+  "configVariants": [
+    {
+      "format": "umd"
+    }
+  ],
+  "expectExecuted": false
+}

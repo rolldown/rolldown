@@ -5,11 +5,12 @@ use crate::utils::resolve_id::resolve_id;
 use rolldown_common::{ImportKind, ResolvedId};
 use rolldown_error::ResultExt;
 use rolldown_error::{BuildDiagnostic, SingleBuildResult};
+use rolldown_fs::FileSystem;
 use rolldown_plugin::SharedPluginDriver;
 use rolldown_resolver::ResolveError;
 
-pub async fn load_entry_module(
-  resolver: &SharedResolver,
+pub async fn load_entry_module<Fs: FileSystem>(
+  resolver: &SharedResolver<Fs>,
   plugin_driver: &SharedPluginDriver,
   id: &str,
   importer: Option<&str>,
@@ -43,6 +44,10 @@ pub async fn load_entry_module(
         package_json_path: _,
         conditions: _,
       } => Err(BuildDiagnostic::unresolved_entry(id, Some(e))),
+      ResolveError::TsconfigNotFound(_)
+      | ResolveError::TsconfigSelfReference(_)
+      | ResolveError::TsconfigCircularExtend(_)
+      | ResolveError::TsconfigLoadFailed { .. } => Err(BuildDiagnostic::tsconfig_error(e)),
       _ => Err(e).map_err_to_unhandleable()?,
     },
   }

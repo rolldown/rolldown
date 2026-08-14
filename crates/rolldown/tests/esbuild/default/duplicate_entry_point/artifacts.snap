@@ -8,8 +8,8 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```js
 //#region entry.js
 console.log(123);
-
 //#endregion
+
 ```
 
 ## entry2.js

@@ -1,18 +1,7 @@
-import { description, version } from '../../../package.json' assert {
-  type: 'json',
-};
+import { description, version } from '../../../package.json' with { type: 'json' };
 import { styleText } from '../../utils/style-text';
 import { options } from '../arguments';
-import { camelCaseToKebabCase } from '../arguments/utils';
 import { logger } from '../logger';
-
-const introduction = `${
-  styleText('gray', `${description} (rolldown v${version})`)
-}
-
-${styleText(['bold', 'underline'], 'USAGE')} ${
-  styleText('cyan', 'rolldown -c <config>')
-} or ${styleText('cyan', 'rolldown <input> <options>')}`;
 
 const examples = [
   {
@@ -33,24 +22,33 @@ const examples = [
   },
   {
     title: 'Create self-executing IIFE using external jQuery as `$` and `_`',
-    command:
-      'rolldown src/main.ts -d dist -n bundle -f iife -e jQuery,window._ -g jQuery=$',
+    command: 'rolldown src/main.ts -d dist -n bundle -f iife -e jQuery,window._ -g jQuery=$',
   },
 ];
 
 const notes = [
-  'Due to the API limitation, you need to pass `-s` for `.map` sourcemap file as the last argument.',
-  'If you are using the configuration, please pass the `-c` as the last argument if you ignore the default configuration file.',
   'CLI options will override the configuration file.',
   'For more information, please visit https://rolldown.rs/.',
 ];
 
-export function showHelp(): void {
-  logger.log(introduction);
-  logger.log('');
-  logger.log(`${styleText(['bold', 'underline'], 'OPTIONS')}`);
-  logger.log('');
-  logger.log(
+/**
+ * Generates the CLI help text as a string.
+ */
+export function generateHelpText(): string {
+  const lines: string[] = [];
+
+  // Introduction
+  lines.push(`${styleText('gray', `${description} (rolldown v${version})`)}`);
+  lines.push('');
+  lines.push(
+    `${styleText(['bold', 'underline'], 'USAGE')} ${styleText('cyan', 'rolldown -c <config>')} or ${styleText('cyan', 'rolldown <input> <options>')}`,
+  );
+
+  // Options
+  lines.push('');
+  lines.push(`${styleText(['bold', 'underline'], 'OPTIONS')}`);
+  lines.push('');
+  lines.push(
     Object.entries(options)
       .sort(([a], [b]) => {
         // 1. If one of them has a short option, prioritize it.
@@ -69,7 +67,6 @@ export function showHelp(): void {
       })
       .map(([option, { type, short, hint, description }]) => {
         let optionStr = `  --${option} `;
-        option = camelCaseToKebabCase(option);
         if (short) {
           optionStr += `-${short}, `;
         }
@@ -87,17 +84,27 @@ export function showHelp(): void {
       })
       .join('\n'),
   );
-  logger.log('');
-  logger.log(`${styleText(['bold', 'underline'], 'EXAMPLES')}`);
-  logger.log('');
+
+  // Examples
+  lines.push('');
+  lines.push(`${styleText(['bold', 'underline'], 'EXAMPLES')}`);
+  lines.push('');
   examples.forEach(({ title, command }, ord) => {
-    logger.log(`  ${ord + 1}. ${title}:`);
-    logger.log(`    ${styleText('cyan', command)}`);
-    logger.log('');
+    lines.push(`  ${ord + 1}. ${title}:`);
+    lines.push(`    ${styleText('cyan', command)}`);
+    lines.push('');
   });
-  logger.log(`${styleText(['bold', 'underline'], 'NOTES')}`);
-  logger.log('');
+
+  // Notes
+  lines.push(`${styleText(['bold', 'underline'], 'NOTES')}`);
+  lines.push('');
   notes.forEach((note) => {
-    logger.log(`  * ${styleText('gray', note)}`);
+    lines.push(`  * ${styleText('gray', note)}`);
   });
+
+  return lines.join('\n');
+}
+
+export function showHelp(): void {
+  logger.log(generateHelpText());
 }

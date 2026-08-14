@@ -1,0 +1,74 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## dynamic.js
+
+```js
+import { t as value } from "./main.js";
+//#region dynamic.js
+console.log("dynamic", value);
+const dynamic = value;
+//#endregion
+export { dynamic };
+
+```
+
+## main.js
+
+```js
+//#region shared.js
+console.log("shared");
+const value = "shared";
+//#endregion
+//#region main.js
+console.log("main", value);
+function load() {
+	return import("./dynamic.js");
+}
+//#endregion
+export { load, value as t };
+
+```
+
+# Variant: disableAvoidRedundantChunkLoads: [chunk_optimization: Options(ChunkOptimizationOptions { merge_common_chunks: false, avoid_redundant_chunk_loads: false })]
+
+## Assets
+
+### dynamic.js
+
+```js
+import { t as value } from "./shared.js";
+//#region dynamic.js
+console.log("dynamic", value);
+const dynamic = value;
+//#endregion
+export { dynamic };
+
+```
+
+### main.js
+
+```js
+import { t as value } from "./shared.js";
+//#region main.js
+console.log("main", value);
+function load() {
+	return import("./dynamic.js");
+}
+//#endregion
+export { load };
+
+```
+
+### shared.js
+
+```js
+//#region shared.js
+console.log("shared");
+const value = "shared";
+//#endregion
+export { value as t };
+
+```

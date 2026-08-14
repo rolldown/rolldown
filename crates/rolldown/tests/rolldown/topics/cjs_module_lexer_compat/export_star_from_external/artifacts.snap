@@ -6,22 +6,23 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## main.js
 
 ```js
-
-
 var node_fs = require("node:fs");
-Object.keys(node_fs).forEach(function (k) {
-  if (k !== 'default' && !Object.prototype.hasOwnProperty.call(exports, k)) Object.defineProperty(exports, k, {
-    enumerable: true,
-    get: function () { return node_fs[k]; }
-  });
+Object.keys(node_fs).forEach(function(k) {
+	if (k !== "default" && !Object.prototype.hasOwnProperty.call(exports, k)) Object.defineProperty(exports, k, {
+		enumerable: true,
+		get: function() {
+			return node_fs[k];
+		}
+	});
 });
-
 var node_path = require("node:path");
-Object.keys(node_path).forEach(function (k) {
-  if (k !== 'default' && !Object.prototype.hasOwnProperty.call(exports, k)) Object.defineProperty(exports, k, {
-    enumerable: true,
-    get: function () { return node_path[k]; }
-  });
+Object.keys(node_path).forEach(function(k) {
+	if (k !== "default" && !Object.prototype.hasOwnProperty.call(exports, k)) Object.defineProperty(exports, k, {
+		enumerable: true,
+		get: function() {
+			return node_path[k];
+		}
+	});
 });
 
 ```

@@ -1,4 +1,3 @@
-use oxc_resolver::NODEJS_BUILTINS;
 use rolldown_utils::{js_regex::HybridRegex, pattern_filter::StringOrRegex};
 use rustc_hash::FxHashSet;
 
@@ -39,5 +38,5 @@ impl BuiltinChecker {
 pub fn is_node_like_builtin(id: &str) -> bool {
   id.starts_with(BUN_BUILTIN_NAMESPACE)
     || id.starts_with(NODE_BUILTIN_NAMESPACE)
-    || NODEJS_BUILTINS.contains(&id)
+    || nodejs_built_in_modules::BUILTINS.contains(&id)
 }

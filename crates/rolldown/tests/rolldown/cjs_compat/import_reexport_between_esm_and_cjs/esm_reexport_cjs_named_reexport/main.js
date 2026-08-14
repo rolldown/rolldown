@@ -1,1 +1,1 @@
-export { a } from './commonjs.js'
+export { a } from './commonjs.js';

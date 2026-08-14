@@ -1,4 +1,4 @@
-import * as first from './first.js'
-import * as second from './second.js'
+import * as first from './first.js';
+import * as second from './second.js';
 
-console.log(first, second)
+console.log(first, second);

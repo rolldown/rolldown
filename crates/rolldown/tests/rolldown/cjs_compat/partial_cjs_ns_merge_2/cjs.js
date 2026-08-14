@@ -1,3 +1,3 @@
-const a = require('./lib.js')
+const a = require('./lib.js');
 
 module.exports = a;

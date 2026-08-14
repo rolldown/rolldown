@@ -6,7 +6,7 @@
  * @typedef {import('./types').TestConfigBase} TestConfigBase
  */
 
-const assert = require('node:assert');
+const assert = require('node:assert/strict');
 const {
 	closeSync,
 	fsyncSync,
@@ -82,6 +82,16 @@ function normalizeError(error, locExpected) {
 		// binding is not set for native errors, so it is removed from expected errors
 		// but binding is set for errors created on JS side
 		delete clone.binding;
+	}
+	if (clone.code === 'SOURCEMAP_BROKEN') {
+		// Rolldown attaches the module id to this warning, but Rollup's
+		// `logSourcemapBroken` is emitted at chunk-collapse time and carries no id.
+		delete clone.id;
+	}
+	if (clone.code === 'FILE_NOT_FOUND') {
+		// Rolldown points at the module containing the `import.meta.ROLLUP_FILE_URL_*` access,
+		// but Rollup's `logFileNotFound` is thrown from the plugin driver and carries no id.
+		delete clone.id;
 	}
 	for (const key in clone) {
 		if (clone[key] === undefined) {
@@ -579,6 +589,46 @@ exports.replaceDirectoryInStringifiedObject = function replaceDirectoryInStringi
 // 			? new RegExp(JSON.parse(value.slice(7)).source, JSON.parse(value.slice(7)).flags)
 // 			: value
 // 		: value;
+
+/**
+ * Wraps plugins to exclude \0rolldown/runtime.js from transform hooks.
+ * This is needed because Rolldown exposes the runtime to transform hooks,
+ * but Rollup test plugins don't expect this internal module.
+ * @param {Plugin | Plugin[] | Promise<Plugin> | undefined | null} plugin
+ * @returns {Plugin | Plugin[] | Promise<Plugin> | undefined | null}
+ */
+function wrapPluginWithRuntimeFilter(plugin) {
+	// Handle null, undefined, and other falsy values
+	if (plugin == null) return plugin;
+
+	// Handle promises - wrap the resolved value
+	if (plugin instanceof Promise) {
+		return plugin.then(wrapPluginWithRuntimeFilter);
+	}
+
+	// Handle arrays (which may be nested)
+	if (Array.isArray(plugin)) {
+		return plugin.map(wrapPluginWithRuntimeFilter);
+	}
+
+	// Handle non-object values
+	if (typeof plugin !== 'object') return plugin;
+
+	const wrapped = { ...plugin };
+
+	if (plugin.transform) {
+		const original = plugin.transform;
+		// Wrap with Rolldown's filter format - exclude only the rolldown runtime
+		wrapped.transform = {
+			filter: { id: { exclude: [/^\0rolldown\/runtime/] } },
+			handler: typeof original === 'function' ? original : original.handler
+		};
+	}
+
+	return wrapped;
+}
+
+exports.wrapPluginWithRuntimeFilter = wrapPluginWithRuntimeFilter;
 
 // Fake require test runner exports.
 require.cache[join(__dirname, '../../../rollup/test/utils.js')] = { exports };

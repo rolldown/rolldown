@@ -1,0 +1,63 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## dynamic.js
+
+```js
+import { t as value1 } from "./from-main-1-and-dynamic.js";
+import "./from-main-1-and-2.js";
+//#region dynamic.js
+console.log("dynamic", value1, "all");
+//#endregion
+
+```
+
+## from-main-1-and-2.js
+
+```js
+//#region from-all.js
+const value2 = "all";
+//#endregion
+//#region from-main-1-and-2.js
+const value3 = "main1 and main2";
+//#endregion
+export { value2 as n, value3 as t };
+
+```
+
+## from-main-1-and-dynamic.js
+
+```js
+//#region from-main-1-and-dynamic.js
+const value1 = "main1 and dynamic";
+//#endregion
+export { value1 as t };
+
+```
+
+## main1.js
+
+```js
+import { t as value1 } from "./from-main-1-and-dynamic.js";
+import { n as value2, t as value3 } from "./from-main-1-and-2.js";
+//#region main1.js
+console.log("main1", value1, "all", value3);
+import("./dynamic.js");
+//#endregion
+export { value1, value2, value3 };
+
+```
+
+## main2.js
+
+```js
+import { n as value2, t as value3 } from "./from-main-1-and-2.js";
+//#region main2.js
+console.log("main2", "all", value3);
+import("./dynamic.js");
+//#endregion
+export { value2, value3 };
+
+```

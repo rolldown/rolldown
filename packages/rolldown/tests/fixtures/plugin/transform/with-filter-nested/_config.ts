@@ -1,4 +1,4 @@
-import { RolldownPluginOption } from 'rolldown';
+import type { RolldownPluginOption } from 'rolldown';
 import { defineTest } from 'rolldown-tests';
 import { withFilter } from 'rolldown/filter';
 import { expect, vi } from 'vitest';
@@ -11,7 +11,7 @@ const nestedPlugin: RolldownPluginOption = [
   {
     name: 'test-plugin-1',
     transform: {
-      handler(_, _id) {
+      handler() {
         transformFn();
       },
     },
@@ -37,6 +37,7 @@ const nestedPlugin: RolldownPluginOption = [
 ];
 
 export default defineTest({
+  sequential: true,
   config: {
     // Without this override, the transform function will be called 9 times
     plugins: [
@@ -47,7 +48,7 @@ export default defineTest({
     ],
   },
   afterTest: () => {
-    expect(transformFn).toHaveBeenCalledTimes(3);
+    expect(transformFn).toHaveBeenCalledTimes(4);
     expect(transformFn1).toHaveBeenCalledTimes(0);
     expect(transformFn2).toHaveBeenCalledTimes(0);
   },

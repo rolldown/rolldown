@@ -6,14 +6,13 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## main.js
 
 ```js
-// HIDDEN [rolldown:runtime]
-
+// HIDDEN [\0rolldown/runtime.js]
 //#region mod.js
 var default_exports = /* @__PURE__ */ __exportAll({ default: () => example });
 function example() {
 	return "default";
 }
-
 //#endregion
 module.exports = default_exports;
+
 ```

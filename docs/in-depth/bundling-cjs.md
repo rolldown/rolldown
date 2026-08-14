@@ -30,7 +30,7 @@ module.exports = { value: 'foo' };
 When bundled, it produces:
 
 ```js
-// #region rolldown:runtime
+// #region \0rolldown/runtime.js
 // ...runtime code
 // #endregion
 
@@ -68,7 +68,7 @@ module.exports = { value: 'foo' };
 Bundled output:
 
 ```js
-// #region rolldown:runtime
+// #region \0rolldown/runtime.js
 // ...runtime code
 // #endregion
 
@@ -97,7 +97,7 @@ By default, Rolldown tries to keep the semantics of `require` and does not conve
 
 ::: tip Still want to convert `require` to `import`?
 
-If you want to convert `require` calls to `import` statements, you can use [the built-in `esmExternalRequirePlugin`](/builtin-plugins/esm-external-require).
+If you want to convert `require` calls to `import` statements, you can use [the built-in `esmExternalRequirePlugin`](/builtin-plugins/esm-external-require). Note that the plugin must own the externals it converts: list them in the plugin's `external` option, not in the top-level `external` option.
 
 :::
 
@@ -143,6 +143,9 @@ If it matches one of the conditions below, the `default` import is the `module.e
 - The closest `package.json` for the importer has a `type` field set to `module`
 - (When it's a dynamic import) The closest `package.json` for the importer has a `type` field set to `commonjs`
 - The `module.exports.__esModule` value of the importee CJS module is not set to `true`
+- The `module.exports` value of the importee CJS module has no own `default` property
+
+The last condition handles CJS modules that set `__esModule` without actually shipping a `default` export (for example tslib's UMD build). Without it, the `default` import would be `undefined`. `@rollup/plugin-commonjs` handles this case with the same fallback.
 
 :::: details Behavior in details
 
@@ -187,9 +190,8 @@ When importing a default export from a CJS module, we recommend to write a code 
 
 ```js
 import rawFoo from './importee.cjs';
-const foo = typeof rawFoo === 'object' && rawFoo !== null && rawFoo.__esModule
-  ? rawFoo.default
-  : rawFoo;
+const foo =
+  typeof rawFoo === 'object' && rawFoo !== null && rawFoo.__esModule ? rawFoo.default : rawFoo;
 console.log(foo);
 ```
 
@@ -200,6 +202,12 @@ This code will print `foo` in both interpretations. Note that TypeScript may sho
 If you find an issue that seems to be caused by this incompatibility, try using [publint](https://publint.dev/) to check the package. It has [a rule that detects the incompatibility](https://publint.dev/rules#cjs_with_esmodule_default_export) (note that it only checks some of the files in the package, not all of them).
 
 If the heuristic is not working for you, you can use the code in the section above that handles both interpretations. If the import is in a dependency, we recommend to raise an issue to the dependency. In the meantime, you can use [`patch-package`](https://github.com/ds300/patch-package) or [`pnpm patch`](https://pnpm.io/cli/patch) or alternatives as an escape hatch.
+
+### Strict Mode Applied to `.js` files
+
+For files ending with `.js`, Rolldown parses the file as ESM ([#7009](https://github.com/rolldown/rolldown/issues/7009)) without falling back to CJS. This means that syntaxes only allowed in non-strict mode (sloppy mode) will be rejected.
+
+For now, you can change the file extension to `.cjs` as a workaround.
 
 ## Future Plans
 

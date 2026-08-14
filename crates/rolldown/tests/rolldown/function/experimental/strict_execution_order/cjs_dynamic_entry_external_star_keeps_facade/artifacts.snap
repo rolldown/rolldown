@@ -1,0 +1,138 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+//! User-defined Entry: [Entry-Module-Id: main.js] [Name: Some("main")]
+Object.defineProperty(exports, Symbol.toStringTag, { value: "Module" });
+const require_rolldown_runtime = require("./rolldown-runtime.js");
+//#region main.js
+var loaded;
+function init_main() {
+	return (init_main = require_rolldown_runtime.__esmMin((() => {
+		loaded = Promise.resolve().then(() => require("./target2.js")).then((namespace) => namespace);
+	})))();
+}
+//#endregion
+init_main();
+exports.loaded = loaded;
+
+```
+
+## reader.js
+
+```js
+//! ManualCodeSplitting: [Group-Name: reader]
+const require_target = require("./target.js");
+const require_rolldown_runtime = require("./rolldown-runtime.js");
+//#region reader.js
+function read() {
+	globalThis.__externalStarLog.push(`reader:1`);
+}
+function init_reader() {
+	return (init_reader = require_rolldown_runtime.__esmMin((() => {
+		require_target.init_target();
+	})))();
+}
+//#endregion
+Object.defineProperty(exports, "init_reader", {
+	enumerable: true,
+	get: function() {
+		return init_reader;
+	}
+});
+Object.defineProperty(exports, "read", {
+	enumerable: true,
+	get: function() {
+		return read;
+	}
+});
+
+```
+
+## rolldown-runtime.js
+
+```js
+//! Common Chunk: [Shared-By: main.js, target.js]
+//#region \0rolldown/runtime.js
+var __esmMin = (fn, res, err) => () => {
+	if (err) throw err[0];
+	try {
+		return fn && (res = fn(fn = 0)), res;
+	} catch (e) {
+		throw err = [e], e;
+	}
+};
+//#endregion
+Object.defineProperty(exports, "__esmMin", {
+	enumerable: true,
+	get: function() {
+		return __esmMin;
+	}
+});
+
+```
+
+## target.js
+
+```js
+//! Dynamic Entry: [Entry-Module-Id: target.js] [Name: None]
+//! Common Chunk: [Shared-By: target.js]
+const require_reader = require("./reader.js");
+const require_rolldown_runtime = require("./rolldown-runtime.js");
+//#region target.js
+var x;
+function init_target() {
+	return (init_target = require_rolldown_runtime.__esmMin((() => {
+		require_reader.init_reader();
+		globalThis.__externalStarLog.push("target");
+		x = 1;
+		require_reader.read();
+	})))();
+}
+//#endregion
+Object.defineProperty(exports, "init_target", {
+	enumerable: true,
+	get: function() {
+		return init_target;
+	}
+});
+Object.defineProperty(exports, "x", {
+	enumerable: true,
+	get: function() {
+		return x;
+	}
+});
+
+```
+
+## target2.js
+
+```js
+//! Dynamic Entry: [Entry-Module-Id: target.js] [Name: None]
+const require_target = require("./target.js");
+require_target.init_target();
+exports.x = require_target.x;
+var external = require("external");
+Object.keys(external).forEach(function(k) {
+	if (k !== "default" && !Object.prototype.hasOwnProperty.call(exports, k)) Object.defineProperty(exports, k, {
+		enumerable: true,
+		get: function() {
+			return external[k];
+		}
+	});
+});
+var primitive = require("primitive");
+Object.keys(primitive).forEach(function(k) {
+	if (k !== "default" && !Object.prototype.hasOwnProperty.call(exports, k)) Object.defineProperty(exports, k, {
+		enumerable: true,
+		get: function() {
+			return primitive[k];
+		}
+	});
+});
+
+```

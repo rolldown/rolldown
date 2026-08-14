@@ -6,18 +6,16 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## index_js.js
 
 ```js
-// HIDDEN [rolldown:runtime]
+// HIDDEN [\0rolldown/runtime.js]
 //#region node_modules/pkg/index.js
 var require_pkg = /* @__PURE__ */ __commonJSMin(((exports) => {
 	exports.pkg = true;
 }));
-
 //#endregion
 //#region nested/index.js
 var require_nested = /* @__PURE__ */ __commonJSMin(((exports) => {
 	exports.nested = true;
 }));
-
 //#endregion
 //#region index.js
 var require_source_identifier_name_index_single_entry = /* @__PURE__ */ __commonJSMin((() => {
@@ -25,7 +23,6 @@ var require_source_identifier_name_index_single_entry = /* @__PURE__ */ __common
 	require_pkg();
 	require_nested();
 }));
-
 //#endregion
 export default require_source_identifier_name_index_single_entry();
 

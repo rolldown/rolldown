@@ -1,0 +1,19 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## entry.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+//#region dep.cjs
+//#endregion
+//#region entry.js
+const value = (/* @__PURE__ */ __commonJSMin(((exports) => {
+	exports.value = "cjs-value";
+})))().value;
+//#endregion
+export { value };
+
+```

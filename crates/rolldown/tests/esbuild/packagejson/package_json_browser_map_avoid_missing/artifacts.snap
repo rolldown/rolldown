@@ -6,14 +6,13 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## entry.js
 
 ```js
-// HIDDEN [rolldown:runtime]
+// HIDDEN [\0rolldown/runtime.js]
 //#region node_modules/component-indexof/index.js
 var require_component_indexof = /* @__PURE__ */ __commonJSMin(((exports, module) => {
 	module.exports = function() {
 		return 234;
 	};
 }));
-
 //#endregion
 //#region node_modules/component-classes/index.js
 try {
@@ -21,6 +20,6 @@ try {
 } catch (err) {
 	require_component_indexof();
 }
-
 //#endregion
+
 ```

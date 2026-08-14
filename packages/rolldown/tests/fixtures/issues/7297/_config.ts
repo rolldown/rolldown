@@ -6,12 +6,8 @@ export default defineTest({
     input: ['./main.js', './entry.js'],
   },
   afterTest(output) {
-    const mainChunk = output.output.find((chunk) =>
-      chunk.fileName === 'main.js'
-    );
-    const entry2Chunk = output.output.find((chunk) =>
-      chunk.fileName === 'entry.js'
-    );
+    const mainChunk = output.output.find((chunk) => chunk.fileName === 'main.js');
+    const entry2Chunk = output.output.find((chunk) => chunk.fileName === 'entry.js');
 
     expect(mainChunk).toBeDefined();
     expect(entry2Chunk).toBeDefined();

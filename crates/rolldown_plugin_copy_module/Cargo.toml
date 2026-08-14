@@ -1,0 +1,21 @@
+[package]
+name = "rolldown_plugin_copy_module"
+version = "1.2.4"
+edition.workspace = true
+license = "MIT"
+publish = true
+description = "Rolldown builtin plugin implementing esbuild copy loader semantics"
+readme = "../../README.md"
+
+[lib]
+doctest = false
+test = false
+
+[dependencies]
+anyhow = { workspace = true }
+arcstr = { workspace = true }
+rolldown_common = { workspace = true }
+rolldown_plugin = { workspace = true }
+rolldown_plugin_utils = { workspace = true }
+rolldown_utils = { workspace = true }
+rustc-hash = { workspace = true }

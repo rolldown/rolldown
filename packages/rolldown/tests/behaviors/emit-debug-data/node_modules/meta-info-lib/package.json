@@ -1,0 +1,8 @@
+{
+  "name": "meta-info-lib",
+  "version": "1.2.3",
+  "type": "module",
+  "exports": {
+    "import": "./index.js"
+  }
+}

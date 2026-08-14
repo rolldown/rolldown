@@ -1,4 +1,4 @@
-import assert from 'node:assert';
+import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
 
@@ -7,6 +7,18 @@ import type {
   OutputChunk as RolldownOutputChunk,
   RolldownOutput as RollupOutput,
 } from 'rolldown';
+
+/** `true` when the suite runs against the WASI binding, set by the `wasi` CI job and `just test-wasi`; every test it skips states its own reason. */
+export const isWasiTest = process.env.ROLLDOWN_WASI_TEST === '1';
+
+/**
+ * @description
+ * Matches a reference id returned by `PluginContext.emitFile`.
+ *
+ * A reference id is guaranteed to be made of characters that an identifier can
+ * contain.
+ */
+export const REFERENCE_ID_REGEX = /^[$\w]+$/;
 
 /**
  * @description
@@ -22,25 +34,27 @@ assert(
   `${workspaceRoot('pnpm-workspace.yaml')} does not exist`,
 );
 export function getOutputChunkNames(output: RollupOutput) {
-  return output.output
-    .filter((chunk) => chunk.type === 'chunk')
-    .map((chunk) => chunk.fileName);
+  return output.output.filter((chunk) => chunk.type === 'chunk').map((chunk) => chunk.fileName);
 }
 
 export function getOutputChunk(output: RollupOutput): RolldownOutputChunk[] {
-  return output.output.filter(
-    (chunk) => chunk.type === 'chunk',
-  ) as RolldownOutputChunk[];
+  return output.output.filter((chunk) => chunk.type === 'chunk') as RolldownOutputChunk[];
 }
 
 export function getOutputAsset(output: RollupOutput): RolldownOutputAsset[] {
-  return output.output.filter(
-    (chunk) => chunk.type === 'asset',
-  ) as RolldownOutputAsset[];
+  return output.output.filter((chunk) => chunk.type === 'asset') as RolldownOutputAsset[];
 }
 
 export function getOutputFileNames(output: RollupOutput) {
   return output.output.map((chunk) => chunk.fileName).sort();
+}
+
+export function getOutputSourcemapFilenames(output: RollupOutput) {
+  return output.output
+    .filter((chunk) => chunk.type === 'chunk')
+    .map((chunk) => chunk.sourcemapFileName)
+    .filter((filename) => filename !== null)
+    .sort((a, b) => a.localeCompare(b));
 }
 
 export function getOutputAssetNames(output: RollupOutput) {
@@ -64,12 +78,7 @@ export function testsDir(...joined: string[]) {
   return projectDir('tests', ...joined);
 }
 
-assert.deepEqual(testsDir().split(path.sep).slice(-4), [
-  'rolldown',
-  'packages',
-  'rolldown',
-  'tests',
-]);
+assert.deepEqual(testsDir().split(path.sep).slice(-3), ['packages', 'rolldown', 'tests']);
 
 export function sleep(ms: number) {
   return new Promise((resolve) => setTimeout(resolve, ms));
@@ -82,9 +91,7 @@ export function getLocation(source: string, search: string | number) {
   var lineStart = 0;
   var index;
 
-  const charIndex = typeof search === 'number'
-    ? search
-    : source.indexOf(search);
+  const charIndex = typeof search === 'number' ? search : source.indexOf(search);
 
   for (index = 0; index < length_; index += 1) {
     var line = lines[index];
@@ -98,15 +105,4 @@ export function getLocation(source: string, search: string | number) {
   }
 
   throw new Error('Could not determine location of character');
-}
-
-export async function waitUtil(expectFn: () => void) {
-  for (let tries = 0; tries < 20; tries++) {
-    try {
-      expectFn();
-      return;
-    } catch {}
-    await sleep(50);
-  }
-  expectFn();
 }

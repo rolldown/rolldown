@@ -3,6 +3,7 @@
   "include": [
     "src/*",
     "src/**/*",
+    "playground/**/*.ts",
     "**/_config.ts",
     "**/*.test.ts",
     "**/*.spec.ts"
@@ -11,6 +12,9 @@
     "types": ["node"],
     "rootDir": "./",
     "allowJs": true,
-    "isolatedDeclarations": false
+    "isolatedDeclarations": false,
+    "paths": {
+      "~utils": ["./playground/test-utils.ts"]
+    }
   }
 }

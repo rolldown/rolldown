@@ -1,0 +1,10 @@
+{
+  "config": {
+    "comments": {
+      "legal": true,
+      "annotation": false,
+      "jsdoc": false
+    }
+  },
+  "expectExecuted": false
+}

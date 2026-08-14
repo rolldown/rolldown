@@ -6,14 +6,14 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## COMMONJS_VARIABLE_IN_ESM
 
 ```text
-[COMMONJS_VARIABLE_IN_ESM] Warning: The CommonJS `exports` variable is treated as a global variable in an ECMAScript module and may not work as expected
+[COMMONJS_VARIABLE_IN_ESM] The CommonJS `exports` variable is treated as a global variable in an ECMAScript module and may not work as expected
    ╭─[ main.js:2:1 ]
    │
  2 │ exports.a = 1000;
    │ ───┬───  
    │    ╰───── 
    │ 
- 7 │ export const a = 1
+ 7 │ export const a = 1;
    │ ───┬──  
    │    ╰──── This file is considered to be an ECMAScript module because of the `export` keyword here:
 ───╯
@@ -23,14 +23,14 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## COMMONJS_VARIABLE_IN_ESM
 
 ```text
-[COMMONJS_VARIABLE_IN_ESM] Warning: The CommonJS `module` variable is treated as a global variable in an ECMAScript module and may not work as expected
+[COMMONJS_VARIABLE_IN_ESM] The CommonJS `module` variable is treated as a global variable in an ECMAScript module and may not work as expected
    ╭─[ main.js:4:1 ]
    │
- 4 │ module.exports = {}
+ 4 │ module.exports = {};
    │ ───┬──  
    │    ╰──── 
    │ 
- 7 │ export const a = 1
+ 7 │ export const a = 1;
    │ ───┬──  
    │    ╰──── This file is considered to be an ECMAScript module because of the `export` keyword here:
 ───╯
@@ -50,7 +50,7 @@ module.exports = {};
 typeof module === "object" ? module.exports : exports;
 const a = 1;
 const e = 1;
-
 //#endregion
 export { a, e };
+
 ```

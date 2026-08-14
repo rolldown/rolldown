@@ -17,30 +17,33 @@ use rolldown_common::{GetLocalDbMut, Module, ScanMode, SharedFileEmitter, Symbol
 use rolldown_devtools::{action, trace_action, trace_action_enabled};
 use rolldown_error::{BuildDiagnostic, BuildResult, Severity};
 use rolldown_fs::{FileSystem, OsFileSystem};
-use rolldown_plugin::{HookBuildEndArgs, HookRenderErrorArgs, SharedPluginDriver};
+use rolldown_plugin::{
+  HookBuildEndArgs, HookCloseBundleArgs, HookRenderErrorArgs, SharedPluginDriver,
+};
 use rolldown_utils::dashmap::FxDashSet;
-use std::sync::Arc;
+use std::{path::Path, sync::Arc};
+use sugar_path::SugarPath;
 
 #[expect(
   clippy::struct_field_names,
   reason = "`bundle_span` emphasizes this's a span for this bundle, not a session level span"
 )]
-pub struct Bundle {
-  pub(crate) fs: OsFileSystem,
+pub struct Bundle<Fs: FileSystem + Clone + 'static = OsFileSystem> {
+  pub(crate) fs: Fs,
   pub(crate) options: SharedOptions,
-  pub(crate) resolver: SharedResolver,
+  pub(crate) resolver: SharedResolver<Fs>,
   pub(crate) file_emitter: SharedFileEmitter,
   pub(crate) plugin_driver: SharedPluginDriver,
   pub(crate) warnings: Vec<BuildDiagnostic>,
   pub(crate) cache: ScanStageCache,
-  pub(crate) bundle_span: Arc<tracing::Span>,
+  pub(crate) bundle_span: tracing::Span,
 }
 
-impl Bundle {
-  #[tracing::instrument(level = "debug", skip_all, parent = &*self.bundle_span)]
+impl<Fs: FileSystem + Clone + 'static> Bundle<Fs> {
+  #[tracing::instrument(level = "debug", skip_all, parent = &self.bundle_span)]
   /// This method intentionally get the ownership of `self` to show that the method cannot be called multiple times.
   pub async fn write(mut self) -> BuildResult<BundleOutput> {
-    let start = self.plugin_driver.start_timing();
+    let start = self.plugin_driver.build_timings.start();
     let result = async {
       self.trace_action_session_meta();
       trace_action!(action::BuildStart { action: "BuildStart" });
@@ -51,14 +54,14 @@ impl Bundle {
       ret
     }
     .await;
-    self.plugin_driver.set_total_build_time(start);
-    self.append_plugin_timings_warning(result)
+    self.plugin_driver.build_timings.record_total(start);
+    result
   }
 
-  #[tracing::instrument(level = "debug", skip_all, parent = &*self.bundle_span)]
+  #[tracing::instrument(level = "debug", skip_all, parent = &self.bundle_span)]
   /// This method intentionally get the ownership of `self` to show that the method cannot be called multiple times.
   pub async fn generate(mut self) -> BuildResult<BundleOutput> {
-    let start = self.plugin_driver.start_timing();
+    let start = self.plugin_driver.build_timings.start();
     let result = async {
       self.trace_action_session_meta();
       trace_action!(action::BuildStart { action: "BuildStart" });
@@ -72,11 +75,11 @@ impl Bundle {
       ret
     }
     .await;
-    self.plugin_driver.set_total_build_time(start);
-    self.append_plugin_timings_warning(result)
+    self.plugin_driver.build_timings.record_total(start);
+    result
   }
 
-  #[tracing::instrument(level = "debug", skip_all, parent = &*self.bundle_span)]
+  #[tracing::instrument(level = "debug", skip_all, parent = &self.bundle_span)]
   /// This method intentionally get the ownership of `self` to show that the method cannot be called multiple times.
   pub async fn scan(mut self) -> BuildResult<()> {
     self.scan_modules(ScanMode::Full).await?;
@@ -84,8 +87,21 @@ impl Bundle {
     Ok(())
   }
 
-  #[tracing::instrument(level = "debug", skip_all, parent = &*self.bundle_span)]
-  pub(crate) async fn scan_modules(
+  #[tracing::instrument(level = "debug", skip_all, parent = &self.bundle_span)]
+  pub async fn scan_modules(
+    &mut self,
+    scan_mode: ScanMode<ArcStr>,
+  ) -> BuildResult<NormalizedScanStageOutput> {
+    // The whole scan (buildStart through buildEnd) is the build phase. Resetting on every exit
+    // means a failed scan cannot leave the emitter stuck in the build phase, where a later emit
+    // (e.g. an HMR patch after a failed rebuild) could still change an already-emitted filename.
+    self.plugin_driver.file_emitter.enter_build_phase();
+    let result = self.scan_modules_impl(scan_mode).await;
+    self.plugin_driver.file_emitter.enter_output_phase();
+    result
+  }
+
+  async fn scan_modules_impl(
     &mut self,
     scan_mode: ScanMode<ArcStr>,
   ) -> BuildResult<NormalizedScanStageOutput> {
@@ -108,7 +124,10 @@ impl Bundle {
           .plugin_driver
           .build_end(Some(&HookBuildEndArgs { errors: &errs, cwd: &self.options.cwd }))
           .await?;
-        self.plugin_driver.close_bundle().await?;
+        self
+          .plugin_driver
+          .close_bundle(Some(&HookCloseBundleArgs { errors: &errs, cwd: &self.options.cwd }))
+          .await?;
         return Err(errs);
       }
     };
@@ -141,10 +160,11 @@ impl Bundle {
     BundleHandle {
       options: Arc::clone(&self.options),
       plugin_driver: Arc::clone(&self.plugin_driver),
+      closed: Arc::default(),
     }
   }
 
-  #[tracing::instrument(level = "debug", skip_all, parent = &*self.bundle_span)]
+  #[tracing::instrument(level = "debug", skip_all, parent = &self.bundle_span)]
   pub async fn bundle_write(
     &mut self,
     scan_stage_output: NormalizedScanStageOutput,
@@ -170,7 +190,26 @@ impl Bundle {
     })?;
 
     for chunk in &output.assets {
-      let dest = dist_dir.join(chunk.filename());
+      let filename = chunk.filename();
+      if filename.contains('\0') {
+        let pattern_name = match chunk {
+          rolldown_common::Output::Chunk(c) => {
+            if c.is_entry {
+              "output.entryFileNames"
+            } else {
+              "output.chunkFileNames"
+            }
+          }
+          rolldown_common::Output::Asset(_) => "output.assetFileNames",
+        };
+        return Err(
+          BuildDiagnostic::invalid_option(rolldown_error::InvalidOptionType::NulByteInFilename {
+            pattern_name: pattern_name.to_string(),
+          })
+          .into(),
+        );
+      }
+      let dest = dist_dir.join(filename);
       if let Some(p) = dest.parent() {
         if !self.fs.exists(p) {
           self.fs.create_dir_all(p).with_context(|| {
@@ -194,8 +233,8 @@ impl Bundle {
     Ok(output)
   }
 
-  #[tracing::instrument(level = "debug", skip_all, parent = &*self.bundle_span)]
-  pub(crate) async fn bundle_generate(
+  #[tracing::instrument(level = "debug", skip_all, parent = &self.bundle_span)]
+  pub async fn bundle_generate(
     &mut self,
     scan_stage_output: NormalizedScanStageOutput,
   ) -> BuildResult<BundleOutput> {
@@ -213,21 +252,22 @@ impl Bundle {
     if is_full_scan_mode {
       let mut output: NormalizedScanStageOutput =
         output.try_into().expect("Should be able to convert to NormalizedScanStageOutput");
-      defer_sync_scan_data(
-        &self.options,
-        &self.resolver,
-        &self.cache.module_id_to_idx,
-        &mut output,
-      )
-      .await?;
+      // The scan produced a complete `output`; `defer_sync_scan_data` only
+      // mutates per-module `side_effects` best-effort, so its error doesn't
+      // invalidate `output`. Commit it rather than fall back to the stale prior
+      // snapshot.
+      // See internal-docs/bundler-data-lifecycle/implementation.md ("Cache integrity on a failed build").
+      let result =
+        defer_sync_scan_data(&self.options, &self.cache.module_id_to_idx, &mut output).await;
       if is_incremental {
         self.cache.set_snapshot(output.make_copy());
       }
+      result?;
       return Ok(output);
     }
 
-    self.cache.merge(output)?;
-    self.cache.update_defer_sync_data(&self.options, &self.resolver).await?;
+    self.cache.merge(output, &self.plugin_driver)?;
+    self.cache.update_defer_sync_data(&self.options).await?;
     Ok(self.cache.create_output())
   }
 
@@ -236,14 +276,29 @@ impl Bundle {
     scan_stage_output: NormalizedScanStageOutput,
     is_write: bool,
   ) -> BuildResult<BundleOutput> {
-    let start = self.plugin_driver.start_timing();
-    let mut link_stage_output = LinkStage::new(scan_stage_output, &self.options).link();
-    self.plugin_driver.set_link_stage_time(start);
+    // The one stretch of a build with no plugin in it, which is what makes it a usable
+    // baseline for "was this build plugin-bound?" — see `BuildTimings`.
+    let link_start = self.plugin_driver.build_timings.start();
+    let (mut link_stage_output, ast_table, used_symbol_refs) =
+      LinkStage::new(scan_stage_output, &self.options).link();
+    self.plugin_driver.build_timings.record_link_stage(link_start);
 
     let bundle_output =
-      GenerateStage::new(&mut link_stage_output, &self.options, &self.plugin_driver)
-        .generate()
+      GenerateStage::new(&mut link_stage_output, ast_table, &self.options, &self.plugin_driver)
+        .generate(used_symbol_refs)
         .await; // Notice we don't use `?` to break the control flow here.
+
+    // `create_output`/`make_copy` strip symbol-table scoping from the cache for
+    // performance; reinstate it here, before the fallible steps below, so the
+    // cache stays whole on their `Err` paths.
+    // See internal-docs/bundler-data-lifecycle/implementation.md ("Cache integrity on a failed build").
+    self.merge_immutable_fields_for_cache(std::mem::take(&mut link_stage_output.symbol_db));
+
+    // `link_stage_output` is dead from here on (its `symbol_db` was just taken
+    // for the cache merge); ship the remaining heavy fields (module_table,
+    // metas, stmt_infos, ...) to a rayon worker so their free() happens off
+    // the critical path.
+    crate::utils::defer_drop::spawn_drop(link_stage_output);
 
     if let Err(errors) = &bundle_output {
       debug_assert!(errors.iter().all(|e| e.severity() == Severity::Error));
@@ -263,11 +318,18 @@ impl Bundle {
       .generate_bundle(&mut output.assets, is_write, &self.options, &mut output.warnings)
       .await?;
 
+    for asset in &output.assets {
+      if is_filename_outside_output_dir(asset.filename()) {
+        return Err(
+          vec![BuildDiagnostic::filename_outside_output_directory(asset.filename().to_string())]
+            .into(),
+        );
+      }
+    }
+
     if let Some(invalidate_js_side_cache) = &self.options.invalidate_js_side_cache {
       invalidate_js_side_cache.call().await?;
     }
-
-    self.merge_immutable_fields_for_cache(link_stage_output.symbol_db);
 
     Ok(output)
   }
@@ -282,8 +344,7 @@ impl Bundle {
         continue;
       };
       let cache_db = snapshot.symbol_ref_db.local_db_mut(idx);
-      let (scoping, _) = db_for_module.ast_scopes.into_inner();
-      cache_db.ast_scopes.set_scoping(scoping);
+      cache_db.merge_from_build(db_for_module);
     }
   }
 
@@ -301,14 +362,16 @@ impl Bundle {
               module
                 .import_records
                 .iter()
-                .map(|r| action::ModuleImport {
-                  module_id: scan_stage_output.module_table[r.resolved_module].id().to_string(),
-                  kind: r.kind.to_string(),
-                  module_request: r.module_request.to_string(),
+                .filter_map(|r| {
+                  r.resolved_module.map(|module_idx| action::ModuleImport {
+                    module_id: scan_stage_output.module_table[module_idx].id().to_string(),
+                    kind: r.kind.to_string(),
+                    module_request: r.module_request.to_string(),
+                  })
                 })
                 .collect(),
             ),
-            importers: Some(module.importers.iter().map(|i| i.to_string()).collect()),
+            importers: Some(module.importers.iter().map(ToString::to_string).collect()),
           },
           Module::External(module) => action::Module {
             id: module.id.to_string(),
@@ -350,17 +413,90 @@ impl Bundle {
       });
     }
   }
+}
 
-  /// Append plugin timings warning to result if applicable.
-  fn append_plugin_timings_warning(
-    &self,
-    result: BuildResult<BundleOutput>,
-  ) -> BuildResult<BundleOutput> {
-    result.map(|mut output| {
-      if let Some(plugins) = self.plugin_driver.get_plugin_timings_info() {
-        output.warnings.push(BuildDiagnostic::plugin_timings(plugins).with_severity_warning());
-      }
-      output
-    })
+/// Check if a filename would escape the output directory.
+///
+/// Rejects paths rooted in POSIX or Windows syntax and relative paths that
+/// normalize outside the output directory or to the directory itself.
+fn is_filename_outside_output_dir(filename: &str) -> bool {
+  let bytes = filename.as_bytes();
+  let starts_with_path_root = bytes.first().is_some_and(|byte| matches!(*byte, b'/' | b'\\'));
+  let has_windows_drive_prefix =
+    bytes.len() >= 2 && bytes[0].is_ascii_alphabetic() && bytes[1] == b':';
+  // Drive-relative paths can escape only on Windows; absolute drive paths are
+  // rejected on every host for cross-platform consistency.
+  let has_disallowed_windows_drive_prefix = has_windows_drive_prefix
+    && (cfg!(windows) || bytes.get(2).is_some_and(|byte| matches!(*byte, b'/' | b'\\')));
+  if starts_with_path_root || has_disallowed_windows_drive_prefix {
+    return true;
+  }
+
+  let normalized = filename.normalize();
+
+  normalized == Path::new(".")
+    || normalized.starts_with(Path::new(".."))
+    // Preserve the existing cross-platform guard for a leading Windows parent.
+    || normalized.to_string_lossy().starts_with("..\\")
+}
+
+#[cfg(test)]
+mod tests {
+  use super::is_filename_outside_output_dir;
+
+  #[test]
+  fn output_filename_cannot_resolve_to_or_escape_output_directory() {
+    for filename in [
+      "",
+      ".",
+      "./",
+      "foo/..",
+      "foo/../",
+      "foo/bar/../..",
+      "..",
+      "../file",
+      "..\\file",
+      "a/../../file",
+      "/file",
+      "\\file",
+      "C:/file",
+      "C:\\file",
+      "c:\\file",
+      "\\\\server\\share\\file",
+      "\\\\?\\C:\\file",
+    ] {
+      assert!(is_filename_outside_output_dir(filename), "expected {filename:?} to be rejected");
+    }
+
+    for filename in [
+      "file.js",
+      "dir/file.js",
+      "dir\\file.js",
+      "./asset.txt",
+      ".\\asset.txt",
+      "foo/",
+      "foo\\",
+      "..file.js",
+      ".hidden",
+      "foo/bar/../baz.js",
+    ] {
+      assert!(!is_filename_outside_output_dir(filename), "expected {filename:?} to be accepted");
+    }
+  }
+
+  #[cfg(windows)]
+  #[test]
+  fn windows_output_filename_cannot_use_drive_relative_or_backslash_traversal() {
+    for filename in [".\\", "C:", "C:file", "c:file", "foo\\..", "a\\..\\..\\file"] {
+      assert!(is_filename_outside_output_dir(filename), "expected {filename:?} to be rejected");
+    }
+  }
+
+  #[cfg(not(windows))]
+  #[test]
+  fn unix_output_filename_keeps_host_native_backslash_and_colon_semantics() {
+    for filename in [".\\", "C:", "C:file", "c:file", "foo\\..", "a\\..\\..\\file"] {
+      assert!(!is_filename_outside_output_dir(filename), "expected {filename:?} to be accepted");
+    }
   }
 }

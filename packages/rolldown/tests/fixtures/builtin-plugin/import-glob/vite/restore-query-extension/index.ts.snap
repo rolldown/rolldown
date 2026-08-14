@@ -1,119 +1,133 @@
-import { n as name$1, t as a_exports } from "./a2.js";
-import { n as name$2, t as b_exports } from "./b2.js";
-import { n as modules_exports, r as name$3 } from "./modules2.js";
-import { t as a_default } from "./a4.js";
-import { t as b_default } from "./b4.js";
-
+import { t as __exportAll } from "./rolldown-runtime.js";
+import { t as a_exports$1 } from "./a.js";
+import { t as b_exports$1 } from "./b.js";
+//#region ../fixtures/a/modules/index.ts
+var modules_exports = /* @__PURE__ */ __exportAll({
+	a: () => "a",
+	b: () => "b",
+	default: () => modules_default,
+	name: () => name
+});
+const name = "index";
+var modules_default = "indexDefault";
+//#endregion
+//#region ../fixtures/a/modules/a.ts?raw
+var a_exports = /* @__PURE__ */ __exportAll({ default: () => a_default });
+var a_default = "export const name = 'a';\n";
+//#endregion
+//#region ../fixtures/a/modules/b.ts?raw
+var b_exports = /* @__PURE__ */ __exportAll({ default: () => b_default });
+var b_default = "export const name = 'b';\n";
+//#endregion
 //#region ../fixtures/a/index.ts
-const basic = {
-	"./modules/a.ts": () => import("./a.js"),
-	"./modules/b.ts": () => import("./b.js"),
-	"./modules/index.ts": () => import("./modules.js")
-};
+const basic = /* #__PURE__ */ Object.assign({
+	"./modules/a.ts": () => import("./a.js").then((n) => n.t),
+	"./modules/b.ts": () => import("./b.js").then((n) => n.t),
+	"./modules/index.ts": () => Promise.resolve().then(() => modules_exports)
+});
 const basicWithObjectKeys = Object.keys({
 	"./modules/a.ts": 0,
 	"./modules/b.ts": 0,
 	"./modules/index.ts": 0
 });
 const basicWithObjectValues = Object.values([
-	() => import("./a.js"),
-	() => import("./b.js"),
-	() => import("./modules.js")
+	() => import("./a.js").then((n) => n.t),
+	() => import("./b.js").then((n) => n.t),
+	() => Promise.resolve().then(() => modules_exports)
 ]);
-const basicEager = {
-	"./modules/a.ts": a_exports,
-	"./modules/b.ts": b_exports,
+const basicEager = /* #__PURE__ */ Object.assign({
+	"./modules/a.ts": a_exports$1,
+	"./modules/b.ts": b_exports$1,
 	"./modules/index.ts": modules_exports
-};
+});
 const basicEagerWithObjectKeys = Object.keys({
 	"./modules/a.ts": 0,
 	"./modules/b.ts": 0,
 	"./modules/index.ts": 0
 });
 const basicEagerWithObjectValues = Object.values([
-	a_exports,
-	b_exports,
+	a_exports$1,
+	b_exports$1,
 	modules_exports
 ]);
-const ignore = {
-	"./modules/a.ts": () => import("./a.js"),
-	"./modules/b.ts": () => import("./b.js")
-};
+const ignore = /* #__PURE__ */ Object.assign({
+	"./modules/a.ts": () => import("./a.js").then((n) => n.t),
+	"./modules/b.ts": () => import("./b.js").then((n) => n.t)
+});
 const ignoreWithObjectKeys = Object.keys({
 	"./modules/a.ts": 0,
 	"./modules/b.ts": 0
 });
-const ignoreWithObjectValues = Object.values([() => import("./a.js"), () => import("./b.js")]);
-const namedEager = {
-	"./modules/a.ts": name$1,
-	"./modules/b.ts": name$2,
-	"./modules/index.ts": name$3
-};
+const ignoreWithObjectValues = Object.values([() => import("./a.js").then((n) => n.t), () => import("./b.js").then((n) => n.t)]);
+const namedEager = /* #__PURE__ */ Object.assign({
+	"./modules/a.ts": "a",
+	"./modules/b.ts": "b",
+	"./modules/index.ts": name
+});
 const namedEagerWithObjectKeys = Object.keys({
 	"./modules/a.ts": 0,
 	"./modules/b.ts": 0,
 	"./modules/index.ts": 0
 });
 const namedEagerWithObjectValues = Object.values([
-	name$1,
-	name$2,
-	name$3
+	"a",
+	"b",
+	name
 ]);
-const namedDefault = {
-	"./modules/a.ts": () => import("./a.js").then((m) => m.default),
-	"./modules/b.ts": () => import("./b.js").then((m) => m.default),
-	"./modules/index.ts": () => import("./modules.js").then((m) => m.default)
-};
+const namedDefault = /* #__PURE__ */ Object.assign({
+	"./modules/a.ts": () => import("./a.js").then((n) => n.t).then((m) => m["default"]),
+	"./modules/b.ts": () => import("./b.js").then((n) => n.t).then((m) => m["default"]),
+	"./modules/index.ts": () => Promise.resolve().then(() => modules_exports).then((m) => m["default"])
+});
 const namedDefaultWithObjectKeys = Object.keys({
 	"./modules/a.ts": 0,
 	"./modules/b.ts": 0,
 	"./modules/index.ts": 0
 });
 const namedDefaultWithObjectValues = Object.values([
-	() => import("./a.js").then((m) => m.default),
-	() => import("./b.js").then((m) => m.default),
-	() => import("./modules.js").then((m) => m.default)
+	() => import("./a.js").then((n) => n.t).then((m) => m["default"]),
+	() => import("./b.js").then((n) => n.t).then((m) => m["default"]),
+	() => Promise.resolve().then(() => modules_exports).then((m) => m["default"])
 ]);
-const eagerAs = {
+const eagerAs = /* #__PURE__ */ Object.assign({
 	"./modules/a.ts": a_default,
 	"./modules/b.ts": b_default
-};
-const rawImportModule = {
-	"./modules/a.ts": () => import("./a3.js"),
-	"./modules/b.ts": () => import("./b3.js")
-};
-const excludeSelf = { "./sibling.ts": () => import("./sibling.js") };
-const excludeSelfRaw = { "./sibling.ts": () => import("./sibling2.js") };
-const customQueryString = { "./sibling.ts": () => import("./sibling.ts_base64_lang.js") };
-const parent = {};
-const rootMixedRelative = {
-	"/b/a.ts": () => import("./a.ts_url_lang.js").then((m) => m.default),
-	"/b/b.ts": () => import("./b.ts_url_lang.js").then((m) => m.default),
-	"/b/index.ts": () => import("./index.ts_url_lang.js").then((m) => m.default)
-};
-const cleverCwd1 = { "./node_modules/framework/pages/hello.page.js": () => import("./hello.page.js") };
-const cleverCwd2 = {
-	"./modules/a.ts": () => import("./a.js"),
-	"./modules/b.ts": () => import("./b.js"),
-	"../b/a.ts": () => import("./a5.js"),
-	"../b/b.ts": () => import("./b5.js")
-};
-const customBase = {
-	"./modules/a.ts": () => import("./a.js"),
-	"./modules/b.ts": () => import("./b.js"),
-	"./modules/index.ts": () => import("./modules.js"),
+});
+const rawImportModule = /* #__PURE__ */ Object.assign({
+	"./modules/a.ts": () => Promise.resolve().then(() => a_exports),
+	"./modules/b.ts": () => Promise.resolve().then(() => b_exports)
+});
+const excludeSelf = /* #__PURE__ */ Object.assign({ "./sibling.ts": () => import("./sibling.js") });
+const excludeSelfRaw = /* #__PURE__ */ Object.assign({ "./sibling.ts": () => import("./sibling2.js") });
+const customQueryString = /* #__PURE__ */ Object.assign({ "./sibling.ts": () => import("./sibling.ts_base64_lang.js") });
+const parent = /* #__PURE__ */ Object.assign({});
+const rootMixedRelative = /* #__PURE__ */ Object.assign({
+	"/b/a.ts": () => import("./a.ts_url_lang.js").then((m) => m["default"]),
+	"/b/b.ts": () => import("./b.ts_url_lang.js").then((m) => m["default"]),
+	"/b/index.ts": () => import("./index.ts_url_lang.js").then((m) => m["default"])
+});
+const cleverCwd1 = /* #__PURE__ */ Object.assign({ "./node_modules/framework/pages/hello.page.js": () => import("./hello.page.js") });
+const cleverCwd2 = /* #__PURE__ */ Object.assign({
+	"./modules/a.ts": () => import("./a.js").then((n) => n.t),
+	"./modules/b.ts": () => import("./b.js").then((n) => n.t),
+	"../b/a.ts": () => import("./a2.js"),
+	"../b/b.ts": () => import("./b2.js")
+});
+const customBase = /* #__PURE__ */ Object.assign({
+	"./modules/a.ts": () => import("./a.js").then((n) => n.t),
+	"./modules/b.ts": () => import("./b.js").then((n) => n.t),
+	"./modules/index.ts": () => Promise.resolve().then(() => modules_exports),
 	"./sibling.ts": () => import("./sibling.js")
-};
-const customRootBase = {
-	"./a.ts": () => import("./a5.js"),
-	"./b.ts": () => import("./b5.js"),
-	"./index.ts": () => import("./b6.js")
-};
-const customBaseParent = {
-	"../b/a.ts": () => import("./a5.js"),
-	"../b/b.ts": () => import("./b5.js"),
-	"../b/index.ts": () => import("./b6.js")
-};
-
+});
+const customRootBase = /* #__PURE__ */ Object.assign({
+	"./a.ts": () => import("./a2.js"),
+	"./b.ts": () => import("./b2.js"),
+	"./index.ts": () => import("./b3.js")
+});
+const customBaseParent = /* #__PURE__ */ Object.assign({
+	"../b/a.ts": () => import("./a2.js"),
+	"../b/b.ts": () => import("./b2.js"),
+	"../b/index.ts": () => import("./b3.js")
+});
 //#endregion
 export { basic, basicEager, basicEagerWithObjectKeys, basicEagerWithObjectValues, basicWithObjectKeys, basicWithObjectValues, cleverCwd1, cleverCwd2, customBase, customBaseParent, customQueryString, customRootBase, eagerAs, excludeSelf, excludeSelfRaw, ignore, ignoreWithObjectKeys, ignoreWithObjectValues, namedDefault, namedDefaultWithObjectKeys, namedDefaultWithObjectValues, namedEager, namedEagerWithObjectKeys, namedEagerWithObjectValues, parent, rawImportModule, rootMixedRelative };

@@ -1,2 +1,6 @@
 #!/usr/bin/env node
-import '../dist/cli.mjs';
+import module from 'node:module';
+try {
+  module.enableCompileCache?.();
+} catch {}
+await import('../dist/cli.mjs');

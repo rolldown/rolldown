@@ -10,9 +10,34 @@ use crate::{
   },
 };
 use arcstr::ArcStr;
-use rolldown_common::{Chunk, ChunkIdx, ChunkKind, GetLocalDb, OutputFormat, SymbolRef, WrapKind};
+use rolldown_common::{
+  Chunk, ChunkIdx, ChunkKind, GetLocalDb, OutputFormat, Platform, SymbolRef, WrapKind,
+};
 use rolldown_utils::ecmascript::legitimize_identifier_name;
 use rustc_hash::{FxHashMap, FxHashSet};
+
+fn reserve_cjs_eval_ambient_paths(
+  renamer: &mut Renamer<'_>,
+  chunk: &Chunk,
+  link_output: &LinkStageOutput,
+  format: OutputFormat,
+  platform: Platform,
+) {
+  if !matches!((platform, format), (Platform::Node, OutputFormat::Esm))
+    || !chunk.modules.iter().copied().any(|idx| {
+      link_output.module_table[idx]
+        .as_normal()
+        .is_some_and(|module| module.exports_kind.is_commonjs() && module.meta.has_eval())
+    })
+  {
+    return;
+  }
+
+  // Eval-only references are invisible to unresolved-reference reservation, but the finalizer
+  // still emits these exact wrapper-local names for CommonJS path bindings.
+  renamer.reserve(CompactStr::new("__dirname"));
+  renamer.reserve(CompactStr::new("__filename"));
+}
 
 #[tracing::instrument(level = "trace", skip_all)]
 #[expect(clippy::too_many_arguments)]
@@ -23,10 +48,13 @@ pub fn deconflict_chunk_symbols(
   order_wrap_state: &OrderWrapState,
   order_live_symbols: &FxHashSet<SymbolRef>,
   format: OutputFormat,
+  platform: Platform,
   index_chunk_id_to_name: &FxHashMap<ChunkIdx, ArcStr>,
   chunk_assignments: ChunkAssignments<'_>,
 ) {
   let mut renamer = Renamer::new(chunk.entry_module_idx(), &link_output.symbol_db, format);
+  reserve_cjs_eval_ambient_paths(&mut renamer, chunk, link_output, format, platform);
+
   // Reserve global scope symbols (unresolved references) to prevent generating conflicting names.
   // These are identifiers referenced but not defined in the module's scope (e.g., `console`, `window`).
   chunk

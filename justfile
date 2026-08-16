@@ -214,6 +214,11 @@ build-rolldown-wasi:
 build-rolldown-release:
   vp run --filter rolldown build-native:release
 
+# Same as `build-rolldown-release`, plus the tracking allocator, so benchmarks can record Rust-side memory usage. Costs ~1-2% build time.
+build-rolldown-release-tracking:
+  vp run --filter rolldown build-binding:release --features tracking_allocator
+  vp run --filter rolldown build-js-glue
+
 # Build `rolldown` located in `packages/rolldown` itself and its `.node` binding in profile mode.
 build-rolldown-profile:
   vp run --filter rolldown build-native:profile

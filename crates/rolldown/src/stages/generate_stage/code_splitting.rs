@@ -1287,7 +1287,6 @@ impl GenerateStage<'_> {
     }
   }
 
-
   pub fn try_inline_dynamic_chunk(&mut self, chunk_graph: &mut ChunkGraph) {
     let to_inline: Vec<(ChunkIdx, ModuleIdx, ModuleIdx,ChunkIdx)> = chunk_graph
       .chunk_table
@@ -1318,7 +1317,6 @@ impl GenerateStage<'_> {
         }
 
         let importer_idx = normal_module.ecma_view.dynamic_importers_idx[0];
-        
         let importer_chunk_idx = chunk_graph.module_to_chunk[importer_idx]?;
 
         Some((dynamic_chunk_idx, dynamic_module_idx, importer_idx,importer_chunk_idx))
@@ -1397,4 +1395,3 @@ fn propagate_has_dynamic_exports(
   invalidate_modules.remove(&target);
   has_dynamic_exports
 }
-

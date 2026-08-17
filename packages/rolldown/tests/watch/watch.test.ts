@@ -2967,6 +2967,41 @@ test.concurrent(
   },
 );
 
+// Native watcher smoke: the only test that exercises RecommendedFsWatcher
+// (FSEvents/inotify/ReadDirectoryChangesW) instead of the polling backend the
+// local watch() wrapper forces. Calls the raw _watch import so a wrapper
+// refactor can never silently flip it back to polling. Asserts only the
+// rebuilt output, never the watchChange event kind: macOS FSEvents coalesces
+// flags, so an in-place write is routinely reported as "create".
+test.concurrent(
+  'native watcher (usePolling: false) rebuilds on file change',
+  { retry: TEST_RETRY, timeout: TEST_TIMEOUT },
+  async ({ task, expect, onTestFinished }) => {
+    const retryCount = task.result?.retryCount ?? 0;
+    const { input, output } = createTestInputAndOutput('watch-native-smoke', retryCount);
+    const watcher = _watch({
+      input,
+      cwd: path.dirname(input),
+      output: { dir: path.join(path.dirname(input), 'dist') },
+      // (usePolling: false, useDebounce: false) selects the native
+      // RecommendedFsWatcher — the production default — stated explicitly so
+      // the smoke survives any change to library defaults.
+      watch: { watcher: { usePolling: false, useDebounce: false } },
+    });
+    onTestFinished(async () => {
+      await watcher.close();
+    });
+    await waitBuildFinished(watcher);
+    expect(fs.readFileSync(output, 'utf-8')).toContain('console.log(1)');
+    await editFile(input, 'console.log(2)');
+    // Measured edit-to-rebuild p50 is ~17ms on FSEvents; 10s absorbs
+    // worst-case coalescing stalls on loaded CI runners.
+    await expect
+      .poll(() => fs.readFileSync(output, 'utf-8'), { timeout: 10_000, interval: 100 })
+      .toContain('console.log(2)');
+  },
+);
+
 function createTestInputAndOutput(testLabel: string, retryCount: number, content?: string) {
   const uniqueId = crypto.randomUUID().slice(0, 8);
   const dirname = `${testLabel}-${uniqueId}-retry${retryCount}`;

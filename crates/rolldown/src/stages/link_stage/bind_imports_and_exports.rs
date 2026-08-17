@@ -12,7 +12,10 @@ use rolldown_common::{
   OutputFormat, ResolvedExport, Specifier, StmtInfos, SymbolOrMemberExprRef, SymbolRef,
   SymbolRefDb, SymbolRefFlags,
 };
-use rolldown_error::{AmbiguousExternalNamespaceModule, BuildDiagnostic, Diagnostics};
+use rolldown_error::{
+  AmbiguousExternalNamespaceModule, BuildDiagnostic, Diagnostics, EventKindSwitcher,
+  NamespaceConflictExporter,
+};
 #[cfg(not(target_family = "wasm"))]
 use rolldown_utils::rayon::IndexedParallelIterator;
 use rolldown_utils::{
@@ -296,10 +299,97 @@ impl LinkStage<'_> {
       meta.sorted_and_non_ambiguous_resolved_exports =
         FxIndexMap::from_iter(sorted_and_non_ambiguous_resolved_exports);
     });
+    if self.options.checks.contains(EventKindSwitcher::NamespaceConflict) {
+      self.detect_namespace_conflicts();
+    }
     self.record_namespace_consumed_star_reexport_paths();
     self.update_cjs_module_meta();
     self.resolve_member_expr_refs(&side_effects_modules, &normal_symbol_exports_chain_map);
     self.normal_symbol_exports_chain_map = normal_symbol_exports_chain_map;
+  }
+
+  fn detect_namespace_conflicts(&mut self) {
+    let mut conflicts: FxHashMap<(CompactStr, Vec<SymbolRef>), (u32, ModuleIdx)> =
+      FxHashMap::default();
+    for (module_idx, meta) in self.metas.iter_enumerated() {
+      if meta.resolved_exports.len() == meta.sorted_and_non_ambiguous_resolved_exports.len() {
+        continue;
+      }
+      let Module::Normal(module) = &self.module_table[module_idx] else {
+        continue;
+      };
+      for (export_name, resolved_export) in &meta.resolved_exports {
+        let Some(potentially_ambiguous_symbol_refs) =
+          &resolved_export.potentially_ambiguous_symbol_refs
+        else {
+          continue;
+        };
+        let mut canonical_refs = std::iter::once(resolved_export.symbol_ref)
+          .chain(potentially_ambiguous_symbol_refs.iter().copied())
+          .map(|symbol_ref| self.symbols.canonical_ref_for(symbol_ref))
+          .collect::<Vec<_>>();
+        canonical_refs.sort_unstable();
+        canonical_refs.dedup();
+        if canonical_refs.len() < 2 {
+          continue;
+        }
+        let all_bound_local = canonical_refs.iter().all(|canonical_ref| {
+          match &self.module_table[canonical_ref.owner] {
+            Module::Normal(owner) => !owner.named_imports.contains_key(canonical_ref),
+            Module::External(_) => false,
+          }
+        });
+        if !all_bound_local {
+          continue;
+        }
+        let candidate = (module.exec_order, module_idx);
+        conflicts
+          .entry((export_name.clone(), canonical_refs))
+          .and_modify(|best| *best = (*best).min(candidate))
+          .or_insert(candidate);
+      }
+    }
+
+    let mut conflicts = conflicts.into_iter().collect::<Vec<_>>();
+    conflicts.sort_unstable_by(|((a_name, _), a_best), ((b_name, _), b_best)| {
+      a_best.cmp(b_best).then_with(|| a_name.cmp(b_name))
+    });
+    for ((export_name, _), (_, module_idx)) in conflicts {
+      let Module::Normal(module) = &self.module_table[module_idx] else {
+        continue;
+      };
+      let resolved_export = &self.metas[module_idx].resolved_exports[&export_name];
+      let exporters = std::iter::once(resolved_export.symbol_ref)
+        .chain(
+          resolved_export
+            .potentially_ambiguous_symbol_refs
+            .iter()
+            .flat_map(|refs| refs.iter().copied()),
+        )
+        .filter_map(|symbol_ref| {
+          let owner = self.module_table[symbol_ref.owner].as_normal()?;
+          let named_export = owner.named_exports.get(&export_name)?;
+          Some(NamespaceConflictExporter {
+            source: owner.source.clone(),
+            module_id: owner.id.to_string(),
+            stable_id: owner.stable_id.to_string(),
+            span_of_identifier: named_export.span,
+          })
+        })
+        .collect::<Vec<_>>();
+      if exporters.len() < 2 {
+        continue;
+      }
+      self.diagnostics.push(
+        BuildDiagnostic::namespace_conflict(
+          export_name.to_string(),
+          module.id.to_string(),
+          module.stable_id.to_string(),
+          exporters,
+        )
+        .with_severity_warning(),
+      );
+    }
   }
 
   /// Update the metadata of CommonJS modules.
@@ -1101,6 +1191,7 @@ impl BindImportsAndExportsContext<'_> {
           imported_as: *imported_as_ref,
         },
       );
+
       tracing::trace!("Got match result {:?}", ret);
       match ret {
         MatchImportKind::Cycle { importer, imported } => {

@@ -190,4 +190,10 @@ export interface ChecksOptions {
    * @default true
    * */
   sourcemapBroken?: boolean;
+
+  /**
+   * Whether to emit warnings when multiple star re-exports provide the same name from different modules.
+   * @default true
+   * */
+  namespaceConflict?: boolean;
 }

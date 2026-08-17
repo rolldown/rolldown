@@ -1,6 +1,27 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
 ---
+# warnings
+
+## NAMESPACE_CONFLICT
+
+```text
+[NAMESPACE_CONFLICT] Conflicting namespaces: "bridge.js" re-exports "collision" from one of the modules "common-a.js" and "common-b.js" (will be ignored).
+   ╭─[ common-a.js:6:14 ]
+   │
+ 6 │ export const collision = /* @__PURE__ */ mark();
+   │              ────┬────  
+   │                  ╰────── One matching export is here.
+   │
+   ├─[ common-b.js:6:14 ]
+   │
+ 6 │ export const collision = /* @__PURE__ */ mark();
+   │              ────┬────  
+   │                  ╰────── One matching export is here.
+───╯
+
+```
+
 # Assets
 
 ## main.js
@@ -101,6 +122,27 @@ export { __exportAll as n, __esmMin as t };
 ```
 
 # Variant: on-demand: [on_demand_wrapping: true]
+
+## warnings
+
+### NAMESPACE_CONFLICT
+
+```text
+[NAMESPACE_CONFLICT] Conflicting namespaces: "bridge.js" re-exports "collision" from one of the modules "common-a.js" and "common-b.js" (will be ignored).
+   ╭─[ common-a.js:6:14 ]
+   │
+ 6 │ export const collision = /* @__PURE__ */ mark();
+   │              ────┬────  
+   │                  ╰────── One matching export is here.
+   │
+   ├─[ common-b.js:6:14 ]
+   │
+ 6 │ export const collision = /* @__PURE__ */ mark();
+   │              ────┬────  
+   │                  ╰────── One matching export is here.
+───╯
+
+```
 
 ## Assets
 

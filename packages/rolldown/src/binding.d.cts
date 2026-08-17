@@ -2011,6 +2011,7 @@ export interface BindingChecksOptions {
   ineffectiveDynamicImport?: boolean
   largeBarrelModules?: boolean
   sourcemapBroken?: boolean
+  namespaceConflict?: boolean
 }
 
 export interface BindingChunkImportMap {

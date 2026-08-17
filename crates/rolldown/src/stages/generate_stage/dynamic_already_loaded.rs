@@ -336,7 +336,12 @@ impl GenerateStage<'_> {
   // with no liveness gate — `used_symbol_refs` still grows after this pass (namespace-extraction
   // and facade-elimination replays), so an export dead here can be live at emission. A facade's
   // own service edges cannot close a cycle (facades have zero static in-degree), so attributing
-  // them to the hosting atom only over-approximates.
+  // them to the hosting atom only over-approximates. The price of the ungated edges is that a
+  // dead entry re-export can conservatively veto a fold that would have been acyclic — a missed
+  // optimization, accepted over trusting a liveness snapshot the replays may outgrow. The
+  // liveness-growth immunity is scoped to service edges: the base prediction's ambiguous branch
+  // (`referenced_symbol_owners`) still reads decision-time statement inclusion, a narrower
+  // pre-existing skew the replays can also outgrow.
   fn compute_atom_dependencies(
     &self,
     atoms: &[ChunkAtom],

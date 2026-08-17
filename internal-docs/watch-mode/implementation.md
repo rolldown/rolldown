@@ -152,7 +152,7 @@ Data flow:
 
 - `Watcher` only holds lifecycle state (`tx`, the close signal, and `coordinator_state`) — lightweight, no bundler access. The state retains the boxed coordinator future until runtime submission succeeds, and restores it on rejection. `publish_close()` sets the atomic flag, notification, and actor message without spawning; N-API calls it synchronously before returning the close promise so a JavaScript listener cannot return into a new build before close is visible. The async `close()` future enters through the selected runtime, starts a not-yet-running coordinator, and awaits its shared result.
 - `WatchCoordinator` owns ALL mutable state. No external mutation.
-- ONE `DynFsWatcher` exists per config group, shared by that group's `WatchTask`s via `Arc<std::sync::Mutex<DynFsWatcher>>`. A save of a file watched by several outputs of one config is therefore delivered exactly once, carrying the group identity, instead of racing per-output on independent notify streams (the pre-group design behind [#10613](https://github.com/rolldown/rolldown/issues/10613)). Watched-path registration stays per task (`watched_files`); notify path adds are idempotent, so members may register the same path.
+- ONE `DynFsWatcher` exists per config group, shared by that group's `WatchTask`s via `Arc<std::sync::Mutex<DynFsWatcher>>`. A save of a file watched by several outputs of one config is therefore delivered exactly once, carrying the group identity, instead of racing per-output on independent notify streams (the pre-group design behind [#10613](https://github.com/rolldown/rolldown/issues/10613)). Watched-path membership stays per task (`watched_files`), but backend registration is deduplicated group-wide through a shared registered-path set (`group_registered_files: Arc<FxDashSet<ArcStr>>`, created next to the shared watcher in `create_tasks`): a path a sibling member already committed is adopted into the member's own `watched_files` without touching the backend. Members must not re-register a sibling's path — on macOS a `paths_mut()` transaction stops the group's shared FSEvents stream, drops the events buffered meanwhile, and restarts from "now" on commit, so a duplicate registration would blind the whole group.
 - Bundler is `Arc<TokioMutex<>>` (where `TokioMutex` aliases `async_lock::Mutex`, not tokio's) because event data structs carry a clone for consumer access (e.g. `BUNDLE_END.result`).
 
 ### Three-Layer Stack
@@ -310,13 +310,22 @@ File change detected by the config group's shared FsWatcher
             - each full build owns independent plugin-driver and emitted-file
               state; a retained earlier result stays valid until its own close
             - update_watch_files() again with any render-phase files
-              - every candidate addition is attempted and every `paths_mut()`
-                transaction is committed, including after an individual add
-                fails or when every path is already registered; the macOS
-                FSEvents backend stops delivery when the transaction opens and
-                restarts on commit
-              - successfully added paths are published only after commit
-                succeeds; add and commit diagnostics are aggregated
+              - candidates are partitioned before the watcher is locked: paths
+                already in the task's `watched_files` are skipped, paths a
+                sibling committed to the group's shared backend (tracked in
+                `group_registered_files`) are adopted into the task set with
+                no backend call, and only group-new paths reach `new_files`
+              - if `new_files` is empty (all-registered or adoption-only), the
+                function returns before locking the watcher — no `paths_mut()`
+                transaction opens at all; the macOS FSEvents backend stops
+                delivery for the whole group when a transaction opens and
+                restarts from "now" on commit, dropping buffered events
+              - an opened transaction attempts every group-new addition and is
+                always committed, including after an individual add fails
+              - added paths are published to BOTH the task set and the group
+                set only after commit succeeds; on failure neither set gains
+                the path, so the next build attempt retries the registration;
+                add and commit diagnostics are aggregated
             - if either registration operation fails, close the unreported
               bundle attempt and retry the task after 25ms, 100ms, then 250ms
               without emitting another `BUNDLE_START`
@@ -515,15 +524,18 @@ Configured via `WatcherOptions`, fires **immediately** on file change (before de
 ## File Watching
 
 - After each build, `bundler.watch_files()` returns the current set.
-- `WatchTask::update_watch_files()` diffs against the task's own `watched_files` set — new files are added to the config group's shared `DynFsWatcher`. Sibling outputs may add the same path; notify registration is idempotent.
+- `WatchTask::update_watch_files()` diffs against the task's own `watched_files` set and the group-level `group_registered_files` set — a path a sibling output already registered on the config group's shared `DynFsWatcher` is adopted into the task's own set without a backend call; only paths new to the whole group are added to the backend.
 - `include`/`exclude` patterns filter which files are watched (via `pattern_filter`).
 - Files are watched **non-recursively** (individual file watches).
 - Batch operations: `fs_watcher.paths_mut()` returns a guard for batching adds, committed via `.commit()`.
-- Opening a path transaction may pause event delivery until commit. Every eligible candidate is
-  attempted and every transaction is committed, including when an individual `PathsMut::add`
-  fails or the batch is empty. If commit succeeds, only paths whose additions succeeded enter
-  `watched_files`; if commit fails, none of the staged paths are published. Add and commit
-  diagnostics are aggregated when both occur.
+- Opening a path transaction may pause event delivery until commit — on macOS it stops the
+  group's shared FSEvents stream and the commit restarts it from "now", dropping events buffered
+  in between. A batch with no group-new paths (all-registered or adoption-only) therefore returns
+  before locking the watcher and never opens a transaction. An opened transaction attempts every
+  group-new candidate and is always committed, including when an individual `PathsMut::add`
+  fails. If commit succeeds, only paths whose additions succeeded enter `watched_files` and
+  `group_registered_files`; if commit fails, neither set gains any staged path, so the next build
+  retries the registration. Add and commit diagnostics are aggregated when both occur.
 - Any add or commit failure aborts that build attempt; neither is logged and skipped. The
   coordinator closes the unreported bundle handle and retries the whole task with
   25ms/100ms/250ms backoff inside the same public `BUNDLE_START` cycle. Close remains interruptible

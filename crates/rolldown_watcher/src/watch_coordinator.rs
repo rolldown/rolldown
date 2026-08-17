@@ -1,7 +1,9 @@
 use crate::event::WatchEvent;
 use crate::file_change_event::FileChangeEvent;
 use crate::handler::WatcherEventHandler;
-use crate::watch_task::{BuildOutcome, WatchTask, WatchTaskBuildError, WatchTaskIdx};
+use crate::watch_task::{
+  BuildOutcome, WatchGroupIdx, WatchTask, WatchTaskBuildError, WatchTaskIdx,
+};
 use crate::watcher::WatcherConfig;
 use crate::watcher_msg::WatcherMsg;
 use crate::watcher_state::WatcherState;
@@ -186,6 +188,12 @@ pub struct WatchCoordinator<H: WatcherEventHandler> {
   state: WatcherState,
   debounce_duration: Duration,
   tasks: IndexVec<WatchTaskIdx, WatchTask>,
+  /// Task membership of each config group. A `FileChanges` message carries a
+  /// group identity, and every member whose watch set contains a changed path
+  /// is marked, so one save covers all affected outputs of the config.
+  group_members: IndexVec<WatchGroupIdx, Vec<WatchTaskIdx>>,
+  /// Inverse of `group_members`: the config group each task belongs to.
+  group_of: IndexVec<WatchTaskIdx, WatchGroupIdx>,
   closed: Arc<AtomicBool>,
   close_notify: Arc<Event>,
   native_owned_close_identities: Arc<Mutex<Vec<u64>>>,
@@ -194,21 +202,36 @@ pub struct WatchCoordinator<H: WatcherEventHandler> {
 }
 
 impl<H: WatcherEventHandler> WatchCoordinator<H> {
+  #[expect(
+    clippy::too_many_arguments,
+    reason = "internal constructor with one call site per production path; \
+              every argument is a distinct coordinator-owned concern"
+  )]
   pub(crate) fn new(
     rx: mpsc::UnboundedReceiver<WatcherMsg>,
     handler: H,
     tasks: IndexVec<WatchTaskIdx, WatchTask>,
+    group_members: IndexVec<WatchGroupIdx, Vec<WatchTaskIdx>>,
     config: &WatcherConfig,
     closed: Arc<AtomicBool>,
     close_notify: Arc<Event>,
     native_owned_close_identities: Arc<Mutex<Vec<u64>>>,
   ) -> Self {
+    let mut group_of: IndexVec<WatchTaskIdx, WatchGroupIdx> =
+      tasks.iter().map(|_| WatchGroupIdx::from_usize(0)).collect();
+    for (group_index, members) in group_members.iter_enumerated() {
+      for &member in members {
+        group_of[member] = group_index;
+      }
+    }
     Self {
       rx,
       handler,
       state: WatcherState::Idle,
       debounce_duration: config.debounce_duration(),
       tasks,
+      group_members,
+      group_of,
       closed,
       close_notify,
       native_owned_close_identities,
@@ -250,8 +273,8 @@ impl<H: WatcherEventHandler> WatchCoordinator<H> {
         WatcherState::Idle => {
           let msg = self.rx.next().await;
           match msg {
-            Some(WatcherMsg::FileChanges { task_index, changes }) => {
-              self.process_file_changes(task_index, changes).await;
+            Some(WatcherMsg::FileChanges { group_index, changes }) => {
+              self.process_file_changes(group_index, changes).await;
             }
             Some(WatcherMsg::Close) | None => return,
           }
@@ -274,8 +297,8 @@ impl<H: WatcherEventHandler> WatchCoordinator<H> {
               }
             }
             DebounceWaitResult::Message(message) => match message {
-              Some(WatcherMsg::FileChanges { task_index, changes }) => {
-                self.process_file_changes(task_index, changes).await;
+              Some(WatcherMsg::FileChanges { group_index, changes }) => {
+                self.process_file_changes(group_index, changes).await;
               }
               Some(WatcherMsg::Close) | None => return,
             },
@@ -362,15 +385,16 @@ impl<H: WatcherEventHandler> WatchCoordinator<H> {
 
     // Step 5: Build each task that needs it.
     //
-    // One filesystem save fans out into one `FileChanges` message per task, and
-    // a 0ms debounce deadline can fire before the siblings arrive. Dispatching
-    // `End` with a sibling still queued would split one save into two rebuild
-    // envelopes, so before `End` the queue is drained and the build pass repeats
-    // while any task still needs a rebuild, keeping the save in one Start..End
-    // envelope.
+    // Within one config group a save is delivered once and marks every
+    // affected member, but two configs watching the same file still receive
+    // independent deliveries, and a 0ms debounce deadline can fire before the
+    // sibling group's message arrives. Dispatching `End` with a sibling still
+    // queued would split one save into two rebuild envelopes, so before `End`
+    // the queue is drained and the build pass repeats while any task still
+    // needs a rebuild, keeping the save in one Start..End envelope.
     let mut dispatched_changes = changes;
-    let mut rebuilt_tasks: IndexVec<WatchTaskIdx, bool> =
-      self.tasks.iter().map(|_| false).collect();
+    let mut rebuilt_groups: IndexVec<WatchGroupIdx, bool> =
+      self.group_members.iter().map(|_| false).collect();
     loop {
       for task_index in self.tasks.indices() {
         if !self.tasks[task_index].needs_rebuild {
@@ -385,9 +409,10 @@ impl<H: WatcherEventHandler> WatchCoordinator<H> {
         let Some(outcome) = self.build_task_with_registration_retries(task_index).await else {
           return false;
         };
-        // Rebuilt inside this envelope: any later message from this task is a
-        // new filesystem event, not its own report of the save being handled.
-        rebuilt_tasks[task_index] = true;
+        // The group rebuilt inside this envelope: any later message from its
+        // shared watch stream is a new filesystem event, not its own report of
+        // the save being handled.
+        rebuilt_groups[self.group_of[task_index]] = true;
         match outcome {
           BuildOutcome::Success(data) => {
             if !self.dispatch_event(WatchEvent::BundleEnd(data)).await {
@@ -404,13 +429,13 @@ impl<H: WatcherEventHandler> WatchCoordinator<H> {
         }
       }
 
-      // Paths reported by a task that already rebuilt in this envelope are new
-      // saves, not same-save sibling reports, so they must be re-dispatched
-      // below even when their (path, kind) was already reported.
+      // Paths reported by a group that already rebuilt in this envelope are
+      // new saves, not same-save sibling reports, so they must be
+      // re-dispatched below even when their (path, kind) was already reported.
       let mut new_save_paths = FxIndexSet::default();
       if !self
-        .drain_buffered_events_observing(|task_index, changes| {
-          if rebuilt_tasks[task_index] {
+        .drain_buffered_events_observing(|group_index, changes| {
+          if rebuilt_groups[group_index] {
             new_save_paths.extend(changes.iter().map(|change| change.path.clone()));
           }
         })
@@ -542,8 +567,8 @@ impl<H: WatcherEventHandler> WatchCoordinator<H> {
         () = timeout => return true,
       };
       match msg {
-        Some(WatcherMsg::FileChanges { task_index, changes }) => {
-          self.process_file_changes(task_index, changes).await;
+        Some(WatcherMsg::FileChanges { group_index, changes }) => {
+          self.process_file_changes(group_index, changes).await;
         }
         Some(WatcherMsg::Close) | None => return false,
       }
@@ -614,19 +639,30 @@ impl<H: WatcherEventHandler> WatchCoordinator<H> {
     }
   }
 
-  /// Process file changes: call on_invalidate per file, mark task for rebuild,
-  /// then batch all changes into a single state transition.
+  /// Process file changes for a config group: mark EVERY group member whose
+  /// watch set contains the changed path (with its on_invalidate callback),
+  /// then batch all effective changes into a single state transition. Group
+  /// scoped marking is what keeps one save inside one rebuild envelope: the
+  /// coordinator acts on watch-set knowledge it already owns instead of
+  /// waiting for per-output notify deliveries that may straddle `End`.
   async fn process_file_changes(
     &mut self,
-    task_index: WatchTaskIdx,
+    group_index: WatchGroupIdx,
     changes: Vec<FileChangeEvent>,
   ) {
     let mut effective_changes: Vec<FileChangeEvent> = Vec::new();
 
-    if let Some(task) = self.tasks.get_mut(task_index) {
+    if let Some(members) = self.group_members.get(group_index) {
       for change in changes {
-        if task.mark_needs_rebuild(&change.path) {
-          task.call_on_invalidate(&change.path).await;
+        let mut effective = false;
+        for &member in members {
+          let task = &mut self.tasks[member];
+          if task.mark_needs_rebuild(&change.path) {
+            task.call_on_invalidate(&change.path).await;
+            effective = true;
+          }
+        }
+        if effective {
           effective_changes.push(change);
         }
       }
@@ -647,19 +683,19 @@ impl<H: WatcherEventHandler> WatchCoordinator<H> {
   }
 
   /// Like [`Self::drain_buffered_events`], but lets the caller observe each
-  /// drained `FileChanges` message with its task provenance, which the state
+  /// drained `FileChanges` message with its group provenance, which the state
   /// machine's path-keyed merge discards.
   async fn drain_buffered_events_observing(
     &mut self,
-    mut observe: impl FnMut(WatchTaskIdx, &[FileChangeEvent]),
+    mut observe: impl FnMut(WatchGroupIdx, &[FileChangeEvent]),
   ) -> bool {
     loop {
       // Buffered messages are still handed out after close, so drain until
       // `Err(_)` — which covers both "empty but open" and "closed and drained".
       match self.rx.try_recv() {
-        Ok(WatcherMsg::FileChanges { task_index, changes }) => {
-          observe(task_index, &changes);
-          self.process_file_changes(task_index, changes).await;
+        Ok(WatcherMsg::FileChanges { group_index, changes }) => {
+          observe(group_index, &changes);
+          self.process_file_changes(group_index, changes).await;
         }
         Ok(WatcherMsg::Close) => {
           return false;
@@ -758,6 +794,19 @@ mod tests {
   use tokio::sync::Notify;
 
   static NEXT_TEST_DIR: AtomicUsize = AtomicUsize::new(0);
+
+  /// Group membership for tasks that each form their own config group
+  /// (the multi-config layout).
+  fn singleton_groups(task_count: usize) -> IndexVec<WatchGroupIdx, Vec<WatchTaskIdx>> {
+    (0..task_count).map(|index| vec![WatchTaskIdx::from_usize(index)]).collect()
+  }
+
+  /// Group membership for tasks that are all outputs of ONE config group.
+  fn one_group(task_count: usize) -> IndexVec<WatchGroupIdx, Vec<WatchTaskIdx>> {
+    let mut groups = IndexVec::new();
+    groups.push((0..task_count).map(WatchTaskIdx::from_usize).collect());
+    groups
+  }
 
   struct TestDir(PathBuf);
 
@@ -959,7 +1008,7 @@ mod tests {
         },
         vec![Arc::new(CloseProbePlugin { close_bundle_calls: Arc::clone(close_bundle_calls) })],
       ),
-      fs_watcher,
+      Arc::new(Mutex::new(fs_watcher)),
       closed,
     )
     .expect("create watch task");
@@ -988,6 +1037,7 @@ mod tests {
         close_calls: Arc::clone(&close_calls),
       },
       tasks,
+      singleton_groups(1),
       &WatcherConfig::default(),
       Arc::clone(&closed),
       Arc::clone(&close_notify),
@@ -1000,8 +1050,9 @@ mod tests {
       .expect("coordinator should recover and finish the initial build");
     assert_eq!(
       commit_attempts.load(Ordering::SeqCst),
-      3,
-      "the retry commits both scan and render registration transactions"
+      2,
+      "the failed scan transaction and its retry commit; the post-render pass \
+       has nothing new to register and must not open a transaction"
     );
     {
       let commit_times = commit_times.lock().expect("commit times lock");
@@ -1036,7 +1087,7 @@ mod tests {
   async fn queued_change_wins_when_debounce_timeout_is_already_ready() {
     let (tx, mut rx) = mpsc::unbounded();
     tx.unbounded_send(WatcherMsg::FileChanges {
-      task_index: WatchTaskIdx::from_usize(0),
+      group_index: WatchGroupIdx::from_usize(0),
       changes: vec![FileChangeEvent::new("main.js".to_string(), WatcherChangeKind::Update)],
     })
     .expect("queue file change");
@@ -1068,6 +1119,7 @@ mod tests {
         close_calls: Arc::clone(&close_calls),
       },
       tasks,
+      singleton_groups(1),
       &WatcherConfig::default(),
       Arc::clone(&closed),
       Arc::clone(&close_notify),
@@ -1081,8 +1133,9 @@ mod tests {
     assert_eq!(add_attempts.load(Ordering::SeqCst), 2);
     assert_eq!(
       commit_attempts.load(Ordering::SeqCst),
-      3,
-      "the failed add attempt and both retry transactions must be committed"
+      2,
+      "the failed add attempt and its retry commit; the post-render pass has \
+       nothing new to register and must not open a transaction"
     );
     assert_eq!(
       *events.lock().expect("events lock"),
@@ -1127,6 +1180,7 @@ mod tests {
         close_calls: Arc::clone(&close_calls),
       },
       tasks,
+      singleton_groups(1),
       &WatcherConfig::default(),
       Arc::clone(&closed),
       Arc::clone(&close_notify),
@@ -1177,6 +1231,7 @@ mod tests {
         close_calls: Arc::clone(&close_calls),
       },
       tasks,
+      singleton_groups(1),
       &WatcherConfig::default(),
       closed,
       close_notify,
@@ -1303,14 +1358,14 @@ mod tests {
     }
   }
 
-  /// One filesystem save fanning out into two per-task `FileChanges` messages:
-  /// the sibling's message is queued during the rebuild's BundleEnd dispatch,
-  /// strictly before the coordinator can dispatch `End`.
+  /// One filesystem save fanning out into two per-config-group `FileChanges`
+  /// messages: the sibling group's message is queued during the rebuild's
+  /// BundleEnd dispatch, strictly before the coordinator can dispatch `End`.
   struct SameSaveInjectingHandler {
     events: Arc<Mutex<Vec<String>>>,
     tx: mpsc::UnboundedSender<WatcherMsg>,
     inject_path: String,
-    inject_task_index: WatchTaskIdx,
+    inject_group_index: WatchGroupIdx,
     injected: AtomicBool,
     end_count: Arc<AtomicUsize>,
     initial_end: Arc<Notify>,
@@ -1326,7 +1381,7 @@ mod tests {
         self
           .tx
           .unbounded_send(WatcherMsg::FileChanges {
-            task_index: self.inject_task_index,
+            group_index: self.inject_group_index,
             changes: vec![FileChangeEvent::new(
               self.inject_path.clone(),
               WatcherChangeKind::Update,
@@ -1414,7 +1469,7 @@ mod tests {
         self
           .tx
           .unbounded_send(WatcherMsg::FileChanges {
-            task_index: WatchTaskIdx::from_usize(0),
+            group_index: WatchGroupIdx::from_usize(0),
             changes: vec![FileChangeEvent::new(
               self.inject_path.clone(),
               WatcherChangeKind::Update,
@@ -1478,7 +1533,7 @@ mod tests {
         },
         vec![Arc::new(WatchChangeCountingPlugin { count: Arc::clone(&watch_change_count) })],
       ),
-      fs_watcher,
+      Arc::new(Mutex::new(fs_watcher)),
       &closed,
     )
     .expect("create watch task");
@@ -1500,6 +1555,7 @@ mod tests {
         rebuild_end: Arc::clone(&rebuild_end),
       },
       tasks,
+      singleton_groups(1),
       &WatcherConfig::default(),
       Arc::clone(&closed),
       Arc::clone(&close_notify),
@@ -1514,7 +1570,7 @@ mod tests {
     // Save #1. Save #2 is queued by the handler while save #1's rebuild
     // BundleEnd is being dispatched.
     tx.unbounded_send(WatcherMsg::FileChanges {
-      task_index: WatchTaskIdx::from_usize(0),
+      group_index: WatchGroupIdx::from_usize(0),
       changes: vec![FileChangeEvent::new(input_str.clone(), WatcherChangeKind::Update)],
     })
     .expect("send first file change");
@@ -1570,6 +1626,11 @@ mod tests {
     );
   }
 
+  /// Two CONFIGS (two singleton groups) watching the same file: the sibling
+  /// config's independent delivery lands mid-envelope and must not split the
+  /// save into two rebuild envelopes. Within one config group this race is
+  /// structurally impossible (one shared watch stream marks every member), so
+  /// this pins the remaining cross-config drain behavior.
   #[tokio::test(flavor = "multi_thread")]
   async fn same_save_sibling_message_stays_in_one_rebuild_envelope() {
     let test_dir = TestDir::new();
@@ -1596,7 +1657,7 @@ mod tests {
           },
           vec![],
         ),
-        fs_watcher,
+        Arc::new(Mutex::new(fs_watcher)),
         &closed,
       )
       .expect("create watch task");
@@ -1613,13 +1674,14 @@ mod tests {
         events: Arc::clone(&events),
         tx: tx.clone(),
         inject_path: input_str.clone(),
-        inject_task_index: WatchTaskIdx::from_usize(1),
+        inject_group_index: WatchGroupIdx::from_usize(1),
         injected: AtomicBool::new(false),
         end_count: Arc::clone(&end_count),
         initial_end: Arc::clone(&initial_end),
         rebuild_end: Arc::clone(&rebuild_end),
       },
       tasks,
+      singleton_groups(2),
       &WatcherConfig::default(),
       Arc::clone(&closed),
       Arc::clone(&close_notify),
@@ -1631,10 +1693,11 @@ mod tests {
       .await
       .expect("initial build should finish");
 
-    // The first per-task message of the save. Its sibling for task 1 is queued
-    // by the handler while task 0's rebuild BundleEnd is being dispatched.
+    // The first per-config message of the save. Its sibling for config group 1
+    // is queued by the handler while group 0's rebuild BundleEnd is being
+    // dispatched.
     tx.unbounded_send(WatcherMsg::FileChanges {
-      task_index: WatchTaskIdx::from_usize(0),
+      group_index: WatchGroupIdx::from_usize(0),
       changes: vec![FileChangeEvent::new(input_str.clone(), WatcherChangeKind::Update)],
     })
     .expect("send first file change");
@@ -1676,5 +1739,318 @@ mod tests {
       ]
     );
     assert_eq!(end_count.load(Ordering::SeqCst), 2);
+  }
+
+  /// Records the full event stream and distinguishes the initial build's `End`
+  /// from the rebuild's `End`. Injects nothing.
+  struct EnvelopeRecordingHandler {
+    events: Arc<Mutex<Vec<String>>>,
+    end_count: Arc<AtomicUsize>,
+    initial_end: Arc<Notify>,
+    rebuild_end: Arc<Notify>,
+  }
+
+  impl WatcherEventHandler for EnvelopeRecordingHandler {
+    async fn on_event(&self, event: WatchEvent) -> anyhow::Result<()> {
+      self.events.lock().expect("events lock").push(event.as_str().to_string());
+      if matches!(event, WatchEvent::End) {
+        let ends = self.end_count.fetch_add(1, Ordering::SeqCst) + 1;
+        if ends == 1 {
+          self.initial_end.notify_one();
+        } else {
+          self.rebuild_end.notify_one();
+        }
+      }
+      Ok(())
+    }
+
+    async fn on_change(&self, _path: &str, _kind: WatcherChangeKind) -> anyhow::Result<()> {
+      self.events.lock().expect("events lock").push("CHANGE".to_string());
+      Ok(())
+    }
+
+    async fn on_restart(&self) -> anyhow::Result<()> {
+      self.events.lock().expect("events lock").push("RESTART".to_string());
+      Ok(())
+    }
+
+    async fn on_close(&self) -> anyhow::Result<()> {
+      self.events.lock().expect("events lock").push("CLOSE".to_string());
+      Ok(())
+    }
+  }
+
+  /// Fails every build after the first one succeeded, turning a sibling's
+  /// rebuild into an `ERROR` outcome.
+  #[derive(Debug)]
+  struct FailAfterFirstBuildPlugin {
+    builds: Arc<AtomicUsize>,
+  }
+
+  impl plugin::Plugin for FailAfterFirstBuildPlugin {
+    fn name(&self) -> Cow<'static, str> {
+      "fail-after-first-build".into()
+    }
+
+    fn register_hook_usage(&self) -> plugin::HookUsage {
+      plugin::HookUsage::BuildStart
+    }
+
+    async fn build_start(
+      &self,
+      _ctx: &plugin::PluginContext,
+      _args: &plugin::HookBuildStartArgs<'_>,
+    ) -> plugin::HookNoopReturn {
+      if self.builds.fetch_add(1, Ordering::SeqCst) >= 1 {
+        anyhow::bail!("intentional sibling rebuild failure");
+      }
+      Ok(())
+    }
+  }
+
+  struct GroupEnvelopeFixture {
+    tx: mpsc::UnboundedSender<WatcherMsg>,
+    closed: Arc<AtomicBool>,
+    close_notify: Arc<Event>,
+    events: Arc<Mutex<Vec<String>>>,
+    end_count: Arc<AtomicUsize>,
+    initial_end: Arc<Notify>,
+    rebuild_end: Arc<Notify>,
+    handle: tokio::task::JoinHandle<CoordinatorCloseResult>,
+  }
+
+  /// Spawn a coordinator whose tasks all belong to ONE config group. Each
+  /// entry of `task_inputs` is `(input_path, out_file, plugins)`.
+  fn spawn_one_group_coordinator(
+    task_inputs: Vec<(PathBuf, &str, Vec<plugin::__inner::SharedPluginable>)>,
+  ) -> GroupEnvelopeFixture {
+    let (tx, rx) = mpsc::unbounded();
+    let closed = Arc::new(AtomicBool::new(false));
+    let close_notify = Arc::new(Event::new());
+
+    let mut tasks = IndexVec::new();
+    for (input, out_file, plugins) in task_inputs {
+      let cwd = input.parent().expect("input has parent").to_path_buf();
+      let fs_watcher: DynFsWatcher = Box::new(NoopWatcher);
+      let task = WatchTask::new(
+        BundlerConfig::new(
+          BundlerOptions {
+            cwd: Some(cwd),
+            input: Some(vec![input.to_string_lossy().into_owned().into()]),
+            file: Some(out_file.into()),
+            ..Default::default()
+          },
+          plugins,
+        ),
+        Arc::new(Mutex::new(fs_watcher)),
+        &closed,
+      )
+      .expect("create watch task");
+      tasks.push(task);
+    }
+    let task_count = tasks.len();
+
+    let events = Arc::new(Mutex::new(Vec::new()));
+    let end_count = Arc::new(AtomicUsize::new(0));
+    let initial_end = Arc::new(Notify::new());
+    let rebuild_end = Arc::new(Notify::new());
+    let coordinator = WatchCoordinator::new(
+      rx,
+      EnvelopeRecordingHandler {
+        events: Arc::clone(&events),
+        end_count: Arc::clone(&end_count),
+        initial_end: Arc::clone(&initial_end),
+        rebuild_end: Arc::clone(&rebuild_end),
+      },
+      tasks,
+      one_group(task_count),
+      &WatcherConfig::default(),
+      Arc::clone(&closed),
+      Arc::clone(&close_notify),
+      Arc::default(),
+    );
+    let handle = tokio::spawn(coordinator.run());
+    GroupEnvelopeFixture {
+      tx,
+      closed,
+      close_notify,
+      events,
+      end_count,
+      initial_end,
+      rebuild_end,
+      handle,
+    }
+  }
+
+  async fn run_one_group_save(
+    fixture: GroupEnvelopeFixture,
+    save_path: String,
+  ) -> (Vec<String>, usize) {
+    tokio::time::timeout(Duration::from_secs(30), fixture.initial_end.notified())
+      .await
+      .expect("initial build should finish");
+
+    // ONE message for the save: the config group's shared watch stream
+    // delivers a save exactly once, carrying the group identity.
+    fixture
+      .tx
+      .unbounded_send(WatcherMsg::FileChanges {
+        group_index: WatchGroupIdx::from_usize(0),
+        changes: vec![FileChangeEvent::new(save_path, WatcherChangeKind::Update)],
+      })
+      .expect("send file change");
+
+    tokio::time::timeout(Duration::from_secs(30), fixture.rebuild_end.notified())
+      .await
+      .expect("rebuild should finish");
+
+    fixture.closed.store(true, Ordering::Relaxed);
+    fixture.close_notify.notify(usize::MAX);
+    fixture.tx.unbounded_send(WatcherMsg::Close).expect("send close");
+    tokio::time::timeout(Duration::from_secs(30), fixture.handle)
+      .await
+      .expect("coordinator should close")
+      .expect("coordinator task should not panic")
+      .expect("coordinator should close successfully");
+
+    let events = fixture.events.lock().expect("events lock").clone();
+    (events, fixture.end_count.load(Ordering::SeqCst))
+  }
+
+  /// Deterministic pin for rolldown#10613: ONE save of a file watched by both
+  /// output tasks of one config produces ONE rebuild envelope covering both
+  /// outputs. The pre-fix per-task watcher fan-out cannot guarantee this: the
+  /// envelope could complete between the two independent deliveries, emitting
+  /// `End` with the sibling stale and a second envelope after it.
+  #[tokio::test(flavor = "multi_thread")]
+  async fn single_save_rebuilds_every_group_member_in_one_envelope() {
+    let test_dir = TestDir::new();
+    let input = test_dir.0.join("main.js");
+    fs::write(&input, "export const value = 1;").expect("write input");
+    let input = fs::canonicalize(input).expect("canonicalize input");
+    let input_str = input.to_string_lossy().into_owned();
+
+    let fixture = spawn_one_group_coordinator(vec![
+      (input.clone(), "dist0/out.js", vec![]),
+      (input.clone(), "dist1/out.js", vec![]),
+    ]);
+    let (events, end_count) = run_one_group_save(fixture, input_str).await;
+
+    assert_eq!(
+      events,
+      [
+        // Initial build: both outputs in one envelope.
+        "START",
+        "BUNDLE_START",
+        "BUNDLE_END",
+        "BUNDLE_START",
+        "BUNDLE_END",
+        "END",
+        // The save's single group-scoped message marks both members, so the
+        // rebuild envelope covers both outputs before `End`.
+        "CHANGE",
+        "RESTART",
+        "START",
+        "BUNDLE_START",
+        "BUNDLE_END",
+        "BUNDLE_START",
+        "BUNDLE_END",
+        "END",
+        "CLOSE",
+      ]
+    );
+    assert_eq!(end_count, 2);
+  }
+
+  /// A group-scoped delivery still respects each member's own watch set: a
+  /// change hitting only one member rebuilds only that member, and `End`
+  /// still fires for the envelope.
+  #[tokio::test(flavor = "multi_thread")]
+  async fn group_change_hitting_one_member_rebuilds_only_that_member() {
+    let test_dir = TestDir::new();
+    let input_a = test_dir.0.join("a.js");
+    let input_b = test_dir.0.join("b.js");
+    fs::write(&input_a, "export const a = 1;").expect("write input a");
+    fs::write(&input_b, "export const b = 1;").expect("write input b");
+    let input_a = fs::canonicalize(input_a).expect("canonicalize input a");
+    let input_b = fs::canonicalize(input_b).expect("canonicalize input b");
+    let input_a_str = input_a.to_string_lossy().into_owned();
+
+    let fixture = spawn_one_group_coordinator(vec![
+      (input_a.clone(), "dist0/out.js", vec![]),
+      (input_b.clone(), "dist1/out.js", vec![]),
+    ]);
+    let (events, end_count) = run_one_group_save(fixture, input_a_str).await;
+
+    assert_eq!(
+      events,
+      [
+        // Initial build: both members.
+        "START",
+        "BUNDLE_START",
+        "BUNDLE_END",
+        "BUNDLE_START",
+        "BUNDLE_END",
+        "END",
+        // Only member 0 watches a.js: one BundleStart/BundleEnd pair, then
+        // `End` without waiting on the unaffected member.
+        "CHANGE",
+        "RESTART",
+        "START",
+        "BUNDLE_START",
+        "BUNDLE_END",
+        "END",
+        "CLOSE",
+      ]
+    );
+    assert_eq!(end_count, 2);
+  }
+
+  /// A sibling member failing mid-envelope reports `ERROR` in place of its
+  /// `BundleEnd`, and the envelope still terminates with `End` — no hang.
+  #[tokio::test(flavor = "multi_thread")]
+  async fn sibling_error_mid_envelope_still_emits_end() {
+    let test_dir = TestDir::new();
+    let input = test_dir.0.join("main.js");
+    fs::write(&input, "export const value = 1;").expect("write input");
+    let input = fs::canonicalize(input).expect("canonicalize input");
+    let input_str = input.to_string_lossy().into_owned();
+
+    let builds = Arc::new(AtomicUsize::new(0));
+    let fixture = spawn_one_group_coordinator(vec![
+      (input.clone(), "dist0/out.js", vec![]),
+      (
+        input.clone(),
+        "dist1/out.js",
+        vec![Arc::new(FailAfterFirstBuildPlugin { builds: Arc::clone(&builds) })],
+      ),
+    ]);
+    let (events, end_count) = run_one_group_save(fixture, input_str).await;
+
+    assert_eq!(
+      events,
+      [
+        // Initial build succeeds for both members.
+        "START",
+        "BUNDLE_START",
+        "BUNDLE_END",
+        "BUNDLE_START",
+        "BUNDLE_END",
+        "END",
+        // Member 1's rebuild fails: `Error` replaces its `BundleEnd`, and the
+        // envelope still closes with `End`.
+        "CHANGE",
+        "RESTART",
+        "START",
+        "BUNDLE_START",
+        "BUNDLE_END",
+        "BUNDLE_START",
+        "ERROR",
+        "END",
+        "CLOSE",
+      ]
+    );
+    assert_eq!(end_count, 2);
+    assert_eq!(builds.load(Ordering::SeqCst), 2, "member 1 must attempt exactly two builds");
   }
 }

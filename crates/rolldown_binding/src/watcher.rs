@@ -93,6 +93,35 @@ fn handle_watcher_close_result(
   }
 }
 
+/// Split the flat per-output config list into config groups. `group_sizes[i]`
+/// is the number of output configs created from input config `i`; the JS layer
+/// builds the flat list in group order, so contiguous chunks reconstruct the
+/// groups. Every output task of a group shares one native filesystem watcher.
+fn split_configs_into_groups(
+  configs: Vec<BundlerConfig>,
+  group_sizes: &[u32],
+) -> napi::Result<Vec<Vec<BundlerConfig>>> {
+  if group_sizes.is_empty() {
+    return Err(napi::Error::from_reason(
+      "Watcher requires at least one config group, but groupSizes was empty",
+    ));
+  }
+  if let Some(position) = group_sizes.iter().position(|&size| size == 0) {
+    return Err(napi::Error::from_reason(format!(
+      "Watcher config group {position} is empty; every group must contain at least one output config",
+    )));
+  }
+  let total: usize = group_sizes.iter().map(|&size| size as usize).sum();
+  if total != configs.len() {
+    return Err(napi::Error::from_reason(format!(
+      "Watcher groupSizes sum to {total}, but {} output configs were provided",
+      configs.len(),
+    )));
+  }
+  let mut configs = configs.into_iter();
+  Ok(group_sizes.iter().map(|&size| configs.by_ref().take(size as usize).collect()).collect())
+}
+
 fn create_watcher_config(configs: &[BundlerConfig]) -> WatcherConfig {
   // Rollup applies the maximum buildDelay across enabled configs. The file
   // watcher itself is shared in Rolldown, so use the first config that
@@ -165,22 +194,26 @@ pub struct BindingWatcher {
 impl BindingWatcher {
   #[napi(
     constructor,
-    ts_args_type = "options: BindingBundlerOptions[], listener: (data: BindingWatcherEvent) => void"
+    ts_args_type = "options: BindingBundlerOptions[], listener: (data: BindingWatcherEvent) => void, groupSizes: Array<number>"
   )]
   pub fn new(
     options: Vec<BindingBundlerOptions>,
     listener: MaybeAsyncJsCallback<FnArgs<(BindingWatcherEvent,)>>,
+    group_sizes: Vec<u32>,
   ) -> napi::Result<Self> {
     let configs = options
       .into_iter()
       .map(create_bundler_config_from_binding_options)
       .collect::<Result<Vec<_>, _>>()?;
 
+    // Shared-watcher settings (debounce, polling backend) span all groups, so
+    // they are derived from the flat list before it is split into groups.
     let watcher_config = create_watcher_config(&configs);
+    let groups = split_configs_into_groups(configs, &group_sizes)?;
 
     let handler = NapiWatcherEventHandler { listener: Arc::new(listener) };
     let inner =
-      rolldown_watcher::Watcher::new(configs, handler, &watcher_config).map_err(|errs| {
+      rolldown_watcher::Watcher::new(groups, handler, &watcher_config).map_err(|errs| {
         napi::Error::new(
           napi::Status::GenericFailure,
           errs.iter().map(|e| e.to_diagnostic().to_string()).collect::<Vec<_>>().join("\n"),
@@ -275,5 +308,43 @@ mod tests {
     assert_eq!(config.debounce, Some(Duration::from_millis(250)));
     assert!(config.use_polling);
     assert_eq!(config.poll_interval, Some(75));
+  }
+
+  fn default_configs(count: usize) -> Vec<BundlerConfig> {
+    (0..count).map(|_| BundlerConfig::new(BundlerOptions::default(), vec![])).collect()
+  }
+
+  #[test]
+  fn group_split_reconstructs_contiguous_groups() {
+    let groups = split_configs_into_groups(default_configs(3), &[2, 1])
+      .expect("matching group sizes must split");
+    assert_eq!(groups.iter().map(Vec::len).collect::<Vec<_>>(), [2, 1]);
+  }
+
+  #[test]
+  fn group_split_rejects_zero_groups() {
+    let error = split_configs_into_groups(default_configs(1), &[])
+      .expect_err("an empty group list must be rejected");
+    assert_eq!(
+      error.reason,
+      "Watcher requires at least one config group, but groupSizes was empty"
+    );
+  }
+
+  #[test]
+  fn group_split_rejects_empty_group() {
+    let error = split_configs_into_groups(default_configs(2), &[2, 0])
+      .expect_err("a zero-size group must be rejected");
+    assert_eq!(
+      error.reason,
+      "Watcher config group 1 is empty; every group must contain at least one output config"
+    );
+  }
+
+  #[test]
+  fn group_split_rejects_size_sum_mismatch() {
+    let error = split_configs_into_groups(default_configs(3), &[2, 2])
+      .expect_err("a group size sum mismatch must be rejected");
+    assert_eq!(error.reason, "Watcher groupSizes sum to 4, but 3 output configs were provided");
   }
 }

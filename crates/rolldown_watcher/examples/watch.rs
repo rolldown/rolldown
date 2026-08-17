@@ -48,7 +48,7 @@ async fn main() {
     vec![],
   );
 
-  let watcher = Watcher::new(vec![config], PrintHandler, &WatcherConfig::default())
+  let watcher = Watcher::new(vec![vec![config]], PrintHandler, &WatcherConfig::default())
     .expect("Failed to create watcher");
   watcher.run().expect("Failed to start watcher");
 

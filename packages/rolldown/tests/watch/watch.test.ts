@@ -1664,6 +1664,56 @@ test.concurrent(
   },
 );
 
+// Adopted from https://github.com/rolldown/rolldown/pull/10612 (author:
+// sapphi-red) — pins https://github.com/rolldown/rolldown/issues/10613: one
+// input edit for a multi-output config must produce a single rebuild cycle
+// whose END fires only after every output finished.
+test.concurrent(
+  'watch emits END after all outputs finish rebuilding',
+  { retry: TEST_RETRY, timeout: TEST_TIMEOUT },
+  async ({ task, expect, onTestFinished }) => {
+    const retryCount = task.result?.retryCount ?? 0;
+    const { input, dir } = createTestInputAndOutput('watch-multiple-output-end-event', retryCount);
+    const outputDirs = [path.join(dir, 'dist-a'), path.join(dir, 'dist-b')];
+    const watcher = watch({
+      input,
+      output: outputDirs.map((outputDir) => ({ dir: outputDir })),
+    });
+    onTestFinished(async () => {
+      await watcher.close();
+      if (!process.env.CI) {
+        fs.rmSync(dir, { recursive: true, force: true });
+      }
+    });
+
+    const events: string[] = [];
+    watcher.on('event', async (event) => {
+      events.push(event.code);
+      if (event.code === 'BUNDLE_END') {
+        await event.result.close();
+      }
+    });
+
+    const expectedEvents = [
+      'START',
+      'BUNDLE_START',
+      'BUNDLE_END',
+      'BUNDLE_START',
+      'BUNDLE_END',
+      'END',
+    ];
+    await expect.poll(() => events).toEqual(expectedEvents);
+
+    // Both outputs share the config's watch stream. A single input edit must
+    // be coalesced into one rebuild cycle with END emitted after both outputs.
+    for (let i = 0; i < 5; i++) {
+      events.length = 0;
+      await editFile(input, `console.log(${i + 2})`);
+      await expect.poll(() => events).toEqual(expectedEvents);
+    }
+  },
+);
+
 test.concurrent(
   'watch event off',
   { retry: TEST_RETRY, timeout: TEST_TIMEOUT },

@@ -1,7 +1,7 @@
 use crate::handler::WatcherEventHandler;
-use crate::task_fs_event_handler::TaskFsEventHandler;
+use crate::task_fs_event_handler::GroupFsEventHandler;
 use crate::watch_coordinator::{CoordinatorCloseError, CoordinatorCloseResult, WatchCoordinator};
-use crate::watch_task::{WatchTask, WatchTaskIdx};
+use crate::watch_task::{WatchGroupIdx, WatchTask, WatchTaskIdx};
 use crate::watcher_msg::WatcherMsg;
 use anyhow::Result;
 use event_listener::Event;
@@ -140,7 +140,7 @@ impl CoordinatorState {
 
 /// The main watcher that manages multiple bundlers.
 ///
-/// Usage: `Watcher::new(configs, handler, &config)` → `watcher.run()` → `watcher.close()`.
+/// Usage: `Watcher::new(groups, handler, &config)` → `watcher.run()` → `watcher.close()`.
 pub struct Watcher {
   coordinator_state: std::sync::Mutex<CoordinatorState>,
   tx: mpsc::UnboundedSender<WatcherMsg>,
@@ -150,10 +150,12 @@ pub struct Watcher {
 }
 
 impl Watcher {
-  /// Create a new watcher with multiple bundler configs and a handler.
+  /// Create a new watcher with a handler and bundler configs arranged in
+  /// config groups: each inner `Vec` holds the per-output configs of one input
+  /// config, which share one filesystem watcher and invalidation stream.
   /// The coordinator future is created but not spawned — call `run()` to start.
   pub fn new<H: WatcherEventHandler + 'static>(
-    configs: Vec<BundlerConfig>,
+    groups: Vec<Vec<BundlerConfig>>,
     handler: H,
     watcher_config: &WatcherConfig,
   ) -> BuildResult<Self> {
@@ -161,11 +163,12 @@ impl Watcher {
     let closed = Arc::new(AtomicBool::new(false));
     let close_notify = Arc::new(Event::new());
     let native_owned_close_identities = Arc::new(std::sync::Mutex::new(Vec::new()));
-    let tasks = Self::create_tasks(configs, watcher_config, &tx, &closed)?;
+    let (tasks, group_members) = Self::create_tasks(groups, watcher_config, &tx, &closed)?;
     let coordinator = WatchCoordinator::new(
       rx,
       handler,
       tasks,
+      group_members,
       watcher_config,
       Arc::clone(&closed),
       Arc::clone(&close_notify),
@@ -264,23 +267,36 @@ impl Watcher {
       .clone()
   }
 
+  /// Create the per-output tasks and the group membership map. ONE filesystem
+  /// watcher is created per config group and shared by the group's tasks, so a
+  /// single save reaches the coordinator as a single message instead of one
+  /// message per output on independent notify streams.
+  #[expect(clippy::type_complexity)]
   fn create_tasks(
-    configs: Vec<BundlerConfig>,
+    groups: Vec<Vec<BundlerConfig>>,
     watcher_config: &WatcherConfig,
     tx: &mpsc::UnboundedSender<WatcherMsg>,
     closed: &Arc<AtomicBool>,
-  ) -> BuildResult<IndexVec<WatchTaskIdx, WatchTask>> {
+  ) -> BuildResult<(IndexVec<WatchTaskIdx, WatchTask>, IndexVec<WatchGroupIdx, Vec<WatchTaskIdx>>)>
+  {
     let fs_watcher_config = watcher_config.to_fs_watcher_config();
-    let mut tasks = IndexVec::with_capacity(configs.len());
-    for (index, config) in configs.into_iter().enumerate() {
-      let task_index = WatchTaskIdx::from_usize(index);
-      let fs_handler = TaskFsEventHandler { task_index, tx: tx.clone() };
-      let fs_watcher =
-        rolldown_fs_watcher::create_fs_watcher(fs_handler, fs_watcher_config.clone())?;
-      let task = WatchTask::new(config, fs_watcher, closed)?;
-      tasks.push(task);
+    let mut tasks = IndexVec::with_capacity(groups.iter().map(Vec::len).sum());
+    let mut group_members = IndexVec::with_capacity(groups.len());
+    for (index, group) in groups.into_iter().enumerate() {
+      let group_index = WatchGroupIdx::from_usize(index);
+      let fs_handler = GroupFsEventHandler { group_index, tx: tx.clone() };
+      let fs_watcher = Arc::new(std::sync::Mutex::new(rolldown_fs_watcher::create_fs_watcher(
+        fs_handler,
+        fs_watcher_config.clone(),
+      )?));
+      let mut members = Vec::with_capacity(group.len());
+      for config in group {
+        let task = WatchTask::new(config, Arc::clone(&fs_watcher), closed)?;
+        members.push(tasks.push(task));
+      }
+      group_members.push(members);
     }
-    Ok(tasks)
+    Ok((tasks, group_members))
   }
 }
 
@@ -643,14 +659,14 @@ mod tests {
     let configs = ["first close failure", "second close failure"]
       .into_iter()
       .map(|message| {
-        BundlerConfig::new(
+        vec![BundlerConfig::new(
           BundlerOptions::default(),
           vec![Arc::new(FailingClosePlugin {
             message,
             close_watcher_calls: Arc::clone(&close_watcher_calls),
             close_bundle_calls: Arc::clone(&close_bundle_calls),
           })],
-        )
+        )]
       })
       .collect();
     let watcher = Watcher::new(
@@ -713,7 +729,7 @@ mod tests {
     let configs = [("panicking", true), ("following", false)]
       .into_iter()
       .map(|(name, panic_close_watcher)| {
-        BundlerConfig::new(
+        vec![BundlerConfig::new(
           BundlerOptions::default(),
           vec![Arc::new(CleanupProbePlugin {
             name,
@@ -721,7 +737,7 @@ mod tests {
             close_watcher_calls: Arc::clone(&close_watcher_calls),
             close_bundle_calls: Arc::clone(&close_bundle_calls),
           })],
-        )
+        )]
       })
       .collect();
     let watcher = Watcher::new(
@@ -777,14 +793,14 @@ mod tests {
     let handler_close_calls = Arc::new(AtomicUsize::new(0));
     let panic_payload_drops = Arc::new(AtomicUsize::new(0));
     let watcher = Watcher::new(
-      vec![BundlerConfig::new(
+      vec![vec![BundlerConfig::new(
         BundlerOptions::default(),
         vec![Arc::new(FailingClosePlugin {
           message: "cleanup failure",
           close_watcher_calls: Arc::clone(&close_watcher_calls),
           close_bundle_calls: Arc::clone(&close_bundle_calls),
         })],
-      )],
+      )]],
       PanickingBuildEventHandler {
         close_calls: Arc::clone(&handler_close_calls),
         close_bundle_calls: Arc::clone(&close_bundle_calls),
@@ -824,7 +840,7 @@ mod tests {
   async fn event_listener_error_runs_cleanup_and_replays_through_close() {
     let handler_close_calls = Arc::new(AtomicUsize::new(0));
     let watcher = Watcher::new(
-      vec![BundlerConfig::new(BundlerOptions::default(), vec![])],
+      vec![vec![BundlerConfig::new(BundlerOptions::default(), vec![])]],
       FailingBuildEventHandler { close_calls: Arc::clone(&handler_close_calls) },
       &WatcherConfig::default(),
     )
@@ -856,7 +872,7 @@ mod tests {
     let handler_close_calls = Arc::new(AtomicUsize::new(0));
     let end = Arc::new(Notify::new());
     let watcher = Watcher::new(
-      vec![BundlerConfig::new(
+      vec![vec![BundlerConfig::new(
         BundlerOptions {
           cwd: Some(cwd),
           input: Some(vec![input.to_string_lossy().into_owned().into()]),
@@ -866,7 +882,7 @@ mod tests {
           watch_change_calls: Arc::clone(&watch_change_calls),
           close_watcher_calls: Arc::clone(&close_watcher_calls),
         })],
-      )],
+      )]],
       RecordingHandler { end: Arc::clone(&end), close_calls: Arc::clone(&handler_close_calls) },
       &WatcherConfig::default(),
     )
@@ -879,7 +895,7 @@ mod tests {
     watcher
       .tx
       .unbounded_send(WatcherMsg::FileChanges {
-        task_index: WatchTaskIdx::from_usize(0),
+        group_index: WatchGroupIdx::from_usize(0),
         changes: vec![FileChangeEvent::new(
           input.to_string_lossy().into_owned(),
           WatcherChangeKind::Update,

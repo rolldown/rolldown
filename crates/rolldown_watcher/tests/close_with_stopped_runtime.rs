@@ -77,7 +77,7 @@ fn close_rejected_by_a_stopped_runtime_stays_retryable() {
     vec![],
   );
   let watcher = Watcher::new(
-    vec![config],
+    vec![vec![config]],
     Probe { dropped: Arc::clone(&dropped), closes: Arc::clone(&closes) },
     &WatcherConfig::default(),
   )

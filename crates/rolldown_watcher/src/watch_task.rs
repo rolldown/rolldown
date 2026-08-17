@@ -21,11 +21,21 @@ oxc_index::define_index_type! {
   pub struct WatchTaskIdx = u32;
 }
 
-/// Per-task data container that owns a bundler and its file-system watcher.
+oxc_index::define_index_type! {
+  /// Identity of a config group: all output tasks created from one input
+  /// config share one filesystem watcher and one invalidation stream.
+  pub struct WatchGroupIdx = u32;
+}
+
+/// Per-task data container that owns a bundler and shares its config group's
+/// file-system watcher.
 pub struct WatchTask {
   bundler: Arc<TokioMutex<Bundler>>,
   options: Arc<NormalizedBundlerOptions>,
-  fs_watcher: std::sync::Mutex<DynFsWatcher>,
+  /// Shared with every sibling output task of the same config group so one
+  /// save is delivered exactly once per group. Watched-path registration is
+  /// idempotent at the notify layer, so members may add the same path.
+  fs_watcher: Arc<std::sync::Mutex<DynFsWatcher>>,
   watched_files: FxDashSet<ArcStr>,
   pub(crate) needs_rebuild: bool,
   closed: Arc<AtomicBool>,
@@ -34,7 +44,7 @@ pub struct WatchTask {
 impl WatchTask {
   pub(crate) fn new(
     config: BundlerConfig,
-    fs_watcher: DynFsWatcher,
+    fs_watcher: Arc<std::sync::Mutex<DynFsWatcher>>,
     closed: &Arc<AtomicBool>,
   ) -> BuildResult<Self> {
     // Validation: dev_mode not allowed with watch
@@ -60,7 +70,7 @@ impl WatchTask {
     Ok(Self {
       bundler: Arc::new(TokioMutex::new(bundler)),
       options,
-      fs_watcher: std::sync::Mutex::new(fs_watcher),
+      fs_watcher,
       watched_files: FxDashSet::default(),
       needs_rebuild: true,
       closed: Arc::clone(closed),
@@ -284,18 +294,19 @@ impl WatchTask {
     options: &NormalizedBundlerOptions,
     files: &[ArcStr],
   ) -> BuildResult<()> {
-    let mut fs_watcher = fs_watcher.lock().expect("fs_watcher lock poisoned");
-    let mut watcher_paths = fs_watcher.paths_mut();
-    let mut pending_watch_files = Vec::new();
-    let mut errors = Vec::new();
-
+    // Collect the genuinely new paths BEFORE opening the notify transaction.
+    // On macOS, opening `paths_mut()` stops the FSEvents stream and the commit
+    // restarts it from "now" — events delivered in between are dropped, not
+    // replayed. The stream is shared by every task in the group, so an open
+    // transaction blinds the whole group. Steady-state rebuilds, where every
+    // path is already registered, must not open a transaction at all.
+    let mut new_files = Vec::new();
     for file in files {
       let file_str = file.as_str();
       if watched_files.contains(file_str) {
         continue;
       }
-      let path = Path::new(file_str);
-      if !path.exists() {
+      if !Path::new(file_str).exists() {
         continue;
       }
       if pattern_filter::filter(
@@ -306,13 +317,26 @@ impl WatchTask {
       )
       .inner()
       {
-        match watcher_paths.add(path, RecursiveMode::NonRecursive) {
-          Ok(()) => {
-            tracing::debug!(name = "notify watch", path = ?path);
-            pending_watch_files.push(file.clone());
-          }
-          Err(error) => errors.extend(error.into_vec()),
+        new_files.push(file.clone());
+      }
+    }
+    if new_files.is_empty() {
+      return Ok(());
+    }
+
+    let mut fs_watcher = fs_watcher.lock().expect("fs_watcher lock poisoned");
+    let mut watcher_paths = fs_watcher.paths_mut();
+    let mut pending_watch_files = Vec::new();
+    let mut errors = Vec::new();
+
+    for file in new_files {
+      let path = Path::new(file.as_str());
+      match watcher_paths.add(path, RecursiveMode::NonRecursive) {
+        Ok(()) => {
+          tracing::debug!(name = "notify watch", path = ?path);
+          pending_watch_files.push(file);
         }
+        Err(error) => errors.extend(error.into_vec()),
       }
     }
 
@@ -755,8 +779,11 @@ mod tests {
       &options,
       std::slice::from_ref(&watch_file),
     )
-    .expect("empty watcher batch should still commit");
-    assert_eq!(commit_attempts.load(Ordering::SeqCst), 3);
+    .expect("already-registered batch must succeed");
+    // An empty batch must NOT open a transaction: on macOS the open/commit
+    // cycle pauses the group's shared FSEvents stream and drops the events
+    // delivered in between.
+    assert_eq!(commit_attempts.load(Ordering::SeqCst), 2);
   }
 
   #[test]

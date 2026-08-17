@@ -679,6 +679,12 @@ export async function createWatcher(
     bindingWatcher = new BindingWatcher(
       bundlerOptions.map((option) => option.bundlerOptions),
       callback,
+      // One entry per input config: how many of the flat per-output options
+      // above belong to it. Native shares one filesystem watcher per config
+      // group so a save rebuilds every affected output in one START..END
+      // envelope (#10613). Setup failures throw before this point, so every
+      // group holds at least one output and the sizes sum to the flat length.
+      bundlerOptionsByConfig.map((configOptions) => configOptions.length),
     );
   } catch (error) {
     return throwWatcherSetupErrorAfterCleanup(

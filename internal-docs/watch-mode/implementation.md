@@ -71,7 +71,9 @@ later `watcher.close()` call.
 ### Rust API
 
 ```rust
-let watcher = Watcher::new(configs, handler, &watcher_config)?;
+// groups: Vec<Vec<BundlerConfig>> — one inner Vec per input config,
+// holding that config's per-output bundler configs.
+let watcher = Watcher::new(groups, handler, &watcher_config)?;
 watcher.run()?;      // submits the coordinator (non-blocking)
 watcher.close().await?;  // sends Close, awaits completion
 ```
@@ -80,17 +82,18 @@ Follows the same `new → run → close` pattern as `DevEngine`. `new()` creates
 
 ### Known Divergences from Rollup
 
-| Aspect                                       | Rollup                            | Rolldown                             | Reason                                                                                      |
-| -------------------------------------------- | --------------------------------- | ------------------------------------ | ------------------------------------------------------------------------------------------- |
-| Bundler per output                           | One build, multiple writes        | One bundler per output               | Architecture constraint — Rolldown's bundler owns the full pipeline                         |
-| `options` hook lifecycle                     | Once per config build/rebuild     | Once during watcher setup            | Native watch tasks retain materialized binding options and plugin workers across rebuilds   |
-| `outputOptions` hook lifecycle               | Once per output per build/rebuild | Once per output during watcher setup | Output options are normalized before constructing each persistent native bundler            |
-| `buildStart` calls                           | Once per config                   | Once per output                      | Consequence of one-bundler-per-output                                                       |
-| `watchChange` calls                          | Once per config                   | Once per output                      | Each output task owns a distinct live plugin context                                        |
-| `onInvalidate` for follower-only watch files | Once per config                   | Not currently emitted                | The first output owns the config callback; native output tasks do not yet share a watch set |
-| Parallel `closeWatcher` calls                | Once per config                   | Once per output                      | Each output task owns a separate worker pool                                                |
-| Module graph sharing                         | Shared across outputs             | Separate per output                  | May change in the future                                                                    |
-| `restart` event                              | Per config change                 | Per rebuild cycle                    | Rolldown emits `restart` once per rebuild cycle                                             |
+| Aspect                                       | Rollup                            | Rolldown                             | Reason                                                                                                                                                                                                                                     |
+| -------------------------------------------- | --------------------------------- | ------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Bundler per output                           | One build, multiple writes        | One bundler per output               | Architecture constraint — Rolldown's bundler owns the full pipeline                                                                                                                                                                        |
+| `options` hook lifecycle                     | Once per config build/rebuild     | Once during watcher setup            | Native watch tasks retain materialized binding options and plugin workers across rebuilds                                                                                                                                                  |
+| `outputOptions` hook lifecycle               | Once per output per build/rebuild | Once per output during watcher setup | Output options are normalized before constructing each persistent native bundler                                                                                                                                                           |
+| `buildStart` calls                           | Once per config                   | Once per output                      | Consequence of one-bundler-per-output                                                                                                                                                                                                      |
+| `watchChange` calls                          | Once per config                   | Once per output                      | Each output task owns a distinct live plugin context                                                                                                                                                                                       |
+| `onInvalidate` for follower-only watch files | Once per config                   | Not currently emitted                | The first output owns the config callback; follower tasks keep their own watch sets                                                                                                                                                        |
+| Parallel `closeWatcher` calls                | Once per config                   | Once per output                      | Each output task owns a separate worker pool                                                                                                                                                                                               |
+| Module graph sharing                         | Shared across outputs             | Separate per output                  | May change in the future                                                                                                                                                                                                                   |
+| `restart` event                              | Per config change                 | Per rebuild cycle                    | Rolldown emits `restart` once per rebuild cycle                                                                                                                                                                                            |
+| `END` event                                  | Once per rebuild cycle            | Once per rebuild cycle               | Parity. All outputs of a config rebuild inside one `START..END` envelope (their group shares one watch stream); configs watching the same file may still split into consecutive cycles under extreme timing, exactly like Rollup's `rerun` |
 
 Rollup recreates a graph from the task's merged config for every build, so its
 `options` hooks can replace plugins and other input options on every rebuild,
@@ -103,12 +106,15 @@ bundler does not use.
 
 For multiple outputs, in-process `onInvalidate` is attached only to the first
 output task to avoid duplicate callbacks for files shared by every output.
-Because each native task currently owns an independent file watcher and there
-is no config-group event identity, attaching the callback to every task cannot
-reliably distinguish one shared filesystem event from separate invalidations.
-As a result, a file watched only by a follower output does not currently invoke
-the config callback. Correct parity requires grouping output tasks behind one
-config-level watch set/event stream rather than timing-based deduplication.
+Output tasks of one config now share a config-group file watcher and event
+stream (`WatchGroupIdx`): one save is delivered once per group, and the
+coordinator marks every member whose own watch set contains the changed path.
+Each member still keeps a per-task watch set (render-phase `addWatchFile` can
+differ per output), so a file watched only by a follower output still does not
+invoke the config callback — the callback lives on the first task. Because
+group event identity now exists, forwarding follower-only invalidations to the
+config callback has become implementable as a follow-up without timing-based
+deduplication.
 
 ## Architecture
 
@@ -120,17 +126,21 @@ Watcher (public API)
   └── close_notify (event_listener::Event) ──→ wakes the coordinator while it awaits a consumer callback
                                ├── handler: H (WatcherEventHandler impl)
                                ├── state: WatcherState
+                               ├── group_members: IndexVec<WatchGroupIdx, Vec<WatchTaskIdx>>
+                               ├── group_of: IndexVec<WatchTaskIdx, WatchGroupIdx>
                                └── tasks: IndexVec<WatchTaskIdx, WatchTask>
-                                    ├── WatchTask 0
+                                    ├── WatchTask 0  ─┐ config group 0 shares
                                     │   ├── bundler: Arc<TokioMutex<Bundler>>
-                                    │   ├── fs_watcher: DynFsWatcher (owned, per-task)
-                                    │   ├── watched_files: FxDashSet<ArcStr>
+                                    │   ├── fs_watcher: Arc<Mutex<DynFsWatcher>> (ONE per config group)
+                                    │   ├── watched_files: FxDashSet<ArcStr> (per task)
                                     │   └── needs_rebuild: bool
-                                    └── WatchTask N ...
+                                    ├── WatchTask 1  ─┘ the same fs_watcher Arc
+                                    └── WatchTask N ... (next group → next fs watcher)
 
 Data flow:
-  DynFsWatcher ──(TaskFsEventHandler: maps notify events → FileChangeEvent)──→ WatcherMsg::FileChanges ──→ WatchCoordinator
-  WatchCoordinator ──→ dispatch_event / dispatch_change / dispatch_restart
+  per-group DynFsWatcher ──(GroupFsEventHandler: maps notify events → FileChangeEvent)──→ WatcherMsg::FileChanges { group_index } ──→ WatchCoordinator
+  WatchCoordinator ──→ marks EVERY group member whose watch set contains the path
+                   ──→ dispatch_event / dispatch_change / dispatch_restart
                          └── await_handler_or_close()
                                ├── handler.on_*().await ──→ Consumer (NAPI/Rust)
                                └── close_notify ─────────→ stop the callback wait and run handle_close()
@@ -142,7 +152,7 @@ Data flow:
 
 - `Watcher` only holds lifecycle state (`tx`, the close signal, and `coordinator_state`) — lightweight, no bundler access. The state retains the boxed coordinator future until runtime submission succeeds, and restores it on rejection. `publish_close()` sets the atomic flag, notification, and actor message without spawning; N-API calls it synchronously before returning the close promise so a JavaScript listener cannot return into a new build before close is visible. The async `close()` future enters through the selected runtime, starts a not-yet-running coordinator, and awaits its shared result.
 - `WatchCoordinator` owns ALL mutable state. No external mutation.
-- Each `WatchTask` owns its `DynFsWatcher`. Per-task watchers mean isolated watch sets and simpler ownership.
+- ONE `DynFsWatcher` exists per config group, shared by that group's `WatchTask`s via `Arc<std::sync::Mutex<DynFsWatcher>>`. A save of a file watched by several outputs of one config is therefore delivered exactly once, carrying the group identity, instead of racing per-output on independent notify streams (the pre-group design behind [#10613](https://github.com/rolldown/rolldown/issues/10613)). Watched-path registration stays per task (`watched_files`); notify path adds are idempotent, so members may register the same path.
 - Bundler is `Arc<TokioMutex<>>` (where `TokioMutex` aliases `async_lock::Mutex`, not tokio's) because event data structs carry a clone for consumer access (e.g. `BUNDLE_END.result`).
 
 ### Three-Layer Stack
@@ -167,9 +177,9 @@ Rust Core (crates/rolldown_watcher/)
 rolldown_watcher/
 ├── lib.rs                     // Public exports
 ├── watcher.rs                 // Watcher (public API) + WatcherConfig
-├── watch_coordinator.rs       // WatchCoordinator (actor + event loop)
-├── watch_task.rs              // WatchTask (bundler + fs watcher) + WatchTaskIdx + BuildOutcome
-├── task_fs_event_handler.rs   // TaskFsEventHandler (notify → FileChangeEvent mapping)
+├── watch_coordinator.rs       // WatchCoordinator (actor + event loop, group membership maps)
+├── watch_task.rs              // WatchTask (bundler + shared group fs watcher) + WatchTaskIdx + WatchGroupIdx + BuildOutcome
+├── task_fs_event_handler.rs   // GroupFsEventHandler (notify → FileChangeEvent mapping, one per config group)
 ├── handler.rs                 // WatcherEventHandler async trait
 ├── event.rs                   // WatchEvent, BundleStartEventData, BundleEndEventData, WatchErrorEventData
 ├── file_change_event.rs       // FileChangeEvent (path + kind)
@@ -276,12 +286,13 @@ Watcher spawns coordinator
 ### File Change → Rebuild
 
 ```
-File change detected by per-task FsWatcher
-  → TaskFsEventHandler sends WatcherMsg::FileChanges
-  → process_fs_event():
-      - Maps notify EventKind → WatcherChangeKind (Create/Update/Delete)
-      - task.invalidate(path) → sets needs_rebuild = true
-      - task.call_on_invalidate(path) → fires immediately, before debounce
+File change detected by the config group's shared FsWatcher
+  → GroupFsEventHandler sends WatcherMsg::FileChanges { group_index }
+  → process_file_changes():
+      - GroupFsEventHandler already mapped notify EventKind → WatcherChangeKind (Create/Update/Delete)
+      - for EVERY member task of the group whose watched_files contains the path:
+          task.mark_needs_rebuild(path) → sets needs_rebuild = true
+          task.call_on_invalidate(path) → fires immediately, before debounce
       - State: Idle → Debouncing, or extends deadline
   → Debounce deadline fires (`sleep_until` wins the biased `select_biased!`)
   → run_build_sequence(changes):
@@ -504,7 +515,7 @@ Configured via `WatcherOptions`, fires **immediately** on file change (before de
 ## File Watching
 
 - After each build, `bundler.watch_files()` returns the current set.
-- `WatchTask::update_watch_files()` diffs against the current set — new files are added to the per-task `DynFsWatcher`.
+- `WatchTask::update_watch_files()` diffs against the task's own `watched_files` set — new files are added to the config group's shared `DynFsWatcher`. Sibling outputs may add the same path; notify registration is idempotent.
 - `include`/`exclude` patterns filter which files are watched (via `pattern_filter`).
 - Files are watched **non-recursively** (individual file watches).
 - Batch operations: `fs_watcher.paths_mut()` returns a guard for batching adds, committed via `.commit()`.
@@ -633,9 +644,13 @@ close() → inner.close()         // sends Close msg, awaits shared future
 
 `BindingWatcher` owns no independent lifecycle state. It converts the flattened
 output configs into native configs, applies the maximum `buildDelay`, selects
-the first config with explicit watcher-backend settings for the shared native
-watcher, and creates the `NapiWatcherEventHandler`. `run()` and
-`waitForClose()` delegate directly. Shared-runtime builds attempt `run()`
+the first config with explicit watcher-backend settings for the shared
+backend/debounce configuration, and creates the `NapiWatcherEventHandler`. The
+constructor also receives `groupSizes` — one entry per input config counting
+its output configs — which it validates (no empty group list, no zero-size
+group, sizes summing to the flat config count) and uses to split the flat list
+into the config groups handed to `Watcher::new`, giving each group one shared
+native fs watcher. `run()` and `waitForClose()` delegate directly. Shared-runtime builds attempt `run()`
 before entering an N-API future, allowing a stopped scheduler to return an
 already-rejected JavaScript Promise while retaining the native coordinator for
 an explicit retry. Tokio builds perform the same checked call inside the N-API

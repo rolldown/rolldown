@@ -275,9 +275,9 @@ jobs:
       # Per-PR OS coverage for the suites the ubuntu-only PR lanes cannot
       # exercise per OS: the runtime's timer/debounce paths, poll-thread
       # scheduling, and watcher/dev-engine lifecycle on a real mac/windows
-      # binding. Both suites force `usePolling: true` (CI stability), so the
-      # native watch backends (FSEvents/ReadDirectoryChangesW) are NOT selected
-      # here — native event delivery has no CI assertion on any OS today.
+      # binding. The suites force `usePolling: true` (CI stability) except the
+      # one native smoke in watch.test.ts, which asserts real
+      # FSEvents/ReadDirectoryChangesW event delivery per OS.
       # `&&` chaining (not a multi-line block) matches reusable-node-test.yml so
       # a first-command failure fails the step under pwsh too. `dev/` scopes the
       # second run to tests/dev/* (dev-watch.test.ts is excluded by test:main

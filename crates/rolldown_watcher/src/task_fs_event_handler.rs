@@ -1,20 +1,22 @@
 use std::path::PathBuf;
 
 use crate::file_change_event::FileChangeEvent;
-use crate::watch_task::WatchTaskIdx;
+use crate::watch_task::WatchGroupIdx;
 use crate::watcher_msg::WatcherMsg;
 use futures::channel::mpsc;
 use rolldown_common::WatcherChangeKind;
 use rolldown_fs_watcher::{FsEventHandler, FsEventResult};
 
 /// Bridge that maps raw notify events to `FileChangeEvent`s and forwards them
-/// to the coordinator via the shared mpsc channel.
-pub struct TaskFsEventHandler {
-  pub task_index: WatchTaskIdx,
+/// to the coordinator via the shared mpsc channel. One handler exists per
+/// config group: every output task of a config shares the same fs watcher, so
+/// one save produces exactly one message carrying the group's identity.
+pub struct GroupFsEventHandler {
+  pub group_index: WatchGroupIdx,
   pub tx: mpsc::UnboundedSender<WatcherMsg>,
 }
 
-impl TaskFsEventHandler {
+impl GroupFsEventHandler {
   /// Map a notify `EventKind` to a `WatcherChangeKind`.
   ///
   /// Returns `None` for event kinds that should not trigger a rebuild.
@@ -59,7 +61,7 @@ impl TaskFsEventHandler {
   }
 }
 
-impl FsEventHandler for TaskFsEventHandler {
+impl FsEventHandler for GroupFsEventHandler {
   fn handle_event(&mut self, event: FsEventResult) {
     match event {
       Ok(fs_events) => {
@@ -91,7 +93,7 @@ impl FsEventHandler for TaskFsEventHandler {
         if !changes.is_empty() {
           let _ = self
             .tx
-            .unbounded_send(WatcherMsg::FileChanges { task_index: self.task_index, changes });
+            .unbounded_send(WatcherMsg::FileChanges { group_index: self.group_index, changes });
         }
       }
       Err(errors) => {

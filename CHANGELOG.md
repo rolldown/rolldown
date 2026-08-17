@@ -1,4 +1,78 @@
 
+## [1.2.4] - 2026-08-12
+
+### 🚀 Features
+
+- code-splitting: widen namespace extraction for already-loaded merges (#10594) by @IWANABETHATGUY
+
+### 🐛 Bug Fixes
+
+- binding: illegal instruction crash on Android arm64 (#10638) by @shulaoda
+- code-splitting: stop negated sideEffects globs retaining modules (#10660) by @JoviDeCroock
+- devtools: resolve log paths against the build cwd (#10622) by @hyfdev
+
+### 📚 Documentation
+
+- plugin-api: document sourcemap differences from Rollup (#10636) by @IWANABETHATGUY
+
+### 🧪 Testing
+
+- browser: smoke test the packed `@rolldown/browser` in a real browser page (#10634) by @hyfdev
+- node-wasi: run the full node test suite against the WASI binding (#10616) by @hyfdev
+- webcontainer: smoke test the packed WASI artifacts inside a WebContainer (#10626) by @hyfdev
+
+### ⚙️ Miscellaneous Tasks
+
+- deps: update napi (#10649) by @renovate[bot]
+- deps: update esbuild for tests to 0.28.2 (#10662) by @rolldown-guard[bot]
+- deps: update test262 submodule for tests (#10663) by @rolldown-guard[bot]
+- deps: update npm packages (#10653) by @renovate[bot]
+- deps: update github actions (#10651) by @renovate[bot]
+- deps: update crate-ci/typos action to v1.49.0 (#10642) by @renovate[bot]
+- deps: update dependency vite-plus to v0.2.9 (#10627) by @renovate[bot]
+- deps: update rust crates (#10652) by @renovate[bot]
+- deps: upgrade oxc to 0.144.0 (#10657) by @camc314
+- ignore napi-rs temp files (#10658) by @camc314
+- deps: tighten `@napi-rs/wasm-runtime` range to `~1.2.2` (#10615) by @hyfdev
+- wasi: point the wasm skips at the right place (#10644) by @hyfdev
+
+
+## [1.2.3] - 2026-08-05
+
+### 🐛 Bug Fixes
+
+- dev: don't let a failed watch registration abort the batch (#10548) by @shulaoda
+
+### 🚜 Refactor
+
+- remove deprecated `watch.notify` option (#10628) by @sapphi-red
+
+### 📚 Documentation
+
+- fix the dangling spec link on `generate_minified_names` (#10617) by @IWANABETHATGUY
+
+### ⚡ Performance
+
+- reduce finalization memory usage (#10554) by @ericclemmons
+- chunk-naming: build minified export names without allocating (#10618) by @IWANABETHATGUY
+
+### 🧪 Testing
+
+- resolve-file-url: allow a reference id to start with a digit (#10623) by @jjb
+- code-splitting: pin the already-loaded namespace-extraction boundaries (#10593) by @IWANABETHATGUY
+
+### ⚙️ Miscellaneous Tasks
+
+- deps: upgrade oxc to 0.143.0  (#10603) by @camc314
+- deps: update rollup submodule for tests to v4.62.4 (#10607) by @rolldown-guard[bot]
+- deps: update test262 submodule for tests (#10608) by @rolldown-guard[bot]
+
+### ❤️ New Contributors
+
+* @ericclemmons made their first contribution in [#10554](https://github.com/rolldown/rolldown/pull/10554)
+* @jjb made their first contribution in [#10623](https://github.com/rolldown/rolldown/pull/10623)
+
+
 ## [1.2.2] - 2026-08-03
 
 ### 🚀 Features

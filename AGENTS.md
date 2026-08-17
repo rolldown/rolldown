@@ -89,6 +89,15 @@ IMPORTANT: The project uses `just` as a task runner. Always prefer `just` comman
 
 - For Windows coverage on a PR, add the `ci: windows` label, then rerun all jobs in the latest `CI` workflow run whose event is `pull_request` and whose head SHA matches the PR. Adding the label alone does not start a workflow. Keep the label so later PR pushes also run the Windows jobs.
 
+# Browser CI
+
+- The default CI's `Browser` job loads the packed `@rolldown/browser` in a real Chrome page: Vite serves an app that imports it through the `browser` export condition, and the test bundles with it. No label — it runs on every PR that touches node code, and it is what catches node builtins leaking into the browser build. Locally: `just test-browser`.
+
+# WebContainer CI
+
+- The `ci: webcontainer` label adds a second suite to that same `Browser` job: it installs and builds the packed `rolldown` / `@rolldown/browser` artifacts inside a WebContainer. Activation works exactly like `ci: windows` above. Locally: `just test-webcontainer` (needs network — WebContainer boots from StackBlitz's CDN).
+- **ALWAYS add this label when a PR touches anything napi-rs related** (napi / emnapi / wasm-runtime versions, the binding loader and glue, the `napi` config, `webcontainer-fallback.cjs`, binding packaging or publish steps). Pure wasm behavior changes don't need it — the default CI's `wasi` job already runs the test suite against the wasm binding; this label checks that the packed packages install and work inside WebContainer.
+
 # Common Pitfalls & Best Practices
 
 - **`AGENTS.md` is the source of truth.** `CLAUDE.md` is a symlink to it.

@@ -1,5 +1,5 @@
 use oxc::allocator::GetAllocator;
-use oxc::ast::builder::{AstBuilder, NONE};
+use oxc::ast::builder::AstBuilder;
 use oxc::{ast::ast, span::SPAN};
 use rolldown_common::NormalModule;
 use rolldown_ecmascript::CJS_MODULE_REF;
@@ -87,7 +87,7 @@ pub trait HmrAstBuilder<'any, 'ast> {
     let register_call = ast::Expression::new_call_expression(
       SPAN,
       ast::Expression::new_identifier(SPAN, "__rolldown_runtime__.registerModule", &self.builder()),
-      NONE,
+      None,
       [self.module_id_argument(), module_exports],
       false,
       &self.builder(),
@@ -107,13 +107,12 @@ pub trait HmrAstBuilder<'any, 'ast> {
         // var $hot_name
         ast::VariableDeclarator::new(
           SPAN,
-          ast::VariableDeclarationKind::Const,
           ast::BindingPattern::new_binding_identifier(
             SPAN,
             self.alias_name_for_import_meta_hot(),
             &self.builder(),
           ),
-          NONE,
+          None,
           // __rolldown_runtime__.createModuleHotContext($stable_id)
           Some(ast::Expression::new_call_expression(
             SPAN,
@@ -122,7 +121,7 @@ pub trait HmrAstBuilder<'any, 'ast> {
               "__rolldown_runtime__.createModuleHotContext",
               &self.builder(),
             ),
-            NONE,
+            None,
             [self.module_id_argument()],
             false,
             &self.builder(),

@@ -486,7 +486,6 @@ impl BundleCoordinator {
   /// Update watcher paths based on current build output
   async fn update_watch_paths(&self) -> BuildResult<()> {
     let bundler = self.bundler.lock().await;
-    let watch_files = bundler.watch_files();
     let cwd = bundler.options().cwd.to_string_lossy().to_string();
 
     let include = self.ctx.options.watch_include.as_deref();
@@ -494,13 +493,20 @@ impl BundleCoordinator {
 
     let mut watcher = self.watcher.lock().ok().context("Failed to acquire watcher lock")?;
     let mut paths_mut = watcher.paths_mut();
-    for watch_file in watch_files.iter() {
-      let watch_file = &**watch_file;
+    for watch_file in bundler.watch_files().iter() {
+      let watch_file = watch_file.as_str();
       if !self.watched_files.contains(watch_file)
         && pattern_filter::filter(exclude, include, watch_file, &cwd).inner()
       {
-        self.watched_files.insert(watch_file.to_string().into());
-        paths_mut.add(watch_file.as_path(), RecursiveMode::NonRecursive)?;
+        let path = watch_file.as_path();
+        match paths_mut.add(path, RecursiveMode::NonRecursive) {
+          Ok(()) => {
+            self.watched_files.insert(watch_file.to_string().into());
+          }
+          Err(error) => {
+            tracing::debug!(name = "notify watch skipped", path = ?path, error = ?error);
+          }
+        }
       }
     }
     paths_mut.commit()?;

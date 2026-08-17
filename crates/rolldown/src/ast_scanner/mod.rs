@@ -18,8 +18,8 @@ use oxc::{
   ast::{
     Comment,
     ast::{
-      ExportAllDeclaration, ExportDefaultDeclaration, ExportNamedDeclaration, IdentifierReference,
-      ImportDeclaration, ModuleDeclaration, Program,
+      ExportAllDeclaration, ExportDeclaration, ExportDefaultDeclaration, ExportFromDeclaration,
+      ExportNamedDeclaration, IdentifierReference, ImportDeclaration, ModuleDeclaration, Program,
     },
   },
   ast_visit::{VisitJs, walk_js},
@@ -722,104 +722,103 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
     self.cur_class_decl = previous_class_decl_id;
   }
 
-  fn scan_export_named_decl(&mut self, decl: &ExportNamedDeclaration<'ast>) {
-    if let Some(source) = &decl.source {
-      let record_idx = self.add_import_record(
-        source.value.as_str(),
-        ImportKind::Import,
-        source.span(),
-        decl.span,
-        if source.span().is_empty() {
-          ImportRecordMeta::IsUnspannedImport
-        } else {
-          ImportRecordMeta::empty()
-        },
-        None,
+  fn scan_export_from_decl(&mut self, decl: &ExportFromDeclaration<'ast>) {
+    let source = &decl.source;
+    let record_idx = self.add_import_record(
+      source.value.as_str(),
+      ImportKind::Import,
+      source.span(),
+      decl.span,
+      if source.span().is_empty() {
+        ImportRecordMeta::IsUnspannedImport
+      } else {
+        ImportRecordMeta::empty()
+      },
+      None,
+    );
+    decl.specifiers.iter().for_each(|spec| {
+      self.add_re_export(
+        spec.exported.name().as_str(),
+        spec.local.name().as_str(),
+        record_idx,
+        spec.local.span(),
       );
-      decl.specifiers.iter().for_each(|spec| {
-        self.add_re_export(
-          spec.exported.name().as_str(),
-          spec.local.name().as_str(),
-          record_idx,
-          spec.local.span(),
-        );
-      });
-      if let Some(ref with_clause) = decl.with_clause {
-        self
-          .result
-          .import_attribute_map
-          .insert(record_idx, ImportAttribute::from_with_clause(with_clause));
+    });
+    if let Some(ref with_clause) = decl.with_clause {
+      self
+        .result
+        .import_attribute_map
+        .insert(record_idx, ImportAttribute::from_with_clause(with_clause));
+    }
+    self.result.imports.insert(decl.node_id(), record_idx);
+    self.result.import_records[record_idx].meta.insert(ImportRecordMeta::IsReExportOnly);
+  }
+
+  fn scan_export_named_decl(&mut self, decl: &ExportNamedDeclaration<'ast>) {
+    decl.specifiers.iter().for_each(|spec| {
+      if let Some(local_symbol_id) = self.get_root_binding(spec.local.name().as_str()) {
+        self.add_local_export(spec.exported.name().as_str(), local_symbol_id, spec.span);
       }
-      self.result.imports.insert(decl.node_id(), record_idx);
-      self.result.import_records[record_idx].meta.insert(ImportRecordMeta::IsReExportOnly);
-    } else {
-      decl.specifiers.iter().for_each(|spec| {
-        if let Some(local_symbol_id) = self.get_root_binding(spec.local.name().as_str()) {
-          self.add_local_export(spec.exported.name().as_str(), local_symbol_id, spec.span);
-        }
-      });
-      if let Some(decl) = decl.declaration.as_ref() {
-        match decl {
-          ast::Declaration::VariableDeclaration(var_decl) => {
-            var_decl.declarations.iter().for_each(|decl| {
-              decl.id.get_binding_identifiers().into_iter().for_each(|id| {
-                self.add_local_export(&id.name, id.symbol_id(), id.span);
-              });
-              if let BindingPattern::BindingIdentifier(ref binding) = decl.id {
-                let symbol_id = binding.symbol_id();
-                if let Some(value) = self.extract_constant_value_from_expr(decl.init.as_ref()) {
-                  self.add_constant_symbol(symbol_id, ConstExportMeta::new(value, false));
+    });
+  }
+
+  fn scan_export_decl(&mut self, export_decl: &ExportDeclaration<'ast>) {
+    match &export_decl.declaration {
+      ast::Declaration::VariableDeclaration(var_decl) => {
+        var_decl.declarations.iter().for_each(|decl| {
+          decl.id.get_binding_identifiers().into_iter().for_each(|id| {
+            self.add_local_export(&id.name, id.symbol_id(), id.span);
+          });
+          if let BindingPattern::BindingIdentifier(ref binding) = decl.id {
+            let symbol_id = binding.symbol_id();
+            if let Some(value) = self.extract_constant_value_from_expr(decl.init.as_ref()) {
+              self.add_constant_symbol(symbol_id, ConstExportMeta::new(value, false));
+            }
+            let (is_side_effect_free_function, is_pure_annotation_only) = decl
+              .init
+              .as_ref()
+              .map(|expr| match expr {
+                Expression::FunctionExpression(func) => {
+                  let empty = func.is_side_effect_free();
+                  (empty || func.pure, func.pure && !empty)
                 }
-                let (is_side_effect_free_function, is_pure_annotation_only) = decl
-                  .init
-                  .as_ref()
-                  .map(|expr| match expr {
-                    Expression::FunctionExpression(func) => {
-                      let empty = func.is_side_effect_free();
-                      (empty || func.pure, func.pure && !empty)
-                    }
-                    Expression::ArrowFunctionExpression(func) => {
-                      let empty = func.is_side_effect_free();
-                      (empty || func.pure, func.pure && !empty)
-                    }
-                    _ => (false, false),
-                  })
-                  .unwrap_or((false, false));
-                if is_side_effect_free_function {
-                  self
-                    .result
-                    .ecma_view_meta
-                    .insert(EcmaViewMeta::TopExportedSideEffectsFreeFunction);
-                  let flags = self.result.symbol_ref_db.flags.entry(symbol_id).or_default();
-                  flags.insert(SymbolRefFlags::SideEffectsFreeFunction);
-                  if is_pure_annotation_only {
-                    flags.insert(SymbolRefFlags::PureAnnotationOnly);
-                  }
+                Expression::ArrowFunctionExpression(func) => {
+                  let empty = func.is_side_effect_free();
+                  (empty || func.pure, func.pure && !empty)
                 }
-              }
-            });
-          }
-          ast::Declaration::FunctionDeclaration(fn_decl) => {
-            let binding_id = fn_decl.id.as_ref().unwrap();
-            let symbol_id = binding_id.symbol_id();
-            self.add_local_export(binding_id.name.as_str(), symbol_id, binding_id.span);
-            let empty = fn_decl.is_side_effect_free();
-            if empty || fn_decl.pure {
+                _ => (false, false),
+              })
+              .unwrap_or((false, false));
+            if is_side_effect_free_function {
               self.result.ecma_view_meta.insert(EcmaViewMeta::TopExportedSideEffectsFreeFunction);
               let flags = self.result.symbol_ref_db.flags.entry(symbol_id).or_default();
               flags.insert(SymbolRefFlags::SideEffectsFreeFunction);
-              if fn_decl.pure && !empty {
+              if is_pure_annotation_only {
                 flags.insert(SymbolRefFlags::PureAnnotationOnly);
               }
             }
           }
-          ast::Declaration::ClassDeclaration(cls_decl) => {
-            let id = cls_decl.id.as_ref().unwrap();
-            self.add_local_export(id.name.as_str(), id.symbol_id(), id.span);
+        });
+      }
+      ast::Declaration::FunctionDeclaration(fn_decl) => {
+        let binding_id = fn_decl.id.as_ref().unwrap();
+        let symbol_id = binding_id.symbol_id();
+        self.add_local_export(binding_id.name.as_str(), symbol_id, binding_id.span);
+        let empty = fn_decl.is_side_effect_free();
+        if empty || fn_decl.pure {
+          self.result.ecma_view_meta.insert(EcmaViewMeta::TopExportedSideEffectsFreeFunction);
+          let flags = self.result.symbol_ref_db.flags.entry(symbol_id).or_default();
+          flags.insert(SymbolRefFlags::SideEffectsFreeFunction);
+          if fn_decl.pure && !empty {
+            flags.insert(SymbolRefFlags::PureAnnotationOnly);
           }
-          _ => {}
         }
       }
+      ast::Declaration::ClassDeclaration(cls_decl) => {
+        let id = cls_decl.id.as_ref().unwrap();
+        self.add_local_export(id.name.as_str(), id.symbol_id(), id.span);
+      }
+      _ => {}
     }
   }
 
@@ -952,6 +951,14 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
       ast::ModuleDeclaration::ExportNamedDeclaration(decl) => {
         self.set_esm_export_keyword(Span::new(decl.span.start, decl.span.start + 6));
         self.scan_export_named_decl(decl);
+      }
+      ast::ModuleDeclaration::ExportDeclaration(decl) => {
+        self.set_esm_export_keyword(Span::new(decl.span.start, decl.span.start + 6));
+        self.scan_export_decl(decl);
+      }
+      ast::ModuleDeclaration::ExportFromDeclaration(decl) => {
+        self.set_esm_export_keyword(Span::new(decl.span.start, decl.span.start + 6));
+        self.scan_export_from_decl(decl);
       }
       ast::ModuleDeclaration::ExportDefaultDeclaration(decl) => {
         self.set_esm_export_keyword(Span::new(decl.span.start, decl.span.start + 6));

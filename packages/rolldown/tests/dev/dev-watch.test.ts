@@ -2,7 +2,7 @@ import { getDevWatchOptionsForCi } from '@rolldown/test-dev-server';
 import crypto from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
-import type { InputOptions, OutputOptions } from 'rolldown';
+import type { InputOptions, OutputOptions, RolldownOutput } from 'rolldown';
 import type { DevEngine, DevOptions } from 'rolldown/experimental';
 import { dev as _dev } from 'rolldown/experimental';
 import { sleep } from 'rolldown-tests/utils';
@@ -352,6 +352,71 @@ function createTestInputAndOutput(testLabel: string, retryCount: number) {
   const outputDir = path.join(dir, 'dist');
   return { input, outputDir, dir };
 }
+
+test.concurrent(
+  'dev re-emitted asset with changed content is included in rebuild output',
+  { retry: TEST_RETRY, timeout: TEST_TIMEOUT },
+  async ({ task, expect, onTestFinished }) => {
+    const retryCount = task.result?.retryCount ?? 0;
+    const { input, outputDir, dir } = createTestInputAndOutput('dev-reemit-asset', retryCount);
+
+    const outputs: RolldownOutput[] = [];
+    const findAsset = (output: RolldownOutput) =>
+      output.output.find(
+        (o): o is Extract<typeof o, { type: 'asset' }> =>
+          o.type === 'asset' && o.fileName === 'extra.html',
+      );
+
+    const engine = await dev(
+      {
+        input,
+        experimental: { devMode: true },
+        plugins: [
+          {
+            name: 'emit-asset',
+            generateBundle() {
+              // Re-emit the same fileName on every build; its content changes
+              // whenever the input module is edited.
+              this.emitFile({
+                type: 'asset',
+                fileName: 'extra.html',
+                source: `<script>${fs.readFileSync(input, 'utf8')}</script>`,
+              });
+            },
+          },
+        ],
+      },
+      { dir: outputDir },
+      {
+        onOutput: (result) => {
+          if (!(result instanceof Error)) {
+            outputs.push(result);
+          }
+        },
+      },
+    );
+    onTestFinished(async () => {
+      await engine.close();
+      if (!process.env.CI) {
+        fs.rmSync(dir, { recursive: true, force: true });
+      }
+    });
+
+    await engine.run();
+    await expect.poll(() => outputs.length).toBeGreaterThan(0);
+    expect(findAsset(outputs.at(-1)!)?.source).toContain('console.log(1)');
+
+    outputs.length = 0;
+    await editFile(input, 'console.log(2)');
+    await expect
+      .poll(async () => {
+        await engine.ensureLatestBuildOutput();
+        const output = outputs.at(-1);
+        return output ? findAsset(output)?.source : undefined;
+      })
+      .toContain('console.log(2)');
+  },
+);
 
 function createTestWithMultiFiles(
   testLabel: string,

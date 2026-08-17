@@ -227,8 +227,15 @@ impl DevEngine {
   pub async fn wait_for_close(&self) -> BuildResult<()> {
     self.create_error_if_closed()?;
 
-    let coordinator_state = self.coordinator_state.lock().await;
-    if let Some(coordinator_handle) = coordinator_state.handle.clone() {
+    // Snapshot the Shared handle and release the guard BEFORE awaiting:
+    // close_inner() must lock this same mutex to send Close, and the
+    // coordinator only finishes after Close is processed — awaiting with
+    // the guard held deadlocks any concurrent close().
+    let coordinator_handle = {
+      let coordinator_state = self.coordinator_state.lock().await;
+      coordinator_state.handle.clone()
+    };
+    if let Some(coordinator_handle) = coordinator_handle {
       if let Err(error) = coordinator_handle.await {
         return Err(anyhow::anyhow!("{error}").into());
       }

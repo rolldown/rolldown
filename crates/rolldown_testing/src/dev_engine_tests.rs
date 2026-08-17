@@ -19,6 +19,7 @@ use std::{
     Arc, Condvar, Mutex,
     atomic::{AtomicUsize, Ordering},
   },
+  task::Poll,
 };
 use tokio::{
   sync::{Notify, oneshot},
@@ -489,4 +490,54 @@ async fn close_contains_a_panicked_bundling_future_and_runs_fallback_cleanup() {
     .expect_err("close must report the coordinator panic instead of panicking");
   assert!(close_error.to_string().contains("DevEngine coordinator task failed"));
   assert_eq!(close_calls.load(Ordering::SeqCst), 1, "fallback cleanup must run closeBundle");
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn concurrent_close_completes_while_wait_for_close_is_parked() {
+  let test_dir = TestDir::new();
+  let input = test_dir.0.join("main.js");
+  fs::write(&input, "export const value = 1;").expect("write initial input");
+  let engine = DevEngine::new(
+    BundlerConfig::new(
+      BundlerOptions {
+        cwd: Some(test_dir.0.clone()),
+        input: Some(vec![input.to_string_lossy().into_owned().into()]),
+        experimental: Some(ExperimentalOptions {
+          incremental_build: Some(true),
+          dev_mode: Some(DevModeOptions::default()),
+          ..Default::default()
+        }),
+        ..Default::default()
+      },
+      Vec::new(),
+    ),
+    DevOptions {
+      watch: Some(DevWatchOptions {
+        disable_watcher: Some(true),
+        skip_write: Some(true),
+        ..Default::default()
+      }),
+      ..Default::default()
+    },
+  )
+  .expect("create dev engine");
+  engine.run().await.expect("run initial build");
+
+  // Park wait_for_close on the coordinator handle. ONE poll is deterministic:
+  // the uncontended async_lock fast path resolves on first poll, the handle is
+  // cloned, and the future suspends awaiting the Shared coordinator handle —
+  // guard captured inside the suspended future in the unfixed code.
+  let mut wait_fut = std::pin::pin!(engine.wait_for_close());
+  let parked = poll_fn(|cx| Poll::Ready(wait_fut.as_mut().poll(cx).is_pending())).await;
+  assert!(parked, "wait_for_close must be parked on the running coordinator");
+
+  // Unfixed: close_inner blocks at the coordinator-state lock and this times out.
+  timeout(LIVENESS_TIMEOUT, engine.close())
+    .await
+    .expect("close() must not deadlock while wait_for_close is parked")
+    .expect("close() must succeed");
+  timeout(LIVENESS_TIMEOUT, wait_fut)
+    .await
+    .expect("wait_for_close must resolve once the coordinator closed")
+    .expect("wait_for_close must return Ok after a clean close");
 }

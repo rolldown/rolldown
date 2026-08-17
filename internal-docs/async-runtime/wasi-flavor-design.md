@@ -11,10 +11,10 @@
 
 Rolldown ships two independent WASI binaries, built from two Rust targets:
 
-| Rust target | npm artifact | Loader | Used by |
-| --- | --- | --- | --- |
-| `wasm32-wasip1-threads` | `@rolldown/binding-wasm32-wasi` | `rolldown-binding.wasi.cjs` | Node fallback, browsers with cross-origin isolation |
-| `wasm32-wasip1` | `@rolldown/binding-wasm32-wasip1` | `rolldown-binding.wasip1.cjs`, `rolldown-binding.wasip1-deferred.js` | `@rolldown/browser`, workerd, non-isolated pages |
+| Rust target             | npm artifact                      | Loader                                                               | Used by                                             |
+| ----------------------- | --------------------------------- | -------------------------------------------------------------------- | --------------------------------------------------- |
+| `wasm32-wasip1-threads` | `@rolldown/binding-wasm32-wasi`   | `rolldown-binding.wasi.cjs`                                          | Node fallback, browsers with cross-origin isolation |
+| `wasm32-wasip1`         | `@rolldown/binding-wasm32-wasip1` | `rolldown-binding.wasip1.cjs`, `rolldown-binding.wasip1-deferred.js` | `@rolldown/browser`, workerd, non-isolated pages    |
 
 Build scripts: `packages/rolldown/package.json` — `build-binding:wasi`
 passes `--target wasm32-wasip1-threads`, `build-binding:wasi-single` passes
@@ -71,7 +71,7 @@ Three compile-time facts, in increasing depth:
 
 2. **The thread ABI.** The threaded binary imports `wasi.thread-spawn`. The
    JS runtime (`@napi-rs/wasm-runtime`) answers it by spawning a Web Worker
-   that re-instantiates the *same module against the same shared memory*
+   that re-instantiates the _same module against the same shared memory_
    and enters at `wasi_thread_start`. The threadless binary contains none
    of this plumbing — the import, the entry export, and the TLS setup are
    absent from the binary, not disabled.

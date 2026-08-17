@@ -368,7 +368,7 @@ function createTestInputAndOutput(testLabel: string, retryCount: number) {
   return { input, outputDir, dir };
 }
 
-test.concurrent.skipIf(isSingleThread)(
+test.skipIf(isSingleThread).concurrent(
   'dev re-emitted asset with changed content is included in rebuild output',
   { retry: TEST_RETRY, timeout: TEST_TIMEOUT },
   async ({ task, expect, onTestFinished }) => {

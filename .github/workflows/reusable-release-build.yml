@@ -31,6 +31,10 @@ jobs:
             target: aarch64-pc-windows-msvc
             build: vp run ci:build-release-binding --target aarch64-pc-windows-msvc
 
+          - os: windows-latest
+            target: i686-pc-windows-msvc
+            build: vp run ci:build-release-binding --target i686-pc-windows-msvc
+
           - os: ubuntu-latest
             target: x86_64-unknown-linux-gnu
             build: vp run ci:build-release-binding --target x86_64-unknown-linux-gnu --use-napi-cross
@@ -52,8 +56,16 @@ jobs:
             build: vp run ci:build-release-binding --target armv7-unknown-linux-gnueabihf --use-napi-cross
 
           - os: ubuntu-latest
+            target: armv7-unknown-linux-musleabihf
+            build: vp run ci:build-release-binding --target armv7-unknown-linux-musleabihf -x
+
+          - os: ubuntu-latest
             target: aarch64-linux-android
             build: vp run ci:build-release-binding --target aarch64-linux-android
+
+          - os: ubuntu-latest
+            target: armv7-linux-androideabi
+            build: vp run ci:build-release-binding --target armv7-linux-androideabi
 
           - os: ubuntu-latest
             target: aarch64-unknown-linux-musl
@@ -68,6 +80,14 @@ jobs:
           - os: ubuntu-latest
             target: powerpc64le-unknown-linux-gnu
             build: vp run ci:build-release-binding --target powerpc64le-unknown-linux-gnu --use-napi-cross
+
+          - os: ubuntu-latest
+            target: riscv64gc-unknown-linux-gnu
+            build: vp run ci:build-release-binding --target riscv64gc-unknown-linux-gnu --use-napi-cross
+
+          - os: ubuntu-latest
+            target: riscv64gc-unknown-linux-musl
+            build: vp run ci:build-release-binding --target riscv64gc-unknown-linux-musl -x
 
           - os: ubuntu-latest
             target: wasm32-wasip1-threads

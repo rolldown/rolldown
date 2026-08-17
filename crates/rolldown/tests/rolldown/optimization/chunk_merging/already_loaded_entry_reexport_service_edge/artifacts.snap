@@ -6,7 +6,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## d.js
 
 ```js
-import { t as a } from "./entry.js";
+import { t as a } from "./x.js";
 //#region w.js
 const q = "value-q";
 //#endregion
@@ -23,10 +23,8 @@ export { q as t };
 ## entry.js
 
 ```js
+import { t as a } from "./x.js";
 import "./d.js";
-//#region x.js
-const a = "value-a";
-//#endregion
 //#region m.js
 function helper() {
 	return `helper:${a}`;
@@ -35,6 +33,15 @@ function helper() {
 //#region entry.js
 (globalThis.entryLog ??= []).push(`entry:${helper()}`);
 globalThis.loadD = () => import("./d.js");
+//#endregion
+
+```
+
+## x.js
+
+```js
+//#region x.js
+const a = "value-a";
 //#endregion
 export { a as t };
 

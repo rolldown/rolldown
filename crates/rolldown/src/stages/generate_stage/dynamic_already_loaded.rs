@@ -4,12 +4,13 @@ use oxc_index::{IndexVec, index_vec};
 use rolldown_common::{
   ChunkIdx, ChunkKind, ChunkMeta, ImportKind, ImportRecordIdx, ImportRecordMeta, ModuleIdx,
   PreserveEntrySignatures, RuntimeHelper, StmtInfoIdx, SymbolOrMemberExprRef, SymbolRef,
-  UsedSymbolRefsBuilder, dynamic_import_usage::DynamicImportExportsUsage,
+  UsedSymbolRefsBuilder, WrapKind, dynamic_import_usage::DynamicImportExportsUsage,
 };
 use rolldown_utils::BitSet;
 use rustc_hash::{FxHashMap, FxHashSet};
 
 use crate::chunk_graph::ChunkGraph;
+use crate::esm_init_obligations::collect_entry_reexported_wrapper_inits;
 
 use super::{
   GenerateStage, code_splitting::IndexSplittingInfo,
@@ -66,7 +67,8 @@ impl GenerateStage<'_> {
       return;
     }
     let module_to_atom_idx = self.compute_module_to_atom_idx(&atoms);
-    let atom_dependencies = self.compute_atom_dependencies(&atoms, &module_to_atom_idx);
+    let atom_dependencies =
+      self.compute_atom_dependencies(&atoms, &module_to_atom_idx, used_symbol_refs);
 
     let static_dependency_atoms_by_entry = self.compute_static_dependency_atoms_by_entry(
       entries_len as usize,
@@ -320,6 +322,7 @@ impl GenerateStage<'_> {
     &self,
     atoms: &[ChunkAtom],
     module_to_atom_idx: &IndexVec<ModuleIdx, Option<usize>>,
+    used_symbol_refs: &UsedSymbolRefsBuilder,
   ) -> Vec<Vec<usize>> {
     let strict_execution_order = self.options.is_strict_execution_order_enabled();
     atoms
@@ -342,7 +345,7 @@ impl GenerateStage<'_> {
             }
             continue;
           }
-          for dep_module_idx in self.predicted_static_import_targets(module_idx) {
+          for dep_module_idx in self.predicted_static_import_targets(module_idx, used_symbol_refs) {
             add(dep_module_idx, &mut dependencies);
           }
         }
@@ -354,7 +357,11 @@ impl GenerateStage<'_> {
   /// Returns the targets that `compute_cross_chunk_links` will import for this module. Transitive
   /// side-effect dependencies behind a `sideEffects: false` barrel are retained only when an
   /// included symbol reference also requires them.
-  fn predicted_static_import_targets(&self, module_idx: ModuleIdx) -> Vec<ModuleIdx> {
+  fn predicted_static_import_targets(
+    &self,
+    module_idx: ModuleIdx,
+    used_symbol_refs: &UsedSymbolRefsBuilder,
+  ) -> Vec<ModuleIdx> {
     let meta = &self.link_output.metas[module_idx];
     let Some(module) = self.link_output.module_table[module_idx].as_normal() else {
       return meta.load_dependencies.iter().copied().collect();
@@ -383,13 +390,66 @@ impl GenerateStage<'_> {
         ambiguous.push(dep_module_idx);
       }
     }
-    if ambiguous.is_empty() {
-      return targets;
+    if !ambiguous.is_empty() {
+      let symbol_owners = self.referenced_symbol_owners(module_idx);
+      targets.extend(ambiguous.into_iter().filter(|dep_idx| symbol_owners.contains(dep_idx)));
     }
 
-    let symbol_owners = self.referenced_symbol_owners(module_idx);
-    targets.extend(ambiguous.into_iter().filter(|dep_idx| symbol_owners.contains(dep_idx)));
+    self.extend_with_entry_export_service_targets(module_idx, used_symbol_refs, &mut targets);
     targets
+  }
+
+  /// An entry chunk imports the canonical symbol of every live resolved export it serves
+  /// (`register_entry_export_depended_symbols`), even when no included statement of the entry
+  /// references it — a re-export the entry never uses still becomes a real import of the owner's
+  /// chunk. `load_dependencies` only carries the narrowed `referenced_symbols_by_entry_point_chunk`
+  /// set, so these targets are derived separately from the full `resolved_exports`. The liveness
+  /// gate mirrors emission exactly: a dead export produces no import, and predicting one would let
+  /// entry reachability claim chunks the entry never loads.
+  fn extend_with_entry_export_service_targets(
+    &self,
+    module_idx: ModuleIdx,
+    used_symbol_refs: &UsedSymbolRefsBuilder,
+    targets: &mut Vec<ModuleIdx>,
+  ) {
+    if !self.link_output.entries.contains_key(&module_idx) {
+      return;
+    }
+    let meta = &self.link_output.metas[module_idx];
+    if matches!(meta.wrap_kind(), WrapKind::Cjs) {
+      // A CJS entry is consumed through its wrapper, not through per-export symbols.
+      return;
+    }
+    let symbol_db = &self.link_output.symbol_db;
+    for resolved_export in meta.resolved_exports.values() {
+      if resolved_export.came_from_commonjs {
+        continue;
+      }
+      let served = symbol_db.canonical_ref_resolving_namespace(resolved_export.symbol_ref);
+      let is_live = if let Some(owner) = self.link_output.module_table[served.owner].as_normal()
+        && owner.namespace_object_ref == served
+      {
+        self.link_output.metas[served.owner].namespace_included
+      } else {
+        used_symbol_refs.contains(&served)
+      };
+      if is_live {
+        targets.push(served.owner);
+      }
+    }
+    // A re-export of a wrapped ESM module additionally imports the module's `init_*` wrapper.
+    for init in collect_entry_reexported_wrapper_inits(
+      module_idx,
+      meta,
+      &self.link_output.metas,
+      &self.link_output.module_table.modules,
+      symbol_db,
+      None,
+    ) {
+      if used_symbol_refs.contains(&init.wrapper_ref) {
+        targets.push(init.wrapper_ref.owner);
+      }
+    }
   }
 
   fn referenced_symbol_owners(&self, module_idx: ModuleIdx) -> FxHashSet<ModuleIdx> {

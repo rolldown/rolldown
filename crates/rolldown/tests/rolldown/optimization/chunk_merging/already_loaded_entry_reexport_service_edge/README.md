@@ -14,12 +14,14 @@ shared pure module.
 
 ## The bug this pins
 
-`x` is statically loaded by the entry, so the already-loaded pass folds it into
-the entry chunk. The fold's cycle check predicts static imports from
-`load_dependencies`, which does not carry the entry's unused re-export of `q`.
-Emission does: the entry chunk must import `q` from the chunk that owns `w` to
-serve the re-export. The emitted graph is `entry -> d -> entry`, and `d`'s
-top-level read of `a` observes an uninitialized binding.
+`x` is statically loaded by the entry, so the already-loaded pass wants to fold
+it into the entry chunk. The fold's cycle check predicts static imports, and a
+prediction built only from `load_dependencies` misses the entry's unused
+re-export of `q`. Emission serves that re-export with a real import: the entry
+chunk imports `q` from the chunk that owns `w`. With the missed edge the fold
+was accepted and the emitted graph was `entry -> d -> entry`, so `d`'s
+top-level read of `a` observed an uninitialized binding.
 
-While the bug exists, `expectExecutionFailure` pins the runtime crash. The fix
-must reject the fold, keeping the chunk graph acyclic.
+The prediction now derives entry-export service targets from the entry's live
+`resolved_exports`, the cycle check sees `entry -> d`, and the fold is
+rejected. `x` stays in its own shared chunk and the graph is acyclic.

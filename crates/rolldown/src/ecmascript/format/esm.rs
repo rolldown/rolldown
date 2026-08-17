@@ -403,6 +403,15 @@ fn render_esm_chunk_imports(ctx: &GenerateContext<'_>) -> Option<String> {
   (!s.is_empty()).then_some(s)
 }
 
+fn render_import_attribute(
+  module_table: &ModuleTable,
+  with_clause: Option<(ModuleIdx, ImportRecordIdx)>,
+) -> Option<String> {
+  let (module_idx, record_idx) = with_clause?;
+  let module = module_table[module_idx].as_normal()?;
+  Some(module.import_attribute_map.get(&record_idx)?.to_string())
+}
+
 fn create_import_declaration(
   module_table: &ModuleTable,
   mut specifiers: Vec<String>,
@@ -411,11 +420,7 @@ fn create_import_declaration(
   with_clause: Option<(ModuleIdx, ImportRecordIdx)>,
 ) -> String {
   let mut ret = String::new();
-  let with_clause_string = with_clause.and_then(|(module_idx, record_idx)| {
-    let module = module_table[module_idx].as_normal()?;
-    let import_attribute = module.import_attribute_map.get(&record_idx)?;
-    Some(import_attribute.to_string())
-  });
+  let with_clause_string = render_import_attribute(module_table, with_clause);
   let first_default_alias = match &default_alias {
     [] => None,
     [first] => Some(first),
@@ -495,6 +500,15 @@ where
           s.push_str(alias);
           s.push_str(" from ");
           s.push_str(&escape(&importee.get_import_path(ctx.chunk, ctx.resolved_paths)));
+          // The attributes are part of the request, not decoration: dropping them changes how
+          // the host resolves and validates the module. This branch renders its own declaration
+          // instead of going through `create_import_declaration`, so it has to append them too.
+          if let Some(with_clause) =
+            render_import_attribute(&ctx.link_output.module_table, with_clause)
+          {
+            s.push(' ');
+            s.push_str(&with_clause);
+          }
           s.push_str(";\n");
           None
         }

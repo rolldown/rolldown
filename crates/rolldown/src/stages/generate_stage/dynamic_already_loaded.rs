@@ -3,7 +3,7 @@ use std::collections::VecDeque;
 use oxc_index::{IndexVec, index_vec};
 use rolldown_common::{
   ChunkIdx, ChunkKind, ChunkMeta, ImportKind, ImportRecordIdx, ImportRecordMeta, Module, ModuleIdx,
-  PreserveEntrySignatures, RuntimeHelper, StmtInfoIdx, UsedSymbolRefsBuilder,
+  OutputFormat, PreserveEntrySignatures, RuntimeHelper, StmtInfoIdx, UsedSymbolRefsBuilder,
   dynamic_import_usage::DynamicImportExportsUsage,
 };
 use rolldown_utils::BitSet;
@@ -215,6 +215,7 @@ impl GenerateStage<'_> {
     if self.link_output.module_table[entry_module_idx].as_normal().is_none() {
       return false;
     }
+    let meta = &self.link_output.metas[entry_module_idx];
 
     // `import()` assimilates a namespace that carries a callable `then`. The extraction callback
     // would then get whatever that `then` returns, not the namespace. Only the export name can do
@@ -223,31 +224,26 @@ impl GenerateStage<'_> {
     //
     // No other export name can become `then`. The minified generator skips it, and
     // `ConflictResolver` reserves it up front. So an internal export named `then` deconflicts to
-    // `then$1`. See `THENABLE_HAZARD_EXPORT_NAME` in compute_cross_chunk_links.rs.
-    if self.link_output.metas[entry_module_idx]
-      .resolved_exports
-      .keys()
-      .any(|name| name.as_str() == "then")
-    {
+    // `then$1`. See `THENABLE_HAZARD_EXPORT_NAME` in compute_cross_chunk_links.rs. The
+    // namespace's own chunk export alias cannot collide with a public one either. The same
+    // resolver reserves every predefined name before it names bundler-owned exports.
+    if meta.resolved_exports.keys().any(|name| name.as_str() == "then") {
       return false;
     }
 
     // An entry with dynamic exports through `export * from` _might_ have a `then` export. The
-    // exception is an entry whose stars are all direct external re-exports of its own. The
-    // materialized namespace merges those at run time with `__reExport`, the same shape Rollup
-    // produces with `_mergeNamespaces`. `find_entry_level_external_module` skips the
-    // entry-level flatten for extraction-registered entries. Those records therefore stay
-    // inside the namespace. The chunk itself publishes no `export *`, so its own namespace
-    // never turns thenable.
-    !self.link_output.metas[entry_module_idx].has_dynamic_exports
-      || self.dynamic_exports_are_direct_external_stars(entry_module_idx)
+    // exception is a single direct external re-export on the entry itself. The materialized
+    // namespace merges that one at run time with `__reExport`, the same shape Rollup produces
+    // with `_mergeNamespaces`. `find_entry_level_external_module` skips the entry-level flatten
+    // for extraction-registered entries. That record therefore stays inside the namespace. The
+    // chunk itself publishes no `export *`, so its own namespace never turns thenable.
+    !meta.has_dynamic_exports || self.dynamic_exports_are_direct_external_stars(entry_module_idx)
   }
 
-  /// Whether every source of this entry's dynamic exports is a direct `export * from
-  /// <external>` record on the entry itself. Only those records join the materialized
-  /// namespace's run-time `__reExport` merge. Any other source would leave the simulated
-  /// namespace missing names that only exist at run time. Two such sources: the entry being
-  /// CommonJS, or a star into a normal module that itself has dynamic exports.
+  /// Whether this entry's run-time-only dynamic exports come from exactly one direct external
+  /// star, in ESM output. Only a direct record joins the materialized namespace's run-time
+  /// `__reExport` merge, so any other dynamic source would leave the simulated namespace missing
+  /// names that only exist at run time.
   fn dynamic_exports_are_direct_external_stars(&self, entry_module_idx: ModuleIdx) -> bool {
     let Some(module) = self.link_output.module_table[entry_module_idx].as_normal() else {
       return false;
@@ -255,7 +251,19 @@ impl GenerateStage<'_> {
     if module.exports_kind.is_commonjs() {
       return false;
     }
-    let mut saw_external_star = false;
+    // Extraction is only safe here because the chunk stops re-exporting the star itself, which
+    // is what keeps its namespace from becoming thenable. That holds in ESM alone: the skip in
+    // `find_entry_level_external_module` clears `entry_level_external_module_idx`, but the
+    // non-ESM renderer emits the `Object.keys(...)` re-export shim from the module's own
+    // `star_exports_from_external_modules` as well (`render_chunk_exports.rs`), so the chunk
+    // would keep publishing the star next to the namespace's `__reExport` — and
+    // `Promise.resolve().then(() => require(...))` assimilates a thenable `exports` exactly the
+    // way `import()` does. The two merges do not even agree on what they copy: the shim
+    // enumerates a primitive external with `Object.keys`, while `__copyProps` skips it.
+    if !matches!(self.options.format, OutputFormat::Esm) {
+      return false;
+    }
+    let mut external_star_count = 0;
     for rec in &module.import_records {
       if !rec.meta.contains(ImportRecordMeta::IsExportStar) {
         continue;
@@ -264,7 +272,16 @@ impl GenerateStage<'_> {
         return false;
       };
       match &self.link_output.module_table[resolved_idx] {
-        Module::External(_) => saw_external_star = true,
+        Module::External(_) => {
+          // ESM omits a name two stars both export; `__copyProps` keeps whichever it copies
+          // first. Which names collide is unknowable for an external, so a second star is
+          // refused outright rather than merged into a namespace that can differ from the
+          // facade's. Rollup's `_mergeNamespaces` is first-wins here too.
+          external_star_count += 1;
+          if external_star_count > 1 {
+            return false;
+          }
+        }
         Module::Normal(_) => {
           if self.link_output.metas[resolved_idx].has_dynamic_exports {
             return false;
@@ -272,7 +289,7 @@ impl GenerateStage<'_> {
         }
       }
     }
-    saw_external_star
+    external_star_count == 1
   }
 
   /// Generates a definition for a fake module namespace for the inlined module, which is then

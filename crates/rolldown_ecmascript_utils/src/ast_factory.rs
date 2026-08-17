@@ -25,7 +25,7 @@ use oxc::{
       FormalParameterKind, FormalParameters, FunctionBody, FunctionType, IdentifierName,
       ImportDeclarationSpecifier, ImportOrExportKind, MemberExpression, ModuleExportName,
       NumberBase, ObjectExpression, ObjectPropertyKind, PropertyKey, PropertyKind, Statement,
-      StringLiteral, VariableDeclarationKind, VariableDeclarator,
+      StringLiteral, VariableDeclarationKind, VariableDeclarator, WithClause,
     },
     builder::GetAstBuilder,
   },
@@ -715,6 +715,7 @@ pub trait StatementFactoryExt<'ast> {
   fn new_import_star_stmt<B: GetAstBuilder<'ast> + GetAllocator<'ast>>(
     source: &str,
     as_name: &str,
+    with_clause: Option<WithClause<'ast>>,
     builder: &B,
   ) -> Statement<'ast> {
     let specifiers = oxc::allocator::Vec::from_value_in(
@@ -730,7 +731,7 @@ pub trait StatementFactoryExt<'ast> {
       Some(specifiers),
       StringLiteral::new(SPAN, oxc::ast::ast::Str::from_str_in(source, builder), None, builder),
       None,
-      None,
+      with_clause.map(|with_clause| oxc::allocator::Box::new_in(with_clause, builder)),
       ImportOrExportKind::Value,
       builder,
     )

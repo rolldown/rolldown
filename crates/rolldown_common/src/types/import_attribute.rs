@@ -1,7 +1,11 @@
 use std::fmt::Display;
 
-use oxc::ast::ast;
-use oxc_str::CompactStr;
+use oxc::{
+  allocator::{GetAllocator, Vec as ArenaVec},
+  ast::{ast, builder::GetAstBuilder},
+  span::SPAN,
+};
+use oxc_str::{CompactStr, Ident, Str};
 use rolldown_utils::indexmap::FxIndexMap;
 
 #[derive(Debug, Clone, Default)]
@@ -57,6 +61,44 @@ impl ImportAttribute {
       })
       .collect();
     Self { kind, entries }
+  }
+
+  /// Rebuild the clause as AST, for a generated import standing in for the record this came
+  /// from. The attributes are part of the request — a host resolves and validates the module
+  /// differently without them — so a synthesized import has to carry them too.
+  pub fn to_with_clause<'ast, B: GetAstBuilder<'ast> + GetAllocator<'ast>>(
+    &self,
+    builder: &B,
+  ) -> ast::WithClause<'ast> {
+    let keyword = match self.kind {
+      ImportAttributeKind::With => ast::WithClauseKeyword::With,
+      ImportAttributeKind::Assert => ast::WithClauseKeyword::Assert,
+    };
+    let with_entries = ArenaVec::from_iter_in(
+      self.entries.iter().map(|(key, value)| {
+        let key = match key {
+          ImportAttributeKey::Identifier(name) => ast::ImportAttributeKey::new_identifier(
+            SPAN,
+            Ident::from_str_in(name.as_str(), builder),
+            builder,
+          ),
+          ImportAttributeKey::String(name) => ast::ImportAttributeKey::new_string_literal(
+            SPAN,
+            Str::from_str_in(name.as_str(), builder),
+            None,
+            builder,
+          ),
+        };
+        ast::ImportAttribute::new(
+          SPAN,
+          key,
+          ast::StringLiteral::new(SPAN, Str::from_str_in(value, builder), None, builder),
+          builder,
+        )
+      }),
+      builder,
+    );
+    ast::WithClause::new(SPAN, keyword, with_entries, builder)
   }
 }
 

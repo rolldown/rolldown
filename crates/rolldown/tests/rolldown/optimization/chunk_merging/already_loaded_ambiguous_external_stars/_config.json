@@ -1,0 +1,13 @@
+{
+  "_comment": "Two direct external stars both export a callable then. ESM omits that ambiguous name, but sequential __reExport merges retain the first value and make the extracted namespace thenable. Keep the facade unless merging can exclude ambiguous names.",
+  "config": {
+    "input": [
+      {
+        "name": "main",
+        "import": "./main.js"
+      }
+    ],
+    "external": ["ext-a", "ext-b"],
+    "minifyInternalExports": true
+  }
+}

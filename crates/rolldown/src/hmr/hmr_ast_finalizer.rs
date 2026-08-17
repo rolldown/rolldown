@@ -480,7 +480,7 @@ impl<'ast> HmrAstFinalizer<'_, 'ast> {
     let module_request = &importee.id;
 
     // import * as [binding_name] from 'external';
-    let stmt = Statement::new_import_star_stmt(module_request, binding_name, self);
+    let stmt = Statement::new_import_star_stmt(module_request, binding_name, None, self);
 
     self.generated_static_import_stmts_from_external.insert(importee.idx, stmt);
   }

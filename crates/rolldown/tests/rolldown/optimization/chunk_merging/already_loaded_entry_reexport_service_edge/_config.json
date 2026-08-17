@@ -1,0 +1,15 @@
+{
+  "config": {
+    "preserveEntrySignatures": "false",
+    "input": [
+      {
+        "name": "entry",
+        "import": "./entry.js"
+      }
+    ]
+  },
+  "expectExecutionFailure": {
+    "reason": "The already-loaded fold misses the entry re-export service edge (entry chunk imports `q` from the chunk owning it), accepts a fold that emits a cyclic chunk graph, and the lazy chunk reads `a` before initialization.",
+    "outputContains": ["before initialization"]
+  }
+}

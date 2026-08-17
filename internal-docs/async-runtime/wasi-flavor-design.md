@@ -113,3 +113,52 @@ Each flavor also carries its own generated declaration file
 (`rolldown-binding.wasi.d.cts`, `rolldown-binding.wasip1.d.cts`); the
 regeneration order that keeps them consistent is documented in
 [implementation.md](./implementation.md).
+
+## Test coverage in real workerd (CI status)
+
+Miniflare embeds the same workerd binary a Cloudflare deployment runs, so
+these steps execute the real runtime, locally in CI:
+
+| CI step | What runs |
+| --- | --- |
+| `ci.yml` "Test @rolldown/browser/workerd end-to-end in real workerd" | `packages/workerd-tests/suite.mjs --rounds=20` on every PR |
+| `ci.yml` packed-consumer check | `scripts/wasi/check-workerd-packed-consumer.mjs` — the wrangler/packaging path |
+| `reusable-wasi.yml` memory canary | `packages/workerd-tests/memory.mjs` — concurrent instances + RSS budget |
+| `reusable-release-build.yml` memory canary | same canary against the **published** `packages/browser/dist` artifacts |
+
+The suite's worker half (`packages/workerd-tests/worker.js`) executes seven
+cases entirely inside workerd: a real multi-module `build()`, the
+unresolvable-import error surface, bundle/instance lifecycle contracts,
+single-slot admission concurrency, fire-and-forget `this.load()`,
+failed-build invalidate rules, and capability reporting. `suite.mjs` also
+enforces a per-rebuild Wasm memory-slope budget with a positive control, so
+a leak inside workerd fails the PR.
+
+### Reusing the existing test suite — three tiers
+
+1. **Done — full suite against the WASI binding.** `test:wasi`
+   (`ROLLDOWN_WASI_TEST=1 test:main`) re-runs the entire vitest suite with
+   the Wasm binding, in Node (`reusable-wasi.yml`). This proves the binding;
+   it does not prove the workerd environment.
+2. **Done — WASI-specific tests.** `test:wasi-threaded`,
+   `test:wasi-runtime`, `test:wasi-runtime-lifecycle`, plus the threaded
+   stability run, each pinned to the flavor it needs.
+3. **Open — test files inside workerd itself.** The existing files cannot
+   move as-is: they read fixtures from disk, spawn child processes, and use
+   vitest snapshots — workerd has no `fs` and no `process`, and vitest does
+   not run inside it. Two options:
+   - **Port scenarios, not files (preferred).** Add a route to `worker.js`
+     per reused scenario: fixtures become in-memory virtual modules, the
+     real API runs inside workerd, the Node driver asserts. This is how
+     the seven existing cases were built; one more is ~30 lines.
+   - **`@cloudflare/vitest-pool-workers`** — the official vitest-in-workerd
+     pool. Not used in this repo. Real vitest DX, but requires wrangler
+     config, bundling fixtures into the worker, and wiring the SAB-free
+     deferred loader into the pool. A standalone project; justified only if
+     a large test population should live inside workerd.
+
+The gap tier 3 closes is narrow: only in-workerd execution proves workerd's
+own environment (no `SharedArrayBuffer`, its module loader, its scheduler).
+The seven cases were chosen to cover exactly that surface, so the standing
+recommendation is to extend them case by case when a bug class warrants it,
+not to stand up a second test framework.

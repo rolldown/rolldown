@@ -273,8 +273,11 @@ jobs:
         run: vp run --filter '@rolldown/test-dev-server' build
 
       # Per-PR OS coverage for the suites the ubuntu-only PR lanes cannot
-      # exercise per OS: watch debounce and the dev engine go through the
-      # runtime's own timer + file-watch paths (kqueue vs ReadDirectoryChangesW).
+      # exercise per OS: the runtime's timer/debounce paths, poll-thread
+      # scheduling, and watcher/dev-engine lifecycle on a real mac/windows
+      # binding. Both suites force `usePolling: true` (CI stability), so the
+      # native watch backends (FSEvents/ReadDirectoryChangesW) are NOT selected
+      # here — native event delivery has no CI assertion on any OS today.
       # `&&` chaining (not a multi-line block) matches reusable-node-test.yml so
       # a first-command failure fails the step under pwsh too. `dev/` scopes the
       # second run to tests/dev/* (dev-watch.test.ts is excluded by test:main

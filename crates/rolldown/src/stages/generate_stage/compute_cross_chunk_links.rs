@@ -98,7 +98,7 @@ impl SymbolChunkTable {
   }
 }
 
-trait UsedSymbolRefsView: Sync {
+pub(super) trait UsedSymbolRefsView: Sync {
   fn contains(&self, symbol_ref: &SymbolRef) -> bool;
 }
 
@@ -157,6 +157,13 @@ impl GenerateStage<'_> {
             .collect()
         })
         .collect();
+
+    #[cfg(debug_assertions)]
+    self.debug_assert_module_level_static_import_prediction(
+      chunk_graph,
+      used_symbol_refs,
+      &index_imports_from_other_chunks,
+    );
 
     self.deconflict_exported_names(
       chunk_graph,
@@ -345,6 +352,78 @@ impl GenerateStage<'_> {
       FinalEsmInitMetadataAvailability::Sealed(final_esm_init_metadata),
     );
     Self::static_import_edges_of(chunk_graph, state)
+  }
+
+  /// Reconciles the module-level prediction (`predicted_static_import_targets`) against the
+  /// static chunk imports this pass just derived. The already-loaded fold consumed that
+  /// prediction before chunks existed, with two obligations: the fold's cycle check must see
+  /// every emitted edge, and its entry reachability must not claim a side effect the emitted
+  /// graph never runs. The contract is therefore one-and-a-half-sided:
+  /// - every emitted edge must be predicted (a miss is the cycle-check bug class pinned by
+  ///   `optimization/chunk_merging/already_loaded_entry_reexport_service_edge`);
+  /// - a predicted edge that is not emitted is tolerated only when every module target behind it
+  ///   is side-effect free. Pure over-prediction is benign for both consumers — the cycle check
+  ///   only becomes more conservative, and reachability claims on pure modules carry no
+  ///   execution-order obligation (their values always arrive through symbol imports). It also
+  ///   cannot be eliminated: constant inlining drops a symbol's import without touching
+  ///   `load_dependencies`.
+  ///
+  /// This validates the prediction *function* on the final state — the fold's decision-time
+  /// snapshot predates namespace-extraction replay and cannot be rechecked here.
+  ///
+  /// Carve-outs:
+  /// - runtime-chunk targets: per-chunk runtime-helper demands and CJS-format interop add
+  ///   emission-time runtime imports the module-level walk does not model; the runtime module
+  ///   imports nothing, so these edges cannot participate in a cycle;
+  /// - entry facades hosting a moved-away entry module: their service edge to the chunk holding
+  ///   the entry has no predicting module.
+  #[cfg(debug_assertions)]
+  fn debug_assert_module_level_static_import_prediction(
+    &self,
+    chunk_graph: &ChunkGraph,
+    used_symbol_refs: &impl UsedSymbolRefsView,
+    index_imports_from_other_chunks: &IndexImportsFromOtherChunks,
+  ) {
+    if self.options.is_strict_execution_order_enabled() || self.options.preserve_modules {
+      return;
+    }
+    let runtime_chunk_idx = chunk_graph.module_to_chunk[self.link_output.runtime.id()];
+    for (chunk_idx, chunk) in chunk_graph.chunk_table.iter_enumerated() {
+      if let ChunkKind::EntryPoint { module: entry_module_idx, .. } = chunk.kind
+        && !chunk.modules.contains(&entry_module_idx)
+      {
+        continue;
+      }
+      // Predicted edge -> whether any module target behind it has side effects.
+      let mut predicted: FxHashMap<ChunkIdx, bool> = FxHashMap::default();
+      for &module_idx in &chunk.modules {
+        for target in self.predicted_static_import_targets(module_idx, used_symbol_refs) {
+          if let Some(target_chunk_idx) = chunk_graph.module_to_chunk[target]
+            && target_chunk_idx != chunk_idx
+            && Some(target_chunk_idx) != runtime_chunk_idx
+          {
+            *predicted.entry(target_chunk_idx).or_insert(false) |=
+              self.link_output.module_table[target].side_effects().has_side_effects();
+          }
+        }
+      }
+      for importee_chunk_idx in index_imports_from_other_chunks[chunk_idx].keys() {
+        debug_assert!(
+          Some(*importee_chunk_idx) == runtime_chunk_idx
+            || predicted.contains_key(importee_chunk_idx),
+          "emitted static import {chunk_idx:?} -> {importee_chunk_idx:?} was not predicted; the \
+           already-loaded cycle check ran without this edge",
+        );
+      }
+      for (importee_chunk_idx, has_side_effectful_target) in predicted {
+        debug_assert!(
+          !has_side_effectful_target
+            || index_imports_from_other_chunks[chunk_idx].contains_key(&importee_chunk_idx),
+          "predicted side-effectful static import {chunk_idx:?} -> {importee_chunk_idx:?} was \
+           not emitted; already-loaded reachability may claim a side effect that never runs",
+        );
+      }
+    }
   }
 
   fn static_import_edges_of(

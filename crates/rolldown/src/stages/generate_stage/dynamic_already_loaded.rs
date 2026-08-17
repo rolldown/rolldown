@@ -13,7 +13,7 @@ use crate::chunk_graph::ChunkGraph;
 use crate::esm_init_obligations::collect_entry_reexported_wrapper_inits;
 
 use super::{
-  GenerateStage, code_splitting::IndexSplittingInfo,
+  GenerateStage, code_splitting::IndexSplittingInfo, compute_cross_chunk_links::UsedSymbolRefsView,
   simulated_facade_inclusion::include_simulated_facade_namespace,
 };
 
@@ -322,7 +322,7 @@ impl GenerateStage<'_> {
     &self,
     atoms: &[ChunkAtom],
     module_to_atom_idx: &IndexVec<ModuleIdx, Option<usize>>,
-    used_symbol_refs: &UsedSymbolRefsBuilder,
+    used_symbol_refs: &impl UsedSymbolRefsView,
   ) -> Vec<Vec<usize>> {
     let strict_execution_order = self.options.is_strict_execution_order_enabled();
     atoms
@@ -357,10 +357,10 @@ impl GenerateStage<'_> {
   /// Returns the targets that `compute_cross_chunk_links` will import for this module. Transitive
   /// side-effect dependencies behind a `sideEffects: false` barrel are retained only when an
   /// included symbol reference also requires them.
-  fn predicted_static_import_targets(
+  pub(super) fn predicted_static_import_targets(
     &self,
     module_idx: ModuleIdx,
-    used_symbol_refs: &UsedSymbolRefsBuilder,
+    used_symbol_refs: &impl UsedSymbolRefsView,
   ) -> Vec<ModuleIdx> {
     let meta = &self.link_output.metas[module_idx];
     let Some(module) = self.link_output.module_table[module_idx].as_normal() else {
@@ -409,7 +409,7 @@ impl GenerateStage<'_> {
   fn extend_with_entry_export_service_targets(
     &self,
     module_idx: ModuleIdx,
-    used_symbol_refs: &UsedSymbolRefsBuilder,
+    used_symbol_refs: &impl UsedSymbolRefsView,
     targets: &mut Vec<ModuleIdx>,
   ) {
     if !self.link_output.entries.contains_key(&module_idx) {

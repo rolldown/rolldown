@@ -119,12 +119,12 @@ regeneration order that keeps them consistent is documented in
 Miniflare embeds the same workerd binary a Cloudflare deployment runs, so
 these steps execute the real runtime, locally in CI:
 
-| CI step | What runs |
-| --- | --- |
-| `ci.yml` "Test @rolldown/browser/workerd end-to-end in real workerd" | `packages/workerd-tests/suite.mjs --rounds=20` on every PR |
-| `ci.yml` packed-consumer check | `scripts/wasi/check-workerd-packed-consumer.mjs` — the wrangler/packaging path |
-| `reusable-wasi.yml` memory canary | `packages/workerd-tests/memory.mjs` — concurrent instances + RSS budget |
-| `reusable-release-build.yml` memory canary | same canary against the **published** `packages/browser/dist` artifacts |
+| CI step                                                              | What runs                                                                      |
+| -------------------------------------------------------------------- | ------------------------------------------------------------------------------ |
+| `ci.yml` "Test @rolldown/browser/workerd end-to-end in real workerd" | `packages/workerd-tests/suite.mjs --rounds=20` on every PR                     |
+| `ci.yml` packed-consumer check                                       | `scripts/wasi/check-workerd-packed-consumer.mjs` — the wrangler/packaging path |
+| `reusable-wasi.yml` memory canary                                    | `packages/workerd-tests/memory.mjs` — concurrent instances + RSS budget        |
+| `reusable-release-build.yml` memory canary                           | same canary against the **published** `packages/browser/dist` artifacts        |
 
 The suite's worker half (`packages/workerd-tests/worker.js`) executes seven
 cases entirely inside workerd: a real multi-module `build()`, the

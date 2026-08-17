@@ -87,6 +87,10 @@ pub struct FileEmitter {
   options: Arc<NormalizedBundlerOptions>,
   /// Mark the files that have been emitted to bundle.
   emitted_files: FxDashSet<ArcStr>,
+  /// Source hashes of the files that have been flushed to a bundle, keyed by reference id.
+  /// The emitter is reused across dev-mode rebuilds, so a file that is re-emitted with
+  /// different content must be flushed again (see `insert_new_file`).
+  emitted_file_source_hashes: FxDashMap<ArcStr, ArcStr>,
   emitted_chunks: FxDashMap<ArcStr, ArcStr>,
   emitted_filenames: FxDashSet<ArcStr>,
   /// Maps module IDs to their emitted file reference IDs.
@@ -109,6 +113,7 @@ impl FileEmitter {
       is_build_phase: AtomicBool::new(false),
       options,
       emitted_files: DashSet::default(),
+      emitted_file_source_hashes: DashMap::default(),
       emitted_filenames: FxDashSet::default(),
       module_to_file_ref: DashMap::default(),
     }
@@ -329,6 +334,16 @@ impl FileEmitter {
     sanitized_file_name: Option<ArcStr>,
   ) -> anyhow::Result<()> {
     self.generate_file_name(file, hash, asset_filename_template, sanitized_file_name)?;
+    // The emitter is reused across dev-mode rebuilds. If this asset was already flushed
+    // to a bundle but is now re-emitted with different content, mark it dirty so that
+    // `add_additional_files` flushes it again instead of dropping the update.
+    if self
+      .emitted_file_source_hashes
+      .get(&reference_id)
+      .is_some_and(|flushed_hash| &*flushed_hash != hash)
+    {
+      self.emitted_files.remove(&reference_id);
+    }
     self.files.insert(
       reference_id,
       OutputAsset {
@@ -355,12 +370,23 @@ impl FileEmitter {
       }
       self.emitted_files.insert(key.clone());
 
-      // Follow rollup using lowercase filename to check conflicts
-      let lowercase_filename = value.filename.as_str().to_lowercase().into();
-      if !self.emitted_filenames.insert(lowercase_filename) {
-        warnings
-          .push(BuildDiagnostic::filename_conflict(value.filename.clone()).with_severity_warning());
+      // Follow rollup using lowercase filename to check conflicts. Only checked on the
+      // first flush: a re-flush after the content changed (dev-mode rebuild, see
+      // `insert_new_file`) reuses the same filename, which is not a conflict.
+      if !self.emitted_file_source_hashes.contains_key(key) {
+        let lowercase_filename = value.filename.as_str().to_lowercase().into();
+        if !self.emitted_filenames.insert(lowercase_filename) {
+          warnings.push(
+            BuildDiagnostic::filename_conflict(value.filename.clone()).with_severity_warning(),
+          );
+        }
       }
+
+      // Record the hash of the flushed source, so that a re-emission with unchanged
+      // content stays deduplicated and a changed one is flushed again.
+      let source_hash: ArcStr =
+        xxhash_with_base(value.source.as_bytes(), self.options.hash_characters.base()).into();
+      self.emitted_file_source_hashes.insert(key.clone(), source_hash);
 
       let mut names = std::mem::take(&mut value.names);
       names.sort_unstable_by(|a, b| (a.len(), a).cmp(&(b.len(), b)));
@@ -451,6 +477,7 @@ impl FileEmitter {
     self.base_reference_id.store(0, Ordering::Relaxed);
     self.is_build_phase.store(false, Ordering::Relaxed);
     self.emitted_files.clear();
+    self.emitted_file_source_hashes.clear();
     self.emitted_chunks.clear();
     self.emitted_filenames.clear();
     self.module_to_file_ref.clear();
@@ -484,5 +511,53 @@ mod tests {
     for name in ["a", "index.js", "assets/deeply/nested/asset.name.txt", ""] {
       assert_eq!(emitter.assign_reference_id(Some(ArcStr::from(name))).len(), 22, "name={name:?}");
     }
+  }
+
+  /// The emitter is reused across dev-mode rebuilds. An asset re-emitted with changed
+  /// content must be flushed again (previously it was silently dropped after the first
+  /// flush, which broke consumers serving emitted assets, e.g. Vite's bundled dev server).
+  #[test]
+  fn reemitted_asset_with_changed_content_is_flushed_again() {
+    let emitter = FileEmitter::new(Arc::new(NormalizedBundlerOptions::default()));
+    let emit = |source: &str| {
+      emitter
+        .emit_file(
+          EmittedAsset {
+            file_name: Some(ArcStr::from("entry.html")),
+            source: StrOrBytes::from(source.to_string()),
+            ..Default::default()
+          },
+          None,
+          None,
+        )
+        .unwrap()
+    };
+    let flushed_source = |bundle: &[Output]| match &bundle[0] {
+      Output::Asset(asset) => String::from_utf8(asset.source.as_bytes().to_vec()).unwrap(),
+      Output::Chunk(_) => panic!("expected an asset"),
+    };
+
+    let mut bundle = Vec::new();
+    let mut warnings = Vec::new();
+
+    emit("v1");
+    emitter.add_additional_files(&mut bundle, &mut warnings);
+    assert_eq!(bundle.len(), 1);
+    assert_eq!(flushed_source(&bundle), "v1");
+    assert!(warnings.is_empty());
+    bundle.clear();
+
+    // Re-emitted with unchanged content: stays deduplicated.
+    emit("v1");
+    emitter.add_additional_files(&mut bundle, &mut warnings);
+    assert!(bundle.is_empty());
+    assert!(warnings.is_empty());
+
+    // Re-emitted with changed content: flushed again, without a filename conflict warning.
+    emit("v2");
+    emitter.add_additional_files(&mut bundle, &mut warnings);
+    assert_eq!(bundle.len(), 1);
+    assert_eq!(flushed_source(&bundle), "v2");
+    assert!(warnings.is_empty());
   }
 }

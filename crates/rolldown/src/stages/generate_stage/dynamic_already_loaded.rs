@@ -22,6 +22,14 @@ struct ChunkAtom {
   dependent_entries: BitSet,
 }
 
+/// Atom-level edge graphs for the pass's two consumers. `reachability` under-approximates the
+/// emitted chunk imports (safe to miss an edge, never to invent one); `cycle` over-approximates
+/// them (safe to invent an edge, never to miss one). See `compute_atom_dependencies`.
+struct AtomDependencyGraphs {
+  reachability: Vec<Vec<usize>>,
+  cycle: Vec<Vec<usize>>,
+}
+
 struct DynamicEntryAnalysis {
   dynamic_entry_indices: Vec<usize>,
   dynamic_entry_modules_by_entry: Vec<Option<ModuleIdx>>,
@@ -73,7 +81,7 @@ impl GenerateStage<'_> {
     let static_dependency_atoms_by_entry = self.compute_static_dependency_atoms_by_entry(
       entries_len as usize,
       &atoms,
-      &atom_dependencies,
+      &atom_dependencies.reachability,
       &module_to_atom_idx,
     );
     let already_loaded_atoms_by_entry = Self::compute_already_loaded_atoms_by_entry(
@@ -106,7 +114,7 @@ impl GenerateStage<'_> {
         )
       };
       if !matches!(action, ReducedEntriesAction::Avoid)
-        && !Self::reduced_atom_graph_has_static_cycle(&atoms, &atom_dependencies)
+        && !Self::reduced_atom_graph_has_static_cycle(&atoms, &atom_dependencies.cycle)
       {
         changed = true;
         if let ReducedEntriesAction::ApplyWithNamespaceExtraction {
@@ -318,50 +326,90 @@ impl GenerateStage<'_> {
   }
 
   // See internal-docs/code-splitting/implementation.md#dynamic-already-loaded-analysis.
+  //
+  // The two graphs serve the pass's two consumers, whose safe approximations point in opposite
+  // directions. `reachability` must only contain edges the emitted chunks really have: its
+  // entry-export service edges are liveness-gated and attached only when the entry module is
+  // hosted by its own entry chunk, because emission hangs those imports on the entry (facade)
+  // chunk, not on whichever shared chunk hosts the module. `cycle` must contain every edge the
+  // emitted chunks might have: its service edges are attached to the hosting atom regardless,
+  // with no liveness gate — `used_symbol_refs` still grows after this pass (namespace-extraction
+  // and facade-elimination replays), so an export dead here can be live at emission. A facade's
+  // own service edges cannot close a cycle (facades have zero static in-degree), so attributing
+  // them to the hosting atom only over-approximates.
   fn compute_atom_dependencies(
     &self,
     atoms: &[ChunkAtom],
     module_to_atom_idx: &IndexVec<ModuleIdx, Option<usize>>,
     used_symbol_refs: &impl UsedSymbolRefsView,
-  ) -> Vec<Vec<usize>> {
+  ) -> AtomDependencyGraphs {
     let strict_execution_order = self.options.is_strict_execution_order_enabled();
-    atoms
+    let flattened_entry_modules: Vec<ModuleIdx> = self
+      .link_output
+      .entries
       .iter()
-      .enumerate()
-      .map(|(atom_idx, atom)| {
-        let mut dependencies = FxHashSet::default();
-        let add = |dep_module_idx: ModuleIdx, dependencies: &mut FxHashSet<usize>| {
-          if let Some(dep_atom_idx) = module_to_atom_idx[dep_module_idx]
-            && dep_atom_idx != atom_idx
-          {
-            dependencies.insert(dep_atom_idx);
+      .flat_map(|(&idx, entries)| std::iter::repeat_n(idx, entries.len()))
+      .collect();
+
+    let mut reachability = Vec::with_capacity(atoms.len());
+    let mut cycle = Vec::with_capacity(atoms.len());
+    for (atom_idx, atom) in atoms.iter().enumerate() {
+      let mut reachability_deps = FxHashSet::default();
+      let mut cycle_deps = FxHashSet::default();
+      let add = |dep_module_idx: ModuleIdx, dependencies: &mut FxHashSet<usize>| {
+        if let Some(dep_atom_idx) = module_to_atom_idx[dep_module_idx]
+          && dep_atom_idx != atom_idx
+        {
+          dependencies.insert(dep_atom_idx);
+        }
+      };
+      for &module_idx in &atom.modules {
+        if strict_execution_order {
+          // Strict lowering can turn linked import records back into `init_*` imports.
+          for &dep_module_idx in &self.link_output.metas[module_idx].dependencies {
+            add(dep_module_idx, &mut reachability_deps);
+            add(dep_module_idx, &mut cycle_deps);
           }
-        };
-        for &module_idx in &atom.modules {
-          if strict_execution_order {
-            // Strict lowering can turn linked import records back into `init_*` imports.
-            for &dep_module_idx in &self.link_output.metas[module_idx].dependencies {
-              add(dep_module_idx, &mut dependencies);
-            }
-            continue;
-          }
-          for dep_module_idx in self.predicted_static_import_targets(module_idx, used_symbol_refs) {
-            add(dep_module_idx, &mut dependencies);
+          continue;
+        }
+        for dep_module_idx in self.predicted_static_import_targets(module_idx) {
+          add(dep_module_idx, &mut reachability_deps);
+          add(dep_module_idx, &mut cycle_deps);
+        }
+
+        let mut service_targets = vec![];
+        self.entry_export_service_targets(module_idx, used_symbol_refs, true, &mut service_targets);
+        for dep_module_idx in service_targets {
+          add(dep_module_idx, &mut cycle_deps);
+        }
+
+        let entry_hosted_by_own_chunk = atom.dependent_entries.bit_count() == 1
+          && atom.dependent_entries.index_of_one().next().is_some_and(|entry_bit| {
+            flattened_entry_modules.get(entry_bit as usize) == Some(&module_idx)
+          });
+        if entry_hosted_by_own_chunk {
+          let mut service_targets = vec![];
+          self.entry_export_service_targets(
+            module_idx,
+            used_symbol_refs,
+            false,
+            &mut service_targets,
+          );
+          for dep_module_idx in service_targets {
+            add(dep_module_idx, &mut reachability_deps);
           }
         }
-        dependencies.into_iter().collect()
-      })
-      .collect()
+      }
+      reachability.push(reachability_deps.into_iter().collect());
+      cycle.push(cycle_deps.into_iter().collect());
+    }
+    AtomDependencyGraphs { reachability, cycle }
   }
 
   /// Returns the targets that `compute_cross_chunk_links` will import for this module. Transitive
   /// side-effect dependencies behind a `sideEffects: false` barrel are retained only when an
   /// included symbol reference also requires them.
-  pub(super) fn predicted_static_import_targets(
-    &self,
-    module_idx: ModuleIdx,
-    used_symbol_refs: &impl UsedSymbolRefsView,
-  ) -> Vec<ModuleIdx> {
+  pub(super) fn predicted_static_import_targets(&self, module_idx: ModuleIdx) -> Vec<ModuleIdx> {
     let meta = &self.link_output.metas[module_idx];
     let Some(module) = self.link_output.module_table[module_idx].as_normal() else {
       return meta.load_dependencies.iter().copied().collect();
@@ -394,8 +442,6 @@ impl GenerateStage<'_> {
       let symbol_owners = self.referenced_symbol_owners(module_idx);
       targets.extend(ambiguous.into_iter().filter(|dep_idx| symbol_owners.contains(dep_idx)));
     }
-
-    self.extend_with_entry_export_service_targets(module_idx, used_symbol_refs, &mut targets);
     targets
   }
 
@@ -403,13 +449,17 @@ impl GenerateStage<'_> {
   /// (`register_entry_export_depended_symbols`), even when no included statement of the entry
   /// references it — a re-export the entry never uses still becomes a real import of the owner's
   /// chunk. `load_dependencies` only carries the narrowed `referenced_symbols_by_entry_point_chunk`
-  /// set, so these targets are derived separately from the full `resolved_exports`. The liveness
-  /// gate mirrors emission exactly: a dead export produces no import, and predicting one would let
-  /// entry reachability claim chunks the entry never loads.
-  fn extend_with_entry_export_service_targets(
+  /// set, so these targets are derived separately from the full `resolved_exports`.
+  ///
+  /// With `assume_all_live: false` the liveness gate mirrors emission exactly: a dead export
+  /// produces no import. `assume_all_live: true` skips the gate for consumers that need a stable
+  /// over-approximation — `used_symbol_refs` keeps growing after the fold's decisions, so a
+  /// dead-here export can still emit an import later.
+  pub(super) fn entry_export_service_targets(
     &self,
     module_idx: ModuleIdx,
     used_symbol_refs: &impl UsedSymbolRefsView,
+    assume_all_live: bool,
     targets: &mut Vec<ModuleIdx>,
   ) {
     if !self.link_output.entries.contains_key(&module_idx) {
@@ -426,13 +476,14 @@ impl GenerateStage<'_> {
         continue;
       }
       let served = symbol_db.canonical_ref_resolving_namespace(resolved_export.symbol_ref);
-      let is_live = if let Some(owner) = self.link_output.module_table[served.owner].as_normal()
-        && owner.namespace_object_ref == served
-      {
-        self.link_output.metas[served.owner].namespace_included
-      } else {
-        used_symbol_refs.contains(&served)
-      };
+      let is_live = assume_all_live
+        || if let Some(owner) = self.link_output.module_table[served.owner].as_normal()
+          && owner.namespace_object_ref == served
+        {
+          self.link_output.metas[served.owner].namespace_included
+        } else {
+          used_symbol_refs.contains(&served)
+        };
       if is_live {
         targets.push(served.owner);
       }
@@ -446,7 +497,7 @@ impl GenerateStage<'_> {
       symbol_db,
       None,
     ) {
-      if used_symbol_refs.contains(&init.wrapper_ref) {
+      if assume_all_live || used_symbol_refs.contains(&init.wrapper_ref) {
         targets.push(init.wrapper_ref.owner);
       }
     }

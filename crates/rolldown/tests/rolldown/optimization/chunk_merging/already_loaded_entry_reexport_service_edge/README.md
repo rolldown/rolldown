@@ -6,7 +6,7 @@ shared pure module.
 
 ## Graph
 
-- `entry.js` uses `helper` from `m.js`, which reads `a` from `x.js`.
+- `entry.js` reads `a` from `x.js`.
 - `entry.js` re-exports `q` from `w.js` and never uses it.
 - `entry.js` dynamically imports `d.js`.
 - `d.js` uses `q` from `w.js` and imports side-effectful `y.js`, which reads

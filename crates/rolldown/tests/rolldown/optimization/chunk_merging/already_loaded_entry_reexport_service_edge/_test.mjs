@@ -9,11 +9,11 @@ await import('./dist/entry.js');
 
 // The entry chunk serves its re-export of `q` with a static import of the chunk
 // owning `w`, so that chunk evaluates eagerly, before the entry body.
-assert.deepEqual(log, ['y:value-a', 'd:value-q', 'entry:helper:value-a']);
+assert.deepEqual(log, ['y:value-a', 'd:value-q', 'entry:value-a']);
 
 // Re-importing through the dynamic entry must not re-run any module.
 await globalThis.loadD();
-assert.deepEqual(log, ['y:value-a', 'd:value-q', 'entry:helper:value-a']);
+assert.deepEqual(log, ['y:value-a', 'd:value-q', 'entry:value-a']);
 
 const distDir = path.join(import.meta.dirname, 'dist');
 const jsFiles = fs.readdirSync(distDir).filter((file) => file.endsWith('.js'));

@@ -25,13 +25,8 @@ export { q as t };
 ```js
 import { t as a } from "./x.js";
 import "./d.js";
-//#region m.js
-function helper() {
-	return `helper:${a}`;
-}
-//#endregion
 //#region entry.js
-(globalThis.entryLog ??= []).push(`entry:${helper()}`);
+(globalThis.entryLog ??= []).push(`entry:${a}`);
 globalThis.loadD = () => import("./d.js");
 //#endregion
 

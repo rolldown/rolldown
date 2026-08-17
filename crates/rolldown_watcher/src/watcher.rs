@@ -12,6 +12,7 @@ use oxc_index::IndexVec;
 use rolldown::BundlerConfig;
 use rolldown_error::BuildResult;
 use rolldown_fs_watcher::FsWatcherConfig;
+use rolldown_utils::dashmap::FxDashSet;
 use rolldown_utils::futures::try_spawn;
 use std::fmt;
 use std::future::Future;
@@ -289,9 +290,19 @@ impl Watcher {
         fs_handler,
         fs_watcher_config.clone(),
       )?));
+      // One registered-path set per group, paired with the group's shared
+      // watcher: a member consults it so paths a sibling already committed are
+      // adopted instead of re-registered, which on macOS would restart the
+      // shared FSEvents stream and drop the events buffered meanwhile.
+      let group_registered_files = Arc::new(FxDashSet::default());
       let mut members = Vec::with_capacity(group.len());
       for config in group {
-        let task = WatchTask::new(config, Arc::clone(&fs_watcher), closed)?;
+        let task = WatchTask::new(
+          config,
+          Arc::clone(&fs_watcher),
+          Arc::clone(&group_registered_files),
+          closed,
+        )?;
         members.push(tasks.push(task));
       }
       group_members.push(members);

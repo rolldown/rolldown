@@ -782,6 +782,7 @@ mod tests {
   use rolldown::{BundlerConfig, BundlerOptions, plugin};
   use rolldown_error::BuildResult;
   use rolldown_fs_watcher::{DynFsWatcher, FsEventHandler, FsWatcher, FsWatcherConfig, PathsMut};
+  use rolldown_utils::dashmap::FxDashSet;
   use std::{
     borrow::Cow,
     fs,
@@ -1009,6 +1010,7 @@ mod tests {
         vec![Arc::new(CloseProbePlugin { close_bundle_calls: Arc::clone(close_bundle_calls) })],
       ),
       Arc::new(Mutex::new(fs_watcher)),
+      Arc::new(FxDashSet::default()),
       closed,
     )
     .expect("create watch task");
@@ -1534,6 +1536,7 @@ mod tests {
         vec![Arc::new(WatchChangeCountingPlugin { count: Arc::clone(&watch_change_count) })],
       ),
       Arc::new(Mutex::new(fs_watcher)),
+      Arc::new(FxDashSet::default()),
       &closed,
     )
     .expect("create watch task");
@@ -1658,6 +1661,7 @@ mod tests {
           vec![],
         ),
         Arc::new(Mutex::new(fs_watcher)),
+        Arc::new(FxDashSet::default()),
         &closed,
       )
       .expect("create watch task");
@@ -1843,6 +1847,7 @@ mod tests {
           plugins,
         ),
         Arc::new(Mutex::new(fs_watcher)),
+        Arc::new(FxDashSet::default()),
         &closed,
       )
       .expect("create watch task");
@@ -2052,5 +2057,135 @@ mod tests {
     );
     assert_eq!(end_count, 2);
     assert_eq!(builds.load(Ordering::SeqCst), 2, "member 1 must attempt exactly two builds");
+  }
+
+  /// Two output tasks of ONE config group share one backend watcher and build
+  /// sequentially over ~the same module graph, so the sibling rediscovers
+  /// every path the first member already registered. The sibling must adopt
+  /// the group's registration instead of opening another paths transaction:
+  /// on macOS a transaction restarts the shared FSEvents stream and drops the
+  /// events buffered while it is open, blinding the whole group.
+  #[tokio::test(flavor = "multi_thread")]
+  async fn group_sibling_adopts_shared_registration_with_a_single_commit() {
+    let test_dir = TestDir::new();
+    let input = test_dir.0.join("main.js");
+    fs::write(&input, "export const value = 1;").expect("write input");
+    let input = fs::canonicalize(input).expect("canonicalize input");
+    let input_str = input.to_string_lossy().into_owned();
+
+    let (tx, rx) = mpsc::unbounded();
+    let closed = Arc::new(AtomicBool::new(false));
+    let close_notify = Arc::new(Event::new());
+    let add_attempts = Arc::new(AtomicUsize::new(0));
+    let commit_attempts = Arc::new(AtomicUsize::new(0));
+    let fs_watcher: DynFsWatcher = Box::new(RegistrationFailingWatcher {
+      fail_adds: 0,
+      fail_commits: 0,
+      add_attempts: Arc::clone(&add_attempts),
+      commit_attempts: Arc::clone(&commit_attempts),
+      commit_times: Arc::new(Mutex::new(Vec::new())),
+    });
+    let fs_watcher = Arc::new(Mutex::new(fs_watcher));
+    let group_registered_files = Arc::new(FxDashSet::default());
+
+    let mut tasks = IndexVec::new();
+    for out_file in ["dist0/out.js", "dist1/out.js"] {
+      let task = WatchTask::new(
+        BundlerConfig::new(
+          BundlerOptions {
+            cwd: Some(test_dir.0.clone()),
+            input: Some(vec![input_str.clone().into()]),
+            file: Some(out_file.into()),
+            ..Default::default()
+          },
+          vec![],
+        ),
+        Arc::clone(&fs_watcher),
+        Arc::clone(&group_registered_files),
+        &closed,
+      )
+      .expect("create watch task");
+      tasks.push(task);
+    }
+
+    let events = Arc::new(Mutex::new(Vec::new()));
+    let end_count = Arc::new(AtomicUsize::new(0));
+    let initial_end = Arc::new(Notify::new());
+    let rebuild_end = Arc::new(Notify::new());
+    let coordinator = WatchCoordinator::new(
+      rx,
+      EnvelopeRecordingHandler {
+        events: Arc::clone(&events),
+        end_count: Arc::clone(&end_count),
+        initial_end: Arc::clone(&initial_end),
+        rebuild_end: Arc::clone(&rebuild_end),
+      },
+      tasks,
+      one_group(2),
+      &WatcherConfig::default(),
+      Arc::clone(&closed),
+      Arc::clone(&close_notify),
+      Arc::default(),
+    );
+    let handle = tokio::spawn(coordinator.run());
+
+    tokio::time::timeout(Duration::from_secs(30), initial_end.notified())
+      .await
+      .expect("initial build should finish");
+    assert_eq!(
+      commit_attempts.load(Ordering::SeqCst),
+      1,
+      "the group's whole initial build must open exactly one backend transaction: \
+       the sibling adopts the already-registered paths instead of re-registering them"
+    );
+    assert_eq!(add_attempts.load(Ordering::SeqCst), 1, "the shared path is added exactly once");
+
+    // Adoption must preserve marking: the shared path lives in the sibling's
+    // own watch set, so one group-scoped delivery rebuilds both members.
+    tx.unbounded_send(WatcherMsg::FileChanges {
+      group_index: WatchGroupIdx::from_usize(0),
+      changes: vec![FileChangeEvent::new(input_str.clone(), WatcherChangeKind::Update)],
+    })
+    .expect("send file change");
+    tokio::time::timeout(Duration::from_secs(30), rebuild_end.notified())
+      .await
+      .expect("rebuild should finish");
+
+    closed.store(true, Ordering::Relaxed);
+    close_notify.notify(usize::MAX);
+    tx.unbounded_send(WatcherMsg::Close).expect("send close");
+    tokio::time::timeout(Duration::from_secs(30), handle)
+      .await
+      .expect("coordinator should close")
+      .expect("coordinator task should not panic")
+      .expect("coordinator should close successfully");
+
+    assert_eq!(
+      *events.lock().expect("events lock"),
+      [
+        // Initial build: both members, one envelope, one backend commit.
+        "START",
+        "BUNDLE_START",
+        "BUNDLE_END",
+        "BUNDLE_START",
+        "BUNDLE_END",
+        "END",
+        // Both members rebuild on the shared path's change.
+        "CHANGE",
+        "RESTART",
+        "START",
+        "BUNDLE_START",
+        "BUNDLE_END",
+        "BUNDLE_START",
+        "BUNDLE_END",
+        "END",
+        "CLOSE",
+      ]
+    );
+    assert_eq!(
+      commit_attempts.load(Ordering::SeqCst),
+      1,
+      "steady-state rebuilds re-register nothing and must not reopen the transaction"
+    );
   }
 }

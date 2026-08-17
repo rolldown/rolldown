@@ -586,31 +586,6 @@ fn should_dedupe(specifier: &str, dedupe: &FxHashSet<String>) -> bool {
   dedupe.contains(pkg_id)
 }
 
-#[cfg(test)]
-mod pnp_tests {
-  use std::fs::{create_dir_all, remove_dir_all, write};
-
-  use super::FileSystemOs;
-  use oxc_resolver::FileSystem as _;
-
-  #[test]
-  fn pnp_file_system_recognizes_virtual_importer() {
-    let root = std::env::temp_dir().join(format!("rolldown-pnp-{}", std::process::id()));
-    let physical_file = root.join(".yarn/cache/pkg/index.js");
-    let virtual_file = root.join(".yarn/__virtual__/pkg-virtual/0/cache/pkg/index.js");
-
-    create_dir_all(physical_file.parent().unwrap()).unwrap();
-    write(&physical_file, b"export {};").unwrap();
-
-    assert!(!virtual_file.exists());
-    let file_system = FileSystemOs::new(true);
-    assert!(file_system.metadata(&virtual_file).is_ok());
-    assert_eq!(file_system.read_to_string(&virtual_file).unwrap(), "export {};");
-
-    remove_dir_all(root).unwrap();
-  }
-}
-
 fn get_path_with_prefix(specifier: &str, try_prefix: &str) -> Option<String> {
   if is_bare_import(specifier)
     && is_deep_import(specifier)
@@ -681,5 +656,58 @@ mod tests {
   fn preserves_existing_package_root_prefix_behavior() {
     assert_eq!(get_path_with_prefix("pkg", "_").as_deref(), Some("_pkg"));
     assert_eq!(get_path_with_prefix("@scope/pkg", "_").as_deref(), Some("@scope/_pkg"));
+  }
+
+  #[test]
+  fn preserves_yarn_pnp_virtual_importer() {
+    use std::fs::{create_dir_all, remove_dir_all, write};
+    use std::sync::Arc;
+
+    use rustc_hash::FxHashSet;
+
+    use super::{AdditionalOptions, BaseOptions, BuiltinChecker, Resolvers};
+
+    let root = std::env::temp_dir().join(format!("rolldown-pnp-importer-{}", std::process::id()));
+    let physical_file = root.join(".yarn/cache/pkg/index.js");
+    create_dir_all(physical_file.parent().unwrap()).unwrap();
+    write(&physical_file, b"export {};").unwrap();
+
+    let empty = Vec::new();
+    let resolvers = Resolvers::new(
+      &BaseOptions {
+        main_fields: &empty,
+        conditions: &empty,
+        extensions: &empty,
+        is_production: false,
+        try_index: false,
+        try_prefix: &None,
+        as_src: false,
+        root: root.clone(),
+        preserve_symlinks: false,
+        tsconfig_paths: false,
+        yarn_pnp: true,
+      },
+      &Vec::new(),
+      Arc::new(BuiltinChecker::new(Vec::new())),
+    );
+    let resolver = resolvers.get(AdditionalOptions::new(false, false));
+
+    let dedupe = FxHashSet::default();
+    let virtual_importer = root.join(".yarn/__virtual__/pkg-virtual/0/cache/pkg/index.js");
+    assert!(!virtual_importer.exists());
+    assert!(resolver.should_use_importer(
+      "react",
+      Some(virtual_importer.to_str().unwrap()),
+      &dedupe
+    ));
+
+    let missing_importer = root.join(".yarn/__virtual__/pkg-virtual/0/cache/missing/index.js");
+    assert!(!resolver.should_use_importer(
+      "react",
+      Some(missing_importer.to_str().unwrap()),
+      &dedupe
+    ));
+
+    remove_dir_all(root).unwrap();
   }
 }

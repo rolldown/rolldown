@@ -132,6 +132,8 @@ pub enum EventKind {
   LargeBarrelModules = 47,
   /// Whether to emit warnings when a plugin transforms code without generating a sourcemap.
   SourcemapBroken = 48,
+  /// Whether to emit warnings when multiple star re-exports provide the same name from different modules.
+  NamespaceConflict = 49,
 }
 
 impl Display for EventKind {
@@ -139,6 +141,7 @@ impl Display for EventKind {
     match self {
       // --- Copied from rollup
       EventKind::AmbiguousExternalNamespaceError => write!(f, "AMBIGUOUS_EXTERNAL_NAMESPACES"),
+      EventKind::NamespaceConflict => write!(f, "NAMESPACE_CONFLICT"),
       EventKind::CircularDependency => write!(f, "CIRCULAR_DEPENDENCY"),
       EventKind::CircularReexportError => write!(f, "CIRCULAR_REEXPORT"),
       EventKind::Eval => write!(f, "EVAL"),

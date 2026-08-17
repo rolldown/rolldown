@@ -1,6 +1,6 @@
 {
   "name": "rolldown",
-  "version": "1.2.3",
+  "version": "1.2.4",
   "description": "Fast JavaScript/TypeScript bundler in Rust with Rollup-compatible API.",
   "keywords": [
     "bundler",
@@ -142,6 +142,7 @@
     "@oxc-node/cli": "catalog:",
     "cac": "catalog:",
     "consola": "catalog:",
+    "emnapi": "catalog:",
     "execa": "catalog:",
     "fresh-import": "catalog:",
     "glob": "catalog:",

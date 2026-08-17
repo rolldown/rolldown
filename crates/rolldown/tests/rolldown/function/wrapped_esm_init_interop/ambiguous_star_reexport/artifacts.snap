@@ -1,6 +1,27 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
 ---
+# warnings
+
+## NAMESPACE_CONFLICT
+
+```text
+[NAMESPACE_CONFLICT] Conflicting namespaces: "barrel.js" re-exports "x" from one of the modules "mod_a.js" and "mod_b.js" (will be ignored).
+   ╭─[ mod_a.js:2:14 ]
+   │
+ 2 │ export const x = 'ax';
+   │              ┬  
+   │              ╰── One matching export is here.
+   │
+   ├─[ mod_b.js:2:14 ]
+   │
+ 2 │ export const x = 'bx';
+   │              ┬  
+   │              ╰── One matching export is here.
+───╯
+
+```
+
 # Assets
 
 ## barrel.js

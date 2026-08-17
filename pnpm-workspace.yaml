@@ -38,8 +38,8 @@ catalog:
   '@babel/core': ^7.29.7
   '@babel/preset-env': ^7.29.7
   '@babel/preset-typescript': ^7.29.7
-  '@emnapi/core': 2.0.0-alpha.3
-  '@emnapi/runtime': 2.0.0-alpha.3
+  '@emnapi/core': 2.0.0-alpha.4
+  '@emnapi/runtime': 2.0.0-alpha.4
   '@jridgewell/trace-mapping': ^0.3.31
   '@napi-rs/cli': ^3.8.2
   '@napi-rs/wasm-runtime': ~1.2.2
@@ -56,7 +56,7 @@ catalog:
   '@types/fs-extra': ^11.0.4
   '@types/lodash-es': ^4.17.12
   '@types/node': 24.10.3
-  '@types/semver': ^7.5.8
+  '@types/semver': ^7.8.0
   '@types/serve-static': ^2.0.0
   '@types/ws': ^8.18.0
   acorn: ^8.17.0
@@ -68,6 +68,7 @@ catalog:
   consola: ^3.4.2
   dedent: ^1.5.3
   diff: ^9.0.0
+  emnapi: 2.0.0-alpha.4
   esbuild: ^0.28.0
   estree-toolkit: ^1.7.8
   execa: ^9.2.0
@@ -119,7 +120,7 @@ catalogs:
     buble: ^0.20.0
     fixturify: ^3.0.0
     magic-string: ^1.1.0
-    mocha: ^11.7.5
+    mocha: ^11.8.0
     strip-comments: ^2.0.1
     source-map-support: ^0.5.21
     terser: ^5.49.0
@@ -149,6 +150,8 @@ minimumReleaseAgeExclude:
   - vitepress-plugin-feedback-tracker@0.2.0-alpha.1
   - void
   - '@napi-rs/wasm-runtime'
+  - '@emnapi/*'
+  - emnapi
 
 # avoid accidentally relying on `NODE_PATH` env var
 extendNodePath: false

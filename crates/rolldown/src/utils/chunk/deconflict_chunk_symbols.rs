@@ -191,7 +191,6 @@ pub fn deconflict_chunk_symbols(
 
   for synthetic in order_wrap_state.synthetic_statements_for_chunk(chunk_idx) {
     for declared_symbol in synthetic.declared_symbols.iter().filter(|item| item.is_normal()) {
-      debug_assert_eq!(declared_symbol.inner().owner, synthetic.owner);
       renamer.add_symbol_in_root_scope(declared_symbol.inner(), true);
     }
   }
@@ -380,6 +379,8 @@ fn rename_shadowing_symbols_in_nested_scopes<'a>(
       output_format,
       OutputFormat::Iife | OutputFormat::Umd | OutputFormat::Cjs
     ));
+
+    ctx.rename_bindings_shadowing_cjs_ambient_names(output_format);
     ctx.rename_cjs_locals_shadowing_referenced_chunk_bindings();
   }
 }

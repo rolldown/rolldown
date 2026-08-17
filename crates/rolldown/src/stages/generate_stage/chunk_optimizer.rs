@@ -726,6 +726,7 @@ impl GenerateStage<'_> {
     };
     let metas = &self.link_output.metas;
     let module_table = &self.link_output.module_table;
+    let merged: FxHashSet<ModuleIdx> = modules.iter().copied().collect();
 
     let entry_exports = &metas[entry_module_idx].resolved_exports;
 
@@ -742,6 +743,15 @@ impl GenerateStage<'_> {
       // 1. The module has no exports (empty resolved_exports)
       // 2. All of the module's exports point to symbols that the entry also exports
       module_meta.resolved_exports.iter().all(|(export_name, resolved_export)| {
+        // Judge by the symbol consumers are actually served: `canonical_ref_resolving_namespace`
+        // redirects a CJS re-export facade to the namespace it aliases. Stopping at
+        // `canonical_ref_for` would let an alias whose namespace lives inside the merged set slip
+        // past as "owned elsewhere" while the merge does move that namespace into the entry chunk.
+        let canonical_ref =
+          self.link_output.symbol_db.canonical_ref_resolving_namespace(resolved_export.symbol_ref);
+        if !merged.contains(&canonical_ref.owner) {
+          return true;
+        }
         // Check if the entry has an export with the same name that resolves to the same symbol
         entry_exports
           .get(export_name)

@@ -135,7 +135,7 @@ session marker. True per-future subscribers would remove that residual cost.
 
 The `tracing` crate provides several scoping primitives:
 
-**`set_default` / `with_default`** — Sets a thread-local subscriber, returns a `DefaultGuard` that restores the prior subscriber on drop. **Thread-local only** — does **not** survive `.await` on multi-threaded tokio runtimes. When a task migrates to a different worker thread after an await point, it loses the scoped subscriber and falls back to the global default.
+**`set_default` / `with_default`** — Sets a thread-local subscriber, returns a `DefaultGuard` that restores the prior subscriber on drop. **Thread-local only** — does **not** survive `.await` on multi-threaded runtimes (the shared scheduler and the opt-in Tokio lane alike). When a task migrates to a different worker thread after an await point, it loses the scoped subscriber and falls back to the global default.
 
 **`.with_subscriber()` (`WithDispatch`)** — The most promising primitive. Wraps an async future so the subscriber is re-installed into thread-local storage on **every poll**. This is async-safe: regardless of which thread polls the future, the correct subscriber is active.
 
@@ -163,31 +163,31 @@ let devtools_subscriber = tracing_subscriber::registry()
 
 // Each bundler's top-level future gets its own subscriber
 let build_future = bundle.write().with_subscriber(devtools_subscriber);
-tokio::spawn(build_future);
+rolldown_utils::futures::spawn(build_future);
 ```
 
-**Key caveat: `tokio::spawn` does NOT inherit.** If the wrapped future internally calls `tokio::spawn(sub_task)`, the sub-task falls back to the global default subscriber. Every internal spawn must be explicitly wrapped:
+**Key caveat: spawning does NOT inherit.** Rolldown's production task boundaries go through the shared spawn facade — `rolldown_utils::futures::{spawn, try_spawn, spawn_detached}`, plus the `rolldown_utils::async_runtime::try_spawn_detached` re-export used by the module loader and the binding. Neither the shared scheduler nor the opt-in Tokio lane propagates the thread-local dispatcher, so if the wrapped future internally spawns a sub-task, that sub-task falls back to the global default subscriber. Every internal spawn must be explicitly wrapped:
 
 ```rust
 // Inside bundler code that spawns sub-tasks:
 let sub_task = do_work().with_current_subscriber(); // captures current thread-local subscriber
-tokio::spawn(sub_task);
+rolldown_utils::futures::spawn_detached(sub_task);
 ```
 
-Missing a single `.with_current_subscriber()` silently drops the subscriber context for that task. This is the main risk for rolldown, which spawns tasks internally in the scan stage and elsewhere.
+Missing a single `.with_current_subscriber()` silently drops the subscriber context for that task. This is the main risk for rolldown, which spawns tasks internally in the scan stage (module loader) and elsewhere.
 
 **Per-layer filtering on a global registry** — Keep one global subscriber installed via `.init()`, but attach per-layer `FilterFn`s that route events based on span fields (e.g. session ID). No propagation issue since the subscriber is global; the complexity shifts to the filter logic and dynamic layer management.
 
 #### Applicability to Rolldown
 
-| Approach                                     | Async-safe? | `tokio::spawn` propagation?                          | Complexity | Fits rolldown?                                                                                          |
-| -------------------------------------------- | ----------- | ---------------------------------------------------- | ---------- | ------------------------------------------------------------------------------------------------------- |
-| **`.with_subscriber()` per bundler future**  | **Yes**     | Manual (`.with_current_subscriber()` on every spawn) | Medium     | **Best semantic fit** — true per-bundler isolation. Requires auditing all internal `tokio::spawn` sites |
-| Per-layer filtering on global registry       | Yes         | Free (global)                                        | Medium     | Good fit — session ID already in span context, no spawn propagation needed                              |
-| `set_default` + `current_thread` per bundler | Yes         | Free (single-thread)                                 | High       | Impractical — changes the runtime model                                                                 |
-| Session-aware check in `trace_action!`       | Yes         | N/A (pre-emit)                                       | Low        | Complementary — zero cost for disabled sessions regardless of which approach above is chosen            |
+| Approach                                     | Async-safe? | Spawn propagation?                                   | Complexity | Fits rolldown?                                                                                        |
+| -------------------------------------------- | ----------- | ---------------------------------------------------- | ---------- | ----------------------------------------------------------------------------------------------------- |
+| **`.with_subscriber()` per bundler future**  | **Yes**     | Manual (`.with_current_subscriber()` on every spawn) | Medium     | **Best semantic fit** — true per-bundler isolation. Requires auditing all internal spawn-facade sites |
+| Per-layer filtering on global registry       | Yes         | Free (global)                                        | Medium     | Good fit — session ID already in span context, no spawn propagation needed                            |
+| `set_default` + `current_thread` per bundler | Yes         | Free (single-thread)                                 | High       | Impractical — changes the runtime model                                                               |
+| Session-aware check in `trace_action!`       | Yes         | N/A (pre-emit)                                       | Low        | Complementary — zero cost for disabled sessions regardless of which approach above is chosen          |
 
-**`.with_subscriber()` is the strongest candidate** for true per-build isolation — it gives each bundler instance its own subscriber with clean separation. The `tokio::spawn` propagation gap is the main adoption cost: it requires auditing every internal spawn site and wrapping with `.with_current_subscriber()`. However, this is a one-time audit that also makes subscriber scoping correctness explicit in the codebase. A lint or wrapper helper (e.g. a `devtools_spawn(future)` that auto-wraps) could enforce this going forward.
+**`.with_subscriber()` is the strongest candidate** for true per-build isolation — it gives each bundler instance its own subscriber with clean separation. The spawn propagation gap is the main adoption cost: it requires auditing every internal spawn-facade call site (`rolldown_utils::futures::{spawn, try_spawn, spawn_detached}` and the `async_runtime::try_spawn_detached` path) and wrapping with `.with_current_subscriber()`. However, this is a one-time audit that also makes subscriber scoping correctness explicit in the codebase. A lint, or auto-wrapping inside the shared spawn facade itself, could enforce this going forward.
 
 Regardless of which approach is chosen for subscriber scoping, a **pre-emit check in `trace_action!`** should be added as a complementary optimization so disabled sessions skip serialization entirely.
 

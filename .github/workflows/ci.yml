@@ -238,6 +238,7 @@ jobs:
       matrix:
         os: [macos-latest, windows-latest]
     runs-on: ${{ matrix.os }}
+    timeout-minutes: 20
     steps:
       - uses: taiki-e/checkout-action@7d1e50e93dc4fb3bba58f85018fadf77898aee8b # v1.4.2
 
@@ -264,6 +265,22 @@ jobs:
         run: vp run --filter rolldown-tests test:main async-runtime-worker-teardown.test.ts
         env:
           ROLLDOWN_TEST_REQUIRE_SHARED_ASYNC_RUNTIME: '1'
+
+      # tests/dev/*.test.ts import this workspace package at module scope, so
+      # collection fails without its dist/ (same note as the ubuntu
+      # native-async-runtime job).
+      - name: Build `@rolldown/test-dev-server`
+        run: vp run --filter '@rolldown/test-dev-server' build
+
+      # Per-PR OS coverage for the suites the ubuntu-only PR lanes cannot
+      # exercise per OS: watch debounce and the dev engine go through the
+      # runtime's own timer + file-watch paths (kqueue vs ReadDirectoryChangesW).
+      # `&&` chaining (not a multi-line block) matches reusable-node-test.yml so
+      # a first-command failure fails the step under pwsh too. `dev/` scopes the
+      # second run to tests/dev/* (dev-watch.test.ts is excluded by test:main
+      # and covered by test:watcher).
+      - name: Watch & dev-engine suites
+        run: vp run --filter rolldown-tests test:watcher && vp run --filter rolldown-tests test:main dev/
 
   node-dev-server-test-windows:
     needs: [changes, build-rolldown-windows]

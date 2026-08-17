@@ -19,6 +19,7 @@ use rolldown_utils::{
   dashmap::FxDashMap, hash_placeholder::HashPlaceholderGenerator, index_vec_ext::IndexVecExt as _,
   indexmap::FxIndexSet, node_style_absolute, rayon::ParallelIterator as _,
 };
+use oxc_str::CompactStr;
 use rustc_hash::{FxHashMap, FxHashSet};
 use sugar_path::SugarPath as _;
 use tracing::debug_span;
@@ -105,6 +106,7 @@ mod detect_ineffective_dynamic_imports;
 mod dynamic_already_loaded;
 mod finalize_chunk_plan;
 mod finalize_modules;
+pub mod inline_common_chunks;
 mod manual_code_splitting;
 mod minify_chunks;
 mod order_analysis;
@@ -168,6 +170,8 @@ impl<'a> GenerateStage<'a> {
       &final_esm_init_metadata,
     );
 
+    let inline_plan = self.plan_inline_common_chunks(&mut chunk_graph);
+
     self.ensure_lazy_module_initialization_order(&mut chunk_graph);
 
     self.merge_cjs_namespace(&mut chunk_graph, &order_state);
@@ -211,18 +215,89 @@ impl<'a> GenerateStage<'a> {
         &mut chunk_graph;
       let chunk_assignments =
         ChunkAssignments::new(&*module_to_chunk, &*post_chunk_optimization_operations);
-      chunk_table.par_iter_mut_enumerated().for_each(|(chunk_idx, chunk)| {
-        deconflict_chunk_symbols(
-          chunk_idx,
-          chunk,
-          self.link_output,
-          &order_state,
-          &order_live_symbols,
-          self.options.format,
-          &index_chunk_id_to_name,
-          chunk_assignments,
-        );
-      });
+      let no_reserved: Vec<CompactStr> = Vec::new();
+      if inline_plan.is_active() {
+        // An inlined chunk's body is printed inside its hosts, so its free variables become the
+        // host's top-level bindings under the names it was deconflicted with. Naming the inlined
+        // chunks first lets every host reserve exactly those names.
+        let inlined: FxHashSet<ChunkIdx> = inline_plan.inlined.iter().copied().collect();
+        // Two inlined chunks printed into the same host share one top-level scope, so their free
+        // variables must not collide either. Naming them in a fixed order, each reserving what its
+        // co-hosted peers already took, is a sequential graph colouring over that constraint.
+        let mut co_hosted: FxHashMap<ChunkIdx, FxHashSet<ChunkIdx>> = FxHashMap::default();
+        for chunk in chunk_table.iter() {
+          for left in &chunk.carried_inline_chunks {
+            for right in &chunk.carried_inline_chunks {
+              if left != right {
+                co_hosted.entry(*left).or_default().insert(*right);
+              }
+            }
+          }
+        }
+        let mut reserved_by_inlined: FxHashMap<ChunkIdx, Vec<CompactStr>> = FxHashMap::default();
+        for &chunk_idx in &inline_plan.inlined {
+          let mut reserved: Vec<CompactStr> = Vec::new();
+          if let Some(peers) = co_hosted.get(&chunk_idx) {
+            for peer in peers {
+              if let Some(names) = reserved_by_inlined.get(peer) {
+                reserved.extend(names.iter().cloned());
+              }
+            }
+          }
+          deconflict_chunk_symbols(
+            chunk_idx,
+            &mut chunk_table[chunk_idx],
+            self.link_output,
+            &order_state,
+            &order_live_symbols,
+            self.options.format,
+            &index_chunk_id_to_name,
+            chunk_assignments,
+            &reserved,
+            true,
+          );
+          reserved_by_inlined.insert(
+            chunk_idx,
+            chunk_table[chunk_idx].canonical_names.values().cloned().collect::<Vec<_>>(),
+          );
+        }
+        chunk_table.par_iter_mut_enumerated().for_each(|(chunk_idx, chunk)| {
+          if inlined.contains(&chunk_idx) {
+            return;
+          }
+          let mut reserved: Vec<CompactStr> = Vec::new();
+          for carried in &chunk.carried_inline_chunks {
+            reserved.extend(reserved_by_inlined[carried].iter().cloned());
+          }
+          deconflict_chunk_symbols(
+            chunk_idx,
+            chunk,
+            self.link_output,
+            &order_state,
+            &order_live_symbols,
+            self.options.format,
+            &index_chunk_id_to_name,
+            chunk_assignments,
+            &reserved,
+            true,
+          );
+        });
+      } else {
+        chunk_table.par_iter_mut_enumerated().for_each(|(chunk_idx, chunk)| {
+          deconflict_chunk_symbols(
+            chunk_idx,
+            chunk,
+            self.link_output,
+            &order_state,
+            &order_live_symbols,
+            self.options.format,
+            &index_chunk_id_to_name,
+            chunk_assignments,
+            &no_reserved,
+            false,
+          );
+        });
+      }
     });
 
     // Pre-resolve paths for external modules to avoid sync JS callbacks during rendering.
@@ -247,7 +322,9 @@ impl<'a> GenerateStage<'a> {
       &final_esm_init_metadata,
     )?;
     self.detect_ineffective_dynamic_imports(&chunk_graph);
-    self.render_chunk_to_assets(&chunk_graph, ast_table, &used_symbol_refs, &order_state).await
+    self
+      .render_chunk_to_assets(&chunk_graph, ast_table, &used_symbol_refs, &order_state, &inline_plan)
+      .await
   }
 
   /// Notices:
@@ -477,6 +554,8 @@ impl<'a> GenerateStage<'a> {
           render_export_items_index_vec: &IndexVec::default(),
           chunk_idx,
           resolved_paths: self.resolved_paths.as_ref(),
+          inline_renders: &FxHashMap::default(),
+          inline_registry_chunk: None,
         },
         entry_module,
         &export_names,

@@ -116,6 +116,17 @@ pub struct Chunk {
     FxHashMap<ModuleIdx, RenderedConcatenatedModuleParts>,
   /// Pre-computed export mode for the chunk
   pub output_exports: OutputExports,
+  /// Set when `codeSplitting.inlineCommonChunks` replaced this chunk with factory placements. The
+  /// chunk stays live in the chunk graph — its modules still finalize against it — but it is not
+  /// emitted as a file. The value is its registry id.
+  pub inline_share_id: Option<u32>,
+  /// Inlined chunks whose `__share` factory this chunk carries, in registration order.
+  pub carried_inline_chunks: Vec<ChunkIdx>,
+  /// Inlined chunks this chunk executes with `__share_require` at its own top level, in evaluation
+  /// order. For an inlined chunk this is what its factory body executes first.
+  pub required_inline_chunks: Vec<ChunkIdx>,
+  /// Local binding name this chunk uses for each inlined chunk's exports object.
+  pub inline_binding_names_for_other_chunks: FxHashMap<ChunkIdx, String>,
 }
 
 impl Chunk {

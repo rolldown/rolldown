@@ -1006,6 +1006,22 @@ export type CodeSplittingOptions = {
    * Groups to be used for code splitting.
    */
   groups?: CodeSplittingGroup[];
+  /**
+   * Replaces small automatic common chunks with factory definitions placed in their consumers,
+   * linked at runtime through one shared registry, so they stop being separate requests.
+   *
+   * Experimental.
+   */
+  inlineCommonChunks?: {
+    /**
+     * Maximum size of a common chunk that may be inlined, in pre-render module bytes. The final
+     * emitted size does not exist while chunks are placed, so this threshold is measured on the
+     * modules' source size instead.
+     *
+     * @default 0
+     */
+    maxSize?: number;
+  };
 };
 
 /**

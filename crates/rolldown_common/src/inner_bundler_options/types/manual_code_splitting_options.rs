@@ -36,6 +36,22 @@ pub struct ManualCodeSplittingOptions {
   pub max_module_size: Option<f64>,
   pub include_dependencies_recursively: Option<bool>,
   pub groups: Option<Vec<MatchGroup>>,
+  pub inline_common_chunks: Option<InlineCommonChunksOptions>,
+}
+
+/// Replaces small automatic common chunks with factory definitions placed in their consumers,
+/// linked at runtime through one shared registry. `max_size` is measured in pre-render module
+/// bytes, the only size available while chunks are still being placed.
+///
+/// `max_size: 0` (the default) selects nothing and leaves the output unchanged.
+#[derive(Default, Debug, Clone, Copy)]
+#[cfg_attr(
+  feature = "deserialize_bundler_options",
+  derive(Deserialize, JsonSchema),
+  serde(rename_all = "camelCase", deny_unknown_fields)
+)]
+pub struct InlineCommonChunksOptions {
+  pub max_size: Option<f64>,
 }
 
 #[derive(Default, Debug, Clone)]

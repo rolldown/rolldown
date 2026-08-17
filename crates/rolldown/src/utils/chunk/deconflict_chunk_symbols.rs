@@ -12,6 +12,11 @@ use crate::{
 use arcstr::ArcStr;
 use rolldown_common::{Chunk, ChunkIdx, ChunkKind, GetLocalDb, OutputFormat, SymbolRef, WrapKind};
 use rolldown_utils::ecmascript::legitimize_identifier_name;
+
+/// Names `codeSplitting.inlineCommonChunks` emits itself: the two registry bindings and the three
+/// factory parameters.
+pub const INLINE_COMMON_CHUNKS_RESERVED_NAMES: [&str; 5] =
+  ["__rd_share", "__rd_share_require", "__rd_m", "__rd_e", "__rd_def"];
 use rustc_hash::{FxHashMap, FxHashSet};
 
 #[tracing::instrument(level = "trace", skip_all)]
@@ -25,8 +30,22 @@ pub fn deconflict_chunk_symbols(
   format: OutputFormat,
   index_chunk_id_to_name: &FxHashMap<ChunkIdx, ArcStr>,
   chunk_assignments: ChunkAssignments<'_>,
+  reserved_names: &[CompactStr],
+  inline_common_chunks_active: bool,
 ) {
   let mut renamer = Renamer::new(chunk.entry_module_idx(), &link_output.symbol_db, format);
+  if inline_common_chunks_active {
+    // The registry bindings and the factory's parameters are written by the generator, not by any
+    // module, so reserve them before a user symbol of the same name can claim them.
+    for name in INLINE_COMMON_CHUNKS_RESERVED_NAMES {
+      renamer.reserve(CompactStr::new(name));
+    }
+    // A carried chunk's body keeps the names it was deconflicted with, and its free variables
+    // become this chunk's top-level import bindings.
+    for name in reserved_names {
+      renamer.reserve(name.clone());
+    }
+  }
   // Reserve global scope symbols (unresolved references) to prevent generating conflicting names.
   // These are identifiers referenced but not defined in the module's scope (e.g., `console`, `window`).
   chunk
@@ -203,6 +222,22 @@ pub fn deconflict_chunk_symbols(
   chunk.imports_from_other_chunks.iter().flat_map(|(_, items)| items.iter()).for_each(|item| {
     renamer.add_symbol_in_root_scope(item.import_ref, true);
   });
+
+  chunk.inline_binding_names_for_other_chunks = chunk
+    .required_inline_chunks
+    .iter()
+    .map(|id| {
+      (
+        *id,
+        renamer
+          .create_conflictless_name(&legitimize_identifier_name(&format!(
+            "share_{}",
+            index_chunk_id_to_name[id]
+          )))
+          .to_string(),
+      )
+    })
+    .collect();
 
   chunk.require_binding_names_for_other_chunks = chunk
     .imports_from_other_chunks

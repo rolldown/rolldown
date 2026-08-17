@@ -1123,6 +1123,13 @@ impl GenerateStage<'_> {
     additional_runtime_consumers: Option<&FxHashSet<ChunkIdx>>,
     cascade: RuntimeMergeCascade,
   ) {
+    if self.options.is_inline_common_chunks_enabled() {
+      // The shared registry is printed into the runtime chunk, and every carrier and consumer
+      // imports it. Folding the runtime into a user chunk would hand those chunks a new import edge
+      // into a chunk that may already import them, which is exactly the cycle standalone-first
+      // placement exists to avoid.
+      return;
+    }
     let runtime_module_idx = self.link_output.runtime.id();
     let Some(runtime_chunk_idx) = chunk_graph.module_to_chunk[runtime_module_idx] else {
       return;

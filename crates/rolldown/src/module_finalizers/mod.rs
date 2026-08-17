@@ -283,6 +283,21 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
   fn wrapper_is_reachable_in_chunk(&self, wrapper_ref: SymbolRef) -> bool {
     let canonical_ref = self.ctx.symbol_db.canonical_ref_for(wrapper_ref);
     self.ctx.chunk.canonical_names.contains_key(&canonical_ref)
+      || self.inlined_chunk_export_for(canonical_ref).is_some()
+  }
+
+  /// Where an inlined chunk's symbol is reachable from this chunk: the local binding for that
+  /// chunk's exports object and the name it is exported under.
+  fn inlined_chunk_export_for(&self, canonical_ref: SymbolRef) -> Option<(&str, &str)> {
+    let target_chunk_idx = self.ctx.symbol_db.get(canonical_ref).chunk_idx?;
+    if target_chunk_idx == self.ctx.chunk_idx {
+      return None;
+    }
+    let target_chunk = &self.ctx.chunk_graph.chunk_table[target_chunk_idx];
+    target_chunk.inline_share_id?;
+    let binding = self.ctx.chunk.inline_binding_names_for_other_chunks.get(&target_chunk_idx)?;
+    let exported_name = target_chunk.exports_to_other_chunks.get(&canonical_ref)?.first()?;
+    Some((binding.as_str(), exported_name.as_str()))
   }
 
   fn wrapped_esm_init_stmt_for_import_record(
@@ -371,7 +386,7 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
       self.ctx.linking_infos,
       self.ctx.modules,
       self.ctx.symbol_db,
-      Some(&self.ctx.chunk.canonical_names),
+      Some(&|symbol_ref| self.wrapper_is_reachable_in_chunk(symbol_ref)),
     );
     let mut stmts = vec![];
     for init in inits {
@@ -574,6 +589,10 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
       }
     }
     let mut hint = FinalizedExprProcessHint::empty();
+    // Tracks whether the expression below became a property read on an inlined chunk's exports
+    // object, so the `this`-binding guard can be applied to it the same way the namespace-alias path
+    // applies it.
+    let mut is_inlined_chunk_member = false;
     let mut expr = if self.ctx.modules[canonical_ref.owner].is_external() {
       // For mixed-mode externals, ESM importers use the node-mode binding name
       if self.ctx.module.should_consider_node_esm_spec_for_static_import() {
@@ -610,7 +629,13 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
             Expression::new_id_ref_expr(SPAN, self.canonical_name_for(canonical_ref), self)
           }
         }
-        _ => Expression::new_id_ref_expr(SPAN, self.canonical_name_for(canonical_ref), self),
+        _ => match self.finalized_expr_for_inlined_chunk_symbol(canonical_ref) {
+          Some(member) => {
+            is_inlined_chunk_member = true;
+            member
+          }
+          None => Expression::new_id_ref_expr(SPAN, self.canonical_name_for(canonical_ref), self),
+        },
       }
     };
 
@@ -638,6 +663,15 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
           self,
         );
       }
+    } else if is_inlined_chunk_member && preserve_this_semantic_if_needed {
+      // The control called this symbol as a plain function, where `this` is `undefined`. Reading it
+      // off the inlined chunk's exports object would call it as a method and bind `this` to that
+      // object, so wrap the callee the same way the namespace-alias path does.
+      expr = Expression::new_seq_in_parens(
+        ast::Expression::new_numeric_literal(SPAN, 0.0, Some("0".into()), NumberBase::Decimal, self),
+        expr,
+        self,
+      );
     }
 
     (expr, hint)
@@ -666,6 +700,17 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
   /// | 8 | Entry | None | Named | default | `require_binding.default` |
   /// | 9 | Entry | None | Named | named | `require_binding.exportName` |
   /// | 10-15 | Common | * | Named | * | `require_binding.exportName` |
+  /// `codeSplitting.inlineCommonChunks` replaces an inlined chunk's file with factory placements,
+  /// so a reference that crossed into it is no longer an import binding. It becomes a property read
+  /// on that chunk's exports object, which is also what keeps a reassigned export live.
+  fn finalized_expr_for_inlined_chunk_symbol(
+    &self,
+    canonical_ref: SymbolRef,
+  ) -> Option<ast::Expression<'ast>> {
+    let (binding, exported_name) = self.inlined_chunk_export_for(canonical_ref)?;
+    Some(Expression::new_member_access_expr(binding, exported_name, self))
+  }
+
   fn finalized_expr_for_cross_chunk_symbol(
     &self,
     cur_chunk_idx: ChunkIdx,

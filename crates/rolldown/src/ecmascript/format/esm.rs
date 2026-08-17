@@ -54,6 +54,16 @@ pub fn render_esm<'code>(
     source_joiner.append_source(imports);
   }
 
+  if let Some(registry_import) = super::share_factory::render_registry_import(ctx) {
+    source_joiner.append_source(registry_import);
+  }
+  if ctx.inline_registry_chunk == Some(ctx.chunk_idx) {
+    source_joiner.append_source(super::share_factory::render_registry());
+  }
+  if let Some(prologue) = super::share_factory::render_share_prologue(ctx) {
+    source_joiner.append_source(prologue);
+  }
+
   if let Some(entry_module) = ctx.chunk.entry_module(&ctx.link_output.module_table) {
     if matches!(entry_module.exports_kind, ExportsKind::Esm) {
       for importee_idx in ctx.chunk.entry_level_external_module_idx.iter().copied() {
@@ -166,7 +176,7 @@ fn find_entry_level_external_import_attribute<'a>(
   None
 }
 
-fn render_chunk_content<'code>(
+pub(crate) fn render_chunk_content<'code>(
   ctx: &GenerateContext<'_>,
   module_sources: &'code [RenderedModuleSource],
   source_joiner: &mut SourceJoiner<'code>,
@@ -329,9 +339,19 @@ fn render_chunk_content<'code>(
   }
 }
 
-fn render_esm_chunk_imports(ctx: &GenerateContext<'_>) -> Option<String> {
+pub(crate) fn render_esm_chunk_imports(ctx: &GenerateContext<'_>) -> Option<String> {
+  render_esm_imports_of(ctx, ctx.chunk)
+}
+
+/// Renders `source`'s cross-chunk and external imports with `source`'s own binding names, but with
+/// paths resolved from `ctx.chunk`. An inlined chunk's body keeps the names it was finalized with,
+/// while the file that prints it decides how to reach the files it imports.
+pub(crate) fn render_esm_imports_of(
+  ctx: &GenerateContext<'_>,
+  source: &rolldown_common::Chunk,
+) -> Option<String> {
   let mut s = String::new();
-  ctx.chunk.imports_from_other_chunks.iter().for_each(|(exporter_id, items)| {
+  source.imports_from_other_chunks.iter().for_each(|(exporter_id, items)| {
     let importee_chunk = &ctx.chunk_graph.chunk_table[*exporter_id];
     let mut default_alias = vec![];
     // Track seen canonical refs to avoid duplicate imports.
@@ -349,7 +369,7 @@ fn render_esm_chunk_imports(ctx: &GenerateContext<'_>) -> Option<String> {
         let imported = ctx
           .link_output
           .symbol_db
-          .canonical_name_for_or_original(canonical_ref, &ctx.chunk.canonical_names);
+          .canonical_name_for_or_original(canonical_ref, &source.canonical_names);
         let alias = &ctx.render_export_items_index_vec[*exporter_id]
           .get(&item.import_ref)
           .expect("should have export item index")[0];
@@ -376,7 +396,7 @@ fn render_esm_chunk_imports(ctx: &GenerateContext<'_>) -> Option<String> {
   });
   let mut rendered_external_import_namespace_modules = FxHashSet::default();
   // render external imports
-  ctx.chunk.direct_imports_from_external_modules.iter().for_each(|(importee_id, named_imports)| {
+  source.direct_imports_from_external_modules.iter().for_each(|(importee_id, named_imports)| {
     let importee = &ctx.link_output.module_table[*importee_id]
       .as_external()
       .expect("Should be external module here");
@@ -393,6 +413,7 @@ fn render_esm_chunk_imports(ctx: &GenerateContext<'_>) -> Option<String> {
     });
     s += &render_named_imports(
       ctx,
+      source,
       importee,
       named_imports.iter(),
       &mut has_importee_imported,
@@ -455,6 +476,7 @@ fn create_import_declaration(
 
 fn render_named_imports<'a, I>(
   ctx: &GenerateContext<'_>,
+  source: &rolldown_common::Chunk,
   importee: &ExternalModule,
   named_imports: I,
   is_importee_rendered: &mut bool,
@@ -483,7 +505,7 @@ where
       let alias = ctx
         .link_output
         .symbol_db
-        .canonical_name_for_or_original(canonical_ref, &ctx.chunk.canonical_names);
+        .canonical_name_for_or_original(canonical_ref, &source.canonical_names);
       match &named_import.imported {
         Specifier::Star => {
           if rendered_external_import_namespace_modules.contains(&importee.idx) {

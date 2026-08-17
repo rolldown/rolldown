@@ -96,7 +96,33 @@ impl Generator for EcmaGenerator {
       })
       .collect();
 
-    let rendered_chunk = Arc::new(generate_rendered_chunk(ctx, rendered_modules));
+    // The chunk ledger has to show a duplicated module in every chunk that carries its factory;
+    // an implementation that injected factories without updating it would report placement wrong.
+    let mut rendered_modules = rendered_modules;
+    for carried in &ctx.chunk.carried_inline_chunks {
+      if let Some(render) = ctx.inline_renders.get(carried) {
+        for (module_id, rendered) in &render.rendered_modules {
+          rendered_modules.insert(module_id.clone(), rendered.clone());
+        }
+      }
+    }
+    let carried_module_ids: Vec<ModuleId> = ctx
+      .chunk
+      .carried_inline_chunks
+      .iter()
+      .filter_map(|carried| ctx.inline_renders.get(carried))
+      .flat_map(|render| render.module_ids.iter().cloned())
+      .collect();
+
+    let rendered_chunk = Arc::new({
+      let mut chunk = generate_rendered_chunk(ctx, rendered_modules);
+      if !carried_module_ids.is_empty() {
+        let mut module_ids = chunk.module_ids.to_vec();
+        module_ids.extend(carried_module_ids);
+        chunk.module_ids = module_ids.into();
+      }
+      chunk
+    });
 
     let hashbang = ctx.chunk.user_defined_entry_module(&ctx.link_output.module_table).and_then(
       |normal_module| {

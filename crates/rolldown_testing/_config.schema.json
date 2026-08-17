@@ -1284,6 +1284,16 @@
           "items": {
             "$ref": "#/$defs/MatchGroup"
           }
+        },
+        "inlineCommonChunks": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/InlineCommonChunksOptions"
+            },
+            {
+              "type": "null"
+            }
+          ]
         }
       },
       "additionalProperties": false
@@ -1386,6 +1396,20 @@
       "enum": [
         "$initial"
       ]
+    },
+    "InlineCommonChunksOptions": {
+      "description": "Replaces small automatic common chunks with factory definitions placed in their consumers,\nlinked at runtime through one shared registry. `max_size` is measured in pre-render module\nbytes, the only size available while chunks are still being placed.\n\n`max_size: 0` (the default) selects nothing and leaves the output unchanged.",
+      "type": "object",
+      "properties": {
+        "maxSize": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "format": "double"
+        }
+      },
+      "additionalProperties": false
     },
     "ChecksOptions": {
       "type": "object",

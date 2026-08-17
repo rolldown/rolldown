@@ -761,6 +761,7 @@ module.exports.BindingRebuildStrategy = nativeBinding.BindingRebuildStrategy
 module.exports.collapseSourcemaps = nativeBinding.collapseSourcemaps
 module.exports.enhancedTransform = nativeBinding.enhancedTransform
 module.exports.enhancedTransformSync = nativeBinding.enhancedTransformSync
+module.exports.experimentalInlineCommonChunksMarker = nativeBinding.experimentalInlineCommonChunksMarker
 module.exports.FilterTokenKind = nativeBinding.FilterTokenKind
 module.exports.initTraceSubscriber = nativeBinding.initTraceSubscriber
 module.exports.registerPlugins = nativeBinding.registerPlugins

@@ -48,7 +48,8 @@ pub mod bundler_options {
       log_level::LogLevel,
       make_absolute_externals_relative::MakeAbsoluteExternalsRelative,
       manual_code_splitting_options::{
-        ChunkingContext, ManualCodeSplittingOptions, MatchGroup, MatchGroupName, MatchGroupTest,
+        ChunkingContext, InlineCommonChunksOptions, ManualCodeSplittingOptions, MatchGroup,
+        MatchGroupName, MatchGroupTest,
       },
       minify_options::{
         MinifyOptions, RawCompressOptions, RawMangleOptions, RawMinifyOptions,

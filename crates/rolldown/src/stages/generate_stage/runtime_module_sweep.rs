@@ -40,6 +40,11 @@ impl GenerateStage<'_> {
     chunk_graph: &mut ChunkGraph,
     used_symbol_refs: &mut UsedSymbolRefsBuilder,
   ) {
+    if self.options.is_inline_common_chunks_enabled() {
+      // The shared registry is printed into the runtime chunk, so the feature needs that chunk even
+      // when no runtime helper is demanded.
+      return;
+    }
     // Without tree-shaking, inclusion is not demand-based; leave everything in place.
     if self.options.treeshake.is_none() {
       return;

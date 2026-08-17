@@ -6,20 +6,27 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## app.js
 
 ```js
-import { t as f0 } from "./vendor.js";
-export * from "ext-then";
+// HIDDEN [\0rolldown/runtime.js]
+//#region vendor.js
+function f0(x) {
+	return x * 2 + 1;
+}
+//#endregion
 //#region app.js
+var app_exports = /* @__PURE__ */ __exportAll({ done: () => done });
+import * as import_ext_then from "ext-then";
+__reExport(app_exports, import_ext_then);
 console.log(f0(1));
 const done = import("./lazy.js").then((m) => m.value);
 //#endregion
-export { done };
+export { done, f0 as n, app_exports as t };
 
 ```
 
 ## lazy.js
 
 ```js
-import { t as f0 } from "./vendor.js";
+import { n as f0 } from "./app.js";
 //#region lazy.js
 const value = f0(3);
 //#endregion
@@ -31,20 +38,8 @@ export { value };
 
 ```js
 //#region main.js
-const app = import("./app.js");
+const app = import("./app.js").then((n) => n.t);
 //#endregion
 export { app };
-
-```
-
-## vendor.js
-
-```js
-//#region vendor.js
-function f0(x) {
-	return x * 2 + 1;
-}
-//#endregion
-export { f0 as t };
 
 ```

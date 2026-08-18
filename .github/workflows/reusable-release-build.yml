@@ -56,6 +56,10 @@ jobs:
             build: vp run ci:build-release-binding --target aarch64-linux-android
 
           - os: ubuntu-latest
+            target: armv7-linux-androideabi
+            build: vp run ci:build-release-binding --target armv7-linux-androideabi
+
+          - os: ubuntu-latest
             target: aarch64-unknown-linux-musl
             build: vp run ci:build-release-binding -x --target aarch64-unknown-linux-musl
 

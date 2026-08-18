@@ -248,7 +248,7 @@ catalogs:
       specifier: ^3.0.0
       version: 3.0.0
     magic-string:
-      specifier: ^1.1.0
+      specifier: ^1.2.0
       version: 1.2.0
     mocha:
       specifier: ^11.8.0
@@ -260,7 +260,7 @@ catalogs:
       specifier: ^2.0.1
       version: 2.0.1
     terser:
-      specifier: ^5.49.0
+      specifier: ^5.50.0
       version: 5.50.0
 
 overrides:
@@ -1120,7 +1120,7 @@ importers:
         specifier: 'catalog:'
         version: 0.1.0
       '@oxlint/plugins':
-        specifier: ^1.77.0
+        specifier: ^1.78.0
         version: 1.78.0
       acorn:
         specifier: 'catalog:'

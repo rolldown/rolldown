@@ -8,3 +8,4 @@ import './shared-module/setup.js';
 import './nested-dynamic-import/setup.js';
 import './emitted-asset/setup.js';
 import './lazy-init-error/setup.js';
+import './circular-reexport/setup.js';

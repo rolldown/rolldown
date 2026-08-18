@@ -197,8 +197,8 @@ impl OrderWrapState {
     wrapper_ref: SymbolRef,
     runtime_helper: RuntimeHelper,
   ) {
+    debug_assert_eq!(wrapper_ref.owner, module_idx);
     let wrapper_statement = self.add_synthetic_statement(OrderSyntheticStmt {
-      owner: module_idx,
       declared_symbols: vec![TaggedSymbolRef::normal(wrapper_ref)],
       referenced_symbols: vec![],
       runtime_helpers: runtime_helper,
@@ -226,8 +226,9 @@ impl OrderWrapState {
     referenced_symbols: Vec<SymbolRef>,
     runtime_helpers: RuntimeHelper,
   ) {
+    debug_assert_eq!(spec.wrapper_ref.owner, key.importer);
+    debug_assert_eq!(spec.namespace_ref.owner, key.importer);
     let wrapper_statement = self.add_synthetic_statement(OrderSyntheticStmt {
-      owner: key.importer,
       declared_symbols: vec![
         TaggedSymbolRef::normal(spec.wrapper_ref),
         TaggedSymbolRef::normal(spec.namespace_ref),
@@ -321,7 +322,6 @@ impl OrderWrapState {
   /// See `internal-docs/code-splitting/design.md` ("Trigger placement").
   pub(super) fn insert_simulated_facade_namespace(
     &mut self,
-    owner: ModuleIdx,
     namespace_ref: SymbolRef,
     chunk_idx: ChunkIdx,
     runtime_helpers: RuntimeHelper,
@@ -339,7 +339,6 @@ impl OrderWrapState {
     }
     requirement.live_importers.extend(live_importers);
     let stmt_idx = self.add_synthetic_statement(OrderSyntheticStmt {
-      owner,
       declared_symbols: vec![TaggedSymbolRef::normal(namespace_ref)],
       referenced_symbols,
       runtime_helpers,
@@ -721,7 +720,6 @@ pub struct EsmInitTarget {
 
 #[derive(Debug)]
 pub struct OrderSyntheticStmt {
-  pub(crate) owner: ModuleIdx,
   pub(crate) declared_symbols: Vec<TaggedSymbolRef>,
   pub(crate) referenced_symbols: Vec<SymbolRef>,
   pub(crate) runtime_helpers: RuntimeHelper,

@@ -56,6 +56,10 @@ jobs:
             build: vp run ci:build-release-binding --target aarch64-linux-android
 
           - os: ubuntu-latest
+            target: armv7-linux-androideabi
+            build: vp run ci:build-release-binding --target armv7-linux-androideabi
+
+          - os: ubuntu-latest
             target: aarch64-unknown-linux-musl
             build: vp run ci:build-release-binding -x --target aarch64-unknown-linux-musl
 
@@ -98,7 +102,7 @@ jobs:
         if: ${{ contains(matrix.target, 'ohos') }}
         uses: Boshen/setup-ohos-sdk@edb865a89a712f1f15dbad932dfa9cfce849d95c # v1.0.0
 
-      - uses: taiki-e/install-action@91ddec75689c4c78665b598d188dc821c5a43e5c # v2.85.9
+      - uses: taiki-e/install-action@82cd3e7658a6f96c86c0234aeeda1748937cb0a1 # v2.85.13
         if: ${{ contains(matrix.target, 'musl') }}
         env:
           GITHUB_TOKEN: ${{ github.token }}
@@ -132,7 +136,7 @@ jobs:
       - uses: taiki-e/checkout-action@7d1e50e93dc4fb3bba58f85018fadf77898aee8b # v1.4.2
       - name: Build
         id: build
-        uses: cross-platform-actions/action@5ea7e8e4677bd726033a10b094ba1c5762b15dee # v1.3.0
+        uses: cross-platform-actions/action@24ef01df165c76df1ed2b9f9e9212e78dc2fc963 # v1.4.0
         env:
           DEBUG: napi:*
           RUSTUP_IO_THREADS: 1

@@ -10,23 +10,23 @@ use rolldown_common::{
 };
 use rolldown_devtools::{action, trace_action, trace_action_enabled};
 use rolldown_error::{BatchedBuildDiagnostic, BuildResult, Diagnostics};
-use rustc_hash::FxHashMap;
 use rolldown_utils::{
   indexmap::{FxIndexMap, FxIndexSet},
   rayon::{IntoParallelRefIterator, ParallelIterator},
 };
+use rustc_hash::FxHashMap;
 
 use crate::{
   BundleOutput,
-  ecmascript::ecma_generator::RenderedModuleSource,
-  utils::render_ecma_module::render_ecma_module,
   chunk_graph::ChunkGraph,
+  ecmascript::ecma_generator::RenderedModuleSource,
   ecmascript::{
     ecma_generator::EcmaGenerator,
     format::share_factory::{InlinedChunkRender, render_inlined_chunk_factory},
   },
   type_alias::{AssetVec, IndexChunkToInstances, IndexEcmaAst, IndexInstantiatedChunks},
   types::generator::{GenerateContext, GenerateOutput, Generator},
+  utils::render_ecma_module::render_ecma_module,
   utils::{
     augment_chunk_hash::augment_chunk_hash,
     chunk::{finalize_chunks::finalize_assets, render_chunk_exports::get_export_items},

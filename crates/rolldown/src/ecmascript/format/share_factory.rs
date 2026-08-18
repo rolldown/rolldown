@@ -143,8 +143,8 @@ fn render_factory_exports(ctx: &GenerateContext<'_>) -> String {
     let canonical_name =
       symbol_db.canonical_name_for_or_original(canonical_ref, &ctx.chunk.canonical_names);
     if let Some(ns_alias) = &symbol.namespace_alias {
-      let canonical_ns_name =
-        symbol_db.canonical_name_for_or_original(ns_alias.namespace_ref, &ctx.chunk.canonical_names);
+      let canonical_ns_name = symbol_db
+        .canonical_name_for_or_original(ns_alias.namespace_ref, &ctx.chunk.canonical_names);
       prelude.push_str(&concat_string!(
         "var ",
         canonical_name,

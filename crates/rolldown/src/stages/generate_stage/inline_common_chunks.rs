@@ -80,7 +80,10 @@ impl GenerateStage<'_> {
     if !matches!(self.options.format, rolldown_common::OutputFormat::Esm) {
       // Every other format resolves cross-chunk references through its own binding shape; the
       // factory interface is only defined for ESM output here.
-      return InlineCommonChunksPlan { disabled_reason: Some("format is not esm"), ..Default::default() };
+      return InlineCommonChunksPlan {
+        disabled_reason: Some("format is not esm"),
+        ..Default::default()
+      };
     }
     if !self.options.is_strict_execution_order_enabled() {
       // A carrier registers and executes a factory in its own body, which ESM runs after every
@@ -96,10 +99,16 @@ impl GenerateStage<'_> {
 
     let runtime_module = self.link_output.runtime.id();
     let Some(registry_chunk) = chunk_graph.module_to_chunk[runtime_module] else {
-      return InlineCommonChunksPlan { disabled_reason: Some("no runtime chunk"), ..Default::default() };
+      return InlineCommonChunksPlan {
+        disabled_reason: Some("no runtime chunk"),
+        ..Default::default()
+      };
     };
     if !chunk_graph.chunk_is_live(registry_chunk) {
-      return InlineCommonChunksPlan { disabled_reason: Some("no runtime chunk"), ..Default::default() };
+      return InlineCommonChunksPlan {
+        disabled_reason: Some("no runtime chunk"),
+        ..Default::default()
+      };
     }
 
     let live: Vec<ChunkIdx> = chunk_graph
@@ -389,10 +398,7 @@ impl GenerateStage<'_> {
       .iter()
       .map(|idx| {
         let chunk = &chunk_graph.chunk_table[*idx];
-        (
-          *idx,
-          (chunk.cross_chunk_imports.clone(), chunk.cross_chunk_dynamic_imports.clone()),
-        )
+        (*idx, (chunk.cross_chunk_imports.clone(), chunk.cross_chunk_dynamic_imports.clone()))
       })
       .collect();
 
@@ -411,13 +417,12 @@ impl GenerateStage<'_> {
       let mut static_imports: Vec<ChunkIdx> = Vec::new();
       let mut dynamic_imports = chunk_graph.chunk_table[idx].cross_chunk_dynamic_imports.clone();
       let mut seen: FxHashSet<ChunkIdx> = FxHashSet::default();
-      let push_static = |target: ChunkIdx,
-                             seen: &mut FxHashSet<ChunkIdx>,
-                             out: &mut Vec<ChunkIdx>| {
-        if target != idx && seen.insert(target) {
-          out.push(target);
-        }
-      };
+      let push_static =
+        |target: ChunkIdx, seen: &mut FxHashSet<ChunkIdx>, out: &mut Vec<ChunkIdx>| {
+          if target != idx && seen.insert(target) {
+            out.push(target);
+          }
+        };
 
       for target in chunk_graph.chunk_table[idx].cross_chunk_imports.clone() {
         if selected.contains(&target) {
@@ -444,8 +449,7 @@ impl GenerateStage<'_> {
         push_static(registry_chunk, &mut seen, &mut static_imports);
       }
 
-      static_imports
-        .sort_unstable_by_key(|target| chunk_graph.chunk_table[*target].exec_order);
+      static_imports.sort_unstable_by_key(|target| chunk_graph.chunk_table[*target].exec_order);
       let chunk = &mut chunk_graph.chunk_table[idx];
       chunk.cross_chunk_imports = static_imports;
       chunk.cross_chunk_dynamic_imports = dynamic_imports;
@@ -459,11 +463,7 @@ impl GenerateStage<'_> {
     // The same unit `codeSplitting.maxSize` uses for manual groups: the module's source size, the
     // only size that exists while chunks are still being placed.
     #[expect(clippy::cast_precision_loss)]
-    chunk
-      .modules
-      .iter()
-      .map(|idx| self.link_output.module_table[*idx].size() as f64)
-      .sum::<f64>()
+    chunk.modules.iter().map(|idx| self.link_output.module_table[*idx].size() as f64).sum::<f64>()
   }
 
   /// Research hook: `ROLLDOWN_INLINE_COMMON_CHUNKS_LEDGER=<path>` writes what the pass selected and
@@ -538,10 +538,7 @@ impl GenerateStage<'_> {
   }
 
   fn chunk_has_top_level_await(&self, chunk: &Chunk) -> bool {
-    chunk
-      .modules
-      .iter()
-      .any(|idx| self.link_output.metas[*idx].is_tla_or_contains_tla_dependency)
+    chunk.modules.iter().any(|idx| self.link_output.metas[*idx].is_tla_or_contains_tla_dependency)
   }
 }
 

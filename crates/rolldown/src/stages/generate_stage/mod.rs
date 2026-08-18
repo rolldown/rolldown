@@ -3,6 +3,7 @@ use std::path::PathBuf;
 use arcstr::ArcStr;
 use futures::future::try_join_all;
 use oxc_index::IndexVec;
+use oxc_str::CompactStr;
 use render_chunk_to_assets::set_emitted_chunk_preliminary_filenames;
 use rolldown_common::{
   ChunkIdx, ChunkKind, InstantiationKind, ModuleIdx, OutputExports, PackageJson, PathsOutputOption,
@@ -19,7 +20,6 @@ use rolldown_utils::{
   dashmap::FxDashMap, hash_placeholder::HashPlaceholderGenerator, index_vec_ext::IndexVecExt as _,
   indexmap::FxIndexSet, node_style_absolute, rayon::ParallelIterator as _,
 };
-use oxc_str::CompactStr;
 use rustc_hash::{FxHashMap, FxHashSet};
 use sugar_path::SugarPath as _;
 use tracing::debug_span;
@@ -323,7 +323,13 @@ impl<'a> GenerateStage<'a> {
     )?;
     self.detect_ineffective_dynamic_imports(&chunk_graph);
     self
-      .render_chunk_to_assets(&chunk_graph, ast_table, &used_symbol_refs, &order_state, &inline_plan)
+      .render_chunk_to_assets(
+        &chunk_graph,
+        ast_table,
+        &used_symbol_refs,
+        &order_state,
+        &inline_plan,
+      )
       .await
   }
 

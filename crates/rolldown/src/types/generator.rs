@@ -162,8 +162,9 @@ impl GenerateContext<'_> {
     }
     let target_chunk = &self.chunk_graph.chunk_table[target_chunk_idx];
     target_chunk.inline_share_id?;
-    let binding =
-      self.chunk_graph.chunk_table[cur_chunk_idx].inline_binding_names_for_other_chunks.get(&target_chunk_idx)?;
+    let binding = self.chunk_graph.chunk_table[cur_chunk_idx]
+      .inline_binding_names_for_other_chunks
+      .get(&target_chunk_idx)?;
     let exported_name = target_chunk.exports_to_other_chunks.get(&canonical_ref)?.first()?;
     Some(property_access_str(binding, exported_name))
   }

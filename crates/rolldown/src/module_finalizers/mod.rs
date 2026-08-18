@@ -668,7 +668,13 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
       // off the inlined chunk's exports object would call it as a method and bind `this` to that
       // object, so wrap the callee the same way the namespace-alias path does.
       expr = Expression::new_seq_in_parens(
-        ast::Expression::new_numeric_literal(SPAN, 0.0, Some("0".into()), NumberBase::Decimal, self),
+        ast::Expression::new_numeric_literal(
+          SPAN,
+          0.0,
+          Some("0".into()),
+          NumberBase::Decimal,
+          self,
+        ),
         expr,
         self,
       );

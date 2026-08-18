@@ -9,16 +9,16 @@ source: crates/rolldown_testing/src/integration_test.rs
 //#region entry.js
 x = class {
 	_mangleThis = 1;
-	["_mangleThisToo"] = 2;
+	[/* @__KEY__ */ "_mangleThisToo"] = 2;
 	"_doNotMangleThis" = 3;
 };
 x = {
 	_mangleThis: 1,
-	["_mangleThisToo"]: 2,
+	[/* @__KEY__ */ "_mangleThisToo"]: 2,
 	"_doNotMangleThis": 3
 };
 x._mangleThis = 1;
-x["_mangleThisToo"] = 2;
+x[/* @__KEY__ */ "_mangleThisToo"] = 2;
 x["_doNotMangleThis"] = 3;
 x([`${foo}._mangleThis = bar._mangleThisToo`, `${foo}.notMangled = bar.notMangledEither`]);
 //#endregion

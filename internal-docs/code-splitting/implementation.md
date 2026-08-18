@@ -369,7 +369,7 @@ When `strict_execution_order` **is** enabled, the order plan wraps the eager car
 
 ### Algorithm
 
-The function iterates over every chunk in the `ChunkGraph` and performs six steps:
+The function iterates over every chunk in the `ChunkGraph` and performs seven steps:
 
 **Step 1 — Find DFS roots.** Entry chunks use the entry module as root. Common chunks have no single entry module, so roots are computed as modules not imported (via `ImportKind::Import`) by any other module _within the same chunk_ — i.e., the "top" of the chunk-local import graph. These are the modules that would execute first when the chunk loads, making them the correct starting points for the DFS that determines eager initialization order. Roots are sorted by execution order to ensure deterministic traversal.
 
@@ -395,21 +395,31 @@ Uses the immutable link-stage `wrap_kind()` from `LinkingMetadata`.
 
 A guard prevents transferring init calls from a lower-exec-order module to a higher one, which would incorrectly reorder execution.
 
+**Step 7 — Inject eager init calls for cross-chunk init positions ([#7449](https://github.com/rolldown/rolldown/issues/7449)).** The transfer above only repositions init calls that already live in the chunk. When a wrapped module's init call sites all live in _other_ chunks, those chunks import this one, so they always evaluate after every eager statement here — including unwrapped dependents with a higher execution order. The canonical case is `advancedChunks` grouping a CJS module together with a later unwrapped ESM module while the entry chunk holds the `require_*()` call.
+
+For such a wrapped module, the pass records an extra eager init call in `eager_init_map[first_unwrapped_dependent] -> [wrapped_module]`. `finalize_modules` renders it as the memoized wrapper call (`require_*()` under the chunk's canonical names — no cross-chunk naming involved, the wrapper is declared in this chunk) and prepends it to the dependent's output. The dependent is chosen by rendered position, not exec order, because `chunkModulesOrder: 'module-id'` hoists side-effect-free leaf modules ahead of the wrapper declaration, and a call prepended there would run before the wrapper var is assigned. The original call site in the importer chunk stays; the second call is a memoized no-op.
+
+This restores the wrapped module's order relative to its chunk-mates and matches how Rollup places a statically imported CommonJS module at its topological position. It is not full source order: like every eager statement of the chunk, the injected call still runs before lower-exec-order statements in later-evaluating chunks (an entry-chunk polyfill imported before the CJS module now runs after it) — the same distortion chunking already imposes on the unwrapped chunk-mates, traded here for the dependent observing the wrapped module initialized.
+
+Unlike the transfer, injection makes the module run whenever the chunk evaluates, so it must not fire for evaluations that would never have initialized the module. It is gated on a chunk-graph proof: every cascade root that can reach this chunk through static chunk imports must also reach a chunk holding an _eager init site_ — an included, unwrapped module whose surviving top-level `import` resolves to the wrapped module. Cascade roots are entry chunks, dynamically imported chunks, and common chunks that absorbed an entry through facade elimination (loaded directly via `getFileName` or a rewritten `import()`). Lazy `require()`/`import()` sites don't count, so a module only required inside a function keeps its lazy semantics. Entry modules, TLA-tainted modules, and concatenated wrapper members are excluded. Fixtures: `issues/7449` (injection), `issues/7449_multi_entry` and `issues/7449_lazy_require` (both guards).
+
 ### Helper: `js_import_order()`
 
 Iterative DFS from the chunk's roots. Only follows `ImportKind::Import` edges — `require()` and `import()` are inherently lazy so they don't contribute to eager initialization order. Returns modules in DFS visit order.
 
-### Output: `insert_map` and `remove_map`
+### Output: `insert_map`, `remove_map` and `eager_init_map`
 
 These maps are stored on each `Chunk` and consumed during module finalization:
 
 - **`remove_map`** — Read in `finalizer_context.rs`. The `ScopeHoistingFinalizer` checks whether any of the current module's import records should have their init calls suppressed (the init call is being moved elsewhere).
 - **`insert_map`** — Read in `finalize_modules.rs`. For each target module, the rendered init call strings from the original locations are prepended to the module's output via `PrependRenderedImport` mutations.
+- **`eager_init_map`** — Read in `finalize_modules.rs`. For each target module, the injected eager wrapper calls (Step 7) are rendered from the chunk's canonical names and prepended the same way.
 
 ```rust
 // On Chunk (in rolldown_common::chunk)
 pub insert_map: FxHashMap<ModuleIdx, Vec<(ModuleIdx, ImportRecordIdx)>>,
 pub remove_map: FxHashMap<ModuleIdx, Vec<ImportRecordIdx>>,
+pub eager_init_map: FxHashMap<ModuleIdx, Vec<ModuleIdx>>,
 ```
 
 ## ChunkGraph

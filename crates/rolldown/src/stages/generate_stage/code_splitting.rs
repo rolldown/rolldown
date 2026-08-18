@@ -1251,7 +1251,7 @@ impl GenerateStage<'_> {
           if !record_is_init_obligation(
             ObligationPurpose::Project,
             pre_chunk_order_state,
-            module_idx,
+            module,
             record,
             rec_idx,
             stmt_is_included,

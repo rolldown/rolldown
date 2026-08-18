@@ -1,5 +1,4 @@
 use std::borrow::Cow;
-use std::hash::{Hash, Hasher};
 
 use arcstr::ArcStr;
 use indexmap::IndexSet;
@@ -50,29 +49,28 @@ impl MatchingContext {
   }
 }
 
-#[derive(Debug, Eq)]
+#[derive(Debug, PartialEq, Eq)]
 pub struct MatchImportKindNormal {
   symbol: SymbolRef,
-  reexports: Vec<SymbolRef>,
+  reexports: ReexportChain,
 }
+
+/// The re-export hops walked to reach the symbol. Carried for dependency tracking only, so it is
+/// deliberately invisible to equality: two resolutions of the same symbol are one.
+#[derive(Debug, Default)]
+struct ReexportChain(Vec<SymbolRef>);
+
+impl PartialEq for ReexportChain {
+  fn eq(&self, _: &Self) -> bool {
+    true
+  }
+}
+
+impl Eq for ReexportChain {}
 
 pub enum RelationWithCommonjs {
   Commonjs,
   IndirectDependOnCommonjs,
-}
-
-impl PartialEq for MatchImportKindNormal {
-  fn eq(&self, other: &Self) -> bool {
-    self.symbol == other.symbol
-  }
-}
-
-// Must agree with the `PartialEq` above: `reexports` is deliberately excluded from both, so that
-// two resolutions of the same symbol hash and compare as one.
-impl Hash for MatchImportKindNormal {
-  fn hash<H: Hasher>(&self, state: &mut H) {
-    self.symbol.hash(state);
-  }
 }
 
 /// Bookkeeping for a collected star branch so it can be promoted if the primary path turns out to
@@ -87,10 +85,7 @@ struct StarBranchPromotion {
   imported: Specifier,
 }
 
-/// Non-cycle star branches keyed by resolution, in collection order.
-type DedupedStarBranches = FxIndexMap<MatchImportKind, StarBranchPromotion>;
-
-#[derive(Debug, PartialEq, Eq, Hash)]
+#[derive(Debug, PartialEq, Eq)]
 #[expect(clippy::box_collection)]
 pub enum MatchImportKind {
   // "sourceIndex" and "ref" are in use
@@ -1258,12 +1253,12 @@ impl BindImportsAndExportsContext<'_> {
           }
         }
         MatchImportKind::Normal(MatchImportKindNormal { symbol, reexports }) => {
-          for r in &reexports {
+          for r in &reexports.0 {
             if self.side_effects_modules.contains(&r.owner) {
               self.metas[module_idx].dependencies.insert(r.owner);
             }
           }
-          self.normal_symbol_exports_chain_map.insert(*imported_as_ref, reexports);
+          self.normal_symbol_exports_chain_map.insert(*imported_as_ref, reexports.0);
 
           self.symbol_db.link(*imported_as_ref, symbol);
         }
@@ -1382,12 +1377,9 @@ impl BindImportsAndExportsContext<'_> {
 
   /// Apply `ResolveExport`'s null-cycle rule to the collected star branches. Cycle branches are
   /// dropped from the agreement set: `ResolveExport` skips a star branch that resolves to null
-  /// instead of failing the whole lookup. Walking a cycle also re-visits the same module once per
-  /// lap, which collects the surviving branches repeatedly — those duplicates would otherwise
-  /// show up as repeated exporters, and repeated files, in the ambiguity diagnostic. An
-  /// insertion-ordered map keeps source order for the "first branch wins" rule and the first
-  /// collection's promotion state while deduplicating in linear time, since a name supplied by N
-  /// distinct `export *` sources would otherwise make the scan quadratic.
+  /// instead of failing the whole lookup. Branches collected at different points of the walk can
+  /// resolve to the same symbol; those collapse to the first, keeping the ambiguity diagnostic's
+  /// exporter list duplicate-free.
   ///
   /// When the primary path was itself a cycle it resolves to null, so the binding is whatever the
   /// remaining branches say: per `ResolveExport` the first non-null branch wins and the rest only
@@ -1395,31 +1387,31 @@ impl BindImportsAndExportsContext<'_> {
   /// into the result) so the caller can realign the collection module's cached winner.
   fn promote_first_surviving_star_branch(
     ret: MatchImportKind,
-    ambiguous_results: Vec<(MatchImportKind, StarBranchPromotion)>,
-  ) -> (MatchImportKind, DedupedStarBranches, Option<StarBranchPromotion>) {
-    let mut deduped_ambiguous_results = DedupedStarBranches::default();
-    for (result, promotion_state) in ambiguous_results {
-      if !matches!(result, MatchImportKind::Cycle { .. }) {
-        deduped_ambiguous_results.entry(result).or_insert(promotion_state);
+    ambiguous_results: &mut Vec<(MatchImportKind, StarBranchPromotion)>,
+  ) -> (MatchImportKind, Option<StarBranchPromotion>) {
+    let mut kept = 0;
+    for i in 0..ambiguous_results.len() {
+      if matches!(ambiguous_results[i].0, MatchImportKind::Cycle { .. })
+        || ambiguous_results[..kept].iter().any(|(prev, _)| *prev == ambiguous_results[i].0)
+      {
+        continue;
       }
+      ambiguous_results.swap(kept, i);
+      kept += 1;
     }
+    ambiguous_results.truncate(kept);
 
-    let (ret, promoted) = if matches!(ret, MatchImportKind::Cycle { .. }) {
-      if let Some((mut promoted, mut promotion)) = deduped_ambiguous_results.shift_remove_index(0) {
-        if let MatchImportKind::Normal(normal) = &mut promoted {
-          let mut reexports = std::mem::take(&mut promotion.reexports_prefix);
-          reexports.append(&mut normal.reexports);
-          normal.reexports = reexports;
-        }
-        (promoted, Some(promotion))
-      } else {
-        (ret, None)
+    if matches!(ret, MatchImportKind::Cycle { .. }) && !ambiguous_results.is_empty() {
+      let (mut promoted, mut promotion) = ambiguous_results.remove(0);
+      if let MatchImportKind::Normal(normal) = &mut promoted {
+        let mut reexports = std::mem::take(&mut promotion.reexports_prefix);
+        reexports.append(&mut normal.reexports.0);
+        normal.reexports.0 = reexports;
       }
+      (promoted, Some(promotion))
     } else {
       (ret, None)
-    };
-
-    (ret, deduped_ambiguous_results, promoted)
+    }
   }
 
   fn match_import_with_export(
@@ -1437,6 +1429,8 @@ impl BindImportsAndExportsContext<'_> {
     let _enter = tracking_span.enter();
 
     let mut ambiguous_results = vec![];
+    // A cycle lap re-visits the same (star module, name); expand its branches only on the first visit.
+    let mut expanded_branches = FxHashSet::default();
     let mut reexports = vec![];
     // The ambiguous-branch recursion below inherits a clone of the caller's stack, so a cycle can
     // match a frame belonging to the *outer* request. Resolving that as null is still right for
@@ -1493,49 +1487,53 @@ impl BindImportsAndExportsContext<'_> {
           break MatchImportKind::NoMatch;
         }
         ImportStatus::Found { symbol, potentially_ambiguous_export_star_refs } => {
-          for ambiguous_ref in &potentially_ambiguous_export_star_refs {
-            let ambiguous_ref_owner = &index_modules[ambiguous_ref.owner];
-            match ambiguous_ref_owner.as_normal().unwrap().named_imports.get(ambiguous_ref) {
-              Some(another_named_import) => {
-                let rec = &ambiguous_ref_owner.as_normal().unwrap().import_records
-                  [another_named_import.record_idx];
-                if let Some(resolved_module_idx) = rec.resolved_module {
-                  let ambiguous_result = self.match_import_with_export(
-                    index_modules,
-                    &mut MatchingContext { tracker_stack: ctx.tracker_stack.clone() },
-                    ImportTracker {
-                      importer: ambiguous_ref_owner.idx(),
-                      importee: resolved_module_idx,
-                      imported: another_named_import.imported.clone(),
-                      imported_as: another_named_import.imported_as,
-                    },
-                  );
-                  let mut reexports_prefix = reexports.clone();
-                  reexports_prefix.push(another_named_import.imported_as);
+          if !potentially_ambiguous_export_star_refs.is_empty()
+            && expanded_branches.insert((tracker.importee, tracker.imported.clone()))
+          {
+            for ambiguous_ref in &potentially_ambiguous_export_star_refs {
+              let ambiguous_ref_owner = &index_modules[ambiguous_ref.owner];
+              match ambiguous_ref_owner.as_normal().unwrap().named_imports.get(ambiguous_ref) {
+                Some(another_named_import) => {
+                  let rec = &ambiguous_ref_owner.as_normal().unwrap().import_records
+                    [another_named_import.record_idx];
+                  if let Some(resolved_module_idx) = rec.resolved_module {
+                    let ambiguous_result = self.match_import_with_export(
+                      index_modules,
+                      &mut MatchingContext { tracker_stack: ctx.tracker_stack.clone() },
+                      ImportTracker {
+                        importer: ambiguous_ref_owner.idx(),
+                        importee: resolved_module_idx,
+                        imported: another_named_import.imported.clone(),
+                        imported_as: another_named_import.imported_as,
+                      },
+                    );
+                    let mut reexports_prefix = reexports.clone();
+                    reexports_prefix.push(another_named_import.imported_as);
+                    ambiguous_results.push((
+                      ambiguous_result,
+                      StarBranchPromotion {
+                        reexports_prefix,
+                        export: *ambiguous_ref,
+                        star_module: tracker.importee,
+                        imported: tracker.imported.clone(),
+                      },
+                    ));
+                  }
+                }
+                _ => {
                   ambiguous_results.push((
-                    ambiguous_result,
+                    MatchImportKind::Normal(MatchImportKindNormal {
+                      symbol: *ambiguous_ref,
+                      reexports: ReexportChain::default(),
+                    }),
                     StarBranchPromotion {
-                      reexports_prefix,
+                      reexports_prefix: reexports.clone(),
                       export: *ambiguous_ref,
                       star_module: tracker.importee,
                       imported: tracker.imported.clone(),
                     },
                   ));
                 }
-              }
-              _ => {
-                ambiguous_results.push((
-                  MatchImportKind::Normal(MatchImportKindNormal {
-                    symbol: *ambiguous_ref,
-                    reexports: vec![],
-                  }),
-                  StarBranchPromotion {
-                    reexports_prefix: reexports.clone(),
-                    export: *ambiguous_ref,
-                    star_module: tracker.importee,
-                    imported: tracker.imported.clone(),
-                  },
-                ));
               }
             }
           }
@@ -1551,7 +1549,7 @@ impl BindImportsAndExportsContext<'_> {
                 Module::External(_) => {
                   break MatchImportKind::Normal(MatchImportKindNormal {
                     symbol: another_named_import.imported_as,
-                    reexports: vec![],
+                    reexports: ReexportChain::default(),
                   });
                 }
                 Module::Normal(importee) => {
@@ -1566,7 +1564,10 @@ impl BindImportsAndExportsContext<'_> {
             }
           }
 
-          break MatchImportKind::Normal(MatchImportKindNormal { symbol, reexports });
+          break MatchImportKind::Normal(MatchImportKindNormal {
+            symbol,
+            reexports: ReexportChain(reexports),
+          });
         }
         ImportStatus::External(symbol_ref) => {
           if self.options.format.keep_esm_import_export_syntax() {
@@ -1574,7 +1575,7 @@ impl BindImportsAndExportsContext<'_> {
             // if the output format preserves the original ES6 import statements
             break MatchImportKind::Normal(MatchImportKindNormal {
               symbol: tracker.imported_as,
-              reexports: vec![],
+              reexports: ReexportChain::default(),
             });
           }
 
@@ -1592,16 +1593,15 @@ impl BindImportsAndExportsContext<'_> {
 
     tracing::trace!("ambiguous_results {:#?}", ambiguous_results);
     tracing::trace!("ret {:#?}", ret);
-    let (ret, deduped_ambiguous_results, promoted) =
-      Self::promote_first_surviving_star_branch(ret, ambiguous_results);
+    let (ret, promoted) = Self::promote_first_surviving_star_branch(ret, &mut ambiguous_results);
 
     if let Some(symbol_ref) = ret.bound_symbol()
-      && deduped_ambiguous_results.keys().any(|result| *result != ret)
+      && ambiguous_results.iter().any(|(result, _)| *result != ret)
     {
       return MatchImportKind::Ambiguous {
         symbol_ref,
         potentially_ambiguous_symbol_refs: Box::new(
-          deduped_ambiguous_results.keys().filter_map(MatchImportKind::bound_symbol).collect(),
+          ambiguous_results.iter().filter_map(|(result, _)| result.bound_symbol()).collect(),
         ),
       };
     }
@@ -1642,7 +1642,7 @@ impl BindImportsAndExportsContext<'_> {
               });
             return MatchImportKind::Normal(MatchImportKindNormal {
               symbol: *shimmed_symbol_ref,
-              reexports: vec![],
+              reexports: ReexportChain::default(),
             });
           }
         }

@@ -9,7 +9,9 @@ use rolldown_common::{
 };
 use rolldown_error::BuildResult;
 use rolldown_plugin::PluginDriver;
+use rolldown_utils::indexmap::FxIndexSet;
 use rolldown_utils::rayon::{IntoParallelRefIterator, ParallelIterator};
+use rolldown_utils::url::clean_url;
 use rustc_hash::{FxHashMap, FxHashSet};
 use sugar_path::SugarPath;
 
@@ -37,6 +39,9 @@ pub struct ScanStageCache {
   pub user_defined_entry: FxHashSet<ModuleId>,
   // Usage: Map file path emitted by watcher to corresponding module index
   pub module_idx_by_abs_path: FxHashMap<ArcStr, ModuleIdx>,
+  /// Clean path (module id with `?query`/`#fragment` stripped) -> modules addressed as
+  /// `<clean path>?query`.
+  pub module_idxs_by_clean_path: FxHashMap<ArcStr, FxIndexSet<ModuleIdx>>,
   // Usage: Map module stable id injected to client code to corresponding module index
   pub module_idx_by_stable_id: FxHashMap<StableModuleId, ModuleIdx>,
 }
@@ -151,11 +156,11 @@ impl ScanStageCache {
     for (new_idx, new_module) in modules {
       let idx = self.module_id_to_idx[new_module.id()].idx();
 
-      // Update `module_idx_by_abs_path`
+      // Update `module_idx_by_abs_path` and `module_idxs_by_clean_path`
       if let rolldown_common::Module::Normal(normal_module) = &new_module {
-        self
-          .module_idx_by_abs_path
-          .insert(ArcStr::from(normal_module.id.as_arc_str().to_slash()), normal_module.idx);
+        let filename = ArcStr::from(normal_module.id.as_arc_str().to_slash());
+        index_query_variant(&mut self.module_idxs_by_clean_path, &filename, normal_module.idx);
+        self.module_idx_by_abs_path.insert(filename, normal_module.idx);
       }
       // Update `module_idx_by_stable_id`
       self.module_idx_by_stable_id.insert(new_module.stable_id().clone(), new_module.idx());
@@ -305,12 +310,14 @@ impl ScanStageCache {
 
   fn build_module_index_maps(&mut self, build_snapshot: &NormalizedScanStageOutput) {
     self.module_idx_by_abs_path.clear();
+    self.module_idxs_by_clean_path.clear();
     self.module_idx_by_stable_id.clear();
 
     for module in &build_snapshot.module_table.modules {
       if let rolldown_common::Module::Normal(normal_module) = module {
         let filename = ArcStr::from(normal_module.id.as_arc_str().to_slash());
         let module_idx = normal_module.idx;
+        index_query_variant(&mut self.module_idxs_by_clean_path, &filename, module_idx);
         self.module_idx_by_abs_path.insert(filename, module_idx);
       }
       self.module_idx_by_stable_id.insert(module.stable_id().clone(), module.idx());
@@ -354,4 +361,18 @@ impl ScanStageCache {
       tla_keyword_span_map: cache.tla_keyword_span_map.clone(),
     }
   }
+}
+
+/// Lazy-compilation proxy ids (`?rolldown-lazy=`) are internal artifacts, not content
+/// variants of the file, so they are kept out of the index.
+fn index_query_variant(
+  module_idxs_by_clean_path: &mut FxHashMap<ArcStr, FxIndexSet<ModuleIdx>>,
+  filename: &ArcStr,
+  module_idx: ModuleIdx,
+) {
+  let clean = clean_url(filename);
+  if clean.len() == filename.len() || filename.contains("?rolldown-lazy=") {
+    return;
+  }
+  module_idxs_by_clean_path.entry(ArcStr::from(clean)).or_default().insert(module_idx);
 }

@@ -1014,6 +1014,12 @@ importers:
         specifier: workspace:*
         version: link:../../..
 
+  packages/test-dev-server/tests/playground/hmr-query-variant:
+    devDependencies:
+      '@rolldown/test-dev-server':
+        specifier: workspace:*
+        version: link:../../..
+
   packages/test-dev-server/tests/playground/hmr-reconnect-ship-map:
     devDependencies:
       '@rolldown/test-dev-server':

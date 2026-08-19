@@ -160,6 +160,9 @@ export const getAsyncRuntimeConfig: typeof binding.getAsyncRuntimeConfig = fnExp
 export const getAsyncRuntimeMetrics: typeof binding.getAsyncRuntimeMetrics = fnExport(
   'getAsyncRuntimeMetrics',
 ) as typeof binding.getAsyncRuntimeMetrics;
+export const getNativeMemoryStats: typeof binding.getNativeMemoryStats = fnExport(
+  'getNativeMemoryStats',
+) as typeof binding.getNativeMemoryStats;
 export const initTraceSubscriber: typeof binding.initTraceSubscriber = fnExport(
   'initTraceSubscriber',
 ) as typeof binding.initTraceSubscriber;
@@ -192,6 +195,9 @@ export const registerPlugins: typeof binding.registerPlugins = fnExport(
 export const resetAsyncRuntimeMetrics: typeof binding.resetAsyncRuntimeMetrics = fnExport(
   'resetAsyncRuntimeMetrics',
 ) as typeof binding.resetAsyncRuntimeMetrics;
+export const resetNativeMemoryStats: typeof binding.resetNativeMemoryStats = fnExport(
+  'resetNativeMemoryStats',
+) as typeof binding.resetNativeMemoryStats;
 export const resolveTsconfig: typeof binding.resolveTsconfig = fnExport(
   'resolveTsconfig',
 ) as typeof binding.resolveTsconfig;

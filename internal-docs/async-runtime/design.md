@@ -149,7 +149,7 @@ Rust core — see [implementation.md](./implementation.md).
    bridges before that window can be used. Host installation is independent of
    the import-time flavor, so a legal synchronous `MultiThread -> CurrentThread`
    update cannot leave a module-cached environment without runnable or timer
-   delivery. Tokio builds skip those bridges.
+   delivery. Tokio builds skipped those bridges.
 
 7. **Lifecycle transitions linearize with submission and generations do not
    overlap.** Backend acquisition, explicit start, and shutdown share one

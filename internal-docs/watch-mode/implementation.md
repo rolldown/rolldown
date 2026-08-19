@@ -662,13 +662,15 @@ constructor also receives `groupSizes` — one entry per input config counting
 its output configs — which it validates (no empty group list, no zero-size
 group, sizes summing to the flat config count) and uses to split the flat list
 into the config groups handed to `Watcher::new`, giving each group one shared
-native fs watcher. `run()` and `waitForClose()` delegate directly. Shared-runtime builds attempt `run()`
-before entering an N-API future, allowing a stopped scheduler to return an
-already-rejected JavaScript Promise while retaining the native coordinator for
-an explicit retry. Tokio builds perform the same checked call inside the N-API
-runtime context they require. `close()` publishes close synchronously,
-then returns a structured result containing every native close failure and the
-close identities owned by the native coordinator.
+native fs watcher. `run()` and `waitForClose()` delegate directly. `run()`
+submits synchronously on the shared runtime before entering any N-API future,
+so a stopped scheduler returns an already-rejected JavaScript Promise while
+retaining the native coordinator for an explicit retry. Builds without
+`async-runtime` are rejected at compile time (the `compile_error!` in
+`crates/rolldown_binding/src/lib.rs`), so no other flavor exists. `close()`
+publishes close synchronously, then returns a structured result containing
+every native close failure and the close identities owned by the native
+coordinator.
 
 The coordinator distinguishes a public `close()` from cleanup started
 automatically after `run()` rejects or native `CLOSE` arrives. If an automatic

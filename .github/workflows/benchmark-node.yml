@@ -61,7 +61,10 @@ jobs:
         run: just setup-bench
 
       - name: Build packages
-        run: just build-rolldown-release
+        # The tracking variant also records per-suite peak Rust-side memory
+        # (`(peak memory)` series). It shifts timing numbers by at most ~2.3%
+        # once — far below the 110% alert threshold.
+        run: just build-rolldown-release-tracking
 
       - name: Run benchmarks
         run: vp run --filter bench bench-ci

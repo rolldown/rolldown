@@ -63,7 +63,16 @@ where
 }
 
 /// Submit a fire-and-forget future without consuming it when no executor is
-/// accepting work; `Err` hands the future back so the caller decides its fate.
+/// reachable; `Err` hands the future back so the caller decides its fate.
+///
+/// `Ok` means the future was handed to an executor, not that it will run.
+/// The shared-runtime arm checks admission, so a closed scheduler returns
+/// `Err`. The tokio arm cannot observe admission: `Handle::spawn` during
+/// runtime shutdown returns a handle for a task that is cancelled before it
+/// polls, so a shutdown race yields `Ok` while the future is dropped by the
+/// runtime. Callers that need submit-or-get-back semantics must treat `Ok`
+/// as at-most-once and put their cleanup in the future's `Drop` path — the
+/// module-loader task supervisor does exactly that.
 #[inline]
 pub fn try_spawn_detached<F>(future: F) -> Result<(), F>
 where

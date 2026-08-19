@@ -62,6 +62,29 @@ where
   }
 }
 
+/// Submit a fire-and-forget future without consuming it when no executor is
+/// accepting work; `Err` hands the future back so the caller decides its fate.
+#[inline]
+pub fn try_spawn_detached<F>(future: F) -> Result<(), F>
+where
+  F: Future<Output = ()> + Send + 'static,
+{
+  #[cfg(not(feature = "tokio-runtime"))]
+  {
+    crate::async_runtime::try_spawn_detached(future)
+  }
+  #[cfg(feature = "tokio-runtime")]
+  {
+    match tokio::runtime::Handle::try_current() {
+      Ok(handle) => {
+        drop(handle.spawn(future));
+        Ok(())
+      }
+      Err(_) => Err(future),
+    }
+  }
+}
+
 #[inline]
 pub fn spawn_blocking<F, Out>(function: F) -> JoinHandle<Out>
 where
@@ -127,5 +150,23 @@ pub fn block_on<F: Future>(f: F) -> F::Output {
   #[cfg(all(feature = "tokio-runtime", not(target_family = "wasm")))]
   {
     tokio::task::block_in_place(move || tokio::runtime::Handle::current().block_on(f))
+  }
+}
+
+/// Whether the selected executor runs the multi-thread flavor.
+#[inline]
+pub fn is_multi_threaded() -> bool {
+  #[cfg(not(feature = "tokio-runtime"))]
+  {
+    crate::async_runtime::is_multi_threaded()
+  }
+  #[cfg(feature = "tokio-runtime")]
+  {
+    match tokio::runtime::Handle::try_current() {
+      Ok(handle) => handle.runtime_flavor() == tokio::runtime::RuntimeFlavor::MultiThread,
+      // No entered runtime: mirror the shared scheduler, which answers from its
+      // configured options — MultiThread on native, CurrentThread on wasm.
+      Err(_) => !cfg!(target_family = "wasm"),
+    }
   }
 }

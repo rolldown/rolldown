@@ -26,7 +26,7 @@ use rolldown_error::{
 };
 use rolldown_fs::FileSystem;
 use rolldown_plugin::SharedPluginDriver;
-use rolldown_utils::async_runtime::try_spawn_detached;
+use rolldown_utils::futures::try_spawn_detached;
 use rolldown_utils::indexmap::FxIndexSet;
 use rolldown_utils::rayon::{IntoParallelIterator, ParallelIterator};
 use rolldown_utils::rustc_hash::FxHashSetExt;

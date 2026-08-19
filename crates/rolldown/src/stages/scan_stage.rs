@@ -209,7 +209,7 @@ impl<Fs: FileSystem + Clone + 'static> ScanStage<Fs> {
     // A thread-capability proxy, not deadlock protection: wasm cannot select
     // MultiThread, so this is what keeps `thread::spawn` off the threadless
     // artifact. Every other flavor generates its maps inline instead.
-    if !rolldown_utils::async_runtime::is_multi_threaded() {
+    if !rolldown_utils::futures::is_multi_threaded() {
       return (None, None);
     }
 

@@ -2682,19 +2682,22 @@ console.log('class plugin context invalidated')
   );
 
   wasiTest(
-    'keeps the measured 64 MiB initial floor through repeated representative builds',
+    'keeps the measured ~64 MiB initial floor through repeated representative builds',
     { timeout: 60_000 },
     async () => {
+      // 1027 pages: the wasm module's env.memory minimum as of oxc 0.146.0;
+      // must stay in lockstep with napi.wasm.threadlessInitialMemory and the
+      // ceiling in scripts/wasi/check-wasi-threadless.mjs.
       expect(WORKERD_WASM_MEMORY).toMatchObject({
-        initialPages: 1024,
-        initialBytes: 64 * 1024 * 1024,
+        initialPages: 1027,
+        initialBytes: 1027 * 64 * 1024,
       });
 
       const module = await WebAssembly.compile(await readFile(wasmPath));
       const moduleCount = 256;
       for (let round = 0; round < 3; round += 1) {
         const instance = await createInstance(module);
-        expect(instance.memoryBytes).toBeGreaterThanOrEqual(64 * 1024 * 1024);
+        expect(instance.memoryBytes).toBeGreaterThanOrEqual(1027 * 64 * 1024);
         expect(instance.memoryBytes).toBeLessThanOrEqual(65 * 1024 * 1024);
         const bundler = new instance.exports.BindingBundler();
         try {

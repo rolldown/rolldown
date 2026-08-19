@@ -7,7 +7,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 //#region entry.ts
-(class {
+var Foo = class {
 	static {
 		this.prop1 = null;
 	}
@@ -21,12 +21,12 @@ source: crates/rolldown_testing/src/integration_test.rs
 		this["prop4_"] = null;
 	}
 	static {
-		this["prop5"] = null;
+		this[/* @__KEY__ */ "prop5"] = null;
 	}
 	static {
-		this["prop6_"] = null;
+		this[/* @__KEY__ */ "prop6_"] = null;
 	}
-});
+};
 //#endregion
 
 ```

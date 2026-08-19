@@ -12,6 +12,10 @@ const SIZE: usize = 1_000_000;
 /// batches of drift around every exact expectation.
 const SLACK: usize = 256 * 1024;
 
+/// Stays below the flush threshold on purpose, so only the exit flush can
+/// record it.
+const CHUNK: usize = 48 * 1024;
+
 // A single test fn: the counters are process-global, so parallel test fns
 // would see each other's allocations.
 #[test]
@@ -36,6 +40,19 @@ fn tracks_allocations() {
   assert!(after.live_bytes <= during.live_bytes - SIZE + SLACK);
   // The peak keeps the high-water mark after the free.
   assert!(after.peak_bytes + SLACK >= before.live_bytes + SIZE);
+
+  // A sub-batch allocation on a thread that exits, freed on this thread, must
+  // not skew the balance: the exit flush records what the retired thread
+  // never flushed itself. Rolldown does this in normal operation, through
+  // expiring spawn_blocking threads and a short-lived sourcemap thread.
+  let base = stats();
+  for _ in 0..32 {
+    let buf = std::thread::spawn(|| black_box(vec![3u8; CHUNK])).join().unwrap();
+    drop(black_box(buf));
+  }
+  let churned = stats();
+  assert!(churned.live_bytes + SLACK >= base.live_bytes);
+  assert!(churned.live_bytes <= base.live_bytes + SLACK);
 
   reset();
   let fresh = stats();

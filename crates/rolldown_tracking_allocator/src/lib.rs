@@ -19,10 +19,11 @@
 //!
 //! - `live_bytes`/`peak_bytes` lag reality by at most `threads × FLUSH_BYTES`.
 //! - counts lag by at most `threads × FLUSH_OPS`.
-//! - a thread that exits with unflushed deltas loses them (no TLS destructor —
-//!   destructors may allocate during registration, recursing into the
-//!   allocator). Long-lived pool threads make this drift negligible, and
-//!   [`stats`] clamps a small negative drift of live bytes to zero.
+//! - an exit guard flushes a thread's pending deltas when the thread exits, so
+//!   a retired thread leaves no drift. The few operations that run while the
+//!   guard registers, or after its destruction during thread teardown, skip
+//!   batching and update the globals directly. [`stats`] still clamps a small
+//!   transient negative drift of live bytes to zero.
 //!
 //! Callers measure whole builds, where megabyte-scale slack is noise-level.
 //!
@@ -59,6 +60,37 @@ thread_local! {
   static PENDING_ALLOCS: Cell<usize> = const { Cell::new(0) };
   static PENDING_REALLOCS: Cell<usize> = const { Cell::new(0) };
   static PENDING_OPS: Cell<usize> = const { Cell::new(0) };
+  /// Re-entrancy latch for [`arm_exit_flush`]: registering the exit guard can
+  /// itself allocate, and that inner call must not recurse into registration.
+  static ARMING: Cell<bool> = const { Cell::new(false) };
+  /// Armed on a thread's first tracked operation. Dropping it at thread exit
+  /// flushes the thread's pending deltas, so a retired thread leaves no drift.
+  static EXIT_FLUSH: ExitFlush = const { ExitFlush };
+}
+
+/// Flushes the thread's pending deltas when the thread exits.
+struct ExitFlush;
+
+impl Drop for ExitFlush {
+  fn drop(&mut self) {
+    flush();
+  }
+}
+
+/// Returns `true` when the exit guard is usable on this thread. `false` means
+/// the guard is mid-registration or already destroyed; the caller must then
+/// apply its delta straight to the globals, because the pending cells may
+/// never flush again on this thread.
+fn arm_exit_flush() -> bool {
+  ARMING.with(|arming| {
+    if arming.get() {
+      return false;
+    }
+    arming.set(true);
+    let armed = EXIT_FLUSH.try_with(|_| ()).is_ok();
+    arming.set(false);
+    armed
+  })
 }
 
 /// Forwards every call to [`MiMalloc`] and maintains the counters returned by
@@ -66,6 +98,16 @@ thread_local! {
 pub struct TrackingAllocator;
 
 fn record(bytes_delta: isize, is_realloc: bool) {
+  if !arm_exit_flush() {
+    if is_realloc {
+      REALLOC_COUNT.fetch_add(1, Relaxed);
+    } else {
+      ALLOC_COUNT.fetch_add(1, Relaxed);
+    }
+    let live = LIVE_BYTES.fetch_add(bytes_delta, Relaxed) + bytes_delta;
+    PEAK_BYTES.fetch_max(live, Relaxed);
+    return;
+  }
   if is_realloc {
     PENDING_REALLOCS.with(|c| c.set(c.get() + 1));
   } else {
@@ -139,8 +181,13 @@ unsafe impl GlobalAlloc for TrackingAllocator {
     unsafe { MiMalloc.dealloc(ptr, layout) };
     // A free is not a new operation for the counts, but it must move the byte
     // balance and can trigger a flush.
+    let size = isize::try_from(layout.size()).unwrap_or(isize::MAX);
+    if !arm_exit_flush() {
+      LIVE_BYTES.fetch_sub(size, Relaxed);
+      return;
+    }
     let pending = PENDING_BYTES.with(|c| {
-      let pending = c.get() - isize::try_from(layout.size()).unwrap_or(isize::MAX);
+      let pending = c.get() - size;
       c.set(pending);
       pending
     });

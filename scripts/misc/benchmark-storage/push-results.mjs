@@ -2,11 +2,10 @@
 //
 // Reads the github-action-benchmark data file the action just updated, converts
 // its newest "Node Benchmark" entry into Entry-schema JSON Lines (the format
-// rolldown/metric's `metric.json` uses — see the storage repo's README), appends
-// them to `benchmark-node-output.jsonl`, and dual-writes the nested JSON while
-// the migration window is open. Pushes with a pull-rebase retry loop, so two
-// concurrent main runs append instead of overwriting each other (the previous
-// whole-file copy step silently dropped the losing run).
+// rolldown/metric's `metric.json` uses — see the storage repo's README), and
+// appends them to `benchmark-node-output.jsonl`. Pushes with a pull-rebase retry
+// loop, so two concurrent main runs append instead of overwriting each other
+// (the previous whole-file copy step silently dropped the losing run).
 //
 // Usage (CI):    node scripts/misc/benchmark-storage/push-results.mjs
 //   env: API_TOKEN_GITHUB — token with push access to the storage repo
@@ -23,12 +22,11 @@ import path from 'node:path';
 const SERIES = 'Node Benchmark';
 const STORAGE_REPO = 'github.com/rolldown/benchmark-results-storage.git';
 const JSONL_FILE = 'benchmark-node-output.jsonl';
-const JSON_FILE = 'benchmark-node-output.json';
 const PEAK_MEMORY_SUFFIX = ' (peak memory)';
 const PUSH_RETRIES = 3;
 
 function parseArgs(argv) {
-  const args = { data: 'tmp/benchmark-node-output.json', dryRun: null };
+  const args = { data: 'tmp/window.json', dryRun: null };
   for (let i = 0; i < argv.length; i++) {
     if (argv[i] === '--data') args.data = argv[++i];
     else if (argv[i] === '--dry-run') args.dryRun = argv[++i];
@@ -95,12 +93,8 @@ if (!workdir) {
 }
 
 const applyChanges = () => {
-  // Dual-write the nested JSON while the migration window is open.
-  fs.copyFileSync(args.data, path.join(workdir, JSON_FILE));
-
   // Append this run's lines — unless they are already there (job rerun, or a
-  // rebase retry after our own commit survived). Starts the file when it does
-  // not exist yet, so this step works before the history-migration PR merges.
+  // rebase retry after our own commit survived).
   const jsonlPath = path.join(workdir, JSONL_FILE);
   const existing = fs.existsSync(jsonlPath) ? fs.readFileSync(jsonlPath, 'utf8') : '';
   const lastLine = existing.trimEnd().split('\n').at(-1);
@@ -114,7 +108,7 @@ const applyChanges = () => {
 };
 
 const appended = applyChanges();
-gitOrThrow(workdir, 'add', JSON_FILE, JSONL_FILE);
+gitOrThrow(workdir, 'add', JSONL_FILE);
 const message = `Append results for rolldown/rolldown@${entry.commit.id.slice(0, 9)}`;
 if (!git(workdir, 'commit', '-m', message)) {
   console.log('nothing to commit');
@@ -138,7 +132,7 @@ for (let attempt = 1; ; attempt++) {
     gitOrThrow(workdir, 'reset', '--hard', 'origin/main');
     gitOrThrow(workdir, 'pull');
     applyChanges();
-    gitOrThrow(workdir, 'add', JSON_FILE, JSONL_FILE);
+    gitOrThrow(workdir, 'add', JSONL_FILE);
     if (!git(workdir, 'commit', '-m', message)) break;
   }
 }

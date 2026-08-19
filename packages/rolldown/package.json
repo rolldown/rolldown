@@ -1,6 +1,6 @@
 {
   "name": "rolldown",
-  "version": "1.2.4",
+  "version": "1.2.5",
   "description": "Fast JavaScript/TypeScript bundler in Rust with Rollup-compatible API.",
   "keywords": [
     "bundler",
@@ -188,7 +188,7 @@
     ],
     "wasm": {
       "initialMemory": 16384,
-      "threadlessInitialMemory": 1024,
+      "threadlessInitialMemory": 1027,
       "maximumMemory": 65536,
       "browser": {
         "fs": true,

@@ -26,9 +26,12 @@ if (
 ) {
   throw new TypeError('packages/rolldown/package.json must declare a valid memory32 maximumMemory');
 }
-if (configuredInitialMemory > 1024) {
+// 1027 pages = the wasm module's own env.memory minimum as of oxc 0.146.0
+// (was 1024 before). The build fails when the binary outgrows the config, so
+// every raise here is a conscious re-measurement, not drift.
+if (configuredInitialMemory > 1027) {
   throw new RangeError(
-    `Threadless WASI initialMemory regressed above the measured 64 MiB budget: ${configuredInitialMemory} pages`,
+    `Threadless WASI initialMemory regressed above the measured ~64 MiB budget: ${configuredInitialMemory} pages`,
   );
 }
 

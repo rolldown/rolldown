@@ -26,7 +26,7 @@ const __wasi = new __nodeWASI({
 })
 
 const __wasmMemory = new WebAssembly.Memory({
-  initial: 1024,
+  initial: 1027,
   maximum: 65536,
 })
 

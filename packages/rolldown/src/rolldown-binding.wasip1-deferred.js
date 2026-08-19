@@ -10,10 +10,10 @@ import { createContext as __emnapiCreateContext } from '@emnapi/runtime'
 import { Buffer } from 'buffer'
 
 export const WORKERD_WASM_MEMORY = Object.freeze({
-  initialPages: 1024,
+  initialPages: 1027,
   maximumPages: 65536,
   pageBytes: 65536,
-  initialBytes: 1024 * 65536,
+  initialBytes: 1027 * 65536,
   maximumBytes: 65536 * 65536,
 })
 

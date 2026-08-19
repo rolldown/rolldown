@@ -98,7 +98,7 @@ impl SymbolChunkTable {
   }
 }
 
-trait UsedSymbolRefsView: Sync {
+pub(super) trait UsedSymbolRefsView: Sync {
   fn contains(&self, symbol_ref: &SymbolRef) -> bool;
 }
 
@@ -157,6 +157,13 @@ impl GenerateStage<'_> {
             .collect()
         })
         .collect();
+
+    #[cfg(debug_assertions)]
+    self.debug_assert_module_level_static_import_prediction(
+      chunk_graph,
+      used_symbol_refs,
+      &index_imports_from_other_chunks,
+    );
 
     self.deconflict_exported_names(
       chunk_graph,
@@ -345,6 +352,116 @@ impl GenerateStage<'_> {
       FinalEsmInitMetadataAvailability::Sealed(final_esm_init_metadata),
     );
     Self::static_import_edges_of(chunk_graph, state)
+  }
+
+  /// Reconciles the module-level prediction (`predicted_static_import_targets` plus
+  /// `entry_export_service_targets`) against the static chunk imports this pass just derived.
+  /// The already-loaded fold consumed that prediction before chunks existed, with two
+  /// obligations: the fold's cycle check must see every emitted edge, and its entry reachability
+  /// must not claim a side effect the emitted graph never runs. The contract is therefore
+  /// one-and-a-half-sided:
+  /// - every edge this pass derives must be predicted (a miss is the cycle-check bug class
+  ///   pinned by `optimization/chunk_merging/already_loaded_entry_reexport_service_edge`),
+  ///   except edges whose every import item is a runtime-owned symbol: per-chunk runtime-helper
+  ///   demands and CJS-format interop request those at emission time and the module-level walk
+  ///   does not model them;
+  /// - a predicted *entry-export service* edge with a side-effectful target must be emitted.
+  ///   Those targets exceed `load_dependencies`, so nothing but their liveness gate keeps entry
+  ///   reachability truthful; this direction validates that the gate mirrors emission. The base
+  ///   prediction is exempt from this direction: it filters `load_dependencies`, the same edges
+  ///   the pre-prediction bits reachability trusted, so its over-predictions are exactly
+  ///   main-parity — e.g. constant inlining drops a symbol's import (and can even orphan an
+  ///   annotated-side-effectful chunk, see `rollup@chunking form@namespace-reexport-side-effect-cache`)
+  ///   without touching `load_dependencies`, on main just as here.
+  ///
+  /// Service imports hang on the entry (possibly facade) chunk, so entry chunks predict them via
+  /// their `entry_module_idx` — hosted or not — plus the facade edge to the chunk hosting a
+  /// moved-away entry module.
+  ///
+  /// Scope: the hard direction covers the edges derived here (`index_imports_from_other_chunks`).
+  /// Edges pre-populated on `Chunk::imports_from_other_chunks` by chunk merging postdate the fold
+  /// and answer to `would_create_circular_dependency`, not to this prediction; they only join the
+  /// union used by the soft direction. This validates the prediction *function* on the final
+  /// state — the fold's decision-time snapshot predates the inclusion replays, which is why the
+  /// fold's own cycle graph over-approximates liveness instead of trusting it.
+  #[cfg(debug_assertions)]
+  fn debug_assert_module_level_static_import_prediction(
+    &self,
+    chunk_graph: &ChunkGraph,
+    used_symbol_refs: &impl UsedSymbolRefsView,
+    index_imports_from_other_chunks: &IndexImportsFromOtherChunks,
+  ) {
+    if self.options.is_strict_execution_order_enabled() || self.options.preserve_modules {
+      return;
+    }
+    let runtime_idx = self.link_output.runtime.id();
+    for (chunk_idx, chunk) in chunk_graph.chunk_table.iter_enumerated() {
+      // A chunk with no modules is either a live entry facade or a husk left behind by facade
+      // elimination, runtime-chunk merging, or dynamic-entry absorption; the two are not
+      // distinguishable here and a husk gets no emission edges at all. Module-level prediction
+      // has nothing to say about either (their only edges are the emission-owned facade and
+      // service imports), so they are out of this contract's scope.
+      if chunk.modules.is_empty() {
+        continue;
+      }
+      // Predicted edge -> whether a side-effectful target reaches it through the service
+      // extension (the only component held to the soft direction).
+      let mut predicted: FxHashMap<ChunkIdx, bool> = FxHashMap::default();
+      let note_target =
+        |target: ModuleIdx, from_service: bool, predicted: &mut FxHashMap<ChunkIdx, bool>| {
+          if let Some(target_chunk_idx) = chunk_graph.module_to_chunk[target]
+            && target_chunk_idx != chunk_idx
+          {
+            let side_effectful = from_service
+              && self.link_output.module_table[target].side_effects().has_side_effects();
+            *predicted.entry(target_chunk_idx).or_insert(false) |= side_effectful;
+          }
+        };
+      for &module_idx in &chunk.modules {
+        for target in self.predicted_static_import_targets(module_idx) {
+          note_target(target, false, &mut predicted);
+        }
+      }
+      if let ChunkKind::EntryPoint { module: entry_module_idx, .. } = chunk.kind {
+        let mut service_targets = vec![];
+        self.entry_export_service_targets(
+          entry_module_idx,
+          used_symbol_refs,
+          false,
+          &mut service_targets,
+        );
+        for target in service_targets {
+          note_target(target, true, &mut predicted);
+        }
+        if !chunk.modules.contains(&entry_module_idx) {
+          // The facade runs its moved-away entry module by importing the chunk hosting it.
+          if let Some(host_chunk_idx) = chunk_graph.module_to_chunk[entry_module_idx]
+            && host_chunk_idx != chunk_idx
+          {
+            predicted.entry(host_chunk_idx).or_insert(false);
+          }
+        }
+      }
+      for (importee_chunk_idx, items) in &index_imports_from_other_chunks[chunk_idx] {
+        let runtime_requested_only =
+          !items.is_empty() && items.iter().all(|item| item.import_ref.owner == runtime_idx);
+        debug_assert!(
+          runtime_requested_only || predicted.contains_key(importee_chunk_idx),
+          "emitted static import {chunk_idx:?} -> {importee_chunk_idx:?} was not predicted; the \
+           already-loaded cycle check ran without this edge",
+        );
+      }
+      for (importee_chunk_idx, side_effectful_service_target) in predicted {
+        debug_assert!(
+          !side_effectful_service_target
+            || index_imports_from_other_chunks[chunk_idx].contains_key(&importee_chunk_idx)
+            || chunk.imports_from_other_chunks.contains_key(&importee_chunk_idx),
+          "predicted side-effectful service import {chunk_idx:?} -> {importee_chunk_idx:?} was \
+           not emitted; the liveness gate diverged from emission and already-loaded reachability \
+           may claim a side effect that never runs",
+        );
+      }
+    }
   }
 
   fn static_import_edges_of(

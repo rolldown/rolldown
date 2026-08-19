@@ -22,11 +22,14 @@ export {
 } from './api/async-runtime';
 export {
   type BindingClientHmrUpdate,
+  type BindingNativeMemoryStats,
   BindingRebuildStrategy,
   type BindingRuntimeCapabilities,
+  getNativeMemoryStats,
   type IsolatedDeclarationsOptions,
   type IsolatedDeclarationsResult,
   type NapiResolveOptions as ResolveOptions,
+  resetNativeMemoryStats,
   type ResolveResult,
 } from './binding.cjs';
 export { isolatedDeclaration, isolatedDeclarationSync } from './utils/isolated-declaration';

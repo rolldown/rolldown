@@ -2612,6 +2612,22 @@ export interface BindingModuleSideEffectsRule {
   external?: boolean
 }
 
+/**
+ * Counters of the Rust-side tracking allocator. V8 never allocates through
+ * the Rust global allocator, so these numbers exclude the JS heap and GC
+ * noise completely, unlike `process.memoryUsage()`.
+ */
+export interface BindingNativeMemoryStats {
+  /** Bytes currently allocated and not yet freed, since process start. */
+  liveBytes: number
+  /** Highest `live_bytes` seen since process start or the last reset. */
+  peakBytes: number
+  /** Successful `alloc` calls since the last reset. */
+  allocCount: number
+  /** Successful `realloc` calls since the last reset. */
+  reallocCount: number
+}
+
 export interface BindingOptimization {
   inlineConst?: boolean | BindingInlineConstConfig
   pifeForModuleWrappers?: boolean
@@ -3234,6 +3250,13 @@ export declare function getAsyncRuntimeMetrics(): BindingRuntimeMetrics
  */
 export declare function getCurrentThreadTaskHostContractVersion(): number
 
+/**
+ * Returns the Rust-side allocator counters, or `None` when this binding was
+ * built without the `tracking_allocator` cargo feature (the default —
+ * tracking costs a few atomic operations per allocation).
+ */
+export declare function getNativeMemoryStats(): BindingNativeMemoryStats | null
+
 /** Report the loaded binding's runtime capabilities. */
 export declare function getRuntimeCapabilities(): BindingRuntimeCapabilities
 
@@ -3329,6 +3352,13 @@ export declare function reserveCurrentThreadHostRegistration(): BindingHostRegis
  * lifetime high-water marks are left untouched.
  */
 export declare function resetAsyncRuntimeMetrics(): void
+
+/**
+ * Starts a new measuring window: the peak restarts from the current live
+ * bytes and the counts restart from zero. No-op when the binding was built
+ * without the `tracking_allocator` cargo feature.
+ */
+export declare function resetNativeMemoryStats(): void
 
 export declare function resolveTsconfig(filename: string, cache: TsconfigCache | undefined | null, yarnPnp: boolean): BindingTsconfigResult | null
 

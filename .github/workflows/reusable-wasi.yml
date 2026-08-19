@@ -107,8 +107,27 @@ jobs:
       # Separate from `test:main` on purpose: managed-workerd tests need the threadless
       # Wasm file, and Node's `--input-type` child-process probes are invalid once
       # inherited by file-based napi-rs worker entrypoints.
+      #
+      # The suite is flaky under the threaded wasm binding (~1/3 of runs) because
+      # multiple wasm instances share one dlmalloc heap and corrupt it under
+      # concurrent allocation while the memory grows — a "memory access out of
+      # bounds" trap that has nothing to do with the code under test. See #10697.
+      # Retry the whole step (the crash takes down the wasm process, so a per-test
+      # retry cannot help); a real failure still fails all attempts and reds the job.
       - name: Node Test (threaded WASI)
-        run: vp run --filter rolldown-tests test:wasi-threaded
+        run: |
+          for attempt in 1 2 3; do
+            if vp run --filter rolldown-tests test:wasi-threaded; then
+              exit 0
+            fi
+
+            if [ "$attempt" -lt 3 ]; then
+              echo "::warning::wasi Node Test attempt ${attempt} failed; retrying (known flake, see #10697)"
+            else
+              echo "::warning::wasi Node Test attempt ${attempt} failed; no more retries (known flake, see #10697)"
+            fi
+          done
+          exit 1
 
       # Catches a dropped entry in copy-addon-plugin.ts, which otherwise ships silently.
       - name: Assert threaded WASI dist file set

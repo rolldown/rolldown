@@ -76,9 +76,11 @@ url = { workspace = true }
 
 [target.'cfg(all(not(target_os = "linux"), not(target_os = "freebsd"), not(target_family = "wasm")))'.dependencies]
 mimalloc-safe = { workspace = true, features = ["skip_collect_on_exit", "v3"] }
+rolldown_tracking_allocator = { workspace = true, optional = true }
 
 [target.'cfg(all(any(target_os = "linux", target_os = "freebsd"), not(target_arch = "aarch64"), not(target_env = "ohos")))'.dependencies]
 mimalloc-safe = { workspace = true, features = ["skip_collect_on_exit", "local_dynamic_tls", "v3"] }
+rolldown_tracking_allocator = { workspace = true, optional = true }
 
 [target.'cfg(all(target_arch = "aarch64", any(target_os = "linux", target_os = "android", target_os = "freebsd")))'.dependencies]
 mimalloc-safe = { workspace = true, features = [
@@ -87,6 +89,7 @@ mimalloc-safe = { workspace = true, features = [
   "local_dynamic_tls",
   "v3",
 ] }
+rolldown_tracking_allocator = { workspace = true, optional = true }
 
 [build-dependencies]
 napi-build = { workspace = true }
@@ -108,3 +111,6 @@ default_global_allocator = []
 disable_panic_hook = []
 runtime-waker-teardown-test = ["async-runtime"]
 runtime-submission-failure-test = ["async-runtime"]
+# Wrap mimalloc with allocation counters exposed via `getNativeMemoryStats()`.
+# Costs a few atomic ops per allocation, so it is off by default.
+tracking_allocator = ["dep:rolldown_tracking_allocator"]

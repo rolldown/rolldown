@@ -247,7 +247,12 @@ impl<'a> LinkStage<'a> {
     self.include_statements(&unreachable_import_expression_node_ids);
     self.patch_module_dependencies();
 
-    tracing::trace!("meta {:#?}", self.metas.iter_enumerated().collect::<Vec<_>>());
+    tracing::trace!(
+      modules = self.metas.len(),
+      included_modules = self.metas.iter().filter(|meta| meta.is_included).count(),
+      resolved_exports = self.metas.iter().map(|meta| meta.resolved_exports.len()).sum::<usize>(),
+      "link metadata ready"
+    );
 
     (
       LinkStageOutput {

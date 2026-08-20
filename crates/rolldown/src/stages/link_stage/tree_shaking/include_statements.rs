@@ -477,18 +477,10 @@ impl LinkStage<'_> {
     }
 
     tracing::trace!(
-      "included statements {:#?}",
-      self
-        .module_table
-        .modules
-        .iter()
-        .filter_map(Module::as_normal)
-        .map(|m| m.to_debug_normal_module_for_tree_shaking(
-          &self.stmt_infos[m.idx],
-          self.metas[m.idx].is_included,
-          &self.metas[m.idx].stmt_info_included
-        ))
-        .collect::<Vec<_>>()
+      included_modules = self.metas.iter().filter(|meta| meta.is_included).count(),
+      included_statements =
+        self.metas.iter().map(|meta| meta.stmt_info_included.bit_count()).sum::<u32>(),
+      "tree shaking inclusion ready"
     );
   }
 }
@@ -641,9 +633,13 @@ fn include_side_effectful_dependencies(ctx: &mut IncludeContext, module: &Normal
     }
   });
   tracing::trace!(
-    "{}:\n module_meta dependencies: {:#?}",
-    module.stable_id,
-    module_meta.dependencies.iter().map(|idx| { ctx.modules[*idx].id().to_string() }).collect_vec()
+    module = %module.stable_id,
+    dependencies = %module_meta
+      .dependencies
+      .iter()
+      .map(|idx| ctx.modules[*idx].id())
+      .join(", "),
+    "module dependencies"
   );
 }
 

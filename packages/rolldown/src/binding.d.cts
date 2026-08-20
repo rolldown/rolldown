@@ -1916,8 +1916,8 @@ export declare class TraceSubscriberGuard {
 }
 
 export declare class TsconfigCache {
-  /** Create a new transform cache with auto tsconfig discovery enabled. */
-  constructor(yarnPnp: boolean)
+  /** Create a new transform cache with auto or manual tsconfig discovery enabled. */
+  constructor(yarnPnp: boolean, pathToTsconfig?: string | undefined | null)
   /**
    * Clear the cache.
    *
@@ -2198,9 +2198,10 @@ export interface BindingEnhancedTransformOptions {
   /**
    * Configure tsconfig handling.
    * - true: Auto-discover and load the nearest tsconfig.json
+   * - string: Use the tsconfig at the provided path
    * - TsconfigRawOptions: Use the provided inline tsconfig options
    */
-  tsconfig?: boolean | BindingTsconfigRawOptions
+  tsconfig?: boolean | string | BindingTsconfigRawOptions
   /** An input source map to collapse with the output source map. */
   inputMap?: SourceMap
 }

@@ -55,6 +55,10 @@ pub struct DevEngine {
   /// filenames — so two independent counters would let two different payloads
   /// collide on one key.
   next_hmr_patch_id: Arc<AtomicU32>,
+  /// Live handle to the plugin-facing module infos — the same map plugin contexts read.
+  /// Full builds clear it in place (the `Arc` identity is stable), so lock-free reads
+  /// here always observe the latest build. Powers the engine-level module queries.
+  module_infos: rolldown_common::SharedModuleInfoDashMap,
 }
 
 impl DevEngine {
@@ -65,6 +69,7 @@ impl DevEngine {
       .with_plugins(config.plugins)
       .build()?;
 
+    let module_infos = bundler.module_infos();
     let bundler = Arc::new(Mutex::new(bundler));
 
     let normalized_options = normalize_dev_options(options);
@@ -123,7 +128,18 @@ impl DevEngine {
       clients,
       is_closed: AtomicBool::new(false),
       next_hmr_patch_id,
+      module_infos,
     })
+  }
+
+  /// Same data the plugin-context `getModuleInfo` returns, readable from the engine
+  /// handle at any time (no hook context needed).
+  pub fn get_module_info(&self, module_id: &str) -> Option<Arc<rolldown_common::ModuleInfo>> {
+    self.module_infos.get(module_id).map(|entry| Arc::clone(entry.value()))
+  }
+
+  pub fn get_module_ids(&self) -> Vec<arcstr::ArcStr> {
+    self.module_infos.iter().map(|entry| entry.key().clone()).collect()
   }
 
   pub async fn run(&self) -> BuildResult<()> {

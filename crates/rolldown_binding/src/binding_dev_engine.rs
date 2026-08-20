@@ -1,3 +1,4 @@
+use itertools::Itertools;
 use napi_derive::napi;
 use rolldown_dev::{
   BundleState, OnAdditionalAssetsCallback, OnHmrUpdatesCallback, OnOutputCallback,
@@ -9,6 +10,7 @@ use crate::binding_dev_options::BindingDevOptions;
 use crate::types::binding_bundler_options::BindingBundlerOptions;
 use crate::types::binding_client_hmr_update::BindingClientHmrUpdate;
 use crate::types::binding_error_stage::BindingErrorStage;
+use crate::types::binding_module_info::BindingModuleInfo;
 use crate::types::binding_outputs::{BindingOutputs, to_binding_error};
 use crate::types::error::{BindingErrors, BindingResult};
 use crate::utils::{
@@ -311,6 +313,18 @@ impl BindingDevEngine {
         })
         .map_err(|e| napi::Error::from_reason(format!("Failed to compile lazy entry: {e:#?}")))
     })
+  }
+
+  /// Same data the plugin-context `getModuleInfo` returns, readable from the engine
+  /// handle at any time (no hook context needed).
+  #[napi]
+  pub fn get_module_info(&self, module_id: String) -> Option<BindingModuleInfo> {
+    self.inner.get_module_info(&module_id).map(BindingModuleInfo::new)
+  }
+
+  #[napi]
+  pub fn get_module_ids<'env>(&self, env: &'env Env) -> napi::Result<Vec<napi::JsString<'env>>> {
+    self.inner.get_module_ids().iter().map(|id| env.create_string(id)).try_collect()
   }
 }
 

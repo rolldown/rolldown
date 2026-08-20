@@ -119,6 +119,17 @@ pub enum MatchImportKind {
 }
 
 impl MatchImportKind {
+  fn kind_name(&self) -> &'static str {
+    match self {
+      Self::Normal(_) => "normal",
+      Self::Namespace { .. } => "namespace",
+      Self::NormalAndNamespace { .. } => "normal-and-namespace",
+      Self::Cycle { .. } => "cycle",
+      Self::Ambiguous { .. } => "ambiguous",
+      Self::NoMatch => "no-match",
+    }
+  }
+
   /// The symbol a resolution binds to, if it has one. Used to describe a resolution when reporting
   /// an ambiguous export.
   fn bound_symbol(&self) -> Option<SymbolRef> {
@@ -160,6 +171,21 @@ pub enum ImportStatus {
 
   /// The imported file is external and has unknown exports
   External(SymbolRef),
+}
+
+impl ImportStatus {
+  fn kind_name(&self) -> &'static str {
+    match self {
+      Self::NoMatch => "no-match",
+      Self::Found { .. } => "found",
+      Self::CommonJS => "commonjs",
+      Self::DynamicFallback { .. } => "dynamic-fallback",
+      Self::DynamicFallbackWithCommonjsReference { .. } => {
+        "dynamic-fallback-with-commonjs-reference"
+      }
+      Self::External(_) => "external",
+    }
+  }
 }
 
 impl LinkStage<'_> {
@@ -1192,7 +1218,7 @@ impl BindImportsAndExportsContext<'_> {
         },
       );
 
-      tracing::trace!("Got match result {:?}", ret);
+      tracing::trace!(result = ret.kind_name(), "matched import with export");
       match ret {
         MatchImportKind::Cycle { importer, imported } => {
           self.diagnostics.push(BuildDiagnostic::circular_reexport(
@@ -1459,7 +1485,7 @@ impl BindImportsAndExportsContext<'_> {
       }
       ctx.tracker_stack.push(tracker.clone());
       let import_status = self.advance_import_tracker(ctx);
-      tracing::trace!("Got import_status {:?}", import_status);
+      tracing::trace!(status = import_status.kind_name(), "advanced import tracker");
       let importer = &self.index_modules[tracker.importer];
       let named_import = &importer.as_normal().unwrap().named_imports[&tracker.imported_as];
       let importer_record = &importer.as_normal().unwrap().import_records[named_import.record_idx];
@@ -1590,8 +1616,11 @@ impl BindImportsAndExportsContext<'_> {
       break kind;
     };
 
-    tracing::trace!("ambiguous_results {:#?}", ambiguous_results);
-    tracing::trace!("ret {:#?}", ret);
+    tracing::trace!(
+      ambiguous_results = ambiguous_results.len(),
+      result = ret.kind_name(),
+      "matched import with export"
+    );
     let (ret, deduped_ambiguous_results, promoted) =
       Self::promote_first_surviving_star_branch(ret, ambiguous_results);
 

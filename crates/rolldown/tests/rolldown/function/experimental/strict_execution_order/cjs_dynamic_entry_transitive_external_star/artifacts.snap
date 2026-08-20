@@ -6,7 +6,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## main.js
 
 ```js
-//! User-defined Entry: [Entry-Module-Id: main.js] [Name: Some("main")]
+//! User-defined Entry: [Entry-Module-Id: main.js] [Name: main]
 Object.defineProperty(exports, Symbol.toStringTag, { value: "Module" });
 const require_rolldown_runtime = require("./rolldown-runtime.js");
 //#region main.js
@@ -115,7 +115,7 @@ Object.defineProperty(exports, "__reExport", {
 ## target.js
 
 ```js
-//! Dynamic Entry: [Entry-Module-Id: target.js] [Name: None]
+//! Dynamic Entry: [Entry-Module-Id: target.js] [Name: <none>]
 //! Common Chunk: [Shared-By: target.js]
 const require_reader = require("./reader.js");
 const require_rolldown_runtime = require("./rolldown-runtime.js");
@@ -154,7 +154,7 @@ Object.defineProperty(exports, "x", {
 ## target2.js
 
 ```js
-//! Dynamic Entry: [Entry-Module-Id: target.js] [Name: None]
+//! Dynamic Entry: [Entry-Module-Id: target.js] [Name: <none>]
 const require_target = require("./target.js");
 require_target.init_target();
 exports.x = require_target.x;

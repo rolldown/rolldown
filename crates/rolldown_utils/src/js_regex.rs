@@ -1,14 +1,25 @@
-use std::borrow::Cow;
+use std::{borrow::Cow, fmt};
 
 use crate::concat_string;
 
 /// According to the doc of `regress`, https://docs.rs/regress/0.10.0/regress/#comparison-to-regex-crate
 /// **regress supports features that regex does not, in particular backreferences and zero-width lookaround assertions.**
 /// these features are not commonly used, so in most cases the slow path will not be reached.
-#[derive(Debug, Clone)]
+#[derive(Clone)]
 pub enum HybridRegex {
   Optimize(regex::Regex),
   Ecma(regress::Regex),
+}
+
+impl fmt::Debug for HybridRegex {
+  fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+    match self {
+      Self::Optimize(regex) => f.debug_tuple("Optimize").field(&regex.as_str()).finish(),
+      // `regress::Regex`'s derived formatter walks its compiled instruction program. Apart from
+      // producing noisy output, calling it retains every instruction's formatter in release builds.
+      Self::Ecma(_) => f.write_str("Ecma(..)"),
+    }
+  }
 }
 
 // Please only used for testing

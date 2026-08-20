@@ -1462,7 +1462,7 @@ impl GenerateStage<'_> {
               let symbol_owner = &self.link_output.module_table[import_ref.owner];
               let symbol_name = import_ref.name(&self.link_output.symbol_db);
               panic!(
-                "Symbol {:?} in {:?} should belong to a chunk",
+                "Symbol `{}` in `{}` should belong to a chunk",
                 symbol_name,
                 symbol_owner.id().as_str()
               )

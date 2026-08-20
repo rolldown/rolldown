@@ -29,10 +29,14 @@ CLI equivalent: `--devtools.session-id <id>`.
 When devtools is enabled, rolldown writes JSON-lines files to:
 
 ```
-<CWD>/node_modules/.rolldown/<session_id>/
+<InputOptions.cwd>/node_modules/.rolldown/<session_id>/
   meta.json    # SessionMeta action (one JSON object per build; appended in watch/rebuild)
   logs.json    # All other actions, one JSON object per line
 ```
+
+The formatter emits paths relative to `node_modules/`, and the writer thread joins them onto the session `cwd` it received from `DebugTracer::init` — `InputOptions#cwd`, which defaults to the working directory the build ran from. The process working directory is not a usable fallback: the wasm binding runs on `wasm32-wasip1-threads`, where there is no process `cwd` and a relative path resolves against the `/` preopen instead of the project.
+
+Events with no session span in scope fall back to the `unknown-session` id (`DEFAULT_SESSION_ID` in `crates/rolldown_devtools/src/static_data.rs`), which never receives a `cwd`. Their paths stay relative, so they follow the process working directory natively and the writer warns instead of writing them on wasm. This is the same process-global activation caveat that [design.md](./design.md) tracks under per-build scoping: once any build turns devtools on, later builds in that process keep emitting under `unknown-session`.
 
 Each line is a self-contained JSON object with an `action` discriminator field. Action events also carry `timestamp`, `session_id`, and `build_id` fields. `StringRef` entries contain only `action`, `id`, and `content` (no timestamp). The consumer reads the file and splits on newlines.
 
@@ -62,7 +66,7 @@ Top-level string fields larger than 10 KB are additionally replaced with a `$ref
 
 ### Key Types
 
-- **`DebugTracer`** — Initializes a `tracing_subscriber` registry with the devtools-specific layer and formatter. Singleton init via `AtomicBool`. On drop, sends a best-effort (no-ack) `CloseSession` to the writer thread as a cleanup fallback; the authoritative flush path is `ClassicBundler::close()`, which uses `rolldown_devtools::flush_session(session_id)` and awaits an ack before resolving.
+- **`DebugTracer`** — Initializes a `tracing_subscriber` registry with the devtools-specific layer and formatter. Singleton init via `AtomicBool`, but the session `cwd` it takes is registered with the writer thread on every call, once per session. On drop, sends a best-effort (no-ack) `CloseSession` to the writer thread as a cleanup fallback; the authoritative flush path is `ClassicBundler::close()`, which uses `rolldown_devtools::flush_session(session_id)` and awaits an ack before resolving.
 - **`Session`** — Holds a session `id` (e.g. `sid_0_1710000000000`) and a parent `tracing::Span`. All build spans are children of the session span. A `Session::dummy()` is used when devtools is disabled (no-op span).
 - **`DevtoolsLayer`** — A `tracing_subscriber::Layer` that extracts `CONTEXT_*` prefixed fields from spans and stores them as `ContextData` in span extensions.
 - **`DevtoolsFormatter`** — A `FormatEvent` impl that serializes `devtoolsAction`-tagged events to JSON lines, injects context variables, and writes to the appropriate file.
@@ -163,13 +167,15 @@ Run: `pnpm --filter @rolldown/debug run gen-action-types`
 
 ## Static Data Management
 
-File handles and hash caches are stored in process-global `LazyLock<DashMap>` statics:
+File handles, session directories, and hash caches live in `WriterState`, owned by the background writer thread, so no locking is needed:
 
-- `OPENED_FILE_HANDLES` — one file handle per output file path, preventing duplicate writes
-- `OPENED_FILES_BY_SESSION` — tracks which files belong to which session (for cleanup)
-- `EXIST_HASH_BY_SESSION` — tracks already-emitted `StringRef` hashes per session (for dedup)
+- `files` — one buffered file handle per output file path, preventing duplicate writes
+- `files_by_session` — tracks which files belong to which session (for cleanup)
+- `exist_hash_by_session` — tracks already-emitted `StringRef` hashes per session (for dedup)
+- `cwd_by_session` — the directory each session's relative log paths resolve against, set by `LogCommand::SetSessionCwd`; kept past `CloseSession` because `close()` queues that command before the `closeBundle` hooks run, so it holds one small entry per session for the life of the process
+- `unopenable_files_by_session` — log files whose first open failed, so the writer warns once instead of retrying per event; dropped on `CloseSession`, and a late event on a still-broken file warns once more and re-adds its entry
 
-These are cleaned up when the background writer thread processes a `CloseSession` command — either sent synchronously via `flush_session(...)` from `ClassicBundler::close()` (ack-based, happens-before `close()` resolving) or best-effort from `DebugTracer::drop`.
+Everything except the session cwd is cleaned up when the background writer thread processes a `CloseSession` command — either sent synchronously via `flush_session(...)` from `ClassicBundler::close()` (ack-based, happens-before `close()` resolving) or best-effort from `DebugTracer::drop`.
 
 ## Consumer Side
 
@@ -178,7 +184,7 @@ The `@rolldown/debug` package provides:
 ```ts
 import { parseToEvents, type Event, type StringRef } from '@rolldown/debug';
 
-const data = fs.readFileSync('node_modules/.rolldown/<sid>/logs.json', 'utf8');
+const data = fs.readFileSync('<InputOptions.cwd>/node_modules/.rolldown/<sid>/logs.json', 'utf8');
 const events = parseToEvents(data.trim());
 // events: Array<StringRef | { timestamp, session_id, action: "BuildStart" | "ModuleGraphReady" | "PackageGraphReady" | ... }>
 ```

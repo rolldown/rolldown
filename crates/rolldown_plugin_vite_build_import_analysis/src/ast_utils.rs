@@ -163,7 +163,6 @@ impl<'a> BuildImportAnalysisVisitor<'a> {
             VariableDeclarationKind::Const,
             [VariableDeclarator::new(
               SPAN,
-              VariableDeclarationKind::Const,
               BindingPattern::ObjectPattern(object_pat.clone_in(self.ast_builder.allocator())),
               None,
               Some(await_expr),

@@ -57,6 +57,7 @@ use super::events::{
   invalid_export_option::InvalidExportOption,
   missing_export::MissingExport,
   mixed_exports::MixedExports,
+  namespace_conflict::{NamespaceConflict, NamespaceConflictExporter},
   oxc_error::OxcError,
   unresolved_entry::UnresolvedEntry,
 };
@@ -78,6 +79,20 @@ impl BuildDiagnostic {
       importee,
       importer,
       exporter,
+    })
+  }
+
+  pub fn namespace_conflict(
+    binding: String,
+    reexporting_module_id: String,
+    reexporting_module_stable_id: String,
+    exporters: Vec<NamespaceConflictExporter>,
+  ) -> Self {
+    Self::new_inner(NamespaceConflict {
+      binding,
+      reexporting_module_id,
+      reexporting_module_stable_id,
+      exporters,
     })
   }
 

@@ -334,7 +334,6 @@ impl<'ast> VisitJsMut<'ast> for ScopeHoistingFinalizer<'_, 'ast> {
           let decorations = self.top_level_var_bindings.iter().map(|var_name| {
             ast::VariableDeclarator::new(
               SPAN,
-              ast::VariableDeclarationKind::Var,
               ast::BindingPattern::new_binding_identifier(SPAN, *var_name, ast_builder),
               None,
               None,
@@ -911,7 +910,8 @@ impl<'ast> VisitJsMut<'ast> for ScopeHoistingFinalizer<'_, 'ast> {
       ast::Declaration::TSTypeAliasDeclaration(_)
       | ast::Declaration::TSInterfaceDeclaration(_)
       | ast::Declaration::TSEnumDeclaration(_)
-      | ast::Declaration::TSModuleDeclaration(_)
+      | ast::Declaration::TSExternalModuleDeclaration(_)
+      | ast::Declaration::TSNamespaceDeclaration(_)
       | ast::Declaration::TSImportEqualsDeclaration(_)
       | ast::Declaration::TSGlobalDeclaration(_) => unreachable!(),
     }

@@ -35,6 +35,7 @@ pub struct ChecksOptions {
   pub ineffective_dynamic_import: Option<bool>,
   pub large_barrel_modules: Option<bool>,
   pub sourcemap_broken: Option<bool>,
+  pub namespace_conflict: Option<bool>,
 }
 impl From<ChecksOptions> for rolldown_error::EventKindSwitcher {
   fn from(value: ChecksOptions) -> Self {
@@ -122,6 +123,10 @@ impl From<ChecksOptions> for rolldown_error::EventKindSwitcher {
     flag.set(
       rolldown_error::EventKindSwitcher::SourcemapBroken,
       value.sourcemap_broken.unwrap_or(true),
+    );
+    flag.set(
+      rolldown_error::EventKindSwitcher::NamespaceConflict,
+      value.namespace_conflict.unwrap_or(true),
     );
     flag
   }

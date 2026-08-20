@@ -169,6 +169,38 @@ export interface MangleOptionsKeepNames {
   class: boolean
 }
 
+export interface ManglePropertiesOptions {
+  /**
+   * JavaScript `RegExp` selecting property names to mangle. The source and flags are compiled
+   * with Rust's regex engine. Flags `i`, `m`, `s`, and `u` are supported.
+   */
+  include: RegExp
+  /** JavaScript `RegExp` excluding property names selected by `include`. */
+  exclude?: RegExp
+  /** Exact names that are neither mangled nor emitted as automatic output names. */
+  reserved?: Array<string>
+  /**
+   * Mangle quoted property occurrences in addition to unquoted occurrences.
+   *
+   * @default false
+   */
+  quoted?: boolean
+  /**
+   * Generate readable `_$name$_`-style output names.
+   *
+   * @default false
+   */
+  debug?: boolean
+  /**
+   * Stable mappings from original names to output names. `false` reserves an original name.
+   * Entries that do not match `include`, or that match `exclude`, remain inert but are
+   * preserved in the returned `mangleCache`. String targets must be `IdentifierName` values
+   * other than `__proto__`, `constructor`, or `prototype`. The original name `__proto__` is
+   * always reserved and cannot be used as a cache key.
+   */
+  cache?: Record<string, string | false>
+}
+
 /**
  * Minify asynchronously.
  *
@@ -181,6 +213,12 @@ export interface MinifyOptions {
   module?: boolean
   compress?: boolean | CompressOptions
   mangle?: boolean | MangleOptions
+  /**
+   * Mangle matching property names independently of identifier mangling. Properties owned by
+   * unminified code, imported module namespaces, globals, or host APIs must be excluded or
+   * reserved.
+   */
+  mangleProps?: ManglePropertiesOptions
   codegen?: boolean | CodegenOptions
   sourcemap?: boolean
 }
@@ -194,6 +232,11 @@ export interface MinifyResult {
    * Only populated when `codegen.legalComments` is `"linked"` or `"external"`.
    */
   legalComments: Array<string>
+  /**
+   * Updated property-name cache sorted by original name. Present when `mangleProps` ran on a
+   * parse without errors.
+   */
+  mangleCache?: Record<string, string | false>
 }
 
 /** Minify synchronously. */
@@ -1969,6 +2012,7 @@ export interface BindingChecksOptions {
   ineffectiveDynamicImport?: boolean
   largeBarrelModules?: boolean
   sourcemapBroken?: boolean
+  namespaceConflict?: boolean
 }
 
 export interface BindingChunkImportMap {
@@ -2564,6 +2608,22 @@ export interface BindingModuleSideEffectsRule {
   external?: boolean
 }
 
+/**
+ * Counters of the Rust-side tracking allocator. V8 never allocates through
+ * the Rust global allocator, so these numbers exclude the JS heap and GC
+ * noise completely, unlike `process.memoryUsage()`.
+ */
+export interface BindingNativeMemoryStats {
+  /** Bytes currently allocated and not yet freed, since process start. */
+  liveBytes: number
+  /** Highest `live_bytes` seen since process start or the last reset. */
+  peakBytes: number
+  /** Successful `alloc` calls since the last reset. */
+  allocCount: number
+  /** Successful `realloc` calls since the last reset. */
+  reallocCount: number
+}
+
 export interface BindingOptimization {
   inlineConst?: boolean | BindingInlineConstConfig
   pifeForModuleWrappers?: boolean
@@ -3061,6 +3121,13 @@ export type FilterTokenKind =  'Id'|
 'QueryKey'|
 'QueryValue';
 
+/**
+ * Returns the Rust-side allocator counters, or `None` when this binding was
+ * built without the `tracking_allocator` cargo feature (the default —
+ * tracking costs a few atomic operations per allocation).
+ */
+export declare function getNativeMemoryStats(): BindingNativeMemoryStats | null
+
 export declare function initTraceSubscriber(): TraceSubscriberGuard | null
 
 export interface JsChangedOutputs {
@@ -3122,6 +3189,13 @@ export interface PreRenderedChunk {
 }
 
 export declare function registerPlugins(id: number, plugins: Array<BindingPluginWithIndex>): void
+
+/**
+ * Starts a new measuring window: the peak restarts from the current live
+ * bytes and the counts restart from zero. No-op when the binding was built
+ * without the `tracking_allocator` cargo feature.
+ */
+export declare function resetNativeMemoryStats(): void
 
 export declare function resolveTsconfig(filename: string, cache: TsconfigCache | undefined | null, yarnPnp: boolean): BindingTsconfigResult | null
 

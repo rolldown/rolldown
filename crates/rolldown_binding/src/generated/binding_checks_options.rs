@@ -27,6 +27,7 @@ pub struct BindingChecksOptions {
   pub ineffective_dynamic_import: Option<bool>,
   pub large_barrel_modules: Option<bool>,
   pub sourcemap_broken: Option<bool>,
+  pub namespace_conflict: Option<bool>,
 }
 impl From<BindingChecksOptions> for rolldown_common::ChecksOptions {
   fn from(value: BindingChecksOptions) -> Self {
@@ -54,6 +55,7 @@ impl From<BindingChecksOptions> for rolldown_common::ChecksOptions {
       ineffective_dynamic_import: value.ineffective_dynamic_import,
       large_barrel_modules: value.large_barrel_modules,
       sourcemap_broken: value.sourcemap_broken,
+      namespace_conflict: value.namespace_conflict,
     }
   }
 }

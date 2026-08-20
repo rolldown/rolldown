@@ -7,28 +7,28 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 //#region entry.ts
-(class {
+var A_keep = class {
 	static {
 		foo;
 	}
-});
-(class {
+};
+var B_keep = class {
 	static {
 		this.foo;
 	}
-});
-(class {
+};
+var C_keep = class {
 	static {
 		try {
 			foo;
 		} catch {}
 	}
-});
-(class {
+};
+var D_keep = class {
 	static {
 		foo;
 	}
-});
+};
 //#endregion
 
 ```

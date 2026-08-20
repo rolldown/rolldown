@@ -100,7 +100,9 @@ export type CodeSplittingNameFunction = (
 /** @inline @category Code Splitting */
 export type CodeSplittingTestFunction = (id: string) => boolean | undefined | void;
 
-export type MinifyOptions = Omit<BindingMinifyOptions, 'module' | 'sourcemap'>;
+// `mangleProps` is not plumbed through the bundler yet — `normalize_binding_options` only
+// reads `mangle`, `compress` and `codegen`, so keep it off the public type.
+export type MinifyOptions = Omit<BindingMinifyOptions, 'module' | 'sourcemap' | 'mangleProps'>;
 
 export interface CommentsOptions {
   /**

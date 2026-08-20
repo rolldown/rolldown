@@ -527,7 +527,7 @@ link + tree shaking
 
 - No generate-stage call can change `LinkingMetadata::wrap_kind()`.
 - No order-lowering call can set a user statement inclusion bit.
-- Every order wrapper has exactly one symbol owner and one rendered chunk.
+- Every order wrapper's declared `SymbolRef` has exactly one module owner, and its synthetic declaration has exactly one rendered chunk.
 - Every CJS re-export carrier is keyed by one importer record and rendered in its CJS importee's chunk.
 - Every synthetic declaration participates in symbol-to-chunk assignment and deconfliction.
 - Every import overlay is backed by an immutable link-stage execution dependency or retained re-export contract.

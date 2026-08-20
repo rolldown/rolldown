@@ -1,4 +1,4 @@
-import { expect } from 'vitest';
+import { expect, inject } from 'vitest';
 
 export interface Container {
   runCommand: (cmd: string, args: string[]) => PromiseLike<string>;
@@ -24,7 +24,7 @@ export async function expectFreshArtifact(container: Container) {
   // safe for both scenarios: @rolldown/browser has no napi loader, so the variable is inert there
   const version = await run(container, `${FORCE_WASI} pnpm exec rolldown --version`);
   expect(version, version.output).toMatchObject({ exitCode: 0 });
-  expect(version.output).toContain(__ROLLDOWN_VERSION__);
+  expect(version.output).toContain(inject('rolldownVersion'));
   expectNoRegistryFallback(version.output);
 }
 

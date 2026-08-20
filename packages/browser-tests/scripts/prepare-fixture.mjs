@@ -1,12 +1,15 @@
-// Packs the real publishable rolldown artifacts into the WebContainer fixtures.
+// Packs the real publishable rolldown artifacts into the fixtures each test suite consumes.
 //
-//   node ./scripts/prepare-fixture.mjs [browser|node|all] [--no-build]
+//   node ./scripts/prepare-fixture.mjs [webcontainer|browser|all] [--no-build]
 //
-// Each scenario packs its tarballs into tests/fixtures/<scenario>, which the test mounts as an
-// overlay on top of the shared app in tests/fixtures/app.
+// `webcontainer` and `browser` are the vitest project names, so this takes the same word as
+// `vitest run --project <name>`.
 //
-// browser: @rolldown/browser, the single self-contained package the StackBlitz starter uses.
-// node:    the plain `rolldown` package plus the separate @rolldown/binding-wasm32-wasi package.
+// webcontainer: the tarballs tests/webcontainer mounts inside the container.
+//   - @rolldown/browser, the single self-contained package the StackBlitz starter uses.
+//   - the plain `rolldown` package plus the separate @rolldown/binding-wasm32-wasi package.
+// browser: the same @rolldown/browser tarball, installed into tests/browser, the app the
+//   real-browser suite loads through Vite.
 import { execFileSync } from 'node:child_process';
 import { copyFileSync, readdirSync, renameSync, rmSync, statSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
@@ -15,14 +18,15 @@ import { fileURLToPath } from 'node:url';
 const packageRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const repoRoot = resolve(packageRoot, '../..');
 const fixtures = join(packageRoot, 'tests/fixtures');
+const browserPage = join(packageRoot, 'tests/browser');
 const rolldownPackage = join(repoRoot, 'packages/rolldown');
 
 const args = process.argv.slice(2);
 const shouldBuild = !args.includes('--no-build');
-const scenario = args.find((arg) => !arg.startsWith('--')) ?? 'all';
+const suite = args.find((arg) => !arg.startsWith('--')) ?? 'all';
 
-if (!['browser', 'node', 'all'].includes(scenario)) {
-  throw new Error(`Unknown scenario "${scenario}", expected one of browser, node, all`);
+if (!['webcontainer', 'browser', 'all'].includes(suite)) {
+  throw new Error(`Unknown suite "${suite}", expected one of webcontainer, browser, all`);
 }
 
 // files the @rolldown/binding-wasm32-wasi package publishes, produced by `build-binding:wasi`
@@ -61,7 +65,14 @@ function pack(sourceDir, fixtureDir, packed, name) {
   console.log(`[prepare-fixture] ${name}: ${(statSync(target).size / 1024 / 1024).toFixed(2)} MB`);
 }
 
-if (scenario === 'browser' || scenario === 'all') {
+// shared by both suites, so pack it once even when preparing everything
+let browserPacked = false;
+function packBrowserPackage() {
+  if (browserPacked) {
+    return;
+  }
+  browserPacked = true;
+
   if (shouldBuild) {
     run('pnpm', ['run', '--filter', 'rolldown', 'build-browser-pkg:debug'], repoRoot, 'browser');
   }
@@ -73,7 +84,7 @@ if (scenario === 'browser' || scenario === 'all') {
   );
 }
 
-if (scenario === 'node' || scenario === 'all') {
+function packNodePackages() {
   if (shouldBuild) {
     run('pnpm', ['run', '--filter', 'rolldown', 'build-binding:wasi'], repoRoot);
     // TARGET is dropped so `dist` keeps the published shape, without the wasm inlined
@@ -95,4 +106,20 @@ if (scenario === 'node' || scenario === 'all') {
     /^rolldown-binding-wasm32-wasi-\d.*\.tgz$/,
     'rolldown-binding-wasm32-wasi.tgz',
   );
+}
+
+// `--ignore-workspace` keeps this out of the repo's pnpm workspace, so `@rolldown/browser` comes
+// from the tarball instead of being linked to packages/browser
+function installBrowserPage() {
+  run('pnpm', ['install', '--ignore-workspace', '--no-frozen-lockfile'], browserPage);
+}
+
+if (suite === 'webcontainer' || suite === 'all') {
+  packBrowserPackage();
+  packNodePackages();
+}
+
+if (suite === 'browser' || suite === 'all') {
+  packBrowserPackage();
+  installBrowserPage();
 }

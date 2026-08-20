@@ -27,7 +27,7 @@ jobs:
           cache-key: debug-build-wasi
           save-cache: ${{ github.ref_name == 'main' }}
 
-      - uses: voidzero-dev/setup-vp@250f29ce396baf5e8f24498e17c0dfdebabc26eb # v1.15.0
+      - uses: voidzero-dev/setup-vp@313600b80b104eadebb9111787d37a2e83e014ca # v1.17.0
         with:
           version: '0.2.1'
           cache: true
@@ -38,6 +38,32 @@ jobs:
       - name: Build Rolldown with WASI Binding
         run: just build-rolldown-wasi
 
+      - name: Build `@rolldown/test-dev-server`
+        run: vp run --filter '@rolldown/test-dev-server' build
+
+      # `test:wasi` is `test:main` with `ROLLDOWN_WASI_TEST=1`, which skips the tests that the wasm binding cannot pass; every skip states its own reason.
+      #
+      # The suite is flaky under the wasm binding (~1/3 of runs) because multiple
+      # wasm instances share one dlmalloc heap and corrupt it under concurrent
+      # allocation while the memory grows — a "memory access out of bounds" trap
+      # that has nothing to do with the code under test. See #10697. Retry the
+      # whole step (the crash takes down the wasm process, so a per-test retry
+      # cannot help); a real failure still fails all attempts and reds the job.
+      - name: Node Test
+        run: |
+          for attempt in 1 2 3; do
+            if vp run --filter rolldown-tests test:wasi; then
+              exit 0
+            fi
+
+            if [ "$attempt" -lt 3 ]; then
+              echo "::warning::wasi Node Test attempt ${attempt} failed; retrying (known flake, see #10697)"
+            else
+              echo "::warning::wasi Node Test attempt ${attempt} failed; no more retries (known flake, see #10697)"
+            fi
+          done
+          exit 1
+
       - name: Stability Test
         run: vp run --filter rolldown-tests test:stability
 
@@ -46,8 +72,6 @@ jobs:
       - name: Tokio Runtime Lifecycle Test
         run: vp run --filter rolldown-tests test:wasi-runtime
 
-      # `@example/typescript` is excluded because its config enables `devtools`, which currently
-      # panics under WASI when the writer tries to open its log file (crates/rolldown_devtools/src/writer.rs).
       # `@example/native-magic-string` is excluded because it depends on a native-only addon.
       - name: Build Examples
-        run: vp run --filter '@example/*' --filter '!@example/native-magic-string' --filter '!@example/typescript' build
+        run: vp run --filter '@example/*' --filter '!@example/native-magic-string' build

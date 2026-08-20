@@ -1,4 +1,95 @@
 
+## [1.2.5] - 2026-08-19
+
+### 🚀 Features
+
+- bench: record per-suite peak memory in the node benchmark (#10704) by @IWANABETHATGUY
+- binding: allocation-tracking global allocator behind the `tracking_allocator` feature (#10703) by @IWANABETHATGUY
+- add armv7 android (armv7-linux-androideabi) support (#10691) by @shulaoda
+- add `NAMESPACE_CONFLICT` warning for conflicting star re-exports (#7452) by @AliceLanniste
+
+### 🐛 Bug Fixes
+
+- rolldown_plugin_vite_reporter: avoid ANSI erase-line escape in non-TTY output (#10692) by @shulaoda
+- rolldown_plugin_vite_resolve: preserve Yarn PnP virtual importer (#10591) by @Freakazo
+- exclude hash placeholders from case-insensitive filename deconfliction (#10590) by @Nic-Polumeyv
+- code-splitting: fold already-loaded side-effectful libraries into eager entries (#10645) by @JoviDeCroock
+- dev: flush re-emitted assets when their content changes (#10637) by @btea
+- renamer: rename nested `require`/`__filename`/`__dirname` bindings in CJS output (#10655) by @marcoroth
+- silence two wasm-only warnings (#10668) by @IWANABETHATGUY
+
+### 🚜 Refactor
+
+- skip case folding for filenames with hash placeholders (#10689) by @hyfdev
+- code-splitting: remove redundant synthetic statement owner (#10503) by @hyfdev
+- renamer: move the cjs check into `rename_bindings_shadowing_cjs_ambient_names` (#10672) by @IWANABETHATGUY
+
+### 📚 Documentation
+
+- agents: point the never-edit list at the binding files that exist (#10719) by @melbinjp
+
+### 🧪 Testing
+
+- deconflict: pin renaming the external process binding away from the global (#10702) by @hyfdev
+- dev: expect a hot update across a circular import (#10700) by @hyfdev
+
+### ⚙️ Miscellaneous Tasks
+
+- deps: upgrade oxc to 0.146.0 (#10707) by @Boshen
+- deps: update rust crates (#10684) by @renovate[bot]
+- deps: update npm packages (#10685) by @renovate[bot]
+- build the benchmark comparison window from the JSON lines (#10701) by @IWANABETHATGUY
+- wasi: retry the Node Test step to absorb the shared-dlmalloc flake (#10699) by @hyfdev
+- append benchmark results to storage as JSON lines (#10682) by @IWANABETHATGUY
+- deps: update github actions (#10683) by @renovate[bot]
+- deps: update dependency rolldown-plugin-dts to v0.28.2 (#10679) by @renovate[bot]
+- deps: update dependency rolldown-plugin-dts to v0.28.1 (#10674) by @renovate[bot]
+
+### ❤️ New Contributors
+
+* @melbinjp made their first contribution in [#10719](https://github.com/rolldown/rolldown/pull/10719)
+* @Freakazo made their first contribution in [#10591](https://github.com/rolldown/rolldown/pull/10591)
+* @marcoroth made their first contribution in [#10655](https://github.com/rolldown/rolldown/pull/10655)
+
+
+## [1.2.4] - 2026-08-12
+
+### 🚀 Features
+
+- code-splitting: widen namespace extraction for already-loaded merges (#10594) by @IWANABETHATGUY
+
+### 🐛 Bug Fixes
+
+- binding: illegal instruction crash on Android arm64 (#10638) by @shulaoda
+- code-splitting: stop negated sideEffects globs retaining modules (#10660) by @JoviDeCroock
+- devtools: resolve log paths against the build cwd (#10622) by @hyfdev
+
+### 📚 Documentation
+
+- plugin-api: document sourcemap differences from Rollup (#10636) by @IWANABETHATGUY
+
+### 🧪 Testing
+
+- browser: smoke test the packed `@rolldown/browser` in a real browser page (#10634) by @hyfdev
+- node-wasi: run the full node test suite against the WASI binding (#10616) by @hyfdev
+- webcontainer: smoke test the packed WASI artifacts inside a WebContainer (#10626) by @hyfdev
+
+### ⚙️ Miscellaneous Tasks
+
+- deps: update napi (#10649) by @renovate[bot]
+- deps: update esbuild for tests to 0.28.2 (#10662) by @rolldown-guard[bot]
+- deps: update test262 submodule for tests (#10663) by @rolldown-guard[bot]
+- deps: update npm packages (#10653) by @renovate[bot]
+- deps: update github actions (#10651) by @renovate[bot]
+- deps: update crate-ci/typos action to v1.49.0 (#10642) by @renovate[bot]
+- deps: update dependency vite-plus to v0.2.9 (#10627) by @renovate[bot]
+- deps: update rust crates (#10652) by @renovate[bot]
+- deps: upgrade oxc to 0.144.0 (#10657) by @camc314
+- ignore napi-rs temp files (#10658) by @camc314
+- deps: tighten `@napi-rs/wasm-runtime` range to `~1.2.2` (#10615) by @hyfdev
+- wasi: point the wasm skips at the right place (#10644) by @hyfdev
+
+
 ## [1.2.3] - 2026-08-05
 
 ### 🐛 Bug Fixes

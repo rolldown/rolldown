@@ -230,7 +230,9 @@ impl DevEngine {
     Ok(status.into())
   }
 
-  // Ensure there's latest bundle output available for browser loading/reloading scenarios
+  /// Ensure there's latest bundle output available for browser loading/reloading scenarios.
+  ///
+  /// If the `DevEngine` is closed while waiting, this method will return early without error.
   pub async fn ensure_latest_bundle_output(&self) -> BuildResult<()> {
     self.create_error_if_closed()?;
 
@@ -250,16 +252,26 @@ impl DevEngine {
         break;
       }
       let (reply_sender, reply_receiver) = tokio::sync::oneshot::channel();
-      self
+      if let Err(err) = self
         .coordinator_sender
         .send(CoordinatorMsg::EnsureLatestBundleOutput { reply: reply_sender })
-        .map_err_to_unhandleable()
-        .context("DevEngine: failed to send EnsureLatestBundleOutput to coordinator")?;
+      {
+        if self.is_closed() {
+          return Ok(());
+        }
+        return (Err(err))
+          .map_err_to_unhandleable()
+          .context("DevEngine: failed to send EnsureLatestBundleOutput to coordinator")?;
+      }
 
-      let received = reply_receiver
-        .await
-        .map_err_to_unhandleable()
-        .context("DevEngine: coordinator closed before responding to EnsureLatestBundleOutput")?;
+      let Ok(received) = reply_receiver.await else {
+        if self.is_closed() {
+          return Ok(());
+        }
+        return Err(anyhow::anyhow!(
+          "DevEngine: coordinator closed before responding to EnsureLatestBundleOutput"
+        ))?;
+      };
 
       // Wait for the build if one is running or was scheduled
       if let Some(ret) = received {

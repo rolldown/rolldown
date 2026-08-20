@@ -3075,6 +3075,7 @@ export interface BindingViteResolvePluginResolveOptions {
 
 export interface BindingViteTransformPluginConfig {
   root: string
+  tsconfig?: string
   include?: Array<BindingStringOrRegex>
   exclude?: Array<BindingStringOrRegex>
   jsxRefreshInclude?: Array<BindingStringOrRegex>

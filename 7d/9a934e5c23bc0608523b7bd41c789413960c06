@@ -1,0 +1,21 @@
+packages/rolldown/src/binding.d.cts
+  s_f8def00b6e4ee6::t_efef96a41b4793 1913-1914,2195,2198
+crates/rolldown_common/src/utils/enhanced_transform.rs
+  s_f8def00b6e4ee6::t_e861cd668e29f6 45-46,297-319
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "7d9a934e5c23bc0608523b7bd41c789413960c06",
+  "prompts": {},
+  "sessions": {
+    "s_f8def00b6e4ee6": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019fd5c8-63c2-7e22-84d5-89b23dc4b4a8",
+        "model": "gpt-5.6-sol"
+      },
+      "human_author": "sapphi-red <green@sapphi.red>"
+    }
+  }
+}

@@ -34,6 +34,7 @@ impl TsconfigCache {
   /// Call this when tsconfig files have changed to ensure fresh resolution.
   #[napi]
   pub fn clear(&self) {
+    self.resolver.clear_cache();
     self.cache.clear();
   }
 

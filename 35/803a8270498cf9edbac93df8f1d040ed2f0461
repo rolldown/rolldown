@@ -1,5 +1,5 @@
 crates/rolldown_plugin_vite_resolve/src/resolver.rs
-  s_601b74de13a3f8::t_58fb8c72d7525f 8-11,39,187-194,643-677
+  s_601b74de13a3f8::t_58fb8c72d7525f 8-11,8,11,39,187-194,643-677
 crates/rolldown_binding/src/options/plugin/config/binding_vite_resolve_plugin_config.rs
   s_601b74de13a3f8::t_25d9aef1ff428c 25,75
 crates/rolldown_plugin_vite_resolve/src/vite_resolve_plugin.rs

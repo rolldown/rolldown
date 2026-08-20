@@ -3038,6 +3038,7 @@ export interface BindingViteReporterPluginConfig {
 
 export interface BindingViteResolvePluginConfig {
   resolveOptions: BindingViteResolvePluginResolveOptions
+  tsconfig?: string
   environmentConsumer: string
   environmentName: string
   builtins: Array<BindingStringOrRegex>

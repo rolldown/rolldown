@@ -28,7 +28,7 @@ catalogs:
       specifier: ^3.8.2
       version: 3.8.6
     '@napi-rs/wasm-runtime':
-      specifier: ~1.2.2
+      specifier: ~1.2.3
       version: 1.2.3
     '@oxc-node/cli':
       specifier: ^0.1.0

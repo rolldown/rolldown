@@ -238,7 +238,6 @@ impl ManualSplitter<'_> {
           };
           &mut module_groups[idx]
         };
-
         add_module_and_dependencies_to_group_recursively(
           group,
           normal_module.idx,
@@ -338,13 +337,47 @@ impl ManualSplitter<'_> {
     if module_groups.is_empty() {
       return module_groups;
     }
-
+    let module_table = &self.link_output.module_table;
     // - Higher priority group goes first.
     // - If two groups have the same priority, the one with the lower index goes first.
     // - If two groups have the same priority and index, we use dictionary order to sort them.
-    // Outer `Reverse` is due to we're gonna use `pop` consume the vector.
-    module_groups.sort_by_cached_key(|item| {
-      Reverse((Reverse(item.priority), item.match_group_index, item.name.clone()))
+    //   (i.e. modules not shared with the other group) by their minimum `stable_id`.
+    //   The group with the smaller minimum `stable_id` goes first. A group with no
+    //   exclusive modules goes first (it was pulled in by the other group).
+    // - If still tied, fall back to dictionary order on the group name.
+
+    module_groups.sort_by(|a, b| {
+      match a.priority.cmp(&b.priority) {
+        Ordering::Equal => {}
+        ord => return ord,
+      }
+      match b.match_group_index.cmp(&a.match_group_index) {
+        Ordering::Equal => {}
+        ord => return ord,
+      }
+      let a_exclusive: Vec<_> = a.modules.difference(&b.modules).copied().collect();
+      let b_exclusive: Vec<_> = b.modules.difference(&a.modules).copied().collect();
+
+      let a_min = a_exclusive
+        .iter()
+        .filter_map(|&idx| module_table[idx].as_normal().map(|m| &m.stable_id))
+        .min();
+      let b_min = b_exclusive
+        .iter()
+        .filter_map(|&idx| module_table[idx].as_normal().map(|m| &m.stable_id))
+        .min();
+
+      match (a_min, b_min) {
+        (Some(a_id), Some(b_id)) => match b_id.cmp(a_id) {
+          Ordering::Equal => {}
+          ord => return ord,
+        },
+        (Some(_), None) => return Ordering::Less,
+        (None, Some(_)) => return Ordering::Greater,
+        (None, None) => {}
+      }
+
+      b.name.cmp(&a.name)
     });
 
     module_groups

@@ -114,17 +114,22 @@ jobs:
       # bounds" trap that has nothing to do with the code under test. See #10697.
       # Retry the whole step (the crash takes down the wasm process, so a per-test
       # retry cannot help); a real failure still fails all attempts and reds the job.
+      # The crash also shows up as a hung suite: a dead worker is dropped
+      # silently, so in-flight builds wait forever and the plain retry loop
+      # stalls on the first attempt without ever retrying, eating the whole
+      # 45-minute job budget. `timeout` caps each attempt so a hang becomes a
+      # failed attempt (exit 124) and retries; the suite finishes in 1-2 min.
       - name: Node Test (threaded WASI)
         run: |
           for attempt in 1 2 3; do
-            if vp run --filter rolldown-tests test:wasi-threaded; then
+            if timeout 300 vp run --filter rolldown-tests test:wasi-threaded; then
               exit 0
             fi
 
             if [ "$attempt" -lt 3 ]; then
-              echo "::warning::wasi Node Test attempt ${attempt} failed; retrying (known flake, see #10697)"
+              echo "::warning::wasi Node Test attempt ${attempt} failed or hung; retrying (known flake, see #10697)"
             else
-              echo "::warning::wasi Node Test attempt ${attempt} failed; no more retries (known flake, see #10697)"
+              echo "::warning::wasi Node Test attempt ${attempt} failed or hung; no more retries (known flake, see #10697)"
             fi
           done
           exit 1

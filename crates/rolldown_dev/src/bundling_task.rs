@@ -178,7 +178,13 @@ impl BundlingTask {
             update: HmrUpdate::FullReload { reason: "tsconfig change".to_owned() },
           })
           .collect();
-        on_hmr_updates(Ok((updates, changed_files))).await?;
+        // Every other fallible callback site records its stage before
+        // propagating; without it this task reports `error_stage: None`
+        // and the coordinator settles to `Idle` instead of `Failed { Hmr }`.
+        if let Err(error) = on_hmr_updates(Ok((updates, changed_files))).await {
+          self.hmr_errored = true;
+          return Err(error);
+        }
       }
       self.input = TaskInput::FullBuild;
     }

@@ -4,6 +4,7 @@ import {
   BindingDevEngine,
   type BindingDevOptions,
   type BindingLazyChunkOutput,
+  type BindingModuleInfo,
   BindingRebuildStrategy,
   type BindingResult,
 } from '../../binding.cjs';
@@ -56,6 +57,44 @@ interface DevCallbackInvocation {
 
 // See internal-docs/async-context/implementation.md.
 const devCallbackContext = createRequiredAsyncContext<DevCallbackInvocation>();
+/**
+ * The part of the binding engine the module graph reads from.
+ *
+ * Typed structurally instead of as `BindingDevEngine`: a public constructor
+ * parameter type is emitted into the public dts, and naming the binding class
+ * there would pull the whole binding type chain into the public surface.
+ */
+interface ModuleGraphSource {
+  getModuleInfo(moduleId: string): BindingModuleInfo | null;
+  getModuleIds(): Array<string>;
+}
+
+/** Read-only view over the engine's module graph, kept current across rebuilds. */
+export class DevEngineModuleGraph {
+  #inner: ModuleGraphSource;
+
+  constructor(inner: ModuleGraphSource) {
+    this.#inner = inner;
+  }
+
+  /**
+   * Get additional information about the module in question.
+   *
+   * @returns Module information for that module. `null` if the module could not be found.
+   */
+  getModuleInfo(moduleId: string): BindingModuleInfo | null {
+    return this.#inner.getModuleInfo(moduleId) ?? null;
+  }
+
+  /**
+   * Get all module ids in the current module graph.
+   *
+   * @returns An array of module ids.
+   */
+  getModuleIds(): string[] {
+    return this.#inner.getModuleIds();
+  }
+}
 
 export class DevEngine {
   #inner: BindingDevEngineWithTerminalClose;
@@ -74,6 +113,8 @@ export class DevEngine {
   #activeOperations = 0;
   #operationsDrainedPromise: Promise<void> | undefined;
   #resolveOperationsDrained: (() => void) | undefined;
+
+  readonly moduleGraph: DevEngineModuleGraph;
 
   static async create(
     inputOptions: InputOptions,
@@ -156,6 +197,7 @@ export class DevEngine {
     this.#stopWorkers = stopWorkers;
     this.#closeCallbackScope = closeCallbackScope;
     this.#closeIdentity = closeIdentity;
+    this.moduleGraph = new DevEngineModuleGraph(inner);
   }
 
   async run(): Promise<void> {

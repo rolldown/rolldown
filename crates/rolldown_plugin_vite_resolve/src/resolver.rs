@@ -5,7 +5,10 @@ use std::{
   sync::Arc,
 };
 
-use oxc_resolver::{FileSystem as _, FileSystemOs, PackageJson, ResolveOptions, TsconfigDiscovery};
+use oxc_resolver::{
+  FileSystem as _, FileSystemOs, PackageJson, ResolveOptions, TsconfigDiscovery, TsconfigOptions,
+  TsconfigReferences,
+};
 use rolldown_common::side_effects::HookSideEffects;
 use rolldown_plugin::{HookResolveIdOutput, HookResolveIdReturn};
 use rolldown_utils::{dashmap::FxDashSet, url::clean_url};
@@ -33,6 +36,7 @@ pub struct BaseOptions<'a> {
   pub root: PathBuf,
   pub preserve_symlinks: bool,
   pub tsconfig_paths: bool,
+  pub tsconfig: Option<PathBuf>,
   pub yarn_pnp: bool,
 }
 
@@ -180,7 +184,14 @@ fn get_resolve_options(
   let main_fields = base_options.main_fields.clone();
 
   oxc_resolver::ResolveOptions {
-    tsconfig: base_options.tsconfig_paths.then_some(TsconfigDiscovery::Auto),
+    tsconfig: base_options.tsconfig_paths.then(|| {
+      base_options.tsconfig.as_ref().map_or(TsconfigDiscovery::Auto, |config_file| {
+        TsconfigDiscovery::Manual(TsconfigOptions {
+          config_file: config_file.clone(),
+          references: TsconfigReferences::Auto,
+        })
+      })
+    }),
     alias_fields: if base_options.main_fields.iter().any(|field| field == "browser") {
       vec![vec!["browser".to_string()]]
     } else {
@@ -629,7 +640,41 @@ impl ResolverLock {
 
 #[cfg(test)]
 mod tests {
-  use super::get_path_with_prefix;
+  use std::path::PathBuf;
+
+  use oxc_resolver::TsconfigDiscovery;
+
+  use super::{AdditionalOptions, BaseOptions, get_path_with_prefix, get_resolve_options};
+
+  #[test]
+  fn uses_explicit_tsconfig_instead_of_auto_discovery() {
+    let main_fields = Vec::new();
+    let conditions = Vec::new();
+    let extensions = Vec::new();
+    let try_prefix = None;
+    let tsconfig = PathBuf::from("explicit.tsconfig.json");
+    let base_options = BaseOptions {
+      main_fields: &main_fields,
+      conditions: &conditions,
+      extensions: &extensions,
+      is_production: false,
+      try_index: true,
+      try_prefix: &try_prefix,
+      as_src: false,
+      root: PathBuf::new(),
+      preserve_symlinks: false,
+      tsconfig_paths: true,
+      tsconfig: Some(tsconfig.clone()),
+      yarn_pnp: false,
+    };
+
+    let options = get_resolve_options(&base_options, AdditionalOptions::new(false, false));
+
+    let Some(TsconfigDiscovery::Manual(options)) = options.tsconfig else {
+      panic!("expected manual tsconfig discovery");
+    };
+    assert_eq!(options.config_file, tsconfig);
+  }
 
   #[test]
   fn prefixes_bare_deep_imports_with_posix_separators() {
@@ -685,6 +730,7 @@ mod tests {
         root: root.clone(),
         preserve_symlinks: false,
         tsconfig_paths: false,
+        tsconfig: None,
         yarn_pnp: true,
       },
       &Vec::new(),

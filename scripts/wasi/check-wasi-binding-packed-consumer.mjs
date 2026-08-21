@@ -1971,7 +1971,7 @@ function renderThreadlessBindingTypeExercise(packageName) {
   return `
 import {
   BindingBundler,
-  type BindingErrorsOr,
+  type BindingResult,
   type BindingOutputs,
 } from ${JSON.stringify(packageName)}
 import {
@@ -1983,7 +1983,7 @@ import wasmAlias from ${JSON.stringify(`${packageName}/wasm.wasm`)}
 
 const constructor: typeof BindingBundler = BindingBundler
 const modules: WebAssembly.Module[] = [wasm, wasmAlias]
-type GenerateResult = BindingErrorsOr<BindingOutputs>
+type GenerateResult = BindingResult<BindingOutputs>
 declare const result: GenerateResult
 declare const instance: WorkerdRolldownInstance
 void [constructor, modules, result, instance, createInstance]

@@ -1276,8 +1276,10 @@ Examples:
 
 These are the binding consumer's responsibility — Vite must sequence its
 calls so they don't race with `close()`. When the race happens anyway we
-report rather than swallow (§16d), so the consumer can detect and fix the
-ordering bug.
+report rather than swallow (§16d) by default, so the consumer can detect and
+fix the ordering bug. The waiting methods listed in §16d are the exception:
+they return `Ok` because "what you were waiting for can no longer happen" is
+a complete answer.
 
 The two categories share the `BuildResult<T>` type today — there is no
 static distinction. Code that needs to react differently must inspect
@@ -1405,6 +1407,13 @@ Current methods that take the exception:
   semantically correct. The doc comment on the method spells this out.
 - `BindingDevEngine::ensure_current_build_finish` (the napi wrapper used
   by `DevEngine.ensureCurrentBuildFinish` in JS) — same shape, PR #9564.
+- `DevEngine::ensure_latest_bundle_output` — only for a `close()` that races
+  a call already past the entry guard. The method does request work, so it
+  keeps `create_error_if_closed()` at entry and still surfaces a channel
+  failure while the engine is open; once `close()` has begun, the output it
+  would wait for can never be produced. Consumers float this call on page
+  requests, so a rejection lands as an unhandled rejection with no useful
+  recovery (rolldown#10729).
 - `DevEngine.removeClient` in the TypeScript API — websocket disconnect
   notification is idempotent, and once close has started the client is already
   being discarded with the engine. Returning without entering the binding

@@ -181,6 +181,51 @@ test.each([
   expect(mocks.bindingifyInputOptions).not.toHaveBeenCalled();
 });
 
+// The two cases above throw inside `hasDefinedProperty`, which walks the chain
+// before `readPropertyOnce` is ever reached, so they do not pin the walk that
+// `readPropertyOnce` performs and deliberately discards. That call is not dead
+// code: it is what makes an unbounded chain be REFUSED BEFORE the property is
+// read, so no user code on the chain runs. Dropping it still yields the same
+// TypeError - the snapshot's `enumerable` walk throws right after - but only
+// after `Reflect.get` has already walked into and executed the accessor.
+//
+// This case slips past `hasDefinedProperty`: the first plugin owns
+// `outputOptions`, so `outputOptionPlugins.some(...)` short-circuits and the
+// over-deep second plugin is first traversed by `readPropertyOnce` itself.
+test('refuses an over-deep plugin prototype chain before reading the hook off it', async () => {
+  let accessorCalls = 0;
+  let overDeepPlugin = Object.create(null, {
+    outputOptions: {
+      configurable: true,
+      get() {
+        accessorCalls += 1;
+        return (options) => options;
+      },
+    },
+  });
+  for (let depth = 0; depth < 300; depth++) {
+    overDeepPlugin = Object.create(overDeepPlugin);
+  }
+
+  await expect(
+    createBundlerOptions(
+      {
+        // Owned so `hasUserLogCallback` short-circuits before walking any plugin.
+        onLog() {},
+        plugins: [
+          { name: 'owns-output-options', outputOptions: (options) => options },
+          overDeepPlugin,
+        ],
+      },
+      {},
+      false,
+    ),
+  ).rejects.toThrow(/Prototype chain exceeded 256 objects while inspecting callback options/);
+  expect(accessorCalls).toBe(0);
+  expect(mocks.initializeParallelPlugins).not.toHaveBeenCalled();
+  expect(mocks.bindingifyInputOptions).not.toHaveBeenCalled();
+});
+
 function withTimeout<T>(promise: Promise<T>, operation: string): Promise<T> {
   const timeoutMs = 2_000;
   let timer: ReturnType<typeof setTimeout> | undefined;

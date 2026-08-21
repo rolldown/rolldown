@@ -1,7 +1,7 @@
 import path from 'node:path';
 import { Worker } from 'node:worker_threads';
 import { isWasiTest } from '@tests/runtime-flavor';
-import { build, type OutputOptions, type Plugin, rolldown } from 'rolldown';
+import { build, type InputOptions, type OutputOptions, type Plugin, rolldown } from 'rolldown';
 import { defineParallelPlugin, viteDynamicImportVarsPlugin } from 'rolldown/experimental';
 import { expect, test, vi } from 'vitest';
 
@@ -766,6 +766,132 @@ test('onLog accessors execute once inside the reentrancy guard', async () => {
   });
   await bundle.close();
 });
+
+// The two tests above pin one half of the option snapshot in
+// `src/utils/create-bundler-option.ts`: a hook is read exactly once, inside the
+// reentrancy guard. The tests below pin the other half. The snapshot installs the
+// value it read as an OWN property on `Object.create(userObject, ...)`, so whatever
+// the read returns wins over the user's object for every downstream consumer.
+// Reading through a prototype-chain descriptor walk returns `undefined` for a
+// `Proxy` that serves the hook only from its `get` trap - a proxy has no descriptor
+// for such a key - and the snapshot then pins that `undefined` in front of the
+// proxy, silently dropping the hook. `readPropertyOnce` therefore has to take the
+// value with `Reflect.get`.
+
+/** Each direct `eval(...)` call emits exactly one EVAL warning during scan. */
+function evalWarningsPlugin(virtualId: string, count: number): Plugin {
+  return {
+    name: 'virtual-eval-warnings',
+    resolveId(id) {
+      if (id === virtualId) return id;
+    },
+    load(id) {
+      if (id !== virtualId) return;
+      let code = '';
+      for (let index = 0; index < count; index++) code += `eval("${index}");\n`;
+      return code;
+    },
+  };
+}
+
+test.each(['onLog', 'onwarn'] as const)(
+  'input options serving %s from a proxy get trap still reach the handler',
+  async (hookName) => {
+    const virtualId = `\0proxy-input-options-${hookName}`;
+    const codes: string[] = [];
+    const onLog: InputOptions['onLog'] = (_level, log) => {
+      codes.push(log.code!);
+    };
+    const onwarn: InputOptions['onwarn'] = (warning) => {
+      codes.push(warning.code!);
+    };
+    const target: InputOptions = {
+      cwd: import.meta.dirname,
+      input: virtualId,
+      plugins: [evalWarningsPlugin(virtualId, 3)],
+    };
+
+    const bundle = await rolldown(
+      new Proxy(target, {
+        get(object, key, receiver) {
+          if (key === hookName) return hookName === 'onLog' ? onLog : onwarn;
+          return Reflect.get(object, key, receiver);
+        },
+      }),
+    );
+    await bundle.generate({});
+    await bundle.close();
+
+    expect(codes.filter((code) => code === 'EVAL')).toHaveLength(3);
+  },
+);
+
+test('a plugin serving outputOptions from a proxy get trap still runs the hook', async () => {
+  let trapReads = 0;
+  let hookCalls = 0;
+  const plugin = new Proxy<Plugin>(
+    { name: 'proxied-output-options' },
+    {
+      get(object, key, receiver) {
+        if (key === 'outputOptions') {
+          trapReads += 1;
+          return (options: OutputOptions): OutputOptions => {
+            hookCalls += 1;
+            return { ...options, entryFileNames: 'from-proxy-hook.js' };
+          };
+        }
+        return Reflect.get(object, key, receiver);
+      },
+    },
+  );
+
+  const bundle = await rolldown({
+    input: './main.js',
+    cwd: import.meta.dirname,
+    plugins: [plugin],
+  });
+  const { output } = await bundle.generate();
+  await bundle.close();
+
+  expect(hookCalls).toBe(1);
+  // Reading through the proxy must not trade masking for repeated reads: the
+  // snapshot is still what every consumer sees, so the trap fires exactly once.
+  expect(trapReads).toBe(1);
+  expect(output[0].fileName).toBe('from-proxy-hook.js');
+});
+
+test('an accessor-backed outputOptions hook is read once per build, not once per consumer', async () => {
+  let getterCalls = 0;
+  const returnedHooks: unknown[] = [];
+  const plugin: Plugin = {
+    name: 'output-options-accessor-once',
+    get outputOptions() {
+      getterCalls += 1;
+      // A fresh function per read. Without the snapshot the hook that
+      // `getSortedPlugins` inspects is a different function from the one
+      // `callOutputOptionsHook` invokes, and the getter runs twice.
+      const hook = (options: OutputOptions): OutputOptions => ({
+        ...options,
+        entryFileNames: 'accessor-once.js',
+      });
+      returnedHooks.push(hook);
+      return hook;
+    },
+  };
+
+  const bundle = await rolldown({
+    input: './main.js',
+    cwd: import.meta.dirname,
+    plugins: [plugin],
+  });
+  const { output } = await bundle.generate();
+  await bundle.close();
+
+  expect(getterCalls).toBe(1);
+  expect(returnedHooks).toHaveLength(1);
+  expect(output[0].fileName).toBe('accessor-once.js');
+});
+
 test(
   'detached plugin descendants can generate after their hook settles',
   { timeout: 5_000 },

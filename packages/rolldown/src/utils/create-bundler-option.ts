@@ -330,10 +330,14 @@ function readPropertyOnce<T extends object, K extends keyof T>(
   object: T,
   key: K,
 ): T[K] | undefined {
-  const descriptor = findPropertyDescriptor(object, key);
-  if (!descriptor) return undefined;
-  if ('value' in descriptor) return descriptor.value;
-  return descriptor.get?.call(object);
+  // Walk first and discard the result: the walk is what bounds a cyclic or
+  // fabricated prototype chain, and it has to throw here, before the read.
+  // The read itself must go through `Reflect.get` so that a `Proxy` serving
+  // or decorating the hook from its `get` trap is observed rather than
+  // masked by the `undefined` this would otherwise snapshot. Still exactly
+  // one read, so accessor-backed hooks keep firing once, inside the guard.
+  findPropertyDescriptor(object, key);
+  return Reflect.get(object, key, object) as T[K] | undefined;
 }
 
 function findPropertyDescriptor(object: object, key: PropertyKey): PropertyDescriptor | undefined {

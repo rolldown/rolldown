@@ -46,7 +46,8 @@ export function makeBuiltinPluginCallable(
         return error(
           logPluginError(e, plugin.name, {
             hook: key,
-            id: key === 'transform' ? args[2] : undefined,
+            // `transform(code, id, options)` — the module id is the second argument.
+            id: key === 'transform' ? args[1] : undefined,
           }),
         );
       }

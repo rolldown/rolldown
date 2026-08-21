@@ -80,6 +80,9 @@ needless_for_each = "allow"
 new_without_default = "allow"
 # TODO: should review this rule.
 missing_panics_doc = "allow"
+# Plugin hooks return `impl Future`, so impls commonly use `async fn` even with no `.await`.
+# Rewriting every early return as `std::future::ready(...)` is noisy and fights existing style.
+unused_async_trait_impl = "allow"
 
 # --- nursery https://doc.rust-lang.org/clippy/usage.html#clippynursery
 # We should only disable rules globally if they are either false positives, chaotic, or does not make sense.

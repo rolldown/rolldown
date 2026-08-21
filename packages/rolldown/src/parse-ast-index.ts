@@ -11,7 +11,6 @@ import { locate } from './log/locate-character';
 import { augmentCodeLocation, error, logParseError } from './log/logs';
 import { getCodeFrame } from './utils/code-frame';
 import { parse, parseSync } from './utils/parse';
-import { shouldEagerlyFreeOutputs } from './utils/threadless-free';
 
 /**
  * @hidden
@@ -24,15 +23,10 @@ export type ParseResult = BindingParseResult;
 export type ParserOptions = BindingParserOptions;
 
 function wrap(result: ParseResult, filename: string | undefined, sourceText: string) {
-  // Drains, not reads: `ParseResult` is an upstream napi class whose getters
-  // hand the native storage back, so reading is the only way to free a field.
-  // Before the error check because a failed parse still carries a whole program.
-  // Skipped elsewhere: finalizers do it there, and the reads cost real time.
-  if (shouldEagerlyFreeOutputs()) {
-    void result.module;
-    void result.comments;
-    void result.program;
-  }
+  // No drain here: `wrapParseResult` in `utils/parse.ts` already reads every
+  // native getter on the threadless-WASI flavor, for failed and successful
+  // parses alike. Touching this wrapper's `program` getter would only run
+  // `jsonParseAst` over an AST the error path throws away.
   if (result.errors.length > 0) {
     return normalizeParseError(filename, sourceText, result.errors);
   }

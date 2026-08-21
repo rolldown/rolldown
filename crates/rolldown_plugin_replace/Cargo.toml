@@ -1,6 +1,6 @@
 [package]
 name = "rolldown_plugin_replace"
-version = "1.2.4"
+version = "1.2.5"
 edition.workspace = true
 homepage.workspace = true
 license.workspace = true
@@ -19,8 +19,8 @@ doctest = false
 anyhow = { workspace = true }
 oxc = { workspace = true }
 regex = { workspace = true }
-regress = { workspace = true }
 rolldown_plugin = { workspace = true }
+rolldown_utils = { workspace = true }
 rustc-hash = { workspace = true }
 string_wizard = { workspace = true }
 

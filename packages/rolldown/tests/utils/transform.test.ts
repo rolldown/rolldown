@@ -173,6 +173,26 @@ describe('enhanced transform', () => {
   describe('tsconfig - auto-discovery', () => {
     const fixtures = path.join(import.meta.dirname, 'fixtures');
 
+    it('should use a tsconfig path', () => {
+      const filename = '/nonexistent/path/test.ts';
+      const code = `class Foo { bar = 'bar' }`;
+      const explicitTsconfig = path.join(fixtures, 'tsconfig.json');
+      const expected = transformSync(filename, code, {
+        target: 'esnext',
+        tsconfig: {
+          compilerOptions: { useDefineForClassFields: false },
+        },
+      });
+      const result = transformSync(filename, code, {
+        target: 'esnext',
+        tsconfig: explicitTsconfig,
+      });
+
+      expect(result.code).toBe(expected.code);
+      expect(result.errors).toHaveLength(0);
+      expect(result.tsconfigFilePaths).toStrictEqual([explicitTsconfig]);
+    });
+
     it('should auto-discover tsconfig by default (no tsconfig option)', async () => {
       const result = await transform(
         path.join(fixtures, 'test1.ts'),

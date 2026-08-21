@@ -22,6 +22,7 @@ use crate::{
 #[derive(Debug)]
 pub struct BindingViteResolvePluginConfig {
   pub resolve_options: BindingViteResolvePluginResolveOptions,
+  pub tsconfig: Option<String>,
   pub environment_consumer: String,
   pub environment_name: String,
   pub builtins: Vec<BindingStringOrRegex>,
@@ -71,6 +72,7 @@ impl From<BindingViteResolvePluginConfig> for ViteResolveOptions {
 
     Self {
       resolve_options: value.resolve_options.into(),
+      tsconfig: value.tsconfig,
       environment_consumer: value.environment_consumer,
       environment_name: value.environment_name,
       builtins: bindingify_string_or_regex_array(value.builtins),

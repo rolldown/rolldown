@@ -1,7 +1,7 @@
 use std::path::PathBuf;
 use std::sync::Arc;
 
-use napi::Either;
+use napi::{Either, bindgen_prelude::Either3};
 use napi_derive::napi;
 use oxc_napi::get_source_type;
 use oxc_sourcemap::napi::SourceMap;
@@ -171,8 +171,9 @@ pub struct BindingEnhancedTransformOptions {
   // --- Enhanced options ---
   /// Configure tsconfig handling.
   /// - true: Auto-discover and load the nearest tsconfig.json
+  /// - string: Use the tsconfig at the provided path
   /// - TsconfigRawOptions: Use the provided inline tsconfig options
-  pub tsconfig: Option<Either<bool, BindingTsconfigRawOptions>>,
+  pub tsconfig: Option<Either3<bool, String, BindingTsconfigRawOptions>>,
   /// An input source map to collapse with the output source map.
   pub input_map: Option<SourceMap>,
 }
@@ -283,9 +284,10 @@ impl BindingEnhancedTransformOptions {
     let source_type =
       Some(get_source_type(filename, self.lang.as_deref(), self.source_type.as_deref()));
     let tsconfig = match &self.tsconfig {
-      Some(Either::A(true)) => Some(TsconfigOption::Auto),
-      Some(Either::A(false)) => Some(TsconfigOption::Disabled),
-      Some(Either::B(raw)) => Some(TsconfigOption::Config(Arc::new(raw.into()))),
+      Some(Either3::A(true)) => Some(TsconfigOption::Auto),
+      Some(Either3::A(false)) => Some(TsconfigOption::Disabled),
+      Some(Either3::B(path)) => Some(TsconfigOption::Path(PathBuf::from(path))),
+      Some(Either3::C(raw)) => Some(TsconfigOption::Config(Arc::new(raw.into()))),
       None => None,
     };
     let sourcemap = self.sourcemap.unwrap_or(false);

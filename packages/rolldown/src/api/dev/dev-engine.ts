@@ -4,6 +4,7 @@ import {
   BindingDevEngine,
   type BindingDevOptions,
   type BindingLazyChunkOutput,
+  type BindingModuleInfo,
   BindingRebuildStrategy,
   type BindingResult,
   shutdownAsyncRuntime,
@@ -18,10 +19,51 @@ import { normalizedStringOrRegex } from '../../utils/normalize-string-or-regex';
 import { transformToRollupOutput } from '../../utils/transform-to-rollup-output';
 import type { DevOptions } from './dev-options';
 
+/**
+ * The part of the binding engine the module graph reads from.
+ *
+ * Typed structurally instead of as `BindingDevEngine`: a public constructor
+ * parameter type is emitted into the public dts, and naming the binding class
+ * there would pull the whole binding type chain into the public surface.
+ */
+interface ModuleGraphSource {
+  getModuleInfo(moduleId: string): BindingModuleInfo | null;
+  getModuleIds(): Array<string>;
+}
+
+/** Read-only view over the engine's module graph, kept current across rebuilds. */
+export class DevEngineModuleGraph {
+  #inner: ModuleGraphSource;
+
+  constructor(inner: ModuleGraphSource) {
+    this.#inner = inner;
+  }
+
+  /**
+   * Get additional information about the module in question.
+   *
+   * @returns Module information for that module. `null` if the module could not be found.
+   */
+  getModuleInfo(moduleId: string): BindingModuleInfo | null {
+    return this.#inner.getModuleInfo(moduleId) ?? null;
+  }
+
+  /**
+   * Get all module ids in the current module graph.
+   *
+   * @returns An array of module ids.
+   */
+  getModuleIds(): string[] {
+    return this.#inner.getModuleIds();
+  }
+}
+
 export class DevEngine {
   #inner: BindingDevEngine;
   #cachedBuildFinishPromise: Promise<void> | null = null;
   #asyncRuntimeReleased = false;
+
+  readonly moduleGraph: DevEngineModuleGraph;
 
   static async create(
     inputOptions: InputOptions,
@@ -99,6 +141,7 @@ export class DevEngine {
 
   private constructor(inner: BindingDevEngine) {
     this.#inner = inner;
+    this.moduleGraph = new DevEngineModuleGraph(inner);
   }
 
   async run(): Promise<void> {

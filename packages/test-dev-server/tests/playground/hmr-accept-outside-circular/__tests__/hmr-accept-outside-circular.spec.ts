@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'vitest';
-import { editFile, page, untilBrowserLogAfter, waitForBuildStable } from '~utils';
+import { editFile, page, waitForBuildStable } from '~utils';
 
 // Port of the removed Rust fixture
 // `crates/rolldown/tests/rolldown/topics/hmr/accept-outside-circular`: same
@@ -12,10 +12,10 @@ import { editFile, page, untilBrowserLogAfter, waitForBuildStable } from '~utils
 // callback (dead code — it dereferenced `newMod.a` on a module with no
 // exports) becomes a bare self-accept, which registers the same boundary.
 //
-// Today the client walk treats any circular import chain as a reload reason
-// (`bubble()` stops when it re-meets an ancestor). If the walk ever learns to
-// cross circles to an outside boundary (Vite's `propagateUpdate` behavior),
-// this becomes a hot update — flip the marker assertion to `'alive'`.
+// Reaching the `b`/`c` back edge used to end the walk in a full reload. Vite's
+// bundled-dev client now skips a parent it is already inside of and keeps
+// going (vitejs/vite#23259), so the walk reaches `main`'s self-accept outside
+// the circle and this is a hot update. The marker assertion tells them apart.
 
 /** Plant a marker on `window`; any full page reload wipes it. */
 const plantMarker = () =>
@@ -29,21 +29,16 @@ describe('hmr-accept-outside-circular', () => {
     await expect.poll(() => page.textContent('.chain')).toBe('c');
   });
 
-  test('editing inside the circle reloads onto fresh content', async () => {
+  test('editing inside the circle hot-updates via the boundary outside it', async () => {
     await waitForBuildStable();
     await plantMarker();
 
-    // The reload must be attributed to the circle, not to a missing boundary
-    // (`main` self-accepts, so a plain no-boundary reason would be a bug).
-    await untilBrowserLogAfter(
-      () => editFile('c.js', (code) => code.replace("export const c = 'c'", "export const c = 'cc'")),
-      /full reload needed: circular import chain between `[^`]*b\.js` and `[^`]*c\.js`/,
-    );
+    editFile('c.js', (code) => code.replace("export const c = 'c'", "export const c = 'cc'"));
     await expect.poll(() => page.textContent('.chain')).toBe('cc');
 
-    // A reload, never a silently stale page: the marker is gone AND the fresh
-    // value rendered.
-    await expect.poll(readMarker).toBe(null);
+    // A hot update, never a reload onto the same content: `cc` rendered AND the
+    // marker survived.
+    expect(await readMarker()).toBe('alive');
     await waitForBuildStable();
   });
 });

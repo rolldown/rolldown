@@ -869,7 +869,6 @@ impl GenerateStage<'_> {
           .or_default()
           .insert(entry_module_idx);
         order_state.insert_simulated_facade_namespace(
-          entry_module_idx,
           entry_module.namespace_object_ref,
           entry_chunk_idx,
           RuntimeHelper::ExportAll,
@@ -1106,7 +1105,6 @@ impl GenerateStage<'_> {
           .as_normal()
           .expect("dynamic entry should be a normal module");
         order_state.insert_simulated_facade_namespace(
-          entry_module_idx,
           entry_module.namespace_object_ref,
           entry_host_chunk,
           RuntimeHelper::ExportAll,

@@ -4,8 +4,8 @@ try {
   module.enableCompileCache?.();
   setTimeout(() => {
     try {
-      module.flushCompileCache?.()
+      module.flushCompileCache?.();
     } catch {}
-  }, 10 * 1000).unref()
+  }, 10 * 1000).unref();
 } catch {}
 await import('../dist/cli.mjs');

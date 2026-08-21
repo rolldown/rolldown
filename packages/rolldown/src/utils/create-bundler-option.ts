@@ -85,10 +85,15 @@ export async function createBundlerOptions(
     hasDefinedProperty(inputOptions, 'onLog') ||
     hasDefinedProperty(inputOptions, 'onwarn') ||
     inputObjectPlugins.some((plugin) => hasDefinedProperty(plugin, 'onLog'));
+  // Read once, like Rollup and like the plugin-less path: an accessor-backed
+  // `onLog`/`onwarn` on the input options must not be re-run per log entry.
+  // `snapshotPluginHooks` stays inside `invokeLogger` on purpose - plugin
+  // `onLog` accessors have to execute inside the reentrancy guard.
+  const inputLogHandlers = getOnLog(snapshotInputLogHandlers(inputOptions), logLevel);
   const invokeLogger: LogHandler = (level, log) =>
     getLogger(
       snapshotPluginHooks(inputObjectPlugins, 'onLog'),
-      getOnLog(snapshotInputLogHandlers(inputOptions), logLevel),
+      inputLogHandlers,
       logLevel,
       watchMode,
     )(level, log);

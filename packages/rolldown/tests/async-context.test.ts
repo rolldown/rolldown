@@ -408,12 +408,36 @@ assert.equal(directTerminal.thenReads, 1)
 assert.equal(directTerminal.marker(), 'terminal')
 
 const nestedTerminal = new Terminal()
-assert.strictEqual(
-  await settle({ then(resolve) { resolve(nestedTerminal) } }),
-  nestedTerminal,
-)
-assert.ok(nestedTerminal.thenReads > 0)
+const terminalRegistry = new WeakMap([[nestedTerminal, 'weak-key']])
+const nestedTerminalResult = await settle({ then(resolve) { resolve(nestedTerminal) } })
+assert.strictEqual(nestedTerminalResult, nestedTerminal)
+// One classification read plus the single adoption performed by the promise
+// handed back to the caller. The settled value is boxed in between, so no
+// intermediate promise runs the Promise Resolution Procedure on it again.
+assert.equal(nestedTerminal.thenReads, 2)
 assert.equal(nestedTerminal.marker(), 'terminal')
+assert.equal(terminalRegistry.get(nestedTerminalResult), 'weak-key')
+
+let flipReads = 0
+let flipDeactivations = 0
+let flipSettled = false
+const flipTerminal = Object.defineProperty({}, 'then', {
+  get() {
+    flipReads += 1
+    // Terminal on the classification read, then a never-settling thenable.
+    // Deactivation must not depend on the value being adopted afterwards.
+    return flipReads >= 2 ? () => {} : undefined
+  },
+})
+const flipPromise = trackAsyncCallbackSettlement(
+  { then(resolve) { resolve(flipTerminal) } },
+  () => { flipDeactivations += 1 },
+)
+void flipPromise.then(() => { flipSettled = true }, () => { flipSettled = true })
+for (let turn = 0; turn < 20; turn += 1) await Promise.resolve()
+assert.ok(flipReads >= 2)
+assert.equal(flipDeactivations, 1)
+assert.equal(flipSettled, false)
 
 const nestedSelf = {}
 let nestedSelfReads = 0

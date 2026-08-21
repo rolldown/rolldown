@@ -163,7 +163,33 @@ export function trackAsyncCallbackSettlement<T>(
     runSynchronousCallback,
     () => publicPromise,
   );
-  publicPromise = settlementPromise.finally(onSettled);
+  // The settled value stays boxed until here so that no intermediate promise
+  // runs the Promise Resolution Procedure on it. Unboxing below is the single
+  // adoption the caller's promise performs, matching the specified one-time
+  // `then` lookup. Deactivation happens first, so a `then` that only turns
+  // callable during that adoption cannot keep the callback active.
+  publicPromise = new Promise<unknown>((resolve, reject) => {
+    void settlementPromise.then(
+      (settled) => {
+        try {
+          onSettled();
+        } catch (error) {
+          reject(error);
+          return;
+        }
+        resolve(settled.value);
+      },
+      (error: unknown) => {
+        try {
+          onSettled();
+        } catch (settlementError) {
+          reject(settlementError);
+          return;
+        }
+        reject(error);
+      },
+    );
+  });
   return publicPromise as T;
 }
 
@@ -176,8 +202,8 @@ function assimilateThenable(
   then: Function,
   runSynchronousCallback: SynchronousCallbackRunner,
   getPublicPromise: () => Promise<unknown> | undefined,
-): Promise<unknown> {
-  return new Promise((resolve, reject) => {
+): Promise<SettledValue> {
+  return new Promise<SettledValue>((resolve, reject) => {
     settleThenable(
       value,
       then,
@@ -196,7 +222,7 @@ function settleThenable(
   thenableChain: Set<object>,
   runSynchronousCallback: SynchronousCallbackRunner,
   getPublicPromise: () => Promise<unknown> | undefined,
-  resolve: (value: unknown) => void,
+  resolve: (settled: SettledValue) => void,
   reject: (reason?: unknown) => void,
 ): void {
   // Match PromiseResolveThenableJob: invoke `then` later, but inspect a value
@@ -236,11 +262,11 @@ function resolveThenable(
   thenableChain: Set<object>,
   runSynchronousCallback: SynchronousCallbackRunner,
   getPublicPromise: () => Promise<unknown> | undefined,
-  resolve: (value: unknown) => void,
+  resolve: (settled: SettledValue) => void,
   reject: (reason?: unknown) => void,
 ): void {
   if ((typeof value !== 'object' || value === null) && typeof value !== 'function') {
-    resolve(value);
+    resolve({ value });
     return;
   }
 
@@ -261,7 +287,7 @@ function resolveThenable(
       reject(new TypeError('Thenable cycle detected while settling a callback result'));
       return;
     }
-    resolve(value);
+    resolve({ value });
     return;
   }
 
@@ -275,7 +301,7 @@ function resolveThenable(
     return;
   }
   if (typeof then !== 'function') {
-    resolve(value);
+    resolve({ value });
     return;
   }
 
@@ -407,6 +433,11 @@ function runCallback(callback: () => void): void {
 }
 
 type SynchronousCallbackRunner = (callback: () => void) => void;
+
+/** Keeps a settled value out of every intermediate promise resolution. */
+interface SettledValue {
+  value: unknown;
+}
 
 interface BrowserProviderSelection {
   provider: AsyncContextProvider;

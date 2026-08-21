@@ -1,0 +1,10 @@
+{
+  "config": {
+    "checks": {
+      "eval": false
+    },
+    "platform": "node",
+    "format": "esm"
+  },
+  "snapshot": false
+}

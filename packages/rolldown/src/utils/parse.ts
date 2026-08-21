@@ -36,7 +36,8 @@ export interface ParserOptions extends BindingParserOptions {}
  * release the native storage; anything left unread would stay allocated
  * forever (the serialized-AST JSON behind `program` is the largest piece).
  * This snapshot keeps the JSON.parse of the program exactly as lazy and
- * memoized as the wrap object's, via the same `jsonParseAst` revival path.
+ * memoized as the wrap object's, via the same `jsonParseAst` revival path,
+ * and drops the JSON once revived so the drain is not undone on the JS side.
  */
 function wrapParseResult(result: BindingParseResult): ParseResult {
   if (!shouldEagerlyFreeOutputs()) {
@@ -44,15 +45,27 @@ function wrapParseResult(result: BindingParseResult): ParseResult {
   }
   // The native `program` getter returns the serialized AST JSON string (a
   // `mem::take` drain), despite the declared `Program` type.
-  const programJson = result.program as unknown as string;
+  let programJson: string | undefined = result.program as unknown as string;
   const module = result.module;
   const comments = result.comments;
   const errors = result.errors;
   let program: Program | undefined;
+  let revived = false;
   return {
     get program() {
-      if (!program) program = oxcParserWrap.jsonParseAst(programJson) as Program;
-      return program;
+      if (!revived) {
+        program = oxcParserWrap.jsonParseAst(programJson) as Program;
+        // Release the JSON now that the object graph exists: measured on
+        // real files it runs 2-19x the source size, so holding both would
+        // undo the drain above for anyone who keeps the result. Released
+        // only once `jsonParseAst` has returned -- a throw must leave the
+        // string for a retry and propagate untouched -- and the memo is
+        // gated on `revived`, not on the AST being truthy, so a falsy
+        // revival can never re-enter this branch on a released string.
+        revived = true;
+        programJson = undefined;
+      }
+      return program as Program;
     },
     get module() {
       return module;

@@ -224,6 +224,32 @@ describe.sequential('browser async-context contract', () => {
     });
   });
 
+  test('callback-free built-in options need no provider', async () => {
+    await withNativeAsyncContext(undefined, async () => {
+      const asyncContext = await importBrowserAsyncContext();
+      const context = asyncContext.createRequiredAsyncContext<unknown>();
+      let runnerCalls = 0;
+      const runBuildCallback: BuildCallbackRunner = (callback) => {
+        runnerCalls += 1;
+        return context.run({}, callback);
+      };
+
+      // Option setup may only reach for a provider once it has a callback to
+      // run. A config carrying none must stay inert, so making proxy-served
+      // callbacks work must not become an unconditional read of every
+      // callback key.
+      const bindingPlugin = bindingifyBuiltInPlugin(
+        viteDynamicImportVarsPlugin({ include: ['**/*.js'] }),
+        runBuildCallback,
+      );
+
+      expect(
+        (bindingPlugin.options as BindingViteDynamicImportVarsPluginConfig).resolver,
+      ).toBeUndefined();
+      expect(runnerCalls).toBe(0);
+    });
+  });
+
   test.each([
     [
       'same-identity cycle',

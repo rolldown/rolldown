@@ -192,7 +192,11 @@ export class CloseCallbackScope {
       }
 
       const prototype = Object.getPrototypeOf(current);
-      if (prototype !== Object.prototype && prototype !== null) {
+      // Builtin configs always take the lazy path, whatever their prototype.
+      // Cloning reads own descriptors, so a `Proxy` serving a callback only
+      // from its `get` trap would lose it: the descriptor walk cannot see a
+      // virtual property, and the clone would then ship without it.
+      if (wrapBuiltinConfig || (prototype !== Object.prototype && prototype !== null)) {
         if (!wrapBuiltinConfig) return current;
 
         // Builtin options cross the binding as opaque objects, so inherited

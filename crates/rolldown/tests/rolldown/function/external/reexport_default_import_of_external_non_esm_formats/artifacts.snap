@@ -1,0 +1,80 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# warnings
+
+## MISSING_GLOBAL_NAME
+
+```text
+[MISSING_GLOBAL_NAME] No name was provided for external module "node:https" in "output.globals" – guessing "node_https".
+
+```
+
+# Assets
+
+## main.js
+
+```js
+var reexportDefaultImportOfExternal = (function(exports, node_https) {
+	Object.defineProperty(exports, Symbol.toStringTag, { value: "Module" });
+	// HIDDEN [\0rolldown/runtime.js]
+	node_https = __toESM(node_https);
+	//#region main.js
+	function getAgentCtor() {
+		return node_https.default.Agent;
+	}
+	//#endregion
+	exports.getAgentCtor = getAgentCtor;
+	return exports;
+})({}, node_https);
+
+```
+
+# Variant: [format: Umd] [name: "reexportDefaultImportOfExternal"]
+
+## warnings
+
+### MISSING_GLOBAL_NAME
+
+```text
+[MISSING_GLOBAL_NAME] No name was provided for external module "node:https" in "output.globals" – guessing "node_https".
+
+```
+
+## Assets
+
+### main.js
+
+```js
+(function(global, factory) {
+	typeof exports === "object" && typeof module !== "undefined" ? factory(exports, require("node:https")) : typeof define === "function" && define.amd ? define(["exports", "node:https"], factory) : (global = typeof globalThis !== "undefined" ? globalThis : global || self, factory(global.reexportDefaultImportOfExternal = {}, global.node_https));
+})(this, function(exports, node_https) {
+	Object.defineProperty(exports, Symbol.toStringTag, { value: "Module" });
+	// HIDDEN [\0rolldown/runtime.js]
+	node_https = __toESM(node_https);
+	//#region main.js
+	function getAgentCtor() {
+		return node_https.default.Agent;
+	}
+	//#endregion
+	exports.getAgentCtor = getAgentCtor;
+});
+
+```
+
+# Variant: [format: Esm]
+
+## Assets
+
+### main.js
+
+```js
+import node_https from "node:https";
+//#region main.js
+function getAgentCtor() {
+	return node_https.Agent;
+}
+//#endregion
+export { getAgentCtor };
+
+```

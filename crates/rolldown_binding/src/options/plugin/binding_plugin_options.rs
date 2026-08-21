@@ -25,6 +25,7 @@ use super::{
     binding_hook_resolve_id_extra_args::BindingHookResolveIdExtraArgs,
     binding_hook_resolve_id_output::BindingHookResolveIdOutput,
     binding_hook_transform_output::BindingHookTransformOutput,
+    binding_hot_update_args::BindingHotUpdateArgs,
     binding_plugin_transform_extra_args::BindingTransformHookExtraArgs,
     binding_render_chunk_meta_chunks::BindingRenderedChunkMeta,
     binding_shared_string::BindingSharedString,
@@ -157,7 +158,7 @@ pub struct BindingPluginOptions {
   pub render_error_meta: Option<BindingPluginHookMeta>,
 
   #[napi(
-    ts_type = "(ctx: BindingPluginContext, bundle: BindingErrorsOr<BindingOutputs>, isWrite: boolean, opts: BindingNormalizedOptions) => MaybePromise<VoidNullable<JsChangedOutputs>>"
+    ts_type = "(ctx: BindingPluginContext, bundle: BindingResult<BindingOutputs>, isWrite: boolean, opts: BindingNormalizedOptions) => MaybePromise<VoidNullable<JsChangedOutputs>>"
   )]
   pub generate_bundle: Option<
     MaybeAsyncJsCallback<
@@ -168,7 +169,7 @@ pub struct BindingPluginOptions {
   pub generate_bundle_meta: Option<BindingPluginHookMeta>,
 
   #[napi(
-    ts_type = "(ctx: BindingPluginContext, bundle: BindingErrorsOr<BindingOutputs>, opts: BindingNormalizedOptions) => MaybePromise<VoidNullable<JsChangedOutputs>>"
+    ts_type = "(ctx: BindingPluginContext, bundle: BindingResult<BindingOutputs>, opts: BindingNormalizedOptions) => MaybePromise<VoidNullable<JsChangedOutputs>>"
   )]
   pub write_bundle: Option<
     MaybeAsyncJsCallback<
@@ -190,6 +191,14 @@ pub struct BindingPluginOptions {
   )]
   pub watch_change: Option<MaybeAsyncJsCallback<FnArgs<(BindingPluginContext, String, String)>>>,
   pub watch_change_meta: Option<BindingPluginHookMeta>,
+
+  #[napi(
+    ts_type = "(ctx: BindingPluginContext, args: BindingHotUpdateArgs) => MaybePromise<VoidNullable<Array<string>>>"
+  )]
+  pub hot_update: Option<
+    MaybeAsyncJsCallback<FnArgs<(BindingPluginContext, BindingHotUpdateArgs)>, Option<Vec<String>>>,
+  >,
+  pub hot_update_meta: Option<BindingPluginHookMeta>,
 
   #[napi(ts_type = "(ctx: BindingPluginContext) => MaybePromise<VoidNullable>")]
   pub close_watcher: Option<MaybeAsyncJsCallback<FnArgs<(BindingPluginContext,)>>>,

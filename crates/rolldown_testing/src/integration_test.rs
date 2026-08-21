@@ -26,6 +26,7 @@ use crate::hmr_files::{
   apply_hmr_edit_files_to_hmr_temp_dir, collect_hmr_edit_files,
   copy_non_hmr_edit_files_to_hmr_temp_dir, get_changed_files_from_hmr_edit_files,
 };
+use crate::preserve_region_markers::PreserveRegionMarkersPlugin;
 use crate::types::{
   BuildArtifactsSnapshot, BuildRoundOutput, DevArtifactsSnapshot, DevRoundOutput, HmrStepOutput,
 };
@@ -560,8 +561,12 @@ impl IntegrationTest {
   pub async fn run_multiple(
     &self,
     mut multiple_options: Vec<NamedBundlerOptions>,
-    plugins: Vec<SharedPluginable>,
+    mut plugins: Vec<SharedPluginable>,
   ) {
+    // Registered last so it runs right before the internal dce pass; see the module docs of
+    // `preserve_region_markers` for why snapshots need markers kept intact.
+    plugins.push(Arc::new(PreserveRegionMarkersPlugin));
+
     let test_folder_path = &self.test_folder_path;
 
     // Detect HMR mode by checking for HMR edit files
@@ -610,10 +615,11 @@ impl IntegrationTest {
     // Dispatch to appropriate build method and generate snapshot
     let snapshot_content = if hmr_mode_enabled {
       let artifacts_snapshot =
-        self.run_multiple_for_dev(multiple_options, plugins, &hmr_steps).await;
+        Box::pin(self.run_multiple_for_dev(multiple_options, plugins, &hmr_steps)).await;
       artifacts_snapshot.render(&self.test_meta)
     } else {
-      let artifacts_snapshot = self.run_multiple_for_build(multiple_options, plugins).await;
+      let artifacts_snapshot =
+        Box::pin(self.run_multiple_for_build(multiple_options, plugins)).await;
       artifacts_snapshot.render(&self.test_meta)
     };
 
@@ -667,7 +673,12 @@ impl IntegrationTest {
     if let Some(experimental) = &mut options.experimental {
       if let Some(dev_mode) = &mut experimental.dev_mode {
         if dev_mode.implement.is_none() {
-          dev_mode.implement = Some(include_str!("./hmr-runtime.js").to_owned());
+          dev_mode.implement = Some(format!(
+            "{}\n{}",
+            include_str!("../../rolldown_plugin_hmr/src/runtime/runtime-extra-dev-common.js"),
+            include_str!("./hmr-runtime.js")
+          ));
+          dev_mode.skip_common_runtime_injection = Some(true);
         }
       }
     }

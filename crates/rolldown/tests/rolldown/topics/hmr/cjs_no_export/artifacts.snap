@@ -38,6 +38,8 @@ var require_b = /* @__PURE__ */ __commonJSMin(((exports, module) => {
 	__rolldown_runtime__.registerModule("b.js", module);
 	console.log("b");
 }));
+//#endregion
+//#region main.js
 __rolldown_runtime__.createModuleHotContext("main.js");
 __rolldown_runtime__.registerModule("main.js", {});
 require_a();

@@ -6,15 +6,6 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## admin.js
 
 ```js
-import "./apps~personal~admin~theming.js";
-import { t as init_admin } from "./admin2.js";
-init_admin();
-
-```
-
-## admin2.js
-
-```js
 import { n as init_app_admin } from "./apps~personal~admin~theming.js";
 import { t as __esmMin } from "./rolldown-runtime.js";
 //#region admin.js
@@ -25,7 +16,7 @@ function init_admin() {
 	})))();
 }
 //#endregion
-export { init_admin as t };
+init_admin();
 
 ```
 
@@ -106,15 +97,6 @@ export { __esmMin as t };
 ## theming.js
 
 ```js
-import "./apps~personal~admin~theming.js";
-import { t as init_theming } from "./theming2.js";
-init_theming();
-
-```
-
-## theming2.js
-
-```js
 import { t as init_app_theming } from "./apps~personal~admin~theming.js";
 import { t as __esmMin } from "./rolldown-runtime.js";
 //#region theming.js
@@ -125,7 +107,7 @@ function init_theming() {
 	})))();
 }
 //#endregion
-export { init_theming as t };
+init_theming();
 
 ```
 
@@ -134,15 +116,6 @@ export { init_theming as t };
 ## Assets
 
 ### admin.js
-
-```js
-import "./apps~personal~admin~theming.js";
-import { t as init_admin } from "./admin2.js";
-init_admin();
-
-```
-
-### admin2.js
 
 ```js
 import { n as init_app_admin } from "./apps~personal~admin~theming.js";
@@ -155,7 +128,7 @@ function init_admin() {
 	})))();
 }
 //#endregion
-export { init_admin as t };
+init_admin();
 
 ```
 
@@ -236,15 +209,6 @@ export { __esmMin as t };
 ### theming.js
 
 ```js
-import "./apps~personal~admin~theming.js";
-import { t as init_theming } from "./theming2.js";
-init_theming();
-
-```
-
-### theming2.js
-
-```js
 import { t as init_app_theming } from "./apps~personal~admin~theming.js";
 import { t as __esmMin } from "./rolldown-runtime.js";
 //#region theming.js
@@ -255,6 +219,6 @@ function init_theming() {
 	})))();
 }
 //#endregion
-export { init_theming as t };
+init_theming();
 
 ```

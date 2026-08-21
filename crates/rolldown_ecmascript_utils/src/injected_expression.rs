@@ -1,6 +1,6 @@
 use oxc::allocator::{Allocator, TakeIn};
 use oxc::ast::ast::{Expression, Statement};
-use oxc::ast_visit::VisitMut;
+use oxc::ast_visit::VisitJsMut;
 use oxc::parser::{ParseOptions, Parser};
 use oxc::span::{SPAN, SourceType, Span};
 
@@ -8,7 +8,7 @@ use oxc::span::{SPAN, SourceType, Span};
 /// so implementing this one method covers the whole subtree.
 struct SpanZeroer;
 
-impl VisitMut<'_> for SpanZeroer {
+impl VisitJsMut<'_> for SpanZeroer {
   fn visit_span(&mut self, it: &mut Span) {
     *it = SPAN;
   }

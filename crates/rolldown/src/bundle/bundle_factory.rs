@@ -125,8 +125,10 @@ impl BundleFactory {
     };
 
     if bundle_mode.is_full_build() {
-      // Reset module infos for full bundle and store it for potential incremental builds
-      self.module_infos_for_incremental_build = Arc::default();
+      // A full build starts from an empty module-info set. Clear the shared map in place
+      // instead of replacing it, so long-lived handles (the dev engine's module queries)
+      // keep observing the current build.
+      self.module_infos_for_incremental_build.clear();
       // Also reset transform dependencies for full builds
       self.transform_dependencies_for_incremental_build = Arc::default();
     }
@@ -141,9 +143,16 @@ impl BundleFactory {
     fs: Fs,
     resolver: SharedResolver<Fs>,
   ) -> Bundle<Fs> {
-    self.module_infos_for_incremental_build = Arc::default();
+    self.module_infos_for_incremental_build.clear();
     self.transform_dependencies_for_incremental_build = Arc::default();
     self.build_bundle(fs, resolver, ScanStageCache::default())
+  }
+
+  /// Live handle to the plugin-facing module infos. The `Arc` identity is stable for the
+  /// factory's lifetime — full builds clear the map in place — so a held clone always
+  /// observes the latest build.
+  pub fn module_infos(&self) -> SharedModuleInfoDashMap {
+    Arc::clone(&self.module_infos_for_incremental_build)
   }
 
   fn build_bundle<Fs: FileSystem + Clone + 'static>(

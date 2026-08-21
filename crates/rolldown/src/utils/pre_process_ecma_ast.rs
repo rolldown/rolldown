@@ -4,7 +4,7 @@ use arcstr::ArcStr;
 use oxc::ast::ast::CommentContent;
 use oxc::ast::ast::Program;
 use oxc::ast::ast::{Declaration, ExportDefaultDeclarationKind, Statement};
-use oxc::ast_visit::{VisitJs, VisitMut, walk_js};
+use oxc::ast_visit::{VisitJs, VisitJsMut, walk_js};
 use oxc::diagnostics::{LabeledSpan, Severity as OxcSeverity};
 use oxc::minifier::{CompressOptions, Compressor, TreeShakeOptions};
 use oxc::semantic::{Scoping, Stats};
@@ -164,11 +164,14 @@ impl PreProcessEcmaAst {
     }
 
     // Step 3: Transform TypeScript and jsx.
-    // Note: Currently, oxc_transform supports es syntax up to ES2024 (unicode-sets-regex).
+    // Note: Currently, the newest syntax oxc_transform can lower is ES2026
+    // explicit resource management (`using`); the ES2025 regexp features are
+    // not transformed. `LOWERABLE_ES_FEATURES` in `rolldown_common` holds the
+    // full list `should_transform_js` is decided from.
     let is_not_js = !matches!(parsed_type, OxcParseType::Js);
     let mut preserve_jsx = false;
     if is_not_js
-      || bundle_options.transform_options.should_transform_js()
+      || bundle_options.transform_options.should_transform_js
       // Run transformer on JS files containing `</script` to handle tagged template literals.
       || contains_script_closing_tag(ast.source().as_bytes())
     {
@@ -296,8 +299,8 @@ impl PreProcessEcmaAst {
 fn function_declaration_stmt_start(stmt: &Statement<'_>) -> Option<u32> {
   match stmt {
     Statement::FunctionDeclaration(decl) => Some(decl.span.start),
-    Statement::ExportNamedDeclaration(e) => match &e.declaration {
-      Some(Declaration::FunctionDeclaration(decl)) => Some(decl.span.start),
+    Statement::ExportDeclaration(e) => match &e.declaration {
+      Declaration::FunctionDeclaration(decl) => Some(decl.span.start),
       _ => None,
     },
     Statement::ExportDefaultDeclaration(e) => match &e.declaration {

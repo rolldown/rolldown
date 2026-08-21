@@ -1,0 +1,125 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## a.js
+
+```js
+import { r as load } from "./dyn.js";
+//#region a.js
+(globalThis.log ??= []).push("a");
+const targetPromise = load();
+//#endregion
+export { targetPromise };
+
+```
+
+## b.js
+
+```js
+//#region helpers.js
+function used() {
+	(globalThis.log ??= []).push("used");
+}
+//#endregion
+//#region b.js
+used();
+//#endregion
+
+```
+
+## dyn.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+//#region loader.js
+const load = () => Promise.resolve().then(() => (init_target(), target_exports));
+//#endregion
+//#region target.js
+var target_exports = /* @__PURE__ */ __exportAll({ value: () => 1 });
+function init_target() {
+	return (init_target = __esmMin((() => {
+		(globalThis.log ??= []).push("target");
+	})))();
+}
+//#endregion
+export { target_exports as n, load as r, init_target as t };
+
+```
+
+# Variant: wrap-all: [on_demand_wrapping: false]
+
+## Assets
+
+### a.js
+
+```js
+import { i as load, r as init_loader } from "./dyn.js";
+import { t as __esmMin } from "./rolldown-runtime.js";
+//#region a.js
+var targetPromise;
+function init_a() {
+	return (init_a = __esmMin((() => {
+		init_loader();
+		(globalThis.log ??= []).push("a");
+		targetPromise = load();
+	})))();
+}
+//#endregion
+init_a();
+export { targetPromise };
+
+```
+
+### b.js
+
+```js
+import { t as __esmMin } from "./rolldown-runtime.js";
+//#region helpers.js
+function used() {
+	(globalThis.log ??= []).push("used");
+}
+//#endregion
+//#region b.js
+function init_b() {
+	return (init_b = __esmMin((() => {
+		used();
+	})))();
+}
+//#endregion
+init_b();
+
+```
+
+### dyn.js
+
+```js
+import { n as __exportAll, t as __esmMin } from "./rolldown-runtime.js";
+//#region loader.js
+var load;
+function init_loader() {
+	return (init_loader = __esmMin((() => {
+		load = () => Promise.resolve().then(() => (init_target(), target_exports));
+	})))();
+}
+//#endregion
+//#region target.js
+var target_exports = /* @__PURE__ */ __exportAll({ value: () => 1 });
+function init_target() {
+	return (init_target = __esmMin((() => {
+		(globalThis.log ??= []).push("target");
+	})))();
+}
+//#endregion
+export { load as i, target_exports as n, init_loader as r, init_target as t };
+
+```
+
+### rolldown-runtime.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+export { __exportAll as n, __esmMin as t };
+
+```

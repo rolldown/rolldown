@@ -1,3 +1,4 @@
+use itertools::Itertools;
 use napi_derive::napi;
 use rolldown_dev::{
   BundleState, OnAdditionalAssetsCallback, OnHmrUpdatesCallback, OnOutputCallback,
@@ -9,6 +10,7 @@ use crate::binding_dev_options::BindingDevOptions;
 use crate::types::binding_bundler_options::BindingBundlerOptions;
 use crate::types::binding_client_hmr_update::BindingClientHmrUpdate;
 use crate::types::binding_error_stage::BindingErrorStage;
+use crate::types::binding_module_info::BindingModuleInfo;
 use crate::types::binding_outputs::{BindingOutputs, to_binding_error};
 use crate::types::error::{BindingErrors, BindingResult};
 use crate::utils::{
@@ -48,6 +50,7 @@ impl BindingDevEngine {
       dev_options.as_ref().and_then(|opts| opts.rebuild_strategy).map(Into::into);
     // Take ownership of watch so we can consume Vec fields (include/exclude).
     let watch_options = dev_options.and_then(|opts| opts.watch);
+    let watcher_enabled = watch_options.as_ref().and_then(|watch| watch.enabled);
     let skip_write = watch_options.as_ref().and_then(|watch| watch.skip_write);
     let use_polling = watch_options.as_ref().and_then(|watch| watch.use_polling);
     let poll_interval = watch_options.as_ref().and_then(|watch| watch.poll_interval);
@@ -127,7 +130,8 @@ impl BindingDevEngine {
       }) as OnAdditionalAssetsCallback
     });
 
-    let dev_watch_options = if skip_write.is_some()
+    let dev_watch_options = if watcher_enabled.is_some()
+      || skip_write.is_some()
       || use_polling.is_some()
       || poll_interval.is_some()
       || use_debounce.is_some()
@@ -138,7 +142,7 @@ impl BindingDevEngine {
       || watch_exclude.is_some()
     {
       Some(rolldown_dev::DevWatchOptions {
-        disable_watcher: None,
+        disable_watcher: watcher_enabled.map(|enabled| !enabled),
         skip_write,
         use_polling,
         poll_interval: poll_interval.map(u64::from),
@@ -309,6 +313,18 @@ impl BindingDevEngine {
         })
         .map_err(|e| napi::Error::from_reason(format!("Failed to compile lazy entry: {e:#?}")))
     })
+  }
+
+  /// Same data the plugin-context `getModuleInfo` returns, readable from the engine
+  /// handle at any time (no hook context needed).
+  #[napi]
+  pub fn get_module_info(&self, module_id: String) -> Option<BindingModuleInfo> {
+    self.inner.get_module_info(&module_id).map(BindingModuleInfo::new)
+  }
+
+  #[napi]
+  pub fn get_module_ids<'env>(&self, env: &'env Env) -> napi::Result<Vec<napi::JsString<'env>>> {
+    self.inner.get_module_ids().iter().map(|id| env.create_string(id)).try_collect()
   }
 }
 

@@ -1,0 +1,171 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+//! User-defined Entry: [Entry-Module-Id: main.js] [Name: Some("main")]
+Object.defineProperty(exports, Symbol.toStringTag, { value: "Module" });
+const require_rolldown_runtime = require("./rolldown-runtime.js");
+//#region main.js
+var loaded;
+function init_main() {
+	return (init_main = require_rolldown_runtime.__esmMin((() => {
+		loaded = Promise.resolve().then(() => require("./target2.js")).then((namespace) => namespace);
+	})))();
+}
+//#endregion
+init_main();
+exports.loaded = loaded;
+
+```
+
+## reader.js
+
+```js
+//! ManualCodeSplitting: [Group-Name: reader]
+const require_target = require("./target.js");
+const require_rolldown_runtime = require("./rolldown-runtime.js");
+//#region reader.js
+function read() {
+	globalThis.__externalStarLog.push(`reader:1`);
+}
+function init_reader() {
+	return (init_reader = require_rolldown_runtime.__esmMin((() => {
+		require_target.init_target();
+	})))();
+}
+//#endregion
+Object.defineProperty(exports, "init_reader", {
+	enumerable: true,
+	get: function() {
+		return init_reader;
+	}
+});
+Object.defineProperty(exports, "read", {
+	enumerable: true,
+	get: function() {
+		return read;
+	}
+});
+
+```
+
+## rolldown-runtime.js
+
+```js
+//! Common Chunk: [Shared-By: main.js, target.js]
+//#region \0rolldown/runtime.js
+var __defProp = Object.defineProperty;
+var __getOwnPropDesc = Object.getOwnPropertyDescriptor;
+var __getOwnPropNames = Object.getOwnPropertyNames;
+var __hasOwnProp = Object.prototype.hasOwnProperty;
+var __esmMin = (fn, res, err) => () => {
+	if (err) throw err[0];
+	try {
+		return fn && (res = fn(fn = 0)), res;
+	} catch (e) {
+		throw err = [e], e;
+	}
+};
+var __exportAll = (all, no_symbols) => {
+	let target = {};
+	for (var name in all) __defProp(target, name, {
+		get: all[name],
+		enumerable: true
+	});
+	if (!no_symbols) __defProp(target, Symbol.toStringTag, { value: "Module" });
+	return target;
+};
+var __copyProps = (to, from, except, desc) => {
+	if (from && typeof from === "object" || typeof from === "function") for (var keys = __getOwnPropNames(from), i = 0, n = keys.length, key; i < n; i++) {
+		key = keys[i];
+		if (!__hasOwnProp.call(to, key) && key !== except) __defProp(to, key, {
+			get: ((k) => from[k]).bind(null, key),
+			enumerable: !(desc = __getOwnPropDesc(from, key)) || desc.enumerable
+		});
+	}
+	return to;
+};
+var __reExport = (target, mod, secondTarget) => (__copyProps(target, mod, "default"), secondTarget && __copyProps(secondTarget, mod, "default"));
+//#endregion
+Object.defineProperty(exports, "__esmMin", {
+	enumerable: true,
+	get: function() {
+		return __esmMin;
+	}
+});
+Object.defineProperty(exports, "__exportAll", {
+	enumerable: true,
+	get: function() {
+		return __exportAll;
+	}
+});
+Object.defineProperty(exports, "__reExport", {
+	enumerable: true,
+	get: function() {
+		return __reExport;
+	}
+});
+
+```
+
+## target.js
+
+```js
+//! Dynamic Entry: [Entry-Module-Id: target.js] [Name: None]
+//! Common Chunk: [Shared-By: target.js]
+const require_reader = require("./reader.js");
+const require_rolldown_runtime = require("./rolldown-runtime.js");
+//#region barrel.js
+function init_barrel() {
+	return (init_barrel = require_rolldown_runtime.__esmMin((() => {})))();
+}
+//#endregion
+//#region target.js
+var x;
+function init_target() {
+	return (init_target = require_rolldown_runtime.__esmMin((() => {
+		require_reader.init_reader();
+		init_barrel();
+		globalThis.__externalStarLog.push("target");
+		x = 1;
+		require_reader.read();
+	})))();
+}
+//#endregion
+Object.defineProperty(exports, "init_target", {
+	enumerable: true,
+	get: function() {
+		return init_target;
+	}
+});
+Object.defineProperty(exports, "x", {
+	enumerable: true,
+	get: function() {
+		return x;
+	}
+});
+
+```
+
+## target2.js
+
+```js
+//! Dynamic Entry: [Entry-Module-Id: target.js] [Name: None]
+const require_target = require("./target.js");
+require_target.init_target();
+exports.x = require_target.x;
+var external = require("external");
+Object.keys(external).forEach(function(k) {
+	if (k !== "default" && !Object.prototype.hasOwnProperty.call(exports, k)) Object.defineProperty(exports, k, {
+		enumerable: true,
+		get: function() {
+			return external[k];
+		}
+	});
+});
+
+```

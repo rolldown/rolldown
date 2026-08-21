@@ -70,7 +70,7 @@ impl Plugin for ViteReporterPlugin {
         *self.latest_checkpoint.write().unwrap() = now;
       }
     } else if transformed_count == 0 {
-      utils::write_line("transforming...");
+      utils::log_info("transforming...");
     }
     Ok(None)
   }

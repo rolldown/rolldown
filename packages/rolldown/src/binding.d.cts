@@ -169,6 +169,38 @@ export interface MangleOptionsKeepNames {
   class: boolean
 }
 
+export interface ManglePropertiesOptions {
+  /**
+   * JavaScript `RegExp` selecting property names to mangle. The source and flags are compiled
+   * with Rust's regex engine. Flags `i`, `m`, `s`, and `u` are supported.
+   */
+  include: RegExp
+  /** JavaScript `RegExp` excluding property names selected by `include`. */
+  exclude?: RegExp
+  /** Exact names that are neither mangled nor emitted as automatic output names. */
+  reserved?: Array<string>
+  /**
+   * Mangle quoted property occurrences in addition to unquoted occurrences.
+   *
+   * @default false
+   */
+  quoted?: boolean
+  /**
+   * Generate readable `_$name$_`-style output names.
+   *
+   * @default false
+   */
+  debug?: boolean
+  /**
+   * Stable mappings from original names to output names. `false` reserves an original name.
+   * Entries that do not match `include`, or that match `exclude`, remain inert but are
+   * preserved in the returned `mangleCache`. String targets must be `IdentifierName` values
+   * other than `__proto__`, `constructor`, or `prototype`. The original name `__proto__` is
+   * always reserved and cannot be used as a cache key.
+   */
+  cache?: Record<string, string | false>
+}
+
 /**
  * Minify asynchronously.
  *
@@ -181,6 +213,12 @@ export interface MinifyOptions {
   module?: boolean
   compress?: boolean | CompressOptions
   mangle?: boolean | MangleOptions
+  /**
+   * Mangle matching property names independently of identifier mangling. Properties owned by
+   * unminified code, imported module namespaces, globals, or host APIs must be excluded or
+   * reserved.
+   */
+  mangleProps?: ManglePropertiesOptions
   codegen?: boolean | CodegenOptions
   sourcemap?: boolean
 }
@@ -194,6 +232,11 @@ export interface MinifyResult {
    * Only populated when `codegen.legalComments` is `"linked"` or `"external"`.
    */
   legalComments: Array<string>
+  /**
+   * Updated property-name cache sorted by original name. Present when `mangleProps` ran on a
+   * parse without errors.
+   */
+  mangleCache?: Record<string, string | false>
 }
 
 /** Minify synchronously. */
@@ -1584,6 +1627,12 @@ export declare class BindingDevEngine {
    * actual module and its dependencies.
    */
   compileEntry(moduleId: string, clientId: string): Promise<BindingLazyChunkOutput>
+  /**
+   * Same data the plugin-context `getModuleInfo` returns, readable from the engine
+   * handle at any time (no hook context needed).
+   */
+  getModuleInfo(moduleId: string): BindingModuleInfo | null
+  getModuleIds(): Array<string>
 }
 
 export declare class BindingLoadPluginContext {
@@ -1867,8 +1916,8 @@ export declare class TraceSubscriberGuard {
 }
 
 export declare class TsconfigCache {
-  /** Create a new transform cache with auto tsconfig discovery enabled. */
-  constructor(yarnPnp: boolean)
+  /** Create a new transform cache with auto or manual tsconfig discovery enabled. */
+  constructor(yarnPnp: boolean, pathToTsconfig?: string | undefined | null)
   /**
    * Clear the cache.
    *
@@ -1969,6 +2018,7 @@ export interface BindingChecksOptions {
   ineffectiveDynamicImport?: boolean
   largeBarrelModules?: boolean
   sourcemapBroken?: boolean
+  namespaceConflict?: boolean
 }
 
 export interface BindingChunkImportMap {
@@ -2041,6 +2091,7 @@ export interface BindingDevtoolsOptions {
 }
 
 export interface BindingDevWatchOptions {
+  enabled?: boolean
   skipWrite?: boolean
   usePolling?: boolean
   pollInterval?: number
@@ -2147,9 +2198,10 @@ export interface BindingEnhancedTransformOptions {
   /**
    * Configure tsconfig handling.
    * - true: Auto-discover and load the nearest tsconfig.json
+   * - string: Use the tsconfig at the provided path
    * - TsconfigRawOptions: Use the provided inline tsconfig options
    */
-  tsconfig?: boolean | BindingTsconfigRawOptions
+  tsconfig?: boolean | string | BindingTsconfigRawOptions
   /** An input source map to collapse with the output source map. */
   inputMap?: SourceMap
 }
@@ -2234,7 +2286,9 @@ export interface BindingEsmExternalRequirePluginConfig {
 export interface BindingExperimentalDevModeOptions {
   host?: string
   port?: number
-  implement?: string
+  implement: string
+  /** @deprecated Common runtime injection will be disabled by default in the future. */
+  skipCommonRuntimeInjection?: boolean
   lazy?: boolean
 }
 
@@ -2284,6 +2338,16 @@ export interface BindingHookJsLoadOutput {
 
 export interface BindingHookJsResolveIdOptions {
   isEntry?: boolean
+  /**
+   * - `import-statement`: `import { foo } from './lib.js';`
+   * - `dynamic-import`: `import('./lib.js')`
+   * - `require-call`: `require('./lib.js')`
+   * - `import-rule`: `@import 'bg-color.css'`
+   * - `url-token`: `url('./icon.png')`
+   * - `new-url`: `new URL('./worker.js', import.meta.url)`
+   * - `hot-accept`: `import.meta.hot.accept('./lib.js', () => {})`
+   */
+  kind?: 'import-statement' | 'dynamic-import' | 'require-call' | 'import-rule' | 'url-token' | 'new-url' | 'hot-accept'
   scan?: boolean
   custom?: BindingVitePluginCustom
 }
@@ -2369,6 +2433,14 @@ export interface BindingHookTransformOutput {
   moduleType?: string
 }
 
+export interface BindingHotUpdateArgs {
+  kind: 'create' | 'update' | 'delete'
+  /** Normalized absolute path of the changed file. */
+  file: string
+  /** The affected module ids as currently computed (raw module ids). */
+  modules: Array<string>
+}
+
 export interface BindingIndentOptions {
   exclude?: Array<Array<number>> | Array<number>
 }
@@ -2421,6 +2493,8 @@ export interface BindingInputOptions {
   keepNames?: boolean
   checks?: BindingChecksOptions
   deferSyncScanData?: undefined | (() => BindingDeferSyncScanData[])
+  /** Asked for while the build is closing, so what it returns includes `closeBundle`. */
+  pluginTimings?: undefined | (() => BindingPluginTimingsMeasurement)
   makeAbsoluteExternalsRelative?: BindingMakeAbsoluteExternalsRelative
   devtools?: BindingDevtoolsOptions
   invalidateJsSideCache?: () => void
@@ -2539,6 +2613,22 @@ export interface BindingModuleSideEffectsRule {
   test?: RegExp | undefined
   sideEffects: boolean
   external?: boolean
+}
+
+/**
+ * Counters of the Rust-side tracking allocator. V8 never allocates through
+ * the Rust global allocator, so these numbers exclude the JS heap and GC
+ * noise completely, unlike `process.memoryUsage()`.
+ */
+export interface BindingNativeMemoryStats {
+  /** Bytes currently allocated and not yet freed, since process start. */
+  liveBytes: number
+  /** Highest `live_bytes` seen since process start or the last reset. */
+  peakBytes: number
+  /** Successful `alloc` calls since the last reset. */
+  allocCount: number
+  /** Successful `realloc` calls since the last reset. */
+  reallocCount: number
 }
 
 export interface BindingOptimization {
@@ -2664,14 +2754,16 @@ export interface BindingPluginOptions {
   renderStartMeta?: BindingPluginHookMeta
   renderError?: (ctx: BindingPluginContext, error: BindingError[]) => void
   renderErrorMeta?: BindingPluginHookMeta
-  generateBundle?: (ctx: BindingPluginContext, bundle: BindingErrorsOr<BindingOutputs>, isWrite: boolean, opts: BindingNormalizedOptions) => MaybePromise<VoidNullable<JsChangedOutputs>>
+  generateBundle?: (ctx: BindingPluginContext, bundle: BindingResult<BindingOutputs>, isWrite: boolean, opts: BindingNormalizedOptions) => MaybePromise<VoidNullable<JsChangedOutputs>>
   generateBundleMeta?: BindingPluginHookMeta
-  writeBundle?: (ctx: BindingPluginContext, bundle: BindingErrorsOr<BindingOutputs>, opts: BindingNormalizedOptions) => MaybePromise<VoidNullable<JsChangedOutputs>>
+  writeBundle?: (ctx: BindingPluginContext, bundle: BindingResult<BindingOutputs>, opts: BindingNormalizedOptions) => MaybePromise<VoidNullable<JsChangedOutputs>>
   writeBundleMeta?: BindingPluginHookMeta
   closeBundle?: (ctx: BindingPluginContext, error?: BindingError[]) => MaybePromise<VoidNullable>
   closeBundleMeta?: BindingPluginHookMeta
   watchChange?: (ctx: BindingPluginContext, path: string, event: string) => MaybePromise<VoidNullable>
   watchChangeMeta?: BindingPluginHookMeta
+  hotUpdate?: (ctx: BindingPluginContext, args: BindingHotUpdateArgs) => MaybePromise<VoidNullable<Array<string>>>
+  hotUpdateMeta?: BindingPluginHookMeta
   closeWatcher?: (ctx: BindingPluginContext) => MaybePromise<VoidNullable>
   closeWatcherMeta?: BindingPluginHookMeta
   banner?: (ctx: BindingPluginContext, chunk: BindingRenderedChunk) => void
@@ -2687,6 +2779,33 @@ export interface BindingPluginOptions {
 export declare enum BindingPluginOrder {
   Pre = 0,
   Post = 1
+}
+
+/**
+ * What one callback cost, measured inside it on the JavaScript side — the one place the
+ * measurement exists, since this side can only bracket dispatch and completion.
+ */
+export interface BindingPluginTiming {
+  /** The plugin the callback belongs to, or the options it was configured on. */
+  owner: string
+  kind: 'plugin' | 'outputOption' | 'inputOption'
+  hook: string
+  calls: number
+  ms: number
+  maxInFlight: number
+  /** How much of `ms` is double counted because calls overlapped. */
+  overlapMs: number
+  /**
+   * Whether `ms` may be compared against another row's — false once two calls of this hook
+   * overlapped, because then their spans cover work each other was doing.
+   */
+  rankable: boolean
+}
+
+export interface BindingPluginTimingsMeasurement {
+  /** Wall time in which any measured callback was running, counting overlap once. */
+  busyMs: number
+  rows: Array<BindingPluginTiming>
 }
 
 export interface BindingPluginWithIndex {
@@ -2920,6 +3039,7 @@ export interface BindingViteReporterPluginConfig {
 
 export interface BindingViteResolvePluginConfig {
   resolveOptions: BindingViteResolvePluginResolveOptions
+  tsconfig?: string
   environmentConsumer: string
   environmentName: string
   builtins: Array<BindingStringOrRegex>
@@ -2956,6 +3076,7 @@ export interface BindingViteResolvePluginResolveOptions {
 
 export interface BindingViteTransformPluginConfig {
   root: string
+  tsconfig?: string
   include?: Array<BindingStringOrRegex>
   exclude?: Array<BindingStringOrRegex>
   jsxRefreshInclude?: Array<BindingStringOrRegex>
@@ -3010,6 +3131,13 @@ export type FilterTokenKind =  'Id'|
 'CleanUrl'|
 'QueryKey'|
 'QueryValue';
+
+/**
+ * Returns the Rust-side allocator counters, or `None` when this binding was
+ * built without the `tracking_allocator` cargo feature (the default —
+ * tracking costs a few atomic operations per allocation).
+ */
+export declare function getNativeMemoryStats(): BindingNativeMemoryStats | null
 
 export declare function initTraceSubscriber(): TraceSubscriberGuard | null
 
@@ -3072,6 +3200,13 @@ export interface PreRenderedChunk {
 }
 
 export declare function registerPlugins(id: number, plugins: Array<BindingPluginWithIndex>): void
+
+/**
+ * Starts a new measuring window: the peak restarts from the current live
+ * bytes and the counts restart from zero. No-op when the binding was built
+ * without the `tracking_allocator` cargo feature.
+ */
+export declare function resetNativeMemoryStats(): void
 
 export declare function resolveTsconfig(filename: string, cache: TsconfigCache | undefined | null, yarnPnp: boolean): BindingTsconfigResult | null
 

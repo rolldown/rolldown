@@ -69,14 +69,6 @@ export { __esmMin as n, __exportAll as r, __commonJSMin as t };
 ### a.js
 
 ```js
-import { t as init_a } from "./a2.js";
-init_a();
-
-```
-
-### a2.js
-
-```js
 import { n as __esmMin } from "./rolldown-runtime.js";
 import { n as init_e } from "./e2.js";
 //#region a.js
@@ -87,19 +79,11 @@ function init_a() {
 	})))();
 }
 //#endregion
-export { init_a as t };
+init_a();
 
 ```
 
 ### b.js
-
-```js
-import { t as require_b } from "./b2.js";
-export default require_b();
-
-```
-
-### b2.js
 
 ```js
 import { t as __commonJSMin } from "./rolldown-runtime.js";
@@ -110,7 +94,7 @@ var require_b = /* @__PURE__ */ __commonJSMin((() => {
 	console.log("B");
 }));
 //#endregion
-export { require_b as t };
+export default require_b();
 
 ```
 

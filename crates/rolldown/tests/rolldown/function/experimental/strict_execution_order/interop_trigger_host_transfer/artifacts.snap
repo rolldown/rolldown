@@ -40,6 +40,8 @@ var require_c1 = /* @__PURE__ */ __commonJSMin((() => {
 	require_c2();
 	console.log("C1");
 }));
+//#endregion
+//#region m3.js
 function init_m3() {
 	return (init_m3 = __esmMin((() => {
 		require_c1();
@@ -52,14 +54,6 @@ export { init_m3 as t };
 ```
 
 ## main.js
-
-```js
-import { t as init_main } from "./main2.js";
-init_main();
-
-```
-
-## main2.js
 
 ```js
 import { n as __esmMin } from "./rolldown-runtime.js";
@@ -82,7 +76,7 @@ function init_main() {
 	})))();
 }
 //#endregion
-export { init_m1 as n, init_main as t };
+init_main();
 
 ```
 
@@ -115,14 +109,6 @@ export { s_exports as n, init_s as t };
 ### b.js
 
 ```js
-import { t as require_b } from "./b2.js";
-export default require_b();
-
-```
-
-### b2.js
-
-```js
 import { t as __commonJSMin } from "./rolldown-runtime.js";
 import { t as init_s } from "./s.js";
 //#region b.cjs
@@ -131,7 +117,7 @@ var require_b = /* @__PURE__ */ __commonJSMin((() => {
 	console.log("B");
 }));
 //#endregion
-export { require_b as t };
+export default require_b();
 
 ```
 
@@ -157,6 +143,8 @@ var require_c1 = /* @__PURE__ */ __commonJSMin((() => {
 	require_c2();
 	console.log("C1");
 }));
+//#endregion
+//#region m3.js
 function init_m3() {
 	return (init_m3 = __esmMin((() => {
 		require_c1();
@@ -169,14 +157,6 @@ export { init_m3 as t };
 ```
 
 ### main.js
-
-```js
-import { t as init_main } from "./main2.js";
-init_main();
-
-```
-
-### main2.js
 
 ```js
 import { n as __esmMin } from "./rolldown-runtime.js";
@@ -199,7 +179,7 @@ function init_main() {
 	})))();
 }
 //#endregion
-export { init_m1 as n, init_main as t };
+init_main();
 
 ```
 

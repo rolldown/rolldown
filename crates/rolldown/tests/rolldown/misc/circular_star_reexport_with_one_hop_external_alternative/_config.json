@@ -1,0 +1,13 @@
+{
+  "config": {
+    "input": [
+      {
+        "name": "index",
+        "import": "index.js"
+      }
+    ],
+    "external": ["ext-pkg"],
+    "format": "cjs"
+  },
+  "expectError": true
+}

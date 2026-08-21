@@ -17,6 +17,8 @@ var y_default = {
 var small = "some small text";
 var _if = "test keyword imports";
 //#endregion
+//#region x.json
+//#endregion
 //#region entry.js
 const x_json = (/* @__PURE__ */ __commonJSMin(((exports, module) => {
 	module.exports = { "x": true };

@@ -1,7 +1,9 @@
 import { type BindingPluginHookMeta, BindingPluginOrder } from '../binding.cjs';
-import type { ObjectHookMeta, PluginOrder } from '.';
+import type { ObjectHook, ObjectHookMeta, PluginOrder } from '.';
+import type { AnyFn } from '../types/utils';
+import { normalizeHook } from '../utils/normalize-hook';
 
-export function bindingifyPluginHookMeta(options: ObjectHookMeta): BindingPluginHookMeta {
+function bindingifyPluginHookMeta(options: ObjectHookMeta): BindingPluginHookMeta {
   return {
     order: bindingPluginOrder(options.order),
   };
@@ -26,3 +28,17 @@ export type PluginHookWithBindingExt<T, F = undefined> = {
   meta?: BindingPluginHookMeta;
   filter?: F;
 };
+
+export function bindingifyHook<Hook extends ObjectHook<AnyFn | string>, T, F = undefined>(
+  hook: Hook | undefined,
+  build: (normalized: ReturnType<typeof normalizeHook<Hook>>) => { plugin: T; filter?: F },
+): PluginHookWithBindingExt<T, F> {
+  if (!hook) {
+    return {};
+  }
+  const normalized = normalizeHook(hook);
+  return {
+    ...build(normalized),
+    meta: bindingifyPluginHookMeta(normalized.meta),
+  };
+}

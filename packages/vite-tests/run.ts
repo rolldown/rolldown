@@ -6,8 +6,7 @@ import { x } from 'tinyexec';
 const VITE_DIR = path.resolve(import.meta.dirname, '../../vite');
 const REPO_PATH = path.resolve(import.meta.dirname, './repo');
 const OVERRIDES = [
-  `  rolldown: ${path.resolve(import.meta.dirname, '../rolldown')}`,
-  `  "@rolldown/pluginutils": ${path.resolve(import.meta.dirname, '../pluginutils')}`
+  `  rolldown: ${path.resolve(import.meta.dirname, '../rolldown')}`
 ];
 
 function printTitle(title: string) {
@@ -106,6 +105,12 @@ const failedTestServe = await runCmdAndPipe(
   ['pnpm', ['run', 'test-serve'], { nodeOptions: { cwd: REPO_PATH } }],
 );
 if (failedTestServe) failed.push('test-serve');
+
+const failedTestServeBundled = await runCmdAndPipe(
+  '# Running `pnpm test-serve-bundled`...',
+  ['pnpm', ['run', 'test-serve-bundled'], { nodeOptions: { cwd: REPO_PATH } }],
+);
+if (failedTestServeBundled) failed.push('test-serve-bundled');
 
 const failedTestBuild = await runCmdAndPipe(
   '# Running `pnpm test-build`...',

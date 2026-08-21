@@ -6,6 +6,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## main.js
 
 ```js
+//#region bar.js
 //#endregion
 //#region main.js
 console.log("used");

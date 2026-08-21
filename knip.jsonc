@@ -45,13 +45,14 @@
         "src/api/experimental.ts",
       ],
       "ignore": ["src/binding.cjs", "src/rolldown-binding.wasi.cjs", "src/browser.js"],
-      "ignoreDependencies": ["@rollup/plugin-json", "buble", "pathe"],
+      "ignoreDependencies": ["pathe"],
     },
     "packages/rolldown/tests": {
       "entry": ["*/**"],
       "ignore": ["{cli,fixtures,stability}/**"], // lots of unlisted dependencies
       "ignoreUnresolved": ["./world"],
       "ignoreDependencies": [
+        "@rolldown/test-dual-format", // used in packages/rolldown/tests/builtin-plugin/vite-resolve.test.ts
         "@rolldown/test-side-effects-field", // used in packages/rolldown/tests/fixtures/plugin/context/resolve-side-effects
         "direct-graph-lib", // fixture dependency in packages/rolldown/tests/behaviors/emit-debug-data
         "duplicate-a", // fixture dependency in packages/rolldown/tests/behaviors/emit-debug-data
@@ -63,12 +64,19 @@
     "packages/rollup-tests": {
       "entry": ["src/**/*.js", "test/**/*.{js,ts}"],
       "ignoreDependencies": [
+        "@jridgewell/sourcemap-codec",
+        "@rollup/plugin-commonjs",
+        "@rollup/plugin-json",
+        "@rollup/plugin-node-resolve",
         "acorn-import-assertions",
         "acorn-import-phases",
-        "locate-character",
-        "requirejs",
+        "acorn-jsx",
+        "buble",
+        "magic-string",
         "terser",
+        "requirejs",
         "weak-napi",
+        "locate-character",
       ],
       "ignoreUnresolved": ["/types$"],
     },
@@ -81,6 +89,9 @@
         "playground/test-utils.ts", // suppress the unused exports errors
         "src/dev-engine-close-child.mjs", // spawned by dev-engine-close.test.ts via execa
       ],
+    },
+    "packages/browser-tests": {
+      "ignore": ["tests/fixtures/**"], // mounted into the container and built there, not here
     },
     "scripts": {
       "entry": ["misc/**", "lint/index.ts"],

@@ -34,6 +34,7 @@ __rolldown_runtime__.registerGraph({
 	edges: [[]],
 	dynamicEdges: [[]]
 });
+//#region main.js
 __rolldown_runtime__.createModuleHotContext("main.js");
 __rolldown_runtime__.registerModule("main.js", {});
 console.log("main.js");

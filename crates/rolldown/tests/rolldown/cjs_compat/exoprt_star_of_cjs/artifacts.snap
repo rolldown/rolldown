@@ -19,6 +19,8 @@ __reExport(b_exports, /* @__PURE__ */ __toESM(require_c()));
 //#region a.js
 var a_exports = /* @__PURE__ */ __exportAll({});
 __reExport(a_exports, b_exports);
+//#endregion
+//#region main.js
 __reExport(/* @__PURE__ */ __exportAll({}), a_exports);
 //#endregion
 

@@ -30,6 +30,7 @@ impl Drop for WrittenBundle {
 
 #[derive(Debug)]
 struct EmitTarget {
+  id: &'static str,
   names: &'static [&'static str],
 }
 
@@ -46,7 +47,7 @@ impl Plugin for EmitTarget {
     for &name in self.names {
       ctx.emit_chunk(EmittedChunk {
         name: Some(name.into()),
-        id: "./target.js".to_string(),
+        id: self.id.to_string(),
         preserve_entry_signatures: Some(PreserveEntrySignatures::AllowExtension),
         ..Default::default()
       })?;
@@ -157,7 +158,7 @@ async fn bundle_emitted_target(
       })),
       ..Default::default()
     },
-    vec![Arc::new(EmitTarget { names })],
+    vec![Arc::new(EmitTarget { id: "./target.js", names })],
   )
   .expect("failed to create bundler");
 
@@ -355,7 +356,7 @@ async fn dynamic_entry_does_not_static_import_side_effectful_runtime_host() {
 }
 
 #[tokio::test(flavor = "multi_thread")]
-async fn wrapped_dynamic_entry_keeps_facade_after_manual_chunk_merge() {
+async fn wrapped_dynamic_entry_uses_the_call_site_trigger_after_manual_chunk_merge() {
   let output = bundle_fixture_with_options(
     &format!("{FIXTURE_ROOT}/m4_dynamic_facade_race"),
     vec![
@@ -381,19 +382,22 @@ async fn wrapped_dynamic_entry_keeps_facade_after_manual_chunk_merge() {
 
   let a_chunk =
     output.values().find(|code| code.contains("a done")).expect("a entry should be emitted");
-  let target_import = "import(\"./chunks/target.js\")";
+  let host_import = "import(\"./chunks/dyn.js\")";
   assert!(
-    a_chunk.contains(target_import),
-    "a should import the restored dynamic facade directly:\n{a_chunk}",
+    a_chunk.contains(host_import),
+    "a should import the chunk hosting the dynamic target:\n{a_chunk}",
   );
-  let after_target_import =
-    a_chunk.split_once(target_import).expect("the target import was checked above").1.trim_start();
+  let after_host_import =
+    a_chunk.split_once(host_import).expect("the host import was checked above").1.trim_start();
   assert!(
-    !after_target_import.starts_with(".then("),
-    "a must not call the wrapped dynamic entry through a shared-chunk .then trigger:\n{a_chunk}",
+    after_host_import.starts_with(".then("),
+    "the import() rewrite must carry the target's trigger:\n{a_chunk}",
   );
-
-  assert_order_wrapper_facade(&output, "chunks/target.js", "init_target");
+  assert!(
+    !output.keys().any(|name| name.contains("target.js")),
+    "no facade file should be emitted for the dynamic target: {:?}",
+    output.keys().collect::<Vec<_>>(),
+  );
 }
 
 #[tokio::test(flavor = "multi_thread")]
@@ -497,22 +501,45 @@ async fn duplicate_emitted_entries_keep_order_wrapper_facades() {
 
 #[tokio::test(flavor = "multi_thread")]
 async fn late_order_wrapping_revalidates_output_file() {
-  let fixture_dir = format!("{FIXTURE_ROOT}/../experimental/strict_execution_order/issue_4782");
-  let mut bundler = Bundler::new(BundlerOptions {
-    input: Some(vec![InputItem {
-      name: Some("main".to_string()),
-      import: "./main.js".to_string(),
-    }]),
-    cwd: Some(fixture_dir.into()),
-    file: Some("bundle.js".to_string()),
-    format: Some(OutputFormat::Esm),
-    strict_execution_order: Some(true),
-    experimental: Some(rolldown_common::ExperimentalOptions {
-      on_demand_wrapping: Some(true),
+  // `output.file` is validated against the *final* chunk graph, so the shape that exercises it has
+  // to render as one chunk after chunk optimization and gain a second chunk only during order
+  // lowering.
+  //
+  // The `grp` group puts every module in one manual chunk, which leaves the user entry chunk empty
+  // and folds the group back into it; the chunk emitted for the same entry module is likewise an
+  // empty facade the optimizer merges into the group. That is one rendered chunk. Order lowering
+  // then revives the emitted facade — an `emitFile` reference id has to resolve to a real file —
+  // and only then is the graph multi-chunk. Flipping `strict_execution_order` off makes this build
+  // succeed, which is what keeps the assertion below honest.
+  //
+  // `lib.js` pulls in a side-effectful `probe.js`, which keeps the entry's load closure
+  // order-sensitive. Without that the wrapper is skippable — the entry would never be wrapped,
+  // nothing would be restored, and the graph would stay single-chunk, testing nothing.
+  let fixture_dir = format!("{FIXTURE_ROOT}/late_split_revalidates_output_file");
+  let mut bundler = Bundler::with_plugins(
+    BundlerOptions {
+      input: Some(vec![InputItem {
+        name: Some("entry".to_string()),
+        import: "./entry.js".to_string(),
+      }]),
+      cwd: Some(fixture_dir.into()),
+      file: Some("bundle.js".to_string()),
+      format: Some(OutputFormat::Esm),
+      strict_execution_order: Some(true),
+      code_splitting: Some(CodeSplittingMode::Advanced(ManualCodeSplittingOptions {
+        groups: Some(vec![MatchGroup {
+          name: MatchGroupName::Static("grp".to_string()),
+          test: Some(MatchGroupTest::Regex(
+            HybridRegex::new(r"[\\/](?:entry|lib|probe)\.js$").expect("regex should be valid"),
+          )),
+          ..Default::default()
+        }]),
+        ..Default::default()
+      })),
       ..Default::default()
-    }),
-    ..Default::default()
-  })
+    },
+    vec![Arc::new(EmitTarget { id: "./entry.js", names: &["emitted"] })],
+  )
   .expect("failed to create bundler");
 
   let Err(error) = bundler.generate().await else {
@@ -523,4 +550,71 @@ async fn late_order_wrapping_revalidates_output_file() {
     message.contains("When building multiple chunks") && message.contains("output.file"),
     "unexpected diagnostic: {message}"
   );
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn disabled_splitting_emitted_entry_routes_consumer_local_barrel() {
+  // `codeSplitting: false` rejects multiple `input`s at option validation, but a plugin-emitted
+  // chunk still adds a second entry whose per-entry placement consumes the pre-chunk probe's
+  // consumer-local routes. The inert-plan carve-out in `apply_order_wraps` must therefore key on
+  // the entry count rather than the option alone: with the entry-count clause dropped, this build
+  // takes the no-lowering fast path while placement has already split the CJS leaves per entry,
+  // and the emitted chunks `require()` each other in the #10515 startup cycle.
+  for on_demand in [false, true] {
+    let fixture_dir = format!("{FIXTURE_ROOT}/disabled_splitting_emitted_entry");
+    let output_dir = std::env::temp_dir().join(format!(
+      "rolldown-strict-order-disabled-emitted-{}-{}",
+      std::process::id(),
+      if on_demand { "on-demand" } else { "wrap-all" },
+    ));
+    let _ = std::fs::remove_dir_all(&output_dir);
+    let mut bundler = Bundler::with_plugins(
+      BundlerOptions {
+        input: Some(vec![InputItem {
+          name: Some("entry-a".to_string()),
+          import: "./entry-a.cjs".to_string(),
+        }]),
+        cwd: Some(fixture_dir.into()),
+        format: Some(OutputFormat::Cjs),
+        entry_filenames: Some("[name].js".to_string().into()),
+        chunk_filenames: Some("chunks/[name].js".to_string().into()),
+        dir: Some(output_dir.to_string_lossy().into_owned()),
+        strict_execution_order: Some(true),
+        code_splitting: Some(CodeSplittingMode::Bool(false)),
+        experimental: Some(rolldown_common::ExperimentalOptions {
+          on_demand_wrapping: Some(on_demand),
+          ..Default::default()
+        }),
+        ..Default::default()
+      },
+      vec![Arc::new(EmitTarget { id: "./entry-b.cjs", names: &["entry-b"] })],
+    )
+    .expect("failed to create bundler");
+
+    let assets: BTreeMap<String, String> = bundler
+      .write()
+      .await
+      .expect("build should succeed")
+      .assets
+      .into_iter()
+      .filter_map(|output| match output {
+        Output::Chunk(chunk) => Some((chunk.filename.to_string(), chunk.code.clone())),
+        Output::Asset(_) => None,
+      })
+      .collect();
+    let bundle = WrittenBundle { assets, output_dir };
+    assert!(
+      bundle.assets.contains_key("chunks/entry-b.js"),
+      "emitted entry should be a separate chunk; emitted files were {:?}",
+      bundle.assets.keys().collect::<Vec<_>>(),
+    );
+    execute_written_bundle(
+      &bundle.output_dir,
+      "import assert from 'node:assert';\n\
+       const entryA = await import('./entry-a.js');\n\
+       assert.strictEqual(entryA.a, 'a');\n\
+       const entryB = await import('./chunks/entry-b.js');\n\
+       assert.strictEqual(entryB.b, 'b');",
+    );
+  }
 }

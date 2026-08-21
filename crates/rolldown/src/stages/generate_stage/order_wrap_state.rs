@@ -1,4 +1,5 @@
 use oxc_index::IndexVec;
+use oxc_str::CompactStr;
 use rolldown_common::{
   ChunkIdx, ImportKind, ImportRecordIdx, ImportRecordMeta, ModuleIdx, RUNTIME_HELPER_NAMES,
   RuntimeHelper, RuntimeModuleBrief, StmtInfoIdx, StmtInfos, SymbolOrMemberExprRef, SymbolRef,
@@ -7,6 +8,8 @@ use rolldown_common::{
 use rolldown_utils::indexmap::FxIndexSet;
 use rustc_hash::{FxHashMap, FxHashSet};
 
+use crate::esm_init_obligations::WrappedEsmInitTarget;
+
 oxc_index::define_index_type! {
   pub struct OrderSyntheticStmtIdx = u32;
 }
@@ -14,12 +17,27 @@ oxc_index::define_index_type! {
 #[derive(Debug, Default)]
 pub struct OrderWrapState {
   modules: FxHashMap<ModuleIdx, OrderWrappedModule>,
+  reexport_init_transparent: FxHashSet<ModuleIdx>,
+  consumer_local_reexport_routes: FxHashSet<ModuleIdx>,
+  consumer_local_namespace_targets: FxHashMap<ModuleIdx, Vec<WrappedEsmInitTarget>>,
+  cjs_carriers: FxHashMap<OrderCjsCarrierKey, OrderCjsCarrier>,
+  cjs_carriers_by_importee: FxHashMap<ModuleIdx, Vec<OrderCjsCarrierKey>>,
+  cjs_carriers_by_symbol: FxHashMap<SymbolRef, Vec<OrderCjsCarrierKey>>,
+  cjs_carrier_by_namespace: FxHashMap<SymbolRef, OrderCjsCarrierKey>,
+  cjs_carrier_wrapper_refs: FxHashSet<SymbolRef>,
   synthetic_statements: IndexVec<OrderSyntheticStmtIdx, OrderSyntheticStmt>,
   synthetic_statements_by_chunk: FxHashMap<ChunkIdx, Vec<OrderSyntheticStmtIdx>>,
   import_overlays: FxHashMap<OrderImportKey, OrderImportOverlay>,
   import_overlays_by_importer: FxHashMap<ModuleIdx, Vec<OrderImportKey>>,
   import_overlays_by_statement: FxHashMap<(ModuleIdx, StmtInfoIdx), Vec<OrderImportKey>>,
+  /// Namespace demand introduced by import/re-export lowering. Unlike a simulated facade, this is
+  /// a semantic namespace consumer and may therefore broaden re-export init routing.
   namespace_requirements: FxHashMap<SymbolRef, FxIndexSet<ModuleIdx>>,
+  /// Namespace objects materialized only so a collapsed dynamic-entry facade can still return its
+  /// link-time-retained export interface. This must not turn that narrowed interface into an opaque
+  /// namespace read and initialize exports that tree shaking did not retain.
+  simulated_facade_namespace_requirements:
+    FxHashMap<SymbolRef, SimulatedFacadeNamespaceRequirement>,
   runtime_symbols: FxHashSet<SymbolRef>,
   nested_reexport_records: FxHashSet<(ModuleIdx, ImportRecordIdx)>,
   consumed_reexport_facades: FxHashSet<SymbolRef>,
@@ -39,6 +57,33 @@ impl OrderWrapState {
       .import_overlays
       .values()
       .fold(synthetic_helpers, |helpers, overlay| helpers | overlay.runtime_helpers)
+  }
+
+  /// The chunks whose rendered output calls a runtime helper that order lowering introduced: a
+  /// wrapper's synthetic `init_*` declaration renders in its assigned chunk, and an overlay's
+  /// lowered import/re-export glue renders at the importer's import site. Pre-lowering helper
+  /// demand is not collected here — the runtime-chunk merge proof re-scans it from chunk and
+  /// statement metadata.
+  pub(crate) fn runtime_helper_consumer_chunks(
+    &self,
+    module_to_chunk: &IndexVec<ModuleIdx, Option<ChunkIdx>>,
+  ) -> FxHashSet<ChunkIdx> {
+    let mut consumers = FxHashSet::default();
+    for stmt in &self.synthetic_statements {
+      if !stmt.runtime_helpers.is_empty()
+        && let Some(chunk_idx) = stmt.chunk
+      {
+        consumers.insert(chunk_idx);
+      }
+    }
+    for (key, overlay) in &self.import_overlays {
+      if !overlay.runtime_helpers.is_empty()
+        && let Some(chunk_idx) = module_to_chunk[key.importer]
+      {
+        consumers.insert(chunk_idx);
+      }
+    }
+    consumers
   }
 
   pub(crate) fn requires_runtime_symbol(
@@ -100,6 +145,7 @@ impl OrderWrapState {
   /// [`LinkingMetadata`]: crate::types::linking_metadata::LinkingMetadata
   pub(crate) fn is_execution_order_wrapper_ref(&self, symbol_ref: SymbolRef) -> bool {
     self.modules.get(&symbol_ref.owner).is_some_and(|module| module.wrapper_ref == symbol_ref)
+      || self.cjs_carrier_wrapper_refs.contains(&symbol_ref)
   }
 
   pub(crate) fn set_nested_reexport_records(
@@ -151,8 +197,8 @@ impl OrderWrapState {
     wrapper_ref: SymbolRef,
     runtime_helper: RuntimeHelper,
   ) {
+    debug_assert_eq!(wrapper_ref.owner, module_idx);
     let wrapper_statement = self.add_synthetic_statement(OrderSyntheticStmt {
-      owner: module_idx,
       declared_symbols: vec![TaggedSymbolRef::normal(wrapper_ref)],
       referenced_symbols: vec![],
       runtime_helpers: runtime_helper,
@@ -173,6 +219,76 @@ impl OrderWrapState {
     self.insert_order_wrapped_module(module_idx, wrapper_ref, None);
   }
 
+  pub(crate) fn insert_order_cjs_carrier(
+    &mut self,
+    key: OrderCjsCarrierKey,
+    spec: OrderCjsCarrierSpec,
+    referenced_symbols: Vec<SymbolRef>,
+    runtime_helpers: RuntimeHelper,
+  ) {
+    debug_assert_eq!(spec.wrapper_ref.owner, key.importer);
+    debug_assert_eq!(spec.namespace_ref.owner, key.importer);
+    let wrapper_statement = self.add_synthetic_statement(OrderSyntheticStmt {
+      declared_symbols: vec![
+        TaggedSymbolRef::normal(spec.wrapper_ref),
+        TaggedSymbolRef::normal(spec.namespace_ref),
+      ],
+      referenced_symbols,
+      runtime_helpers,
+      chunk: None,
+    });
+    self.insert_order_cjs_carrier_inner(key, spec, Some(wrapper_statement));
+  }
+
+  pub(crate) fn insert_order_cjs_carrier_probe(
+    &mut self,
+    key: OrderCjsCarrierKey,
+    spec: OrderCjsCarrierSpec,
+  ) {
+    self.insert_order_cjs_carrier_inner(key, spec, None);
+  }
+
+  fn insert_order_cjs_carrier_inner(
+    &mut self,
+    key: OrderCjsCarrierKey,
+    spec: OrderCjsCarrierSpec,
+    wrapper_statement: Option<OrderSyntheticStmtIdx>,
+  ) {
+    assert!(
+      self
+        .cjs_carriers
+        .insert(
+          key,
+          OrderCjsCarrier {
+            importee: spec.importee,
+            wrapper_ref: spec.wrapper_ref,
+            namespace_ref: spec.namespace_ref,
+            wrapper_statement,
+            chunk: None,
+            eager: spec.eager,
+            needs_to_esm: spec.needs_to_esm,
+            is_node_mode: spec.is_node_mode,
+          },
+        )
+        .is_none(),
+      "duplicate order CJS carrier",
+    );
+    self.cjs_carriers_by_importee.entry(spec.importee).or_default().push(key);
+    assert!(self.cjs_carrier_wrapper_refs.insert(spec.wrapper_ref));
+    assert!(self.cjs_carrier_by_namespace.insert(spec.namespace_ref, key).is_none());
+  }
+
+  pub(crate) fn map_order_cjs_carrier_symbol(
+    &mut self,
+    symbol_ref: SymbolRef,
+    key: OrderCjsCarrierKey,
+  ) {
+    let carriers = self.cjs_carriers_by_symbol.entry(symbol_ref).or_default();
+    if !carriers.contains(&key) {
+      carriers.push(key);
+    }
+  }
+
   fn insert_order_wrapped_module(
     &mut self,
     module_idx: ModuleIdx,
@@ -182,15 +298,7 @@ impl OrderWrapState {
     assert!(
       self
         .modules
-        .insert(
-          module_idx,
-          OrderWrappedModule {
-            wrapper_ref,
-            wrapper_statement,
-            chunk: None,
-            reexport_init_transparent: false,
-          },
-        )
+        .insert(module_idx, OrderWrappedModule { wrapper_ref, wrapper_statement, chunk: None },)
         .is_none(),
       "duplicate order-wrapped module",
     );
@@ -201,6 +309,52 @@ impl OrderWrapState {
     stmt: OrderSyntheticStmt,
   ) -> OrderSyntheticStmtIdx {
     self.synthetic_statements.push(stmt)
+  }
+
+  /// Record the namespace declaration and runtime demand needed when strict-order lowering keeps
+  /// a dynamic entry in its implementation chunk and moves activation to its `import()` call sites.
+  ///
+  /// The module finalizer still owns rendering the namespace declaration. The requirement records
+  /// the exact export names the removed facade exposed, while this synthetic statement makes the
+  /// declaration and its non-inlined backing bindings visible to symbol-to-chunk assignment,
+  /// deconfliction, cross-chunk linking, and the runtime-helper closure. Those bindings were already
+  /// retained by the link-stage entry interface; this does not reopen user-code liveness.
+  /// See `internal-docs/code-splitting/design.md` ("Trigger placement").
+  pub(super) fn insert_simulated_facade_namespace(
+    &mut self,
+    namespace_ref: SymbolRef,
+    chunk_idx: ChunkIdx,
+    runtime_helpers: RuntimeHelper,
+    exports: impl IntoIterator<Item = SimulatedFacadeNamespaceExport>,
+    live_importers: impl IntoIterator<Item = ModuleIdx>,
+  ) {
+    let mut referenced_symbols = vec![];
+    let requirement =
+      self.simulated_facade_namespace_requirements.entry(namespace_ref).or_default();
+    for export in exports {
+      requirement.export_names.insert(export.name);
+      if let Some(symbol_ref) = export.referenced_symbol {
+        referenced_symbols.push(symbol_ref);
+      }
+    }
+    requirement.live_importers.extend(live_importers);
+    let stmt_idx = self.add_synthetic_statement(OrderSyntheticStmt {
+      declared_symbols: vec![TaggedSymbolRef::normal(namespace_ref)],
+      referenced_symbols,
+      runtime_helpers,
+      chunk: None,
+    });
+    self.assign_synthetic_statement_chunk(stmt_idx, chunk_idx);
+  }
+
+  pub(crate) fn simulated_facade_export_names(
+    &self,
+    namespace_ref: SymbolRef,
+  ) -> Option<&FxHashSet<CompactStr>> {
+    self
+      .simulated_facade_namespace_requirements
+      .get(&namespace_ref)
+      .map(|requirement| &requirement.export_names)
   }
 
   pub(crate) fn assign_synthetic_statement_chunk(
@@ -223,20 +377,106 @@ impl OrderWrapState {
     }
   }
 
+  pub(crate) fn assign_order_cjs_carrier_chunk(
+    &mut self,
+    key: OrderCjsCarrierKey,
+    chunk_idx: ChunkIdx,
+  ) {
+    let carrier = self.cjs_carriers.get_mut(&key).expect("order CJS carrier should exist");
+    carrier.chunk = Some(chunk_idx);
+    if let Some(wrapper_statement) = carrier.wrapper_statement {
+      self.assign_synthetic_statement_chunk(wrapper_statement, chunk_idx);
+    }
+  }
+
   /// Mark an execution-order wrapper as a routing waypoint for binding-driven re-export init.
   /// Its module has no local executable body and no unconditional execution dependency, so a
   /// consumer may route directly to the wrapped leaf definers it actually consumes instead of
   /// making this shared barrel wrapper own every retained re-export path.
   pub(crate) fn set_reexport_init_transparent(&mut self, module_idx: ModuleIdx) {
-    self
-      .modules
-      .get_mut(&module_idx)
-      .expect("order-wrapped module should exist")
-      .reexport_init_transparent = true;
+    self.reexport_init_transparent.insert(module_idx);
   }
 
   pub(crate) fn reexport_init_is_transparent(&self, module_idx: ModuleIdx) -> bool {
-    self.modules.get(&module_idx).is_some_and(|module| module.reexport_init_transparent)
+    self.reexport_init_transparent.contains(&module_idx)
+  }
+
+  pub(crate) fn set_consumer_local_reexport_route(&mut self, module_idx: ModuleIdx) {
+    self.consumer_local_reexport_routes.insert(module_idx);
+    self.set_reexport_init_transparent(module_idx);
+  }
+
+  pub(crate) fn is_consumer_local_reexport_route(&self, module_idx: ModuleIdx) -> bool {
+    self.consumer_local_reexport_routes.contains(&module_idx)
+  }
+
+  pub(crate) fn has_consumer_local_reexport_routes(&self) -> bool {
+    !self.consumer_local_reexport_routes.is_empty()
+  }
+
+  pub(crate) fn set_consumer_local_namespace_targets(
+    &mut self,
+    module_idx: ModuleIdx,
+    targets: Vec<WrappedEsmInitTarget>,
+  ) {
+    self.consumer_local_namespace_targets.insert(module_idx, targets);
+  }
+
+  pub(crate) fn consumer_local_namespace_targets(
+    &self,
+    module_idx: ModuleIdx,
+  ) -> Option<&[WrappedEsmInitTarget]> {
+    self.consumer_local_namespace_targets.get(&module_idx).map(Vec::as_slice)
+  }
+
+  pub(crate) fn order_cjs_carrier(&self, key: OrderCjsCarrierKey) -> Option<&OrderCjsCarrier> {
+    self.cjs_carriers.get(&key)
+  }
+
+  pub(crate) fn has_order_cjs_carrier(&self, key: OrderCjsCarrierKey) -> bool {
+    self.cjs_carriers.contains_key(&key)
+  }
+
+  pub(crate) fn order_cjs_carriers_for_importee(
+    &self,
+    importee_idx: ModuleIdx,
+  ) -> &[OrderCjsCarrierKey] {
+    self.cjs_carriers_by_importee.get(&importee_idx).map_or(&[], Vec::as_slice)
+  }
+
+  pub(crate) fn order_cjs_carrier_keys(&self) -> impl Iterator<Item = OrderCjsCarrierKey> + '_ {
+    self.cjs_carriers.keys().copied()
+  }
+
+  pub(crate) fn order_cjs_carriers_for_symbol(
+    &self,
+    symbol_ref: SymbolRef,
+  ) -> &[OrderCjsCarrierKey] {
+    self.cjs_carriers_by_symbol.get(&symbol_ref).map_or(&[], Vec::as_slice)
+  }
+
+  pub(crate) fn is_order_cjs_carrier_namespace(&self, symbol_ref: SymbolRef) -> bool {
+    self.cjs_carrier_by_namespace.contains_key(&symbol_ref)
+  }
+
+  pub(crate) fn order_cjs_carrier_key_for_namespace(
+    &self,
+    symbol_ref: SymbolRef,
+  ) -> Option<OrderCjsCarrierKey> {
+    self.cjs_carrier_by_namespace.get(&symbol_ref).copied()
+  }
+
+  pub(crate) fn order_cjs_carrier_included_in_live_chunk(
+    &self,
+    key: OrderCjsCarrierKey,
+    chunk_graph: &crate::chunk_graph::ChunkGraph,
+  ) -> bool {
+    self.cjs_carriers.get(&key).is_some_and(|carrier| {
+      carrier.chunk.is_some_and(|chunk_idx| {
+        chunk_graph.module_to_chunk[carrier.importee] == Some(chunk_idx)
+          && chunk_graph.module_is_in_live_chunk(carrier.importee)
+      })
+    })
   }
 
   pub(crate) fn synthetic_statements_for_chunk(
@@ -335,6 +575,26 @@ impl OrderWrapState {
     symbol_ref: SymbolRef,
     importer_is_live: impl Fn(ModuleIdx) -> bool,
   ) -> bool {
+    let mut importer_is_live = importer_is_live;
+    self
+      .namespace_requirements
+      .get(&symbol_ref)
+      .is_some_and(|importers| importers.iter().copied().any(&mut importer_is_live))
+      || self
+        .simulated_facade_namespace_requirements
+        .get(&symbol_ref)
+        .is_some_and(|requirement| requirement.live_importers.iter().copied().any(importer_is_live))
+  }
+
+  /// Whether order lowering itself observes this namespace semantically. A namespace created only
+  /// to replace a dynamic-entry facade is deliberately excluded: its getters were narrowed to the
+  /// exports retained by the original `import()` consumers, so init routing must keep using those
+  /// consumer-local paths instead of expanding the whole namespace.
+  pub(crate) fn requires_semantic_namespace(
+    &self,
+    symbol_ref: SymbolRef,
+    importer_is_live: impl Fn(ModuleIdx) -> bool,
+  ) -> bool {
     self
       .namespace_requirements
       .get(&symbol_ref)
@@ -392,6 +652,18 @@ impl OrderWrapState {
   }
 }
 
+#[derive(Debug, Default)]
+struct SimulatedFacadeNamespaceRequirement {
+  live_importers: FxIndexSet<ModuleIdx>,
+  export_names: FxHashSet<CompactStr>,
+}
+
+#[derive(Debug)]
+pub(super) struct SimulatedFacadeNamespaceExport {
+  pub(super) name: CompactStr,
+  pub(super) referenced_symbol: Option<SymbolRef>,
+}
+
 #[derive(Debug)]
 pub struct OrderWrappedModule {
   pub(crate) wrapper_ref: SymbolRef,
@@ -403,10 +675,34 @@ pub struct OrderWrappedModule {
   /// statement to answer `order_wrapper_chunk`. Kept in sync with the wrapper statement's chunk on
   /// the real path.
   pub(crate) chunk: Option<ChunkIdx>,
-  /// This order wrapper has no module-local executable body and no unconditional execution
-  /// dependency. Binding-driven consumers may therefore route through it to the leaf wrappers
-  /// they consume. Side-effect-only imports still call the wrapper directly.
-  pub(crate) reexport_init_transparent: bool,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+pub struct OrderCjsCarrierKey {
+  pub(crate) importer: ModuleIdx,
+  pub(crate) record: ImportRecordIdx,
+}
+
+#[derive(Clone, Copy, Debug)]
+pub struct OrderCjsCarrierSpec {
+  pub(crate) importee: ModuleIdx,
+  pub(crate) wrapper_ref: SymbolRef,
+  pub(crate) namespace_ref: SymbolRef,
+  pub(crate) eager: bool,
+  pub(crate) needs_to_esm: bool,
+  pub(crate) is_node_mode: bool,
+}
+
+#[derive(Debug)]
+pub struct OrderCjsCarrier {
+  pub(crate) importee: ModuleIdx,
+  pub(crate) wrapper_ref: SymbolRef,
+  pub(crate) namespace_ref: SymbolRef,
+  wrapper_statement: Option<OrderSyntheticStmtIdx>,
+  pub(crate) chunk: Option<ChunkIdx>,
+  pub(crate) eager: bool,
+  pub(crate) needs_to_esm: bool,
+  pub(crate) is_node_mode: bool,
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -424,7 +720,6 @@ pub struct EsmInitTarget {
 
 #[derive(Debug)]
 pub struct OrderSyntheticStmt {
-  pub(crate) owner: ModuleIdx,
   pub(crate) declared_symbols: Vec<TaggedSymbolRef>,
   pub(crate) referenced_symbols: Vec<SymbolRef>,
   pub(crate) runtime_helpers: RuntimeHelper,

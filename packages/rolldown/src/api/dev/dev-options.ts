@@ -17,6 +17,12 @@ type DevOnAdditionalAssets = (output: RolldownOutput) => void | Promise<void>;
 
 export interface DevWatchOptions {
   /**
+   * If `false`, no file system watcher is started, so file changes are never
+   * picked up and no rebuild or HMR update is triggered on their own.
+   * @default true
+   */
+  enabled?: boolean;
+  /**
    * If `true`, files are not written to disk.
    * @default false
    */

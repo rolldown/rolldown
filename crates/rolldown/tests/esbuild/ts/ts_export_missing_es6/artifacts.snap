@@ -10,6 +10,8 @@ source: crates/rolldown_testing/src/integration_test.rs
 //#region bar.js
 var nope = void 0;
 //#endregion
+//#region foo.ts
+//#endregion
 //#region entry.js
 console.log(/* @__PURE__ */ __exportAll({ nope: () => nope }));
 //#endregion

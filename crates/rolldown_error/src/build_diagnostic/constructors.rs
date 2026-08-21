@@ -33,7 +33,7 @@ use super::events::json_parse::JsonParse;
 use super::events::missing_global_name::MissingGlobalName;
 use super::events::missing_name_option_for_iife_export::MissingNameOptionForIifeExport;
 use super::events::plugin_error::{CausedPlugin, PluginError};
-use super::events::plugin_timings::{PluginTimingInfo, PluginTimings};
+use super::events::plugin_timings::PluginTimings;
 use super::events::prefer_builtin_feature::PreferBuiltinFeature;
 use super::events::require_tla::RequireTla;
 use super::events::resolve_error::DiagnosableResolveError;
@@ -57,6 +57,7 @@ use super::events::{
   invalid_export_option::InvalidExportOption,
   missing_export::MissingExport,
   mixed_exports::MixedExports,
+  namespace_conflict::{NamespaceConflict, NamespaceConflictExporter},
   oxc_error::OxcError,
   unresolved_entry::UnresolvedEntry,
 };
@@ -78,6 +79,20 @@ impl BuildDiagnostic {
       importee,
       importer,
       exporter,
+    })
+  }
+
+  pub fn namespace_conflict(
+    binding: String,
+    reexporting_module_id: String,
+    reexporting_module_stable_id: String,
+    exporters: Vec<NamespaceConflictExporter>,
+  ) -> Self {
+    Self::new_inner(NamespaceConflict {
+      binding,
+      reexporting_module_id,
+      reexporting_module_stable_id,
+      exporters,
     })
   }
 
@@ -428,8 +443,8 @@ impl BuildDiagnostic {
     Self::new_inner(CouldNotCleanDirectory { dir, reason })
   }
 
-  pub fn plugin_timings(plugins: Vec<PluginTimingInfo>) -> Self {
-    Self::new_inner(PluginTimings { plugins })
+  pub fn plugin_timings(timings: PluginTimings) -> Self {
+    Self::new_inner(timings)
   }
 
   pub fn duplicate_shebang(filename: String, source: &str) -> Self {

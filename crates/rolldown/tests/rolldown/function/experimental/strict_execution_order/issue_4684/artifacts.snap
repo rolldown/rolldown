@@ -16,14 +16,6 @@ function init_dynamic() {
 	})))();
 }
 //#endregion
-export { init_dynamic as t };
-
-```
-
-## dynamic2.js
-
-```js
-import { t as init_dynamic } from "./dynamic.js";
 init_dynamic();
 
 ```
@@ -70,7 +62,7 @@ function init_main() {
 		init_read();
 		setup();
 		read();
-		import("./dynamic2.js");
+		import("./dynamic.js");
 		nodeAssert.strictEqual(globalThis.foo, "foo");
 	})))();
 }
@@ -104,14 +96,6 @@ function init_dynamic() {
 	})))();
 }
 //#endregion
-export { init_dynamic as t };
-
-```
-
-### dynamic2.js
-
-```js
-import { t as init_dynamic } from "./dynamic.js";
 init_dynamic();
 
 ```
@@ -158,7 +142,7 @@ function init_main() {
 		init_read();
 		setup();
 		read();
-		import("./dynamic2.js");
+		import("./dynamic.js");
 		nodeAssert.strictEqual(globalThis.foo, "foo");
 	})))();
 }

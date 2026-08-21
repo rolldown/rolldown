@@ -1,6 +1,27 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
 ---
+# warnings
+
+## NAMESPACE_CONFLICT
+
+```text
+[NAMESPACE_CONFLICT] Conflicting namespaces: "barrel.js" re-exports "x" from one of the modules "mod_a.js" and "mod_b.js" (will be ignored).
+   ╭─[ mod_a.js:2:14 ]
+   │
+ 2 │ export const x = 'ax';
+   │              ┬  
+   │              ╰── One matching export is here.
+   │
+   ├─[ mod_b.js:2:14 ]
+   │
+ 2 │ export const x = 'bx';
+   │              ┬  
+   │              ╰── One matching export is here.
+───╯
+
+```
+
 # Assets
 
 ## barrel.js
@@ -38,7 +59,10 @@ export { mod_a_exports as a, init_mod_a as i, init_mod_b as n, __exportAll as o,
 
 ```js
 import { i as init_mod_a, n as init_mod_b, o as __exportAll, s as __reExport, t as barrel_exports } from "./barrel.js";
-__reExport(/* @__PURE__ */ __exportAll({}), barrel_exports);
+//#region main.js
+var main_exports = /* @__PURE__ */ __exportAll({});
+init_mod_a();
+__reExport(main_exports, barrel_exports);
 globalThis.__log.push("BEFORE_REQUIRE");
 init_mod_a();
 init_mod_b();

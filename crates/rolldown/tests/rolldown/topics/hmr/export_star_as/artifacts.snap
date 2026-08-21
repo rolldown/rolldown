@@ -1,0 +1,113 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+import assert from "node:assert";
+// HIDDEN [\0rolldown/runtime.js]
+__rolldown_runtime__.registerGraph({
+	ids: [
+		"dep.js",
+		"reexport.js",
+		"hmr.js",
+		"main.js"
+	],
+	localCount: 4,
+	edges: [
+		[],
+		[0],
+		[1],
+		[2]
+	],
+	dynamicEdges: [
+		[],
+		[],
+		[],
+		[]
+	]
+});
+//#region dep.js
+var dep_exports = /* @__PURE__ */ __exportAll({ value: () => value });
+__rolldown_runtime__.createModuleHotContext("dep.js");
+__rolldown_runtime__.registerModule("dep.js", { exports: dep_exports });
+const value = "from-dep";
+//#endregion
+//#region reexport.js
+var reexport_exports = /* @__PURE__ */ __exportAll({ NS: () => dep_exports });
+__rolldown_runtime__.createModuleHotContext("reexport.js");
+__rolldown_runtime__.registerModule("reexport.js", { exports: reexport_exports });
+//#endregion
+//#region hmr.js
+var hmr_exports = /* @__PURE__ */ __exportAll({});
+const hmr_hot = __rolldown_runtime__.createModuleHotContext("hmr.js");
+__rolldown_runtime__.registerModule("hmr.js", { exports: hmr_exports });
+assert.ok(dep_exports, "NS should be a namespace object");
+assert.strictEqual(value, "from-dep");
+hmr_hot.accept();
+//#endregion
+//#region main.js
+var main_exports = /* @__PURE__ */ __exportAll({});
+__rolldown_runtime__.createModuleHotContext("main.js");
+__rolldown_runtime__.registerModule("main.js", { exports: main_exports });
+//#endregion
+
+```
+
+# HMR Step 0
+
+## Code
+
+```js
+__rolldown_runtime__.registerGraph({ids:["dep.js","hmr.js","reexport.js"],localCount:3,edges:[[],[2],[0]],dynamicEdges:[[],[],[]]});
+//#region dep.js
+__rolldown_runtime__.registerFactory("dep.js", "esm", (function(__rolldown_module_id__) {
+	try {
+		var __rolldown_exports__ = __rolldown_runtime__.__exportAll({ value: () => value });
+		__rolldown_runtime__.registerModule(__rolldown_module_id__, { exports: __rolldown_exports__ });
+		const hot_dep = __rolldown_runtime__.createModuleHotContext(__rolldown_module_id__);
+		const value = "from-dep";
+		console.log("dep updated");
+	} finally {}
+}));
+
+//#endregion
+//#region hmr.js
+import * as import_node_assert_10 from "node:assert";
+__rolldown_runtime__.registerFactory("hmr.js", "esm", (function(__rolldown_module_id__) {
+	try {
+		var __rolldown_exports__ = __rolldown_runtime__.__exportAll({});
+		__rolldown_runtime__.registerModule(__rolldown_module_id__, { exports: __rolldown_exports__ });
+		__rolldown_runtime__.initModule("reexport.js");
+		const hot_hmr = __rolldown_runtime__.createModuleHotContext(__rolldown_module_id__);
+		var import_reexport_11 = __rolldown_runtime__.loadExports("reexport.js");
+		import_node_assert_10.default.ok(import_reexport_11.NS, "NS should be a namespace object");
+		import_node_assert_10.default.strictEqual(import_reexport_11.NS.value, "from-dep");
+		hot_hmr.accept();
+	} finally {}
+}));
+
+//#endregion
+//#region reexport.js
+__rolldown_runtime__.registerFactory("reexport.js", "esm", (function(__rolldown_module_id__) {
+	try {
+		var __rolldown_exports__ = __rolldown_runtime__.__exportAll({ NS: () => import_dep_20 });
+		__rolldown_runtime__.registerModule(__rolldown_module_id__, { exports: __rolldown_exports__ });
+		__rolldown_runtime__.initModule("dep.js");
+		const hot_reexport = __rolldown_runtime__.createModuleHotContext(__rolldown_module_id__);
+		var import_dep_20 = __rolldown_runtime__.loadExports("dep.js");
+	} finally {}
+}));
+
+//#endregion
+```
+
+## Meta
+
+- update type: patch
+
+### Changed Ids
+
+- dep.js

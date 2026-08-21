@@ -115,7 +115,11 @@ impl RawMinifyOptions {
             TreeShakeOptions::from(&options.treeshake),
           );
           MinifyOptions::Enabled((
-            oxc::minifier::MinifierOptions { mangle: Some(mangle), compress: Some(compress) },
+            oxc::minifier::MinifierOptions {
+              mangle: Some(mangle),
+              mangle_properties: None,
+              compress: Some(compress),
+            },
             true,
           ))
         } else {
@@ -125,6 +129,7 @@ impl RawMinifyOptions {
       RawMinifyOptions::DeadCodeEliminationOnly => {
         MinifyOptions::DeadCodeEliminationOnly(oxc::minifier::MinifierOptions {
           mangle: None,
+          mangle_properties: None,
           compress: Some(CompressOptions {
             // For `dce-only`, disable all syntax transforming optimizations
             target: EngineTargets::from_target("es2015").expect("es2015 to be a valid target"),
@@ -144,7 +149,7 @@ impl RawMinifyOptions {
           )
         });
         MinifyOptions::Enabled((
-          oxc::minifier::MinifierOptions { mangle, compress },
+          oxc::minifier::MinifierOptions { mangle, mangle_properties: None, compress },
           value.remove_whitespace,
         ))
       }

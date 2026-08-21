@@ -6,11 +6,14 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## main.js
 
 ```js
+//#region dep1.js
 console.log(["spread 1"]);
 //#endregion
 //#region dep2.js
 const spread$1 = ["spread 2"];
 console.log(spread$1);
+//#endregion
+//#region dep3.js
 console.log(["spread 3"]);
 //#endregion
 //#region main.js

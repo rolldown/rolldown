@@ -1,7 +1,6 @@
-// CJS interop carrier hosted in chunk A. Its `var require_carrier = __commonJSMin(...)`
-// declaration is assigned in A's chunk *body* — during the emergent cycle's evaluation, chunk B's
-// body runs before A's, so an eager read of this wrapper from B observes the unassigned var
-// (vue-vben-admin's `qe is not a function` shape).
+// CJS interop carrier hosted in chunk A. Its wrapper declaration is body-assigned, so a phantom
+// A <-> B cycle could make B read it before assignment (`require_* is not a function`). On-demand
+// routing avoids that cycle; wrap-all defers the read.
 module.exports = function carrier() {
   return 'CARRIED';
 };

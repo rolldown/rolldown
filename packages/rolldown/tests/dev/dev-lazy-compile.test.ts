@@ -2,7 +2,7 @@ import { getDevWatchOptionsForCi } from '@rolldown/test-dev-server';
 import crypto from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
-import type { InputOptions, OutputOptions } from 'rolldown';
+import type { InputOptions, OutputOptions, Plugin } from 'rolldown';
 import type { DevEngine, DevOptions } from 'rolldown/experimental';
 import { dev as _dev } from 'rolldown/experimental';
 import { SourceMapConsumer, SourceMapGenerator } from 'source-map';
@@ -221,6 +221,150 @@ test(
   },
 );
 
+test(
+  'lazy proxy modules skip user plugin hooks',
+  { timeout: TEST_TIMEOUT },
+  async ({ onTestFinished }) => {
+    const uniqueId = crypto.randomUUID().slice(0, 8);
+    const dir = path.join(import.meta.dirname, 'temp', `dev-lazy-skip-hooks-${uniqueId}`);
+    fs.mkdirSync(dir, { recursive: true });
+    const main = path.join(dir, 'main.js');
+    const lazy = path.join(dir, 'lazy.js');
+    fs.writeFileSync(main, `globalThis.load = () => import('./lazy.js');\n`);
+    fs.writeFileSync(lazy, `export const value = 1;\n`);
+
+    const seenTransformIds: string[] = [];
+    const seenModuleParsedIds: string[] = [];
+    const plugin = {
+      name: 'assert-no-lazy-proxy-hooks',
+      load: {
+        order: 'pre',
+        handler(id: string) {
+          if (id.includes('?rolldown-lazy=1')) {
+            throw new Error(`load hook saw lazy proxy id: ${id}`);
+          }
+        },
+      },
+      transform(code: string, id: string) {
+        seenTransformIds.push(id);
+        if (id.includes('?rolldown-lazy=1')) {
+          throw new Error(`transform hook saw lazy proxy id: ${id}`);
+        }
+        return code;
+      },
+      moduleParsed(moduleInfo: { id: string }) {
+        seenModuleParsedIds.push(moduleInfo.id);
+        if (moduleInfo.id.includes('?rolldown-lazy=1')) {
+          throw new Error(`moduleParsed hook saw lazy proxy id: ${moduleInfo.id}`);
+        }
+      },
+    };
+
+    const engine = await dev(
+      {
+        input: main,
+        plugins: [plugin],
+        experimental: { devMode: { lazy: true } },
+      },
+      { dir: path.join(dir, 'dist') },
+      {},
+    );
+
+    onTestFinished(async () => {
+      await engine.close();
+      if (!process.env.CI) {
+        fs.rmSync(dir, { recursive: true, force: true });
+      }
+    });
+
+    await engine.run();
+    await engine.registerClient('c1');
+    await engine.compileEntry(`${lazy}?rolldown-lazy=1`, 'c1');
+
+    expect(seenTransformIds.some((id) => id.includes('?rolldown-lazy=1'))).toBe(false);
+    expect(seenTransformIds.some((id) => id.endsWith('lazy.js'))).toBe(true);
+    expect(seenModuleParsedIds.some((id) => id.includes('?rolldown-lazy=1'))).toBe(false);
+    expect(seenModuleParsedIds.some((id) => id.endsWith('lazy.js'))).toBe(true);
+  },
+);
+
+// A virtual module behind a lazy proxy must stay loadable: re-resolving the proxy id
+// (`\0virtual:lazy-me?rolldown-lazy=1`) is claimed by the lazy compilation plugin itself
+// and never reaches user `resolveId` hooks, which only recognize the bare id.
+test(
+  'lazy proxy ids resolve without reaching user resolveId hooks',
+  { timeout: TEST_TIMEOUT },
+  async ({ onTestFinished }) => {
+    const uniqueId = crypto.randomUUID().slice(0, 8);
+    const dir = path.join(import.meta.dirname, 'temp', `dev-lazy-virtual-${uniqueId}`);
+    fs.mkdirSync(dir, { recursive: true });
+    const main = path.join(dir, 'main.js');
+    fs.writeFileSync(main, `globalThis.load = () => import('virtual:lazy-me');\n`);
+
+    const virtualId = '\0virtual:lazy-me';
+    const lazyProxyId = `${virtualId}?rolldown-lazy=1`;
+
+    const seenByOwner: string[] = [];
+    const seenByObserver: string[] = [];
+    let resolvedProxyId: string | null | undefined;
+    const virtualOwner: Plugin = {
+      name: 'virtual-owner',
+      resolveId(source) {
+        seenByOwner.push(source);
+        if (source === 'virtual:lazy-me' || source === virtualId) {
+          return virtualId;
+        }
+      },
+      load(id) {
+        if (id === virtualId) {
+          return `export const value = 1;\n`;
+        }
+      },
+      // The real module is only parsed once the proxy is fetched, so by now the proxy
+      // id is a registered lazy entry and re-resolving it must work.
+      async moduleParsed(moduleInfo) {
+        if (moduleInfo.id === virtualId) {
+          resolvedProxyId = (await this.resolve(lazyProxyId))?.id;
+        }
+      },
+    };
+    const observer: Plugin = {
+      name: 'observe-resolve-ids',
+      resolveId(source) {
+        seenByObserver.push(source);
+      },
+    };
+
+    const engine = await dev(
+      {
+        input: main,
+        plugins: [virtualOwner, observer],
+        experimental: { devMode: { lazy: true } },
+      },
+      { dir: path.join(dir, 'dist') },
+      {},
+    );
+
+    onTestFinished(async () => {
+      await engine.close();
+      if (!process.env.CI) {
+        fs.rmSync(dir, { recursive: true, force: true });
+      }
+    });
+
+    await engine.run();
+    await engine.registerClient('c1');
+    const chunk = await engine.compileEntry(lazyProxyId, 'c1');
+
+    expect(chunk.code).toContain('value');
+    expect(resolvedProxyId).toBe(lazyProxyId);
+    expect(seenByOwner.some((id) => id.includes('?rolldown-lazy=1'))).toBe(false);
+    expect(seenByObserver.some((id) => id.includes('?rolldown-lazy=1'))).toBe(false);
+    expect(seenByOwner).toContain('virtual:lazy-me');
+    expect(seenByOwner).toContain(virtualId);
+  },
+);
+
 // With `sourcemap: true` the chunk gets a `sourceMappingURL`, so the map it names
 // has to be reachable: a lazy chunk is not written to disk, which leaves the
 // return value as the only way for the consumer to serve it.
@@ -263,5 +407,120 @@ test(
       consumer.originalPositionFor(throwPosition(chunk.code)),
     );
     expect(position.line).toBe(2);
+  },
+);
+
+// `export * as ns from './dep'` and `export * from './dep'` are the same oxc node,
+// separated only by `exported`. Reading it wrong drops the name from the namespace
+// object, and the consumer sees `undefined`. The snapshot fixture
+// (crates/rolldown/tests/rolldown/topics/hmr/export_star_as) pins the HMR patch; this
+// pins the lazy chunk, which reaches the same finalizer by a different route.
+test(
+  'a lazy chunk keeps the export name of `export * as ns from`',
+  { timeout: TEST_TIMEOUT },
+  async ({ onTestFinished }) => {
+    const uniqueId = crypto.randomUUID().slice(0, 8);
+    const dir = path.join(import.meta.dirname, 'temp', `dev-lazy-export-star-as-${uniqueId}`);
+    fs.mkdirSync(dir, { recursive: true });
+    fs.writeFileSync(path.join(dir, 'main.js'), `import('./lazy.js');\n`);
+    // reachable only through the namespace re-export
+    fs.writeFileSync(path.join(dir, 'dep.js'), `export const value = 'from-dep';\n`);
+    fs.writeFileSync(path.join(dir, 'reexport.js'), `export * as NS from './dep.js';\n`);
+    fs.writeFileSync(
+      path.join(dir, 'lazy.js'),
+      `import { NS } from './reexport.js';\nexport const lazy = NS.value;\n`,
+    );
+
+    const engine = await dev(
+      {
+        input: path.join(dir, 'main.js'),
+        experimental: { devMode: { lazy: true } },
+      },
+      { dir: path.join(dir, 'dist') },
+      {},
+    );
+
+    onTestFinished(async () => {
+      await engine.close();
+      if (!process.env.CI) {
+        fs.rmSync(dir, { recursive: true, force: true });
+      }
+    });
+
+    await engine.run();
+
+    const chunk = await engine.compileEntry(
+      `${path.join(dir, 'lazy.js')}?rolldown-lazy=1`,
+      'export-star-as-client',
+    );
+
+    // the namespace object carries `NS`, rather than `dep.js`'s own exports being
+    // spread onto the re-exporting module the way `export *` would
+    expect(chunk.code).toMatch(/NS:\s*\(\)\s*=>/);
+    expect(chunk.code).not.toMatch(/__reExport\(/);
+  },
+);
+
+// The dev runtime registry only holds modules this build wrapped, so an external can
+// only be reached through a real import statement. The three re-export forms used to
+// ask the registry for it instead, which yields `{}`; and when the same module also
+// imported that external, the two paths emitted one binding name twice, the inner
+// `var` shadowing the real import.
+test(
+  'a lazy chunk imports externals it re-exports instead of asking the registry',
+  { timeout: TEST_TIMEOUT },
+  async ({ onTestFinished }) => {
+    const uniqueId = crypto.randomUUID().slice(0, 8);
+    const dir = path.join(import.meta.dirname, 'temp', `dev-lazy-reexport-external-${uniqueId}`);
+    fs.mkdirSync(dir, { recursive: true });
+    fs.writeFileSync(path.join(dir, 'main.js'), `import('./lazy.js');\n`);
+    // reachable only through the lazy chunk, and re-exports the external three ways
+    // while also importing it — the case that produced the shadowing `var`
+    fs.writeFileSync(
+      path.join(dir, 'reexport.js'),
+      `import { helper } from 'external-dep';\n` +
+        `export { helper as reHelper } from 'external-dep';\n` +
+        `export * as EXT from 'external-dep';\n` +
+        `export * from 'external-dep';\n` +
+        `export const helperType = typeof helper;\n`,
+    );
+    fs.writeFileSync(
+      path.join(dir, 'lazy.js'),
+      `import { EXT, reHelper, helperType } from './reexport.js';\n` +
+        `export const lazy = [EXT, reHelper, helperType];\n`,
+    );
+
+    const engine = await dev(
+      {
+        input: path.join(dir, 'main.js'),
+        external: ['external-dep'],
+        experimental: { devMode: { lazy: true } },
+      },
+      { dir: path.join(dir, 'dist') },
+      {},
+    );
+
+    onTestFinished(async () => {
+      await engine.close();
+      if (!process.env.CI) {
+        fs.rmSync(dir, { recursive: true, force: true });
+      }
+    });
+
+    await engine.run();
+
+    const chunk = await engine.compileEntry(
+      `${path.join(dir, 'lazy.js')}?rolldown-lazy=1`,
+      'reexport-external-client',
+    );
+
+    const bindings = [...chunk.code.matchAll(/import \* as (\w+) from "external-dep"/g)].map(
+      (match) => match[1],
+    );
+    expect(bindings).toHaveLength(1);
+    // the registry never holds an external, so nothing may look it up there
+    expect(chunk.code).not.toMatch(/loadExports\("external-dep"\)/);
+    // and the one binding is declared once, so the import is not shadowed
+    expect(chunk.code).not.toMatch(new RegExp(`var\\s+${bindings[0]}\\b`));
   },
 );

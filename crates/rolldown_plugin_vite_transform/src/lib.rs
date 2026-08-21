@@ -27,9 +27,14 @@ pub struct ViteTransformPlugin {
 }
 
 impl ViteTransformPlugin {
-  pub fn new_resolver(yarn_pnp: bool) -> oxc_resolver::Resolver {
+  pub fn new_resolver(yarn_pnp: bool, tsconfig: Option<PathBuf>) -> oxc_resolver::Resolver {
     oxc_resolver::Resolver::new(oxc_resolver::ResolveOptions {
-      tsconfig: Some(oxc_resolver::TsconfigDiscovery::Auto),
+      tsconfig: Some(tsconfig.map_or(oxc_resolver::TsconfigDiscovery::Auto, |config_file| {
+        oxc_resolver::TsconfigDiscovery::Manual(oxc_resolver::TsconfigOptions {
+          config_file,
+          references: oxc_resolver::TsconfigReferences::Auto,
+        })
+      })),
       yarn_pnp,
       ..Default::default()
     })

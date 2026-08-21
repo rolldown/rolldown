@@ -19,18 +19,15 @@ use oxc::{
   allocator::{self, GetAllocator, IntoIn},
   ast::{
     ast::{
-      Argument, ArrowFunctionExpression, AssignmentExpression, AssignmentOperator,
-      AssignmentTarget, BindingIdentifier, BindingPattern, CallExpression, ClassElement,
-      Declaration, ExportDefaultDeclarationKind, ExportSpecifier, Expression, ExpressionStatement,
-      FormalParameter, FormalParameterKind, FormalParameters, Function, FunctionBody, FunctionType,
-      IdentifierName, IdentifierReference, ImportDeclaration, ImportDeclarationSpecifier,
-      ImportNamespaceSpecifier, ImportOrExportKind, MemberExpression, ModuleDeclaration,
-      ModuleExportName, NumberBase, ObjectExpression, ObjectPropertyKind, ParenthesizedExpression,
-      PropertyKey, PropertyKind, ReturnStatement, SequenceExpression, SimpleAssignmentTarget,
-      Statement, StaticMemberExpression, StringLiteral, VariableDeclaration,
-      VariableDeclarationKind, VariableDeclarator,
+      Argument, ArrowFunctionBody, ArrowFunctionExpression, AssignmentOperator, AssignmentTarget,
+      BindingIdentifier, BindingPattern, CallExpression, ClassElement,
+      ExportDefaultDeclarationKind, ExportSpecifier, Expression, FormalParameter,
+      FormalParameterKind, FormalParameters, FunctionBody, FunctionType, IdentifierName,
+      ImportDeclarationSpecifier, ImportOrExportKind, MemberExpression, ModuleExportName,
+      NumberBase, ObjectExpression, ObjectPropertyKind, PropertyKey, PropertyKind, Statement,
+      StringLiteral, VariableDeclarationKind, VariableDeclarator,
     },
-    builder::{GetAstBuilder, NONE},
+    builder::GetAstBuilder,
   },
   span::{GetSpanMut, SPAN, Span},
 };
@@ -82,26 +79,15 @@ pub trait ExpressionFactoryExt<'ast> {
     expr: Expression<'ast>,
     builder: &B,
   ) -> Expression<'ast> {
-    let statements = oxc::allocator::Vec::from_value_in(
-      Statement::ExpressionStatement(ExpressionStatement::boxed(SPAN, expr, builder)),
-      builder,
-    );
-    Expression::ArrowFunctionExpression(ArrowFunctionExpression::boxed(
+    Expression::new_arrow_function_expression(
       SPAN,
-      true,
       false,
-      NONE,
-      FormalParameters::new(
-        SPAN,
-        FormalParameterKind::Signature,
-        oxc::allocator::Vec::new_in(builder),
-        NONE,
-        builder,
-      ),
-      NONE,
-      FunctionBody::new(SPAN, oxc::allocator::Vec::new_in(builder), statements, builder),
+      None,
+      FormalParameters::boxed(SPAN, FormalParameterKind::Signature, [], None, builder),
+      None,
+      ArrowFunctionBody::from(expr),
       builder,
-    ))
+    )
   }
 
   /// `<object>.<property>` as an `Expression`.
@@ -120,8 +106,7 @@ pub trait ExpressionFactoryExt<'ast> {
     pure: bool,
     builder: &B,
   ) -> Expression<'ast> {
-    let mut call_expr =
-      CallExpression::new(SPAN, callee, NONE, oxc::allocator::Vec::new_in(builder), false, builder);
+    let mut call_expr = CallExpression::new(SPAN, callee, None, [], false, builder);
     call_expr.pure = pure;
     call_expr.arguments.push(arg.into());
     Expression::CallExpression(call_expr.into_in(builder.allocator()))
@@ -132,40 +117,33 @@ pub trait ExpressionFactoryExt<'ast> {
     expr: Expression<'ast>,
     builder: &B,
   ) -> Expression<'ast> {
-    Expression::CallExpression(CallExpression::boxed(
+    Expression::new_call_expression(
       SPAN,
-      Expression::StaticMemberExpression(StaticMemberExpression::boxed(
+      Expression::new_static_member_expression(
         SPAN,
-        Expression::CallExpression(CallExpression::boxed(
+        Expression::new_call_expression(
           SPAN,
-          Expression::StaticMemberExpression(StaticMemberExpression::boxed(
+          Expression::new_static_member_expression(
             SPAN,
-            Expression::new_identifier(
-              SPAN,
-              oxc::ast::ast::Str::from_str_in("Promise", builder),
-              builder,
-            ),
-            IdentifierName::new(SPAN, oxc::ast::ast::Str::from_str_in("resolve", builder), builder),
+            Expression::new_identifier(SPAN, "Promise", builder),
+            IdentifierName::new(SPAN, "resolve", builder),
             false,
             builder,
-          )),
-          NONE,
-          oxc::allocator::Vec::new_in(builder),
+          ),
+          None,
+          [],
           false,
           builder,
-        )),
-        IdentifierName::new(SPAN, oxc::ast::ast::Str::from_str_in("then", builder), builder),
+        ),
+        IdentifierName::new(SPAN, "then", builder),
         false,
         builder,
-      )),
-      NONE,
-      oxc::allocator::Vec::from_value_in(
-        Argument::from(Expression::new_arrow_returning(expr, builder)),
-        builder,
       ),
+      None,
+      [Argument::from(Expression::new_arrow_returning(expr, builder))],
       false,
       builder,
-    ))
+    )
   }
 
   /// `None` → `<call_expr>`; `Babel` → `__toESM(<call_expr>)`; `Node` → `__toESM(<call_expr>, 1)`.
@@ -183,13 +161,7 @@ pub trait ExpressionFactoryExt<'ast> {
       Some(Interop::Node) => oxc::allocator::Vec::from_iter_in(
         [
           Argument::from(call_expr),
-          Argument::from(Expression::new_numeric_literal(
-            SPAN,
-            1.0,
-            None,
-            NumberBase::Decimal,
-            builder,
-          )),
+          Argument::new_numeric_literal(SPAN, 1.0, None, NumberBase::Decimal, builder),
         ],
         builder,
       ),
@@ -201,7 +173,7 @@ pub trait ExpressionFactoryExt<'ast> {
         oxc::ast::ast::Str::from_str_in(to_esm_fn_name, builder),
         builder,
       ),
-      NONE,
+      None,
       arguments,
       false,
       builder,
@@ -217,11 +189,11 @@ pub trait ExpressionFactoryExt<'ast> {
     let mut expressions = oxc::allocator::Vec::with_capacity_in(2, builder);
     expressions.push(a);
     expressions.push(b);
-    Expression::ParenthesizedExpression(ParenthesizedExpression::boxed(
+    Expression::new_parenthesized_expression(
       SPAN,
-      Expression::SequenceExpression(SequenceExpression::boxed(SPAN, expressions, builder)),
+      Expression::new_sequence_expression(SPAN, expressions, builder),
       builder,
-    ))
+    )
   }
 
   /// `<object>.<prop>.<prop>...` — chains member access for each prop, then sets the span.
@@ -234,7 +206,7 @@ pub trait ExpressionFactoryExt<'ast> {
     let mut cur = object;
     for prop in props {
       cur = if oxc::syntax::identifier::is_identifier_name(&prop.name) {
-        Expression::from(MemberExpression::new_static_member_expression(
+        Expression::new_static_member_expression(
           SPAN,
           cur,
           IdentifierName::new(
@@ -244,9 +216,9 @@ pub trait ExpressionFactoryExt<'ast> {
           ),
           prop.optional,
           builder,
-        ))
+        )
       } else {
-        Expression::from(MemberExpression::new_computed_member_expression(
+        Expression::new_computed_member_expression(
           SPAN,
           cur,
           Expression::new_string_literal(
@@ -257,7 +229,7 @@ pub trait ExpressionFactoryExt<'ast> {
           ),
           prop.optional,
           builder,
-        ))
+        )
       };
     }
     *cur.span_mut() = span;
@@ -294,7 +266,7 @@ pub trait ExpressionFactoryExt<'ast> {
     Expression::new_call_expression_with_pure(
       SPAN,
       callee,
-      NONE,
+      None,
       {
         let mut items = oxc::allocator::Vec::with_capacity_in(2, builder);
         items.push(target.into());
@@ -326,28 +298,22 @@ pub trait ExpressionFactoryExt<'ast> {
       oxc::allocator::Vec::from_iter_in(
         [
           Argument::from(expr),
-          Argument::from(Expression::new_numeric_literal(
-            SPAN,
-            1.0,
-            None,
-            NumberBase::Decimal,
-            builder,
-          )),
+          Argument::new_numeric_literal(SPAN, 1.0, None, NumberBase::Decimal, builder),
         ],
         builder,
       )
     } else {
       oxc::allocator::Vec::from_value_in(Argument::from(expr), builder)
     };
-    Expression::CallExpression(CallExpression::boxed_with_pure(
+    Expression::new_call_expression_with_pure(
       SPAN,
       to_esm_fn_expr,
-      NONE,
+      None,
       args,
       false,
       true,
       builder,
-    ))
+    )
   }
 
   /// `<call_expr>.then(() => <return_expr>)`
@@ -356,23 +322,20 @@ pub trait ExpressionFactoryExt<'ast> {
     return_expr: Expression<'ast>,
     builder: &B,
   ) -> Expression<'ast> {
-    Expression::CallExpression(CallExpression::boxed(
+    Expression::new_call_expression(
       SPAN,
-      Expression::StaticMemberExpression(StaticMemberExpression::boxed(
+      Expression::new_static_member_expression(
         SPAN,
         call_expr,
         IdentifierName::new(SPAN, "then", builder),
         false,
         builder,
-      )),
-      NONE,
-      oxc::allocator::Vec::from_value_in(
-        Argument::from(Expression::new_arrow_returning(return_expr, builder)),
-        builder,
       ),
+      None,
+      [Argument::from(Expression::new_arrow_returning(return_expr, builder))],
       false,
       builder,
-    ))
+    )
   }
 }
 
@@ -414,13 +377,13 @@ pub trait MemberExpressionFactoryExt<'ast> {
     property: &str,
     builder: &B,
   ) -> MemberExpression<'ast> {
-    MemberExpression::StaticMemberExpression(StaticMemberExpression::boxed(
+    MemberExpression::new_static_member_expression(
       SPAN,
       Expression::new_id_ref_expr(SPAN, object, builder),
       IdentifierName::new_id_name(SPAN, property, builder),
       false,
       builder,
-    ))
+    )
   }
 }
 
@@ -439,12 +402,12 @@ pub trait ObjectPropertyKindFactoryExt<'ast> {
       SPAN,
       PropertyKind::Init,
       if computed {
-        PropertyKey::from(Expression::new_string_literal(
+        PropertyKey::new_string_literal(
           SPAN,
           oxc::ast::ast::Str::from_str_in(key, builder),
           None,
           builder,
-        ))
+        )
       } else {
         PropertyKey::new_static_identifier(
           SPAN,
@@ -473,34 +436,31 @@ pub trait ClassElementFactoryExt<'ast> {
   ) -> ClassElement<'ast> {
     ClassElement::new_static_block(
       SPAN,
-      oxc::allocator::Vec::from_value_in(
-        Statement::new_expression_statement(
+      [Statement::new_expression_statement(
+        SPAN,
+        Expression::new_call_expression(
           SPAN,
-          Expression::new_call_expression(
-            SPAN,
-            callee,
-            NONE,
-            {
-              let mut items = oxc::allocator::Vec::with_capacity_in(2, builder);
-              items.push(Expression::new_this_expression(SPAN, builder).into());
-              items.push(
-                Expression::new_string_literal(
-                  SPAN,
-                  oxc::ast::ast::Str::from_str_in(name, builder),
-                  None,
-                  builder,
-                )
-                .into(),
-              );
-              items
-            },
-            false,
-            builder,
-          ),
+          callee,
+          None,
+          {
+            let mut items = oxc::allocator::Vec::with_capacity_in(2, builder);
+            items.push(Expression::new_this_expression(SPAN, builder).into());
+            items.push(
+              Expression::new_string_literal(
+                SPAN,
+                oxc::ast::ast::Str::from_str_in(name, builder),
+                None,
+                builder,
+              )
+              .into(),
+            );
+            items
+          },
+          false,
           builder,
         ),
         builder,
-      ),
+      )],
       builder,
     )
   }
@@ -518,7 +478,7 @@ pub trait CallExpressionFactoryExt<'ast> {
     builder: &B,
   ) -> CallExpression<'ast> {
     let args = oxc::allocator::Vec::from_iter_in([first_arg.into(), second_arg.into()], builder);
-    CallExpression::new(SPAN, re_export_fn_ref, NONE, args, false, builder)
+    CallExpression::new(SPAN, re_export_fn_ref, None, args, false, builder)
   }
 
   /// `<expr>.then(n => n.<property_name>)`
@@ -529,47 +489,60 @@ pub trait CallExpressionFactoryExt<'ast> {
   ) -> allocator::Box<'ast, CallExpression<'ast>> {
     debug_assert!(is_validate_identifier_name(property_name));
     // `n.<property_name>`
-    let member = Expression::StaticMemberExpression(StaticMemberExpression::boxed(
+    let member = Expression::new_static_member_expression(
       SPAN,
       Expression::new_identifier(SPAN, "n", builder),
       IdentifierName::new(SPAN, oxc::ast::ast::Str::from_str_in(property_name, builder), builder),
       false,
       builder,
-    ));
+    );
     then_with_arrow_callback(expr, member, builder)
   }
 
-  /// `<expr>.then(n => (n.<wrapper_name>(), n.<namespace_name>))`
-  fn new_then_call_esm_wrapper_with_namespace<B: GetAstBuilder<'ast> + GetAllocator<'ast>>(
+  /// `<expr>.then(n => (n.<wrapper_name>()..., n.<namespace_name>))`
+  fn new_then_call_esm_wrappers_with_namespace<B: GetAstBuilder<'ast> + GetAllocator<'ast>>(
     expr: Expression<'ast>,
-    wrapper_name: &str,
+    wrapper_names: &[&str],
     namespace_name: &str,
     builder: &B,
   ) -> allocator::Box<'ast, CallExpression<'ast>> {
-    let wrapper_member = Expression::StaticMemberExpression(StaticMemberExpression::boxed(
-      SPAN,
-      Expression::new_identifier(SPAN, "n", builder),
-      IdentifierName::new(SPAN, oxc::ast::ast::Str::from_str_in(wrapper_name, builder), builder),
-      false,
-      builder,
-    ));
-    let wrapper_call = Expression::new_call_expression(
-      SPAN,
-      wrapper_member,
-      NONE,
-      oxc::allocator::Vec::new_in(builder),
-      false,
-      builder,
-    );
-    let namespace_member = Expression::StaticMemberExpression(StaticMemberExpression::boxed(
+    let mut expressions = allocator::Vec::with_capacity_in(wrapper_names.len() + 1, builder);
+    for wrapper_name in wrapper_names {
+      debug_assert!(is_validate_identifier_name(wrapper_name));
+      let wrapper_member = Expression::new_static_member_expression(
+        SPAN,
+        Expression::new_identifier(SPAN, "n", builder),
+        IdentifierName::new(SPAN, oxc::ast::ast::Str::from_str_in(wrapper_name, builder), builder),
+        false,
+        builder,
+      );
+      expressions.push(Expression::new_call_expression(
+        SPAN,
+        wrapper_member,
+        None,
+        [],
+        false,
+        builder,
+      ));
+    }
+    debug_assert!(is_validate_identifier_name(namespace_name));
+    let namespace_member = Expression::new_static_member_expression(
       SPAN,
       Expression::new_identifier(SPAN, "n", builder),
       IdentifierName::new(SPAN, oxc::ast::ast::Str::from_str_in(namespace_name, builder), builder),
       false,
       builder,
-    ));
-    let seq_expr = Expression::new_seq_in_parens(wrapper_call, namespace_member, builder);
-    then_with_arrow_callback(expr, seq_expr, builder)
+    );
+    if expressions.is_empty() {
+      return then_with_arrow_callback(expr, namespace_member, builder);
+    }
+    expressions.push(namespace_member);
+    let sequence = Expression::new_parenthesized_expression(
+      SPAN,
+      Expression::new_sequence_expression(SPAN, expressions, builder),
+      builder,
+    );
+    then_with_arrow_callback(expr, sequence, builder)
   }
 
   /// `<expr>.then(n => __toESM(n.<property_name>()))`
@@ -580,21 +553,14 @@ pub trait CallExpressionFactoryExt<'ast> {
     node_mode: bool,
     builder: &B,
   ) -> allocator::Box<'ast, CallExpression<'ast>> {
-    let member_expr = Expression::StaticMemberExpression(StaticMemberExpression::boxed(
+    let member_expr = Expression::new_static_member_expression(
       SPAN,
       Expression::new_identifier(SPAN, "n", builder),
       IdentifierName::new(SPAN, oxc::ast::ast::Str::from_str_in(property_name, builder), builder),
       false,
       builder,
-    ));
-    let wrapper_call = Expression::new_call_expression(
-      SPAN,
-      member_expr,
-      NONE,
-      oxc::allocator::Vec::new_in(builder),
-      false,
-      builder,
     );
+    let wrapper_call = Expression::new_call_expression(SPAN, member_expr, None, [], false, builder);
     let to_esm_call =
       Expression::new_to_esm_wrapper(to_esm_fn_expr, wrapper_call, node_mode, builder);
     then_with_arrow_callback(expr, to_esm_call, builder)
@@ -614,13 +580,12 @@ pub trait StatementFactoryExt<'ast> {
     let declarations = oxc::allocator::Vec::from_value_in(
       VariableDeclarator::new(
         SPAN,
-        VariableDeclarationKind::Var,
         BindingPattern::new_binding_identifier(
           SPAN,
           oxc::ast::ast::Str::from_str_in(name, builder),
           builder,
         ),
-        NONE,
+        None,
         Some(init),
         false,
         builder,
@@ -628,13 +593,43 @@ pub trait StatementFactoryExt<'ast> {
       builder,
     );
 
-    Statement::from(Declaration::VariableDeclaration(VariableDeclaration::boxed(
+    Statement::new_variable_declaration(
       SPAN,
       VariableDeclarationKind::Var,
       declarations,
       false,
       builder,
-    )))
+    )
+  }
+
+  /// `var <name>;`
+  fn new_var_decl_no_init<B: GetAstBuilder<'ast> + GetAllocator<'ast>>(
+    name: &str,
+    builder: &B,
+  ) -> Statement<'ast> {
+    let declarations = oxc::allocator::Vec::from_value_in(
+      VariableDeclarator::new(
+        SPAN,
+        BindingPattern::new_binding_identifier(
+          SPAN,
+          oxc::ast::ast::Str::from_str_in(name, builder),
+          builder,
+        ),
+        None,
+        None,
+        false,
+        builder,
+      ),
+      builder,
+    );
+
+    Statement::new_variable_declaration(
+      SPAN,
+      VariableDeclarationKind::Var,
+      declarations,
+      false,
+      builder,
+    )
   }
 
   /// `export default <expr>`
@@ -642,11 +637,11 @@ pub trait StatementFactoryExt<'ast> {
     expr: Expression<'ast>,
     builder: &B,
   ) -> Statement<'ast> {
-    Statement::from(ModuleDeclaration::new_export_default_declaration(
+    Statement::new_export_default_declaration(
       SPAN,
       ExportDefaultDeclarationKind::from(expr),
       builder,
-    ))
+    )
   }
 
   /// `module.exports = <expr>`
@@ -659,15 +654,13 @@ pub trait StatementFactoryExt<'ast> {
       Expression::new_assignment_expression(
         SPAN,
         AssignmentOperator::Assign,
-        AssignmentTarget::from(SimpleAssignmentTarget::from(
-          MemberExpression::new_static_member_expression(
-            SPAN,
-            Expression::new_identifier(SPAN, "module", builder),
-            IdentifierName::new(SPAN, "exports", builder),
-            false,
-            builder,
-          ),
-        )),
+        AssignmentTarget::new_static_member_expression(
+          SPAN,
+          Expression::new_identifier(SPAN, "module", builder),
+          IdentifierName::new(SPAN, "exports", builder),
+          false,
+          builder,
+        ),
         expr,
         builder,
       ),
@@ -675,20 +668,15 @@ pub trait StatementFactoryExt<'ast> {
     )
   }
 
-  /// `export { <local> as <exported>, ... };`, optionally with a `declaration`.
-  fn new_export_named_stmt<'a, T, I, B>(
-    declaration: Option<Declaration<'ast>>,
-    specifiers: I,
-    builder: &B,
-  ) -> Statement<'ast>
+  /// `export { <local> as <exported>, ... };`.
+  fn new_export_named_stmt<'a, T, I, B>(specifiers: I, builder: &B) -> Statement<'ast>
   where
     T: AsRef<str> + 'a,
     I: Iterator<Item = (&'a T, &'a (T, bool))>,
     B: GetAstBuilder<'ast> + GetAllocator<'ast>,
   {
-    Statement::from(ModuleDeclaration::new_export_named_declaration(
+    Statement::new_export_named_declaration(
       SPAN,
-      declaration,
       oxc::allocator::Vec::from_iter_in(
         specifiers.into_iter().map(|(local, (exported, legal_ident))| {
           ExportSpecifier::new(
@@ -718,11 +706,9 @@ pub trait StatementFactoryExt<'ast> {
         }),
         builder,
       ),
-      None,
       ImportOrExportKind::Value,
-      NONE,
       builder,
-    ))
+    )
   }
 
   /// `import * as <as_name> from "<source>";`
@@ -732,22 +718,22 @@ pub trait StatementFactoryExt<'ast> {
     builder: &B,
   ) -> Statement<'ast> {
     let specifiers = oxc::allocator::Vec::from_value_in(
-      ImportDeclarationSpecifier::ImportNamespaceSpecifier(ImportNamespaceSpecifier::boxed(
+      ImportDeclarationSpecifier::new_import_namespace_specifier(
         SPAN,
         BindingIdentifier::new(SPAN, oxc::ast::ast::Str::from_str_in(as_name, builder), builder),
         builder,
-      )),
+      ),
       builder,
     );
-    Statement::ImportDeclaration(ImportDeclaration::boxed(
+    Statement::new_import_declaration(
       SPAN,
       Some(specifiers),
       StringLiteral::new(SPAN, oxc::ast::ast::Str::from_str_in(source, builder), None, builder),
       None,
-      NONE,
+      None,
       ImportOrExportKind::Value,
       builder,
-    ))
+    )
   }
 
   /// `var <binding_name> = __commonJS(... (exports, module) => { <statements> } ...)`
@@ -762,21 +748,21 @@ pub trait StatementFactoryExt<'ast> {
     is_async: bool,
     builder: &B,
   ) -> Statement<'ast> {
-    let mut params = FormalParameters::new(
+    let mut params = FormalParameters::boxed(
       SPAN,
       FormalParameterKind::Signature,
       oxc::allocator::Vec::with_capacity_in(1, builder),
-      NONE,
+      None,
       builder,
     );
-    let body = FunctionBody::new(SPAN, oxc::allocator::Vec::new_in(builder), statements, builder);
+    let body = FunctionBody::boxed(SPAN, [], statements, builder);
     if ast_usage.intersects(EcmaModuleAstUsage::ModuleOrExports) {
       params.items.push(FormalParameter::new(
         SPAN,
-        oxc::allocator::Vec::new_in(builder),
+        [],
         BindingPattern::new_binding_identifier(SPAN, "exports", builder),
-        NONE,
-        NONE,
+        None,
+        None,
         false,
         None,
         false,
@@ -787,10 +773,10 @@ pub trait StatementFactoryExt<'ast> {
     if ast_usage.contains(EcmaModuleAstUsage::ModuleRef) {
       params.items.push(FormalParameter::new(
         SPAN,
-        oxc::allocator::Vec::new_in(builder),
+        [],
         BindingPattern::new_binding_identifier(SPAN, "module", builder),
-        NONE,
-        NONE,
+        None,
+        None,
         false,
         None,
         false,
@@ -798,39 +784,36 @@ pub trait StatementFactoryExt<'ast> {
         builder,
       ));
     }
-    let mut commonjs_call_expr = CallExpression::new_with_pure(
+    let mut commonjs_call_expr =
+      CallExpression::new_with_pure(SPAN, commonjs_expr, None, [], false, true, builder);
+    let mut arrow_expr = ArrowFunctionExpression::boxed(
       SPAN,
-      commonjs_expr,
-      NONE,
-      oxc::allocator::Vec::new_in(builder),
-      false,
-      true,
+      is_async,
+      None,
+      params,
+      None,
+      ArrowFunctionBody::FunctionBody(body),
       builder,
     );
-    let mut arrow_expr =
-      ArrowFunctionExpression::boxed(SPAN, false, is_async, NONE, params, NONE, body, builder);
     arrow_expr.pife = true;
     if profiler_names {
       let obj_expr = ObjectExpression::boxed(
         SPAN,
-        oxc::allocator::Vec::from_value_in(
-          ObjectPropertyKind::new_object_property(
+        [ObjectPropertyKind::new_object_property(
+          SPAN,
+          PropertyKind::Init,
+          PropertyKey::new_string_literal(
             SPAN,
-            PropertyKind::Init,
-            PropertyKey::from(Expression::new_string_literal(
-              SPAN,
-              oxc::ast::ast::Str::from_str_in(stable_id, builder),
-              None,
-              builder,
-            )),
-            Expression::ArrowFunctionExpression(arrow_expr),
-            true,
-            false,
-            false,
+            oxc::ast::ast::Str::from_str_in(stable_id, builder),
+            None,
             builder,
           ),
+          Expression::ArrowFunctionExpression(arrow_expr),
+          true,
+          false,
+          false,
           builder,
-        ),
+        )],
         builder,
       );
       commonjs_call_expr.arguments.push(Argument::ObjectExpression(obj_expr));
@@ -860,54 +843,37 @@ pub trait StatementFactoryExt<'ast> {
       body_kind,
       decl_kind,
     } = options;
-    let params = FormalParameters::new(
-      SPAN,
-      FormalParameterKind::Signature,
-      oxc::allocator::Vec::new_in(builder),
-      NONE,
-      builder,
-    );
-    let body = FunctionBody::new(SPAN, oxc::allocator::Vec::new_in(builder), statements, builder);
-    let mut esm_call_expr = CallExpression::new(
-      SPAN,
-      esm_fn_expr,
-      NONE,
-      oxc::allocator::Vec::new_in(builder),
-      false,
-      builder,
-    );
+    let params = FormalParameters::boxed(SPAN, FormalParameterKind::Signature, [], None, builder);
+    let body = FunctionBody::boxed(SPAN, [], statements, builder);
+    let mut esm_call_expr = CallExpression::new(SPAN, esm_fn_expr, None, [], false, builder);
     let mut arrow_expr = ArrowFunctionExpression::boxed(
       SPAN,
-      false,
       matches!(body_kind, EsmWrapperBodyKind::Async),
-      NONE,
+      None,
       params,
-      NONE,
-      body,
+      None,
+      ArrowFunctionBody::FunctionBody(body),
       builder,
     );
     arrow_expr.pife = matches!(call_kind, EsmWrapperCallKind::Pife);
     if let Some(stable_id) = profiler_name {
       let obj_expr = ObjectExpression::boxed(
         SPAN,
-        oxc::allocator::Vec::from_value_in(
-          ObjectPropertyKind::new_object_property(
+        [ObjectPropertyKind::new_object_property(
+          SPAN,
+          PropertyKind::Init,
+          PropertyKey::new_string_literal(
             SPAN,
-            PropertyKind::Init,
-            PropertyKey::from(Expression::new_string_literal(
-              SPAN,
-              oxc::ast::ast::Str::from_str_in(stable_id, builder),
-              None,
-              builder,
-            )),
-            Expression::ArrowFunctionExpression(arrow_expr),
-            false,
-            false,
-            false,
+            oxc::ast::ast::Str::from_str_in(stable_id, builder),
+            None,
             builder,
           ),
+          Expression::ArrowFunctionExpression(arrow_expr),
+          false,
+          false,
+          false,
           builder,
-        ),
+        )],
         builder,
       );
       esm_call_expr.arguments.push(Argument::ObjectExpression(obj_expr));
@@ -921,26 +887,20 @@ pub trait StatementFactoryExt<'ast> {
         builder,
       );
     }
-    let assignment_expr = Expression::AssignmentExpression(AssignmentExpression::boxed(
+    let assignment_expr = Expression::new_assignment_expression(
       SPAN,
       AssignmentOperator::Assign,
-      AssignmentTarget::AssignmentTargetIdentifier(IdentifierReference::boxed(
+      AssignmentTarget::new_assignment_target_identifier(
         SPAN,
         oxc::ast::ast::Str::from_str_in(binding_name, builder),
         builder,
-      )),
+      ),
       Expression::CallExpression(esm_call_expr.into_in(builder.allocator())),
       builder,
-    ));
-    let call_expr = Expression::new_call_expression(
-      SPAN,
-      assignment_expr,
-      NONE,
-      oxc::allocator::Vec::new_in(builder),
-      false,
-      builder,
     );
-    Statement::FunctionDeclaration(Function::boxed(
+    let call_expr =
+      Expression::new_call_expression(SPAN, assignment_expr, None, [], false, builder);
+    Statement::new_function_declaration(
       SPAN,
       FunctionType::FunctionDeclaration,
       Some(BindingIdentifier::new(
@@ -951,27 +911,18 @@ pub trait StatementFactoryExt<'ast> {
       false,
       false,
       false,
-      NONE,
-      NONE,
-      FormalParameters::new(
+      None,
+      None,
+      FormalParameters::boxed(SPAN, FormalParameterKind::Signature, [], None, builder),
+      None,
+      Some(FunctionBody::boxed(
         SPAN,
-        FormalParameterKind::Signature,
-        oxc::allocator::Vec::new_in(builder),
-        NONE,
-        builder,
-      ),
-      NONE,
-      Some(FunctionBody::new(
-        SPAN,
-        oxc::allocator::Vec::new_in(builder),
-        oxc::allocator::Vec::from_value_in(
-          Statement::ReturnStatement(ReturnStatement::boxed(SPAN, Some(call_expr), builder)),
-          builder,
-        ),
+        [],
+        [Statement::new_return_statement(SPAN, Some(call_expr), builder)],
         builder,
       )),
       builder,
-    ))
+    )
   }
 }
 
@@ -983,64 +934,38 @@ fn then_with_arrow_callback<'ast, B: GetAstBuilder<'ast> + GetAllocator<'ast>>(
   return_expr: Expression<'ast>,
   builder: &B,
 ) -> allocator::Box<'ast, CallExpression<'ast>> {
-  let arrow_fn = ArrowFunctionExpression::boxed(
+  let arrow_fn = Argument::new_arrow_function_expression(
     SPAN,
-    true,
     false,
-    NONE,
-    FormalParameters::new(
+    None,
+    FormalParameters::boxed(
       SPAN,
       FormalParameterKind::ArrowFormalParameters,
-      oxc::allocator::Vec::from_value_in(
-        FormalParameter::new(
-          SPAN,
-          oxc::allocator::Vec::new_in(builder),
-          BindingPattern::new_binding_identifier(
-            SPAN,
-            oxc::ast::ast::Str::from_str_in("n", builder),
-            builder,
-          ),
-          NONE,
-          NONE,
-          false,
-          None,
-          false,
-          false,
-          builder,
-        ),
+      [FormalParameter::new(
+        SPAN,
+        [],
+        BindingPattern::new_binding_identifier(SPAN, "n", builder),
+        None,
+        None,
+        false,
+        None,
+        false,
+        false,
         builder,
-      ),
-      NONE,
+      )],
+      None,
       builder,
     ),
-    NONE,
-    FunctionBody::new(
-      SPAN,
-      oxc::allocator::Vec::new_in(builder),
-      oxc::allocator::Vec::from_value_in(
-        Statement::ExpressionStatement(ExpressionStatement::boxed(SPAN, return_expr, builder)),
-        builder,
-      ),
-      builder,
-    ),
+    None,
+    ArrowFunctionBody::from(return_expr),
     builder,
   );
-  let callee = StaticMemberExpression::boxed(
+  let callee = Expression::new_static_member_expression(
     SPAN,
     expr,
     IdentifierName::new(SPAN, "then", builder),
     false,
     builder,
   );
-  CallExpression::boxed(
-    SPAN,
-    Expression::StaticMemberExpression(callee),
-    NONE,
-    oxc::allocator::Vec::from_value_in(
-      Expression::ArrowFunctionExpression(arrow_fn).into(),
-      builder,
-    ),
-    false,
-    builder,
-  )
+  CallExpression::boxed(SPAN, callee, None, [arrow_fn], false, builder)
 }

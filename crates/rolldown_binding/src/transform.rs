@@ -23,7 +23,7 @@ fn resolve_tsconfig_from_cache(
   let Some(tsconfig_cache) = cache else {
     return Ok(());
   };
-  if !matches!(options.tsconfig, Some(TsconfigOption::Auto) | None) {
+  if matches!(options.tsconfig, Some(TsconfigOption::Config(_) | TsconfigOption::Disabled)) {
     return Ok(());
   }
 
@@ -120,7 +120,8 @@ pub fn resolve_tsconfig(
   cache: Option<&TsconfigCache>,
   yarn_pnp: bool,
 ) -> napi::Result<Option<BindingTsconfigResult>> {
-  let tsconfig_cache = if let Some(cache) = cache { cache } else { &TsconfigCache::new(yarn_pnp) };
+  let tsconfig_cache =
+    if let Some(cache) = cache { cache } else { &TsconfigCache::new(yarn_pnp, None) };
 
   match tsconfig_cache.find_tsconfig(Path::new(&filename)) {
     Ok(Some(tsconfig)) => Ok(Some(tsconfig.as_ref().clone().into())),

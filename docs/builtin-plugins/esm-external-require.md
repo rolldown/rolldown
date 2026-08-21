@@ -39,6 +39,10 @@ export default defineConfig({
 });
 ```
 
+:::warning The plugin must own its externals
+List each module in this plugin's `external` option or in the top-level `external` option, never both. Top-level `external` wins during resolution, so the plugin skips duplicated modules entirely. The build succeeds with a warning while the output keeps calling `require()` on the external module at runtime.
+:::
+
 ## Options
 
 ### `external`
@@ -69,7 +73,9 @@ By default, the plugin checks if any externals you specify are also configured i
 Found 2 duplicate external: `react`, `vue`. Remove them from top-level `external` as they're already handled by 'builtin:esm-external-require' plugin.
 ```
 
-This helps avoid configuration confusion and ensures the plugin handles ESM `require()` transforms correctly. You can disable this check by setting `skipDuplicateCheck: true` if you're confident about your configuration.
+Treat this warning as a correctness signal. The plugin leaves duplicated modules untouched: the top-level `external` option takes priority, so the output still contains the raw `require()` calls this plugin is meant to convert. Remove the duplicates from top-level `external`. Nothing is lost: the plugin marks its own modules as external anyway.
+
+`skipDuplicateCheck: true` doesn't make duplicates work. It only silences the warning, so enable it only when you're certain no module appears in both places.
 
 ## Limitations
 

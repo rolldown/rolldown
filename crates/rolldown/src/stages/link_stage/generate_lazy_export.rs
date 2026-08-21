@@ -202,11 +202,11 @@ fn json_object_expr_to_esm(link_staged: &mut LinkStage, module_idx: ModuleIdx) -
             property.computed = true;
           } else if is_legal_ident {
             property.shorthand = is_legal_ident;
-            property.key = ast::PropertyKey::StaticIdentifier(ast::IdentifierName::boxed(
+            property.key = ast::PropertyKey::new_static_identifier(
               SPAN,
               oxc::ast::ast::Str::from_str_in(legitimized_ident.as_ref(), &ast_builder),
               &ast_builder,
-            ));
+            );
           }
           match index_map.entry(legitimized_ident) {
             Entry::Occupied(mut occ) => {
@@ -232,7 +232,6 @@ fn json_object_expr_to_esm(link_staged: &mut LinkStage, module_idx: ModuleIdx) -
       )))
       // export all declaration
       .chain(std::iter::once(Statement::new_export_named_stmt(
-        None,
         declaration_binding_names.iter(),
         &ast_builder,
       )));

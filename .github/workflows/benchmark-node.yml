@@ -35,7 +35,7 @@ jobs:
       - uses: taiki-e/checkout-action@7d1e50e93dc4fb3bba58f85018fadf77898aee8b # v1.4.2
 
       - name: Download previous benchmark data
-        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           # https://github.com/rolldown/benchmark-results-storage
           repository: rolldown/benchmark-results-storage
@@ -45,7 +45,7 @@ jobs:
       - name: List Files
         run: find -maxdepth 2 -ls
 
-      - uses: voidzero-dev/setup-vp@250f29ce396baf5e8f24498e17c0dfdebabc26eb # v1.15.0
+      - uses: voidzero-dev/setup-vp@313600b80b104eadebb9111787d37a2e83e014ca # v1.17.0
         with:
           version: '0.2.1'
           cache: true
@@ -61,10 +61,19 @@ jobs:
         run: just setup-bench
 
       - name: Build packages
-        run: just build-rolldown-release
+        # The tracking variant also records per-suite peak Rust-side memory
+        # (`(peak memory)` series). It shifts timing numbers by at most ~2.3%
+        # once — far below the 110% alert threshold.
+        run: just build-rolldown-release-tracking
 
       - name: Run benchmarks
         run: vp run --filter bench bench-ci
+
+      # The action compares the new run against the previous entry only, so it
+      # needs a short window of history rather than the whole series. Rebuilding
+      # it from the JSON lines is what lets the 17 MB nested JSON stay frozen.
+      - name: Build the comparison window
+        run: node scripts/misc/benchmark-storage/window-from-jsonl.mjs --jsonl tmp/benchmark-node-output.jsonl --out tmp/window.json
 
       - name: Show/Update benchmark result
         uses: benchmark-action/github-action-benchmark@52576c92bccf6ac60c8223ec7eb2565637cae9ba # v1.22.1
@@ -75,7 +84,7 @@ jobs:
           # Where the output from the benchmark tool is stored
           output-file-path: tmp/new-benchmark-node-output.json
           # Where the previous data file is stored
-          external-data-json-path: tmp/benchmark-node-output.json
+          external-data-json-path: tmp/window.json
           fail-on-alert: false
           summary-always: true
           comment-always: false
@@ -85,14 +94,10 @@ jobs:
 
       - name: Save benchmark result
         if: github.event_name == 'push'
-        # https://github.com/dmnemec/copy_file_to_another_repo_action
-        uses: dmnemec/copy_file_to_another_repo_action@bbebd3da22e4a37d04dca5f782edd5201cb97083
         env:
           # Results are stored in https://github.com/rolldown/benchmark-results-storage
           API_TOKEN_GITHUB: ${{ secrets.REPO_TOKEN_BENCHMARK_RESULTS }}
-        with:
-          source_file: './tmp/benchmark-node-output.json'
-          destination_repo: 'rolldown/benchmark-results-storage'
-          user_email: 'github-actions[bot]@users.noreply.github.com'
-          user_name: 'github-actions[bot]'
-          commit_message: 'Update `benchmark-node-output.json`'
+        # Appends this run as Entry-schema JSON lines (see the storage repo's
+        # README). Pushes with a rebase retry, so concurrent runs append instead
+        # of overwriting each other.
+        run: node scripts/misc/benchmark-storage/push-results.mjs

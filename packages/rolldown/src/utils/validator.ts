@@ -433,6 +433,12 @@ const ChecksOptionsSchema = v.strictObject({
       'Whether to emit warnings when a plugin transforms code without generating a sourcemap',
     ),
   ),
+  namespaceConflict: v.pipe(
+    v.optional(v.boolean()),
+    v.description(
+      'Whether to emit warnings when multiple star re-exports provide the same name from different modules',
+    ),
+  ),
 });
 isTypeTrue<IsSchemaSubType<typeof ChecksOptionsSchema, ChecksOptions>>();
 
@@ -600,6 +606,7 @@ const DevModeSchema = v.union([
     port: v.optional(v.number()),
     host: v.optional(v.string()),
     implement: v.optional(v.string()),
+    skipCommonRuntimeInjection: v.optional(v.boolean()),
     lazy: v.optional(v.boolean()),
   }),
 ]);

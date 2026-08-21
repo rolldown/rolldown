@@ -9,6 +9,8 @@ source: crates/rolldown_testing/src/integration_test.rs
 //#region ring-b.js
 globalThis.__ringB = "b";
 //#endregion
+//#region ring-a.js
+//#endregion
 //#region main.js
 const value = await Promise.resolve("a");
 //#endregion
@@ -23,16 +25,7 @@ export { value };
 ### main.js
 
 ```js
-import { n as value, t as init_main } from "./main2.js";
-await init_main();
-export { value };
-
-```
-
-### main2.js
-
-```js
-import { t as __esmMin } from "./rolldown-runtime.js";
+// HIDDEN [\0rolldown/runtime.js]
 //#region ring-b.js
 function init_ring_b() {
 	return (init_ring_b = __esmMin((async () => {
@@ -59,15 +52,8 @@ function init_main() {
 	})))();
 }
 //#endregion
-export { value as n, init_main as t };
-
-```
-
-### rolldown-runtime.js
-
-```js
-// HIDDEN [\0rolldown/runtime.js]
-export { __esmMin as t };
+await init_main();
+export { value };
 
 ```
 
@@ -80,6 +66,8 @@ export { __esmMin as t };
 ```js
 //#region ring-b.js
 globalThis.__ringB = "b";
+//#endregion
+//#region ring-a.js
 //#endregion
 //#region main.js
 const value = await Promise.resolve("a");

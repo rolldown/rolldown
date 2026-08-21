@@ -1,3 +1,4 @@
+use std::path::PathBuf;
 use std::sync::Arc;
 use std::sync::atomic::AtomicBool;
 
@@ -16,7 +17,10 @@ pub struct DebugTracer {
 
 impl DebugTracer {
   #[must_use]
-  pub fn init(session_id: Arc<str>) -> Self {
+  pub fn init(session_id: Arc<str>, cwd: PathBuf) -> Self {
+    // Registered per session, before the process-wide subscriber guard, so every session resolves its own log paths.
+    writer::send(LogCommand::SetSessionCwd { session_id: session_id.as_ref().to_string(), cwd });
+
     let tracer = Self { session_id };
     if IS_INITIALIZED.swap(true, std::sync::atomic::Ordering::SeqCst) {
       return tracer;

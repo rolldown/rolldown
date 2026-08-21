@@ -1,0 +1,90 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+//#region dep.cjs
+var require_dep = /* @__PURE__ */ __commonJSMin(((exports, module) => {
+	globalThis.__events.push("cjs");
+	module.exports = {};
+}));
+//#endregion
+//#region leaf.js
+var value;
+function init_leaf() {
+	return (init_leaf = __esmMin((() => {
+		init_barrel();
+		globalThis.__events.push("leaf");
+		value = "value";
+	})))();
+}
+//#endregion
+//#region barrel.js
+function init_barrel() {
+	return (init_barrel = __esmMin((() => {
+		require_dep();
+		init_leaf();
+	})))();
+}
+//#endregion
+//#region main.js
+function init_main() {
+	return (init_main = __esmMin((() => {
+		init_barrel();
+		globalThis.__events.push(`main:${value}`);
+	})))();
+}
+//#endregion
+init_main();
+export { value };
+
+```
+
+# Variant: on-demand: [on_demand_wrapping: true]
+
+## Assets
+
+### main.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+//#region dep.cjs
+var require_dep = /* @__PURE__ */ __commonJSMin(((exports, module) => {
+	globalThis.__events.push("cjs");
+	module.exports = {};
+}));
+//#endregion
+//#region leaf.js
+var value;
+function init_leaf() {
+	return (init_leaf = __esmMin((() => {
+		init_barrel();
+		globalThis.__events.push("leaf");
+		value = "value";
+	})))();
+}
+//#endregion
+//#region barrel.js
+function init_barrel() {
+	return (init_barrel = __esmMin((() => {
+		require_dep();
+		init_leaf();
+	})))();
+}
+//#endregion
+//#region main.js
+function init_main() {
+	return (init_main = __esmMin((() => {
+		init_barrel();
+		globalThis.__events.push(`main:${value}`);
+	})))();
+}
+//#endregion
+init_main();
+export { value };
+
+```

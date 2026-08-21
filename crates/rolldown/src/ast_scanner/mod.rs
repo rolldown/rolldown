@@ -534,6 +534,7 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
         imported_as: (self.immutable_ctx.idx, local).into(),
         span_imported,
         record_idx,
+        is_reexport: false,
       },
     );
   }
@@ -546,6 +547,7 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
         imported_as: (self.immutable_ctx.idx, local).into(),
         record_idx,
         span_imported,
+        is_reexport: false,
       },
     );
     self.namespace_object_symbol_ids.insert(local);
@@ -627,7 +629,6 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
     };
     let generated_imported_as_ref =
       self.result.symbol_ref_db.create_facade_root_symbol_ref(ident.as_ref());
-
     self
       .current_stmt_info
       .declared_symbols
@@ -637,6 +638,7 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
       imported_as: generated_imported_as_ref,
       record_idx,
       span_imported,
+      is_reexport: true,
     };
     self.result.named_exports.insert(
       export_name.into(),
@@ -668,6 +670,7 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
       span_imported: span_for_export_name,
       imported_as: generated_imported_as_ref,
       record_idx,
+      is_reexport: true,
     };
 
     self.result.named_exports.insert(

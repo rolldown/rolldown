@@ -10,7 +10,7 @@ use futures::FutureExt;
 use notify::EventKind;
 use rolldown_common::WatcherChangeKind;
 use rolldown_error::BuildResult;
-use rolldown_fs_watcher::{DynFsWatcher, FsEventResult, RecursiveMode};
+use rolldown_fs_watcher::{FsEventResult, FsWatcher, RecursiveMode};
 use rolldown_utils::{dashmap::FxDashSet, indexmap::FxIndexMap, pattern_filter};
 use sugar_path::SugarPath;
 use tokio::sync::Mutex;
@@ -38,7 +38,7 @@ pub struct BundleCoordinator {
   /// field doc on `DevEngine::next_hmr_patch_id`.
   next_hmr_patch_id: Arc<AtomicU32>,
   rx: CoordinatorReceiver,
-  watcher: StdMutex<DynFsWatcher>,
+  watcher: StdMutex<FsWatcher>,
   watched_files: FxDashSet<ArcStr>,
   /// Tracks the state of the initial build
   state: CoordinatorState,
@@ -55,7 +55,7 @@ impl BundleCoordinator {
     bundler: Arc<Mutex<Bundler>>,
     ctx: SharedDevContext,
     rx: CoordinatorReceiver,
-    watcher: DynFsWatcher,
+    watcher: FsWatcher,
     next_hmr_patch_id: Arc<AtomicU32>,
   ) -> Self {
     Self {

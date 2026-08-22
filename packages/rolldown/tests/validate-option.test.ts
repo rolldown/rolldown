@@ -42,6 +42,27 @@ test('validate output option', async () => {
   );
 });
 
+test('requires RegExp for mangleProps include', async () => {
+  const consoleSpy = vi.spyOn(console, 'warn');
+  const bundle = await rolldown({
+    input: './build-api/main.js',
+    cwd: import.meta.dirname,
+  });
+  await expect(
+    bundle.generate({
+      minify: {
+        mangleProps: {
+          // @ts-ignore invalid value
+          include: '^_',
+        },
+      },
+    }),
+  ).rejects.toThrow();
+  expect(consoleSpy).toHaveBeenCalledWith(
+    expect.stringContaining('Invalid type: Expected RegExp but received "^_"'),
+  );
+});
+
 test('give a warning for hoistTransitiveImports: true', async () => {
   const consoleSpy = vi.spyOn(console, 'warn');
   const bundle = await rolldown({

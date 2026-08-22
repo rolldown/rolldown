@@ -51,7 +51,8 @@ pub mod bundler_options {
         ChunkingContext, ManualCodeSplittingOptions, MatchGroup, MatchGroupName, MatchGroupTest,
       },
       minify_options::{
-        MinifyOptions, RawCompressOptions, RawMangleOptions, RawMinifyOptions,
+        EnabledMinifyOptions, ManglePropertiesPattern, ManglePropertiesPatterns, MinifyOptions,
+        RawCompressOptions, RawMangleOptions, RawManglePropertiesOptions, RawMinifyOptions,
         RawMinifyOptionsDetailed,
       },
       module_type::ModuleType,

@@ -1,5 +1,9 @@
 import path from 'node:path';
-import type { NormalizedInputOptions, NormalizedOutputOptions } from 'rolldown';
+import type {
+  ManglePropertiesOptions,
+  NormalizedInputOptions,
+  NormalizedOutputOptions,
+} from 'rolldown';
 import { defineTest } from 'rolldown-tests';
 import { expect } from 'vitest';
 
@@ -42,6 +46,19 @@ export default defineTest({
       preserveModulesRoot: 'src',
       virtualDirname: 'virtual',
       minifyInternalExports: true,
+      minify: {
+        compress: false,
+        mangle: false,
+        codegen: false,
+        mangleProps: {
+          include: /^_/i,
+          exclude: /^_skip$/s,
+          reserved: ['_reserved'],
+          quoted: true,
+          debug: true,
+          cache: { _shared: 'shared', _keep: false },
+        },
+      },
     },
     plugins: [
       {
@@ -105,6 +122,22 @@ export default defineTest({
       expect(option.preserveModulesRoot).toStrictEqual(path.join(__dirname, 'src'));
       expect(option.virtualDirname).toBe('virtual');
       expect(option.minifyInternalExports).toBe(true);
+
+      const normalizedMangleProps = (
+        option.minify as {
+          mangleProps: ManglePropertiesOptions;
+        }
+      ).mangleProps;
+      expect(normalizedMangleProps.include).toBeInstanceOf(RegExp);
+      expect(normalizedMangleProps.include.source).toBe('^_');
+      expect(normalizedMangleProps.include.flags).toBe('i');
+      expect(normalizedMangleProps.exclude).toBeInstanceOf(RegExp);
+      expect(normalizedMangleProps.exclude?.source).toBe('^_skip$');
+      expect(normalizedMangleProps.exclude?.flags).toBe('s');
+      expect(normalizedMangleProps.reserved).toEqual(['_reserved']);
+      expect(normalizedMangleProps.quoted).toBe(true);
+      expect(normalizedMangleProps.debug).toBe(true);
+      expect(normalizedMangleProps.cache).toEqual({ _shared: 'shared', _keep: false });
     });
   },
 });

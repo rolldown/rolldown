@@ -47,6 +47,7 @@ impl Plugin for ViteImportGlobPlugin {
         import_decls: Vec::new(),
         errors: Vec::new(),
         restore_query_extension: self.restore_query_extension,
+        is_dev_mode: ctx.options().is_dev_mode_enabled(),
       };
       visitor.visit_program(&parser_ret.program);
       if let Some(err) = visitor.errors.into_iter().next() {

@@ -21,14 +21,16 @@
 //!   reachable (registration is what *makes* it reachable).
 //! - **Project** — the on-demand emergent-cycle fixpoint (`order_analysis`) predicts the chunk
 //!   edges a wrap plan's lowering will add, before anything is minted. It drives the same
-//!   enumerator/collector against a probe [`OrderWrapState`], extended to the excluded re-export
-//!   hops whose registration flows through the metadata pass rather than the included-record path.
+//!   enumerator/collector against a probe [`OrderWrapState`], extended to the excluded records
+//!   whose registration flows through the metadata pass rather than the included-record path.
 //!
 //! Excluded statements are the one structural asymmetry: for Emit and Register their targets are
 //! precomputed once by `compute_wrapped_esm_init_metadata` (post-convergence, returned as
 //! `Sealed<FinalEsmInitMetadata>`), while Project must recompute them per fixpoint round from the
-//! current plan — both through the shared excluded-hop router
-//! [`collect_order_wrap_esm_init_targets`], so the routing itself cannot drift.
+//! current plan — both through the same routers (the excluded-hop router
+//! [`collect_order_wrap_esm_init_targets`] for re-export hops, the shared per-record collector
+//! [`collect_wrapped_esm_init_targets_for_import_record`] for binding-demand plain imports), so
+//! the routing itself cannot drift.
 //!
 //! Purpose contracts are deliberately *not* identical, and each divergence is encoded (and
 //! justified) on [`ObligationPurpose`] rather than re-derived at call sites.
@@ -63,11 +65,14 @@ pub enum ObligationPurpose {
   /// included statements only, nested records skipped — registration and emission must stay in
   /// lockstep or a registered-but-never-emitted wrapper import (or vice versa) appears.
   Register,
-  /// Emergent-cycle edge projection. Included statements *plus* excluded re-export hops (their
-  /// real registration flows through the excluded-statement metadata, which does not exist yet at
-  /// projection time), and nested records are *kept*: projection may over-approximate — an extra
-  /// edge only ever wraps more, and wrapping more is always legal — but must never drop an edge
-  /// source, so it declines the nested-ownership refinement Emit/Register apply.
+  /// Emergent-cycle edge projection. Included statements *plus* excluded re-export hops and
+  /// excluded plain imports that declare bindings (their real registration flows through the
+  /// excluded-statement metadata, which does not exist yet at projection time — re-export hops
+  /// through the hop router, binding-demand plain imports through the shared collector), and
+  /// nested records are *kept*: projection may over-approximate — an extra edge only ever wraps
+  /// more, and wrapping more is always legal — but must never drop an edge source, so it declines
+  /// the nested-ownership refinement Emit/Register apply. A binding-less excluded plain import
+  /// stays out on every purpose: tree shaking stripped that side-effect edge deliberately.
   Project,
 }
 
@@ -77,7 +82,7 @@ pub enum ObligationPurpose {
 pub fn record_is_init_obligation(
   purpose: ObligationPurpose,
   order_state: &OrderWrapState,
-  importer_idx: ModuleIdx,
+  importer: &NormalModule,
   rec: &ResolvedImportRecord,
   rec_idx: ImportRecordIdx,
   stmt_is_included: bool,
@@ -85,18 +90,23 @@ pub fn record_is_init_obligation(
   if rec.kind != ImportKind::Import {
     return false;
   }
-  if order_state.is_consumer_local_reexport_route(importer_idx)
+  if order_state.is_consumer_local_reexport_route(importer.idx)
     && rec.meta.intersects(ImportRecordMeta::IsExportStar | ImportRecordMeta::IsReExportOnly)
   {
     return false;
   }
   match purpose {
     ObligationPurpose::Emit | ObligationPurpose::Register => {
-      stmt_is_included && !order_state.is_nested_reexport_record(importer_idx, rec_idx)
+      stmt_is_included && !order_state.is_nested_reexport_record(importer.idx, rec_idx)
     }
     ObligationPurpose::Project => {
       stmt_is_included
         || rec.meta.intersects(ImportRecordMeta::IsExportStar | ImportRecordMeta::IsReExportOnly)
+        // An excluded plain import that declares bindings can still carry binding demand (folded
+        // member reads, re-exported facades) that the excluded-statement metadata routes for
+        // Emit/Register, so projection must keep the same edge sources (issue #10690). The
+        // collector refines actual demand per binding.
+        || importer.named_imports.values().any(|import| import.record_idx == rec_idx)
     }
   }
 }
@@ -119,7 +129,7 @@ pub fn for_each_init_obligation_record(
       if record_is_init_obligation(
         purpose,
         order_state,
-        importer.idx,
+        importer,
         &importer.import_records[rec_idx],
         rec_idx,
         stmt_is_included,
@@ -449,9 +459,12 @@ fn collect_esm_init_targets_for_record(
           // Liveness is importer-local. A named binding can itself hold a namespace object, so a
           // statically resolved `binding.member` read routes only that member even when the local
           // facade is absent from UsedSymbolRefs. Filtering by the canonical export would let a
-          // different importer that consumes the same leaf resurrect this dead specifier.
+          // different importer that consumes the same leaf resurrect this dead specifier. A
+          // re-exported binding is opaque like a re-exported namespace: it can canonically resolve
+          // to a namespace whose downstream member reads were statically folded (issue #10690).
           let binding_is_opaque = symbol_is_used(*imported_as_ref)
             || ctx.order_wrap_state.is_consumed_reexport_facade(*imported_as_ref)
+            || importer_reexports_binding(ctx.importer, *imported_as_ref)
             || add_wrapped_esm_init_targets_for_static_member_reads(
               ctx,
               *imported_as_ref,
@@ -621,7 +634,12 @@ fn add_wrapped_esm_init_targets_for_namespace_consumer(
   targets: &mut Vec<WrappedEsmInitTarget>,
   visited_symbols: &mut FxHashSet<SymbolRef>,
 ) {
+  // A re-exported namespace binding is opaque to this importer: downstream consumers can read any
+  // member through the importer's export surface, and a statically folded `ns.x` read leaves no
+  // importer-local reference behind for the member-read scan below (issue #10690). Dead leaves
+  // stay pruned by the per-target reachability gates.
   let opaque_namespace_use = symbol_is_used(namespace_ref)
+    || importer_reexports_binding(ctx.importer, namespace_ref)
     || add_wrapped_esm_init_targets_for_static_member_reads(
       ctx,
       namespace_ref,
@@ -642,6 +660,14 @@ fn add_wrapped_esm_init_targets_for_namespace_consumer(
       );
     }
   }
+}
+
+/// Whether the importer re-exports this local import binding. Membership is scan-time export
+/// surface data, deliberately not consumption-gated: a statically folded downstream read leaves no
+/// liveness trace on the facade chain, and a genuinely dead re-export routes nothing anyway
+/// because every target is gated on an included wrapper in a live chunk (issue #10690).
+pub fn importer_reexports_binding(importer: &NormalModule, local_ref: SymbolRef) -> bool {
+  importer.named_exports.values().any(|export| export.referenced == local_ref)
 }
 
 /// Route statically resolved member reads of one local import facade and report whether any use is

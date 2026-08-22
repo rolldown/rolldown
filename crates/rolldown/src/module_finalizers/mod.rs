@@ -406,7 +406,7 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
       if record_is_init_obligation(
         ObligationPurpose::Emit,
         self.ctx.order_wrap_state,
-        self.ctx.idx,
+        self.ctx.module,
         rec,
         rec_idx,
         true,
@@ -424,7 +424,7 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
         if record_is_init_obligation(
           ObligationPurpose::Emit,
           self.ctx.order_wrap_state,
-          self.ctx.idx,
+          self.ctx.module,
           rec,
           rec_idx,
           true,
@@ -1954,7 +1954,7 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
                 if record_is_init_obligation(
                   ObligationPurpose::Emit,
                   self.ctx.order_wrap_state,
-                  self.ctx.idx,
+                  self.ctx.module,
                   rec,
                   rec_idx,
                   true,

@@ -158,8 +158,12 @@ impl<'a> GenerateStage<'a> {
     self.compute_retained_export_symbols(&used_symbol_refs);
 
     let mut ast_table = std::mem::take(&mut self.ast_table);
-    let final_esm_init_metadata =
-      self.compute_wrapped_esm_init_metadata(&ast_table, &chunk_graph, &order_state);
+    let final_esm_init_metadata = self.compute_wrapped_esm_init_metadata(
+      &ast_table,
+      &chunk_graph,
+      &order_state,
+      &used_symbol_refs,
+    );
 
     self.compute_cross_chunk_links(
       &mut chunk_graph,

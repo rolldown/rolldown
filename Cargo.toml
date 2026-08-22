@@ -173,7 +173,11 @@ anyhow = "1.0.103"
 append-only-vec = "0.1.8"
 arcstr = { version = "1.2.0", default-features = false }
 ariadne = { package = "rolldown-ariadne", version = "0.6.0" }
+async-broadcast = "0.7.2"
 async-channel = "2.5.0"
+async-lock = "3.4.2"
+# Only used by the opt-in `tokio-runtime` facade arm in rolldown_utils
+# (block_on_spawn_all); the default tokio-free build never compiles it.
 async-scoped = "0.9.0"
 base-encode = "0.3.1"
 base64-simd = "0.8.0"
@@ -184,6 +188,7 @@ criterion2 = { version = "3.0.4", default-features = false }
 dashmap = "6.2.1"
 derive_more = { version = "2.1.1", features = ["debug"] }
 dunce = "1.0.5" # Normalize Windows paths to the most compatible format, avoiding UNC where possible
+event-listener = "5.4.1"
 fast-glob = "1.1.0"
 flate2 = { version = "=1.1.9", features = ["zlib-rs"] }
 form_urlencoded = "1.2.2"
@@ -261,9 +266,10 @@ syn = { version = "3", default-features = false }
 # napi
 # Keep the `tracing` feature on: `#[napi]` logs every binding call, which helps debug deadlocks
 # (e.g. #7289) by showing which napi function is pending.
-napi = { version = "3", features = ["async", "anyhow", "tracing", "object_indexmap"] }
-napi-build = { version = "2" }
-napi-derive = { version = "3", default-features = false, features = ["type-def", "tracing"] }
+# Minimum versions: the first registry releases with the napi-rs#3423 content rolldown needs (borrow tracker, non-Error rejection identity, wasm teardown barrier, addon pinning).
+napi = { version = "3.12.1", features = ["anyhow", "tracing", "object_indexmap"] }
+napi-build = { version = "2.4.1" }
+napi-derive = { version = "3.6.3", default-features = false, features = ["type-def", "tracing"] }
 
 # oxc crates with the same version
 oxc = { version = "0.146.0", features = [

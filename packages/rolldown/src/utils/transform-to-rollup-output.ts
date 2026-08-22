@@ -13,7 +13,8 @@ import { OutputChunkImpl } from '../types/output-chunk-impl';
 import type { OutputAsset, OutputChunk, RolldownOutput, SourceMap } from '../types/rolldown-output';
 import { bindingifySourcemap } from '../types/sourcemap';
 import { type AssetSource, bindingAssetSource, transformAssetSource } from './asset-source';
-import { transformChunkModules } from './transform-rendered-chunk';
+import { shouldEagerlyFreeOutputs } from './threadless-free';
+import { snapshotChunkModules, transformChunkModules } from './transform-rendered-chunk';
 
 export function transformToRollupSourceMap(map: string): SourceMap {
   const parsed: Omit<SourceMap, 'toString' | 'toUrl'> = JSON.parse(map);
@@ -32,7 +33,7 @@ export function transformToRollupSourceMap(map: string): SourceMap {
   return obj;
 }
 
-function transformToRollupOutputChunk(bindingChunk: BindingOutputChunk): OutputChunk {
+function transformToRollupOutputChunk(bindingChunk: BindingOutputChunk): OutputChunkImpl {
   return new OutputChunkImpl(bindingChunk);
 }
 
@@ -48,7 +49,14 @@ function transformToMutableRollupOutputChunk(
     fileName: bindingChunk.getFileName(),
     name: bindingChunk.getName(),
     get modules() {
-      return transformChunkModules(bindingChunk.getModules());
+      // Every getModules() call marshals fresh per-module boxes that only
+      // finalizers reclaim, so snapshot and release them on the threadless
+      // flavor. Safe because the proxy caches this map after the first read and
+      // `collectChangedBundle` always submits an empty modules map.
+      const bindingModules = bindingChunk.getModules();
+      return shouldEagerlyFreeOutputs()
+        ? snapshotChunkModules(bindingModules)
+        : transformChunkModules(bindingModules);
     },
     get imports() {
       return bindingChunk.getImports();
@@ -92,7 +100,7 @@ function transformToMutableRollupOutputChunk(
   });
 }
 
-function transformToRollupOutputAsset(bindingAsset: BindingOutputAsset): OutputAsset {
+function transformToRollupOutputAsset(bindingAsset: BindingOutputAsset): OutputAssetImpl {
   return new OutputAssetImpl(bindingAsset);
 }
 
@@ -131,11 +139,19 @@ function transformToMutableRollupOutputAsset(
 
 export function transformToRollupOutput(output: BindingOutputs): RolldownOutput {
   const { chunks, assets } = output;
+  const chunkItems = chunks.map((chunk) => transformToRollupOutputChunk(chunk));
+  const assetItems = assets.map((asset) => transformToRollupOutputAsset(asset));
+  if (shouldEagerlyFreeOutputs()) {
+    for (const item of [...chunkItems, ...assetItems]) {
+      // keepDataAlive: materialize every lazy field into the JavaScript wrapper
+      // first, then release the native payload. Reads keep working; a later
+      // explicit freeExternalMemory() reports "already been freed".
+      item.__rolldown_external_memory_handle__(true);
+    }
+  }
+  const outputItems: (OutputChunk | OutputAsset)[] = [...chunkItems, ...assetItems];
   return {
-    output: [
-      ...chunks.map((chunk) => transformToRollupOutputChunk(chunk)),
-      ...assets.map((asset) => transformToRollupOutputAsset(asset)),
-    ],
+    output: outputItems,
   } as RolldownOutput;
 }
 

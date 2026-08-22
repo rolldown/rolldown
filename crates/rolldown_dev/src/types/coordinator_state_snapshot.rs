@@ -1,4 +1,5 @@
 use crate::{dev_context::BundlingFuture, types::error_stage::ErrorStage};
+use rolldown_dev_common::types::DevCallbackError;
 
 /// Response containing current coordinator status
 #[derive(Debug, Clone)]
@@ -24,5 +25,7 @@ pub struct CoordinatorStateSnapshot {
   /// (via `trigger_full_build`) rather than replaying the cached HMR
   /// error. See `internal-docs/dev-engine/implementation.md` §12.
   pub last_error_stage: Option<ErrorStage>,
+  /// Last callback execution failure. Cleared when a subsequent task starts.
+  pub last_callback_error: Option<DevCallbackError>,
   pub has_stale_output: bool,
 }

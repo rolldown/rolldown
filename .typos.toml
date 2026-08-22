@@ -42,3 +42,5 @@ styl = "styl"
 [default.extend-identifiers]
 IIFEs = "IIFEs"
 PnP = "PnP"
+# Cloudflare Workers compatibility flag (AsyncLocalStorage).
+nodejs_als = "nodejs_als"

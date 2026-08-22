@@ -59,6 +59,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "arc-swap"
+version = "1.9.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "c049c0be4daef0b145cb3555416b3b8ef5b7888a38aea1a3a155801fe7b0810b"
+dependencies = [
+ "rustversion",
+]
+
+[[package]]
 name = "arcstr"
 version = "1.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -77,6 +86,18 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "d3fb67a6e08acf24fdeccbac2cb6ac4305825bd1f117462e0e6f2f193345ad56"
 
 [[package]]
+name = "async-broadcast"
+version = "0.7.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "435a87a52755b8f27fcf321ac4f04b2802e337c8c4872923137471ec39c37532"
+dependencies = [
+ "event-listener",
+ "event-listener-strategy",
+ "futures-core",
+ "pin-project-lite",
+]
+
+[[package]]
 name = "async-channel"
 version = "2.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -85,6 +106,17 @@ dependencies = [
  "concurrent-queue",
  "event-listener-strategy",
  "futures-core",
+ "pin-project-lite",
+]
+
+[[package]]
+name = "async-lock"
+version = "3.4.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "290f7f2596bd5b78a9fec8088ccd89180d7f9f55b94b0576823bbbdc72ee8311"
+dependencies = [
+ "event-listener",
+ "event-listener-strategy",
  "pin-project-lite",
 ]
 
@@ -98,6 +130,12 @@ dependencies = [
  "pin-project",
  "tokio",
 ]
+
+[[package]]
+name = "async-task"
+version = "4.7.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "8b75356056920673b02621b35afd0f7dda9306d03c79a30f5c56c44cf256e3de"
 
 [[package]]
 name = "autocfg"
@@ -140,9 +178,9 @@ dependencies = [
  "rolldown_resolver",
  "rolldown_sourcemap",
  "rolldown_tracking_allocator",
+ "rolldown_utils",
  "rolldown_workspace",
  "rustc-hash",
- "tokio",
 ]
 
 [[package]]
@@ -453,7 +491,6 @@ dependencies = [
  "oorandom",
  "serde",
  "serde_json",
- "tokio",
 ]
 
 [[package]]
@@ -610,11 +647,10 @@ dependencies = [
 
 [[package]]
 name = "event-listener"
-version = "5.4.1"
+version = "5.4.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e13b66accf52311f30a0db42147dadea9850cb48cd070028831ae5f5d4b856ab"
+checksum = "5a23add41df1562121a9393cb065eab5146a1242410f23a644851e90cfd669d2"
 dependencies = [
- "concurrent-queue",
  "parking",
  "pin-project-lite",
 ]
@@ -1097,9 +1133,9 @@ checksum = "c22a2041e3874a055a4eb03ea2395aaccdefa84ce75b31d542d72a741c3c6ad3"
 
 [[package]]
 name = "json-strip-comments"
-version = "3.1.2"
+version = "3.1.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "01ed659c5f428031b9c1fb7de6729af2eb491654d4bcd416a5b5b704986b9658"
+checksum = "9301b34ecbe81051a62001a2dfa56d906628efdfbc68153e0a4d5eba58181ece"
 dependencies = [
  "memchr",
 ]
@@ -1343,8 +1379,21 @@ dependencies = [
  "rustc-hash",
  "serde",
  "serde_json",
- "tokio",
  "tracing",
+]
+
+[[package]]
+name = "napi-async-runtime"
+version = "0.2.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "5cb114343feaa2063dfe5ad79afbd7f5a2fea7e4721e971cbc96e4553bf34622"
+dependencies = [
+ "arc-swap",
+ "async-task",
+ "crossbeam-deque",
+ "futures",
+ "rayon",
+ "rustc-hash",
 ]
 
 [[package]]
@@ -2684,6 +2733,7 @@ dependencies = [
  "dashmap",
  "derive_more",
  "fast-glob",
+ "futures",
  "insta",
  "itertools",
  "num-bigint 0.5.1",
@@ -2707,7 +2757,6 @@ dependencies = [
  "smallvec",
  "string_wizard",
  "sugar_path",
- "tokio",
 ]
 
 [[package]]
@@ -2716,6 +2765,7 @@ version = "1.2.5"
 dependencies = [
  "anyhow",
  "arcstr",
+ "async-lock",
  "futures",
  "rolldown",
  "rolldown-notify",
@@ -2826,9 +2876,11 @@ version = "1.2.5"
 dependencies = [
  "anyhow",
  "arcstr",
+ "async-broadcast",
  "bitflags",
  "dashmap",
  "derive_more",
+ "futures",
  "nodejs-built-in-modules",
  "oxc_index",
  "rolldown_common",
@@ -2844,7 +2896,6 @@ dependencies = [
  "serde_json",
  "string_wizard",
  "sugar_path",
- "tokio",
  "tracing",
  "typedmap",
 ]
@@ -3001,7 +3052,6 @@ dependencies = [
  "rolldown_utils",
  "serde_json",
  "string_wizard",
- "tokio",
 ]
 
 [[package]]
@@ -3269,6 +3319,7 @@ dependencies = [
 name = "rolldown_tracing"
 version = "1.2.5"
 dependencies = [
+ "rolldown_devtools",
  "tracing",
  "tracing-chrome",
  "tracing-subscriber",
@@ -3301,6 +3352,7 @@ dependencies = [
  "itoa",
  "memchr",
  "mime",
+ "napi-async-runtime",
  "nom",
  "oxc",
  "oxc_index",
@@ -3325,6 +3377,8 @@ version = "1.2.5"
 dependencies = [
  "anyhow",
  "arcstr",
+ "async-lock",
+ "event-listener",
  "futures",
  "oxc_index",
  "rolldown",
@@ -3404,9 +3458,9 @@ dependencies = [
 
 [[package]]
 name = "schemars"
-version = "1.2.2"
+version = "1.2.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "687274d293b6cdc6e73e0fee520bf2049650090d7164f87672d212a3c530cf4a"
+checksum = "a2b42f36aa1cd011945615b92222f6bf73c599a102a300334cd7f8dbeec726cc"
 dependencies = [
  "dyn-clone",
  "ref-cast",
@@ -3417,14 +3471,14 @@ dependencies = [
 
 [[package]]
 name = "schemars_derive"
-version = "1.2.2"
+version = "1.2.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d98c67716b46af2f0b8cf752abc930f6f9aecfbf671ecfb531db8a31dbe4e2ba"
+checksum = "7d115b50f4aaeea07e79c1912f645c7513d81715d0420f8bc77a18c6260b307f"
 dependencies = [
  "proc-macro2",
  "quote",
  "serde_derive_internals",
- "syn 3.0.3",
+ "syn 2.0.119",
 ]
 
 [[package]]
@@ -3483,13 +3537,13 @@ dependencies = [
 
 [[package]]
 name = "serde_derive_internals"
-version = "0.30.0"
+version = "0.29.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f852137cce035d6a4df67ccce505ff6b3e9fd3a10e3e52b24dc71e650bb1a9bd"
+checksum = "18d26a20a969b9e3fdf2fc2d9f21eda6c40e2de84c9408bb5d3b05d499aae711"
 dependencies = [
  "proc-macro2",
  "quote",
- "syn 3.0.3",
+ "syn 2.0.119",
 ]
 
 [[package]]
@@ -3732,9 +3786,9 @@ dependencies = [
 
 [[package]]
 name = "testing_macros"
-version = "1.0.2"
+version = "1.0.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5c21fb13b703fb0bf466ec891704055ec18e2a8c8d2d47c31b65d7006044e146"
+checksum = "b7442bd3ca09f38d4788dc5ebafbc1967c3717726b4b074db011d470b353548b"
 dependencies = [
  "anyhow",
  "glob",

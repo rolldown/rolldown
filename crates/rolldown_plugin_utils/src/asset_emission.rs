@@ -1,4 +1,7 @@
-use std::{path::Path, sync::Arc};
+use std::{
+  path::{Path, PathBuf},
+  sync::Arc,
+};
 
 use arcstr::ArcStr;
 use memchr::memmem;
@@ -7,6 +10,7 @@ use rolldown_plugin::{
   HookRenderChunkArgs, HookRenderChunkOutput, HookTransformOutputMap, PluginContext,
 };
 use rolldown_std_utils::relative_path_as_js_specifier;
+use rolldown_utils::futures::spawn_blocking;
 use string_wizard::{MagicString, SourceMapOptions};
 
 pub async fn emit_asset(
@@ -15,7 +19,11 @@ pub async fn emit_asset(
   read_error: impl FnOnce(std::io::Error) -> anyhow::Error,
 ) -> anyhow::Result<ArcStr> {
   let path = Path::new(clean_id);
-  let bytes = tokio::fs::read(clean_id).await.map_err(read_error)?;
+  let read_path = PathBuf::from(clean_id);
+  let bytes = spawn_blocking(move || std::fs::read(read_path))
+    .await
+    .map_err(|e| anyhow::anyhow!("Failed to join asset read for {clean_id}: {e}"))?
+    .map_err(read_error)?;
   let file_name = path.file_name().and_then(|n| n.to_str()).unwrap_or("asset").to_string();
   let original_file_name =
     path.strip_prefix(ctx.cwd()).unwrap_or(path).to_string_lossy().into_owned();

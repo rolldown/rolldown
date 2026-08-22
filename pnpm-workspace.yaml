@@ -32,17 +32,24 @@ onlyBuiltDependencies:
   - tree-sitter
 
 overrides:
+  # napi-build 2.4.1 links the emnapi v2 C archives; pin the exact release so a range change cannot silently swap them.
+  emnapi: 2.0.0-alpha.4
   vitepress>vite: npm:rolldown-vite@latest
 
 catalog:
   '@babel/core': ^7.29.7
   '@babel/preset-env': ^7.29.7
   '@babel/preset-typescript': ^7.29.7
+  # the .wasm links emnapi v2 C archives, so a v1 JS runtime is an ABI mismatch (see the `emnapi` override above).
+  # scripts/wasi/check-workerd-packed-consumer.mjs asserts these exact versions, so bump both together.
   '@emnapi/core': 2.0.0-alpha.4
   '@emnapi/runtime': 2.0.0-alpha.4
   '@jridgewell/trace-mapping': ^0.3.31
-  '@napi-rs/cli': ^3.8.2
-  '@napi-rs/wasm-runtime': ~1.2.2
+  # exact pin: `napi.rootPublisher` (napi-rs#3450) is honored only from 3.8.5, and
+  # pre-publish validation needs it, so a `^` range could resolve below that. 3.8.6
+  # peer-requires the emnapi 2.0.0-alpha.4 line, so it moves with the pins above.
+  '@napi-rs/cli': 3.8.6
+  '@napi-rs/wasm-runtime': ~1.2.3
   '@oxc-node/cli': ^0.1.0
   '@oxc-node/core': ^0.1.0
   '@oxc-project/runtime': '=0.146.0'
@@ -58,6 +65,7 @@ catalog:
   '@types/node': 24.10.3
   '@types/semver': ^7.8.0
   '@types/serve-static': ^2.0.0
+  buffer: ^6.0.3
   '@types/ws': ^8.18.0
   acorn: ^8.17.0
   astring: ^1.9.0
@@ -79,6 +87,7 @@ catalog:
   glob: ^13.0.0
   lodash-es: ^4.17.21
   micromatch: ^4.0.8
+  miniflare: ^4.20260611.0
   oxc-parser: '=0.146.0'
   oxc-transform: '=0.146.0'
   pathe: ^2.0.3
@@ -103,6 +112,7 @@ catalog:
   vue: ^3.5.35
   web-tree-sitter: ^0.26.0
   ws: ^8.20.1
+  wrangler: ^4.100.0
   zx: ^8.1.2
 
 catalogs:
@@ -137,7 +147,11 @@ trustPolicyExclude:
 verifyDepsBeforeRun: install
 
 minimumReleaseAgeExclude:
-  - '@napi-rs/cli'
+  - '@napi-rs/cli@3.8.6'
+  - '@emnapi/core@1.11.2 || 2.0.0-alpha.4'
+  - '@emnapi/runtime@1.11.2 || 2.0.0-alpha.4'
+  - emnapi@1.11.2 || 2.0.0-alpha.4
+  - '@emnapi/wasi-threads@2.0.1'
   - '@oxc-minify/*'
   - '@oxc-parser/*'
   - '@oxc-transform/*'

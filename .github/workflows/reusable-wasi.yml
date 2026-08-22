@@ -32,32 +32,97 @@ jobs:
           version: '0.2.1'
           cache: true
 
-      - name: Add WASI target
-        run: rustup target add wasm32-wasip1-threads
+      - name: Test package transaction rollback
+        run: just test-package-transactions
 
-      - name: Build Rolldown with WASI Binding
+      - name: Add WASI targets
+        run: rustup target add wasm32-wasip1 wasm32-wasip1-threads
+
+      # `napi-build` requires `EMNAPI_LINK_DIR`, and `RUSTC` must be the real binary rather
+      # than the rustup shim so it can locate `crt1-reactor.o`. Both are needed by every
+      # direct `cargo check` below, because build scripts run even without linking.
+      # `emnapi` is a transitive dependency of `@napi-rs/cli`, so resolve it through the CLI.
+      - name: Resolve emnapi link directory
+        run: |
+          emnapi_package_dir="$(
+            cd packages/rolldown
+            node - <<'NODE'
+          const { createRequire } = require('node:module')
+          const { dirname } = require('node:path')
+          const cliRequire = createRequire(require.resolve('@napi-rs/cli/package.json'))
+          console.log(dirname(cliRequire.resolve('emnapi/package.json')))
+          NODE
+          )"
+          {
+            echo "EMNAPI_DIR=$emnapi_package_dir"
+            echo "RUSTC_BIN=$(rustup which rustc)"
+          } >> "$GITHUB_ENV"
+
+      - name: Check shared runtime on threadless WASI
+        run: |
+          RUSTC="$RUSTC_BIN" EMNAPI_LINK_DIR="$EMNAPI_DIR/lib/wasm32-wasip1" \
+            cargo check -p rolldown_binding --target wasm32-wasip1 \
+              --no-default-features --features async-runtime --locked
+          RUSTC="$RUSTC_BIN" EMNAPI_LINK_DIR="$EMNAPI_DIR/lib/wasm32-wasip1" \
+            cargo check -p rolldown_binding --target wasm32-wasip1 \
+              --features async-runtime --locked
+
+      # Negative checks: `rolldown_binding` has no `tokio-runtime` feature (removed), and
+      # a runtime-feature-less build must hit the `compile_error!` in its `src/lib.rs`.
+      - name: Reject non-async-runtime builds on threadless WASI
+        run: |
+          if output="$(
+            RUSTC="$RUSTC_BIN" EMNAPI_LINK_DIR="$EMNAPI_DIR/lib/wasm32-wasip1" \
+              cargo check -p rolldown_binding --target wasm32-wasip1 \
+                --no-default-features --features tokio-runtime --locked 2>&1
+          )"; then
+            echo "Expected the removed tokio-runtime feature to be rejected"
+            exit 1
+          fi
+          printf '%s\n' "$output"
+          grep -F "does not contain this feature: tokio-runtime" <<<"$output"
+          if output="$(
+            RUSTC="$RUSTC_BIN" EMNAPI_LINK_DIR="$EMNAPI_DIR/lib/wasm32-wasip1" \
+              cargo check -p rolldown_binding --target wasm32-wasip1 \
+                --no-default-features --locked 2>&1
+          )"; then
+            echo "Expected the runtime-feature-less build to be rejected"
+            exit 1
+          fi
+          printf '%s\n' "$output"
+          grep -F "rolldown_binding requires the \`async-runtime\` feature" <<<"$output"
+
+      - name: Check shared runtime on threaded WASI
+        run: |
+          RUSTC="$RUSTC_BIN" EMNAPI_LINK_DIR="$EMNAPI_DIR/lib/wasm32-wasip1-threads" \
+            cargo check -p rolldown_binding --target wasm32-wasip1-threads \
+              --no-default-features --features async-runtime --locked
+
+      # The two WASI flavors have distinct artifact names, so both builds co-exist in
+      # packages/rolldown/src — but each build re-points packages/rolldown/dist at its OWN
+      # loaders, so every flavor's tests must run right after that flavor's build.
+      - name: Build Rolldown with threaded WASI binding
         run: just build-rolldown-wasi
 
-      - name: Build `@rolldown/test-dev-server`
-        run: vp run --filter '@rolldown/test-dev-server' build
-
-      # `test:wasi` is `test:main` with `ROLLDOWN_WASI_TEST=1`, which skips the tests that the wasm binding cannot pass; every skip states its own reason.
+      # Separate from `test:main` on purpose: managed-workerd tests need the threadless
+      # Wasm file, and Node's `--input-type` child-process probes are invalid once
+      # inherited by file-based napi-rs worker entrypoints.
       #
-      # The suite is flaky under the wasm binding (~1/3 of runs) because multiple
-      # wasm instances share one dlmalloc heap and corrupt it under concurrent
-      # allocation while the memory grows — a "memory access out of bounds" trap
-      # that has nothing to do with the code under test. See #10697. Retry the
-      # whole step (the crash takes down the wasm process, so a per-test retry
-      # cannot help); a real failure still fails all attempts and reds the job.
+      # The suite is flaky under the threaded wasm binding (~1/3 of runs) because
+      # multiple wasm instances share one dlmalloc heap and corrupt it under
+      # concurrent allocation while the memory grows — a "memory access out of
+      # bounds" trap that has nothing to do with the code under test. See #10697.
+      # Retry the whole step (the crash takes down the wasm process, so a per-test
+      # retry cannot help); a real failure still fails all attempts and reds the job.
       # The crash also shows up as a hung suite: a dead worker is dropped
       # silently, so in-flight builds wait forever and the plain retry loop
       # stalls on the first attempt without ever retrying, eating the whole
       # 45-minute job budget. `timeout` caps each attempt so a hang becomes a
       # failed attempt (exit 124) and retries; the suite finishes in 1-2 min.
-      - name: Node Test
+      - name: Node Test (threaded WASI)
         run: |
           for attempt in 1 2 3; do
-            if timeout 300 vp run --filter rolldown-tests test:wasi; then
+            if timeout 300 vp run --filter rolldown-tests test:wasi-threaded; then
               exit 0
             fi
 
@@ -69,7 +134,11 @@ jobs:
           done
           exit 1
 
-      - name: Stability Test
+      # Catches a dropped entry in copy-addon-plugin.ts, which otherwise ships silently.
+      - name: Assert threaded WASI dist file set
+        run: node scripts/wasi/check-wasi-dist-files.mjs threaded
+
+      - name: Stability Test (threaded WASI)
         run: vp run --filter rolldown-tests test:stability
 
       # Runs against the WASI binding itself (NAPI_RS_FORCE_WASI), which no
@@ -77,6 +146,45 @@ jobs:
       - name: Tokio Runtime Lifecycle Test
         run: vp run --filter rolldown-tests test:wasi-runtime
 
+      - name: Threaded WASI Runtime Lifecycle Test
+        run: vp run --filter rolldown-tests test:wasi-runtime-lifecycle
+
+      - name: Build Rolldown with non-threaded WASI binding
+        run: just build-rolldown-wasi-single
+
+      # Same guard for the single-thread set, which ships the workerd `wasip1-deferred` loader.
+      - name: Assert single-thread WASI dist file set
+        run: node scripts/wasi/check-wasi-dist-files.mjs single
+
+      # Threadless means: no Worker creation, no shared memory, `asyncWorkPoolSize: 0`.
+      - name: Assert single-thread WASI loaders are threadless
+        run: node scripts/wasi/check-wasi-threadless.mjs
+
+      # Glue only — reuses the single-thread binding built above instead of recompiling WASI.
+      - name: Build `@rolldown/browser` artifacts
+        run: vp run --filter '@rolldown/browser' build-node
+
+      - name: Stage self-contained WASI packages
+        run: node scripts/wasi/stage-wasi-packages.mjs
+
+      - name: Check staged WASI binding dependencies
+        run: node scripts/wasi/check-wasi-binding-deps.mjs
+
+      - name: Exercise concurrent workerd instance lifecycle and memory canary
+        run: node --expose-gc packages/workerd-tests/memory.mjs --max-rss-growth-mb=128
+
+      # Needed at collection time: tests/dev/*.test.ts import it at module scope.
+      - name: Build `@rolldown/test-dev-server`
+        run: vp run --filter '@rolldown/test-dev-server' build
+
+      # Both skip families apply on this lane: the binding reports the CurrentThread
+      # flavor and the wasi target, so `isSingleThread` and `isWasiTest` skips both hold
+      # — see tests/src/runtime-flavor.ts.
+      - name: Node Test (single-thread WASI)
+        run: vp run --filter rolldown-tests test:wasi
+
+      # `@example/typescript` is shared with the watch example, which is unsupported on
+      # WASI; its basic and chunk-import-map cases are covered by the Node profile above.
       # `@example/native-magic-string` is excluded because it depends on a native-only addon.
       - name: Build Examples
-        run: vp run --filter '@example/*' --filter '!@example/native-magic-string' build
+        run: vp run --filter '@example/*' --filter '!@example/native-magic-string' --filter '!@example/typescript' build

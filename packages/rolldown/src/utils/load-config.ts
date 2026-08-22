@@ -1,3 +1,4 @@
+import { randomBytes } from 'node:crypto';
 import fs from 'node:fs';
 import { readdir } from 'node:fs/promises';
 import path from 'node:path';
@@ -6,8 +7,16 @@ import { pathToFileURL } from 'node:url';
 import { rolldown } from '../api/rolldown';
 import type { ConfigExport } from './define-config';
 import type { OutputChunk } from '../types/rolldown-output';
+import { onExit } from './signal-exit';
 
-async function bundleTsConfig(configFile: string, isEsm: boolean): Promise<string> {
+interface BundledConfig {
+  /** Absolute path of the emitted entry module. */
+  outputFile: string;
+  /** Absolute paths of every emitted file (entry included), for cleanup. */
+  outputFiles: string[];
+}
+
+async function bundleTsConfig(configFile: string, isEsm: boolean): Promise<BundledConfig> {
   const dirnameVarName = 'injected_original_dirname';
   const filenameVarName = 'injected_original_filename';
   const importMetaUrlVarName = 'injected_original_import_meta_url';
@@ -44,19 +53,95 @@ async function bundleTsConfig(configFile: string, isEsm: boolean): Promise<strin
       },
     ],
   });
+  // Must be emitted beside the config file: the emitted module's URL is the
+  // resolution base for any runtime-computed relative dynamic import a
+  // deferred config function performs later. The per-call random token keeps
+  // concurrent loads collision-free.
   const outputDir = path.dirname(configFile);
-  const result = await bundle.write({
-    dir: outputDir,
-    format: isEsm ? 'esm' : 'cjs',
-    sourcemap: 'inline',
-    // respect the original file extension, mts -> mjs, cts -> cjs
-    // mts should be generate mjs, it avoid add `type: module` at package.json
-    entryFileNames: `rolldown.config.[hash]${path.extname(configFile).replace('ts', 'js')}`,
-  });
-  const fileName = result.output.find(
-    (chunk): chunk is OutputChunk => chunk.type === 'chunk' && chunk.isEntry,
-  )!.fileName;
-  return path.join(outputDir, fileName);
+  const outputPrefix = `.rolldown.config.${randomBytes(4).toString('hex')}.`;
+  let outputFile: string | undefined;
+  let outputFiles: string[] | undefined;
+  let operationError: unknown;
+  try {
+    const result = await bundle.write({
+      dir: outputDir,
+      format: isEsm ? 'esm' : 'cjs',
+      // Single-file output: everything a deferred config function may import
+      // later is either inlined into the entry or resolved from the user's
+      // own files beside the config, never from a transient sibling chunk.
+      codeSplitting: false,
+      sourcemap: 'inline',
+      // respect the original file extension, mts -> mjs, cts -> cjs
+      // mts should be generate mjs, it avoid add `type: module` at package.json
+      entryFileNames: `${outputPrefix}[hash]${path.extname(configFile).replace('ts', 'js')}`,
+    });
+    const entryFileName = result.output.find(
+      (chunk): chunk is OutputChunk => chunk.type === 'chunk' && chunk.isEntry,
+    )?.fileName;
+    if (entryFileName === undefined) {
+      throw new Error(`Rolldown did not emit an entry chunk for config file "${configFile}"`);
+    }
+    outputFiles = result.output.map(({ fileName }) => path.join(outputDir, fileName));
+    outputFile = path.join(outputDir, entryFileName);
+  } catch (error) {
+    operationError = error;
+  }
+
+  let closeError: unknown;
+  try {
+    await bundle.close();
+  } catch (error) {
+    closeError = error;
+  }
+
+  const errors: unknown[] = [];
+  if (operationError !== undefined) errors.push(operationError);
+  if (closeError !== undefined) errors.push(closeError);
+  if (errors.length > 0) {
+    // Nothing was (or will be) imported, so every file this call emitted can
+    // be removed right away. If the write itself failed the emitted names are
+    // unknown; fall back to the per-call entry prefix.
+    try {
+      const files =
+        outputFiles ??
+        (await readdir(outputDir))
+          .filter((name) => name.startsWith(outputPrefix))
+          .map((name) => path.join(outputDir, name));
+      await removeBundledFiles(files);
+    } catch (error) {
+      errors.push(error);
+    }
+  }
+
+  throwCollectedErrors(errors, 'Config bundling and cleanup both failed');
+  return { outputFile: outputFile!, outputFiles: outputFiles! };
+}
+
+async function removeBundledFiles(files: string[]): Promise<void> {
+  await Promise.all(files.map((file) => fs.promises.rm(file, { force: true })));
+}
+
+const filesPendingRemovalAtExit = new Set<string>();
+
+/**
+ * Defer removal of emitted files a deferred config function might still
+ * runtime-import. With `codeSplitting: false` this should never receive any
+ * file; it is a safety net so cleanup cannot break a deferred dynamic import.
+ */
+function scheduleRemovalAtExit(files: string[]): void {
+  if (files.length === 0) return;
+  if (filesPendingRemovalAtExit.size === 0) {
+    onExit(() => {
+      for (const file of filesPendingRemovalAtExit) {
+        try {
+          fs.rmSync(file, { force: true });
+        } catch {
+          // Ignore errors: best-effort cleanup while the process is exiting.
+        }
+      }
+    });
+  }
+  for (const file of files) filesPendingRemovalAtExit.add(file);
 }
 
 const SUPPORTED_JS_CONFIG_FORMATS = ['.js', '.mjs', '.cjs'];
@@ -76,12 +161,42 @@ async function findConfigFileNameInCwd(): Promise<string> {
 
 async function loadTsConfig(configFile: string): Promise<ConfigExport> {
   const isEsm = isFilePathESM(configFile);
-  const file = await bundleTsConfig(configFile, isEsm);
+  const { outputFile, outputFiles } = await bundleTsConfig(configFile, isEsm);
+  let config: ConfigExport | undefined;
+  let importError: unknown;
   try {
-    return (await import(pathToFileURL(file).href)).default;
-  } finally {
-    fs.unlink(file, () => {}); // Ignore errors
+    config = (await import(pathToFileURL(outputFile).href)).default;
+  } catch (error) {
+    importError = error;
   }
+
+  let cleanupError: unknown;
+  try {
+    if (importError === undefined) {
+      // The entry is in memory now, so its file can go. Any other emitted file
+      // must survive until process exit: a deferred config function the caller
+      // invokes after this returns may still runtime-import it.
+      await removeBundledFiles([outputFile]);
+      scheduleRemovalAtExit(outputFiles.filter((file) => file !== outputFile));
+    } else {
+      await removeBundledFiles(outputFiles);
+    }
+  } catch (error) {
+    cleanupError = error;
+  }
+
+  const errors: unknown[] = [];
+  if (importError !== undefined) errors.push(importError);
+  if (cleanupError !== undefined) errors.push(cleanupError);
+  throwCollectedErrors(errors, 'Config import and cleanup both failed');
+  return config!;
+}
+
+function throwCollectedErrors(errors: unknown[], message: string): void {
+  if (errors.length > 1) {
+    throw new AggregateError(errors, message, { cause: errors[0] });
+  }
+  if (errors.length === 1) throw errors[0];
 }
 
 function isFilePathESM(filePath: string): boolean {

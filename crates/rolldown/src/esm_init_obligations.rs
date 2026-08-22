@@ -33,7 +33,6 @@
 //! Purpose contracts are deliberately *not* identical, and each divergence is encoded (and
 //! justified) on [`ObligationPurpose`] rather than re-derived at call sites.
 
-use oxc_str::CompactStr;
 use rolldown_common::{
   ChunkIdx, ConcatenateWrappedModuleKind, ConstExportMeta, ExportsKind, ImportKind,
   ImportRecordIdx, ImportRecordMeta, IndexModules, InlineConstMode, Module, ModuleIdx,
@@ -163,7 +162,7 @@ pub struct EntryReexportedWrapperInit {
 /// evaluated before the entry's bindings are read (issue #10543).
 ///
 /// This is the single copy of the walk. Cross-chunk registration
-/// (`collect_depended_symbols`'s entry branch) consumes it with `canonical_names: None` to import
+/// (`collect_depended_symbols`'s entry branch) consumes it with `wrapper_is_reachable: None` to import
 /// every wrapper the entry may need; emission (the finalizer's entry body prelude and
 /// `render_wrapped_entry_chunk`'s tail path) consumes it with the chunk's assigned names to call
 /// exactly the reachable ones — so "everything emission calls, registration imported" is a fact
@@ -183,7 +182,7 @@ pub fn collect_entry_reexported_wrapper_inits(
   metas: &LinkingMetadataVec,
   modules: &IndexModules,
   symbol_db: &SymbolRefDb,
-  canonical_names: Option<&FxHashMap<SymbolRef, CompactStr>>,
+  wrapper_is_reachable: Option<&dyn Fn(SymbolRef) -> bool>,
 ) -> Vec<EntryReexportedWrapperInit> {
   // Filter before sorting: entries whose exports resolve to no wrapped module at all — the
   // overwhelmingly common case — should not pay for sorting their whole export map (a dep
@@ -218,8 +217,8 @@ pub fn collect_entry_reexported_wrapper_inits(
       // Emission may only call a wrapper the chunk declares or imports; anything else would
       // render as a dangling identifier. Registration passes `None`: it runs before chunk names
       // exist and is what makes a wrapper reachable in the first place.
-      if let Some(canonical_names) = canonical_names
-        && !canonical_names.contains_key(&canonical_wrapper_ref)
+      if let Some(wrapper_is_reachable) = wrapper_is_reachable
+        && !wrapper_is_reachable(canonical_wrapper_ref)
       {
         return None;
       }

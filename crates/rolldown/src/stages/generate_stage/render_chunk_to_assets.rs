@@ -14,13 +14,19 @@ use rolldown_utils::{
   indexmap::{FxIndexMap, FxIndexSet},
   rayon::{IntoParallelRefIterator, ParallelIterator},
 };
+use rustc_hash::FxHashMap;
 
 use crate::{
   BundleOutput,
   chunk_graph::ChunkGraph,
-  ecmascript::ecma_generator::EcmaGenerator,
+  ecmascript::ecma_generator::RenderedModuleSource,
+  ecmascript::{
+    ecma_generator::EcmaGenerator,
+    format::share_factory::{InlinedChunkRender, render_inlined_chunk_factory},
+  },
   type_alias::{AssetVec, IndexChunkToInstances, IndexEcmaAst, IndexInstantiatedChunks},
   types::generator::{GenerateContext, GenerateOutput, Generator},
+  utils::render_ecma_module::render_ecma_module,
   utils::{
     augment_chunk_hash::augment_chunk_hash,
     chunk::{finalize_chunks::finalize_assets, render_chunk_exports::get_export_items},
@@ -45,6 +51,7 @@ impl GenerateStage<'_> {
     ast_table: IndexEcmaAst,
     used_symbol_refs: &UsedSymbolRefs,
     order_state: &super::order_wrap_state::OrderWrapState,
+    inline_plan: &super::inline_common_chunks::InlineCommonChunksPlan,
   ) -> BuildResult<BundleOutput> {
     // Move the mixed-severity accumulator out of `link_output` so it can be
     // passed by `&mut` to `instantiate_chunks` (which borrows `&self`, and so
@@ -57,7 +64,14 @@ impl GenerateStage<'_> {
     // releasing the per-module bumpalo arenas before `minify_chunks` and
     // `finalize_assets` allocate.
     let (mut instantiated_chunks, index_chunk_to_instances) = self
-      .instantiate_chunks(chunk_graph, ast_table, &mut diagnostics, used_symbol_refs, order_state)
+      .instantiate_chunks(
+        chunk_graph,
+        ast_table,
+        &mut diagnostics,
+        used_symbol_refs,
+        order_state,
+        inline_plan,
+      )
       .await?;
 
     self.trace_action_package_graph_ready(chunk_graph, &instantiated_chunks);
@@ -154,12 +168,14 @@ impl GenerateStage<'_> {
     diagnostics: &mut Diagnostics,
     used_symbol_refs: &UsedSymbolRefs,
     order_state: &super::order_wrap_state::OrderWrapState,
+    inline_plan: &super::inline_common_chunks::InlineCommonChunksPlan,
   ) -> BuildResult<(IndexInstantiatedChunks, IndexChunkToInstances)> {
     let mut index_chunk_to_instances: IndexChunkToInstances =
       index_vec![FxIndexSet::default(); chunk_graph.chunk_table.len()];
     let mut index_instantiated_chunks: IndexInstantiatedChunks =
       IndexVec::with_capacity(chunk_graph.chunk_table.len());
-    let chunk_index_to_codegen_rets = self.create_chunk_to_codegen_ret_map(chunk_graph, ast_table);
+    let mut chunk_index_to_codegen_rets =
+      self.create_chunk_to_codegen_ret_map(chunk_graph, ast_table);
     let render_export_items_index_vec = &chunk_graph
       .chunk_table
       .chunks
@@ -173,6 +189,19 @@ impl GenerateStage<'_> {
       })
       .collect();
 
+    // Inlined chunks render first: every chunk that carries one prints its finished factory, so the
+    // factory has to exist before any host is generated.
+    let inline_renders = self.render_inlined_chunks(
+      chunk_graph,
+      &mut chunk_index_to_codegen_rets,
+      diagnostics,
+      used_symbol_refs,
+      order_state,
+      inline_plan,
+      render_export_items_index_vec,
+    );
+    let inline_renders = &inline_renders;
+
     try_join_all(
       chunk_index_to_codegen_rets
         .into_iter()
@@ -184,6 +213,10 @@ impl GenerateStage<'_> {
             return None;
           }
           let chunk = chunk_graph.chunk_table.get(chunk_idx)?;
+          if chunk.inline_share_id.is_some() {
+            // Replaced by factory placements; it is not emitted as a file.
+            return None;
+          }
           Some((chunk_idx, chunk, module_id_to_codegen_ret))
         })
         .flat_map(|(chunk_idx, chunk, module_id_to_codegen_ret)| {
@@ -201,6 +234,8 @@ impl GenerateStage<'_> {
               module_id_to_codegen_ret,
               render_export_items_index_vec,
               resolved_paths,
+              inline_renders,
+              inline_registry_chunk: inline_plan.registry_chunk,
             };
             let ecma_chunks_future = EcmaGenerator::instantiate_chunk(&mut ecma_ctx);
             let ecma_chunks = ecma_chunks_future.await?;
@@ -230,6 +265,109 @@ impl GenerateStage<'_> {
     });
 
     Ok((index_instantiated_chunks, index_chunk_to_instances))
+  }
+
+  /// Renders every inlined chunk into its `__rd_share(...)` registration, once. Hosts print that
+  /// text verbatim; only its `import` declarations are re-rendered per host, because output
+  /// directories differ.
+  #[expect(clippy::too_many_arguments)]
+  fn render_inlined_chunks(
+    &self,
+    chunk_graph: &ChunkGraph,
+    chunk_index_to_codegen_rets: &mut [Vec<Option<ModuleRenderOutput>>],
+    diagnostics: &mut Diagnostics,
+    used_symbol_refs: &UsedSymbolRefs,
+    order_state: &super::order_wrap_state::OrderWrapState,
+    inline_plan: &super::inline_common_chunks::InlineCommonChunksPlan,
+    render_export_items_index_vec: &IndexVec<ChunkIdx, FxIndexMap<SymbolRef, Vec<CompactStr>>>,
+  ) -> FxHashMap<ChunkIdx, InlinedChunkRender> {
+    let mut renders = FxHashMap::default();
+    if !inline_plan.is_active() {
+      return renders;
+    }
+    let empty: FxHashMap<ChunkIdx, InlinedChunkRender> = FxHashMap::default();
+    for &chunk_idx in &inline_plan.inlined {
+      let module_id_to_codegen_ret =
+        std::mem::take(&mut chunk_index_to_codegen_rets[chunk_idx.raw() as usize]);
+      let chunk = &chunk_graph.chunk_table[chunk_idx];
+      let mut ctx = GenerateContext {
+        chunk_idx,
+        chunk,
+        options: self.options,
+        link_output: self.link_output,
+        used_symbol_refs,
+        order_wrap_state: order_state,
+        chunk_graph,
+        plugin_driver: self.plugin_driver,
+        module_id_to_codegen_ret,
+        render_export_items_index_vec,
+        resolved_paths: self.resolved_paths.as_ref(),
+        inline_renders: &empty,
+        inline_registry_chunk: inline_plan.registry_chunk,
+      };
+
+      let codegen_rets = std::mem::take(&mut ctx.module_id_to_codegen_ret);
+      let rendered_pairs: Vec<(RenderedModuleSource, Vec<rolldown_error::BuildDiagnostic>)> = ctx
+        .chunk
+        .modules
+        .iter()
+        .copied()
+        .zip(codegen_rets)
+        .filter_map(|(id, codegen_ret)| {
+          ctx.link_output.module_table[id]
+            .as_normal()
+            .map(|m| (m, codegen_ret.expect("should have codegen_ret")))
+        })
+        .map(|(m, codegen_ret)| {
+          let render = render_ecma_module(m, ctx.options, codegen_ret);
+          (
+            RenderedModuleSource::new(m.idx, m.id.clone(), m.exec_order, render.sources),
+            render.warnings,
+          )
+        })
+        .collect::<Vec<_>>();
+
+      let mut module_sources: Vec<RenderedModuleSource> = Vec::with_capacity(rendered_pairs.len());
+      for (source, warnings) in rendered_pairs {
+        diagnostics.extend(warnings);
+        module_sources.push(source);
+      }
+
+      let rendered_modules: FxHashMap<rolldown_common::ModuleId, rolldown_common::RenderedModule> =
+        module_sources
+          .iter()
+          .map(|source| {
+            let rendered_exports = ctx.link_output.metas[source.module_idx]
+              .resolved_exports
+              .iter()
+              .filter_map(|(key, export)| {
+                ctx
+                  .link_output
+                  .retained_export_symbols
+                  .contains(&export.symbol_ref)
+                  .then(|| key.clone())
+              })
+              .collect::<Vec<_>>();
+            (
+              source.module_id.clone(),
+              rolldown_common::RenderedModule::new(
+                source.sources.clone(),
+                rendered_exports,
+                source.exec_order,
+              ),
+            )
+          })
+          .collect();
+      let module_ids = module_sources.iter().map(|source| source.module_id.clone()).collect();
+
+      let mut body_joiner = rolldown_sourcemap::SourceJoiner::default();
+      crate::ecmascript::format::esm::render_chunk_content(&ctx, &module_sources, &mut body_joiner);
+      let (body, _map) = body_joiner.join();
+      let factory = render_inlined_chunk_factory(&ctx, &body);
+
+      renders.insert(chunk_idx, InlinedChunkRender { factory, rendered_modules, module_ids });
+    }
+    renders
   }
 
   /// Create a IndexVecMap from chunk index to related modules codegen return list.

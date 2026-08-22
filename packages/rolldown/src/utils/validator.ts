@@ -847,6 +847,11 @@ const AdvancedChunksSchema = v.strictObject({
       }),
     ),
   ),
+  inlineCommonChunks: v.optional(
+    v.strictObject({
+      maxSize: v.optional(v.number()),
+    }),
+  ),
 });
 isTypeTrue<IsSchemaSubType<typeof AdvancedChunksSchema, CodeSplittingOptions>>();
 

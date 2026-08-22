@@ -148,7 +148,10 @@ fn render_entry_reexported_wrapper_init_calls(
     &ctx.link_output.metas,
     &ctx.link_output.module_table.modules,
     &ctx.link_output.symbol_db,
-    Some(&ctx.chunk.canonical_names),
+    Some(&|symbol_ref| {
+      ctx.chunk.canonical_names.contains_key(&symbol_ref)
+        || ctx.inlined_chunk_export_pattern(ctx.chunk_idx, symbol_ref).is_some()
+    }),
   );
   let mut rendered = String::new();
   for init in inits {
@@ -230,6 +233,17 @@ pub fn render_chunk_exports(
             s.push_str(canonical_ns_name);
             s.push('.');
             s.push_str(property_name);
+            s.push_str(";\n");
+          } else if let Some(pattern) =
+            ctx.inlined_chunk_export_pattern(ctx.chunk_idx, canonical_ref)
+          {
+            // `codeSplitting.inlineCommonChunks` gives the owner no file to import from, so bind the
+            // exported name to a read on that chunk's exports object first. Without this the chunk
+            // would export an identifier it never declares.
+            s.push_str("var ");
+            s.push_str(canonical_name);
+            s.push_str(" = ");
+            s.push_str(&pattern);
             s.push_str(";\n");
           }
 

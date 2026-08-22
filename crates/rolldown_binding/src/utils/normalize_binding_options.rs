@@ -442,6 +442,9 @@ fn normalize_code_splitting(
           })
           .transpose()?,
         include_dependencies_recursively: inner.include_dependencies_recursively,
+        inline_common_chunks: inner
+          .inline_common_chunks
+          .map(|inner| rolldown::InlineCommonChunksOptions { max_size: inner.max_size }),
       })
     })
     .transpose()?;

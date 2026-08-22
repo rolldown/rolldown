@@ -17,6 +17,13 @@ pub struct BindingManualCodeSplittingOptions {
   pub max_size: Option<f64>,
   pub min_module_size: Option<f64>,
   pub max_module_size: Option<f64>,
+  pub inline_common_chunks: Option<BindingInlineCommonChunksOptions>,
+}
+
+#[napi_derive::napi(object, object_to_js = false)]
+#[derive(Debug)]
+pub struct BindingInlineCommonChunksOptions {
+  pub max_size: Option<f64>,
 }
 
 type BindingMatchGroupTest =

@@ -229,6 +229,19 @@ impl NormalizedBundlerOptions {
     self.strict_execution_order && self.experimental.is_on_demand_wrapping_enabled()
   }
 
+  /// Pre-render byte ceiling for `codeSplitting.inlineCommonChunks`. Zero means the feature is
+  /// off, which is the default and produces output identical to a build without the option.
+  pub fn inline_common_chunks_max_size(&self) -> u32 {
+    let Some(options) = self.manual_code_splitting.as_ref() else { return 0 };
+    let Some(inline) = options.inline_common_chunks.as_ref() else { return 0 };
+    let Some(max_size) = inline.max_size else { return 0 };
+    if max_size <= 0.0 { 0 } else { max_size as u32 }
+  }
+
+  pub fn is_inline_common_chunks_enabled(&self) -> bool {
+    self.inline_common_chunks_max_size() > 0
+  }
+
   pub fn has_manual_code_splitting_groups(&self) -> bool {
     self
       .manual_code_splitting

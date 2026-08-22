@@ -11,6 +11,7 @@ use rustc_hash::FxHashMap;
 
 use crate::{
   chunk_graph::ChunkGraph,
+  ecmascript::format::share_factory::InlinedChunkRender,
   stages::{
     generate_stage::order_wrap_state::{EsmInitTarget, OrderWrapState},
     link_stage::LinkStageOutput,
@@ -39,6 +40,10 @@ pub struct GenerateContext<'a> {
   /// Pre-resolved paths for external modules (always a `FxHashMap` variant).
   /// Used instead of `options.paths` in sync rendering code to avoid deadlocks.
   pub resolved_paths: Option<&'a PathsOutputOption>,
+  /// Rendered `codeSplitting.inlineCommonChunks` factories, keyed by the chunk they replaced.
+  pub inline_renders: &'a FxHashMap<ChunkIdx, InlinedChunkRender>,
+  /// The chunk that prints the shared registry, when the feature placed anything.
+  pub inline_registry_chunk: Option<ChunkIdx>,
 }
 
 impl GenerateContext<'_> {
@@ -135,8 +140,33 @@ impl GenerateContext<'_> {
           self.canonical_name_for(canonical_names, canonical_ref).to_string()
         }
       }
-      _ => self.canonical_name_for(canonical_names, canonical_ref).to_string(),
+      _ => {
+        if let Some(pattern) = self.inlined_chunk_export_pattern(cur_chunk_idx, canonical_ref) {
+          return pattern;
+        }
+        self.canonical_name_for(canonical_names, canonical_ref).to_string()
+      }
     }
+  }
+
+  /// `codeSplitting.inlineCommonChunks` reaches an inlined chunk's symbol through its exports
+  /// object rather than an import binding.
+  pub fn inlined_chunk_export_pattern(
+    &self,
+    cur_chunk_idx: ChunkIdx,
+    canonical_ref: SymbolRef,
+  ) -> Option<String> {
+    let target_chunk_idx = self.link_output.symbol_db.get(canonical_ref).chunk_idx?;
+    if target_chunk_idx == cur_chunk_idx {
+      return None;
+    }
+    let target_chunk = &self.chunk_graph.chunk_table[target_chunk_idx];
+    target_chunk.inline_share_id?;
+    let binding = self.chunk_graph.chunk_table[cur_chunk_idx]
+      .inline_binding_names_for_other_chunks
+      .get(&target_chunk_idx)?;
+    let exported_name = target_chunk.exports_to_other_chunks.get(&canonical_ref)?.first()?;
+    Some(property_access_str(binding, exported_name))
   }
 
   fn canonical_name_for<'name>(

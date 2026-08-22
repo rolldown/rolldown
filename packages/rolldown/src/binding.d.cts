@@ -2461,6 +2461,10 @@ export interface BindingInjectImportNamespace {
   from: string
 }
 
+export interface BindingInlineCommonChunksOptions {
+  maxSize?: number
+}
+
 export interface BindingInlineConstConfig {
   mode?: string
   pass?: number
@@ -2587,6 +2591,7 @@ export interface BindingManualCodeSplittingOptions {
   maxSize?: number
   minModuleSize?: number
   maxModuleSize?: number
+  inlineCommonChunks?: BindingInlineCommonChunksOptions
 }
 
 export interface BindingMatchGroup {
@@ -3106,6 +3111,13 @@ export declare function collapseSourcemaps(sourcemapChain: Array<BindingSourcema
 export declare function enhancedTransform(filename: string, sourceText: string, options: BindingEnhancedTransformOptions | undefined | null, cache: TsconfigCache | undefined | null, yarnPnp: boolean): Promise<BindingEnhancedTransformResult>
 
 export declare function enhancedTransformSync(filename: string, sourceText: string, options: BindingEnhancedTransformOptions | undefined | null, cache: TsconfigCache | undefined | null, yarnPnp: boolean): BindingEnhancedTransformResult
+
+/**
+ * Research build marker for the `codeSplitting.inlineCommonChunks` prototype. It exists only in a
+ * binding built from that branch, so an analyzer can prove which engine produced an artifact
+ * instead of trusting a resolved package version.
+ */
+export declare function experimentalInlineCommonChunksMarker(): string
 
 export interface ExtensionAliasItem {
   target: string

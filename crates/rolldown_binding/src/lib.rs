@@ -104,6 +104,14 @@ pub fn start_async_runtime() {
   }
 }
 
+/// Research build marker for the `codeSplitting.inlineCommonChunks` prototype. It exists only in a
+/// binding built from that branch, so an analyzer can prove which engine produced an artifact
+/// instead of trusting a resolved package version.
+#[napi]
+pub fn experimental_inline_common_chunks_marker() -> &'static str {
+  "rolldown-inline-common-chunks/1"
+}
+
 #[napi_derive::module_init]
 fn init() {
   #[cfg(not(target_family = "wasm"))]

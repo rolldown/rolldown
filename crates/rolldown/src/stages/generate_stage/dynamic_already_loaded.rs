@@ -4,7 +4,8 @@ use oxc_index::{IndexVec, index_vec};
 use rolldown_common::{
   ChunkIdx, ChunkKind, ChunkMeta, ImportKind, ImportRecordIdx, ImportRecordMeta, ModuleIdx,
   PreserveEntrySignatures, RuntimeHelper, StmtInfoIdx, SymbolOrMemberExprRef, SymbolRef,
-  UsedSymbolRefsBuilder, WrapKind, dynamic_import_usage::DynamicImportExportsUsage,
+  UsedSymbolRefsBuilder, UsedSymbolRefsView, WrapKind,
+  dynamic_import_usage::DynamicImportExportsUsage,
 };
 use rolldown_utils::BitSet;
 use rustc_hash::{FxHashMap, FxHashSet};
@@ -13,7 +14,7 @@ use crate::chunk_graph::ChunkGraph;
 use crate::esm_init_obligations::collect_entry_reexported_wrapper_inits;
 
 use super::{
-  GenerateStage, code_splitting::IndexSplittingInfo, compute_cross_chunk_links::UsedSymbolRefsView,
+  GenerateStage, code_splitting::IndexSplittingInfo,
   simulated_facade_inclusion::include_simulated_facade_namespace,
 };
 
@@ -346,7 +347,7 @@ impl GenerateStage<'_> {
     &self,
     atoms: &[ChunkAtom],
     module_to_atom_idx: &IndexVec<ModuleIdx, Option<usize>>,
-    used_symbol_refs: &impl UsedSymbolRefsView,
+    used_symbol_refs: &UsedSymbolRefsBuilder,
   ) -> AtomDependencyGraphs {
     let strict_execution_order = self.options.is_strict_execution_order_enabled();
     let flattened_entry_modules: Vec<ModuleIdx> = self
@@ -383,7 +384,12 @@ impl GenerateStage<'_> {
         }
 
         let mut service_targets = vec![];
-        self.entry_export_service_targets(module_idx, used_symbol_refs, true, &mut service_targets);
+        self.entry_export_service_targets(
+          module_idx,
+          used_symbol_refs.view(),
+          true,
+          &mut service_targets,
+        );
         for dep_module_idx in service_targets {
           add(dep_module_idx, &mut cycle_deps);
         }
@@ -396,7 +402,7 @@ impl GenerateStage<'_> {
           let mut service_targets = vec![];
           self.entry_export_service_targets(
             module_idx,
-            used_symbol_refs,
+            used_symbol_refs.view(),
             false,
             &mut service_targets,
           );
@@ -463,7 +469,7 @@ impl GenerateStage<'_> {
   pub(super) fn entry_export_service_targets(
     &self,
     module_idx: ModuleIdx,
-    used_symbol_refs: &impl UsedSymbolRefsView,
+    used_symbol_refs: UsedSymbolRefsView<'_>,
     assume_all_live: bool,
     targets: &mut Vec<ModuleIdx>,
   ) {

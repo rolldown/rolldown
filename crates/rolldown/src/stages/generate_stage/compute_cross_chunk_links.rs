@@ -373,7 +373,7 @@ impl GenerateStage<'_> {
   fn debug_assert_module_level_static_import_prediction(
     &self,
     chunk_graph: &ChunkGraph,
-    used_symbol_refs: UsedSymbolRefsView<'_>,
+    used_symbol_refs_view: UsedSymbolRefsView<'_>,
     index_imports_from_other_chunks: &IndexImportsFromOtherChunks,
   ) {
     if self.options.is_strict_execution_order_enabled() || self.options.preserve_modules {
@@ -411,7 +411,7 @@ impl GenerateStage<'_> {
         let mut service_targets = vec![];
         self.entry_export_service_targets(
           entry_module_idx,
-          used_symbol_refs,
+          used_symbol_refs_view,
           false,
           &mut service_targets,
         );
@@ -468,7 +468,7 @@ impl GenerateStage<'_> {
   fn compute_cross_chunk_link_state(
     &self,
     chunk_graph: &ChunkGraph,
-    used_symbol_refs: UsedSymbolRefsView<'_>,
+    used_symbol_refs_view: UsedSymbolRefsView<'_>,
     order_state: &super::order_wrap_state::OrderWrapState,
     final_esm_init_metadata: FinalEsmInitMetadataAvailability<'_>,
   ) -> CrossChunkLinkState {
@@ -512,7 +512,7 @@ impl GenerateStage<'_> {
       &mut index_chunk_direct_imports_from_external_modules,
       &mut index_cross_chunk_dynamic_imports,
       &mut index_chunk_dynamic_imports_from_external_modules,
-      used_symbol_refs,
+      used_symbol_refs_view,
       order_state,
       final_esm_init_metadata,
     );
@@ -525,7 +525,7 @@ impl GenerateStage<'_> {
       &mut index_cross_chunk_imports,
       &mut index_imports_from_other_chunks,
       &mut index_chunk_indirect_imports_from_external_modules,
-      used_symbol_refs,
+      used_symbol_refs_view,
       order_state,
       &order_live_symbols,
       &symbol_chunk_table,
@@ -604,7 +604,7 @@ impl GenerateStage<'_> {
     index_chunk_imports_from_external_modules: &mut IndexChunkImportsFromExternalModules,
     index_cross_chunk_dynamic_imports: &mut IndexCrossChunkDynamicImports,
     index_chunk_dynamic_imports_from_external_modules: &mut IndexChunkDynamicImportsFromExternalModules,
-    used_symbol_refs: UsedSymbolRefsView<'_>,
+    used_symbol_refs_view: UsedSymbolRefsView<'_>,
     order_state: &super::order_wrap_state::OrderWrapState,
     final_esm_init_metadata: FinalEsmInitMetadataAvailability<'_>,
   ) -> SymbolChunkTable {
@@ -723,7 +723,7 @@ impl GenerateStage<'_> {
           );
           self.add_module_esm_init_depended_symbols(
             chunk_graph,
-            used_symbol_refs,
+            used_symbol_refs_view,
             order_state,
             final_esm_init_metadata,
             depended_symbols,
@@ -956,7 +956,7 @@ impl GenerateStage<'_> {
   fn add_module_esm_init_depended_symbols(
     &self,
     chunk_graph: &ChunkGraph,
-    used_symbol_refs: UsedSymbolRefsView<'_>,
+    used_symbol_refs_view: UsedSymbolRefsView<'_>,
     order_state: &super::order_wrap_state::OrderWrapState,
     final_esm_init_metadata: FinalEsmInitMetadataAvailability<'_>,
     depended_symbols: &mut FxIndexSet<SymbolRef>,
@@ -973,7 +973,7 @@ impl GenerateStage<'_> {
     }
     self.add_included_import_esm_init_depended_symbols(
       chunk_graph,
-      used_symbol_refs,
+      used_symbol_refs_view,
       order_state,
       depended_symbols,
       module_idx,
@@ -1089,7 +1089,7 @@ impl GenerateStage<'_> {
   fn add_included_import_esm_init_depended_symbols(
     &self,
     chunk_graph: &ChunkGraph,
-    used_symbol_refs: UsedSymbolRefsView<'_>,
+    used_symbol_refs_view: UsedSymbolRefsView<'_>,
     order_state: &super::order_wrap_state::OrderWrapState,
     depended_symbols: &mut FxIndexSet<SymbolRef>,
     module_idx: ModuleIdx,
@@ -1134,7 +1134,7 @@ impl GenerateStage<'_> {
         let targets = collect_wrapped_esm_init_targets_for_import_record(
           &ctx,
           rec_idx,
-          |symbol_ref| used_symbol_refs.contains(&symbol_ref),
+          |symbol_ref| used_symbol_refs_view.contains(&symbol_ref),
           |_| true,
           |forwarding_module_idx| {
             chunk_graph.module_to_chunk[forwarding_module_idx] == Some(chunk_idx)
@@ -1194,7 +1194,7 @@ impl GenerateStage<'_> {
     index_cross_chunk_imports: &mut IndexCrossChunkImports,
     index_imports_from_other_chunks: &mut IndexImportsFromOtherChunks,
     index_chunk_indirect_imports_from_external_modules: &mut IndexChunkAllImportsFromExternalModules,
-    used_symbol_refs: UsedSymbolRefsView<'_>,
+    used_symbol_refs_view: UsedSymbolRefsView<'_>,
     order_state: &super::order_wrap_state::OrderWrapState,
     order_live_symbols: &FxHashSet<SymbolRef>,
     symbol_chunk_table: &SymbolChunkTable,
@@ -1405,7 +1405,7 @@ impl GenerateStage<'_> {
           {
             self.link_output.metas[import_ref.owner].namespace_included
           } else {
-            non_namespace_symbol_is_live(used_symbol_refs, order_live_symbols, import_ref)
+            non_namespace_symbol_is_live(used_symbol_refs_view, order_live_symbols, import_ref)
           };
           if !is_live {
             continue;
@@ -1770,11 +1770,11 @@ impl GenerateStage<'_> {
 }
 
 fn non_namespace_symbol_is_live(
-  used_symbol_refs: UsedSymbolRefsView<'_>,
+  used_symbol_refs_view: UsedSymbolRefsView<'_>,
   order_live_symbols: &FxHashSet<SymbolRef>,
   symbol_ref: SymbolRef,
 ) -> bool {
-  used_symbol_refs.contains(&symbol_ref) || order_live_symbols.contains(&symbol_ref)
+  used_symbol_refs_view.contains(&symbol_ref) || order_live_symbols.contains(&symbol_ref)
 }
 
 // The same implementation with https://github.com/oxc-project/oxc/blob/crates_v0.86.0/crates/oxc_mangler/src/base54.rs#L30-L31

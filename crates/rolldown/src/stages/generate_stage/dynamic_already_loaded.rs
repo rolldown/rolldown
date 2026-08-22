@@ -469,7 +469,7 @@ impl GenerateStage<'_> {
   pub(super) fn entry_export_service_targets(
     &self,
     module_idx: ModuleIdx,
-    used_symbol_refs: UsedSymbolRefsView<'_>,
+    used_symbol_refs_view: UsedSymbolRefsView<'_>,
     assume_all_live: bool,
     targets: &mut Vec<ModuleIdx>,
   ) {
@@ -493,7 +493,7 @@ impl GenerateStage<'_> {
         {
           self.link_output.metas[served.owner].namespace_included
         } else {
-          used_symbol_refs.contains(&served)
+          used_symbol_refs_view.contains(&served)
         };
       if is_live {
         targets.push(served.owner);
@@ -508,7 +508,7 @@ impl GenerateStage<'_> {
       symbol_db,
       None,
     ) {
-      if assume_all_live || used_symbol_refs.contains(&init.wrapper_ref) {
+      if assume_all_live || used_symbol_refs_view.contains(&init.wrapper_ref) {
         targets.push(init.wrapper_ref.owner);
       }
     }

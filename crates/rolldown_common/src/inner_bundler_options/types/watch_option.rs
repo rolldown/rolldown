@@ -1,4 +1,4 @@
-use std::sync::Arc;
+use std::{future::Future, pin::Pin, sync::Arc};
 
 use derive_more::Debug;
 
@@ -38,6 +38,12 @@ pub struct WatchOption {
   pub exclude: Option<Vec<StringOrRegex>>,
   #[debug("Function")]
   #[cfg_attr(feature = "deserialize_bundler_options", serde(skip_serializing, skip_deserializing))]
+  pub include_fn: Option<WatchFilter>,
+  #[debug("Function")]
+  #[cfg_attr(feature = "deserialize_bundler_options", serde(skip_serializing, skip_deserializing))]
+  pub exclude_fn: Option<WatchFilter>,
+  #[debug("Function")]
+  #[cfg_attr(feature = "deserialize_bundler_options", serde(skip_serializing, skip_deserializing))]
   pub on_invalidate: Option<OnInvalidate>,
 }
 
@@ -54,10 +60,26 @@ where
 
 // TODO should it be just placed here?
 type OnInvalidateFn = dyn Fn(&str) + Send + Sync;
+type WatchFilterFuture = Pin<Box<dyn Future<Output = anyhow::Result<bool>> + Send>>;
+type WatchFilterFn = dyn Fn(&str) -> WatchFilterFuture + Send + Sync;
 
 #[derive(Clone, Debug)]
 #[debug("OnInvalidateFn::Fn(...)")]
 pub struct OnInvalidate(Arc<OnInvalidateFn>);
+
+#[derive(Clone, Debug)]
+#[debug("WatchFilterFn::Fn(...)")]
+pub struct WatchFilter(Arc<WatchFilterFn>);
+
+impl WatchFilter {
+  pub fn new(f: Arc<WatchFilterFn>) -> Self {
+    Self(f)
+  }
+
+  pub async fn call(&self, path: &str) -> anyhow::Result<bool> {
+    (self.0)(path).await
+  }
+}
 
 impl OnInvalidate {
   pub fn new(f: Arc<OnInvalidateFn>) -> Self {

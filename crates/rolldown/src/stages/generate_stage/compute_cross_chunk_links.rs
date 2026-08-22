@@ -289,12 +289,12 @@ impl GenerateStage<'_> {
   pub(super) fn predicted_static_import_edges(
     &self,
     chunk_graph: &ChunkGraph,
-    used_symbol_refs: &UsedSymbolRefsBuilder,
+    used_symbol_refs_builder: &UsedSymbolRefsBuilder,
   ) -> IndexVec<ChunkIdx, FxHashSet<ChunkIdx>> {
     let empty_order_state = super::order_wrap_state::OrderWrapState::default();
     let state = self.compute_cross_chunk_link_state(
       chunk_graph,
-      used_symbol_refs.view(),
+      used_symbol_refs_builder.view(),
       &empty_order_state,
       FinalEsmInitMetadataAvailability::Unavailable,
     );
@@ -326,13 +326,13 @@ impl GenerateStage<'_> {
   pub(super) fn lowered_static_import_edges(
     &self,
     chunk_graph: &ChunkGraph,
-    used_symbol_refs: &UsedSymbolRefsBuilder,
+    used_symbol_refs_builder: &UsedSymbolRefsBuilder,
     order_state: &super::order_wrap_state::OrderWrapState,
     final_esm_init_metadata: &Sealed<FinalEsmInitMetadata>,
   ) -> IndexVec<ChunkIdx, FxHashSet<ChunkIdx>> {
     let state = self.compute_cross_chunk_link_state(
       chunk_graph,
-      used_symbol_refs.view(),
+      used_symbol_refs_builder.view(),
       order_state,
       FinalEsmInitMetadataAvailability::Sealed(final_esm_init_metadata),
     );

@@ -553,10 +553,13 @@ true` and calls `rebuild()`.
 
 Per changed file:
 
-1. **Default affected set** — the file's own module, plus every module
-   that registered the file with `addWatchFile` (transform
-   dependencies), in a stable order: own module first, then
-   registrants sorted by stable id.
+1. **Default affected set** — the file's own module, every module that
+   registered the file with `addWatchFile` (transform dependencies),
+   and every module addressed as `<file>?query`
+   (`module_idxs_by_clean_path` — the html-proxy /
+   `foo.vue?vue&type=...` pattern), in a stable order: own module
+   first, then registrants sorted by stable id, then the query
+   variants sorted the same way.
 2. **`hotUpdate` plugin chain** (dev-only) — plugins run in hook order;
    each may replace the set. Module ids cross the hook
    slash-normalized, in the same convention as `file`; returned ids
@@ -568,8 +571,11 @@ Per changed file:
    scan, nothing is queued in `pending_rescans`, so the lost edits
    reach the graph only when a later change touches those files
    again — the same contract as `watchChange`.
-3. **Delete handling** — a deleted module cannot be re-fetched; the
-   update starts from its importers instead.
+3. **Delete handling** — a deleted file's own module and its `?query`
+   variants cannot be re-fetched; the update starts from their
+   importers instead, skipping importers that are deleted with them (a
+   variant is typically imported by the deleted module itself, or by a
+   sibling variant).
 
 Then, across all files of the batch:
 

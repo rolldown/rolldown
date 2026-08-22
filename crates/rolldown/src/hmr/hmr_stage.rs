@@ -130,7 +130,8 @@ impl<'a, Fs: FileSystem + Clone + 'static> HmrStage<'a, Fs> {
       }
       // `transform_dependencies` is a DashMap, so its iteration order can differ between runs.
       // The `hotUpdate` hook makes this order plugin-visible via `args.modules`, so give the
-      // set a stable order: own module first, then registrants sorted by stable id.
+      // set a stable order: own module first, then registrants sorted by stable id, then the
+      // file's `?query` variants sorted the same way.
       let mut transform_dep_modules = self
         .plugin_driver
         .transform_dependencies
@@ -140,6 +141,20 @@ impl<'a, Fs: FileSystem + Clone + 'static> HmrStage<'a, Fs> {
       transform_dep_modules
         .sort_unstable_by_key(|module_idx| self.module_table().modules[*module_idx].stable_id());
       affected_modules.extend(transform_dep_modules);
+      // Modules addressed as `<changed file>?query` (an html proxy module, a
+      // `foo.vue?vue&type=...` sub-module) read their content from the changed file, so
+      // they are re-fetched with it; the exact-id lookup above cannot see them and would
+      // keep serving their cached copies.
+      if let Some(variant_idxs) = self.cache.module_idxs_by_clean_path.get(&changed_file_path) {
+        let mut query_variant_modules = variant_idxs
+          .iter()
+          .copied()
+          .filter(|module_idx| self.module_table().modules[*module_idx].as_normal().is_some())
+          .collect::<Vec<_>>();
+        query_variant_modules
+          .sort_unstable_by_key(|module_idx| self.module_table().modules[*module_idx].stable_id());
+        affected_modules.extend(query_variant_modules);
+      }
 
       let mut hook_replaced = false;
       if hot_update_hook_registered {
@@ -180,11 +195,36 @@ impl<'a, Fs: FileSystem + Clone + 'static> HmrStage<'a, Fs> {
         }
       }
 
+      // On a delete, the file's `?query` variants are exactly as un-refetchable as the file's
+      // own module — their content comes from the deleted file. Collect all of them as one set
+      // so the importer expansion below can also skip edges that lead back into it: a variant
+      // is typically imported by the deleted module itself, or by a sibling variant.
+      let deleted_module_idxs: FxHashSet<ModuleIdx> = if *event == WatcherChangeKind::Delete {
+        own_module_idx
+          .into_iter()
+          .chain(
+            self
+              .cache
+              .module_idxs_by_clean_path
+              .get(&changed_file_path)
+              .into_iter()
+              .flat_map(|variant_idxs| variant_idxs.iter().copied()),
+          )
+          .collect()
+      } else {
+        FxHashSet::default()
+      };
+
       for module_idx in affected_modules {
-        if *event == WatcherChangeKind::Delete && Some(module_idx) == own_module_idx {
-          // A deleted module cannot be re-fetched — start the update from its importers.
+        if deleted_module_idxs.contains(&module_idx) {
+          // A deleted module cannot be re-fetched — start the update from its live importers.
           if let Some(importers) = self.cache.importers.get(module_idx) {
-            changed_modules.extend(importers.iter().map(|imp| imp.importer_idx));
+            changed_modules.extend(
+              importers
+                .iter()
+                .map(|imp| imp.importer_idx)
+                .filter(|importer_idx| !deleted_module_idxs.contains(importer_idx)),
+            );
           }
         } else {
           changed_modules.insert(module_idx);

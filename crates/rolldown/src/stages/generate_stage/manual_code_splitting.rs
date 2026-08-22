@@ -115,6 +115,8 @@ impl ManualSplitter<'_> {
   async fn build_module_groups(
     &self,
   ) -> BuildResult<(IndexVec<ModuleGroupIdx, ModuleGroup>, Vec<ModuleGroup>)> {
+    /// Max JS callback invocations in flight at once.
+    const CALLBACK_BATCH: usize = 4096;
     let metas = &self.link_output.metas;
     let mut module_groups: IndexVec<ModuleGroupIdx, ModuleGroup> = IndexVec::default();
     let mut group_idx_by_id: FxHashMap<ModuleGroupId, ModuleGroupIdx> = FxHashMap::default();
@@ -133,36 +135,35 @@ impl ManualSplitter<'_> {
       .modules
       .iter()
       .filter_map(Module::as_normal)
-      .sorted_unstable_by(|a, b| a.stable_id.cmp(&b.stable_id));
+      .filter(|m| metas[m.idx].is_included && !self.module_to_assigned.has_bit(m.idx))
+      .sorted_unstable_by(|a, b| a.stable_id.cmp(&b.stable_id))
+      .collect::<Vec<_>>();
 
-    for normal_module in sorted_normal_modules {
-      if !metas[normal_module.idx].is_included {
-        continue;
-      }
-
-      if self.module_to_assigned.has_bit(normal_module.idx) {
-        continue;
-      }
-
-      let splitting_info = &self.index_splitting_info[normal_module.idx];
-
-      for (match_group_index, match_group) in self.match_groups.iter().copied().enumerate() {
-        let is_matched = match &match_group.test {
-          None => true,
-          Some(MatchGroupTest::Regex(reg)) => reg.matches(&normal_module.id),
-          Some(MatchGroupTest::Function(func)) => {
-            func(&normal_module.id).await?.unwrap_or_default()
-          }
-        };
-
-        if !is_matched {
-          continue;
+    // `test` / `name` functions are JS callbacks: evaluate them up front in batches (one
+    // function at a time, modules in `stable_id` order, so stateful callbacks see a stable
+    // sequence) instead of awaiting one round trip per (module, group) in the loop below.
+    let ctx = ChunkingContext::new(Arc::clone(&self.plugin_driver.module_infos));
+    let mut test_results: FxHashMap<(ModuleIdx, usize), bool> = FxHashMap::default();
+    for (match_group_index, match_group) in self.match_groups.iter().copied().enumerate() {
+      let Some(MatchGroupTest::Function(func)) = &match_group.test else { continue };
+      for batch in sorted_normal_modules.chunks(CALLBACK_BATCH) {
+        let results =
+          futures::future::try_join_all(batch.iter().map(|m| async move { func(&m.id).await }))
+            .await?;
+        for (normal_module, matched) in batch.iter().zip(results) {
+          test_results.insert((normal_module.idx, match_group_index), matched.unwrap_or_default());
         }
-
+      }
+    }
+    let passes_static_filters =
+      |match_group_index: usize,
+       match_group: &MatchGroup,
+       normal_module: &rolldown_common::NormalModule| {
+        let splitting_info = &self.index_splitting_info[normal_module.idx];
         // Filter by module tags. See internal-docs/module-tags/implementation.md
         if let Some(required_tags) = &self.match_group_required_tags[match_group_index] {
           if !splitting_info.tags_bit_set.contains_all(required_tags) {
-            continue;
+            return false;
           }
         }
 
@@ -177,24 +178,72 @@ impl ManualSplitter<'_> {
           .is_none_or(|max_module_size| normal_module.size() <= max_module_size);
 
         if !is_min_module_size_satisfied || !is_max_module_size_satisfied {
-          continue;
+          return false;
         }
 
         if let Some(allow_min_share_count) =
           match_group.min_share_count.map_or(self.chunking_options.min_share_count, Some)
         {
           if splitting_info.share_count < allow_min_share_count {
-            continue;
+            return false;
           }
         }
+        true
+      };
+    let is_matched = |match_group_index: usize,
+                      match_group: &MatchGroup,
+                      normal_module: &rolldown_common::NormalModule| {
+      match &match_group.test {
+        None => true,
+        Some(MatchGroupTest::Regex(reg)) => reg.matches(&normal_module.id),
+        Some(MatchGroupTest::Function(_)) => {
+          test_results.get(&(normal_module.idx, match_group_index)).copied().unwrap_or_default()
+        }
+      }
+    };
+    let mut name_results: FxHashMap<(ModuleIdx, usize), Option<ArcStr>> = FxHashMap::default();
+    for (match_group_index, match_group) in self.match_groups.iter().copied().enumerate() {
+      if !matches!(match_group.name, rolldown_common::MatchGroupName::Dynamic(_)) {
+        continue;
+      }
+      let candidates = sorted_normal_modules
+        .iter()
+        .copied()
+        .filter(|m| {
+          is_matched(match_group_index, match_group, m)
+            && passes_static_filters(match_group_index, match_group, m)
+        })
+        .collect::<Vec<_>>();
+      for batch in candidates.chunks(CALLBACK_BATCH) {
+        let results =
+          futures::future::try_join_all(batch.iter().map(|m| match_group.name.value(&ctx, &m.id)))
+            .await?;
+        for (normal_module, name) in batch.iter().zip(results) {
+          name_results.insert((normal_module.idx, match_group_index), name.map(ArcStr::from));
+        }
+      }
+    }
 
-        let ctx = ChunkingContext::new(Arc::clone(&self.plugin_driver.module_infos));
+    for normal_module in sorted_normal_modules.iter().copied() {
+      for (match_group_index, match_group) in self.match_groups.iter().copied().enumerate() {
+        if !is_matched(match_group_index, match_group, normal_module) {
+          continue;
+        }
 
-        let Some(group_name) = match_group.name.value(&ctx, &normal_module.id).await? else {
+        if !passes_static_filters(match_group_index, match_group, normal_module) {
+          continue;
+        }
+
+        let group_name = match &match_group.name {
+          rolldown_common::MatchGroupName::Static(name) => Some(ArcStr::from(name.as_str())),
+          rolldown_common::MatchGroupName::Dynamic(_) => {
+            name_results.get(&(normal_module.idx, match_group_index)).cloned().flatten()
+          }
+        };
+        let Some(group_name) = group_name else {
           // Group which doesn't have a name will be ignored.
           continue;
         };
-        let group_name = ArcStr::from(group_name);
 
         let entries_aware = match_group.entries_aware.unwrap_or(false);
         let module_group_id = ModuleGroupId { match_group_index, name: group_name.clone() };

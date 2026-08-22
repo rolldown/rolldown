@@ -62,7 +62,5 @@ pub mod symbol_ref;
 pub mod symbol_ref_db;
 pub mod used_external_symbols;
 pub mod used_symbol_refs;
-pub mod used_symbol_refs_builder;
-pub mod used_symbol_refs_view;
 pub mod watch;
 pub mod wrap_kind;

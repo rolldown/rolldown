@@ -1,0 +1,81 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+//#region log.js
+const log = [];
+//#endregion
+//#region main.js
+{
+	await using _ = { async [Symbol.asyncDispose]() {
+		await Promise.resolve();
+		log.push("disposed");
+	} };
+	log.push("body");
+}
+//#endregion
+export { log };
+
+```
+
+# Variant: wrap-all: [strict_execution_order: true]
+
+## Assets
+
+### main.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+//#region log.js
+var log;
+function init_log() {
+	return (init_log = __esmMin((() => {
+		log = [];
+	})))();
+}
+//#endregion
+//#region main.js
+function init_main() {
+	return (init_main = __esmMin((async () => {
+		init_log();
+		{
+			await using _ = { async [Symbol.asyncDispose]() {
+				await Promise.resolve();
+				log.push("disposed");
+			} };
+			log.push("body");
+		}
+	})))();
+}
+//#endregion
+await init_main();
+export { log };
+
+```
+
+# Variant: on-demand: [on_demand_wrapping: true] [strict_execution_order: true]
+
+## Assets
+
+### main.js
+
+```js
+//#region log.js
+const log = [];
+//#endregion
+//#region main.js
+{
+	await using _ = { async [Symbol.asyncDispose]() {
+		await Promise.resolve();
+		log.push("disposed");
+	} };
+	log.push("body");
+}
+//#endregion
+export { log };
+
+```

@@ -107,7 +107,7 @@ pub struct LinkStage<'a> {
   pub diagnostics: Diagnostics,
   pub ast_table: IndexEcmaAst,
   pub options: &'a SharedOptions,
-  pub used_symbol_refs: UsedSymbolRefsBuilder,
+  pub used_symbol_refs_builder: UsedSymbolRefsBuilder,
   pub used_external_symbols: UsedExternalSymbols,
   pub safely_merge_cjs_ns_map: FxHashMap<ModuleIdx, SafelyMergeCjsNsInfo>,
   pub dynamic_import_exports_usage_map: FxHashMap<ModuleIdx, DynamicImportExportsUsage>,
@@ -214,7 +214,7 @@ impl<'a> LinkStage<'a> {
       ast_table: scan_stage_output.index_ecma_ast,
       dynamic_import_exports_usage_map: scan_stage_output.dynamic_import_exports_usage_map,
       options,
-      used_symbol_refs: UsedSymbolRefsBuilder::default(),
+      used_symbol_refs_builder: UsedSymbolRefsBuilder::default(),
       used_external_symbols: UsedExternalSymbols::default(),
       safely_merge_cjs_ns_map: FxHashMap::default(),
       normal_symbol_exports_chain_map: FxHashMap::default(),
@@ -278,7 +278,7 @@ impl<'a> LinkStage<'a> {
         has_enum_inlining: self.has_enum_inlining,
       },
       self.ast_table,
-      self.used_symbol_refs,
+      self.used_symbol_refs_builder,
     )
   }
 

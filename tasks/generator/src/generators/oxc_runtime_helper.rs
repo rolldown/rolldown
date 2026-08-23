@@ -1,8 +1,10 @@
 use std::collections::BTreeMap;
 use std::fmt::Write as _;
 use std::fs;
+use std::io::Write as _;
 use std::path::Path;
 
+use flate2::{Compression, write::DeflateEncoder};
 use oxc_resolver::ResolveOptions;
 
 use crate::{
@@ -36,7 +38,7 @@ impl Generator for OxcRuntimeHelperGenerator {
     // non-files so the `esm/` subdir entry is ignored when listing this directory.
     let cjs_helpers = read_helpers_dir(&cjs_helpers_dir)?;
 
-    let code = generate_embedded_helpers_rs(version, &esm_helpers, &cjs_helpers);
+    let code = generate_embedded_helpers_rs(version, &esm_helpers, &cjs_helpers)?;
 
     Ok(vec![crate::output::Output::RustString {
       path: output_path("crates/rolldown_plugin_oxc_runtime/src", "embedded_helpers.rs"),
@@ -69,7 +71,23 @@ fn generate_embedded_helpers_rs(
   version: &str,
   esm_helpers: &BTreeMap<String, String>,
   cjs_helpers: &BTreeMap<String, String>,
-) -> String {
+) -> anyhow::Result<String> {
+  let mut corpus = String::new();
+  let mut helper_metadata = Vec::with_capacity(esm_helpers.len() + cjs_helpers.len());
+
+  for (prefix, helpers) in [("esm/", esm_helpers), ("", cjs_helpers)] {
+    for (name, content) in helpers {
+      let start = u32::try_from(corpus.len()).expect("Oxc runtime helper corpus fits in u32");
+      corpus.push_str(content);
+      let end = u32::try_from(corpus.len()).expect("Oxc runtime helper corpus fits in u32");
+      helper_metadata.push((format!("{prefix}{name}"), start, end));
+    }
+  }
+
+  let mut encoder = DeflateEncoder::new(Vec::new(), Compression::best());
+  encoder.write_all(corpus.as_bytes())?;
+  let compressed_helpers = encoder.finish()?;
+
   let mut code = String::new();
 
   // Write file header with version info
@@ -82,7 +100,10 @@ fn generate_embedded_helpers_rs(
 
   write!(
     &mut code,
-    r#"use arcstr::ArcStr;
+    r#"use std::{{io::Read as _, sync::LazyLock}};
+
+use arcstr::ArcStr;
+use flate2::read::DeflateDecoder;
 use phf::{{Map, phf_map}};
 
 pub const RUNTIME_HELPER_PREFIX: &str = "@oxc-project+runtime@{version}/helpers/";
@@ -92,8 +113,45 @@ pub const RUNTIME_HELPER_UNVERSIONED_PREFIX: &str = "@oxc-project/runtime/helper
   )
   .unwrap();
 
-  write_helper_map(&mut code, "ESM_HELPERS", "src/helpers/esm/", esm_helpers);
-  write_helper_map(&mut code, "CJS_HELPERS", "src/helpers/", cjs_helpers);
+  writeln!(
+    &mut code,
+    "const UNCOMPRESSED_HELPERS_LEN: usize = {};\n\
+     static COMPRESSED_HELPERS: &[u8] = b\"{}\";\n",
+    corpus.len(),
+    escape_byte_string(&compressed_helpers),
+  )
+  .unwrap();
+
+  code.push_str(
+    r"static HELPER_SLOTS: Map<&'static str, u16> = phf_map! {
+",
+  );
+  for (slot, (path, _, _)) in helper_metadata.iter().enumerate() {
+    let slot = u16::try_from(slot).expect("Oxc runtime helper count fits in u16");
+    writeln!(&mut code, "  \"{path}\" => {slot},").unwrap();
+  }
+  code.push_str("};\n\nstatic HELPER_RANGES: &[(u32, u32)] = &[\n");
+  for (_, start, end) in helper_metadata {
+    writeln!(&mut code, "  ({start}, {end}),").unwrap();
+  }
+  code.push_str(
+    r#"];
+
+static DECODED_HELPERS: LazyLock<Box<[ArcStr]>> = LazyLock::new(|| {
+  let mut decoder = DeflateDecoder::new(COMPRESSED_HELPERS);
+  let mut decoded = Vec::with_capacity(UNCOMPRESSED_HELPERS_LEN);
+  decoder.read_to_end(&mut decoded).expect("embedded Oxc runtime helpers should decompress");
+  assert_eq!(decoded.len(), UNCOMPRESSED_HELPERS_LEN, "embedded Oxc runtime helper length");
+  let decoded = String::from_utf8(decoded).expect("embedded Oxc runtime helpers should be UTF-8");
+
+  HELPER_RANGES
+    .iter()
+    .map(|&(start, end)| ArcStr::from(&decoded[start as usize..end as usize]))
+    .collect()
+});
+
+"#,
+  );
 
   // Write helper functions
   code.push_str(
@@ -105,11 +163,8 @@ pub const RUNTIME_HELPER_UNVERSIONED_PREFIX: &str = "@oxc-project/runtime/helper
 pub fn get_helper_content(specifier: &str) -> Option<ArcStr> {
   let helper_path = specifier.strip_prefix(RUNTIME_HELPER_PREFIX)?;
   let helper_path = helper_path.strip_suffix(".js").unwrap_or(helper_path);
-  if let Some(name) = helper_path.strip_prefix("esm/") {
-    ESM_HELPERS.get(name).cloned()
-  } else {
-    CJS_HELPERS.get(helper_path).cloned()
-  }
+  let slot = HELPER_SLOTS.get(helper_path)?;
+  Some(DECODED_HELPERS[*slot as usize].clone())
 }
 
 /// Check if a specifier is an OXC runtime helper
@@ -124,47 +179,13 @@ pub fn is_virtual_runtime_helper(specifier: &str) -> bool {
 "#,
   );
 
-  code
+  Ok(code)
 }
 
-fn write_helper_map(
-  code: &mut String,
-  map_name: &str,
-  source_dir_doc: &str,
-  helpers: &BTreeMap<String, String>,
-) {
-  writeln!(
-    code,
-    "/// Map of all helpers from `@oxc-project/runtime/{source_dir_doc}`.\n\
-     pub static {map_name}: Map<&'static str, ArcStr> = phf_map! {{"
-  )
-  .unwrap();
-
-  for (helper_name, content) in helpers {
-    let hash_count = calculate_hash_count(content);
-    let hashes = "#".repeat(hash_count);
-    writeln!(code, "  \"{helper_name}\" => arcstr::literal!(r{hashes}\"{content}\"{hashes}),")
-      .unwrap();
+fn escape_byte_string(bytes: &[u8]) -> String {
+  let mut escaped = String::with_capacity(bytes.len() * 4);
+  for &byte in bytes {
+    write!(&mut escaped, "\\x{byte:02x}").unwrap();
   }
-
-  code.push_str("};\n\n");
-}
-
-/// Calculate the number of # needed for raw string literal
-fn calculate_hash_count(content: &str) -> usize {
-  let mut count = 0;
-  let mut chars = content.chars().peekable();
-
-  while let Some(ch) = chars.next() {
-    if ch == '"' {
-      let mut hash_seq = 0;
-      while chars.peek() == Some(&'#') {
-        chars.next();
-        hash_seq += 1;
-      }
-      count = count.max(hash_seq);
-    }
-  }
-
-  count + 1 // Add one more to be safe
+  escaped
 }

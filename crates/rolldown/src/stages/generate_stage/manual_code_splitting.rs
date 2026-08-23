@@ -10,7 +10,7 @@ use itertools::Itertools;
 use oxc_index::IndexVec;
 use rolldown_common::{
   Chunk, ChunkKind, ChunkingContext, EntryPoint, ManualCodeSplittingOptions, MatchGroup,
-  MatchGroupTest, Module, ModuleIdx, ModuleTable, ModuleTagBitSet, ModuleTagRegistry,
+  MatchGroupTest, Module, ModuleIdx, ModuleTable, ModuleTagBitSet, ModuleTagRegistry, NormalModule,
 };
 use rolldown_error::BuildResult;
 use rolldown_plugin::SharedPluginDriver;
@@ -112,6 +112,48 @@ impl ManualSplitter<'_> {
     Ok(())
   }
 
+  /// Whether `module` clears the group's module-level constraints: required tags, the module size
+  /// bounds, and the share count.
+  fn passes_static_filters(
+    &self,
+    match_group_index: usize,
+    match_group: &MatchGroup,
+    module: &NormalModule,
+  ) -> bool {
+    let splitting_info = &self.index_splitting_info[module.idx];
+
+    // Filter by module tags. See internal-docs/module-tags/implementation.md
+    if let Some(required_tags) = &self.match_group_required_tags[match_group_index] {
+      if !splitting_info.tags_bit_set.contains_all(required_tags) {
+        return false;
+      }
+    }
+
+    let allow_min_module_size =
+      match_group.min_module_size.map_or(self.chunking_options.min_module_size, Some);
+    let allow_max_module_size =
+      match_group.max_module_size.map_or(self.chunking_options.max_module_size, Some);
+
+    let is_min_module_size_satisfied =
+      allow_min_module_size.is_none_or(|min_module_size| module.size() >= min_module_size);
+    let is_max_module_size_satisfied =
+      allow_max_module_size.is_none_or(|max_module_size| module.size() <= max_module_size);
+
+    if !is_min_module_size_satisfied || !is_max_module_size_satisfied {
+      return false;
+    }
+
+    if let Some(allow_min_share_count) =
+      match_group.min_share_count.map_or(self.chunking_options.min_share_count, Some)
+    {
+      if splitting_info.share_count < allow_min_share_count {
+        return false;
+      }
+    }
+
+    true
+  }
+
   async fn build_module_groups(
     &self,
   ) -> BuildResult<(IndexVec<ModuleGroupIdx, ModuleGroup>, Vec<ModuleGroup>)> {
@@ -133,19 +175,18 @@ impl ManualSplitter<'_> {
       .modules
       .iter()
       .filter_map(Module::as_normal)
+      // Nothing in this function writes to `module_to_assigned`, so these two checks hold for the
+      // whole run. Applying them before the sort keeps the same set and sorts fewer modules.
+      .filter(|module| {
+        metas[module.idx].is_included && !self.module_to_assigned.has_bit(module.idx)
+      })
       .sorted_unstable_by(|a, b| a.stable_id.cmp(&b.stable_id));
 
+    // `ChunkingContext` holds one `Arc` to the shared module infos and nothing else, so a single
+    // instance serves every call below. It used to be rebuilt for each (module, group) pair.
+    let ctx = ChunkingContext::new(Arc::clone(&self.plugin_driver.module_infos));
+
     for normal_module in sorted_normal_modules {
-      if !metas[normal_module.idx].is_included {
-        continue;
-      }
-
-      if self.module_to_assigned.has_bit(normal_module.idx) {
-        continue;
-      }
-
-      let splitting_info = &self.index_splitting_info[normal_module.idx];
-
       for (match_group_index, match_group) in self.match_groups.iter().copied().enumerate() {
         let is_matched = match &match_group.test {
           None => true,
@@ -159,36 +200,9 @@ impl ManualSplitter<'_> {
           continue;
         }
 
-        // Filter by module tags. See internal-docs/module-tags/implementation.md
-        if let Some(required_tags) = &self.match_group_required_tags[match_group_index] {
-          if !splitting_info.tags_bit_set.contains_all(required_tags) {
-            continue;
-          }
-        }
-
-        let allow_min_module_size =
-          match_group.min_module_size.map_or(self.chunking_options.min_module_size, Some);
-        let allow_max_module_size =
-          match_group.max_module_size.map_or(self.chunking_options.max_module_size, Some);
-
-        let is_min_module_size_satisfied = allow_min_module_size
-          .is_none_or(|min_module_size| normal_module.size() >= min_module_size);
-        let is_max_module_size_satisfied = allow_max_module_size
-          .is_none_or(|max_module_size| normal_module.size() <= max_module_size);
-
-        if !is_min_module_size_satisfied || !is_max_module_size_satisfied {
+        if !self.passes_static_filters(match_group_index, match_group, normal_module) {
           continue;
         }
-
-        if let Some(allow_min_share_count) =
-          match_group.min_share_count.map_or(self.chunking_options.min_share_count, Some)
-        {
-          if splitting_info.share_count < allow_min_share_count {
-            continue;
-          }
-        }
-
-        let ctx = ChunkingContext::new(Arc::clone(&self.plugin_driver.module_infos));
 
         let Some(group_name) = match_group.name.value(&ctx, &normal_module.id).await? else {
           // Group which doesn't have a name will be ignored.

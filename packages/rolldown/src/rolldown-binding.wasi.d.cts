@@ -3098,6 +3098,8 @@ export interface BindingWatchOption {
   useDebounce?: boolean
   debounceDelay?: number
   debounceTickRate?: number
+  includeFn?: ((id: string) => boolean) | undefined
+  excludeFn?: ((id: string) => boolean) | undefined
   onInvalidate?: ((id: string) => void) | undefined
 }
 

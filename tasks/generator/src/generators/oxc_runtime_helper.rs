@@ -38,12 +38,19 @@ impl Generator for OxcRuntimeHelperGenerator {
     // non-files so the `esm/` subdir entry is ignored when listing this directory.
     let cjs_helpers = read_helpers_dir(&cjs_helpers_dir)?;
 
-    let code = generate_embedded_helpers_rs(version, &esm_helpers, &cjs_helpers)?;
+    let (code, compressed_helpers) =
+      generate_embedded_helpers_rs(version, &esm_helpers, &cjs_helpers)?;
 
-    Ok(vec![crate::output::Output::RustString {
-      path: output_path("crates/rolldown_plugin_oxc_runtime/src", "embedded_helpers.rs"),
-      code: add_header(&code, self.file_path(), "//"),
-    }])
+    Ok(vec![
+      crate::output::Output::RustString {
+        path: output_path("crates/rolldown_plugin_oxc_runtime/src", "embedded_helpers.rs"),
+        code: add_header(&code, self.file_path(), "//"),
+      },
+      crate::output::Output::Binary {
+        path: output_path("crates/rolldown_plugin_oxc_runtime/src", "embedded_helpers.deflate"),
+        content: compressed_helpers,
+      },
+    ])
   }
 }
 
@@ -71,7 +78,7 @@ fn generate_embedded_helpers_rs(
   version: &str,
   esm_helpers: &BTreeMap<String, String>,
   cjs_helpers: &BTreeMap<String, String>,
-) -> anyhow::Result<String> {
+) -> anyhow::Result<(String, Vec<u8>)> {
   let mut corpus = String::new();
   let mut helper_metadata = Vec::with_capacity(esm_helpers.len() + cjs_helpers.len());
 
@@ -113,14 +120,10 @@ pub const RUNTIME_HELPER_UNVERSIONED_PREFIX: &str = "@oxc-project/runtime/helper
   )
   .unwrap();
 
-  writeln!(
-    &mut code,
-    "const UNCOMPRESSED_HELPERS_LEN: usize = {};\n\
-     static COMPRESSED_HELPERS: &[u8] = b\"{}\";\n",
-    corpus.len(),
-    escape_byte_string(&compressed_helpers),
-  )
-  .unwrap();
+  writeln!(&mut code, "const UNCOMPRESSED_HELPERS_LEN: usize = {};", corpus.len()).unwrap();
+  code.push_str(
+    "static COMPRESSED_HELPERS: &[u8] = include_bytes!(\"embedded_helpers.deflate\");\n\n",
+  );
 
   code.push_str(
     r"static HELPER_SLOTS: Map<&'static str, u16> = phf_map! {
@@ -179,13 +182,5 @@ pub fn is_virtual_runtime_helper(specifier: &str) -> bool {
 "#,
   );
 
-  Ok(code)
-}
-
-fn escape_byte_string(bytes: &[u8]) -> String {
-  let mut escaped = String::with_capacity(bytes.len() * 4);
-  for &byte in bytes {
-    write!(&mut escaped, "\\x{byte:02x}").unwrap();
-  }
-  escaped
+  Ok((code, compressed_helpers))
 }

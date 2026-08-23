@@ -19,16 +19,23 @@ pub struct BindingManualCodeSplittingOptions {
   pub max_module_size: Option<f64>,
 }
 
-type BindingMatchGroupTest =
-  Either<BindingStringOrRegex, JsCallback<FnArgs<(/*module id*/ String,)>, Option<bool>>>;
+/// The JS side wraps the user's per-id function in one shim per group. The returned array matches
+/// the id array by index. See `packages/rolldown/src/utils/bindingify-output-options.ts`.
+type BindingMatchGroupTest = Either<
+  BindingStringOrRegex,
+  JsCallback<FnArgs<(/*module ids*/ Vec<String>,)>, Vec<Option<bool>>>,
+>;
 
 #[napi_derive::napi(object, object_to_js = false)]
 #[derive(Debug)]
 pub struct BindingMatchGroup {
-  #[napi(ts_type = "string | ((id: string, ctx: BindingChunkingContext) => VoidNullable<string>)")]
+  #[napi(
+    ts_type = "string | ((ids: Array<string>, ctx: BindingChunkingContext) => Array<VoidNullable<string>>)"
+  )]
   #[debug("MatchGroupName(...)")]
-  pub name: Either<String, JsCallback<FnArgs<(String, BindingChunkingContext)>, Option<String>>>,
-  #[napi(ts_type = "string | RegExp | ((id: string) => VoidNullable<boolean>)")]
+  pub name:
+    Either<String, JsCallback<FnArgs<(Vec<String>, BindingChunkingContext)>, Vec<Option<String>>>>,
+  #[napi(ts_type = "string | RegExp | ((ids: Array<string>) => Array<VoidNullable<boolean>>)")]
   #[debug("MatchGroupTest(...)")]
   pub test: Option<BindingMatchGroupTest>,
   // pub share_count: Option<u32>,

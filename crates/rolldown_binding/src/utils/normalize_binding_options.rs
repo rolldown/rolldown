@@ -383,14 +383,13 @@ fn normalize_code_splitting(
                     Either::A(name) => MatchGroupName::Static(name),
                     Either::B(func) => {
                       let func = Arc::clone(&func);
-                      MatchGroupName::Dynamic(Arc::new(move |module_id, ctx| {
-                        let module_id = module_id.to_string();
+                      MatchGroupName::Dynamic(Arc::new(move |module_ids, ctx| {
                         let func = Arc::clone(&func);
                         let owned_ctx = ctx.clone();
                         Box::pin(async move {
                           func
                             .invoke_async(
-                              (module_id, BindingChunkingContext::new(owned_ctx)).into(),
+                              (module_ids, BindingChunkingContext::new(owned_ctx)).into(),
                             )
                             .await
                             .context("advancedChunks group name option")
@@ -410,19 +409,18 @@ fn normalize_code_splitting(
                             ))
                           })?))
                         }
-                        Either::B(func) => {
-                          Ok(rolldown::MatchGroupTest::Function(Arc::new(move |id: &str| {
-                            let id = id.to_string();
+                        Either::B(func) => Ok(rolldown::MatchGroupTest::Function(Arc::new(
+                          move |module_ids: Vec<String>| {
                             let func = Arc::clone(&func);
                             Box::pin(async move {
                               func
-                                .invoke_async((id,).into())
+                                .invoke_async((module_ids,).into())
                                 .await
                                 .context("advancedChunks group test option")
                                 .map_err(anyhow::Error::from)
                             })
-                          })))
-                        }
+                          },
+                        ))),
                       }
                     })
                     .transpose()?,

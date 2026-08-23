@@ -15,7 +15,8 @@ use rolldown_common::{
   ChunkIdx, ChunkKind, ChunkMeta, CrossChunkImportItem, EntryPointKind, ExportsKind, ImportKind,
   ImportRecordMeta, Module, ModuleIdx, NamedImport, OutputFormat, PostChunkOptimizationOperation,
   PreserveEntrySignatures, RUNTIME_HELPER_NAMES, ResolvedImportRecord, RuntimeHelper, SymbolRef,
-  SymbolRefDb, TaggedSymbolRef, UsedSymbolRefs, UsedSymbolRefsBuilder, WrapKind,
+  SymbolRefDb, TaggedSymbolRef, UsedSymbolRefs, UsedSymbolRefsBuilder, UsedSymbolRefsView,
+  WrapKind,
 };
 use rolldown_utils::index_vec_ext::IndexVecRefExt as _;
 use rolldown_utils::indexmap::{FxIndexMap, FxIndexSet};
@@ -98,22 +99,6 @@ impl SymbolChunkTable {
   }
 }
 
-pub(super) trait UsedSymbolRefsView: Sync {
-  fn contains(&self, symbol_ref: &SymbolRef) -> bool;
-}
-
-impl UsedSymbolRefsView for UsedSymbolRefs {
-  fn contains(&self, symbol_ref: &SymbolRef) -> bool {
-    UsedSymbolRefs::contains(self, symbol_ref)
-  }
-}
-
-impl UsedSymbolRefsView for UsedSymbolRefsBuilder {
-  fn contains(&self, symbol_ref: &SymbolRef) -> bool {
-    UsedSymbolRefsBuilder::contains(self, symbol_ref)
-  }
-}
-
 impl GenerateStage<'_> {
   #[tracing::instrument(level = "debug", skip_all)]
   pub fn compute_cross_chunk_links(
@@ -135,7 +120,7 @@ impl GenerateStage<'_> {
       symbol_chunk_table,
     } = self.compute_cross_chunk_link_state(
       chunk_graph,
-      used_symbol_refs,
+      used_symbol_refs.view(),
       order_state,
       FinalEsmInitMetadataAvailability::Sealed(final_esm_init_metadata),
     );
@@ -161,7 +146,7 @@ impl GenerateStage<'_> {
     #[cfg(debug_assertions)]
     self.debug_assert_module_level_static_import_prediction(
       chunk_graph,
-      used_symbol_refs,
+      used_symbol_refs.view(),
       &index_imports_from_other_chunks,
     );
 
@@ -304,12 +289,12 @@ impl GenerateStage<'_> {
   pub(super) fn predicted_static_import_edges(
     &self,
     chunk_graph: &ChunkGraph,
-    used_symbol_refs: &UsedSymbolRefsBuilder,
+    used_symbol_refs_builder: &UsedSymbolRefsBuilder,
   ) -> IndexVec<ChunkIdx, FxHashSet<ChunkIdx>> {
     let empty_order_state = super::order_wrap_state::OrderWrapState::default();
     let state = self.compute_cross_chunk_link_state(
       chunk_graph,
-      used_symbol_refs,
+      used_symbol_refs_builder.view(),
       &empty_order_state,
       FinalEsmInitMetadataAvailability::Unavailable,
     );
@@ -341,13 +326,13 @@ impl GenerateStage<'_> {
   pub(super) fn lowered_static_import_edges(
     &self,
     chunk_graph: &ChunkGraph,
-    used_symbol_refs: &UsedSymbolRefsBuilder,
+    used_symbol_refs_builder: &UsedSymbolRefsBuilder,
     order_state: &super::order_wrap_state::OrderWrapState,
     final_esm_init_metadata: &Sealed<FinalEsmInitMetadata>,
   ) -> IndexVec<ChunkIdx, FxHashSet<ChunkIdx>> {
     let state = self.compute_cross_chunk_link_state(
       chunk_graph,
-      used_symbol_refs,
+      used_symbol_refs_builder.view(),
       order_state,
       FinalEsmInitMetadataAvailability::Sealed(final_esm_init_metadata),
     );
@@ -388,7 +373,7 @@ impl GenerateStage<'_> {
   fn debug_assert_module_level_static_import_prediction(
     &self,
     chunk_graph: &ChunkGraph,
-    used_symbol_refs: &impl UsedSymbolRefsView,
+    used_symbol_refs_view: UsedSymbolRefsView<'_>,
     index_imports_from_other_chunks: &IndexImportsFromOtherChunks,
   ) {
     if self.options.is_strict_execution_order_enabled() || self.options.preserve_modules {
@@ -426,7 +411,7 @@ impl GenerateStage<'_> {
         let mut service_targets = vec![];
         self.entry_export_service_targets(
           entry_module_idx,
-          used_symbol_refs,
+          used_symbol_refs_view,
           false,
           &mut service_targets,
         );
@@ -483,7 +468,7 @@ impl GenerateStage<'_> {
   fn compute_cross_chunk_link_state(
     &self,
     chunk_graph: &ChunkGraph,
-    used_symbol_refs: &impl UsedSymbolRefsView,
+    used_symbol_refs_view: UsedSymbolRefsView<'_>,
     order_state: &super::order_wrap_state::OrderWrapState,
     final_esm_init_metadata: FinalEsmInitMetadataAvailability<'_>,
   ) -> CrossChunkLinkState {
@@ -527,7 +512,7 @@ impl GenerateStage<'_> {
       &mut index_chunk_direct_imports_from_external_modules,
       &mut index_cross_chunk_dynamic_imports,
       &mut index_chunk_dynamic_imports_from_external_modules,
-      used_symbol_refs,
+      used_symbol_refs_view,
       order_state,
       final_esm_init_metadata,
     );
@@ -540,7 +525,7 @@ impl GenerateStage<'_> {
       &mut index_cross_chunk_imports,
       &mut index_imports_from_other_chunks,
       &mut index_chunk_indirect_imports_from_external_modules,
-      used_symbol_refs,
+      used_symbol_refs_view,
       order_state,
       &order_live_symbols,
       &symbol_chunk_table,
@@ -619,7 +604,7 @@ impl GenerateStage<'_> {
     index_chunk_imports_from_external_modules: &mut IndexChunkImportsFromExternalModules,
     index_cross_chunk_dynamic_imports: &mut IndexCrossChunkDynamicImports,
     index_chunk_dynamic_imports_from_external_modules: &mut IndexChunkDynamicImportsFromExternalModules,
-    used_symbol_refs: &impl UsedSymbolRefsView,
+    used_symbol_refs_view: UsedSymbolRefsView<'_>,
     order_state: &super::order_wrap_state::OrderWrapState,
     final_esm_init_metadata: FinalEsmInitMetadataAvailability<'_>,
   ) -> SymbolChunkTable {
@@ -738,7 +723,7 @@ impl GenerateStage<'_> {
           );
           self.add_module_esm_init_depended_symbols(
             chunk_graph,
-            used_symbol_refs,
+            used_symbol_refs_view,
             order_state,
             final_esm_init_metadata,
             depended_symbols,
@@ -971,7 +956,7 @@ impl GenerateStage<'_> {
   fn add_module_esm_init_depended_symbols(
     &self,
     chunk_graph: &ChunkGraph,
-    used_symbol_refs: &impl UsedSymbolRefsView,
+    used_symbol_refs_view: UsedSymbolRefsView<'_>,
     order_state: &super::order_wrap_state::OrderWrapState,
     final_esm_init_metadata: FinalEsmInitMetadataAvailability<'_>,
     depended_symbols: &mut FxIndexSet<SymbolRef>,
@@ -988,7 +973,7 @@ impl GenerateStage<'_> {
     }
     self.add_included_import_esm_init_depended_symbols(
       chunk_graph,
-      used_symbol_refs,
+      used_symbol_refs_view,
       order_state,
       depended_symbols,
       module_idx,
@@ -1104,7 +1089,7 @@ impl GenerateStage<'_> {
   fn add_included_import_esm_init_depended_symbols(
     &self,
     chunk_graph: &ChunkGraph,
-    used_symbol_refs: &impl UsedSymbolRefsView,
+    used_symbol_refs_view: UsedSymbolRefsView<'_>,
     order_state: &super::order_wrap_state::OrderWrapState,
     depended_symbols: &mut FxIndexSet<SymbolRef>,
     module_idx: ModuleIdx,
@@ -1149,7 +1134,7 @@ impl GenerateStage<'_> {
         let targets = collect_wrapped_esm_init_targets_for_import_record(
           &ctx,
           rec_idx,
-          |symbol_ref| used_symbol_refs.contains(&symbol_ref),
+          |symbol_ref| used_symbol_refs_view.contains(&symbol_ref),
           |_| true,
           |forwarding_module_idx| {
             chunk_graph.module_to_chunk[forwarding_module_idx] == Some(chunk_idx)
@@ -1209,7 +1194,7 @@ impl GenerateStage<'_> {
     index_cross_chunk_imports: &mut IndexCrossChunkImports,
     index_imports_from_other_chunks: &mut IndexImportsFromOtherChunks,
     index_chunk_indirect_imports_from_external_modules: &mut IndexChunkAllImportsFromExternalModules,
-    used_symbol_refs: &impl UsedSymbolRefsView,
+    used_symbol_refs_view: UsedSymbolRefsView<'_>,
     order_state: &super::order_wrap_state::OrderWrapState,
     order_live_symbols: &FxHashSet<SymbolRef>,
     symbol_chunk_table: &SymbolChunkTable,
@@ -1420,7 +1405,7 @@ impl GenerateStage<'_> {
           {
             self.link_output.metas[import_ref.owner].namespace_included
           } else {
-            non_namespace_symbol_is_live(used_symbol_refs, order_live_symbols, import_ref)
+            non_namespace_symbol_is_live(used_symbol_refs_view, order_live_symbols, import_ref)
           };
           if !is_live {
             continue;
@@ -1462,7 +1447,7 @@ impl GenerateStage<'_> {
               let symbol_owner = &self.link_output.module_table[import_ref.owner];
               let symbol_name = import_ref.name(&self.link_output.symbol_db);
               panic!(
-                "Symbol {:?} in {:?} should belong to a chunk",
+                "Symbol `{}` in `{}` should belong to a chunk",
                 symbol_name,
                 symbol_owner.id().as_str()
               )
@@ -1730,7 +1715,7 @@ impl GenerateStage<'_> {
         {
           self.link_output.metas[chunk_export.owner].namespace_included
         } else {
-          non_namespace_symbol_is_live(used_symbol_refs, order_live_symbols, *chunk_export)
+          non_namespace_symbol_is_live(used_symbol_refs.view(), order_live_symbols, *chunk_export)
         };
         if !is_live {
           continue;
@@ -1785,11 +1770,11 @@ impl GenerateStage<'_> {
 }
 
 fn non_namespace_symbol_is_live(
-  used_symbol_refs: &impl UsedSymbolRefsView,
+  used_symbol_refs_view: UsedSymbolRefsView<'_>,
   order_live_symbols: &FxHashSet<SymbolRef>,
   symbol_ref: SymbolRef,
 ) -> bool {
-  used_symbol_refs.contains(&symbol_ref) || order_live_symbols.contains(&symbol_ref)
+  used_symbol_refs_view.contains(&symbol_ref) || order_live_symbols.contains(&symbol_ref)
 }
 
 // The same implementation with https://github.com/oxc-project/oxc/blob/crates_v0.86.0/crates/oxc_mangler/src/base54.rs#L30-L31

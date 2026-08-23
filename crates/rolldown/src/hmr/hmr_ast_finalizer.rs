@@ -267,8 +267,8 @@ impl<'ast> HmrAstFinalizer<'_, 'ast> {
             &self.ast_builder,
           ));
         }
-        unhandled_kind => {
-          unreachable!("Unexpected export default declaration kind: {unhandled_kind:#?}");
+        _ => {
+          unreachable!("Unexpected export default declaration kind");
         }
       },
       ast::Statement::ExportAllDeclaration(export_all_decl) => {

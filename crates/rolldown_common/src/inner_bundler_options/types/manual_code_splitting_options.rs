@@ -97,7 +97,7 @@ where
   let transformed = deserialized
     .map(|inner| HybridRegex::new(&inner))
     .transpose()
-    .map_err(|e| serde::de::Error::custom(format!("failed to deserialize {e:?} to HybridRegex")))?;
+    .map_err(|e| serde::de::Error::custom(format!("failed to deserialize {e} to HybridRegex")))?;
   Ok(transformed.map(MatchGroupTest::Regex))
 }
 

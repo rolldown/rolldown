@@ -4,7 +4,8 @@ use oxc_index::{IndexVec, index_vec};
 use rolldown_common::{
   ChunkIdx, ChunkKind, ChunkMeta, ImportKind, ImportRecordIdx, ImportRecordMeta, ModuleIdx,
   PreserveEntrySignatures, RuntimeHelper, StmtInfoIdx, SymbolOrMemberExprRef, SymbolRef,
-  UsedSymbolRefsBuilder, WrapKind, dynamic_import_usage::DynamicImportExportsUsage,
+  UsedSymbolRefsBuilder, UsedSymbolRefsView, WrapKind,
+  dynamic_import_usage::DynamicImportExportsUsage,
 };
 use rolldown_utils::BitSet;
 use rustc_hash::{FxHashMap, FxHashSet};
@@ -13,7 +14,7 @@ use crate::chunk_graph::ChunkGraph;
 use crate::esm_init_obligations::collect_entry_reexported_wrapper_inits;
 
 use super::{
-  GenerateStage, code_splitting::IndexSplittingInfo, compute_cross_chunk_links::UsedSymbolRefsView,
+  GenerateStage, code_splitting::IndexSplittingInfo,
   simulated_facade_inclusion::include_simulated_facade_namespace,
 };
 
@@ -57,7 +58,7 @@ impl GenerateStage<'_> {
     index_splitting_info: &mut IndexSplittingInfo,
     chunk_graph: &mut ChunkGraph,
     entries_len: u32,
-    used_symbol_refs: &mut UsedSymbolRefsBuilder,
+    used_symbol_refs_builder: &mut UsedSymbolRefsBuilder,
   ) {
     let mut namespace_extractions = FxHashSet::default();
     let DynamicEntryAnalysis {
@@ -80,7 +81,7 @@ impl GenerateStage<'_> {
       &atoms,
       &module_to_atom_idx,
       &flattened_entry_modules,
-      used_symbol_refs,
+      used_symbol_refs_builder,
     );
     // Indexed by entry bit, so `reduced_atom_graph_has_static_cycle` can pair each facade chunk
     // with its entry module's host atom by index instead of hashing a synthesized `BitSet`.
@@ -158,7 +159,7 @@ impl GenerateStage<'_> {
     self.apply_dynamic_entry_namespace_extractions(
       chunk_graph,
       &namespace_extractions,
-      used_symbol_refs,
+      used_symbol_refs_builder,
     );
   }
 
@@ -271,17 +272,17 @@ impl GenerateStage<'_> {
     &mut self,
     chunk_graph: &mut ChunkGraph,
     namespace_extractions: &FxHashSet<(ChunkIdx, ModuleIdx)>,
-    used_symbol_refs: &mut UsedSymbolRefsBuilder,
+    used_symbol_refs_builder: &mut UsedSymbolRefsBuilder,
   ) {
     if namespace_extractions.is_empty() {
       return;
     }
 
     for &(_, entry_module_idx) in namespace_extractions {
-      self.narrow_namespace_stmt_to_used_symbols(entry_module_idx, used_symbol_refs);
+      self.narrow_namespace_stmt_to_used_symbols(entry_module_idx, used_symbol_refs_builder);
     }
 
-    self.replay_link_stage_inclusion(used_symbol_refs, |context| {
+    self.replay_link_stage_inclusion(used_symbol_refs_builder, |context| {
       let mut needs_export_all_helper = false;
       for &(entry_chunk_idx, entry_module_idx) in namespace_extractions {
         chunk_graph
@@ -357,8 +358,9 @@ impl GenerateStage<'_> {
   // hosted by its own entry chunk, because emission hangs those imports on the entry (facade)
   // chunk, not on whichever shared chunk hosts the module. `cycle` must contain every edge the
   // emitted chunks might have: its service edges are attached to the hosting atom regardless,
-  // with no liveness gate — `used_symbol_refs` still grows after this pass (namespace-extraction
-  // and facade-elimination replays), so an export dead here can be live at emission.
+  // with no liveness gate — `used_symbol_refs_builder` still grows after this pass
+  // (namespace-extraction and facade-elimination replays), so an export dead here can be live at
+  // emission.
   //
   // Hosting-atom attribution over-approximates rather than misses only because of the facade edges
   // `reduced_atom_graph_has_static_cycle` adds: the facade depends on the host, which is where
@@ -376,7 +378,7 @@ impl GenerateStage<'_> {
     atoms: &[ChunkAtom],
     module_to_atom_idx: &IndexVec<ModuleIdx, Option<usize>>,
     flattened_entry_modules: &[ModuleIdx],
-    used_symbol_refs: &impl UsedSymbolRefsView,
+    used_symbol_refs_builder: &UsedSymbolRefsBuilder,
   ) -> AtomDependencyGraphs {
     let strict_execution_order = self.options.is_strict_execution_order_enabled();
 
@@ -407,7 +409,12 @@ impl GenerateStage<'_> {
         }
 
         let mut service_targets = vec![];
-        self.entry_export_service_targets(module_idx, used_symbol_refs, true, &mut service_targets);
+        self.entry_export_service_targets(
+          module_idx,
+          used_symbol_refs_builder.view(),
+          true,
+          &mut service_targets,
+        );
         for dep_module_idx in service_targets {
           add(dep_module_idx, &mut cycle_deps);
         }
@@ -420,7 +427,7 @@ impl GenerateStage<'_> {
           let mut service_targets = vec![];
           self.entry_export_service_targets(
             module_idx,
-            used_symbol_refs,
+            used_symbol_refs_builder.view(),
             false,
             &mut service_targets,
           );
@@ -482,12 +489,12 @@ impl GenerateStage<'_> {
   ///
   /// With `assume_all_live: false` the liveness gate mirrors emission exactly: a dead export
   /// produces no import. `assume_all_live: true` skips the gate for consumers that need a stable
-  /// over-approximation — `used_symbol_refs` keeps growing after the fold's decisions, so a
+  /// over-approximation — `used_symbol_refs_builder` keeps growing after the fold's decisions, so a
   /// dead-here export can still emit an import later.
   pub(super) fn entry_export_service_targets(
     &self,
     module_idx: ModuleIdx,
-    used_symbol_refs: &impl UsedSymbolRefsView,
+    used_symbol_refs_view: UsedSymbolRefsView<'_>,
     assume_all_live: bool,
     targets: &mut Vec<ModuleIdx>,
   ) {
@@ -511,7 +518,7 @@ impl GenerateStage<'_> {
         {
           self.link_output.metas[served.owner].namespace_included
         } else {
-          used_symbol_refs.contains(&served)
+          used_symbol_refs_view.contains(&served)
         };
       if is_live {
         targets.push(served.owner);
@@ -526,7 +533,7 @@ impl GenerateStage<'_> {
       symbol_db,
       None,
     ) {
-      if assume_all_live || used_symbol_refs.contains(&init.wrapper_ref) {
+      if assume_all_live || used_symbol_refs_view.contains(&init.wrapper_ref) {
         targets.push(init.wrapper_ref.owner);
       }
     }

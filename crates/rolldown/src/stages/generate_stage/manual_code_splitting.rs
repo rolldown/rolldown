@@ -175,15 +175,11 @@ impl ManualSplitter<'_> {
       .modules
       .iter()
       .filter_map(Module::as_normal)
-      // Nothing in this function writes to `module_to_assigned`, so these two checks hold for the
-      // whole run. Applying them before the sort keeps the same set and sorts fewer modules.
       .filter(|module| {
         metas[module.idx].is_included && !self.module_to_assigned.has_bit(module.idx)
       })
       .sorted_unstable_by(|a, b| a.stable_id.cmp(&b.stable_id));
 
-    // `ChunkingContext` holds one `Arc` to the shared module infos and nothing else, so a single
-    // instance serves every call below. It used to be rebuilt for each (module, group) pair.
     let ctx = ChunkingContext::new(Arc::clone(&self.plugin_driver.module_infos));
 
     for normal_module in sorted_normal_modules {

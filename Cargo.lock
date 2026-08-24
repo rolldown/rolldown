@@ -3330,7 +3330,6 @@ dependencies = [
  "futures",
  "oxc_index",
  "rolldown",
- "rolldown-notify",
  "rolldown_common",
  "rolldown_error",
  "rolldown_fs_watcher",

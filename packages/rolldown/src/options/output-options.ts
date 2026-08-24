@@ -825,6 +825,10 @@ export type CodeSplittingGroup = {
    * :::warning
    * Constraints like `minSize`, `maxSize`, etc. are applied separately for different names returned by the function.
    * :::
+   *
+   * :::warning
+   * Rolldown calls a function `name` once for each captured module, in a deterministic order. It calls `test` for every candidate module of the group first. Do not read a "current module" variable that `test` wrote, because that variable holds the last module `test` saw. Store such state under the module id instead.
+   * :::
    */
   name: string | CodeSplittingNameFunction;
   /**
@@ -839,6 +843,10 @@ export type CodeSplittingGroup = {
    * When using regular expression, it's recommended to use `[\\/]` to match the path separator instead of `/` to avoid potential issues on Windows.
    * - ✅ Recommended: `/node_modules[\\/]react/`
    * - ❌ Not recommended: `/node_modules/react/`
+   * :::
+   *
+   * :::warning
+   * Rolldown calls a function `test` once for each candidate module, in a deterministic order. It makes every `test` call of a group before it makes the first `name` call of that group. Rolldown processes the groups in the order that you declare them.
    * :::
    */
   test?: StringOrRegExp | CodeSplittingTestFunction;

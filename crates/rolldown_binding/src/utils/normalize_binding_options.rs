@@ -289,16 +289,16 @@ fn normalize_sourcemap_ignore_list_option(
       rolldown::SourceMapIgnoreList::from_string_or_regex(string_or_regex.inner())
     }
     Either3::C(ts_fn) => {
-      rolldown::SourceMapIgnoreList::new(Arc::new(move |source, sourcemap_path| {
+      rolldown::SourceMapIgnoreList::new(Arc::new(move |sources, sourcemap_path| {
         let ts_fn = Arc::clone(&ts_fn);
-        let source = source.to_string();
         let sourcemap_path = sourcemap_path.to_string();
         Box::pin(async move {
           ts_fn
-            .invoke_async((source, sourcemap_path).into())
+            .invoke_async((sources, sourcemap_path).into())
             .await
             .context("sourcemapIgnoreList option")
             .map_err(anyhow::Error::from)
+            .map(|flags| flags.iter().map(|flag| *flag != 0).collect())
         })
       }))
     }

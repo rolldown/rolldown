@@ -404,14 +404,23 @@ function bindingifyCodeSplitting(
  * Wraps a per-id `test` in the batched shim that the binding expects.
  *
  * The loop runs in JS so that a group makes one napi crossing, not one per module.
+ *
+ * The result is a `Uint8Array`, which crosses as a buffer instead of one tagged value per id.
  */
-function batchTest(
-  test: CodeSplittingTestFunction,
-): (ids: string[]) => ReturnType<CodeSplittingTestFunction>[] {
+function batchTest(test: CodeSplittingTestFunction): (ids: string[]) => Uint8Array {
   return (ids) => {
-    const results: ReturnType<CodeSplittingTestFunction>[] = [];
+    const results = new Uint8Array(ids.length);
     for (let index = 0; index < ids.length; index++) {
-      results.push(test(ids[index]));
+      const result = test(ids[index]);
+      // napi reports the type of the array, not of the bad element, so the check runs here.
+      if (result != null && typeof result !== 'boolean') {
+        throw new TypeError(
+          `\`output.codeSplitting.groups[].test\` returned ${typeof result} for module "${
+            ids[index]
+          }", but expected a boolean, null or undefined.`,
+        );
+      }
+      results[index] = result === true ? 1 : 0;
     }
     return results;
   };
@@ -432,7 +441,16 @@ function batchName(
     const context = new ChunkingContextImpl(bindingContext, pluginContextData);
     const results: ReturnType<CodeSplittingNameFunction>[] = [];
     for (let index = 0; index < ids.length; index++) {
-      results.push(name(ids[index], context));
+      const result = name(ids[index], context);
+      // napi reports the type of the array, not of the bad element, so the check runs here.
+      if (result != null && typeof result !== 'string') {
+        throw new TypeError(
+          `\`output.codeSplitting.groups[].name\` returned ${typeof result} for module "${
+            ids[index]
+          }", but expected a string, null or undefined.`,
+        );
+      }
+      results.push(result);
     }
     return results;
   };

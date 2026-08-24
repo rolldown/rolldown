@@ -82,7 +82,7 @@ pub struct MatchGroup {
 /// The returned `Vec` must match `module_ids` by index. The caller rejects any other length.
 type MatchGroupTestFn = dyn Fn(
     /* module ids */ Vec<String>,
-  ) -> Pin<Box<dyn Future<Output = anyhow::Result<Vec<Option<bool>>>> + Send + 'static>>
+  ) -> Pin<Box<dyn Future<Output = anyhow::Result<Vec<bool>>> + Send + 'static>>
   + Send
   + Sync;
 

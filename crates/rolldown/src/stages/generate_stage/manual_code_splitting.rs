@@ -213,7 +213,7 @@ impl ManualSplitter<'_> {
               .into(),
             );
           }
-          results.into_iter().map(Option::unwrap_or_default).collect_vec()
+          results
         }
       };
 

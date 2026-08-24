@@ -1,0 +1,22 @@
+Cargo.toml
+  s_8d5c341ef39b90::t_ef75a691d7d899 269,280-289
+Cargo.lock
+  s_8d5c341ef39b90::t_e84f0295a5e6f7 1586,1624,1637,1654,1665,1676,1691,1697,1709,1717,1735,1755,1776,1793,1811,1836,1858,1873,1896,1912,1969,2007,2020,2032,2052,2066,2095,2117
+  s_8d5c341ef39b90::t_9ffb2763946c21 335,601,1439,3356,3686,3705,4109
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "2431b3fb15e12925acc0b51123493885f398493c",
+  "prompts": {},
+  "sessions": {
+    "s_8d5c341ef39b90": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019fd2a4-9dd6-7050-9aa2-fd882e51e24d",
+        "model": "gpt-5.6-sol"
+      },
+      "human_author": "Cameron <cameron.clark@hey.com>"
+    }
+  }
+}

@@ -135,8 +135,10 @@ pub struct BindingOutputOptions<'env> {
   pub sourcemap_ignore_list: Option<SourcemapIgnoreListOutputOption>,
   pub sourcemap_debug_ids: Option<bool>,
   #[debug(skip)]
-  #[napi(ts_type = "(source: string, sourcemapPath: string) => string")]
-  pub sourcemap_path_transform: Option<JsCallback<FnArgs<(String, String)>, String>>,
+  /// Batched like `sourcemapIgnoreList` above. One call rewrites every source of a sourcemap,
+  /// and the returned array matches the source array by index.
+  #[napi(ts_type = "(sources: Array<string>, sourcemapPath: string) => Array<string>")]
+  pub sourcemap_path_transform: Option<JsCallback<FnArgs<(Vec<String>, String)>, Vec<String>>>,
   pub sourcemap_exclude_sources: Option<bool>,
   // sourcemapFile: string | undefined;
   #[napi(ts_type = "boolean | 'auto'")]

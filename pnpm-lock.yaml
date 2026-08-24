@@ -157,7 +157,7 @@ catalogs:
       specifier: ^11.0.0
       version: 11.0.0
     remeda:
-      specifier: ^2.34.1
+      specifier: ^2.42.0
       version: 2.42.0
     rolldown-plugin-dts:
       specifier: ^0.28.0
@@ -1120,7 +1120,7 @@ importers:
         specifier: 'catalog:'
         version: 0.1.0
       '@oxlint/plugins':
-        specifier: ^1.78.0
+        specifier: ^1.79.0
         version: 1.79.0
       acorn:
         specifier: 'catalog:'

@@ -201,7 +201,7 @@ itertools = "0.15.0"
 itoa = "1.0.18"
 json-escape-simd = "3.1.1"
 json-strip-comments = "3"
-jsonschema = { version = "0.49.0", default-features = false }
+jsonschema = { version = "0.51.0", default-features = false }
 memchr = "2.8.2"
 mimalloc-safe = "0.1.64"
 mime = "0.3.17"
@@ -226,7 +226,7 @@ regex = { version = "1.13.0", default-features = false, features = [
   "unicode-perl",
   "unicode-case",
 ] }
-regress = "0.11.1"
+regress = "0.12.0"
 rolldown-notify = "10.5.0"
 rolldown-notify-debouncer-full = "0.7.9"
 rustc-hash = { version = "2.1.3" }

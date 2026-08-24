@@ -3,10 +3,12 @@
 
 mod config;
 mod event;
+mod event_map;
 mod notify;
 mod watcher;
 
 pub use ::notify::RecursiveMode;
 pub use config::FsWatcherConfig;
 pub use event::{FsEvent, FsEventHandler, FsEventResult};
+pub use event_map::{FsChangeKind, map_notify_event};
 pub use watcher::{FsWatcher, PathsMut};

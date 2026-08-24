@@ -21,6 +21,7 @@ export default defineConfig({
       'packages/rolldown/tests/magic-string/*.test.ts',
       'packages/rolldown/src/binding.*',
       'packages/rolldown/src/rolldown-binding.*',
+      'packages/rolldown/src/wasi-worker*.mjs',
       'packages/test-dev-server/tests/fixtures/**',
       'packages/test-dev-server/tests/playground/**',
       'packages/vite-tests/repo/**',

@@ -25,7 +25,6 @@ Object.assign(globalThis, {
   require,
   Worker,
   importScripts: function (f) {
-    // oxlint-disable-next-line no-eval -- importScripts polyfill for WASI worker
     ;(0, eval)(fs.readFileSync(f, "utf8") + "//# sourceURL=" + f);
   },
   postMessage: function (msg) {

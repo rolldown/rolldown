@@ -2665,7 +2665,7 @@ export interface BindingOutputOptions {
   sourcemap?: 'file' | 'inline' | 'hidden'
   sourcemapFileNames?: string | ((chunk: PreRenderedChunk) => string)
   sourcemapBaseUrl?: string
-  sourcemapIgnoreList?: boolean | string | RegExp | ((source: string, sourcemapPath: string) => boolean)
+  sourcemapIgnoreList?: boolean | string | RegExp | ((sources: Array<string>, sourcemapPath: string) => Uint8Array)
   sourcemapDebugIds?: boolean
   sourcemapPathTransform?: (source: string, sourcemapPath: string) => string
   sourcemapExcludeSources?: boolean

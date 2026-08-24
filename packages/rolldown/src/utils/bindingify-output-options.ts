@@ -89,11 +89,13 @@ export function bindingifyOutputOptions(
       sourcemapFileNames,
     ),
     sourcemapExcludeSources,
-    sourcemapIgnoreList: measureIfFunction(
-      timings,
-      OUTPUT_OPTIONS_OWNER,
-      'sourcemapIgnoreList',
-      sourcemapIgnoreList ?? /node_modules/,
+    sourcemapIgnoreList: batchSourcemapIgnoreList(
+      measureIfFunction(
+        timings,
+        OUTPUT_OPTIONS_OWNER,
+        'sourcemapIgnoreList',
+        sourcemapIgnoreList ?? /node_modules/,
+      ),
     ),
     sourcemapPathTransform: measureIfFunction(
       timings,
@@ -384,5 +386,32 @@ function bindingifyCodeSplitting(
   return {
     inlineDynamicImports,
     advancedChunks: advancedChunksResult,
+  };
+}
+
+/**
+ * Wraps a per-source `sourcemapIgnoreList` in the batched shim that the binding expects.
+ *
+ * The loop runs in JS so that a sourcemap makes one napi crossing, not one per source. The old
+ * Rust loop also awaited each call before it started the next.
+ *
+ * The result is a `Uint8Array`, which crosses as a buffer instead of one tagged value per source.
+ * The shim reads each result the way `if` reads it. napi would otherwise reject the whole call
+ * for a type it cannot attribute to one source.
+ *
+ * A boolean, string or regular expression passes through. Rust reads those without a call.
+ */
+function batchSourcemapIgnoreList(
+  ignoreList: OutputOptions['sourcemapIgnoreList'],
+): BindingOutputOptions['sourcemapIgnoreList'] {
+  if (typeof ignoreList !== 'function') {
+    return ignoreList;
+  }
+  return (sources, sourcemapPath) => {
+    const results = new Uint8Array(sources.length);
+    for (let index = 0; index < sources.length; index++) {
+      results[index] = ignoreList(sources[index], sourcemapPath) ? 1 : 0;
+    }
+    return results;
   };
 }

@@ -357,6 +357,9 @@ When an import resolves to a non-existent file, the build errors. Watch mode rel
 
 ### Notify Event Mapping
 
+Shared with bundled dev through `rolldown_fs_watcher::map_notify_event`.
+Do not re-implement this table in `rolldown_dev` or `rolldown_watcher`.
+
 ```
 notify::EventKind::Create(_)                              → WatcherChangeKind::Create
 notify::EventKind::Modify(Name(RenameMode::To))           → WatcherChangeKind::Create

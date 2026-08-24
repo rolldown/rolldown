@@ -418,6 +418,7 @@ fn normalize_code_splitting(
                                 .await
                                 .context("advancedChunks group test option")
                                 .map_err(anyhow::Error::from)
+                                .map(|flags| flags.iter().map(|flag| *flag != 0).collect())
                             })
                           },
                         ))),

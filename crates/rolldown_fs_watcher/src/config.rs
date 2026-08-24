@@ -1,7 +1,12 @@
 use std::time::Duration;
 
 #[derive(Debug, Clone)]
+#[expect(clippy::struct_excessive_bools)] // Raw booleans make this configuration easier to read.
 pub struct FsWatcherConfig {
+  /// Whether filesystem watching is enabled.
+  /// Default: true.
+  pub enabled: bool,
+
   /// Debounce delay for debounced watchers (in milliseconds).
   /// Default to 10ms.
   ///
@@ -31,19 +36,20 @@ pub struct FsWatcherConfig {
   /// Whether to use polling-based file watching instead of native OS events.
   /// Default: false (use native OS events).
   ///
-  /// ⚠️Only used by `create_fs_watcher` for watcher selection, not by concrete watcher implementations.
+  /// ⚠️Only used by `FsWatcher::new` for backend selection.
   pub use_polling: bool,
 
   /// Whether to use debounced event delivery.
   /// Default: false.
   ///
-  /// ⚠️Only used by `create_fs_watcher` for watcher selection, not by concrete watcher implementations.
+  /// ⚠️Only used by `FsWatcher::new` for backend selection.
   pub use_debounce: bool,
 }
 
 impl Default for FsWatcherConfig {
   fn default() -> Self {
     Self {
+      enabled: true,
       debounce_delay: 10,
       // Chokidar's default poll interval is 100ms
       poll_interval: 100,

@@ -97,11 +97,13 @@ export function bindingifyOutputOptions(
         sourcemapIgnoreList ?? /node_modules/,
       ),
     ),
-    sourcemapPathTransform: measureIfFunction(
-      timings,
-      OUTPUT_OPTIONS_OWNER,
-      'sourcemapPathTransform',
-      sourcemapPathTransform,
+    sourcemapPathTransform: batchSourcemapPathTransform(
+      measureIfFunction(
+        timings,
+        OUTPUT_OPTIONS_OWNER,
+        'sourcemapPathTransform',
+        sourcemapPathTransform,
+      ),
     ),
     banner: bindingifyAddon(banner, 'banner', timings),
     footer: bindingifyAddon(footer, 'footer', timings),
@@ -411,6 +413,35 @@ function batchSourcemapIgnoreList(
     const results = new Uint8Array(sources.length);
     for (let index = 0; index < sources.length; index++) {
       results[index] = ignoreList(sources[index], sourcemapPath) ? 1 : 0;
+    }
+    return results;
+  };
+}
+
+/**
+ * The `sourcemapPathTransform` counterpart of {@linkcode batchSourcemapIgnoreList}.
+ *
+ * A path cannot be reduced to a byte, so this batch is still an array of strings. napi reports the
+ * type of the array, not of the bad element, so the check runs here.
+ */
+function batchSourcemapPathTransform(
+  pathTransform: OutputOptions['sourcemapPathTransform'],
+): BindingOutputOptions['sourcemapPathTransform'] {
+  if (typeof pathTransform !== 'function') {
+    return pathTransform;
+  }
+  return (sources, sourcemapPath) => {
+    const results: string[] = [];
+    for (let index = 0; index < sources.length; index++) {
+      const result = pathTransform(sources[index], sourcemapPath);
+      if (typeof result !== 'string') {
+        throw new TypeError(
+          `\`output.sourcemapPathTransform\` returned ${typeof result} for source "${
+            sources[index]
+          }", but expected a string.`,
+        );
+      }
+      results.push(result);
     }
     return results;
   };

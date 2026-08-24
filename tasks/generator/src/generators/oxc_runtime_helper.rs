@@ -5,6 +5,12 @@ use std::io::Write as _;
 use std::path::Path;
 
 use flate2::{Compression, write::DeflateEncoder};
+use oxc::{
+  allocator::Allocator,
+  codegen::{Codegen, CodegenOptions},
+  parser::Parser,
+  span::SourceType,
+};
 use oxc_resolver::ResolveOptions;
 
 use crate::{
@@ -82,10 +88,12 @@ fn generate_embedded_helpers_rs(
   let mut corpus = String::new();
   let mut helper_metadata = Vec::with_capacity(esm_helpers.len() + cjs_helpers.len());
 
-  for (prefix, helpers) in [("esm/", esm_helpers), ("", cjs_helpers)] {
+  for (prefix, helpers, source_type) in
+    [("esm/", esm_helpers, SourceType::mjs()), ("", cjs_helpers, SourceType::cjs())]
+  {
     for (name, content) in helpers {
       let start = u32::try_from(corpus.len()).expect("Oxc runtime helper corpus fits in u32");
-      corpus.push_str(content);
+      corpus.push_str(&remove_helper_whitespace(content, source_type, name)?);
       let end = u32::try_from(corpus.len()).expect("Oxc runtime helper corpus fits in u32");
       helper_metadata.push((format!("{prefix}{name}"), start, end));
     }
@@ -183,4 +191,22 @@ pub fn is_virtual_runtime_helper(specifier: &str) -> bool {
   );
 
   Ok((code, compressed_helpers))
+}
+
+fn remove_helper_whitespace(
+  source: &str,
+  source_type: SourceType,
+  name: &str,
+) -> anyhow::Result<String> {
+  let allocator = Allocator::default();
+  let parsed = Parser::new(&allocator, source, source_type).parse();
+  if parsed.panicked || !parsed.diagnostics.is_empty() {
+    anyhow::bail!("failed to parse Oxc runtime helper `{name}`: {:?}", parsed.diagnostics);
+  }
+  Ok(
+    Codegen::new()
+      .with_options(CodegenOptions { minify: true, ..CodegenOptions::default() })
+      .build(&parsed.program)
+      .code,
+  )
 }

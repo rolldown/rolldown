@@ -739,6 +739,72 @@ test.each([
   expect(thenReads).toBe(1);
 });
 
+test('plugin normalization accepts a thenable that sheds `then` before resolving to itself', async () => {
+  let thenCalls = 0;
+  const mutableSelf: any = {
+    // oxlint-disable-next-line unicorn/no-thenable -- verifies mutable self-resolution
+    then(resolve: (value: unknown) => void) {
+      thenCalls += 1;
+      delete mutableSelf.then;
+      resolve(mutableSelf);
+    },
+  };
+
+  const [plugin] = await normalizePluginOption(mutableSelf);
+  expect(plugin).toBe(mutableSelf);
+  expect(thenCalls).toBe(1);
+});
+
+test('plugin normalization accepts a thenable whose `then` turns non-callable before resolving to itself', async () => {
+  let thenCalls = 0;
+  const mutableSelf: any = {
+    // oxlint-disable-next-line unicorn/no-thenable -- verifies mutable self-resolution
+    then(resolve: (value: unknown) => void) {
+      thenCalls += 1;
+      // oxlint-disable-next-line unicorn/no-thenable -- turns `then` non-callable mid-resolution
+      mutableSelf.then = null;
+      resolve(mutableSelf);
+    },
+  };
+
+  const [plugin] = await normalizePluginOption(mutableSelf);
+  expect(plugin).toBe(mutableSelf);
+  expect(thenCalls).toBe(1);
+});
+
+test('plugin normalization accepts a `then` accessor that deletes itself before resolving to itself', async () => {
+  let thenReads = 0;
+  // oxlint-disable-next-line unicorn/no-thenable -- verifies mutable accessor self-resolution
+  const mutableAccessorSelf: any = Object.defineProperty({}, 'then', {
+    configurable: true,
+    get() {
+      thenReads += 1;
+      Reflect.deleteProperty(mutableAccessorSelf, 'then');
+      return (resolve: (value: unknown) => void) => resolve(mutableAccessorSelf);
+    },
+  });
+
+  const [plugin] = await normalizePluginOption(mutableAccessorSelf);
+  expect(plugin).toBe(mutableAccessorSelf);
+  expect(thenReads).toBe(1);
+});
+
+test('plugin normalization rejects a thenable that stays thenable while resolving to itself', async () => {
+  let thenCalls = 0;
+  const persistentSelf: any = {
+    // oxlint-disable-next-line unicorn/no-thenable -- verifies cyclic thenable rejection
+    then(resolve: (value: unknown) => void) {
+      thenCalls += 1;
+      resolve(persistentSelf);
+    },
+  };
+
+  await expect(normalizePluginOption(persistentSelf)).rejects.toThrow(
+    new TypeError('Thenable cycle detected while flattening values'),
+  );
+  expect(thenCalls).toBe(1);
+});
+
 test('plugin normalization permits the same thenable in independent sibling branches', async () => {
   const plugins = [{ name: 'first' }, { name: 'second' }];
   let resolutions = 0;

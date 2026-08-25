@@ -1,5 +1,5 @@
 import { AsyncLocalStorage } from 'node:async_hooks';
-import { findPropertyDescriptorInPrototypeChain } from './prototype-chain';
+import { hasCallableThenWithoutInvokingAccessor } from './prototype-chain';
 
 export interface AsyncContext<T> {
   getStore(): T | undefined;
@@ -316,21 +316,6 @@ function resolveThenable(
     resolve,
     reject,
   );
-}
-
-function hasCallableThenWithoutInvokingAccessor(value: object): boolean {
-  const descriptor = findPropertyDescriptorInPrototypeChain(
-    value,
-    'then',
-    'checking a repeated thenable resolution',
-  );
-  if (!descriptor) return false;
-  if ('value' in descriptor) return typeof descriptor.value === 'function';
-
-  // The same object already produced a callable `then` on this resolution
-  // path. Treat an accessor that still exists as the same cycle without
-  // invoking user code again. Deleting it still permits mutable self-resolution.
-  return typeof descriptor.get === 'function';
 }
 
 function createBrowserStorage<T>(): AsyncContext<T> | undefined {

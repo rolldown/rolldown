@@ -26,3 +26,18 @@ export function findPropertyDescriptorInPrototypeChain(
     current = Reflect.getPrototypeOf(current);
   }
 }
+
+export function hasCallableThenWithoutInvokingAccessor(value: object): boolean {
+  const descriptor = findPropertyDescriptorInPrototypeChain(
+    value,
+    'then',
+    'checking a repeated thenable resolution',
+  );
+  if (!descriptor) return false;
+  if ('value' in descriptor) return typeof descriptor.value === 'function';
+
+  // The same object already produced a callable `then` on this resolution
+  // path. Treat an accessor that still exists as the same cycle without
+  // invoking user code again. Deleting it still permits mutable self-resolution.
+  return typeof descriptor.get === 'function';
+}

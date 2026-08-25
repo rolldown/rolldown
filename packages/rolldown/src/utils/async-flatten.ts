@@ -1,5 +1,7 @@
 // Adapted from https://github.com/rollup/rollup/blob/3b560f7c889a63968dabc9b6970aabf52a77d3fd/src/utils/asyncFlatten.ts
 
+import { hasCallableThenWithoutInvokingAccessor } from './prototype-chain';
+
 export type SynchronousCallbackRunner = <T>(callback: () => T) => T;
 
 const runDirectly: SynchronousCallbackRunner = (callback) => callback();
@@ -55,7 +57,14 @@ function assimilateThenable<T>(
       return { arrayChain, thenableChain, value };
     }
     if (thenableChain?.has(value)) {
-      throw new TypeError('Thenable cycle detected while flattening values');
+      // A repeated value is only a cycle while it is STILL thenable: the spec
+      // re-reads `then` on every resolution step, so a thenable that shed its
+      // `then` before resolving to itself is terminal. The callback-settlement
+      // path (async-context.ts) treats the same mutated-self case as terminal.
+      if (hasCallableThenWithoutInvokingAccessor(value)) {
+        throw new TypeError('Thenable cycle detected while flattening values');
+      }
+      return { arrayChain, thenableChain, value };
     }
 
     const then = Reflect.get(value, 'then');

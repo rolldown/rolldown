@@ -294,6 +294,5 @@
   "rollup@form@reexport-self: handles recursions when a module reexports its own namespace",
   "rollup@function@catch-scope-nested-deconflicting: deconflicts nested catch scope parameters correctly",
   "rollup@function@emit-file@no-input: It is not necessary to provide an input if a dynamic entry is emitted",
-  "rollup@function@export-default-this-without-semicolon: adds the missing semicolon after a default export of a rewritten top-level \"this\" without a trailing semicolon",
   "rollup@function@resolveid-recursive-call: skipSelf: true option in resolveId hook option should skip the plugin if it has been called before with the same id and importer, see #5768 for more details"
 ]

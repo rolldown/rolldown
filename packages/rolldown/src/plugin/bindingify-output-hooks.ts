@@ -21,6 +21,7 @@ import {
 import { bindingifyRenderChunkFilter } from './bindingify-hook-filter';
 import type { BindingifyPluginArgs } from './bindingify-plugin';
 import { bindingifyHook, type PluginHookWithBindingExt } from './bindingify-plugin-hook-meta';
+import type { RenderedChunkMeta } from './index';
 import { createPluginContext } from './plugin-context';
 
 // Every hook invocation marshals fresh boxes (plugin context, rendered chunk,
@@ -55,10 +56,10 @@ export function bindingifyRenderChunk(
       // Hoisted so the box the `magicString` getter below mints lazily can be
       // released in the `finally` on the threadless flavor.
       let magicStringInstance: RolldownMagicString | undefined;
-      // Flipped in the `finally`: a FIRST `meta.magicString` mint through the
-      // retained (cached, shared) meta after the hook settles would escape the
-      // cleanup below and leak on a flavor with no GC finalizers, so the
-      // getter refuses it there instead.
+      // Flipped in the `finally`: a FIRST `meta.magicString` mint through a
+      // retained meta after the hook settles would escape the cleanup below
+      // and leak on a flavor with no GC finalizers, so the getter refuses it
+      // there instead.
       let settled = false;
       try {
         // cache the chunks binding to deduplicated avoid clone chunks
@@ -77,7 +78,17 @@ export function bindingifyRenderChunk(
             ),
           });
         }
-        const renderChunkMeta = args.pluginContextData.getRenderChunkMeta()!;
+        // Per-chunk invocations of this hook run concurrently (the Rust side
+        // drives them through `try_join_all`), so only the chunks map is
+        // shared through the cache; the meta object handed to the hook is
+        // built per invocation. A getter defined on the shared object instead
+        // would be clobbered by whichever invocation started last, and a hook
+        // reading `meta.magicString` after an `await` would get another
+        // chunk's code -- or, on the threadless flavor, a box that
+        // invocation's cleanup already released.
+        const renderChunkMeta: RenderedChunkMeta = {
+          chunks: args.pluginContextData.getRenderChunkMeta()!.chunks,
+        };
 
         // Add lazy-loaded magicString if nativeMagicString is enabled
         if (args.options.experimental?.nativeMagicString) {
@@ -94,7 +105,6 @@ export function bindingifyRenderChunk(
               magicStringInstance = new RolldownMagicString(code);
               return magicStringInstance;
             },
-            configurable: true,
           });
         }
 

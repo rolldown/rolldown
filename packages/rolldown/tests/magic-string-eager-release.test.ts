@@ -164,4 +164,71 @@ describe('native MagicString ownership on the threadless-WASI dist', () => {
     },
     180_000,
   );
+
+  distTest(
+    'concurrent renderChunk invocations each keep their own magicString',
+    async () => {
+      const { build } = (await import(distEntryPath)) as typeof browserEntryTypes;
+      const { getRuntimeSupport } = (await import(
+        distExperimentalPath
+      )) as typeof browserExperimentalTypes;
+      expect(getRuntimeSupport().threadlessWasi).toBe(true);
+
+      // Per-chunk renderChunk invocations run concurrently on the Rust side,
+      // so chunk a's hook yields until chunk b's invocation has fully settled
+      // and only then reads `meta.magicString` IN-hook. It must see its OWN
+      // chunk -- not chunk b's code, and not the box b's cleanup released.
+      const files = new Map([
+        ['virt:a.js', 'export const A_MARKER = "chunk-a-marker";\nconsole.log(A_MARKER);\n'],
+        ['virt:b.js', 'export const B_MARKER = "chunk-b-marker";\nconsole.log(B_MARKER);\n'],
+      ]);
+      let resolveBDone!: () => void;
+      const bDone = new Promise<void>((resolve) => {
+        resolveBDone = resolve;
+      });
+      const observed: Record<string, string> = {};
+
+      await build({
+        input: { a: 'virt:a.js', b: 'virt:b.js' },
+        write: false,
+        experimental: { nativeMagicString: true },
+        output: { format: 'esm' },
+        plugins: [
+          {
+            name: 'virtual-two-chunks',
+            resolveId: (id: string) => (files.has(id) ? id : undefined),
+            load: (id: string) => files.get(id),
+          },
+          {
+            name: 'interleave-probe',
+            async renderChunk(_code, chunk, _options, meta) {
+              if (chunk.fileName.startsWith('a')) {
+                await Promise.race([
+                  bDone,
+                  new Promise((_, reject) =>
+                    setTimeout(
+                      () => reject(new Error('renderChunk invocations did not interleave')),
+                      10_000,
+                    ),
+                  ),
+                ]);
+                // One macrotask more, so b's wrapper cleanup has run too.
+                await new Promise((resolve) => setTimeout(resolve, 20));
+              }
+              observed[chunk.fileName] = meta.magicString!.original;
+              if (chunk.fileName.startsWith('b')) {
+                resolveBDone();
+              }
+              return null;
+            },
+          },
+        ],
+      });
+
+      expect(observed['a.js']).toContain('chunk-a-marker');
+      expect(observed['a.js']).not.toContain('chunk-b-marker');
+      expect(observed['b.js']).toContain('chunk-b-marker');
+    },
+    180_000,
+  );
 });

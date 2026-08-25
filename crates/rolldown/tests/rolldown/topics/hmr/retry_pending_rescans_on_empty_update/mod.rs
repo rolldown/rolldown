@@ -1,7 +1,7 @@
-use std::{borrow::Cow, sync::Arc};
+use std::borrow::Cow;
 
 use rolldown::{BundlerOptions, DevModeOptions, ExperimentalOptions, InputItem};
-use rolldown_plugin::{HookUsage, Plugin, PluginContext};
+use rolldown_plugin::{HookUsage, Plugin, PluginContext, Pluginable};
 use rolldown_testing::{manual_integration_test, test_config::TestMeta};
 use sugar_path::SugarPath;
 
@@ -63,7 +63,7 @@ async fn retry_pending_rescans_on_empty_update() {
         }),
         ..Default::default()
       },
-      vec![Arc::new(WatchSideFilePlugin)],
+      vec![Pluginable::new_shared(WatchSideFilePlugin)],
     )
     .await;
 }

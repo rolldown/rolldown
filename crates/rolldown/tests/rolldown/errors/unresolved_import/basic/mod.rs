@@ -1,8 +1,9 @@
-use std::{borrow::Cow, sync::Arc};
+use std::borrow::Cow;
 
 use rolldown::{BundlerOptions, InputItem};
 use rolldown_plugin::{
   HookResolveIdArgs, HookResolveIdOutput, HookResolveIdReturn, HookUsage, Plugin, PluginContext,
+  Pluginable,
 };
 use rolldown_testing::{manual_integration_test, test_config::TestMeta};
 
@@ -47,7 +48,7 @@ async fn should_failed_to_resolve_the_module_with_diagnostic() {
         }]),
         ..Default::default()
       },
-      vec![Arc::new(UnresolvedImport)],
+      vec![Pluginable::new_shared(UnresolvedImport)],
     )
     .await;
 }

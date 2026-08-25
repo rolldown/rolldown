@@ -1,11 +1,11 @@
-use std::{borrow::Cow, sync::Arc};
+use std::borrow::Cow;
 
 use rolldown::{BundlerOptions, InputItem, PreserveEntrySignatures};
 use rolldown_common::{
   CodeSplittingMode, EmittedChunk, ManualCodeSplittingOptions, MatchGroup, MatchGroupName,
   MatchGroupTest,
 };
-use rolldown_plugin::{HookUsage, Plugin, PluginContext};
+use rolldown_plugin::{HookUsage, Plugin, PluginContext, Pluginable};
 use rolldown_testing::{manual_integration_test, test_config::TestMeta};
 use rolldown_utils::js_regex::HybridRegex;
 
@@ -70,7 +70,7 @@ async fn allow_extension_exports() {
         })),
         ..Default::default()
       },
-      vec![Arc::new(EmitChunkPlugin)],
+      vec![Pluginable::new_shared(EmitChunkPlugin)],
     )
     .await;
 }

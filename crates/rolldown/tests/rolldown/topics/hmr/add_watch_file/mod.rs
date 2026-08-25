@@ -1,7 +1,7 @@
-use std::{borrow::Cow, fs, sync::Arc};
+use std::{borrow::Cow, fs};
 
 use rolldown::{BundlerOptions, DevModeOptions, ExperimentalOptions, InputItem};
-use rolldown_plugin::{HookUsage, Plugin};
+use rolldown_plugin::{HookUsage, Plugin, Pluginable};
 use rolldown_testing::{manual_integration_test, test_config::TestMeta};
 use sugar_path::SugarPath;
 #[derive(Debug)]
@@ -48,7 +48,7 @@ async fn add_watch_file() {
         }),
         ..Default::default()
       },
-      vec![Arc::new(TestPlugin)],
+      vec![Pluginable::new_shared(TestPlugin)],
     )
     .await;
 }

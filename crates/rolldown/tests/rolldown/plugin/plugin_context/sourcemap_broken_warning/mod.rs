@@ -1,7 +1,7 @@
-use std::{borrow::Cow, sync::Arc};
+use std::borrow::Cow;
 
 use rolldown::{Bundler, BundlerOptions, InputItem, SourceMapType};
-use rolldown_plugin::{HookTransformOutputMap, HookUsage, Plugin};
+use rolldown_plugin::{HookTransformOutputMap, HookUsage, Plugin, Pluginable};
 
 /// A plugin whose `transform` hook returns code without providing a sourcemap.
 /// `output_map` controls whether the result has `map: Omitted` (which triggers
@@ -102,7 +102,7 @@ async fn run(
       sourcemap,
       ..Default::default()
     },
-    vec![Arc::new(plugin)],
+    vec![Pluginable::new_shared(plugin)],
   )
   .expect("failed to create bundler");
 
@@ -233,7 +233,7 @@ async fn omitted_map_suppressed_when_module_contributes_no_code_to_chunk() {
       sourcemap: Some(SourceMapType::File),
       ..Default::default()
     },
-    vec![Arc::new(RewriteToImportOnly)],
+    vec![Pluginable::new_shared(RewriteToImportOnly)],
   )
   .expect("failed to create bundler");
 

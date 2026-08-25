@@ -1,7 +1,7 @@
 use crate::handler::WatcherEventHandler;
 use crate::task_fs_event_handler::GroupFsEventHandler;
 use crate::watch_coordinator::{CoordinatorCloseError, CoordinatorCloseResult, WatchCoordinator};
-use crate::watch_task::{WatchGroupIdx, WatchTask, WatchTaskIdx};
+use crate::watch_task::{TaskFsWatcher, WatchGroupIdx, WatchTask, WatchTaskIdx};
 use crate::watcher_msg::WatcherMsg;
 use anyhow::Result;
 use event_listener::Event;
@@ -11,7 +11,7 @@ use futures::future::Shared;
 use oxc_index::IndexVec;
 use rolldown::BundlerConfig;
 use rolldown_error::BuildResult;
-use rolldown_fs_watcher::FsWatcherConfig;
+use rolldown_fs_watcher::{FsWatcher, FsWatcherConfig};
 use rolldown_utils::dashmap::FxDashSet;
 use rolldown_utils::futures::try_spawn;
 use std::fmt;
@@ -286,10 +286,8 @@ impl Watcher {
     for (index, group) in groups.into_iter().enumerate() {
       let group_index = WatchGroupIdx::from_usize(index);
       let fs_handler = GroupFsEventHandler { group_index, tx: tx.clone() };
-      let fs_watcher = Arc::new(std::sync::Mutex::new(rolldown_fs_watcher::create_fs_watcher(
-        fs_handler,
-        fs_watcher_config.clone(),
-      )?));
+      let fs_watcher: Arc<std::sync::Mutex<Box<dyn TaskFsWatcher>>> =
+        Arc::new(std::sync::Mutex::new(Box::new(FsWatcher::new(fs_handler, &fs_watcher_config)?)));
       // One registered-path set per group, paired with the group's shared
       // watcher: a member consults it so paths a sibling already committed are
       // adopted instead of re-registered, which on macOS would restart the

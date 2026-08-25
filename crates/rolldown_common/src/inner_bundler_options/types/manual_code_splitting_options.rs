@@ -77,7 +77,12 @@ pub struct MatchGroup {
   pub include_dependencies_recursively: Option<bool>,
 }
 
-type MatchGroupTestFn = dyn Fn(&str) -> Pin<Box<dyn Future<Output = anyhow::Result<Option<bool>>> + Send + 'static>>
+/// Classifies a whole batch of module ids in one call.
+///
+/// The returned `Vec` must match `module_ids` by index. The caller rejects any other length.
+type MatchGroupTestFn = dyn Fn(
+    /* module ids */ Vec<String>,
+  ) -> Pin<Box<dyn Future<Output = anyhow::Result<Vec<bool>>> + Send + 'static>>
   + Send
   + Sync;
 
@@ -97,14 +102,16 @@ where
   let transformed = deserialized
     .map(|inner| HybridRegex::new(&inner))
     .transpose()
-    .map_err(|e| serde::de::Error::custom(format!("failed to deserialize {e:?} to HybridRegex")))?;
+    .map_err(|e| serde::de::Error::custom(format!("failed to deserialize {e} to HybridRegex")))?;
   Ok(transformed.map(MatchGroupTest::Regex))
 }
 
+/// Names a whole batch of module ids in one call. The returned `Vec` follows the same rule as
+/// [`MatchGroupTestFn`].
 type MatchGroupNameFn = dyn Fn(
-    /* module id */ &str,
+    /* module ids */ Vec<String>,
     /* chunking context */ &ChunkingContext,
-  ) -> Pin<Box<dyn Future<Output = anyhow::Result<Option<String>>> + Send + 'static>>
+  ) -> Pin<Box<dyn Future<Output = anyhow::Result<Vec<Option<String>>>> + Send + 'static>>
   + Send
   + Sync;
 
@@ -116,16 +123,28 @@ pub enum MatchGroupName {
 }
 
 impl MatchGroupName {
-  pub async fn value<'a>(
+  /// Resolves the group name of every id in `module_ids`, in the same order. The result always
+  /// has the same length as `module_ids`.
+  pub async fn values<'a>(
     &'a self,
     ctx: &ChunkingContext,
-    module_id: &str,
-  ) -> BuildResult<Option<Cow<'a, str>>> {
+    module_ids: Vec<String>,
+  ) -> BuildResult<Vec<Option<Cow<'a, str>>>> {
     match self {
-      Self::Static(name) => Ok(Some(Cow::Borrowed(name))),
+      Self::Static(name) => Ok(vec![Some(Cow::Borrowed(name.as_str())); module_ids.len()]),
       Self::Dynamic(func) => {
-        let name = func(module_id, ctx).await?;
-        Ok(name.map(Cow::Owned))
+        let expected = module_ids.len();
+        let names = func(module_ids, ctx).await?;
+        if names.len() != expected {
+          return Err(
+            anyhow::anyhow!(
+              "a `codeSplitting` group `name` function returned {} names for {expected} modules",
+              names.len()
+            )
+            .into(),
+          );
+        }
+        Ok(names.into_iter().map(|name| name.map(Cow::Owned)).collect())
       }
     }
   }

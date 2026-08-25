@@ -131,14 +131,14 @@ Watcher (public API)
                                └── tasks: IndexVec<WatchTaskIdx, WatchTask>
                                     ├── WatchTask 0  ─┐ config group 0 shares
                                     │   ├── bundler: Arc<TokioMutex<Bundler>>
-                                    │   ├── fs_watcher: Arc<Mutex<DynFsWatcher>> (ONE per config group)
+                                    │   ├── fs_watcher: Arc<Mutex<Box<dyn TaskFsWatcher>>> (ONE FsWatcher per config group)
                                     │   ├── watched_files: FxDashSet<ArcStr> (per task)
                                     │   └── needs_rebuild: bool
                                     ├── WatchTask 1  ─┘ the same fs_watcher Arc
                                     └── WatchTask N ... (next group → next fs watcher)
 
 Data flow:
-  per-group DynFsWatcher ──(GroupFsEventHandler: maps notify events → FileChangeEvent)──→ WatcherMsg::FileChanges { group_index } ──→ WatchCoordinator
+  per-group FsWatcher ──(GroupFsEventHandler: maps notify events via map_notify_event → FileChangeEvent)──→ WatcherMsg::FileChanges { group_index } ──→ WatchCoordinator
   WatchCoordinator ──→ marks EVERY group member whose watch set contains the path
                    ──→ dispatch_event / dispatch_change / dispatch_restart
                          └── await_handler_or_close()
@@ -152,7 +152,7 @@ Data flow:
 
 - `Watcher` only holds lifecycle state (`tx`, the close signal, and `coordinator_state`) — lightweight, no bundler access. The state retains the boxed coordinator future until runtime submission succeeds, and restores it on rejection. `publish_close()` sets the atomic flag, notification, and actor message without spawning; N-API calls it synchronously before returning the close promise so a JavaScript listener cannot return into a new build before close is visible. The async `close()` future enters through the selected runtime, starts a not-yet-running coordinator, and awaits its shared result.
 - `WatchCoordinator` owns ALL mutable state. No external mutation.
-- ONE `DynFsWatcher` exists per config group, shared by that group's `WatchTask`s via `Arc<std::sync::Mutex<DynFsWatcher>>`. A save of a file watched by several outputs of one config is therefore delivered exactly once, carrying the group identity, instead of racing per-output on independent notify streams (the pre-group design behind [#10613](https://github.com/rolldown/rolldown/issues/10613)). Watched-path membership stays per task (`watched_files`), but backend registration is deduplicated group-wide through a shared registered-path set (`group_registered_files: Arc<FxDashSet<ArcStr>>`, created next to the shared watcher in `create_tasks`): a path a sibling member already committed is adopted into the member's own `watched_files` without touching the backend. Members must not re-register a sibling's path — on macOS a `paths_mut()` transaction stops the group's shared FSEvents stream, drops the events buffered meanwhile, and restarts from "now" on commit, so a duplicate registration would blind the whole group.
+- ONE `FsWatcher` exists per config group, shared by that group's `WatchTask`s via `Arc<std::sync::Mutex<Box<dyn TaskFsWatcher>>>` — `TaskFsWatcher` is a crate-local seam over the concrete `FsWatcher`, kept so tests can substitute failing or recording watchers. A save of a file watched by several outputs of one config is therefore delivered exactly once, carrying the group identity, instead of racing per-output on independent notify streams (the pre-group design behind [#10613](https://github.com/rolldown/rolldown/issues/10613)). Watched-path membership stays per task (`watched_files`), but backend registration is deduplicated group-wide through a shared registered-path set (`group_registered_files: Arc<FxDashSet<ArcStr>>`, created next to the shared watcher in `create_tasks`): a path a sibling member already committed is adopted into the member's own `watched_files` without touching the backend. Members must not re-register a sibling's path — on macOS a `paths_mut()` transaction stops the group's shared FSEvents stream, drops the events buffered meanwhile, and restarts from "now" on commit, so a duplicate registration would blind the whole group.
 - Bundler is `Arc<TokioMutex<>>` (where `TokioMutex` aliases `async_lock::Mutex`, not tokio's) because event data structs carry a clone for consumer access (e.g. `BUNDLE_END.result`).
 
 ### Three-Layer Stack
@@ -185,6 +185,17 @@ rolldown_watcher/
 ├── file_change_event.rs       // FileChangeEvent (path + kind)
 ├── watcher_state.rs           // WatcherState enum + transitions
 └── watcher_msg.rs             // WatcherMsg enum (FileChanges, Close)
+
+rolldown_fs_watcher/
+├── lib.rs                     // Public exports: FsWatcher, FsWatcherConfig, FsEvent*
+├── config.rs                  // FsWatcherConfig (enabled, use_polling, use_debounce, …)
+├── event.rs                   // FsEvent, FsEventHandler, FsEventResult
+├── watcher.rs                 // public FsWatcher + internal WatcherBackend + PathsMut
+└── notify/
+    ├── mod.rs                 // create_backend() — selects backend from config
+    ├── immediate.rs           // recommended / poll, no debounce
+    ├── debounced.rs           // recommended / poll + notify-debouncer-full
+    └── noop.rs                // no-op backend when enabled: false
 ```
 
 ## State Machine
@@ -222,7 +233,7 @@ enum WatcherState {
 There are two possible debounce layers:
 
 1. **Coordinator-level** (`WatcherState::Debouncing`) — batches file changes across files before triggering a rebuild. Controlled by `buildDelay`. This is the primary mechanism.
-2. **Fs-watcher-level** (`notify-debouncer-full`) — deduplicates rapid OS-level events for the same file (e.g. editors that write multiple times per save). Available in `rolldown_fs_watcher` but not used by the watcher.
+2. **Fs-watcher-level** (`notify-debouncer-full`) — deduplicates rapid OS-level events for the same file (e.g. editors that write multiple times per save). Off by default. Watch mode turns it on with `watch.watcher.useDebounce` (`FsWatcherConfig.use_debounce`).
 
 Only coordinator-level debounce is active by default. This matches Rollup, which implements its own `setTimeout`/`clearTimeout` debounce on top of chokidar (chokidar has no debounce option — only `awaitWriteFinish` for write completion detection).
 
@@ -264,7 +275,7 @@ Like Rollup's `eventsRewrites` table, rolldown consolidates change kinds when mu
 
 This matters because plugins receive the `WatcherChangeKind` in `watchChange` hooks and may behave differently based on whether a file was created vs. modified.
 
-The fs-watcher layer (`notify-debouncer-full`) is available as an option for users who need OS-level event deduplication (noisy editors, network drives), exposed through `watch.watcher` options (`usePolling` / `pollInterval`). Using both layers adds latency and makes timing harder to reason about, so it's not the default.
+The fs-watcher layer (`notify-debouncer-full`) is available as an option for users who need OS-level event deduplication (noisy editors, network drives), exposed through `watch.watcher.useDebounce` (`debounceDelay` / `debounceTickRate`). Polling is a separate backend choice (`usePolling` / `pollInterval`). Using both debounce layers adds latency and makes timing harder to reason about, so fs-level debounce is not the default.
 
 ### Default Delay
 
@@ -524,7 +535,7 @@ Configured via `WatcherOptions`, fires **immediately** on file change (before de
 ## File Watching
 
 - After each build, `bundler.watch_files()` returns the current set.
-- `WatchTask::update_watch_files()` diffs against the task's own `watched_files` set and the group-level `group_registered_files` set — a path a sibling output already registered on the config group's shared `DynFsWatcher` is adopted into the task's own set without a backend call; only paths new to the whole group are added to the backend.
+- `WatchTask::update_watch_files()` diffs against the task's own `watched_files` set and the group-level `group_registered_files` set — a path a sibling output already registered on the config group's shared `FsWatcher` is adopted into the task's own set without a backend call; only paths new to the whole group are added to the backend.
 - `include`/`exclude` patterns filter which files are watched (via `pattern_filter`).
 - Files are watched **non-recursively** (individual file watches).
 - Batch operations: `fs_watcher.paths_mut()` returns a guard for batching adds, committed via `.commit()`.
@@ -544,6 +555,24 @@ Configured via `WatcherOptions`, fires **immediately** on file change (before de
 - `BUNDLE_END.output` follows Rollup's `path.resolve(output.file || output.dir)` behavior. Relative
   paths are resolved against the normalized bundler `cwd`, and `.` / `..` components are removed
   lexically without requiring the output path to exist.
+
+### Backend selection
+
+`Watcher::create_tasks` builds ONE watcher per config group with
+`FsWatcher::new(handler, &config)` and shares it among the group's tasks.
+`FsWatcher` is a concrete type; the notify implementations stay crate-private.
+`WatcherConfig::to_fs_watcher_config()` maps watch options onto `FsWatcherConfig`,
+and construction picks the backend:
+
+| `use_polling` | `use_debounce` | Backend                               |
+| ------------- | -------------- | ------------------------------------- |
+| false         | false          | notify `RecommendedWatcher` (default) |
+| true          | false          | notify `PollWatcher`                  |
+| false         | true           | debounced `RecommendedWatcher`        |
+| true          | true           | debounced `PollWatcher`               |
+
+Watch mode leaves `enabled` at its default (`true`). The no-op backend is a
+dev-engine concern (`disable_watcher` → `FsWatcherConfig.enabled: false`).
 
 ### Split-Phase Build for Watch Mode
 
@@ -565,6 +594,9 @@ This matches the legacy watcher's approach (`with_cached_bundle`), where `watch_
 When an import resolves to a non-existent file, the build errors. Watch mode relies on the resolver cache being cleared before each rebuild (`bundler.clear_resolver_cache()`). The expected recovery workflow is: create the missing file, then manually edit a watched file (e.g. noop edit to the importer) to trigger a rebuild. The resolver re-evaluates the import with a fresh cache and succeeds. This matches Rollup's behavior — Rollup only watches successfully loaded modules.
 
 ### Notify Event Mapping
+
+Shared with bundled dev through `rolldown_fs_watcher::map_notify_event`.
+Do not re-implement this table in `rolldown_dev` or `rolldown_watcher`.
 
 ```
 notify::EventKind::Create(_)                              → WatcherChangeKind::Create
@@ -738,12 +770,15 @@ WatchCoordinator.run_build_sequence()
 ```typescript
 interface WatcherOptions {
   skipWrite?: boolean; // Skip bundle.write(). Default: false
-  buildDelay?: number; // Debounce ms. Default: 0
+  buildDelay?: number; // Coordinator debounce ms. Default: 0
   watcher?: {
     usePolling?: boolean; // Use polling backend. Default: false
     pollInterval?: number; // Polling interval ms. Default: 100
+    compareContentsForPolling?: boolean; // Default: false
+    useDebounce?: boolean; // FS-level debounce. Default: false
+    debounceDelay?: number; // FS-level debounce delay ms. Default: 10
+    debounceTickRate?: number; // Debouncer tick rate ms. Default: auto
   };
-  notify?: { ... }; // Deprecated — use `watcher` instead
   include?: StringOrRegExp | StringOrRegExp[];
   exclude?: StringOrRegExp | StringOrRegExp[];
   onInvalidate?: (id: string) => void;
@@ -800,6 +835,6 @@ Tracks progress from old watcher → new `rolldown_watcher`. Items link to [#648
 - [module-id](../module-id/implementation.md) — Module ID, path identity, and normalization
 - [#6482](https://github.com/rolldown/rolldown/issues/6482) — Watch mode issue collection (tracks all known bugs)
 - `crates/rolldown_watcher/` — Implementation
-- `crates/rolldown_fs_watcher/` — File system watching abstraction over `notify`
+- `crates/rolldown_fs_watcher/` — One public `FsWatcher`; notify backends stay private
 - `crates/rolldown_dev/` — Dev mode, uses same actor pattern for reference
 - `packages/rolldown/src/api/watch/` — TypeScript API layer

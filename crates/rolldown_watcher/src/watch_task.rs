@@ -8,7 +8,7 @@ use rolldown_error::{
   BatchedBuildDiagnostic, BuildDiagnostic, BuildResult, Diagnostic, DiagnosticOptions,
   filter_out_disabled_diagnostics,
 };
-use rolldown_fs_watcher::{DynFsWatcher, RecursiveMode};
+use rolldown_fs_watcher::{FsWatcher, PathsMut, RecursiveMode};
 use rolldown_utils::{dashmap::FxDashSet, pattern_filter};
 use std::path::{Component, Path, PathBuf};
 use std::sync::Arc;
@@ -27,6 +27,20 @@ oxc_index::define_index_type! {
   pub struct WatchGroupIdx = u32;
 }
 
+/// The slice of the watcher a watch task drives. `rolldown_fs_watcher`
+/// collapsed its backends behind the concrete [`FsWatcher`], so this local
+/// seam is what lets tests substitute failing or recording watchers for path
+/// registration.
+pub trait TaskFsWatcher: Send {
+  fn paths_mut(&mut self) -> Box<dyn PathsMut + '_>;
+}
+
+impl TaskFsWatcher for FsWatcher {
+  fn paths_mut(&mut self) -> Box<dyn PathsMut + '_> {
+    FsWatcher::paths_mut(self)
+  }
+}
+
 /// Per-task data container that owns a bundler and shares its config group's
 /// file-system watcher.
 pub struct WatchTask {
@@ -38,7 +52,7 @@ pub struct WatchTask {
   /// group's shared FSEvents stream and drops the events buffered while it is
   /// open, so a path a sibling already registered must not be re-added (see
   /// `group_registered_files`).
-  fs_watcher: Arc<std::sync::Mutex<DynFsWatcher>>,
+  fs_watcher: Arc<std::sync::Mutex<Box<dyn TaskFsWatcher>>>,
   /// Paths any member of this config group has committed to the shared
   /// backend. Consulted before opening a paths transaction so a sibling's
   /// duplicate discovery adopts the existing registration instead of
@@ -54,7 +68,7 @@ pub struct WatchTask {
 impl WatchTask {
   pub(crate) fn new(
     config: BundlerConfig,
-    fs_watcher: Arc<std::sync::Mutex<DynFsWatcher>>,
+    fs_watcher: Arc<std::sync::Mutex<Box<dyn TaskFsWatcher>>>,
     group_registered_files: Arc<FxDashSet<ArcStr>>,
     closed: &Arc<AtomicBool>,
   ) -> BuildResult<Self> {
@@ -309,7 +323,7 @@ impl WatchTask {
   /// Static helper: update FS watcher with newly discovered files.
   /// Separated from `&self` to allow calling from closures during build.
   fn update_watch_files_from(
-    fs_watcher: &std::sync::Mutex<DynFsWatcher>,
+    fs_watcher: &std::sync::Mutex<Box<dyn TaskFsWatcher>>,
     watched_files: &FxDashSet<ArcStr>,
     group_registered_files: &FxDashSet<ArcStr>,
     options: &NormalizedBundlerOptions,
@@ -509,7 +523,6 @@ pub enum WatchTaskBuildError {
 #[cfg(test)]
 mod tests {
   use super::*;
-  use rolldown_fs_watcher::{FsEventHandler, FsWatcher, FsWatcherConfig, PathsMut};
   use std::{
     fs,
     path::{Path, PathBuf},
@@ -568,33 +581,8 @@ mod tests {
     }
   }
 
-  impl FsWatcher for CommitFailingWatcher {
-    fn new<F: FsEventHandler>(_event_handler: F) -> BuildResult<Self>
-    where
-      Self: Sized,
-    {
-      unreachable!("test constructs the watcher directly")
-    }
-
-    fn with_config<F: FsEventHandler>(
-      _event_handler: F,
-      _config: FsWatcherConfig,
-    ) -> BuildResult<Self>
-    where
-      Self: Sized,
-    {
-      unreachable!("test constructs the watcher directly")
-    }
-
-    fn watch(&mut self, _path: &Path, _recursive_mode: RecursiveMode) -> BuildResult<()> {
-      unreachable!("test uses the batch path API")
-    }
-
-    fn unwatch(&mut self, _path: &Path) -> BuildResult<()> {
-      unreachable!("test never removes paths")
-    }
-
-    fn paths_mut<'me>(&'me mut self) -> Box<dyn PathsMut + 'me> {
+  impl TaskFsWatcher for CommitFailingWatcher {
+    fn paths_mut(&mut self) -> Box<dyn PathsMut + '_> {
       Box::new(CommitFailingPaths {
         commit_attempts: Arc::clone(&self.commit_attempts),
         pending: Vec::new(),
@@ -617,7 +605,7 @@ mod tests {
   }
 
   struct AddFailingWatcherFixture {
-    watcher: std::sync::Mutex<DynFsWatcher>,
+    watcher: std::sync::Mutex<Box<dyn TaskFsWatcher>>,
     add_attempts: Arc<Mutex<Vec<PathBuf>>>,
     commit_attempts: Arc<AtomicUsize>,
     event_delivery_paused: Arc<AtomicBool>,
@@ -646,33 +634,8 @@ mod tests {
     }
   }
 
-  impl FsWatcher for AddFailingWatcher {
-    fn new<F: FsEventHandler>(_event_handler: F) -> BuildResult<Self>
-    where
-      Self: Sized,
-    {
-      unreachable!("test constructs the watcher directly")
-    }
-
-    fn with_config<F: FsEventHandler>(
-      _event_handler: F,
-      _config: FsWatcherConfig,
-    ) -> BuildResult<Self>
-    where
-      Self: Sized,
-    {
-      unreachable!("test constructs the watcher directly")
-    }
-
-    fn watch(&mut self, _path: &Path, _recursive_mode: RecursiveMode) -> BuildResult<()> {
-      unreachable!("test uses the batch path API")
-    }
-
-    fn unwatch(&mut self, _path: &Path) -> BuildResult<()> {
-      unreachable!("test never removes paths")
-    }
-
-    fn paths_mut<'me>(&'me mut self) -> Box<dyn PathsMut + 'me> {
+  impl TaskFsWatcher for AddFailingWatcher {
+    fn paths_mut(&mut self) -> Box<dyn PathsMut + '_> {
       assert!(
         !self.event_delivery_paused.swap(true, Ordering::SeqCst),
         "the preceding paths transaction must have restarted event delivery"
@@ -701,7 +664,7 @@ mod tests {
     let add_attempts = Arc::new(Mutex::new(Vec::new()));
     let commit_attempts = Arc::new(AtomicUsize::new(0));
     let event_delivery_paused = Arc::new(AtomicBool::new(false));
-    let watcher: DynFsWatcher = Box::new(AddFailingWatcher {
+    let watcher: Box<dyn TaskFsWatcher> = Box::new(AddFailingWatcher {
       fail_commit,
       add_attempts: Arc::clone(&add_attempts),
       commit_attempts: Arc::clone(&commit_attempts),
@@ -806,7 +769,7 @@ mod tests {
       ..Default::default()
     };
     let commit_attempts = Arc::new(AtomicUsize::new(0));
-    let watcher: DynFsWatcher =
+    let watcher: Box<dyn TaskFsWatcher> =
       Box::new(CommitFailingWatcher { commit_attempts: Arc::clone(&commit_attempts) });
     let watcher = std::sync::Mutex::new(watcher);
     let watched_files = FxDashSet::default();

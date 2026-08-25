@@ -30,7 +30,7 @@
   "devDependencies": {
     "@napi-rs/cli": "catalog:",
     "@oxc-node/cli": "catalog:",
-    "@oxlint/plugins": "^1.78.0",
+    "@oxlint/plugins": "^1.79.0",
     "acorn": "catalog:",
     "astring": "catalog:",
     "diff": "catalog:",

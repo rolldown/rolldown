@@ -104,21 +104,21 @@ impl GenerateStage<'_> {
   /// needs the same physical chunk placement even though it will not need an `init_*` call.
   pub(super) fn pre_chunk_order_state(
     &self,
-    used_symbol_refs: &UsedSymbolRefsBuilder,
+    used_symbol_refs_builder: &UsedSymbolRefsBuilder,
   ) -> super::order_wrap_state::OrderWrapState {
     let mut state = super::order_wrap_state::OrderWrapState::default();
     if !self.options.is_strict_execution_order_enabled() {
       return state;
     }
     let plan = self.wrap_all_order_analysis().plan;
-    self.populate_probe_order_targets(&plan, used_symbol_refs, &mut state);
+    self.populate_probe_order_targets(&plan, used_symbol_refs_builder, &mut state);
     state
   }
 
   pub(super) fn analyze_execution_order(
     &self,
     chunk_graph: &ChunkGraph,
-    used_symbol_refs: &UsedSymbolRefsBuilder,
+    used_symbol_refs_builder: &UsedSymbolRefsBuilder,
   ) -> Option<OrderAnalysis> {
     if !self.options.is_strict_execution_order_enabled() {
       return None;
@@ -131,7 +131,7 @@ impl GenerateStage<'_> {
       return Some(self.wrap_all_order_analysis());
     }
 
-    let import_edges = self.predicted_static_import_edges(chunk_graph, used_symbol_refs);
+    let import_edges = self.predicted_static_import_edges(chunk_graph, used_symbol_refs_builder);
     let chunk_cycles = ChunkCycles::from_import_edges(&import_edges);
     let mut all_at_risk = FxHashSet::default();
     let mut roots = Vec::new();
@@ -184,7 +184,7 @@ impl GenerateStage<'_> {
     // placement and couple all of the routes again. The structural candidate check excludes
     // synchronous import/require SCCs, so this monotone addition keeps the existing conservative
     // cycle fallback.
-    let placement_state = self.pre_chunk_order_state(used_symbol_refs);
+    let placement_state = self.pre_chunk_order_state(used_symbol_refs_builder);
     all_at_risk.extend(placement_state.order_cjs_carrier_keys().map(|key| key.importer));
 
     let mut plan = self.build_order_wrap_plan(
@@ -213,7 +213,7 @@ impl GenerateStage<'_> {
         chunk_graph,
         &plan,
         &import_edges,
-        used_symbol_refs,
+        used_symbol_refs_builder,
         &reverse_static_imports,
       );
       let post_cycles = ChunkCycles::from_import_edges(&post_edges);
@@ -322,12 +322,12 @@ impl GenerateStage<'_> {
     chunk_graph: &ChunkGraph,
     plan: &OrderWrapPlan,
     baseline: &IndexVec<ChunkIdx, FxHashSet<ChunkIdx>>,
-    used_symbol_refs: &UsedSymbolRefsBuilder,
+    used_symbol_refs_builder: &UsedSymbolRefsBuilder,
     reverse_static_imports: &IndexVec<ModuleIdx, Vec<ModuleIdx>>,
   ) -> IndexVec<ChunkIdx, FxHashSet<ChunkIdx>> {
     let mut edges = baseline.clone();
     let probe_state =
-      self.probe_order_state(chunk_graph, plan, used_symbol_refs, reverse_static_imports);
+      self.probe_order_state(chunk_graph, plan, used_symbol_refs_builder, reverse_static_imports);
 
     for module in self.link_output.module_table.modules.iter().filter_map(Module::as_normal) {
       let importer_idx = module.idx;
@@ -348,7 +348,7 @@ impl GenerateStage<'_> {
         self.project_collector_edges(
           chunk_graph,
           &probe_state,
-          used_symbol_refs,
+          used_symbol_refs_builder,
           module,
           importer_chunk,
           &mut targets,
@@ -473,7 +473,7 @@ impl GenerateStage<'_> {
     &self,
     chunk_graph: &ChunkGraph,
     probe_state: &super::order_wrap_state::OrderWrapState,
-    used_symbol_refs: &UsedSymbolRefsBuilder,
+    used_symbol_refs_builder: &UsedSymbolRefsBuilder,
     module: &NormalModule,
     importer_chunk: ChunkIdx,
     targets: &mut Vec<WrappedEsmInitTarget>,
@@ -505,7 +505,7 @@ impl GenerateStage<'_> {
         targets.extend(collect_wrapped_esm_init_targets_for_import_record(
           &ctx,
           rec_idx,
-          |symbol_ref| used_symbol_refs.contains(&symbol_ref),
+          |symbol_ref| used_symbol_refs_builder.contains(&symbol_ref),
           |_| true,
           |forwarding_module_idx| {
             chunk_graph.module_to_chunk[forwarding_module_idx] == Some(importer_chunk)
@@ -580,11 +580,11 @@ impl GenerateStage<'_> {
     &self,
     chunk_graph: &ChunkGraph,
     plan: &OrderWrapPlan,
-    used_symbol_refs: &UsedSymbolRefsBuilder,
+    used_symbol_refs_builder: &UsedSymbolRefsBuilder,
     reverse_static_imports: &IndexVec<ModuleIdx, Vec<ModuleIdx>>,
   ) -> super::order_wrap_state::OrderWrapState {
     let mut probe_state = super::order_wrap_state::OrderWrapState::default();
-    self.populate_probe_order_targets(plan, used_symbol_refs, &mut probe_state);
+    self.populate_probe_order_targets(plan, used_symbol_refs_builder, &mut probe_state);
 
     // Populate exactly the nested re-export records and per-record overlays `lower_order_state`
     // mints for this plan, so the transitive excluded-hop projection restricts each barrel's walk
@@ -605,7 +605,7 @@ impl GenerateStage<'_> {
       star_reexport_records_by_imported_symbol: &self
         .link_output
         .star_reexport_records_by_imported_symbol,
-      used_symbols: used_symbol_refs,
+      used_symbol_refs_builder,
       cyclic_modules: &cyclic_modules,
       tree_shaking: self.options.treeshake.is_some(),
     };
@@ -640,7 +640,7 @@ impl GenerateStage<'_> {
   fn populate_probe_order_targets(
     &self,
     plan: &OrderWrapPlan,
-    used_symbol_refs: &UsedSymbolRefsBuilder,
+    used_symbol_refs_builder: &UsedSymbolRefsBuilder,
     probe_state: &mut super::order_wrap_state::OrderWrapState,
   ) {
     for module_idx in plan.modules() {
@@ -675,7 +675,7 @@ impl GenerateStage<'_> {
       star_reexport_records_by_imported_symbol: &self
         .link_output
         .star_reexport_records_by_imported_symbol,
-      used_symbols: used_symbol_refs,
+      used_symbol_refs_builder,
       cyclic_modules: &cyclic_modules,
       tree_shaking: self.options.treeshake.is_some(),
     };

@@ -1,5 +1,9 @@
 import type { BindingChunkingContext, BindingOutputOptions } from '../binding.cjs';
-import type { OutputOptions } from '../options/output-options';
+import type {
+  CodeSplittingNameFunction,
+  CodeSplittingTestFunction,
+  OutputOptions,
+} from '../options/output-options';
 import type { BuildCallbackRunner } from '../plugin/bindingify-plugin';
 import type { PluginContextData } from '../plugin/plugin-context-data';
 import { ChunkingContextImpl } from '../types/chunking-context';
@@ -386,7 +390,14 @@ function bindingifyCodeSplitting(
           ...restGroup,
           test: wrapOptionalBuildCallback(
             typeof test === 'function'
-              ? measureHookCost(timings, OUTPUT_OPTIONS_OWNER, 'codeSplitting groups[].test', test)
+              ? batchTest(
+                  measureHookCost(
+                    timings,
+                    OUTPUT_OPTIONS_OWNER,
+                    'codeSplitting groups[].test',
+                    test,
+                  ),
+                )
               : test,
             runBuildCallback,
           ),
@@ -396,22 +407,14 @@ function bindingifyCodeSplitting(
           name:
             typeof name === 'function'
               ? wrapOptionalBuildCallback(
-                  measureHookCost(
-                    timings,
-                    OUTPUT_OPTIONS_OWNER,
-                    'codeSplitting groups[].name',
-                    (id: string, ctx: BindingChunkingContext) => {
-                      // The classifier is sync by contract (the binding wants
-                      // a plain string back), so its per-candidate context box
-                      // can be released as soon as the call returns. Any
-                      // getModuleInfo boxes it minted were already
-                      // snapshot-and-dropped by `ChunkingContextImpl`.
-                      try {
-                        return name(id, new ChunkingContextImpl(ctx, pluginContextData));
-                      } finally {
-                        releaseOrDefer(ctx);
-                      }
-                    },
+                  batchName(
+                    measureHookCost(
+                      timings,
+                      OUTPUT_OPTIONS_OWNER,
+                      'codeSplitting groups[].name',
+                      name,
+                    ),
+                    pluginContextData,
                   ),
                   runBuildCallback,
                 )
@@ -424,6 +427,72 @@ function bindingifyCodeSplitting(
   return {
     inlineDynamicImports,
     advancedChunks: advancedChunksResult,
+  };
+}
+
+/**
+ * Wraps a per-id `test` in the batched shim that the binding expects.
+ *
+ * The loop runs in JS so that a group makes one napi crossing, not one per module.
+ *
+ * The result is a `Uint8Array`, which crosses as a buffer instead of one tagged value per id.
+ */
+function batchTest(test: CodeSplittingTestFunction): (ids: string[]) => Uint8Array {
+  return (ids) => {
+    const results = new Uint8Array(ids.length);
+    for (let index = 0; index < ids.length; index++) {
+      const result = test(ids[index]);
+      // napi reports the type of the array, not of the bad element, so the check runs here.
+      if (result != null && typeof result !== 'boolean') {
+        throw new TypeError(
+          `\`output.codeSplitting.groups[].test\` returned ${typeof result} for module "${
+            ids[index]
+          }", but expected a boolean, null or undefined.`,
+        );
+      }
+      results[index] = result === true ? 1 : 0;
+    }
+    return results;
+  };
+}
+
+/**
+ * This is the `name` equivalent of {@linkcode batchTest}. The context wrapper holds no per-call
+ * state, so one instance serves the whole batch.
+ */
+function batchName(
+  name: CodeSplittingNameFunction,
+  pluginContextData: PluginContextData,
+): (
+  ids: string[],
+  bindingContext: BindingChunkingContext,
+) => ReturnType<CodeSplittingNameFunction>[] {
+  return (ids, bindingContext) => {
+    const context = new ChunkingContextImpl(bindingContext, pluginContextData);
+    const results: ReturnType<CodeSplittingNameFunction>[] = [];
+    // The classifier is sync by contract (the binding wants plain strings
+    // back), so the batch's context box can be released as soon as the loop
+    // finishes — after the last candidate's `name` call, its final native
+    // read. Each batch invocation gets a freshly minted box, so releasing it
+    // here cannot affect later groups. Any getModuleInfo boxes the callbacks
+    // minted were already snapshot-and-dropped by `ChunkingContextImpl`.
+    try {
+      for (let index = 0; index < ids.length; index++) {
+        const result = name(ids[index], context);
+        // napi reports the type of the array, not of the bad element, so the check runs here.
+        if (result != null && typeof result !== 'string') {
+          throw new TypeError(
+            `\`output.codeSplitting.groups[].name\` returned ${typeof result} for module "${
+              ids[index]
+            }", but expected a string, null or undefined.`,
+          );
+        }
+        results.push(result);
+      }
+    } finally {
+      releaseOrDefer(bindingContext);
+    }
+    return results;
   };
 }
 

@@ -826,8 +826,8 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
   fn resolve_symbol_from_reference(&self, id_ref: &IdentifierReference) -> Option<SymbolId> {
     let ref_id = id_ref.reference_id.get().unwrap_or_else(|| {
       panic!(
-        "{id_ref:#?} must have reference id in code```\n{}\n```\n",
-        self.current_stmt_info.unwrap_debug_label()
+        "Identifier `{}` at {}..{} must have a reference id",
+        id_ref.name, id_ref.span.start, id_ref.span.end
       )
     });
     self.result.symbol_ref_db.ast_scopes.symbol_id_for(ref_id)

@@ -307,13 +307,13 @@ impl<Fs: FileSystem + Clone + 'static> Bundle<Fs> {
     // The one stretch of a build with no plugin in it, which is what makes it a usable
     // baseline for "was this build plugin-bound?" — see `BuildTimings`.
     let link_start = self.plugin_driver.build_timings.start();
-    let (mut link_stage_output, ast_table, used_symbol_refs) =
+    let (mut link_stage_output, ast_table, used_symbol_refs_builder) =
       LinkStage::new(scan_stage_output, &self.options).link();
     self.plugin_driver.build_timings.record_link_stage(link_start);
 
     let bundle_output =
       GenerateStage::new(&mut link_stage_output, ast_table, &self.options, &self.plugin_driver)
-        .generate(used_symbol_refs)
+        .generate(used_symbol_refs_builder)
         .await; // Notice we don't use `?` to break the control flow here.
 
     // `create_output`/`make_copy` strip symbol-table scoping from the cache for

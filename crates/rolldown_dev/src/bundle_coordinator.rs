@@ -8,11 +8,14 @@ use anyhow::Context;
 use arcstr::ArcStr;
 use async_lock::Mutex;
 use futures::StreamExt;
+#[cfg(target_os = "macos")]
 use notify::EventKind;
 use rolldown_common::WatcherChangeKind;
 use rolldown_dev_common::types::{DevCallbackError, DevCallbackResult};
 use rolldown_error::BuildResult;
-use rolldown_fs_watcher::{DynFsWatcher, FsEventResult, RecursiveMode};
+use rolldown_fs_watcher::{
+  FsChangeKind, FsEventResult, FsWatcher, PathsMut, RecursiveMode, map_notify_event,
+};
 use rolldown_utils::{
   dashmap::FxDashSet,
   futures::spawn_detached,
@@ -51,6 +54,20 @@ struct WatchRegistrationErrorEvent {
   observed: bool,
 }
 
+/// The slice of the watcher `BundleCoordinator` drives. `rolldown_fs_watcher`
+/// collapsed its backends behind the concrete [`FsWatcher`], so this local
+/// seam is what lets tests substitute failing or recording watchers for path
+/// registration.
+pub trait CoordinatorFsWatcher: Send {
+  fn paths_mut(&mut self) -> Box<dyn PathsMut + '_>;
+}
+
+impl CoordinatorFsWatcher for FsWatcher {
+  fn paths_mut(&mut self) -> Box<dyn PathsMut + '_> {
+    FsWatcher::paths_mut(self)
+  }
+}
+
 /// BundleCoordinator - coordinates build tasks and manages initial build state
 pub struct BundleCoordinator {
   bundler: Arc<Mutex<Bundler>>,
@@ -59,7 +76,7 @@ pub struct BundleCoordinator {
   /// field doc on `DevEngine::next_hmr_patch_id`.
   next_hmr_patch_id: Arc<AtomicU32>,
   rx: CoordinatorReceiver,
-  watcher: StdMutex<DynFsWatcher>,
+  watcher: StdMutex<Box<dyn CoordinatorFsWatcher>>,
   watched_files: FxDashSet<ArcStr>,
   /// Tracks the state of the initial build
   state: CoordinatorState,
@@ -81,7 +98,7 @@ impl BundleCoordinator {
     bundler: Arc<Mutex<Bundler>>,
     ctx: SharedDevContext,
     rx: CoordinatorReceiver,
-    watcher: DynFsWatcher,
+    watcher: impl CoordinatorFsWatcher + 'static,
     next_hmr_patch_id: Arc<AtomicU32>,
   ) -> Self {
     Self {
@@ -89,7 +106,7 @@ impl BundleCoordinator {
       ctx,
       next_hmr_patch_id,
       rx,
-      watcher: StdMutex::new(watcher),
+      watcher: StdMutex::new(Box::new(watcher)),
       watched_files: FxDashSet::default(),
       state: CoordinatorState::Initialized,
       queued_file_changes_waited_for_full_build: FxIndexMap::default(),
@@ -255,40 +272,33 @@ impl BundleCoordinator {
     )
   }
 
-  /// Handle file change events from watcher
+  /// Handle file change events from watcher.
+  ///
+  /// Rename mapping is shared with build watch via [`map_notify_event`].
+  /// See `internal-docs/dev-engine/implementation.md` ("From fs event to queued task").
   async fn handle_watch_event(&mut self, watch_event: FsEventResult) {
     match watch_event {
       Ok(batched_events) => {
         let mut changed_files = FxIndexMap::default();
-        batched_events.into_iter().for_each(|batched_event| {
-          match &batched_event.detail.kind {
-            EventKind::Create(_create_kind) => {
-              for path in batched_event.detail.paths {
-                changed_files.insert(path, WatcherChangeKind::Create);
-              }
-            }
-            #[cfg(target_os = "macos")]
+        for batched_event in batched_events {
+          #[cfg(target_os = "macos")]
+          if matches!(
+            batched_event.detail.kind,
             EventKind::Modify(notify::event::ModifyKind::Metadata(_))
-              if !self.ctx.options.use_polling =>
-            {
-              // When using kqueue on mac, ignore metadata changes as it happens frequently and doesn't affect the build in most cases
-              // Note that when using polling, we shouldn't ignore metadata changes as the polling watcher prefer to emit them over
-              // content change events
-            }
-            EventKind::Modify(notify::event::ModifyKind::Name(notify::event::RenameMode::From))
-            | EventKind::Remove(_) => {
-              for path in batched_event.detail.paths {
-                changed_files.insert(path, WatcherChangeKind::Delete);
-              }
-            }
-            EventKind::Modify(_modify_kind) => {
-              for path in batched_event.detail.paths {
-                changed_files.insert(path, WatcherChangeKind::Update);
-              }
-            }
-            _ => {}
+          ) && !self.ctx.options.use_polling
+          {
+            // kqueue on mac emits metadata events often; they do not affect the
+            // build in most cases. Polling prefers metadata over content events,
+            // so those must still be mapped.
+            continue;
           }
-        });
+
+          for (path, kind) in
+            map_notify_event(&batched_event.detail.kind, batched_event.detail.paths)
+          {
+            changed_files.insert(path, watcher_change_kind(kind));
+          }
+        }
 
         self.handle_file_changes(changed_files).await;
       }
@@ -809,7 +819,7 @@ impl BundleCoordinator {
   }
 
   fn update_watch_paths_from(
-    watcher: &StdMutex<DynFsWatcher>,
+    watcher: &StdMutex<Box<dyn CoordinatorFsWatcher>>,
     watched_files: &FxDashSet<ArcStr>,
     watch_files: &[ArcStr],
     cwd: &str,
@@ -850,6 +860,14 @@ impl BundleCoordinator {
   }
 }
 
+fn watcher_change_kind(kind: FsChangeKind) -> WatcherChangeKind {
+  match kind {
+    FsChangeKind::Create => WatcherChangeKind::Create,
+    FsChangeKind::Update => WatcherChangeKind::Update,
+    FsChangeKind::Delete => WatcherChangeKind::Delete,
+  }
+}
+
 #[cfg(test)]
 mod tests {
   use super::*;
@@ -860,7 +878,7 @@ mod tests {
   use futures::channel::oneshot;
   use rolldown::{BundlerOptions, DevModeOptions, ExperimentalOptions};
   use rolldown_error::BatchedBuildDiagnostic;
-  use rolldown_fs_watcher::{FsEventHandler, FsWatcher, FsWatcherConfig, NoopFsWatcher, PathsMut};
+  use rolldown_fs_watcher::FsWatcherConfig;
   use std::{
     fs,
     path::{Path, PathBuf},
@@ -900,6 +918,13 @@ mod tests {
   fn create_observation_test_coordinator() -> BundleCoordinator {
     let bundler = Bundler::new(BundlerOptions::default()).expect("create test bundler");
     let (coordinator_tx, coordinator_rx) = unbounded();
+    // `enabled: false` selects the noop backend, replacing the removed
+    // `NoopFsWatcher` type.
+    let watcher = FsWatcher::new(
+      BundleCoordinator::create_watcher_event_handler(coordinator_tx.clone()),
+      &FsWatcherConfig { enabled: false, ..FsWatcherConfig::default() },
+    )
+    .expect("create noop watcher");
     let ctx = Arc::new(DevContext {
       options: normalize_dev_options(DevOptions::default()),
       coordinator_tx,
@@ -913,7 +938,7 @@ mod tests {
       Arc::new(Mutex::new(bundler)),
       ctx,
       coordinator_rx,
-      Box::new(NoopFsWatcher),
+      watcher,
       Arc::new(AtomicU32::new(0)),
     )
   }
@@ -950,33 +975,8 @@ mod tests {
     }
   }
 
-  impl FsWatcher for CommitFailingWatcher {
-    fn new<F: FsEventHandler>(_event_handler: F) -> BuildResult<Self>
-    where
-      Self: Sized,
-    {
-      unreachable!("test constructs the watcher directly")
-    }
-
-    fn with_config<F: FsEventHandler>(
-      _event_handler: F,
-      _config: FsWatcherConfig,
-    ) -> BuildResult<Self>
-    where
-      Self: Sized,
-    {
-      unreachable!("test constructs the watcher directly")
-    }
-
-    fn watch(&mut self, _path: &Path, _recursive_mode: RecursiveMode) -> BuildResult<()> {
-      unreachable!("test uses the batch path API")
-    }
-
-    fn unwatch(&mut self, _path: &Path) -> BuildResult<()> {
-      unreachable!("test never removes paths")
-    }
-
-    fn paths_mut<'me>(&'me mut self) -> Box<dyn PathsMut + 'me> {
+  impl CoordinatorFsWatcher for CommitFailingWatcher {
+    fn paths_mut(&mut self) -> Box<dyn PathsMut + '_> {
       Box::new(CommitFailingPaths {
         commit_attempts: Arc::clone(&self.commit_attempts),
         failures_before_success: self.failures_before_success,
@@ -1016,33 +1016,8 @@ mod tests {
     }
   }
 
-  impl FsWatcher for AddFailingWatcher {
-    fn new<F: FsEventHandler>(_event_handler: F) -> BuildResult<Self>
-    where
-      Self: Sized,
-    {
-      unreachable!("test constructs the watcher directly")
-    }
-
-    fn with_config<F: FsEventHandler>(
-      _event_handler: F,
-      _config: FsWatcherConfig,
-    ) -> BuildResult<Self>
-    where
-      Self: Sized,
-    {
-      unreachable!("test constructs the watcher directly")
-    }
-
-    fn watch(&mut self, _path: &Path, _recursive_mode: RecursiveMode) -> BuildResult<()> {
-      unreachable!("test uses the batch path API")
-    }
-
-    fn unwatch(&mut self, _path: &Path) -> BuildResult<()> {
-      unreachable!("test never removes paths")
-    }
-
-    fn paths_mut<'me>(&'me mut self) -> Box<dyn PathsMut + 'me> {
+  impl CoordinatorFsWatcher for AddFailingWatcher {
+    fn paths_mut(&mut self) -> Box<dyn PathsMut + '_> {
       Box::new(AddFailingPaths {
         commit_attempts: Arc::clone(&self.commit_attempts),
         fail_commit: self.fail_commit,
@@ -1077,33 +1052,8 @@ mod tests {
     }
   }
 
-  impl FsWatcher for RecordingWatcher {
-    fn new<F: FsEventHandler>(_event_handler: F) -> BuildResult<Self>
-    where
-      Self: Sized,
-    {
-      unreachable!("test constructs the watcher directly")
-    }
-
-    fn with_config<F: FsEventHandler>(
-      _event_handler: F,
-      _config: FsWatcherConfig,
-    ) -> BuildResult<Self>
-    where
-      Self: Sized,
-    {
-      unreachable!("test constructs the watcher directly")
-    }
-
-    fn watch(&mut self, _path: &Path, _recursive_mode: RecursiveMode) -> BuildResult<()> {
-      unreachable!("test uses the batch path API")
-    }
-
-    fn unwatch(&mut self, _path: &Path) -> BuildResult<()> {
-      unreachable!("test never removes paths")
-    }
-
-    fn paths_mut<'me>(&'me mut self) -> Box<dyn PathsMut + 'me> {
+  impl CoordinatorFsWatcher for RecordingWatcher {
+    fn paths_mut(&mut self) -> Box<dyn PathsMut + '_> {
       Box::new(RecordingPaths { added: Arc::clone(&self.added), pending: Vec::new() })
     }
   }
@@ -1111,7 +1061,7 @@ mod tests {
   #[test]
   fn failed_watch_add_commits_and_publishes_only_successful_additions() {
     let commit_attempts = Arc::new(AtomicUsize::new(0));
-    let watcher: DynFsWatcher = Box::new(AddFailingWatcher {
+    let watcher: Box<dyn CoordinatorFsWatcher> = Box::new(AddFailingWatcher {
       commit_attempts: Arc::clone(&commit_attempts),
       fail_commit: false,
     });
@@ -1268,7 +1218,7 @@ mod tests {
   #[test]
   fn watch_add_and_commit_failures_are_aggregated_without_publication() {
     let commit_attempts = Arc::new(AtomicUsize::new(0));
-    let watcher: DynFsWatcher = Box::new(AddFailingWatcher {
+    let watcher: Box<dyn CoordinatorFsWatcher> = Box::new(AddFailingWatcher {
       commit_attempts: Arc::clone(&commit_attempts),
       fail_commit: true,
     });
@@ -1302,7 +1252,7 @@ mod tests {
   #[test]
   fn failed_watch_commit_is_not_published_and_is_retried() {
     let commit_attempts = Arc::new(AtomicUsize::new(0));
-    let watcher: DynFsWatcher = Box::new(CommitFailingWatcher {
+    let watcher: Box<dyn CoordinatorFsWatcher> = Box::new(CommitFailingWatcher {
       commit_attempts: Arc::clone(&commit_attempts),
       failures_before_success: 1,
     });
@@ -1387,10 +1337,10 @@ mod tests {
       last_task_errored: std::sync::atomic::AtomicBool::new(false),
     });
     let commit_attempts = Arc::new(AtomicUsize::new(0));
-    let watcher: DynFsWatcher = Box::new(CommitFailingWatcher {
+    let watcher = CommitFailingWatcher {
       commit_attempts: Arc::clone(&commit_attempts),
       failures_before_success: 2,
-    });
+    };
     let mut coordinator = BundleCoordinator::new(
       Arc::new(Mutex::new(bundler)),
       ctx,
@@ -1522,10 +1472,10 @@ mod tests {
       last_task_errored: std::sync::atomic::AtomicBool::new(false),
     });
     let commit_attempts = Arc::new(AtomicUsize::new(0));
-    let watcher: DynFsWatcher = Box::new(CommitFailingWatcher {
+    let watcher = CommitFailingWatcher {
       commit_attempts: Arc::clone(&commit_attempts),
       failures_before_success: 1,
-    });
+    };
     let mut coordinator = BundleCoordinator::new(
       Arc::new(Mutex::new(bundler)),
       ctx,
@@ -1646,7 +1596,7 @@ mod tests {
       Arc::new(Mutex::new(bundler)),
       ctx,
       coordinator_rx,
-      Box::new(RecordingWatcher { added: Arc::clone(&added) }),
+      RecordingWatcher { added: Arc::clone(&added) },
       Arc::new(AtomicU32::new(0)),
     );
     coordinator.state = CoordinatorState::InProgress;
@@ -1729,7 +1679,7 @@ mod tests {
       Arc::clone(&bundler),
       Arc::clone(&ctx),
       coordinator_rx,
-      Box::new(RecordingWatcher { added: Arc::clone(&added) }),
+      RecordingWatcher { added: Arc::clone(&added) },
       Arc::new(AtomicU32::new(0)),
     );
     coordinator.state = CoordinatorState::InProgress;

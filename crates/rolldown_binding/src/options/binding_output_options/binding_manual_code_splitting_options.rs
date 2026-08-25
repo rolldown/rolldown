@@ -1,5 +1,8 @@
 use derive_more::Debug;
-use napi::{Either, bindgen_prelude::FnArgs};
+use napi::{
+  Either,
+  bindgen_prelude::{FnArgs, Uint8Array},
+};
 use rolldown::ChunkingContext;
 
 use crate::types::{
@@ -19,16 +22,22 @@ pub struct BindingManualCodeSplittingOptions {
   pub max_module_size: Option<f64>,
 }
 
+/// The JS side wraps the user's per-id function in one shim per group. The result holds one byte
+/// per id, and a nonzero byte captures the module. See
+/// `packages/rolldown/src/utils/bindingify-output-options.ts`.
 type BindingMatchGroupTest =
-  Either<BindingStringOrRegex, JsCallback<FnArgs<(/*module id*/ String,)>, Option<bool>>>;
+  Either<BindingStringOrRegex, JsCallback<FnArgs<(/*module ids*/ Vec<String>,)>, Uint8Array>>;
 
 #[napi_derive::napi(object, object_to_js = false)]
 #[derive(Debug)]
 pub struct BindingMatchGroup {
-  #[napi(ts_type = "string | ((id: string, ctx: BindingChunkingContext) => VoidNullable<string>)")]
+  #[napi(
+    ts_type = "string | ((ids: Array<string>, ctx: BindingChunkingContext) => Array<VoidNullable<string>>)"
+  )]
   #[debug("MatchGroupName(...)")]
-  pub name: Either<String, JsCallback<FnArgs<(String, BindingChunkingContext)>, Option<String>>>,
-  #[napi(ts_type = "string | RegExp | ((id: string) => VoidNullable<boolean>)")]
+  pub name:
+    Either<String, JsCallback<FnArgs<(Vec<String>, BindingChunkingContext)>, Vec<Option<String>>>>,
+  #[napi(ts_type = "string | RegExp | ((ids: Array<string>) => Uint8Array)")]
   #[debug("MatchGroupTest(...)")]
   pub test: Option<BindingMatchGroupTest>,
   // pub share_count: Option<u32>,

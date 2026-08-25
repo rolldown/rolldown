@@ -778,10 +778,11 @@ mod tests {
   use super::*;
   // `tokio::sync::Notify` below is ONLY the tests' internal end/stop signal;
   // production `close_notify` is `event_listener::Event`.
+  use crate::watch_task::TaskFsWatcher;
   use event_listener::Event;
   use rolldown::{BundlerConfig, BundlerOptions, plugin};
   use rolldown_error::BuildResult;
-  use rolldown_fs_watcher::{DynFsWatcher, FsEventHandler, FsWatcher, FsWatcherConfig, PathsMut};
+  use rolldown_fs_watcher::PathsMut;
   use rolldown_utils::dashmap::FxDashSet;
   use std::{
     borrow::Cow,
@@ -877,37 +878,8 @@ mod tests {
     }
   }
 
-  impl FsWatcher for RegistrationFailingWatcher {
-    fn new<F: FsEventHandler>(_event_handler: F) -> BuildResult<Self>
-    where
-      Self: Sized,
-    {
-      unreachable!("test constructs the watcher directly")
-    }
-
-    fn with_config<F: FsEventHandler>(
-      _event_handler: F,
-      _config: FsWatcherConfig,
-    ) -> BuildResult<Self>
-    where
-      Self: Sized,
-    {
-      unreachable!("test constructs the watcher directly")
-    }
-
-    fn watch(
-      &mut self,
-      _path: &Path,
-      _recursive_mode: rolldown_fs_watcher::RecursiveMode,
-    ) -> BuildResult<()> {
-      unreachable!("test uses the batch path API")
-    }
-
-    fn unwatch(&mut self, _path: &Path) -> BuildResult<()> {
-      unreachable!("test never removes paths")
-    }
-
-    fn paths_mut<'me>(&'me mut self) -> Box<dyn PathsMut + 'me> {
+  impl TaskFsWatcher for RegistrationFailingWatcher {
+    fn paths_mut(&mut self) -> Box<dyn PathsMut + '_> {
       Box::new(RegistrationFailingPaths {
         fail_adds: self.fail_adds,
         fail_commits: self.fail_commits,
@@ -992,7 +964,7 @@ mod tests {
     let add_attempts = Arc::new(AtomicUsize::new(0));
     let commit_attempts = Arc::new(AtomicUsize::new(0));
     let commit_times = Arc::new(Mutex::new(Vec::new()));
-    let fs_watcher: DynFsWatcher = Box::new(RegistrationFailingWatcher {
+    let fs_watcher: Box<dyn TaskFsWatcher> = Box::new(RegistrationFailingWatcher {
       fail_adds,
       fail_commits,
       add_attempts: Arc::clone(&add_attempts),
@@ -1325,37 +1297,8 @@ mod tests {
     }
   }
 
-  impl FsWatcher for NoopWatcher {
-    fn new<F: FsEventHandler>(_event_handler: F) -> BuildResult<Self>
-    where
-      Self: Sized,
-    {
-      Ok(Self)
-    }
-
-    fn with_config<F: FsEventHandler>(
-      _event_handler: F,
-      _config: FsWatcherConfig,
-    ) -> BuildResult<Self>
-    where
-      Self: Sized,
-    {
-      Ok(Self)
-    }
-
-    fn watch(
-      &mut self,
-      _path: &Path,
-      _recursive_mode: rolldown_fs_watcher::RecursiveMode,
-    ) -> BuildResult<()> {
-      Ok(())
-    }
-
-    fn unwatch(&mut self, _path: &Path) -> BuildResult<()> {
-      Ok(())
-    }
-
-    fn paths_mut<'me>(&'me mut self) -> Box<dyn PathsMut + 'me> {
+  impl TaskFsWatcher for NoopWatcher {
+    fn paths_mut(&mut self) -> Box<dyn PathsMut + '_> {
       Box::new(NoopPaths)
     }
   }
@@ -1524,7 +1467,7 @@ mod tests {
     let watch_change_count = Arc::new(AtomicUsize::new(0));
 
     let mut tasks = IndexVec::new();
-    let fs_watcher: DynFsWatcher = Box::new(NoopWatcher);
+    let fs_watcher: Box<dyn TaskFsWatcher> = Box::new(NoopWatcher);
     let task = WatchTask::new(
       BundlerConfig::new(
         BundlerOptions {
@@ -1649,7 +1592,7 @@ mod tests {
 
     let mut tasks = IndexVec::new();
     for out_file in ["dist0/out.js", "dist1/out.js"] {
-      let fs_watcher: DynFsWatcher = Box::new(NoopWatcher);
+      let fs_watcher: Box<dyn TaskFsWatcher> = Box::new(NoopWatcher);
       let task = WatchTask::new(
         BundlerConfig::new(
           BundlerOptions {
@@ -1835,7 +1778,7 @@ mod tests {
     let mut tasks = IndexVec::new();
     for (input, out_file, plugins) in task_inputs {
       let cwd = input.parent().expect("input has parent").to_path_buf();
-      let fs_watcher: DynFsWatcher = Box::new(NoopWatcher);
+      let fs_watcher: Box<dyn TaskFsWatcher> = Box::new(NoopWatcher);
       let task = WatchTask::new(
         BundlerConfig::new(
           BundlerOptions {
@@ -2078,7 +2021,7 @@ mod tests {
     let close_notify = Arc::new(Event::new());
     let add_attempts = Arc::new(AtomicUsize::new(0));
     let commit_attempts = Arc::new(AtomicUsize::new(0));
-    let fs_watcher: DynFsWatcher = Box::new(RegistrationFailingWatcher {
+    let fs_watcher: Box<dyn TaskFsWatcher> = Box::new(RegistrationFailingWatcher {
       fail_adds: 0,
       fail_commits: 0,
       add_attempts: Arc::clone(&add_attempts),

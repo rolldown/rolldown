@@ -16,6 +16,7 @@ import { RolldownOutputImpl } from '../../types/rolldown-output-impl';
 import { createBundlerOptions } from '../../utils/create-bundler-option';
 import { CloseCallbackScope, createCloseIdentity } from '../../utils/close-callback-scope';
 import { normalizeBindingResultErrors, unwrapBindingResult } from '../../utils/error';
+import { shouldEagerlyFreeOutputs } from '../../utils/threadless-free';
 import { validateOption } from '../../utils/validator';
 // oxlint-disable-next-line no-unused-vars -- this is used in JSDoc links
 import type { rolldown } from './index';
@@ -355,6 +356,13 @@ export class RolldownBuild {
       nativeBuildEntered = true;
       supersededCleanupErrors = nativeBuild.supersededCleanupErrors;
       result = new RolldownOutputImpl(unwrapBindingResult(await nativeBuild.nativePromise));
+      // On the threadless-WASI flavor GC finalizers never run, so a result
+      // whose `output` is never read (write-and-forget) would keep every
+      // native output box allocated per build. Materializing here makes the
+      // lazy getter's eager release fire even for ignored results.
+      if (shouldEagerlyFreeOutputs()) {
+        void result.output;
+      }
     } catch (error) {
       option.releaseOptionBoxes();
       const errors: unknown[] = [error];

@@ -43,7 +43,7 @@ pub trait HmrAstBuilder<'any, 'ast> {
     )
   }
 
-  /// `__rolldown_runtime__.registerModule(moduleId, module)`
+  /// `__rolldown_runtime__.registerModule(moduleId[, module])`
   fn create_register_module_stmt(&self) -> ast::Statement<'ast> {
     let module_exports = match self.module().exports_kind {
       rolldown_common::ExportsKind::Esm => {
@@ -56,7 +56,7 @@ pub trait HmrAstBuilder<'any, 'ast> {
         );
 
         // { exports: namespace }
-        ast::Argument::new_object_expression(
+        Some(ast::Argument::new_object_expression(
           SPAN,
           [ast::ObjectPropertyKind::new_object_property(
             SPAN,
@@ -69,26 +69,26 @@ pub trait HmrAstBuilder<'any, 'ast> {
             &self.builder(),
           )],
           &self.builder(),
-        )
+        ))
       }
       rolldown_common::ExportsKind::CommonJs => {
         // `module`
-        ast::Argument::new_identifier(SPAN, Self::cjs_module_name(), &self.builder())
+        Some(ast::Argument::new_identifier(SPAN, Self::cjs_module_name(), &self.builder()))
       }
-      rolldown_common::ExportsKind::None => {
-        // `{}`
-        ast::Argument::new_object_expression(SPAN, [], &self.builder())
-      }
+      rolldown_common::ExportsKind::None => None,
     };
 
-    // __rolldown_runtime__.registerModule(moduleId, module)
+    // __rolldown_runtime__.registerModule(moduleId[, module])
     // moduleId is either `__rolldown_module_id__` (HMR/lazy path) or the stable-id
     // string literal (main-bundle path).
     let register_call = ast::Expression::new_call_expression(
       SPAN,
       ast::Expression::new_identifier(SPAN, "__rolldown_runtime__.registerModule", &self.builder()),
       None,
-      [self.module_id_argument(), module_exports],
+      oxc::allocator::Vec::from_iter_in(
+        std::iter::once(self.module_id_argument()).chain(module_exports),
+        &self.builder(),
+      ),
       false,
       &self.builder(),
     );

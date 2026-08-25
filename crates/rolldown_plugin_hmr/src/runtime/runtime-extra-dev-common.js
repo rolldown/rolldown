@@ -147,9 +147,9 @@ export class DevRuntime {
 
   /**
    * @param {string} id
-   * @param {{ exports: any }} exportsHolder
+   * @param {{ exports: any }} [exportsHolder]
    */
-  registerModule(id, exportsHolder) {
+  registerModule(id, exportsHolder = { exports: {} }) {
     const module = new Module(id);
     module.exportsHolder = exportsHolder;
     this.moduleCache.set(id, module);

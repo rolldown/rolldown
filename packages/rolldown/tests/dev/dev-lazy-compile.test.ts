@@ -2,6 +2,7 @@ import { getDevWatchOptionsForCi } from '@rolldown/test-dev-server';
 import crypto from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
+import vm from 'node:vm';
 import type { InputOptions, OutputOptions, Plugin } from 'rolldown';
 import type { DevEngine, DevOptions } from 'rolldown/experimental';
 import { dev as _dev } from 'rolldown/experimental';
@@ -522,5 +523,79 @@ test(
     expect(chunk.code).not.toMatch(/loadExports\("external-dep"\)/);
     // and the one binding is declared once, so the import is not shadowed
     expect(chunk.code).not.toMatch(new RegExp(`var\\s+${bindings[0]}\\b`));
+  },
+);
+
+// Every module registers an exports holder with the runtime, and `loadExports` reads
+// `exports` straight off that holder. A module with no exports is no exception: it has to
+// register `{ exports: {} }`, matching what a normal build gives such a module. Registering a
+// bare `{}` reads back as `undefined`, and every consumer of it then breaks — `__toCommonJS`
+// throws "Cannot convert undefined or null to object".
+test(
+  'a module without exports still registers an empty exports object',
+  { timeout: TEST_TIMEOUT },
+  async ({ onTestFinished }) => {
+    const uniqueId = crypto.randomUUID().slice(0, 8);
+    const dir = path.join(import.meta.dirname, 'temp', `dev-lazy-require-unused-${uniqueId}`);
+    const pkg = path.join(dir, 'pkg');
+    fs.mkdirSync(pkg, { recursive: true });
+    fs.writeFileSync(path.join(dir, 'main.js'), `import('./pkg/cjs.js');\n`);
+    // A `package.json` without `type` makes the files below CommonJS. That is what stops a
+    // module with no exports from registering an exports object at all, which is the state
+    // the bug needed.
+    fs.writeFileSync(path.join(pkg, 'package.json'), `{ "name": "pkg", "main": "cjs.js" }\n`);
+    fs.writeFileSync(
+      path.join(pkg, 'cjs.js'),
+      `require('./side-effect.js');\n\nmodule.exports = 'loaded';\n`,
+    );
+    fs.writeFileSync(path.join(pkg, 'side-effect.js'), `globalThis.sideEffectRan = true;\n`);
+
+    const engine = await dev(
+      {
+        input: path.join(dir, 'main.js'),
+        experimental: { devMode: { lazy: true, implement: '', skipCommonRuntimeInjection: true } },
+      },
+      { dir: path.join(dir, 'dist'), format: 'esm' },
+      {},
+    );
+
+    onTestFinished(async () => {
+      await engine.close();
+      delete (globalThis as Record<string, unknown>).sideEffectRan;
+      if (!process.env.CI) {
+        fs.rmSync(dir, { recursive: true, force: true });
+      }
+    });
+
+    await engine.run();
+    await engine.registerClient('require-unused-client');
+    const chunk = await engine.compileEntry(
+      `${path.join(pkg, 'cjs.js')}?rolldown-lazy=1`,
+      'require-unused-client',
+    );
+
+    // `require('./side-effect.js')` is a statement, so its result is thrown away and only the
+    // init call is emitted — the same shape a normal build produces for an unused require.
+    expect(chunk.code).toMatch(/initModule\("[^"]*side-effect\.js"\)/);
+    expect(chunk.code).not.toMatch(/loadExports\("[^"]*side-effect\.js"\)/);
+
+    const { DevRuntime } = await import(import.meta.resolve('rolldown/experimental/runtime'));
+    const runtime = new DevRuntime('require-unused-client');
+    runtime.hooks = {
+      createModuleHotContext: () => ({}),
+      onModuleCacheRemoval: () => {},
+    };
+    vm.runInThisContext(`(__rolldown_runtime__) => {\n${chunk.code}\n}`)(runtime);
+
+    // The registry is keyed by the stable id, which is relative to the process cwd.
+    const stableId = (suffix: string) =>
+      new RegExp(`registerFactory\\("([^"]*${suffix})"`).exec(chunk.code)![1];
+
+    const lazyExports = runtime.loadExports(stableId('cjs\\.js\\?rolldown-lazy=1'));
+    expect(await lazyExports['rolldown:exports']).toBe('loaded');
+    expect((globalThis as Record<string, unknown>).sideEffectRan).toBe(true);
+
+    // The module has no exports, so its exports are empty — never `undefined`.
+    expect(runtime.loadExports(stableId('side-effect\\.js'))).toEqual({});
   },
 );

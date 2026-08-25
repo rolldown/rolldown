@@ -1,5 +1,9 @@
 import type { BindingChunkingContext, BindingOutputOptions } from '../binding.cjs';
-import type { OutputOptions } from '../options/output-options';
+import type {
+  CodeSplittingNameFunction,
+  CodeSplittingTestFunction,
+  OutputOptions,
+} from '../options/output-options';
 import type { PluginContextData } from '../plugin/plugin-context-data';
 import { ChunkingContextImpl } from '../types/chunking-context';
 import { transformAssetSource } from './asset-source';
@@ -361,19 +365,28 @@ function bindingifyCodeSplitting(
           ...restGroup,
           test:
             typeof test === 'function'
-              ? measureHookCost(timings, OUTPUT_OPTIONS_OWNER, 'codeSplitting groups[].test', test)
+              ? batchTest(
+                  measureHookCost(
+                    timings,
+                    OUTPUT_OPTIONS_OWNER,
+                    'codeSplitting groups[].test',
+                    test,
+                  ),
+                )
               : test,
           // The core calls this classifier directly rather than through a plugin, so it
           // belongs to no plugin's rows — and it runs once per module, which is how it ends
           // up dominating a build.
           name:
             typeof name === 'function'
-              ? measureHookCost(
-                  timings,
-                  OUTPUT_OPTIONS_OWNER,
-                  'codeSplitting groups[].name',
-                  (id: string, ctx: BindingChunkingContext) =>
-                    name(id, new ChunkingContextImpl(ctx, pluginContextData)),
+              ? batchName(
+                  measureHookCost(
+                    timings,
+                    OUTPUT_OPTIONS_OWNER,
+                    'codeSplitting groups[].name',
+                    name,
+                  ),
+                  pluginContextData,
                 )
               : name,
         };
@@ -384,5 +397,61 @@ function bindingifyCodeSplitting(
   return {
     inlineDynamicImports,
     advancedChunks: advancedChunksResult,
+  };
+}
+
+/**
+ * Wraps a per-id `test` in the batched shim that the binding expects.
+ *
+ * The loop runs in JS so that a group makes one napi crossing, not one per module.
+ *
+ * The result is a `Uint8Array`, which crosses as a buffer instead of one tagged value per id.
+ */
+function batchTest(test: CodeSplittingTestFunction): (ids: string[]) => Uint8Array {
+  return (ids) => {
+    const results = new Uint8Array(ids.length);
+    for (let index = 0; index < ids.length; index++) {
+      const result = test(ids[index]);
+      // napi reports the type of the array, not of the bad element, so the check runs here.
+      if (result != null && typeof result !== 'boolean') {
+        throw new TypeError(
+          `\`output.codeSplitting.groups[].test\` returned ${typeof result} for module "${
+            ids[index]
+          }", but expected a boolean, null or undefined.`,
+        );
+      }
+      results[index] = result === true ? 1 : 0;
+    }
+    return results;
+  };
+}
+
+/**
+ * This is the `name` equivalent of {@linkcode batchTest}. The context wrapper holds no per-call
+ * state, so one instance serves the whole batch.
+ */
+function batchName(
+  name: CodeSplittingNameFunction,
+  pluginContextData: PluginContextData,
+): (
+  ids: string[],
+  bindingContext: BindingChunkingContext,
+) => ReturnType<CodeSplittingNameFunction>[] {
+  return (ids, bindingContext) => {
+    const context = new ChunkingContextImpl(bindingContext, pluginContextData);
+    const results: ReturnType<CodeSplittingNameFunction>[] = [];
+    for (let index = 0; index < ids.length; index++) {
+      const result = name(ids[index], context);
+      // napi reports the type of the array, not of the bad element, so the check runs here.
+      if (result != null && typeof result !== 'string') {
+        throw new TypeError(
+          `\`output.codeSplitting.groups[].name\` returned ${typeof result} for module "${
+            ids[index]
+          }", but expected a string, null or undefined.`,
+        );
+      }
+      results.push(result);
+    }
+    return results;
   };
 }

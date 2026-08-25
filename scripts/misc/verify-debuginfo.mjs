@@ -2,11 +2,12 @@
 // published debug info sits next to it, and not before.
 // See internal-docs/panic-symbolication/implementation.md
 //
-// Usage: node scripts/misc/verify-debuginfo.mjs [--debuginfo <archive.tar.gz>]
+// Usage: node scripts/misc/verify-debuginfo.mjs [--debuginfo <archive.tar.zst>]
 // Without `--debuginfo`, the single archive under `target/debuginfo/` is used.
 
 import { execFileSync, spawnSync } from 'node:child_process';
 import * as fs from 'node:fs';
+import * as os from 'node:os';
 import * as path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -22,7 +23,7 @@ function parseArgs(argv) {
   }
   if (!args.debuginfo) {
     const dir = path.join(REPO_ROOT, 'target/debuginfo');
-    const archives = fs.readdirSync(dir).filter((f) => f.endsWith('.debuginfo.tar.gz'));
+    const archives = fs.readdirSync(dir).filter((f) => f.endsWith('.debuginfo.tar.zst'));
     if (archives.length !== 1)
       throw new Error(`expected one archive in ${dir}, found: ${archives.join(', ') || 'none'}`);
     args.debuginfo = path.join(dir, archives[0]);
@@ -68,8 +69,14 @@ function main() {
   }
 
   console.info(`2. unpack ${path.basename(debuginfo)} next to the binding`);
-  const entry = execFileSync('tar', ['-tzf', debuginfo], { encoding: 'utf8' }).split('/')[0].trim();
-  execFileSync('tar', ['-xzf', debuginfo, '-C', BINDING_DIR], { stdio: 'inherit' });
+  const tarball = path.join(
+    fs.mkdtempSync(path.join(os.tmpdir(), 'rolldown-debuginfo-')),
+    'debuginfo.tar',
+  );
+  execFileSync('zstd', ['-d', '-q', '-f', debuginfo, '-o', tarball], { stdio: 'inherit' });
+  const entry = execFileSync('tar', ['-tf', tarball], { encoding: 'utf8' }).split('/')[0].trim();
+  execFileSync('tar', ['-xf', tarball, '-C', BINDING_DIR], { stdio: 'inherit' });
+  fs.rmSync(path.dirname(tarball), { recursive: true, force: true });
 
   console.info('3. panic with debug info');
   let after;

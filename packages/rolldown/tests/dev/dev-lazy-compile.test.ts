@@ -536,7 +536,8 @@ test.skipIf(isSingleThread)(
 // register `{ exports: {} }`, matching what a normal build gives such a module. Registering a
 // bare `{}` reads back as `undefined`, and every consumer of it then breaks — `__toCommonJS`
 // throws "Cannot convert undefined or null to object".
-test(
+// Upstream #10772 landed unguarded; dev() reports devSupported: false without threads.
+test.skipIf(isSingleThread)(
   'a module without exports still registers an empty exports object',
   { timeout: TEST_TIMEOUT },
   async ({ onTestFinished }) => {

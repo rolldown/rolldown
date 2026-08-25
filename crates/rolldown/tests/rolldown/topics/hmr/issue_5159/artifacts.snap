@@ -77,7 +77,7 @@ __rolldown_runtime__.registerGraph({
 });
 //#region main.js
 __rolldown_runtime__.createModuleHotContext("main.js");
-__rolldown_runtime__.registerModule("main.js", {});
+__rolldown_runtime__.registerModule("main.js");
 import("./foo.js"), import("./bar.js");
 //#endregion
 export { __exportAll as t };

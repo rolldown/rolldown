@@ -803,6 +803,11 @@ impl<'ast> HmrAstFinalizer<'_, 'ast> {
       return;
     };
 
+    if rec.meta.contains(ImportRecordMeta::IsRequireUnused) {
+      *it = self.make_init_module_call(&self.modules[importee_idx]);
+      return;
+    }
+
     let is_importee_cjs = importee.exports_kind == rolldown_common::ExportsKind::CommonJs;
 
     // Use stable module ID for consistent runtime lookup

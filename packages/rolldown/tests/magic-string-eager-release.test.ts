@@ -112,4 +112,56 @@ describe('native MagicString ownership on the threadless-WASI dist', () => {
     },
     180_000,
   );
+
+  distTest(
+    'a retained meta refuses to mint a magicString after its hook settled',
+    async () => {
+      const { build } = (await import(distEntryPath)) as typeof browserEntryTypes;
+      const { getRuntimeSupport } = (await import(
+        distExperimentalPath
+      )) as typeof browserExperimentalTypes;
+      // Guard the premise: on a lazy flavor the late mint below would succeed
+      // and the assertions would test nothing.
+      expect(getRuntimeSupport().threadlessWasi).toBe(true);
+
+      let retainedTransformMeta: { magicString?: RolldownMagicString } | undefined;
+      let retainedRenderChunkMeta: { magicString?: RolldownMagicString } | undefined;
+
+      await build({
+        input: ENTRY_ID,
+        write: false,
+        experimental: { nativeMagicString: true },
+        output: { format: 'esm' },
+        plugins: [
+          virtualEntryPlugin(),
+          {
+            name: 'meta-retainer',
+            // Retain both metas WITHOUT reading `magicString`: the wrappers'
+            // settle-time cleanup then has nothing to release, and only the
+            // getter itself can stop a post-settle FIRST mint from leaking a
+            // box no finalizer will ever free.
+            transform(_code, id, meta) {
+              if (id === ENTRY_ID) {
+                retainedTransformMeta = meta;
+              }
+              return null;
+            },
+            renderChunk(_code, _chunk, _options, meta) {
+              retainedRenderChunkMeta = meta;
+              return null;
+            },
+          },
+        ],
+      });
+
+      expect(retainedTransformMeta).toBeDefined();
+      expect(retainedRenderChunkMeta).toBeDefined();
+      // Denied instead of minted: a box allocated here could never be
+      // released, and the error surface matches what reads of an eagerly
+      // released box already throw.
+      expect(() => retainedTransformMeta!.magicString).toThrow(/no longer usable/);
+      expect(() => retainedRenderChunkMeta!.magicString).toThrow(/no longer usable/);
+    },
+    180_000,
+  );
 });

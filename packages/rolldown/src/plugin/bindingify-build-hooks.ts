@@ -185,6 +185,11 @@ export function bindingifyTransform(
       // Hoisted for the same reason: the `meta.magicString` getter below mints
       // this box lazily, and the `finally` has to be able to reach it.
       let magicStringInstance: RolldownMagicString | undefined;
+      // Flipped in the `finally`: a FIRST `meta.magicString` mint through a
+      // retained `meta` after the hook settles would escape the cleanup below
+      // and leak on a flavor with no GC finalizers, so the getter refuses it
+      // there instead — the same error surface reads of a released box throw.
+      let settled = false;
       try {
         let astInstance: Program;
         Object.defineProperties(meta, {
@@ -192,6 +197,11 @@ export function bindingifyTransform(
             get() {
               if (magicStringInstance) {
                 return magicStringInstance;
+              }
+              if (settled && shouldEagerlyFreeOutputs()) {
+                throw new Error(
+                  'meta.magicString is no longer usable: its transform hook has already settled, and a MagicString minted now could never be released on this flavor. Read it while the hook runs.',
+                );
               }
               magicStringInstance = new RolldownMagicString(code);
               return magicStringInstance;
@@ -280,6 +290,7 @@ export function bindingifyTransform(
           moduleType: ret.moduleType,
         };
       } finally {
+        settled = true;
         if (shouldEagerlyFreeOutputs()) {
           // A fire-and-forget `this.load()`/`this.resolve()` may still hold a
           // borrow on `innerCtx`, so its release goes through the tracker; the

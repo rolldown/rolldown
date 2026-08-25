@@ -13,6 +13,13 @@ import { expect } from 'vitest';
 let transformMagicString: RolldownMagicString | undefined;
 let renderChunkMagicString: RolldownMagicString | undefined;
 
+// Retained WITHOUT reading `magicString` during the hook: `afterTest` reads it
+// late. On the eager flavor the getter must refuse a post-settle FIRST mint
+// (nothing would ever release the box); the lazy flavors keep the historical
+// late mint alive for the finalizer.
+let retainedTransformMeta: { magicString?: RolldownMagicString } | undefined;
+let retainedRenderChunkMeta: { magicString?: RolldownMagicString } | undefined;
+
 function expectReleasedByItsHook(label: string, box: RolldownMagicString): void {
   const first = box.dropInner();
   if (isThreadlessWasi) {
@@ -67,6 +74,21 @@ export default defineTest({
           return renderChunkMagicString;
         },
       },
+      {
+        // Runs after the plugin above, so the `renderChunk` meta getter left
+        // installed on the shared meta object is this plugin's un-minted one.
+        name: 'test-magic-string-retain-meta',
+        transform(_code, id, meta) {
+          if (!id.startsWith('\0')) {
+            retainedTransformMeta = meta;
+          }
+          return null;
+        },
+        renderChunk(_code, _chunk, _options, meta) {
+          retainedRenderChunkMeta = meta;
+          return null;
+        },
+      },
     ],
   },
   afterTest(output) {
@@ -79,5 +101,24 @@ export default defineTest({
 
     expect(renderChunkMagicString).toBeDefined();
     expectReleasedByItsHook('renderChunk', renderChunkMagicString!);
+
+    // Late FIRST access through a retained meta, after both hooks settled.
+    expect(retainedTransformMeta).toBeDefined();
+    expect(retainedRenderChunkMeta).toBeDefined();
+    if (isThreadlessWasi) {
+      // The eager flavor denies the mint with the same error surface reads of
+      // an eagerly released box already use.
+      expect(() => retainedTransformMeta!.magicString).toThrow(/no longer usable/);
+      expect(() => retainedRenderChunkMeta!.magicString).toThrow(/no longer usable/);
+    } else {
+      // The lazy flavors still mint a live, usable box late; releasing it here
+      // is this test being tidy, not part of the contract.
+      const lateTransform = retainedTransformMeta!.magicString!;
+      expect(lateTransform.original).toContain("console.log('hello')");
+      expect(lateTransform.dropInner().freed).toBe(true);
+      const lateRenderChunk = retainedRenderChunkMeta!.magicString!;
+      expect(lateRenderChunk.original.length).toBeGreaterThan(0);
+      expect(lateRenderChunk.dropInner().freed).toBe(true);
+    }
   },
 });

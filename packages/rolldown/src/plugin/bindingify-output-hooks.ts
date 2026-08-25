@@ -55,6 +55,11 @@ export function bindingifyRenderChunk(
       // Hoisted so the box the `magicString` getter below mints lazily can be
       // released in the `finally` on the threadless flavor.
       let magicStringInstance: RolldownMagicString | undefined;
+      // Flipped in the `finally`: a FIRST `meta.magicString` mint through the
+      // retained (cached, shared) meta after the hook settles would escape the
+      // cleanup below and leak on a flavor with no GC finalizers, so the
+      // getter refuses it there instead.
+      let settled = false;
       try {
         // cache the chunks binding to deduplicated avoid clone chunks
         if (args.pluginContextData.getRenderChunkMeta() == null) {
@@ -80,6 +85,11 @@ export function bindingifyRenderChunk(
             get() {
               if (magicStringInstance) {
                 return magicStringInstance;
+              }
+              if (settled && shouldEagerlyFreeOutputs()) {
+                throw new Error(
+                  'meta.magicString is no longer usable: its renderChunk hook has already settled, and a MagicString minted now could never be released on this flavor. Read it while the hook runs.',
+                );
               }
               magicStringInstance = new RolldownMagicString(code);
               return magicStringInstance;
@@ -163,6 +173,7 @@ export function bindingifyRenderChunk(
           map: bindingifySourcemap(ret.map),
         };
       } finally {
+        settled = true;
         if (shouldEagerlyFreeOutputs()) {
           // The chunk box was released by `snapshotRenderedChunk`; the meta
           // box is read on the first invocation only (the snapshot above is

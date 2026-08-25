@@ -1,12 +1,12 @@
 use std::{
   borrow::Cow,
   path::{Path, PathBuf},
-  sync::Arc,
 };
 
 use rolldown::{BundlerOptions, InputItem, OutputFormat};
 use rolldown_plugin::{
   HookResolveIdArgs, HookResolveIdOutput, HookResolveIdReturn, HookUsage, Plugin, PluginContext,
+  Pluginable,
 };
 use rolldown_testing::{manual_integration_test, test_config::TestMeta};
 
@@ -68,7 +68,7 @@ async fn preserve_modules_root_with_slash_normalized_ids() {
         preserve_modules_root: Some("src".into()),
         ..Default::default()
       },
-      vec![Arc::new(SlashNormalizedResolvePlugin)],
+      vec![Pluginable::new_shared(SlashNormalizedResolvePlugin)],
     )
     .await;
 }

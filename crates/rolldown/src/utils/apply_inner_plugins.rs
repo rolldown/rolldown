@@ -1,7 +1,5 @@
-use std::sync::Arc;
-
 use rolldown_common::NormalizedBundlerOptions;
-use rolldown_plugin::__inner::SharedPluginable;
+use rolldown_plugin::__inner::{Pluginable, SharedPluginable};
 use rolldown_plugin_lazy_compilation::LazyCompilationContext;
 
 /// Result of applying inner plugins, containing optional contexts for features
@@ -22,28 +20,34 @@ pub fn apply_inner_plugins(
   user_plugins: &mut Vec<SharedPluginable>,
 ) -> ApplyInnerPluginsReturn {
   let mut before_user_plugins: Vec<SharedPluginable> = vec![
-    Arc::new(rolldown_plugin_copy_module::CopyModulePlugin::new(&options.module_types)),
-    Arc::new(rolldown_plugin_asset_module::AssetModulePlugin::new(&options.module_types)),
-    Arc::new(rolldown_plugin_data_url::DataUrlPlugin::default()),
-    Arc::new(rolldown_plugin_oxc_runtime::OxcRuntimePlugin),
+    Pluginable::new_shared(rolldown_plugin_copy_module::CopyModulePlugin::new(
+      &options.module_types,
+    )),
+    Pluginable::new_shared(rolldown_plugin_asset_module::AssetModulePlugin::new(
+      &options.module_types,
+    )),
+    Pluginable::new_shared(rolldown_plugin_data_url::DataUrlPlugin::default()),
+    Pluginable::new_shared(rolldown_plugin_oxc_runtime::OxcRuntimePlugin),
   ];
 
   if let Some(config) = &options.experimental.chunk_import_map {
-    before_user_plugins.push(Arc::new(rolldown_plugin_chunk_import_map::ChunkImportMapPlugin {
-      base_url: config.base_url.clone(),
-      file_name: config.file_name.clone(),
-      ..Default::default()
-    }));
+    before_user_plugins.push(Pluginable::new_shared(
+      rolldown_plugin_chunk_import_map::ChunkImportMapPlugin {
+        base_url: config.base_url.clone(),
+        file_name: config.file_name.clone(),
+        ..Default::default()
+      },
+    ));
   }
 
   let mut lazy_compilation_context = None;
 
   if let Some(dev_mode) = &options.experimental.dev_mode {
-    before_user_plugins.push(Arc::new(rolldown_plugin_hmr::HmrPlugin));
+    before_user_plugins.push(Pluginable::new_shared(rolldown_plugin_hmr::HmrPlugin));
     if dev_mode.lazy == Some(true) {
       let plugin = rolldown_plugin_lazy_compilation::LazyCompilationPlugin::new();
       lazy_compilation_context = Some(plugin.context());
-      before_user_plugins.push(Arc::new(plugin));
+      before_user_plugins.push(Pluginable::new_shared(plugin));
     }
   }
 

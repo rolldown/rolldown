@@ -1,8 +1,9 @@
-use std::{borrow::Cow, sync::Arc};
+use std::borrow::Cow;
 
 use rolldown::{BundlerOptions, InputItem};
 use rolldown_plugin::{
   HookResolveIdArgs, HookResolveIdOutput, HookResolveIdReturn, HookUsage, Plugin, PluginContext,
+  Pluginable,
 };
 use rolldown_testing::{manual_integration_test, test_config::TestMeta};
 
@@ -43,7 +44,7 @@ async fn test() {
         input: Some(vec![InputItem { name: Some("ext".to_string()), import: "ext".to_string() }]),
         ..Default::default()
       },
-      vec![Arc::new(TestPlugin)],
+      vec![Pluginable::new_shared(TestPlugin)],
     )
     .await;
 }

@@ -1,8 +1,10 @@
-use std::{borrow::Cow, sync::Arc};
+use std::borrow::Cow;
 
 use rolldown::{BundlerOptions, InputItem};
 use rolldown_common::RUNTIME_MODULE_KEY;
-use rolldown_plugin::{HookTransformReturn, HookUsage, Plugin, SharedTransformPluginContext};
+use rolldown_plugin::{
+  HookTransformReturn, HookUsage, Plugin, Pluginable, SharedTransformPluginContext,
+};
 use rolldown_testing::{manual_integration_test, test_config::TestMeta};
 
 /// A plugin that removes `__exportAll` and `__toCommonJS` from the runtime module,
@@ -53,7 +55,7 @@ async fn runtime_module_symbol_removed_error() {
         }]),
         ..Default::default()
       },
-      vec![Arc::new(RuntimeBreakingPlugin)],
+      vec![Pluginable::new_shared(RuntimeBreakingPlugin)],
     )
     .await;
 }

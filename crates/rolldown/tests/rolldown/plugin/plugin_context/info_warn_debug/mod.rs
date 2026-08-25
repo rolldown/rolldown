@@ -4,7 +4,7 @@ use std::{
 };
 
 use rolldown::{BundlerOptions, InputItem, Log, LogLevel, LogWithoutPlugin, OnLog};
-use rolldown_plugin::{HookUsage, Plugin, PluginContext};
+use rolldown_plugin::{HookUsage, Plugin, PluginContext, Pluginable};
 use rolldown_testing::{manual_integration_test, test_config::TestMeta};
 
 #[derive(Debug)]
@@ -69,7 +69,7 @@ async fn allow_pass_custom_arg() {
         on_log: Some(on_log),
         ..Default::default()
       },
-      vec![Arc::new(TestPlugin)],
+      vec![Pluginable::new_shared(TestPlugin)],
     )
     .await;
 

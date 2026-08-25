@@ -21,7 +21,7 @@ Everything lives in `.github/workflows/reusable-release-build.yml`, gated on a `
 
    The strip commands mirror what rustc does for `strip = "symbols"` (`--strip-all` on ELF, `strip -x` on a macOS cdylib), so the shipped `.node` is the same as before.
 
-   The output is one archive per target, `target/debuginfo/<node basename>.debuginfo.tar.gz`, holding one entry:
+   The output is one archive per target, `target/debuginfo/<node basename>.debuginfo.tar.zst`, holding one entry:
 
    - ELF: `<node basename>.debug`. The name must match the `.gnu_debuglink` record.
    - macOS: `<node basename>.dSYM/`. Any name ending in `.dSYM` works; the match is by `LC_UUID`.

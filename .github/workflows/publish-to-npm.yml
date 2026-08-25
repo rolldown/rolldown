@@ -173,7 +173,7 @@ jobs:
             --target "$TARGET" \
             --title "$TAG_NAME" \
             --notes "$NOTES" \
-            debuginfo/*.debuginfo.tar.gz)
+            debuginfo/*.debuginfo.tar.zst)
           echo "url=$url" >> "$GITHUB_OUTPUT"
 
       - name: Notify Discord

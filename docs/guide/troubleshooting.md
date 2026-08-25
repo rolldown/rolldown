@@ -221,11 +221,11 @@ Each release attaches the debug info of the binding as a separate archive. Put t
 
 Three platforms have an archive:
 
-| Platform          | Binding package                    | Archive                                                 |
-| ----------------- | ---------------------------------- | ------------------------------------------------------- |
-| Linux x64 (glibc) | `@rolldown/binding-linux-x64-gnu`  | `rolldown-binding.linux-x64-gnu.node.debuginfo.tar.gz`  |
-| macOS arm64       | `@rolldown/binding-darwin-arm64`   | `rolldown-binding.darwin-arm64.node.debuginfo.tar.gz`   |
-| Windows x64       | `@rolldown/binding-win32-x64-msvc` | `rolldown-binding.win32-x64-msvc.node.debuginfo.tar.gz` |
+| Platform          | Binding package                    | Archive                                                  |
+| ----------------- | ---------------------------------- | -------------------------------------------------------- |
+| Linux x64 (glibc) | `@rolldown/binding-linux-x64-gnu`  | `rolldown-binding.linux-x64-gnu.node.debuginfo.tar.zst`  |
+| macOS arm64       | `@rolldown/binding-darwin-arm64`   | `rolldown-binding.darwin-arm64.node.debuginfo.tar.zst`   |
+| Windows x64       | `@rolldown/binding-win32-x64-msvc` | `rolldown-binding.win32-x64-msvc.node.debuginfo.tar.zst` |
 
 The steps below use macOS arm64. Replace the names for your platform.
 
@@ -235,15 +235,18 @@ node -p "require('rolldown/package.json').version"
 
 # 2. Download the archive from the release with that version.
 gh release download v1.2.3 --repo rolldown/rolldown \
-  --pattern 'rolldown-binding.darwin-arm64.node.debuginfo.tar.gz'
+  --pattern 'rolldown-binding.darwin-arm64.node.debuginfo.tar.zst'
 
-# 3. Unpack the archive into the binding package.
-tar -xzf rolldown-binding.darwin-arm64.node.debuginfo.tar.gz \
+# 3. Decompress the archive, then unpack it into the binding package.
+zstd -d rolldown-binding.darwin-arm64.node.debuginfo.tar.zst
+tar -xf rolldown-binding.darwin-arm64.node.debuginfo.tar \
   -C node_modules/@rolldown/binding-darwin-arm64/
 
 # 4. Run the build again.
 RUST_BACKTRACE=1 npx rolldown -c
 ```
+
+Step 3 needs the `zstd` command. Most package managers provide it, for example `brew install zstd` or `apt install zstd`.
 
 You can also do step 2 in a browser:
 

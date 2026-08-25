@@ -160,7 +160,7 @@ jobs:
         with:
           if-no-files-found: error
           name: debuginfo-${{ matrix.target }}
-          path: target/debuginfo/*.debuginfo.tar.gz
+          path: target/debuginfo/*.debuginfo.tar.zst
 
   # Keep this list in sync with the `debuginfo: true` entries above.
   verify-debuginfo:

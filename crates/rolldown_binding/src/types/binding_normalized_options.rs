@@ -11,6 +11,7 @@ use rustc_hash::FxBuildHasher;
 use crate::utils::minify_options_conversion::{
   codegen_options_to_napi_codegen_options, compress_options_to_napi_compress_options,
   mangle_options_to_napi_mangle_options,
+  mangle_properties_options_to_napi_mangle_properties_options,
 };
 
 #[napi]
@@ -272,20 +273,31 @@ impl BindingNormalizedOptions {
     match &self.inner.minify {
       MinifyOptions::Disabled => Either3::A(false),
       MinifyOptions::DeadCodeEliminationOnly(_) => Either3::B("dce-only"),
-      MinifyOptions::Enabled((minify_options, remove_whitespace)) => {
-        Either3::C(oxc_minify_napi::MinifyOptions {
-          compress: minify_options
-            .compress
-            .as_ref()
-            .map(|compress| Either::B(compress_options_to_napi_compress_options(compress))),
-          mangle: minify_options
-            .mangle
-            .as_ref()
-            .map(|mangle| Either::B(mangle_options_to_napi_mangle_options(mangle))),
-          codegen: Some(Either::B(codegen_options_to_napi_codegen_options(*remove_whitespace))),
-          ..Default::default()
-        })
-      }
+      MinifyOptions::Enabled(minify_options) => Either3::C(oxc_minify_napi::MinifyOptions {
+        compress: minify_options
+          .options
+          .compress
+          .as_ref()
+          .map(|compress| Either::B(compress_options_to_napi_compress_options(compress))),
+        mangle: minify_options
+          .options
+          .mangle
+          .as_ref()
+          .map(|mangle| Either::B(mangle_options_to_napi_mangle_options(mangle))),
+        mangle_props: minify_options.options.mangle_properties.as_ref().map(|options| {
+          mangle_properties_options_to_napi_mangle_properties_options(
+            options,
+            minify_options
+              .mangle_properties_patterns
+              .as_ref()
+              .expect("property patterns are retained with property options"),
+          )
+        }),
+        codegen: Some(Either::B(codegen_options_to_napi_codegen_options(
+          minify_options.remove_whitespace,
+        ))),
+        ..Default::default()
+      }),
     }
   }
 

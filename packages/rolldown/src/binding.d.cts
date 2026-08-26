@@ -2687,6 +2687,7 @@ export interface BindingOutputOptions {
 export interface BindingOutputs {
   chunks: Array<BindingOutputChunk>
   assets: Array<BindingOutputAsset>
+  mangleCache?: Record<string, string | false>
 }
 
 export interface BindingOverwriteOptions {

@@ -67,7 +67,7 @@ impl GenerateStage<'_> {
 
     augment_chunk_hash(self.plugin_driver, &mut instantiated_chunks).await?;
 
-    Self::minify_chunks(self.options, &mut instantiated_chunks)?;
+    let mangle_cache = Self::minify_chunks(self.options, &mut instantiated_chunks)?;
 
     Self::post_banner_footer(&mut instantiated_chunks)?;
 
@@ -143,7 +143,7 @@ impl GenerateStage<'_> {
     // aborts the build, otherwise the warnings ride out on the `BundleOutput`.
     // `into_result` fast-paths the common no-error case, skipping the partition.
     let warnings = diagnostics.into_result()?;
-    Ok(BundleOutput { assets: output, warnings })
+    Ok(BundleOutput { assets: output, warnings, mangle_cache })
   }
 
   #[tracing::instrument(level = "debug", skip_all)]

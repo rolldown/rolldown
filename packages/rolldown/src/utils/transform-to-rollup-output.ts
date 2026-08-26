@@ -131,12 +131,16 @@ function transformToMutableRollupOutputAsset(
 
 export function transformToRollupOutput(output: BindingOutputs): RolldownOutput {
   const { chunks, assets } = output;
-  return {
+  const transformed = {
     output: [
       ...chunks.map((chunk) => transformToRollupOutputChunk(chunk)),
       ...assets.map((asset) => transformToRollupOutputAsset(asset)),
     ],
   } as RolldownOutput;
+  if (output.mangleCache !== undefined) {
+    transformed.mangleCache = output.mangleCache;
+  }
+  return transformed;
 }
 
 function transformToMutableRollupOutput(

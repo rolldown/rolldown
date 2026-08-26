@@ -174,7 +174,9 @@ describe('enhanced transform', () => {
     const fixtures = path.join(import.meta.dirname, 'fixtures');
 
     it('should use a tsconfig path', () => {
-      const filename = '/nonexistent/path/test.ts';
+      // Must be a real absolute path. `/foo` is not absolute on Windows, so
+      // oxc_resolver treats it as a virtual module and skips tsconfig.
+      const filename = path.resolve('/nonexistent/path/test.ts');
       const code = `class Foo { bar = 'bar' }`;
       const explicitTsconfig = path.join(fixtures, 'tsconfig.json');
       const expected = transformSync(filename, code, {

@@ -1,4 +1,61 @@
 
+## [1.2.6] - 2026-08-26
+
+### 🚀 Features
+
+- minify: support property name mangling (#10374) by @Dunqing
+- add `tsconfig: string` option to `transform` (#10727) by @sapphi-red
+- rolldown_plugin_vite_transform: add `tsconfig` option (#10725) by @sapphi-red
+- rolldown_plugin_vite_resolve: add top-level `tsconfig` option (#10724) by @sapphi-red
+- dev: expose module graph queries on the dev engine handle (#10716) by @h-a-n-a
+
+### 🐛 Bug Fixes
+
+- dev: assign import bindings before initializing dependencies (#10783) by @h-a-n-a
+- dev: copy star re-exports before initializing dependencies (#10761) by @h-a-n-a
+- dev: register an empty exports object for a module without exports (#10772) by @h-a-n-a
+- name the module when a `codeSplitting` group callback returns a wrong type (#10753) by @IWANABETHATGUY
+- dev: map dev rename events like build watch (#10758) by @shulaoda
+- clear resolution cache when `TsconfigCache::clear` is called (#10726) by @sapphi-red
+- dev: resolve in-flight `ensureLatestBuildOutput` when the engine closes (#10730) by @h-a-n-a
+- binding: replace undeclared BindingErrorsOr with BindingResult in hook types (#10717) by @h-a-n-a
+
+### 🚜 Refactor
+
+- rolldown_fs_watcher: collapse fs-watcher backends behind a single FsWatcher (#10735) by @shulaoda
+- hoist invariants out of the `codeSplitting` group loop (#10744) by @IWANABETHATGUY
+
+### 📚 Documentation
+
+- document shared notify rename mapping (#10759) by @shulaoda
+- update watch-mode internals for unified FsWatcher (#10736) by @shulaoda
+
+### ⚡ Performance
+
+- batch `codeSplitting` group `test` / `name` calls (#10745) by @IWANABETHATGUY
+- deduplicate used symbol ref readers (#10742) by @Boshen
+- reduce release debug formatting (#10728) by @Boshen
+- enable compiler cache via `module.enableCompileCache()` (#10678) by @btea
+- deduplicate regress codegen (#10732) by @Boshen
+
+### 🧪 Testing
+
+- define: add expected failure for default parameter scope (#10780) by @hyfdev
+- use an absolute filename for transform tsconfig path (#10782) by @shulaoda
+
+### ⚙️ Miscellaneous Tasks
+
+- deps: upgrade oxc to 0.147.0 (#10767) by @camc314
+- deps: update resolver dependencies (#10766) by @Boshen
+- deps: update rollup submodule for tests to v4.62.5 (#10770) by @rolldown-guard[bot]
+- deps: update dependency vite-plus to ^0.3.0 (#10757) by @renovate[bot]
+- deps: update npm packages (#10750) by @renovate[bot]
+- deps: update rust crates (#10748) by @renovate[bot]
+- deps: update rust crate napi to v3.12.2 (#10738) by @renovate[bot]
+- deps: update dependency rust to v1.98.0 (#10733) by @renovate[bot]
+- wasi: cap each Node Test attempt with timeout to survive hangs (#10709) by @hyfdev
+
+
 ## [1.2.5] - 2026-08-19
 
 ### 🚀 Features

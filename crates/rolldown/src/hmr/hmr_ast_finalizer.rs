@@ -278,10 +278,21 @@ impl<'ast> HmrAstFinalizer<'_, 'ast> {
         let importee = &self.modules[importee_idx];
         self.dependencies.insert(importee_idx);
         let binding_name = self.ensure_static_import_info(importee_idx, rec_id).to_string();
-        if let Some(stmt) =
-          self.create_importee_binding_stmt(importee, &binding_name, export_all_decl.span)
-        {
-          program_body.push(stmt);
+        // Only two of the three `export *` shapes refer to the importee binding by name:
+        //
+        //   export * from './dep.js'          // no binding. The copy, emitted in `exit_program`
+        //                                     // before the body, reads `loadExports("dep.js")`
+        //                                     // inline - a `var` here would be declared too late.
+        //   export * from 'node:util'         // `__reExport(exports, import_node_util_24)`, where
+        //                                     // the hoisted `import * as import_node_util_24` is
+        //                                     // registered by this call.
+        //   export * as ns from './dep.js'    // `ns: () => import_dep_20`.
+        if export_all_decl.exported.is_some() || matches!(importee, Module::External(_)) {
+          if let Some(stmt) =
+            self.create_importee_binding_stmt(importee, &binding_name, export_all_decl.span)
+          {
+            program_body.push(stmt);
+          }
         }
         if let Some(exported) = &export_all_decl.exported {
           // `export * as ns from './dep.js'` binds the importee's namespace object to a
@@ -295,10 +306,8 @@ impl<'ast> HmrAstFinalizer<'_, 'ast> {
             !is_validate_identifier_name(&exported_name),
             &self.ast_builder,
           ));
-        } else if let Some(stmt) =
-          self.create_re_export_call_stmt(importee, &binding_name, export_all_decl.span)
-        {
-          program_body.push(stmt);
+        } else {
+          self.re_export_all_dependencies.insert(importee_idx);
         }
       }
       // Every other statement is kept as-is. That's ordinary statements, which need no
@@ -485,16 +494,34 @@ impl<'ast> HmrAstFinalizer<'_, 'ast> {
     self.generated_static_import_stmts_from_external.insert(importee.idx, stmt);
   }
 
-  fn create_re_export_call_stmt(
-    &mut self,
-    importee: &Module,
-    binding_name: &str,
-    span: Span,
-  ) -> Option<Statement<'ast>> {
-    if self.re_export_all_dependencies.contains(&importee.idx()) {
-      return None;
-    }
-    self.re_export_all_dependencies.insert(importee.idx());
+  /// `__rolldown_runtime__.__reExport(<this module's exports>, <the importee's namespace>)` for one `export * from`
+  pub fn create_re_export_call_stmt(&self, importee: &Module) -> Statement<'ast> {
+    let source = match importee {
+      Module::Normal(importee) => {
+        let load_exports_call = Expression::new_call_with_arg(
+          Expression::new_member_access_expr("__rolldown_runtime__", "loadExports", self),
+          ast::Expression::new_string_literal(
+            SPAN,
+            Str::from_str_in(importee.stable_id.as_ref(), self),
+            None,
+            self,
+          ),
+          false,
+          self,
+        );
+        Expression::new_to_esm_call_with_interop(
+          "__rolldown_runtime__.__toESM",
+          load_exports_call,
+          self.module.interop(importee),
+          self,
+        )
+      }
+      Module::External(_) => Expression::new_id_ref_expr(
+        SPAN,
+        &self.generated_static_import_infos[&importee.idx()],
+        self,
+      ),
+    };
 
     let self_exports = self.module_exports_name();
 
@@ -505,7 +532,7 @@ impl<'ast> HmrAstFinalizer<'_, 'ast> {
       oxc::allocator::Vec::from_iter_in(
         [
           ast::Argument::from(Expression::new_id_ref_expr(SPAN, self_exports, self)),
-          ast::Argument::from(Expression::new_id_ref_expr(SPAN, binding_name, self)),
+          ast::Argument::from(source),
         ],
         self,
       ),
@@ -513,7 +540,7 @@ impl<'ast> HmrAstFinalizer<'_, 'ast> {
       self,
     );
 
-    Some(ast::Statement::new_expression_statement(span, call_expr, self))
+    ast::Statement::new_expression_statement(SPAN, call_expr, self)
   }
 
   fn generate_declaration_of_module_namespace_object(

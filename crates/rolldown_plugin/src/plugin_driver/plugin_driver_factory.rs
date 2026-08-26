@@ -61,7 +61,6 @@ impl PluginDriverFactory {
 
       self.plugins.iter().for_each(|plugin| {
         let plugin_idx = index_plugins.push(Arc::clone(plugin));
-        // See internal-docs/plugin-adapter/implementation.md.
         plugin_usage_vec.push(plugin.call_hook_usage());
 
         let plugin_name = plugin.call_name();

@@ -39,15 +39,19 @@ impl<'ast> Traverse<'ast, ()> for HmrAstFinalizer<'_, 'ast> {
     // `initModule("<stable id>")` for EVERY static dep, uniformly registry-gated: a
     // co-carried factory runs, a resident module short-circuits. No payload-membership
     // split exists in the emitted bytes.
-    // Each `export * from` becomes a `__reExport(...)` copy onto this module's namespace.
-    // The copies are emitted here, before the body, in this order:
+    // A dep can also carry statements of its own, emitted here before the body: a
+    // `var import_dep = loadExports("dep.js")` binding, and one `__reExport(...)` copy per
+    // `export * from`. Which ones it carries depends on how it was imported. The order is:
     //
     //   for each dep in `dependencies` (first-reference order):
     //     initModule(dep)
-    //     copy every `export *` source that is now ready, in `export *` order,
-    //     and stop at the first one that is not ready yet
+    //     if the dep has a binding: var import_dep = loadExports(dep)
+    //     if any `export *` source is now ready: copy it, in `export *` order,
+    //     stopping at the first one that is not ready yet
     //
-    // Rule 1: copy as early as possible. Example (the cycle from vitejs/vite#21626):
+    // Rule 1: as early as possible, copy a re-export (`export * from './dep.js'`) or make a name
+    // readable (`export { x } from './dep.js'`, `export * as ns from './dep.js'` -
+    // rolldown#10781). Example (the cycle from vitejs/vite#21626):
     //
     //   // index.js                     // b.js
     //   export * from './a.js'          import { valueA } from './index.js'
@@ -77,6 +81,7 @@ impl<'ast> Traverse<'ast, ()> for HmrAstFinalizer<'_, 'ast> {
     //
     // An external needs no `initModule`. Its `import * as` binding is hoisted, so it is always
     // ready to copy.
+    let mut load_exports_stmts = std::mem::take(&mut self.generated_load_exports_stmts);
     let mut dependencies_init_fn_stmts: Vec<ast::Statement<'ast>> = Vec::new();
     let mut initialized = FxHashSet::default();
     let mut next_copy = 0;
@@ -89,6 +94,9 @@ impl<'ast> Traverse<'ast, ()> for HmrAstFinalizer<'_, 'ast> {
           self,
         ));
       }
+      if let Some(stmt) = load_exports_stmts.remove(dep) {
+        dependencies_init_fn_stmts.push(stmt);
+      }
       initialized.insert(*dep);
       while let Some(source) = self.re_export_all_dependencies.get_index(next_copy) {
         let source_module = &self.modules[*source];
@@ -99,6 +107,9 @@ impl<'ast> Traverse<'ast, ()> for HmrAstFinalizer<'_, 'ast> {
         next_copy += 1;
       }
     }
+    // Every binding is created next to a `self.dependencies.insert`, so the loop above emits all
+    // of them.
+    debug_assert!(load_exports_stmts.is_empty());
 
     let runtime_module_register = self.generate_runtime_module_register_for_hmr(ctx.scoping());
 

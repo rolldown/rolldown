@@ -9,3 +9,5 @@ import './nested-dynamic-import/setup.js';
 import './emitted-asset/setup.js';
 import './lazy-init-error/setup.js';
 import './star-reexport-order/setup.js';
+import './circular-named-reexport/setup.js';
+import './circular-namespace-reexport/setup.js';

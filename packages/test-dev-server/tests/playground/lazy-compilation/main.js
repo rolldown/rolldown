@@ -11,3 +11,4 @@ import './lazy-init-error/setup.js';
 import './star-reexport-order/setup.js';
 import './circular-named-reexport/setup.js';
 import './circular-namespace-reexport/setup.js';
+import './circular-reexport/setup.js';

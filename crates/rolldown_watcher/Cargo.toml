@@ -1,6 +1,6 @@
 [package]
 name = "rolldown_watcher"
-version = "1.2.5"
+version = "1.2.6"
 edition.workspace = true
 homepage.workspace = true
 license.workspace = true
@@ -23,7 +23,6 @@ rolldown = { workspace = true, features = ["experimental"] }
 rolldown_common = { workspace = true }
 rolldown_error = { workspace = true }
 rolldown_fs_watcher = { workspace = true }
-rolldown-notify = { workspace = true }
 rolldown_utils = { workspace = true }
 tokio = { workspace = true, features = ["rt", "macros", "sync", "time"] }
 tracing = { workspace = true }

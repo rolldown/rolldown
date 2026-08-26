@@ -881,7 +881,7 @@ impl<'a, Fs: FileSystem + Clone + 'static> HmrStage<'a, Fs> {
         exports: oxc::allocator::Vec::new_in(&fields.allocator),
         use_pife_for_module_wrappers,
         dependencies: FxIndexSet::default(),
-        imports: FxHashSet::default(),
+        generated_load_exports_stmts: FxHashMap::default(),
         generated_static_import_infos: FxHashMap::default(),
         re_export_all_dependencies: FxIndexSet::default(),
         generated_static_import_stmts_from_external: FxIndexMap::default(),

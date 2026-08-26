@@ -318,6 +318,16 @@ impl<Fs: FileSystem + Clone + 'static> Bundle<Fs> {
       .generate_bundle(&mut output.assets, is_write, &self.options, &mut output.warnings)
       .await?;
 
+    if let Err(errors) =
+      GenerateStage::validate_mangle_properties_output(&self.options, &output.assets)
+    {
+      self
+        .plugin_driver
+        .render_error(&HookRenderErrorArgs { errors: &errors, cwd: &self.options.cwd })
+        .await?;
+      return Err(errors);
+    }
+
     for asset in &output.assets {
       if is_filename_outside_output_dir(asset.filename()) {
         return Err(

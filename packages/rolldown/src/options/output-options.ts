@@ -1,4 +1,8 @@
-import type { MinifyOptions as BindingMinifyOptions, PreRenderedChunk } from '../binding.cjs';
+import type {
+  ManglePropertiesOptions as BindingManglePropertiesOptions,
+  MinifyOptions as BindingMinifyOptions,
+  PreRenderedChunk,
+} from '../binding.cjs';
 import type { RolldownOutputPluginOption } from '../plugin';
 import type { SourcemapIgnoreListOption, SourcemapPathTransformOption } from '../types/misc';
 import type { ModuleInfo } from '../types/module-info';
@@ -100,9 +104,26 @@ export type CodeSplittingNameFunction = (
 /** @inline @category Code Splitting */
 export type CodeSplittingTestFunction = (id: string) => boolean | undefined | void;
 
-// `mangleProps` is not plumbed through the bundler yet — `normalize_binding_options` only
-// reads `mangle`, `compress` and `codegen`, so keep it off the public type.
-export type MinifyOptions = Omit<BindingMinifyOptions, 'module' | 'sourcemap' | 'mangleProps'>;
+export interface ManglePropertiesOptions extends Omit<BindingManglePropertiesOptions, 'cache'> {
+  /**
+   * Stable mappings from original names to output names. `false` reserves an original name.
+   * String targets must be valid identifiers and cannot be `__proto__`, `constructor`, or
+   * `prototype`. Generated mappings are returned as `RolldownOutput.mangleCache`.
+   */
+  cache?: Record<string, string | false>;
+}
+
+export type MinifyOptions = Omit<BindingMinifyOptions, 'module' | 'sourcemap' | 'mangleProps'> & {
+  /**
+   * Mangle matching property names. This currently requires a single JavaScript output chunk.
+   * Rolldown throws an error when this option is used with multiple JavaScript chunks.
+   *
+   * Reserve names accessed indirectly, through module namespace objects, or by code outside
+   * Rolldown's minification.
+   * Numeric spellings, `__proto__`, `constructor`, and `prototype` are never mangled.
+   */
+  mangleProps?: ManglePropertiesOptions;
+};
 
 export interface CommentsOptions {
   /**
@@ -825,6 +846,10 @@ export type CodeSplittingGroup = {
    * :::warning
    * Constraints like `minSize`, `maxSize`, etc. are applied separately for different names returned by the function.
    * :::
+   *
+   * :::warning
+   * Rolldown calls a function `name` once for each captured module, in a deterministic order. It calls `test` for every candidate module of the group first. Do not read a "current module" variable that `test` wrote, because that variable holds the last module `test` saw. Store such state under the module id instead.
+   * :::
    */
   name: string | CodeSplittingNameFunction;
   /**
@@ -839,6 +864,10 @@ export type CodeSplittingGroup = {
    * When using regular expression, it's recommended to use `[\\/]` to match the path separator instead of `/` to avoid potential issues on Windows.
    * - ✅ Recommended: `/node_modules[\\/]react/`
    * - ❌ Not recommended: `/node_modules/react/`
+   * :::
+   *
+   * :::warning
+   * Rolldown calls a function `test` once for each candidate module, in a deterministic order. It makes every `test` call of a group before it makes the first `name` call of that group. Rolldown processes the groups in the order that you declare them.
    * :::
    */
   test?: StringOrRegExp | CodeSplittingTestFunction;

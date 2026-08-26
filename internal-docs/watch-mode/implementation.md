@@ -87,13 +87,13 @@ Watcher (public API)
                                └── tasks: IndexVec<WatchTaskIdx, WatchTask>
                                     ├── WatchTask 0
                                     │   ├── bundler: Arc<TokioMutex<Bundler>>
-                                    │   ├── fs_watcher: DynFsWatcher (owned, per-task)
+                                    │   ├── fs_watcher: FsWatcher (owned, per-task)
                                     │   ├── watched_files: FxDashSet<ArcStr>
                                     │   └── needs_rebuild: bool
                                     └── WatchTask N ...
 
 Data flow:
-  DynFsWatcher ──(TaskFsEventHandler: maps notify events → FileChangeEvent)──→ WatcherMsg::FileChanges ──→ WatchCoordinator
+  FsWatcher ──(TaskFsEventHandler: maps notify events → FileChangeEvent)──→ WatcherMsg::FileChanges ──→ WatchCoordinator
   WatchCoordinator ──→ dispatch_event / dispatch_change / dispatch_restart
                          └── await_handler_or_close()
                                ├── handler.on_*().await ──→ Consumer (NAPI/Rust)
@@ -104,7 +104,7 @@ Data flow:
 
 - `Watcher` only holds lifecycle state (`tx`, the close signal, and `coordinator_state`) — lightweight, no bundler access.
 - `WatchCoordinator` owns ALL mutable state. No external mutation.
-- Each `WatchTask` owns its `DynFsWatcher`. Per-task watchers mean isolated watch sets and simpler ownership.
+- Each `WatchTask` owns its `FsWatcher`. Per-task watchers mean isolated watch sets and simpler ownership.
 - Bundler is `Arc<TokioMutex<>>` because event data structs carry a clone for consumer access (e.g. `BUNDLE_END.result`).
 
 ### Three-Layer Stack
@@ -137,6 +137,17 @@ rolldown_watcher/
 ├── file_change_event.rs       // FileChangeEvent (path + kind)
 ├── watcher_state.rs           // WatcherState enum + transitions
 └── watcher_msg.rs             // WatcherMsg enum (FileChanges, Close)
+
+rolldown_fs_watcher/
+├── lib.rs                     // Public exports: FsWatcher, FsWatcherConfig, FsEvent*
+├── config.rs                  // FsWatcherConfig (enabled, use_polling, use_debounce, …)
+├── event.rs                   // FsEvent, FsEventHandler, FsEventResult
+├── watcher.rs                 // public FsWatcher + internal WatcherBackend + PathsMut
+└── notify/
+    ├── mod.rs                 // create_backend() — selects backend from config
+    ├── immediate.rs           // recommended / poll, no debounce
+    ├── debounced.rs           // recommended / poll + notify-debouncer-full
+    └── noop.rs                // no-op backend when enabled: false
 ```
 
 ## State Machine
@@ -168,7 +179,7 @@ enum WatcherState {
 There are two possible debounce layers:
 
 1. **Coordinator-level** (`WatcherState::Debouncing`) — batches file changes across files before triggering a rebuild. Controlled by `buildDelay`. This is the primary mechanism.
-2. **Fs-watcher-level** (`notify-debouncer-full`) — deduplicates rapid OS-level events for the same file (e.g. editors that write multiple times per save). Available in `rolldown_fs_watcher` but not used by the watcher.
+2. **Fs-watcher-level** (`notify-debouncer-full`) — deduplicates rapid OS-level events for the same file (e.g. editors that write multiple times per save). Off by default. Watch mode turns it on with `watch.watcher.useDebounce` (`FsWatcherConfig.use_debounce`).
 
 Only coordinator-level debounce is active by default. This matches Rollup, which implements its own `setTimeout`/`clearTimeout` debounce on top of chokidar (chokidar has no debounce option — only `awaitWriteFinish` for write completion detection).
 
@@ -207,7 +218,7 @@ Like Rollup's `eventsRewrites` table, rolldown consolidates change kinds when mu
 
 This matters because plugins receive the `WatcherChangeKind` in `watchChange` hooks and may behave differently based on whether a file was created vs. modified.
 
-The fs-watcher layer (`notify-debouncer-full`) is available as an option for users who need OS-level event deduplication (noisy editors, network drives), exposed through `watch.watcher` options (`usePolling` / `pollInterval`). Using both layers adds latency and makes timing harder to reason about, so it's not the default.
+The fs-watcher layer (`notify-debouncer-full`) is available as an option for users who need OS-level event deduplication (noisy editors, network drives), exposed through `watch.watcher.useDebounce` (`debounceDelay` / `debounceTickRate`). Polling is a separate backend choice (`usePolling` / `pollInterval`). Using both debounce layers adds latency and makes timing harder to reason about, so fs-level debounce is not the default.
 
 ### Default Delay
 
@@ -303,10 +314,27 @@ Configured via `WatcherOptions`, fires **immediately** on file change (before de
 ## File Watching
 
 - After each build, `bundler.watch_files()` returns the current set.
-- `WatchTask::update_watch_files()` diffs against the current set — new files are added to the per-task `DynFsWatcher`.
+- `WatchTask::update_watch_files()` diffs against the current set — new files are added to the per-task `FsWatcher`.
 - `include`/`exclude` patterns filter which files are watched (via `pattern_filter`).
 - Files are watched **non-recursively** (individual file watches).
 - Batch operations: `fs_watcher.paths_mut()` returns a guard for batching adds, committed via `.commit()`.
+
+### Backend selection
+
+Each `WatchTask` builds its watcher with `FsWatcher::new(handler, &config)`.
+`FsWatcher` is a concrete type; the notify implementations stay crate-private.
+`WatcherConfig::to_fs_watcher_config()` maps watch options onto `FsWatcherConfig`,
+and construction picks the backend:
+
+| `use_polling` | `use_debounce` | Backend                               |
+| ------------- | -------------- | ------------------------------------- |
+| false         | false          | notify `RecommendedWatcher` (default) |
+| true          | false          | notify `PollWatcher`                  |
+| false         | true           | debounced `RecommendedWatcher`        |
+| true          | true           | debounced `PollWatcher`               |
+
+Watch mode leaves `enabled` at its default (`true`). The no-op backend is a
+dev-engine concern (`disable_watcher` → `FsWatcherConfig.enabled: false`).
 
 ### Split-Phase Build for Watch Mode
 
@@ -328,6 +356,9 @@ This matches the legacy watcher's approach (`with_cached_bundle`), where `watch_
 When an import resolves to a non-existent file, the build errors. Watch mode relies on the resolver cache being cleared before each rebuild (`bundler.clear_resolver_cache()`). The expected recovery workflow is: create the missing file, then manually edit a watched file (e.g. noop edit to the importer) to trigger a rebuild. The resolver re-evaluates the import with a fresh cache and succeeds. This matches Rollup's behavior — Rollup only watches successfully loaded modules.
 
 ### Notify Event Mapping
+
+Shared with bundled dev through `rolldown_fs_watcher::map_notify_event`.
+Do not re-implement this table in `rolldown_dev` or `rolldown_watcher`.
 
 ```
 notify::EventKind::Create(_)                              → WatcherChangeKind::Create
@@ -438,12 +469,15 @@ WatchCoordinator.run_build_sequence()
 ```typescript
 interface WatcherOptions {
   skipWrite?: boolean; // Skip bundle.write(). Default: false
-  buildDelay?: number; // Debounce ms. Default: 0
+  buildDelay?: number; // Coordinator debounce ms. Default: 0
   watcher?: {
     usePolling?: boolean; // Use polling backend. Default: false
     pollInterval?: number; // Polling interval ms. Default: 100
+    compareContentsForPolling?: boolean; // Default: false
+    useDebounce?: boolean; // FS-level debounce. Default: false
+    debounceDelay?: number; // FS-level debounce delay ms. Default: 10
+    debounceTickRate?: number; // Debouncer tick rate ms. Default: auto
   };
-  notify?: { ... }; // Deprecated — use `watcher` instead
   include?: StringOrRegExp | StringOrRegExp[];
   exclude?: StringOrRegExp | StringOrRegExp[];
   onInvalidate?: (id: string) => void;
@@ -492,6 +526,6 @@ Tracks progress from old watcher → new `rolldown_watcher`. Items link to [#648
 - [module-id](../module-id/implementation.md) — Module ID, path identity, and normalization
 - [#6482](https://github.com/rolldown/rolldown/issues/6482) — Watch mode issue collection (tracks all known bugs)
 - `crates/rolldown_watcher/` — Implementation
-- `crates/rolldown_fs_watcher/` — File system watching abstraction over `notify`
+- `crates/rolldown_fs_watcher/` — One public `FsWatcher`; notify backends stay private
 - `crates/rolldown_dev/` — Dev mode, uses same actor pattern for reference
 - `packages/rolldown/src/api/watch/` — TypeScript API layer

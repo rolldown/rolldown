@@ -7,7 +7,7 @@ use rolldown_error::{
   BatchedBuildDiagnostic, BuildDiagnostic, BuildResult, Diagnostic, DiagnosticOptions, ResultExt,
   filter_out_disabled_diagnostics,
 };
-use rolldown_fs_watcher::{DynFsWatcher, RecursiveMode};
+use rolldown_fs_watcher::{FsWatcher, RecursiveMode};
 use rolldown_utils::{dashmap::FxDashSet, pattern_filter};
 use std::path::Path;
 use std::sync::Arc;
@@ -25,7 +25,7 @@ oxc_index::define_index_type! {
 pub struct WatchTask {
   bundler: Arc<TokioMutex<Bundler>>,
   options: Arc<NormalizedBundlerOptions>,
-  fs_watcher: std::sync::Mutex<DynFsWatcher>,
+  fs_watcher: std::sync::Mutex<FsWatcher>,
   watched_files: FxDashSet<ArcStr>,
   pub(crate) needs_rebuild: bool,
   closed: Arc<AtomicBool>,
@@ -34,7 +34,7 @@ pub struct WatchTask {
 impl WatchTask {
   pub(crate) fn new(
     config: BundlerConfig,
-    fs_watcher: DynFsWatcher,
+    fs_watcher: FsWatcher,
     closed: &Arc<AtomicBool>,
   ) -> BuildResult<Self> {
     // Validation: dev_mode not allowed with watch
@@ -260,7 +260,7 @@ impl WatchTask {
   /// Static helper: update FS watcher with newly discovered files.
   /// Separated from `&self` to allow calling from closures during build.
   fn update_watch_files_from(
-    fs_watcher: &std::sync::Mutex<DynFsWatcher>,
+    fs_watcher: &std::sync::Mutex<FsWatcher>,
     watched_files: &FxDashSet<ArcStr>,
     options: &NormalizedBundlerOptions,
     files: &[ArcStr],

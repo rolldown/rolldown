@@ -2590,8 +2590,8 @@ export interface BindingManualCodeSplittingOptions {
 }
 
 export interface BindingMatchGroup {
-  name: string | ((id: string, ctx: BindingChunkingContext) => VoidNullable<string>)
-  test?: string | RegExp | ((id: string) => VoidNullable<boolean>)
+  name: string | ((ids: Array<string>, ctx: BindingChunkingContext) => Array<VoidNullable<string>>)
+  test?: string | RegExp | ((ids: Array<string>) => Uint8Array)
   priority?: number
   minSize?: number
   minShareCount?: number
@@ -2687,6 +2687,7 @@ export interface BindingOutputOptions {
 export interface BindingOutputs {
   chunks: Array<BindingOutputChunk>
   assets: Array<BindingOutputAsset>
+  mangleCache?: Record<string, string | false>
 }
 
 export interface BindingOverwriteOptions {

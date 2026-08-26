@@ -1,6 +1,6 @@
 [package]
 name = "rolldown_fs_watcher"
-version = "1.2.5"
+version = "1.2.6"
 edition.workspace = true
 homepage.workspace = true
 license.workspace = true
@@ -18,5 +18,4 @@ rolldown_error = { workspace = true }
 workspace = true
 
 [lib]
-test = false
 doctest = false

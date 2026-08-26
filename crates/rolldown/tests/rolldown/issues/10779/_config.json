@@ -1,0 +1,13 @@
+{
+  "_comment": "Tracks https://github.com/rolldown/rolldown/issues/10779; upstream fix: https://github.com/oxc-project/oxc/pull/24033",
+  "snapshot": false,
+  "config": {
+    "define": {
+      "typeof window": "\"undefined\""
+    }
+  },
+  "expectExecutionFailure": {
+    "reason": "define treats a function-body var as visible in a default parameter",
+    "outputContains": ["define should replace typeof window in a default parameter"]
+  }
+}

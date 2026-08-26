@@ -2,7 +2,7 @@ use std::borrow::Cow;
 
 use rolldown::{BundlerOptions, InputItem, PreserveEntrySignatures};
 use rolldown_common::EmittedChunk;
-use rolldown_plugin::{HookUsage, Plugin, Pluginable};
+use rolldown_plugin::{HookUsage, Plugin};
 use rolldown_testing::{manual_integration_test, test_config::TestMeta};
 
 #[derive(Debug)]
@@ -53,7 +53,7 @@ async fn should_rewrite_dynamic_imports_that_import_external_modules() {
         preserve_entry_signatures: Some(PreserveEntrySignatures::False),
         ..Default::default()
       },
-      vec![Pluginable::new_shared(Test)],
+      vec![Plugin::new_shared(Test)],
     )
     .await;
 }

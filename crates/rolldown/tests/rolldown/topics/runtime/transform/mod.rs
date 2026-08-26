@@ -8,9 +8,7 @@ use std::{
 
 use rolldown::{BundlerOptions, InputItem};
 use rolldown_common::RUNTIME_MODULE_KEY;
-use rolldown_plugin::{
-  HookBuildStartArgs, HookNoopReturn, HookUsage, Plugin, PluginContext, Pluginable,
-};
+use rolldown_plugin::{HookBuildStartArgs, HookNoopReturn, HookUsage, Plugin, PluginContext};
 use rolldown_testing::{manual_integration_test, test_config::TestMeta};
 
 /// Per-build state stored in PluginContextMeta to avoid race conditions
@@ -76,7 +74,7 @@ impl Plugin for RuntimeTransformPlugin {
 
 #[tokio::test(flavor = "multi_thread")]
 async fn transform_runtime_module() {
-  let plugin = Pluginable::new_shared(RuntimeTransformPlugin);
+  let plugin = Plugin::new_shared(RuntimeTransformPlugin);
 
   manual_integration_test!()
     .build(TestMeta { expect_executed: false, ..Default::default() })

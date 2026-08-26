@@ -3,10 +3,7 @@
 use std::{borrow::Cow, sync::Arc};
 
 use futures::future::{self, BoxFuture};
-use rolldown_plugin::{
-  __inner::{Pluginable, SharedPluginable},
-  HookUsage, Plugin,
-};
+use rolldown_plugin::{__inner::SharedPluginable, HookUsage, Plugin};
 
 use super::{BindingPluginOptions, JsPlugin};
 use crate::worker_manager::WorkerManager;
@@ -24,7 +21,7 @@ impl ParallelJsPlugin {
   ) -> napi::Result<SharedPluginable> {
     let plugins =
       plugins.into_iter().map(JsPlugin::new).collect::<napi::Result<Vec<_>>>()?.into_boxed_slice();
-    Ok(Pluginable::new_shared(Self { plugins, worker_manager }))
+    Ok(Plugin::new_shared(Self { plugins, worker_manager }))
   }
 
   fn first_plugin(&self) -> &JsPlugin {

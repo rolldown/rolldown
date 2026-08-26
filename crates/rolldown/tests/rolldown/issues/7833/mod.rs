@@ -2,7 +2,7 @@ use std::borrow::Cow;
 
 use rolldown::{BundlerOptions, InputItem, PreserveEntrySignatures};
 use rolldown_common::EmittedChunk;
-use rolldown_plugin::{HookUsage, Plugin, Pluginable};
+use rolldown_plugin::{HookUsage, Plugin};
 use rolldown_testing::{manual_integration_test, test_config::TestMeta};
 
 /// Test that when a module is both dynamically imported AND emitted via this.emitFile,
@@ -50,7 +50,7 @@ async fn deduplicate_emit_file_and_dynamic_import() {
         input: Some(vec![InputItem { name: Some("main".into()), import: "./main.js".into() }]),
         ..Default::default()
       },
-      vec![Pluginable::new_shared(Test)],
+      vec![Plugin::new_shared(Test)],
     )
     .await;
 }

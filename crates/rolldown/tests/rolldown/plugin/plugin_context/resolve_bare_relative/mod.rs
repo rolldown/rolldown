@@ -1,7 +1,7 @@
 use std::borrow::Cow;
 
 use rolldown::{BundlerOptions, InputItem};
-use rolldown_plugin::{HookUsage, Plugin, PluginContext, Pluginable};
+use rolldown_plugin::{HookUsage, Plugin, PluginContext};
 use rolldown_testing::{manual_integration_test, test_config::TestMeta};
 
 #[derive(Debug)]
@@ -51,7 +51,7 @@ async fn resolve_bare_relative_path_without_importer() {
         }]),
         ..Default::default()
       },
-      vec![Pluginable::new_shared(TestPlugin)],
+      vec![Plugin::new_shared(TestPlugin)],
     )
     .await;
 }

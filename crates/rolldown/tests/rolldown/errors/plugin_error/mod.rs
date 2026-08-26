@@ -2,7 +2,7 @@ use std::borrow::Cow;
 
 use rolldown::{BundlerOptions, InputItem};
 use rolldown_error::BatchedBuildDiagnostic;
-use rolldown_plugin::{HookUsage, Plugin, PluginContext, Pluginable};
+use rolldown_plugin::{HookUsage, Plugin, PluginContext};
 use rolldown_testing::{manual_integration_test, test_config::TestMeta};
 
 #[derive(Debug)]
@@ -41,7 +41,7 @@ async fn should_emit_multi_plugin_diagnostics() {
         }]),
         ..Default::default()
       },
-      vec![Pluginable::new_shared(PluginErrorTest)],
+      vec![Plugin::new_shared(PluginErrorTest)],
     )
     .await;
 }

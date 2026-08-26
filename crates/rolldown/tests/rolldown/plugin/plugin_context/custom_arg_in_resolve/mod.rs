@@ -3,7 +3,7 @@ use std::{borrow::Cow, sync::Arc};
 use rolldown::{BundlerOptions, InputItem};
 use rolldown_plugin::{
   CustomField, HookResolveIdArgs, HookResolveIdOutput, HookResolveIdReturn, HookUsage, Plugin,
-  PluginContext, PluginContextResolveOptions, Pluginable, typedmap::TypedMapKey,
+  PluginContext, PluginContextResolveOptions, typedmap::TypedMapKey,
 };
 use rolldown_testing::{manual_integration_test, test_config::TestMeta};
 #[derive(Debug)]
@@ -95,7 +95,7 @@ async fn allow_pass_custom_arg() {
         }]),
         ..Default::default()
       },
-      vec![Pluginable::new_shared(TestPluginCaller), Pluginable::new_shared(TestPluginReceiver)],
+      vec![Plugin::new_shared(TestPluginCaller), Plugin::new_shared(TestPluginReceiver)],
     )
     .await;
 }

@@ -1,5 +1,5 @@
 use napi::{Unknown, bindgen_prelude::FromNapiValue};
-use rolldown_plugin::__inner::{Pluginable, SharedPluginable};
+use rolldown_plugin::{__inner::SharedPluginable, Plugin};
 use rolldown_plugin_bundle_analyzer::BundleAnalyzerPlugin;
 use rolldown_plugin_esm_external_require::EsmExternalRequirePlugin;
 use rolldown_plugin_isolated_declaration::IsolatedDeclarationPlugin;
@@ -63,7 +63,7 @@ impl TryFrom<BindingBuiltinPlugin<'_>> for SharedPluginable {
         } else {
           BundleAnalyzerPlugin::default()
         };
-        Pluginable::new_shared(plugin)
+        Plugin::new_shared(plugin)
       }
       BindingBuiltinPluginName::EsmExternalRequire => {
         let plugin = if let Some(options) = plugin.options {
@@ -71,7 +71,7 @@ impl TryFrom<BindingBuiltinPlugin<'_>> for SharedPluginable {
         } else {
           EsmExternalRequirePlugin::default()
         };
-        Pluginable::new_shared(plugin)
+        Plugin::new_shared(plugin)
       }
       BindingBuiltinPluginName::IsolatedDeclaration => {
         let plugin = if let Some(options) = plugin.options {
@@ -79,7 +79,7 @@ impl TryFrom<BindingBuiltinPlugin<'_>> for SharedPluginable {
         } else {
           IsolatedDeclarationPlugin::default()
         };
-        Pluginable::new_shared(plugin)
+        Plugin::new_shared(plugin)
       }
       BindingBuiltinPluginName::Replace => {
         let config = if let Some(options) = plugin.options {
@@ -87,7 +87,7 @@ impl TryFrom<BindingBuiltinPlugin<'_>> for SharedPluginable {
         } else {
           BindingReplacePluginConfig::default()
         };
-        Pluginable::new_shared(ReplacePlugin::with_options(config.try_into()?)?)
+        Plugin::new_shared(ReplacePlugin::with_options(config.try_into()?)?)
       }
       BindingBuiltinPluginName::ViteAlias => {
         let plugin = if let Some(options) = plugin.options {
@@ -95,7 +95,7 @@ impl TryFrom<BindingBuiltinPlugin<'_>> for SharedPluginable {
         } else {
           ViteAliasPlugin::default()
         };
-        Pluginable::new_shared(plugin)
+        Plugin::new_shared(plugin)
       }
       BindingBuiltinPluginName::ViteBuildImportAnalysis => {
         let config = if let Some(options) = plugin.options {
@@ -106,7 +106,7 @@ impl TryFrom<BindingBuiltinPlugin<'_>> for SharedPluginable {
             "Missing options for ViteBuildImportAnalysisPlugin",
           ));
         };
-        Pluginable::new_shared(ViteBuildImportAnalysisPlugin::try_from(config)?)
+        Plugin::new_shared(ViteBuildImportAnalysisPlugin::try_from(config)?)
       }
       BindingBuiltinPluginName::ViteDynamicImportVars => {
         let plugin = if let Some(options) = plugin.options {
@@ -114,7 +114,7 @@ impl TryFrom<BindingBuiltinPlugin<'_>> for SharedPluginable {
         } else {
           ViteDynamicImportVarsPlugin::default()
         };
-        Pluginable::new_shared(plugin)
+        Plugin::new_shared(plugin)
       }
       BindingBuiltinPluginName::ViteImportGlob => {
         let plugin = if let Some(options) = plugin.options {
@@ -122,7 +122,7 @@ impl TryFrom<BindingBuiltinPlugin<'_>> for SharedPluginable {
         } else {
           ViteImportGlobPlugin::default()
         };
-        Pluginable::new_shared(plugin)
+        Plugin::new_shared(plugin)
       }
       BindingBuiltinPluginName::ViteJson => {
         let plugin = if let Some(options) = plugin.options {
@@ -130,9 +130,9 @@ impl TryFrom<BindingBuiltinPlugin<'_>> for SharedPluginable {
         } else {
           ViteJsonPlugin::default()
         };
-        Pluginable::new_shared(plugin)
+        Plugin::new_shared(plugin)
       }
-      BindingBuiltinPluginName::ViteLoadFallback => Pluginable::new_shared(ViteLoadFallbackPlugin),
+      BindingBuiltinPluginName::ViteLoadFallback => Plugin::new_shared(ViteLoadFallbackPlugin),
       BindingBuiltinPluginName::ViteManifest => {
         let plugin: ViteManifestPlugin = if let Some(options) = plugin.options {
           BindingViteManifestPluginConfig::from_unknown(options)?.into()
@@ -142,7 +142,7 @@ impl TryFrom<BindingBuiltinPlugin<'_>> for SharedPluginable {
             "Missing options for ViteManifestPlugin",
           ));
         };
-        Pluginable::new_shared(plugin)
+        Plugin::new_shared(plugin)
       }
       BindingBuiltinPluginName::ViteModulePreloadPolyfill => {
         let plugin = if let Some(options) = plugin.options {
@@ -150,7 +150,7 @@ impl TryFrom<BindingBuiltinPlugin<'_>> for SharedPluginable {
         } else {
           ViteModulePreloadPolyfillPlugin::default()
         };
-        Pluginable::new_shared(plugin)
+        Plugin::new_shared(plugin)
       }
       BindingBuiltinPluginName::ViteReactRefreshWrapper => {
         let config = if let Some(options) = plugin.options {
@@ -161,7 +161,7 @@ impl TryFrom<BindingBuiltinPlugin<'_>> for SharedPluginable {
             "Missing options for ViteReactRefreshWrapperPlugin",
           ));
         };
-        Pluginable::new_shared(ViteReactRefreshWrapperPlugin::new(config.into()))
+        Plugin::new_shared(ViteReactRefreshWrapperPlugin::new(config.into()))
       }
       BindingBuiltinPluginName::ViteReporter => {
         let plugin: ViteReporterPlugin = if let Some(options) = plugin.options {
@@ -172,7 +172,7 @@ impl TryFrom<BindingBuiltinPlugin<'_>> for SharedPluginable {
             "Missing options for ViteReporterPlugin",
           ));
         };
-        Pluginable::new_shared(plugin)
+        Plugin::new_shared(plugin)
       }
       BindingBuiltinPluginName::ViteResolve => {
         let config = if let Some(options) = plugin.options {
@@ -183,7 +183,7 @@ impl TryFrom<BindingBuiltinPlugin<'_>> for SharedPluginable {
             "Missing options for ViteResolvePlugin",
           ));
         };
-        Pluginable::new_shared(ViteResolvePlugin::new(config.into()))
+        Plugin::new_shared(ViteResolvePlugin::new(config.into()))
       }
       BindingBuiltinPluginName::ViteTransform => {
         let plugin = if let Some(options) = plugin.options {
@@ -191,12 +191,10 @@ impl TryFrom<BindingBuiltinPlugin<'_>> for SharedPluginable {
         } else {
           ViteTransformPlugin::default()
         };
-        Pluginable::new_shared(plugin)
+        Plugin::new_shared(plugin)
       }
-      BindingBuiltinPluginName::ViteWebWorkerPost => {
-        Pluginable::new_shared(ViteWebWorkerPostPlugin)
-      }
-      BindingBuiltinPluginName::OxcRuntime => Pluginable::new_shared(OxcRuntimePlugin),
+      BindingBuiltinPluginName::ViteWebWorkerPost => Plugin::new_shared(ViteWebWorkerPostPlugin),
+      BindingBuiltinPluginName::OxcRuntime => Plugin::new_shared(OxcRuntimePlugin),
     })
   }
 }

@@ -5,7 +5,7 @@ use rolldown_common::{
   CodeSplittingMode, EmittedChunk, ManualCodeSplittingOptions, MatchGroup, MatchGroupName,
   MatchGroupTest,
 };
-use rolldown_plugin::{HookUsage, Plugin, PluginContext, Pluginable};
+use rolldown_plugin::{HookUsage, Plugin, PluginContext};
 use rolldown_testing::{manual_integration_test, test_config::TestMeta};
 use rolldown_utils::js_regex::HybridRegex;
 
@@ -65,7 +65,7 @@ async fn allow_extension_merge_aliased_then_locals() {
         })),
         ..Default::default()
       },
-      vec![Pluginable::new_shared(EmitChunkPlugin)],
+      vec![Plugin::new_shared(EmitChunkPlugin)],
     )
     .await;
 }

@@ -2,7 +2,7 @@ use std::borrow::Cow;
 
 use rolldown::{BundlerOptions, DevModeOptions, ExperimentalOptions, InputItem};
 use rolldown_error::BatchedBuildDiagnostic;
-use rolldown_plugin::{HookUsage, Plugin, PluginContext, Pluginable};
+use rolldown_plugin::{HookUsage, Plugin, PluginContext};
 use rolldown_testing::{
   manual_integration_test,
   test_config::{DevTestMeta, TestMeta},
@@ -82,7 +82,7 @@ async fn recover_after_generate_bundle_error() {
         }),
         ..Default::default()
       },
-      vec![Pluginable::new_shared(FailGenerateBundleOnMarkerPlugin)],
+      vec![Plugin::new_shared(FailGenerateBundleOnMarkerPlugin)],
     )
     .await;
 }

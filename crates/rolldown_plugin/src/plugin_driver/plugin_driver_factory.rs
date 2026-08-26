@@ -2,6 +2,7 @@ use std::sync::{Arc, Weak};
 
 use arcstr::ArcStr;
 use dashmap::DashMap;
+use oxc_index::IndexVec;
 use rolldown_common::{
   ModuleIdx, PluginIdx, SharedFileEmitter, SharedModuleInfoDashMap, SharedNormalizedBundlerOptions,
 };
@@ -39,6 +40,8 @@ impl PluginDriverFactory {
     let watch_files = Arc::new(FxDashSet::default());
     let meta = Arc::new(PluginContextMeta::default());
     let tx = Arc::new(std::sync::Mutex::new(None));
+    let mut plugin_usage_vec = IndexVec::new();
+
     let bundle_span = initial_bundle_span.clone();
 
     // Create derived span for manual resolve calls
@@ -58,6 +61,9 @@ impl PluginDriverFactory {
 
       self.plugins.iter().for_each(|plugin| {
         let plugin_idx = index_plugins.push(Arc::clone(plugin));
+        // See internal-docs/plugin-adapter/implementation.md.
+        plugin_usage_vec.push(plugin.call_hook_usage());
+
         let plugin_name = plugin.call_name();
         if lazy_compilation_plugin_idx.is_none() && plugin_name == "lazy-compilation" {
           lazy_compilation_plugin_idx = Some(plugin_idx);
@@ -82,7 +88,7 @@ impl PluginDriverFactory {
       });
 
       crate::plugin_driver::PluginDriver {
-        hook_orders: PluginHookOrders::new(&index_plugins),
+        hook_orders: PluginHookOrders::new(&index_plugins, &plugin_usage_vec),
         plugins: index_plugins,
         contexts: index_contexts,
         should_skip_user_plugins_for_lazy_proxy_modules,

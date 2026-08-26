@@ -21,12 +21,12 @@ The concrete-type restoration uses one centralized unsafe cast. Its safety invar
 constructor stores a `T` and only installs hook and metadata adapters instantiated with that same
 `T`. A debug assertion checks the invariant during development.
 
-`crates/rolldown_plugin/src/plugin_driver/hook_orders.rs` reads the cached usage directly when it
-builds the fixed hook-order lists. There is no separate usage vector and no usage check on active
-hook calls.
+`crates/rolldown_plugin/src/plugin_driver/plugin_driver_factory.rs` copies the cached usage into the
+existing index-aligned usage vector used to build the fixed hook-order lists. There is no usage
+check on active hook calls.
 
-Plugin construction sites must use `Pluginable::new_shared(plugin)` instead of relying on an
-`Arc<T>` to `Arc<dyn Pluginable>` coercion.
+Plugin construction sites use `Plugin::new_shared(plugin)` instead of naming the internal adapter
+or relying on an `Arc<T>` to `Arc<dyn Pluginable>` coercion.
 
 ## Related
 

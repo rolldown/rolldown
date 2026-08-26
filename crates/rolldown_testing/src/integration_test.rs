@@ -12,7 +12,7 @@ use oxc::span::SourceType;
 use rolldown::{
   BundleOutput, Bundler, BundlerBuilder, BundlerOptions, ChecksOptions, IsExternal,
   NormalizedBundlerOptions, OutputFormat, Platform, SourceMapType,
-  plugin::__inner::{Pluginable, SharedPluginable},
+  plugin::{__inner::SharedPluginable, Plugin},
 };
 use rolldown_common::Output;
 use rolldown_dev::{BundlerConfig, DevEngine, DevOptions, DevWatchOptions};
@@ -564,7 +564,7 @@ impl IntegrationTest {
   ) {
     // Registered last so it runs right before the internal dce pass; see the module docs of
     // `preserve_region_markers` for why snapshots need markers kept intact.
-    plugins.push(Pluginable::new_shared(PreserveRegionMarkersPlugin));
+    plugins.push(Plugin::new_shared(PreserveRegionMarkersPlugin));
 
     let test_folder_path = &self.test_folder_path;
 

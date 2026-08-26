@@ -3,7 +3,6 @@ use std::borrow::Cow;
 use rolldown::{BundlerOptions, InputItem};
 use rolldown_plugin::{
   HookResolveIdArgs, HookResolveIdOutput, HookResolveIdReturn, HookUsage, Plugin, PluginContext,
-  Pluginable,
 };
 use rolldown_testing::{manual_integration_test, test_config::TestMeta};
 use sugar_path::SugarPath;
@@ -49,7 +48,7 @@ async fn should_rewrite_dynamic_imports_that_import_external_modules() {
         }]),
         ..Default::default()
       },
-      vec![Pluginable::new_shared(ExternalCss)],
+      vec![Plugin::new_shared(ExternalCss)],
     )
     .await;
 }

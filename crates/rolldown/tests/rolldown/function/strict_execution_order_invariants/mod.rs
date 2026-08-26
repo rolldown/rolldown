@@ -10,7 +10,7 @@ use rolldown_common::{
   CodeSplittingMode, EmittedChunk, ManualCodeSplittingOptions, MatchGroup, MatchGroupName,
   MatchGroupTest, Output,
 };
-use rolldown_plugin::{HookUsage, Plugin, PluginContext, Pluginable};
+use rolldown_plugin::{HookUsage, Plugin, PluginContext};
 use rolldown_utils::js_regex::HybridRegex;
 
 const FIXTURE_ROOT: &str =
@@ -157,7 +157,7 @@ async fn bundle_emitted_target(
       })),
       ..Default::default()
     },
-    vec![Pluginable::new_shared(EmitTarget { id: "./target.js", names })],
+    vec![Plugin::new_shared(EmitTarget { id: "./target.js", names })],
   )
   .expect("failed to create bundler");
 
@@ -537,7 +537,7 @@ async fn late_order_wrapping_revalidates_output_file() {
       })),
       ..Default::default()
     },
-    vec![Pluginable::new_shared(EmitTarget { id: "./entry.js", names: &["emitted"] })],
+    vec![Plugin::new_shared(EmitTarget { id: "./entry.js", names: &["emitted"] })],
   )
   .expect("failed to create bundler");
 
@@ -586,7 +586,7 @@ async fn disabled_splitting_emitted_entry_routes_consumer_local_barrel() {
         }),
         ..Default::default()
       },
-      vec![Pluginable::new_shared(EmitTarget { id: "./entry-b.cjs", names: &["entry-b"] })],
+      vec![Plugin::new_shared(EmitTarget { id: "./entry-b.cjs", names: &["entry-b"] })],
     )
     .expect("failed to create bundler");
 

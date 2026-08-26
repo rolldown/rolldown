@@ -111,7 +111,6 @@ macro_rules! define_hooks {
 /// defaults, while implemented hooks point at small type-erasing adapters. This keeps the
 /// ergonomic, statically dispatched [Plugin] trait without generating a large object-safe
 /// vtable for every plugin type.
-// See internal-docs/plugin-adapter/implementation.md.
 pub struct Pluginable {
   plugin: Box<ErasedPlugin>,
   name: fn(&ErasedPlugin) -> Cow<'static, str>,

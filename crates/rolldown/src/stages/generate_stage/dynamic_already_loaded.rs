@@ -76,8 +76,17 @@ impl GenerateStage<'_> {
       return;
     }
     let module_to_atom_idx = self.compute_module_to_atom_idx(&atoms);
-    let atom_dependencies =
-      self.compute_atom_dependencies(&atoms, &module_to_atom_idx, used_symbol_refs_builder);
+    let flattened_entry_modules = self.flattened_entry_modules();
+    let atom_dependencies = self.compute_atom_dependencies(
+      &atoms,
+      &module_to_atom_idx,
+      &flattened_entry_modules,
+      used_symbol_refs_builder,
+    );
+    // Indexed by entry bit, so `reduced_atom_graph_has_static_cycle` can pair each facade chunk
+    // with its entry module's host atom by index instead of hashing a synthesized `BitSet`.
+    let host_atom_by_entry_bit: Vec<Option<usize>> =
+      flattened_entry_modules.iter().map(|&module_idx| module_to_atom_idx[module_idx]).collect();
 
     let static_dependency_atoms_by_entry = self.compute_static_dependency_atoms_by_entry(
       entries_len as usize,
@@ -115,7 +124,11 @@ impl GenerateStage<'_> {
         )
       };
       if !matches!(action, ReducedEntriesAction::Avoid)
-        && !Self::reduced_atom_graph_has_static_cycle(&atoms, &atom_dependencies.cycle)
+        && !Self::reduced_atom_graph_has_static_cycle(
+          &atoms,
+          &atom_dependencies.cycle,
+          &host_atom_by_entry_bit,
+        )
       {
         changed = true;
         if let ReducedEntriesAction::ApplyWithNamespaceExtraction {
@@ -326,6 +339,17 @@ impl GenerateStage<'_> {
     module_to_atom_idx
   }
 
+  /// The entry module behind each entry bit, in the bit order `determine_reachable_modules_for_entry`
+  /// assigns (`link_output.entries` flattened, one bit per entry point).
+  fn flattened_entry_modules(&self) -> Vec<ModuleIdx> {
+    self
+      .link_output
+      .entries
+      .iter()
+      .flat_map(|(&idx, entries)| std::iter::repeat_n(idx, entries.len()))
+      .collect()
+  }
+
   // See internal-docs/code-splitting/implementation.md#dynamic-already-loaded-analysis.
   //
   // The two graphs serve the pass's two consumers, whose safe approximations point in opposite
@@ -334,28 +358,29 @@ impl GenerateStage<'_> {
   // hosted by its own entry chunk, because emission hangs those imports on the entry (facade)
   // chunk, not on whichever shared chunk hosts the module. `cycle` must contain every edge the
   // emitted chunks might have: its service edges are attached to the hosting atom regardless,
-  // with no liveness gate — `used_symbol_refs_builder` still grows after this pass (namespace-extraction
-  // and facade-elimination replays), so an export dead here can be live at emission. A facade's
-  // own service edges cannot close a cycle (facades have zero static in-degree), so attributing
-  // them to the hosting atom only over-approximates. The price of the ungated edges is that a
-  // dead entry re-export can conservatively veto a fold that would have been acyclic — a missed
-  // optimization, accepted over trusting a liveness snapshot the replays may outgrow. The
-  // liveness-growth immunity is scoped to service edges: the base prediction's ambiguous branch
-  // (`referenced_symbol_owners`) still reads decision-time statement inclusion, a narrower
-  // pre-existing skew the replays can also outgrow.
+  // with no liveness gate — `used_symbol_refs_builder` still grows after this pass
+  // (namespace-extraction and facade-elimination replays), so an export dead here can be live at
+  // emission.
+  //
+  // Hosting-atom attribution over-approximates rather than misses only because of the facade edges
+  // `reduced_atom_graph_has_static_cycle` adds: the facade depends on the host, which is where
+  // these edges land, so anything emission hangs on the facade stays reachable as facade -> host ->
+  // target. Before rolldown#10734 this rested on facades having zero static in-degree, which a
+  // fold moving an atom into a facade broke — re-derive it before attributing them elsewhere.
+  //
+  // The price of the ungated edges is that a dead entry re-export can conservatively veto a fold
+  // that would have been acyclic — a missed optimization, accepted over trusting a liveness
+  // snapshot the replays may outgrow. The liveness-growth immunity is scoped to service edges:
+  // the base prediction's ambiguous branch (`referenced_symbol_owners`) still reads decision-time
+  // statement inclusion, a narrower pre-existing skew the replays can also outgrow.
   fn compute_atom_dependencies(
     &self,
     atoms: &[ChunkAtom],
     module_to_atom_idx: &IndexVec<ModuleIdx, Option<usize>>,
+    flattened_entry_modules: &[ModuleIdx],
     used_symbol_refs_builder: &UsedSymbolRefsBuilder,
   ) -> AtomDependencyGraphs {
     let strict_execution_order = self.options.is_strict_execution_order_enabled();
-    let flattened_entry_modules: Vec<ModuleIdx> = self
-      .link_output
-      .entries
-      .iter()
-      .flat_map(|(&idx, entries)| std::iter::repeat_n(idx, entries.len()))
-      .collect();
 
     let mut reachability = Vec::with_capacity(atoms.len());
     let mut cycle = Vec::with_capacity(atoms.len());
@@ -550,9 +575,11 @@ impl GenerateStage<'_> {
   fn reduced_atom_graph_has_static_cycle(
     atoms: &[ChunkAtom],
     atom_dependencies: &[Vec<usize>],
+    host_atom_by_entry_bit: &[Option<usize>],
   ) -> bool {
     let mut chunk_idx_by_bits = FxHashMap::default();
     let mut atom_to_chunk = Vec::with_capacity(atoms.len());
+    let mut facade_chunk_by_entry_bit = vec![None; host_atom_by_entry_bit.len()];
     for atom in atoms {
       let next_chunk_idx = chunk_idx_by_bits.len();
       let chunk_idx = match chunk_idx_by_bits.entry(atom.dependent_entries.clone()) {
@@ -563,6 +590,15 @@ impl GenerateStage<'_> {
         }
       };
       atom_to_chunk.push(chunk_idx);
+      // An entry chunk's bits are exactly its own entry bit, so the singleton atoms seen here are
+      // the only facade candidates. Recording them keeps the facade lookup below an array index —
+      // this runs once per fold candidate, and hashing a `BitSet` per entry on every call would
+      // add `atoms * entries * entries / 8` bytes of hashing to the pass's quadratic hot spot.
+      if atom.dependent_entries.bit_count() == 1
+        && let Some(entry_bit) = atom.dependent_entries.index_of_one().next()
+      {
+        facade_chunk_by_entry_bit[entry_bit as usize] = Some(chunk_idx);
+      }
     }
 
     let mut chunk_dependencies = vec![FxHashSet::default(); chunk_idx_by_bits.len()];
@@ -573,6 +609,35 @@ impl GenerateStage<'_> {
         if from_chunk_idx != to_chunk_idx {
           chunk_dependencies[from_chunk_idx].insert(to_chunk_idx);
         }
+      }
+    }
+
+    // The facade edges the atom graph cannot express: an entry whose module lands in a shared chunk
+    // keeps its own entry chunk as a facade, and `compute_chunk_imports` makes that facade import
+    // the host chunk — to run the module and to re-export its interface — but no module in the
+    // facade imports the entry module. Without them, folding an atom into a facade whose host
+    // statically depends on that atom yields a chunk cycle that evaluates in the wrong order
+    // (rolldown#10734). `cycle` over-approximates, so a redundant facade edge only costs a missed
+    // merge.
+    for (entry_bit, &host_atom_idx) in host_atom_by_entry_bit.iter().enumerate() {
+      // A `None` host means the entry module is external or excluded. Skipping is not a safe
+      // approximation in general — `cycle` may never miss an edge — but it drops no real edge:
+      // `split_chunks` assigns such a module to no chunk, so the facade has no host to import. An
+      // included normal entry module always has an atom — `determine_reachable_modules_for_entry`
+      // sets the entry's own bit on its module, and `split_chunks` asserts that an included
+      // module's bits are non-empty.
+      let Some(host_atom_idx) = host_atom_idx else {
+        continue;
+      };
+      // No facade chunk for this bit means the entry chunk holds nothing: a module-less facade
+      // declares no symbol, so nothing can depend back on it and the omitted node cannot sit on a
+      // cycle.
+      let Some(facade_chunk_idx) = facade_chunk_by_entry_bit[entry_bit] else {
+        continue;
+      };
+      let host_chunk_idx = atom_to_chunk[host_atom_idx];
+      if facade_chunk_idx != host_chunk_idx {
+        chunk_dependencies[facade_chunk_idx].insert(host_chunk_idx);
       }
     }
 

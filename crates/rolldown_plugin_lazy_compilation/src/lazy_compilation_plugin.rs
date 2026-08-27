@@ -156,7 +156,6 @@ impl Plugin for LazyCompilationPlugin {
 
     Ok(None)
   }
-
 }
 
 // Replace placeholders in order: longer ones first to avoid partial matches

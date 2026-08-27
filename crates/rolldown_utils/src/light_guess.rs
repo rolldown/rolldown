@@ -14,7 +14,7 @@ impl RawMimeExt {
   }
 }
 
-pub static MIME_TYPES_KEYS: [&str; 24] = [
+pub static MIME_TYPES_KEYS: [&str; 25] = [
   "avif",
   "css",
   "eot",
@@ -33,6 +33,7 @@ pub static MIME_TYPES_KEYS: [&str; 24] = [
   "png",
   "sfnt",
   "svg",
+  "txt",
   "ttf",
   "wasm",
   "webmanifest",
@@ -41,7 +42,7 @@ pub static MIME_TYPES_KEYS: [&str; 24] = [
   "woff2",
 ];
 
-pub static MIME_TYPES_VALUES: [RawMimeExt; 24] = [
+pub static MIME_TYPES_VALUES: [RawMimeExt; 25] = [
   RawMimeExt::new("image/avif", false),
   RawMimeExt::new("text/css", true),
   RawMimeExt::new("application/vnd.ms-fontobject", false),
@@ -60,6 +61,7 @@ pub static MIME_TYPES_VALUES: [RawMimeExt; 24] = [
   RawMimeExt::new("image/png", false),
   RawMimeExt::new("font/sfnt", false),
   RawMimeExt::new("image/svg+xml", false),
+  RawMimeExt::new("text/plain", true),
   RawMimeExt::new("font/ttf", false),
   RawMimeExt::new("application/wasm", false),
   RawMimeExt::new("application/manifest+json", false),
@@ -97,7 +99,7 @@ mod tests {
 
   #[test]
   fn normal_extensions() {
-    assert_eq!(mime_type_by_extension("txt"), None);
+    assert_eq!(mime_type_by_extension("txt").unwrap().mime_str, "text/plain");
     assert_eq!(mime_type_by_extension("css").unwrap().mime_str, "text/css");
     assert_eq!(mime_type_by_extension("html").unwrap().mime_str, "text/html");
     assert_eq!(mime_type_by_extension("json").unwrap().mime_str, "application/json");

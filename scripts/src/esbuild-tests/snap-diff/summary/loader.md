@@ -3,8 +3,6 @@
   oxc minifier does not support JSX (https://github.com/oxc-project/oxc/issues/13248)
 ## [jsx_preserve_capital_letter_minify_nested](../../../../../crates/rolldown/tests/esbuild/loader/jsx_preserve_capital_letter_minify_nested/diff.md)
   oxc minifier does not support JSX (https://github.com/oxc-project/oxc/issues/13248)
-## [loader_data_url_base64_invalid_utf8](../../../../../crates/rolldown/tests/esbuild/loader/loader_data_url_base64_invalid_utf8/diff.md)
-  mime type should be `data:text/plain`
 ## [loader_file_one_source_two_different_output_paths_css](../../../../../crates/rolldown/tests/esbuild/loader/loader_file_one_source_two_different_output_paths_css/diff.md)
   generate wrong output when css as entry and has shared css
 # Passed Cases

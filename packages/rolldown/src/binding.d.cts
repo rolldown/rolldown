@@ -1599,14 +1599,26 @@ export declare class BindingMagicString {
   get ignoreList(): boolean
   get offset(): number
   set offset(offset: number)
+  /**
+   * Internal helper for the JS function-replacer path (`replace`/`replaceAll` with a
+   * callback). Throws "Cannot split a chunk that has already been edited" when `index`
+   * (unshifted; `offset` is applied here, like every other position-based method) sits
+   * inside a surrogate pair whose character lies in an already-edited chunk — exactly the
+   * split error upstream magic-string raises at such an overwrite boundary. Widening the
+   * overwrite to the whole character would otherwise skip that check. Read-only: performs
+   * no edit and touches no chunk state.
+   */
+  assertCanSplitAt(index: number): void
   replace(from: string, to: string): this
   replaceAll(from: string, to: string): this
   /**
-   * Returns the UTF-16 offset past the last match, or -1 if no match was found.
-   * The JS wrapper uses this to update `lastIndex` on the caller's RegExp.
-   * Global/sticky behavior is derived from the regex's own flags.
+   * Regex + string-replacement path. Matching runs natively (see `regex_replace`); the
+   * caller's RegExp `lastIndex` is updated here with `String.prototype.replace` semantics:
+   * global regexes end at 0 (exec-loop exhaustion), non-global sticky regexes advance to
+   * the match end (or reset to 0 on a miss), and non-global non-sticky regexes are left
+   * untouched.
    */
-  replaceRegex(from: RegExp, to: string): number
+  replaceRegex(from: RegExp, to: string): void
   prepend(content: string): this
   append(content: string): this
   prependLeft(index: number, content: string): this

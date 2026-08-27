@@ -1,8 +1,8 @@
 #![expect(clippy::inherent_to_string)]
 use std::borrow::Cow;
 
-use napi::bindgen_prelude::{Either, This};
-use napi::{Env, JsString};
+use napi::bindgen_prelude::{Either, FromNapiValue, JsObjectValue, JsValue, Object, This};
+use napi::{Env, JsString, Status, Unknown, ValueType};
 use napi_derive::napi;
 use rolldown_sourcemap::{JSONSourceMap, SourceMap};
 use rolldown_utils::base64::to_standard_base64;
@@ -203,6 +203,35 @@ impl Utf16ToByteMapper {
     let len = self.utf16_len();
     if len > 0 && index < 0 { ((index % len) + len) % len } else { index }
   }
+}
+
+/// Validates that a JS value is a primitive string and extracts it, throwing a real JS
+/// `TypeError` (matching `magic-string`, which type-checks content before doing anything
+/// else) when it is not. napi's own signature validation rejects non-strings with a plain
+/// `Error`, so content parameters are declared `Unknown` and validated here instead.
+/// `what` is the upstream noun: "outro content", "inserted content", "replacement content".
+fn require_string_content(env: &Env, value: Unknown<'_>, what: &str) -> napi::Result<String> {
+  if value.get_type()? == ValueType::String {
+    return unsafe { String::from_napi_value(env.raw(), value.raw()) };
+  }
+  env.throw_type_error(&format!("{what} must be a string"), None)?;
+  // The TypeError is already pending on the env; this status tells napi-rs not to throw
+  // a second, generic error on top of it.
+  Err(napi::Error::new(Status::PendingException, "pending exception"))
+}
+
+/// Result of `regex_replace`: matching always runs to completion (that is what determines
+/// the caller's `lastIndex`), while a failure applying one of the overwrites is carried in
+/// `apply_error` so the caller can write `lastIndex` back before surfacing it — matching
+/// upstream, where `lastIndex` moves as a side effect of the exec loop, strictly before any
+/// overwrite can throw.
+struct RegexReplaceOutcome {
+  /// UTF-16 offset past the last match (including no-op matches), or `None` if nothing
+  /// matched.
+  last_match_end_utf16: Option<u32>,
+  /// The first overwrite failure, if any; earlier matches' edits stay applied (upstream's
+  /// mid-replace failure semantics).
+  apply_error: Option<napi::Error>,
 }
 
 #[napi(object)]
@@ -493,16 +522,39 @@ impl BindingMagicString<'_> {
     self.offset = offset;
   }
 
+  /// Internal helper for the JS function-replacer path (`replace`/`replaceAll` with a
+  /// callback). Throws "Cannot split a chunk that has already been edited" when `index`
+  /// (unshifted; `offset` is applied here, like every other position-based method) sits
+  /// inside a surrogate pair whose character lies in an already-edited chunk — exactly the
+  /// split error upstream magic-string raises at such an overwrite boundary. Widening the
+  /// overwrite to the whole character would otherwise skip that check. Read-only: performs
+  /// no edit and touches no chunk state.
+  #[napi]
+  pub fn assert_can_split_at(&self, index: u32) -> napi::Result<()> {
+    self.ensure_live()?;
+    let shifted = self.apply_offset_u32(index)?;
+    self.reject_surrogate_split_of_edited_chunk(shifted)
+  }
+
   /// Performs regex-based replace on the original source string.
   /// When `global` is true, replaces all matches; otherwise replaces only the first.
   /// Handles `$&`, `$$`, and `$N` substitution patterns in the replacement string.
+  ///
+  /// Errors before matching (an unsupported pattern) are returned as `Err`; an error while
+  /// *applying* an overwrite is reported inside the `Ok` outcome instead, because upstream
+  /// finishes matching — which is what moves `lastIndex` — before it applies any edit, so
+  /// the caller must write `lastIndex` back even when an edit fails.
   ///
   /// NOTE: Uses `HybridRegex` which tries `regex::Regex` first (orders of magnitude
   /// faster) and only falls back to `regress::Regex` when the pattern uses syntax
   /// not supported by the `regex` crate (e.g. backreferences, lookaround).
   /// Sticky (`y`) flag always uses the `regress` path since `regex` doesn't support it,
   /// and `lastIndex` is respected via `find_from`.
-  fn regex_replace(&mut self, js_regex: &JsRegExp, replacement: &str) -> napi::Result<Option<u32>> {
+  fn regex_replace(
+    &mut self,
+    js_regex: &JsRegExp,
+    replacement: &str,
+  ) -> napi::Result<RegexReplaceOutcome> {
     let global = js_regex.flags.contains('g');
     let flags_without_g: String = js_regex.flags.chars().filter(|&c| c != 'g').collect();
     let reg = HybridRegex::with_flags(&js_regex.source, &flags_without_g)
@@ -548,7 +600,9 @@ impl BindingMagicString<'_> {
         } else {
           match self.utf16_to_byte_mapper.utf16_to_byte(js_regex.last_index as u32) {
             Some(byte_offset) => byte_offset as usize,
-            None => return Ok(None),
+            None => {
+              return Ok(RegexReplaceOutcome { last_match_end_utf16: None, apply_error: None });
+            }
           }
         };
 
@@ -597,13 +651,21 @@ impl BindingMagicString<'_> {
     let last_match_end_utf16 =
       last_match_end.and_then(|b| self.utf16_to_byte_mapper.byte_to_utf16(b));
 
+    // Like upstream, an edit failure keeps the edits of earlier matches and stops there —
+    // but matching already finished above, so the outcome still carries the match end for
+    // the caller's `lastIndex` writeback.
+    let mut apply_error = None;
     for (start, end, rep) in overwrites {
-      self
+      if let Err(e) = self
         .inner
         .update_with(start, end, rep, UpdateOptions { overwrite: true, keep_original: false })
-        .map_err(napi::Error::from_reason)?;
+        .map_err(napi::Error::from_reason)
+      {
+        apply_error = Some(e);
+        break;
+      }
     }
-    Ok(last_match_end_utf16)
+    Ok(RegexReplaceOutcome { last_match_end_utf16, apply_error })
   }
 
   /// Applies `self.offset` to a u32 character index.
@@ -646,10 +708,12 @@ impl BindingMagicString<'_> {
   #[napi]
   pub fn replace<'s>(
     &'s mut self,
+    env: &Env,
     this: This<'s>,
     from: String,
-    to: String,
+    #[napi(ts_arg_type = "string")] to: Unknown<'s>,
   ) -> napi::Result<This<'s>> {
+    let to = require_string_content(env, to, "replacement content")?;
     self.ensure_live()?;
     self.inner.replace(&from, to).map_err(napi::Error::from_reason)?;
     Ok(this)
@@ -658,39 +722,69 @@ impl BindingMagicString<'_> {
   #[napi]
   pub fn replace_all<'s>(
     &'s mut self,
+    env: &Env,
     this: This<'s>,
     from: String,
-    to: String,
+    #[napi(ts_arg_type = "string")] to: Unknown<'s>,
   ) -> napi::Result<This<'s>> {
+    let to = require_string_content(env, to, "replacement content")?;
     self.ensure_live()?;
     self.inner.replace_all(&from, to).map_err(napi::Error::from_reason)?;
     Ok(this)
   }
 
-  /// Returns the UTF-16 offset past the last match, or -1 if no match was found.
-  /// The JS wrapper uses this to update `lastIndex` on the caller's RegExp.
-  /// Global/sticky behavior is derived from the regex's own flags.
+  /// Regex + string-replacement path. Matching runs natively (see `regex_replace`); the
+  /// caller's RegExp `lastIndex` is updated here with `String.prototype.replace` semantics:
+  /// global regexes end at 0 (exec-loop exhaustion), non-global sticky regexes advance to
+  /// the match end (or reset to 0 on a miss), and non-global non-sticky regexes are left
+  /// untouched.
   #[napi(js_name = "replaceRegex")]
   pub fn replace_regex(
     &mut self,
-    #[napi(ts_arg_type = "RegExp")] from: JsRegExp,
+    env: &Env,
+    #[napi(ts_arg_type = "RegExp")] from: Unknown<'_>,
     to: String,
-  ) -> napi::Result<i32> {
+  ) -> napi::Result<()> {
     self.ensure_live()?;
-    let last_end = self.regex_replace(&from, &to)?;
-    #[expect(clippy::cast_possible_wrap)]
-    Ok(last_end.map_or(-1, |v| v as i32))
+    let js_regex: JsRegExp = unsafe { JsRegExp::from_napi_value(env.raw(), from.raw())? };
+    let outcome = self.regex_replace(&js_regex, &to)?;
+    let global = js_regex.flags.contains('g');
+    let sticky = js_regex.flags.contains('y');
+    if global || sticky {
+      // `lastIndex` is a side effect of matching, which ran to completion even when an
+      // overwrite failed below — so it is written back before the error surfaces, exactly
+      // like upstream's exec loop moving `lastIndex` before any edit can throw.
+      let mut regex_obj: Object = unsafe { Object::from_napi_value(env.raw(), from.raw())? };
+      let new_last_index = if global { 0 } else { outcome.last_match_end_utf16.unwrap_or(0) };
+      regex_obj.set_named_property("lastIndex", new_last_index)?;
+    }
+    if let Some(err) = outcome.apply_error {
+      return Err(err);
+    }
+    Ok(())
   }
 
   #[napi]
-  pub fn prepend<'s>(&'s mut self, this: This<'s>, content: String) -> napi::Result<This<'s>> {
+  pub fn prepend<'s>(
+    &'s mut self,
+    env: &Env,
+    this: This<'s>,
+    #[napi(ts_arg_type = "string")] content: Unknown<'s>,
+  ) -> napi::Result<This<'s>> {
+    let content = require_string_content(env, content, "outro content")?;
     self.ensure_live()?;
     self.inner.prepend(content);
     Ok(this)
   }
 
   #[napi]
-  pub fn append<'s>(&'s mut self, this: This<'s>, content: String) -> napi::Result<This<'s>> {
+  pub fn append<'s>(
+    &'s mut self,
+    env: &Env,
+    this: This<'s>,
+    #[napi(ts_arg_type = "string")] content: Unknown<'s>,
+  ) -> napi::Result<This<'s>> {
+    let content = require_string_content(env, content, "outro content")?;
     self.ensure_live()?;
     self.inner.append(content);
     Ok(this)
@@ -699,10 +793,12 @@ impl BindingMagicString<'_> {
   #[napi]
   pub fn prepend_left<'s>(
     &'s mut self,
+    env: &Env,
     this: This<'s>,
     index: u32,
-    content: String,
+    #[napi(ts_arg_type = "string")] content: Unknown<'s>,
   ) -> napi::Result<This<'s>> {
+    let content = require_string_content(env, content, "inserted content")?;
     self.ensure_live()?;
     // Match original magic-string: out-of-bound indices fall through to prepend_intro
     let index = self.apply_offset_u32(index)?;
@@ -721,10 +817,12 @@ impl BindingMagicString<'_> {
   #[napi]
   pub fn prepend_right<'s>(
     &'s mut self,
+    env: &Env,
     this: This<'s>,
     index: u32,
-    content: String,
+    #[napi(ts_arg_type = "string")] content: Unknown<'s>,
   ) -> napi::Result<This<'s>> {
+    let content = require_string_content(env, content, "inserted content")?;
     self.ensure_live()?;
     // Match original magic-string: out-of-bound indices fall through to prepend_outro
     let index = self.apply_offset_u32(index)?;
@@ -743,10 +841,12 @@ impl BindingMagicString<'_> {
   #[napi]
   pub fn append_left<'s>(
     &'s mut self,
+    env: &Env,
     this: This<'s>,
     index: u32,
-    content: String,
+    #[napi(ts_arg_type = "string")] content: Unknown<'s>,
   ) -> napi::Result<This<'s>> {
+    let content = require_string_content(env, content, "inserted content")?;
     self.ensure_live()?;
     // Match original magic-string: out-of-bound indices fall through to append_intro
     let index = self.apply_offset_u32(index)?;
@@ -765,10 +865,12 @@ impl BindingMagicString<'_> {
   #[napi]
   pub fn append_right<'s>(
     &'s mut self,
+    env: &Env,
     this: This<'s>,
     index: u32,
-    content: String,
+    #[napi(ts_arg_type = "string")] content: Unknown<'s>,
   ) -> napi::Result<This<'s>> {
+    let content = require_string_content(env, content, "inserted content")?;
     self.ensure_live()?;
     // Match original magic-string: out-of-bound indices fall through to append_outro
     let index = self.apply_offset_u32(index)?;
@@ -787,12 +889,14 @@ impl BindingMagicString<'_> {
   #[napi]
   pub fn overwrite<'s>(
     &'s mut self,
+    env: &Env,
     this: This<'s>,
     start: u32,
     end: u32,
-    content: String,
+    #[napi(ts_arg_type = "string")] content: Unknown<'s>,
     options: Option<BindingOverwriteOptions>,
   ) -> napi::Result<This<'s>> {
+    let content = require_string_content(env, content, "replacement content")?;
     self.ensure_live()?;
     let start_byte = self
       .utf16_to_byte_mapper
@@ -877,12 +981,14 @@ impl BindingMagicString<'_> {
   #[napi]
   pub fn update<'s>(
     &'s mut self,
+    env: &Env,
     this: This<'s>,
     start: u32,
     end: u32,
-    content: String,
+    #[napi(ts_arg_type = "string")] content: Unknown<'s>,
     options: Option<BindingUpdateOptions>,
   ) -> napi::Result<This<'s>> {
+    let content = require_string_content(env, content, "replacement content")?;
     self.ensure_live()?;
     let start_byte = self
       .utf16_to_byte_mapper

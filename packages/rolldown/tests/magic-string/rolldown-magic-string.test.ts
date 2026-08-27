@@ -513,14 +513,58 @@ describe('regex replace', () => {
     // The emoji occupies UTF-16 indices 1-2, so lastIndex should be 3.
     assert.strictEqual(regex.lastIndex, 3);
   });
+
+  // Upstream's exec loop writes `lastIndex` while matching, before any overwrite — so a
+  // global (or sticky) regex whose `lastIndex` is read-only throws V8's TypeError with the
+  // source untouched, while a non-global non-sticky regex never writes it and succeeds.
+  it('throws before editing when a global regex has a read-only lastIndex', () => {
+    const s = new MagicString('aa');
+    const re = /a/g;
+    Object.defineProperty(re, 'lastIndex', { writable: false });
+    assert.throws(
+      () => s.replace(re, 'x'),
+      (err: unknown) =>
+        err instanceof TypeError && /read only property 'lastIndex'/.test(String(err)),
+    );
+    assert.strictEqual(s.toString(), 'aa');
+
+    const ok = new MagicString('aa');
+    const plain = /a/;
+    Object.defineProperty(plain, 'lastIndex', { writable: false });
+    ok.replace(plain, 'x'); // lastIndex is never written for non-global non-sticky
+    assert.strictEqual(ok.toString(), 'xa');
+  });
+
+  // Upstream's `lastIndex` moves as a side effect of the exec loop, which finishes before
+  // any overwrite runs — so an overwrite failure must not skip the writeback: the global
+  // regex still ends exhausted at 0, and a sticky regex still advances to its match end.
+  it('updates lastIndex even when the overwrite fails', () => {
+    const g = new MagicString('aa');
+    g.overwrite(0, 2, 'bb');
+    const global = /a/g;
+    global.lastIndex = 1;
+    assert.throws(() => g.replace(global, 'X'), /already been edited/);
+    assert.strictEqual(global.lastIndex, 0);
+    assert.strictEqual(g.toString(), 'bb');
+
+    const y = new MagicString('aa');
+    y.overwrite(0, 2, 'bb');
+    const sticky = /a/y;
+    sticky.lastIndex = 1;
+    assert.throws(() => y.replace(sticky, 'X'), /already been edited/);
+    assert.strictEqual(sticky.lastIndex, 2);
+    assert.strictEqual(y.toString(), 'bb');
+  });
 });
 
 describe('function replacer over surrogate pairs', () => {
-  // A non-Unicode regex like `/./g` matches each UTF-16 code unit, so it splits an
-  // astral character into two matches. Upstream (a UTF-16 rope) replaces each half
-  // independently; our UTF-8 store cannot address a lone surrogate, but when both
-  // halves are replaced we coalesce the two edits into one overwrite of the whole
-  // character — reproducing upstream's output without splitting the string.
+  // A non-Unicode regex like `/./g` matches each UTF-16 code unit, so it splits an astral
+  // character into two matches. Upstream (a UTF-16 rope) replaces each half independently;
+  // our UTF-8 store cannot address a lone surrogate, so we coalesce the two halves into one
+  // overwrite of the whole character. That works whenever the coalesced result is
+  // well-formed — both halves replaced, or one half replaced while the other (untouched, or
+  // re-emitted by the replacement) still completes the pair. Only a result that would strand
+  // a lone surrogate is rejected.
   it('coalesces both halves of a pair into one replacement', () => {
     const s = new MagicString('🤷');
     s.replace(/./g, () => 'x');
@@ -546,18 +590,226 @@ describe('function replacer over surrogate pairs', () => {
     assert.strictEqual(s.hasChanged(), false);
   });
 
-  // Replacing only one half of a pair would strand the other as a lone surrogate,
-  // which UTF-8 cannot represent — reject it atomically, leaving the string untouched.
-  it('throws without mutating when only the high half is replaced', () => {
+  // Changing only one half is representable when the other half still completes the pair:
+  // the untouched low half plus a replacement that re-emits the high half yields 'X🤷'.
+  it('keeps the untouched low half when the high half re-emits its surrogate', () => {
+    const s = new MagicString('🤷');
+    s.replace(/./g, (m, i) => (i === 0 ? 'X' + m : m));
+    assert.strictEqual(s.toString(), 'X🤷');
+  });
+
+  it('keeps the untouched high half when the low half re-emits its surrogate', () => {
+    const s = new MagicString('🤷');
+    s.replace(/./g, (m, i) => (i === 1 ? m + 'X' : m));
+    assert.strictEqual(s.toString(), '🤷X');
+  });
+
+  // Replacing one half with content that does NOT restore the pair would strand the other as
+  // a lone surrogate, which UTF-8 cannot represent — reject it atomically, leaving the string
+  // untouched. (Upstream, a UTF-16 rope, returns the lone-surrogate string instead.)
+  it('throws without mutating when the high half is replaced by a non-surrogate', () => {
     const s = new MagicString('🤷');
     assert.throws(() => s.replace(/./g, (m, i) => (i === 0 ? 'X' : m)), /splits a surrogate pair/);
     assert.strictEqual(s.toString(), '🤷');
   });
 
-  it('throws without mutating when only the low half is replaced', () => {
+  it('throws without mutating when the low half is replaced by a non-surrogate', () => {
     const s = new MagicString('🤷');
     assert.throws(() => s.replace(/./g, (m, i) => (i === 1 ? 'X' : m)), /splits a surrogate pair/);
     assert.strictEqual(s.toString(), '🤷');
+  });
+
+  // The string-search path routes through the same coalescing, so a search term that matches
+  // a lone surrogate half is handled instead of hitting overwrite() with a half-character
+  // range (which would round to the whole char and corrupt the retained half into U+FFFD).
+  it('coalesces a string search that matches the high half', () => {
+    const s = new MagicString('🤷');
+    s.replace('\uD83E', (m) => 'X' + m);
+    assert.strictEqual(s.toString(), 'X🤷');
+  });
+
+  it('coalesces a string search that matches the low half', () => {
+    const s = new MagicString('🤷');
+    s.replace('\uDD37', (m) => m + 'X');
+    assert.strictEqual(s.toString(), '🤷X');
+  });
+
+  it('coalesces a replaceAll string search over surrogate halves', () => {
+    const s = new MagicString('🤷🤷');
+    s.replaceAll('\uD83E', (m) => 'X' + m);
+    assert.strictEqual(s.toString(), 'X🤷X🤷');
+  });
+
+  // A representable high-half edit is applied *before* the low half's callback runs, so a
+  // stateful replacer observes it — matching upstream, which overwrites each half in turn.
+  it('applies a representable high-half edit before the low-half callback', () => {
+    const s = new MagicString('🤷');
+    const seen: string[] = [];
+    s.replace(/./g, (m, i) => {
+      if (i === 1) seen.push(s.toString());
+      return i === 0 ? 'X' + m : s.toString().startsWith('X') ? m + 'Y' : m;
+    });
+    // The low-half callback saw the applied high-half edit, not the untouched original.
+    assert.strictEqual(seen[0], 'X🤷');
+    assert.strictEqual(s.toString(), 'X🤷Y');
+  });
+
+  // If the low half's edit then drops its surrogate, the combined edit is a lone surrogate
+  // that UTF-8 cannot hold — throw (upstream returns the lone-surrogate string). Like
+  // upstream's own mid-replace failures, edits already applied stay applied — here the
+  // representable high-half edit the low-half callback already observed. There is no
+  // rollback: un-overwriting cannot restore chunk state, so a "restored" instance would
+  // claim to be untouched while rejecting operations an untouched instance accepts.
+  it('throws and keeps the applied high-half edit when the low half strands a surrogate', () => {
+    const s = new MagicString('🤷');
+    assert.throws(
+      () => s.replace(/./g, (m, i) => (i === 0 ? 'X' + m : 'Z')),
+      /splits a surrogate pair/,
+    );
+    assert.strictEqual(s.toString(), 'X🤷');
+    // the instance stays consistent and usable
+    s.append('!');
+    assert.strictEqual(s.toString(), 'X🤷!');
+  });
+
+  // Upstream splits its rope at every overwrite boundary, so a boundary inside a previously
+  // *edited* pair throws "Cannot split a chunk that has already been edited" right after
+  // that match's callback. Widening to the whole character must not paper over that error:
+  // the boundary is probed so it surfaces at the same point, with the same state.
+  it('preserves the split error when the pair was previously edited', () => {
+    const s = new MagicString('🤷');
+    s.overwrite(0, 2, 'Q');
+    const calls: number[] = [];
+    assert.throws(
+      () =>
+        s.replace(/./g, (m, i) => {
+          calls.push(i);
+          return i === 0 ? 'X' + m : m;
+        }),
+      /already been edited/,
+    );
+    assert.deepStrictEqual(calls, [0]); // the second callback never runs, matching upstream
+    assert.strictEqual(s.toString(), 'Q');
+  });
+
+  it('preserves the split error for a string search on an edited pair', () => {
+    const s = new MagicString('🤷');
+    s.overwrite(0, 2, 'Q');
+    assert.throws(() => s.replace('\uDD37', (m) => m + 'X'), /already been edited/);
+    assert.strictEqual(s.toString(), 'Q');
+  });
+
+  // A merged adjacent match can itself end inside the following pair; folding continues
+  // until the combined edit closes on a character boundary. The second callback must still
+  // observe the first match's applied edit, exactly as upstream interleaves them.
+  it('extends a merged edit across the next surrogate boundary', () => {
+    const s = new MagicString('🤷🤷');
+    const seen: string[] = [];
+    s.replace(/(?:\uD83E|\uDD37\uD83E)/g, (m) => {
+      seen.push(s.toString());
+      return m === '\uD83E' ? 'X' + m : '\uDD37Y\uD83E';
+    });
+    assert.strictEqual(s.toString(), 'X🤷Y🤷');
+    assert.deepStrictEqual(seen, ['🤷🤷', 'X🤷🤷']);
+  });
+
+  // A zero-width match is an insertion point, not a character replacement; coalescing it into
+  // a whole-character overwrite would mask upstream's zero-length-range rejection.
+  it('rejects a zero-width match at a surrogate interior as a zero-length range', () => {
+    const s = new MagicString('🤷');
+    assert.throws(() => s.replace(/(?=\uDD37)/, () => '\uDD37X\uD83E'), /zero-length range/);
+    assert.strictEqual(s.toString(), '🤷');
+  });
+
+  // The same holds when the zero-width match sits right after a folded high-half edit: it is
+  // never folded into the neighbouring character edit, so it still reaches the zero-length
+  // rejection — after the preceding match's edit was applied, exactly like upstream with a
+  // terminating exec. (Upstream's own match loop never terminates on this regex; ours
+  // advances lastIndex past zero-width matches per the spec.)
+  it('does not fold an adjacent zero-width match into a surrogate edit', () => {
+    const s = new MagicString('🤷');
+    const calls: string[] = [];
+    assert.throws(
+      () =>
+        s.replace(/\uD83E|(?=\uDD37)/g, (m) => {
+          calls.push(m);
+          return m === '\uD83E' ? 'X' + m : 'Z';
+        }),
+      /zero-length range/,
+    );
+    assert.deepStrictEqual(calls, ['\uD83E', '']);
+    assert.strictEqual(s.toString(), 'X🤷');
+  });
+
+  // Matching runs against the unshifted original, but edits land at `index + offset`, so
+  // surrogate-boundary decisions must be made at the shifted position. Here the match is
+  // the *first* emoji's high half, while the edit lands on '😀' — the retained low half is
+  // the second emoji's, exactly as upstream.
+  it('applies offset when widening a surrogate edit', () => {
+    const s = new MagicString('🤷a😀', { offset: 3 });
+    s.replace('\uD83E', (m) => 'X' + m);
+    // '🤷a' + 'X' + '\uD83E' (from the replacement) + '\uDE00' (retained from '😀') = '🤷aX🨀'
+    assert.strictEqual(s.toString(), '🤷aX🨀');
+  });
+
+  // Upstream rejects a non-string replacer result inside overwrite() (TypeError) before
+  // touching the source. The folding paths concatenate before overwrite, which would
+  // silently coerce e.g. a String object, so the result is validated when it is produced.
+  it('rejects a non-string replacer result on the surrogate path without mutating', () => {
+    const s = new MagicString('🤷');
+    assert.throws(
+      () => s.replace('\uD83E', (m) => new String('X' + m) as unknown as string),
+      (err: unknown) =>
+        err instanceof TypeError && /replacement content must be a string/.test(String(err)),
+    );
+    assert.strictEqual(s.toString(), '🤷');
+  });
+
+  // Upstream reads the live `offset` inside each edit call — after that match's callback,
+  // which may have reassigned it. The surrogate widening must decide boundaries with the
+  // same offset the edit lands at: here the match is the first emoji's high half, but with
+  // `offset` set to 3 mid-callback the edit lands on '😀', retaining *its* low half.
+  it('honours an offset reassigned inside the replacer callback', () => {
+    const s = new MagicString('🤷a😀');
+    s.replace('\uD83E', (m) => {
+      s.offset = 3;
+      return 'X' + m;
+    });
+    assert.strictEqual(s.toString(), '🤷aX🨀');
+  });
+
+  // Adjacent half-matches only combine into one character edit while the offset is stable.
+  // When the low half's callback reassigns `offset`, upstream applies that match at the
+  // *new* offset — a different emoji entirely — so the combined edit must close with the
+  // high half's settled text and the low-half match must be applied independently.
+  it('applies each match at the offset its own callback set', () => {
+    const s = new MagicString('🤷a😀');
+    s.replace(/[🤷]/g, (m) => {
+      if (m === '\uD83E') return 'X' + m;
+      s.offset = 3;
+      return '\uDD37Y';
+    });
+    // high half edited at offset 0 (first emoji), low-half match applied at offset 3,
+    // landing on '😀' and re-forming U+1F537 with its high surrogate
+    assert.strictEqual(s.toString(), 'X🤷a🔷Y');
+  });
+});
+
+describe('function replacer applies each edit before the next callback', () => {
+  // Upstream magic-string overwrites immediately after each callback, so a stateful replacer
+  // observes the edits made by earlier matches. We match that ordering instead of running
+  // every callback up front: on 'aa', the second `() => s.toString()` sees the first 'a'
+  // already replaced by 'aa' (giving 'aaa'), so the final result is 'aaaaa', not 'aaaa'.
+  it('regex: a later callback sees an earlier overwrite', () => {
+    const s = new MagicString('aa');
+    s.replace(/a/g, () => s.toString());
+    assert.strictEqual(s.toString(), 'aaaaa');
+  });
+
+  it('replaceAll string: a later callback sees an earlier overwrite', () => {
+    const s = new MagicString('aa');
+    s.replaceAll('a', () => s.toString());
+    assert.strictEqual(s.toString(), 'aaaaa');
   });
 });
 

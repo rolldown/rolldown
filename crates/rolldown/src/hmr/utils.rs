@@ -5,6 +5,7 @@ use rolldown_common::NormalModule;
 use rolldown_ecmascript::CJS_MODULE_REF;
 #[cfg(feature = "experimental")]
 use rolldown_ecmascript::CJS_ROLLDOWN_MODULE_REF;
+use rolldown_ecmascript_utils::ExpressionFactoryExt as _;
 
 #[cfg(feature = "experimental")]
 use crate::hmr::hmr_ast_finalizer::HmrAstFinalizer;
@@ -191,4 +192,107 @@ impl<'any, 'ast> HmrAstBuilder<'any, 'ast> for ScopeHoistingFinalizer<'any, 'ast
   fn cjs_module_name() -> &'static str {
     CJS_MODULE_REF
   }
+}
+
+const LAZY_PROXY_QUERY: &str = "?rolldown-lazy=1";
+
+/// `__rolldown_runtime__.requestLazy("<stable_real_id>", () => import(`/@vite/lazy?id=…&clientId=…`))`
+///
+/// The one shape both codegen paths emit for a lazy boundary, so a boundary never becomes a
+/// chunk the browser fetches.
+pub fn create_request_lazy_call<'ast, B>(
+  proxy_module_id: &str,
+  stable_proxy_id: &str,
+  builder: &B,
+) -> ast::Expression<'ast>
+where
+  B: oxc::ast::builder::GetAstBuilder<'ast> + GetAllocator<'ast>,
+{
+  let encode_call = ast::Expression::new_call_expression(
+    SPAN,
+    ast::Expression::new_identifier(SPAN, "encodeURIComponent", builder),
+    None,
+    [ast::Argument::new_string_literal(
+      SPAN,
+      ast::Str::from_str_in(proxy_module_id, builder),
+      None,
+      builder,
+    )],
+    false,
+    builder,
+  );
+
+  let url_expr = {
+    let quasis = oxc::allocator::Vec::from_iter_in(
+      [
+        ast::TemplateElement::new(
+          SPAN,
+          ast::TemplateElementValue { raw: ast::Str::from("/@vite/lazy?id="), cooked: None },
+          false,
+          builder,
+        ),
+        ast::TemplateElement::new(
+          SPAN,
+          ast::TemplateElementValue { raw: ast::Str::from("&clientId="), cooked: None },
+          false,
+          builder,
+        ),
+        ast::TemplateElement::new(
+          SPAN,
+          ast::TemplateElementValue { raw: ast::Str::from(""), cooked: None },
+          true,
+          builder,
+        ),
+      ],
+      builder,
+    );
+    let expressions = oxc::allocator::Vec::from_iter_in(
+      [
+        encode_call,
+        ast::Expression::new_member_access_expr("__rolldown_runtime__", "clientId", builder),
+      ],
+      builder,
+    );
+    ast::Expression::new_template_literal(SPAN, quasis, expressions, builder)
+  };
+
+  // () => import(`/@vite/lazy?...`)
+  let fetch_chunk = ast::Expression::new_arrow_function_expression(
+    SPAN,
+    /* async */ false,
+    None,
+    ast::FormalParameters::boxed(
+      SPAN,
+      ast::FormalParameterKind::ArrowFormalParameters,
+      [],
+      None,
+      builder,
+    ),
+    None,
+    ast::ArrowFunctionBody::from(ast::Expression::new_import_expression(
+      SPAN, url_expr, None, None, builder,
+    )),
+    builder,
+  );
+
+  ast::Expression::new_call_expression(
+    SPAN,
+    ast::Expression::new_identifier(SPAN, "__rolldown_runtime__.requestLazy", builder),
+    None,
+    [
+      // Stripping the marker recovers the id the delivered chunk registers a factory under.
+      ast::Argument::new_string_literal(
+        SPAN,
+        ast::Str::from_str_in(
+          stable_proxy_id.strip_suffix(LAZY_PROXY_QUERY).unwrap_or(stable_proxy_id),
+          builder,
+        ),
+        None,
+        builder,
+      ),
+      ast::Argument::from(fetch_chunk),
+    ],
+    false,
+    builder,
+  )
 }

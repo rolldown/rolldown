@@ -181,9 +181,9 @@ When `load` is called for a proxy module:
    (CJS modules use `createCjsInitializer` with `__rolldown_exports__` / `__rolldown_module__` params.)
 
 4. Dynamic imports inside the rendered modules are rewritten:
-   - importee id contains `?rolldown-lazy=1` (a nested lazy proxy) → ``import(`/@vite/lazy?id=${encodeURIComponent(absProxyId)}&clientId=${__rolldown_runtime__.clientId}`).then(() => __rolldown_runtime__.loadExports("<stableProxyId>"))`` — partial bundles have no separately bundled proxy chunk, so the proxy's top-level `'rolldown:exports'` export would be lost inside the init wrapper; reading it back via `loadExports` preserves the surface `__unwrap_lazy_compilation_entry` expects (pinned by the nested-dynamic-import spec)
+   - importee id contains `?rolldown-lazy=1` (a nested lazy proxy) → ``__rolldown_runtime__.requestLazy("<stableRealId>", () => import(`/@vite/lazy?id=${encodeURIComponent(absProxyId)}&clientId=${__rolldown_runtime__.clientId}`))`` — the same shape the full build emits (pinned by the nested-dynamic-import spec)
    - ordinary `import()` → `Promise.resolve().then(() => __rolldown_runtime__.loadExports("<stableId>"))`, prefixed with the importee's `init_x()` call when it is in the same patch
-5. The chunk ends with the proxy entry's `init_xxx()` call (this re-registers the proxy id with the real initializer — what the stub's step 3 awaits)
+5. The chunk carries registrations only — no execute-entry tail. `requestLazy` runs the module once the chunk has evaluated, so a throw from the module body reaches the importer's `await import(...)` instead of becoming a floating rejection inside the proxy's async wrapper
 6. The result is post-processed under a synthetic name `lazy_compile_{n}.js` (n from the dev engine's `next_invalidate_patch_id` counter, shared with `hmr.invalidate` patches — **not** the coordinator's `hmr_patch_{n}.js` counter) and returned as a plain JS string
 
 ### Emitted Assets (#9815)
@@ -468,10 +468,6 @@ The flow is:
 
 ## Implementation Notes
 
-### Naming Convention for Injected Helpers
-
-The lazy compilation plugin injects helper functions with double-underscore prefix (e.g., `__unwrap_lazy_compilation_entry`). This is a standard convention for internal/reserved identifiers in JavaScript bundlers and should not conflict with user code.
-
 ### Directive Prologue Handling
 
 The injected helper function is inserted **after** any directive prologues (e.g., `"use strict"`) to preserve their semantics. The plugin counts leading string literal expression statements and inserts the helper after them. The helper is only injected when at least one dynamic import in the module was actually wrapped.
@@ -498,11 +494,12 @@ For future debugging, these files handle lazy compilation:
 
 ### Core Plugin
 
-1. **`crates/rolldown_plugin_lazy_compilation/src/lazy_compilation_plugin.rs`** - Plugin with `resolve_id`, `load`, and `transform_ast` hooks; `LazyCompilationContext` with fetched-state tracking; `render_proxy_template`
-2. **`crates/rolldown_plugin_lazy_compilation/src/runtime_injector.rs`** - AST visitor for wrapping dynamic imports and generating `__unwrap_lazy_compilation_entry`
-3. **`crates/rolldown_plugin_lazy_compilation/src/proxy-module-template.js`** - Stub template (not fetched)
-4. **`crates/rolldown_plugin_lazy_compilation/src/proxy-module-template-fetched.js`** - Fetched template
-5. **`crates/rolldown/src/utils/apply_inner_plugins.rs`** - registers the plugin when `experimental.dev_mode.lazy == true`
+1. **`crates/rolldown_plugin_lazy_compilation/src/lazy_compilation_plugin.rs`** - Plugin with `resolve_id` and `load` hooks; `LazyCompilationContext` with fetched-state tracking; `render_proxy_template`
+2. **`crates/rolldown_plugin_lazy_compilation/src/proxy-module-template.js`** - Stub template (not fetched)
+3. **`crates/rolldown_plugin_lazy_compilation/src/proxy-module-template-fetched.js`** - Fetched template
+4. **`crates/rolldown/src/hmr/utils.rs`** - `create_request_lazy_call`, the one emitted shape for a lazy boundary
+5. **`crates/rolldown_plugin_hmr/src/runtime/runtime-extra-dev-common.js`** - `requestLazy`, the runtime entry point
+6. **`crates/rolldown/src/utils/apply_inner_plugins.rs`** - registers the plugin when `experimental.dev_mode.lazy == true`
 
 ### Dev Engine
 

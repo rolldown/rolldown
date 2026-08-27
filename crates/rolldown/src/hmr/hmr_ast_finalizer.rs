@@ -3,8 +3,8 @@ use oxc::ast::ast::Str;
 use oxc::{
   allocator::IntoIn,
   ast::ast::{
-    self, ArrowFunctionBody, BindingIdentifier, ExportDefaultDeclarationKind, Expression,
-    IdentifierName, ObjectPropertyKind, Statement,
+    self, BindingIdentifier, ExportDefaultDeclarationKind, Expression, IdentifierName,
+    ObjectPropertyKind, Statement,
   },
   semantic::{IsGlobalReference, Scoping, SymbolId},
   span::{SPAN, Span},
@@ -25,7 +25,7 @@ use rolldown_utils::{
 };
 use rustc_hash::FxHashMap;
 
-use crate::hmr::utils::{HmrAstBuilder, MODULE_EXPORTS_NAME_FOR_ESM};
+use crate::hmr::utils::{HmrAstBuilder, MODULE_EXPORTS_NAME_FOR_ESM, create_request_lazy_call};
 
 pub struct HmrAstFinalizer<'me, 'ast> {
   // Outside input
@@ -585,124 +585,9 @@ impl<'ast> HmrAstFinalizer<'_, 'ast> {
       return;
     };
 
-    // Handle lazy proxy modules - rewrite to mirror the proxy module's runtime contract.
-    //
-    // In a regular full build, scope finalizer rewrites `import('./foo')` to point at the
-    // proxy module's chunk URL. That chunk's content is `proxy-module-template.js`, which
-    // exposes `'rolldown:exports'` at the top level so consumers can do
-    // `.then(__unwrap_lazy_compilation_entry).then(m => m.X)`.
-    //
-    // In HMR partial bundles there's no separately bundled proxy chunk - the proxy module's
-    // body gets wrapped inside a `createEsmInitializer` and its top-level `export` is lost.
-    // To keep the same surface as the full build, we rewrite the dynamic import to:
-    //
-    //   import(`/@vite/lazy?id=...&clientId=...`)
-    //     .then(() => __rolldown_runtime__.loadExports("<stable_proxy_id>"))
-    //
-    // After the partial bundle evaluates, the proxy module is registered under
-    // `<stable_proxy_id>` with a `'rolldown:exports'` getter (set up by `__exportAll` inside
-    // the init wrapper). Reading it back via `loadExports` yields the namespace object that
-    // the existing `__unwrap_lazy_compilation_entry` chain expects.
-    //
     // TODO: hyf0 should switch to a more robust way to identify lazy proxy modules
     if importee.id.contains("?rolldown-lazy=1") {
-      // Build: encodeURIComponent(importee.id)
-      let encode_call = ast::Expression::new_call_expression(
-        SPAN,
-        Expression::new_identifier(SPAN, "encodeURIComponent", self),
-        None,
-        [ast::Argument::new_string_literal(SPAN, Str::from_str_in(&importee.id, self), None, self)],
-        false,
-        self,
-      );
-
-      // Build template literal: `/@vite/lazy?id=${encodeURIComponent(importee.id)}&clientId=${__rolldown_runtime__.clientId}`
-      let url_expr = {
-        let quasis = oxc::allocator::Vec::from_iter_in(
-          [
-            ast::TemplateElement::new(
-              SPAN,
-              ast::TemplateElementValue { raw: Str::from("/@vite/lazy?id="), cooked: None },
-              false,
-              self,
-            ),
-            ast::TemplateElement::new(
-              SPAN,
-              ast::TemplateElementValue { raw: Str::from("&clientId="), cooked: None },
-              false,
-              self,
-            ),
-            ast::TemplateElement::new(
-              SPAN,
-              ast::TemplateElementValue { raw: Str::from(""), cooked: None },
-              true,
-              self,
-            ),
-          ],
-          self,
-        );
-        let expressions = oxc::allocator::Vec::from_iter_in(
-          [
-            encode_call,
-            Expression::new_member_access_expr("__rolldown_runtime__", "clientId", self),
-          ],
-          self,
-        );
-        ast::Expression::new_template_literal(SPAN, quasis, expressions, self)
-      };
-
-      // Build: import(`/@vite/lazy?id=...&clientId=...`)
-      let import_expr = ast::Expression::new_import_expression(SPAN, url_expr, None, None, self);
-
-      // Build: __rolldown_runtime__.loadExports("<stable_proxy_id>")
-      let load_exports_call = ast::Expression::new_call_expression(
-        SPAN,
-        Expression::new_identifier(SPAN, "__rolldown_runtime__.loadExports", self),
-        None,
-        [ast::Argument::new_string_literal(
-          SPAN,
-          Str::from_str_in(&importee.stable_id, self),
-          None,
-          self,
-        )],
-        false,
-        self,
-      );
-
-      // Build: () => __rolldown_runtime__.loadExports("<stable_proxy_id>")
-      let arrow_fn = ast::Expression::new_arrow_function_expression(
-        SPAN,
-        /* async */ false,
-        None,
-        ast::FormalParameters::boxed(
-          SPAN,
-          ast::FormalParameterKind::ArrowFormalParameters,
-          [],
-          None,
-          self,
-        ),
-        None,
-        ArrowFunctionBody::from(load_exports_call),
-        self,
-      );
-
-      // Build: import(...).then(() => __rolldown_runtime__.loadExports("..."))
-      let then_callee = Expression::new_static_member_expression(
-        SPAN,
-        import_expr,
-        ast::IdentifierName::new(SPAN, "then", self),
-        false,
-        self,
-      );
-
-      *it = ast::Expression::new_call_expression(
-        SPAN,
-        then_callee,
-        None,
-        [ast::Argument::from(arrow_fn)],
-        false,
-        self,
-      );
+      *it = create_request_lazy_call(&importee.id, &importee.stable_id, self);
       return;
     }
 

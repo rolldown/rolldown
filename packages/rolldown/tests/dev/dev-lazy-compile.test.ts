@@ -591,11 +591,133 @@ test(
     const stableId = (suffix: string) =>
       new RegExp(`registerFactory\\("([^"]*${suffix})"`).exec(chunk.code)![1];
 
-    const lazyExports = runtime.loadExports(stableId('cjs\\.js\\?rolldown-lazy=1'));
-    expect(await lazyExports['rolldown:exports']).toBe('loaded');
+    // A lazy chunk only registers factories — running the module it was compiled for is
+    // `requestLazy`'s job, once the chunk has evaluated. Drive it the same way here.
+    expect(runtime.initModule(stableId('cjs\\.js'))).toBe('loaded');
     expect((globalThis as Record<string, unknown>).sideEffectRan).toBe(true);
 
     // The module has no exports, so its exports are empty — never `undefined`.
     expect(runtime.loadExports(stableId('side-effect\\.js'))).toEqual({});
   },
 );
+
+// A lazy boundary must stay lazy even when code splitting is off. Without code splitting the
+// finalizer's inline path would rewrite `import()` into an eager `(init_foo(), foo_exports)`,
+// pulling the module into the bundle — the opposite of lazy compilation. The empty proxy body
+// also used to trip the `init_is_noop` assertion, because dev mode adds an HMR header to a
+// closure that pass had classified as empty.
+test(
+  'a lazy import stays lazy when code splitting is disabled',
+  { timeout: TEST_TIMEOUT },
+  async ({ onTestFinished }) => {
+    const uniqueId = crypto.randomUUID().slice(0, 8);
+    const dir = path.join(import.meta.dirname, 'temp', `dev-lazy-nosplit-${uniqueId}`);
+    fs.mkdirSync(dir, { recursive: true });
+    fs.writeFileSync(path.join(dir, 'main.js'), `import('./lazy.js').then((m) => m.value);\n`);
+    fs.writeFileSync(path.join(dir, 'lazy.js'), `export const value = 'lazy';\n`);
+
+    const engine = await dev(
+      { input: path.join(dir, 'main.js'), experimental: { devMode: { lazy: true } } },
+      { dir: path.join(dir, 'dist'), codeSplitting: false },
+      {},
+    );
+
+    onTestFinished(async () => {
+      await engine.close();
+      if (!process.env.CI) {
+        fs.rmSync(dir, { recursive: true, force: true });
+      }
+    });
+
+    await engine.run();
+
+    const code = fs.readFileSync(path.join(dir, 'dist', 'main.js'), 'utf8');
+    expect(code).toContain('requestLazy');
+    // The lazy module's body must not be in the entry.
+    expect(code).not.toContain(`'lazy'`);
+  },
+);
+
+// A module that threw while initializing is poisoned, the way the platform treats one:
+// `import()` of it rejects every later time. Retrying is not an option — an ESM factory
+// registers its module before running the body, so a module that threw stays in the cache and
+// re-running `initModule` would hand back its half-initialized exports as success. The browser
+// specs only ever click once per page load, so nothing else covers this.
+test(
+  'a lazy module that throws stays rejected on repeat imports',
+  { timeout: TEST_TIMEOUT },
+  async ({ onTestFinished }) => {
+    const uniqueId = crypto.randomUUID().slice(0, 8);
+    const dir = path.join(import.meta.dirname, 'temp', `dev-lazy-poison-${uniqueId}`);
+    fs.mkdirSync(dir, { recursive: true });
+    fs.writeFileSync(path.join(dir, 'main.js'), `import('./boom.js');\n`);
+    fs.writeFileSync(
+      path.join(dir, 'boom.js'),
+      `export const v = 1;\nthrow new Error('boom during lazy init');\n`,
+    );
+
+    const engine = await dev(
+      {
+        input: path.join(dir, 'main.js'),
+        experimental: { devMode: { lazy: true, implement: '', skipCommonRuntimeInjection: true } },
+      },
+      { dir: path.join(dir, 'dist'), format: 'esm' },
+      {},
+    );
+
+    onTestFinished(async () => {
+      await engine.close();
+      if (!process.env.CI) {
+        fs.rmSync(dir, { recursive: true, force: true });
+      }
+    });
+
+    await engine.run();
+    await engine.registerClient('poison-client');
+    const chunk = await engine.compileEntry(
+      `${path.join(dir, 'boom.js')}?rolldown-lazy=1`,
+      'poison-client',
+    );
+
+    const { DevRuntime } = await import(import.meta.resolve('rolldown/experimental/runtime'));
+    const runtime = new DevRuntime('poison-client');
+    runtime.hooks = { createModuleHotContext: () => ({}), onModuleCacheRemoval: () => {} };
+    vm.runInThisContext(`(__rolldown_runtime__) => {\n${chunk.code}\n}`)(runtime);
+
+    const realId = /registerFactory\("([^"]*boom\.js)"/.exec(chunk.code)![1];
+    const noopFetch = async () => {};
+    for (let attempt = 0; attempt < 3; attempt++) {
+      await expect(runtime.requestLazy(realId, noopFetch)).rejects.toThrow('boom during lazy init');
+    }
+  },
+);
+
+// The memo must not outlive the module it memoized. `registerModule` installs a fresh exports
+// object on every run, so a memo kept across an HMR update would hand a repeat `import()` the
+// pre-edit namespace forever — the module is no longer re-executed by any other path that
+// could refresh it.
+test('a repeat lazy import after an HMR update sees the new exports', async () => {
+  const { DevRuntime } = await import(import.meta.resolve('rolldown/experimental/runtime'));
+  const runtime = new DevRuntime('stale-client');
+  runtime.hooks = { createModuleHotContext: () => ({}), onModuleCacheRemoval: () => {} };
+
+  const id = 'lazy.js';
+  const registerVersion = (v: string) =>
+    runtime.registerFactory(id, 'esm', (moduleId: string) => {
+      runtime.registerModule(moduleId, { exports: runtime.__exportAll({ v: () => v }) });
+    });
+
+  const first = await runtime.requestLazy(id, async () => registerVersion('v1'));
+  expect(first.v).toBe('v1');
+
+  // What `applyUpdate` does for a patched module: new factory, evict, re-run.
+  registerVersion('v2');
+  runtime.removeModuleCache(id);
+  runtime.initModule(id);
+
+  // A repeat import must see v2, and must not need the server to get it.
+  const second = await runtime.requestLazy(id, async () => {
+    throw new Error('should not re-fetch: the factory is already registered');
+  });
+  expect(second.v).toBe('v2');
+});

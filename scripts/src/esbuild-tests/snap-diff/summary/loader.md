@@ -14,6 +14,7 @@
 ## [jsx_syntax_in_js_with_jsx_loader](../../../../../crates/rolldown/tests/esbuild/loader/jsx_syntax_in_js_with_jsx_loader)
 ## [loader_base64_common_js_and_es6](../../../../../crates/rolldown/tests/esbuild/loader/loader_base64_common_js_and_es6)
 ## [loader_data_url_application_json](../../../../../crates/rolldown/tests/esbuild/loader/loader_data_url_application_json)
+## [loader_data_url_base64_invalid_utf8](../../../../../crates/rolldown/tests/esbuild/loader/loader_data_url_base64_invalid_utf8)
 ## [loader_data_url_base64_vs_percent_encoding](../../../../../crates/rolldown/tests/esbuild/loader/loader_data_url_base64_vs_percent_encoding)
 ## [loader_data_url_common_js_and_es6](../../../../../crates/rolldown/tests/esbuild/loader/loader_data_url_common_js_and_es6)
 ## [loader_data_url_escape_percents](../../../../../crates/rolldown/tests/esbuild/loader/loader_data_url_escape_percents)

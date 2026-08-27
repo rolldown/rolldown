@@ -100,9 +100,10 @@ export interface PluginTimingsRecorder {
    */
   costs: Map<unknown, Map<string, HookCost>>;
   /**
-   * Wall time during which *any* measured callback was running — the union of every span,
-   * so overlapping calls are counted once. Unlike a sum of spans this cannot outrun the
-   * build, which is what makes it usable as a share.
+   * Wall time in which at least one measured callback ran: the union of every span, so
+   * overlapping calls count once. The value cannot be more than the window the callbacks
+   * ran in. That is what makes it usable as a share. It can be more than the core build
+   * clock, because `closeBundle` runs after that clock stops.
    */
   busyMs: number;
   /** Across all hooks, for maintaining {@link PluginTimingsRecorder.busyMs}. */
@@ -318,7 +319,11 @@ export interface PluginTimingRow {
  * as `BindingPluginTimingsMeasurement`.
  */
 export interface PluginTimingsMeasurement {
-  /** Union of every span, so it counts overlap once and cannot outrun the build. */
+  /**
+   * Union of every span, so overlap counts once. The value cannot be more than the window
+   * the callbacks ran in. It can be more than the core build clock, because `closeBundle`
+   * runs after that clock stops.
+   */
   busyMs: number;
   /**
    * First-call order. No significance — ordering is the renderer's call, and this side does

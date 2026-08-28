@@ -1,6 +1,98 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
 ---
+# warnings
+
+## MODULE_LEVEL_DIRECTIVE
+
+```text
+[MODULE_LEVEL_DIRECTIVE] The semantics of the module level directive "use 1" in "entry.js" may not be preserved when bundling.
+   ╭─[ entry.js:2:1 ]
+   │
+ 2 │ 'use 1'
+   │ ───┬───  
+   │    ╰───── module level directive may not be preserved
+   │ 
+   │ Help: For more information, see https://rolldown.rs/in-depth/directives#other-directives
+───╯
+
+```
+
+## MODULE_LEVEL_DIRECTIVE
+
+```text
+[MODULE_LEVEL_DIRECTIVE] The semantics of the module level directive "use 2" in "entry.js" may not be preserved when bundling.
+   ╭─[ entry.js:4:1 ]
+   │
+ 4 │ 'use 2'
+   │ ───┬───  
+   │    ╰───── module level directive may not be preserved
+   │ 
+   │ Help: For more information, see https://rolldown.rs/in-depth/directives#other-directives
+───╯
+
+```
+
+## MODULE_LEVEL_DIRECTIVE
+
+```text
+[MODULE_LEVEL_DIRECTIVE] The semantics of the module level directive "use 3" in "entry.js" may not be preserved when bundling.
+   ╭─[ entry.js:6:1 ]
+   │
+ 6 │ 'use 3'
+   │ ───┬───  
+   │    ╰───── module level directive may not be preserved
+   │ 
+   │ Help: For more information, see https://rolldown.rs/in-depth/directives#other-directives
+───╯
+
+```
+
+## MODULE_LEVEL_DIRECTIVE
+
+```text
+[MODULE_LEVEL_DIRECTIVE] The semantics of the module level directive "use A" in "nested.js" may not be preserved when bundling.
+   ╭─[ nested.js:2:1 ]
+   │
+ 2 │ 'use A'
+   │ ───┬───  
+   │    ╰───── module level directive may not be preserved
+   │ 
+   │ Help: For more information, see https://rolldown.rs/in-depth/directives#other-directives
+───╯
+
+```
+
+## MODULE_LEVEL_DIRECTIVE
+
+```text
+[MODULE_LEVEL_DIRECTIVE] The semantics of the module level directive "use B" in "nested.js" may not be preserved when bundling.
+   ╭─[ nested.js:4:1 ]
+   │
+ 4 │ 'use B'
+   │ ───┬───  
+   │    ╰───── module level directive may not be preserved
+   │ 
+   │ Help: For more information, see https://rolldown.rs/in-depth/directives#other-directives
+───╯
+
+```
+
+## MODULE_LEVEL_DIRECTIVE
+
+```text
+[MODULE_LEVEL_DIRECTIVE] The semantics of the module level directive "use C" in "nested.js" may not be preserved when bundling.
+   ╭─[ nested.js:6:1 ]
+   │
+ 6 │ 'use C'
+   │ ───┬───  
+   │    ╰───── module level directive may not be preserved
+   │ 
+   │ Help: For more information, see https://rolldown.rs/in-depth/directives#other-directives
+───╯
+
+```
+
 # Assets
 
 ## entry.js

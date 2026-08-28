@@ -1,0 +1,89 @@
+packages/rolldown/src/options/generated/checks-options.ts
+  s_7a0a56bb095ca6::t_e76e28e6bc3a3d 80-85
+crates/rolldown/tests/rolldown/warnings/module_level_directive/artifacts.snap
+  s_7a0a56bb095ca6::t_18003807537eea 1-50
+crates/rolldown_error/src/types/event_kind.rs
+  s_7a0a56bb095ca6::t_b7795bc751aae4 56-58,167
+crates/rolldown_error/src/build_diagnostic/events/module_level_directive.rs
+  s_d1716a8e25218f::t_3421457880e15a 1-47
+packages/rolldown/src/utils/validator.ts
+  s_7a0a56bb095ca6::t_9734f7ae8750c6 361-364
+packages/rolldown/src/binding.d.cts
+  s_7a0a56bb095ca6::t_cea239d0f6431d 2007
+crates/rolldown/tests/rolldown/warnings/module_level_directive_disabled/_config.json
+  s_7a0a56bb095ca6::t_010e9f79cb23ff 1-10
+crates/rolldown_binding/src/generated/binding_checks_options.rs
+  s_7a0a56bb095ca6::t_cbbc5ec6bab353 16,45
+crates/rolldown_error/src/generated/event_kind_switcher.rs
+  s_7a0a56bb095ca6::t_06f426a8da6218 26
+crates/rolldown/src/ast_scanner/impl_visit.rs
+  s_7a0a56bb095ca6::t_4e45277ff53887 23,135-149
+packages/rollup-tests/src/status.md
+  s_7a0a56bb095ca6::t_17f0c6c7ecc7fb 6,9
+crates/rolldown_error/src/build_diagnostic/constructors.rs
+  s_7a0a56bb095ca6::t_8140c02de38eca 60,68-76
+crates/rolldown/tests/rolldown/warnings/module_level_directive/main.js
+  s_7a0a56bb095ca6::t_6efc07075de021 1-9
+crates/rolldown/tests/rolldown/warnings/module_level_directive_disabled/main.js
+  s_7a0a56bb095ca6::t_29c5c9ad4b8e8e 1-3
+packages/rolldown/src/rolldown-binding.wasi.d.cts
+  s_7a0a56bb095ca6::t_75237e8a4cc7c6 2007
+crates/rolldown/tests/rolldown/warnings/module_level_directive/_config.json
+  s_7a0a56bb095ca6::t_27ce6efde9b51f 1-4
+packages/rollup-tests/src/status.json
+  s_7a0a56bb095ca6::t_15d58925940d7e 5,8-9
+crates/rolldown_error/src/build_diagnostic/events/mod.rs
+  s_7a0a56bb095ca6::t_56ea6e7520c604 45
+crates/rolldown_common/src/generated/checks_options.rs
+  s_7a0a56bb095ca6::t_3f9c39f2c4e1f5 24,74-77
+crates/rolldown_testing/_config.schema.json
+  s_7a0a56bb095ca6::t_2efcd667dfa1ce 1447-1452
+crates/rolldown/tests/esbuild/dce/preserve_directives_minify_bundle/artifacts.snap
+  s_48a90a598e741f::t_f62cd7b9a40041 4-95
+crates/rolldown/tests/esbuild/dce/preserve_directives_minify_iife/artifacts.snap
+  s_48a90a598e741f::t_70849b9d8b77a6 4-50
+crates/rolldown/tests/esbuild/dce/preserve_directives_minify_pass_through/artifacts.snap
+  s_48a90a598e741f::t_59ce27c37e95af 4-50
+crates/rolldown/tests/esbuild/default/use_strict_directive_minify_no_bundle/artifacts.snap
+  s_48a90a598e741f::t_ca21a78548e671 4-20
+crates/rolldown/tests/esbuild/lower/lower_using_hoisting/artifacts.snap
+  s_48a90a598e741f::t_11a24e02ee2af9 4-20
+crates/rolldown/tests/rolldown/misc/chunk_level_directives/artifacts.snap
+  s_48a90a598e741f::t_c66dfbd13c9993 4-65
+crates/rolldown/tests/rolldown/misc/preserve_modules/directives/artifacts.snap
+  s_48a90a598e741f::t_b4e684db1a7aab 4-35
+packages/rolldown/tests/cli/__snapshots__/cli-e2e.test.ts.snap
+  s_48a90a598e741f::t_5ee58594c15866 43,194,345,496
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "37952ae4880cdbf8f6a4f2f43e177a087fd52241",
+  "prompts": {},
+  "sessions": {
+    "s_48a90a598e741f": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a047c0-3a5f-7531-b43c-8988be09ae6e",
+        "model": "gpt-5.6-sol"
+      },
+      "human_author": "sapphi-red <green@sapphi.red>"
+    },
+    "s_7a0a56bb095ca6": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a03225-e5f3-7e82-8264-790191237415",
+        "model": "gpt-5.6-sol"
+      },
+      "human_author": "sapphi-red <green@sapphi.red>"
+    },
+    "s_d1716a8e25218f": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a04622-acb2-7350-9d9a-3b7d1de8e96f",
+        "model": "gpt-5.6-sol"
+      },
+      "human_author": "sapphi-red <green@sapphi.red>"
+    }
+  }
+}

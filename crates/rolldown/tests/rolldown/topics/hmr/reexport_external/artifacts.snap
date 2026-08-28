@@ -108,10 +108,10 @@ __rolldown_runtime__.registerFactory("hmr.js", "esm", (function(__rolldown_modul
 		var __rolldown_exports__ = __rolldown_runtime__.__exportAll({});
 		__rolldown_runtime__.registerModule(__rolldown_module_id__, { exports: __rolldown_exports__ });
 		__rolldown_runtime__.initModule("reexport.js");
-		__rolldown_runtime__.initModule("shadow.js");
-		const hot_hmr = __rolldown_runtime__.createModuleHotContext(__rolldown_module_id__);
 		var import_reexport_11 = __rolldown_runtime__.loadExports("reexport.js");
+		__rolldown_runtime__.initModule("shadow.js");
 		var import_shadow_12 = __rolldown_runtime__.loadExports("shadow.js");
+		const hot_hmr = __rolldown_runtime__.createModuleHotContext(__rolldown_module_id__);
 		import_node_assert_10.default.strictEqual(import_reexport_11.value, "from-dep");
 		import_node_assert_10.default.strictEqual(typeof import_reexport_11.assertOk, "function", "export { x } from external");
 		import_node_assert_10.default.strictEqual(import_reexport_11.assertDefault, import_node_assert_10.default, "export { default as y } from external");
@@ -136,10 +136,9 @@ __rolldown_runtime__.registerFactory("reexport.js", "esm", (function(__rolldown_
 		});
 		__rolldown_runtime__.registerModule(__rolldown_module_id__, { exports: __rolldown_exports__ });
 		__rolldown_runtime__.initModule("dep.js");
-		const hot_reexport = __rolldown_runtime__.createModuleHotContext(__rolldown_module_id__);
-		var import_dep_20 = __rolldown_runtime__.loadExports("dep.js");
-		__rolldown_runtime__.__reExport(__rolldown_exports__, import_dep_20);
+		__rolldown_runtime__.__reExport(__rolldown_exports__, __rolldown_runtime__.loadExports("dep.js"));
 		__rolldown_runtime__.__reExport(__rolldown_exports__, import_node_util_24);
+		const hot_reexport = __rolldown_runtime__.createModuleHotContext(__rolldown_module_id__);
 	} finally {}
 }));
 
@@ -151,10 +150,9 @@ __rolldown_runtime__.registerFactory("shadow.js", "esm", (function(__rolldown_mo
 		var __rolldown_exports__ = __rolldown_runtime__.__exportAll({ shadowWorks: () => shadowWorks });
 		__rolldown_runtime__.registerModule(__rolldown_module_id__, { exports: __rolldown_exports__ });
 		__rolldown_runtime__.initModule("dep.js");
-		const hot_shadow = __rolldown_runtime__.createModuleHotContext(__rolldown_module_id__);
-		var import_dep_31 = __rolldown_runtime__.loadExports("dep.js");
-		__rolldown_runtime__.__reExport(__rolldown_exports__, import_dep_31);
+		__rolldown_runtime__.__reExport(__rolldown_exports__, __rolldown_runtime__.loadExports("dep.js"));
 		__rolldown_runtime__.__reExport(__rolldown_exports__, import_node_assert_30);
+		const hot_shadow = __rolldown_runtime__.createModuleHotContext(__rolldown_module_id__);
 		const shadowWorks = typeof import_node_assert_30.deepStrictEqual === "function";
 	} finally {}
 }));

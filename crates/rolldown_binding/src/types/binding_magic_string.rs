@@ -3,6 +3,7 @@ use std::borrow::Cow;
 use napi::bindgen_prelude::{Either, This};
 use napi::{Env, JsString};
 use napi_derive::napi;
+use oxc_napi::JsRegExp;
 use rolldown_sourcemap::{JSONSourceMap, SourceMap};
 use rolldown_utils::base64::to_standard_base64;
 use rolldown_utils::js_regex::{HybridMatch, HybridRegex};
@@ -10,7 +11,6 @@ use serde::Serialize;
 use string_wizard::{MagicString, MagicStringOptions, SourceMapOptions, UpdateOptions};
 
 use super::external_memory_status::ExternalMemoryStatus;
-use super::js_regex::JsRegExp;
 
 /// Class storage with no borrow from the N-API call frame: the alias keeps the
 /// lifetime out of the `#[napi]` field syntax while fixing it to `'static`.
@@ -631,7 +631,7 @@ impl BindingMagicString {
         let start = if global || !is_sticky {
           0
         } else {
-          match self.utf16_to_byte_mapper.utf16_to_byte(js_regex.last_index as u32) {
+          match self.utf16_to_byte_mapper.utf16_to_byte(js_regex.last_index) {
             Some(byte_offset) => byte_offset as usize,
             None => return Ok(None),
           }

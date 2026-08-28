@@ -365,7 +365,7 @@ impl BindingDevEngine {
           Box::pin(async move {
             let _callback = lifecycle.begin_callback();
             let binding_result: BindingResult<BindingOutputs> = match result {
-              Ok(bundle_output) => Either::B(BindingOutputs::from(bundle_output.assets)),
+              Ok(bundle_output) => Either::B(BindingOutputs::from(bundle_output)),
               Err(errors) => {
                 let binding_errors: Vec<_> = errors
                   .iter()
@@ -392,7 +392,7 @@ impl BindingDevEngine {
         let lifecycle = Arc::clone(&lifecycle);
         Box::pin(async move {
           let _callback = lifecycle.begin_callback();
-          let binding_outputs = BindingOutputs::from(output.assets);
+          let binding_outputs = BindingOutputs::from(output);
           js_callback
             .await_call(FnArgs { data: (binding_outputs,) })
             .await

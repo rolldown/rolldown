@@ -64,7 +64,7 @@ impl BindingBundler {
     let fut = async move {
       let cwd = bundle.options().cwd.clone();
       let options = Arc::clone(bundle.options());
-      let bundle_output = match bundle.generate().await {
+      let mut bundle_output = match bundle.generate().await {
         Ok(output) => output,
         Err(errs) => {
           let diagnostics = Arc::new(errs.into_vec());
@@ -78,12 +78,13 @@ impl BindingBundler {
       };
       let _operation = operation;
 
-      if let Err(err) = handle_warnings(bundle_output.warnings, &options).await {
+      if let Err(err) = handle_warnings(std::mem::take(&mut bundle_output.warnings), &options).await
+      {
         let error = to_binding_error(&err.into(), cwd.clone());
         return Ok(napi::Either::A(BindingErrors::new(vec![error])));
       }
 
-      Ok(napi::Either::B(bundle_output.assets.into()))
+      Ok(napi::Either::B(bundle_output.into()))
     };
     let promise = spawn_boxed_future(env, fut)?;
     self.install_bundle_handle(bundle_handle);
@@ -107,7 +108,7 @@ impl BindingBundler {
     let fut = async move {
       let cwd = bundle.options().cwd.clone();
       let options = Arc::clone(bundle.options());
-      let bundle_output = match bundle.write().await {
+      let mut bundle_output = match bundle.write().await {
         Ok(output) => output,
         Err(errs) => {
           let diagnostics = Arc::new(errs.into_vec());
@@ -121,12 +122,13 @@ impl BindingBundler {
       };
       let _operation = operation;
 
-      if let Err(err) = handle_warnings(bundle_output.warnings, &options).await {
+      if let Err(err) = handle_warnings(std::mem::take(&mut bundle_output.warnings), &options).await
+      {
         let error = to_binding_error(&err.into(), cwd.clone());
         return Ok(napi::Either::A(BindingErrors::new(vec![error])));
       }
 
-      Ok(napi::Either::B(bundle_output.assets.into()))
+      Ok(napi::Either::B(bundle_output.into()))
     };
     let promise = spawn_boxed_future(env, fut)?;
     self.install_bundle_handle(bundle_handle);

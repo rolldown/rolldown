@@ -141,18 +141,24 @@ export function transformToRollupOutput(output: BindingOutputs): RolldownOutput 
   const { chunks, assets } = output;
   const chunkItems = chunks.map((chunk) => transformToRollupOutputChunk(chunk));
   const assetItems = assets.map((asset) => transformToRollupOutputAsset(asset));
+  const outputItems: (OutputChunk | OutputAsset)[] = [...chunkItems, ...assetItems];
+  const transformed = {
+    output: outputItems,
+  } as RolldownOutput;
+  if (output.mangleCache !== undefined) {
+    transformed.mangleCache = output.mangleCache;
+  }
   if (shouldEagerlyFreeOutputs()) {
     for (const item of [...chunkItems, ...assetItems]) {
       // keepDataAlive: materialize every lazy field into the JavaScript wrapper
       // first, then release the native payload. Reads keep working; a later
-      // explicit freeExternalMemory() reports "already been freed".
+      // explicit freeExternalMemory() reports "already been freed". Runs last —
+      // after `output.mangleCache` is copied over — so the release stays the
+      // final native read before the function returns.
       item.__rolldown_external_memory_handle__(true);
     }
   }
-  const outputItems: (OutputChunk | OutputAsset)[] = [...chunkItems, ...assetItems];
-  return {
-    output: outputItems,
-  } as RolldownOutput;
+  return transformed;
 }
 
 function transformToMutableRollupOutput(

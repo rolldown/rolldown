@@ -81,8 +81,8 @@ __rolldown_runtime__.registerFactory("parent.js", "esm", (function(__rolldown_mo
 		var __rolldown_exports__ = __rolldown_runtime__.__exportAll({});
 		__rolldown_runtime__.registerModule(__rolldown_module_id__, { exports: __rolldown_exports__ });
 		__rolldown_runtime__.initModule("child.js");
-		const hot_parent = __rolldown_runtime__.createModuleHotContext(__rolldown_module_id__);
 		var import_child_01 = __rolldown_runtime__.loadExports("child.js");
+		const hot_parent = __rolldown_runtime__.createModuleHotContext(__rolldown_module_id__);
 		hot_parent.accept("child.js", () => {
 			globalThis.newAcceptWasCalled = true;
 		});

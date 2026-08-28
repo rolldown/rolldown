@@ -87,10 +87,10 @@ __rolldown_runtime__.registerFactory("hub.js", "esm", (function(__rolldown_modul
 		var __rolldown_exports__ = __rolldown_runtime__.__exportAll({ combined: () => combined });
 		__rolldown_runtime__.registerModule(__rolldown_module_id__, { exports: __rolldown_exports__ });
 		__rolldown_runtime__.initModule("a.js");
-		__rolldown_runtime__.initModule("b.js");
-		const hot_hub = __rolldown_runtime__.createModuleHotContext(__rolldown_module_id__);
 		var import_a_10 = __rolldown_runtime__.loadExports("a.js");
+		__rolldown_runtime__.initModule("b.js");
 		var import_b_11 = __rolldown_runtime__.loadExports("b.js");
+		const hot_hub = __rolldown_runtime__.createModuleHotContext(__rolldown_module_id__);
 		const combined = import_a_10.a + import_b_11.b;
 		globalThis.__mixed_runs_hub = (globalThis.__mixed_runs_hub ?? 0) + 1;
 		if (hot_hub) {
@@ -140,10 +140,10 @@ __rolldown_runtime__.registerFactory("hub.js", "esm", (function(__rolldown_modul
 		var __rolldown_exports__ = __rolldown_runtime__.__exportAll({ combined: () => combined });
 		__rolldown_runtime__.registerModule(__rolldown_module_id__, { exports: __rolldown_exports__ });
 		__rolldown_runtime__.initModule("a.js");
-		__rolldown_runtime__.initModule("b.js");
-		const hot_hub = __rolldown_runtime__.createModuleHotContext(__rolldown_module_id__);
 		var import_a_10 = __rolldown_runtime__.loadExports("a.js");
+		__rolldown_runtime__.initModule("b.js");
 		var import_b_11 = __rolldown_runtime__.loadExports("b.js");
+		const hot_hub = __rolldown_runtime__.createModuleHotContext(__rolldown_module_id__);
 		const combined = import_a_10.a + import_b_11.b;
 		globalThis.__mixed_runs_hub = (globalThis.__mixed_runs_hub ?? 0) + 1;
 		if (hot_hub) {

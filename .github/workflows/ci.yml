@@ -339,7 +339,7 @@ jobs:
     steps:
       - uses: taiki-e/checkout-action@7d1e50e93dc4fb3bba58f85018fadf77898aee8b # v1.4.2
 
-      - uses: voidzero-dev/setup-vp@313600b80b104eadebb9111787d37a2e83e014ca # v1.17.0
+      - uses: voidzero-dev/setup-vp@1b32467adbe183473499fd9d5d372c3ed9641754 # v1.18.0
         with:
           version: '0.2.1'
           cache: true
@@ -385,7 +385,7 @@ jobs:
           env-mapping: |
             PNPM_HOME,{{ DEV_DRIVE }}/.pnpm
 
-      - uses: voidzero-dev/setup-vp@313600b80b104eadebb9111787d37a2e83e014ca # v1.17.0
+      - uses: voidzero-dev/setup-vp@1b32467adbe183473499fd9d5d372c3ed9641754 # v1.18.0
         with:
           version: '0.2.1'
           cache: true
@@ -449,7 +449,7 @@ jobs:
           cache-key: native-build
           save-cache: false
 
-      - uses: voidzero-dev/setup-vp@313600b80b104eadebb9111787d37a2e83e014ca # v1.17.0
+      - uses: voidzero-dev/setup-vp@1b32467adbe183473499fd9d5d372c3ed9641754 # v1.18.0
         with:
           version: '0.2.1'
           cache: true
@@ -546,7 +546,7 @@ jobs:
           save-cache: ${{ github.ref_name == 'main' }}
           components: rustfmt
 
-      - uses: voidzero-dev/setup-vp@313600b80b104eadebb9111787d37a2e83e014ca # v1.17.0
+      - uses: voidzero-dev/setup-vp@1b32467adbe183473499fd9d5d372c3ed9641754 # v1.18.0
         with:
           version: '0.2.1'
           cache: true
@@ -564,6 +564,6 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: taiki-e/checkout-action@7d1e50e93dc4fb3bba58f85018fadf77898aee8b # v1.4.2
-      - uses: crate-ci/typos@8a48f81b6c64dcfea44b3633223084c4be58ac5f # v1.49.0
+      - uses: crate-ci/typos@a8168dc2984a9e2352f183ffe788f0f23a300389 # v1.49.1
         with:
           files: .

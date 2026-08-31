@@ -1,7 +1,7 @@
 import { existsSync, readFileSync } from 'node:fs';
 import { readFile } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
-import { describe, expect, test } from 'vitest';
+import { afterEach, describe, expect, test, vi } from 'vitest';
 // @ts-ignore This focused unit test intentionally reaches the package source outside the test rootDir.
 import * as bindingProxy from '../src/binding-workerd-proxy';
 // @ts-ignore This focused unit test intentionally reaches the package source outside the test rootDir.
@@ -192,6 +192,153 @@ describe('workerd build() source entry', () => {
       /exactly one of `instance` or `module`/,
     );
   }, 60_000);
+});
+
+// Unit tests for the `module:` path's private-instance ownership: the deferred
+// loader's dispose() keeps a failed handle undisposed for a retry, and build()
+// is that handle's only owner, so a failed dispose must park the instance for
+// the next entry point instead of dropping the reference. Everything below the
+// wrapper is mocked (scoped via doMock so the other describes keep the real
+// modules), so these tests run purely against the source entry.
+describe('workerd build() owned-instance disposal parking', () => {
+  interface FakeOwnedInstance {
+    exports: object;
+    dispose: ReturnType<typeof vi.fn>;
+  }
+
+  function fakeOwnedInstance(dispose: () => void): FakeOwnedInstance {
+    return { exports: {}, dispose: vi.fn(dispose) };
+  }
+
+  /** Throws `error` for the first `failures` calls, then succeeds. */
+  function disposeFailingTimes(failures: number, error: Error): () => void {
+    let calls = 0;
+    return () => {
+      calls += 1;
+      if (calls <= failures) throw error;
+    };
+  }
+
+  afterEach(() => {
+    vi.doUnmock('../src/binding.cjs');
+    vi.doUnmock('../src/rolldown-binding.wasip1-deferred.js');
+    vi.doUnmock('../src/api/rolldown');
+    vi.resetModules();
+  });
+
+  /**
+   * Fresh copy of the source entry with the workerd-bundle marker set, its
+   * private `createInstance` consuming `instanceQueue`, and the pipeline
+   * stubbed: each `rolldown()` call consumes one `buildQueue` step ('ok'
+   * generates a one-chunk result, an Error rejects the generate pass).
+   */
+  async function loadHarness(
+    instanceQueue: FakeOwnedInstance[],
+    buildQueue: Array<'ok' | Error>,
+  ): Promise<Pick<typeof workerdEntryTypes, 'build' | 'createWorkerdBundle'>> {
+    vi.resetModules();
+    vi.doMock('../src/binding.cjs', () => ({ __isWorkerdBindingProxy: true }));
+    vi.doMock('../src/rolldown-binding.wasip1-deferred.js', () => ({
+      createInstance: vi.fn(async () => {
+        const next = instanceQueue.shift();
+        if (next === undefined) throw new Error('harness: no fake instance queued');
+        return next;
+      }),
+    }));
+    vi.doMock('../src/api/rolldown', () => ({
+      rolldown: vi.fn(async () => {
+        const step = buildQueue.shift() ?? 'ok';
+        return {
+          generate: async () => {
+            if (step !== 'ok') throw step;
+            return { output: [{ type: 'chunk' }] };
+          },
+          close: async () => {},
+          __nativeCloseSettled: true,
+          __whenNativeCloseSettled: async () => {},
+        };
+      }),
+    }));
+    // @ts-ignore This focused unit test intentionally reaches the package source outside the test rootDir.
+    return await import('../src/workerd-build');
+  }
+
+  const wasmModule = {} as WebAssembly.Module;
+
+  test('build-error branch: rejection surface unchanged, parked instance drained by a later build', async () => {
+    const buildError = new Error('generate failed');
+    const disposeError = new Error('transient host cleanup failure');
+    // Fails the immediate attempt AND the one re-attempt, then recovers.
+    const parked = fakeOwnedInstance(disposeFailingTimes(2, disposeError));
+    const second = fakeOwnedInstance(() => {});
+    const third = fakeOwnedInstance(() => {});
+    const { build } = await loadHarness([parked, second, third], [buildError, 'ok', 'ok']);
+
+    const rejection: unknown = await build({ module: wasmModule, input: 'x' }).catch((e) => e);
+    expect(rejection).toBeInstanceOf(AggregateError);
+    const aggregate = rejection as AggregateError;
+    expect(aggregate.message).toBe('Build and workerd instance disposal both failed');
+    expect(aggregate.errors).toStrictEqual([buildError, disposeError]);
+    expect(aggregate.cause).toBe(buildError);
+    // The immediate re-attempt ran before parking.
+    expect(parked.dispose).toHaveBeenCalledTimes(2);
+
+    // The next build() drains the parked instance before its own work...
+    const result = await build({ module: wasmModule, input: 'x' });
+    expect(result.output).toHaveLength(1);
+    expect(parked.dispose).toHaveBeenCalledTimes(3);
+    expect(second.dispose).toHaveBeenCalledTimes(1);
+
+    // ...and a successful drain removes it: no further retries.
+    await build({ module: wasmModule, input: 'x' });
+    expect(parked.dispose).toHaveBeenCalledTimes(3);
+  });
+
+  test('success branch: raw dispose error surface unchanged, still-failing instance stays parked without failing later builds', async () => {
+    const disposeError = new Error('persistent cleanup failure');
+    const stuck = fakeOwnedInstance(() => {
+      throw disposeError;
+    });
+    const second = fakeOwnedInstance(() => {});
+    const third = fakeOwnedInstance(() => {});
+    const { build } = await loadHarness([stuck, second, third], ['ok', 'ok', 'ok']);
+
+    // The build itself succeeded; the raw dispose error still rejects, as today.
+    const rejection: unknown = await build({ module: wasmModule, input: 'x' }).catch((e) => e);
+    expect(rejection).toBe(disposeError);
+    expect(stuck.dispose).toHaveBeenCalledTimes(2);
+
+    // Later builds retry the parked instance but never fail because of it.
+    const result = await build({ module: wasmModule, input: 'x' });
+    expect(result.output).toHaveLength(1);
+    expect(stuck.dispose).toHaveBeenCalledTimes(3);
+    await build({ module: wasmModule, input: 'x' });
+    expect(stuck.dispose).toHaveBeenCalledTimes(4);
+  });
+
+  test('a transient dispose failure recovers via the immediate re-attempt', async () => {
+    const transient = fakeOwnedInstance(disposeFailingTimes(1, new Error('EBUSY once')));
+    const { build } = await loadHarness([transient], ['ok']);
+    const result = await build({ module: wasmModule, input: 'x' });
+    expect(result.output).toHaveLength(1);
+    expect(transient.dispose).toHaveBeenCalledTimes(2);
+  });
+
+  test('createWorkerdBundle() also drains parked instances', async () => {
+    const parked = fakeOwnedInstance(disposeFailingTimes(2, new Error('cleanup failure')));
+    const buildError = new Error('generate failed');
+    const { build, createWorkerdBundle } = await loadHarness([parked], [buildError, 'ok']);
+
+    await expect(build({ module: wasmModule, input: 'x' })).rejects.toThrowError(AggregateError);
+    expect(parked.dispose).toHaveBeenCalledTimes(2);
+
+    const callerOwned = fakeOwnedInstance(() => {});
+    const bundle = await createWorkerdBundle(callerOwned as never, { input: 'x' });
+    expect(parked.dispose).toHaveBeenCalledTimes(3);
+    // The caller-owned instance is untouched by the drain.
+    expect(callerOwned.dispose).not.toHaveBeenCalled();
+    await bundle.close();
+  });
 });
 
 // Full integration through the BUILT dist entry (node variant of the same

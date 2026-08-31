@@ -73,8 +73,8 @@ impl JsChangedOutputs {
     outputs: &mut Vec<rolldown_common::Output>,
   ) -> anyhow::Result<()> {
     let mut result = Ok(());
-    let mut sourcemap_updates = HashMap::<String, String, FxBuildHasher>::default();
-    let mut explicitly_updated_assets = HashSet::<String, FxBuildHasher>::default();
+    let mut sourcemap_updates = None;
+    let mut explicitly_updated_assets = None;
     if !self.deleted.is_empty() || !self.changes.is_empty() {
       outputs.retain_mut(|output| {
         if result.is_err() {
@@ -91,11 +91,15 @@ impl JsChangedOutputs {
               } else if let (Some(filename), Some(map)) =
                 (&old_chunk.sourcemap_filename, &old_chunk.map)
               {
-                sourcemap_updates.insert(filename.clone(), map.to_json_string());
+                sourcemap_updates
+                  .get_or_insert_with(HashMap::default)
+                  .insert(filename.clone(), map.to_json_string());
               }
             }
             (v @ rolldown_common::Output::Asset(_), Either::B(asset)) => {
-              explicitly_updated_assets.insert(asset.filename.clone());
+              explicitly_updated_assets
+                .get_or_insert_with(HashSet::default)
+                .insert(asset.filename.clone());
               *v = rolldown_common::Output::Asset(Arc::new(asset.into()));
             }
             _ => {}
@@ -104,21 +108,29 @@ impl JsChangedOutputs {
         true
       });
     }
-    if !sourcemap_updates.is_empty() {
-      for output in outputs.iter_mut() {
-        let rolldown_common::Output::Asset(asset) = output else {
-          continue;
-        };
-        if explicitly_updated_assets.contains(asset.filename.as_str()) {
-          continue;
-        }
-        let Some(source) = sourcemap_updates.get(asset.filename.as_str()) else {
-          continue;
-        };
-        Arc::make_mut(asset).source = source.clone().into();
-      }
+    if let Some(sourcemap_updates) = sourcemap_updates {
+      sync_sourcemap_assets(outputs, &sourcemap_updates, explicitly_updated_assets.as_ref());
     }
     result
+  }
+}
+
+fn sync_sourcemap_assets(
+  outputs: &mut [rolldown_common::Output],
+  sourcemap_updates: &HashMap<String, String, FxBuildHasher>,
+  explicitly_updated_assets: Option<&HashSet<String, FxBuildHasher>>,
+) {
+  for output in outputs {
+    let rolldown_common::Output::Asset(asset) = output else {
+      continue;
+    };
+    if explicitly_updated_assets.is_some_and(|assets| assets.contains(asset.filename.as_str())) {
+      continue;
+    }
+    let Some(source) = sourcemap_updates.get(asset.filename.as_str()) else {
+      continue;
+    };
+    Arc::make_mut(asset).source = source.clone().into();
   }
 }
 

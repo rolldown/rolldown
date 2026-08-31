@@ -13,6 +13,7 @@ pub struct Bundler {
     bundle_factory: BundleFactory,
     cache: ScanStageCache,
     closed: bool,
+    last_close_failure_delivered: bool,
 }
 ```
 
@@ -20,6 +21,7 @@ pub struct Bundler {
 - **`ScanStageCache`** — Persists the module graph, barrel state, and module index maps across builds. Swapped in/out of `Bundle` via `with_cached_bundle()` so incremental builds only re-scan changed modules.
 - **`SharedResolver`** — Owned by the factory, shared across builds. The resolution cache survives between builds.
 - **`closed`** — Legacy flag, see "Close Mechanism" below.
+- **`last_close_failure_delivered`** — Once-per-handle delivery gate for a terminal close failure, see "Close Mechanism" below.
 
 `Bundler` derefs to `BundleFactory`, so callers can access factory fields directly (e.g. `bundler.options`, `bundler.resolver`).
 
@@ -76,8 +78,18 @@ For watch mode, the non-consuming methods (`scan_modules()`, `bundle_write()`, `
 `closeBundle` is a **per-build lifecycle concern**, so the terminal hook state
 lives on `BundleHandle`. `Bundler::close()` remains the owner-level guard used
 by dev/watch shutdown: it marks the bundler closed to reject further builds and
-delegates to the latest handle. Repeated calls still await that handle's
-memoized result instead of converting an earlier failure into success.
+delegates to the latest handle.
+
+The contract is split between the two layers. The HANDLE replays its memoized
+terminal result forever — concurrent and late closers (and the ClassicBundler
+failure-close aggregation) depend on observing the same result. The BUNDLER
+delivers a terminal close failure to its owner exactly once
+(`last_close_failure_delivered`), through whichever of `close()` or the
+pre-build `ensure_last_bundle_closed` gate observes it first; later calls
+complete so teardown retries and the next `write`/`generate`/`scan` can make
+progress. Starting that next build installs a fresh handle (fresh close state)
+via `Bundler::create_bundle`, which resets the gate — one failed `closeBundle`
+hook fails the build that owed the close, not every build after it.
 
 Cache and resolver data are not reset by `BundleHandle.close()`; those are
 rebuild/drop concerns. In watch mode, `event.result.close()` therefore releases

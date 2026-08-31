@@ -90,11 +90,9 @@ export function bindingifyOutputOptions(
     sourcemap: bindingifySourcemap(sourcemap),
     sourcemapBaseUrl,
     sourcemapDebugIds,
-    sourcemapFileNames: measureIfFunction(
-      timings,
-      OUTPUT_OPTIONS_OWNER,
-      'sourcemapFileNames',
-      sourcemapFileNames,
+    sourcemapFileNames: wrapOptionalBuildCallback(
+      measureIfFunction(timings, OUTPUT_OPTIONS_OWNER, 'sourcemapFileNames', sourcemapFileNames),
+      runBuildCallback,
     ),
     sourcemapExcludeSources,
     sourcemapIgnoreList: wrapOptionalBuildCallback(

@@ -640,6 +640,50 @@ test('output option callbacks reject same-bundle reentrancy instead of deadlocki
 });
 
 test(
+  'sourcemapFileNames callbacks reject same-bundle reentrancy instead of deadlocking',
+  { timeout: 10_000 },
+  async () => {
+    let bundle: Awaited<ReturnType<typeof rolldown>>;
+    let reentrantAttempt: Promise<unknown> | undefined;
+    bundle = await rolldown({
+      input: './main.js',
+      cwd: import.meta.dirname,
+    });
+
+    try {
+      const output = await bundle.generate({
+        sourcemap: true,
+        // The binding contract is sync-returning, so the nested call is captured
+        // instead of awaited; the race keeps an unguarded deadlock from hanging
+        // the suite by failing the assertion below instead.
+        sourcemapFileNames: () => {
+          reentrantAttempt ??= Promise.race([
+            bundle.generate().then(() => new Error('nested generate() unexpectedly succeeded')),
+            new Promise<Error>((resolve) => {
+              const timer = setTimeout(
+                () => resolve(new Error('nested generate() timed out instead of rejecting')),
+                3_000,
+              );
+              timer.unref();
+            }),
+          ]).catch((error) => error);
+          return 'reentrancy-probe-[name].map';
+        },
+      });
+
+      await expect(reentrantAttempt).resolves.toMatchObject({
+        message: expect.stringMatching(/active JavaScript callbacks/),
+      });
+      // The reentrancy wrap must not break the value path: the outer build
+      // completes and the returned template names the chunk's sourcemap file.
+      expect(output.output[0].sourcemapFileName).toBe('reentrancy-probe-main.map');
+    } finally {
+      await bundle.close();
+    }
+  },
+);
+
+test(
   'native built-in callbacks reject same-bundle reentrancy instead of deadlocking',
   { timeout: 5_000 },
   async () => {

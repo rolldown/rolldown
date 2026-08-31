@@ -73,23 +73,29 @@ impl JsChangedOutputs {
     outputs: &mut Vec<rolldown_common::Output>,
   ) -> anyhow::Result<()> {
     let mut result = Ok(());
+    let mut sourcemap_updates = HashMap::<String, String, FxBuildHasher>::default();
+    let mut explicitly_updated_assets = HashSet::<String, FxBuildHasher>::default();
     if !self.deleted.is_empty() || !self.changes.is_empty() {
       outputs.retain_mut(|output| {
         if result.is_err() {
           return true;
         }
-        let filename = output.filename();
-        if self.deleted.contains(filename) {
+        if self.deleted.contains(output.filename()) {
           return false;
         }
-        if let Some(change) = self.changes.remove(filename) {
+        if let Some(change) = self.changes.remove(output.filename()) {
           match (output, change) {
             (rolldown_common::Output::Chunk(old_chunk), Either::A(chunk)) => {
               if let Err(err) = update_output_chunk(old_chunk, chunk) {
                 result = Err(err);
+              } else if let (Some(filename), Some(map)) =
+                (&old_chunk.sourcemap_filename, &old_chunk.map)
+              {
+                sourcemap_updates.insert(filename.clone(), map.to_json_string());
               }
             }
             (v @ rolldown_common::Output::Asset(_), Either::B(asset)) => {
+              explicitly_updated_assets.insert(asset.filename.clone());
               *v = rolldown_common::Output::Asset(Arc::new(asset.into()));
             }
             _ => {}
@@ -97,6 +103,20 @@ impl JsChangedOutputs {
         }
         true
       });
+    }
+    if !sourcemap_updates.is_empty() {
+      for output in outputs.iter_mut() {
+        let rolldown_common::Output::Asset(asset) = output else {
+          continue;
+        };
+        if explicitly_updated_assets.contains(asset.filename.as_str()) {
+          continue;
+        }
+        let Some(source) = sourcemap_updates.get(asset.filename.as_str()) else {
+          continue;
+        };
+        Arc::make_mut(asset).source = source.clone().into();
+      }
     }
     result
   }

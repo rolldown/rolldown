@@ -236,6 +236,68 @@ export { ... };
 :::
 Now, the libraries are split into separate chunks, and the browser can download them in parallel. This can significantly improve the loading performance of your application, especially if the libraries are large.
 
+## Recipes
+
+The following patterns are common starting points for optimizing cache invalidation and first paint. Tune `minSize`, `maxSize`, and `test` to match your application.
+
+### Vendor and shared chunks
+
+This pattern separates stable `node_modules` code from application code and extracts modules shared across multiple entry points:
+
+```js [rolldown.config.js]
+export default {
+  output: {
+    codeSplitting: {
+      groups: [
+        {
+          name: 'vendor',
+          test: /node_modules/,
+          minSize: 4096,
+          maxSize: 1024 * 1024,
+        },
+        {
+          name: 'shared',
+          minSize: 4096,
+          maxSize: 1024 * 1024,
+          minShareCount: 2,
+        },
+      ],
+    },
+  },
+};
+```
+
+- **vendor** — dependencies from `node_modules` that change less often than application code, improving cache hit rates between deploys.
+- **shared** — modules imported by at least two manual groups or entry chunks (`minShareCount: 2`), keeping individual entry chunks smaller.
+
+`maxSize` is a target, not a hard limit. See [Why is the chunk bigger than `maxSize`?](#why-is-the-chunk-bigger-than-maxsize) below.
+
+### Per-library vendor chunks
+
+If a single vendor chunk is still too large, split specific libraries into their own groups so they can be cached independently:
+
+```js [rolldown.config.js]
+export default {
+  output: {
+    codeSplitting: {
+      groups: [
+        {
+          name: 'react-vendor',
+          test: /node_modules[\\/](react|react-dom|scheduler)[\\/]/,
+        },
+        {
+          name: 'vendor',
+          test: /node_modules/,
+          minSize: 4096,
+        },
+      ],
+    },
+  },
+};
+```
+
+Groups are matched in order — put more specific `test` patterns before broader ones.
+
 ## Limitations
 
 ### Why there's always a `runtime.js` chunk?

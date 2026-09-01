@@ -1,0 +1,18 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+Object.defineProperty(exports, Symbol.toStringTag, { value: "Module" });
+// HIDDEN [\0rolldown/runtime.js]
+let esm_pkg = require("esm-pkg");
+esm_pkg = __toESM(esm_pkg, 1);
+//#region main.js
+const result = (0, esm_pkg.default)("rolldown");
+//#endregion
+exports.result = result;
+
+```

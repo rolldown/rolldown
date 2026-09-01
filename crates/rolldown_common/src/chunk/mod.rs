@@ -109,6 +109,10 @@ pub struct Chunk {
   pub entry_level_external_module_idx: Vec<ModuleIdx>,
   pub insert_map: FxHashMap<ModuleIdx, Vec<(ModuleIdx, ImportRecordIdx)>>,
   pub remove_map: FxHashMap<ModuleIdx, Vec<ImportRecordIdx>>,
+  /// Wrapped modules whose memoized init call is additionally rendered eagerly in this chunk,
+  /// prepended to the keyed module's output. Filled by `ensure_lazy_module_initialization_order`
+  /// for wrapped modules whose init call sites all live in later-executing chunks.
+  pub eager_init_map: FxHashMap<ModuleIdx, Vec<ModuleIdx>>,
   pub transformed_parts_rendered: FxIndexMap<(ModuleIdx, ImportRecordIdx), String>,
   pub module_groups: Vec<ModuleGroup>,
   pub module_idx_to_group_idx: FxHashMap<ModuleIdx, usize>,

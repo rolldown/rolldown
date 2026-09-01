@@ -75,9 +75,7 @@ impl Diagnostic {
     content: impl Into<ArcStr>,
   ) -> DiagnosticFileId {
     let filename = DiagnosticFileId::from(filename.into());
-    let content = content.into();
-    debug_assert!(!self.files.contains_key(&filename));
-    self.files.insert(filename.clone(), content);
+    self.files.entry(filename.clone()).or_insert_with(|| content.into());
     filename
   }
 

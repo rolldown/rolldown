@@ -900,6 +900,9 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
 
   fn generate_declaration_of_module_namespace_object(&self) -> Vec<ast::Statement<'ast>> {
     if !self.module_namespace_included {
+      if let Some(statements) = self.generate_inline_dynyamic_module_namespace() {
+        return statements;
+      }
       return vec![];
     }
 
@@ -1109,6 +1112,37 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
     ret
   }
 
+  fn generate_inline_dynyamic_module_namespace(&self) -> Option<Vec<ast::Statement<'ast>>> {
+    if let Some(dynamic_namespace_ref) =
+      &self.ctx.linking_info.is_inlined_dead_dynamic_import_namespace_module_idx
+    {
+      let binding_name_for_namespace_object_ref = self.canonical_name_for(*dynamic_namespace_ref);
+
+      let frozen_empty = Expression::new_call_with_arg(
+        Expression::new_member_access_expr("Object", "freeze", self),
+        ast::Expression::new_object_expression(
+          SPAN,
+          [ast::ObjectPropertyKind::new_object_property(
+            SPAN,
+            ast::PropertyKind::Init,
+            ast::PropertyKey::new_static_identifier(SPAN, "__proto__", self),
+            ast::Expression::new_null_literal(SPAN, self),
+            false,
+            false,
+            false,
+            self,
+          )],
+          self,
+        ),
+        true,
+        self,
+      );
+      let decl_stmt =
+        Statement::new_var_decl(binding_name_for_namespace_object_ref, frozen_empty, self);
+      return Some(vec![decl_stmt]);
+    }
+    None
+  }
   // Handle `import.meta.xxx`, `import.meta['xxx']`, `import.meta?.xxx` and `import.meta?.['xxx']`
   pub fn try_rewrite_import_meta_prop_expr(
     &mut self,

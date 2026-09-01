@@ -1,0 +1,28 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+//#region probe.cjs
+//#endregion
+//#region main.js
+var import_probe = /* @__PURE__ */ __toESM((/* @__PURE__ */ __commonJSMin(((exports, module) => {
+	function readLocals(__dirname, __filename) {
+		return [__dirname, __filename];
+	}
+	module.exports = {
+		ambient: [typeof __dirname, typeof __filename],
+		locals: readLocals("local dirname", "local filename")
+	};
+})))());
+if (JSON.stringify(import_probe.default) !== JSON.stringify({
+	ambient: ["undefined", "undefined"],
+	locals: ["local dirname", "local filename"]
+})) throw new Error(`Unexpected CommonJS path bindings: ${JSON.stringify(import_probe.default)}`);
+//#endregion
+
+```

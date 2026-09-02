@@ -1,4 +1,31 @@
 
+## [1.2.7] - 2026-09-02
+
+### 🐛 Bug Fixes
+
+- rolldown_binding: make `PreRenderedChunk.facadeModuleId` nullable like Rollup (#10810) by @IWANABETHATGUY
+- plugin_timings: reword the warning so it does not contradict itself (#10788) by @IWANABETHATGUY
+- model a facade's host import in the fold cycle check (#10743) by @ulrichstark
+
+### 🧪 Testing
+
+- dev: add circular reexport test (#10563) by @sapphi-red
+
+### ⚙️ Miscellaneous Tasks
+
+- deps: update npm packages (#10795) by @renovate[bot]
+- deps: update rust crates (#10794) by @renovate[bot]
+- deps: update dependency rolldown-plugin-dts to v0.28.3 (#10805) by @renovate[bot]
+- renovate: disable oxc auto-updates (#10813) by @IWANABETHATGUY
+- deps: upgrade oxc to 0.148.0 (#10809) by @camc314
+- deps: update pnpm to v11.24.0 (#10803) by @renovate[bot]
+- deps: update crate-ci/typos action to v1.50.0 (#10806) by @renovate[bot]
+- deps: update test262 submodule for tests (#10808) by @rolldown-guard[bot]
+- deps: update rollup submodule for tests to v4.63.1 (#10807) by @rolldown-guard[bot]
+- deps: update crate-ci/typos action to v1.49.1 (#10796) by @renovate[bot]
+- deps: update github actions (#10749) by @renovate[bot]
+
+
 ## [1.2.6] - 2026-08-26
 
 ### 🚀 Features

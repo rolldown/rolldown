@@ -1,4 +1,4 @@
-use std::{borrow::Cow, sync::Arc};
+use std::borrow::Cow;
 
 use rolldown::{BundlerOptions, InputItem};
 use rolldown_plugin::{HookUsage, Plugin, PluginContext};
@@ -51,7 +51,7 @@ async fn resolve_bare_relative_path_without_importer() {
         }]),
         ..Default::default()
       },
-      vec![Arc::new(TestPlugin)],
+      vec![Plugin::new_shared(TestPlugin)],
     )
     .await;
 }

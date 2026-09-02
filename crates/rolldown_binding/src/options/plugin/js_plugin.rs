@@ -1,16 +1,10 @@
-use crate::types::{
-  binding_module_info::BindingModuleInfo,
-  binding_normalized_options::BindingNormalizedOptions,
-  binding_outputs::{JsChangedOutputs, to_binding_error},
-  binding_rendered_chunk::BindingRenderedChunk,
-  js_callback::MaybeAsyncJsCallbackExt,
-};
+use std::{borrow::Cow, ops::Deref, sync::Arc};
+
 use anyhow::Context;
 use napi::bindgen_prelude::FnArgs;
 use rolldown_common::NormalModule;
 use rolldown_plugin::{__inner::SharedPluginable, HookUsage, Plugin, typedmap::TypedMapKey};
 use rolldown_utils::filter_expression::filter_exprs_interpreter;
-use std::{borrow::Cow, ops::Deref, sync::Arc};
 use tracing::{Instrument, debug_span};
 
 use super::{
@@ -25,6 +19,13 @@ use super::{
     binding_render_chunk_meta_chunks::BindingRenderedChunkMeta,
     binding_shared_string::BindingSharedString,
   },
+};
+use crate::types::{
+  binding_module_info::BindingModuleInfo,
+  binding_normalized_options::BindingNormalizedOptions,
+  binding_outputs::{JsChangedOutputs, to_binding_error},
+  binding_rendered_chunk::BindingRenderedChunk,
+  js_callback::MaybeAsyncJsCallbackExt,
 };
 
 #[derive(Hash, Debug, PartialEq, Eq)]
@@ -71,7 +72,7 @@ impl JsPlugin {
 
   pub(crate) fn new_shared(inner: BindingPluginOptions) -> napi::Result<SharedPluginable> {
     let filter_expr_cache = inner.pre_compile_filter_expr()?;
-    Ok(Arc::new(Self { inner, filter_expr_cache }))
+    Ok(Plugin::new_shared(Self { inner, filter_expr_cache }))
   }
 }
 

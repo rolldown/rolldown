@@ -1,20 +1,19 @@
-use std::path::PathBuf;
-use std::sync::Arc;
 use std::{
   fs,
   io::{Read, Write},
-  path::Path,
+  path::{Path, PathBuf},
   process::Command,
+  sync::Arc,
 };
 
 use anyhow::Context;
 use oxc::parser::{ParseOptions, Parser};
 use oxc::span::SourceType;
 use rolldown::{
-  BundleOutput, Bundler, BundlerBuilder, BundlerOptions, IsExternal, OutputFormat, Platform,
-  SourceMapType, plugin::__inner::SharedPluginable,
+  BundleOutput, Bundler, BundlerBuilder, BundlerOptions, ChecksOptions, IsExternal,
+  NormalizedBundlerOptions, OutputFormat, Platform, SourceMapType,
+  plugin::{__inner::SharedPluginable, Plugin},
 };
-use rolldown::{ChecksOptions, NormalizedBundlerOptions};
 use rolldown_common::Output;
 use rolldown_dev::{BundlerConfig, DevEngine, DevOptions, DevWatchOptions};
 use rolldown_error::BuildResult;
@@ -565,7 +564,7 @@ impl IntegrationTest {
   ) {
     // Registered last so it runs right before the internal dce pass; see the module docs of
     // `preserve_region_markers` for why snapshots need markers kept intact.
-    plugins.push(Arc::new(PreserveRegionMarkersPlugin));
+    plugins.push(Plugin::new_shared(PreserveRegionMarkersPlugin));
 
     let test_folder_path = &self.test_folder_path;
 

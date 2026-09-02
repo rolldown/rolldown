@@ -1,4 +1,4 @@
-use std::{borrow::Cow, sync::Arc};
+use std::borrow::Cow;
 
 use rolldown::{BundlerOptions, InputItem, PreserveEntrySignatures};
 use rolldown_common::EmittedChunk;
@@ -53,7 +53,7 @@ async fn should_rewrite_dynamic_imports_that_import_external_modules() {
         preserve_entry_signatures: Some(PreserveEntrySignatures::False),
         ..Default::default()
       },
-      vec![Arc::new(Test)],
+      vec![Plugin::new_shared(Test)],
     )
     .await;
 }

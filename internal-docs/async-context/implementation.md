@@ -96,9 +96,14 @@ is returned unchanged. Nested accessor-backed values follow Promise resolution
 semantics without proxying: a non-function fulfills with the original object
 identity, a callable getter result is cached and assimilated under the selected
 callback scope, and a throwing getter preserves its original error. The settled
-value travels through the resolver inside a `{ value }` box, the same shape
-`utils/async-flatten.ts` uses, so no intermediate promise runs the Promise
-Resolution Procedure on it. Only the promise handed back to the caller unboxes
+value travels through the resolver inside a `{ value }` box, so no intermediate
+promise runs the Promise Resolution Procedure on it. `utils/async-flatten.ts`
+boxes plugin-option values the same way (its box also carries the captured
+`then` and the cycle chains) and follows the same procedure - one `then` read
+per step, job-deferred invocation inside the scope, resolve-time
+classification - so a plugin option and a callback result assimilate
+identically; there a callable `then` also takes precedence over array
+flattening. Only the promise handed back to the caller unboxes
 and adopts the value, which limits an accessor-backed `then` to one
 classification read plus that single adoption. The box never escapes and no
 wrapper is introduced, so private fields and `WeakMap` keys remain valid.

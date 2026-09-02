@@ -870,6 +870,98 @@ test('plugin array flattening preserves depth-first left-to-right accessor order
   expect(accesses).toEqual(['first', 'nested', 'second']);
 });
 
+test.each([
+  ['native', async () => CloseCallbackScope],
+  ['browser', loadBrowserCloseCallbackScope],
+  ['unscoped', async () => undefined],
+])('%s plugin thenables are invoked in a later promise job', async (_, loadScope) => {
+  const Scope = await loadScope();
+  const scope = Scope ? new Scope() : undefined;
+  const events: string[] = [];
+  let plugin = { name: 'stale' };
+  const thenable = {
+    // oxlint-disable-next-line unicorn/no-thenable -- verifies Promise-like invocation timing
+    then(resolve: (value: typeof plugin) => void) {
+      events.push('then');
+      resolve(plugin);
+    },
+  };
+
+  const normalized = normalizePluginOption(thenable, scope);
+  events.push('after-call');
+  plugin = { name: 'updated' };
+
+  await expect(normalized).resolves.toEqual([{ name: 'updated' }]);
+  expect(events).toEqual(['after-call', 'then']);
+});
+
+function createThenableArray(
+  elements: unknown[],
+  resolveTo: unknown,
+  kind: 'data' | 'accessor',
+): { array: unknown[]; thenReads: () => number } {
+  let thenReads = 0;
+  const then = (resolve: (value: unknown) => void) => resolve(resolveTo);
+  const array: unknown[] = [...elements];
+  if (kind === 'data') {
+    // oxlint-disable-next-line unicorn/no-thenable -- an array that is also thenable
+    Object.assign(array, { then });
+  } else {
+    // oxlint-disable-next-line unicorn/no-thenable -- an array with an accessor-backed then
+    Object.defineProperty(array, 'then', {
+      get() {
+        thenReads += 1;
+        return then;
+      },
+    });
+  }
+  return { array, thenReads: () => thenReads };
+}
+
+test.each([
+  ['data', 'data', [{ name: 'spread' }]],
+  ['accessor', 'accessor', [{ name: 'spread' }]],
+  ['empty', 'data', []],
+])('plugin arrays that are thenable resolve through `then` (%s)', async (_, kind, elements) => {
+  const plugins = [{ name: 'from-then' }];
+  const direct = createThenableArray(elements, plugins, kind);
+  await expect(normalizePluginOption(direct.array)).resolves.toEqual(plugins);
+
+  const nested = createThenableArray(elements, plugins, kind);
+  await expect(normalizePluginOption([[nested.array]])).resolves.toEqual(plugins);
+
+  const resolved = createThenableArray(elements, plugins, kind);
+  await expect(
+    normalizePluginOption({
+      // oxlint-disable-next-line unicorn/no-thenable -- resolves to a thenable array
+      then(resolve: (value: unknown) => void) {
+        resolve(resolved.array);
+      },
+    }),
+  ).resolves.toEqual(plugins);
+
+  if (kind === 'accessor') {
+    expect([direct.thenReads(), nested.thenReads(), resolved.thenReads()]).toEqual([1, 1, 1]);
+  }
+});
+
+test('plugin thenable results are classified when `resolve` runs, before later mutation', async () => {
+  const plugin: { name: string; then?: unknown } = { name: 'resolved' };
+  const thenable = {
+    // oxlint-disable-next-line unicorn/no-thenable -- verifies resolve-time classification
+    then(resolve: (value: typeof plugin) => void) {
+      resolve(plugin);
+      // The Promise Resolution Procedure has read `then` by the time `resolve`
+      // returns; a `then` attached afterwards is not assimilated.
+      // oxlint-disable-next-line unicorn/no-thenable -- mutates after resolution
+      plugin.then = (innerResolve: (value: unknown) => void) => innerResolve({ name: 'late' });
+    },
+  };
+
+  const [normalized] = await normalizePluginOption(thenable);
+  expect(normalized).toBe(plugin);
+});
+
 // A plugin-option accessor runs while its build is already registered as an
 // active build, so `bundle.close()` must be acknowledged reentrantly there:
 // unless the accessor itself runs inside the close-callback scope, a thenable

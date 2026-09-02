@@ -6,9 +6,22 @@ export type SynchronousCallbackRunner = <T>(callback: () => T) => T;
 
 const runDirectly: SynchronousCallbackRunner = (callback) => callback();
 
+// Values assimilate the way the callback-settlement path (async-context.ts,
+// `settleThenable`) already does, so a plugin option and a callback result
+// follow one Promise Resolution Procedure:
+// - `then` is read once per value per resolution step, inside the callback scope;
+// - the captured `then` is called in a later promise job that re-enters the
+//   scope, because the browser scope does not propagate through jobs;
+// - a callable `then` wins over `Array.isArray` at every level;
+// - a resolved value is classified while the resolving function runs, before a
+//   later job can mutate it.
+// See internal-docs/async-context/implementation.md.
 interface BoxedValue<T> {
   arrayChain: Set<unknown[]> | undefined;
   thenableChain: Set<object> | undefined;
+  // Never named `then`: boxes travel through native promises and through
+  // `CloseCallbackScope.run`, which both assimilate a thenable result.
+  thenMethod: Function | undefined;
   value: T;
 }
 
@@ -16,68 +29,90 @@ export async function asyncFlatten<T>(
   array: T[],
   runSynchronousCallback: SynchronousCallbackRunner = runDirectly,
 ): Promise<T[]> {
-  let pending = array.map((value): BoxedValue<T> => ({
-    arrayChain: undefined,
-    thenableChain: undefined,
-    value,
-  }));
-  while (true) {
-    let requiresAnotherPass = false;
+  // Scope callbacks assign instead of returning: `CloseCallbackScope.run`
+  // reads `then` on whatever a callback returns.
+  let pending!: BoxedValue<T>[];
+  runSynchronousCallback(() => {
+    pending = array.flatMap((value) => flattenArrays(classify(value, undefined, undefined)));
+  });
+  while (pending.some((box) => box.thenMethod !== undefined)) {
     const boxed = await Promise.all(
-      pending.map(({ arrayChain, thenableChain, value }) => {
-        if (Array.isArray(value)) {
-          requiresAnotherPass = true;
-          return Promise.resolve({ arrayChain, thenableChain, value });
-        }
-        return Promise.resolve(
-          assimilateThenable(value, arrayChain, thenableChain, runSynchronousCallback, () => {
-            requiresAnotherPass = true;
-          }),
-        );
-      }),
+      pending.map((box) =>
+        box.thenMethod === undefined
+          ? Promise.resolve(box)
+          : assimilateThenable(box, box.thenMethod, runSynchronousCallback),
+      ),
     );
-    // Flattening runs after an `await`, so the array traps it invokes are user
-    // callbacks that native close can end up waiting on. Run them inside the
-    // close-callback scope, or a `bundle.close()` issued from one of them
-    // deadlocks against the build that awaits it.
-    pending = runSynchronousCallback(() => boxed.flatMap(flattenArrays));
-    if (!requiresAnotherPass) return pending.map(({ value }) => value);
+    // Array traps are user callbacks that native close can end up waiting on,
+    // so flattening runs inside the close-callback scope.
+    runSynchronousCallback(() => {
+      pending = boxed.flatMap(flattenArrays);
+    });
   }
+  return pending.map(({ value }) => value);
 }
 
-function assimilateThenable<T>(
+/** The one `then` read for this resolution step. Runs inside the callback scope. */
+function classify<T>(
   value: T,
   arrayChain: Set<unknown[]> | undefined,
   thenableChain: Set<object> | undefined,
+): BoxedValue<T> {
+  const box: BoxedValue<T> = { arrayChain, thenableChain, thenMethod: undefined, value };
+  if ((typeof value !== 'object' || value === null) && typeof value !== 'function') return box;
+  if (thenableChain?.has(value)) {
+    // A repeated value is only a cycle while it is STILL thenable: the spec
+    // re-reads `then` on every resolution step, so a thenable that shed its
+    // `then` before resolving to itself is terminal. The descriptor walk keeps
+    // an accessor from running a second time.
+    if (hasCallableThenWithoutInvokingAccessor(value)) {
+      throw new TypeError('Thenable cycle detected while flattening values');
+    }
+    return box;
+  }
+  const then = Reflect.get(value, 'then');
+  if (typeof then === 'function') box.thenMethod = then;
+  return box;
+}
+
+function assimilateThenable<T>(
+  { arrayChain, thenableChain, value }: BoxedValue<T>,
+  then: Function,
   runSynchronousCallback: SynchronousCallbackRunner,
-  markAssimilated: () => void,
-): BoxedValue<T> | Promise<BoxedValue<T>> {
-  return runSynchronousCallback(() => {
-    if ((typeof value !== 'object' || value === null) && typeof value !== 'function') {
-      return { arrayChain, thenableChain, value };
-    }
-    if (thenableChain?.has(value)) {
-      // A repeated value is only a cycle while it is STILL thenable: the spec
-      // re-reads `then` on every resolution step, so a thenable that shed its
-      // `then` before resolving to itself is terminal. The callback-settlement
-      // path (async-context.ts) treats the same mutated-self case as terminal.
-      if (hasCallableThenWithoutInvokingAccessor(value)) {
-        throw new TypeError('Thenable cycle detected while flattening values');
+): Promise<BoxedValue<T>> {
+  const nextThenableChain = new Set(thenableChain);
+  nextThenableChain.add(value as object);
+  return new Promise<BoxedValue<T>>((resolve, reject) => {
+    // PromiseResolveThenableJob: call the captured `then` in a later job; the
+    // first resolving function to run wins, and a throw after it is ignored.
+    void Promise.resolve().then(() => {
+      let settled = false;
+      const resolveOnce = (resolved: T) => {
+        if (settled) return;
+        settled = true;
+        let next!: BoxedValue<T>;
+        try {
+          runSynchronousCallback(() => {
+            next = classify(resolved, arrayChain, nextThenableChain);
+          });
+        } catch (error) {
+          reject(error);
+          return;
+        }
+        resolve(next);
+      };
+      const rejectOnce = (reason?: unknown) => {
+        if (settled) return;
+        settled = true;
+        reject(reason);
+      };
+      try {
+        runSynchronousCallback(() => {
+          Reflect.apply(then, value, [resolveOnce, rejectOnce]);
+        });
+      } catch (error) {
+        rejectOnce(error);
       }
-      return { arrayChain, thenableChain, value };
-    }
-
-    const then = Reflect.get(value, 'then');
-    if (typeof then !== 'function') return { arrayChain, thenableChain, value };
-
-    markAssimilated();
-    const nextThenableChain = new Set(thenableChain);
-    nextThenableChain.add(value);
-    return new Promise<BoxedValue<T>>((resolve, reject) => {
-      Reflect.apply(then, value, [
-        (resolved: T) => resolve({ arrayChain, thenableChain: nextThenableChain, value: resolved }),
-        reject,
-      ]);
     });
   });
 }
@@ -93,11 +128,7 @@ function flattenArrays<T>(boxed: BoxedValue<T>): BoxedValue<T>[] {
         entry.index += 1;
         if (!(index in entry.value)) continue;
         pending.push(entry, {
-          boxed: {
-            arrayChain: entry.arrayChain,
-            thenableChain: entry.thenableChain,
-            value: entry.value[index],
-          },
+          boxed: classify(entry.value[index], entry.arrayChain, entry.thenableChain),
           kind: 'value',
         });
         break;
@@ -106,7 +137,8 @@ function flattenArrays<T>(boxed: BoxedValue<T>): BoxedValue<T>[] {
     }
 
     const current = entry.boxed;
-    if (!Array.isArray(current.value)) {
+    // A thenable array waits for assimilation instead of being spread.
+    if (current.thenMethod !== undefined || !Array.isArray(current.value)) {
       flattened.push(current as BoxedValue<T>);
       continue;
     }

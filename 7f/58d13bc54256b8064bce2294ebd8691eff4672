@@ -1,0 +1,19 @@
+AGENTS.md
+  s_1524eb9f9fabad::t_a9a364ca2bd094 88-91
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "7f58d13bc54256b8064bce2294ebd8691eff4672",
+  "prompts": {},
+  "sessions": {
+    "s_1524eb9f9fabad": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019f8761-7347-7b70-b3f1-24c54174fc35",
+        "model": "gpt-5.6-sol"
+      },
+      "human_author": "Yunfei He <i.heyunfei@gmail.com>"
+    }
+  }
+}

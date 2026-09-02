@@ -1,0 +1,19 @@
+crates/rolldown/src/ast_scanner/stmt_eval_analyzer/mod.rs
+  s_1524eb9f9fabad::t_a280da9d2560f5 28-29,479-480,485-502,669-670,672-674,677,680-694,698-701,733-740,804,826-831,840-842,848-855,969-970,974,1077-1148,1886-2062
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "3137103f87db8e563a64878fabc01cc98aa613f8",
+  "prompts": {},
+  "sessions": {
+    "s_1524eb9f9fabad": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019f8761-7347-7b70-b3f1-24c54174fc35",
+        "model": "gpt-5.6-sol"
+      },
+      "human_author": "Yunfei He <i.heyunfei@gmail.com>"
+    }
+  }
+}

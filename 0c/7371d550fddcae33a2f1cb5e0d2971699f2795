@@ -1,0 +1,31 @@
+crates/rolldown/src/stages/generate_stage/order_wrapping.rs
+  s_7a5d44773df791::t_a70f120d8763c9 477-483,485-486
+crates/rolldown/tests/rolldown/function/experimental/strict_execution_order/cross_chunk_dynamic_importer_uses_call_site_trigger/_config.json
+  s_7a5d44773df791::t_22029e94f4de78 2
+crates/rolldown/tests/rolldown/function/experimental/strict_execution_order/cross_chunk_dynamic_importer_uses_call_site_trigger/_test.mjs
+  s_7a5d44773df791::t_e3a3219639185f 3-6
+crates/rolldown/tests/rolldown/function/experimental/strict_execution_order/cross_chunk_dynamic_importer_uses_call_site_trigger/artifacts.snap
+  s_7a5d44773df791::t_ab79d33ae663e0 20,29,35,40,47,90,101,107,112,119
+crates/rolldown/tests/rolldown/function/strict_execution_order_invariants/m4_dynamic_facade_race/_test.mjs
+  s_7a5d44773df791::t_42867a5e545906 5-8,11-12,18-19
+crates/rolldown/tests/rolldown/function/strict_execution_order_invariants/m4_dynamic_facade_race/artifacts.snap
+  s_7a5d44773df791::t_5cb73cf9c40cc3 12,41,52,62,89,121,132,142
+crates/rolldown/tests/rolldown/function/strict_execution_order_invariants/mod.rs
+  s_7a5d44773df791::t_5652982f4e44f6 358,384,386-387,389-390,392-398
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "0c7371d550fddcae33a2f1cb5e0d2971699f2795",
+  "prompts": {},
+  "sessions": {
+    "s_7a5d44773df791": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "6f32c7f8-2daa-47f1-a76e-5c75e06cc8e8",
+        "model": "claude-opus-5"
+      },
+      "human_author": "Yunfei He <i.heyunfei@gmail.com>"
+    }
+  }
+}

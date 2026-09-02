@@ -1,0 +1,29 @@
+crates/rolldown/tests/rolldown/code_splitting/eliminated_dynamic_facade_shared_external_star/artifacts.snap
+  s_a263216b342109::t_9d4dc84fcaf775 1-90
+crates/rolldown/tests/rolldown/code_splitting/eliminated_dynamic_facade_external_star_attributes/artifacts.snap
+  s_a263216b342109::t_04e5a548c6bd97 1-57
+crates/rolldown/tests/rolldown/code_splitting/eliminated_dynamic_facade_external_star/artifacts.snap
+  s_a263216b342109::t_53f5d4d5232fb0 1-62
+crates/rolldown/tests/rolldown/code_splitting/eliminated_dynamic_facade_transitive_external_star/artifacts.snap
+  s_a263216b342109::t_503069ad44f479 1-95
+crates/rolldown_ecmascript_utils/src/ast_factory.rs
+  s_a263216b342109::t_5a82e3561c9219 25-26,29,35-38,687-696,706-741,747
+crates/rolldown/src/stages/generate_stage/chunk_optimizer.rs
+  s_a263216b342109::t_217443f01609ed 8-10,70-103,1190
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "a4a360c912f72dc69bf476d99d6fd243eda43a36",
+  "prompts": {},
+  "sessions": {
+    "s_a263216b342109": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019fa32f-2224-7331-92fc-284bb0b3b993",
+        "model": "gpt-5.6-sol"
+      },
+      "human_author": "Yunfei He <i.heyunfei@gmail.com>"
+    }
+  }
+}

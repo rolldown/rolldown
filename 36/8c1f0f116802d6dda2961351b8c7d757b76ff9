@@ -1,0 +1,41 @@
+crates/rolldown/src/esm_init_obligations.rs
+  s_1524eb9f9fabad::t_ff46144afef93b 28-30
+crates/rolldown/src/module_finalizers/impl_visit_mut.rs
+  s_1524eb9f9fabad::t_ea5c0346c6f1f3 212-213
+crates/rolldown/src/module_finalizers/mod.rs
+  s_1524eb9f9fabad::t_459fcc55e10bd1 189,1534,1760-1761,1764-1766
+crates/rolldown/src/stages/generate_stage/compute_cross_chunk_links.rs
+  s_1524eb9f9fabad::t_c7ed6f2db9dfec 1,67,77-82,224-226,234,236-241,258,298,335,452,490,608,615,638,642-645
+crates/rolldown/src/stages/generate_stage/compute_wrapped_esm_init_metadata.rs
+  s_a6f305dc0983c0::t_5b63a16e55ca9a 23-51,53-54,56,59-60,74,93,100,105
+crates/rolldown/src/stages/generate_stage/order_analysis.rs
+  s_1524eb9f9fabad::t_a1854e2b75d73d 487-489
+crates/rolldown/src/stages/generate_stage/order_wrapping.rs
+  s_1524eb9f9fabad::t_f272a0275eda0c 593-597
+internal-docs/code-splitting/design.md
+  s_1524eb9f9fabad::t_7df809d3f9fc0c 240,242,277-293,316,346,366-368,383
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "368c1f0f116802d6dda2961351b8c7d757b76ff9",
+  "prompts": {},
+  "sessions": {
+    "s_1524eb9f9fabad": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019f8761-7347-7b70-b3f1-24c54174fc35",
+        "model": "gpt-5.6-sol"
+      },
+      "human_author": "Yunfei He <i.heyunfei@gmail.com>"
+    },
+    "s_a6f305dc0983c0": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019f7eb6-4cde-75c0-a32b-d790440743fc",
+        "model": "gpt-5.6-sol"
+      },
+      "human_author": "Yunfei He <i.heyunfei@gmail.com>"
+    }
+  }
+}

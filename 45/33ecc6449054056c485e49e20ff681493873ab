@@ -1,0 +1,19 @@
+test262
+  s_5b6d25c244d13a::t_840cd6e1764ac3 1
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "4533ecc6449054056c485e49e20ff681493873ab",
+  "prompts": {},
+  "sessions": {
+    "s_5b6d25c244d13a": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_f9ebc1c40ffes31sUp46Wz76zn",
+        "model": "@cf/moonshotai/kimi-k3"
+      },
+      "human_author": "shulaoda <165626830+shulaoda@users.noreply.github.com>"
+    }
+  }
+}

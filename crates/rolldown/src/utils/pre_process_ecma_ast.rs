@@ -90,14 +90,13 @@ impl PreProcessEcmaAst {
         EventKind::ParseError,
       ))?;
     };
-    // Surface invalid pure annotations flagged by oxc (issue #8898).
-    // oxc marks `/* #__PURE__ */` / `/* @__PURE__ */` comments with
-    // `CommentContent::PureNotApplied` when their position prevents the parser
-    // from applying them (expression-level, statement-level, or variable declarator).
+    // Surface invalid annotations flagged by oxc (issue #8898).
+    // oxc marks misplaced `PURE` and `NO_SIDE_EFFECTS` comments with their
+    // respective `NotApplied` variants when the parser cannot apply them.
     // Aligns with Rollup's `INVALID_ANNOTATION` log code.
     if should_warn_on_invalid_annotation {
       warnings.extend(ast.program.with_dependent(|_owner, dep| {
-        invalid_pure_annotation_warnings(&dep.program, &source, resolved_id)
+        invalid_annotation_warnings(&dep.program, &source, resolved_id)
       }));
     }
 
@@ -355,31 +354,41 @@ impl<'ast> VisitJs<'ast> for FunctionDeclarationStartMatcher {
   }
 }
 
-fn invalid_pure_annotation_warnings(
+fn invalid_annotation_warnings(
   program: &Program<'_>,
   source: &ArcStr,
   resolved_id: &str,
 ) -> Vec<BuildDiagnostic> {
-  let pure_not_applied_comments: Vec<_> =
-    program.comments.iter().filter(|c| c.content == CommentContent::PureNotApplied).collect();
+  let not_applied_comments: Vec<_> = program
+    .comments
+    .iter()
+    .filter(|comment| {
+      matches!(
+        comment.content,
+        CommentContent::PureNotApplied | CommentContent::NoSideEffectsNotApplied
+      )
+    })
+    .collect();
 
-  if pure_not_applied_comments.is_empty() {
+  if not_applied_comments.is_empty() {
     return Vec::new();
   }
 
   let target_statement_starts: FxHashSet<u32> =
-    pure_not_applied_comments.iter().map(|comment| comment.attached_to).collect();
+    not_applied_comments.iter().map(|comment| comment.attached_to).collect();
   let mut function_declaration_start_matcher =
     FunctionDeclarationStartMatcher::new(target_statement_starts);
   function_declaration_start_matcher.visit_program(program);
 
-  pure_not_applied_comments
+  not_applied_comments
     .into_iter()
     .map(|comment| {
       let span = comment.span;
       let annotation = source[span.start as usize..span.end as usize].to_string();
-      let is_before_function_declaration =
-        function_declaration_start_matcher.matched_statement_starts.contains(&comment.attached_to);
+      let is_before_function_declaration = comment.content == CommentContent::PureNotApplied
+        && function_declaration_start_matcher
+          .matched_statement_starts
+          .contains(&comment.attached_to);
       BuildDiagnostic::invalid_annotation(
         resolved_id.to_string(),
         annotation,
@@ -398,19 +407,22 @@ mod tests {
   use rolldown_ecmascript::EcmaCompiler;
   use rolldown_error::Severity;
 
-  use super::invalid_pure_annotation_warnings;
+  use super::invalid_annotation_warnings;
 
   #[test]
-  fn invalid_pure_annotations_are_warning_severity() {
-    let ast =
-      EcmaCompiler::parse("main.js", "/* #__PURE__ */ globalThis.foo;", SourceType::default())
-        .unwrap();
+  fn invalid_annotations_are_warning_severity() {
+    let ast = EcmaCompiler::parse(
+      "main.js",
+      "/* #__PURE__ */ globalThis.foo; /* #__NO_SIDE_EFFECTS__ */ globalThis.bar;",
+      SourceType::default(),
+    )
+    .unwrap();
     let source = ast.source().clone();
-    let warnings = ast.program.with_dependent(|_owner, dep| {
-      invalid_pure_annotation_warnings(&dep.program, &source, "main.js")
-    });
+    let warnings = ast
+      .program
+      .with_dependent(|_owner, dep| invalid_annotation_warnings(&dep.program, &source, "main.js"));
 
-    assert_eq!(warnings.len(), 1);
-    assert_eq!(warnings[0].severity(), Severity::Warning);
+    assert_eq!(warnings.len(), 2);
+    assert!(warnings.iter().all(|warning| warning.severity() == Severity::Warning));
   }
 }

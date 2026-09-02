@@ -15,6 +15,28 @@
       "matchManagers": ["cargo"],
       "matchPackageNames": ["idna_adapter"],
       "enabled": false
+    },
+    {
+      "description": "Lockstep oxc packages are always upgraded manually via the `upgrade-oxc` skill, so the Renovate `oxc` group PR is always superseded (e.g. #10809 superseded #10811). Independently released oxc packages (oxc_resolver, oxc_sourcemap, oxc_index, ...) remain auto-updated.",
+      "matchDatasources": ["crate", "npm"],
+      "matchPackageNames": [
+        "oxc",
+        "oxc_*",
+        "@oxc-project/*",
+        "oxc-parser",
+        "oxc-transform",
+        "oxc-minify"
+      ],
+      "excludePackageNames": [
+        "oxc_index",
+        "oxc_sourcemap",
+        "oxc_resolver",
+        "oxc_resolver_napi",
+        "oxc-miette",
+        "oxc-browserslist",
+        "oxc-resolver"
+      ],
+      "enabled": false
     }
   ]
 }

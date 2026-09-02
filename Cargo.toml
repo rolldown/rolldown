@@ -185,7 +185,7 @@ dashmap = "6.2.1"
 derive_more = { version = "2.1.1", features = ["debug"] }
 dunce = "1.0.5" # Normalize Windows paths to the most compatible format, avoiding UNC where possible
 fast-glob = "1.1.0"
-flate2 = { version = "=1.1.9", features = ["zlib-rs"] }
+flate2 = { version = "1.1.10", features = ["zlib-rs"] }
 form_urlencoded = "1.2.2"
 futures = "0.3.32"
 glob = "0.3.3"
@@ -201,7 +201,7 @@ itertools = "0.15.0"
 itoa = "1.0.18"
 json-escape-simd = "3.1.1"
 json-strip-comments = "3"
-jsonschema = { version = "0.51.0", default-features = false }
+jsonschema = { version = "0.52.0", default-features = false }
 memchr = "2.8.2"
 mimalloc-safe = "0.1.64"
 mime = "0.3.17"
@@ -209,7 +209,7 @@ nodejs-built-in-modules = "1.0.0"
 nom = "8.0.0"
 num-bigint = "0.5.1"
 num_cpus = "1.17"
-owo-colors = "4.3.0"
+owo-colors = "4.4.0"
 parking_lot = "0.12.5"
 path-posix = "0.0.1"
 percent-encoding = "2.3.2"
@@ -248,7 +248,7 @@ tracing-subscriber = { version = "0.3.23", default-features = false }
 ts-rs = "12.0"
 typedmap = "0.6.0"
 url = "2.5.8"
-uuid = "1.23.4"
+uuid = "1.26.0"
 vfs = "0.13.0"
 walkdir = "2.5.0"
 xxhash-rust = "0.8.16"
@@ -266,7 +266,7 @@ napi-build = { version = "2" }
 napi-derive = { version = "3", default-features = false, features = ["type-def", "tracing"] }
 
 # oxc crates with the same version
-oxc = { version = "0.147.0", features = [
+oxc = { version = "0.148.0", features = [
   "ast_visit",
   "transformer",
   "minifier",
@@ -277,14 +277,14 @@ oxc = { version = "0.147.0", features = [
   "isolated_declarations",
   "regular_expression",
 ] }
-oxc_allocator = { version = "0.147.0", features = ["pool"] }
-oxc_ecmascript = { version = "0.147.0" }
-oxc_napi = { version = "0.147.0" }
-oxc_str = { version = "0.147.0" }
-oxc_minify_napi = { version = "0.147.0" }
-oxc_parser_napi = { version = "0.147.0" }
-oxc_transform_napi = { version = "0.147.0" }
-oxc_traverse = { version = "0.147.0" }
+oxc_allocator = { version = "0.148.0", features = ["pool"] }
+oxc_ecmascript = { version = "0.148.0" }
+oxc_napi = { version = "0.148.0" }
+oxc_str = { version = "0.148.0" }
+oxc_minify_napi = { version = "0.148.0" }
+oxc_parser_napi = { version = "0.148.0" }
+oxc_transform_napi = { version = "0.148.0" }
+oxc_traverse = { version = "0.148.0" }
 
 # oxc crates in their own repos
 # Versions must be relaxed for usage in oxc.

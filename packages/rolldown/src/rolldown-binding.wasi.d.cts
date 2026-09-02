@@ -3371,7 +3371,7 @@ export interface PreRenderedChunk {
   /** Whether this chunk is a dynamic entry point. */
   isDynamicEntry: boolean
   /** The id of a module that this chunk corresponds to. */
-  facadeModuleId?: string
+  facadeModuleId: string | null
   /** The list of ids of modules included in this chunk. */
   moduleIds: Array<string>
   /** Exported variable names from this chunk. */

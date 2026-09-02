@@ -52,8 +52,8 @@ catalog:
   '@napi-rs/wasm-runtime': ~1.2.3
   '@oxc-node/cli': ^0.1.0
   '@oxc-node/core': ^0.1.0
-  '@oxc-project/runtime': '=0.147.0'
-  '@oxc-project/types': '=0.147.0'
+  '@oxc-project/runtime': '=0.148.0'
+  '@oxc-project/types': '=0.148.0'
   '@pnpm/find-workspace-packages': ^6.0.9
   '@rolldown/pluginutils': ^1.0.0
   '@rollup/plugin-commonjs': ^29.0.0
@@ -88,15 +88,15 @@ catalog:
   lodash-es: ^4.17.21
   micromatch: ^4.0.8
   miniflare: ^4.20260611.0
-  oxc-parser: '=0.147.0'
-  oxc-transform: '=0.147.0'
+  oxc-parser: '=0.148.0'
+  oxc-transform: '=0.148.0'
   pathe: ^2.0.3
   react: ^19.0.0
   react-dom: ^19.0.0
   remark-parse: ^11.0.0
-  remeda: ^2.42.0
+  remeda: ^2.45.0
   rolldown-plugin-dts: ^0.28.0
-  rollup: ^4.60.4
+  rollup: ^4.63.0
   semver: ^7.8.0
   serve-static: ^2.0.0
   signal-exit: 4.1.0

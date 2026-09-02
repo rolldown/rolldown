@@ -57,6 +57,7 @@ use super::events::{
   invalid_export_option::InvalidExportOption,
   missing_export::MissingExport,
   mixed_exports::MixedExports,
+  module_level_directive::ModuleLevelDirective,
   namespace_conflict::{NamespaceConflict, NamespaceConflictExporter},
   oxc_error::OxcError,
   unresolved_entry::UnresolvedEntry,
@@ -64,6 +65,15 @@ use super::events::{
 
 impl BuildDiagnostic {
   // --- Rollup related
+  pub fn module_level_directive(
+    module_id: String,
+    directive: String,
+    source: ArcStr,
+    span: Span,
+  ) -> Self {
+    Self::new_inner(ModuleLevelDirective { module_id, directive, source, span })
+  }
+
   pub fn entry_cannot_be_external(unresolved_id: impl AsRef<Path>) -> Self {
     Self::new_inner(ExternalEntry { id: unresolved_id.as_ref().to_path_buf() })
   }

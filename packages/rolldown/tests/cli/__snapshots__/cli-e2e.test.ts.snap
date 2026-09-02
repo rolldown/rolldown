@@ -40,6 +40,7 @@ OPTIONS
   --checks.missingGlobalName  Whether to emit warnings when the \`output.globals\` option is missing when needed.
   --checks.missingNameOptionForIifeExport Whether to emit warnings when the \`output.name\` option is missing when needed.
   --checks.mixedExports       Whether to emit warnings when the way to export values is ambiguous.
+  --checks.moduleLevelDirective Whether to emit warnings for module-level directives other than \`use strict\`.
   --checks.namespaceConflict  Whether to emit warnings when multiple star re-exports provide the same name from different modules.
   --checks.pluginTimings      Whether to emit warnings when plugins take significant time during the build process.
   --checks.preferBuiltinFeature Whether to emit warnings when a plugin that is covered by a built-in feature is used.
@@ -190,6 +191,7 @@ OPTIONS
   --checks.missingGlobalName  Whether to emit warnings when the \`output.globals\` option is missing when needed.
   --checks.missingNameOptionForIifeExport Whether to emit warnings when the \`output.name\` option is missing when needed.
   --checks.mixedExports       Whether to emit warnings when the way to export values is ambiguous.
+  --checks.moduleLevelDirective Whether to emit warnings for module-level directives other than \`use strict\`.
   --checks.namespaceConflict  Whether to emit warnings when multiple star re-exports provide the same name from different modules.
   --checks.pluginTimings      Whether to emit warnings when plugins take significant time during the build process.
   --checks.preferBuiltinFeature Whether to emit warnings when a plugin that is covered by a built-in feature is used.
@@ -340,6 +342,7 @@ OPTIONS
   --checks.missingGlobalName  Whether to emit warnings when the \`output.globals\` option is missing when needed.
   --checks.missingNameOptionForIifeExport Whether to emit warnings when the \`output.name\` option is missing when needed.
   --checks.mixedExports       Whether to emit warnings when the way to export values is ambiguous.
+  --checks.moduleLevelDirective Whether to emit warnings for module-level directives other than \`use strict\`.
   --checks.namespaceConflict  Whether to emit warnings when multiple star re-exports provide the same name from different modules.
   --checks.pluginTimings      Whether to emit warnings when plugins take significant time during the build process.
   --checks.preferBuiltinFeature Whether to emit warnings when a plugin that is covered by a built-in feature is used.
@@ -490,6 +493,7 @@ OPTIONS
   --checks.missingGlobalName  Whether to emit warnings when the \`output.globals\` option is missing when needed.
   --checks.missingNameOptionForIifeExport Whether to emit warnings when the \`output.name\` option is missing when needed.
   --checks.mixedExports       Whether to emit warnings when the way to export values is ambiguous.
+  --checks.moduleLevelDirective Whether to emit warnings for module-level directives other than \`use strict\`.
   --checks.namespaceConflict  Whether to emit warnings when multiple star re-exports provide the same name from different modules.
   --checks.pluginTimings      Whether to emit warnings when plugins take significant time during the build process.
   --checks.preferBuiltinFeature Whether to emit warnings when a plugin that is covered by a built-in feature is used.

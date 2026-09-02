@@ -42,6 +42,7 @@ pub mod missing_export;
 pub mod missing_global_name;
 pub mod missing_name_option_for_iife_export;
 pub mod mixed_exports;
+pub mod module_level_directive;
 pub mod namespace_conflict;
 pub mod oxc_error;
 pub mod plugin_error;

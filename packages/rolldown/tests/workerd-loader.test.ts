@@ -2745,6 +2745,134 @@ console.log('class plugin context invalidated')
     },
   );
 
+  // A short import chain on the raw binding surface; every module renders to a
+  // non-empty source, so each `getModules()` box has data behind it.
+  async function generateRawChain(
+    bundler: InstanceType<DeferredRolldownInstance['exports']['BindingBundler']>,
+    moduleCount: number,
+  ) {
+    const result = await bundler.generate({
+      inputOptions: {
+        input: [{ import: 'virtual:0' }],
+        plugins: [
+          {
+            name: 'workerd-raw-chain',
+            hookUsage: 11,
+            resolveId(_ctx, id) {
+              if (id.startsWith('virtual:')) return { id };
+            },
+            load(_ctx, id) {
+              if (!id.startsWith('virtual:')) return;
+              const index = Number(id.slice('virtual:'.length));
+              const next =
+                index + 1 < moduleCount
+                  ? `import next from 'virtual:${index + 1}';`
+                  : 'const next = 1;';
+              return {
+                code: `${next}\nexport function fn_${index}(a) { return a + next + ${index}; }\nexport default next + ${index};`,
+              };
+            },
+          },
+        ],
+        cwd: '/',
+        logLevel: 0,
+        onLog() {},
+      },
+      outputOptions: { format: 'es', plugins: [] },
+    });
+    if ('isBindingErrors' in result) {
+      throw new Error(JSON.stringify(result.errors));
+    }
+    return result;
+  }
+
+  wasiTest(
+    'raw getModules() boxes outlive freeOutputs(): each is its own last native holder',
+    { timeout: 60_000 },
+    async () => {
+      const module = await WebAssembly.compile(await readFile(wasmPath));
+      const instance = await createInstance(module);
+      const bundler = new instance.exports.BindingBundler();
+      try {
+        const result = await generateRawChain(bundler, 4);
+        const chunk = result.chunks[0];
+        const modules = chunk.getModules();
+        expect(modules.values).toHaveLength(4);
+
+        const report = workerd.freeOutputs(result);
+        // The chunk box held the last reference to the chunk itself...
+        expect(report.chunks[0]).toEqual({ freed: true });
+        expect(() => chunk.getModules()).toThrowError(/Memory has been freed/);
+        // ...while every module box still reads through its own reference to
+        // that module's rendered source: freeOutputs() cannot see these boxes,
+        // and on workerd no finalizer ever releases them.
+        for (const box of modules.values) {
+          expect(typeof box.code).toBe('string');
+          // `freed: true` = this box was the LAST holder, so nothing but this
+          // explicit call would have freed the rendered source.
+          expect(box.dropInner()).toEqual({ freed: true });
+          expect(box.dropInner()).toEqual({
+            freed: false,
+            reason: 'Memory has already been freed',
+          });
+        }
+      } finally {
+        try {
+          await bundler.close();
+        } finally {
+          instance.dispose();
+        }
+      }
+    },
+  );
+
+  wasiTest(
+    'snapshotModules() copies raw getModules() boxes to plain data and releases every box',
+    { timeout: 60_000 },
+    async () => {
+      const module = await WebAssembly.compile(await readFile(wasmPath));
+      const instance = await createInstance(module);
+      const bundler = new instance.exports.BindingBundler();
+      let keys: string[];
+      let snapshot: ReturnType<typeof workerd.snapshotModules>;
+      try {
+        const result = await generateRawChain(bundler, 4);
+        const chunk = result.chunks[0];
+        const modules = chunk.getModules();
+        keys = [...modules.keys];
+        // The documented raw-path recipe: snapshot the modules, then free the
+        // output.
+        snapshot = workerd.snapshotModules(modules);
+        for (const box of modules.values) {
+          expect(() => box.code).toThrowError(/Memory has been freed/);
+          expect(box.dropInner()).toEqual({
+            freed: false,
+            reason: 'Memory has already been freed',
+          });
+        }
+        expect(workerd.freeOutputs(result).chunks[0]).toEqual({ freed: true });
+      } finally {
+        try {
+          await bundler.close();
+        } finally {
+          instance.dispose();
+        }
+      }
+      // Plain JavaScript data: fully readable after the instance is gone.
+      expect(instance.disposed).toBe(true);
+      expect(Object.keys(snapshot).sort()).toEqual([...keys].sort());
+      for (const key of keys) {
+        const rendered = snapshot[key];
+        expect(typeof rendered.code).toBe('string');
+        expect(rendered.renderedLength).toBe(rendered.code!.length);
+        expect(Array.isArray(rendered.renderedExports)).toBe(true);
+      }
+      expect(snapshot['virtual:0'].renderedExports).toEqual(
+        expect.arrayContaining(['fn_0', 'default']),
+      );
+    },
+  );
+
   wasiTest('keeps the 64 MiB floor above the Wasm env.memory import minimum', async () => {
     const module = await WebAssembly.compile(await readFile(wasmPath));
     const imports = WebAssembly.Module.imports(module);

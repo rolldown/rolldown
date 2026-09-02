@@ -30,6 +30,8 @@ export function shouldEagerlyFreeOutputs(): boolean {
  *
  * `src/workerd.ts` `freeOutputs()` keeps its own equivalent loop on purpose: it
  * reports per-item statuses and must work against a raw binding result.
+ * Neither loop reaches the boxes `getModules()` mints; `OutputChunkImpl`
+ * snapshots those itself and the raw surface exports `snapshotModules` for it.
  */
 export function dropBindingOutputs(outputs: BindingOutputs): void {
   for (const chunk of outputs.chunks) {

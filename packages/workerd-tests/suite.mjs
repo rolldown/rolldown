@@ -449,6 +449,7 @@ assert.deepEqual(
     'freeOutputs',
     'getWorkerdRuntimeStats',
     'instantiate',
+    'snapshotModules',
   ],
   'the workerd entry export surface changed',
 );

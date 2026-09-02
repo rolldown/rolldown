@@ -416,7 +416,17 @@ describe('getRuntimeCapabilities', () => {
         { cwd: testsDir, env: { ...process.env }, encoding: 'utf8', timeout: 55_000 },
       );
       const lines = child.stdout.trim().split('\n');
-      const result = JSON.parse(lines[lines.length - 1]);
+      let result;
+      try {
+        result = JSON.parse(lines[lines.length - 1]);
+      } catch {
+        // The child prints its result line last, so a missing line means it
+        // died or hung first; surface why instead of a bare JSON parse error.
+        throw new Error(
+          `child produced no result line (status=${child.status} signal=${child.signal})\n` +
+            `--- stdout ---\n${child.stdout}\n--- stderr ---\n${child.stderr}`,
+        );
+      }
       expect(result.rebuilt).toBe(true);
       expect(result.endCount).toBeGreaterThanOrEqual(2);
       // A busy retry loop against the dead worker-owned callback emits this line

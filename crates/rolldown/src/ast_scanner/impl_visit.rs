@@ -335,6 +335,11 @@ impl<'me, 'ast: 'me> VisitJs<'ast> for AstScanner<'me, 'ast> {
   }
 
   fn visit_variable_declaration(&mut self, decl: &ast::VariableDeclaration<'ast>) {
+    // `await using x = …` awaits when the enclosing scope is exited, without any
+    // `AwaitExpression` node, so at module scope it is a top-level await (like `for await`).
+    if decl.kind == ast::VariableDeclarationKind::AwaitUsing && self.is_valid_tla_scope() {
+      self.handle_top_level_await(decl.span());
+    }
     match decl.declarations.as_slice() {
       [decl] => {
         if let (BindingPattern::BindingIdentifier(binding), Some(init)) = (&decl.id, &decl.init) {

@@ -1,0 +1,37 @@
+crates/rolldown/src/utils/pre_process_ecma_ast.rs
+  4111cdaab070bd69 357,362-371,373,378,383,388-391
+  s_8d5c341ef39b90::t_59e2fe22c54ccb 93-95,99,410,413-419,421-423,425-426
+Cargo.toml
+  s_8d5c341ef39b90::t_3e35ceee5976ff 269,280-289
+Cargo.lock
+  s_8d5c341ef39b90::t_a9125b776ccfa8 1563,1601,1614,1631,1642,1653,1674,1686,1694,1711,1731,1752,1769,1787,1812,1834,1849,1872,1888,1945,1983,1996,2008,2028,2042,2071,2093
+  s_8d5c341ef39b90::t_102288ea21d372 335,587,1416,3322,3652,3671,4075
+crates/rolldown/tests/esbuild/dce/no_side_effects_comment/artifacts.snap
+  s_8d5c341ef39b90::t_ee519eab39e7fc 4-141,379,381,385,387
+crates/rolldown/tests/esbuild/dce/no_side_effects_comment_ignore_annotations/artifacts.snap
+  s_8d5c341ef39b90::t_dae6adf9ee6ed4 6-209,593,595,599,601
+crates/rolldown/tests/esbuild/dce/no_side_effects_comment_minify_whitespace/artifacts.snap
+  s_8d5c341ef39b90::t_358a100928801a 6-209,593,595,599,601
+crates/rolldown/tests/rolldown/warnings/invalid_no_side_effects_annotation/artifacts.snap
+  s_8d5c341ef39b90::t_b89f1a0c2480dd 1-32
+crates/rolldown/tests/rolldown/warnings/invalid_no_side_effects_annotation/_config.json
+  s_8d5c341ef39b90::t_4c806db6ce68ac 1-3
+crates/rolldown/tests/rolldown/warnings/invalid_no_side_effects_annotation/main.js
+  s_8d5c341ef39b90::t_f31e82d0478379 1-2
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "87c58bf060f34771c1d60ff36eec17c0910b3fcd",
+  "prompts": {},
+  "sessions": {
+    "s_8d5c341ef39b90": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019fd2a4-9dd6-7050-9aa2-fd882e51e24d",
+        "model": "gpt-5.6-sol"
+      },
+      "human_author": "Cameron <cameron.clark@hey.com>"
+    }
+  }
+}

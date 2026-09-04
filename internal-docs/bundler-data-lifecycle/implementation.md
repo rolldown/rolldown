@@ -16,7 +16,6 @@ Bundler (long-lived)
   │     ├── PluginDriverFactory
   │     ├── SharedResolver
   │     ├── SharedOptions
-  │     ├── SharedFileEmitter
   │     ├── module_infos_for_incremental_build     ─┐
   │     └── transform_dependencies_for_incremental_build ─┤ shared via Arc with PluginDriver
   │
@@ -35,6 +34,7 @@ Bundler (long-lived)
 Bundle (per-build, consumed after use)
   ├── PluginDriver (fresh instance, created by PluginDriverFactory)
   │     ├── plugins / contexts (fresh)
+  │     ├── SharedFileEmitter (fresh for full modes; reused for IncrementalBuild)
   │     ├── watch_files (fresh)
   │     ├── module_infos (Arc → bundler-level)
   │     └── transform_dependencies (Arc → bundler-level)
@@ -50,25 +50,31 @@ Data that survives across all builds. It is either immutable configuration or in
 | ---------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `SharedOptions`                                | Immutable config. No reason to recreate.                                                                                                                                                                                                                                                                 |
 | `SharedResolver`                               | Expensive to construct; the resolver's internal cache improves rebuild speed.                                                                                                                                                                                                                            |
-| `SharedFileEmitter`                            | File emission state must be consistent across builds (e.g. emitted asset dedup).                                                                                                                                                                                                                         |
+| `SharedFileEmitter`                            | Incremental builds reuse the preceding handle's emitter so HMR and lazy compilation share deduplication and exactly-once delivery state. `FullBuild` and `IncrementalFullBuild` start with a fresh emitter so independent build handles cannot clear or mutate one another.                              |
 | `PluginDriverFactory`                          | Plugin definitions don't change between builds. Only the per-build plugin _instances_ and _contexts_ do.                                                                                                                                                                                                 |
 | `module_infos_for_incremental_build`           | Plugin-populated module metadata (via `this.getModuleInfo`). Must survive across incremental builds so plugins can query modules they didn't re-process.                                                                                                                                                 |
 | `transform_dependencies_for_incremental_build` | `addWatchFile()` dependencies from plugins. Critical for HMR invalidation — must persist so the HMR stage knows which files affect which modules.                                                                                                                                                        |
 | `ScanStageCache`                               | Module graph snapshot, module index maps, barrel state. Makes incremental builds possible — on `IncrementalBuild`, only changed modules are re-scanned and merged via `ScanStageCache::merge()`. Temporarily moved into `Bundle` during a build, then moved back (see "ScanStageCache Ownership" below). |
 
-**Reset rules:** `module_infos` and `transform_dependencies` are reset to fresh `Arc::default()` on `FullBuild` and `IncrementalFullBuild` (via `BundleFactory::create_bundle`). They are preserved across `IncrementalBuild`.
+**Reset rules:** `file_emitter`, `module_infos`, and `transform_dependencies`
+are reset to fresh state on `FullBuild` and `IncrementalFullBuild` (via
+`BundleFactory::create_bundle`). They are preserved across `IncrementalBuild`.
+The current emitter is reached through the latest `BundleHandle`; the factory
+does not retain an independent strong reference that could outlive a temporary
+or retained full-build handle.
 
 ### Tier 2: Bundle-Level (Per-Build)
 
 Data created fresh for each build and discarded (or consumed) when the build completes.
 
-| Data              | Why bundle-level                                                                                                                                          |
-| ----------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `PluginDriver`    | Plugin hooks carry per-build state (e.g. accumulated `watch_files`, per-module transform context). A stale driver from a previous build would leak state. |
-| `watch_files`     | The set of files a build touched. Must be fresh — a file no longer imported shouldn't trigger rebuilds.                                                   |
-| `warnings`        | Diagnostics are per-build output.                                                                                                                         |
-| `bundle_span`     | Tracing span for this specific build.                                                                                                                     |
-| Plugin `contexts` | `PluginContext` instances carry per-build references (resolver, file emitter handles).                                                                    |
+| Data               | Why bundle-level                                                                                                                                                                     |
+| ------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `PluginDriver`     | Plugin hooks carry per-build state (e.g. accumulated `watch_files`, per-module transform context). A stale driver from a previous build would leak state.                            |
+| Full-build emitter | Independent full builds may remain alive as separate watch results. Their emitted-file maps must stay valid until their own close and must not be cleared by another result's close. |
+| `watch_files`      | The set of files a build touched. Must be fresh — a file no longer imported shouldn't trigger rebuilds.                                                                              |
+| `warnings`         | Diagnostics are per-build output.                                                                                                                                                    |
+| `bundle_span`      | Tracing span for this specific build.                                                                                                                                                |
+| Plugin `contexts`  | `PluginContext` instances carry per-build references (resolver, file emitter handles).                                                                                               |
 
 ### ScanStageCache Ownership
 
@@ -222,9 +228,13 @@ This is what fixed the bug where `this.getModuleInfo()` returned nothing on the 
 
 4. **Unnecessary `ScanStageCache` materialization in non-incremental watch mode** (rolldown/rolldown#6894) — Earlier versions materialized scan-stage state even when watch mode ran with `incremental: false`, making the separation problem visible. `BundleMode` made this explicit. Current code resets `ScanStageCache` when incremental build is disabled (see `Bundle::scan_modules()`), so it is no longer retained across non-incremental builds.
 
-## Unresolved Questions
+## Close lifecycle
 
-- `Bundler::close()` still exists with a `closed` flag, but `closeBundle` is a per-build concern. It should move to `BundleHandle` — see [rust-bundler.md](../rust-bundler/implementation.md).
+`closeBundle` state is owned by the per-build `BundleHandle`; the long-lived
+`Bundler::close()` only marks the owner closed and delegates to its latest
+handle. The handle clears bundle-level plugin-driver resources on both success
+and failure and memoizes one terminal result for all clones. See
+[rust-bundler](../rust-bundler/implementation.md).
 
 ## Related
 

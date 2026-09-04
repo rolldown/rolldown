@@ -1,4 +1,5 @@
-use crate::{BundleFactory, BundlerOptions, types::scan_stage_cache::ScanStageCache};
+use crate::{Bundle, BundleFactory, BundlerOptions, types::scan_stage_cache::ScanStageCache};
+use rolldown_common::BundleMode;
 use rolldown_error::BuildResult;
 use rolldown_plugin::__inner::SharedPluginable;
 use std::ops::Deref;
@@ -18,6 +19,11 @@ pub struct Bundler {
   #[cfg_attr(not(feature = "experimental"), allow(dead_code))]
   pub(super) cache: ScanStageCache,
   pub(super) closed: bool,
+  /// Whether the terminal close failure of the current `last_bundle_handle` has
+  /// already been delivered to this bundler's caller. The handle replays its
+  /// terminal close result forever; the bundler reports it only once.
+  /// See `ensure_last_bundle_closed` in `impl_bundler_build.rs`.
+  pub(super) last_close_failure_delivered: bool,
 }
 
 impl Bundler {
@@ -34,6 +40,7 @@ impl Bundler {
       plugins,
       session: None,
       disable_tracing_setup: true,
+      defer_close_on_error: false,
     })?;
 
     Ok(Self {
@@ -41,7 +48,22 @@ impl Bundler {
       session: rolldown_devtools::Session::dummy(),
       cache: ScanStageCache::default(),
       closed: false,
+      last_close_failure_delivered: false,
     })
+  }
+
+  /// The `Bundler`-level way to create a bundle. Installing a fresh
+  /// `last_bundle_handle` (with a fresh close state) resets the once-per-handle
+  /// close-failure delivery gate. See `ensure_last_bundle_closed` in
+  /// `impl_bundler_build.rs`.
+  pub(super) fn create_bundle(
+    &mut self,
+    bundle_mode: BundleMode,
+    cache: Option<ScanStageCache>,
+  ) -> BuildResult<Bundle> {
+    let bundle = self.bundle_factory.create_bundle(bundle_mode, cache)?;
+    self.last_close_failure_delivered = false;
+    Ok(bundle)
   }
 
   pub(super) fn create_error_if_closed(&self) -> BuildResult<()> {

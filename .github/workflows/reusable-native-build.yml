@@ -47,6 +47,9 @@ jobs:
       - name: Build Native Rolldown
         run: just build-rolldown
 
+      # `just build-rolldown` regenerates the WASI loaders as THREADED variants and
+      # restores the browser loader (committed as the single-thread variant), so this
+      # stays clean — see internal-docs/async-runtime/implementation.md.
       - name: Check no diff
         run: git diff --exit-code
 

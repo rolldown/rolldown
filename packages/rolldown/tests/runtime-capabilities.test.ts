@@ -1,0 +1,571 @@
+import { execFileSync, spawnSync } from 'node:child_process';
+import { existsSync, readFileSync } from 'node:fs';
+import { createRequire } from 'node:module';
+import nodePath from 'node:path';
+import { fileURLToPath, pathToFileURL } from 'node:url';
+import { MessageChannel, Worker } from 'node:worker_threads';
+import { createParallelPluginWorkerBootstrap } from '../src/utils/initialize-parallel-plugins';
+// Registers the timer host before `timers` is asserted: this entry runs
+// `setup.ts` -> `timer-host.ts` -> `registerTimerHost`.
+import { rolldown, watch } from 'rolldown';
+import {
+  dev,
+  defineParallelPlugin,
+  getAsyncRuntimeConfig,
+  getRuntimeCapabilities,
+  getRuntimeSupport,
+  viteDynamicImportVarsPlugin,
+} from 'rolldown/experimental';
+import { describe, expect, test } from 'vitest';
+
+// Runs against whatever binding the worktree built (native in either
+// shared-runtime flavor, or a WASI artifact) and asserts the capability report is
+// internally coherent and matches the artifact. Every `isWasiTest` /
+// `isSingleThread` skip predicate in tests/src/runtime-flavor.ts derives from
+// this report, so a lying capability shifts the lane's pass/skip counts too.
+
+const testsDir = fileURLToPath(new URL('.', import.meta.url));
+
+// Run `script` (an ESM module body) in a FRESH node process that resolves
+// packages from this tests package; returns the last stdout line parsed as JSON
+// (stderr, e.g. node:wasi's ExperimentalWarning, is ignored).
+function inFreshProcess(script: string, env: Record<string, string | undefined> = {}): any {
+  const stdout = execFileSync(process.execPath, ['--input-type=module', '-e', script], {
+    cwd: testsDir,
+    env: { ...process.env, ...env },
+    encoding: 'utf8',
+    timeout: 30_000,
+  });
+  const lines = stdout.trim().split('\n');
+  return JSON.parse(lines[lines.length - 1]);
+}
+
+describe('getRuntimeCapabilities', () => {
+  const caps = getRuntimeCapabilities();
+  // Every shared-runtime artifact has a timer facility once a public entry has
+  // loaded: MultiThread owns a timer heap, CurrentThread delegates to the
+  // registered host driver.
+  const timersExpected = true;
+
+  test('reports a coherent capability set for the loaded artifact', () => {
+    expect(caps.backend).toBe('shared');
+    expect(caps.asyncRuntimeBuild).toBe(true);
+
+    expect(['native', 'wasi', 'wasi-threads']).toContain(caps.target);
+    expect(caps.wasi).toBe(caps.target !== 'native');
+
+    expect(['CurrentThread', 'MultiThread']).toContain(caps.flavor);
+    expect(caps.threads).toBe(caps.flavor === 'MultiThread');
+    // Worker threads keep native tasks progressing, but a foreign block_on
+    // entered on Node's main thread still parks the JS event loop.
+    expect(caps.blockOnJsThreadSafe).toBe(false);
+
+    // One pipeline: the capability flavor and the config reporter's flavor
+    // come from the same resolved snapshot / runtime controller.
+    expect(caps.flavor).toBe(getAsyncRuntimeConfig().flavor);
+
+    // Static per artifact: watch works on both native flavors and on no wasm
+    // artifact, independent of timer-host registration state.
+    expect(caps.watchSupported).toBe(!caps.wasi);
+    expect(caps.devSupported).toBe(caps.threads);
+
+    // Every shared-runtime WebAssembly artifact -- wasi and wasi-threads
+    // alike -- schedules on the calling thread only.
+    if (caps.wasi) {
+      expect(caps.flavor).toBe('CurrentThread');
+      expect(caps.threads).toBe(false);
+      expect(getAsyncRuntimeConfig()).toMatchObject({
+        flavor: 'CurrentThread',
+        maxBlockingTasks: 1,
+        workerThreads: 1,
+      });
+    }
+  });
+
+  test('reports complete public workflow support', () => {
+    const support = getRuntimeSupport();
+    expect(support).toEqual({
+      dev: caps.devSupported,
+      watch: caps.watchSupported,
+      dynamicImportVarsResolver: true,
+      importGlobResolver: true,
+      parallelPlugins: !caps.wasi,
+      pluginErrorMetadata: true,
+      symlinks: !caps.wasi,
+      threadlessWasi: caps.target === 'wasi' && !caps.threads,
+      workerd: false,
+    });
+    expect(Object.keys(support)).toContain('workerd');
+    expect(Object.getOwnPropertyDescriptor(support, 'workerd')).toMatchObject({
+      enumerable: true,
+      value: false,
+    });
+  });
+
+  test('preserves structured plugin error metadata', async () => {
+    const cause = Object.assign(new RangeError('nested plugin cause'), {
+      nestedMarker: 17,
+    });
+    const original = Object.assign(new TypeError('plugin metadata failure'), {
+      cause,
+      code: 'USER_PLUGIN_CODE',
+      customMarker: 'retained',
+    });
+    const bundle = await rolldown({
+      input: 'entry',
+      plugins: [
+        {
+          name: 'runtime-metadata-probe',
+          resolveId(id) {
+            if (id === 'entry') return '\0entry';
+          },
+          load(id) {
+            if (id === '\0entry') return 'export default 1';
+          },
+          transform(_code, id) {
+            if (id === '\0entry') throw original;
+          },
+        },
+      ],
+    });
+
+    try {
+      const failure = await bundle.generate().catch((error: unknown) => error);
+      const [pluginError] = (failure as { errors?: unknown[] }).errors ?? [];
+      expect(pluginError).toBe(original);
+      expect(pluginError).toMatchObject({
+        code: 'PLUGIN_ERROR',
+        pluginCode: 'USER_PLUGIN_CODE',
+        plugin: 'runtime-metadata-probe',
+        hook: 'transform',
+        id: '\0entry',
+        customMarker: 'retained',
+      });
+      expect(original.stack).toContain('plugin metadata failure');
+      expect(original.cause).toBe(cause);
+      expect(original.cause).toMatchObject({
+        name: 'RangeError',
+        message: 'nested plugin cause',
+        nestedMarker: 17,
+      });
+    } finally {
+      await bundle.close();
+    }
+  });
+
+  test('JS-backed dynamic import resolvers build through the async callback bridge', async () => {
+    const fixtureDir = nodePath.join(
+      import.meta.dirname,
+      'fixtures/builtin-plugin/dynamic-import-vars/vite',
+    );
+    let resolverCalls = 0;
+    const bundle = await rolldown({
+      input: nodePath.join(fixtureDir, 'main.js'),
+      plugins: [
+        viteDynamicImportVarsPlugin({
+          async resolver(id) {
+            resolverCalls += 1;
+            return id
+              .replace('@', nodePath.join(fixtureDir, 'mods'))
+              .replace('#', nodePath.resolve(fixtureDir, '../../'));
+          },
+        }),
+      ],
+    });
+
+    try {
+      await expect(bundle.generate()).resolves.toBeDefined();
+      expect(resolverCalls).toBeGreaterThan(0);
+    } finally {
+      await bundle.close();
+    }
+  });
+
+  test.runIf(caps.flavor === 'CurrentThread')('dev fails before entering the binding', async () => {
+    await expect(dev({ input: 'entry.js' })).rejects.toMatchObject({
+      code: 'ERR_ROLLDOWN_UNSUPPORTED_RUNTIME_FEATURE',
+      feature: 'dev',
+    });
+  });
+
+  test.runIf(caps.wasi)('watch reports a normal setup failure instead of stalling', async () => {
+    const watcher = watch({ input: 'entry.js' });
+    const events: string[] = [];
+    let reportedError: Error | undefined;
+    const ended = new Promise<void>((resolve) => {
+      watcher.on('event', (event) => {
+        events.push(event.code);
+        if (event.code === 'ERROR') {
+          reportedError = event.error;
+        } else if (event.code === 'END') {
+          resolve();
+        }
+      });
+    });
+
+    await Promise.all([ended, watcher.close()]);
+    expect(events).toEqual(['ERROR', 'END']);
+    expect(reportedError).toMatchObject({
+      code: 'ERR_ROLLDOWN_UNSUPPORTED_RUNTIME_FEATURE',
+      feature: 'watch',
+    });
+  });
+
+  test.runIf(caps.wasi)('parallel plugins fail before spawning workers on WASI', () => {
+    expect(() => defineParallelPlugin('file:///parallel-plugin.mjs')).toThrowError(
+      expect.objectContaining({
+        code: 'ERR_ROLLDOWN_UNSUPPORTED_RUNTIME_FEATURE',
+        feature: 'parallelPlugins',
+      }),
+    );
+  });
+  test('a timer facility is available once any public entry has loaded', () => {
+    expect(caps.timers).toBe(timersExpected);
+  });
+
+  test('the report is a stable snapshot, not an env re-read', () => {
+    const capsBefore = getRuntimeCapabilities();
+    const configBefore = getAsyncRuntimeConfig();
+    const mutated = { ...process.env };
+    process.env.ROLLDOWN_RUNTIME = caps.threads ? 'single' : 'multi';
+    process.env.ROLLDOWN_WORKER_THREADS = '99';
+    try {
+      expect(getRuntimeCapabilities()).toEqual(capsBefore);
+      expect(getAsyncRuntimeConfig()).toEqual(configBefore);
+    } finally {
+      process.env.ROLLDOWN_RUNTIME = mutated.ROLLDOWN_RUNTIME;
+      process.env.ROLLDOWN_WORKER_THREADS = mutated.ROLLDOWN_WORKER_THREADS;
+      if (mutated.ROLLDOWN_RUNTIME === undefined) {
+        delete process.env.ROLLDOWN_RUNTIME;
+      }
+      if (mutated.ROLLDOWN_WORKER_THREADS === undefined) {
+        delete process.env.ROLLDOWN_WORKER_THREADS;
+      }
+    }
+  });
+
+  // Import-order invariant: a fresh process whose ONLY import is
+  // `rolldown/experimental` must still see working timers (that entry carries the
+  // timer-host side effect itself) and the artifact-static watch flag. Without
+  // it, a CurrentThread artifact reports timers:false and watchSupported:false
+  // despite supporting both.
+  test('capabilities do not depend on import order (experimental-only import)', () => {
+    const fresh = inFreshProcess(`
+      const { getRuntimeCapabilities } = await import('rolldown/experimental');
+      console.log(JSON.stringify(getRuntimeCapabilities()));
+    `);
+    expect(fresh.timers).toBe(timersExpected);
+    expect(fresh.watchSupported).toBe(!caps.wasi);
+    // Same artifact, same lane env => the flavor this process sees.
+    expect(fresh.flavor).toBe(caps.flavor);
+  });
+
+  // Load-time snapshot invariant: every artifact resolves the runtime config
+  // eagerly in lib.rs `init`, so an env mutation between import and the FIRST
+  // query is invisible -- the report must equal a control process that queried
+  // immediately. On threaded-WASI node:wasi also snapshots the WASI env at loader
+  // load (uvwasi), so the eager init is what makes load-time pinning a property
+  // of rolldown itself rather than of the host's WASI shim.
+  test('first query reflects load-time env even if mutated after import', () => {
+    const spawnEnv = {
+      ROLLDOWN_WORKER_THREADS: '7',
+      NAPI_RS_ASYNC_WORK_POOL_SIZE: '6',
+    };
+    const report = `
+      const { getAsyncRuntimeConfig, getRuntimeCapabilities } = await import('rolldown/experimental');
+      MUTATE;
+      console.log(JSON.stringify({ config: getAsyncRuntimeConfig(), caps: getRuntimeCapabilities() }));
+    `;
+    const mutateAll = `for (const key of ['ROLLDOWN_RUNTIME', 'ROLLDOWN_WORKER_THREADS', 'ROLLDOWN_MAX_BLOCKING_THREADS', 'ROLLDOWN_PARK_DEADLINE_MS', 'NAPI_RS_ASYNC_WORK_POOL_SIZE', 'UV_THREADPOOL_SIZE']) process.env[key] = '9'`;
+    const mutated = inFreshProcess(report.replace('MUTATE', mutateAll), spawnEnv);
+    const control = inFreshProcess(report.replace('MUTATE', ''), spawnEnv);
+    expect(mutated).toEqual(control);
+  });
+
+  test.runIf(caps.target === 'native')(
+    'oversized thread environment values are bounded before addon import',
+    () => {
+      const report = inFreshProcess(
+        `
+          const { getAsyncRuntimeConfig } = await import('rolldown/experimental');
+          console.log(JSON.stringify(getAsyncRuntimeConfig()));
+        `,
+        {
+          ROLLDOWN_MAX_BLOCKING_THREADS: '1000000',
+          ROLLDOWN_RUNTIME: 'multi',
+          ROLLDOWN_WORKER_THREADS: '1000000',
+        },
+      );
+      expect(report.workerThreads).toBe(256);
+      expect(report.maxBlockingTasks).toBe(255);
+    },
+  );
+
+  // Worker-environment invariant: a fresh process whose FIRST binding import
+  // happens inside a Node worker must see working timers there -- timer-host
+  // registration carries NO isMainThread guard, since the parallel-plugin
+  // machinery loads the binding in workers. The registry takes one registration
+  // per importing env and races every timer across all live hosts, so the
+  // worker's joins rather than clobbers a later main-thread import. Without it, a
+  // CurrentThread worker reports timers:false and a CT sleep_until there panics
+  // driverless even though watchSupported is statically true.
+  test('capabilities hold when a worker thread imports the binding first', () => {
+    const result = inFreshProcess(`
+      import { Worker } from 'node:worker_threads';
+      const workerCaps = await new Promise((resolve, reject) => {
+        const worker = new Worker(
+          "(async () => { const { getRuntimeCapabilities } = await import('rolldown/experimental'); const { parentPort } = await import('node:worker_threads'); parentPort.postMessage(getRuntimeCapabilities()); })().catch((error) => { setTimeout(() => { throw error; }); })",
+          { eval: true },
+        );
+        worker.once('message', resolve);
+        worker.once('error', reject);
+      });
+      // The worker registered first; the main thread must not be driverless
+      // either (it registers its own per-env driver alongside the worker's).
+      const { getRuntimeCapabilities } = await import('rolldown/experimental');
+      console.log(JSON.stringify({ workerCaps, mainCaps: getRuntimeCapabilities() }));
+    `);
+    expect(result.workerCaps.timers).toBe(timersExpected);
+    expect(result.workerCaps.watchSupported).toBe(!caps.wasi);
+    expect(result.workerCaps.flavor).toBe(caps.flavor);
+    expect(result.mainCaps.timers).toBe(timersExpected);
+  });
+
+  // Driver-lifetime invariant: a worker that imports the binding FIRST and then
+  // EXITS must not leave timer duty to its dead driver. The weak threadsafe
+  // function behind the timer host does not keep the worker's event loop alive,
+  // so the worker exits naturally and its env teardown kills the callback. The
+  // registry must evict the dead registrant, re-arm on the main thread's live
+  // driver, and keep stderr clean. Fails (busy-retry against the dead callback)
+  // if a first-registration-wins slot lets the dead driver shadow the live host;
+  // buildDelay > 0 keeps the debounce off the already-elapsed fast path so it is
+  // a REAL CurrentThread sleep.
+  test.skipIf(!caps.watchSupported)(
+    'watch debounce timers survive a worker-first registrant that exited',
+    { retry: 3, timeout: 60_000 },
+    () => {
+      const child = spawnSync(
+        process.execPath,
+        [
+          '--input-type=module',
+          '-e',
+          `
+      import { Worker } from 'node:worker_threads';
+      import fs from 'node:fs';
+      import os from 'node:os';
+      import path from 'node:path';
+
+      // Step 1: a worker imports the binding FIRST (registering a timer host
+      // owned by the worker's env), then exits.
+      const worker = new Worker(
+        "(async () => { await import('rolldown/experimental'); const { parentPort } = await import('node:worker_threads'); parentPort.postMessage('ready'); })().catch((error) => { setTimeout(() => { throw error; }); })",
+        { eval: true },
+      );
+      await new Promise((resolve, reject) => {
+        worker.once('message', resolve);
+        worker.once('error', reject);
+      });
+      const naturalExit = await Promise.race([
+        new Promise((resolve) => worker.once('exit', () => resolve(true))),
+        new Promise((resolve) => setTimeout(() => resolve(false), 10_000)),
+      ]);
+      if (!naturalExit) {
+        // Fallback: terminate tears the env down just the same.
+        await worker.terminate();
+      }
+
+      // Step 2: the main thread imports rolldown and runs a REAL watch whose
+      // debounce must go through a CurrentThread host timer.
+      const { watch } = await import('rolldown');
+      const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'rd-worker-exit-timer-'));
+      const input = path.join(dir, 'main.js');
+      fs.writeFileSync(input, 'export const a = 1;');
+      const watcher = watch({
+        input,
+        cwd: dir,
+        output: { dir: path.join(dir, 'dist') },
+        watch: { buildDelay: 150, watcher: { usePolling: true, pollInterval: 50 } },
+      });
+
+      let endCount = 0;
+      let resolveSecondEnd;
+      const secondEnd = new Promise((resolve) => { resolveSecondEnd = resolve; });
+      watcher.on('event', (event) => {
+        if (event.code === 'END') {
+          endCount += 1;
+          if (endCount >= 2) resolveSecondEnd(true);
+        }
+      });
+      await new Promise((resolve) => {
+        const check = setInterval(() => {
+          if (endCount >= 1) { clearInterval(check); resolve(); }
+        }, 50);
+      });
+
+      // Edit across a whole-second mtime boundary (poll watcher granularity).
+      await new Promise((resolve) => setTimeout(resolve, 1100));
+      fs.writeFileSync(input, 'export const a = 2;');
+      const rebuilt = await Promise.race([
+        secondEnd,
+        new Promise((resolve) => setTimeout(() => resolve(false), 20_000)),
+      ]);
+      console.log(JSON.stringify({ rebuilt, endCount, naturalExit }));
+      process.exit(rebuilt ? 0 : 7);
+          `,
+        ],
+        { cwd: testsDir, env: { ...process.env }, encoding: 'utf8', timeout: 55_000 },
+      );
+      const lines = child.stdout.trim().split('\n');
+      let result;
+      try {
+        result = JSON.parse(lines[lines.length - 1]);
+      } catch {
+        // The child prints its result line last, so a missing line means it
+        // died or hung first; surface why instead of a bare JSON parse error.
+        throw new Error(
+          `child produced no result line (status=${child.status} signal=${child.signal})\n` +
+            `--- stdout ---\n${child.stdout}\n--- stderr ---\n${child.stderr}`,
+        );
+      }
+      expect(result.rebuilt).toBe(true);
+      expect(result.endCount).toBeGreaterThanOrEqual(2);
+      // A busy retry loop against the dead worker-owned callback emits this line
+      // repeatedly; correct eviction never touches that relay.
+      expect(child.stderr).not.toContain('host timer callback failed');
+      expect(child.status).toBe(0);
+    },
+  );
+
+  // Worker-entry invariant: the REAL `#parallel-plugin-worker` entry loads the
+  // binding, so it must import './timer-host' first and carry its own
+  // registration. On native, the process-global registry can mask a missing one
+  // (main's driver serves); on the wasm artifacts the registry is per-instance
+  // and the worker would be genuinely driverless. Bundling may place
+  // `require_binding` and timer-host's top-level registration in one shared
+  // chunk, so this also guards the contract across future chunk splits.
+  const rolldownPkgDir = nodePath.dirname(
+    createRequire(import.meta.url).resolve('rolldown/package.json'),
+  );
+  const parallelWorkerEntry = nodePath.join(rolldownPkgDir, 'dist', 'parallel-plugin-worker.mjs');
+  const wasiNodeBinding = nodePath.join(rolldownPkgDir, 'dist', 'rolldown-binding.wasi.cjs');
+  const wasiArtifact = nodePath.join(rolldownPkgDir, 'dist', 'rolldown-binding.wasm32-wasi.wasm');
+
+  test.runIf(caps.target === 'wasi-threads')(
+    'threaded-WASI file workers discard inherited string-input execArgv',
+    { timeout: 30_000 },
+    () => {
+      const result = inFreshProcess(`
+        await import(${JSON.stringify(pathToFileURL(wasiNodeBinding).href)});
+        await new Promise((resolve) => setTimeout(resolve, 250));
+        console.log(JSON.stringify({ loaded: true }));
+      `);
+      expect(result).toEqual({ loaded: true });
+    },
+  );
+
+  test.runIf(caps.target === 'wasi-threads')('threaded-WASI artifact is a reactor', () => {
+    const module = new WebAssembly.Module(new Uint8Array(readFileSync(wasiArtifact)));
+    const exports = WebAssembly.Module.exports(module);
+    expect(exports).toContainEqual({ name: '_initialize', kind: 'function' });
+    expect(exports.some(({ name }) => name === '_start')).toBe(false);
+  });
+
+  test(
+    'the parallel-plugin worker entry carries the timer-host registration',
+    { timeout: 30_000 },
+    async () => {
+      expect(existsSync(parallelWorkerEntry)).toBe(true);
+      // STRUCTURAL: the entry's static import graph (the entry plus its relative
+      // chunks -- including BARE side-effect imports, the form the timer-host
+      // import takes on the wasi dist) must contain the registration call.
+      // Top-level chunk code executes on import, so presence in the graph IS
+      // registration in the worker's env. The receiver-bound host bridge must
+      // include both timeout creation and cancellation; resolving the relay after
+      // clearTimeout lets Rust retire the detached schedule task immediately.
+      const entryText = readFileSync(parallelWorkerEntry, 'utf8');
+      let graphText = entryText;
+      for (const match of entryText.matchAll(/(?:from\s+|import\s+)["'](\.\/[^"']+)["']/g)) {
+        const chunkPath = nodePath.join(nodePath.dirname(parallelWorkerEntry), match[1]);
+        if (existsSync(chunkPath)) {
+          graphText += readFileSync(chunkPath, 'utf8');
+        }
+      }
+      expect(graphText).toContain('Reflect.get(globalThis, "setTimeout"');
+      expect(graphText).toContain('Reflect.get(globalThis, "clearTimeout"');
+      expect(graphText).toContain('Reflect.apply(timer.clearTimeoutHost');
+      expect(graphText).toContain('getCurrentThreadTaskHostContractVersion');
+      expect(graphText).toContain('registerCurrentThreadTaskHost');
+      expect(graphText).toContain('registerTimerHost');
+      expect(graphText).not.toContain('driveCurrentThreadRuntimeTasks');
+      expect(graphText).not.toContain('cancelCurrentThreadRuntimeTaskDispatch');
+      expect(graphText).toContain('timer.resolve()');
+
+      // BEHAVIORAL: the real entry must actually run as a worker under this
+      // lane's flavor (empty plugin set: registerPlugins(id, []) no-ops on an
+      // unknown registry id and the entry posts success).
+      const { port1: controlPort, port2: workerControlPort } = new MessageChannel();
+      const authentication = {
+        readyToken: 'runtime-capabilities-ready',
+        resultToken: 'runtime-capabilities-result',
+        session: 'runtime-capabilities-session',
+        startToken: 'runtime-capabilities-start',
+      };
+      const worker = new Worker(
+        createParallelPluginWorkerBootstrap(
+          pathToFileURL(parallelWorkerEntry).href,
+          authentication,
+        ),
+        {
+          eval: true,
+          transferList: [workerControlPort],
+          workerData: {
+            controlPort: workerControlPort,
+            registryId: 0,
+            pluginInfos: [],
+            threadNumber: 0,
+            watchMode: false,
+          },
+        },
+      );
+      try {
+        const messages: string[] = [];
+        const outcome: any = await Promise.race([
+          new Promise((resolve, reject) => {
+            const onMessage = (message: any) => {
+              if (
+                message?.session !== authentication.session ||
+                (message?.type === 'ready'
+                  ? message?.token !== authentication.readyToken
+                  : message?.token !== authentication.resultToken)
+              ) {
+                reject(new Error('parallel-plugin worker sent an unauthenticated response'));
+                return;
+              }
+              messages.push(message.type);
+              if (message.type === 'ready') {
+                controlPort.postMessage({
+                  session: authentication.session,
+                  token: authentication.startToken,
+                  type: 'start',
+                });
+                return;
+              }
+              controlPort.off('message', onMessage);
+              resolve(message);
+            };
+            controlPort.on('message', onMessage);
+            worker.once('error', reject);
+          }),
+          new Promise((_, reject) =>
+            setTimeout(() => reject(new Error('parallel-plugin worker never reported')), 20_000),
+          ),
+        ]);
+        expect(messages).toEqual(['ready', 'success']);
+        expect(outcome.type).toBe('success');
+      } finally {
+        controlPort.close();
+        await worker.terminate();
+      }
+    },
+  );
+});

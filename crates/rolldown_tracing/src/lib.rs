@@ -25,6 +25,18 @@ static LOG_OUTPUT_ENV_NAME: &str = "RD_LOG_OUTPUT";
 
 static IS_INITIALIZED: AtomicBool = AtomicBool::new(false);
 
+macro_rules! with_devtools_layers {
+  ($subscriber:expr) => {
+    $subscriber
+      .with(rolldown_devtools::DevtoolsLayer.with_filter(rolldown_devtools::DevtoolsFilter))
+      .with(
+        fmt::layer()
+          .event_format(rolldown_devtools::DevtoolsFormatter)
+          .with_filter(rolldown_devtools::DevtoolsFilter),
+      )
+  };
+}
+
 pub fn try_init_tracing() -> Option<Box<dyn Any + Send>> {
   let Ok(env_var) = std::env::var(LOG_ENV_NAME) else {
     // tracing will slow down the bundling process, so we only enable it when `LOG` is set.
@@ -61,10 +73,13 @@ pub fn try_init_tracing() -> Option<Box<dyn Any + Send>> {
           if output_mode == "chrome-json" { TraceStyle::Async } else { TraceStyle::Threaded };
         let (chrome_layer, guard) =
           ChromeLayerBuilder::new().trace_style(trace_style).include_args(true).build();
-        tracing_subscriber::registry()
-          .with(targets)
-          .with(chrome_layer.with_filter(filter_for_removing_devtools_event))
-          .init();
+        if !initialize_tracing(with_devtools_layers!(
+          tracing_subscriber::registry().with(
+            chrome_layer.with_filter(filter_for_removing_devtools_event).with_filter(targets),
+          )
+        )) {
+          return None;
+        }
         Some(Box::new(guard))
       }
       #[cfg(not(feature = "chrome-tracing"))]
@@ -75,17 +90,19 @@ pub fn try_init_tracing() -> Option<Box<dyn Any + Send>> {
            which is disabled in release builds. Falling back to readable stdout output. \
            Build a profile binary (`pnpm build-binding:profile`) to enable chrome tracing."
         );
-        tracing_subscriber::registry()
-          .with(filter_for_removing_devtools_event)
-          .with(targets)
-          .with(
+        if !initialize_tracing(with_devtools_layers!(
+          tracing_subscriber::registry().with(
             fmt::layer()
               .pretty()
               .with_span_events(FmtSpan::NONE)
               .with_level(true)
-              .with_target(false),
+              .with_target(false)
+              .with_filter(filter_for_removing_devtools_event)
+              .with_filter(targets),
           )
-          .init();
+        )) {
+          return None;
+        }
         None
       }
     }
@@ -93,34 +110,65 @@ pub fn try_init_tracing() -> Option<Box<dyn Any + Send>> {
       report_tracing_init_failure(
         "`RD_LOG_OUTPUT=json` is not implemented; falling back to readable output",
       );
-      tracing_subscriber::registry()
-        .with(filter_for_removing_devtools_event)
-        .with(targets)
-        .with(
-          fmt::layer().pretty().with_span_events(FmtSpan::NONE).with_level(true).with_target(false),
+      if !initialize_tracing(with_devtools_layers!(
+        tracing_subscriber::registry().with(
+          fmt::layer()
+            .pretty()
+            .with_span_events(FmtSpan::NONE)
+            .with_level(true)
+            .with_target(false)
+            .with_filter(filter_for_removing_devtools_event)
+            .with_filter(targets),
         )
-        .init();
+      )) {
+        return None;
+      }
       None
     }
     "readable" => {
-      tracing_subscriber::registry()
-        .with(filter_for_removing_devtools_event)
-        .with(targets)
-        .with(
-          fmt::layer().pretty().with_span_events(FmtSpan::NONE).with_level(true).with_target(false),
+      if !initialize_tracing(with_devtools_layers!(
+        tracing_subscriber::registry().with(
+          fmt::layer()
+            .pretty()
+            .with_span_events(FmtSpan::NONE)
+            .with_level(true)
+            .with_target(false)
+            .with_filter(filter_for_removing_devtools_event)
+            .with_filter(targets),
         )
-        .init();
+      )) {
+        return None;
+      }
       tracing::debug!("Tracing initialized");
       None
     }
     _ => {
-      tracing_subscriber::registry()
-        .with(filter_for_removing_devtools_event)
-        .with(targets)
-        .with(fmt::layer().pretty().with_span_events(FmtSpan::CLOSE | FmtSpan::ENTER))
-        .init();
+      if !initialize_tracing(with_devtools_layers!(
+        tracing_subscriber::registry().with(
+          fmt::layer()
+            .pretty()
+            .with_span_events(FmtSpan::CLOSE | FmtSpan::ENTER)
+            .with_filter(filter_for_removing_devtools_event)
+            .with_filter(targets),
+        )
+      )) {
+        return None;
+      }
       tracing::debug!("Tracing initialized");
       None
+    }
+  }
+}
+
+fn initialize_tracing(subscriber: impl tracing::Subscriber + Send + Sync + 'static) -> bool {
+  match rolldown_devtools::ensure_tracing_subscriber(
+    rolldown_devtools::TracingSubscriberCapabilities::DEVTOOLS_AND_LOGGING,
+    || tracing::Dispatch::new(subscriber),
+  ) {
+    Ok(()) => true,
+    Err(error) => {
+      report_tracing_init_failure(&error.to_string());
+      false
     }
   }
 }

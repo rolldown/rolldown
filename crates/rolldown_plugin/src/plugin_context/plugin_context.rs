@@ -51,6 +51,7 @@ impl PluginContext {
       PluginContext::Napi(_) => self.clone(),
       PluginContext::Native(ctx) => Self::Native(Arc::new(NativePluginContextImpl {
         plugin_name: ctx.plugin_name.clone(),
+        close_identity: ctx.close_identity,
         skipped_resolve_calls,
         plugin_idx: ctx.plugin_idx,
         plugin_driver: Weak::clone(&ctx.plugin_driver),

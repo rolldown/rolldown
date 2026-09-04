@@ -1,9 +1,12 @@
+import type { Program } from '@oxc-project/types';
 import {
   parse as originalParse,
   type ParseResult as BindingParseResult,
   type ParserOptions as BindingParserOptions,
   parseSync as originalParseSync,
 } from '../binding.cjs';
+import { runWithRuntimeLease } from './run-with-runtime-lease';
+import { shouldEagerlyFreeOutputs } from './threadless-free';
 // @ts-ignore
 import * as oxcParserWrap from 'oxc-parser/src-js/wrap.js';
 
@@ -19,6 +22,62 @@ export interface ParseResult extends BindingParseResult {}
  * @category Utilities
  */
 export interface ParserOptions extends BindingParserOptions {}
+
+/**
+ * Wrap a native `ParseResult` for consumers.
+ *
+ * Lazy flavors get oxc-parser's own wrap object: its getters read -- and
+ * thereby drain, every upstream getter is a `mem::take` -- each native field
+ * on first access, and finalizers release whatever stays unread.
+ *
+ * The threadless-WASI flavor never runs finalizers (see
+ * `src/utils/threadless-free.ts`), and the upstream napi class has no
+ * `dropInner`, so reading all four getters immediately is the only way to
+ * release the native storage; anything left unread would stay allocated
+ * forever (the serialized-AST JSON behind `program` is the largest piece).
+ * This snapshot keeps the JSON.parse of the program exactly as lazy and
+ * memoized as the wrap object's, via the same `jsonParseAst` revival path,
+ * and drops the JSON once revived so the drain is not undone on the JS side.
+ */
+function wrapParseResult(result: BindingParseResult): ParseResult {
+  if (!shouldEagerlyFreeOutputs()) {
+    return oxcParserWrap.wrap(result);
+  }
+  // The native `program` getter returns the serialized AST JSON string (a
+  // `mem::take` drain), despite the declared `Program` type.
+  let programJson: string | undefined = result.program as unknown as string;
+  const module = result.module;
+  const comments = result.comments;
+  const errors = result.errors;
+  let program: Program | undefined;
+  let revived = false;
+  return {
+    get program() {
+      if (!revived) {
+        program = oxcParserWrap.jsonParseAst(programJson) as Program;
+        // Release the JSON now that the object graph exists: measured on
+        // real files it runs 2-19x the source size, so holding both would
+        // undo the drain above for anyone who keeps the result. Released
+        // only once `jsonParseAst` has returned -- a throw must leave the
+        // string for a retry and propagate untouched -- and the memo is
+        // gated on `revived`, not on the AST being truthy, so a falsy
+        // revival can never re-enter this branch on a released string.
+        revived = true;
+        programJson = undefined;
+      }
+      return program as Program;
+    },
+    get module() {
+      return module;
+    },
+    get comments() {
+      return comments;
+    },
+    get errors() {
+      return errors;
+    },
+  };
+}
 
 /**
  * Parse JS/TS source asynchronously on a separate thread.
@@ -40,7 +99,12 @@ export async function parse(
   sourceText: string,
   options?: ParserOptions | null,
 ): Promise<ParseResult> {
-  return oxcParserWrap.wrap(await originalParse(filename, sourceText, options));
+  return wrapParseResult(
+    await runWithRuntimeLease(
+      () => originalParse(filename, sourceText, options),
+      'Parse and runtime release both failed',
+    ),
+  );
 }
 
 /**
@@ -60,5 +124,5 @@ export function parseSync(
   sourceText: string,
   options?: ParserOptions | null,
 ): ParseResult {
-  return oxcParserWrap.wrap(originalParseSync(filename, sourceText, options));
+  return wrapParseResult(originalParseSync(filename, sourceText, options));
 }

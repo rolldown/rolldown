@@ -6,6 +6,15 @@
 
 Rolldown devtools is a tracing-based system that emits structured build-time data (module graphs, chunk graphs, plugin hook calls, generated assets) to disk so that external tools (e.g. Vite devtools) can consume it to provide debugging, profiling, and visualization experiences.
 
+## Lifecycle Principles
+
+- Output identity follows the canonical filesystem identity of an existing `cwd`, not its lexical spelling. Symlink, `.`/`..`, drive-letter, and case aliases must converge without changing where that filesystem path resolves.
+- The output files belong to a logical `(canonical output root, raw session ID)` pair, but every tracer has an independent owner lease. Same-key bundlers may append to the same files; one close or drop must not consume another owner's state or diagnostics.
+- `$ref:` dictionaries are file-local. A consumer must be able to parse `meta.json` or `logs.json` independently without loading the other file first.
+- Ordinary tracing writes are best-effort and must not unwind build work when the process-global writer cannot start or be accessed. The authoritative close path still returns structured failures.
+- Global subscriber installation is serialized, fallible, and capability-aware. When `RD_LOG` is enabled first, normal tracing and the dormant devtools layers are installed together; an existing external subscriber becomes a build diagnostic instead of an N-API-crossing panic. Because tracing subscribers cannot gain layers after global installation, requesting `RD_LOG` after a devtools-only subscriber returns an explicit recoverable incompatibility instead of pretending logging was enabled.
+- A devtools event is accepted only when its span ancestry carries both the selected session ID and canonical output root. Non-opted-in builds cannot fall back into another owner's files, and action callsites stay disabled while no tracer lease is active.
+
 ## Future Directions
 
 ### Plugin-Supplied Metadata
@@ -35,11 +44,11 @@ Now that the system is in use, it's a major issue. On large projects, enabling d
 - **Synchronous JSON serialization on the hot path.** Every `trace_action!` call serializes the action struct to JSON via `serde_json::to_string`, then the formatter parses it back into `serde_json::Value` for context injection and file writing. This double serialization happens inline during the build.
 - **Full module content in hook events.** `HookLoadCallEnd`, `HookTransformCallStart/End`, and `HookRenderChunkStart/End` include the full source text of every module. For large codebases this means serializing and writing megabytes of source code per build.
 - **blake3 hashing for dedup.** Every string >5 KB is hashed, and every string >10 KB triggers a hash lookup and `$ref` replacement. This adds CPU work proportional to total source size.
-- **Synchronous file I/O.** `DevtoolsFormatter::format_event` writes directly to files via `std::fs::File`, blocking the thread.
+- **Per-event channel and writer work.** `DevtoolsFormatter::format_event` sends each shaped `serde_json::Value` to a process-global background writer. File creation, hashing, serialization to JSON lines, buffering, and flushing are off the build thread, but every event still incurs an allocation-heavy channel handoff and is processed individually.
 
 Potential approaches:
 
-- **Async/buffered writes.** Move file I/O off the build thread — buffer events in memory and flush on a background thread or at build boundaries.
+- **Batch writer commands.** Accumulate multiple shaped actions per command or build boundary to reduce channel and per-event writer overhead while preserving the acknowledged close contract.
 - **Lazy content emission.** Don't include full source in hook events by default. Instead, emit a content hash or offset reference; let the consumer request full content on demand (or write content to separate sidecar files).
 - **Avoid double serialization.** Serialize directly to the output format instead of going through `serde_json::Value` as an intermediate.
 - **Tiered verbosity.** Let users opt into levels of detail (e.g. graph-only vs. full hook tracing) so lightweight consumers don't pay for data they don't need.
@@ -103,18 +112,30 @@ This allows the JSON-lines file writer to remain as the default (zero new depend
 
 ### Per-Build Scoping (vs. Global Activation)
 
-The current implementation uses a process-global `tracing_subscriber` registry initialized via `DebugTracer::init()` with an `AtomicBool` singleton guard. This means:
+The current implementation uses one process-global `tracing_subscriber`
+registry, but output ownership remains per bundler. `RD_LOG` initialization and
+the first devtools initialization share one serialized installation result.
+The installed devtools filters consult an active-tracer count before enabling
+action callsites and all span callsites. The first acquisition and final release
+rebuild tracing's process-wide callsite-interest cache, so callsites observed
+before a traced build can transition from `never` to `always` without requiring
+an active-count load on every action event. The filter intentionally leaves the
+maximum-level hint unspecified: trace-level actions must remain eligible when a
+co-installed `RD_LOG=info` layer has a lower maximum. The formatter rejects
+events whose span ancestry lacks the devtools output-root marker. A build that
+did not opt in therefore produces no devtools output even while another build
+is traced.
 
-- Setting `devtools: {}` in **one** rolldown config causes **all** bundler instances in the same process to emit devtools data, even those that didn't opt in.
-- There's no way to enable devtools for one build and disable it for another within the same process (e.g. a monorepo tool running multiple rolldown builds).
-
-The root cause is that `tracing_subscriber::registry().init()` installs a global subscriber. Once installed, every `tracing::trace!` event in the process flows through the devtools layer.
+The remaining global aspect is cost coupling: while any tracer is active,
+devtools action callsites are enabled process-wide and unrelated builds may
+still pay event-construction cost before the formatter rejects their missing
+session marker. True per-future subscribers would remove that residual cost.
 
 #### `tracing` Scoped Subscriber Mechanisms
 
 The `tracing` crate provides several scoping primitives:
 
-**`set_default` / `with_default`** — Sets a thread-local subscriber, returns a `DefaultGuard` that restores the prior subscriber on drop. **Thread-local only** — does **not** survive `.await` on multi-threaded tokio runtimes. When a task migrates to a different worker thread after an await point, it loses the scoped subscriber and falls back to the global default.
+**`set_default` / `with_default`** — Sets a thread-local subscriber, returns a `DefaultGuard` that restores the prior subscriber on drop. **Thread-local only** — does **not** survive `.await` on multi-threaded runtimes (the shared scheduler and the opt-in Tokio lane alike). When a task migrates to a different worker thread after an await point, it loses the scoped subscriber and falls back to the global default.
 
 **`.with_subscriber()` (`WithDispatch`)** — The most promising primitive. Wraps an async future so the subscriber is re-installed into thread-local storage on **every poll**. This is async-safe: regardless of which thread polls the future, the correct subscriber is active.
 
@@ -142,31 +163,31 @@ let devtools_subscriber = tracing_subscriber::registry()
 
 // Each bundler's top-level future gets its own subscriber
 let build_future = bundle.write().with_subscriber(devtools_subscriber);
-tokio::spawn(build_future);
+rolldown_utils::futures::spawn(build_future);
 ```
 
-**Key caveat: `tokio::spawn` does NOT inherit.** If the wrapped future internally calls `tokio::spawn(sub_task)`, the sub-task falls back to the global default subscriber. Every internal spawn must be explicitly wrapped:
+**Key caveat: spawning does NOT inherit.** Rolldown's production task boundaries go through the shared spawn facade — `rolldown_utils::futures::{spawn, try_spawn, spawn_detached}`, plus the `rolldown_utils::async_runtime::try_spawn_detached` re-export used by the module loader and the binding. Neither the shared scheduler nor the opt-in Tokio lane propagates the thread-local dispatcher, so if the wrapped future internally spawns a sub-task, that sub-task falls back to the global default subscriber. Every internal spawn must be explicitly wrapped:
 
 ```rust
 // Inside bundler code that spawns sub-tasks:
 let sub_task = do_work().with_current_subscriber(); // captures current thread-local subscriber
-tokio::spawn(sub_task);
+rolldown_utils::futures::spawn_detached(sub_task);
 ```
 
-Missing a single `.with_current_subscriber()` silently drops the subscriber context for that task. This is the main risk for rolldown, which spawns tasks internally in the scan stage and elsewhere.
+Missing a single `.with_current_subscriber()` silently drops the subscriber context for that task. This is the main risk for rolldown, which spawns tasks internally in the scan stage (module loader) and elsewhere.
 
 **Per-layer filtering on a global registry** — Keep one global subscriber installed via `.init()`, but attach per-layer `FilterFn`s that route events based on span fields (e.g. session ID). No propagation issue since the subscriber is global; the complexity shifts to the filter logic and dynamic layer management.
 
 #### Applicability to Rolldown
 
-| Approach                                     | Async-safe? | `tokio::spawn` propagation?                          | Complexity | Fits rolldown?                                                                                          |
-| -------------------------------------------- | ----------- | ---------------------------------------------------- | ---------- | ------------------------------------------------------------------------------------------------------- |
-| **`.with_subscriber()` per bundler future**  | **Yes**     | Manual (`.with_current_subscriber()` on every spawn) | Medium     | **Best semantic fit** — true per-bundler isolation. Requires auditing all internal `tokio::spawn` sites |
-| Per-layer filtering on global registry       | Yes         | Free (global)                                        | Medium     | Good fit — session ID already in span context, no spawn propagation needed                              |
-| `set_default` + `current_thread` per bundler | Yes         | Free (single-thread)                                 | High       | Impractical — changes the runtime model                                                                 |
-| Session-aware check in `trace_action!`       | Yes         | N/A (pre-emit)                                       | Low        | Complementary — zero cost for disabled sessions regardless of which approach above is chosen            |
+| Approach                                     | Async-safe? | Spawn propagation?                                   | Complexity | Fits rolldown?                                                                                        |
+| -------------------------------------------- | ----------- | ---------------------------------------------------- | ---------- | ----------------------------------------------------------------------------------------------------- |
+| **`.with_subscriber()` per bundler future**  | **Yes**     | Manual (`.with_current_subscriber()` on every spawn) | Medium     | **Best semantic fit** — true per-bundler isolation. Requires auditing all internal spawn-facade sites |
+| Per-layer filtering on global registry       | Yes         | Free (global)                                        | Medium     | Good fit — session ID already in span context, no spawn propagation needed                            |
+| `set_default` + `current_thread` per bundler | Yes         | Free (single-thread)                                 | High       | Impractical — changes the runtime model                                                               |
+| Session-aware check in `trace_action!`       | Yes         | N/A (pre-emit)                                       | Low        | Complementary — zero cost for disabled sessions regardless of which approach above is chosen          |
 
-**`.with_subscriber()` is the strongest candidate** for true per-build isolation — it gives each bundler instance its own subscriber with clean separation. The `tokio::spawn` propagation gap is the main adoption cost: it requires auditing every internal spawn site and wrapping with `.with_current_subscriber()`. However, this is a one-time audit that also makes subscriber scoping correctness explicit in the codebase. A lint or wrapper helper (e.g. a `devtools_spawn(future)` that auto-wraps) could enforce this going forward.
+**`.with_subscriber()` is the strongest candidate** for true per-build isolation — it gives each bundler instance its own subscriber with clean separation. The spawn propagation gap is the main adoption cost: it requires auditing every internal spawn-facade call site (`rolldown_utils::futures::{spawn, try_spawn, spawn_detached}` and the `async_runtime::try_spawn_detached` path) and wrapping with `.with_current_subscriber()`. However, this is a one-time audit that also makes subscriber scoping correctness explicit in the codebase. A lint, or auto-wrapping inside the shared spawn facade itself, could enforce this going forward.
 
 Regardless of which approach is chosen for subscriber scoping, a **pre-emit check in `trace_action!`** should be added as a complementary optimization so disabled sessions skip serialization entirely.
 

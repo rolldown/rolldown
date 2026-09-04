@@ -5,6 +5,7 @@
 
 const { readFileSync } = require('fs')
 let nativeBinding = null
+let loadedBindingTarget = 'native'
 const loadErrors = []
 
 const isMusl = () => {
@@ -550,7 +551,7 @@ function createLoadErrorChain(errors) {
 //
 // NAPI_RS_WASI_FLAVOR selects one exact generated flavor and implies strict
 // WASI loading. It never crosses into another flavor or falls back to native.
-const __napiWasiFlavors = ["wasm32-wasi"]
+const __napiWasiFlavors = ["wasm32-wasi","wasm32-wasip1"]
 const __napiWasiFlavor = process.env.NAPI_RS_WASI_FLAVOR
 const __napiWasiFlavorRequested =
   typeof __napiWasiFlavor === 'string' && __napiWasiFlavor.length > 0
@@ -628,6 +629,30 @@ if (!nativeBinding || forceWasi) {
       if (!candidateFailed) {
         wasiBinding = require('./rolldown-binding.wasi.cjs')
         nativeBinding = wasiBinding
+      loadedBindingTarget =
+        wasiBinding.__rolldownBindingTarget === 'wasi' ? 'wasi' : 'wasi-threads'
+        wasiBindingLoaded = true
+      }
+    } catch (err) {
+      candidateError = err
+      candidateFailed = true
+    }
+    if (candidateFailed) {
+      wasiBindingErrors.push(candidateError)
+      loadErrors.push(candidateError)
+    }
+  }
+  if (!wasiBindingLoaded && (!__napiWasiFlavorRequested || __napiWasiFlavor === "wasm32-wasip1")) {
+    let candidateError = null
+    let candidateFailed = false
+    try {
+      candidateError = __napiWasiResolveCandidate('./rolldown-binding.wasip1.cjs', false, ["./rolldown-binding.wasm32-wasip1.debug.wasm","./rolldown-binding.wasm32-wasip1.wasm"])
+      candidateFailed = candidateError !== null
+      if (!candidateFailed) {
+        wasiBinding = require('./rolldown-binding.wasip1.cjs')
+        nativeBinding = wasiBinding
+      loadedBindingTarget =
+        wasiBinding.__rolldownBindingTarget === 'wasi' ? 'wasi' : 'wasi-threads'
         wasiBindingLoaded = true
       }
     } catch (err) {
@@ -654,6 +679,36 @@ if (!nativeBinding || forceWasi) {
         }
         wasiBinding = require('@rolldown/binding-wasm32-wasi')
         nativeBinding = wasiBinding
+      loadedBindingTarget =
+        wasiBinding.__rolldownBindingTarget === 'wasi' ? 'wasi' : 'wasi-threads'
+        wasiBindingLoaded = true
+      }
+    } catch (err) {
+      candidateError = err
+      candidateFailed = true
+    }
+    if (candidateFailed) {
+      wasiBindingErrors.push(candidateError)
+      loadErrors.push(candidateError)
+    }
+  }
+  if (!wasiBindingLoaded && (!__napiWasiFlavorRequested || __napiWasiFlavor === "wasm32-wasip1")) {
+    let candidateError = null
+    let candidateFailed = false
+    try {
+      candidateError = __napiWasiResolveCandidate('@rolldown/binding-wasm32-wasip1', true, undefined)
+      candidateFailed = candidateError !== null
+      if (!candidateFailed) {
+        if (process.env.NAPI_RS_ENFORCE_VERSION_CHECK && process.env.NAPI_RS_ENFORCE_VERSION_CHECK !== '0') {
+          const bindingPackageVersion = require('@rolldown/binding-wasm32-wasip1/package.json').version
+          if (bindingPackageVersion !== '1.2.7') {
+            throw new Error(`WASI binding package version mismatch, expected 1.2.7 but got ${bindingPackageVersion}. You can reinstall dependencies to fix this issue.`)
+          }
+        }
+        wasiBinding = require('@rolldown/binding-wasm32-wasip1')
+        nativeBinding = wasiBinding
+      loadedBindingTarget =
+        wasiBinding.__rolldownBindingTarget === 'wasi' ? 'wasi' : 'wasi-threads'
         wasiBindingLoaded = true
       }
     } catch (err) {
@@ -700,6 +755,7 @@ if (!nativeBinding) {
 }
 
 module.exports = nativeBinding
+module.exports.__rolldownBindingTarget = loadedBindingTarget
 module.exports.LegalCommentsMode = nativeBinding.LegalCommentsMode
 module.exports.minify = nativeBinding.minify
 module.exports.minifySync = nativeBinding.minifySync
@@ -723,9 +779,11 @@ module.exports.moduleRunnerTransform = nativeBinding.moduleRunnerTransform
 module.exports.moduleRunnerTransformSync = nativeBinding.moduleRunnerTransformSync
 module.exports.transform = nativeBinding.transform
 module.exports.transformSync = nativeBinding.transformSync
+module.exports.BindingAsyncRuntimeLease = nativeBinding.BindingAsyncRuntimeLease
 module.exports.BindingBundleEndEventData = nativeBinding.BindingBundleEndEventData
 module.exports.BindingBundleErrorEventData = nativeBinding.BindingBundleErrorEventData
 module.exports.BindingBundler = nativeBinding.BindingBundler
+module.exports.BindingBundleStartEventData = nativeBinding.BindingBundleStartEventData
 module.exports.BindingCallableBuiltinPlugin = nativeBinding.BindingCallableBuiltinPlugin
 module.exports.BindingChunkingContext = nativeBinding.BindingChunkingContext
 module.exports.BindingDecodedMap = nativeBinding.BindingDecodedMap
@@ -749,6 +807,7 @@ module.exports.BindingWatcherEvent = nativeBinding.BindingWatcherEvent
 module.exports.ParallelJsPluginRegistry = nativeBinding.ParallelJsPluginRegistry
 module.exports.TraceSubscriberGuard = nativeBinding.TraceSubscriberGuard
 module.exports.TsconfigCache = nativeBinding.TsconfigCache
+module.exports.acquireAsyncRuntime = nativeBinding.acquireAsyncRuntime
 module.exports.BindingAttachDebugInfo = nativeBinding.BindingAttachDebugInfo
 module.exports.BindingBuiltinPluginName = nativeBinding.BindingBuiltinPluginName
 module.exports.BindingChunkModuleOrderBy = nativeBinding.BindingChunkModuleOrderBy
@@ -758,14 +817,27 @@ module.exports.BindingPluginOrder = nativeBinding.BindingPluginOrder
 module.exports.BindingPropertyReadSideEffects = nativeBinding.BindingPropertyReadSideEffects
 module.exports.BindingPropertyWriteSideEffects = nativeBinding.BindingPropertyWriteSideEffects
 module.exports.BindingRebuildStrategy = nativeBinding.BindingRebuildStrategy
+module.exports.BindingRuntimeFlavor = nativeBinding.BindingRuntimeFlavor
 module.exports.collapseSourcemaps = nativeBinding.collapseSourcemaps
+module.exports.configureAsyncRuntime = nativeBinding.configureAsyncRuntime
 module.exports.enhancedTransform = nativeBinding.enhancedTransform
 module.exports.enhancedTransformSync = nativeBinding.enhancedTransformSync
 module.exports.FilterTokenKind = nativeBinding.FilterTokenKind
+module.exports.getAsyncRuntimeConfig = nativeBinding.getAsyncRuntimeConfig
+module.exports.getAsyncRuntimeMetrics = nativeBinding.getAsyncRuntimeMetrics
+module.exports.getCurrentThreadTaskHostContractVersion = nativeBinding.getCurrentThreadTaskHostContractVersion
 module.exports.getNativeMemoryStats = nativeBinding.getNativeMemoryStats
+module.exports.getRuntimeCapabilities = nativeBinding.getRuntimeCapabilities
 module.exports.initTraceSubscriber = nativeBinding.initTraceSubscriber
+module.exports.isCurrentThreadHostRegistrationActive = nativeBinding.isCurrentThreadHostRegistrationActive
+module.exports.registerCurrentThreadTaskHost = nativeBinding.registerCurrentThreadTaskHost
 module.exports.registerPlugins = nativeBinding.registerPlugins
+module.exports.registerTimerHost = nativeBinding.registerTimerHost
+module.exports.reserveCurrentThreadHostRegistration = nativeBinding.reserveCurrentThreadHostRegistration
+module.exports.resetAsyncRuntimeMetrics = nativeBinding.resetAsyncRuntimeMetrics
 module.exports.resetNativeMemoryStats = nativeBinding.resetNativeMemoryStats
 module.exports.resolveTsconfig = nativeBinding.resolveTsconfig
 module.exports.shutdownAsyncRuntime = nativeBinding.shutdownAsyncRuntime
 module.exports.startAsyncRuntime = nativeBinding.startAsyncRuntime
+module.exports.unregisterCurrentThreadTaskHost = nativeBinding.unregisterCurrentThreadTaskHost
+module.exports.unregisterTimerHost = nativeBinding.unregisterTimerHost

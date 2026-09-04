@@ -105,6 +105,11 @@ jobs:
 
       - run: just lint-rust
 
+      # `just lint-rust` uses `--all-features`, which turns the opt-in `tokio-runtime`
+      # feature ON and so never lints the shipped `not(tokio-runtime)` arms.
+      - name: Clippy (async-runtime feature)
+        run: cargo clippy -p rolldown_utils -p rolldown_binding --no-default-features --features async-runtime --all-targets -- --deny warnings
+
       - name: Check allocations
         run: |
           cargo allocs
@@ -182,6 +187,103 @@ jobs:
     with:
       changed: ${{ needs.changes.outputs.node-changes == 'true' }}
       webcontainer: ${{ needs.changes.outputs.run-webcontainer == 'true' }}
+
+  native-async-runtime:
+    name: Native Async Runtime
+    needs: changes
+    if: ${{ needs.changes.outputs.node-changes == 'true' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          persist-credentials: false
+
+      - name: Setup Rust
+        uses: oxc-project/setup-rust@3d6fb132fbe7cdcb66bf8ec193911c2945369d12 # v1.0.17
+        with:
+          tools: just
+          cache-key: debug-build-async-runtime
+          save-cache: ${{ github.ref_name == 'main' }}
+
+      - uses: voidzero-dev/setup-vp@250f29ce396baf5e8f24498e17c0dfdebabc26eb # v1.15.0
+        with:
+          version: '0.2.1'
+          cache: true
+
+      - name: Build Rolldown with the shared async runtime
+        run: just build-rolldown-async-runtime
+
+      # tests/dev/*.test.ts import this workspace package at module scope, so collection
+      # fails without its dist/. They are also collected on the single-thread leg below,
+      # where `dev()` is unsupported — hence `test.skipIf(isSingleThread)` on each of them.
+      - name: Build `@rolldown/test-dev-server`
+        run: vp run --filter '@rolldown/test-dev-server' build
+
+      # The single-thread lane sets `ROLLDOWN_PARK_DEADLINE_MS` (inside the recipe)
+      # because a `block_on`-over-JS hang freezes the JS event loop before vitest's own
+      # timeout can fire, so the runtime must panic with `BlockOnDeadlock` instead.
+      - name: Scheduler unit tests + node & watcher suites (single- and multi-thread flavors)
+        run: just test-async-runtime
+
+      - name: Prove the production graphs are tokio-free
+        run: just check-no-tokio
+
+  native-async-runtime-check:
+    name: Native Async Runtime Lifecycle (${{ matrix.os }})
+    needs: changes
+    if: ${{ needs.changes.outputs.node-changes == 'true' }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macos-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 20
+    steps:
+      - uses: taiki-e/checkout-action@7d1e50e93dc4fb3bba58f85018fadf77898aee8b # v1.4.2
+
+      - name: Setup Rust
+        uses: oxc-project/setup-rust@3d6fb132fbe7cdcb66bf8ec193911c2945369d12 # v1.0.17
+        with:
+          tools: just
+          cache-key: native-async-runtime-check-${{ matrix.os }}
+          save-cache: ${{ github.ref_name == 'main' }}
+
+      - uses: voidzero-dev/setup-vp@250f29ce396baf5e8f24498e17c0dfdebabc26eb # v1.15.0
+        with:
+          version: '0.2.1'
+          cache: true
+
+      - name: Test package transaction recovery
+        run: just test-package-transactions
+
+      # Builds the real `.node` addon with the test-only waker probe the step below needs.
+      - name: Build shared async runtime probe
+        run: just build-rolldown-async-runtime
+
+      - name: Test worker environment teardown
+        run: vp run --filter rolldown-tests test:main async-runtime-worker-teardown.test.ts
+        env:
+          ROLLDOWN_TEST_REQUIRE_SHARED_ASYNC_RUNTIME: '1'
+
+      # tests/dev/*.test.ts import this workspace package at module scope, so
+      # collection fails without its dist/ (same note as the ubuntu
+      # native-async-runtime job).
+      - name: Build `@rolldown/test-dev-server`
+        run: vp run --filter '@rolldown/test-dev-server' build
+
+      # Per-PR OS coverage for the suites the ubuntu-only PR lanes cannot
+      # exercise per OS: the runtime's timer/debounce paths, poll-thread
+      # scheduling, and watcher/dev-engine lifecycle on a real mac/windows
+      # binding. The suites force `usePolling: true` (CI stability) except the
+      # one native smoke in watch.test.ts, which asserts real
+      # FSEvents/ReadDirectoryChangesW event delivery per OS.
+      # `&&` chaining (not a multi-line block) matches reusable-node-test.yml so
+      # a first-command failure fails the step under pwsh too. `dev/` scopes the
+      # second run to tests/dev/* (dev-watch.test.ts is excluded by test:main
+      # and covered by test:watcher).
+      - name: Watch & dev-engine suites
+        run: vp run --filter rolldown-tests test:watcher && vp run --filter rolldown-tests test:main dev/
 
   node-dev-server-test-windows:
     needs: [changes, build-rolldown-windows]
@@ -359,10 +461,53 @@ jobs:
           path: packages/rolldown/dist
 
       - name: Add WASI target
-        run: rustup target add wasm32-wasip1-threads
+        run: rustup target add wasm32-wasip1-threads wasm32-wasip1
 
       - name: Build @rolldown/browser
         run: just build-browser
+
+      - name: Assert browser CurrentThread timer registration
+        run: node packages/browser-tests/runtime-contract.mjs packages/browser/dist
+
+      - name: Test packed browser package in Wrangler and Miniflare
+        run: node scripts/wasi/check-workerd-packed-consumer.mjs
+
+      # Covers what `packages/workerd-tests/memory.mjs` cannot: the per-rebuild Wasm memory slope
+      # WITH plugin hooks. Deliberately not copied into reusable-release-build.yml —
+      # that lane builds a RELEASE wasm and these budgets were measured on the DEBUG one.
+      - name: Test @rolldown/browser/workerd end-to-end in real workerd
+        # --rounds=20 shrinks the slope quantum to ~0.0037 MiB/rebuild, giving the
+        # moduleBoxDelta control (threshold 0.014) margin; the budget bands are round-invariant.
+        run: node packages/workerd-tests/suite.mjs --rounds=20
+
+      # `just build-browser` regenerates the wasip1 loaders byte-identically, so the only
+      # expected drift is binding.d.cts (feature-gated doc comments). Restore it so the
+      # `git diff --exit-code` below keeps guarding the @rolldown/debug generated code.
+      - name: Assert browser-build drift allowlist and restore expected regen
+        run: |
+          set -euo pipefail
+          changed=()
+          while IFS= read -r file; do
+            changed+=("$file")
+          done < <(git diff --name-only -- packages/rolldown/src)
+          unexpected=()
+          for file in "${changed[@]}"; do
+            case "$file" in
+              packages/rolldown/src/binding.d.cts) ;;
+              *) unexpected+=("$file") ;;
+            esac
+          done
+          if (( ${#unexpected[@]} > 0 )); then
+            echo "::error::Unexpected packages/rolldown/src drift from 'just build-browser' (not in the allowlist):" >&2
+            printf ' - %s\n' "${unexpected[@]}" >&2
+            git --no-pager diff -- "${unexpected[@]}"
+            exit 1
+          fi
+          if (( ${#changed[@]} > 0 )); then
+            echo "Restoring expected browser-build regeneration:"
+            printf ' - %s\n' "${changed[@]}"
+            git checkout -- "${changed[@]}"
+          fi
 
       - name: Build @rolldown/debug
         run: just build-rolldown-debug

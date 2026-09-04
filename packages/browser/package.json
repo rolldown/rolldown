@@ -1,6 +1,7 @@
 {
   "name": "@rolldown/browser",
   "version": "1.2.7",
+  "private": true,
   "description": "Fast JavaScript/TypeScript bundler in Rust with Rollup-compatible API.",
   "keywords": [
     "bundler",
@@ -62,7 +63,23 @@
     "./parallelPlugin": "./dist/parallel-plugin.mjs",
     "./parseAst": "./dist/parse-ast-index.mjs",
     "./package.json": "./package.json",
-    "./utils": "./dist/utils-index.mjs"
+    "./utils": "./dist/utils-index.mjs",
+    "./workerd": {
+      "types": "./dist/workerd.d.mts",
+      "workerd": "./dist/workerd.browser.mjs",
+      "browser": "./dist/workerd.browser.mjs",
+      "default": "./dist/workerd.mjs"
+    },
+    "./workerd/wasm": {
+      "types": "./dist/workerd-wasm.d.ts",
+      "workerd": "./dist/rolldown-binding.wasm32-wasip1.wasm",
+      "default": "./dist/rolldown-binding.wasm32-wasip1.wasm"
+    },
+    "./workerd/wasm.wasm": {
+      "types": "./dist/workerd-wasm.d.ts",
+      "workerd": "./dist/rolldown-binding.wasm32-wasip1.wasm",
+      "default": "./dist/rolldown-binding.wasm32-wasip1.wasm"
+    }
   },
   "publishConfig": {
     "access": "public",

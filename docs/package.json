@@ -5,7 +5,7 @@
   "scripts": {
     "dev": "vitepress dev",
     "build": "vitepress build",
-    "build:cloudflare": "node .vitepress/scripts/generate-reference.ts && vitepress build",
+    "build:cloudflare": "pnpm generate && pnpm build",
     "preview": "vitepress preview",
     "generate": "node .vitepress/scripts/generate-reference.ts",
     "void": "void"

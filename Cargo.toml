@@ -208,13 +208,10 @@ json-escape-simd = "3.1.1"
 json-strip-comments = "3"
 jsonschema = { version = "0.52.0", default-features = false }
 memchr = "2.8.2"
-# Exact pin: mimalloc-safe 0.1.65 pulls libmimalloc-sys2 0.1.61 (mimalloc v3.5.0), which no
-# longer attaches the thread-exit hook to the thread that first initializes the allocator. When
-# that thread is a Node worker (an addon dlopen'd in a worker first) and it exits, its heap stays
-# registered; a later thread reusing the TCB trips the debug assertion in
-# `_mi_thread_init_with_heap` (init.c:327, "theap==NULL") and aborts the process. Seen on the
-# Linux `local_dynamic_tls` builds only; macOS compiles the check out via MI_TLS_RECURSE_GUARD.
-mimalloc-safe = "=0.1.64"
+# 0.1.66+ carries mimalloc v3.5.1 plus the fix for the process-init thread's thread-done hook
+# (see microsoft/mimalloc#1393). Older 0.1.65 (mimalloc v3.5.0) aborts Linux debug builds when
+# the thread that first loads the addon (e.g. a Node worker) exits and its thread id is reused.
+mimalloc-safe = "0.1.66"
 mime = "0.3.17"
 nodejs-built-in-modules = "1.0.0"
 nom = "8.0.0"

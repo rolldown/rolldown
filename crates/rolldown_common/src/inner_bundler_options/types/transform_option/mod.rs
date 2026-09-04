@@ -4,7 +4,7 @@ mod jsx_options;
 mod plugin_options;
 mod typescript_options;
 
-use oxc::transformer::{EnvOptions, HelperLoaderOptions};
+use oxc::transformer::{EngineTargets, EnvOptions, HelperLoaderOptions};
 
 pub use itertools::Either;
 pub use {
@@ -23,10 +23,12 @@ pub struct TransformOptions {
   /// Sets the target environment for the generated JavaScript.
   ///
   /// The lowest target is `es2015`.
+  /// Browserslist queries such as `baseline widely available` are also supported.
   ///
   /// Example:
   ///
   /// * `'es2015'`
+  /// * `'baseline widely available'`
   /// * `['es2020', 'chrome58', 'edge16', 'firefox57', 'node12', 'safari11']`
   ///
   /// @default `esnext` (No transformation)
@@ -48,6 +50,23 @@ pub struct TransformOptions {
 
   /// Behaviour for runtime helpers.
   pub helpers: Option<HelperLoaderOptions>,
+}
+
+impl TransformOptions {
+  /// Resolve esbuild-style engine targets, falling back to a Browserslist query.
+  pub fn resolve_target(&self) -> Result<EngineTargets, String> {
+    match &self.target {
+      Some(Either::Left(target)) => match EngineTargets::from_target(target) {
+        Ok(targets) => Ok(targets),
+        Err(error) => EngineTargets::try_from_query(target).map_err(|_| error),
+      },
+      Some(Either::Right(targets)) => match EngineTargets::from_target_list(targets) {
+        Ok(targets) => Ok(targets),
+        Err(error) => EngineTargets::try_from_query(&targets.join(", ")).map_err(|_| error),
+      },
+      None => Ok(EngineTargets::default()),
+    }
+  }
 }
 
 impl From<crate::utils::enhanced_transform::EnhancedTransformOptions> for TransformOptions {
@@ -90,11 +109,7 @@ impl TryFrom<TransformOptions> for oxc::transformer::TransformOptions {
   type Error = String;
 
   fn try_from(options: TransformOptions) -> Result<Self, Self::Error> {
-    let env = match options.target {
-      Some(Either::Left(s)) => EnvOptions::from_target(&s)?,
-      Some(Either::Right(list)) => EnvOptions::from_target_list(&list)?,
-      _ => EnvOptions::default(),
-    };
+    let env = EnvOptions::from(options.resolve_target()?);
     Ok(Self {
       // cwd: options.cwd.map(PathBuf::from).unwrap_or_default(),
       assumptions: options.assumptions.map(Into::into).unwrap_or_default(),
@@ -125,5 +140,20 @@ impl TryFrom<TransformOptions> for oxc::transformer::TransformOptions {
       plugins: oxc::transformer::PluginsOptions::from(options.plugins.unwrap_or_default()),
       ..Default::default()
     })
+  }
+}
+
+#[cfg(test)]
+mod tests {
+  use super::*;
+
+  #[test]
+  fn baseline_widely_available_is_a_valid_target() {
+    let options = TransformOptions {
+      target: Some(Either::Left("baseline widely available".to_string())),
+      ..Default::default()
+    };
+
+    oxc::transformer::TransformOptions::try_from(options).expect("Baseline query should parse");
   }
 }

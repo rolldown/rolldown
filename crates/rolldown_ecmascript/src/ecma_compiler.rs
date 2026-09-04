@@ -33,7 +33,7 @@ impl EcmaCompiler {
           ..ParseOptions::default()
         });
         let ret = parser.parse();
-        if ret.panicked || !ret.diagnostics.is_empty() {
+        if ret.fatal_error || !ret.diagnostics.is_empty() {
           Err(BuildDiagnostic::from_oxc_diagnostics(
             ret.diagnostics,
             &source.clone(),

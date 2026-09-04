@@ -22,7 +22,11 @@
         ".vitepress/scripts/extract-options-plugin.ts", // used as a string path in TypeDoc plugin config
         ".vitepress/scripts/custom-theme-plugin.ts", // used as a string path in TypeDoc plugin config
       ],
-      "ignoreDependencies": ["typedoc-plugin-merge-modules", "typedoc-vitepress-theme"],
+      "ignoreDependencies": [
+        "typedoc-plugin-merge-modules",
+        "typedoc-vitepress-theme",
+        "wrangler", // used by the external Cloudflare Workers Builds deploy command
+      ],
     },
     "packages/bench": {
       "entry": ["vue-entry.js"],

@@ -1,0 +1,136 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## css.js
+
+```js
+//#region color.js
+const setOpacity = (color, opacity) => `${color}:${opacity}`;
+//#endregion
+//#region css.js
+globalThis.cssResult = setOpacity("a", 1);
+//#endregion
+
+```
+
+## first.js
+
+```js
+import "./css.js";
+import assert from "node:assert";
+//#region first.js
+assert.strictEqual(globalThis.cssResult, "a:1");
+//#endregion
+
+```
+
+## main.js
+
+```js
+//#region main.js
+await import("./first.js");
+await import("./second.js");
+//#endregion
+
+```
+
+## second.js
+
+```js
+import "./css.js";
+import assert from "node:assert";
+//#region second.js
+assert.strictEqual(globalThis.cssResult, "a:1");
+//#endregion
+
+```
+
+# Variant: wrap-all: [on_demand_wrapping: false]
+
+## Assets
+
+### css.js
+
+```js
+import { t as __esmMin } from "./rolldown-runtime.js";
+//#region color.js
+var setOpacity;
+function init_color() {
+	return (init_color = __esmMin((() => {
+		setOpacity = (color, opacity) => `${color}:${opacity}`;
+	})))();
+}
+//#endregion
+//#region css.js
+function init_css() {
+	return (init_css = __esmMin((() => {
+		init_color();
+		globalThis.cssResult = setOpacity("a", 1);
+	})))();
+}
+//#endregion
+export { init_css as t };
+
+```
+
+### first.js
+
+```js
+import { t as init_css } from "./css.js";
+import { t as __esmMin } from "./rolldown-runtime.js";
+import assert from "node:assert";
+//#region first.js
+function init_first() {
+	return (init_first = __esmMin((() => {
+		init_css();
+		assert.strictEqual(globalThis.cssResult, "a:1");
+	})))();
+}
+//#endregion
+init_first();
+
+```
+
+### main.js
+
+```js
+import { t as __esmMin } from "./rolldown-runtime.js";
+//#region main.js
+function init_main() {
+	return (init_main = __esmMin((async () => {
+		await import("./first.js");
+		await import("./second.js");
+	})))();
+}
+//#endregion
+await init_main();
+
+```
+
+### rolldown-runtime.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+export { __esmMin as t };
+
+```
+
+### second.js
+
+```js
+import { t as init_css } from "./css.js";
+import { t as __esmMin } from "./rolldown-runtime.js";
+import assert from "node:assert";
+//#region second.js
+function init_second() {
+	return (init_second = __esmMin((() => {
+		init_css();
+		assert.strictEqual(globalThis.cssResult, "a:1");
+	})))();
+}
+//#endregion
+init_second();
+
+```

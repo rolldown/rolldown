@@ -2356,6 +2356,11 @@ export interface BindingHookJsResolveIdOutput {
   id: string
   external?: boolean | 'absolute' | 'relative'
   moduleSideEffects?: boolean | 'no-treeshake'
+  /**
+   * @internal The package json path resolved by oxc resolver, so that the caller can hand it
+   * back to rolldown instead of making it infer the module format from the id alone.
+   */
+  packageJsonPath?: string
 }
 
 export interface BindingHookLoadOutput {

@@ -64,6 +64,18 @@ impl From<&ConstantValue> for constant_evaluation::ConstantValue<'_> {
 }
 
 impl ConstantValue {
+  /// The JavaScript language type of the value, for oxc's `GlobalContext::value_type_for_reference_id`.
+  pub fn value_type(&self) -> oxc_ecmascript::ValueType {
+    match self {
+      ConstantValue::Number(_) => oxc_ecmascript::ValueType::Number,
+      ConstantValue::BigInt(_) => oxc_ecmascript::ValueType::BigInt,
+      ConstantValue::String(_) => oxc_ecmascript::ValueType::String,
+      ConstantValue::Boolean(_) => oxc_ecmascript::ValueType::Boolean,
+      ConstantValue::Undefined => oxc_ecmascript::ValueType::Undefined,
+      ConstantValue::Null => oxc_ecmascript::ValueType::Null,
+    }
+  }
+
   pub fn to_expression<'ast>(&self, ast: &oxc::ast::builder::AstBuilder<'ast>) -> Expression<'ast> {
     match self {
       ConstantValue::Number(n) => {

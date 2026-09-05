@@ -19,12 +19,15 @@ use rolldown_ecmascript_utils::ExpressionExt;
 use rolldown_utils::rayon::{IntoParallelRefIterator, ParallelIterator};
 use rustc_hash::{FxHashMap, FxHashSet};
 
-use crate::ast_scanner::{
-  const_eval::{ConstEvalCtx, try_extract_const_literal},
-  stmt_eval_analyzer::StmtEvalAnalyzer,
+use crate::{
+  ast_scanner::{
+    const_eval::{ConstEvalCtx, try_extract_const_literal},
+    stmt_eval_analyzer::StmtEvalAnalyzer,
+  },
+  type_alias::IndexStmtInfos,
 };
 
-use super::LinkStage;
+use super::{LinkStage, refine_stmt_side_effects::LinkedConstantLookup};
 
 type MutationResult = (
   Option<(ModuleIdx, FxHashMap<StmtInfoIdx, StmtEvalFlags>)>,
@@ -223,6 +226,8 @@ impl LinkStage<'_> {
               stmt_idx_to_dynamic_import_expr_node_ids,
               resolved_member_expr_refs: &self.metas[module_idx].resolved_member_expr_refs,
               namespace_object_symbol_ids: &namespace_object_symbol_ids,
+              stmt_infos: &self.stmt_infos,
+              constant_symbol_map,
             },
             // `0` is preserved for namespace stmt
             toplevel_stmt_idx: StmtInfoIdx::from_raw_unchecked(1),
@@ -264,6 +269,7 @@ impl LinkStage<'_> {
         for (stmt_info_idx, tree_shaking_flags) in mutations {
           self.stmt_infos[module_idx][stmt_info_idx].eval_flags = tree_shaking_flags;
         }
+        self.relaxed_side_effect_modules.insert(module_idx);
       }
 
       if !local_constants.is_empty() {
@@ -296,6 +302,9 @@ struct CrossModuleOptimizationImmutableCtx<'a, 'ast: 'a> {
   /// Local symbols of `import * as ns` bindings, so property reads on them are treated as
   /// side-effect-free when re-detecting side effects of statements.
   namespace_object_symbol_ids: &'a FxHashSet<SymbolId>,
+  stmt_infos: &'a IndexStmtInfos,
+  /// Constants known so far, for the `StmtEvalAnalyzer` re-run (see `LinkedConstantLookup`).
+  constant_symbol_map: &'a FxHashMap<SymbolRef, ConstExportMeta>,
 }
 
 struct CrossModuleOptimizationRunnerContext<'a, 'ast: 'a> {
@@ -369,12 +378,21 @@ impl<'a, 'ast: 'a> VisitJs<'ast> for CrossModuleOptimizationRunnerContext<'a, 'a
       self.visit_statement(stmt);
       if pre_node_id_len != self.side_effect_free_call_expr_node_ids.len() {
         let stmt_info_idx = StmtInfoIdx::new(idx + 1);
+        let constants = LinkedConstantLookup {
+          module_idx: self.immutable_ctx.module_idx,
+          stmt_idx: stmt_info_idx,
+          modules: self.immutable_ctx.modules,
+          symbols: self.immutable_ctx.symbols,
+          stmt_infos: self.immutable_ctx.stmt_infos,
+          constants: self.immutable_ctx.constant_symbol_map,
+        };
         let stmt_eval_facts = StmtEvalAnalyzer::new(
           self.immutable_ctx.ast_scope,
           self.immutable_ctx.flat_options,
           self.immutable_ctx.options,
           Some(&self.side_effect_free_call_expr_node_ids),
           Some(self.immutable_ctx.namespace_object_symbol_ids),
+          Some(&constants),
         )
         .analyze_stmt(stmt);
         // Cross-module optimization only refreshes tree-shaking flags. Module-level

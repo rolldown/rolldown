@@ -7,15 +7,18 @@ use oxc::ast::ast::{
 };
 use oxc::ast::match_member_expression;
 use oxc::ast_visit::{VisitJs, walk_js};
-use oxc::semantic::{NodeId, ScopeFlags, SymbolId};
+use oxc::semantic::{NodeId, ReferenceId, ScopeFlags, SymbolId};
 use oxc::transformer::EngineTargets;
-use oxc_ecmascript::GlobalContext;
 use oxc_ecmascript::side_effects::{
   MayHaveSideEffects, MayHaveSideEffectsContext, PropertyReadSideEffects,
 };
-use rolldown_common::{AstScopes, FlatOptions, SharedNormalizedBundlerOptions, StmtEvalFlags};
+use oxc_ecmascript::{GlobalContext, ValueType};
+use rolldown_common::{
+  AstScopes, ConstExportMeta, ConstantValue, FlatOptions, SharedNormalizedBundlerOptions,
+  StmtEvalFlags,
+};
 use rolldown_ecmascript_utils::ExpressionExt;
-use rustc_hash::FxHashSet;
+use rustc_hash::{FxHashMap, FxHashSet};
 
 use crate::utils;
 
@@ -113,6 +116,32 @@ impl BitOrAssign for StmtEvalFacts {
   }
 }
 
+/// Constant values of bindings, looked up by the symbol a reference resolves to.
+///
+/// Oxc decides whether a coercion can throw from the operand's `ValueType`. Without a lookup
+/// every identifier is `Undetermined`, so `60 * SECOND` is kept as a possible `valueOf()` call
+/// and `` `${NAME}` `` as a possible `toString()` call or Symbol conversion, even when `SECOND`
+/// is a number constant and `NAME` a string constant (#10817). Answering from the constant maps
+/// lets both become side-effect free.
+///
+/// The value must describe what the binding holds when the analyzed statement runs. The analyzer
+/// therefore only asks for `const` bindings and import bindings (a `let`/`var` that is never
+/// assigned statically can still be changed by direct `eval`, and a hoisted `var` initializer may
+/// never run). An implementation must additionally make sure the `const` declaration has finished
+/// before the read: a `const` read in its TDZ throws.
+pub trait ConstantSymbolLookup {
+  fn constant_value(&self, symbol_id: SymbolId) -> Option<&ConstantValue>;
+}
+
+/// The scanner's module-local constants. Filled while the statements are visited in order, so a
+/// later statement sees exactly the constants declared before it. A root `const` is always a
+/// top-level declaration, so its initializer ran once an earlier statement is done.
+impl ConstantSymbolLookup for FxHashMap<SymbolId, ConstExportMeta> {
+  fn constant_value(&self, symbol_id: SymbolId) -> Option<&ConstantValue> {
+    self.get(&symbol_id).map(|meta| &meta.value)
+  }
+}
+
 /// Collect facts about evaluating a statement.
 ///
 /// The returned facts keep tree-shaking side effects separate from order-sensitive reasons.
@@ -126,6 +155,8 @@ pub struct StmtEvalAnalyzer<'a> {
   /// Property reads on ES module namespace objects are guaranteed side-effect-free
   /// because namespace objects are frozen/sealed by spec with no getters.
   namespace_object_symbol_ids: Option<&'a FxHashSet<SymbolId>>,
+  /// Constant values of bindings, see [`ConstantSymbolLookup`].
+  constant_symbols: Option<&'a dyn ConstantSymbolLookup>,
 }
 
 impl<'a> StmtEvalAnalyzer<'a> {
@@ -135,6 +166,7 @@ impl<'a> StmtEvalAnalyzer<'a> {
     options: &'a SharedNormalizedBundlerOptions,
     side_effect_free_call_expr_node_ids: Option<&'a FxHashSet<NodeId>>,
     namespace_object_symbol_ids: Option<&'a FxHashSet<SymbolId>>,
+    constant_symbols: Option<&'a dyn ConstantSymbolLookup>,
   ) -> Self {
     Self {
       scope,
@@ -142,7 +174,19 @@ impl<'a> StmtEvalAnalyzer<'a> {
       flat_options,
       side_effect_free_call_expr_node_ids,
       namespace_object_symbol_ids,
+      constant_symbols,
     }
+  }
+
+  fn constant_value_for_reference_id(&self, reference_id: ReferenceId) -> Option<&ConstantValue> {
+    let symbol_id = self.scope.symbol_id_for(reference_id)?;
+    // See `ConstantSymbolLookup`: only a `const` cannot change behind the static analysis. An
+    // import binding is resolved to its (checked) canonical declaration by the lookup.
+    let flags = self.scope.scoping().symbol_flags(symbol_id);
+    if !(flags.is_const_variable() || flags.is_import()) {
+      return None;
+    }
+    self.constant_symbols?.constant_value(symbol_id)
   }
 
   /// Check if a call expression has been marked pure by cross-module optimization.
@@ -1039,9 +1083,20 @@ fn for_each_eager_chain_child<'a>(expr: &'a Expression, visit: impl FnMut(EagerC
   let _ = chain_root_visiting_eager_children(expr, visit);
 }
 
-impl GlobalContext<'_> for StmtEvalAnalyzer<'_> {
-  fn is_global_reference(&self, reference: &IdentifierReference<'_>) -> bool {
+impl<'ast> GlobalContext<'ast> for StmtEvalAnalyzer<'_> {
+  fn is_global_reference(&self, reference: &IdentifierReference<'ast>) -> bool {
     self.is_unresolved_reference(reference)
+  }
+
+  fn get_constant_value_for_reference_id(
+    &self,
+    reference_id: ReferenceId,
+  ) -> Option<oxc_ecmascript::ConstantValue<'ast>> {
+    self.constant_value_for_reference_id(reference_id).map(oxc_ecmascript::ConstantValue::from)
+  }
+
+  fn value_type_for_reference_id(&self, reference_id: ReferenceId) -> Option<ValueType> {
+    self.constant_value_for_reference_id(reference_id).map(ConstantValue::value_type)
   }
 }
 
@@ -1083,10 +1138,11 @@ mod test {
   use itertools::Itertools;
   use oxc::{parser::Parser, span::SourceType};
   use rolldown_common::{
-    AstScopes, ExperimentalOptions, InnerOptions, NormalizedBundlerOptions,
-    PropertyReadSideEffects, PropertyWriteSideEffects, StmtEvalFlags,
+    AstScopes, ConstExportMeta, ConstantValue, ExperimentalOptions, InnerOptions,
+    NormalizedBundlerOptions, PropertyReadSideEffects, PropertyWriteSideEffects, StmtEvalFlags,
   };
   use rolldown_ecmascript::{EcmaAst, EcmaCompiler};
+  use rustc_hash::FxHashMap;
 
   use super::StmtEvalAnalyzer;
   use rolldown_common::FlatOptions;
@@ -1101,7 +1157,7 @@ mod test {
     let options = Arc::new(NormalizedBundlerOptions::default());
     let flags = FlatOptions::from_shared_options(&options);
     ast.program().body.iter().any(|stmt| {
-      StmtEvalAnalyzer::new(&ast_scopes, flags, &options, None, None)
+      StmtEvalAnalyzer::new(&ast_scopes, flags, &options, None, None, None)
         .analyze_stmt(stmt)
         .has_side_effect_for_tree_shaking()
     })
@@ -1120,7 +1176,7 @@ mod test {
     let options = Arc::new(options);
     let flags = FlatOptions::from_shared_options(&options);
     ast.program().body.iter().any(|stmt| {
-      StmtEvalAnalyzer::new(&ast_scopes, flags, &options, None, None)
+      StmtEvalAnalyzer::new(&ast_scopes, flags, &options, None, None, None)
         .analyze_stmt(stmt)
         .has_side_effect_for_tree_shaking()
     })
@@ -1140,7 +1196,42 @@ mod test {
       .body
       .iter()
       .map(|stmt| {
-        StmtEvalAnalyzer::new(&ast_scopes, flags, &options, None, None)
+        StmtEvalAnalyzer::new(&ast_scopes, flags, &options, None, None, None)
+          .analyze_stmt(stmt)
+          .tree_shaking_flags()
+      })
+      .collect_vec()
+  }
+
+  /// Like `get_stmt_eval_flags`, with the named root bindings known to hold `constants`.
+  fn get_stmt_eval_flags_with_constants(
+    code: &str,
+    constants: &[(&str, ConstantValue)],
+  ) -> Vec<StmtEvalFlags> {
+    let source_type = SourceType::tsx();
+    let ast = EcmaCompiler::parse("<Noop>", code, source_type).unwrap();
+    let semantic = EcmaAst::make_semantic(ast.program());
+    let scoping = semantic.into_scoping();
+    let ast_scopes = AstScopes::new(scoping);
+    let constant_map: FxHashMap<_, _> = constants
+      .iter()
+      .map(|(name, value)| {
+        let symbol_id = ast_scopes
+          .scoping()
+          .get_root_binding((*name).into())
+          .unwrap_or_else(|| panic!("`{name}` should be a root binding of {code:?}"));
+        (symbol_id, ConstExportMeta::new(value.clone(), false))
+      })
+      .collect();
+
+    let options = Arc::new(NormalizedBundlerOptions::default());
+    let flags = FlatOptions::from_shared_options(&options);
+    ast
+      .program()
+      .body
+      .iter()
+      .map(|stmt| {
+        StmtEvalAnalyzer::new(&ast_scopes, flags, &options, None, None, Some(&constant_map))
           .analyze_stmt(stmt)
           .tree_shaking_flags()
       })
@@ -1161,7 +1252,7 @@ mod test {
       .body
       .iter()
       .map(|stmt| {
-        StmtEvalAnalyzer::new(&ast_scopes, flags, &options, None, None)
+        StmtEvalAnalyzer::new(&ast_scopes, flags, &options, None, None, None)
           .analyze_stmt(stmt)
           .is_order_sensitive()
       })
@@ -1185,7 +1276,7 @@ mod test {
       .iter()
       .map(|stmt| {
         let facts =
-          StmtEvalAnalyzer::new(&ast_scopes, flags, options, None, None).analyze_stmt(stmt);
+          StmtEvalAnalyzer::new(&ast_scopes, flags, options, None, None, None).analyze_stmt(stmt);
         (facts.tree_shaking_flags(), facts.is_order_sensitive())
       })
       .collect_vec()
@@ -1207,7 +1298,7 @@ mod test {
       .body
       .iter()
       .map(|stmt| {
-        let analyzer = StmtEvalAnalyzer::new(&ast_scopes, flags, options, None, None);
+        let analyzer = StmtEvalAnalyzer::new(&ast_scopes, flags, options, None, None, None);
         let mut facts = analyzer.analyze_stmt(stmt);
         if options.is_strict_execution_order_enabled() && !facts.is_order_sensitive() {
           analyzer.add_top_level_eager_order_reasons(stmt, &mut facts);
@@ -1257,6 +1348,58 @@ mod test {
     assert!(
       eager[..eager.len() - 1].iter().all(|(_, is_order_sensitive)| !is_order_sensitive),
       "deferred declarations for {code}"
+    );
+  }
+
+  /// Coercing a binding whose constant value is known cannot call user code or throw (#10817).
+  #[test]
+  fn test_coercion_of_known_constant_is_side_effect_free() {
+    let pure = StmtEvalFlags::empty();
+    let unknown = StmtEvalFlags::UnknownSideEffect;
+    let second = [("SECOND", ConstantValue::Number(1000.0))];
+    let name = [("NAME", ConstantValue::String("rolldown".to_string()))];
+
+    // Without the constant the operand type is undetermined, so the coercion may throw.
+    assert_eq!(get_stmt_eval_flags("const SECOND = 1000; 60 * SECOND;"), [pure, unknown]);
+    assert_eq!(get_stmt_eval_flags("const NAME = 'rolldown'; `${NAME}`;"), [pure, unknown]);
+
+    for code in [
+      "const SECOND = 1000; 60 * SECOND;",
+      "const SECOND = 1000; const MINUTE = 60 * SECOND;",
+      "const SECOND = 1000; export const MINUTE = 60 * SECOND;",
+      "const SECOND = 1000; -SECOND;",
+      "const SECOND = 1000; SECOND + 1;",
+      "const SECOND = 1000; `${SECOND}ms`;",
+    ] {
+      assert_eq!(get_stmt_eval_flags_with_constants(code, &second), [pure, pure], "{code}");
+    }
+    for code in [
+      "const NAME = 'rolldown'; `${NAME}!`;",
+      "const NAME = 'rolldown'; NAME + '!';",
+      "const NAME = 'rolldown'; NAME.length;",
+    ] {
+      assert_eq!(get_stmt_eval_flags_with_constants(code, &name), [pure, pure], "{code}");
+    }
+
+    // A `let`/`var` may be changed by direct `eval`, and a hoisted `var` initializer may never run
+    // (`while (false) var SECOND = 1000;`), so only `const` bindings are answered.
+    for code in ["let SECOND = 1000; 60 * SECOND;", "while (false) var SECOND = 1000; 60 * SECOND;"]
+    {
+      assert_eq!(get_stmt_eval_flags_with_constants(code, &second), [pure, unknown], "{code}");
+    }
+
+    // Operations that throw regardless of the operand's primitive type stay side effects.
+    for code in [
+      "const SECOND = 1000; SECOND in {};",
+      "const SECOND = 1000; SECOND();",
+      "const SECOND = 1000; SECOND.a.b;",
+    ] {
+      assert_eq!(get_stmt_eval_flags_with_constants(code, &second), [pure, unknown], "{code}");
+    }
+    // A number constant coerced together with a `BigInt` throws a `TypeError`.
+    assert_eq!(
+      get_stmt_eval_flags_with_constants("const SECOND = 1000; 1n * SECOND;", &second),
+      [pure, unknown]
     );
   }
 

@@ -1,0 +1,11 @@
+{
+  "_comment": "Scanner constant facts must only describe stable, definitely initialized runtime values. The two entries independently cover a conditional var initializer and a root binding visible to direct eval.",
+  "config": {
+    "input": [
+      { "name": "conditional-var", "import": "./conditional-var.js" },
+      { "name": "direct-eval", "import": "./direct-eval.js" }
+    ],
+    "minify": false
+  },
+  "snapshot": false
+}

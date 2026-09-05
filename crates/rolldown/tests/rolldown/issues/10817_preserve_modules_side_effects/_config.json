@@ -1,0 +1,9 @@
+{
+  "_comment": "Imported-constant refinement must update analyzed module side effects before side-effect-only imports are propagated. Once derived.js's coercion is removed, preserveModules must emit neither its import nor an empty derived.js.",
+  "config": {
+    "input": [{ "name": "main", "import": "./main.js" }],
+    "minify": false,
+    "preserveModules": true
+  },
+  "snapshot": false
+}

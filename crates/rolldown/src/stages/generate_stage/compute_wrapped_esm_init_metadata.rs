@@ -88,6 +88,11 @@ impl GenerateStage<'_> {
     order_state: &OrderWrapState,
   ) -> Sealed<FinalEsmInitMetadata> {
     let keep_names = self.options.keep_names;
+    // Dev mode emits an HMR header (`createModuleHotContext` / `registerModule`) into every
+    // module's closure. That happens after this pass, so it is invisible to the AST check
+    // below — the same blind spot `shimmed_missing_exports` guards against. No wrapped module
+    // has an empty closure in dev, so nothing here can be a no-op.
+    let is_dev_mode = self.options.is_dev_mode_enabled();
     // Off-strict, lowering never mutates the chunk graph, so the liveness guard cannot fire.
     let strict = self.options.is_strict_execution_order_enabled();
     let metas = &self.link_output.metas;
@@ -101,7 +106,8 @@ impl GenerateStage<'_> {
           return None;
         }
         let init_target = order_state.esm_init_target(module_idx, meta)?;
-        let is_noop = init_is_noop(meta, ast_table[module_idx].as_ref(), keep_names);
+        let is_noop =
+          !is_dev_mode && init_is_noop(meta, ast_table[module_idx].as_ref(), keep_names);
         let targets_by_stmt = modules[module_idx]
           .as_normal()
           .zip(module_to_chunk[module_idx])

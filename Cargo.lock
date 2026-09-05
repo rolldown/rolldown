@@ -2922,7 +2922,6 @@ version = "1.2.7"
 dependencies = [
  "anyhow",
  "arcstr",
- "oxc",
  "rolldown_common",
  "rolldown_plugin",
  "rolldown_utils",

@@ -25,6 +25,8 @@ use rolldown_ecmascript_utils::{
   parse_injected_expression,
 };
 use rolldown_error::EmptyImportMetaKind;
+
+use crate::hmr::utils::create_request_lazy_call;
 use std::borrow::Cow;
 
 mod finalizer_context;
@@ -1709,6 +1711,15 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
     let rec = &self.ctx.module.import_records[*rec_idx];
     let importee_id = rec.resolved_module?;
 
+    // Inlining a lazy boundary would pull the module it stands for into the bundle eagerly.
+    // Leave it for `try_rewrite_import_expression`, which emits the `requestLazy` call.
+    if self.ctx.options.is_dev_mode_enabled()
+      && let Module::Normal(importee) = &self.ctx.modules[importee_id]
+      && importee.id.contains("?rolldown-lazy=1")
+    {
+      return None;
+    }
+
     if rec.meta.contains(ImportRecordMeta::DeadDynamicImport) {
       // `Promise.resolve().then(() => /* @__PURE__ */ Object.freeze({ __proto__: null }))`
       return Some(Expression::new_promise_resolve_then(
@@ -2667,6 +2678,16 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
       // options expression left to walk into.
       return expr.options.is_none();
     };
+
+    // Must come before the chunk lookup below, which would otherwise point the import at the
+    // proxy's own chunk — a chunk nothing fetches.
+    if self.ctx.options.is_dev_mode_enabled()
+      && let Module::Normal(importee) = &self.ctx.modules[importee_idx]
+      && importee.id.contains("?rolldown-lazy=1")
+    {
+      *node = create_request_lazy_call(&importee.id, &importee.stable_id, self);
+      return true;
+    }
 
     match &self.ctx.modules[importee_idx] {
       Module::Normal(importee) => {

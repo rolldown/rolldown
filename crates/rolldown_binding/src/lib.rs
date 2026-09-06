@@ -119,10 +119,12 @@ fn init() {
     let worker_threads = std::env::var("ROLLDOWN_WORKER_THREADS")
       .ok()
       .and_then(|v| v.parse::<usize>().ok())
-      // unlike the web server scenario
-      // rolldown puts a lot of blocking tasks in the worker threads rather than blocking_threads
-      // so we need to increase the worker threads rather than the blocking_threads
-      .unwrap_or(num_cpus::get_physical() * 3 / 2);
+      .unwrap_or_else(|| {
+        default_worker_threads(
+          num_cpus::get_physical(),
+          std::thread::available_parallelism().ok().map(std::num::NonZeroUsize::get),
+        )
+      });
     let mut builder = tokio::runtime::Builder::new_multi_thread();
 
     let rt = builder
@@ -145,5 +147,52 @@ fn init() {
         "\nPlease report this issue at: https://github.com/rolldown/rolldown/issues/new?template=panic_report.yml"
       );
     }));
+  }
+}
+
+/// Default size of the tokio worker pool when `ROLLDOWN_WORKER_THREADS` is unset.
+///
+/// Unlike a web server, rolldown runs most of its CPU-bound work on the runtime workers rather
+/// than on blocking threads, so the pool is oversized relative to the physical core count.
+///
+/// `num_cpus::get_physical()` reads `/proc/cpuinfo` on Linux, which is not namespaced and so
+/// reports the host's cores even inside a container with a cgroup CPU quota. The physical count
+/// is therefore clamped by `std::thread::available_parallelism()`, which does honor cgroup quotas
+/// and affinity masks.
+#[cfg(not(target_family = "wasm"))]
+fn default_worker_threads(physical_cpus: usize, available_parallelism: Option<usize>) -> usize {
+  let cpus = match available_parallelism {
+    Some(available) => physical_cpus.min(available),
+    None => physical_cpus,
+  };
+  (cpus * 3 / 2).max(1)
+}
+
+#[cfg(all(test, not(target_family = "wasm")))]
+mod tests {
+  use super::default_worker_threads;
+
+  #[test]
+  fn unconstrained_host_keeps_physical_heuristic() {
+    // 4 physical / 8 logical cores, no quota: 4 * 3 / 2.
+    assert_eq!(default_worker_threads(4, Some(8)), 6);
+  }
+
+  #[test]
+  fn cgroup_quota_clamps_physical_count() {
+    // 4 physical cores on the host, but the container is limited to 2 CPUs.
+    assert_eq!(default_worker_threads(4, Some(2)), 3);
+    // 48 physical cores on the host, container limited to 24 CPUs.
+    assert_eq!(default_worker_threads(48, Some(24)), 36);
+  }
+
+  #[test]
+  fn unknown_parallelism_falls_back_to_physical_count() {
+    assert_eq!(default_worker_threads(4, None), 6);
+  }
+
+  #[test]
+  fn never_returns_zero_workers() {
+    assert_eq!(default_worker_threads(1, Some(1)), 1);
   }
 }

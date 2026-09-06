@@ -25,7 +25,7 @@
     "knip": "^6.32.0",
     "playwright-chromium": "^1.62.0",
     "publint": "^0.3.21",
-    "remove-unused-vars": "^0.0.14",
+    "remove-unused-vars": "^0.0.15",
     "rolldown": "workspace:*",
     "typescript": "catalog:",
     "vite-plus": "^0.3.0"

@@ -9,7 +9,7 @@
     "test:webcontainer": "node ./scripts/prepare-fixture.mjs webcontainer && vitest run --project webcontainer"
   },
   "devDependencies": {
-    "@vitest/browser-playwright": "^4.1.6",
+    "@vitest/browser-playwright": "^5.0.0",
     "@webcontainer/test": "^0.3.0",
     "playwright": "^1.62.0",
     "vitest": "catalog:"

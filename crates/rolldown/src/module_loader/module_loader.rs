@@ -29,6 +29,7 @@ use rolldown_utils::indexmap::FxIndexSet;
 use rolldown_utils::rayon::{IntoParallelIterator, ParallelIterator};
 use rolldown_utils::rustc_hash::FxHashSetExt;
 use rustc_hash::{FxHashMap, FxHashSet};
+use sugar_path::SugarPath;
 use tracing::Instrument;
 
 use crate::module_loader::module_task::ModuleTaskOwner;
@@ -441,6 +442,32 @@ impl<'a, Fs: FileSystem + Clone + 'static> ModuleLoader<'a, Fs> {
     {
       if seen_changed_ids.insert(resolved_id.id.clone()) {
         changed_resolved_ids.push(resolved_id);
+      }
+    }
+    // Modules addressed as `<changed id>?query` read their content from the changed file;
+    // re-fetch them together with it, or the scan reuses their stale cached copies without
+    // running any hook. (The index is keyed by `to_slash`ed ids, like the other cache
+    // index maps.)
+    if let Some(snapshot) = self.cache.snapshot() {
+      let mut query_variant_resolved_ids = Vec::new();
+      for resolved_id in &changed_resolved_ids {
+        let Some(variant_idxs) =
+          self.cache.module_idxs_by_clean_path.get(&*resolved_id.id.as_arc_str().to_slash())
+        else {
+          continue;
+        };
+        for module_idx in variant_idxs {
+          if let Some(module) =
+            snapshot.module_table.modules.get(*module_idx).and_then(Module::as_normal)
+          {
+            query_variant_resolved_ids.push(module.originative_resolved_id.clone());
+          }
+        }
+      }
+      for resolved_id in query_variant_resolved_ids {
+        if seen_changed_ids.insert(resolved_id.id.clone()) {
+          changed_resolved_ids.push(resolved_id);
+        }
       }
     }
     for resolved_id in changed_resolved_ids.iter().cloned() {

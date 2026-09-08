@@ -1,7 +1,7 @@
 import crypto from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
-import type { RolldownWatcher, WatchOptions } from 'rolldown';
+import type { ModuleInfo, RolldownWatcher, WatchOptions } from 'rolldown';
 import { rolldown, watch as _watch } from 'rolldown';
 import { sleep } from 'rolldown-tests/utils';
 import { test, vi } from 'vitest';
@@ -610,6 +610,59 @@ console.log(a + 1000)
 
     await waitBuildFinished(watcher);
     expect(fs.readdirSync(path.join(cwd, 'dist'))).toHaveLength(1);
+  },
+);
+
+test.concurrent(
+  'chunking module-info cache refreshes incoming edges in incremental builds',
+  { retry: TEST_RETRY, timeout: TEST_TIMEOUT },
+  async ({ task, expect, onTestFinished }) => {
+    const { dir: cwd } = createTestWithMultiFiles(
+      'chunking-module-info-cache',
+      task.result?.retryCount ?? 0,
+      {
+        'main.js': `import './dep.js'; console.log('main')`,
+        'dep.js': `console.log('dep')`,
+      },
+    );
+    const main = path.join(cwd, 'main.js');
+    const dep = path.join(cwd, 'dep.js');
+    let latestInfo: ModuleInfo | undefined;
+    const watcher = watch({
+      cwd,
+      input: 'main.js',
+      experimental: { incrementalBuild: true },
+      output: {
+        codeSplitting: {
+          groups: [
+            {
+              name(_id, context) {
+                latestInfo = context.getModuleInfo(dep)!;
+                expect(context.getModuleInfo(dep)).toBe(latestInfo);
+                return null;
+              },
+            },
+          ],
+        },
+      },
+    });
+    onTestFinished(async () => {
+      await watcher.close();
+      if (!process.env.CI) {
+        fs.rmSync(cwd, { recursive: true, force: true });
+      }
+    });
+    await waitBuildFinished(watcher);
+    const firstInfo = latestInfo!;
+    expect(firstInfo.importers).toEqual([main]);
+    expect(firstInfo.dynamicImporters).toEqual([]);
+
+    watcher.clear('event');
+    await editFile(main, `import('./dep.js'); console.log('main')`);
+    await waitBuildFinished(watcher);
+    expect(latestInfo === firstInfo).toBe(false);
+    expect(latestInfo!.importers).toEqual([]);
+    expect(latestInfo!.dynamicImporters).toEqual([main]);
   },
 );
 

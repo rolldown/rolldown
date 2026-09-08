@@ -357,8 +357,15 @@ function bindingifyCodeSplitting(
   let advancedChunksResult: BindingOutputOptions['manualCodeSplitting'];
   if (effectiveChunksOption != null) {
     const { groups, ...restOptions } = effectiveChunksOption;
+    let chunkingContext: ChunkingContextImpl | undefined;
+    const getChunkingContext = (bindingContext: BindingChunkingContext) =>
+      (chunkingContext ??= new ChunkingContextImpl(bindingContext, pluginContextData));
     advancedChunksResult = {
       ...restOptions,
+      invalidateJsSideCache: () => {
+        chunkingContext?.clearModuleInfoCache();
+        chunkingContext = undefined;
+      },
       groups: groups?.map((group) => {
         const { name, test, ...restGroup } = group;
         return {
@@ -386,7 +393,7 @@ function bindingifyCodeSplitting(
                     'codeSplitting groups[].name',
                     name,
                   ),
-                  pluginContextData,
+                  getChunkingContext,
                 )
               : name,
         };
@@ -427,18 +434,18 @@ function batchTest(test: CodeSplittingTestFunction): (ids: string[]) => Uint8Arr
 }
 
 /**
- * This is the `name` equivalent of {@linkcode batchTest}. The context wrapper holds no per-call
- * state, so one instance serves the whole batch.
+ * This is the `name` equivalent of {@linkcode batchTest}. All groups in a chunking pass share
+ * a context so repeated module queries reuse their JavaScript values.
  */
 function batchName(
   name: CodeSplittingNameFunction,
-  pluginContextData: PluginContextData,
+  getChunkingContext: (bindingContext: BindingChunkingContext) => ChunkingContextImpl,
 ): (
   ids: string[],
   bindingContext: BindingChunkingContext,
 ) => ReturnType<CodeSplittingNameFunction>[] {
   return (ids, bindingContext) => {
-    const context = new ChunkingContextImpl(bindingContext, pluginContextData);
+    const context = getChunkingContext(bindingContext);
     const results: ReturnType<CodeSplittingNameFunction>[] = [];
     for (let index = 0; index < ids.length; index++) {
       const result = name(ids[index], context);

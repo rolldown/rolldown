@@ -367,6 +367,9 @@ fn normalize_code_splitting(
   let manual_code_splitting = manual_code_splitting
     .map(|inner| -> napi::Result<ManualCodeSplittingOptions> {
       Ok(ManualCodeSplittingOptions {
+        invalidate_js_side_cache: normalize_invalidate_js_side_cache_option(
+          inner.invalidate_js_side_cache,
+        ),
         min_size: inner.min_size,
         min_share_count: inner.min_share_count,
         min_module_size: inner.min_module_size,

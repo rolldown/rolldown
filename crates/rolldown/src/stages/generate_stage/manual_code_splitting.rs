@@ -576,7 +576,13 @@ impl GenerateStage<'_> {
       module_to_assigned,
       flattened_entries,
     };
-    splitter.split().await
+    let result = splitter.split().await;
+    // Release the JS module-info cache on both success and failure.
+    // See internal-docs/manual-code-splitting/implementation.md.
+    if let Some(invalidate_js_side_cache) = &chunking_options.invalidate_js_side_cache {
+      invalidate_js_side_cache.call().await?;
+    }
+    result
   }
 }
 

@@ -6,6 +6,12 @@ Manual code splitting lets users define chunk boundaries via `manualCodeSplittin
 
 ## Important features
 
+### JavaScript module information cache
+
+All dynamic group-name callbacks in one manual splitting pass share a `ChunkingContextImpl`. It caches complete JavaScript `ModuleInfo` objects by module ID after their first native lookup. Scanning has completed before this pass, so dependency arrays and entry flags are stable. `meta` retains its shared JavaScript reference, `moduleSideEffects` reads and writes the existing module-option store, and `code` remains a lazy getter.
+
+The binding supplies a private `invalidateJsSideCache` callback on the manual splitting options. `apply_manual_code_splitting` invokes it after `split` returns, including errors. The callback drops the cache and disables caching on retained contexts; the next splitting pass creates a fresh context. The plugin-context API and graph construction do not use this cache.
+
 ### `entriesAware`
 
 When `entriesAware: true`, a group's modules are further split by **which entry points can reach them**. This produces per-entry-set chunks instead of one monolithic group chunk.

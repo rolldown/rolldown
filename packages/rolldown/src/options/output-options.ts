@@ -142,6 +142,10 @@ export interface CommentsOptions {
 
 /** @inline @category Code Splitting */
 export interface ChunkingContext {
+  /**
+   * The returned object and its dependency arrays are reused within the current chunking pass.
+   * Treat graph fields as read-only. `meta` properties and the `moduleSideEffects` field remain mutable.
+   */
   getModuleInfo(moduleId: string): ModuleInfo | null;
 }
 

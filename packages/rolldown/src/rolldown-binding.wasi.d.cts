@@ -2084,6 +2084,7 @@ export interface BindingDevOptions {
   onAdditionalAssets?: undefined | ((output: BindingOutputs) => void | Promise<void>)
   rebuildStrategy?: BindingRebuildStrategy
   watch?: BindingDevWatchOptions
+  hotUpdate?: boolean
 }
 
 export interface BindingDevtoolsOptions {

@@ -130,6 +130,7 @@ export class DevEngine {
         include: normalizedStringOrRegex(devOptions.watch.include),
         exclude: normalizedStringOrRegex(devOptions.watch.exclude),
       },
+      hotUpdate: devOptions.hotUpdate,
     };
 
     const inner = new BindingDevEngine(options.bundlerOptions, bindingDevOptions);

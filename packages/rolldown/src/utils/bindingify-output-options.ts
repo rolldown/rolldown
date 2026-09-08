@@ -362,7 +362,7 @@ function bindingifyCodeSplitting(
       (chunkingContext ??= new ChunkingContextImpl(bindingContext, pluginContextData));
     advancedChunksResult = {
       ...restOptions,
-      invalidateJsSideCache: () => {
+      internalInvalidateModuleInfoCache: () => {
         chunkingContext?.clearModuleInfoCache();
         chunkingContext = undefined;
       },

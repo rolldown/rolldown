@@ -2588,7 +2588,7 @@ export interface BindingManualCodeSplittingOptions {
   maxSize?: number
   minModuleSize?: number
   maxModuleSize?: number
-  invalidateJsSideCache?: JsCallback
+  internalInvalidateModuleInfoCache?: JsCallback
 }
 
 export interface BindingMatchGroup {

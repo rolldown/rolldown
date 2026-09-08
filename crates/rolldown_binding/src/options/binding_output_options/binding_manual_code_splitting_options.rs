@@ -20,8 +20,8 @@ pub struct BindingManualCodeSplittingOptions {
   pub max_size: Option<f64>,
   pub min_module_size: Option<f64>,
   pub max_module_size: Option<f64>,
-  #[debug("InvalidateJsSideCache(...)")]
-  pub invalidate_js_side_cache: Option<JsCallback>,
+  #[debug("InternalInvalidateModuleInfoCache(...)")]
+  pub internal_invalidate_module_info_cache: Option<JsCallback>,
 }
 
 /// The JS side wraps the user's per-id function in one shim per group. The result holds one byte

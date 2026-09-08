@@ -326,16 +326,13 @@ fn normalize_sourcemap_path_transform_option(
 
 fn normalize_invalidate_js_side_cache_option(
   invalidate_js_side_cache: Option<JsCallback>,
+  error_context: &'static str,
 ) -> Option<rolldown::InvalidateJsSideCache> {
   invalidate_js_side_cache.map(|ts_fn| {
     rolldown::InvalidateJsSideCache::new(Arc::new(move || {
       let ts_fn = Arc::clone(&ts_fn);
       Box::pin(async move {
-        ts_fn
-          .invoke_async(())
-          .await
-          .context("invalidateJsSideCache option")
-          .map_err(anyhow::Error::from)
+        ts_fn.invoke_async(()).await.context(error_context).map_err(anyhow::Error::from)
       })
     }))
   })
@@ -367,8 +364,9 @@ fn normalize_code_splitting(
   let manual_code_splitting = manual_code_splitting
     .map(|inner| -> napi::Result<ManualCodeSplittingOptions> {
       Ok(ManualCodeSplittingOptions {
-        invalidate_js_side_cache: normalize_invalidate_js_side_cache_option(
-          inner.invalidate_js_side_cache,
+        internal_invalidate_module_info_cache: normalize_invalidate_js_side_cache_option(
+          inner.internal_invalidate_module_info_cache,
+          "internalInvalidateModuleInfoCache callback",
         ),
         min_size: inner.min_size,
         min_share_count: inner.min_share_count,
@@ -477,8 +475,10 @@ pub fn normalize_binding_options(
     normalize_sourcemap_ignore_list_option(output_options.sourcemap_ignore_list);
   let sourcemap_path_transform =
     normalize_sourcemap_path_transform_option(output_options.sourcemap_path_transform);
-  let invalidate_js_side_cache =
-    normalize_invalidate_js_side_cache_option(input_options.invalidate_js_side_cache);
+  let invalidate_js_side_cache = normalize_invalidate_js_side_cache_option(
+    input_options.invalidate_js_side_cache,
+    "invalidateJsSideCache option",
+  );
   let on_log = normalize_on_log_option(input_options.on_log);
 
   let mut module_types = None;

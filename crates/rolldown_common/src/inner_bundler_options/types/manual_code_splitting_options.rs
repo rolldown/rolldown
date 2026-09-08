@@ -37,7 +37,7 @@ pub struct ManualCodeSplittingOptions {
   pub include_dependencies_recursively: Option<bool>,
   pub groups: Option<Vec<MatchGroup>>,
   #[cfg_attr(feature = "deserialize_bundler_options", serde(skip), schemars(skip))]
-  pub invalidate_js_side_cache: Option<InvalidateJsSideCache>,
+  pub internal_invalidate_module_info_cache: Option<InvalidateJsSideCache>,
 }
 
 #[derive(Default, Debug, Clone)]

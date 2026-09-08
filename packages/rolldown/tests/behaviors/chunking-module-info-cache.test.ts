@@ -26,9 +26,13 @@ test('shares module info across groups and releases it before rendering', async 
         },
         renderChunk() {
           renderCalls++;
-          const info = chunkingContext.getModuleInfo('dep');
+          const info = chunkingContext.getModuleInfo('dep')!;
           expect(info === firstInfo).toBe(false);
           expect(chunkingContext.getModuleInfo('dep') === info).toBe(false);
+          info.moduleSideEffects = false;
+          expect(this.getModuleInfo('dep')!.moduleSideEffects).toBe(false);
+          this.getModuleInfo('dep')!.moduleSideEffects = true;
+          expect(info.moduleSideEffects).toBe(true);
         },
       },
     ],
@@ -87,9 +91,13 @@ test.each(['name throws', 'name returns invalid type', 'later test throws'])(
           load: (id) => modules[id],
           renderError() {
             checkedError = true;
-            const info = context.getModuleInfo('dep');
+            const info = context.getModuleInfo('dep')!;
             expect(info === cached).toBe(false);
             expect(context.getModuleInfo('dep') === info).toBe(false);
+            info.moduleSideEffects = null;
+            expect(this.getModuleInfo('dep')!.moduleSideEffects).toBeNull();
+            this.getModuleInfo('dep')!.moduleSideEffects = false;
+            expect(info.moduleSideEffects).toBe(false);
           },
         },
       ],

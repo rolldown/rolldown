@@ -24,16 +24,14 @@ export class ChunkingContextImpl {
     if (bindingInfo) {
       const option = this.pluginContextData.getModuleOption(moduleId);
       const info = transformModuleInfo(bindingInfo, option);
-      if (this.moduleInfoCache) {
-        Object.defineProperty(info, 'moduleSideEffects', {
-          get: () => option.moduleSideEffects,
-          set: (moduleSideEffects: ModuleInfo['moduleSideEffects']) => {
-            option.moduleSideEffects = moduleSideEffects;
-            option.invalidate = true;
-          },
-        });
-        this.moduleInfoCache.set(moduleId, info);
-      }
+      Object.defineProperty(info, 'moduleSideEffects', {
+        get: () => option.moduleSideEffects,
+        set: (moduleSideEffects: ModuleInfo['moduleSideEffects']) => {
+          option.moduleSideEffects = moduleSideEffects;
+          option.invalidate = true;
+        },
+      });
+      this.moduleInfoCache?.set(moduleId, info);
       return info;
     }
     return null;

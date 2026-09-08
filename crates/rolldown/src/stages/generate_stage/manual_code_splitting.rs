@@ -582,7 +582,7 @@ impl GenerateStage<'_> {
     if let Some(invalidate_module_info_cache) =
       &chunking_options.internal_invalidate_module_info_cache
     {
-      invalidate_module_info_cache.call().await?;
+      return result.and(invalidate_module_info_cache.call().await.map_err(Into::into));
     }
     result
   }

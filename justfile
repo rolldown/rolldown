@@ -268,8 +268,13 @@ build-rolldown-binding:
 # flavor owns `rolldown-binding.wasi.*` + the worker scripts, the single-thread
 # flavor owns `rolldown-binding.wasip1.*`. Non-wasi builds regenerate BOTH
 # flavors' loaders deterministically from the wasi targets declared in the napi
-# config, byte-identical to the committed copies, so native builds leave a
-# clean tree without any restore step. See
+# config, byte-identical to the committed copies, so the loaders leave a clean
+# tree without any restore step. The per-flavor DECLARATIONS are the exception:
+# a build restores the flavor it is not building
+# (`preserveInactiveWasiDeclaration` in `packages/rolldown/build-binding.ts`),
+# so a native build never refreshes `rolldown-binding.wasip1.d.cts` — only
+# `build-rolldown-wasi-single` (or `build-browser`) does. Regenerate it there
+# after any change to the binding surface. See
 # internal-docs/async-runtime/implementation.md.
 build-rolldown:
   vp run --filter rolldown build-native:debug

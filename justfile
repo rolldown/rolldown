@@ -274,7 +274,9 @@ build-rolldown-binding:
 # (`preserveInactiveWasiDeclaration` in `packages/rolldown/build-binding.ts`),
 # so a native build never refreshes `rolldown-binding.wasip1.d.cts` — only
 # `build-rolldown-wasi-single` (or `build-browser`) does. Regenerate it there
-# after any change to the binding surface. See
+# after any change to the binding surface. Drift between the two WASI
+# declarations is caught by `just test-node`
+# (`packages/rolldown/tests/wasi-declaration-consistency.test.ts`). See
 # internal-docs/async-runtime/implementation.md.
 build-rolldown:
   vp run --filter rolldown build-native:debug

@@ -62,3 +62,31 @@ test('keeps target-neutral binding types aligned across native and WASI declarat
     }
   }
 });
+
+test('keeps the threaded and threadless WASI declarations byte-identical', async () => {
+  const [threaded, threadless] = await Promise.all([
+    readFile(declarations.threaded, 'utf8'),
+    readFile(declarations.threadless, 'utf8'),
+  ]);
+
+  expect(
+    threadless.split('\n'),
+    [
+      '`src/rolldown-binding.wasip1.d.cts` has drifted from `src/rolldown-binding.wasi.d.cts`.',
+      '',
+      'Each binding build only refreshes the declaration of the flavor it builds and RESTORES',
+      'the other one (`preserveInactiveWasiDeclaration` in `packages/rolldown/build-binding.ts`),',
+      'so a native or threaded-WASI build leaves the threadless declaration untouched. The tree',
+      'therefore looks clean while `rolldown-binding.wasip1.d.cts` is stale — which is exactly how',
+      'this file silently fell behind across merges from main.',
+      '',
+      'Normal fix: run `just build-rolldown-wasi-single` (or `just build-browser`) and commit the',
+      'regenerated `packages/rolldown/src/rolldown-binding.wasip1.d.cts`.',
+      '',
+      'Exception: if the diff is only `node:stream/web` imports, `typeof global`, or `Buffer` type',
+      'differences, that is a legitimate `@napi-rs/cli` threadless rewrite and NOT drift. In that',
+      'case the two declarations are meant to differ, and this assertion needs a normalizer for',
+      'those channels rather than a rebuild.',
+    ].join('\n'),
+  ).toEqual(threaded.split('\n'));
+});

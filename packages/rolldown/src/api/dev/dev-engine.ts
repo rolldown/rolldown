@@ -435,6 +435,7 @@ function createBindingDevOptions(
       include: normalizedStringOrRegex(watch.include),
       exclude: normalizedStringOrRegex(watch.exclude),
     },
+    hotUpdate: devOptions.hotUpdate,
   };
 }
 

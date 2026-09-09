@@ -126,6 +126,7 @@ impl BuildDiagnostic {
     source: ArcStr,
     span: oxc::span::Span,
     is_before_function_declaration: bool,
+    is_no_side_effects: bool,
   ) -> Self {
     Self::new_inner(InvalidAnnotation {
       module_id,
@@ -133,6 +134,7 @@ impl BuildDiagnostic {
       source,
       span,
       is_before_function_declaration,
+      is_no_side_effects,
     })
   }
 

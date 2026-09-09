@@ -39,4 +39,5 @@ pub struct BindingDevOptions {
   pub on_additional_assets: Option<MaybeAsyncJsCallback<FnArgs<(BindingOutputs,)>>>,
   pub rebuild_strategy: Option<BindingRebuildStrategy>,
   pub watch: Option<BindingDevWatchOptions>,
+  pub hot_update: Option<bool>,
 }

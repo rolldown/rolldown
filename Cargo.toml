@@ -206,7 +206,7 @@ itertools = "0.15.0"
 itoa = "1.0.18"
 json-escape-simd = "3.1.1"
 json-strip-comments = "3"
-jsonschema = { version = "0.52.0", default-features = false }
+jsonschema = { version = "0.55.0", default-features = false }
 memchr = "2.8.2"
 # 0.1.66+ carries mimalloc v3.5.1 plus the fix for the process-init thread's thread-done hook
 # (see microsoft/mimalloc#1393). Older 0.1.65 (mimalloc v3.5.0) aborts Linux debug builds when
@@ -244,7 +244,7 @@ serde = { version = "1.0.228", features = ["derive"] }
 serde_json = "1.0.150"
 serde_yaml = "0.9.34"
 simdutf8 = "0.1.5"
-smallvec = { version = "1.15.2", features = ["union"] }
+smallvec = { version = "1.16.0", features = ["union"] }
 sugar_path = { version = "3", features = ["cached_current_dir"] }
 supports-color = "3"
 terminal_size = "0.4.4"
@@ -275,7 +275,7 @@ napi-build = { version = "2.4.1" }
 napi-derive = { version = "3.6.3", default-features = false, features = ["type-def", "tracing"] }
 
 # oxc crates with the same version
-oxc = { version = "0.148.0", features = [
+oxc = { version = "0.149.0", features = [
   "ast_visit",
   "transformer",
   "minifier",
@@ -286,14 +286,14 @@ oxc = { version = "0.148.0", features = [
   "isolated_declarations",
   "regular_expression",
 ] }
-oxc_allocator = { version = "0.148.0", features = ["pool"] }
-oxc_ecmascript = { version = "0.148.0" }
-oxc_napi = { version = "0.148.0" }
-oxc_str = { version = "0.148.0" }
-oxc_minify_napi = { version = "0.148.0" }
-oxc_parser_napi = { version = "0.148.0" }
-oxc_transform_napi = { version = "0.148.0" }
-oxc_traverse = { version = "0.148.0" }
+oxc_allocator = { version = "0.149.0", features = ["pool"] }
+oxc_ecmascript = { version = "0.149.0" }
+oxc_napi = { version = "0.149.0" }
+oxc_str = { version = "0.149.0" }
+oxc_minify_napi = { version = "0.149.0" }
+oxc_parser_napi = { version = "0.149.0" }
+oxc_transform_napi = { version = "0.149.0" }
+oxc_traverse = { version = "0.149.0" }
 
 # oxc crates in their own repos
 # Versions must be relaxed for usage in oxc.

@@ -132,7 +132,7 @@ impl IntegrationTest {
           .with_options(ParseOptions { allow_return_outside_function: true, ..Default::default() })
           .parse();
 
-        if ret.panicked || !ret.diagnostics.is_empty() {
+        if ret.fatal_error || !ret.diagnostics.is_empty() {
           let errors_str = ret
             .diagnostics
             .iter()

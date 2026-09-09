@@ -585,8 +585,12 @@ Per changed file:
    that registered the file with `addWatchFile` (transform
    dependencies), in a stable order: own module first, then
    registrants sorted by stable id.
-2. **`hotUpdate` plugin chain** (dev-only) — plugins run in hook order;
-   each may replace the set. Module ids cross the hook
+2. **`hotUpdate` plugin chain** (dev-only, off by default) — runs only
+   when the `hotUpdate` dev option is `true`. It stays off until
+   file-to-module invalidation is complete (rolldown/rolldown#10714),
+   because the set the hook receives is not yet correct for query-variant
+   modules. When enabled, plugins run in hook order and each may replace
+   the set. Module ids cross the hook
    slash-normalized, in the same convention as `file`; returned ids
    with native separators still round-trip. An empty return suppresses
    this file's update. Ids the graph does not know are dropped. Lazy-compilation

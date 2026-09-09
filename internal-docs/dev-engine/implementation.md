@@ -1170,9 +1170,9 @@ instead of abandoning workers or a lease. The shared registry is implemented
 in platform-neutral `utils/retryable-cleanup.ts` so browser builds do not retain
 the Node-specific parallel-worker startup module. User-controlled `DevOptions`
 getters are materialized under the same setup-cleanup boundary. Top-level
-callback, rebuild-strategy, and watch getters are each read once, and a getter
-failure after parallel-worker startup terminates those workers before the
-creation promise rejects.
+callback, rebuild-strategy, watch, and hot-update getters are each read once,
+and a getter failure after parallel-worker startup terminates those workers
+before the creation promise rejects.
 
 Every JavaScript `DevEngine` also owns a process-unique close identity. Its
 wrapped plugin and dev callbacks use that identity by default, and `close()`

@@ -231,6 +231,7 @@ impl BundlingTask {
         &mut stamp_table,
         Arc::clone(&self.next_hmr_patch_id),
         self.dev_context.last_task_errored.load(Ordering::Relaxed),
+        self.dev_context.options.hot_update,
       )
       .await;
     drop(stamp_table);

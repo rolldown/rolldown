@@ -45,6 +45,8 @@ pub struct DevOptions {
   pub on_additional_assets: Option<OnAdditionalAssetsCallback>,
   pub rebuild_strategy: Option<RebuildStrategy>,
   pub watch: Option<DevWatchOptions>,
+  /// Whether the `hotUpdate` plugin hook is called. Off by default until Vite supports it.
+  pub hot_update: Option<bool>,
 }
 
 #[expect(clippy::struct_excessive_bools)]
@@ -67,6 +69,7 @@ pub struct NormalizedDevOptions {
   pub debounce_tick_rate: Option<u64>,
   pub watch_include: Option<Vec<StringOrRegex>>,
   pub watch_exclude: Option<Vec<StringOrRegex>>,
+  pub hot_update: bool,
 }
 
 pub fn normalize_dev_options(options: DevOptions) -> NormalizedDevOptions {
@@ -86,5 +89,6 @@ pub fn normalize_dev_options(options: DevOptions) -> NormalizedDevOptions {
     debounce_tick_rate: watch_options.debounce_tick_rate,
     watch_include: watch_options.include,
     watch_exclude: watch_options.exclude,
+    hot_update: options.hot_update.unwrap_or(false),
   }
 }

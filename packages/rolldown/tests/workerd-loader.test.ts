@@ -2542,7 +2542,9 @@ console.log('managed binding wrappers collected')
     'mediates $name input records after real workerd disposal',
     { timeout: 30_000 },
     ({ pluginSource }) => {
-      const tsxLoader = createRequire(import.meta.url).resolve('tsx');
+      // `--import` parses its value as a URL first, so a bare Windows absolute path
+      // is read as the `d:` scheme and rejected. Always hand Node a file:// URL.
+      const tsxLoaderUrl = pathToFileURL(createRequire(import.meta.url).resolve('tsx')).href;
       // Import the deferred loader directly: the public workerd entry also pulls
       // the high-level build() pipeline, whose legacy decorators the child's tsx
       // transform mishandles.
@@ -2552,7 +2554,7 @@ console.log('managed binding wrappers collected')
         process.execPath,
         [
           '--import',
-          tsxLoader,
+          tsxLoaderUrl,
           '--input-type=module',
           '--eval',
           `
@@ -2603,7 +2605,9 @@ console.log('input record context invalidated')
     'mediates inherited class plugin hooks after real workerd disposal',
     { timeout: 30_000 },
     () => {
-      const tsxLoader = createRequire(import.meta.url).resolve('tsx');
+      // `--import` parses its value as a URL first, so a bare Windows absolute path
+      // is read as the `d:` scheme and rejected. Always hand Node a file:// URL.
+      const tsxLoaderUrl = pathToFileURL(createRequire(import.meta.url).resolve('tsx')).href;
       // Import the deferred loader directly: the public workerd entry also pulls
       // the high-level build() pipeline, whose legacy decorators the child's tsx
       // transform mishandles.
@@ -2613,7 +2617,7 @@ console.log('input record context invalidated')
         process.execPath,
         [
           '--import',
-          tsxLoader,
+          tsxLoaderUrl,
           '--input-type=module',
           '--eval',
           `

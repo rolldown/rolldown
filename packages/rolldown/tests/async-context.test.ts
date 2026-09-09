@@ -2,6 +2,7 @@ import { AsyncLocalStorage } from 'node:async_hooks';
 import { spawnSync } from 'node:child_process';
 import { createRequire } from 'node:module';
 import path from 'node:path';
+import { pathToFileURL } from 'node:url';
 import { Buffer } from 'node:buffer';
 import { rolldown } from 'rolldown';
 import { viteDynamicImportVarsPlugin } from 'rolldown/experimental';
@@ -335,13 +336,15 @@ test(
   'callback settlement rejects path-local cycles and preserves direct terminal identity',
   { timeout: 10_000 },
   () => {
-    const tsxLoader = createRequire(import.meta.url).resolve('tsx');
+    // `--import` parses its value as a URL first, so a bare Windows absolute path
+    // is read as the `d:` scheme and rejected. Always hand Node a file:// URL.
+    const tsxLoaderUrl = pathToFileURL(createRequire(import.meta.url).resolve('tsx')).href;
     const asyncContextUrl = new URL('../src/utils/async-context.ts', import.meta.url).href;
     const child = spawnSync(
       process.execPath,
       [
         '--import',
-        tsxLoader,
+        tsxLoaderUrl,
         '--input-type=module',
         '--eval',
         `

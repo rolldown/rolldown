@@ -128,7 +128,7 @@ test.skipIf(isWasiTest)(
 
 test.skipIf(isWasiTest).each([
   {
-    args: ['--import', preloadSpoofPath, preloadSpoofChildPath],
+    args: ['--import', pathToFileURL(preloadSpoofPath).href, preloadSpoofChildPath],
     env: {},
     source: 'execArgv',
   },

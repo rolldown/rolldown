@@ -21,6 +21,7 @@ pub struct BindingManualCodeSplittingOptions {
   pub min_module_size: Option<f64>,
   pub max_module_size: Option<f64>,
   #[debug("InternalInvalidateModuleInfoCache(...)")]
+  #[napi(ts_type = "() => void")]
   pub internal_invalidate_module_info_cache: Option<JsCallback>,
 }
 

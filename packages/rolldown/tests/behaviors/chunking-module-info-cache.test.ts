@@ -1,3 +1,4 @@
+import { isThreadlessWasi } from '@tests/runtime-flavor';
 import type { ChunkingContext, ModuleInfo, OutputOptions, PluginContext } from 'rolldown';
 import { rolldown } from 'rolldown';
 import { expect, test } from 'vitest';
@@ -6,6 +7,30 @@ const modules: Record<string, string> = {
   entry: 'import "dep"; import "external"; console.log("entry");',
   dep: 'console.log("dep"); export const value = 1;',
 };
+
+// Some checks below read a context AFTER the invocation that owns it: the
+// plugin context `buildEnd` was handed (kept alive through the captured
+// `getModuleInfo`), and a group-`name` batch's chunking context (read again
+// from `renderChunk` and `renderError`, where the pass-scoped module-info cache
+// has already been invalidated so the read reaches the native box).
+//
+// The threadless-WASI flavor never runs the GC finalizers those boxes would
+// otherwise wait for, so the wrappers release them the moment their invocation
+// settles -- `bindingify-build-hooks.ts` `buildEnd`'s `finally` and
+// `bindingify-output-options.ts` `batchName`'s `finally`, both through
+// `src/utils/threadless-free.ts`. The late read then throws from the binding:
+//   plugin context    "...this plugin context's native data was eagerly released
+//                      after its hook invocation settled."
+//                     crates/rolldown_binding/src/options/plugin/binding_plugin_context.rs
+//   chunking context  "...this chunking context's native data was eagerly released
+//                      after its group-name invocation settled."
+//                     crates/rolldown_binding/src/options/binding_output_options/binding_manual_code_splitting_options.rs
+//
+// Asserting that throw instead of skipping the flavor keeps the module-info
+// cache contract itself covered on the WASI lane -- the same call
+// `fixtures/topics/free-external-memory/_config.ts` makes for `freeExternalMemory()`.
+const RELEASED_PLUGIN_CONTEXT = /this plugin context's native data was eagerly released/;
+const RELEASED_CHUNKING_CONTEXT = /this chunking context's native data was eagerly released/;
 
 test('shares module info across groups and releases it before rendering', async () => {
   let getPluginModuleInfo: PluginContext['getModuleInfo'];
@@ -26,13 +51,25 @@ test('shares module info across groups and releases it before rendering', async 
         },
         renderChunk() {
           renderCalls++;
-          const info = chunkingContext.getModuleInfo('dep')!;
-          expect(info === firstInfo).toBe(false);
-          expect(chunkingContext.getModuleInfo('dep') === info).toBe(false);
-          info.moduleSideEffects = false;
-          expect(this.getModuleInfo('dep')!.moduleSideEffects).toBe(false);
-          this.getModuleInfo('dep')!.moduleSideEffects = true;
-          expect(info.moduleSideEffects).toBe(true);
+          if (isThreadlessWasi) {
+            expect(() => chunkingContext.getModuleInfo('dep')).toThrow(RELEASED_CHUNKING_CONTEXT);
+            // This hook's own plugin context is live, so the write-through
+            // between a freshly minted module info and the shared option store
+            // still holds here.
+            const live = this.getModuleInfo('dep')!;
+            live.moduleSideEffects = false;
+            expect(this.getModuleInfo('dep')!.moduleSideEffects).toBe(false);
+            this.getModuleInfo('dep')!.moduleSideEffects = true;
+            expect(live.moduleSideEffects).toBe(true);
+          } else {
+            const info = chunkingContext.getModuleInfo('dep')!;
+            expect(info === firstInfo).toBe(false);
+            expect(chunkingContext.getModuleInfo('dep') === info).toBe(false);
+            info.moduleSideEffects = false;
+            expect(this.getModuleInfo('dep')!.moduleSideEffects).toBe(false);
+            this.getModuleInfo('dep')!.moduleSideEffects = true;
+            expect(info.moduleSideEffects).toBe(true);
+          }
         },
       },
     ],
@@ -50,18 +87,29 @@ test('shares module info across groups and releases it before rendering', async 
             expect(info.importers).toEqual(['entry']);
             expect(context.getModuleInfo('external')).toBe(context.getModuleInfo('external'));
             expect(context.getModuleInfo('missing')).toBeNull();
-            getPluginModuleInfo('dep')!.moduleSideEffects = true;
-            expect(info.moduleSideEffects).toBe(true);
-            getPluginModuleInfo('dep')!.moduleSideEffects = false;
-            expect(info.moduleSideEffects).toBe(false);
-            info.moduleSideEffects = true;
-            expect(getPluginModuleInfo('dep')!.moduleSideEffects).toBe(true);
-            info.moduleSideEffects = null;
-            expect(info.moduleSideEffects).toBeNull();
-            expect(getPluginModuleInfo('dep')!.moduleSideEffects).toBeNull();
-            expect(info.meta).toBe(getPluginModuleInfo('dep')!.meta);
-            info.meta.group = 'shared';
-            expect(getPluginModuleInfo('dep')!.meta.group).toBe('shared');
+            if (isThreadlessWasi) {
+              // `getPluginModuleInfo` is bound to the box `buildEnd` released.
+              expect(() => getPluginModuleInfo('dep')).toThrow(RELEASED_PLUGIN_CONTEXT);
+              info.moduleSideEffects = true;
+              expect(info.moduleSideEffects).toBe(true);
+              info.moduleSideEffects = null;
+              expect(info.moduleSideEffects).toBeNull();
+              info.meta.group = 'shared';
+              expect(info.meta.group).toBe('shared');
+            } else {
+              getPluginModuleInfo('dep')!.moduleSideEffects = true;
+              expect(info.moduleSideEffects).toBe(true);
+              getPluginModuleInfo('dep')!.moduleSideEffects = false;
+              expect(info.moduleSideEffects).toBe(false);
+              info.moduleSideEffects = true;
+              expect(getPluginModuleInfo('dep')!.moduleSideEffects).toBe(true);
+              info.moduleSideEffects = null;
+              expect(info.moduleSideEffects).toBeNull();
+              expect(getPluginModuleInfo('dep')!.moduleSideEffects).toBeNull();
+              expect(info.meta).toBe(getPluginModuleInfo('dep')!.meta);
+              info.meta.group = 'shared';
+              expect(getPluginModuleInfo('dep')!.meta.group).toBe('shared');
+            }
             return null;
           },
         })),
@@ -91,13 +139,25 @@ test.each(['name throws', 'name returns invalid type', 'later test throws'])(
           load: (id) => modules[id],
           renderError() {
             checkedError = true;
-            const info = context.getModuleInfo('dep')!;
-            expect(info === cached).toBe(false);
-            expect(context.getModuleInfo('dep') === info).toBe(false);
-            info.moduleSideEffects = null;
-            expect(this.getModuleInfo('dep')!.moduleSideEffects).toBeNull();
-            this.getModuleInfo('dep')!.moduleSideEffects = false;
-            expect(info.moduleSideEffects).toBe(false);
+            if (isThreadlessWasi) {
+              expect(() => context.getModuleInfo('dep')).toThrow(RELEASED_CHUNKING_CONTEXT);
+              // This hook's own plugin context is live; the outer
+              // `cached !== previousInfo` check below is what proves the
+              // pass-scoped cache was dropped when the classifier failed.
+              const info = this.getModuleInfo('dep')!;
+              info.moduleSideEffects = null;
+              expect(this.getModuleInfo('dep')!.moduleSideEffects).toBeNull();
+              this.getModuleInfo('dep')!.moduleSideEffects = false;
+              expect(info.moduleSideEffects).toBe(false);
+            } else {
+              const info = context.getModuleInfo('dep')!;
+              expect(info === cached).toBe(false);
+              expect(context.getModuleInfo('dep') === info).toBe(false);
+              info.moduleSideEffects = null;
+              expect(this.getModuleInfo('dep')!.moduleSideEffects).toBeNull();
+              this.getModuleInfo('dep')!.moduleSideEffects = false;
+              expect(info.moduleSideEffects).toBe(false);
+            }
           },
         },
       ],

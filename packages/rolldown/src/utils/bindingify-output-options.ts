@@ -380,8 +380,24 @@ function bindingifyCodeSplitting(
   let advancedChunksResult: BindingOutputOptions['manualCodeSplitting'];
   if (effectiveChunksOption != null) {
     const { groups, ...restOptions } = effectiveChunksOption;
+    let chunkingContext: ChunkingContextImpl | undefined;
+    const getChunkingContext = (bindingContext: BindingChunkingContext) => {
+      if (chunkingContext) {
+        // The pass reuses one context so its module-info cache spans every
+        // group, but the previous group's batch released its own context box
+        // (see `batchName`), so the reused context has to adopt this batch's
+        // live box before any cache miss reads through it.
+        chunkingContext.useBindingContext(bindingContext);
+        return chunkingContext;
+      }
+      return (chunkingContext = new ChunkingContextImpl(bindingContext, pluginContextData));
+    };
     advancedChunksResult = {
       ...restOptions,
+      internalInvalidateModuleInfoCache: () => {
+        chunkingContext?.clearModuleInfoCache();
+        chunkingContext = undefined;
+      },
       groups: groups?.map((group) => {
         const { name, test, ...restGroup } = group;
         return {
@@ -412,7 +428,7 @@ function bindingifyCodeSplitting(
                       'codeSplitting groups[].name',
                       name,
                     ),
-                    pluginContextData,
+                    getChunkingContext,
                   ),
                   runBuildCallback,
                 )
@@ -455,25 +471,28 @@ function batchTest(test: CodeSplittingTestFunction): (ids: string[]) => Uint8Arr
 }
 
 /**
- * This is the `name` equivalent of {@linkcode batchTest}. The context wrapper holds no per-call
- * state, so one instance serves the whole batch.
+ * This is the `name` equivalent of {@linkcode batchTest}. All groups in a chunking pass share
+ * a context so repeated module queries reuse their JavaScript values.
  */
 function batchName(
   name: CodeSplittingNameFunction,
-  pluginContextData: PluginContextData,
+  getChunkingContext: (bindingContext: BindingChunkingContext) => ChunkingContextImpl,
 ): (
   ids: string[],
   bindingContext: BindingChunkingContext,
 ) => ReturnType<CodeSplittingNameFunction>[] {
   return (ids, bindingContext) => {
-    const context = new ChunkingContextImpl(bindingContext, pluginContextData);
+    const context = getChunkingContext(bindingContext);
     const results: ReturnType<CodeSplittingNameFunction>[] = [];
     // The classifier is sync by contract (the binding wants plain strings
     // back), so the batch's context box can be released as soon as the loop
     // finishes — after the last candidate's `name` call, its final native
-    // read. Each batch invocation gets a freshly minted box, so releasing it
-    // here cannot affect later groups. Any getModuleInfo boxes the callbacks
-    // minted were already snapshot-and-dropped by `ChunkingContextImpl`.
+    // read. Each batch invocation gets a freshly minted box and the shared
+    // context adopts the current one on entry (see `getChunkingContext`), so
+    // releasing it here cannot affect later groups. Any getModuleInfo boxes
+    // the callbacks minted were already snapshot-and-dropped by
+    // `ChunkingContextImpl`, whose module-info cache holds plain JavaScript
+    // values and so outlives the box.
     try {
       for (let index = 0; index < ids.length; index++) {
         const result = name(ids[index], context);

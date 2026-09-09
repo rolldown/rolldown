@@ -45,10 +45,14 @@ catalog:
   '@emnapi/core': 2.0.0-alpha.4
   '@emnapi/runtime': 2.0.0-alpha.4
   '@jridgewell/trace-mapping': ^0.3.31
-  # exact pin: `napi.rootPublisher` (napi-rs#3450) is honored only from 3.8.5, and
-  # pre-publish validation needs it, so a `^` range could resolve below that. 3.8.6
-  # peer-requires the emnapi 2.0.0-alpha.4 line, so it moves with the pins above.
-  '@napi-rs/cli': 3.8.6
+  # floor pin: `napi.rootPublisher` (napi-rs#3450) is honored only from 3.8.5, and
+  # pre-publish validation needs it. 3.9.0 peer-requires the same
+  # `^1.7.1 || ^2.0.0-alpha.4` emnapi line as 3.8.6, so it moves with the pins
+  # above. A cli bump can reshape the generated loaders — see the contract
+  # snippets in `packages/rolldown/generate-workerd-loader.ts`.
+  '@napi-rs/cli': ^3.9.0
+  # 1.2.3 is this branch's tested floor; main's `~1.2.2` resolves to the same
+  # 1.2.x head.
   '@napi-rs/wasm-runtime': ~1.2.3
   '@oxc-node/cli': ^0.1.0
   '@oxc-node/core': ^0.1.0
@@ -147,7 +151,7 @@ trustPolicyExclude:
 verifyDepsBeforeRun: install
 
 minimumReleaseAgeExclude:
-  - '@napi-rs/cli@3.8.6'
+  - '@napi-rs/cli'
   - '@emnapi/core@1.11.2 || 2.0.0-alpha.4'
   - '@emnapi/runtime@1.11.2 || 2.0.0-alpha.4'
   - emnapi@1.11.2 || 2.0.0-alpha.4

@@ -684,7 +684,7 @@ unshared `WebAssembly.Memory`, set `asyncWorkPoolSize: 0`, and omit Worker
 imports and factories. `packages/rolldown` keeps the threaded WASI scripts and
 adds `build-binding:wasi-single`; browser-package scripts select the
 single-thread variant. Those CLI changes are published: the workspace catalog
-pins `@napi-rs/cli` to `3.8.6`, so every build variant — single-thread
+pins `@napi-rs/cli` to `^3.9.0`, so every build variant — single-thread
 included — uses the released package entry and the repository carries no
 `patchedDependencies` at all.
 
@@ -1073,7 +1073,7 @@ name-collision guard lattice (restore steps in the justfile, the
 build-order coupling in the WASI workflow) is gone:
 
 - The per-flavor naming and loader codegen (napi-rs#3353) ship in the released
-  `@napi-rs/cli`, pinned to `3.8.6` in the workspace catalog — there is no
+  `@napi-rs/cli`, pinned to `^3.9.0` in the workspace catalog — there is no
   vendored CLI patch any more. A build whose target is NOT wasi regenerates
   EVERY declared wasi flavor's loader set, each with `hasThreads` derived from
   its own triple, so loader regeneration is deterministic and byte-identical to

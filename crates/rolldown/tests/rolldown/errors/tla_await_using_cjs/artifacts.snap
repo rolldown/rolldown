@@ -1,0 +1,17 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Errors
+
+## UNSUPPORTED_FEATURE
+
+```text
+[UNSUPPORTED_FEATURE] Top-level await is currently not supported with the 'cjs' output format
+   ╭─[ main.js:2:1 ]
+   │
+ 2 │ await using handle = resource;
+   │ ───────────────┬──────────────  
+   │                ╰──────────────── 
+───╯
+
+```

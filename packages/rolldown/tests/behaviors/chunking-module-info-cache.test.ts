@@ -53,14 +53,17 @@ test('shares module info across groups and releases it before rendering', async 
           renderCalls++;
           if (isThreadlessWasi) {
             expect(() => chunkingContext.getModuleInfo('dep')).toThrow(RELEASED_CHUNKING_CONTEXT);
-            // This hook's own plugin context is live, so the write-through
-            // between a freshly minted module info and the shared option store
-            // still holds here.
-            const live = this.getModuleInfo('dep')!;
-            live.moduleSideEffects = false;
+            // This hook's own plugin context is live, so the write-through to
+            // the shared option store still holds. Read it back with a fresh
+            // call: `proxyModuleInfo` caches the value in a per-object closure
+            // (`plugin-context-data.ts:86-99`), so a plugin-context info is
+            // write-through but NOT read-through -- an info minted earlier does
+            // not observe a later write made through a different one. That is
+            // true on every flavor; the native branch below reads freshly too.
+            this.getModuleInfo('dep')!.moduleSideEffects = false;
             expect(this.getModuleInfo('dep')!.moduleSideEffects).toBe(false);
             this.getModuleInfo('dep')!.moduleSideEffects = true;
-            expect(live.moduleSideEffects).toBe(true);
+            expect(this.getModuleInfo('dep')!.moduleSideEffects).toBe(true);
           } else {
             const info = chunkingContext.getModuleInfo('dep')!;
             expect(info === firstInfo).toBe(false);
@@ -144,11 +147,12 @@ test.each(['name throws', 'name returns invalid type', 'later test throws'])(
               // This hook's own plugin context is live; the outer
               // `cached !== previousInfo` check below is what proves the
               // pass-scoped cache was dropped when the classifier failed.
-              const info = this.getModuleInfo('dep')!;
-              info.moduleSideEffects = null;
+              // Read back with a fresh call -- see the note in `renderChunk`
+              // above on why a retained plugin-context info is not read-through.
+              this.getModuleInfo('dep')!.moduleSideEffects = null;
               expect(this.getModuleInfo('dep')!.moduleSideEffects).toBeNull();
               this.getModuleInfo('dep')!.moduleSideEffects = false;
-              expect(info.moduleSideEffects).toBe(false);
+              expect(this.getModuleInfo('dep')!.moduleSideEffects).toBe(false);
             } else {
               const info = context.getModuleInfo('dep')!;
               expect(info === cached).toBe(false);

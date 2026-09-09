@@ -1,0 +1,29 @@
+Cargo.lock
+  s_0d417fb46163f1::t_a41468eda84c9f 341,607,1421,3337,3667,3686,4090
+crates/rolldown_ecmascript_utils/src/ast_factory.rs
+  s_d3ad640973ad49::t_4948323fa6cd84 22-28,92-97,807-815,873,978,983
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "161b747566e56c55946f2b15955ea2f517b9200e",
+  "prompts": {},
+  "sessions": {
+    "s_0d417fb46163f1": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019fae1d-7d80-71e1-a657-209bd5460c73",
+        "model": "gpt-5.6-sol"
+      },
+      "human_author": "Cameron <cameron.clark@hey.com>"
+    },
+    "s_d3ad640973ad49": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019fa96b-09c1-7881-b0ca-127222b208ef",
+        "model": "gpt-5.6-sol"
+      },
+      "human_author": "Cameron <cameron.clark@hey.com>"
+    }
+  }
+}

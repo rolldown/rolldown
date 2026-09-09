@@ -100,4 +100,9 @@ export interface DevOptions {
    */
   rebuildStrategy?: 'always' | 'never';
   watch?: DevWatchOptions;
+  /**
+   * Whether the `hotUpdate` plugin hook is called. Off until Vite supports it.
+   * @default false
+   */
+  hotUpdate?: boolean;
 }

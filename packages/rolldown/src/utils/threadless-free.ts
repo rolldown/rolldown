@@ -51,7 +51,7 @@ export function dropBindingOutputs(outputs: BindingOutputs): void {
 // and its continuation with `beginNativeCall`/`endNativeCall`, and the LAST
 // call to finish performs a requested drop. Sync-only boxes cannot hold a
 // pending borrow and keep calling `dropInner()` directly.
-interface DroppableBox {
+export interface DroppableBox {
   dropInner(): unknown;
 }
 

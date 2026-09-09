@@ -381,15 +381,25 @@ function bindingifyCodeSplitting(
   if (effectiveChunksOption != null) {
     const { groups, ...restOptions } = effectiveChunksOption;
     let chunkingContext: ChunkingContextImpl | undefined;
+    let adoptedContextBox: BindingChunkingContext | undefined;
     const getChunkingContext = (bindingContext: BindingChunkingContext) => {
       if (chunkingContext) {
         // The pass reuses one context so its module-info cache spans every
-        // group, but the previous group's batch released its own context box
-        // (see `batchName`), so the reused context has to adopt this batch's
-        // live box before any cache miss reads through it.
+        // group, and each group's batch is handed a freshly minted box, so the
+        // reused context has to adopt this batch's box before any cache miss
+        // reads through it. `batchName` parks its box on the build-scoped
+        // registry instead of releasing it, so the one being replaced here is
+        // released now: only the box the context actually reads through has to
+        // outlive its batch, which keeps a pass's live retention at O(1)
+        // rather than O(groups).
+        if (adoptedContextBox && adoptedContextBox !== bindingContext) {
+          releaseOrDefer(adoptedContextBox);
+        }
+        adoptedContextBox = bindingContext;
         chunkingContext.useBindingContext(bindingContext);
         return chunkingContext;
       }
+      adoptedContextBox = bindingContext;
       return (chunkingContext = new ChunkingContextImpl(bindingContext, pluginContextData));
     };
     advancedChunksResult = {
@@ -429,6 +439,7 @@ function bindingifyCodeSplitting(
                       name,
                     ),
                     getChunkingContext,
+                    pluginContextData,
                   ),
                   runBuildCallback,
                 )
@@ -477,6 +488,7 @@ function batchTest(test: CodeSplittingTestFunction): (ids: string[]) => Uint8Arr
 function batchName(
   name: CodeSplittingNameFunction,
   getChunkingContext: (bindingContext: BindingChunkingContext) => ChunkingContextImpl,
+  pluginContextData: PluginContextData,
 ): (
   ids: string[],
   bindingContext: BindingChunkingContext,
@@ -484,15 +496,14 @@ function batchName(
   return (ids, bindingContext) => {
     const context = getChunkingContext(bindingContext);
     const results: ReturnType<CodeSplittingNameFunction>[] = [];
-    // The classifier is sync by contract (the binding wants plain strings
-    // back), so the batch's context box can be released as soon as the loop
-    // finishes — after the last candidate's `name` call, its final native
-    // read. Each batch invocation gets a freshly minted box and the shared
-    // context adopts the current one on entry (see `getChunkingContext`), so
-    // releasing it here cannot affect later groups. Any getModuleInfo boxes
-    // the callbacks minted were already snapshot-and-dropped by
-    // `ChunkingContextImpl`, whose module-info cache holds plain JavaScript
-    // values and so outlives the box.
+    // A classifier may keep the chunking context and read it after its batch
+    // ends — `renderChunk` and `renderError` both do — so the box is parked on
+    // the build-scoped registry rather than released here; it is drained at
+    // the generate settle, long after the last legal read. The next batch's
+    // `getChunkingContext` releases whichever box this one leaves adopted, so
+    // only one stays live per pass. Any getModuleInfo boxes the callbacks
+    // minted were already snapshot-and-dropped by `ChunkingContextImpl`, whose
+    // module-info cache holds plain JavaScript values and so outlives the box.
     try {
       for (let index = 0; index < ids.length; index++) {
         const result = name(ids[index], context);
@@ -507,7 +518,7 @@ function batchName(
         results.push(result);
       }
     } finally {
-      releaseOrDefer(bindingContext);
+      pluginContextData.retainContextBox(bindingContext);
     }
     return results;
   };

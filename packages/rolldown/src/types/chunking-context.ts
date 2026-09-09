@@ -15,10 +15,10 @@ export class ChunkingContextImpl {
   /**
    * One context serves a whole chunking pass so its module-info cache spans
    * every group, but each group's `name` batch is handed a freshly minted
-   * context box and `batchName` releases that box when its loop ends. The
-   * reused context therefore adopts the live box at the start of each batch.
-   * The cache holds plain JavaScript values, not pending native reads, so it
-   * is unaffected by the swap.
+   * context box, so the reused context adopts the live box at the start of
+   * each batch (`bindingify-output-options.ts` `getChunkingContext`, which
+   * also releases the box being replaced). The cache holds plain JavaScript
+   * values, not pending native reads, so it is unaffected by the swap.
    */
   useBindingContext(context: BindingChunkingContext): void {
     this.context = context;

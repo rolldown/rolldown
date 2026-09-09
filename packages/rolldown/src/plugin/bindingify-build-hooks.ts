@@ -30,10 +30,17 @@ import { TransformPluginContextImpl } from './transform-plugin-context';
 // Every hook invocation marshals fresh boxes (plugin context, module info,
 // normalized options, and for load/transform their specialized contexts). On
 // the threadless-WASI flavor, where GC finalizers cannot be relied on, the
-// wrappers release each box once its hook settles. Arguments a callback may
-// legally retain are handed over as plain-data snapshots first; a retained
-// plugin context used after its hook settles throws a clear post-release
-// error on this flavor only.
+// wrappers release each box once its hook settles, and arguments a callback
+// may legally retain are handed over as plain-data snapshots first.
+//
+// The two BUILD-scoped plugin contexts are the exception: rollup lets a plugin
+// keep `buildStart`/`buildEnd`'s context and use it later (vite's
+// `vite:watch-package-data` binds `this.addWatchFile` in `buildStart` and
+// calls it from `resolveId`), so those boxes are parked on the build-scoped
+// registry via `pluginContextData.retainContextBox` and drained at the
+// generate settle instead. The per-module hooks below still release per
+// invocation, so a plugin context retained out of resolveId/load/transform/
+// moduleParsed throws a clear post-release error on this flavor only.
 export function bindingifyBuildStart(
   args: BindingifyPluginArgs,
 ): PluginHookWithBindingExt<BindingPluginOptions['buildStart']> {
@@ -45,7 +52,7 @@ export function bindingifyBuildStart(
           args.pluginContextData.getInputOptions(opts),
         );
       } finally {
-        releaseOrDefer(ctx);
+        args.pluginContextData.retainContextBox(ctx);
       }
     },
   }));
@@ -61,7 +68,7 @@ export function bindingifyBuildEnd(
           err ? aggregateBindingErrorsIntoJsError(err) : undefined,
         );
       } finally {
-        releaseOrDefer(ctx);
+        args.pluginContextData.retainContextBox(ctx);
       }
     },
   }));

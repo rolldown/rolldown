@@ -143,7 +143,7 @@ jobs:
 
       # Runs against the WASI binding itself (NAPI_RS_FORCE_WASI), which no
       # other CI test does. Regression coverage for #8411 and #8747.
-      - name: Tokio Runtime Lifecycle Test
+      - name: Forced WASI Runtime Lifecycle Test (threaded WASI)
         run: vp run --filter rolldown-tests test:wasi-runtime
 
       - name: Threaded WASI Runtime Lifecycle Test

@@ -10,6 +10,7 @@ repository.workspace = true
 [dependencies]
 anyhow = { workspace = true }
 cow-utils = { workspace = true }
+flate2 = { workspace = true }
 heck = { workspace = true }
 oxc = { workspace = true }
 oxc_resolver = { workspace = true }

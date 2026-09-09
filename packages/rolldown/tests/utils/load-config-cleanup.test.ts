@@ -128,6 +128,39 @@ describe('loadConfig bundle cleanup', () => {
     });
   });
 
+  it('treats a config import that rejects with `undefined` as a failure', async () => {
+    const fileName = 'rolldown.config.undefined-rejection.mjs';
+    const siblingName = 'config-undefined-rejection-chunk.mjs';
+    rolldown.mockResolvedValue({ close, write });
+    write.mockImplementation(async (outputOptions: { dir: string }) => {
+      await emitFile(outputOptions.dir, fileName, 'throw undefined');
+      await emitFile(outputOptions.dir, siblingName, 'export default "./entry.js"');
+      return {
+        output: [
+          { fileName, isEntry: true, type: 'chunk' },
+          { fileName: siblingName, isEntry: false, type: 'chunk' },
+        ],
+      };
+    });
+
+    const outcome = await loadConfig(fixture).then(
+      (config: unknown) => ({ rejected: false, value: config }),
+      (error: unknown) => ({ rejected: true, value: error }),
+    );
+
+    // A module body may throw `undefined`, so the import rejection must be
+    // tracked apart from its value; otherwise the failure is mistaken for a
+    // successful import and `loadConfig` resolves with `undefined`.
+    expect(outcome.rejected).toBe(true);
+    expect((outcome.value as Error).message).toBe('Error happened while loading config.');
+    expect((outcome.value as Error & { cause?: unknown }).cause).toBeUndefined();
+    // A failed import takes the eager-cleanup path: nothing will be imported
+    // later, so every emitted file goes right away.
+    await expect(access(path.join(fixtureDir, siblingName))).rejects.toMatchObject({
+      code: 'ENOENT',
+    });
+  });
+
   it('preserves config import and cleanup failures', async () => {
     const cleanupError = new Error('config file cleanup failed');
     const fileName = 'rolldown.config.import-failure.mjs';

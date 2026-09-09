@@ -164,15 +164,19 @@ async function loadTsConfig(configFile: string): Promise<ConfigExport> {
   const { outputFile, outputFiles } = await bundleTsConfig(configFile, isEsm);
   let config: ConfigExport | undefined;
   let importError: unknown;
+  // The config module body is user code and may throw `undefined`, so the
+  // rejection cannot be recognised by its value alone.
+  let importFailed = false;
   try {
     config = (await import(pathToFileURL(outputFile).href)).default;
   } catch (error) {
+    importFailed = true;
     importError = error;
   }
 
   let cleanupError: unknown;
   try {
-    if (importError === undefined) {
+    if (!importFailed) {
       // The entry is in memory now, so its file can go. Any other emitted file
       // must survive until process exit: a deferred config function the caller
       // invokes after this returns may still runtime-import it.
@@ -186,7 +190,7 @@ async function loadTsConfig(configFile: string): Promise<ConfigExport> {
   }
 
   const errors: unknown[] = [];
-  if (importError !== undefined) errors.push(importError);
+  if (importFailed) errors.push(importError);
   if (cleanupError !== undefined) errors.push(cleanupError);
   throwCollectedErrors(errors, 'Config import and cleanup both failed');
   return config!;

@@ -1,12 +1,7 @@
 import crypto from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
-import type {
-  ModuleInfo,
-  RolldownWatcher,
-  RolldownWatcherEvent,
-  WatchOptions,
-} from 'rolldown';
+import type { ModuleInfo, RolldownWatcher, RolldownWatcherEvent, WatchOptions } from 'rolldown';
 import { rolldown, watch as _watch } from 'rolldown';
 import { defineParallelPlugin } from 'rolldown/experimental';
 import { sleep } from 'rolldown-tests/utils';

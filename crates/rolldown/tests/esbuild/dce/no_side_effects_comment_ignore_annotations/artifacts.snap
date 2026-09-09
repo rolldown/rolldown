@@ -13,7 +13,7 @@ source: crates/rolldown_testing/src/integration_test.rs
    │     ─────────────┬────────────  
    │                  ╰────────────── comment ignored due to position
    │ 
-   │ Help 1: Correct annotation placement: https://rolldown.rs/in-depth/dead-code-elimination#pure
+   │ Help 1: Correct annotation placement: https://rolldown.rs/in-depth/dead-code-elimination#no-side-effects
    │ 
    │ Help 2: Disable with `checks.invalidAnnotation: false`.
 ───╯
@@ -30,7 +30,7 @@ source: crates/rolldown_testing/src/integration_test.rs
    │     ─────────────┬────────────  
    │                  ╰────────────── comment ignored due to position
    │ 
-   │ Help 1: Correct annotation placement: https://rolldown.rs/in-depth/dead-code-elimination#pure
+   │ Help 1: Correct annotation placement: https://rolldown.rs/in-depth/dead-code-elimination#no-side-effects
    │ 
    │ Help 2: Disable with `checks.invalidAnnotation: false`.
 ───╯
@@ -47,7 +47,7 @@ source: crates/rolldown_testing/src/integration_test.rs
    │     ─────────────┬────────────  
    │                  ╰────────────── comment ignored due to position
    │ 
-   │ Help 1: Correct annotation placement: https://rolldown.rs/in-depth/dead-code-elimination#pure
+   │ Help 1: Correct annotation placement: https://rolldown.rs/in-depth/dead-code-elimination#no-side-effects
    │ 
    │ Help 2: Disable with `checks.invalidAnnotation: false`.
 ───╯
@@ -64,7 +64,7 @@ source: crates/rolldown_testing/src/integration_test.rs
    │     ─────────────┬────────────  
    │                  ╰────────────── comment ignored due to position
    │ 
-   │ Help 1: Correct annotation placement: https://rolldown.rs/in-depth/dead-code-elimination#pure
+   │ Help 1: Correct annotation placement: https://rolldown.rs/in-depth/dead-code-elimination#no-side-effects
    │ 
    │ Help 2: Disable with `checks.invalidAnnotation: false`.
 ───╯
@@ -81,7 +81,7 @@ source: crates/rolldown_testing/src/integration_test.rs
    │ ─────────────┬────────────  
    │              ╰────────────── comment ignored due to position
    │ 
-   │ Help 1: Correct annotation placement: https://rolldown.rs/in-depth/dead-code-elimination#pure
+   │ Help 1: Correct annotation placement: https://rolldown.rs/in-depth/dead-code-elimination#no-side-effects
    │ 
    │ Help 2: Disable with `checks.invalidAnnotation: false`.
 ───╯
@@ -98,7 +98,7 @@ source: crates/rolldown_testing/src/integration_test.rs
    │ ─────────────┬────────────  
    │              ╰────────────── comment ignored due to position
    │ 
-   │ Help 1: Correct annotation placement: https://rolldown.rs/in-depth/dead-code-elimination#pure
+   │ Help 1: Correct annotation placement: https://rolldown.rs/in-depth/dead-code-elimination#no-side-effects
    │ 
    │ Help 2: Disable with `checks.invalidAnnotation: false`.
 ───╯
@@ -115,7 +115,7 @@ source: crates/rolldown_testing/src/integration_test.rs
    │ ─────────────┬────────────  
    │              ╰────────────── comment ignored due to position
    │ 
-   │ Help 1: Correct annotation placement: https://rolldown.rs/in-depth/dead-code-elimination#pure
+   │ Help 1: Correct annotation placement: https://rolldown.rs/in-depth/dead-code-elimination#no-side-effects
    │ 
    │ Help 2: Disable with `checks.invalidAnnotation: false`.
 ───╯
@@ -132,7 +132,7 @@ source: crates/rolldown_testing/src/integration_test.rs
    │ ─────────────┬────────────  
    │              ╰────────────── comment ignored due to position
    │ 
-   │ Help 1: Correct annotation placement: https://rolldown.rs/in-depth/dead-code-elimination#pure
+   │ Help 1: Correct annotation placement: https://rolldown.rs/in-depth/dead-code-elimination#no-side-effects
    │ 
    │ Help 2: Disable with `checks.invalidAnnotation: false`.
 ───╯
@@ -149,7 +149,7 @@ source: crates/rolldown_testing/src/integration_test.rs
    │ ─────────────┬────────────  
    │              ╰────────────── comment ignored due to position
    │ 
-   │ Help 1: Correct annotation placement: https://rolldown.rs/in-depth/dead-code-elimination#pure
+   │ Help 1: Correct annotation placement: https://rolldown.rs/in-depth/dead-code-elimination#no-side-effects
    │ 
    │ Help 2: Disable with `checks.invalidAnnotation: false`.
 ───╯
@@ -166,7 +166,7 @@ source: crates/rolldown_testing/src/integration_test.rs
    │ ─────────────┬────────────  
    │              ╰────────────── comment ignored due to position
    │ 
-   │ Help 1: Correct annotation placement: https://rolldown.rs/in-depth/dead-code-elimination#pure
+   │ Help 1: Correct annotation placement: https://rolldown.rs/in-depth/dead-code-elimination#no-side-effects
    │ 
    │ Help 2: Disable with `checks.invalidAnnotation: false`.
 ───╯
@@ -183,7 +183,7 @@ source: crates/rolldown_testing/src/integration_test.rs
    │ ─────────────┬────────────  
    │              ╰────────────── comment ignored due to position
    │ 
-   │ Help 1: Correct annotation placement: https://rolldown.rs/in-depth/dead-code-elimination#pure
+   │ Help 1: Correct annotation placement: https://rolldown.rs/in-depth/dead-code-elimination#no-side-effects
    │ 
    │ Help 2: Disable with `checks.invalidAnnotation: false`.
 ───╯
@@ -200,7 +200,7 @@ source: crates/rolldown_testing/src/integration_test.rs
    │ ─────────────┬────────────  
    │              ╰────────────── comment ignored due to position
    │ 
-   │ Help 1: Correct annotation placement: https://rolldown.rs/in-depth/dead-code-elimination#pure
+   │ Help 1: Correct annotation placement: https://rolldown.rs/in-depth/dead-code-elimination#no-side-effects
    │ 
    │ Help 2: Disable with `checks.invalidAnnotation: false`.
 ───╯

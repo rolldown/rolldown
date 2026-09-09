@@ -374,8 +374,11 @@ fn invalid_annotation_warnings(
     return Vec::new();
   }
 
-  let target_statement_starts: FxHashSet<u32> =
-    not_applied_comments.iter().map(|comment| comment.attached_to).collect();
+  let target_statement_starts: FxHashSet<u32> = not_applied_comments
+    .iter()
+    .filter(|comment| comment.content == CommentContent::PureNotApplied)
+    .map(|comment| comment.attached_to)
+    .collect();
   let mut function_declaration_start_matcher =
     FunctionDeclarationStartMatcher::new(target_statement_starts);
   function_declaration_start_matcher.visit_program(program);
@@ -395,6 +398,7 @@ fn invalid_annotation_warnings(
         source.clone(),
         span,
         is_before_function_declaration,
+        comment.content == CommentContent::NoSideEffectsNotApplied,
       )
       .with_severity_warning()
     })
@@ -410,7 +414,7 @@ mod tests {
   use super::invalid_annotation_warnings;
 
   #[test]
-  fn invalid_annotations_are_warning_severity() {
+  fn invalid_annotations_have_warning_severity_and_matching_guidance() {
     let ast = EcmaCompiler::parse(
       "main.js",
       "/* #__PURE__ */ globalThis.foo; /* #__NO_SIDE_EFFECTS__ */ globalThis.bar;",
@@ -423,6 +427,12 @@ mod tests {
       .with_dependent(|_owner, dep| invalid_annotation_warnings(&dep.program, &source, "main.js"));
 
     assert_eq!(warnings.len(), 2);
-    assert!(warnings.iter().all(|warning| warning.severity() == Severity::Warning));
+    for (warning, anchor) in warnings.iter().zip(["pure", "no-side-effects"]) {
+      assert_eq!(warning.severity(), Severity::Warning);
+      let rendered = warning.to_diagnostic().convert_to_string(false);
+      assert!(rendered.contains(&format!(
+        "Correct annotation placement: https://rolldown.rs/in-depth/dead-code-elimination#{anchor}"
+      )));
+    }
   }
 }

@@ -80,6 +80,7 @@ catalog:
   consola: ^3.4.2
   dedent: ^1.5.3
   diff: ^9.0.0
+  # Shadowed by the `overrides.emnapi` pin above, which rewrites the recorded specifier so `catalog:` never resolves here; kept as the fallback for the day that override is dropped.
   emnapi: 2.0.0-alpha.4
   esbuild: ^0.28.0
   estree-toolkit: ^1.7.8

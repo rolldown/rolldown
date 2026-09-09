@@ -160,7 +160,7 @@ mod tests {
   #[test]
   fn log_target_uses_the_tracer_output_root() {
     let output_root = std::env::temp_dir().join("rolldown-devtools-formatter");
-    let absolute = output_root.join("sid_1/meta.json");
+    let absolute = output_root.join("sid_1").join("meta.json");
     let target = devtools_log_target(&output_root.to_string_lossy(), "sid_1", true);
 
     assert_eq!(target.filename.as_ref(), absolute.to_string_lossy());

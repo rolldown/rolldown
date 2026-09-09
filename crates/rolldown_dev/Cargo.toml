@@ -37,6 +37,8 @@ sugar_path = { workspace = true }
 tracing = { workspace = true }
 
 [dev-dependencies]
+# Strips the `\\?\` verbatim prefix `std::fs::canonicalize` returns on Windows.
+dunce = { workspace = true }
 rolldown_workspace = { workspace = true }
 # tokio backs this crate's #[tokio::test] suites and examples/dev.rs's
 # #[tokio::main]; production code runs on the runtime-agnostic facade.

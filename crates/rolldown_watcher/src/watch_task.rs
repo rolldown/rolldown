@@ -655,7 +655,9 @@ mod tests {
       .map(|name| {
         let file = test_dir.0.join(name);
         fs::write(&file, "export const value = 1;").expect("write input");
-        ArcStr::from(fs::canonicalize(file).expect("canonicalize input").to_string_lossy().as_ref())
+        ArcStr::from(
+          dunce::canonicalize(file).expect("canonicalize input").to_string_lossy().as_ref(),
+        )
       })
       .collect()
   }
@@ -762,7 +764,7 @@ mod tests {
     let test_dir = TestDir::new();
     let file = test_dir.0.join("input.js");
     fs::write(&file, "export const value = 1;").expect("write input");
-    let file = fs::canonicalize(file).expect("canonicalize input");
+    let file = dunce::canonicalize(file).expect("canonicalize input");
     let watch_file = ArcStr::from(file.to_string_lossy().as_ref());
     let options = NormalizedBundlerOptions {
       cwd: file.parent().expect("input has parent").to_path_buf(),

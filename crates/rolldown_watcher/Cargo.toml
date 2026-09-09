@@ -29,6 +29,8 @@ rolldown_utils = { workspace = true }
 tracing = { workspace = true }
 
 [dev-dependencies]
+# Strips the `\\?\` verbatim prefix `std::fs::canonicalize` returns on Windows.
+dunce = { workspace = true }
 rolldown_workspace = { workspace = true }
 sugar_path = { workspace = true }
 # `time` here only serves examples/watch.rs's demo sleep.

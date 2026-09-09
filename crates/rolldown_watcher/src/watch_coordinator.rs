@@ -960,7 +960,7 @@ mod tests {
   ) -> RegistrationTestTask {
     let input = test_dir.0.join("main.js");
     fs::write(&input, "export const value = 1;").expect("write input");
-    let input = fs::canonicalize(input).expect("canonicalize input");
+    let input = dunce::canonicalize(input).expect("canonicalize input");
     let add_attempts = Arc::new(AtomicUsize::new(0));
     let commit_attempts = Arc::new(AtomicUsize::new(0));
     let commit_times = Arc::new(Mutex::new(Vec::new()));
@@ -1457,7 +1457,7 @@ mod tests {
     let test_dir = TestDir::new();
     let input = test_dir.0.join("main.js");
     fs::write(&input, "export const value = 1;").expect("write input");
-    let input = fs::canonicalize(input).expect("canonicalize input");
+    let input = dunce::canonicalize(input).expect("canonicalize input");
     let cwd = input.parent().expect("input has parent").to_path_buf();
     let input_str = input.to_string_lossy().into_owned();
 
@@ -1582,7 +1582,7 @@ mod tests {
     let test_dir = TestDir::new();
     let input = test_dir.0.join("main.js");
     fs::write(&input, "export const value = 1;").expect("write input");
-    let input = fs::canonicalize(input).expect("canonicalize input");
+    let input = dunce::canonicalize(input).expect("canonicalize input");
     let cwd = input.parent().expect("input has parent").to_path_buf();
     let input_str = input.to_string_lossy().into_owned();
 
@@ -1875,7 +1875,7 @@ mod tests {
     let test_dir = TestDir::new();
     let input = test_dir.0.join("main.js");
     fs::write(&input, "export const value = 1;").expect("write input");
-    let input = fs::canonicalize(input).expect("canonicalize input");
+    let input = dunce::canonicalize(input).expect("canonicalize input");
     let input_str = input.to_string_lossy().into_owned();
 
     let fixture = spawn_one_group_coordinator(vec![
@@ -1920,8 +1920,8 @@ mod tests {
     let input_b = test_dir.0.join("b.js");
     fs::write(&input_a, "export const a = 1;").expect("write input a");
     fs::write(&input_b, "export const b = 1;").expect("write input b");
-    let input_a = fs::canonicalize(input_a).expect("canonicalize input a");
-    let input_b = fs::canonicalize(input_b).expect("canonicalize input b");
+    let input_a = dunce::canonicalize(input_a).expect("canonicalize input a");
+    let input_b = dunce::canonicalize(input_b).expect("canonicalize input b");
     let input_a_str = input_a.to_string_lossy().into_owned();
 
     let fixture = spawn_one_group_coordinator(vec![
@@ -1961,7 +1961,7 @@ mod tests {
     let test_dir = TestDir::new();
     let input = test_dir.0.join("main.js");
     fs::write(&input, "export const value = 1;").expect("write input");
-    let input = fs::canonicalize(input).expect("canonicalize input");
+    let input = dunce::canonicalize(input).expect("canonicalize input");
     let input_str = input.to_string_lossy().into_owned();
 
     let builds = Arc::new(AtomicUsize::new(0));
@@ -2013,7 +2013,7 @@ mod tests {
     let test_dir = TestDir::new();
     let input = test_dir.0.join("main.js");
     fs::write(&input, "export const value = 1;").expect("write input");
-    let input = fs::canonicalize(input).expect("canonicalize input");
+    let input = dunce::canonicalize(input).expect("canonicalize input");
     let input_str = input.to_string_lossy().into_owned();
 
     let (tx, rx) = mpsc::unbounded();

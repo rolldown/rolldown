@@ -904,8 +904,10 @@ mod tests {
       fs::create_dir_all(&path).expect("create test directory");
       // Module ids are canonical, so a `/var` -> `/private/var` temp dir would
       // stop a changed path from resolving to its module and silently turn HMR
-      // into a no-op.
-      Self(path.canonicalize().expect("canonicalize test directory"))
+      // into a no-op. `dunce` keeps that realpath behaviour while dropping the
+      // `\\?\` verbatim prefix `std::fs::canonicalize` adds on Windows, which
+      // the resolver cannot resolve an entry from.
+      Self(dunce::canonicalize(&path).expect("canonicalize test directory"))
     }
   }
 

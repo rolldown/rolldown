@@ -873,7 +873,7 @@ mod tests {
     let test_dir = TestDir::new();
     let input = test_dir.0.join("main.js");
     fs::write(&input, "export const value = 1;").expect("write input");
-    let input = fs::canonicalize(input).expect("canonicalize input");
+    let input = dunce::canonicalize(input).expect("canonicalize input");
     let cwd = input.parent().expect("input has parent").to_path_buf();
 
     let watch_change_calls = Arc::new(AtomicUsize::new(0));

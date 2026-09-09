@@ -1,6 +1,6 @@
 use self::render_chunk_exports::get_chunk_export_names;
 use arcstr::ArcStr;
-use itertools::{EitherOrBoth, Itertools};
+use itertools::Itertools;
 use rolldown_common::{
   Chunk, ChunkKind, ChunkMeta, ModuleId, ModuleIdx, ModuleTable, PreserveEntrySignatures,
   RenderedModule, RollupPreRenderedChunk, RollupRenderedChunk, SharedNormalizedBundlerOptions,
@@ -25,12 +25,10 @@ fn static_external_imports<'a>(
     .direct_imports_from_external_modules
     .iter()
     .map(|(idx, _)| *idx)
-    .merge_join_by(chunk.entry_level_external_module_idx.iter().copied(), |a, b| {
-      module_table[*a].exec_order().cmp(&module_table[*b].exec_order()).then_with(|| a.cmp(b))
+    .merge_by(chunk.entry_level_external_module_idx.iter().copied(), |a, b| {
+      module_table[*a].exec_order() <= module_table[*b].exec_order()
     })
-    .map(|item| match item {
-      EitherOrBoth::Left(idx) | EitherOrBoth::Right(idx) | EitherOrBoth::Both(idx, _) => idx,
-    })
+    .dedup()
 }
 
 pub fn generate_pre_rendered_chunk(

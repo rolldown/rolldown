@@ -66,6 +66,37 @@ impl ChunkOptimizationOption {
 #[cfg_attr(
   feature = "deserialize_bundler_options",
   derive(Deserialize, JsonSchema),
+  serde(rename_all = "camelCase", deny_unknown_fields, default)
+)]
+pub struct BuildCacheOptions {
+  /// Directory where cache entries are stored. Relative paths are resolved
+  /// against `cwd`. Defaults to `node_modules/.cache/rolldown`.
+  pub dir: Option<String>,
+  /// Extra cache invalidation key mixed into every entry's hash. The cache key
+  /// only captures the rolldown version, the ordered plugin names, each
+  /// module's id and on-disk content. Plugin *configuration* or
+  /// *implementation* changes and resolution inputs outside module files
+  /// (lockfile, `tsconfig.json` paths) are invisible to it, so callers must
+  /// fold anything that changes resolve/load/transform output (e.g. a hash of
+  /// the resolved config and lockfile) into this key.
+  pub key: Option<String>,
+}
+
+#[derive(Debug, Clone)]
+#[cfg_attr(
+  feature = "deserialize_bundler_options",
+  derive(Deserialize, JsonSchema),
+  serde(untagged)
+)]
+pub enum BuildCacheOption {
+  Bool(bool),
+  Options(BuildCacheOptions),
+}
+
+#[derive(Debug, Default, Clone)]
+#[cfg_attr(
+  feature = "deserialize_bundler_options",
+  derive(Deserialize, JsonSchema),
   serde(rename_all = "camelCase", deny_unknown_fields)
 )]
 pub struct ExperimentalOptions {
@@ -80,6 +111,7 @@ pub struct ExperimentalOptions {
   pub native_magic_string: Option<bool>,
   pub chunk_optimization: Option<ChunkOptimizationOption>,
   pub lazy_barrel: Option<bool>,
+  pub build_cache: Option<BuildCacheOption>,
 }
 
 impl ExperimentalOptions {
@@ -124,5 +156,13 @@ impl ExperimentalOptions {
 
   pub fn is_lazy_barrel_enabled(&self) -> bool {
     self.lazy_barrel.unwrap_or(false)
+  }
+
+  pub fn build_cache_options(&self) -> Option<BuildCacheOptions> {
+    match &self.build_cache {
+      Some(BuildCacheOption::Bool(true)) => Some(BuildCacheOptions::default()),
+      Some(BuildCacheOption::Options(options)) => Some(options.clone()),
+      Some(BuildCacheOption::Bool(false)) | None => None,
+    }
   }
 }

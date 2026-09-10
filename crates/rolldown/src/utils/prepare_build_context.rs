@@ -2,7 +2,7 @@ use std::{borrow::Cow, path::Path, sync::Arc};
 
 use arcstr::ArcStr;
 use itertools::Either;
-use oxc::{transformer::EngineTargets, transformer_plugins::InjectGlobalVariablesConfig};
+use oxc::transformer_plugins::InjectGlobalVariablesConfig;
 use rolldown_common::{
   AttachDebugInfo, CodeSplittingMode, GlobalsOutputOption, InjectImport, JsxOptions, JsxPreset,
   LegalComments, ManualCodeSplittingOptions, MinifyOptions, ModuleType, NormalizedBundlerOptions,
@@ -319,12 +319,7 @@ pub fn prepare_build_context(
   let transform_options = {
     let mut raw_transform_options = raw_options.transform.unwrap_or_default();
 
-    let target = match &raw_transform_options.target {
-      Some(Either::Left(target)) => EngineTargets::from_target(target),
-      Some(Either::Right(targets)) => EngineTargets::from_target_list(targets),
-      None => Ok(EngineTargets::default()),
-    }
-    .map_err(|message| {
+    let target = raw_transform_options.resolve_target().map_err(|message| {
       let hint = message
         .contains("Invalid target")
         .then(|| "Rolldown only supports ES2015 (ES6) and later.".to_owned());

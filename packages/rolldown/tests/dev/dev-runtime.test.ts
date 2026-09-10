@@ -72,6 +72,70 @@ test('registerGraph maintains static + dynamic reverse indexes; getImporters uni
   expect(runtime.getImporters('both.js')).toEqual(['app.js']);
 });
 
+test('registerGraph keeps the export names each static edge imports', async () => {
+  const { runtime } = await createRuntime();
+
+  // app → named (imports `a`, `default`), app → effect (side-effect only), app ⇢ lazy
+  runtime.registerGraph({
+    ids: ['app.js', 'named.js', 'effect.js', 'lazy.js'],
+    localCount: 4,
+    edges: [[1, 2], [], [], []],
+    bindings: [[['a', 'default'], []], [], [], []],
+    dynamicEdges: [[3], [], [], []],
+  });
+  expect(runtime.getImportedBindings('app.js', 'named.js')).toEqual(['a', 'default']);
+  expect(runtime.getImportedBindings('app.js', 'effect.js')).toEqual([]);
+  // a dynamic import() reads the whole namespace
+  expect(runtime.getImportedBindings('app.js', 'lazy.js')).toEqual(['*']);
+  expect(runtime.getImportedBindings('app.js', 'missing.js')).toBeUndefined();
+
+  // a static edge and a dynamic import() to the same module: the import() reads everything
+  runtime.registerGraph({
+    ids: ['both.js', 'dep.js'],
+    localCount: 2,
+    edges: [[1], []],
+    bindings: [[['a']], []],
+    dynamicEdges: [[1], []],
+  });
+  expect(runtime.getImportedBindings('both.js', 'dep.js')).toEqual(['a', '*']);
+  runtime.registerGraph({
+    ids: ['both.js', 'dep.js'],
+    localCount: 2,
+    edges: [[1], []],
+    bindings: [[['*', 'a']], []],
+    dynamicEdges: [[1], []],
+  });
+  expect(runtime.getImportedBindings('both.js', 'dep.js')).toEqual(['*', 'a']);
+
+  // re-carrying a module replaces its names (last write wins)
+  runtime.registerGraph({
+    ids: ['app.js', 'named.js'],
+    localCount: 2,
+    edges: [[1], []],
+    bindings: [[['b']], []],
+  });
+  expect(runtime.getImportedBindings('app.js', 'named.js')).toEqual(['b']);
+
+  // `null` and missing trailing entries mean "imports everything"
+  runtime.registerGraph({
+    ids: ['sparse.js', 'x.js', 'y.js', 'z.js'],
+    localCount: 4,
+    edges: [[1, 2, 3], [], [], []],
+    bindings: [[null, ['a']], [], [], []],
+  });
+  expect(runtime.getImportedBindings('sparse.js', 'x.js')).toEqual(['*']);
+  expect(runtime.getImportedBindings('sparse.js', 'y.js')).toEqual(['a']);
+  expect(runtime.getImportedBindings('sparse.js', 'z.js')).toEqual(['*']);
+
+  // a payload without `bindings` (an older compiler) is read as "imports everything"
+  runtime.registerGraph({
+    ids: ['old.js', 'dep.js'],
+    localCount: 2,
+    edges: [[1], []],
+  });
+  expect(runtime.getImportedBindings('old.js', 'dep.js')).toEqual(['*']);
+});
+
 test('initModule is registry-gated and returns the live exports', async () => {
   const { runtime } = await createRuntime();
   const factory = vi.fn((id: string) => {

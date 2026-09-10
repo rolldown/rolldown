@@ -22,6 +22,8 @@ impl ViteImportGlobPlugin {
 
 /// Replays the accept/reject decision of the build-time walk in
 /// [`crate::utils::GlobImportVisit`] without re-walking the filesystem, so the two cannot drift.
+///
+/// See `internal-docs/import-meta-glob/design.md`.
 #[derive(Debug)]
 pub struct GlobMatcher {
   /// In original case: the walk itself is never case-folded, only the glob comparison is.

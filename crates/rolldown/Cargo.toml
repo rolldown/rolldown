@@ -14,6 +14,12 @@ workspace = true
 
 [features]
 default = ["serde"]
+async-runtime = ["rolldown_utils/async-runtime"]
+# Selects the tokio arms of the rolldown_utils runtime facade for every task in
+# this crate, but does NOT drop napi-async-runtime from the dependency graph:
+# workspace feature unification keeps rolldown_utils's default `async-runtime`
+# on through many edges; full separation needs default-features = false workspace-wide.
+tokio-runtime = ["rolldown_utils/tokio-runtime"]
 serde = ["dep:serde", "oxc_index/serde"]
 testing = []
 experimental = []
@@ -64,7 +70,6 @@ serde_json = { workspace = true, features = ["preserve_order"] }
 smallvec = { workspace = true }
 string_wizard = { workspace = true }
 sugar_path = { workspace = true }
-tokio = { workspace = true, features = ["rt", "macros", "sync", "time"] }
 tracing = { workspace = true }
 url = { workspace = true }
 xxhash-rust = { workspace = true, features = ["xxh3"] }
@@ -82,7 +87,7 @@ serde_json = { workspace = true }
 serde_yaml = { workspace = true }
 sugar_path = { workspace = true }
 testing_macros = { workspace = true }
-tokio = { workspace = true, features = ["rt", "macros", "sync", "rt-multi-thread"] }
+tokio = { workspace = true, features = ["rt", "macros", "sync", "rt-multi-thread", "time"] }
 walkdir = { workspace = true }
 
 [lib]

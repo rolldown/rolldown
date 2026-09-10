@@ -9,7 +9,8 @@
     // tests/browser installs @rolldown/browser from a tarball that only exists after
     // `just test-browser`, so type checking reads the same declarations from the workspace build
     "paths": {
-      "@rolldown/browser": ["../browser/dist/index.d.mts"]
+      "@rolldown/browser": ["../browser/dist/index.d.mts"],
+      "@rolldown/browser/experimental": ["../browser/dist/experimental-index.d.mts"]
     }
   }
 }

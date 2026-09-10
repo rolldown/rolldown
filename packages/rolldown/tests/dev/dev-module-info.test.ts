@@ -3,11 +3,12 @@ import crypto from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
 import { dev } from 'rolldown/experimental';
+import { isSingleThread } from '@tests/runtime-flavor';
 import { expect, test } from 'vitest';
 
 const TEST_TIMEOUT = 60_000;
 
-test(
+test.skipIf(isSingleThread)(
   'module queries on the engine handle',
   { timeout: TEST_TIMEOUT },
   async ({ onTestFinished }) => {

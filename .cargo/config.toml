@@ -26,4 +26,4 @@ rustflags = [
 ]
 
 [target.wasm32-wasip1-threads]
-rustflags = ["-C", "target-feature=+simd128", "--cfg", "tokio_unstable"]
+rustflags = ["-C", "target-feature=+simd128"]

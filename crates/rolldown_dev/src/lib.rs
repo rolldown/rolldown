@@ -8,8 +8,8 @@ mod watcher_event_handler;
 
 use std::sync::Arc;
 
+use async_lock::Mutex;
 use rustc_hash::FxHashMap;
-use tokio::sync::Mutex;
 pub use {
   crate::{
     dev_context::BundlingFuture,
@@ -18,9 +18,9 @@ pub use {
   },
   rolldown::BundlerConfig,
   rolldown_dev_common::types::{
-    BundleOutput, DevOptions, DevWatchOptions, NormalizedDevOptions, OnAdditionalAssetsCallback,
-    OnHmrUpdatesCallback, OnOutputCallback, RebuildStrategy, SharedNormalizedDevOptions,
-    normalize_dev_options,
+    BundleOutput, DevCallbackError, DevCallbackFuture, DevCallbackResult, DevOptions,
+    DevWatchOptions, NormalizedDevOptions, OnAdditionalAssetsCallback, OnHmrUpdatesCallback,
+    OnOutputCallback, RebuildStrategy, SharedNormalizedDevOptions, normalize_dev_options,
   },
 };
 

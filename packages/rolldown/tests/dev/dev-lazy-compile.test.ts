@@ -1,4 +1,5 @@
 import { getDevWatchOptionsForCi } from '@rolldown/test-dev-server';
+import { isSingleThread } from '@tests/runtime-flavor';
 import crypto from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
@@ -31,7 +32,9 @@ function dev(
 // must therefore be rejected rather than read from disk. This pins the
 // error-path behavior so the gate in `compile_lazy_entry`
 // (crates/rolldown/src/hmr/hmr_stage.rs) can't silently regress.
-test(
+// Dev mode spawns the BindingDevEngine, which is out of scope for the
+// single-thread (CurrentThread) runtime flavor.
+test.skipIf(isSingleThread)(
   'compileEntry rejects an unknown module id instead of bundling it',
   { timeout: TEST_TIMEOUT },
   async ({ onTestFinished }) => {
@@ -75,7 +78,9 @@ test(
 // not be re-shipped to a registered client (whose session froze the top-level-evaluated
 // map at hello). An unregistered client has no session and must still receive the
 // full closure.
-test(
+// Dev mode spawns the BindingDevEngine, which is out of scope for the
+// single-thread (CurrentThread) runtime flavor.
+test.skipIf(isSingleThread)(
   'lazy chunk omits factories for modules the entry chunk evaluated at top level',
   { timeout: TEST_TIMEOUT },
   async ({ onTestFinished }) => {
@@ -182,7 +187,7 @@ function inlineSourceMap(code: string) {
 // the same way a module rendered into a chunk does — otherwise every position in
 // a lazily compiled module is off by whatever the transforms shifted, which is
 // every stack frame and every devtools jump inside it.
-test(
+test.skipIf(isSingleThread)(
   'lazy chunk sourcemap maps through the plugin sourcemap chain',
   { timeout: TEST_TIMEOUT },
   async ({ onTestFinished }) => {
@@ -222,7 +227,7 @@ test(
   },
 );
 
-test(
+test.skipIf(isSingleThread)(
   'lazy proxy modules skip user plugin hooks',
   { timeout: TEST_TIMEOUT },
   async ({ onTestFinished }) => {
@@ -292,7 +297,7 @@ test(
 // A virtual module behind a lazy proxy must stay loadable: re-resolving the proxy id
 // (`\0virtual:lazy-me?rolldown-lazy=1`) is claimed by the lazy compilation plugin itself
 // and never reaches user `resolveId` hooks, which only recognize the bare id.
-test(
+test.skipIf(isSingleThread)(
   'lazy proxy ids resolve without reaching user resolveId hooks',
   { timeout: TEST_TIMEOUT },
   async ({ onTestFinished }) => {
@@ -369,7 +374,7 @@ test(
 // With `sourcemap: true` the chunk gets a `sourceMappingURL`, so the map it names
 // has to be reachable: a lazy chunk is not written to disk, which leaves the
 // return value as the only way for the consumer to serve it.
-test(
+test.skipIf(isSingleThread)(
   'lazy chunk returns the sourcemap its sourceMappingURL names',
   { timeout: TEST_TIMEOUT },
   async ({ onTestFinished }) => {
@@ -416,7 +421,7 @@ test(
 // object, and the consumer sees `undefined`. The snapshot fixture
 // (crates/rolldown/tests/rolldown/topics/hmr/export_star_as) pins the HMR patch; this
 // pins the lazy chunk, which reaches the same finalizer by a different route.
-test(
+test.skipIf(isSingleThread)(
   'a lazy chunk keeps the export name of `export * as ns from`',
   { timeout: TEST_TIMEOUT },
   async ({ onTestFinished }) => {
@@ -467,7 +472,7 @@ test(
 // ask the registry for it instead, which yields `{}`; and when the same module also
 // imported that external, the two paths emitted one binding name twice, the inner
 // `var` shadowing the real import.
-test(
+test.skipIf(isSingleThread)(
   'a lazy chunk imports externals it re-exports instead of asking the registry',
   { timeout: TEST_TIMEOUT },
   async ({ onTestFinished }) => {
@@ -531,7 +536,8 @@ test(
 // register `{ exports: {} }`, matching what a normal build gives such a module. Registering a
 // bare `{}` reads back as `undefined`, and every consumer of it then breaks — `__toCommonJS`
 // throws "Cannot convert undefined or null to object".
-test(
+// Upstream #10772 landed unguarded; dev() reports devSupported: false without threads.
+test.skipIf(isSingleThread)(
   'a module without exports still registers an empty exports object',
   { timeout: TEST_TIMEOUT },
   async ({ onTestFinished }) => {

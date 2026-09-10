@@ -94,9 +94,22 @@ rolldown_tracking_allocator = { workspace = true, optional = true }
 napi-build = { workspace = true }
 
 [features]
+# The custom tokio-free scheduler is the only runtime; `async-runtime` is the
+# default and required feature (the binding-level Tokio flavor was removed).
+default = ["async-runtime"]
+async-runtime = [
+  # `napi/async-runtime` (= napi4) provides the pluggable async-runtime SPI plus
+  # `AsyncTask`; it deliberately does NOT enable `napi/async` (= tokio_rt), so the
+  # custom flavor no longer drags tokio in through napi.
+  "napi/async-runtime",
+  "rolldown/async-runtime",
+  "rolldown_utils/async-runtime",
+]
 chrome-tracing = ["rolldown_tracing/chrome-tracing"]
 default_global_allocator = []
 disable_panic_hook = []
+runtime-waker-teardown-test = ["async-runtime"]
+runtime-submission-failure-test = ["async-runtime"]
 # Wrap mimalloc with allocation counters exposed via `getNativeMemoryStats()`.
 # Costs a few atomic ops per allocation, so it is off by default.
 tracking_allocator = ["dep:rolldown_tracking_allocator"]

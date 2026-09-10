@@ -4,30 +4,40 @@ use std::sync::{
 };
 
 use anyhow::Context;
+use arcstr::ArcStr;
+use async_lock::Mutex;
+use futures::channel::mpsc::unbounded;
 use futures::{FutureExt, future::Shared};
 #[cfg(feature = "testing")]
 use rolldown_common::WatcherChangeKind;
 use rolldown_common::{HmrLazyChunkOutput, HmrStampTable};
-use rolldown_error::{BuildResult, ResultExt};
+use rolldown_dev_common::types::DevCallbackError;
+use rolldown_error::{BatchedBuildDiagnostic, BuildResult, ResultExt};
 use rolldown_fs_watcher::{FsWatcher, FsWatcherConfig};
+use rolldown_utils::futures::try_spawn;
 use rustc_hash::FxHashMap;
 #[cfg(feature = "testing")]
 use rustc_hash::FxHashSet;
-use tokio::sync::{Mutex, mpsc::unbounded_channel};
 
 use rolldown::{Bundler, BundlerBuilder, BundlerConfig, NormalizedBundlerOptions};
 
 use crate::{
   BundleOutput, DevOptions, SharedClients,
   bundle_coordinator::BundleCoordinator,
-  dev_context::{DevContext, PinBoxSendStaticFuture},
+  dev_context::{DevContext, PinBoxSendStaticFuture, dev_callback_result_to_build_result},
   normalize_dev_options,
-  type_aliases::CoordinatorSender,
+  type_aliases::{CoordinatorSender, WatchRegistrationErrorObservation},
   types::{
     coordinator_msg::CoordinatorMsg, coordinator_state_snapshot::CoordinatorStateSnapshot,
     error_stage::ErrorStage, pending_payload::PendingPayload,
   },
 };
+
+type DevEngineCloseResult = Result<(), Arc<BatchedBuildDiagnostic>>;
+type DevEngineCloseFuture = Shared<PinBoxSendStaticFuture<DevEngineCloseResult>>;
+type CoordinatorTaskResult = Result<(), Arc<str>>;
+type PendingCoordinatorFuture = PinBoxSendStaticFuture<()>;
+type CoordinatorTaskFuture = Shared<PinBoxSendStaticFuture<CoordinatorTaskResult>>;
 
 use crate::ClientSession;
 #[cfg(feature = "testing")]
@@ -36,8 +46,66 @@ use rolldown_utils::indexmap::FxIndexMap;
 use std::path::PathBuf;
 
 pub struct CoordinatorState {
-  coordinator: Option<BundleCoordinator>,
-  handle: Option<Shared<PinBoxSendStaticFuture<()>>>,
+  coordinator: Option<PendingCoordinatorFuture>,
+  handle: Option<CoordinatorTaskFuture>,
+}
+
+impl CoordinatorState {
+  /// Start the retained coordinator future. When submission fails (e.g. the
+  /// async runtime rejected the spawn), the coordinator is retained so a later
+  /// call can retry after a runtime restart.
+  fn try_start<E>(
+    &mut self,
+    start: impl FnOnce(
+      PendingCoordinatorFuture,
+    ) -> Result<CoordinatorTaskFuture, (E, PendingCoordinatorFuture)>,
+  ) -> Result<(), E> {
+    let Some(coordinator) = self.coordinator.take() else {
+      return Ok(());
+    };
+
+    match start(coordinator) {
+      Ok(handle) => {
+        self.handle = Some(handle);
+        Ok(())
+      }
+      Err((error, coordinator)) => {
+        self.coordinator = Some(coordinator);
+        Err(error)
+      }
+    }
+  }
+}
+
+impl WatchRegistrationErrorObservation {
+  async fn finish(mut self) -> BuildResult<()> {
+    let observer_id = self.observer_id();
+    let (reply_sender, reply_receiver) = futures::channel::oneshot::channel();
+    self
+      .coordinator_sender()
+      .unbounded_send(CoordinatorMsg::PreviewWatchRegistrationErrors {
+        observer_id,
+        reply: reply_sender,
+      })
+      .map_err_to_unhandleable()
+      .context("DevEngine: failed to preview watch-registration errors")?;
+
+    let error = reply_receiver
+      .await
+      .map_err_to_unhandleable()
+      .context("DevEngine: coordinator closed before previewing watch-registration errors")?;
+    let preview_result = DevEngine::retained_error_to_build_result(error);
+    let acknowledgement_result = self
+      .coordinator_sender()
+      .unbounded_send(CoordinatorMsg::AcknowledgeWatchRegistrationErrors { observer_id })
+      .map_err_to_unhandleable()
+      .context("DevEngine: failed to acknowledge previewed watch-registration errors")
+      .map_err(BatchedBuildDiagnostic::from);
+    if acknowledgement_result.is_ok() {
+      self.disarm();
+    }
+    DevEngine::merge_build_results(preview_result, acknowledgement_result)
+  }
 }
 
 pub struct DevEngine {
@@ -46,7 +114,8 @@ pub struct DevEngine {
   /// Shared dev context, kept so out-of-coordinator entry points (e.g.
   /// `compile_lazy_entry`) can reach `options.on_additional_assets`.
   dev_context: Arc<DevContext>,
-  coordinator_state: Mutex<CoordinatorState>,
+  coordinator_state: Arc<Mutex<CoordinatorState>>,
+  close_future: std::sync::Mutex<Option<DevEngineCloseFuture>>,
   pub clients: SharedClients,
   is_closed: AtomicBool,
   /// The engine's single patch-id counter, shared with the coordinator's bundling
@@ -74,7 +143,7 @@ impl DevEngine {
 
     let normalized_options = normalize_dev_options(options);
 
-    let (coordinator_tx, coordinator_rx) = unbounded_channel::<CoordinatorMsg>();
+    let (coordinator_tx, coordinator_rx) = unbounded::<CoordinatorMsg>();
 
     let clients = SharedClients::default();
 
@@ -112,15 +181,17 @@ impl DevEngine {
       watcher,
       Arc::clone(&next_hmr_patch_id),
     );
+    let coordinator = Box::pin(coordinator.run()) as PendingCoordinatorFuture;
 
     Ok(Self {
       coordinator_sender: coordinator_tx,
       bundler,
       dev_context: Arc::clone(&ctx),
-      coordinator_state: Mutex::new(CoordinatorState {
+      coordinator_state: Arc::new(Mutex::new(CoordinatorState {
         coordinator: Some(coordinator),
         handle: None,
-      }),
+      })),
+      close_future: std::sync::Mutex::new(None),
       clients,
       is_closed: AtomicBool::new(false),
       next_hmr_patch_id,
@@ -141,18 +212,19 @@ impl DevEngine {
   pub async fn run(&self) -> BuildResult<()> {
     let mut coordinator_state = self.coordinator_state.lock().await;
 
-    if coordinator_state.coordinator.is_none() {
-      // The coordinator is already running.
-      return Ok(());
-    }
-
-    // Spawn the coordinator
-    if let Some(coordinator) = coordinator_state.coordinator.take() {
-      let join_handle = tokio::spawn(coordinator.run());
-      let coordinator_handle = Box::pin(async move {
-        join_handle.await.unwrap();
-      }) as PinBoxSendStaticFuture;
-      coordinator_state.handle = Some(coordinator_handle.shared());
+    let start_result = coordinator_state.try_start(|coordinator| match try_spawn(coordinator) {
+      Ok(join_handle) => {
+        let coordinator_handle = Box::pin(async move {
+          join_handle.await.map_err(|error| {
+            Arc::<str>::from(format!("DevEngine coordinator task failed: {error}"))
+          })
+        }) as PinBoxSendStaticFuture<CoordinatorTaskResult>;
+        Ok(coordinator_handle.shared())
+      }
+      Err((error, coordinator)) => Err((error, coordinator)),
+    });
+    if let Err(error) = start_result {
+      return Err(anyhow::anyhow!("DevEngine coordinator task submission failed: {error}").into());
     }
     drop(coordinator_state);
 
@@ -167,9 +239,18 @@ impl DevEngine {
   pub async fn wait_for_close(&self) -> BuildResult<()> {
     self.create_error_if_closed()?;
 
-    let coordinator_state = self.coordinator_state.lock().await;
-    if let Some(coordinator_handle) = coordinator_state.handle.clone() {
-      coordinator_handle.await;
+    // Snapshot the Shared handle and release the guard BEFORE awaiting:
+    // close_inner() must lock this same mutex to send Close, and the
+    // coordinator only finishes after Close is processed — awaiting with
+    // the guard held deadlocks any concurrent close().
+    let coordinator_handle = {
+      let coordinator_state = self.coordinator_state.lock().await;
+      coordinator_state.handle.clone()
+    };
+    if let Some(coordinator_handle) = coordinator_handle {
+      if let Err(error) = coordinator_handle.await {
+        return Err(anyhow::anyhow!("{error}").into());
+      }
     }
     Ok(())
   }
@@ -182,8 +263,16 @@ impl DevEngine {
       return Ok(());
     }
 
-    let (reply_sender, reply_receiver) = tokio::sync::oneshot::channel();
-    if let Err(err) = self.coordinator_sender.send(CoordinatorMsg::GetState { reply: reply_sender })
+    let observation = self.begin_watch_registration_error_observation().await?;
+    let operation_result = self.wait_for_ongoing_bundle_inner().await;
+    let watch_registration_result = observation.finish().await;
+    Self::merge_build_results(operation_result, watch_registration_result)
+  }
+
+  async fn wait_for_ongoing_bundle_inner(&self) -> BuildResult<()> {
+    let (reply_sender, reply_receiver) = futures::channel::oneshot::channel();
+    if let Err(err) =
+      self.coordinator_sender.unbounded_send(CoordinatorMsg::GetState { reply: reply_sender })
     {
       if self.is_closed() {
         return Ok(());
@@ -201,29 +290,18 @@ impl DevEngine {
     };
 
     if let Some(bundling_future) = status.running_future {
-      bundling_future.await;
+      dev_callback_result_to_build_result(bundling_future.await)
+    } else if let Some(error) = status.last_callback_error {
+      dev_callback_result_to_build_result(Err(error))
+    } else {
+      Ok(())
     }
-
-    Ok(())
   }
 
   pub async fn get_bundle_state(&self) -> BuildResult<BundleState> {
     self.create_error_if_closed()?;
 
-    let (reply_sender, reply_receiver) = tokio::sync::oneshot::channel();
-    self
-      .coordinator_sender
-      .send(CoordinatorMsg::GetState { reply: reply_sender })
-      .map_err_to_unhandleable()
-      .context(
-        "DevEngine: failed to send GetState to coordinator within has_latest_bundle_output",
-      )?;
-
-    let status = reply_receiver.await.map_err_to_unhandleable().context(
-      "DevEngine: coordinator closed before responding to GetStatus within get_bundle_state",
-    )?;
-
-    Ok(status.into())
+    Ok(self.get_coordinator_state_snapshot().await?.into())
   }
 
   /// Ensure there's latest bundle output available for browser loading/reloading scenarios.
@@ -232,6 +310,13 @@ impl DevEngine {
   pub async fn ensure_latest_bundle_output(&self) -> BuildResult<()> {
     self.create_error_if_closed()?;
 
+    let observation = self.begin_watch_registration_error_observation().await?;
+    let operation_result = self.ensure_latest_bundle_output_inner().await;
+    let watch_registration_result = observation.finish().await;
+    Self::merge_build_results(operation_result, watch_registration_result)
+  }
+
+  async fn ensure_latest_bundle_output_inner(&self) -> BuildResult<()> {
     let mut loop_count = 0u32;
     loop {
       loop_count += 1;
@@ -247,10 +332,10 @@ impl DevEngine {
         }
         break;
       }
-      let (reply_sender, reply_receiver) = tokio::sync::oneshot::channel();
+      let (reply_sender, reply_receiver) = futures::channel::oneshot::channel();
       if let Err(err) = self
         .coordinator_sender
-        .send(CoordinatorMsg::EnsureLatestBundleOutput { reply: reply_sender })
+        .unbounded_send(CoordinatorMsg::EnsureLatestBundleOutput { reply: reply_sender })
       {
         if self.is_closed() {
           return Ok(());
@@ -272,7 +357,8 @@ impl DevEngine {
       // Wait for the build if one is running or was scheduled
       if let Some(ret) = received {
         // Either a build is ongoing, or a new build was scheduled - wait for it to complete
-        ret.future.await;
+        let callback_result = dev_callback_result_to_build_result(ret.future.await);
+        callback_result?;
         if ret.is_ensure_latest_bundle_output_future {
           break;
         }
@@ -281,7 +367,8 @@ impl DevEngine {
       }
     }
 
-    Ok(())
+    let status = self.get_coordinator_state_snapshot().await?;
+    Self::retained_error_to_build_result(status.last_callback_error)
   }
 
   pub fn trigger_full_build(&self) -> BuildResult<()> {
@@ -289,7 +376,7 @@ impl DevEngine {
 
     self
       .coordinator_sender
-      .send(CoordinatorMsg::TriggerFullBuild)
+      .unbounded_send(CoordinatorMsg::TriggerFullBuild)
       .map_err_to_unhandleable()
       .context("DevEngine: failed to send TriggerFullBuild to coordinator")?;
 
@@ -410,21 +497,51 @@ impl DevEngine {
           },
         )
         .await;
+    }
 
+    let additional_assets = if result.is_ok() {
       // Deliver assets emitted while compiling the lazy entry (e.g. an image
       // imported by the lazy module) before returning the code, so the consumer
       // can register/serve them before the client requests them.
       if let Some(on_additional_assets) = self.dev_context.options.on_additional_assets.as_ref() {
         let mut output = BundleOutput::default();
-        bundler.file_emitter.add_additional_files(&mut output.assets, &mut output.warnings);
-        if !output.assets.is_empty() {
-          on_additional_assets(output);
+        bundler
+          .file_emitter()
+          .expect("successful lazy compilation requires an installed bundle handle")
+          .add_additional_files(&mut output.assets, &mut output.warnings);
+        if output.assets.is_empty() {
+          None
+        } else {
+          Some((Arc::clone(on_additional_assets), output))
         }
+      } else {
+        None
       }
-
+    } else {
+      None
+    };
+    if result.is_ok() {
       // Notify that the proxy module has changed so build output gets updated.
       // This ensures future page loads get the fetched template directly.
-      self.notify_module_changed(proxy_module_id);
+      //
+      // `compile_lazy_entry` added this module's sources to
+      // `plugin_driver.watch_files`, which lives on the current bundle handle
+      // only. Snapshot it here, under the same lock that produced it: a rebuild
+      // installs a fresh handle with an empty set, and the coordinator reads
+      // the handle asynchronously, so by then the entries can be gone. A module
+      // reached only through a dynamic import is added nowhere else, so losing
+      // this one snapshot means it is never watched and editing it produces no
+      // filesystem event at all.
+      //
+      // The send itself no longer needs the guard, since the paths now travel
+      // as data. Keeping it inside makes capture and publication one step.
+      let watch_files = bundler.watch_files().iter().map(|path| path.clone()).collect();
+      self.notify_module_changed(proxy_module_id, watch_files);
+    }
+    drop(bundler);
+
+    if let Some((on_additional_assets, output)) = additional_assets {
+      dev_callback_result_to_build_result(on_additional_assets(output).await)?;
     }
 
     result
@@ -432,35 +549,138 @@ impl DevEngine {
 
   /// Notify the coordinator that a module has changed programmatically.
   /// This triggers a rebuild to update the build output.
-  fn notify_module_changed(&self, module_id: String) {
-    let _ = self.coordinator_sender.send(CoordinatorMsg::ModuleChanged { module_id });
+  ///
+  /// `watch_files` must be snapshotted while holding the bundler lock; see
+  /// `CoordinatorMsg::ModuleChanged`.
+  fn notify_module_changed(&self, module_id: String, watch_files: Vec<ArcStr>) {
+    let _ = self
+      .coordinator_sender
+      .unbounded_send(CoordinatorMsg::ModuleChanged { module_id, watch_files });
   }
 
-  pub async fn close(&self) -> BuildResult<()> {
-    if self.is_closed.swap(true, std::sync::atomic::Ordering::SeqCst) {
-      return Ok(());
-    }
+  pub async fn close(&self) -> Result<(), Arc<BatchedBuildDiagnostic>> {
+    // Reject new work immediately, independently of how long terminal cleanup
+    // takes or whether it eventually fails.
+    self.is_closed.store(true, std::sync::atomic::Ordering::SeqCst);
 
-    // Send close message to coordinator
-    self.coordinator_sender.send(CoordinatorMsg::Close)
+    let close_future = {
+      let mut state = self.close_future.lock().expect("DevEngine close future lock poisoned");
+      state
+        .get_or_insert_with(|| {
+          let coordinator_sender = self.coordinator_sender.clone();
+          let bundler = Arc::clone(&self.bundler);
+          let coordinator_state = Arc::clone(&self.coordinator_state);
+          (Box::pin(async move {
+            Self::close_inner(coordinator_sender, bundler, coordinator_state)
+              .await
+              .map_err(Arc::new)
+          }) as PinBoxSendStaticFuture<DevEngineCloseResult>)
+            .shared()
+        })
+        .clone()
+    };
+
+    close_future.await
+  }
+
+  async fn close_inner(
+    coordinator_sender: CoordinatorSender,
+    bundler: Arc<Mutex<Bundler>>,
+    coordinator_state: Arc<Mutex<CoordinatorState>>,
+  ) -> BuildResult<()> {
+    let coordinator_handle = {
+      let mut coordinator_state = coordinator_state.lock().await;
+      if coordinator_state.handle.is_none() {
+        // `close()` before `run()` has no task to coordinate. Drop the
+        // unstarted coordinator (and its watcher) and close the bundler here.
+        coordinator_state.coordinator.take();
+      }
+      coordinator_state.handle.clone()
+    };
+
+    let Some(coordinator_handle) = coordinator_handle else {
+      let mut bundler = bundler.lock().await;
+      return bundler.close().await;
+    };
+
+    let (reply_sender, reply_receiver) = futures::channel::oneshot::channel();
+    let send_result = coordinator_sender
+      .unbounded_send(CoordinatorMsg::Close { reply: reply_sender })
       .map_err_to_unhandleable()
-      .context("DevEngine: failed to send Close message to coordinator - coordinator may have already terminated")?;
-
-    // Close the bundler (calls `closeBundle` plugin hook).
-    // The bundler lock MUST be released before waiting for the coordinator below.
-    // Otherwise we'd deadlock: the coordinator's Close handler waits for any running
-    // bundling task to finish, and that task may need to acquire the bundler lock.
-    {
-      let mut bundler = self.bundler.lock().await;
-      bundler.close().await?;
+      .context(
+        "DevEngine: failed to send Close message to coordinator - coordinator may have already terminated",
+      );
+    if let Err(error) = send_result {
+      let coordinator_error =
+        Self::merge_coordinator_task_result(error.into(), coordinator_handle.await);
+      return Self::close_bundler_after_coordinator_error(bundler, coordinator_error).await;
     }
 
-    // Wait for coordinator to close (coordinator handles watcher cleanup)
-    let coordinator_state = self.coordinator_state.lock().await;
-    if let Some(coordinator_handle) = coordinator_state.handle.clone() {
-      coordinator_handle.await;
+    let close_result = reply_receiver
+      .await
+      .map_err_to_unhandleable()
+      .context("DevEngine: coordinator closed before responding to Close");
+    let coordinator_task_result = coordinator_handle.await;
+
+    match (close_result, coordinator_task_result) {
+      (Ok(close_result), Ok(())) => close_result,
+      (Ok(close_result), Err(task_error)) => {
+        Self::merge_build_results(close_result, Err(anyhow::anyhow!("{task_error}").into()))
+      }
+      (Err(error), task_result) => {
+        let coordinator_error = Self::merge_coordinator_task_result(error.into(), task_result);
+        Self::close_bundler_after_coordinator_error(bundler, coordinator_error).await
+      }
     }
-    Ok(())
+  }
+
+  fn merge_coordinator_task_result(
+    coordinator_error: BatchedBuildDiagnostic,
+    task_result: CoordinatorTaskResult,
+  ) -> BatchedBuildDiagnostic {
+    match task_result {
+      Ok(()) => coordinator_error,
+      Err(task_error) => {
+        let mut errors = coordinator_error.into_vec();
+        errors.extend(BatchedBuildDiagnostic::from(anyhow::anyhow!("{task_error}")).into_vec());
+        BatchedBuildDiagnostic::new(errors)
+      }
+    }
+  }
+
+  fn merge_build_results(primary: BuildResult<()>, secondary: BuildResult<()>) -> BuildResult<()> {
+    match (primary, secondary) {
+      (Ok(()), Ok(())) => Ok(()),
+      (Err(error), Ok(())) | (Ok(()), Err(error)) => Err(error),
+      (Err(primary), Err(secondary)) => {
+        let mut errors = primary.into_vec();
+        errors.extend(secondary.into_vec());
+        Err(BatchedBuildDiagnostic::new(errors))
+      }
+    }
+  }
+
+  fn retained_error_to_build_result(error: Option<DevCallbackError>) -> BuildResult<()> {
+    error.map_or_else(|| Ok(()), |error| dev_callback_result_to_build_result(Err(error)))
+  }
+
+  async fn close_bundler_after_coordinator_error(
+    bundler: Arc<Mutex<Bundler>>,
+    coordinator_error: BatchedBuildDiagnostic,
+  ) -> BuildResult<()> {
+    let fallback_result = {
+      let mut bundler = bundler.lock().await;
+      bundler.close().await
+    };
+
+    match fallback_result {
+      Ok(()) => Err(coordinator_error),
+      Err(fallback_error) => {
+        let mut errors = coordinator_error.into_vec();
+        errors.extend(fallback_error.into_vec());
+        Err(BatchedBuildDiagnostic::new(errors))
+      }
+    }
   }
 
   pub fn is_closed(&self) -> bool {
@@ -470,6 +690,40 @@ impl DevEngine {
   /// Returns a clone of the shared normalized bundler options
   pub async fn bundler_options(&self) -> Arc<NormalizedBundlerOptions> {
     Arc::clone(self.bundler.lock().await.options())
+  }
+
+  async fn get_coordinator_state_snapshot(&self) -> BuildResult<CoordinatorStateSnapshot> {
+    let (reply_sender, reply_receiver) = futures::channel::oneshot::channel();
+    self
+      .coordinator_sender
+      .unbounded_send(CoordinatorMsg::GetState { reply: reply_sender })
+      .map_err_to_unhandleable()
+      .context("DevEngine: failed to send GetState to coordinator")?;
+
+    reply_receiver
+      .await
+      .map_err_to_unhandleable()
+      .context("DevEngine: coordinator closed before responding to GetState")
+      .map_err(Into::into)
+  }
+
+  async fn begin_watch_registration_error_observation(
+    &self,
+  ) -> BuildResult<WatchRegistrationErrorObservation> {
+    let (reply_sender, reply_receiver) = futures::channel::oneshot::channel();
+    self
+      .coordinator_sender
+      .unbounded_send(CoordinatorMsg::BeginWatchRegistrationErrorObservation {
+        reply: reply_sender,
+      })
+      .map_err_to_unhandleable()
+      .context("DevEngine: failed to begin watch-registration error observation")?;
+
+    reply_receiver
+      .await
+      .map_err_to_unhandleable()
+      .context("DevEngine: coordinator closed before registering watch-error observer")
+      .map_err(BatchedBuildDiagnostic::from)
   }
 
   #[cfg(feature = "testing")]
@@ -502,17 +756,19 @@ impl DevEngine {
     if !events.is_empty() {
       // Send WatchEvent message to coordinator (simulates real file change)
       // The coordinator will automatically schedule a build via handle_file_changes
-      let _ = self.coordinator_sender.send(CoordinatorMsg::WatchEvent(Ok(events)));
+      let _ = self.coordinator_sender.unbounded_send(CoordinatorMsg::WatchEvent(Ok(events)));
     }
 
     // Send ScheduleBuild to ensure WatchEvent is processed (FIFO),
     // and get the build future to wait on
-    let (reply_tx, reply_rx) = tokio::sync::oneshot::channel();
-    let _ = self.coordinator_sender.send(CoordinatorMsg::ScheduleBuildIfStale { reply: reply_tx });
+    let (reply_tx, reply_rx) = futures::channel::oneshot::channel();
+    let _ = self
+      .coordinator_sender
+      .unbounded_send(CoordinatorMsg::ScheduleBuildIfStale { reply: reply_tx });
 
     // Wait for the build that was triggered by the file change
     if let Ok(Some(ret)) = reply_rx.await {
-      ret.future.await;
+      let _ = ret.future.await;
     }
   }
 
@@ -525,10 +781,10 @@ impl DevEngine {
   pub async fn get_watched_files(&self) -> BuildResult<FxHashSet<String>> {
     self.create_error_if_closed()?;
 
-    let (reply_sender, reply_receiver) = tokio::sync::oneshot::channel();
+    let (reply_sender, reply_receiver) = futures::channel::oneshot::channel();
     self
       .coordinator_sender
-      .send(CoordinatorMsg::GetWatchedFiles { reply: reply_sender })
+      .unbounded_send(CoordinatorMsg::GetWatchedFiles { reply: reply_sender })
       .map_err_to_unhandleable()
       .context(
         "DevEngine: failed to send GetWatchedFiles to coordinator within get_watched_files",
@@ -577,5 +833,62 @@ impl From<CoordinatorStateSnapshot> for BundleState {
       last_error_stage: snapshot.last_error_stage,
       has_stale_output: snapshot.has_stale_output,
     }
+  }
+}
+
+#[cfg(test)]
+mod tests {
+  use super::*;
+  use std::{
+    convert::Infallible,
+    sync::atomic::{AtomicUsize, Ordering},
+  };
+
+  #[tokio::test]
+  async fn rejected_coordinator_submission_is_retryable_after_runtime_restart() {
+    let runs = Arc::new(AtomicUsize::new(0));
+    let runs_task = Arc::clone(&runs);
+    let coordinator: PendingCoordinatorFuture = Box::pin(async move {
+      runs_task.fetch_add(1, Ordering::SeqCst);
+    });
+    let mut state = CoordinatorState { coordinator: Some(coordinator), handle: None };
+
+    let error = state.try_start(|coordinator| Err(("runtime stopped", coordinator))).unwrap_err();
+    assert_eq!(error, "runtime stopped");
+    assert!(state.coordinator.is_some());
+    assert!(state.handle.is_none());
+    assert_eq!(runs.load(Ordering::SeqCst), 0);
+
+    state
+      .try_start::<Infallible>(|coordinator| {
+        let handle = Box::pin(async move {
+          coordinator.await;
+          Ok(())
+        }) as PinBoxSendStaticFuture<CoordinatorTaskResult>;
+        Ok(handle.shared())
+      })
+      .expect("a restarted runtime must accept the retained coordinator");
+    state
+      .handle
+      .clone()
+      .expect("accepted coordinator must publish its handle")
+      .await
+      .expect("retained coordinator must complete");
+    assert!(state.coordinator.is_none());
+    assert_eq!(runs.load(Ordering::SeqCst), 1);
+  }
+
+  #[test]
+  fn dropped_watch_registration_observation_requests_cancellation() {
+    let (coordinator_sender, mut coordinator_receiver) =
+      futures::channel::mpsc::unbounded::<CoordinatorMsg>();
+    let observation = WatchRegistrationErrorObservation::new(17, coordinator_sender);
+
+    drop(observation);
+
+    assert!(matches!(
+      coordinator_receiver.try_recv(),
+      Ok(CoordinatorMsg::CancelWatchRegistrationErrorObservation { observer_id: 17 })
+    ));
   }
 }

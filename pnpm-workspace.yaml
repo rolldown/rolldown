@@ -32,17 +32,28 @@ onlyBuiltDependencies:
   - tree-sitter
 
 overrides:
+  # napi-build 2.4.1 links the emnapi v2 C archives; pin the exact release so a range change cannot silently swap them.
+  emnapi: 2.0.0-alpha.4
   vitepress>vite: npm:rolldown-vite@latest
 
 catalog:
   '@babel/core': ^7.29.7
   '@babel/preset-env': ^7.29.7
   '@babel/preset-typescript': ^7.29.7
+  # the .wasm links emnapi v2 C archives, so a v1 JS runtime is an ABI mismatch (see the `emnapi` override above).
+  # scripts/wasi/check-workerd-packed-consumer.mjs asserts these exact versions, so bump both together.
   '@emnapi/core': 2.0.0-alpha.4
   '@emnapi/runtime': 2.0.0-alpha.4
   '@jridgewell/trace-mapping': ^0.3.31
+  # floor pin: `napi.rootPublisher` (napi-rs#3450) is honored only from 3.8.5, and
+  # pre-publish validation needs it. 3.9.0 peer-requires the same
+  # `^1.7.1 || ^2.0.0-alpha.4` emnapi line as 3.8.6, so it moves with the pins
+  # above. A cli bump can reshape the generated loaders — see the contract
+  # snippets in `packages/rolldown/generate-workerd-loader.ts`.
   '@napi-rs/cli': ^3.9.0
-  '@napi-rs/wasm-runtime': ~1.2.2
+  # 1.2.3 is this branch's tested floor; main's `~1.2.2` resolves to the same
+  # 1.2.x head.
+  '@napi-rs/wasm-runtime': ~1.2.3
   '@oxc-node/cli': ^0.1.0
   '@oxc-node/core': ^0.1.0
   '@oxc-project/runtime': '=0.149.0'
@@ -58,6 +69,7 @@ catalog:
   '@types/node': 24.10.3
   '@types/semver': ^7.8.0
   '@types/serve-static': ^2.0.0
+  buffer: ^6.0.3
   '@types/ws': ^8.18.0
   acorn: ^8.17.0
   astring: ^1.9.0
@@ -68,6 +80,7 @@ catalog:
   consola: ^3.4.2
   dedent: ^1.5.3
   diff: ^9.0.0
+  # Shadowed by the `overrides.emnapi` pin above, which rewrites the recorded specifier so `catalog:` never resolves here; kept as the fallback for the day that override is dropped.
   emnapi: 2.0.0-alpha.4
   esbuild: ^0.28.0
   estree-toolkit: ^1.7.8
@@ -79,6 +92,7 @@ catalog:
   glob: ^13.0.0
   lodash-es: ^4.17.21
   micromatch: ^4.0.8
+  miniflare: ^4.20260611.0
   oxc-parser: '=0.149.0'
   oxc-transform: '=0.149.0'
   pathe: ^2.0.3
@@ -103,6 +117,7 @@ catalog:
   vue: ^3.5.35
   web-tree-sitter: ^0.27.0
   ws: ^8.20.1
+  wrangler: ^4.100.0
   zx: ^8.1.2
 
 catalogs:
@@ -138,6 +153,10 @@ verifyDepsBeforeRun: install
 
 minimumReleaseAgeExclude:
   - '@napi-rs/cli'
+  - '@emnapi/core@1.11.2 || 2.0.0-alpha.4'
+  - '@emnapi/runtime@1.11.2 || 2.0.0-alpha.4'
+  - emnapi@1.11.2 || 2.0.0-alpha.4
+  - '@emnapi/wasi-threads@2.0.1'
   - '@oxc-minify/*'
   - '@oxc-parser/*'
   - '@oxc-transform/*'

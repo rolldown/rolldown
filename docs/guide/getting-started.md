@@ -57,6 +57,9 @@ Prebuilt binaries are distributed for the following platforms (grouped by [Node.
   - Android armv7 (`armv7-linux-androideabi`)
   - Wasm + Wasi (`wasm32-wasip1-threads`)
 
+See [WASI and workerd support](/guide/wasi) for the runtime support matrix,
+threadless package API, and production memory-validation requirements.
+
 If you are using a platform that a prebuilt binary is not distributed, you have the following options:
 
 - Use the Wasm build
@@ -209,7 +212,7 @@ Next, in the npm script, we can instruct Rolldown to use the config file with th
 
 ### Multiple builds in the same config
 
-You can also specify multiple configurations as an array, and Rolldown will bundle them in parallel.
+You can also specify multiple configurations as an array. Rolldown bundles them one after another, in the order they are listed, which matches Rollup's behavior.
 
 ```js [rolldown.config.js]
 import { defineConfig } from 'rolldown';

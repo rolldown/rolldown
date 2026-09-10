@@ -11,6 +11,7 @@
   "devDependencies": {
     "@vitest/browser-playwright": "^4.1.6",
     "@webcontainer/test": "^0.3.0",
+    "acorn": "catalog:",
     "playwright": "^1.62.0",
     "vitest": "catalog:"
   }

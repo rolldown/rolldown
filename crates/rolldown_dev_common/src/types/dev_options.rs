@@ -2,7 +2,7 @@ use derive_more::Debug;
 use rolldown_common::ClientHmrUpdate;
 use rolldown_error::BuildResult;
 use rolldown_utils::pattern_filter::StringOrRegex;
-use std::sync::Arc;
+use std::{error::Error, future::Future, pin::Pin, sync::Arc};
 
 #[cfg(feature = "deserialize_dev_options")]
 use schemars::JsonSchema;
@@ -13,9 +13,14 @@ use super::bundle_output::BundleOutput;
 use super::dev_watch_options::DevWatchOptions;
 use super::rebuild_strategy::RebuildStrategy;
 
+pub type DevCallbackError = Arc<dyn Error + Send + Sync>;
+pub type DevCallbackResult<T = ()> = Result<T, DevCallbackError>;
+pub type DevCallbackFuture<T = ()> =
+  Pin<Box<dyn Future<Output = DevCallbackResult<T>> + Send + 'static>>;
 pub type OnHmrUpdatesCallback =
-  Arc<dyn Fn(BuildResult<(Vec<ClientHmrUpdate>, Vec<String>)>) + Send + Sync>;
-pub type OnOutputCallback = Arc<dyn Fn(BuildResult<BundleOutput>) + Send + Sync>;
+  Arc<dyn Fn(BuildResult<(Vec<ClientHmrUpdate>, Vec<String>)>) -> DevCallbackFuture + Send + Sync>;
+pub type OnOutputCallback =
+  Arc<dyn Fn(BuildResult<BundleOutput>) -> DevCallbackFuture + Send + Sync>;
 /// Assets emitted while generating an HMR patch or compiling a lazy entry (e.g.
 /// an image newly imported by the changed/lazy module). A pure HMR patch and a
 /// lazy compile never go through `on_output`, so this callback is the consumer's
@@ -23,7 +28,7 @@ pub type OnOutputCallback = Arc<dyn Fn(BuildResult<BundleOutput>) + Send + Sync>
 ///
 /// Carries a `BundleOutput` so `add_additional_files` warnings ride along, as
 /// they would through `on_output`.
-pub type OnAdditionalAssetsCallback = Arc<dyn Fn(BundleOutput) + Send + Sync>;
+pub type OnAdditionalAssetsCallback = Arc<dyn Fn(BundleOutput) -> DevCallbackFuture + Send + Sync>;
 
 pub type SharedNormalizedDevOptions = Arc<NormalizedDevOptions>;
 

@@ -1,4 +1,4 @@
-// napi-rs-artifact-metadata:{"version":2,"rootEntry":"binding.cjs","exports":["LegalCommentsMode","minify","minifySync","Severity","ParseResult","ExportExportNameKind","ExportImportNameKind","ExportLocalNameKind","ImportNameKind","parse","parseSync","rawTransferSupported","ResolverFactory","EnforceExtension","ModuleType","sync","HelperMode","isolatedDeclaration","isolatedDeclarationSync","moduleRunnerTransform","moduleRunnerTransformSync","transform","transformSync","BindingBundleEndEventData","BindingBundleErrorEventData","BindingBundler","BindingCallableBuiltinPlugin","BindingChunkingContext","BindingDecodedMap","BindingDevEngine","BindingLoadPluginContext","BindingMagicString","BindingModuleInfo","BindingNormalizedOptions","BindingOutputAsset","BindingOutputChunk","BindingPluginContext","BindingRenderedChunk","BindingRenderedChunkMeta","BindingRenderedModule","BindingSourceMap","BindingTransformPluginContext","BindingWatcher","BindingWatcherBundler","BindingWatcherChangeData","BindingWatcherEvent","ParallelJsPluginRegistry","TraceSubscriberGuard","TsconfigCache","BindingAttachDebugInfo","BindingBuiltinPluginName","BindingChunkModuleOrderBy","BindingErrorStage","BindingLogLevel","BindingPluginOrder","BindingPropertyReadSideEffects","BindingPropertyWriteSideEffects","BindingRebuildStrategy","collapseSourcemaps","enhancedTransform","enhancedTransformSync","FilterTokenKind","getNativeMemoryStats","initTraceSubscriber","registerPlugins","resetNativeMemoryStats","resolveTsconfig","shutdownAsyncRuntime","startAsyncRuntime"],"managedRootEntries":["browser.js","binding.cjs","rolldown-binding.wasm","rolldown-binding.debug.wasm"]}
+// napi-rs-artifact-metadata:{"version":2,"rootEntry":"binding.cjs","exports":["LegalCommentsMode","minify","minifySync","Severity","ParseResult","ExportExportNameKind","ExportImportNameKind","ExportLocalNameKind","ImportNameKind","parse","parseSync","rawTransferSupported","ResolverFactory","EnforceExtension","ModuleType","sync","HelperMode","isolatedDeclaration","isolatedDeclarationSync","moduleRunnerTransform","moduleRunnerTransformSync","transform","transformSync","BindingAsyncRuntimeLease","BindingBundleEndEventData","BindingBundleErrorEventData","BindingBundler","BindingBundleStartEventData","BindingCallableBuiltinPlugin","BindingChunkingContext","BindingDecodedMap","BindingDevEngine","BindingLoadPluginContext","BindingMagicString","BindingModuleInfo","BindingNormalizedOptions","BindingOutputAsset","BindingOutputChunk","BindingPluginContext","BindingRenderedChunk","BindingRenderedChunkMeta","BindingRenderedModule","BindingSourceMap","BindingTransformPluginContext","BindingWatcher","BindingWatcherBundler","BindingWatcherChangeData","BindingWatcherEvent","ParallelJsPluginRegistry","TraceSubscriberGuard","TsconfigCache","acquireAsyncRuntime","BindingAttachDebugInfo","BindingBuiltinPluginName","BindingChunkModuleOrderBy","BindingErrorStage","BindingLogLevel","BindingPluginOrder","BindingPropertyReadSideEffects","BindingPropertyWriteSideEffects","BindingRebuildStrategy","BindingRuntimeFlavor","collapseSourcemaps","configureAsyncRuntime","enhancedTransform","enhancedTransformSync","FilterTokenKind","getAsyncRuntimeConfig","getAsyncRuntimeMetrics","getCurrentThreadTaskHostContractVersion","getNativeMemoryStats","getRuntimeCapabilities","initTraceSubscriber","isCurrentThreadHostRegistrationActive","registerCurrentThreadTaskHost","registerPlugins","registerTimerHost","reserveCurrentThreadHostRegistration","resetAsyncRuntimeMetrics","resetNativeMemoryStats","resolveTsconfig","shutdownAsyncRuntime","startAsyncRuntime","unregisterCurrentThreadTaskHost","unregisterTimerHost"],"managedRootEntries":["browser.js","binding.cjs","rolldown-binding.wasm","rolldown-binding.debug.wasm"]}
 /* eslint-disable */
 /* prettier-ignore */
 
@@ -89,7 +89,7 @@ function __createWasiWorker(filename) {
   while (true) {
     try {
       return new Worker(filename, {
-        env: process.env,
+        env: __rolldownWasiEnv,
         execArgv: __workerExecArgv,
       })
     } catch (error) {
@@ -106,11 +106,30 @@ function __createWasiWorker(filename) {
   }
 }
 
+function __normalizeRolldownAsyncWorkPoolSize(value) {
+  const numeric = Number(value)
+  if (!Number.isFinite(numeric) || numeric <= 0) {
+    return 4
+  }
+  const integer = Math.trunc(numeric)
+  return integer > 0
+    ? Math.min(integer, 1024)
+    : 4
+}
+
+const __rolldownAsyncWorkPoolSize = __normalizeRolldownAsyncWorkPoolSize(
+  process.env.NAPI_RS_ASYNC_WORK_POOL_SIZE ?? process.env.UV_THREADPOOL_SIZE,
+)
+const __rolldownWasiEnv = {
+  ...process.env,
+  NAPI_RS_ASYNC_WORK_POOL_SIZE: String(__rolldownAsyncWorkPoolSize),
+}
+
 const __rootDir = __nodePath.parse(process.cwd()).root
 
 const __wasi = new __nodeWASI({
   version: 'preview1',
-  env: process.env,
+  env: __rolldownWasiEnv,
   preopens: {
     [__rootDir]: __rootDir,
   }
@@ -221,6 +240,16 @@ function __attachCleanupErrors(error, cleanupErrors) {
     aggregate.cause = error
   } catch {}
   return aggregate
+}
+
+function __wrapEmnapiContextDestroyForSettlement(context) {
+  // oxlint-disable-next-line typescript/unbound-method -- invoked with the wrapper receiver below
+  const __contextDestroy = context.destroy
+  context.destroy = function () {
+    __prepareWasmEnvCleanup()
+    return Reflect.apply(__contextDestroy, this, arguments)
+  }
+  return context
 }
 
 function __prepareWasmEnvCleanup() {
@@ -743,6 +772,8 @@ if (__pendingWasiRollback !== undefined) {
 }
 
 let __wasiModule
+let __nodeTaskHostRegistration
+let __nodeTimerHostRegistration
 let __napiModule
 let __wasiExitListenerRegistered = false
 
@@ -828,7 +859,7 @@ function __captureEmnapiAutoDestroyListener() {
 try {
   const __finishAutoDestroyCapture = __captureEmnapiAutoDestroyListener()
   try {
-    __emnapiContext = __emnapiCreateContext({ autoDestroy: false })
+    __emnapiContext = __wrapEmnapiContextDestroyForSettlement(__emnapiCreateContext({ autoDestroy: false }))
     // emnapi 2.x still registers an unconditional once-listener for
     // beforeExit that auto-destroys the context, and suppressDestroy() only
     // neutralizes its callback without removing it. This loader owns cleanup
@@ -846,15 +877,7 @@ try {
     napiModule: __napiModule,
   } = __emnapiInstantiateNapiModuleSync(__wasmFile, {
     context: __emnapiContext,
-    asyncWorkPoolSize: (function() {
-      const threadsSizeFromEnv = Number(process.env.NAPI_RS_ASYNC_WORK_POOL_SIZE ?? process.env.UV_THREADPOOL_SIZE)
-      // NaN > 0 is false
-      if (threadsSizeFromEnv > 0) {
-        return threadsSizeFromEnv
-      } else {
-        return 4
-      }
-    })(),
+    asyncWorkPoolSize: __rolldownAsyncWorkPoolSize,
     reuseWorker: true,
     plugins: [__emnapiAsyncWorkPlugin, __emnapiTSFNPlugin],
     wasi: __wasi,
@@ -909,10 +932,249 @@ try {
   }))
   __publishWasiDispose(__napiModule.exports)
   __registerWasiExitListener()
+/* ROLLDOWN_CURRENT_THREAD_HOST_BOOTSTRAP_START */
+;{
+  const __rolldownBinding = __napiModule.exports
+  const __getRuntimeCapabilities = __rolldownBinding.getRuntimeCapabilities
+  const __runtimeCapabilities =
+    typeof __getRuntimeCapabilities === 'function'
+      ? Reflect.apply(__getRuntimeCapabilities, __rolldownBinding, [])
+      : undefined
+  if (
+    __runtimeCapabilities !== null &&
+    typeof __runtimeCapabilities === 'object' &&
+    __runtimeCapabilities.asyncRuntimeBuild === true
+  ) {
+    const __getCurrentThreadTaskHostContractVersion =
+      __rolldownBinding.getCurrentThreadTaskHostContractVersion
+    const __isCurrentThreadHostRegistrationActive =
+      __rolldownBinding.isCurrentThreadHostRegistrationActive
+    const __registerCurrentThreadTaskHost =
+      __rolldownBinding.registerCurrentThreadTaskHost
+    const __registerTimerHost = __rolldownBinding.registerTimerHost
+    const __reserveCurrentThreadHostRegistration =
+      __rolldownBinding.reserveCurrentThreadHostRegistration
+    const __unregisterCurrentThreadTaskHost =
+      __rolldownBinding.unregisterCurrentThreadTaskHost
+    const __unregisterTimerHost = __rolldownBinding.unregisterTimerHost
+    if (
+      typeof __getCurrentThreadTaskHostContractVersion !== 'function' ||
+      typeof __isCurrentThreadHostRegistrationActive !== 'function' ||
+      typeof __registerCurrentThreadTaskHost !== 'function' ||
+      typeof __registerTimerHost !== 'function' ||
+      typeof __reserveCurrentThreadHostRegistration !== 'function' ||
+      typeof __unregisterCurrentThreadTaskHost !== 'function' ||
+      typeof __unregisterTimerHost !== 'function'
+    ) {
+      throw new TypeError(
+        'The threaded Rolldown binding does not expose its CurrentThread host integration',
+      )
+    }
+    const __taskHostContractVersion =
+      Reflect.apply(
+        __getCurrentThreadTaskHostContractVersion,
+        __rolldownBinding,
+        [],
+      )
+    if (__taskHostContractVersion !== 4) {
+      throw new TypeError(
+        'The threaded Rolldown binding uses CurrentThread task-host contract version ' +
+          String(__taskHostContractVersion) +
+          ', but version 4 is required',
+      )
+    }
+    const __readHostRegistration = (__registration, __label) => {
+      let __high
+      let __low
+      try {
+        __high = Reflect.get(__registration, 'high', __registration)
+        __low = Reflect.get(__registration, 'low', __registration)
+      } catch {}
+      if (
+        !Number.isInteger(__high) ||
+        __high < 0 ||
+        __high > 0xffffffff ||
+        !Number.isInteger(__low) ||
+        __low < 0 ||
+        __low > 0xffffffff ||
+        (__high === 0 && __low === 0)
+      ) {
+        throw new TypeError(
+          'The threaded Rolldown binding returned an invalid ' +
+            __label +
+            ' host registration',
+        )
+      }
+      return { high: __high, low: __low }
+    }
+    const __assertHostRegistrationActive = (__registration, __label) => {
+      const __active = Reflect.apply(
+        __isCurrentThreadHostRegistrationActive,
+        __rolldownBinding,
+        [__registration.high, __registration.low],
+      )
+      if (typeof __active !== 'boolean') {
+        throw new TypeError(
+          'The threaded Rolldown binding returned an invalid ' +
+            __label +
+            ' host liveness result',
+        )
+      }
+      if (!__active) {
+        throw new TypeError(
+          'The threaded Rolldown binding returned an inactive ' +
+            __label +
+            ' host registration',
+        )
+      }
+    }
+    const __taskHostRegistration = __readHostRegistration(
+      Reflect.apply(
+        __reserveCurrentThreadHostRegistration,
+        __rolldownBinding,
+        [],
+      ),
+      'task',
+    )
+    __nodeTaskHostRegistration = __taskHostRegistration
+    Reflect.apply(__registerCurrentThreadTaskHost, __rolldownBinding, [
+      __taskHostRegistration.high,
+      __taskHostRegistration.low,
+    ])
+    __assertHostRegistrationActive(__taskHostRegistration, 'task')
+
+    const __setTimeoutHost = globalThis.setTimeout?.bind(globalThis)
+    const __clearTimeoutHost = globalThis.clearTimeout?.bind(globalThis)
+    if (__setTimeoutHost && __clearTimeoutHost) {
+      const __MAX_HOST_TIMEOUT_MS = 2147483647
+      const __activeTimers = new Map()
+      const __armTimer = (__id, __timer) => {
+        const __delay = Math.min(__timer.remainingMs, __MAX_HOST_TIMEOUT_MS)
+        __timer.handle = __setTimeoutHost(() => {
+          if (__activeTimers.get(__id) !== __timer) return
+          __timer.remainingMs -= __delay
+          if (__timer.remainingMs > 0) {
+            try {
+              __armTimer(__id, __timer)
+            } catch (__error) {
+              __activeTimers.delete(__id)
+              __timer.reject(__error)
+            }
+            return
+          }
+          __activeTimers.delete(__id)
+          __timer.resolve()
+        }, __delay)
+      }
+      const __cancelTimer = (__timer) => {
+        try {
+          if (__timer.handle !== undefined) {
+            __clearTimeoutHost(__timer.handle)
+          }
+        } catch {
+          // Rust invokes this callback through a non-catching TSFN. Contain
+          // host cancellation failures at the JavaScript boundary.
+        } finally {
+          __timer.resolve()
+        }
+      }
+      const __timerHostRegistration = __readHostRegistration(
+        Reflect.apply(
+          __reserveCurrentThreadHostRegistration,
+          __rolldownBinding,
+          [],
+        ),
+        'timer',
+      )
+      __nodeTimerHostRegistration = __timerHostRegistration
+      Reflect.apply(__registerTimerHost, __rolldownBinding, [
+        __timerHostRegistration.high,
+        __timerHostRegistration.low,
+        (__id, __ms) => {
+          const __previous = __activeTimers.get(__id)
+          if (__previous) {
+              __activeTimers.delete(__id)
+              __cancelTimer(__previous)
+            }
+            return new Promise((__resolve, __reject) => {
+              const __timer = {
+                handle: undefined,
+                remainingMs: Math.max(__ms, 0),
+                reject: __reject,
+                resolve: __resolve,
+              }
+              __activeTimers.set(__id, __timer)
+              try {
+                __armTimer(__id, __timer)
+              } catch (__error) {
+                if (__activeTimers.get(__id) === __timer) {
+                  __activeTimers.delete(__id)
+                }
+                __reject(__error)
+              }
+            })
+          },
+          (__id) => {
+            const __timer = __activeTimers.get(__id)
+            if (!__timer) return
+            __activeTimers.delete(__id)
+            __cancelTimer(__timer)
+          },
+        ])
+      __assertHostRegistrationActive(__timerHostRegistration, 'timer')
+    }
+  }
+}
+/* ROLLDOWN_CURRENT_THREAD_HOST_BOOTSTRAP_END */
+/* ROLLDOWN_NODE_INITIALIZATION_CLEANUP_START */
 } catch (error) {
+  const __hostCleanupErrors = []
+  const __cleanupSync = (__operation, __message) => {
+    const __operationErrors = []
+    for (let __attempt = 0; __attempt < 2; __attempt += 1) {
+      try {
+        __operation()
+        return true
+      } catch (__cleanupError) {
+        __operationErrors.push(__cleanupError)
+      }
+    }
+    __hostCleanupErrors.push(new AggregateError(__operationErrors, __message))
+    return false
+  }
+  if (
+    typeof __nodeTimerHostRegistration !== 'undefined' &&
+    __nodeTimerHostRegistration !== undefined
+  ) {
+    const __released = __cleanupSync(() => {
+      const __binding = __napiModule.exports
+      Reflect.apply(__binding.unregisterTimerHost, __binding, [
+        __nodeTimerHostRegistration.high,
+        __nodeTimerHostRegistration.low,
+      ])
+    }, 'Threaded Node timer-host cleanup failed')
+    if (__released) {
+      __nodeTimerHostRegistration = undefined
+    }
+  }
+  if (
+    typeof __nodeTaskHostRegistration !== 'undefined' &&
+    __nodeTaskHostRegistration !== undefined
+  ) {
+    const __released = __cleanupSync(() => {
+      const __binding = __napiModule.exports
+      Reflect.apply(__binding.unregisterCurrentThreadTaskHost, __binding, [
+        __nodeTaskHostRegistration.high,
+        __nodeTaskHostRegistration.low,
+      ])
+    }, 'Threaded Node task-host cleanup failed')
+    if (__released) {
+      __nodeTaskHostRegistration = undefined
+    }
+  }
   const rollback = {
     active: false,
-    error,
+    error: __attachCleanupErrors(error, __hostCleanupErrors),
     promise: undefined,
     rollback: __rollbackWasiInitialization,
   }
@@ -920,7 +1182,9 @@ try {
   __runWasiInitializationRollback(rollback)
   throw rollback.error
 }
+/* ROLLDOWN_NODE_INITIALIZATION_CLEANUP_END */
 module.exports = __napiModule.exports
+module.exports.__rolldownBindingTarget = 'wasi-threads'
 module.exports.LegalCommentsMode = __napiModule.exports.LegalCommentsMode
 module.exports.minify = __napiModule.exports.minify
 module.exports.minifySync = __napiModule.exports.minifySync
@@ -944,9 +1208,11 @@ module.exports.moduleRunnerTransform = __napiModule.exports.moduleRunnerTransfor
 module.exports.moduleRunnerTransformSync = __napiModule.exports.moduleRunnerTransformSync
 module.exports.transform = __napiModule.exports.transform
 module.exports.transformSync = __napiModule.exports.transformSync
+module.exports.BindingAsyncRuntimeLease = __napiModule.exports.BindingAsyncRuntimeLease
 module.exports.BindingBundleEndEventData = __napiModule.exports.BindingBundleEndEventData
 module.exports.BindingBundleErrorEventData = __napiModule.exports.BindingBundleErrorEventData
 module.exports.BindingBundler = __napiModule.exports.BindingBundler
+module.exports.BindingBundleStartEventData = __napiModule.exports.BindingBundleStartEventData
 module.exports.BindingCallableBuiltinPlugin = __napiModule.exports.BindingCallableBuiltinPlugin
 module.exports.BindingChunkingContext = __napiModule.exports.BindingChunkingContext
 module.exports.BindingDecodedMap = __napiModule.exports.BindingDecodedMap
@@ -970,6 +1236,7 @@ module.exports.BindingWatcherEvent = __napiModule.exports.BindingWatcherEvent
 module.exports.ParallelJsPluginRegistry = __napiModule.exports.ParallelJsPluginRegistry
 module.exports.TraceSubscriberGuard = __napiModule.exports.TraceSubscriberGuard
 module.exports.TsconfigCache = __napiModule.exports.TsconfigCache
+module.exports.acquireAsyncRuntime = __napiModule.exports.acquireAsyncRuntime
 module.exports.BindingAttachDebugInfo = __napiModule.exports.BindingAttachDebugInfo
 module.exports.BindingBuiltinPluginName = __napiModule.exports.BindingBuiltinPluginName
 module.exports.BindingChunkModuleOrderBy = __napiModule.exports.BindingChunkModuleOrderBy
@@ -979,14 +1246,27 @@ module.exports.BindingPluginOrder = __napiModule.exports.BindingPluginOrder
 module.exports.BindingPropertyReadSideEffects = __napiModule.exports.BindingPropertyReadSideEffects
 module.exports.BindingPropertyWriteSideEffects = __napiModule.exports.BindingPropertyWriteSideEffects
 module.exports.BindingRebuildStrategy = __napiModule.exports.BindingRebuildStrategy
+module.exports.BindingRuntimeFlavor = __napiModule.exports.BindingRuntimeFlavor
 module.exports.collapseSourcemaps = __napiModule.exports.collapseSourcemaps
+module.exports.configureAsyncRuntime = __napiModule.exports.configureAsyncRuntime
 module.exports.enhancedTransform = __napiModule.exports.enhancedTransform
 module.exports.enhancedTransformSync = __napiModule.exports.enhancedTransformSync
 module.exports.FilterTokenKind = __napiModule.exports.FilterTokenKind
+module.exports.getAsyncRuntimeConfig = __napiModule.exports.getAsyncRuntimeConfig
+module.exports.getAsyncRuntimeMetrics = __napiModule.exports.getAsyncRuntimeMetrics
+module.exports.getCurrentThreadTaskHostContractVersion = __napiModule.exports.getCurrentThreadTaskHostContractVersion
 module.exports.getNativeMemoryStats = __napiModule.exports.getNativeMemoryStats
+module.exports.getRuntimeCapabilities = __napiModule.exports.getRuntimeCapabilities
 module.exports.initTraceSubscriber = __napiModule.exports.initTraceSubscriber
+module.exports.isCurrentThreadHostRegistrationActive = __napiModule.exports.isCurrentThreadHostRegistrationActive
+module.exports.registerCurrentThreadTaskHost = __napiModule.exports.registerCurrentThreadTaskHost
 module.exports.registerPlugins = __napiModule.exports.registerPlugins
+module.exports.registerTimerHost = __napiModule.exports.registerTimerHost
+module.exports.reserveCurrentThreadHostRegistration = __napiModule.exports.reserveCurrentThreadHostRegistration
+module.exports.resetAsyncRuntimeMetrics = __napiModule.exports.resetAsyncRuntimeMetrics
 module.exports.resetNativeMemoryStats = __napiModule.exports.resetNativeMemoryStats
 module.exports.resolveTsconfig = __napiModule.exports.resolveTsconfig
 module.exports.shutdownAsyncRuntime = __napiModule.exports.shutdownAsyncRuntime
 module.exports.startAsyncRuntime = __napiModule.exports.startAsyncRuntime
+module.exports.unregisterCurrentThreadTaskHost = __napiModule.exports.unregisterCurrentThreadTaskHost
+module.exports.unregisterTimerHost = __napiModule.exports.unregisterTimerHost

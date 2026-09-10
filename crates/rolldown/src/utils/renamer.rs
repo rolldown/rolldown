@@ -7,8 +7,8 @@ use oxc::syntax::keyword::{GLOBAL_OBJECTS, RESERVED_KEYWORDS};
 use oxc_str::CompactStr;
 
 use rolldown_common::{
-  ExportsKind, ImportRecordMeta, ModuleIdx, NormalModule, OutputFormat, SymbolRef, SymbolRefDb,
-  SymbolRefDbForModule, WrapKind,
+  ChunkIdx, ExportsKind, ImportRecordMeta, ModuleIdx, NormalModule, OutputFormat, SymbolRef,
+  SymbolRefDb, SymbolRefDbForModule, WrapKind,
 };
 use rolldown_utils::concat_string;
 
@@ -546,7 +546,11 @@ impl NestedScopeRenamer<'_, '_> {
   /// This is reference-precise: a root-scope local is renamed only when the module genuinely
   /// references a chunk-root binding of the same final name, leaving unrelated same-named locals
   /// untouched.
-  pub fn rename_cjs_locals_shadowing_referenced_chunk_bindings(&mut self) {
+  pub fn rename_cjs_locals_shadowing_referenced_chunk_bindings(
+    &mut self,
+    output_format: OutputFormat,
+    chunk_idx: ChunkIdx,
+  ) {
     if !matches!(self.link_output.metas[self.module_idx].wrap_kind(), WrapKind::Cjs) {
       return;
     }
@@ -609,12 +613,13 @@ impl NestedScopeRenamer<'_, '_> {
       }
     }
 
-    // `require()` of a wrapped-ESM importee — the finalizer rewrites it to
-    // `(init_x(), __toCommonJS(xxx_exports))`, so a root-scope local sharing the importee's
-    // namespace-object final name shadows that read (issue #9882, require()/namespace channel).
-    // We mirror the finalizer's gate (`module_finalizers/mod.rs`): a non-CommonJS importee whose
-    // require is actually used. The namespace object lives in the importee module, never in
-    // `self.module`, so any same-named root-scope local here is a genuine shadowing local.
+    // `require()` of a wrapped importee — the finalizer rewrites it to the importee's chunk-root
+    // facades: `require_x()` for a CJS-wrapped importee, `(init_x(), __toCommonJS(xxx_exports))`
+    // for a wrapped-ESM one. A root-scope local sharing one of those final names shadows the read
+    // (issue #9882, require()/namespace channel). We mirror the finalizer's gate
+    // (`module_finalizers/mod.rs`): an importee whose require is actually used. Both facades live
+    // in the importee module, so a same-named root-scope local here is a genuine shadowing local —
+    // except for a self-require, which the owner guard rules out.
     for rec in &self.module.import_records {
       let Some(importee_idx) = rec.resolved_module else {
         continue;
@@ -625,19 +630,29 @@ impl NestedScopeRenamer<'_, '_> {
       let Some(importee) = self.link_output.module_table[importee_idx].as_normal() else {
         continue;
       };
-      if matches!(importee.exports_kind, ExportsKind::CommonJs) {
-        continue;
-      }
-      let Some(canonical_name) =
-        self.renamer.get_canonical_name(importee.namespace_object_ref).cloned()
-      else {
-        continue;
-      };
-      if let Some(binding) = self.scoping.get_binding(root_scope_id, canonical_name.as_str().into())
-      {
-        let local_ref: SymbolRef = (self.module_idx, binding).into();
-        if self.link_output.symbol_db.canonical_ref_for(local_ref).owner == self.module_idx {
-          shadowing_locals.insert(local_ref);
+      // The namespace object only backs the wrapped-ESM rewrite; a CommonJS importee is read
+      // through its `require_x` wrapper alone.
+      let namespace_object_ref = (!matches!(importee.exports_kind, ExportsKind::CommonJs))
+        .then_some(importee.namespace_object_ref);
+      // The wrapper facade is what a bundled `require_<basename>` local collides with. Rolldown's
+      // own CJS output names require-locals from the same namespace it derives wrapper names from
+      // (`require_<basename>`, `$N`-suffixed for duplicate basenames), so re-bundling it lands a
+      // local on a deconflicted wrapper name such as `require_dup$1`.
+      let wrapper_ref = self.link_output.metas[importee_idx].wrapper_ref;
+      for referenced_ref in namespace_object_ref.into_iter().chain(wrapper_ref) {
+        if !self.is_shadowable_chunk_binding(referenced_ref, output_format, chunk_idx) {
+          continue;
+        }
+        let Some(canonical_name) = self.renamer.get_canonical_name(referenced_ref).cloned() else {
+          continue;
+        };
+        if let Some(binding) =
+          self.scoping.get_binding(root_scope_id, canonical_name.as_str().into())
+        {
+          let local_ref: SymbolRef = (self.module_idx, binding).into();
+          if self.link_output.symbol_db.canonical_ref_for(local_ref).owner == self.module_idx {
+            shadowing_locals.insert(local_ref);
+          }
         }
       }
     }
@@ -646,5 +661,23 @@ impl NestedScopeRenamer<'_, '_> {
       let original_name = self.scoping.symbol_name(local_ref.symbol);
       self.renamer.override_root_scope_binding(local_ref, original_name, self.scoping);
     }
+  }
+
+  /// Whether a root-scope local of this module could shadow `symbol_ref`'s final name.
+  ///
+  /// CJS output reaches a symbol owned by another chunk through a member access on that chunk's
+  /// require binding (`require_other.foo`, see `finalized_expr_for_cross_chunk_symbol`), so the
+  /// name never resolves against this module's scopes and nothing can shadow it. A facade owned by
+  /// this very module (a self-`require`) is not a chunk-root binding either.
+  fn is_shadowable_chunk_binding(
+    &self,
+    symbol_ref: SymbolRef,
+    output_format: OutputFormat,
+    chunk_idx: ChunkIdx,
+  ) -> bool {
+    let canonical_ref = self.link_output.symbol_db.canonical_ref_for(symbol_ref);
+    canonical_ref.owner != self.module_idx
+      && (!matches!(output_format, OutputFormat::Cjs)
+        || self.link_output.symbol_db.get(canonical_ref).chunk_idx == Some(chunk_idx))
   }
 }

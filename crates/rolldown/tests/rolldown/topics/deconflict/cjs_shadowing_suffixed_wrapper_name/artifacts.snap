@@ -1,0 +1,68 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+//#region a/dup.cjs
+var require_dup$2 = /* @__PURE__ */ __commonJSMin(((exports) => {
+	exports.value = "a";
+}));
+//#endregion
+//#region b/dup.cjs
+var require_dup$1 = /* @__PURE__ */ __commonJSMin(((exports) => {
+	exports.value = "b";
+}));
+//#endregion
+//#region lib.cjs
+//#endregion
+//#region main.js
+var main_default = (/* @__PURE__ */ __toESM((/* @__PURE__ */ __commonJSMin(((exports, module) => {
+	const require_dup = require_dup$2();
+	const require_dup$1$1 = require_dup$1();
+	module.exports = {
+		a: require_dup.value,
+		b: require_dup$1$1.value
+	};
+})))())).default;
+//#endregion
+export { main_default as default };
+
+```
+
+# Variant: cjs: [format: Cjs]
+
+## Assets
+
+### main.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+//#region a/dup.cjs
+var require_dup$2 = /* @__PURE__ */ __commonJSMin(((exports) => {
+	exports.value = "a";
+}));
+//#endregion
+//#region b/dup.cjs
+var require_dup$1 = /* @__PURE__ */ __commonJSMin(((exports) => {
+	exports.value = "b";
+}));
+//#endregion
+//#region lib.cjs
+//#endregion
+//#region main.js
+var main_default = (/* @__PURE__ */ __toESM((/* @__PURE__ */ __commonJSMin(((exports, module) => {
+	const require_dup = require_dup$2();
+	const require_dup$1$1 = require_dup$1();
+	module.exports = {
+		a: require_dup.value,
+		b: require_dup$1$1.value
+	};
+})))())).default;
+//#endregion
+module.exports = main_default;
+
+```

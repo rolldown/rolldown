@@ -27,6 +27,7 @@ pub struct GlobImportVisit<'a> {
   pub magic_string: Option<MagicString<'a>>,
   pub import_decls: Vec<String>,
   pub errors: Vec<anyhow::Error>,
+  pub is_dev_mode: bool,
 }
 
 impl<'ast> VisitJs<'ast> for GlobImportVisit<'_> {
@@ -475,7 +476,19 @@ impl GlobImportVisit<'_> {
     }
 
     let common = self.get_common_base(&positive_globs);
-    let entries = walkdir::WalkDir::new(common.as_ref())
+    let common_path = Path::new(common.as_ref());
+
+    // `walkdir` yields nothing for a directory that does not exist, so the walk below cannot
+    // register anything. Watching the nearest existing ancestor makes its creation observable.
+    if self.is_dev_mode
+      && !common_path.is_dir()
+      && let Some(ancestor) =
+        common_path.ancestors().skip(1).find(|dir| dir.is_dir()).and_then(Path::to_str)
+    {
+      self.ctx.add_watch_file(ancestor);
+    }
+
+    let entries = walkdir::WalkDir::new(common_path)
       .follow_links(true)
       .sort_by(|a, b| a.file_name().cmp(b.file_name()))
       .into_iter()
@@ -488,11 +501,18 @@ impl GlobImportVisit<'_> {
           path.to_str().is_none_or(|s| s != "node_modules")
         }
       })
-      .filter_map(Result::ok)
-      .filter(|e| !e.file_type().is_dir());
+      .filter_map(Result::ok);
 
     for entry in entries {
       let file = entry.path();
+
+      if entry.file_type().is_dir() {
+        if self.is_dev_mode {
+          self.ctx.add_watch_file(&file.to_slash_lossy());
+        }
+        continue;
+      }
+
       let path = file.to_slash_lossy();
 
       // Skip the file itself if it matches the glob pattern, to avoid self-importing.

@@ -1,0 +1,13 @@
+{
+  "config": {
+    "input": [
+      { "name": "main", "import": "./main.js" },
+      { "name": "control", "import": "./control.js" }
+    ],
+    "format": "esm",
+    "platform": "node"
+  },
+  "expectExecuted": true,
+  "writeToDisk": true,
+  "snapshot": false
+}

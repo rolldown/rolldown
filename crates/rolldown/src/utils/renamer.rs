@@ -469,10 +469,17 @@ impl NestedScopeRenamer<'_, '_> {
       return;
     }
 
+    // Direct eval resolves CJS wrapper bindings by their original source names. Preserve only
+    // those two names in an eval-bearing CJS module; external IIFE/UMD factory names still need
+    // the ordinary collision protection below.
+    let preserve_cjs_wrapper_names = is_cjs_wrapped && self.module.meta.has_eval();
+
     // Skip root scope (index 0), check nested scopes only
     for (_, bindings) in self.scoping.iter_bindings().skip(1) {
       for (&name, symbol_id) in bindings {
-        if wrapper_param_names.contains(name.into()) {
+        if wrapper_param_names.contains(name.into())
+          && !(preserve_cjs_wrapper_names && matches!(name.as_str(), "exports" | "module"))
+        {
           let symbol_ref = (self.module_idx, *symbol_id).into();
           self.renamer.register_nested_scope_symbols(symbol_ref, name.as_str());
         }

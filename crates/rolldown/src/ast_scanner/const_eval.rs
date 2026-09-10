@@ -5,7 +5,7 @@ use oxc::{
   semantic::{IsGlobalReference, ReferenceId, Scoping, SymbolId},
 };
 use oxc_ecmascript::{
-  GlobalContext,
+  GlobalContext, ToJsString,
   constant_evaluation::{ConstantEvaluation, ConstantEvaluationCtx},
   side_effects::MayHaveSideEffectsContext,
 };
@@ -82,5 +82,14 @@ pub fn try_extract_const_literal<'me, 'ast: 'me>(
   ctx: &ConstEvalCtx<'me, 'ast>,
   expr: &Expression<'ast>,
 ) -> Option<ConstantValue> {
-  expr.evaluate_value(ctx).map(ConstantValue::from)
+  match expr {
+    // oxc's `evaluate_value` has no arm for template literals, so `` const a = `` `` was never
+    // recorded as a constant and `` `${a}` `` stayed a possibly-throwing coercion (#10817). An
+    // untagged template whose text folds is the string literal of that text; `to_js_string` is
+    // what oxc folds `` `${1}` `` with and bails on lone surrogates like `evaluate_value` does.
+    Expression::TemplateLiteral(template) => {
+      template.to_js_string(ctx).map(|text| ConstantValue::String(text.into_owned()))
+    }
+    _ => expr.evaluate_value(ctx).map(ConstantValue::from),
+  }
 }

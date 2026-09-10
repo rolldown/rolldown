@@ -17,6 +17,8 @@ use rolldown_std_utils::relative_path_to_slash;
 use string_wizard::MagicString;
 use sugar_path::SugarPath;
 
+use crate::matcher::GlobMatcher;
+
 pub struct GlobImportVisit<'a> {
   pub ctx: &'a PluginContext,
   pub id: &'a str,
@@ -28,6 +30,7 @@ pub struct GlobImportVisit<'a> {
   pub import_decls: Vec<String>,
   pub errors: Vec<anyhow::Error>,
   pub is_dev_mode: bool,
+  pub matchers: Vec<GlobMatcher>,
 }
 
 impl<'ast> VisitJs<'ast> for GlobImportVisit<'_> {
@@ -75,6 +78,11 @@ impl<'a> PathWithGlob<'a> {
     let i = Self::find_glob_syntax(&glob[glob.len() - j..]);
     path.truncate(path.len() - i);
     Self { path, glob: &glob[glob.len() - i..] }
+  }
+
+  /// Owned copy for the long-lived [`GlobMatcher`]
+  fn to_owned_parts(&self) -> (String, String) {
+    (self.path.clone(), self.glob.to_string())
   }
 
   fn find_glob_syntax(path: &str) -> usize {
@@ -475,17 +483,26 @@ impl GlobImportVisit<'_> {
       return None;
     }
 
-    let common = self.get_common_base(&positive_globs);
-    let common_path = Path::new(common.as_ref());
+    let common = self.get_common_base(&positive_globs).into_owned();
+    let common_path = Path::new(&common);
 
-    // `walkdir` yields nothing for a directory that does not exist, so the walk below cannot
-    // register anything. Watching the nearest existing ancestor makes its creation observable.
-    if self.is_dev_mode
-      && !common_path.is_dir()
-      && let Some(ancestor) =
-        common_path.ancestors().skip(1).find(|dir| dir.is_dir()).and_then(Path::to_str)
-    {
-      self.ctx.add_watch_file(ancestor);
+    if self.is_dev_mode {
+      self.matchers.push(GlobMatcher {
+        walk_root: common.clone(),
+        positive: positive_globs.iter().map(PathWithGlob::to_owned_parts).collect(),
+        negated: negated_globs.iter().map(PathWithGlob::to_owned_parts).collect(),
+        exhaustive: options.exhaustive,
+        case_sensitive,
+      });
+
+      // `walkdir` yields nothing for a directory that does not exist, so the walk below cannot
+      // register anything. Watching the nearest existing ancestor makes its creation observable.
+      if !common_path.is_dir()
+        && let Some(ancestor) =
+          common_path.ancestors().skip(1).find(|dir| dir.is_dir()).and_then(Path::to_str)
+      {
+        self.ctx.add_watch_file(ancestor);
+      }
     }
 
     let entries = walkdir::WalkDir::new(common_path)

@@ -1,0 +1,34 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## index.js
+
+```js
+import { t as require_a } from "./vendor.js";
+//#region index.js
+require_a();
+//#endregion
+
+```
+
+## vendor.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+//#region a.js
+var require_a = /* @__PURE__ */ __commonJSMin(((exports, module) => {
+	globalThis.init = () => {
+		console.log("init");
+	};
+	module.exports = {};
+}));
+//#endregion
+//#region b.js
+require_a();
+globalThis.init();
+//#endregion
+export { require_a as t };
+
+```

@@ -1,0 +1,47 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## index.js
+
+```js
+import { t as __commonJSMin } from "./rolldown-runtime.js";
+import { t as require_a } from "./vendor.js";
+//#region lazy.cjs
+//#endregion
+//#region index.js
+var import_lazy = (/* @__PURE__ */ __commonJSMin(((exports) => {
+	exports.load = () => require_a();
+})))();
+if (globalThis.aRan) throw new Error("a.cjs must not run before load() is called");
+(0, import_lazy.load)();
+if (!globalThis.aRan) throw new Error("a.cjs must run when load() is called");
+//#endregion
+
+```
+
+## rolldown-runtime.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+export { __commonJSMin as t };
+
+```
+
+## vendor.js
+
+```js
+import { t as __commonJSMin } from "./rolldown-runtime.js";
+//#region a.cjs
+var require_a = /* @__PURE__ */ __commonJSMin(((exports, module) => {
+	globalThis.aRan = true;
+	module.exports = {};
+}));
+//#endregion
+//#region b.js
+globalThis.bRan = true;
+//#endregion
+export { require_a as t };
+
+```

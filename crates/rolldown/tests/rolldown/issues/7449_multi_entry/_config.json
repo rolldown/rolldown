@@ -1,0 +1,12 @@
+{
+  "_comment": "Negative coverage for the #7449 eager-init injection: entry2 can evaluate the vendor chunk without ever importing the CJS module, so no eager require_a() may be injected into the vendor chunk.",
+  "config": {
+    "input": [
+      { "name": "entry1", "import": "./entry1.js" },
+      { "name": "entry2", "import": "./entry2.js" }
+    ],
+    "codeSplitting": {
+      "groups": [{ "name": "vendor", "test": "[ab]\\.js" }]
+    }
+  }
+}

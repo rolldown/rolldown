@@ -104,6 +104,7 @@ var require_cjs_lib = /* @__PURE__ */ __commonJSMin(((exports, module) => {
 //#endregion
 //#region cases/require/umd-lib.js
 var require_umd_lib = /* @__PURE__ */ __commonJSMin(((exports, module) => {
+	var define;
 	init_trigger_dep();
 	__rolldown_runtime__.createModuleHotContext("cases/require/umd-lib.js");
 	__rolldown_runtime__.registerModule("cases/require/umd-lib.js", module);

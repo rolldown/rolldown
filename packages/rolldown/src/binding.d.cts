@@ -2004,6 +2004,7 @@ export interface BindingChecksOptions {
   unresolvedEntry?: boolean
   unresolvedImport?: boolean
   filenameConflict?: boolean
+  moduleLevelDirective?: boolean
   commonJsVariableInEsm?: boolean
   importIsUndefined?: boolean
   emptyImportMeta?: boolean

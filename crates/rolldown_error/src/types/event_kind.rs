@@ -53,6 +53,9 @@ pub enum EventKind {
   FilenameConflict = 15,
   FilenameOutsideOutputDirectoryError = 16,
   FileNotFoundError = 17,
+  /// Whether to emit warnings for module-level directives other than `use strict`.
+  // Reuse the existing gap at 44 so this check does not shift existing switcher bits.
+  ModuleLevelDirective = 44,
   // !! Only add new kind if it's not covered by the kinds from rollup !!
 
   // --- These kinds are derived from esbuild
@@ -161,6 +164,7 @@ impl Display for EventKind {
         write!(f, "FILE_NAME_OUTSIDE_OUTPUT_DIRECTORY")
       }
       EventKind::FileNotFoundError => write!(f, "FILE_NOT_FOUND"),
+      EventKind::ModuleLevelDirective => write!(f, "MODULE_LEVEL_DIRECTIVE"),
 
       // --- Derived from esbuild
       EventKind::AssignToImportError => write!(f, "ASSIGN_TO_IMPORT"),

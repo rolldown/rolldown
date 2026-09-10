@@ -1444,6 +1444,12 @@
             "null"
           ]
         },
+        "moduleLevelDirective": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
         "commonJsVariableInEsm": {
           "type": [
             "boolean",

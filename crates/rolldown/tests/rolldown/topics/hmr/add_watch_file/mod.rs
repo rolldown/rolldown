@@ -1,4 +1,4 @@
-use std::{borrow::Cow, fs, sync::Arc};
+use std::{borrow::Cow, fs};
 
 use rolldown::{BundlerOptions, DevModeOptions, ExperimentalOptions, InputItem};
 use rolldown_plugin::{HookUsage, Plugin};
@@ -48,7 +48,7 @@ async fn add_watch_file() {
         }),
         ..Default::default()
       },
-      vec![Arc::new(TestPlugin)],
+      vec![Plugin::new_shared(TestPlugin)],
     )
     .await;
 }

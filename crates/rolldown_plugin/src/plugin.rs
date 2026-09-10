@@ -2,6 +2,7 @@ use std::{any::Any, borrow::Cow, fmt::Debug, sync::Arc};
 
 use super::plugin_context::PluginContext;
 use crate::{
+  __inner::{Pluginable, SharedPluginable},
   HookAddonArgs, HookBuildEndArgs, HookCloseBundleArgs, HookGenerateBundleArgs, HookLoadArgs,
   HookLoadOutput, HookRenderChunkArgs, HookRenderChunkOutput, HookResolveIdArgs,
   HookResolveIdOutput, HookTransformArgs, HookUsage, HookWriteBundleArgs, PluginHookMeta,
@@ -30,6 +31,13 @@ pub type HookInjectionOutputReturn = Result<Option<String>>;
 pub type HookHotUpdateReturn = Result<Option<Vec<ArcStr>>>;
 
 pub trait Plugin: Any + Debug + Send + Sync + 'static {
+  fn new_shared(plugin: Self) -> SharedPluginable
+  where
+    Self: Sized,
+  {
+    Pluginable::new_shared(plugin)
+  }
+
   fn name(&self) -> Cow<'static, str>;
 
   // The `option` hook consider call at node side.

@@ -1,4 +1,4 @@
-use std::{borrow::Cow, sync::Arc};
+use std::borrow::Cow;
 
 use rolldown::{BundlerOptions, InputItem};
 use rolldown_plugin::{
@@ -43,7 +43,7 @@ async fn test() {
         input: Some(vec![InputItem { name: Some("ext".to_string()), import: "ext".to_string() }]),
         ..Default::default()
       },
-      vec![Arc::new(TestPlugin)],
+      vec![Plugin::new_shared(TestPlugin)],
     )
     .await;
 }

@@ -2480,6 +2480,7 @@ dependencies = [
  "oxc_index",
  "oxc_str",
  "oxc_traverse",
+ "percent-encoding",
  "petgraph",
  "rayon",
  "regex",

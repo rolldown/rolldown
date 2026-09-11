@@ -70,7 +70,7 @@ Entry
     └── import('./lazy-b')  ← another lazy boundary (NOT compiled yet)
 ```
 
-Inside a rendered lazy chunk (or HMR patch), a nested `import()` of another lazy proxy is rewritten by the HMR finalizer to fetch `/@vite/lazy?...` and then read the proxy's registered exports via `loadExports(stableProxyId)` — partial bundles have no separately bundled proxy chunk, so the proxy's top-level export would otherwise be lost (see implementation.md "Lazy chunk rendering").
+Inside a rendered lazy chunk (or HMR patch), a nested `import()` of another lazy proxy is rewritten by the HMR finalizer into the same `requestLazy` call the full build emits (see "The `requestLazy` Entry Point" below), so a nested boundary also costs one request (see implementation.md "Lazy chunk rendering").
 
 ## Key Design Decisions
 
@@ -91,10 +91,12 @@ const mod = await __rolldown_runtime__.requestLazy(
   'lazy.js',
   () =>
     import(
-      `/@vite/lazy?id=${encodeURIComponent(absProxyId)}&clientId=${__rolldown_runtime__.clientId}`
+      `/@vite/lazy?id=<absProxyId, percent-encoded>&clientId=${__rolldown_runtime__.clientId}`
     ),
 );
 ```
+
+The proxy id is percent-encoded at compile time (`create_request_lazy_call`), not by emitting `encodeURIComponent(...)`. The call lands in the importer's own scope, where a user binding named `encodeURIComponent` would shadow the global and produce a broken URL.
 
 Both codegen paths emit this same shape — the full build from `try_rewrite_import_expression`, HMR patches from `rewrite_dynamic_import` — so a lazy boundary never becomes a chunk the browser fetches, and a cold lazy route costs one request.
 

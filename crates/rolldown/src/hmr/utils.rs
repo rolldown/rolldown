@@ -196,10 +196,26 @@ impl<'any, 'ast> HmrAstBuilder<'any, 'ast> for ScopeHoistingFinalizer<'any, 'ast
 
 const LAZY_PROXY_QUERY: &str = "?rolldown-lazy=1";
 
-/// `__rolldown_runtime__.requestLazy("<stable_real_id>", () => import(`/@vite/lazy?id=…&clientId=…`))`
+/// The characters JS `encodeURIComponent` leaves as-is.
+const URI_COMPONENT_ENCODE_SET: &percent_encoding::AsciiSet = &percent_encoding::NON_ALPHANUMERIC
+  .remove(b'-')
+  .remove(b'_')
+  .remove(b'.')
+  .remove(b'!')
+  .remove(b'~')
+  .remove(b'*')
+  .remove(b'\'')
+  .remove(b'(')
+  .remove(b')');
+
+/// `__rolldown_runtime__.requestLazy("<stable_real_id>", () => import(`/@vite/lazy?id=<encoded proxy id>&clientId=${__rolldown_runtime__.clientId}`))`
 ///
 /// The one shape both codegen paths emit for a lazy boundary, so a boundary never becomes a
 /// chunk the browser fetches.
+///
+/// The proxy id is percent-encoded here rather than by emitting `encodeURIComponent(...)`: the
+/// call lands in the importer's own scope, where a user binding of that name would shadow the
+/// global and produce a broken URL.
 pub fn create_request_lazy_call<'ast, B>(
   proxy_module_id: &str,
   stable_proxy_id: &str,
@@ -208,32 +224,19 @@ pub fn create_request_lazy_call<'ast, B>(
 where
   B: oxc::ast::builder::GetAstBuilder<'ast> + GetAllocator<'ast>,
 {
-  let encode_call = ast::Expression::new_call_expression(
-    SPAN,
-    ast::Expression::new_identifier(SPAN, "encodeURIComponent", builder),
-    None,
-    [ast::Argument::new_string_literal(
-      SPAN,
-      ast::Str::from_str_in(proxy_module_id, builder),
-      None,
-      builder,
-    )],
-    false,
-    builder,
-  );
-
   let url_expr = {
+    let url_head = format!(
+      "/@vite/lazy?id={}&clientId=",
+      percent_encoding::utf8_percent_encode(proxy_module_id, URI_COMPONENT_ENCODE_SET)
+    );
     let quasis = oxc::allocator::Vec::from_iter_in(
       [
         ast::TemplateElement::new(
           SPAN,
-          ast::TemplateElementValue { raw: ast::Str::from("/@vite/lazy?id="), cooked: None },
-          false,
-          builder,
-        ),
-        ast::TemplateElement::new(
-          SPAN,
-          ast::TemplateElementValue { raw: ast::Str::from("&clientId="), cooked: None },
+          ast::TemplateElementValue {
+            raw: ast::Str::from_str_in(&url_head, builder),
+            cooked: None,
+          },
           false,
           builder,
         ),
@@ -247,10 +250,7 @@ where
       builder,
     );
     let expressions = oxc::allocator::Vec::from_iter_in(
-      [
-        encode_call,
-        ast::Expression::new_member_access_expr("__rolldown_runtime__", "clientId", builder),
-      ],
+      [ast::Expression::new_member_access_expr("__rolldown_runtime__", "clientId", builder)],
       builder,
     );
     ast::Expression::new_template_literal(SPAN, quasis, expressions, builder)

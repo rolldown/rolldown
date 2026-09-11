@@ -638,6 +638,50 @@ test(
   },
 );
 
+test(
+  'the lazy URL is encoded at compile time, so a user `encodeURIComponent` cannot break it',
+  { timeout: TEST_TIMEOUT },
+  async ({ onTestFinished }) => {
+    const uniqueId = crypto.randomUUID().slice(0, 8);
+    const dir = path.join(import.meta.dirname, 'temp', `dev-lazy-encode-${uniqueId}`);
+    fs.mkdirSync(dir, { recursive: true });
+    fs.writeFileSync(
+      path.join(dir, 'main.js'),
+      [
+        // Shadows the global in the importer's scope, where the rewritten import lands.
+        `function encodeURIComponent() { return 'SHADOWED'; }`,
+        `export const p = import('./lazy.js').then((m) => m.value);`,
+        '',
+      ].join('\n'),
+    );
+    fs.writeFileSync(path.join(dir, 'lazy.js'), `export const value = 'lazy';\n`);
+
+    const engine = await dev(
+      { input: path.join(dir, 'main.js'), experimental: { devMode: { lazy: true } } },
+      { dir: path.join(dir, 'dist') },
+      {},
+    );
+
+    onTestFinished(async () => {
+      await engine.close();
+      if (!process.env.CI) {
+        fs.rmSync(dir, { recursive: true, force: true });
+      }
+    });
+
+    await engine.run();
+
+    const code = fs.readFileSync(path.join(dir, 'dist', 'main.js'), 'utf8');
+    const lazyCall = code.match(/requestLazy\(.*\)/)?.[0];
+    expect(lazyCall).toBeDefined();
+    expect(lazyCall).not.toContain('encodeURIComponent');
+    // The proxy id arrives already percent-encoded, marker included.
+    expect(lazyCall).toContain(
+      `/@vite/lazy?id=${encodeURIComponent(path.join(dir, 'lazy.js') + '?rolldown-lazy=1')}&clientId=`,
+    );
+  },
+);
+
 // A module that threw while initializing is poisoned, the way the platform treats one:
 // `import()` of it rejects every later time. Retrying is not an option — an ESM factory
 // registers its module before running the body, so a module that threw stays in the cache and

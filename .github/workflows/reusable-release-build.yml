@@ -22,10 +22,12 @@ jobs:
           - os: macos-latest
             target: aarch64-apple-darwin
             build: vp run ci:build-release-binding --target aarch64-apple-darwin
+            debuginfo: true
 
           - os: windows-latest
             target: x86_64-pc-windows-msvc
             build: vp run ci:build-release-binding --target x86_64-pc-windows-msvc
+            debuginfo: true
 
           - os: windows-latest
             target: aarch64-pc-windows-msvc
@@ -34,6 +36,7 @@ jobs:
           - os: ubuntu-latest
             target: x86_64-unknown-linux-gnu
             build: vp run ci:build-release-binding --target x86_64-unknown-linux-gnu --use-napi-cross
+            debuginfo: true
 
           - os: ubuntu-latest
             target: x86_64-unknown-linux-musl
@@ -114,11 +117,33 @@ jobs:
           version: '0.2.1'
           cache: true
 
+      # Targets with `debuginfo: true` build with debug info, which the next
+      # steps split out and publish. The env overrides keep `[profile.release]`
+      # itself unchanged. See internal-docs/panic-symbolication/implementation.md
+      - name: Enable Debug Info
+        if: ${{ matrix.debuginfo }}
+        shell: bash
+        env:
+          TARGET: ${{ matrix.target }}
+        run: |
+          echo 'CARGO_PROFILE_RELEASE_DEBUG=line-tables-only' >> "$GITHUB_ENV"
+          echo 'CARGO_PROFILE_RELEASE_STRIP=none' >> "$GITHUB_ENV"
+          if [[ "$TARGET" == *-apple-darwin ]]; then
+            echo 'CARGO_PROFILE_RELEASE_SPLIT_DEBUGINFO=packed' >> "$GITHUB_ENV"
+          fi
+
       - name: Build Binding
         run: ${{ matrix.build }}
         shell: bash
         env:
           TARGET_CC: clang # for mimalloc
+
+      - name: Split Debug Info
+        if: ${{ matrix.debuginfo }}
+        shell: bash
+        env:
+          TARGET: ${{ matrix.target }}
+        run: node scripts/misc/split-debuginfo.mjs --target "$TARGET"
 
       - name: Upload Binding Artifact
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
@@ -128,6 +153,56 @@ jobs:
           path: |
             packages/rolldown/src/rolldown-binding.*.node
             packages/rolldown/src/rolldown-binding.*.wasm
+
+      - name: Upload Debug Info Artifact
+        if: ${{ matrix.debuginfo }}
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          if-no-files-found: error
+          name: debuginfo-${{ matrix.target }}
+          path: target/debuginfo/*.debuginfo.tar.gz
+
+  # Keep this list in sync with the `debuginfo: true` entries above.
+  verify-debuginfo:
+    needs: build-binding
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: macos-latest
+            target: aarch64-apple-darwin
+          - os: windows-latest
+            target: x86_64-pc-windows-msvc
+          - os: ubuntu-latest
+            target: x86_64-unknown-linux-gnu
+    name: Verify Debug Info ${{ matrix.target }}
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: taiki-e/checkout-action@7d1e50e93dc4fb3bba58f85018fadf77898aee8b # v1.4.2
+
+      - name: Download Binding Artifact
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: bindings-${{ matrix.target }}
+          path: packages/rolldown/src
+
+      - name: Download Debug Info Artifact
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: debuginfo-${{ matrix.target }}
+          path: target/debuginfo
+
+      - name: Check Binding Has No Debug Sections
+        if: ${{ runner.os == 'Linux' }}
+        run: |
+          if readelf -SW packages/rolldown/src/rolldown-binding.*.node | grep -q '\.debug_'; then
+            echo 'debug sections remain in the binding'
+            exit 1
+          fi
+
+      - name: Verify Backtrace Symbolication
+        shell: bash
+        run: node scripts/misc/verify-debuginfo.mjs
 
   build-freebsd:
     name: Build FreeBSD

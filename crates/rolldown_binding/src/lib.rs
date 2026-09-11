@@ -104,6 +104,15 @@ pub fn start_async_runtime() {
   }
 }
 
+/// Panics on purpose. CI calls this to check that a published binding can produce a
+/// symbolicated backtrace from its separately published debug info.
+/// See `scripts/misc/verify-debuginfo.mjs` and internal-docs/panic-symbolication/implementation.md
+#[napi(js_name = "__internalForcePanic", catch_unwind)]
+#[inline(never)]
+pub fn internal_force_panic() {
+  panic!("forced panic for debug info verification");
+}
+
 #[napi_derive::module_init]
 fn init() {
   #[cfg(not(target_family = "wasm"))]
@@ -135,6 +144,8 @@ fn init() {
     create_custom_tokio_runtime(rt);
   }
 
+  // The published binding is stripped; its debug info ships separately.
+  // See internal-docs/panic-symbolication/implementation.md
   #[cfg(not(feature = "disable_panic_hook"))]
   {
     let default_hook = std::panic::take_hook();

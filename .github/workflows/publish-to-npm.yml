@@ -152,6 +152,14 @@ jobs:
             echo EOF
           } >> $GITHUB_OUTPUT
 
+      # Debug info split out of the release bindings; see internal-docs/panic-symbolication/implementation.md
+      - name: Download Debug Info Artifacts
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          path: debuginfo
+          pattern: debuginfo-*
+          merge-multiple: true
+
       - name: Create GitHub Release
         id: github_release
         env:
@@ -164,7 +172,8 @@ jobs:
           url=$(gh release create "$TAG_NAME" \
             --target "$TARGET" \
             --title "$TAG_NAME" \
-            --notes "$NOTES")
+            --notes "$NOTES" \
+            debuginfo/*.debuginfo.tar.gz)
           echo "url=$url" >> "$GITHUB_OUTPUT"
 
       - name: Notify Discord

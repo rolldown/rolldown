@@ -2,29 +2,19 @@ use std::path::PathBuf;
 use std::sync::{Arc, OnceLock};
 
 use arcstr::ArcStr;
-use oxc::ast_visit::VisitJsMut;
 use rolldown_common::{ImportKind, ModuleId};
 use rolldown_plugin::{HookResolveIdOutput, HookUsage, Plugin, PluginContextResolveOptions};
 use rolldown_utils::dashmap::FxDashSet;
 
-use crate::runtime_injector::{
-  LazyCompilationRuntimeInjector, create_unwrap_lazy_compilation_entry_helper,
-};
-
-/// Shared type for lazy entries set
 pub type SharedLazyEntries = Arc<FxDashSet<ArcStr>>;
 
-/// Context for lazy compilation, shared between plugin and DevEngine
 #[derive(Clone)]
 pub struct LazyCompilationContext {
   pub lazy_entries: SharedLazyEntries,
-  /// Tracks which proxy modules have been fetched (requested at runtime via `/lazy`)
   pub fetched_entries: SharedLazyEntries,
 }
 
 impl LazyCompilationContext {
-  /// Mark a proxy module as fetched. This changes the content returned by the load hook
-  /// from a stub (fetches via /lazy endpoint) to actual code that imports the real module.
   pub fn mark_as_fetched(&self, proxy_module_id: &str) {
     self.fetched_entries.insert(proxy_module_id.into());
   }
@@ -33,21 +23,17 @@ impl LazyCompilationContext {
 #[derive(Debug)]
 pub struct LazyCompilationPlugin {
   lazy_entries: SharedLazyEntries,
-  /// Tracks which proxy modules have been fetched (requested at runtime via `/lazy`)
   fetched_entries: SharedLazyEntries,
-  /// The current working directory, obtained from build_start hook
   cwd: OnceLock<PathBuf>,
 }
 
 impl LazyCompilationPlugin {
-  /// Creates a new LazyCompilationPlugin
   pub fn new() -> Self {
     let lazy_entries: SharedLazyEntries = Arc::new(FxDashSet::default());
     let fetched_entries: SharedLazyEntries = Arc::new(FxDashSet::default());
     LazyCompilationPlugin { lazy_entries, fetched_entries, cwd: OnceLock::new() }
   }
 
-  /// Returns a context that can be used to interact with lazy compilation state
   pub fn context(&self) -> LazyCompilationContext {
     LazyCompilationContext {
       lazy_entries: Arc::clone(&self.lazy_entries),
@@ -62,7 +48,7 @@ impl Plugin for LazyCompilationPlugin {
   }
 
   fn register_hook_usage(&self) -> rolldown_plugin::HookUsage {
-    HookUsage::BuildStart | HookUsage::ResolveId | HookUsage::Load | HookUsage::TransformAst
+    HookUsage::BuildStart | HookUsage::ResolveId | HookUsage::Load
   }
 
   async fn build_start(
@@ -79,10 +65,8 @@ impl Plugin for LazyCompilationPlugin {
     ctx: &rolldown_plugin::PluginContext,
     args: &rolldown_plugin::HookResolveIdArgs<'_>,
   ) -> rolldown_plugin::HookResolveIdReturn {
-    // Re-resolution of a known proxy id (e.g. the dev server resolving the stub id to
-    // serve a lazy compilation request) is claimed here; unknown proxy ids fall through
-    // and stay unresolvable (cf. the unknown-lazy-id rejection in
-    // `HmrStage::compile_lazy_entry`).
+    // Unknown proxy ids must fall through and stay unresolvable — that is what stops an
+    // arbitrary id from being bundled (cf. `HmrStage::compile_lazy_entry`).
     if args.specifier.ends_with("?rolldown-lazy=1") && self.lazy_entries.contains(args.specifier) {
       return Ok(Some(HookResolveIdOutput {
         id: args.specifier.into(),
@@ -94,9 +78,8 @@ impl Plugin for LazyCompilationPlugin {
     }
 
     if matches!(args.kind, ImportKind::DynamicImport) {
-      // If the importer is a fetched proxy module, don't create another proxy.
-      // This allows the fetched template's `import($MODULE_ID)` to resolve
-      // to the actual module instead of creating a self-referencing proxy.
+      // Without this the fetched template's `import($MODULE_ID)` would be given the proxy's
+      // own id back, so the proxy would import itself and the real module never enter the graph.
       if let Some(importer) = args.importer {
         if importer.contains("?rolldown-lazy=1") && self.fetched_entries.contains(importer) {
           return Ok(None);
@@ -116,14 +99,8 @@ impl Plugin for LazyCompilationPlugin {
         )
         .await??;
 
-      // Idempotent: Calling `ctx.resolve` may trigger other plugins' resolve_id hooks,
-      // and these hooks may also call `ctx.resolve`,
-      // so it may cause `LazyCompilationPlugin::resolve_id` to be called multiple times for the same module
-      // so that the `original_id` may be marked as `rolldown-lazy=1` already.
-      //
-      // Here we check if the module has already been marked as a lazy entry.
-      // Otherwise, `delete modules[$STABLE_PROXY_MODULE_ID]` may not be aligned with the module ID,
-      // causing the bundler failing to invalidation downstream.
+      // `ctx.resolve` can re-enter this hook, so the id may already carry the marker. Appending
+      // it twice would yield an id nothing else in the graph agrees on.
       let lazy_id: ArcStr = if original_id.id.as_str().ends_with("?rolldown-lazy=1") {
         original_id.id.as_str().into()
       } else {
@@ -150,10 +127,7 @@ impl Plugin for LazyCompilationPlugin {
   ) -> rolldown_plugin::HookLoadReturn {
     if args.id.contains("rolldown-lazy=1") {
       if self.lazy_entries.contains(args.id) {
-        // Extract original ID without the query string (this is the absolute path)
         let original_id = args.id.split("?rolldown-lazy=1").next().unwrap_or(args.id);
-
-        // Compute stable_id from original_id using cwd
         let cwd = self
           .cwd
           .get()
@@ -161,16 +135,12 @@ impl Plugin for LazyCompilationPlugin {
 
         let stable_id = ModuleId::new(original_id).stabilize(cwd);
 
-        // Check if this proxy has been fetched (requested at runtime via /lazy)
-        // If fetched, return template that imports the real module
-        // Otherwise, return stub template that fetches via /lazy endpoint
         let template = if self.fetched_entries.contains(args.id) {
           include_str!("./proxy-module-template-fetched.js")
         } else {
           include_str!("./proxy-module-template.js")
         };
 
-        // The proxy module ID includes the ?rolldown-lazy=1 suffix
         let proxy_id = args.id;
 
         let stable_proxy_id = format!("{stable_id}?rolldown-lazy=1");
@@ -186,44 +156,9 @@ impl Plugin for LazyCompilationPlugin {
 
     Ok(None)
   }
-
-  async fn transform_ast(
-    &self,
-    _ctx: &rolldown_plugin::PluginContext,
-    mut args: rolldown_plugin::HookTransformAstArgs<'_>,
-  ) -> rolldown_plugin::HookTransformAstReturn {
-    // Skip proxy modules (they have their own structure)
-    if args.id.contains("?rolldown-lazy=1") {
-      return Ok(args.ast);
-    }
-
-    args.ast.program.with_mut(|fields| {
-      let mut visitor = LazyCompilationRuntimeInjector::new(fields.allocator);
-      visitor.visit_program(fields.program);
-
-      // Inject helper after directive prologues (e.g., "use strict")
-      if visitor.transformed_count > 0 {
-        let helper = create_unwrap_lazy_compilation_entry_helper(fields.allocator);
-        // Find insertion point after directive prologues
-        let insert_idx = fields
-          .program
-          .body
-          .iter()
-          .take_while(|stmt| {
-            matches!(stmt, oxc::ast::ast::Statement::ExpressionStatement(expr_stmt)
-              if matches!(&expr_stmt.expression, oxc::ast::ast::Expression::StringLiteral(_)))
-          })
-          .count();
-        fields.program.body.insert(insert_idx, helper);
-      }
-    });
-
-    Ok(args.ast)
-  }
 }
 
 // Replace placeholders in order: longer ones first to avoid partial matches
-// $PROXY_MODULE_ID and $STABLE_MODULE_ID contain "MODULE_ID" as substring
 fn render_proxy_template(
   template: &str,
   proxy_id: &str,

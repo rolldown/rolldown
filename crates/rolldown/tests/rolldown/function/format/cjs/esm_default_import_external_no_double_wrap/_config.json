@@ -1,0 +1,8 @@
+{
+  "config": {
+    "input": [{ "name": "main", "import": "./main.js" }],
+    "external": ["esm-pkg"],
+    "format": "cjs"
+  },
+  "expectExecuted": true
+}

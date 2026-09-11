@@ -62,7 +62,19 @@ export var __toESM = (mod, isNodeMode, target) => (
   (target = mod != null ? __create(__getProtoOf(mod)) : {}),
   __copyProps(
     // `__esModule` alone is not enough: the module must own a `default` (#10360).
-    isNodeMode || !mod || !mod.__esModule || !__hasOwnProp.call(mod, 'default')
+    (isNodeMode
+      ? !(mod &&
+          // The `typeof` guard skips primitive exports, which would make
+          // `Reflect.isExtensible` throw. Extensibility and prototype are
+          // checked before Symbol.toStringTag because they never trigger a
+          // proxy `get` trap, so exotic exports like Vite's browser-external
+          // shims (proxies that throw on any property access) short-circuit
+          // here without being touched.
+          typeof mod === 'object' &&
+          !Reflect.isExtensible(mod) &&
+          __getProtoOf(mod) === null &&
+          mod[Symbol.toStringTag] === 'Module')
+      : !mod || !mod.__esModule || !__hasOwnProp.call(mod, 'default'))
       ? __defProp(target, 'default', { value: mod, enumerable: true })
       : target,
     mod,

@@ -81,8 +81,8 @@ impl<'me, 'ast: 'me> VisitJs<'ast> for AstScanner<'me, 'ast> {
         self.immutable_ctx.options,
         None,
         Some(&self.namespace_object_symbol_ids),
-        // Constants declared by the statements visited so far (`visit_variable_declaration` and
-        // `scan_export_decl` add them), so a read cannot precede its declaration.
+        // Constants that earlier statements declared. The map grows in statement order, so no read
+        // precedes its declaration.
         Some(&self.result.constant_export_map),
       );
       let mut stmt_eval_facts = analyzer.analyze_stmt(stmt);

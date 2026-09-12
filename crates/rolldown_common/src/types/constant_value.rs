@@ -64,7 +64,7 @@ impl From<&ConstantValue> for constant_evaluation::ConstantValue<'_> {
 }
 
 impl ConstantValue {
-  /// The JavaScript language type of the value, for oxc's `GlobalContext::value_type_for_reference_id`.
+  /// Returns the JavaScript type of the value, for oxc's `value_type_for_reference_id` hook.
   pub fn value_type(&self) -> oxc_ecmascript::ValueType {
     match self {
       ConstantValue::Number(_) => oxc_ecmascript::ValueType::Number,

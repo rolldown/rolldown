@@ -116,26 +116,21 @@ impl BitOrAssign for StmtEvalFacts {
   }
 }
 
-/// Constant values of bindings, looked up by the symbol a reference resolves to.
+/// The constant value behind a symbol, for oxc's value and type hooks.
 ///
-/// Oxc decides whether a coercion can throw from the operand's `ValueType`. Without a lookup
-/// every identifier is `Undetermined`, so `60 * SECOND` is kept as a possible `valueOf()` call
-/// and `` `${NAME}` `` as a possible `toString()` call or Symbol conversion, even when `SECOND`
-/// is a number constant and `NAME` a string constant (#10817). Answering from the constant maps
-/// lets both become side-effect free.
+/// Without it, oxc treats every identifier as `Undetermined`, so `60 * SECOND` and `` `${NAME}` ``
+/// stay possible `valueOf()` or `toString()` calls even when `SECOND` and `NAME` are constants
+/// (#10817).
 ///
-/// The value must describe what the binding holds when the analyzed statement runs. The analyzer
-/// therefore only asks for `const` bindings and import bindings (a `let`/`var` that is never
-/// assigned statically can still be changed by direct `eval`, and a hoisted `var` initializer may
-/// never run). An implementation must additionally make sure the `const` declaration has finished
-/// before the read: a `const` read in its TDZ throws.
+/// The value must hold when the analyzed statement runs. The analyzer asks only for `const` and
+/// import bindings: direct `eval` can change a `let` or `var`, and a hoisted `var` initializer does
+/// not always run. An implementation must also refuse a `const` that is still in its TDZ.
 pub trait ConstantSymbolLookup {
   fn constant_value(&self, symbol_id: SymbolId) -> Option<&ConstantValue>;
 }
 
-/// The scanner's module-local constants. Filled while the statements are visited in order, so a
-/// later statement sees exactly the constants declared before it. A root `const` is always a
-/// top-level declaration, so its initializer ran once an earlier statement is done.
+/// The scanner adds its module-local constants in statement order, so a statement sees only the
+/// constants declared before it.
 impl ConstantSymbolLookup for FxHashMap<SymbolId, ConstExportMeta> {
   fn constant_value(&self, symbol_id: SymbolId) -> Option<&ConstantValue> {
     self.get(&symbol_id).map(|meta| &meta.value)
@@ -155,7 +150,7 @@ pub struct StmtEvalAnalyzer<'a> {
   /// Property reads on ES module namespace objects are guaranteed side-effect-free
   /// because namespace objects are frozen/sealed by spec with no getters.
   namespace_object_symbol_ids: Option<&'a FxHashSet<SymbolId>>,
-  /// Constant values of bindings, see [`ConstantSymbolLookup`].
+  /// The constant values of bindings. See [`ConstantSymbolLookup`].
   constant_symbols: Option<&'a dyn ConstantSymbolLookup>,
 }
 
@@ -180,8 +175,8 @@ impl<'a> StmtEvalAnalyzer<'a> {
 
   fn constant_value_for_reference_id(&self, reference_id: ReferenceId) -> Option<&ConstantValue> {
     let symbol_id = self.scope.symbol_id_for(reference_id)?;
-    // See `ConstantSymbolLookup`: only a `const` cannot change behind the static analysis. An
-    // import binding is resolved to its (checked) canonical declaration by the lookup.
+    // Only a `const` cannot change behind the static analysis. The lookup checks the canonical
+    // declaration of an import.
     let flags = self.scope.scoping().symbol_flags(symbol_id);
     if !(flags.is_const_variable() || flags.is_import()) {
       return None;
@@ -1203,7 +1198,7 @@ mod test {
       .collect_vec()
   }
 
-  /// Like `get_stmt_eval_flags`, with the named root bindings known to hold `constants`.
+  /// Like `get_stmt_eval_flags`, but the named root bindings hold `constants`.
   fn get_stmt_eval_flags_with_constants(
     code: &str,
     constants: &[(&str, ConstantValue)],
@@ -1351,7 +1346,7 @@ mod test {
     );
   }
 
-  /// Coercing a binding whose constant value is known cannot call user code or throw (#10817).
+  /// A coercion of a known constant cannot call user code or throw (#10817).
   #[test]
   fn test_coercion_of_known_constant_is_side_effect_free() {
     let pure = StmtEvalFlags::empty();
@@ -1359,7 +1354,7 @@ mod test {
     let second = [("SECOND", ConstantValue::Number(1000.0))];
     let name = [("NAME", ConstantValue::String("rolldown".to_string()))];
 
-    // Without the constant the operand type is undetermined, so the coercion may throw.
+    // Without the constant, the operand type is undetermined, so the coercion can throw.
     assert_eq!(get_stmt_eval_flags("const SECOND = 1000; 60 * SECOND;"), [pure, unknown]);
     assert_eq!(get_stmt_eval_flags("const NAME = 'rolldown'; `${NAME}`;"), [pure, unknown]);
 
@@ -1381,8 +1376,8 @@ mod test {
       assert_eq!(get_stmt_eval_flags_with_constants(code, &name), [pure, pure], "{code}");
     }
 
-    // A `let`/`var` may be changed by direct `eval`, and a hoisted `var` initializer may never run
-    // (`while (false) var SECOND = 1000;`), so only `const` bindings are answered.
+    // Direct `eval` can change a `let` or `var`, and a hoisted `var` initializer does not always
+    // run (`while (false) var SECOND = 1000;`).
     for code in ["let SECOND = 1000; 60 * SECOND;", "while (false) var SECOND = 1000; 60 * SECOND;"]
     {
       assert_eq!(get_stmt_eval_flags_with_constants(code, &second), [pure, unknown], "{code}");
@@ -1396,7 +1391,7 @@ mod test {
     ] {
       assert_eq!(get_stmt_eval_flags_with_constants(code, &second), [pure, unknown], "{code}");
     }
-    // A number constant coerced together with a `BigInt` throws a `TypeError`.
+    // A number constant coerced with a `BigInt` throws a `TypeError`.
     assert_eq!(
       get_stmt_eval_flags_with_constants("const SECOND = 1000; 1n * SECOND;", &second),
       [pure, unknown]

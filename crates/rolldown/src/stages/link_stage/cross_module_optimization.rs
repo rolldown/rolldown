@@ -303,7 +303,7 @@ struct CrossModuleOptimizationImmutableCtx<'a, 'ast: 'a> {
   /// side-effect-free when re-detecting side effects of statements.
   namespace_object_symbol_ids: &'a FxHashSet<SymbolId>,
   stmt_infos: &'a IndexStmtInfos,
-  /// Constants known so far, for the `StmtEvalAnalyzer` re-run (see `LinkedConstantLookup`).
+  /// Constants known so far, for the `StmtEvalAnalyzer` re-run. See `LinkedConstantLookup`.
   constant_symbol_map: &'a FxHashMap<SymbolRef, ConstExportMeta>,
 }
 

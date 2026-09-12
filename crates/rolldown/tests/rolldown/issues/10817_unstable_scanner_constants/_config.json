@@ -1,5 +1,5 @@
 {
-  "_comment": "Scanner constant facts must only describe stable, definitely initialized runtime values. The two entries independently cover a conditional var initializer and a root binding visible to direct eval.",
+  "_comment": "The scanner must record only constants that are stable and always initialized. The two entries cover a conditional var initializer and a root binding that direct eval can see.",
   "config": {
     "input": [
       { "name": "conditional-var", "import": "./conditional-var.js" },

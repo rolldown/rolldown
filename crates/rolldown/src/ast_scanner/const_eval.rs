@@ -93,14 +93,11 @@ pub fn try_extract_const_literal<'me, 'ast: 'me>(
   }
 }
 
-/// The text of an untagged template whose substitutions all evaluate, or `None`.
+/// Returns the text of an untagged template. Returns `None` when a substitution does not evaluate
+/// or a text piece has a lone surrogate.
 ///
-/// oxc's `evaluate_value` has no arm for template literals, so `` const a = `` `` was never a
-/// constant and `` `${a}` `` stayed a possibly-throwing coercion (#10817). Each substitution is
-/// evaluated with the constant map, so `` `${NAME}!` `` folds when `NAME` is a known constant;
-/// oxc's own `ToJsString` would only fold the globals `undefined`, `NaN` and `Infinity` there.
-/// Like oxc, this bails on lone surrogates: a new string literal built from the text would print
-/// their `\u{FFFD}` escape encoding as literal text.
+/// oxc's `evaluate_value` has no arm for template literals (#10817), and its `ToJsString` folds
+/// only global identifiers. So this evaluates each substitution with the constant map.
 fn template_text<'ast>(
   ctx: &ConstEvalCtx<'_, 'ast>,
   template: &TemplateLiteral<'ast>,
@@ -134,8 +131,8 @@ mod tests {
   };
   use rolldown_common::AstScopes;
 
-  /// Evaluate the initializer of the root binding `target` in `code`. Every root binding declared
-  /// before it whose initializer evaluates is already in the constant map, as in the scanner.
+  /// Evaluate the initializer of the root binding `target` in `code`. Earlier root bindings that
+  /// evaluate are in the constant map, as in the scanner.
   fn extract(code: &str, target: &str) -> Option<ConstantValue> {
     let allocator = Allocator::default();
     let program = Parser::new(&allocator, code, SourceType::default()).parse().program;
@@ -202,7 +199,7 @@ mod tests {
     assert_eq!(extract("const a = `${foo()}`;", "a"), None);
     assert_eq!(extract("const a = `${a}`;", "a"), None);
     assert_eq!(extract("const NAME = 'rolldown'; const a = `${NAME}${x}`;", "a"), None);
-    // A lone surrogate cannot be carried into a new string literal.
+    // A new string literal cannot carry a lone surrogate.
     assert_eq!(extract("const a = `\\uD800`;", "a"), None);
   }
 }

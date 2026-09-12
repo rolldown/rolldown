@@ -1,3 +1,5 @@
+use std::collections::VecDeque;
+
 use arcstr::ArcStr;
 use itertools::Itertools;
 use oxc::span::Span;
@@ -155,8 +157,45 @@ impl<'a> LinkStage<'a> {
       .extract_if(0.., |item| !matches!(item.kind, EntryPointKind::UserDefined))
       .collect_vec();
 
+    // The order the graph first reaches each module, walking from the user-defined
+    // entries. `sort_modules` walks entries in this order, and for modules in an
+    // import cycle the entry the walk starts from is what decides which side of the
+    // cycle is executed first.
+    //
+    // A dynamic entry reached only through another one can never be evaluated before
+    // it at runtime, so ordering the two by path can pick an execution order that
+    // cannot happen, leaving a cyclic module to read a binding whose declaration has
+    // not run yet. Reach order models what the runtime does: the first dynamic import
+    // to fire is the first one the graph arrives at.
+    let reach_order = {
+      let modules = &scan_stage_output.module_table.modules;
+      let mut order = FxHashMap::default();
+      let mut queue = VecDeque::new();
+      for entry in &scan_stage_output.entry_points {
+        let next = order.len();
+        if order.insert(entry.idx, next).is_none() {
+          queue.push_back(entry.idx);
+        }
+      }
+      while let Some(idx) = queue.pop_front() {
+        for rec in modules[idx].import_records() {
+          let Some(dep) = rec.resolved_module else { continue };
+          if !order.contains_key(&dep) {
+            order.insert(dep, order.len());
+            queue.push_back(dep);
+          }
+        }
+      }
+      order
+    };
+
     rest.sort_by_cached_key(|item| {
-      (item.kind, scan_stage_output.module_table.modules[item.idx].id().as_str())
+      (
+        item.kind,
+        // Entries the walk never reaches keep their path-ordered position.
+        reach_order.get(&item.idx).copied().unwrap_or(usize::MAX),
+        scan_stage_output.module_table.modules[item.idx].id().as_str(),
+      )
     });
 
     scan_stage_output.entry_points.extend(rest);

@@ -21,6 +21,7 @@ anyhow = { workspace = true }
 arcstr = { workspace = true }
 cow-utils = { workspace = true }
 derive_more = { workspace = true }
+futures = { workspace = true }
 memchr = { workspace = true }
 oxc = { workspace = true }
 rolldown_plugin = { workspace = true }

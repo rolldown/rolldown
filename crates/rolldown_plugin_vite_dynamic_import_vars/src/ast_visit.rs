@@ -36,6 +36,10 @@ pub struct Edit {
 /// This struct holds owned data only. `transform` can therefore drop the AST
 /// before it calls the resolver. The earlier code kept a `*const Expression`
 /// that pointed into the arena.
+///
+/// The hook cannot await while the AST is alive. The AST is `!Send`, and the
+/// hook future must be `Send`. Do not block the thread to avoid this limit.
+/// A blocked thread deadlocks the runtime (#10664).
 pub struct PendingAsyncImport {
   pub glob: String,
   pub import_span: Span,

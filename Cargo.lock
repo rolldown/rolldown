@@ -3003,6 +3003,7 @@ dependencies = [
  "arcstr",
  "cow-utils",
  "derive_more",
+ "futures",
  "memchr",
  "oxc",
  "rolldown_plugin",

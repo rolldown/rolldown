@@ -54,8 +54,12 @@ uuid = { workspace = true, features = ["v4"] }
 xxhash-rust = { workspace = true, features = ["xxh3"] }
 
 [target.'cfg(not(target_family = "wasm"))'.dependencies]
-async-scoped = { workspace = true, features = ["use-tokio"] }
 rayon = { workspace = true }
+# `crate::futures::block_on` uses `block_in_place` and `runtime::Handle` on
+# targets that are not wasm. Both need the `rt-multi-thread` feature. The
+# `async-scoped` dependency supplied that feature before, behind the same target
+# gate.
+tokio = { workspace = true, features = ["rt-multi-thread"] }
 
 [dev-dependencies]
 criterion2 = { workspace = true }

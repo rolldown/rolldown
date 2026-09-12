@@ -1,0 +1,11 @@
+{
+  "_comment": "The scanner must record only constants that are stable and always initialized. The two entries cover a conditional var initializer and a root binding that direct eval can see.",
+  "config": {
+    "input": [
+      { "name": "conditional-var", "import": "./conditional-var.js" },
+      { "name": "direct-eval", "import": "./direct-eval.js" }
+    ],
+    "minify": false
+  },
+  "snapshot": false
+}

@@ -81,6 +81,9 @@ impl<'me, 'ast: 'me> VisitJs<'ast> for AstScanner<'me, 'ast> {
         self.immutable_ctx.options,
         None,
         Some(&self.namespace_object_symbol_ids),
+        // Constants that earlier statements declared. The map grows in statement order, so no read
+        // precedes its declaration.
+        Some(&self.result.constant_export_map),
       );
       let mut stmt_eval_facts = analyzer.analyze_stmt(stmt);
       // `ExecutionOrderSensitive` is read outside the wrap planner too — it gates which leaf

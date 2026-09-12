@@ -10,6 +10,8 @@ export const NEGATED = -SECOND;
 export const TOTAL = SECOND + 1;
 `${EMPTY}`;
 `${GREETING}`;
+// `LABEL` is a template whose substitution is a constant of this module.
+`${LABEL}`;
 
 // The follow-up case in the issue: a template literal constant coerced twice.
 const a = ``;

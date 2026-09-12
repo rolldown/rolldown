@@ -1,5 +1,5 @@
 {
-  "_comment": "A linked constant imported through a static cycle is not initialized merely because its canonical owner is known. The coercion in b.js must remain and throw while VALUE is in its TDZ.",
+  "_comment": "A constant imported through a static cycle can still be in its TDZ. The coercion in b.js must stay and throw.",
   "config": {
     "input": [{ "name": "main", "import": "./a.js" }],
     "minify": false

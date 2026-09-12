@@ -6,10 +6,9 @@ use rolldown_common::{
 
 use crate::stages::link_stage::LinkStage;
 
-/// A module's side-effect verdict as the scan stage left it, plus how many statement infos it had
-/// then. `link()` appends bundler statements later (the `__esm`/`__commonJS` wrapper statement of
-/// `wrap_modules` carries `UnknownSideEffect`), and those must not count as module side effects.
-/// See `LinkStage::recompute_analyzed_side_effects`.
+/// Holds a module's scan-time side-effect verdict and statement count. `link()` later appends
+/// wrapper statements that carry `UnknownSideEffect`, and those must not count as module side
+/// effects. See `LinkStage::recompute_analyzed_side_effects`.
 #[derive(Debug, Clone, Copy)]
 pub struct ScanTimeSideEffects {
   pub side_effects: DeterminedSideEffects,
@@ -41,17 +40,14 @@ impl LinkStage<'_> {
 
   /// Re-derive the module verdicts after a pass relaxed statement flags.
   ///
-  /// `determine_side_effects` runs before imports are bound because `bind_imports_and_exports`
-  /// reads its result, but `cross_module_optimization` and
-  /// `refine_stmt_side_effects_with_imported_constants` relax statement flags after that. A module
-  /// whose only apparent side effect was such a statement must not stay side-effectful:
-  /// `reference_needed_symbols` would keep a side-effect-only `import './mod'` of it and
-  /// `include_statements` would emit it empty.
+  /// `determine_side_effects` must run before `bind_imports_and_exports`, which reads its result,
+  /// but `cross_module_optimization` and `refine_stmt_side_effects_with_imported_constants` relax
+  /// flags later. Without this step, a module whose only side effect was such a statement keeps its
+  /// side-effect-only imports, and `include_statements` emits it empty.
   ///
-  /// Every `Analyzed` verdict is reset to what the scan stage computed and propagated again. A
-  /// module in `relaxed_side_effect_modules` recomputes that base from its scan-time statements
-  /// (`ScanTimeSideEffects::stmt_info_count`), exactly as `lazy_check_side_effects` did; the
-  /// bundler statements appended since then are ignored, as they were in the first run.
+  /// Every `Analyzed` verdict resets to its scan-time value. A relaxed module recomputes it from
+  /// its scan-time statements only, as `lazy_check_side_effects` did, so appended bundler
+  /// statements do not count.
   pub fn recompute_analyzed_side_effects(&mut self) {
     if self.relaxed_side_effect_modules.is_empty() {
       return;

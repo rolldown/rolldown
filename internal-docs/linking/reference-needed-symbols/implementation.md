@@ -27,7 +27,7 @@ Source: `crates/rolldown/src/stages/link_stage/reference_needed_symbols.rs`.
 Position is load-bearing in three directions:
 
 1. **`wrap_kind` and `wrapper_ref` must already exist.** Every CJS/ESM-wrap arm reads `metas[importee.idx].wrap_kind()` and dereferences `wrapper_ref.unwrap()`. `wrap_modules` and `generate_lazy_export` populate them.
-2. **Module side effects must be final.** The import-statement flags this pass writes copy `importee.side_effects`. `cross_module_optimization` and `refine_stmt_side_effects_with_imported_constants` relax statement flags after `determine_side_effects`, so `recompute_analyzed_side_effects` rebuilds the module verdicts first; otherwise a side-effect-only `import './mod'` of a module that became side-effect free would be kept.
+2. **Module side effects must be final.** The import-statement flags this pass writes copy `importee.side_effects`. `cross_module_optimization` and `refine_stmt_side_effects_with_imported_constants` relax statement flags after `determine_side_effects`, so `recompute_analyzed_side_effects` rebuilds the module verdicts first. Otherwise this pass keeps a side-effect-only `import './mod'` of a module that became side-effect free.
 3. **`include_statements` must run after.** Tree-shaking traverses `stmt_info.referenced_symbols` and joins `depended_runtime_helper` against included statements. Without the data this pass writes, wrappers and helpers would be silently dropped from the output.
 
 ## Dispatch

@@ -128,11 +128,10 @@ pub struct LinkStage<'a> {
   pub tla_keyword_span_map: FxHashMap<ModuleIdx, Span>,
   /// Computed during `include_statements`, reused when building `LinkStageOutput`.
   pub has_enum_inlining: bool,
-  /// Module side-effect verdicts as the scan stage left them, see
+  /// Module side-effect verdicts as the scan stage left them. See
   /// `recompute_analyzed_side_effects`.
   pub scan_time_side_effects: IndexVec<ModuleIdx, ScanTimeSideEffects>,
-  /// Modules whose statement flags a link pass relaxed after `determine_side_effects` ran
-  /// (`cross_module_optimization`, `refine_stmt_side_effects_with_imported_constants`).
+  /// Modules in which a link pass relaxed statement flags after `determine_side_effects` ran.
   pub relaxed_side_effect_modules: FxHashSet<ModuleIdx>,
 }
 
@@ -264,8 +263,8 @@ impl<'a> LinkStage<'a> {
     self.create_exports_for_ecma_modules();
     let unreachable_import_expression_node_ids = self.cross_module_optimization();
     self.refine_stmt_side_effects_with_imported_constants();
-    // Both passes above only relax statement flags; module verdicts must follow before
-    // `reference_needed_symbols` derives import-statement flags from them.
+    // The passes above only relax statement flags. Module verdicts must follow before
+    // `reference_needed_symbols` derives import flags from them.
     self.recompute_analyzed_side_effects();
     self.reference_needed_symbols();
     self.include_statements(&unreachable_import_expression_node_ids);

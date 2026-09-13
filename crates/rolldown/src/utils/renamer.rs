@@ -184,12 +184,11 @@ impl<'name> Renamer<'name> {
 
   /// Assign the canonical name of a CJS `exports` alias.
   ///
-  /// The alias is declared inside the wrapper body of a direct-eval module, where the renamer
-  /// must move no source binding at all, because eval resolves them by their source name. So the
-  /// alias itself takes the collision: its name avoids every binding of its own module, root and
-  /// nested, on top of the names already taken at chunk scope. None of the shortcuts in
-  /// [`Self::is_name_available_with`] apply here — the preferred name gets the same check as a
-  /// suffixed one, and an entry module earns no exemption.
+  /// The alias sits inside the wrapper body of a direct-eval module, where eval resolves every
+  /// source binding by its source name. So the renamer moves the alias, never a source binding.
+  /// A candidate name must be free at chunk scope, and free in every scope of this module, root
+  /// and nested. The shortcuts in [`Self::is_name_available_with`] do not apply. The preferred
+  /// name gets the same check as a suffixed one, and an entry module gets no exemption.
   pub fn add_cjs_exports_alias(&mut self, symbol_ref: SymbolRef, scoping: &Scoping) {
     let canonical_ref = symbol_ref.canonical_ref(self.symbol_db);
     let original_name = self.symbol_db.original_name(canonical_ref);
@@ -523,7 +522,7 @@ impl NestedScopeRenamer<'_, '_> {
   ///
   /// Those identifiers mean the CommonJS ambient bindings, so a nested binding of the same name
   /// must not capture them. `module`/`exports` are deliberately not in the set:
-  /// `rename_bindings_shadowing_wrapper_params` covers the CJS-wrapped-module case, and there the
+  /// `rename_bindings_shadowing_wrapper_params` covers a CJS-wrapped module, and there the
   /// top-level `this` rewrite reaches the wrapper parameter through its own alias.
   ///
   /// A `var` binding is hoisted, so it shadows even an injected call inside its own initializer:

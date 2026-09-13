@@ -346,8 +346,8 @@ fn collect_chunk_scope_captured_names(
   captured
 }
 
-/// Name every CJS `exports` alias of the chunk, after the other chunk-root names are taken and
-/// before nested renaming can pick a `$n` suffix. See [`Renamer::add_cjs_exports_alias`].
+/// Name every CJS `exports` alias of the chunk. The pass runs after the other chunk-root names
+/// exist, and before nested renaming picks a `$n` suffix. See [`Renamer::add_cjs_exports_alias`].
 fn name_cjs_exports_aliases(
   chunk: &Chunk,
   link_output: &LinkStageOutput,

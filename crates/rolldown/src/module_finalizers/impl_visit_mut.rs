@@ -27,8 +27,8 @@ use crate::module_finalizers::{
 use super::ScopeHoistingFinalizer;
 
 impl<'ast> ScopeHoistingFinalizer<'_, 'ast> {
-  /// `var <alias> = exports;`, the first statement of a CJS wrapper body that needs an alias of
-  /// the `exports` parameter. See [`crate::types::linking_metadata::LinkingMetadata`].
+  /// Build `var <alias> = exports;`, the first statement of the CJS wrapper body. Returns `None`
+  /// when the module has no alias. See [`crate::types::linking_metadata::LinkingMetadata`].
   fn cjs_exports_alias_stmt(&self) -> Option<Statement<'ast>> {
     let alias_ref = self.ctx.linking_info.cjs_exports_alias_ref?;
     Some(Statement::new_var_decl(
@@ -594,8 +594,8 @@ impl<'ast> VisitJsMut<'ast> for ScopeHoistingFinalizer<'_, 'ast> {
         {
           match kind {
             ThisExprReplaceKind::Exports => {
-              // Direct eval keeps nested `exports` bindings at their source name, so a bare
-              // `exports` here would resolve to one of them instead of the wrapper parameter.
+              // Direct eval keeps nested `exports` bindings at their source name. A bare
+              // `exports` here resolves to one of them, not to the wrapper parameter.
               *expr = match self.ctx.linking_info.cjs_exports_alias_ref {
                 Some(alias_ref) => {
                   Expression::new_id_ref_expr(SPAN, self.canonical_name_for(alias_ref), self)

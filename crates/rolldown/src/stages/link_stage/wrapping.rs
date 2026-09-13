@@ -185,11 +185,9 @@ impl LinkStage<'_> {
 
 /// Whether the CJS wrapper of `module` needs an alias of its `exports` parameter.
 ///
-/// A rewritten top-level `this` renders as a bare `exports`, and a direct-eval module keeps the
-/// source name of every nested `exports` binding, so one of them would capture that reference.
-/// The alias is itself one more name direct eval can read, so it is created only where such a
-/// binding exists. `Renamer` then names it around every source binding of the module, so no
-/// source binding moves.
+/// A rewritten top-level `this` renders as a bare `exports`. A direct-eval module keeps the source
+/// name of every nested `exports` binding, so such a binding captures that reference. The alias is
+/// one more name direct eval reads, so it appears only where such a binding exists.
 fn needs_cjs_exports_alias(module: &NormalModule, symbols: &SymbolRefDb) -> bool {
   module.meta.has_eval()
     && module.ast_usage.intersects(EcmaModuleAstUsage::ModuleOrExports)

@@ -1,0 +1,30 @@
+{
+  "config": {
+    "minify": true,
+    "comments": {
+      "legal": true,
+      "annotation": true
+    }
+  },
+  "configVariants": [
+    {
+      "minify": true,
+      "comments": {
+        "legal": false,
+        "annotation": true
+      }
+    },
+    {
+      "minify": true,
+      "comments": {
+        "legal": true,
+        "annotation": false
+      }
+    },
+    {
+      "minify": true,
+      "comments": false
+    }
+  ],
+  "expectExecuted": false
+}

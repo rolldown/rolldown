@@ -6,10 +6,12 @@
 //      `main` (a checkout taken over by the developer is built as-is, see
 //      checkout.ts),
 //   2. `pnpm install --frozen-lockfile` (no manifest or lockfile writes),
-//   3. build the `vite` package with its own pinned dependencies,
-//   4. swap the `packages/vite/node_modules/rolldown` symlink to point at the
-//      workspace's `packages/rolldown`, so Vite's dist resolves the local
-//      rolldown (and its native binding) at runtime.
+//   3. swap the `packages/vite/node_modules/rolldown` symlink to point at the
+//      workspace's `packages/rolldown`,
+//   4. build the `vite` package. Vite's browser client inlines rolldown's
+//      `DevRuntime` (`rolldown/experimental/runtime`) at build time, so the
+//      swap must be in place BEFORE this step: the runtime the browser runs
+//      has to match the code the workspace rolldown emits for it.
 //
 // The Vite source files are never patched. The swap is undone by any
 // `pnpm install` inside the checkout, so re-run this script after that (it is
@@ -42,18 +44,15 @@ ensureViteCheckout();
 // 2. Install Vite's workspace deps exactly as pinned upstream, via vp. It
 // delegates to the checkout's pinned pnpm itself, so no pnpm needs to be
 // installed separately. This also resets any previous symlink swap from
-// step 4, so the build below always uses Vite's own pinned rolldown.
+// step 3, so the swap below always starts from a clean install.
 run('vp install --frozen-lockfile', viteDir);
 
-// 3. Build the vite package (dist/node + dist/client, plus its type build)
-// via its own `build` script. vp delegates to the checkout's pinned package
-// manager, so no pnpm needs to be installed separately.
+// 3. Point Vite's `rolldown` resolution at the workspace package.
 const vitePkgDir = nodePath.join(viteDir, 'packages', 'vite');
-run('vp run build', vitePkgDir);
-
-// 4. Point Vite's runtime `rolldown` resolution at the workspace package.
 const linkPath = nodePath.join(vitePkgDir, 'node_modules', 'rolldown');
-const target = nodePath.relative(nodePath.dirname(linkPath), localRolldownDir);
+// Resolve through any symlinked `vite/` first, so the relative link is
+// computed from the directory it actually lives in.
+const target = nodePath.relative(nodeFs.realpathSync(nodePath.dirname(linkPath)), localRolldownDir);
 const current = nodeFs.existsSync(linkPath) ? nodeFs.realpathSync(linkPath) : null;
 if (current !== nodeFs.realpathSync(localRolldownDir)) {
   nodeFs.rmSync(linkPath, { recursive: true, force: true });
@@ -65,6 +64,16 @@ if (current !== nodeFs.realpathSync(localRolldownDir)) {
 } else {
   console.log('[setup-vite] rolldown symlink already points at the workspace package');
 }
+
+// 4. Build the vite package (dist/node + dist/client). This mirrors Vite's
+// own `build` script minus the type build, which the tests do not need.
+// The bundle step is invoked through the checkout's own `rolldown` bin, not
+// `vp run`: `vp run` re-syncs node_modules with the lockfile first, which
+// would silently undo the swap from step 3 and inline the pinned runtime.
+// The bin shim resolves through `node_modules/rolldown`, so after the swap
+// the workspace rolldown both bundles Vite and provides the inlined runtime.
+nodeFs.rmSync(nodePath.join(vitePkgDir, 'dist'), { recursive: true, force: true });
+run('./node_modules/.bin/rolldown --config rolldown.config.ts', vitePkgDir);
 
 // 5. Verify the override took: resolving `rolldown` from the vite package must
 // land inside the workspace copy. Failing loudly here beats silently running

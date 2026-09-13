@@ -93,11 +93,13 @@ export function bindingifyOutputOptions(
       sourcemapFileNames,
     ),
     sourcemapExcludeSources,
-    sourcemapIgnoreList: measureIfFunction(
-      timings,
-      OUTPUT_OPTIONS_OWNER,
-      'sourcemapIgnoreList',
-      sourcemapIgnoreList ?? /node_modules/,
+    sourcemapIgnoreList: batchSourcemapIgnoreList(
+      measureIfFunction(
+        timings,
+        OUTPUT_OPTIONS_OWNER,
+        'sourcemapIgnoreList',
+        sourcemapIgnoreList ?? /node_modules/,
+      ),
     ),
     sourcemapPathTransform: measureIfFunction(
       timings,
@@ -458,6 +460,40 @@ function batchName(
         );
       }
       results.push(result);
+    }
+    return results;
+  };
+}
+
+/**
+ * Wraps a per-source `sourcemapIgnoreList` in the batched shim that the binding expects.
+ *
+ * The loop runs in JS so that a sourcemap makes one napi crossing, not one per source. The old
+ * Rust loop also awaited each call before it started the next.
+ *
+ * The result is a `Uint8Array`, which crosses as a buffer instead of one tagged value per source.
+ *
+ * A boolean, string or regular expression passes through. Rust reads those without a call.
+ */
+function batchSourcemapIgnoreList(
+  ignoreList: OutputOptions['sourcemapIgnoreList'],
+): BindingOutputOptions['sourcemapIgnoreList'] {
+  if (typeof ignoreList !== 'function') {
+    return ignoreList;
+  }
+  return (sources, sourcemapPath) => {
+    const results = new Uint8Array(sources.length);
+    for (let index = 0; index < sources.length; index++) {
+      const result = ignoreList(sources[index], sourcemapPath);
+      // napi reports the type of the array, not of the bad element, so the check runs here.
+      if (typeof result !== 'boolean') {
+        throw new TypeError(
+          `\`output.sourcemapIgnoreList\` returned ${typeof result} for source "${
+            sources[index]
+          }", but expected a boolean.`,
+        );
+      }
+      results[index] = result ? 1 : 0;
     }
     return results;
   };

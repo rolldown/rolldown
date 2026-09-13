@@ -6,7 +6,7 @@ mod binding_pre_rendered_chunk;
 use binding_pre_rendered_asset::BindingPreRenderedAsset;
 use derive_more::Debug;
 use napi::Either;
-use napi::bindgen_prelude::{Either3, FnArgs};
+use napi::bindgen_prelude::{Either3, FnArgs, Uint8Array};
 use rustc_hash::FxHashMap;
 
 pub use binding_comments_options::BindingCommentsOptions;
@@ -32,8 +32,11 @@ pub type GlobalsOutputOption =
 pub type PathsOutputOption =
   Either<FxHashMap<String, String>, JsCallback<FnArgs<(String,)>, String>>;
 pub type SanitizeFileName = Either<bool, JsCallback<FnArgs<(String,)>, String>>;
+/// The JS side wraps the user's per-source function in one shim. The result holds one byte per
+/// source, and a nonzero byte ignores that source. See
+/// `packages/rolldown/src/utils/bindingify-output-options.ts`.
 pub type SourcemapIgnoreListOutputOption =
-  Either3<bool, BindingStringOrRegex, JsCallback<FnArgs<(String, String)>, bool>>;
+  Either3<bool, BindingStringOrRegex, JsCallback<FnArgs<(Vec<String>, String)>, Uint8Array>>;
 
 #[napi_derive::napi(object, object_to_js = false)]
 #[derive(Debug)]
@@ -127,7 +130,7 @@ pub struct BindingOutputOptions<'env> {
   pub sourcemap_base_url: Option<String>,
   #[debug(skip)]
   #[napi(
-    ts_type = "boolean | string | RegExp | ((source: string, sourcemapPath: string) => boolean)"
+    ts_type = "boolean | string | RegExp | ((sources: Array<string>, sourcemapPath: string) => Uint8Array)"
   )]
   pub sourcemap_ignore_list: Option<SourcemapIgnoreListOutputOption>,
   pub sourcemap_debug_ids: Option<bool>,

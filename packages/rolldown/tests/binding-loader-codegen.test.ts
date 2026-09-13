@@ -23,12 +23,15 @@ function __createWasiWorker(filename) {
     env: process.env,
   }
 }
-const __rootDir = __nodePath.parse(process.cwd()).root
+const __cwd = process.cwd()
+const __rootDir = __nodePath.parse(__cwd).root
+const __hostRoot =
+  process.platform === 'android' ? __cwd : __rootDir
 const __wasiOptions = {
   env: process.env,
 }
 const __emnapiOptions = {
-    asyncWorkPoolSize: (function() {
+    asyncWorkPoolSize: (function () {
       const threadsSizeFromEnv = Number(process.env.NAPI_RS_ASYNC_WORK_POOL_SIZE ?? process.env.UV_THREADPOOL_SIZE)
       // NaN > 0 is false
       if (threadsSizeFromEnv > 0) {

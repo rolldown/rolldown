@@ -63,7 +63,11 @@ const WASI_DISPOSAL_CHAIN_SIGNATURES = [
 ] as const;
 const WASI_DISPOSE_PUBLICATION = '__publishWasiDispose(__napiModule.exports)';
 const WASI_EXIT_LISTENER_HELPER = 'function __registerWasiExitListener() {';
-const WASI_NODE_HELPER_ANCHOR = 'const __rootDir = __nodePath.parse(process.cwd()).root\n';
+// The head of upstream's cwd/rootDir/hostRoot block (`@napi-rs/cli` >= 3.9.1
+// derives an android-aware `__hostRoot` from `__cwd`). The pool-size helper
+// lands before the whole block so it precedes the WASI instance construction.
+const WASI_NODE_HELPER_ANCHOR =
+  'const __cwd = process.cwd()\nconst __rootDir = __nodePath.parse(__cwd).root\n';
 const WASI_NODE_ENV_ASSIGNMENT = 'env: process.env,';
 const WASI_NODE_WORKER_HELPER_SIGNATURES = [
   'function __getWasiWorkerExecArgv() {',
@@ -73,7 +77,7 @@ const WASI_NODE_WORKER_HELPER_SIGNATURES = [
 ] as const;
 const WASI_NODE_WORKER_CONSTRUCTION =
   "const worker = __createWasiWorker(__nodePath.join(__dirname, 'wasi-worker.mjs'))";
-const WASI_NODE_ASYNC_WORK_POOL_SIZE = `    asyncWorkPoolSize: (function() {
+const WASI_NODE_ASYNC_WORK_POOL_SIZE = `    asyncWorkPoolSize: (function () {
       const threadsSizeFromEnv = Number(process.env.NAPI_RS_ASYNC_WORK_POOL_SIZE ?? process.env.UV_THREADPOOL_SIZE)
       // NaN > 0 is false
       if (threadsSizeFromEnv > 0) {
@@ -245,6 +249,12 @@ export function patchWasiNodeWorkerExecArgv(source: string): string {
   return source;
 }
 
+/**
+ * Replace upstream's async-work-pool IIFE (`@napi-rs/cli` <= 3.9.1 passes any
+ * positive env value through unclamped and non-integer, and never tells the
+ * WASI guest or its workers which size won) with one normalized value that is
+ * handed to emnapi, the WASI instance env, and every spawned worker env.
+ */
 export function patchWasiNodeAsyncWorkPoolSize(source: string): string {
   if (source.includes('const __rolldownAsyncWorkPoolSize =')) {
     return source;

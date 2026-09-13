@@ -1078,7 +1078,14 @@ build-order coupling in the WASI workflow) is gone:
   EVERY declared wasi flavor's loader set, each with `hasThreads` derived from
   its own triple, so loader regeneration is deterministic and byte-identical to
   the committed copies on every host and under every build variant. A wasi
-  build regenerates only the flavor being built. Loaders need no restore step;
+  build regenerates only the flavor being built, and it alone owns that
+  flavor's export list: a non-wasi build re-derives each flavor's loaders from
+  the `// napi-rs-artifact-metadata:` header of the COMMITTED
+  `rolldown-binding.<flavor>.cjs` (and re-writes `.<flavor>.d.cts` verbatim),
+  never from the native type-def. So a merge that takes upstream's copy of a
+  committed wasi loader silently drops this branch's exports from the next
+  native build (`assertAsyncRuntimeHostExports` fails) until that flavor's
+  wasi build runs again. Loaders need no restore step;
   CI's "Check no diff" in `reusable-native-build.yml` has full coverage of all
   committed loaders. Declarations do: `binding.d.cts` keeps whichever flavor
   built last, so the native build must run last — which is why ci.yml restores

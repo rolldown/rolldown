@@ -748,8 +748,6 @@ export interface InputOptions {
    * These options only take effect when running with the [`--watch`](/apis/cli#w-watch) flag, or using {@linkcode watch | watch()} API.
    *
    * {@include ./docs/watch.md}
-   *
-   * @experimental
    */
   watch?: WatcherOptions | false;
   /**

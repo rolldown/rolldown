@@ -193,7 +193,10 @@ impl LinkStage<'_> {
 fn needs_cjs_exports_alias(module: &NormalModule, symbols: &SymbolRefDb) -> bool {
   module.meta.has_eval()
     && module.ast_usage.intersects(EcmaModuleAstUsage::ModuleOrExports)
-    && module.this_expr_replace_map.values().any(|kind| matches!(kind, ThisExprReplaceKind::Exports))
+    && module
+      .this_expr_replace_map
+      .values()
+      .any(|kind| matches!(kind, ThisExprReplaceKind::Exports))
     && symbols[module.idx].as_ref().is_some_and(|db| {
       // Skip the root scope: a root `var exports` merges with the wrapper parameter.
       db.ast_scopes.scoping().iter_bindings().skip(1).any(|(_, b)| b.contains_key("exports"))

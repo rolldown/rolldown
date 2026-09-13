@@ -18,3 +18,6 @@ assert.deepEqual(
     directEvalCalledValueOf: true,
   },
 );
+
+const derived = await import('./dist/direct-eval-derived.js');
+assert.deepEqual(derived.reads, ['b', 'b', 'b']);

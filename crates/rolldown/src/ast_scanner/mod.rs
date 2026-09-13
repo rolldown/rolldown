@@ -1123,8 +1123,8 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
 
   pub fn add_constant_symbol(&mut self, symbol_id: SymbolId, value: ConstExportMeta) {
     let scoping = self.result.symbol_ref_db.scoping();
-    let is_mutated =
-      !self.result.symbol_ref_db.is_facade_symbol(symbol_id) && scoping.symbol_is_mutated(symbol_id);
+    let is_mutated = !self.result.symbol_ref_db.is_facade_symbol(symbol_id)
+      && scoping.symbol_is_mutated(symbol_id);
     // Direct `eval` can assign a `let`, a `var`, or an `exports` property without a write
     // reference, so only a `const` is stable in such a module.
     let eval_can_assign = scoping.root_scope_flags().contains_direct_eval()

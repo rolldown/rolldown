@@ -4,7 +4,7 @@ import { spawn } from 'node:child_process';
 import path from 'node:path';
 
 const dist = path.resolve(import.meta.dirname, 'dist');
-for (const name of ['main', 'control']) {
+for (const name of ['main', 'control', 'lexical-this', 'alias']) {
   const child = spawn(process.execPath, [path.join(dist, `${name}.js`)], { encoding: 'utf8' });
   let stdout = '';
   let stderr = '';

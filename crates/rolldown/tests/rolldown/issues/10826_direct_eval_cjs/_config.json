@@ -2,7 +2,9 @@
   "config": {
     "input": [
       { "name": "main", "import": "./main.js" },
-      { "name": "control", "import": "./control.js" }
+      { "name": "control", "import": "./control.js" },
+      { "name": "lexical-this", "import": "./lexical-this.js" },
+      { "name": "alias", "import": "./alias.js" }
     ],
     "format": "esm",
     "platform": "node"

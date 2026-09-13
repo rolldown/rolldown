@@ -1,6 +1,7 @@
 use rolldown_common::{
-  ExportsKind, ImportKind, IndexModules, Module, ModuleIdx, NormalModule, NormalizedBundlerOptions,
-  RuntimeModuleBrief, StmtInfo, StmtInfoMeta, StmtInfos, SymbolRefDb, TaggedSymbolRef, WrapKind,
+  EcmaModuleAstUsage, ExportsKind, ImportKind, IndexModules, Module, ModuleIdx, NormalModule,
+  NormalizedBundlerOptions, RuntimeModuleBrief, StmtInfo, StmtInfoMeta, StmtInfos, SymbolRefDb,
+  TaggedSymbolRef, ThisExprReplaceKind, WrapKind,
 };
 use rolldown_utils::IndexBitSet;
 use smallvec::smallvec;
@@ -182,6 +183,23 @@ impl LinkStage<'_> {
   }
 }
 
+/// Whether the CJS wrapper of `module` needs an alias of its `exports` parameter.
+///
+/// A rewritten top-level `this` renders as a bare `exports`, and a direct-eval module keeps the
+/// source name of every nested `exports` binding, so one of them would capture that reference.
+/// The alias is itself one more name direct eval can read, so it is created only where such a
+/// binding exists. `Renamer` then names it around every source binding of the module, so no
+/// source binding moves.
+fn needs_cjs_exports_alias(module: &NormalModule, symbols: &SymbolRefDb) -> bool {
+  module.meta.has_eval()
+    && module.ast_usage.intersects(EcmaModuleAstUsage::ModuleOrExports)
+    && module.this_expr_replace_map.values().any(|kind| matches!(kind, ThisExprReplaceKind::Exports))
+    && symbols[module.idx].as_ref().is_some_and(|db| {
+      // Skip the root scope: a root `var exports` merges with the wrapper parameter.
+      db.ast_scopes.scoping().iter_bindings().skip(1).any(|(_, b)| b.contains_key("exports"))
+    })
+}
+
 fn create_wrapper(
   module: &NormalModule,
   stmt_infos: &mut StmtInfos,
@@ -201,6 +219,13 @@ fn create_wrapper(
     WrapKind::Cjs => {
       let wrapper_ref =
         symbols.create_facade_root_symbol_ref(module.idx, &format!("require_{}", module.repr_name));
+
+      if needs_cjs_exports_alias(module, symbols) {
+        linking_info.cjs_exports_alias_ref = Some(
+          symbols
+            .create_facade_root_symbol_ref(module.idx, &format!("exports_{}", module.repr_name)),
+        );
+      }
 
       let stmt_info = StmtInfo {
         declared_symbols: smallvec![TaggedSymbolRef::normal(wrapper_ref)],

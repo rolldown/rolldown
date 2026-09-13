@@ -27,6 +27,17 @@ use crate::module_finalizers::{
 use super::ScopeHoistingFinalizer;
 
 impl<'ast> ScopeHoistingFinalizer<'_, 'ast> {
+  /// `var <alias> = exports;`, the first statement of a CJS wrapper body that needs an alias of
+  /// the `exports` parameter. See [`crate::types::linking_metadata::LinkingMetadata`].
+  fn cjs_exports_alias_stmt(&self) -> Option<Statement<'ast>> {
+    let alias_ref = self.ctx.linking_info.cjs_exports_alias_ref?;
+    Some(Statement::new_var_decl(
+      self.canonical_name_for(alias_ref),
+      ast::Expression::new_identifier(SPAN, "exports", self),
+      self,
+    ))
+  }
+
   fn append_order_cjs_carriers(&self, program: &mut ast::Program<'ast>) {
     let carrier_keys =
       self.ctx.order_wrap_state.order_cjs_carriers_for_importee(self.ctx.idx).to_vec();
@@ -258,6 +269,7 @@ impl<'ast> VisitJsMut<'ast> for ScopeHoistingFinalizer<'_, 'ast> {
         let (commonjs_ref_expr, _) = self.finalized_expr_for_symbol_ref(commonjs_ref, false, false);
 
         let mut stmts_inside_closure = allocator::Vec::new_in(self);
+        stmts_inside_closure.extend(self.cjs_exports_alias_stmt());
         stmts_inside_closure.append(&mut program.body);
 
         program.body.push(Statement::new_commonjs_wrapper_stmt(
@@ -582,7 +594,14 @@ impl<'ast> VisitJsMut<'ast> for ScopeHoistingFinalizer<'_, 'ast> {
         {
           match kind {
             ThisExprReplaceKind::Exports => {
-              *expr = ast::Expression::new_identifier(SPAN, "exports", self);
+              // Direct eval keeps nested `exports` bindings at their source name, so a bare
+              // `exports` here would resolve to one of them instead of the wrapper parameter.
+              *expr = match self.ctx.linking_info.cjs_exports_alias_ref {
+                Some(alias_ref) => {
+                  Expression::new_id_ref_expr(SPAN, self.canonical_name_for(alias_ref), self)
+                }
+                None => ast::Expression::new_identifier(SPAN, "exports", self),
+              };
             }
             ThisExprReplaceKind::Context if self.ctx.options.context.is_empty() => {
               *expr = ast::Expression::new_void_0(SPAN, self);

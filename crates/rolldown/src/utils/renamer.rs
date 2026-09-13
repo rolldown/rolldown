@@ -182,6 +182,31 @@ impl<'name> Renamer<'name> {
     slot.insert(resolved);
   }
 
+  /// Assign the canonical name of a CJS `exports` alias.
+  ///
+  /// The alias is declared inside the wrapper body of a direct-eval module, where the renamer
+  /// must move no source binding at all, because eval resolves them by their source name. So the
+  /// alias itself takes the collision: its name avoids every binding of its own module, root and
+  /// nested, on top of the names already taken at chunk scope. None of the shortcuts in
+  /// [`Self::is_name_available_with`] apply here — the preferred name gets the same check as a
+  /// suffixed one, and an entry module earns no exemption.
+  pub fn add_cjs_exports_alias(&mut self, symbol_ref: SymbolRef, scoping: &Scoping) {
+    let canonical_ref = symbol_ref.canonical_ref(self.symbol_db);
+    let original_name = self.symbol_db.original_name(canonical_ref);
+    let mut candidate = original_name.clone();
+    for count in 1u32.. {
+      if !self.resolver.contains(&candidate)
+        && !scoping.iter_bindings().any(|(_, bindings)| bindings.contains_key(candidate.as_str()))
+      {
+        break;
+      }
+      candidate =
+        concat_string!(original_name.as_str(), "$", itoa::Buffer::new().format(count)).into();
+    }
+    self.resolver.reserve(candidate.clone());
+    self.canonical_names.insert(canonical_ref, candidate);
+  }
+
   pub fn create_conflictless_name(&mut self, hint: &str) -> CompactStr {
     self.resolver.resolve(CompactStr::new(hint), |_, _| true)
   }
@@ -497,9 +522,9 @@ impl NestedScopeRenamer<'_, '_> {
   /// - `__dirname` — the `import.meta.dirname` rewrite
   ///
   /// Those identifiers mean the CommonJS ambient bindings, so a nested binding of the same name
-  /// must not capture them. `module`/`exports` are deliberately not in the set: nothing injects
-  /// them into nested scopes, and `rename_bindings_shadowing_wrapper_params` already covers the
-  /// CJS-wrapped-module case.
+  /// must not capture them. `module`/`exports` are deliberately not in the set:
+  /// `rename_bindings_shadowing_wrapper_params` covers the CJS-wrapped-module case, and there the
+  /// top-level `this` rewrite reaches the wrapper parameter through its own alias.
   ///
   /// A `var` binding is hoisted, so it shadows even an injected call inside its own initializer:
   ///

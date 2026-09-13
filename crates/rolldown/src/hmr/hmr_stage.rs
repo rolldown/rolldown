@@ -487,6 +487,13 @@ impl<'a, Fs: FileSystem + Clone + 'static> HmrStage<'a, Fs> {
           // Edge boundary: the accepting importer is not re-run, so it joins no set.
           continue;
         }
+        if let Some(accepted) = &module.hmr_info.accepted_exports
+          && crate::hmr::module_graph_delta::imports_only_accepted_exports(
+            importer, module_idx, accepted,
+          )
+        {
+          continue;
+        }
         stack.push(importer_idx);
       }
     }

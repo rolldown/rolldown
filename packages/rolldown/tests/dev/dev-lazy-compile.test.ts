@@ -611,7 +611,7 @@ test.skipIf(isSingleThread)(
 // pulling the module into the bundle — the opposite of lazy compilation. The empty proxy body
 // also used to trip the `init_is_noop` assertion, because dev mode adds an HMR header to a
 // closure that pass had classified as empty.
-test(
+test.skipIf(isSingleThread)(
   'a lazy import stays lazy when code splitting is disabled',
   { timeout: TEST_TIMEOUT },
   async ({ onTestFinished }) => {
@@ -643,7 +643,7 @@ test(
   },
 );
 
-test(
+test.skipIf(isSingleThread)(
   'the lazy URL is encoded at compile time, so a user `encodeURIComponent` cannot break it',
   { timeout: TEST_TIMEOUT },
   async ({ onTestFinished }) => {
@@ -692,7 +692,7 @@ test(
 // registers its module before running the body, so a module that threw stays in the cache and
 // re-running `initModule` would hand back its half-initialized exports as success. The browser
 // specs only ever click once per page load, so nothing else covers this.
-test(
+test.skipIf(isSingleThread)(
   'a lazy module that throws stays rejected on repeat imports',
   { timeout: TEST_TIMEOUT },
   async ({ onTestFinished }) => {

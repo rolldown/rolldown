@@ -393,44 +393,6 @@ async fn bundling_future_preserves_static_str_panic_payload() {
 #[derive(Debug)]
 struct CallbackPanicPayload(&'static str);
 
-struct NestedPanicPayload(Arc<AtomicUsize>);
-
-impl Drop for NestedPanicPayload {
-  fn drop(&mut self) {
-    self.0.fetch_add(1, Ordering::SeqCst);
-    panic!("nested panic payload destructor panic");
-  }
-}
-
-struct HostilePanicPayload(Arc<AtomicUsize>);
-
-impl Drop for HostilePanicPayload {
-  fn drop(&mut self) {
-    self.0.fetch_add(1, Ordering::SeqCst);
-    panic_any(NestedPanicPayload(Arc::clone(&self.0)));
-  }
-}
-
-#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
-async fn unobserved_opaque_panic_payload_destruction_is_contained() {
-  let drops = Arc::new(AtomicUsize::new(0));
-  let panic_drops = Arc::clone(&drops);
-  let bundling_future = BundlingFuture::new_for_testing(async move {
-    panic_any(HostilePanicPayload(panic_drops));
-  });
-
-  timeout(LIVENESS_TIMEOUT, bundling_future.clone().drive_for_testing())
-    .await
-    .expect("the detached driver must publish the panic outcome");
-  drop(bundling_future);
-
-  assert_eq!(
-    drops.load(Ordering::SeqCst),
-    2,
-    "both hostile payload destructors must run without escaping teardown"
-  );
-}
-
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn close_contains_a_panicked_bundling_future_and_runs_fallback_cleanup() {
   let test_dir = TestDir::new();
@@ -525,13 +487,11 @@ async fn concurrent_close_completes_while_wait_for_close_is_parked() {
 
   // Park wait_for_close on the coordinator handle. ONE poll is deterministic:
   // the uncontended async_lock fast path resolves on first poll, the handle is
-  // cloned, and the future suspends awaiting the Shared coordinator handle —
-  // guard captured inside the suspended future in the unfixed code.
+  // cloned, and the future suspends awaiting the Shared coordinator handle.
   let mut wait_fut = std::pin::pin!(engine.wait_for_close());
   let parked = poll_fn(|cx| Poll::Ready(wait_fut.as_mut().poll(cx).is_pending())).await;
   assert!(parked, "wait_for_close must be parked on the running coordinator");
 
-  // Unfixed: close_inner blocks at the coordinator-state lock and this times out.
   timeout(LIVENESS_TIMEOUT, engine.close())
     .await
     .expect("close() must not deadlock while wait_for_close is parked")

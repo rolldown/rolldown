@@ -18,13 +18,6 @@
 // already `FxBuildHasher` at every use site).
 #![allow(clippy::disallowed_types)]
 
-// `.github/workflows/reusable-wasi.yml` greps for this exact message; keep the
-// two in sync.
-#[cfg(not(feature = "async-runtime"))]
-compile_error!(
-  "rolldown_binding requires the `async-runtime` feature: the shared tokio-free scheduler is the only runtime"
-);
-
 use napi_derive::napi;
 
 pub mod async_runtime;
@@ -72,43 +65,6 @@ pub mod worker_manager;
 pub use oxc_parser_napi;
 pub use oxc_resolver_napi;
 
-/// A compatibility no-op: the async runtime's lifecycle follows the N-API
-/// environment, so `release()` does nothing. Kept because the generated WASI
-/// loaders still acquire a lease at import and release it at teardown.
-#[napi]
-pub struct BindingAsyncRuntimeLease {}
-
-#[napi]
-impl BindingAsyncRuntimeLease {
-  #[napi]
-  pub fn release(&self) {}
-}
-
-pub struct AcquireAsyncRuntimeTask {}
-
-#[napi]
-impl napi::Task for AcquireAsyncRuntimeTask {
-  type Output = ();
-  type JsValue = BindingAsyncRuntimeLease;
-
-  fn compute(&mut self) -> napi::Result<Self::Output> {
-    Ok(())
-  }
-
-  fn resolve(&mut self, _env: napi::Env, (): Self::Output) -> napi::Result<Self::JsValue> {
-    Ok(BindingAsyncRuntimeLease {})
-  }
-}
-
-#[napi]
-/// Acquire an async runtime lifecycle lease. See `BindingAsyncRuntimeLease`:
-/// the lease is a no-op.
-pub fn acquire_async_runtime(
-  _env: &napi::Env,
-) -> napi::bindgen_prelude::AsyncTask<AcquireAsyncRuntimeTask> {
-  napi::bindgen_prelude::AsyncTask::new(AcquireAsyncRuntimeTask {})
-}
-
 #[napi]
 /// A no-op kept for compatibility; the async runtime follows the N-API
 /// environment lifecycle.
@@ -118,15 +74,6 @@ pub fn shutdown_async_runtime() {}
 /// A no-op kept for compatibility; the async runtime follows the N-API
 /// environment lifecycle.
 pub fn start_async_runtime() {}
-
-#[cfg(test)]
-mod manual_async_runtime_transition_tests {
-  #[test]
-  fn manual_lifecycle_exports_are_noops() {
-    super::start_async_runtime();
-    super::shutdown_async_runtime();
-  }
-}
 
 #[napi_derive::module_init]
 fn init() {

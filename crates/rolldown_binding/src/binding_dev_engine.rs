@@ -17,9 +17,8 @@ use crate::types::binding_outputs::{BindingOutputs, to_binding_error};
 use crate::types::error::{BindingErrors, BindingResult};
 use crate::types::js_callback::MaybeAsyncJsCallbackExt;
 use crate::utils::{
-  DetachedFutureSpawn,
   create_bundler_config_from_binding_options::create_bundler_config_from_binding_options,
-  spawn_boxed_future, try_spawn_detached_future,
+  spawn_boxed_future,
 };
 use futures::channel::oneshot;
 use napi::bindgen_prelude::{FnArgs, PromiseRaw};
@@ -58,7 +57,6 @@ fn dev_engine_closed_error() -> napi::Error {
 struct BindingDevEngineLifecycleState {
   closing: bool,
   active_operations: usize,
-  active_callbacks: usize,
   operations_drained: Vec<oneshot::Sender<()>>,
   close_started: bool,
   close_finished: Vec<oneshot::Sender<BindingDevEngineCloseOutcome>>,
@@ -70,9 +68,8 @@ struct BindingDevEngineLifecycle {
 }
 
 enum BeginBindingDevEngineClose {
-  Start { operations_drained: Option<oneshot::Receiver<()>>, acknowledge: bool },
+  Start { operations_drained: Option<oneshot::Receiver<()>> },
   Wait(oneshot::Receiver<BindingDevEngineCloseOutcome>),
-  Acknowledge,
   Finished(BindingDevEngineCloseOutcome),
 }
 
@@ -82,7 +79,6 @@ impl BindingDevEngineLifecycle {
       state: StdMutex::new(BindingDevEngineLifecycleState {
         closing: false,
         active_operations: 0,
-        active_callbacks: 0,
         operations_drained: Vec::new(),
         close_started: false,
         close_finished: Vec::new(),
@@ -100,33 +96,13 @@ impl BindingDevEngineLifecycle {
     Some(BindingDevEngineOperationGuard { lifecycle: Arc::clone(self) })
   }
 
-  fn begin_callback(self: &Arc<Self>) -> BindingDevEngineCallbackGuard {
-    self.state.lock().unwrap_or_else(std::sync::PoisonError::into_inner).active_callbacks += 1;
-    BindingDevEngineCallbackGuard { lifecycle: Arc::clone(self) }
-  }
-
   fn begin_close(&self) -> BeginBindingDevEngineClose {
-    self.begin_close_with_callback_acknowledgement(true)
-  }
-
-  fn begin_terminal_close(&self) -> BeginBindingDevEngineClose {
-    self.begin_close_with_callback_acknowledgement(false)
-  }
-
-  fn begin_close_with_callback_acknowledgement(
-    &self,
-    allow_callback_acknowledgement: bool,
-  ) -> BeginBindingDevEngineClose {
     let mut state = self.state.lock().unwrap_or_else(std::sync::PoisonError::into_inner);
     if let Some(outcome) = state.close_outcome.clone() {
       return BeginBindingDevEngineClose::Finished(outcome);
     }
     state.closing = true;
-    let acknowledge = allow_callback_acknowledgement && state.active_callbacks > 0;
     if state.close_started {
-      if acknowledge {
-        return BeginBindingDevEngineClose::Acknowledge;
-      }
       let (sender, receiver) = oneshot::channel();
       state.close_finished.push(sender);
       return BeginBindingDevEngineClose::Wait(receiver);
@@ -139,7 +115,7 @@ impl BindingDevEngineLifecycle {
       state.operations_drained.push(sender);
       Some(receiver)
     };
-    BeginBindingDevEngineClose::Start { operations_drained, acknowledge }
+    BeginBindingDevEngineClose::Start { operations_drained }
   }
 
   fn finish_close(&self, outcome: BindingDevEngineCloseOutcome) {
@@ -200,21 +176,6 @@ impl Drop for BindingDevEngineOperationGuard {
         let _ = operations_drained.send(());
       }
     }
-  }
-}
-
-struct BindingDevEngineCallbackGuard {
-  lifecycle: Arc<BindingDevEngineLifecycle>,
-}
-
-impl Drop for BindingDevEngineCallbackGuard {
-  fn drop(&mut self) {
-    self
-      .lifecycle
-      .state
-      .lock()
-      .unwrap_or_else(std::sync::PoisonError::into_inner)
-      .active_callbacks -= 1;
   }
 }
 
@@ -319,7 +280,6 @@ impl BindingDevEngine {
     // If callback is provided, wrap it to convert BuildResult<(Vec<ClientHmrUpdate>, Vec<String>)> to BindingResult<(Vec<BindingClientHmrUpdate>, Vec<String>)>
     let on_hmr_updates = on_hmr_updates_callback.map(|js_callback| {
       let cwd = Arc::<Path>::clone(&cwd);
-      let lifecycle = Arc::clone(&lifecycle);
       Arc::new(
         move |result: rolldown_error::BuildResult<(
           Vec<rolldown_common::ClientHmrUpdate>,
@@ -328,9 +288,7 @@ impl BindingDevEngine {
               -> DevCallbackFuture {
           let js_callback = Arc::clone(&js_callback);
           let cwd = Arc::<Path>::clone(&cwd);
-          let lifecycle = Arc::clone(&lifecycle);
           Box::pin(async move {
-            let _callback = lifecycle.begin_callback();
             let binding_result: BindingResult<(Vec<BindingClientHmrUpdate>, Vec<String>)> =
               match result {
                 Ok((updates, changed_files)) => {
@@ -357,14 +315,11 @@ impl BindingDevEngine {
 
     let on_output = on_output_callback.map(|js_callback| {
       let cwd = Arc::<Path>::clone(&cwd);
-      let lifecycle = Arc::clone(&lifecycle);
       Arc::new(
         move |result: rolldown_error::BuildResult<rolldown::BundleOutput>| -> DevCallbackFuture {
           let js_callback = Arc::clone(&js_callback);
           let cwd = Arc::<Path>::clone(&cwd);
-          let lifecycle = Arc::clone(&lifecycle);
           Box::pin(async move {
-            let _callback = lifecycle.begin_callback();
             let binding_result: BindingResult<BindingOutputs> = match result {
               Ok(bundle_output) => Either::B(BindingOutputs::from(bundle_output)),
               Err(errors) => {
@@ -387,12 +342,9 @@ impl BindingDevEngine {
     // Assets emitted during an HMR patch / lazy compile (these never go through
     // `on_output`). Forward the assets; warnings stay Rust-side, as in `on_output`.
     let on_additional_assets = on_additional_assets_callback.map(|js_callback| {
-      let lifecycle = Arc::clone(&lifecycle);
       Arc::new(move |output: rolldown::BundleOutput| -> DevCallbackFuture {
         let js_callback = Arc::clone(&js_callback);
-        let lifecycle = Arc::clone(&lifecycle);
         Box::pin(async move {
-          let _callback = lifecycle.begin_callback();
           let binding_outputs = BindingOutputs::from(output);
           js_callback
             .await_call(FnArgs { data: (binding_outputs,) })
@@ -585,42 +537,7 @@ impl BindingDevEngine {
 
   #[napi]
   pub fn close<'env>(&self, env: &'env Env) -> napi::Result<PromiseRaw<'env, BindingResult<()>>> {
-    match self.lifecycle.begin_close() {
-      BeginBindingDevEngineClose::Finished(outcome) => {
-        PromiseRaw::resolve(env, dev_engine_close_binding_result(outcome, self.cwd.as_ref()))
-      }
-      BeginBindingDevEngineClose::Acknowledge => PromiseRaw::resolve(env, Either::B(())),
-      BeginBindingDevEngineClose::Start { operations_drained, acknowledge: true } => {
-        let inner = Arc::clone(&self.inner);
-        let close_execution = BindingDevEngineCloseExecutionGuard::new(Arc::clone(&self.lifecycle));
-        let background_close = async move {
-          let _ =
-            execute_binding_dev_engine_close(inner, close_execution, operations_drained).await;
-        };
-        if let DetachedFutureSpawn::Rejected(background_close) =
-          try_spawn_detached_future(background_close)
-        {
-          drop(background_close);
-          return PromiseRaw::reject(
-            env,
-            napi::Error::from_reason("The async runtime rejected the dev engine close task"),
-          );
-        }
-        PromiseRaw::resolve(env, Either::B(()))
-      }
-      BeginBindingDevEngineClose::Start { operations_drained, acknowledge: false } => {
-        spawn_terminal_binding_dev_engine_close(
-          env,
-          Arc::clone(&self.inner),
-          Arc::clone(&self.lifecycle),
-          Arc::clone(&self.cwd),
-          operations_drained,
-        )
-      }
-      BeginBindingDevEngineClose::Wait(close_finished) => {
-        wait_for_terminal_binding_dev_engine_close(env, Arc::clone(&self.cwd), close_finished)
-      }
-    }
+    self.close_terminal(env)
   }
 
   #[napi(skip_typescript)]
@@ -628,11 +545,11 @@ impl BindingDevEngine {
     &self,
     env: &'env Env,
   ) -> napi::Result<PromiseRaw<'env, BindingResult<()>>> {
-    match self.lifecycle.begin_terminal_close() {
+    match self.lifecycle.begin_close() {
       BeginBindingDevEngineClose::Finished(outcome) => {
         PromiseRaw::resolve(env, dev_engine_close_binding_result(outcome, self.cwd.as_ref()))
       }
-      BeginBindingDevEngineClose::Start { operations_drained, acknowledge: false } => {
+      BeginBindingDevEngineClose::Start { operations_drained } => {
         spawn_terminal_binding_dev_engine_close(
           env,
           Arc::clone(&self.inner),
@@ -643,10 +560,6 @@ impl BindingDevEngine {
       }
       BeginBindingDevEngineClose::Wait(close_finished) => {
         wait_for_terminal_binding_dev_engine_close(env, Arc::clone(&self.cwd), close_finished)
-      }
-      BeginBindingDevEngineClose::Acknowledge
-      | BeginBindingDevEngineClose::Start { acknowledge: true, .. } => {
-        unreachable!("terminal close never acknowledges an active callback")
       }
     }
   }
@@ -671,8 +584,7 @@ impl BindingDevEngine {
     spawn_boxed_future(env, async move {
       // Via `dev_engine_binding_result` (like `run`) so an `onAdditionalAssets`
       // rejection propagates as the original JS error instead of being flattened
-      // into a `GenericFailure` string. Covered by dev-callbacks.test.ts
-      // "compileEntry awaits onAdditionalAssets and propagates its rejection".
+      // into a `GenericFailure` string.
       let result = dev_engine_binding_result(
         inner.compile_lazy_entry(module_id, client_id).await.map(|output| BindingLazyChunkOutput {
           code: output.code,
@@ -739,8 +651,6 @@ impl From<BundleState> for BindingBundleState {
 #[cfg(test)]
 mod tests {
   use super::*;
-  use crate::types::error::BindingError;
-  use rolldown_error::BuildDiagnostic;
 
   #[test]
   fn lifecycle_close_waits_for_active_operations_and_replays_outcome() {
@@ -748,10 +658,8 @@ mod tests {
     let first_operation = lifecycle.begin_operation().expect("engine should start open");
     let second_operation = lifecycle.begin_operation().expect("engine should start open");
 
-    let BeginBindingDevEngineClose::Start {
-      operations_drained: Some(mut operations_drained),
-      acknowledge: false,
-    } = lifecycle.begin_close()
+    let BeginBindingDevEngineClose::Start { operations_drained: Some(mut operations_drained) } =
+      lifecycle.begin_close()
     else {
       panic!("close should wait for active operations");
     };
@@ -777,70 +685,12 @@ mod tests {
   }
 
   #[test]
-  fn lifecycle_acknowledges_close_during_owned_callback_and_replays_terminal_outcome() {
-    let lifecycle = Arc::new(BindingDevEngineLifecycle::new());
-    let operation = lifecycle.begin_operation().expect("engine should start open");
-    let callback = lifecycle.begin_callback();
-
-    let BeginBindingDevEngineClose::Start {
-      operations_drained: Some(mut operations_drained),
-      acknowledge: true,
-    } = lifecycle.begin_close()
-    else {
-      panic!("callback close should start background cleanup and return an acknowledgement");
-    };
-    assert!(matches!(lifecycle.begin_close(), BeginBindingDevEngineClose::Acknowledge));
-    let BeginBindingDevEngineClose::Wait(mut terminal_close) = lifecycle.begin_terminal_close()
-    else {
-      panic!("terminal close should wait even while the callback is active");
-    };
-
-    drop(callback);
-    drop(operation);
-    assert_eq!(operations_drained.try_recv().expect("barrier should resolve"), Some(()));
-
-    lifecycle.finish_close(Ok(()));
-    assert!(matches!(
-      terminal_close.try_recv().expect("terminal close should resolve"),
-      Some(Ok(()))
-    ));
-    assert!(matches!(lifecycle.begin_close(), BeginBindingDevEngineClose::Finished(Ok(()))));
-  }
-
-  #[test]
-  fn lifecycle_terminal_close_started_during_callback_never_acknowledges() {
-    let lifecycle = Arc::new(BindingDevEngineLifecycle::new());
-    let operation = lifecycle.begin_operation().expect("engine should start open");
-    let callback = lifecycle.begin_callback();
-
-    let BeginBindingDevEngineClose::Start {
-      operations_drained: Some(mut operations_drained),
-      acknowledge: false,
-    } = lifecycle.begin_terminal_close()
-    else {
-      panic!("terminal close should start without acknowledging the callback");
-    };
-    assert!(matches!(lifecycle.begin_close(), BeginBindingDevEngineClose::Acknowledge));
-
-    drop(callback);
-    drop(operation);
-    assert_eq!(operations_drained.try_recv().expect("barrier should resolve"), Some(()));
-    lifecycle.finish_close(Ok(()));
-    assert!(matches!(
-      lifecycle.begin_terminal_close(),
-      BeginBindingDevEngineClose::Finished(Ok(()))
-    ));
-  }
-
-  #[test]
   fn lifecycle_can_retry_when_close_transport_fails_to_start() {
     let lifecycle = Arc::new(BindingDevEngineLifecycle::new());
     let operation = lifecycle.begin_operation().expect("engine should start open");
 
-    let BeginBindingDevEngineClose::Start {
-      operations_drained: Some(first_operations_drained),
-      acknowledge: false,
-    } = lifecycle.begin_close()
+    let BeginBindingDevEngineClose::Start { operations_drained: Some(first_operations_drained) } =
+      lifecycle.begin_close()
     else {
       panic!("first close should start");
     };
@@ -849,7 +699,6 @@ mod tests {
 
     let BeginBindingDevEngineClose::Start {
       operations_drained: Some(mut retry_operations_drained),
-      acknowledge: false,
     } = lifecycle.begin_close()
     else {
       panic!("transport setup failure must leave close retryable");
@@ -865,19 +714,15 @@ mod tests {
   fn lifecycle_cancelled_close_executor_wakes_waiters_and_allows_retry() {
     let lifecycle = Arc::new(BindingDevEngineLifecycle::new());
     let operation = lifecycle.begin_operation().expect("engine should start open");
-    let callback = lifecycle.begin_callback();
 
-    let BeginBindingDevEngineClose::Start {
-      operations_drained: Some(first_operations_drained),
-      acknowledge: true,
-    } = lifecycle.begin_close()
+    let BeginBindingDevEngineClose::Start { operations_drained: Some(first_operations_drained) } =
+      lifecycle.begin_close()
     else {
-      panic!("callback close should start an acknowledged executor");
+      panic!("close should start an executor");
     };
     let close_execution = BindingDevEngineCloseExecutionGuard::new(Arc::clone(&lifecycle));
-    let BeginBindingDevEngineClose::Wait(mut terminal_close) = lifecycle.begin_terminal_close()
-    else {
-      panic!("terminal close should wait for the active executor");
+    let BeginBindingDevEngineClose::Wait(mut terminal_close) = lifecycle.begin_close() else {
+      panic!("a concurrent close should wait for the active executor");
     };
 
     drop(close_execution);
@@ -888,38 +733,15 @@ mod tests {
 
     let BeginBindingDevEngineClose::Start {
       operations_drained: Some(mut retry_operations_drained),
-      acknowledge: false,
-    } = lifecycle.begin_terminal_close()
+    } = lifecycle.begin_close()
     else {
       panic!("executor cancellation must leave close retryable");
     };
     drop(first_operations_drained);
-    drop(callback);
     drop(operation);
     assert_eq!(
       retry_operations_drained.try_recv().expect("retry barrier should resolve"),
       Some(())
     );
-  }
-
-  #[test]
-  fn close_transport_preserves_callback_registration_and_close_diagnostics() {
-    let outcome = Err(Arc::new(BatchedBuildDiagnostic::new(vec![
-      BuildDiagnostic::napi_error(napi::Error::from_reason("intentional callback failure")),
-      BuildDiagnostic::from(anyhow::anyhow!("intentional registration failure")),
-      BuildDiagnostic::napi_error(napi::Error::from_reason("intentional closeBundle failure")),
-    ])));
-
-    let Either::A(errors) = dev_engine_close_binding_result(outcome, Path::new("/project")) else {
-      panic!("close failures must use the structured binding-error transport");
-    };
-
-    assert_eq!(errors.errors.len(), 3);
-    assert!(matches!(errors.errors[0], BindingError::JsError(_)));
-    let BindingError::NativeError(registration_error) = &errors.errors[1] else {
-      panic!("watch registration failure must remain a native diagnostic");
-    };
-    assert!(registration_error.message.contains("intentional registration failure"));
-    assert!(matches!(errors.errors[2], BindingError::JsError(_)));
   }
 }

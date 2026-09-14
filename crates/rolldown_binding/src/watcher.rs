@@ -100,26 +100,9 @@ fn handle_watcher_close_result(
 fn split_configs_into_groups(
   configs: Vec<BundlerConfig>,
   group_sizes: &[u32],
-) -> napi::Result<Vec<Vec<BundlerConfig>>> {
-  if group_sizes.is_empty() {
-    return Err(napi::Error::from_reason(
-      "Watcher requires at least one config group, but groupSizes was empty",
-    ));
-  }
-  if let Some(position) = group_sizes.iter().position(|&size| size == 0) {
-    return Err(napi::Error::from_reason(format!(
-      "Watcher config group {position} is empty; every group must contain at least one output config",
-    )));
-  }
-  let total: usize = group_sizes.iter().map(|&size| size as usize).sum();
-  if total != configs.len() {
-    return Err(napi::Error::from_reason(format!(
-      "Watcher groupSizes sum to {total}, but {} output configs were provided",
-      configs.len(),
-    )));
-  }
+) -> Vec<Vec<BundlerConfig>> {
   let mut configs = configs.into_iter();
-  Ok(group_sizes.iter().map(|&size| configs.by_ref().take(size as usize).collect()).collect())
+  group_sizes.iter().map(|&size| configs.by_ref().take(size as usize).collect()).collect()
 }
 
 fn create_watcher_config(configs: &[BundlerConfig]) -> WatcherConfig {
@@ -209,7 +192,7 @@ impl BindingWatcher {
     // Shared-watcher settings (debounce, polling backend) span all groups, so
     // they are derived from the flat list before it is split into groups.
     let watcher_config = create_watcher_config(&configs);
-    let groups = split_configs_into_groups(configs, &group_sizes)?;
+    let groups = split_configs_into_groups(configs, &group_sizes);
 
     let handler = NapiWatcherEventHandler { listener: Arc::new(listener) };
     let inner =
@@ -305,35 +288,7 @@ mod tests {
 
   #[test]
   fn group_split_reconstructs_contiguous_groups() {
-    let groups = split_configs_into_groups(default_configs(3), &[2, 1])
-      .expect("matching group sizes must split");
+    let groups = split_configs_into_groups(default_configs(3), &[2, 1]);
     assert_eq!(groups.iter().map(Vec::len).collect::<Vec<_>>(), [2, 1]);
-  }
-
-  #[test]
-  fn group_split_rejects_zero_groups() {
-    let error = split_configs_into_groups(default_configs(1), &[])
-      .expect_err("an empty group list must be rejected");
-    assert_eq!(
-      error.reason,
-      "Watcher requires at least one config group, but groupSizes was empty"
-    );
-  }
-
-  #[test]
-  fn group_split_rejects_empty_group() {
-    let error = split_configs_into_groups(default_configs(2), &[2, 0])
-      .expect_err("a zero-size group must be rejected");
-    assert_eq!(
-      error.reason,
-      "Watcher config group 1 is empty; every group must contain at least one output config"
-    );
-  }
-
-  #[test]
-  fn group_split_rejects_size_sum_mismatch() {
-    let error = split_configs_into_groups(default_configs(3), &[2, 2])
-      .expect_err("a group size sum mismatch must be rejected");
-    assert_eq!(error.reason, "Watcher groupSizes sum to 4, but 3 output configs were provided");
   }
 }

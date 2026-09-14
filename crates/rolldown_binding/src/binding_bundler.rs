@@ -15,10 +15,7 @@ use crate::{
     spawn_boxed_future,
   },
 };
-use napi::{
-  Env, JsValue, Unknown,
-  bindgen_prelude::{Array, FnArgs, Function, JsObjectValue, Object, PromiseRaw},
-};
+use napi::{Env, JsValue, bindgen_prelude::PromiseRaw};
 use napi_derive::napi;
 use rolldown::{Bundle, BundleHandle, BundlerConfig};
 use rolldown_error::{BatchedBuildDiagnostic, BuildDiagnostic, PluginTimings};
@@ -245,54 +242,29 @@ impl BindingBundler {
   }
 }
 
+/// A lone JavaScript close failure rejects with the original exception object so
+/// its identity, stack and own properties survive; every other shape rejects
+/// with the aggregated message. Rendering a diagnostic can panic, so the
+/// inspection runs inside `catch_unwind` and falls back to the same message.
 fn close_rejection_promise<'env>(
   env: &'env Env,
   error: &ClassicBundlerCloseError,
 ) -> napi::Result<PromiseRaw<'env, ()>> {
-  let converted = catch_unwind(AssertUnwindSafe(|| try_close_rejection_value(env, error)));
-  let rejection = match converted {
-    Ok(Ok(rejection)) => rejection,
-    Ok(Err(error)) => napi::JsError::from(error).into_unknown(*env),
+  let js_error = match catch_unwind(AssertUnwindSafe(|| {
+    let mut errors = close_binding_errors(error);
+    take_single_js_error(&mut errors)
+  })) {
+    Ok(js_error) => js_error,
     Err(payload) => {
       discard_panic_payload(payload);
-      napi::JsError::from(napi::Error::from_reason(error.to_string())).into_unknown(*env)
+      None
     }
   };
+  let rejection = match js_error {
+    Some(js_error) => js_error.into_unknown(*env),
+    None => napi::JsError::from(napi::Error::from_reason(error.to_string())).into_unknown(*env),
+  };
   PromiseRaw::reject(env, rejection)
-}
-
-fn try_close_rejection_value<'env>(
-  env: &'env Env,
-  error: &ClassicBundlerCloseError,
-) -> napi::Result<Unknown<'env>> {
-  let mut errors = close_binding_errors(error);
-  if let Some(js_error) = take_single_js_error(&mut errors) {
-    return Ok(js_error.into_unknown(*env));
-  }
-
-  if errors.is_empty() {
-    return Ok(napi::JsError::from(napi::Error::from_reason(error.to_string())).into_unknown(*env));
-  }
-
-  let mut js_errors = env.create_array(u32::try_from(errors.len()).map_err(|_| {
-    napi::Error::from_reason("too many close failures to create a JavaScript AggregateError")
-  })?)?;
-  for (index, error) in errors.into_iter().enumerate() {
-    let index = u32::try_from(index)
-      .map_err(|_| napi::Error::from_reason("close failure index exceeds JavaScript array size"))?;
-    match error {
-      BindingError::JsError(error) => js_errors.set(index, error)?,
-      BindingError::NativeError(error) => {
-        js_errors.set(index, native_close_error_object(env, error)?)?;
-      }
-    }
-  }
-
-  let global = env.get_global()?;
-  let aggregate_error = global
-    .get_named_property::<Function<FnArgs<(Array<'_>, String)>, Unknown<'_>>>("AggregateError")?
-    .new_instance(FnArgs::from((js_errors, error.to_string())))?;
-  Ok(aggregate_error)
 }
 
 fn take_single_js_error(errors: &mut Vec<BindingError>) -> Option<napi::JsError> {
@@ -303,19 +275,6 @@ fn take_single_js_error(errors: &mut Vec<BindingError>) -> Option<napi::JsError>
     unreachable!("the singleton error was checked above");
   };
   Some(js_error)
-}
-
-fn native_close_error_object(env: &Env, error: NativeError) -> napi::Result<Object<'_>> {
-  let NativeError { kind, message, id, exporter, loc, pos } = error;
-  let mut object = env.create_error(napi::Error::from_reason(message.clone()))?;
-  object.set_named_property("code", kind.clone())?;
-  object.set_named_property("kind", kind)?;
-  object.set_named_property("message", message)?;
-  object.set_named_property("id", id)?;
-  object.set_named_property("exporter", exporter)?;
-  object.set_named_property("loc", loc)?;
-  object.set_named_property("pos", pos)?;
-  Ok(object)
 }
 
 fn close_binding_errors(error: &ClassicBundlerCloseError) -> Vec<BindingError> {

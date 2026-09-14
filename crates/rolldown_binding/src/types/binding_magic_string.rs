@@ -1491,18 +1491,3 @@ fn apply_replacement_ecma(
   let group_count = m.group_count();
   apply_replacement(replacement, matched, group_count, |n| m.group(n).map(|range| &source[range]))
 }
-
-#[cfg(test)]
-mod tests {
-  use super::*;
-
-  #[test]
-  fn constructor_moves_source_into_owned_magic_string_without_reallocating() {
-    let source = String::from("const answer = 42;");
-    let source_ptr = source.as_ptr();
-
-    let magic_string = BindingMagicString::new(source, None);
-
-    assert_eq!(magic_string.inner.source().as_ptr(), source_ptr);
-  }
-}

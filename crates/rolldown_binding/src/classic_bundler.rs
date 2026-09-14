@@ -221,10 +221,7 @@ impl ClassicBundlerLifecycle {
     Some(ClassicBundlerOperationGuard { lifecycle: Arc::clone(self), active: true, debug_tracer })
   }
 
-  fn begin_terminal_close(
-    self: &Arc<Self>,
-    debug_tracer: Option<rolldown_devtools::DebugTracer>,
-  ) -> ClassicBundlerTerminalCloseGuard {
+  fn begin_terminal_close(self: &Arc<Self>) -> ClassicBundlerTerminalCloseGuard {
     let mut state = self.state.lock().unwrap_or_else(std::sync::PoisonError::into_inner);
     state.terminal_closes += 1;
     let operations_drained = operation_waiter(&mut state);
@@ -232,7 +229,7 @@ impl ClassicBundlerLifecycle {
       lifecycle: Arc::clone(self),
       operations_drained,
       failure_triggered: false,
-      debug_tracer,
+      debug_tracer: None,
       armed: true,
     }
   }
@@ -715,7 +712,7 @@ impl ClassicBundler {
       self.closed = true;
     }
     if self.close_future.is_none() {
-      let mut terminal_close = self.lifecycle.begin_terminal_close(None);
+      let mut terminal_close = self.lifecycle.begin_terminal_close();
       // `take`, not `clone`: the handle pins the normalized options and plugin
       // driver, and a copy left on the struct is only freed by the N-API
       // finalizer — which never runs on the threadless WASI flavor, leaking one

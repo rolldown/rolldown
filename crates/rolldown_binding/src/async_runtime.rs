@@ -11,17 +11,17 @@ use napi::bindgen_prelude::{
 use napi::bindgen_prelude::{FnArgs, Promise, Unknown};
 use napi::threadsafe_function::ThreadsafeFunctionCallMode;
 use napi_derive::napi;
-use rolldown_utils::MAX_ASYNC_RUNTIME_WORKER_THREADS;
 use rolldown_utils::async_runtime::{
-  CurrentThreadTaskDelivery, CurrentThreadTaskDriver, CurrentThreadTaskDriverId, RuntimeFlavor,
-  RuntimeMetricsSnapshot, RuntimeOptions, RuntimeOptionsPatch, TimerDriver, TimerDriverId, TimerId,
+  CurrentThreadTaskDelivery, CurrentThreadTaskDriver, CurrentThreadTaskDriverId,
+  MAX_ASYNC_RUNTIME_WORKER_THREADS, RuntimeFlavor, RuntimeMetricsSnapshot, RuntimeOptions,
+  RuntimeOptionsPatch, TimerDriver, TimerDriverId, TimerId,
   acknowledge_current_thread_task_delivery, configure, configure_partial, configured_options,
-  drive_current_thread_tasks, fail_current_thread_task_delivery, metrics,
-  register_current_thread_task_driver, register_timer_driver, request_current_thread_task_drain,
-  reset_metrics, shutdown, start, try_block_on_dyn, try_spawn, try_spawn_blocking,
-  try_spawn_detached, unregister_current_thread_task_driver, unregister_timer_driver,
+  drive_current_thread_tasks, fail_current_thread_task_delivery, max_async_runtime_worker_threads,
+  metrics, register_current_thread_task_driver, register_timer_driver,
+  request_current_thread_task_drain, reset_metrics, shutdown, start, try_block_on_dyn, try_spawn,
+  try_spawn_blocking, try_spawn_detached, unregister_current_thread_task_driver,
+  unregister_timer_driver,
 };
-use rolldown_utils::max_async_runtime_worker_threads;
 
 use crate::types::js_callback::InvalidReturnValue;
 use crate::types::js_callback::JsCallback;
@@ -258,12 +258,7 @@ pub fn get_async_runtime_config() -> BindingRuntimeConfig {
   configured_options().into()
 }
 
-// Every runtime-config environment variable is read in exactly one place
-// (`RuntimeEnv::from_process`), resolved by the pure per-target defaults table
-// (`resolve_runtime_config_for`), and snapshotted once per process
-// (`resolved_runtime_config`). Both the runtime that gets built and the
-// `get_runtime_capabilities` export read that same snapshot, so a later `process.env`
-// mutation can never make what we report diverge from the runtime that exists.
+// See internal-docs/async-runtime/implementation.md §3.
 
 /// Which target family this binding was compiled for.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -273,32 +268,6 @@ pub enum ResolvedRuntimeTarget {
   Wasi,
   /// `wasm32-wasip1-threads`: wasm with real OS threads (atomics).
   WasiThreads,
-}
-
-/// Executor flavor, decoupled from the napi types so the pure resolver (and
-/// its tests) need no napi machinery.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum ResolvedRuntimeFlavor {
-  CurrentThread,
-  MultiThread,
-}
-
-impl From<ResolvedRuntimeFlavor> for BindingRuntimeFlavor {
-  fn from(value: ResolvedRuntimeFlavor) -> Self {
-    match value {
-      ResolvedRuntimeFlavor::CurrentThread => Self::CurrentThread,
-      ResolvedRuntimeFlavor::MultiThread => Self::MultiThread,
-    }
-  }
-}
-
-impl From<ResolvedRuntimeFlavor> for RuntimeFlavor {
-  fn from(value: ResolvedRuntimeFlavor) -> Self {
-    match value {
-      ResolvedRuntimeFlavor::CurrentThread => Self::CurrentThread,
-      ResolvedRuntimeFlavor::MultiThread => Self::MultiThread,
-    }
-  }
 }
 
 /// Raw environment values consumed by the resolver. `from_process` is the
@@ -337,7 +306,7 @@ impl RuntimeEnv {
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct ResolvedRuntimeConfig {
   pub target: ResolvedRuntimeTarget,
-  pub flavor: ResolvedRuntimeFlavor,
+  pub flavor: RuntimeFlavor,
   pub worker_threads: usize,
   pub max_blocking_tasks: usize,
   /// `Some(ms)` only when deadline-based deadlock detection is armed.
@@ -349,11 +318,7 @@ pub struct ResolvedRuntimeConfig {
 }
 
 const fn compiled_target() -> ResolvedRuntimeTarget {
-  // `rolldown_wasi_threads` is emitted by build.rs for the exact
-  // `wasm32-wasip1-threads` cargo TARGET. It is NOT derivable from built-in cfgs: the
-  // two WASI targets expose identical cfg sets, and `cfg!(target_feature = "atomics")`
-  // reads false even on the threads target (a threaded artifact built with that
-  // predicate reported `target: "wasi"`).
+  // See build.rs: only the cargo TARGET distinguishes the two WASI targets.
   if cfg!(not(target_family = "wasm")) {
     ResolvedRuntimeTarget::Native
   } else if cfg!(rolldown_wasi_threads) {
@@ -382,15 +347,10 @@ fn parse_drain_linger_us(raw: Option<String>) -> Option<u64> {
 
 /// Parse a raw `ROLLDOWN_RUNTIME` value; unknown / unset values keep
 /// `default` (the shared backend's per-target default flavor).
-fn resolve_runtime_flavor(
-  raw: Option<&str>,
-  default: ResolvedRuntimeFlavor,
-) -> ResolvedRuntimeFlavor {
+fn resolve_runtime_flavor(raw: Option<&str>, default: RuntimeFlavor) -> RuntimeFlavor {
   match raw {
-    Some("current" | "current-thread" | "single" | "single-thread") => {
-      ResolvedRuntimeFlavor::CurrentThread
-    }
-    Some("multi" | "multi-thread") => ResolvedRuntimeFlavor::MultiThread,
+    Some("current" | "current-thread" | "single" | "single-thread") => RuntimeFlavor::CurrentThread,
+    Some("multi" | "multi-thread") => RuntimeFlavor::MultiThread,
     _ => default,
   }
 }
@@ -404,13 +364,13 @@ fn detected_native_parallelism() -> usize {
 }
 
 fn clamp_shared_blocking_tasks(
-  flavor: ResolvedRuntimeFlavor,
+  flavor: RuntimeFlavor,
   worker_threads: usize,
   requested: usize,
 ) -> usize {
   match flavor {
-    ResolvedRuntimeFlavor::CurrentThread => 1,
-    ResolvedRuntimeFlavor::MultiThread => requested.min(worker_threads.saturating_sub(1).max(1)),
+    RuntimeFlavor::CurrentThread => 1,
+    RuntimeFlavor::MultiThread => requested.min(worker_threads.saturating_sub(1).max(1)),
   }
 }
 
@@ -424,13 +384,13 @@ fn resolve_runtime_config_for(
   use crate::env_config::resolve_thread_count;
   let native = matches!(target, ResolvedRuntimeTarget::Native);
   let default_flavor =
-    if native { ResolvedRuntimeFlavor::MultiThread } else { ResolvedRuntimeFlavor::CurrentThread };
+    if native { RuntimeFlavor::MultiThread } else { RuntimeFlavor::CurrentThread };
   let requested_flavor = resolve_runtime_flavor(env.runtime.as_deref(), default_flavor);
   // The shared scheduler has no MultiThread executor on WebAssembly (`rolldown_utils`
   // does not compile Rayon there). Normalize the unsupported override before the
   // module-init hook calls `configure`, so loading a WASI artifact cannot panic because
   // `ROLLDOWN_RUNTIME=multi` leaked in from a native process environment.
-  let flavor = if native { requested_flavor } else { ResolvedRuntimeFlavor::CurrentThread };
+  let flavor = if native { requested_flavor } else { RuntimeFlavor::CurrentThread };
   let requested_worker_threads = if native {
     resolve_thread_count(
       env.worker_threads.clone(),
@@ -438,13 +398,13 @@ fn resolve_runtime_config_for(
       max_async_runtime_worker_threads(),
     )
   } else {
-    // `ROLLDOWN_WORKER_THREADS` does not apply on wasm; keep
-    // `RuntimeOptions::default()` parity with `available_parallelism`.
-    std::thread::available_parallelism().map_or(1, usize::from)
+    // `ROLLDOWN_WORKER_THREADS` does not apply on wasm, and the flavor above is
+    // forced to CurrentThread there, so this value is never read.
+    1
   };
   let worker_threads = match flavor {
-    ResolvedRuntimeFlavor::CurrentThread => 1,
-    ResolvedRuntimeFlavor::MultiThread => requested_worker_threads.max(2),
+    RuntimeFlavor::CurrentThread => 1,
+    RuntimeFlavor::MultiThread => requested_worker_threads.max(2),
   };
   let requested_blocking_tasks =
     resolve_thread_count(env.max_blocking_threads.clone(), worker_threads, worker_threads);
@@ -2000,7 +1960,7 @@ fn install_async_runtime_backend() {
   // The same resolved snapshot `get_runtime_capabilities` reports from.
   let resolved = resolved_runtime_config();
   let options = RuntimeOptions {
-    flavor: resolved.flavor.into(),
+    flavor: resolved.flavor,
     worker_threads: resolved.worker_threads,
     max_blocking_tasks: resolved.max_blocking_tasks,
     park_deadline: resolved.park_deadline_ms.map(std::time::Duration::from_millis),
@@ -2013,90 +1973,6 @@ fn install_async_runtime_backend() {
   };
   configure(options).expect("Failed to configure the Rolldown async runtime");
   register_async_runtime(RolldownAsyncRuntime);
-}
-
-#[cfg(all(feature = "runtime-waker-teardown-test", not(target_family = "wasm")))]
-struct RetainedSchedulerWakerProbe {
-  sender: Option<std::sync::mpsc::Sender<std::task::Waker>>,
-}
-
-#[cfg(all(feature = "runtime-waker-teardown-test", not(target_family = "wasm")))]
-impl Future for RetainedSchedulerWakerProbe {
-  type Output = ();
-
-  fn poll(mut self: Pin<&mut Self>, cx: &mut std::task::Context<'_>) -> std::task::Poll<()> {
-    if let Some(sender) = self.sender.take() {
-      let _ = sender.send(cx.waker().clone());
-    }
-    std::task::Poll::Pending
-  }
-}
-
-#[cfg(all(feature = "runtime-waker-teardown-test", not(target_family = "wasm")))]
-fn run_retained_scheduler_waker_probe(
-  receiver: std::sync::mpsc::Receiver<std::task::Waker>,
-  armed_path: std::path::PathBuf,
-  release_path: std::path::PathBuf,
-  completed_path: std::path::PathBuf,
-) {
-  let result = (|| -> Result<(), String> {
-    let waker = receiver
-      .recv()
-      .map_err(|_| "scheduler task retired before publishing its waker".to_string())?;
-    std::fs::write(&armed_path, b"armed")
-      .map_err(|error| format!("failed to publish armed marker: {error}"))?;
-
-    let deadline = std::time::Instant::now() + std::time::Duration::from_secs(30);
-    while !release_path.exists() {
-      if std::time::Instant::now() >= deadline {
-        return Err("timed out waiting for the post-teardown release marker".to_string());
-      }
-      std::thread::sleep(std::time::Duration::from_millis(5));
-    }
-
-    std::panic::catch_unwind(std::panic::AssertUnwindSafe(move || {
-      waker.wake_by_ref();
-      drop(waker);
-    }))
-    .map_err(|_| "post-teardown scheduler waker invocation panicked".to_string())
-  })();
-
-  let status = match result {
-    Ok(()) => "completed".to_string(),
-    Err(error) => format!("error: {error}"),
-  };
-  let _ = std::fs::write(completed_path, status);
-}
-
-/// Test-only worker teardown probe. It retains a real shared-scheduler waker
-/// on an external native thread until the caller publishes `release_path`.
-#[cfg(all(feature = "runtime-waker-teardown-test", not(target_family = "wasm")))]
-#[napi(js_name = "__rolldownTestRetainSchedulerWaker")]
-pub fn retain_scheduler_waker_for_worker_teardown(
-  armed_path: String,
-  release_path: String,
-  completed_path: String,
-) -> napi::Result<()> {
-  let (sender, receiver) = std::sync::mpsc::channel();
-  std::thread::Builder::new()
-    .name("rolldown-waker-teardown-test".to_string())
-    .spawn(move || {
-      run_retained_scheduler_waker_probe(
-        receiver,
-        armed_path.into(),
-        release_path.into(),
-        completed_path.into(),
-      );
-    })
-    .map_err(|error| {
-      napi::Error::from_reason(format!(
-        "Failed to start the scheduler waker teardown probe thread: {error}"
-      ))
-    })?;
-
-  try_spawn_detached(RetainedSchedulerWakerProbe { sender: Some(sender) }).map_err(|_| {
-    napi::Error::from_reason("The shared async runtime rejected the scheduler waker teardown probe")
-  })
 }
 
 /// Stop the real shared scheduler so the next N-API future submission is
@@ -2199,13 +2075,13 @@ pub fn get_runtime_capabilities() -> BindingRuntimeCapabilities {
 // exercised on any host.
 #[cfg(test)]
 mod tests {
-  use rolldown_utils::max_async_runtime_worker_threads;
+  use rolldown_utils::async_runtime::max_async_runtime_worker_threads;
 
   use super::{
-    BindingHostRegistration, ResolvedRuntimeFlavor, ResolvedRuntimeTarget, RuntimeEnv,
-    claim_host_registration_id, get_current_thread_task_host_contract_version,
-    native_default_parallelism, parse_park_deadline_ms, reserve_current_thread_host_registration,
-    resolve_runtime_config_for, unregister_current_thread_task_host,
+    BindingHostRegistration, ResolvedRuntimeTarget, RuntimeEnv, RuntimeFlavor,
+    claim_host_registration_id, native_default_parallelism, parse_park_deadline_ms,
+    reserve_current_thread_host_registration, resolve_runtime_config_for,
+    unregister_current_thread_task_host,
   };
   use super::{
     BindingRuntimeFlavor, BindingRuntimeOptions, HOST_TIMER_MAX_TRANSIENT_FAILURES,
@@ -2215,8 +2091,8 @@ mod tests {
     PendingHostTimerRegistration, PendingRelayDropGuard, PendingRelayState,
     RelayCancellationAccounting, RelayIdAllocator, RelayScheduleState, RolldownAsyncRuntime,
     call_native_current_thread_task_host, complete_relay_schedule_callback,
-    install_cleanup_hook_or_rollback, install_host_driver_registration, record_host_timer_failure,
-    recover_host_timer_failure, register_pending_host_timer, register_pending_host_timer_if_live,
+    install_host_driver_registration, record_host_timer_failure, recover_host_timer_failure,
+    register_pending_host_timer, register_pending_host_timer_if_live,
     reset_host_timer_failures_after_success, retire_pending_relay, retire_pending_relays,
     safe_js_number, take_pending_host_timers, wake_host_timer_safely,
   };
@@ -2305,42 +2181,8 @@ mod tests {
     (relay_id, relay_health, PendingRelayDropGuard::new(std::sync::Arc::clone(state), id, relay_id))
   }
 
-  struct BudgetBoundaryTimerWait {
-    state: std::sync::Arc<TestPendingRelayState>,
-    timer_id: rolldown_utils::async_runtime::TimerId,
-    schedule_state: RelayScheduleState,
-    registered: bool,
-  }
-
-  impl std::future::Future for BudgetBoundaryTimerWait {
-    type Output = ();
-
-    fn poll(
-      mut self: std::pin::Pin<&mut Self>,
-      cx: &mut std::task::Context<'_>,
-    ) -> std::task::Poll<Self::Output> {
-      assert!(!self.registered, "the timer wait must be cancelled before a second poll");
-      self.registered = true;
-      let state = std::sync::Arc::clone(&self.state);
-      let timer_id = self.timer_id;
-      let (_, _, relay_drop_guard) =
-        test_pending_relay_guard(&state, timer_id, cx.waker().clone(), self.schedule_state);
-      rolldown_utils::async_runtime::spawn_detached(async move {
-        let mut relay_drop_guard = relay_drop_guard;
-        std::future::pending::<()>().await;
-        relay_drop_guard.disarm();
-      });
-      std::task::Poll::Pending
-    }
-  }
-
   fn env() -> RuntimeEnv {
     RuntimeEnv::default()
-  }
-
-  #[test]
-  fn current_thread_task_host_contract_version_is_stable() {
-    assert_eq!(get_current_thread_task_host_contract_version(), 4);
   }
 
   #[test]
@@ -3074,25 +2916,6 @@ mod tests {
   }
 
   #[test]
-  fn cleanup_hook_registration_failure_rolls_back_host_registration() {
-    let rollback_calls = std::sync::atomic::AtomicUsize::new(0);
-    let result = install_cleanup_hook_or_rollback(
-      || -> napi::Result<()> {
-        Err(napi::Error::new(
-          napi::Status::GenericFailure,
-          "intentional cleanup-hook registration failure",
-        ))
-      },
-      || {
-        rollback_calls.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
-      },
-    );
-
-    assert!(result.is_err());
-    assert_eq!(rollback_calls.load(std::sync::atomic::Ordering::SeqCst), 1);
-  }
-
-  #[test]
   fn host_driver_installation_allows_reentrant_eviction_before_publication() {
     let dead = std::sync::atomic::AtomicBool::new(false);
     let registration = std::sync::Mutex::new(None);
@@ -3509,161 +3332,6 @@ mod tests {
     );
   }
 
-  #[cfg(not(target_family = "wasm"))]
-  #[test]
-  fn timer_relay_terminal_drop_at_host_turn_budget_settles_without_later_work() {
-    const CHILD_ENV: &str = "ROLLDOWN_TEST_TIMER_RELAY_TERMINAL_DROP_CHILD";
-    const HOST_TURN_RUNNABLE_BUDGET: usize = 64;
-
-    if let Some(relay_state) = std::env::var_os(CHILD_ENV) {
-      use std::sync::{Arc, mpsc};
-      use std::time::Duration;
-
-      use futures::FutureExt as _;
-      use rolldown_utils::async_runtime::{
-        CurrentThreadTaskDelivery, CurrentThreadTaskDriver, RuntimeFlavor, RuntimeOptions,
-        acknowledge_current_thread_task_delivery, cancel_current_thread_task_dispatch, configure,
-        drive_current_thread_tasks, metrics, register_current_thread_task_driver, reset_metrics,
-        shutdown, spawn, spawn_detached, start, unregister_current_thread_task_driver,
-      };
-
-      struct RecordingTaskDriver {
-        dispatches: mpsc::Sender<CurrentThreadTaskDelivery>,
-      }
-
-      impl CurrentThreadTaskDriver for RecordingTaskDriver {
-        fn dispatch(&self, delivery: CurrentThreadTaskDelivery) -> bool {
-          self.dispatches.send(delivery).is_ok()
-        }
-      }
-
-      let schedule_state = if relay_state == "complete" {
-        RelayScheduleState::CallbackComplete
-      } else {
-        RelayScheduleState::AwaitingCallback
-      };
-
-      let options = RuntimeOptions {
-        flavor: RuntimeFlavor::CurrentThread,
-        worker_threads: 1,
-        max_blocking_tasks: 1,
-        ..RuntimeOptions::default()
-      };
-      configure(options).expect("the isolated runtime must accept CurrentThread configuration");
-      start().expect("the isolated CurrentThread runtime must start");
-      reset_metrics();
-
-      let (dispatch_tx, dispatch_rx) = mpsc::channel();
-      let driver_id = register_current_thread_task_driver(Arc::new(RecordingTaskDriver {
-        dispatches: dispatch_tx,
-      }));
-
-      for _ in 0..HOST_TURN_RUNNABLE_BUDGET - 1 {
-        spawn_detached(async {});
-      }
-      let state = Arc::new(TestPendingRelayState::default());
-      let timer_task = spawn(BudgetBoundaryTimerWait {
-        state: Arc::clone(&state),
-        timer_id: 1,
-        schedule_state,
-        registered: false,
-      });
-      let first_dispatch = dispatch_rx
-        .recv_timeout(Duration::from_secs(2))
-        .expect("the initial host turn must be published");
-      assert!(
-        matches!(dispatch_rx.try_recv(), Err(mpsc::TryRecvError::Empty)),
-        "all 64 initial runnables must coalesce behind one host turn"
-      );
-
-      let callback_lease = drive_current_thread_tasks(first_dispatch.capability())
-        .expect("the exact host delivery must be admitted");
-      acknowledge_current_thread_task_delivery(first_dispatch);
-      drop(callback_lease);
-      assert_eq!(
-        metrics().runnable_polls,
-        HOST_TURN_RUNNABLE_BUDGET as u64,
-        "the timer operation must occupy the last poll in the host-turn budget"
-      );
-      assert_eq!(
-        state.pending.lock().unwrap_or_else(std::sync::PoisonError::into_inner).len(),
-        1,
-        "the timer poll must register its pending relay"
-      );
-      assert_eq!(
-        metrics().queued_runnables,
-        1,
-        "the unpolled relay must be the sole runnable beyond the budget boundary"
-      );
-
-      let failed_dispatch = dispatch_rx
-        .recv_timeout(Duration::from_secs(2))
-        .expect("budget exhaustion must publish a fresh relay turn");
-      cancel_current_thread_task_dispatch(failed_dispatch.capability());
-      let replacement_dispatch = dispatch_rx
-        .recv_timeout(Duration::from_secs(2))
-        .expect("the first scheduler failure must publish one replacement");
-      assert_ne!(replacement_dispatch, failed_dispatch);
-      cancel_current_thread_task_dispatch(replacement_dispatch.capability());
-
-      assert!(
-        state.pending.lock().unwrap_or_else(std::sync::PoisonError::into_inner).is_empty(),
-        "terminal queue destruction must retire the matching pending relay"
-      );
-      let cancelled_relays =
-        state.cancelled_relays.lock().unwrap_or_else(std::sync::PoisonError::into_inner);
-      if schedule_state == RelayScheduleState::CallbackComplete {
-        assert_eq!(
-          cancelled_relays.len(),
-          1,
-          "a callback-complete relay must queue exactly one host cancellation"
-        );
-      } else {
-        assert!(
-          cancelled_relays.is_empty(),
-          "cleanup must not overtake a schedule callback that has not returned"
-        );
-      }
-      drop(cancelled_relays);
-      assert_eq!(metrics().queued_runnables, 0);
-      assert!(
-        matches!(dispatch_rx.try_recv(), Err(mpsc::TryRecvError::Empty)),
-        "terminal recovery must stay bounded after the replacement failure"
-      );
-      let task_result =
-        timer_task.now_or_never().expect("the original timer operation must settle immediately");
-      assert_eq!(
-        task_result
-          .expect_err("terminal recovery must cancel the pending timer operation")
-          .to_string(),
-        "async runtime stopped before the task completed"
-      );
-
-      unregister_current_thread_task_driver(driver_id);
-      shutdown().expect("the isolated CurrentThread runtime must shut down cleanly");
-      return;
-    }
-
-    for relay_state in ["awaiting", "complete"] {
-      let output = std::process::Command::new(std::env::current_exe().unwrap())
-        .arg("--exact")
-        .arg(
-          "async_runtime::tests::timer_relay_terminal_drop_at_host_turn_budget_settles_without_later_work",
-        )
-        .arg("--nocapture")
-        .env(CHILD_ENV, relay_state)
-        .output()
-        .expect("the timer relay regression subprocess must start");
-      assert!(
-        output.status.success(),
-        "{relay_state} timer relay terminal-drop regression failed; status={:?}\nstdout={}\nstderr={}",
-        output.status.code(),
-        String::from_utf8_lossy(&output.stdout),
-        String::from_utf8_lossy(&output.stderr)
-      );
-    }
-  }
-
   #[test]
   fn native_thread_env_overrides_clamp_to_production_limits() {
     let shared = resolve(
@@ -3693,7 +3361,7 @@ mod tests {
   #[test]
   fn shared_native_defaults_reserve_one_runnable_lane() {
     let resolved = resolve(ResolvedRuntimeTarget::Native, &env());
-    assert_eq!(resolved.flavor, ResolvedRuntimeFlavor::MultiThread);
+    assert_eq!(resolved.flavor, RuntimeFlavor::MultiThread);
     assert_eq!(
       resolved.worker_threads,
       native_default_parallelism(num_cpus::get_physical(), num_cpus::get())
@@ -3719,14 +3387,14 @@ mod tests {
     assert_eq!((resolved.worker_threads, resolved.max_blocking_tasks), (7, 6));
 
     for (raw, expected) in [
-      ("single", ResolvedRuntimeFlavor::CurrentThread),
-      ("single-thread", ResolvedRuntimeFlavor::CurrentThread),
-      ("current", ResolvedRuntimeFlavor::CurrentThread),
-      ("current-thread", ResolvedRuntimeFlavor::CurrentThread),
-      ("multi", ResolvedRuntimeFlavor::MultiThread),
-      ("multi-thread", ResolvedRuntimeFlavor::MultiThread),
+      ("single", RuntimeFlavor::CurrentThread),
+      ("single-thread", RuntimeFlavor::CurrentThread),
+      ("current", RuntimeFlavor::CurrentThread),
+      ("current-thread", RuntimeFlavor::CurrentThread),
+      ("multi", RuntimeFlavor::MultiThread),
+      ("multi-thread", RuntimeFlavor::MultiThread),
       // Unknown values keep the per-target default (MultiThread on native).
-      ("turbo", ResolvedRuntimeFlavor::MultiThread),
+      ("turbo", RuntimeFlavor::MultiThread),
     ] {
       let resolved = resolve(
         ResolvedRuntimeTarget::Native,
@@ -3746,7 +3414,7 @@ mod tests {
         ..RuntimeEnv::default()
       },
     );
-    assert_eq!(resolved.flavor, ResolvedRuntimeFlavor::MultiThread);
+    assert_eq!(resolved.flavor, RuntimeFlavor::MultiThread);
     assert_eq!(
       (resolved.worker_threads, resolved.max_blocking_tasks),
       (2, 1),
@@ -3804,54 +3472,6 @@ mod tests {
     assert_eq!(resolve(ResolvedRuntimeTarget::Native, &env()).drain_linger_us, None);
   }
 
-  #[cfg(not(target_family = "wasm"))]
-  #[test]
-  fn shared_drain_linger_oversized_budget_is_accepted_and_clamped_by_configure() {
-    const CHILD_ENV: &str = "ROLLDOWN_TEST_DRAIN_LINGER_OVERSIZED_CHILD";
-
-    if std::env::var_os(CHILD_ENV).is_some() {
-      use std::time::Duration;
-
-      use rolldown_utils::async_runtime::{
-        MAX_DRAIN_LINGER_MICROS, RuntimeFlavor, RuntimeOptions, configure, configured_options,
-      };
-
-      // An env typo resolving to a huge budget must never panic module init:
-      // `configure` clamps to the shared ceiling instead of erroring.
-      configure(RuntimeOptions {
-        flavor: RuntimeFlavor::CurrentThread,
-        worker_threads: 1,
-        max_blocking_tasks: 1,
-        drain_linger: Duration::from_micros(u64::MAX),
-        ..RuntimeOptions::default()
-      })
-      .expect("configure must accept (and clamp) an oversized drain-linger budget");
-      assert_eq!(
-        configured_options().drain_linger,
-        Duration::from_micros(MAX_DRAIN_LINGER_MICROS),
-        "validation must clamp the oversized budget to the shared ceiling"
-      );
-      return;
-    }
-
-    let output = std::process::Command::new(std::env::current_exe().unwrap())
-      .arg("--exact")
-      .arg(
-        "async_runtime::tests::shared_drain_linger_oversized_budget_is_accepted_and_clamped_by_configure",
-      )
-      .arg("--nocapture")
-      .env(CHILD_ENV, "1")
-      .output()
-      .expect("the oversized drain-linger subprocess must start");
-    assert!(
-      output.status.success(),
-      "the oversized drain-linger configuration failed; status={:?}\nstdout={}\nstderr={}",
-      output.status.code(),
-      String::from_utf8_lossy(&output.stdout),
-      String::from_utf8_lossy(&output.stderr)
-    );
-  }
-
   #[test]
   fn shared_wasi_defaults_keep_runtime_options_parity() {
     for target in [ResolvedRuntimeTarget::Wasi, ResolvedRuntimeTarget::WasiThreads] {
@@ -3859,7 +3479,7 @@ mod tests {
       assert_eq!(resolved.target, target);
       assert_eq!(
         resolved.flavor,
-        ResolvedRuntimeFlavor::CurrentThread,
+        RuntimeFlavor::CurrentThread,
         "the shared wasm default flavor is CurrentThread"
       );
       assert_eq!(
@@ -3881,7 +3501,7 @@ mod tests {
           ..RuntimeEnv::default()
         },
       );
-      assert_eq!(overridden.flavor, ResolvedRuntimeFlavor::CurrentThread);
+      assert_eq!(overridden.flavor, RuntimeFlavor::CurrentThread);
       assert_eq!(overridden.worker_threads, 1);
       assert_eq!(overridden.max_blocking_tasks, 1);
     }

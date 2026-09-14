@@ -125,17 +125,17 @@ test-async-runtime-binding:
   cargo test -p rolldown_binding --lib async_runtime::tests::
   cargo test -p rolldown_binding --lib classic_bundler::tests::
   cargo test -p rolldown_binding --lib env_config::tests::
-  cargo test -p rolldown_binding --lib manual_async_runtime_transition_tests::
 
-# Run the scheduler unit tests plus the node and watcher suites on both
-# flavors of the shared async runtime. Requires
+# Run the scheduler unit tests plus the node suite on both flavors of the shared
+# async runtime, and the watcher suite on the single-thread flavor (the default
+# flavor is already covered by the node test job). Requires
 # `just build-rolldown-async-runtime` first. The single-thread lane arms the
 # runtime's own deadlock detection (`ROLLDOWN_PARK_DEADLINE_MS`): a
 # `block_on`-over-JS hang freezes the JS event loop before vitest's own
 # timeouts can fire, so the runtime panics with a typed `BlockOnDeadlock`
-# diagnostic instead of hanging until a job-level timeout. The watcher suite
-# runs on both flavors because the watch-mode debounce timer goes through
-# the runtime's own `rolldown_utils::time::sleep_until` facility.
+# diagnostic instead of hanging until a job-level timeout. The watcher suite is
+# in here because the watch-mode debounce timer goes through the runtime's own
+# `rolldown_utils::time::sleep_until` facility.
 [unix]
 test-async-runtime:
   #!/usr/bin/env bash
@@ -145,7 +145,6 @@ test-async-runtime:
   ROLLDOWN_RUNTIME=single ROLLDOWN_PARK_DEADLINE_MS=60000 vp run --filter rolldown-tests test:main
   ROLLDOWN_RUNTIME=single ROLLDOWN_PARK_DEADLINE_MS=60000 vp run --filter rolldown-tests test:watcher
   vp run --filter rolldown-tests test:main
-  vp run --filter rolldown-tests test:watcher
 
 # --- `t` series commands provide scenario-specific shortcut commands for testing compared to `test` series commands.
 
@@ -280,15 +279,12 @@ build-rolldown-test-dev-server:
 build-rolldown-wasi:
   vp run --filter rolldown build-wasi:debug
 
-# Build `rolldown` and its native `.node` binding with the shared async
-# runtime (`--no-default-features --features
-# async-runtime,runtime-waker-teardown-test,runtime-submission-failure-test`)
-# instead of tokio. The test features expose only lifecycle regression probes.
-# Preserve every
-# generated text artifact byte-for-byte while building that test binary, then
-# build the package glue from the restored production sources.
+# Build `rolldown` and its native `.node` binding with the lifecycle regression
+# probe (`--features runtime-submission-failure-test`) turned on.
+# Preserve every generated text artifact byte-for-byte while building that test
+# binary, then build the package glue from the restored production sources.
 build-rolldown-async-runtime:
-  vp exec --filter rolldown -- oxnode ./generate-workerd-loader.ts --preserve-generated-sources -- node --import @oxc-node/core/register ./build-binding.ts --no-default-features --features async-runtime,runtime-waker-teardown-test,runtime-submission-failure-test
+  vp exec --filter rolldown -- oxnode ./generate-workerd-loader.ts --preserve-generated-sources -- node --import @oxc-node/core/register ./build-binding.ts --features runtime-submission-failure-test
   vp run --filter rolldown build-js-glue
 
 # Build `rolldown` with the non-threaded `.wasm` binding

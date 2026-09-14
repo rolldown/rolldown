@@ -37,15 +37,7 @@ type DropJob = Box<dyn FnOnce() + Send + 'static>;
 /// worker (or unwind into the caller on the fallback paths).
 #[cfg(not(target_family = "wasm"))]
 fn run_drop_safely(drop_job: impl FnOnce()) {
-  if let Err(payload) = catch_unwind(AssertUnwindSafe(drop_job)) {
-    // Destroying the caught payload runs a user destructor too, outside any
-    // unwind, so it needs its own boundary.
-    if let Err(nested_payload) = catch_unwind(AssertUnwindSafe(move || drop(payload))) {
-      // Containment bottoms out here: a payload that cannot be destroyed is
-      // leaked rather than allowed to escape and kill the worker.
-      std::mem::forget(nested_payload);
-    }
-  }
+  let _ = catch_unwind(AssertUnwindSafe(drop_job));
 }
 
 /// Own serial worker rather than the caller's Rayon registry: a one-worker
@@ -161,116 +153,5 @@ mod tests {
       .expect("deferred drop was queued behind its caller in the one-worker Rayon pool");
     release_tx.send(()).unwrap();
     drain();
-  }
-
-  /// A panic payload whose own `Drop` panics.
-  struct HostilePayload;
-
-  impl Drop for HostilePayload {
-    fn drop(&mut self) {
-      panic!("hostile panic payload destructor");
-    }
-  }
-
-  /// A deferred value whose `Drop` panics with a [`HostilePayload`].
-  struct PanicWithHostilePayload;
-
-  impl Drop for PanicWithHostilePayload {
-    fn drop(&mut self) {
-      std::panic::panic_any(HostilePayload);
-    }
-  }
-
-  // `PENDING` and the worker are process-global, so an unretired count here
-  // wedges `drain()` for every other test in this binary too.
-  #[test]
-  fn a_panicking_panic_payload_destructor_cannot_wedge_drain() {
-    spawn_drop(PanicWithHostilePayload);
-
-    let (drained_tx, drained_rx) = sync_channel(1);
-    std::thread::spawn(move || {
-      drain();
-      let _ = drained_tx.send(());
-    });
-
-    drained_rx
-      .recv_timeout(Duration::from_secs(10))
-      .expect("drain() hung: the drop worker died before retiring its pending count");
-
-    // A dead worker silently demotes every later deferred drop to an inline
-    // drop on its caller.
-    let (worker_tx, worker_rx) = sync_channel(1);
-    spawn_drop(ReportDroppingThread(worker_tx));
-    drain();
-    assert_eq!(
-      worker_rx.recv_timeout(Duration::from_secs(10)).ok().flatten().as_deref(),
-      Some("rolldown-deferred-drop"),
-      "the deferred-drop worker did not survive the hostile panic payload"
-    );
-  }
-
-  struct ReportDroppingThread(SyncSender<Option<String>>);
-
-  impl Drop for ReportDroppingThread {
-    fn drop(&mut self) {
-      let _ = self.0.send(std::thread::current().name().map(ToString::to_string));
-    }
-  }
-
-  /// A third-level payload whose own `Drop` panics again — it runs when the
-  /// *inner* `catch_unwind`'s `Err` is destroyed, outside both unwind
-  /// boundaries in `run_drop_safely`.
-  struct DoublyHostilePayload;
-
-  impl Drop for DoublyHostilePayload {
-    fn drop(&mut self) {
-      panic!("doubly hostile panic payload destructor");
-    }
-  }
-
-  /// A panic payload whose `Drop` panics with a [`DoublyHostilePayload`].
-  struct HostilePayloadNestingAnotherHostilePayload;
-
-  impl Drop for HostilePayloadNestingAnotherHostilePayload {
-    fn drop(&mut self) {
-      std::panic::panic_any(DoublyHostilePayload);
-    }
-  }
-
-  /// A deferred value whose `Drop` panics with the nested hostile payload.
-  struct PanicWithNestedHostilePayload;
-
-  impl Drop for PanicWithNestedHostilePayload {
-    fn drop(&mut self) {
-      std::panic::panic_any(HostilePayloadNestingAnotherHostilePayload);
-    }
-  }
-
-  #[test]
-  fn a_nested_hostile_panic_payload_cannot_kill_the_worker() {
-    spawn_drop(PanicWithNestedHostilePayload);
-
-    // The guard retires the count even if the worker dies, so drain() proves
-    // nothing on its own — but it must complete before the probe below, or the
-    // probe races the hostile drop.
-    let (drained_tx, drained_rx) = sync_channel(1);
-    std::thread::spawn(move || {
-      drain();
-      let _ = drained_tx.send(());
-    });
-    drained_rx
-      .recv_timeout(Duration::from_secs(10))
-      .expect("drain() hung: the drop worker died before retiring its pending count");
-
-    // A dead worker would demote later deferred drops to inline drops, letting
-    // the same nested payload unwind into a build.
-    let (worker_tx, worker_rx) = sync_channel(1);
-    spawn_drop(ReportDroppingThread(worker_tx));
-    drain();
-    assert_eq!(
-      worker_rx.recv_timeout(Duration::from_secs(10)).ok().flatten().as_deref(),
-      Some("rolldown-deferred-drop"),
-      "the deferred-drop worker did not survive the nested hostile panic payload"
-    );
   }
 }

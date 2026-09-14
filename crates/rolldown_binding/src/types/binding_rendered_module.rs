@@ -54,12 +54,9 @@ impl BindingRenderedModule {
     Ok(self.try_get_inner()?.code())
   }
 
-  // Owned `String`s are defense in depth only. napi holds the shared borrow
-  // across return-value conversion, so a re-entrant `dropInner()` is already
-  // rejected rather than freeing what the conversion still reads.
   #[napi(getter)]
-  pub fn rendered_exports(&self) -> napi::Result<Vec<String>> {
-    Ok(self.try_get_inner()?.rendered_exports.iter().map(ToString::to_string).collect())
+  pub fn rendered_exports(&self) -> napi::Result<Vec<&str>> {
+    Ok(self.try_get_inner()?.rendered_exports.iter().map(AsRef::as_ref).collect())
   }
 }
 

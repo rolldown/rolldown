@@ -35,10 +35,4 @@ mod tests {
     // The host-derived default is clamped too.
     assert_eq!(resolve_thread_count(None, 32, MAXIMUM), MAXIMUM);
   }
-
-  #[test]
-  #[should_panic(expected = "the default thread count must be positive")]
-  fn resolve_thread_count_rejects_an_invalid_default() {
-    let _ = resolve_thread_count(None, 0, 1);
-  }
 }

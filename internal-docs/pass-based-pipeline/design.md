@@ -1,0 +1,251 @@
+# Pass-Based Pipeline — Design & Principles
+
+## Summary
+
+A guiding methodology for structuring bundler-internal pipelines (stage-level dataflow) as passes with a compile-time ownership contract: every pass implements one small trait declaring what it reads, owns, seals, and hands onward. Compiler gates pin the shape; what they cannot pin is a short, explicit review list (see [Enforcement](#enforcement)). This doc defines the contract; there is no implementation.md yet — the first flow that adopts it adds one.
+
+## Ground rules (read this first)
+
+- This is a methodology, **not a migration mandate**. Do **not** proactively refactor existing pipeline code into passes.
+- Use the pass mechanism only when a maintainer explicitly asks for a pass-based refactor of a flow, or when designing a **new** flow.
+- It applies to pipeline top-level structure only. Helpers, visitors, and utilities stay plain functions — do not try to make everything a pass.
+- Acceptance test for calling something a Pass — all three, or it is not one: (1) it produces a nameable artifact or transforms a nameable working set, (2) it is a top-level driver step, (3) a maintainer asked for it or it is part of a new flow. Failing the test is grounds to **reject** Pass-ification in review — the rule cuts against reviewers demanding "why isn't this a Pass?" as much as against authors refactoring proactively.
+
+## What it is
+
+- A pass is one pipeline step with a machine-checked contract, written as an implementation of one small trait — every pass reads the same way.
+- The contract declares four things:
+  - what it only reads
+  - what it takes ownership of
+  - what it seals forever
+  - what it hands onward, still mutable
+- Enforcement is layered, mostly on ordinary Rust:
+  - order: the driver's `let`-chain — a step cannot name inputs that do not exist yet
+  - sealing: `run_pass` wraps every read-side output in `Sealed<T>` — only `&T` ever comes out; frozen representations inside (`Box<[T]>`, `IndexBox`) are the soft second layer
+  - ownership: by-value slots — "to modify is to own and hand back"
+  - shape: trait bounds plus the wrapper assertion — reads cannot be `&mut`, and a pass value has zero runtime size
+
+## What it looks like
+
+The whole mechanism is one trait and one wrapper function:
+
+```rust
+/// A pass type is a **name**, not a value: `run_pass` compile-time-asserts it is
+/// zero-sized, and the declaration rule makes it a non-generic unit struct. All
+/// runtime data — including configuration — enters through the declared slots.
+pub trait Pass: Copy + 'static {
+  type InputRead<'a>: Copy;         // shared borrows only; Copy makes `&mut` unrepresentable here
+  type InputOwned;                  // data taken over (to modify = to own and hand back); `()` if none
+  type OutputRead;                  // minted here; `run_pass` wraps it in `Sealed<_>` — frozen unconditionally
+  type OutputOwned;                 // still-mutable data handed to a later pass
+
+  fn run(self, cx: &mut PassCtx, read: Self::InputRead<'_>, owned: Self::InputOwned)
+    -> BuildResult<(Self::OutputRead, Self::OutputOwned)>;
+}
+
+pub fn run_pass<P: Pass>(pass: P, cx: &mut PassCtx, read: P::InputRead<'_>, owned: P::InputOwned)
+  -> BuildResult<(Sealed<P::OutputRead>, P::OutputOwned)> {
+  const { assert!(size_of::<P>() == 0, "a pass is a name — state lives in run() locals or in the slots") };
+  // tracing span + diagnostics provenance live here, once, for every pass
+  let (minted, owned_out) = pass.run(cx, read, owned)?;
+  Ok((Sealed::new(minted), owned_out)) // the harness seals — there is no unsealed exit
+}
+
+/// The hard freeze: only `&T` ever comes out — no `DerefMut`, no `into_inner`,
+/// private field. No mutation path exists, even for an owner.
+pub struct Sealed<T>(T);
+
+impl<T> Sealed<T> {
+  fn new(value: T) -> Self {   // harness-private: `run_pass` is the sole minting point (E0624 elsewhere)
+    Self(value)
+  }
+}
+
+impl<T> std::ops::Deref for Sealed<T> {
+  type Target = T;
+  fn deref(&self) -> &T {
+    &self.0
+  }
+}
+```
+
+Conventions:
+
+- The passes module carries `#![forbid(unsafe_code)]`, which closes the raw-pointer residual of the two `Pass` bounds.
+- Module layout is load-bearing: the harness types (`Pass`, `run_pass`, `PassCtx`, `Sealed`) live in their own **leaf** module (or crate), and pass modules are siblings of it, never descendants. Rust privacy is visible to descendant modules — a pass nested under the module that declares `Sealed` can read its private field and unfreeze it (this compiles; a true sibling fails E0616). For the same reason `PassCtx` is not `Default` and its constructor stays private to the driver.
+- `self` carries **no runtime data**: every pass is a zero-sized name token (`const`-asserted in `run_pass`), kept only so call sites read as `run_pass(OptimizeChunksPass, ..)`. Configuration is runtime data and enters through `InputRead` like everything else. Caveat: the inline assertion is checked when the compiler generates code for a reachable concrete `run_pass::<P>` call. A build rejects a non-zero-sized pass, but `cargo check` and rust-analyzer's default check-on-save may not report it, so do not rely on check-only or IDE feedback alone.
+- Slot types: empty = `()`; a single artifact = the bare type; multiple = a named per-pass struct (`XxxPassInputRead { .. }`, derives `Copy`), which doubles as the pass's greppable dependency manifest.
+- Naming and declaration: aside from its visibility, every pass token is declared as the non-generic unit struct `struct XxxPass;` (for example, `pub struct OptimizeChunksPass;`); its input struct is `<PassName>InputRead`. Generic, tuple, and braced pass-token declarations are disallowed even when zero-sized; generic logic belongs in helpers, and configuration belongs in the declared slots. Under this rule, `rg 'struct \w+Pass;'` is the complete pass inventory. The size assertion is a separate backstop against non-zero-sized pass values.
+- **Two freezes.** (1) Mutation-freeze: `Sealed<T>`, applied unconditionally by `run_pass` — whose constructor is harness-private, making it also the only minting point — so nothing exits `OutputRead` unfrozen and frozenness survives re-ownership. (2) Domain-freeze: draft/final type pairs with mutators only on the draft side, kept where sealing does real work (compaction, API narrowing) — this is the correctness story, and `UsedSymbolRefsBuilder::seal()` is its in-tree precedent. `Sealed<T>` does not make `T` a good artifact — `Sealed<LinkingMetadata>` would still be a fact bag; the mint rule in Example is what blocks that.
+- **Representation changes are the hygiene layer**: inside artifacts, prefer `Vec<T> → Box<[T]>`, `String → Box<str>`, `IndexVec<I, T> → IndexBox<I, [T]>`, maps → sorted boxed slices — dropped capacity, fixed lengths (indices cannot dangle by growth or removal), honest types even when viewed without the wrapper. Defense-in-depth; correctness does not rest on it. `Sealed<T>` alone suffices where sealing does no real work.
+- `Arc<T>` is **not** a seal: a unique holder melts it with `Arc::get_mut` / `Arc::try_unwrap` — frozenness would hinge on the runtime reference count, not the type. `Arc` is a sharing mechanism: compose it as `Arc<Sealed<T>>` when a sealed artifact must be shared.
+- `PassCtx` is the single sanctioned `&mut`: write-only sinks (diagnostics now, devtools trace later). It never contains pipeline data; passes may write it but never read it — and make that constructional, not reviewed: write methods take `&mut self`, read/drain methods take `self` by value, so a pass holding only `&mut PassCtx` cannot call them. `run_pass` (the wrapper) owns tracing spans and stamps every diagnostic with the emitting pass's name.
+- The contract is **sync**: stage work is CPU-bound, and `async` on every pass would tax every call site for a capability few passes need. Work that must await — plugin hooks, user callbacks — is hoisted to the driver between passes; the in-tree precedent is the async pre-resolution of `paths` before sync rendering. The awaiting-pass variant is parked in Future directions — take it out when a flow actually needs it.
+- Driver rules: every `OutputOwned` is consumed by exactly one later `InputOwned` (or explicitly dropped). **Seal order follows reference direction**: seal an artifact only when everything its keys/indices point into is already sealed.
+
+The freeze boundary proven in-tree today is `UsedSymbolRefsBuilder::seal()` in the generate stage: source liveness becomes read-only while chunk layout stays mutable — freeze lines are per-artifact, not global:
+
+```text
+UsedSymbolRefsBuilder ──(mutated through chunk generation)──► seal() ──► UsedSymbolRefs (frozen)
+                                                (chunk graph stays mutable past this point)
+```
+
+What a fully adopted flow could look like — **hypothetical**: today's `GenerateStage` does not have this boundary (its graph keeps being mutated by link derivation, wrapping, naming, and finalization well past chunk optimization). Sealing the chunk graph itself is left to the first flow that adopts this methodology:
+
+```text
+()  ──Split──►  Draft  ──Optimize──►  Draft  ──Seal──►  Sealed<ChunkGraph>
+                                                             │
+                                 ┌──────── &ChunkGraph ──────┤
+                                 ▼                           ▼
+                            ComputeLinksPass                AssignNamesPass
+                                 │                           │
+                            Links (sealed)             Names (sealed)
+```
+
+## Example
+
+Three passes, three roles — the slots mirror what each pass does to the data (names are illustrative; `DraftChunkGraph`, `ChunkNames` etc. do not exist today):
+
+```rust
+// 1) Reshape: chunk merging restructures the graph itself, so it owns the graph.
+#[derive(Clone, Copy)]
+pub struct OptimizeChunksPass;
+
+#[derive(Clone, Copy)]
+pub struct OptimizeChunksPassInputRead<'a> {
+  pub modules: &'a ModuleTable,
+  pub side_effects: &'a ModuleSideEffects,   // one decomposed fact — minted sealed by an earlier pass
+}
+
+impl Pass for OptimizeChunksPass {
+  type InputRead<'a> = OptimizeChunksPassInputRead<'a>;
+  type InputOwned    = DraftChunkGraph;   // it merges chunks and moves modules
+  type OutputRead    = ();
+  type OutputOwned   = DraftChunkGraph;   // handed back, still mutable
+
+  fn run(self, _cx: &mut PassCtx, read: Self::InputRead<'_>, mut graph: Self::InputOwned)
+    -> BuildResult<((), Self::OutputOwned)> {
+    // we own `graph`: mutate freely, internal `par_iter_mut` is fine
+    Ok(((), graph))
+  }
+}
+
+// 2) Seal: the freeze transition is itself a pass — compact, then freeze the
+//    representation: IndexVec<ChunkIdx, Chunk> becomes IndexBox<ChunkIdx, [Chunk]>.
+#[derive(Clone, Copy)]
+pub struct SealChunkGraphPass;
+
+impl Pass for SealChunkGraphPass {
+  type InputRead<'a> = ();
+  type InputOwned    = DraftChunkGraph;
+  type OutputRead    = ChunkGraph;        // run_pass hands the driver a Sealed<ChunkGraph>
+  type OutputOwned   = ();
+  // ...
+}
+
+// 3) Derive: the most common shape — owns nothing, reads sealed data, mints a new sealed artifact.
+#[derive(Clone, Copy)]
+pub struct AssignNamesPass;
+
+impl Pass for AssignNamesPass {
+  type InputRead<'a> = AssignNamesPassInputRead<'a>;   // { graph: &'a ChunkGraph, options: &'a NormalizedBundlerOptions }
+  type InputOwned    = ();
+  type OutputRead    = ChunkNames;        // e.g. IndexBox<ChunkIdx, [ArcStr]>; arrives as Sealed<ChunkNames>
+  type OutputOwned   = ();
+  // ...
+}
+```
+
+The driver is a typed `let`-chain (deliberately **not** `Vec<Box<dyn Pass>>` — heterogeneous signatures are the point):
+
+```rust
+let (_, graph) = run_pass(OptimizeChunksPass, &mut cx, optimize_reads, graph)?;
+let (graph, ()) = run_pass(SealChunkGraphPass, &mut cx, (), graph)?; // graph: Sealed<ChunkGraph>
+let (names, ()) = run_pass(AssignNamesPass, &mut cx, names_reads, ())?;
+```
+
+`OutputRead = ()` still comes back as `Sealed<()>` — discard it with `_`; a literal `()` pattern does not match it (E0308). The owned side is never wrapped, so `()` patterns are fine there.
+
+Needing to own more than you reshape is the signal that an artifact should be split out — not a reason to widen the slot.
+
+The same rule applies to reads. Entity tables (`ModuleTable`, `SymbolRefDb`) are legitimate inputs; metadata god-structs are not — declaring `&IndexVec<ModuleIdx, LinkingMetadata>` in an `InputRead` would launder today's grab-bag through the contract, and the manifest is only as informative as the granularity of the types it names. A pass declares the specific facts it consumes (`&ModuleSideEffects`, `&WrapKinds`); breaking blobs like `LinkingMetadata` into per-pass artifacts is much of why this contract exists.
+
+The mint side is symmetric: `OutputRead` must be a named, purpose-specific artifact — if you cannot say which fact the sealed type answers, it is not ready to be an `OutputRead`. Sealing a stage dump (`Sealed<SomeBigBag>`) makes the bag immutable, not decomposed; review holds this rule exactly as it holds the read rule.
+
+## Why
+
+Wrong order is a compile error, not a comment:
+
+```rust
+let (canon, ()) = run_pass(DeconflictPass, &mut cx, DeconflictPassInputRead { names: &names, /* .. */ }, ())?;
+let (names, ()) = run_pass(AssignNamesPass, &mut cx, names_reads, ())?;
+// error[E0425]: cannot find value `names` in this scope
+```
+
+Sealed means sealed:
+
+```rust
+graph.add_chunk(chunk);
+// error[E0599]: no method named `add_chunk` found for struct `Sealed<ChunkGraph>`
+// (method lookup walks through Deref and still finds nothing — mutators exist
+//  only on DraftChunkGraph, and what you hold after sealing is Sealed<ChunkGraph>)
+```
+
+### Other benefits
+
+The dependency graph is greppable — impact analysis without reading bodies:
+
+```console
+$ rg 'symbol_db: &' -g '*.rs'           # every pass that reads the symbol table
+$ rg 'InputOwned = DraftChunkGraph'     # every pass that ever owns the graph (rustfmt collapses aligned spaces)
+```
+
+Each pass is unit-testable by construction: its `InputRead` type is the exact, minimal fixture spec — no need to build whole stage outputs to test one pass.
+
+Parallel candidates are visible in signatures — and with sync passes, a driver-level `rayon::join` is real multicore, not interleaving:
+
+```rust
+// both read &ChunkGraph, own nothing, take separate sinks
+let (links_res, names_res) = rayon::join(
+  || run_pass(ComputeLinksPass, &mut cx_a, (&graph, &symbols), ()),
+  || run_pass(AssignNamesPass,  &mut cx_b, AssignNamesPassInputRead { graph: &graph, options: &options }, ()),
+);
+let ((links, ()), (names, ())) = (links_res?, names_res?);
+```
+
+Two passes are candidates exactly when their `InputOwned`s are disjoint and neither reads the other's output — both facts sit in the slot types, and the borrow checker rejects an unsound join (shared owned data, missing artifact). What it does not prove stays stated discipline: no interior mutability in pipeline data, no globals, no order-dependent external calls, per-branch sinks merged in a fixed order. Everyday parallelism remains `par_iter_mut` over owned data inside a pass; the driver-level join is for whole-pass overlap when profiling justifies it.
+
+Uniform machinery: `run_pass` is the single home for tracing spans and diagnostics provenance (`type_name::<P>()`), so observability never needs per-pass wiring.
+
+Memory release points become signature facts. An artifact's last reader takes it through `InputOwned` and does not hand it back — `InputOwned = IndexEcmaAst, OutputOwned = ()` declares "the AST arenas die here"; today's generate stage achieves the same by hand (by-value threading of the AST table, with comments explaining the drop timing). Artifacts that are only ever lent get an explicit `drop(x)` in the driver after their last borrower — and dropping too early is a compile error at the next borrow (use of moved value), not a runtime surprise. The seal conversion already frees capacity slack on its own (`Vec → Box<[T]>` discards the headroom); when a drop itself is expensive, hand the dead artifact to a deferred-drop helper — the contract fixes where release happens, not on which thread.
+
+## Enforcement
+
+The goal is **not** to make illegal states unrepresentable — it is to make them impossible to write _quietly_. Runtime pipeline state has exactly three legal homes: locals inside `run` (unrestricted); driver-built values lent through `InputRead`; artifacts moving through the owned slots. There is no fourth place: `run_pass` requires a pass value to have zero runtime size when the compiler generates code for its concrete call, and the declaration rule forbids fields and generic arguments. A pass therefore cannot store runtime state or encode configuration in its type. What has no home is state that crosses passes without appearing in any signature. The gates below force exactly that case into the open, where review can catch it — under a shared `&mut` world it was invisible by construction.
+
+What the compiler pins:
+
+- reads cannot be `&mut` — `InputRead<'a>: Copy` (`&mut` is never `Copy`)
+- a pass value has zero runtime size and contains no non-static borrows — `run_pass` `const`-asserts `size_of::<P>() == 0`, and `Pass: Copy + 'static` supplies the value and lifetime bounds; the exact declaration shape is review-held below
+- no escape through raw pointers — `#![forbid(unsafe_code)]` on the passes module
+- pass order — `let`-chain scoping; sealing — applied by `run_pass` itself (`Sealed<T>`: no `DerefMut`, no unwrap, and `Sealed::new` is harness-private, E0624 elsewhere); ownership transfer — moves
+
+What stays review-held (the honest list):
+
+- pass tokens stay non-generic unit structs whose names end in `Pass`, which keeps generic choices out of the token and the inventory grep complete; the size assertion enforces zero runtime size, not source syntax
+- frozen representations inside artifacts (`Box<[T]>` over `Vec<T>`) — hygiene, not correctness; the hard freeze is `Sealed<T>`, applied by the harness
+- no interior mutability in pipeline data types; no global statics holding pipeline data (the one remaining way to smuggle state past the bounds)
+- artifact granularity on both sides: own exactly what you reshape, read specific facts, mint named purpose-specific artifacts (the read and mint rules in Example); new `PassCtx` methods staying write-only (drain methods take `self` by value, unreachable through `&mut`)
+
+Why a trait at all: uniform pass style — every pass declares the same four slots and is invoked through one wrapper — plus the shape gates above, which plain functions cannot carry (nothing stops an extra `&mut` parameter on a plain function except review). And since `run_pass` is the sole sealing/minting point, the trait now carries an enforcement duty: the `OutputRead` slot is what lets one generic wrapper seal every pass's result — plain functions have no slot for a wrapper to seal, so unconditional sealing would degrade to per-function memory. The cost — GATs and `()`/tuple ceremony, smaller now that `run` is sync — is accepted deliberately.
+
+## Future directions
+
+- Driver-level `rayon::join` of candidate passes, once profiling shows a win worth taking (candidates are already visible in signatures; see Other benefits).
+- `AsyncPass`, parked until a flow genuinely needs a pass that awaits mid-work (not just at its edges): same four slots, `async fn run`, its own `run_pass_async` applying the same ZST assert and `Sealed` wrap. Two known costs move with it: the `async_fn_in_trait` Send-bound question, and driver-level parallelism reverting from `rayon::join` to future interleaving for those passes. Until then, hoisting awaits to the driver covers the known cases.
+- When the first flow adopts the contract, pin the compile-error claims (E0308 / E0425 / E0599 / E0277) as `trybuild` compile-fail tests — the doc promises compiler behavior, and tests should hold it.
+- Incremental cache friendliness: explicit inputs are natural dependency keys, sealed artifacts are natural snapshot/hash units, and a pass is a natural recompute unit. To be honest: the contract was **not** designed with incremental builds as a premise, and nothing in it depends on that — it simply does not stand in the way.
+
+## Related
+
+- `implementation.md` — none yet; added by the first flow that adopts the contract. The first adoption is deliberately not named here — per Ground rules, a maintainer picks it. Its definition of done doubles as this doc's success criterion: driver order/seal mistakes fail to compile in that flow, and the compile-error claims above get pinned as `trybuild` tests. Until then, those claims are principles awaiting their call site.

@@ -506,10 +506,7 @@ test.skipIf(isWasiTest)('should print original error if it can not be assigned',
       structuredClone(proxy);
     },
   });
-  // The exact `DataCloneError: #<Object> could not be cloned` text is
-  // V8-specific — other engines (e.g. the WASI/browser lanes) word the
-  // structured-clone failure differently, so match loosely.
-  expect(error!.message).toMatch(/could not be cloned|DataCloneError/);
+  expect(error!.message).toContain('DataCloneError: #<Object> could not be cloned');
 });
 
 describe('Error output format', () => {

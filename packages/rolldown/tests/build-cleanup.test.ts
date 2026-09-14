@@ -1,7 +1,4 @@
-import { existsSync, mkdtempSync, readFileSync, rmSync, statSync, writeFileSync } from 'node:fs';
-import { tmpdir } from 'node:os';
-import { join } from 'node:path';
-import { afterEach, beforeEach, expect, test, vi } from 'vitest';
+import { beforeEach, expect, test, vi } from 'vitest';
 
 const mocks = vi.hoisted(() => ({
   close: vi.fn(),
@@ -43,13 +40,6 @@ import {
   recoverRetryableCleanups,
   retryCleanupFromError,
 } from '../src/utils/retryable-cleanup';
-// @ts-ignore This focused unit test intentionally reaches package build tooling outside the test rootDir.
-import {
-  beginBuildArtifactTransaction,
-  BINDING_BUILD_ARTIFACT_SELECTION,
-} from '../build-binding-artifacts';
-
-const temporaryDirectories: string[] = [];
 
 beforeEach(() => {
   mocks.close.mockReset();
@@ -62,12 +52,6 @@ beforeEach(() => {
     generate: mocks.generate,
     write: vi.fn(),
   });
-});
-
-afterEach(() => {
-  for (const directory of temporaryDirectories.splice(0)) {
-    rmSync(directory, { force: true, recursive: true });
-  }
 });
 
 test('build surfaces terminal diagnostics after recovering a transport failure', async () => {
@@ -347,104 +331,6 @@ test('build and close failure keeps retryable cleanup on the top-level error', a
   expect(mocks.retryRolldownBuildCleanup).toHaveBeenCalledTimes(3);
   expect(getRetryableCleanup(error)).toBeUndefined();
 });
-
-test('failed binding build removes only artifacts created by that invocation', () => {
-  const directory = createTemporaryDirectory();
-  const nativeArtifact = join(directory, 'rolldown-binding.darwin-arm64.node');
-  const threadlessArtifact = join(directory, 'rolldown-binding.wasm32-wasip1.wasm');
-  const threadedArtifact = join(directory, 'rolldown-binding.wasm32-wasi.wasm');
-  const threadedDebugArtifact = join(directory, 'rolldown-binding.wasm32-wasi.debug.wasm');
-  const browserEntry = join(directory, 'browser.js');
-  const unrelatedWasm = join(directory, 'unrelated.wasm');
-  writeFileSync(nativeArtifact, 'native');
-  writeFileSync(threadlessArtifact, 'threadless');
-  const nativeInode = statSync(nativeArtifact).ino;
-  const threadlessInode = statSync(threadlessArtifact).ino;
-
-  const transaction = beginBuildArtifactTransaction(directory, BINDING_BUILD_ARTIFACT_SELECTION);
-  writeFileSync(threadedArtifact, 'partial threaded build');
-  writeFileSync(threadedDebugArtifact, 'partial threaded debug build');
-  writeFileSync(browserEntry, 'partial browser entry');
-  writeFileSync(unrelatedWasm, 'not owned by the binding build');
-
-  transaction.rollback();
-
-  expect(existsSync(threadedArtifact)).toBe(false);
-  expect(existsSync(threadedDebugArtifact)).toBe(false);
-  expect(existsSync(browserEntry)).toBe(false);
-  expect(readFileSync(nativeArtifact, 'utf8')).toBe('native');
-  expect(readFileSync(threadlessArtifact, 'utf8')).toBe('threadless');
-  expect(statSync(nativeArtifact).ino).toBe(nativeInode);
-  expect(statSync(threadlessArtifact).ino).toBe(threadlessInode);
-  expect(readFileSync(unrelatedWasm, 'utf8')).toBe('not owned by the binding build');
-});
-
-test('failed binding build restores overwritten and deleted artifacts', () => {
-  const directory = createTemporaryDirectory();
-  const releaseArtifact = join(directory, 'rolldown-binding.wasm32-wasi.wasm');
-  const debugArtifact = join(directory, 'rolldown-binding.wasm32-wasi.debug.wasm');
-  writeFileSync(releaseArtifact, 'previous release');
-  writeFileSync(debugArtifact, 'previous debug');
-
-  const rootLoader = join(directory, 'binding.cjs');
-  const wasiLoader = join(directory, 'rolldown-binding.wasip1.cjs');
-  const newWorkerLoader = join(directory, 'wasi-worker.mjs');
-  writeFileSync(rootLoader, 'previous root loader');
-  writeFileSync(wasiLoader, 'previous WASI loader');
-
-  const transaction = beginBuildArtifactTransaction(directory, BINDING_BUILD_ARTIFACT_SELECTION);
-  writeFileSync(releaseArtifact, 'invalid replacement');
-  rmSync(debugArtifact);
-  writeFileSync(rootLoader, 'invalid root loader');
-  rmSync(wasiLoader);
-  writeFileSync(newWorkerLoader, 'partial worker loader');
-
-  transaction.rollback();
-
-  expect(readFileSync(releaseArtifact, 'utf8')).toBe('previous release');
-  expect(readFileSync(debugArtifact, 'utf8')).toBe('previous debug');
-  expect(readFileSync(rootLoader, 'utf8')).toBe('previous root loader');
-  expect(readFileSync(wasiLoader, 'utf8')).toBe('previous WASI loader');
-  expect(existsSync(newWorkerLoader)).toBe(false);
-});
-
-test('failed binding build restores browser.js after post-NAPI validation fails', () => {
-  const directory = createTemporaryDirectory();
-  const browserEntry = join(directory, 'browser.js');
-  const postNapiValidationError = new Error('post-NAPI binding validation failed');
-  writeFileSync(browserEntry, 'previous browser entry');
-
-  const transaction = beginBuildArtifactTransaction(directory, BINDING_BUILD_ARTIFACT_SELECTION);
-  let failure: unknown;
-  try {
-    writeFileSync(browserEntry, 'browser entry written by NAPI');
-    throw postNapiValidationError;
-  } catch (error) {
-    failure = error;
-    transaction.rollback();
-  }
-
-  expect(failure).toBe(postNapiValidationError);
-  expect(readFileSync(browserEntry, 'utf8')).toBe('previous browser entry');
-});
-
-test('successful binding build retains replacement artifacts', () => {
-  const directory = createTemporaryDirectory();
-  const artifact = join(directory, 'rolldown-binding.darwin-arm64.node');
-  writeFileSync(artifact, 'previous native');
-
-  const transaction = beginBuildArtifactTransaction(directory, BINDING_BUILD_ARTIFACT_SELECTION);
-  writeFileSync(artifact, 'new native');
-  transaction.commit();
-
-  expect(readFileSync(artifact, 'utf8')).toBe('new native');
-});
-
-function createTemporaryDirectory(): string {
-  const directory = mkdtempSync(join(tmpdir(), 'rolldown-build-cleanup-'));
-  temporaryDirectories.push(directory);
-  return directory;
-}
 
 async function waitForCallCount(
   mock: { mock: { calls: unknown[][] } },

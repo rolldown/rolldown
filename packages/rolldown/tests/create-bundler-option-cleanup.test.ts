@@ -181,17 +181,12 @@ test.each([
   expect(mocks.bindingifyInputOptions).not.toHaveBeenCalled();
 });
 
-// The two cases above throw inside `hasDefinedProperty`, which walks the chain
-// before `readPropertyOnce` is ever reached, so they do not pin the walk that
-// `readPropertyOnce` performs and deliberately discards. That call is not dead
-// code: it is what makes an unbounded chain be REFUSED BEFORE the property is
-// read, so no user code on the chain runs. Dropping it still yields the same
-// TypeError - the snapshot's `enumerable` walk throws right after - but only
-// after `Reflect.get` has already walked into and executed the accessor.
-//
-// This case slips past `hasDefinedProperty`: the first plugin owns
-// `outputOptions`, so `outputOptionPlugins.some(...)` short-circuits and the
-// over-deep second plugin is first traversed by `readPropertyOnce` itself.
+// `accessorCalls` pins the consequence of the walk `readPropertyOnce` performs
+// and discards: without it the same TypeError still surfaces - the snapshot's
+// `enumerable` walk throws right after - but only after `Reflect.get` has
+// already executed the accessor. This case slips past `hasDefinedProperty`
+// because the first plugin owns `outputOptions`, so the over-deep second plugin
+// is first traversed by `readPropertyOnce` itself.
 test('refuses an over-deep plugin prototype chain before reading the hook off it', async () => {
   let accessorCalls = 0;
   let overDeepPlugin = Object.create(null, {

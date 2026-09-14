@@ -219,22 +219,6 @@ test('recovery includes an attachment made before its shared promise settles', a
   }
 });
 
-test('synchronous cleanup self-reentry is an idempotent no-op', async () => {
-  let nestedAttempt!: Promise<void>;
-  const release = vi.fn();
-  const cleanup = vi.fn(() => {
-    release();
-    nestedAttempt = runRetryableCleanup(cleanup);
-    return nestedAttempt;
-  });
-
-  const attempt = runRetryableCleanup(cleanup, false);
-  await expect(Promise.all([attempt, nestedAttempt])).resolves.toEqual([undefined, undefined]);
-  await expect(recoverRetryableCleanups()).resolves.toBeUndefined();
-  expect(cleanup).toHaveBeenCalledOnce();
-  expect(release).toHaveBeenCalledOnce();
-});
-
 test('external retaining caller keeps a shared non-retaining failure recoverable', async () => {
   const cleanupError = new Error('shared cleanup failure');
   let ownsResources = true;

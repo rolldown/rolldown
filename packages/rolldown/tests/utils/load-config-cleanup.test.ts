@@ -38,25 +38,15 @@ afterEach(async () => {
 });
 
 describe('loadConfig bundle cleanup', () => {
-  it('closes the transient build, removes the imported entry, and keeps sibling outputs for deferred imports', async () => {
+  it('closes the transient build and removes every emitted file', async () => {
     rolldown.mockResolvedValue({ close, write });
     let outputDir: string | undefined;
     write.mockImplementation(async (outputOptions: { dir: string }) => {
       outputDir = outputOptions.dir;
       const fileName = 'rolldown.config.cleanup.mjs';
-      await emitFile(
-        outputOptions.dir,
-        fileName,
-        'import input from "./config-chunk.mjs"; export default { input }',
-      );
-      await emitFile(outputOptions.dir, 'config-chunk.mjs', 'export default "./entry.js"');
-      await emitFile(outputOptions.dir, 'config-asset.txt', 'temporary config asset');
+      await emitFile(outputOptions.dir, fileName, 'export default { input: "./entry.js" }');
       return {
-        output: [
-          { fileName, isEntry: true, type: 'chunk' },
-          { fileName: 'config-chunk.mjs', isEntry: false, type: 'chunk' },
-          { fileName: 'config-asset.txt', type: 'asset' },
-        ],
+        output: [{ fileName, isEntry: true, type: 'chunk' }],
       };
     });
 
@@ -72,14 +62,10 @@ describe('loadConfig bundle cleanup', () => {
     // relative dynamic imports in a deferred config function resolve against
     // the config's own directory.
     expect(outputDir).toBe(fixtureDir);
-    // The imported entry is removed immediately (it already lives in memory)…
+    // The imported entry is removed immediately (it already lives in memory).
     await expect(
       access(path.join(fixtureDir, 'rolldown.config.cleanup.mjs')),
     ).rejects.toMatchObject({ code: 'ENOENT' });
-    // …while sibling outputs a deferred config function may still import stay
-    // on disk until the process exits.
-    await expect(access(path.join(fixtureDir, 'config-chunk.mjs'))).resolves.toBeUndefined();
-    await expect(access(path.join(fixtureDir, 'config-asset.txt'))).resolves.toBeUndefined();
   });
 
   it('closes the transient build when config generation fails', async () => {

@@ -33,8 +33,6 @@ try {
   process.env.RD_LOG = 'info';
   process.env.RD_LOG_OUTPUT = 'readable';
   assert.equal(initTraceSubscriber(), null);
-
-  console.log(JSON.stringify({ devtoolsFirst: true, rdLogRejected: true }));
 } finally {
   uninstallCurrentThreadTaskHost();
   rmSync(root, { force: true, recursive: true });

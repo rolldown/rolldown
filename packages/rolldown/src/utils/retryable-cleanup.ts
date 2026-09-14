@@ -7,7 +7,6 @@ interface RetryableCleanupClaim {
 
 interface CleanupAttemptState {
   promise: Promise<void>;
-  invokingCleanup: boolean;
   retainFailureRequested: boolean;
 }
 
@@ -18,7 +17,6 @@ const abandonedRecoveryPolicies = new WeakMap<RetryableCleanup, AbandonedRecover
 const cleanupFailureErrors = new WeakSet<object>();
 const pendingAbandonedCleanups = new Set<RetryableCleanup>();
 const cleanupAttempts = new WeakMap<RetryableCleanup, CleanupAttemptState>();
-const acknowledgedSelfReentry = Promise.resolve();
 let pendingAbandonedCleanupRecovery: Promise<void> | undefined;
 
 /** @internal Associate cleanup ownership with an error without changing its public shape. */
@@ -120,15 +118,11 @@ function runCleanupAttempt(
 ): { attempt: CleanupAttemptState; promise: Promise<void> } {
   const activeAttempt = cleanupAttempts.get(cleanup);
   if (activeAttempt) {
-    // An on-stack cleanup cannot await its own attempt. Calls after cleanup()
-    // returns still observe invokingCleanup=false and join the real promise.
-    if (!activeAttempt.invokingCleanup && retainFailure) {
+    // Concurrent callers join the active attempt.
+    if (retainFailure) {
       activeAttempt.retainFailureRequested = true;
     }
-    return {
-      attempt: activeAttempt,
-      promise: activeAttempt.invokingCleanup ? acknowledgedSelfReentry : activeAttempt.promise,
-    };
+    return { attempt: activeAttempt, promise: activeAttempt.promise };
   }
 
   let resolveAttempt!: () => void;
@@ -139,7 +133,6 @@ function runCleanupAttempt(
   });
   const attemptState: CleanupAttemptState = {
     promise: attempt,
-    invokingCleanup: true,
     retainFailureRequested: retainFailure,
   };
   cleanupAttempts.set(cleanup, attemptState);
@@ -153,12 +146,10 @@ function runCleanupAttempt(
   try {
     result = cleanup();
   } catch (error) {
-    attemptState.invokingCleanup = false;
     finishAttempt();
     rejectAttempt(error);
     return { attempt: attemptState, promise: attempt };
   }
-  attemptState.invokingCleanup = false;
   void Promise.resolve(result).then(
     () => {
       finishAttempt();

@@ -7,7 +7,6 @@ import { pathToFileURL } from 'node:url';
 import { rolldown } from '../api/rolldown';
 import type { ConfigExport } from './define-config';
 import type { OutputChunk } from '../types/rolldown-output';
-import { onExit } from './signal-exit';
 
 interface BundledConfig {
   /** Absolute path of the emitted entry module. */
@@ -121,29 +120,6 @@ async function removeBundledFiles(files: string[]): Promise<void> {
   await Promise.all(files.map((file) => fs.promises.rm(file, { force: true })));
 }
 
-const filesPendingRemovalAtExit = new Set<string>();
-
-/**
- * Defer removal of emitted files a deferred config function might still
- * runtime-import. With `codeSplitting: false` this should never receive any
- * file; it is a safety net so cleanup cannot break a deferred dynamic import.
- */
-function scheduleRemovalAtExit(files: string[]): void {
-  if (files.length === 0) return;
-  if (filesPendingRemovalAtExit.size === 0) {
-    onExit(() => {
-      for (const file of filesPendingRemovalAtExit) {
-        try {
-          fs.rmSync(file, { force: true });
-        } catch {
-          // Ignore errors: best-effort cleanup while the process is exiting.
-        }
-      }
-    });
-  }
-  for (const file of files) filesPendingRemovalAtExit.add(file);
-}
-
 const SUPPORTED_JS_CONFIG_FORMATS = ['.js', '.mjs', '.cjs'];
 const SUPPORTED_TS_CONFIG_FORMATS = ['.ts', '.mts', '.cts'];
 const SUPPORTED_CONFIG_FORMATS = [...SUPPORTED_JS_CONFIG_FORMATS, ...SUPPORTED_TS_CONFIG_FORMATS];
@@ -176,15 +152,9 @@ async function loadTsConfig(configFile: string): Promise<ConfigExport> {
 
   let cleanupError: unknown;
   try {
-    if (!importFailed) {
-      // The entry is in memory now, so its file can go. Any other emitted file
-      // must survive until process exit: a deferred config function the caller
-      // invokes after this returns may still runtime-import it.
-      await removeBundledFiles([outputFile]);
-      scheduleRemovalAtExit(outputFiles.filter((file) => file !== outputFile));
-    } else {
-      await removeBundledFiles(outputFiles);
-    }
+    // The entry is in memory now, so its file can go, and `codeSplitting: false`
+    // leaves nothing else a deferred config function could runtime-import.
+    await removeBundledFiles(outputFiles);
   } catch (error) {
     cleanupError = error;
   }

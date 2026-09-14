@@ -32,14 +32,6 @@ try {
   await afterClose.generate();
   await afterClose.close();
   assert.equal(existsSync(path.join(outputRoot, 'unknown_session')), false);
-
-  console.log(
-    JSON.stringify({
-      isolatedOptIn: true,
-      rdLogCompatible: true,
-      untracedFirstThenTraced: true,
-    }),
-  );
 } finally {
   rmSync(root, { force: true, recursive: true });
 }

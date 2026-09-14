@@ -811,16 +811,10 @@ test('onLog accessors execute once inside the reentrancy guard', async () => {
   await bundle.close();
 });
 
-// The two tests above pin one half of the option snapshot in
-// `src/utils/create-bundler-option.ts`: a hook is read exactly once, inside the
-// reentrancy guard. The tests below pin the other half. The snapshot installs the
-// value it read as an OWN property on `Object.create(userObject, ...)`, so whatever
-// the read returns wins over the user's object for every downstream consumer.
-// Reading through a prototype-chain descriptor walk returns `undefined` for a
-// `Proxy` that serves the hook only from its `get` trap - a proxy has no descriptor
-// for such a key - and the snapshot then pins that `undefined` in front of the
-// proxy, silently dropping the hook. `readPropertyOnce` therefore has to take the
-// value with `Reflect.get`.
+// The option snapshot installs the value it read as an OWN property on
+// `Object.create(userObject, ...)`, so a wrong read permanently masks the user's
+// hook rather than merely going stale. See `readPropertyOnce` in
+// `src/utils/create-bundler-option.ts`.
 
 /** Each direct `eval(...)` call emits exactly one EVAL warning during scan. */
 function evalWarningsPlugin(virtualId: string, count: number): Plugin {

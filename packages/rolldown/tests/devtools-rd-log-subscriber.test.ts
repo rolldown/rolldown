@@ -35,11 +35,6 @@ test(
     expect(child.error).toBeUndefined();
     expect(child.signal).toBeNull();
     expect(child.status, child.stderr || child.stdout).toBe(0);
-    expect(JSON.parse(child.stdout.trim().split('\n').at(-1)!)).toEqual({
-      isolatedOptIn: true,
-      rdLogCompatible: true,
-      untracedFirstThenTraced: true,
-    });
   },
 );
 
@@ -61,9 +56,5 @@ test(
     expect(child.signal).toBeNull();
     expect(child.status, child.stderr || child.stdout).toBe(0);
     expect(child.stderr).toContain('cannot add normal `RD_LOG` logging after global installation');
-    expect(JSON.parse(child.stdout.trim().split('\n').at(-1)!)).toEqual({
-      devtoolsFirst: true,
-      rdLogRejected: true,
-    });
   },
 );

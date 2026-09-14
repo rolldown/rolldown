@@ -1,12 +1,12 @@
 {
   "extends": "../../../tsconfig.json",
   "include": [
-    "../src/types.d.ts",
     "src/*",
     "src/**/*",
     "**/_config.ts",
     "**/*.test.ts",
-    "**/*.test-d.ts"
+    "**/*.test-d.ts",
+    "../src/types.d.ts"
   ],
   "compilerOptions": {
     "types": ["node", "vite/client"],

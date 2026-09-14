@@ -30,8 +30,8 @@ const tempDir = await mkdtemp(path.join(tmpdir(), 'rolldown-workerd-consumer-'))
 // future registry consumer must resolve; drift must fail CI until this script is
 // updated deliberately.
 const expectedRegistryRuntimeDependencies = {
-  '@emnapi/core': '2.0.0-alpha.4',
-  '@emnapi/runtime': '2.0.0-alpha.4',
+  '@emnapi/core': '2.0.0-alpha.5',
+  '@emnapi/runtime': '2.0.0-alpha.5',
   '@napi-rs/wasm-runtime': '~1.2.3',
 };
 

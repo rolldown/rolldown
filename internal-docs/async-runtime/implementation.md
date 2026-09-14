@@ -497,7 +497,7 @@ back-compat):
 
 Unshared memory growth detaches the previous JavaScript `ArrayBuffer`, so
 emnapi must refresh TSFN atomic views after event-loop turns and NAPI result
-DataViews after reentrant JavaScript calls. The pinned `emnapi@2.0.0-alpha.4`
+DataViews after reentrant JavaScript calls. The pinned `emnapi@2.0.0-alpha.5`
 release carries those refreshes and the `@emnapi/runtime` CJS entry the
 generated CJS WASI loaders require, and supplies the per-flavor napi-rs link
 archives. The browser package build bundles that

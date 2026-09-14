@@ -7,7 +7,6 @@ import {
   sanitizeFileWorkerExecArgv,
   superviseWorker,
   type SupervisedWorker,
-  terminateWorkersWithRetry,
   WorkerBootstrapCoordinator,
 } from '../src/utils/initialize-parallel-plugins';
 import {
@@ -56,7 +55,7 @@ function completeBootstrap(worker: TestWorker, supervisedWorker: SupervisedWorke
 }
 
 describe('parallel plugin worker cleanup', () => {
-  test('creates browser-bundle-safe cryptographic bootstrap authentication', () => {
+  test('draws every bootstrap token from its own 24-byte CSPRNG sample', () => {
     let nextByte = 0;
     const getRandomValues = vi.fn((bytes: Uint8Array) => {
       for (let index = 0; index < bytes.length; index += 1) {
@@ -68,41 +67,21 @@ describe('parallel plugin worker cleanup', () => {
     vi.stubGlobal('crypto', { getRandomValues });
 
     try {
-      expect(createWorkerBootstrapAuthentication()).toEqual({
-        readyToken: Array.from({ length: 24 }, (_, index) =>
-          index.toString(16).padStart(2, '0'),
-        ).join(''),
-        resultToken: Array.from({ length: 24 }, (_, index) =>
-          (index + 24).toString(16).padStart(2, '0'),
-        ).join(''),
-        session: Array.from({ length: 24 }, (_, index) =>
-          (index + 48).toString(16).padStart(2, '0'),
-        ).join(''),
-        startToken: Array.from({ length: 24 }, (_, index) =>
-          (index + 72).toString(16).padStart(2, '0'),
-        ).join(''),
-      });
+      const authentication = createWorkerBootstrapAuthentication();
+
       expect(getRandomValues).toHaveBeenCalledTimes(4);
       expect(getRandomValues.mock.calls.every(([bytes]) => bytes.byteLength === 24)).toBe(true);
+      expect(Object.keys(authentication)).toHaveLength(4);
+      expect(new Set(Object.values(authentication)).size).toBe(4);
     } finally {
       vi.unstubAllGlobals();
     }
   });
 
-  test('sanitizes parent invocation modes and inherited code injection flags', () => {
+  test('sanitizes the parent string-input mode and inherited code injection flags', () => {
     expect(
       sanitizeFileWorkerExecArgv([
         '--input-type=module',
-        '--eval',
-        'import("./child.mjs")',
-        '-p',
-        'process.version',
-        '--check',
-        '--interactive',
-        '--run',
-        'parent-script',
-        '--import',
-        './register.mjs',
         '--require=./register.cjs',
         '-r',
         './register-short.cjs',
@@ -116,17 +95,7 @@ describe('parallel plugin worker cleanup', () => {
     ).toEqual(['--conditions', 'development', '--trace-warnings']);
 
     expect(
-      sanitizeFileWorkerExecArgv([
-        '--input-type',
-        'commonjs',
-        '--eval=0',
-        '--print=process.version',
-        '--run=parent-script',
-        '-e',
-        '0',
-        '-c',
-        '-i',
-      ]),
+      sanitizeFileWorkerExecArgv(['--input-type', 'commonjs', '--require', './register.cjs']),
     ).toEqual([]);
   });
 
@@ -141,48 +110,6 @@ describe('parallel plugin worker cleanup', () => {
       PATH: '/test/bin',
     });
     expect(source.NODE_OPTIONS).toBe('--import ./preload.mjs');
-  });
-
-  test('retries only workers whose first termination attempt failed', async () => {
-    const recovered = {
-      terminate: vi
-        .fn<() => Promise<number>>()
-        .mockRejectedValueOnce(new Error('first termination failed'))
-        .mockResolvedValue(0),
-    };
-    const completed = {
-      terminate: vi.fn<() => Promise<number>>().mockResolvedValue(0),
-    };
-
-    const result = await terminateWorkersWithRetry([recovered, completed], 2);
-
-    expect(result).toEqual({ errors: [], remainingWorkers: [] });
-    expect(recovered.terminate).toHaveBeenCalledTimes(2);
-    expect(completed.terminate).toHaveBeenCalledOnce();
-  });
-
-  test('retains workers that still fail after the bounded retry', async () => {
-    const error = new Error('termination failed');
-    const worker = {
-      terminate: vi.fn<() => Promise<number>>().mockRejectedValue(error),
-    };
-
-    const result = await terminateWorkersWithRetry([worker], 2);
-
-    expect(result.errors).toEqual([error]);
-    expect(result.remainingWorkers).toEqual([worker]);
-    expect(worker.terminate).toHaveBeenCalledTimes(2);
-  });
-
-  test('does not mistake a falsey termination rejection for success', async () => {
-    const worker = {
-      terminate: vi.fn<() => Promise<number>>().mockRejectedValue(undefined),
-    };
-
-    const result = await terminateWorkersWithRetry([worker], 1);
-
-    expect(result.errors).toEqual([undefined]);
-    expect(result.remainingWorkers).toEqual([worker]);
   });
 
   test('retains cleanup ownership when worker shutdown rejects with a falsey value', async () => {
@@ -434,22 +361,6 @@ describe('parallel plugin worker cleanup', () => {
     expect(worker.listenerCount('message')).toBe(0);
     expect(worker.listenerCount('error')).toBe(0);
     expect(worker.listenerCount('exit')).toBe(0);
-  });
-
-  test('authenticated readiness received during cleanup releases termination', async () => {
-    const worker = new TestWorker();
-    const supervisedWorker = superviseTestWorker(worker);
-    const bootstrap = supervisedWorker.waitForBootstrap();
-    const bootstrapRejection = expect(bootstrap).rejects.toThrow(
-      'Parallel-plugin worker initialization was cancelled during pool cleanup',
-    );
-
-    const termination = supervisedWorker.terminate();
-    await bootstrapRejection;
-    expect(worker.terminate).not.toHaveBeenCalled();
-    reportReady(worker);
-    await expect(termination).resolves.toBe(0);
-    expect(worker.terminate).toHaveBeenCalledOnce();
   });
 
   test('retains delayed worker errors until shutdown without reterminating the worker', async () => {

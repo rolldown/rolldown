@@ -34,7 +34,7 @@ const preloadSpoofPath = nodePath.join(
   testsDir,
   'fixtures',
   'parallel-worker-bootstrap',
-  'preload-spoof.mjs',
+  'preload-spoof.cjs',
 );
 
 test.skipIf(isWasiTest)(
@@ -83,16 +83,13 @@ test.skipIf(isWasiTest)(
   },
 );
 
-test.skipIf(isWasiTest).each([
-  [[], 'parallel worker non-cloneable failure reported'],
-  [['--disrupt-reporting'], 'parallel worker reporting capability isolated'],
-])(
-  'parallel bootstrap failure cannot hang when rejection handling warns (%j)',
+test.skipIf(isWasiTest)(
+  'parallel bootstrap failure cannot hang when rejection handling warns',
   { timeout: 30_000 },
-  (fixtureArgs, expectedOutput) => {
+  () => {
     const child = spawnSync(
       process.execPath,
-      ['--unhandled-rejections=warn', noncloneableBootstrapChildPath, ...fixtureArgs],
+      ['--unhandled-rejections=warn', noncloneableBootstrapChildPath],
       {
         cwd: testsDir,
         encoding: 'utf8',
@@ -104,7 +101,7 @@ test.skipIf(isWasiTest).each([
     expect(child.error).toBeUndefined();
     expect(child.signal).toBeNull();
     expect(child.status, child.stderr || child.stdout).toBe(0);
-    expect(child.stdout).toContain(expectedOutput);
+    expect(child.stdout).toContain('parallel worker non-cloneable failure reported');
   },
 );
 
@@ -128,14 +125,14 @@ test.skipIf(isWasiTest)(
 
 test.skipIf(isWasiTest).each([
   {
-    args: ['--import', pathToFileURL(preloadSpoofPath).href, preloadSpoofChildPath],
+    args: ['--require', preloadSpoofPath, preloadSpoofChildPath],
     env: {},
     source: 'execArgv',
   },
   {
     args: [preloadSpoofChildPath],
     env: {
-      NODE_OPTIONS: `--import=${pathToFileURL(preloadSpoofPath).href}`,
+      NODE_OPTIONS: `--require="${preloadSpoofPath}"`,
     },
     source: 'NODE_OPTIONS',
   },

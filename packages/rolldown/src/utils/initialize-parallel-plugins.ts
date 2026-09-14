@@ -65,24 +65,21 @@ export interface SupervisedWorker extends TerminableWorker {
   waitForReadiness(): Promise<void>;
 }
 
-const FILE_WORKER_CONTEXT_FLAGS_WITH_VALUE = new Set([
-  '--eval',
-  '-e',
-  '--input-type',
-  '--print',
-  '-p',
-  '--run',
-]);
-const FILE_WORKER_CONTEXT_FLAGS = new Set(['--check', '-c', '--interactive', '-i']);
+const FILE_WORKER_CONTEXT_FLAGS_WITH_VALUE = new Set(['--input-type']);
 const FILE_WORKER_INJECTION_FLAGS_WITH_VALUE = new Set([
   '--experimental-loader',
-  '--import',
   '--loader',
   '--require',
   '-r',
 ]);
 
-/** @internal Remove parent invocation modes that are invalid or meaningless for a file worker. */
+/**
+ * @internal Remove parent invocation modes and inherited preload hooks the worker
+ * must not replay. The worker is created with `eval: true`, so `--input-type` is
+ * the only parent mode that breaks its CommonJS bootstrap, and `--require` plus
+ * the loader flags are the only preloads it inherits: a static `--import` never
+ * runs in a classic eval worker.
+ */
 export function sanitizeFileWorkerExecArgv(execArgv: readonly string[]): string[] {
   const sanitized: string[] = [];
   for (let index = 0; index < execArgv.length; index += 1) {
@@ -96,9 +93,6 @@ export function sanitizeFileWorkerExecArgv(execArgv: readonly string[]): string[
       if (equalsIndex === -1) {
         index += 1;
       }
-      continue;
-    }
-    if (FILE_WORKER_CONTEXT_FLAGS.has(argument)) {
       continue;
     }
     sanitized.push(argument);
@@ -120,20 +114,18 @@ export function createParallelPluginWorkerEnv(
   return env;
 }
 
-/** @internal Retry only workers whose previous termination attempt failed. */
-export async function terminateWorkersWithRetry<T extends TerminableWorker>(
+/**
+ * @internal Terminate every worker once and report the ones that refused, so the
+ * retryable-cleanup protocol can retry them on a later close() call.
+ */
+async function terminateWorkersWithRetry<T extends TerminableWorker>(
   workers: T[],
-  maxAttempts: number,
 ): Promise<{ errors: unknown[]; remainingWorkers: T[] }> {
-  let remainingWorkers = workers;
-  let errors: unknown[] = [];
-  for (let attempt = 0; attempt < maxAttempts && remainingWorkers.length > 0; attempt += 1) {
-    const currentWorkers = remainingWorkers;
-    const results = await Promise.allSettled(currentWorkers.map((worker) => worker.terminate()));
-    remainingWorkers = currentWorkers.filter((_, index) => results[index].status === 'rejected');
-    errors = results.flatMap((result) => (result.status === 'rejected' ? [result.reason] : []));
-  }
-  return { errors, remainingWorkers };
+  const results = await Promise.allSettled(workers.map((worker) => worker.terminate()));
+  return {
+    errors: results.flatMap((result) => (result.status === 'rejected' ? [result.reason] : [])),
+    remainingWorkers: workers.filter((_, index) => results[index].status === 'rejected'),
+  };
 }
 
 export async function initializeParallelPlugins(
@@ -199,22 +191,14 @@ export async function initializeWorkerPool<T extends TerminableWorker>(
   initializeWorker: (threadNumber: number, registerWorker: (worker: T) => void) => Promise<void>,
 ): Promise<RetryableCleanup> {
   const workers: T[] = [];
-  const registeredWorkers = new Set<T>();
   const registerWorker = (worker: T) => {
-    if (!registeredWorkers.has(worker)) {
-      registeredWorkers.add(worker);
-      workers.push(worker);
-    }
+    workers.push(worker);
   };
   const stopWorkers = createWorkerCleanup(workers);
 
-  const initializations = Array.from({ length: count }, (_, threadNumber) => {
-    try {
-      return Promise.resolve(initializeWorker(threadNumber, registerWorker));
-    } catch (error) {
-      return Promise.reject(error);
-    }
-  });
+  const initializations = Array.from({ length: count }, (_, threadNumber) =>
+    initializeWorker(threadNumber, registerWorker),
+  );
   const failures: { error: unknown; threadNumber: number }[] = [];
   let remaining = initializations.length;
   let resolveAllInitializations!: () => void;
@@ -225,9 +209,6 @@ export async function initializeWorkerPool<T extends TerminableWorker>(
   const firstFailure = new Promise<void>((resolve) => {
     resolveFirstFailure = resolve;
   });
-  if (remaining === 0) {
-    resolveAllInitializations();
-  }
   const finishInitialization = () => {
     remaining -= 1;
     if (remaining === 0) {
@@ -270,7 +251,7 @@ export async function initializeWorkerPool<T extends TerminableWorker>(
 function createWorkerCleanup<T extends TerminableWorker>(initialWorkers: T[]): RetryableCleanup {
   let workers = initialWorkers;
   const stopWorkers: RetryableCleanup = async () => {
-    const result = await terminateWorkersWithRetry(workers, 1);
+    const result = await terminateWorkersWithRetry(workers);
     workers = result.remainingWorkers;
     if (result.errors.length === 0) {
       clearRetryableCleanup(stopWorkers);
@@ -371,32 +352,11 @@ function disposeControlPort() {
 }
 
 function postBootstrapResult(message) {
-  try {
-    postControlMessage({
-      ...message,
-      session: authentication.session,
-      token: message.type === 'ready' ? authentication.readyToken : authentication.resultToken,
-    });
-  } catch (postMessageError) {
-    disposeControlPort();
-    const bootstrapDiagnostic =
-      message.type === 'error'
-        ? message.error
-        : new Error(
-            message.type === 'ready'
-              ? 'Parallel-plugin worker could not report binding readiness'
-              : 'Parallel-plugin worker could not report successful initialization',
-          );
-    const reportingDiagnostic = createCloneableBootstrapDiagnostic(
-      postMessageError,
-      'Parallel-plugin worker could not report its bootstrap result',
-    );
-    const terminalDiagnostic = new Error(
-      bootstrapDiagnostic.message + '; ' + reportingDiagnostic.message,
-    );
-    terminalDiagnostic.name = 'ParallelPluginBootstrapError';
-    throw terminalDiagnostic;
-  }
+  postControlMessage({
+    ...message,
+    session: authentication.session,
+    token: message.type === 'ready' ? authentication.readyToken : authentication.resultToken,
+  });
 }
 
 function waitForStart() {
@@ -535,9 +495,6 @@ class WorkerTerminationBarrier {
     this.#settled = new Promise<void>((resolve) => {
       this.#resolveSettled = resolve;
     });
-    if (count === 0) {
-      this.#resolveSettled();
-    }
   }
 
   createSlot(): WorkerTerminationSlot {
@@ -545,7 +502,6 @@ class WorkerTerminationBarrier {
   }
 
   arrive(): void {
-    if (this.#remaining === 0) return;
     this.#remaining -= 1;
     if (this.#remaining === 0) {
       this.#resolveSettled();
@@ -588,20 +544,9 @@ export class WorkerBootstrapCoordinator {
     this.#started = new Promise<void>((resolve) => {
       this.#resolveStarted = resolve;
     });
-    if (count === 0) {
-      this.#resolveStarted();
-    }
   }
 
   register(threadNumber: number, worker: SupervisedWorker): void {
-    if (
-      !Number.isSafeInteger(threadNumber) ||
-      threadNumber < 0 ||
-      threadNumber >= this.#workers.length ||
-      this.#workers[threadNumber]
-    ) {
-      throw new Error(`Invalid parallel-plugin worker registration for thread ${threadNumber}`);
-    }
     this.#workers[threadNumber] = worker;
   }
 
@@ -682,10 +627,6 @@ class WorkerSupervisor implements SupervisedWorker {
 
   startBootstrap(): void {
     if (this.#phase !== 'bootstrapping') return;
-    if (!this.#readyReceived || this.#startSent || this.#terminalReceived) {
-      this.#failProtocol('Parallel-plugin worker could not enter the start phase');
-      return;
-    }
     this.#startSent = true;
     try {
       this.#controlPort.postMessage({

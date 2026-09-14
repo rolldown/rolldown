@@ -66,6 +66,8 @@ After processing all import records, the importer is itself wrapped as CJS when:
 
 The "is entry + Esm output" branch is what allows `module.exports = ...` to keep working in a CJS-emit-as-ESM scenario; the `Iife`/`Umd` branch prevents leaking `module`/`exports` into the IIFE wrapper's outer scope.
 
+`ModuleOrExports` also includes implicit `exports` references from CommonJS top-level `this`, including lexical `this` in arrows and blocks. Scanning sets `ExportsRef` when it records that rewrite, after classifying the module. This makes IIFE/UMD entries require a wrapper and ensures that every CommonJS wrapper receives an `exports` parameter even when the source exports only through `this`.
+
 > **Why "lazy export" is excluded from the `Import` + `None` arm:**
 > Lazy-export modules are deferred ESM facades; promoting them here would short-circuit the dedicated lazy-export pass that runs later (`generate_lazy_export`), which performs additional restructuring that a naive `None → Esm` promotion would skip.
 

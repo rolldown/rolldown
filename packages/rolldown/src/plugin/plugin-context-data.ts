@@ -30,7 +30,7 @@ export class PluginContextData {
 
   // Native option boxes the cached wrappers above still read from. On the
   // threadless-WASI flavor GC finalizers never run, so these are released
-  // explicitly (see `#releaseRetainedBoxes`); every other box a hook marshals
+  // explicitly (see `#releaseOptionBoxes`); every other box a hook marshals
   // is a never-read duplicate and is dropped on arrival.
   #retainedOptionBoxes: Set<BindingNormalizedOptions> = new Set();
 
@@ -39,8 +39,11 @@ export class PluginContextData {
   // it over has settled — vite's `vite:watch-package-data` binds
   // `this.addWatchFile` in `buildStart` and calls it from `resolveId`
   // (`vite/packages/vite/src/node/packages.ts`). Each of these boxes holds one
-  // `Arc` and no bulk payload, so parking them here until the same drain the
-  // option boxes use is memory-neutral. See `retainContextBox`.
+  // `Arc` and no bulk payload, so parking them here until the build settles is
+  // memory-neutral. Unlike the option boxes these have no cached wrapper to
+  // fall back on, so they are drained ONLY by `releaseRetainedOptionBoxes` —
+  // never by `clear()`, which the native side fires before `writeBundle`.
+  // See `retainContextBox` and `#releaseContextBoxes`.
   #retainedContextBoxes: Set<DroppableBox> = new Set();
 
   constructor(
@@ -188,46 +191,46 @@ export class PluginContextData {
   // Hands a context box to the build-scoped registry instead of letting its
   // own invocation release it, so a plugin that retained the context can still
   // use it afterwards. ONLY for boxes minted during the build: the registry
-  // drains at the generate settle, so an output-side or close-side box parked
-  // here would never be released at all. No-op outside the threadless-WASI
-  // flavor, where GC finalizers already do this.
+  // drains once the `generate()`/`write()` call settles, so an output-side or
+  // close-side box parked here would never be released at all. No-op outside
+  // the threadless-WASI flavor, where GC finalizers already do this.
   retainContextBox(box: DroppableBox): void {
     if (shouldEagerlyFreeOutputs()) {
       this.#retainedContextBoxes.add(box);
     }
   }
 
+  // The native `invalidateJsSideCache` callback. It fires from the END of
+  // `bundle_up` (bundle.rs), which for `write()` is BEFORE `write_bundle`
+  // runs, so this must not touch the retained context boxes: a `buildStart`-
+  // bound `this.addWatchFile` called from `writeBundle` still needs them.
+  // Releasing the option boxes here is safe because their cached wrappers
+  // keep serving every later read.
   clear(): void {
     this.renderedChunkMeta = null;
     this.loadModulePromiseMap.clear();
-    this.#releaseRetainedBoxes();
+    this.#releaseOptionBoxes();
   }
 
-  // Terminal release for builds where the native invalidate callback never
-  // fires: it only runs after a successful generate (bundle.rs `bundle_up`,
-  // between generateBundle and writeBundle), so failed builds, scan(), and
-  // writeBundle would otherwise strand their retained boxes. No-op on native
-  // flavors and idempotent, so every terminal path may call it repeatedly.
+  // Terminal release once the build call has settled (rolldown-build.ts
+  // `#build`, after the native promise — which for `write()` includes
+  // `writeBundle` — resolves or rejects; experimental `scan()` and the watcher
+  // close call it too). This is the ONLY drain for the retained context boxes,
+  // and it also covers the option boxes for builds where the native invalidate
+  // callback never fires (failed builds, scan()). No-op on native flavors and
+  // idempotent, so every terminal path may call it repeatedly.
   releaseRetainedOptionBoxes(): void {
-    this.#releaseRetainedBoxes();
+    this.#releaseContextBoxes();
+    this.#releaseOptionBoxes();
   }
 
-  // Settle point for the retained boxes on the threadless-WASI flavor.
-  //
-  // Context boxes go first: they carry no cached wrapper, so they only need
-  // releasing. `releaseOrDefer` rather than `dropInner()`, because a
-  // fire-and-forget `this.load()`/`this.resolve()` still holds a napi SHARED
-  // borrow on its context and an exclusive drop would throw out of the borrow
-  // tracker (see `utils/threadless-free.ts`).
-  //
-  // Then the cached options wrappers: copy every box-backed value to
-  // JavaScript, then release the boxes. The wrappers stay cached, so later
-  // hooks and user-held references keep reading them. Only BOX-BACKED data is
-  // materialized — fields backed by the user's original `outputOptions` stay
-  // lazy, because running user accessors from a cleanup path must never turn a
-  // successful build into a rejection. The whole release is best-effort: one
-  // failure must not strand the rest.
-  #releaseRetainedBoxes(): void {
+  // Context boxes carry no cached wrapper, so they only need releasing.
+  // `releaseOrDefer` rather than `dropInner()`, because a fire-and-forget
+  // `this.load()`/`this.resolve()` still holds a napi SHARED borrow on its
+  // context and an exclusive drop would throw out of the borrow tracker (see
+  // `utils/threadless-free.ts`). Best-effort: one failure must not strand the
+  // rest.
+  #releaseContextBoxes(): void {
     if (!shouldEagerlyFreeOutputs()) {
       return;
     }
@@ -239,7 +242,17 @@ export class PluginContextData {
       }
     }
     this.#retainedContextBoxes.clear();
-    if (this.#retainedOptionBoxes.size === 0) {
+  }
+
+  // Settle point for the cached options wrappers on the threadless-WASI
+  // flavor: copy every box-backed value to JavaScript, then release the boxes.
+  // The wrappers stay cached, so later hooks and user-held references keep
+  // reading them. Only BOX-BACKED data is materialized — fields backed by the
+  // user's original `outputOptions` stay lazy, because running user accessors
+  // from a cleanup path must never turn a successful build into a rejection.
+  // The whole release is best-effort: one failure must not strand the rest.
+  #releaseOptionBoxes(): void {
+    if (!shouldEagerlyFreeOutputs() || this.#retainedOptionBoxes.size === 0) {
       return;
     }
     for (const wrapper of [this.normalizedInputOptions, this.normalizedOutputOptions]) {

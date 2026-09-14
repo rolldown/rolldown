@@ -12,12 +12,20 @@
 // `src/utils/threadless-free.ts`). Doing that to the build-scoped plugin
 // contexts would make the bound `addWatchFile` above throw "Memory has been
 // freed" mid-resolve, so `buildStart`/`buildEnd` park their context box on the
-// build-scoped registry instead and it is drained at the generate settle
-// (`plugin-context-data.ts` `retainContextBox`).
+// build-scoped registry instead and it is drained once the `generate()` /
+// `write()` call settles (`plugin-context-data.ts` `retainContextBox`).
 //
-// This test is flavor-independent on purpose: the idiom must work everywhere,
-// and on native/threaded-WASI it guards against a future eager release being
-// wired up here.
+// That settle is the ONLY drain: the native `invalidateJsSideCache` callback
+// fires between `generateBundle` and `writeBundle`, so draining there would
+// free a `buildStart`-bound context before `writeBundle` could use it. The
+// `write()` cases below pin that ordering.
+//
+// These tests are flavor-independent on purpose: the idiom must work
+// everywhere, and on native/threaded-WASI they guard against a future eager
+// release being wired up here.
+import { mkdtemp, rm } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import nodePath from 'node:path';
 import { rolldown } from 'rolldown';
 import { expect, test } from 'vitest';
 
@@ -65,3 +73,57 @@ test('a `buildStart`-bound plugin context still works from `resolveId`', async (
   expect(watched).toEqual([ENTRY_ID, DEP_ID]);
   expect(output[0].code).toContain('42');
 });
+
+// `writeBundle` runs AFTER the native cache invalidation that `write()` fires
+// at the end of `bundle_up` (`crates/rolldown/src/bundle/bundle.rs`), so a
+// build-hook-bound context reaching it proves the registry survived that
+// callback. Read `watchFiles` before `close()`: closing clears the native set.
+for (const bindingHook of ['buildStart', 'buildEnd'] as const) {
+  test(`a \`${bindingHook}\`-bound plugin context still works from \`writeBundle\` under \`write()\``, async () => {
+    let boundAddWatchFile: ((id: string) => void) | undefined;
+    let lateCallError: unknown;
+    let writeBundleRan = false;
+    const watchedId = `virt:${bindingHook}.watched`;
+    function bindAddWatchFile(this: { addWatchFile: (id: string) => void }) {
+      boundAddWatchFile = this.addWatchFile.bind(this);
+    }
+
+    const outDir = await mkdtemp(nodePath.join(tmpdir(), 'rolldown-retained-build-context-'));
+    try {
+      const bundle = await rolldown({
+        input: ENTRY_ID,
+        plugins: [
+          {
+            name: 'retained-build-context',
+            buildStart: bindingHook === 'buildStart' ? bindAddWatchFile : undefined,
+            buildEnd: bindingHook === 'buildEnd' ? bindAddWatchFile : undefined,
+            resolveId: (id) => (id in MODULES ? id : undefined),
+            load: (id) => MODULES[id],
+            writeBundle() {
+              writeBundleRan = true;
+              // The late call: the build hooks settled long ago and the native
+              // cache invalidation has already fired, so the context box has to
+              // still be alive here.
+              try {
+                boundAddWatchFile!(watchedId);
+              } catch (error) {
+                lateCallError = error;
+              }
+            },
+          },
+        ],
+      });
+      const { output } = await bundle.write({ format: 'esm', dir: outDir });
+      const watchFiles = await bundle.watchFiles;
+      await bundle.close();
+
+      expect(lateCallError).toBeUndefined();
+      // Guards the premise: a writeBundle that never ran would pass vacuously.
+      expect(writeBundleRan).toBe(true);
+      expect(watchFiles).toContain(watchedId);
+      expect(output[0].code).toContain('42');
+    } finally {
+      await rm(outDir, { recursive: true, force: true });
+    }
+  });
+}

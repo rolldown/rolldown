@@ -348,9 +348,10 @@ export class RolldownBuild {
     let result: RolldownOutput;
     let nativeBuildEntered = false;
     let supersededCleanupErrors: unknown[] = [];
-    // The native invalidate callback only fires after a successful generate,
-    // so the option boxes must be released on every settlement path below
-    // (no-op outside the threadless-WASI flavor).
+    // The native invalidate callback only fires after a successful generate
+    // (and, for write(), before writeBundle), so the option boxes must be
+    // released on every settlement path below, and the build-scoped context
+    // boxes are released ONLY here (no-op outside the threadless-WASI flavor).
     try {
       const nativeBuild = await this.#enterNativeBuild(operation, isWrite, option.bundlerOptions);
       nativeBuildEntered = true;

@@ -279,7 +279,8 @@ export interface BundlerOptionWithStopWorker {
   onLog: LogHandler;
   stopWorkers?: () => Promise<void>;
   /**
-   * Releases the native option boxes this build's hooks retained; see
+   * Releases the native option boxes and build-scoped plugin-context boxes
+   * this build's hooks retained; see
    * {@linkcode PluginContextData.releaseRetainedOptionBoxes}. Idempotent and
    * a no-op outside the threadless-WASI flavor; every consumer must call it
    * once its build reaches a terminal state (settled, scanned, or closed).

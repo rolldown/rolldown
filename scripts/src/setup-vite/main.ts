@@ -24,7 +24,7 @@
 import nodeFs from 'node:fs';
 import { createRequire } from 'node:module';
 import nodePath from 'node:path';
-import { ensureViteCheckout, repoRoot, run, viteDir } from './checkout.js';
+import { ensureViteCheckout, repoRoot, run, runNode, viteDir } from './checkout.js';
 
 const localRolldownDir = nodePath.join(repoRoot, 'packages', 'rolldown');
 
@@ -67,18 +67,29 @@ if (current !== target) {
 
 // 4. Build the vite package (dist/node + dist/client). This mirrors Vite's
 // own `build` script minus the type build, which the tests do not need.
-// The bundle step is invoked through the checkout's own `rolldown` bin, not
-// `vp run`: `vp run` re-syncs node_modules with the lockfile first, which
+// The bundle step is invoked through the checkout's own `rolldown` resolution,
+// not `vp run`: `vp run` re-syncs node_modules with the lockfile first, which
 // would silently undo the swap from step 3 and inline the pinned runtime.
-// The bin shim resolves through `node_modules/rolldown`, so after the swap
-// the workspace rolldown both bundles Vite and provides the inlined runtime.
+// Resolving through `node_modules/rolldown` means that after the swap the
+// workspace rolldown both bundles Vite and provides the inlined runtime.
+// The CLI is spawned with `process.execPath` instead of the `.bin/rolldown`
+// shim, which cmd.exe cannot execute on Windows. `bin/cli.mjs` is not an
+// exported subpath, so its path comes from the manifest's `bin` field.
+const viteRequire = createRequire(nodePath.join(vitePkgDir, 'package.json'));
+const rolldownPkgJsonPath = viteRequire.resolve('rolldown/package.json');
+const rolldownManifest = JSON.parse(nodeFs.readFileSync(rolldownPkgJsonPath, 'utf8')) as {
+  bin: { rolldown: string };
+};
+const rolldownCli = nodePath.resolve(
+  nodePath.dirname(rolldownPkgJsonPath),
+  rolldownManifest.bin.rolldown,
+);
 nodeFs.rmSync(nodePath.join(vitePkgDir, 'dist'), { recursive: true, force: true });
-run('./node_modules/.bin/rolldown --config rolldown.config.ts', vitePkgDir);
+runNode(rolldownCli, ['--config', 'rolldown.config.ts'], vitePkgDir);
 
 // 5. Verify the override took: resolving `rolldown` from the vite package must
 // land inside the workspace copy. Failing loudly here beats silently running
 // the tests against the npm-pinned rolldown.
-const viteRequire = createRequire(nodePath.join(vitePkgDir, 'package.json'));
 const resolvedRolldown = nodeFs.realpathSync(viteRequire.resolve('rolldown'));
 if (!resolvedRolldown.startsWith(nodeFs.realpathSync(localRolldownDir) + nodePath.sep)) {
   console.error(

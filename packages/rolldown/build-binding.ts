@@ -12,8 +12,6 @@ import {
 import {
   assertAsyncRuntimeHostExports,
   patchNativeBindingLoader,
-  patchWasiBrowserContextDestroyAwait,
-  patchWasiBrowserWorkerTerminationAwait,
   patchWasiBindingContextLifecycle,
   patchWasiBindingLoader,
   patchWasiNodeAsyncWorkPoolSize,
@@ -75,7 +73,6 @@ try {
   patchWasiNodeWorkerExecArgvConfig();
   patchWasiNodeAsyncWorkPoolConfig();
   validateAsyncRuntimeHostExports();
-  patchWasiBrowserContextDestroyAwaitConfig();
   if (argsOptions.target === WASI_THREADS_TARGET) {
     validateWasiReactorArtifacts();
   }
@@ -210,12 +207,4 @@ function patchWasiNodeWorkerExecArgvConfig(): void {
 function patchWasiNodeAsyncWorkPoolConfig(): void {
   const bindingPath = join(__dirname, 'src', 'rolldown-binding.wasi.cjs');
   writeFileSync(bindingPath, patchWasiNodeAsyncWorkPoolSize(readFileSync(bindingPath, 'utf8')));
-}
-
-function patchWasiBrowserContextDestroyAwaitConfig(): void {
-  const bindingPath = join(__dirname, 'src', 'rolldown-binding.wasi-browser.js');
-  let source = readFileSync(bindingPath, 'utf8');
-  source = patchWasiBrowserContextDestroyAwait(source);
-  source = patchWasiBrowserWorkerTerminationAwait(source);
-  writeFileSync(bindingPath, source);
 }

@@ -62,6 +62,24 @@ const WASI_DISPOSAL_CHAIN_SIGNATURES = [
   'function __rollbackWasiInitialization() {',
 ] as const;
 const WASI_DISPOSE_PUBLICATION = '__publishWasiDispose(__napiModule.exports)';
+// Both async teardown waits: the disposal chain must settle a thenable
+// context destroy and collect thenable worker terminations before it
+// completes, or teardown failures and retry ownership are lost.
+const WASI_ASYNC_TEARDOWN_WAITS = [
+  {
+    label: 'WASI thenable-aware context destroy',
+    snippet: `  const destroyResult = __destroyEmnapiContext()
+  if (__isThenable(destroyResult)) {
+`,
+  },
+  {
+    label: 'WASI thenable-aware worker termination',
+    snippet: `    if (__isThenable(result)) {
+      pending.push(
+        Promise.resolve(result).then(
+`,
+  },
+] as const;
 const WASI_EXIT_LISTENER_HELPER = 'function __registerWasiExitListener() {';
 // The head of upstream's cwd/rootDir/hostRoot block (`@napi-rs/cli` >= 3.9.1
 // derives an android-aware `__hostRoot` from `__cwd`). The pool-size helper
@@ -181,6 +199,9 @@ export function patchWasiBindingContextLifecycle(source: string): string {
   for (const signature of WASI_DISPOSAL_CHAIN_SIGNATURES) {
     assertExactlyOne(source, signature, 'WASI disposal chain helper');
   }
+  for (const wait of WASI_ASYNC_TEARDOWN_WAITS) {
+    assertExactlyOne(source, wait.snippet, wait.label);
+  }
   assertExactlyOne(source, WASI_CONTEXT_SUPPRESS_DESTROY, 'WASI context auto-destroy suppression');
   assertExactlyOne(
     source,
@@ -283,49 +304,6 @@ const __rolldownAsyncWorkPoolSize = __normalizeRolldownAsyncWorkPoolSize(
     '    asyncWorkPoolSize: __rolldownAsyncWorkPoolSize,',
     1,
     'WASI async-work-pool option',
-  );
-  return source;
-}
-
-/**
- * Assert the browser WASI loader routes every context destroy through the
- * thenable-aware disposal chain (so sync and promise-returning emnapi destroys
- * settle identically), and return it unchanged.
- */
-export function patchWasiBrowserContextDestroyAwait(source: string): string {
-  assertExactlyOne(
-    source,
-    `  const destroyResult = __destroyEmnapiContext()
-  if (__isThenable(destroyResult)) {
-`,
-    'WASI browser thenable-aware context destroy',
-  );
-  if (countOccurrences(source, 'await __emnapiContext.destroy()') !== 0) {
-    throw new Error(
-      'Unexpected NAPI-RS WASI browser cleanup template: found a bare context destroy await outside the disposal chain',
-    );
-  }
-  return source;
-}
-
-/**
- * Assert the browser WASI loader collects worker termination results
- * uniformly, so mixed settled/unsettled entries cannot race the disposal, and
- * return it unchanged.
- */
-export function patchWasiBrowserWorkerTerminationAwait(source: string): string {
-  assertExactlyOne(
-    source,
-    'function __terminateWasiWorkers() {',
-    'WASI browser worker termination',
-  );
-  assertExactlyOne(
-    source,
-    `    if (__isThenable(result)) {
-      pending.push(
-        Promise.resolve(result).then(
-`,
-    'WASI browser thenable-aware worker termination',
   );
   return source;
 }

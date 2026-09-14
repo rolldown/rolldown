@@ -116,6 +116,7 @@ mod tests {
   use rolldown_common::InputItem;
   use rolldown_plugin::{
     HookBuildStartArgs, HookCloseBundleArgs, HookNoopReturn, HookUsage, Plugin, PluginContext,
+    Pluginable,
   };
   use std::{
     borrow::Cow,
@@ -182,7 +183,7 @@ mod tests {
     }
   }
 
-  fn create_bundler(dir: &TestDir, plugin: Arc<FailingClosePlugin>) -> Bundler {
+  fn create_bundler(dir: &TestDir, plugin: FailingClosePlugin) -> Bundler {
     Bundler::with_plugins(
       BundlerOptions {
         cwd: Some(dir.0.clone()),
@@ -192,7 +193,7 @@ mod tests {
         }]),
         ..Default::default()
       },
-      vec![plugin],
+      vec![Pluginable::new_shared(plugin)],
     )
     .expect("create bundler")
   }
@@ -208,11 +209,11 @@ mod tests {
     let dir = TestDir::new("successful-build");
     let mut bundler = create_bundler(
       &dir,
-      Arc::new(FailingClosePlugin {
+      FailingClosePlugin {
         fail_build_start: false,
         build_start_calls: Arc::clone(&build_start_calls),
         close_calls: Arc::clone(&close_calls),
-      }),
+      },
     );
 
     // Build 1 succeeds; nothing has been closed yet.
@@ -251,11 +252,11 @@ mod tests {
     let dir = TestDir::new("failed-scan");
     let mut bundler = create_bundler(
       &dir,
-      Arc::new(FailingClosePlugin {
+      FailingClosePlugin {
         fail_build_start: true,
         build_start_calls: Arc::clone(&build_start_calls),
         close_calls: Arc::clone(&close_calls),
-      }),
+      },
     );
 
     // Build 1: the scan fails; the failed-scan close runs (and fails), but the

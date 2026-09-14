@@ -2,6 +2,7 @@ use rolldown::{
   BundlerOptions, DevModeOptions, ExperimentalOptions,
   plugin::{
     HookBuildStartArgs, HookCloseBundleArgs, HookNoopReturn, HookUsage, Plugin, PluginContext,
+    Pluginable,
   },
 };
 use rolldown_common::WatcherChangeKind;
@@ -155,7 +156,7 @@ async fn close_waits_for_hmr_rebuild_before_closing_the_final_bundle_handle() {
           }),
           ..Default::default()
         },
-        vec![Arc::new(LifecyclePlugin {
+        vec![Pluginable::new_shared(LifecyclePlugin {
           build_start_calls: Arc::clone(&build_start_calls),
           close_calls: Arc::clone(&close_calls),
           close_observed_build_start_calls: Arc::clone(&close_observed_build_start_calls),
@@ -280,7 +281,7 @@ async fn concurrent_and_late_close_callers_replay_the_terminal_failure() {
           }),
           ..Default::default()
         },
-        vec![Arc::new(GatedFailingClosePlugin {
+        vec![Pluginable::new_shared(GatedFailingClosePlugin {
           calls: Arc::clone(&calls),
           entered: Arc::clone(&entered),
           release: Arc::clone(&release),
@@ -413,7 +414,7 @@ async fn close_contains_a_panicked_bundling_future_and_runs_fallback_cleanup() {
           }),
           ..Default::default()
         },
-        vec![Arc::new(LifecyclePlugin {
+        vec![Pluginable::new_shared(LifecyclePlugin {
           build_start_calls: Arc::new(AtomicUsize::new(0)),
           close_calls: Arc::clone(&close_calls),
           close_observed_build_start_calls: Arc::new(AtomicUsize::new(0)),

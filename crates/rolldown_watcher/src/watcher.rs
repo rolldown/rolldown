@@ -603,7 +603,7 @@ mod tests {
       .map(|message| {
         vec![BundlerConfig::new(
           BundlerOptions::default(),
-          vec![Arc::new(FailingClosePlugin {
+          vec![plugin::Pluginable::new_shared(FailingClosePlugin {
             message,
             close_watcher_calls: Arc::clone(&close_watcher_calls),
             close_bundle_calls: Arc::clone(&close_bundle_calls),
@@ -673,7 +673,7 @@ mod tests {
       .map(|(name, panic_close_watcher)| {
         vec![BundlerConfig::new(
           BundlerOptions::default(),
-          vec![Arc::new(CleanupProbePlugin {
+          vec![plugin::Pluginable::new_shared(CleanupProbePlugin {
             name,
             panic_close_watcher,
             close_watcher_calls: Arc::clone(&close_watcher_calls),
@@ -737,7 +737,7 @@ mod tests {
     let watcher = Watcher::new(
       vec![vec![BundlerConfig::new(
         BundlerOptions::default(),
-        vec![Arc::new(FailingClosePlugin {
+        vec![plugin::Pluginable::new_shared(FailingClosePlugin {
           message: "cleanup failure",
           close_watcher_calls: Arc::clone(&close_watcher_calls),
           close_bundle_calls: Arc::clone(&close_bundle_calls),
@@ -820,7 +820,7 @@ mod tests {
           input: Some(vec![input.to_string_lossy().into_owned().into()]),
           ..Default::default()
         },
-        vec![Arc::new(FailingWatchChangePlugin {
+        vec![plugin::Pluginable::new_shared(FailingWatchChangePlugin {
           watch_change_calls: Arc::clone(&watch_change_calls),
           close_watcher_calls: Arc::clone(&close_watcher_calls),
         })],

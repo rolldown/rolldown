@@ -974,7 +974,9 @@ mod tests {
           file: Some("dist/out.js".into()),
           ..Default::default()
         },
-        vec![Arc::new(CloseProbePlugin { close_bundle_calls: Arc::clone(close_bundle_calls) })],
+        vec![plugin::Pluginable::new_shared(CloseProbePlugin {
+          close_bundle_calls: Arc::clone(close_bundle_calls),
+        })],
       ),
       Arc::new(Mutex::new(fs_watcher)),
       Arc::new(FxDashSet::default()),
@@ -1348,7 +1350,9 @@ mod tests {
           file: Some("dist/out.js".into()),
           ..Default::default()
         },
-        vec![Arc::new(WatchChangeCountingPlugin { count: Arc::clone(&watch_change_count) })],
+        vec![plugin::Pluginable::new_shared(WatchChangeCountingPlugin {
+          count: Arc::clone(&watch_change_count),
+        })],
       ),
       Arc::new(Mutex::new(fs_watcher)),
       Arc::new(FxDashSet::default()),
@@ -1801,7 +1805,9 @@ mod tests {
       (
         input.clone(),
         "dist1/out.js",
-        vec![Arc::new(FailAfterFirstBuildPlugin { builds: Arc::clone(&builds) })],
+        vec![plugin::Pluginable::new_shared(FailAfterFirstBuildPlugin {
+          builds: Arc::clone(&builds),
+        })],
       ),
     ]);
     let (events, end_count) = run_one_group_save(fixture, input_str).await;

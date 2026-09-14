@@ -820,7 +820,9 @@ mod tests {
   };
 
   use futures::{future::join, pin_mut, poll};
-  use rolldown_plugin::{HookCloseBundleArgs, HookNoopReturn, HookUsage, Plugin, PluginContext};
+  use rolldown_plugin::{
+    HookCloseBundleArgs, HookNoopReturn, HookUsage, Plugin, PluginContext, Pluginable,
+  };
 
   use super::*;
 
@@ -1030,7 +1032,7 @@ mod tests {
       let calls = Arc::new(AtomicUsize::new(0));
       let (release, released) = oneshot::channel();
       let mut factory = BundleFactory::new(BundleFactoryOptions {
-        plugins: vec![Arc::new(GatedClosePlugin {
+        plugins: vec![Pluginable::new_shared(GatedClosePlugin {
           calls: Arc::clone(&calls),
           release: StdMutex::new(Some(released)),
         })],

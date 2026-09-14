@@ -228,6 +228,7 @@ mod tests {
   use rolldown_common::{BundleMode, EmittedPrebuiltChunk};
   use rolldown_plugin::{
     HookBuildStartArgs, HookCloseBundleArgs, HookNoopReturn, HookUsage, Plugin, PluginContext,
+    Pluginable,
   };
   use std::{
     borrow::Cow,
@@ -336,7 +337,7 @@ mod tests {
     let entered = Arc::new(Notify::new());
     let release = Arc::new(Notify::new());
     let mut factory = BundleFactory::new(BundleFactoryOptions {
-      plugins: vec![Arc::new(GatedFailingClosePlugin {
+      plugins: vec![Pluginable::new_shared(GatedFailingClosePlugin {
         calls: Arc::clone(&calls),
         entered: Arc::clone(&entered),
         release: Arc::clone(&release),
@@ -434,7 +435,7 @@ mod tests {
   async fn close_contains_panics_clears_resources_and_replays_the_failure() {
     let calls = Arc::new(AtomicUsize::new(0));
     let mut factory = BundleFactory::new(BundleFactoryOptions {
-      plugins: vec![Arc::new(PanickingClosePlugin { calls: Arc::clone(&calls) })],
+      plugins: vec![Pluginable::new_shared(PanickingClosePlugin { calls: Arc::clone(&calls) })],
       disable_tracing_setup: true,
       ..Default::default()
     })
@@ -458,7 +459,7 @@ mod tests {
     let close_calls = Arc::new(AtomicUsize::new(0));
     let close_error_counts = Arc::new(Mutex::new(Vec::new()));
     let mut factory = BundleFactory::new(BundleFactoryOptions {
-      plugins: vec![Arc::new(FailingBuildStartAndClosePlugin {
+      plugins: vec![Pluginable::new_shared(FailingBuildStartAndClosePlugin {
         close_calls: Arc::clone(&close_calls),
         close_error_counts: Arc::clone(&close_error_counts),
       })],

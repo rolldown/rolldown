@@ -2,6 +2,10 @@ async function resolveSpecifier() {
   return './lib.js';
 }
 
-export const a = await import(await resolveSpecifier());
+export async function load() {
+  return await import(await resolveSpecifier());
+}
 
-export const b = await import(await resolveSpecifier()).then((m) => m.foo);
+export async function loadThen() {
+  return await import(await resolveSpecifier()).then((m) => m.foo);
+}

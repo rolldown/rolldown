@@ -95,7 +95,7 @@ async fn allow_pass_custom_arg() {
         }]),
         ..Default::default()
       },
-      vec![Arc::new(TestPluginCaller), Arc::new(TestPluginReceiver)],
+      vec![Plugin::new_shared(TestPluginCaller), Plugin::new_shared(TestPluginReceiver)],
     )
     .await;
 }

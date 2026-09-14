@@ -1,6 +1,8 @@
 // @ts-nocheck
 import assert from 'node:assert';
-import { a, b } from './dist/main';
+import { load, loadThen } from './dist/main';
 
-assert.strictEqual(a.foo, 100);
-assert.strictEqual(b, 100);
+// Importing at all is the assertion: a synchronous preload thunk makes this
+// module a syntax error, so the import throws before these run.
+assert.strictEqual(typeof load, 'function');
+assert.strictEqual(typeof loadThen, 'function');

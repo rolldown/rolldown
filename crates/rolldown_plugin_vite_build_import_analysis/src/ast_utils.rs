@@ -140,8 +140,7 @@ impl<'a> BuildImportAnalysisVisitor<'a> {
   ///
   /// The thunk is `async` so that an `await` inside the import argument -- e.g.
   /// `import(await resolveUrl())` -- is not stranded in a non-async scope, which
-  /// would be a syntax error. `__vitePreload` invokes and awaits the thunk
-  /// immediately, so this is inert for the common case.
+  /// would be a syntax error.
   pub fn rewrite_import_expr(&self, expr: &mut Expression<'a>) -> bool {
     let Expression::ImportExpression(_) = expr else { return false };
     *expr = self.vite_preload_call(Argument::from(Expression::new_async_arrow_returning(

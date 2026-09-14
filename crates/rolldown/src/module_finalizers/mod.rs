@@ -2685,7 +2685,16 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
       && let Module::Normal(importee) = &self.ctx.modules[importee_idx]
       && importee.id.contains("?rolldown-lazy=1")
     {
-      *node = create_request_lazy_call(&importee.id, &importee.stable_id, self);
+      let lazy_endpoint = crate::hmr::utils::lazy_endpoint_url(
+        self
+          .ctx
+          .options
+          .experimental
+          .dev_mode
+          .as_ref()
+          .and_then(|dev_mode| dev_mode.base.as_deref()),
+      );
+      *node = create_request_lazy_call(&importee.id, &importee.stable_id, self, &lazy_endpoint);
       return true;
     }
 

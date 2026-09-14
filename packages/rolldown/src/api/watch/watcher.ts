@@ -108,14 +108,9 @@ export class WatchResultCloseRegistry {
 
   drain(
     nativeOwnedCloseIdentities: ReadonlySet<string> = new Set(),
-    includeCurrentAndPending = false,
   ): Promise<PromiseSettledResult<void>[]> {
     if (!this.#terminalOutcomes) {
       const registeredCloses = new Set(this.#superseded);
-      if (includeCurrentAndPending) {
-        for (const close of this.#current.values()) registeredCloses.add(close);
-        for (const close of this.#pendingBuild.values()) registeredCloses.add(close);
-      }
       const closes = [...registeredCloses].filter(
         ({ closeIdentity }) => !nativeOwnedCloseIdentities.has(closeIdentity),
       );
@@ -248,7 +243,6 @@ function createEventCallback(
 }
 
 class Watcher {
-  closed: boolean;
   inner: BindingWatcher;
   emitter: WatcherEmitter;
   runtimeLease: RuntimeLease;
@@ -282,7 +276,6 @@ class Watcher {
     stopWorkers: ((() => Promise<void>) | undefined)[],
     releaseOptionBoxes: (() => void)[],
   ) {
-    this.closed = false;
     this.inner = inner;
     this.emitter = emitter;
     this.runtimeLease = runtimeLease;
@@ -296,7 +289,6 @@ class Watcher {
     // A timer is a host turn in both browsers and Node.js.
     this.scheduledRun = globalThis.setTimeout(() => {
       this.scheduledRun = undefined;
-      if (this.closed) return;
       const runOutcomePromise = Promise.resolve()
         .then(() => this.run())
         .then<unknown[], unknown[]>(
@@ -426,26 +418,11 @@ class Watcher {
     return result;
   }
 
-  async cleanupAfterSetupFailure(): Promise<CloseAttemptResult> {
-    const result = await this.closeOwnedResources();
-    if (!result.nativeCloseReturned) {
-      return result;
-    }
-    try {
-      this.runtimeLease.release();
-    } catch (error) {
-      result.errors.push(error);
-      result.retryable = true;
-    }
-    return result;
-  }
-
   private async closeOwnedResources(
     context?: WatcherCloseAttemptContext,
   ): Promise<WatcherCloseAttemptResult> {
-    this.closed = true;
     const errors: unknown[] = [];
-    this.cancelScheduledRun(errors);
+    this.cancelScheduledRun();
     this.startNativeClose();
     const nativeCloseResultPromise = this.nativeCloseResultPromise!;
     const nativeCloseResult = await nativeCloseResultPromise;
@@ -550,15 +527,11 @@ class Watcher {
     }
   }
 
-  private cancelScheduledRun(errors: unknown[]): void {
+  private cancelScheduledRun(): void {
     if (this.scheduledRun === undefined) return;
     const scheduledRun = this.scheduledRun;
     this.scheduledRun = undefined;
-    try {
-      globalThis.clearTimeout(scheduledRun);
-    } catch (error) {
-      errors.push(error);
-    }
+    globalThis.clearTimeout(scheduledRun);
   }
 
   private async dispatchCloseEvent(): Promise<void> {
@@ -701,35 +674,12 @@ export async function createWatcher(
     bundlerOptions.map((option) => option.stopWorkers),
     bundlerOptions.map((option) => option.releaseOptionBoxes),
   );
-  try {
-    onNativeClose = () => watcher.onNativeClose();
-    registerResultClose = (taskIndex, closeIdentity, close) =>
-      watcher.registerResultClose(taskIndex, closeIdentity, close);
-    beginTaskBuild = (taskIndex) => watcher.beginTaskBuild(taskIndex);
-    watcher.start();
-    emitter.bindClose(() => watcher.close());
-  } catch (error) {
-    onNativeClose = () => {};
-    const cleanupErrors: unknown[] = [];
-    let cleanupResult = await watcher.cleanupAfterSetupFailure();
-    cleanupErrors.push(...cleanupResult.errors);
-    if (cleanupResult.retryable) {
-      cleanupResult = await watcher.cleanupAfterSetupFailure();
-      for (const cleanupError of cleanupResult.errors) {
-        if (!cleanupErrors.includes(cleanupError)) cleanupErrors.push(cleanupError);
-      }
-    }
-    // Keep ownership reachable through the public emitter so a later close
-    // can retry any worker termination or runtime release that still failed.
-    emitter.bindClose(() => watcher.close());
-    if (cleanupErrors.length > 0) {
-      throw new AggregateError(
-        [error, ...cleanupErrors],
-        'Watcher setup, native cleanup, parallel-plugin worker cleanup, or runtime release failed',
-      );
-    }
-    throw error;
-  }
+  onNativeClose = () => watcher.onNativeClose();
+  registerResultClose = (taskIndex, closeIdentity, close) =>
+    watcher.registerResultClose(taskIndex, closeIdentity, close);
+  beginTaskBuild = (taskIndex) => watcher.beginTaskBuild(taskIndex);
+  watcher.start();
+  emitter.bindClose(() => watcher.close());
 }
 
 function collectParallelPluginCleanups(

@@ -21,10 +21,7 @@ browserTest(
         return (
           globalThis as typeof globalThis & {
             runBrowserWatcherTests(): Promise<{
-              cancellation: Record<string, number | boolean>;
-              cleanup: Record<string, number>;
               lifecycle: Record<string, number | boolean>;
-              transport: Record<string, number | boolean>;
               unsupported: Record<string, number | string | boolean | undefined>;
             }>;
           }
@@ -39,29 +36,6 @@ browserTest(
         reentrantCloseSettled: true,
         runCallsAfterHostTurn: 1,
         runCallsBeforeHostTurn: 0,
-        stopWorkerCalls: 1,
-      });
-      expect(result.cancellation).toEqual({
-        closeRejectedWithCancellationError: true,
-        leaseReleaseCalls: 1,
-        nativeCloseCalls: 1,
-        runCalls: 0,
-        stopWorkerCalls: 1,
-      });
-      expect(result.cleanup).toEqual({
-        closeEvents: 1,
-        leaseReleaseCalls: 3,
-        nativeCloseCalls: 1,
-        runCalls: 0,
-        stopWorkerCalls: 3,
-      });
-      expect(result.transport).toEqual({
-        closeRejectedWithNativeError: true,
-        leaseReleaseCallsAfterFailure: 0,
-        leaseReleaseCalls: 1,
-        nativeCloseCalls: 2,
-        retryResolved: true,
-        stopWorkerCallsAfterFailure: 0,
         stopWorkerCalls: 1,
       });
       expect(result.unsupported).toEqual({
@@ -116,15 +90,10 @@ async function buildBrowserWatcherHarness(): Promise<string> {
           async run() {
             globalThis.__watchHarness.runCalls += 1;
           }
-          waitForClose() {
-            globalThis.__watchHarness.waitForCloseCalls += 1;
-          }
+          waitForClose() {}
           async close() {
             globalThis.__watchHarness.nativeCloseCalls += 1;
             await Promise.resolve();
-            if (globalThis.__watchHarness.nativeCloseError) {
-              throw globalThis.__watchHarness.nativeCloseError;
-            }
             await this.callback({ eventKind: () => 'close' });
             return { errors: [], nativeOwnedCloseIdentities: [] };
           }
@@ -178,10 +147,6 @@ async function buildBrowserWatcherHarness(): Promise<string> {
             release() {
               if (released) return;
               harness.leaseReleaseCalls += 1;
-              if (harness.leaseReleaseFailures > 0) {
-                harness.leaseReleaseFailures -= 1;
-                throw harness.leaseReleaseError;
-              }
               released = true;
             },
           };
@@ -202,10 +167,6 @@ async function buildBrowserWatcherHarness(): Promise<string> {
             async stopWorkers() {
               if (stopped) return;
               harness.stopWorkerCalls += 1;
-              if (harness.stopWorkerFailures > 0) {
-                harness.stopWorkerFailures -= 1;
-                throw harness.stopWorkerError;
-              }
               stopped = true;
             },
           };
@@ -271,7 +232,7 @@ async function buildBrowserWatcherHarness(): Promise<string> {
         },
         load(id) {
           if (id === '\0browser-watcher-harness') {
-            return browserHarnessEntry(watchIndexPath, watcherPath, emitterPath, asyncContextPath);
+            return browserHarnessEntry(watchIndexPath, watcherPath, emitterPath);
           }
           return virtualModules.get(id.slice(1));
         },
@@ -307,28 +268,20 @@ function browserHarnessEntry(
   watchIndexPath: string,
   watcherPath: string,
   emitterPath: string,
-  asyncContextPath: string,
 ): string {
   return `
     import { watch } from ${JSON.stringify(watchIndexPath)};
     import { createWatcher } from ${JSON.stringify(watcherPath)};
     import { WatcherEmitter } from ${JSON.stringify(emitterPath)};
-    import { configureAsyncContext } from ${JSON.stringify(asyncContextPath)};
 
     function resetHarness() {
       globalThis.__watchHarness = {
         bindingConstructed: 0,
         leaseReleaseCalls: 0,
-        leaseReleaseError: new Error('lease release failed'),
-        leaseReleaseFailures: 0,
         nativeCloseCalls: 0,
-        nativeCloseError: undefined,
         optionsHookCalls: 0,
         runCalls: 0,
         stopWorkerCalls: 0,
-        stopWorkerError: new Error('worker stop failed'),
-        stopWorkerFailures: 0,
-        waitForCloseCalls: 0,
         watchSupported: true,
       };
       return globalThis.__watchHarness;
@@ -345,63 +298,6 @@ function browserHarnessEntry(
         }),
       ]);
     }
-
-    globalThis.runBrowserWatcherLateProviderTest = (createStorage) => withTimeout(async () => {
-      const harness = resetHarness();
-      let storageCreations = 0;
-      configureAsyncContext({
-        createStorage() {
-          storageCreations += 1;
-          return createStorage();
-        },
-      });
-
-      const emitter = new WatcherEmitter();
-      const storageCreationsAfterConstruction = storageCreations;
-      await createWatcher(emitter, { output: {} });
-      const storageCreationsBeforeClose = storageCreations;
-      let reentrantClose;
-      emitter.on('close', async () => {
-        await Promise.resolve();
-        reentrantClose = emitter.close();
-      });
-      await emitter.close();
-      await reentrantClose;
-      return {
-        reentrantCloseSettled: true,
-        storageCreations,
-        storageCreationsAfterConstruction,
-        storageCreationsBeforeClose,
-      };
-    });
-
-    globalThis.runBrowserWatcherProviderRetryTest = (createStorage) => withTimeout(async () => {
-      let listenerCalls = 0;
-      const listener = async () => {
-        listenerCalls += 1;
-        await Promise.resolve();
-      };
-
-      const unavailableEmitter = new WatcherEmitter();
-      unavailableEmitter.on('close', listener);
-      await unavailableEmitter.emitClose(Promise.resolve());
-
-      let storageCreations = 0;
-      configureAsyncContext({
-        createStorage() {
-          storageCreations += 1;
-          return createStorage();
-        },
-      });
-      const configuredEmitter = new WatcherEmitter();
-      configuredEmitter.on('close', listener);
-      await configuredEmitter.emitClose(Promise.resolve());
-
-      return {
-        listenerCalls,
-        storageCreations,
-      };
-    });
 
     globalThis.runBrowserWatcherTests = () => withTimeout(async () => {
       const lifecycleHarness = resetHarness();
@@ -450,77 +346,6 @@ function browserHarnessEntry(
         runCallsAfterHostTurn,
         runCallsBeforeHostTurn,
         stopWorkerCalls: lifecycleHarness.stopWorkerCalls,
-      };
-
-      const cancellationHarness = resetHarness();
-      const cancellationEmitter = new WatcherEmitter();
-      await createWatcher(cancellationEmitter, { output: {} });
-      const cancellationError = new Error('host turn cancellation failed');
-      const originalClearTimeout = globalThis.clearTimeout;
-      globalThis.clearTimeout = () => {
-        throw cancellationError;
-      };
-      const cancellationResult = await Promise.allSettled([cancellationEmitter.close()]);
-      globalThis.clearTimeout = originalClearTimeout;
-      await new Promise((resolve) => globalThis.setTimeout(resolve, 0));
-      const cancellation = {
-        closeRejectedWithCancellationError:
-          cancellationResult[0].status === 'rejected' &&
-          cancellationResult[0].reason === cancellationError,
-        leaseReleaseCalls: cancellationHarness.leaseReleaseCalls,
-        nativeCloseCalls: cancellationHarness.nativeCloseCalls,
-        runCalls: cancellationHarness.runCalls,
-        stopWorkerCalls: cancellationHarness.stopWorkerCalls,
-      };
-
-      const cleanupHarness = resetHarness();
-      cleanupHarness.leaseReleaseFailures = 2;
-      cleanupHarness.stopWorkerFailures = 2;
-      const cleanupEmitter = new WatcherEmitter();
-      let cleanupCloseEvents = 0;
-      cleanupEmitter.on('close', () => {
-        cleanupCloseEvents += 1;
-      });
-      const originalSetTimeout = globalThis.setTimeout;
-      globalThis.setTimeout = () => {
-        throw new Error('host turn scheduling failed');
-      };
-      let cleanupSetupError;
-      try {
-        await createWatcher(cleanupEmitter, { output: {} });
-        throw new Error('watcher creation unexpectedly succeeded');
-      } catch (error) {
-        const errors = error instanceof AggregateError ? error.errors : [error];
-        if (!errors.some((item) => String(item).includes('host turn scheduling failed'))) {
-          throw error;
-        }
-        cleanupSetupError = error;
-      } finally {
-        globalThis.setTimeout = originalSetTimeout;
-      }
-      await cleanupEmitter.failSetup(cleanupSetupError);
-      await cleanupEmitter.close();
-
-      const transportHarness = resetHarness();
-      const transportEmitter = new WatcherEmitter();
-      await createWatcher(transportEmitter, { output: {} });
-      const nativeCloseError = new Error('native close transport failed');
-      transportHarness.nativeCloseError = nativeCloseError;
-      const transportResult = await Promise.allSettled([transportEmitter.close()]);
-      const leaseReleaseCallsAfterFailure = transportHarness.leaseReleaseCalls;
-      const stopWorkerCallsAfterFailure = transportHarness.stopWorkerCalls;
-      transportHarness.nativeCloseError = undefined;
-      const retryResult = await Promise.allSettled([transportEmitter.close()]);
-      const transport = {
-        closeRejectedWithNativeError:
-          transportResult[0].status === 'rejected' &&
-          transportResult[0].reason === nativeCloseError,
-        leaseReleaseCallsAfterFailure,
-        leaseReleaseCalls: transportHarness.leaseReleaseCalls,
-        nativeCloseCalls: transportHarness.nativeCloseCalls,
-        retryResolved: retryResult[0].status === 'fulfilled',
-        stopWorkerCallsAfterFailure,
-        stopWorkerCalls: transportHarness.stopWorkerCalls,
       };
 
       const unsupportedHarness = resetHarness();
@@ -572,16 +397,7 @@ function browserHarnessEntry(
       await unsupportedWatcher.close();
 
       return {
-        cancellation,
-        cleanup: {
-          closeEvents: cleanupCloseEvents,
-          leaseReleaseCalls: cleanupHarness.leaseReleaseCalls,
-          nativeCloseCalls: cleanupHarness.nativeCloseCalls,
-          runCalls: cleanupHarness.runCalls,
-          stopWorkerCalls: cleanupHarness.stopWorkerCalls,
-        },
         lifecycle,
-        transport,
         unsupported: {
           bindingConstructions: unsupportedHarness.bindingConstructed,
           closeOvertookEnd,

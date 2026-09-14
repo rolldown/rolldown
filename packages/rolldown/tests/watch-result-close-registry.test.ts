@@ -47,22 +47,6 @@ test('terminal drain excludes a superseded result closed by the native watcher',
   expect(current).not.toHaveBeenCalled();
 });
 
-test('transport-failure drain closes current and pending results without native ownership', async () => {
-  const registry = new WatchResultCloseRegistry();
-  const current = vi.fn(async () => {});
-  const pending = vi.fn(async () => {});
-  registry.register(1, 'current', current);
-  registry.register(2, 'pending', pending);
-  registry.beginTaskBuild(2);
-
-  await expect(registry.drain(new Set(), true)).resolves.toEqual([
-    { status: 'fulfilled', value: undefined },
-    { status: 'fulfilled', value: undefined },
-  ]);
-  expect(current).toHaveBeenCalledOnce();
-  expect(pending).toHaveBeenCalledOnce();
-});
-
 test('canceling a pending build keeps the current result native-owned', async () => {
   const registry = new WatchResultCloseRegistry();
   const current = vi.fn(async () => {});

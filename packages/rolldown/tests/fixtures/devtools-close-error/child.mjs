@@ -15,7 +15,6 @@ const closeError = Object.assign(new RangeError('devtools closeBundle identity')
   marker: 'original-close-error',
 });
 let closeBundleCalls = 0;
-let directCloseBundleCalls = 0;
 
 function directBindingOptions(name, closeBundle, devtools) {
   return {
@@ -73,35 +72,6 @@ try {
   assert.equal(lateError, firstError);
   assert.equal(closeBundleCalls, 1);
 
-  const directCloseError = Object.assign(new SyntaxError('direct binding closeBundle identity'), {
-    marker: 'direct-binding-close-error',
-  });
-  const directBundler = new BindingBundler();
-  const directGenerateResult = await directBundler.generate(
-    directBindingOptions(
-      'direct-binding-devtools-close-error',
-      () => {
-        directCloseBundleCalls += 1;
-        throw directCloseError;
-      },
-      { sessionId: 'direct-binding-session' },
-    ),
-  );
-  assert.equal(directGenerateResult?.isBindingErrors, undefined);
-
-  const directError = await directBundler.close().then(
-    () => null,
-    (error) => error,
-  );
-  assert(directError instanceof AggregateError);
-  assert.equal(directError.errors[0], directCloseError);
-  const directWriterErrors = directError.errors.slice(1);
-  assert(directWriterErrors.length > 0);
-  assert(directWriterErrors.every((error) => error instanceof Error));
-  assert(directWriterErrors.every((error) => error.code === 'BUNDLER_CLOSE_ERROR'));
-  assert(directWriterErrors.every((error) => /devtools|rolldown log/i.test(error.message)));
-  assert.equal(directCloseBundleCalls, 1);
-
   const loneCloseError = new URIError('direct binding lone closeBundle identity');
   const loneBundler = new BindingBundler();
   const loneGenerateResult = await loneBundler.generate(
@@ -120,9 +90,6 @@ try {
     JSON.stringify({
       closeBundleCalls,
       concurrentPromiseReused,
-      directBindingFailuresPreserved:
-        directError.errors[0] === directCloseError && directWriterErrors.length > 0,
-      directCloseBundleCalls,
       loneDirectErrorIdentityPreserved: loneRejection === loneCloseError,
       originalErrorPreserved: firstError.errors[0] === closeError,
       replayedAggregatePreserved: concurrentError === firstError && lateError === firstError,

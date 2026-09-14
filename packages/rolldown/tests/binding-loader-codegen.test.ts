@@ -178,6 +178,32 @@ class WorkerStub {
   unref(): void {}
 }
 
+// The generated loader bootstraps the CurrentThread task and timer hosts at
+// load, so the stub napi module must expose the seven host exports the
+// bootstrap reads (contract version 4, live registrations).
+function createHostIntegrationExports(): Record<string, unknown> {
+  const active = new Set<string>();
+  let nextLow = 1;
+  return {
+    getCurrentThreadTaskHostContractVersion: () => 4,
+    isCurrentThreadHostRegistrationActive: (high: number, low: number) =>
+      active.has(`${high}:${low}`),
+    reserveCurrentThreadHostRegistration: () => ({ high: 0, low: nextLow++ }),
+    registerCurrentThreadTaskHost: (high: number, low: number) => {
+      active.add(`${high}:${low}`);
+    },
+    registerTimerHost: (high: number, low: number) => {
+      active.add(`${high}:${low}`);
+    },
+    unregisterCurrentThreadTaskHost: (high: number, low: number) => {
+      active.delete(`${high}:${low}`);
+    },
+    unregisterTimerHost: (high: number, low: number) => {
+      active.delete(`${high}:${low}`);
+    },
+  };
+}
+
 function executeGeneratedWasiNodeLoader({
   createContext,
   prepareCleanup = () => {},
@@ -223,7 +249,7 @@ function executeGeneratedWasiNodeLoader({
               return {
                 instance,
                 module: {},
-                napiModule: { exports: {} },
+                napiModule: { exports: createHostIntegrationExports() },
               };
             },
           };

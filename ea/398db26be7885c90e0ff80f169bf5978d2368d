@@ -1,0 +1,19 @@
+crates/rolldown_plugin_oxc_runtime/src/generated/embedded_helpers.rs
+  s_8d5c341ef39b90::t_5ffbe320bf9938 5,10
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "ea398db26be7885c90e0ff80f169bf5978d2368d",
+  "prompts": {},
+  "sessions": {
+    "s_8d5c341ef39b90": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019fd2a4-9dd6-7050-9aa2-fd882e51e24d",
+        "model": "unknown"
+      },
+      "human_author": "Cameron <cameron.clark@hey.com>"
+    }
+  }
+}

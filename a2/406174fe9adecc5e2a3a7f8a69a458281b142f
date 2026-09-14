@@ -1,0 +1,19 @@
+crates/rolldown_ecmascript_utils/src/ast_factory.rs
+  s_d3ad640973ad49::t_4948323fa6cd84 22-28,88,798-806,864,969
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "a2406174fe9adecc5e2a3a7f8a69a458281b142f",
+  "prompts": {},
+  "sessions": {
+    "s_d3ad640973ad49": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019fa96b-09c1-7881-b0ca-127222b208ef",
+        "model": "gpt-5.6-sol"
+      },
+      "human_author": "Cameron <cameron.clark@hey.com>"
+    }
+  }
+}

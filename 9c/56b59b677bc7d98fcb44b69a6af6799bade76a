@@ -1,0 +1,52 @@
+Cargo.toml
+  s_8d5c341ef39b90::t_f5e79e19cdd48a 265,276-285
+Cargo.lock
+  s_8d5c341ef39b90::t_902ec53a107a22 341,607,1422,3319,3649,3668,4072
+  s_8d5c341ef39b90::t_4f010d74df7526 1569,1591,1593,1595-1596,1607,1620,1637,1648,1659,1679,1691,1699,1701,1704-1705,1708-1710,1716,1736,1757,1774,1792,1816,1836,1851,1874,1890,1947,1985,1998,2010,2030,2044,2073,2095
+crates/rolldown/tests/esbuild/dce/dce_class_static_blocks/artifacts.snap
+  s_8d5c341ef39b90::t_e054accef527d6 10,14-15,19-20,26-27,31
+crates/rolldown/tests/esbuild/dce/dce_class_static_blocks_minify_syntax/artifacts.snap
+  s_8d5c341ef39b90::t_e921e3a7a750e7 10,14-15,19-20,26-27,31
+crates/rolldown/tests/esbuild/dce/dce_of_decorators/artifacts.snap
+  s_8d5c341ef39b90::t_096a78c06b9336 15-16,18-19,21-22,24-25,27-28,30-31,33
+crates/rolldown/tests/esbuild/dce/tree_shaking_class_static_property/artifacts.snap
+  s_8d5c341ef39b90::t_12ffc8c25b05e3 10,12-13,15
+crates/rolldown/tests/esbuild/dce/tree_shaking_lowered_class_static_field_minified/artifacts.snap
+  s_8d5c341ef39b90::t_bda1e97d8fb8f1 10,14
+crates/rolldown/tests/esbuild/lower/java_script_auto_accessor_es2022/artifacts.snap
+  s_8d5c341ef39b90::t_948c2383b11cf4 20,25-26,31,41,44-45,48
+crates/rolldown/tests/esbuild/lower/java_script_auto_accessor_es_next/artifacts.snap
+  s_8d5c341ef39b90::t_5cb8108893af1d 20,25-26,31,41,44-45,48
+crates/rolldown/tests/esbuild/lower/static_class_block_es2021/artifacts.snap
+  s_8d5c341ef39b90::t_f985d2e8b77272 19,26
+crates/rolldown/tests/esbuild/lower/static_class_block_es_next/artifacts.snap
+  s_8d5c341ef39b90::t_a082e4a905235d 19,26
+crates/rolldown/tests/esbuild/lower/ts_lower_class_private_field_next_no_bundle/artifacts.snap
+  s_8d5c341ef39b90::t_c098cad0f22fc9 10,22
+crates/rolldown/tests/esbuild/ts/parameter_props_use_define_for_class_fields_false/artifacts.snap
+  s_8d5c341ef39b90::t_ecff4af0887053 10,26
+crates/rolldown/tests/esbuild/ts/parameter_props_use_define_for_class_fields_true/artifacts.snap
+  s_8d5c341ef39b90::t_f256d970514e1d 10,28
+crates/rolldown/tests/esbuild/ts/ts_experimental_decorator_scope_issue2147/artifacts.snap
+  s_8d5c341ef39b90::t_c4735ea1fbaa24 19,41
+crates/rolldown/tests/esbuild/ts/ts_experimental_decorators_mangle_props_static_assign_semantics/artifacts.snap
+  s_8d5c341ef39b90::t_cd1d2474411bc0 10,29
+crates/rolldown/tests/rolldown/tree_shaking/property_write_side_effects/artifacts.snap
+  s_8d5c341ef39b90::t_1ab5c577fe57fd 28,32
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "9c56b59b677bc7d98fcb44b69a6af6799bade76a",
+  "prompts": {},
+  "sessions": {
+    "s_8d5c341ef39b90": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019fd2a4-9dd6-7050-9aa2-fd882e51e24d",
+        "model": "gpt-5.6-sol"
+      },
+      "human_author": "Cameron <cameron.clark@hey.com>"
+    }
+  }
+}

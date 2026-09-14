@@ -1,0 +1,31 @@
+packages/test-dev-server/tests/playground/hmr-dynamic-entry-cache/__tests__/hmr-dynamic-entry-cache.spec.ts
+  s_d35b6306f1ab7b::t_4f0d09241c1008 1-31
+packages/test-dev-server/tests/playground/hmr-dynamic-entry-cache/dev.config.mjs
+  s_d35b6306f1ab7b::t_77dfa07f941c9e 1-14
+packages/test-dev-server/tests/playground/hmr-dynamic-entry-cache/index.html
+  s_d35b6306f1ab7b::t_4fd3f2df3586dc 1-3
+packages/test-dev-server/tests/playground/hmr-dynamic-entry-cache/main.ts
+  s_d35b6306f1ab7b::t_252233c4ef7541 1-7
+packages/test-dev-server/tests/playground/hmr-dynamic-entry-cache/package.json
+  s_d35b6306f1ab7b::t_a9185713ca0f4b 1-12
+packages/test-dev-server/tests/playground/hmr-dynamic-entry-cache/page.ts
+  s_d35b6306f1ab7b::t_021b2687a5e22a 1-3
+pnpm-lock.yaml
+  s_d35b6306f1ab7b::t_1bd137a007b9e1 888-893
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "bf4cd3b235841838998ac1a55be2cb34187d938b",
+  "prompts": {},
+  "sessions": {
+    "s_d35b6306f1ab7b": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a084bb-08d7-7873-996e-e05af43d099e",
+        "model": "unknown"
+      },
+      "human_author": "shulaoda <165626830+shulaoda@users.noreply.github.com>"
+    }
+  }
+}

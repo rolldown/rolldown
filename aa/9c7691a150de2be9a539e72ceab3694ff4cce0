@@ -1,0 +1,65 @@
+Cargo.lock
+  s_85a31be82a4bf4::t_2c67420b95736f 341,355-366,369,607,1405,1551,1553,1614,1616,1628,1630,1646,1648,1653,1658,1660,1670,1672,1692,1694,1705,1707,1714,1716,1725,1727,1734,1743,1745,1765,1767,1783,1785,1802,1804,1828,1830,1849,1851,1865,1867,1889,1891,1906,1908,1927,1964,1966,2003,2005,2007,2018,2020,2022,2031,2033,2052,2054,2067,2069,2072,2097,2099,2120,2122,3347,3656,3675,4079
+crates/rolldown/src/module_finalizers/impl_visit_mut.rs
+  s_85a31be82a4bf4::t_18296cc7170b56 507-509
+crates/rolldown/src/module_finalizers/mod.rs
+  s_85a31be82a4bf4::t_f54088cc62dadc 1168
+crates/rolldown/tests/esbuild/default/switch_scope_no_bundle/artifacts.snap
+  s_85a31be82a4bf4::t_e83ebb60c7bf78 13
+crates/rolldown/tests/esbuild/lower/lower_private_class_static_method_order/artifacts.snap
+  s_85a31be82a4bf4::t_cc1eeb0d8f67f9 10-11,16-17
+crates/rolldown/tests/rolldown/function/experimental/strict_execution_order/top_level_await_syntax_minify/artifacts.snap
+  s_85a31be82a4bf4::t_6d4f2615a1eaec 25
+crates/rolldown/tests/rolldown/function/module_types/binary/binary/artifacts.snap
+  s_85a31be82a4bf4::t_2e7cbda35a642a 11-12,26-29
+crates/rolldown/tests/rolldown/function/module_types/binary/empty/artifacts.snap
+  s_85a31be82a4bf4::t_39e330c5dff504 11-12,26-29
+crates/rolldown/tests/rolldown/issues/6513/artifacts.snap
+  s_85a31be82a4bf4::t_37e82c68d980f0 36-37
+crates/rolldown/tests/rolldown/misc/wrapped_esm/artifacts.snap
+  s_85a31be82a4bf4::t_90eb94a7b8dc51 44,132-148,150-189
+crates/rolldown_ecmascript_utils/src/extensions/ast_ext/expression_ext.rs
+  s_85a31be82a4bf4::t_65f9431b8395b3 48
+crates/rolldown_plugin_oxc_runtime/src/generated/embedded_helpers.rs
+  s_85a31be82a4bf4::t_beed079de20e79 5,10
+crates/rolldown_plugin_vite_build_import_analysis/src/ast_utils.rs
+  s_85a31be82a4bf4::t_889cdf41c161b2 242
+crates/rolldown_plugin_vite_import_glob/src/utils.rs
+  s_85a31be82a4bf4::t_a5a83f872900c0 138
+crates/rolldown_plugin_vite_web_worker_post/src/ast_visitor.rs
+  s_85a31be82a4bf4::t_da8d7555223480 87
+packages/rollup-tests/src/ignored-passed-snapshot-different-tests.js
+  s_85a31be82a4bf4::t_08ebda1b377bd0 111
+packages/rollup-tests/src/status.json
+  s_85a31be82a4bf4::t_c350063e69c605 7-8
+packages/rollup-tests/src/status.md
+  s_85a31be82a4bf4::t_977862df1830ba 8-9
+pnpm-lock.yaml
+  s_85a31be82a4bf4::t_0eb17db12a1efd 34-35,37-38,154-155,157-158,250,385,400,532,539,569,675,3388-3389,3400-3401,3412-3413,3429-3430,3446-3447,3458-3459,3470-3471,3483-3484,3503-3504,3523-3524,3537-3538,3551-3552,3565-3566,3579-3580,3599-3600,3618-3619,3629-3630,3640-3641,3657-3658,3669-3670,3688-3689,3701-3702,3810-3811,3816-3817,3822-3823,3828-3829,3834-3835,3840-3841,3846-3847,3852-3853,3859-3860,3866-3867,3873-3874,3880-3881,3887-3888,3894-3895,3901-3902,3908-3909,3914-3915,3919-3920,3925-3926,3931-3932,7161-7162,7171-7172,10734,10737,10766,11226,11232,11238,11247,11256,11262,11268,11274,11283,11292,11298,11304,11310,11316,11325,11334,11344,11354,11363,11369,11379,11387,11452,11455,11458,11461,11464,11467,11470,11473,11476,11479,11482,11485,11488,11491,11494,11497,11500,11507,11510,11513,14486,14488,14490-14509,14546,14548-14569,14572,15616,15624
+Cargo.toml
+  s_85a31be82a4bf4::t_956e81897ea633 265,276,279-286
+crates/rolldown/src/ast_scanner/stmt_eval_analyzer/mod.rs
+  s_85a31be82a4bf4::t_ddcecd68e7284e 11,183,872-875
+crates/rolldown/src/utils/prepare_build_context.rs
+  s_85a31be82a4bf4::t_97abc8bc6121bd 320
+crates/rolldown_common/src/inner_bundler_options/types/transform_options.rs
+  s_85a31be82a4bf4::t_5cccb97d0c906b 190
+pnpm-workspace.yaml
+  s_85a31be82a4bf4::t_abbc2e1046e98d 46-47,86-87
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "aa9c7691a150de2be9a539e72ceab3694ff4cce0",
+  "prompts": {},
+  "sessions": {
+    "s_85a31be82a4bf4": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019f7f09-83db-79a1-9643-40eca53a7485",
+        "model": "gpt-5.6-sol"
+      },
+      "human_author": "Cameron <cameron.clark@hey.com>"
+    }
+  }
+}

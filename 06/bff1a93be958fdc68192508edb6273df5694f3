@@ -1,0 +1,61 @@
+Cargo.lock
+  s_0d417fb46163f1::t_34c4f2d62e371a 341,607,1421,1568,1631,1644,1661,1672,1683,1703,1715,1723,1733,1753,1774,1791,1809,1833,1853,1868,1891,1907,1964,2002,2016,2028,2048,2062,2091,2113,3337,3667,3686,4090
+crates/rolldown/src/ast_scanner/dynamic_import.rs
+  s_0d417fb46163f1::t_964f0ddc70da87 59,125
+crates/rolldown/src/ast_scanner/mod.rs
+  s_a523c5eac1fce0::t_d91ff058589f12 21-22,725-744,746-760,762-783,785-787,789-792,796,801-813,817-821,955-962
+crates/rolldown/src/hmr/hmr_ast_finalizer.rs
+  s_0d417fb46163f1::t_2a13c19331981d 123-190,192,194-202,204,206-218
+crates/rolldown/src/module_finalizers/mod.rs
+  s_0d417fb46163f1::t_524ca15fc6e9d3 1869,1909-1910,1953-1954,1982-1983,1985,1987-1989,2011-2012,2014-2015,2061-2064,2156-2160,2181-2185,2212-2224,2226
+crates/rolldown/src/stages/generate_stage/order_wrapping.rs
+  s_a523c5eac1fce0::t_29f24b8802209e 120-122,124,130
+crates/rolldown/tests/esbuild/dce/cross_module_constant_folding_number/artifacts.snap
+  s_0d417fb46163f1::t_0e4150fa579b38 21-22,66-67
+crates/rolldown_ecmascript_utils/src/ast_factory.rs
+  s_0d417fb46163f1::t_a121afcf85594c 23,673-674
+crates/rolldown/src/ast_scanner/stmt_eval_analyzer/mod.rs
+  s_0d417fb46163f1::t_455a0eba1476e0 591-592,614-615
+crates/rolldown/src/ast_scanner/top_level_import_read.rs
+  s_0d417fb46163f1::t_316e761cfed08b 2-3,117-120,122-124
+crates/rolldown/src/stages/generate_stage/compute_wrapped_esm_init_metadata.rs
+  s_0d417fb46163f1::t_cc43a0641fd5ca 195-199
+crates/rolldown/src/stages/link_stage/cross_module_optimization.rs
+  s_0d417fb46163f1::t_94a1065997bbba 5-6,453-455,483
+crates/rolldown/src/utils/pre_process_ecma_ast.rs
+  s_0d417fb46163f1::t_908a4f199e2475 302-303
+crates/rolldown/src/utils/tweak_ast_for_scanning.rs
+  s_0d417fb46163f1::t_a3d420080adf60 4,85,87,134-136,140
+crates/rolldown_common/src/ecmascript/ecma_view.rs
+  s_0d417fb46163f1::t_ac37450559859c 125-126
+crates/rolldown_ecmascript_utils/src/extensions/ast_ext/statement_ext.rs
+  s_0d417fb46163f1::t_8025913a6e4070 9,38-40
+crates/rolldown_plugin_isolated_declaration/src/type_import_visitor.rs
+  s_0d417fb46163f1::t_3903eea50450e4 3,33-42
+internal-docs/ast-construction/implementation.md
+  s_0d417fb46163f1::t_21c325c1317228 56-57
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "06bff1a93be958fdc68192508edb6273df5694f3",
+  "prompts": {},
+  "sessions": {
+    "s_0d417fb46163f1": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019fae1d-7d80-71e1-a657-209bd5460c73",
+        "model": "gpt-5.6-sol"
+      },
+      "human_author": "Cameron <cameron.clark@hey.com>"
+    },
+    "s_a523c5eac1fce0": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019fb7bf-4124-7a00-992c-215cbfffdd60",
+        "model": "gpt-5.6-sol"
+      },
+      "human_author": "Cameron <cameron.clark@hey.com>"
+    }
+  }
+}

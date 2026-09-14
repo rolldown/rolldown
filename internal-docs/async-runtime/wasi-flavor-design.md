@@ -18,8 +18,8 @@ Rolldown ships two independent WASI binaries, built from two Rust targets:
 
 Build scripts: `packages/rolldown/package.json` — `build-binding:wasi`
 passes `--target wasm32-wasip1-threads`, `build-binding:wasi-single` passes
-`--target wasm32-wasip1`. Both compile the same `async-runtime` feature; the
-target decides the threading model.
+`--target wasm32-wasip1`. Both compile the same crate and the same shared
+scheduler; the target alone decides the threading model.
 
 **Naming trap:** the short npm suffix `-wasm32-wasi` is the **threaded**
 artifact. `-wasm32-wasip1` is the single-threaded one. This mirrors
@@ -31,8 +31,7 @@ packages are live, and the short suffix means threads.
 Both binaries import their linear memory from JS (`env.memory`); the loader
 constructs a `WebAssembly.Memory` and hands it in. That gives JS control
 over **size** — `initial`, `maximum`, and growth at runtime (grown shared
-memory is why JS-side typed-array views need refresh; that is the
-emnapi memory-growth work this program upstreamed).
+memory is why JS-side typed-array views need refresh).
 
 JS does **not** control the memory's kind. The `shared` flag is part of the
 module's declared import type, fixed at compile time, and
@@ -52,14 +51,20 @@ bit 0 = has maximum, bit 1 = shared):
 
 ```
 rolldown-binding.wasm32-wasi.wasm        (wasm32-wasip1-threads)
-  memory import env.memory   flags=0x03  shared=true   min=1023  max=65536
+  memory import env.memory   flags=0x03  shared=true   max=65536
   host import  wasi.thread-spawn
   export       wasi_thread_start
 
 rolldown-binding.wasm32-wasip1.wasm      (wasm32-wasip1)
-  memory import env.memory   flags=0x01  shared=false  min=1023  max=65536
+  memory import env.memory   flags=0x01  shared=false  max=65536
   (no thread-spawn import, no wasi_thread_start export)
 ```
+
+The declared minimum is deliberately not reproduced here: it moves with every
+toolchain and oxc bump. `scripts/wasi/check-wasi-threadless.mjs` reads the live
+value out of the built binary, so re-parse the artifacts rather than trusting a
+number in prose. The `shared` flag is the part of this block that never
+changes, and it is the part the argument rests on.
 
 ## Why a runtime switch cannot exist
 
@@ -134,31 +139,25 @@ failed-build invalidate rules, and capability reporting. `suite.mjs` also
 enforces a per-rebuild Wasm memory-slope budget with a positive control, so
 a leak inside workerd fails the PR.
 
-### Reusing the existing test suite — three tiers
+## Unresolved Questions
 
-1. **Done — full suite against the WASI binding.** `test:wasi`
-   (`ROLLDOWN_WASI_TEST=1 test:main`) re-runs the entire vitest suite with
-   the Wasm binding, in Node (`reusable-wasi.yml`). This proves the binding;
-   it does not prove the workerd environment.
-2. **Done — WASI-specific tests.** `test:wasi-threaded`,
-   `test:wasi-runtime`, `test:wasi-runtime-lifecycle`, plus the threaded
-   stability run, each pinned to the flavor it needs.
-3. **Open — test files inside workerd itself.** The existing files cannot
-   move as-is: they read fixtures from disk, spawn child processes, and use
-   vitest snapshots — workerd has no `fs` and no `process`, and vitest does
-   not run inside it. Two options:
-   - **Port scenarios, not files (preferred).** Add a route to `worker.js`
-     per reused scenario: fixtures become in-memory virtual modules, the
-     real API runs inside workerd, the Node driver asserts. This is how
-     the seven existing cases were built; one more is ~30 lines.
-   - **`@cloudflare/vitest-pool-workers`** — the official vitest-in-workerd
-     pool. Not used in this repo. Real vitest DX, but requires wrangler
-     config, bundling fixtures into the worker, and wiring the SAB-free
-     deferred loader into the pool. A standalone project; justified only if
-     a large test population should live inside workerd.
+**Should the vitest suite itself run inside workerd?** Not today. The existing
+test files cannot move as-is: they read fixtures from disk, spawn child
+processes, and use vitest snapshots — workerd has no `fs` and no `process`, and
+vitest does not run inside it. Two ways out were considered:
 
-The gap tier 3 closes is narrow: only in-workerd execution proves workerd's
-own environment (no `SharedArrayBuffer`, its module loader, its scheduler).
-The seven cases were chosen to cover exactly that surface, so the standing
+- **Port scenarios, not files (preferred).** Add a route to `worker.js` per
+  reused scenario: fixtures become in-memory virtual modules, the real API runs
+  inside workerd, the Node driver asserts. This is how the existing cases were
+  built; one more is ~30 lines.
+- **`@cloudflare/vitest-pool-workers`** — the official vitest-in-workerd pool,
+  deliberately not a dependency of this repo. Real vitest DX, but it requires
+  wrangler config, bundling fixtures into the worker, and wiring the SAB-free
+  deferred loader into the pool. That is a standalone project, justified only
+  if a large test population should live inside workerd.
+
+The gap this leaves is narrow: only in-workerd execution proves workerd's own
+environment (no `SharedArrayBuffer`, its module loader, its scheduler). The
+cases in `worker.js` were chosen to cover exactly that surface, so the standing
 recommendation is to extend them case by case when a bug class warrants it,
-not to stand up a second test framework.
+rather than stand up a second test framework.

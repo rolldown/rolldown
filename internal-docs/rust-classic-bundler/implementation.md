@@ -187,8 +187,8 @@ suspension from waiting on itself, but an unrelated same-build browser caller
 during that interval is indistinguishable and may receive the admission error.
 Raw `BindingBundler` callers continue to receive the explicit admission error
 and must coordinate retries themselves.
-`RolldownBuild` and `scan()` retain the latest parallel-plugin workers and
-runtime lease after such a rejection, clear only the native close
+`RolldownBuild` and `scan()` retain the latest parallel-plugin workers after
+such a rejection, clear only the native close
 single-flight promise, and retry the binding close before releasing ownership.
 After an immediate retry still fails, their public operation awaits one final
 retry on a later event-loop turn. Native-close cleanup stays outside abandoned

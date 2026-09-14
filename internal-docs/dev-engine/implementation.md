@@ -1159,14 +1159,14 @@ terminal-close phase; native close waits for active dev callbacks,
 `closeBundle`, and coordinator shutdown. Parallel workers are terminated only afterward,
 including when native close reports terminal diagnostics. If the terminal-close
 promise rejects before delivering that structured result, TypeScript clears
-only the native close single-flight promise and retains both workers and the
-runtime lease for the next `close()` attempt. Constructor failure also
-terminates workers that were already initialized. Runtime-lease acquisition
-and binding-construction failures combine worker shutdown with lease release
-under one retryable setup-cleanup owner. A transient cleanup failure is retried
+only the native close single-flight promise and retains the workers for the
+next `close()` attempt. Constructor failure also
+terminates workers that were already initialized. A binding-construction
+failure hands worker shutdown to one retryable setup-cleanup owner. A
+transient cleanup failure is retried
 immediately; if cleanup still fails, ownership remains in the shared
 pending-cleanup registry so a later option initialization can recover it
-instead of abandoning workers or a lease. The shared registry is implemented
+instead of abandoning workers. The shared registry is implemented
 in platform-neutral `utils/retryable-cleanup.ts` so browser builds do not retain
 the Node-specific parallel-worker startup module. User-controlled `DevOptions`
 getters are materialized under the same setup-cleanup boundary. Top-level
@@ -1194,19 +1194,21 @@ Parallel plugin callbacks are weak napi TSFNs, so they do not keep a worker
 environment alive. `parallel-plugin-worker.ts` explicitly refs its
 `parentPort`. The main thread keeps each `Worker` referenced until its
 supervised bootstrap response settles, then calls `Worker.unref()` so an
-initialized pool does not pin process exit. File workers receive a sanitized
-copy of `process.execArgv`: parent-only string-input modes (`--input-type`,
-`--eval`/`-e`, `--print`/`-p`, check/interactive modes) are removed while
-the parent `--run <script>` mode is also removed; compatible preload, loader,
-condition, diagnostic, and runtime flags are preserved. The owned
-`stopWorkers()` path remains the explicit termination boundary.
+initialized pool does not pin process exit. The worker is created with
+`eval: true` and receives a sanitized copy of `process.execArgv`: the parent's
+`--input-type`, which would break the CommonJS bootstrap, and the preload hooks
+an eval worker actually replays (`--require`/`-r`,
+`--loader`/`--experimental-loader`) are removed, while condition, diagnostic,
+and runtime flags are preserved. The owned `stopWorkers()` path remains the
+explicit termination boundary.
 
 The public `devSupported` capability is exercised against the actual artifact,
-not inferred from thread availability alone: the threaded-WASI lifecycle suite
-creates a virtual-input engine, runs its initial build, observes output, closes
-it, and repeats the sequence after runtime restart. CurrentThread remains
-rejected before plugin callbacks, option setup, runtime leasing, or native
-construction.
+not inferred from thread availability alone. `dev()` needs a MultiThread
+executor, so it is false on every CurrentThread artifact, including both WASI
+flavors: the WASI lifecycle suite asserts `devSupported: false`, drives a
+rejected `dev()` twice, and then proves the runtime is still usable for a
+normal build. CurrentThread is rejected before plugin callbacks, option setup,
+or native construction.
 
 The three JavaScript dev callbacks run inside an engine-specific async context
 that remains active through their returned promise. Calling and awaiting
@@ -1462,7 +1464,7 @@ promise with the first embedded JavaScript error. The TypeScript dev owner uses
 `normalizeBindingResultErrors` and the shared close-error aggregation rule:
 zero errors returns the value, one rethrows that exact error object, and
 multiple errors produce one `AggregateError`. Native close errors are retained
-as a flat list and join worker-shutdown or runtime-release failures in the same
+as a flat list and join worker-shutdown failures in the same
 outer aggregate. Concurrent and later `close()` calls observe the memoized
 terminal error object.
 
@@ -1520,11 +1522,11 @@ Existing panic sites in `rolldown_dev` that are intentional, not punts:
   `*InProgress`, where the state machine guarantees `Some(_)`. A `None` here
   means a transition was missed.
 
-Two sites that used to panic are now routed instead:
-`watcher_event_handler.rs:10` logs at debug level when `unbounded_send` finds
-the coordinator channel already closed, and the coordinator task join
-(`dev_engine.rs:205, 231`) folds its error into the close result rather than
-unwrapping it.
+Two sites deliberately route instead of panicking, and belong in the list
+above by contrast: `WatcherEventHandler::handle_event` logs at debug level when
+`unbounded_send` finds the coordinator channel already closed, and the
+coordinator task join future in `DevEngine::run` maps its `JoinError` into the
+close result (`merge_coordinator_task_result`) rather than unwrapping it.
 
 When adding new panic sites, document the invariant being asserted in the
 `.expect(...)` message so the next reader sees the contract without having to

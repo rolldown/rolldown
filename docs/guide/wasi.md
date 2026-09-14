@@ -32,15 +32,16 @@ runtime report.
 
 ## Support matrix
 
-| Feature                                         | Native MultiThread | Native CurrentThread  | Threaded WASI         | Threadless WASI                     |
-| ----------------------------------------------- | ------------------ | --------------------- | --------------------- | ----------------------------------- |
-| One-shot `rolldown()` / `build()`               | Yes                | Yes                   | Yes                   | Yes                                 |
-| `dev()`                                         | Yes                | No, fails immediately | No, fails immediately | No, fails immediately               |
-| `watch()`                                       | Yes                | Yes                   | No, fails immediately | No, fails immediately               |
-| Async built-in-plugin resolution                | Yes                | Yes                   | Yes                   | Yes                                 |
-| Complete plugin error metadata and cause chains | Yes                | Yes                   | Yes                   | Yes                                 |
-| Symbolic-link traversal                         | Yes                | Yes                   | No                    | No                                  |
-| Managed deferred workerd loader                 | No                 | No                    | No                    | Through a public `./workerd` facade |
+| Feature                                          | Native MultiThread | Native CurrentThread  | Threaded WASI         | Threadless WASI                     |
+| ------------------------------------------------ | ------------------ | --------------------- | --------------------- | ----------------------------------- |
+| One-shot `rolldown()` / `build()`                | Yes                | Yes                   | Yes                   | Yes                                 |
+| `dev()`                                          | Yes                | No, fails immediately | No, fails immediately | No, fails immediately               |
+| `watch()`                                        | Yes                | Yes                   | No, fails immediately | No, fails immediately               |
+| Async built-in-plugin resolution                 | Yes                | Yes                   | Yes                   | Yes                                 |
+| Complete plugin error metadata and cause chains  | Yes                | Yes                   | Yes                   | Yes                                 |
+| Symbolic-link traversal                          | Yes                | Yes                   | No                    | No                                  |
+| Managed deferred workerd loader                  | No                 | No                    | No                    | Through a public `./workerd` facade |
+| Native data released when its invocation settles | No                 | No                    | No                    | Yes, later reads throw              |
 
 In both WASI flavors, plugin hook failures retain the original JavaScript
 error's stack and custom properties, Rolldown's applicable `code`, `plugin`,
@@ -49,6 +50,33 @@ error's stack and custom properties, Rolldown's applicable `code`, `plugin`,
 Unsupported public workflows throw
 `ERR_ROLLDOWN_UNSUPPORTED_RUNTIME_FEATURE` before entering the binding. This
 prevents configurations that cannot make progress from hanging.
+
+## Native memory on threadless WASI
+
+Every other artifact reclaims the native memory behind an output chunk, a
+rendered module, a plugin context, or a normalized-options object through a
+garbage-collection finalizer. Threadless WASI hosts — workerd above all —
+rarely or never run those finalizers, because Wasm memory adds no JavaScript
+heap pressure for the engine to react to. Rolldown therefore copies the data
+into JavaScript and releases the native side eagerly on that flavor only.
+
+What that means for a plugin:
+
+- A per-module or per-chunk hook context (the `this` inside `load`,
+  `transform`, `renderChunk` and friends, and the objects those hooks receive)
+  is released when that hook invocation settles. Read what you need during the
+  hook; do not stash the context and read it later.
+- Build-lifecycle contexts — `buildStart`, `buildEnd`, chunking hooks — and
+  the normalized option objects survive until the whole build call settles, so
+  a `buildStart`-bound `this.addWatchFile` still works from `writeBundle`.
+- Once that build call settles, those objects are released too. A `closeBundle`
+  hook that reaches back into a build-lifecycle context or a normalized-options
+  object is reading freed memory, and each read throws.
+
+Reads after release throw rather than returning stale data. Values already
+copied into JavaScript keep working, so the fix is always to copy the fields
+you need while the invocation that owns them is still live. On every other
+artifact these objects stay lazy and none of this applies.
 
 ## Browser async context
 
@@ -114,7 +142,6 @@ try {
 }
 ```
 
-`instantiate` remains an alias of `createInstance` for compatibility.
 Published `rolldown/workerd` and
 `@rolldown/binding-wasm32-wasip1/workerd` facades expose the same managed
 factory. `@rolldown/browser/workerd` remains the canonical entry for workerd
@@ -154,20 +181,20 @@ requires a precompiled `WebAssembly.Module`.
 
 ## Memory validation
 
-The current threadless loader declares 1,024 initial pages, a 64 MiB Wasm
-address space. It can grow up to the memory32 limit when the host permits it.
-`instance.memoryBytes` and `getWorkerdRuntimeStats()` report address-space and
-instance-lifecycle data, not committed platform memory.
+The threadless loader starts from a roughly 64 MiB Wasm address space; the
+exact initial page count is pinned in the published loader and moves with the
+toolchain, so read it from the loader rather than from this page. It can grow
+up to the memory32 limit when the host permits it. `instance.memoryBytes` and
+`getWorkerdRuntimeStats()` report address-space and instance-lifecycle data,
+not committed platform memory.
 
 Cloudflare Workers limits the JavaScript heap and Wasm allocations in an
 isolate to 128 MB. Before production use:
 
-1. Run `node packages/workerd-tests/memory.mjs` as a local lifecycle and
-   RSS regression canary.
-2. Exercise representative bundles with `wrangler dev`; open DevTools with
+1. Exercise representative bundles with `wrangler dev`; open DevTools with
    `D` and take memory snapshots.
-3. Repeat with production-like traffic and remote bindings.
-4. Monitor the Workers memory-usage percentiles and `exceededMemory`
+2. Repeat with production-like traffic and remote bindings.
+3. Monitor the Workers memory-usage percentiles and `exceededMemory`
    invocation outcomes after deployment.
 
 Miniflare and local address-space measurements are not substitutes for this

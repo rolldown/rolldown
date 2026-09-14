@@ -392,7 +392,7 @@ including every diagnostic in a batched failure, and the binding converts each
 entry independently. JavaScript exceptions retain their original object
 identity on supported N-API hosts. The TypeScript wrapper flattens those
 entries into the same outer close coordinator as retained-result, worker,
-listener, and runtime-release failures, so one stable terminal `AggregateError`
+and listener failures, so one stable terminal `AggregateError`
 contains every attempted shutdown phase instead of collapsing all native
 failures into one child error.
 Structured native failures are terminal results, so the outer `closePromise`
@@ -401,7 +401,7 @@ every parallel-plugin worker termination, and dispatching a stable snapshot of
 `close` listeners concurrently. A rejected N-API close promise is different:
 the binding may already have published native close without delivering its
 shared result. JavaScript clears only the transport promise, retains result
-handles, workers, listeners, and the runtime lease, and retries the idempotent
+handles, workers, and listeners, and retries the idempotent
 native close on the next public close attempt. Teardown continues only after a
 structured result establishes native ownership.
 Close dispatch awaits every listener with all-settled semantics, aggregates all
@@ -498,10 +498,10 @@ Setup also uses all-settled option initialization and terminates workers from
 every successfully initialized output if another output or native watcher
 construction fails. Rejected option initialization can also retain
 worker-cleanup ownership; the JavaScript setup path adopts those closures
-together with fulfilled-option workers and the runtime lease under one
+together with fulfilled-option workers under one
 retryable cleanup owner. Cleanup is retried once immediately. If it still
 fails, the owner remains in the shared pending-cleanup registry so later
-parallel-plugin initialization can recover the workers or lease instead of
+parallel-plugin initialization can recover the workers instead of
 discarding them with the setup error. The registry and retry coalescing live in
 the platform-neutral `utils/retryable-cleanup.ts`; keeping them separate from
 worker startup prevents browser watch builds from retaining Node worker-thread
@@ -672,7 +672,7 @@ The `run()` / `waitForClose()` outcome is observed from creation and stores its
 settled diagnostics in the same fulfillment or rejection continuation. A
 native close failure in the same microtask turn therefore cannot overtake the
 bookkeeping and omit the transport error. A successful native close waits for
-any still-pending runner outcome before releasing workers or the runtime lease;
+any still-pending runner outcome before releasing workers;
 a retryable native transport failure reports only already-settled runner
 diagnostics and lets the next close attempt await the rest.
 

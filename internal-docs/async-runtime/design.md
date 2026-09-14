@@ -16,13 +16,9 @@ supports a cooperative current-thread flavor for hosts without threads and a
 work-stealing multi-thread flavor for native builds. Shutdown is
 generation-quiescent: accepted work is cancelled or completed, scheduler roles
 exit, and physical workers retire before a restart may create the next pool.
-This scheduler is the runtime of every shipped artifact: it is selected by
-the `async-runtime` Cargo feature, which is enabled by default, so native and
-WebAssembly artifacts alike compile the shared runtime and keep Tokio out of
-their production dependency graphs. The previous Tokio executor is no longer
-buildable as a binding artifact — the binding-level `tokio-runtime` feature
-was removed; only the crate-level `tokio-runtime` facade arms in
-`rolldown_utils`/`rolldown` remain.
+This scheduler is the runtime of every shipped artifact: the binding compiles
+it unconditionally, so native and WebAssembly artifacts alike keep Tokio out
+of their production dependency graphs.
 
 For the machinery that realizes these principles — where the runtime is
 selected, configured, bridged across the napi boundary, and consumed by the
@@ -35,7 +31,13 @@ Rust core — see [implementation.md](./implementation.md).
    no WebAssembly multi-thread executor — and threadless `wasm32-wasip1` must
    not import shared memory, construct workers, park with `Atomics.wait`, or
    call `std::thread::spawn`. Native builds default to the multi-thread
-   flavor.
+   flavor. The public capability contract follows from that: binding dev mode
+   is unsupported on current-thread and watch is unsupported on every WASI
+   artifact. Reporting it is part of the contract, not an afterthought —
+   `dev()` rejects before callback, plugin, or runtime setup, while `watch()`
+   reports the unsupported runtime through its normal `ERROR`, `END`, and
+   closable-emitter lifecycle rather than throwing, so a caller's teardown
+   path stays the same shape on every artifact.
 
 2. **CPU and async work share a pool.** Module-task futures run on the same
    Rayon pool used by link and generate stages. Nested Rayon work therefore
@@ -141,15 +143,12 @@ Rust core — see [implementation.md](./implementation.md).
    instead of overwriting disjoint fields from stale snapshots. A rejected
    candidate leaves the prior configuration unchanged.
    Native `ROLLDOWN_*` worker counts clamp to 256 before runtime construction.
-   Explicit JavaScript options above 256 reject atomically. (The removed
-   `tokio-runtime` binding lane additionally clamped native Tokio blocking
-   counts to 512 and checked the combined worker/blocking capacity before
-   entering Tokio's internal addition.)
+   Explicit JavaScript options above 256 reject atomically.
    Every native shared-runtime package entry installs both CurrentThread host
    bridges before that window can be used. Host installation is independent of
    the import-time flavor, so a legal synchronous `MultiThread -> CurrentThread`
    update cannot leave a module-cached environment without runnable or timer
-   delivery. Tokio builds skipped those bridges.
+   delivery.
 
 7. **Lifecycle transitions linearize with submission and generations do not
    overlap.** Backend acquisition, explicit start, and shutdown share one
@@ -394,24 +393,14 @@ Rust core — see [implementation.md](./implementation.md).
    synchronously submit diagnostic, cleanup, owner-release, or lifecycle work.
    The default detector-disabled runtime retains only predictable option
    branches and performs no admission atomics or publication locking.
-   Threaded-WASI artifacts run the same shared CurrentThread runtime and need
-   no cross-realm JavaScript ownership protocol; the lifecycle exports remain
-   as no-ops for loader compatibility. Only Tokio-backed threaded-WASI
-   artifacts still hold their runtime alive through explicit reference-counted
-   JavaScript leases, and a restart there waits off the JavaScript thread for
-   the previous generation to retire. Those are previously published legacy
-   Tokio-era artifacts (the buildable `tokio-runtime` binding lane was
-   removed), recognized through the package's compatibility shim, which
-   synthesizes `backend: 'tokio'` for bindings without a capability report.
-   Legacy bindings from the still-earlier implicit-owner protocol fail closed
-   instead of attempting to coordinate a single owner through realm-local
-   JavaScript state.
+   Threaded-WASI artifacts run the same shared CurrentThread runtime as every
+   other artifact, so no JavaScript ownership protocol exists on any target:
+   the N-API environment lifecycle owns the runtime everywhere, and there is
+   nothing for a realm to reference-count.
    JavaScript close single-flight state is published before invoking cleanup,
    so synchronous re-entry joins the original lifecycle attempt rather than
-   creating a second owner-release or native-close sequence.
-   Environment teardown cancels pending acquisition waits, while native token
-   finalization closes the gap between async-work completion and JavaScript
-   delivery. Once generation shutdown begins, stop outranks queued work and
+   creating a second native-close sequence.
+   Once generation shutdown begins, stop outranks queued work and
    stored self-wake permits in every explicit driver, so an always-self-waking
    future cannot prevent quiescence.
 
@@ -450,22 +439,15 @@ Rust core — see [implementation.md](./implementation.md).
    panic, shutdown cancellation, or rejected submission becomes exactly one
    build diagnostic and completion accounting cannot hang.
 
-9. **The binding is tokio-free; no Tokio-backed binding can be built
-   anymore.** Every shipped artifact compiles the shared runtime through
-   the default `async-runtime` feature, and the `just check-no-tokio` gate
-   proves with `cargo tree -i tokio` that the shipped binding's dependency
-   graph — native plus both WASI targets — and the CodSpeed bench harness stay
-   tokio-free. `wasm32-wasip1-threads` runs the current-thread flavor; napi-rs
-   async work there is served by the host loader's emnapi worker pool, not by
-   a runtime Rolldown owns. Threadless `wasm32-wasip1` runs the same flavor
-   with no workers at all. The former binding-level `tokio-runtime` opt-out
-   (`--no-default-features --features tokio-runtime`), which retained
-   napi-rs's Tokio executor on native and `wasm32-wasip1-threads` and was
-   rejected at compile time on threadless `wasm32-wasip1`, was removed: the
-   feature no longer exists, and a build without `async-runtime` is rejected
-   by a `compile_error!` in `rolldown_binding/src/lib.rs`. Only the
-   crate-level `tokio-runtime` facade arms in `rolldown_utils`/`rolldown`
-   remain, compile-checked via `cargo check --workspace --all-features`.
+9. **The binding is tokio-free, with no build that is not.** There is no
+   runtime feature to pick: every shipped artifact compiles the shared
+   scheduler, and the `just check-no-tokio` gate proves with
+   `cargo tree -i tokio` that the shipped binding's dependency graph — native
+   plus both WASI targets — and the CodSpeed bench harness stay tokio-free.
+   `wasm32-wasip1-threads` runs the current-thread flavor; napi-rs async work
+   there is served by the host loader's emnapi worker pool, not by a runtime
+   Rolldown owns. Threadless `wasm32-wasip1` runs the same flavor with no
+   workers at all.
 
 ## Background
 
@@ -482,49 +464,18 @@ Rust core — see [implementation.md](./implementation.md).
 The new runtime treats these as one scheduling problem rather than independent
 Tokio, Tokio-blocking, Rayon, and ad-hoc thread-pool tuning problems.
 
-## Implemented Follow-ups
-
-- Watch debounce uses a runtime-independent `sleep_until` facade. Multi-thread
-  mode owns a timer heap; current-thread mode delegates to the host event loop.
-  Dropping a current-thread sleep clears the host timeout and resolves its relay
-  task instead of leaving either alive until the deadline. Native watch mode
-  therefore works on both flavors. The public capability contract marks binding
-  dev mode unsupported on current-thread and watch unsupported on every WASI
-  artifact. `dev()` rejects before callback/plugin/runtime setup, while
-  `watch()` reports the unsupported runtime through its normal `ERROR`, `END`,
-  and closable-emitter lifecycle before any setup side effects can run.
-- The runtime layer normalizes an inherited `ROLLDOWN_RUNTIME=multi` override
-  to `CurrentThread` before WebAssembly module initialization because the shared
-  scheduler has no WebAssembly MultiThread executor.
-- Threaded and single-thread WASI builds use distinct artifact names. The
-  threaded build retains the `wasi` loader/wasm names and worker scripts; the
-  single-thread build uses `wasip1` names, includes the deferred workerd loader,
-  and ships no worker scripts.
-- Tokio-backed threaded-WASI artifacts own independent native runtime
-  leases: concurrent acquisitions retain separate owners, only the final
-  release shuts down the runtime, and restart waits for the previous
-  generation to retire, so closing one build cannot stop another live build
-  and every lease releases at most once. Current shared-runtime bindings
-  expose that lease surface as no-ops; the JavaScript package arms real
-  leases only for Tokio-backed artifacts.
-- The canonical workerd entry is `@rolldown/browser/workerd`. Release staging
-  also routes `rolldown/workerd` and the threadless optional package's
-  `./workerd` facade through the same managed factory. They create independent
-  instances with explicit disposal and lifecycle diagnostics; generated
-  binary-name deep imports are compatibility details.
-- Managed workerd entries are self-contained and do not require Node
-  compatibility flags. They bundle the npm Buffer implementation used by
-  emnapi, preserve Buffer values across the public facade, and reject malformed
-  or non-monotonic cross-bundle memory-claim protocols. Same-realm code that
-  runs before every loader remains outside this lifecycle coordination trust
-  boundary.
-- `getRuntimeSupport().threadlessWasi` reports only the binding compatibility
-  required by that entry. The separate `workerd` field is true only in an
-  `@rolldown/browser` build that exposes the managed package entry.
+That is also why #6270's mechanism was not carried over literally: a dedicated
+filesystem read pool was prototyped on top of the shared scheduler and lost
+9-16% wall time, because it re-introduces the second pool this design exists to
+collapse. The remaining serial tail is oxc minify/sourcemap work, not read
+concurrency.
 
 ## Related
 
 - [implementation.md](./implementation.md) — the machinery that realizes these
   principles (components, data flow, file pointers)
+- [wasi-flavor-design.md](./wasi-flavor-design.md) — why two WASI artifacts
+  exist instead of one runtime-switchable binary
+- [benchmarks.md](./benchmarks.md) — the frozen tokio-vs-shared A/B record
 - [bundler-data-lifecycle](../bundler-data-lifecycle/implementation.md) -
   deferred drops and rebuild ownership

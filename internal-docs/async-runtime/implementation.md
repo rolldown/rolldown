@@ -35,10 +35,8 @@ integration surface:
 `try_spawn` / `drive_current_thread_tasks` / `Sleep` / `RuntimeOptions`
 symbol named below is **provided by the crate**, not defined here.
 
-The shared runtime is selected by the `async-runtime` Cargo feature, which is
-the default and what every shipped artifact compiles. The previous Tokio
-executor was removed from the binding; §9 and §10 record the retired
-`tokio-runtime` lane.
+The binding compiles the shared runtime unconditionally, on every target;
+there is no build that selects a different executor (§9).
 
 ---
 
@@ -48,6 +46,13 @@ Rolldown does **not** use the crate's own napi adapter. It vendors a
 zero-sized backend and registers it with napi at module init; napi's SPI then
 routes every JS-triggered async operation through that adapter into the
 crate's fallible `try_*` API.
+
+The vendored copy is deliberate, not a fork: `RolldownAsyncRuntime` mirrors
+`napi-async-runtime` 0.2.0's own `adapter.rs` method for method. It exists
+only because 0.2.0 has no public API for installing that adapter from a
+downstream crate. When 0.2.1 exposes one, the vendored struct is deleted and
+the crate's adapter is installed directly; until then, edits to the mirrored
+methods must track upstream rather than diverge from it.
 
 - `crates/rolldown_binding/src/async_runtime.rs` — `struct RolldownAsyncRuntime`,
   `unsafe impl AsyncRuntime` — the vendored napi backend. Method map:
@@ -62,8 +67,7 @@ crate's fallible `try_*` API.
   (`#[napi_derive::module_init]`) — the single backend-selection/registration
   point: builds `RuntimeOptions` from the resolved snapshot (§3), calls the
   crate's `configure(options)`, then `register_async_runtime(RolldownAsyncRuntime)`.
-  Compiled under the default (and required) `async-runtime` feature — every
-  target includes it (§9, §10).
+  Unconditional — every target compiles it (§9).
 - `crates/rolldown_binding/src/utils/mod.rs` — `spawn_boxed_future()` — the
   JS-entry helper that boxes a future and hands it to `env.spawn_future`
   (i.e. into `RolldownAsyncRuntime::spawn`); used by the bundler entry points
@@ -230,9 +234,15 @@ pool — but it shares the same panic-containment discipline.
 
 ## 7. The TypeScript host layer
 
-The JS side installs the host bridges, gates workflow features on the native
-capability report, and (for Tokio-backed artifacts only) manages runtime
-leases. It never drives tasks.
+The JS side installs the host bridges and gates workflow features on the
+native capability report. It never drives tasks.
+
+There is no compatibility layer for a binding built from another commit. The
+JavaScript package and the binding ship from the same commit with exact
+version pins, so a loaded binding that does not match this package is a
+broken install, not a lane: the capability report is required, every field is
+validated, and a report that does not agree fails with
+`ERR_ROLLDOWN_BINDING_MISMATCH` instead of being synthesized or defaulted.
 
 - **Host install (register-only, contract-gated)** —
   `packages/rolldown/src/timer-host.ts` installs the task host and (on
@@ -259,23 +269,14 @@ leases. It never drives tasks.
 - **Capability gating** — `packages/rolldown/src/runtime-support.ts`
   (`getRuntimeCapabilityReportCompat`, `normalizeRuntimeCapabilities`
   cross-checks, `getRuntimeSupport` → `threadlessWasi` / `workerd` / `dev` /
-  `watch`, `assertRuntimeFeature`). A binding with **no** capability reporter is
-  treated as legacy: `getLegacyRuntimeCapabilities` synthesizes
-  `backend:'tokio'`; a _partial_ contract throws `BindingMismatchError`.
+  `watch`, `assertRuntimeFeature`). A missing reporter or a partial contract
+  throws `BindingMismatchError`.
 - **Loaders** — `packages/rolldown/src/binding.cjs` (native; line-8
   `loadedBindingTarget='native'`, exported as `__rolldownBindingTarget`),
   `rolldown-binding.wasi.cjs` / `rolldown-binding.wasi-browser.js` (threaded
   WASI, target `wasi-threads`, emnapi TSFN/async-work plugins). The generated
   loaders are patched by `packages/rolldown/binding-loader-codegen.ts`, whose
   `assertAsyncRuntimeHostExports` guarantees every host export survives codegen.
-- **Lifecycle leases** — `packages/rolldown/src/runtime-lifecycle.ts`
-  (`acquireRuntimeLease`, `isRuntimeLeaseRequired` — real leases only for
-  `target==='wasi-threads' && backend==='tokio'`, i.e. the Tokio-backed
-  threaded-WASI lane and legacy artifacts; every current shared-runtime
-  binding gets `NOOP_LEASE`). Acquire/release with `AggregateError`-aggregated
-  cleanup at `api/experimental.ts` (`scan`), `api/watch/watcher.ts`
-  (single-flight `close`), `api/dev/dev-engine.ts`, and
-  `api/rolldown/rolldown-build.ts`. See §12 for the armed protocol.
 
 ---
 
@@ -310,28 +311,19 @@ CurrentThread timer:
 
 ## 9. Build, targets, and the no-tokio gate
 
-- `crates/rolldown_binding/Cargo.toml` — `async-runtime` is the **default
-  and only** runtime feature: the binding-level `tokio-runtime` feature was
-  removed, and a build without `async-runtime` hits a `compile_error!` in
-  `lib.rs`. It enables `napi = { features = ["async-runtime"] }` — the
-  pluggable-SPI (napi4) plus `AsyncTask` — but deliberately **not**
-  `napi/async` (which would pull `tokio_rt`), so the shipped binding compiles
-  the shared runtime on every target. The shipped/CI profile is
-  `--no-default-features --features async-runtime`, equivalent to the
-  default feature set (Principle 9; §10).
+- `crates/rolldown_binding/Cargo.toml` — there is no runtime feature to pick.
+  The binding depends on `napi` with the pluggable-SPI (napi4) plus
+  `AsyncTask`, but deliberately **not** `napi/async` (which would pull
+  `tokio_rt`), so every target compiles the shared runtime (Principle 9).
 - `crates/rolldown_utils/Cargo.toml` — `napi-async-runtime = { version =
 "0.2.0", default-features = false }` from crates.io (napi-free
-  consumption), pulled in by the `async-runtime` feature; the `tokio-runtime`
-  feature pulls `tokio` + `async-scoped` instead. The root `Cargo.toml` pins
+  consumption). The root `Cargo.toml` pins
   the napi stack to **published crates.io releases** — `napi 3.12.1`,
   `napi-build 2.4.1`, `napi-derive 3.6.3` (resolving `napi-derive-backend
 6.1.2` and `napi-sys 3.3.0`) — and carries **no** `[patch.crates-io]`
   section: that single registry `napi` node covers `rolldown_binding` **and**
-  every `oxc_*_napi`. Those are the first registry releases cut from the
-  napi-rs main content that rolldown's CI matrix verified; the comment above
-  the pins in `Cargo.toml` records the four things older releases do not carry
-  (native borrow tracker, non-`Error` rejection identity, wasm teardown
-  barrier/drain + disposal latch, addon-image pinning).
+  every `oxc_*_napi`. The comment above those pins records why the minimum is
+  a pin rather than a range.
 - `crates/rolldown_binding/build.rs` — emits `cargo::rustc-cfg=rolldown_wasi_threads`
   only for `wasm32-wasip1-threads` (the two WASI targets are otherwise
   cfg-indistinguishable); consumed by `compiled_target()`.
@@ -339,45 +331,17 @@ CurrentThread timer:
   tokio-free via `cargo tree -i tokio` over four scopes:
   `-e no-dev -p rolldown_binding` (native), the same with
   `--target wasm32-wasip1` and `--target wasm32-wasip1-threads`, and
-  `-p bench`. The optional crate-level `tokio-runtime` facade dependencies
-  (`rolldown_utils`/`rolldown`) stay outside the
-  default-feature graph, and the lone unconditional `tokio` entry (in
-  `crates/rolldown` `[dev-dependencies]`) is excluded by `-e no-dev`.
+  `-p bench`. The lone remaining `tokio` entry (in `crates/rolldown`
+  `[dev-dependencies]`) is excluded by `-e no-dev`, which is why the scopes
+  carry that flag.
 
 ---
 
-## 10. The removed `tokio-runtime` fallback lane and dedicated test builds
+## 10. Dedicated test builds
 
-The opt-in binding lane that restored the previous Tokio executor end to end
-(Principle 9's former compatibility path) was **removed**: the binding-level
-`tokio-runtime` feature no longer exists, and
-`.github/workflows/reusable-wasi.yml` pins both rejections (Cargo's
-unknown-feature error for `--features tokio-runtime`; the `lib.rs`
-`compile_error!` without `async-runtime`). For the historical record, that
-lane behaved as follows:
-
-- On a `tokio-runtime`-only build, `configureAsyncRuntime` threw a
-  feature-disabled error, `getAsyncRuntimeConfig` reported values derived from
-  the environment variables and built-in defaults, and
-  `getAsyncRuntimeMetrics` always returned zeroed counters.
-- Tokio resolution distinguished all three target families so the pure
-  defaults table (§3) remained exhaustive and unit-testable. Native used the
-  bounded Rolldown-built multi-thread runtime — worker threads at
-  `physical * 3 / 2` and a dedicated 4-thread blocking pool instead of
-  tokio's 512 — built by `lib.rs::init` from the same resolved snapshot the
-  diagnostics reporters serve, with a checked worker+blocking capacity
-  addition. `wasm32-wasip1-threads` mirrored the generated loader's emnapi
-  pool. The table modeled threadless `wasm32-wasip1` as napi-rs's single
-  current-thread lane, but `lib.rs` rejected that Tokio-only feature
-  combination at compile time because napi-rs rejects every built-in async
-  task there.
-- Tokio builds skipped the CurrentThread host bridges; the lease surface's
-  real machinery was compiled only for the Tokio-backed threaded-WASI
-  artifact (`cfg(all(target_family = "wasm", tokio_unstable))`, §12).
-
-Two test-only features harden the shared-runtime lane
-(`just build-rolldown-async-runtime` enables both; their exports are absent
-from production artifacts):
+Two test-only features harden the runtime lane (the justfile's dedicated
+test-binding recipe enables both; their exports are absent from production
+artifacts):
 
 - `runtime-submission-failure-test` — raw-binding-only stop/start probes shut
   down the real scheduler so one `Env::spawn_future` submission rejects
@@ -403,11 +367,11 @@ from production artifacts):
 
 Native watch mode is supported on both runtime flavors. Public `dev()` checks
 `devSupported` before reading callbacks, running plugin hooks, creating
-workers, acquiring a runtime lease, or constructing `BindingDevEngine`.
+workers, or constructing `BindingDevEngine`.
 Public `watch()` creates its emitter first, checks `watchSupported` before
 calling `createWatcher`, and routes failure through `failSetup`; callers
 therefore observe `ERROR` followed by `END`, and `close()` remains usable
-without any worker, lease, or native watcher having been created. WASI watch
+without any worker or native watcher having been created. WASI watch
 remains unsupported because entering the native initial build can park the
 JavaScript host thread before debounce timers are involved. The public
 `getRuntimeSupport()` report and `ERR_ROLLDOWN_UNSUPPORTED_RUNTIME_FEATURE`
@@ -424,23 +388,14 @@ truthful workflow-level report.
 `CurrentThread`; `watchSupported` is false on every WebAssembly artifact. The
 TypeScript `runtime-support.ts` layer maps those binding facts to named public
 features and throws `ERR_ROLLDOWN_UNSUPPORTED_RUNTIME_FEATURE` before entering
-unsupported setup paths. Missing capability booleans from an older reporter are
-normalized from the stable `threads` and `wasi` fields before either support
-queries or error construction. If the reporter itself is absent, generated
-loaders expose `__rolldownBindingTarget`; compatibility maps `native`, `wasi`,
-and `wasi-threads` to conservative complete capability records (§7's legacy
-shim) instead of assuming every legacy artifact is native. Reports with any
-other missing, invalid, or internally inconsistent field fail with
-`ERR_ROLLDOWN_BINDING_MISMATCH`; when loader metadata is available, its target
-must also agree with the reporter. Missing `devSupported` and `watchSupported`
-fields use the stable `threads` and inverse-`wasi` compatibility defaults, but
-explicit values are independent workflow capabilities and are preserved.
+unsupported setup paths. A missing, invalid, or internally inconsistent field
+fails with `ERR_ROLLDOWN_BINDING_MISMATCH`; when loader metadata is available,
+its target must also agree with the reporter.
 Binding export, reporter, loader-target, and report-field getter failures
 preserve their original `cause` under the same mismatch identity. This prevents
-malformed threaded-WASI reports from silently taking the native no-lease path
-or enabling unsupported worker-backed features. Import-time task and timer host
-registration uses this same compatibility normalizer, so legacy public-entry
-imports receive the same target-aware defaults and malformed reports fail
+a malformed threaded-WASI report from enabling unsupported worker-backed
+features. Import-time task and timer host registration reads the same
+validated report, so a malformed report fails
 before either host can be registered. Stacked host integrations can still
 declare richer or narrower workflow support without changing the low-level
 scheduler contract. Parallel-plugin descriptor consumption has an additional
@@ -453,9 +408,11 @@ executing accessors, or using indexed proxy `get` operations. Proxy metadata
 reflection (`ownKeys` and `getOwnPropertyDescriptor`) may still run; failures
 are contained and the value is deferred to normal plugin materialization.
 Accessor-produced values are likewise checked by the post-normalization
-capability guard. A fabricated or older-package descriptor on an unsupported
-artifact therefore fails before the next asynchronous setup boundary, worker
-registry, runtime lease, or binding construction. Ordinary object plugins do
+capability guard. A fabricated descriptor on an unsupported artifact
+therefore fails before the next asynchronous setup boundary, worker registry,
+or binding construction. The synchronous descriptor walk tracks visited
+arrays, so a malformed cyclic plugin list stays bounded while a materialized
+descriptor elsewhere in the graph is still found. Ordinary object plugins do
 not trigger that gate.
 
 Structured plugin errors are supported on every artifact, including both WASI
@@ -515,178 +472,32 @@ remaining option-access, warning, binding-conversion, and callback-wrapping
 step runs inside the same cleanup boundary so a synchronous setup failure
 cannot abandon those workers.
 
----
-
-## 12. Tokio-backed threaded-WASI runtime ownership
-
-Current threaded-WASI artifacts run the shared CurrentThread runtime and need
-no JavaScript ownership protocol: the binding's lease surface
-(`acquireAsyncRuntime()`, `startAsyncRuntime`, `shutdownAsyncRuntime`) remains
-exported for loader compatibility but resolves no-op leases. The real
-machinery below exists only in previously published legacy Tokio-era
-artifacts — it compiled under
-`cfg(all(target_family = "wasm", tokio_unstable))` before the binding-level
-`tokio-runtime` lane was removed — which the package recognizes through the
-capability report (or the legacy shim's synthesized `backend: 'tokio'`, §7).
-
-On a Tokio-backed artifact, threaded WASI starts with zero Rolldown owners.
-Every public asynchronous
-operation calls the binding's `acquireAsyncRuntime()` export and receives one
-`BindingAsyncRuntimeLease` native object. The lease owns exactly one count until
-its idempotent `release()` succeeds; its native finalizer is the backstop if
-promise delivery, JavaScript setup, or user cleanup abandons the object.
-There is no implicit owner shared between JavaScript realms: workers and the
-main realm therefore cannot independently claim the same process-global count.
-
-The native manager serializes `Stopped -> Starting -> Running` and
-`Running -> Stopping -> Stopped` transitions with a mutex and condition
-variable, but drops the mutex before invoking napi lifecycle hooks. Concurrent
-acquisitions share one start transition and then retain independent counts.
-Only the final lease release calls napi shutdown. Failed start leaves zero
-owners; failed shutdown keeps the final lease owned so the same JavaScript
-cleanup can retry. Releasing an already released token is a no-op, and
-concurrent finalization cannot underflow the count. Environment cancellation
-and owner publication are one atomic decision: after a successful start, the
-acquisition compare-exchanges its cancellation state from pending to committed
-before incrementing the owner count. If cleanup wins that race, the manager
-enters `Stopping`, rolls the just-started runtime back, and never exposes a
-lease. A rollback failure retains one abandoned lease owner in
-`ShutdownFailed`, preserving a recoverable retry path instead of reporting zero
-owners for a still-running runtime. One acquisition can first recover such an
-abandoned owner and then lose the commit race after starting the replacement
-generation, so its shutdown action remains reusable for that second rollback
-instead of leaving the manager stuck in `Stopping`.
-
-Restart is awaitable because napi's combined custom/Tokio runtime deliberately
-does not overlap Tokio generations. `AcquireAsyncRuntimeTask` runs as N-API
-async work, snapshots napi-rs's retirement waiter, and waits on its condition
-variable off the JavaScript thread. A fresh waiter is used if another lifecycle
-transition creates a newer retirement before start linearizes. The waiter
-reports retirement-worker creation or runtime-drop failures as terminal errors
-instead of waiting forever, and rejects waiting from the generation that is
-retiring. A non-last environment cleanup briefly publishes a napi lifecycle
-transition without creating a Tokio retirement generation. If explicit start
-meets that transition, the binding retries through a cancellable exponential
-condition-variable backoff capped at 16ms instead of hot-spinning an emnapi
-async-work thread. The binding installs one cancellation hub per N-API
-environment. Environment teardown cancels that environment's pending waiters
-and wakes both retirement and transition-backoff waits; it never cancels
-retirement itself.
-
-The task returns the native lease token as its output rather than resolving a
-bare `Promise<void>`. Ownership therefore remains in Rust across async-work
-completion and JavaScript object conversion. If delivery fails, normal Rust or
-N-API finalization releases the token. The legacy `startAsyncRuntime` and
-`shutdownAsyncRuntime` exports retain a separate manual-owner count for
-threaded-WASI compatibility, so an unmatched manual shutdown cannot decrement
-a public object's token. On native, threadless-WASI, and shared-runtime
-threaded-WASI artifacts they remain successful no-ops for compatibility;
-automatic N-API environment lifecycle owns those runtimes. Callable builtin
-hooks rely exclusively on the outer native operation token; retaining a manual
-owner inside their async block would make environment-teardown cancellation
-attempt a lifecycle transition from inside the runtime operation guard.
-
-`packages/rolldown/src/runtime-lifecycle.ts` exposes the awaitable lease
-protocol. On a Tokio-backed artifact, build, scan, watch, and dev objects
-await one lease before native construction and retain it for their whole
-lifecycle. Standalone
-binding-backed promise utilities (`parse`, `parseAstAsync`, `transform`,
-`minify`, isolated declarations, module-runner transforms, callable builtin
-hooks, and asynchronous resolver methods) await one lease per invocation.
-Overlapping calls therefore own independent native tokens until their own
-promises settle.
-
-The TypeScript lease decision is snapshotted once when a package copy loads:
-real leases are armed only when the loaded binding reports
-`target: 'wasi-threads'` with `backend: 'tokio'` (including the compatibility
-shim's synthesized legacy report); every current shared-runtime binding takes
-the no-op path.
-Bindings from the preceding threaded-WASI protocol report
-`target: 'wasi-threads'` but do not export `acquireAsyncRuntime`; the
-TypeScript layer fails lease acquisition closed for them. JavaScript realms do
-not share `globalThis`, so no
-realm-local registry can safely consume that protocol's one implicit native
-owner. Modern native-token bindings can safely fall back to independent local
-managers because every acquisition receives a distinct native token.
-A threaded-WASI binding that requires leases but exposes neither protocol
-fails acquisition with a
-package/binding version-mismatch diagnostic instead of entering native work
-without an owner. Both this missing-protocol path and the rejected legacy
-implicit-owner path carry `ERR_ROLLDOWN_BINDING_MISMATCH`.
-Each acquired value is validated for a callable `release()` method, captured
-once with its original receiver, before JavaScript records lease ownership.
-Malformed package/binding combinations therefore fail with
-`ERR_ROLLDOWN_BINDING_MISMATCH` instead of allowing native work to proceed with
-an unreleasable token.
-Older capability reports also lack `devSupported`; the public workflow layer
-derives it from `threads`, while a shim with no reporter keeps the historical
-native MultiThread feature set.
-
-Package copies in one JavaScript realm share a manager through a realm-global
-weak registry keyed by the loaded binding's `acquireAsyncRuntime` function
-identity. This coalesces failed-release recovery without serializing independent
-native token requests; the native manager owns lifecycle transition ordering.
-Correctness no longer depends on realm-global state: every realm obtains real
-native tokens. Each JavaScript release retries one transient native shutdown
-failure before surfacing it, so setup and utility calls without a reusable close
-object cannot strand every other realm after a one-shot failure. A persistent
-failure stays owned by its lease and can be retried by the same close call; if
-that caller abandons the failure, the next acquisition in the same realm retries
-retained releases before requesting another token. Native, threadless, and
-shared-runtime threaded-WASI artifacts use no-op JavaScript leases, preserving
-direct binding identities where no threaded-WASI ownership is required.
-
-The threaded-WASI lifecycle suite
-(`packages/rolldown/tests/wasi-runtime-lifecycle.mjs`) exercises the
-Tokio-backed threaded artifact
-end to end. It covers isolated loader contexts, pending-promise settlement
-during context cleanup, same-realm reload after
-destruction, selective inherited-worker-argument retry, overlapping public owners,
-restart after the final release, repeated immediate token reacquisition while
-Tokio's previous generation retires, cancellation of a worker environment
-whose acquisition is blocked behind retirement, operation and
-binding-construction failures, worker realms, a real dev-engine run/close/restart,
-fail-closed watch and parallel-plugin capability detection, and duplicate
-JavaScript package copies that resolve one shared binding. A user-created Node
-worker loads a separate Wasm memory, so it cannot cover the same-image
-non-last-environment transition and is not claimed as that regression. The watch
-case verifies `ERROR`/`END`, repeated close, and that plugin option hooks never
-run. Parallel JavaScript plugins are rejected by both the public factory and
-option consumption on WASI because the Rust binding does not consume their
-worker registry on wasm targets.
-The consumption guard covers descriptors created directly or by an older
-package copy and runs before plugin promise assimilation, options hooks,
-registry allocation, runtime acquisition, or native construction.
-`rolldown()` checks the result of its input-options hook again before lease
-acquisition, so a hook cannot inject an unsupported descriptor and leave an
-otherwise unusable bundle owner behind. The synchronous descriptor walk tracks
-visited arrays, which keeps malformed cyclic plugin lists bounded while still
-finding a materialized descriptor elsewhere in the graph. A parent-process
-watchdog runs the suite in a child process so a synchronous WASI loader stall
-cannot consume the entire CI job without a bounded failure.
+`packages/rolldown/tests/wasi-runtime-lifecycle.mjs` is where the WASI end of
+these contracts is pinned: it runs against the threaded artifact, asserts it
+reports `backend: 'shared'` with `devSupported: false`, and exercises isolated
+loader contexts, pending-promise settlement during context cleanup, same-realm
+reload after destruction, selective inherited-worker-argument retry,
+overlapping public callers, operation and binding-construction failures, worker
+realms, a rejected `dev()` that leaves the runtime usable, fail-closed watch
+and parallel-plugin capability detection, and duplicate JavaScript package
+copies that resolve one shared binding. The watch case verifies `ERROR`/`END`, repeated close, and that plugin
+option hooks never run. A parent-process watchdog runs the suite in a child
+process, so a synchronous WASI loader stall fails with a bound instead of
+consuming the whole CI job.
 
 ---
 
-## 13. Non-threaded WASI
+## 12. Non-threaded WASI
 
 The current-thread executor is the runtime half of the non-threaded
-`wasm32-wasip1` build. The browser build uses:
-
-```text
-wasm32-wasip1
---no-default-features
---features async-runtime
-```
+`wasm32-wasip1` build; the browser build targets it directly.
 
 The napi-rs CLI changes from napi-rs#3353 link `libemnapi-basic-napi-rs.a`
 (the non-threaded napi-rs flavor shipped by the released emnapi package), emit
 unshared `WebAssembly.Memory`, set `asyncWorkPoolSize: 0`, and omit Worker
 imports and factories. `packages/rolldown` keeps the threaded WASI scripts and
 adds `build-binding:wasi-single`; browser-package scripts select the
-single-thread variant. Those CLI changes are published: the workspace catalog
-pins `@napi-rs/cli` to `^3.9.0`, so every build variant — single-thread
-included — uses the released package entry and the repository carries no
-`patchedDependencies` at all.
+single-thread variant.
 
 Each WASI flavor has its own artifact names end to end (napi CLI
 `parseTriple`: non-threaded `wasm32-wasipX` triples get their own
@@ -702,28 +513,23 @@ back-compat):
 | worker scripts            | `wasi-worker.mjs`, `wasi-worker-browser.mjs`        | —                                                       |
 | npm dir / package         | `npm/wasm32-wasi` → `@rolldown/binding-wasm32-wasi` | `npm/wasm32-wasip1` → `@rolldown/binding-wasm32-wasip1` |
 
-Unshared memory growth detaches the previous JavaScript `ArrayBuffer`. The
-emnapi fix in emnapi#220 refreshes TSFN atomic views after event-loop turns and
-refreshes NAPI result DataViews after reentrant JavaScript calls. The pinned
-`emnapi@2.0.0-alpha.4` release ships those fixes (and the `@emnapi/runtime` CJS
-entry the generated CJS WASI loaders require) upstream, so no emnapi workspace
-patches or vendored archives remain — the per-flavor napi-rs link archives come
-straight from the released package. The browser package build bundles that
+Unshared memory growth detaches the previous JavaScript `ArrayBuffer`, so
+emnapi must refresh TSFN atomic views after event-loop turns and NAPI result
+DataViews after reentrant JavaScript calls. The pinned `emnapi@2.0.0-alpha.4`
+release carries those refreshes and the `@emnapi/runtime` CJS entry the
+generated CJS WASI loaders require, and supplies the per-flavor napi-rs link
+archives. The browser package build bundles that
 emnapi/wasm runtime into the published `workerd.mjs` and
 `workerd.browser.mjs` entries. It aliases the deferred loader's bare `buffer`
 import to the npm polyfill and bundles that implementation too; packed
 validation rejects any remaining `buffer`, `node:buffer`, emnapi, or wasm
 runtime import. Managed workerd consumers therefore do not depend on Node
-compatibility flags or pnpm's workspace-only `patchedDependencies` behavior.
+compatibility flags.
 `@rolldown/browser` nevertheless stays `private: true`, so `vp pm publish -r`
-skips it. The original reason (a pnpm-patched `@napi-rs/wasm-runtime` supplying
-the emnapi v2 plugin exports) is gone — the released `~1.2.3` exports
-`emnapiAsyncWorkPlugin` and `emnapiTSFNPlugin` itself. What remains is the
-prerelease ABI line recorded in
+skips it. The reason is the prerelease ABI line recorded in
 `scripts/wasi/check-workerd-packed-consumer.mjs`: the `.wasm` links the emnapi
 `2.0.0-alpha` C archives and the manifest pins the matching `2.0.0-alpha`
-runtimes, so publishing is gated on emnapi v2 going stable, not on any
-repository-local tooling.
+runtimes, so publishing is gated on emnapi v2 going stable.
 The same build
 emits the threadless CJS/browser/deferred loaders plus a dedicated release
 artifact containing the threaded CJS/browser/Node-worker/browser-worker graph.
@@ -742,71 +548,12 @@ therefore forwards to the same managed factory.
 Staging also owns package-directory recovery. A clean checkout bootstraps only
 the missing napi-generated WASI package skeletons in an isolated directory,
 while release staging preserves an already downloaded package-local Wasm binary
-when the source-tree binary is unavailable. Package replacement is serialized,
-journaled, and rolled back as one transaction. Journal creation, each backup and
-install rename, commit publication, and journal cleanup have explicit file and
-parent-directory fsync barriers. Recovery distinguishes incomplete,
-active, and committed journals at every durable boundary. Metadata files are
-bounded regular-file reads opened without following symlinks or blocking on
-special files; Unix metadata uses `0644` and shared transaction directories use
-`0775`.
-
-The canonical filesystem lock is prepared under a unique
-`candidate-preparing.v2` path containing its PID and encoded execution-identity
-fingerprint. Its owner record is written and fsynced there before an atomic
-rename publishes a complete ordinary candidate; a second atomic rename
-publishes that candidate as the canonical lock. The transaction root is fsynced
-after both publication renames. A crash before owner publication therefore
-leaves identity-scoped preparation state that another canonical owner can
-remove after proving the preparing process is dead, while a live or non-local
-preparation remains untouched.
-
-Canonical retirement renames the exact owner to a unique path and fsyncs the
-transaction root before bounded cleanup retries. It retries transient Windows
-sharing violations while rereading and exactly matching the complete owner
-before every rename attempt, so a delayed retry cannot retire a successor-owned
-canonical path. Version 2 owners record machine, boot, PID-namespace, PID, and
-process-incarnation identity. Darwin uses `IOPlatformUUID` for machine scope and
-`kern.bootsessionuuid` for the immutable boot-session identity; `kern.uuid` is a
-kernel-image identity and is not used. Reclamation is allowed only for the same
-machine and namespace after proving a previous boot, dead PID, or comparable
-incarnation mismatch; non-local or unavailable identity fails closed without a
-wall-clock lease. A canonical version 1 owner lacks enough scope for safe
-automatic classification, so acquisition rejects it immediately as unsupported
-legacy state and leaves it untouched for explicit operator resolution instead
-of timing out or reclaiming it.
-
-Stale-lock reclaimers serialize with unique Lamport bakery candidates: each
-prepares its immutable owner outside the bakery namespace under a versioned
-path containing its PID and encoded execution-identity fingerprint, atomically
-publishes the complete chooser, publishes its ticket, and waits for every live
-chooser and lower ticket. An ownerless preparation is removed only after its
-scope and process death can be established, so a stalled creator is not aged
-out by wall-clock time. An unavailable live-PID preparation is retained
-conservatively, but remains outside the bakery and therefore does not block
-another reclaimer. Transient process-incarnation probe failure does not prevent
-complete owner publication. Legacy ownerless chooser directories and complete
-version 1 chooser owners do not carry machine or namespace scope. They remain
-blocking until explicit cleanup because local PID or timestamp evidence cannot
-prove that a process on another host sharing the transaction root is dead.
-
-Every reclaim preparation or candidate is released by atomically renaming its
-exact UUID-scoped path to a fresh retired name with bounded Windows sharing-
-violation retries, fsyncing the transaction root, then applying bounded deletion
-retries. Failed canonical-lock preparations and publication candidates use the
-same retirement protocol. A crashed reclaimer therefore leaves an owner-specific
-path that a successor can remove without renaming or deleting successor-owned
-state. If publication or reclaim work and its retirement both fail, the
-operation error remains first and is retained as the aggregate `cause`;
-retirement hooks cannot suppress the deletion attempt.
-Canonical owners and reclaim candidates also record a best-effort OS process-
-incarnation identity. Reclamation requires a positively observed incarnation
-mismatch before treating a reused live PID as stale. Only identities of the same
-recognized format are comparable; unavailable, unknown, or cross-format
-identities retain conservative PID-only behavior.
-
-emnapi 2.0.0-alpha.3 already includes the separate bound-`setImmediate` fix
-from emnapi#221.
+when the source-tree binary is unavailable. Each flavor is validated inside a
+staging directory under the package root and then swapped into place by removing
+the destination and renaming the staged copy over it; the staging directory is
+always removed afterwards. Every lane runs staging exactly once, on a checkout it
+owns, so there is no concurrent writer to serialize against and no later process
+that could read recovery state back.
 
 The managed workerd entry must register both the runnable task host and timer
 host for every independently created instance, including callers of the root
@@ -854,12 +601,8 @@ post-processes the napi-rs CJS and browser loaders for BOTH wasm flavors —
 native CurrentThread runnable host and the JavaScript timer host before
 exposing the binding: since the registry napi pin, every wasm artifact runs the
 shared CurrentThread flavor, so a raw import of either shipped loader set must
-carry its own task/timer hosts or a build never completes. The threadless
-loaders install unconditionally (that target is by construction an
-async-runtime build) while the threaded loaders gate the same bootstrap on the
-binding reporting `getRuntimeCapabilities().asyncRuntimeBuild === true`, so a
-self-scheduling binding without the shared runtime still loads with the
-bootstrap inert. The task-host bootstrap validates contract
+carry its own task/timer hosts or a build never completes. Both loader sets
+install that bootstrap unconditionally. The task-host bootstrap validates contract
 version 4 and the exact reserved registration capability, captures that
 capability for cleanup, and never exposes JavaScript drive or cancellation
 functions. The CJS
@@ -1012,36 +755,28 @@ hostile `cause` accessor to retain cleanup information.
 This ordering must remain aligned with napi-rs#3352's environment lifecycle as
 that upstream API evolves.
 
-The threadless loaders start with 1024 WebAssembly pages (64 MiB), replacing
-the inherited threaded-WASI value of 16384 pages (1 GiB).
-`napi.wasm.initialMemory` remains 16384 for the existing threaded flavor;
-Rolldown's `threadlessInitialMemory` setting is applied only to generated
-`wasip1` loaders by the deterministic post-generator. The generated threadless
-module currently declares an imported-memory minimum of 1021 pages. When that
-ignored build artifact is present, generation fails if the configured floor
-drops below its binary contract or if the configured maximum exceeds its import
-maximum. Bounds always fail above memory32. Native builds also run the
+The threadless loaders take their initial page count from
+`napi.wasm.threadlessInitialMemory` in `packages/rolldown/package.json`, a
+~64 MiB budget instead of the threaded flavor's inherited 16384 pages (1 GiB);
+`napi.wasm.initialMemory` remains 16384 for the threaded flavor. The number is
+not repeated in prose because it moves with every toolchain bump: the module's
+own `env.memory` minimum is the floor, `generate-workerd-loader.ts` refuses a
+configured value below it, and `scripts/wasi/check-wasi-threadless.mjs` caps
+the configured value at the last measured budget, so a raise is a conscious
+re-measurement rather than drift. When the ignored build artifact is present,
+generation also fails if the configured maximum exceeds the binary's import
+maximum; bounds always fail above memory32. Native builds also run the
 post-generator from clean checkouts, so they skip binary inspection when no
-threadless Wasm has been built. The three-page margin rounds the current
-structural minimum to 64 MiB while allowing normal unshared-memory growth up to
-the existing maximum. The focused unit and packed-consumer gates repeat a
-256-module graph three times, require the declared 64 MiB floor, and fail if
-the representative build crosses 128 MiB. The threadless static check derives
-the live import minimum through WebAssembly instantiation rather than trusting
-generated source, so the actual threadless build remains fail closed. These are
+threadless Wasm has been built. The focused unit and packed-consumer gates
+repeat a 256-module graph three times, require the declared floor, and fail if
+the representative build crosses 128 MiB. The threadless static check instantiates
+the built module at the configured floor rather than trusting generated source,
+so the actual threadless build remains fail closed. These are
 local address-space regression gates; production committed-memory validation
 still requires Workers platform telemetry.
 
-Runtime-lease ownership is managed by
-`packages/rolldown/src/runtime-lifecycle.ts` as described in §12: only
-Tokio-backed threaded-WASI artifacts arm real leases; native, threadless, and
-shared-runtime threaded artifacts receive no-op leases.
 Build and dev objects memoize their close sequence so concurrent or repeated
-callers observe the same teardown result and cannot release a lease twice.
-Failed releases remain individually owned by their lease state. A later
-acquisition retries every abandoned failed release before starting a new
-owner, so multiple shutdown failures cannot overwrite each other and leak a
-native owner.
+callers observe the same teardown result.
 Watch close uses the same single-flight contract and attempts every
 parallel-plugin worker teardown plus binding close before reporting cleanup
 errors. Its public close function is installed before asynchronous watcher
@@ -1057,24 +792,22 @@ loaders are post-bundled with their emnapi/wasm runtime dependencies, as are
 the managed workerd entries. Release assembly reuses those hardened loader
 bundles for both standalone WASI binding flavors, including both threaded
 worker entry points. Published browser, standalone-flavor, and root-facade
-consumers therefore do not depend on any repository-local build tooling (the
-repository declares no `patchedDependencies`) or resolve registry emnapi at
-runtime.
+consumers therefore do not depend on any repository-local build tooling or
+resolve registry emnapi at runtime.
 
 ---
 
-## 14. Committed WASI loaders and codegen checks
+## 13. Committed WASI loaders and codegen checks
 
 `packages/rolldown/src` commits BOTH flavors' loader sets side by side under
 their per-flavor names (plus `browser.js`, which re-exports the single-thread
-binding package — the browser story). Because the names are distinct, the old
-name-collision guard lattice (restore steps in the justfile, the
-`rolldown-binding.wasi.cjs` arm of the ci.yml drift allowlist, the wasi
-build-order coupling in the WASI workflow) is gone:
+binding package — the browser story). Distinct names are what make the rest of
+this section possible: no restore step, no drift-allowlist arm, and no
+build-order coupling is needed to keep one flavor from overwriting the other.
 
 - The per-flavor naming and loader codegen (napi-rs#3353) ship in the released
-  `@napi-rs/cli`, pinned to `^3.9.0` in the workspace catalog — there is no
-  vendored CLI patch any more. A build whose target is NOT wasi regenerates
+  `@napi-rs/cli`, pinned to `^3.9.0` in the workspace catalog. A build whose
+  target is NOT wasi regenerates
   EVERY declared wasi flavor's loader set, each with `hasThreads` derived from
   its own triple, so loader regeneration is deterministic and byte-identical to
   the committed copies on every host and under every build variant. A wasi
@@ -1099,9 +832,8 @@ build-order coupling in the WASI workflow) is gone:
   raw dev `exports` map (whose `dev: ./src/*.ts` conditions are never packed)
   untouched. Without the declaration the validator would judge the raw dev map
   and reject those unpacked `./src/*.ts` targets.
-- The Node Validation job in `ci.yml` still asserts a drift allowlist after
-  `just build-browser`, but the allowlist is down to `binding.d.cts`
-  (feature-gated doc-comment drift only).
+- The Node Validation job in `ci.yml` asserts a drift allowlist after
+  `just build-browser`; the allowlist is `binding.d.cts` alone.
 - The threadless-ness of the single-thread loaders is guarded by
   `scripts/wasi/check-wasi-threadless.mjs` in the WASI workflow (it inspects
   the committed/regenerated `rolldown-binding.wasip1.*` loaders); a wrong
@@ -1109,7 +841,7 @@ build-order coupling in the WASI workflow) is gone:
   fail loudly instead of silently swapping flavors.
 - Immediately after the threaded build, the WASI workflow runs the dedicated
   `test:wasi-threaded` Node profile against the still-wired threaded dist. The
-  profile executes concurrent builds and verifies runtime lease ownership without
+  profile executes concurrent builds without
   collecting managed-workerd tests that require the threadless Wasm file or
   child-process `--input-type` probes that file-based worker entrypoints cannot
   inherit.
@@ -1148,29 +880,26 @@ workspace-only pnpm patches from defining a published WASI runtime.
 
 ---
 
-## 15. Metrics and baseline
+## 14. Metrics and baseline
 
-Superseded: committed, reproducible measurements now live in
-[benchmarks.md](./benchmarks.md). They confirm the earlier illustrative
-observation — the Tokio-async + Tokio-blocking + Rayon thread population
-collapses to a single shared pool (56 → 25 peak threads on the measured host)
-— and add wall-time, instruction, RSS, and context-switch comparisons across
-four fixtures. Those measurements predate the production-hardening reserve
-lane, exact two-thread minimum, accepted-work cancellation tracking,
-generation-quiescent shutdown, and dedicated deferred-drop worker;
-[benchmarks.md](./benchmarks.md) records them as historical evidence and calls
-out the required re-measurement.
+The one committed measurement of this change is
+[benchmarks.md](./benchmarks.md): the Tokio-async + Tokio-blocking + Rayon
+thread population collapses to a single shared pool (56 → 25 peak threads on
+the measured host), with wall-time, instruction, RSS, and context-switch
+comparisons across four fixtures. That file states its own limits — it
+measures a tokio side that can no longer be built, and it predates the
+scheduler hardening — so treat it as the frozen baseline, not a claim about
+head.
 
 ---
 
 ## Invariants (each tied to a file)
 
 - **No tokio in the shipped graph** — `Justfile::check-no-tokio`;
-  `rolldown_binding/Cargo.toml`'s default `async-runtime` feature uses
-  `napi/async-runtime`, not `napi/async`; the binding has no `tokio-runtime`
-  feature at all (Principle 9).
+  `rolldown_binding/Cargo.toml` depends on napi's pluggable SPI, not
+  `napi/async` (Principle 9).
 - **Shared runtime on every shipped target** — `install_async_runtime_backend`
-  (`#[module_init]`, compiled under the default `async-runtime` feature).
+  (`#[module_init]`, compiled unconditionally).
 - **Single env read + frozen snapshot** — `RuntimeEnv::from_process` is the
   only reader; `resolved_runtime_config()` `OnceLock`; forced by `lib.rs::init`
   (Principle 6).
@@ -1188,15 +917,16 @@ out the required re-measurement.
   `run_drop_safely` / `PendingGuard` (`defer_drop.rs`).
 - **Module-loader = one accepted supervised task** — `supervised_module_task`
   - `ModuleTaskSupervisor::Drop` (Principle 8).
-- **Leases armed only for Tokio-backed threaded WASI** —
-  `runtime-lifecycle.ts` (`isRuntimeLeaseRequired`); the binding's real lease
-  machinery is `cfg(all(target_family = "wasm", tokio_unstable))` (§12).
+- **No JavaScript runtime-ownership protocol on any target** — the N-API
+  environment lifecycle owns the runtime; `lib.rs` exports no lease surface.
 
 ## Related
 
 - [design.md](./design.md) — the principles and trade-offs behind this
-- [benchmarks.md](./benchmarks.md) — committed tokio-vs-shared measurements
-  (§15)
+- [benchmarks.md](./benchmarks.md) — the frozen tokio-vs-shared measurements
+  (§14)
+- [wasi-flavor-design.md](./wasi-flavor-design.md) — why two WASI artifacts
+  exist instead of one runtime-switchable binary (§12)
 - [bundler-data-lifecycle](../bundler-data-lifecycle/implementation.md) —
   deferred drops and rebuild ownership (§6)
 - [watch-mode](../watch-mode/implementation.md) — the `sleep_until` debounce

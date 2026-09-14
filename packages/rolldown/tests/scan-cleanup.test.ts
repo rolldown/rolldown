@@ -1,15 +1,14 @@
 import { beforeEach, expect, test, vi } from 'vitest';
 
 const mocks = vi.hoisted(() => ({
-  acquireRuntimeLease: vi.fn(),
   bindingConstructions: 0,
   callOptionsHook: vi.fn(async (option) => option),
   close: vi.fn(),
   createBundlerOptions: vi.fn(),
   pluginPromiseThenCalls: 0,
   runtimeCapabilities: {
-    asyncRuntimeBuild: false,
-    backend: 'tokio',
+    asyncRuntimeBuild: true,
+    backend: 'shared',
     blockOnJsThreadSafe: false,
     devSupported: true,
     flavor: 'MultiThread',
@@ -40,11 +39,6 @@ vi.mock('../src/plugin/plugin-driver', () => ({
   },
 }));
 
-vi.mock('../src/runtime-lifecycle', () => ({
-  acquireRuntimeLease: mocks.acquireRuntimeLease,
-  isRuntimeLeaseRequired: () => false,
-}));
-
 vi.mock('../src/utils/create-bundler-option', () => ({
   createBundlerOptions: mocks.createBundlerOptions,
 }));
@@ -55,7 +49,6 @@ import { scan } from '../src/api/experimental';
 import { getRetryableCleanup, recoverRetryableCleanups } from '../src/utils/retryable-cleanup';
 
 beforeEach(() => {
-  mocks.acquireRuntimeLease.mockReset();
   mocks.bindingConstructions = 0;
   mocks.callOptionsHook.mockClear();
   mocks.close.mockReset();
@@ -128,69 +121,13 @@ test('scan rejects output descriptors before input promises, hooks, or setup', a
   expect(outputOptionsHookCalls).toBe(0);
   expect(mocks.callOptionsHook).not.toHaveBeenCalled();
   expect(mocks.createBundlerOptions).not.toHaveBeenCalled();
-  expect(mocks.acquireRuntimeLease).not.toHaveBeenCalled();
   expect(mocks.bindingConstructions).toBe(0);
-});
-
-test('scan setup retries parallel-worker cleanup after the first termination rejection', async () => {
-  const setupError = new Error('runtime lease setup failed');
-  const cleanupError = new Error('worker termination failed');
-  const stopWorkers = vi
-    .fn<() => Promise<void>>()
-    .mockRejectedValueOnce(cleanupError)
-    .mockResolvedValue(undefined);
-  mocks.createBundlerOptions.mockResolvedValue({
-    bundlerOptions: {},
-    inputOptions: { input: 'entry.js' },
-    onLog: vi.fn(),
-    stopWorkers,
-    releaseOptionBoxes: vi.fn(),
-  });
-  mocks.acquireRuntimeLease.mockRejectedValue(setupError);
-
-  const error = await scan({ input: 'entry.js' }).catch((error: unknown) => error);
-
-  expect(error).toBeInstanceOf(AggregateError);
-  expect((error as AggregateError).errors).toEqual([setupError, cleanupError]);
-  expect(stopWorkers).toHaveBeenCalledTimes(2);
-  expect(getRetryableCleanup(error)).toBeUndefined();
-});
-
-test('scan setup-only cleanup remains eligible for abandoned recovery', async () => {
-  const setupError = new Error('runtime lease setup failed');
-  const firstCleanupError = new Error('first worker termination failed');
-  const secondCleanupError = new Error('second worker termination failed');
-  const stopWorkers = vi
-    .fn<() => Promise<void>>()
-    .mockRejectedValueOnce(firstCleanupError)
-    .mockRejectedValueOnce(secondCleanupError)
-    .mockResolvedValue(undefined);
-  mocks.createBundlerOptions.mockResolvedValue({
-    bundlerOptions: {},
-    inputOptions: { input: 'entry.js' },
-    onLog: vi.fn(),
-    stopWorkers,
-    releaseOptionBoxes: vi.fn(),
-  });
-  mocks.acquireRuntimeLease.mockRejectedValue(setupError);
-
-  const error = await scan({ input: 'entry.js' }).catch((error: unknown) => error);
-
-  expect(error).toBeInstanceOf(AggregateError);
-  expect(stopWorkers).toHaveBeenCalledTimes(2);
-  expect(mocks.close).not.toHaveBeenCalled();
-  expect(getRetryableCleanup(error)).toBeTypeOf('function');
-
-  await expect(recoverRetryableCleanups()).resolves.toBeUndefined();
-  expect(stopWorkers).toHaveBeenCalledTimes(3);
-  expect(mocks.close).not.toHaveBeenCalled();
 });
 
 test('scan retry clears worker ownership even when native close remains failed', async () => {
   const scanError = new Error('scan failed');
   const nativeCloseError = new Error('native close failed');
   const cleanupError = new Error('worker termination failed');
-  const release = vi.fn();
   const stopWorkers = vi
     .fn<() => Promise<void>>()
     .mockRejectedValueOnce(cleanupError)
@@ -202,7 +139,6 @@ test('scan retry clears worker ownership even when native close remains failed',
     stopWorkers,
     releaseOptionBoxes: vi.fn(),
   });
-  mocks.acquireRuntimeLease.mockResolvedValue({ release });
   mocks.scan.mockRejectedValue(scanError);
   mocks.close.mockResolvedValue(bindingErrors(nativeCloseError));
 
@@ -212,14 +148,12 @@ test('scan retry clears worker ownership even when native close remains failed',
   expect((error as AggregateError).errors[0]).toBe(scanError);
   expect(stopWorkers).toHaveBeenCalledTimes(2);
   expect(mocks.close).toHaveBeenCalledOnce();
-  expect(release).toHaveBeenCalledOnce();
   expect(getRetryableCleanup(error)).toBeUndefined();
 });
 
 test('scan retries a synchronous native close transport failure before releasing ownership', async () => {
   const scanError = new Error('scan failed');
   const nativeCloseError = new Error('native close threw synchronously');
-  const release = vi.fn();
   const stopWorkers = vi.fn<() => Promise<void>>().mockResolvedValue(undefined);
   mocks.createBundlerOptions.mockResolvedValue({
     bundlerOptions: {},
@@ -228,7 +162,6 @@ test('scan retries a synchronous native close transport failure before releasing
     stopWorkers,
     releaseOptionBoxes: vi.fn(),
   });
-  mocks.acquireRuntimeLease.mockResolvedValue({ release });
   mocks.scan.mockRejectedValue(scanError);
   mocks.close.mockImplementationOnce(() => {
     throw nativeCloseError;
@@ -241,13 +174,11 @@ test('scan retries a synchronous native close transport failure before releasing
   expect((error as AggregateError).errors).toEqual([scanError, nativeCloseError]);
   expect(mocks.close).toHaveBeenCalledTimes(2);
   expect(stopWorkers).toHaveBeenCalledOnce();
-  expect(release).toHaveBeenCalledOnce();
   expect(getRetryableCleanup(error)).toBeUndefined();
 });
 
 test('scan retries an asynchronous native close transport rejection before cleanup', async () => {
   const nativeCloseError = new Error('native close transport rejected');
-  const release = vi.fn();
   const stopWorkers = vi.fn<() => Promise<void>>().mockResolvedValue(undefined);
   mocks.createBundlerOptions.mockResolvedValue({
     bundlerOptions: {},
@@ -256,7 +187,6 @@ test('scan retries an asynchronous native close transport rejection before clean
     stopWorkers,
     releaseOptionBoxes: vi.fn(),
   });
-  mocks.acquireRuntimeLease.mockResolvedValue({ release });
   mocks.scan.mockResolvedValue(undefined);
   mocks.close.mockRejectedValueOnce(nativeCloseError).mockResolvedValue(undefined);
 
@@ -264,14 +194,12 @@ test('scan retries an asynchronous native close transport rejection before clean
 
   expect(mocks.close).toHaveBeenCalledTimes(2);
   expect(stopWorkers).toHaveBeenCalledOnce();
-  expect(release).toHaveBeenCalledOnce();
   expect(getRetryableCleanup(nativeCloseError)).toBeUndefined();
 });
 
 test('scan preserves a terminal diagnostic delivered by a transport retry', async () => {
   const transportError = new Error('native close transport rejected');
   const terminalError = new Error('closeBundle failed after transport retry');
-  const release = vi.fn();
   const stopWorkers = vi.fn<() => Promise<void>>().mockResolvedValue(undefined);
   mocks.createBundlerOptions.mockResolvedValue({
     bundlerOptions: {},
@@ -280,7 +208,6 @@ test('scan preserves a terminal diagnostic delivered by a transport retry', asyn
     stopWorkers,
     releaseOptionBoxes: vi.fn(),
   });
-  mocks.acquireRuntimeLease.mockResolvedValue({ release });
   mocks.scan.mockResolvedValue(undefined);
   mocks.close.mockRejectedValueOnce(transportError).mockResolvedValue(bindingErrors(terminalError));
 
@@ -291,7 +218,6 @@ test('scan preserves a terminal diagnostic delivered by a transport retry', asyn
   expect((error as AggregateError).cause).toBe(transportError);
   expect(mocks.close).toHaveBeenCalledTimes(2);
   expect(stopWorkers).toHaveBeenCalledOnce();
-  expect(release).toHaveBeenCalledOnce();
   expect(getRetryableCleanup(error)).toBeUndefined();
   expect(getRetryableCleanup(transportError)).toBeUndefined();
 });
@@ -305,7 +231,6 @@ test(
       const firstTransportError = new Error('first native close transport rejection');
       const secondTransportError = new Error('second native close transport rejection');
       const terminalError = new Error('closeBundle failed during final scan cleanup');
-      const release = vi.fn();
       const stopWorkers = vi.fn<() => Promise<void>>().mockResolvedValue(undefined);
       mocks.createBundlerOptions.mockResolvedValue({
         bundlerOptions: {},
@@ -314,7 +239,6 @@ test(
         stopWorkers,
         releaseOptionBoxes: vi.fn(),
       });
-      mocks.acquireRuntimeLease.mockResolvedValue({ release });
       mocks.scan.mockResolvedValue(undefined);
       mocks.close
         .mockRejectedValueOnce(firstTransportError)
@@ -337,7 +261,6 @@ test(
       await waitForCallCount(mocks.close, 2);
 
       expect(stopWorkers).not.toHaveBeenCalled();
-      expect(release).not.toHaveBeenCalled();
       expect(settled).toBe(false);
       await waitForTimerCount(1);
 
@@ -355,7 +278,6 @@ test(
       ]);
       expect(mocks.close).toHaveBeenCalledTimes(3);
       expect(stopWorkers).toHaveBeenCalledOnce();
-      expect(release).toHaveBeenCalledOnce();
       expect(getRetryableCleanup(scanError)).toBeUndefined();
       expect(vi.getTimerCount()).toBe(0);
     } finally {
@@ -368,7 +290,6 @@ test('scan bounds abandoned recovery when native close persistently rejects', as
   vi.useFakeTimers();
   try {
     const transportError = new Error('persistent native close transport rejection');
-    const release = vi.fn();
     const stopWorkers = vi.fn<() => Promise<void>>().mockResolvedValue(undefined);
     mocks.createBundlerOptions.mockResolvedValue({
       bundlerOptions: {},
@@ -377,7 +298,6 @@ test('scan bounds abandoned recovery when native close persistently rejects', as
       stopWorkers,
       releaseOptionBoxes: vi.fn(),
     });
-    mocks.acquireRuntimeLease.mockResolvedValue({ release });
     mocks.scan.mockResolvedValue(undefined);
     mocks.close.mockRejectedValue(transportError);
 
@@ -397,7 +317,6 @@ test('scan bounds abandoned recovery when native close persistently rejects', as
     expect(vi.getTimerCount()).toBe(0);
     expect(getRetryableCleanup(scanError)).toBe(retryCleanup);
     expect(stopWorkers).not.toHaveBeenCalled();
-    expect(release).not.toHaveBeenCalled();
   } finally {
     vi.useRealTimers();
   }

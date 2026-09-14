@@ -2,7 +2,6 @@ import { beforeEach, expect, test, vi } from 'vitest';
 
 const binding = vi.hoisted(() => ({
   __rolldownBindingTarget: 'native',
-  getRuntimeCapabilities: undefined as undefined | ReturnType<typeof vi.fn>,
   getCurrentThreadTaskHostContractVersion: undefined as undefined | (() => unknown),
   isCurrentThreadHostRegistrationActive: undefined as undefined | ReturnType<typeof vi.fn>,
   registerCurrentThreadTaskHost: undefined as undefined | ReturnType<typeof vi.fn>,
@@ -13,9 +12,6 @@ const binding = vi.hoisted(() => ({
 }));
 
 vi.mock('../src/binding.cjs', () => ({
-  get getRuntimeCapabilities() {
-    return binding.getRuntimeCapabilities;
-  },
   get getCurrentThreadTaskHostContractVersion() {
     return binding.getCurrentThreadTaskHostContractVersion;
   },
@@ -42,18 +38,6 @@ vi.mock('../src/binding.cjs', () => ({
 beforeEach(() => {
   vi.resetModules();
   vi.clearAllMocks();
-  binding.getRuntimeCapabilities = vi.fn(() => ({
-    asyncRuntimeBuild: true,
-    backend: 'shared',
-    blockOnJsThreadSafe: false,
-    devSupported: false,
-    flavor: 'CurrentThread',
-    target: 'native',
-    threads: false,
-    timers: false,
-    wasi: false,
-    watchSupported: true,
-  }));
   binding.getCurrentThreadTaskHostContractVersion = undefined;
   binding.isCurrentThreadHostRegistrationActive = undefined;
   binding.registerCurrentThreadTaskHost = vi.fn((_dispatch?: unknown) => {});
@@ -93,14 +77,6 @@ test('rejects a nonnumeric host contract version without coercing it', async () 
   });
   expect(binding.registerCurrentThreadTaskHost).not.toHaveBeenCalled();
   expect(binding.registerTimerHost).not.toHaveBeenCalled();
-});
-
-test('allows a truly legacy binding with no capability reporter or host contract', async () => {
-  binding.getRuntimeCapabilities = undefined;
-  binding.registerCurrentThreadTaskHost = undefined;
-  binding.registerTimerHost = undefined;
-
-  await expect(import('../src/timer-host')).resolves.toBeDefined();
 });
 
 test('rejects an incomplete v4 reservation surface before registration', async () => {

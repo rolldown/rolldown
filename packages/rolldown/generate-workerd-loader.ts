@@ -172,8 +172,6 @@ interface WasmConfig {
 
 export interface WasiDeclarationBuildOptions {
   target?: string;
-  features?: readonly string[];
-  noDefaultFeatures?: boolean;
 }
 
 export interface WasiDeclarationPaths {
@@ -221,14 +219,7 @@ export async function preserveGeneratedBindingSources<T>(
 }
 
 export function isAsyncRuntimeDeclarationBuild(options: WasiDeclarationBuildOptions): boolean {
-  if (options.target === 'wasm32-wasip1') return true;
-  if (options.target === 'wasm32-wasip1-threads') return false;
-  return (
-    options.noDefaultFeatures === true &&
-    options.features?.some((features) =>
-      features.split(',').some((feature) => feature.trim() === 'async-runtime'),
-    ) === true
-  );
+  return options.target === 'wasm32-wasip1';
 }
 
 function getActiveWasiDeclarationFlavor(

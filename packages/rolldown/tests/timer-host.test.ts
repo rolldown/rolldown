@@ -7,9 +7,6 @@ const callbacks = vi.hoisted(() => ({
 }));
 const bindingState = vi.hoisted(() => ({
   activeRegistrations: new Set<string>(),
-  asyncRuntimeBuild: true,
-  backend: 'shared',
-  flavor: 'CurrentThread',
   nextRegistrationLow: 1,
   reservedRegistrations: new Set<string>(),
   version: 4,
@@ -24,18 +21,6 @@ function reserveRegistration(low: number) {
 
 vi.mock('../src/binding.cjs', () => ({
   __rolldownBindingTarget: 'native',
-  getRuntimeCapabilities: vi.fn(() => ({
-    asyncRuntimeBuild: bindingState.asyncRuntimeBuild,
-    backend: bindingState.backend,
-    blockOnJsThreadSafe: false,
-    devSupported: bindingState.flavor === 'MultiThread',
-    flavor: bindingState.flavor,
-    target: 'native',
-    threads: bindingState.flavor === 'MultiThread',
-    timers: bindingState.flavor === 'MultiThread',
-    wasi: false,
-    watchSupported: true,
-  })),
   getCurrentThreadTaskHostContractVersion: vi.fn(() => bindingState.version),
   isCurrentThreadHostRegistrationActive: vi.fn((high: number, low: number) =>
     bindingState.activeRegistrations.has(`${high}:${low}`),
@@ -83,9 +68,6 @@ vi.mock('../src/binding.cjs', () => ({
 beforeEach(async () => {
   vi.resetModules();
   Reflect.deleteProperty(globalThis, hostInstallationsKey);
-  bindingState.asyncRuntimeBuild = true;
-  bindingState.backend = 'shared';
-  bindingState.flavor = 'CurrentThread';
   bindingState.version = 4;
   bindingState.nextRegistrationLow = 1;
   bindingState.activeRegistrations.clear();
@@ -93,7 +75,6 @@ beforeEach(async () => {
   callbacks.schedule = undefined;
   callbacks.cancel = undefined;
   const binding = await import('../src/binding.cjs');
-  vi.mocked(binding.getRuntimeCapabilities).mockClear();
   vi.mocked(binding.getCurrentThreadTaskHostContractVersion).mockClear();
   vi.mocked(binding.isCurrentThreadHostRegistrationActive).mockClear();
   vi.mocked(binding.reserveCurrentThreadHostRegistration).mockClear();
@@ -118,30 +99,11 @@ test('CurrentThread task host installs the native driver without a JavaScript ca
   expect(registerCurrentThreadTaskHost).toHaveBeenCalledWith(0, 1);
 });
 
-test('Tokio runtimes do not install shared-runtime hosts', async () => {
-  bindingState.asyncRuntimeBuild = false;
-  bindingState.backend = 'tokio';
-  bindingState.flavor = 'MultiThread';
-
+test('both hosts are installed proactively for a later flavor switch', async () => {
   // @ts-ignore The test intentionally imports package source outside the tests tsconfig root.
   await expect(import('../src/timer-host')).resolves.toBeDefined();
   const binding = await import('../src/binding.cjs');
 
-  expect(binding.getRuntimeCapabilities).toHaveBeenCalledOnce();
-  expect(binding.getCurrentThreadTaskHostContractVersion).not.toHaveBeenCalled();
-  expect(binding.reserveCurrentThreadHostRegistration).not.toHaveBeenCalled();
-  expect(binding.registerCurrentThreadTaskHost).not.toHaveBeenCalled();
-  expect(binding.registerTimerHost).not.toHaveBeenCalled();
-});
-
-test('shared MultiThread runtimes proactively install hosts for a later flavor switch', async () => {
-  bindingState.flavor = 'MultiThread';
-
-  // @ts-ignore The test intentionally imports package source outside the tests tsconfig root.
-  await expect(import('../src/timer-host')).resolves.toBeDefined();
-  const binding = await import('../src/binding.cjs');
-
-  expect(binding.getRuntimeCapabilities).toHaveBeenCalledOnce();
   expect(binding.getCurrentThreadTaskHostContractVersion).toHaveBeenCalledOnce();
   expect(binding.reserveCurrentThreadHostRegistration).toHaveBeenCalledTimes(2);
   expect(binding.registerCurrentThreadTaskHost).toHaveBeenCalledWith(0, 1);

@@ -215,14 +215,13 @@ pool — but it shares the same panic-containment discipline.
 - `crates/rolldown/src/utils/defer_drop.rs` — `spawn_drop<T>(value)` (enqueue;
   wasm-gated inline drop since the browser main thread cannot `Atomics.wait`),
   `drain()` (blocks on a `PENDING` Condvar; called at every shared-pool build
-  entry), `run_drop_safely` / `PendingGuard` (nested `catch_unwind`, bottoming
-  out with `mem::forget`, mirroring the binding's
-  `contain_current_thread_task_host_unwind`).
+  entry), `run_drop_safely` / `PendingGuard` (a `catch_unwind` around the user
+  destructor; the guard retires the count even when that destructor panics).
 - If the operating system refuses to create the maintenance thread, deferred
   destruction falls back to synchronous, panic-contained drops — moving
   destruction off the caller is an optimization, not a correctness
-  requirement. The pending count is retired only after both unwind boundaries
-  complete, so the next build cannot begin while a caught panic payload is
+  requirement. The pending count is retired only after the unwind boundary
+  completes, so the next build cannot begin while a caught panic payload is
   still being destroyed.
 - Call sites: `crates/rolldown/src/bundle/bundle.rs` (`spawn_drop`, one per
   build), `crates/rolldown/src/bundle/bundle_factory.rs` and
@@ -240,9 +239,9 @@ native capability report. It never drives tasks.
 There is no compatibility layer for a binding built from another commit. The
 JavaScript package and the binding ship from the same commit with exact
 version pins, so a loaded binding that does not match this package is a
-broken install, not a lane: the capability report is required, every field is
-validated, and a report that does not agree fails with
-`ERR_ROLLDOWN_BINDING_MISMATCH` instead of being synthesized or defaulted.
+broken install, not a lane: the capability report is read as the
+`#[napi(object)]` struct defines it, never synthesized or defaulted, and a
+missing host-contract export fails with `ERR_ROLLDOWN_BINDING_MISMATCH`.
 
 - **Host install (register-only, contract-gated)** —
   `packages/rolldown/src/timer-host.ts` installs the task host and (on
@@ -264,13 +263,10 @@ validated, and a report that does not agree fails with
   `parse-ast-index.ts`, and `cli/timer-host-entry.ts`).
 - **Config / metrics API** — `packages/rolldown/src/api/async-runtime.ts`
   (`configureAsyncRuntime`, `getAsyncRuntimeConfig` incl. the `drainLingerUs`
-  field, `getAsyncRuntimeMetrics` with `max* ≥ live*` enforcement,
-  `normalizeAsyncRuntimeTopology` enforcing CurrentThread ⇒ both counts = 1).
+  field, `getAsyncRuntimeMetrics`), each a direct call into the binding export.
 - **Capability gating** — `packages/rolldown/src/runtime-support.ts`
-  (`getRuntimeCapabilityReportCompat`, `normalizeRuntimeCapabilities`
-  cross-checks, `getRuntimeSupport` → `threadlessWasi` / `workerd` / `dev` /
-  `watch`, `assertRuntimeFeature`). A missing reporter or a partial contract
-  throws `BindingMismatchError`.
+  (`getRuntimeCapabilitiesCompat`, `getRuntimeSupport` → `threadlessWasi` /
+  `workerd` / `dev` / `watch`, `assertRuntimeFeature`).
 - **Loaders** — `packages/rolldown/src/binding.cjs` (native; line-8
   `loadedBindingTarget='native'`, exported as `__rolldownBindingTarget`),
   `rolldown-binding.wasi.cjs` / `rolldown-binding.wasi-browser.js` (threaded
@@ -339,8 +335,8 @@ CurrentThread timer:
 
 ## 10. Dedicated test builds
 
-Two test-only features harden the runtime lane (the justfile's dedicated
-test-binding recipe enables both; their exports are absent from production
+One test-only feature hardens the runtime lane (the justfile's dedicated
+test-binding recipe enables it; its exports are absent from production
 artifacts):
 
 - `runtime-submission-failure-test` — raw-binding-only stop/start probes shut
@@ -348,18 +344,9 @@ artifacts):
   before a retry executes the already-memoized close future. The same fixture
   verifies that `BindingWatcher.run()` returns a rejected Promise while
   stopped, retains its coordinator, and starts it exactly once after restart.
-- `runtime-waker-teardown-test` — backs the worker-teardown probe
-  (`async-runtime-worker-teardown.test.ts`): the suite loads the raw addon
-  only inside a worker after the public package installs that environment's
-  normal hosts. A pending shared-scheduler task clones its real waker to an
-  external native thread. The unreferenced task host allows the worker to
-  exit naturally; after environment cleanup has returned, the parent releases
-  that thread, which calls `wake_by_ref`, drops the waker, and publishes
-  completion. No test-only unregister or forced `Worker.terminate()` masks
-  host ownership. The parent process never imports the addon, so survival
-  cannot be explained by another live environment retaining the image
-  (Principle 7's addon retention). The probe adds no module-count hooks or
-  lifecycle locks.
+  `async-runtime-worker-teardown.test.ts` gates on these probes: it loads the
+  raw addon only inside a worker after the public package installs that
+  environment's normal hosts, and the parent process never imports the addon.
 
 ---
 
@@ -388,23 +375,18 @@ truthful workflow-level report.
 `CurrentThread`; `watchSupported` is false on every WebAssembly artifact. The
 TypeScript `runtime-support.ts` layer maps those binding facts to named public
 features and throws `ERR_ROLLDOWN_UNSUPPORTED_RUNTIME_FEATURE` before entering
-unsupported setup paths. A missing, invalid, or internally inconsistent field
-fails with `ERR_ROLLDOWN_BINDING_MISMATCH`; when loader metadata is available,
-its target must also agree with the reporter.
-Binding export, reporter, loader-target, and report-field getter failures
-preserve their original `cause` under the same mismatch identity. This prevents
-a malformed threaded-WASI report from enabling unsupported worker-backed
-features. Import-time task and timer host registration reads the same
-validated report, so a malformed report fails
-before either host can be registered. Stacked host integrations can still
-declare richer or narrower workflow support without changing the low-level
-scheduler contract. Parallel-plugin descriptor consumption has an additional
-synchronous preflight at the public build, rolldown, scan, and dev boundaries
-and at `createBundlerOptions`. The latter repeats the preflight immediately
-after synchronous `outputOptions` hooks, before normalizing hook-injected
-plugins. Each pass recursively inspects only already-materialized own data
-properties of plugin arrays without assimilating neighboring thenables,
-executing accessors, or using indexed proxy `get` operations. Proxy metadata
+unsupported setup paths. The report is read straight from the binding: the
+`#[napi(object)]` struct fixes every field, so the package does not re-validate
+it. Import-time task and timer host registration instead fails with
+`ERR_ROLLDOWN_BINDING_MISMATCH` when the binding's host-contract exports are
+missing or report a different contract version. Parallel-plugin descriptor
+consumption has an additional synchronous preflight at the public build,
+rolldown, scan, and dev boundaries and at `createBundlerOptions`. The latter
+repeats the preflight immediately after synchronous `outputOptions` hooks,
+before normalizing hook-injected plugins. Each pass recursively inspects only
+already-materialized own data properties of plugin arrays without assimilating
+neighboring thenables, executing accessors, or using indexed proxy `get`
+operations. Proxy metadata
 reflection (`ownKeys` and `getOwnPropertyDescriptor`) may still run; failures
 are contained and the value is deferred to normal plugin materialization.
 Accessor-produced values are likewise checked by the post-normalization
@@ -628,9 +610,7 @@ build-binding:wasi-single # threadless d.cts
 just build-rolldown       # native LAST: restores binding.d.cts and browser.js
 ```
 
-The deferred loader's
-`instantiate` export aliases its managed `createInstance` factory; no published
-workerd entry returns raw binding exports or host controls.
+No published workerd entry returns raw binding exports or host controls.
 The deferred declaration imports `rolldown-binding.wasip1.cjs`, which resolves
 to `rolldown-binding.wasip1.d.cts` instead of the generic native declaration, so
 its `exports` type follows the exact target feature set. Packed validation
@@ -645,11 +625,11 @@ package-side timer-host setup fails after task-host registration, initialization
 unregisters that exact task-host capability before propagating the failure.
 The canonical `@rolldown/browser/workerd` package entry, the staged
 threadless optional-package facade, and the generated `rolldown/workerd`
-facade expose `createInstance` and its compatibility alias `instantiate`.
-Both names register the CurrentThread timer host and the v4 #9977 native
-runnable task host, expose per-instance memory diagnostics, and return an
-idempotently disposable handle. Successful disposal unregisters the exact
-task-host capability and synchronously clears and resolves every pending
+facade expose `createInstance`. It registers the CurrentThread timer host and
+the v4 #9977 native runnable task host, exposes per-instance memory
+diagnostics, and returns an idempotently disposable handle. Successful disposal
+unregisters the exact task-host capability and synchronously clears and
+resolves every pending
 JavaScript timer relay, so a destroyed N-API context cannot remain retained
 until a long host deadline expires. Runnable drains are deferred through the
 native host's fresh threadsafe-function turn; polling inline from a waker could

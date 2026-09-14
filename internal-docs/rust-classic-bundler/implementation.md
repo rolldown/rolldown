@@ -141,9 +141,9 @@ for transport/runtime failure before the terminal result was delivered.
 its terminal outcome. Concurrent and later calls await or replay that same
 future, so a transport failure cannot invoke `closeBundle` again or issue a
 second devtools `CloseSession` request. The retained failure contains one entry
-per subsystem; the binding converts each entry independently, preserving an
-original JavaScript exception reference while reporting devtools failures as
-separate native diagnostics. Panic containment is phase-local, so the devtools
+per subsystem; `closeTerminal()` reports each entry independently, while
+`close()` rejects with an original JavaScript exception only when that single
+entry is the whole failure and otherwise with the aggregated message. Panic containment is phase-local, so the devtools
 flush is still attempted after a `closeBundle` panic and neither phase can erase
 an already captured failure. The final `BundleHandle` supplies the diagnostic
 `cwd`, allowing nested `BatchedBuildDiagnostic` values to expand through the

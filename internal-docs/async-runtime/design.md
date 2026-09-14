@@ -354,9 +354,9 @@ Rust core — see [implementation.md](./implementation.md).
    payload produced by a hostile payload destructor is quarantined, so normal
    payload state is reclaimed without letting a second panic leave the
    controller permanently stuck in `Stopping` or escape a napi environment
-   cleanup callback. The deferred-destruction worker uses the same boundary so
-   it cannot die and discard queued jobs while leaving their pending counts
-   permanently registered.
+   cleanup callback. The deferred-destruction worker contains a panicking user
+   destructor under one such boundary and retires its pending count from a
+   guard, so a caught panic cannot wedge `drain()`.
    Deadlock-detection durations that cannot be represented as an `Instant`
    deadline are treated as effectively unbounded. Idle drivers remain
    wakeable, and the same rule keeps an armed host-timer wait live, instead of

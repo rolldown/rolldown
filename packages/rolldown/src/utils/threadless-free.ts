@@ -13,13 +13,7 @@ let eagerlyFreeOutputs: boolean | undefined;
 
 export function shouldEagerlyFreeOutputs(): boolean {
   if (eagerlyFreeOutputs === undefined) {
-    try {
-      eagerlyFreeOutputs = getRuntimeSupport().threadlessWasi;
-    } catch {
-      // A binding without a readable capability report keeps the historical
-      // lazy behavior.
-      eagerlyFreeOutputs = false;
-    }
+    eagerlyFreeOutputs = getRuntimeSupport().threadlessWasi;
   }
   return eagerlyFreeOutputs;
 }

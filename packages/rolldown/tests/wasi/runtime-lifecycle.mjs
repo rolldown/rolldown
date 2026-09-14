@@ -1,7 +1,6 @@
 // Runtime lifecycle regression test, WASI only. The WASI binding runs the
 // shared CurrentThread runtime, whose lifecycle is owned by the N-API
-// environment rather than by JavaScript-held runtime leases (compatibility
-// no-ops here), and dev()/watch() are unsupported on the WASI artifact by
+// environment, and dev()/watch() are unsupported on the WASI artifact by
 // design.
 //
 // It must set NAPI_RS_FORCE_WASI before importing rolldown, and `error` mode is

@@ -31,7 +31,6 @@ browserTest(
       expect(result.lifecycle).toEqual({
         concurrentCloseDuringListenerSettled: true,
         initiatingCloseSettledBeforeListenerFinished: false,
-        leaseReleaseCalls: 1,
         nativeCloseCalls: 1,
         reentrantCloseSettled: true,
         runCallsAfterHostTurn: 1,
@@ -46,7 +45,6 @@ browserTest(
         errorCode: 'ERR_ROLLDOWN_UNSUPPORTED_RUNTIME_FEATURE',
         errorFeature: 'watch',
         events: 'ERROR,ERROR_CLOSE_RESOLVED,END,END_FINISHED,CLOSE,CLOSE_AFTER_END',
-        leaseReleaseCalls: 0,
         optionsHookCalls: 0,
         stopWorkerCalls: 0,
       });
@@ -138,18 +136,6 @@ async function buildBrowserWatcherHarness(): Promise<string> {
           if (errors.length > 1) {
             throw new AggregateError(errors, message, { cause: errors[0] });
           }
-        }
-
-        export function acquireRuntimeLease() {
-          const harness = globalThis.__watchHarness;
-          let released = false;
-          return {
-            release() {
-              if (released) return;
-              harness.leaseReleaseCalls += 1;
-              released = true;
-            },
-          };
         }
       `,
     ],
@@ -277,7 +263,6 @@ function browserHarnessEntry(
     function resetHarness() {
       globalThis.__watchHarness = {
         bindingConstructed: 0,
-        leaseReleaseCalls: 0,
         nativeCloseCalls: 0,
         optionsHookCalls: 0,
         runCalls: 0,
@@ -340,7 +325,6 @@ function browserHarnessEntry(
       const lifecycle = {
         concurrentCloseDuringListenerSettled,
         initiatingCloseSettledBeforeListenerFinished,
-        leaseReleaseCalls: lifecycleHarness.leaseReleaseCalls,
         nativeCloseCalls: lifecycleHarness.nativeCloseCalls,
         reentrantCloseSettled: true,
         runCallsAfterHostTurn,
@@ -406,7 +390,6 @@ function browserHarnessEntry(
           errorCode: unsupportedError?.code,
           errorFeature: unsupportedError?.feature,
           events: unsupportedEvents.join(','),
-          leaseReleaseCalls: unsupportedHarness.leaseReleaseCalls,
           optionsHookCalls: unsupportedHarness.optionsHookCalls,
           stopWorkerCalls: unsupportedHarness.stopWorkerCalls,
         },

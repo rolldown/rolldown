@@ -3,7 +3,6 @@ import type { InputOptions } from '../options/input-options';
 import type { OutputOptions } from '../options/output-options';
 import { assertParallelPluginOptionsSupported } from '../plugin/parallel-plugin';
 import { PluginDriver } from '../plugin/plugin-driver';
-import { acquireRuntimeLease, type RuntimeLease } from '../runtime-lifecycle';
 import { createBundlerOptions } from '../utils/create-bundler-option';
 import { normalizeBindingResultErrors, unwrapBindingResult } from '../utils/error';
 import {
@@ -59,7 +58,6 @@ export const scan = async (
   }
 
   let stopWorkers = ret.stopWorkers;
-  let runtimeLease: RuntimeLease | undefined;
   let bundler: BindingBundlerWithTerminalClose | undefined;
   let nativeClosePromise: Promise<Error[]> | undefined;
   const deliveredTerminalErrors: unknown[] = [];
@@ -73,12 +71,6 @@ export const scan = async (
         if (stopWorkers === ownedStopWorkers) {
           stopWorkers = undefined;
         }
-      } catch (error) {
-        errors.push(error);
-      }
-      try {
-        runtimeLease?.release();
-        runtimeLease = undefined;
       } catch (error) {
         errors.push(error);
       }
@@ -102,10 +94,7 @@ export const scan = async (
     const cleanupError =
       errors.length === 1
         ? errors[0]
-        : new AggregateError(
-            errors,
-            'Scan native close, parallel-plugin worker shutdown, or runtime release failed',
-          );
+        : new AggregateError(errors, 'Scan native close or parallel-plugin worker shutdown failed');
     if (hasOwnership()) {
       const retryableError =
         cleanupError instanceof Error
@@ -118,7 +107,7 @@ export const scan = async (
   };
 
   let setupCleanupAttempt: Promise<void> | undefined;
-  const hasSetupCleanup = () => stopWorkers !== undefined || runtimeLease !== undefined;
+  const hasSetupCleanup = () => stopWorkers !== undefined;
   const cleanupSetup = (): Promise<void> =>
     (setupCleanupAttempt ??= (async () => {
       const errors = await releaseResources();
@@ -131,8 +120,7 @@ export const scan = async (
   trackRetryableCleanupOwnership(cleanupSetup, hasSetupCleanup);
 
   let scanCleanupAttempt: Promise<void> | undefined;
-  const hasScanCleanup = () =>
-    bundler !== undefined || stopWorkers !== undefined || runtimeLease !== undefined;
+  const hasScanCleanup = () => bundler !== undefined || stopWorkers !== undefined;
   const cleanupScan = (): Promise<void> =>
     (scanCleanupAttempt ??= (async () => {
       const errors: unknown[] = [];
@@ -196,7 +184,6 @@ export const scan = async (
   };
 
   try {
-    runtimeLease = await acquireRuntimeLease();
     bundler = new BindingBundler() as BindingBundlerWithTerminalClose;
   } catch (error) {
     return throwAfterCleanupWithRetry(

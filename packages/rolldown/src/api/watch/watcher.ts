@@ -10,10 +10,8 @@ import { aggregateBindingErrorsIntoJsError, normalizeBindingError } from '../../
 import type { WatchOptions } from '../../options/watch-options';
 import { PluginDriver } from '../../plugin/plugin-driver';
 import {
-  acquireRuntimeLease,
   CloseCoordinator,
   type CloseAttemptResult,
-  type RuntimeLease,
   throwCloseErrors,
 } from '../../runtime-lifecycle';
 import {
@@ -245,7 +243,6 @@ function createEventCallback(
 class Watcher {
   inner: BindingWatcher;
   emitter: WatcherEmitter;
-  runtimeLease: RuntimeLease;
   stopWorkers: ((() => Promise<void>) | undefined)[];
   releaseOptionBoxes: (() => void)[];
   scheduledRun: ReturnType<typeof setTimeout> | undefined;
@@ -266,19 +263,17 @@ class Watcher {
   private automaticNativeCloseRetryAttempted = false;
   private retainedWorkerDiagnostics: RetainedWorkerDiagnostic[] = [];
   closeCoordinator = new CloseCoordinator(
-    'Watcher native close, parallel-plugin worker shutdown, close listener, or runtime release failed',
+    'Watcher native close, parallel-plugin worker shutdown, or close listener failed',
   );
 
   constructor(
     emitter: WatcherEmitter,
     inner: BindingWatcher,
-    runtimeLease: RuntimeLease,
     stopWorkers: ((() => Promise<void>) | undefined)[],
     releaseOptionBoxes: (() => void)[],
   ) {
     this.inner = inner;
     this.emitter = emitter;
-    this.runtimeLease = runtimeLease;
     this.stopWorkers = stopWorkers;
     this.releaseOptionBoxes = releaseOptionBoxes;
   }
@@ -307,7 +302,7 @@ class Watcher {
       void runOutcomePromise.then((errors) => {
         if (errors.length === 0) return;
         // Preserve the failure for a later public close while ensuring the
-        // native watcher, workers, and runtime lease are not abandoned.
+        // native watcher and its workers are not abandoned.
         this.closeAutomatically();
       });
     }, 0);
@@ -402,13 +397,6 @@ class Watcher {
       await this.closeEventPromise;
     } catch (error) {
       result.errors.push(error);
-    }
-
-    try {
-      this.runtimeLease.release();
-    } catch (error) {
-      result.errors.push(error);
-      result.retryable = true;
     }
 
     const terminalErrors = this.retainedWorkerDiagnostics.map(({ error }) => error);
@@ -625,18 +613,6 @@ export async function createWatcher(
       'Watcher warning and parallel-plugin worker retry cleanup both failed',
     );
   }
-  let runtimeLease: RuntimeLease;
-  try {
-    runtimeLease = await acquireRuntimeLease();
-  } catch (error) {
-    return throwWatcherSetupErrorAfterCleanup(
-      error,
-      createWatcherSetupCleanup(workerCleanups),
-      'Watcher runtime setup and parallel-plugin worker cleanup failed',
-      'Watcher runtime setup and parallel-plugin worker retry cleanup failed',
-    );
-  }
-
   let onNativeClose = () => {};
   let registerResultClose =
     (_taskIndex: number, _closeIdentity: string, _close: () => Promise<void>) => () => {};
@@ -662,15 +638,14 @@ export async function createWatcher(
   } catch (error) {
     return throwWatcherSetupErrorAfterCleanup(
       error,
-      createWatcherSetupCleanup(workerCleanups, runtimeLease),
-      'Watcher construction, parallel-plugin worker cleanup, or runtime release failed',
+      createWatcherSetupCleanup(workerCleanups),
+      'Watcher construction or parallel-plugin worker cleanup failed',
       'Watcher construction and retry cleanup failed',
     );
   }
   const watcher = new Watcher(
     emitter,
     bindingWatcher,
-    runtimeLease,
     bundlerOptions.map((option) => option.stopWorkers),
     bundlerOptions.map((option) => option.releaseOptionBoxes),
   );
@@ -699,12 +674,10 @@ function collectParallelPluginCleanups(
 
 function createWatcherSetupCleanup(
   initialWorkerCleanups: RetryableCleanup[],
-  initialRuntimeLease?: RuntimeLease,
 ): RetryableCleanup | undefined {
-  if (initialWorkerCleanups.length === 0 && !initialRuntimeLease) return undefined;
+  if (initialWorkerCleanups.length === 0) return undefined;
 
   let workerCleanups = initialWorkerCleanups;
-  let runtimeLease = initialRuntimeLease;
   const cleanup: RetryableCleanup = async () => {
     const errors: unknown[] = [];
     const ownedWorkerCleanups = workerCleanups;
@@ -719,28 +692,12 @@ function createWatcherSetupCleanup(
       if (result.status === 'rejected') errors.push(result.reason);
     }
 
-    const ownedRuntimeLease = runtimeLease;
-    try {
-      ownedRuntimeLease?.release();
-      if (runtimeLease === ownedRuntimeLease) {
-        runtimeLease = undefined;
-      }
-    } catch (error) {
-      errors.push(error);
-    }
-
     if (errors.length === 1) throw errors[0];
     if (errors.length > 1) {
-      throw new AggregateError(
-        errors,
-        'Watcher parallel-plugin worker cleanup or runtime release failed',
-      );
+      throw new AggregateError(errors, 'Watcher parallel-plugin worker cleanup failed');
     }
   };
-  trackRetryableCleanupOwnership(
-    cleanup,
-    () => workerCleanups.length > 0 || runtimeLease !== undefined,
-  );
+  trackRetryableCleanupOwnership(cleanup, () => workerCleanups.length > 0);
   return cleanup;
 }
 

@@ -11,7 +11,6 @@ import { error, logPluginError } from '../log/logs';
 import type { BuildCallbackRunner } from '../plugin/bindingify-plugin';
 import type { PluginContextData } from '../plugin/plugin-context-data';
 import type { TypeAssert } from '../types/assert';
-import { runWithRuntimeLease } from '../utils/run-with-runtime-lease';
 import { findPropertyDescriptorInPrototypeChain } from '../utils/prototype-chain';
 import type { ViteManifestPluginConfig } from './vite-manifest-plugin';
 
@@ -62,11 +61,8 @@ export function makeBuiltinPluginCallable(
   for (const key in callablePlugin) {
     const wrappedHook = async function (...args: any[]) {
       try {
-        return await runWithRuntimeLease(
-          // @ts-expect-error
-          () => callablePlugin[key](...args),
-          `Callable builtin ${key} hook and runtime release both failed`,
-        );
+        // @ts-expect-error
+        return await callablePlugin[key](...args);
       } catch (e: any) {
         if (e instanceof Error && !e.stack?.includes('at ')) {
           Error.captureStackTrace(

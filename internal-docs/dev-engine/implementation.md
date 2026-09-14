@@ -1120,34 +1120,15 @@ both direct binding consumers and the public TypeScript API. In particular,
 starts terminal `closeBundle`; a hook may therefore await the `run()` promise
 without creating `run -> GetState -> coordinator close -> closeBundle -> run`.
 
-The binding also counts its owned `on_output`, `on_hmr_updates`, and
-`on_additional_assets` callback promises. A raw `BindingDevEngine.close()` call
-while one of those callbacks is active starts one background close executor and
-returns a successful acknowledgement instead of waiting on the operation guard
-that owns the callback. The callback can then return, the guard drains, and the
-executor performs coordinated native close. Concurrent callback-context close
-calls receive the same acknowledgement; the first close after no owned callback
-is active waits for, or replays, the terminal result. Because N-API exposes no
-portable way to identify which JavaScript async continuation invoked a method,
-an unrelated raw close racing an active callback also receives the
-acknowledgement and must call close again to observe terminal diagnostics. The
-background executor is a detached Rust runtime task, not an unobserved
-JavaScript Promise; terminal close diagnostics are retained only in the
-lifecycle state for the next explicit close caller and cannot surface as an
-unhandled rejection. An armed execution guard resets the close-start latch and
-wakes terminal waiters if runtime shutdown cancels that detached task, so a
-later close can retry instead of waiting permanently for an executor that no
-longer exists. Detached admission failure drops the same guard and returns a
-rejected JavaScript Promise, preserving the asynchronous `close()` contract.
-The public TypeScript owner uses the binding's internal terminal-close entry point,
-which never acknowledges callback activity. Its dependency-aware close promise
-still acknowledges a close awaited from inside a callback, allowing that
-callback to return while the underlying terminal close continues. Unrelated
-public callers await the terminal result, including late callback and
-`closeBundle` diagnostics, before worker or runtime cleanup. If N-API cannot
-schedule the terminal close executor, dropping its execution guard owns the
-rollback: it clears only the `close_started` latch and wakes waiters so a later
-close can retry transport setup while the engine remains closed to new
+`BindingDevEngine.close()` delegates to the internal terminal-close entry
+point, so raw and public callers share one close path: every caller awaits the
+terminal result, including late callback and `closeBundle` diagnostics, before
+worker or runtime cleanup. The public TypeScript owner's dependency-aware close
+promise still acknowledges a close awaited from inside a callback, allowing that
+callback to return while the underlying terminal close continues. If N-API
+cannot schedule the terminal close executor, dropping its execution guard owns
+the rollback: it clears only the `close_started` latch and wakes waiters so a
+later close can retry transport setup while the engine remains closed to new
 operations.
 
 ### TypeScript parallel-plugin ownership

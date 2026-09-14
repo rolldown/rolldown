@@ -67,10 +67,10 @@ catalog:
   '@types/node': 24.10.3
   '@types/semver': ^7.8.0
   '@types/serve-static': ^2.0.0
-  buffer: ^6.0.3
   '@types/ws': ^8.18.0
   acorn: ^8.17.0
   astring: ^1.9.0
+  buffer: ^6.0.3
   cac: ^7.0.0
   chalk: ^5.3.0
   change-case: ^5.4.4
@@ -114,8 +114,8 @@ catalog:
   vitest: ^4.1.6
   vue: ^3.5.35
   web-tree-sitter: ^0.27.0
-  ws: ^8.20.1
   wrangler: ^4.100.0
+  ws: ^8.20.1
   zx: ^8.1.2
 
 catalogs:

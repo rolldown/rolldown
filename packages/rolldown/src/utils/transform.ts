@@ -7,7 +7,6 @@ import {
 import type { TsconfigCache } from './resolve-tsconfig';
 import type { RolldownLog } from '../get-log-filter';
 import { normalizeBindingError } from './error';
-import { runWithRuntimeLease } from './run-with-runtime-lease';
 
 // process is undefined for browser build
 const yarnPnp = typeof process === 'object' && !!process.versions?.pnp;
@@ -73,10 +72,7 @@ export async function transform(
   options?: TransformOptions | null,
   cache?: TsconfigCache | null,
 ): Promise<TransformResult> {
-  const result = await runWithRuntimeLease(
-    () => originalTransform(filename, sourceText, options, cache, yarnPnp),
-    'Transform and runtime release both failed',
-  );
+  const result = await originalTransform(filename, sourceText, options, cache, yarnPnp);
   return {
     ...result,
     errors: result.errors.map(normalizeBindingError),

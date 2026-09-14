@@ -23,14 +23,18 @@
 import { expect, test, vi } from 'vitest';
 
 const binding = vi.hoisted(() => {
+  // `src/parse-ast-index.ts` pulls in `src/timer-host.ts` as a side effect, so
+  // the mock has to satisfy the whole CurrentThread host contract as well.
+  const activeRegistrations = new Set();
+  let nextRegistrationLow = 1;
   const result = {
     __rolldownBindingTarget: 'native',
     target: 'native',
     // The fake native ParseResult handed back by the next parse/parseSync.
     nextNative: undefined,
     getRuntimeCapabilities: vi.fn(() => ({
-      asyncRuntimeBuild: false,
-      backend: 'tokio',
+      asyncRuntimeBuild: true,
+      backend: 'shared',
       blockOnJsThreadSafe: false,
       devSupported: binding.target === 'native',
       flavor: binding.target === 'wasi' ? 'CurrentThread' : 'MultiThread',
@@ -40,6 +44,26 @@ const binding = vi.hoisted(() => {
       wasi: binding.target !== 'native',
       watchSupported: binding.target === 'native',
     })),
+    getCurrentThreadTaskHostContractVersion: vi.fn(() => 4),
+    isCurrentThreadHostRegistrationActive: vi.fn((high, low) =>
+      activeRegistrations.has(`${high}:${low}`),
+    ),
+    reserveCurrentThreadHostRegistration: vi.fn(() => ({
+      high: 0,
+      low: nextRegistrationLow++,
+    })),
+    registerCurrentThreadTaskHost: vi.fn((high, low) => {
+      activeRegistrations.add(`${high}:${low}`);
+    }),
+    registerTimerHost: vi.fn((high, low) => {
+      activeRegistrations.add(`${high}:${low}`);
+    }),
+    unregisterCurrentThreadTaskHost: vi.fn((high, low) => {
+      activeRegistrations.delete(`${high}:${low}`);
+    }),
+    unregisterTimerHost: vi.fn((high, low) => {
+      activeRegistrations.delete(`${high}:${low}`);
+    }),
     parse: vi.fn(async () => binding.nextNative),
     parseSync: vi.fn(() => binding.nextNative),
   };

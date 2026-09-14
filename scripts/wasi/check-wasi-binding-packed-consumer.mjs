@@ -120,7 +120,6 @@ const generatedRootFiles = {
   wasmTypeDef: 'rolldown-binding.wasm32-wasip1.wasm.d.mts',
 };
 const internalRuntimeExports = [
-  'AcquireAsyncRuntimeTask',
   'EnhancedTransformTask',
   'IsolatedDeclarationTask',
   'MinifyTask',

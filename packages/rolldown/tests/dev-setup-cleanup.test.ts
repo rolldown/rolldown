@@ -2,7 +2,6 @@
 import { beforeEach, expect, test, vi } from 'vitest';
 
 const mocks = vi.hoisted(() => ({
-  acquireRuntimeLease: vi.fn(),
   bindingCloseTerminal: vi.fn(),
   bindingConstructionError: undefined as unknown,
   bindingConstructions: 0,
@@ -55,7 +54,6 @@ vi.mock('../src/runtime-lifecycle', () => {
     }
   };
   return {
-    acquireRuntimeLease: mocks.acquireRuntimeLease,
     CloseCoordinator: class {
       constructor(aggregateMessage) {
         this.aggregateMessage = aggregateMessage;
@@ -85,7 +83,6 @@ import {
 } from '../src/utils/retryable-cleanup';
 
 beforeEach(() => {
-  mocks.acquireRuntimeLease.mockReset();
   mocks.bindingCloseTerminal.mockReset().mockResolvedValue(undefined);
   mocks.bindingConstructionError = undefined;
   mocks.bindingConstructions = 0;
@@ -143,7 +140,6 @@ test('dev rejects descriptors before plugin promises or setup on threaded WASI',
   expect(mocks.pluginPromiseThenCalls).toBe(0);
   expect(mocks.callOptionsHook).not.toHaveBeenCalled();
   expect(mocks.createBundlerOptions).not.toHaveBeenCalled();
-  expect(mocks.acquireRuntimeLease).not.toHaveBeenCalled();
   expect(mocks.bindingConstructions).toBe(0);
 });
 
@@ -163,29 +159,10 @@ test('dev rejects CurrentThread before callbacks or setup', async () => {
   expect(onOutput).not.toHaveBeenCalled();
   expect(mocks.callOptionsHook).not.toHaveBeenCalled();
   expect(mocks.createBundlerOptions).not.toHaveBeenCalled();
-  expect(mocks.acquireRuntimeLease).not.toHaveBeenCalled();
   expect(mocks.bindingConstructions).toBe(0);
 });
 
-test('dev runtime setup retries failed worker cleanup', async () => {
-  const setupError = new Error('runtime lease setup failed');
-  const cleanupError = new Error('worker cleanup failed');
-  const stopWorkers = vi
-    .fn<() => Promise<void>>()
-    .mockRejectedValueOnce(cleanupError)
-    .mockResolvedValue(undefined);
-  mocks.createBundlerOptions.mockResolvedValue(createBundlerOption(stopWorkers));
-  mocks.acquireRuntimeLease.mockRejectedValue(setupError);
-
-  const error = await DevEngine.create({}).catch((error: unknown) => error);
-
-  expect(error).toBeInstanceOf(AggregateError);
-  expect((error as AggregateError).errors[0]).toBe(setupError);
-  expect(stopWorkers).toHaveBeenCalledTimes(2);
-  expect(getRetryableCleanup(error)).toBeUndefined();
-});
-
-test('dev option getter failure cleans workers before runtime acquisition', async () => {
+test('dev option getter failure cleans workers', async () => {
   const setupError = new Error('dev option getter failed');
   const stopWorkers = vi.fn<() => Promise<void>>().mockResolvedValue(undefined);
   mocks.createBundlerOptions.mockResolvedValue(createBundlerOption(stopWorkers));
@@ -197,14 +174,11 @@ test('dev option getter failure cleans workers before runtime acquisition', asyn
 
   await expect(DevEngine.create({}, {}, devOptions)).rejects.toBe(setupError);
   expect(stopWorkers).toHaveBeenCalledOnce();
-  expect(mocks.acquireRuntimeLease).not.toHaveBeenCalled();
 });
 
 test('dev snapshots top-level setup options once after worker initialization', async () => {
   const stopWorkers = vi.fn<() => Promise<void>>().mockResolvedValue(undefined);
-  const release = vi.fn();
   mocks.createBundlerOptions.mockResolvedValue(createBundlerOption(stopWorkers));
-  mocks.acquireRuntimeLease.mockResolvedValue({ release });
   let rebuildStrategyReads = 0;
   let watchReads = 0;
   const watch = { pollInterval: 25 };
@@ -232,7 +206,6 @@ test('dev rejects invalid rebuild strategies and cleans initialized workers', as
     'Invalid dev rebuildStrategy "sometimes". Expected "always" or "never".',
   );
   expect(stopWorkers).toHaveBeenCalledOnce();
-  expect(mocks.acquireRuntimeLease).not.toHaveBeenCalled();
 });
 
 test('dev reports non-JSON invalid rebuild strategies without losing cleanup', async () => {
@@ -243,22 +216,16 @@ test('dev reports non-JSON invalid rebuild strategies without losing cleanup', a
     'Invalid dev rebuildStrategy 1n. Expected "always" or "never".',
   );
   expect(stopWorkers).toHaveBeenCalledOnce();
-  expect(mocks.acquireRuntimeLease).not.toHaveBeenCalled();
 });
 
-test('dev construction retries worker cleanup and runtime release', async () => {
+test('dev construction retries worker cleanup', async () => {
   const constructionError = new Error('dev engine construction failed');
   const workerCleanupError = new Error('worker cleanup failed');
-  const releaseError = new Error('runtime release failed');
   const stopWorkers = vi
     .fn<() => Promise<void>>()
     .mockRejectedValueOnce(workerCleanupError)
     .mockResolvedValue(undefined);
-  const release = vi.fn().mockImplementationOnce(() => {
-    throw releaseError;
-  });
   mocks.createBundlerOptions.mockResolvedValue(createBundlerOption(stopWorkers));
-  mocks.acquireRuntimeLease.mockResolvedValue({ release });
   mocks.bindingConstructionError = constructionError;
 
   const error = await DevEngine.create({}).catch((error: unknown) => error);
@@ -266,7 +233,6 @@ test('dev construction retries worker cleanup and runtime release', async () => 
   expect(error).toBeInstanceOf(AggregateError);
   expect((error as AggregateError).errors[0]).toBe(constructionError);
   expect(stopWorkers).toHaveBeenCalledTimes(2);
-  expect(release).toHaveBeenCalledTimes(2);
   expect(getRetryableCleanup(error)).toBeUndefined();
 });
 
@@ -274,23 +240,12 @@ test('dev setup keeps persistent cleanup retryable without hiding the setup erro
   const constructionError = new Error('dev engine construction failed');
   const firstWorkerCleanupError = new Error('first worker cleanup failed');
   const secondWorkerCleanupError = new Error('second worker cleanup failed');
-  const firstReleaseError = new Error('first runtime release failed');
-  const secondReleaseError = new Error('second runtime release failed');
   const stopWorkers = vi
     .fn<() => Promise<void>>()
     .mockRejectedValueOnce(firstWorkerCleanupError)
     .mockRejectedValueOnce(secondWorkerCleanupError)
     .mockResolvedValue(undefined);
-  const release = vi
-    .fn()
-    .mockImplementationOnce(() => {
-      throw firstReleaseError;
-    })
-    .mockImplementationOnce(() => {
-      throw secondReleaseError;
-    });
   mocks.createBundlerOptions.mockResolvedValue(createBundlerOption(stopWorkers));
-  mocks.acquireRuntimeLease.mockResolvedValue({ release });
   mocks.bindingConstructionError = constructionError;
 
   const error = await DevEngine.create({}).catch((error: unknown) => error);
@@ -299,42 +254,34 @@ test('dev setup keeps persistent cleanup retryable without hiding the setup erro
   expect((error as AggregateError).errors[0]).toBe(constructionError);
   expect((error as AggregateError).cause).toBe(constructionError);
   expect(stopWorkers).toHaveBeenCalledTimes(2);
-  expect(release).toHaveBeenCalledTimes(2);
   const cleanup = getRetryableCleanup(error);
   expect(cleanup).toBeDefined();
 
   await recoverRetryableCleanups();
   expect(stopWorkers).toHaveBeenCalledTimes(3);
-  expect(release).toHaveBeenCalledTimes(3);
   expect(hasRetryableCleanupOwnership(cleanup!)).toBe(false);
 });
 
 test('dev close retries a transport rejection without releasing owned resources', async () => {
   const transportError = new Error('dev close transport rejected');
   const stopWorkers = vi.fn<() => Promise<void>>().mockResolvedValue(undefined);
-  const release = vi.fn();
   mocks.createBundlerOptions.mockResolvedValue(createBundlerOption(stopWorkers));
-  mocks.acquireRuntimeLease.mockResolvedValue({ release });
   mocks.bindingCloseTerminal.mockRejectedValueOnce(transportError).mockResolvedValue(undefined);
   const engine = await DevEngine.create({});
 
   await expect(engine.close()).rejects.toBe(transportError);
   expect(mocks.bindingCloseTerminal).toHaveBeenCalledOnce();
   expect(stopWorkers).not.toHaveBeenCalled();
-  expect(release).not.toHaveBeenCalled();
 
   await expect(engine.close()).resolves.toBeUndefined();
   expect(mocks.bindingCloseTerminal).toHaveBeenCalledTimes(2);
   expect(stopWorkers).toHaveBeenCalledOnce();
-  expect(release).toHaveBeenCalledOnce();
 });
 
 test('dev close memoizes resolved terminal diagnostics after releasing owned resources', async () => {
   const terminalError = new Error('dev close terminal diagnostic');
   const stopWorkers = vi.fn<() => Promise<void>>().mockResolvedValue(undefined);
-  const release = vi.fn();
   mocks.createBundlerOptions.mockResolvedValue(createBundlerOption(stopWorkers));
-  mocks.acquireRuntimeLease.mockResolvedValue({ release });
   mocks.bindingCloseTerminal.mockResolvedValue({
     errors: [{ type: 'JsError', field0: terminalError }],
     isBindingErrors: true,
@@ -345,7 +292,6 @@ test('dev close memoizes resolved terminal diagnostics after releasing owned res
   await expect(engine.close()).rejects.toBe(terminalError);
   expect(mocks.bindingCloseTerminal).toHaveBeenCalledOnce();
   expect(stopWorkers).toHaveBeenCalledOnce();
-  expect(release).toHaveBeenCalledOnce();
 });
 
 function createBundlerOption(stopWorkers: () => Promise<void>) {

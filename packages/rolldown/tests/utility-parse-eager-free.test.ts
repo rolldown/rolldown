@@ -193,7 +193,7 @@ test('threadless WASI drains every native field eagerly, behavior unchanged', as
   expect(program.body[0].expression.value).toBe(123n);
   expect(program.body[1].expression.value).toEqual(/xy/g);
 
-  // The async utility drains through the same helper, lease path untouched.
+  // The async utility drains through the same helper.
   const asyncNative = createNativeParseResult();
   binding.nextNative = asyncNative.native;
   const eagerAsync = await parse('input.js', '123n;/xy/g;');

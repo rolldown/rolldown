@@ -77,9 +77,8 @@ to the production and platform caps above.
 The published Node threaded-WASI loader additionally sizes emnapi's async-work
 pool from `NAPI_RS_ASYNC_WORK_POOL_SIZE`, falling back to `UV_THREADPOOL_SIZE`
 and then 4. The generated loader normalizes the value to a positive integer
-capped at 1024 before creating emnapi workers and before exposing the
-environment to the WASI guest. That pool serves napi-rs async work on the
-host side; it is not part of the shared scheduler's topology.
+capped at 1024 before creating emnapi workers. That pool serves napi-rs async
+work on the host side; it is not part of the shared scheduler's topology.
 
 ## Metrics
 

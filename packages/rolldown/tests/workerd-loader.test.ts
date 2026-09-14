@@ -7,9 +7,6 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { runInNewContext } from 'node:vm';
-import { createBuildCommand } from '@napi-rs/cli';
-// @ts-ignore This focused build-codegen test intentionally reaches package tooling outside the test rootDir.
-import { isAsyncRuntimeDeclarationBuild } from '../generate-workerd-loader';
 // @ts-ignore This focused build-codegen test intentionally reaches package tooling outside the test rootDir.
 import { injectCurrentThreadHostBootstrap } from '../generate-workerd-loader';
 // @ts-ignore This focused build-codegen test intentionally reaches package tooling outside the test rootDir.
@@ -323,11 +320,6 @@ describe.sequential('managed workerd loader', () => {
       active: 'threadless',
     },
     {
-      name: 'native async-runtime build',
-      options: { noDefaultFeatures: true, features: ['async-runtime'] },
-      active: 'threadless',
-    },
-    {
       name: 'threaded target',
       options: { target: 'wasm32-wasip1-threads' },
       active: 'threaded',
@@ -386,17 +378,6 @@ describe.sequential('managed workerd loader', () => {
   maximum: 65536,
 })
 `);
-  });
-
-  test('recognizes async-runtime in comma-combined napi CLI features', () => {
-    const options = createBuildCommand([
-      '--no-default-features',
-      '--features',
-      'async-runtime,runtime-waker-teardown-test',
-    ]).getOptions();
-
-    expect(options.features).toEqual(['async-runtime,runtime-waker-teardown-test']);
-    expect(isAsyncRuntimeDeclarationBuild(options)).toBe(true);
   });
 
   test('restores all generated binding sources after a profile build fails', async () => {

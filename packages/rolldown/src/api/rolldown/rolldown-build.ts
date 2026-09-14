@@ -5,11 +5,7 @@ import {
   createRequiredAsyncContext,
   trackAsyncCallbackSettlement,
 } from '../../utils/async-context';
-import {
-  CloseCoordinator,
-  type CloseAttemptResult,
-  type RuntimeLease,
-} from '../../runtime-lifecycle';
+import { CloseCoordinator, type CloseAttemptResult } from '../../runtime-lifecycle';
 import type { HasProperty, TypeAssert } from '../../types/assert';
 import type { RolldownOutput } from '../../types/rolldown-output';
 import { RolldownOutputImpl } from '../../types/rolldown-output-impl';
@@ -34,8 +30,8 @@ interface BuildOperation {
 }
 
 interface BuildCleanupOwnership {
+  closeCompleted: boolean;
   retryCleanup: () => Promise<unknown[]>;
-  runtimeLeaseReleased: boolean;
   workerOwners: Set<BuildOperation>;
 }
 
@@ -52,9 +48,7 @@ const buildCleanupOwnership = new WeakMap<RolldownBuild, BuildCleanupOwnership>(
 /** @internal */
 export function hasRetryableBuildCleanup(build: RolldownBuild): boolean {
   const ownership = buildCleanupOwnership.get(build);
-  return (
-    ownership !== undefined && (!ownership.runtimeLeaseReleased || ownership.workerOwners.size > 0)
-  );
+  return ownership !== undefined && (!ownership.closeCompleted || ownership.workerOwners.size > 0);
 }
 
 /** @internal Retry only resource ownership retained by a failed bundle close. */
@@ -82,7 +76,6 @@ const buildCallContext = createRequiredAsyncContext<BuildCallbackInvocation>();
 export class RolldownBuild {
   #inputOptions: InputOptions;
   #bundler: BindingBundlerWithTerminalClose;
-  #runtimeLease: RuntimeLease;
   #activeBuilds = new Set<Promise<RolldownOutput>>();
   #workerOwners = new Set<BuildOperation>();
   #latestBuildOperation: BuildOperation | undefined;
@@ -94,32 +87,18 @@ export class RolldownBuild {
   #closeIdentity = createCloseIdentity('rolldown-build');
   #closeCallbackScope = new CloseCallbackScope(this.#closeIdentity);
   #closeCoordinator = new CloseCoordinator(
-    'Bundle native close, parallel-plugin worker shutdown, or runtime release failed',
+    'Bundle native close or parallel-plugin worker shutdown failed',
   );
 
   /** @hidden should not be used directly */
-  constructor(inputOptions: InputOptions, runtimeLease: RuntimeLease) {
+  constructor(inputOptions: InputOptions) {
     this.#inputOptions = inputOptions;
-    this.#runtimeLease = runtimeLease;
     buildCleanupOwnership.set(this, {
+      closeCompleted: false,
       retryCleanup: () => this.#closeCoordinator.retryOwnedCleanup(() => this.#close()),
-      runtimeLeaseReleased: false,
       workerOwners: this.#workerOwners,
     });
-    try {
-      this.#bundler = new BindingBundler() as BindingBundlerWithTerminalClose;
-    } catch (error) {
-      try {
-        this.#runtimeLease.release();
-      } catch (cleanupError) {
-        throw new AggregateError(
-          [error, cleanupError],
-          'Bundle construction and runtime release both failed',
-          { cause: error },
-        );
-      }
-      throw error;
-    }
+    this.#bundler = new BindingBundler() as BindingBundlerWithTerminalClose;
   }
 
   /**
@@ -269,16 +248,7 @@ export class RolldownBuild {
       }
     }
 
-    const cleanupOwnership = buildCleanupOwnership.get(this)!;
-    if (!cleanupOwnership.runtimeLeaseReleased) {
-      try {
-        this.#runtimeLease.release();
-        cleanupOwnership.runtimeLeaseReleased = true;
-      } catch (error) {
-        errors.push(error);
-        retryable = true;
-      }
-    }
+    buildCleanupOwnership.get(this)!.closeCompleted = true;
 
     return { errors, retryable, terminalErrors };
   }

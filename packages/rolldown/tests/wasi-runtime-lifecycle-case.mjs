@@ -58,14 +58,6 @@ assert.equal(
   false,
   'dev needs a MultiThread executor, which no WebAssembly artifact has',
 );
-// The lease API is a compatibility no-op on the shared runtime, but the
-// generated WASI loaders still acquire a lease at import and release it at
-// teardown, so the export has to stay.
-assert.equal(
-  typeof binding.acquireAsyncRuntime,
-  'function',
-  'the generated threaded-WASI binding must export acquireAsyncRuntime',
-);
 assert.deepEqual(
   Object.keys(runtimeConfig).sort(),
   ['drainLingerUs', 'flavor', 'maxBlockingTasks', 'workerThreads'],
@@ -243,91 +235,6 @@ await check('overlapping owners and restart after final release', async () => {
   await generateAndClose('restart-after-overlap');
 });
 
-// Leases are compatibility no-ops here (the runtime's lifecycle follows the
-// N-API environment), so this loop guards a weaker contract than the Tokio-era
-// reacquire race it replaces: churning leases must not disturb a later build.
-await check('rapid lease churn leaves the shared runtime usable', async () => {
-  for (let iteration = 0; iteration < 24; iteration += 1) {
-    const lease = await binding.acquireAsyncRuntime();
-    lease.release();
-  }
-
-  await generateAndClose('restart-after-lease-churn');
-});
-
-// #8411/#8747: tearing an environment down mid-acquisition must not wedge the
-// runtime for the surviving realm. The 25ms window below deliberately does NOT
-// assert a pending acquisition -- one round-trip through the wasm worker proxy
-// measures ~33ms, so such an assertion would only measure machine speed.
-await check('environment teardown mid-acquisition leaves the main realm usable', async () => {
-  const worker = new Worker(
-    `
-      const { parentPort } = require('node:worker_threads');
-      const binding = require(${JSON.stringify(bindingPath)});
-      parentPort.postMessage({ type: 'ready' });
-      parentPort.once('message', async (message) => {
-        if (message !== 'acquire') return;
-        parentPort.postMessage({ type: 'acquiring' });
-        try {
-          const lease = await binding.acquireAsyncRuntime();
-          parentPort.postMessage({ type: 'acquired' });
-          lease.release();
-        } catch (error) {
-          parentPort.postMessage({
-            type: 'rejected',
-            error: error?.stack || String(error),
-          });
-        }
-      });
-    `,
-    { eval: true },
-  );
-
-  const parentLease = await binding.acquireAsyncRuntime();
-  let parentLeaseReleased = false;
-  const slowSource = `export const retirementLoad = [${Array.from(
-    { length: 750_000 },
-    (_, index) => index,
-  ).join(',')}];`;
-  const retirementWork = Promise.allSettled(
-    Array.from({ length: 4 }, (_, index) =>
-      binding.transform(`retirement-${index}.js`, slowSource, undefined),
-    ),
-  );
-
-  try {
-    assert.equal((await waitForWorkerMessage(worker)).type, 'ready');
-    await new Promise((resolve) => setImmediate(resolve));
-    parentLease.release();
-    parentLeaseReleased = true;
-    worker.postMessage('acquire');
-    assert.equal((await waitForWorkerMessage(worker)).type, 'acquiring');
-
-    // Whether the acquisition resolves before the worker is terminated is a
-    // scheduling race and deliberately not asserted; either outcome must
-    // leave the main realm working, which is what this case checks below.
-    const settled = await waitForWorkerMessageOrDelay(worker, 25);
-    assert.ok(
-      settled === undefined || settled.type === 'acquired' || settled.type === 'rejected',
-      `unexpected worker acquisition outcome: ${JSON.stringify(settled)}`,
-    );
-  } finally {
-    if (!parentLeaseReleased) {
-      parentLease.release();
-    }
-    await worker.terminate();
-    await retirementWork;
-  }
-
-  const restartedLease = await withTimeout(
-    binding.acquireAsyncRuntime(),
-    30_000,
-    'main realm could not acquire after cancelling the worker environment',
-  );
-  restartedLease.release();
-  await generateAndClose('restart-after-environment-cancellation');
-});
-
 await check('operation rejection releases the runtime for a restart', async () => {
   const operationError = new Error('injected scan failure');
   await assert.rejects(
@@ -351,7 +258,7 @@ await check('operation rejection releases the runtime for a restart', async () =
   await generateAndClose('restart-after-rejection');
 });
 
-await check('construction failures release real runtime leases', async () => {
+await check('construction failures leave the shared runtime usable', async () => {
   const copyRoot = mkdtempSync(path.join(packageDir, '.wasi-construction-copy-'));
   const copyDirectory = path.join(copyRoot, 'dist');
   cpSync(distDir, copyDirectory, { recursive: true });
@@ -412,8 +319,7 @@ await check(
 );
 
 // The capability gate lives above the binding: a second package copy must not
-// reach `BindingDevEngine`, nor strand a runtime lease on its way to the
-// rejection.
+// reach `BindingDevEngine` on its way to the rejection.
 await check('a package copy cannot reach the dev binding behind the capability gate', async () => {
   const copyRoot = mkdtempSync(path.join(packageDir, '.wasi-dev-close-copy-'));
   const copyDirectory = path.join(copyRoot, 'dist');
@@ -431,11 +337,6 @@ await check('a package copy cannot reach the dev binding behind the capability g
     `
       const binding = require(${JSON.stringify(bindingPath)});
       ${bindingExportForwarders}
-      module.exports.acquireAsyncRuntime = async function() {
-        const runtimeLease = await binding.acquireAsyncRuntime();
-        globalThis[${JSON.stringify(captureKey)}].runtimeLease = runtimeLease;
-        return runtimeLease;
-      };
       module.exports.BindingDevEngine = class {
         constructor(...args) {
           const engine = new binding.BindingDevEngine(...args);
@@ -485,13 +386,7 @@ await check('a package copy cannot reach the dev binding behind the capability g
       undefined,
       'the capability gate must reject before constructing BindingDevEngine',
     );
-    assert.equal(
-      capture.runtimeLease,
-      undefined,
-      'the rejected dev entry must not strand a runtime lease',
-    );
   } finally {
-    capture.runtimeLease?.release();
     delete globalThis[captureKey];
     rmSync(copyRoot, { force: true, recursive: true });
   }
@@ -499,7 +394,7 @@ await check('a package copy cannot reach the dev binding behind the capability g
   await generateAndClose('restart-after-rejected-copy-dev');
 });
 
-await check('a worker realm acquires, uses, and releases its own runtime lease', async () => {
+await check('a worker realm builds and closes in its own environment', async () => {
   const worker = new Worker(
     `
       const { parentPort } = require('node:worker_threads');
@@ -659,7 +554,7 @@ await check('parallel plugins fail closed without affecting runtime restart', as
   await generateAndClose('restart-after-parallel-plugin-rejection');
 });
 
-await check('duplicate package copies share one binding-backed lease manager', async () => {
+await check('duplicate package copies share one binding', async () => {
   const copiesRoot = mkdtempSync(path.join(packageDir, '.wasi-lifecycle-copies-'));
   const copyDirectories = [path.join(copiesRoot, 'copy-a'), path.join(copiesRoot, 'copy-b')];
   try {
@@ -811,28 +706,6 @@ function containsError(error, expected) {
   return nestedErrors.some((entry) => containsError(entry, expected));
 }
 
-function waitForWorkerMessageOrDelay(worker, milliseconds) {
-  return new Promise((resolve, reject) => {
-    const onMessage = (message) => {
-      clearTimeout(timer);
-      worker.off('error', onError);
-      resolve(message);
-    };
-    const onError = (error) => {
-      clearTimeout(timer);
-      worker.off('message', onMessage);
-      reject(error);
-    };
-    const timer = setTimeout(() => {
-      worker.off('message', onMessage);
-      worker.off('error', onError);
-      resolve(undefined);
-    }, milliseconds);
-    worker.once('message', onMessage);
-    worker.once('error', onError);
-  });
-}
-
 function waitForWorkerMessage(worker) {
   return withTimeout(
     new Promise((resolve, reject) => {
@@ -851,7 +724,7 @@ function waitForWorkerExit(worker) {
       worker.once('error', reject);
     }),
     30_000,
-    'worker realm did not exit after releasing its runtime lease',
+    'worker realm did not exit after closing its bundle',
   );
 }
 

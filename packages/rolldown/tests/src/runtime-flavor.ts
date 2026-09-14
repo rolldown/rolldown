@@ -22,8 +22,4 @@ export const isWasiTest: boolean = capabilities.wasi;
 // (threaded WASI is wasm too) nor `isSingleThread` (native CurrentThread is
 // threadless but not wasm). Same field `src/utils/threadless-free.ts` reads, so
 // eager-free assertions stay in lockstep with the package.
-export const isThreadlessWasi: boolean = getRuntimeSupport(capabilities).threadlessWasi;
-
-// True for every current binding (the shared runtime is the only backend);
-// false only when the compat shim synthesized a legacy tokio-era report.
-export const isAsyncRuntimeBuild: boolean = capabilities.asyncRuntimeBuild;
+export const isThreadlessWasi: boolean = getRuntimeSupport().threadlessWasi;

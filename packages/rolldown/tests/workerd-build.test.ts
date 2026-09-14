@@ -73,7 +73,7 @@ describe('binding-workerd-proxy export surface', () => {
       wasi: true,
       watchSupported: false,
     });
-    // The invariants normalizeRuntimeCapabilities() fails closed on.
+    // The invariants the native `get_runtime_capabilities()` report holds.
     expect(capabilities.asyncRuntimeBuild).toBe(capabilities.backend === 'shared');
     expect(capabilities.threads).toBe(capabilities.flavor === 'MultiThread');
     expect(capabilities.wasi).toBe(capabilities.target !== 'native');

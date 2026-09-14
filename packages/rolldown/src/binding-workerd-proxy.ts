@@ -106,14 +106,14 @@ function enumExport(name: string): any {
   });
 }
 
-// Matches the generated loader export consumed by
-// `runtime-support.ts#getLoadedBindingTarget()`.
+// Matches the generated loader export that `binding-loader-codegen.ts` emits as
+// `LOADED_BINDING_TARGET_EXPORT`.
 export const __rolldownBindingTarget = 'wasi';
 
-// Report used while no managed instance is active, so importing
-// `runtime-lifecycle.ts` (which reads capabilities at module evaluation) is
-// safe in workerd bundles. Matches `async_runtime.rs get_runtime_capabilities()`
-// for wasm32-wasip1 before any timer driver registration (`timers: false`).
+// Report used while no managed instance is active, so a capability read before
+// the first managed instantiation is safe in workerd bundles. Matches
+// `async_runtime.rs get_runtime_capabilities()` for wasm32-wasip1 before any
+// timer driver registration (`timers: false`).
 const STATIC_THREADLESS_CAPABILITIES: BindingRuntimeCapabilities = Object.freeze({
   asyncRuntimeBuild: true,
   backend: 'shared',
@@ -139,9 +139,6 @@ export function getRuntimeCapabilities(): BindingRuntimeCapabilities {
 }
 
 // -- functions ---------------------------------------------------------------
-export const acquireAsyncRuntime: typeof binding.acquireAsyncRuntime = fnExport(
-  'acquireAsyncRuntime',
-) as typeof binding.acquireAsyncRuntime;
 export const collapseSourcemaps: typeof binding.collapseSourcemaps = fnExport(
   'collapseSourcemaps',
 ) as typeof binding.collapseSourcemaps;
@@ -216,9 +213,6 @@ export const transformSync: typeof binding.transformSync = fnExport(
 ) as typeof binding.transformSync;
 
 // -- classes -----------------------------------------------------------------
-export const BindingAsyncRuntimeLease: typeof binding.BindingAsyncRuntimeLease = classExport(
-  'BindingAsyncRuntimeLease',
-) as typeof binding.BindingAsyncRuntimeLease;
 export const BindingBundleEndEventData: typeof binding.BindingBundleEndEventData = classExport(
   'BindingBundleEndEventData',
 ) as typeof binding.BindingBundleEndEventData;

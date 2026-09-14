@@ -447,29 +447,6 @@ describe('getRuntimeCapabilities', () => {
     createRequire(import.meta.url).resolve('rolldown/package.json'),
   );
   const parallelWorkerEntry = nodePath.join(rolldownPkgDir, 'dist', 'parallel-plugin-worker.mjs');
-  const wasiNodeBinding = nodePath.join(rolldownPkgDir, 'dist', 'rolldown-binding.wasi.cjs');
-  const wasiArtifact = nodePath.join(rolldownPkgDir, 'dist', 'rolldown-binding.wasm32-wasi.wasm');
-
-  test.runIf(caps.target === 'wasi-threads')(
-    'threaded-WASI file workers discard inherited string-input execArgv',
-    { timeout: 30_000 },
-    () => {
-      const result = inFreshProcess(`
-        await import(${JSON.stringify(pathToFileURL(wasiNodeBinding).href)});
-        await new Promise((resolve) => setTimeout(resolve, 250));
-        console.log(JSON.stringify({ loaded: true }));
-      `);
-      expect(result).toEqual({ loaded: true });
-    },
-  );
-
-  test.runIf(caps.target === 'wasi-threads')('threaded-WASI artifact is a reactor', () => {
-    const module = new WebAssembly.Module(new Uint8Array(readFileSync(wasiArtifact)));
-    const exports = WebAssembly.Module.exports(module);
-    expect(exports).toContainEqual({ name: '_initialize', kind: 'function' });
-    expect(exports.some(({ name }) => name === '_start')).toBe(false);
-  });
-
   test(
     'the parallel-plugin worker entry carries the timer-host registration',
     { timeout: 30_000 },

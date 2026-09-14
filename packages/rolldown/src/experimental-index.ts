@@ -11,10 +11,6 @@ export {
   type AsyncRuntimeFlavor,
   type AsyncRuntimeMetrics,
   type AsyncRuntimeOptions,
-  type BindingRuntimeConfig,
-  type BindingRuntimeFlavor,
-  type BindingRuntimeMetrics,
-  type BindingRuntimeOptions,
   configureAsyncRuntime,
   getAsyncRuntimeConfig,
   getAsyncRuntimeMetrics,
@@ -26,15 +22,16 @@ export {
   BindingRebuildStrategy,
   type BindingRuntimeCapabilities,
   getNativeMemoryStats,
+  isolatedDeclaration,
   type IsolatedDeclarationsOptions,
   type IsolatedDeclarationsResult,
+  isolatedDeclarationSync,
+  moduleRunnerTransform,
   type NapiResolveOptions as ResolveOptions,
   resetNativeMemoryStats,
   type ResolveResult,
+  ResolverFactory,
 } from './binding.cjs';
-export { isolatedDeclaration, isolatedDeclarationSync } from './utils/isolated-declaration';
-export { moduleRunnerTransform } from './utils/module-runner-transform';
-export { ResolverFactory } from './utils/resolver-factory';
 export { resolveTsconfig } from './utils/resolve-tsconfig';
 export {
   AsyncContextUnavailableError,

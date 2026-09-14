@@ -34,10 +34,8 @@ import {
 import { normalizedStringOrRegex } from '../../utils/normalize-string-or-regex';
 import { transformToRollupOutput } from '../../utils/transform-to-rollup-output';
 import {
-  acquireRuntimeLease,
   CloseCoordinator,
   type CloseAttemptResult,
-  type RuntimeLease,
   throwCloseErrors,
 } from '../../runtime-lifecycle';
 import { assertRuntimeFeature } from '../../runtime-support';
@@ -98,14 +96,13 @@ export class DevEngineModuleGraph {
 
 export class DevEngine {
   #inner: BindingDevEngineWithTerminalClose;
-  #runtimeLease: RuntimeLease;
   #callbackOwner: DevCallbackOwner;
   #stopWorkers: (() => Promise<void>) | undefined;
   #nativeCloseErrorsPromise: Promise<unknown[]> | undefined;
   #closeCallbackScope: CloseCallbackScope;
   #closeIdentity: string;
   #closeCoordinator = new CloseCoordinator(
-    'Dev engine native close, parallel-plugin worker shutdown, or runtime release failed',
+    'Dev engine native close or parallel-plugin worker shutdown failed',
   );
   #cachedBuildFinishPromise: Promise<void> | null = null;
   // See internal-docs/dev-engine/implementation.md sections 15-16.
@@ -148,18 +145,6 @@ export class DevEngine {
       );
     }
 
-    let runtimeLease: RuntimeLease;
-    try {
-      runtimeLease = await acquireRuntimeLease();
-    } catch (error) {
-      return throwDevSetupErrorAfterCleanup(
-        error,
-        createDevSetupCleanup(options.stopWorkers),
-        'Dev engine runtime setup and parallel-plugin worker cleanup both failed',
-        'Dev engine runtime setup and parallel-plugin worker retry cleanup both failed',
-      );
-    }
-
     try {
       const inner = new BindingDevEngine(
         options.bundlerOptions,
@@ -167,7 +152,6 @@ export class DevEngine {
       ) as BindingDevEngineWithTerminalClose;
       return new DevEngine(
         inner,
-        runtimeLease,
         callbackOwner,
         options.stopWorkers,
         closeCallbackScope,
@@ -176,7 +160,7 @@ export class DevEngine {
     } catch (error) {
       return throwDevSetupErrorAfterCleanup(
         error,
-        createDevSetupCleanup(options.stopWorkers, runtimeLease),
+        createDevSetupCleanup(options.stopWorkers),
         'Dev engine setup and cleanup failed',
         'Dev engine setup and retry cleanup failed',
       );
@@ -185,14 +169,12 @@ export class DevEngine {
 
   private constructor(
     inner: BindingDevEngineWithTerminalClose,
-    runtimeLease: RuntimeLease,
     callbackOwner: DevCallbackOwner,
     stopWorkers: (() => Promise<void>) | undefined,
     closeCallbackScope: CloseCallbackScope,
     closeIdentity: string,
   ) {
     this.#inner = inner;
-    this.#runtimeLease = runtimeLease;
     this.#callbackOwner = callbackOwner;
     this.#stopWorkers = stopWorkers;
     this.#closeCallbackScope = closeCallbackScope;
@@ -306,13 +288,6 @@ export class DevEngine {
       if (this.#stopWorkers === stopWorkers) {
         this.#stopWorkers = undefined;
       }
-    } catch (error) {
-      errors.push(error);
-      retryable = true;
-    }
-
-    try {
-      this.#runtimeLease.release();
     } catch (error) {
       errors.push(error);
       retryable = true;
@@ -499,12 +474,10 @@ function runDevCallback<T>(owner: DevCallbackOwner, callback: () => T): T {
 
 function createDevSetupCleanup(
   initialStopWorkers: RetryableCleanup | undefined,
-  initialRuntimeLease?: RuntimeLease,
 ): RetryableCleanup | undefined {
-  if (!initialStopWorkers && !initialRuntimeLease) return undefined;
+  if (!initialStopWorkers) return undefined;
 
-  let stopWorkers = initialStopWorkers;
-  let runtimeLease = initialRuntimeLease;
+  let stopWorkers: RetryableCleanup | undefined = initialStopWorkers;
   const cleanup: RetryableCleanup = async () => {
     const errors: unknown[] = [];
     const ownedStopWorkers = stopWorkers;
@@ -522,28 +495,12 @@ function createDevSetupCleanup(
       errors.push(error);
     }
 
-    const ownedRuntimeLease = runtimeLease;
-    try {
-      ownedRuntimeLease?.release();
-      if (runtimeLease === ownedRuntimeLease) {
-        runtimeLease = undefined;
-      }
-    } catch (error) {
-      errors.push(error);
-    }
-
     if (errors.length === 1) throw errors[0];
     if (errors.length > 1) {
-      throw new AggregateError(
-        errors,
-        'Dev engine parallel-plugin worker cleanup or runtime release failed',
-      );
+      throw new AggregateError(errors, 'Dev engine parallel-plugin worker cleanup failed');
     }
   };
-  trackRetryableCleanupOwnership(
-    cleanup,
-    () => stopWorkers !== undefined || runtimeLease !== undefined,
-  );
+  trackRetryableCleanupOwnership(cleanup, () => stopWorkers !== undefined);
   return cleanup;
 }
 

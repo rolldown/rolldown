@@ -2,14 +2,13 @@
 import { beforeEach, expect, test, vi } from 'vitest';
 
 const mocks = vi.hoisted(() => ({
-  acquireRuntimeLease: vi.fn(),
   bindingConstructionError: undefined as unknown,
   bindingConstructor: vi.fn(),
   callOptionsHook: vi.fn(async (option) => option),
   pluginPromiseThenCalls: 0,
   runtimeCapabilities: {
-    asyncRuntimeBuild: false,
-    backend: 'tokio',
+    asyncRuntimeBuild: true,
+    backend: 'shared',
     blockOnJsThreadSafe: false,
     devSupported: true,
     flavor: 'MultiThread',
@@ -38,7 +37,6 @@ vi.mock('../src/plugin/plugin-driver', () => ({
 }));
 
 vi.mock('../src/runtime-lifecycle', () => ({
-  acquireRuntimeLease: mocks.acquireRuntimeLease,
   CloseCoordinator: class {},
 }));
 
@@ -50,7 +48,6 @@ import { build } from '../src/api/build';
 import { rolldown } from '../src/api/rolldown';
 
 beforeEach(() => {
-  mocks.acquireRuntimeLease.mockReset();
   mocks.bindingConstructionError = undefined;
   mocks.bindingConstructor.mockReset();
   mocks.callOptionsHook.mockClear();
@@ -100,15 +97,6 @@ test.each([
 
   expect(mocks.pluginPromiseThenCalls).toBe(0);
   expect(mocks.callOptionsHook).not.toHaveBeenCalled();
-  expect(mocks.acquireRuntimeLease).not.toHaveBeenCalled();
-  expect(mocks.bindingConstructor).not.toHaveBeenCalled();
-});
-
-test('rolldown does not enter native construction when runtime acquisition fails', async () => {
-  const acquisitionError = new Error('runtime acquisition failed');
-  mocks.acquireRuntimeLease.mockRejectedValue(acquisitionError);
-
-  await expect(rolldown({ input: 'entry.js' })).rejects.toBe(acquisitionError);
   expect(mocks.bindingConstructor).not.toHaveBeenCalled();
 });
 
@@ -129,19 +117,15 @@ test('rolldown rejects descriptors returned by the options hook before runtime s
     feature: 'parallelPlugins',
   });
 
-  expect(mocks.acquireRuntimeLease).not.toHaveBeenCalled();
   expect(mocks.bindingConstructor).not.toHaveBeenCalled();
 });
 
-test('rolldown releases the transferred lease when native construction fails', async () => {
+test('rolldown propagates a native construction failure', async () => {
   const constructionError = new Error('bundle construction failed');
-  const release = vi.fn();
-  mocks.acquireRuntimeLease.mockResolvedValue({ release });
   mocks.bindingConstructionError = constructionError;
 
   await expect(rolldown({ input: 'entry.js' })).rejects.toBe(constructionError);
   expect(mocks.bindingConstructor).toHaveBeenCalledOnce();
-  expect(release).toHaveBeenCalledOnce();
 });
 
 function createHangingPluginThenable() {
@@ -162,20 +146,3 @@ function createParallelDescriptor() {
     },
   };
 }
-
-test('rolldown preserves construction and release failures', async () => {
-  const constructionError = new Error('bundle construction failed');
-  const releaseError = new Error('runtime release failed');
-  const release = vi.fn(() => {
-    throw releaseError;
-  });
-  mocks.acquireRuntimeLease.mockResolvedValue({ release });
-  mocks.bindingConstructionError = constructionError;
-
-  const error = await rolldown({ input: 'entry.js' }).catch((error: unknown) => error);
-
-  expect(error).toBeInstanceOf(AggregateError);
-  expect(error.errors).toEqual([constructionError, releaseError]);
-  expect(error.cause).toBe(constructionError);
-  expect(release).toHaveBeenCalledOnce();
-});

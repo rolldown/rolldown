@@ -6,7 +6,7 @@ const capabilities = getRuntimeCapabilities();
 const expectThreadedWasi = process.env.ROLLDOWN_EXPECT_WASI_THREADS === '1';
 
 test.runIf(capabilities.target === 'wasi-threads' || expectThreadedWasi)(
-  'executes threaded WASI while preserving concurrent runtime leases',
+  'executes threaded WASI while overlapping builds survive a concurrent close',
   { timeout: 20_000 },
   async () => {
     // The resolver normalizes every non-native target to CurrentThread

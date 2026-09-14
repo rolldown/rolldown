@@ -5,6 +5,11 @@ import type { OutputOptions, PreRenderedAsset } from '../src/options/output-opti
 import { createBundlerOptions } from '../src/utils/create-bundler-option';
 import { summarizePluginTimings } from '../src/utils/plugin-timings';
 
+vi.mock('../src/binding.cjs', async () => {
+  const { loadBinding } = await import('./src/load-binding');
+  return loadBinding();
+});
+
 function fakeClock() {
   let now = 1_000;
   const read = vi.spyOn(performance, 'now').mockImplementation(() => now);

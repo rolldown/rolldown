@@ -31,7 +31,7 @@ use crate::{
   bundling_task::BundlingTask,
   dev_context::{
     BundlingFuture, RetainedDevCallbackErrors, SharedDevContext,
-    dev_callback_result_to_build_result,
+    dev_callback_result_to_build_result, merge_build_results,
   },
   type_aliases::{
     BeginWatchRegistrationErrorObservationSender, CoordinatorReceiver, CoordinatorSender,
@@ -54,10 +54,9 @@ struct WatchRegistrationErrorEvent {
   observed: bool,
 }
 
-/// The slice of the watcher `BundleCoordinator` drives. `rolldown_fs_watcher`
-/// collapsed its backends behind the concrete [`FsWatcher`], so this local
-/// seam is what lets tests substitute failing or recording watchers for path
-/// registration.
+/// The slice of the watcher `BundleCoordinator` drives - the local seam that
+/// lets tests substitute failing or recording watchers for path registration.
+/// Rationale on `rolldown_watcher`'s `TaskFsWatcher`, the same seam there.
 pub trait CoordinatorFsWatcher: Send {
   fn paths_mut(&mut self) -> Box<dyn PathsMut + '_>;
 }
@@ -215,10 +214,9 @@ impl BundleCoordinator {
   /// Handle programmatic module change (e.g., lazy compilation executed).
   ///
   /// `watch_files` is the sender's snapshot of `plugin_driver.watch_files`,
-  /// taken under the bundler lock. The rebuild this message schedules installs
-  /// a fresh handle and drops those entries, and the live handle may already
-  /// have been replaced before we get here, so publish the snapshot first and
-  /// union it with whatever the handle holds now.
+  /// unioned with whatever the live handle holds - see
+  /// `CoordinatorMsg::ModuleChanged` and
+  /// `internal-docs/dev-engine/implementation.md`.
   ///
   /// A failed publication must outlive the build that this message schedules.
   async fn handle_module_changed(&mut self, module_id: String, watch_files: &[ArcStr]) {
@@ -607,20 +605,8 @@ impl BundleCoordinator {
     let watch_registration_result = watch_registration_error
       .map_or_else(|| Ok(()), |error| dev_callback_result_to_build_result(Err(error)));
     let callback_and_registration_result =
-      Self::merge_build_results(callback_result, watch_registration_result);
-    Self::merge_build_results(callback_and_registration_result, close_result)
-  }
-
-  fn merge_build_results(primary: BuildResult<()>, secondary: BuildResult<()>) -> BuildResult<()> {
-    match (primary, secondary) {
-      (Ok(()), Ok(())) => Ok(()),
-      (Err(error), Ok(())) | (Ok(()), Err(error)) => Err(error),
-      (Err(primary_error), Err(secondary_error)) => {
-        let mut errors = primary_error.into_vec();
-        errors.extend(secondary_error.into_vec());
-        Err(errors.into())
-      }
-    }
+      merge_build_results(callback_result, watch_registration_result);
+    merge_build_results(callback_and_registration_result, close_result)
   }
 
   fn retain_watch_registration_result(&mut self, watch_paths_result: BuildResult<()>) {
@@ -646,16 +632,10 @@ impl BundleCoordinator {
   }
 
   fn begin_watch_registration_error_observation(&mut self) -> WatchRegistrationErrorObserverId {
-    let observer_id = loop {
-      let observer_id = self.next_watch_registration_error_observer_id;
-      self.next_watch_registration_error_observer_id =
-        self.next_watch_registration_error_observer_id.wrapping_add(1).max(1);
-      if !self.previewed_watch_registration_error_observers.contains(&observer_id)
-        && self.active_watch_registration_error_observers.insert(observer_id)
-      {
-        break observer_id;
-      }
-    };
+    let observer_id = self.next_watch_registration_error_observer_id;
+    self.next_watch_registration_error_observer_id =
+      self.next_watch_registration_error_observer_id.wrapping_add(1);
+    self.active_watch_registration_error_observers.insert(observer_id);
 
     for error in &mut self.watch_registration_errors {
       if !error.recovered || !error.observed {
@@ -920,8 +900,7 @@ mod tests {
   fn create_observation_test_coordinator() -> BundleCoordinator {
     let bundler = Bundler::new(BundlerOptions::default()).expect("create test bundler");
     let (coordinator_tx, coordinator_rx) = unbounded();
-    // `enabled: false` selects the noop backend, replacing the removed
-    // `NoopFsWatcher` type.
+    // `enabled: false` = noop backend.
     let watcher = FsWatcher::new(
       BundleCoordinator::create_watcher_event_handler(coordinator_tx.clone()),
       &FsWatcherConfig { enabled: false, ..FsWatcherConfig::default() },

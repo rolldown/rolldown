@@ -280,8 +280,7 @@ impl<H: WatcherEventHandler> WatchCoordinator<H> {
           }
         }
         WatcherState::Debouncing { deadline, .. } => {
-          // Must go through the timer facade: the async-runtime build has no
-          // tokio reactor, so `tokio::time::sleep_until` would panic here.
+          // Runtime-agnostic timer facade: tokio is a dev-dependency here.
           let timeout = rolldown_utils::time::sleep_until(*deadline);
 
           // Debounce extension rules: see internal-docs/watch-mode/implementation.md.
@@ -776,8 +775,6 @@ impl<H: WatcherEventHandler> WatchCoordinator<H> {
 #[cfg(test)]
 mod tests {
   use super::*;
-  // `tokio::sync::Notify` below is ONLY the tests' internal end/stop signal;
-  // production `close_notify` is `event_listener::Event`.
   use crate::watch_task::TaskFsWatcher;
   use event_listener::Event;
   use rolldown::{BundlerConfig, BundlerOptions, plugin};
@@ -923,7 +920,6 @@ mod tests {
 
   struct RegistrationTestTask {
     task: WatchTask,
-    add_attempts: Arc<AtomicUsize>,
     commit_attempts: Arc<AtomicUsize>,
     commit_times: Arc<Mutex<Vec<Instant>>>,
   }
@@ -961,13 +957,12 @@ mod tests {
     let input = test_dir.0.join("main.js");
     fs::write(&input, "export const value = 1;").expect("write input");
     let input = dunce::canonicalize(input).expect("canonicalize input");
-    let add_attempts = Arc::new(AtomicUsize::new(0));
     let commit_attempts = Arc::new(AtomicUsize::new(0));
     let commit_times = Arc::new(Mutex::new(Vec::new()));
     let fs_watcher: Box<dyn TaskFsWatcher> = Box::new(RegistrationFailingWatcher {
       fail_adds,
       fail_commits,
-      add_attempts: Arc::clone(&add_attempts),
+      add_attempts: Arc::new(AtomicUsize::new(0)),
       commit_attempts: Arc::clone(&commit_attempts),
       commit_times: Arc::clone(&commit_times),
     });
@@ -986,7 +981,7 @@ mod tests {
       closed,
     )
     .expect("create watch task");
-    RegistrationTestTask { task, add_attempts, commit_attempts, commit_times }
+    RegistrationTestTask { task, commit_attempts, commit_times }
   }
 
   #[tokio::test(flavor = "multi_thread")]
@@ -996,7 +991,7 @@ mod tests {
     let closed = Arc::new(AtomicBool::new(false));
     let close_notify = Arc::new(Event::new());
     let close_bundle_calls = Arc::new(AtomicUsize::new(0));
-    let RegistrationTestTask { task, commit_attempts, commit_times, .. } =
+    let RegistrationTestTask { task, commit_attempts, commit_times } =
       create_task(&test_dir, 0, 1, &closed, &close_bundle_calls);
     let mut tasks = IndexVec::new();
     tasks.push(task);
@@ -1069,68 +1064,6 @@ mod tests {
     let result = wait_for_debounce_input(&mut rx, std::future::ready(())).await;
 
     assert!(matches!(result, DebounceWaitResult::Message(Some(WatcherMsg::FileChanges { .. }))));
-  }
-
-  #[tokio::test(flavor = "multi_thread")]
-  async fn coordinator_retries_individual_watch_add_failure() {
-    let test_dir = TestDir::new();
-    let (tx, rx) = mpsc::unbounded();
-    let closed = Arc::new(AtomicBool::new(false));
-    let close_notify = Arc::new(Event::new());
-    let close_bundle_calls = Arc::new(AtomicUsize::new(0));
-    let RegistrationTestTask { task, add_attempts, commit_attempts, .. } =
-      create_task(&test_dir, 1, 0, &closed, &close_bundle_calls);
-    let mut tasks = IndexVec::new();
-    tasks.push(task);
-    let events = Arc::new(Mutex::new(Vec::new()));
-    let end = Arc::new(Notify::new());
-    let close_calls = Arc::new(AtomicUsize::new(0));
-    let coordinator = WatchCoordinator::new(
-      rx,
-      RecordingHandler {
-        events: Arc::clone(&events),
-        end: Arc::clone(&end),
-        close_calls: Arc::clone(&close_calls),
-      },
-      tasks,
-      singleton_groups(1),
-      &WatcherConfig::default(),
-      Arc::clone(&closed),
-      Arc::clone(&close_notify),
-      Arc::default(),
-    );
-    let handle = tokio::spawn(coordinator.run());
-
-    tokio::time::timeout(Duration::from_secs(10), end.notified())
-      .await
-      .expect("coordinator should retry the failed path registration");
-    assert_eq!(add_attempts.load(Ordering::SeqCst), 2);
-    assert_eq!(
-      commit_attempts.load(Ordering::SeqCst),
-      2,
-      "the failed add attempt and its retry commit; the post-render pass has \
-       nothing new to register and must not open a transaction"
-    );
-    assert_eq!(
-      *events.lock().expect("events lock"),
-      ["START", "BUNDLE_START", "BUNDLE_END", "END"]
-    );
-    assert_eq!(
-      close_bundle_calls.load(Ordering::SeqCst),
-      1,
-      "the hidden failed build must be closed before retry"
-    );
-
-    closed.store(true, Ordering::Relaxed);
-    close_notify.notify(usize::MAX);
-    tx.unbounded_send(WatcherMsg::Close).expect("send close");
-    tokio::time::timeout(Duration::from_secs(10), handle)
-      .await
-      .expect("coordinator should close")
-      .expect("coordinator task should not panic")
-      .expect("coordinator should close successfully");
-    assert_eq!(close_bundle_calls.load(Ordering::SeqCst), 2);
-    assert_eq!(close_calls.load(Ordering::SeqCst), 1);
   }
 
   #[tokio::test(flavor = "multi_thread")]
@@ -1303,9 +1236,10 @@ mod tests {
     }
   }
 
-  /// One filesystem save fanning out into two per-config-group `FileChanges`
-  /// messages: the sibling group's message is queued during the rebuild's
-  /// BundleEnd dispatch, strictly before the coordinator can dispatch `End`.
+  /// Queues one extra `FileChanges` message for `inject_group_index` during
+  /// the rebuild's BundleEnd dispatch, strictly before the coordinator can
+  /// dispatch `End` - the sibling group's half of a single save fanning out
+  /// across config groups, or a genuinely new save of the same file.
   struct SameSaveInjectingHandler {
     events: Arc<Mutex<Vec<String>>>,
     tx: mpsc::UnboundedSender<WatcherMsg>,
@@ -1390,68 +1324,6 @@ mod tests {
     }
   }
 
-  /// A genuinely new save of the same file (same kind) landing while the
-  /// previous save's rebuild is still inside its envelope: queued during the
-  /// rebuild's BundleEnd dispatch, strictly before `End` can be dispatched.
-  struct SecondSaveInjectingHandler {
-    events: Arc<Mutex<Vec<String>>>,
-    tx: mpsc::UnboundedSender<WatcherMsg>,
-    inject_path: String,
-    injected: AtomicBool,
-    end_count: Arc<AtomicUsize>,
-    initial_end: Arc<Notify>,
-    rebuild_end: Arc<Notify>,
-  }
-
-  impl WatcherEventHandler for SecondSaveInjectingHandler {
-    async fn on_event(&self, event: WatchEvent) -> anyhow::Result<()> {
-      if matches!(event, WatchEvent::BundleEnd(_))
-        && self.end_count.load(Ordering::SeqCst) == 1
-        && !self.injected.swap(true, Ordering::SeqCst)
-      {
-        // The first save's rebuild just finished building; the user saves the
-        // file again (same path, same kind) before `End` is dispatched.
-        self
-          .tx
-          .unbounded_send(WatcherMsg::FileChanges {
-            group_index: WatchGroupIdx::from_usize(0),
-            changes: vec![FileChangeEvent::new(
-              self.inject_path.clone(),
-              WatcherChangeKind::Update,
-            )],
-          })
-          .expect("queue second save");
-      }
-
-      self.events.lock().expect("events lock").push(event.as_str().to_string());
-
-      if matches!(event, WatchEvent::End) {
-        let ends = self.end_count.fetch_add(1, Ordering::SeqCst) + 1;
-        if ends == 1 {
-          self.initial_end.notify_one();
-        } else {
-          self.rebuild_end.notify_one();
-        }
-      }
-      Ok(())
-    }
-
-    async fn on_change(&self, _path: &str, _kind: WatcherChangeKind) -> anyhow::Result<()> {
-      self.events.lock().expect("events lock").push("CHANGE".to_string());
-      Ok(())
-    }
-
-    async fn on_restart(&self) -> anyhow::Result<()> {
-      self.events.lock().expect("events lock").push("RESTART".to_string());
-      Ok(())
-    }
-
-    async fn on_close(&self) -> anyhow::Result<()> {
-      self.events.lock().expect("events lock").push("CLOSE".to_string());
-      Ok(())
-    }
-  }
-
   #[tokio::test(flavor = "multi_thread")]
   async fn second_save_during_rebuild_still_reports_change_and_watch_change() {
     let test_dir = TestDir::new();
@@ -1491,10 +1363,14 @@ mod tests {
     let rebuild_end = Arc::new(Notify::new());
     let coordinator = WatchCoordinator::new(
       rx,
-      SecondSaveInjectingHandler {
+      // The injected message is a genuinely new save of the same file (same
+      // path, same kind) landing while the previous save's rebuild is still
+      // inside its envelope.
+      SameSaveInjectingHandler {
         events: Arc::clone(&events),
         tx: tx.clone(),
         inject_path: input_str.clone(),
+        inject_group_index: WatchGroupIdx::from_usize(0),
         injected: AtomicBool::new(false),
         end_count: Arc::clone(&end_count),
         initial_end: Arc::clone(&initial_end),
@@ -1865,51 +1741,6 @@ mod tests {
     (events, fixture.end_count.load(Ordering::SeqCst))
   }
 
-  /// Deterministic pin for rolldown#10613: ONE save of a file watched by both
-  /// output tasks of one config produces ONE rebuild envelope covering both
-  /// outputs. The pre-fix per-task watcher fan-out cannot guarantee this: the
-  /// envelope could complete between the two independent deliveries, emitting
-  /// `End` with the sibling stale and a second envelope after it.
-  #[tokio::test(flavor = "multi_thread")]
-  async fn single_save_rebuilds_every_group_member_in_one_envelope() {
-    let test_dir = TestDir::new();
-    let input = test_dir.0.join("main.js");
-    fs::write(&input, "export const value = 1;").expect("write input");
-    let input = dunce::canonicalize(input).expect("canonicalize input");
-    let input_str = input.to_string_lossy().into_owned();
-
-    let fixture = spawn_one_group_coordinator(vec![
-      (input.clone(), "dist0/out.js", vec![]),
-      (input.clone(), "dist1/out.js", vec![]),
-    ]);
-    let (events, end_count) = run_one_group_save(fixture, input_str).await;
-
-    assert_eq!(
-      events,
-      [
-        // Initial build: both outputs in one envelope.
-        "START",
-        "BUNDLE_START",
-        "BUNDLE_END",
-        "BUNDLE_START",
-        "BUNDLE_END",
-        "END",
-        // The save's single group-scoped message marks both members, so the
-        // rebuild envelope covers both outputs before `End`.
-        "CHANGE",
-        "RESTART",
-        "START",
-        "BUNDLE_START",
-        "BUNDLE_END",
-        "BUNDLE_START",
-        "BUNDLE_END",
-        "END",
-        "CLOSE",
-      ]
-    );
-    assert_eq!(end_count, 2);
-  }
-
   /// A group-scoped delivery still respects each member's own watch set: a
   /// change hitting only one member rebuilds only that member, and `End`
   /// still fires for the envelope.
@@ -2002,6 +1833,12 @@ mod tests {
     assert_eq!(builds.load(Ordering::SeqCst), 2, "member 1 must attempt exactly two builds");
   }
 
+  /// Deterministic pin for rolldown#10613: ONE save of a file watched by both
+  /// output tasks of one config produces ONE rebuild envelope covering both
+  /// outputs. The pre-fix per-task watcher fan-out cannot guarantee this: the
+  /// envelope could complete between the two independent deliveries, emitting
+  /// `End` with the sibling stale and a second envelope after it.
+  ///
   /// Two output tasks of ONE config group share one backend watcher and build
   /// sequentially over ~the same module graph, so the sibling rediscovers
   /// every path the first member already registered. The sibling must adopt

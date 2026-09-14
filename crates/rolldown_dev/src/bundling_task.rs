@@ -360,13 +360,8 @@ impl BundlingTask {
   async fn rebuild(&mut self) -> DevCallbackResult {
     let mut bundler = self.bundler.lock().await;
 
-    // Snapshot before the rebuild retires this handle: `create_plugin_driver`
-    // gives the replacement an empty `watch_files`, and a partial rescan only
-    // re-records what it refetched. Everything the earlier stages of this task
-    // put on the outgoing handle — the `watchChange` hook's `addWatchFile`
-    // calls, the modules the HMR stage pulled in — is otherwise gone before the
-    // coordinator reads it. Carried as data on `BundleCompleted`; see that
-    // message's doc.
+    // Snapshot before the rebuild retires this handle; carried as data on
+    // `BundleCompleted`. See that message's doc.
     self.retired_watch_files = bundler.watch_files().iter().map(|path| path.clone()).collect();
 
     // TODO: hyf0 `skip_write` in watch mode won't trigger generate stage, need to investigate why.

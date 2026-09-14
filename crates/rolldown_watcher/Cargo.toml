@@ -33,7 +33,8 @@ tracing = { workspace = true }
 dunce = { workspace = true }
 rolldown_workspace = { workspace = true }
 sugar_path = { workspace = true }
-# `time` here only serves examples/watch.rs's demo sleep.
+# tokio backs this crate's #[tokio::test] suites and examples/watch.rs's
+# #[tokio::main]; production code runs on the runtime-agnostic facade.
 tokio = { workspace = true, features = [
   "rt",
   "macros",

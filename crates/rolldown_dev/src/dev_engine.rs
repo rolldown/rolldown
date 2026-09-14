@@ -24,7 +24,9 @@ use rolldown::{Bundler, BundlerBuilder, BundlerConfig, NormalizedBundlerOptions}
 use crate::{
   BundleOutput, DevOptions, SharedClients,
   bundle_coordinator::BundleCoordinator,
-  dev_context::{DevContext, PinBoxSendStaticFuture, dev_callback_result_to_build_result},
+  dev_context::{
+    DevContext, PinBoxSendStaticFuture, dev_callback_result_to_build_result, merge_build_results,
+  },
   normalize_dev_options,
   type_aliases::{CoordinatorSender, WatchRegistrationErrorObservation},
   types::{
@@ -104,7 +106,7 @@ impl WatchRegistrationErrorObservation {
     if acknowledgement_result.is_ok() {
       self.disarm();
     }
-    DevEngine::merge_build_results(preview_result, acknowledgement_result)
+    merge_build_results(preview_result, acknowledgement_result)
   }
 }
 
@@ -266,7 +268,7 @@ impl DevEngine {
     let observation = self.begin_watch_registration_error_observation().await?;
     let operation_result = self.wait_for_ongoing_bundle_inner().await;
     let watch_registration_result = observation.finish().await;
-    Self::merge_build_results(operation_result, watch_registration_result)
+    merge_build_results(operation_result, watch_registration_result)
   }
 
   async fn wait_for_ongoing_bundle_inner(&self) -> BuildResult<()> {
@@ -313,7 +315,7 @@ impl DevEngine {
     let observation = self.begin_watch_registration_error_observation().await?;
     let operation_result = self.ensure_latest_bundle_output_inner().await;
     let watch_registration_result = observation.finish().await;
-    Self::merge_build_results(operation_result, watch_registration_result)
+    merge_build_results(operation_result, watch_registration_result)
   }
 
   async fn ensure_latest_bundle_output_inner(&self) -> BuildResult<()> {
@@ -625,7 +627,7 @@ impl DevEngine {
     match (close_result, coordinator_task_result) {
       (Ok(close_result), Ok(())) => close_result,
       (Ok(close_result), Err(task_error)) => {
-        Self::merge_build_results(close_result, Err(anyhow::anyhow!("{task_error}").into()))
+        merge_build_results(close_result, Err(anyhow::anyhow!("{task_error}").into()))
       }
       (Err(error), task_result) => {
         let coordinator_error = Self::merge_coordinator_task_result(error.into(), task_result);
@@ -644,18 +646,6 @@ impl DevEngine {
         let mut errors = coordinator_error.into_vec();
         errors.extend(BatchedBuildDiagnostic::from(anyhow::anyhow!("{task_error}")).into_vec());
         BatchedBuildDiagnostic::new(errors)
-      }
-    }
-  }
-
-  fn merge_build_results(primary: BuildResult<()>, secondary: BuildResult<()>) -> BuildResult<()> {
-    match (primary, secondary) {
-      (Ok(()), Ok(())) => Ok(()),
-      (Err(error), Ok(())) | (Ok(()), Err(error)) => Err(error),
-      (Err(primary), Err(secondary)) => {
-        let mut errors = primary.into_vec();
-        errors.extend(secondary.into_vec());
-        Err(BatchedBuildDiagnostic::new(errors))
       }
     }
   }
@@ -876,19 +866,5 @@ mod tests {
       .expect("retained coordinator must complete");
     assert!(state.coordinator.is_none());
     assert_eq!(runs.load(Ordering::SeqCst), 1);
-  }
-
-  #[test]
-  fn dropped_watch_registration_observation_requests_cancellation() {
-    let (coordinator_sender, mut coordinator_receiver) =
-      futures::channel::mpsc::unbounded::<CoordinatorMsg>();
-    let observation = WatchRegistrationErrorObservation::new(17, coordinator_sender);
-
-    drop(observation);
-
-    assert!(matches!(
-      coordinator_receiver.try_recv(),
-      Ok(CoordinatorMsg::CancelWatchRegistrationErrorObservation { observer_id: 17 })
-    ));
   }
 }

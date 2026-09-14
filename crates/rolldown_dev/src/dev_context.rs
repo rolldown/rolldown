@@ -196,6 +196,23 @@ pub fn dev_callback_result_to_build_result(result: DevCallbackResult) -> BuildRe
   result.map_err(|error| BatchedBuildDiagnostic::new(dev_callback_error_to_diagnostics(error)))
 }
 
+/// Concatenates the diagnostics of two independent build results so neither
+/// failure is dropped when both happen.
+pub fn merge_build_results(
+  primary: BuildResult<()>,
+  secondary: BuildResult<()>,
+) -> BuildResult<()> {
+  match (primary, secondary) {
+    (Ok(()), Ok(())) => Ok(()),
+    (Err(error), Ok(())) | (Ok(()), Err(error)) => Err(error),
+    (Err(primary), Err(secondary)) => {
+      let mut errors = primary.into_vec();
+      errors.extend(secondary.into_vec());
+      Err(BatchedBuildDiagnostic::new(errors))
+    }
+  }
+}
+
 fn dev_callback_error_to_diagnostics(
   error: DevCallbackError,
 ) -> Vec<rolldown_error::BuildDiagnostic> {

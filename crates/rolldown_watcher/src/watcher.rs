@@ -317,7 +317,6 @@ mod tests {
   use rolldown_common::WatcherChangeKind;
   use std::{
     borrow::Cow,
-    convert::Infallible,
     fs,
     panic::panic_any,
     path::PathBuf,
@@ -327,9 +326,6 @@ mod tests {
     },
     time::Duration,
   };
-  // `tokio::sync::Notify` below is ONLY the tests' internal `end` signal;
-  // production `close_notify` is `event_listener::Event`.
-  use event_listener::Event;
   use tokio::sync::Notify;
 
   static NEXT_TEST_DIR: AtomicUsize = AtomicUsize::new(0);
@@ -594,69 +590,6 @@ mod tests {
     let config = WatcherConfig { poll_interval: Some(250), ..Default::default() };
     let fs_config = config.to_fs_watcher_config();
     assert_eq!(fs_config.poll_interval, 250);
-  }
-
-  #[tokio::test]
-  async fn rejected_coordinator_submission_is_retryable_after_runtime_restart() {
-    let runs = Arc::new(AtomicUsize::new(0));
-    let runs_task = Arc::clone(&runs);
-    let coordinator: PendingCoordinatorFuture = Box::pin(async move {
-      runs_task.fetch_add(1, Ordering::SeqCst);
-      Ok(())
-    });
-    let (tx, _rx) = mpsc::unbounded();
-    let watcher = Watcher {
-      coordinator_state: std::sync::Mutex::new(CoordinatorState {
-        coordinator: Some(coordinator),
-        handle: None,
-      }),
-      tx,
-      closed: Arc::new(AtomicBool::new(false)),
-      close_notify: Arc::new(Event::new()),
-      native_owned_close_identities: Arc::new(std::sync::Mutex::new(Vec::new())),
-    };
-
-    let error = watcher
-      .start_coordinator(|coordinator| Err((std::io::Error::other("runtime stopped"), coordinator)))
-      .expect_err("the first run must reject while the runtime is stopped");
-    assert_eq!(error.to_string(), "Watcher coordinator task submission failed: runtime stopped");
-    assert_eq!(
-      std::error::Error::source(&error).map(std::string::ToString::to_string).as_deref(),
-      Some("runtime stopped")
-    );
-    {
-      let state = watcher.coordinator_state.lock().unwrap();
-      assert!(state.coordinator.is_some());
-      assert!(state.handle.is_none());
-    }
-    assert_eq!(runs.load(Ordering::SeqCst), 0);
-
-    let accepted_submissions = Arc::new(AtomicUsize::new(0));
-    let accepted_submissions_task = Arc::clone(&accepted_submissions);
-    watcher
-      .start_coordinator::<Infallible>(|coordinator| {
-        accepted_submissions_task.fetch_add(1, Ordering::SeqCst);
-        Ok(coordinator.shared())
-      })
-      .expect("a restarted runtime must accept the retained coordinator");
-    watcher
-      .start_coordinator::<Infallible>(|coordinator| {
-        accepted_submissions.fetch_add(1, Ordering::SeqCst);
-        Ok(coordinator.shared())
-      })
-      .expect("an accepted start must be idempotent");
-    let handle = watcher
-      .coordinator_state
-      .lock()
-      .unwrap()
-      .handle
-      .clone()
-      .expect("accepted coordinator must publish its handle");
-    handle.await.expect("retained coordinator must complete");
-    let state = watcher.coordinator_state.lock().unwrap();
-    assert!(state.coordinator.is_none());
-    assert_eq!(accepted_submissions.load(Ordering::SeqCst), 1);
-    assert_eq!(runs.load(Ordering::SeqCst), 1);
   }
 
   #[tokio::test(flavor = "multi_thread")]

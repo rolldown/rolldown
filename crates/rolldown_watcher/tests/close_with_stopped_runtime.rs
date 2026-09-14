@@ -93,6 +93,13 @@ fn close_rejected_by_a_stopped_runtime_stays_retryable() {
     rejected.to_string().starts_with("Watcher coordinator task submission failed:"),
     "unexpected close error: {rejected}"
   );
+  // The runtime's own refusal stays reachable through the error chain.
+  let source = std::error::Error::source(&*rejected)
+    .expect("the rejection must expose the runtime error as its source");
+  assert!(
+    rejected.to_string().ends_with(&source.to_string()),
+    "rejection must wrap the runtime error: {rejected} / {source}"
+  );
   // The rejection must not fake a teardown: nothing was closed or released.
   assert_eq!(closes.load(Ordering::SeqCst), 0, "close hooks must not run for a rejected close");
   assert!(!dropped.load(Ordering::SeqCst), "a rejected close must retain the coordinator");

@@ -365,8 +365,7 @@ export function bindingifyLoad(
         };
       } finally {
         if (shouldEagerlyFreeOutputs()) {
-          // Tracker release for `innerCtx`, direct drop for the sync-only
-          // wrapper box (see the load hook above).
+          // See the transform hook's finally above.
           releaseOrDefer(innerCtx);
           ctx.dropInner();
         }

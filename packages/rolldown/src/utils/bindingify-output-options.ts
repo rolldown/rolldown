@@ -524,7 +524,7 @@ function batchName(
   };
 }
 
-function wrapOptionalBuildCallback<Value>(
+export function wrapOptionalBuildCallback<Value>(
   value: Value,
   runBuildCallback?: BuildCallbackRunner,
 ): Value {

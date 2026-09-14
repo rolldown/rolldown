@@ -228,18 +228,13 @@ export class PluginContextData {
   // `releaseOrDefer` rather than `dropInner()`, because a fire-and-forget
   // `this.load()`/`this.resolve()` still holds a napi SHARED borrow on its
   // context and an exclusive drop would throw out of the borrow tracker (see
-  // `utils/threadless-free.ts`). Best-effort: one failure must not strand the
-  // rest.
+  // `utils/threadless-free.ts`).
   #releaseContextBoxes(): void {
     if (!shouldEagerlyFreeOutputs()) {
       return;
     }
     for (const box of this.#retainedContextBoxes) {
-      try {
-        releaseOrDefer(box);
-      } catch {
-        // Best-effort: a box that refuses to drop must not strand the rest.
-      }
+      releaseOrDefer(box);
     }
     this.#retainedContextBoxes.clear();
   }
@@ -250,7 +245,6 @@ export class PluginContextData {
   // reading them. Only BOX-BACKED data is materialized — fields backed by the
   // user's original `outputOptions` stay lazy, because running user accessors
   // from a cleanup path must never turn a successful build into a rejection.
-  // The whole release is best-effort: one failure must not strand the rest.
   #releaseOptionBoxes(): void {
     if (!shouldEagerlyFreeOutputs() || this.#retainedOptionBoxes.size === 0) {
       return;
@@ -265,11 +259,7 @@ export class PluginContextData {
       }
     }
     for (const box of this.#retainedOptionBoxes) {
-      try {
-        box.dropInner();
-      } catch {
-        // Same best-effort contract as above.
-      }
+      box.dropInner();
     }
     this.#retainedOptionBoxes.clear();
   }

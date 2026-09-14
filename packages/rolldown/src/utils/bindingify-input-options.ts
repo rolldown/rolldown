@@ -21,6 +21,7 @@ import type { OutputOptions } from '../options/output-options';
 import type { Plugin, RolldownPlugin } from '../plugin';
 import { bindingifyPlugin, type BuildCallbackRunner } from '../plugin/bindingify-plugin';
 import type { PluginContextData } from '../plugin/plugin-context-data';
+import { wrapOptionalBuildCallback } from './bindingify-output-options';
 import type { CloseCallbackScope } from './close-callback-scope';
 import { arraify } from './misc';
 import { normalizedStringOrRegex } from './normalize-string-or-regex';
@@ -395,29 +396,18 @@ function bindingifyTreeshakeOptions(
     ];
   } else {
     // The function form runs once per module.
-    normalizedConfig.moduleSideEffects =
-      typeof config.moduleSideEffects === 'function'
-        ? wrapBuildCallback(
-            measureIfFunction(
-              timings,
-              INPUT_OPTIONS_OWNER,
-              'treeshake.moduleSideEffects',
-              config.moduleSideEffects,
-            ),
-            runBuildCallback,
-          )
-        : config.moduleSideEffects;
+    normalizedConfig.moduleSideEffects = wrapOptionalBuildCallback(
+      measureIfFunction(
+        timings,
+        INPUT_OPTIONS_OWNER,
+        'treeshake.moduleSideEffects',
+        config.moduleSideEffects,
+      ),
+      runBuildCallback,
+    );
   }
 
   return normalizedConfig;
-}
-
-function wrapBuildCallback<Args extends unknown[], Result>(
-  callback: (...args: Args) => Result,
-  runBuildCallback?: BuildCallbackRunner,
-): (...args: Args) => Result {
-  if (!runBuildCallback) return callback;
-  return (...args) => runBuildCallback(() => callback(...args));
 }
 
 function bindingifyMakeAbsoluteExternalsRelative(

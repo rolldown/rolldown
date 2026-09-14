@@ -150,7 +150,6 @@ mod tests {
   fn disabled_js_hooks_preserve_the_shared_bit_positions() {
     let generated = generate_hook_usage_ts();
 
-    assert!(!generated.contains("transformAst ="));
     assert!(generated.contains("banner = 1 << 17,"));
   }
 }

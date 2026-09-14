@@ -1,7 +1,6 @@
 import {
   emnapiAsyncWorkPlugin as __emnapiAsyncWorkPlugin,
   emnapiTSFNPlugin as __emnapiTSFNPlugin,
-  getDefaultContext as __emnapiGetDefaultContext,
   instantiateNapiModule as __emnapiInstantiateNapiModule,
   WASI as __WASI,
 } from '@napi-rs/wasm-runtime'
@@ -335,9 +334,8 @@ function __registerManagedCurrentThreadTaskHost(__binding, __captureDisposer) {
 }
 
 function __registerManagedTimerHost(__binding, __captureDisposer) {
-  const __setTimeoutHost = globalThis.setTimeout?.bind(globalThis)
-  const __clearTimeoutHost = globalThis.clearTimeout?.bind(globalThis)
-  if (!__setTimeoutHost || !__clearTimeoutHost) return
+  const __setTimeoutHost = globalThis.setTimeout.bind(globalThis)
+  const __clearTimeoutHost = globalThis.clearTimeout.bind(globalThis)
 
   const __getContractVersion = Reflect.get(
     __binding,
@@ -2017,10 +2015,7 @@ function __createManagedContext() {
       __captureListenerInstalled = true
     }
     __emnapiContext = __emnapiCreateContext({ autoDestroy: false })
-    // The emnapi v2 runtime context exposes `features`; the v1 `feature`
-    // name is kept as a fallback for harnesses/mocks that predate the
-    // emnapi v2 migration.
-    ;(__emnapiContext.features ?? __emnapiContext.feature).Buffer = Buffer
+    __emnapiContext.features.Buffer = Buffer
     __emnapiContext.suppressDestroy()
   } catch (__error) {
     __setupFailed = true
@@ -2110,8 +2105,7 @@ function __createManagedContext() {
 async function __instantiate(
   __wasmInput,
   __options = {},
-  __emnapiContext = __emnapiGetDefaultContext(),
-  __claimMemory = false,
+  __emnapiContext,
 ) {
   const __module = await __wasmInput
   __validateModule(__module)
@@ -2134,7 +2128,7 @@ async function __instantiate(
   __validateMemory(__wasmMemory)
   // A failed instantiation may already have mutated memory before throwing.
   // Claim before entering emnapi and never make caller memory reusable.
-  if (__claimMemory) __claimManagedMemoryForAttempt(__wasmMemory)
+  __claimManagedMemoryForAttempt(__wasmMemory)
 
   const __wasi = new __WASI({ version: 'preview1' })
   const { napiModule: __napiModule } = await __emnapiInstantiateNapiModule(__module, {
@@ -2145,12 +2139,7 @@ async function __instantiate(
     // JavaScript implementations through the emnapi plugins. @napi-rs/wasm-runtime
     // exports them but never defaults them, so omitting them is what makes
     // instantiation fail with a LinkError naming napi_create_threadsafe_function.
-    // The typeof guard is only for harnesses that replace the import block with
-    // injected dependencies and so leave the plugin bindings undeclared — a real
-    // named import can never be undefined, a missing export is a link-time error.
-    // Any such harness that instantiates a real basic-archive wasm has to inject
-    // the plugins itself; the empty fallback just avoids a ReferenceError.
-    plugins: typeof __emnapiAsyncWorkPlugin === 'undefined' ? [] : [__emnapiAsyncWorkPlugin, __emnapiTSFNPlugin],
+    plugins: [__emnapiAsyncWorkPlugin, __emnapiTSFNPlugin],
     wasi: __wasi,
     overwriteImports(importObject) {
       importObject.env = {
@@ -2188,7 +2177,7 @@ export async function createInstance(__wasmInput, __options) {
   let __exports
   let __memory
   try {
-    const __instance = await __instantiate(__module, __options, __emnapiContext, true)
+    const __instance = await __instantiate(__module, __options, __emnapiContext)
     __exports = __instance.exports
     __memory = __instance.memory
   } catch (__error) {
@@ -2365,6 +2354,3 @@ export async function createInstance(__wasmInput, __options) {
     },
   })
 }
-
-/** Compatibility alias for the managed factory. */
-export const instantiate = createInstance

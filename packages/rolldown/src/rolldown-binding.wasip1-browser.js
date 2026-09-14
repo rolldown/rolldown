@@ -699,86 +699,84 @@ try {
   ])
   __assertHostRegistrationActive(__taskHostRegistration, 'task')
 
-  const __setTimeoutHost = globalThis.setTimeout?.bind(globalThis)
-  const __clearTimeoutHost = globalThis.clearTimeout?.bind(globalThis)
-  if (__setTimeoutHost && __clearTimeoutHost) {
-    const __MAX_HOST_TIMEOUT_MS = 2147483647
-    const __activeTimers = new Map()
-    const __armTimer = (__id, __timer) => {
-      const __delay = Math.min(__timer.remainingMs, __MAX_HOST_TIMEOUT_MS)
-      __timer.handle = __setTimeoutHost(() => {
-        if (__activeTimers.get(__id) !== __timer) return
-        __timer.remainingMs -= __delay
-        if (__timer.remainingMs > 0) {
+  const __setTimeoutHost = globalThis.setTimeout.bind(globalThis)
+  const __clearTimeoutHost = globalThis.clearTimeout.bind(globalThis)
+  const __MAX_HOST_TIMEOUT_MS = 2147483647
+  const __activeTimers = new Map()
+  const __armTimer = (__id, __timer) => {
+    const __delay = Math.min(__timer.remainingMs, __MAX_HOST_TIMEOUT_MS)
+    __timer.handle = __setTimeoutHost(() => {
+      if (__activeTimers.get(__id) !== __timer) return
+      __timer.remainingMs -= __delay
+      if (__timer.remainingMs > 0) {
+        try {
+          __armTimer(__id, __timer)
+        } catch (__error) {
+          __activeTimers.delete(__id)
+          __timer.reject(__error)
+        }
+        return
+      }
+      __activeTimers.delete(__id)
+      __timer.resolve()
+    }, __delay)
+  }
+  const __cancelTimer = (__timer) => {
+    try {
+      if (__timer.handle !== undefined) {
+        __clearTimeoutHost(__timer.handle)
+      }
+    } catch {
+      // Rust invokes this callback through a non-catching TSFN. Contain
+      // host cancellation failures at the JavaScript boundary.
+    } finally {
+      __timer.resolve()
+    }
+  }
+  const __timerHostRegistration = __readHostRegistration(
+    Reflect.apply(
+      __reserveCurrentThreadHostRegistration,
+      __rolldownBinding,
+      [],
+    ),
+    'timer',
+  )
+  __browserTimerHostRegistration = __timerHostRegistration
+  Reflect.apply(__registerTimerHost, __rolldownBinding, [
+    __timerHostRegistration.high,
+    __timerHostRegistration.low,
+    (__id, __ms) => {
+      const __previous = __activeTimers.get(__id)
+      if (__previous) {
+          __activeTimers.delete(__id)
+          __cancelTimer(__previous)
+        }
+        return new Promise((__resolve, __reject) => {
+          const __timer = {
+            handle: undefined,
+            remainingMs: Math.max(__ms, 0),
+            reject: __reject,
+            resolve: __resolve,
+          }
+          __activeTimers.set(__id, __timer)
           try {
             __armTimer(__id, __timer)
           } catch (__error) {
-            __activeTimers.delete(__id)
-            __timer.reject(__error)
+            if (__activeTimers.get(__id) === __timer) {
+              __activeTimers.delete(__id)
+            }
+            __reject(__error)
           }
-          return
-        }
+        })
+      },
+      (__id) => {
+        const __timer = __activeTimers.get(__id)
+        if (!__timer) return
         __activeTimers.delete(__id)
-        __timer.resolve()
-      }, __delay)
-    }
-    const __cancelTimer = (__timer) => {
-      try {
-        if (__timer.handle !== undefined) {
-          __clearTimeoutHost(__timer.handle)
-        }
-      } catch {
-        // Rust invokes this callback through a non-catching TSFN. Contain
-        // host cancellation failures at the JavaScript boundary.
-      } finally {
-        __timer.resolve()
-      }
-    }
-    const __timerHostRegistration = __readHostRegistration(
-      Reflect.apply(
-        __reserveCurrentThreadHostRegistration,
-        __rolldownBinding,
-        [],
-      ),
-      'timer',
-    )
-    __browserTimerHostRegistration = __timerHostRegistration
-    Reflect.apply(__registerTimerHost, __rolldownBinding, [
-      __timerHostRegistration.high,
-      __timerHostRegistration.low,
-      (__id, __ms) => {
-        const __previous = __activeTimers.get(__id)
-        if (__previous) {
-            __activeTimers.delete(__id)
-            __cancelTimer(__previous)
-          }
-          return new Promise((__resolve, __reject) => {
-            const __timer = {
-              handle: undefined,
-              remainingMs: Math.max(__ms, 0),
-              reject: __reject,
-              resolve: __resolve,
-            }
-            __activeTimers.set(__id, __timer)
-            try {
-              __armTimer(__id, __timer)
-            } catch (__error) {
-              if (__activeTimers.get(__id) === __timer) {
-                __activeTimers.delete(__id)
-              }
-              __reject(__error)
-            }
-          })
-        },
-        (__id) => {
-          const __timer = __activeTimers.get(__id)
-          if (!__timer) return
-          __activeTimers.delete(__id)
-          __cancelTimer(__timer)
-        },
-      ])
-    __assertHostRegistrationActive(__timerHostRegistration, 'timer')
-  }
+        __cancelTimer(__timer)
+      },
+    ])
+  __assertHostRegistrationActive(__timerHostRegistration, 'timer')
 }
 /* ROLLDOWN_CURRENT_THREAD_HOST_BOOTSTRAP_END */
 /* ROLLDOWN_BROWSER_INITIALIZATION_GUARD_END */
@@ -842,7 +840,6 @@ export const moduleRunnerTransform = __napiModule.exports.moduleRunnerTransform
 export const moduleRunnerTransformSync = __napiModule.exports.moduleRunnerTransformSync
 export const transform = __napiModule.exports.transform
 export const transformSync = __napiModule.exports.transformSync
-export const BindingAsyncRuntimeLease = __napiModule.exports.BindingAsyncRuntimeLease
 export const BindingBundleEndEventData = __napiModule.exports.BindingBundleEndEventData
 export const BindingBundleErrorEventData = __napiModule.exports.BindingBundleErrorEventData
 export const BindingBundler = __napiModule.exports.BindingBundler
@@ -870,7 +867,6 @@ export const BindingWatcherEvent = __napiModule.exports.BindingWatcherEvent
 export const ParallelJsPluginRegistry = __napiModule.exports.ParallelJsPluginRegistry
 export const TraceSubscriberGuard = __napiModule.exports.TraceSubscriberGuard
 export const TsconfigCache = __napiModule.exports.TsconfigCache
-export const acquireAsyncRuntime = __napiModule.exports.acquireAsyncRuntime
 export const BindingAttachDebugInfo = __napiModule.exports.BindingAttachDebugInfo
 export const BindingBuiltinPluginName = __napiModule.exports.BindingBuiltinPluginName
 export const BindingChunkModuleOrderBy = __napiModule.exports.BindingChunkModuleOrderBy

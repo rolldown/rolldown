@@ -58,5 +58,3 @@ export function createInstance(
   module: WebAssembly.Module | PromiseLike<WebAssembly.Module>,
   options?: DeferredInstanceOptions,
 ): Promise<DeferredRolldownInstance>;
-
-export const instantiate: typeof createInstance;

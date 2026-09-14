@@ -1493,15 +1493,6 @@ export interface TypeScriptOptions {
   rewriteImportExtensions?: 'rewrite' | 'remove' | boolean
 }
 
-/**
- * A compatibility no-op: the async runtime's lifecycle follows the N-API
- * environment, so `release()` does nothing. Kept because the generated WASI
- * loaders still acquire a lease at import and release it at teardown.
- */
-export declare class BindingAsyncRuntimeLease {
-  release(): void
-}
-
 export declare class BindingBundleEndEventData {
   output: string
   duration: number
@@ -1910,12 +1901,6 @@ export declare class TsconfigCache {
   /** Get the number of cached entries. */
   size(): number
 }
-
-/**
- * Acquire an async runtime lifecycle lease. See `BindingAsyncRuntimeLease`:
- * the lease is a no-op.
- */
-export declare function acquireAsyncRuntime(): Promise<BindingAsyncRuntimeLease>
 
 export interface AliasItem {
   find: string

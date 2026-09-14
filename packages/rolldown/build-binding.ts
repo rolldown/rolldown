@@ -102,16 +102,15 @@ function validateAsyncRuntimeHostExports(): void {
     ['rolldown-binding.wasip1-browser.js', 'esm'],
   ] as const;
   for (const [name, format] of loaders) {
-    const loaderPath = join(sourceDir, name);
-    if (!existsSync(loaderPath)) continue;
-    assertAsyncRuntimeHostExports(readFileSync(loaderPath, 'utf8'), format);
+    assertAsyncRuntimeHostExports(readFileSync(join(sourceDir, name), 'utf8'), format);
   }
 }
 
 function configureWasiRustc(target: unknown): void {
   if (target !== WASI_THREADS_TARGET && target !== WASI_SINGLE_TARGET) return;
 
-  // See internal-docs/async-runtime/implementation.md.
+  // RUSTC must be the real toolchain binary, not the rustup shim, so the wasi
+  // link step can locate crt1-reactor.o (same as reusable-wasi.yml).
   const rustcPath = resolveRustcPath();
   if (!existsSync(rustcPath)) {
     throw new Error(`Could not resolve the real rustc executable at ${rustcPath}`);
@@ -184,7 +183,6 @@ function patchBindingTargetMetadata(): void {
     patchNativeBindingLoader(readFileSync(nativeBindingPath, 'utf8')),
   );
   for (const { path: bindingPath, target: wasiTarget } of wasiBindings) {
-    if (!existsSync(bindingPath)) continue;
     writeFileSync(
       bindingPath,
       patchWasiBindingLoader(readFileSync(bindingPath, 'utf8'), wasiTarget),
@@ -200,7 +198,6 @@ function patchWasiBindingContextLifecycles(): void {
     join(sourceDir, 'rolldown-binding.wasip1.cjs'),
     join(sourceDir, 'rolldown-binding.wasip1-browser.js'),
   ]) {
-    if (!existsSync(bindingPath)) continue;
     writeFileSync(bindingPath, patchWasiBindingContextLifecycle(readFileSync(bindingPath, 'utf8')));
   }
 }

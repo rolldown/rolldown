@@ -126,8 +126,6 @@
     "build-native:memory-profile": "pnpm run build-binding:profile --features default_global_allocator && pnpm run build-js-glue",
     "build-wasi:debug": "TARGET='rolldown-wasi' pnpm run --sequential '/^build-(binding|binding:wasi|node)$/'",
     "build-wasi:release": "TARGET='rolldown-wasi' pnpm run --sequential '/^build-(binding|binding:wasi:release|node)$/'",
-    "build-wasi-single:debug": "oxnode ./build-binding.ts --target wasm32-wasip1 --no-default-features --features async-runtime && TARGET='rolldown-wasi-single' node --enable-source-maps --import @oxc-node/core/register -C dev ./build.ts",
-    "build-wasi-single:release": "oxnode ./build-binding.ts --profile release-wasi --target wasm32-wasip1 --no-default-features --features async-runtime && TARGET='rolldown-wasi-single' node --enable-source-maps --import @oxc-node/core/register -C dev ./build.ts",
     "build-browser-pkg:debug": "TARGET='browser' pnpm run --sequential '/^build-(binding:wasi-single|node)$/'",
     "build-browser-pkg:release": "TARGET='browser' pnpm run --sequential '/^build-(binding:wasi-single:release|node)$/'",
     "# Scrips for docs #": "_",

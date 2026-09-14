@@ -68,7 +68,6 @@ const WASI_EXIT_LISTENER_HELPER = 'function __registerWasiExitListener() {';
 // lands before the whole block so it precedes the WASI instance construction.
 const WASI_NODE_HELPER_ANCHOR =
   'const __cwd = process.cwd()\nconst __rootDir = __nodePath.parse(__cwd).root\n';
-const WASI_NODE_ENV_ASSIGNMENT = 'env: process.env,';
 const WASI_NODE_WORKER_HELPER_SIGNATURES = [
   'function __getWasiWorkerExecArgv() {',
   'function __isInvalidWasiWorkerExecArgv(errorMessage, argument) {',
@@ -96,10 +95,6 @@ const WASI_ESM_TARGET_PATTERN = new RegExp(
 );
 
 export function patchNativeBindingLoader(source: string): string {
-  if (source.includes(`module.exports.${LOADED_BINDING_TARGET_EXPORT} = loadedBindingTarget`)) {
-    return source;
-  }
-
   source = replaceExactly(
     source,
     NATIVE_BINDING_ANCHOR,
@@ -251,9 +246,8 @@ export function patchWasiNodeWorkerExecArgv(source: string): string {
 
 /**
  * Replace upstream's async-work-pool IIFE (`@napi-rs/cli` <= 3.9.1 passes any
- * positive env value through unclamped and non-integer, and never tells the
- * WASI guest or its workers which size won) with one normalized value that is
- * handed to emnapi, the WASI instance env, and every spawned worker env.
+ * positive env value through unclamped and non-integer) with one normalized
+ * value handed to emnapi.
  */
 export function patchWasiNodeAsyncWorkPoolSize(source: string): string {
   if (source.includes('const __rolldownAsyncWorkPoolSize =')) {
@@ -274,10 +268,6 @@ export function patchWasiNodeAsyncWorkPoolSize(source: string): string {
 const __rolldownAsyncWorkPoolSize = __normalizeRolldownAsyncWorkPoolSize(
   process.env.NAPI_RS_ASYNC_WORK_POOL_SIZE ?? process.env.UV_THREADPOOL_SIZE,
 )
-const __rolldownWasiEnv = {
-  ...process.env,
-  NAPI_RS_ASYNC_WORK_POOL_SIZE: String(__rolldownAsyncWorkPoolSize),
-}
 
 `;
   source = replaceExactly(
@@ -294,14 +284,7 @@ const __rolldownWasiEnv = {
     1,
     'WASI async-work-pool option',
   );
-  // One environment on the WASI instance, one inside __createWasiWorker.
-  const environmentCount = countOccurrences(source, WASI_NODE_ENV_ASSIGNMENT);
-  if (environmentCount !== 2) {
-    throw new Error(
-      `Unexpected NAPI-RS loader template for WASI runtime and worker environments: expected 2 anchors, found ${environmentCount}`,
-    );
-  }
-  return source.replaceAll(WASI_NODE_ENV_ASSIGNMENT, 'env: __rolldownWasiEnv,');
+  return source;
 }
 
 /**

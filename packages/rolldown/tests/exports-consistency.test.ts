@@ -25,12 +25,6 @@ describe('package.json exports consistency', () => {
       browser: './dist/workerd.browser.mjs',
       default: './dist/workerd.mjs',
     });
-    expect(browserPkg.exports['./workerd/wasm']).toEqual({
-      types: './dist/workerd-wasm.d.ts',
-      workerd: './dist/rolldown-binding.wasm32-wasip1.wasm',
-      default: './dist/rolldown-binding.wasm32-wasip1.wasm',
-    });
-    expect(browserPkg.exports['./workerd/wasm.wasm']).toEqual(browserPkg.exports['./workerd/wasm']);
   });
 
   test('browser package.json imports keys match normal package imports keys except parallel plugin worker', () => {

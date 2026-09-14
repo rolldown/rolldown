@@ -20,9 +20,6 @@ export type WorkerdRuntimeStats = DeferredRuntimeStats;
 
 export { createInstance, WORKERD_WASM_MEMORY };
 
-/** Compatibility alias for the managed factory. */
-export const instantiate: typeof createInstance = createInstance;
-
 /**
  * Report loader-local managed-instance counts and the declared initial Wasm
  * address space. Use platform memory telemetry for committed memory and quota

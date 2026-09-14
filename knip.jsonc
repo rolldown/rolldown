@@ -60,11 +60,8 @@
       ],
     },
     "packages/browser": {
-      // dist bundles these runtimes, so nothing imports them by name. They stay
-      // declared on purpose: the .wasm links the emnapi 2.0.0-alpha C archives,
-      // so a consumer resolving a v1 runtime is an ABI mismatch. These pins are
-      // the ABI line, and scripts/wasi/check-workerd-packed-consumer.mjs asserts
-      // the packed manifest still carries them at these exact versions.
+      // bundled into dist, so never imported by name; kept declared as the emnapi
+      // ABI pin (see the pnpm-workspace.yaml catalog comment).
       "ignoreDependencies": ["@emnapi/core", "@emnapi/runtime", "@napi-rs/wasm-runtime"],
     },
     "packages/rolldown/tests": {

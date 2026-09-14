@@ -46,13 +46,11 @@ catalog:
   '@emnapi/runtime': 2.0.0-alpha.4
   '@jridgewell/trace-mapping': ^0.3.31
   # floor pin: `napi.rootPublisher` (napi-rs#3450) is honored only from 3.8.5, and
-  # pre-publish validation needs it. 3.9.0 peer-requires the same
-  # `^1.7.1 || ^2.0.0-alpha.4` emnapi line as 3.8.6, so it moves with the pins
-  # above. A cli bump can reshape the generated loaders — see the contract
+  # pre-publish validation needs it. The cli peer-requires the same
+  # `^1.7.1 || ^2.0.0-alpha.4` emnapi line as the pins above, so it moves with
+  # them. A cli bump can reshape the generated loaders — see the contract
   # snippets in `packages/rolldown/generate-workerd-loader.ts`.
   '@napi-rs/cli': ^3.9.0
-  # 1.2.3 is this branch's tested floor; main's `~1.2.2` resolves to the same
-  # 1.2.x head.
   '@napi-rs/wasm-runtime': ~1.2.3
   '@oxc-node/cli': ^0.1.0
   '@oxc-node/core': ^0.1.0
@@ -80,7 +78,7 @@ catalog:
   consola: ^3.4.2
   dedent: ^1.5.3
   diff: ^9.0.0
-  # Shadowed by the `overrides.emnapi` pin above, which rewrites the recorded specifier so `catalog:` never resolves here; kept as the fallback for the day that override is dropped.
+  # `overrides.emnapi` above pins the same version; keep both in sync.
   emnapi: 2.0.0-alpha.4
   esbuild: ^0.28.0
   estree-toolkit: ^1.7.8

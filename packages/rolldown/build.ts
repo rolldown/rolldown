@@ -281,9 +281,9 @@ async function bundleManagedWorkerdLoaders() {
   });
 }
 
-// Published browser consumers do not inherit the workspace's pnpm patches, so
-// bundle the generated loaders last: every package-root condition must embed
-// the exact hardened emnapi runtime the release was built with.
+// Published consumers do not inherit the workspace `overrides` pin, so bundle
+// the generated loaders last: every package-root condition must embed the exact
+// emnapi runtime the release was built with.
 async function bundleBrowserWasiLoaders() {
   await build({
     input: bindingFileWasiBrowser,

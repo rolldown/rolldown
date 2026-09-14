@@ -22,13 +22,9 @@ import { rewriteThreadlessMemoryDescriptor } from '../generate-workerd-loader';
 import type { DeferredRolldownInstance } from '../src/rolldown-binding.wasip1-deferred.js';
 // @ts-ignore This focused integration test intentionally reaches the package source outside the test rootDir.
 import * as workerd from '../src/workerd';
-// @ts-ignore This focused unit test intentionally reaches the package source outside the test rootDir.
-import { registerWorkerdCurrentThreadTaskHost } from '../src/workerd-task-host';
-// @ts-ignore This focused unit test intentionally reaches the package source outside the test rootDir.
-import { registerWorkerdTimerHost } from '../src/workerd-timer-host';
 import { describe, expect, test, vi } from 'vitest';
 
-const { createInstance, getWorkerdRuntimeStats, instantiate, WORKERD_WASM_MEMORY } = workerd;
+const { createInstance, getWorkerdRuntimeStats, WORKERD_WASM_MEMORY } = workerd;
 
 const wasmPath = new URL('../src/rolldown-binding.wasm32-wasip1.wasm', import.meta.url);
 const wasiTest = test.runIf(existsSync(wasmPath));
@@ -54,10 +50,6 @@ const privateManagedHostExports = [
   'reserveCurrentThreadHostRegistration',
   'unregisterCurrentThreadTaskHost',
   'unregisterTimerHost',
-] as const;
-const removedTaskHostExports = [
-  'cancelCurrentThreadRuntimeTaskDispatch',
-  'driveCurrentThreadRuntimeTasks',
 ] as const;
 
 let nextMockHostRegistration = 1;
@@ -102,34 +94,6 @@ function installMockHostRegistrationControls(binding: Record<PropertyKey, unknow
   };
   install('registerCurrentThreadTaskHost', 'unregisterCurrentThreadTaskHost');
   install('registerTimerHost', 'unregisterTimerHost');
-}
-
-function createWorkerdTimerHostBinding(
-  registerTimerHost: (schedule: unknown, cancel: unknown) => void,
-  options: {
-    registration?: { high: number; low: number };
-    unregisterTimerHost?: (high: number, low: number) => void;
-  } = {},
-) {
-  const registration = options.registration ?? { high: 0, low: nextMockHostRegistration++ };
-  let active = false;
-  return {
-    getCurrentThreadTaskHostContractVersion: () => 4,
-    isCurrentThreadHostRegistrationActive: (high: number, low: number) =>
-      active && high === registration.high && low === registration.low,
-    registerTimerHost(high: number, low: number, schedule: unknown, cancel: unknown) {
-      if (high !== registration.high || low !== registration.low) {
-        throw new TypeError('Unexpected timer host registration');
-      }
-      registerTimerHost(schedule, cancel);
-      active = true;
-    },
-    reserveCurrentThreadHostRegistration: () => registration,
-    unregisterTimerHost(high: number, low: number) {
-      options.unregisterTimerHost?.(high, low);
-      active = false;
-    },
-  };
 }
 
 async function readCurrentThreadHostBootstrap(loaderPath: URL): Promise<string> {
@@ -182,7 +146,12 @@ ${source}`,
 async function loadDeferredLoaderWithDependencies(dependencies: object) {
   const source = await readFile(deferredLoaderPath, 'utf8');
   const dependencyKey = `__rolldownWorkerdLoaderTest${Date.now()}${Math.random()}`;
-  const testDependencies = { Buffer: NodeBuffer, ...dependencies } as Record<PropertyKey, unknown>;
+  const testDependencies = {
+    Buffer: NodeBuffer,
+    emnapiAsyncWorkPlugin: undefined,
+    emnapiTSFNPlugin: undefined,
+    ...dependencies,
+  } as Record<PropertyKey, unknown>;
   const createContext = Reflect.get(testDependencies, 'createContext');
   if (typeof createContext === 'function') {
     Reflect.set(testDependencies, 'createContext', (...args: unknown[]) => {
@@ -190,9 +159,9 @@ async function loadDeferredLoaderWithDependencies(dependencies: object) {
       if (
         context &&
         (typeof context === 'object' || typeof context === 'function') &&
-        !Reflect.has(context, 'feature')
+        !Reflect.has(context, 'features')
       ) {
-        Reflect.set(context, 'feature', {});
+        Reflect.set(context, 'features', {});
       }
       return context;
     });
@@ -216,7 +185,8 @@ async function loadDeferredLoaderWithDependencies(dependencies: object) {
     .replace(
       /import \{[\s\S]*?\} from '@napi-rs\/wasm-runtime'\nimport \{ createContext as __emnapiCreateContext \} from '@emnapi\/runtime'\n/,
       `const {
-  getDefaultContext: __emnapiGetDefaultContext,
+  emnapiAsyncWorkPlugin: __emnapiAsyncWorkPlugin,
+  emnapiTSFNPlugin: __emnapiTSFNPlugin,
   instantiateNapiModule: __emnapiInstantiateNapiModule,
   WASI: __WASI,
   createContext: __emnapiCreateContext,
@@ -310,7 +280,6 @@ async function getDeferredInitializationFailure(primaryError: unknown): Promise<
   };
   const loader = await loadDeferredLoaderWithDependencies({
     createContext: () => context,
-    getDefaultContext: () => context,
     instantiateNapiModule: () => Promise.reject(primaryError),
     WASI: class {},
   });
@@ -347,15 +316,6 @@ function expectCleanupFailure(
 }
 
 describe.sequential('managed workerd loader', () => {
-  test('keeps the deferred Buffer import bundleable for workerd', async () => {
-    const source = await readFile(deferredLoaderPath, 'utf8');
-
-    expect(source).toContain(
-      "// oxlint-disable-next-line unicorn/prefer-node-protocol -- workerd builds alias this bare specifier to the npm polyfill\nimport { Buffer } from 'buffer'\n",
-    );
-    expect(source).not.toContain("from 'node:buffer'");
-  });
-
   test.each([
     {
       name: 'threadless target',
@@ -408,10 +368,6 @@ describe.sequential('managed workerd loader', () => {
     {
       name: 'direct declaration',
       prefix: 'const ',
-    },
-    {
-      name: 'deferred lifecycle assignment',
-      prefix: '',
     },
   ])('rewrites the $name memory descriptor', ({ prefix }) => {
     const source = `${prefix}__wasmMemory = new WebAssembly.Memory({
@@ -497,91 +453,6 @@ describe.sequential('managed workerd loader', () => {
 
     expect(bindingSource).not.toContain('__rolldownTest');
     expect(declarationSource).not.toContain('__rolldownTest');
-  });
-
-  test('hardens the generated browser initialization lifecycle', () => {
-    const source = `const __wasmMemory = new WebAssembly.Memory({
-  initial: 16384,
-  maximum: 65536,
-})
-
-let __emnapiContext
-let __napiInstance
-
-function __rollbackWasiInitialization() {
-  return []
-}
-
-function __attachCleanupErrors(error, cleanupErrors) {
-  return error
-}
-
-function __publishWasiDispose(exports) {}
-
-let __wasiModule
-let __napiModule
-
-try {
-  __emnapiContext = __emnapiCreateContext({ autoDestroy: false })
-  __emnapiContext.suppressDestroy()
-    __emnapiContext.features.Buffer = Buffer
-
-  ;({
-    instance: __napiInstance,
-    module: __wasiModule,
-    napiModule: __napiModule,
-  } = await __emnapiInstantiateNapiModule(__wasmFile, {}))
-  __publishWasiDispose(__napiModule.exports)
-} catch (error) {
-  const cleanupErrors = await __rollbackWasiInitialization()
-  throw __attachCleanupErrors(error, cleanupErrors)
-}
-export default __napiModule.exports
-`;
-
-    const hardened = injectCurrentThreadHostBootstrap(
-      source,
-      'rolldown-binding.wasip1-browser.js',
-      'export default __napiModule.exports',
-      true,
-      {
-        initialMemory: 1024,
-        maximumMemory: 65536,
-      },
-    );
-
-    expect(hardened).toContain(browserInitializationGuardStart);
-    expect(hardened).toContain(browserInitializationGuardEnd);
-    expect(hardened).toContain(currentThreadBootstrapStart);
-    expect(hardened).toContain(currentThreadBootstrapEnd);
-    expect(hardened).toContain('let __browserTaskHostRegistration');
-    expect(hardened).toContain('let __browserTimerHostRegistration');
-    expect(hardened).toContain('initial: 1024');
-    expect(hardened).toContain('__emnapiContext.features.Buffer = Buffer');
-    expect(hardened).toContain('Threadless browser timer-host cleanup failed');
-    expect(hardened).toContain('Threadless browser task-host cleanup failed');
-    expect(hardened).toContain('const __cleanupSync = (__operation, __message)');
-    expect(hardened).toContain('const cleanupErrors = await __rollbackWasiInitialization()');
-    expect(hardened).toContain(
-      'throw __attachCleanupErrors(error, __hostCleanupErrors.concat(cleanupErrors))',
-    );
-    expect(hardened).toContain('getCurrentThreadTaskHostContractVersion');
-    expect(hardened).toContain('__taskHostContractVersion !== 4');
-    for (const removedExport of removedTaskHostExports) {
-      expect(hardened).not.toContain(removedExport);
-    }
-    expect(
-      injectCurrentThreadHostBootstrap(
-        hardened,
-        'rolldown-binding.wasip1-browser.js',
-        'export default __napiModule.exports',
-        true,
-        {
-          initialMemory: 1024,
-          maximumMemory: 65536,
-        },
-      ),
-    ).toBe(hardened);
   });
 
   test('hardens the generated napi-rs Node initialization lifecycle', async () => {
@@ -706,15 +577,10 @@ function __rollbackWasiInitialization() {`,
     ).toThrow(/Unexpected generated Node lifecycle contract/);
   });
 
-  test('exposes createInstance and instantiate through the same managed host path', () => {
-    expect(createInstance).toBe(instantiate);
-  });
-
   test('does not create a managed context before the module promise settles', async () => {
     const createContext = vi.fn();
     const loader = await loadDeferredLoaderWithDependencies({
       createContext,
-      getDefaultContext: vi.fn(),
       instantiateNapiModule: vi.fn(),
       WASI: class {},
     });
@@ -735,13 +601,12 @@ function __rollbackWasiInitialization() {`,
 
   test('injects the imported Buffer constructor into managed emnapi contexts', async () => {
     const context = {
-      feature: {} as { Buffer?: typeof NodeBuffer },
+      features: {} as { Buffer?: typeof NodeBuffer },
       suppressDestroy() {},
       destroy() {},
     };
     const loader = await loadDeferredLoaderWithDependencies({
       createContext: () => context,
-      getDefaultContext: () => context,
       instantiateNapiModule: async () => ({
         napiModule: {
           exports: {
@@ -759,7 +624,7 @@ function __rollbackWasiInitialization() {`,
       maximumMemoryPages: 1,
     });
     try {
-      expect(context.feature.Buffer).toBe(NodeBuffer);
+      expect(context.features.Buffer).toBe(NodeBuffer);
     } finally {
       instance.dispose();
     }
@@ -978,7 +843,6 @@ function __rollbackWasiInitialization() {`,
     };
     const loader = await loadDeferredLoaderWithDependencies({
       createContext: () => context,
-      getDefaultContext: () => context,
       instantiateNapiModule: async () => ({ napiModule: { exports: rawBinding } }),
       WASI: class {},
     });
@@ -1030,7 +894,6 @@ function __rollbackWasiInitialization() {`,
     };
     const loader = await loadDeferredLoaderWithDependencies({
       createContext: () => context,
-      getDefaultContext: () => context,
       instantiateNapiModule: async () => ({ napiModule: { exports: rawBinding } }),
       WASI: class {},
     });
@@ -1069,7 +932,6 @@ function __rollbackWasiInitialization() {`,
     };
     const loader = await loadDeferredLoaderWithDependencies({
       createContext: () => context,
-      getDefaultContext: () => context,
       instantiateNapiModule: async () => ({
         napiModule: {
           exports: {
@@ -1122,9 +984,6 @@ function __rollbackWasiInitialization() {`,
         },
         destroy,
       }),
-      getDefaultContext: () => {
-        throw new Error('default context should not be used');
-      },
       instantiateNapiModule: vi.fn(),
       WASI: class {},
     });
@@ -1151,9 +1010,6 @@ function __rollbackWasiInitialization() {`,
           throw cleanupErrors.shift();
         },
       }),
-      getDefaultContext: () => {
-        throw new Error('default context should not be used');
-      },
       instantiateNapiModule: vi.fn(),
       WASI: class {},
     });
@@ -1230,9 +1086,6 @@ function __rollbackWasiInitialization() {`,
             destroy,
           };
         },
-        getDefaultContext: () => {
-          throw new Error('default context should not be used');
-        },
         instantiateNapiModule: vi.fn(),
         WASI: class {},
       });
@@ -1260,8 +1113,8 @@ function __rollbackWasiInitialization() {`,
       const module = await WebAssembly.compile(await readFile(wasmPath));
       const before = getWorkerdRuntimeStats();
       const [first, second] = await Promise.all([
-        instantiate(module),
-        instantiate(Promise.resolve(module)),
+        createInstance(module),
+        createInstance(Promise.resolve(module)),
       ]);
 
       expect(first.memory).not.toBe(second.memory);
@@ -1330,7 +1183,6 @@ function __rollbackWasiInitialization() {`,
     };
     const loader = await loadDeferredLoaderWithDependencies({
       createContext: () => context,
-      getDefaultContext: () => context,
       instantiateNapiModule: async (
         _module: WebAssembly.Module,
         options: { beforeInit: (input: { instance: { exports: object } }) => void },
@@ -1347,8 +1199,6 @@ function __rollbackWasiInitialization() {`,
     });
     const binding = instance.exports;
 
-    expect(loader.instantiate).toBe(loader.createInstance);
-    expect(loader).not.toHaveProperty('getDeferredInstanceBinding');
     for (const privateHostExport of privateManagedHostExports) {
       expect(loader).not.toHaveProperty(privateHostExport);
       expect(binding).not.toHaveProperty(privateHostExport);
@@ -1401,7 +1251,6 @@ function __rollbackWasiInitialization() {`,
     const context = { suppressDestroy() {}, destroy: vi.fn() };
     const loader = await loadDeferredLoaderWithDependencies({
       createContext: () => context,
-      getDefaultContext: () => context,
       instantiateNapiModule: async () => ({ napiModule: { exports: rawBinding } }),
       WASI: class {},
     });
@@ -1456,7 +1305,6 @@ function __rollbackWasiInitialization() {`,
     const context = { suppressDestroy() {}, destroy: vi.fn() };
     const loader = await loadDeferredLoaderWithDependencies({
       createContext: () => context,
-      getDefaultContext: () => context,
       instantiateNapiModule: async () => ({ napiModule: { exports: rawBinding } }),
       WASI: class {},
     });
@@ -1508,7 +1356,6 @@ function __rollbackWasiInitialization() {`,
     const context = { suppressDestroy() {}, destroy: vi.fn() };
     const loader = await loadDeferredLoaderWithDependencies({
       createContext: () => context,
-      getDefaultContext: () => context,
       instantiateNapiModule: async () => ({ napiModule: { exports: rawBinding } }),
       WASI: class {},
     });
@@ -1580,7 +1427,6 @@ function __rollbackWasiInitialization() {`,
     const context = { suppressDestroy() {}, destroy: vi.fn() };
     const loader = await loadDeferredLoaderWithDependencies({
       createContext: () => context,
-      getDefaultContext: () => context,
       instantiateNapiModule: async () => ({ napiModule: { exports: rawBinding } }),
       WASI: class {},
     });
@@ -1693,7 +1539,6 @@ function __rollbackWasiInitialization() {`,
     const context = { suppressDestroy() {}, destroy: vi.fn() };
     const loader = await loadDeferredLoaderWithDependencies({
       createContext: () => context,
-      getDefaultContext: () => context,
       instantiateNapiModule: async () => ({ napiModule: { exports: rawBinding } }),
       WASI: class {},
     });
@@ -1756,7 +1601,6 @@ function __rollbackWasiInitialization() {`,
     const context = { suppressDestroy() {}, destroy: vi.fn() };
     const loader = await loadDeferredLoaderWithDependencies({
       createContext: () => context,
-      getDefaultContext: () => context,
       instantiateNapiModule: async () => ({ napiModule: { exports: rawBinding } }),
       WASI: class {},
     });
@@ -1810,7 +1654,6 @@ function __rollbackWasiInitialization() {`,
     const context = { suppressDestroy() {}, destroy: vi.fn() };
     const loader = await loadDeferredLoaderWithDependencies({
       createContext: () => context,
-      getDefaultContext: () => context,
       instantiateNapiModule: async () => ({ napiModule: { exports: rawBinding } }),
       WASI: class {},
     });
@@ -1876,7 +1719,6 @@ function __rollbackWasiInitialization() {`,
     const context = { suppressDestroy() {}, destroy: vi.fn() };
     const loader = await loadDeferredLoaderWithDependencies({
       createContext: () => context,
-      getDefaultContext: () => context,
       instantiateNapiModule: async () => ({ napiModule: { exports: rawBinding } }),
       WASI: class {},
     });
@@ -1920,7 +1762,6 @@ function __rollbackWasiInitialization() {`,
     const context = { suppressDestroy() {}, destroy: vi.fn() };
     const loader = await loadDeferredLoaderWithDependencies({
       createContext: () => context,
-      getDefaultContext: () => context,
       instantiateNapiModule: async () => ({ napiModule: { exports: rawBinding } }),
       WASI: class {},
     });
@@ -1967,7 +1808,6 @@ function __rollbackWasiInitialization() {`,
     const loader = await loadDeferredLoaderWithDependencies({
       Buffer: EmbeddedBuffer,
       createContext: () => context,
-      getDefaultContext: () => context,
       instantiateNapiModule: async () => ({ napiModule: { exports: rawBinding } }),
       WASI: class {},
     });
@@ -2035,7 +1875,6 @@ function __rollbackWasiInitialization() {`,
     const context = { suppressDestroy() {}, destroy: vi.fn() };
     const loader = await loadDeferredLoaderWithDependencies({
       createContext: () => context,
-      getDefaultContext: () => context,
       instantiateNapiModule: async () => ({ napiModule: { exports: rawBinding } }),
       WASI: class {},
     });
@@ -2088,7 +1927,6 @@ function __rollbackWasiInitialization() {`,
     const context = { suppressDestroy() {}, destroy: vi.fn() };
     const loader = await loadDeferredLoaderWithDependencies({
       createContext: () => context,
-      getDefaultContext: () => context,
       instantiateNapiModule: async () => ({ napiModule: { exports: rawBinding } }),
       WASI: class {},
     });
@@ -2161,7 +1999,6 @@ function __rollbackWasiInitialization() {`,
     const context = { suppressDestroy() {}, destroy: vi.fn() };
     const loader = await loadDeferredLoaderWithDependencies({
       createContext: () => context,
-      getDefaultContext: () => context,
       instantiateNapiModule: async () => ({ napiModule: { exports: rawBinding } }),
       WASI: class {},
     });
@@ -2281,11 +2118,10 @@ const createRawBinding = () => {
     },
   }
 }
-const context = { feature: {}, suppressDestroy() {}, destroy() {} }
+const context = { features: {}, suppressDestroy() {}, destroy() {} }
 globalThis[dependencyKey] = {
   Buffer,
   createContext: () => context,
-  getDefaultContext: () => context,
   instantiateNapiModule: async () => ({
     napiModule: { exports: createRawBinding() },
   }),
@@ -2295,7 +2131,8 @@ const transformed = source
   .replace(
     /import \\{[\\s\\S]*?\\} from '@napi-rs\\/wasm-runtime'\\nimport \\{ createContext as __emnapiCreateContext \\} from '@emnapi\\/runtime'\\n/,
     \`const {
-  getDefaultContext: __emnapiGetDefaultContext,
+  emnapiAsyncWorkPlugin: __emnapiAsyncWorkPlugin,
+  emnapiTSFNPlugin: __emnapiTSFNPlugin,
   instantiateNapiModule: __emnapiInstantiateNapiModule,
   WASI: __WASI,
   createContext: __emnapiCreateContext,
@@ -2384,7 +2221,6 @@ console.log('managed binding wrappers collected')
       };
       return loadDeferredLoaderWithDependencies({
         createContext: () => context,
-        getDefaultContext: () => context,
         instantiateNapiModule: async (
           _module: WebAssembly.Module,
           options: { beforeInit: (input: { instance: { exports: object } }) => void },
@@ -2877,53 +2713,12 @@ console.log('class plugin context invalidated')
     },
   );
 
-  wasiTest('keeps the 64 MiB floor above the Wasm env.memory import minimum', async () => {
-    const module = await WebAssembly.compile(await readFile(wasmPath));
-    const imports = WebAssembly.Module.imports(module);
-    const importObject: WebAssembly.Imports = {};
-    for (const descriptor of imports) {
-      const namespace = (importObject[descriptor.module] ??= {});
-      if (descriptor.kind === 'function') {
-        namespace[descriptor.name] = () => 0;
-      }
-    }
-    const instantiateWithPages = (initial: number) => {
-      (importObject.env ??= {}).memory = new WebAssembly.Memory({
-        initial,
-        maximum: WORKERD_WASM_MEMORY.maximumPages,
-      });
-      return new WebAssembly.Instance(module, importObject);
-    };
-
-    let belowMinimumError: unknown;
-    try {
-      instantiateWithPages(1);
-    } catch (error) {
-      belowMinimumError = error;
-    }
-    // Node 20 words this "smaller than initial N"; 24 says "the declared initial of N".
-    const minimumMatch = String(belowMinimumError).match(
-      /smaller than (?:the declared )?initial(?: of)? (\d+)/,
-    );
-    expect(minimumMatch).not.toBeNull();
-    const importedMinimum = Number(minimumMatch![1]);
-
-    expect(() => instantiateWithPages(importedMinimum)).not.toThrow();
-    // The floor must cover what the artifact declares or workerd cannot
-    // instantiate it at all (`generate-workerd-loader.ts` enforces the same rule
-    // at build time). Equality is allowed on purpose: the debug profile's larger
-    // static data consumes the whole floor, while the shipped release-wasi
-    // artifact declares ~998 pages and keeps real headroom. Raising the floor for
-    // a profile we never ship would spend the 128 MiB isolate budget on nothing.
-    expect(WORKERD_WASM_MEMORY.initialPages).toBeGreaterThanOrEqual(importedMinimum);
-  });
-
   test('rejects inputs that would require dynamic Wasm compilation', async () => {
     const beforeStats = getWorkerdRuntimeStats();
     const beforeListeners = process.rawListeners('beforeExit').length;
 
     await expect(
-      instantiate(new Uint8Array([0, 97, 115, 109]) as unknown as WebAssembly.Module),
+      createInstance(new Uint8Array([0, 97, 115, 109]) as unknown as WebAssembly.Module),
     ).rejects.toThrow(/precompiled WebAssembly\.Module/);
 
     expect(getWorkerdRuntimeStats()).toEqual(beforeStats);
@@ -2942,10 +2737,10 @@ console.log('class plugin context invalidated')
     ) as WebAssembly.Memory;
 
     expect(crossRealmSharedMemory.buffer).not.toBeInstanceOf(SharedArrayBuffer);
-    await expect(instantiate(module, { memory: sharedMemory })).rejects.toThrow(
+    await expect(createInstance(module, { memory: sharedMemory })).rejects.toThrow(
       /requires an unshared WebAssembly\.Memory/,
     );
-    await expect(instantiate(module, { memory: crossRealmSharedMemory })).rejects.toThrow(
+    await expect(createInstance(module, { memory: crossRealmSharedMemory })).rejects.toThrow(
       /requires an unshared WebAssembly\.Memory/,
     );
   });
@@ -2958,11 +2753,11 @@ console.log('class plugin context invalidated')
     });
 
     const concurrent = await Promise.allSettled([
-      instantiate(module, { memory }),
-      instantiate(module, { memory }),
+      createInstance(module, { memory }),
+      createInstance(module, { memory }),
     ]);
     const fulfilled = concurrent.filter(
-      (result): result is PromiseFulfilledResult<Awaited<ReturnType<typeof instantiate>>> =>
+      (result): result is PromiseFulfilledResult<Awaited<ReturnType<typeof createInstance>>> =>
         result.status === 'fulfilled',
     );
     const rejected = concurrent.filter(
@@ -2976,7 +2771,7 @@ console.log('class plugin context invalidated')
     });
 
     fulfilled[0].value.dispose();
-    await expect(instantiate(module, { memory })).rejects.toThrow(/initialization attempt/);
+    await expect(createInstance(module, { memory })).rejects.toThrow(/initialization attempt/);
   });
 
   test('coordinates memory claims across JavaScript realms', async () => {
@@ -3011,7 +2806,6 @@ console.log('class plugin context invalidated')
     };
     const loader = await loadDeferredLoaderWithDependencies({
       createContext: () => context,
-      getDefaultContext: () => context,
       instantiateNapiModule: async (
         _module: WebAssembly.Module,
         options: { beforeInit: (input: { instance: { exports: object } }) => void },
@@ -3101,7 +2895,6 @@ console.log('class plugin context invalidated')
       let bindingIndex = 0;
       const loader = await loadDeferredLoaderWithDependencies({
         createContext: () => contexts[contextIndex++],
-        getDefaultContext: vi.fn(),
         instantiateNapiModule: async () => ({
           napiModule: {
             exports: rawBindings[bindingIndex++],
@@ -3163,7 +2956,6 @@ console.log('class plugin context invalidated')
     };
     const loader = await loadDeferredLoaderWithDependencies({
       createContext: () => context,
-      getDefaultContext: () => context,
       instantiateNapiModule: async () => {
         throw initializationError;
       },
@@ -3192,7 +2984,6 @@ console.log('class plugin context invalidated')
     };
     const loader = await loadDeferredLoaderWithDependencies({
       createContext: () => context,
-      getDefaultContext: () => context,
       instantiateNapiModule: async () => {
         throw initializationError;
       },
@@ -3224,7 +3015,6 @@ console.log('class plugin context invalidated')
     };
     const loader = await loadDeferredLoaderWithDependencies({
       createContext: () => context,
-      getDefaultContext: () => context,
       instantiateNapiModule: () => Promise.reject('primitive initialization failure'),
       WASI: class {},
     });
@@ -3303,10 +3093,12 @@ console.log('class plugin context invalidated')
     });
 
     await expect(
-      instantiate(new Uint8Array([0, 97, 115, 109]) as unknown as WebAssembly.Module, { memory }),
+      createInstance(new Uint8Array([0, 97, 115, 109]) as unknown as WebAssembly.Module, {
+        memory,
+      }),
     ).rejects.toThrow(/precompiled WebAssembly\.Module/);
 
-    const instance = await instantiate(module, { memory });
+    const instance = await createInstance(module, { memory });
     instance.dispose();
   });
 
@@ -3322,11 +3114,11 @@ console.log('class plugin context invalidated')
     const beforeStats = getWorkerdRuntimeStats();
     const beforeListeners = process.rawListeners('beforeExit').length;
 
-    await expect(instantiate(incompatibleModule, { memory })).rejects.toThrow();
+    await expect(createInstance(incompatibleModule, { memory })).rejects.toThrow();
     expect(getWorkerdRuntimeStats()).toEqual(beforeStats);
     expect(process.rawListeners('beforeExit')).toHaveLength(beforeListeners);
 
-    await expect(instantiate(module, { memory })).rejects.toThrow(/initialization attempt/);
+    await expect(createInstance(module, { memory })).rejects.toThrow(/initialization attempt/);
     expect(getWorkerdRuntimeStats()).toEqual(beforeStats);
     expect(process.rawListeners('beforeExit')).toHaveLength(beforeListeners);
   });
@@ -3335,9 +3127,9 @@ console.log('class plugin context invalidated')
     const module = await WebAssembly.compile(await readFile(wasmPath));
     vi.stubGlobal('Buffer', undefined);
 
-    let instance: Awaited<ReturnType<typeof instantiate>> | undefined;
+    let instance: Awaited<ReturnType<typeof createInstance>> | undefined;
     try {
-      instance = await instantiate(module);
+      instance = await createInstance(module);
       const bundler = new instance.exports.BindingBundler();
       try {
         const result = await bundler.generate({
@@ -3393,7 +3185,7 @@ console.log('class plugin context invalidated')
     const before = process.rawListeners('beforeExit').length;
 
     for (let index = 0; index < 3; index += 1) {
-      const instance = await instantiate(module);
+      const instance = await createInstance(module);
       instance.dispose();
     }
 
@@ -3424,7 +3216,6 @@ try {
   const [
     {
       instantiateNapiModule,
-      getDefaultContext,
       WASI,
       emnapiAsyncWorkPlugin,
       emnapiTSFNPlugin,
@@ -3445,7 +3236,6 @@ try {
   globalThis[dependencyKey] = {
     Buffer,
     createContext,
-    getDefaultContext,
     emnapiAsyncWorkPlugin,
     emnapiTSFNPlugin,
     instantiateNapiModule: async (...args) => {
@@ -3459,7 +3249,6 @@ try {
     .replace(
       /import \\{[\\s\\S]*?\\} from '@napi-rs\\/wasm-runtime'\\nimport \\{ createContext as __emnapiCreateContext \\} from '@emnapi\\/runtime'\\n/,
       \`const {
-  getDefaultContext: __emnapiGetDefaultContext,
   instantiateNapiModule: __emnapiInstantiateNapiModule,
   WASI: __WASI,
   createContext: __emnapiCreateContext,
@@ -3542,114 +3331,6 @@ try {
     expect(child.stdout).toContain('deferred TSFN drain skipped after managed disposal');
   });
 
-  wasiTest('does not claim timer support when the host has no setTimeout', async () => {
-    const module = await WebAssembly.compile(await readFile(wasmPath));
-    vi.stubGlobal('setTimeout', undefined);
-
-    try {
-      const instance = await instantiate(module);
-      try {
-        expect(instance.exports.getRuntimeCapabilities().timers).toBe(false);
-      } finally {
-        instance.dispose();
-      }
-    } finally {
-      vi.unstubAllGlobals();
-    }
-  });
-
-  wasiTest('does not claim timer support when the host cannot cancel timeouts', async () => {
-    const module = await WebAssembly.compile(await readFile(wasmPath));
-    vi.stubGlobal('clearTimeout', undefined);
-
-    try {
-      const instance = await instantiate(module);
-      try {
-        expect(instance.exports.getRuntimeCapabilities().timers).toBe(false);
-      } finally {
-        instance.dispose();
-      }
-    } finally {
-      vi.unstubAllGlobals();
-    }
-  });
-
-  test('rejects a mismatched managed task-host ABI before registration', () => {
-    const registerCurrentThreadTaskHost = vi.fn();
-    expect(() =>
-      registerWorkerdCurrentThreadTaskHost({
-        getCurrentThreadTaskHostContractVersion: () => 1,
-        isCurrentThreadHostRegistrationActive: vi.fn(),
-        registerCurrentThreadTaskHost,
-        reserveCurrentThreadHostRegistration: vi.fn(),
-        unregisterCurrentThreadTaskHost: vi.fn(),
-      }),
-    ).toThrow(/contract version 1.*version 4/);
-    expect(registerCurrentThreadTaskHost).not.toHaveBeenCalled();
-  });
-
-  test.each([
-    ['missing registration', undefined],
-    ['null registration', null],
-    ['missing high word', { low: 1 }],
-    ['missing low word', { high: 0 }],
-    ['string high word', { high: '0', low: 1 }],
-    ['negative high word', { high: -1, low: 1 }],
-    ['overflowing high word', { high: 0x1_0000_0000, low: 1 }],
-    ['fractional low word', { high: 0, low: 1.5 }],
-    ['overflowing low word', { high: 0, low: 0x1_0000_0000 }],
-    ['inactive registration', { high: 0, low: 0 }],
-  ])('rejects a managed task host with %s', (_name, registration) => {
-    const registerCurrentThreadTaskHost = vi.fn();
-    const unregisterCurrentThreadTaskHost = vi.fn();
-    expect(() =>
-      registerWorkerdCurrentThreadTaskHost({
-        getCurrentThreadTaskHostContractVersion: () => 4,
-        isCurrentThreadHostRegistrationActive: vi.fn(() => true),
-        registerCurrentThreadTaskHost,
-        reserveCurrentThreadHostRegistration: () => registration,
-        unregisterCurrentThreadTaskHost,
-      }),
-    ).toThrow(/invalid host registration/);
-    expect(registerCurrentThreadTaskHost).not.toHaveBeenCalled();
-    expect(unregisterCurrentThreadTaskHost).not.toHaveBeenCalled();
-  });
-
-  test('unregisters the exact managed task host once and retries a failed unregister', () => {
-    const registration = { high: 0x1234_5678, low: 0x9abc_def0 };
-    const unregisterError = new Error('task host unregister failed');
-    const registerCurrentThreadTaskHost = vi.fn();
-    const unregisterCurrentThreadTaskHost = vi
-      .fn()
-      .mockImplementationOnce(() => {
-        throw unregisterError;
-      })
-      .mockImplementation(() => {});
-    const dispose = registerWorkerdCurrentThreadTaskHost({
-      getCurrentThreadTaskHostContractVersion: () => 4,
-      isCurrentThreadHostRegistrationActive: () => true,
-      registerCurrentThreadTaskHost,
-      reserveCurrentThreadHostRegistration: () => registration,
-      unregisterCurrentThreadTaskHost,
-    });
-
-    expect(registerCurrentThreadTaskHost).toHaveBeenCalledWith(registration.high, registration.low);
-    expect(() => dispose()).toThrow(unregisterError);
-    expect(() => dispose()).not.toThrow();
-    expect(() => dispose()).not.toThrow();
-    expect(unregisterCurrentThreadTaskHost).toHaveBeenCalledTimes(2);
-    expect(unregisterCurrentThreadTaskHost).toHaveBeenNthCalledWith(
-      1,
-      registration.high,
-      registration.low,
-    );
-    expect(unregisterCurrentThreadTaskHost).toHaveBeenNthCalledWith(
-      2,
-      registration.high,
-      registration.low,
-    );
-  });
-
   test('generates equivalent ABI-v4 task hosts for CJS and browser roots', async () => {
     const [cjsBootstrap, browserBootstrap] = await Promise.all([
       readCurrentThreadHostBootstrap(cjsLoaderPath),
@@ -3690,13 +3371,10 @@ try {
         taskRegistration.high,
         taskRegistration.low,
       );
-      for (const removedExport of removedTaskHostExports) {
-        expect(bootstrap).not.toContain(removedExport);
-      }
     }
   });
 
-  test('gates the threaded loader host bootstrap on the reported shared runtime', async () => {
+  test('installs the threaded loader host bootstrap on both generated roots', async () => {
     const [threadedCjsSource, threadedBrowserSource] = await Promise.all([
       readFile(threadedCjsLoaderPath, 'utf8'),
       readFile(threadedBrowserLoaderPath, 'utf8'),
@@ -3708,9 +3386,6 @@ try {
     for (const source of [threadedCjsSource, threadedBrowserSource]) {
       // The threaded loaders keep their generated shared-memory descriptor.
       expect(source).toContain('shared: true');
-      for (const removedExport of removedTaskHostExports) {
-        expect(source).not.toContain(removedExport);
-      }
     }
 
     const [cjsBootstrap, browserBootstrap] = await Promise.all([
@@ -3728,39 +3403,20 @@ try {
     );
 
     for (const bootstrap of [cjsBootstrap, browserBootstrap]) {
-      expect(bootstrap).toContain('__runtimeCapabilities.asyncRuntimeBuild === true');
       expect(bootstrap).toContain('The threaded Rolldown binding');
       expect(bootstrap).not.toContain('threadless');
 
-      // A binding without a capability reporter loads without the host contract.
-      const reserveWithoutCapabilities = vi.fn();
-      runCurrentThreadHostBootstrap(bootstrap, {
-        reserveCurrentThreadHostRegistration: reserveWithoutCapabilities,
-      });
-      expect(reserveWithoutCapabilities).not.toHaveBeenCalled();
+      // A binding without the host contract fails loudly.
+      expect(() => runCurrentThreadHostBootstrap(bootstrap, {})).toThrow(
+        'The threaded Rolldown binding does not expose its CurrentThread host integration',
+      );
 
-      // A self-scheduling binding reports no shared runtime and stays untouched.
-      const reserveWithoutSharedRuntime = vi.fn();
-      runCurrentThreadHostBootstrap(bootstrap, {
-        getRuntimeCapabilities: () => ({ asyncRuntimeBuild: false }),
-        reserveCurrentThreadHostRegistration: reserveWithoutSharedRuntime,
-      });
-      expect(reserveWithoutSharedRuntime).not.toHaveBeenCalled();
-
-      // A shared-runtime binding without the host contract fails loudly.
-      expect(() =>
-        runCurrentThreadHostBootstrap(bootstrap, {
-          getRuntimeCapabilities: () => ({ asyncRuntimeBuild: true }),
-        }),
-      ).toThrow('The threaded Rolldown binding does not expose its CurrentThread host integration');
-
-      // A shared-runtime binding registers both hosts through the v4 contract.
+      // A binding registers both hosts through the v4 contract.
       const taskRegistration = { high: 0x1234_5678, low: 0x9abc_def0 };
       const timerRegistration = { high: 0, low: 2 };
       const registrations = [taskRegistration, timerRegistration];
       const live = new Set<number>();
       const binding = {
-        getRuntimeCapabilities: vi.fn(() => ({ asyncRuntimeBuild: true })),
         getCurrentThreadTaskHostContractVersion: vi.fn(() => 4),
         isCurrentThreadHostRegistrationActive: vi.fn((_high: number, low: number) => live.has(low)),
         registerCurrentThreadTaskHost: vi.fn((_high: number, low: number) => {
@@ -3774,7 +3430,7 @@ try {
         unregisterTimerHost: vi.fn(),
       };
       runCurrentThreadHostBootstrap(bootstrap, binding);
-      expect(binding.getRuntimeCapabilities).toHaveBeenCalledWith();
+      expect(binding.getCurrentThreadTaskHostContractVersion).toHaveBeenCalledWith();
       expect(binding.reserveCurrentThreadHostRegistration).toHaveBeenCalledTimes(2);
       expect(binding.registerCurrentThreadTaskHost).toHaveBeenCalledWith(
         taskRegistration.high,
@@ -3863,11 +3519,6 @@ try {
       readFile(browserLoaderPath, 'utf8'),
     ]);
 
-    for (const source of [cjsSource, browserSource]) {
-      for (const removedExport of removedTaskHostExports) {
-        expect(source).not.toContain(removedExport);
-      }
-    }
     expect(cjsSource.indexOf(currentThreadBootstrapEnd)).toBeLessThan(
       cjsSource.indexOf('module.exports = __napiModule.exports'),
     );
@@ -4073,6 +3724,8 @@ ${cleanup}`,
           __wasiRollbackRegistry: { set: registrySet },
           __wasiRollbackRegistryKey: 'rolldown-test-rollback-key',
           __primaryError: primaryError,
+          __nodeTaskHostRegistration: undefined,
+          __nodeTimerHostRegistration: undefined,
         },
       ),
     ).toThrow(augmentedError);
@@ -4179,257 +3832,6 @@ ${cleanup}`,
     callbacks.get(chainedFailureHandle)?.();
     await chainedFailure;
     expect(callbacks.size).toBe(0);
-  });
-
-  test('clears and resolves cancelled host timer relays', async () => {
-    vi.useFakeTimers();
-    try {
-      const registerTimerHost = vi.fn();
-      const dispose = registerWorkerdTimerHost(createWorkerdTimerHostBinding(registerTimerHost));
-      expect(registerTimerHost).toHaveBeenCalledOnce();
-
-      const [schedule, cancel] = registerTimerHost.mock.calls[0] as [
-        (idOrMs: number, ms?: number) => Promise<void>,
-        (id: number) => void,
-      ];
-      let replacedResolved = false;
-      const replacedRelay = schedule(7, 60_000).then(() => {
-        replacedResolved = true;
-      });
-      const relay = schedule(7, 120_000);
-      await replacedRelay;
-      expect(replacedResolved).toBe(true);
-      expect(vi.getTimerCount()).toBe(1);
-
-      let resolved = false;
-      void relay.then(() => {
-        resolved = true;
-      });
-
-      await vi.advanceTimersByTimeAsync(1);
-      expect(resolved).toBe(false);
-      cancel(7);
-      await relay;
-      expect(resolved).toBe(true);
-      expect(vi.getTimerCount()).toBe(0);
-
-      const legacyRelay = schedule(25);
-      await vi.advanceTimersByTimeAsync(25);
-      await legacyRelay;
-      dispose();
-    } finally {
-      vi.useRealTimers();
-    }
-  });
-
-  test('splits long managed and legacy host delays into bounded chunks', async () => {
-    vi.useFakeTimers();
-    try {
-      const registerTimerHost = vi.fn();
-      const dispose = registerWorkerdTimerHost(createWorkerdTimerHostBinding(registerTimerHost));
-      const [schedule] = registerTimerHost.mock.calls[0] as [
-        (idOrMs: number, ms?: number) => Promise<void>,
-      ];
-      const maxHostTimeoutMs = 2_147_483_647;
-      let managedSettled = false;
-      let legacySettled = false;
-      const managedRelay = schedule(7, maxHostTimeoutMs + 25).then(() => {
-        managedSettled = true;
-      });
-      const legacyRelay = schedule(maxHostTimeoutMs + 10).then(() => {
-        legacySettled = true;
-      });
-
-      await vi.advanceTimersByTimeAsync(maxHostTimeoutMs);
-      expect(managedSettled).toBe(false);
-      expect(legacySettled).toBe(false);
-      expect(vi.getTimerCount()).toBe(2);
-
-      await vi.advanceTimersByTimeAsync(10);
-      expect(legacySettled).toBe(true);
-      expect(managedSettled).toBe(false);
-
-      await vi.advanceTimersByTimeAsync(15);
-      await Promise.all([managedRelay, legacyRelay]);
-      expect(managedSettled).toBe(true);
-      expect(vi.getTimerCount()).toBe(0);
-      dispose();
-    } finally {
-      vi.useRealTimers();
-    }
-  });
-
-  test('rejects managed relays when initial or chained timers cannot be armed', async () => {
-    vi.useFakeTimers();
-    const setTimeoutHost = globalThis.setTimeout.bind(globalThis);
-    const schedulerError = new Error('managed setTimeout failed');
-    let failNextArm = true;
-    vi.stubGlobal('setTimeout', ((callback: TimerHandler, ms?: number, ...args: unknown[]) => {
-      if (failNextArm) {
-        failNextArm = false;
-        throw schedulerError;
-      }
-      return setTimeoutHost(callback, ms, ...args);
-    }) as typeof setTimeout);
-    try {
-      const registerTimerHost = vi.fn();
-      const dispose = registerWorkerdTimerHost(createWorkerdTimerHostBinding(registerTimerHost));
-      const [schedule] = registerTimerHost.mock.calls[0] as unknown as [
-        (id: number, ms: number) => Promise<void>,
-      ];
-      const maxHostTimeoutMs = 2_147_483_647;
-      await expect(schedule(9, 1)).rejects.toBe(schedulerError);
-
-      const relay = schedule(9, maxHostTimeoutMs + 1);
-      const rejection = expect(relay).rejects.toBe(schedulerError);
-
-      failNextArm = true;
-      await vi.advanceTimersByTimeAsync(maxHostTimeoutMs);
-      await rejection;
-      expect(vi.getTimerCount()).toBe(0);
-      dispose();
-    } finally {
-      vi.unstubAllGlobals();
-      vi.useRealTimers();
-    }
-  });
-
-  test('disposes pending host timer relays', async () => {
-    vi.useFakeTimers();
-    try {
-      const registerTimerHost = vi.fn();
-      const dispose = registerWorkerdTimerHost(createWorkerdTimerHostBinding(registerTimerHost));
-      const [schedule] = registerTimerHost.mock.calls[0] as [
-        (idOrMs: number, ms?: number) => Promise<void>,
-      ];
-      let resolved = 0;
-      const relays = [
-        schedule(7, 60_000).then(() => {
-          resolved += 1;
-        }),
-        schedule(8, 120_000).then(() => {
-          resolved += 1;
-        }),
-        schedule(180_000).then(() => {
-          resolved += 1;
-        }),
-      ];
-
-      expect(vi.getTimerCount()).toBe(3);
-      dispose();
-      dispose();
-      await Promise.all(relays);
-      expect(resolved).toBe(3);
-      expect(vi.getTimerCount()).toBe(0);
-
-      await schedule(9, 60_000);
-      expect(vi.getTimerCount()).toBe(0);
-    } finally {
-      vi.useRealTimers();
-    }
-  });
-
-  test('rejects the v1 managed timer-host ABI before registration', () => {
-    const registerTimerHost = vi.fn();
-    expect(() =>
-      registerWorkerdTimerHost({
-        getCurrentThreadTaskHostContractVersion: () => 1,
-        isCurrentThreadHostRegistrationActive: vi.fn(),
-        registerTimerHost,
-        reserveCurrentThreadHostRegistration: vi.fn(),
-        unregisterTimerHost: vi.fn(),
-      }),
-    ).toThrow(/contract version 1.*version 4/);
-    expect(registerTimerHost).not.toHaveBeenCalled();
-  });
-
-  test('rejects and rolls back an inactive v4 managed timer-host registration', () => {
-    const registration = { high: 0, low: 1 };
-    const registerTimerHost = vi.fn();
-    const unregisterTimerHost = vi.fn();
-    expect(() =>
-      registerWorkerdTimerHost({
-        getCurrentThreadTaskHostContractVersion: () => 4,
-        isCurrentThreadHostRegistrationActive: () => false,
-        registerTimerHost,
-        reserveCurrentThreadHostRegistration: () => registration,
-        unregisterTimerHost,
-      }),
-    ).toThrow(/inactive timer host registration/);
-    expect(registerTimerHost).toHaveBeenCalledWith(
-      registration.high,
-      registration.low,
-      expect.any(Function),
-      expect.any(Function),
-    );
-    expect(unregisterTimerHost).toHaveBeenCalledWith(registration.high, registration.low);
-  });
-
-  test('retries exact timer-host unregistration before disposing pending relays', async () => {
-    vi.useFakeTimers();
-    try {
-      const registration = { high: 0x1234_5678, low: 0x9abc_def0 };
-      const unregisterError = new Error('timer host unregister failed');
-      const unregisterTimerHost = vi
-        .fn()
-        .mockImplementationOnce(() => {
-          throw unregisterError;
-        })
-        .mockImplementationOnce(() => {});
-      const registerTimerHost = vi.fn();
-      const dispose = registerWorkerdTimerHost(
-        createWorkerdTimerHostBinding(registerTimerHost, {
-          registration,
-          unregisterTimerHost,
-        }),
-      );
-      expect(registerTimerHost).toHaveBeenCalledWith(expect.any(Function), expect.any(Function));
-
-      const [schedule] = registerTimerHost.mock.calls[0] as unknown as [
-        (id: number, ms: number) => Promise<void>,
-      ];
-      const relay = schedule(7, 60_000);
-      expect(vi.getTimerCount()).toBe(1);
-
-      expect(dispose).toThrow(unregisterError);
-      expect(vi.getTimerCount()).toBe(1);
-
-      expect(dispose).not.toThrow();
-      await relay;
-      expect(unregisterTimerHost).toHaveBeenNthCalledWith(2, registration.high, registration.low);
-      expect(vi.getTimerCount()).toBe(0);
-
-      dispose();
-      expect(unregisterTimerHost).toHaveBeenCalledTimes(2);
-    } finally {
-      vi.useRealTimers();
-    }
-  });
-
-  test('resolves a cancelled timer relay when host cancellation throws', async () => {
-    vi.useFakeTimers();
-    const clearTimeoutHost = globalThis.clearTimeout;
-    vi.stubGlobal('clearTimeout', (handle: ReturnType<typeof setTimeout>) => {
-      clearTimeoutHost(handle);
-      throw new Error('host cancellation failed');
-    });
-    try {
-      const registerTimerHost = vi.fn();
-      const dispose = registerWorkerdTimerHost(createWorkerdTimerHostBinding(registerTimerHost));
-      const [schedule, cancel] = registerTimerHost.mock.calls[0] as [
-        (id: number, ms: number) => Promise<void>,
-        (id: number) => void,
-      ];
-      const relay = schedule(7, 60_000);
-
-      expect(() => cancel(7)).not.toThrow();
-      await relay;
-      expect(vi.getTimerCount()).toBe(0);
-      dispose();
-    } finally {
-      vi.unstubAllGlobals();
-      vi.useRealTimers();
-    }
   });
 
   test('generated root timer hosts contain cancellation failures and retire relays', async () => {

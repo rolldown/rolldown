@@ -19,11 +19,11 @@ use arcstr::ArcStr;
 use itertools::Itertools;
 use oxc_index::{IndexVec, index_vec};
 use rolldown_common::{
-  Chunk, ChunkIdx, ChunkKind, ChunkMeta, EntryPointKind, ExportsKind, ImportKind, ImportRecordIdx,
-  ImportRecordMeta, IndexModules, Module, ModuleId, ModuleIdx, ModuleNamespaceIncludedReason,
-  ModuleTag, ModuleTagBitSet, ModuleTagRegistry, PostChunkOptimizationOperation,
-  PreserveEntrySignatures, RetainedExportSymbols, SymbolRef, UsedSymbolRefs, UsedSymbolRefsBuilder,
-  WrapKind,
+  Chunk, ChunkIdx, ChunkKind, ChunkMeta, ConcatenateWrappedModuleKind, EntryPointKind, ExportsKind,
+  ImportKind, ImportRecordIdx, ImportRecordMeta, IndexModules, Module, ModuleId, ModuleIdx,
+  ModuleNamespaceIncludedReason, ModuleTag, ModuleTagBitSet, ModuleTagRegistry,
+  PostChunkOptimizationOperation, PreserveEntrySignatures, RetainedExportSymbols, SymbolRef,
+  UsedSymbolRefs, UsedSymbolRefsBuilder, WrapKind,
 };
 use rolldown_error::BuildResult;
 use rolldown_std_utils::PathBufExt as _;
@@ -48,6 +48,15 @@ pub struct SplittingInfo {
 }
 
 pub type IndexSplittingInfo = IndexVec<ModuleIdx, SplittingInfo>;
+
+/// Chunk-graph facts shared by every [`GenerateStage::collect_eager_init_map`] call:
+/// module-to-chunk assignment, reversed static chunk-import edges, and the cascade roots (entry
+/// chunks plus dynamically imported chunks — every chunk evaluation starts at one of them).
+struct EagerInitGraphContext<'a> {
+  module_to_chunk: &'a IndexVec<ModuleIdx, Option<ChunkIdx>>,
+  chunk_importers: &'a IndexVec<ChunkIdx, Vec<ChunkIdx>>,
+  cascade_roots: &'a FxHashSet<ChunkIdx>,
+}
 
 impl GenerateStage<'_> {
   #[tracing::instrument(level = "debug", skip_all)]
@@ -317,7 +326,47 @@ impl GenerateStage<'_> {
       // guaranteed.
       return;
     }
-    chunk_graph.chunk_table.iter_mut().for_each(|chunk| {
+    // Reversed static chunk-import edges (`chunk_importers[c]` = live chunks that import `c`) and
+    // the set of cascade roots (entry chunks plus dynamically imported chunks — every chunk
+    // evaluation starts at one of them). Both feed the eager-init reachability analysis below.
+    let ChunkGraph {
+      chunk_table,
+      module_to_chunk,
+      post_chunk_optimization_operations,
+      entry_module_to_entry_chunk,
+      ..
+    } = chunk_graph;
+    let mut chunk_importers: IndexVec<ChunkIdx, Vec<ChunkIdx>> =
+      index_vec![Vec::new(); chunk_table.len()];
+    let mut cascade_roots: FxHashSet<ChunkIdx> = FxHashSet::default();
+    for (chunk_idx, chunk) in chunk_table.iter_enumerated() {
+      if post_chunk_optimization_operations.get(&chunk_idx).copied()
+        == Some(PostChunkOptimizationOperation::Removed)
+      {
+        continue;
+      }
+      for importee in &chunk.cross_chunk_imports {
+        chunk_importers[*importee].push(chunk_idx);
+      }
+      cascade_roots.extend(chunk.cross_chunk_dynamic_imports.iter().copied());
+      if matches!(chunk.kind, ChunkKind::EntryPoint { .. }) {
+        cascade_roots.insert(chunk_idx);
+      }
+    }
+    // A common chunk that absorbed an entry through facade elimination can be loaded directly
+    // (an emitted chunk's `getFileName` consumer, a rewritten `import()`), so it starts a cascade
+    // of its own without appearing as an `EntryPoint` chunk or a dynamic-import target.
+    for &target_chunk in entry_module_to_entry_chunk.values() {
+      if matches!(chunk_table[target_chunk].kind, ChunkKind::Common) {
+        cascade_roots.insert(target_chunk);
+      }
+    }
+    let graph_ctx = EagerInitGraphContext {
+      module_to_chunk,
+      chunk_importers: &chunk_importers,
+      cascade_roots: &cascade_roots,
+    };
+    chunk_table.iter_mut_enumerated().for_each(|(chunk_idx, chunk)| {
       // Determine DFS roots based on chunk kind.
       // For entry chunks, the root is the entry module.
       // For common chunks, roots are modules not imported by any other module in the chunk.
@@ -433,6 +482,9 @@ impl GenerateStage<'_> {
         }
       }
 
+      let modules_with_init_position: FxHashSet<ModuleIdx> =
+        module_init_position.keys().copied().collect();
+
       let mut module_init_position = module_init_position.into_iter().collect_vec();
       module_init_position.sort_by_cached_key(|(idx, _)| chunk_module_to_exec_order[idx]);
 
@@ -466,7 +518,139 @@ impl GenerateStage<'_> {
       }
       chunk.insert_map = insert_map;
       chunk.remove_map = remove_map;
+      chunk.eager_init_map = self.collect_eager_init_map(
+        chunk_idx,
+        &graph_ctx,
+        &chunk.modules,
+        &wrapped_modules[..max_length],
+        &modules_with_init_position,
+        &none_wrapped_module_to_wrapped_dependency_length,
+      );
     });
+  }
+
+  /// The transfer built by [`Self::ensure_lazy_module_initialization_order`] only repositions init
+  /// calls that already live in the chunk. A wrapped module whose init call sites all live in
+  /// other chunks stays uncovered: those chunks import this one, so they always evaluate after
+  /// every eager statement here, including dependents with a higher execution order (#7449). For
+  /// such a module, additionally render its memoized init call eagerly at its position in this
+  /// chunk, prepended to the first unwrapped dependent's output. That restores the wrapped
+  /// module's order relative to its chunk-mates and matches how Rollup places a statically
+  /// imported CommonJS module at its topological position; like every eager statement of this
+  /// chunk, the call still runs before lower-exec-order statements in later-evaluating chunks —
+  /// the distortion chunking already imposes on unwrapped chunk-mates. Injection must also not
+  /// run the module for evaluations that would never have initialized it, so it is gated on every
+  /// cascade that can evaluate this chunk initializing the wrapped module anyway — proven through
+  /// the static chunk-import graph. See
+  /// internal-docs/code-splitting/implementation.md#lazy-module-initialization-order.
+  fn collect_eager_init_map(
+    &self,
+    chunk_idx: ChunkIdx,
+    graph_ctx: &EagerInitGraphContext<'_>,
+    chunk_modules: &[ModuleIdx],
+    wrapped_modules: &[ModuleIdx],
+    modules_with_init_position: &FxHashSet<ModuleIdx>,
+    none_wrapped_module_to_wrapped_dependency_length: &FxHashMap<ModuleIdx, usize>,
+  ) -> FxHashMap<ModuleIdx, Vec<ModuleIdx>> {
+    let mut eager_init_map: FxHashMap<ModuleIdx, Vec<ModuleIdx>> = FxHashMap::default();
+    let mut roots_reaching_chunk: Option<Vec<ChunkIdx>> = None;
+    // Rendered positions, not exec orders: `sort_chunk_modules` can hoist side-effect-free leaf
+    // modules ahead of the wrapper declaration (`chunkModulesOrder: 'module-id'`), and a call
+    // prepended to such a module would run before the wrapper var is assigned.
+    let mut chunk_module_positions: Option<FxHashMap<ModuleIdx, usize>> = None;
+    for (w_pos, &wrapped_idx) in wrapped_modules.iter().enumerate() {
+      if modules_with_init_position.contains(&wrapped_idx) {
+        continue;
+      }
+      if graph_ctx.module_to_chunk[wrapped_idx] != Some(chunk_idx) {
+        continue;
+      }
+      // Entry modules initialize through entry-specific rendering (prologues, cjs
+      // `require_*()` export shapes); leave them to that machinery.
+      if self.link_output.entries.contains_key(&wrapped_idx) {
+        continue;
+      }
+      let meta = &self.link_output.metas[wrapped_idx];
+      let wrapper_is_included =
+        meta.wrapper_stmt_info.is_some_and(|stmt_idx| meta.stmt_info_included.has_bit(stmt_idx));
+      if !wrapper_is_included
+        || meta.is_tla_or_contains_tla_dependency
+        || !matches!(meta.concatenated_wrapped_module_kind, ConcatenateWrappedModuleKind::None)
+      {
+        continue;
+      }
+      let Some(wrapped_module) = self.link_output.module_table[wrapped_idx].as_normal() else {
+        continue;
+      };
+      // Chunks holding an importer that initializes the wrapped module eagerly: an included,
+      // unwrapped module whose surviving top-level `import` resolves to it. `require()` and
+      // `import()` sites stay lazy and do not count.
+      let mut eager_site_chunks: FxHashSet<ChunkIdx> = FxHashSet::default();
+      for &importer_idx in &wrapped_module.importers_idx {
+        let Some(importer) = self.link_output.module_table[importer_idx].as_normal() else {
+          continue;
+        };
+        let importer_meta = &self.link_output.metas[importer_idx];
+        if !importer_meta.is_included || !importer_meta.wrap_kind().is_none() {
+          continue;
+        }
+        let Some(importer_chunk) = graph_ctx.module_to_chunk[importer_idx] else {
+          continue;
+        };
+        let has_eager_record = self.link_output.stmt_infos[importer_idx].iter_enumerated().any(
+          |(stmt_idx, stmt_info)| {
+            importer_meta.stmt_info_included.has_bit(stmt_idx)
+              && stmt_info.import_records.iter().any(|rec_idx| {
+                let rec = &importer.import_records[*rec_idx];
+                rec.kind == ImportKind::Import && rec.resolved_module == Some(wrapped_idx)
+              })
+          },
+        );
+        if has_eager_record {
+          eager_site_chunks.insert(importer_chunk);
+        }
+      }
+      if eager_site_chunks.is_empty() {
+        continue;
+      }
+      let roots_reaching_chunk = roots_reaching_chunk.get_or_insert_with(|| {
+        let reaching = chunks_reaching([chunk_idx], graph_ctx.chunk_importers);
+        graph_ctx.cascade_roots.iter().copied().filter(|root| reaching.contains(root)).collect()
+      });
+      if roots_reaching_chunk.is_empty() {
+        continue;
+      }
+      let reaching_eager_site =
+        chunks_reaching(eager_site_chunks.iter().copied(), graph_ctx.chunk_importers);
+      if !roots_reaching_chunk.iter().all(|root| reaching_eager_site.contains(root)) {
+        continue;
+      }
+      // Prepend the call to the first unwrapped chunk-mate rendered after the wrapped module,
+      // i.e. right after its wrapper declaration in the rendered order.
+      let positions = chunk_module_positions.get_or_insert_with(|| {
+        chunk_modules.iter().enumerate().map(|(position, idx)| (*idx, position)).collect()
+      });
+      let Some(wrapped_position) = positions.get(&wrapped_idx).copied() else {
+        continue;
+      };
+      let target = none_wrapped_module_to_wrapped_dependency_length
+        .iter()
+        .filter(|(_, dep_length)| **dep_length > w_pos)
+        .filter_map(|(none_wrapped, _)| {
+          positions
+            .get(none_wrapped)
+            .copied()
+            .filter(|position| *position > wrapped_position)
+            .map(|position| (*none_wrapped, position))
+        })
+        .min_by_key(|(_, position)| *position)
+        .map(|(none_wrapped, _)| none_wrapped);
+      let Some(target) = target else {
+        continue;
+      };
+      eager_init_map.entry(target).or_default().push(wrapped_idx);
+    }
+    eager_init_map
   }
 
   /// Only considering module eager initialization order, both `require()` and `import()` are lazy
@@ -1286,6 +1470,25 @@ impl GenerateStage<'_> {
       }
     }
   }
+}
+
+/// All chunks that can (transitively) trigger the evaluation of any chunk in `starts` through
+/// static chunk imports, including the start chunks themselves. `chunk_importers` holds the
+/// reversed static chunk-import edges.
+fn chunks_reaching(
+  starts: impl IntoIterator<Item = ChunkIdx>,
+  chunk_importers: &IndexVec<ChunkIdx, Vec<ChunkIdx>>,
+) -> FxHashSet<ChunkIdx> {
+  let mut visited: FxHashSet<ChunkIdx> = starts.into_iter().collect();
+  let mut stack: Vec<ChunkIdx> = visited.iter().copied().collect();
+  while let Some(chunk_idx) = stack.pop() {
+    for &importer in &chunk_importers[chunk_idx] {
+      if visited.insert(importer) {
+        stack.push(importer);
+      }
+    }
+  }
+  visited
 }
 
 fn propagate_has_dynamic_exports(

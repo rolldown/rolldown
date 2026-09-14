@@ -591,8 +591,7 @@ impl<'ast> HmrAstFinalizer<'_, 'ast> {
 
     // TODO: hyf0 should switch to a more robust way to identify lazy proxy modules
     if importee.id.contains("?rolldown-lazy=1") {
-      *it =
-        create_request_lazy_call(&importee.id, &importee.stable_id, self, &self.lazy_endpoint);
+      *it = create_request_lazy_call(&importee.id, &importee.stable_id, self, &self.lazy_endpoint);
       return;
     }
 

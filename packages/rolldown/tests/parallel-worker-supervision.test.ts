@@ -132,7 +132,9 @@ test.skipIf(isWasiTest).each([
   {
     args: [preloadSpoofChildPath],
     env: {
-      NODE_OPTIONS: `--require="${preloadSpoofPath}"`,
+      // `NODE_OPTIONS` parses a double-quoted value with backslash escapes, so a
+      // raw Windows path would lose its separators; JSON quoting matches that grammar.
+      NODE_OPTIONS: `--require=${JSON.stringify(preloadSpoofPath)}`,
     },
     source: 'NODE_OPTIONS',
   },

@@ -32,7 +32,7 @@ if (Number.isNaN(maxRssGrowthMb) || maxRssGrowthMb < 0) {
 }
 
 const loader = await import(pathToFileURL(loaderPath).href);
-const instantiate = loader.createInstance ?? loader.instantiate;
+const instantiate = loader.createInstance;
 const getStats = loader.getDeferredRuntimeStats ?? loader.getWorkerdRuntimeStats;
 if (typeof instantiate !== 'function' || typeof getStats !== 'function') {
   throw new TypeError(`Unsupported managed workerd loader: ${loaderPath}`);

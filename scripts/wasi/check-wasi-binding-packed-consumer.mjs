@@ -23,6 +23,8 @@ import { fileURLToPath } from 'node:url';
 import { parse } from 'acorn';
 import { chromium } from 'playwright-chromium';
 
+import { findBareRuntimeImports } from './bare-runtime-imports.mjs';
+
 const execFileAsync = promisify(execFile);
 const repoRoot = fileURLToPath(new URL('../../', import.meta.url));
 const rootPackageDir = path.join(repoRoot, 'packages/rolldown');
@@ -36,6 +38,11 @@ const publicTypesVersion = JSON.parse(
   await readFile(path.join(rootPackageDir, 'node_modules/@oxc-project/types/package.json'), 'utf8'),
 ).version;
 const runtimePackages = ['@emnapi/core', '@emnapi/runtime', '@napi-rs/wasm-runtime', 'buffer'];
+// The loaders are generated from these two manifest fields, so read them here
+// rather than restating the numbers (a hardcoded copy silently goes stale).
+const threadlessInitialPages = rootPackageManifest.napi.wasm.threadlessInitialMemory;
+const threadlessMaximumPages = rootPackageManifest.napi.wasm.maximumMemory;
+const wasmPageBytes = 64 * 1024;
 const flavors = [
   {
     key: 'threaded',
@@ -691,71 +698,6 @@ async function assertWorkerdDeclarationParity(packageDir, runtimeExports, worker
     );
   }
 }
-
-function isBareRuntimeSpecifier(specifier) {
-  return /^(?:@(?:emnapi|napi-rs)\/|(?:node:)?buffer$)/.test(specifier);
-}
-
-function findBareRuntimeImports(code, sourceType) {
-  const program = parse(code, { ecmaVersion: 'latest', sourceType });
-  const imports = [];
-  const pending = [program];
-
-  while (pending.length > 0) {
-    const node = pending.pop();
-    if (!node || typeof node !== 'object') continue;
-
-    if (
-      (node.type === 'ImportDeclaration' ||
-        node.type === 'ExportNamedDeclaration' ||
-        node.type === 'ExportAllDeclaration') &&
-      typeof node.source?.value === 'string' &&
-      isBareRuntimeSpecifier(node.source.value)
-    ) {
-      imports.push(node.source.value);
-    }
-    if (
-      node.type === 'ImportExpression' &&
-      typeof node.source?.value === 'string' &&
-      isBareRuntimeSpecifier(node.source.value)
-    ) {
-      imports.push(node.source.value);
-    }
-    if (
-      node.type === 'CallExpression' &&
-      node.arguments?.length === 1 &&
-      typeof node.arguments[0]?.value === 'string' &&
-      isBareRuntimeSpecifier(node.arguments[0].value) &&
-      ((node.callee?.type === 'Identifier' && node.callee.name === 'require') ||
-        (node.callee?.type === 'MemberExpression' &&
-          node.callee.object?.type === 'Identifier' &&
-          node.callee.object.name === 'require' &&
-          node.callee.property?.type === 'Identifier' &&
-          node.callee.property.name === 'resolve'))
-    ) {
-      imports.push(node.arguments[0].value);
-    }
-
-    for (const value of Object.values(node)) {
-      if (Array.isArray(value)) {
-        pending.push(...value);
-      } else if (value && typeof value === 'object') {
-        pending.push(value);
-      }
-    }
-  }
-
-  return imports.sort((a, b) => a.localeCompare(b));
-}
-
-assert.deepEqual(
-  findBareRuntimeImports(
-    "export * from 'node:buffer'; import('buffer'); require.resolve('@emnapi/runtime');",
-    'module',
-  ),
-  ['@emnapi/runtime', 'buffer', 'node:buffer'],
-  'packed runtime import scan must cover re-exports, dynamic imports, and require.resolve',
-);
 
 async function exerciseEmbeddedWasiThreadsRefresh(consumerDir, packageDir) {
   const workerCode = await readFile(path.join(packageDir, 'wasi-worker.mjs'), 'utf8');
@@ -1495,9 +1437,6 @@ const workerd = await import(workerdSpecifier)
 const require = createRequire(import.meta.url)
 const wasmModule = await WebAssembly.compile(await readFile(require.resolve(wasmSpecifier)))
 if (typeof workerd.createInstance !== 'function') throw new Error('Missing workerd createInstance')
-if (workerd.createInstance !== workerd.instantiate) {
-  throw new Error('workerd instantiate must alias the managed createInstance factory')
-}
 const instance = await workerd.createInstance(wasmModule)
 let grew = false
 const bundler = new instance.exports.BindingBundler()
@@ -2185,7 +2124,7 @@ try {
   );
   assert.deepEqual(threadlessBrowserResult, {
     outputs: 1,
-    memories: [{ initial: 1024, maximum: 65536, shared: false }],
+    memories: [{ initial: threadlessInitialPages, maximum: threadlessMaximumPages, shared: false }],
     capabilities: threadlessCapabilities,
   });
 
@@ -2202,11 +2141,11 @@ try {
   for (const { stdout, runtimeVersion } of memoryFloorResults) {
     const memoryFloorResult = JSON.parse(stdout);
     assert.deepEqual(memoryFloorResult.memory, {
-      initialPages: 1024,
-      maximumPages: 65536,
-      pageBytes: 65536,
-      initialBytes: 64 * 1024 * 1024,
-      maximumBytes: 4 * 1024 * 1024 * 1024,
+      initialPages: threadlessInitialPages,
+      maximumPages: threadlessMaximumPages,
+      pageBytes: wasmPageBytes,
+      initialBytes: threadlessInitialPages * wasmPageBytes,
+      maximumBytes: threadlessMaximumPages * wasmPageBytes,
     });
     assert.equal(memoryFloorResult.moduleCount, 256);
     assert.equal(memoryFloorResult.rounds, 3);

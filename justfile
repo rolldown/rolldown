@@ -75,7 +75,7 @@ test-update-node:
 test-rust:
   cargo test --workspace --exclude rolldown_binding
 
-# Run package replacement rollback regressions without building artifacts.
+# Run the WASI package staging regressions without building artifacts.
 test-package-transactions:
   vp run --filter '@rolldown-internal/scripts' test:package-transactions
 
@@ -264,18 +264,9 @@ build-rolldown-binding:
 
 # Build `rolldown` located in `packages/rolldown` itself and its `.node` binding.
 #
-# The committed WASI loader sets are per-flavor (distinct names): the threaded
-# flavor owns `rolldown-binding.wasi.*` + the worker scripts, the single-thread
-# flavor owns `rolldown-binding.wasip1.*`. Non-wasi builds regenerate BOTH
-# flavors' loaders deterministically from the wasi targets declared in the napi
-# config, byte-identical to the committed copies, so the loaders leave a clean
-# tree without any restore step. The per-flavor DECLARATIONS are the exception:
-# a build restores the flavor it is not building
-# (`preserveInactiveWasiDeclaration` in `packages/rolldown/build-binding.ts`),
-# so a native build never refreshes `rolldown-binding.wasip1.d.cts` — only
-# `build-rolldown-wasi-single` (or `build-browser`) does. Regenerate it there
-# after any change to the binding surface. Drift between the two WASI
-# declarations is caught by `just test-node`
+# Native builds never refresh `rolldown-binding.wasip1.d.cts`; run
+# `just build-rolldown-wasi-single` after binding-surface changes. Drift is
+# caught by `just test-node`
 # (`packages/rolldown/tests/wasi-declaration-consistency.test.ts`). See
 # internal-docs/async-runtime/implementation.md.
 build-rolldown:

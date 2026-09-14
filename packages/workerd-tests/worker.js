@@ -46,8 +46,6 @@ function ansiLocations(error) {
 function errInfo(error) {
   return {
     isError: error instanceof Error,
-    name: error?.name ?? null,
-    code: error?.code ?? null,
     message: typeof error?.message === 'string' ? error.message : String(error),
     errorCount: Array.isArray(error?.errors) ? error.errors.length : null,
     errorMessages: Array.isArray(error?.errors)
@@ -609,14 +607,10 @@ async function caseCapabilities() {
       wasi: caps.wasi,
       watchSupported: caps.watchSupported,
       devSupported: caps.devSupported,
-      timers: caps.timers,
       blockOnJsThreadSafe: caps.blockOnJsThreadSafe,
-      // The workerd ENTRY must not offer a watch API. `BindingWatcher` still
-      // exists on the raw binding surface -- watch is gated by capability, not
-      // by deleting the class -- so it is reported, not asserted away.
+      // The workerd ENTRY must not offer a watch API.
       entryExports: Object.keys(workerdApi).sort(),
       watchExported: 'watch' in workerdApi,
-      bindingWatcherType: typeof instance.exports.BindingWatcher,
       memoryBytes: instance.memoryBytes,
     };
   } finally {

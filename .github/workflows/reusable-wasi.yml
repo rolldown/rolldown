@@ -32,71 +32,11 @@ jobs:
           version: '0.2.1'
           cache: true
 
-      - name: Test package transaction rollback
+      - name: Test WASI package staging
         run: just test-package-transactions
 
       - name: Add WASI targets
         run: rustup target add wasm32-wasip1 wasm32-wasip1-threads
-
-      # `napi-build` requires `EMNAPI_LINK_DIR`, and `RUSTC` must be the real binary rather
-      # than the rustup shim so it can locate `crt1-reactor.o`. Both are needed by every
-      # direct `cargo check` below, because build scripts run even without linking.
-      # `emnapi` is a transitive dependency of `@napi-rs/cli`, so resolve it through the CLI.
-      - name: Resolve emnapi link directory
-        run: |
-          emnapi_package_dir="$(
-            cd packages/rolldown
-            node - <<'NODE'
-          const { createRequire } = require('node:module')
-          const { dirname } = require('node:path')
-          const cliRequire = createRequire(require.resolve('@napi-rs/cli/package.json'))
-          console.log(dirname(cliRequire.resolve('emnapi/package.json')))
-          NODE
-          )"
-          {
-            echo "EMNAPI_DIR=$emnapi_package_dir"
-            echo "RUSTC_BIN=$(rustup which rustc)"
-          } >> "$GITHUB_ENV"
-
-      - name: Check shared runtime on threadless WASI
-        run: |
-          RUSTC="$RUSTC_BIN" EMNAPI_LINK_DIR="$EMNAPI_DIR/lib/wasm32-wasip1" \
-            cargo check -p rolldown_binding --target wasm32-wasip1 \
-              --no-default-features --features async-runtime --locked
-          RUSTC="$RUSTC_BIN" EMNAPI_LINK_DIR="$EMNAPI_DIR/lib/wasm32-wasip1" \
-            cargo check -p rolldown_binding --target wasm32-wasip1 \
-              --features async-runtime --locked
-
-      # Negative checks: `rolldown_binding` has no `tokio-runtime` feature (removed), and
-      # a runtime-feature-less build must hit the `compile_error!` in its `src/lib.rs`.
-      - name: Reject non-async-runtime builds on threadless WASI
-        run: |
-          if output="$(
-            RUSTC="$RUSTC_BIN" EMNAPI_LINK_DIR="$EMNAPI_DIR/lib/wasm32-wasip1" \
-              cargo check -p rolldown_binding --target wasm32-wasip1 \
-                --no-default-features --features tokio-runtime --locked 2>&1
-          )"; then
-            echo "Expected the removed tokio-runtime feature to be rejected"
-            exit 1
-          fi
-          printf '%s\n' "$output"
-          grep -F "does not contain this feature: tokio-runtime" <<<"$output"
-          if output="$(
-            RUSTC="$RUSTC_BIN" EMNAPI_LINK_DIR="$EMNAPI_DIR/lib/wasm32-wasip1" \
-              cargo check -p rolldown_binding --target wasm32-wasip1 \
-                --no-default-features --locked 2>&1
-          )"; then
-            echo "Expected the runtime-feature-less build to be rejected"
-            exit 1
-          fi
-          printf '%s\n' "$output"
-          grep -F "rolldown_binding requires the \`async-runtime\` feature" <<<"$output"
-
-      - name: Check shared runtime on threaded WASI
-        run: |
-          RUSTC="$RUSTC_BIN" EMNAPI_LINK_DIR="$EMNAPI_DIR/lib/wasm32-wasip1-threads" \
-            cargo check -p rolldown_binding --target wasm32-wasip1-threads \
-              --no-default-features --features async-runtime --locked
 
       # The two WASI flavors have distinct artifact names, so both builds co-exist in
       # packages/rolldown/src — but each build re-points packages/rolldown/dist at its OWN

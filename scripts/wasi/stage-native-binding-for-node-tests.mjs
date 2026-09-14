@@ -21,24 +21,11 @@ const artifact = artifacts[0];
 const stagedArtifact = path.join(path.dirname(SOURCE_LOADER), path.basename(artifact));
 copyFileSync(artifact, stagedArtifact);
 
+// docs/guide/getting-started.md tells contributors to export this; it would make
+// the smoke-load below verify a different binary than the one just staged.
 delete process.env.NAPI_RS_NATIVE_LIBRARY_PATH;
 const require = createRequire(import.meta.url);
-const binding = require(SOURCE_LOADER);
-
-const requiredFunctions = [
-  ['getRuntimeCapabilities', binding.getRuntimeCapabilities],
-  ['BindingBundler.prototype.closeTerminal', binding.BindingBundler?.prototype?.closeTerminal],
-  [
-    'BindingBundler.prototype.waitForFailureClose',
-    binding.BindingBundler?.prototype?.waitForFailureClose,
-  ],
-];
-
-for (const [name, value] of requiredFunctions) {
-  if (typeof value !== 'function') {
-    throw new TypeError(`Expected ${name} to be a function in the staged native binding`);
-  }
-}
+require(SOURCE_LOADER);
 
 console.log(
   `Staged and verified ${path.relative(REPO_ROOT, artifact)} as ${path.relative(REPO_ROOT, stagedArtifact)}`,

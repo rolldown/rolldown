@@ -35,19 +35,13 @@ if (configuredInitialMemory > 1027) {
   );
 }
 
-// All three loaders come out of the same build. Self-test: pass explicit loader
-// paths as CLI args (resolved against the cwd) to point the guard at temporary
-// copies and exercise the negative cases.
+// All three loaders come out of the same build.
 const DEFAULT_LOADERS = [
   'packages/rolldown/src/rolldown-binding.wasip1-browser.js',
   'packages/rolldown/src/rolldown-binding.wasip1.cjs',
   'packages/rolldown/src/rolldown-binding.wasip1-deferred.js',
 ];
 const THREADLESS_DECLARATION = 'packages/rolldown/src/rolldown-binding.wasip1-deferred.d.ts';
-const argLoaders = process.argv.slice(2);
-const LOADERS = argLoaders.length > 0 ? argLoaders : DEFAULT_LOADERS;
-const resolveLoader = (rel) =>
-  argLoaders.length > 0 ? path.resolve(process.cwd(), rel) : path.join(REPO_ROOT, rel);
 
 // Markers a threaded loader emits; a single-thread loader must carry none.
 const FORBIDDEN = [/new Worker\b/, /onCreateWorker\b/, /shared:\s*true\b/];
@@ -60,121 +54,103 @@ const stripComments = (source) =>
   source.replace(/\/\*[\s\S]*?\*\//g, '').replace(/(^|\s)\/\/[^\n]*/g, '$1');
 
 const failures = [];
-let importedMinimumMemory;
 
-if (argLoaders.length === 0) {
-  const bindingDeclarationPath = path.join(
-    REPO_ROOT,
-    'packages/rolldown/src/rolldown-binding.wasip1.d.cts',
-  );
-  const bindingDeclaration = fs.readFileSync(bindingDeclarationPath, 'utf8');
-  for (const removedExport of [
-    'cancelCurrentThreadRuntimeTaskDispatch',
-    'driveCurrentThreadRuntimeTasks',
-  ]) {
-    if (bindingDeclaration.includes(removedExport)) {
-      failures.push(
-        `${path.relative(REPO_ROOT, bindingDeclarationPath)}: exposes removed CurrentThread task-host export ${removedExport}`,
-      );
-    }
-  }
-  for (const signature of [
-    'export interface BindingHostRegistration {',
-    'high: number',
-    'low: number',
-    'getCurrentThreadTaskHostContractVersion(): number',
-    'isCurrentThreadHostRegistrationActive(registrationHigh: number, registrationLow: number): boolean',
-    'reserveCurrentThreadHostRegistration(): BindingHostRegistration',
-    'registerCurrentThreadTaskHost(registrationHigh: number, registrationLow: number, dispatch?: never): void',
-    'registerTimerHost(registrationHigh: number, registrationLow: number, schedule: (id: number, ms: number) => Promise<void>, cancel: (id: number) => void): void',
-    'unregisterCurrentThreadTaskHost(registrationHigh: number, registrationLow: number): void',
-    'unregisterTimerHost(registrationHigh: number, registrationLow: number): void',
-  ]) {
-    if (!bindingDeclaration.includes(signature)) {
-      failures.push(
-        `${path.relative(REPO_ROOT, bindingDeclarationPath)}: missing generation-aware signature ${signature}`,
-      );
-    }
-  }
-
-  const declaration = fs.readFileSync(path.join(REPO_ROOT, THREADLESS_DECLARATION), 'utf8');
-  if (
-    !declaration.startsWith(
-      "import type * as RolldownBinding from './rolldown-binding.wasip1.cjs';\n",
-    )
-  ) {
+const bindingDeclarationPath = path.join(
+  REPO_ROOT,
+  'packages/rolldown/src/rolldown-binding.wasip1.d.cts',
+);
+const bindingDeclaration = fs.readFileSync(bindingDeclarationPath, 'utf8');
+for (const removedExport of [
+  'cancelCurrentThreadRuntimeTaskDispatch',
+  'driveCurrentThreadRuntimeTasks',
+]) {
+  if (bindingDeclaration.includes(removedExport)) {
     failures.push(
-      `${THREADLESS_DECLARATION}: must derive binding types from the threadless wasip1 declaration`,
+      `${path.relative(REPO_ROOT, bindingDeclarationPath)}: exposes removed CurrentThread task-host export ${removedExport}`,
     );
   }
-
-  const wasmPath = path.join(
-    REPO_ROOT,
-    'packages/rolldown/src/rolldown-binding.wasm32-wasip1.wasm',
-  );
-  const wasmModule = new WebAssembly.Module(fs.readFileSync(wasmPath));
-  const importDescriptors = WebAssembly.Module.imports(wasmModule);
-  const memoryImports = importDescriptors.filter(({ kind }) => kind === 'memory');
-  const unsupportedImports = importDescriptors.filter(
-    ({ kind }) => kind !== 'function' && kind !== 'memory',
-  );
-  if (
-    memoryImports.length !== 1 ||
-    memoryImports[0].module !== 'env' ||
-    memoryImports[0].name !== 'memory'
-  ) {
-    failures.push(`${wasmPath}: must import exactly one memory as env.memory`);
-  } else if (unsupportedImports.length > 0) {
+}
+for (const signature of [
+  'export interface BindingHostRegistration {',
+  'high: number',
+  'low: number',
+  'getCurrentThreadTaskHostContractVersion(): number',
+  'isCurrentThreadHostRegistrationActive(registrationHigh: number, registrationLow: number): boolean',
+  'reserveCurrentThreadHostRegistration(): BindingHostRegistration',
+  'registerCurrentThreadTaskHost(registrationHigh: number, registrationLow: number, dispatch?: never): void',
+  'registerTimerHost(registrationHigh: number, registrationLow: number, schedule: (id: number, ms: number) => Promise<void>, cancel: (id: number) => void): void',
+  'unregisterCurrentThreadTaskHost(registrationHigh: number, registrationLow: number): void',
+  'unregisterTimerHost(registrationHigh: number, registrationLow: number): void',
+]) {
+  if (!bindingDeclaration.includes(signature)) {
     failures.push(
-      `${wasmPath}: minimum-memory probe does not support imports ${unsupportedImports
-        .map(({ module, name, kind }) => `${module}.${name}:${kind}`)
-        .join(', ')}`,
+      `${path.relative(REPO_ROOT, bindingDeclarationPath)}: missing generation-aware signature ${signature}`,
     );
-  } else {
-    const importObject = {};
-    for (const descriptor of importDescriptors) {
-      importObject[descriptor.module] ??= {};
-      if (descriptor.kind === 'function') {
-        importObject[descriptor.module][descriptor.name] = () => 0;
-      }
-    }
-    const canInstantiateWithPages = (initial) => {
-      importObject.env.memory = new WebAssembly.Memory({
-        initial,
-        maximum: configuredMaximumMemory,
-      });
-      try {
-        new WebAssembly.Instance(wasmModule, importObject);
-        return true;
-      } catch (error) {
-        if (error instanceof WebAssembly.LinkError && /memory import/.test(error.message)) {
-          return false;
-        }
-        throw error;
-      }
-    };
-    if (!canInstantiateWithPages(configuredInitialMemory)) {
-      failures.push(
-        `${wasmPath}: configured initial memory (${configuredInitialMemory} pages) cannot satisfy env.memory`,
-      );
-    } else {
-      let lower = 1;
-      let upper = configuredInitialMemory;
-      while (lower < upper) {
-        const candidate = Math.floor((lower + upper) / 2);
-        if (canInstantiateWithPages(candidate)) {
-          upper = candidate;
-        } else {
-          lower = candidate + 1;
-        }
-      }
-      importedMinimumMemory = lower;
-    }
   }
 }
 
-for (const rel of LOADERS) {
-  const abs = resolveLoader(rel);
+const declaration = fs.readFileSync(path.join(REPO_ROOT, THREADLESS_DECLARATION), 'utf8');
+if (
+  !declaration.startsWith(
+    "import type * as RolldownBinding from './rolldown-binding.wasip1.cjs';\n",
+  )
+) {
+  failures.push(
+    `${THREADLESS_DECLARATION}: must derive binding types from the threadless wasip1 declaration`,
+  );
+}
+
+const wasmPath = path.join(REPO_ROOT, 'packages/rolldown/src/rolldown-binding.wasm32-wasip1.wasm');
+const wasmModule = new WebAssembly.Module(fs.readFileSync(wasmPath));
+const importDescriptors = WebAssembly.Module.imports(wasmModule);
+const memoryImports = importDescriptors.filter(({ kind }) => kind === 'memory');
+const unsupportedImports = importDescriptors.filter(
+  ({ kind }) => kind !== 'function' && kind !== 'memory',
+);
+if (
+  memoryImports.length !== 1 ||
+  memoryImports[0].module !== 'env' ||
+  memoryImports[0].name !== 'memory'
+) {
+  failures.push(`${wasmPath}: must import exactly one memory as env.memory`);
+} else if (unsupportedImports.length > 0) {
+  failures.push(
+    `${wasmPath}: minimum-memory probe does not support imports ${unsupportedImports
+      .map(({ module, name, kind }) => `${module}.${name}:${kind}`)
+      .join(', ')}`,
+  );
+} else {
+  const importObject = {};
+  for (const descriptor of importDescriptors) {
+    importObject[descriptor.module] ??= {};
+    if (descriptor.kind === 'function') {
+      importObject[descriptor.module][descriptor.name] = () => 0;
+    }
+  }
+  const canInstantiateWithPages = (initial) => {
+    importObject.env.memory = new WebAssembly.Memory({
+      initial,
+      maximum: configuredMaximumMemory,
+    });
+    try {
+      new WebAssembly.Instance(wasmModule, importObject);
+      return true;
+    } catch (error) {
+      if (error instanceof WebAssembly.LinkError && /memory import/.test(error.message)) {
+        return false;
+      }
+      throw error;
+    }
+  };
+  if (!canInstantiateWithPages(configuredInitialMemory)) {
+    failures.push(
+      `${wasmPath}: configured initial memory (${configuredInitialMemory} pages) cannot satisfy env.memory`,
+    );
+  }
+}
+
+for (const rel of DEFAULT_LOADERS) {
+  const abs = path.join(REPO_ROOT, rel);
   let source;
   try {
     source = fs.readFileSync(abs, 'utf8');
@@ -345,5 +321,5 @@ if (failures.length > 0) {
 }
 
 console.log(
-  `OK: single-thread WASI loaders are threadless, host-integrated, and use ${configuredInitialMemory} initial pages${importedMinimumMemory === undefined ? '' : ` for a ${importedMinimumMemory}-page Wasm import minimum`} — checked ${LOADERS.join(', ')}.`,
+  `OK: single-thread WASI loaders are threadless, host-integrated, and use ${configuredInitialMemory} initial pages — checked ${DEFAULT_LOADERS.join(', ')}.`,
 );

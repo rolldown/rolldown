@@ -28,10 +28,10 @@ const flags = new Set(process.argv.slice(2).filter((arg) => !arg.includes('=')))
 
 const distDir = path.resolve(repoRoot, args.get('--dist') ?? 'packages/browser/dist');
 const rounds = Number(args.get('--rounds') ?? 12);
-const slopeModules = Number(args.get('--modules') ?? 300);
+const slopeModules = 300;
 // Rounds discarded before measuring: the first rebuilds on a fresh instance pay
 // one-time allocations that are not a per-rebuild leak.
-const warmupRounds = Number(args.get('--warmup') ?? 2);
+const warmupRounds = 2;
 // `--measure` reports the slopes without enforcing the budgets. Use it to
 // re-derive the numbers below after an intentional memory change.
 const measureOnly = flags.has('--measure');
@@ -56,7 +56,7 @@ const STACKED_RENDER_CHUNK_PLUGINS = 6;
 const renderChunkDepth = (variant) =>
   variant === 'renderchunk-stacked' ? STACKED_RENDER_CHUNK_PLUGINS : 1;
 
-// What one round owes `transform`: the whole slope graph (`--modules` modules
+// What one round owes `transform`: the whole slope graph (`slopeModules` modules
 // plus 4 utils and 1 entry) AND rolldown's injected runtime module, which
 // transform sees even though no `load` ever serves it.
 const TRANSFORMED_MODULES_PER_ROUND = slopeModules + 5 + 1;
@@ -448,7 +448,6 @@ assert.deepEqual(
     'createWorkerdBundle',
     'freeOutputs',
     'getWorkerdRuntimeStats',
-    'instantiate',
     'snapshotModules',
   ],
   'the workerd entry export surface changed',
@@ -601,21 +600,20 @@ for (const variant of Object.keys(MEMORY_BUDGETS)) {
 
   const { measured, budget } = MEMORY_BUDGETS[variant];
   const floor = measured * SLOPE_FLOOR_RATIO;
-  const verdict =
-    measureOnly || budget === null
-      ? 'measured'
-      : slope > budget
-        ? 'OVER BUDGET'
-        : slope < floor
-          ? 'UNDER FLOOR'
-          : 'ok';
+  const verdict = measureOnly
+    ? 'measured'
+    : slope > budget
+      ? 'OVER BUDGET'
+      : slope < floor
+        ? 'UNDER FLOOR'
+        : 'ok';
   console.log(
     `  [8/8] memory ${variant.padEnd(21)} ${verdict.padEnd(11)} ` +
       `${slope.toFixed(3)} MiB/rebuild` +
-      (budget === null ? '' : ` (band ${floor.toFixed(3)}-${budget.toFixed(3)})`) +
+      ` (band ${floor.toFixed(3)}-${budget.toFixed(3)})` +
       `  [${report.memFirstMiB} -> ${report.memLastMiB} MiB over ${rounds} rounds]`,
   );
-  if (!measureOnly && budget !== null && slope > budget) {
+  if (!measureOnly && slope > budget) {
     failures.push(
       `memory variant '${variant}' retained ${slope.toFixed(3)} MiB/rebuild, ` +
         `budget is ${budget.toFixed(3)} MiB/rebuild. A hook-input eager-release path ` +
@@ -657,11 +655,6 @@ for (const variant of Object.keys(MEMORY_BUDGETS)) {
 // are checked as MAGNITUDES because the arena tail can flip the sign. A counter
 // that grows but ignores what the build did would show NEITHER, and would still
 // satisfy every per-variant check above.
-//
-// This replaces a 0.007 threshold read against the single-hook
-// `renderchunk-nomodules` row. That gap was only 3 quanta while each side jitters
-// a page, so a 2-quanta threshold sat inside the noise: CI run 31394326339 failed
-// it at 0.004 with every band green, `nohooks` having drifted one page.
 if (!measureOnly) {
   const hookSlopeDelta = slopes['renderchunk-stacked'] - slopes.nohooks;
   const hookFirstDelta = (firstSamples['renderchunk-stacked'] - firstSamples.nohooks) / MiB;

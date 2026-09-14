@@ -33,10 +33,10 @@ pub struct HmrAstFinalizer<'me, 'ast> {
   pub modules: &'me IndexModules,
   pub module: &'me NormalModule,
   pub use_pife_for_module_wrappers: bool,
-  /// URL of the lazy compilation endpoint, prefixed with the dev server's base
-  /// (`experimental.devMode.base`). Used when rewriting a nested `import()` of a
-  /// lazy proxy module inside a lazy chunk / HMR patch.
-  pub lazy_endpoint: String,
+  /// The dev server's public base path (`experimental.devMode.base`). Prefixes the
+  /// lazy compilation endpoint when rewriting a nested `import()` of a lazy proxy
+  /// module inside a lazy chunk / HMR patch.
+  pub lazy_base: Option<String>,
 
   // Each module has a unique index, which is used to generate something that needs to be unique.
   pub unique_index: usize,
@@ -591,7 +591,12 @@ impl<'ast> HmrAstFinalizer<'_, 'ast> {
 
     // TODO: hyf0 should switch to a more robust way to identify lazy proxy modules
     if importee.id.contains("?rolldown-lazy=1") {
-      *it = create_request_lazy_call(&importee.id, &importee.stable_id, self, &self.lazy_endpoint);
+      *it = create_request_lazy_call(
+        &importee.id,
+        &importee.stable_id,
+        self,
+        self.lazy_base.as_deref(),
+      );
       return;
     }
 

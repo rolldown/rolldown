@@ -233,14 +233,15 @@ pub fn create_request_lazy_call<'ast, B>(
   proxy_module_id: &str,
   stable_proxy_id: &str,
   builder: &B,
-  lazy_endpoint: &str,
+  base: Option<&str>,
 ) -> ast::Expression<'ast>
 where
   B: oxc::ast::builder::GetAstBuilder<'ast> + GetAllocator<'ast>,
 {
   let url_expr = {
     let url_head = format!(
-      "{lazy_endpoint}?id={}&clientId=",
+      "{}?id={}&clientId=",
+      lazy_endpoint_url(base),
       percent_encoding::utf8_percent_encode(proxy_module_id, URI_COMPONENT_ENCODE_SET)
     );
     let quasis = oxc::allocator::Vec::from_iter_in(

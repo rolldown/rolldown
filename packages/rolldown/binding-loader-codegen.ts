@@ -1,6 +1,4 @@
 export const LOADED_BINDING_TARGET_EXPORT = '__rolldownBindingTarget';
-const EMNAPI_ASYNC_WORK_POOL_SIZE_DEFAULT = 4;
-export const EMNAPI_ASYNC_WORK_POOL_SIZE_MAX = 1024;
 const ASYNC_RUNTIME_HOST_EXPORTS = [
   'getCurrentThreadTaskHostContractVersion',
   'isCurrentThreadHostRegistrationActive',
@@ -81,11 +79,6 @@ const WASI_ASYNC_TEARDOWN_WAITS = [
   },
 ] as const;
 const WASI_EXIT_LISTENER_HELPER = 'function __registerWasiExitListener() {';
-// The head of upstream's cwd/rootDir/hostRoot block (`@napi-rs/cli` >= 3.9.1
-// derives an android-aware `__hostRoot` from `__cwd`). The pool-size helper
-// lands before the whole block so it precedes the WASI instance construction.
-const WASI_NODE_HELPER_ANCHOR =
-  'const __cwd = process.cwd()\nconst __rootDir = __nodePath.parse(__cwd).root\n';
 const WASI_NODE_WORKER_HELPER_SIGNATURES = [
   'function __getWasiWorkerExecArgv() {',
   'function __isInvalidWasiWorkerExecArgv(errorMessage, argument) {',
@@ -94,15 +87,6 @@ const WASI_NODE_WORKER_HELPER_SIGNATURES = [
 ] as const;
 const WASI_NODE_WORKER_CONSTRUCTION =
   "const worker = __createWasiWorker(__nodePath.join(__dirname, 'wasi-worker.mjs'))";
-const WASI_NODE_ASYNC_WORK_POOL_SIZE = `    asyncWorkPoolSize: (function () {
-      const threadsSizeFromEnv = Number(process.env.NAPI_RS_ASYNC_WORK_POOL_SIZE ?? process.env.UV_THREADPOOL_SIZE)
-      // NaN > 0 is false
-      if (threadsSizeFromEnv > 0) {
-        return threadsSizeFromEnv
-      } else {
-        return 4
-      }
-    })(),`;
 const WASI_CJS_TARGET_PATTERN = new RegExp(
   `module\\.exports\\.${LOADED_BINDING_TARGET_EXPORT}\\s*=\\s*[^\\r\\n]+`,
   'g',
@@ -262,49 +246,6 @@ export function patchWasiNodeWorkerExecArgv(source: string): string {
     assertExactlyOne(source, signature, 'WASI worker execArgv helper');
   }
   assertExactlyOne(source, WASI_NODE_WORKER_CONSTRUCTION, 'WASI worker construction');
-  return source;
-}
-
-/**
- * Replace upstream's async-work-pool IIFE (`@napi-rs/cli` <= 3.9.1 passes any
- * positive env value through unclamped and non-integer) with one normalized
- * value handed to emnapi.
- */
-export function patchWasiNodeAsyncWorkPoolSize(source: string): string {
-  if (source.includes('const __rolldownAsyncWorkPoolSize =')) {
-    return source;
-  }
-
-  const normalization = `function __normalizeRolldownAsyncWorkPoolSize(value) {
-  const numeric = Number(value)
-  if (!Number.isFinite(numeric) || numeric <= 0) {
-    return ${EMNAPI_ASYNC_WORK_POOL_SIZE_DEFAULT}
-  }
-  const integer = Math.trunc(numeric)
-  return integer > 0
-    ? Math.min(integer, ${EMNAPI_ASYNC_WORK_POOL_SIZE_MAX})
-    : ${EMNAPI_ASYNC_WORK_POOL_SIZE_DEFAULT}
-}
-
-const __rolldownAsyncWorkPoolSize = __normalizeRolldownAsyncWorkPoolSize(
-  process.env.NAPI_RS_ASYNC_WORK_POOL_SIZE ?? process.env.UV_THREADPOOL_SIZE,
-)
-
-`;
-  source = replaceExactly(
-    source,
-    WASI_NODE_HELPER_ANCHOR,
-    normalization + WASI_NODE_HELPER_ANCHOR,
-    1,
-    'WASI async-work-pool helper',
-  );
-  source = replaceExactly(
-    source,
-    WASI_NODE_ASYNC_WORK_POOL_SIZE,
-    '    asyncWorkPoolSize: __rolldownAsyncWorkPoolSize,',
-    1,
-    'WASI async-work-pool option',
-  );
   return source;
 }
 

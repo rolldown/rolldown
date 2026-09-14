@@ -3,32 +3,10 @@ import { createRequire } from 'node:module';
 import { fileURLToPath } from 'node:url';
 import { describe, expect, test } from 'vitest';
 
-import {
-  EMNAPI_ASYNC_WORK_POOL_SIZE_MAX,
-  LOADED_BINDING_TARGET_EXPORT,
-  patchWasiBindingLoader,
-  patchWasiNodeAsyncWorkPoolSize,
-} from '../binding-loader-codegen';
+import { LOADED_BINDING_TARGET_EXPORT, patchWasiBindingLoader } from '../binding-loader-codegen';
 
 const cjsAnchor = 'module.exports = __napiModule.exports\n';
 const esmAnchor = 'export default __napiModule.exports\n';
-const wasiNodeLoaderTemplate = `const __nodePath = { parse: () => ({ root: '/' }) }
-const __cwd = process.cwd()
-const __rootDir = __nodePath.parse(__cwd).root
-const __hostRoot =
-  process.platform === 'android' ? __cwd : __rootDir
-const __emnapiOptions = {
-    asyncWorkPoolSize: (function () {
-      const threadsSizeFromEnv = Number(process.env.NAPI_RS_ASYNC_WORK_POOL_SIZE ?? process.env.UV_THREADPOOL_SIZE)
-      // NaN > 0 is false
-      if (threadsSizeFromEnv > 0) {
-        return threadsSizeFromEnv
-      } else {
-        return 4
-      }
-    })(),
-}
-`;
 const generatedWasiNodeLoader = readFileSync(
   fileURLToPath(new URL('../src/rolldown-binding.wasi.cjs', import.meta.url)),
   'utf8',
@@ -49,45 +27,6 @@ describe('WASI binding target metadata', () => {
     expect(reversed).toContain(`${exportName} = 'wasi-threads'`);
     expect(reversed).not.toContain(`${exportName} = 'wasi'`);
     expect(patchWasiBindingLoader(reversed, 'wasi-threads')).toBe(reversed);
-  });
-});
-
-describe('WASI async work pool normalization', () => {
-  test('the generated Node loader gives emnapi the capped value', () => {
-    const patched = patchWasiNodeAsyncWorkPoolSize(wasiNodeLoaderTemplate);
-    const process = {
-      cwd: () => '/',
-      env: {
-        NAPI_RS_ASYNC_WORK_POOL_SIZE: '2048',
-        UV_THREADPOOL_SIZE: '2',
-        UNRELATED: 'preserved',
-      },
-    };
-    // oxlint-disable-next-line typescript/no-implied-eval -- evaluate the generated loader snippet in an isolated scope
-    const result = Function(
-      'process',
-      `${patched}
-return { pool: __emnapiOptions.asyncWorkPoolSize }`,
-    )(process);
-
-    expect(result).toEqual({ pool: EMNAPI_ASYNC_WORK_POOL_SIZE_MAX });
-    expect(process.env.NAPI_RS_ASYNC_WORK_POOL_SIZE).toBe('2048');
-    expect(patchWasiNodeAsyncWorkPoolSize(patched)).toBe(patched);
-  });
-
-  test('the generated Node loader falls back to the UV pool size', () => {
-    const patched = patchWasiNodeAsyncWorkPoolSize(wasiNodeLoaderTemplate);
-    // oxlint-disable-next-line typescript/no-implied-eval -- evaluate the generated loader snippet in an isolated scope
-    const result = Function(
-      'process',
-      `${patched}
-return { pool: __emnapiOptions.asyncWorkPoolSize }`,
-    )({
-      cwd: () => '/',
-      env: { UV_THREADPOOL_SIZE: '6' },
-    });
-
-    expect(result.pool).toBe(6);
   });
 });
 

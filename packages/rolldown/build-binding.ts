@@ -14,7 +14,6 @@ import {
   patchNativeBindingLoader,
   patchWasiBindingContextLifecycle,
   patchWasiBindingLoader,
-  patchWasiNodeAsyncWorkPoolSize,
   patchWasiNodeWorkerExecArgv,
 } from './binding-loader-codegen';
 import {
@@ -71,7 +70,6 @@ try {
   patchBindingTargetMetadata();
   patchWasiBindingContextLifecycles();
   patchWasiNodeWorkerExecArgvConfig();
-  patchWasiNodeAsyncWorkPoolConfig();
   validateAsyncRuntimeHostExports();
   if (argsOptions.target === WASI_THREADS_TARGET) {
     validateWasiReactorArtifacts();
@@ -202,9 +200,4 @@ function patchWasiBindingContextLifecycles(): void {
 function patchWasiNodeWorkerExecArgvConfig(): void {
   const bindingPath = join(__dirname, 'src', 'rolldown-binding.wasi.cjs');
   writeFileSync(bindingPath, patchWasiNodeWorkerExecArgv(readFileSync(bindingPath, 'utf8')));
-}
-
-function patchWasiNodeAsyncWorkPoolConfig(): void {
-  const bindingPath = join(__dirname, 'src', 'rolldown-binding.wasi.cjs');
-  writeFileSync(bindingPath, patchWasiNodeAsyncWorkPoolSize(readFileSync(bindingPath, 'utf8')));
 }

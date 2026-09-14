@@ -105,21 +105,6 @@ function __createWasiWorker(filename) {
   }
 }
 
-function __normalizeRolldownAsyncWorkPoolSize(value) {
-  const numeric = Number(value)
-  if (!Number.isFinite(numeric) || numeric <= 0) {
-    return 4
-  }
-  const integer = Math.trunc(numeric)
-  return integer > 0
-    ? Math.min(integer, 1024)
-    : 4
-}
-
-const __rolldownAsyncWorkPoolSize = __normalizeRolldownAsyncWorkPoolSize(
-  process.env.NAPI_RS_ASYNC_WORK_POOL_SIZE ?? process.env.UV_THREADPOOL_SIZE,
-)
-
 const __cwd = process.cwd()
 const __rootDir = __nodePath.parse(__cwd).root
 const __hostRoot =
@@ -876,7 +861,15 @@ try {
     napiModule: __napiModule,
   } = __emnapiInstantiateNapiModuleSync(__wasmFile, {
     context: __emnapiContext,
-    asyncWorkPoolSize: __rolldownAsyncWorkPoolSize,
+    asyncWorkPoolSize: (function () {
+      const threadsSizeFromEnv = Number(process.env.NAPI_RS_ASYNC_WORK_POOL_SIZE ?? process.env.UV_THREADPOOL_SIZE)
+      // NaN > 0 is false
+      if (threadsSizeFromEnv > 0) {
+        return threadsSizeFromEnv
+      } else {
+        return 4
+      }
+    })(),
     reuseWorker: true,
     plugins: [__emnapiAsyncWorkPlugin, __emnapiTSFNPlugin],
     wasi: __wasi,

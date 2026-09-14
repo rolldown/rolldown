@@ -123,11 +123,12 @@ export async function createBundlerOptions(
       ? runBuildCallback(callOutputOptionsHook, 'outputOptions')
       : invokeOutputOptionsHook();
 
-  assertParallelPluginOptionsSupported(readPluginOption(() => outputOptions.plugins));
-  const hookOutputPlugins = await normalizePluginOption(
-    readPluginOption(() => outputOptions.plugins),
-    closeCallbackScope,
-  );
+  // One snapshot for both consumers: an accessor-backed `plugins` on the hook
+  // result has to fire exactly once, or the preflight read would swallow the
+  // plugins the hook injected. See internal-docs/async-runtime/implementation.md.
+  const hookOutputPluginOption = readPluginOption(() => outputOptions.plugins);
+  assertParallelPluginOptionsSupported(hookOutputPluginOption);
+  const hookOutputPlugins = await normalizePluginOption(hookOutputPluginOption, closeCallbackScope);
   const normalizedInputPlugins = normalizePlugins(inputPlugins, ANONYMOUS_PLUGIN_PREFIX);
   const normalizedOutputPlugins = normalizePlugins(
     hookOutputPlugins,

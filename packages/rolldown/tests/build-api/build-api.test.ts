@@ -1229,6 +1229,44 @@ test.each(['single', 'array'] as const)(
   },
 );
 
+test('build reads plugins on the `outputOptions` hook result once', async () => {
+  let hookPluginReads = 0;
+  let renderChunkCalls = 0;
+  const outputPlugin: Plugin = {
+    name: 'hook-injected-output-plugin',
+    renderChunk() {
+      renderChunkCalls += 1;
+    },
+  };
+
+  await build({
+    input: './main.js',
+    cwd: import.meta.dirname,
+    write: false,
+    plugins: [
+      {
+        name: 'inject-output-plugin',
+        outputOptions(options) {
+          // The hook result is consumed as-is, so an accessor-backed `plugins` on it
+          // must be read exactly once: the parallel-plugin preflight and the plugin
+          // normalization share one snapshot instead of reading twice.
+          return Object.defineProperty({ ...options }, 'plugins', {
+            configurable: true,
+            enumerable: true,
+            get() {
+              hookPluginReads += 1;
+              return hookPluginReads === 1 ? [outputPlugin] : undefined;
+            },
+          });
+        },
+      },
+    ],
+  });
+
+  expect(hookPluginReads).toBeGreaterThan(0);
+  expect(renderChunkCalls).toBe(1);
+});
+
 test('supports closeBundle hook', async () => {
   let closeBundleCalls = 0;
   try {

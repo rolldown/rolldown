@@ -595,6 +595,34 @@ Then, across all files of the batch:
 6. **Refetch and patch** — one partial scan and cache merge, then the
    per-client update-superset walk picks the factories to ship.
 
+The superset walk (`collect_client_update_superset` in `hmr_stage.rs`)
+starts from the changed modules and follows importer edges (static and
+dynamic `import()`). It stops at a self-accepting module, at an importer
+that accepts the module as a dependency, and — since
+`import.meta.hot.acceptExports` — at an importer that reads only export
+names the module accepts (`imports_only_accepted_exports` in
+`module_graph_delta.rs`). The accepted names come from the scanner
+(`HmrInfo::accepted_exports`); they are `None` when the argument is not a
+string literal or a list of string literals, and then the importer is
+walked as usual.
+
+The browser repeats the same decision on its own copy of the graph. Each
+patch's `registerGraph` prelude carries, per static edge, the export names
+the importer reads (`bindings[i][j]`): `"*"` for a whole-namespace read
+(`import * as ns`, `export * from`, `require()`, non-JS records; the same
+sentinel Vite's `importAnalysis` uses), an empty list for a side-effect-only
+import. The field is filled only for edges into a module that calls
+`acceptExports`; a `null` or missing entry means `"*"`, and the key is
+left out when no edge qualifies. The runtime keeps the names in
+`staticImports` and exposes them through `getImportedBindings`.
+
+Both sides decide from different generations: the server reads the
+post-rebuild `hmr_info`, the browser reads the hot context of the module
+still evaluated there. When an edit adds or widens an `accept` /
+`acceptExports` declaration, the server may prune an importer that the
+browser's older context still walks into, and that client full-reloads
+once. The reload loads the new generation, so the two agree again.
+
 ### `rebuild` (`bundling_task.rs:189-223`)
 
 - Locks the `Bundler`.

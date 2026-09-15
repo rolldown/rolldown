@@ -967,6 +967,17 @@ impl GenerateStage<'_> {
     let allow_avoid_redundant_chunk_loads =
       self.options.experimental.is_avoid_redundant_chunk_loads_enabled()
         && !has_tla_or_tla_dependency;
+
+    self
+      .apply_manual_code_splitting(
+        index_splitting_info,
+        &mut module_is_assigned,
+        chunk_graph,
+        input_base,
+        &tag_registry,
+      )
+      .await?;
+
     // See internal-docs/code-splitting/implementation.md#dynamic-already-loaded-analysis.
     if allow_avoid_redundant_chunk_loads {
       let entries_len: u32 = self
@@ -979,6 +990,7 @@ impl GenerateStage<'_> {
         .expect("Too many entries, u32 overflowed.");
       self.optimize_dynamic_entry_bits(
         index_splitting_info,
+        &module_is_assigned,
         chunk_graph,
         entries_len,
         used_symbol_refs_builder,
@@ -990,16 +1002,6 @@ impl GenerateStage<'_> {
       chunk_graph,
       input_base,
     );
-
-    self
-      .apply_manual_code_splitting(
-        index_splitting_info,
-        &mut module_is_assigned,
-        chunk_graph,
-        input_base,
-        &tag_registry,
-      )
-      .await?;
 
     // If it is allow to allow that entry chunks have the different exports as the underlying entry module.
     // This is used to generate less chunks when possible.

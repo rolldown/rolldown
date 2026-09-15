@@ -21,8 +21,8 @@ To fix:
 ## first.js
 
 ```js
-import { n as __exportAll, t as __esmMin } from "./rolldown-runtime.js";
 import { r as value$1, t as init_second } from "./second.js";
+import { n as __exportAll, t as __esmMin } from "./rolldown-runtime.js";
 //#region first.js
 var first_exports = /* @__PURE__ */ __exportAll({ value: () => value });
 var value;
@@ -40,9 +40,9 @@ export { init_first as n, value as r, first_exports as t };
 ## main.js
 
 ```js
-import { t as __esmMin } from "./rolldown-runtime.js";
 import { n as second_exports, t as init_second } from "./second.js";
 import { n as init_first, t as first_exports } from "./first.js";
+import { t as __esmMin } from "./rolldown-runtime.js";
 //#region main.js
 function init_main() {
 	return (init_main = __esmMin((() => {
@@ -67,8 +67,8 @@ export { __exportAll as n, __esmMin as t };
 ## second.js
 
 ```js
-import { n as __exportAll, t as __esmMin } from "./rolldown-runtime.js";
 import { n as init_first, r as value$1 } from "./first.js";
+import { n as __exportAll, t as __esmMin } from "./rolldown-runtime.js";
 //#region second.js
 var second_exports = /* @__PURE__ */ __exportAll({ value: () => value });
 var value;
@@ -105,8 +105,8 @@ To fix:
 ### first.js
 
 ```js
-import { n as __exportAll, t as __esmMin } from "./rolldown-runtime.js";
 import { r as value$1, t as init_second } from "./second.js";
+import { n as __exportAll, t as __esmMin } from "./rolldown-runtime.js";
 //#region first.js
 var first_exports = /* @__PURE__ */ __exportAll({ value: () => value });
 var value;
@@ -124,9 +124,9 @@ export { init_first as n, value as r, first_exports as t };
 ### main.js
 
 ```js
-import { t as __esmMin } from "./rolldown-runtime.js";
 import { n as second_exports, t as init_second } from "./second.js";
 import { n as init_first, t as first_exports } from "./first.js";
+import { t as __esmMin } from "./rolldown-runtime.js";
 //#region main.js
 function init_main() {
 	return (init_main = __esmMin((() => {
@@ -151,8 +151,8 @@ export { __exportAll as n, __esmMin as t };
 ### second.js
 
 ```js
-import { n as __exportAll, t as __esmMin } from "./rolldown-runtime.js";
 import { n as init_first, r as value$1 } from "./first.js";
+import { n as __exportAll, t as __esmMin } from "./rolldown-runtime.js";
 //#region second.js
 var second_exports = /* @__PURE__ */ __exportAll({ value: () => value });
 var value;

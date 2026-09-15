@@ -54,7 +54,7 @@
  - rollup@function@max-parallel-file-operations@infinity: maxParallelFileOps set to infinity
  - rollup@function@max-parallel-file-operations@set: maxParallelFileOps set to 3
  - rollup@function@max-parallel-file-operations@with-plugin: maxParallelFileOps with plugin
-
+ - rollup@function@max-parallel-file-operations: maxParallelFileOps limits write operations
 ### The `PluginContext.emitFile` emit chunk is only supported partially
  - rollup@function@implicit-dependencies@dependant-dynamic-import-no-effects: throws when a module that is loaded before an emitted chunk is fully tree-shaken
  - rollup@function@implicit-dependencies@dependant-dynamic-import-not-included: throws when a module that is loaded before an emitted chunk is only linked to the module graph via a tree-shaken dynamic import

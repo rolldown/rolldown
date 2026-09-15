@@ -1,0 +1,63 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+//#region common.js
+const common = "common-base";
+//#endregion
+//#region c1.js
+const c1 = "c1:" + common;
+//#endregion
+//#region c2.js
+const c2 = "c2:" + c1;
+//#endregion
+//#region c3.js
+const c3 = "c3:" + c2;
+//#endregion
+//#region main.js
+console.log(common, c1, c2, c3, [
+	() => import("./r1.js"),
+	() => import("./r2.js"),
+	() => import("./r3.js")
+]);
+//#endregion
+export { common as i, c2 as n, c1 as r, c3 as t };
+
+```
+
+## r1.js
+
+```js
+import { i as common, r as c1 } from "./main.js";
+//#region r1.js
+var r1_default = () => common + c1 + "/r1";
+//#endregion
+export { r1_default as default };
+
+```
+
+## r2.js
+
+```js
+import { n as c2, r as c1 } from "./main.js";
+//#region r2.js
+var r2_default = () => c1 + c2 + "/r2";
+//#endregion
+export { r2_default as default };
+
+```
+
+## r3.js
+
+```js
+import { n as c2, t as c3 } from "./main.js";
+//#region r3.js
+var r3_default = () => c2 + c3 + "/r3";
+//#endregion
+export { r3_default as default };
+
+```

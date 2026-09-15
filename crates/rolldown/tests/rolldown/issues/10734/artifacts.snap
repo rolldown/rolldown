@@ -6,6 +6,13 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## INEFFECTIVE_DYNAMIC_IMPORT
 
 ```text
+[INEFFECTIVE_DYNAMIC_IMPORT] chain-a.js is dynamically imported by service.js but also statically imported by shared.js, dynamic import will not move module into another chunk.
+
+```
+
+## INEFFECTIVE_DYNAMIC_IMPORT
+
+```text
 [INEFFECTIVE_DYNAMIC_IMPORT] shared.js is dynamically imported by service.js but also statically imported by service.js, dynamic import will not move module into another chunk.
 
 ```
@@ -15,12 +22,8 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## chain-a.js
 
 ```js
-// HIDDEN [\0rolldown/runtime.js]
-//#region chain-a.js
-var chain_a_exports = /* @__PURE__ */ __exportAll({ chainA: () => chainA });
-const chainA = "chainA";
-//#endregion
-export { chain_a_exports as n, __exportAll as r, chainA as t };
+import { i as chainA } from "./service.js";
+export { chainA };
 
 ```
 
@@ -48,12 +51,15 @@ export { done };
 ## service.js
 
 ```js
-import { r as __exportAll, t as chainA } from "./chain-a.js";
+// HIDDEN [\0rolldown/runtime.js]
+//#region chain-a.js
+const chainA = "chainA";
+//#endregion
 //#region chain-b.js
 const chainB = "chainB";
 //#endregion
 //#region shared.js
-const shared = "shared" + chainA;
+const shared = "sharedchainA";
 //#endregion
 //#region service.js
 var service_exports = /* @__PURE__ */ __exportAll({
@@ -65,9 +71,9 @@ var service_exports = /* @__PURE__ */ __exportAll({
 const entryValue = "entry" + shared + chainB;
 const loadCyclic = () => import("./cyclic.js");
 const loadShared = () => import("./shared.js");
-const loadChainA = () => import("./chain-a.js").then((n) => n.n);
+const loadChainA = () => import("./chain-a.js");
 //#endregion
-export { entryValue, loadChainA, loadCyclic, loadShared, shared as n, chainB as r, service_exports as t };
+export { entryValue, chainA as i, loadChainA, loadCyclic, loadShared, shared as n, chainB as r, service_exports as t };
 
 ```
 

@@ -157,6 +157,11 @@ export interface ChecksOptions {
    * {@include ../docs/checks-plugin-timings.md}
    * @default true
    * */
+  bundlerTimings?: boolean;
+
+  /**
+   * @deprecated Use {@linkcode bundlerTimings} instead. `bundlerTimings` takes precedence when both options are set.
+   */
   pluginTimings?: boolean;
 
   /**

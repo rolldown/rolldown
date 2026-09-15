@@ -30,6 +30,8 @@ pub struct ChecksOptions {
   pub configuration_field_conflict: Option<bool>,
   pub prefer_builtin_feature: Option<bool>,
   pub could_not_clean_directory: Option<bool>,
+  pub bundler_timings: Option<bool>,
+  /// Deprecated alias for `bundler_timings`. The new option takes precedence.
   pub plugin_timings: Option<bool>,
   pub duplicate_shebang: Option<bool>,
   pub unsupported_tsconfig_option: Option<bool>,
@@ -107,8 +109,10 @@ impl From<ChecksOptions> for rolldown_error::EventKindSwitcher {
       rolldown_error::EventKindSwitcher::CouldNotCleanDirectory,
       value.could_not_clean_directory.unwrap_or(true),
     );
-    flag
-      .set(rolldown_error::EventKindSwitcher::PluginTimings, value.plugin_timings.unwrap_or(true));
+    flag.set(
+      rolldown_error::EventKindSwitcher::PluginTimings,
+      value.bundler_timings.or(value.plugin_timings).unwrap_or(true),
+    );
     flag.set(
       rolldown_error::EventKindSwitcher::DuplicateShebang,
       value.duplicate_shebang.unwrap_or(true),

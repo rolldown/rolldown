@@ -2,7 +2,7 @@ import path from 'node:path';
 
 import type { OutputChunk as RolldownOutputChunk } from 'rolldown';
 import { defineTest } from 'rolldown-tests';
-import { getOutputChunk } from 'rolldown-tests/utils';
+import { getOutputAsset, getOutputChunk } from 'rolldown-tests/utils';
 import { expect } from 'vitest';
 
 const entry = path.join(__dirname, './main.js');
@@ -109,5 +109,11 @@ export default defineTest({
     expect(Object.values(chunks[0].modules)[0].code).toBe(
       '//#region main.js\nconsole.log();\n\n//#endregion',
     );
+    const mapAsset = getOutputAsset(output).find(
+      (asset) => asset.fileName === chunks[0].sourcemapFileName,
+    );
+    expect(mapAsset).toBeDefined();
+    const emittedMap = JSON.parse(mapAsset!.source as string) as { mappings: string };
+    expect(emittedMap.mappings).toBe(chunks[0].map!.mappings);
   },
 });

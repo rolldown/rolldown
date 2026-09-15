@@ -646,8 +646,12 @@ impl GenerateStage<'_> {
       // `create_order_wrap_entry_facades` bails out on it anyway.
       return index_vec![FxHashSet::default(); chunk_graph.chunk_table.len()];
     }
-    let final_esm_init_metadata =
-      self.compute_wrapped_esm_init_metadata(&self.ast_table, chunk_graph, order_state);
+    let final_esm_init_metadata = self.compute_wrapped_esm_init_metadata(
+      &self.ast_table,
+      chunk_graph,
+      order_state,
+      used_symbol_refs,
+    );
     self.lowered_static_import_edges(
       chunk_graph,
       used_symbol_refs_builder,

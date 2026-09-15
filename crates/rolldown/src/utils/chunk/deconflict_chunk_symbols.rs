@@ -273,6 +273,8 @@ pub fn deconflict_chunk_symbols(
     chunk.node_mode_external_ns_names = node_mode_names;
   }
 
+  name_cjs_exports_aliases(chunk, link_output, &mut renamer);
+
   rename_shadowing_symbols_in_nested_scopes(chunk, link_output, format, &mut renamer);
 
   chunk.canonical_names = renamer.into_canonical_names();
@@ -342,6 +344,25 @@ fn collect_chunk_scope_captured_names(
     }
   }
   captured
+}
+
+/// Name every CJS `exports` alias of the chunk. The pass runs after the other chunk-root names
+/// exist, and before nested renaming picks a `$n` suffix. See [`Renamer::add_cjs_exports_alias`].
+fn name_cjs_exports_aliases(
+  chunk: &Chunk,
+  link_output: &LinkStageOutput,
+  renamer: &mut Renamer<'_>,
+) {
+  chunk
+    .modules
+    .iter()
+    .copied()
+    .filter_map(|module_idx| {
+      let alias_ref = link_output.metas[module_idx].cjs_exports_alias_ref?;
+      let db = link_output.symbol_db[module_idx].as_ref()?;
+      Some((alias_ref, db.ast_scopes.scoping()))
+    })
+    .for_each(|(alias_ref, scoping)| renamer.add_cjs_exports_alias(alias_ref, scoping));
 }
 
 /// Rename nested scope symbols that would shadow top-level symbols.

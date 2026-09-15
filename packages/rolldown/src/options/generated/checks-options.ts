@@ -78,6 +78,12 @@ export interface ChecksOptions {
   filenameConflict?: boolean;
 
   /**
+   * Whether to emit warnings for module-level directives other than `use strict`.
+   * @default true
+   * */
+  moduleLevelDirective?: boolean;
+
+  /**
    * Whether to emit warnings when a CommonJS variable is used in an ES module.
    *
    * CommonJS variables like `module` and `exports` are treated as global variables in ES modules and may not work as expected.

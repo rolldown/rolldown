@@ -29,7 +29,6 @@ export const failedReasons: Record<string, string> = {
     'oxc minifier does not support JSX (https://github.com/oxc-project/oxc/issues/13248)',
   'loader/jsx_preserve_capital_letter_minify_nested':
     'oxc minifier does not support JSX (https://github.com/oxc-project/oxc/issues/13248)',
-  'loader/loader_data_url_base64_invalid_utf8': 'mime type should be `data:text/plain`',
   'loader/loader_file_one_source_two_different_output_paths_css':
     'generate wrong output when css as entry and has shared css',
   'packagejson/common_js_variable_in_esm_type_module':

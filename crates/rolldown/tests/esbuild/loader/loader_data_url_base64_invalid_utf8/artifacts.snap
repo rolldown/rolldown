@@ -9,7 +9,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 //#region binary.txt
 //#endregion
 //#region entry.js
-console.log("data:application/octet-stream;base64,/w==");
+console.log("data:text/plain;charset=utf-8;base64,/w==");
 //#endregion
 
 ```

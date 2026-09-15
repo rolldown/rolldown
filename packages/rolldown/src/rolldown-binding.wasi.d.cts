@@ -4,6 +4,10 @@ type VoidNullable<T = void> = T | null | undefined | void
 export type BindingStringOrRegex = string | RegExp
 export type BindingResult<T> = { errors: BindingError[], isBindingErrors: boolean } | T
 
+
+/** The WASI flavor this loader instantiates. */
+export declare const __napiBindingTarget: 'wasm32-wasi'
+
 export interface CodegenOptions {
   /**
    * Remove whitespace.

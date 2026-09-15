@@ -1,4 +1,5 @@
 import type { WatchOptions } from '../../options/watch-options';
+import { assertRuntimeFeature } from '../../runtime-support';
 import { type RolldownWatcher, WatcherEmitter } from './watch-emitter';
 import { createWatcher } from './watcher';
 
@@ -36,6 +37,15 @@ import { createWatcher } from './watcher';
  */
 export function watch(input: WatchOptions | WatchOptions[]): RolldownWatcher {
   const emitter = new WatcherEmitter();
-  createWatcher(emitter, input);
+  let setupPromise: Promise<void>;
+  try {
+    assertRuntimeFeature('watch');
+    setupPromise = createWatcher(emitter, input);
+  } catch (error) {
+    setupPromise = Promise.reject(error);
+  }
+  void setupPromise
+    .catch((error) => emitter.failSetup(error))
+    .catch((error) => console.error('watcher setup error listener failed', error));
   return emitter;
 }

@@ -1,3 +1,7 @@
+// This entry loads the binding (parse/minify/transform); every such entry
+// registers the CurrentThread timer host at import (see timer-host.ts).
+import './timer-host';
+
 export { parse, parseSync, type ParseResult, type ParserOptions } from './utils/parse';
 export type * as ESTree from '@oxc-project/types';
 export { minify, type MinifyOptions, type MinifyResult, minifySync } from './utils/minify';

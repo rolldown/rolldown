@@ -6,3 +6,6 @@ mod preserve_region_markers;
 pub mod test_config;
 pub mod types;
 pub mod utils;
+
+#[cfg(test)]
+mod dev_engine_tests;

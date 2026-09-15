@@ -6,6 +6,7 @@ import { expect, test } from 'vitest';
 
 // The `.rolldown` dir is generated under `InputOptions.cwd`, which `runBundle` sets to this directory.
 const dotRolldownFileName = join(import.meta.dirname, 'node_modules/.rolldown');
+const requestedSessionId = 'requested-devtools-session';
 
 function normalizePath(path) {
   return path.replaceAll('\\', '/');
@@ -24,15 +25,15 @@ test(`emit data for devtool`, async () => {
   const renderedModuleSizes = await runBundle();
 
   const dotRolldownDir = readdirSync(dotRolldownFileName);
-  expect(dotRolldownDir.length).toBe(1);
-  const debugDataDir = readdirSync(join(dotRolldownFileName, dotRolldownDir[0]));
+  expect(dotRolldownDir).toEqual([requestedSessionId]);
+  const debugDataDir = readdirSync(join(dotRolldownFileName, requestedSessionId));
   // Expect `logs.json` and `meta.json` exist
   expect(debugDataDir).toContain('logs.json');
   expect(debugDataDir).toContain('meta.json');
 
   // Ensure there are no invalid uninjected variables in the logs
   const variables = ['${build_id}', '${session_id}', '${hook_resolve_id_trigger}'];
-  const logsContent = readFileSync(join(dotRolldownFileName, dotRolldownDir[0], 'logs.json'));
+  const logsContent = readFileSync(join(dotRolldownFileName, requestedSessionId, 'logs.json'));
   for (const variable of variables) {
     expect(logsContent.includes(variable)).toBe(false);
   }
@@ -42,6 +43,11 @@ test(`emit data for devtool`, async () => {
     .trim()
     .split('\n')
     .map((line) => JSON.parse(line));
+  for (const event of logs) {
+    if (event.action !== 'StringRef') {
+      expect(event.session_id).toBe(requestedSessionId);
+    }
+  }
 
   const moduleGraphReady = logs.find((event) => event.action === 'ModuleGraphReady');
   expect(moduleGraphReady).toBeDefined();
@@ -184,14 +190,23 @@ test(`emit data for devtool`, async () => {
   expect(unusedPackage.modules).toEqual([]);
   expect(unusedPackage.chunk_ids).toEqual([]);
 
-  const metaContent = readFileSync(join(dotRolldownFileName, dotRolldownDir[0], 'meta.json'));
+  const metaContent = readFileSync(join(dotRolldownFileName, requestedSessionId, 'meta.json'));
   for (const variable of variables) {
     expect(metaContent.includes(variable)).toBe(false);
   }
+  const metaEvents = metaContent
+    .toString()
+    .trim()
+    .split('\n')
+    .map((line) => JSON.parse(line));
+  expect(metaEvents.length).toBeGreaterThan(0);
+  expect(metaEvents.every((event) => event.session_id === requestedSessionId)).toBe(true);
 
   async function runBundle() {
     const bundle = await rolldown({
-      devtools: {},
+      devtools: {
+        sessionId: requestedSessionId,
+      },
       cwd: import.meta.dirname,
       input: join(import.meta.dirname, 'index.ts'),
       resolve: {
@@ -246,7 +261,7 @@ test(`emit data for devtool`, async () => {
       }
     }
     // Devtools log files are only guaranteed complete after `close()` — the
-    // writer thread drains and flushes on the CloseSession ack.
+    // writer backend drains and flushes on the CloseSession ack.
     await bundle.close();
     return renderedModuleSizes;
   }

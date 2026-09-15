@@ -9,6 +9,14 @@ pub enum BindingError {
   NativeError(NativeError),
 }
 
+impl BindingError {
+  pub fn from_napi_error(error: &napi::Error) -> Self {
+    // See internal-docs/async-runtime/implementation.md.
+    let error = error.try_clone().unwrap_or_else(|clone_error| clone_error);
+    Self::JsError(napi::JsError::from(error))
+  }
+}
+
 #[napi_derive::napi(object, object_from_js = false)]
 pub struct BindingErrors {
   pub errors: Vec<BindingError>,

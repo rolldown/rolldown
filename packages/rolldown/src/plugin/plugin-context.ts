@@ -22,6 +22,7 @@ import type { PartialNull } from '../types/utils';
 import { type AssetSource, bindingAssetSource } from '../utils/asset-source';
 import { bindingifyPreserveEntrySignatures } from '../utils/bindingify-input-options';
 import { isPathFragment, unreachable } from '../utils/misc';
+import { beginNativeCall, endNativeCall } from '../utils/threadless-free';
 import type { BindingifyPluginArgs } from './bindingify-plugin';
 import { fsModule, type RolldownFsModule } from './fs';
 import type { CustomPluginOptions, ModuleOptions, Plugin, ResolvedId } from './index';
@@ -298,32 +299,42 @@ export class PluginContextImpl extends MinimalPluginContextImpl {
     if (id === this.currentLoadingModule) {
       this.onLog(LOG_LEVEL_WARN, logCycleLoading(this.pluginName, this.currentLoadingModule));
     }
-    // resolveDependencies always true at rolldown
-    const moduleInfo = this.data.getModuleInfo(id, this.context);
-    if (moduleInfo && moduleInfo.code !== null /* module already parsed */) {
-      return moduleInfo;
-    }
-    const rawOptions: ModuleOptions = {
-      meta: options.meta || {},
-      moduleSideEffects: options.moduleSideEffects || null,
-      invalidate: false,
-    };
-    this.data.updateModuleOption(id, rawOptions);
+    // A fire-and-forget call legally outlives its hook, so bracket from before
+    // the native `load` through the `getModuleInfo` continuation to defer the
+    // box release until this call is done with it (see `releaseOrDefer`). Both
+    // settle paths funnel through the single `finally`, so the decrement runs
+    // exactly once.
+    beginNativeCall(this.context);
+    try {
+      // resolveDependencies always true at rolldown
+      const moduleInfo = this.data.getModuleInfo(id, this.context);
+      if (moduleInfo && moduleInfo.code !== null /* module already parsed */) {
+        return moduleInfo;
+      }
+      const rawOptions: ModuleOptions = {
+        meta: options.meta || {},
+        moduleSideEffects: options.moduleSideEffects || null,
+        invalidate: false,
+      };
+      this.data.updateModuleOption(id, rawOptions);
 
-    let loadPromise = this.data.loadModulePromiseMap.get(id);
-    if (!loadPromise) {
-      loadPromise = this.context
-        .load(id, options.moduleSideEffects ?? undefined, options.packageJsonPath ?? undefined)
-        .catch(() => {
-          // avoid reusing the promise if it's an error
-          // because the error may happen only in non-supported hooks (e.g. `buildStart` hook)
-          this.data.loadModulePromiseMap.delete(id);
-        });
-      this.data.loadModulePromiseMap.set(id, loadPromise);
-    }
+      let loadPromise = this.data.loadModulePromiseMap.get(id);
+      if (!loadPromise) {
+        loadPromise = this.context
+          .load(id, options.moduleSideEffects ?? undefined, options.packageJsonPath ?? undefined)
+          .catch(() => {
+            // avoid reusing the promise if it's an error
+            // because the error may happen only in non-supported hooks (e.g. `buildStart` hook)
+            this.data.loadModulePromiseMap.delete(id);
+          });
+        this.data.loadModulePromiseMap.set(id, loadPromise);
+      }
 
-    await loadPromise;
-    return this.data.getModuleInfo(id, this.context)!;
+      await loadPromise;
+      return this.data.getModuleInfo(id, this.context)!;
+    } finally {
+      endNativeCall(this.context);
+    }
   }
 
   public async resolve(
@@ -344,29 +355,37 @@ export class PluginContextImpl extends MinimalPluginContextImpl {
       },
       undefined as BindingVitePluginCustom | undefined,
     );
-    const res = await this.context.resolve(source, importer, {
-      importKind: options?.kind,
-      custom: receipt,
-      isEntry: options?.isEntry,
-      skipSelf: options?.skipSelf,
-      vitePluginCustom,
-    } satisfies Record<keyof BindingPluginContextResolveOptions, unknown>);
-    if (receipt != null) {
-      this.data.removeSavedResolveOptions(receipt);
-    }
+    // Same fire-and-forget contract as `load` above: the native `resolve`
+    // holds a napi borrow on the box until it settles, so an eager release
+    // requested while this call is in flight must wait for it.
+    beginNativeCall(this.context);
+    try {
+      const res = await this.context.resolve(source, importer, {
+        importKind: options?.kind,
+        custom: receipt,
+        isEntry: options?.isEntry,
+        skipSelf: options?.skipSelf,
+        vitePluginCustom,
+      } satisfies Record<keyof BindingPluginContextResolveOptions, unknown>);
+      if (receipt != null) {
+        this.data.removeSavedResolveOptions(receipt);
+      }
 
-    if (res == null) return null;
-    const info = this.data.getModuleOption(res.id) || ({} as ModuleOptions);
-    return {
-      ...res,
-      external:
-        res.external === 'relative'
-          ? unreachable(`The PluginContext resolve result external couldn't be 'relative'`)
-          : res.external,
-      ...info,
-      moduleSideEffects: info.moduleSideEffects ?? res.moduleSideEffects ?? null,
-      packageJsonPath: res.packageJsonPath,
-    };
+      if (res == null) return null;
+      const info = this.data.getModuleOption(res.id) || ({} as ModuleOptions);
+      return {
+        ...res,
+        external:
+          res.external === 'relative'
+            ? unreachable(`The PluginContext resolve result external couldn't be 'relative'`)
+            : res.external,
+        ...info,
+        moduleSideEffects: info.moduleSideEffects ?? res.moduleSideEffects ?? null,
+        packageJsonPath: res.packageJsonPath,
+      };
+    } finally {
+      endNativeCall(this.context);
+    }
   }
 
   public emitFile: PluginContext['emitFile'] = (file): string => {

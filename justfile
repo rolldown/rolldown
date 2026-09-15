@@ -75,6 +75,10 @@ test-update-node:
 test-rust:
   cargo test --workspace --exclude rolldown_binding
 
+# Run the WASI package staging regressions without building artifacts.
+test-package-transactions:
+  vp run --filter '@rolldown-internal/scripts' test:package-transactions
+
 # Run Node.js tests for Rolldown.
 test-node-rolldown *args="": build-rolldown
   just t-node-rolldown {{ args }}
@@ -114,6 +118,33 @@ test-webcontainer:
 # Build `@rolldown/browser` and smoke test the packed artifact inside a real browser page.
 test-browser:
   vp run --filter browser-tests test:browser
+
+# Run the async-runtime unit tests in the N-API binding. This recipe is their
+# CI home: the workspace-wide `test-rust` recipe excludes `rolldown_binding`.
+test-async-runtime-binding:
+  cargo test -p rolldown_binding --lib async_runtime::tests::
+  cargo test -p rolldown_binding --lib classic_bundler::tests::
+  cargo test -p rolldown_binding --lib env_config::tests::
+
+# Run the scheduler unit tests plus the node suite on both flavors of the shared
+# async runtime, and the watcher suite on the single-thread flavor (the default
+# flavor is already covered by the node test job). Requires
+# `just build-rolldown-async-runtime` first. The single-thread lane arms the
+# runtime's own deadlock detection (`ROLLDOWN_PARK_DEADLINE_MS`): a
+# `block_on`-over-JS hang freezes the JS event loop before vitest's own
+# timeouts can fire, so the runtime panics with a typed `BlockOnDeadlock`
+# diagnostic instead of hanging until a job-level timeout. The watcher suite is
+# in here because the watch-mode debounce timer goes through the runtime's own
+# `rolldown_utils::time::sleep_until` facility.
+[unix]
+test-async-runtime:
+  #!/usr/bin/env bash
+  set -euo pipefail
+  cargo test -p rolldown_utils
+  just test-async-runtime-binding
+  ROLLDOWN_RUNTIME=single ROLLDOWN_PARK_DEADLINE_MS=60000 vp run --filter rolldown-tests test:main
+  ROLLDOWN_RUNTIME=single ROLLDOWN_PARK_DEADLINE_MS=60000 vp run --filter rolldown-tests test:watcher
+  vp run --filter rolldown-tests test:main
 
 # --- `t` series commands provide scenario-specific shortcut commands for testing compared to `test` series commands.
 
@@ -171,6 +202,38 @@ lint-rust: clippy
 clippy:
   cargo clippy --workspace --all-targets -- --deny warnings
 
+# Prove the production dependency graphs are tokio-free: the shipped binding
+# on every target plus the CodSpeed bench harness. `cargo tree -i tokio`
+# prints an inverted dependency tree when tokio is reachable; when it is not,
+# it either prints nothing (still in the lockfile through dev-deps) or fails
+# with "did not match any packages" (absent from the resolved set) — both
+# count as tokio-free here.
+[unix]
+check-no-tokio:
+  #!/usr/bin/env bash
+  set -euo pipefail
+  check() {
+    local out status=0
+    out=$(cargo tree -i tokio "$@" 2>&1) || status=$?
+    if [ "$status" -ne 0 ]; then
+      if grep -q 'did not match any packages' <<<"$out"; then
+        return 0
+      fi
+      printf '%s\n' "$out" >&2
+      return "$status"
+    fi
+    if grep -q '^tokio ' <<<"$out"; then
+      echo "error: tokio is reachable (cargo tree -i tokio $*):" >&2
+      printf '%s\n' "$out" >&2
+      return 1
+    fi
+    return 0
+  }
+  check -e no-dev -p rolldown_binding
+  check -e no-dev -p rolldown_binding --target wasm32-wasip1
+  check -e no-dev -p rolldown_binding --target wasm32-wasip1-threads
+  check -p bench
+
 lint-node:
   vp check
   vp run lint-knip
@@ -199,6 +262,12 @@ build-rolldown-binding:
   vp run --filter rolldown build-binding
 
 # Build `rolldown` located in `packages/rolldown` itself and its `.node` binding.
+#
+# Native builds never refresh `rolldown-binding.wasip1.d.cts`; run
+# `just build-rolldown-wasi-single` after binding-surface changes. Drift is
+# caught by `just test-node`
+# (`packages/rolldown/tests/wasi-declaration-consistency.test.ts`). See
+# internal-docs/async-runtime/implementation.md.
 build-rolldown:
   vp run --filter rolldown build-native:debug
 
@@ -209,6 +278,22 @@ build-rolldown-test-dev-server:
 # Build `rolldown` located in `packages/rolldown` itself and its `.wasm` binding for WASI.
 build-rolldown-wasi:
   vp run --filter rolldown build-wasi:debug
+
+# Build `rolldown` and its native `.node` binding with the lifecycle regression
+# probe (`--features runtime-submission-failure-test`) turned on.
+# Preserve every generated text artifact byte-for-byte while building that test
+# binary, then build the package glue from the restored production sources.
+build-rolldown-async-runtime:
+  vp exec --filter rolldown -- oxnode ./build-binding-guards.ts --preserve-generated-sources -- node --import @oxc-node/core/register ./build-binding.ts --features runtime-submission-failure-test
+  vp run --filter rolldown build-js-glue
+
+# Build `rolldown` with the non-threaded `.wasm` binding
+# (`rolldown-binding.wasm32-wasip1.wasm` + `rolldown-binding.wasip1.*`
+# loaders; the dist is wired to the single-thread flavor).
+[env('TARGET', 'rolldown-wasi-single')]
+build-rolldown-wasi-single:
+  vp run --filter rolldown build-binding:wasi-single
+  vp run --filter rolldown build-node
 
 # Build `rolldown` located in `packages/rolldown` itself and its `.node` binding in release mode.
 build-rolldown-release:

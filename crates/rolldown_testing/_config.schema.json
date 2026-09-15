@@ -1094,6 +1094,13 @@
             "boolean",
             "null"
           ]
+        },
+        "base": {
+          "description": "Public base path of the dev server.\n\nURLs of dev-server endpoints referenced from generated code (currently the\nlazy compilation endpoint `/@vite/lazy`) are prefixed with it.",
+          "type": [
+            "string",
+            "null"
+          ]
         }
       },
       "additionalProperties": false

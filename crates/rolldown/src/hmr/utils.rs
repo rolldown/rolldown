@@ -196,6 +196,19 @@ impl<'any, 'ast> HmrAstBuilder<'any, 'ast> for ScopeHoistingFinalizer<'any, 'ast
 
 const LAZY_PROXY_QUERY: &str = "?rolldown-lazy=1";
 
+/// The URL of the lazy compilation endpoint referenced from generated code.
+///
+/// The dev server is expected to intercept requests to this URL and serve the
+/// compiled lazy chunk. `base` (the dev server's public base path, from
+/// `experimental.devMode.base`) prefixes the endpoint so the URL stays reachable
+/// when the server is not mounted at the domain root.
+pub fn lazy_endpoint_url(base: Option<&str>) -> String {
+  match base {
+    Some(base) => format!("{}/@vite/lazy", base.trim_end_matches('/')),
+    None => "/@vite/lazy".to_string(),
+  }
+}
+
 /// The characters JS `encodeURIComponent` leaves as-is.
 const URI_COMPONENT_ENCODE_SET: &percent_encoding::AsciiSet = &percent_encoding::NON_ALPHANUMERIC
   .remove(b'-')
@@ -220,13 +233,15 @@ pub fn create_request_lazy_call<'ast, B>(
   proxy_module_id: &str,
   stable_proxy_id: &str,
   builder: &B,
+  base: Option<&str>,
 ) -> ast::Expression<'ast>
 where
   B: oxc::ast::builder::GetAstBuilder<'ast> + GetAllocator<'ast>,
 {
   let url_expr = {
     let url_head = format!(
-      "/@vite/lazy?id={}&clientId=",
+      "{}?id={}&clientId=",
+      lazy_endpoint_url(base),
       percent_encoding::utf8_percent_encode(proxy_module_id, URI_COMPONENT_ENCODE_SET)
     );
     let quasis = oxc::allocator::Vec::from_iter_in(
@@ -295,4 +310,17 @@ where
     false,
     builder,
   )
+}
+
+#[cfg(test)]
+mod tests {
+  use super::lazy_endpoint_url;
+
+  #[test]
+  fn endpoint_url_normalizes_base() {
+    assert_eq!(lazy_endpoint_url(None), "/@vite/lazy");
+    assert_eq!(lazy_endpoint_url(Some("/")), "/@vite/lazy");
+    assert_eq!(lazy_endpoint_url(Some("/foo/")), "/foo/@vite/lazy");
+    assert_eq!(lazy_endpoint_url(Some("/foo")), "/foo/@vite/lazy");
+  }
 }

@@ -22,7 +22,12 @@ import { NapiCli } from '@napi-rs/cli';
 import { findBareRuntimeImports } from './bare-runtime-imports.mjs';
 
 const defaultRepoRoot = fileURLToPath(new URL('../../', import.meta.url));
-const coreRuntimePackages = ['@emnapi/core', '@emnapi/runtime', '@napi-rs/wasm-runtime'];
+const coreRuntimePackages = [
+  '@emnapi/core',
+  '@emnapi/runtime',
+  '@napi-rs/async-runtime',
+  '@napi-rs/wasm-runtime',
+];
 const runtimePackages = [...coreRuntimePackages, 'buffer'];
 const notices = ['LICENSE', 'THIRD-PARTY-LICENSE'];
 const stagingDirectoryPrefix = '.stage-wasi-packages-';

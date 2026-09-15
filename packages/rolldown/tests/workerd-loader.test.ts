@@ -8,13 +8,9 @@ import { join } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { runInNewContext } from 'node:vm';
 // @ts-ignore This focused build-codegen test intentionally reaches package tooling outside the test rootDir.
-import { injectCurrentThreadHostBootstrap } from '../generate-workerd-loader';
-// @ts-ignore This focused build-codegen test intentionally reaches package tooling outside the test rootDir.
 import { preserveGeneratedBindingSources } from '../generate-workerd-loader';
 // @ts-ignore This focused build-codegen test intentionally reaches package tooling outside the test rootDir.
 import { preserveInactiveWasiDeclaration } from '../generate-workerd-loader';
-// @ts-ignore This focused build-codegen test intentionally reaches package tooling outside the test rootDir.
-import { rewriteThreadlessMemoryDescriptor } from '../generate-workerd-loader';
 // @ts-ignore This focused unit test intentionally reaches generated package source outside the test rootDir.
 import type { DeferredRolldownInstance } from '../src/rolldown-binding.wasip1-deferred.js';
 // @ts-ignore This focused integration test intentionally reaches the package source outside the test rootDir.
@@ -23,22 +19,20 @@ import { describe, expect, test, vi } from 'vitest';
 
 const { createInstance, getWorkerdRuntimeStats, WORKERD_WASM_MEMORY } = workerd;
 
+// Resolved the way the generated loaders resolve it, from the rolldown package.
+const { installCurrentThreadHosts } = createRequire(
+  fileURLToPath(new URL('../src/rolldown-binding.wasip1-browser.js', import.meta.url)),
+)('@napi-rs/async-runtime') as {
+  installCurrentThreadHosts: (
+    binding: object,
+    options?: { installTimerHost?: boolean },
+  ) => () => void;
+};
+
 const wasmPath = new URL('../src/rolldown-binding.wasm32-wasip1.wasm', import.meta.url);
 const wasiTest = test.runIf(existsSync(wasmPath));
 const deferredLoaderPath = new URL('../src/rolldown-binding.wasip1-deferred.js', import.meta.url);
-const cjsLoaderPath = new URL('../src/rolldown-binding.wasip1.cjs', import.meta.url);
 const browserLoaderPath = new URL('../src/rolldown-binding.wasip1-browser.js', import.meta.url);
-const threadedCjsLoaderPath = new URL('../src/rolldown-binding.wasi.cjs', import.meta.url);
-const threadedBrowserLoaderPath = new URL(
-  '../src/rolldown-binding.wasi-browser.js',
-  import.meta.url,
-);
-const currentThreadBootstrapStart = '/* ROLLDOWN_CURRENT_THREAD_HOST_BOOTSTRAP_START */';
-const currentThreadBootstrapEnd = '/* ROLLDOWN_CURRENT_THREAD_HOST_BOOTSTRAP_END */';
-const browserInitializationGuardStart = '/* ROLLDOWN_BROWSER_INITIALIZATION_GUARD_START */';
-const browserInitializationGuardEnd = '/* ROLLDOWN_BROWSER_INITIALIZATION_GUARD_END */';
-const nodeInitializationCleanupStart = '/* ROLLDOWN_NODE_INITIALIZATION_CLEANUP_START */';
-const nodeInitializationCleanupEnd = '/* ROLLDOWN_NODE_INITIALIZATION_CLEANUP_END */';
 const privateManagedHostExports = [
   'getCurrentThreadTaskHostContractVersion',
   'isCurrentThreadHostRegistrationActive',
@@ -91,53 +85,6 @@ function installMockHostRegistrationControls(binding: Record<PropertyKey, unknow
   };
   install('registerCurrentThreadTaskHost', 'unregisterCurrentThreadTaskHost');
   install('registerTimerHost', 'unregisterTimerHost');
-}
-
-async function readCurrentThreadHostBootstrap(loaderPath: URL): Promise<string> {
-  const source = await readFile(loaderPath, 'utf8');
-  const start = source.indexOf(currentThreadBootstrapStart);
-  const end = source.indexOf(currentThreadBootstrapEnd, start);
-  expect(start).toBeGreaterThanOrEqual(0);
-  expect(end).toBeGreaterThan(start);
-  expect(source.indexOf(currentThreadBootstrapStart, start + 1)).toBe(-1);
-  expect(source.indexOf(currentThreadBootstrapEnd, end + 1)).toBe(-1);
-  return source.slice(start + currentThreadBootstrapStart.length, end);
-}
-
-async function readGeneratedNodeLifecycle(): Promise<string> {
-  // The full generated lifecycle block: dispose symbol, disposal chain, the
-  // initialization rollback helpers, the rollback registry, and the module
-  // declarations, ending right before the top-level initialization try.
-  const source = await readFile(cjsLoaderPath, 'utf8');
-  const start = source.indexOf('const __wasiDisposeSymbol');
-  const end = source.indexOf('\ntry {\n', start);
-  expect(start).toBeGreaterThanOrEqual(0);
-  expect(end).toBeGreaterThan(start);
-  return source.slice(start, end);
-}
-
-function runCurrentThreadHostBootstrap(
-  source: string,
-  binding: object,
-  globals: {
-    setTimeout?: unknown;
-    clearTimeout?: unknown;
-  } = {},
-): void {
-  const getGlobal = (name: keyof typeof globals, fallback: unknown) =>
-    Object.prototype.hasOwnProperty.call(globals, name) ? globals[name] : fallback;
-  runInNewContext(
-    `let __browserTaskHostRegistration
-let __browserTimerHostRegistration
-let __nodeTaskHostRegistration
-let __nodeTimerHostRegistration
-${source}`,
-    {
-      __napiModule: { exports: binding },
-      setTimeout: getGlobal('setTimeout', globalThis.setTimeout),
-      clearTimeout: getGlobal('clearTimeout', globalThis.clearTimeout),
-    },
-  );
 }
 
 async function loadDeferredLoaderWithDependencies(dependencies: object) {
@@ -203,12 +150,17 @@ async function loadDeferredLoaderWithDependencies(dependencies: object) {
 async function loadBrowserLoaderWithDependencies(dependencies: object) {
   const source = await readFile(browserLoaderPath, 'utf8');
   const runtimeImports =
-    /import \{[\s\S]*?\} from '@napi-rs\/wasm-runtime'\nimport \{ createContext as __emnapiCreateContext \} from '@emnapi\/runtime'\nimport \{ memfs, Buffer \} from '@napi-rs\/wasm-runtime\/fs'\n/;
+    /import \{[\s\S]*?\} from '@napi-rs\/wasm-runtime'\nimport \{ createContext as __emnapiCreateContext \} from '@emnapi\/runtime'\nimport \{ installCurrentThreadHosts as __installCurrentThreadHosts \} from '@napi-rs\/async-runtime'\nimport \{ memfs, Buffer \} from '@napi-rs\/wasm-runtime\/fs'\n/;
   if (!runtimeImports.test(source)) {
     throw new Error('Unable to inject generated browser loader test dependencies');
   }
   const dependencyKey = `__rolldownBrowserLoaderTest${Date.now()}${Math.random()}`;
-  const testDependencies = { Buffer: NodeBuffer, ...dependencies } as Record<PropertyKey, unknown>;
+  const testDependencies = {
+    Buffer: NodeBuffer,
+    // The real host protocol package the generated loader installs with.
+    installCurrentThreadHosts,
+    ...dependencies,
+  } as Record<PropertyKey, unknown>;
   const createContext = Reflect.get(testDependencies, 'createContext');
   if (typeof createContext === 'function') {
     Reflect.set(testDependencies, 'createContext', (...args: unknown[]) => {
@@ -248,6 +200,7 @@ async function loadBrowserLoaderWithDependencies(dependencies: object) {
   emnapiAsyncWorkPlugin: __emnapiAsyncWorkPlugin,
   emnapiTSFNPlugin: __emnapiTSFNPlugin,
   fetch: __browserFetch,
+  installCurrentThreadHosts: __installCurrentThreadHosts,
   instantiateNapiModule: __emnapiInstantiateNapiModule,
   memfs,
   WASI: __WASI,
@@ -356,30 +309,6 @@ describe.sequential('managed workerd loader', () => {
     }
   });
 
-  test.each([
-    {
-      name: 'direct declaration',
-      prefix: 'const ',
-    },
-  ])('rewrites the $name memory descriptor', ({ prefix }) => {
-    const source = `${prefix}__wasmMemory = new WebAssembly.Memory({
-  initial: 16384,
-  maximum: 65536,
-})
-`;
-
-    expect(
-      rewriteThreadlessMemoryDescriptor(source, 'rolldown-binding.wasip1.cjs', {
-        initialMemory: 1024,
-        maximumMemory: 65536,
-      }),
-    ).toBe(`${prefix}__wasmMemory = new WebAssembly.Memory({
-  initial: 1024,
-  maximum: 65536,
-})
-`);
-  });
-
   test('restores all generated binding sources after a profile build fails', async () => {
     const directory = await mkdtemp(join(tmpdir(), 'rolldown-generated-binding-sources-'));
     const buildError = new Error('profile build failed');
@@ -434,128 +363,6 @@ describe.sequential('managed workerd loader', () => {
 
     expect(bindingSource).not.toContain('__rolldownTest');
     expect(declarationSource).not.toContain('__rolldownTest');
-  });
-
-  test('hardens the generated napi-rs Node initialization lifecycle', async () => {
-    const lifecycle = await readGeneratedNodeLifecycle();
-    const source = `let __wasmMemory = new WebAssembly.Memory({
-  initial: 16384,
-  maximum: 65536,
-})
-
-${lifecycle}
-try {
-  ;({ napiModule: __napiModule } = __emnapiInstantiateNapiModuleSync())
-  __publishWasiDispose(__napiModule.exports)
-  __registerWasiExitListener()
-} catch (error) {
-  const rollback = {
-    active: false,
-    error,
-    promise: undefined,
-    rollback: __rollbackWasiInitialization,
-  }
-  __wasiRollbackRegistry.set(__wasiRollbackRegistryKey, rollback)
-  __runWasiInitializationRollback(rollback)
-  throw rollback.error
-}
-module.exports = __napiModule.exports
-`;
-
-    const hardened = injectCurrentThreadHostBootstrap(
-      source,
-      'rolldown-binding.wasip1.cjs',
-      '} catch (error) {\n  const rollback = {',
-      false,
-      {
-        initialMemory: 1024,
-        maximumMemory: 65536,
-      },
-    );
-
-    expect(hardened).toContain(nodeInitializationCleanupStart);
-    expect(hardened).toContain(nodeInitializationCleanupEnd);
-    expect(hardened).toContain(currentThreadBootstrapStart);
-    expect(hardened).toContain(currentThreadBootstrapEnd);
-    expect(hardened).toContain('let __nodeTaskHostRegistration');
-    expect(hardened).toContain('let __nodeTimerHostRegistration');
-    expect(hardened).toContain('__nodeTaskHostRegistration = __taskHostRegistration');
-    expect(hardened).toContain('__nodeTimerHostRegistration = __timerHostRegistration');
-    expect(hardened).toContain('initial: 1024');
-    expect(hardened).toContain('Threadless Node timer-host cleanup failed');
-    expect(hardened).toContain('Threadless Node task-host cleanup failed');
-    expect(hardened).toContain('for (let __attempt = 0; __attempt < 2; __attempt += 1)');
-    expect(hardened).toContain('error: __attachCleanupErrors(error, __hostCleanupErrors)');
-    expect(hardened).toContain('rollback: __rollbackWasiInitialization,');
-    expect(hardened).toContain('__wasiRollbackRegistry.set(__wasiRollbackRegistryKey, rollback)');
-    expect(hardened).toContain('__runWasiInitializationRollback(rollback)');
-    expect(hardened).toContain('throw rollback.error');
-    expect(
-      injectCurrentThreadHostBootstrap(
-        hardened,
-        'rolldown-binding.wasip1.cjs',
-        '} catch (error) {\n  const rollback = {',
-        false,
-        {
-          initialMemory: 1024,
-          maximumMemory: 65536,
-        },
-      ),
-    ).toBe(hardened);
-  });
-
-  test.each([
-    {
-      name: 'removes the context destroy helper',
-      mutate: (source: string) =>
-        source.replace(
-          'function __destroyEmnapiContext() {',
-          'function __destroyEmnapiContextMissing() {',
-        ),
-    },
-    {
-      name: 'weakens the pinned rollback runner',
-      mutate: (source: string) =>
-        source.replace(
-          `function __runWasiInitializationRollback(record) {
-  if (record.active) {
-    return
-  }
-  record.active = true`,
-          `function __runWasiInitializationRollback(record) {
-  record.active = true
-  if (record.active) {
-    return
-  }`,
-        ),
-    },
-    {
-      name: 'duplicates a lifecycle helper',
-      mutate: (source: string) =>
-        source.replace(
-          'function __rollbackWasiInitialization() {',
-          `function __rollbackWasiInitialization() {}
-
-function __rollbackWasiInitialization() {`,
-        ),
-    },
-  ])('rejects a marked Node loader that $name', async ({ mutate }) => {
-    const source = await readFile(cjsLoaderPath, 'utf8');
-    const mutated = mutate(source);
-    expect(mutated).not.toBe(source);
-
-    expect(() =>
-      injectCurrentThreadHostBootstrap(
-        mutated,
-        'rolldown-binding.wasip1.cjs',
-        '} catch (__error) {\n  let __cleanupResult\n  let __cleanupFailed = false',
-        false,
-        {
-          initialMemory: 1024,
-          maximumMemory: 65536,
-        },
-      ),
-    ).toThrow(/Unexpected generated Node lifecycle contract/);
   });
 
   test('does not create a managed context before the module promise settles', async () => {
@@ -635,16 +442,14 @@ function __rollbackWasiInitialization() {`,
     expect(destroy).toHaveBeenCalledOnce();
   });
 
-  test('retries transient browser host and context cleanup failures', async () => {
+  test('aggregates browser host and context cleanup failures onto the primary error', async () => {
     const initializationError = new Error('browser timer host registration failed');
     const registration = { high: 0x1234_5678, low: 0x9abc_def0 };
     const prepareWasmEnvCleanup = vi.fn();
-    const unregisterCurrentThreadTaskHost = vi
-      .fn()
-      .mockImplementationOnce(() => {
-        throw new Error('transient task host cleanup failure');
-      })
-      .mockImplementationOnce(() => {});
+    const taskCleanupError = new Error('task host cleanup failure');
+    const unregisterCurrentThreadTaskHost = vi.fn(() => {
+      throw taskCleanupError;
+    });
     const contextCleanupError = new Error('context cleanup failure');
     const destroy = vi.fn().mockRejectedValueOnce(contextCleanupError);
 
@@ -680,16 +485,16 @@ function __rollbackWasiInitialization() {`,
         memfs: () => ({ fs: {}, vol: {} }),
         WASI: class {},
       }),
-    ).rejects.toBe(initializationError);
+    ).rejects.toMatchObject({
+      // `installCurrentThreadHosts` reports a rollback that did not complete as
+      // an aggregate whose cause is the primary failure; the generated loader
+      // then attaches its own cleanup failures to it.
+      errors: [initializationError, taskCleanupError],
+      cause: initializationError,
+      cleanupErrors: [contextCleanupError],
+    });
 
-    expect(unregisterCurrentThreadTaskHost).toHaveBeenCalledTimes(2);
-    expect(unregisterCurrentThreadTaskHost).toHaveBeenNthCalledWith(
-      1,
-      registration.high,
-      registration.low,
-    );
-    expect(unregisterCurrentThreadTaskHost).toHaveBeenNthCalledWith(
-      2,
+    expect(unregisterCurrentThreadTaskHost).toHaveBeenCalledExactlyOnceWith(
       registration.high,
       registration.low,
     );
@@ -765,26 +570,21 @@ function __rollbackWasiInitialization() {`,
       'register timer',
       `unregister timer ${timerRegistration.high}:${timerRegistration.low}`,
       `unregister task ${registration.high}:${registration.low}`,
-      `unregister task ${registration.high}:${registration.low}`,
       'destroy context',
     ]);
     // The reserved timer token is rolled back exactly once even though its
     // registration threw: v4 reserves the capability before side effects, so
     // cleanup can always target the exact token.
-    expect(unregisterTimerHost).toHaveBeenCalledTimes(1);
-    expect(unregisterTimerHost).toHaveBeenCalledWith(timerRegistration.high, timerRegistration.low);
-    // The primary error keeps its identity; host cleanup failures (retried
-    // twice) and the single context destroy failure ride along on its cause.
-    expect(failure).toBe(registrationError);
-    expect((failure as Error).cause).toMatchObject({
-      message: 'WASI binding cleanup failed',
-      errors: [
-        expect.objectContaining({
-          message: 'Threadless browser task-host cleanup failed',
-          errors: unregisterErrors,
-        }),
-        destroyError,
-      ],
+    expect(unregisterTimerHost).toHaveBeenCalledExactlyOnceWith(
+      timerRegistration.high,
+      timerRegistration.low,
+    );
+    // The primary error stays the aggregate's cause, and the single context
+    // destroy failure rides along on `cleanupErrors`.
+    expect(failure).toMatchObject({
+      errors: [registrationError, unregisterErrors[0]],
+      cause: registrationError,
+      cleanupErrors: [destroyError],
     });
   });
 
@@ -3310,556 +3110,5 @@ try {
     expect(child.signal).toBeNull();
     expect(child.status, child.stderr || child.stdout).toBe(0);
     expect(child.stdout).toContain('deferred TSFN drain skipped after managed disposal');
-  });
-
-  test('generates equivalent ABI-v4 task hosts for CJS and browser roots', async () => {
-    const [cjsBootstrap, browserBootstrap] = await Promise.all([
-      readCurrentThreadHostBootstrap(cjsLoaderPath),
-      readCurrentThreadHostBootstrap(browserLoaderPath),
-    ]);
-    const normalizeCapturedRegistrations = (bootstrap: string) =>
-      bootstrap
-        .replace(/^[ \t]*__browserTaskHostRegistration = __taskHostRegistration$/m, '')
-        .replace(/^[ \t]*__browserTimerHostRegistration = __timerHostRegistration$/m, '')
-        .replace(/^[ \t]*__nodeTaskHostRegistration = __taskHostRegistration$/m, '')
-        .replace(/^[ \t]*__nodeTimerHostRegistration = __timerHostRegistration$/m, '');
-    expect(normalizeCapturedRegistrations(browserBootstrap)).toBe(
-      normalizeCapturedRegistrations(cjsBootstrap),
-    );
-
-    for (const bootstrap of [cjsBootstrap, browserBootstrap]) {
-      const taskRegistration = { high: 0x1234_5678, low: 0x9abc_def0 };
-      const timerRegistration = { high: 0, low: 2 };
-      const registrations = [taskRegistration, timerRegistration];
-      const live = new Set<number>();
-      const binding = {
-        getCurrentThreadTaskHostContractVersion: vi.fn(() => 4),
-        isCurrentThreadHostRegistrationActive: vi.fn((_high: number, low: number) => live.has(low)),
-        registerCurrentThreadTaskHost: vi.fn((_high: number, low: number) => {
-          live.add(low);
-        }),
-        registerTimerHost: vi.fn((_high: number, low: number) => {
-          live.add(low);
-        }),
-        reserveCurrentThreadHostRegistration: vi.fn(() => registrations.shift()),
-        unregisterCurrentThreadTaskHost: vi.fn(),
-        unregisterTimerHost: vi.fn(),
-      };
-      runCurrentThreadHostBootstrap(bootstrap, binding);
-      expect(binding.getCurrentThreadTaskHostContractVersion).toHaveBeenCalledWith();
-      expect(binding.reserveCurrentThreadHostRegistration).toHaveBeenCalledTimes(2);
-      expect(binding.registerCurrentThreadTaskHost).toHaveBeenCalledWith(
-        taskRegistration.high,
-        taskRegistration.low,
-      );
-    }
-  });
-
-  test('installs the threaded loader host bootstrap on both generated roots', async () => {
-    const [threadedCjsSource, threadedBrowserSource] = await Promise.all([
-      readFile(threadedCjsLoaderPath, 'utf8'),
-      readFile(threadedBrowserLoaderPath, 'utf8'),
-    ]);
-    expect(threadedCjsSource).toContain('Threaded Node timer-host cleanup failed');
-    expect(threadedCjsSource).toContain('Threaded Node task-host cleanup failed');
-    expect(threadedBrowserSource).toContain('Threaded browser timer-host cleanup failed');
-    expect(threadedBrowserSource).toContain('Threaded browser task-host cleanup failed');
-    for (const source of [threadedCjsSource, threadedBrowserSource]) {
-      // The threaded loaders keep their generated shared-memory descriptor.
-      expect(source).toContain('shared: true');
-    }
-
-    const [cjsBootstrap, browserBootstrap] = await Promise.all([
-      readCurrentThreadHostBootstrap(threadedCjsLoaderPath),
-      readCurrentThreadHostBootstrap(threadedBrowserLoaderPath),
-    ]);
-    const normalizeCapturedRegistrations = (bootstrap: string) =>
-      bootstrap
-        .replace(/^[ \t]*__browserTaskHostRegistration = __taskHostRegistration$/m, '')
-        .replace(/^[ \t]*__browserTimerHostRegistration = __timerHostRegistration$/m, '')
-        .replace(/^[ \t]*__nodeTaskHostRegistration = __taskHostRegistration$/m, '')
-        .replace(/^[ \t]*__nodeTimerHostRegistration = __timerHostRegistration$/m, '');
-    expect(normalizeCapturedRegistrations(browserBootstrap)).toBe(
-      normalizeCapturedRegistrations(cjsBootstrap),
-    );
-
-    for (const bootstrap of [cjsBootstrap, browserBootstrap]) {
-      expect(bootstrap).toContain('The threaded Rolldown binding');
-      expect(bootstrap).not.toContain('threadless');
-
-      // A binding without the host contract fails loudly.
-      expect(() => runCurrentThreadHostBootstrap(bootstrap, {})).toThrow(
-        'The threaded Rolldown binding does not expose its CurrentThread host integration',
-      );
-
-      // A binding registers both hosts through the v4 contract.
-      const taskRegistration = { high: 0x1234_5678, low: 0x9abc_def0 };
-      const timerRegistration = { high: 0, low: 2 };
-      const registrations = [taskRegistration, timerRegistration];
-      const live = new Set<number>();
-      const binding = {
-        getCurrentThreadTaskHostContractVersion: vi.fn(() => 4),
-        isCurrentThreadHostRegistrationActive: vi.fn((_high: number, low: number) => live.has(low)),
-        registerCurrentThreadTaskHost: vi.fn((_high: number, low: number) => {
-          live.add(low);
-        }),
-        registerTimerHost: vi.fn((_high: number, low: number) => {
-          live.add(low);
-        }),
-        reserveCurrentThreadHostRegistration: vi.fn(() => registrations.shift()),
-        unregisterCurrentThreadTaskHost: vi.fn(),
-        unregisterTimerHost: vi.fn(),
-      };
-      runCurrentThreadHostBootstrap(bootstrap, binding);
-      expect(binding.getCurrentThreadTaskHostContractVersion).toHaveBeenCalledWith();
-      expect(binding.reserveCurrentThreadHostRegistration).toHaveBeenCalledTimes(2);
-      expect(binding.registerCurrentThreadTaskHost).toHaveBeenCalledWith(
-        taskRegistration.high,
-        taskRegistration.low,
-      );
-      expect(binding.registerTimerHost).toHaveBeenCalledWith(
-        timerRegistration.high,
-        timerRegistration.low,
-        expect.any(Function),
-        expect.any(Function),
-      );
-    }
-  });
-
-  test('re-injects the threaded loader bootstrap idempotently', async () => {
-    const memoryConfig = { initialMemory: 1024, maximumMemory: 65536 };
-    const cjsSource = await readFile(threadedCjsLoaderPath, 'utf8');
-    expect(
-      injectCurrentThreadHostBootstrap(
-        cjsSource,
-        'rolldown-binding.wasi.cjs',
-        '} catch (error) {\n  const rollback = {',
-        false,
-        memoryConfig,
-        'threaded',
-      ),
-    ).toBe(cjsSource);
-    const browserSource = await readFile(threadedBrowserLoaderPath, 'utf8');
-    expect(
-      injectCurrentThreadHostBootstrap(
-        browserSource,
-        'rolldown-binding.wasi-browser.js',
-        'export default __napiModule.exports',
-        true,
-        memoryConfig,
-        'threaded',
-      ),
-    ).toBe(browserSource);
-  });
-
-  test('rejects a mismatched generated root task-host ABI before registration', async () => {
-    const bootstrap = await readCurrentThreadHostBootstrap(cjsLoaderPath);
-    const registerCurrentThreadTaskHost = vi.fn();
-    expect(() =>
-      runCurrentThreadHostBootstrap(bootstrap, {
-        getCurrentThreadTaskHostContractVersion: () => 1,
-        isCurrentThreadHostRegistrationActive: vi.fn(),
-        registerCurrentThreadTaskHost,
-        registerTimerHost: vi.fn(),
-        reserveCurrentThreadHostRegistration: vi.fn(),
-        unregisterCurrentThreadTaskHost: vi.fn(),
-        unregisterTimerHost: vi.fn(),
-      }),
-    ).toThrow(/contract version 1.*version 4/);
-    expect(registerCurrentThreadTaskHost).not.toHaveBeenCalled();
-  });
-
-  test.each([
-    ['missing registration', undefined],
-    ['missing high word', { low: 1 }],
-    ['missing low word', { high: 0 }],
-    ['fractional low word', { high: 0, low: 1.5 }],
-    ['inactive registration', { high: 0, low: 0 }],
-  ])('rejects a generated root task host with %s', async (_name, registration) => {
-    const bootstrap = await readCurrentThreadHostBootstrap(cjsLoaderPath);
-    const registerCurrentThreadTaskHost = vi.fn();
-    const registerTimerHost = vi.fn();
-    expect(() =>
-      runCurrentThreadHostBootstrap(bootstrap, {
-        getCurrentThreadTaskHostContractVersion: () => 4,
-        isCurrentThreadHostRegistrationActive: vi.fn(() => true),
-        registerCurrentThreadTaskHost,
-        registerTimerHost,
-        reserveCurrentThreadHostRegistration: () => registration,
-        unregisterCurrentThreadTaskHost: vi.fn(),
-        unregisterTimerHost: vi.fn(),
-      }),
-    ).toThrow(/invalid task host registration/);
-    expect(registerCurrentThreadTaskHost).not.toHaveBeenCalled();
-    expect(registerTimerHost).not.toHaveBeenCalled();
-  });
-
-  test('keeps removed task-delivery capabilities out of generated roots', async () => {
-    const [cjsSource, browserSource] = await Promise.all([
-      readFile(cjsLoaderPath, 'utf8'),
-      readFile(browserLoaderPath, 'utf8'),
-    ]);
-
-    expect(cjsSource.indexOf(currentThreadBootstrapEnd)).toBeLessThan(
-      cjsSource.indexOf('module.exports = __napiModule.exports'),
-    );
-    expect(browserSource.indexOf(currentThreadBootstrapEnd)).toBeLessThan(
-      browserSource.indexOf('export default __napiModule.exports'),
-    );
-    expect(browserSource.indexOf(browserInitializationGuardStart)).toBeLessThan(
-      browserSource.indexOf(currentThreadBootstrapStart),
-    );
-    expect(browserSource.indexOf(currentThreadBootstrapEnd)).toBeLessThan(
-      browserSource.indexOf(browserInitializationGuardEnd),
-    );
-    expect(cjsSource.indexOf(currentThreadBootstrapEnd)).toBeLessThan(
-      cjsSource.indexOf(nodeInitializationCleanupStart),
-    );
-    expect(cjsSource).toContain(nodeInitializationCleanupEnd);
-  });
-
-  async function readInjectedNodeInitializationCleanup(): Promise<string> {
-    const source = await readFile(cjsLoaderPath, 'utf8');
-    const start = source.indexOf(nodeInitializationCleanupStart);
-    const end = source.indexOf(nodeInitializationCleanupEnd, start);
-    expect(start).toBeGreaterThanOrEqual(0);
-    expect(end).toBeGreaterThan(start);
-    return source.slice(start + nodeInitializationCleanupStart.length, end);
-  }
-
-  test('retries transient generated Node host cleanup before registering the rollback', async () => {
-    const cleanup = await readInjectedNodeInitializationCleanup();
-    const primaryError = new Error('Node initialization failed');
-    const transientTimerError = new Error('transient timer-host cleanup failure');
-    const taskRegistration = { high: 0x1234_5678, low: 0x9abc_def0 };
-    const timerRegistration = { high: 0x0fed_cba9, low: 0x8765_4321 };
-    const operations: string[] = [];
-    const unregisterTimerHost = vi
-      .fn()
-      .mockImplementationOnce(() => {
-        operations.push('timer');
-        throw transientTimerError;
-      })
-      .mockImplementationOnce(() => {
-        operations.push('timer');
-      });
-    const unregisterCurrentThreadTaskHost = vi.fn(() => {
-      operations.push('task');
-    });
-    const attachCleanupErrors = vi.fn((error: unknown) => error);
-    const rollbackWasiInitialization = vi.fn(() => []);
-    const runWasiInitializationRollback = vi.fn();
-    const registrySet = vi.fn();
-    const registryKey = 'rolldown-test-rollback-key';
-    const vmContext: Record<string, unknown> = {
-      __attachCleanupErrors: attachCleanupErrors,
-      __napiModule: {
-        exports: {
-          unregisterCurrentThreadTaskHost,
-          unregisterTimerHost,
-        },
-      },
-      __nodeTaskHostRegistration: taskRegistration,
-      __nodeTimerHostRegistration: timerRegistration,
-      __rollbackWasiInitialization: rollbackWasiInitialization,
-      __runWasiInitializationRollback: runWasiInitializationRollback,
-      __wasiRollbackRegistry: { set: registrySet },
-      __wasiRollbackRegistryKey: registryKey,
-      __primaryError: primaryError,
-    };
-
-    expect(() =>
-      runInNewContext(
-        `try {
-  throw __primaryError
-${cleanup}`,
-        vmContext,
-      ),
-    ).toThrow(primaryError);
-    expect(operations).toEqual(['timer', 'timer', 'task']);
-    expect(unregisterTimerHost).toHaveBeenNthCalledWith(
-      1,
-      timerRegistration.high,
-      timerRegistration.low,
-    );
-    expect(unregisterTimerHost).toHaveBeenNthCalledWith(
-      2,
-      timerRegistration.high,
-      timerRegistration.low,
-    );
-    expect(unregisterCurrentThreadTaskHost).toHaveBeenCalledWith(
-      taskRegistration.high,
-      taskRegistration.low,
-    );
-    // Recovered host cleanup surfaces no cleanup errors.
-    expect(attachCleanupErrors).toHaveBeenCalledWith(primaryError, []);
-    // Successfully released registrations are cleared for the retryable
-    // rollback that may run later.
-    expect(vmContext.__nodeTimerHostRegistration).toBeUndefined();
-    expect(vmContext.__nodeTaskHostRegistration).toBeUndefined();
-    // The rollback record is registered and started through the generated
-    // rollback flow.
-    expect(registrySet).toHaveBeenCalledOnce();
-    const [registeredKey, record] = registrySet.mock.calls[0] as [string, Record<string, unknown>];
-    expect(registeredKey).toBe(registryKey);
-    expect(record).toMatchObject({
-      active: false,
-      error: primaryError,
-      promise: undefined,
-    });
-    expect(record.rollback).toBe(rollbackWasiInitialization);
-    expect(runWasiInitializationRollback).toHaveBeenCalledExactlyOnceWith(record);
-    expect(registrySet.mock.invocationCallOrder[0]).toBeLessThan(
-      runWasiInitializationRollback.mock.invocationCallOrder[0],
-    );
-  });
-
-  test('aggregates persistent generated Node host cleanup failures into the rollback error', async () => {
-    const cleanup = await readInjectedNodeInitializationCleanup();
-    const primaryError = new Error('Node initialization failed');
-    const timerErrors = [
-      new Error('timer-host cleanup failed once'),
-      new Error('timer-host cleanup failed twice'),
-    ];
-    const taskErrors = [
-      new Error('task-host cleanup failed once'),
-      new Error('task-host cleanup failed twice'),
-    ];
-    const taskRegistration = { high: 0x1234_5678, low: 0x9abc_def0 };
-    const timerRegistration = { high: 0x0fed_cba9, low: 0x8765_4321 };
-    const unregisterTimerHost = vi.fn(() => {
-      throw timerErrors[unregisterTimerHost.mock.calls.length - 1];
-    });
-    const unregisterCurrentThreadTaskHost = vi.fn(() => {
-      throw taskErrors[unregisterCurrentThreadTaskHost.mock.calls.length - 1];
-    });
-    const attachCleanupErrors = vi.fn((error: unknown, _cleanupErrors: unknown[]) => error);
-    const rollbackWasiInitialization = vi.fn(() => []);
-    const runWasiInitializationRollback = vi.fn();
-    const vmContext: Record<string, unknown> = {
-      __attachCleanupErrors: attachCleanupErrors,
-      __napiModule: {
-        exports: {
-          unregisterCurrentThreadTaskHost,
-          unregisterTimerHost,
-        },
-      },
-      __nodeTaskHostRegistration: taskRegistration,
-      __nodeTimerHostRegistration: timerRegistration,
-      __rollbackWasiInitialization: rollbackWasiInitialization,
-      __runWasiInitializationRollback: runWasiInitializationRollback,
-      __wasiRollbackRegistry: { set: vi.fn() },
-      __wasiRollbackRegistryKey: 'rolldown-test-rollback-key',
-      __primaryError: primaryError,
-    };
-
-    expect(() =>
-      runInNewContext(
-        `try {
-  throw __primaryError
-${cleanup}`,
-        vmContext,
-      ),
-    ).toThrow(primaryError);
-    expect(unregisterTimerHost).toHaveBeenCalledTimes(2);
-    expect(unregisterCurrentThreadTaskHost).toHaveBeenCalledTimes(2);
-    // Both persistent host cleanup failures are attached to the primary
-    // error, each aggregating its two attempts.
-    expect(attachCleanupErrors).toHaveBeenCalledOnce();
-    const [attachedError, cleanupErrors] = attachCleanupErrors.mock.calls[0];
-    expect(attachedError).toBe(primaryError);
-    expect(cleanupErrors).toEqual([
-      expect.objectContaining({
-        message: 'Threadless Node timer-host cleanup failed',
-        errors: timerErrors,
-      }),
-      expect.objectContaining({
-        message: 'Threadless Node task-host cleanup failed',
-        errors: taskErrors,
-      }),
-    ]);
-    // Failed releases keep their registrations for the retryable rollback.
-    expect(vmContext.__nodeTimerHostRegistration).toBe(timerRegistration);
-    expect(vmContext.__nodeTaskHostRegistration).toBe(taskRegistration);
-    expect(runWasiInitializationRollback).toHaveBeenCalledOnce();
-  });
-
-  test('rethrows the augmented rollback error for host-free initialization failures', async () => {
-    const cleanup = await readInjectedNodeInitializationCleanup();
-    const primaryError = new Error('Node initialization failed');
-    const augmentedError = new Error('augmented Node initialization failure');
-    const attachCleanupErrors = vi.fn(() => augmentedError);
-    const rollbackWasiInitialization = vi.fn(() => []);
-    const runWasiInitializationRollback = vi.fn();
-    const registrySet = vi.fn();
-
-    expect(() =>
-      runInNewContext(
-        `try {
-  throw __primaryError
-${cleanup}`,
-        {
-          __attachCleanupErrors: attachCleanupErrors,
-          __rollbackWasiInitialization: rollbackWasiInitialization,
-          __runWasiInitializationRollback: runWasiInitializationRollback,
-          __wasiRollbackRegistry: { set: registrySet },
-          __wasiRollbackRegistryKey: 'rolldown-test-rollback-key',
-          __primaryError: primaryError,
-          __nodeTaskHostRegistration: undefined,
-          __nodeTimerHostRegistration: undefined,
-        },
-      ),
-    ).toThrow(augmentedError);
-    expect(attachCleanupErrors).toHaveBeenCalledWith(primaryError, []);
-    const [, record] = registrySet.mock.calls[0] as [string, Record<string, unknown>];
-    expect(record.error).toBe(augmentedError);
-    expect(runWasiInitializationRollback).toHaveBeenCalledExactlyOnceWith(record);
-  });
-
-  test('generated root timer hosts preserve relay semantics across long delays and failures', async () => {
-    const bootstrap = await readCurrentThreadHostBootstrap(cjsLoaderPath);
-    const schedulerError = new Error('timer scheduling failed');
-    const callbacks = new Map<number, () => void>();
-    const clearedHandles: number[] = [];
-    const scheduledDelays: number[] = [];
-    let nextHandle = 0;
-    let failScheduling = false;
-    let schedule: ((id: number, ms: number) => Promise<void>) | undefined;
-    let cancel: ((id: number) => void) | undefined;
-    const reservations = [
-      { high: 0, low: 1 },
-      { high: 0, low: 2 },
-    ];
-    const live = new Set<number>();
-    const binding = {
-      getCurrentThreadTaskHostContractVersion: () => 4,
-      isCurrentThreadHostRegistrationActive: (_high: number, low: number) => live.has(low),
-      reserveCurrentThreadHostRegistration: () => reservations.shift(),
-      registerCurrentThreadTaskHost: vi.fn((_high: number, low: number) => {
-        live.add(low);
-      }),
-      registerTimerHost(
-        _high: number,
-        low: number,
-        scheduleCallback: (id: number, ms: number) => Promise<void>,
-        cancelCallback: (id: number) => void,
-      ) {
-        schedule = scheduleCallback;
-        cancel = cancelCallback;
-        live.add(low);
-      },
-      unregisterCurrentThreadTaskHost: vi.fn(),
-      unregisterTimerHost: vi.fn(),
-    };
-    runCurrentThreadHostBootstrap(bootstrap, binding, {
-      setTimeout(callback: () => void, ms: number) {
-        if (failScheduling) {
-          failScheduling = false;
-          throw schedulerError;
-        }
-        scheduledDelays.push(ms);
-        nextHandle += 1;
-        const handle = nextHandle;
-        callbacks.set(handle, () => {
-          callbacks.delete(handle);
-          callback();
-        });
-        return handle;
-      },
-      clearTimeout(handle: number) {
-        clearedHandles.push(handle);
-        callbacks.delete(handle);
-      },
-    });
-
-    expect(schedule).toBeTypeOf('function');
-    expect(cancel).toBeTypeOf('function');
-    let firstResolved = false;
-    const first = schedule!(7, 10_000).then(() => {
-      firstResolved = true;
-    });
-    const replacement = schedule!(7, 20_000);
-    await first;
-    expect(firstResolved).toBe(true);
-    expect(clearedHandles).toEqual([1]);
-    expect(callbacks.has(1)).toBe(false);
-
-    callbacks.get(2)?.();
-    await replacement;
-    expect(callbacks.has(2)).toBe(false);
-
-    failScheduling = true;
-    await expect(schedule!(8, 30_000)).rejects.toBe(schedulerError);
-    const recovered = schedule!(8, 40_000);
-    cancel!(8);
-    await recovered;
-    expect(clearedHandles).toEqual([1, 3]);
-
-    const maxHostTimeoutMs = 2_147_483_647;
-    const longRelay = schedule!(9, maxHostTimeoutMs + 25);
-    const firstLongHandle = nextHandle;
-    expect(scheduledDelays.at(-1)).toBe(maxHostTimeoutMs);
-    callbacks.get(firstLongHandle)?.();
-    const finalLongHandle = nextHandle;
-    expect(finalLongHandle).toBe(firstLongHandle + 1);
-    expect(scheduledDelays.at(-1)).toBe(25);
-    callbacks.get(finalLongHandle)?.();
-    await longRelay;
-
-    const chainedFailureRelay = schedule!(10, maxHostTimeoutMs + 1);
-    const chainedFailureHandle = nextHandle;
-    failScheduling = true;
-    const chainedFailure = expect(chainedFailureRelay).rejects.toBe(schedulerError);
-    callbacks.get(chainedFailureHandle)?.();
-    await chainedFailure;
-    expect(callbacks.size).toBe(0);
-  });
-
-  test('generated root timer hosts contain cancellation failures and retire relays', async () => {
-    const bootstrap = await readCurrentThreadHostBootstrap(cjsLoaderPath);
-    const callbacks = new Map<number, () => void>();
-    let schedule: ((id: number, ms: number) => Promise<void>) | undefined;
-    let cancel: ((id: number) => void) | undefined;
-    const registrations = [
-      { high: 0, low: 1 },
-      { high: 0, low: 2 },
-    ];
-    const live = new Set<number>();
-    const binding = {
-      getCurrentThreadTaskHostContractVersion: () => 4,
-      isCurrentThreadHostRegistrationActive: (_high: number, low: number) => live.has(low),
-      registerCurrentThreadTaskHost: vi.fn((_high: number, low: number) => {
-        live.add(low);
-      }),
-      registerTimerHost(
-        _high: number,
-        low: number,
-        scheduleCallback: (id: number, ms: number) => Promise<void>,
-        cancelCallback: (id: number) => void,
-      ) {
-        live.add(low);
-        schedule = scheduleCallback;
-        cancel = cancelCallback;
-      },
-      reserveCurrentThreadHostRegistration: () => registrations.shift(),
-      unregisterCurrentThreadTaskHost: vi.fn(),
-      unregisterTimerHost: vi.fn(),
-    };
-    runCurrentThreadHostBootstrap(bootstrap, binding, {
-      setTimeout(callback: () => void) {
-        const handle = callbacks.size + 1;
-        callbacks.set(handle, callback);
-        return handle;
-      },
-      clearTimeout(handle: number) {
-        callbacks.delete(handle);
-        throw new Error('root timer cancellation failed');
-      },
-    });
-
-    const relay = schedule!(7, 60_000);
-    expect(() => cancel!(7)).not.toThrow();
-    await relay;
-    expect(callbacks.size).toBe(0);
   });
 });

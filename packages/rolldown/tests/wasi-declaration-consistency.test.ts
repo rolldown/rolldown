@@ -63,11 +63,25 @@ test('keeps target-neutral binding types aligned across native and WASI declarat
   }
 });
 
+// `@napi-rs/cli` declares each flavor's own `__napiBindingTarget` literal, so
+// that one line is meant to differ. Normalize it instead of weakening the
+// byte-identical assertion around it.
+function normalizeBindingTarget(source: string): string {
+  return source.replace(
+    /^export declare const __napiBindingTarget: '(?:wasm32-wasi|wasm32-wasip1)'$/m,
+    "export declare const __napiBindingTarget: '<flavor>'",
+  );
+}
+
 test('keeps the threaded and threadless WASI declarations byte-identical', async () => {
-  const [threaded, threadless] = await Promise.all([
+  const [threadedSource, threadlessSource] = await Promise.all([
     readFile(declarations.threaded, 'utf8'),
     readFile(declarations.threadless, 'utf8'),
   ]);
+  expect(threadedSource).toContain("export declare const __napiBindingTarget: 'wasm32-wasi'");
+  expect(threadlessSource).toContain("export declare const __napiBindingTarget: 'wasm32-wasip1'");
+  const threaded = normalizeBindingTarget(threadedSource);
+  const threadless = normalizeBindingTarget(threadlessSource);
 
   expect(
     threadless.split('\n'),
@@ -83,10 +97,11 @@ test('keeps the threaded and threadless WASI declarations byte-identical', async
       'Normal fix: run `just build-rolldown-wasi-single` (or `just build-browser`) and commit the',
       'regenerated `packages/rolldown/src/rolldown-binding.wasip1.d.cts`.',
       '',
-      'Exception: if the diff is only `node:stream/web` imports, `typeof global`, or `Buffer` type',
-      'differences, that is a legitimate `@napi-rs/cli` threadless rewrite and NOT drift. In that',
-      'case the two declarations are meant to differ, and this assertion needs a normalizer for',
-      'those channels rather than a rebuild.',
+      'Exception: if the diff is only `node:stream/web` imports, `typeof global`, `Buffer` type',
+      'differences, or the per-flavor `__napiBindingTarget` literal, that is a legitimate',
+      '`@napi-rs/cli` threadless rewrite and NOT drift. In that case the two declarations are',
+      'meant to differ, and this assertion needs a normalizer for those channels rather than a',
+      'rebuild.',
     ].join('\n'),
   ).toEqual(threaded.split('\n'));
 });

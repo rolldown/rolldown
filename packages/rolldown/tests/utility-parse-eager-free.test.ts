@@ -14,7 +14,7 @@ import { expect, test, vi } from 'vitest';
 
 const binding = vi.hoisted(() => {
   const result = {
-    __rolldownBindingTarget: 'native',
+    __napiBindingTarget: 'native',
     target: 'native',
     // The fake native ParseResult handed back by the next parse/parseSync.
     nextNative: undefined,
@@ -124,7 +124,7 @@ function snapshotFields(result) {
 }
 
 test('lazy flavors keep the oxc-parser wrap semantics (no eager native reads)', async () => {
-  binding.__rolldownBindingTarget = 'native';
+  binding.__napiBindingTarget = 'native';
   binding.target = 'native';
   vi.resetModules();
   const [{ parseSync }, { shouldEagerlyFreeOutputs }] = await Promise.all([
@@ -156,7 +156,7 @@ test('lazy flavors keep the oxc-parser wrap semantics (no eager native reads)', 
 test('threadless WASI drains every native field eagerly, behavior unchanged', async () => {
   // Baseline: the lazy flavor's observable result, read through the real
   // wrap.js revival path.
-  binding.__rolldownBindingTarget = 'native';
+  binding.__napiBindingTarget = 'native';
   binding.target = 'native';
   vi.resetModules();
   const lazyParse = await import('../src/utils/parse');
@@ -165,7 +165,7 @@ test('threadless WASI drains every native field eagerly, behavior unchanged', as
   const baseline = snapshotFields(lazyParse.parseSync('input.js', '123n;/xy/g;'));
 
   // Forced flag: threadless-WASI capability report.
-  binding.__rolldownBindingTarget = 'wasi';
+  binding.__napiBindingTarget = 'wasm32-wasip1';
   binding.target = 'wasi';
   vi.resetModules();
   const [{ parse, parseSync }, { shouldEagerlyFreeOutputs }] = await Promise.all([
@@ -242,7 +242,7 @@ async function collect() {
 }
 
 async function loadThreadlessWasiParse() {
-  binding.__rolldownBindingTarget = 'wasi';
+  binding.__napiBindingTarget = 'wasm32-wasip1';
   binding.target = 'wasi';
   vi.resetModules();
   const [parse, { shouldEagerlyFreeOutputs }] = await Promise.all([

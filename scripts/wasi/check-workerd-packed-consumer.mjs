@@ -32,7 +32,7 @@ const tempDir = await mkdtemp(path.join(tmpdir(), 'rolldown-workerd-consumer-'))
 const expectedRegistryRuntimeDependencies = {
   '@emnapi/core': '2.0.0-alpha.5',
   '@emnapi/runtime': '2.0.0-alpha.5',
-  '@napi-rs/wasm-runtime': '~1.2.3',
+  '@napi-rs/wasm-runtime': '~1.2.4',
 };
 
 async function run(command, args, options = {}) {
@@ -259,7 +259,7 @@ export default {
   for (const [dependency, pinnedRange] of Object.entries(expectedRegistryRuntimeDependencies)) {
     // A virtual-store entry is `<name>@<version>`, plus a `_`-joined
     // peer-resolution suffix when the package declares peer dependencies
-    // (@napi-rs/wasm-runtime 1.2.3 peers on the emnapi runtimes, so its entry
+    // (@napi-rs/wasm-runtime 1.2.4 peers on the emnapi runtimes, so its entry
     // carries one). Match the version prefix the range guarantees: the major
     // for `^`, major.minor for `~`, and the exact version for pins.
     const storeName = dependency.replace('/', '+');

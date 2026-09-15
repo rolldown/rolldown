@@ -28,7 +28,7 @@ const binding = vi.hoisted(() => {
   const activeRegistrations = new Set();
   let nextRegistrationLow = 1;
   const result = {
-    __rolldownBindingTarget: 'native',
+    __napiBindingTarget: 'native',
     target: 'native',
     // The fake native ParseResult handed back by the next parse/parseSync.
     nextNative: undefined,
@@ -161,7 +161,7 @@ function createNativeParseResult(errors) {
 }
 
 async function loadThreadlessWasiParseAst() {
-  binding.__rolldownBindingTarget = 'wasi';
+  binding.__napiBindingTarget = 'wasm32-wasip1';
   binding.target = 'wasi';
   vi.resetModules();
   oxcParserWrapSpies.jsonParseAst.mockClear();

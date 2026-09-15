@@ -267,9 +267,9 @@ syn = { version = "3", default-features = false }
 # Keep the `tracing` feature on: `#[napi]` logs every binding call, which helps debug deadlocks
 # (e.g. #7289) by showing which napi function is pending.
 # Minimum versions: the first registry releases with the napi-rs#3423 content rolldown needs (borrow tracker, non-Error rejection identity, wasm teardown barrier, addon pinning).
-napi = { version = "3.12.1", features = ["anyhow", "tracing", "object_indexmap"] }
-napi-build = { version = "2.4.1" }
-napi-derive = { version = "3.6.3", default-features = false, features = ["type-def", "tracing"] }
+napi = { version = "3.12.5", features = ["anyhow", "tracing", "object_indexmap"] }
+napi-build = { version = "2.4.2" }
+napi-derive = { version = "3.6.6", default-features = false, features = ["type-def", "tracing"] }
 
 # oxc crates with the same version
 oxc = { version = "0.150.0", features = [

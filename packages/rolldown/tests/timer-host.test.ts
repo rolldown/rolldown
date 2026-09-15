@@ -11,7 +11,7 @@ const bindingState = vi.hoisted(() => ({
   reservedRegistrations: new Set<string>(),
   version: 4,
 }));
-const hostInstallationsKey = Symbol.for('rolldown.current-thread-host-installations.v4');
+const hostInstallationsKey = Symbol.for('@napi-rs/async-runtime/current-thread-hosts/v4');
 
 function reserveRegistration(low: number) {
   const registration = { high: 0, low };
@@ -20,7 +20,7 @@ function reserveRegistration(low: number) {
 }
 
 vi.mock('../src/binding.cjs', () => ({
-  __rolldownBindingTarget: 'native',
+  __napiBindingTarget: 'native',
   getCurrentThreadTaskHostContractVersion: vi.fn(() => bindingState.version),
   isCurrentThreadHostRegistrationActive: vi.fn((high: number, low: number) =>
     bindingState.activeRegistrations.has(`${high}:${low}`),
@@ -148,7 +148,7 @@ test('CurrentThread task host rejects a malformed v4 reservation before installa
 
   // @ts-ignore The test intentionally imports package source outside the tests tsconfig root.
   await expect(import('../src/timer-host')).rejects.toMatchObject({
-    code: 'ERR_ROLLDOWN_BINDING_MISMATCH',
+    code: 'ERR_NAPI_ASYNC_RUNTIME_BINDING_MISMATCH',
     message: expect.stringMatching(
       /invalid CurrentThread task-host registration for contract version 4/,
     ),
@@ -166,7 +166,7 @@ test('CurrentThread task host rejects the reserved zero registration', async () 
 
   // @ts-ignore The test intentionally imports package source outside the tests tsconfig root.
   await expect(import('../src/timer-host')).rejects.toMatchObject({
-    code: 'ERR_ROLLDOWN_BINDING_MISMATCH',
+    code: 'ERR_NAPI_ASYNC_RUNTIME_BINDING_MISMATCH',
     message: expect.stringMatching(
       /invalid CurrentThread task-host registration for contract version 4/,
     ),
@@ -183,7 +183,7 @@ test('CurrentThread task host rolls back an inactive registration', async () => 
 
   // @ts-ignore The test intentionally imports package source outside the tests tsconfig root.
   await expect(import('../src/timer-host')).rejects.toMatchObject({
-    code: 'ERR_ROLLDOWN_BINDING_MISMATCH',
+    code: 'ERR_NAPI_ASYNC_RUNTIME_BINDING_MISMATCH',
     message: expect.stringMatching(/inactive CurrentThread task-host registration/),
   });
   expect(binding.unregisterCurrentThreadTaskHost).toHaveBeenCalledWith(0, 1);
@@ -232,7 +232,7 @@ test('CurrentThread timer host rejects a malformed v4 reservation before install
 
   // @ts-ignore The test intentionally imports package source outside the tests tsconfig root.
   await expect(import('../src/timer-host')).rejects.toMatchObject({
-    code: 'ERR_ROLLDOWN_BINDING_MISMATCH',
+    code: 'ERR_NAPI_ASYNC_RUNTIME_BINDING_MISMATCH',
     message: expect.stringMatching(
       /invalid CurrentThread timer-host registration for contract version 4/,
     ),
@@ -249,7 +249,7 @@ test('CurrentThread timer host rejects the reserved zero registration', async ()
 
   // @ts-ignore The test intentionally imports package source outside the tests tsconfig root.
   await expect(import('../src/timer-host')).rejects.toMatchObject({
-    code: 'ERR_ROLLDOWN_BINDING_MISMATCH',
+    code: 'ERR_NAPI_ASYNC_RUNTIME_BINDING_MISMATCH',
     message: expect.stringMatching(
       /invalid CurrentThread timer-host registration for contract version 4/,
     ),
@@ -269,7 +269,7 @@ test('CurrentThread timer host rolls back an inactive registration', async () =>
 
   // @ts-ignore The test intentionally imports package source outside the tests tsconfig root.
   await expect(import('../src/timer-host')).rejects.toMatchObject({
-    code: 'ERR_ROLLDOWN_BINDING_MISMATCH',
+    code: 'ERR_NAPI_ASYNC_RUNTIME_BINDING_MISMATCH',
     message: expect.stringMatching(/inactive CurrentThread timer-host registration/),
   });
   expect(binding.unregisterTimerHost).toHaveBeenCalledWith(0, 42);

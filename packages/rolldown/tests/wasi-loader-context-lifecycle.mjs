@@ -17,7 +17,7 @@ let replacementContext;
 try {
   const first = loadFreshBinding();
   firstContext = first.context;
-  assert.equal(first.binding.__rolldownBindingTarget, 'wasi-threads');
+  assert.equal(first.binding.__napiBindingTarget, 'wasm32-wasi');
 
   const { rolldown } = await import(
     `${pathToFileURL(path.join(distDir, 'index.mjs')).href}?wasi-context-lifecycle`

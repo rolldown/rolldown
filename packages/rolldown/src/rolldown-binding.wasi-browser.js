@@ -6,8 +6,58 @@ import {
   WASI as __WASI,
 } from '@napi-rs/wasm-runtime'
 import { createContext as __emnapiCreateContext } from '@emnapi/runtime'
+import { installCurrentThreadHosts as __installCurrentThreadHosts } from '@napi-rs/async-runtime'
 import { memfs, Buffer } from '@napi-rs/wasm-runtime/fs'
 
+export const __napiBindingTarget = 'wasm32-wasi'
+function __napiStampBindingTarget(exportsObject, target) {
+  if (
+    Object.prototype.hasOwnProperty.call(exportsObject, '__napiBindingTarget')
+  ) {
+    if (exportsObject.__napiBindingTarget === target) {
+      // Already ours: the root entry aliases the object it loaded, so a WASI
+      // fallback candidate — or a `NAPI_RS_NATIVE_LIBRARY_PATH` override that
+      // is a generated loader — arrives already stamped with this same value.
+      return target
+    }
+    const error = new Error(
+      '`__napiBindingTarget` is reserved by the generated binding loader, but the loaded binding already exports it. Rename the export, e.g. #[napi(js_name = "...")].',
+    )
+    error.code = 'ERR_NAPI_BINDING_TARGET_CONFLICT'
+    throw error
+  }
+  if (!Object.isExtensible(exportsObject)) {
+    // A `#[napi(module_exports)]` hook may seal or freeze this object
+    // (`Object::seal` / `Object::freeze`). Reporting the artifact is metadata,
+    // never a reason to fail an otherwise successful load, so the stamp is
+    // skipped. What a consumer still sees then follows the entry point: the
+    // browser and deferred loaders declare `__napiBindingTarget` at module
+    // level and go on reporting it, while the CommonJS entries hand back this
+    // very object as `module.exports`, so there the value is absent.
+    return target
+  }
+  try {
+    // [[Define]], not [[Set]]: an ordinary assignment walks the prototype
+    // chain, so an inherited accessor could swallow the value or throw and
+    // fail an otherwise successful load. The descriptor is what a successful
+    // assignment would have produced.
+    Object.defineProperty(exportsObject, '__napiBindingTarget', {
+      configurable: true,
+      enumerable: true,
+      value: target,
+      writable: true,
+    })
+  } catch {
+    // Same rule as the non-extensible skip above: reporting the artifact is
+    // metadata, never a reason to fail an otherwise successful load. An exotic
+    // object (a Proxy whose defineProperty trap refuses) is skipped, not
+    // thrown over.
+  }
+  // The CommonJS loaders assign this return value so `cjs-module-lexer` — and
+  // therefore Node's CJS -> ESM named export detection — can see
+  // `__napiBindingTarget` statically.
+  return target
+}
 
 export const { fs: __fs, vol: __volume } = memfs()
 
@@ -52,6 +102,7 @@ let __napiInstance
 let __emnapiContextDestroyed = false
 let __emnapiContextDestroyPromise
 let __emnapiWasmEnvCleanupPrepared = false
+let __emnapiWasmEnvCleanupPreparing = false
 let __emnapiWasmEnvCleanupRan = false
 let __emnapiWasmEnvCleanupDrained = false
 let __emnapiWasmEnvCleanupDrainPromise
@@ -62,6 +113,36 @@ let __completeWasiDisposal = function () {}
 // that stopped short of destroying the context. See
 // `__rollbackWasiInitialization`.
 let __retainWasiRollbackForRetry = function () {}
+
+let __currentThreadHostsDisposer
+
+function __reportCurrentThreadHostDisposalError(error) {
+  try {
+    const consoleHost = globalThis.console
+    if (consoleHost && typeof consoleHost.error === 'function') {
+      consoleHost.error(error)
+    }
+  } catch {}
+}
+
+/**
+ * Unregister the CurrentThread task and timer hosts this loader installed.
+ * Idempotent, and never throws: an unregister failure must not abort
+ * `Context.destroy()`, which would retain the whole environment over a
+ * bookkeeping error. The failure is reported instead.
+ */
+function __disposeCurrentThreadHosts() {
+  const dispose = __currentThreadHostsDisposer
+  if (dispose === undefined) {
+    return
+  }
+  __currentThreadHostsDisposer = undefined
+  try {
+    dispose()
+  } catch (error) {
+    __reportCurrentThreadHostDisposalError(error)
+  }
+}
 
 function __isThenable(value) {
   return (
@@ -125,23 +206,58 @@ function __attachCleanupErrors(error, cleanupErrors) {
   return aggregate
 }
 
-function __wrapEmnapiContextDestroyForSettlement(context) {
-  // oxlint-disable-next-line typescript/unbound-method -- invoked with the wrapper receiver below
-  const __contextDestroy = context.destroy
-  context.destroy = function () {
-    __prepareWasmEnvCleanup()
-    return Reflect.apply(__contextDestroy, this, arguments)
+function __wrapEmnapiContextDestroyForSettlement(
+  context,
+  prepareEnvCleanup,
+  isPreparingEnvCleanup,
+) {
+  let destroy
+  try {
+    destroy = context.destroy
+  } catch {
+    return context
   }
+  if (typeof destroy !== 'function') {
+    return context
+  }
+  try {
+    Object.defineProperty(context, 'destroy', {
+      configurable: true,
+      enumerable: false,
+      writable: true,
+      value: function () {
+        // Reentered from a promise hook that fired inside the barrier: the
+        // frame running it destroys as soon as it returns.
+        if (isPreparingEnvCleanup?.()) {
+          return
+        }
+        prepareEnvCleanup?.()
+        return Reflect.apply(destroy, this, arguments)
+      },
+    })
+  } catch {}
   return context
 }
 
+function __isPreparingWasmEnvCleanup() {
+  return __emnapiWasmEnvCleanupPreparing
+}
+
 function __prepareWasmEnvCleanup() {
-  if (__emnapiWasmEnvCleanupPrepared) {
+  if (__emnapiWasmEnvCleanupPrepared || __emnapiWasmEnvCleanupPreparing) {
     return
   }
   const prepare = __napiInstance?.exports?.napi_prepare_wasm_env_cleanup
   if (typeof prepare === 'function') {
-    prepare()
+    // The addon settles the promises it cancels synchronously, under a
+    // non-reentrant lifecycle mutex: anything a promise hook calls from in
+    // here must not reach this export again.
+    __emnapiWasmEnvCleanupPreparing = true
+    try {
+      prepare()
+    } finally {
+      __emnapiWasmEnvCleanupPreparing = false
+    }
     __emnapiWasmEnvCleanupRan = true
   }
   __emnapiWasmEnvCleanupPrepared = true
@@ -313,6 +429,7 @@ function __destroyEmnapiContext() {
     return __emnapiContextDestroyPromise
   }
 
+  __disposeCurrentThreadHosts()
   __prepareWasmEnvCleanup()
   const result = __emnapiContext.destroy()
   if (!__isThenable(result)) {
@@ -567,14 +684,15 @@ function __rollbackWasiInitialization() {
   return __destroyContextForWasiRollback(cleanupErrors)
 }
 
-let __browserTaskHostRegistration
-let __browserTimerHostRegistration
 let __wasiModule
 let __napiModule
 
 try {
-/* ROLLDOWN_BROWSER_INITIALIZATION_GUARD_START */
-  __emnapiContext = __wrapEmnapiContextDestroyForSettlement(__emnapiCreateContext({ autoDestroy: false }))
+  __emnapiContext = __wrapEmnapiContextDestroyForSettlement(
+    __emnapiCreateContext({ autoDestroy: false }),
+    __prepareWasmEnvCleanup,
+    __isPreparingWasmEnvCleanup,
+  )
   __emnapiContext.suppressDestroy()
     __emnapiContext.features.Buffer = Buffer
 
@@ -630,225 +748,20 @@ try {
     },
   }))
   __publishWasiDispose(__napiModule.exports)
-/* ROLLDOWN_CURRENT_THREAD_HOST_BOOTSTRAP_START */
-;{
-  const __rolldownBinding = __napiModule.exports
-  const __getCurrentThreadTaskHostContractVersion =
-    __rolldownBinding.getCurrentThreadTaskHostContractVersion
-  const __isCurrentThreadHostRegistrationActive =
-    __rolldownBinding.isCurrentThreadHostRegistrationActive
-  const __registerCurrentThreadTaskHost =
-    __rolldownBinding.registerCurrentThreadTaskHost
-  const __registerTimerHost = __rolldownBinding.registerTimerHost
-  const __reserveCurrentThreadHostRegistration =
-    __rolldownBinding.reserveCurrentThreadHostRegistration
-  const __unregisterCurrentThreadTaskHost =
-    __rolldownBinding.unregisterCurrentThreadTaskHost
-  const __unregisterTimerHost = __rolldownBinding.unregisterTimerHost
-  if (
-    typeof __getCurrentThreadTaskHostContractVersion !== 'function' ||
-    typeof __isCurrentThreadHostRegistrationActive !== 'function' ||
-    typeof __registerCurrentThreadTaskHost !== 'function' ||
-    typeof __registerTimerHost !== 'function' ||
-    typeof __reserveCurrentThreadHostRegistration !== 'function' ||
-    typeof __unregisterCurrentThreadTaskHost !== 'function' ||
-    typeof __unregisterTimerHost !== 'function'
-  ) {
-    throw new TypeError(
-      'The threaded Rolldown binding does not expose its CurrentThread host integration',
-    )
-  }
-  const __taskHostContractVersion =
-    Reflect.apply(
-      __getCurrentThreadTaskHostContractVersion,
-      __rolldownBinding,
-      [],
-    )
-  if (__taskHostContractVersion !== 4) {
-    throw new TypeError(
-      'The threaded Rolldown binding uses CurrentThread task-host contract version ' +
-        String(__taskHostContractVersion) +
-        ', but version 4 is required',
-    )
-  }
-  const __readHostRegistration = (__registration, __label) => {
-    let __high
-    let __low
-    try {
-      __high = Reflect.get(__registration, 'high', __registration)
-      __low = Reflect.get(__registration, 'low', __registration)
-    } catch {}
-    if (
-      !Number.isInteger(__high) ||
-      __high < 0 ||
-      __high > 0xffffffff ||
-      !Number.isInteger(__low) ||
-      __low < 0 ||
-      __low > 0xffffffff ||
-      (__high === 0 && __low === 0)
-    ) {
-      throw new TypeError(
-        'The threaded Rolldown binding returned an invalid ' +
-          __label +
-          ' host registration',
-      )
-    }
-    return { high: __high, low: __low }
-  }
-  const __assertHostRegistrationActive = (__registration, __label) => {
-    const __active = Reflect.apply(
-      __isCurrentThreadHostRegistrationActive,
-      __rolldownBinding,
-      [__registration.high, __registration.low],
-    )
-    if (typeof __active !== 'boolean') {
-      throw new TypeError(
-        'The threaded Rolldown binding returned an invalid ' +
-          __label +
-          ' host liveness result',
-      )
-    }
-    if (!__active) {
-      throw new TypeError(
-        'The threaded Rolldown binding returned an inactive ' +
-          __label +
-          ' host registration',
-      )
-    }
-  }
-  const __taskHostRegistration = __readHostRegistration(
-    Reflect.apply(
-      __reserveCurrentThreadHostRegistration,
-      __rolldownBinding,
-      [],
-    ),
-    'task',
+  __currentThreadHostsDisposer = __installCurrentThreadHosts(
+    __napiModule.exports,
   )
-  __browserTaskHostRegistration = __taskHostRegistration
-  Reflect.apply(__registerCurrentThreadTaskHost, __rolldownBinding, [
-    __taskHostRegistration.high,
-    __taskHostRegistration.low,
-  ])
-  __assertHostRegistrationActive(__taskHostRegistration, 'task')
-
-  const __setTimeoutHost = globalThis.setTimeout.bind(globalThis)
-  const __clearTimeoutHost = globalThis.clearTimeout.bind(globalThis)
-  const __MAX_HOST_TIMEOUT_MS = 2147483647
-  const __activeTimers = new Map()
-  const __armTimer = (__id, __timer) => {
-    const __delay = Math.min(__timer.remainingMs, __MAX_HOST_TIMEOUT_MS)
-    __timer.handle = __setTimeoutHost(() => {
-      if (__activeTimers.get(__id) !== __timer) return
-      __timer.remainingMs -= __delay
-      if (__timer.remainingMs > 0) {
-        try {
-          __armTimer(__id, __timer)
-        } catch (__error) {
-          __activeTimers.delete(__id)
-          __timer.reject(__error)
-        }
-        return
-      }
-      __activeTimers.delete(__id)
-      __timer.resolve()
-    }, __delay)
-  }
-  const __cancelTimer = (__timer) => {
-    try {
-      if (__timer.handle !== undefined) {
-        __clearTimeoutHost(__timer.handle)
-      }
-    } catch {
-      // Rust invokes this callback through a non-catching TSFN. Contain
-      // host cancellation failures at the JavaScript boundary.
-    } finally {
-      __timer.resolve()
-    }
-  }
-  const __timerHostRegistration = __readHostRegistration(
-    Reflect.apply(
-      __reserveCurrentThreadHostRegistration,
-      __rolldownBinding,
-      [],
-    ),
-    'timer',
-  )
-  __browserTimerHostRegistration = __timerHostRegistration
-  Reflect.apply(__registerTimerHost, __rolldownBinding, [
-    __timerHostRegistration.high,
-    __timerHostRegistration.low,
-    (__id, __ms) => {
-      const __previous = __activeTimers.get(__id)
-      if (__previous) {
-          __activeTimers.delete(__id)
-          __cancelTimer(__previous)
-        }
-        return new Promise((__resolve, __reject) => {
-          const __timer = {
-            handle: undefined,
-            remainingMs: Math.max(__ms, 0),
-            reject: __reject,
-            resolve: __resolve,
-          }
-          __activeTimers.set(__id, __timer)
-          try {
-            __armTimer(__id, __timer)
-          } catch (__error) {
-            if (__activeTimers.get(__id) === __timer) {
-              __activeTimers.delete(__id)
-            }
-            __reject(__error)
-          }
-        })
-      },
-      (__id) => {
-        const __timer = __activeTimers.get(__id)
-        if (!__timer) return
-        __activeTimers.delete(__id)
-        __cancelTimer(__timer)
-      },
-    ])
-  __assertHostRegistrationActive(__timerHostRegistration, 'timer')
-}
-/* ROLLDOWN_CURRENT_THREAD_HOST_BOOTSTRAP_END */
-/* ROLLDOWN_BROWSER_INITIALIZATION_GUARD_END */
+  // The default export hands out this object; a named module export does not
+  // travel with it, so carry the marker on the binding itself too. After the
+  // host install, which hands the same object to addon-provided registration
+  // functions that may put anything on it, and inside this `try`, so a claimed
+  // name fails the load through the rollback below rather than past it.
+  __napiStampBindingTarget(__napiModule.exports, __napiBindingTarget)
 } catch (error) {
-  const __hostCleanupErrors = []
-  const __cleanupSync = (__operation, __message) => {
-    const __operationErrors = []
-    for (let __attempt = 0; __attempt < 2; __attempt += 1) {
-      try {
-        __operation()
-        return
-      } catch (__cleanupError) {
-        __operationErrors.push(__cleanupError)
-      }
-    }
-    __hostCleanupErrors.push(new AggregateError(__operationErrors, __message))
-  }
-  if (__browserTimerHostRegistration !== undefined) {
-    __cleanupSync(() => {
-      const __binding = __napiModule.exports
-      Reflect.apply(__binding.unregisterTimerHost, __binding, [
-        __browserTimerHostRegistration.high,
-        __browserTimerHostRegistration.low,
-      ])
-    }, 'Threaded browser timer-host cleanup failed')
-  }
-  if (__browserTaskHostRegistration !== undefined) {
-    __cleanupSync(() => {
-      const __binding = __napiModule.exports
-      Reflect.apply(__binding.unregisterCurrentThreadTaskHost, __binding, [
-        __browserTaskHostRegistration.high,
-        __browserTaskHostRegistration.low,
-      ])
-    }, 'Threaded browser task-host cleanup failed')
-  }
   const cleanupErrors = await __rollbackWasiInitialization()
-  throw __attachCleanupErrors(error, __hostCleanupErrors.concat(cleanupErrors))
+  throw __attachCleanupErrors(error, cleanupErrors)
 }
 export default __napiModule.exports
-export const __rolldownBindingTarget = 'wasi-threads'
 export const LegalCommentsMode = __napiModule.exports.LegalCommentsMode
 export const minify = __napiModule.exports.minify
 export const minifySync = __napiModule.exports.minifySync

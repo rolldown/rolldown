@@ -39,7 +39,7 @@ memchr = { workspace = true }
 mime = { workspace = true }
 # The shared scheduler; napi-free with default features off (the napi SPI
 # adapter stays in rolldown_binding).
-napi-async-runtime = { version = "0.2.0", default-features = false }
+napi-async-runtime = { version = "0.2.1", default-features = false }
 nom = { workspace = true }
 oxc = { workspace = true }
 oxc_index = { workspace = true }

@@ -187,51 +187,36 @@ for (const rel of DEFAULT_LOADERS) {
   }
 
   if (rel.endsWith('.wasip1.cjs') || rel.endsWith('.wasip1-browser.js')) {
+    // `napi.wasm.asyncRuntime` makes @napi-rs/cli install the hosts from the
+    // shared `@napi-rs/async-runtime` protocol package; the loader carries the
+    // wiring, not the protocol.
     for (const [label, pattern] of [
-      ['bootstrap start', /ROLLDOWN_CURRENT_THREAD_HOST_BOOTSTRAP_START/],
       [
-        'zero-argument contract-version call',
-        /Reflect\.apply\(\s*__getCurrentThreadTaskHostContractVersion,\s*__rolldownBinding,\s*\[\],?\s*\)/,
-      ],
-      ['contract version 4 validation', /__taskHostContractVersion !== 4/],
-      [
-        'zero-argument host reservation',
-        /Reflect\.apply\(\s*__reserveCurrentThreadHostRegistration,\s*__rolldownBinding,\s*\[\],?\s*\)/,
+        'host protocol import',
+        /(?:import \{ installCurrentThreadHosts as __installCurrentThreadHosts \} from '@napi-rs\/async-runtime'|installCurrentThreadHosts: __installCurrentThreadHosts,\s*\n\} = require\('@napi-rs\/async-runtime'\))/,
       ],
       [
-        'reserved task-host registration',
-        /Reflect\.apply\(__registerCurrentThreadTaskHost, __rolldownBinding, \[\s*__taskHostRegistration\.high,\s*__taskHostRegistration\.low,?\s*\]\)/,
+        'host installation against the binding exports',
+        /__currentThreadHostsDisposer = __installCurrentThreadHosts\(\s*__napiModule\.exports,?\s*\)/,
       ],
-      ['task-host registration validation', /__readHostRegistration\([\s\S]*?'task'/],
-      [
-        'task-host liveness validation',
-        /__assertHostRegistrationActive\(__taskHostRegistration, 'task'\)/,
-      ],
-      ['timer-host registration', /Reflect\.apply\(__registerTimerHost, __rolldownBinding, \[/],
+      ['host disposer capture', /let __currentThreadHostsDisposer/],
+      ['host disposal helper', /function __disposeCurrentThreadHosts\(\) \{/],
     ]) {
       if (!pattern.test(source)) {
         failures.push(`${rel}: missing generated CurrentThread host bootstrap ${label}`);
       }
     }
-    if (rel.endsWith('.wasip1-browser.js')) {
-      const taskUnregisterPattern =
-        /Reflect\.apply\(__binding\.unregisterCurrentThreadTaskHost, __binding, \[\s*__browserTaskHostRegistration\.high,\s*__browserTaskHostRegistration\.low,\s*\]\)/;
-      const taskUnregister = source.search(taskUnregisterPattern);
-      // `__rollbackWasiInitialization` is where the context is destroyed
-      // (prepare -> drain -> destroy -> worker teardown).
-      const contextRollback = source.search(
-        /const cleanupErrors = await __rollbackWasiInitialization\(\)/,
+    // The hosts must be evicted before the context they registered against is
+    // destroyed: `__destroyEmnapiContext` runs dispose -> prepare -> destroy.
+    const hostDisposal = source.search(/\n {2}__disposeCurrentThreadHosts\(\)\n/);
+    const contextDestroy = source.search(/const result = __emnapiContext\.destroy\(\)/);
+    if (hostDisposal === -1) {
+      failures.push(`${rel}: missing CurrentThread host disposal in the context teardown`);
+    }
+    if (contextDestroy === -1 || (hostDisposal !== -1 && hostDisposal > contextDestroy)) {
+      failures.push(
+        `${rel}: CurrentThread hosts must be disposed before the emnapi context is destroyed`,
       );
-      if (taskUnregister === -1) {
-        failures.push(
-          `${rel}: missing exact CurrentThread task-host unregister with the captured high/low token`,
-        );
-      }
-      if (contextRollback === -1 || (taskUnregister !== -1 && taskUnregister > contextRollback)) {
-        failures.push(
-          `${rel}: CurrentThread task host must unregister before the browser initialization rollback destroys the context`,
-        );
-      }
     }
     if (!code.includes(`initial: ${configuredInitialMemory},`)) {
       failures.push(

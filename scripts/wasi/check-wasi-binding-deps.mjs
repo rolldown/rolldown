@@ -12,7 +12,13 @@ import * as path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const REPO_ROOT = fileURLToPath(new URL('../../', import.meta.url));
-const TRACKED = ['@napi-rs/wasm-runtime', '@emnapi/core', '@emnapi/runtime', 'buffer'];
+const TRACKED = [
+  '@napi-rs/async-runtime',
+  '@napi-rs/wasm-runtime',
+  '@emnapi/core',
+  '@emnapi/runtime',
+  'buffer',
+];
 const BINDING_PKGS = [
   path.join(REPO_ROOT, 'packages/rolldown/npm/wasm32-wasip1/package.json'),
   path.join(REPO_ROOT, 'packages/rolldown/npm/wasm32-wasi/package.json'),

@@ -142,6 +142,7 @@
   "devDependencies": {
     "@emnapi/core": "catalog:",
     "@emnapi/runtime": "catalog:",
+    "@napi-rs/async-runtime": "catalog:",
     "@napi-rs/cli": "catalog:",
     "@napi-rs/wasm-runtime": "catalog:",
     "@oxc-node/cli": "catalog:",
@@ -188,6 +189,7 @@
       "x86_64-unknown-linux-musl"
     ],
     "wasm": {
+      "asyncRuntime": true,
       "initialMemory": 16384,
       "threadlessInitialMemory": 1027,
       "maximumMemory": 65536,

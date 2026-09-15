@@ -106,9 +106,10 @@ function enumExport(name: string): any {
   });
 }
 
-// Matches the generated loader export that `binding-loader-codegen.ts` emits as
-// `LOADED_BINDING_TARGET_EXPORT`.
-export const __rolldownBindingTarget = 'wasi';
+// Matches `__napiBindingTarget` in the generated threadless WASI loader this
+// proxy stands in for; `@napi-rs/cli` reports the flavor's `platformArchABI`,
+// which is not the same spelling as the Rust `getRuntimeCapabilities().target`.
+export const __napiBindingTarget = 'wasm32-wasip1';
 
 // Report used while no managed instance is active, so a capability read before
 // the first managed instantiation is safe in workerd bundles. Matches

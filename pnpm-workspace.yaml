@@ -32,7 +32,7 @@ onlyBuiltDependencies:
   - tree-sitter
 
 overrides:
-  # napi-build 2.4.1 links the emnapi v2 C archives; pin the exact release so a range change cannot silently swap them.
+  # napi-build 2.4.2 links the emnapi v2 C archives; pin the exact release so a range change cannot silently swap them.
   emnapi: 2.0.0-alpha.5
   vitepress>vite: npm:rolldown-vite@latest
 
@@ -45,13 +45,21 @@ catalog:
   '@emnapi/core': 2.0.0-alpha.5
   '@emnapi/runtime': 2.0.0-alpha.5
   '@jridgewell/trace-mapping': ^0.3.31
-  # floor pin: `napi.rootPublisher` (napi-rs#3450) is honored only from 3.8.5, and
-  # pre-publish validation needs it. The cli peer-requires the same
+  # JavaScript host protocol for the `napi-async-runtime` bindings; the cli emits
+  # imports of it into the generated WASI loaders when `napi.wasm.asyncRuntime`
+  # is set, so it moves with the cli floor below.
+  '@napi-rs/async-runtime': ^0.2.0
+  # floor pin: the generated loaders are the contract. From 3.10.0 the cli itself
+  # exports `__napiBindingTarget` (napi-rs#3515), wraps the raw emnapi context
+  # destroy behind the cleanup barrier (#3514), honors
+  # `napi.wasm.threadlessInitialMemory` (#3516) and installs the CurrentThread
+  # hosts for `napi.wasm.asyncRuntime` (#3517). Rolldown deleted the local
+  # codegen patches that used to add all four, so an older cli silently
+  # regenerates loaders without them. The cli peer-requires the same
   # `^1.7.1 || ^2.0.0-alpha.4` emnapi line as the pins above, so it moves with
-  # them. A cli bump can reshape the generated loaders — see the contract
-  # snippets in `packages/rolldown/generate-workerd-loader.ts`.
-  '@napi-rs/cli': ^3.9.0
-  '@napi-rs/wasm-runtime': ~1.2.3
+  # them.
+  '@napi-rs/cli': ^3.10.0
+  '@napi-rs/wasm-runtime': ~1.2.4
   '@oxc-node/cli': ^0.1.0
   '@oxc-node/core': ^0.1.0
   '@oxc-project/runtime': '=0.150.0'
@@ -150,6 +158,7 @@ trustPolicyExclude:
 verifyDepsBeforeRun: install
 
 minimumReleaseAgeExclude:
+  - '@napi-rs/async-runtime'
   - '@napi-rs/cli'
   - '@oxc-minify/*'
   - '@oxc-parser/*'

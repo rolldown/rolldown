@@ -241,38 +241,55 @@ JavaScript package and the binding ship from the same commit with exact
 version pins, so a loaded binding that does not match this package is a
 broken install, not a lane: the capability report is read as the
 `#[napi(object)]` struct defines it, never synthesized or defaulted, and a
-missing host-contract export fails with `ERR_ROLLDOWN_BINDING_MISMATCH`.
+missing host-contract export fails with `ERR_NAPI_ASYNC_RUNTIME_BINDING_MISMATCH`.
 
-- **Host install (register-only, contract-gated)** —
-  `packages/rolldown/src/timer-host.ts` installs the task host and (on
-  non-browser builds) the timer host as a module side effect. Before any
-  native side effect, it verifies
-  `getCurrentThreadTaskHostContractVersion() === 4`, then reserves + validates
-  the capability, then calls `registerCurrentThreadTaskHost(high, low)`
-  (no callback) and `registerTimerHost(high, low, schedule, cancel)`. The
-  timer host arms `setTimeout` hops (chunked to `MAX_HOST_TIMEOUT_MS`) and, on
-  `cancel`, clears the timeout **and** resolves the relay promise (dropping a
-  sleep must not wait out the deadline). On the **browser** build the timer
-  registration is guarded by `!import.meta.browserBuild` (timer-host.ts), so a
-  browser entry installs only the task host and reports `timers: false` — the
-  browser event loop backs timers directly. Installed once per binding via a
-  per-realm `Symbol.for('rolldown.current-thread-host-installations.v4')`
-  WeakMap. Every native package entry pulls it in through a side-effect
+- **Host install (register-only, contract-gated)** — the host protocol itself
+  lives in `@napi-rs/async-runtime` (`installCurrentThreadHosts`), shared with
+  every other napi-rs binding built on the runtime.
+  `packages/rolldown/src/timer-host.ts` is the one-line rolldown call site: it
+  installs the task host and (on non-browser builds) the timer host against
+  `binding.cjs` as a module side effect. Before any native side effect the
+  package verifies `getCurrentThreadTaskHostContractVersion() === 4`, then
+  reserves + validates the capability, then calls
+  `registerCurrentThreadTaskHost(high, low)` (no callback) and
+  `registerTimerHost(high, low, schedule, cancel)`. The timer host arms
+  `setTimeout` hops (chunked to `MAX_HOST_TIMEOUT_MS`) and, on `cancel`, clears
+  the timeout **and** resolves the relay promise (dropping a sleep must not
+  wait out the deadline); a cancellation the host cannot complete rejects the
+  relay and rethrows, so the native side's bounded strike policy observes it.
+  On the **browser** build the timer registration is turned off with
+  `installTimerHost: !import.meta.browserBuild`, so a browser entry installs
+  only the task host and reports `timers: false` — the browser event loop backs
+  timers directly. Installed once per binding via a per-realm
+  `Symbol.for('@napi-rs/async-runtime/current-thread-hosts/v4')` WeakMap. Every
+  native package entry pulls it in through a side-effect
   `import './timer-host'` (`setup.ts`, `config.ts`, `plugins-index.ts`,
   `parallel-plugin-worker.ts`, `experimental-index.ts`, `utils-index.ts`,
-  `parse-ast-index.ts`, and `cli/timer-host-entry.ts`).
+  `parse-ast-index.ts`, and `cli/timer-host-entry.ts`). The **generated WASI
+  loaders** install the same hosts themselves: `napi.wasm.asyncRuntime: true`
+  in `packages/rolldown/package.json` makes `@napi-rs/cli` (>= 3.10.0) emit the
+  `installCurrentThreadHosts` call into every generated loader, so `timer-host.ts`
+  only covers the native one.
 - **Config / metrics API** — `packages/rolldown/src/api/async-runtime.ts`
   (`configureAsyncRuntime`, `getAsyncRuntimeConfig` incl. the `drainLingerUs`
   field, `getAsyncRuntimeMetrics`), each a direct call into the binding export.
 - **Capability gating** — `packages/rolldown/src/runtime-support.ts`
   (`getRuntimeCapabilitiesCompat`, `getRuntimeSupport` → `threadlessWasi` /
   `workerd` / `dev` / `watch`, `assertRuntimeFeature`).
-- **Loaders** — `packages/rolldown/src/binding.cjs` (native; line-8
-  `loadedBindingTarget='native'`, exported as `__rolldownBindingTarget`),
+- **Loaders** — `packages/rolldown/src/binding.cjs` (native;
+  `__napiLoadedBindingTarget = 'native'`, exported as `__napiBindingTarget`),
   `rolldown-binding.wasi.cjs` / `rolldown-binding.wasi-browser.js` (threaded
-  WASI, target `wasi-threads`, emnapi TSFN/async-work plugins). The generated
-  loaders are patched by `packages/rolldown/binding-loader-codegen.ts`, whose
-  `assertAsyncRuntimeHostExports` guarantees every host export survives codegen.
+  WASI, `__napiBindingTarget === 'wasm32-wasi'`, emnapi TSFN/async-work
+  plugins) and the `wasip1` pair (`'wasm32-wasip1'`). Note that
+  `__napiBindingTarget` reports the artifact's `platformArchABI`, which is not
+  the spelling `getRuntimeCapabilities().target` uses (`native` / `wasi` /
+  `wasi-threads`). All of it is emitted by `@napi-rs/cli`; rolldown keeps no
+  loader rewriting of its own. What is left in
+  `packages/rolldown/binding-loader-codegen.ts` is assertion-only:
+  `assertWasiBindingContextLifecycle` pins the teardown seams (disposal chain,
+  settlement barrier, raw-destroy wrapper) and `assertAsyncRuntimeHostExports`
+  pins the host exports on the native loader, so a cli bump that reshapes
+  either fails the build instead of regressing silently.
 
 ---
 
@@ -378,7 +395,7 @@ features and throws `ERR_ROLLDOWN_UNSUPPORTED_RUNTIME_FEATURE` before entering
 unsupported setup paths. The report is read straight from the binding: the
 `#[napi(object)]` struct fixes every field, so the package does not re-validate
 it. Import-time task and timer host registration instead fails with
-`ERR_ROLLDOWN_BINDING_MISMATCH` when the binding's host-contract exports are
+`ERR_NAPI_ASYNC_RUNTIME_BINDING_MISMATCH` when the binding's host-contract exports are
 missing or report a different contract version. Parallel-plugin descriptor
 consumption has an additional synchronous preflight at the public build,
 rolldown, scan, and dev boundaries and at `createBundlerOptions`. The latter
@@ -576,25 +593,23 @@ restores every overwritten generated file and removes only files created by
 that invocation. The root facade is managed explicitly rather than by a broad
 JavaScript-file pattern, so unrelated sources remain outside the transaction.
 
-`packages/rolldown/generate-workerd-loader.ts` deterministically hardens the
-generated deferred loader after every napi build. The same generation pass
-post-processes the napi-rs CJS and browser loaders for BOTH wasm flavors —
-`wasm32-wasip1` and threaded `wasm32-wasip1-threads` — registering the v4
-native CurrentThread runnable host and the JavaScript timer host before
+`packages/rolldown/generate-workerd-loader.ts` renders the deferred workerd
+loader after every napi build. The eager CJS and browser loaders for BOTH wasm
+flavors — `wasm32-wasip1` and threaded `wasm32-wasip1-threads` — register the
+v4 native CurrentThread runnable host and the JavaScript timer host before
 exposing the binding: since the registry napi pin, every wasm artifact runs the
 shared CurrentThread flavor, so a raw import of either shipped loader set must
-carry its own task/timer hosts or a build never completes. Both loader sets
-install that bootstrap unconditionally. The task-host bootstrap validates contract
-version 4 and the exact reserved registration capability, captures that
-capability for cleanup, and never exposes JavaScript drive or cancellation
-functions. The CJS
-bootstrap remains inside napi-rs's isolated-context initialization guard, so
-registration failure unregisters any installed host, destroys the emnapi
-context, and preserves cleanup diagnostics before the module load fails. The
-transform uses explicit generated-block markers, is idempotent, validates all
-loader anchors before writing any output, and fails when the expected napi-rs
-shape changes; committed loaders must therefore be regenerated rather than
-edited. The binding wrapper bypasses napi-rs's feature-blind declaration cache
+carry its own task/timer hosts or a build never completes. That bootstrap is
+`@napi-rs/cli`'s (`napi.wasm.asyncRuntime`), installed unconditionally by every
+generated loader, and it lives inside napi-rs's isolated-context initialization
+guard, so registration failure unregisters any installed host, destroys the
+emnapi context, and preserves cleanup diagnostics before the module load fails.
+`installCurrentThreadHosts` validates contract version 4 and the exact reserved
+registration capability, captures that capability for cleanup, and never
+exposes JavaScript drive or cancellation functions. Rolldown re-asserts those
+seams from `binding-loader-codegen.ts` (see section 7) rather than rewriting
+them; committed loaders must therefore be regenerated rather than edited. The
+binding wrapper bypasses napi-rs's feature-blind declaration cache
 for dedicated WASI targets and native `async-runtime` builds — each gets a fresh
 type-def scratch folder, so no stale fragments survive — and restores the
 inactive flavor's `rolldown-binding.*.d.cts` around every build. Only a build
@@ -637,9 +652,13 @@ re-enter a future that still holds its waker lock. Exact delivery identity,
 stale callback rejection, bounded replacement, and failure acknowledgement stay
 inside the crate's registry and executor (see the Summary) rather than
 crossing the JavaScript facade.
-Timer cancellation contains host `clearTimeout` failures at the JavaScript
-boundary and still resolves the Rust relay, because the callback enters through
-a non-catching threadsafe function.
+Timer cancellation resolves the Rust relay whenever the host timeout could be
+released. The managed workerd host contains a failing `clearTimeout` at the
+JavaScript boundary and resolves anyway; the package-side host
+(`@napi-rs/async-runtime`) first falls back to the handle's own
+`Symbol.dispose`/`close`, then to `unref`, and only when nothing could release
+the timeout does it reject the relay and rethrow, so the native side's bounded
+strike policy observes a cancellation it must not assume happened.
 All package, managed, and generated timer hosts split delays above
 `2_147_483_647` milliseconds into host-safe chunks. Initial or chained
 `setTimeout` failures reject the relay; duplicate IDs, cancellation, and
@@ -739,8 +758,9 @@ The threadless loaders take their initial page count from
 `napi.wasm.threadlessInitialMemory` in `packages/rolldown/package.json`, a
 ~64 MiB budget instead of the threaded flavor's inherited 16384 pages (1 GiB);
 `napi.wasm.initialMemory` remains 16384 for the threaded flavor. The number is
-not repeated in prose because it moves with every toolchain bump: the module's
-own `env.memory` minimum is the floor, `generate-workerd-loader.ts` refuses a
+not repeated in prose because it moves with every toolchain bump: `@napi-rs/cli`
+reads the key for the threadless loaders, the module's own `env.memory` minimum
+is the floor, `generate-workerd-loader.ts` refuses a
 configured value below it, and `scripts/wasi/check-wasi-threadless.mjs` caps
 the configured value at the last measured budget, so a raise is a conscious
 re-measurement rather than drift. When the ignored build artifact is present,
@@ -786,7 +806,11 @@ this section possible: no restore step, no drift-allowlist arm, and no
 build-order coupling is needed to keep one flavor from overwriting the other.
 
 - The per-flavor naming and loader codegen (napi-rs#3353) ship in the released
-  `@napi-rs/cli`, pinned to `^3.9.0` in the workspace catalog. A build whose
+  `@napi-rs/cli`, pinned to `^3.10.0` in the workspace catalog — the floor is
+  the loader contract itself (`__napiBindingTarget`, the raw-destroy settlement
+  wrapper, `napi.wasm.threadlessInitialMemory`, and the
+  `napi.wasm.asyncRuntime` host bootstrap); rolldown used to add all four with
+  local codegen patches and no longer does. A build whose
   target is NOT wasi regenerates
   EVERY declared wasi flavor's loader set, each with `hasThreads` derived from
   its own triple, so loader regeneration is deterministic and byte-identical to

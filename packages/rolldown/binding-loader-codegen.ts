@@ -1,4 +1,3 @@
-export const LOADED_BINDING_TARGET_EXPORT = '__rolldownBindingTarget';
 const ASYNC_RUNTIME_HOST_EXPORTS = [
   'getCurrentThreadTaskHostContractVersion',
   'isCurrentThreadHostRegistrationActive',
@@ -9,39 +8,32 @@ const ASYNC_RUNTIME_HOST_EXPORTS = [
   'unregisterTimerHost',
 ] as const;
 
-type LoadedBindingTarget = 'native' | 'wasi' | 'wasi-threads';
-export type WasiBindingTarget = Exclude<LoadedBindingTarget, 'native'>;
 export type BindingLoaderModuleFormat = 'commonjs' | 'esm';
 
-const NATIVE_BINDING_ANCHOR = 'let nativeBinding = null\n';
-const WASI_BINDING_ASSIGNMENT = 'nativeBinding = wasiBinding';
-const NATIVE_BINDING_EXPORT_ANCHOR = 'module.exports = nativeBinding\n';
-const WASI_CJS_EXPORT_ANCHOR = 'module.exports = __napiModule.exports\n';
-const WASI_ESM_EXPORT_ANCHOR = 'export default __napiModule.exports\n';
 const WASI_CJS_CREATE_CONTEXT_IMPORT =
   "const { createContext: __emnapiCreateContext } = require('@emnapi/runtime')\n";
 const WASI_ESM_CREATE_CONTEXT_IMPORT =
   "import { createContext as __emnapiCreateContext } from '@emnapi/runtime'\n";
-const WASI_CONTEXT_CREATION = '__emnapiContext = __emnapiCreateContext({ autoDestroy: false })';
 const WASI_CONTEXT_SUPPRESS_DESTROY = '__emnapiContext.suppressDestroy()';
 const WASI_CONTEXT_PREPARE_CLEANUP_FLAG = 'let __emnapiWasmEnvCleanupPrepared = false\n';
-const WASI_PREPARE_CLEANUP_HELPER = 'function __prepareWasmEnvCleanup() {';
-const WASI_CONTEXT_DESTROY_WRAP_HELPER = 'function __wrapEmnapiContextDestroyForSettlement(';
-// Upstream only guards its own destroy paths, but a raw `context.destroy()`
-// must also run the wasm-side cleanup preparation first: it cancels pending
-// napi async work while the env can still call into JavaScript, so deferreds
-// reject instead of panicking on a dead threadsafe function.
-const WASI_CONTEXT_DESTROY_WRAP = `function __wrapEmnapiContextDestroyForSettlement(context) {
-  // oxlint-disable-next-line typescript/unbound-method -- invoked with the wrapper receiver below
-  const __contextDestroy = context.destroy
-  context.destroy = function () {
-    __prepareWasmEnvCleanup()
-    return Reflect.apply(__contextDestroy, this, arguments)
-  }
-  return context
-}
-
-`;
+// A raw `context.destroy()` must run the wasm-side cleanup preparation first:
+// it cancels pending napi async work while the env can still call into
+// JavaScript, so deferreds reject instead of panicking on a dead threadsafe
+// function. Upstream owns the wrapper since `@napi-rs/cli` 3.10.0
+// (napi-rs#3514); these two anchors are the guard that a cli bump has not
+// dropped it again.
+const WASI_CONTEXT_DESTROY_WRAP_HELPER = `function __wrapEmnapiContextDestroyForSettlement(
+  context,
+  prepareEnvCleanup,
+  isPreparingEnvCleanup,
+) {`;
+// Indentation differs per flavor (2 spaces in the browser ESM loaders, 4 in
+// the Node CommonJS ones), so this anchor is matched whitespace-normalized.
+const WASI_CONTEXT_DESTROY_WRAP_WIRING = `__emnapiContext = __wrapEmnapiContextDestroyForSettlement(
+  __emnapiCreateContext({ autoDestroy: false }),
+  __prepareWasmEnvCleanup,
+  __isPreparingWasmEnvCleanup,
+)`;
 // Settlement barrier: the cleanup preparation must precede the context
 // destroy, or the TSFN cleanup hook discards pending napi async work.
 const WASI_CONTEXT_DESTROY_SETTLEMENT = `  __prepareWasmEnvCleanup()
@@ -79,99 +71,17 @@ const WASI_ASYNC_TEARDOWN_WAITS = [
   },
 ] as const;
 const WASI_EXIT_LISTENER_HELPER = 'function __registerWasiExitListener() {';
-const WASI_NODE_WORKER_HELPER_SIGNATURES = [
-  'function __getWasiWorkerExecArgv() {',
-  'function __isInvalidWasiWorkerExecArgv(errorMessage, argument) {',
-  'function __removeInvalidWasiWorkerExecArgv(execArgv, error) {',
-  'function __createWasiWorker(filename) {',
-] as const;
-const WASI_NODE_WORKER_CONSTRUCTION =
-  "const worker = __createWasiWorker(__nodePath.join(__dirname, 'wasi-worker.mjs'))";
-const WASI_CJS_TARGET_PATTERN = new RegExp(
-  `module\\.exports\\.${LOADED_BINDING_TARGET_EXPORT}\\s*=\\s*[^\\r\\n]+`,
-  'g',
-);
-const WASI_ESM_TARGET_PATTERN = new RegExp(
-  `export const ${LOADED_BINDING_TARGET_EXPORT}\\s*=\\s*[^\\r\\n]+`,
-  'g',
-);
-
-export function patchNativeBindingLoader(source: string): string {
-  source = replaceExactly(
-    source,
-    NATIVE_BINDING_ANCHOR,
-    `${NATIVE_BINDING_ANCHOR}let loadedBindingTarget = 'native'\n`,
-    1,
-    'native binding declaration',
-  );
-  const wasiBindingAssignmentCount = source.split(WASI_BINDING_ASSIGNMENT).length - 1;
-  if (wasiBindingAssignmentCount < 2 || wasiBindingAssignmentCount % 2 !== 0) {
-    throw new Error(
-      `Unexpected NAPI-RS loader template for WASI binding assignments: expected a positive pair count, found ${wasiBindingAssignmentCount}`,
-    );
-  }
-  source = source.replaceAll(
-    WASI_BINDING_ASSIGNMENT,
-    `${WASI_BINDING_ASSIGNMENT}
-      loadedBindingTarget =
-        wasiBinding.${LOADED_BINDING_TARGET_EXPORT} === 'wasi' ? 'wasi' : 'wasi-threads'`,
-  );
-  return replaceExactly(
-    source,
-    NATIVE_BINDING_EXPORT_ANCHOR,
-    `${NATIVE_BINDING_EXPORT_ANCHOR}module.exports.${LOADED_BINDING_TARGET_EXPORT} = loadedBindingTarget\n`,
-    1,
-    'native binding export',
-  );
-}
-
-export function patchWasiBindingLoader(source: string, target: WasiBindingTarget): string {
-  const cjsExport = `module.exports.${LOADED_BINDING_TARGET_EXPORT} = '${target}'`;
-  const esmExport = `export const ${LOADED_BINDING_TARGET_EXPORT} = '${target}'`;
-  const cjsTargets = source.match(WASI_CJS_TARGET_PATTERN) ?? [];
-  const esmTargets = source.match(WASI_ESM_TARGET_PATTERN) ?? [];
-  const targetCount = cjsTargets.length + esmTargets.length;
-
-  if (targetCount > 1) {
-    throw new Error(
-      `Unexpected NAPI-RS WASI loader template: expected at most one binding target export, found ${targetCount}`,
-    );
-  }
-  if (cjsTargets.length === 1) {
-    return source.replace(cjsTargets[0], cjsExport);
-  }
-  if (esmTargets.length === 1) {
-    return source.replace(esmTargets[0], esmExport);
-  }
-  if (source.includes(WASI_CJS_EXPORT_ANCHOR)) {
-    return replaceExactly(
-      source,
-      WASI_CJS_EXPORT_ANCHOR,
-      `${WASI_CJS_EXPORT_ANCHOR}${cjsExport}\n`,
-      1,
-      'WASI CommonJS binding export',
-    );
-  }
-  if (source.includes(WASI_ESM_EXPORT_ANCHOR)) {
-    return replaceExactly(
-      source,
-      WASI_ESM_EXPORT_ANCHOR,
-      `${WASI_ESM_EXPORT_ANCHOR}${esmExport}\n`,
-      1,
-      'WASI ESM binding export',
-    );
-  }
-  throw new Error('Unexpected NAPI-RS WASI loader template: no module export anchor');
-}
 
 /**
- * Assert the upstream (`@napi-rs/cli` >= 3.8.4) context lifecycle seams, then
- * add the raw-destroy settlement wrapper (see `WASI_CONTEXT_DESTROY_WRAP`).
+ * Assert the upstream (`@napi-rs/cli` >= 3.10.0) context lifecycle seams and
+ * return the loader unchanged.
  *
- * The assertions make a CLI bump that drops or reshapes any teardown seam fail
- * the build loudly instead of silently regressing teardown.
+ * Nothing here rewrites the generated source any more: every seam below is
+ * emitted by the cli itself. The assertions make a cli bump that drops or
+ * reshapes any teardown seam fail the build loudly instead of silently
+ * regressing teardown.
  */
-export function patchWasiBindingContextLifecycle(source: string): string {
+export function assertWasiBindingContextLifecycle(source: string): void {
   const cjsDirectImportCount = countOccurrences(source, WASI_CJS_CREATE_CONTEXT_IMPORT);
   const esmDirectImportCount = countOccurrences(source, WASI_ESM_CREATE_CONTEXT_IMPORT);
   if (cjsDirectImportCount + esmDirectImportCount !== 1) {
@@ -200,6 +110,12 @@ export function patchWasiBindingContextLifecycle(source: string): string {
     WASI_CONTEXT_DESTROY_SETTLEMENT,
     'WASI context destroy settlement barrier',
   );
+  assertExactlyOne(source, WASI_CONTEXT_DESTROY_WRAP_HELPER, 'WASI context destroy wrapper');
+  assertExactlyOneNormalized(
+    source,
+    WASI_CONTEXT_DESTROY_WRAP_WIRING,
+    'WASI context destroy settlement wiring',
+  );
   assertExactlyOne(source, WASI_DISPOSE_PUBLICATION, 'WASI dispose symbol publication');
   const isCommonJs = cjsDirectImportCount === 1;
   const exitListenerCount = countOccurrences(source, WASI_EXIT_LISTENER_HELPER);
@@ -208,45 +124,6 @@ export function patchWasiBindingContextLifecycle(source: string): string {
       `Unexpected NAPI-RS WASI loader template for exit-time teardown: expected one exit listener helper, found ${exitListenerCount}`,
     );
   }
-
-  // A wasi-target build only regenerates its own flavor's loaders, so the
-  // other flavor's files arrive here already carrying the wrapper: verify it
-  // and return them unchanged.
-  const wrappedCreation =
-    '__emnapiContext = __wrapEmnapiContextDestroyForSettlement(__emnapiCreateContext({ autoDestroy: false }))';
-  if (countOccurrences(source, WASI_CONTEXT_DESTROY_WRAP_HELPER) > 0) {
-    assertExactlyOne(source, WASI_CONTEXT_DESTROY_WRAP, 'WASI context destroy settlement wrapper');
-    assertExactlyOne(source, wrappedCreation, 'WASI context destroy settlement wiring');
-    return source;
-  }
-
-  assertExactlyOne(source, WASI_CONTEXT_CREATION, 'WASI isolated context creation');
-  source = replaceExactly(
-    source,
-    WASI_PREPARE_CLEANUP_HELPER,
-    `${WASI_CONTEXT_DESTROY_WRAP}${WASI_PREPARE_CLEANUP_HELPER}`,
-    1,
-    'WASI context destroy settlement wrapper',
-  );
-  return replaceExactly(
-    source,
-    WASI_CONTEXT_CREATION,
-    wrappedCreation,
-    1,
-    'WASI context destroy settlement wiring',
-  );
-}
-
-/**
- * Assert the Node WASI loader still spawns threads through upstream's
- * exec-argv sanitizing worker factory, and return it unchanged.
- */
-export function patchWasiNodeWorkerExecArgv(source: string): string {
-  for (const signature of WASI_NODE_WORKER_HELPER_SIGNATURES) {
-    assertExactlyOne(source, signature, 'WASI worker execArgv helper');
-  }
-  assertExactlyOne(source, WASI_NODE_WORKER_CONSTRUCTION, 'WASI worker construction');
-  return source;
 }
 
 export function assertAsyncRuntimeHostExports(
@@ -265,20 +142,8 @@ export function assertAsyncRuntimeHostExports(
   }
 }
 
-function replaceExactly(
-  source: string,
-  search: string,
-  replacement: string,
-  expectedCount: number,
-  label: string,
-): string {
-  const count = countOccurrences(source, search);
-  if (count !== expectedCount) {
-    throw new Error(
-      `Unexpected NAPI-RS loader template for ${label}: expected ${expectedCount} anchors, found ${count}`,
-    );
-  }
-  return source.replaceAll(search, replacement);
+function normalizeWhitespace(source: string): string {
+  return source.replace(/\s+/g, ' ');
 }
 
 function countOccurrences(source: string, search: string): number {
@@ -292,4 +157,8 @@ function assertExactlyOne(source: string, search: string, label: string): void {
       `Unexpected NAPI-RS loader template for ${label}: expected 1 anchor, found ${count}`,
     );
   }
+}
+
+function assertExactlyOneNormalized(source: string, search: string, label: string): void {
+  assertExactlyOne(normalizeWhitespace(source), normalizeWhitespace(search), label);
 }

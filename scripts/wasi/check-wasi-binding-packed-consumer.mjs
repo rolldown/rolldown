@@ -640,7 +640,10 @@ async function assertWorkerdDeclarationParity(packageDir, runtimeExports, worker
     [...loaderExports]
       .filter((name) => !declaredExports.has(name))
       .sort((a, b) => a.localeCompare(b)),
-    ['__fs', '__rolldownBindingTarget', '__volume', 'default'],
+    // `__napiBindingTarget` IS declared since @napi-rs/cli 3.10.0 (napi-rs#3515
+    // augments each flavor's preserved `.d.cts`), so it is no longer an
+    // undeclared loader internal.
+    ['__fs', '__volume', 'default'],
     'Only the documented browser-loader internals may be absent from binding declarations',
   );
   for (const requiredExport of [
@@ -804,6 +807,7 @@ function assertThreadlessNodeLifecycle(code, loader) {
     'function __attachCleanupErrors(error, cleanupErrors) {',
     'function __registerWasiExitListener() {',
     'function __disposeWasiBinding() {',
+    'function __disposeCurrentThreadHosts() {',
   ]) {
     assert.equal(
       code.split(signature).length - 1,
@@ -849,18 +853,25 @@ function assertThreadlessNodeLifecycle(code, loader) {
     1,
     `${loader} must rethrow the rollback-augmented initialization error`,
   );
-  // rolldown's injected host cleanup runs before the generated rollback.
-  const timerHostCleanup = code.search(/["']Threadless Node timer-host cleanup failed["']/);
-  const taskHostCleanup = code.search(/["']Threadless Node task-host cleanup failed["']/);
+  // `napi.wasm.asyncRuntime` installs the hosts from `@napi-rs/async-runtime`,
+  // and the generated teardown disposes them inside `__destroyEmnapiContext`,
+  // ahead of the settlement barrier and the raw destroy the rollback reaches.
+  assert.match(
+    code,
+    /__currentThreadHostsDisposer = __installCurrentThreadHosts\(\s*__napiModule\.exports,?\s*\)/,
+    `${loader} must install the CurrentThread hosts against its own binding exports`,
+  );
+  const hostDisposal = code.search(/__disposeCurrentThreadHosts\(\);?\n/);
+  const contextDestroy = code.search(/const result = __emnapiContext\.destroy\(\);?/);
   const rollbackRegistration = code.indexOf(
     '__wasiRollbackRegistry.set(__wasiRollbackRegistryKey, rollback)',
   );
   assert.ok(
-    timerHostCleanup !== -1 &&
-      taskHostCleanup !== -1 &&
+    hostDisposal !== -1 &&
+      contextDestroy !== -1 &&
       rollbackRegistration !== -1 &&
-      timerHostCleanup < taskHostCleanup &&
-      taskHostCleanup < rollbackRegistration,
+      hostDisposal < contextDestroy &&
+      contextDestroy < rollbackRegistration,
     `${loader} must release the CurrentThread hosts before running the initialization rollback`,
   );
 }

@@ -1,7 +1,7 @@
 import { beforeEach, expect, test, vi } from 'vitest';
 
 const binding = vi.hoisted(() => ({
-  __rolldownBindingTarget: 'native',
+  __napiBindingTarget: 'native',
   getCurrentThreadTaskHostContractVersion: undefined as undefined | (() => unknown),
   isCurrentThreadHostRegistrationActive: undefined as undefined | ReturnType<typeof vi.fn>,
   registerCurrentThreadTaskHost: undefined as undefined | ReturnType<typeof vi.fn>,
@@ -49,7 +49,7 @@ beforeEach(() => {
 
 test('rejects a binding without the task-host contract reporter before invocation', async () => {
   await expect(import('../src/timer-host')).rejects.toMatchObject({
-    code: 'ERR_ROLLDOWN_BINDING_MISMATCH',
+    code: 'ERR_NAPI_ASYNC_RUNTIME_BINDING_MISMATCH',
     message: expect.stringMatching(
       /incomplete async-runtime host contract.*getCurrentThreadTaskHostContractVersion/,
     ),
@@ -72,7 +72,7 @@ test('rejects a nonnumeric host contract version without coercing it', async () 
   binding.unregisterTimerHost = vi.fn();
 
   await expect(import('../src/timer-host')).rejects.toMatchObject({
-    code: 'ERR_ROLLDOWN_BINDING_MISMATCH',
+    code: 'ERR_NAPI_ASYNC_RUNTIME_BINDING_MISMATCH',
     message: expect.stringContaining('contract version a value of type object'),
   });
   expect(binding.registerCurrentThreadTaskHost).not.toHaveBeenCalled();
@@ -86,7 +86,7 @@ test('rejects an incomplete v4 reservation surface before registration', async (
   binding.unregisterTimerHost = vi.fn();
 
   await expect(import('../src/timer-host')).rejects.toMatchObject({
-    code: 'ERR_ROLLDOWN_BINDING_MISMATCH',
+    code: 'ERR_NAPI_ASYNC_RUNTIME_BINDING_MISMATCH',
     message: expect.stringMatching(
       /incomplete async-runtime host contract.*reserveCurrentThreadHostRegistration/,
     ),
@@ -104,7 +104,7 @@ test('rejects the v3 native task-host contract before registration', async () =>
   binding.unregisterTimerHost = vi.fn();
 
   await expect(import('../src/timer-host')).rejects.toMatchObject({
-    code: 'ERR_ROLLDOWN_BINDING_MISMATCH',
+    code: 'ERR_NAPI_ASYNC_RUNTIME_BINDING_MISMATCH',
     message: expect.stringMatching(/task-host contract version 3.*requires version 4/),
   });
 

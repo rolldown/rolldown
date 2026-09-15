@@ -34,8 +34,16 @@ const PROXY_ONLY_EXPORTS = [
   '__isWorkerdBindingProxy',
   // The generated cjs loader exports this next to the artifact exports; the
   // metadata header does not list it.
-  '__rolldownBindingTarget',
+  '__napiBindingTarget',
 ] as const;
+
+// `@napi-rs/cli` reports the loaded flavor's `platformArchABI`; the Rust
+// `get_runtime_capabilities()` report spells the same artifact differently.
+const CAPABILITY_TARGET_TO_BINDING_TARGET: Record<string, string> = {
+  native: 'native',
+  wasi: 'wasm32-wasip1',
+  'wasi-threads': 'wasm32-wasi',
+};
 
 function readArtifactMetadataExports(): string[] {
   const source = readFileSync(wasip1LoaderPath, 'utf8');
@@ -77,7 +85,9 @@ describe('binding-workerd-proxy export surface', () => {
     expect(capabilities.asyncRuntimeBuild).toBe(capabilities.backend === 'shared');
     expect(capabilities.threads).toBe(capabilities.flavor === 'MultiThread');
     expect(capabilities.wasi).toBe(capabilities.target !== 'native');
-    expect(bindingProxy.__rolldownBindingTarget).toBe(capabilities.target);
+    expect(bindingProxy.__napiBindingTarget).toBe(
+      CAPABILITY_TARGET_TO_BINDING_TARGET[capabilities.target],
+    );
   });
 
   test('forwards calls to the active exports and fails closed when inactive', () => {

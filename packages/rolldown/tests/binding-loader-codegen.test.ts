@@ -3,34 +3,16 @@ import { createRequire } from 'node:module';
 import { fileURLToPath } from 'node:url';
 import { describe, expect, test } from 'vitest';
 
-import { LOADED_BINDING_TARGET_EXPORT, patchWasiBindingLoader } from '../binding-loader-codegen';
-
-const cjsAnchor = 'module.exports = __napiModule.exports\n';
-const esmAnchor = 'export default __napiModule.exports\n';
 const generatedWasiNodeLoader = readFileSync(
   fileURLToPath(new URL('../src/rolldown-binding.wasi.cjs', import.meta.url)),
   'utf8',
 );
-describe('WASI binding target metadata', () => {
-  test.each([
-    ['CommonJS', cjsAnchor, `module.exports.${LOADED_BINDING_TARGET_EXPORT}`],
-    ['ESM', esmAnchor, `export const ${LOADED_BINDING_TARGET_EXPORT}`],
-  ])('replaces %s metadata across repeated and reversed builds', (_name, anchor, exportName) => {
-    const threaded = patchWasiBindingLoader(anchor, 'wasi-threads');
-    expect(threaded).toContain(`${exportName} = 'wasi-threads'`);
-
-    const threadless = patchWasiBindingLoader(threaded, 'wasi');
-    expect(threadless).toContain(`${exportName} = 'wasi'`);
-    expect(threadless).not.toContain(`${exportName} = 'wasi-threads'`);
-
-    const reversed = patchWasiBindingLoader(threadless, 'wasi-threads');
-    expect(reversed).toContain(`${exportName} = 'wasi-threads'`);
-    expect(reversed).not.toContain(`${exportName} = 'wasi'`);
-    expect(patchWasiBindingLoader(reversed, 'wasi-threads')).toBe(reversed);
-  });
-});
 
 describe('generated WASI loader lifecycle', () => {
+  test('reports the threaded WASI flavor as its binding target', () => {
+    expect(generatedWasiNodeLoader).toContain("const __napiBindingTarget = 'wasm32-wasi'");
+  });
+
   test('uses a fresh context per evaluation and prepares each context once', () => {
     const contexts: Array<{ destroy(): void }> = [];
     const cleanupEvents: string[] = [];
@@ -192,6 +174,12 @@ function executeGeneratedWasiNodeLoader({
               };
             },
           };
+        case '@napi-rs/async-runtime':
+          // The real host protocol package: the generated loader installs the
+          // CurrentThread hosts against the stub exports above.
+          return createRequire(
+            fileURLToPath(new URL('../src/rolldown-binding.wasi.cjs', import.meta.url)),
+          )('@napi-rs/async-runtime');
         case '@emnapi/runtime':
           return {
             createContext() {

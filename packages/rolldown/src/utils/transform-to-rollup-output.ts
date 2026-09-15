@@ -183,6 +183,7 @@ export function transformToOutputBundle(
       if (typeof property === 'string') {
         changed.deleted.add(property);
       }
+      delete target[property as keyof typeof target];
       return true;
     },
   });

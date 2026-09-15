@@ -691,6 +691,10 @@ pub fn normalize_binding_options(
                 Some(Either::A(bool)) => *bool,
                 Some(Either::B(codegen_opts)) => codegen_opts.remove_whitespace.unwrap_or(true),
               },
+              ascii_only: match &opts.codegen {
+                Some(Either::B(codegen_opts)) => codegen_opts.ascii_only.unwrap_or(false),
+                None | Some(Either::A(_)) => false,
+              },
             }))
           }
         }

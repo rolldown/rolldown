@@ -867,6 +867,7 @@ export const BindingWatcherEvent = __napiModule.exports.BindingWatcherEvent
 export const ParallelJsPluginRegistry = __napiModule.exports.ParallelJsPluginRegistry
 export const TraceSubscriberGuard = __napiModule.exports.TraceSubscriberGuard
 export const TsconfigCache = __napiModule.exports.TsconfigCache
+export const __internalForcePanic = __napiModule.exports.__internalForcePanic
 export const BindingAttachDebugInfo = __napiModule.exports.BindingAttachDebugInfo
 export const BindingBuiltinPluginName = __napiModule.exports.BindingBuiltinPluginName
 export const BindingChunkModuleOrderBy = __napiModule.exports.BindingChunkModuleOrderBy

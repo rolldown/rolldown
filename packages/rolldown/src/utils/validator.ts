@@ -504,6 +504,7 @@ isTypeTrue<IsSchemaSubType<typeof ManglePropertiesOptionsSchema, ManglePropertie
 
 const CodegenOptionsSchema = v.strictObject({
   removeWhitespace: v.optional(v.boolean()),
+  asciiOnly: v.optional(v.boolean()),
   legalComments: v.optional(
     v.union([
       v.literal('none'),

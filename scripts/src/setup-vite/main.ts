@@ -67,29 +67,18 @@ if (current !== target) {
 
 // 4. Build the vite package (dist/node + dist/client). This mirrors Vite's
 // own `build` script minus the type build, which the tests do not need.
-// The bundle step is invoked through the checkout's own `rolldown` resolution,
-// not `vp run`: `vp run` re-syncs node_modules with the lockfile first, which
-// would silently undo the swap from step 3 and inline the pinned runtime.
-// Resolving through `node_modules/rolldown` means that after the swap the
-// workspace rolldown both bundles Vite and provides the inlined runtime.
-// The CLI is spawned with `process.execPath` instead of the `.bin/rolldown`
-// shim, which cmd.exe cannot execute on Windows. `bin/cli.mjs` is not an
-// exported subpath, so its path comes from the manifest's `bin` field.
-const viteRequire = createRequire(nodePath.join(vitePkgDir, 'package.json'));
-const rolldownPkgJsonPath = viteRequire.resolve('rolldown/package.json');
-const rolldownManifest = JSON.parse(nodeFs.readFileSync(rolldownPkgJsonPath, 'utf8')) as {
-  bin: { rolldown: string };
-};
-const rolldownCli = nodePath.resolve(
-  nodePath.dirname(rolldownPkgJsonPath),
-  rolldownManifest.bin.rolldown,
-);
+// Invoke the workspace CLI directly with Node so Windows does not have to
+// execute a POSIX-style `.bin` path through cmd.exe. `vp run` would re-sync
+// node_modules and undo the swap from step 3, inlining the pinned runtime.
+// See internal-docs/dev-server-test-harness/implementation.md.
 nodeFs.rmSync(nodePath.join(vitePkgDir, 'dist'), { recursive: true, force: true });
+const rolldownCli = nodePath.join(localRolldownDir, 'bin', 'cli.mjs');
 runNode(rolldownCli, ['--config', 'rolldown.config.ts'], vitePkgDir);
 
 // 5. Verify the override took: resolving `rolldown` from the vite package must
 // land inside the workspace copy. Failing loudly here beats silently running
 // the tests against the npm-pinned rolldown.
+const viteRequire = createRequire(nodePath.join(vitePkgDir, 'package.json'));
 const resolvedRolldown = nodeFs.realpathSync(viteRequire.resolve('rolldown'));
 if (!resolvedRolldown.startsWith(nodeFs.realpathSync(localRolldownDir) + nodePath.sep)) {
   console.error(

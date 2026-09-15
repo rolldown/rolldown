@@ -139,6 +139,12 @@ export function getRuntimeCapabilities(): BindingRuntimeCapabilities {
 }
 
 // -- functions ---------------------------------------------------------------
+// CI-only hook that forces a panic to verify published debug info. It is part
+// of the artifact metadata export list, so the proxy forwards it like any other
+// binding function.
+export const __internalForcePanic: typeof binding.__internalForcePanic = fnExport(
+  '__internalForcePanic',
+) as typeof binding.__internalForcePanic;
 export const collapseSourcemaps: typeof binding.collapseSourcemaps = fnExport(
   'collapseSourcemaps',
 ) as typeof binding.collapseSourcemaps;

@@ -55,8 +55,9 @@ for (let round = 1; round <= rounds; round += 1) {
   const active = process.memoryUsage();
   const memoryBytes = instances.map((instance) => instance.memoryBytes);
   for (const instance of instances) {
-    instance.dispose();
-    instance.dispose();
+    // Twice: a completed disposal is idempotent.
+    await instance.dispose();
+    await instance.dispose();
   }
   const disposed = process.memoryUsage();
   globalThis.gc?.();

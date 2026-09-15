@@ -20,7 +20,8 @@ import * as binding from './binding.cjs';
 //
 // Only the native loader needs this. The generated WASI loaders install the
 // same hosts themselves from `napi.wasm.asyncRuntime` (@napi-rs/cli >= 3.10.0),
-// and the deferred workerd loader installs per-instance hosts instead.
+// and the deferred workerd loader installs PER-INSTANCE hosts from
+// `@napi-rs/async-runtime/workerd` instead of these process-wide ones.
 // See internal-docs/async-runtime/implementation.md.
 installCurrentThreadHosts(binding, {
   // Browser timer support remains a separate capability decision: the wasm

@@ -8,16 +8,13 @@ import type { RolldownBuild } from './api/rolldown/rolldown-build';
 import { __enterWorkerdBinding, __exitWorkerdBinding } from './binding-workerd-proxy';
 import type { InputOptions } from './options/input-options';
 import type { OutputOptions } from './options/output-options';
-import {
-  createInstance,
-  type DeferredRolldownInstance,
-} from './rolldown-binding.wasip1-deferred.js';
 import type { RolldownOutput } from './types/rolldown-output';
 import {
   configureAsyncContext,
   getAsyncContextSupport,
   type AsyncContextStorage,
 } from './utils/async-context';
+import { createInstance, type WorkerdRolldownInstance } from './workerd-managed-instance';
 
 export interface WorkerdBuildOptions extends InputOptions {
   /**
@@ -25,7 +22,7 @@ export interface WorkerdBuildOptions extends InputOptions {
    * instance stays usable after the build; the caller keeps ownership and
    * disposes it. Pass exactly one of `instance` or `module`.
    */
-  instance?: DeferredRolldownInstance;
+  instance?: WorkerdRolldownInstance;
   /**
    * A precompiled threadless Rolldown Wasm module (for workerd: imported under
    * a `CompiledWasm` rule, e.g. `import mod from '@rolldown/browser/workerd/wasm'`).
@@ -156,37 +153,54 @@ function ensureAsyncContext(): Promise<void> {
   return asyncContextInit;
 }
 
-// The deferred loader's dispose() deliberately leaves a handle undisposed when
-// cleanup throws so "a later call retries cleanup" (see
-// `rolldown-binding.wasip1-deferred.d.ts`), and for `module:` builds this
-// wrapper is that handle's ONLY owner — so ownership must survive the
-// rejection. A dropped reference would strand the instance's Wasm memory and
-// N-API environment for good: workerd never runs the GC finalizers that could
-// otherwise reclaim it (see `utils/threadless-free.ts`). Instances whose
-// dispose() kept failing are parked here and retried at every entry point.
-const pendingOwnedDisposals = new Set<DeferredRolldownInstance>();
+// The deferred loader keeps a failed `dispose()` retryable on purpose — it
+// clears its memo and leaves the instance undisposed so "a later dispose() runs
+// the drain again" (see `@napi-rs/cli`'s deferred loader contract) — and for
+// `module:` builds this wrapper is that handle's ONLY owner, so ownership must
+// survive the rejection. A dropped reference would strand the instance's Wasm
+// memory and N-API environment for good: workerd never runs the GC finalizers
+// that could otherwise reclaim it (see `utils/threadless-free.ts`). Instances
+// whose dispose() kept failing are parked here and retried at every entry point.
+const pendingOwnedDisposals = new Set<WorkerdRolldownInstance>();
+// Single-flight: two concurrent build()/createWorkerdBundle() calls must not
+// both start a retry for the same parked instance, which would race two
+// disposal frames onto one N-API environment.
+let pendingOwnedDisposalDrain: Promise<void> | undefined;
 
-function drainPendingOwnedDisposals(): void {
-  for (const parked of pendingOwnedDisposals) {
-    try {
-      parked.dispose();
-      pendingOwnedDisposals.delete(parked);
-    } catch {
-      // Still failing: keep it parked for the next entry point. Draining must
-      // never fail the unrelated build that triggered it.
+function drainPendingOwnedDisposals(): Promise<void> {
+  if (pendingOwnedDisposalDrain) return pendingOwnedDisposalDrain;
+  const drain = (async () => {
+    for (const parked of pendingOwnedDisposals) {
+      try {
+        await parked.dispose();
+        pendingOwnedDisposals.delete(parked);
+      } catch {
+        // Still failing: keep it parked for the next entry point. Draining must
+        // never fail the unrelated build that triggered it.
+      }
     }
-  }
+  })();
+  pendingOwnedDisposalDrain = drain;
+  // Released from a continuation, never from inside the frame above: a drain
+  // that never suspends (every parked dispose() rejecting synchronously) would
+  // otherwise clear the slot before this assignment installed it and stay
+  // latched for the rest of the process.
+  const release = () => {
+    if (pendingOwnedDisposalDrain === drain) pendingOwnedDisposalDrain = undefined;
+  };
+  void drain.then(release, release);
+  return drain;
 }
 
-function disposeOwnedInstance(ownedInstance: DeferredRolldownInstance): void {
+async function disposeOwnedInstance(ownedInstance: WorkerdRolldownInstance): Promise<void> {
   try {
-    ownedInstance.dispose();
+    await ownedInstance.dispose();
     return;
   } catch (disposeError) {
     try {
       // One immediate re-attempt, matching the loader's own two-attempt
       // cleanup idiom; a truly transient failure recovers without a park.
-      ownedInstance.dispose();
+      await ownedInstance.dispose();
       return;
     } catch {
       pendingOwnedDisposals.add(ownedInstance);
@@ -195,7 +209,7 @@ function disposeOwnedInstance(ownedInstance: DeferredRolldownInstance): void {
   }
 }
 
-function requireInstanceExports(instance: DeferredRolldownInstance): object {
+function requireInstanceExports(instance: WorkerdRolldownInstance): object {
   if (
     instance === null ||
     typeof instance !== 'object' ||
@@ -253,7 +267,7 @@ export async function build(options: WorkerdBuildOptions): Promise<RolldownOutpu
     throw new TypeError('Pass exactly one of `instance` or `module` to build()');
   }
   assertWorkerdBundleContext();
-  drainPendingOwnedDisposals();
+  await drainPendingOwnedDisposals();
   await ensureAsyncContext();
 
   if (module !== undefined) {
@@ -263,7 +277,7 @@ export async function build(options: WorkerdBuildOptions): Promise<RolldownOutpu
       result = await buildWithInstance(ownedInstance, inputOptions, output, stripAnsi);
     } catch (error) {
       try {
-        disposeOwnedInstance(ownedInstance);
+        await disposeOwnedInstance(ownedInstance);
       } catch (disposeError) {
         throw new AggregateError(
           [error, disposeError],
@@ -273,7 +287,9 @@ export async function build(options: WorkerdBuildOptions): Promise<RolldownOutpu
       }
       throw error;
     }
-    disposeOwnedInstance(ownedInstance);
+    // Awaited before returning: callers read the instance counters and the
+    // materialized output as soon as build() settles.
+    await disposeOwnedInstance(ownedInstance);
     return result;
   }
 
@@ -281,7 +297,7 @@ export async function build(options: WorkerdBuildOptions): Promise<RolldownOutpu
 }
 
 async function buildWithInstance(
-  instance: DeferredRolldownInstance,
+  instance: WorkerdRolldownInstance,
   inputOptions: InputOptions,
   outputOptions: OutputOptions,
   stripAnsi: boolean,
@@ -321,13 +337,13 @@ async function buildWithInstance(
  * `generate()` any number of times (including concurrently) in between.
  */
 export async function createWorkerdBundle(
-  instance: DeferredRolldownInstance,
+  instance: WorkerdRolldownInstance,
   inputOptions: InputOptions,
   options: WorkerdBundleOptions = {},
 ): Promise<WorkerdBundle> {
   const { stripAnsi = true } = options;
   assertWorkerdBundleContext();
-  drainPendingOwnedDisposals();
+  await drainPendingOwnedDisposals();
   const exports = requireInstanceExports(instance);
   await ensureAsyncContext();
 

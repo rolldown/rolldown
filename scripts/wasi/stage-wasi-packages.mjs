@@ -311,20 +311,38 @@ export async function stageWasiPackages({ repoRoot = defaultRepoRoot } = {}) {
           path.join(stagedPackageDir, 'rolldown-binding.wasip1-deferred.js'),
           'utf8',
         );
-        assert.match(managedWorkerd, /getCurrentThreadTaskHostContractVersion/);
-        assert.match(managedWorkerd, /isCurrentThreadHostRegistrationActive/);
-        assert.match(managedWorkerd, /reserveCurrentThreadHostRegistration/);
-        assert.match(managedWorkerd, /registerCurrentThreadTaskHost/);
-        assert.match(managedWorkerd, /unregisterCurrentThreadTaskHost/);
-        assert.match(managedWorkerd, /__actualVersion !== 4/);
-        assert.match(managedWorkerd, /Reflect\.apply\(__reserve, __binding, \[\]\)/);
-        assert.match(managedWorkerd, /Reflect\.apply\(__register, __binding, __registration\)/);
-        assert.match(managedWorkerd, /Reflect\.apply\(__unregister, __binding, __registration\)/);
+        // @napi-rs/cli renders the deferred loader and installs both
+        // CurrentThread hosts per instance from `@napi-rs/async-runtime/workerd`;
+        // the rolldown-owned managed facade goes on top. Both must be in the
+        // staged bundle, asserted through string literals that survive bundling
+        // verbatim (identifiers may be renamed).
+        for (const exportName of [
+          'getCurrentThreadTaskHostContractVersion',
+          'isCurrentThreadHostRegistrationActive',
+          'reserveCurrentThreadHostRegistration',
+          'registerCurrentThreadTaskHost',
+          'unregisterCurrentThreadTaskHost',
+          'registerTimerHost',
+          'unregisterTimerHost',
+        ]) {
+          assert.match(managedWorkerd, new RegExp('([\'"`])' + exportName + '\\1'));
+        }
+        assert.match(
+          managedWorkerd,
+          /The managed workerd binding does not support CurrentThread task hosting/,
+        );
+        assert.match(
+          managedWorkerd,
+          /The managed workerd binding does not support exact timer-host disposal/,
+        );
+        assert.match(managedWorkerd, /CurrentThread task-host contract version/);
+        assert.match(managedWorkerd, /CURRENT_THREAD_TASK_HOST_CONTRACT_VERSION\w* = 4\b/);
+        assert.match(managedWorkerd, /@rolldown\/browser\/workerd\/managed-memory-claims\/v1/);
+        assert.match(managedWorkerd, /Cannot replace or remove close/);
         assert.doesNotMatch(
           managedWorkerd,
           /driveCurrentThreadRuntimeTasks|cancelCurrentThreadRuntimeTaskDispatch|dispatchHigh|dispatchLow/,
         );
-        assert.match(managedWorkerd, /registerTimerHost/);
         assert.doesNotMatch(managedWorkerd, /from\s+['"]node:/);
       }
 

@@ -14,10 +14,10 @@ import {
   assertWasiBindingContextLifecycle,
 } from './binding-loader-codegen';
 import {
-  generateWorkerdLoader,
+  assertThreadlessMemoryConfig,
   isAsyncRuntimeDeclarationBuild,
   preserveInactiveWasiDeclaration,
-} from './generate-workerd-loader';
+} from './build-binding-guards';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const WASI_THREADS_TARGET = 'wasm32-wasip1-threads';
@@ -69,7 +69,7 @@ try {
   if (argsOptions.target === WASI_THREADS_TARGET) {
     validateWasiReactorArtifacts();
   }
-  generateWorkerdLoader();
+  assertThreadlessMemoryConfig();
   artifactTransaction.commit();
 } catch (error) {
   console.error(error);

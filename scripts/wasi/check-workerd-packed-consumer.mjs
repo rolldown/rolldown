@@ -211,7 +211,7 @@ export default {
         await Promise.all([bundler.close(), bundler.close()])
       }
     } finally {
-      instance.dispose()
+      await instance.dispose()
     }
   },
 }
@@ -391,6 +391,9 @@ export default {
     globalThis.fetch = originalFetch;
   }
 
+  // A quoted name -- the form the host installers read their binding exports
+  // in -- rather than a bare substring, which any mention would satisfy.
+  const quotedName = (name) => new RegExp('([\'"`])' + name + '\\1');
   for (const entry of ['workerd.mjs', 'workerd.browser.mjs']) {
     const workerdBundle = await readFile(path.join(installedBrowserDir, 'dist', entry), 'utf8');
     assert.deepEqual(
@@ -398,21 +401,45 @@ export default {
       [],
       `${entry} must not import external emnapi/wasm runtime packages`,
     );
-    assert.match(workerdBundle, /getCurrentThreadTaskHostContractVersion/);
-    assert.match(workerdBundle, /isCurrentThreadHostRegistrationActive/);
-    assert.match(workerdBundle, /reserveCurrentThreadHostRegistration/);
-    assert.match(workerdBundle, /registerCurrentThreadTaskHost/);
-    assert.match(workerdBundle, /unregisterCurrentThreadTaskHost/);
-    assert.match(workerdBundle, /__actualVersion !== 4/);
-    assert.match(workerdBundle, /Reflect\.apply\(__reserve, __binding, \[\]\)/);
-    assert.match(workerdBundle, /Reflect\.apply\(__register, __binding, __registration\)/);
-    assert.match(workerdBundle, /Reflect\.apply\(__unregister, __binding, __registration\)/);
+    // @napi-rs/cli renders the deferred loader and installs both CurrentThread
+    // hosts per instance from the shared `@napi-rs/async-runtime/workerd`
+    // protocol package, so the contract is asserted against that upstream code
+    // as bundled here: string literals survive bundling verbatim, identifiers
+    // may be renamed.
+    for (const exportName of [
+      'getCurrentThreadTaskHostContractVersion',
+      'isCurrentThreadHostRegistrationActive',
+      'reserveCurrentThreadHostRegistration',
+      'registerCurrentThreadTaskHost',
+      'unregisterCurrentThreadTaskHost',
+      'registerTimerHost',
+      'unregisterTimerHost',
+    ]) {
+      assert.match(workerdBundle, quotedName(exportName));
+    }
+    assert.match(
+      workerdBundle,
+      /The managed workerd binding does not support CurrentThread task hosting/,
+    );
+    assert.match(
+      workerdBundle,
+      /The managed workerd binding returned an inactive task host registration/,
+    );
+    assert.match(
+      workerdBundle,
+      /The managed workerd binding does not support exact timer-host disposal/,
+    );
+    assert.match(workerdBundle, /CurrentThread task-host contract version/);
+    assert.match(workerdBundle, /CURRENT_THREAD_TASK_HOST_CONTRACT_VERSION\w* = 4\b/);
     assert.doesNotMatch(
       workerdBundle,
       /driveCurrentThreadRuntimeTasks|cancelCurrentThreadRuntimeTaskDispatch|dispatchHigh|dispatchLow/,
     );
     assert.match(workerdBundle, /clearTimeout/);
-    assert.match(workerdBundle, /timer\.resolve\(\)/);
+    // The rolldown-owned managed facade rode along into the bundle.
+    assert.match(workerdBundle, /@rolldown\/browser\/workerd\/managed-memory-claims\/v1/);
+    assert.match(workerdBundle, /Cannot replace or remove close/);
+    assert.match(workerdBundle, /This workerd Rolldown instance has been disposed/);
   }
 
   const defaultWorkerd = await import(
@@ -493,8 +520,8 @@ export default {
     try {
       await firstBundler?.close();
     } finally {
-      unsafeSecondInstance?.dispose();
-      firstInstance?.dispose();
+      await unsafeSecondInstance?.dispose();
+      await firstInstance?.dispose();
     }
   }
   assert.equal(firstInstance.disposed, true);

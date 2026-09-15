@@ -1507,7 +1507,7 @@ try {
     assert.equal(closeError?.message, 'managed raw close failure')
     assert.equal(closeError?.code, 'ERR_MANAGED_RAW_CLOSE')
   } finally {
-    instance.dispose()
+    await instance.dispose()
   }
 }
 let retainedFailures = 0
@@ -1806,7 +1806,7 @@ for (let round = 1; round <= rounds; round += 1) {
     try {
       await bundler.close()
     } finally {
-      instance.dispose()
+      await instance.dispose()
     }
   }
 }

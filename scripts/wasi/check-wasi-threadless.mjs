@@ -89,15 +89,18 @@ for (const signature of [
   }
 }
 
+// @napi-rs/cli renders this declaration alongside the deferred loader; it must
+// still derive its binding surface from the threadless wasip1 declaration.
 const declaration = fs.readFileSync(path.join(REPO_ROOT, THREADLESS_DECLARATION), 'utf8');
 if (
-  !declaration.startsWith(
-    "import type * as RolldownBinding from './rolldown-binding.wasip1.cjs';\n",
-  )
+  !declaration.includes("export type WasiBinding = typeof import('./rolldown-binding.wasip1.cjs')")
 ) {
   failures.push(
     `${THREADLESS_DECLARATION}: must derive binding types from the threadless wasip1 declaration`,
   );
+}
+if (!/export function createInstance\(/.test(declaration)) {
+  failures.push(`${THREADLESS_DECLARATION}: must declare the deferred createInstance()`);
 }
 
 const wasmPath = path.join(REPO_ROOT, 'packages/rolldown/src/rolldown-binding.wasm32-wasip1.wasm');
@@ -176,13 +179,15 @@ for (const rel of DEFAULT_LOADERS) {
       failures.push(`${rel}: contains removed CurrentThread task-host marker ${removedMarker}`);
     }
   }
-  for (const requiredHostExport of [
-    'getCurrentThreadTaskHostContractVersion',
-    'registerCurrentThreadTaskHost',
-    'unregisterCurrentThreadTaskHost',
-  ]) {
-    if (!source.includes(requiredHostExport)) {
-      failures.push(`${rel}: missing CurrentThread task-host ABI ${requiredHostExport}`);
+  if (!rel.endsWith('-deferred.js')) {
+    for (const requiredHostExport of [
+      'getCurrentThreadTaskHostContractVersion',
+      'registerCurrentThreadTaskHost',
+      'unregisterCurrentThreadTaskHost',
+    ]) {
+      if (!source.includes(requiredHostExport)) {
+        failures.push(`${rel}: missing CurrentThread task-host ABI ${requiredHostExport}`);
+      }
     }
   }
 
@@ -229,23 +234,35 @@ for (const rel of DEFAULT_LOADERS) {
       );
     }
   } else {
+    // The deferred loader installs both CurrentThread hosts per instance from
+    // `@napi-rs/async-runtime/workerd` instead of carrying the protocol itself.
     for (const required of [
-      'Reflect.apply(__getContractVersion, __binding, [])',
-      '__actualVersion !== 4',
-      'but version 4 is required',
-      'Reflect.apply(__reserve, __binding, [])',
-      'Reflect.apply(__register, __binding, __registration)',
-      'Reflect.apply(__unregister, __binding, __registration)',
+      "from '@napi-rs/async-runtime/workerd'",
+      'registerWorkerdCurrentThreadTaskHost',
+      'registerWorkerdTimerHost',
     ]) {
       if (!source.includes(required)) {
-        failures.push(`${rel}: missing managed CurrentThread task-host marker ${required}`);
+        failures.push(`${rel}: missing deferred CurrentThread host install marker ${required}`);
       }
     }
-    const finishCallStart = source.indexOf('const __finishCall = (');
-    const finishCallEnd = source.indexOf('const __wrapOutputDescriptor = (', finishCallStart);
+    // The managed facade is rolldown's, and its close accounting is what gates
+    // instance disposal, so it is pinned here rather than in the loader.
+    const facadeRel = 'packages/rolldown/src/workerd-managed-instance.ts';
+    const facade = fs.readFileSync(path.join(REPO_ROOT, facadeRel), 'utf8');
+    for (const required of [
+      "Symbol.for('@rolldown/browser/workerd/managed-memory-claims/v1')",
+      'const __finishCall = (',
+      'const __wrapOutputDescriptor = (',
+    ]) {
+      if (!facade.includes(required)) {
+        failures.push(`${facadeRel}: missing managed facade marker ${required}`);
+      }
+    }
+    const finishCallStart = facade.indexOf('const __finishCall = (');
+    const finishCallEnd = facade.indexOf('const __wrapOutputDescriptor = (', finishCallStart);
     const finishCall =
       finishCallStart >= 0 && finishCallEnd > finishCallStart
-        ? source.slice(finishCallStart, finishCallEnd)
+        ? facade.slice(finishCallStart, finishCallEnd)
         : '';
     const closedCheck = finishCall.indexOf(
       "Reflect.get(__closeOwner, 'closed', __closeOwner) === true",
@@ -260,7 +277,7 @@ for (const rel of DEFAULT_LOADERS) {
       finishCall.match(/__releaseBindingObject\(__closeOwner\)/g)?.length !== 2
     ) {
       failures.push(
-        `${rel}: managed close must release exactly once on success and after a terminal rejected close`,
+        `${facadeRel}: managed close must release exactly once on success and after a terminal rejected close`,
       );
     }
     if (!code.includes(`initialPages: ${configuredInitialMemory},`)) {

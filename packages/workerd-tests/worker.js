@@ -286,7 +286,7 @@ async function caseErrorSurface() {
       loadedCount: new Set(trace.loaded).size,
     };
   } finally {
-    instance.dispose();
+    await instance.dispose();
   }
   // Read before the owned-instance half below, so the two deltas cannot mask
   // each other.
@@ -342,7 +342,7 @@ async function caseLifecycle() {
     out.generateOk = esm.output[0]?.type === 'chunk';
 
     // dispose() must be refused while a bundle object is still open.
-    out.disposeWhileOpen = await settle(Promise.resolve().then(() => instanceA.dispose()));
+    out.disposeWhileOpen = await settle(instanceA.dispose());
 
     await bundle.close();
     out.closedAfterClose = bundle.closed;
@@ -361,8 +361,8 @@ async function caseLifecycle() {
     );
   } finally {
     // The bundle is closed now, so the same dispose() must succeed.
-    out.disposeAfterClose = await settle(Promise.resolve().then(() => instanceA.dispose()));
-    instanceB.dispose();
+    out.disposeAfterClose = await settle(instanceA.dispose());
+    await instanceB.dispose();
   }
   out.instanceADisposed = instanceA.disposed;
   out.instanceBDisposed = instanceB.disposed;
@@ -423,7 +423,7 @@ async function caseConcurrency() {
         second: describeConcurrent(second, traceB),
       };
     } finally {
-      shared.dispose();
+      await shared.dispose();
     }
   }
 
@@ -475,8 +475,8 @@ async function caseConcurrency() {
         isChunk,
       );
     } finally {
-      instanceA.dispose();
-      instanceB.dispose();
+      await instanceA.dispose();
+      await instanceB.dispose();
     }
   }
 
@@ -590,7 +590,7 @@ async function caseFailedBuildReuse() {
       recoveredChunkCount: recovered.output.filter((item) => item.type === 'chunk').length,
     };
   } finally {
-    instance.dispose();
+    await instance.dispose();
   }
 }
 
@@ -614,7 +614,7 @@ async function caseCapabilities() {
       memoryBytes: instance.memoryBytes,
     };
   } finally {
-    instance.dispose();
+    await instance.dispose();
   }
 }
 
@@ -815,7 +815,7 @@ async function caseMemorySlope(url) {
     // breaking, where swallowing it would leave `error` null plus a full set of
     // samples and the driver would pass the budget on a broken instance.
     try {
-      instance.dispose();
+      await instance.dispose();
     } catch (e) {
       disposeError = String(e?.stack ?? e);
     }

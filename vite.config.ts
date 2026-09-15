@@ -136,6 +136,7 @@ export default defineConfig({
       'packages/rolldown/src/rolldown-binding.wasip1.cjs',
       'packages/rolldown/src/rolldown-binding.wasip1-browser.js',
       'packages/rolldown/src/rolldown-binding.wasip1-deferred.js',
+      'packages/rolldown/src/rolldown-binding.wasip1-deferred.d.ts',
       'packages/rolldown/src/wasi-worker-browser.mjs',
       'packages/rolldown/src/wasi-worker.mjs',
       'packages/rolldown/tests/fixtures/misc/error/diagnostics/**/*.js',

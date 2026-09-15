@@ -138,7 +138,7 @@ try {
   // Use the low-level binding within this instance.
 } finally {
   // Close every build created from binding before disposing the instance.
-  instance.dispose();
+  await instance.dispose();
 }
 ```
 
@@ -164,17 +164,18 @@ module:
 
 Each call creates an independent emnapi context, N-API environment, scheduler,
 and unshared Wasm memory. Concurrent instances do not share runtime ownership.
-`dispose()` is idempotent after successful cleanup and releases the managed
-handle's references. If a cleanup hook throws, the instance remains
-undisposed and a later `dispose()` call retries cleanup. Close every build
-first, and do not retain aliases to `instance.exports` or `instance.memory`
-after disposal.
+`dispose()` returns a promise: await it. It settles the runtime's pending
+promises before the environment stops accepting JavaScript, then destroys the
+context and releases the managed handle's references. It is idempotent once it
+has completed. If cleanup rejects, the instance remains undisposed and a later
+`dispose()` call retries it. Close every build first, and do not retain aliases
+to `instance.exports` or `instance.memory` after disposal.
 Caller-provided `WebAssembly.Memory` objects are single-use per validated
-initialization attempt. The loader claims memory before entering emnapi because
-a failed instantiation may already have mutated it. Once initialization begins,
-the memory cannot be reused, even if initialization fails or the resulting
-instance is later disposed. Inputs rejected before memory validation do not
-claim it.
+initialization attempt. The memory is claimed before initialization begins
+because a failed instantiation may already have mutated it, and it must come
+from the same realm as the loader. Once initialization begins, the memory
+cannot be reused, even if initialization fails or the resulting instance is
+later disposed. Inputs rejected before memory validation do not claim it.
 
 The loader rejects byte buffers, URLs, and `Response` objects because workerd
 requires a precompiled `WebAssembly.Module`.

@@ -8,13 +8,18 @@ import { join } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { runInNewContext } from 'node:vm';
 // @ts-ignore This focused build-codegen test intentionally reaches package tooling outside the test rootDir.
-import { preserveGeneratedBindingSources } from '../generate-workerd-loader';
+import { preserveGeneratedBindingSources } from '../build-binding-guards';
 // @ts-ignore This focused build-codegen test intentionally reaches package tooling outside the test rootDir.
-import { preserveInactiveWasiDeclaration } from '../generate-workerd-loader';
+import { preserveInactiveWasiDeclaration } from '../build-binding-guards';
 // @ts-ignore This focused unit test intentionally reaches generated package source outside the test rootDir.
-import type { DeferredRolldownInstance } from '../src/rolldown-binding.wasip1-deferred.js';
+import type { WasiInstance } from '../src/rolldown-binding.wasip1-deferred.js';
 // @ts-ignore This focused integration test intentionally reaches the package source outside the test rootDir.
 import * as workerd from '../src/workerd';
+// @ts-ignore This focused unit test intentionally reaches the package source outside the test rootDir.
+import {
+  claimManagedMemoryForAttempt,
+  createManagedInstance,
+} from '../src/workerd-managed-instance';
 import { describe, expect, test, vi } from 'vitest';
 
 const { createInstance, getWorkerdRuntimeStats, WORKERD_WASM_MEMORY } = workerd;
@@ -32,6 +37,7 @@ const { installCurrentThreadHosts } = createRequire(
 const wasmPath = new URL('../src/rolldown-binding.wasm32-wasip1.wasm', import.meta.url);
 const wasiTest = test.runIf(existsSync(wasmPath));
 const deferredLoaderPath = new URL('../src/rolldown-binding.wasip1-deferred.js', import.meta.url);
+const managedInstancePath = new URL('../src/workerd-managed-instance.ts', import.meta.url);
 const browserLoaderPath = new URL('../src/rolldown-binding.wasip1-browser.js', import.meta.url);
 const privateManagedHostExports = [
   'getCurrentThreadTaskHostContractVersion',
@@ -42,6 +48,52 @@ const privateManagedHostExports = [
   'unregisterCurrentThreadTaskHost',
   'unregisterTimerHost',
 ] as const;
+
+// The facade is typed against the real binding surface; these focused tests
+// drive it with purpose-built stand-in classes instead.
+type ManagedStub = Omit<workerd.WorkerdRolldownInstance, 'exports'> & {
+  // oxlint-disable-next-line typescript/no-explicit-any -- stand-in binding shapes
+  exports: any;
+};
+
+/**
+ * A stand-in for one instance of the deferred loader `@napi-rs/cli` generates:
+ * the same handle shape, with a caller-supplied teardown. A rejected teardown
+ * leaves the stub undisposed, exactly like the real loader's retryable
+ * `dispose()`.
+ */
+function createStubDeferredInstance(
+  rawBinding: object,
+  dispose: () => void | Promise<void>,
+): WasiInstance {
+  const memory = new WebAssembly.Memory({ initial: 1, maximum: 1 });
+  let disposed = false;
+  return {
+    exports: rawBinding,
+    get memory() {
+      return memory;
+    },
+    get memoryBytes() {
+      return disposed ? 0 : memory.buffer.byteLength;
+    },
+    get disposed() {
+      return disposed;
+    },
+    async dispose() {
+      await dispose();
+      disposed = true;
+    },
+  } as unknown as WasiInstance;
+}
+
+async function createManagedStub(
+  rawBinding: object,
+  dispose: () => void | Promise<void> = () => {},
+): Promise<ManagedStub> {
+  return (await createManagedInstance(
+    createStubDeferredInstance(rawBinding, dispose),
+  )) as unknown as ManagedStub;
+}
 
 let nextMockHostRegistration = 1;
 
@@ -85,66 +137,6 @@ function installMockHostRegistrationControls(binding: Record<PropertyKey, unknow
   };
   install('registerCurrentThreadTaskHost', 'unregisterCurrentThreadTaskHost');
   install('registerTimerHost', 'unregisterTimerHost');
-}
-
-async function loadDeferredLoaderWithDependencies(dependencies: object) {
-  const source = await readFile(deferredLoaderPath, 'utf8');
-  const dependencyKey = `__rolldownWorkerdLoaderTest${Date.now()}${Math.random()}`;
-  const testDependencies = {
-    Buffer: NodeBuffer,
-    emnapiAsyncWorkPlugin: undefined,
-    emnapiTSFNPlugin: undefined,
-    ...dependencies,
-  } as Record<PropertyKey, unknown>;
-  const createContext = Reflect.get(testDependencies, 'createContext');
-  if (typeof createContext === 'function') {
-    Reflect.set(testDependencies, 'createContext', (...args: unknown[]) => {
-      const context = Reflect.apply(createContext, dependencies, args);
-      if (
-        context &&
-        (typeof context === 'object' || typeof context === 'function') &&
-        !Reflect.has(context, 'features')
-      ) {
-        Reflect.set(context, 'features', {});
-      }
-      return context;
-    });
-  }
-  const instantiateNapiModule = Reflect.get(testDependencies, 'instantiateNapiModule');
-  if (typeof instantiateNapiModule === 'function') {
-    Reflect.set(testDependencies, 'instantiateNapiModule', async (...args: unknown[]) => {
-      const result = await Reflect.apply(instantiateNapiModule, dependencies, args);
-      const binding = result?.napiModule?.exports;
-      if (binding && (typeof binding === 'object' || typeof binding === 'function')) {
-        installMockHostRegistrationControls(binding);
-      }
-      return result;
-    });
-  }
-  Object.defineProperty(globalThis, dependencyKey, {
-    configurable: true,
-    value: testDependencies,
-  });
-  const transformed = source
-    .replace(
-      /import \{[\s\S]*?\} from '@napi-rs\/wasm-runtime'\nimport \{ createContext as __emnapiCreateContext \} from '@emnapi\/runtime'\n/,
-      `const {
-  emnapiAsyncWorkPlugin: __emnapiAsyncWorkPlugin,
-  emnapiTSFNPlugin: __emnapiTSFNPlugin,
-  instantiateNapiModule: __emnapiInstantiateNapiModule,
-  WASI: __WASI,
-  createContext: __emnapiCreateContext,
-  Buffer,
-} = globalThis[${JSON.stringify(dependencyKey)}]\n`,
-    )
-    .replace("import { Buffer } from 'buffer'\n", '');
-  try {
-    return await import(
-      `data:text/javascript;base64,${Buffer.from(transformed).toString('base64')}#${dependencyKey}`
-    );
-  } finally {
-    Reflect.deleteProperty(globalThis, dependencyKey);
-  }
 }
 
 async function loadBrowserLoaderWithDependencies(dependencies: object) {
@@ -218,51 +210,6 @@ const __wasmResponse = await __browserFetch(__wasmUrl)`,
   } finally {
     Reflect.deleteProperty(globalThis, dependencyKey);
   }
-}
-
-async function getDeferredInitializationFailure(primaryError: unknown): Promise<unknown> {
-  const cleanupErrors = [new Error('cleanup failed once'), new Error('cleanup failed twice')];
-  const context = {
-    suppressDestroy() {},
-    destroy() {
-      throw cleanupErrors.shift();
-    },
-  };
-  const loader = await loadDeferredLoaderWithDependencies({
-    createContext: () => context,
-    instantiateNapiModule: () => Promise.reject(primaryError),
-    WASI: class {},
-  });
-  const module = await WebAssembly.compile(new Uint8Array([0, 97, 115, 109, 1, 0, 0, 0]));
-
-  return await loader
-    .createInstance(module, {
-      initialMemoryPages: 1,
-      maximumMemoryPages: 1,
-    })
-    .then(
-      () => {
-        throw new Error('Expected deferred workerd initialization to fail');
-      },
-      (error: unknown) => error,
-    );
-}
-
-function expectCleanupFailure(
-  failure: unknown,
-  primaryError: unknown,
-  cleanupMessage: string,
-): void {
-  expect(Object.is(failure, primaryError)).toBe(false);
-  expect(failure).toBeInstanceOf(AggregateError);
-  const aggregate = failure as AggregateError & { cause?: unknown };
-  expect(aggregate.cause).toBe(primaryError);
-  expect(aggregate.errors).toHaveLength(2);
-  expect(aggregate.errors[0]).toBe(primaryError);
-  expect(aggregate.errors[1]).toMatchObject({
-    message: cleanupMessage,
-    errors: [expect.any(Error), expect.any(Error)],
-  });
 }
 
 describe.sequential('managed workerd loader', () => {
@@ -365,57 +312,25 @@ describe.sequential('managed workerd loader', () => {
     expect(declarationSource).not.toContain('__rolldownTest');
   });
 
-  test('does not create a managed context before the module promise settles', async () => {
-    const createContext = vi.fn();
-    const loader = await loadDeferredLoaderWithDependencies({
-      createContext,
-      instantiateNapiModule: vi.fn(),
-      WASI: class {},
-    });
+  test('does not consume caller memory before the module promise settles', async () => {
+    const before = getWorkerdRuntimeStats();
+    const memory = new WebAssembly.Memory({ initial: 1, maximum: 1 });
     const moduleError = new Error('module resolution failed');
     let rejectModule!: (error: unknown) => void;
     const module = new Promise<WebAssembly.Module>((_resolve, reject) => {
       rejectModule = reject;
     });
 
-    const initialization = loader.createInstance(module);
+    const initialization = createInstance(module, { memory });
     await Promise.resolve();
-    expect(createContext).not.toHaveBeenCalled();
+    expect(getWorkerdRuntimeStats()).toEqual(before);
 
     rejectModule(moduleError);
     await expect(initialization).rejects.toBe(moduleError);
-    expect(createContext).not.toHaveBeenCalled();
-  });
-
-  test('injects the imported Buffer constructor into managed emnapi contexts', async () => {
-    const context = {
-      features: {} as { Buffer?: typeof NodeBuffer },
-      suppressDestroy() {},
-      destroy() {},
-    };
-    const loader = await loadDeferredLoaderWithDependencies({
-      createContext: () => context,
-      instantiateNapiModule: async () => ({
-        napiModule: {
-          exports: {
-            registerCurrentThreadTaskHost() {},
-            registerTimerHost() {},
-          },
-        },
-      }),
-      WASI: class {},
-    });
-    const module = await WebAssembly.compile(new Uint8Array([0, 97, 115, 109, 1, 0, 0, 0]));
-
-    const instance = await loader.createInstance(module, {
-      initialMemoryPages: 1,
-      maximumMemoryPages: 1,
-    });
-    try {
-      expect(context.features.Buffer).toBe(NodeBuffer);
-    } finally {
-      instance.dispose();
-    }
+    expect(getWorkerdRuntimeStats()).toEqual(before);
+    // The module was validated before the option bag could be consumed, so the
+    // caller's memory is still usable for a corrected call.
+    expect(() => claimManagedMemoryForAttempt(memory)).not.toThrow();
   });
 
   test('destroys the browser context when top-level instantiation fails', async () => {
@@ -588,305 +503,6 @@ describe.sequential('managed workerd loader', () => {
     });
   });
 
-  test('unregisters the exact managed task host when timer registration fails', async () => {
-    const registrationError = new Error('timer host registration failed');
-    const registration = { high: 0x1234_5678, low: 0x9abc_def0 };
-    const timerRegistration = { high: 0x1234_5678, low: 0x9abc_def1 };
-    const reservations = [registration, timerRegistration];
-    const live = new Set<number>();
-    const cleanupOrder: string[] = [];
-    const rawBinding = {
-      getCurrentThreadTaskHostContractVersion: () => 4,
-      isCurrentThreadHostRegistrationActive: vi.fn((_high: number, low: number) => live.has(low)),
-      reserveCurrentThreadHostRegistration: vi.fn(() => reservations.shift()),
-      registerCurrentThreadTaskHost: vi.fn((_high: number, low: number) => {
-        cleanupOrder.push('register task');
-        live.add(low);
-      }),
-      unregisterCurrentThreadTaskHost: vi.fn((high: number, low: number) => {
-        cleanupOrder.push(`unregister task ${high}:${low}`);
-        live.delete(low);
-      }),
-      registerTimerHost: vi.fn(() => {
-        cleanupOrder.push('register timer');
-        throw registrationError;
-      }),
-      unregisterTimerHost: vi.fn((high: number, low: number) => {
-        cleanupOrder.push(`unregister timer ${high}:${low}`);
-        live.delete(low);
-      }),
-    };
-    const context = {
-      suppressDestroy() {},
-      destroy() {
-        cleanupOrder.push('destroy context');
-      },
-    };
-    const loader = await loadDeferredLoaderWithDependencies({
-      createContext: () => context,
-      instantiateNapiModule: async () => ({ napiModule: { exports: rawBinding } }),
-      WASI: class {},
-    });
-    const module = await WebAssembly.compile(new Uint8Array([0, 97, 115, 109, 1, 0, 0, 0]));
-
-    await expect(
-      loader.createInstance(module, {
-        initialMemoryPages: 1,
-        maximumMemoryPages: 1,
-      }),
-    ).rejects.toBe(registrationError);
-    expect(rawBinding.registerCurrentThreadTaskHost).toHaveBeenCalledWith(
-      registration.high,
-      registration.low,
-    );
-    expect(rawBinding.unregisterCurrentThreadTaskHost).toHaveBeenCalledWith(
-      registration.high,
-      registration.low,
-    );
-    // The reserved timer token is rolled back even though its registration threw.
-    expect(rawBinding.unregisterTimerHost).toHaveBeenCalledWith(
-      timerRegistration.high,
-      timerRegistration.low,
-    );
-    expect(cleanupOrder).toEqual([
-      'register task',
-      'register timer',
-      `unregister timer ${timerRegistration.high}:${timerRegistration.low}`,
-      `unregister task ${registration.high}:${registration.low}`,
-      'destroy context',
-    ]);
-  });
-
-  test('rejects an inactive managed task-host registration before timer registration', async () => {
-    const registration = { high: 0x1234_5678, low: 0x9abc_def0 };
-    const context = {
-      suppressDestroy() {},
-      destroy: vi.fn(),
-    };
-    const rawBinding = {
-      getCurrentThreadTaskHostContractVersion: () => 4,
-      // The binding accepts the registration but never reports it live.
-      isCurrentThreadHostRegistrationActive: vi.fn(() => false),
-      reserveCurrentThreadHostRegistration: vi.fn(() => registration),
-      registerCurrentThreadTaskHost: vi.fn(),
-      unregisterCurrentThreadTaskHost: vi.fn(),
-      registerTimerHost: vi.fn(),
-      unregisterTimerHost: vi.fn(),
-    };
-    const loader = await loadDeferredLoaderWithDependencies({
-      createContext: () => context,
-      instantiateNapiModule: async () => ({ napiModule: { exports: rawBinding } }),
-      WASI: class {},
-    });
-    const module = await WebAssembly.compile(new Uint8Array([0, 97, 115, 109, 1, 0, 0, 0]));
-
-    await expect(
-      loader.createInstance(module, {
-        initialMemoryPages: 1,
-        maximumMemoryPages: 1,
-      }),
-    ).rejects.toThrow(/inactive task host registration/);
-    expect(rawBinding.registerCurrentThreadTaskHost).toHaveBeenCalledWith(
-      registration.high,
-      registration.low,
-    );
-    expect(rawBinding.registerTimerHost).not.toHaveBeenCalled();
-    // The reserved token is rolled back exactly: the registration performed
-    // side effects even though the liveness revalidation failed.
-    expect(rawBinding.unregisterCurrentThreadTaskHost).toHaveBeenCalledWith(
-      registration.high,
-      registration.low,
-    );
-    expect(rawBinding.unregisterTimerHost).not.toHaveBeenCalled();
-    expect(context.destroy).toHaveBeenCalledOnce();
-  });
-
-  test('retains context cleanup diagnostics for primitive host registration failures', async () => {
-    const primaryError: unknown = 'primitive host registration failure';
-    const cleanupErrors = [new Error('cleanup failed once'), new Error('cleanup failed twice')];
-    let cleanupAttempt = 0;
-    const context = {
-      suppressDestroy() {},
-      destroy() {
-        throw cleanupErrors[cleanupAttempt++];
-      },
-    };
-    const loader = await loadDeferredLoaderWithDependencies({
-      createContext: () => context,
-      instantiateNapiModule: async () => ({
-        napiModule: {
-          exports: {
-            registerCurrentThreadTaskHost() {
-              throw primaryError;
-            },
-            registerTimerHost() {},
-          },
-        },
-      }),
-      WASI: class {},
-    });
-    const module = await WebAssembly.compile(new Uint8Array([0, 97, 115, 109, 1, 0, 0, 0]));
-    const failure = await loader
-      .createInstance(module, {
-        initialMemoryPages: 1,
-        maximumMemoryPages: 1,
-      })
-      .then(
-        () => {
-          throw new Error('Expected managed host registration to fail');
-        },
-        (error: unknown) => error,
-      );
-
-    expect(failure).toMatchObject({
-      cause: primaryError,
-      errors: [
-        primaryError,
-        expect.objectContaining({
-          message: 'Managed workerd initialization cleanup failed',
-          errors: [
-            expect.objectContaining({
-              message: 'Managed workerd context cleanup failed',
-              errors: cleanupErrors,
-            }),
-          ],
-        }),
-      ],
-    });
-  });
-
-  test('destroys a context whose setup fails before instantiation', async () => {
-    const setupError = new Error('suppressDestroy failed');
-    const destroy = vi.fn();
-    const loader = await loadDeferredLoaderWithDependencies({
-      createContext: () => ({
-        suppressDestroy() {
-          throw setupError;
-        },
-        destroy,
-      }),
-      instantiateNapiModule: vi.fn(),
-      WASI: class {},
-    });
-    const module = await WebAssembly.compile(new Uint8Array([0, 97, 115, 109, 1, 0, 0, 0]));
-
-    await expect(
-      loader.createInstance(module, {
-        initialMemoryPages: 1,
-        maximumMemoryPages: 1,
-      }),
-    ).rejects.toBe(setupError);
-    expect(destroy).toHaveBeenCalledOnce();
-  });
-
-  test('retains context setup cleanup failures', async () => {
-    const setupError = new Error('suppressDestroy failed');
-    const cleanupErrors = [new Error('destroy failed once'), new Error('destroy failed twice')];
-    const loader = await loadDeferredLoaderWithDependencies({
-      createContext: () => ({
-        suppressDestroy() {
-          throw setupError;
-        },
-        destroy() {
-          throw cleanupErrors.shift();
-        },
-      }),
-      instantiateNapiModule: vi.fn(),
-      WASI: class {},
-    });
-    const module = await WebAssembly.compile(new Uint8Array([0, 97, 115, 109, 1, 0, 0, 0]));
-
-    const failure = await loader
-      .createInstance(module, {
-        initialMemoryPages: 1,
-        maximumMemoryPages: 1,
-      })
-      .then(
-        () => {
-          throw new Error('Expected context setup to fail');
-        },
-        (error: unknown) => error,
-      );
-    expect(failure).toBeInstanceOf(AggregateError);
-    expect(failure).toMatchObject({
-      cause: setupError,
-      errors: [
-        setupError,
-        expect.objectContaining({
-          message: 'Managed workerd context setup cleanup failed',
-          errors: [
-            expect.objectContaining({
-              message: 'Managed workerd context setup cleanup failed',
-              errors: [expect.any(Error), expect.any(Error)],
-            }),
-          ],
-        }),
-      ],
-    });
-  });
-
-  test('retries transient beforeExit listener cleanup during failed context setup', async () => {
-    const setupError = new Error('suppressDestroy failed');
-    const beforeExitListener = () => {};
-    let beforeExitListeners: Array<() => void> = [];
-    let newListeners: Array<(event: string, listener: () => void) => void> = [];
-    let beforeExitRemoveCalls = 0;
-    const destroy = vi.fn();
-    vi.stubGlobal('process', {
-      getMaxListeners: () => 10,
-      setMaxListeners() {},
-      rawListeners(event: string) {
-        return event === 'newListener' ? [...newListeners] : [...beforeExitListeners];
-      },
-      prependListener(_event: string, listener: (event: string, listener: () => void) => void) {
-        newListeners.unshift(listener);
-      },
-      removeListener(event: string, listener: () => void) {
-        if (event === 'newListener') {
-          newListeners = newListeners.filter((candidate) => candidate !== listener);
-          return;
-        }
-        beforeExitRemoveCalls += 1;
-        if (beforeExitRemoveCalls === 1) {
-          throw new Error('transient listener cleanup failure');
-        }
-        beforeExitListeners = beforeExitListeners.filter((candidate) => candidate !== listener);
-      },
-    });
-    try {
-      const loader = await loadDeferredLoaderWithDependencies({
-        createContext: () => {
-          for (const listener of newListeners.slice()) {
-            listener('beforeExit', beforeExitListener);
-          }
-          beforeExitListeners.push(beforeExitListener);
-          return {
-            suppressDestroy() {
-              throw setupError;
-            },
-            destroy,
-          };
-        },
-        instantiateNapiModule: vi.fn(),
-        WASI: class {},
-      });
-      const module = await WebAssembly.compile(new Uint8Array([0, 97, 115, 109, 1, 0, 0, 0]));
-
-      await expect(
-        loader.createInstance(module, {
-          initialMemoryPages: 1,
-          maximumMemoryPages: 1,
-        }),
-      ).rejects.toBe(setupError);
-      expect(beforeExitRemoveCalls).toBe(2);
-      expect(newListeners).toEqual([]);
-      expect(beforeExitListeners).toEqual([]);
-      expect(destroy).toHaveBeenCalledOnce();
-    } finally {
-      vi.unstubAllGlobals();
-    }
-  });
-
   wasiTest(
     'owns independent concurrent instances with idempotent disposal',
     { timeout: 60_000 },
@@ -918,8 +534,8 @@ describe.sequential('managed workerd loader', () => {
         liveInstances: before.liveInstances + 2,
       });
 
-      first.dispose();
-      first.dispose();
+      await first.dispose();
+      await first.dispose();
       expect(first.disposed).toBe(true);
       expect(first.memoryBytes).toBe(0);
       expect(() => first.exports).toThrow(/disposed/);
@@ -932,7 +548,7 @@ describe.sequential('managed workerd loader', () => {
       );
       expect(getWorkerdRuntimeStats().liveInstances).toBe(before.liveInstances + 1);
 
-      second.dispose();
+      await second.dispose();
       expect(getWorkerdRuntimeStats().liveInstances).toBe(before.liveInstances);
     },
   );
@@ -951,38 +567,23 @@ describe.sequential('managed workerd loader', () => {
       }
     }
     const getRuntimeCapabilities = vi.fn(() => ({ target: 'wasi' }));
-    const rawBinding = {
+    const rawBinding: Record<string, unknown> = {
       BindingBundler,
       getRuntimeCapabilities,
-      registerCurrentThreadTaskHost: vi.fn(),
-      registerTimerHost: vi.fn(),
     };
+    for (const privateHostExport of privateManagedHostExports) {
+      rawBinding[privateHostExport] = vi.fn();
+    }
     const destroy = vi.fn();
-    const context = {
-      suppressDestroy() {},
-      destroy,
-    };
-    const loader = await loadDeferredLoaderWithDependencies({
-      createContext: () => context,
-      instantiateNapiModule: async (
-        _module: WebAssembly.Module,
-        options: { beforeInit: (input: { instance: { exports: object } }) => void },
-      ) => {
-        options.beforeInit({ instance: { exports: {} } });
-        return { napiModule: { exports: rawBinding } };
-      },
-      WASI: class {},
-    });
-    const module = await WebAssembly.compile(new Uint8Array([0, 97, 115, 109, 1, 0, 0, 0]));
-    const instance = await loader.createInstance(module, {
-      initialMemoryPages: 1,
-      maximumMemoryPages: 1,
-    });
+    const instance = await createManagedStub(rawBinding, destroy);
     const binding = instance.exports;
 
     for (const privateHostExport of privateManagedHostExports) {
-      expect(loader).not.toHaveProperty(privateHostExport);
+      expect(workerd).not.toHaveProperty(privateHostExport);
       expect(binding).not.toHaveProperty(privateHostExport);
+      // Hidden by projection, never deleted: the loader keeps its own host
+      // controls on the raw exports object it owns.
+      expect(rawBinding).toHaveProperty(privateHostExport);
     }
 
     const RetainedBundler = binding.BindingBundler;
@@ -990,7 +591,7 @@ describe.sequential('managed workerd loader', () => {
     const bundler = new RetainedBundler();
     const generation = bundler.generate();
 
-    expect(() => instance.dispose()).toThrow(
+    await expect(instance.dispose()).rejects.toThrow(
       /1 active binding operation and 1 open binding object/,
     );
     expect(destroy).not.toHaveBeenCalled();
@@ -998,11 +599,11 @@ describe.sequential('managed workerd loader', () => {
 
     finishGenerate('generated');
     await expect(generation).resolves.toBe('generated');
-    expect(() => instance.dispose()).toThrow(/1 open binding object/);
+    await expect(instance.dispose()).rejects.toThrow(/1 open binding object/);
     expect(destroy).not.toHaveBeenCalled();
 
     await bundler.close();
-    instance.dispose();
+    await instance.dispose();
     expect(destroy).toHaveBeenCalledOnce();
     expect(instance.disposed).toBe(true);
     expect(() => retainedCapabilities()).toThrow(
@@ -1029,27 +630,18 @@ describe.sequential('managed workerd loader', () => {
       registerCurrentThreadTaskHost() {},
       registerTimerHost() {},
     };
-    const context = { suppressDestroy() {}, destroy: vi.fn() };
-    const loader = await loadDeferredLoaderWithDependencies({
-      createContext: () => context,
-      instantiateNapiModule: async () => ({ napiModule: { exports: rawBinding } }),
-      WASI: class {},
-    });
-    const module = await WebAssembly.compile(new Uint8Array([0, 97, 115, 109, 1, 0, 0, 0]));
-    const instance = await loader.createInstance(module, {
-      initialMemoryPages: 1,
-      maximumMemoryPages: 1,
-    });
+    const destroy = vi.fn();
+    const instance = await createManagedStub(rawBinding, destroy);
     const bundler = new instance.exports.BindingBundler();
 
     await expect(bundler.close()).rejects.toBe(retryableCloseError);
-    expect(() => instance.dispose()).toThrow(/1 open binding object/);
+    await expect(instance.dispose()).rejects.toThrow(/1 open binding object/);
 
     terminal = true;
     await expect(bundler.close()).rejects.toBe(terminalCloseError);
-    instance.dispose();
+    await instance.dispose();
 
-    expect(context.destroy).toHaveBeenCalledOnce();
+    expect(destroy).toHaveBeenCalledOnce();
   });
 
   test('mediates returned callables and retargets mutable raw function fields', async () => {
@@ -1083,17 +675,8 @@ describe.sequential('managed workerd loader', () => {
       registerCurrentThreadTaskHost() {},
       registerTimerHost() {},
     };
-    const context = { suppressDestroy() {}, destroy: vi.fn() };
-    const loader = await loadDeferredLoaderWithDependencies({
-      createContext: () => context,
-      instantiateNapiModule: async () => ({ napiModule: { exports: rawBinding } }),
-      WASI: class {},
-    });
-    const module = await WebAssembly.compile(new Uint8Array([0, 97, 115, 109, 1, 0, 0, 0]));
-    const instance = await loader.createInstance(module, {
-      initialMemoryPages: 1,
-      maximumMemoryPages: 1,
-    });
+    const destroy = vi.fn();
+    const instance = await createManagedStub(rawBinding, destroy);
     const record = new instance.exports.BindingCallableRecord();
     const closable = new instance.exports.BindingAccessorClose();
 
@@ -1108,13 +691,13 @@ describe.sequential('managed workerd loader', () => {
     expect(record.mutableCallback).toBe(mutableCallback);
     expect(mutableCallback()).toBe('second');
 
-    expect(() => instance.dispose()).toThrow(/1 open binding object/);
+    await expect(instance.dispose()).rejects.toThrow(/1 open binding object/);
     const retainedClose = closable.close;
     await retainedClose();
     expect(closeCalls).toBe(1);
 
-    instance.dispose();
-    expect(context.destroy).toHaveBeenCalledOnce();
+    await instance.dispose();
+    expect(destroy).toHaveBeenCalledOnce();
     for (const callback of [returnedCallback, accessorCallback, mutableCallback, retainedClose]) {
       expect(() => callback()).toThrow('This workerd Rolldown instance has been disposed');
     }
@@ -1134,17 +717,8 @@ describe.sequential('managed workerd loader', () => {
       registerCurrentThreadTaskHost() {},
       registerTimerHost() {},
     };
-    const context = { suppressDestroy() {}, destroy: vi.fn() };
-    const loader = await loadDeferredLoaderWithDependencies({
-      createContext: () => context,
-      instantiateNapiModule: async () => ({ napiModule: { exports: rawBinding } }),
-      WASI: class {},
-    });
-    const module = await WebAssembly.compile(new Uint8Array([0, 97, 115, 109, 1, 0, 0, 0]));
-    const instance = await loader.createInstance(module, {
-      initialMemoryPages: 1,
-      maximumMemoryPages: 1,
-    });
+    const destroy = vi.fn();
+    const instance = await createManagedStub(rawBinding, destroy);
     const Bundler = instance.exports.BindingBundler;
     const originalPrototype = Bundler.prototype;
     const bundler = new Bundler();
@@ -1184,13 +758,13 @@ describe.sequential('managed workerd loader', () => {
     Object.setPrototypeOf(DerivedBundler.prototype, {});
     expect(() => Object.preventExtensions(derived)).toThrow(/Cannot replace or remove close/);
     expect(Object.isExtensible(derived)).toBe(true);
-    expect(() => instance.dispose()).toThrow(/2 open binding objects/);
+    await expect(instance.dispose()).rejects.toThrow(/2 open binding objects/);
 
     await bundler.close();
     await derived.close();
     expect(close).toHaveBeenCalledTimes(2);
-    instance.dispose();
-    expect(context.destroy).toHaveBeenCalledOnce();
+    await instance.dispose();
+    expect(destroy).toHaveBeenCalledOnce();
   });
 
   test('preserves binding class, prototype, and object reflection invariants', async () => {
@@ -1205,17 +779,8 @@ describe.sequential('managed workerd loader', () => {
       registerCurrentThreadTaskHost() {},
       registerTimerHost() {},
     };
-    const context = { suppressDestroy() {}, destroy: vi.fn() };
-    const loader = await loadDeferredLoaderWithDependencies({
-      createContext: () => context,
-      instantiateNapiModule: async () => ({ napiModule: { exports: rawBinding } }),
-      WASI: class {},
-    });
-    const module = await WebAssembly.compile(new Uint8Array([0, 97, 115, 109, 1, 0, 0, 0]));
-    const instance = await loader.createInstance(module, {
-      initialMemoryPages: 1,
-      maximumMemoryPages: 1,
-    });
+    const destroy = vi.fn();
+    const instance = await createManagedStub(rawBinding, destroy);
     const Bundler = instance.exports.BindingBundler;
 
     expect(Reflect.ownKeys(Bundler)).toContain('kind');
@@ -1290,8 +855,8 @@ describe.sequential('managed workerd loader', () => {
 
     bundler.close();
     derived.close();
-    instance.dispose();
-    expect(context.destroy).toHaveBeenCalledOnce();
+    await instance.dispose();
+    expect(destroy).toHaveBeenCalledOnce();
     expect(() => Reflect.ownKeys(Bundler.prototype)).toThrow(/disposed/);
   });
 
@@ -1317,17 +882,8 @@ describe.sequential('managed workerd loader', () => {
       registerCurrentThreadTaskHost() {},
       registerTimerHost() {},
     };
-    const context = { suppressDestroy() {}, destroy: vi.fn() };
-    const loader = await loadDeferredLoaderWithDependencies({
-      createContext: () => context,
-      instantiateNapiModule: async () => ({ napiModule: { exports: rawBinding } }),
-      WASI: class {},
-    });
-    const module = await WebAssembly.compile(new Uint8Array([0, 97, 115, 109, 1, 0, 0, 0]));
-    const instance = await loader.createInstance(module, {
-      initialMemoryPages: 1,
-      maximumMemoryPages: 1,
-    });
+    const destroy = vi.fn();
+    const instance = await createManagedStub(rawBinding, destroy);
     const binding = instance.exports;
     const resources = [
       new binding.BindingBundler(),
@@ -1337,33 +893,31 @@ describe.sequential('managed workerd loader', () => {
       new binding.TraceSubscriberGuard(),
     ];
 
-    expect(() => instance.dispose()).toThrow(/5 open binding objects/);
+    await expect(instance.dispose()).rejects.toThrow(/5 open binding objects/);
     await resources[0].close.call(resources[1]);
     await resources[0].close();
     await Promise.all(resources.slice(2).map((resource) => resource.close()));
     for (const resource of resources.slice(2)) {
       await resource.close();
     }
-    instance.dispose();
-    expect(context.destroy).toHaveBeenCalledOnce();
+    await instance.dispose();
+    expect(destroy).toHaveBeenCalledOnce();
   });
 
-  test('reads and calls custom thenables once while blocking reentrant disposal', async () => {
-    let instance!: DeferredRolldownInstance;
+  test('reads and calls custom thenables once while refusing reentrant disposal', async () => {
+    let instance!: ManagedStub;
     let getterCalls = 0;
     let thenCalls = 0;
-    let disposalFailure: unknown;
+    let disposalAttempt: Promise<void> | undefined;
     class BindingBundler {
       generate() {
         return {
           // oxlint-disable-next-line unicorn/no-thenable -- exercises one-shot custom thenable assimilation
           get then() {
             getterCalls += 1;
-            try {
-              instance.dispose();
-            } catch (error) {
-              disposalFailure = error;
-            }
+            // dispose() is a promise API: a refusal arrives as a rejection, so
+            // capture it here and assert once the call it fired from settles.
+            disposalAttempt = instance.dispose();
             return (resolve: (value: string) => void) => {
               thenCalls += 1;
               resolve('generated');
@@ -1374,35 +928,24 @@ describe.sequential('managed workerd loader', () => {
 
       close(): void {}
     }
-    const rawBinding = {
-      BindingBundler,
-      registerCurrentThreadTaskHost() {},
-      registerTimerHost() {},
-    };
-    const context = { suppressDestroy() {}, destroy: vi.fn() };
-    const loader = await loadDeferredLoaderWithDependencies({
-      createContext: () => context,
-      instantiateNapiModule: async () => ({ napiModule: { exports: rawBinding } }),
-      WASI: class {},
-    });
-    const module = await WebAssembly.compile(new Uint8Array([0, 97, 115, 109, 1, 0, 0, 0]));
-    instance = await loader.createInstance(module, {
-      initialMemoryPages: 1,
-      maximumMemoryPages: 1,
-    });
+    const destroy = vi.fn();
+    instance = await createManagedStub({ BindingBundler }, destroy);
     const bundler = new instance.exports.BindingBundler();
 
-    await expect((bundler as unknown as { generate(): Promise<string> }).generate()).resolves.toBe(
+    await expect((bundler as { generate(): Promise<string> }).generate()).resolves.toBe(
       'generated',
     );
     expect(getterCalls).toBe(1);
     expect(thenCalls).toBe(1);
-    expect(disposalFailure).toMatchObject({
-      message: expect.stringMatching(/1 active binding operation and 1 open binding object/),
-    });
+    await expect(disposalAttempt).rejects.toThrow(
+      /1 active binding operation and 1 open binding object/,
+    );
+    expect(destroy).not.toHaveBeenCalled();
+    expect(instance.disposed).toBe(false);
 
     bundler.close();
-    instance.dispose();
+    await instance.dispose();
+    expect(destroy).toHaveBeenCalledOnce();
   });
 
   test('defers custom then invocation for binding results and input callbacks', async () => {
@@ -1432,17 +975,8 @@ describe.sequential('managed workerd loader', () => {
       registerCurrentThreadTaskHost() {},
       registerTimerHost() {},
     };
-    const context = { suppressDestroy() {}, destroy: vi.fn() };
-    const loader = await loadDeferredLoaderWithDependencies({
-      createContext: () => context,
-      instantiateNapiModule: async () => ({ napiModule: { exports: rawBinding } }),
-      WASI: class {},
-    });
-    const module = await WebAssembly.compile(new Uint8Array([0, 97, 115, 109, 1, 0, 0, 0]));
-    const instance = await loader.createInstance(module, {
-      initialMemoryPages: 1,
-      maximumMemoryPages: 1,
-    });
+    const destroy = vi.fn();
+    const instance = await createManagedStub(rawBinding, destroy);
     const invoker = new instance.exports.BindingInvoker();
 
     const bindingResult = invoker.returnThenable();
@@ -1468,13 +1002,13 @@ describe.sequential('managed workerd loader', () => {
     expect(events.at(-1)).toBe('input:then');
 
     invoker.close();
-    instance.dispose();
-    expect(context.destroy).toHaveBeenCalledOnce();
+    await instance.dispose();
+    expect(destroy).toHaveBeenCalledOnce();
   });
 
   test('releases a resolved close thenable before its later user microtasks', async () => {
-    let instance!: DeferredRolldownInstance;
-    let disposalError: unknown;
+    let instance!: ManagedStub;
+    let disposal: Promise<void> | undefined;
     class BindingResource {
       close() {
         return {
@@ -1482,43 +1016,23 @@ describe.sequential('managed workerd loader', () => {
           then(resolve: () => void) {
             resolve();
             queueMicrotask(() => {
-              try {
-                instance.dispose();
-              } catch (error) {
-                disposalError = error;
-              }
+              disposal = instance.dispose();
             });
           },
         };
       }
     }
-    const rawBinding = {
-      BindingResource,
-      registerCurrentThreadTaskHost() {},
-      registerTimerHost() {},
-    };
-    const context = { suppressDestroy() {}, destroy: vi.fn() };
-    const loader = await loadDeferredLoaderWithDependencies({
-      createContext: () => context,
-      instantiateNapiModule: async () => ({ napiModule: { exports: rawBinding } }),
-      WASI: class {},
-    });
-    const module = await WebAssembly.compile(new Uint8Array([0, 97, 115, 109, 1, 0, 0, 0]));
-    instance = await loader.createInstance(module, {
-      initialMemoryPages: 1,
-      maximumMemoryPages: 1,
-    });
-    const Resource = (
-      instance.exports as unknown as {
-        BindingResource: typeof BindingResource;
-      }
-    ).BindingResource;
-    const resource = new Resource();
+    const destroy = vi.fn();
+    instance = await createManagedStub({ BindingResource }, destroy);
+    const resource = new instance.exports.BindingResource();
 
     await resource.close();
-    expect(disposalError).toBeUndefined();
+    // The close barrier ran before that later microtask, so the disposal it
+    // started was accepted rather than refused for an open binding object.
+    expect(disposal).toBeDefined();
+    await expect(disposal).resolves.toBeUndefined();
     expect(instance.disposed).toBe(true);
-    expect(context.destroy).toHaveBeenCalledOnce();
+    expect(destroy).toHaveBeenCalledOnce();
   });
 
   test('rejects a managed thenable that resolves to the public returned promise', async () => {
@@ -1540,17 +1054,8 @@ describe.sequential('managed workerd loader', () => {
       registerCurrentThreadTaskHost() {},
       registerTimerHost() {},
     };
-    const context = { suppressDestroy() {}, destroy: vi.fn() };
-    const loader = await loadDeferredLoaderWithDependencies({
-      createContext: () => context,
-      instantiateNapiModule: async () => ({ napiModule: { exports: rawBinding } }),
-      WASI: class {},
-    });
-    const module = await WebAssembly.compile(new Uint8Array([0, 97, 115, 109, 1, 0, 0, 0]));
-    const instance = await loader.createInstance(module, {
-      initialMemoryPages: 1,
-      maximumMemoryPages: 1,
-    });
+    const destroy = vi.fn();
+    const instance = await createManagedStub(rawBinding, destroy);
     const invoker = new instance.exports.BindingInvoker();
 
     publicPromise = (invoker as unknown as { invoke(): Promise<unknown> }).invoke();
@@ -1559,8 +1064,8 @@ describe.sequential('managed workerd loader', () => {
     );
 
     invoker.close();
-    instance.dispose();
-    expect(context.destroy).toHaveBeenCalledOnce();
+    await instance.dispose();
+    expect(destroy).toHaveBeenCalledOnce();
   });
 
   test('passes native Buffer and foreign or subclassed views to the raw binding unchanged', async () => {
@@ -1585,18 +1090,8 @@ describe.sequential('managed workerd loader', () => {
       registerCurrentThreadTaskHost() {},
       registerTimerHost() {},
     };
-    const context = { suppressDestroy() {}, destroy: vi.fn() };
-    const loader = await loadDeferredLoaderWithDependencies({
-      Buffer: EmbeddedBuffer,
-      createContext: () => context,
-      instantiateNapiModule: async () => ({ napiModule: { exports: rawBinding } }),
-      WASI: class {},
-    });
-    const module = await WebAssembly.compile(new Uint8Array([0, 97, 115, 109, 1, 0, 0, 0]));
-    const instance = await loader.createInstance(module, {
-      initialMemoryPages: 1,
-      maximumMemoryPages: 1,
-    });
+    const destroy = vi.fn();
+    const instance = await createManagedStub(rawBinding, destroy);
 
     try {
       expect(EmbeddedBuffer.prototype).not.toBe(NodeBuffer.prototype);
@@ -1608,9 +1103,9 @@ describe.sequential('managed workerd loader', () => {
         expect(ArrayBuffer.isView(receivedViews?.[index])).toBe(true);
       }
     } finally {
-      instance.dispose();
+      await instance.dispose();
     }
-    expect(context.destroy).toHaveBeenCalledOnce();
+    expect(destroy).toHaveBeenCalledOnce();
   });
 
   test('passes foreign and subclassed ArrayBuffers to the raw binding unchanged', async () => {
@@ -1653,17 +1148,8 @@ describe.sequential('managed workerd loader', () => {
       registerCurrentThreadTaskHost() {},
       registerTimerHost() {},
     };
-    const context = { suppressDestroy() {}, destroy: vi.fn() };
-    const loader = await loadDeferredLoaderWithDependencies({
-      createContext: () => context,
-      instantiateNapiModule: async () => ({ napiModule: { exports: rawBinding } }),
-      WASI: class {},
-    });
-    const module = await WebAssembly.compile(new Uint8Array([0, 97, 115, 109, 1, 0, 0, 0]));
-    const instance = await loader.createInstance(module, {
-      initialMemoryPages: 1,
-      maximumMemoryPages: 1,
-    });
+    const destroy = vi.fn();
+    const instance = await createManagedStub(rawBinding, destroy);
 
     try {
       expect(new instance.exports.BindingInvoker().accept({ buffers })).toEqual([1, 2, 3, 4, 5, 6]);
@@ -1674,9 +1160,9 @@ describe.sequential('managed workerd loader', () => {
         expect(readByteLength(receivedBuffers?.[index])).toBe(index + 1);
       }
     } finally {
-      instance.dispose();
+      await instance.dispose();
     }
-    expect(context.destroy).toHaveBeenCalledOnce();
+    expect(destroy).toHaveBeenCalledOnce();
   });
 
   test('mediates callback-delivered binding objects for intrinsic subclasses', async () => {
@@ -1705,17 +1191,8 @@ describe.sequential('managed workerd loader', () => {
       registerCurrentThreadTaskHost() {},
       registerTimerHost() {},
     };
-    const context = { suppressDestroy() {}, destroy: vi.fn() };
-    const loader = await loadDeferredLoaderWithDependencies({
-      createContext: () => context,
-      instantiateNapiModule: async () => ({ napiModule: { exports: rawBinding } }),
-      WASI: class {},
-    });
-    const module = await WebAssembly.compile(new Uint8Array([0, 97, 115, 109, 1, 0, 0, 0]));
-    const instance = await loader.createInstance(module, {
-      initialMemoryPages: 1,
-      maximumMemoryPages: 1,
-    });
+    const destroy = vi.fn();
+    const instance = await createManagedStub(rawBinding, destroy);
     const plugin = new DatePlugin(123);
     const invoker = new instance.exports.BindingInvoker();
 
@@ -1723,8 +1200,8 @@ describe.sequential('managed workerd loader', () => {
     expect(plugin.observedTime).toBe(123);
     expect(retainedContext?.getModuleIds()).toEqual(['virtual:entry']);
 
-    instance.dispose();
-    expect(context.destroy).toHaveBeenCalledOnce();
+    await instance.dispose();
+    expect(destroy).toHaveBeenCalledOnce();
     expect(() => retainedContext?.getModuleIds()).toThrow(
       'This workerd Rolldown instance has been disposed',
     );
@@ -1777,17 +1254,8 @@ describe.sequential('managed workerd loader', () => {
       registerCurrentThreadTaskHost() {},
       registerTimerHost() {},
     };
-    const context = { suppressDestroy() {}, destroy: vi.fn() };
-    const loader = await loadDeferredLoaderWithDependencies({
-      createContext: () => context,
-      instantiateNapiModule: async () => ({ napiModule: { exports: rawBinding } }),
-      WASI: class {},
-    });
-    const module = await WebAssembly.compile(new Uint8Array([0, 97, 115, 109, 1, 0, 0, 0]));
-    const instance = await loader.createInstance(module, {
-      initialMemoryPages: 1,
-      maximumMemoryPages: 1,
-    });
+    const destroy = vi.fn();
+    const instance = await createManagedStub(rawBinding, destroy);
     const binding = instance.exports;
     const Bundler = binding.BindingBundler;
     const BoundBundler = Bundler.bind(undefined);
@@ -1812,12 +1280,12 @@ describe.sequential('managed workerd loader', () => {
     await watcher.run();
     expect(retainedWatcherEvent?.constructor).toBe(binding.BindingWatcherEvent);
     expect(retainedWatcherBundler?.constructor).toBe(binding.BindingWatcherBundler);
-    expect(() => instance.dispose()).toThrow(/3 open binding objects/);
+    await expect(instance.dispose()).rejects.toThrow(/3 open binding objects/);
 
     bundler.close();
     watcher.close();
     retainedWatcherBundler?.close();
-    instance.dispose();
+    await instance.dispose();
     expect(rawChunkCalls).toBe(1);
     expect(() => chunk.getCode()).toThrow('This workerd Rolldown instance has been disposed');
     expect(() => retainedGetCode()).toThrow('This workerd Rolldown instance has been disposed');
@@ -1847,7 +1315,7 @@ describe.sequential('managed workerd loader', () => {
       expect(Object.getPrototypeOf(magicString) === replacementPrototype).toBe(true);
       expect(magicString instanceof MagicString).toBe(true);
 
-      instance.dispose();
+      await instance.dispose();
     },
   );
 
@@ -1855,83 +1323,44 @@ describe.sequential('managed workerd loader', () => {
     'allows dropped binding objects and repeated closed objects to be collected',
     { timeout: 30_000 },
     () => {
+      // `--import` parses its value as a URL first, so a bare Windows absolute path
+      // is read as the `d:` scheme and rejected. Always hand Node a file:// URL.
+      const tsxLoaderUrl = pathToFileURL(createRequire(import.meta.url).resolve('tsx')).href;
       const child = spawnSync(
         process.execPath,
         [
           '--expose-gc',
+          '--import',
+          tsxLoaderUrl,
           '--input-type=module',
           '--eval',
           `
 import assert from 'node:assert/strict'
-import { readFile } from 'node:fs/promises'
 
-const loaderPath = ${JSON.stringify(fileURLToPath(deferredLoaderPath))}
-const source = await readFile(loaderPath, 'utf8')
-const dependencyKey = '__rolldownWorkerdGcTest'
+const { createManagedInstance } = await import(${JSON.stringify(managedInstancePath.href)})
 class BindingBundler {
   close() {}
 }
-let nextRegistration = 1
-const createRawBinding = () => {
-  const liveHosts = new Set()
+const createStubDeferredInstance = () => {
+  const memory = new WebAssembly.Memory({ initial: 1, maximum: 1 })
+  let disposed = false
   return {
-    BindingBundler,
-    getCurrentThreadTaskHostContractVersion() {
-      return 4
+    exports: { BindingBundler },
+    get memory() {
+      return memory
     },
-    isCurrentThreadHostRegistrationActive(_high, low) {
-      return liveHosts.has(low)
+    get memoryBytes() {
+      return disposed ? 0 : memory.buffer.byteLength
     },
-    reserveCurrentThreadHostRegistration() {
-      return { high: 0, low: nextRegistration++ }
+    get disposed() {
+      return disposed
     },
-    registerCurrentThreadTaskHost(_high, low) {
-      liveHosts.add(low)
-    },
-    unregisterCurrentThreadTaskHost(_high, low) {
-      liveHosts.delete(low)
-    },
-    registerTimerHost(_high, low) {
-      liveHosts.add(low)
-    },
-    unregisterTimerHost(_high, low) {
-      liveHosts.delete(low)
+    async dispose() {
+      disposed = true
     },
   }
 }
-const context = { features: {}, suppressDestroy() {}, destroy() {} }
-globalThis[dependencyKey] = {
-  Buffer,
-  createContext: () => context,
-  instantiateNapiModule: async () => ({
-    napiModule: { exports: createRawBinding() },
-  }),
-  WASI: class {},
-}
-const transformed = source
-  .replace(
-    /import \\{[\\s\\S]*?\\} from '@napi-rs\\/wasm-runtime'\\nimport \\{ createContext as __emnapiCreateContext \\} from '@emnapi\\/runtime'\\n/,
-    \`const {
-  emnapiAsyncWorkPlugin: __emnapiAsyncWorkPlugin,
-  emnapiTSFNPlugin: __emnapiTSFNPlugin,
-  instantiateNapiModule: __emnapiInstantiateNapiModule,
-  WASI: __WASI,
-  createContext: __emnapiCreateContext,
-  Buffer,
-} = globalThis[\${JSON.stringify(dependencyKey)}]\\n\`,
-  )
-  .replace("import { Buffer } from 'buffer'\\n", '')
-const loader = await import(
-  \`data:text/javascript;base64,\${Buffer.from(transformed).toString('base64')}\`
-)
-delete globalThis[dependencyKey]
-const module = await WebAssembly.compile(
-  new Uint8Array([0, 97, 115, 109, 1, 0, 0, 0]),
-)
-const instance = await loader.createInstance(module, {
-  initialMemoryPages: 1,
-  maximumMemoryPages: 1,
-})
+const instance = await createManagedInstance(createStubDeferredInstance())
 let dropped = new instance.exports.BindingBundler()
 const droppedRef = new WeakRef(dropped)
 dropped = undefined
@@ -1949,18 +1378,13 @@ assert.equal(droppedCollected, true)
 for (let attempt = 0; attempt < 100 && !instance.disposed; attempt += 1) {
   globalThis.gc()
   await new Promise(setImmediate)
-  try {
-    instance.dispose()
-  } catch (error) {
+  await instance.dispose().catch((error) => {
     assert.match(error.message, /open binding object/)
-  }
+  })
 }
 assert.equal(instance.disposed, true)
 
-const second = await loader.createInstance(module, {
-  initialMemoryPages: 1,
-  maximumMemoryPages: 1,
-})
+const second = await createManagedInstance(createStubDeferredInstance())
 const refs = []
 for (let index = 0; index < 256; index += 1) {
   let resource = new second.exports.BindingBundler()
@@ -1977,7 +1401,7 @@ assert.equal(
   0,
   'closed binding wrappers remained strongly retained',
 )
-second.dispose()
+await second.dispose()
 console.log('managed binding wrappers collected')
 `,
         ],
@@ -1993,57 +1417,6 @@ console.log('managed binding wrappers collected')
       expect(child.stdout).toContain('managed binding wrappers collected');
     },
   );
-
-  test('reports managed instance counts per evaluated loader module', async () => {
-    const createLoader = () => {
-      const context = {
-        suppressDestroy() {},
-        destroy() {},
-      };
-      return loadDeferredLoaderWithDependencies({
-        createContext: () => context,
-        instantiateNapiModule: async (
-          _module: WebAssembly.Module,
-          options: { beforeInit: (input: { instance: { exports: object } }) => void },
-        ) => {
-          options.beforeInit({ instance: { exports: {} } });
-          return {
-            napiModule: {
-              exports: {
-                registerCurrentThreadTaskHost() {},
-                registerTimerHost() {},
-              },
-            },
-          };
-        },
-        WASI: class {},
-      });
-    };
-    const [firstLoader, secondLoader] = await Promise.all([createLoader(), createLoader()]);
-    const module = await WebAssembly.compile(new Uint8Array([0, 97, 115, 109, 1, 0, 0, 0]));
-    const first = await firstLoader.createInstance(module, {
-      initialMemoryPages: 1,
-      maximumMemoryPages: 1,
-    });
-    const second = await secondLoader.createInstance(module, {
-      initialMemoryPages: 1,
-      maximumMemoryPages: 1,
-    });
-
-    expect(firstLoader.getDeferredRuntimeStats()).toMatchObject({
-      createdInstances: 1,
-      liveInstances: 1,
-    });
-    expect(secondLoader.getDeferredRuntimeStats()).toMatchObject({
-      createdInstances: 1,
-      liveInstances: 1,
-    });
-
-    first.dispose();
-    expect(firstLoader.getDeferredRuntimeStats().liveInstances).toBe(0);
-    expect(secondLoader.getDeferredRuntimeStats().liveInstances).toBe(1);
-    second.dispose();
-  });
 
   wasiTest(
     'lets an active build settle before requiring its bundler to close for disposal',
@@ -2086,17 +1459,17 @@ console.log('managed binding wrappers collected')
       });
 
       await loadEntered;
-      expect(() => instance.dispose()).toThrow(
+      await expect(instance.dispose()).rejects.toThrow(
         /2 active binding operations and 1 open binding object/,
       );
       expect(instance.disposed).toBe(false);
 
       releaseLoad();
       await expect(generation).resolves.not.toHaveProperty('isBindingErrors', true);
-      expect(() => instance.dispose()).toThrow(/1 open binding object/);
+      await expect(instance.dispose()).rejects.toThrow(/1 open binding object/);
 
       await bundler.close();
-      instance.dispose();
+      await instance.dispose();
       expect(instance.disposed).toBe(true);
     },
   );
@@ -2162,11 +1535,10 @@ console.log('managed binding wrappers collected')
       // `--import` parses its value as a URL first, so a bare Windows absolute path
       // is read as the `d:` scheme and rejected. Always hand Node a file:// URL.
       const tsxLoaderUrl = pathToFileURL(createRequire(import.meta.url).resolve('tsx')).href;
-      // Import the deferred loader directly: the public workerd entry also pulls
-      // the high-level build() pipeline, whose legacy decorators the child's tsx
-      // transform mishandles.
-      const workerdUrl = new URL('../src/rolldown-binding.wasip1-deferred.js', import.meta.url)
-        .href;
+      // Import the managed instance module directly: the public workerd entry
+      // also pulls the high-level build() pipeline, whose legacy decorators the
+      // child's tsx transform mishandles.
+      const workerdUrl = managedInstancePath.href;
       const child = spawnSync(
         process.execPath,
         [
@@ -2197,7 +1569,7 @@ const output = await bundler.generate({
 assert.notEqual(output.isBindingErrors, true)
 assert.ok(retainedContext)
 await bundler.close()
-instance.dispose()
+await instance.dispose()
 assert.throws(
   () => retainedContext.getModuleIds(),
   /This workerd Rolldown instance has been disposed/,
@@ -2225,11 +1597,10 @@ console.log('input record context invalidated')
       // `--import` parses its value as a URL first, so a bare Windows absolute path
       // is read as the `d:` scheme and rejected. Always hand Node a file:// URL.
       const tsxLoaderUrl = pathToFileURL(createRequire(import.meta.url).resolve('tsx')).href;
-      // Import the deferred loader directly: the public workerd entry also pulls
-      // the high-level build() pipeline, whose legacy decorators the child's tsx
-      // transform mishandles.
-      const workerdUrl = new URL('../src/rolldown-binding.wasip1-deferred.js', import.meta.url)
-        .href;
+      // Import the managed instance module directly: the public workerd entry
+      // also pulls the high-level build() pipeline, whose legacy decorators the
+      // child's tsx transform mishandles.
+      const workerdUrl = managedInstancePath.href;
       const child = spawnSync(
         process.execPath,
         [
@@ -2281,7 +1652,7 @@ assert.notEqual(output.isBindingErrors, true)
 assert.ok(retainedContext)
 assert.equal(plugin.hookCalls, 2)
 await bundler.close()
-instance.dispose()
+await instance.dispose()
 assert.throws(
   () => retainedContext.getModuleIds(),
   /This workerd Rolldown instance has been disposed/,
@@ -2358,7 +1729,7 @@ console.log('class plugin context invalidated')
           try {
             await bundler.close();
           } finally {
-            instance.dispose();
+            await instance.dispose();
           }
         }
         expect(instance.disposed).toBe(true);
@@ -2369,7 +1740,7 @@ console.log('class plugin context invalidated')
   // A short import chain on the raw binding surface; every module renders to a
   // non-empty source, so each `getModules()` box has data behind it.
   async function generateRawChain(
-    bundler: InstanceType<DeferredRolldownInstance['exports']['BindingBundler']>,
+    bundler: InstanceType<workerd.WorkerdRolldownInstance['exports']['BindingBundler']>,
     moduleCount: number,
   ) {
     const result = await bundler.generate({
@@ -2441,7 +1812,7 @@ console.log('class plugin context invalidated')
         try {
           await bundler.close();
         } finally {
-          instance.dispose();
+          await instance.dispose();
         }
       }
     },
@@ -2476,7 +1847,7 @@ console.log('class plugin context invalidated')
         try {
           await bundler.close();
         } finally {
-          instance.dispose();
+          await instance.dispose();
         }
       }
       // Plain JavaScript data: fully readable after the instance is gone.
@@ -2551,319 +1922,81 @@ console.log('class plugin context invalidated')
       message: expect.stringMatching(/initialization attempt/),
     });
 
-    fulfilled[0].value.dispose();
+    await fulfilled[0].value.dispose();
     await expect(createInstance(module, { memory })).rejects.toThrow(/initialization attempt/);
   });
 
-  test('coordinates memory claims across JavaScript realms', async () => {
-    const source = await readFile(deferredLoaderPath, 'utf8');
-    const claimSource = source
-      .slice(
-        source.indexOf('const __managedMemoryClaimsKey'),
-        source.indexOf('function __attachCleanupError'),
-      )
-      .replaceAll('export ', '');
-    const createClaim = () =>
-      runInNewContext(`${claimSource}\n__claimManagedMemoryForAttempt`) as (
-        memory: WebAssembly.Memory,
-      ) => void;
+  test('coordinates memory claims across evaluated facade copies', async () => {
+    // Two evaluations of the facade module, each with its own WeakSet. What
+    // makes them agree is the claim pinned on the Memory itself under
+    // `Symbol.for('@rolldown/browser/workerd/managed-memory-claims/v1')`.
+    const [first, second] = await Promise.all([
+      import(/* @vite-ignore */ `${managedInstancePath.href}?managed-memory-claims=1`),
+      import(/* @vite-ignore */ `${managedInstancePath.href}?managed-memory-claims=2`),
+    ]);
+    expect(first.claimManagedMemoryForAttempt).not.toBe(second.claimManagedMemoryForAttempt);
     const memory = new WebAssembly.Memory({ initial: 1, maximum: 1 });
 
-    createClaim()(memory);
-    expect(() => createClaim()(memory)).toThrow(/initialization attempt/);
+    first.claimManagedMemoryForAttempt(memory);
+    expect(() => second.claimManagedMemoryForAttempt(memory)).toThrow(/initialization attempt/);
   });
 
   test('keeps failed disposal live and retries cleanup', async () => {
-    let destroyCalls = 0;
-    let instance: DeferredRolldownInstance | undefined;
+    let disposeCalls = 0;
     const cleanupError = new Error('cleanup failed');
-    const context = {
-      suppressDestroy() {},
-      destroy() {
-        destroyCalls += 1;
-        if (destroyCalls === 1) throw cleanupError;
-        instance?.dispose();
+    const instance = await createManagedStub(
+      { getRuntimeCapabilities: () => ({ target: 'wasi' }) },
+      () => {
+        disposeCalls += 1;
+        if (disposeCalls === 1) throw cleanupError;
       },
-    };
-    const loader = await loadDeferredLoaderWithDependencies({
-      createContext: () => context,
-      instantiateNapiModule: async (
-        _module: WebAssembly.Module,
-        options: { beforeInit: (input: { instance: { exports: object } }) => void },
-      ) => {
-        options.beforeInit({ instance: { exports: {} } });
-        return {
-          napiModule: {
-            exports: {
-              registerCurrentThreadTaskHost() {},
-              registerTimerHost() {},
-            },
-          },
-        };
-      },
-      WASI: class {},
-    });
-    const module = await WebAssembly.compile(new Uint8Array([0, 97, 115, 109, 1, 0, 0, 0]));
-    const before = loader.getDeferredRuntimeStats();
-    const managedInstance = (await loader.createInstance(module, {
-      initialMemoryPages: 1,
-      maximumMemoryPages: 1,
-    })) as DeferredRolldownInstance;
-    instance = managedInstance;
-
-    expect(() => managedInstance.dispose()).toThrow(cleanupError);
-    expect(managedInstance.disposed).toBe(false);
-    expect(managedInstance.memoryBytes).toBeGreaterThan(0);
-    expect(() => managedInstance.exports).toThrow(/disposal has started/);
-    expect(loader.getDeferredRuntimeStats().liveInstances).toBe(before.liveInstances + 1);
-
-    expect(() => managedInstance.dispose()).not.toThrow();
-    expect(destroyCalls).toBe(2);
-    expect(managedInstance.disposed).toBe(true);
-    expect(loader.getDeferredRuntimeStats().liveInstances).toBe(before.liveInstances);
-  });
-
-  test('evicts exact task and timer hosts before a failed destroy and preserves fallback hosts', async () => {
-    vi.useFakeTimers();
-    try {
-      type Host = { label: string };
-      const taskHosts = new Map<number, Host>();
-      const timerHosts = new Map<number, Host>();
-      const unregisterCalls: string[] = [];
-      const timerRelays = new Map<string, Promise<void>>();
-      let nextRegistration = 1;
-      const createRawBinding = (label: string) => {
-        return {
-          getCurrentThreadTaskHostContractVersion: () => 4,
-          isCurrentThreadHostRegistrationActive: (_high: number, low: number) =>
-            taskHosts.has(low) || timerHosts.has(low),
-          reserveCurrentThreadHostRegistration: () => ({ high: 0, low: nextRegistration++ }),
-          registerCurrentThreadTaskHost(_high: number, low: number) {
-            taskHosts.set(low, { label });
-          },
-          unregisterCurrentThreadTaskHost(_high: number, low: number) {
-            unregisterCalls.push(`task:${label}:${low}`);
-            taskHosts.delete(low);
-          },
-          registerTimerHost(
-            _high: number,
-            low: number,
-            schedule: (id: number, ms: number) => Promise<void>,
-            _cancel: (id: number) => void,
-          ) {
-            timerHosts.set(low, { label });
-            timerRelays.set(label, schedule(low, 60_000));
-          },
-          unregisterTimerHost(_high: number, low: number) {
-            unregisterCalls.push(`timer:${label}:${low}`);
-            timerHosts.delete(low);
-          },
-        };
-      };
-      let secondDestroyCalls = 0;
-      const contexts = [
-        { suppressDestroy() {}, destroy: vi.fn() },
-        {
-          suppressDestroy() {},
-          destroy() {
-            secondDestroyCalls += 1;
-            if (secondDestroyCalls === 1) throw new Error('cleanup hook failed');
-          },
-        },
-      ];
-      const rawBindings = [createRawBinding('first'), createRawBinding('second')];
-      let contextIndex = 0;
-      let bindingIndex = 0;
-      const loader = await loadDeferredLoaderWithDependencies({
-        createContext: () => contexts[contextIndex++],
-        instantiateNapiModule: async () => ({
-          napiModule: {
-            exports: rawBindings[bindingIndex++],
-          },
-        }),
-        WASI: class {},
-      });
-      const module = await WebAssembly.compile(new Uint8Array([0, 97, 115, 109, 1, 0, 0, 0]));
-      const first = await loader.createInstance(module, {
-        initialMemoryPages: 1,
-        maximumMemoryPages: 1,
-      });
-      const second = await loader.createInstance(module, {
-        initialMemoryPages: 1,
-        maximumMemoryPages: 1,
-      });
-
-      expect([...taskHosts.values()].at(-1)?.label).toBe('second');
-      expect([...timerHosts.values()].at(-1)?.label).toBe('second');
-      expect(vi.getTimerCount()).toBe(2);
-
-      expect(() => second.dispose()).toThrow('cleanup hook failed');
-      expect(second.disposed).toBe(false);
-      expect([...taskHosts.values()].map(({ label }) => label)).toEqual(['first']);
-      expect([...timerHosts.values()].map(({ label }) => label)).toEqual(['first']);
-      expect(unregisterCalls.map((call) => call.split(':').slice(0, 2).join(':'))).toEqual([
-        'timer:second',
-        'task:second',
-      ]);
-      await timerRelays.get('second');
-      expect(vi.getTimerCount()).toBe(1);
-      await vi.runAllTimersAsync();
-      expect(vi.getTimerCount()).toBe(0);
-
-      second.dispose();
-      expect(second.disposed).toBe(true);
-      expect(secondDestroyCalls).toBe(2);
-      expect(unregisterCalls).toHaveLength(2);
-
-      first.dispose();
-      expect(first.disposed).toBe(true);
-      expect(taskHosts.size).toBe(0);
-      expect(timerHosts.size).toBe(0);
-    } finally {
-      vi.useRealTimers();
-    }
-  });
-
-  test('retries failed initialization cleanup without masking the primary error', async () => {
-    const initializationError = new Error('initialization failed');
-    const cleanupError = new Error('cleanup failed');
-    let destroyCalls = 0;
-    const context = {
-      suppressDestroy() {},
-      destroy() {
-        destroyCalls += 1;
-        if (destroyCalls === 1) throw cleanupError;
-      },
-    };
-    const loader = await loadDeferredLoaderWithDependencies({
-      createContext: () => context,
-      instantiateNapiModule: async () => {
-        throw initializationError;
-      },
-      WASI: class {},
-    });
-    const module = await WebAssembly.compile(new Uint8Array([0, 97, 115, 109, 1, 0, 0, 0]));
-
-    await expect(
-      loader.createInstance(module, {
-        initialMemoryPages: 1,
-        maximumMemoryPages: 1,
-      }),
-    ).rejects.toBe(initializationError);
-    expect(destroyCalls).toBe(2);
-    expect(initializationError.cause).toBeUndefined();
-  });
-
-  test('retains cleanup diagnostics when initialization cleanup retry fails', async () => {
-    const initializationError = new Error('initialization failed');
-    const cleanupErrors = [new Error('cleanup failed once'), new Error('cleanup failed twice')];
-    const context = {
-      suppressDestroy() {},
-      destroy() {
-        throw cleanupErrors.shift();
-      },
-    };
-    const loader = await loadDeferredLoaderWithDependencies({
-      createContext: () => context,
-      instantiateNapiModule: async () => {
-        throw initializationError;
-      },
-      WASI: class {},
-    });
-    const module = await WebAssembly.compile(new Uint8Array([0, 97, 115, 109, 1, 0, 0, 0]));
-
-    const failure = await loader
-      .createInstance(module, {
-        initialMemoryPages: 1,
-        maximumMemoryPages: 1,
-      })
-      .then(
-        () => {
-          throw new Error('Expected deferred workerd initialization to fail');
-        },
-        (error: unknown) => error,
-      );
-    expectCleanupFailure(failure, initializationError, 'Managed workerd context cleanup failed');
-  });
-
-  test('retains cleanup diagnostics for primitive initialization failures', async () => {
-    const cleanupErrors = [new Error('cleanup failed once'), new Error('cleanup failed twice')];
-    const context = {
-      suppressDestroy() {},
-      destroy() {
-        throw cleanupErrors.shift();
-      },
-    };
-    const loader = await loadDeferredLoaderWithDependencies({
-      createContext: () => context,
-      instantiateNapiModule: () => Promise.reject('primitive initialization failure'),
-      WASI: class {},
-    });
-    const module = await WebAssembly.compile(new Uint8Array([0, 97, 115, 109, 1, 0, 0, 0]));
-
-    await expect(
-      loader.createInstance(module, {
-        initialMemoryPages: 1,
-        maximumMemoryPages: 1,
-      }),
-    ).rejects.toMatchObject({
-      cause: 'primitive initialization failure',
-      errors: [
-        'primitive initialization failure',
-        expect.objectContaining({
-          message: 'Managed workerd context cleanup failed',
-          errors: [expect.any(Error), expect.any(Error)],
-        }),
-      ],
-    });
-  });
-
-  test.each([
-    {
-      name: 'occupied cause',
-      createPrimaryError: () =>
-        new Error('initialization failed', { cause: new Error('existing cause') }),
-    },
-    {
-      name: 'non-writable cause',
-      createPrimaryError: () =>
-        Object.defineProperty(new Error('initialization failed'), 'cause', {
-          value: undefined,
-          writable: false,
-        }),
-    },
-    {
-      name: 'throwing cause getter',
-      createPrimaryError: () =>
-        Object.defineProperty(new Error('initialization failed'), 'cause', {
-          get() {
-            throw new Error('cause getter failed');
-          },
-        }),
-    },
-    {
-      name: 'stateful cause accessor',
-      createPrimaryError: () => {
-        let reads = 0;
-        let assigned: unknown;
-        return Object.defineProperty(new Error('initialization failed'), 'cause', {
-          get() {
-            reads += 1;
-            return reads === 2 ? assigned : undefined;
-          },
-          set(value: unknown) {
-            assigned = value;
-          },
-        });
-      },
-    },
-  ])('retains deferred cleanup diagnostics for $name', async ({ createPrimaryError }) => {
-    const primaryError = createPrimaryError();
-    expectCleanupFailure(
-      await getDeferredInitializationFailure(primaryError),
-      primaryError,
-      'Managed workerd context cleanup failed',
     );
+    const retainedCapabilities = instance.exports.getRuntimeCapabilities;
+
+    await expect(instance.dispose()).rejects.toBe(cleanupError);
+    expect(instance.disposed).toBe(false);
+    expect(instance.memoryBytes).toBeGreaterThan(0);
+    expect(() => instance.exports).toThrow(/disposal has started/);
+    expect(() => retainedCapabilities()).toThrow(/disposal has started/);
+
+    await expect(instance.dispose()).resolves.toBeUndefined();
+    expect(disposeCalls).toBe(2);
+    expect(instance.disposed).toBe(true);
+    expect(instance.memoryBytes).toBe(0);
+    expect(() => retainedCapabilities()).toThrow(
+      'This workerd Rolldown instance has been disposed',
+    );
+  });
+
+  test('keeps a sibling instance intact across a failed disposal and its retry', async () => {
+    class BindingBundler {
+      close(): void {}
+    }
+    let secondDisposeCalls = 0;
+    const firstDispose = vi.fn();
+    const first = await createManagedStub({ BindingBundler }, firstDispose);
+    const second = await createManagedStub({ BindingBundler }, () => {
+      secondDisposeCalls += 1;
+      if (secondDisposeCalls === 1) throw new Error('cleanup hook failed');
+    });
+    const firstBundler = new first.exports.BindingBundler();
+
+    await expect(second.dispose()).rejects.toThrow('cleanup hook failed');
+    expect(second.disposed).toBe(false);
+    // Only the failing instance is quarantined. Its sibling's facade is
+    // untouched, open-object accounting included.
+    expect(first.exports.BindingBundler).toBeTypeOf('function');
+    await expect(first.dispose()).rejects.toThrow(/1 open binding object/);
+    expect(firstDispose).not.toHaveBeenCalled();
+
+    await expect(second.dispose()).resolves.toBeUndefined();
+    expect(second.disposed).toBe(true);
+    expect(secondDisposeCalls).toBe(2);
+
+    firstBundler.close();
+    await first.dispose();
+    expect(first.disposed).toBe(true);
+    expect(firstDispose).toHaveBeenCalledOnce();
   });
 
   wasiTest('does not consume caller memory when module validation fails', async () => {
@@ -2880,7 +2013,7 @@ console.log('class plugin context invalidated')
     ).rejects.toThrow(/precompiled WebAssembly\.Module/);
 
     const instance = await createInstance(module, { memory });
-    instance.dispose();
+    await instance.dispose();
   });
 
   wasiTest('keeps caller memory consumed after initialization fails', async () => {
@@ -2956,7 +2089,7 @@ console.log('class plugin context invalidated')
         await bundler.close();
       }
     } finally {
-      instance?.dispose();
+      await instance?.dispose();
       vi.unstubAllGlobals();
     }
   });
@@ -2967,19 +2100,21 @@ console.log('class plugin context invalidated')
 
     for (let index = 0; index < 3; index += 1) {
       const instance = await createInstance(module);
-      instance.dispose();
+      await instance.dispose();
     }
 
     expect(process.rawListeners('beforeExit')).toHaveLength(before);
   });
 
   wasiTest('skips deferred emnapi TSFN drains after managed disposal', { timeout: 30_000 }, () => {
-    const require = createRequire(import.meta.url);
-    const wasmRuntimeUrl = pathToFileURL(require.resolve('@napi-rs/wasm-runtime')).href;
-    const emnapiRuntimeUrl = pathToFileURL(require.resolve('@emnapi/runtime')).href;
+    // `--import` parses its value as a URL first, so a bare Windows absolute path
+    // is read as the `d:` scheme and rejected. Always hand Node a file:// URL.
+    const tsxLoaderUrl = pathToFileURL(createRequire(import.meta.url).resolve('tsx')).href;
     const child = spawnSync(
       process.execPath,
       [
+        '--import',
+        tsxLoaderUrl,
         '--input-type=module',
         '--eval',
         `
@@ -2994,59 +2129,19 @@ globalThis.setImmediate = (callback, ...args) => {
 }
 
 try {
-  const [
-    {
-      instantiateNapiModule,
-      WASI,
-      emnapiAsyncWorkPlugin,
-      emnapiTSFNPlugin,
-    },
-    { createContext },
-  ] =
-    await Promise.all([
-      import(${JSON.stringify(wasmRuntimeUrl)}),
-      import(${JSON.stringify(emnapiRuntimeUrl)}),
-    ])
-  const source = await readFile(${JSON.stringify(fileURLToPath(deferredLoaderPath))}, 'utf8')
-  const dependencyKey = '__rolldownManagedTsfnDisposalTest'
-  let rawBinding
-  // Replacing the import block leaves the loader's plugin bindings undeclared, so
-  // the async-work/TSFN plugins must be injected alongside the runtime; without
-  // them this wasm's basic emnapi archive fails to instantiate with a LinkError
-  // on napi_create_threadsafe_function.
-  globalThis[dependencyKey] = {
-    Buffer,
-    createContext,
-    emnapiAsyncWorkPlugin,
-    emnapiTSFNPlugin,
-    instantiateNapiModule: async (...args) => {
-      const result = await instantiateNapiModule(...args)
-      rawBinding = result.napiModule.exports
-      return result
-    },
-    WASI,
-  }
-  const transformed = source
-    .replace(
-      /import \\{[\\s\\S]*?\\} from '@napi-rs\\/wasm-runtime'\\nimport \\{ createContext as __emnapiCreateContext \\} from '@emnapi\\/runtime'\\n/,
-      \`const {
-  instantiateNapiModule: __emnapiInstantiateNapiModule,
-  WASI: __WASI,
-  createContext: __emnapiCreateContext,
-  emnapiAsyncWorkPlugin: __emnapiAsyncWorkPlugin,
-  emnapiTSFNPlugin: __emnapiTSFNPlugin,
-  Buffer,
-} = globalThis[\${JSON.stringify(dependencyKey)}]\\n\`,
-    )
-    .replace("import { Buffer } from 'buffer'\\n", '')
-  const loader = await import(
-    \`data:text/javascript;base64,\${Buffer.from(transformed).toString('base64')}\`
+  // The deferred loader hands back the raw instance; the managed facade goes on
+  // top of it here, so the raw binding stays reachable for the queued future
+  // below while disposal still runs the managed handle's real path.
+  const { createInstance: createDeferredInstance } = await import(
+    ${JSON.stringify(deferredLoaderPath.href)}
   )
-  delete globalThis[dependencyKey]
+  const { createManagedInstance } = await import(${JSON.stringify(managedInstancePath.href)})
   const module = await WebAssembly.compile(
     await readFile(${JSON.stringify(fileURLToPath(wasmPath))}),
   )
-  const instance = await loader.createInstance(module)
+  const deferred = await createDeferredInstance(module)
+  const rawBinding = deferred.exports
+  const instance = await createManagedInstance(deferred)
   assert.equal(immediateQueue.length, 0)
 
   // Bypass the managed facade only to deterministically leave one native
@@ -3066,10 +2161,32 @@ try {
   assert.equal(immediateQueue.length, 1)
   const outerTurn = immediateQueue.shift()
 
-  instance.dispose()
+  // Disposal is asynchronous and its settlement drain schedules real
+  // event-loop turns onto the stubbed queue, so pump that queue in FIFO order
+  // until dispose() settles. The outer TSFN turn stays held back: it was
+  // accepted before disposal started and is what queues the nested drain.
+  const disposal = instance.dispose()
+  let disposalSettled = false
+  let disposalError
+  disposal.then(
+    () => {
+      disposalSettled = true
+    },
+    (error) => {
+      disposalSettled = true
+      disposalError = error
+    },
+  )
+  for (let pumped = 0; !disposalSettled; pumped += 1) {
+    assert.ok(pumped < 1000, 'managed disposal did not settle')
+    if (immediateQueue.length > 0) {
+      immediateQueue.shift()()
+    }
+    await new Promise((resolve) => realSetImmediate(resolve))
+  }
+  if (disposalError) throw disposalError
   assert.equal(instance.disposed, true)
   const cleanupTurnCount = immediateQueue.length
-  assert.ok(cleanupTurnCount > 0)
 
   // The outer TSFN turn was already accepted, so it observes the function as
   // live and queues the nested drain behind finalization.

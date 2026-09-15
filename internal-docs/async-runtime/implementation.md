@@ -593,8 +593,17 @@ restores every overwritten generated file and removes only files created by
 that invocation. The root facade is managed explicitly rather than by a broad
 JavaScript-file pattern, so unrelated sources remain outside the transaction.
 
-`packages/rolldown/generate-workerd-loader.ts` renders the deferred workerd
-loader after every napi build. The eager CJS and browser loaders for BOTH wasm
+`@napi-rs/cli` renders the deferred workerd loader
+(`rolldown-binding.wasip1-deferred.js` and its `.d.ts`) on every threadless napi
+build, exactly like the eager loaders. Rolldown no longer renders it: what stays
+on this side is `packages/rolldown/build-binding-guards.ts` (keep the inactive
+flavor's declaration, restore generated sources around a throwaway binding
+build, validate the configured threadless memory against the artifact's
+`env.memory`) and the static managed facade in
+`packages/rolldown/src/workerd-managed-instance.ts`, which the workerd entry
+bundles on top of the cli's loader.
+
+The eager CJS and browser loaders for BOTH wasm
 flavors — `wasm32-wasip1` and threaded `wasm32-wasip1-threads` — register the
 v4 native CurrentThread runnable host and the JavaScript timer host before
 exposing the binding: since the registry napi pin, every wasm artifact runs the
@@ -640,10 +649,12 @@ package-side timer-host setup fails after task-host registration, initialization
 unregisters that exact task-host capability before propagating the failure.
 The canonical `@rolldown/browser/workerd` package entry, the staged
 threadless optional-package facade, and the generated `rolldown/workerd`
-facade expose `createInstance`. It registers the CurrentThread timer host and
-the v4 #9977 native runnable task host, exposes per-instance memory
-diagnostics, and returns an idempotently disposable handle. Successful disposal
-unregisters the exact task-host capability and synchronously clears and
+facade expose `createInstance`. The deferred loader underneath it registers the
+CurrentThread timer host and the v4 #9977 native runnable task host per
+instance through `@napi-rs/async-runtime/workerd`; the rolldown facade adds the
+memory claim, the mediating binding surface, per-instance memory diagnostics,
+and an idempotently disposable handle whose `dispose()` is a promise. Successful
+disposal unregisters the exact task-host capability and synchronously clears and
 resolves every pending
 JavaScript timer relay, so a destroyed N-API context cannot remain retained
 until a long host deadline expires. Runnable drains are deferred through the
@@ -666,21 +677,23 @@ managed disposal clear the active host timeout when possible and settle the
 retired relay even when `clearTimeout` throws.
 Each invocation owns independent N-API state, emnapi context, and
 unshared memory. Callers must first close all binding objects so napi-rs can
-complete task cancellation before environment teardown. Managed disposal then
-explicitly unregisters both exact Rust hosts before asking emnapi to destroy
-the context. This ordering does not depend on emnapi's LIFO cleanup queue
-continuing after a throwing hook. It attempts both timer-host and task-host
-cleanup even if one fails; successfully released hosts are forgotten, failed
-host disposers remain retryable through a later `dispose()` call, and context
-destruction does not begin until every host is evicted. Multiple host failures
-are reported together.
-If host registration fails before a handle can be returned, failed host
-disposers are retried once immediately and persistent failures are aggregated
-with the registration error.
-The generated managed factory registers task and timer hosts against the raw
-binding before constructing the public facade, removes all host-control
-exports, and never publishes a raw-binding accessor. Package facades only
-re-export that managed factory. The facade mediates binding objects nested in
+complete task cancellation before environment teardown: the facade's `dispose()`
+rejects — never throws synchronously — while any binding operation is active or
+any close-bearing object is open, and only then hands over to the loader.
+The loader owns the rest of the order: it runs the wasm settlement barrier and
+its bounded drain while the environment can still call JavaScript, evicts both
+exact Rust hosts, and only then destroys the emnapi context. That ordering does
+not depend on emnapi's LIFO cleanup queue continuing after a throwing hook.
+A rejected disposal leaves the instance undisposed and retryable on both sides:
+the loader clears its own memo, and the facade clears the promise it memoized
+so a later `dispose()` runs the whole sequence again. The facade keeps
+`disposalStarted` set across that failure, so retained wrappers stay refused in
+the meantime.
+The managed facade goes over the raw exports the loader hands back. It hides
+the seven host-control exports by projection — it skips them while building the
+facade instead of deleting them from the loader's own object — and never
+publishes a raw-binding accessor. Package facades only re-export
+`createInstance`. The facade mediates binding objects nested in
 plain records and arrays, inherited callbacks on class-based input records,
 and binding objects delivered through caller callbacks, so retaining a plugin
 context, output, event, constructor, prototype, bound constructor, or method
@@ -729,12 +742,13 @@ accepted. Same-realm code that runs before every loader can preinstall a
 semantically equivalent monotonic operation and is outside this lifecycle
 coordination boundary; descriptor immutability prevents replacement after the
 first legitimate installation.
-Managed disposal commits the disposed state only after emnapi context
-destruction succeeds. A thrown cleanup hook leaves the context and handle
-available for a later retry. emnapi marks the context as stopping before it
-drains cleanup hooks, so a thrown hook may leave partial teardown behind; the
-pre-destroy explicit host eviction ensures the retryable handle cannot retain a
-selected task or timer host. Context setup retries transient
+Managed disposal commits the disposed state only after the loader's disposal
+promise fulfills, which is after emnapi context destruction succeeded. A
+rejected cleanup leaves the context and handle available for a later retry.
+emnapi marks the context as stopping before it drains cleanup hooks, so a
+thrown hook may leave partial teardown behind; the loader's pre-destroy host
+eviction ensures the retryable handle cannot retain a selected task or timer
+host. Context setup retries transient
 `beforeExit` listener removal and listener-limit restoration failures before
 aborting. It tracks listener occurrence counts rather than identities alone, so
 an emnapi listener that reuses an existing function object is still removed
@@ -760,7 +774,7 @@ The threadless loaders take their initial page count from
 `napi.wasm.initialMemory` remains 16384 for the threaded flavor. The number is
 not repeated in prose because it moves with every toolchain bump: `@napi-rs/cli`
 reads the key for the threadless loaders, the module's own `env.memory` minimum
-is the floor, `generate-workerd-loader.ts` refuses a
+is the floor, `build-binding-guards.ts` refuses a
 configured value below it, and `scripts/wasi/check-wasi-threadless.mjs` caps
 the configured value at the last measured budget, so a raise is a conscious
 re-measurement rather than drift. When the ignored build artifact is present,
@@ -827,6 +841,14 @@ build-order coupling is needed to keep one flavor from overwriting the other.
   committed loaders. Declarations do: `binding.d.cts` keeps whichever flavor
   built last, so the native build must run last — which is why ci.yml restores
   it after `just build-browser`.
+- The deferred workerd loader is the cli's output too, not a rolldown render:
+  `rolldown-binding.wasip1-deferred.js` and its `.d.ts` come out of the same
+  `build-binding:wasi-single` run as the eager pair and are committed verbatim,
+  so a second build is a no-op. Rolldown's own layer is the static
+  `src/workerd-managed-instance.ts` module the workerd entries bundle on top:
+  the cross-copy memory claim and the mediating binding facade. Nothing in
+  `packages/rolldown` writes either deferred file any more, so a cli bump
+  changes them the way it changes every other loader.
 - `packages/rolldown/package.json` declares `napi.rootPublisher: "pnpm"`
   (honored from `@napi-rs/cli` 3.8.5, per napi-rs#3450). Pre-publish
   validation is publisher-aware: because the manifest also declares

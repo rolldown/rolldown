@@ -231,7 +231,7 @@ describe('workerd build() owned-instance disposal parking', () => {
 
   afterEach(() => {
     vi.doUnmock('../src/binding.cjs');
-    vi.doUnmock('../src/rolldown-binding.wasip1-deferred.js');
+    vi.doUnmock('../src/workerd-managed-instance');
     vi.doUnmock('../src/api/rolldown');
     vi.resetModules();
   });
@@ -248,7 +248,7 @@ describe('workerd build() owned-instance disposal parking', () => {
   ): Promise<Pick<typeof workerdEntryTypes, 'build' | 'createWorkerdBundle'>> {
     vi.resetModules();
     vi.doMock('../src/binding.cjs', () => ({ __isWorkerdBindingProxy: true }));
-    vi.doMock('../src/rolldown-binding.wasip1-deferred.js', () => ({
+    vi.doMock('../src/workerd-managed-instance', () => ({
       createInstance: vi.fn(async () => {
         const next = instanceQueue.shift();
         if (next === undefined) throw new Error('harness: no fake instance queued');
@@ -447,7 +447,7 @@ describe('workerd build() against the built dist', () => {
       } finally {
         // Must succeed right away: the pipeline's terminal close releases the
         // bundler in the managed facade's open-object accounting.
-        instance.dispose();
+        await instance.dispose();
       }
       expect(instance.disposed).toBe(true);
     },
@@ -493,8 +493,8 @@ describe('workerd build() against the built dist', () => {
         });
         expect(result.output[0].fileName).toBe('virt_entry.js');
       } finally {
-        instanceA.dispose();
-        instanceB.dispose();
+        await instanceA.dispose();
+        await instanceB.dispose();
       }
     },
     180_000,
@@ -555,7 +555,7 @@ describe('workerd build() against the built dist', () => {
         expect(bundle.closed).toBe(true);
         // The slot released once the real close settled: dispose works and
         // the other instance can build.
-        instanceA.dispose();
+        await instanceA.dispose();
         const result = await workerd.build({
           instance: instanceB,
           input: 'virt:entry.js',
@@ -563,12 +563,10 @@ describe('workerd build() against the built dist', () => {
         });
         expect(result.output[0].type).toBe('chunk');
       } finally {
-        try {
-          instanceA.dispose();
-        } catch {
-          // Disposed in the happy path above.
-        }
-        instanceB.dispose();
+        // Disposed in the happy path above, where a completed disposal is
+        // idempotent; a failed assertion may have left the slot held.
+        await instanceA.dispose().catch(() => {});
+        await instanceB.dispose();
       }
     },
     180_000,
@@ -603,17 +601,14 @@ describe('workerd build() against the built dist', () => {
         expect(hookCloseError).toBeInstanceOf(Error);
         expect(bundle.closed).toBe(false);
         // The instance slot is still held, so disposing must be refused...
-        expect(() => instance.dispose()).toThrow();
+        await expect(instance.dispose()).rejects.toThrow();
         // ...until a retried close succeeds.
         await bundle.close();
         expect(bundle.closed).toBe(true);
       } finally {
-        try {
-          instance.dispose();
-        } catch {
-          // A failed assertion above may have left the bundle open; don't
-          // let the refused dispose mask it.
-        }
+        // A failed assertion above may have left the bundle open; don't let the
+        // refused dispose mask it.
+        await instance.dispose().catch(() => {});
       }
     },
     180_000,

@@ -159,7 +159,7 @@ describe('workerd output ownership against the built dist', () => {
         expect(seenBundleKeys).toHaveLength(2);
         expect(seenBundleKeys[1]).toEqual(seenBundleKeys[0]);
       } finally {
-        instance.dispose();
+        await instance.dispose();
       }
     },
     180_000,
@@ -213,7 +213,7 @@ describe('workerd output ownership against the built dist', () => {
         const afterChurn = await buildEmitting(emitted);
         expect(Uint8Array.from(afterChurn)).toStrictEqual(original);
       } finally {
-        instance.dispose();
+        await instance.dispose();
       }
     },
     180_000,

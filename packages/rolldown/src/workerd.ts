@@ -1,10 +1,7 @@
 import {
-  createInstance,
   getDeferredRuntimeStats,
-  WORKERD_WASM_MEMORY,
-  type DeferredInstanceOptions,
-  type DeferredRolldownInstance,
-  type DeferredRuntimeStats,
+  WASM_MEMORY,
+  type WasiRuntimeStats,
 } from './rolldown-binding.wasip1-deferred.js';
 import type {
   BindingOutputs,
@@ -12,13 +9,23 @@ import type {
   ExternalMemoryStatus,
 } from './rolldown-binding.wasip1.cjs';
 import { snapshotChunkModules } from './utils/transform-rendered-chunk';
+import { createInstance } from './workerd-managed-instance';
 
+// `@napi-rs/cli` renders the deferred loader this entry builds on; the managed
+// facade over it lives in `workerd-managed-instance.ts`.
 // See internal-docs/async-runtime/implementation.md.
-export type WorkerdInstanceOptions = DeferredInstanceOptions;
-export type WorkerdRolldownInstance = DeferredRolldownInstance;
-export type WorkerdRuntimeStats = DeferredRuntimeStats;
+export type {
+  DeferredRolldownBinding,
+  WorkerdInstanceOptions,
+  WorkerdModuleInput,
+  WorkerdRolldownInstance,
+} from './workerd-managed-instance';
+export type WorkerdRuntimeStats = WasiRuntimeStats;
 
-export { createInstance, WORKERD_WASM_MEMORY };
+export { createInstance };
+
+/** The memory descriptor the deferred loader was generated with. */
+export const WORKERD_WASM_MEMORY: typeof WASM_MEMORY = WASM_MEMORY;
 
 /**
  * Report loader-local managed-instance counts and the declared initial Wasm

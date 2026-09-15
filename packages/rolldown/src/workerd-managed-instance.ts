@@ -1546,6 +1546,12 @@ function __resolveManagedMemory(__options: any): WebAssembly.Memory {
 export async function createManagedInstance(
   deferredInstance: WasiInstance,
 ): Promise<WorkerdRolldownInstance> {
+  // The handle below is the cli instance's only owner, and consumers may keep a
+  // disposed handle around. Reach the instance through a clearable holder so
+  // that disposal can drop it along with everything it owns -- the raw binding
+  // exports object and the whole linear memory. Nothing in this function may
+  // capture the parameter itself, or the holder would release nothing.
+  let __deferred: WasiInstance | undefined = deferredInstance;
   const __state: any = {
     activeOperations: 0,
     disposalStarted: false,
@@ -1555,12 +1561,12 @@ export async function createManagedInstance(
   };
   let __publicExports: any;
   try {
-    __publicExports = __createManagedBindingFacade(deferredInstance.exports, __state);
+    __publicExports = __createManagedBindingFacade(__deferred.exports, __state);
   } catch (__error) {
     // The loader handed back a live instance; tear it down before surfacing the
     // facade failure, and keep the facade failure as the primary error.
     try {
-      await deferredInstance.dispose();
+      await __deferred.dispose();
     } catch (__cleanupError) {
       throw new AggregateError(
         [__error, __cleanupError],
@@ -1571,7 +1577,7 @@ export async function createManagedInstance(
     throw __error;
   }
 
-  let __memory: WebAssembly.Memory | undefined = deferredInstance.memory;
+  let __memory: WebAssembly.Memory | undefined = __deferred.memory;
   let __disposePromise: Promise<void> | undefined;
 
   return Object.freeze({
@@ -1627,13 +1633,21 @@ export async function createManagedInstance(
         __state.disposalStarted = true;
       }
       const __promise = (async () => {
-        await deferredInstance.dispose();
+        // Always through the holder: a retry after a rejected disposal must
+        // reach the same instance, and a successful one clears it below.
+        await __deferred!.dispose();
       })().then(
         () => {
           __state.disposed = true;
           __state.releaseBindingFacade?.();
           __publicExports = undefined;
           __memory = undefined;
+          // Released last, after the facade gave up its raw targets: this is
+          // the final strong reference to the cli instance, so a consumer that
+          // keeps a disposed handle no longer keeps the binding exports and the
+          // WebAssembly.Memory alive with it. Kept on rejection so a later
+          // dispose() can retry.
+          __deferred = undefined;
         },
         (__error) => {
           // The loader keeps a failed disposal retryable, and for `module:`

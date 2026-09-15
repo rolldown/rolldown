@@ -1418,6 +1418,102 @@ console.log('managed binding wrappers collected')
     },
   );
 
+  test(
+    'releases the deferred instance so a disposed handle retains no memory',
+    { timeout: 30_000 },
+    () => {
+      // Regression: every method on the managed handle shares one closure, so a
+      // captured deferred instance is retained for as long as a consumer keeps
+      // the handle -- which kept the raw binding exports and the whole
+      // WebAssembly.Memory alive while `memoryBytes` already reported 0.
+      // A WebAssembly.Memory only becomes unreachable under an async major GC,
+      // so the loop below asks for that shape explicitly.
+      const tsxLoaderUrl = pathToFileURL(createRequire(import.meta.url).resolve('tsx')).href;
+      const child = spawnSync(
+        process.execPath,
+        [
+          '--expose-gc',
+          '--import',
+          tsxLoaderUrl,
+          '--input-type=module',
+          '--eval',
+          `
+import assert from 'node:assert/strict'
+
+const { createManagedInstance } = await import(${JSON.stringify(managedInstancePath.href)})
+class BindingBundler {
+  close() {}
+}
+let memoryRef
+let rawExportsRef
+const createStubDeferredInstance = () => {
+  const memory = new WebAssembly.Memory({ initial: 1, maximum: 1 })
+  const exports = { BindingBundler }
+  memoryRef = new WeakRef(memory)
+  rawExportsRef = new WeakRef(exports)
+  let disposed = false
+  return {
+    exports,
+    get memory() {
+      return memory
+    },
+    get memoryBytes() {
+      return disposed ? 0 : memory.buffer.byteLength
+    },
+    get disposed() {
+      return disposed
+    },
+    async dispose() {
+      disposed = true
+    },
+  }
+}
+
+const instance = await createManagedInstance(createStubDeferredInstance())
+let bundler = new instance.exports.BindingBundler()
+bundler.close()
+bundler = undefined
+await instance.dispose()
+
+for (let attempt = 0; attempt < 100; attempt += 1) {
+  await globalThis.gc({ type: 'major', execution: 'async' })
+  await new Promise(setImmediate)
+  if (memoryRef.deref() === undefined && rawExportsRef.deref() === undefined) break
+}
+
+// The handle is still strongly referenced here on purpose: that is exactly the
+// consumer shape that used to strand a whole instance.
+assert.equal(instance.disposed, true)
+assert.equal(instance.memoryBytes, 0)
+assert.throws(() => instance.memory, /This workerd Rolldown instance has been disposed/)
+assert.throws(() => instance.exports, /This workerd Rolldown instance has been disposed/)
+await instance.dispose()
+assert.equal(
+  rawExportsRef.deref(),
+  undefined,
+  'a disposed managed handle retained the raw binding exports',
+)
+assert.equal(
+  memoryRef.deref(),
+  undefined,
+  'a disposed managed handle retained the instance memory',
+)
+console.log('disposed managed handle released its deferred instance')
+`,
+        ],
+        {
+          encoding: 'utf8',
+          timeout: 20_000,
+        },
+      );
+
+      expect(child.error).toBeUndefined();
+      expect(child.signal).toBeNull();
+      expect(child.status, child.stderr || child.stdout).toBe(0);
+      expect(child.stdout).toContain('disposed managed handle released its deferred instance');
+    },
+  );
+
   wasiTest(
     'lets an active build settle before requiring its bundler to close for disposal',
     { timeout: 30_000 },

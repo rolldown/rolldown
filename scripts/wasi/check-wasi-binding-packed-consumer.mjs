@@ -608,6 +608,27 @@ function findModuleExports(code) {
   return [...exports].sort((a, b) => a.localeCompare(b));
 }
 
+// The dts bundler emits the workerd entry's own exports inline (`export declare
+// function createInstance(...)`) and only re-exports types through a trailing
+// list, so there is no single `export { ... }` block to read. Collect both
+// shapes, anchored at column 0 so the indented blocks inside the bundled
+// `declare namespace` wrappers stay out of the top-level export set.
+function collectDeclarationExports(declaration) {
+  const names = new Set();
+  const declarationPattern =
+    /^export\s+(?:declare\s+)?(?:abstract\s+)?(?:const|let|var|function|class|interface|type|enum|namespace)\s+([A-Za-z_$][\w$]*)/gm;
+  for (const [, name] of declaration.matchAll(declarationPattern)) names.add(name);
+  const listPattern = /^export\s+(?:type\s+)?\{([^}]*)\}/gm;
+  for (const [, list] of declaration.matchAll(listPattern)) {
+    for (const entry of list.split(',')) {
+      const name = entry.trim();
+      if (!name) continue;
+      names.add(name.split(/\s+as\s+/).at(-1));
+    }
+  }
+  return names;
+}
+
 async function assertWorkerdDeclarationParity(packageDir, runtimeExports, workerdExports) {
   const [declaration, browserLoader] = await Promise.all([
     readFile(path.join(packageDir, 'rolldown-binding.wasip1-deferred.d.ts'), 'utf8'),
@@ -668,16 +689,11 @@ async function assertWorkerdDeclarationParity(packageDir, runtimeExports, worker
       `Threadless browser loader must not expose ${removedExport}`,
     );
   }
-  const workerdExportBlock = [...declaration.matchAll(/\bexport\s*\{([^}]+)\}/gs)].find(
-    ([, exports]) =>
-      exports.includes('createInstance') && exports.includes('getWorkerdRuntimeStats'),
-  );
-  assert.ok(workerdExportBlock, 'Unable to find the managed workerd declaration export list');
-  const declaredWorkerdExports = new Set(
-    workerdExportBlock[1]
-      .split(',')
-      .map((name) => name.trim())
-      .filter(Boolean),
+  const declaredWorkerdExports = collectDeclarationExports(declaration);
+  assert.ok(
+    declaredWorkerdExports.has('createInstance') &&
+      declaredWorkerdExports.has('getWorkerdRuntimeStats'),
+    'Unable to find the managed workerd declaration exports',
   );
   assert.deepEqual(
     workerdExports.filter((name) => !declaredWorkerdExports.has(name)),

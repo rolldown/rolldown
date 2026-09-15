@@ -1,0 +1,29 @@
+crates/rolldown/src/ast_scanner/mod.rs
+  s_0c65eed71d9a61::t_19d6eb9e0cc3b3 358-360
+crates/rolldown/tests/rolldown/cjs_compat/top_level_this_exports/_config.json
+  s_0c65eed71d9a61::t_2c4e8ff4193b5c 1-13
+crates/rolldown/tests/rolldown/cjs_compat/top_level_this_exports/artifacts.snap
+  s_0c65eed71d9a61::t_4d176170dd48ac 1-26
+crates/rolldown/tests/rolldown/cjs_compat/top_level_this_exports/lib.cjs
+  s_0c65eed71d9a61::t_7dae0397fdc9b6 1-6
+crates/rolldown/tests/rolldown/cjs_compat/top_level_this_exports/main.cjs
+  s_0c65eed71d9a61::t_a552e349ac9024 1-7
+internal-docs/linking/determine-module-exports-kind/implementation.md
+  s_0c65eed71d9a61::t_8171dc7ea099c3 69-70
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "b267b3b012698df8acb9a40f8f39d29cbddd4e72",
+  "prompts": {},
+  "sessions": {
+    "s_0c65eed71d9a61": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a09ecb-b1dc-7c93-b849-4ec18f4feb25",
+        "model": "unknown"
+      },
+      "human_author": "IWANABETHATGUY <iwanabethatguy@qq.com>"
+    }
+  }
+}

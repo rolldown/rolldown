@@ -21,6 +21,7 @@
 //
 // Usage: `just setup-vite` (or `vp run --filter @rolldown-internal/scripts setup-vite`)
 
+import { execFileSync } from 'node:child_process';
 import nodeFs from 'node:fs';
 import { createRequire } from 'node:module';
 import nodePath from 'node:path';
@@ -67,13 +68,17 @@ if (current !== target) {
 
 // 4. Build the vite package (dist/node + dist/client). This mirrors Vite's
 // own `build` script minus the type build, which the tests do not need.
-// The bundle step is invoked through the checkout's own `rolldown` bin, not
-// `vp run`: `vp run` re-syncs node_modules with the lockfile first, which
-// would silently undo the swap from step 3 and inline the pinned runtime.
-// The bin shim resolves through `node_modules/rolldown`, so after the swap
-// the workspace rolldown both bundles Vite and provides the inlined runtime.
+// Invoke the workspace CLI directly with Node so Windows does not have to
+// execute a POSIX-style `.bin` path through cmd.exe. `vp run` would re-sync
+// node_modules and undo the swap from step 3, inlining the pinned runtime.
+// See internal-docs/dev-server-test-harness/implementation.md.
 nodeFs.rmSync(nodePath.join(vitePkgDir, 'dist'), { recursive: true, force: true });
-run('./node_modules/.bin/rolldown --config rolldown.config.ts', vitePkgDir);
+const rolldownCli = nodePath.join(localRolldownDir, 'bin', 'cli.mjs');
+console.log(`[setup-vite] node ${rolldownCli} --config rolldown.config.ts`);
+execFileSync(process.execPath, [rolldownCli, '--config', 'rolldown.config.ts'], {
+  cwd: vitePkgDir,
+  stdio: 'inherit',
+});
 
 // 5. Verify the override took: resolving `rolldown` from the vite package must
 // land inside the workspace copy. Failing loudly here beats silently running

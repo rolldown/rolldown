@@ -1498,7 +1498,14 @@
             "null"
           ]
         },
+        "bundlerTimings": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
         "pluginTimings": {
+          "description": "Deprecated alias for `bundler_timings`. The new option takes precedence.",
           "type": [
             "boolean",
             "null"

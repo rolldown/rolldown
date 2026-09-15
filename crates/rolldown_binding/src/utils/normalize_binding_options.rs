@@ -306,16 +306,15 @@ fn normalize_sourcemap_ignore_list_option(
 }
 
 fn normalize_sourcemap_path_transform_option(
-  sourcemap_path_transform: Option<JsCallback<FnArgs<(String, String)>, String>>,
+  sourcemap_path_transform: Option<JsCallback<FnArgs<(Vec<String>, String)>, Vec<String>>>,
 ) -> Option<rolldown::SourceMapPathTransform> {
   sourcemap_path_transform.map(|ts_fn| {
-    rolldown::SourceMapPathTransform::new(Arc::new(move |source, sourcemap_path| {
+    rolldown::SourceMapPathTransform::new(Arc::new(move |sources, sourcemap_path| {
       let ts_fn = Arc::clone(&ts_fn);
-      let source = source.to_string();
       let sourcemap_path = sourcemap_path.to_string();
       Box::pin(async move {
         ts_fn
-          .invoke_async((source, sourcemap_path).into())
+          .invoke_async((sources, sourcemap_path).into())
           .await
           .context("sourcemapPathTransform option")
           .map_err(anyhow::Error::from)

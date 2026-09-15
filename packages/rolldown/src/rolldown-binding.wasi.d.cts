@@ -1944,6 +1944,8 @@ export interface BindingChecksOptions {
   configurationFieldConflict?: boolean
   preferBuiltinFeature?: boolean
   couldNotCleanDirectory?: boolean
+  bundlerTimings?: boolean
+  /** Deprecated alias for `bundler_timings`. The new option takes precedence. */
   pluginTimings?: boolean
   duplicateShebang?: boolean
   unsupportedTsconfigOption?: boolean

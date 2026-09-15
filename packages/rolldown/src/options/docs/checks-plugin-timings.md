@@ -1,4 +1,8 @@
-When enabled, Rolldown measures how long your plugin hooks run and warns when they account for a significant share of the build.
+When enabled, Rolldown measures how long your plugin hooks and option callbacks run and warns when they account for a significant share of the build.
+
+`checks.bundlerTimings` replaces `checks.pluginTimings`. The old name remains as a deprecated alias.
+Rolldown resolves the setting as `bundlerTimings ?? pluginTimings ?? true`.
+Both options control the same check. The diagnostic code remains `PLUGIN_TIMINGS`.
 
 **How it works:**
 

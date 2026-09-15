@@ -23,10 +23,12 @@ class Module {
 }
 
 /**
- * Compiler-emitted module-graph delta — pure topology (static + dynamic edges).
+ * Compiler-emitted module-graph delta — topology (static + dynamic edges).
  * `ids[0, localCount)` are the modules this payload carries; `ids[localCount, …)` are foreign edge targets.
  * `edges[i]` / `dynamicEdges[i]` are the static / dynamic-`import()` out-edges of `ids[i]`.
- * @typedef {{ ids: string[], localCount: number, edges: number[][], dynamicEdges?: number[][] }} ModuleGraphDelta
+ * `bindings[i][j]` are the export names `ids[i]` imports through `edges[i][j]`; a missing or
+ * `null` entry means the whole namespace.
+ * @typedef {{ ids: string[], localCount: number, edges: number[][], bindings?: (string[] | null)[][], dynamicEdges?: number[][] }} ModuleGraphDelta
  * @typedef {{ createModuleHotContext(moduleId: string): any, onModuleCacheRemoval(moduleId: string): void }} DevRuntimeHooks
  */
 
@@ -57,7 +59,7 @@ export class DevRuntime {
   /**
    * Static import edges from `registerGraph` — entries persist across `removeModuleCache`
    * and change only by replacement from a newer payload (last write wins).
-   * @type {Map<string, { edges: string[] }>}
+   * @type {Map<string, { edges: string[], bindings: string[][] }>}
    */
   staticImports = new Map();
   /**
@@ -116,7 +118,8 @@ export class DevRuntime {
         }
         importerSet.add(id);
       }
-      this.staticImports.set(id, { edges });
+      const bindings = edges.map((_, j) => delta.bindings?.[i]?.[j] ?? ['*']);
+      this.staticImports.set(id, { edges, bindings });
 
       // Dynamic `import()` edges are maintained in a parallel reverse index with the same
       // last-write-wins bookkeeping; `getImporters` unions the two.
@@ -168,6 +171,23 @@ export class DevRuntime {
       return [...(this.importers.get(id) ?? [])];
     }
     return [...new Set([...(this.importers.get(id) ?? []), ...dynamic])];
+  }
+
+  /**
+   * `"*"` means the whole namespace, an empty list a side-effect-only import, `undefined` no edge.
+   * @param {string} importer
+   * @param {string} id
+   * @returns {string[] | undefined}
+   */
+  getImportedBindings(importer, id) {
+    const record = this.staticImports.get(importer);
+    const j = record ? record.edges.indexOf(id) : -1;
+    const names = j === -1 ? undefined : record?.bindings[j];
+    if (!this.dynamicImports.get(importer)?.edges.includes(id)) {
+      return names;
+    }
+    if (!names) return ['*'];
+    return names.includes('*') ? names : [...names, '*'];
   }
 
   /**

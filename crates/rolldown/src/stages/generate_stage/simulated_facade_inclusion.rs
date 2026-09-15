@@ -23,7 +23,7 @@ impl GenerateStage<'_> {
   pub(super) fn narrow_namespace_stmt_to_used_symbols(
     &mut self,
     entry_module_idx: ModuleIdx,
-    used_symbol_refs: &UsedSymbolRefsBuilder,
+    used_symbol_refs_builder: &UsedSymbolRefsBuilder,
   ) {
     let runtime_module_idx = self.link_output.runtime.id();
     let wrap_kind = self.link_output.metas[entry_module_idx].wrap_kind();
@@ -40,7 +40,7 @@ impl GenerateStage<'_> {
         .retain(|item| match item {
           rolldown_common::SymbolOrMemberExprRef::Symbol(symbol_ref) => {
             // module namespace symbol requires `__exportAll` runtime helper
-            used_symbol_refs.contains(symbol_ref) || symbol_ref.owner == runtime_module_idx
+            used_symbol_refs_builder.contains(symbol_ref) || symbol_ref.owner == runtime_module_idx
           }
           rolldown_common::SymbolOrMemberExprRef::MemberExpr(_member_expr_ref) => true,
         });
@@ -53,7 +53,7 @@ impl GenerateStage<'_> {
   /// When `f` returns `true`, the `__exportAll` runtime helper is included as well.
   pub(super) fn replay_link_stage_inclusion(
     &mut self,
-    used_symbol_refs: &mut UsedSymbolRefsBuilder,
+    used_symbol_refs_builder: &mut UsedSymbolRefsBuilder,
     f: impl FnOnce(&mut IncludeContext<'_>) -> bool,
   ) {
     let (mut stmt_info_included_vec, mut module_included_vec, mut module_namespace_reason_vec) =
@@ -77,7 +77,7 @@ impl GenerateStage<'_> {
       tree_shaking: self.options.treeshake.is_some(),
       runtime_idx: self.link_output.runtime.id(),
       metas: &self.link_output.metas,
-      used_symbol_refs,
+      used_symbol_refs_builder,
       used_external_symbols: &mut self.link_output.used_external_symbols,
       constant_symbol_map: &self.link_output.global_constant_symbol_map,
       options: self.options,

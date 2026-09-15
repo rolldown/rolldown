@@ -7,6 +7,7 @@ use std::{
 };
 
 use arcstr::ArcStr;
+use itertools::Itertools;
 use oxc::ast::builder::AstBuilder;
 use oxc_traverse::traverse_mut;
 use rolldown_common::{
@@ -99,16 +100,23 @@ impl<'a, Fs: FileSystem + Clone + 'static> HmrStage<'a, Fs> {
     clients: &[ClientHmrInput<'_>],
     stamp_table: &mut HmrStampTable,
     last_build_errored: bool,
+    hot_update_hook_enabled: bool,
   ) -> BuildResult<Vec<ClientHmrUpdate>> {
     tracing::trace!(
-      "[HmrStage] starts computing HMR updates\n - changed_file_paths: {:#?}\n - clients: {:#?}",
-      changed_file_paths,
-      clients.iter().map(|c| c.client_id).collect::<Vec<_>>(),
+      changed_files = %changed_file_paths
+        .iter()
+        .map(|(path, kind)| format!("{path}:{kind}"))
+        .join(", "),
+      clients = %clients.iter().map(|client| client.client_id).join(", "),
+      "[HmrStage] starts computing HMR updates"
     );
 
     // 1. Identify changed modules — per changed file: compute the default affected set, then (if
-    // any plugin registered `hotUpdate`) let the plugin replace-chain edit it before re-fetching.
-    let hot_update_hook_registered = self.plugin_driver.has_hot_update_hook();
+    // the hook is enabled and any plugin registered `hotUpdate`) let the plugin replace-chain
+    // edit it before re-fetching. `hot_update_hook_enabled` is the `hot_update` dev option,
+    // off by default — see `DevOptions::hot_update`.
+    let hot_update_hook_registered =
+      hot_update_hook_enabled && self.plugin_driver.has_hot_update_hook();
     let mut changed_modules = FxIndexSet::default();
     // Modules a `hotUpdate` hook explicitly selected (a plugin returned a replacement set).
     // They are exempt from the unchanged-output suppression below — like `last_build_errored`,
@@ -196,11 +204,11 @@ impl<'a, Fs: FileSystem + Clone + 'static> HmrStage<'a, Fs> {
     }
 
     tracing::trace!(
-      "[HmrStage] map changed file paths to module idxs\n - changed_modules: {:#?}",
-      changed_modules
+      changed_modules = %changed_modules
         .iter()
         .map(|module_idx| self.module_table().modules[*module_idx].stable_id())
-        .collect::<Vec<_>>(),
+        .join(", "),
+      "[HmrStage] mapped changed file paths to modules"
     );
 
     // Files re-queued by an earlier failed scan (`pending_rescans`) get
@@ -307,11 +315,11 @@ impl<'a, Fs: FileSystem + Clone + 'static> HmrStage<'a, Fs> {
 
       tracing::debug!(
         target: "hmr",
-        "New added modules: {:?}",
-        new_added_modules
+        new_modules = %new_added_modules
           .iter()
           .map(|module_idx| module_loader_output.module_table.get(*module_idx).stable_id())
-          .collect::<Vec<_>>(),
+          .join(", "),
+        "added modules"
       );
 
       let plugin_driver = Arc::clone(&self.plugin_driver);
@@ -351,11 +359,11 @@ impl<'a, Fs: FileSystem + Clone + 'static> HmrStage<'a, Fs> {
     if !output_unchanged_modules.is_empty() {
       tracing::debug!(
         target: "hmr",
-        "skip modules whose rebuilt output is unchanged: {:?}",
-        output_unchanged_modules
+        unchanged_modules = %output_unchanged_modules
           .iter()
           .map(|module_idx| self.module_table().modules[*module_idx].stable_id())
-          .collect::<Vec<_>>(),
+          .join(", "),
+        "skip modules whose rebuilt output is unchanged"
       );
       changed_modules.retain(|module_idx| !output_unchanged_modules.contains(module_idx));
     }
@@ -511,7 +519,7 @@ impl<'a, Fs: FileSystem + Clone + 'static> HmrStage<'a, Fs> {
   ) -> BuildResult<HmrLazyChunkOutput> {
     tracing::debug!(
       target: "hmr",
-      "compile_lazy_entry: module_id: {:?}",
+      "compile_lazy_entry: module_id: {}",
       module_id,
     );
 
@@ -661,15 +669,9 @@ impl<'a, Fs: FileSystem + Clone + 'static> HmrStage<'a, Fs> {
       source_joiner.append_source_dyn(source);
     }
 
-    // A lazy chunk is delivery + execute-entry — no walk, no cache removals. The tail is the
-    // one uniform re-execution gate: the stub removed the proxy id from the cache, so this misses the
-    // registry and runs the fetched-template factory.
-    let entry_stable_id = self.module_table().modules[entry_module_idx].stable_id().as_str();
-    source_joiner.append_source(format!(
-      "__rolldown_runtime__.initModule({})",
-      json_escape_simd::escape(entry_stable_id)
-    ));
-
+    // Registrations only — deliberately no execute-entry tail; `requestLazy` runs the module.
+    // Executing here would run it inside the proxy's async wrapper, turning a throw from its
+    // body into a floating rejection instead of one that reaches the importer.
     let (mut code, mut map) = source_joiner.join();
 
     let lazy_patch_id = self.next_hmr_patch_id.fetch_add(1, Ordering::Relaxed);
@@ -877,7 +879,7 @@ impl<'a, Fs: FileSystem + Clone + 'static> HmrStage<'a, Fs> {
         exports: oxc::allocator::Vec::new_in(&fields.allocator),
         use_pife_for_module_wrappers,
         dependencies: FxIndexSet::default(),
-        imports: FxHashSet::default(),
+        generated_load_exports_stmts: FxHashMap::default(),
         generated_static_import_infos: FxHashMap::default(),
         re_export_all_dependencies: FxIndexSet::default(),
         generated_static_import_stmts_from_external: FxIndexMap::default(),

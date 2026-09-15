@@ -30,6 +30,7 @@ import type {
   ChunkFileNamesFunction,
   GlobalsFunction,
   ManualChunksFunction,
+  ManglePropertiesOptions,
   OutputOptions,
   PathsFunction,
   PreRenderedAsset,
@@ -357,6 +358,10 @@ const ChecksOptionsSchema = v.strictObject({
       'Whether to emit warnings when files generated have the same name with different contents',
     ),
   ),
+  moduleLevelDirective: v.pipe(
+    v.optional(v.boolean()),
+    v.description('Whether to emit warnings for module-level directives other than `use strict`'),
+  ),
   commonJsVariableInEsm: v.pipe(
     v.optional(v.boolean()),
     v.description('Whether to emit warnings when a CommonJS variable is used in an ES module'),
@@ -487,8 +492,19 @@ const MangleOptionsSchema = v.strictObject({
 }) satisfies v.GenericSchema<MangleOptions>;
 isTypeTrue<IsSchemaSubType<typeof MangleOptionsSchema, MangleOptions>>();
 
+const ManglePropertiesOptionsSchema = v.strictObject({
+  include: v.instance(RegExp),
+  exclude: v.optional(v.instance(RegExp)),
+  reserved: v.optional(v.array(v.string())),
+  quoted: v.optional(v.boolean()),
+  debug: v.optional(v.boolean()),
+  cache: v.optional(v.record(v.string(), v.union([v.string(), v.literal(false)]))),
+});
+isTypeTrue<IsSchemaSubType<typeof ManglePropertiesOptionsSchema, ManglePropertiesOptions>>();
+
 const CodegenOptionsSchema = v.strictObject({
   removeWhitespace: v.optional(v.boolean()),
+  asciiOnly: v.optional(v.boolean()),
   legalComments: v.optional(
     v.union([
       v.literal('none'),
@@ -504,6 +520,7 @@ isTypeTrue<IsSchemaSubType<typeof CodegenOptionsSchema, CodegenOptions>>();
 const MinifyOptionsSchema = v.strictObject({
   compress: v.optional(v.union([v.boolean(), CompressOptionsSchema])),
   mangle: v.optional(v.union([v.boolean(), MangleOptionsSchema])),
+  mangleProps: v.optional(ManglePropertiesOptionsSchema),
   codegen: v.optional(v.union([v.boolean(), CodegenOptionsSchema])),
 });
 isTypeTrue<IsSchemaSubType<typeof MinifyOptionsSchema, MinifyOptions>>();

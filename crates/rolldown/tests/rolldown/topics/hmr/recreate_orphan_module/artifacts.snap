@@ -115,8 +115,8 @@ __rolldown_runtime__.registerFactory("main.js", "esm", (function(__rolldown_modu
 		var __rolldown_exports__ = __rolldown_runtime__.__exportAll({});
 		__rolldown_runtime__.registerModule(__rolldown_module_id__, { exports: __rolldown_exports__ });
 		__rolldown_runtime__.initModule("parent.js");
-		const hot_main = __rolldown_runtime__.createModuleHotContext(__rolldown_module_id__);
 		var import_parent_00 = __rolldown_runtime__.loadExports("parent.js");
+		const hot_main = __rolldown_runtime__.createModuleHotContext(__rolldown_module_id__);
 	} finally {}
 }));
 
@@ -130,8 +130,8 @@ __rolldown_runtime__.registerFactory("parent.js", "esm", (function(__rolldown_mo
 		});
 		__rolldown_runtime__.registerModule(__rolldown_module_id__, { exports: __rolldown_exports__ });
 		__rolldown_runtime__.initModule("child.js");
-		const hot_parent = __rolldown_runtime__.createModuleHotContext(__rolldown_module_id__);
 		var import_child_10 = __rolldown_runtime__.loadExports("child.js");
+		const hot_parent = __rolldown_runtime__.createModuleHotContext(__rolldown_module_id__);
 		const parentValue = "parent";
 		assert.strictEqual(parentValue, "parent");
 		assert.strictEqual(import_child_10.value, "child");

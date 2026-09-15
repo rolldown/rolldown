@@ -145,16 +145,16 @@ impl<'a> GenerateStage<'a> {
   #[tracing::instrument(level = "debug", skip_all)]
   pub async fn generate(
     &mut self,
-    mut used_symbol_refs: UsedSymbolRefsBuilder,
+    mut used_symbol_refs_builder: UsedSymbolRefsBuilder,
   ) -> BuildResult<BundleOutput> {
     self.plugin_driver.render_start(self.options).await?;
-    let mut chunk_graph = self.generate_chunks(&mut used_symbol_refs).await?;
+    let mut chunk_graph = self.generate_chunks(&mut used_symbol_refs_builder).await?;
 
-    let order_state = self.finalize_chunk_plan(&mut chunk_graph, &mut used_symbol_refs)?;
+    let order_state = self.finalize_chunk_plan(&mut chunk_graph, &mut used_symbol_refs_builder)?;
 
     // Order lowering and the unused-runtime sweep have had their last chance to update liveness.
     // Sealing consumes the builder, so nothing downstream can mutate the set.
-    let used_symbol_refs = used_symbol_refs.seal();
+    let used_symbol_refs = used_symbol_refs_builder.seal();
     self.compute_retained_export_symbols(&used_symbol_refs);
 
     let mut ast_table = std::mem::take(&mut self.ast_table);

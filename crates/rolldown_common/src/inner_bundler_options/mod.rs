@@ -334,7 +334,7 @@ where
       Ok(Some(RawMinifyOptions::DeadCodeEliminationOnly))
     }
     None => Ok(None),
-    _ => unreachable!("Unexpected value for minify {:?}", deserialized),
+    _ => unreachable!("Unexpected value for minify"),
   }
 }
 

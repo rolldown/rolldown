@@ -1,13 +1,13 @@
 use arcstr::ArcStr;
 use rolldown::{Bundler, BundlerBuilder, BundlerConfig};
 use rolldown_common::{
-  BundleMode, LogLevel, NormalizedBundlerOptions, ScanMode, WatcherChangeKind,
+  BundleMode, Log, LogLevel, NormalizedBundlerOptions, ScanMode, WatcherChangeKind,
 };
 use rolldown_error::{
   BatchedBuildDiagnostic, BuildDiagnostic, BuildResult, Diagnostic, DiagnosticOptions, ResultExt,
   filter_out_disabled_diagnostics,
 };
-use rolldown_fs_watcher::{DynFsWatcher, RecursiveMode};
+use rolldown_fs_watcher::{FsWatcher, RecursiveMode};
 use rolldown_utils::{dashmap::FxDashSet, pattern_filter};
 use std::path::Path;
 use std::sync::Arc;
@@ -25,7 +25,7 @@ oxc_index::define_index_type! {
 pub struct WatchTask {
   bundler: Arc<TokioMutex<Bundler>>,
   options: Arc<NormalizedBundlerOptions>,
-  fs_watcher: std::sync::Mutex<DynFsWatcher>,
+  fs_watcher: std::sync::Mutex<FsWatcher>,
   watched_files: FxDashSet<ArcStr>,
   pub(crate) needs_rebuild: bool,
   closed: Arc<AtomicBool>,
@@ -34,7 +34,7 @@ pub struct WatchTask {
 impl WatchTask {
   pub(crate) fn new(
     config: BundlerConfig,
-    fs_watcher: DynFsWatcher,
+    fs_watcher: FsWatcher,
     closed: &Arc<AtomicBool>,
   ) -> BuildResult<Self> {
     // Validation: dev_mode not allowed with watch
@@ -213,36 +213,7 @@ impl WatchTask {
     // that throws to abort the build stops at the first failure without invoking
     // later handlers. Mirrors `handle_warnings` in the binding. See #9748.
     for (warning, rendered) in warnings.into_iter().zip(rendered) {
-      #[expect(
-        clippy::cast_possible_truncation,
-        reason = "line/column/position values are unlikely to exceed u32::MAX in practical use"
-      )]
-      let (loc, pos) = match rendered.primary_location {
-        Some(location) => (
-          Some(rolldown_common::LogLocation {
-            line: location.line as u32,
-            column: location.column as u32,
-            file: warning.id(),
-          }),
-          Some(location.utf16_position as u32),
-        ),
-        None => (None, None),
-      };
-      on_log
-        .call(
-          LogLevel::Warn,
-          rolldown_common::Log {
-            id: warning.id(),
-            exporter: warning.exporter(),
-            code: Some(warning.kind().to_string()),
-            message: rendered.message,
-            plugin: None,
-            loc,
-            pos,
-            ids: warning.ids(),
-          },
-        )
-        .await?;
+      on_log.call(LogLevel::Warn, Log::from_rendered(&warning, rendered)).await?;
     }
     Ok(())
   }
@@ -260,7 +231,7 @@ impl WatchTask {
   /// Static helper: update FS watcher with newly discovered files.
   /// Separated from `&self` to allow calling from closures during build.
   fn update_watch_files_from(
-    fs_watcher: &std::sync::Mutex<DynFsWatcher>,
+    fs_watcher: &std::sync::Mutex<FsWatcher>,
     watched_files: &FxDashSet<ArcStr>,
     options: &NormalizedBundlerOptions,
     files: &[ArcStr],

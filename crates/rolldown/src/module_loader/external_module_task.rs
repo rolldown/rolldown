@@ -35,7 +35,7 @@ impl<Fs: FileSystem> ExternalModuleTask<Fs> {
     Self { ctx, module_idx: idx, resolved_id, user_defined_entries }
   }
 
-  #[tracing::instrument(name="ExternalModuleTask::run", level = "trace", skip_all, fields(module_id = ?self.resolved_id.id))]
+  #[tracing::instrument(name="ExternalModuleTask::run", level = "trace", skip_all, fields(module_id = %self.resolved_id.id))]
   pub async fn run(self) {
     if let Err(errs) = self.run_inner().await {
       self

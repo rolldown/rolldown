@@ -1,16 +1,29 @@
-use std::{borrow::Cow, ops::Range};
+use std::{borrow::Cow, fmt, ops::Range};
 
 use crate::concat_string;
 
 /// Uses `regex` for common JavaScript patterns and falls back to `regress` for
 /// features such as backreferences and lookaround assertions.
-#[derive(Debug, Clone)]
+#[derive(Clone)]
 pub struct HybridRegex(HybridRegexInner);
 
-#[derive(Debug, Clone)]
+#[derive(Clone)]
 enum HybridRegexInner {
   Optimized(regex::Regex),
   Ecma(regress::Regex),
+}
+
+impl fmt::Debug for HybridRegex {
+  fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+    match &self.0 {
+      HybridRegexInner::Optimized(regex) => {
+        f.debug_tuple("Optimized").field(&regex.as_str()).finish()
+      }
+      // `regress::Regex`'s derived formatter walks its compiled instruction program. Apart from
+      // producing noisy output, calling it retains every instruction's formatter in release builds.
+      HybridRegexInner::Ecma(_) => f.write_str("Ecma(..)"),
+    }
+  }
 }
 
 /// An iterator over matches from the ECMAScript fallback engine.

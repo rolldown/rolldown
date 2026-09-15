@@ -51,7 +51,8 @@ pub mod bundler_options {
         ChunkingContext, ManualCodeSplittingOptions, MatchGroup, MatchGroupName, MatchGroupTest,
       },
       minify_options::{
-        MinifyOptions, RawCompressOptions, RawMangleOptions, RawMinifyOptions,
+        EnabledMinifyOptions, ManglePropertiesPattern, ManglePropertiesPatterns, MinifyOptions,
+        RawCompressOptions, RawMangleOptions, RawManglePropertiesOptions, RawMinifyOptions,
         RawMinifyOptionsDetailed,
       },
       module_type::ModuleType,
@@ -220,7 +221,7 @@ pub use crate::{
     GetLocalDb, GetLocalDbMut, SymbolRefDb, SymbolRefDbForModule, SymbolRefFlags,
   },
   types::used_external_symbols::{ExternalInteropUse, UsedExternalSymbols},
-  types::used_symbol_refs::{UsedSymbolRefs, UsedSymbolRefsBuilder},
+  types::used_symbol_refs::{UsedSymbolRefs, UsedSymbolRefsBuilder, UsedSymbolRefsView},
   types::watch::WatcherChangeKind,
   types::wrap_kind::WrapKind,
 };

@@ -1,5 +1,9 @@
 import type { BindingChunkingContext, BindingOutputOptions } from '../binding.cjs';
-import type { OutputOptions } from '../options/output-options';
+import type {
+  CodeSplittingNameFunction,
+  CodeSplittingTestFunction,
+  OutputOptions,
+} from '../options/output-options';
 import type { PluginContextData } from '../plugin/plugin-context-data';
 import { ChunkingContextImpl } from '../types/chunking-context';
 import { transformAssetSource } from './asset-source';
@@ -353,27 +357,43 @@ function bindingifyCodeSplitting(
   let advancedChunksResult: BindingOutputOptions['manualCodeSplitting'];
   if (effectiveChunksOption != null) {
     const { groups, ...restOptions } = effectiveChunksOption;
+    let chunkingContext: ChunkingContextImpl | undefined;
+    const getChunkingContext = (bindingContext: BindingChunkingContext) =>
+      (chunkingContext ??= new ChunkingContextImpl(bindingContext, pluginContextData));
     advancedChunksResult = {
       ...restOptions,
+      internalInvalidateModuleInfoCache: () => {
+        chunkingContext?.clearModuleInfoCache();
+        chunkingContext = undefined;
+      },
       groups: groups?.map((group) => {
         const { name, test, ...restGroup } = group;
         return {
           ...restGroup,
           test:
             typeof test === 'function'
-              ? measureHookCost(timings, OUTPUT_OPTIONS_OWNER, 'codeSplitting groups[].test', test)
+              ? batchTest(
+                  measureHookCost(
+                    timings,
+                    OUTPUT_OPTIONS_OWNER,
+                    'codeSplitting groups[].test',
+                    test,
+                  ),
+                )
               : test,
           // The core calls this classifier directly rather than through a plugin, so it
           // belongs to no plugin's rows — and it runs once per module, which is how it ends
           // up dominating a build.
           name:
             typeof name === 'function'
-              ? measureHookCost(
-                  timings,
-                  OUTPUT_OPTIONS_OWNER,
-                  'codeSplitting groups[].name',
-                  (id: string, ctx: BindingChunkingContext) =>
-                    name(id, new ChunkingContextImpl(ctx, pluginContextData)),
+              ? batchName(
+                  measureHookCost(
+                    timings,
+                    OUTPUT_OPTIONS_OWNER,
+                    'codeSplitting groups[].name',
+                    name,
+                  ),
+                  getChunkingContext,
                 )
               : name,
         };
@@ -384,5 +404,61 @@ function bindingifyCodeSplitting(
   return {
     inlineDynamicImports,
     advancedChunks: advancedChunksResult,
+  };
+}
+
+/**
+ * Wraps a per-id `test` in the batched shim that the binding expects.
+ *
+ * The loop runs in JS so that a group makes one napi crossing, not one per module.
+ *
+ * The result is a `Uint8Array`, which crosses as a buffer instead of one tagged value per id.
+ */
+function batchTest(test: CodeSplittingTestFunction): (ids: string[]) => Uint8Array {
+  return (ids) => {
+    const results = new Uint8Array(ids.length);
+    for (let index = 0; index < ids.length; index++) {
+      const result = test(ids[index]);
+      // napi reports the type of the array, not of the bad element, so the check runs here.
+      if (result != null && typeof result !== 'boolean') {
+        throw new TypeError(
+          `\`output.codeSplitting.groups[].test\` returned ${typeof result} for module "${
+            ids[index]
+          }", but expected a boolean, null or undefined.`,
+        );
+      }
+      results[index] = result === true ? 1 : 0;
+    }
+    return results;
+  };
+}
+
+/**
+ * This is the `name` equivalent of {@linkcode batchTest}. All groups in a chunking pass share
+ * a context so repeated module queries reuse their JavaScript values.
+ */
+function batchName(
+  name: CodeSplittingNameFunction,
+  getChunkingContext: (bindingContext: BindingChunkingContext) => ChunkingContextImpl,
+): (
+  ids: string[],
+  bindingContext: BindingChunkingContext,
+) => ReturnType<CodeSplittingNameFunction>[] {
+  return (ids, bindingContext) => {
+    const context = getChunkingContext(bindingContext);
+    const results: ReturnType<CodeSplittingNameFunction>[] = [];
+    for (let index = 0; index < ids.length; index++) {
+      const result = name(ids[index], context);
+      // napi reports the type of the array, not of the bad element, so the check runs here.
+      if (result != null && typeof result !== 'string') {
+        throw new TypeError(
+          `\`output.codeSplitting.groups[].name\` returned ${typeof result} for module "${
+            ids[index]
+          }", but expected a string, null or undefined.`,
+        );
+      }
+      results.push(result);
+    }
+    return results;
   };
 }

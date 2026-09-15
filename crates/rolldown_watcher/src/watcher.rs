@@ -9,7 +9,7 @@ use futures::future::Shared;
 use oxc_index::IndexVec;
 use rolldown::BundlerConfig;
 use rolldown_error::BuildResult;
-use rolldown_fs_watcher::FsWatcherConfig;
+use rolldown_fs_watcher::{FsWatcher, FsWatcherConfig};
 use std::future::Future;
 use std::pin::Pin;
 use std::sync::Arc;
@@ -155,8 +155,7 @@ impl Watcher {
     for (index, config) in configs.into_iter().enumerate() {
       let task_index = WatchTaskIdx::from_usize(index);
       let fs_handler = TaskFsEventHandler { task_index, tx: tx.clone() };
-      let fs_watcher =
-        rolldown_fs_watcher::create_fs_watcher(fs_handler, fs_watcher_config.clone())?;
+      let fs_watcher = FsWatcher::new(fs_handler, &fs_watcher_config)?;
       let task = WatchTask::new(config, fs_watcher, closed)?;
       tasks.push(task);
     }

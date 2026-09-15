@@ -96,8 +96,8 @@ __rolldown_runtime__.registerFactory("bar.js", "esm", (function(__rolldown_modul
 		var __rolldown_exports__ = __rolldown_runtime__.__exportAll({ bar: () => bar });
 		__rolldown_runtime__.registerModule(__rolldown_module_id__, { exports: __rolldown_exports__ });
 		__rolldown_runtime__.initModule("common.js");
-		const hot_bar = __rolldown_runtime__.createModuleHotContext(__rolldown_module_id__);
 		var import_common_00 = __rolldown_runtime__.loadExports("common.js");
+		const hot_bar = __rolldown_runtime__.createModuleHotContext(__rolldown_module_id__);
 		const bar = import_common_00.prefix + "bar";
 	} finally {}
 }));
@@ -120,8 +120,8 @@ __rolldown_runtime__.registerFactory("foo.js", "esm", (function(__rolldown_modul
 		var __rolldown_exports__ = __rolldown_runtime__.__exportAll({ foo: () => foo });
 		__rolldown_runtime__.registerModule(__rolldown_module_id__, { exports: __rolldown_exports__ });
 		__rolldown_runtime__.initModule("common.js");
-		const hot_foo = __rolldown_runtime__.createModuleHotContext(__rolldown_module_id__);
 		var import_common_20 = __rolldown_runtime__.loadExports("common.js");
+		const hot_foo = __rolldown_runtime__.createModuleHotContext(__rolldown_module_id__);
 		const foo = import_common_20.prefix + "foo";
 	} finally {}
 }));
@@ -136,12 +136,12 @@ __rolldown_runtime__.registerFactory("messenger.js", "esm", (function(__rolldown
 		});
 		__rolldown_runtime__.registerModule(__rolldown_module_id__, { exports: __rolldown_exports__ });
 		__rolldown_runtime__.initModule("foo.js");
-		__rolldown_runtime__.initModule("bar.js");
-		__rolldown_runtime__.initModule("common.js");
-		const hot_messenger = __rolldown_runtime__.createModuleHotContext(__rolldown_module_id__);
 		var import_foo_30 = __rolldown_runtime__.loadExports("foo.js");
+		__rolldown_runtime__.initModule("bar.js");
 		var import_bar_31 = __rolldown_runtime__.loadExports("bar.js");
+		__rolldown_runtime__.initModule("common.js");
 		var import_common_32 = __rolldown_runtime__.loadExports("common.js");
+		const hot_messenger = __rolldown_runtime__.createModuleHotContext(__rolldown_module_id__);
 		let msg = [
 			import_common_32.prefix,
 			import_foo_30.foo,

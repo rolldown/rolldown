@@ -342,19 +342,25 @@ one is present.
 
 ## 6. From fs event to queued task — `handle_watch_event`
 
-`handle_watch_event` (`bundle_coordinator.rs:154-194`) translates a raw
-`notify` event batch into a `FxIndexMap<PathBuf, WatcherChangeKind>`:
+`handle_watch_event` (`bundle_coordinator.rs`) translates a raw
+`notify` event batch into a `FxIndexMap<PathBuf, WatcherChangeKind>`
+via the shared `rolldown_fs_watcher::map_notify_event` helper (same
+mapping as build watch):
 
-| `notify` `EventKind`                          | `WatcherChangeKind` |
-| --------------------------------------------- | ------------------- |
-| `Create(_)`                                   | `Create`            |
-| `Modify(Name(RenameMode::From))`, `Remove(_)` | `Delete`            |
-| `Modify(_)` (other)                           | `Update`            |
-| `Modify(Metadata(_))` on macOS non-polling    | ignored             |
+| `notify` `EventKind`                          | `WatcherChangeKind`                          |
+| --------------------------------------------- | -------------------------------------------- |
+| `Create(_)`                                   | `Create`                                     |
+| `Modify(Name(RenameMode::To))`                | `Create`                                     |
+| `Modify(Name(RenameMode::Both))`              | `Delete` (`paths[0]`), `Create` (`paths[1]`) |
+| `Modify(Name(RenameMode::From))`, `Remove(_)` | `Delete`                                     |
+| `Modify(_)` (other)                           | `Update`                                     |
+| `Modify(Metadata(_))` on macOS non-polling    | ignored (FBM-only; skipped before mapping)   |
+| `Access(_)`                                   | ignored                                      |
 
 It then calls `handle_file_changes`. Note that `rolldown_dev` does no
 debouncing or Delete+Create consolidation of its own — it dispatches each
-raw watcher event batch straight through.
+raw watcher event batch straight through. A `Name(Both)` rename is split
+into `Delete`+`Create` at mapping time; that is not debounce consolidation.
 
 ---
 
@@ -557,8 +563,12 @@ Per changed file:
    that registered the file with `addWatchFile` (transform
    dependencies), in a stable order: own module first, then
    registrants sorted by stable id.
-2. **`hotUpdate` plugin chain** (dev-only) — plugins run in hook order;
-   each may replace the set. Module ids cross the hook
+2. **`hotUpdate` plugin chain** (dev-only, off by default) — runs only
+   when the `hotUpdate` dev option is `true`. It stays off until
+   file-to-module invalidation is complete (rolldown/rolldown#10714),
+   because the set the hook receives is not yet correct for query-variant
+   modules. When enabled, plugins run in hook order and each may replace
+   the set. Module ids cross the hook
    slash-normalized, in the same convention as `file`; returned ids
    with native separators still round-trip. An empty return suppresses
    this file's update. Ids the graph does not know are dropped. Lazy-compilation

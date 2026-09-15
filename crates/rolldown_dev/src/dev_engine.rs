@@ -9,7 +9,7 @@ use futures::{FutureExt, future::Shared};
 use rolldown_common::WatcherChangeKind;
 use rolldown_common::{HmrLazyChunkOutput, HmrStampTable};
 use rolldown_error::{BuildResult, ResultExt};
-use rolldown_fs_watcher::{FsWatcher, FsWatcherConfig, FsWatcherExt, NoopFsWatcher};
+use rolldown_fs_watcher::{FsWatcher, FsWatcherConfig};
 use rustc_hash::FxHashMap;
 #[cfg(feature = "testing")]
 use rustc_hash::FxHashSet;
@@ -93,6 +93,7 @@ impl DevEngine {
     });
 
     let watcher_config = FsWatcherConfig {
+      enabled: !ctx.options.disable_watcher,
       poll_interval: ctx.options.poll_interval,
       debounce_delay: ctx.options.debounce_duration,
       compare_contents_for_polling: ctx.options.compare_contents_for_polling,
@@ -102,12 +103,7 @@ impl DevEngine {
     };
 
     let event_handler = BundleCoordinator::create_watcher_event_handler(coordinator_tx.clone());
-
-    let watcher = if ctx.options.disable_watcher {
-      NoopFsWatcher::with_config(event_handler, watcher_config)?.into_dyn_fs_watcher()
-    } else {
-      rolldown_fs_watcher::create_fs_watcher(event_handler, watcher_config)?
-    };
+    let watcher = FsWatcher::new(event_handler, &watcher_config)?;
 
     let coordinator = BundleCoordinator::new(
       Arc::clone(&bundler),

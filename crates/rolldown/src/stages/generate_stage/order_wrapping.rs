@@ -53,7 +53,7 @@ pub(super) struct OrderLoweringInput<'a> {
   pub(super) export_chains: &'a FxHashMap<SymbolRef, Vec<SymbolRef>>,
   pub(super) star_reexport_records_by_imported_symbol:
     &'a FxHashMap<SymbolRef, Vec<Vec<(ModuleIdx, ImportRecordIdx)>>>,
-  pub(super) used_symbols: &'a UsedSymbolRefsBuilder,
+  pub(super) used_symbol_refs_builder: &'a UsedSymbolRefsBuilder,
   pub(super) cyclic_modules: &'a FxHashSet<ModuleIdx>,
   pub(super) tree_shaking: bool,
 }
@@ -434,7 +434,7 @@ impl GenerateStage<'_> {
     &mut self,
     chunk_graph: &mut ChunkGraph,
     analysis: &OrderAnalysis,
-    used_symbol_refs: &UsedSymbolRefsBuilder,
+    used_symbol_refs_builder: &UsedSymbolRefsBuilder,
     order_state: &mut OrderWrapState,
   ) -> bool {
     let plan = &analysis.plan;
@@ -459,7 +459,12 @@ impl GenerateStage<'_> {
     // module produce identical bit sets, so one entry module still means the routes moved
     // nothing.
     if plan.is_empty() && code_splitting_disabled && self.link_output.entries.len() <= 1 {
-      return self.apply_inert_order_wrap_plan(chunk_graph, used_symbol_refs, order_state, plan);
+      return self.apply_inert_order_wrap_plan(
+        chunk_graph,
+        used_symbol_refs_builder,
+        order_state,
+        plan,
+      );
     }
     let runtime_helper = self.esm_runtime_helper();
     let cyclic_modules = synchronous_cycle_modules(&self.link_output.module_table.modules);
@@ -474,13 +479,18 @@ impl GenerateStage<'_> {
       star_reexport_records_by_imported_symbol: &self
         .link_output
         .star_reexport_records_by_imported_symbol,
-      used_symbols: used_symbol_refs,
+      used_symbol_refs_builder,
       cyclic_modules: &cyclic_modules,
       tree_shaking: self.options.treeshake.is_some(),
     };
     let consumer_local_plan = consumer_local_reexport_plan(&input, order_state);
     if plan.is_empty() && consumer_local_plan.is_empty() {
-      return self.apply_inert_order_wrap_plan(chunk_graph, used_symbol_refs, order_state, plan);
+      return self.apply_inert_order_wrap_plan(
+        chunk_graph,
+        used_symbol_refs_builder,
+        order_state,
+        plan,
+      );
     }
 
     let mut output =
@@ -563,7 +573,8 @@ impl GenerateStage<'_> {
     // spare the query entirely when no entry could need a facade in the first place.
     let candidates = self.entry_facade_candidates(plan);
     if !candidates.is_empty() {
-      let import_edges = self.entry_facade_import_edges(chunk_graph, used_symbol_refs, order_state);
+      let import_edges =
+        self.entry_facade_import_edges(chunk_graph, used_symbol_refs_builder, order_state);
       self.create_order_wrap_entry_facades(chunk_graph, candidates, &import_edges, order_state);
       // `create_order_wrap_entry_facades` may replace a newly-created dynamic facade with a
       // call-site trigger. Its simulated namespace adds late runtime-helper demand after the
@@ -596,7 +607,7 @@ impl GenerateStage<'_> {
   fn apply_inert_order_wrap_plan(
     &self,
     chunk_graph: &mut ChunkGraph,
-    used_symbol_refs: &UsedSymbolRefsBuilder,
+    used_symbol_refs_builder: &UsedSymbolRefsBuilder,
     order_state: &mut OrderWrapState,
     plan: &OrderWrapPlan,
   ) -> bool {
@@ -604,7 +615,8 @@ impl GenerateStage<'_> {
     if candidates.is_empty() {
       return false;
     }
-    let import_edges = self.entry_facade_import_edges(chunk_graph, used_symbol_refs, order_state);
+    let import_edges =
+      self.entry_facade_import_edges(chunk_graph, used_symbol_refs_builder, order_state);
     if !self.create_order_wrap_entry_facades(chunk_graph, candidates, &import_edges, order_state) {
       return false;
     }
@@ -626,7 +638,7 @@ impl GenerateStage<'_> {
   fn entry_facade_import_edges(
     &self,
     chunk_graph: &ChunkGraph,
-    used_symbol_refs: &UsedSymbolRefsBuilder,
+    used_symbol_refs_builder: &UsedSymbolRefsBuilder,
     order_state: &OrderWrapState,
   ) -> IndexVec<ChunkIdx, FxHashSet<ChunkIdx>> {
     if self.options.code_splitting.is_disabled() {
@@ -638,7 +650,7 @@ impl GenerateStage<'_> {
       self.compute_wrapped_esm_init_metadata(&self.ast_table, chunk_graph, order_state);
     self.lowered_static_import_edges(
       chunk_graph,
-      used_symbol_refs,
+      used_symbol_refs_builder,
       order_state,
       &final_esm_init_metadata,
     )
@@ -1551,7 +1563,7 @@ pub(super) fn collect_frozen_reexport_usage(
 ) -> FrozenReexportUsage {
   let mut consumed_facades = FxHashSet::default();
   for (used_ref, chain) in input.export_chains {
-    if input.used_symbols.contains(used_ref) {
+    if input.used_symbol_refs_builder.contains(used_ref) {
       consumed_facades.extend(chain.iter().copied());
     }
   }
@@ -1583,7 +1595,7 @@ pub(super) fn collect_frozen_reexport_usage(
         // this gate exists for — is a link-time fact the provisional pass already observes.
         input.linking[imported_as_ref.owner].namespace_included
       } else {
-        input.used_symbols.contains(imported_as_ref)
+        input.used_symbol_refs_builder.contains(imported_as_ref)
           || consumed_facades.contains(imported_as_ref)
           || input.linking[root.0]
             .referenced_symbols_by_entry_point_chunk
@@ -1680,7 +1692,7 @@ fn retained_order_reexport_path(
   }
 
   let facade_is_retained = |facade_ref: SymbolRef| {
-    input.used_symbols.contains(&facade_ref)
+    input.used_symbol_refs_builder.contains(&facade_ref)
       || reexport_usage.consumed_facades.contains(&facade_ref)
   };
   (importer

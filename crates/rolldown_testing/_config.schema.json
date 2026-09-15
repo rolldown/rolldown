@@ -1444,6 +1444,12 @@
             "null"
           ]
         },
+        "moduleLevelDirective": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
         "commonJsVariableInEsm": {
           "type": [
             "boolean",
@@ -2127,6 +2133,13 @@
             {
               "type": "null"
             }
+          ]
+        },
+        "hotUpdate": {
+          "description": "Whether the `hotUpdate` plugin hook is called. Off by default until Vite supports it.",
+          "type": [
+            "boolean",
+            "null"
           ]
         }
       },

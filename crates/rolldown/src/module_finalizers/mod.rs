@@ -25,6 +25,8 @@ use rolldown_ecmascript_utils::{
   parse_injected_expression,
 };
 use rolldown_error::EmptyImportMetaKind;
+
+use crate::hmr::utils::create_request_lazy_call;
 use std::borrow::Cow;
 
 mod finalizer_context;
@@ -593,7 +595,10 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
             // Scoped symbols don't get assigned a `ChunkIdx`. There are skipped for performance reason, because they are surely
             // belong to the chunk they are declared in and won't link to other chunks.
             let symbol_name = canonical_ref.name(self.ctx.symbol_db);
-            panic!("{canonical_ref:?} {symbol_name:?} is not in any chunk, which is unexpected");
+            let module_id = self.ctx.modules[canonical_ref.owner].stable_id();
+            panic!(
+              "Symbol `{symbol_name}` in module `{module_id}` is not in any chunk, which is unexpected"
+            );
           });
           let cur_chunk_idx = self.ctx.chunk_graph.module_to_chunk[self.ctx.idx]
             .expect("This module should be in a chunk");
@@ -1706,6 +1711,15 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
     let rec = &self.ctx.module.import_records[*rec_idx];
     let importee_id = rec.resolved_module?;
 
+    // Inlining a lazy boundary would pull the module it stands for into the bundle eagerly.
+    // Leave it for `try_rewrite_import_expression`, which emits the `requestLazy` call.
+    if self.ctx.options.is_dev_mode_enabled()
+      && let Module::Normal(importee) = &self.ctx.modules[importee_id]
+      && importee.id.contains("?rolldown-lazy=1")
+    {
+      return None;
+    }
+
     if rec.meta.contains(ImportRecordMeta::DeadDynamicImport) {
       // `Promise.resolve().then(() => /* @__PURE__ */ Object.freeze({ __proto__: null }))`
       return Some(Expression::new_promise_resolve_then(
@@ -2550,9 +2564,9 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
           } else if let Some(targets) = consumer_local_targets {
             let Some(ns_name) = namespace_export_name else {
               tracing::warn!(
-                "Consumer-local dynamic entry {:?} in chunk {:?} has no namespace export.",
-                importee_idx,
-                importee_chunk_idx
+                module = %importee.stable_id,
+                chunk = importee_chunk_idx.index(),
+                "Consumer-local dynamic entry has no namespace export."
               );
               return None;
             };
@@ -2565,9 +2579,9 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
                 .and_then(|names| names.first())
               else {
                 tracing::warn!(
-                  "Consumer-local dynamic entry {:?} in chunk {:?} is missing an init-target export.",
-                  importee_idx,
-                  importee_chunk_idx
+                  module = %importee.stable_id,
+                  chunk = importee_chunk_idx.index(),
+                  "Consumer-local dynamic entry is missing an init-target export."
                 );
                 return None;
               };
@@ -2592,9 +2606,9 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
               Some(Expression::CallExpression(call_expr))
             } else {
               tracing::warn!(
-                "ESM wrapped module {:?} in chunk {:?} has wrapper but no namespace export.",
-                importee_idx,
-                importee_chunk_idx
+                module = %importee.stable_id,
+                chunk = importee_chunk_idx.index(),
+                "ESM wrapped module has wrapper but no namespace export."
               );
               None
             }
@@ -2605,11 +2619,11 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
         }
         None => {
           tracing::warn!(
-            "Merged dynamic entry module {:?} in chunk {:?} has no export name in exports_to_other_chunks. \
+            module = %importee.stable_id,
+            chunk = importee_chunk_idx.index(),
+            "Merged dynamic entry module has no export name in exports_to_other_chunks. \
             This indicates an inconsistent state in the chunk graph where the module is marked as merged \
-            but its namespace export is not properly tracked.",
-            importee_idx,
-            importee_chunk_idx
+            but its namespace export is not properly tracked."
           );
           None
         }
@@ -2664,6 +2678,16 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
       // options expression left to walk into.
       return expr.options.is_none();
     };
+
+    // Must come before the chunk lookup below, which would otherwise point the import at the
+    // proxy's own chunk — a chunk nothing fetches.
+    if self.ctx.options.is_dev_mode_enabled()
+      && let Module::Normal(importee) = &self.ctx.modules[importee_idx]
+      && importee.id.contains("?rolldown-lazy=1")
+    {
+      *node = create_request_lazy_call(&importee.id, &importee.stable_id, self);
+      return true;
+    }
 
     match &self.ctx.modules[importee_idx] {
       Module::Normal(importee) => {

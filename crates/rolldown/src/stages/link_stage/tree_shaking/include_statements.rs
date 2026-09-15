@@ -73,7 +73,7 @@ pub struct IncludeContext<'a> {
   pub inline_const_smart: bool,
   pub runtime_idx: ModuleIdx,
   pub metas: &'a LinkingMetadataVec,
-  pub used_symbol_refs: &'a mut UsedSymbolRefsBuilder,
+  pub used_symbol_refs_builder: &'a mut UsedSymbolRefsBuilder,
   pub used_external_symbols: &'a mut UsedExternalSymbols,
   pub constant_symbol_map: &'a FxHashMap<SymbolRef, ConstExportMeta>,
   pub options: &'a NormalizedBundlerOptions,
@@ -121,7 +121,7 @@ impl<'a> IncludeContext<'a> {
     is_module_included_vec: &'a mut ModuleInclusionVec,
     runtime_idx: ModuleIdx,
     metas: &'a LinkingMetadataVec,
-    used_symbol_refs: &'a mut UsedSymbolRefsBuilder,
+    used_symbol_refs_builder: &'a mut UsedSymbolRefsBuilder,
     used_external_symbols: &'a mut UsedExternalSymbols,
     constant_symbol_map: &'a FxHashMap<SymbolRef, ConstExportMeta>,
     options: &'a NormalizedBundlerOptions,
@@ -140,7 +140,7 @@ impl<'a> IncludeContext<'a> {
       inline_const_smart: options.optimization.is_inline_const_smart_mode(),
       runtime_idx,
       metas,
-      used_symbol_refs,
+      used_symbol_refs_builder,
       used_external_symbols,
       constant_symbol_map,
       options,
@@ -266,7 +266,7 @@ impl LinkStage<'_> {
         m.as_normal().map_or(IndexBitSet::default(), |_| IndexBitSet::new(stmt_infos.len()))
       })
       .collect::<IndexVec<ModuleIdx, _>>();
-    let mut used_symbol_refs = UsedSymbolRefsBuilder::default();
+    let mut used_symbol_refs_builder = UsedSymbolRefsBuilder::default();
     let mut used_external_symbols = UsedExternalSymbols::default();
     let mut is_module_included_vec: ModuleInclusionVec =
       IndexBitSet::new(self.module_table.modules.len());
@@ -293,7 +293,7 @@ impl LinkStage<'_> {
       &mut is_module_included_vec,
       self.runtime.id(),
       &self.metas,
-      &mut used_symbol_refs,
+      &mut used_symbol_refs_builder,
       &mut used_external_symbols,
       &self.global_constant_symbol_map,
       self.options,
@@ -454,7 +454,7 @@ impl LinkStage<'_> {
       &mut is_module_included_vec,
       self.runtime.id(),
       &self.metas,
-      &mut used_symbol_refs,
+      &mut used_symbol_refs_builder,
       &mut used_external_symbols,
       &self.global_constant_symbol_map,
       self.options,
@@ -465,7 +465,7 @@ impl LinkStage<'_> {
     );
     include_runtime_symbol(context, &self.runtime, depended_runtime_helper);
 
-    self.used_symbol_refs = used_symbol_refs;
+    self.used_symbol_refs_builder = used_symbol_refs_builder;
     self.used_external_symbols = used_external_symbols;
     // Store the final statement inclusion results back to metas.
     is_stmt_info_included_vec.into_iter_enumerated().for_each(|(module_idx, stmt_included_vec)| {
@@ -477,18 +477,10 @@ impl LinkStage<'_> {
     }
 
     tracing::trace!(
-      "included statements {:#?}",
-      self
-        .module_table
-        .modules
-        .iter()
-        .filter_map(Module::as_normal)
-        .map(|m| m.to_debug_normal_module_for_tree_shaking(
-          &self.stmt_infos[m.idx],
-          self.metas[m.idx].is_included,
-          &self.metas[m.idx].stmt_info_included
-        ))
-        .collect::<Vec<_>>()
+      included_modules = self.metas.iter().filter(|meta| meta.is_included).count(),
+      included_statements =
+        self.metas.iter().map(|meta| meta.stmt_info_included.bit_count()).sum::<u32>(),
+      "tree shaking inclusion ready"
     );
   }
 }
@@ -641,9 +633,13 @@ fn include_side_effectful_dependencies(ctx: &mut IncludeContext, module: &Normal
     }
   });
   tracing::trace!(
-    "{}:\n module_meta dependencies: {:#?}",
-    module.stable_id,
-    module_meta.dependencies.iter().map(|idx| { ctx.modules[*idx].id().to_string() }).collect_vec()
+    module = %module.stable_id,
+    dependencies = %module_meta
+      .dependencies
+      .iter()
+      .map(|idx| ctx.modules[*idx].id())
+      .join(", "),
+    "module dependencies"
   );
 }
 
@@ -679,7 +675,7 @@ fn handle_include_symbol(
   }
 
   // Also include the symbol that points to the canonical ref.
-  ctx.used_symbol_refs.insert(symbol_ref);
+  ctx.used_symbol_refs_builder.insert(symbol_ref);
   if ctx.modules[symbol_ref.owner].is_external() {
     ctx.used_external_symbols.insert(symbol_ref);
   }
@@ -695,7 +691,7 @@ fn handle_include_symbol(
   let is_simulated_facade_chunk =
     note_namespace_inclusion_reason(ctx, canonical_ref, include_reason);
 
-  ctx.used_symbol_refs.insert(canonical_ref);
+  ctx.used_symbol_refs_builder.insert(canonical_ref);
   if ctx.modules[canonical_ref.owner].is_external() {
     ctx.used_external_symbols.insert(canonical_ref);
     note_external_interop_use(ctx, symbol_ref, alias_holder_ref, canonical_ref);

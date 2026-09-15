@@ -991,7 +991,7 @@ impl GenerateStage<'_> {
     input_base: &ArcStr,
     module_is_assigned: &mut IndexBitSet<ModuleIdx>,
     temp_chunk_opt_graph: &ChunkOptimizationGraph,
-    used_symbol_refs: &mut UsedSymbolRefsBuilder,
+    used_symbol_refs_builder: &mut UsedSymbolRefsBuilder,
   ) {
     // Find empty dynamic entry chunks that should be merged with their target common chunks
     let (mut facade_eliminations, common_chunk_merges, emitted_chunk_groups) =
@@ -1011,12 +1011,15 @@ impl GenerateStage<'_> {
     );
 
     for elimination in &facade_eliminations {
-      self.narrow_namespace_stmt_to_used_symbols(elimination.entry_module_idx, used_symbol_refs);
+      self.narrow_namespace_stmt_to_used_symbols(
+        elimination.entry_module_idx,
+        used_symbol_refs_builder,
+      );
     }
 
     let mut runtime_dependent_chunks = FxHashSet::default();
 
-    self.replay_link_stage_inclusion(used_symbol_refs, |context| {
+    self.replay_link_stage_inclusion(used_symbol_refs_builder, |context| {
       let mut needs_export_all_helper = false;
       for elimination in &facade_eliminations {
         let FacadeChunkElimination { reason, entry_module_idx, from_chunk_idx, to_chunk_idx } =

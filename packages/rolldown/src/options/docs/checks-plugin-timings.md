@@ -10,10 +10,10 @@ The clock starts and stops **inside the JavaScript callback**, not around the ca
 
 3. **Rows**: up to 12 hooks are listed, sorted by measured time, each shown as a share of total build time with its call count. Only hooks costing at least 1 second get a line. User callbacks configured on the options rather than on a plugin — `external`, `treeshake.moduleSideEffects`, the file-name and addon callbacks, and the [`output.advancedChunks`](/reference/OutputOptions.advancedChunks) `groups[].name` classifier and `groups[].test` predicate — appear under `input options` / `output options`.
 
-   The headline figure is the wall time in which _any_ plugin callback was running, counted once however much they overlap, so it can never exceed the build. Individual rows can add up to more than it, because one callback may run inside another — `this.emitFile()` in `buildStart` invokes your `assetFileNames`, and that time belongs to both.
+   The headline figure is the wall time in which at least one plugin callback ran. Overlap counts once. The figure can be more than the build time, because `closeBundle` runs after the build clock stops. The message says so when that happens. The rows can add up to more than the headline figure, because callbacks can overlap. One callback can run inside another: `this.emitFile()` in `buildStart` runs your `assetFileNames`, and that time counts for both. Two `async` callbacks can also run at the same time.
 
 > [!IMPORTANT]
-> **Some hooks are listed without a number**, under a heading saying they are not measurable.
+> **The message lists some hooks without a time.**
 >
 > A span from callback entry to callback exit can be added to another span only if the two never overlap. A synchronous callback cannot overlap — it holds the thread until it returns. An `async` one can: it may suspend at an `await` and let another call of the same hook begin, and then both spans cover the same wall clock and adding them counts it twice. Overlap also changes what the span means — a hook that awaits Rolldown itself, via `this.resolve` or `this.load`, spends most of its span waiting for the bundler, so its elapsed time describes the bundler rather than your plugin.
 >

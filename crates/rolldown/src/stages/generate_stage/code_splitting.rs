@@ -53,7 +53,7 @@ impl GenerateStage<'_> {
   #[tracing::instrument(level = "debug", skip_all)]
   pub async fn generate_chunks(
     &mut self,
-    used_symbol_refs: &mut UsedSymbolRefsBuilder,
+    used_symbol_refs_builder: &mut UsedSymbolRefsBuilder,
   ) -> BuildResult<ChunkGraph> {
     // Count total entry points (not unique modules) to handle duplicates correctly
     let entries_len: u32 = self
@@ -65,7 +65,7 @@ impl GenerateStage<'_> {
       .try_into()
       .expect("Too many entries, u32 overflowed.");
     let mut chunk_graph = ChunkGraph::new(self.link_output.module_table.modules.len());
-    let pre_chunk_order_state = self.pre_chunk_order_state(used_symbol_refs);
+    let pre_chunk_order_state = self.pre_chunk_order_state(used_symbol_refs_builder);
     chunk_graph.chunk_table.chunks.reserve(entries_len as usize);
 
     let mut index_splitting_info: IndexSplittingInfo = oxc_index::index_vec![SplittingInfo {
@@ -170,12 +170,12 @@ impl GenerateStage<'_> {
           &mut chunk_graph,
           &mut bits_to_chunk,
           &input_base,
-          used_symbol_refs,
+          used_symbol_refs_builder,
           &pre_chunk_order_state,
         )
         .await?;
     }
-    self.merge_external_import_symbols(&chunk_graph, used_symbol_refs);
+    self.merge_external_import_symbols(&chunk_graph, used_symbol_refs_builder);
 
     chunk_graph.sort_chunk_modules(self.link_output, self.options);
 
@@ -279,7 +279,7 @@ impl GenerateStage<'_> {
   fn merge_external_import_symbols(
     &mut self,
     chunk_graph: &ChunkGraph,
-    used_symbol_refs: &UsedSymbolRefsBuilder,
+    used_symbol_refs_builder: &UsedSymbolRefsBuilder,
   ) {
     // Merge external import namespaces at chunk level.
     for symbol_set in self.link_output.external_import_namespace_merger.values() {
@@ -297,7 +297,8 @@ impl GenerateStage<'_> {
           continue;
         }
         group.sort_unstable_by_key(|item| self.link_output.module_table[item.owner].exec_order());
-        let Some(idx) = group.iter().position(|item| used_symbol_refs.contains(item)) else {
+        let Some(idx) = group.iter().position(|item| used_symbol_refs_builder.contains(item))
+        else {
           continue;
         };
         // In the extreme case, idx would eq to group.len() - 1, which means the first symbol is the only one that is used.
@@ -930,7 +931,7 @@ impl GenerateStage<'_> {
     chunk_graph: &mut ChunkGraph,
     bits_to_chunk: &mut FxHashMap<BitSet, ChunkIdx>,
     input_base: &ArcStr,
-    used_symbol_refs: &mut UsedSymbolRefsBuilder,
+    used_symbol_refs_builder: &mut UsedSymbolRefsBuilder,
     pre_chunk_order_state: &super::order_wrap_state::OrderWrapState,
   ) -> BuildResult<()> {
     // Determine which modules belong to which chunk. A module could belong to multiple chunks.
@@ -951,7 +952,7 @@ impl GenerateStage<'_> {
         entry_index.try_into().expect("Too many entries, u32 overflowed."),
         index_splitting_info,
         is_user_defined_entry,
-        used_symbol_refs,
+        used_symbol_refs_builder,
         pre_chunk_order_state,
       );
     }
@@ -980,7 +981,7 @@ impl GenerateStage<'_> {
         index_splitting_info,
         chunk_graph,
         entries_len,
-        used_symbol_refs,
+        used_symbol_refs_builder,
       );
     }
     self.extract_standalone_runtime_chunk(
@@ -1083,7 +1084,7 @@ impl GenerateStage<'_> {
         input_base,
         &mut module_is_assigned,
         &temp_chunk_graph,
-        used_symbol_refs,
+        used_symbol_refs_builder,
       );
     }
 
@@ -1146,7 +1147,7 @@ impl GenerateStage<'_> {
     entry_index: u32,
     index_splitting_info: &mut IndexSplittingInfo,
     is_user_defined_entry: bool,
-    used_symbol_refs: &UsedSymbolRefsBuilder,
+    used_symbol_refs_builder: &UsedSymbolRefsBuilder,
     pre_chunk_order_state: &super::order_wrap_state::OrderWrapState,
   ) {
     debug_assert!(
@@ -1246,7 +1247,7 @@ impl GenerateStage<'_> {
           }
           let has_live_binding =
             import_record_has_live_binding_consumer(&ctx, rec_idx, |symbol_ref| {
-              used_symbol_refs.contains(&symbol_ref)
+              used_symbol_refs_builder.contains(&symbol_ref)
             });
           if !record_is_init_obligation(
             ObligationPurpose::Project,
@@ -1266,7 +1267,7 @@ impl GenerateStage<'_> {
           let placement_targets = collect_wrapped_esm_init_targets_for_import_record(
             &ctx,
             rec_idx,
-            |symbol_ref| used_symbol_refs.contains(&symbol_ref),
+            |symbol_ref| used_symbol_refs_builder.contains(&symbol_ref),
             |_| true,
             |_| false,
           );

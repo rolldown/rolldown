@@ -24,6 +24,8 @@ allowBuilds:
   workerd: true
 
 overrides:
+  # 12.10 dropped the Node 20 prebuilds, which the CI matrix still covers
+  better-sqlite3: 12.9.0
   vitepress>vite: npm:rolldown-vite@latest
 
 catalog:

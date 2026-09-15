@@ -41,11 +41,7 @@ Everything lives in `.github/workflows/reusable-release-build.yml`, gated on a `
 
 ## Reproducing a panic locally
 
-From a release:
-
-1. Download `rolldown-binding.<platform>.node.debuginfo.tar.gz` from the release.
-2. `tar -xzf` it into the directory that holds the `.node` (`node_modules/@rolldown/binding-<platform>/`).
-3. Run the failing build with `RUST_BACKTRACE=1`.
+`docs/guide/troubleshooting.md` covers the release path, and the panic report template links to it. Keep that section in sync with the archive name and the enabled targets.
 
 A pkg.pr.new preview has no release, so its archive stays a workflow run artifact. The preview reports the released version, so find the run by PR instead:
 
@@ -69,4 +65,5 @@ A user's pasted backtrace prints absolute addresses with no module base, so it c
 
 ## Related
 
+- `../../docs/guide/troubleshooting.md` — the user-facing instructions, under `Error: "Rolldown panicked"`.
 - `../devtools/implementation.md` — the other diagnostics pipeline; it does not touch panics.

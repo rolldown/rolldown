@@ -17,7 +17,7 @@ body:
       description: |
         Please paste the full panic message you saw in the console.
 
-        The published binding is stripped, so even with `RUST_BACKTRACE=1` the backtrace carries no file or line numbers. To add them, download `rolldown-binding.<platform>.node.debuginfo.tar.gz` from the matching [release](https://github.com/rolldown/rolldown/releases), unpack it into `node_modules/@rolldown/binding-<platform>/`, and run again. Available for Linux x64 (glibc), macOS arm64 and Windows x64.
+        The published binding is stripped, so the backtrace carries no file or line numbers. [Add the debug info](https://rolldown.rs/guide/troubleshooting#panic-debug-info) and run again to get them. This works on Linux x64 (glibc), macOS arm64 and Windows x64.
       placeholder: |
         Rolldown panicked. This is a bug in Rolldown, not your code.
         thread 'tokio-runtime-worker' panicked at ...

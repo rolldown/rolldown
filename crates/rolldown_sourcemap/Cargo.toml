@@ -20,6 +20,7 @@ bench = false
 doctest = false
 
 [dependencies]
+rustc-hash = { workspace = true }
 memchr = { workspace = true }
 oxc = { workspace = true }
 oxc_sourcemap = { workspace = true }

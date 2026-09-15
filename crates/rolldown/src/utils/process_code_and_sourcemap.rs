@@ -169,7 +169,7 @@ pub fn emit_sourcemap(
           filename: map_filename.into(),
           source: source.into(),
           original_file_names: vec![],
-          names: vec![],
+          names: map.get_names().map(ToString::to_string).collect(),
         }));
       }
       SourceMapType::Inline => {

@@ -79,42 +79,110 @@ pub fn collapse_sourcemaps(sourcemap_chain: &[&oxc_sourcemap::SourceMap<'_>]) ->
     .map(|sourcemap| (*sourcemap, sourcemap.generate_lookup_table()))
     .collect();
 
-  let tokens: Box<[Token]> = last_map
-    .get_source_view_tokens()
-    .filter_map(|token| {
-      let unmapped_token =
-        || Token::new(token.get_dst_line(), token.get_dst_col(), 0, 0, None, None);
-      if token.get_source_id().is_none() {
-        return Some(unmapped_token());
-      }
+  let has_any_names = sourcemap_chain.iter().any(|m| m.get_names().next().is_some());
 
-      let mut original_token = token;
-      for (sourcemap, lookup_table) in &sourcemap_and_lookup_table {
-        let traced = sourcemap.lookup_source_view_token_approx(
-          lookup_table,
-          original_token.get_src_line(),
-          original_token.get_src_col(),
-        )?;
-        if traced.get_source_id().is_none() {
+  let (names, tokens) = if has_any_names {
+    let mut names: Vec<Cow<'static, str>> =
+      first_map.get_names().map(|n| Cow::Owned(n.to_owned())).collect();
+    let mut name_to_id: rustc_hash::FxHashMap<String, u32> = names
+      .iter()
+      .enumerate()
+      .map(|(i, n)| {
+        (n.as_ref().to_owned(), u32::try_from(i).expect("name index should fit in u32"))
+      })
+      .collect();
+
+    let tokens: Box<[Token]> = last_map
+      .get_source_view_tokens()
+      .filter_map(|token| {
+        let unmapped_token =
+          || Token::new(token.get_dst_line(), token.get_dst_col(), 0, 0, None, None);
+        if token.get_source_id().is_none() {
           return Some(unmapped_token());
         }
-        original_token = traced;
-      }
 
-      Some(Token::new(
-        token.get_dst_line(),
-        token.get_dst_col(),
-        original_token.get_src_line(),
-        original_token.get_src_col(),
-        original_token.get_source_id(),
-        original_token.get_name_id(),
-      ))
-    })
-    .collect();
+        let mut name = token.get_name_id().and_then(|id| last_map.get_name(id));
+
+        let mut original_token = token;
+        for (sourcemap, lookup_table) in &sourcemap_and_lookup_table {
+          let traced = sourcemap.lookup_source_view_token_approx(
+            lookup_table,
+            original_token.get_src_line(),
+            original_token.get_src_col(),
+          )?;
+          if traced.get_source_id().is_none() {
+            return Some(unmapped_token());
+          }
+          if let Some(traced_name) = traced.get_name_id().and_then(|id| sourcemap.get_name(id)) {
+            name = Some(traced_name);
+          }
+          original_token = traced;
+        }
+
+        let final_name_id = name.map(|n| match name_to_id.get(n) {
+          Some(id) => *id,
+          None => {
+            let id = u32::try_from(names.len()).expect("name index should fit in u32");
+            names.push(Cow::Owned(n.to_owned()));
+            name_to_id.insert(n.to_owned(), id);
+            id
+          }
+        });
+
+        Some(Token::new(
+          token.get_dst_line(),
+          token.get_dst_col(),
+          original_token.get_src_line(),
+          original_token.get_src_col(),
+          original_token.get_source_id(),
+          final_name_id,
+        ))
+      })
+      .collect();
+
+    (names, tokens)
+  } else {
+    // Fast path: none of the sourcemaps in the chain have symbol names.
+    // Avoid any name extraction, tracking, or hash map operations in the hot loop.
+    let tokens: Box<[Token]> = last_map
+      .get_source_view_tokens()
+      .filter_map(|token| {
+        let unmapped_token =
+          || Token::new(token.get_dst_line(), token.get_dst_col(), 0, 0, None, None);
+        if token.get_source_id().is_none() {
+          return Some(unmapped_token());
+        }
+
+        let mut original_token = token;
+        for (sourcemap, lookup_table) in &sourcemap_and_lookup_table {
+          let traced = sourcemap.lookup_source_view_token_approx(
+            lookup_table,
+            original_token.get_src_line(),
+            original_token.get_src_col(),
+          )?;
+          if traced.get_source_id().is_none() {
+            return Some(unmapped_token());
+          }
+          original_token = traced;
+        }
+
+        Some(Token::new(
+          token.get_dst_line(),
+          token.get_dst_col(),
+          original_token.get_src_line(),
+          original_token.get_src_col(),
+          original_token.get_source_id(),
+          original_token.get_name_id(),
+        ))
+      })
+      .collect();
+
+    (vec![], tokens)
+  };
 
   SourceMap::new(
     None,
-    first_map.get_names().map(|n| Cow::Owned(n.to_owned())).collect(),
+    names,
     None,
     first_map.get_sources().map(|s| Cow::Owned(s.to_owned())).collect(),
     first_map.get_source_contents().map(|x| x.map(|s| Cow::Owned(s.to_owned()))).collect(),
@@ -346,4 +414,64 @@ export function App() {
     Some(get_loc(original_code.find("return").unwrap(), original_code)),
     "collapsed sourcemap should map 'return' in transformed code back to original source"
   );
+}
+
+#[test]
+fn test_collapse_sourcemaps_preserves_names_from_minifier() {
+  use crate::collapse_sourcemaps;
+  use oxc::{
+    allocator::Allocator,
+    codegen::{Codegen, CodegenOptions},
+    minifier::{Minifier, MinifierOptions},
+    parser::Parser,
+    span::SourceType,
+  };
+
+  let allocator = Allocator::default();
+  let filename = "input.js";
+  let source =
+    "function greet(personName) { return `Hello, ${personName}!`; } console.log(greet(`World`));";
+  let source_type = SourceType::mjs();
+
+  // 1. Initial codegen (first map without names)
+  let parsed = Parser::new(&allocator, source, source_type).parse();
+  let ret1 = Codegen::new()
+    .with_options(CodegenOptions {
+      source_map_path: Some(filename.into()),
+      ..CodegenOptions::default()
+    })
+    .build(&parsed.program);
+  let initial_map = ret1.map.unwrap().into_owned();
+  assert!(initial_map.get_names().next().is_none());
+
+  // 2. Minify and mangle identifiers (produces names in minified_map)
+  let parsed2 = Parser::new(&allocator, &ret1.code, source_type).parse();
+  let mut program = parsed2.program;
+  let minifier = Minifier::new(MinifierOptions::default());
+  let minify_ret = minifier.minify(&allocator, &mut program);
+  let ret2 = Codegen::new()
+    .with_options(CodegenOptions {
+      source_map_path: Some(filename.into()),
+      minify: true,
+      ..CodegenOptions::default()
+    })
+    .with_scoping(minify_ret.scoping)
+    .build(&program);
+  let minified_map = ret2.map.unwrap().into_owned();
+  let minified_names: Vec<_> = minified_map.get_names().collect();
+  assert!(minified_names.contains(&"greet"));
+  assert!(minified_names.contains(&"personName"));
+
+  // 3. Collapsing should propagate names and token name_ids
+  let collapsed = collapse_sourcemaps(&[&initial_map, &minified_map]);
+  let collapsed_names: Vec<_> = collapsed.get_names().collect();
+  assert!(collapsed_names.contains(&"greet"));
+  assert!(collapsed_names.contains(&"personName"));
+
+  let named_tokens: Vec<_> = collapsed
+    .get_source_view_tokens()
+    .filter_map(|t| t.get_name_id().and_then(|id| collapsed.get_name(id)))
+    .collect();
+  assert!(named_tokens.contains(&"greet"));
+  assert!(named_tokens.contains(&"personName"));
 }

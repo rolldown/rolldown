@@ -1,0 +1,38 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+function e(e){return`Hello, ${e}!`}console.log(e(`World`)),console.log(e(`Rolldown`));
+//# sourceMappingURL=main.js.map
+```
+
+# Sourcemap Visualizer
+
+```
+- ../main.js
+(0:0) "function " --> (0:0) "function "
+(0:9) "greet(" --> (0:9) "e("
+(0:15) "personName) " --> (0:11) "e)"
+(0:27) "{\n" --> (0:13) "{"
+(1:2) "return " --> (0:14) "return"
+(1:9) "`Hello, ${" --> (0:20) "`Hello, ${"
+(1:19) "personName}" --> (0:30) "e}"
+(1:30) "!`;\n" --> (0:32) "!`"
+(2:0) "}\n" --> (0:34) "}"
+(3:0) "console." --> (0:35) "console."
+(3:8) "log(" --> (0:43) "log("
+(3:12) "greet(" --> (0:47) "e("
+(3:18) "'World'" --> (0:49) "`World`"
+(3:25) ")" --> (0:56) ")"
+(3:26) ");\n" --> (0:57) "),"
+(4:0) "console." --> (0:59) "console."
+(4:8) "log(" --> (0:67) "log("
+(4:12) "greet(" --> (0:71) "e("
+(4:18) "'Rolldown'" --> (0:73) "`Rolldown`"
+(4:28) ")" --> (0:83) ")"
+(4:29) ");\n" --> (0:84) ");\n"
+```

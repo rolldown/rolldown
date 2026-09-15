@@ -128,17 +128,25 @@ impl<'a> BuildImportAnalysisVisitor<'a> {
     // For non-destructuring: wrap the entire import().then() expression
     walk_arguments(self, &mut call_expr.arguments);
     let import_then_expr = expr.take_in(self);
-    *expr = self
-      .vite_preload_call(Argument::from(Expression::new_arrow_returning(import_then_expr, self)));
+    *expr = self.vite_preload_call(Argument::from(Expression::new_async_arrow_returning(
+      import_then_expr,
+      self,
+    )));
     true
   }
 
   /// transform `import('foo')`
-  /// to `__vitePreload(() => import('foo'),...)`
+  /// to `__vitePreload(async () => import('foo'),...)`
+  ///
+  /// The thunk is `async` so that an `await` inside the import argument -- e.g.
+  /// `import(await resolveUrl())` -- is not stranded in a non-async scope, which
+  /// would be a syntax error.
   pub fn rewrite_import_expr(&self, expr: &mut Expression<'a>) -> bool {
     let Expression::ImportExpression(_) = expr else { return false };
-    *expr = self
-      .vite_preload_call(Argument::from(Expression::new_arrow_returning(expr.take_in(self), self)));
+    *expr = self.vite_preload_call(Argument::from(Expression::new_async_arrow_returning(
+      expr.take_in(self),
+      self,
+    )));
     true
   }
 

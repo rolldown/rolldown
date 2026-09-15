@@ -10,13 +10,76 @@ const distDir = path.resolve(repoRoot, process.argv[2] ?? 'packages/browser/dist
 const entries = await readdir(distDir);
 const browserLoader = 'rolldown-binding.wasip1-browser.js';
 const browserLoaderCode = await readFile(path.join(distDir, browserLoader), 'utf8');
-if (
-  !browserLoaderCode.includes('registerCurrentThreadTaskHost') ||
-  !browserLoaderCode.includes('registerTimerHost') ||
-  !browserLoaderCode.includes('__setTimeoutHost') ||
-  !browserLoaderCode.includes('__clearTimeoutHost')
-) {
-  throw new Error('Browser WASI loader does not register its CurrentThread task and timer hosts');
+// @napi-rs/cli >= 3.10.0 installs both CurrentThread hosts from the shared
+// `@napi-rs/async-runtime` protocol package instead of emitting a
+// rolldown-authored bootstrap, so the loader's own `__setTimeoutHost` /
+// `__clearTimeoutHost` locals are gone. The browser build bundles that
+// installer into the loader, so the contract is asserted against the bundled
+// upstream code: string literals survive bundling verbatim, identifiers may be
+// renamed, hence the renaming-tolerant patterns below.
+// See internal-docs/async-runtime/implementation.md.
+const hostContractFailures = [];
+const requireLoaderMarker = (label, pattern) => {
+  if (!pattern.test(browserLoaderCode)) {
+    hostContractFailures.push(label);
+  }
+};
+// A quoted name — the form the installer reads its binding exports in — rather
+// than a bare substring, which any mention of the host anywhere would satisfy.
+const quotedName = (name) => new RegExp('([\'"`])' + name + '\\1');
+
+// The upstream installer is really in the bundle, not merely something that
+// happens to name the hosts.
+requireLoaderMarker(
+  'the @napi-rs/async-runtime installer (its realm-global registration registry key)',
+  /@napi-rs\/async-runtime\/current-thread-hosts\/v4/,
+);
+requireLoaderMarker(
+  'the @napi-rs/async-runtime binding-mismatch guard',
+  /ERR_NAPI_ASYNC_RUNTIME_BINDING_MISMATCH/,
+);
+
+// Both hosts are wired: the installer reads every binding export it needs by
+// name, so each quoted name proves that half of the contract survived.
+for (const [host, exportNames] of [
+  ['CurrentThread task host', ['registerCurrentThreadTaskHost', 'unregisterCurrentThreadTaskHost']],
+  ['timer host', ['registerTimerHost', 'unregisterTimerHost']],
+  [
+    'host registration handshake',
+    [
+      'getCurrentThreadTaskHostContractVersion',
+      'isCurrentThreadHostRegistrationActive',
+      'reserveCurrentThreadHostRegistration',
+    ],
+  ],
+]) {
+  for (const exportName of exportNames) {
+    requireLoaderMarker(`${host} binding export ${exportName}`, quotedName(exportName));
+  }
+}
+
+// The loader bootstrap runs the installer against the binding exports and
+// leaves the timer host enabled — a second argument would be the
+// `{ installTimerHost: false }` opt-out.
+requireLoaderMarker(
+  'the installer call against the binding exports with the timer host enabled',
+  /__currentThreadHostsDisposer\w*\s*=\s*[A-Za-z_$][\w$]*\(\s*__napiModule\w*\.exports\s*,?\s*\)/,
+);
+// The disposer must be captured AND evicted on teardown: a declared but never
+// called helper would leave both hosts registered against a destroyed context.
+requireLoaderMarker(
+  'the CurrentThread host disposal helper',
+  /function __disposeCurrentThreadHosts\w*\(\)/,
+);
+if ((browserLoaderCode.match(/__disposeCurrentThreadHosts\w*\(\)/g) ?? []).length < 2) {
+  hostContractFailures.push('a call to the CurrentThread host disposal helper (declaration only)');
+}
+
+if (hostContractFailures.length > 0) {
+  throw new Error(
+    `Browser WASI loader does not install its CurrentThread task and timer hosts through ` +
+      `@napi-rs/async-runtime — missing: ${hostContractFailures.join('; ')}`,
+  );
 }
 if (browserLoaderCode.includes('rolldown-binding.wasip1.cjs')) {
   throw new Error('Browser timer host unexpectedly imports the Node WASI loader');
@@ -275,7 +338,10 @@ try {
   globalThis.fetch = originalFetch;
 }
 
-console.log(`OK: browser entries register CurrentThread hosts through ${browserLoader}`);
+console.log(
+  `OK: browser entries install the CurrentThread task and timer hosts through ` +
+    `the @napi-rs/async-runtime installer bundled into ${browserLoader}`,
+);
 
 function createVirtualBundle(browserApi, hook) {
   return browserApi.rolldown({

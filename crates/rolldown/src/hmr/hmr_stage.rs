@@ -100,6 +100,7 @@ impl<'a, Fs: FileSystem + Clone + 'static> HmrStage<'a, Fs> {
     clients: &[ClientHmrInput<'_>],
     stamp_table: &mut HmrStampTable,
     last_build_errored: bool,
+    hot_update_hook_enabled: bool,
   ) -> BuildResult<Vec<ClientHmrUpdate>> {
     tracing::trace!(
       changed_files = %changed_file_paths
@@ -111,8 +112,11 @@ impl<'a, Fs: FileSystem + Clone + 'static> HmrStage<'a, Fs> {
     );
 
     // 1. Identify changed modules — per changed file: compute the default affected set, then (if
-    // any plugin registered `hotUpdate`) let the plugin replace-chain edit it before re-fetching.
-    let hot_update_hook_registered = self.plugin_driver.has_hot_update_hook();
+    // the hook is enabled and any plugin registered `hotUpdate`) let the plugin replace-chain
+    // edit it before re-fetching. `hot_update_hook_enabled` is the `hot_update` dev option,
+    // off by default — see `DevOptions::hot_update`.
+    let hot_update_hook_registered =
+      hot_update_hook_enabled && self.plugin_driver.has_hot_update_hook();
     let mut changed_modules = FxIndexSet::default();
     // Modules a `hotUpdate` hook explicitly selected (a plugin returned a replacement set).
     // They are exempt from the unchanged-output suppression below — like `last_build_errored`,
@@ -665,15 +669,9 @@ impl<'a, Fs: FileSystem + Clone + 'static> HmrStage<'a, Fs> {
       source_joiner.append_source_dyn(source);
     }
 
-    // A lazy chunk is delivery + execute-entry — no walk, no cache removals. The tail is the
-    // one uniform re-execution gate: the stub removed the proxy id from the cache, so this misses the
-    // registry and runs the fetched-template factory.
-    let entry_stable_id = self.module_table().modules[entry_module_idx].stable_id().as_str();
-    source_joiner.append_source(format!(
-      "__rolldown_runtime__.initModule({})",
-      json_escape_simd::escape(entry_stable_id)
-    ));
-
+    // Registrations only — deliberately no execute-entry tail; `requestLazy` runs the module.
+    // Executing here would run it inside the proxy's async wrapper, turning a throw from its
+    // body into a floating rejection instead of one that reaches the importer.
     let (mut code, mut map) = source_joiner.join();
 
     let lazy_patch_id = self.next_hmr_patch_id.fetch_add(1, Ordering::Relaxed);

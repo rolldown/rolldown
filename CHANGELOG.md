@@ -1,4 +1,73 @@
 
+## [1.2.8] - 2026-09-09
+
+### 🚀 Features
+
+- dev: add `hotUpdate` dev option to gate the `hotUpdate` hook (#10837) by @h-a-n-a
+- docs: add wrangler (#10821) by @mdong1909
+
+### 🐛 Bug Fixes
+
+- dev: clean stale dynamic entry references after partial scans (#10846) by @shulaoda
+- include external wildcard re-exports in `OutputChunk.imports` (#10845) by @isker
+
+### 📚 Documentation
+
+- document dynamic entry cache merging after partial scans (#10848) by @shulaoda
+
+### ⚡ Performance
+
+- cache `getModuleInfo` during code splitting (#10838) by @hyfdev
+
+### 🧪 Testing
+
+- dev: cover stale dynamic entry references after partial scans (#10847) by @shulaoda
+
+### ⚙️ Miscellaneous Tasks
+
+- deps: update dependency @napi-rs/cli to v3.9.0 (#10816) by @renovate[bot]
+- deps: update dependency rolldown-plugin-dts to v0.28.5 (#10827) by @renovate[bot]
+- deps: update dependency vite-plus to v0.3.1 (#10842) by @renovate[bot]
+- deps: upgrade oxc to 0.149.0 (#10834) by @camc314
+- deps: update rust crates (#10830) by @renovate[bot]
+- deps: update npm packages (#10832) by @renovate[bot]
+- deps: update crate-ci/typos action to v1.50.1 (#10824) by @renovate[bot]
+- deps: update test262 submodule for tests (#10836) by @rolldown-guard[bot]
+- deps: update github actions (#10831) by @renovate[bot]
+- deps: update dependency rust to v1.98.1 (#10819) by @renovate[bot]
+
+### ❤️ New Contributors
+
+* @isker made their first contribution in [#10845](https://github.com/rolldown/rolldown/pull/10845)
+
+
+## [1.2.7] - 2026-09-02
+
+### 🐛 Bug Fixes
+
+- rolldown_binding: make `PreRenderedChunk.facadeModuleId` nullable like Rollup (#10810) by @IWANABETHATGUY
+- plugin_timings: reword the warning so it does not contradict itself (#10788) by @IWANABETHATGUY
+- model a facade's host import in the fold cycle check (#10743) by @ulrichstark
+
+### 🧪 Testing
+
+- dev: add circular reexport test (#10563) by @sapphi-red
+
+### ⚙️ Miscellaneous Tasks
+
+- deps: update npm packages (#10795) by @renovate[bot]
+- deps: update rust crates (#10794) by @renovate[bot]
+- deps: update dependency rolldown-plugin-dts to v0.28.3 (#10805) by @renovate[bot]
+- renovate: disable oxc auto-updates (#10813) by @IWANABETHATGUY
+- deps: upgrade oxc to 0.148.0 (#10809) by @camc314
+- deps: update pnpm to v11.24.0 (#10803) by @renovate[bot]
+- deps: update crate-ci/typos action to v1.50.0 (#10806) by @renovate[bot]
+- deps: update test262 submodule for tests (#10808) by @rolldown-guard[bot]
+- deps: update rollup submodule for tests to v4.63.1 (#10807) by @rolldown-guard[bot]
+- deps: update crate-ci/typos action to v1.49.1 (#10796) by @renovate[bot]
+- deps: update github actions (#10749) by @renovate[bot]
+
+
 ## [1.2.6] - 2026-08-26
 
 ### 🚀 Features

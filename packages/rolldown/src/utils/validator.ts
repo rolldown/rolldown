@@ -358,6 +358,10 @@ const ChecksOptionsSchema = v.strictObject({
       'Whether to emit warnings when files generated have the same name with different contents',
     ),
   ),
+  moduleLevelDirective: v.pipe(
+    v.optional(v.boolean()),
+    v.description('Whether to emit warnings for module-level directives other than `use strict`'),
+  ),
   commonJsVariableInEsm: v.pipe(
     v.optional(v.boolean()),
     v.description('Whether to emit warnings when a CommonJS variable is used in an ES module'),
@@ -500,6 +504,7 @@ isTypeTrue<IsSchemaSubType<typeof ManglePropertiesOptionsSchema, ManglePropertie
 
 const CodegenOptionsSchema = v.strictObject({
   removeWhitespace: v.optional(v.boolean()),
+  asciiOnly: v.optional(v.boolean()),
   legalComments: v.optional(
     v.union([
       v.literal('none'),

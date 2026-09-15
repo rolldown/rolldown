@@ -355,7 +355,7 @@ pub fn enhanced_transform(
       ..Default::default()
     })
     .parse();
-  if parse_ret.panicked || !parse_ret.diagnostics.is_empty() {
+  if parse_ret.fatal_error || !parse_ret.diagnostics.is_empty() {
     append_oxc_diagnostics(parse_ret.diagnostics, &source, filename, &mut warnings, &mut errors);
     return EnhancedTransformResult::new_for_error(errors, warnings, tsconfig_file_paths);
   }

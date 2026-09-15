@@ -340,9 +340,11 @@ arm is `unreachable!()`.
    `EcmaView::rebuild_importer_sets`. The scan does this only for modules it
    produced; a cached module whose importer added/removed/re-kinded an import
    of it is refreshed here (issue #7416).
-5. **Merge entry points** — for a matching existing entry
-   point, drop `related_stmt_infos` for re-scanned modules and extend with the
-   new ones; otherwise push the new entry point.
+5. **Merge entry points** — collect every module present in the partial scan,
+   remove those modules' references from every cached dynamic entry, then merge
+   the new rows. The cleanup is global because deleting or retargeting an import
+   produces no row for the old target. Drop stale entries left without call
+   sites; the merge can re-add an unspanned import with empty `related_stmt_infos`.
 6. **Patch barrel modules** — drain
    `barrel_state.resolved_barrel_modules` and write the resolved import records
    back into the cached modules.

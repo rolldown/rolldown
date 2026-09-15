@@ -204,10 +204,10 @@ pub async fn finalize_assets(
         .iter()
         .flat_map(|importee_idx| &index_chunk_to_instances[*importee_idx])
         .map(|importee_asset_idx| index_ins_chunk_to_filename[*importee_asset_idx].clone())
-        .chain(chunk.direct_imports_from_external_modules.iter().map(|(idx, _)| {
-          link_output.module_table[*idx]
+        .chain(super::static_external_imports(chunk, &link_output.module_table).map(|idx| {
+          link_output.module_table[idx]
             .as_external()
-            .expect("direct_imports_from_external_modules should only contain external modules")
+            .expect("static external imports should only contain external modules")
             .get_file_name(resolved_paths)
         }))
         .collect();

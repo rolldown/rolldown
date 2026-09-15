@@ -21,6 +21,7 @@ pub struct ChecksOptions {
   pub unresolved_entry: Option<bool>,
   pub unresolved_import: Option<bool>,
   pub filename_conflict: Option<bool>,
+  pub module_level_directive: Option<bool>,
   pub common_js_variable_in_esm: Option<bool>,
   pub import_is_undefined: Option<bool>,
   pub empty_import_meta: Option<bool>,
@@ -69,6 +70,10 @@ impl From<ChecksOptions> for rolldown_error::EventKindSwitcher {
     flag.set(
       rolldown_error::EventKindSwitcher::FilenameConflict,
       value.filename_conflict.unwrap_or(true),
+    );
+    flag.set(
+      rolldown_error::EventKindSwitcher::ModuleLevelDirective,
+      value.module_level_directive.unwrap_or(true),
     );
     flag.set(
       rolldown_error::EventKindSwitcher::CommonJsVariableInEsm,

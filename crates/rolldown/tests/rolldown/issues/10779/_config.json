@@ -5,9 +5,5 @@
     "define": {
       "typeof window": "\"undefined\""
     }
-  },
-  "expectExecutionFailure": {
-    "reason": "define treats a function-body var as visible in a default parameter",
-    "outputContains": ["define should replace typeof window in a default parameter"]
   }
 }

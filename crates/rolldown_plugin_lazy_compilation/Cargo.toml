@@ -1,6 +1,6 @@
 [package]
 name = "rolldown_plugin_lazy_compilation"
-version = "1.2.6"
+version = "1.2.8"
 edition.workspace = true
 homepage.workspace = true
 license.workspace = true
@@ -11,7 +11,6 @@ publish = true
 
 [dependencies]
 arcstr = { workspace = true }
-oxc = { workspace = true }
 rolldown_common = { workspace = true }
 rolldown_plugin = { workspace = true }
 rolldown_utils = { workspace = true }

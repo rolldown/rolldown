@@ -403,7 +403,6 @@
  - rollup@function@invalid-top-level-await: throws for invalid top-level-await format (`INVALID_TLA_FORMAT` error expected, but got `UNSUPPORTED_FEATURE`)
  - rollup@function@load-returns-string-or-null: throws error if load returns something wacky (`BAD_LOADER` error expected, but got `InvalidArg`)
  - rollup@function@vars-with-init-in-dead-branch: handles vars with init in dead branch (#1198) (`EMPTY_BUNDLE` warning)
- - rollup@function@module-level-directive: module level directives should produce warnings (`MODULE_LEVEL_DIRECTIVE` warning)
  - rollup@function@hashing@maximum-hash-size: throws when the maximum hash size is exceeded (`VALIDATION_ERROR` error)
  - rollup@function@hashing@minimum-hash-size: throws when the maximum hash size is exceeded (`VALIDATION_ERROR` error)
  - rollup@function@hashing@length-at-non-hash: throws when configuring a length for placeholder other than "hash" (`VALIDATION_ERROR` error)

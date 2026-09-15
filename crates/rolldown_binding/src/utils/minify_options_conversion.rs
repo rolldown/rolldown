@@ -76,9 +76,11 @@ pub fn compress_options_to_napi_compress_options(
 
 pub fn codegen_options_to_napi_codegen_options(
   remove_whitespace: bool,
+  ascii_only: bool,
 ) -> oxc_minify_napi::CodegenOptions {
   oxc_minify_napi::CodegenOptions {
     remove_whitespace: Some(remove_whitespace),
+    ascii_only: Some(ascii_only),
     legal_comments: None,
   }
 }

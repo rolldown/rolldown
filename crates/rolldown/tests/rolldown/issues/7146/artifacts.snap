@@ -33,7 +33,7 @@ Object.defineProperty(exports, "default", {
 ```js
 const require_config$1 = require("./config.js");
 //#region main.js
-const assert = require("assert");
+const assert = require("assert/strict");
 const config = require_config$1.default;
 assert.deepEqual(config, { foo: 1 });
 //#endregion
@@ -73,7 +73,7 @@ export { require_config };
 import { __require } from "./_virtual/_rolldown/runtime.js";
 import { require_config } from "./config.js";
 //#region main.js
-const assert = __require("assert");
+const assert = __require("assert/strict");
 const config = require_config();
 assert.deepEqual(config, { foo: 1 });
 //#endregion

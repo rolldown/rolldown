@@ -37,6 +37,9 @@ import "./a.js";
 
 ```js
 import { t as __commonJSMin } from "./a.js";
+//#region x.js
+//#endregion
+//#region b.js
 (/* @__PURE__ */ __commonJSMin(((exports, module) => {
 	module.exports = 42;
 })))();

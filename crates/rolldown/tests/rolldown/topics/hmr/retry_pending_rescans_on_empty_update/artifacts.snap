@@ -1,0 +1,97 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## entry.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+__rolldown_runtime__.registerGraph({
+	ids: ["dep.js", "main.js"],
+	localCount: 2,
+	edges: [[], [0]],
+	dynamicEdges: [[], []]
+});
+//#region dep.js
+var dep_exports = /* @__PURE__ */ __exportAll({ value: () => "dep" });
+const dep_hot = __rolldown_runtime__.createModuleHotContext("dep.js");
+__rolldown_runtime__.registerModule("dep.js", { exports: dep_exports });
+if (dep_hot) dep_hot.accept();
+//#endregion
+//#region main.js
+var main_exports = /* @__PURE__ */ __exportAll({});
+__rolldown_runtime__.createModuleHotContext("main.js");
+__rolldown_runtime__.registerModule("main.js", { exports: main_exports });
+console.log("dep");
+//#endregion
+
+```
+
+# HMR Step 0
+
+## Errors
+
+### PARSE_ERROR
+
+```text
+[PARSE_ERROR] Expected a semicolon or an implicit semicolon after a statement, but found none
+   ╭─[ dep.js:6:8 ]
+   │
+ 6 │ invalid syntax
+   │        │ 
+   │        ╰─ 
+   │ 
+   │ Help: Try inserting a semicolon here
+───╯
+
+```
+
+# HMR Step 1
+
+## Errors
+
+### PARSE_ERROR
+
+```text
+[PARSE_ERROR] Expected a semicolon or an implicit semicolon after a statement, but found none
+   ╭─[ dep.js:6:8 ]
+   │
+ 6 │ invalid syntax
+   │        │ 
+   │        ╰─ 
+   │ 
+   │ Help: Try inserting a semicolon here
+───╯
+
+```
+
+# HMR Step 2
+
+## Code
+
+```js
+__rolldown_runtime__.registerGraph({ids:["dep.js"],localCount:1,edges:[[]],dynamicEdges:[[]]});
+//#region dep.js
+__rolldown_runtime__.registerFactory("dep.js", "esm", (function(__rolldown_module_id__) {
+	try {
+		var __rolldown_exports__ = __rolldown_runtime__.__exportAll({ value: () => value });
+		__rolldown_runtime__.registerModule(__rolldown_module_id__, { exports: __rolldown_exports__ });
+		const hot_dep = __rolldown_runtime__.createModuleHotContext(__rolldown_module_id__);
+		const value = "dep";
+		if (hot_dep) {
+			hot_dep.accept();
+		}
+	} finally {}
+}));
+
+//#endregion
+```
+
+## Meta
+
+- update type: patch
+
+### Changed Ids
+
+- dep.js

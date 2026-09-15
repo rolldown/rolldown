@@ -1,0 +1,18 @@
+{
+  "_comment": "Companion to `reexport_default_import_of_external_cjs` (https://github.com/rolldown/rolldown/issues/10069). Only cjs regressed there: iife/umd keep the external alive as a factory parameter, so their `__toESM` never went missing, and esm keeps the import syntax and needs no interop at all. This pins that the cjs fix leaves all three alone — it also walks the iife/umd renderer and the chunk deconflicter, which the fix touches. Not executed: iife/umd would need `output.globals` for a node builtin.",
+  "expectExecuted": false,
+  "config": {
+    "external": ["node:https"],
+    "format": "iife",
+    "name": "reexportDefaultImportOfExternal"
+  },
+  "configVariants": [
+    {
+      "format": "umd",
+      "name": "reexportDefaultImportOfExternal"
+    },
+    {
+      "format": "esm"
+    }
+  ]
+}

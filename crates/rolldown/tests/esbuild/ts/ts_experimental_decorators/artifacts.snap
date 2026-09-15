@@ -59,8 +59,12 @@ Foo$1 = _Foo = __decorate([
 var all_default = Foo$1;
 //#endregion
 //#region all_computed.ts
-var _ref, _ref2;
-let _mDef, _xDef, _yDef, _sDef;
+var _ref;
+var _ref2;
+let _mDef;
+let _xDef;
+let _yDef;
+let _sDef;
 var Foo = class Foo {
 	constructor() {
 		this[_mDef] = 1;

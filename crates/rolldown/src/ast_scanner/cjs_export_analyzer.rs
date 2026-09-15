@@ -1,9 +1,8 @@
-use oxc::allocator::{GetAddress, UnstableAddress};
 use oxc::ast::{
   AstKind, MemberExpressionKind,
   ast::{self, AssignmentExpression, Expression, IdentifierReference, PropertyKey},
 };
-use oxc::span::Span;
+use oxc::semantic::NodeId;
 use oxc_str::CompactStr;
 use rolldown_common::{AstScopes, EcmaModuleAstUsage};
 use rolldown_ecmascript_utils::ExpressionExt;
@@ -42,7 +41,7 @@ pub enum CommonJsAstType {
   /// `console.log(exports)`
   ExportsRead,
   EsModuleFlag,
-  Reexport(Span),
+  Reexport(NodeId),
 }
 
 impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
@@ -77,7 +76,7 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
               if call_expr
                 .arguments
                 .first()
-                .is_some_and(|arg| arg.address() == parent.address()) =>
+                .is_some_and(|arg| arg.node_id() == parent.node_id()) =>
             {
               self.check_object_define_property(call_expr)
             }
@@ -95,10 +94,7 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
         }
       },
       AstKind::CallExpression(call_expr)
-        if call_expr
-          .arguments
-          .first()
-          .is_some_and(|arg| arg.address() == ident_ref.unstable_address()) =>
+        if call_expr.arguments.first().is_some_and(|arg| arg.node_id() == ident_ref.node_id()) =>
       {
         // one scenario:
         // 1. Object.defineProperty(exports, "__esModule", { value: true });
@@ -119,9 +115,9 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
       Some(CommonJsAstType::ExportsPropWrite(prop)) if prop == "*" => {
         self.result.ast_usage.remove(EcmaModuleAstUsage::AllStaticExportPropertyAccess);
       }
-      Some(CommonJsAstType::Reexport(span)) => {
+      Some(CommonJsAstType::Reexport(node_id)) => {
         self.result.ast_usage.insert(EcmaModuleAstUsage::IsCjsReexport);
-        self.result.cjs_reexport_require_spans.push(*span);
+        self.result.cjs_reexport_require_node_ids.push(*node_id);
       }
       _ => {}
     }
@@ -181,7 +177,7 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
       .as_expression()?
       .as_string_literal()
       .is_some()
-      .then_some(CommonJsAstType::Reexport(call_expr.span))
+      .then_some(CommonJsAstType::Reexport(call_expr.node_id()))
   }
 }
 

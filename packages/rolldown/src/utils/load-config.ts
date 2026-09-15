@@ -126,18 +126,54 @@ function tryStatSync(file: string): fs.Stats | undefined {
   }
 }
 
+export type ConfigLoader = 'bundle' | 'native';
+
+export interface LoadConfigOptions {
+  /**
+   * How to load the config file.
+   * - `'bundle'` (default): bundle the config with Rolldown, then import it.
+   * - `'native'`: import the config directly, delegating TypeScript/loader
+   *   handling to the runtime. Faster, but requires runtime support.
+   *
+   * @default 'bundle'
+   */
+  configLoader?: ConfigLoader;
+}
+
+async function loadNativeConfig(resolvedPath: string): Promise<ConfigExport> {
+  const url = pathToFileURL(resolvedPath).href;
+  const { freshImport } = await import('fresh-import');
+  const freshImported = freshImport(url);
+  if (freshImported) {
+    const { result } = await freshImported;
+    return (result as { [Symbol.toStringTag]: 'Module'; default: ConfigExport }).default;
+  }
+  // Runtimes without Module-hook support (e.g. Bun/Deno)
+  const mod = await import(url + '?t=' + Date.now());
+  return mod.default;
+}
+
 /**
  * Load config from a file in a way that Rolldown does.
  *
  * @param configPath The path to the config file. If empty, it will look for `rolldown.config` with supported extensions in the current working directory.
+ * @param options Loading options. `configLoader` selects `'bundle'` (default) or `'native'`.
  * @returns The loaded config export
  *
  * @category Config
  */
-export async function loadConfig(configPath: string): Promise<ConfigExport> {
+export async function loadConfig(
+  configPath: string,
+  options: LoadConfigOptions = {},
+): Promise<ConfigExport> {
+  const configLoader = options.configLoader ?? 'bundle';
   const ext = path.extname((configPath = configPath || (await findConfigFileNameInCwd())));
 
   try {
+    if (configLoader === 'native') {
+      return await loadNativeConfig(path.resolve(configPath));
+    }
+
     if (
       SUPPORTED_JS_CONFIG_FORMATS.includes(ext) ||
       (process.env.NODE_OPTIONS?.includes('--import=tsx') &&
@@ -155,6 +191,18 @@ export async function loadConfig(configPath: string): Promise<ConfigExport> {
       );
     }
   } catch (err) {
+    if (configLoader === 'native') {
+      const isTsConfig = SUPPORTED_TS_CONFIG_FORMATS.includes(ext);
+      const tsHint =
+        isTsConfig && !process.features.typescript
+          ? ' This runtime does not natively support TypeScript config files.'
+          : '';
+      throw new Error(
+        `Failed to load the config file "${configPath}" using the "native" config loader.${tsHint} ` +
+          `Try "--configLoader bundle", or register a loader such as "--import tsx".`,
+        { cause: err },
+      );
+    }
     throw new Error('Error happened while loading config.', { cause: err });
   }
 }

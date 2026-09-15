@@ -14,8 +14,8 @@ var Foo = class {
 		this.prop2_ = null;
 		this["prop3"] = null;
 		this["prop4_"] = null;
-		this["prop5"] = null;
-		this["prop6_"] = null;
+		this[/* @__KEY__ */ "prop5"] = null;
+		this[/* @__KEY__ */ "prop6_"] = null;
 	}
 };
 __decorate([dec(1)], Foo.prototype, "prop1", void 0);

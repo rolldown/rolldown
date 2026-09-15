@@ -6,7 +6,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## main.js
 
 ```js
-//#endregion
+// HIDDEN [\0rolldown/runtime.js]
 //#region main.js
 Promise.resolve().then(() => /* @__PURE__ */ Object.freeze({ __proto__: null }));
 //#endregion

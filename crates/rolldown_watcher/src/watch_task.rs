@@ -4,10 +4,10 @@ use rolldown_common::{
   BundleMode, LogLevel, NormalizedBundlerOptions, ScanMode, WatcherChangeKind,
 };
 use rolldown_error::{
-  BatchedBuildDiagnostic, BuildDiagnostic, BuildResult, DiagnosticOptions, ResultExt,
+  BatchedBuildDiagnostic, BuildDiagnostic, BuildResult, Diagnostic, DiagnosticOptions, ResultExt,
   filter_out_disabled_diagnostics,
 };
-use rolldown_fs_watcher::{DynFsWatcher, RecursiveMode};
+use rolldown_fs_watcher::{FsWatcher, RecursiveMode};
 use rolldown_utils::{dashmap::FxDashSet, pattern_filter};
 use std::path::Path;
 use std::sync::Arc;
@@ -25,7 +25,7 @@ oxc_index::define_index_type! {
 pub struct WatchTask {
   bundler: Arc<TokioMutex<Bundler>>,
   options: Arc<NormalizedBundlerOptions>,
-  fs_watcher: std::sync::Mutex<DynFsWatcher>,
+  fs_watcher: std::sync::Mutex<FsWatcher>,
   watched_files: FxDashSet<ArcStr>,
   pub(crate) needs_rebuild: bool,
   closed: Arc<AtomicBool>,
@@ -34,7 +34,7 @@ pub struct WatchTask {
 impl WatchTask {
   pub(crate) fn new(
     config: BundlerConfig,
-    fs_watcher: DynFsWatcher,
+    fs_watcher: FsWatcher,
     closed: &Arc<AtomicBool>,
   ) -> BuildResult<Self> {
     // Validation: dev_mode not allowed with watch
@@ -93,9 +93,11 @@ impl WatchTask {
         last_bundle_handle.plugin_driver().clear();
       }
 
-      // Always clear resolver cache before each rebuild in watch mode to avoid
-      // stale resolution results from modified package.json/tsconfig/export maps.
+      // Always clear the resolver and tsconfig caches before each rebuild in
+      // watch mode to avoid stale resolution and transform results from
+      // modified package.json/tsconfig/export maps.
       bundler.clear_resolver_cache();
+      bundler.clear_transform_tsconfig_cache();
 
       // Use with_cached_bundle_experimental to register FS watches between scan and write phases.
       // This ensures changes made during render hooks (e.g. renderStart modifying a file)
@@ -189,43 +191,58 @@ impl WatchTask {
     if warnings.is_empty() || options.log_level == Some(LogLevel::Silent) {
       return Ok(());
     }
-    if let Some(on_log) = options.on_log.as_ref() {
-      for warning in filter_out_disabled_diagnostics(warnings, &options.checks) {
-        let diag = warning.to_diagnostic_with(&DiagnosticOptions { cwd: options.cwd.clone() });
-        let code = warning.kind().to_string();
-        #[expect(
-          clippy::cast_possible_truncation,
-          reason = "line/column/position values are unlikely to exceed u32::MAX in practical use"
-        )]
-        let (loc, pos) = if let Some((_file, line, column, position)) = diag.get_primary_location()
-        {
-          (
-            Some(rolldown_common::LogLocation {
-              line: line as u32,
-              column: column as u32,
-              file: warning.id(),
-            }),
-            Some(position as u32),
-          )
-        } else {
-          (None, None)
-        };
-        on_log
-          .call(
-            LogLevel::Warn,
-            rolldown_common::Log {
-              id: warning.id(),
-              exporter: warning.exporter(),
-              code: Some(code),
-              message: diag.to_color_string(),
-              plugin: None,
-              loc,
-              pos,
-              ids: warning.ids(),
-            },
-          )
-          .await?;
-      }
+    let Some(on_log) = options.on_log.as_ref() else {
+      return Ok(());
+    };
+
+    let warnings: Vec<BuildDiagnostic> =
+      filter_out_disabled_diagnostics(warnings, &options.checks).collect();
+    if warnings.is_empty() {
+      return Ok(());
+    }
+
+    // Render all warnings through the batch API so the per-source line index /
+    // ariadne `Source` is built once and shared, rather than rebuilt for every
+    // warning (O(N^2) for many warnings in one large file, see #9748).
+    let diagnostic_options = DiagnosticOptions { cwd: options.cwd.clone() };
+    let diagnostics: Vec<Diagnostic> =
+      warnings.iter().map(|warning| warning.to_diagnostic_with(&diagnostic_options)).collect();
+    let rendered = Diagnostic::render_batch(&diagnostics, true);
+
+    // Dispatch sequentially, awaiting each callback before the next, so a handler
+    // that throws to abort the build stops at the first failure without invoking
+    // later handlers. Mirrors `handle_warnings` in the binding. See #9748.
+    for (warning, rendered) in warnings.into_iter().zip(rendered) {
+      #[expect(
+        clippy::cast_possible_truncation,
+        reason = "line/column/position values are unlikely to exceed u32::MAX in practical use"
+      )]
+      let (loc, pos) = match rendered.primary_location {
+        Some(location) => (
+          Some(rolldown_common::LogLocation {
+            line: location.line as u32,
+            column: location.column as u32,
+            file: warning.id(),
+          }),
+          Some(location.utf16_position as u32),
+        ),
+        None => (None, None),
+      };
+      on_log
+        .call(
+          LogLevel::Warn,
+          rolldown_common::Log {
+            id: warning.id(),
+            exporter: warning.exporter(),
+            code: Some(warning.kind().to_string()),
+            message: rendered.message,
+            plugin: None,
+            loc,
+            pos,
+            ids: warning.ids(),
+          },
+        )
+        .await?;
     }
     Ok(())
   }
@@ -243,7 +260,7 @@ impl WatchTask {
   /// Static helper: update FS watcher with newly discovered files.
   /// Separated from `&self` to allow calling from closures during build.
   fn update_watch_files_from(
-    fs_watcher: &std::sync::Mutex<DynFsWatcher>,
+    fs_watcher: &std::sync::Mutex<FsWatcher>,
     watched_files: &FxDashSet<ArcStr>,
     options: &NormalizedBundlerOptions,
     files: &[ArcStr],

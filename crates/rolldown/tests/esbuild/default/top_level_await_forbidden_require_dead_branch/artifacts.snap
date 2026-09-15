@@ -16,12 +16,14 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 (function() {
-	var __esmMin = (fn, res) => () => (fn && (res = fn(fn = 0)), res);
-	var __commonJSMin = (cb, mod) => () => (mod || (cb((mod = { exports: {} }).exports, mod), cb = null), mod.exports);
-	//#endregion
+	// HIDDEN [\0rolldown/runtime.js]
 	//#region c.js
 	var require_c = /* @__PURE__ */ __commonJSMin((() => {}));
+	//#endregion
+	//#region b.js
 	var init_b = __esmMin((() => {}));
+	//#endregion
+	//#region a.js
 	var init_a = __esmMin((() => {}));
 	//#endregion
 	//#region entry.js

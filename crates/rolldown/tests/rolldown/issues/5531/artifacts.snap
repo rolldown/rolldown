@@ -24,6 +24,8 @@ var require_leaflet_toolbar = /* @__PURE__ */ __commonJSMin(((exports, module) =
 	global.bar = global.L.foo;
 	module.exports = bar;
 }));
+//#endregion
+//#region lib.js
 require_leaflet();
 require_leaflet_toolbar();
 //#endregion

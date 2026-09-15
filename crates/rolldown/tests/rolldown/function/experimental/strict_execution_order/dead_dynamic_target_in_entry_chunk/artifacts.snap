@@ -1,0 +1,78 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## b.js
+
+```js
+import { t as __esmMin } from "./rolldown-runtime.js";
+//#region b.js
+function init_b() {
+	return (init_b = __esmMin((() => {
+		Promise.resolve().then(() => /* @__PURE__ */ Object.freeze({ __proto__: null }));
+		console.log("B");
+	})))();
+}
+//#endregion
+init_b();
+
+```
+
+## e.js
+
+```js
+import { t as __esmMin } from "./rolldown-runtime.js";
+//#region t.js
+var t;
+function init_t() {
+	return (init_t = __esmMin((() => {
+		t = String(globalThis.__t ?? "t");
+	})))();
+}
+//#endregion
+//#region e.js
+function init_e() {
+	return (init_e = __esmMin((() => {
+		init_t();
+		console.log("E", t);
+	})))();
+}
+//#endregion
+init_e();
+
+```
+
+## rolldown-runtime.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+export { __esmMin as t };
+
+```
+
+# Variant: on-demand: [on_demand_wrapping: true]
+
+## Assets
+
+### b.js
+
+```js
+//#region b.js
+Promise.resolve().then(() => /* @__PURE__ */ Object.freeze({ __proto__: null }));
+console.log("B");
+//#endregion
+
+```
+
+### e.js
+
+```js
+//#region t.js
+const t = String(globalThis.__t ?? "t");
+//#endregion
+//#region e.js
+console.log("E", t);
+//#endregion
+
+```

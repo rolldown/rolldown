@@ -1,0 +1,43 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## computed_lib.js
+
+```js
+//#region computed_lib.js
+const a = "a";
+const b = "b";
+//#endregion
+export { a, b };
+
+```
+
+## main.js
+
+```js
+//#region main.js
+const k = globalThis.k;
+import("./computed_lib.js").then((ns) => {
+	const { [k]: x } = ns;
+	console.log(x);
+});
+let m = await import("./reassigned_lib.js");
+m = { a: 1 };
+const { a } = m;
+console.log(a);
+//#endregion
+
+```
+
+## reassigned_lib.js
+
+```js
+//#region reassigned_lib.js
+const a = "a";
+const b = "b";
+//#endregion
+export { a, b };
+
+```

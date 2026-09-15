@@ -29,7 +29,7 @@ impl WatcherState {
   /// Handle a batch of file change events
   ///
   /// Returns the new state after processing the file changes.
-  /// See "Kind Consolidation" in `meta/design/watch-mode.md` for dedup rules.
+  /// See "Kind Consolidation" in `internal-docs/watch-mode/implementation.md` for dedup rules.
   #[must_use]
   pub fn on_file_changes(self, entries: Vec<FileChangeEvent>, debounce_duration: Duration) -> Self {
     if entries.is_empty() {
@@ -121,7 +121,7 @@ impl WatcherState {
 
 /// Merge a new change kind into the accumulated changes for a path.
 ///
-/// See "Kind Consolidation" in `meta/design/watch-mode.md` for the full rule table.
+/// See "Kind Consolidation" in `internal-docs/watch-mode/implementation.md` for the full rule table.
 fn merge_change_kind(
   changes: &mut FxIndexMap<String, WatcherChangeKind>,
   path: String,

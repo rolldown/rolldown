@@ -7,12 +7,12 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```text
 [IMPORT_IS_UNDEFINED] Import `foo` will always be undefined because there is no matching export in 'bar.js'
-   ╭─[ entry.js:7:14 ]
-   │
- 7 │ assert.equal(ns.foo, undefined)
-   │              ───┬──  
-   │                 ╰──── 
-───╯
+    ╭─[ entry.js:13:14 ]
+    │
+ 13 │ assert.equal(ns.foo, undefined)
+    │              ───┬──  
+    │                 ╰──── 
+────╯
 
 ```
 
@@ -21,16 +21,13 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## entry.js
 
 ```js
-import assert from "node:assert";
+import assert from "node:assert/strict";
 // HIDDEN [\0rolldown/runtime.js]
 //#region bar.js
 var bar_exports = /* @__PURE__ */ __exportAll({ x: () => 123 });
 //#endregion
 //#region entry.js
-assert.deepEqual(bar_exports, {
-	[Symbol.toStringTag]: "Module",
-	x: 123
-});
+assert.deepEqual(bar_exports, Object.defineProperty({ x: 123 }, Symbol.toStringTag, { value: "Module" }));
 assert.equal(void 0, void 0);
 //#endregion
 

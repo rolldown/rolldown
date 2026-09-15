@@ -3,8 +3,12 @@ import {
   type BindingClientHmrUpdate,
   BindingDevEngine,
   type BindingDevOptions,
+  type BindingLazyChunkOutput,
+  type BindingModuleInfo,
   BindingRebuildStrategy,
   type BindingResult,
+  shutdownAsyncRuntime,
+  startAsyncRuntime,
 } from '../../binding.cjs';
 import type { InputOptions } from '../../options/input-options';
 import type { OutputOptions } from '../../options/output-options';
@@ -15,9 +19,51 @@ import { normalizedStringOrRegex } from '../../utils/normalize-string-or-regex';
 import { transformToRollupOutput } from '../../utils/transform-to-rollup-output';
 import type { DevOptions } from './dev-options';
 
+/**
+ * The part of the binding engine the module graph reads from.
+ *
+ * Typed structurally instead of as `BindingDevEngine`: a public constructor
+ * parameter type is emitted into the public dts, and naming the binding class
+ * there would pull the whole binding type chain into the public surface.
+ */
+interface ModuleGraphSource {
+  getModuleInfo(moduleId: string): BindingModuleInfo | null;
+  getModuleIds(): Array<string>;
+}
+
+/** Read-only view over the engine's module graph, kept current across rebuilds. */
+export class DevEngineModuleGraph {
+  #inner: ModuleGraphSource;
+
+  constructor(inner: ModuleGraphSource) {
+    this.#inner = inner;
+  }
+
+  /**
+   * Get additional information about the module in question.
+   *
+   * @returns Module information for that module. `null` if the module could not be found.
+   */
+  getModuleInfo(moduleId: string): BindingModuleInfo | null {
+    return this.#inner.getModuleInfo(moduleId) ?? null;
+  }
+
+  /**
+   * Get all module ids in the current module graph.
+   *
+   * @returns An array of module ids.
+   */
+  getModuleIds(): string[] {
+    return this.#inner.getModuleIds();
+  }
+}
+
 export class DevEngine {
   #inner: BindingDevEngine;
   #cachedBuildFinishPromise: Promise<void> | null = null;
+  #asyncRuntimeReleased = false;
+
+  readonly moduleGraph: DevEngineModuleGraph;
 
   static async create(
     inputOptions: InputOptions,
@@ -55,17 +101,25 @@ export class DevEngine {
         }
       : undefined;
 
+    const userOnAdditionalAssets = devOptions.onAdditionalAssets;
+    const bindingOnAdditionalAssets: BindingDevOptions['onAdditionalAssets'] =
+      userOnAdditionalAssets
+        ? function (output) {
+            userOnAdditionalAssets(transformToRollupOutput(output));
+          }
+        : undefined;
+
     const bindingDevOptions: BindingDevOptions = {
       onHmrUpdates: bindingOnHmrUpdates,
       onOutput: bindingOnOutput,
+      onAdditionalAssets: bindingOnAdditionalAssets,
       rebuildStrategy: devOptions.rebuildStrategy
         ? devOptions.rebuildStrategy === 'always'
           ? BindingRebuildStrategy.Always
-          : devOptions.rebuildStrategy === 'auto'
-            ? BindingRebuildStrategy.Auto
-            : BindingRebuildStrategy.Never
+          : BindingRebuildStrategy.Never
         : undefined,
       watch: devOptions.watch && {
+        enabled: devOptions.watch.enabled,
         skipWrite: devOptions.watch.skipWrite,
         usePolling: devOptions.watch.usePolling,
         pollInterval: devOptions.watch.pollInterval,
@@ -76,15 +130,19 @@ export class DevEngine {
         include: normalizedStringOrRegex(devOptions.watch.include),
         exclude: normalizedStringOrRegex(devOptions.watch.exclude),
       },
+      hotUpdate: devOptions.hotUpdate,
     };
 
     const inner = new BindingDevEngine(options.bundlerOptions, bindingDevOptions);
+
+    startAsyncRuntime();
 
     return new DevEngine(inner);
   }
 
   private constructor(inner: BindingDevEngine) {
     this.#inner = inner;
+    this.moduleGraph = new DevEngineModuleGraph(inner);
   }
 
   async run(): Promise<void> {
@@ -114,12 +172,20 @@ export class DevEngine {
     this.#inner.triggerFullBuild();
   }
 
-  async invalidate(file: string, firstInvalidatedBy?: string): Promise<BindingClientHmrUpdate[]> {
-    return unwrapBindingResult(await this.#inner.invalidate(file, firstInvalidatedBy));
+  /**
+   * Client-connect signal (the clientId hello): creates the per-client session
+   * with an empty ship map. Reconnects arrive as fresh clientIds.
+   */
+  async registerClient(clientId: string): Promise<void> {
+    await this.#inner.registerClient(clientId);
   }
 
-  async registerModules(clientId: string, modules: string[]): Promise<void> {
-    await this.#inner.registerModules(clientId, modules);
+  /**
+   * Delivery notification from the serving middleware: the response for
+   * `filename` completed, so record its modules as shipped to that client.
+   */
+  async notifyPayloadDelivered(filename: string): Promise<void> {
+    await this.#inner.notifyPayloadDelivered(filename);
   }
 
   async removeClient(clientId: string): Promise<void> {
@@ -127,7 +193,16 @@ export class DevEngine {
   }
 
   async close(): Promise<void> {
-    await this.#inner.close();
+    // Claim the release before the first await so a second `close` cannot release twice.
+    const shouldRelease = !this.#asyncRuntimeReleased;
+    this.#asyncRuntimeReleased = true;
+    try {
+      await this.#inner.close();
+    } finally {
+      if (shouldRelease) {
+        shutdownAsyncRuntime();
+      }
+    }
   }
 
   /**
@@ -139,9 +214,10 @@ export class DevEngine {
    *
    * @param moduleId - The absolute file path of the module to compile
    * @param clientId - The client ID requesting this compilation
-   * @returns The compiled JavaScript code as a string (HMR patch format)
+   * @returns The compiled chunk: its code plus the filename whose delivery the
+   * serving middleware reports via {@link notifyPayloadDelivered}
    */
-  async compileEntry(moduleId: string, clientId: string): Promise<string> {
+  async compileEntry(moduleId: string, clientId: string): Promise<BindingLazyChunkOutput> {
     return this.#inner.compileEntry(moduleId, clientId);
   }
 }

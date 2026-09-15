@@ -1,7 +1,7 @@
 import crypto from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
-import type { RolldownWatcher, WatchOptions } from 'rolldown';
+import type { ModuleInfo, RolldownWatcher, WatchOptions } from 'rolldown';
 import { rolldown, watch as _watch } from 'rolldown';
 import { sleep } from 'rolldown-tests/utils';
 import { test, vi } from 'vitest';
@@ -173,6 +173,65 @@ test.concurrent(
     fs.writeFileSync(input, 'console.log(3)');
     // The watcher is closed, so the output file should not be updated
     await expect.poll(() => fs.readFileSync(output, 'utf-8')).toContain('console.log(1)');
+  },
+);
+
+// https://github.com/rolldown/rolldown/issues/9462
+test.concurrent(
+  'watcher.close() can be awaited inside an event callback',
+  { retry: TEST_RETRY, timeout: TEST_TIMEOUT },
+  async ({ task, expect, onTestFinished }) => {
+    const retryCount = task.result?.retryCount ?? 0;
+    const { input, output, dir } = createTestInputAndOutput('watch-close-inside-event', retryCount);
+    onTestFinished(() => {
+      if (!process.env.CI) {
+        fs.rmSync(dir, { recursive: true, force: true });
+      }
+    });
+
+    const closeWatcherFn = vi.fn();
+    const watcher = watch({
+      input,
+      output: { file: output },
+      plugins: [
+        {
+          name: 'test closeWatcher',
+          async closeWatcher() {
+            await sleep(10);
+            closeWatcherFn();
+          },
+        },
+      ],
+    });
+
+    const closeFn = vi.fn();
+    watcher.on('close', async () => {
+      // Closing again from the close listener must remain re-entrant as well.
+      await watcher.close();
+      closeFn();
+    });
+
+    const events: string[] = [];
+    await new Promise<void>((resolve, reject) => {
+      watcher.on('event', async (event) => {
+        events.push(event.code);
+        if (event.code !== 'BUNDLE_END') return;
+
+        try {
+          await event.result.close();
+          await watcher.close();
+
+          // close() must not resolve after merely queueing the request. All cleanup and the close
+          // event are complete before its promise settles.
+          expect(closeWatcherFn).toHaveBeenCalledTimes(1);
+          expect(closeFn).toHaveBeenCalledTimes(1);
+          expect(events).not.toContain('END');
+          resolve();
+        } catch (error) {
+          reject(error);
+        }
+      });
+    });
   },
 );
 
@@ -551,6 +610,59 @@ console.log(a + 1000)
 
     await waitBuildFinished(watcher);
     expect(fs.readdirSync(path.join(cwd, 'dist'))).toHaveLength(1);
+  },
+);
+
+test.concurrent(
+  'chunking module-info cache refreshes incoming edges in incremental builds',
+  { retry: TEST_RETRY, timeout: TEST_TIMEOUT },
+  async ({ task, expect, onTestFinished }) => {
+    const { dir: cwd } = createTestWithMultiFiles(
+      'chunking-module-info-cache',
+      task.result?.retryCount ?? 0,
+      {
+        'main.js': `import './dep.js'; console.log('main')`,
+        'dep.js': `console.log('dep')`,
+      },
+    );
+    const main = path.join(cwd, 'main.js');
+    const dep = path.join(cwd, 'dep.js');
+    let latestInfo: ModuleInfo | undefined;
+    const watcher = watch({
+      cwd,
+      input: 'main.js',
+      experimental: { incrementalBuild: true },
+      output: {
+        codeSplitting: {
+          groups: [
+            {
+              name(_id, context) {
+                latestInfo = context.getModuleInfo(dep)!;
+                expect(context.getModuleInfo(dep)).toBe(latestInfo);
+                return null;
+              },
+            },
+          ],
+        },
+      },
+    });
+    onTestFinished(async () => {
+      await watcher.close();
+      if (!process.env.CI) {
+        fs.rmSync(cwd, { recursive: true, force: true });
+      }
+    });
+    await waitBuildFinished(watcher);
+    const firstInfo = latestInfo!;
+    expect(firstInfo.importers).toEqual([main]);
+    expect(firstInfo.dynamicImporters).toEqual([]);
+
+    watcher.clear('event');
+    await editFile(main, `import('./dep.js'); console.log('main')`);
+    await waitBuildFinished(watcher);
+    expect(latestInfo === firstInfo).toBe(false);
+    expect(latestInfo!.importers).toEqual([]);
+    expect(latestInfo!.dynamicImporters).toEqual([main]);
   },
 );
 
@@ -1366,6 +1478,97 @@ async function waitBuildFinished(watcher: RolldownWatcher, updateFn?: () => void
     updateFn && updateFn();
   });
 }
+
+// https://github.com/rolldown/rolldown/issues/9598
+test.concurrent(
+  'rebuild when tsconfig changes (auto-discovery)',
+  { retry: TEST_RETRY, timeout: TEST_TIMEOUT },
+  async ({ task, expect, onTestFinished }) => {
+    const retryCount = task.result?.retryCount ?? 0;
+    const { dir } = createTestWithMultiFiles('watch-tsconfig-auto', retryCount, {
+      'main.ts': 'export class Foo { bar = 1 }',
+      'tsconfig.json': JSON.stringify({
+        compilerOptions: { target: 'ESNext', useDefineForClassFields: false },
+      }),
+    });
+    onTestFinished(() => {
+      if (!process.env.CI) {
+        fs.rmSync(dir, { recursive: true, force: true });
+      }
+    });
+    const output = path.join(dir, 'dist', 'main.js');
+
+    const watcher = watch({
+      input: path.join(dir, 'main.ts'),
+      cwd: dir,
+      tsconfig: true,
+      output: { file: output },
+    });
+
+    try {
+      await waitBuildFinished(watcher);
+      // useDefineForClassFields: false compiles the field to a constructor assignment
+      expect(fs.readFileSync(output, 'utf-8')).toContain('this.bar = 1');
+
+      // Changing only the tsconfig must trigger a rebuild that uses the new options
+      await editFile(
+        path.join(dir, 'tsconfig.json'),
+        JSON.stringify({
+          compilerOptions: { target: 'ESNext', useDefineForClassFields: true },
+        }),
+      );
+      // useDefineForClassFields: true keeps the field declaration in the class body
+      await expect.poll(() => fs.readFileSync(output, 'utf-8')).not.toContain('this.bar = 1');
+      expect(fs.readFileSync(output, 'utf-8')).toContain('bar = 1');
+    } finally {
+      await watcher.close();
+    }
+  },
+);
+
+// https://github.com/rolldown/rolldown/issues/9598
+test.concurrent(
+  'rebuild when tsconfig changes (manual path)',
+  { retry: TEST_RETRY, timeout: TEST_TIMEOUT },
+  async ({ task, expect, onTestFinished }) => {
+    const retryCount = task.result?.retryCount ?? 0;
+    const { dir } = createTestWithMultiFiles('watch-tsconfig-manual', retryCount, {
+      'main.ts': 'export class Foo { bar = 1 }',
+      'tsconfig.build.json': JSON.stringify({
+        compilerOptions: { target: 'ESNext', useDefineForClassFields: false },
+      }),
+    });
+    onTestFinished(() => {
+      if (!process.env.CI) {
+        fs.rmSync(dir, { recursive: true, force: true });
+      }
+    });
+    const output = path.join(dir, 'dist', 'main.js');
+
+    const watcher = watch({
+      input: path.join(dir, 'main.ts'),
+      cwd: dir,
+      tsconfig: './tsconfig.build.json',
+      output: { file: output },
+    });
+
+    try {
+      await waitBuildFinished(watcher);
+      expect(fs.readFileSync(output, 'utf-8')).toContain('this.bar = 1');
+
+      await editFile(
+        path.join(dir, 'tsconfig.build.json'),
+        JSON.stringify({
+          compilerOptions: { target: 'ESNext', useDefineForClassFields: true },
+        }),
+      );
+      await expect.poll(() => fs.readFileSync(output, 'utf-8')).not.toContain('this.bar = 1');
+      expect(fs.readFileSync(output, 'utf-8')).toContain('bar = 1');
+    } finally {
+      await watcher.close();
+    }
+  },
+);
 
 // https://github.com/rolldown/rolldown/issues/8937
 test.concurrent(

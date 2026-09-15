@@ -50,6 +50,8 @@ var require_designer = /* @__PURE__ */ __commonJSMin(((exports, module) => {
 		GC.Spread.Sheets.Designer = GC.Spread.Sheets.Designer || {};
 	});
 }));
+//#endregion
+//#region noop.js
 require_resource();
 require_designer();
 //#endregion

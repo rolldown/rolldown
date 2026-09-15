@@ -42,7 +42,7 @@ export function rewriteRolldown(code: string, config: RewriteConfig) {
       },
     },
     ImportDeclaration(path) {
-      let sourceList = ['assert', 'node:assert'];
+      let sourceList = ['assert', 'assert/strict', 'node:assert', 'node:assert/strict'];
       let node = path.node as acorn.ImportDeclaration;
       if (node.source.value && sourceList.includes(node.source.value.toString())) {
         path.remove();

@@ -1,6 +1,6 @@
 {
   "config": {
-    "manualCodeSplitting": {
+    "codeSplitting": {
       "minSize": 1024,
       "groups": [
         {

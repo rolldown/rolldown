@@ -13,6 +13,10 @@
 // }),
 // Looks redundant
 #![allow(clippy::missing_transmute_annotations)]
+// NAPI-RS requires `std::collections::HashMap`/`HashSet` to generate the TypeScript definitions,
+// so the whole binding crate opts out of the `FxHashMap`/`FxHashSet` type ban (the hasher is
+// already `FxBuildHasher` at every use site).
+#![allow(clippy::disallowed_types)]
 
 #[cfg(all(target_family = "wasm", tokio_unstable))]
 use std::sync::{
@@ -25,10 +29,24 @@ use napi_derive::napi;
 #[cfg(all(
   not(target_family = "wasm"),
   not(feature = "default_global_allocator"),
-  not(target_env = "ohos")
+  not(target_env = "ohos"),
+  not(feature = "tracking_allocator")
 ))]
 #[global_allocator]
 static ALLOC: mimalloc_safe::MiMalloc = mimalloc_safe::MiMalloc;
+
+// Same mimalloc, wrapped with allocation counters. The counters are read
+// through `getNativeMemoryStats()` in `native_memory.rs`; the cfg there must
+// stay in sync with this one.
+#[cfg(all(
+  not(target_family = "wasm"),
+  not(feature = "default_global_allocator"),
+  not(target_env = "ohos"),
+  feature = "tracking_allocator"
+))]
+#[global_allocator]
+static ALLOC: rolldown_tracking_allocator::TrackingAllocator =
+  rolldown_tracking_allocator::TrackingAllocator;
 
 pub mod binding_bundler;
 pub mod binding_dev_engine;
@@ -36,6 +54,7 @@ pub mod binding_dev_options;
 pub mod binding_watcher_bundler;
 pub mod classic_bundler;
 mod generated;
+pub mod native_memory;
 pub mod options;
 pub mod parallel_js_plugin_registry;
 pub mod transform;
@@ -49,11 +68,18 @@ pub mod worker_manager;
 pub use oxc_parser_napi;
 pub use oxc_resolver_napi;
 
+/// Number of live holders of the shared tokio runtime.
+///
+/// Starts at 0 so the runtime is torn down exactly when the last holder releases it.
+/// Every JS object that outlives a single call and spawns onto the runtime
+/// (`RolldownBuild`, `Watcher`, `DevEngine`, the `scan` bundler) must acquire on
+/// create and release on close. An unpaired release drops the runtime out from
+/// under the remaining holders (#8411, #8747).
 #[cfg(all(target_family = "wasm", tokio_unstable))]
-pub static ACTIVE_TASK_COUNT: LazyLock<AtomicU32> = LazyLock::new(|| AtomicU32::new(1));
+pub static ACTIVE_TASK_COUNT: LazyLock<AtomicU32> = LazyLock::new(|| AtomicU32::new(0));
 
 #[napi]
-/// Shutdown the tokio runtime manually.
+/// Release one holder of the tokio runtime, shutting it down once none are left.
 ///
 /// This is required for the wasm target with `tokio_unstable` cfg.
 /// In the wasm runtime, the `park` threads will hang there until the tokio::Runtime is shutdown.
@@ -69,10 +95,7 @@ pub fn shutdown_async_runtime() {
 }
 
 #[napi]
-/// Start the async runtime manually.
-///
-/// This is required when the async runtime is shutdown manually.
-/// Usually it's used in test.
+/// Acquire one holder of the tokio runtime, starting it if it is not running.
 pub fn start_async_runtime() {
   #[cfg(all(target_family = "wasm", tokio_unstable))]
   {

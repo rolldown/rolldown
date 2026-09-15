@@ -8,6 +8,12 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```js
 import assert from "node:assert";
 // HIDDEN [\0rolldown/runtime.js]
+__rolldown_runtime__.registerGraph({
+	ids: ["lib.js", "main.js"],
+	localCount: 2,
+	edges: [[], [0]],
+	dynamicEdges: [[], []]
+});
 //#region lib.js
 var require_lib = /* @__PURE__ */ __commonJSMin(((exports, module) => {
 	__rolldown_runtime__.createModuleHotContext("lib.js");

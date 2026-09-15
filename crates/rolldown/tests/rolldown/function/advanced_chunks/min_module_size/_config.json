@@ -1,6 +1,6 @@
 {
   "config": {
-    "manualCodeSplitting": {
+    "codeSplitting": {
       "groups": [
         {
           // `size-14.js` and `size-23.js` will be captured

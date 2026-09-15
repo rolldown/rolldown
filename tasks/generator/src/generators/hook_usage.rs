@@ -11,7 +11,7 @@ pub struct HookUsageGenerator;
 
 define_generator!(HookUsageGenerator);
 
-const HOOK_KIND: [&str; 21] = [
+const HOOK_KIND: [&str; 23] = [
   "build_start",
   "resolve_id",
   "resolve_dynamic_import",
@@ -33,6 +33,8 @@ const HOOK_KIND: [&str; 21] = [
   "footer",
   "intro",
   "outro",
+  "resolve_file_url",
+  "hot_update",
 ];
 
 const DISABLE_JS_HOOK: [&str; 1] = ["transform_ast"];
@@ -70,7 +72,7 @@ fn generate_hook_usage_ts() -> String {
         r"
       if (plugin.{}) {{
         hookUsage.union(HookUsageKind.{});
-      
+
       }}
       ",
         kind.to_lower_camel_case(),
@@ -101,8 +103,8 @@ fn generate_hook_usage_ts() -> String {
     }}
   }}
 
-import type {{ Plugin }} from '../..';
-export function extractHookUsage(plugin: Plugin): HookUsage {{
+import type {{ PluginWithInternalHooks }} from '../internal-hooks';
+export function extractHookUsage(plugin: PluginWithInternalHooks): HookUsage {{
   let hookUsage = new HookUsage();
   {union_hook_usage_list}
   return hookUsage;

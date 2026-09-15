@@ -1,24 +1,23 @@
-use std::path::PathBuf;
-use std::sync::Arc;
 use std::{
   fs,
   io::{Read, Write},
-  path::Path,
+  path::{Path, PathBuf},
   process::Command,
+  sync::Arc,
 };
 
 use anyhow::Context;
 use oxc::parser::{ParseOptions, Parser};
 use oxc::span::SourceType;
 use rolldown::{
-  BundleOutput, Bundler, BundlerOptions, IsExternal, OutputFormat, Platform, SourceMapType,
-  plugin::__inner::SharedPluginable,
+  BundleOutput, Bundler, BundlerBuilder, BundlerOptions, ChecksOptions, IsExternal,
+  NormalizedBundlerOptions, OutputFormat, Platform, SourceMapType,
+  plugin::{__inner::SharedPluginable, Plugin},
 };
-use rolldown::{ChecksOptions, NormalizedBundlerOptions};
 use rolldown_common::Output;
 use rolldown_dev::{BundlerConfig, DevEngine, DevOptions, DevWatchOptions};
 use rolldown_error::BuildResult;
-use rolldown_testing_config::TestMeta;
+use rolldown_testing_config::{ExpectedExecutionFailure, TestMeta};
 use serde_json::{Map, Value};
 use sugar_path::SugarPath;
 
@@ -26,9 +25,15 @@ use crate::hmr_files::{
   apply_hmr_edit_files_to_hmr_temp_dir, collect_hmr_edit_files,
   copy_non_hmr_edit_files_to_hmr_temp_dir, get_changed_files_from_hmr_edit_files,
 };
+use crate::preserve_region_markers::PreserveRegionMarkersPlugin;
 use crate::types::{
   BuildArtifactsSnapshot, BuildRoundOutput, DevArtifactsSnapshot, DevRoundOutput, HmrStepOutput,
 };
+
+/// RFC 3986 unreserved set — matches the former `urlencoding::encode`: percent-encode
+/// everything except `A-Za-z0-9` and `-._~`.
+const DATA_URL_ENCODE_SET: &percent_encoding::AsciiSet =
+  &percent_encoding::NON_ALPHANUMERIC.remove(b'-').remove(b'.').remove(b'_').remove(b'~');
 
 #[derive(Default)]
 pub struct IntegrationTest {
@@ -45,6 +50,8 @@ pub struct NamedBundlerOptions {
   pub snapshot: Option<bool>,
   // Will be injected into `globalThis.__configName`. If not specified, `TestMeta.config_name` will be used.
   pub config_name: Option<String>,
+  /// The generated output must fail when executed. A successful execution is an XPASS.
+  pub expect_execution_failure: Option<ExpectedExecutionFailure>,
 }
 
 fn default_test_input_item() -> rolldown::InputItem {
@@ -80,7 +87,13 @@ impl IntegrationTest {
   pub async fn run_with_plugins(&self, options: BundlerOptions, plugins: Vec<SharedPluginable>) {
     self
       .run_multiple(
-        vec![NamedBundlerOptions { options, description: None, snapshot: None, config_name: None }],
+        vec![NamedBundlerOptions {
+          options,
+          description: None,
+          snapshot: None,
+          config_name: None,
+          expect_execution_failure: self.test_meta.expect_execution_failure.clone(),
+        }],
         plugins,
       )
       .await;
@@ -118,9 +131,9 @@ impl IntegrationTest {
           .with_options(ParseOptions { allow_return_outside_function: true, ..Default::default() })
           .parse();
 
-        if ret.panicked || !ret.errors.is_empty() {
+        if ret.fatal_error || !ret.diagnostics.is_empty() {
           let errors_str = ret
-            .errors
+            .diagnostics
             .iter()
             .map(|e| e.clone().with_source_code(chunk.code.clone()).to_string())
             .collect::<Vec<_>>()
@@ -264,6 +277,34 @@ impl IntegrationTest {
         if self.test_meta.dev.ensure_latest_build_output_for_each_step {
           dev_engine.ensure_latest_bundle_output().await.unwrap();
         }
+
+        // Compare the incremental scan state with a fresh full build of the
+        // current file state. Running it per step catches divergences that a
+        // later rescan of the affected module would repair. Skipped when the
+        // current state does not build (e.g. a step introducing a syntax
+        // error), and when this step's incremental build failed: a failed
+        // scan is reverted, so the state intentionally stays at the last
+        // good build and cannot mirror the current files yet.
+        if self.test_meta.dev.check_state_parity {
+          let step_failed = {
+            let hmr_updates = hmr_updates_by_steps.lock().unwrap();
+            let build_results = build_results_by_steps.lock().unwrap();
+            hmr_updates.last().is_some_and(|step| step.iter().any(Result::is_err))
+              || build_results.last().is_some_and(|step| step.iter().any(Result::is_err))
+          };
+          if !step_failed {
+            let mut fresh_bundler = BundlerBuilder::default()
+              .with_options(named_options.options.clone())
+              .with_plugins(plugins.clone())
+              .build()
+              .expect("failed to build the state parity bundler");
+            if fresh_bundler.generate().await.is_ok() {
+              let incremental_bundler = dev_engine.bundler();
+              let incremental_bundler = incremental_bundler.lock().await;
+              incremental_bundler.assert_scan_state_parity_with(&fresh_bundler);
+            }
+          }
+        }
       }
 
       // Collect results
@@ -315,15 +356,15 @@ impl IntegrationTest {
           }
 
           // Process HMR updates and patches for execution
-          let mut patch_chunks: Vec<String> = vec![];
+          let mut patch_chunks: Vec<(String, Vec<String>)> = vec![];
           for step_output in &build_snapshot.hmr_steps {
             if let Ok((client_updates, _changed_files)) = &step_output.hmr_updates {
               for hmr_update in client_updates {
                 match &hmr_update.update {
                   rolldown_common::HmrUpdate::Patch(patch) => {
-                    let output_path = format!("{}/{}", &output_dir, &patch.filename);
+                    let output_path = format!("{}/{}", output_dir, patch.filename);
                     fs::write(&output_path, &patch.code).unwrap();
-                    patch_chunks.push(format!("./{}", patch.filename));
+                    patch_chunks.push((format!("./{}", patch.filename), patch.changed_ids.clone()));
                   }
                   rolldown_common::HmrUpdate::FullReload { reason } => {
                     assert!(
@@ -351,6 +392,7 @@ impl IntegrationTest {
               &patch_chunks,
               config_name,
               true,
+              named_options.expect_execution_failure.as_ref(),
             );
           } else {
             if self.test_meta.write_to_disk {
@@ -360,6 +402,7 @@ impl IntegrationTest {
                 &patch_chunks,
                 config_name,
                 false,
+                named_options.expect_execution_failure.as_ref(),
               );
             }
             if !self.test_meta.skip_syntax_validation {
@@ -421,6 +464,10 @@ impl IntegrationTest {
           bundler
         }
         Err(errs) => {
+          assert!(
+            named_options.expect_execution_failure.is_none(),
+            "Expected the bundler to be success, but failed to create it: {errs:#?}"
+          );
           // Set cwd and error, then skip this build round
           build_snapshot.cwd = Some(cwd);
           build_snapshot.initial_output = Some(Err(errs));
@@ -469,10 +516,24 @@ impl IntegrationTest {
             .map(Some)
             .unwrap_or(self.test_meta.config_name.as_deref());
           if self.should_execute_output() {
-            Self::execute_output_assets(bundler.options(), &debug_title, &[], config_name, true);
+            Self::execute_output_assets(
+              bundler.options(),
+              &debug_title,
+              &[],
+              config_name,
+              true,
+              named_options.expect_execution_failure.as_ref(),
+            );
           } else {
             if self.test_meta.write_to_disk {
-              Self::execute_output_assets(bundler.options(), &debug_title, &[], config_name, false);
+              Self::execute_output_assets(
+                bundler.options(),
+                &debug_title,
+                &[],
+                config_name,
+                false,
+                named_options.expect_execution_failure.as_ref(),
+              );
             }
             if !self.test_meta.skip_syntax_validation {
               // When not executing output, validate that all JS chunks are syntactically valid
@@ -499,14 +560,51 @@ impl IntegrationTest {
   pub async fn run_multiple(
     &self,
     mut multiple_options: Vec<NamedBundlerOptions>,
-    plugins: Vec<SharedPluginable>,
+    mut plugins: Vec<SharedPluginable>,
   ) {
+    // Registered last so it runs right before the internal dce pass; see the module docs of
+    // `preserve_region_markers` for why snapshots need markers kept intact.
+    plugins.push(Plugin::new_shared(PreserveRegionMarkersPlugin));
+
     let test_folder_path = &self.test_folder_path;
 
     // Detect HMR mode by checking for HMR edit files
     let hmr_temp_dir_path = test_folder_path.join("hmr-temp");
     let hmr_steps = collect_hmr_edit_files(test_folder_path, &hmr_temp_dir_path);
     let hmr_mode_enabled = !hmr_steps.is_empty();
+
+    for expected_failure in
+      multiple_options.iter().filter_map(|options| options.expect_execution_failure.as_ref())
+    {
+      assert!(
+        !expected_failure.reason.trim().is_empty(),
+        "`expectExecutionFailure.reason` must not be empty or whitespace-only",
+      );
+      assert!(
+        !expected_failure.output_contains.is_empty(),
+        "`expectExecutionFailure.outputContains` must contain at least one matcher",
+      );
+      assert!(
+        expected_failure.output_contains.iter().all(|matcher| !matcher.trim().is_empty()),
+        "`expectExecutionFailure.outputContains` entries must not be empty or whitespace-only",
+      );
+    }
+
+    assert!(
+      !hmr_mode_enabled
+        || multiple_options.iter().all(|options| options.expect_execution_failure.is_none()),
+      "`expectExecutionFailure` is not supported by HMR fixtures",
+    );
+    assert!(
+      !self.test_meta.expect_error
+        || multiple_options.iter().all(|options| options.expect_execution_failure.is_none()),
+      "`expectExecutionFailure` cannot be combined with `expectError`",
+    );
+    assert!(
+      self.test_meta.write_to_disk
+        || multiple_options.iter().all(|options| options.expect_execution_failure.is_none()),
+      "`expectExecutionFailure` requires `writeToDisk: true`",
+    );
 
     // Apply test defaults to all options
     for named_options in &mut multiple_options {
@@ -516,10 +614,11 @@ impl IntegrationTest {
     // Dispatch to appropriate build method and generate snapshot
     let snapshot_content = if hmr_mode_enabled {
       let artifacts_snapshot =
-        self.run_multiple_for_dev(multiple_options, plugins, &hmr_steps).await;
+        Box::pin(self.run_multiple_for_dev(multiple_options, plugins, &hmr_steps)).await;
       artifacts_snapshot.render(&self.test_meta)
     } else {
-      let artifacts_snapshot = self.run_multiple_for_build(multiple_options, plugins).await;
+      let artifacts_snapshot =
+        Box::pin(self.run_multiple_for_build(multiple_options, plugins)).await;
       artifacts_snapshot.render(&self.test_meta)
     };
 
@@ -533,7 +632,8 @@ impl IntegrationTest {
     }
 
     if options.external.is_none() {
-      options.external = Some(IsExternal::from(vec!["node:assert".to_string()]));
+      options.external =
+        Some(IsExternal::from(vec!["node:assert".to_string(), "node:assert/strict".to_string()]));
     }
 
     if options.input.is_none() {
@@ -572,7 +672,12 @@ impl IntegrationTest {
     if let Some(experimental) = &mut options.experimental {
       if let Some(dev_mode) = &mut experimental.dev_mode {
         if dev_mode.implement.is_none() {
-          dev_mode.implement = Some(include_str!("./hmr-runtime.js").to_owned());
+          dev_mode.implement = Some(format!(
+            "{}\n{}",
+            include_str!("../../rolldown_plugin_hmr/src/runtime/runtime-extra-dev-common.js"),
+            include_str!("./hmr-runtime.js")
+          ));
+          dev_mode.skip_common_runtime_injection = Some(true);
         }
       }
     }
@@ -602,9 +707,10 @@ impl IntegrationTest {
   fn execute_output_assets(
     options: &NormalizedBundlerOptions,
     test_title: &str,
-    patch_chunks: &[String],
+    patch_chunks: &[(String, Vec<String>)],
     config_name: Option<&str>,
     execute_compiled_entries: bool,
+    expected_execution_failure: Option<&ExpectedExecutionFailure>,
   ) {
     let cwd = options.cwd.clone();
     let dist_folder = cwd.join(&options.out_dir);
@@ -640,8 +746,10 @@ impl IntegrationTest {
       Self::generate_globals_injection_for_execute_output(config_name, patch_chunks, options);
 
     if !globals_injection.is_empty() {
-      let inject_script_url =
-        format!("data:text/javascript,{}", urlencoding::encode(&globals_injection));
+      let inject_script_url = format!(
+        "data:text/javascript,{}",
+        percent_encoding::utf8_percent_encode(&globals_injection, DATA_URL_ENCODE_SET)
+      );
       node_command.arg("--import");
       node_command.arg(inject_script_url);
     }
@@ -649,6 +757,10 @@ impl IntegrationTest {
     if test_script.exists() {
       node_command.arg(test_script);
     } else if !execute_compiled_entries {
+      assert!(
+        expected_execution_failure.is_none(),
+        "`expectExecutionFailure` requires a `_test.mjs`/`_test.cjs` script or executable entries",
+      );
       return;
     } else {
       // make sure to set this: https://github.com/nodejs/node/issues/59374
@@ -676,8 +788,10 @@ impl IntegrationTest {
       let post_globals_injection =
         Self::generate_post_globals_injection_for_execute_output(patch_chunks, &dist_folder);
       if !post_globals_injection.is_empty() {
-        let inject_script_url =
-          format!("data:text/javascript,{}", urlencoding::encode(&post_globals_injection));
+        let inject_script_url = format!(
+          "data:text/javascript,{}",
+          percent_encoding::utf8_percent_encode(&post_globals_injection, DATA_URL_ENCODE_SET)
+        );
         compiled_entries.push(inject_script_url);
       }
 
@@ -693,10 +807,38 @@ impl IntegrationTest {
 
     let output = node_command.output().unwrap();
 
+    if output.status.success() {
+      if let Some(expected_failure) = expected_execution_failure {
+        panic!(
+          "XPASS: generated output was expected to fail execution: {}",
+          expected_failure.reason
+        );
+      }
+      return;
+    }
+
     #[expect(clippy::print_stdout)]
-    if !output.status.success() {
+    {
       let stdout_utf8 = std::str::from_utf8(&output.stdout).unwrap();
       let stderr_utf8 = std::str::from_utf8(&output.stderr).unwrap();
+
+      if let Some(expected_failure) = expected_execution_failure
+        && output.status.code().is_some()
+      {
+        assert!(
+          !expected_failure.output_contains.is_empty(),
+          "`expectExecutionFailure.outputContains` must contain at least one matcher",
+        );
+        let process_output = format!("{stdout_utf8}\n{stderr_utf8}");
+        for expected in &expected_failure.output_contains {
+          assert!(
+            process_output.contains(expected),
+            "execution failed for a different reason than expected ({reason}); missing {expected:?}\nstdout:\n{stdout_utf8}\nstderr:\n{stderr_utf8}",
+            reason = expected_failure.reason,
+          );
+        }
+        return;
+      }
 
       println!(
         "⬇️⬇️ Failed to execute command {test_title} ⬇️⬇️\n{node_command:?}\n⬆️⬆️ end  ⬆️⬆️"
@@ -709,7 +851,7 @@ impl IntegrationTest {
 
   fn generate_globals_injection_for_execute_output(
     config_name: Option<&str>,
-    patch_chunks: &[String],
+    patch_chunks: &[(String, Vec<String>)],
     _options: &NormalizedBundlerOptions,
   ) -> String {
     let mut stmts = vec![];
@@ -719,9 +861,14 @@ impl IntegrationTest {
     }
 
     if !patch_chunks.is_empty() {
+      // Each entry carries the patch file plus the push envelope's changedIds — the
+      // test runtime's walk driver consumes them the way the real client consumes the
+      // `{changedIds, url, seq}` envelope.
       let patch_chunks_array = patch_chunks
         .iter()
-        .map(|chunk| format!("\"{}\"", chunk.replace('"', "\\\"")))
+        .map(|(file, changed_ids)| {
+          serde_json::json!({ "file": file, "changedIds": changed_ids }).to_string()
+        })
         .collect::<Vec<_>>()
         .join(",");
       stmts.push(format!("globalThis.__testPatches = [{patch_chunks_array}];"));
@@ -731,7 +878,7 @@ impl IntegrationTest {
   }
 
   fn generate_post_globals_injection_for_execute_output(
-    patch_chunks: &[String],
+    patch_chunks: &[(String, Vec<String>)],
     dist_folder: &Path,
   ) -> String {
     if patch_chunks.is_empty() {
@@ -746,9 +893,10 @@ import path from 'node:path';
 const dir = '{}';
 setTimeout(async () => {{
   for (const patchChunk of globalThis.__testPatches) {{
-    const file = path.join(dir, patchChunk);
+    const file = path.join(dir, patchChunk.file);
     try {{
       await import(url.pathToFileURL(file));
+      globalThis.__rolldown_runtime__.__testApplyHmr(patchChunk.changedIds);
     }} catch (error) {{
       console.error('Error executing a patch:', error);
       process.exitCode = 1;

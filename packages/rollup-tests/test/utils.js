@@ -6,7 +6,7 @@
  * @typedef {import('./types').TestConfigBase} TestConfigBase
  */
 
-const assert = require('node:assert');
+const assert = require('node:assert/strict');
 const {
 	closeSync,
 	fsyncSync,
@@ -86,6 +86,11 @@ function normalizeError(error, locExpected) {
 	if (clone.code === 'SOURCEMAP_BROKEN') {
 		// Rolldown attaches the module id to this warning, but Rollup's
 		// `logSourcemapBroken` is emitted at chunk-collapse time and carries no id.
+		delete clone.id;
+	}
+	if (clone.code === 'FILE_NOT_FOUND') {
+		// Rolldown points at the module containing the `import.meta.ROLLUP_FILE_URL_*` access,
+		// but Rollup's `logFileNotFound` is thrown from the plugin driver and carries no id.
 		delete clone.id;
 	}
 	for (const key in clone) {

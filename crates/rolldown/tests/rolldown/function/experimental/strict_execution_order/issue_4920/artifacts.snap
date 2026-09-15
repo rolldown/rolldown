@@ -7,25 +7,20 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 import nodeAssert from "node:assert";
-// HIDDEN [\0rolldown/runtime.js]
 //#region dep.js
 function foo() {
 	globalThis.value = 1;
 }
-var dep_default;
-var init_dep = __esmMin((() => {
-	dep_default = /*#__PURE__*/ foo();
-}));
+var dep_default = /*#__PURE__*/ foo();
 //#endregion
-__esmMin((() => {
-	init_dep();
-	nodeAssert.strictEqual(globalThis.value, 1);
-}))();
+//#region main.js
+nodeAssert.strictEqual(globalThis.value, 1);
+//#endregion
 export { dep_default as dep };
 
 ```
 
-# Variant: [on_demand_wrapping: true]
+# Variant: wrap-all: [on_demand_wrapping: false]
 
 ## Assets
 
@@ -39,14 +34,21 @@ function foo() {
 	globalThis.value = 1;
 }
 var dep_default;
-var init_dep = __esmMin((() => {
-	dep_default = /*#__PURE__*/ foo();
-}));
+function init_dep() {
+	return (init_dep = __esmMin((() => {
+		dep_default = /*#__PURE__*/ foo();
+	})))();
+}
 //#endregion
-__esmMin((() => {
-	init_dep();
-	nodeAssert.strictEqual(globalThis.value, 1);
-}))();
+//#region main.js
+function init_main() {
+	return (init_main = __esmMin((() => {
+		init_dep();
+		nodeAssert.strictEqual(globalThis.value, 1);
+	})))();
+}
+//#endregion
+init_main();
 export { dep_default as dep };
 
 ```

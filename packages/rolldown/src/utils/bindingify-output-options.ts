@@ -1,12 +1,27 @@
 import type { BindingChunkingContext, BindingOutputOptions } from '../binding.cjs';
-import type { OutputOptions } from '../options/output-options';
+import type {
+  CodeSplittingNameFunction,
+  CodeSplittingTestFunction,
+  OutputOptions,
+} from '../options/output-options';
+import type { PluginContextData } from '../plugin/plugin-context-data';
 import { ChunkingContextImpl } from '../types/chunking-context';
 import { transformAssetSource } from './asset-source';
 import { unimplemented } from './misc';
 import { transformRenderedChunk } from './transform-rendered-chunk';
 import { logger } from '../cli/logger';
+import {
+  measureHookCost,
+  measureIfFunction,
+  OUTPUT_OPTIONS_OWNER,
+  type PluginTimingsRecorder,
+} from './plugin-timings';
 
-export function bindingifyOutputOptions(outputOptions: OutputOptions): BindingOutputOptions {
+export function bindingifyOutputOptions(
+  outputOptions: OutputOptions,
+  pluginContextData: PluginContextData,
+  timings: PluginTimingsRecorder | undefined,
+): BindingOutputOptions {
   const {
     dir,
     format,
@@ -15,6 +30,7 @@ export function bindingifyOutputOptions(outputOptions: OutputOptions): BindingOu
     sourcemap,
     sourcemapBaseUrl,
     sourcemapDebugIds,
+    sourcemapFileNames,
     sourcemapExcludeSources,
     sourcemapIgnoreList,
     sourcemapPathTransform,
@@ -33,6 +49,7 @@ export function bindingifyOutputOptions(outputOptions: OutputOptions): BindingOu
     paths,
     generatedCode,
     file,
+    // Already measured at the source; see `createBundlerOptions`.
     sanitizeFileName,
     preserveModules,
     virtualDirname,
@@ -55,6 +72,8 @@ export function bindingifyOutputOptions(outputOptions: OutputOptions): BindingOu
     outputOptions.inlineDynamicImports,
     outputOptions.advancedChunks,
     manualChunks,
+    pluginContextData,
+    timings,
   );
 
   return {
@@ -67,24 +86,51 @@ export function bindingifyOutputOptions(outputOptions: OutputOptions): BindingOu
     sourcemap: bindingifySourcemap(sourcemap),
     sourcemapBaseUrl,
     sourcemapDebugIds,
+    sourcemapFileNames: measureIfFunction(
+      timings,
+      OUTPUT_OPTIONS_OWNER,
+      'sourcemapFileNames',
+      sourcemapFileNames,
+    ),
     sourcemapExcludeSources,
-    sourcemapIgnoreList: sourcemapIgnoreList ?? /node_modules/,
-    sourcemapPathTransform,
-    banner: bindingifyAddon(banner),
-    footer: bindingifyAddon(footer),
-    postBanner: bindingifyAddon(postBanner),
-    postFooter: bindingifyAddon(postFooter),
-    intro: bindingifyAddon(intro),
-    outro: bindingifyAddon(outro),
+    sourcemapIgnoreList: measureIfFunction(
+      timings,
+      OUTPUT_OPTIONS_OWNER,
+      'sourcemapIgnoreList',
+      sourcemapIgnoreList ?? /node_modules/,
+    ),
+    sourcemapPathTransform: measureIfFunction(
+      timings,
+      OUTPUT_OPTIONS_OWNER,
+      'sourcemapPathTransform',
+      sourcemapPathTransform,
+    ),
+    banner: bindingifyAddon(banner, 'banner', timings),
+    footer: bindingifyAddon(footer, 'footer', timings),
+    postBanner: bindingifyAddon(postBanner, 'postBanner', timings),
+    postFooter: bindingifyAddon(postFooter, 'postFooter', timings),
+    intro: bindingifyAddon(intro, 'intro', timings),
+    outro: bindingifyAddon(outro, 'outro', timings),
     extend: outputOptions.extend,
-    globals,
-    paths,
+    globals: measureIfFunction(timings, OUTPUT_OPTIONS_OWNER, 'globals', globals),
+    paths: measureIfFunction(timings, OUTPUT_OPTIONS_OWNER, 'paths', paths),
     generatedCode,
     esModule,
     name,
+    // Already measured at the source; see `createBundlerOptions`.
     assetFileNames: bindingifyAssetFilenames(assetFileNames),
-    entryFileNames,
-    chunkFileNames,
+    entryFileNames: measureIfFunction(
+      timings,
+      OUTPUT_OPTIONS_OWNER,
+      'entryFileNames',
+      entryFileNames,
+    ),
+    chunkFileNames: measureIfFunction(
+      timings,
+      OUTPUT_OPTIONS_OWNER,
+      'chunkFileNames',
+      chunkFileNames,
+    ),
     // TODO(sapphi-red): support parallel plugins
     plugins: [],
     minify: outputOptions.minify,
@@ -109,12 +155,19 @@ export function bindingifyOutputOptions(outputOptions: OutputOptions): BindingOu
 
 type AddonKeys = 'banner' | 'footer' | 'intro' | 'outro';
 
-function bindingifyAddon(configAddon: OutputOptions[AddonKeys]): BindingOutputOptions[AddonKeys] {
+function bindingifyAddon(
+  configAddon: OutputOptions[AddonKeys],
+  name: AddonKeys | 'postBanner' | 'postFooter',
+  timings: PluginTimingsRecorder | undefined,
+): BindingOutputOptions[AddonKeys] {
   if (configAddon == null || configAddon === '') {
     return undefined;
   }
   if (typeof configAddon === 'function') {
-    return async (chunk) => configAddon(transformRenderedChunk(chunk));
+    // Measure the user's callback, not `transformRenderedChunk` around it, so the row is
+    // their work rather than the conversion their choice of a function forced.
+    const measured = measureHookCost(timings, OUTPUT_OPTIONS_OWNER, name, configAddon);
+    return async (chunk) => measured(transformRenderedChunk(chunk));
   }
   return configAddon;
 }
@@ -193,6 +246,8 @@ function bindingifyCodeSplitting(
   inlineDynamicImportsOption: OutputOptions['inlineDynamicImports'],
   advancedChunks: OutputOptions['advancedChunks'],
   manualChunks: OutputOptions['manualChunks'],
+  pluginContextData: PluginContextData,
+  timings: PluginTimingsRecorder | undefined,
 ): {
   inlineDynamicImports: BindingOutputOptions['inlineDynamicImports'];
   advancedChunks: BindingOutputOptions['manualCodeSplitting'];
@@ -286,19 +341,60 @@ function bindingifyCodeSplitting(
     };
   }
 
+  // `inlineDynamicImports: true` (the deprecated alias for `codeSplitting: false`) disables code
+  // splitting, so any resolved chunk grouping is dropped here, mirroring the `codeSplitting: false`
+  // path above. `manualChunks` already throws earlier, so only `advancedChunks` can reach this
+  // point. Without this, the grouping would be forwarded and then silently discarded in the Rust
+  // binding, ignoring the requested groups without any diagnostic.
+  if (inlineDynamicImports === true && effectiveChunksOption != null) {
+    logger.warn(
+      '`advancedChunks` option is ignored because `inlineDynamicImports: true` disables code splitting.',
+    );
+    effectiveChunksOption = undefined;
+  }
+
   // Transform effectiveChunksOption to binding format
   let advancedChunksResult: BindingOutputOptions['manualCodeSplitting'];
   if (effectiveChunksOption != null) {
     const { groups, ...restOptions } = effectiveChunksOption;
+    let chunkingContext: ChunkingContextImpl | undefined;
+    const getChunkingContext = (bindingContext: BindingChunkingContext) =>
+      (chunkingContext ??= new ChunkingContextImpl(bindingContext, pluginContextData));
     advancedChunksResult = {
       ...restOptions,
+      internalInvalidateModuleInfoCache: () => {
+        chunkingContext?.clearModuleInfoCache();
+        chunkingContext = undefined;
+      },
       groups: groups?.map((group) => {
-        const { name, ...restGroup } = group;
+        const { name, test, ...restGroup } = group;
         return {
           ...restGroup,
+          test:
+            typeof test === 'function'
+              ? batchTest(
+                  measureHookCost(
+                    timings,
+                    OUTPUT_OPTIONS_OWNER,
+                    'codeSplitting groups[].test',
+                    test,
+                  ),
+                )
+              : test,
+          // The core calls this classifier directly rather than through a plugin, so it
+          // belongs to no plugin's rows — and it runs once per module, which is how it ends
+          // up dominating a build.
           name:
             typeof name === 'function'
-              ? (id: string, ctx: BindingChunkingContext) => name(id, new ChunkingContextImpl(ctx))
+              ? batchName(
+                  measureHookCost(
+                    timings,
+                    OUTPUT_OPTIONS_OWNER,
+                    'codeSplitting groups[].name',
+                    name,
+                  ),
+                  getChunkingContext,
+                )
               : name,
         };
       }),
@@ -308,5 +404,61 @@ function bindingifyCodeSplitting(
   return {
     inlineDynamicImports,
     advancedChunks: advancedChunksResult,
+  };
+}
+
+/**
+ * Wraps a per-id `test` in the batched shim that the binding expects.
+ *
+ * The loop runs in JS so that a group makes one napi crossing, not one per module.
+ *
+ * The result is a `Uint8Array`, which crosses as a buffer instead of one tagged value per id.
+ */
+function batchTest(test: CodeSplittingTestFunction): (ids: string[]) => Uint8Array {
+  return (ids) => {
+    const results = new Uint8Array(ids.length);
+    for (let index = 0; index < ids.length; index++) {
+      const result = test(ids[index]);
+      // napi reports the type of the array, not of the bad element, so the check runs here.
+      if (result != null && typeof result !== 'boolean') {
+        throw new TypeError(
+          `\`output.codeSplitting.groups[].test\` returned ${typeof result} for module "${
+            ids[index]
+          }", but expected a boolean, null or undefined.`,
+        );
+      }
+      results[index] = result === true ? 1 : 0;
+    }
+    return results;
+  };
+}
+
+/**
+ * This is the `name` equivalent of {@linkcode batchTest}. All groups in a chunking pass share
+ * a context so repeated module queries reuse their JavaScript values.
+ */
+function batchName(
+  name: CodeSplittingNameFunction,
+  getChunkingContext: (bindingContext: BindingChunkingContext) => ChunkingContextImpl,
+): (
+  ids: string[],
+  bindingContext: BindingChunkingContext,
+) => ReturnType<CodeSplittingNameFunction>[] {
+  return (ids, bindingContext) => {
+    const context = getChunkingContext(bindingContext);
+    const results: ReturnType<CodeSplittingNameFunction>[] = [];
+    for (let index = 0; index < ids.length; index++) {
+      const result = name(ids[index], context);
+      // napi reports the type of the array, not of the bad element, so the check runs here.
+      if (result != null && typeof result !== 'string') {
+        throw new TypeError(
+          `\`output.codeSplitting.groups[].name\` returned ${typeof result} for module "${
+            ids[index]
+          }", but expected a string, null or undefined.`,
+        );
+      }
+      results.push(result);
+    }
+    return results;
   };
 }

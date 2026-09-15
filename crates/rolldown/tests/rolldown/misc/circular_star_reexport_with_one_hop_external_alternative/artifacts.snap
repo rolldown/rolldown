@@ -1,0 +1,42 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Errors
+
+## AMBIGUOUS_EXTERNAL_NAMESPACES
+
+```text
+[AMBIGUOUS_EXTERNAL_NAMESPACES] Found ambiguous export.
+   ╭─[ b.js:1:10 ]
+   │
+ 1 │ export { foo } from './a.js';
+   │          ─┬─  
+   │           ╰─── "a.js" re-exports "foo"
+   │
+   ├─[ c.js:1:12 ]
+   │
+ 1 │ export let foo = 1;
+   │            ─┬─  
+   │             ╰─── One matching export is here.
+───╯
+
+```
+
+## AMBIGUOUS_EXTERNAL_NAMESPACES
+
+```text
+[AMBIGUOUS_EXTERNAL_NAMESPACES] Found ambiguous export.
+   ╭─[ index.js:1:10 ]
+   │
+ 1 │ import { foo } from './a.js';
+   │          ─┬─  
+   │           ╰─── "a.js" re-exports "foo"
+   │
+   ├─[ c.js:1:12 ]
+   │
+ 1 │ export let foo = 1;
+   │            ─┬─  
+   │             ╰─── One matching export is here.
+───╯
+
+```

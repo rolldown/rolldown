@@ -5,11 +5,12 @@ use std::sync::{
 
 use anyhow::Context;
 use futures::{FutureExt, future::Shared};
-use rolldown_common::ClientHmrUpdate;
 #[cfg(feature = "testing")]
 use rolldown_common::WatcherChangeKind;
+use rolldown_common::{HmrLazyChunkOutput, HmrStampTable};
 use rolldown_error::{BuildResult, ResultExt};
-use rolldown_fs_watcher::{FsWatcher, FsWatcherConfig, FsWatcherExt, NoopFsWatcher};
+use rolldown_fs_watcher::{FsWatcher, FsWatcherConfig};
+use rustc_hash::FxHashMap;
 #[cfg(feature = "testing")]
 use rustc_hash::FxHashSet;
 use tokio::sync::{Mutex, mpsc::unbounded_channel};
@@ -17,15 +18,17 @@ use tokio::sync::{Mutex, mpsc::unbounded_channel};
 use rolldown::{Bundler, BundlerBuilder, BundlerConfig, NormalizedBundlerOptions};
 
 use crate::{
-  DevOptions, SharedClients,
+  BundleOutput, DevOptions, SharedClients,
   bundle_coordinator::BundleCoordinator,
   dev_context::{DevContext, PinBoxSendStaticFuture},
   normalize_dev_options,
   type_aliases::CoordinatorSender,
-  types::{coordinator_msg::CoordinatorMsg, coordinator_state_snapshot::CoordinatorStateSnapshot},
+  types::{
+    coordinator_msg::CoordinatorMsg, coordinator_state_snapshot::CoordinatorStateSnapshot,
+    error_stage::ErrorStage, pending_payload::PendingPayload,
+  },
 };
 
-#[cfg(feature = "testing")]
 use crate::ClientSession;
 #[cfg(feature = "testing")]
 use rolldown_utils::indexmap::FxIndexMap;
@@ -40,11 +43,22 @@ pub struct CoordinatorState {
 pub struct DevEngine {
   coordinator_sender: CoordinatorSender,
   bundler: Arc<Mutex<Bundler>>,
+  /// Shared dev context, kept so out-of-coordinator entry points (e.g.
+  /// `compile_lazy_entry`) can reach `options.on_additional_assets`.
+  dev_context: Arc<DevContext>,
   coordinator_state: Mutex<CoordinatorState>,
   pub clients: SharedClients,
   is_closed: AtomicBool,
-  /// Counter for HMR patch IDs used by invalidate() method
-  next_invalidate_patch_id: Arc<AtomicU32>,
+  /// The engine's single patch-id counter, shared with the coordinator's bundling
+  /// tasks. Both counters' consumers format filenames as `hmr_patch_{id}.js` /
+  /// `lazy_compile_{id}.js`, and pending-payload entries are keyed by those
+  /// filenames — so two independent counters would let two different payloads
+  /// collide on one key.
+  next_hmr_patch_id: Arc<AtomicU32>,
+  /// Live handle to the plugin-facing module infos — the same map plugin contexts read.
+  /// Full builds clear it in place (the `Arc` identity is stable), so lock-free reads
+  /// here always observe the latest build. Powers the engine-level module queries.
+  module_infos: rolldown_common::SharedModuleInfoDashMap,
 }
 
 impl DevEngine {
@@ -55,6 +69,7 @@ impl DevEngine {
       .with_plugins(config.plugins)
       .build()?;
 
+    let module_infos = bundler.module_infos();
     let bundler = Arc::new(Mutex::new(bundler));
 
     let normalized_options = normalize_dev_options(options);
@@ -63,13 +78,22 @@ impl DevEngine {
 
     let clients = SharedClients::default();
 
+    // ONE patch-id counter for the whole engine (bundling tasks AND lazy
+    // compiles) — see the field doc on `next_hmr_patch_id`.
+    let next_hmr_patch_id = Arc::new(AtomicU32::new(0));
+
     let ctx = Arc::new(DevContext {
       options: normalized_options,
       coordinator_tx: coordinator_tx.clone(),
       clients: Arc::clone(&clients),
+      stamp_table: Arc::new(Mutex::new(HmrStampTable::default())),
+      pending_payloads: Arc::new(Mutex::new(FxHashMap::default())),
+      top_level_evaluated: Mutex::new(Arc::new(FxHashMap::default())),
+      last_task_errored: std::sync::atomic::AtomicBool::new(false),
     });
 
     let watcher_config = FsWatcherConfig {
+      enabled: !ctx.options.disable_watcher,
       poll_interval: ctx.options.poll_interval,
       debounce_delay: ctx.options.debounce_duration,
       compare_contents_for_polling: ctx.options.compare_contents_for_polling,
@@ -79,27 +103,39 @@ impl DevEngine {
     };
 
     let event_handler = BundleCoordinator::create_watcher_event_handler(coordinator_tx.clone());
+    let watcher = FsWatcher::new(event_handler, &watcher_config)?;
 
-    let watcher = if ctx.options.disable_watcher {
-      NoopFsWatcher::with_config(event_handler, watcher_config)?.into_dyn_fs_watcher()
-    } else {
-      rolldown_fs_watcher::create_fs_watcher(event_handler, watcher_config)?
-    };
-
-    let coordinator =
-      BundleCoordinator::new(Arc::clone(&bundler), Arc::clone(&ctx), coordinator_rx, watcher);
+    let coordinator = BundleCoordinator::new(
+      Arc::clone(&bundler),
+      Arc::clone(&ctx),
+      coordinator_rx,
+      watcher,
+      Arc::clone(&next_hmr_patch_id),
+    );
 
     Ok(Self {
       coordinator_sender: coordinator_tx,
       bundler,
+      dev_context: Arc::clone(&ctx),
       coordinator_state: Mutex::new(CoordinatorState {
         coordinator: Some(coordinator),
         handle: None,
       }),
       clients,
       is_closed: AtomicBool::new(false),
-      next_invalidate_patch_id: Arc::new(AtomicU32::new(0)),
+      next_hmr_patch_id,
+      module_infos,
     })
+  }
+
+  /// Same data the plugin-context `getModuleInfo` returns, readable from the engine
+  /// handle at any time (no hook context needed).
+  pub fn get_module_info(&self, module_id: &str) -> Option<Arc<rolldown_common::ModuleInfo>> {
+    self.module_infos.get(module_id).map(|entry| Arc::clone(entry.value()))
+  }
+
+  pub fn get_module_ids(&self) -> Vec<arcstr::ArcStr> {
+    self.module_infos.iter().map(|entry| entry.key().clone()).collect()
   }
 
   pub async fn run(&self) -> BuildResult<()> {
@@ -190,7 +226,9 @@ impl DevEngine {
     Ok(status.into())
   }
 
-  // Ensure there's latest bundle output available for browser loading/reloading scenarios
+  /// Ensure there's latest bundle output available for browser loading/reloading scenarios.
+  ///
+  /// If the `DevEngine` is closed while waiting, this method will return early without error.
   pub async fn ensure_latest_bundle_output(&self) -> BuildResult<()> {
     self.create_error_if_closed()?;
 
@@ -210,16 +248,26 @@ impl DevEngine {
         break;
       }
       let (reply_sender, reply_receiver) = tokio::sync::oneshot::channel();
-      self
+      if let Err(err) = self
         .coordinator_sender
         .send(CoordinatorMsg::EnsureLatestBundleOutput { reply: reply_sender })
-        .map_err_to_unhandleable()
-        .context("DevEngine: failed to send EnsureLatestBundleOutput to coordinator")?;
+      {
+        if self.is_closed() {
+          return Ok(());
+        }
+        return (Err(err))
+          .map_err_to_unhandleable()
+          .context("DevEngine: failed to send EnsureLatestBundleOutput to coordinator")?;
+      }
 
-      let received = reply_receiver
-        .await
-        .map_err_to_unhandleable()
-        .context("DevEngine: coordinator closed before responding to EnsureLatestBundleOutput")?;
+      let Ok(received) = reply_receiver.await else {
+        if self.is_closed() {
+          return Ok(());
+        }
+        return Err(anyhow::anyhow!(
+          "DevEngine: coordinator closed before responding to EnsureLatestBundleOutput"
+        ))?;
+      };
 
       // Wait for the build if one is running or was scheduled
       if let Some(ret) = received {
@@ -248,31 +296,44 @@ impl DevEngine {
     Ok(())
   }
 
-  pub async fn invalidate(
-    &self,
-    caller: String,
-    first_invalidated_by: Option<String>,
-  ) -> BuildResult<Vec<ClientHmrUpdate>> {
-    self.create_error_if_closed()?;
-    let mut bundler = self.bundler.lock().await;
+  /// Client-connect signal (the clientId hello): creates the per-client session with an
+  /// empty ship map and the current top-level-evaluated map frozen in. The hello comes from
+  /// the runtime inside the entry chunk, so it doubles as the entry delivery
+  /// notification. (A client that loaded an output older than the latest rebuild
+  /// gets the newer map; the mismatched entries then read as current copies the client
+  /// does not hold — the reload fallback covers that window until the hello carries a
+  /// build id.) Reconnects arrive as fresh clientIds, which is the per-client reset.
+  pub async fn register_client(&self, client_id: String) {
+    let top_level_evaluated = Arc::clone(&*self.dev_context.top_level_evaluated.lock().await);
+    self
+      .clients
+      .lock()
+      .await
+      .entry(client_id)
+      .or_insert_with(|| ClientSession { top_level_evaluated, ..ClientSession::default() });
+  }
 
-    // Use bundler directly for invalidation (avoid message roundtrip)
-    let mut updates = Vec::new();
-    let clients = self.clients.lock().await;
-    for (client_key, client) in clients.iter() {
-      let update = bundler
-        .compute_update_for_calling_invalidate(
-          caller.clone(),
-          first_invalidated_by.clone(),
-          client_key,
-          &client.executed_modules,
-          Arc::clone(&self.next_invalidate_patch_id),
-        )
-        .await?;
-      updates.push(ClientHmrUpdate { client_id: client_key.clone(), update });
+  /// Client-disconnect signal: drops the session together with any
+  /// rendered-but-undelivered payloads addressed to it.
+  pub async fn remove_client(&self, client_id: &str) {
+    self.clients.lock().await.remove(client_id);
+    self.dev_context.pending_payloads.lock().await.retain(|_, p| p.client_id != client_id);
+  }
+
+  /// Delivery notification from the serving middleware: the response for `filename`
+  /// completed. Max-merges the pending entry's stamps into that client's shipped[C] —
+  /// idempotent, and a late or repeated delivery can never move the record backwards.
+  pub async fn notify_payload_delivered(&self, filename: &str) {
+    let Some(pending) = self.dev_context.pending_payloads.lock().await.remove(filename) else {
+      return;
+    };
+    let mut clients = self.clients.lock().await;
+    let Some(session) = clients.get_mut(&pending.client_id) else {
+      return;
+    };
+    for (id, stamp) in pending.modules {
+      session.shipped.entry(id).and_modify(|e| *e = (*e).max(stamp)).or_insert(stamp);
     }
-
-    Ok(updates)
   }
 
   /// Compile a lazy entry module and return compiled code.
@@ -286,7 +347,7 @@ impl DevEngine {
   /// * `client_id` - The client ID requesting this compilation
   ///
   /// # Returns
-  /// The compiled JavaScript code as a string
+  /// The compiled chunk plus the modules and render-time stamps it carries
   ///
   /// # Panics
   /// - If lazy compilation is not enabled
@@ -296,17 +357,19 @@ impl DevEngine {
     &self,
     proxy_module_id: String,
     client_id: String,
-  ) -> BuildResult<String> {
+  ) -> BuildResult<HmrLazyChunkOutput> {
     self.create_error_if_closed()?;
     let mut bundler = self.bundler.lock().await;
 
-    // Get executed modules for this client
-    let executed_modules = self
+    // Snapshot the ship map `shipped[C]` and the top-level-evaluated map for this client so
+    // the compile runs without the clients lock. `ArcStr` keys make the ship-map copy
+    // refcount bumps, not string copies; the top-level-evaluated map is shared by `Arc`.
+    let (shipped, top_level_evaluated) = self
       .clients
       .lock()
       .await
       .get(&client_id)
-      .map(|c| c.executed_modules.clone())
+      .map(|c| (c.shipped.clone(), Arc::clone(&c.top_level_evaluated)))
       .unwrap_or_default();
 
     // Mark the proxy module as fetched BEFORE compilation.
@@ -319,18 +382,48 @@ impl DevEngine {
     // Compile starting from the proxy module.
     // The plugin will return new content (fetched template) that imports the real module,
     // which triggers compilation of the actual module and its dependencies.
-    let result = bundler
+    let stamp_table = self.dev_context.stamp_table.lock().await;
+    let mut result = bundler
       .compile_lazy_entry(
         proxy_module_id.clone(),
         &client_id,
-        &executed_modules,
-        Arc::clone(&self.next_invalidate_patch_id),
+        &shipped,
+        &top_level_evaluated,
+        &stamp_table,
+        Arc::clone(&self.next_hmr_patch_id),
       )
       .await;
+    drop(stamp_table);
 
-    // Notify that the proxy module has changed so build output gets updated.
-    // This ensures future page loads get the fetched template directly.
-    if result.is_ok() {
+    if let Ok(output) = &mut result {
+      // Record the rendered chunk as pending: the delivery notification
+      // max-merges its stamps into `shipped[C]` when the serving middleware
+      // sees the response for `output.filename` complete. The binding layer
+      // drops `carried`, so hand it to the pending entry instead of cloning.
+      self
+        .dev_context
+        .insert_pending_payload(
+          output.filename.clone(),
+          PendingPayload {
+            client_id: client_id.clone(),
+            modules: std::mem::take(&mut output.carried),
+          },
+        )
+        .await;
+
+      // Deliver assets emitted while compiling the lazy entry (e.g. an image
+      // imported by the lazy module) before returning the code, so the consumer
+      // can register/serve them before the client requests them.
+      if let Some(on_additional_assets) = self.dev_context.options.on_additional_assets.as_ref() {
+        let mut output = BundleOutput::default();
+        bundler.file_emitter.add_additional_files(&mut output.assets, &mut output.warnings);
+        if !output.assets.is_empty() {
+          on_additional_assets(output);
+        }
+      }
+
+      // Notify that the proxy module has changed so build output gets updated.
+      // This ensures future page loads get the fetched template directly.
       self.notify_module_changed(proxy_module_id);
     }
 
@@ -384,24 +477,32 @@ impl DevEngine {
     &self,
     changed_files: FxIndexMap<PathBuf, WatcherChangeKind>,
   ) {
-    for (path, event) in changed_files {
-      // Create a synthetic file change event to simulate real file system changes
-      let notify_event = notify::Event {
-        kind: if event == WatcherChangeKind::Delete {
-          notify::EventKind::Remove(notify::event::RemoveKind::Any)
-        } else {
-          notify::EventKind::Modify(notify::event::ModifyKind::Data(notify::event::DataChange::Any))
-        },
-        paths: vec![path],
-        attrs: notify::event::EventAttributes::default(),
-      };
+    // Create synthetic file change events to simulate real file system
+    // changes. The whole step goes into ONE batch: one event per message
+    // would spawn one build per file, while the future awaited below only
+    // covers the first, leaving the rest racing the caller's assertions.
+    let events = changed_files
+      .into_iter()
+      .map(|(path, event)| {
+        let notify_event = notify::Event {
+          kind: if event == WatcherChangeKind::Delete {
+            notify::EventKind::Remove(notify::event::RemoveKind::Any)
+          } else {
+            notify::EventKind::Modify(notify::event::ModifyKind::Data(
+              notify::event::DataChange::Any,
+            ))
+          },
+          paths: vec![path],
+          attrs: notify::event::EventAttributes::default(),
+        };
+        rolldown_fs_watcher::FsEvent { detail: notify_event, time: std::time::Instant::now() }
+      })
+      .collect::<Vec<_>>();
 
-      let event =
-        rolldown_fs_watcher::FsEvent { detail: notify_event, time: std::time::Instant::now() };
-
+    if !events.is_empty() {
       // Send WatchEvent message to coordinator (simulates real file change)
       // The coordinator will automatically schedule a build via handle_file_changes
-      let _ = self.coordinator_sender.send(CoordinatorMsg::WatchEvent(Ok(vec![event])));
+      let _ = self.coordinator_sender.send(CoordinatorMsg::WatchEvent(Ok(events)));
     }
 
     // Send ScheduleBuild to ensure WatchEvent is processed (FIFO),
@@ -413,6 +514,11 @@ impl DevEngine {
     if let Ok(Some(ret)) = reply_rx.await {
       ret.future.await;
     }
+  }
+
+  #[cfg(feature = "testing")]
+  pub fn bundler(&self) -> Arc<Mutex<Bundler>> {
+    Arc::clone(&self.bundler)
   }
 
   #[cfg(feature = "testing")]
@@ -438,8 +544,9 @@ impl DevEngine {
   #[cfg(feature = "testing")]
   pub async fn create_client_for_testing(&self) {
     let client_session = ClientSession::default();
-    // Use special client ID "rolldown-tests" which will be recognized by HMR logic
-    // to always consider modules as executed, without needing to populate the HashSet
+    // A fixed client ID so HMR steps in tests have a session to compute updates for.
+    // Its ship map starts empty and no delivery is ever marked, so every step ships
+    // the full affected factory set.
     self.clients.lock().await.insert("rolldown-tests".to_string(), client_session);
   }
 
@@ -453,14 +560,21 @@ impl DevEngine {
 
 #[derive(Debug, Clone)]
 pub struct BundleState {
-  pub last_full_build_failed: bool,
+  /// True for any error state (initial or incremental).
+  pub last_build_errored: bool,
+  /// The stage of the last incremental failure (`Some` only in
+  /// `Failed { .. }`; `None` on success and on `FullBuildFailed`). Lets
+  /// the consumer force a full rebuild on access after an `Hmr`-stage
+  /// failure — see `internal-docs/dev-engine/implementation.md` §12.
+  pub last_error_stage: Option<ErrorStage>,
   pub has_stale_output: bool,
 }
 
 impl From<CoordinatorStateSnapshot> for BundleState {
   fn from(snapshot: CoordinatorStateSnapshot) -> Self {
     Self {
-      last_full_build_failed: snapshot.last_full_build_failed,
+      last_build_errored: snapshot.last_build_errored,
+      last_error_stage: snapshot.last_error_stage,
       has_stale_output: snapshot.has_stale_output,
     }
   }

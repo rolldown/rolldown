@@ -1,8 +1,11 @@
 # Maintenance Guide
 
-A plugin for `rolldown-vite` that generates a `manifest.json` mapping original filenames to emitted assets/chunks, ported from `Vite`'s [manifestPlugin](https://github.com/vitejs/rolldown-vite/blob/fa33494/packages/vite/src/node/plugins/manifest.ts).
+A plugin for `vite` that generates a `manifest.json` mapping original filenames to emitted assets/chunks, ported from `Vite`'s [manifestPlugin](https://github.com/vitejs/rolldown-vite/blob/fa33494/packages/vite/src/node/plugins/manifest.ts).
 
-**This plugin is exclusive to `rolldown-vite` and is not recommended for external use.**
+> [!NOTE]
+> This plugin is exclusive to `vite`; external use is not recommended.
+> Its API may change between minor versions of `rolldown`, but
+> stays compatible within the same minor version.
 
 ## 📦 What it does
 

@@ -30,6 +30,7 @@ import type {
   ChunkFileNamesFunction,
   GlobalsFunction,
   ManualChunksFunction,
+  ManglePropertiesOptions,
   OutputOptions,
   PathsFunction,
   PreRenderedAsset,
@@ -228,32 +229,6 @@ isTypeTrue<
   IsSchemaSubType<typeof TransformPluginsSchema, Exclude<TransformOptions['plugins'], undefined>>
 >();
 
-const ReactCompilerOptionsSchema = v.object({
-  compilationMode: v.optional(
-    v.union([v.literal('infer'), v.literal('syntax'), v.literal('annotation'), v.literal('all')]),
-  ),
-  panicThreshold: v.optional(
-    v.union([v.literal('none'), v.literal('critical_errors'), v.literal('all_errors')]),
-  ),
-  target: v.optional(v.union([v.literal('17'), v.literal('18'), v.literal('19')])),
-  noEmit: v.optional(v.boolean()),
-  outputMode: v.optional(v.union([v.literal('client'), v.literal('ssr'), v.literal('lint')])),
-  ignoreUseNoForget: v.optional(v.boolean()),
-  flowSuppressions: v.optional(v.boolean()),
-  enableReanimated: v.optional(v.boolean()),
-  isDev: v.optional(v.boolean()),
-  filename: v.optional(v.string()),
-  eslintSuppressionRules: v.optional(v.array(v.string())),
-  customOptOutDirectives: v.optional(v.array(v.string())),
-  gating: v.optional(
-    v.object({
-      source: v.string(),
-      importSpecifierName: v.string(),
-    }),
-  ),
-  dynamicGating: v.optional(v.object({ source: v.string() })),
-});
-
 const TransformOptionsSchema = v.object({
   assumptions: v.optional(AssumptionsSchema),
   typescript: v.optional(TypescriptSchema),
@@ -285,7 +260,6 @@ const TransformOptionsSchema = v.object({
     v.description('Remove labeled statements with these label names'),
   ),
   plugins: v.pipe(v.optional(TransformPluginsSchema), v.description('Third-party plugins to use')),
-  reactCompiler: v.optional(v.union([v.boolean(), ReactCompilerOptionsSchema])),
 });
 isTypeTrue<IsSchemaSubType<typeof TransformOptionsSchema, TransformOptions>>();
 
@@ -384,6 +358,10 @@ const ChecksOptionsSchema = v.strictObject({
       'Whether to emit warnings when files generated have the same name with different contents',
     ),
   ),
+  moduleLevelDirective: v.pipe(
+    v.optional(v.boolean()),
+    v.description('Whether to emit warnings for module-level directives other than `use strict`'),
+  ),
   commonJsVariableInEsm: v.pipe(
     v.optional(v.boolean()),
     v.description('Whether to emit warnings when a CommonJS variable is used in an ES module'),
@@ -456,6 +434,12 @@ const ChecksOptionsSchema = v.strictObject({
       'Whether to emit warnings when a plugin transforms code without generating a sourcemap',
     ),
   ),
+  namespaceConflict: v.pipe(
+    v.optional(v.boolean()),
+    v.description(
+      'Whether to emit warnings when multiple star re-exports provide the same name from different modules',
+    ),
+  ),
 });
 isTypeTrue<IsSchemaSubType<typeof ChecksOptionsSchema, ChecksOptions>>();
 
@@ -503,12 +487,24 @@ isTypeTrue<IsSchemaSubType<typeof MangleOptionsKeepNamesSchema, MangleOptionsKee
 const MangleOptionsSchema = v.strictObject({
   toplevel: v.optional(v.boolean()),
   keepNames: v.optional(v.union([v.boolean(), MangleOptionsKeepNamesSchema])),
+  reserved: v.optional(v.array(v.string())),
   debug: v.optional(v.boolean()),
 }) satisfies v.GenericSchema<MangleOptions>;
 isTypeTrue<IsSchemaSubType<typeof MangleOptionsSchema, MangleOptions>>();
 
+const ManglePropertiesOptionsSchema = v.strictObject({
+  include: v.instance(RegExp),
+  exclude: v.optional(v.instance(RegExp)),
+  reserved: v.optional(v.array(v.string())),
+  quoted: v.optional(v.boolean()),
+  debug: v.optional(v.boolean()),
+  cache: v.optional(v.record(v.string(), v.union([v.string(), v.literal(false)]))),
+});
+isTypeTrue<IsSchemaSubType<typeof ManglePropertiesOptionsSchema, ManglePropertiesOptions>>();
+
 const CodegenOptionsSchema = v.strictObject({
   removeWhitespace: v.optional(v.boolean()),
+  asciiOnly: v.optional(v.boolean()),
   legalComments: v.optional(
     v.union([
       v.literal('none'),
@@ -524,6 +520,7 @@ isTypeTrue<IsSchemaSubType<typeof CodegenOptionsSchema, CodegenOptions>>();
 const MinifyOptionsSchema = v.strictObject({
   compress: v.optional(v.union([v.boolean(), CompressOptionsSchema])),
   mangle: v.optional(v.union([v.boolean(), MangleOptionsSchema])),
+  mangleProps: v.optional(ManglePropertiesOptionsSchema),
   codegen: v.optional(v.union([v.boolean(), CodegenOptionsSchema])),
 });
 isTypeTrue<IsSchemaSubType<typeof MinifyOptionsSchema, MinifyOptions>>();
@@ -622,6 +619,7 @@ const DevModeSchema = v.union([
     port: v.optional(v.number()),
     host: v.optional(v.string()),
     implement: v.optional(v.string()),
+    skipCommonRuntimeInjection: v.optional(v.boolean()),
     lazy: v.optional(v.boolean()),
   }),
 ]);
@@ -920,6 +918,10 @@ const OutputOptionsSchema = v.strictObject({
     v.optional(v.string()),
     v.description('Base URL used to prefix sourcemap paths'),
   ),
+  sourcemapFileNames: v.pipe(
+    v.optional(ChunkFileNamesSchema),
+    v.description('Name pattern for emitted sourcemaps'),
+  ),
   sourcemapDebugIds: v.pipe(v.optional(v.boolean()), v.description('Inject sourcemap debug IDs')),
   sourcemapExcludeSources: v.pipe(
     v.optional(v.boolean()),
@@ -1014,7 +1016,7 @@ const OutputOptionsSchema = v.strictObject({
   ),
   strictExecutionOrder: v.pipe(
     v.optional(v.boolean()),
-    v.description('Lets modules be executed in the order they are declared.'),
+    v.description('Preserve source module execution order across generated chunks.'),
   ),
   strict: v.pipe(
     v.optional(v.union([v.boolean(), v.literal('auto')])),
@@ -1082,7 +1084,9 @@ const OutputCliOverrideSchema = v.strictObject({
         }),
       ]),
     ),
-    v.description('Code splitting options (true, false, or object)'),
+    v.description(
+      'Code splitting options. Enabled by default; use `--no-codeSplitting` to disable, or `--codeSplitting.minSize` / `--codeSplitting.minShareCount` to configure',
+    ),
   ),
   advancedChunks: v.pipe(
     v.optional(
@@ -1123,6 +1127,10 @@ const CliOptionsSchema = v.strictObject({
   watch: v.pipe(
     v.optional(v.boolean()),
     v.description('Watch files in bundle and rebuild on changes'),
+  ),
+  configLoader: v.pipe(
+    v.optional(v.union([v.literal('bundle'), v.literal('native')])),
+    v.description('How to load the config file (bundle, native)'),
   ),
   ...InputCliOptionsSchema.entries,
   ...OutputCliOptionsSchema.entries,

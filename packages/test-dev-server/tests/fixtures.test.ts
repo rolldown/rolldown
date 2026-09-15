@@ -5,14 +5,14 @@ import killPort from 'kill-port';
 import nodeFs from 'node:fs';
 import nodePath from 'node:path';
 import { afterAll, describe, test } from 'vitest';
-import { isDirectoryExists, removeDirSync } from './src/utils';
 import {
   getBuildSeq,
-  getModuleRegistrationSeq,
+  getConnectedClients,
+  waitForClientConnected,
   waitForBuildStable,
-  waitForModuleRegistration,
   waitForNextBuild,
-} from './test-utils';
+} from './src/dev-status';
+import { isDirectoryExists, removeDirSync } from './src/utils';
 
 function main() {
   const fixturesPath = nodePath.resolve(__dirname, 'fixtures');
@@ -40,6 +40,7 @@ function main() {
       }
       test(`fixture: ${fixtureName}`, async () => {
         const port = 3000 + testIndex;
+        const serverUrl = `http://localhost:${port}`;
         testIndex++;
 
         let tmpProjectPath = nodePath.join(tmpFixturesPath, fixtureName);
@@ -88,18 +89,22 @@ function main() {
 
         await waitForPathExists(nodeScriptPath);
 
-        let runningArtifactProcess = await runArtifactProcess(nodeScriptPath, tmpProjectPath, port);
+        let runningArtifactProcess = await runArtifactProcess(
+          nodeScriptPath,
+          tmpProjectPath,
+          serverUrl,
+        );
 
         const hmrEditFiles = await collectHmrEditFiles(tmpProjectPath);
 
         // Wait for the initial build to stabilize
-        await waitForBuildStable(port);
+        await waitForBuildStable(serverUrl);
 
         for (const [index, [step, hmrEdits]] of hmrEditFiles.entries()) {
           // Wait for the previous build's debounce window to close so the
           // watcher treats the next file write as a new change.
           if (index !== 0) {
-            await waitForBuildStable(port);
+            await waitForBuildStable(serverUrl);
           }
 
           console.log(
@@ -124,7 +129,7 @@ function main() {
           }
 
           // Snapshot buildSeq before writing so we can detect the resulting build
-          const preWriteBuildSeq = await getBuildSeq(port);
+          const preWriteBuildSeq = await getBuildSeq(serverUrl);
 
           for (const hmrEdit of hmrEditsWithContent) {
             console.log(`🔄 Writing content to: ${hmrEdit.targetPath}`);
@@ -143,11 +148,15 @@ function main() {
               devServeProcess.stdin.write('r');
             } else {
               // For restart steps (no reload), wait for the watcher-triggered build.
-              await waitForNextBuild(port, preWriteBuildSeq);
+              await waitForNextBuild(serverUrl, preWriteBuildSeq);
             }
             await runningArtifactProcess.close();
             await waitForFileToBeModified(nodeScriptPath, currentArtifactContent);
-            runningArtifactProcess = await runArtifactProcess(nodeScriptPath, tmpProjectPath, port);
+            runningArtifactProcess = await runArtifactProcess(
+              nodeScriptPath,
+              tmpProjectPath,
+              serverUrl,
+            );
           }
           await waitForPathExists(nodePath.join(tmpProjectPath, `ok-${index}`), 10 * 1000);
           console.log(`✅ HMR triggered for step ${step}`);
@@ -172,20 +181,23 @@ function main() {
 
 let id = 0;
 
-async function runArtifactProcess(artifactPath: string, tmpProjectPath: string, port: number) {
+async function runArtifactProcess(artifactPath: string, tmpProjectPath: string, serverUrl: string) {
   const thisId = id;
   id++;
 
   const initOkFilePath = nodePath.join(tmpProjectPath, `ok-init-${thisId}`);
+  const webSocketUrl = import.meta.resolve('ws');
   const injectCode = encodeURIComponent(
     `
     import __nodeFs__ from 'node:fs';
+    import { WebSocket as __WebSocket__ } from ${JSON.stringify(webSocketUrl)};
+    globalThis.WebSocket = __WebSocket__;
     __nodeFs__.writeFileSync('ok-init-${thisId}', '');
   `.trim(),
   );
 
-  // Snapshot registered clients before starting the process
-  const currentRegistered = await getModuleRegistrationSeq(port);
+  // Snapshot connected clients before starting the process
+  const currentConnected = await getConnectedClients(serverUrl);
 
   console.log(`🔄 Starting Node.js process: ${artifactPath}`);
   const artifactProcess = execa(
@@ -197,8 +209,9 @@ async function runArtifactProcess(artifactPath: string, tmpProjectPath: string, 
   // Wait for the Node.js process to start
   await waitForPathExists(initOkFilePath);
 
-  // Wait for modules to be registered with the dev server
-  await waitForModuleRegistration(port, currentRegistered);
+  // Wait for the artifact's runtime to connect — the ws connect fires while the
+  // bundle evaluates, and the remaining modules evaluate synchronously after it
+  await waitForClientConnected(serverUrl, currentConnected);
 
   return {
     process: artifactProcess,

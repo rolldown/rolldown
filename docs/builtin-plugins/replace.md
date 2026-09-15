@@ -37,7 +37,12 @@ export default defineConfig({
 - **Type:** `[string, string]`
 - **Default:** `["\\b", "\\b(?!\\.)"]`
 
-Customizes how strings are matched. The default ensures word boundaries and prevents replacing property access (e.g., won't replace `process` in `process.env`).
+Customizes how each key is matched. A key only matches when it's surrounded by these two patterns:
+
+- `delimiters[0]` (**left**): what must come right before the key.
+- `delimiters[1]` (**right**): what must come right after the key.
+
+Both are regular expressions. The default `["\\b", "\\b(?!\\.)"]` matches a key only at word boundaries and skips property accesses, so `process` in `process.env` is left untouched.
 
 ### `preventAssignment`
 

@@ -87,13 +87,6 @@ impl Module {
     }
   }
 
-  pub fn as_external_mut(&mut self) -> Option<&mut ExternalModule> {
-    match self {
-      Module::External(v) => Some(v),
-      Module::Normal(_) => None,
-    }
-  }
-
   pub fn import_records(&self) -> &IndexVec<ImportRecordIdx, ResolvedImportRecord> {
     match self {
       Module::Normal(v) => &v.ecma_view.import_records,

@@ -1,0 +1,29 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+let node_assert = require("node:assert");
+node_assert = __toESM(node_assert);
+//#region main.js
+function init() {
+	const dir = __dirname;
+	var __dirname$1 = "SENTINEL";
+	return [
+		dir,
+		dir,
+		__dirname$1,
+		__dirname$1
+	];
+}
+const [dir, , dirname] = init();
+node_assert.default.equal(typeof dir, "string");
+node_assert.default.ok(!dir.includes("SENTINEL"));
+node_assert.default.equal(dirname, "SENTINEL");
+//#endregion
+
+```

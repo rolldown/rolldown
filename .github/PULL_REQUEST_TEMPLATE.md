@@ -1,0 +1,15 @@
+<!--
+- What is this PR solving? Write a clear and concise description.
+- Reference the issues it solves (e.g. `fixes #123`).
+- What other alternatives have you explored?
+- Are there any parts you think require more attention from reviewers?
+
+Also, please make sure you do the following:
+
+- Read the Contributing Guidelines at https://rolldown.rs/contribution-guide/.
+- Check that there isn't already a PR that solves the problem the same way. If you find a duplicate, please help us review it.
+- Update the corresponding documentation if needed.
+- Include relevant tests that fail without this PR but pass with it. If the tests are not included, explain why.
+
+Thank you for contributing to Rolldown!
+-->

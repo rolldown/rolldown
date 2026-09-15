@@ -10,6 +10,8 @@ source: crates/rolldown_testing/src/integration_test.rs
 //#region node_modules/package/esm-output.js
 const output = "esm";
 //#endregion
+//#region node_modules/package/cjs-output.js
+//#endregion
 //#region main.js
 const { output: requireOutput } = (/* @__PURE__ */ __commonJSMin(((exports, module) => {
 	module.exports.output = "cjs";

@@ -1,0 +1,9 @@
+{
+  "_comment": "KNOWN HOLE (rolldown#10164 second-round review, focus item 1). An edit adds a static import of a module that is already in the graph (reachable only through a never-triggered import(), so it lives in a chunk this client never loaded). The patch superset (upward importer walk ∪ graph-new modules) never ships it: it is not an importer of the changed module and not new to the graph. A client that executes this patch evicts and re-runs hmr.js, whose new import hits initModule('heavy.js') with no resident factory and fails midway (MissingFactoryError). Until the patch also ships newly-added static deps, the step-0 patch in the snapshot must NOT contain heavy.js's factory — execution is skipped for the same reason as no_boundary_reload. When the fix lands, heavy.js appears in the patch and `expectExecuted` can be dropped. The browser-platform counterpart (lazy compilation, multi-tab) is the `hmr-new-static-dep-unloaded-chunk` playground in packages/test-dev-server.",
+  "expectExecuted": false,
+  "config": {
+    "experimental": {
+      "devMode": {}
+    }
+  }
+}

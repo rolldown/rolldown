@@ -13,7 +13,7 @@ use itertools::Itertools;
 use oxc_index::IndexVec;
 use oxc_str::CompactStr;
 use rolldown_ecmascript::{EcmaAst, EcmaCompiler, PrintOptions};
-use rolldown_sourcemap::{OwnedSourceMap, collapse_sourcemaps};
+use rolldown_sourcemap::collapse_sourcemaps;
 use rolldown_utils::IndexBitSet;
 use rustc_hash::FxHashSet;
 use string_wizard::SourceMapOptions;
@@ -34,17 +34,18 @@ pub struct NormalModule {
 }
 
 impl NormalModule {
+  pub fn star_export_records(&self) -> impl Iterator<Item = (ImportRecordIdx, ModuleIdx)> + '_ {
+    self.ecma_view.import_records.iter_enumerated().filter_map(|(rec_idx, rec)| {
+      rec
+        .meta
+        .contains(ImportRecordMeta::IsExportStar)
+        .then(|| rec.resolved_module.map(|module_idx| (rec_idx, module_idx)))
+        .flatten()
+    })
+  }
+
   pub fn star_export_module_ids(&self) -> impl Iterator<Item = ModuleIdx> + '_ {
-    if self.has_star_export() {
-      itertools::Either::Left(self.ecma_view.import_records.iter().filter_map(|rec| {
-        if !rec.meta.contains(ImportRecordMeta::IsExportStar) {
-          return None;
-        }
-        rec.resolved_module
-      }))
-    } else {
-      itertools::Either::Right(std::iter::empty())
-    }
+    self.star_export_records().map(|(_, module_idx)| module_idx)
   }
 
   pub fn has_star_export(&self) -> bool {
@@ -228,18 +229,23 @@ impl NormalModule {
             mutation.apply(&mut magic_string);
           }
           let code = magic_string.to_string();
+          // `collapse_sourcemaps` walks this map's tokens, so it must match the codegen map's
+          // granularity — the default `Hires::False` maps only each line's column 0 and drops
+          // indented lines' mappings (rolldown#10070).
           let mutated_map = magic_string.source_map(SourceMapOptions {
             source: Arc::clone(&original_code),
+            hires: string_wizard::Hires::Boundary,
             ..Default::default()
           });
-          let map = render_output
-            .map
-            .map(|original| collapse_sourcemaps(&[&original.into_inner(), &mutated_map]));
+          // `original` borrows the module source; `collapse_sourcemaps` copies what it
+          // keeps from it, so no `into_owned` detach is needed.
+          let map =
+            render_output.map.map(|original| collapse_sourcemaps(&[&original, &mutated_map]));
           return ModuleRenderOutput { code, map };
         }
         ModuleRenderOutput {
           code: render_output.code,
-          map: render_output.map.map(OwnedSourceMap::into_inner),
+          map: render_output.map.map(oxc_sourcemap::SourceMap::into_owned),
         }
       }
     }

@@ -1,0 +1,61 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+__rolldown_runtime__.registerGraph({
+	ids: ["main.ts"],
+	localCount: 1,
+	edges: [[]],
+	dynamicEdges: [[]]
+});
+//#region main.ts
+var main_exports = /* @__PURE__ */ __exportAll({ Foo: () => Foo });
+__rolldown_runtime__.createModuleHotContext("main.ts");
+__rolldown_runtime__.registerModule("main.ts", { exports: main_exports });
+var Foo = class {
+	constructor() {
+		this.bar = 1;
+	}
+};
+//#endregion
+export { Foo };
+
+```
+
+# HMR Step 0
+
+## Meta
+
+- update type: full-reload
+- reason: tsconfig change
+
+## Build Output
+
+### Assets
+
+#### main.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+__rolldown_runtime__.registerGraph({
+	ids: ["main.ts"],
+	localCount: 1,
+	edges: [[]],
+	dynamicEdges: [[]]
+});
+//#region main.ts
+var main_exports = /* @__PURE__ */ __exportAll({ Foo: () => Foo });
+__rolldown_runtime__.createModuleHotContext("main.ts");
+__rolldown_runtime__.registerModule("main.ts", { exports: main_exports });
+var Foo = class {
+	bar = 1;
+};
+//#endregion
+export { Foo };
+
+```

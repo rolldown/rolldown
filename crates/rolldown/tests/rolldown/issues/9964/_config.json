@@ -1,0 +1,9 @@
+{
+  "_comment": "https://github.com/rolldown/rolldown/issues/9964 - a pure-CJS `entry.cjs` requires the ESM consumer `story.js`, wrapping it via require(esm). The consumer imports only `objectKeys` from the barrel `lib/index.js`; the barrel also `export *`s a separate `sideEffects:false` module `account.js` whose derived initializers read imported `eg` but whose exports are never used. The unused account body and `eg.js` import must stay dropped. Executes require interop and asserts run() === 'ok'.",
+  "config": {
+    "input": [{ "name": "entry", "import": "./entry.cjs" }],
+    "experimental": {
+      "lazyBarrel": true
+    }
+  }
+}

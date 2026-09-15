@@ -70,6 +70,63 @@ describe('enhanced transform', () => {
     });
   });
 
+  describe('decorator metadata strictNullChecks from tsconfig', () => {
+    const code = `
+      function dec(_target: any, _key: string) {}
+      class MyClass {
+        @dec
+        field: string | null = null;
+      }
+    `;
+
+    it('infers strictNullChecks: false from tsconfig (emits the primitive)', () => {
+      const result = transformSync('test.ts', code, {
+        tsconfig: {
+          compilerOptions: {
+            experimentalDecorators: true,
+            emitDecoratorMetadata: true,
+            strictNullChecks: false,
+          },
+        },
+      });
+      expect(result.errors).toHaveLength(0);
+      expect(result.code).toMatch(/design:type",\s*String/);
+    });
+
+    it('falls back to tsconfig `strict` when strictNullChecks is unset', () => {
+      const result = transformSync('test.ts', code, {
+        tsconfig: {
+          compilerOptions: {
+            experimentalDecorators: true,
+            emitDecoratorMetadata: true,
+            strict: false,
+          },
+        },
+      });
+      expect(result.errors).toHaveLength(0);
+      expect(result.code).toMatch(/design:type",\s*String/);
+    });
+
+    it('keeps the strict default (Object) when tsconfig sets neither', () => {
+      const result = transformSync('test.ts', code, {
+        tsconfig: {
+          compilerOptions: { experimentalDecorators: true, emitDecoratorMetadata: true },
+        },
+      });
+      expect(result.errors).toHaveLength(0);
+      expect(result.code).toMatch(/design:type",\s*Object/);
+    });
+
+    it('explicit transform.decorator.strictNullChecks overrides tsconfig', () => {
+      const result = transformSync('test.ts', code, {
+        decorator: { legacy: true, emitDecoratorMetadata: true, strictNullChecks: true },
+        tsconfig: { compilerOptions: { strictNullChecks: false } },
+      });
+      expect(result.errors).toHaveLength(0);
+      expect(result.code).toMatch(/design:type",\s*Object/);
+    });
+  });
+
   describe('tsconfig - raw options', () => {
     it('should use raw tsconfig JSX options', async () => {
       const result = await transform('test.tsx', '<div />', {
@@ -115,6 +172,28 @@ describe('enhanced transform', () => {
 
   describe('tsconfig - auto-discovery', () => {
     const fixtures = path.join(import.meta.dirname, 'fixtures');
+
+    it('should use a tsconfig path', () => {
+      // Must be a real absolute path. `/foo` is not absolute on Windows, so
+      // oxc_resolver treats it as a virtual module and skips tsconfig.
+      const filename = path.resolve('/nonexistent/path/test.ts');
+      const code = `class Foo { bar = 'bar' }`;
+      const explicitTsconfig = path.join(fixtures, 'tsconfig.json');
+      const expected = transformSync(filename, code, {
+        target: 'esnext',
+        tsconfig: {
+          compilerOptions: { useDefineForClassFields: false },
+        },
+      });
+      const result = transformSync(filename, code, {
+        target: 'esnext',
+        tsconfig: explicitTsconfig,
+      });
+
+      expect(result.code).toBe(expected.code);
+      expect(result.errors).toHaveLength(0);
+      expect(result.tsconfigFilePaths).toStrictEqual([explicitTsconfig]);
+    });
 
     it('should auto-discover tsconfig by default (no tsconfig option)', async () => {
       const result = await transform(

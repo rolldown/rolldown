@@ -1,0 +1,122 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## b.js
+
+```js
+import { n as init_shared, r as s } from "./e2.js";
+import { t as __esmMin } from "./rolldown-runtime.js";
+//#region b.js
+function init_b() {
+	return (init_b = __esmMin((() => {
+		init_shared();
+		globalThis.events.push("B body " + s);
+	})))();
+}
+//#endregion
+init_b();
+
+```
+
+## e.js
+
+```js
+import { t as init_e } from "./e2.js";
+init_e();
+
+```
+
+## e2.js
+
+```js
+import { t as __esmMin } from "./rolldown-runtime.js";
+//#region shared.js
+var s;
+function init_shared() {
+	return (init_shared = __esmMin((() => {
+		globalThis.events.push("S body");
+		s = String(globalThis.__s ?? "S");
+	})))();
+}
+//#endregion
+//#region e.js
+function init_e() {
+	return (init_e = __esmMin((() => {
+		globalThis.events.push("E body");
+	})))();
+}
+//#endregion
+export { init_shared as n, s as r, init_e as t };
+
+```
+
+## rolldown-runtime.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+export { __esmMin as t };
+
+```
+
+# Variant: on-demand: [on_demand_wrapping: true]
+
+## Assets
+
+### b.js
+
+```js
+import { n as init_shared, r as s } from "./e2.js";
+import { t as __esmMin } from "./rolldown-runtime.js";
+//#region b.js
+function init_b() {
+	return (init_b = __esmMin((() => {
+		init_shared();
+		globalThis.events.push("B body " + s);
+	})))();
+}
+//#endregion
+init_b();
+
+```
+
+### e.js
+
+```js
+import { t as init_e } from "./e2.js";
+init_e();
+
+```
+
+### e2.js
+
+```js
+import { t as __esmMin } from "./rolldown-runtime.js";
+//#region shared.js
+var s;
+function init_shared() {
+	return (init_shared = __esmMin((() => {
+		globalThis.events.push("S body");
+		s = String(globalThis.__s ?? "S");
+	})))();
+}
+//#endregion
+//#region e.js
+function init_e() {
+	return (init_e = __esmMin((() => {
+		globalThis.events.push("E body");
+	})))();
+}
+//#endregion
+export { init_shared as n, s as r, init_e as t };
+
+```
+
+### rolldown-runtime.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+export { __esmMin as t };
+
+```

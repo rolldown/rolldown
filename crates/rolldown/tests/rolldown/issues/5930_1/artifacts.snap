@@ -19,6 +19,7 @@ const require_runtime = require("./_virtual/_rolldown/runtime.js");
 const require_rule$1 = require("./rule.js");
 let node_assert = require("node:assert");
 node_assert = require_runtime.__toESM(node_assert);
+//#region main.js
 const plugin = { mod: (/* @__PURE__ */ require_runtime.__toESM(require_rule$1)).default };
 node_assert.default.strictEqual(plugin.mod.meta, 19);
 //#endregion

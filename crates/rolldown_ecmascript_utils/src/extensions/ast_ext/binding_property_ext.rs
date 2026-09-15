@@ -1,128 +1,131 @@
+use oxc::allocator::GetAllocator;
 use oxc::{
-  allocator::{Allocator, IntoIn as _, TakeIn},
+  allocator::{IntoIn as _, TakeIn},
   ast::{
-    AstBuilder,
     ast::{
-      AssignmentTargetMaybeDefault, AssignmentTargetProperty, BindingPattern, BindingProperty,
+      AssignmentTargetMaybeDefault, AssignmentTargetProperty, AssignmentTargetRest, BindingPattern,
+      BindingProperty, IdentifierReference,
     },
+    builder::GetAstBuilder,
   },
 };
 
 use crate::BindingPatternExt as _;
 
 pub trait BindingPropertyExt<'ast> {
-  fn into_assignment_target_property(
+  fn into_assignment_target_property<B: GetAstBuilder<'ast> + GetAllocator<'ast>>(
     self,
-    alloc: &'ast Allocator,
+    builder: &B,
   ) -> AssignmentTargetProperty<'ast>;
 }
 
 impl<'ast> BindingPropertyExt<'ast> for BindingProperty<'ast> {
-  fn into_assignment_target_property(
+  fn into_assignment_target_property<B: GetAstBuilder<'ast> + GetAllocator<'ast>>(
     self,
-    alloc: &'ast Allocator,
+    builder: &B,
   ) -> AssignmentTargetProperty<'ast> {
-    let builder = AstBuilder::new(alloc);
     match self.value {
       BindingPattern::AssignmentPattern(assign_pat) => {
         let assign_pat = assign_pat.unbox();
         if self.shorthand {
           let binding_id = assign_pat.left.get_binding_identifier().unwrap();
-          AssignmentTargetProperty::AssignmentTargetPropertyIdentifier(
-            builder.alloc_assignment_target_property_identifier(
-              self.span,
-              builder.identifier_reference(binding_id.span, binding_id.name),
-              Some(assign_pat.right),
-            ),
+          AssignmentTargetProperty::new_assignment_target_property_identifier(
+            self.span,
+            IdentifierReference::new(binding_id.span, binding_id.name, builder),
+            Some(assign_pat.right),
+            builder,
           )
         } else {
-          AssignmentTargetProperty::AssignmentTargetPropertyProperty(
-            builder.alloc_assignment_target_property_property(
-              self.span,
-              self.key,
-              AssignmentTargetMaybeDefault::AssignmentTargetWithDefault(
-                builder.alloc_assignment_target_with_default(
-                  assign_pat.span,
-                  assign_pat.left.into_assignment_target(alloc),
-                  assign_pat.right,
-                ),
-              ),
-              self.computed,
+          AssignmentTargetProperty::new_assignment_target_property_property(
+            self.span,
+            self.key,
+            AssignmentTargetMaybeDefault::new_assignment_target_with_default(
+              assign_pat.span,
+              assign_pat.left.into_assignment_target(builder),
+              assign_pat.right,
+              builder,
             ),
+            self.computed,
+            builder,
           )
-          .into_in(alloc)
+          .into_in(builder.allocator())
         }
       }
       BindingPattern::BindingIdentifier(ref id) => {
         if self.shorthand {
-          AssignmentTargetProperty::AssignmentTargetPropertyIdentifier(
-            builder.alloc_assignment_target_property_identifier(
-              self.span,
-              builder.identifier_reference(id.span, id.name),
-              None,
-            ),
+          AssignmentTargetProperty::new_assignment_target_property_identifier(
+            self.span,
+            IdentifierReference::new(id.span, id.name, builder),
+            None,
+            builder,
           )
         } else {
-          AssignmentTargetProperty::AssignmentTargetPropertyProperty(
-            builder.alloc_assignment_target_property_property(
-              self.span,
-              self.key,
-              AssignmentTargetMaybeDefault::from(self.value.into_assignment_target(alloc)),
-              self.computed,
-            ),
+          AssignmentTargetProperty::new_assignment_target_property_property(
+            self.span,
+            self.key,
+            AssignmentTargetMaybeDefault::from(self.value.into_assignment_target(builder)),
+            self.computed,
+            builder,
           )
-          .into_in(alloc)
+          .into_in(builder.allocator())
         }
       }
       BindingPattern::ArrayPattern(arr_pat) => {
         let mut arr_pat = arr_pat.unbox();
         let rest = arr_pat.rest.take().map(|rest| {
-          builder.alloc_assignment_target_rest(
+          AssignmentTargetRest::boxed(
             rest.span,
-            rest.unbox().argument.into_assignment_target(alloc),
+            rest.unbox().argument.into_assignment_target(builder),
+            builder,
           )
         });
-        let mut elements = builder.vec_with_capacity(arr_pat.elements.len());
-        arr_pat.elements.take_in(alloc).into_iter().for_each(|element| {
+        let mut elements = oxc::allocator::Vec::with_capacity_in(arr_pat.elements.len(), builder);
+        arr_pat.elements.take_in(&builder.allocator()).into_iter().for_each(|element| {
           elements.push(element.map(|binding_pat| {
-            AssignmentTargetMaybeDefault::from(binding_pat.into_assignment_target(alloc))
+            AssignmentTargetMaybeDefault::from(binding_pat.into_assignment_target(builder))
           }));
         });
-        AssignmentTargetProperty::AssignmentTargetPropertyProperty(
-          builder.alloc_assignment_target_property_property(
-            self.span,
-            self.key,
-            AssignmentTargetMaybeDefault::ArrayAssignmentTarget(
-              builder.alloc_array_assignment_target(arr_pat.span, elements, rest),
-            ),
-            self.computed,
+        AssignmentTargetProperty::new_assignment_target_property_property(
+          self.span,
+          self.key,
+          AssignmentTargetMaybeDefault::new_array_assignment_target(
+            arr_pat.span,
+            elements,
+            rest,
+            builder,
           ),
+          self.computed,
+          builder,
         )
-        .into_in(alloc)
+        .into_in(builder.allocator())
       }
       BindingPattern::ObjectPattern(obj_pat) => {
         let mut obj_pat = obj_pat.unbox();
         let rest = obj_pat.rest.take().map(|rest| {
-          builder.alloc_assignment_target_rest(
+          AssignmentTargetRest::boxed(
             rest.span,
-            rest.unbox().argument.into_assignment_target(alloc),
+            rest.unbox().argument.into_assignment_target(builder),
+            builder,
           )
         });
-        let mut properties = builder.vec_with_capacity(obj_pat.properties.len());
-        obj_pat.properties.take_in(alloc).into_iter().for_each(|property| {
-          properties.push(property.into_assignment_target_property(alloc));
+        let mut properties =
+          oxc::allocator::Vec::with_capacity_in(obj_pat.properties.len(), builder);
+        obj_pat.properties.take_in(&builder.allocator()).into_iter().for_each(|property| {
+          properties.push(property.into_assignment_target_property(builder));
         });
-        AssignmentTargetProperty::AssignmentTargetPropertyProperty(
-          builder.alloc_assignment_target_property_property(
-            self.span,
-            self.key,
-            AssignmentTargetMaybeDefault::ObjectAssignmentTarget(
-              builder.alloc_object_assignment_target(obj_pat.span, properties, rest),
-            ),
-            self.computed,
+        AssignmentTargetProperty::new_assignment_target_property_property(
+          self.span,
+          self.key,
+          AssignmentTargetMaybeDefault::new_object_assignment_target(
+            obj_pat.span,
+            properties,
+            rest,
+            builder,
           ),
+          self.computed,
+          builder,
         )
-        .into_in(alloc)
+        .into_in(builder.allocator())
       }
     }
   }

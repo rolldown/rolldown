@@ -9,6 +9,8 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 // HIDDEN [\0rolldown/runtime.js]
+//#region foo.txt
+//#endregion
 //#region main.cjs
 console.log((/* @__PURE__ */ __commonJSMin(((exports, module) => {
 	module.exports = "./assets/foo-Cctl21F7.txt";

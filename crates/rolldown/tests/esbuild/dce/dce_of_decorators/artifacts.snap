@@ -10,25 +10,27 @@ source: crates/rolldown_testing/src/integration_test.rs
 const fn = () => {
 	console.log("side effect");
 };
-(@fn class {});
-(class {
+//#endregion
+//#region keep-these.js
+var Class = @fn class {};
+var Field = class {
 	@fn field;
-});
-(class {
+};
+var Method = class {
 	@fn method() {}
-});
-(class {
+};
+var Accessor = class {
 	@fn accessor accessor;
-});
-(class {
+};
+var StaticField = class {
 	@fn static field;
-});
-(class {
+};
+var StaticMethod = class {
 	@fn static method() {}
-});
-(class {
+};
+var StaticAccessor = class {
 	@fn static accessor accessor;
-});
+};
 //#endregion
 
 ```

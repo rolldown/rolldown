@@ -1,0 +1,9 @@
+{
+  "_comment": "Mirror of rollup's chunking-form/entry-without-code-dynamic: `dynamic.js` is a code-less re-export barrel that is both statically imported (main1) and a dynamic entry (main2). The static importer must keep participating in the dynamic entry's bit pattern so `foo.js` lands inside the dynamic entry chunk (3 chunks total) instead of splitting into a fourth shared chunk that leaves the dynamic chunk an empty facade.",
+  "config": {
+    "input": [
+      { "name": "main1", "import": "./main1.js" },
+      { "name": "main2", "import": "./main2.js" }
+    ]
+  }
+}

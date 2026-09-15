@@ -1,0 +1,86 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+//#region b.js
+function getB() {
+	return getA ? "b" : "unreachable";
+}
+var init_b = __esmMin((() => {
+	init_a();
+}));
+//#endregion
+//#region leaf.js
+function leaf() {
+	return "leaf";
+}
+var init_leaf = __esmMin((() => {}));
+//#endregion
+//#region a.js
+function getA() {
+	return getB && leaf ? "a" : "unreachable";
+}
+var init_a = __esmMin((() => {
+	init_b();
+	init_leaf();
+}));
+//#endregion
+//#region main.js
+var result;
+function init_main() {
+	return (init_main = __esmMin((() => {
+		init_a();
+		init_a();
+		result = getA();
+	})))();
+}
+//#endregion
+init_main();
+export { result };
+
+```
+
+# Variant: on-demand: [on_demand_wrapping: true] [strict_execution_order: true]
+
+## Assets
+
+### main.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+//#region b.js
+function getB() {
+	return getA ? "b" : "unreachable";
+}
+var init_b = __esmMin((() => {
+	init_a();
+}));
+//#endregion
+//#region leaf.js
+function leaf() {
+	return "leaf";
+}
+var init_leaf = __esmMin((() => {}));
+//#endregion
+//#region a.js
+function getA() {
+	return getB && leaf ? "a" : "unreachable";
+}
+var init_a = __esmMin((() => {
+	init_b();
+	init_leaf();
+}));
+//#endregion
+//#region main.js
+init_a();
+init_a();
+const result = getA();
+//#endregion
+export { result };
+
+```

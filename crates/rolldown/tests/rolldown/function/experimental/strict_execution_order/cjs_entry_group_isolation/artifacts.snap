@@ -1,0 +1,100 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## common.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+//#region effect.js
+var require_effect = /* @__PURE__ */ __commonJSMin(((exports, module) => {
+	(globalThis.__cjs_entry_group_isolation ??= []).push("effect-entry");
+	module.exports = { name: "effect" };
+}));
+//#endregion
+//#region silent.js
+var require_silent = /* @__PURE__ */ __commonJSMin(((exports, module) => {
+	module.exports = { name: "silent" };
+}));
+//#endregion
+Object.defineProperty(exports, "require_effect", {
+	enumerable: true,
+	get: function() {
+		return require_effect;
+	}
+});
+Object.defineProperty(exports, "require_silent", {
+	enumerable: true,
+	get: function() {
+		return require_silent;
+	}
+});
+
+```
+
+## effect.js
+
+```js
+const require_common = require("./common.js");
+module.exports = require_common.require_effect();
+
+```
+
+## silent.js
+
+```js
+const require_common = require("./common.js");
+module.exports = require_common.require_silent();
+
+```
+
+# Variant: on-demand: [on_demand_wrapping: true]
+
+## Assets
+
+### common.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+//#region effect.js
+var require_effect = /* @__PURE__ */ __commonJSMin(((exports, module) => {
+	(globalThis.__cjs_entry_group_isolation ??= []).push("effect-entry");
+	module.exports = { name: "effect" };
+}));
+//#endregion
+//#region silent.js
+var require_silent = /* @__PURE__ */ __commonJSMin(((exports, module) => {
+	module.exports = { name: "silent" };
+}));
+//#endregion
+Object.defineProperty(exports, "require_effect", {
+	enumerable: true,
+	get: function() {
+		return require_effect;
+	}
+});
+Object.defineProperty(exports, "require_silent", {
+	enumerable: true,
+	get: function() {
+		return require_silent;
+	}
+});
+
+```
+
+### effect.js
+
+```js
+const require_common = require("./common.js");
+module.exports = require_common.require_effect();
+
+```
+
+### silent.js
+
+```js
+const require_common = require("./common.js");
+module.exports = require_common.require_silent();
+
+```

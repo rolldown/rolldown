@@ -1,0 +1,50 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## entry_a.js
+
+```js
+import "./s_ac.js";
+import "./re.js";
+export * from "external";
+
+```
+
+## entry_b.js
+
+```js
+import "./re.js";
+export * from "external";
+
+```
+
+## entry_c.js
+
+```js
+import "./s_ac.js";
+//#region entry_c.js
+const c = "c";
+//#endregion
+export { c };
+
+```
+
+## re.js
+
+```js
+//#region re.js
+console.log("re side effect");
+//#endregion
+
+```
+
+## s_ac.js
+
+```js
+//#region s_ac.js
+console.log("s_ac side effect");
+//#endregion
+
+```

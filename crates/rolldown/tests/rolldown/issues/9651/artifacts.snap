@@ -6,11 +6,15 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## main.js
 
 ```js
-//#endregion
+// HIDDEN [\0rolldown/runtime.js]
 //#region src/zod/locales.js
 function en() {
 	return "en";
 }
+//#endregion
+//#region src/dyn/a.js
+//#endregion
+//#region main.js
 Promise.resolve().then(() => /* @__PURE__ */ Object.freeze({ __proto__: null }));
 if (en() !== "en") throw new Error("expected z.locales.en() to be 'en'");
 //#endregion

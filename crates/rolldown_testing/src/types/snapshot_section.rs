@@ -54,7 +54,7 @@ impl SnapshotSection {
     }
 
     if !self.content.is_empty() {
-      writeln!(ret, "{}", &self.content).unwrap();
+      writeln!(ret, "{}", self.content).unwrap();
       if !self.children.is_empty() {
         writeln!(ret).unwrap();
       }

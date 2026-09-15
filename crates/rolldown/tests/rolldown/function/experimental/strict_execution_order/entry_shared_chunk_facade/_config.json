@@ -1,0 +1,19 @@
+{
+  "configName": "wrap-all",
+  "config": {
+    "input": [
+      { "name": "b", "import": "./b.js" },
+      { "name": "e", "import": "./e.js" }
+    ],
+    "strictExecutionOrder": true,
+    "codeSplitting": {
+      "groups": [
+        {
+          "name": "e-group",
+          "test": "[\\\\/]entry_shared_chunk_facade[\\\\/](?:e|shared)\\.js$"
+        }
+      ]
+    }
+  },
+  "configVariants": [{ "_configName": "on-demand", "onDemandWrapping": true }]
+}

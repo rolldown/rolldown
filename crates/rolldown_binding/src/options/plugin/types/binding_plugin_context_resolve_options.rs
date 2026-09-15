@@ -36,11 +36,11 @@ impl TryFrom<BindingPluginContextResolveOptions> for PluginContextResolveOptions
     if let Some(js_custom_id) = value.custom {
       custom.insert(JsPluginContextResolveCustomArgId, js_custom_id);
     }
-    if let Some(is_sub_imports_pattern) = value
-      .vite_plugin_custom
-      .and_then(|v| v.vite_import_glob.and_then(|v| v.is_sub_imports_pattern))
-    {
-      custom.insert(ViteImportGlob, ViteImportGlobValue(is_sub_imports_pattern));
+    if let Some(vite_import_glob) = value.vite_plugin_custom.and_then(|c| c.vite_import_glob) {
+      custom.insert(
+        ViteImportGlob,
+        ViteImportGlobValue(vite_import_glob.is_sub_imports_pattern.unwrap_or(false)),
+      );
     }
     Ok(Self {
       import_kind: value.import_kind.as_deref().unwrap_or("import-statement").try_into()?,

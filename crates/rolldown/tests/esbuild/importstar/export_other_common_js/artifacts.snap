@@ -8,6 +8,8 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```js
 Object.defineProperty(exports, Symbol.toStringTag, { value: "Module" });
 // HIDDEN [\0rolldown/runtime.js]
+//#region foo.js
+//#endregion
 //#region entry.js
 var import_foo = (/* @__PURE__ */ __commonJSMin(((exports) => {})))();
 //#endregion

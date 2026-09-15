@@ -2,7 +2,7 @@
 source: crates/rolldown/tests/integration/test262.rs
 expression: snapshot
 ---
-Summary: 543 passed, 56 failed, 599 total
+Summary: 545 passed, 54 failed, 599 total
 
 ---
 
@@ -1258,31 +1258,15 @@ Actual: Runtime execution succeeded
 ---
 
 # language/module-code/instn-star-iee-multi-cycle-same-name.js
-Result: FAIL
-Reason: Incorrect ambiguous export detection in Rolldown
+Result: PASS
 Expected: success
-Actual:
-'foo' cannot be exported from 'instn-star-iee-multi-cycle-same-name-b_FIXTURE.js' as it is a reexport that references itself.
-'foo' cannot be exported from 'instn-star-iee-multi-cycle-same-name-b_FIXTURE.js' as it is a reexport that references itself.
-'foo' cannot be exported from 'instn-star-iee-multi-cycle-same-name-b_FIXTURE.js' as it is a reexport that references itself.
-'foo' cannot be exported from 'instn-star-iee-multi-cycle-same-name-b_FIXTURE.js' as it is a reexport that references itself.
-'foo' cannot be exported from 'instn-star-iee-multi-cycle-same-name-b_FIXTURE.js' as it is a reexport that references itself.
-'foo' cannot be exported from 'instn-star-iee-multi-cycle-same-name-b_FIXTURE.js' as it is a reexport that references itself.
-'foo' cannot be exported from 'instn-star-iee-multi-cycle-same-name-d_FIXTURE.js' as it is a reexport that references itself.
-'foo' cannot be exported from 'instn-star-iee-multi-cycle-same-name-d_FIXTURE.js' as it is a reexport that references itself.
-'foo' cannot be exported from 'instn-star-iee-multi-cycle-same-name-d_FIXTURE.js' as it is a reexport that references itself.
-'foo' cannot be exported from 'instn-star-iee-multi-cycle-same-name-d_FIXTURE.js' as it is a reexport that references itself.
-'foo' cannot be exported from 'instn-star-iee-multi-cycle-same-name-d_FIXTURE.js' as it is a reexport that references itself.
-'foo' cannot be exported from 'instn-star-iee-multi-cycle-same-name-d_FIXTURE.js' as it is a reexport that references itself.
+Actual: Runtime execution succeeded
 ---
 
 # language/module-code/instn-star-iee-single-cycle-same-name.js
-Result: FAIL
-Reason: Incorrect ambiguous export detection in Rolldown
+Result: PASS
 Expected: success
-Actual:
-'foo' cannot be exported from 'instn-star-iee-single-cycle-same-name-b_FIXTURE.js' as it is a reexport that references itself.
-'foo' cannot be exported from 'instn-star-iee-single-cycle-same-name-b_FIXTURE.js' as it is a reexport that references itself.
+Actual: Runtime execution succeeded
 ---
 
 # language/module-code/instn-star-props-circular.js

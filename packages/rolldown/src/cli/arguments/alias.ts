@@ -1,5 +1,6 @@
 import type { InputCliOptions } from '../../options/input-options';
 import type { OutputCliOptions } from '../../options/output-options';
+import type { ConfigLoader } from '../../utils/load-config';
 
 export interface CliOptions extends InputCliOptions, OutputCliOptions {
   config?: string | boolean;
@@ -7,6 +8,7 @@ export interface CliOptions extends InputCliOptions, OutputCliOptions {
   version?: boolean;
   watch?: boolean;
   environment?: string | string[];
+  configLoader?: ConfigLoader;
 }
 
 interface OptionConfig {
@@ -25,6 +27,9 @@ export const alias: Partial<Record<keyof CliOptions, OptionConfig>> = {
   config: {
     abbreviation: 'c',
     hint: 'filename',
+  },
+  configLoader: {
+    hint: 'loader',
   },
   help: {
     abbreviation: 'h',

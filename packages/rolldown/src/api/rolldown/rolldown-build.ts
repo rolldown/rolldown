@@ -24,14 +24,13 @@ export class RolldownBuild {
   #inputOptions: InputOptions;
   #bundler: BindingBundler;
   #stopWorkers?: () => Promise<void>;
-
-  /** @internal */
-  static asyncRuntimeShutdown = false;
+  #asyncRuntimeReleased = false;
 
   /** @hidden should not be used directly */
   constructor(inputOptions: InputOptions) {
     this.#inputOptions = inputOptions;
     this.#bundler = new BindingBundler();
+    startAsyncRuntime();
   }
 
   /**
@@ -91,11 +90,19 @@ export class RolldownBuild {
    * ```
    */
   async close(): Promise<void> {
-    await this.#stopWorkers?.();
-    await this.#bundler.close();
-    shutdownAsyncRuntime();
-    RolldownBuild.asyncRuntimeShutdown = true;
-    this.#stopWorkers = void 0;
+    // Claim the release before the first await so a second `close` cannot release twice.
+    const shouldRelease = !this.#asyncRuntimeReleased;
+    this.#asyncRuntimeReleased = true;
+    try {
+      await this.#stopWorkers?.();
+      // `BindingBundler.close` spawns onto the runtime, so release only after it settles.
+      await this.#bundler.close();
+      this.#stopWorkers = void 0;
+    } finally {
+      if (shouldRelease) {
+        shutdownAsyncRuntime();
+      }
+    }
   }
 
   /** @hidden documented in close method */
@@ -117,11 +124,12 @@ export class RolldownBuild {
   async #build(isWrite: boolean, outputOptions: OutputOptions): Promise<RolldownOutput> {
     validateOption('output', outputOptions);
     await this.#stopWorkers?.();
-    const option = await createBundlerOptions(this.#inputOptions, outputOptions, false);
-
-    if (RolldownBuild.asyncRuntimeShutdown) {
-      startAsyncRuntime();
-    }
+    const option = await createBundlerOptions(
+      this.#inputOptions,
+      outputOptions,
+      /* watchMode */ false,
+      /* measureTimings */ true,
+    );
 
     try {
       this.#stopWorkers = option.stopWorkers;

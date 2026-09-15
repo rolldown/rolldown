@@ -1,0 +1,55 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## barrel.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+//#region leaf_a.js
+var leaf_a_exports = /* @__PURE__ */ __exportAll({ a: () => a });
+function a() {
+	return "a";
+}
+var init_leaf_a = __esmMin((() => {
+	globalThis.__log.push("A");
+}));
+//#endregion
+//#region leaf_b.js
+var leaf_b_exports = /* @__PURE__ */ __exportAll({ b: () => b });
+function b() {
+	return "b";
+}
+var init_leaf_b = __esmMin((() => {
+	globalThis.__log.push("B");
+}));
+//#endregion
+//#region barrel.js
+init_leaf_a();
+init_leaf_b();
+//#endregion
+export { leaf_a_exports as a, init_leaf_a as i, leaf_b_exports as n, a as r, init_leaf_b as t };
+
+```
+
+## main.js
+
+```js
+import { i as init_leaf_a, r as a, t as init_leaf_b } from "./barrel.js";
+//#region main.js
+init_leaf_a();
+globalThis.__log.push("BEFORE_REQUIRE:" + a());
+init_leaf_a();
+init_leaf_b();
+globalThis.__log.push("MAIN");
+//#endregion
+
+```
+
+## wrapper.js
+
+```js
+import "./barrel.js";
+
+```

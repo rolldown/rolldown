@@ -7,8 +7,10 @@ pub struct WatcherEventHandler {
 }
 impl FsEventHandler for WatcherEventHandler {
   fn handle_event(&mut self, event: rolldown_fs_watcher::FsEventResult) {
-    self.coordinator_tx.send(CoordinatorMsg::WatchEvent(event)).expect(
-      "Coordinator channel closed while sending file change event - coordinator terminated unexpectedly"
-    );
+    if self.coordinator_tx.send(CoordinatorMsg::WatchEvent(event)).is_err() {
+      tracing::debug!(
+        "[WatcherEventHandler] coordinator channel closed while sending file change event"
+      );
+    }
   }
 }

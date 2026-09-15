@@ -6,17 +6,14 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## entry.js
 
 ```js
-import assert from "node:assert";
+import assert from "node:assert/strict";
 // HIDDEN [\0rolldown/runtime.js]
 //#region bar.js
 var bar_exports = /* @__PURE__ */ __exportAll({ foo: () => 123 });
 //#endregion
 //#region entry.js
 let foo = 234;
-assert.deepEqual(bar_exports, {
-	[Symbol.toStringTag]: "Module",
-	foo: 123
-});
+assert.deepEqual(bar_exports, Object.defineProperty({ foo: 123 }, Symbol.toStringTag, { value: "Module" }));
 assert.equal(123, 123);
 assert.equal(foo, 234);
 //#endregion

@@ -11,6 +11,7 @@ use rustc_hash::FxBuildHasher;
 use crate::utils::minify_options_conversion::{
   codegen_options_to_napi_codegen_options, compress_options_to_napi_compress_options,
   mangle_options_to_napi_mangle_options,
+  mangle_properties_options_to_napi_mangle_properties_options,
 };
 
 #[napi]
@@ -91,6 +92,14 @@ impl BindingNormalizedOptions {
   }
 
   #[napi(getter)]
+  pub fn sourcemap_filenames(&self) -> Either<&str, Undefined> {
+    match &self.inner.sourcemap_filenames {
+      Some(rolldown::ChunkFilenamesOutputOption::String(inner)) => Either::A(inner),
+      Some(rolldown::ChunkFilenamesOutputOption::Fn(_)) | None => Either::B(()),
+    }
+  }
+
+  #[napi(getter)]
   pub fn asset_filenames(&self) -> Either<&str, Undefined> {
     match &self.inner.asset_filenames {
       rolldown::AssetFilenamesOutputOption::String(inner) => Either::A(inner),
@@ -110,12 +119,7 @@ impl BindingNormalizedOptions {
 
   #[napi(getter, ts_return_type = "'es' | 'cjs' | 'iife' | 'umd'")]
   pub fn format(&self) -> &'static str {
-    match self.inner.format {
-      rolldown::OutputFormat::Esm => "es",
-      rolldown::OutputFormat::Cjs => "cjs",
-      rolldown::OutputFormat::Iife => "iife",
-      rolldown::OutputFormat::Umd => "umd",
-    }
+    self.inner.format.as_str()
   }
 
   #[napi(getter, ts_return_type = "'default' | 'named' | 'none' | 'auto'")]
@@ -139,8 +143,12 @@ impl BindingNormalizedOptions {
 
   #[napi(getter)]
   pub fn code_splitting(&self) -> bool {
-    match self.inner.code_splitting {
-      rolldown_common::CodeSplittingMode::Bool(v) => v,
+    // The normalized layer never holds the `Advanced` object form (it is decomposed
+    // into the gate + `manual_code_splitting` during normalization), but match it
+    // exhaustively as "enabled" for completeness.
+    match &self.inner.code_splitting {
+      rolldown_common::CodeSplittingMode::Bool(v) => *v,
+      rolldown_common::CodeSplittingMode::Advanced(_) => true,
     }
   }
 
@@ -265,20 +273,32 @@ impl BindingNormalizedOptions {
     match &self.inner.minify {
       MinifyOptions::Disabled => Either3::A(false),
       MinifyOptions::DeadCodeEliminationOnly(_) => Either3::B("dce-only"),
-      MinifyOptions::Enabled((minify_options, remove_whitespace)) => {
-        Either3::C(oxc_minify_napi::MinifyOptions {
-          compress: minify_options
-            .compress
-            .as_ref()
-            .map(|compress| Either::B(compress_options_to_napi_compress_options(compress))),
-          mangle: minify_options
-            .mangle
-            .as_ref()
-            .map(|mangle| Either::B(mangle_options_to_napi_mangle_options(mangle))),
-          codegen: Some(Either::B(codegen_options_to_napi_codegen_options(*remove_whitespace))),
-          ..Default::default()
-        })
-      }
+      MinifyOptions::Enabled(minify_options) => Either3::C(oxc_minify_napi::MinifyOptions {
+        compress: minify_options
+          .options
+          .compress
+          .as_ref()
+          .map(|compress| Either::B(compress_options_to_napi_compress_options(compress))),
+        mangle: minify_options
+          .options
+          .mangle
+          .as_ref()
+          .map(|mangle| Either::B(mangle_options_to_napi_mangle_options(mangle))),
+        mangle_props: minify_options.options.mangle_properties.as_ref().map(|options| {
+          mangle_properties_options_to_napi_mangle_properties_options(
+            options,
+            minify_options
+              .mangle_properties_patterns
+              .as_ref()
+              .expect("property patterns are retained with property options"),
+          )
+        }),
+        codegen: Some(Either::B(codegen_options_to_napi_codegen_options(
+          minify_options.remove_whitespace,
+          minify_options.ascii_only,
+        ))),
+        ..Default::default()
+      }),
     }
   }
 

@@ -18,6 +18,7 @@ pub struct InvalidAnnotation {
   /// Whether the annotation appears immediately before a function declaration.
   /// When true, an additional hint suggests using `@__NO_SIDE_EFFECTS__`.
   pub is_before_function_declaration: bool,
+  pub is_no_side_effects: bool,
 }
 
 impl BuildEvent for InvalidAnnotation {
@@ -53,6 +54,39 @@ impl BuildEvent for InvalidAnnotation {
       ));
     }
 
-    diagnostic.add_help(String::from("For more information on how to use pure annotations correctly, check the documentation: https://rolldown.rs/in-depth/dead-code-elimination#pure"));
+    let anchor = if self.is_no_side_effects { "no-side-effects" } else { "pure" };
+    diagnostic.add_help(format!(
+      "Correct annotation placement: https://rolldown.rs/in-depth/dead-code-elimination#{anchor}",
+    ));
+    diagnostic.add_help(String::from("Disable with `checks.invalidAnnotation: false`."));
+  }
+}
+
+#[cfg(test)]
+mod tests {
+  use arcstr::ArcStr;
+  use oxc::span::Span;
+
+  use crate::BuildDiagnostic;
+
+  #[test]
+  fn renders_concise_guide_and_disable_help() {
+    let rendered = BuildDiagnostic::invalid_annotation(
+      "main.js".to_string(),
+      "/* #__PURE__ */".to_string(),
+      ArcStr::from("/* #__PURE__ */ foo;"),
+      Span::new(0, 15),
+      false,
+      false,
+    )
+    .with_severity_warning()
+    .to_diagnostic()
+    .convert_to_string(false);
+
+    assert!(rendered.contains(
+      "Help 1: Correct annotation placement: https://rolldown.rs/in-depth/dead-code-elimination#pure"
+    ));
+    assert!(rendered.contains("Help 2: Disable with `checks.invalidAnnotation: false`."));
+    assert_eq!(rendered.matches("Help ").count(), 2);
   }
 }

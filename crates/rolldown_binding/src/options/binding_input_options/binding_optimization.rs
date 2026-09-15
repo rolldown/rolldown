@@ -11,7 +11,6 @@ pub struct BindingInlineConstConfig {
 #[napi_derive::napi(object, object_to_js = false)]
 #[derive(Debug, Default)]
 pub struct BindingOptimization {
-  #[napi(ts_type = "boolean | BindingInlineConstConfig")]
   pub inline_const: Option<Either<bool, BindingInlineConstConfig>>,
   pub pife_for_module_wrappers: Option<bool>,
 }

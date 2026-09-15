@@ -39,6 +39,7 @@ const FS_PREFIX: &str = "/@fs/";
 #[derive(Debug)]
 pub struct ViteResolveOptions {
   pub resolve_options: ViteResolveResolveOptions,
+  pub tsconfig: Option<String>,
   pub environment_consumer: String,
   pub environment_name: String,
   pub builtins: Vec<StringOrRegex>,
@@ -153,6 +154,7 @@ impl ViteResolvePlugin {
       root: PathBuf::from(&options.resolve_options.root),
       preserve_symlinks: options.resolve_options.preserve_symlinks,
       tsconfig_paths: options.resolve_options.tsconfig_paths,
+      tsconfig: options.tsconfig.map(PathBuf::from),
       yarn_pnp: options.yarn_pnp,
     };
     let builtin_checker = Arc::new(BuiltinChecker::new(options.builtins));
@@ -283,7 +285,7 @@ impl Plugin for ViteResolvePlugin {
           })
           .flatten();
         return Ok(Some(HookResolveIdOutput {
-          id: path.to_slash_lossy().into(),
+          id: ArcStr::from(path.to_slash()),
           package_json_path,
           ..Default::default()
         }));
@@ -342,6 +344,38 @@ impl Plugin for ViteResolvePlugin {
     );
     let resolver = self.resolvers.get(additional_options);
 
+    let specifier = normalize_leading_slashes(&id);
+
+    // tsconfig `paths` mapping for `import.meta.glob`.
+    // The specifier is a glob pattern so we need to apply the mapping here,
+    // otherwise the mapping will be ignored as the mapped path does not point at a
+    // real file.
+    if self.resolve_options.tsconfig_paths
+      && args.custom.get(&rolldown_plugin_utils::constants::ViteImportGlob).is_some()
+      && let Some(importer) = args.importer
+    {
+      let mut candidates = resolver.resolve_tsconfig_path_alias(importer, specifier)?;
+      if candidates.len() > 1 {
+        self
+          .warn(
+            ctx,
+            format!(
+              "The glob \"{specifier}\" matches a tsconfig `paths` entry with multiple targets. \
+               Currently, multiple target `paths` is not supported for glob resolution. The first (\"{}\") is used unconditionally.",
+              candidates[0]
+            ),
+          )
+          .await?;
+      }
+      if !candidates.is_empty() {
+        let mapped = candidates.swap_remove(0);
+        self
+          .debug_log(|| format!("[glob-tsconfig-paths] {} -> {}", id.cyan(), mapped.dimmed()))
+          .await?;
+        return Ok(Some(HookResolveIdOutput { id: mapped.into(), ..Default::default() }));
+      }
+    }
+
     if is_bare_import(&id) {
       let external = self.resolve_options.is_build
         && self.environment_consumer == "server"
@@ -382,7 +416,7 @@ impl Plugin for ViteResolvePlugin {
         if !(matches!(self.external, ResolveOptionsExternal::True)
           || self.external.is_external_explicitly(&id))
         {
-          let mut message = format!("Automatically externalized node built-in module \"{}\"", &id);
+          let mut message = format!("Automatically externalized node built-in module \"{}\"", id);
           if let Some(importer) = args.importer {
             let current_dir =
               env::current_dir().unwrap_or(PathBuf::from(&self.resolve_options.root));
@@ -459,7 +493,6 @@ impl Plugin for ViteResolvePlugin {
       }
     }
 
-    let specifier = normalize_leading_slashes(&id);
     let resolved = resolver.normalize_oxc_resolver_result(
       specifier,
       args.importer,
@@ -497,8 +530,13 @@ impl Plugin for ViteResolvePlugin {
     args: &HookLoadArgs<'_>,
   ) -> HookLoadReturn {
     if let Some(id_without_prefix) = args.id.strip_prefix(BROWSER_EXTERNAL_ID) {
+      // A bare `__vite-browser-external` (no `:name` suffix) is a `browser` field `false`
+      // mapping. Per the browser field spec it must resolve to an empty module, not the proxy
+      // that throws on property access.
+      let is_browser_field_false = id_without_prefix.is_empty();
+
       if self.resolve_options.is_build {
-        if self.resolve_options.is_production {
+        if self.resolve_options.is_production || is_browser_field_false {
           // rolldown treats missing export as an error, and will break build.
           // So use cjs to avoid it.
           return Ok(Some(HookLoadOutput {
@@ -507,18 +545,12 @@ impl Plugin for ViteResolvePlugin {
           }));
         } else {
           return Ok(Some(HookLoadOutput {
-            code: get_development_build_browser_external_module_code(
-              // trim leading `:` if it's not empty
-              if id_without_prefix.is_empty() {
-                id_without_prefix
-              } else {
-                &id_without_prefix[1..]
-              },
-            ),
+            // trim leading `:`
+            code: get_development_build_browser_external_module_code(&id_without_prefix[1..]),
             ..Default::default()
           }));
         }
-      } else if self.resolve_options.is_production {
+      } else if self.resolve_options.is_production || is_browser_field_false {
         // in dev, needs to return esm
         return Ok(Some(HookLoadOutput {
           code: arcstr::literal!("export default {}"),
@@ -526,10 +558,8 @@ impl Plugin for ViteResolvePlugin {
         }));
       } else {
         return Ok(Some(HookLoadOutput {
-          code: get_development_dev_browser_external_module_code(
-            // trim leading `:` if it's not empty
-            if id_without_prefix.is_empty() { id_without_prefix } else { &id_without_prefix[1..] },
-          ),
+          // trim leading `:`
+          code: get_development_dev_browser_external_module_code(&id_without_prefix[1..]),
           ..Default::default()
         }));
       }

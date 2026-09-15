@@ -1,19 +1,35 @@
 use self::render_chunk_exports::get_chunk_export_names;
 use arcstr::ArcStr;
+use itertools::Itertools;
 use rolldown_common::{
-  Chunk, ChunkKind, ChunkMeta, ModuleId, ModuleIdx, PreserveEntrySignatures, RenderedModule,
-  RollupPreRenderedChunk, RollupRenderedChunk, SharedNormalizedBundlerOptions,
+  Chunk, ChunkKind, ChunkMeta, ModuleId, ModuleIdx, ModuleTable, PreserveEntrySignatures,
+  RenderedModule, RollupPreRenderedChunk, RollupRenderedChunk, SharedNormalizedBundlerOptions,
 };
 use rustc_hash::FxHashMap;
 
 use crate::{stages::link_stage::LinkStageOutput, types::generator::GenerateContext};
 
+pub mod conflict_resolver;
 pub mod deconflict_chunk_symbols;
 pub mod determine_export_mode;
 pub mod finalize_chunks;
 pub mod namespace_marker;
 pub mod render_chunk_exports;
 pub mod validate_options_for_multi_chunk_output;
+
+fn static_external_imports<'a>(
+  chunk: &'a Chunk,
+  module_table: &'a ModuleTable,
+) -> impl Iterator<Item = ModuleIdx> + 'a {
+  chunk
+    .direct_imports_from_external_modules
+    .iter()
+    .map(|(idx, _)| *idx)
+    .merge_by(chunk.entry_level_external_module_idx.iter().copied(), |a, b| {
+      module_table[*a].exec_order() <= module_table[*b].exec_order()
+    })
+    .dedup()
+}
 
 pub fn generate_pre_rendered_chunk(
   chunk: &Chunk,
@@ -72,10 +88,10 @@ pub fn generate_rendered_chunk(
           .expect("should have preliminary_filename")
           .clone()
       })
-      .chain(chunk.direct_imports_from_external_modules.iter().map(|(idx, _)| {
-        link_output.module_table[*idx]
+      .chain(static_external_imports(chunk, &link_output.module_table).map(|idx| {
+        link_output.module_table[idx]
           .as_external()
-          .expect("direct_imports_from_external_modules should only contain external modules")
+          .expect("static external imports should only contain external modules")
           .get_file_name(*resolved_paths)
       }))
       .collect(),
@@ -89,6 +105,12 @@ pub fn generate_rendered_chunk(
           .expect("should have preliminary_filename")
           .clone()
       })
+      .chain(chunk.dynamic_imports_from_external_modules.iter().map(|idx| {
+        link_output.module_table[*idx]
+          .as_external()
+          .expect("dynamic_imports_from_external_modules should only contain external modules")
+          .get_file_name(*resolved_paths)
+      }))
       .collect(),
   }
 }

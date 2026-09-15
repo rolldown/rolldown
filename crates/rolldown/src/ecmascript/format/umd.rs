@@ -190,7 +190,7 @@ async fn render_iife_export(
   let mut dependencies = Vec::with_capacity(externals.len());
 
   for external in externals {
-    let global = ctx.options.globals.call(external.id.as_str()).await;
+    let global = ctx.options.globals.call(external.id.as_str()).await?;
     let target = match &global {
       Some(global_name) => global_name.split('.').map(render_property_access).collect::<String>(),
       None => {

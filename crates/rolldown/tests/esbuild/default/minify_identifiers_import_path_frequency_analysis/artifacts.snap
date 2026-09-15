@@ -16,6 +16,8 @@ console.log(123, "no identifier in this file should be named W, X, Y, or Z");
 
 ```js
 // HIDDEN [\0rolldown/runtime.js]
+//#region AAAAAAAAAABBBBBBBBBBCCCCCCCCCCDDDDDDDDDD.js
+//#endregion
 //#region require.js
 const foo = (/* @__PURE__ */ __commonJSMin(((exports, module) => {
 	module.exports = 123;

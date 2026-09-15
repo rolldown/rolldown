@@ -6,6 +6,7 @@ pub enum InvalidOptionType {
   UnsupportedInlineDynamicFormat(String),
   UnsupportedCodeSplittingFormat(String),
   InvalidOutputFile,
+  OutputFileWithoutName(String),
   InvalidOutputDirOption,
   NoEntryPoint,
   ManualCodeSplittingWithoutGroups(Vec<String>),
@@ -16,7 +17,7 @@ pub enum InvalidOptionType {
   InvalidFilenameSubstitution { name: String, pattern_name: String },
   CodeSplittingDisabledWithMultipleInputs,
   CodeSplittingDisabledWithPreserveModules,
-  CodeSplittingDisabledWithManualCodeSplitting,
+  ManglePropertiesWithMultipleChunks,
   HashLengthTooLong { pattern_name: String, received: usize, max: usize },
   HashLengthTooShort { pattern_name: String, received: usize, min: usize, chunk_count: u32 },
   InvalidEmittedFileName(String),
@@ -42,6 +43,9 @@ impl BuildEvent for InvalidOption {
           format!("Invalid value \"{format}\" for option \"output.format\" - UMD and IIFE are not supported for code-splitting builds. For single entry builds, you can set `output.codeSplitting` to `false` to disable code-splitting.")
         }
         InvalidOptionType::InvalidOutputFile => "Invalid value for option \"output.file\" - When building multiple chunks, the \"output.dir\" option must be used, not \"output.file\". You may set `output.codeSplitting` to `false` when using dynamic imports.".to_string(),
+        InvalidOptionType::OutputFileWithoutName(file) => {
+          format!("Invalid value \"{file}\" for option \"output.file\" - it does not contain a file name. Please provide a path that ends with a file name.")
+        }
         InvalidOptionType::InvalidOutputDirOption => "Invalid value for option \"output.dir\" - you must set either \"output.file\" for a single-file build or \"output.dir\" when generating multiple chunks.".to_string(),
         InvalidOptionType::NoEntryPoint =>"You must supply `options.input` to rolldown, you should at least provide one entrypoint via `options.input` or `this.emitFile({type: 'chunk', ...})` (https://rolldown.rs/reference/Interface.PluginContext#in-depth-type-chunk)".to_string(),
         InvalidOptionType::ManualCodeSplittingWithoutGroups(options) => {
@@ -84,7 +88,7 @@ impl BuildEvent for InvalidOption {
         InvalidOptionType::InvalidFilenameSubstitution { name, pattern_name } => {
           format!(
             "Invalid substitution \"{name}\" for placeholder \"[name]\" in \"{pattern_name}\" pattern, \
-             can be neither absolute nor relative paths."
+             can be neither absolute nor relative path."
           )
         }
         InvalidOptionType::CodeSplittingDisabledWithMultipleInputs => {
@@ -93,14 +97,12 @@ impl BuildEvent for InvalidOption {
         InvalidOptionType::CodeSplittingDisabledWithPreserveModules => {
           "Invalid value \"false\" for option \"output.codeSplitting\" - this option is not supported for \"output.preserveModules\".".to_string()
         }
-        InvalidOptionType::CodeSplittingDisabledWithManualCodeSplitting => {
-          "Invalid value \"false\" for option \"output.codeSplitting\" - this option is not supported with manual code splitting groups.".to_string()
-        }
+        InvalidOptionType::ManglePropertiesWithMultipleChunks => "Invalid value for option \"output.minify.mangleProps\" - property mangling is currently supported only when a build generates one JavaScript chunk. Use a single-chunk build or remove \"mangleProps\".".to_string(),
         InvalidOptionType::HashLengthTooLong { pattern_name, received, max } => {
-          format!("Hashes cannot be longer than {max} characters, received {received}. Check the `{pattern_name}` option.")
+          format!("Hashes cannot be longer than {max} characters, received {received}. Check the \"{pattern_name}\" option.")
         }
         InvalidOptionType::HashLengthTooShort { pattern_name, received, min, chunk_count } => {
-          format!("To generate hashes for this number of chunks (currently {chunk_count}), you need a minimum hash size of {min}, received {received}. Check the `{pattern_name}` option.")
+          format!("To generate hashes for this number of chunks (currently {chunk_count}), you need a minimum hash size of {min}, received {received}. Check the \"{pattern_name}\" option.")
         }
         InvalidOptionType::InvalidEmittedFileName(name) => {
           format!("The \"fileName\" or \"name\" properties of emitted chunks and assets must be strings that are neither absolute nor relative paths, received \"{name}\".")

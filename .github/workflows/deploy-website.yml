@@ -24,8 +24,9 @@ concurrency:
 
 jobs:
   # Builds/validates the docs and, on main, decides whether the content needs deploying. Runs
-  # untrusted PR code, so it has NO `environment` and NO access to VOID_TOKEN. The deploy is a
-  # separate main-only job below — we never deploy to Void from a PR.
+  # untrusted PR code, so it has NO `environment` and NO `id-token` permission — it cannot mint
+  # an OIDC token. The deploy is a separate main-only job below — we never deploy to Void from
+  # a PR.
   docs-validation:
     name: Docs Validation
     runs-on: ubuntu-latest
@@ -36,8 +37,9 @@ jobs:
     steps:
       - uses: taiki-e/checkout-action@7d1e50e93dc4fb3bba58f85018fadf77898aee8b # v1.4.2
 
-      - uses: voidzero-dev/setup-vp@2dec1e33f4ab2c6d5bce1b0c4607961bb1a3f7a1 # v1.12.0
+      - uses: voidzero-dev/setup-vp@49c3e4e92c52e7f8392712a9267bbe71c5ab30e5 # v1.19.0
         with:
+          version: '0.2.1'
           cache: true
 
       - name: Generate API reference
@@ -68,7 +70,7 @@ jobs:
       - name: Was this content already deployed?
         id: deployed
         if: github.ref_name == 'main'
-        uses: actions/cache/restore@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5.0.5
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: .docs-deploy-marker
           key: docs-deploy-${{ steps.fingerprint.outputs.hash }}
@@ -80,17 +82,22 @@ jobs:
     if: github.ref_name == 'main' && needs.docs-validation.outputs.deploy == 'true'
     runs-on: ubuntu-latest
     environment: void
+    # `void deploy` authenticates via GitHub OIDC: with id-token:write (and no VOID_TOKEN set)
+    # it mints an OIDC token (audience `void`) and exchanges it for a short-lived,
+    # project-scoped deploy token. No long-lived secret is stored in the repo.
+    permissions:
+      id-token: write
     steps:
       - uses: taiki-e/checkout-action@7d1e50e93dc4fb3bba58f85018fadf77898aee8b # v1.4.2
 
-      - uses: voidzero-dev/setup-vp@2dec1e33f4ab2c6d5bce1b0c4607961bb1a3f7a1 # v1.12.0
+      - uses: voidzero-dev/setup-vp@49c3e4e92c52e7f8392712a9267bbe71c5ab30e5 # v1.19.0
         with:
+          version: '0.2.1'
           cache: true
 
       - name: Deploy to Void
         run: vp run docs:void
         env:
-          VOID_TOKEN: ${{ secrets.VOID_TOKEN }}
           VOID_PROJECT: rolldown
           ALGOLIA_APP_ID: ${{ secrets.ALGOLIA_APP_ID }}
           ALGOLIA_API_KEY: ${{ secrets.ALGOLIA_API_KEY }}
@@ -102,7 +109,7 @@ jobs:
         run: touch .docs-deploy-marker
 
       - name: Save deploy marker
-        uses: actions/cache/save@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5.0.5
+        uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: .docs-deploy-marker
           key: docs-deploy-${{ needs.docs-validation.outputs.fingerprint }}

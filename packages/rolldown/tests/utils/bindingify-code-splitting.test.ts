@@ -107,6 +107,22 @@ test('codeSplitting: object with inlineDynamicImports warns and ignores', async 
   );
 });
 
+test('inlineDynamicImports: true with advancedChunks warns and ignores', async () => {
+  const bundle = await rolldown({
+    input: './fixtures/tree-shake/inline-dynamic-imports/main.js',
+    cwd: import.meta.dirname + '/..',
+  });
+  const result = await bundle.generate({
+    inlineDynamicImports: true,
+    advancedChunks: { minSize: 1000 },
+  });
+  expect(consoleSpy).toHaveBeenCalledWith(
+    '`advancedChunks` option is ignored because `inlineDynamicImports: true` disables code splitting.',
+  );
+  // Grouping is dropped: inlining produces a single chunk.
+  expect(result.output.length).toBe(1);
+});
+
 test('codeSplitting: object with advancedChunks warns and ignores', async () => {
   const bundle = await rolldown({
     input: './fixtures/tree-shake/inline-dynamic-imports/main.js',

@@ -65,7 +65,7 @@ pub fn render_ecma_module(
 ///
 /// A `SOURCEMAP_BROKEN` warning is pushed onto `warnings` for every plugin that
 /// omitted its sourcemap, since that breaks the mapping chain for `module_id`.
-fn collapse_module_sourcemap(
+pub fn collapse_module_sourcemap(
   sourcemap_chain: &[SourcemapChainElement],
   codegen_map: Option<SourceMap>,
   module_id: &str,
@@ -141,7 +141,7 @@ mod tests {
     let source_id = builder.add_source_and_content(source, content);
     builder.add_token(0, 0, 0, 0, Some(source_id), None);
     builder.add_token(0, 6, 0, 6, Some(source_id), None);
-    builder.into_sourcemap()
+    builder.into_sourcemap().into_owned()
   }
 
   /// The oxc codegen map is always the last element of the chain and, in production, uses

@@ -13,8 +13,8 @@ var Foo = class {
 	static prop2_() {}
 	static ["prop3"]() {}
 	static ["prop4_"]() {}
-	static ["prop5"]() {}
-	static ["prop6_"]() {}
+	static [/* @__KEY__ */ "prop5"]() {}
+	static [/* @__KEY__ */ "prop6_"]() {}
 };
 __decorate([dec(1)], Foo, "prop1", null);
 __decorate([dec(2)], Foo, "prop2_", null);

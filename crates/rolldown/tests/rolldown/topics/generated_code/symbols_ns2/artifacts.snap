@@ -1,21 +1,6 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
 ---
-# warnings
-
-## UNRESOLVED_IMPORT
-
-```text
-[UNRESOLVED_IMPORT] Could not resolve 'assert' in main.js
-   ╭─[ main.js:1:20 ]
-   │
- 1 │ import assert from 'assert';
-   │                    ────┬───  
-   │                        ╰───── Module not found, treating it as an external dependency
-───╯
-
-```
-
 # Assets
 
 ## main.js
@@ -73,19 +58,6 @@ assert.default.equal(String(lib_exports), "[object Module]");
 
 ```text
 [MISSING_GLOBAL_NAME] No name was provided for external module "assert" in "output.globals" – guessing "assert".
-
-```
-
-### UNRESOLVED_IMPORT
-
-```text
-[UNRESOLVED_IMPORT] Could not resolve 'assert' in main.js
-   ╭─[ main.js:1:20 ]
-   │
- 1 │ import assert from 'assert';
-   │                    ────┬───  
-   │                        ╰───── Module not found, treating it as an external dependency
-───╯
 
 ```
 

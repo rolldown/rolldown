@@ -93,17 +93,17 @@ impl BundleFactory {
     })
   }
 
-  fn generate_unique_bundle_span(&mut self) -> Arc<tracing::Span> {
+  fn generate_unique_bundle_span(&mut self) -> tracing::Span {
     let bundle_id = rolldown_devtools::generate_build_id(self.bundle_id_seed);
     self.bundle_id_seed += 1;
-    Arc::new(tracing::info_span!(
+    tracing::info_span!(
       parent: &self.session.span,
       "build",
       CONTEXT_build_id = bundle_id.as_ref(),
       // - This behaves like default value for `${hook_resolve_id_trigger}`.
       // - For case like injecting `manual`, we will override this field by adding a child span to shadow this one.
       CONTEXT_hook_resolve_id_trigger = "automatic"
-    ))
+    )
   }
 
   pub fn create_bundle(
@@ -125,8 +125,10 @@ impl BundleFactory {
     };
 
     if bundle_mode.is_full_build() {
-      // Reset module infos for full bundle and store it for potential incremental builds
-      self.module_infos_for_incremental_build = Arc::default();
+      // A full build starts from an empty module-info set. Clear the shared map in place
+      // instead of replacing it, so long-lived handles (the dev engine's module queries)
+      // keep observing the current build.
+      self.module_infos_for_incremental_build.clear();
       // Also reset transform dependencies for full builds
       self.transform_dependencies_for_incremental_build = Arc::default();
     }
@@ -141,9 +143,16 @@ impl BundleFactory {
     fs: Fs,
     resolver: SharedResolver<Fs>,
   ) -> Bundle<Fs> {
-    self.module_infos_for_incremental_build = Arc::default();
+    self.module_infos_for_incremental_build.clear();
     self.transform_dependencies_for_incremental_build = Arc::default();
     self.build_bundle(fs, resolver, ScanStageCache::default())
+  }
+
+  /// Live handle to the plugin-facing module infos. The `Arc` identity is stable for the
+  /// factory's lifetime — full builds clear the map in place — so a held clone always
+  /// observes the latest build.
+  pub fn module_infos(&self) -> SharedModuleInfoDashMap {
+    Arc::clone(&self.module_infos_for_incremental_build)
   }
 
   fn build_bundle<Fs: FileSystem + Clone + 'static>(
@@ -152,6 +161,12 @@ impl BundleFactory {
     resolver: SharedResolver<Fs>,
     cache: ScanStageCache,
   ) -> Bundle<Fs> {
+    // Every build passes through here exactly once before any scan/link work
+    // starts. Wait for the previous build's deferred drops to retire so they
+    // can never overlap this build's rayon work; a no-op in steady state.
+    // See `utils::defer_drop` for the full invariant.
+    crate::utils::defer_drop::drain();
+
     let bundle_span = self.generate_unique_bundle_span();
     let module_infos = Arc::clone(&self.module_infos_for_incremental_build);
     let transform_dependencies = Arc::clone(&self.transform_dependencies_for_incremental_build);

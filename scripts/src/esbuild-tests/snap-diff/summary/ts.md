@@ -12,6 +12,7 @@
 ## [this_inside_function_ts_no_bundle](../../../../../crates/rolldown/tests/esbuild/ts/this_inside_function_ts_no_bundle)
 ## [this_inside_function_ts_no_bundle_use_define_for_class_fields](../../../../../crates/rolldown/tests/esbuild/ts/this_inside_function_ts_no_bundle_use_define_for_class_fields)
 ## [this_inside_function_ts_use_define_for_class_fields](../../../../../crates/rolldown/tests/esbuild/ts/this_inside_function_ts_use_define_for_class_fields)
+## [tree_shaking_import_alias_issue4507](../../../../../crates/rolldown/tests/esbuild/ts/tree_shaking_import_alias_issue4507)
 ## [ts_abstract_class_field_use_assign](../../../../../crates/rolldown/tests/esbuild/ts/ts_abstract_class_field_use_assign)
 ## [ts_abstract_class_field_use_define](../../../../../crates/rolldown/tests/esbuild/ts/ts_abstract_class_field_use_define)
 ## [ts_common_js_variable_in_esm_type_module](../../../../../crates/rolldown/tests/esbuild/ts/ts_common_js_variable_in_esm_type_module)

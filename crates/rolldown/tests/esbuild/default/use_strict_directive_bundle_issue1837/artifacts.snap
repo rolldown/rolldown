@@ -6,7 +6,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## MISSING_GLOBAL_NAME
 
 ```text
-[MISSING_GLOBAL_NAME] No name was provided for external module "node:assert" in "output.globals" – guessing "node_assert".
+[MISSING_GLOBAL_NAME] No name was provided for external module "node:assert/strict" in "output.globals" – guessing "node_assert_strict".
 
 ```
 
@@ -22,10 +22,10 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## entry.js
 
 ```js
-(function(process, node_assert) {
+(function(process, node_assert_strict) {
 	// HIDDEN [\0rolldown/runtime.js]
 	process = __toESM(process);
-	node_assert = __toESM(node_assert);
+	node_assert_strict = __toESM(node_assert_strict);
 	//#region shims.js
 	var init_shims = __esmMin((() => {}));
 	//#endregion
@@ -37,8 +37,8 @@ source: crates/rolldown_testing/src/integration_test.rs
 	//#endregion
 	//#region entry.js
 	init_shims();
-	node_assert.default.deepEqual(require_cjs(), { foo: process.default });
+	node_assert_strict.default.deepEqual(require_cjs(), { foo: process.default });
 	//#endregion
-})(process, node_assert);
+})(process, node_assert_strict);
 
 ```

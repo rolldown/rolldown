@@ -1,4 +1,4 @@
-use std::{any::Any, fmt::Debug};
+use std::any::Any;
 
 use arcstr::ArcStr;
 use oxc::span::Span;
@@ -25,6 +25,7 @@ pub mod duplicate_shebang;
 pub mod empty_import_meta;
 pub mod eval;
 pub mod external_entry;
+pub mod file_not_found;
 pub mod filename_conflict;
 pub mod filename_outside_output_directory;
 pub mod forbid_const_assign;
@@ -41,6 +42,8 @@ pub mod missing_export;
 pub mod missing_global_name;
 pub mod missing_name_option_for_iife_export;
 pub mod mixed_exports;
+pub mod module_level_directive;
+pub mod namespace_conflict;
 pub mod oxc_error;
 pub mod plugin_error;
 pub mod plugin_timings;
@@ -57,7 +60,7 @@ pub mod unsupported_feature;
 pub mod unsupported_tsconfig_option;
 pub mod untranspiled_syntax;
 
-pub trait BuildEvent: Debug + Sync + Send + AsAny + AsAnyMut {
+pub trait BuildEvent: Sync + Send + AsAny + AsAnyMut {
   fn kind(&self) -> EventKind;
 
   fn message(&self, opts: &DiagnosticOptions) -> String;

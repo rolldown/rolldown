@@ -28,6 +28,7 @@ pub mod output_exports;
 pub mod output_format;
 pub mod output_option;
 pub mod platform;
+pub mod plugin_timings_option;
 pub mod resolve_options;
 pub mod sanitize_filename;
 pub mod source_map_type;

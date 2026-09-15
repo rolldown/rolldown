@@ -44,11 +44,6 @@ export function viteReporterPlugin(config: BindingViteReporterPluginConfig): Bui
   return new BuiltinPlugin('builtin:vite-reporter', config);
 }
 
-export function viteWasmFallbackPlugin(): BuiltinPlugin {
-  const builtinPlugin = new BuiltinPlugin('builtin:vite-wasm-fallback');
-  return makeBuiltinPluginCallable(builtinPlugin);
-}
-
 export function viteLoadFallbackPlugin(): BuiltinPlugin {
   return new BuiltinPlugin('builtin:vite-load-fallback');
 }

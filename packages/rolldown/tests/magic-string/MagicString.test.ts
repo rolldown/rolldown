@@ -1,5 +1,5 @@
 // @ts-nocheck
-import assert from 'node:assert';
+import assert from 'node:assert/strict';
 import { SourceMapConsumer } from 'source-map-js';
 import { RolldownMagicString as MagicString } from 'rolldown';
 import { describe, it } from 'vitest';
@@ -366,7 +366,7 @@ describe('MagicString', () => {
       assert.deepEqual(m1, m2);
     });
 
-    it.skip('should recover original names', () => {
+    it('should recover original names', () => {
       const s = new MagicString('function Foo () {}');
 
       s.overwrite(9, 12, 'Bar', { storeName: true });

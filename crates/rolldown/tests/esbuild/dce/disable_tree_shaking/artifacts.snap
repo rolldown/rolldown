@@ -6,9 +6,12 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## entry.js
 
 ```js
+//#region remove-me.js
 //#endregion
 //#region keep-me/index.js
 console.log("side effects");
+//#endregion
+//#region entry.jsx
 pure();
 some.fn();
 //#endregion

@@ -1,0 +1,25 @@
+{
+  "expectExecuted": false,
+  "configName": "on-demand",
+  "config": {
+    "external": ["external"],
+    "strictExecutionOrder": true,
+    "codeSplitting": {
+      "groups": [
+        {
+          "name": "reader",
+          "test": "[\\\\/]reader\\.js$"
+        }
+      ]
+    },
+    "experimental": {
+      "onDemandWrapping": true
+    }
+  },
+  "configVariants": [
+    {
+      "_configName": "wrap-all",
+      "onDemandWrapping": false
+    }
+  ]
+}

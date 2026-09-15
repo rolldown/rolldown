@@ -20,6 +20,8 @@ var require_cjs_impl = /* @__PURE__ */ __commonJSMin(((exports) => {
 	exports.foo = "from-cjs";
 }));
 //#endregion
+//#region reexporter.js
+//#endregion
 //#region main.js
 var import_reexporter = (/* @__PURE__ */ __commonJSMin(((exports, module) => {
 	if (process.env.USE_ESM) module.exports = (init_esm_impl(), __toCommonJS(esm_impl_exports));

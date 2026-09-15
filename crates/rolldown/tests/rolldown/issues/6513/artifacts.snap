@@ -24,6 +24,7 @@ Object.defineProperty(exports, Symbol.toStringTag, { value: "Module" });
 // HIDDEN [\0rolldown/runtime.js]
 let node_assert = require("node:assert");
 node_assert = __toESM(node_assert);
+//#region lib.js
 //#endregion
 //#region entry.js
 var import_lib = (/* @__PURE__ */ __commonJSMin(((exports) => {
@@ -33,7 +34,8 @@ var import_lib = (/* @__PURE__ */ __commonJSMin(((exports) => {
 	exports.defaultProvider = remoteProvider;
 })))();
 (async () => {
-	(0, node_assert.default)((await (0, import_lib.defaultProvider)()).ddd === 100);
+	const mod = await (0, import_lib.defaultProvider)();
+	(0, node_assert.default)(mod.ddd === 100);
 })();
 //#endregion
 exports.__esmMin = __esmMin;

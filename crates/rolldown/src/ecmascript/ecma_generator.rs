@@ -85,7 +85,7 @@ impl Generator for EcmaGenerator {
           .resolved_exports
           .iter()
           .filter_map(|(key, export)| {
-            if ctx.link_output.used_symbol_refs.contains(&export.symbol_ref) {
+            if ctx.link_output.retained_export_symbols.contains(&export.symbol_ref) {
               Some(key.clone())
             } else {
               None
@@ -301,8 +301,8 @@ impl Generator for EcmaGenerator {
           .preliminary_filename
           .clone()
           .expect("should have preliminary filename"),
+        preliminary_sourcemap_filename: ctx.chunk.preliminary_sourcemap_filename.clone(),
         augment_chunk_hash: None,
-
         post_banner,
         post_footer,
       }],

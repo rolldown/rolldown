@@ -4,13 +4,12 @@ use std::borrow::Cow;
 use napi::bindgen_prelude::{Either, This};
 use napi::{Env, JsString};
 use napi_derive::napi;
+use oxc_napi::JsRegExp;
 use rolldown_sourcemap::{JSONSourceMap, SourceMap};
 use rolldown_utils::base64::to_standard_base64;
-use rolldown_utils::js_regex::HybridRegex;
+use rolldown_utils::js_regex::{HybridMatch, HybridRegex};
 use serde::Serialize;
 use string_wizard::{MagicString, MagicStringOptions, SourceMapOptions, UpdateOptions};
-
-use super::js_regex::JsRegExp;
 
 /// Internal representation preserving the original JS format (flat `[start, end]` vs nested
 /// `[[start, end], ...]`) so the getter returns the same shape the user passed in.
@@ -155,6 +154,20 @@ impl Utf16ToByteMapper {
     self.get(utf16_offset).map(|e| e.byte_offset)
   }
 
+  /// For a UTF-16 index that lands on a low surrogate — i.e. strictly inside a surrogate
+  /// pair — returns the byte span of the supplementary character containing it.
+  /// Character-boundary indices return `None`.
+  fn surrogate_interior_char_span(&self, utf16_offset: u32) -> Option<(u32, u32)> {
+    let entry = self.get(utf16_offset)?;
+    if !entry.is_low_surrogate() {
+      return None;
+    }
+    // A low surrogate is always preceded by its high surrogate, whose byte offset is the
+    // character's start; the low surrogate's own byte offset is the character's end.
+    let start = self.entries[utf16_offset as usize - 1].byte_offset;
+    Some((start, entry.byte_offset))
+  }
+
   /// Returns the UTF-16 code unit count of the original string.
   /// This matches JavaScript's `String.prototype.length`.
   fn utf16_len(&self) -> i64 {
@@ -204,12 +217,16 @@ pub struct BindingMagicStringOptions {
 #[derive(Default)]
 pub struct BindingUpdateOptions {
   pub overwrite: Option<bool>,
+  /// Stores the replaced content in the generated sourcemap's `names` field.
+  pub store_name: Option<bool>,
 }
 
 #[napi(object)]
 #[derive(Default)]
 pub struct BindingOverwriteOptions {
   pub content_only: Option<bool>,
+  /// Stores the replaced content in the generated sourcemap's `names` field.
+  pub store_name: Option<bool>,
 }
 
 #[napi(object)]
@@ -387,11 +404,39 @@ impl BindingDecodedMap {
 
 #[napi]
 pub struct BindingMagicString<'a> {
-  pub(crate) inner: MagicString<'a>,
+  inner: MagicString<'a>,
   utf16_to_byte_mapper: Utf16ToByteMapper,
   pub(crate) offset: i64,
   indent_exclusion_ranges: Option<IndentExclusionRanges>,
   ignore_list: bool,
+  /// Set once `sendMagicString` has moved `inner` out to the native sourcemap channel.
+  /// The JS object outlives that move, so every method that touches `inner` has to refuse
+  /// rather than silently operate on the empty `MagicString` left behind.
+  consumed: bool,
+}
+
+impl<'a> BindingMagicString<'a> {
+  /// Moves the inner `MagicString` out for delivery to the sourcemap worker, marking this
+  /// instance unusable. Errors if the instance was already consumed: repeating the transfer
+  /// would hand the empty `MagicString` left behind by the first move to the sourcemap
+  /// channel, silently replacing the real map. See [`Self::consumed`].
+  pub(crate) fn take_inner(&mut self) -> napi::Result<MagicString<'a>> {
+    self.ensure_live()?;
+    self.consumed = true;
+    Ok(std::mem::take(&mut self.inner))
+  }
+
+  /// Errors if this instance was already consumed by `sendMagicString`.
+  fn ensure_live(&self) -> napi::Result<()> {
+    if self.consumed {
+      return Err(napi::Error::from_reason(
+        "This MagicString was already passed to `sendMagicString()`, which moves its contents \
+         into the native sourcemap channel. Finish reading and editing it before returning it \
+         from the `transform` hook.",
+      ));
+    }
+    Ok(())
+  }
 }
 
 #[napi]
@@ -411,17 +456,20 @@ impl BindingMagicString<'_> {
       offset,
       indent_exclusion_ranges,
       ignore_list,
+      consumed: false,
     }
   }
 
   #[napi(getter)]
-  pub fn original(&self) -> &str {
-    self.inner.source()
+  pub fn original(&self) -> napi::Result<&str> {
+    self.ensure_live()?;
+    Ok(self.inner.source())
   }
 
   #[napi(getter)]
-  pub fn filename(&self) -> Option<&str> {
-    self.inner.filename()
+  pub fn filename(&self) -> napi::Result<Option<&str>> {
+    self.ensure_live()?;
+    Ok(self.inner.filename())
   }
 
   #[napi(getter)]
@@ -449,9 +497,9 @@ impl BindingMagicString<'_> {
   /// Handles `$&`, `$$`, and `$N` substitution patterns in the replacement string.
   ///
   /// NOTE: Uses `HybridRegex` which tries `regex::Regex` first (orders of magnitude
-  /// faster) and only falls back to `regress::Regex` when the pattern uses syntax
+  /// faster) and only falls back to the ECMAScript engine when the pattern uses syntax
   /// not supported by the `regex` crate (e.g. backreferences, lookaround).
-  /// Sticky (`y`) flag always uses the `regress` path since `regex` doesn't support it,
+  /// Sticky (`y`) flag always uses the ECMAScript path since `regex` doesn't support it,
   /// and `lastIndex` is respected via `find_from`.
   fn regex_replace(&mut self, js_regex: &JsRegExp, replacement: &str) -> napi::Result<Option<u32>> {
     let global = js_regex.flags.contains('g');
@@ -466,10 +514,10 @@ impl BindingMagicString<'_> {
 
     // Collect into Vec to release the borrow on `source` before mutating `self.inner`.
     #[expect(clippy::cast_possible_truncation)]
-    let overwrites: Vec<(u32, u32, String)> = match &reg {
-      HybridRegex::Optimize(r) => {
+    let overwrites: Vec<(u32, u32, String)> = match reg.as_optimized() {
+      Some(r) => {
         // The `regex` crate path is only used for non-sticky patterns (the `y` flag
-        // causes `regex::Regex::new` to fail, falling back to regress).
+        // causes `regex::Regex::new` to fail, selecting the ECMAScript fallback).
         // For non-sticky regexes, JS resets `lastIndex` before matching, so we
         // always start from the beginning.
         let iter = r.captures_iter(source);
@@ -489,7 +537,7 @@ impl BindingMagicString<'_> {
           })
           .collect()
       }
-      HybridRegex::Ecma(r) => {
+      None => {
         let is_sticky = js_regex.flags.contains('y');
         // For global regexes, JS resets lastIndex to 0 before matching.
         // For non-global sticky, use the caller's lastIndex (converted from UTF-16 to byte offset).
@@ -497,7 +545,7 @@ impl BindingMagicString<'_> {
         let start = if global || !is_sticky {
           0
         } else {
-          match self.utf16_to_byte_mapper.utf16_to_byte(js_regex.last_index as u32) {
+          match self.utf16_to_byte_mapper.utf16_to_byte(js_regex.last_index) {
             Some(byte_offset) => byte_offset as usize,
             None => return Ok(None),
           }
@@ -508,16 +556,19 @@ impl BindingMagicString<'_> {
           // For non-global sticky, this is at most one match.
           let mut results = Vec::new();
           let mut pos = start;
-          for m in r.find_from(source, start) {
-            if m.range.start != pos {
+          let matches =
+            reg.find_from(source, start).expect("fallback regex should use the ECMAScript engine");
+          for m in matches {
+            let range = m.range();
+            if range.start != pos {
               break; // non-contiguous — stop
             }
-            pos = m.range.end;
-            last_match_end = Some(m.range.end as u32);
-            let matched = &source[m.range.clone()];
-            let rep = apply_replacement_regress(replacement, matched, &m, source);
+            pos = range.end;
+            last_match_end = Some(range.end as u32);
+            let matched = &source[range.clone()];
+            let rep = apply_replacement_ecma(replacement, matched, &m, source);
             if rep != matched {
-              results.push((m.range.start as u32, m.range.end as u32, rep));
+              results.push((range.start as u32, range.end as u32, rep));
             }
             if !global {
               break; // non-global: one match only
@@ -526,7 +577,8 @@ impl BindingMagicString<'_> {
           results
         } else {
           // Non-sticky
-          let iter = r.find_from(source, 0);
+          let iter =
+            reg.find_from(source, 0).expect("fallback regex should use the ECMAScript engine");
           let iter = if global {
             itertools::Either::Left(iter)
           } else {
@@ -534,10 +586,11 @@ impl BindingMagicString<'_> {
           };
           iter
             .filter_map(|m| {
-              last_match_end = Some(m.range.end as u32);
-              let matched = &source[m.range.clone()];
-              let rep = apply_replacement_regress(replacement, matched, &m, source);
-              (rep != matched).then_some((m.range.start as u32, m.range.end as u32, rep))
+              let range = m.range();
+              last_match_end = Some(range.end as u32);
+              let matched = &source[range.clone()];
+              let rep = apply_replacement_ecma(replacement, matched, &m, source);
+              (rep != matched).then_some((range.start as u32, range.end as u32, rep))
             })
             .collect()
         }
@@ -579,6 +632,21 @@ impl BindingMagicString<'_> {
     index.saturating_add(self.offset)
   }
 
+  /// A UTF-16 index inside a surrogate pair has no byte equivalent. `magic-string` splits
+  /// the chunk there (into lone surrogates, which UTF-8 cannot hold), so on unedited content
+  /// we round to the character boundary instead — but on an edited chunk `magic-string`
+  /// throws, and rounding would swallow that error and place content at a boundary the
+  /// caller never named. `utf16_index` must already have `self.offset` applied.
+  fn reject_surrogate_split_of_edited_chunk(&self, utf16_index: u32) -> napi::Result<()> {
+    if let Some((start, end)) = self.utf16_to_byte_mapper.surrogate_interior_char_span(utf16_index)
+    {
+      if self.inner.is_range_within_edited_chunk(start, end) {
+        return Err(napi::Error::from_reason("Cannot split a chunk that has already been edited"));
+      }
+    }
+    Ok(())
+  }
+
   #[napi]
   pub fn replace<'s>(
     &'s mut self,
@@ -586,6 +654,7 @@ impl BindingMagicString<'_> {
     from: String,
     to: String,
   ) -> napi::Result<This<'s>> {
+    self.ensure_live()?;
     self.inner.replace(&from, to).map_err(napi::Error::from_reason)?;
     Ok(this)
   }
@@ -597,6 +666,7 @@ impl BindingMagicString<'_> {
     from: String,
     to: String,
   ) -> napi::Result<This<'s>> {
+    self.ensure_live()?;
     self.inner.replace_all(&from, to).map_err(napi::Error::from_reason)?;
     Ok(this)
   }
@@ -610,21 +680,24 @@ impl BindingMagicString<'_> {
     #[napi(ts_arg_type = "RegExp")] from: JsRegExp,
     to: String,
   ) -> napi::Result<i32> {
+    self.ensure_live()?;
     let last_end = self.regex_replace(&from, &to)?;
     #[expect(clippy::cast_possible_wrap)]
     Ok(last_end.map_or(-1, |v| v as i32))
   }
 
   #[napi]
-  pub fn prepend<'s>(&'s mut self, this: This<'s>, content: String) -> This<'s> {
+  pub fn prepend<'s>(&'s mut self, this: This<'s>, content: String) -> napi::Result<This<'s>> {
+    self.ensure_live()?;
     self.inner.prepend(content);
-    this
+    Ok(this)
   }
 
   #[napi]
-  pub fn append<'s>(&'s mut self, this: This<'s>, content: String) -> This<'s> {
+  pub fn append<'s>(&'s mut self, this: This<'s>, content: String) -> napi::Result<This<'s>> {
+    self.ensure_live()?;
     self.inner.append(content);
-    this
+    Ok(this)
   }
 
   #[napi]
@@ -634,10 +707,13 @@ impl BindingMagicString<'_> {
     index: u32,
     content: String,
   ) -> napi::Result<This<'s>> {
+    self.ensure_live()?;
     // Match original magic-string: out-of-bound indices fall through to prepend_intro
-    match self.utf16_to_byte_mapper.utf16_to_byte(self.apply_offset_u32(index)?) {
+    let index = self.apply_offset_u32(index)?;
+    self.reject_surrogate_split_of_edited_chunk(index)?;
+    match self.utf16_to_byte_mapper.utf16_to_byte(index) {
       Some(byte_index) => {
-        self.inner.prepend_left(byte_index, content);
+        self.inner.prepend_left(byte_index, content).map_err(napi::Error::from_reason)?;
       }
       None => {
         self.inner.prepend(content);
@@ -653,10 +729,13 @@ impl BindingMagicString<'_> {
     index: u32,
     content: String,
   ) -> napi::Result<This<'s>> {
+    self.ensure_live()?;
     // Match original magic-string: out-of-bound indices fall through to prepend_outro
-    match self.utf16_to_byte_mapper.utf16_to_byte(self.apply_offset_u32(index)?) {
+    let index = self.apply_offset_u32(index)?;
+    self.reject_surrogate_split_of_edited_chunk(index)?;
+    match self.utf16_to_byte_mapper.utf16_to_byte(index) {
       Some(byte_index) => {
-        self.inner.prepend_right(byte_index, content);
+        self.inner.prepend_right(byte_index, content).map_err(napi::Error::from_reason)?;
       }
       None => {
         self.inner.prepend_outro(content);
@@ -672,10 +751,13 @@ impl BindingMagicString<'_> {
     index: u32,
     content: String,
   ) -> napi::Result<This<'s>> {
+    self.ensure_live()?;
     // Match original magic-string: out-of-bound indices fall through to append_intro
-    match self.utf16_to_byte_mapper.utf16_to_byte(self.apply_offset_u32(index)?) {
+    let index = self.apply_offset_u32(index)?;
+    self.reject_surrogate_split_of_edited_chunk(index)?;
+    match self.utf16_to_byte_mapper.utf16_to_byte(index) {
       Some(byte_index) => {
-        self.inner.append_left(byte_index, content);
+        self.inner.append_left(byte_index, content).map_err(napi::Error::from_reason)?;
       }
       None => {
         self.inner.append_intro(content);
@@ -691,10 +773,13 @@ impl BindingMagicString<'_> {
     index: u32,
     content: String,
   ) -> napi::Result<This<'s>> {
+    self.ensure_live()?;
     // Match original magic-string: out-of-bound indices fall through to append_outro
-    match self.utf16_to_byte_mapper.utf16_to_byte(self.apply_offset_u32(index)?) {
+    let index = self.apply_offset_u32(index)?;
+    self.reject_surrogate_split_of_edited_chunk(index)?;
+    match self.utf16_to_byte_mapper.utf16_to_byte(index) {
       Some(byte_index) => {
-        self.inner.append_right(byte_index, content);
+        self.inner.append_right(byte_index, content).map_err(napi::Error::from_reason)?;
       }
       None => {
         self.inner.append(content);
@@ -712,6 +797,7 @@ impl BindingMagicString<'_> {
     content: String,
     options: Option<BindingOverwriteOptions>,
   ) -> napi::Result<This<'s>> {
+    self.ensure_live()?;
     let start_byte = self
       .utf16_to_byte_mapper
       .utf16_to_byte(self.apply_offset_u32(start)?)
@@ -720,45 +806,52 @@ impl BindingMagicString<'_> {
       .utf16_to_byte_mapper
       .utf16_to_byte(self.apply_offset_u32(end)?)
       .ok_or_else(|| napi::Error::from_reason("Invalid end character index"))?;
-    let content_only = options.and_then(|o| o.content_only).unwrap_or(false);
+    let (content_only, store_name) = options
+      .map_or((false, false), |o| (o.content_only.unwrap_or(false), o.store_name.unwrap_or(false)));
     self
       .inner
       .update_with(
         start_byte,
         end_byte,
         content,
-        string_wizard::UpdateOptions { overwrite: !content_only, keep_original: false },
+        string_wizard::UpdateOptions { overwrite: !content_only, keep_original: store_name },
       )
       .map_err(napi::Error::from_reason)?;
     Ok(this)
   }
 
   #[napi]
-  pub fn to_string(&self) -> String {
-    self.inner.to_string()
+  pub fn to_string(&self) -> napi::Result<String> {
+    self.ensure_live()?;
+    Ok(self.inner.to_string())
   }
 
   #[napi]
-  pub fn has_changed(&self) -> bool {
-    self.inner.has_changed()
+  pub fn has_changed(&self) -> napi::Result<bool> {
+    self.ensure_live()?;
+    Ok(self.inner.has_changed())
   }
 
   #[napi]
-  pub fn length(&self) -> u32 {
-    // MagicString::len() returns usize (length of generated output)
+  pub fn length(&self) -> napi::Result<u32> {
+    self.ensure_live()?;
+    // JS measures string length in UTF-16 code units, so this must use `len_utf16` rather
+    // than `len`, which counts UTF-8 bytes and over-reports for any non-ASCII source.
     #[expect(clippy::cast_possible_truncation, reason = "files are < 4GB")]
     {
-      self.inner.len() as u32
+      Ok(self.inner.len_utf16() as u32)
     }
   }
 
   #[napi]
-  pub fn is_empty(&self) -> bool {
-    self.inner.is_empty()
+  pub fn is_empty(&self) -> napi::Result<bool> {
+    self.ensure_live()?;
+    Ok(self.inner.is_empty())
   }
 
   #[napi]
   pub fn remove<'s>(&'s mut self, this: This<'s>, start: i64, end: i64) -> napi::Result<This<'s>> {
+    self.ensure_live()?;
     // Apply offset, then handle negative indices (matching reset/slice pattern)
     let start = self.utf16_to_byte_mapper.normalize_index(self.apply_offset_i64(start));
     let end = self.utf16_to_byte_mapper.normalize_index(self.apply_offset_i64(end));
@@ -794,6 +887,7 @@ impl BindingMagicString<'_> {
     content: String,
     options: Option<BindingUpdateOptions>,
   ) -> napi::Result<This<'s>> {
+    self.ensure_live()?;
     let start_byte = self
       .utf16_to_byte_mapper
       .utf16_to_byte(self.apply_offset_u32(start)?)
@@ -802,14 +896,15 @@ impl BindingMagicString<'_> {
       .utf16_to_byte_mapper
       .utf16_to_byte(self.apply_offset_u32(end)?)
       .ok_or_else(|| napi::Error::from_reason("Invalid end character index"))?;
-    let overwrite = options.and_then(|o| o.overwrite).unwrap_or(false);
+    let (overwrite, store_name) = options
+      .map_or((false, false), |o| (o.overwrite.unwrap_or(false), o.store_name.unwrap_or(false)));
     self
       .inner
       .update_with(
         start_byte,
         end_byte,
         content,
-        string_wizard::UpdateOptions { overwrite, keep_original: false },
+        string_wizard::UpdateOptions { overwrite, keep_original: store_name },
       )
       .map_err(napi::Error::from_reason)?;
     Ok(this)
@@ -823,6 +918,7 @@ impl BindingMagicString<'_> {
     end: u32,
     to: u32,
   ) -> napi::Result<This<'s>> {
+    self.ensure_live()?;
     let start_byte = self
       .utf16_to_byte_mapper
       .utf16_to_byte(self.apply_offset_u32(start)?)
@@ -859,7 +955,8 @@ impl BindingMagicString<'_> {
     this: This<'s>,
     indentor: Option<String>,
     options: Option<BindingIndentOptions>,
-  ) -> This<'s> {
+  ) -> napi::Result<This<'s>> {
+    self.ensure_live()?;
     // Per-call exclude takes priority; fall back to constructor's indentExclusionRanges.
     let explicit_exclude = options.and_then(|opts| opts.exclude);
     let exclude_ranges = if let Some(ref e) = explicit_exclude {
@@ -870,39 +967,58 @@ impl BindingMagicString<'_> {
       vec![]
     };
 
-    self.inner.indent_with(string_wizard::IndentOptions {
-      indentor: indentor.as_deref(),
-      exclude: &exclude_ranges,
-    });
-    this
+    self
+      .inner
+      .indent_with(string_wizard::IndentOptions {
+        indentor: indentor.as_deref(),
+        exclude: &exclude_ranges,
+      })
+      .map_err(napi::Error::from_reason)?;
+    Ok(this)
   }
 
   /// Trims whitespace or specified characters from the start and end.
   #[napi]
-  pub fn trim<'s>(&'s mut self, this: This<'s>, char_type: Option<String>) -> This<'s> {
+  pub fn trim<'s>(
+    &'s mut self,
+    this: This<'s>,
+    char_type: Option<String>,
+  ) -> napi::Result<This<'s>> {
+    self.ensure_live()?;
     self.inner.trim(char_type.as_deref());
-    this
+    Ok(this)
   }
 
   /// Trims whitespace or specified characters from the start.
   #[napi]
-  pub fn trim_start<'s>(&'s mut self, this: This<'s>, char_type: Option<String>) -> This<'s> {
+  pub fn trim_start<'s>(
+    &'s mut self,
+    this: This<'s>,
+    char_type: Option<String>,
+  ) -> napi::Result<This<'s>> {
+    self.ensure_live()?;
     self.inner.trim_start(char_type.as_deref());
-    this
+    Ok(this)
   }
 
   /// Trims whitespace or specified characters from the end.
   #[napi]
-  pub fn trim_end<'s>(&'s mut self, this: This<'s>, char_type: Option<String>) -> This<'s> {
+  pub fn trim_end<'s>(
+    &'s mut self,
+    this: This<'s>,
+    char_type: Option<String>,
+  ) -> napi::Result<This<'s>> {
+    self.ensure_live()?;
     self.inner.trim_end(char_type.as_deref());
-    this
+    Ok(this)
   }
 
   /// Trims newlines from the start and end.
   #[napi]
-  pub fn trim_lines<'s>(&'s mut self, this: This<'s>) -> This<'s> {
+  pub fn trim_lines<'s>(&'s mut self, this: This<'s>) -> napi::Result<This<'s>> {
+    self.ensure_live()?;
     self.inner.trim_lines();
-    this
+    Ok(this)
   }
 
   /// Deprecated method that throws an error directing users to use prependRight or appendLeft.
@@ -916,38 +1032,43 @@ impl BindingMagicString<'_> {
 
   /// Returns a clone of the MagicString instance.
   #[napi(js_name = "clone")]
-  #[must_use]
-  pub fn clone_instance(&self) -> Self {
-    Self {
+  pub fn clone_instance(&self) -> napi::Result<Self> {
+    self.ensure_live()?;
+    Ok(Self {
       inner: self.inner.clone(),
       utf16_to_byte_mapper: self.utf16_to_byte_mapper.clone(),
       offset: self.offset,
       indent_exclusion_ranges: self.indent_exclusion_ranges.clone(),
       ignore_list: self.ignore_list,
-    }
+      consumed: false,
+    })
   }
 
   /// Returns the last character of the generated string, or an empty string if empty.
   #[napi]
-  pub fn last_char(&self) -> String {
-    self.inner.last_char().map(|c| c.to_string()).unwrap_or_default()
+  pub fn last_char(&self) -> napi::Result<String> {
+    self.ensure_live()?;
+    Ok(self.inner.last_char().map(|c| c.to_string()).unwrap_or_default())
   }
 
   /// Returns the content after the last newline in the generated string.
   #[napi]
-  pub fn last_line(&self) -> String {
-    self.inner.last_line()
+  pub fn last_line(&self) -> napi::Result<String> {
+    self.ensure_live()?;
+    Ok(self.inner.last_line())
   }
 
   /// Returns the guessed indentation string, or `\t` if none is found.
   #[napi]
-  pub fn get_indent_string(&self) -> &str {
-    self.inner.get_indent_string()
+  pub fn get_indent_string(&self) -> napi::Result<&str> {
+    self.ensure_live()?;
+    Ok(self.inner.get_indent_string())
   }
 
   /// Returns a clone with content outside the specified range removed.
   #[napi]
   pub fn snip(&self, start: u32, end: u32) -> napi::Result<Self> {
+    self.ensure_live()?;
     let start_byte = self
       .utf16_to_byte_mapper
       .utf16_to_byte(self.apply_offset_u32(start)?)
@@ -962,6 +1083,7 @@ impl BindingMagicString<'_> {
       offset: self.offset,
       indent_exclusion_ranges: self.indent_exclusion_ranges.clone(),
       ignore_list: self.ignore_list,
+      consumed: false,
     })
   }
 
@@ -970,6 +1092,7 @@ impl BindingMagicString<'_> {
   /// Supports negative indices (counting from the end).
   #[napi]
   pub fn reset<'s>(&'s mut self, this: This<'s>, start: i64, end: i64) -> napi::Result<This<'s>> {
+    self.ensure_live()?;
     // Apply offset, then handle negative indices (matching original magic-string behavior)
     let start = self.utf16_to_byte_mapper.normalize_index(self.apply_offset_i64(start));
     let end = self.utf16_to_byte_mapper.normalize_index(self.apply_offset_i64(end));
@@ -1005,6 +1128,7 @@ impl BindingMagicString<'_> {
     start: Option<i64>,
     end: Option<i64>,
   ) -> napi::Result<JsString<'env>> {
+    self.ensure_live()?;
     // Apply offset to both start and end (including defaults), then normalize negatives
     let start = self.apply_offset_i64(start.unwrap_or(0));
 
@@ -1106,7 +1230,11 @@ impl BindingMagicString<'_> {
   /// Generates a source map for the transformations applied to this MagicString.
   /// Returns a BindingSourceMap object with version, file, sources, sourcesContent, names, mappings.
   #[napi]
-  pub fn generate_map(&self, options: Option<BindingSourceMapOptions>) -> BindingSourceMap {
+  pub fn generate_map(
+    &self,
+    options: Option<BindingSourceMapOptions>,
+  ) -> napi::Result<BindingSourceMap> {
+    self.ensure_live()?;
     let opts = options.unwrap_or_default();
     let hires = match &opts.hires {
       Some(Either::A(true)) => string_wizard::Hires::True,
@@ -1138,7 +1266,7 @@ impl BindingMagicString<'_> {
       source_map
     };
 
-    BindingSourceMap { json: source_map.to_json() }
+    Ok(BindingSourceMap { json: source_map.to_json() })
   }
 
   /// Generates a decoded source map for the transformations applied to this MagicString.
@@ -1147,7 +1275,8 @@ impl BindingMagicString<'_> {
   pub fn generate_decoded_map(
     &self,
     options: Option<BindingSourceMapOptions>,
-  ) -> BindingDecodedMap {
+  ) -> napi::Result<BindingDecodedMap> {
+    self.ensure_live()?;
     let opts = options.unwrap_or_default();
     let hires = match &opts.hires {
       Some(Either::A(true)) => string_wizard::Hires::True,
@@ -1180,7 +1309,7 @@ impl BindingMagicString<'_> {
     };
 
     let json = source_map.to_json();
-    BindingDecodedMap { inner: source_map, json }
+    Ok(BindingDecodedMap { inner: source_map, json })
   }
 }
 
@@ -1266,13 +1395,13 @@ fn apply_replacement_regex(
   apply_replacement(replacement, matched, group_count, |n| caps.get(n).map(|m| m.as_str()))
 }
 
-/// `apply_replacement` adapter for `regress::Match` (slow/fallback path).
-fn apply_replacement_regress(
+/// `apply_replacement` adapter for an ECMAScript match (slow/fallback path).
+fn apply_replacement_ecma(
   replacement: &str,
   matched: &str,
-  m: &regress::Match,
+  m: &HybridMatch,
   source: &str,
 ) -> String {
-  let group_count = 1 + m.captures.len();
+  let group_count = m.group_count();
   apply_replacement(replacement, matched, group_count, |n| m.group(n).map(|range| &source[range]))
 }

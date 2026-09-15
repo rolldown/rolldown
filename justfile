@@ -93,6 +93,10 @@ test-node *args="": build-rolldown build-rolldown-test-dev-server
   just test-node-rolldown {{ args }}
   just test-node-rollup
 
+# Run Rolldown's tests against the WASI binding, mirroring the WASI CI lane. Replaces any native `dist`, so run `just build-rolldown` afterwards.
+test-wasi *args="": build-rolldown-wasi build-rolldown-test-dev-server
+  vp run --filter rolldown-tests test:wasi {{ args }}
+
 test-node-hmr *args: build build-test-dev-server
   just test-node-hmr-only {{ args }}
 
@@ -102,6 +106,14 @@ test-node-hmr-only *args:
 # Run Vite's test suite to check Rolldown's behaviors.
 test-vite: # We don't use `test-node-vite` because it's not expected to run in `just test-node`.
   vp run --filter vite-tests test
+
+# Build the WASI artifacts and smoke test them inside a WebContainer. Opt-in only, needs network.
+test-webcontainer:
+  vp run --filter browser-tests test:webcontainer
+
+# Build `@rolldown/browser` and smoke test the packed artifact inside a real browser page.
+test-browser:
+  vp run --filter browser-tests test:browser
 
 # --- `t` series commands provide scenario-specific shortcut commands for testing compared to `test` series commands.
 
@@ -202,6 +214,11 @@ build-rolldown-wasi:
 build-rolldown-release:
   vp run --filter rolldown build-native:release
 
+# Same as `build-rolldown-release`, plus the tracking allocator, so benchmarks can record Rust-side memory usage. Costs ~1-2% build time.
+build-rolldown-release-tracking:
+  vp run --filter rolldown build-binding:release --features tracking_allocator
+  vp run --filter rolldown build-js-glue
+
 # Build `rolldown` located in `packages/rolldown` itself and its `.node` binding in profile mode.
 build-rolldown-profile:
   vp run --filter rolldown build-native:profile
@@ -220,6 +237,14 @@ build-browser-release:
 # Build `@rolldown/test-dev-server` located in `packages/test-dev-server`.
 build-test-dev-server:
   vp run --filter @rolldown/test-dev-server build
+
+# Set up the Vite checkout at `vite/` (clone vitejs/vite rolldown-canary
+# rebased onto main, link the workspace rolldown into it, install + build
+# vite). It backs the `@rolldown/test-dev-server` browser tests, and
+# `packages/vite-tests` clones the same checkout. Requires
+# `just build-rolldown` first.
+setup-vite:
+  vp run --filter @rolldown-internal/scripts setup-vite
 
 # --- `bench` series commands aim to provide a easy way to run benchmarks.
 
@@ -245,6 +270,11 @@ bump-packages *args:
 # - Event kind switching logic (crates/rolldown_error/src/generated/event_kind_switcher.rs)
 update-generated-code:
   cargo run --bin generator
+
+# Update the allocation-count snapshot (tasks/track_memory_allocations/allocs.snap).
+# Run after changes to `rolldown_sourcemap` if the allocs CI gate fails.
+allocs:
+  cargo allocs
 
 # Run the `rolldown` cli using node.
 run *args:

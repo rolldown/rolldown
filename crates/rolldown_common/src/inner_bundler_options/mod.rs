@@ -10,7 +10,6 @@ use types::invalidate_js_side_cache::InvalidateJsSideCache;
 use types::legal_comments::LegalComments;
 use types::log_level::LogLevel;
 use types::make_absolute_externals_relative::MakeAbsoluteExternalsRelative;
-use types::manual_code_splitting_options::ManualCodeSplittingOptions;
 use types::minify_options::RawMinifyOptions;
 use types::on_log::OnLog;
 use types::optimization::OptimizationOption;
@@ -35,8 +34,9 @@ use self::types::{
   defer_sync_scan_data_option::DeferSyncScanDataOption, es_module_flag::EsModuleFlag,
   hash_characters::HashCharacters, input_item::InputItem, is_external::IsExternal,
   output_exports::OutputExports, output_format::OutputFormat, output_option::AddonOutputOption,
-  platform::Platform, resolve_options::ResolveOptions, source_map_type::SourceMapType,
-  sourcemap_path_transform::SourceMapPathTransform, strict_mode::StrictMode, tsconfig::TsConfig,
+  platform::Platform, plugin_timings_option::PluginTimingsOption, resolve_options::ResolveOptions,
+  source_map_type::SourceMapType, sourcemap_path_transform::SourceMapPathTransform,
+  strict_mode::StrictMode, tsconfig::TsConfig,
 };
 
 use crate::{
@@ -150,6 +150,12 @@ pub struct BundlerOptions {
   pub sourcemap_base_url: Option<String>,
   #[cfg_attr(
     feature = "deserialize_bundler_options",
+    serde(default, deserialize_with = "deserialize_chunk_filenames"),
+    schemars(with = "Option<String>")
+  )]
+  pub sourcemap_filenames: Option<ChunkFilenamesOutputOption>,
+  #[cfg_attr(
+    feature = "deserialize_bundler_options",
     serde(default, skip_deserializing),
     schemars(skip)
   )]
@@ -189,9 +195,11 @@ pub struct BundlerOptions {
   pub keep_names: Option<bool>,
   pub inject: Option<Vec<InjectImport>>,
   pub external_live_bindings: Option<bool>,
+  /// Mirrors the public `codeSplitting: boolean | CodeSplittingOptions`. The object
+  /// form (`Advanced`) carries the manual chunk grouping config; it is decomposed into
+  /// the gate + `NormalizedBundlerOptions::manual_code_splitting` during normalization.
   pub code_splitting: Option<CodeSplittingMode>,
   pub dynamic_import_in_cjs: Option<bool>,
-  pub manual_code_splitting: Option<ManualCodeSplittingOptions>,
   pub checks: Option<ChecksOptions>,
   #[cfg_attr(
     feature = "deserialize_bundler_options",
@@ -209,6 +217,12 @@ pub struct BundlerOptions {
     schemars(skip)
   )]
   pub defer_sync_scan_data: Option<DeferSyncScanDataOption>,
+  #[cfg_attr(
+    feature = "deserialize_bundler_options",
+    serde(default, skip_deserializing),
+    schemars(skip)
+  )]
+  pub plugin_timings: Option<PluginTimingsOption>,
   pub make_absolute_externals_relative: Option<MakeAbsoluteExternalsRelative>,
   pub devtools: Option<DevtoolsOptions>,
   #[cfg_attr(
@@ -320,7 +334,7 @@ where
       Ok(Some(RawMinifyOptions::DeadCodeEliminationOnly))
     }
     None => Ok(None),
-    _ => unreachable!("Unexpected value for minify {:?}", deserialized),
+    _ => unreachable!("Unexpected value for minify"),
   }
 }
 

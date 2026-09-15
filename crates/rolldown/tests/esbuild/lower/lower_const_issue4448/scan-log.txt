@@ -1,0 +1,1 @@
+entry.ts: WARNING: "import.meta" is not available in the configured target environment and will be empty

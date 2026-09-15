@@ -8,7 +8,9 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```js
 Object.defineProperty(exports, Symbol.toStringTag, { value: "Module" });
 //#region entry.mjs
-let foo, bar, baz;
+let foo;
+let bar;
+let baz;
 //#endregion
 exports["..."] = baz;
 exports.foo = foo;

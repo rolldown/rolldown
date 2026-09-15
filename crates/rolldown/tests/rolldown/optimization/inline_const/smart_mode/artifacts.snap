@@ -6,6 +6,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## main.js
 
 ```js
+//#region constants.js
 //#endregion
 //#region main.js
 console.log("production", 1, true, null, void 0, "1234", "123");

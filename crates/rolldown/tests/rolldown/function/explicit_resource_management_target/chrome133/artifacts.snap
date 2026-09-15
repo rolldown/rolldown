@@ -1,0 +1,25 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+// HIDDEN [\0@oxc-project+runtime@0.0.0/file.js]
+//#region main.js
+function acquireResource() {
+	return { [Symbol.dispose]() {} };
+}
+try {
+	var _usingCtx = _usingCtx$1();
+	var resource = _usingCtx.u(acquireResource());
+	console.log("acquired", resource);
+} catch (_) {
+	_usingCtx.e = _;
+} finally {
+	_usingCtx.d();
+}
+//#endregion
+
+```

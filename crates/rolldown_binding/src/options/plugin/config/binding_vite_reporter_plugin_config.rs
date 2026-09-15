@@ -7,7 +7,7 @@ use std::{
 use rolldown_plugin_vite_reporter::{LogInfoFn, ViteReporterPlugin};
 use sugar_path::SugarPath as _;
 
-use crate::types::js_callback::{JsCallback, JsCallbackExt as _};
+use crate::types::js_callback::{JsCallback, JsCallbackExt as _, JsCallbackResultExt as _};
 
 #[napi_derive::napi(object, object_to_js = false)]
 #[expect(clippy::struct_excessive_bools)]
@@ -40,7 +40,12 @@ impl From<BindingViteReporterPluginConfig> for ViteReporterPlugin {
       log_info: config.log_info.map(|log_info| -> Arc<LogInfoFn> {
         Arc::new(move |msg: String| {
           let cb = Arc::clone(&log_info);
-          Box::pin(async move { cb.invoke_async(msg).await.map_err(anyhow::Error::from) })
+          Box::pin(async move {
+            cb.invoke_async(msg)
+              .await
+              .context("viteReporter logInfo option")
+              .map_err(anyhow::Error::from)
+          })
         })
       }),
     }

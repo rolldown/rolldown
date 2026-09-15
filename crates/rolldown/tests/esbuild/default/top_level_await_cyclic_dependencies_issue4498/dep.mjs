@@ -1,0 +1,1 @@
+export const tla = await Promise.resolve("x");

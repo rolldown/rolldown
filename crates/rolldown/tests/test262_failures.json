@@ -152,12 +152,6 @@
   "language/module-code/instn-named-bndng-dflt-gen-anon.js": {
     "reason": "keepNames feature in Rolldown does not work for accesses requiring the function to be hoisted"
   },
-  "language/module-code/instn-star-iee-multi-cycle-same-name.js": {
-    "reason": "Incorrect ambiguous export detection in Rolldown"
-  },
-  "language/module-code/instn-star-iee-single-cycle-same-name.js": {
-    "reason": "Incorrect ambiguous export detection in Rolldown"
-  },
   "language/module-code/namespace/internals/super-access-to-tdz-binding.js": {
     "reason": "Rolldown does not preserve TDZ semantics"
   },

@@ -1,0 +1,7 @@
+{
+  "snapshot": false,
+  "expectExecutionFailure": {
+    "reason": "blank output matchers must not accept arbitrary process failures",
+    "outputContains": [" "]
+  }
+}

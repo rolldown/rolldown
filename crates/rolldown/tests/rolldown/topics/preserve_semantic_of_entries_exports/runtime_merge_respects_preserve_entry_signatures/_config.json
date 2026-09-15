@@ -1,17 +1,39 @@
 {
-  "_comment": "Two entries where `main` reads `lib`'s exports and independently pulls runtime helpers, so the runtime is a candidate to fold into the `lib` entry chunk. The runtime-merge signature guard must respect `preserveEntrySignatures`: for `strict` (and the default `exports-only`, since lib declares exports) it must keep the runtime — and thus its helpers — out of lib's public exports; for `allow-extension` the merge is allowed and helpers become extension exports on lib. The `strict`/`allow-extension` cases are covered explicitly via `configVariants`, so the auto-generated `extendedTests` variants for them are disabled to avoid redundant runs.",
+  "_comment": "Two entries where `main` reads `lib`'s exports, and both entries pull runtime helpers via interop. The runtime-merge signature guard must respect `preserveEntrySignatures`: `strict` (and the default `exports-only`, since lib declares exports) must keep runtime helpers out of lib's public exports. `allow-extension` permits a runtime merge: the on-demand layout merges it and exposes helper extension exports, while wrap-all may validly keep a separate runtime chunk. The cases are explicit config variants, so their auto-generated extended-test variants are disabled.",
+  "configName": "on-demand",
   "config": {
     "input": [
-      { "name": "main", "import": "./main.js" },
-      { "name": "lib", "import": "./lib.js" }
+      {
+        "name": "main",
+        "import": "./main.js"
+      },
+      {
+        "name": "lib",
+        "import": "./lib.js"
+      }
     ],
     "format": "cjs",
     "exports": "named",
     "strictExecutionOrder": true,
     "minifyInternalExports": false,
-    "preserveEntrySignatures": "strict"
+    "preserveEntrySignatures": "strict",
+    "experimental": {
+      "onDemandWrapping": true
+    }
   },
   "configVariants": [
-    { "_configName": "allow-extension", "preserveEntrySignatures": "allow-extension" }
+    {
+      "_configName": "allow-extension-on-demand",
+      "preserveEntrySignatures": "allow-extension"
+    },
+    {
+      "_configName": "allow-extension-wrap-all",
+      "preserveEntrySignatures": "allow-extension",
+      "onDemandWrapping": false
+    },
+    {
+      "_configName": "wrap-all",
+      "onDemandWrapping": false
+    }
   ]
 }

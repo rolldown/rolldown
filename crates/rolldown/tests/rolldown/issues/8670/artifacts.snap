@@ -27,7 +27,6 @@ export default require_main();
 var myLib = (function() {
 
 // HIDDEN [\0rolldown/runtime.js]
-
 //#region main.cjs
 	var require_main = /* @__PURE__ */ __commonJSMin(((exports) => {
 		exports.foo = "foo";
@@ -53,7 +52,6 @@ module.exports = myLib;
   (global = typeof globalThis !== 'undefined' ? globalThis : global || self, (global.myLib = factory()));
 })(this, function() {
 // HIDDEN [\0rolldown/runtime.js]
-
 //#region main.cjs
 	var require_main = /* @__PURE__ */ __commonJSMin(((exports) => {
 		exports.foo = "foo";

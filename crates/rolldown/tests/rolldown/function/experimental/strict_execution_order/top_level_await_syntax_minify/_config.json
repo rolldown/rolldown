@@ -1,4 +1,5 @@
 {
+  "configName": "on-demand",
   "config": {
     "input": [
       {
@@ -7,7 +8,16 @@
       }
     ],
     "strictExecutionOrder": true,
-    "minify": true
+    "minify": true,
+    "experimental": {
+      "onDemandWrapping": true
+    }
   },
-  "expectExecuted": false
+  "expectExecuted": false,
+  "configVariants": [
+    {
+      "_configName": "wrap-all",
+      "onDemandWrapping": false
+    }
+  ]
 }

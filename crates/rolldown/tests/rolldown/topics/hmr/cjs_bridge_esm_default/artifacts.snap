@@ -17,6 +17,24 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```js
 import assert from "node:assert";
 // HIDDEN [\0rolldown/runtime.js]
+__rolldown_runtime__.registerGraph({
+	ids: [
+		"esm.js",
+		"bridge.js",
+		"main.js"
+	],
+	localCount: 3,
+	edges: [
+		[],
+		[0],
+		[1]
+	],
+	dynamicEdges: [
+		[],
+		[],
+		[]
+	]
+});
 //#region esm.js
 var esm_exports = /* @__PURE__ */ __exportAll({ default: () => esm_default }), esm_default;
 var init_esm = __esmMin((() => {
@@ -56,24 +74,26 @@ process.on("beforeExit", (code) => {
 ## Code
 
 ```js
+__rolldown_runtime__.registerGraph({ids:["bridge.js","esm.js"],localCount:1,edges:[[1]],dynamicEdges:[[]]});
 //#region bridge.js
-var require_bridge_0 = __rolldown_runtime__.createCjsInitializer("bridge.js", (function(__rolldown_exports__, __rolldown_module__, __rolldown_module_id__) {
+__rolldown_runtime__.registerFactory("bridge.js", "cjs", (function(__rolldown_module_id__) {
 	try {
+		var __rolldown_module__ = { exports: {} };
+		var __rolldown_exports__ = __rolldown_module__.exports;
 		__rolldown_runtime__.registerModule(__rolldown_module_id__, __rolldown_module__);
 		const hot_bridge = __rolldown_runtime__.createModuleHotContext(__rolldown_module_id__);
-		__rolldown_module__.exports = __rolldown_runtime__.__toCommonJS(__rolldown_runtime__.loadExports("esm.js"));
+		__rolldown_module__.exports = (__rolldown_runtime__.initModule("esm.js"), __rolldown_runtime__.__toCommonJS(__rolldown_runtime__.loadExports("esm.js")));
+		void "force-output-change";
 	} finally {}
 }));
 
 //#endregion
-require_bridge_0()
-__rolldown_runtime__.applyUpdates([['main.js', 'bridge.js']]);
 ```
 
 ## Meta
 
 - update type: patch
 
-### Hmr Boundaries
+### Changed Ids
 
-- boundary: main.js, accepted_via: bridge.js
+- bridge.js

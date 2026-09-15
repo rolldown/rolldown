@@ -1,0 +1,13 @@
+{
+  "config": {
+    "input": [
+      { "name": "entry-1", "import": "./node4.cjs" },
+      { "name": "entry-2", "import": "./node3.cjs" }
+    ],
+    "preserveEntrySignatures": "allow-extension",
+    "codeSplitting": {
+      "includeDependenciesRecursively": false,
+      "groups": [{ "name": "v", "test": "node[0-4]" }]
+    }
+  }
+}

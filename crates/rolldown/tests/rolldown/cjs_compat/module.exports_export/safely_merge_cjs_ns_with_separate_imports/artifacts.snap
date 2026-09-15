@@ -8,6 +8,8 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```js
 import assert from "node:assert";
 // HIDDEN [\0rolldown/runtime.js]
+//#region node_modules/this-is-only-used-for-testing/index.js
+//#endregion
 //#region entry.js
 var import_this_is_only_used_for_testing = /* @__PURE__ */ __toESM((/* @__PURE__ */ __commonJSMin(((exports, module) => {
 	function React() {}

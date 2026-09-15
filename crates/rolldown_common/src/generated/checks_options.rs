@@ -21,6 +21,7 @@ pub struct ChecksOptions {
   pub unresolved_entry: Option<bool>,
   pub unresolved_import: Option<bool>,
   pub filename_conflict: Option<bool>,
+  pub module_level_directive: Option<bool>,
   pub common_js_variable_in_esm: Option<bool>,
   pub import_is_undefined: Option<bool>,
   pub empty_import_meta: Option<bool>,
@@ -35,6 +36,7 @@ pub struct ChecksOptions {
   pub ineffective_dynamic_import: Option<bool>,
   pub large_barrel_modules: Option<bool>,
   pub sourcemap_broken: Option<bool>,
+  pub namespace_conflict: Option<bool>,
 }
 impl From<ChecksOptions> for rolldown_error::EventKindSwitcher {
   fn from(value: ChecksOptions) -> Self {
@@ -68,6 +70,10 @@ impl From<ChecksOptions> for rolldown_error::EventKindSwitcher {
     flag.set(
       rolldown_error::EventKindSwitcher::FilenameConflict,
       value.filename_conflict.unwrap_or(true),
+    );
+    flag.set(
+      rolldown_error::EventKindSwitcher::ModuleLevelDirective,
+      value.module_level_directive.unwrap_or(true),
     );
     flag.set(
       rolldown_error::EventKindSwitcher::CommonJsVariableInEsm,
@@ -122,6 +128,10 @@ impl From<ChecksOptions> for rolldown_error::EventKindSwitcher {
     flag.set(
       rolldown_error::EventKindSwitcher::SourcemapBroken,
       value.sourcemap_broken.unwrap_or(true),
+    );
+    flag.set(
+      rolldown_error::EventKindSwitcher::NamespaceConflict,
+      value.namespace_conflict.unwrap_or(true),
     );
     flag
   }

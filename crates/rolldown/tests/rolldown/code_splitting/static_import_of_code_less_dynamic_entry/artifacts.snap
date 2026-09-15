@@ -1,0 +1,37 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## dynamic.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+//#region foo.js
+const foo = "foo";
+//#endregion
+//#region dynamic.js
+var dynamic_exports = /* @__PURE__ */ __exportAll({ foo: () => "foo" });
+//#endregion
+export { foo as n, dynamic_exports as t };
+
+```
+
+## main1.js
+
+```js
+import "./dynamic.js";
+//#region main1.js
+console.log("foo");
+//#endregion
+
+```
+
+## main2.js
+
+```js
+//#region main2.js
+import("./dynamic.js").then((n) => n.t).then(console.log);
+//#endregion
+
+```

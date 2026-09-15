@@ -9,6 +9,13 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 // HIDDEN [\0rolldown/runtime.js]
+//#region foo.txt
+//#endregion
+//#region main.js
+var main_default = (/* @__PURE__ */ __toESM((/* @__PURE__ */ __commonJSMin(((exports, module) => {
+	module.exports = "./assets/foo-Cctl21F7.txt";
+})))())).default;
+//#endregion
 export { main_default as default };
 
 //# sourceMappingURL=main.js.map
@@ -22,15 +29,15 @@ export { main_default as default };
 
 ```
 - ../main.js
-(2:0) "export default " --> (22:0) "var "
-(2:0) "export default " --> (22:4) "main_default = ("
-(2:15) "filePath;\n" --> (22:20) "/* @__PURE__ */ __toESM((/* @__PURE__ */ __commonJSMin(((exports, module) => {\n"
+(2:0) "export default " --> (26:0) "var "
+(2:0) "export default " --> (26:4) "main_default = ("
+(2:15) "filePath;\n" --> (26:20) "/* @__PURE__ */ __toESM((/* @__PURE__ */ __commonJSMin(((exports, module) => {\n"
 - ../foo.txt
-(0:0) "module." --> (23:1) "module."
-(0:7) "exports = " --> (23:8) "exports = "
-(0:17) "\"__ROLLDOWN_ASSET__#VRAku6fjghkApIISiBWPzg\"" --> (23:18) "\"./assets/foo-Cctl21F7.txt\";\n"
+(0:0) "module." --> (27:1) "module."
+(0:7) "exports = " --> (27:8) "exports = "
+(0:17) "\"__ROLLDOWN_ASSET__#VRAku6fjghkApIISiBWPzg\"" --> (27:18) "\"./assets/foo-Cctl21F7.txt\";\n"
 - ../main.js
-(2:15) "filePath;\n" --> (24:6) "))"
-(2:15) "filePath;\n" --> (24:8) "."
-(2:15) "filePath;\n" --> (24:9) "default;\n"
+(2:15) "filePath;\n" --> (28:6) "))"
+(2:15) "filePath;\n" --> (28:8) "."
+(2:15) "filePath;\n" --> (28:9) "default;\n"
 ```

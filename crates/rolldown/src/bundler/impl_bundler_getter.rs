@@ -15,6 +15,17 @@ impl Bundler {
     self.bundle_factory.resolver.clear_cache();
   }
 
+  /// Clear the transform options merged from tsconfig files so the next
+  /// build picks up tsconfig edits.
+  pub fn clear_transform_tsconfig_cache(&self) {
+    self.bundle_factory.options.transform_options.clear_transform_tsconfig_cache();
+  }
+
+  /// See [`crate::bundle::bundle_factory::BundleFactory::module_infos`].
+  pub fn module_infos(&self) -> rolldown_common::SharedModuleInfoDashMap {
+    self.bundle_factory.module_infos()
+  }
+
   pub fn watch_files(&self) -> &Arc<FxDashSet<ArcStr>> {
     static EMPTY_SET: LazyLock<Arc<FxDashSet<ArcStr>>> =
       LazyLock::new(|| Arc::new(FxDashSet::default()));

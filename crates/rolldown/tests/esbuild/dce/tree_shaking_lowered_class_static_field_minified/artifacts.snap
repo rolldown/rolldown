@@ -6,11 +6,12 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## entry.js
 
 ```js
-(class {
+//#region entry.js
+var KeepMe1 = class {
 	static x = "x";
 	static y = sideEffects();
 	static z = "z";
-});
+};
 var KeepMe2 = class {
 	static x = "x";
 	static y = "y";

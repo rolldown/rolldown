@@ -13,6 +13,7 @@ pub struct BindingChecksOptions {
   pub unresolved_entry: Option<bool>,
   pub unresolved_import: Option<bool>,
   pub filename_conflict: Option<bool>,
+  pub module_level_directive: Option<bool>,
   pub common_js_variable_in_esm: Option<bool>,
   pub import_is_undefined: Option<bool>,
   pub empty_import_meta: Option<bool>,
@@ -27,6 +28,7 @@ pub struct BindingChecksOptions {
   pub ineffective_dynamic_import: Option<bool>,
   pub large_barrel_modules: Option<bool>,
   pub sourcemap_broken: Option<bool>,
+  pub namespace_conflict: Option<bool>,
 }
 impl From<BindingChecksOptions> for rolldown_common::ChecksOptions {
   fn from(value: BindingChecksOptions) -> Self {
@@ -40,6 +42,7 @@ impl From<BindingChecksOptions> for rolldown_common::ChecksOptions {
       unresolved_entry: value.unresolved_entry,
       unresolved_import: value.unresolved_import,
       filename_conflict: value.filename_conflict,
+      module_level_directive: value.module_level_directive,
       common_js_variable_in_esm: value.common_js_variable_in_esm,
       import_is_undefined: value.import_is_undefined,
       empty_import_meta: value.empty_import_meta,
@@ -54,6 +57,7 @@ impl From<BindingChecksOptions> for rolldown_common::ChecksOptions {
       ineffective_dynamic_import: value.ineffective_dynamic_import,
       large_barrel_modules: value.large_barrel_modules,
       sourcemap_broken: value.sourcemap_broken,
+      namespace_conflict: value.namespace_conflict,
     }
   }
 }

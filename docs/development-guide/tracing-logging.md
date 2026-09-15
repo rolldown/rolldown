@@ -13,6 +13,8 @@ RD_LOG=debug [executing rolldown]
 RD_LOG=debug RD_LOG_OUTPUT=chrome-json [executing rolldown]
 ```
 
+`RD_LOG_OUTPUT=chrome-json` requires building with the `chrome-tracing` cargo feature, which is enabled for profile builds (`pnpm build-binding:profile`) but disabled in release builds to keep the shipped binary smaller. Without it, rolldown falls back to readable stdout output and prints a warning.
+
 ## Add logging
 
 It's fine to add `tracing::debug!` or `tracing::trace!` calls in your PRs. However, to avoid noise in the logs, you should be careful about choosing `tracing::debug!` or `tracing::trace!`.

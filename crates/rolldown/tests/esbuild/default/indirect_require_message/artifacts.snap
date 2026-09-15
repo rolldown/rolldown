@@ -7,6 +7,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 import "./rolldown-runtime.js";
+//#region array.js
 //#endregion
 
 ```
@@ -35,6 +36,7 @@ __require.cache;
 
 ```js
 import "./rolldown-runtime.js";
+//#region ident.js
 //#endregion
 
 ```

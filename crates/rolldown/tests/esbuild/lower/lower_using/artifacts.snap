@@ -6,37 +6,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## PARSE_ERROR
 
 ```text
-[PARSE_ERROR] Using declaration cannot appear in the bare case statement.
-    ╭─[ switch.js:14:11 ]
-    │
- 14 │        case 0: using c = d
-    │                ─────┬─────  
-    │                     ╰─────── 
-    │ 
-    │ Help: Wrap this declaration in a block statement
-────╯
-
-```
-
-## PARSE_ERROR
-
-```text
-[PARSE_ERROR] Using declaration cannot appear in the bare case statement.
-    ╭─[ switch.js:15:12 ]
-    │
- 15 │        default: using e = f
-    │                 ─────┬─────  
-    │                      ╰─────── 
-    │ 
-    │ Help: Wrap this declaration in a block statement
-────╯
-
-```
-
-## PARSE_ERROR
-
-```text
-[PARSE_ERROR] Using declaration cannot appear in the bare case statement.
+[PARSE_ERROR] 'await using' declaration cannot appear in the bare case statement.
     ╭─[ switch.js:18:11 ]
     │
  18 │        case 0: await using c = d
@@ -51,52 +21,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## PARSE_ERROR
 
 ```text
-[PARSE_ERROR] Using declaration cannot appear in the bare case statement.
-    ╭─[ switch.js:19:12 ]
-    │
- 19 │        default: using e = f
-    │                 ─────┬─────  
-    │                      ╰─────── 
-    │ 
-    │ Help: Wrap this declaration in a block statement
-────╯
-
-```
-
-## PARSE_ERROR
-
-```text
-[PARSE_ERROR] Using declaration cannot appear in the bare case statement.
-   ╭─[ switch.js:3:10 ]
-   │
- 3 │     case 0: using c = d
-   │             ─────┬─────  
-   │                  ╰─────── 
-   │ 
-   │ Help: Wrap this declaration in a block statement
-───╯
-
-```
-
-## PARSE_ERROR
-
-```text
-[PARSE_ERROR] Using declaration cannot appear in the bare case statement.
-   ╭─[ switch.js:4:11 ]
-   │
- 4 │     default: using e = f
-   │              ─────┬─────  
-   │                   ╰─────── 
-   │ 
-   │ Help: Wrap this declaration in a block statement
-───╯
-
-```
-
-## PARSE_ERROR
-
-```text
-[PARSE_ERROR] Using declaration cannot appear in the bare case statement.
+[PARSE_ERROR] 'await using' declaration cannot appear in the bare case statement.
    ╭─[ switch.js:7:10 ]
    │
  7 │     case 0: await using c = d
@@ -111,7 +36,82 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## PARSE_ERROR
 
 ```text
-[PARSE_ERROR] Using declaration cannot appear in the bare case statement.
+[PARSE_ERROR] 'using' declaration cannot appear in the bare case statement.
+    ╭─[ switch.js:14:11 ]
+    │
+ 14 │        case 0: using c = d
+    │                ─────┬─────  
+    │                     ╰─────── 
+    │ 
+    │ Help: Wrap this declaration in a block statement
+────╯
+
+```
+
+## PARSE_ERROR
+
+```text
+[PARSE_ERROR] 'using' declaration cannot appear in the bare case statement.
+    ╭─[ switch.js:15:12 ]
+    │
+ 15 │        default: using e = f
+    │                 ─────┬─────  
+    │                      ╰─────── 
+    │ 
+    │ Help: Wrap this declaration in a block statement
+────╯
+
+```
+
+## PARSE_ERROR
+
+```text
+[PARSE_ERROR] 'using' declaration cannot appear in the bare case statement.
+    ╭─[ switch.js:19:12 ]
+    │
+ 19 │        default: using e = f
+    │                 ─────┬─────  
+    │                      ╰─────── 
+    │ 
+    │ Help: Wrap this declaration in a block statement
+────╯
+
+```
+
+## PARSE_ERROR
+
+```text
+[PARSE_ERROR] 'using' declaration cannot appear in the bare case statement.
+   ╭─[ switch.js:3:10 ]
+   │
+ 3 │     case 0: using c = d
+   │             ─────┬─────  
+   │                  ╰─────── 
+   │ 
+   │ Help: Wrap this declaration in a block statement
+───╯
+
+```
+
+## PARSE_ERROR
+
+```text
+[PARSE_ERROR] 'using' declaration cannot appear in the bare case statement.
+   ╭─[ switch.js:4:11 ]
+   │
+ 4 │     default: using e = f
+   │              ─────┬─────  
+   │                   ╰─────── 
+   │ 
+   │ Help: Wrap this declaration in a block statement
+───╯
+
+```
+
+## PARSE_ERROR
+
+```text
+[PARSE_ERROR] 'using' declaration cannot appear in the bare case statement.
    ╭─[ switch.js:8:11 ]
    │
  8 │     default: using e = f

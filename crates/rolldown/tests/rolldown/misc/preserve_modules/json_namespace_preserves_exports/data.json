@@ -1,0 +1,6 @@
+{
+  "answer": 42,
+  "nested": {
+    "ok": true
+  }
+}

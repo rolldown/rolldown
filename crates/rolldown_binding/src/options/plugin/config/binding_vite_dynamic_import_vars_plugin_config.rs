@@ -5,7 +5,7 @@ use rolldown_plugin_vite_dynamic_import_vars::{ResolverFn, ViteDynamicImportVars
 
 use crate::types::{
   binding_string_or_regex::{BindingStringOrRegex, bindingify_string_or_regex_array},
-  js_callback::{MaybeAsyncJsCallback, MaybeAsyncJsCallbackExt as _},
+  js_callback::{JsCallbackResultExt as _, MaybeAsyncJsCallback, MaybeAsyncJsCallbackExt as _},
 };
 
 #[napi_derive::napi(object, object_to_js = false)]
@@ -28,7 +28,11 @@ impl From<BindingViteDynamicImportVarsPluginConfig> for ViteDynamicImportVarsPlu
         Arc::new(move |id: String, importer: String| {
           let resolver = Arc::clone(&resolver);
           Box::pin(async move {
-            resolver.await_call((id, importer).into()).await.map_err(anyhow::Error::from)
+            resolver
+              .await_call((id, importer).into())
+              .await
+              .context("viteDynamicImportVars resolver option")
+              .map_err(anyhow::Error::from)
           })
         })
       }),

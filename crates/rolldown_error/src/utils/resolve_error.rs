@@ -24,6 +24,7 @@ pub fn resolve_error_to_message(error: &ResolveError, opts: &DiagnosticOptions) 
     ResolveError::TsconfigCircularExtend(_) => {
       "Circular reference detected in tsconfig 'extends'".to_string()
     }
+    ResolveError::TsconfigLoadFailed { source, .. } => resolve_error_to_message(source, opts),
     ResolveError::IOError(_) => "I/O error occurred".to_string(),
     ResolveError::Builtin { .. } => "Builtin module".to_string(),
     ResolveError::ExtensionAlias { .. } => "None of the aliased extensions were found".to_string(),

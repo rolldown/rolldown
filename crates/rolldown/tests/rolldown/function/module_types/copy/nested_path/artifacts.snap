@@ -30,6 +30,7 @@ console.log(shallow, deep, shallowReq, deepReq);
 
 ```
 - ../../../main.js
+(2:0) "const " --> (9:0) "const "
 (2:6) "shallowReq = require(" --> (9:6) "shallowReq = "
 (2:6) "shallowReq = require(" --> (9:19) "__require("
 (2:27) "'./root.txt'" --> (9:29) "\"../../deep/assets/root-DcToKNib.txt\""

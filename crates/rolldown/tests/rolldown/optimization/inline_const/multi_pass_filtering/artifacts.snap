@@ -6,9 +6,16 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## main.js
 
 ```js
+//#region const_b.js
+//#endregion
+//#region const_c.js
+//#endregion
+//#region unrelated.js
 function unrelatedFn() {
 	return "hello";
 }
+//#endregion
+//#region main.js
 console.log(unrelatedFn());
 //#endregion
 

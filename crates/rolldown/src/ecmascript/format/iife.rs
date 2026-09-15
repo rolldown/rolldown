@@ -173,7 +173,7 @@ pub async fn render_iife<'code>(
 
   // iife wrapper end
   let factory_arguments =
-    render_iife_factory_arguments(warnings, ctx, &externals, exports_prefix).await;
+    render_iife_factory_arguments(warnings, ctx, &externals, exports_prefix).await?;
   source_joiner.append_source(concat_string!("})(", factory_arguments, ");"));
 
   if let Some(footer) = footer {
@@ -188,7 +188,7 @@ async fn render_iife_factory_arguments(
   ctx: &GenerateContext<'_>,
   externals: &[&ExternalModule],
   exports_prefix: Option<&str>,
-) -> String {
+) -> BuildResult<String> {
   let mut factory_arguments = if let Some(exports_prefix) = exports_prefix {
     vec![exports_prefix.to_string()]
   } else {
@@ -196,7 +196,7 @@ async fn render_iife_factory_arguments(
   };
   let globals = &ctx.options.globals;
   for external in externals {
-    let global = globals.call(external.id.as_str()).await;
+    let global = globals.call(external.id.as_str()).await?;
     let target = match &global {
       Some(global_name) => global_name.clone(),
       None => {
@@ -213,5 +213,5 @@ async fn render_iife_factory_arguments(
     };
     factory_arguments.push(target);
   }
-  factory_arguments.join(", ")
+  Ok(factory_arguments.join(", "))
 }

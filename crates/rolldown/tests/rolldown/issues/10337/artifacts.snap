@@ -1,0 +1,33 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+//#region main.js
+import("./three-mesh-bvh.js").then((n) => n.t).then((res) => {
+	if (typeof res.MeshBVH !== "function") throw new Error("MeshBVH missing from dynamic namespace");
+});
+//#endregion
+
+```
+
+## three-mesh-bvh.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+//#region three-mesh-bvh/core/MeshBVH.js
+var MeshBVH = class {
+	constructor() {
+		this.name = "MeshBVH";
+	}
+};
+//#endregion
+//#region three-mesh-bvh/index.js
+var three_mesh_bvh_exports = /* @__PURE__ */ __exportAll({ MeshBVH: () => MeshBVH });
+//#endregion
+export { three_mesh_bvh_exports as t };
+
+```

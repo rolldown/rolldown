@@ -6,8 +6,13 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## main.js
 
 ```js
+//#region dep1.js
 console.log("element 1");
+//#endregion
+//#region dep2.js
 console.log("element 2");
+//#endregion
+//#region dep3.js
 console.log("element 3");
 //#endregion
 //#region main.js

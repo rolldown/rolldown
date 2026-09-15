@@ -16,7 +16,7 @@ impl<T> ScanMode<T> {
     matches!(self, Self::Full)
   }
 
-  pub fn iter(&self) -> impl Iterator<Item = &T> {
+  pub fn iter(&self) -> impl ExactSizeIterator<Item = &T> {
     match self {
       ScanMode::Full => Either::Left(std::iter::empty()),
       ScanMode::Partial(ids) => Either::Right(ids.iter()),

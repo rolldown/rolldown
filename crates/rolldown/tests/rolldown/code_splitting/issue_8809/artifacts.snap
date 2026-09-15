@@ -41,6 +41,7 @@ export { __commonJSMin as i, start as n, stop as r, daemon_exports as t };
 
 ```js
 import { i as __commonJSMin, n as start, r as stop } from "./daemon.js";
+//#region cjs-dep.cjs
 //#endregion
 //#region gateway.js
 var import_cjs_dep = (/* @__PURE__ */ __commonJSMin(((exports) => {

@@ -1,9 +1,15 @@
-import assert from 'node:assert'
+import assert from 'node:assert/strict'
 import {ns} from './bar'
 let foo = 234
-assert.deepEqual(ns, {
-  [Symbol.toStringTag]: 'Module',
-  foo: 123
-})
+assert.deepEqual(
+  ns,
+  Object.defineProperty(
+    {
+      foo: 123,
+    },
+    Symbol.toStringTag,
+    { value: "Module" },
+  ),
+)
 assert.equal(ns.foo, 123)
 assert.equal(foo, 234)

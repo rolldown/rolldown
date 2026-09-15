@@ -4,13 +4,11 @@ use std::{collections::HashSet, sync::Arc};
 
 use napi::bindgen_prelude::{Either4, FnArgs};
 use napi_derive::napi;
+use oxc_napi::JsRegExp;
 use rolldown::{InnerOptions, ModuleSideEffects, ModuleSideEffectsRule};
 use rolldown_utils::js_regex::HybridRegex;
 
-use crate::{
-  types::js_callback::{JsCallback, JsCallbackExt},
-  types::js_regex::JsRegExp,
-};
+use crate::types::js_callback::{JsCallback, JsCallbackExt, JsCallbackResultExt};
 
 #[napi]
 #[derive(Debug)]
@@ -57,7 +55,6 @@ pub struct BindingModuleSideEffectsRule {
   #[napi(ts_type = "RegExp | undefined")]
   pub test: Option<JsRegExp>,
   pub side_effects: bool,
-  #[napi(ts_type = "boolean | undefined")]
   pub external: Option<bool>,
 }
 
@@ -70,7 +67,7 @@ impl TryFrom<BindingTreeshake> for rolldown::TreeshakeOptions {
         let mut ret = Vec::with_capacity(rules.len());
         for rule in rules {
           let test = match rule.test {
-            Some(test) => Some(HybridRegex::try_from(test)?),
+            Some(test) => Some(HybridRegex::with_flags(&test.source, &test.flags)?),
             None => None,
           };
           ret.push(ModuleSideEffectsRule {
@@ -86,7 +83,11 @@ impl TryFrom<BindingTreeshake> for rolldown::TreeshakeOptions {
           let id = id.to_string();
           let ts_fn = Arc::clone(&ts_fn);
           Box::pin(async move {
-            ts_fn.invoke_async((id.clone(), is_external).into()).await.map_err(anyhow::Error::from)
+            ts_fn
+              .invoke_async((id.clone(), is_external).into())
+              .await
+              .context("treeshake.moduleSideEffects option")
+              .map_err(anyhow::Error::from)
           })
         }))
       }

@@ -21,6 +21,8 @@ var init_esm = __esmMin((() => {
 	moduleExports = { customExport: "custom" };
 }));
 //#endregion
+//#region cjs.js
+//#endregion
 //#region main.js
 var import_cjs = /* @__PURE__ */ __toESM((/* @__PURE__ */ __commonJSMin(((exports, module) => {
 	module.exports = (init_esm(), __toCommonJS(esm_exports));

@@ -3,10 +3,10 @@ use std::{borrow::Cow, path::Path, sync::Arc};
 use arcstr::ArcStr;
 use rolldown_common::{EmittedAsset, Output, OutputChunk};
 use rolldown_plugin::{HookNoopReturn, HookUsage, Plugin, PluginContext};
+use rolldown_std_utils::relative_path_to_slash;
 use rolldown_utils::rustc_hash::FxHashMapExt;
 use rustc_hash::{FxHashMap, FxHashSet};
 use serde::Serialize;
-use sugar_path::SugarPath;
 
 mod render_markdown;
 use render_markdown::render_markdown;
@@ -357,7 +357,7 @@ fn stabilize_module_id(id: &str, cwd: &Path) -> String {
   let path = Path::new(id);
   if path.is_absolute() {
     // Convert absolute path to relative path from cwd using forward slashes
-    path.relative(cwd).to_slash().map_or_else(|| id.to_string(), |s| s.to_string())
+    relative_path_to_slash(path, cwd)
   } else if id.starts_with('\0') {
     // Escape virtual module prefix
     id.replace('\0', "\\0")

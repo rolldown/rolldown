@@ -4,7 +4,7 @@ use arcstr::ArcStr;
 use oxc::ast::ast::CommentContent;
 use oxc::ast::ast::Program;
 use oxc::ast::ast::{Declaration, ExportDefaultDeclarationKind, Statement};
-use oxc::ast_visit::{Visit, VisitMut, walk};
+use oxc::ast_visit::{VisitJs, VisitJsMut, walk_js};
 use oxc::diagnostics::{LabeledSpan, Severity as OxcSeverity};
 use oxc::minifier::{CompressOptions, Compressor, TreeShakeOptions};
 use oxc::semantic::{Scoping, Stats};
@@ -39,6 +39,7 @@ impl PreProcessEcmaAst {
     mut ast: EcmaAst,
     stable_id: &str,
     resolved_id: &str,
+    should_warn_on_invalid_annotation: bool,
     parsed_type: &OxcParseType,
     replace_global_define_config: Option<&ReplaceGlobalDefinesConfig>,
     bundle_options: &NormalizedBundlerOptions,
@@ -70,7 +71,7 @@ impl PreProcessEcmaAst {
     });
 
     let (errors, warnings): (Vec<_>, Vec<_>) =
-      semantic_ret.errors.into_iter().partition(|w| w.severity == OxcSeverity::Error);
+      semantic_ret.diagnostics.into_iter().partition(|w| w.severity == OxcSeverity::Error);
 
     let mut warnings = if errors.is_empty() {
       BuildDiagnostic::from_oxc_diagnostics(
@@ -89,14 +90,15 @@ impl PreProcessEcmaAst {
         EventKind::ParseError,
       ))?;
     };
-    // Surface invalid pure annotations flagged by oxc (issue #8898).
-    // oxc marks `/* #__PURE__ */` / `/* @__PURE__ */` comments with
-    // `CommentContent::PureNotApplied` when their position prevents the parser
-    // from applying them (expression-level, statement-level, or variable declarator).
+    // Surface invalid annotations flagged by oxc (issue #8898).
+    // oxc marks misplaced `PURE` and `NO_SIDE_EFFECTS` comments with their
+    // respective `NotApplied` variants when the parser cannot apply them.
     // Aligns with Rollup's `INVALID_ANNOTATION` log code.
-    warnings.extend(ast.program.with_dependent(|_owner, dep| {
-      invalid_pure_annotation_warnings(&dep.program, &source, resolved_id)
-    }));
+    if should_warn_on_invalid_annotation {
+      warnings.extend(ast.program.with_dependent(|_owner, dep| {
+        invalid_annotation_warnings(&dep.program, &source, resolved_id)
+      }));
+    }
 
     self.stats = semantic_ret.semantic.stats();
     let mut scoping = Some(semantic_ret.semantic.into_scoping());
@@ -109,7 +111,10 @@ impl PreProcessEcmaAst {
     // Tree-shaking in `include_statements.rs` skips including the enum declaration
     // when a member access will be inlined. Regular enum IIFEs are `@__PURE__`, so
     // they are naturally tree-shaken if no other references keep them alive.
-    let enum_member_value_map = {
+    // Enums are a TypeScript-only construct, so only Ts/Tsx modules can declare
+    // them. For plain JS/JSX modules, skip the full symbol-table walk and the map
+    // allocation entirely (the result would always be empty).
+    let enum_member_value_map = if matches!(parsed_type, OxcParseType::Ts | OxcParseType::Tsx) {
       let scoping_ref = scoping.as_mut().unwrap();
       let mut enum_values: FxHashMap<CompactStr, FxHashMap<CompactStr, ConstExportMeta>> =
         FxHashMap::default();
@@ -142,6 +147,8 @@ impl PreProcessEcmaAst {
         }
       }
       enum_values
+    } else {
+      FxHashMap::default()
     };
 
     // Step 2: Run define plugin.
@@ -156,11 +163,14 @@ impl PreProcessEcmaAst {
     }
 
     // Step 3: Transform TypeScript and jsx.
-    // Note: Currently, oxc_transform supports es syntax up to ES2024 (unicode-sets-regex).
+    // Note: Currently, the newest syntax oxc_transform can lower is ES2026
+    // explicit resource management (`using`); the ES2025 regexp features are
+    // not transformed. `LOWERABLE_ES_FEATURES` in `rolldown_common` holds the
+    // full list `should_transform_js` is decided from.
     let is_not_js = !matches!(parsed_type, OxcParseType::Js);
     let mut preserve_jsx = false;
     if is_not_js
-      || bundle_options.transform_options.should_transform_js()
+      || bundle_options.transform_options.should_transform_js
       // Run transformer on JS files containing `</script` to handle tagged template literals.
       || contains_script_closing_tag(ast.source().as_bytes())
     {
@@ -179,7 +189,7 @@ impl PreProcessEcmaAst {
           .build_with_scoping(scoping, program);
 
         let (errors, transformer_warnings): (Vec<_>, Vec<_>) =
-          ret.errors.into_iter().partition(|error| error.severity == OxcSeverity::Error);
+          ret.diagnostics.into_iter().partition(|error| error.severity == OxcSeverity::Error);
         if !errors.is_empty() {
           return Err(BatchedBuildDiagnostic::from(BuildDiagnostic::from_oxc_diagnostics(
             errors,
@@ -200,6 +210,11 @@ impl PreProcessEcmaAst {
       })?;
     }
 
+    debug_assert!(
+      ast.program().source_type.is_javascript(),
+      "ECMAScript transform must produce a JavaScript AST"
+    );
+
     // Step 4: Run inject plugin.
     if !bundle_options.inject.is_empty() {
       ast.program.with_mut(|WithMutFields { program, allocator, .. }| {
@@ -219,7 +234,6 @@ impl PreProcessEcmaAst {
         let scoping = self.recreate_scoping(&mut scoping, program);
         let mut treeshake = TreeShakeOptions::from(&bundle_options.treeshake);
         treeshake.invalid_import_side_effects = true;
-        // NOTE: `CompressOptions::dead_code_elimination` will remove `ParenthesizedExpression`s from the AST.
         let options = CompressOptions {
           target: bundle_options.transform_options.target.clone(),
           treeshake,
@@ -249,7 +263,7 @@ impl PreProcessEcmaAst {
         String::new(),
         "`import defer` is currently lowered to a normal import. This changes execution timing because side effects run immediately instead of when the deferred import is first used.".to_string(),
         vec![LabeledSpan::at(
-          span.start as usize..span.end as usize,
+          span.start..span.end,
           "The deferred phase is removed here.",
         )],
         EventKind::UnsupportedFeatureError,
@@ -284,8 +298,8 @@ impl PreProcessEcmaAst {
 fn function_declaration_stmt_start(stmt: &Statement<'_>) -> Option<u32> {
   match stmt {
     Statement::FunctionDeclaration(decl) => Some(decl.span.start),
-    Statement::ExportNamedDeclaration(e) => match &e.declaration {
-      Some(Declaration::FunctionDeclaration(decl)) => Some(decl.span.start),
+    Statement::ExportDeclaration(e) => match &e.declaration {
+      Declaration::FunctionDeclaration(decl) => Some(decl.span.start),
       _ => None,
     },
     Statement::ExportDefaultDeclaration(e) => match &e.declaration {
@@ -313,7 +327,7 @@ impl FunctionDeclarationStartMatcher {
   }
 }
 
-impl<'ast> Visit<'ast> for FunctionDeclarationStartMatcher {
+impl<'ast> VisitJs<'ast> for FunctionDeclarationStartMatcher {
   fn visit_program(&mut self, program: &Program<'ast>) {
     for stmt in &program.body {
       if self.remaining_target_count == 0 {
@@ -335,43 +349,90 @@ impl<'ast> Visit<'ast> for FunctionDeclarationStartMatcher {
       }
     }
     if self.remaining_target_count > 0 {
-      walk::walk_statement(self, stmt);
+      walk_js::walk_statement(self, stmt);
     }
   }
 }
 
-fn invalid_pure_annotation_warnings(
+fn invalid_annotation_warnings(
   program: &Program<'_>,
   source: &ArcStr,
   resolved_id: &str,
 ) -> Vec<BuildDiagnostic> {
-  let pure_not_applied_comments: Vec<_> =
-    program.comments.iter().filter(|c| c.content == CommentContent::PureNotApplied).collect();
+  let not_applied_comments: Vec<_> = program
+    .comments
+    .iter()
+    .filter(|comment| {
+      matches!(
+        comment.content,
+        CommentContent::PureNotApplied | CommentContent::NoSideEffectsNotApplied
+      )
+    })
+    .collect();
 
-  if pure_not_applied_comments.is_empty() {
+  if not_applied_comments.is_empty() {
     return Vec::new();
   }
 
-  let target_statement_starts: FxHashSet<u32> =
-    pure_not_applied_comments.iter().map(|comment| comment.attached_to).collect();
+  let target_statement_starts: FxHashSet<u32> = not_applied_comments
+    .iter()
+    .filter(|comment| comment.content == CommentContent::PureNotApplied)
+    .map(|comment| comment.attached_to)
+    .collect();
   let mut function_declaration_start_matcher =
     FunctionDeclarationStartMatcher::new(target_statement_starts);
   function_declaration_start_matcher.visit_program(program);
 
-  pure_not_applied_comments
+  not_applied_comments
     .into_iter()
     .map(|comment| {
       let span = comment.span;
       let annotation = source[span.start as usize..span.end as usize].to_string();
-      let is_before_function_declaration =
-        function_declaration_start_matcher.matched_statement_starts.contains(&comment.attached_to);
+      let is_before_function_declaration = comment.content == CommentContent::PureNotApplied
+        && function_declaration_start_matcher
+          .matched_statement_starts
+          .contains(&comment.attached_to);
       BuildDiagnostic::invalid_annotation(
         resolved_id.to_string(),
         annotation,
         source.clone(),
         span,
         is_before_function_declaration,
+        comment.content == CommentContent::NoSideEffectsNotApplied,
       )
+      .with_severity_warning()
     })
     .collect()
+}
+
+#[cfg(test)]
+mod tests {
+  use oxc::span::SourceType;
+  use rolldown_ecmascript::EcmaCompiler;
+  use rolldown_error::Severity;
+
+  use super::invalid_annotation_warnings;
+
+  #[test]
+  fn invalid_annotations_have_warning_severity_and_matching_guidance() {
+    let ast = EcmaCompiler::parse(
+      "main.js",
+      "/* #__PURE__ */ globalThis.foo; /* #__NO_SIDE_EFFECTS__ */ globalThis.bar;",
+      SourceType::default(),
+    )
+    .unwrap();
+    let source = ast.source().clone();
+    let warnings = ast
+      .program
+      .with_dependent(|_owner, dep| invalid_annotation_warnings(&dep.program, &source, "main.js"));
+
+    assert_eq!(warnings.len(), 2);
+    for (warning, anchor) in warnings.iter().zip(["pure", "no-side-effects"]) {
+      assert_eq!(warning.severity(), Severity::Warning);
+      let rendered = warning.to_diagnostic().convert_to_string(false);
+      assert!(rendered.contains(&format!(
+        "Correct annotation placement: https://rolldown.rs/in-depth/dead-code-elimination#{anchor}"
+      )));
+    }
+  }
 }

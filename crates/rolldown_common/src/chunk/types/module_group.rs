@@ -23,7 +23,7 @@ impl ModuleGroup {
     println!("[{}:{}] Debugging module group:", caller.file(), caller.line());
     for module_idx in &self.modules {
       let module = &module_table[*module_idx];
-      println!("{}", &module.stable_id());
+      println!("{}", module.stable_id());
     }
   }
 }

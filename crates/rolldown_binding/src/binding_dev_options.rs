@@ -8,6 +8,7 @@ use napi::bindgen_prelude::FnArgs;
 
 #[napi_derive::napi(object, object_to_js = false)]
 pub struct BindingDevWatchOptions {
+  pub enabled: Option<bool>,
   pub skip_write: Option<bool>,
   pub use_polling: Option<bool>,
   pub poll_interval: Option<u32>,
@@ -30,6 +31,12 @@ pub struct BindingDevOptions {
     ts_type = "undefined | ((result: BindingResult<BindingOutputs>) => void | Promise<void>)"
   )]
   pub on_output: Option<JsCallback<FnArgs<(BindingResult<BindingOutputs>,)>, ()>>,
+  /// Called with assets emitted while generating an HMR patch or compiling a
+  /// lazy entry. These never go through `on_output`, so a consumer (e.g. Vite)
+  /// must register this to serve them (e.g. write them to its in-memory files).
+  #[napi(ts_type = "undefined | ((output: BindingOutputs) => void | Promise<void>)")]
+  pub on_additional_assets: Option<JsCallback<FnArgs<(BindingOutputs,)>, ()>>,
   pub rebuild_strategy: Option<BindingRebuildStrategy>,
   pub watch: Option<BindingDevWatchOptions>,
+  pub hot_update: Option<bool>,
 }

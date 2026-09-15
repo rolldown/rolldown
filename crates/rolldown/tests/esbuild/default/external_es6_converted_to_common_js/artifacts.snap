@@ -9,6 +9,18 @@ source: crates/rolldown_testing/src/integration_test.rs
 import "x";
 import "x";
 // HIDDEN [\0rolldown/runtime.js]
+//#region a.js
+var init_a = __esmMin((() => {}));
+//#endregion
+//#region b.js
+var init_b = __esmMin((() => {}));
+//#endregion
+//#region c.js
+var init_c = __esmMin((() => {}));
+//#endregion
+//#region d.js
+var init_d = __esmMin((() => {}));
+//#endregion
 //#region e.js
 var e_exports = /* @__PURE__ */ __exportAll({});
 import * as import_x from "x";

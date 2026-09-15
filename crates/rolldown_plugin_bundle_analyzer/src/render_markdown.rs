@@ -367,7 +367,7 @@ fn render_full_module_graph(
 
   // Sort modules alphabetically by path for consistent output
   let mut sorted_modules: Vec<(usize, &ModuleData)> = data.modules.iter().enumerate().collect();
-  sorted_modules.sort_by(|a, b| a.1.path.cmp(&b.1.path));
+  sorted_modules.sort_unstable_by(|a, b| a.1.path.cmp(&b.1.path));
 
   for &(idx, module) in &sorted_modules {
     writeln!(out, "### `{}`\n", module.path).unwrap();
@@ -430,7 +430,7 @@ fn render_raw_data(
 
   // All Imports
   let mut sorted_modules: Vec<(usize, &ModuleData)> = data.modules.iter().enumerate().collect();
-  sorted_modules.sort_by(|a, b| a.1.path.cmp(&b.1.path));
+  sorted_modules.sort_unstable_by(|a, b| a.1.path.cmp(&b.1.path));
 
   out.push_str("### All Imports\n\n```\n");
   for &(idx, module) in &sorted_modules {

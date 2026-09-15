@@ -12,6 +12,8 @@ var require_bar = /* @__PURE__ */ __commonJSMin((() => {
 	works();
 }));
 //#endregion
+//#region src/node_modules/pkg/sub/foo.js
+//#endregion
 //#region src/entry.js
 (/* @__PURE__ */ __commonJSMin((() => {
 	require_bar();

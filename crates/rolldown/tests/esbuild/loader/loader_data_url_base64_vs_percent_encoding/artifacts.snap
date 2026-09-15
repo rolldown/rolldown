@@ -6,6 +6,13 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## entry.js
 
 ```js
+//#region shouldUsePercent_1.txt
+//#endregion
+//#region shouldUsePercent_2.txt
+//#endregion
+//#region shouldUseBase64_1.txt
+//#endregion
+//#region shouldUseBase64_2.txt
 //#endregion
 //#region entry.js
 console.log("data:text/plain;charset=utf-8,%0A%0A%0A", "data:text/plain;charset=utf-8,%0A%0A%0A%0A", "data:text/plain;charset=utf-8;base64,CgoKCgo=", "data:text/plain;charset=utf-8;base64,CgoKCgoK");

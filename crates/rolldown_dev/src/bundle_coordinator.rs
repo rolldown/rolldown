@@ -7,10 +7,13 @@ use std::{
 use anyhow::Context;
 use arcstr::ArcStr;
 use futures::FutureExt;
+#[cfg(target_os = "macos")]
 use notify::EventKind;
 use rolldown_common::WatcherChangeKind;
 use rolldown_error::BuildResult;
-use rolldown_fs_watcher::{DynFsWatcher, FsEventResult, RecursiveMode};
+use rolldown_fs_watcher::{
+  FsChangeKind, FsEventResult, FsWatcher, RecursiveMode, map_notify_event,
+};
 use rolldown_utils::{dashmap::FxDashSet, indexmap::FxIndexMap, pattern_filter};
 use sugar_path::SugarPath;
 use tokio::sync::Mutex;
@@ -24,7 +27,7 @@ use crate::{
   types::{
     coordinator_msg::CoordinatorMsg, coordinator_state::CoordinatorState,
     coordinator_state_snapshot::CoordinatorStateSnapshot,
-    ensure_latest_bundle_output_return::EnsureLatestBundleOutputReturn,
+    ensure_latest_bundle_output_return::EnsureLatestBundleOutputReturn, error_stage::ErrorStage,
     schedule_build_return::ScheduleBuildReturn, task_input::TaskInput,
   },
   watcher_event_handler::WatcherEventHandler,
@@ -34,9 +37,11 @@ use crate::{
 pub struct BundleCoordinator {
   bundler: Arc<Mutex<Bundler>>,
   ctx: SharedDevContext,
+  /// The engine-wide patch-id counter (shared with lazy compiles) — see the
+  /// field doc on `DevEngine::next_hmr_patch_id`.
   next_hmr_patch_id: Arc<AtomicU32>,
   rx: CoordinatorReceiver,
-  watcher: StdMutex<DynFsWatcher>,
+  watcher: StdMutex<FsWatcher>,
   watched_files: FxDashSet<ArcStr>,
   /// Tracks the state of the initial build
   state: CoordinatorState,
@@ -53,12 +58,13 @@ impl BundleCoordinator {
     bundler: Arc<Mutex<Bundler>>,
     ctx: SharedDevContext,
     rx: CoordinatorReceiver,
-    watcher: DynFsWatcher,
+    watcher: FsWatcher,
+    next_hmr_patch_id: Arc<AtomicU32>,
   ) -> Self {
     Self {
       bundler,
       ctx,
-      next_hmr_patch_id: Arc::new(AtomicU32::new(0)),
+      next_hmr_patch_id,
       rx,
       watcher: StdMutex::new(watcher),
       watched_files: FxDashSet::default(),
@@ -101,8 +107,8 @@ impl BundleCoordinator {
         CoordinatorMsg::WatchEvent(watch_event) => {
           self.handle_watch_event(watch_event).await;
         }
-        CoordinatorMsg::BundleCompleted { has_encountered_error, has_generated_bundle_output } => {
-          self.handle_bundle_completed(has_encountered_error, has_generated_bundle_output).await;
+        CoordinatorMsg::BundleCompleted { error_stage, has_generated_bundle_output } => {
+          self.handle_bundle_completed(error_stage, has_generated_bundle_output).await;
         }
         #[cfg(feature = "testing")]
         CoordinatorMsg::ScheduleBuildIfStale { reply } => {
@@ -155,40 +161,33 @@ impl BundleCoordinator {
     }
   }
 
-  /// Handle file change events from watcher
+  /// Handle file change events from watcher.
+  ///
+  /// Rename mapping is shared with build watch via [`map_notify_event`].
+  /// See `internal-docs/dev-engine/implementation.md` ("From fs event to queued task").
   async fn handle_watch_event(&mut self, watch_event: FsEventResult) {
     match watch_event {
       Ok(batched_events) => {
         let mut changed_files = FxIndexMap::default();
-        batched_events.into_iter().for_each(|batched_event| {
-          match &batched_event.detail.kind {
-            EventKind::Create(_create_kind) => {
-              for path in batched_event.detail.paths {
-                changed_files.insert(path, WatcherChangeKind::Create);
-              }
-            }
-            #[cfg(target_os = "macos")]
+        for batched_event in batched_events {
+          #[cfg(target_os = "macos")]
+          if matches!(
+            batched_event.detail.kind,
             EventKind::Modify(notify::event::ModifyKind::Metadata(_))
-              if !self.ctx.options.use_polling =>
-            {
-              // When using kqueue on mac, ignore metadata changes as it happens frequently and doesn't affect the build in most cases
-              // Note that when using polling, we shouldn't ignore metadata changes as the polling watcher prefer to emit them over
-              // content change events
-            }
-            EventKind::Modify(notify::event::ModifyKind::Name(notify::event::RenameMode::From))
-            | EventKind::Remove(_) => {
-              for path in batched_event.detail.paths {
-                changed_files.insert(path, WatcherChangeKind::Delete);
-              }
-            }
-            EventKind::Modify(_modify_kind) => {
-              for path in batched_event.detail.paths {
-                changed_files.insert(path, WatcherChangeKind::Update);
-              }
-            }
-            _ => {}
+          ) && !self.ctx.options.use_polling
+          {
+            // kqueue on mac emits metadata events often; they do not affect the
+            // build in most cases. Polling prefers metadata over content events,
+            // so those must still be mapped.
+            continue;
           }
-        });
+
+          for (path, kind) in
+            map_notify_event(&batched_event.detail.kind, batched_event.detail.paths)
+          {
+            changed_files.insert(path, watcher_change_kind(kind));
+          }
+        }
 
         self.handle_file_changes(changed_files).await;
       }
@@ -209,11 +208,27 @@ impl BundleCoordinator {
       CoordinatorState::FullBuildInProgress => {
         self.queued_file_changes_waited_for_full_build.extend(changed_files);
       }
-      CoordinatorState::Idle | CoordinatorState::InProgress | CoordinatorState::Failed => {
-        // The metal model for being `CoordinatorState::Failed` and receiving file changes is a bit of non-intuitive.
-        // Like the file is edited 2 times, the first edit is invalid and the second edit fixes the error.
-        // We just think the file is changed to second edit directly, ignoring the first invalid edit and follow the usual flow.
+      CoordinatorState::Idle | CoordinatorState::InProgress => {
         let task_input = if self.ctx.options.rebuild_strategy.is_always() {
+          TaskInput::HmrRebuild { changed_files }
+        } else {
+          TaskInput::Hmr { changed_files }
+        };
+
+        self.queued_tasks.push_back(task_input);
+
+        let _ = self.schedule_build_if_stale().await;
+      }
+      CoordinatorState::Failed { last_error_stage } => {
+        // Mental model: if the file is edited twice and the first edit was invalid,
+        // we treat the second edit as the only edit and follow the usual flow.
+        //
+        // Recovery choice (per Design principles §3 corollary): a Rebuild-stage
+        // failure left the bundle output stale w.r.t. source, so the recovery
+        // task must include a rebuild. An Hmr-stage failure (incl. watch_change
+        // hook) is recoverable by re-running the Hmr task alone.
+        let force_rebuild = matches!(last_error_stage, ErrorStage::Rebuild);
+        let task_input = if force_rebuild || self.ctx.options.rebuild_strategy.is_always() {
           TaskInput::HmrRebuild { changed_files }
         } else {
           TaskInput::Hmr { changed_files }
@@ -244,12 +259,12 @@ impl BundleCoordinator {
   /// Handle build completion notification
   async fn handle_bundle_completed(
     &mut self,
-    has_encountered_error: bool,
+    error_stage: Option<ErrorStage>,
     has_generated_bundle_output: bool,
   ) {
     match self.state {
       CoordinatorState::Initialized
-      | CoordinatorState::Failed
+      | CoordinatorState::Failed { .. }
       | CoordinatorState::FullBuildFailed
       | CoordinatorState::Idle => {
         tracing::error!(
@@ -264,7 +279,9 @@ impl BundleCoordinator {
         // so that a new full build is triggered by the change for those files
         let _ = self.update_watch_paths().await;
 
-        if has_encountered_error {
+        if error_stage.is_some() {
+          // FullBuildFailed always recovers via FullBuild on next file change,
+          // so the originating stage is not tracked.
           self.set_initial_build_state(CoordinatorState::FullBuildFailed);
           self.has_stale_bundle_output = true;
         } else {
@@ -289,8 +306,8 @@ impl BundleCoordinator {
         // (e.g. an edit that introduced a new transitive import).
         let _ = self.update_watch_paths().await;
 
-        if has_encountered_error {
-          self.set_initial_build_state(CoordinatorState::Failed);
+        if let Some(stage) = error_stage {
+          self.set_initial_build_state(CoordinatorState::Failed { last_error_stage: stage });
           self.has_stale_bundle_output = true;
         } else {
           self.has_stale_bundle_output = !has_generated_bundle_output;
@@ -325,7 +342,9 @@ impl BundleCoordinator {
         // So, we only need to wait for the latest build to finish.
         Some(ScheduleBuildReturn { future: self.current_bundling_future.clone().unwrap() })
       }
-      CoordinatorState::Idle | CoordinatorState::FullBuildFailed | CoordinatorState::Failed => {
+      CoordinatorState::Idle
+      | CoordinatorState::FullBuildFailed
+      | CoordinatorState::Failed { .. } => {
         if let Some(mut task_input) = self.queued_tasks.pop_front() {
           tracing::trace!(
             "[BundleCoordinator] scheduling new build task\n - state: {:?}\n - task_input: {task_input:#?}",
@@ -424,7 +443,7 @@ impl BundleCoordinator {
           is_ensure_latest_bundle_output_future: false,
         })
       }
-      CoordinatorState::FullBuildFailed | CoordinatorState::Failed => {
+      CoordinatorState::FullBuildFailed | CoordinatorState::Failed { .. } => {
         // Don't auto-retry — without file changes the same error would recur.
         // Recovery is driven by file change events from the watcher (see handle_file_changes).
         None
@@ -442,14 +461,20 @@ impl BundleCoordinator {
 
   /// Get current build status - atomic operation that doesn't block
   fn create_state_snapshot(&self) -> CoordinatorStateSnapshot {
+    let last_build_errored =
+      matches!(self.state, CoordinatorState::Failed { .. } | CoordinatorState::FullBuildFailed);
+    let last_error_stage = match self.state {
+      CoordinatorState::Failed { last_error_stage } => Some(last_error_stage),
+      _ => None,
+    };
     CoordinatorStateSnapshot {
       running_future: self.current_bundling_future.clone(),
-      last_full_build_failed: self.state == CoordinatorState::FullBuildFailed,
+      last_build_errored,
+      last_error_stage,
       has_stale_output: self.has_stale_bundle_output,
     }
   }
 
-  /// Set initial build state with logging
   fn set_initial_build_state(&mut self, new_state: CoordinatorState) {
     self.state = new_state;
   }
@@ -457,7 +482,6 @@ impl BundleCoordinator {
   /// Update watcher paths based on current build output
   async fn update_watch_paths(&self) -> BuildResult<()> {
     let bundler = self.bundler.lock().await;
-    let watch_files = bundler.watch_files();
     let cwd = bundler.options().cwd.to_string_lossy().to_string();
 
     let include = self.ctx.options.watch_include.as_deref();
@@ -465,16 +489,31 @@ impl BundleCoordinator {
 
     let mut watcher = self.watcher.lock().ok().context("Failed to acquire watcher lock")?;
     let mut paths_mut = watcher.paths_mut();
-    for watch_file in watch_files.iter() {
-      let watch_file = &**watch_file;
+    for watch_file in bundler.watch_files().iter() {
+      let watch_file = watch_file.as_str();
       if !self.watched_files.contains(watch_file)
         && pattern_filter::filter(exclude, include, watch_file, &cwd).inner()
       {
-        self.watched_files.insert(watch_file.to_string().into());
-        paths_mut.add(watch_file.as_path(), RecursiveMode::NonRecursive)?;
+        let path = watch_file.as_path();
+        match paths_mut.add(path, RecursiveMode::NonRecursive) {
+          Ok(()) => {
+            self.watched_files.insert(watch_file.to_string().into());
+          }
+          Err(error) => {
+            tracing::debug!(name = "notify watch skipped", path = ?path, error = ?error);
+          }
+        }
       }
     }
     paths_mut.commit()?;
     Ok(())
+  }
+}
+
+fn watcher_change_kind(kind: FsChangeKind) -> WatcherChangeKind {
+  match kind {
+    FsChangeKind::Create => WatcherChangeKind::Create,
+    FsChangeKind::Update => WatcherChangeKind::Update,
+    FsChangeKind::Delete => WatcherChangeKind::Delete,
   }
 }

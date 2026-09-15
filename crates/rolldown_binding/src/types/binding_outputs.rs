@@ -1,5 +1,5 @@
 use std::{
-  collections::{HashMap, HashSet},
+  collections::{BTreeMap, HashMap, HashSet},
   sync::Arc,
 };
 
@@ -17,10 +17,15 @@ use rustc_hash::FxBuildHasher;
 pub struct BindingOutputs {
   pub chunks: Vec<BindingOutputChunk>,
   pub assets: Vec<BindingOutputAsset>,
+  #[napi(ts_type = "Record<string, string | false>")]
+  pub mangle_cache: Option<BTreeMap<String, Either<String, bool>>>,
 }
 
-impl From<Vec<rolldown_common::Output>> for BindingOutputs {
-  fn from(outputs: Vec<rolldown_common::Output>) -> Self {
+impl BindingOutputs {
+  fn new(
+    outputs: Vec<rolldown_common::Output>,
+    mangle_cache: Option<BTreeMap<String, Option<String>>>,
+  ) -> Self {
     let mut chunks = vec![];
     let mut assets = vec![];
     outputs.into_iter().for_each(|o| match o {
@@ -31,7 +36,28 @@ impl From<Vec<rolldown_common::Output>> for BindingOutputs {
         assets.push(BindingOutputAsset::new(asset));
       }
     });
-    Self { chunks, assets }
+    let mangle_cache = mangle_cache.map(|cache| {
+      cache
+        .into_iter()
+        .map(|(original, target)| {
+          let target = target.map_or(Either::B(false), Either::A);
+          (original, target)
+        })
+        .collect()
+    });
+    Self { chunks, assets, mangle_cache }
+  }
+}
+
+impl From<Vec<rolldown_common::Output>> for BindingOutputs {
+  fn from(outputs: Vec<rolldown_common::Output>) -> Self {
+    Self::new(outputs, None)
+  }
+}
+
+impl From<rolldown::BundleOutput> for BindingOutputs {
+  fn from(output: rolldown::BundleOutput) -> Self {
+    Self::new(output.assets, output.mangle_cache)
   }
 }
 

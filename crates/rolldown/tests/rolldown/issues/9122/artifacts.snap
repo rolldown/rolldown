@@ -1,0 +1,34 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## index.js
+
+```js
+import { StateCode } from "./state-codes.js";
+import { initialState } from "./wrapper.js";
+export { StateCode, initialState };
+
+```
+
+## state-codes.js
+
+```js
+//#region state-codes.js
+const StateCode = "waiting";
+//#endregion
+export { StateCode };
+
+```
+
+## wrapper.js
+
+```js
+import { StateCode } from "./state-codes.js";
+//#region wrapper.js
+const initialState = StateCode;
+//#endregion
+export { StateCode, initialState };
+
+```

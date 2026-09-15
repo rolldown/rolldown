@@ -6,7 +6,8 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## entry_js.js
 
 ```js
-var __esmMin = (fn, res) => () => (fn && (res = fn(fn = 0)), res), x;
+// HIDDEN [\0rolldown/runtime.js]
+//#region foo.js
 //#endregion
 //#region entry.js
 __esmMin((() => {

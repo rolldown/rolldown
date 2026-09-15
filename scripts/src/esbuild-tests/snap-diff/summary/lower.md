@@ -20,6 +20,7 @@
 ## [lower_class_field_next_no_bundle](../../../../../crates/rolldown/tests/esbuild/lower/lower_class_field_next_no_bundle)
 ## [lower_class_field_strict_tsconfig_json2020](../../../../../crates/rolldown/tests/esbuild/lower/lower_class_field_strict_tsconfig_json2020)
 ## [lower_class_field2020_no_bundle](../../../../../crates/rolldown/tests/esbuild/lower/lower_class_field2020_no_bundle)
+## [lower_const_issue4448](../../../../../crates/rolldown/tests/esbuild/lower/lower_const_issue4448)
 ## [lower_exponentiation_operator_no_bundle](../../../../../crates/rolldown/tests/esbuild/lower/lower_exponentiation_operator_no_bundle)
 ## [lower_export_star_as_name_collision](../../../../../crates/rolldown/tests/esbuild/lower/lower_export_star_as_name_collision)
 ## [lower_export_star_as_name_collision_no_bundle](../../../../../crates/rolldown/tests/esbuild/lower/lower_export_star_as_name_collision_no_bundle)

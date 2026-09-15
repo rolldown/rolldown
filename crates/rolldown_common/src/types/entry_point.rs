@@ -1,7 +1,7 @@
 use std::hash::Hash;
 
 use arcstr::ArcStr;
-use oxc::allocator::Address;
+use oxc::semantic::NodeId;
 
 use crate::{ImportRecordIdx, ModuleIdx, StmtInfoIdx};
 
@@ -13,7 +13,7 @@ pub struct EntryPoint {
   /// emitted chunk specified filename, used to generate chunk filename
   pub file_name: Option<ArcStr>,
   /// which stmts create this entry point
-  pub related_stmt_infos: Vec<(ModuleIdx, StmtInfoIdx, Address, ImportRecordIdx)>,
+  pub related_stmt_infos: Vec<(ModuleIdx, StmtInfoIdx, NodeId, ImportRecordIdx)>,
 }
 
 #[derive(Debug, Eq, Clone, Copy, PartialOrd, Ord)]

@@ -42,11 +42,11 @@ pub struct NativePluginContextImpl {
   pub(crate) module_infos: SharedModuleInfoDashMap,
   pub(crate) tx: Arc<Mutex<Option<tokio::sync::mpsc::UnboundedSender<ModuleLoaderMsg>>>>,
   pub(crate) session: rolldown_devtools::Session,
-  pub(crate) bundle_span: Arc<tracing::Span>,
+  pub(crate) bundle_span: tracing::Span,
   // `resolve_id` hook not only will be triggered by the rolldown's resolve process, but also could be triggered
   // by manual calls of `PluginContext.resolve()`. We use a dedicated span here to distinguish whether the call is
   // - automatic (by rolldown) or manual (by `PluginContext.resolve()`)
-  pub(crate) manual_resolve_span: Arc<tracing::Span>,
+  pub(crate) manual_resolve_span: tracing::Span,
 }
 
 impl NativePluginContextImpl {
@@ -129,7 +129,7 @@ impl NativePluginContextImpl {
       )
       .await
     }
-    .instrument(self.manual_resolve_span.as_ref().clone())
+    .instrument(self.manual_resolve_span.clone())
     .await
   }
 
@@ -149,7 +149,10 @@ impl NativePluginContextImpl {
   ) -> anyhow::Result<ArcStr> {
     let file_name_is_none = file.file_name.is_none();
     let asset_filename_template = file_name_is_none.then(|| {
-      FilenameTemplate::new(self.options.asset_filenames.value(fn_asset_filename), "assetFileNames")
+      FilenameTemplate::new(
+        self.options.asset_filenames.value(fn_asset_filename),
+        "output.assetFileNames",
+      )
     });
     let sanitized_file_name = file_name_is_none.then(|| {
       self.options.sanitize_filename.value(file.name_for_sanitize(), fn_sanitized_file_name)

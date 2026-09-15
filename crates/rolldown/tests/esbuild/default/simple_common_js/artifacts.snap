@@ -8,6 +8,8 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```js
 import * as assert from "node:assert";
 // HIDDEN [\0rolldown/runtime.js]
+//#region foo.js
+//#endregion
 //#region entry.js
 const fn = (/* @__PURE__ */ __commonJSMin(((exports, module) => {
 	module.exports = function() {

@@ -16,7 +16,7 @@ You could get a list of available commands by running the command `just` only.
 - `just test` - Runs all tests.
 - `just lint` - Format and lint the codebase.
 - `just fix` - Fix formatting and linting issues.
-- `just build` - Build the `rolldown` node package (and `@rolldown/pluginutils` node package).
+- `just build` - Build the `rolldown` node package.
 - `just run` - Run the `rolldown` cli using node.
 
 > Most of commands will run both Rust and Node.js scripts. To only target one, append `-rust` or `-node` to the just command. For example, `just lint-rust` or `just test-node`.

@@ -1,26 +1,3 @@
-## /out/remove-these.js
-### esbuild
-```js
-keepThisButRemoveTheIIFE;
-```
-### rolldown
-```js
-//#region remove-these.js
-keepThisButRemoveTheIIFE;
-(() => 123)();
-//#endregion
-
-```
-### diff
-```diff
-===================================================================
---- esbuild	/out/remove-these.js
-+++ rolldown	remove-these.js
-@@ -1,1 +1,2 @@
- keepThisButRemoveTheIIFE;
-+(() => 123)();
-
-```
 ## /out/keep-these.js
 ### esbuild
 ```js

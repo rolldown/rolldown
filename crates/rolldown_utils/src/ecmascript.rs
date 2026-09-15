@@ -54,7 +54,6 @@ pub fn legitimize_json_local_binding_name(
 }
 
 pub fn legitimize_identifier_name(name: &str) -> Cow<'_, str> {
-  let mut legitimized = String::with_capacity(name.len());
   let mut chars_indices = name.char_indices();
 
   let mut first_invalid_char_index = None;
@@ -74,6 +73,8 @@ pub fn legitimize_identifier_name(name: &str) -> Cow<'_, str> {
     return Cow::Borrowed(name);
   };
 
+  // Allocate only on the path that actually legitimizes the name.
+  let mut legitimized = String::with_capacity(name.len());
   let (first_valid_part, rest_part) = name.split_at(first_invalid_char_index);
   legitimized.push_str(first_valid_part);
   if first_invalid_char_index == 0 {

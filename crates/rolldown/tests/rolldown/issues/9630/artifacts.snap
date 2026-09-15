@@ -45,6 +45,7 @@ export default require_last();
 
 ```js
 import { r as __toESM, t as require_isArrayLike } from "./isArrayLike.js";
+//#region main.js
 const eager = (0, require_isArrayLike().isArrayLike)([1]);
 async function lazy() {
 	return (await import("./last.js").then((m) => /* @__PURE__ */ __toESM(m.default))).default.last([
@@ -127,6 +128,7 @@ Object.defineProperty(exports, "default", {
 ```js
 Object.defineProperty(exports, Symbol.toStringTag, { value: "Module" });
 const require_isArrayLike$1 = require("./isArrayLike.js");
+//#region main.js
 const eager = (0, require_isArrayLike$1.require_isArrayLike().isArrayLike)([1]);
 async function lazy() {
 	return (await Promise.resolve().then(() => /* @__PURE__ */ require_isArrayLike$1.__toESM(require("./last.js").default))).default.last([

@@ -1,0 +1,2 @@
+import('./emitted');
+import('./nested');

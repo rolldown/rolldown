@@ -1,8 +1,11 @@
 # Maintenance Guide
 
-A plugin for [rolldown-vite](https://github.com/vitejs/rolldown-vite) that injects a `modulepreload` polyfill for legacy browsers, ported from [Vite's `modulePreloadPolyfillPlugin`](https://github.com/vitejs/vite/blob/main/packages/vite/src/node/plugins/modulePreloadPolyfill.ts#L34).
+A plugin for [vite](https://github.com/vitejs/rolldown-vite) that injects a `modulepreload` polyfill for legacy browsers, ported from [Vite's `modulePreloadPolyfillPlugin`](https://github.com/vitejs/vite/blob/main/packages/vite/src/node/plugins/modulePreloadPolyfill.ts#L34).
 
-**This plugin is exclusive to `rolldown-vite` and is currently considered unstable for external use.**
+> [!NOTE]
+> This plugin is exclusive to `vite`; external use is not recommended.
+> Its API may change between minor versions of `rolldown`, but
+> stays compatible within the same minor version.
 
 ## 📦 What it does
 

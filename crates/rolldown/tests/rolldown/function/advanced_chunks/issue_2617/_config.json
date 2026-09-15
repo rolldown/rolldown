@@ -1,7 +1,7 @@
 {
   // Should not process trreeshaked modules
   "config": {
-    "manualCodeSplitting": {
+    "codeSplitting": {
       "groups": [
         {
           "test": "lib\\.js",

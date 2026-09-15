@@ -1,0 +1,32 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+import assert from "node:assert";
+// HIDDEN [\0rolldown/runtime.js]
+//#region target.cjs
+var require_target = /* @__PURE__ */ __commonJSMin(((exports, module) => {
+	module.exports = { existing: "existing" };
+}));
+//#endregion
+//#region augment.cjs
+var require_augment = /* @__PURE__ */ __commonJSMin((() => {
+	const target = require_target();
+	target.added = function added() {
+		return "added";
+	};
+}));
+//#endregion
+//#region main.js
+var import_target = /* @__PURE__ */ __toESM(require_target());
+require_augment();
+assert.equal(import_target.existing, "existing");
+assert.equal(typeof import_target.added, "undefined");
+assert.equal(typeof import_target.default?.added, "function");
+//#endregion
+
+```

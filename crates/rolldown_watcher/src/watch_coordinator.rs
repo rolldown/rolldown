@@ -8,9 +8,12 @@ use crate::watcher_state::WatcherState;
 use oxc_index::IndexVec;
 use rolldown_common::WatcherChangeKind;
 use rolldown_utils::indexmap::FxIndexMap;
+use std::future::Future;
 use std::mem;
+use std::sync::Arc;
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::time::Duration;
-use tokio::sync::mpsc;
+use tokio::sync::{Notify, mpsc};
 
 /// The coordinator actor that owns all state and runs the event loop.
 pub struct WatchCoordinator<H: WatcherEventHandler> {
@@ -19,6 +22,8 @@ pub struct WatchCoordinator<H: WatcherEventHandler> {
   state: WatcherState,
   debounce_duration: Duration,
   tasks: IndexVec<WatchTaskIdx, WatchTask>,
+  closed: Arc<AtomicBool>,
+  close_notify: Arc<Notify>,
 }
 
 impl<H: WatcherEventHandler> WatchCoordinator<H> {
@@ -27,6 +32,8 @@ impl<H: WatcherEventHandler> WatchCoordinator<H> {
     handler: H,
     tasks: IndexVec<WatchTaskIdx, WatchTask>,
     config: &WatcherConfig,
+    closed: Arc<AtomicBool>,
+    close_notify: Arc<Notify>,
   ) -> Self {
     Self {
       rx,
@@ -34,13 +41,18 @@ impl<H: WatcherEventHandler> WatchCoordinator<H> {
       state: WatcherState::Idle,
       debounce_duration: config.debounce_duration(),
       tasks,
+      closed,
+      close_notify,
     }
   }
 
   /// Main event loop: initial build → loop on state
   pub(crate) async fn run(mut self) {
     // Perform initial build
-    self.run_initial_build().await;
+    if !self.run_initial_build().await {
+      self.handle_close().await;
+      return;
+    }
 
     loop {
       match &self.state {
@@ -66,7 +78,10 @@ impl<H: WatcherEventHandler> WatchCoordinator<H> {
               self.state = new_state;
 
               if let Some(changes) = changes {
-                self.run_build_sequence(changes).await;
+                if !self.run_build_sequence(changes).await {
+                  self.handle_close().await;
+                  break;
+                }
               }
             }
             msg = self.rx.recv() => {
@@ -91,23 +106,31 @@ impl<H: WatcherEventHandler> WatchCoordinator<H> {
   }
 
   /// Run the initial build for all tasks
-  async fn run_initial_build(&mut self) {
-    self.handler.on_event(WatchEvent::Start).await;
+  async fn run_initial_build(&mut self) -> bool {
+    if !self.dispatch_event(WatchEvent::Start).await {
+      return false;
+    }
 
     for task_index in self.tasks.indices() {
       let task = &self.tasks[task_index];
-      self.handler.on_event(WatchEvent::BundleStart(task.start_event_data(task_index))).await;
+      if !self.dispatch_event(WatchEvent::BundleStart(task.start_event_data(task_index))).await {
+        return false;
+      }
 
       let task = &mut self.tasks[task_index];
       match task.build(task_index).await {
         Ok(BuildOutcome::Success(data)) => {
-          self.handler.on_event(WatchEvent::BundleEnd(data)).await;
+          if !self.dispatch_event(WatchEvent::BundleEnd(data)).await {
+            return false;
+          }
         }
         Ok(BuildOutcome::Error(data)) => {
-          self.handler.on_event(WatchEvent::Error(data)).await;
+          if !self.dispatch_event(WatchEvent::Error(data)).await {
+            return false;
+          }
         }
         Ok(BuildOutcome::Skipped) => {}
-        Ok(BuildOutcome::Closed) => return,
+        Ok(BuildOutcome::Closed) => return false,
         Err(errs) => {
           let error_messages: Vec<String> =
             errs.iter().map(|e| e.to_diagnostic().to_string()).collect();
@@ -116,7 +139,7 @@ impl<H: WatcherEventHandler> WatchCoordinator<H> {
       }
     }
 
-    self.handler.on_event(WatchEvent::End).await;
+    self.dispatch_event(WatchEvent::End).await
   }
 
   /// The rebuild sequence matching Rollup's semantics (spec §2.8):
@@ -127,10 +150,12 @@ impl<H: WatcherEventHandler> WatchCoordinator<H> {
   /// 5. For each task needing rebuild: BundleStart → build → BundleEnd/Error
   /// 6. handler.on_event(End)
   /// 7. drain_buffered_events
-  async fn run_build_sequence(&mut self, changes: FxIndexMap<String, WatcherChangeKind>) {
+  async fn run_build_sequence(&mut self, changes: FxIndexMap<String, WatcherChangeKind>) -> bool {
     // Step 1 & 2: Notify handler and plugin hooks for each change
     for (path, kind) in &changes {
-      self.handler.on_change(path.as_str(), *kind).await;
+      if !self.dispatch_change(path.as_str(), *kind).await {
+        return false;
+      }
     }
 
     for task in &self.tasks {
@@ -140,10 +165,14 @@ impl<H: WatcherEventHandler> WatchCoordinator<H> {
     }
 
     // Step 3: Restart notification
-    self.handler.on_restart().await;
+    if !self.dispatch_restart().await {
+      return false;
+    }
 
     // Step 4: Start event
-    self.handler.on_event(WatchEvent::Start).await;
+    if !self.dispatch_event(WatchEvent::Start).await {
+      return false;
+    }
 
     // Step 5: Build each task that needs it
     for task_index in self.tasks.indices() {
@@ -152,18 +181,24 @@ impl<H: WatcherEventHandler> WatchCoordinator<H> {
       }
 
       let task = &self.tasks[task_index];
-      self.handler.on_event(WatchEvent::BundleStart(task.start_event_data(task_index))).await;
+      if !self.dispatch_event(WatchEvent::BundleStart(task.start_event_data(task_index))).await {
+        return false;
+      }
 
       let task = &mut self.tasks[task_index];
       match task.build(task_index).await {
         Ok(BuildOutcome::Success(data)) => {
-          self.handler.on_event(WatchEvent::BundleEnd(data)).await;
+          if !self.dispatch_event(WatchEvent::BundleEnd(data)).await {
+            return false;
+          }
         }
         Ok(BuildOutcome::Error(data)) => {
-          self.handler.on_event(WatchEvent::Error(data)).await;
+          if !self.dispatch_event(WatchEvent::Error(data)).await {
+            return false;
+          }
         }
         Ok(BuildOutcome::Skipped) => {}
-        Ok(BuildOutcome::Closed) => return,
+        Ok(BuildOutcome::Closed) => return false,
         Err(errs) => {
           let error_messages: Vec<String> =
             errs.iter().map(|e| e.to_diagnostic().to_string()).collect();
@@ -173,10 +208,48 @@ impl<H: WatcherEventHandler> WatchCoordinator<H> {
     }
 
     // Step 6: End event
-    self.handler.on_event(WatchEvent::End).await;
+    if !self.dispatch_event(WatchEvent::End).await {
+      return false;
+    }
 
     // Step 7: Drain buffered events that arrived during the build
     self.drain_buffered_events().await;
+    true
+  }
+
+  async fn dispatch_event(&self, event: WatchEvent) -> bool {
+    self.await_handler_or_close(self.handler.on_event(event)).await
+  }
+
+  async fn dispatch_change(&self, path: &str, kind: WatcherChangeKind) -> bool {
+    self.await_handler_or_close(self.handler.on_change(path, kind)).await
+  }
+
+  async fn dispatch_restart(&self) -> bool {
+    self.await_handler_or_close(self.handler.on_restart()).await
+  }
+
+  /// Await a consumer event callback while keeping close re-entrant.
+  ///
+  /// A callback may call and await `watcher.close()`. Waiting only for the callback would deadlock:
+  /// close waits for this coordinator, while the coordinator waits for the callback. On close, drop
+  /// only the Rust-side wait for the callback; the JavaScript promise keeps running, and the
+  /// coordinator performs the complete close sequence before `watcher.close()` resolves.
+  async fn await_handler_or_close<F>(&self, handler: F) -> bool
+  where
+    F: Future<Output = ()>,
+  {
+    let wait_for_close = async {
+      if !self.closed.load(Ordering::Relaxed) {
+        self.close_notify.notified().await;
+      }
+    };
+
+    tokio::select! {
+      biased;
+      () = wait_for_close => false,
+      () = handler => !self.closed.load(Ordering::Relaxed),
+    }
   }
 
   /// Process file changes: call on_invalidate per file, mark task for rebuild,

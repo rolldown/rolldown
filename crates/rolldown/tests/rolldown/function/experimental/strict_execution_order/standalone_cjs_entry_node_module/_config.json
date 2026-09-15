@@ -1,0 +1,16 @@
+{
+  "snapshot": false,
+  "configName": "wrap-all",
+  "config": {
+    "platform": "node",
+    "format": "cjs",
+    "strictExecutionOrder": true,
+    "codeSplitting": false
+  },
+  "configVariants": [
+    {
+      "_configName": "on-demand",
+      "onDemandWrapping": true
+    }
+  ]
+}

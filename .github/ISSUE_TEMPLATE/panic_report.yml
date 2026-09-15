@@ -17,7 +17,7 @@ body:
       description: |
         Please paste the full panic message you saw in the console.
 
-        The published binding is stripped, so the backtrace carries no file or line numbers. [Add the debug info](https://rolldown.rs/guide/troubleshooting#panic-debug-info) and run again to get them. This works on Linux x64 (glibc), macOS arm64 and Windows x64.
+        The release build strips the published binding, so the backtrace shows no file names and no line numbers. [Add the debug info](https://rolldown.rs/guide/troubleshooting#panic-debug-info). Then run the build again. Archives exist for Linux x64 (glibc), macOS arm64 and Windows x64.
       placeholder: |
         Rolldown panicked. This is a bug in Rolldown, not your code.
         thread 'tokio-runtime-worker' panicked at ...

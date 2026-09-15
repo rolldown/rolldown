@@ -41,9 +41,9 @@ Everything lives in `.github/workflows/reusable-release-build.yml`, gated on a `
 
 ## Reproducing a panic locally
 
-`docs/guide/troubleshooting.md` covers the release path, and the panic report template links to it. Keep that section in sync with the archive name and the enabled targets.
+`docs/guide/troubleshooting.md` gives the steps for a release. The panic report template links to that section. Update it when the archive name or the enabled targets change.
 
-A pkg.pr.new preview has no release, so its archive stays a workflow run artifact. The preview reports the released version, so find the run by PR instead:
+A pkg.pr.new preview has no release, so its archive stays a workflow run artifact. The preview reports the released version. Find the run by its PR instead:
 
 ```bash
 branch=$(gh pr view <pr> --json headRefName -q .headRefName)
@@ -51,7 +51,7 @@ gh run list --workflow publish-to-pkg.pr.new.yml --branch "$branch" --json datab
 gh run download <run-id> -n debuginfo-<target> -D <dir>
 ```
 
-Unpack it the same way. Run artifacts need repo read access and they expire; release assets need neither. Any later `npm install` replaces the binding package and drops the unpacked side file.
+Unpack the archive the same way. A run artifact expires and needs read access to the repository. A release asset has neither limit. A later `npm install` replaces the binding package and deletes the unpacked side file.
 
 ## Enabled targets
 

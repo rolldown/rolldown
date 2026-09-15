@@ -206,7 +206,7 @@ It can also happen when the config file lives in a symlinked directory that poin
 
 A panic is always a bug in Rolldown. Report it with the [panic report template](https://github.com/rolldown/rolldown/issues/new?template=panic_report.yml).
 
-The published binding is stripped, so the backtrace holds no file names and no line numbers. `RUST_BACKTRACE=1` does not change this:
+The release build strips the published binding, so the backtrace shows no file names and no line numbers. `RUST_BACKTRACE=1` does not add them:
 
 ```text
 Rolldown panicked. This is a bug in Rolldown, not your code.
@@ -217,7 +217,7 @@ stack backtrace:
 note: Some details are omitted, run with `RUST_BACKTRACE=full` for a verbose backtrace.
 ```
 
-Each release attaches the debug info of the binding as a separate archive. Put that archive next to the `.node` file and the frames come back. Rust finds the file on its own, so no other setting is necessary.
+Each release attaches the debug info of the binding as a separate archive. Put that archive next to the `.node` file. The backtrace then shows the missing frames. Rust finds the unpacked file automatically, so you need no other setting.
 
 Three platforms have an archive:
 
@@ -245,9 +245,13 @@ tar -xzf rolldown-binding.darwin-arm64.node.debuginfo.tar.gz \
 RUST_BACKTRACE=1 npx rolldown -c
 ```
 
-Step 2 also works in a browser. Open the [releases page](https://github.com/rolldown/rolldown/releases), find the matching tag, and download the archive from its assets.
+You can also do step 2 in a browser:
 
-Each frame now carries a source file and a line. Paste this backtrace into the issue:
+1. Open the [releases page](https://github.com/rolldown/rolldown/releases).
+2. Find the tag with the same version.
+3. Download the archive from the assets of that tag.
+
+Each frame now shows a source file and a line number. Paste this backtrace into the issue:
 
 ```text
 stack backtrace:
@@ -260,5 +264,5 @@ stack backtrace:
 ```
 
 ::: tip
-The next `npm install` replaces the binding package and deletes the unpacked file. Unpack the archive again after an install.
+The next `npm install` replaces the binding package and deletes the unpacked file. Unpack the archive again after each install.
 :::

@@ -68,8 +68,8 @@ function main() {
   }
 
   console.info(`2. unpack ${path.basename(debuginfo)} next to the binding`);
-  // bsdtar on Windows reads an absolute `C:\...` argument as `host:path`, so tar
-  // runs in the binding directory and takes the archive as a relative path.
+  // bsdtar on Windows reads an absolute `C:\...` argument as `host:path`. Tar
+  // therefore runs in the binding directory and receives a relative path.
   const rel = path.relative(BINDING_DIR, debuginfo).replaceAll(path.sep, '/');
   const opts = { cwd: BINDING_DIR };
   const entry = execFileSync('tar', ['-tzf', rel], { ...opts, encoding: 'utf8' })

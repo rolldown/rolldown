@@ -42,8 +42,8 @@ function hostTriple() {
 }
 
 // `rust-objcopy` (llvm-objcopy) comes with the `llvm-tools` rustup component, so
-// cross-built ELF bindings usually need no extra tool. It can sit in the sysroot
-// yet fail to load `libLLVM.so` without that component, so run every candidate.
+// most cross-built ELF bindings need no extra tool. Without the component the
+// sysroot copy can fail to load `libLLVM.so`. Run each candidate to find a good one.
 function findObjcopy() {
   const sysroot = run('rustc', ['--print', 'sysroot']).trim();
   const candidates = [
@@ -94,8 +94,8 @@ function main() {
   const binding = findBinding();
   const bindingName = path.basename(binding);
   fs.mkdirSync(args.outDir, { recursive: true });
-  // bsdtar on Windows reads an absolute `C:\...` argument as `host:path`, so the
-  // stage sits next to the archive and tar only ever sees relative names.
+  // bsdtar on Windows reads an absolute `C:\...` argument as `host:path`. The stage
+  // therefore goes next to the archive, and tar receives only relative names.
   const stage = fs.mkdtempSync(path.join(args.outDir, '.stage-'));
   // The name inside the archive must match what the debugger looks for, so the
   // files are staged under that exact name before packing.

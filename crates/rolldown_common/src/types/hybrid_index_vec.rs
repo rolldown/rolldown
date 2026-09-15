@@ -61,7 +61,7 @@ impl<I: Idx, T> HybridIndexVec<I, T> {
         let len = map.len();
         map
           .get_mut(&i)
-          .unwrap_or_else(|| panic!("HybridIndexVec::Map missing idx {i:?} (len={len})"))
+          .unwrap_or_else(|| panic!("HybridIndexVec::Map missing idx {} (len={len})", i.index()))
       }
     }
   }
@@ -79,9 +79,9 @@ impl<I: Idx, T> HybridIndexVec<I, T> {
   pub fn get(&self, i: I) -> &T {
     match self {
       HybridIndexVec::IndexVec(index_vec) => &index_vec[i],
-      HybridIndexVec::Map(map) => map
-        .get(&i)
-        .unwrap_or_else(|| panic!("HybridIndexVec::Map missing idx {i:?} (len={})", map.len())),
+      HybridIndexVec::Map(map) => map.get(&i).unwrap_or_else(|| {
+        panic!("HybridIndexVec::Map missing idx {} (len={})", i.index(), map.len())
+      }),
     }
   }
 

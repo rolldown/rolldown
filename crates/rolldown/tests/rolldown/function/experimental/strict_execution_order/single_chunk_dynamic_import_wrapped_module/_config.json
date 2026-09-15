@@ -1,0 +1,26 @@
+{
+  "_comment": "Single-chunk strict coverage for iife/umd: with `codeSplitting: false` there is no other chunk to load, so `determine_module_exports_kind` wraps the dynamic target and `wrap_modules` follows into its whole subgraph, and the finalizer inlines both `import()` call sites to `Promise.resolve().then(() => (init_lazy(), lazy_exports))`. Strict order must not disturb that: the target stays lazy (nothing it pulls in runs before the promise settles), initializes exactly once, and hands both call sites the same namespace object, while the dependency it shares with the entry keeps its eager static position. Wrap-all additionally wraps the entry itself, so the two formats also render `exports.ready` from a wrapped entry instead of from an inline body.",
+  "configName": "iife-wrap-all",
+  "config": {
+    "input": [{ "name": "main", "import": "./main.js" }],
+    "format": "iife",
+    "name": "singleChunkDynamicImportWrappedModule",
+    "strictExecutionOrder": true,
+    "codeSplitting": false
+  },
+  "configVariants": [
+    {
+      "_configName": "iife-on-demand",
+      "onDemandWrapping": true
+    },
+    {
+      "_configName": "umd-wrap-all",
+      "format": "umd"
+    },
+    {
+      "_configName": "umd-on-demand",
+      "format": "umd",
+      "onDemandWrapping": true
+    }
+  ]
+}

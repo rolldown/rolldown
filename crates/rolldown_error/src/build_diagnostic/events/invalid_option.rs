@@ -17,6 +17,7 @@ pub enum InvalidOptionType {
   InvalidFilenameSubstitution { name: String, pattern_name: String },
   CodeSplittingDisabledWithMultipleInputs,
   CodeSplittingDisabledWithPreserveModules,
+  ManglePropertiesWithMultipleChunks,
   HashLengthTooLong { pattern_name: String, received: usize, max: usize },
   HashLengthTooShort { pattern_name: String, received: usize, min: usize, chunk_count: u32 },
   InvalidEmittedFileName(String),
@@ -87,7 +88,7 @@ impl BuildEvent for InvalidOption {
         InvalidOptionType::InvalidFilenameSubstitution { name, pattern_name } => {
           format!(
             "Invalid substitution \"{name}\" for placeholder \"[name]\" in \"{pattern_name}\" pattern, \
-             can be neither absolute nor relative paths."
+             can be neither absolute nor relative path."
           )
         }
         InvalidOptionType::CodeSplittingDisabledWithMultipleInputs => {
@@ -96,11 +97,12 @@ impl BuildEvent for InvalidOption {
         InvalidOptionType::CodeSplittingDisabledWithPreserveModules => {
           "Invalid value \"false\" for option \"output.codeSplitting\" - this option is not supported for \"output.preserveModules\".".to_string()
         }
+        InvalidOptionType::ManglePropertiesWithMultipleChunks => "Invalid value for option \"output.minify.mangleProps\" - property mangling is currently supported only when a build generates one JavaScript chunk. Use a single-chunk build or remove \"mangleProps\".".to_string(),
         InvalidOptionType::HashLengthTooLong { pattern_name, received, max } => {
-          format!("Hashes cannot be longer than {max} characters, received {received}. Check the `{pattern_name}` option.")
+          format!("Hashes cannot be longer than {max} characters, received {received}. Check the \"{pattern_name}\" option.")
         }
         InvalidOptionType::HashLengthTooShort { pattern_name, received, min, chunk_count } => {
-          format!("To generate hashes for this number of chunks (currently {chunk_count}), you need a minimum hash size of {min}, received {received}. Check the `{pattern_name}` option.")
+          format!("To generate hashes for this number of chunks (currently {chunk_count}), you need a minimum hash size of {min}, received {received}. Check the \"{pattern_name}\" option.")
         }
         InvalidOptionType::InvalidEmittedFileName(name) => {
           format!("The \"fileName\" or \"name\" properties of emitted chunks and assets must be strings that are neither absolute nor relative paths, received \"{name}\".")

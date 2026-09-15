@@ -1,0 +1,58 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## app.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+//#region vendor.js
+function f0(x) {
+	return x * 2 + 1;
+}
+//#endregion
+//#region app.js
+var app_exports = /* @__PURE__ */ __exportAll({ done: () => done });
+console.log(f0(1));
+const done = Promise.resolve().then(() => require("./lazy.js")).then(({ fn }) => {
+	fn();
+});
+//#endregion
+Object.defineProperty(exports, "app_exports", {
+	enumerable: true,
+	get: function() {
+		return app_exports;
+	}
+});
+exports.done = done;
+exports.f0 = f0;
+
+```
+
+## lazy.js
+
+```js
+const require_app = require("./app.js");
+//#region lazy.js
+function fn() {
+	console.log(require_app.f0(3));
+}
+//#endregion
+exports.fn = fn;
+
+```
+
+## main.js
+
+```js
+Object.defineProperty(exports, Symbol.toStringTag, { value: "Module" });
+//#region main.js
+const done = Promise.resolve().then(() => require("./app.js")).then((n) => n.app_exports).then(async (app) => {
+	await app.done;
+	return Object.keys(app).sort();
+});
+//#endregion
+exports.done = done;
+
+```

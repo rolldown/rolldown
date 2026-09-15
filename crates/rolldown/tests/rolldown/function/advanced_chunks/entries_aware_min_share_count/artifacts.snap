@@ -6,7 +6,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## entry-a.js
 
 ```js
-//! User-defined Entry: [Entry-Module-Id: entry-a.js] [Name: Some("entry-a")]
+//! User-defined Entry: [Entry-Module-Id: entry-a.js] [Name: entry-a]
 import "./utils~entry-a~entry-b.js";
 //#region utils/debounce.js
 console.log("debounce");
@@ -17,7 +17,7 @@ console.log("debounce");
 ## entry-b.js
 
 ```js
-//! User-defined Entry: [Entry-Module-Id: entry-b.js] [Name: Some("entry-b")]
+//! User-defined Entry: [Entry-Module-Id: entry-b.js] [Name: entry-b]
 import "./utils~entry-a~entry-b.js";
 import "./utils~entry-b~entry-c.js";
 
@@ -26,7 +26,7 @@ import "./utils~entry-b~entry-c.js";
 ## entry-c.js
 
 ```js
-//! User-defined Entry: [Entry-Module-Id: entry-c.js] [Name: Some("entry-c")]
+//! User-defined Entry: [Entry-Module-Id: entry-c.js] [Name: entry-c]
 import "./utils~entry-b~entry-c.js";
 
 ```

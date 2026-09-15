@@ -1,0 +1,34 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# warnings
+
+## NAMESPACE_CONFLICT
+
+```text
+[NAMESPACE_CONFLICT] Conflicting namespaces: "main.js" re-exports "foo" from one of the modules "file.js" and "file2.js" (will be ignored).
+   ╭─[ file.js:1:12 ]
+   │
+ 1 │ export let foo = 1
+   │            ─┬─  
+   │             ╰─── One matching export is here.
+   │
+   ├─[ file2.js:1:12 ]
+   │
+ 1 │ export let foo = 2
+   │            ─┬─  
+   │             ╰─── One matching export is here.
+───╯
+
+```
+
+# Assets
+
+## main.js
+
+```js
+//#region main.js
+console.log();
+//#endregion
+
+```

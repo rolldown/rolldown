@@ -2,7 +2,7 @@ use oxc::allocator::{Allocator, GetAllocator};
 use oxc::ast::builder::{AstBuilder, GetAstBuilder};
 use oxc::{
   ast::ast::{Expression, IdentifierName, ObjectPropertyKind, Statement},
-  ast_visit::VisitMut,
+  ast_visit::VisitJsMut,
   span::SPAN,
 };
 use rolldown_ecmascript_utils::{ExpressionExt as _, StatementFactoryExt as _};
@@ -57,9 +57,9 @@ impl<'ast> WebWorkerPostVisitor<'ast> {
   }
 }
 
-impl<'ast> VisitMut<'ast> for WebWorkerPostVisitor<'ast> {
+impl<'ast> VisitJsMut<'ast> for WebWorkerPostVisitor<'ast> {
   fn visit_program(&mut self, it: &mut oxc::ast::ast::Program<'ast>) {
-    oxc::ast_visit::walk_mut::walk_program(self, it);
+    oxc::ast_visit::walk_js_mut::walk_program(self, it);
     if self.should_inject_import_meta_object {
       it.body.insert(0, self.create_import_meta_object_decl());
     }
@@ -76,7 +76,7 @@ impl<'ast> VisitMut<'ast> for WebWorkerPostVisitor<'ast> {
         self.should_inject_import_meta_object = true;
         *it = Expression::new_identifier(SPAN, "_vite_importMeta", self);
       }
-      _ => oxc::ast_visit::walk_mut::walk_expression(self, it),
+      _ => oxc::ast_visit::walk_js_mut::walk_expression(self, it),
     }
   }
 }

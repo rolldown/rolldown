@@ -72,8 +72,8 @@ __rolldown_runtime__.registerFactory("c.js", "esm", (function(__rolldown_module_
 		var __rolldown_exports__ = __rolldown_runtime__.__exportAll({ c: () => c });
 		__rolldown_runtime__.registerModule(__rolldown_module_id__, { exports: __rolldown_exports__ });
 		__rolldown_runtime__.initModule("b.js");
-		const hot_c = __rolldown_runtime__.createModuleHotContext(__rolldown_module_id__);
 		var import_b_01 = __rolldown_runtime__.loadExports("b.js");
+		const hot_c = __rolldown_runtime__.createModuleHotContext(__rolldown_module_id__);
 		const c = "cc";
 		import_node_assert_00.default.strictEqual(c, "cc");
 		hot_c.accept(() => {

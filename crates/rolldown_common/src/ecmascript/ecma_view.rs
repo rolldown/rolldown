@@ -122,7 +122,8 @@ pub struct EcmaView {
   pub import_records: IndexVec<ImportRecordIdx, ResolvedImportRecord>,
   /// Cross-pass AST-node side tables use post-semantic `NodeId`. See internal-docs/ast-mutation/implementation.md.
   ///
-  /// The key is the `NodeId` of `ImportDeclaration`, `ImportExpression`, `ExportNamedDeclaration`, `ExportAllDeclaration`
+  /// The key is the `NodeId` of `ImportDeclaration`, `ImportExpression`,
+  /// `ExportFromDeclaration`, or `ExportAllDeclaration`.
   /// and `CallExpression`(only when the callee is `require`).
   pub imports: FxHashMap<NodeId, ImportRecordIdx>,
   pub exports_kind: ExportsKind,

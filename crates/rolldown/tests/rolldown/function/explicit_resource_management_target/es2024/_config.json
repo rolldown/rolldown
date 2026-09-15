@@ -1,0 +1,8 @@
+{
+  "_comment": "es2024 is the target that exposed the gap: unicode-sets RegExp is supported from es2024 on, so a gate keyed on that one feature concluded 'nothing left to lower' — while `using` is not supported until es2026 and does need lowering. Before the fix this emitted `using resource = acquireResource();` unchanged.",
+  "config": {
+    "transform": {
+      "target": "es2024"
+    }
+  }
+}

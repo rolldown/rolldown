@@ -13,6 +13,7 @@ use rolldown_utils::{
 };
 use rustc_hash::FxHashSet;
 
+use crate::esm_init_obligations::{WrappedEsmInitTarget, collect_entry_reexported_wrapper_inits};
 use crate::{stages::link_stage::LinkStageOutput, types::generator::GenerateContext};
 
 pub fn render_wrapped_entry_chunk(
@@ -54,6 +55,36 @@ pub fn render_wrapped_entry_chunk(
       };
     }
 
+    if let Some(targets) = ctx.order_wrap_state.consumer_local_namespace_targets(entry_id) {
+      let mut rendered = String::new();
+      for target in targets {
+        let wrapper_ref = match target {
+          WrappedEsmInitTarget::Module(module_idx) => {
+            let target =
+              ctx.esm_init_target(*module_idx).expect("entry init target should have a wrapper");
+            debug_assert!(!target.tla_tainted);
+            target.wrapper_ref
+          }
+          WrappedEsmInitTarget::CjsCarrier(key) => {
+            ctx
+              .order_wrap_state
+              .order_cjs_carrier(*key)
+              .expect("entry CJS carrier should exist")
+              .wrapper_ref
+          }
+        };
+        let wrapper_name = ctx.finalized_string_pattern_for_symbol_ref(
+          wrapper_ref,
+          ctx.chunk_idx,
+          &ctx.chunk.canonical_names,
+        );
+        writeln!(rendered, "{wrapper_name}();").expect("writing to a string cannot fail");
+      }
+      return Some(rendered);
+    }
+
+    let reexport_init_calls = render_entry_reexported_wrapper_init_calls(ctx, entry_id, entry_meta);
+
     match ctx.esm_init_target(entry_id) {
       Some(target) => {
         let wrapper_ref_name = ctx.finalized_string_pattern_for_symbol_ref(
@@ -61,17 +92,93 @@ pub fn render_wrapped_entry_chunk(
           ctx.chunk_idx,
           &ctx.chunk.canonical_names,
         );
-        if target.tla_tainted {
-          Some(concat_string!("await ", wrapper_ref_name, "();"))
+        let own_init_call = if target.tla_tainted {
+          concat_string!("await ", wrapper_ref_name, "();")
         } else {
-          Some(concat_string!(wrapper_ref_name, "();"))
+          concat_string!(wrapper_ref_name, "();")
+        };
+        match reexport_init_calls {
+          Some(mut calls) => {
+            calls.push_str(&own_init_call);
+            Some(calls)
+          }
+          None => Some(own_init_call),
         }
       }
-      None => None,
+      None => reexport_init_calls,
     }
   } else {
     None
   }
+}
+
+/// Off-strict, an entry can re-export bindings owned by an ESM-wrapped module hosted in another
+/// chunk while every statement that could call that module's `init_*` was tree-shaken (a pure
+/// re-export barrel chain resolves bindings symbol-to-symbol, keeping the barrels' forwarding
+/// statements excluded). Cross-chunk registration still imports each such wrapper — the non-strict
+/// arm of `add_depended_symbol_with_wrapped_esm_init` pairs every depended binding with its
+/// wrapper — but nothing ever calls it, so the wrapped module never evaluates and its bindings
+/// read as `undefined` at runtime (issue #10543).
+///
+/// The entry chunk owns these calls: it already imports every such wrapper (no new chunk-graph
+/// edges, hence no new cyclic-evaluation hazards for eager top-level init calls in shared
+/// chunks). ESM evaluates dependencies before the importer's body, so an entry hosting its own
+/// body gets the calls as a body prelude from the finalizer
+/// (`entry_reexported_wrapper_init_prelude`); this chunk-tail path serves the remaining shapes,
+/// where the tail still precedes the entry body: a facade chunk hosts no body at all, and a
+/// wrapped entry's body only runs inside the wrapper invoked right after these calls.
+fn render_entry_reexported_wrapper_init_calls(
+  ctx: &GenerateContext<'_>,
+  entry_id: ModuleIdx,
+  entry_meta: &crate::types::linking_metadata::LinkingMetadata,
+) -> Option<String> {
+  if ctx.options.is_strict_execution_order_enabled() {
+    // Strict execution order routes entry initialization through order-wrap lowering
+    // (consumer-local targets and entry facades) instead.
+    return None;
+  }
+  let entry_hosted_here = ctx.chunk_graph.module_to_chunk[entry_id] == Some(ctx.chunk_idx);
+  let entry_is_wrapped = ctx.esm_init_target(entry_id).is_some();
+  if entry_hosted_here && !entry_is_wrapped {
+    return None;
+  }
+  let inits = collect_entry_reexported_wrapper_inits(
+    entry_id,
+    entry_meta,
+    &ctx.link_output.metas,
+    &ctx.link_output.module_table.modules,
+    &ctx.link_output.symbol_db,
+    Some(&ctx.chunk.canonical_names),
+  );
+  let mut rendered = String::new();
+  for init in inits {
+    // An in-chunk wrapped entry was wrapped together with its whole static graph (wrap
+    // propagation), so a same-chunk owner's init is already covered inside the chunk — by a
+    // statement-position call or the excluded-statement metadata's same-chunk arm — and calling
+    // it again here would be a pure duplicate. A facade chunk gets no such guarantee for the
+    // modules it hosts, so only the in-chunk wrapped entry filters.
+    if entry_hosted_here && ctx.chunk_graph.module_to_chunk[init.owner] == Some(ctx.chunk_idx) {
+      continue;
+    }
+    let wrapper_name = ctx.finalized_string_pattern_for_symbol_ref(
+      init.wrapper_ref,
+      ctx.chunk_idx,
+      &ctx.chunk.canonical_names,
+    );
+    if init.tla_tainted {
+      // Defensive parity with `wrapped_esm_init_call_expr`'s `await_if_tla`; believed
+      // unreachable today. Non-`esm` formats reject top-level await at scan time
+      // (`AstScanner::handle_top_level_await`), so this cannot produce an `await` inside a
+      // plain iife/umd/cjs factory. Under `esm`, every off-strict `WrapKind::Esm` cause is
+      // blocked from combining with TLA: a `require` reaching a TLA subtree is a build error
+      // (`REQUIRE_TLA`), and the dynamic-import-with-splitting-disabled cause is single-chunk,
+      // where a statement-position or metadata init always covers the module first.
+      writeln!(rendered, "await {wrapper_name}();").expect("writing to a string cannot fail");
+    } else {
+      writeln!(rendered, "{wrapper_name}();").expect("writing to a string cannot fail");
+    }
+  }
+  (!rendered.is_empty()).then_some(rendered)
 }
 
 #[expect(clippy::too_many_lines)] // Dispatches over every output format and export mode inline.

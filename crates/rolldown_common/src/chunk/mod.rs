@@ -86,6 +86,7 @@ pub struct Chunk {
   // Sorted by Chunk#exec_order of the imported chunks
   pub cross_chunk_imports: Vec<ChunkIdx>,
   pub cross_chunk_dynamic_imports: Vec<ChunkIdx>,
+  pub dynamic_imports_from_external_modules: Vec<ModuleIdx>,
   pub bits: BitSet,
   pub imports_from_other_chunks: FxIndexMap<ChunkIdx, Vec<CrossChunkImportItem>>,
   // Only meaningful for cjs format
@@ -180,7 +181,7 @@ impl Chunk {
       options.chunk_filenames.call(rollup_pre_rendered_chunk).await?
     };
 
-    let pattern_name = if is_entry { "entryFileNames" } else { "chunkFileNames" };
+    let pattern_name = if is_entry { "output.entryFileNames" } else { "output.chunkFileNames" };
 
     Ok(FilenameTemplate::new(ret, pattern_name))
   }
@@ -242,7 +243,7 @@ impl Chunk {
     };
     let sourcemap_filename = sourcemap_filename.call(rollup_pre_rendered_chunk).await?;
 
-    let filename_template = FilenameTemplate::new(sourcemap_filename, "sourcemapFileNames");
+    let filename_template = FilenameTemplate::new(sourcemap_filename, "output.sourcemapFileNames");
     let has_hash_pattern = filename_template.has_hash_pattern();
 
     let mut hash_placeholder = has_hash_pattern.then_some(vec![]);

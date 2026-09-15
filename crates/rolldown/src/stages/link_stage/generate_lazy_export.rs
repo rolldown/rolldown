@@ -232,7 +232,6 @@ fn json_object_expr_to_esm(link_staged: &mut LinkStage, module_idx: ModuleIdx) -
       )))
       // export all declaration
       .chain(std::iter::once(Statement::new_export_named_stmt(
-        None,
         declaration_binding_names.iter(),
         &ast_builder,
       )));

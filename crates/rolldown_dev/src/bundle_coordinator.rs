@@ -7,10 +7,13 @@ use std::{
 use anyhow::Context;
 use arcstr::ArcStr;
 use futures::FutureExt;
+#[cfg(target_os = "macos")]
 use notify::EventKind;
 use rolldown_common::WatcherChangeKind;
 use rolldown_error::BuildResult;
-use rolldown_fs_watcher::{DynFsWatcher, FsEventResult, RecursiveMode};
+use rolldown_fs_watcher::{
+  FsChangeKind, FsEventResult, FsWatcher, RecursiveMode, map_notify_event,
+};
 use rolldown_utils::{dashmap::FxDashSet, indexmap::FxIndexMap, pattern_filter};
 use sugar_path::SugarPath;
 use tokio::sync::Mutex;
@@ -38,7 +41,7 @@ pub struct BundleCoordinator {
   /// field doc on `DevEngine::next_hmr_patch_id`.
   next_hmr_patch_id: Arc<AtomicU32>,
   rx: CoordinatorReceiver,
-  watcher: StdMutex<DynFsWatcher>,
+  watcher: StdMutex<FsWatcher>,
   watched_files: FxDashSet<ArcStr>,
   /// Tracks the state of the initial build
   state: CoordinatorState,
@@ -55,7 +58,7 @@ impl BundleCoordinator {
     bundler: Arc<Mutex<Bundler>>,
     ctx: SharedDevContext,
     rx: CoordinatorReceiver,
-    watcher: DynFsWatcher,
+    watcher: FsWatcher,
     next_hmr_patch_id: Arc<AtomicU32>,
   ) -> Self {
     Self {
@@ -158,40 +161,33 @@ impl BundleCoordinator {
     }
   }
 
-  /// Handle file change events from watcher
+  /// Handle file change events from watcher.
+  ///
+  /// Rename mapping is shared with build watch via [`map_notify_event`].
+  /// See `internal-docs/dev-engine/implementation.md` ("From fs event to queued task").
   async fn handle_watch_event(&mut self, watch_event: FsEventResult) {
     match watch_event {
       Ok(batched_events) => {
         let mut changed_files = FxIndexMap::default();
-        batched_events.into_iter().for_each(|batched_event| {
-          match &batched_event.detail.kind {
-            EventKind::Create(_create_kind) => {
-              for path in batched_event.detail.paths {
-                changed_files.insert(path, WatcherChangeKind::Create);
-              }
-            }
-            #[cfg(target_os = "macos")]
+        for batched_event in batched_events {
+          #[cfg(target_os = "macos")]
+          if matches!(
+            batched_event.detail.kind,
             EventKind::Modify(notify::event::ModifyKind::Metadata(_))
-              if !self.ctx.options.use_polling =>
-            {
-              // When using kqueue on mac, ignore metadata changes as it happens frequently and doesn't affect the build in most cases
-              // Note that when using polling, we shouldn't ignore metadata changes as the polling watcher prefer to emit them over
-              // content change events
-            }
-            EventKind::Modify(notify::event::ModifyKind::Name(notify::event::RenameMode::From))
-            | EventKind::Remove(_) => {
-              for path in batched_event.detail.paths {
-                changed_files.insert(path, WatcherChangeKind::Delete);
-              }
-            }
-            EventKind::Modify(_modify_kind) => {
-              for path in batched_event.detail.paths {
-                changed_files.insert(path, WatcherChangeKind::Update);
-              }
-            }
-            _ => {}
+          ) && !self.ctx.options.use_polling
+          {
+            // kqueue on mac emits metadata events often; they do not affect the
+            // build in most cases. Polling prefers metadata over content events,
+            // so those must still be mapped.
+            continue;
           }
-        });
+
+          for (path, kind) in
+            map_notify_event(&batched_event.detail.kind, batched_event.detail.paths)
+          {
+            changed_files.insert(path, watcher_change_kind(kind));
+          }
+        }
 
         self.handle_file_changes(changed_files).await;
       }
@@ -486,7 +482,6 @@ impl BundleCoordinator {
   /// Update watcher paths based on current build output
   async fn update_watch_paths(&self) -> BuildResult<()> {
     let bundler = self.bundler.lock().await;
-    let watch_files = bundler.watch_files();
     let cwd = bundler.options().cwd.to_string_lossy().to_string();
 
     let include = self.ctx.options.watch_include.as_deref();
@@ -494,16 +489,31 @@ impl BundleCoordinator {
 
     let mut watcher = self.watcher.lock().ok().context("Failed to acquire watcher lock")?;
     let mut paths_mut = watcher.paths_mut();
-    for watch_file in watch_files.iter() {
-      let watch_file = &**watch_file;
+    for watch_file in bundler.watch_files().iter() {
+      let watch_file = watch_file.as_str();
       if !self.watched_files.contains(watch_file)
         && pattern_filter::filter(exclude, include, watch_file, &cwd).inner()
       {
-        self.watched_files.insert(watch_file.to_string().into());
-        paths_mut.add(watch_file.as_path(), RecursiveMode::NonRecursive)?;
+        let path = watch_file.as_path();
+        match paths_mut.add(path, RecursiveMode::NonRecursive) {
+          Ok(()) => {
+            self.watched_files.insert(watch_file.to_string().into());
+          }
+          Err(error) => {
+            tracing::debug!(name = "notify watch skipped", path = ?path, error = ?error);
+          }
+        }
       }
     }
     paths_mut.commit()?;
     Ok(())
+  }
+}
+
+fn watcher_change_kind(kind: FsChangeKind) -> WatcherChangeKind {
+  match kind {
+    FsChangeKind::Create => WatcherChangeKind::Create,
+    FsChangeKind::Update => WatcherChangeKind::Update,
+    FsChangeKind::Delete => WatcherChangeKind::Delete,
   }
 }

@@ -1,20 +1,19 @@
-use std::path::PathBuf;
-use std::sync::Arc;
 use std::{
   fs,
   io::{Read, Write},
-  path::Path,
+  path::{Path, PathBuf},
   process::Command,
+  sync::Arc,
 };
 
 use anyhow::Context;
 use oxc::parser::{ParseOptions, Parser};
 use oxc::span::SourceType;
 use rolldown::{
-  BundleOutput, Bundler, BundlerBuilder, BundlerOptions, IsExternal, OutputFormat, Platform,
-  SourceMapType, plugin::__inner::SharedPluginable,
+  BundleOutput, Bundler, BundlerBuilder, BundlerOptions, ChecksOptions, IsExternal,
+  NormalizedBundlerOptions, OutputFormat, Platform, SourceMapType,
+  plugin::{__inner::SharedPluginable, Plugin},
 };
-use rolldown::{ChecksOptions, NormalizedBundlerOptions};
 use rolldown_common::Output;
 use rolldown_dev::{BundlerConfig, DevEngine, DevOptions, DevWatchOptions};
 use rolldown_error::BuildResult;
@@ -132,7 +131,7 @@ impl IntegrationTest {
           .with_options(ParseOptions { allow_return_outside_function: true, ..Default::default() })
           .parse();
 
-        if ret.panicked || !ret.diagnostics.is_empty() {
+        if ret.fatal_error || !ret.diagnostics.is_empty() {
           let errors_str = ret
             .diagnostics
             .iter()
@@ -565,7 +564,7 @@ impl IntegrationTest {
   ) {
     // Registered last so it runs right before the internal dce pass; see the module docs of
     // `preserve_region_markers` for why snapshots need markers kept intact.
-    plugins.push(Arc::new(PreserveRegionMarkersPlugin));
+    plugins.push(Plugin::new_shared(PreserveRegionMarkersPlugin));
 
     let test_folder_path = &self.test_folder_path;
 
@@ -615,10 +614,11 @@ impl IntegrationTest {
     // Dispatch to appropriate build method and generate snapshot
     let snapshot_content = if hmr_mode_enabled {
       let artifacts_snapshot =
-        self.run_multiple_for_dev(multiple_options, plugins, &hmr_steps).await;
+        Box::pin(self.run_multiple_for_dev(multiple_options, plugins, &hmr_steps)).await;
       artifacts_snapshot.render(&self.test_meta)
     } else {
-      let artifacts_snapshot = self.run_multiple_for_build(multiple_options, plugins).await;
+      let artifacts_snapshot =
+        Box::pin(self.run_multiple_for_build(multiple_options, plugins)).await;
       artifacts_snapshot.render(&self.test_meta)
     };
 
@@ -672,7 +672,12 @@ impl IntegrationTest {
     if let Some(experimental) = &mut options.experimental {
       if let Some(dev_mode) = &mut experimental.dev_mode {
         if dev_mode.implement.is_none() {
-          dev_mode.implement = Some(include_str!("./hmr-runtime.js").to_owned());
+          dev_mode.implement = Some(format!(
+            "{}\n{}",
+            include_str!("../../rolldown_plugin_hmr/src/runtime/runtime-extra-dev-common.js"),
+            include_str!("./hmr-runtime.js")
+          ));
+          dev_mode.skip_common_runtime_injection = Some(true);
         }
       }
     }

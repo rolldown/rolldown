@@ -172,7 +172,6 @@ Regardless of which approach is chosen for subscriber scoping, a **pre-emit chec
 
 ## Unresolved Questions
 
-- **Output location:** Currently hardcoded to `node_modules/.rolldown/` relative to real `process.cwd()`, not `InputOptions.cwd`. This means the devtools output may not land where expected if cwd differs.
 - **Incremental/watch mode:** The devtools system works for both `ClassicBundler` (one-shot) and core `Bundler` (incremental), but successive builds within the same session append to the same `logs.json`. No explicit "rebuild boundary" action exists yet.
 - **Dev engine integration:** `BindingDevEngine` creates a session but uses `Session::dummy()` — devtools is not yet wired up for the dev/HMR engine.
 

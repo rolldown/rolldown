@@ -67,8 +67,8 @@ __rolldown_runtime__.registerFactory("adder.js", "esm", (function(__rolldown_mod
 		var __rolldown_exports__ = __rolldown_runtime__.__exportAll({ tag: () => tag });
 		__rolldown_runtime__.registerModule(__rolldown_module_id__, { exports: __rolldown_exports__ });
 		__rolldown_runtime__.initModule("lib.js");
-		const hot_adder = __rolldown_runtime__.createModuleHotContext(__rolldown_module_id__);
 		var import_lib_00 = __rolldown_runtime__.loadExports("lib.js");
+		const hot_adder = __rolldown_runtime__.createModuleHotContext(__rolldown_module_id__);
 		const tag = `adder-${import_lib_00.value}`;
 		hot_adder.accept();
 	} finally {}
@@ -97,8 +97,8 @@ __rolldown_runtime__.registerFactory("accepter.js", "esm", (function(__rolldown_
 		var __rolldown_exports__ = __rolldown_runtime__.__exportAll({ read: () => read });
 		__rolldown_runtime__.registerModule(__rolldown_module_id__, { exports: __rolldown_exports__ });
 		__rolldown_runtime__.initModule("lib.js");
-		const hot_accepter = __rolldown_runtime__.createModuleHotContext(__rolldown_module_id__);
 		var import_lib_00 = __rolldown_runtime__.loadExports("lib.js");
+		const hot_accepter = __rolldown_runtime__.createModuleHotContext(__rolldown_module_id__);
 		const read = () => import_lib_00.value;
 		hot_accepter.accept();
 	} finally {}
@@ -111,8 +111,8 @@ __rolldown_runtime__.registerFactory("adder.js", "esm", (function(__rolldown_mod
 		var __rolldown_exports__ = __rolldown_runtime__.__exportAll({ tag: () => tag });
 		__rolldown_runtime__.registerModule(__rolldown_module_id__, { exports: __rolldown_exports__ });
 		__rolldown_runtime__.initModule("lib.js");
-		const hot_adder = __rolldown_runtime__.createModuleHotContext(__rolldown_module_id__);
 		var import_lib_10 = __rolldown_runtime__.loadExports("lib.js");
+		const hot_adder = __rolldown_runtime__.createModuleHotContext(__rolldown_module_id__);
 		const tag = `adder-${import_lib_10.value}`;
 		hot_adder.accept();
 	} finally {}

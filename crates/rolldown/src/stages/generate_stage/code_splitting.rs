@@ -2,6 +2,12 @@ use std::{borrow::Cow, cmp::Ordering, collections::VecDeque, path::Path};
 
 use crate::{
   chunk_graph::ChunkGraph,
+  esm_init_obligations::{
+    ObligationPurpose, WrappedEsmInitTarget, WrappedEsmInitTargetContext,
+    collect_eager_order_cjs_carriers_for_consumer_local_route,
+    collect_wrapped_esm_init_targets_for_import_record, import_record_has_live_binding_consumer,
+    record_is_init_obligation,
+  },
   stages::generate_stage::{
     chunk_ext::ChunkDebugExt,
     chunk_optimizer::{ChunkOptimizationGraph, RuntimeMergeCascade},
@@ -47,7 +53,7 @@ impl GenerateStage<'_> {
   #[tracing::instrument(level = "debug", skip_all)]
   pub async fn generate_chunks(
     &mut self,
-    used_symbol_refs: &mut UsedSymbolRefsBuilder,
+    used_symbol_refs_builder: &mut UsedSymbolRefsBuilder,
   ) -> BuildResult<ChunkGraph> {
     // Count total entry points (not unique modules) to handle duplicates correctly
     let entries_len: u32 = self
@@ -59,6 +65,7 @@ impl GenerateStage<'_> {
       .try_into()
       .expect("Too many entries, u32 overflowed.");
     let mut chunk_graph = ChunkGraph::new(self.link_output.module_table.modules.len());
+    let pre_chunk_order_state = self.pre_chunk_order_state(used_symbol_refs_builder);
     chunk_graph.chunk_table.chunks.reserve(entries_len as usize);
 
     let mut index_splitting_info: IndexSplittingInfo = oxc_index::index_vec![SplittingInfo {
@@ -163,11 +170,12 @@ impl GenerateStage<'_> {
           &mut chunk_graph,
           &mut bits_to_chunk,
           &input_base,
-          used_symbol_refs,
+          used_symbol_refs_builder,
+          &pre_chunk_order_state,
         )
         .await?;
     }
-    self.merge_external_import_symbols(&chunk_graph, used_symbol_refs);
+    self.merge_external_import_symbols(&chunk_graph, used_symbol_refs_builder);
 
     chunk_graph.sort_chunk_modules(self.link_output, self.options);
 
@@ -271,7 +279,7 @@ impl GenerateStage<'_> {
   fn merge_external_import_symbols(
     &mut self,
     chunk_graph: &ChunkGraph,
-    used_symbol_refs: &UsedSymbolRefsBuilder,
+    used_symbol_refs_builder: &UsedSymbolRefsBuilder,
   ) {
     // Merge external import namespaces at chunk level.
     for symbol_set in self.link_output.external_import_namespace_merger.values() {
@@ -289,7 +297,8 @@ impl GenerateStage<'_> {
           continue;
         }
         group.sort_unstable_by_key(|item| self.link_output.module_table[item.owner].exec_order());
-        let Some(idx) = group.iter().position(|item| used_symbol_refs.contains(item)) else {
+        let Some(idx) = group.iter().position(|item| used_symbol_refs_builder.contains(item))
+        else {
           continue;
         };
         // In the extreme case, idx would eq to group.len() - 1, which means the first symbol is the only one that is used.
@@ -493,13 +502,18 @@ impl GenerateStage<'_> {
     js_import_order
   }
 
-  pub fn merge_cjs_namespace(&mut self, chunk_graph: &mut ChunkGraph) {
+  pub fn merge_cjs_namespace(
+    &mut self,
+    chunk_graph: &mut ChunkGraph,
+    order_state: &super::order_wrap_state::OrderWrapState,
+  ) {
     let mut chunk_list: IndexVec<ChunkIdx, FxHashMap<(ModuleIdx, usize), Vec<SymbolRef>>> =
       index_vec![FxHashMap::default(); chunk_graph.chunk_table.len()];
     for (k, info) in &self.link_output.safely_merge_cjs_ns_map {
       for symbol_ref in info
         .namespace_refs
         .iter()
+        .filter(|ns| !order_state.is_order_cjs_carrier_namespace(**ns))
         .filter_map(|ns| {
           // We must check statement inclusion here (not in linking stage) because
           // `include_statements` runs after the pass that populates
@@ -917,7 +931,8 @@ impl GenerateStage<'_> {
     chunk_graph: &mut ChunkGraph,
     bits_to_chunk: &mut FxHashMap<BitSet, ChunkIdx>,
     input_base: &ArcStr,
-    used_symbol_refs: &mut UsedSymbolRefsBuilder,
+    used_symbol_refs_builder: &mut UsedSymbolRefsBuilder,
+    pre_chunk_order_state: &super::order_wrap_state::OrderWrapState,
   ) -> BuildResult<()> {
     // Determine which modules belong to which chunk. A module could belong to multiple chunks.
     let tag_registry = ModuleTagRegistry::new();
@@ -937,6 +952,8 @@ impl GenerateStage<'_> {
         entry_index.try_into().expect("Too many entries, u32 overflowed."),
         index_splitting_info,
         is_user_defined_entry,
+        used_symbol_refs_builder,
+        pre_chunk_order_state,
       );
     }
 
@@ -960,7 +977,12 @@ impl GenerateStage<'_> {
         .sum::<usize>()
         .try_into()
         .expect("Too many entries, u32 overflowed.");
-      self.optimize_dynamic_entry_bits(index_splitting_info, chunk_graph, entries_len);
+      self.optimize_dynamic_entry_bits(
+        index_splitting_info,
+        chunk_graph,
+        entries_len,
+        used_symbol_refs_builder,
+      );
     }
     self.extract_standalone_runtime_chunk(
       index_splitting_info,
@@ -1062,7 +1084,7 @@ impl GenerateStage<'_> {
         input_base,
         &mut module_is_assigned,
         &temp_chunk_graph,
-        used_symbol_refs,
+        used_symbol_refs_builder,
       );
     }
 
@@ -1125,11 +1147,15 @@ impl GenerateStage<'_> {
     entry_index: u32,
     index_splitting_info: &mut IndexSplittingInfo,
     is_user_defined_entry: bool,
+    used_symbol_refs_builder: &UsedSymbolRefsBuilder,
+    pre_chunk_order_state: &super::order_wrap_state::OrderWrapState,
   ) {
     debug_assert!(
       self.link_output.module_table[entry_module_idx].is_normal(),
       "Entry module {entry_module_idx:?} should be a normal module. External dynamic imports should be filtered out in module_loader.rs."
     );
+    let has_consumer_local_reexport_routes =
+      pre_chunk_order_state.has_consumer_local_reexport_routes();
     let mut q = VecDeque::from([entry_module_idx]);
     while let Some(module_idx) = q.pop_front() {
       if !self.link_output.module_table[module_idx].is_normal() {
@@ -1153,14 +1179,111 @@ impl GenerateStage<'_> {
       if is_user_defined_entry {
         index_splitting_info[module_idx].tags_bit_set.set_bit(ModuleTag::INITIAL_BIT);
       }
-      // Walk only the dependencies this module actually loads at runtime (referenced-symbol
-      // owners and side-effect-full import targets). A side-effect-free module whose bindings
-      // resolve elsewhere — e.g. a pure barrel that only re-exports — must not be treated as
-      // reachable, otherwise it (and its subtree) is shared into this entry's chunk group even
-      // though the emitted code never imports it (#8920).
+      let Some(module) = self.link_output.module_table[module_idx].as_normal() else {
+        continue;
+      };
+      let ctx = WrappedEsmInitTargetContext {
+        importer: module,
+        importer_meta: meta,
+        modules: &self.link_output.module_table.modules,
+        metas: &self.link_output.metas,
+        stmt_infos: &self.link_output.stmt_infos,
+        symbol_db: &self.link_output.symbol_db,
+        constant_value_map: &self.link_output.global_constant_symbol_map,
+        inline_const_mode: self.options.optimization.inline_const.map(|config| config.mode),
+        order_wrap_state: pre_chunk_order_state,
+        strict_execution_order: true,
+      };
+      let is_consumer_local_barrel =
+        pre_chunk_order_state.is_consumer_local_reexport_route(module_idx);
+
+      // A carrierized direct re-export barrel has no shared executable body after order lowering.
+      // Its module-wide `load_dependencies` is the union of every re-export used by any entry, so
+      // traversing it here would couple all routes before the per-record carrier even exists. A
+      // barrel that is itself the entry still exposes its whole namespace and therefore keeps the
+      // ordinary full traversal. Otherwise preserve only consumer-local waypoint chains and
+      // effectful carriers unconditionally; selected leaves are added below from each consuming
+      // import record through the shared resolver.
+      if is_consumer_local_barrel && module_idx != entry_module_idx {
+        for rec in &module.import_records {
+          if rec.kind == ImportKind::Import
+            && let Some(importee_idx) = rec.resolved_module
+            && pre_chunk_order_state.is_consumer_local_reexport_route(importee_idx)
+          {
+            q.push_back(importee_idx);
+          }
+        }
+        for target in
+          collect_eager_order_cjs_carriers_for_consumer_local_route(&ctx, module_idx, |_| true)
+        {
+          let WrappedEsmInitTarget::CjsCarrier(key) = target else {
+            unreachable!("eager consumer-local target should be an order CJS carrier");
+          };
+          let carrier = pre_chunk_order_state
+            .order_cjs_carrier(key)
+            .expect("pre-chunk order CJS carrier should exist");
+          q.push_back(carrier.importee);
+        }
+        continue;
+      }
       meta.load_dependencies.iter().copied().for_each(|dep_idx| {
         q.push_back(dep_idx);
       });
+      if !has_consumer_local_reexport_routes {
+        continue;
+      }
+      for (stmt_idx, stmt_info) in self.link_output.stmt_infos[module_idx].iter_enumerated() {
+        let stmt_is_included = meta.stmt_info_included.has_bit(stmt_idx);
+        for &rec_idx in &stmt_info.import_records {
+          let record = &module.import_records[rec_idx];
+          let Some(importee_idx) = record.resolved_module else {
+            continue;
+          };
+          // The resolver below only changes placement for consumer-local waypoints. Check that
+          // cheap route fact before scanning all named imports and included statement references
+          // for importer-local binding demand.
+          if !pre_chunk_order_state.is_consumer_local_reexport_route(importee_idx) {
+            continue;
+          }
+          let has_live_binding =
+            import_record_has_live_binding_consumer(&ctx, rec_idx, |symbol_ref| {
+              used_symbol_refs_builder.contains(&symbol_ref)
+            });
+          if !record_is_init_obligation(
+            ObligationPurpose::Project,
+            pre_chunk_order_state,
+            module_idx,
+            record,
+            rec_idx,
+            stmt_is_included,
+          ) && !has_live_binding
+          {
+            continue;
+          }
+          // Resolve through every transparent waypoint, not only a barrel that directly owns a
+          // carrier. An outer ESM-only barrel can re-export a binding from an inner carrierized
+          // barrel; the importer-local symbol route must cross that whole chain before the inner
+          // barrel's module-wide dependency union is suppressed.
+          let placement_targets = collect_wrapped_esm_init_targets_for_import_record(
+            &ctx,
+            rec_idx,
+            |symbol_ref| used_symbol_refs_builder.contains(&symbol_ref),
+            |_| true,
+            |_| false,
+          );
+          for target in placement_targets {
+            match target {
+              WrappedEsmInitTarget::Module(target_idx) => q.push_back(target_idx),
+              WrappedEsmInitTarget::CjsCarrier(key) => {
+                let carrier = pre_chunk_order_state
+                  .order_cjs_carrier(key)
+                  .expect("pre-chunk order CJS carrier should exist");
+                q.push_back(carrier.importee);
+              }
+            }
+          }
+        }
+      }
     }
   }
 }

@@ -136,7 +136,8 @@ const ignoreTests = [
   "rollup@function@jsx@unnecessary-import-source: throws when preserving JSX syntax with an unnecessary import source", // `jsx.importSource` cannot be set with `jsx: 'preserve'`
   "rollup@function@catch-rust-panic: Catch Rust panics and then throw them in Node", // specific to Rollup's implementation
   "rollup@function@exports-are-not-defined: Throw descriptive error message for used export is not defined", // the input code triggers a different error in rolldown
-  "rollup@function@dynamic-import-call-method-with-this-await: includes the correct \"this\" context when calling a method on a dynamically imported module via \"await\"" // Rolldown does not necessarily keep the `this` value for exported functions
+  "rollup@function@dynamic-import-call-method-with-this-await: includes the correct \"this\" context when calling a method on a dynamically imported module via \"await\"", // Rolldown does not necessarily keep the `this` value for exported functions
+  "rollup@sourcemaps@names-transformed-render-chunk: names are recovered if transforms are used@generates es", // the assertion expects spaces not to be injected, but the default `minify: 'dce-only'` injects it
 ]
 
 module.exports = {

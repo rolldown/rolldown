@@ -1,24 +1,48 @@
-import { beforeAll, expect, test, vi } from 'vitest';
+import fs from 'node:fs';
 
-// The runtime references helpers that rolldown injects at build time
-// (`__toESM` etc.) from class-field initializers, so they must exist as
-// globals before a DevRuntime is constructed.
-beforeAll(() => {
-  const g = globalThis as any;
-  g.__toESM = (mod: any) => mod;
-  g.__toCommonJS = (mod: any) => mod;
-  g.__exportAll = (all: any) => all;
-  g.__reExport = () => {};
-});
+import { expect, test, vi } from 'vitest';
 
 async function createRuntime() {
-  const runtimeUrl = new URL(
-    '../../../../crates/rolldown_plugin_hmr/src/runtime/runtime-extra-dev-common.js',
-    import.meta.url,
-  ).href;
+  const runtimeUrl = import.meta.resolve('rolldown/experimental/runtime');
   const { DevRuntime, MissingFactoryError } = await import(runtimeUrl);
   return { runtime: new DevRuntime('test-client') as any, MissingFactoryError };
 }
+
+test('the standalone runtime uses the canonical runtime helpers', async () => {
+  const { runtime } = await createRuntime();
+  const commonJsModule = { value: 1 };
+
+  expect(runtime.__toESM(commonJsModule).default).toBe(commonJsModule);
+  const esmModule = runtime.__toCommonJS({ default: commonJsModule });
+  expect(esmModule.__esModule).toBe(true);
+  expect(esmModule.default).toBe(commonJsModule);
+});
+
+test('the packaged runtime base is byte-identical to the bundled runtime base', () => {
+  const packagedRuntimeBaseUrl = new URL(
+    './experimental-runtime-base.mjs',
+    import.meta.resolve('rolldown/experimental/runtime'),
+  );
+  const bundledRuntimeBaseUrl = new URL(
+    '../../../../crates/rolldown/src/runtime/runtime-base.js',
+    import.meta.url,
+  );
+
+  expect(fs.existsSync(packagedRuntimeBaseUrl)).toBe(true);
+  if (!fs.existsSync(packagedRuntimeBaseUrl)) return;
+  expect(fs.readFileSync(packagedRuntimeBaseUrl, 'utf8')).toBe(
+    fs.readFileSync(bundledRuntimeBaseUrl, 'utf8'),
+  );
+});
+
+test('the package does not emit a separate runtime injection source', () => {
+  const runtimeSourceUrl = new URL(
+    './experimental-runtime-source.mjs',
+    import.meta.resolve('rolldown/experimental/runtime'),
+  );
+
+  expect(fs.existsSync(runtimeSourceUrl)).toBe(false);
+});
 
 test('registerGraph maintains static + dynamic reverse indexes; getImporters unions them', async () => {
   const { runtime } = await createRuntime();

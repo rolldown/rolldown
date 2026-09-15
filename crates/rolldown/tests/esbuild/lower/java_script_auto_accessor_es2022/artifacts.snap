@@ -17,18 +17,18 @@ three(), six();
 ```js
 //#region ts-assign/ts-assign.ts
 three(), six();
-(class {
+var StaticNormal = class {
 	static accessor a = b;
 	static {
 		this.c = d;
 	}
-});
-(class {
+};
+var StaticPrivate = class {
 	static accessor #a = b;
 	static {
 		this.c = d;
 	}
-});
+};
 //#endregion
 
 ```
@@ -38,14 +38,14 @@ three(), six();
 ```js
 //#region ts-define/ts-define.ts
 three(), six();
-(class {
+var StaticNormal = class {
 	static accessor a = b;
 	static c = d;
-});
-(class {
+};
+var StaticPrivate = class {
 	static accessor #a = b;
 	static c = d;
-});
+};
 //#endregion
 
 ```

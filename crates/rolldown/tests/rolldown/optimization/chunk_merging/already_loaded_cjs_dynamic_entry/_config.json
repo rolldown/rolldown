@@ -1,0 +1,11 @@
+{
+  "_comment": "The dynamic entry `app.cjs` is a CommonJS module, so the namespace extraction goes through the `WrapKind::Cjs` arm: the chunk exports the entry's wrapper (`require_xxx`) and the dynamic importer is rewritten to `.then((n) => __toESM(n.require_xxx()))` instead of reading a synthetic namespace object.",
+  "config": {
+    "input": [
+      {
+        "name": "main",
+        "import": "./main.js"
+      }
+    ]
+  }
+}

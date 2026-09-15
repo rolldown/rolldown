@@ -169,7 +169,13 @@ impl ClassicBundler {
 
   fn enable_debug_tracing_if_needed(&mut self, options: &BundlerOptions) {
     if self.debug_tracer.is_none() && options.devtools.is_some() {
-      self.debug_tracer = Some(rolldown_devtools::DebugTracer::init(Arc::clone(&self.session_id)));
+      // Mirrors the `cwd` default in `prepare_build_context`; the wasm binding always supplies one because it has no process working directory.
+      let cwd = options
+        .cwd
+        .clone()
+        .unwrap_or_else(|| std::env::current_dir().expect("Failed to get current dir"));
+      self.debug_tracer =
+        Some(rolldown_devtools::DebugTracer::init(Arc::clone(&self.session_id), cwd));
       // Caveat: `Span` must be created after initialization of `DebugTracer`, we need it to inject data to the tracking system.
       let session_span =
         tracing::debug_span!("session", CONTEXT_session_id = self.session_id.as_ref());

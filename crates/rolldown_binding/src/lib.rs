@@ -29,10 +29,24 @@ use napi_derive::napi;
 #[cfg(all(
   not(target_family = "wasm"),
   not(feature = "default_global_allocator"),
-  not(target_env = "ohos")
+  not(target_env = "ohos"),
+  not(feature = "tracking_allocator")
 ))]
 #[global_allocator]
 static ALLOC: mimalloc_safe::MiMalloc = mimalloc_safe::MiMalloc;
+
+// Same mimalloc, wrapped with allocation counters. The counters are read
+// through `getNativeMemoryStats()` in `native_memory.rs`; the cfg there must
+// stay in sync with this one.
+#[cfg(all(
+  not(target_family = "wasm"),
+  not(feature = "default_global_allocator"),
+  not(target_env = "ohos"),
+  feature = "tracking_allocator"
+))]
+#[global_allocator]
+static ALLOC: rolldown_tracking_allocator::TrackingAllocator =
+  rolldown_tracking_allocator::TrackingAllocator;
 
 pub mod binding_bundler;
 pub mod binding_dev_engine;
@@ -40,6 +54,7 @@ pub mod binding_dev_options;
 pub mod binding_watcher_bundler;
 pub mod classic_bundler;
 mod generated;
+pub mod native_memory;
 pub mod options;
 pub mod parallel_js_plugin_registry;
 pub mod transform;

@@ -23,6 +23,7 @@ bitflags! {
     const FilenameConflict = 1 << 15;
     const FilenameOutsideOutputDirectoryError = 1 << 16;
     const FileNotFoundError = 1 << 17;
+    const ModuleLevelDirective = 1 << 44;
     const AssignToImportError = 1 << 18;
     const CommonJsVariableInEsm = 1 << 19;
     const ImportIsUndefined = 1 << 20;
@@ -53,5 +54,6 @@ bitflags! {
     const RequireTlaError = 1 << 46;
     const LargeBarrelModules = 1 << 47;
     const SourcemapBroken = 1 << 48;
+    const NamespaceConflict = 1 << 49;
   }
 }

@@ -54,6 +54,7 @@ Prebuilt binaries are distributed for the following platforms (grouped by [Node.
 - Other
   - Linux arm64 musl (`aarch64-unknown-linux-musl`)
   - Android arm64 (`aarch64-linux-android`)
+  - Android armv7 (`armv7-linux-androideabi`)
   - Wasm + Wasi (`wasm32-wasip1-threads`)
 
 If you are using a platform that a prebuilt binary is not distributed, you have the following options:

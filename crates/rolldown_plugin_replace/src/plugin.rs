@@ -6,6 +6,7 @@ use anyhow::Result;
 use rolldown_plugin::{
   HookRenderChunkOutput, HookTransformOutput, HookTransformOutputMap, HookUsage, Plugin,
 };
+use rolldown_utils::js_regex::HybridRegex;
 use rustc_hash::FxHashMap;
 use string_wizard::{MagicString, SourceMapOptions};
 
@@ -19,14 +20,6 @@ pub struct ReplaceOptions {
   pub prevent_assignment: bool,
   pub object_guards: bool,
   pub sourcemap: bool,
-}
-
-// We don't reuse `HybridRegex` in `rolldown_utils`, since
-// only the enum is needed
-#[derive(Debug)]
-enum HybridRegex {
-  Optimize(regex::Regex),
-  Ecma(regress::Regex),
 }
 
 #[derive(Debug)]
@@ -78,9 +71,9 @@ impl ReplacePlugin {
     // https://rustexp.lpil.uk/
     let matcher = if let Some((delimiter_left, delimiter_right)) = options.delimiters {
       let pattern = format!("{delimiter_left}({joined_keys}){delimiter_right}{lookahead}");
-      HybridRegex::Ecma(regress::Regex::new(&pattern)?)
+      HybridRegex::new_ecma(&pattern)?
     } else {
-      HybridRegex::Optimize(
+      HybridRegex::from_optimized(
         regex::Regex::new(&format!("\\b({joined_keys})\\b"))
           .expect("to be a valid regex because we escape the keys"),
       )
@@ -98,9 +91,10 @@ impl ReplacePlugin {
     code: &'text str,
     magic_string: &mut MagicString<'text>,
   ) -> bool {
-    match self.matcher {
-      HybridRegex::Optimize(ref regex) => self.optimized_replace(code, magic_string, regex),
-      HybridRegex::Ecma(ref regex) => self.fallback_replace(code, magic_string, regex),
+    if let Some(regex) = self.matcher.as_optimized() {
+      self.optimized_replace(code, magic_string, regex)
+    } else {
+      self.fallback_replace(code, magic_string)
     }
   }
 
@@ -157,12 +151,13 @@ impl ReplacePlugin {
     &'text self,
     code: &'text str,
     magic_string: &mut MagicString<'text>,
-    regex: &regress::Regex,
   ) -> bool {
     let mut changed = false;
-    for captures in regex.find_iter(code) {
+    let matches =
+      self.matcher.find_from(code, 0).expect("fallback regex should use the ECMAScript engine");
+    for captures in matches {
       // We expect the regex we used will always have one `Captures`.
-      let Some(Some(matched)) = captures.captures.first() else {
+      let Some(matched) = captures.group(1) else {
         break;
       };
       if self.prevent_assignment && is_variable_declaration_prefix(&code[0..matched.start]) {

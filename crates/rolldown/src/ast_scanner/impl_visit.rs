@@ -20,7 +20,7 @@ use rolldown_common::{
 #[cfg(debug_assertions)]
 use rolldown_ecmascript::ToSourceString;
 use rolldown_ecmascript_utils::{ExpressionExt, is_top_level};
-use rolldown_error::BuildDiagnostic;
+use rolldown_error::{BuildDiagnostic, EventKindSwitcher};
 use rolldown_std_utils::OptionExt;
 
 use crate::{ast_scanner::cjs_export_analyzer::CommonJsAstType, utils};
@@ -83,7 +83,10 @@ impl<'me, 'ast: 'me> VisitJs<'ast> for AstScanner<'me, 'ast> {
         Some(&self.namespace_object_symbol_ids),
       );
       let mut stmt_eval_facts = analyzer.analyze_stmt(stmt);
-      if self.immutable_ctx.options.is_strict_on_demand_wrapping_enabled()
+      // `ExecutionOrderSensitive` is read outside the wrap planner too — it gates which leaf
+      // modules `sort_chunk_modules` may sort by id — so it has to mean the same thing in every
+      // strict plan. Collecting the reasons only for the selective plan left the default weaker.
+      if self.immutable_ctx.options.is_strict_execution_order_enabled()
         && !self.result.ecma_view_meta.contains(EcmaViewMeta::ExecutionOrderSensitive)
         && !stmt_eval_facts.is_order_sensitive()
       {
@@ -129,6 +132,21 @@ impl<'me, 'ast: 'me> VisitJs<'ast> for AstScanner<'me, 'ast> {
     }
 
     self.result.hashbang_range = program.hashbang.as_ref().map(GetSpan::span);
+    if self.immutable_ctx.options.checks.contains(EventKindSwitcher::ModuleLevelDirective) {
+      for directive in &program.directives {
+        if !directive.is_use_strict() {
+          self.result.warnings.push(
+            BuildDiagnostic::module_level_directive(
+              self.immutable_ctx.id.to_string(),
+              directive.directive.to_string(),
+              self.immutable_ctx.source.clone(),
+              directive.span,
+            )
+            .with_severity_warning(),
+          );
+        }
+      }
+    }
     self.result.directive_range = program.directives.iter().map(GetSpan::span).collect();
     self.result.dynamic_import_rec_exports_usage =
       std::mem::take(&mut self.dynamic_import_usage_info.dynamic_import_exports_usage);

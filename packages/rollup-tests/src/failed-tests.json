@@ -232,6 +232,8 @@
   "rollup@chunking form@preserve-modules-proxy-import: correctly resolves imports via a proxy module as direct imports when preserving modules@generates cjs",
   "rollup@chunking form@preserve-modules-root: confirm preserveModulesRoot restructures src appropriately@generates cjs",
   "rollup@chunking form@preserve-modules-root: confirm preserveModulesRoot restructures src appropriately@generates es",
+  "rollup@chunking form@preserve-modules-sanitized-input-base: sanitizes the input base like module ids when preserving modules (#5446)@generates cjs",
+  "rollup@chunking form@preserve-modules-sanitized-input-base: sanitizes the input base like module ids when preserving modules (#5446)@generates es",
   "rollup@chunking form@preserve-modules-virtual-modules-filename-pattern: Generates actual files whose filename adheres to entryFileNames for virtual modules when preserving modules@generates cjs",
   "rollup@chunking form@preserve-modules-virtual-modules-filename-pattern: Generates actual files whose filename adheres to entryFileNames for virtual modules when preserving modules@generates es",
   "rollup@chunking form@preserve-modules-virtual-modules: Generates actual files for virtual modules when preserving modules@generates cjs",
@@ -292,6 +294,5 @@
   "rollup@form@reexport-self: handles recursions when a module reexports its own namespace",
   "rollup@function@catch-scope-nested-deconflicting: deconflicts nested catch scope parameters correctly",
   "rollup@function@emit-file@no-input: It is not necessary to provide an input if a dynamic entry is emitted",
-  "rollup@function@resolveid-recursive-call: skipSelf: true option in resolveId hook option should skip the plugin if it has been called before with the same id and importer, see #5768 for more details",
-  "rollup@sourcemaps@names-transformed-render-chunk: names are recovered if transforms are used@generates es"
+  "rollup@function@resolveid-recursive-call: skipSelf: true option in resolveId hook option should skip the plugin if it has been called before with the same id and importer, see #5768 for more details"
 ]

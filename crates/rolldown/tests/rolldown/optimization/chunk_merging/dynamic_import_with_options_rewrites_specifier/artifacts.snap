@@ -1,0 +1,35 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## a.js
+
+```js
+//#region a.js
+const targetPromise = import("./dyn.js").then((n) => n.t);
+//#endregion
+export { targetPromise };
+
+```
+
+## b.js
+
+```js
+import "./dyn.js";
+
+```
+
+## dyn.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+//#region observer.js
+globalThis.observed = true;
+//#endregion
+//#region target.js
+var target_exports = /* @__PURE__ */ __exportAll({ value: () => 1 });
+//#endregion
+export { target_exports as t };
+
+```

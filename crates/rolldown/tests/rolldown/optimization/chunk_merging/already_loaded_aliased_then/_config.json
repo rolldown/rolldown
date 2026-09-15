@@ -1,0 +1,17 @@
+{
+  "_comment": "The dynamic entry has a local symbol named `then` exported under an alias (`export { then as ready }`), so its namespace has a `ready` key and is NOT thenable. `minifyInternalExports` is set explicitly in both cells so the harness does not add its own opposite variant, keeping the emitted chunk count deterministic: the second cell is the naming path where chunk exports come from declaring symbols.",
+  "config": {
+    "input": [
+      {
+        "name": "main",
+        "import": "./main.js"
+      }
+    ],
+    "minifyInternalExports": true
+  },
+  "configVariants": [
+    {
+      "minifyInternalExports": false
+    }
+  ]
+}

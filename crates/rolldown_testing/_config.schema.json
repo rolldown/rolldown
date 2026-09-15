@@ -1081,6 +1081,13 @@
             "null"
           ]
         },
+        "skipCommonRuntimeInjection": {
+          "description": "Do not inject the common dev runtime before the custom implementation.\n\nDeprecated: common runtime injection will be disabled by default in the future.",
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
         "lazy": {
           "description": "Enable lazy compilation for dynamic imports.",
           "type": [
@@ -1437,6 +1444,12 @@
             "null"
           ]
         },
+        "moduleLevelDirective": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
         "commonJsVariableInEsm": {
           "type": [
             "boolean",
@@ -1516,6 +1529,12 @@
           ]
         },
         "sourcemapBroken": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "namespaceConflict": {
           "type": [
             "boolean",
             "null"
@@ -2114,6 +2133,13 @@
             {
               "type": "null"
             }
+          ]
+        },
+        "hotUpdate": {
+          "description": "Whether the `hotUpdate` plugin hook is called. Off by default until Vite supports it.",
+          "type": [
+            "boolean",
+            "null"
           ]
         }
       },

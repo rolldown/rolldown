@@ -1,0 +1,760 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# warnings
+
+## INEFFECTIVE_DYNAMIC_IMPORT
+
+```text
+[INEFFECTIVE_DYNAMIC_IMPORT] node_modules/pure-barrel/index.js is dynamically imported by main.js but also statically imported by main.js, route.js, dynamic import will not move module into another chunk.
+
+```
+
+# Assets
+
+## clone-deep.js
+
+```js
+import { n as __esmMin, r as __toESM, t as __commonJSMin } from "./rolldown-runtime.js";
+//#region node_modules/pure-barrel/stack.js
+var Stack;
+function init_stack() {
+	return (init_stack = __esmMin((() => {
+		globalThis.__events.push("stack");
+		Stack = class {
+			items = [];
+			push(value) {
+				this.items.push(value);
+			}
+		};
+	})))();
+}
+//#endregion
+//#region node_modules/pure-barrel/clone-deep.cjs
+var require_clone_deep = /* @__PURE__ */ __commonJSMin(((exports, module) => {
+	globalThis.__events.push("clone-deep");
+	module.exports = function cloneDeep(value) {
+		return JSON.parse(JSON.stringify(value));
+	};
+}));
+var import_clone_deep;
+function init_pure_barrel_cjs_0() {
+	return (init_pure_barrel_cjs_0 = __esmMin((() => {
+		import_clone_deep = /* @__PURE__ */ __toESM(require_clone_deep(), 1);
+	})))();
+}
+//#endregion
+export { init_stack as i, init_pure_barrel_cjs_0 as n, Stack as r, import_clone_deep as t };
+
+```
+
+## main.js
+
+```js
+import { n as loadNamespace, r as loadRoute, t as init_main } from "./main2.js";
+init_main();
+export { loadNamespace, loadRoute };
+
+```
+
+## main2.js
+
+```js
+import { n as __esmMin } from "./rolldown-runtime.js";
+//#region node_modules/pure-barrel/cn.js
+function cn(...values) {
+	return values.filter(Boolean).join(" ");
+}
+function init_cn() {
+	return (init_cn = __esmMin((() => {
+		globalThis.__events.push("cn");
+	})))();
+}
+//#endregion
+//#region node_modules/pure-barrel/index.js
+function init_pure_barrel() {
+	return (init_pure_barrel = __esmMin((() => {})))();
+}
+//#endregion
+//#region main.js
+function loadRoute() {
+	return import("./route.js");
+}
+function loadNamespace() {
+	return import("./pure-barrel.js");
+}
+function init_main() {
+	return (init_main = __esmMin((() => {
+		init_cn();
+		globalThis.__events.push(`main:${cn("a", "b")}`);
+	})))();
+}
+//#endregion
+export { cn as a, init_pure_barrel as i, loadNamespace as n, init_cn as o, loadRoute as r, init_main as t };
+
+```
+
+## pure-barrel.js
+
+```js
+import { i as init_stack, n as init_pure_barrel_cjs_0, r as Stack, t as import_clone_deep } from "./clone-deep.js";
+import { a as cn, o as init_cn } from "./main2.js";
+init_cn();
+init_stack();
+init_pure_barrel_cjs_0();
+var cloneDeep = import_clone_deep.default;
+export { Stack, cloneDeep, cn };
+
+```
+
+## rolldown-runtime.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+export { __esmMin as n, __toESM as r, __commonJSMin as t };
+
+```
+
+## route.js
+
+```js
+import { n as __esmMin } from "./rolldown-runtime.js";
+import { i as init_stack, n as init_pure_barrel_cjs_0, r as Stack, t as import_clone_deep } from "./clone-deep.js";
+import "./main2.js";
+//#region route.js
+var stack, value;
+function init_route() {
+	return (init_route = __esmMin((() => {
+		init_stack(), init_pure_barrel_cjs_0();
+		stack = new Stack();
+		stack.push((0, import_clone_deep.default)(1));
+		globalThis.__events.push("route");
+		value = stack.items[0];
+	})))();
+}
+//#endregion
+init_route();
+export { value };
+
+```
+
+# Variant: on-demand: [on_demand_wrapping: true]
+
+## warnings
+
+### INEFFECTIVE_DYNAMIC_IMPORT
+
+```text
+[INEFFECTIVE_DYNAMIC_IMPORT] node_modules/pure-barrel/index.js is dynamically imported by main.js but also statically imported by main.js, route.js, dynamic import will not move module into another chunk.
+
+```
+
+## Assets
+
+### clone-deep.js
+
+```js
+import { n as __esmMin, r as __toESM, t as __commonJSMin } from "./rolldown-runtime.js";
+//#region node_modules/pure-barrel/stack.js
+var Stack;
+function init_stack() {
+	return (init_stack = __esmMin((() => {
+		globalThis.__events.push("stack");
+		Stack = class {
+			items = [];
+			push(value) {
+				this.items.push(value);
+			}
+		};
+	})))();
+}
+//#endregion
+//#region node_modules/pure-barrel/clone-deep.cjs
+var require_clone_deep = /* @__PURE__ */ __commonJSMin(((exports, module) => {
+	globalThis.__events.push("clone-deep");
+	module.exports = function cloneDeep(value) {
+		return JSON.parse(JSON.stringify(value));
+	};
+}));
+var import_clone_deep;
+function init_pure_barrel_cjs_0() {
+	return (init_pure_barrel_cjs_0 = __esmMin((() => {
+		import_clone_deep = /* @__PURE__ */ __toESM(require_clone_deep(), 1);
+	})))();
+}
+//#endregion
+export { init_stack as i, init_pure_barrel_cjs_0 as n, Stack as r, import_clone_deep as t };
+
+```
+
+### main.js
+
+```js
+import { n as loadNamespace, r as loadRoute, t as init_main } from "./main2.js";
+init_main();
+export { loadNamespace, loadRoute };
+
+```
+
+### main2.js
+
+```js
+import { n as __esmMin } from "./rolldown-runtime.js";
+//#region node_modules/pure-barrel/cn.js
+function cn(...values) {
+	return values.filter(Boolean).join(" ");
+}
+function init_cn() {
+	return (init_cn = __esmMin((() => {
+		globalThis.__events.push("cn");
+	})))();
+}
+//#endregion
+//#region node_modules/pure-barrel/index.js
+function init_pure_barrel() {
+	return (init_pure_barrel = __esmMin((() => {})))();
+}
+//#endregion
+//#region main.js
+function loadRoute() {
+	return import("./route.js");
+}
+function loadNamespace() {
+	return import("./pure-barrel.js");
+}
+function init_main() {
+	return (init_main = __esmMin((() => {
+		init_cn();
+		globalThis.__events.push(`main:${cn("a", "b")}`);
+	})))();
+}
+//#endregion
+export { cn as a, init_pure_barrel as i, loadNamespace as n, init_cn as o, loadRoute as r, init_main as t };
+
+```
+
+### pure-barrel.js
+
+```js
+import { i as init_stack, n as init_pure_barrel_cjs_0, r as Stack, t as import_clone_deep } from "./clone-deep.js";
+import { a as cn, o as init_cn } from "./main2.js";
+init_cn();
+init_stack();
+init_pure_barrel_cjs_0();
+var cloneDeep = import_clone_deep.default;
+export { Stack, cloneDeep, cn };
+
+```
+
+### rolldown-runtime.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+export { __esmMin as n, __toESM as r, __commonJSMin as t };
+
+```
+
+### route.js
+
+```js
+import { n as __esmMin } from "./rolldown-runtime.js";
+import { i as init_stack, n as init_pure_barrel_cjs_0, r as Stack, t as import_clone_deep } from "./clone-deep.js";
+import "./main2.js";
+//#region route.js
+var stack, value;
+function init_route() {
+	return (init_route = __esmMin((() => {
+		init_stack(), init_pure_barrel_cjs_0();
+		stack = new Stack();
+		stack.push((0, import_clone_deep.default)(1));
+		globalThis.__events.push("route");
+		value = stack.items[0];
+	})))();
+}
+//#endregion
+init_route();
+export { value };
+
+```
+
+# Variant: on-demand-preserve-modules: [on_demand_wrapping: true] [preserve_modules: true]
+
+## Assets
+
+### _virtual/_rolldown/runtime.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+export { __commonJSMin, __esmMin, __exportAll, __toESM };
+
+```
+
+### _virtual/pure-barrel.js
+
+```js
+import { __esmMin, __exportAll } from "./_rolldown/runtime.js";
+import { cn } from "../node_modules/pure-barrel/cn.js";
+import { Stack, init_stack } from "../node_modules/pure-barrel/stack.js";
+import { import_clone_deep, init_pure_barrel_cjs_0 } from "../node_modules/pure-barrel/clone-deep.js";
+//#region node_modules/pure-barrel/index.js
+var pure_barrel_exports = /* @__PURE__ */ __exportAll({
+	Stack: () => Stack,
+	cloneDeep: () => import_clone_deep.default,
+	cn: () => cn
+});
+function init_pure_barrel() {
+	return (init_pure_barrel = __esmMin((() => {})))();
+}
+//#endregion
+export { init_pure_barrel, init_pure_barrel_cjs_0, init_stack, pure_barrel_exports };
+
+```
+
+### main.js
+
+```js
+import { __esmMin } from "./_virtual/_rolldown/runtime.js";
+import { cn } from "./node_modules/pure-barrel/cn.js";
+//#region main.js
+function loadRoute() {
+	return import("./route.js");
+}
+function loadNamespace() {
+	return import("./_virtual/pure-barrel.js").then((n) => (n.init_stack(), n.init_pure_barrel_cjs_0(), n.pure_barrel_exports));
+}
+function init_main() {
+	return (init_main = __esmMin((() => {
+		globalThis.__events.push(`main:${cn("a", "b")}`);
+	})))();
+}
+//#endregion
+init_main();
+export { loadNamespace, loadRoute };
+
+```
+
+### node_modules/pure-barrel/clone-deep.js
+
+```js
+import { __commonJSMin, __esmMin, __toESM } from "../../_virtual/_rolldown/runtime.js";
+//#region node_modules/pure-barrel/clone-deep.cjs
+var require_clone_deep = /* @__PURE__ */ __commonJSMin(((exports, module) => {
+	globalThis.__events.push("clone-deep");
+	module.exports = function cloneDeep(value) {
+		return JSON.parse(JSON.stringify(value));
+	};
+}));
+var import_clone_deep;
+function init_pure_barrel_cjs_0() {
+	return (init_pure_barrel_cjs_0 = __esmMin((() => {
+		import_clone_deep = /* @__PURE__ */ __toESM(require_clone_deep(), 1);
+	})))();
+}
+//#endregion
+export default require_clone_deep();
+export { import_clone_deep, init_pure_barrel_cjs_0 };
+
+```
+
+### node_modules/pure-barrel/cn.js
+
+```js
+//#region node_modules/pure-barrel/cn.js
+globalThis.__events.push("cn");
+function cn(...values) {
+	return values.filter(Boolean).join(" ");
+}
+//#endregion
+export { cn };
+
+```
+
+### node_modules/pure-barrel/stack.js
+
+```js
+import { __esmMin } from "../../_virtual/_rolldown/runtime.js";
+//#region node_modules/pure-barrel/stack.js
+var Stack;
+function init_stack() {
+	return (init_stack = __esmMin((() => {
+		globalThis.__events.push("stack");
+		Stack = class {
+			items = [];
+			push(value) {
+				this.items.push(value);
+			}
+		};
+	})))();
+}
+//#endregion
+init_stack();
+export { Stack, init_stack };
+
+```
+
+### route.js
+
+```js
+import { __esmMin } from "./_virtual/_rolldown/runtime.js";
+import { Stack, init_stack } from "./node_modules/pure-barrel/stack.js";
+import { import_clone_deep, init_pure_barrel_cjs_0 } from "./node_modules/pure-barrel/clone-deep.js";
+import "./_virtual/pure-barrel.js";
+//#region route.js
+var stack, value;
+function init_route() {
+	return (init_route = __esmMin((() => {
+		init_stack(), init_pure_barrel_cjs_0();
+		stack = new Stack();
+		stack.push((0, import_clone_deep.default)(1));
+		globalThis.__events.push("route");
+		value = stack.items[0];
+	})))();
+}
+//#endregion
+init_route();
+export { value };
+
+```
+
+# Variant: cjs-output: [format: Cjs]
+
+## warnings
+
+### INEFFECTIVE_DYNAMIC_IMPORT
+
+```text
+[INEFFECTIVE_DYNAMIC_IMPORT] node_modules/pure-barrel/index.js is dynamically imported by main.js but also statically imported by main.js, route.js, dynamic import will not move module into another chunk.
+
+```
+
+## Assets
+
+### clone-deep.js
+
+```js
+const require_rolldown_runtime = require("./rolldown-runtime.js");
+//#region node_modules/pure-barrel/stack.js
+var Stack;
+function init_stack() {
+	return (init_stack = require_rolldown_runtime.__esmMin((() => {
+		globalThis.__events.push("stack");
+		Stack = class {
+			items = [];
+			push(value) {
+				this.items.push(value);
+			}
+		};
+	})))();
+}
+//#endregion
+//#region node_modules/pure-barrel/clone-deep.cjs
+var require_clone_deep = /* @__PURE__ */ require_rolldown_runtime.__commonJSMin(((exports, module) => {
+	globalThis.__events.push("clone-deep");
+	module.exports = function cloneDeep(value) {
+		return JSON.parse(JSON.stringify(value));
+	};
+}));
+var import_clone_deep;
+function init_pure_barrel_cjs_0() {
+	return (init_pure_barrel_cjs_0 = require_rolldown_runtime.__esmMin((() => {
+		import_clone_deep = /* @__PURE__ */ require_rolldown_runtime.__toESM(require_clone_deep(), 1);
+	})))();
+}
+//#endregion
+Object.defineProperty(exports, "Stack", {
+	enumerable: true,
+	get: function() {
+		return Stack;
+	}
+});
+Object.defineProperty(exports, "import_clone_deep", {
+	enumerable: true,
+	get: function() {
+		return import_clone_deep;
+	}
+});
+Object.defineProperty(exports, "init_pure_barrel_cjs_0", {
+	enumerable: true,
+	get: function() {
+		return init_pure_barrel_cjs_0;
+	}
+});
+Object.defineProperty(exports, "init_stack", {
+	enumerable: true,
+	get: function() {
+		return init_stack;
+	}
+});
+
+```
+
+### main.js
+
+```js
+Object.defineProperty(exports, Symbol.toStringTag, { value: "Module" });
+const require_main = require("./main2.js");
+require_main.init_main();
+exports.loadNamespace = require_main.loadNamespace;
+exports.loadRoute = require_main.loadRoute;
+
+```
+
+### main2.js
+
+```js
+const require_rolldown_runtime = require("./rolldown-runtime.js");
+//#region node_modules/pure-barrel/cn.js
+function cn(...values) {
+	return values.filter(Boolean).join(" ");
+}
+function init_cn() {
+	return (init_cn = require_rolldown_runtime.__esmMin((() => {
+		globalThis.__events.push("cn");
+	})))();
+}
+//#endregion
+//#region node_modules/pure-barrel/index.js
+function init_pure_barrel() {
+	return (init_pure_barrel = require_rolldown_runtime.__esmMin((() => {})))();
+}
+//#endregion
+//#region main.js
+function loadRoute() {
+	return Promise.resolve().then(() => require("./route.js"));
+}
+function loadNamespace() {
+	return Promise.resolve().then(() => require("./pure-barrel.js"));
+}
+function init_main() {
+	return (init_main = require_rolldown_runtime.__esmMin((() => {
+		init_cn();
+		globalThis.__events.push(`main:${cn("a", "b")}`);
+	})))();
+}
+//#endregion
+Object.defineProperty(exports, "cn", {
+	enumerable: true,
+	get: function() {
+		return cn;
+	}
+});
+Object.defineProperty(exports, "init_cn", {
+	enumerable: true,
+	get: function() {
+		return init_cn;
+	}
+});
+Object.defineProperty(exports, "init_main", {
+	enumerable: true,
+	get: function() {
+		return init_main;
+	}
+});
+Object.defineProperty(exports, "init_pure_barrel", {
+	enumerable: true,
+	get: function() {
+		return init_pure_barrel;
+	}
+});
+Object.defineProperty(exports, "loadNamespace", {
+	enumerable: true,
+	get: function() {
+		return loadNamespace;
+	}
+});
+Object.defineProperty(exports, "loadRoute", {
+	enumerable: true,
+	get: function() {
+		return loadRoute;
+	}
+});
+
+```
+
+### pure-barrel.js
+
+```js
+const require_clone_deep = require("./clone-deep.js");
+const require_main = require("./main2.js");
+require_main.init_cn();
+require_clone_deep.init_stack();
+require_clone_deep.init_pure_barrel_cjs_0();
+exports.Stack = require_clone_deep.Stack;
+Object.defineProperty(exports, "cloneDeep", {
+	enumerable: true,
+	get: function() {
+		return require_clone_deep.import_clone_deep.default;
+	}
+});
+exports.cn = require_main.cn;
+
+```
+
+### rolldown-runtime.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+Object.defineProperty(exports, "__commonJSMin", {
+	enumerable: true,
+	get: function() {
+		return __commonJSMin;
+	}
+});
+Object.defineProperty(exports, "__esmMin", {
+	enumerable: true,
+	get: function() {
+		return __esmMin;
+	}
+});
+Object.defineProperty(exports, "__toESM", {
+	enumerable: true,
+	get: function() {
+		return __toESM;
+	}
+});
+
+```
+
+### route.js
+
+```js
+const require_rolldown_runtime = require("./rolldown-runtime.js");
+const require_clone_deep = require("./clone-deep.js");
+require("./main2.js");
+//#region route.js
+var stack, value;
+function init_route() {
+	return (init_route = require_rolldown_runtime.__esmMin((() => {
+		require_clone_deep.init_stack(), require_clone_deep.init_pure_barrel_cjs_0();
+		stack = new require_clone_deep.Stack();
+		stack.push((0, require_clone_deep.import_clone_deep.default)(1));
+		globalThis.__events.push("route");
+		value = stack.items[0];
+	})))();
+}
+//#endregion
+init_route();
+exports.value = value;
+
+```
+
+# Variant: no-treeshake: [treeshake: Boolean(false)]
+
+## warnings
+
+### INEFFECTIVE_DYNAMIC_IMPORT
+
+```text
+[INEFFECTIVE_DYNAMIC_IMPORT] node_modules/pure-barrel/index.js is dynamically imported by main.js but also statically imported by main.js, route.js, dynamic import will not move module into another chunk.
+
+```
+
+## Assets
+
+### main.js
+
+```js
+import { n as loadNamespace, r as loadRoute, t as init_main } from "./main2.js";
+init_main();
+export { loadNamespace, loadRoute };
+
+```
+
+### main2.js
+
+```js
+import { i as __toESM, n as __esmMin, r as __exportAll, t as __commonJSMin } from "./rolldown-runtime.js";
+//#region node_modules/pure-barrel/cn.js
+function cn(...values) {
+	return values.filter(Boolean).join(" ");
+}
+function init_cn() {
+	return (init_cn = __esmMin((() => {
+		globalThis.__events.push("cn");
+	})))();
+}
+//#endregion
+//#region node_modules/pure-barrel/stack.js
+var Stack;
+function init_stack() {
+	return (init_stack = __esmMin((() => {
+		globalThis.__events.push("stack");
+		Stack = class {
+			items = [];
+			push(value) {
+				this.items.push(value);
+			}
+		};
+	})))();
+}
+//#endregion
+//#region node_modules/pure-barrel/clone-deep.cjs
+var require_clone_deep = /* @__PURE__ */ __commonJSMin(((exports, module) => {
+	globalThis.__events.push("clone-deep");
+	module.exports = function cloneDeep(value) {
+		return JSON.parse(JSON.stringify(value));
+	};
+}));
+//#endregion
+//#region node_modules/pure-barrel/index.js
+var pure_barrel_exports = /* @__PURE__ */ __exportAll({
+	Stack: () => Stack,
+	cloneDeep: () => import_clone_deep.default,
+	cn: () => cn
+});
+var import_clone_deep;
+function init_pure_barrel() {
+	return (init_pure_barrel = __esmMin((() => {
+		init_cn();
+		init_stack();
+		import_clone_deep = /* @__PURE__ */ __toESM(require_clone_deep(), 1);
+	})))();
+}
+//#endregion
+//#region main.js
+function loadRoute() {
+	return import("./route.js");
+}
+function loadNamespace() {
+	return Promise.resolve().then(() => (init_pure_barrel(), pure_barrel_exports));
+}
+function init_main() {
+	return (init_main = __esmMin((() => {
+		init_pure_barrel();
+		globalThis.__events.push(`main:${cn("a", "b")}`);
+	})))();
+}
+//#endregion
+export { init_pure_barrel as a, import_clone_deep as i, loadNamespace as n, Stack as o, loadRoute as r, init_stack as s, init_main as t };
+
+```
+
+### rolldown-runtime.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+export { __toESM as i, __esmMin as n, __exportAll as r, __commonJSMin as t };
+
+```
+
+### route.js
+
+```js
+import { a as init_pure_barrel, i as import_clone_deep, o as Stack } from "./main2.js";
+import { n as __esmMin } from "./rolldown-runtime.js";
+//#region route.js
+var stack, value;
+function init_route() {
+	return (init_route = __esmMin((() => {
+		init_pure_barrel();
+		stack = new Stack();
+		stack.push((0, import_clone_deep.default)(1));
+		globalThis.__events.push("route");
+		value = stack.items[0];
+	})))();
+}
+//#endregion
+init_route();
+export { value };
+
+```

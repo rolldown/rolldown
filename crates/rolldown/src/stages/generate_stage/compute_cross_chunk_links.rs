@@ -1,8 +1,9 @@
 use super::{FinalEsmInitMetadata, GenerateStage, Sealed};
 use crate::chunk_graph::ChunkGraph;
 use crate::esm_init_obligations::{
-  ObligationPurpose, WrappedEsmInitTargetContext,
-  collect_wrapped_esm_init_targets_for_import_record, for_each_init_obligation_record,
+  ObligationPurpose, WrappedEsmInitTarget, WrappedEsmInitTargetContext,
+  collect_entry_reexported_wrapper_inits, collect_wrapped_esm_init_targets_for_import_record,
+  for_each_init_obligation_record,
 };
 use crate::utils::chunk::conflict_resolver::{ConflictResolver, deconflict_order_key};
 use crate::utils::chunk::normalize_preserve_entry_signature;
@@ -13,8 +14,9 @@ use oxc_str::CompactStr;
 use rolldown_common::{
   ChunkIdx, ChunkKind, ChunkMeta, CrossChunkImportItem, EntryPointKind, ExportsKind, ImportKind,
   ImportRecordMeta, Module, ModuleIdx, NamedImport, OutputFormat, PostChunkOptimizationOperation,
-  PreserveEntrySignatures, RUNTIME_HELPER_NAMES, RuntimeHelper, SymbolRef, TaggedSymbolRef,
-  UsedSymbolRefs, UsedSymbolRefsBuilder, WrapKind,
+  PreserveEntrySignatures, RUNTIME_HELPER_NAMES, ResolvedImportRecord, RuntimeHelper, SymbolRef,
+  SymbolRefDb, TaggedSymbolRef, UsedSymbolRefs, UsedSymbolRefsBuilder, UsedSymbolRefsView,
+  WrapKind,
 };
 use rolldown_utils::index_vec_ext::IndexVecRefExt as _;
 use rolldown_utils::indexmap::{FxIndexMap, FxIndexSet};
@@ -28,8 +30,20 @@ type IndexChunkAllImportsFromExternalModules = IndexVec<ChunkIdx, FxIndexSet<Mod
 type IndexChunkExportedSymbols = IndexVec<ChunkIdx, FxHashMap<SymbolRef, Vec<CompactStr>>>;
 type IndexCrossChunkImports = IndexVec<ChunkIdx, FxHashSet<ChunkIdx>>;
 type IndexCrossChunkDynamicImports = IndexVec<ChunkIdx, FxIndexSet<ChunkIdx>>;
+type IndexChunkDynamicImportsFromExternalModules = IndexVec<ChunkIdx, FxIndexSet<ModuleIdx>>;
 type IndexImportsFromOtherChunks =
   IndexVec<ChunkIdx, FxHashMap<ChunkIdx, Vec<CrossChunkImportItem>>>;
+
+/// A chunk is loaded through `import('./chunk.js')`, whose promise resolves with the chunk's
+/// namespace object. Promise resolution assimilates any value with a callable `then` as a
+/// thenable, so a chunk exporting `then` hijacks every dynamic import of that chunk — including
+/// the `.then((n) => n.ns)` the finalizer generates to reach a merged dynamic entry, whose
+/// callback then receives whatever the exported `then` resolved with instead of the namespace.
+///
+/// Internal cross-chunk export names are bundler-owned, so simply never hand out `then` for one.
+/// Names the user can observe — an entry chunk's public exports and the export names an
+/// `emitFile` consumer relies on — are a contract and keep whatever they declare.
+const THENABLE_HAZARD_EXPORT_NAME: &str = "then";
 
 struct CrossChunkLinkState {
   index_chunk_exported_symbols: IndexChunkExportedSymbols,
@@ -38,7 +52,9 @@ struct CrossChunkLinkState {
   index_imports_from_other_chunks: IndexImportsFromOtherChunks,
   index_cross_chunk_imports: IndexCrossChunkImports,
   index_cross_chunk_dynamic_imports: IndexCrossChunkDynamicImports,
+  index_chunk_dynamic_imports_from_external_modules: IndexChunkDynamicImportsFromExternalModules,
   order_live_symbols: FxHashSet<SymbolRef>,
+  symbol_chunk_table: SymbolChunkTable,
 }
 
 #[derive(Clone, Copy)]
@@ -58,39 +74,28 @@ impl<'a> FinalEsmInitMetadataAvailability<'a> {
   }
 }
 
-/// What a cross-chunk link computation does with the symbol->chunk ownership it derives.
+/// Symbol -> owning chunk, derived by [`GenerateStage::collect_depended_symbols`] for one
+/// cross-chunk link pass.
 ///
-/// [`GenerateStage::collect_depended_symbols`] does not only *read* the chunk graph: it writes each
-/// declared symbol's owning chunk back into the shared symbol database, and
-/// [`GenerateStage::compute_chunk_imports`] then reads that ownership to resolve which chunk a
-/// depended symbol is imported from. So the write is load-bearing *within* one pass, and the pass
-/// cannot be turned into a plain read-only query by dropping it.
-///
-/// It can be scoped instead. `Scoped` records each symbol's previous owner while committing, so the
-/// caller can roll the database back afterwards and leave no trace. That is what lets the entry
-/// facade decision run the real link computation as a question ("which chunks import this chunk?")
-/// before the final pass answers it for real.
-enum SymbolChunkOwnership<'a> {
-  /// Keep the derived ownership. Used by the final [`GenerateStage::compute_cross_chunk_links`].
-  Commit,
-  /// Keep it only for the duration of this pass; record the previous owners into the journal so the
-  /// caller can restore them.
-  Scoped(&'a mut Vec<(SymbolRef, Option<ChunkIdx>)>),
+/// The derivation used to be written into the shared symbol database mid-pass so that
+/// [`GenerateStage::compute_chunk_imports`] could read it back — a load-bearing write that forced
+/// every link pass, including the what-if ones, to mutate shared state and undo it afterwards.
+/// Carried as pass-local data instead, the whole pass is read-only by construction: a pass whose
+/// result is never committed (the prediction pass, the entry-facade edge query) simply drops its
+/// table, and the final [`GenerateStage::compute_cross_chunk_links`] remains the single writer,
+/// flushing its table into the database in one place for the downstream consumers of
+/// `chunk_idx` (the CJS cross-chunk reference rendering in the module finalizer and the
+/// chunk-export generator).
+struct SymbolChunkTable {
+  map: FxHashMap<SymbolRef, ChunkIdx>,
 }
 
-trait UsedSymbolRefsView: Sync {
-  fn contains(&self, symbol_ref: &SymbolRef) -> bool;
-}
-
-impl UsedSymbolRefsView for UsedSymbolRefs {
-  fn contains(&self, symbol_ref: &SymbolRef) -> bool {
-    UsedSymbolRefs::contains(self, symbol_ref)
-  }
-}
-
-impl UsedSymbolRefsView for UsedSymbolRefsBuilder {
-  fn contains(&self, symbol_ref: &SymbolRef) -> bool {
-    UsedSymbolRefsBuilder::contains(self, symbol_ref)
+impl SymbolChunkTable {
+  /// The chunk owning `symbol_ref`, as this pass derived it; falls back to the value already in
+  /// the symbol database, mirroring the write-then-read behavior this table replaced (a symbol
+  /// the pass did not assign resolves exactly as it did then).
+  fn chunk_of(&self, symbol_ref: SymbolRef, symbols: &SymbolRefDb) -> Option<ChunkIdx> {
+    self.map.get(&symbol_ref).copied().or_else(|| symbols.get(symbol_ref).chunk_idx)
   }
 }
 
@@ -110,14 +115,20 @@ impl GenerateStage<'_> {
       index_imports_from_other_chunks,
       index_cross_chunk_imports,
       index_cross_chunk_dynamic_imports,
+      index_chunk_dynamic_imports_from_external_modules,
       order_live_symbols,
+      symbol_chunk_table,
     } = self.compute_cross_chunk_link_state(
       chunk_graph,
-      used_symbol_refs,
+      used_symbol_refs.view(),
       order_state,
       FinalEsmInitMetadataAvailability::Sealed(final_esm_init_metadata),
-      SymbolChunkOwnership::Commit,
     );
+    // The single flush of symbol->chunk ownership into the shared symbol database. Everything
+    // downstream that reads `chunk_idx` — the module finalizer and the chunk-export generator
+    // rendering CJS cross-chunk references — sees exactly this pass's derivation; the what-if
+    // passes (prediction, the entry-facade edge query) never write at all.
+    self.commit_symbol_chunk_table(&symbol_chunk_table);
 
     #[cfg(debug_assertions)]
     let predicted_static_import_edges: IndexVec<ChunkIdx, FxHashSet<ChunkIdx>> =
@@ -131,6 +142,13 @@ impl GenerateStage<'_> {
             .collect()
         })
         .collect();
+
+    #[cfg(debug_assertions)]
+    self.debug_assert_module_level_static_import_prediction(
+      chunk_graph,
+      used_symbol_refs.view(),
+      &index_imports_from_other_chunks,
+    );
 
     self.deconflict_exported_names(
       chunk_graph,
@@ -190,6 +208,7 @@ impl GenerateStage<'_> {
       index_sorted_imports_from_external_modules,
       index_sorted_cross_chunk_imports,
       index_cross_chunk_dynamic_imports,
+      index_chunk_dynamic_imports_from_external_modules,
       index_chunk_indirect_imports_from_external_modules.iter_mut(),
     ))
     .par_bridge()
@@ -200,6 +219,7 @@ impl GenerateStage<'_> {
         imports_from_external_modules,
         cross_chunk_imports,
         cross_chunk_dynamic_imports,
+        dynamic_imports_from_external_modules,
         chunk_indirect_imports_from_external_modules,
       )| {
         // deduplicated
@@ -211,6 +231,8 @@ impl GenerateStage<'_> {
         chunk.cross_chunk_imports = cross_chunk_imports;
         chunk.cross_chunk_dynamic_imports =
           cross_chunk_dynamic_imports.into_iter().collect::<Vec<_>>();
+        chunk.dynamic_imports_from_external_modules =
+          dynamic_imports_from_external_modules.into_iter().collect::<Vec<_>>();
         chunk.import_symbol_from_external_modules =
           std::mem::take(chunk_indirect_imports_from_external_modules);
       },
@@ -258,23 +280,23 @@ impl GenerateStage<'_> {
     }
   }
 
-  /// Compute provisional links for order analysis. Runtime symbol placement is cleared if moved.
-  /// Uses an empty order state and explicitly marks final-init metadata unavailable, so the edges
-  /// are the *pre-lowering* baseline topology (value and side-effect imports, before wrapping adds
-  /// `init_*` imports). The emergent-cycle fixpoint layers the plan's `init_*` forwarding edges on
-  /// top of this baseline (`post_lowering_import_edges`).
+  /// Compute provisional links for order analysis. Uses an empty order state and explicitly marks
+  /// final-init metadata unavailable, so the edges are the *pre-lowering* baseline topology (value
+  /// and side-effect imports, before wrapping adds `init_*` imports). The emergent-cycle fixpoint
+  /// layers the plan's `init_*` forwarding edges on top of this baseline
+  /// (`post_lowering_import_edges`). Read-only: the symbol ownership this pass derives is dropped
+  /// with its table, so no provisional values ever reach the symbol database.
   pub(super) fn predicted_static_import_edges(
-    &mut self,
+    &self,
     chunk_graph: &ChunkGraph,
-    used_symbol_refs: &UsedSymbolRefsBuilder,
+    used_symbol_refs_builder: &UsedSymbolRefsBuilder,
   ) -> IndexVec<ChunkIdx, FxHashSet<ChunkIdx>> {
     let empty_order_state = super::order_wrap_state::OrderWrapState::default();
     let state = self.compute_cross_chunk_link_state(
       chunk_graph,
-      used_symbol_refs,
+      used_symbol_refs_builder.view(),
       &empty_order_state,
       FinalEsmInitMetadataAvailability::Unavailable,
-      SymbolChunkOwnership::Commit,
     );
     Self::static_import_edges_of(chunk_graph, state)
   }
@@ -298,28 +320,133 @@ impl GenerateStage<'_> {
   /// "some chunk other than me imports me" is unchanged, and all facade decisions can be taken
   /// together from this one pre-facade snapshot.
   ///
-  /// The symbol->chunk ownership the pass commits is rolled back before returning, so this leaves
-  /// the symbol database exactly as it found it and the final pass is still the only writer.
+  /// The symbol->chunk ownership the pass derives stays in its pass-local [`SymbolChunkTable`] and
+  /// is dropped with the state, so this query is read-only by construction and the final pass is
+  /// still the only writer of the symbol database.
   pub(super) fn lowered_static_import_edges(
-    &mut self,
+    &self,
     chunk_graph: &ChunkGraph,
-    used_symbol_refs: &UsedSymbolRefsBuilder,
+    used_symbol_refs_builder: &UsedSymbolRefsBuilder,
     order_state: &super::order_wrap_state::OrderWrapState,
     final_esm_init_metadata: &Sealed<FinalEsmInitMetadata>,
   ) -> IndexVec<ChunkIdx, FxHashSet<ChunkIdx>> {
-    let mut journal = Vec::new();
     let state = self.compute_cross_chunk_link_state(
       chunk_graph,
-      used_symbol_refs,
+      used_symbol_refs_builder.view(),
       order_state,
       FinalEsmInitMetadataAvailability::Sealed(final_esm_init_metadata),
-      SymbolChunkOwnership::Scoped(&mut journal),
     );
-    let symbols = &mut self.link_output.symbol_db;
-    for (symbol_ref, previous_chunk_idx) in journal.into_iter().rev() {
-      symbols.get_mut(symbol_ref).chunk_idx = previous_chunk_idx;
-    }
     Self::static_import_edges_of(chunk_graph, state)
+  }
+
+  /// Reconciles the module-level prediction (`predicted_static_import_targets` plus
+  /// `entry_export_service_targets`) against the static chunk imports this pass just derived.
+  /// The already-loaded fold consumed that prediction before chunks existed, with two
+  /// obligations: the fold's cycle check must see every emitted edge, and its entry reachability
+  /// must not claim a side effect the emitted graph never runs. The contract is therefore
+  /// one-and-a-half-sided:
+  /// - every edge this pass derives must be predicted (a miss is the cycle-check bug class
+  ///   pinned by `optimization/chunk_merging/already_loaded_entry_reexport_service_edge`),
+  ///   except edges whose every import item is a runtime-owned symbol: per-chunk runtime-helper
+  ///   demands and CJS-format interop request those at emission time and the module-level walk
+  ///   does not model them;
+  /// - a predicted *entry-export service* edge with a side-effectful target must be emitted.
+  ///   Those targets exceed `load_dependencies`, so nothing but their liveness gate keeps entry
+  ///   reachability truthful; this direction validates that the gate mirrors emission. The base
+  ///   prediction is exempt from this direction: it filters `load_dependencies`, the same edges
+  ///   the pre-prediction bits reachability trusted, so its over-predictions are exactly
+  ///   main-parity — e.g. constant inlining drops a symbol's import (and can even orphan an
+  ///   annotated-side-effectful chunk, see `rollup@chunking form@namespace-reexport-side-effect-cache`)
+  ///   without touching `load_dependencies`, on main just as here.
+  ///
+  /// Service imports hang on the entry (possibly facade) chunk, so entry chunks predict them via
+  /// their `entry_module_idx` — hosted or not — plus the facade edge to the chunk hosting a
+  /// moved-away entry module.
+  ///
+  /// Scope: the hard direction covers the edges derived here (`index_imports_from_other_chunks`).
+  /// Edges pre-populated on `Chunk::imports_from_other_chunks` by chunk merging postdate the fold
+  /// and answer to `would_create_circular_dependency`, not to this prediction; they only join the
+  /// union used by the soft direction. This validates the prediction *function* on the final
+  /// state — the fold's decision-time snapshot predates the inclusion replays, which is why the
+  /// fold's own cycle graph over-approximates liveness instead of trusting it.
+  #[cfg(debug_assertions)]
+  fn debug_assert_module_level_static_import_prediction(
+    &self,
+    chunk_graph: &ChunkGraph,
+    used_symbol_refs_view: UsedSymbolRefsView<'_>,
+    index_imports_from_other_chunks: &IndexImportsFromOtherChunks,
+  ) {
+    if self.options.is_strict_execution_order_enabled() || self.options.preserve_modules {
+      return;
+    }
+    let runtime_idx = self.link_output.runtime.id();
+    for (chunk_idx, chunk) in chunk_graph.chunk_table.iter_enumerated() {
+      // A chunk with no modules is either a live entry facade or a husk left behind by facade
+      // elimination, runtime-chunk merging, or dynamic-entry absorption; the two are not
+      // distinguishable here and a husk gets no emission edges at all. Module-level prediction
+      // has nothing to say about either (their only edges are the emission-owned facade and
+      // service imports), so they are out of this contract's scope.
+      if chunk.modules.is_empty() {
+        continue;
+      }
+      // Predicted edge -> whether a side-effectful target reaches it through the service
+      // extension (the only component held to the soft direction).
+      let mut predicted: FxHashMap<ChunkIdx, bool> = FxHashMap::default();
+      let note_target =
+        |target: ModuleIdx, from_service: bool, predicted: &mut FxHashMap<ChunkIdx, bool>| {
+          if let Some(target_chunk_idx) = chunk_graph.module_to_chunk[target]
+            && target_chunk_idx != chunk_idx
+          {
+            let side_effectful = from_service
+              && self.link_output.module_table[target].side_effects().has_side_effects();
+            *predicted.entry(target_chunk_idx).or_insert(false) |= side_effectful;
+          }
+        };
+      for &module_idx in &chunk.modules {
+        for target in self.predicted_static_import_targets(module_idx) {
+          note_target(target, false, &mut predicted);
+        }
+      }
+      if let ChunkKind::EntryPoint { module: entry_module_idx, .. } = chunk.kind {
+        let mut service_targets = vec![];
+        self.entry_export_service_targets(
+          entry_module_idx,
+          used_symbol_refs_view,
+          false,
+          &mut service_targets,
+        );
+        for target in service_targets {
+          note_target(target, true, &mut predicted);
+        }
+        if !chunk.modules.contains(&entry_module_idx) {
+          // The facade runs its moved-away entry module by importing the chunk hosting it.
+          if let Some(host_chunk_idx) = chunk_graph.module_to_chunk[entry_module_idx]
+            && host_chunk_idx != chunk_idx
+          {
+            predicted.entry(host_chunk_idx).or_insert(false);
+          }
+        }
+      }
+      for (importee_chunk_idx, items) in &index_imports_from_other_chunks[chunk_idx] {
+        let runtime_requested_only =
+          !items.is_empty() && items.iter().all(|item| item.import_ref.owner == runtime_idx);
+        debug_assert!(
+          runtime_requested_only || predicted.contains_key(importee_chunk_idx),
+          "emitted static import {chunk_idx:?} -> {importee_chunk_idx:?} was not predicted; the \
+           already-loaded cycle check ran without this edge",
+        );
+      }
+      for (importee_chunk_idx, side_effectful_service_target) in predicted {
+        debug_assert!(
+          !side_effectful_service_target
+            || index_imports_from_other_chunks[chunk_idx].contains_key(&importee_chunk_idx)
+            || chunk.imports_from_other_chunks.contains_key(&importee_chunk_idx),
+          "predicted side-effectful service import {chunk_idx:?} -> {importee_chunk_idx:?} was \
+           not emitted; the liveness gate diverged from emission and already-loaded reachability \
+           may claim a side effect that never runs",
+        );
+      }
+    }
   }
 
   fn static_import_edges_of(
@@ -339,12 +466,11 @@ impl GenerateStage<'_> {
   }
 
   fn compute_cross_chunk_link_state(
-    &mut self,
+    &self,
     chunk_graph: &ChunkGraph,
-    used_symbol_refs: &impl UsedSymbolRefsView,
+    used_symbol_refs_view: UsedSymbolRefsView<'_>,
     order_state: &super::order_wrap_state::OrderWrapState,
     final_esm_init_metadata: FinalEsmInitMetadataAvailability<'_>,
-    symbol_chunk_ownership: SymbolChunkOwnership<'_>,
   ) -> CrossChunkLinkState {
     let mut index_chunk_depended_symbols: IndexChunkDependedSymbols =
       index_vec![FxIndexSet::<SymbolRef>::default(); chunk_graph.chunk_table.len()];
@@ -359,6 +485,9 @@ impl GenerateStage<'_> {
     let mut index_cross_chunk_imports: IndexCrossChunkImports =
       index_vec![FxHashSet::default(); chunk_graph.chunk_table.len()];
     let mut index_cross_chunk_dynamic_imports: IndexCrossChunkDynamicImports =
+      index_vec![FxIndexSet::default(); chunk_graph.chunk_table.len()];
+    let mut index_chunk_dynamic_imports_from_external_modules:
+      IndexChunkDynamicImportsFromExternalModules =
       index_vec![FxIndexSet::default(); chunk_graph.chunk_table.len()];
     let rendered_modules =
       order_state.has_import_overlays().then(|| super::rendered_module_set(chunk_graph));
@@ -377,15 +506,15 @@ impl GenerateStage<'_> {
       },
     );
 
-    self.collect_depended_symbols(
+    let symbol_chunk_table = self.collect_depended_symbols(
       chunk_graph,
       &mut index_chunk_depended_symbols,
       &mut index_chunk_direct_imports_from_external_modules,
       &mut index_cross_chunk_dynamic_imports,
-      used_symbol_refs,
+      &mut index_chunk_dynamic_imports_from_external_modules,
+      used_symbol_refs_view,
       order_state,
       final_esm_init_metadata,
-      symbol_chunk_ownership,
     );
 
     self.compute_chunk_imports(
@@ -396,9 +525,10 @@ impl GenerateStage<'_> {
       &mut index_cross_chunk_imports,
       &mut index_imports_from_other_chunks,
       &mut index_chunk_indirect_imports_from_external_modules,
-      used_symbol_refs,
+      used_symbol_refs_view,
       order_state,
       &order_live_symbols,
+      &symbol_chunk_table,
     );
 
     CrossChunkLinkState {
@@ -408,24 +538,76 @@ impl GenerateStage<'_> {
       index_imports_from_other_chunks,
       index_cross_chunk_imports,
       index_cross_chunk_dynamic_imports,
+      index_chunk_dynamic_imports_from_external_modules,
       order_live_symbols,
+      symbol_chunk_table,
     }
   }
 
-  /// - Assign each symbol to the chunk it belongs to
+  fn collect_external_import(
+    &self,
+    importer_idx: ModuleIdx,
+    import_record: &ResolvedImportRecord,
+    external_module_idx: ModuleIdx,
+    imports_from_external_modules: &mut FxHashMap<ModuleIdx, Vec<(ModuleIdx, NamedImport)>>,
+    dynamic_imports_from_external_modules: &mut FxIndexSet<ModuleIdx>,
+  ) {
+    if matches!(import_record.kind, ImportKind::DynamicImport)
+      && import_record.dynamic_import_expr_info.as_ref().is_none_or(|info| {
+        self.link_output.metas[importer_idx].stmt_info_included.has_bit(info.stmt_info_idx)
+      })
+    {
+      dynamic_imports_from_external_modules.insert(external_module_idx);
+    }
+    // Ensure the external module is imported in case it has side effects.
+    if matches!(import_record.kind, ImportKind::Import)
+      && !import_record.meta.contains(ImportRecordMeta::IsExportStar)
+    {
+      imports_from_external_modules.entry(external_module_idx).or_default();
+    }
+  }
+
+  fn collect_dynamic_chunk_import(
+    &self,
+    chunk_graph: &ChunkGraph,
+    import_record: &ResolvedImportRecord,
+    importee_module_idx: ModuleIdx,
+    cross_chunk_dynamic_imports: &mut FxIndexSet<ChunkIdx>,
+  ) {
+    // The resolved module is not included in the module graph, skip it.
+    if !self.link_output.metas[importee_module_idx].is_included
+      || !matches!(import_record.kind, ImportKind::DynamicImport)
+    {
+      return;
+    }
+    // The finalizer rewrites `import()` specifiers through `entry_module_to_entry_chunk`, which
+    // diverges from the hosting chunk whenever the dynamic entry's facade chunk survives while
+    // another chunk hosts its body (order-wrap facade splits, or kept facades when common-chunk
+    // merging is off); record the chunk the emitted specifier actually names.
+    let importee_chunk = chunk_graph
+      .entry_module_to_entry_chunk
+      .get(&importee_module_idx)
+      .copied()
+      .or(chunk_graph.module_to_chunk[importee_module_idx])
+      .expect("importee chunk should exist");
+    cross_chunk_dynamic_imports.insert(importee_chunk);
+  }
+
+  /// - Derive each declared symbol's owning chunk, returned as the pass-local
+  ///   [`SymbolChunkTable`]
   /// - Collect all referenced symbols and consider them potential imports
   #[expect(clippy::too_many_arguments)]
   fn collect_depended_symbols(
-    &mut self,
+    &self,
     chunk_graph: &ChunkGraph,
     index_chunk_depended_symbols: &mut IndexChunkDependedSymbols,
     index_chunk_imports_from_external_modules: &mut IndexChunkImportsFromExternalModules,
     index_cross_chunk_dynamic_imports: &mut IndexCrossChunkDynamicImports,
-    used_symbol_refs: &impl UsedSymbolRefsView,
+    index_chunk_dynamic_imports_from_external_modules: &mut IndexChunkDynamicImportsFromExternalModules,
+    used_symbol_refs_view: UsedSymbolRefsView<'_>,
     order_state: &super::order_wrap_state::OrderWrapState,
     final_esm_init_metadata: FinalEsmInitMetadataAvailability<'_>,
-    symbol_chunk_ownership: SymbolChunkOwnership<'_>,
-  ) {
+  ) -> SymbolChunkTable {
     let symbols = &self.link_output.symbol_db;
     let chunk_id_to_symbols_vec = append_only_vec::AppendOnlyVec::new();
 
@@ -434,6 +616,7 @@ impl GenerateStage<'_> {
       index_chunk_depended_symbols.iter_mut(),
       index_chunk_imports_from_external_modules.iter_mut(),
       index_cross_chunk_dynamic_imports.iter_mut(),
+      index_chunk_dynamic_imports_from_external_modules.iter_mut(),
     ));
 
     chunks_iter.par_bridge().for_each(
@@ -442,6 +625,7 @@ impl GenerateStage<'_> {
         depended_symbols,
         imports_from_external_modules,
         cross_chunk_dynamic_imports,
+        dynamic_imports_from_external_modules,
       )| {
         let mut symbol_needs_to_assign = vec![];
         chunk.modules.iter().copied().for_each(|module_id| {
@@ -452,38 +636,20 @@ impl GenerateStage<'_> {
             .import_records
             .iter()
             .filter_map(|rec| rec.resolved_module.map(|module_idx| (rec, module_idx)))
-            .for_each(|(rec, module_idx)| {
-              match &self.link_output.module_table[module_idx] {
-                Module::Normal(_) => {
-                  // The the resolved module is not included in module graph, skip it.
-                  if !self.link_output.metas[module_idx].is_included {
-                    return;
-                  }
-                  if matches!(rec.kind, ImportKind::DynamicImport) {
-                    // The finalizer rewrites `import()` specifiers through
-                    // `entry_module_to_entry_chunk`, which diverges from the hosting chunk
-                    // whenever the dynamic entry's facade chunk survives while another chunk
-                    // hosts its body (order-wrap facade splits, or kept facades when
-                    // common-chunk merging is off); record the chunk the emitted specifier
-                    // actually names.
-                    let importee_chunk = chunk_graph
-                      .entry_module_to_entry_chunk
-                      .get(&module_idx)
-                      .copied()
-                      .or(chunk_graph.module_to_chunk[module_idx])
-                      .expect("importee chunk should exist");
-                    cross_chunk_dynamic_imports.insert(importee_chunk);
-                  }
-                }
-                Module::External(_) => {
-                  // Ensure the external module is imported in case it has side effects.
-                  if matches!(rec.kind, ImportKind::Import)
-                    && !rec.meta.contains(ImportRecordMeta::IsExportStar)
-                  {
-                    imports_from_external_modules.entry(module_idx).or_default();
-                  }
-                }
-              }
+            .for_each(|(rec, module_idx)| match &self.link_output.module_table[module_idx] {
+              Module::Normal(_) => self.collect_dynamic_chunk_import(
+                chunk_graph,
+                rec,
+                module_idx,
+                cross_chunk_dynamic_imports,
+              ),
+              Module::External(_) => self.collect_external_import(
+                module.idx,
+                rec,
+                module_idx,
+                imports_from_external_modules,
+                dynamic_imports_from_external_modules,
+              ),
             });
 
           module
@@ -509,6 +675,14 @@ impl GenerateStage<'_> {
               if !self.link_output.metas[module.idx].stmt_info_included.has_bit(stmt_info_idx)
                 && !is_order_runtime_stmt
               {
+                return;
+              }
+              if stmt_info.import_records.iter().any(|rec_idx| {
+                order_state.has_order_cjs_carrier(super::order_wrap_state::OrderCjsCarrierKey {
+                  importer: module.idx,
+                  record: *rec_idx,
+                })
+              }) {
                 return;
               }
               stmt_info.declared_symbols.iter().for_each(|declared| {
@@ -549,7 +723,7 @@ impl GenerateStage<'_> {
           );
           self.add_module_esm_init_depended_symbols(
             chunk_graph,
-            used_symbol_refs,
+            used_symbol_refs_view,
             order_state,
             final_esm_init_metadata,
             depended_symbols,
@@ -562,27 +736,27 @@ impl GenerateStage<'_> {
           let entry_meta = &self.link_output.metas[entry.idx];
 
           if !matches!(entry_meta.wrap_kind(), WrapKind::Cjs) {
-            for export_ref in entry_meta
-              .resolved_exports
-              .iter()
-              .sorted_unstable_by_key(|(name, _)| *name)
-              .map(|(_, export)| export)
-              // A chunk should always consume a cjs export symbol by property access, so filter
-              // out a exported symbol that came from a cjs module.
-              .filter(|resolved_export| !resolved_export.came_from_commonjs)
-            {
-              self.add_depended_symbol_with_wrapped_esm_init(
-                chunk_graph,
-                order_state,
-                depended_symbols,
-                symbols.canonical_ref_resolving_namespace(export_ref.symbol_ref),
-              );
-            }
+            self.register_entry_export_depended_symbols(
+              chunk_graph,
+              order_state,
+              depended_symbols,
+              entry.idx,
+              entry_meta,
+            );
           }
 
           if matches!(entry_meta.wrap_kind(), WrapKind::Cjs) {
             depended_symbols
               .insert(entry_meta.wrapper_ref.expect("CJS entry should have a wrapper"));
+          } else if let Some(targets) = order_state.consumer_local_namespace_targets(entry.idx) {
+            for &target in targets {
+              self.add_wrapped_esm_init_target_depended_symbol(
+                chunk_graph,
+                order_state,
+                depended_symbols,
+                target,
+              );
+            }
           } else if let Some(target) = order_state.esm_init_target(entry.idx, entry_meta) {
             depended_symbols.insert(target.wrapper_ref);
           }
@@ -603,6 +777,8 @@ impl GenerateStage<'_> {
             depended_symbols.insert(entry.namespace_object_ref);
           }
         }
+
+        self.add_absorbed_entry_init_deps(chunk_graph, order_state, depended_symbols, chunk_id);
 
         for synthetic in order_state.synthetic_statements_for_chunk(chunk_id) {
           symbol_needs_to_assign.extend(synthetic.declared_symbols.iter().copied());
@@ -631,42 +807,86 @@ impl GenerateStage<'_> {
         chunk_id_to_symbols_vec.push((chunk_id, symbol_needs_to_assign));
       },
     );
-    self.assign_symbol_chunk_ownership(chunk_id_to_symbols_vec, symbol_chunk_ownership);
+    self.build_symbol_chunk_table(chunk_id_to_symbols_vec)
   }
 
   /// Record which chunk owns each declared symbol, so [`Self::compute_chunk_imports`] can resolve a
   /// depended symbol to the chunk it must be imported from.
-  fn assign_symbol_chunk_ownership(
-    &mut self,
+  fn build_symbol_chunk_table(
+    &self,
     chunk_id_to_symbols_vec: append_only_vec::AppendOnlyVec<(ChunkIdx, Vec<TaggedSymbolRef>)>,
-    symbol_chunk_ownership: SymbolChunkOwnership<'_>,
-  ) {
-    // shadowing previous immutable borrow
-    let symbols = &mut self.link_output.symbol_db;
-    let mut journal = match symbol_chunk_ownership {
-      SymbolChunkOwnership::Commit => None,
-      SymbolChunkOwnership::Scoped(journal) => Some(journal),
-    };
+  ) -> SymbolChunkTable {
+    let mut map = FxHashMap::default();
     for (chunk_idx, symbol_list) in chunk_id_to_symbols_vec {
       for declared in symbol_list {
         let declared = declared.inner();
-        if cfg!(debug_assertions) {
-          let symbol_data = symbols.get(declared);
-          debug_assert!(
-            symbol_data.chunk_idx.unwrap_or(chunk_idx) == chunk_idx,
-            "Symbol: {:?}, {:?} in {:?} should only belong to one chunk. Existed {:?}, new {chunk_idx:?}",
-            declared.name(symbols),
-            declared,
-            self.link_output.module_table[declared.owner].id().as_str(),
-            symbol_data.chunk_idx,
-          );
-        }
+        let previous = map.insert(declared, chunk_idx);
+        debug_assert!(
+          previous.is_none_or(|previous| previous == chunk_idx),
+          "Symbol: {:?}, {:?} in {:?} should only belong to one chunk. Existed {previous:?}, new {chunk_idx:?}",
+          declared.name(&self.link_output.symbol_db),
+          declared,
+          self.link_output.module_table[declared.owner].id().as_str(),
+        );
+      }
+    }
+    SymbolChunkTable { map }
+  }
 
-        let symbol_data = symbols.get_mut(declared);
-        if let Some(journal) = journal.as_deref_mut() {
-          journal.push((declared, symbol_data.chunk_idx));
-        }
-        symbol_data.chunk_idx = Some(chunk_idx);
+  /// The single point where derived symbol->chunk ownership enters the shared symbol database.
+  fn commit_symbol_chunk_table(&mut self, table: &SymbolChunkTable) {
+    let symbols = &mut self.link_output.symbol_db;
+    for (symbol_ref, chunk_idx) in &table.map {
+      symbols.get_mut(*symbol_ref).chunk_idx = Some(*chunk_idx);
+    }
+  }
+
+  /// Register what a non-CJS entry's export signature makes the chunk depend on: the canonical
+  /// symbol of every re-exported binding, plus — off-strict — the `init_*` wrapper of every
+  /// ESM-wrapped module backing one. The wrappers come from the same walk entry emission
+  /// consumes (`collect_entry_reexported_wrapper_inits`), so everything the entry chunk may call
+  /// is imported by construction; `None` for the names because registration runs before chunk
+  /// names exist — it is what makes a wrapper reachable. The entry's own wrapper is not part of
+  /// the walk; the caller's `esm_init_target` arm covers it.
+  fn register_entry_export_depended_symbols(
+    &self,
+    chunk_graph: &ChunkGraph,
+    order_state: &super::order_wrap_state::OrderWrapState,
+    depended_symbols: &mut FxIndexSet<SymbolRef>,
+    entry_idx: ModuleIdx,
+    entry_meta: &crate::types::linking_metadata::LinkingMetadata,
+  ) {
+    let symbols = &self.link_output.symbol_db;
+    let sorted_export_refs = entry_meta
+      .resolved_exports
+      .iter()
+      .sorted_unstable_by_key(|(name, _)| *name)
+      .map(|(_, export)| export)
+      // A chunk should always consume a cjs export symbol by property access, so filter
+      // out a exported symbol that came from a cjs module.
+      .filter(|resolved_export| !resolved_export.came_from_commonjs);
+    if self.options.is_strict_execution_order_enabled() {
+      for export_ref in sorted_export_refs {
+        self.add_depended_symbol_with_wrapped_esm_init(
+          chunk_graph,
+          order_state,
+          depended_symbols,
+          symbols.canonical_ref_resolving_namespace(export_ref.symbol_ref),
+        );
+      }
+    } else {
+      for export_ref in sorted_export_refs {
+        depended_symbols.insert(symbols.canonical_ref_resolving_namespace(export_ref.symbol_ref));
+      }
+      for init in collect_entry_reexported_wrapper_inits(
+        entry_idx,
+        entry_meta,
+        &self.link_output.metas,
+        &self.link_output.module_table.modules,
+        symbols,
+        None,
+      ) {
+        depended_symbols.insert(init.wrapper_ref);
       }
     }
   }
@@ -690,6 +910,18 @@ impl GenerateStage<'_> {
         depended_symbols.insert(wrapper_ref);
       }
       return;
+    }
+
+    // A carrier namespace is declared beside its CJS importee, even though the synthetic symbol
+    // is owned by the forwarding barrel. Register that exact per-record carrier as an additional
+    // init companion before the ordinary owner-based path below considers the barrel wrapper.
+    if let Some(key) = order_state.order_cjs_carrier_key_for_namespace(symbol_ref) {
+      self.add_wrapped_esm_init_target_depended_symbol(
+        chunk_graph,
+        order_state,
+        depended_symbols,
+        WrappedEsmInitTarget::CjsCarrier(key),
+      );
     }
 
     if matches!(self.link_output.module_table[symbol_ref.owner], Module::Normal(_))
@@ -724,7 +956,7 @@ impl GenerateStage<'_> {
   fn add_module_esm_init_depended_symbols(
     &self,
     chunk_graph: &ChunkGraph,
-    used_symbol_refs: &impl UsedSymbolRefsView,
+    used_symbol_refs_view: UsedSymbolRefsView<'_>,
     order_state: &super::order_wrap_state::OrderWrapState,
     final_esm_init_metadata: FinalEsmInitMetadataAvailability<'_>,
     depended_symbols: &mut FxIndexSet<SymbolRef>,
@@ -741,7 +973,7 @@ impl GenerateStage<'_> {
     }
     self.add_included_import_esm_init_depended_symbols(
       chunk_graph,
-      used_symbol_refs,
+      used_symbol_refs_view,
       order_state,
       depended_symbols,
       module_idx,
@@ -776,12 +1008,69 @@ impl GenerateStage<'_> {
     for (_, targets) in
       targets_by_stmt.iter().sorted_unstable_by_key(|(stmt_info_idx, _)| **stmt_info_idx)
     {
-      for &target_idx in targets {
+      for &target in targets {
+        self.add_wrapped_esm_init_target_depended_symbol(
+          chunk_graph,
+          order_state,
+          depended_symbols,
+          target,
+        );
+      }
+    }
+  }
+
+  fn add_wrapped_esm_init_target_depended_symbol(
+    &self,
+    chunk_graph: &ChunkGraph,
+    order_state: &super::order_wrap_state::OrderWrapState,
+    depended_symbols: &mut FxIndexSet<SymbolRef>,
+    target: WrappedEsmInitTarget,
+  ) {
+    match target {
+      WrappedEsmInitTarget::Module(target_idx) => {
         let meta = &self.link_output.metas[target_idx];
         if let Some(target) = order_state.esm_init_target(target_idx, meta)
           && order_state.init_target_included_in_live_chunk(&target, meta, target_idx, chunk_graph)
         {
           depended_symbols.insert(target.wrapper_ref);
+        }
+      }
+      WrappedEsmInitTarget::CjsCarrier(key) => {
+        if order_state.order_cjs_carrier_included_in_live_chunk(key, chunk_graph)
+          && let Some(carrier) = order_state.order_cjs_carrier(key)
+        {
+          depended_symbols.insert(carrier.wrapper_ref);
+        }
+      }
+    }
+  }
+
+  /// A collapsed dynamic-entry facade runs its initialization at each `import()` call site.
+  /// Consumer-local barrels replace the entry's shared wrapper with the complete namespace target
+  /// list, which can contain leaf wrappers and CJS carriers hosted by other chunks. Register those
+  /// targets as dependencies of the absorbed entry's host chunk so both the same-chunk direct calls
+  /// and the cross-chunk re-exports have real backing imports.
+  fn add_absorbed_entry_init_deps(
+    &self,
+    chunk_graph: &ChunkGraph,
+    order_state: &super::order_wrap_state::OrderWrapState,
+    depended_symbols: &mut FxIndexSet<SymbolRef>,
+    chunk_idx: ChunkIdx,
+  ) {
+    let Some(dynamic_entries) =
+      chunk_graph.common_chunk_exported_facade_chunk_namespace.get(&chunk_idx)
+    else {
+      return;
+    };
+    for dynamic_entry in dynamic_entries {
+      if let Some(targets) = order_state.consumer_local_namespace_targets(*dynamic_entry) {
+        for &target in targets {
+          self.add_wrapped_esm_init_target_depended_symbol(
+            chunk_graph,
+            order_state,
+            depended_symbols,
+            target,
+          );
         }
       }
     }
@@ -800,7 +1089,7 @@ impl GenerateStage<'_> {
   fn add_included_import_esm_init_depended_symbols(
     &self,
     chunk_graph: &ChunkGraph,
-    used_symbol_refs: &impl UsedSymbolRefsView,
+    used_symbol_refs_view: UsedSymbolRefsView<'_>,
     order_state: &super::order_wrap_state::OrderWrapState,
     depended_symbols: &mut FxIndexSet<SymbolRef>,
     module_idx: ModuleIdx,
@@ -845,24 +1134,19 @@ impl GenerateStage<'_> {
         let targets = collect_wrapped_esm_init_targets_for_import_record(
           &ctx,
           rec_idx,
-          |symbol_ref| used_symbol_refs.contains(&symbol_ref),
+          |symbol_ref| used_symbol_refs_view.contains(&symbol_ref),
           |_| true,
           |forwarding_module_idx| {
             chunk_graph.module_to_chunk[forwarding_module_idx] == Some(chunk_idx)
           },
         );
-        for target_idx in targets {
-          let target_meta = &self.link_output.metas[target_idx];
-          if let Some(target) = order_state.esm_init_target(target_idx, target_meta)
-            && order_state.init_target_included_in_live_chunk(
-              &target,
-              target_meta,
-              target_idx,
-              chunk_graph,
-            )
-          {
-            depended_symbols.insert(target.wrapper_ref);
-          }
+        for target in targets {
+          self.add_wrapped_esm_init_target_depended_symbol(
+            chunk_graph,
+            order_state,
+            depended_symbols,
+            target,
+          );
         }
       },
     );
@@ -910,9 +1194,10 @@ impl GenerateStage<'_> {
     index_cross_chunk_imports: &mut IndexCrossChunkImports,
     index_imports_from_other_chunks: &mut IndexImportsFromOtherChunks,
     index_chunk_indirect_imports_from_external_modules: &mut IndexChunkAllImportsFromExternalModules,
-    used_symbol_refs: &impl UsedSymbolRefsView,
+    used_symbol_refs_view: UsedSymbolRefsView<'_>,
     order_state: &super::order_wrap_state::OrderWrapState,
     order_live_symbols: &FxHashSet<SymbolRef>,
+    symbol_chunk_table: &SymbolChunkTable,
   ) {
     // For each module that has been absorbed as a facade namespace, we need to know
     // which other modules dynamically import it so we can tell whether the absorbed
@@ -1063,6 +1348,32 @@ impl GenerateStage<'_> {
               if let Some(wrapper_ref) = meta.wrapper_ref {
                 index_chunk_exported_symbols[chunk_id].entry(wrapper_ref).or_default();
               }
+            } else if let Some(targets) =
+              order_state.consumer_local_namespace_targets(*dynamic_entry_module)
+            {
+              // A consumer-local namespace is activated by its complete leaf/carrier target list,
+              // never by the intentionally empty shared barrel wrapper.
+              for &target in targets {
+                let wrapper_ref = match target {
+                  WrappedEsmInitTarget::Module(module_idx) => {
+                    order_state
+                      .esm_init_target(module_idx, &self.link_output.metas[module_idx])
+                      .expect("dynamic-entry module target should have a wrapper")
+                      .wrapper_ref
+                  }
+                  WrappedEsmInitTarget::CjsCarrier(key) => {
+                    order_state
+                      .order_cjs_carrier(key)
+                      .expect("dynamic-entry CJS carrier should have a wrapper")
+                      .wrapper_ref
+                  }
+                };
+                index_chunk_exported_symbols[chunk_id].entry(wrapper_ref).or_default();
+              }
+              let ns_ref = self.link_output.module_table[*dynamic_entry_module]
+                .namespace_object_ref()
+                .expect("dynamic entry should be normal module");
+              index_chunk_exported_symbols[chunk_id].entry(ns_ref).or_default();
             } else if let Some(target) = order_state.esm_init_target(*dynamic_entry_module, meta) {
               // For ESM modules, export both wrapper_ref (init_xxx) and namespace
               // Generated code: `import('./chunk.js').then((n) => (n.init_xxx(), n.namespace))`
@@ -1094,7 +1405,7 @@ impl GenerateStage<'_> {
           {
             self.link_output.metas[import_ref.owner].namespace_included
           } else {
-            non_namespace_symbol_is_live(used_symbol_refs, order_live_symbols, import_ref)
+            non_namespace_symbol_is_live(used_symbol_refs_view, order_live_symbols, import_ref)
           };
           if !is_live {
             continue;
@@ -1119,7 +1430,7 @@ impl GenerateStage<'_> {
             // namespace or default imports from external modules. Named-only imports render as
             // direct `require()` bindings and must not inherit another chunk's `__toESM`.
             let to_esm_ref = self.link_output.runtime.resolve_symbol("__toESM");
-            if self.link_output.symbol_db.get(to_esm_ref).chunk_idx.is_some() {
+            if symbol_chunk_table.chunk_of(to_esm_ref, &self.link_output.symbol_db).is_some() {
               // __toESM is in a chunk, so it's being used
               to_esm_ref
             } else {
@@ -1130,16 +1441,17 @@ impl GenerateStage<'_> {
           } else {
             import_ref
           };
-          let import_symbol = self.link_output.symbol_db.get(import_ref);
-          let importee_chunk_idx = import_symbol.chunk_idx.unwrap_or_else(|| {
-            let symbol_owner = &self.link_output.module_table[import_ref.owner];
-            let symbol_name = import_ref.name(&self.link_output.symbol_db);
-            panic!(
-              "Symbol {:?} in {:?} should belong to a chunk",
-              symbol_name,
-              symbol_owner.id().as_str()
-            )
-          });
+          let importee_chunk_idx = symbol_chunk_table
+            .chunk_of(import_ref, &self.link_output.symbol_db)
+            .unwrap_or_else(|| {
+              let symbol_owner = &self.link_output.module_table[import_ref.owner];
+              let symbol_name = import_ref.name(&self.link_output.symbol_db);
+              panic!(
+                "Symbol `{}` in `{}` should belong to a chunk",
+                symbol_name,
+                symbol_owner.id().as_str()
+              )
+            });
           // Check if the import is from another chunk
           if chunk_id != importee_chunk_idx {
             index_cross_chunk_imports[chunk_id].insert(importee_chunk_idx);
@@ -1335,8 +1647,12 @@ impl GenerateStage<'_> {
           let mut export_name: CompactStr;
           loop {
             named_index += 1;
-            export_name = generate_minified_names(named_index).into();
-            if !used_names.contains(&export_name) {
+            export_name = generate_minified_names(named_index);
+            // Unreachable in practice — the generator first produces the four-character `then`
+            // at value 443,179, i.e. after ~443k internal exports in one chunk — but it is the
+            // only other source of internal export names, so make it impossible rather than
+            // improbable.
+            if !used_names.contains(&export_name) && export_name != THENABLE_HAZARD_EXPORT_NAME {
               break;
             }
           }
@@ -1347,8 +1663,40 @@ impl GenerateStage<'_> {
         continue;
       }
 
+      // The symbols an `emitFile` consumer reaches under the name `then`. Unlike an entry
+      // signature they arrive with no predefined name, so they would otherwise be
+      // indistinguishable from a bundler-owned internal name below. Only the export name is the
+      // contract: a preserve-name module whose local `then` leaves under an alias goes through
+      // the resolver like everything else, so it can never hand `then` to the chunk.
+      //
+      // The carve-out below additionally requires the declaring symbol to be named `then`: with
+      // internal minification off this pass outputs declaring-symbol names, so export aliases are
+      // already not honored — a pre-existing defect tracked in #10500, whose fix (routing
+      // preserved names through the predefined-names path) also removes this set and the
+      // first-wins flag below.
+      let preserved_then_refs: FxHashSet<SymbolRef> = preserve_export_names_modules
+        .get(&chunk_id)
+        .map(|modules| {
+          modules
+            .iter()
+            .flat_map(|&module_idx| {
+              self.link_output.metas[module_idx]
+                .canonical_exports(false)
+                .filter(|(name, _)| name.as_str() == THENABLE_HAZARD_EXPORT_NAME)
+                .map(|(_, export)| self.link_output.symbol_db.canonical_ref_for(export.symbol_ref))
+            })
+            .collect()
+        })
+        .unwrap_or_default();
+      let mut preserved_then_taken = false;
+
       let mut resolver =
         ConflictResolver::with_capacity(index_chunk_exported_symbols[chunk_id].len());
+      // Names taken from source symbols can collide with `then`; reserving it up front deconflicts
+      // those to `then$1` like any other collision. See
+      // internal-docs/code-splitting/design.md ("Thenable chunk namespaces"). Predefined names take the `lst` branch below,
+      // which re-reserves (a no-op) and emits them verbatim, so a public `then` still stays `then`.
+      resolver.reserve(CompactStr::new_const(THENABLE_HAZARD_EXPORT_NAME));
       for (chunk_export, predefined_names) in index_chunk_exported_symbols[chunk_id]
         .iter()
         .sorted_by_cached_key(|(symbol_ref, _predefined_names)| {
@@ -1367,7 +1715,7 @@ impl GenerateStage<'_> {
         {
           self.link_output.metas[chunk_export.owner].namespace_included
         } else {
-          non_namespace_symbol_is_live(used_symbol_refs, order_live_symbols, *chunk_export)
+          non_namespace_symbol_is_live(used_symbol_refs.view(), order_live_symbols, *chunk_export)
         };
         if !is_live {
           continue;
@@ -1401,7 +1749,20 @@ impl GenerateStage<'_> {
         } else {
           original_name
         };
-        let chosen = resolver.resolve(base, |_, _| true);
+        let chosen = if base == THENABLE_HAZARD_EXPORT_NAME
+          && !preserved_then_taken
+          && preserved_then_refs
+            .contains(&self.link_output.symbol_db.canonical_ref_for(*chunk_export))
+        {
+          // A name an `emitFile` consumer relies on is a contract, so it keeps `then`. The
+          // reservation above only fences off bundler-owned internal names. Two preserved
+          // modules both exporting the name `then` cannot both be honored — the second falls
+          // back to the resolver so the chunk at least stays parseable.
+          preserved_then_taken = true;
+          base
+        } else {
+          resolver.resolve(base, |_, _| true)
+        };
         chunk.exports_to_other_chunks.entry(*chunk_export).or_default().push(chosen);
       }
     }
@@ -1409,11 +1770,11 @@ impl GenerateStage<'_> {
 }
 
 fn non_namespace_symbol_is_live(
-  used_symbol_refs: &impl UsedSymbolRefsView,
+  used_symbol_refs_view: UsedSymbolRefsView<'_>,
   order_live_symbols: &FxHashSet<SymbolRef>,
   symbol_ref: SymbolRef,
 ) -> bool {
-  used_symbol_refs.contains(&symbol_ref) || order_live_symbols.contains(&symbol_ref)
+  used_symbol_refs_view.contains(&symbol_ref) || order_live_symbols.contains(&symbol_ref)
 }
 
 // The same implementation with https://github.com/oxc-project/oxc/blob/crates_v0.86.0/crates/oxc_mangler/src/base54.rs#L30-L31
@@ -1422,22 +1783,25 @@ const REST_BASE: u32 = 64;
 const FREQUENT_CHARS: &[u8; REST_BASE as usize] =
   b"etnriaoscludfpmhg_vybxSCwTEDOkAjMNPFILRzBVHUWGKqJYXZQ$1024368579";
 
-// Intentionally NOT routed through `ConflictResolver`: this is a generative
-// base54 namer (not `$N`-suffix), so it shares only `deconflict_order_key`,
-// not the conflict loop. See docs/superpowers/specs/2026-06-17-renamer-naming-engine-design.md.
-fn generate_minified_names(mut value: u32) -> String {
-  let mut buffer = vec![];
+// Intentionally NOT routed through `ConflictResolver`. This is a generative base54 namer, not
+// a `$N`-suffix one. Its call site shares `deconflict_order_key` with the resolver path, but
+// not the conflict loop (#9831).
+fn generate_minified_names(mut value: u32) -> CompactStr {
+  // `u32::MAX` needs 6 bytes: one base-54 head plus five base-64 digits, because
+  // `u32::MAX / FIRST_BASE` lands between `REST_BASE.pow(4)` and `REST_BASE.pow(5)`.
+  let mut buffer = [0u8; 6];
+  let mut len = 0;
 
   // Base 54 at first because these are the usable first characters in JavaScript identifiers
-  let byte = FREQUENT_CHARS[(value % FIRST_BASE) as usize];
-  buffer.push(byte);
+  buffer[len] = FREQUENT_CHARS[(value % FIRST_BASE) as usize];
+  len += 1;
   value /= FIRST_BASE;
 
   while value > 0 {
-    let byte = FREQUENT_CHARS[(value % REST_BASE) as usize];
-    buffer.push(byte);
+    buffer[len] = FREQUENT_CHARS[(value % REST_BASE) as usize];
+    len += 1;
     value /= REST_BASE;
   }
-  // SAFETY: `buffer` is base64 characters, it is valid utf8 characters
-  unsafe { String::from_utf8_unchecked(buffer) }
+  // SAFETY: every byte written comes from `FREQUENT_CHARS`, which is ASCII.
+  CompactStr::new(unsafe { std::str::from_utf8_unchecked(&buffer[..len]) })
 }

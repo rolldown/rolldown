@@ -9,7 +9,7 @@ use futures::{FutureExt, future::Shared};
 use rolldown_common::WatcherChangeKind;
 use rolldown_common::{HmrLazyChunkOutput, HmrStampTable};
 use rolldown_error::{BuildResult, ResultExt};
-use rolldown_fs_watcher::{FsWatcher, FsWatcherConfig, FsWatcherExt, NoopFsWatcher};
+use rolldown_fs_watcher::{FsWatcher, FsWatcherConfig};
 use rustc_hash::FxHashMap;
 #[cfg(feature = "testing")]
 use rustc_hash::FxHashSet;
@@ -55,6 +55,10 @@ pub struct DevEngine {
   /// filenames — so two independent counters would let two different payloads
   /// collide on one key.
   next_hmr_patch_id: Arc<AtomicU32>,
+  /// Live handle to the plugin-facing module infos — the same map plugin contexts read.
+  /// Full builds clear it in place (the `Arc` identity is stable), so lock-free reads
+  /// here always observe the latest build. Powers the engine-level module queries.
+  module_infos: rolldown_common::SharedModuleInfoDashMap,
 }
 
 impl DevEngine {
@@ -65,6 +69,7 @@ impl DevEngine {
       .with_plugins(config.plugins)
       .build()?;
 
+    let module_infos = bundler.module_infos();
     let bundler = Arc::new(Mutex::new(bundler));
 
     let normalized_options = normalize_dev_options(options);
@@ -88,6 +93,7 @@ impl DevEngine {
     });
 
     let watcher_config = FsWatcherConfig {
+      enabled: !ctx.options.disable_watcher,
       poll_interval: ctx.options.poll_interval,
       debounce_delay: ctx.options.debounce_duration,
       compare_contents_for_polling: ctx.options.compare_contents_for_polling,
@@ -97,12 +103,7 @@ impl DevEngine {
     };
 
     let event_handler = BundleCoordinator::create_watcher_event_handler(coordinator_tx.clone());
-
-    let watcher = if ctx.options.disable_watcher {
-      NoopFsWatcher::with_config(event_handler, watcher_config)?.into_dyn_fs_watcher()
-    } else {
-      rolldown_fs_watcher::create_fs_watcher(event_handler, watcher_config)?
-    };
+    let watcher = FsWatcher::new(event_handler, &watcher_config)?;
 
     let coordinator = BundleCoordinator::new(
       Arc::clone(&bundler),
@@ -123,7 +124,18 @@ impl DevEngine {
       clients,
       is_closed: AtomicBool::new(false),
       next_hmr_patch_id,
+      module_infos,
     })
+  }
+
+  /// Same data the plugin-context `getModuleInfo` returns, readable from the engine
+  /// handle at any time (no hook context needed).
+  pub fn get_module_info(&self, module_id: &str) -> Option<Arc<rolldown_common::ModuleInfo>> {
+    self.module_infos.get(module_id).map(|entry| Arc::clone(entry.value()))
+  }
+
+  pub fn get_module_ids(&self) -> Vec<arcstr::ArcStr> {
+    self.module_infos.iter().map(|entry| entry.key().clone()).collect()
   }
 
   pub async fn run(&self) -> BuildResult<()> {
@@ -214,7 +226,9 @@ impl DevEngine {
     Ok(status.into())
   }
 
-  // Ensure there's latest bundle output available for browser loading/reloading scenarios
+  /// Ensure there's latest bundle output available for browser loading/reloading scenarios.
+  ///
+  /// If the `DevEngine` is closed while waiting, this method will return early without error.
   pub async fn ensure_latest_bundle_output(&self) -> BuildResult<()> {
     self.create_error_if_closed()?;
 
@@ -234,16 +248,26 @@ impl DevEngine {
         break;
       }
       let (reply_sender, reply_receiver) = tokio::sync::oneshot::channel();
-      self
+      if let Err(err) = self
         .coordinator_sender
         .send(CoordinatorMsg::EnsureLatestBundleOutput { reply: reply_sender })
-        .map_err_to_unhandleable()
-        .context("DevEngine: failed to send EnsureLatestBundleOutput to coordinator")?;
+      {
+        if self.is_closed() {
+          return Ok(());
+        }
+        return (Err(err))
+          .map_err_to_unhandleable()
+          .context("DevEngine: failed to send EnsureLatestBundleOutput to coordinator")?;
+      }
 
-      let received = reply_receiver
-        .await
-        .map_err_to_unhandleable()
-        .context("DevEngine: coordinator closed before responding to EnsureLatestBundleOutput")?;
+      let Ok(received) = reply_receiver.await else {
+        if self.is_closed() {
+          return Ok(());
+        }
+        return Err(anyhow::anyhow!(
+          "DevEngine: coordinator closed before responding to EnsureLatestBundleOutput"
+        ))?;
+      };
 
       // Wait for the build if one is running or was scheduled
       if let Some(ret) = received {

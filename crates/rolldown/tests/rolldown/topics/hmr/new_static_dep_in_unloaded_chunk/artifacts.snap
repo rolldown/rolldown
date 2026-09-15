@@ -83,8 +83,8 @@ __rolldown_runtime__.registerFactory("hmr.js", "esm", (function(__rolldown_modul
 		var __rolldown_exports__ = __rolldown_runtime__.__exportAll({ value: () => value });
 		__rolldown_runtime__.registerModule(__rolldown_module_id__, { exports: __rolldown_exports__ });
 		__rolldown_runtime__.initModule("heavy.js");
-		const hot_hmr = __rolldown_runtime__.createModuleHotContext(__rolldown_module_id__);
 		var import_heavy_00 = __rolldown_runtime__.loadExports("heavy.js");
+		const hot_hmr = __rolldown_runtime__.createModuleHotContext(__rolldown_module_id__);
 		const value = "v2";
 		console.log("hmr", value, import_heavy_00.heavy);
 		hot_hmr.accept();

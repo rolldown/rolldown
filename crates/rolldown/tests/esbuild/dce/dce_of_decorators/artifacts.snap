@@ -12,25 +12,25 @@ const fn = () => {
 };
 //#endregion
 //#region keep-these.js
-(@fn class {});
-(class {
+var Class = @fn class {};
+var Field = class {
 	@fn field;
-});
-(class {
+};
+var Method = class {
 	@fn method() {}
-});
-(class {
+};
+var Accessor = class {
 	@fn accessor accessor;
-});
-(class {
+};
+var StaticField = class {
 	@fn static field;
-});
-(class {
+};
+var StaticMethod = class {
 	@fn static method() {}
-});
-(class {
+};
+var StaticAccessor = class {
 	@fn static accessor accessor;
-});
+};
 //#endregion
 
 ```

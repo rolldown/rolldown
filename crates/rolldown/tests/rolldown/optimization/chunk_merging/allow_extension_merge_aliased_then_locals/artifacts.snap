@@ -1,0 +1,33 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## index.js
+
+```js
+import { then$1, then$2 as then } from "./libs.js";
+import assert from "node:assert";
+//#region index.js
+assert.strictEqual(typeof then, "function");
+assert.strictEqual(typeof then$1, "function");
+//#endregion
+
+```
+
+## libs.js
+
+```js
+//#region lib1.js
+function then$1(resolve) {
+	resolve("lib1");
+}
+//#endregion
+//#region lib2.js
+function then(resolve) {
+	resolve("lib2");
+}
+//#endregion
+export { then as then$1, then$1 as then$2 };
+
+```

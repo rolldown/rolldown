@@ -1,0 +1,9 @@
+{
+  "_comment": "Companion to `namespace_import_of_external_via_node_esm_shim` with the shim kept alive by a side effect. Here the chunk's own `named_imports` already report node mode, so a recorded non-node use would disagree with them and flip the chunk into the mixed-mode path, emitting two bindings for one observation. Pins the single correct `__toESM(mod, 1)`.",
+  "expectExecuted": false,
+  "config": {
+    "input": [{ "name": "main", "import": "./main.js" }],
+    "external": ["node:https"],
+    "format": "cjs"
+  }
+}

@@ -26,7 +26,7 @@ bitflags! {
         /// Reads from an unresolved global or a member chain rooted at one.
         const GlobalVarAccess = 1;
         /// A call/new/tagged-template expression was treated as pure by an annotation or
-        /// cross-module analysis. Only the strict on-demand statement walk additionally sets it
+        /// cross-module analysis. Only the strict top-level statement walk additionally sets it
         /// for `manualPureFunctions` forms; the regular analyzer and the class-mode collector
         /// deliberately do not.
         const PureAnnotation = 1 << 1;
@@ -515,11 +515,11 @@ impl<'a> StmtEvalAnalyzer<'a> {
 
   /// Add order-only facts from every expression that may run while evaluating this top-level
   /// statement. This deliberately does not reuse the tree-shaking walk: that walk may stop as soon
-  /// as Oxc proves a surrounding call/member/binding operation pure, while strict on-demand order
-  /// analysis still needs reads hidden behind that operation.
+  /// as Oxc proves a surrounding call/member/binding operation pure, while strict order analysis
+  /// still needs reads hidden behind that operation.
   ///
-  /// The scanner only calls this for strict on-demand builds whose regular facts are not already
-  /// order-sensitive. Keeping the entry point separate leaves the default and wrap-all hot paths,
+  /// The scanner only calls this for strict builds whose regular facts are not already
+  /// order-sensitive. Keeping the entry point separate leaves the non-strict hot path,
   /// cross-module tree-shaking re-analysis, and `tree_shaking_flags` unchanged.
   pub(crate) fn add_top_level_eager_order_reasons(
     &self,
@@ -588,6 +588,8 @@ impl<'a> StmtEvalAnalyzer<'a> {
   fn analyze_module_declaration(&self, decl: &ast::ModuleDeclaration) -> StmtEvalFacts {
     match decl {
       ast::ModuleDeclaration::ExportAllDeclaration(_)
+      | ast::ModuleDeclaration::ExportFromDeclaration(_)
+      | ast::ModuleDeclaration::ExportNamedDeclaration(_)
       | ast::ModuleDeclaration::ImportDeclaration(_) => {
         // We consider `import ...` has no side effect. However, `import ...` might be rewritten to other statements by the bundler.
         // In that case, we will mark the statement as having side effect in link stage.
@@ -609,12 +611,8 @@ impl<'a> StmtEvalAnalyzer<'a> {
           }
         }
       }
-      ast::ModuleDeclaration::ExportNamedDeclaration(named_decl) => {
-        if named_decl.source.is_some() {
-          StmtEvalFacts::default()
-        } else {
-          named_decl.declaration.as_ref().map(|decl| self.analyze_decl(decl)).unwrap_or_default()
-        }
+      ast::ModuleDeclaration::ExportDeclaration(export_decl) => {
+        self.analyze_decl(&export_decl.declaration)
       }
       ast::ModuleDeclaration::TSExportAssignment(_)
       | ast::ModuleDeclaration::TSNamespaceExportDeclaration(_) => {
@@ -726,9 +724,9 @@ impl<'analyzer, 'ctx> EagerEvaluationOrderReasonCollector<'analyzer, 'ctx> {
     analyzer: &'analyzer StmtEvalAnalyzer<'ctx>,
     class: &ast::Class,
   ) -> StmtOrderSensitiveReasons {
-    // Preserve the original class-definition collector outside strict on-demand builds. The
-    // extended statement-level cases below are scheduling metadata for that mode only and must not
-    // perturb ordinary chunk sorting.
+    // Preserve the original class-definition collector outside the strict top-level statement
+    // walk. The extended statement-level cases below are order metadata for strict builds only and
+    // must not perturb non-strict analysis.
     let mut collector = Self::new(analyzer, false);
     collector.visit_class(class);
     collector.reasons
@@ -754,7 +752,7 @@ impl<'analyzer, 'ctx> EagerEvaluationOrderReasonCollector<'analyzer, 'ctx> {
       }
       Expression::ArrowFunctionExpression(arrow) => {
         self.visit_formal_parameters(&arrow.params);
-        self.visit_function_body(&arrow.body);
+        self.visit_arrow_function_body(&arrow.body);
       }
       Expression::SequenceExpression(sequence) => {
         if let Some(last) = sequence.expressions.last() {
@@ -817,7 +815,7 @@ impl<'analyzer, 'ctx> EagerEvaluationOrderReasonCollector<'analyzer, 'ctx> {
     for decorator in &class.decorators {
       self.visit_expression(&decorator.expression);
     }
-    if let Some(super_class) = &class.super_class {
+    if let Some(super_class) = class.heritage_expression() {
       self.visit_expression(super_class);
     }
 
@@ -1211,7 +1209,7 @@ mod test {
       .map(|stmt| {
         let analyzer = StmtEvalAnalyzer::new(&ast_scopes, flags, options, None, None);
         let mut facts = analyzer.analyze_stmt(stmt);
-        if options.is_strict_on_demand_wrapping_enabled() && !facts.is_order_sensitive() {
+        if options.is_strict_execution_order_enabled() && !facts.is_order_sensitive() {
           analyzer.add_top_level_eager_order_reasons(stmt, &mut facts);
         }
         (facts.tree_shaking_flags(), facts.is_order_sensitive())
@@ -2277,7 +2275,7 @@ mod test {
   }
 
   #[test]
-  fn test_extended_top_level_reasons_do_not_leak_to_default_or_wrap_all() {
+  fn test_extended_top_level_reasons_do_not_leak_to_the_non_strict_default() {
     let manual_pure_tag = "function tag() { return (/* @__PURE__ */ globalThis.__orderRead?.() ?? 5); } class C { static value = tag``; }";
     let manual_pure_treeshake = || InnerOptions {
       manual_pure_functions: Some(std::iter::once("tag".to_string()).collect()),
@@ -2293,19 +2291,20 @@ mod test {
       strict_execution_order: true,
       ..NormalizedBundlerOptions::default()
     });
-    for options in [&default_options, &wrap_all_options] {
-      assert_eq!(
-        get_stmt_eval_with_top_level_eager_order_reasons(manual_pure_tag, options),
-        vec![(StmtEvalFlags::empty(), false), (StmtEvalFlags::empty(), false)]
+    assert_eq!(
+      get_stmt_eval_with_top_level_eager_order_reasons(manual_pure_tag, &default_options),
+      vec![(StmtEvalFlags::empty(), false), (StmtEvalFlags::empty(), false)]
+    );
+
+    // Both strict plans read the same signal, so both collect the same reasons.
+    let strict_on_demand = strict_on_demand_options(manual_pure_treeshake());
+    for options in [&wrap_all_options, &strict_on_demand] {
+      assert_last_statement_gets_eager_reason_only(
+        manual_pure_tag,
+        options,
+        StmtEvalFlags::empty(),
       );
     }
-
-    let strict_on_demand = strict_on_demand_options(manual_pure_treeshake());
-    assert_last_statement_gets_eager_reason_only(
-      manual_pure_tag,
-      &strict_on_demand,
-      StmtEvalFlags::empty(),
-    );
   }
 
   #[test]

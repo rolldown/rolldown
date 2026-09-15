@@ -1,21 +1,17 @@
-// Hole 1 — an *eager* re-export barrel closes an emergent chunk cycle through its import overlay.
+// Regression pin for a retained eager re-export barrel next to a potential cross-chunk cycle.
 //
-// The forwarder in chunk A stays eager (a pure `export { x } from` with no order-sensitivity of
-// its own), so on-demand wrapping never plans it. But its retained re-export of the order-wrapped
-// `definer` still makes the lowering emit `init_definer()` in A's body and register A's dependency
-// on `init_definer` — a cross-chunk A -> B edge carried by an `OrderImportOverlay`, not by an
-// `init_A` the projector can see. Together with the baseline B -> A edge (chunk B's `eagerhaz`
-// eagerly requires chunk A's CJS carrier) that closes a real A <-> B cycle. Chunk B's body then
-// runs before chunk A assigns its `var require_carrier`, so `eagerhaz`'s record-position
-// `require_carrier()` reads the unassigned var — the C-class `require_* is not a function` startup
-// crash, recurring because the projector skips every importer without its own ESM `init_*`.
+// In on-demand mode the consumer-local resolver gives the entry's live `pv` obligation directly
+// to `definer`. The forwarder's non-empty retained-path overlay must not also reference
+// `init_definer`: doing so would add a phantom A -> B edge which, together with chunk B's eager
+// import of chunk A's CJS carrier, would manufacture an A <-> B cycle. In wrap-all mode the
+// conservative wrapper path may still contain that edge, but it must defer the carrier read so
+// both modes produce the same initialized values.
 //
 // Source order pins the expected evaluation: a-first (A), the eager carrier reader (B), e-first
 // (entry chunk), then the definer subtree (B). The entry-chunk-hosted e-first runs after the
 // grouped chunks in the predicted order but before the definer subtree in source order, so
-// `definer` deviates (premature) and joins the wrap plan — while `eagerhaz`, earlier than every
-// planned module in this root's expected order, legitimately stays eager, and the pure forwarder
-// is never order-sensitive so it stays eager too.
+// `definer` deviates (premature) and joins the wrap plan. In on-demand mode `eagerhaz` and the pure
+// forwarder stay eager; wrap-all conservatively wraps them.
 import './a/a-first.js';
 import './b/eagerhaz.js';
 import './e-first.js';

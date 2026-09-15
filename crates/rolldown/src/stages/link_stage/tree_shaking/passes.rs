@@ -105,7 +105,7 @@ pub fn include_runtime_symbol(
 /// it. `#9122`'s `wrapper` keeps `StateCode`/`getX` because the entry imports them *through*
 /// `wrapper` (`export { … } from './wrapper.js'`). The synthetic runtime module is excluded.
 ///
-/// Must run once, after the inclusion fixpoint has settled `used_symbol_refs`. It only includes
+/// Must run once, after the inclusion fixpoint has settled `used_symbol_refs_builder`. It only includes
 /// re-export statements that reference already-retained canonicals, so it introduces no new
 /// reachable values and needs no further convergence.
 pub(super) fn preserve_reexported_interfaces(ctx: &mut IncludeContext) {
@@ -116,7 +116,7 @@ pub(super) fn preserve_reexported_interfaces(ctx: &mut IncludeContext) {
   // symbol — these are the facades consumed through their own module.
   let mut consumed_facades: FxHashSet<SymbolRef> = FxHashSet::default();
   for (imported_as_ref, reexports) in ctx.normal_symbol_exports_chain_map {
-    if ctx.used_symbol_refs.contains(imported_as_ref) {
+    if ctx.used_symbol_refs_builder.contains(imported_as_ref) {
       consumed_facades.extend(reexports.iter().copied());
     }
   }

@@ -1,0 +1,24 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+//#region main.js
+const loaded = import("./target-oUvUsQEi.js").then((target) => target.value);
+//#endregion
+export { loaded };
+
+```
+
+## target-oUvUsQEi.js
+
+```js
+//#region target.js
+const value = 42;
+//#endregion
+export { value };
+
+```

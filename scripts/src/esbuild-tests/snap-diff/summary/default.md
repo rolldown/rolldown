@@ -205,6 +205,7 @@
 ## [to_esm_wrapper_omission](../../../../../crates/rolldown/tests/esbuild/default/to_esm_wrapper_omission)
 ## [top_level_await_allowed_import_without_splitting](../../../../../crates/rolldown/tests/esbuild/default/top_level_await_allowed_import_without_splitting)
 ## [top_level_await_cjs_dead_branch](../../../../../crates/rolldown/tests/esbuild/default/top_level_await_cjs_dead_branch)
+## [top_level_await_cyclic_dependencies_issue4498](../../../../../crates/rolldown/tests/esbuild/default/top_level_await_cyclic_dependencies_issue4498)
 ## [top_level_await_esm](../../../../../crates/rolldown/tests/esbuild/default/top_level_await_esm)
 ## [top_level_await_esm_dead_branch](../../../../../crates/rolldown/tests/esbuild/default/top_level_await_esm_dead_branch)
 ## [top_level_await_forbidden_require_dead_branch](../../../../../crates/rolldown/tests/esbuild/default/top_level_await_forbidden_require_dead_branch)

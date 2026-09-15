@@ -1,0 +1,284 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## cn.js
+
+```js
+import { n as __esmMin } from "./rolldown-runtime.js";
+//#region node_modules/namespace-barrel/cn.js
+var cn;
+function init_cn() {
+	return (init_cn = __esmMin((() => {
+		globalThis.__events.push("leaf-cn");
+		cn = () => "cn";
+	})))();
+}
+//#endregion
+export { init_cn as n, cn as t };
+
+```
+
+## main.js
+
+```js
+import { n as init_cn, t as cn } from "./cn.js";
+import { n as __esmMin } from "./rolldown-runtime.js";
+//#region main.js
+var loadStatic, loadOpaque;
+function init_main() {
+	return (init_main = __esmMin((() => {
+		init_cn();
+		globalThis.__events.push(`main:${cn()}`);
+		loadStatic = () => import("./route-static.js");
+		loadOpaque = () => import("./route-opaque.js");
+	})))();
+}
+//#endregion
+init_main();
+export { loadOpaque, loadStatic };
+
+```
+
+## rolldown-runtime.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+export { __toESM as i, __esmMin as n, __exportAll as r, __commonJSMin as t };
+
+```
+
+## route-opaque.js
+
+```js
+import { n as init_cn, t as cn } from "./cn.js";
+import { n as init_stack, t as Stack } from "./stack.js";
+import { i as __toESM, n as __esmMin, r as __exportAll, t as __commonJSMin } from "./rolldown-runtime.js";
+//#region node_modules/namespace-barrel/a.cjs
+var require_a = /* @__PURE__ */ __commonJSMin(((exports, module) => {
+	globalThis.__events.push("cjs-a");
+	module.exports = "a";
+}));
+var import_a;
+function init_namespace_barrel_cjs_0() {
+	return (init_namespace_barrel_cjs_0 = __esmMin((() => {
+		import_a = /* @__PURE__ */ __toESM(require_a(), 1);
+	})))();
+}
+//#endregion
+//#region node_modules/namespace-barrel/b.cjs
+var require_b = /* @__PURE__ */ __commonJSMin(((exports, module) => {
+	globalThis.__events.push("cjs-b");
+	module.exports = "b";
+}));
+var import_b;
+function init_namespace_barrel_cjs_1() {
+	return (init_namespace_barrel_cjs_1 = __esmMin((() => {
+		import_b = /* @__PURE__ */ __toESM(require_b(), 1);
+	})))();
+}
+//#endregion
+//#region node_modules/namespace-barrel/index.js
+var namespace_barrel_exports = /* @__PURE__ */ __exportAll({
+	Stack: () => Stack,
+	a: () => import_a.default,
+	b: () => import_b.default,
+	cn: () => cn
+});
+//#endregion
+//#region route-opaque.js
+var value;
+function init_route_opaque() {
+	return (init_route_opaque = __esmMin((() => {
+		init_cn(), init_stack(), init_namespace_barrel_cjs_0(), init_namespace_barrel_cjs_1();
+		globalThis.__events.push("route-opaque");
+		value = namespace_barrel_exports[globalThis.__namespaceKey];
+	})))();
+}
+//#endregion
+init_route_opaque();
+export { value };
+
+```
+
+## route-static.js
+
+```js
+import { n as init_stack, t as Stack } from "./stack.js";
+import { n as __esmMin } from "./rolldown-runtime.js";
+//#region route-static.js
+var value;
+function init_route_static() {
+	return (init_route_static = __esmMin((() => {
+		init_stack();
+		globalThis.__events.push("route-static");
+		value = new Stack().size;
+	})))();
+}
+//#endregion
+init_route_static();
+export { value };
+
+```
+
+## stack.js
+
+```js
+import { n as __esmMin } from "./rolldown-runtime.js";
+//#region node_modules/namespace-barrel/stack.js
+var Stack;
+function init_stack() {
+	return (init_stack = __esmMin((() => {
+		globalThis.__events.push("leaf-stack");
+		Stack = class {
+			size = 1;
+		};
+	})))();
+}
+//#endregion
+export { init_stack as n, Stack as t };
+
+```
+
+# Variant: on-demand: [on_demand_wrapping: true]
+
+## Assets
+
+### cn.js
+
+```js
+import { n as __esmMin } from "./rolldown-runtime.js";
+//#region node_modules/namespace-barrel/cn.js
+var cn;
+function init_cn() {
+	return (init_cn = __esmMin((() => {
+		globalThis.__events.push("leaf-cn");
+		cn = () => "cn";
+	})))();
+}
+//#endregion
+export { init_cn as n, cn as t };
+
+```
+
+### main.js
+
+```js
+import { n as init_cn, t as cn } from "./cn.js";
+import { n as __esmMin } from "./rolldown-runtime.js";
+//#region main.js
+var loadStatic, loadOpaque;
+function init_main() {
+	return (init_main = __esmMin((() => {
+		init_cn();
+		globalThis.__events.push(`main:${cn()}`);
+		loadStatic = () => import("./route-static.js");
+		loadOpaque = () => import("./route-opaque.js");
+	})))();
+}
+//#endregion
+init_main();
+export { loadOpaque, loadStatic };
+
+```
+
+### rolldown-runtime.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+export { __toESM as i, __esmMin as n, __exportAll as r, __commonJSMin as t };
+
+```
+
+### route-opaque.js
+
+```js
+import { n as init_cn, t as cn } from "./cn.js";
+import { n as init_stack, t as Stack } from "./stack.js";
+import { i as __toESM, n as __esmMin, r as __exportAll, t as __commonJSMin } from "./rolldown-runtime.js";
+//#region node_modules/namespace-barrel/a.cjs
+var require_a = /* @__PURE__ */ __commonJSMin(((exports, module) => {
+	globalThis.__events.push("cjs-a");
+	module.exports = "a";
+}));
+var import_a;
+function init_namespace_barrel_cjs_0() {
+	return (init_namespace_barrel_cjs_0 = __esmMin((() => {
+		import_a = /* @__PURE__ */ __toESM(require_a(), 1);
+	})))();
+}
+//#endregion
+//#region node_modules/namespace-barrel/b.cjs
+var require_b = /* @__PURE__ */ __commonJSMin(((exports, module) => {
+	globalThis.__events.push("cjs-b");
+	module.exports = "b";
+}));
+var import_b;
+function init_namespace_barrel_cjs_1() {
+	return (init_namespace_barrel_cjs_1 = __esmMin((() => {
+		import_b = /* @__PURE__ */ __toESM(require_b(), 1);
+	})))();
+}
+//#endregion
+//#region node_modules/namespace-barrel/index.js
+var namespace_barrel_exports = /* @__PURE__ */ __exportAll({
+	Stack: () => Stack,
+	a: () => import_a.default,
+	b: () => import_b.default,
+	cn: () => cn
+});
+//#endregion
+//#region route-opaque.js
+var value;
+function init_route_opaque() {
+	return (init_route_opaque = __esmMin((() => {
+		init_cn(), init_stack(), init_namespace_barrel_cjs_0(), init_namespace_barrel_cjs_1();
+		globalThis.__events.push("route-opaque");
+		value = namespace_barrel_exports[globalThis.__namespaceKey];
+	})))();
+}
+//#endregion
+init_route_opaque();
+export { value };
+
+```
+
+### route-static.js
+
+```js
+import { n as init_stack, t as Stack } from "./stack.js";
+import { n as __esmMin } from "./rolldown-runtime.js";
+//#region route-static.js
+var value;
+function init_route_static() {
+	return (init_route_static = __esmMin((() => {
+		init_stack();
+		globalThis.__events.push("route-static");
+		value = new Stack().size;
+	})))();
+}
+//#endregion
+init_route_static();
+export { value };
+
+```
+
+### stack.js
+
+```js
+import { n as __esmMin } from "./rolldown-runtime.js";
+//#region node_modules/namespace-barrel/stack.js
+var Stack;
+function init_stack() {
+	return (init_stack = __esmMin((() => {
+		globalThis.__events.push("leaf-stack");
+		Stack = class {
+			size = 1;
+		};
+	})))();
+}
+//#endregion
+export { init_stack as n, Stack as t };
+
+```

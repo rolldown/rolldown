@@ -1,0 +1,194 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+import { n as loadRoute, t as init_main } from "./main2.js";
+await init_main();
+export { loadRoute };
+
+```
+
+## main2.js
+
+```js
+import { r as init_pure_barrel } from "./route.js";
+import { n as __esmMin } from "./rolldown-runtime.js";
+//#region node_modules/pure-barrel/cn.js
+function cn(...values) {
+	return values.filter(Boolean).join(" ");
+}
+function init_cn() {
+	return (init_cn = __esmMin((async () => {
+		await Promise.resolve();
+		globalThis.__events.push("cn");
+	})))();
+}
+//#endregion
+//#region main.js
+function loadRoute() {
+	return import("./route2.js");
+}
+function init_main() {
+	return (init_main = __esmMin((async () => {
+		await init_pure_barrel();
+		globalThis.__events.push(`main:${cn("a", "b")}`);
+	})))();
+}
+//#endregion
+export { loadRoute as n, init_cn as r, init_main as t };
+
+```
+
+## rolldown-runtime.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+export { __esmMin as n, __toESM as r, __commonJSMin as t };
+
+```
+
+## route.js
+
+```js
+import { r as init_cn } from "./main2.js";
+import { n as __esmMin, r as __toESM, t as __commonJSMin } from "./rolldown-runtime.js";
+//#region node_modules/pure-barrel/clone-deep.cjs
+var require_clone_deep = /* @__PURE__ */ __commonJSMin(((exports, module) => {
+	globalThis.__events.push("clone-deep");
+	module.exports = function cloneDeep(value) {
+		return JSON.parse(JSON.stringify(value));
+	};
+}));
+//#endregion
+//#region node_modules/pure-barrel/index.js
+var import_clone_deep;
+function init_pure_barrel() {
+	return (init_pure_barrel = __esmMin((async () => {
+		await init_cn();
+		import_clone_deep = /* @__PURE__ */ __toESM(require_clone_deep(), 1);
+	})))();
+}
+//#endregion
+//#region route.js
+var value;
+function init_route() {
+	return (init_route = __esmMin((async () => {
+		await init_pure_barrel();
+		globalThis.__events.push("route");
+		value = (0, import_clone_deep.default)({ value: 1 });
+	})))();
+}
+//#endregion
+export { value as n, init_pure_barrel as r, init_route as t };
+
+```
+
+## route2.js
+
+```js
+import { n as value, t as init_route } from "./route.js";
+await init_route();
+export { value };
+
+```
+
+# Variant: on-demand: [on_demand_wrapping: true]
+
+## Assets
+
+### main.js
+
+```js
+import { n as loadRoute, t as init_main } from "./main2.js";
+await init_main();
+export { loadRoute };
+
+```
+
+### main2.js
+
+```js
+import { r as init_pure_barrel } from "./route.js";
+import { n as __esmMin } from "./rolldown-runtime.js";
+//#region node_modules/pure-barrel/cn.js
+function cn(...values) {
+	return values.filter(Boolean).join(" ");
+}
+function init_cn() {
+	return (init_cn = __esmMin((async () => {
+		await Promise.resolve();
+		globalThis.__events.push("cn");
+	})))();
+}
+//#endregion
+//#region main.js
+function loadRoute() {
+	return import("./route2.js");
+}
+function init_main() {
+	return (init_main = __esmMin((async () => {
+		await init_pure_barrel();
+		globalThis.__events.push(`main:${cn("a", "b")}`);
+	})))();
+}
+//#endregion
+export { loadRoute as n, init_cn as r, init_main as t };
+
+```
+
+### rolldown-runtime.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+export { __esmMin as n, __toESM as r, __commonJSMin as t };
+
+```
+
+### route.js
+
+```js
+import { r as init_cn } from "./main2.js";
+import { n as __esmMin, r as __toESM, t as __commonJSMin } from "./rolldown-runtime.js";
+//#region node_modules/pure-barrel/clone-deep.cjs
+var require_clone_deep = /* @__PURE__ */ __commonJSMin(((exports, module) => {
+	globalThis.__events.push("clone-deep");
+	module.exports = function cloneDeep(value) {
+		return JSON.parse(JSON.stringify(value));
+	};
+}));
+//#endregion
+//#region node_modules/pure-barrel/index.js
+var import_clone_deep;
+function init_pure_barrel() {
+	return (init_pure_barrel = __esmMin((async () => {
+		await init_cn();
+		import_clone_deep = /* @__PURE__ */ __toESM(require_clone_deep(), 1);
+	})))();
+}
+//#endregion
+//#region route.js
+var value;
+function init_route() {
+	return (init_route = __esmMin((async () => {
+		await init_pure_barrel();
+		globalThis.__events.push("route");
+		value = (0, import_clone_deep.default)({ value: 1 });
+	})))();
+}
+//#endregion
+export { value as n, init_pure_barrel as r, init_route as t };
+
+```
+
+### route2.js
+
+```js
+import { n as value, t as init_route } from "./route.js";
+await init_route();
+export { value };
+
+```

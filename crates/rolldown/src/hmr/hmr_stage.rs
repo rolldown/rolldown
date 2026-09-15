@@ -7,6 +7,7 @@ use std::{
 };
 
 use arcstr::ArcStr;
+use itertools::Itertools;
 use oxc::ast::builder::AstBuilder;
 use oxc_traverse::traverse_mut;
 use rolldown_common::{
@@ -77,55 +78,137 @@ impl<Fs: FileSystem + Clone + 'static> DerefMut for HmrStage<'_, Fs> {
   }
 }
 
+/// Module ids the `hotUpdate` hook must not see or return: lazy-compilation proxies are internal
+/// artifacts (cf. the dynamic-importer exclusion in `EcmaView`) and runtime modules are never
+/// re-fetched. Runtime ids use both prefixes (cf. the same pair in `ChunkGraph`); the `\0` one
+/// covers `RUNTIME_MODULE_KEY`.
+fn is_hidden_from_hot_update_hook(id: &str) -> bool {
+  id.contains("?rolldown-lazy=") || id.starts_with("rolldown:") || id.starts_with("\0rolldown/")
+}
+
 impl<'a, Fs: FileSystem + Clone + 'static> HmrStage<'a, Fs> {
   pub fn new(input: HmrStageInput<'a, Fs>) -> Self {
     Self { input }
   }
 
+  /// Stage order is documented in `internal-docs/dev-engine/implementation.md`
+  /// ("Inside `compute_hmr_update_for_file_changes`").
+  #[expect(clippy::too_many_lines)]
   pub async fn compute_hmr_update_for_file_changes(
     &mut self,
     changed_file_paths: &FxIndexMap<String, WatcherChangeKind>,
     clients: &[ClientHmrInput<'_>],
     stamp_table: &mut HmrStampTable,
     last_build_errored: bool,
+    hot_update_hook_enabled: bool,
   ) -> BuildResult<Vec<ClientHmrUpdate>> {
     tracing::trace!(
-      "[HmrStage] starts computing HMR updates\n - changed_file_paths: {:#?}\n - clients: {:#?}",
-      changed_file_paths,
-      clients.iter().map(|c| c.client_id).collect::<Vec<_>>(),
+      changed_files = %changed_file_paths
+        .iter()
+        .map(|(path, kind)| format!("{path}:{kind}"))
+        .join(", "),
+      clients = %clients.iter().map(|client| client.client_id).join(", "),
+      "[HmrStage] starts computing HMR updates"
     );
 
-    // 1. Identify changed modules
+    // 1. Identify changed modules — per changed file: compute the default affected set, then (if
+    // the hook is enabled and any plugin registered `hotUpdate`) let the plugin replace-chain
+    // edit it before re-fetching. `hot_update_hook_enabled` is the `hot_update` dev option,
+    // off by default — see `DevOptions::hot_update`.
+    let hot_update_hook_registered =
+      hot_update_hook_enabled && self.plugin_driver.has_hot_update_hook();
     let mut changed_modules = FxIndexSet::default();
+    // Modules a `hotUpdate` hook explicitly selected (a plugin returned a replacement set).
+    // They are exempt from the unchanged-output suppression below — like `last_build_errored`,
+    // by skipping the pre-rebuild capture. An explicit return is a directive to re-run the
+    // module in clients, and what changed can live outside the module's own code (e.g. a
+    // watched non-module file the module reads at runtime), so identical output does not make
+    // the update empty. Vite ships hook-returned modules unconditionally.
+    let mut hook_selected_modules = FxHashSet::default();
     for (changed_file_path, event) in changed_file_paths {
       let changed_file_path = ArcStr::from(changed_file_path.to_slash());
-      // Check if the file itself is a module
-      if let Some(module_idx) = self.cache.module_idx_by_abs_path.get(&changed_file_path) {
-        if *event == WatcherChangeKind::Delete {
-          if let Some(importers) = self.cache.importers.get(*module_idx) {
-            changed_modules.extend(importers.iter().map(|imp| imp.importer_idx));
+
+      // Default affected set: the file's own module (kept even for deletes — the hook contract
+      // passes the deleted module itself; importer expansion happens after the chain) plus every
+      // module that has this file as a transform dependency.
+      let own_module_idx = self.cache.module_idx_by_abs_path.get(&changed_file_path).copied();
+      let mut affected_modules = FxIndexSet::default();
+      if let Some(module_idx) = own_module_idx {
+        affected_modules.insert(module_idx);
+      }
+      // `transform_dependencies` is a DashMap, so its iteration order can differ between runs.
+      // The `hotUpdate` hook makes this order plugin-visible via `args.modules`, so give the
+      // set a stable order: own module first, then registrants sorted by stable id.
+      let mut transform_dep_modules = self
+        .plugin_driver
+        .transform_dependencies
+        .iter()
+        .filter_map(|entry| entry.value().contains(&changed_file_path).then_some(*entry.key()))
+        .collect::<Vec<_>>();
+      transform_dep_modules
+        .sort_unstable_by_key(|module_idx| self.module_table().modules[*module_idx].stable_id());
+      affected_modules.extend(transform_dep_modules);
+
+      let mut hook_replaced = false;
+      if hot_update_hook_registered {
+        // Plugins receive plain module ids and may replace the set; an empty return suppresses
+        // this file's update. The chain also runs when the default set is empty — content
+        // plugins claim files no module maps to. Ids the graph doesn't know are dropped.
+        // The ids are `to_slash`ed like `args.file`, so one args object never mixes path
+        // conventions on Windows.
+        let default_ids = affected_modules
+          .iter()
+          .filter_map(|module_idx| match &self.module_table().modules[*module_idx] {
+            Module::Normal(module) if !is_hidden_from_hot_update_hook(module.id.as_arc_str()) => {
+              Some(ArcStr::from(module.id.as_arc_str().to_slash()))
+            }
+            _ => None,
+          })
+          .collect::<Vec<_>>();
+        let final_ids =
+          self.plugin_driver.hot_update(*event, &changed_file_path, default_ids).await?;
+        if let Some(final_ids) = final_ids {
+          hook_replaced = true;
+          affected_modules.clear();
+          for id in final_ids {
+            if is_hidden_from_hot_update_hook(&id) {
+              continue;
+            }
+            // The map keys are `to_slash`ed module ids, but a returned id may be plugin-built
+            // with native separators (e.g. via `path.join` on Windows) — normalize it the same
+            // way so it still round-trips back to its module.
+            if let Some(module_idx) = self.cache.module_idx_by_abs_path.get(&*id.to_slash()) {
+              affected_modules.insert(*module_idx);
+            } else {
+              tracing::debug!(
+                "[HmrStage] dropped unknown module id returned from the hotUpdate hook: {id}"
+              );
+            }
           }
-        } else {
-          changed_modules.insert(*module_idx);
         }
       }
 
-      // Check if any modules have this file as a transform dependency
-      for entry in self.plugin_driver.transform_dependencies.iter() {
-        let module_idx = *entry.key();
-        let deps = entry.value();
-        if deps.contains(&changed_file_path) {
+      for module_idx in affected_modules {
+        if *event == WatcherChangeKind::Delete && Some(module_idx) == own_module_idx {
+          // A deleted module cannot be re-fetched — start the update from its importers.
+          if let Some(importers) = self.cache.importers.get(module_idx) {
+            changed_modules.extend(importers.iter().map(|imp| imp.importer_idx));
+          }
+        } else {
           changed_modules.insert(module_idx);
+          if hook_replaced {
+            hook_selected_modules.insert(module_idx);
+          }
         }
       }
     }
 
     tracing::trace!(
-      "[HmrStage] map changed file paths to module idxs\n - changed_modules: {:#?}",
-      changed_modules
+      changed_modules = %changed_modules
         .iter()
         .map(|module_idx| self.module_table().modules[*module_idx].stable_id())
-        .collect::<Vec<_>>(),
+        .join(", "),
+      "[HmrStage] mapped changed file paths to modules"
     );
 
     // Files re-queued by an earlier failed scan (`pending_rescans`) get
@@ -139,7 +222,9 @@ impl<'a, Fs: FileSystem + Clone + 'static> HmrStage<'a, Fs> {
     // restore of the broken file to its pre-break bytes would be suppressed as
     // unchanged, leaving clients stuck on the error overlay. Folding first
     // makes the empty event re-fetch the broken file, which keeps failing (and
-    // keeps the latch set) until the file is actually fixed.
+    // keeps the latch set) until the file is actually fixed. The same ordering
+    // also keeps a `hotUpdate` hook that suppresses an update from starving
+    // the recovery.
     for resolved_id in &self.cache.pending_rescans {
       if let Some(state) = self.cache.module_id_to_idx.get(&resolved_id.id) {
         changed_modules.insert(state.idx());
@@ -168,6 +253,7 @@ impl<'a, Fs: FileSystem + Clone + 'static> HmrStage<'a, Fs> {
     } else {
       let pre_rebuild_inputs = changed_modules
         .iter()
+        .filter(|module_idx| !hook_selected_modules.contains(*module_idx))
         .filter_map(|module_idx| {
           self.module_table().modules[*module_idx].as_normal()?;
           let ecma_ast = self.index_ecma_ast()[*module_idx].as_ref()?;
@@ -229,11 +315,11 @@ impl<'a, Fs: FileSystem + Clone + 'static> HmrStage<'a, Fs> {
 
       tracing::debug!(
         target: "hmr",
-        "New added modules: {:?}",
-        new_added_modules
+        new_modules = %new_added_modules
           .iter()
           .map(|module_idx| module_loader_output.module_table.get(*module_idx).stable_id())
-          .collect::<Vec<_>>(),
+          .join(", "),
+        "added modules"
       );
 
       let plugin_driver = Arc::clone(&self.plugin_driver);
@@ -273,11 +359,11 @@ impl<'a, Fs: FileSystem + Clone + 'static> HmrStage<'a, Fs> {
     if !output_unchanged_modules.is_empty() {
       tracing::debug!(
         target: "hmr",
-        "skip modules whose rebuilt output is unchanged: {:?}",
-        output_unchanged_modules
+        unchanged_modules = %output_unchanged_modules
           .iter()
           .map(|module_idx| self.module_table().modules[*module_idx].stable_id())
-          .collect::<Vec<_>>(),
+          .join(", "),
+        "skip modules whose rebuilt output is unchanged"
       );
       changed_modules.retain(|module_idx| !output_unchanged_modules.contains(module_idx));
     }
@@ -433,7 +519,7 @@ impl<'a, Fs: FileSystem + Clone + 'static> HmrStage<'a, Fs> {
   ) -> BuildResult<HmrLazyChunkOutput> {
     tracing::debug!(
       target: "hmr",
-      "compile_lazy_entry: module_id: {:?}",
+      "compile_lazy_entry: module_id: {}",
       module_id,
     );
 
@@ -583,15 +669,9 @@ impl<'a, Fs: FileSystem + Clone + 'static> HmrStage<'a, Fs> {
       source_joiner.append_source_dyn(source);
     }
 
-    // A lazy chunk is delivery + execute-entry — no walk, no cache removals. The tail is the
-    // one uniform re-execution gate: the stub removed the proxy id from the cache, so this misses the
-    // registry and runs the fetched-template factory.
-    let entry_stable_id = self.module_table().modules[entry_module_idx].stable_id().as_str();
-    source_joiner.append_source(format!(
-      "__rolldown_runtime__.initModule({})",
-      json_escape_simd::escape(entry_stable_id)
-    ));
-
+    // Registrations only — deliberately no execute-entry tail; `requestLazy` runs the module.
+    // Executing here would run it inside the proxy's async wrapper, turning a throw from its
+    // body into a floating rejection instead of one that reaches the importer.
     let (mut code, mut map) = source_joiner.join();
 
     let lazy_patch_id = self.next_hmr_patch_id.fetch_add(1, Ordering::Relaxed);
@@ -799,7 +879,7 @@ impl<'a, Fs: FileSystem + Clone + 'static> HmrStage<'a, Fs> {
         exports: oxc::allocator::Vec::new_in(&fields.allocator),
         use_pife_for_module_wrappers,
         dependencies: FxIndexSet::default(),
-        imports: FxHashSet::default(),
+        generated_load_exports_stmts: FxHashMap::default(),
         generated_static_import_infos: FxHashMap::default(),
         re_export_all_dependencies: FxIndexSet::default(),
         generated_static_import_stmts_from_external: FxIndexMap::default(),
@@ -911,5 +991,19 @@ impl<Fs: FileSystem + Clone + 'static> HmrStage<'_, Fs> {
         }
       }
     }
+  }
+}
+
+#[cfg(test)]
+mod tests {
+  use super::is_hidden_from_hot_update_hook;
+
+  #[test]
+  fn hidden_ids_cover_runtime_and_lazy_proxy_modules() {
+    assert!(is_hidden_from_hot_update_hook(rolldown_common::RUNTIME_MODULE_KEY));
+    assert!(is_hidden_from_hot_update_hook("rolldown:hmr"));
+    assert!(is_hidden_from_hot_update_hook("/app/main.js?rolldown-lazy=1"));
+    assert!(!is_hidden_from_hot_update_hook("/app/main.js"));
+    assert!(!is_hidden_from_hot_update_hook("\0virtual:team"));
   }
 }

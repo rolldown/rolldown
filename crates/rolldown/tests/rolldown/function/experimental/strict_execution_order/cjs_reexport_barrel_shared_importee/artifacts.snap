@@ -1,0 +1,195 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+import { n as __esmMin } from "./rolldown-runtime.js";
+//#region main.js
+var loadA, loadB;
+function init_main() {
+	return (init_main = __esmMin((() => {
+		globalThis.__events.push("main");
+		loadA = () => import("./route-a.js");
+		loadB = () => import("./route-b.js");
+	})))();
+}
+//#endregion
+init_main();
+export { loadA, loadB };
+
+```
+
+## rolldown-runtime.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+export { __esmMin as n, __toESM as r, __commonJSMin as t };
+
+```
+
+## route-a.js
+
+```js
+import { i as init_barrel_a_cjs_0, r as import_shared } from "./shared.js";
+import { n as __esmMin } from "./rolldown-runtime.js";
+//#region node_modules/shared-importee-barrel/barrel-a.js
+//#endregion
+//#region route-a.js
+var value;
+function init_route_a() {
+	return (init_route_a = __esmMin((() => {
+		init_barrel_a_cjs_0();
+		globalThis.__events.push("route-a");
+		value = import_shared.default;
+	})))();
+}
+//#endregion
+init_route_a();
+export { value };
+
+```
+
+## route-b.js
+
+```js
+import { n as init_barrel_b_cjs_1, t as import_shared } from "./shared.js";
+import { n as __esmMin } from "./rolldown-runtime.js";
+//#region node_modules/shared-importee-barrel/barrel-b.js
+//#endregion
+//#region route-b.js
+var value;
+function init_route_b() {
+	return (init_route_b = __esmMin((() => {
+		init_barrel_b_cjs_1();
+		globalThis.__events.push("route-b");
+		value = import_shared.default;
+	})))();
+}
+//#endregion
+init_route_b();
+export { value };
+
+```
+
+## shared.js
+
+```js
+import { n as __esmMin, r as __toESM, t as __commonJSMin } from "./rolldown-runtime.js";
+//#region node_modules/shared-importee-barrel/shared.cjs
+var require_shared = /* @__PURE__ */ __commonJSMin(((exports, module) => {
+	globalThis.__events.push("shared-cjs");
+	module.exports = "shared";
+}));
+var import_shared$1;
+function init_barrel_a_cjs_0() {
+	return (init_barrel_a_cjs_0 = __esmMin((() => {
+		import_shared$1 = /* @__PURE__ */ __toESM(require_shared(), 1);
+	})))();
+}
+var import_shared;
+function init_barrel_b_cjs_1() {
+	return (init_barrel_b_cjs_1 = __esmMin((() => {
+		import_shared = /* @__PURE__ */ __toESM(require_shared(), 1);
+	})))();
+}
+//#endregion
+export { init_barrel_a_cjs_0 as i, init_barrel_b_cjs_1 as n, import_shared$1 as r, import_shared as t };
+
+```
+
+# Variant: on-demand: [on_demand_wrapping: true]
+
+## Assets
+
+### main.js
+
+```js
+//#region main.js
+globalThis.__events.push("main");
+const loadA = () => import("./route-a.js");
+const loadB = () => import("./route-b.js");
+//#endregion
+export { loadA, loadB };
+
+```
+
+### rolldown-runtime.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+export { __esmMin as n, __toESM as r, __commonJSMin as t };
+
+```
+
+### route-a.js
+
+```js
+import { i as init_barrel_a_cjs_0, r as import_shared } from "./shared.js";
+import { n as __esmMin } from "./rolldown-runtime.js";
+//#region node_modules/shared-importee-barrel/barrel-a.js
+//#endregion
+//#region route-a.js
+var value;
+function init_route_a() {
+	return (init_route_a = __esmMin((() => {
+		init_barrel_a_cjs_0();
+		globalThis.__events.push("route-a");
+		value = import_shared.default;
+	})))();
+}
+//#endregion
+init_route_a();
+export { value };
+
+```
+
+### route-b.js
+
+```js
+import { n as init_barrel_b_cjs_1, t as import_shared } from "./shared.js";
+import { n as __esmMin } from "./rolldown-runtime.js";
+//#region node_modules/shared-importee-barrel/barrel-b.js
+//#endregion
+//#region route-b.js
+var value;
+function init_route_b() {
+	return (init_route_b = __esmMin((() => {
+		init_barrel_b_cjs_1();
+		globalThis.__events.push("route-b");
+		value = import_shared.default;
+	})))();
+}
+//#endregion
+init_route_b();
+export { value };
+
+```
+
+### shared.js
+
+```js
+import { n as __esmMin, r as __toESM, t as __commonJSMin } from "./rolldown-runtime.js";
+//#region node_modules/shared-importee-barrel/shared.cjs
+var require_shared = /* @__PURE__ */ __commonJSMin(((exports, module) => {
+	globalThis.__events.push("shared-cjs");
+	module.exports = "shared";
+}));
+var import_shared$1;
+function init_barrel_a_cjs_0() {
+	return (init_barrel_a_cjs_0 = __esmMin((() => {
+		import_shared$1 = /* @__PURE__ */ __toESM(require_shared(), 1);
+	})))();
+}
+var import_shared;
+function init_barrel_b_cjs_1() {
+	return (init_barrel_b_cjs_1 = __esmMin((() => {
+		import_shared = /* @__PURE__ */ __toESM(require_shared(), 1);
+	})))();
+}
+//#endregion
+export { init_barrel_a_cjs_0 as i, init_barrel_b_cjs_1 as n, import_shared$1 as r, import_shared as t };
+
+```

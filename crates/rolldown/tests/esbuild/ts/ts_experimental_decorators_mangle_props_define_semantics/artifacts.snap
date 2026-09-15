@@ -13,8 +13,8 @@ var Foo = class {
 	prop2_ = null;
 	["prop3"] = null;
 	["prop4_"] = null;
-	["prop5"] = null;
-	["prop6_"] = null;
+	[/* @__KEY__ */ "prop5"] = null;
+	[/* @__KEY__ */ "prop6_"] = null;
 };
 __decorate([dec(1)], Foo.prototype, "prop1", void 0);
 __decorate([dec(2)], Foo.prototype, "prop2_", void 0);

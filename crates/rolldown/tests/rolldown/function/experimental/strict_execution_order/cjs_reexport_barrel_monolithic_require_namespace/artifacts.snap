@@ -1,0 +1,128 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+//#region node_modules/pure-barrel/cn.js
+var cn;
+var init_cn = __esmMin((() => {
+	globalThis.__events.push("cn");
+	cn = (...values) => values.filter(Boolean).join(" ");
+}));
+//#endregion
+//#region node_modules/pure-barrel/clone-deep.cjs
+var require_clone_deep = /* @__PURE__ */ __commonJSMin(((exports, module) => {
+	globalThis.__events.push("clone-deep");
+	module.exports = function cloneDeep(value) {
+		return JSON.parse(JSON.stringify(value));
+	};
+}));
+var import_clone_deep;
+function init_pure_barrel_cjs_0() {
+	return (init_pure_barrel_cjs_0 = __esmMin((() => {
+		import_clone_deep = /* @__PURE__ */ __toESM(require_clone_deep(), 1);
+	})))();
+}
+//#endregion
+//#region node_modules/pure-barrel/index.js
+//#endregion
+//#region wrapper.js
+var wrapper_exports = /* @__PURE__ */ __exportAll({
+	cloneDeep: () => import_clone_deep.default,
+	cn: () => cn
+});
+var init_wrapper = __esmMin((() => {
+	init_cn(), init_pure_barrel_cjs_0();
+}));
+//#endregion
+//#region outer.cjs
+var require_outer = /* @__PURE__ */ __commonJSMin(((exports, module) => {
+	const ns = (init_wrapper(), __toCommonJS(wrapper_exports));
+	module.exports = {
+		cloned: ns.cloneDeep({ value: 1 }),
+		cn: ns.cn("x"),
+		keys: Object.keys(ns).sort()
+	};
+}));
+//#endregion
+//#region main.js
+var import_outer;
+function init_main() {
+	return (init_main = __esmMin((() => {
+		import_outer = /* @__PURE__ */ __toESM(require_outer());
+	})))();
+}
+//#endregion
+init_main();
+var result = import_outer.default;
+export { result };
+
+```
+
+# Variant: on-demand: [on_demand_wrapping: true]
+
+## Assets
+
+### main.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+//#region node_modules/pure-barrel/cn.js
+var cn;
+var init_cn = __esmMin((() => {
+	globalThis.__events.push("cn");
+	cn = (...values) => values.filter(Boolean).join(" ");
+}));
+//#endregion
+//#region node_modules/pure-barrel/clone-deep.cjs
+var require_clone_deep = /* @__PURE__ */ __commonJSMin(((exports, module) => {
+	globalThis.__events.push("clone-deep");
+	module.exports = function cloneDeep(value) {
+		return JSON.parse(JSON.stringify(value));
+	};
+}));
+var import_clone_deep;
+function init_pure_barrel_cjs_0() {
+	return (init_pure_barrel_cjs_0 = __esmMin((() => {
+		import_clone_deep = /* @__PURE__ */ __toESM(require_clone_deep(), 1);
+	})))();
+}
+//#endregion
+//#region node_modules/pure-barrel/index.js
+//#endregion
+//#region wrapper.js
+var wrapper_exports = /* @__PURE__ */ __exportAll({
+	cloneDeep: () => import_clone_deep.default,
+	cn: () => cn
+});
+var init_wrapper = __esmMin((() => {
+	init_cn(), init_pure_barrel_cjs_0();
+}));
+//#endregion
+//#region outer.cjs
+var require_outer = /* @__PURE__ */ __commonJSMin(((exports, module) => {
+	const ns = (init_wrapper(), __toCommonJS(wrapper_exports));
+	module.exports = {
+		cloned: ns.cloneDeep({ value: 1 }),
+		cn: ns.cn("x"),
+		keys: Object.keys(ns).sort()
+	};
+}));
+//#endregion
+//#region main.js
+var import_outer;
+function init_main() {
+	return (init_main = __esmMin((() => {
+		import_outer = /* @__PURE__ */ __toESM(require_outer());
+	})))();
+}
+//#endregion
+init_main();
+var result = import_outer.default;
+export { result };
+
+```

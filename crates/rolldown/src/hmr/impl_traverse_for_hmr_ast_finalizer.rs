@@ -1,9 +1,6 @@
 use oxc::{
   allocator::TakeIn,
-  ast::{
-    ast::{self, Expression},
-    builder::NONE,
-  },
+  ast::ast::{self, Expression},
   span::SPAN,
 };
 use oxc_traverse::Traverse;
@@ -12,6 +9,7 @@ use rolldown_ecmascript::{
   CJS_ROLLDOWN_EXPORTS_REF_IDENT, CJS_ROLLDOWN_MODULE_REF, CJS_ROLLDOWN_MODULE_REF_IDENT,
 };
 use rolldown_ecmascript_utils::ExpressionFactoryExt as _;
+use rustc_hash::FxHashSet;
 
 use crate::hmr::{
   hmr_ast_finalizer::HmrAstFinalizer,
@@ -41,16 +39,77 @@ impl<'ast> Traverse<'ast, ()> for HmrAstFinalizer<'_, 'ast> {
     // `initModule("<stable id>")` for EVERY static dep, uniformly registry-gated: a
     // co-carried factory runs, a resident module short-circuits. No payload-membership
     // split exists in the emitted bytes.
-    let dependencies_init_fn_stmts: Vec<_> = self
-      .dependencies
-      .iter()
-      .filter_map(|dep| {
-        let module = &self.modules[*dep];
-        module.as_normal().map(|_| {
-          ast::Statement::new_expression_statement(SPAN, self.make_init_module_call(module), self)
-        })
-      })
-      .collect();
+    // A dep can also carry statements of its own, emitted here before the body: a
+    // `var import_dep = loadExports("dep.js")` binding, and one `__reExport(...)` copy per
+    // `export * from`. Which ones it carries depends on how it was imported. The order is:
+    //
+    //   for each dep in `dependencies` (first-reference order):
+    //     initModule(dep)
+    //     if the dep has a binding: var import_dep = loadExports(dep)
+    //     if any `export *` source is now ready: copy it, in `export *` order,
+    //     stopping at the first one that is not ready yet
+    //
+    // Rule 1: as early as possible, copy a re-export (`export * from './dep.js'`) or make a name
+    // readable (`export { x } from './dep.js'`, `export * as ns from './dep.js'` -
+    // rolldown#10781). Example (the cycle from vitejs/vite#21626):
+    //
+    //   // index.js                     // b.js
+    //   export * from './a.js'          import { valueA } from './index.js'
+    //   export { fn } from './b.js'     export const fn = () => valueA.concat('!')
+    //
+    //   initModule("a.js")
+    //   __reExport(exports, loadExports("a.js"))   // `valueA` is on the namespace now
+    //   initModule("b.js")                         // b.js runs here and reads `valueA`
+    //
+    // b.js runs inside `initModule("b.js")`, before this body. If the copy of a.js came after
+    // all `initModule` calls, b.js would read `valueA` as `undefined`.
+    //
+    // Rule 2: keep `export *` order. `__reExport` skips a name the target already has, so the
+    // first copy owns a name that two sources export. Example:
+    //
+    //   import { helper } from './b.js'   // `dependencies` = [b, c]
+    //   export * from './c.js'            // `re_export_all_dependencies` = [c, b]
+    //   export * from './b.js'            // both c.js and b.js export `foo`
+    //
+    //   initModule("b.js")                           // c.js is not ready, so no copy yet
+    //   initModule("c.js")
+    //   __reExport(exports, loadExports("c.js"))     // `foo` comes from c.js
+    //   __reExport(exports, loadExports("b.js"))     // `foo` already set, skipped
+    //
+    // Copying b.js right after `initModule("b.js")` would give `foo` to b.js, only because an
+    // unrelated import mentioned b.js first.
+    //
+    // An external needs no `initModule`. Its `import * as` binding is hoisted, so it is always
+    // ready to copy.
+    let mut load_exports_stmts = std::mem::take(&mut self.generated_load_exports_stmts);
+    let mut dependencies_init_fn_stmts: Vec<ast::Statement<'ast>> = Vec::new();
+    let mut initialized = FxHashSet::default();
+    let mut next_copy = 0;
+    for dep in &self.dependencies {
+      let module = &self.modules[*dep];
+      if module.as_normal().is_some() {
+        dependencies_init_fn_stmts.push(ast::Statement::new_expression_statement(
+          SPAN,
+          self.make_init_module_call(module),
+          self,
+        ));
+      }
+      if let Some(stmt) = load_exports_stmts.remove(dep) {
+        dependencies_init_fn_stmts.push(stmt);
+      }
+      initialized.insert(*dep);
+      while let Some(source) = self.re_export_all_dependencies.get_index(next_copy) {
+        let source_module = &self.modules[*source];
+        if source_module.as_normal().is_some() && !initialized.contains(source) {
+          break;
+        }
+        dependencies_init_fn_stmts.push(self.create_re_export_call_stmt(source_module));
+        next_copy += 1;
+      }
+    }
+    // Every binding is created next to a `self.dependencies.insert`, so the loop above emits all
+    // of them.
+    debug_assert!(load_exports_stmts.is_empty());
 
     let runtime_module_register = self.generate_runtime_module_register_for_hmr(ctx.scoping());
 
@@ -81,13 +140,12 @@ impl<'ast> Traverse<'ast, ()> for HmrAstFinalizer<'_, 'ast> {
           oxc::allocator::Vec::from_value_in(
             ast::VariableDeclarator::new(
               SPAN,
-              ast::VariableDeclarationKind::Var,
               ast::BindingPattern::new_binding_identifier(
                 SPAN,
                 CJS_ROLLDOWN_MODULE_REF_IDENT,
                 self,
               ),
-              NONE,
+              None,
               Some(module_object),
               false,
               self,
@@ -104,13 +162,12 @@ impl<'ast> Traverse<'ast, ()> for HmrAstFinalizer<'_, 'ast> {
           oxc::allocator::Vec::from_value_in(
             ast::VariableDeclarator::new(
               SPAN,
-              ast::VariableDeclarationKind::Var,
               ast::BindingPattern::new_binding_identifier(
                 SPAN,
                 CJS_ROLLDOWN_EXPORTS_REF_IDENT,
                 self,
               ),
-              NONE,
+              None,
               Some(Expression::new_member_access_expr(CJS_ROLLDOWN_MODULE_REF, "exports", self)),
               false,
               self,
@@ -145,7 +202,7 @@ impl<'ast> Traverse<'ast, ()> for HmrAstFinalizer<'_, 'ast> {
     let final_block = ast::BlockStatement::boxed(SPAN, [], self);
 
     let try_stmt =
-      ast::Statement::new_try_statement(SPAN, try_block, NONE, Some(final_block), self);
+      ast::Statement::new_try_statement(SPAN, try_block, None, Some(final_block), self);
 
     // The runtime calls the factory with the module's stable id as its argument, so it's
     // available inside the body as `__rolldown_module_id__`. This lets registerModule /
@@ -155,19 +212,19 @@ impl<'ast> Traverse<'ast, ()> for HmrAstFinalizer<'_, 'ast> {
       SPAN,
       [],
       ast::BindingPattern::new_binding_identifier(SPAN, MODULE_ID_PARAM_FOR_HMR, self),
-      NONE,
-      NONE,
+      None,
+      None,
       false,
       None,
       false,
       false,
       self,
     );
-    let params = ast::FormalParameters::new(
+    let params = ast::FormalParameters::boxed(
       SPAN,
       ast::FormalParameterKind::Signature,
       [module_id_param],
-      NONE,
+      None,
       self,
     );
     // function () { [user code] }
@@ -178,11 +235,11 @@ impl<'ast> Traverse<'ast, ()> for HmrAstFinalizer<'_, 'ast> {
       false,
       false,
       false,
-      NONE,
-      NONE,
+      None,
+      None,
       params,
-      NONE,
-      Some(ast::FunctionBody::new(SPAN, [], [try_stmt], self)),
+      None,
+      Some(ast::FunctionBody::boxed(SPAN, [], [try_stmt], self)),
       self,
     );
     // mark the callback as PIFE because the callback is executed when this chunk is loaded
@@ -213,7 +270,7 @@ impl<'ast> Traverse<'ast, ()> for HmrAstFinalizer<'_, 'ast> {
     let register_factory_call = ast::Expression::new_call_expression(
       SPAN,
       Expression::new_identifier(SPAN, "__rolldown_runtime__.registerFactory", self),
-      NONE,
+      None,
       register_factory_args,
       false,
       self,

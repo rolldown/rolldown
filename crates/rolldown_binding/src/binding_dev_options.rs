@@ -8,6 +8,7 @@ use napi::bindgen_prelude::FnArgs;
 
 #[napi_derive::napi(object, object_to_js = false)]
 pub struct BindingDevWatchOptions {
+  pub enabled: Option<bool>,
   pub skip_write: Option<bool>,
   pub use_polling: Option<bool>,
   pub poll_interval: Option<u32>,
@@ -37,4 +38,5 @@ pub struct BindingDevOptions {
   pub on_additional_assets: Option<JsCallback<FnArgs<(BindingOutputs,)>, ()>>,
   pub rebuild_strategy: Option<BindingRebuildStrategy>,
   pub watch: Option<BindingDevWatchOptions>,
+  pub hot_update: Option<bool>,
 }

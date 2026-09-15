@@ -20,7 +20,7 @@ impl GenerateStage<'_> {
   pub(super) fn finalize_chunk_plan(
     &mut self,
     chunk_graph: &mut ChunkGraph,
-    used_symbol_refs: &mut UsedSymbolRefsBuilder,
+    used_symbol_refs_builder: &mut UsedSymbolRefsBuilder,
   ) -> BuildResult<OrderWrapState> {
     // The order analysis reuses cross-chunk linking logic, which reads finalized namespace and
     // external-export facts. Prepare those inputs on the provisional topology first.
@@ -28,9 +28,9 @@ impl GenerateStage<'_> {
     let mut order_state = OrderWrapState::default();
     self.finalized_module_namespace_ref_usage(chunk_graph, &order_state);
 
-    let order_analysis = self.analyze_execution_order(chunk_graph, used_symbol_refs);
+    let order_analysis = self.analyze_execution_order(chunk_graph, used_symbol_refs_builder);
     if let Some(analysis) = &order_analysis
-      && self.apply_order_wraps(chunk_graph, analysis, used_symbol_refs, &mut order_state)
+      && self.apply_order_wraps(chunk_graph, analysis, used_symbol_refs_builder, &mut order_state)
     {
       #[cfg(debug_assertions)]
       self.assert_order_wrap_plan_applied(chunk_graph, &analysis.plan, &order_state);
@@ -44,7 +44,7 @@ impl GenerateStage<'_> {
     if order_state.required_runtime_helpers().is_empty() {
       let runtime_idx = self.link_output.runtime.id();
       let runtime_chunk_before = chunk_graph.module_to_chunk[runtime_idx];
-      self.sweep_unused_runtime_module(chunk_graph, used_symbol_refs);
+      self.sweep_unused_runtime_module(chunk_graph, used_symbol_refs_builder);
       if runtime_chunk_before.is_some() && chunk_graph.module_to_chunk[runtime_idx].is_none() {
         // The sweep removed the runtime from its chunk. When that chunk is still live (the runtime
         // co-hosted with user modules), its `modules[0]` changed, so the `exec_order` the
@@ -100,7 +100,12 @@ impl GenerateStage<'_> {
         let entry_chunk_idx = chunk_graph.entry_module_to_entry_chunk[&module_idx];
         debug_assert!(is_rendered_chunk(chunk_graph, entry_chunk_idx));
         match chunk_graph.chunk_table[entry_chunk_idx].kind {
-          ChunkKind::EntryPoint { module, .. } => debug_assert_eq!(module, module_idx),
+          // A dynamic entry merged into a user-defined entry chunk keeps that host chunk as
+          // its entry chunk (the facade stays eliminated); the host must contain the module.
+          ChunkKind::EntryPoint { module, .. } => debug_assert!(
+            module == module_idx
+              || chunk_graph.chunk_table[entry_chunk_idx].modules.contains(&module_idx)
+          ),
           ChunkKind::Common => {
             debug_assert!(chunk_graph.chunk_table[entry_chunk_idx].modules.contains(&module_idx));
           }

@@ -5,7 +5,7 @@ use std::borrow::Cow;
 
 use arcstr::ArcStr;
 use oxc::ast::builder::AstBuilder;
-use oxc::ast_visit::VisitMut;
+use oxc::ast_visit::VisitJsMut;
 use rolldown_common::side_effects::HookSideEffects;
 use rolldown_plugin::{
   HookLoadArgs, HookLoadOutput, HookLoadReturn, HookResolveIdArgs, HookResolveIdOutput,

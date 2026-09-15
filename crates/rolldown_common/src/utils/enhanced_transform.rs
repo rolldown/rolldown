@@ -42,6 +42,8 @@ pub type InjectOptions = Vec<(String, Either<String, Vec<String>>)>;
 pub enum TsconfigOption {
   /// Auto-discover tsconfig.json by walking up from the file's directory.
   Auto,
+  /// Use the tsconfig at the provided path.
+  Path(PathBuf),
   /// Use the provided tsconfig directly.
   Config(Arc<TsConfig>),
   /// Don't use tsconfig options.
@@ -292,6 +294,29 @@ pub fn enhanced_transform(
       }
       found
     }
+    Some(TsconfigOption::Path(config_file)) => {
+      let file_path = PathBuf::from(filename);
+      let result = oxc_resolver::Resolver::new(oxc_resolver::ResolveOptions {
+        tsconfig: Some(oxc_resolver::TsconfigDiscovery::Manual(oxc_resolver::TsconfigOptions {
+          config_file: config_file.clone(),
+          references: oxc_resolver::TsconfigReferences::Auto,
+        })),
+        yarn_pnp,
+        ..Default::default()
+      })
+      .find_tsconfig(file_path);
+      let found = match result {
+        Ok(found) => found,
+        Err(err) => {
+          errors.push(BuildDiagnostic::tsconfig_error(err));
+          return EnhancedTransformResult::new_for_error(errors, warnings, tsconfig_file_paths);
+        }
+      };
+      if let Some(tsconfig) = &found {
+        tsconfig_file_paths.push(tsconfig.path.clone());
+      }
+      found
+    }
     Some(TsconfigOption::Config(config)) => Some(Arc::clone(config)),
     Some(TsconfigOption::Disabled) => None,
   };
@@ -330,7 +355,7 @@ pub fn enhanced_transform(
       ..Default::default()
     })
     .parse();
-  if parse_ret.panicked || !parse_ret.diagnostics.is_empty() {
+  if parse_ret.fatal_error || !parse_ret.diagnostics.is_empty() {
     append_oxc_diagnostics(parse_ret.diagnostics, &source, filename, &mut warnings, &mut errors);
     return EnhancedTransformResult::new_for_error(errors, warnings, tsconfig_file_paths);
   }

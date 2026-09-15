@@ -1,0 +1,11 @@
+{
+  "_comment": "When the already-loaded analysis groups `shared.js` (which has exports used cross-chunk by `lazy.js`) into `app.js`'s dynamic entry chunk, the namespace observed through `import('./app.js')` must still expose exactly `app.js`'s own exports: the chunk exports the entry's true namespace object and dynamic importers are rewritten to `.then((n) => n.<ns>)`, matching Rollup.",
+  "config": {
+    "input": [
+      {
+        "name": "main",
+        "import": "./main.js"
+      }
+    ]
+  }
+}

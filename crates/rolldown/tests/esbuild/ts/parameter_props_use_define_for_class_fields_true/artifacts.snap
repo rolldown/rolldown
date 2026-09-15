@@ -7,7 +7,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 //#region entry.ts
-(class {
+var Foo = class {
 	b1;
 	b2;
 	static {
@@ -25,7 +25,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 		console.log("c");
 	}
 	c = 3;
-});
+};
 //#endregion
 
 ```

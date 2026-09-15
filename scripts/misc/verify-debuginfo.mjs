@@ -2,7 +2,7 @@
 // published debug info sits next to it, and not before.
 // See internal-docs/panic-symbolication/implementation.md
 //
-// Usage: node scripts/misc/verify-debuginfo.mjs [--debuginfo <archive.tar.gz>]
+// Usage: node scripts/misc/verify-debuginfo.mjs [--debuginfo <archive.tar.zst>]
 // Without `--debuginfo`, the single archive under `target/debuginfo/` is used.
 
 import { execFileSync, spawnSync } from 'node:child_process';
@@ -22,7 +22,7 @@ function parseArgs(argv) {
   }
   if (!args.debuginfo) {
     const dir = path.join(REPO_ROOT, 'target/debuginfo');
-    const archives = fs.readdirSync(dir).filter((f) => f.endsWith('.debuginfo.tar.gz'));
+    const archives = fs.readdirSync(dir).filter((f) => f.endsWith('.debuginfo.tar.zst'));
     if (archives.length !== 1)
       throw new Error(`expected one archive in ${dir}, found: ${archives.join(', ') || 'none'}`);
     args.debuginfo = path.join(dir, archives[0]);
@@ -68,14 +68,16 @@ function main() {
   }
 
   console.info(`2. unpack ${path.basename(debuginfo)} next to the binding`);
-  // bsdtar on Windows reads an absolute `C:\...` argument as `host:path`. Tar
-  // therefore runs in the binding directory and receives a relative path.
-  const rel = path.relative(BINDING_DIR, debuginfo).replaceAll(path.sep, '/');
+  // bsdtar on Windows reads an absolute `C:\...` argument as `host:path`. The
+  // tarball therefore goes to the binding directory, and tar receives relative names.
+  const tarball = path.join(BINDING_DIR, 'debuginfo.tar');
+  execFileSync('zstd', ['-d', '-q', '-f', debuginfo, '-o', tarball], { stdio: 'inherit' });
   const opts = { cwd: BINDING_DIR };
-  const entry = execFileSync('tar', ['-tzf', rel], { ...opts, encoding: 'utf8' })
+  const entry = execFileSync('tar', ['-tf', 'debuginfo.tar'], { ...opts, encoding: 'utf8' })
     .split('/')[0]
     .trim();
-  execFileSync('tar', ['-xzf', rel], { ...opts, stdio: 'inherit' });
+  execFileSync('tar', ['-xf', 'debuginfo.tar'], { ...opts, stdio: 'inherit' });
+  fs.rmSync(tarball, { force: true });
 
   console.info('3. panic with debug info');
   let after;

@@ -1,5 +1,6 @@
 import type { BindingChunkingContext, BindingOutputOptions } from '../binding.cjs';
 import type {
+  CodeSplittingGroup,
   CodeSplittingNameFunction,
   CodeSplittingTestFunction,
   OutputOptions,
@@ -254,6 +255,7 @@ function bindingifyCodeSplitting(
 } {
   let inlineDynamicImports: boolean | undefined;
   let effectiveChunksOption: Exclude<OutputOptions['codeSplitting'], boolean> | undefined;
+  let migratedManualChunksGroup: CodeSplittingGroup | undefined;
 
   // Handle codeSplitting boolean values
   if (codeSplitting === false) {
@@ -328,16 +330,15 @@ function bindingifyCodeSplitting(
       '`manualChunks` option is ignored because the `codeSplitting` option is specified.',
     );
   } else if (manualChunks != null) {
+    migratedManualChunksGroup = {
+      name(moduleId, ctx) {
+        return manualChunks(moduleId, {
+          getModuleInfo: (id) => ctx.getModuleInfo(id),
+        });
+      },
+    };
     effectiveChunksOption = {
-      groups: [
-        {
-          name(moduleId, ctx) {
-            return manualChunks(moduleId, {
-              getModuleInfo: (id) => ctx.getModuleInfo(id),
-            });
-          },
-        },
-      ],
+      groups: [migratedManualChunksGroup],
     };
   }
 
@@ -370,8 +371,13 @@ function bindingifyCodeSplitting(
         const { name, test, ...restGroup } = group;
         // The group object supplies a stable key across repeated outputs.
         // Different group objects remain separate when their labels match.
+        // The migration creates a new group for each output. The original `manualChunks`
+        // callback keeps one timing row across repeated outputs.
+        const timingKey = group === migratedManualChunksGroup ? (manualChunks ?? group) : group;
         const timingOwner =
-          timings === undefined ? OUTPUT_OPTIONS_OWNER : { ...OUTPUT_OPTIONS_OWNER, key: group };
+          timings === undefined
+            ? OUTPUT_OPTIONS_OWNER
+            : { ...OUTPUT_OPTIONS_OWNER, key: timingKey };
         return {
           ...restGroup,
           test:

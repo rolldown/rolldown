@@ -127,4 +127,32 @@ describe('code-splitting group timings', () => {
       ],
     });
   });
+
+  it('keeps one manualChunks row across repeated outputs', async () => {
+    const clock = fakeClock();
+    const inputOptions: InputOptions = { checks: { bundlerTimings: true } };
+    const manualChunks: NonNullable<OutputOptions['manualChunks']> = () => {
+      clock.advance(600);
+      return 'shared';
+    };
+    const outputOptions: OutputOptions = { manualChunks };
+
+    for (let index = 0; index < 2; index++) {
+      const { bundlerOptions } = await createBundlerOptions(
+        inputOptions,
+        outputOptions,
+        false,
+        true,
+      );
+      const [bindingGroup] = getBindingGroups(bundlerOptions);
+      runName(bindingGroup);
+    }
+
+    const recorder = pluginTimingsRecorderFor(inputOptions);
+    expect(recorder.costs.size).toBe(1);
+    expect(recorder.costs.get(manualChunks)?.get('codeSplitting groups[].name')).toMatchObject({
+      calls: 2,
+      ms: 1_200,
+    });
+  });
 });

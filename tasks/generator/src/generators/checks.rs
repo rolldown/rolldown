@@ -323,7 +323,7 @@ fn generate_validate_check_options(
       fields.push(format!(
         r#"{alias}: v.pipe(
     v.optional(v.boolean()),
-    v.description("{alias} is a deprecated alias for {camel_case}. If {camel_case} and {alias} have values, Rolldown uses {camel_case}."),
+    v.description("Deprecated alias for {camel_case}. Rolldown uses {camel_case} if both options have values."),
   ),"#,
       ));
     }

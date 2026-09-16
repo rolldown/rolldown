@@ -43,7 +43,7 @@ OPTIONS
   --checks.mixedExports       Whether to emit warnings when the way to export values is ambiguous.
   --checks.moduleLevelDirective Whether to emit warnings for module-level directives other than \`use strict\`.
   --checks.namespaceConflict  Whether to emit warnings when multiple star re-exports provide the same name from different modules.
-  --checks.pluginTimings      PluginTimings is a deprecated alias for bundlerTimings. If bundlerTimings and pluginTimings have values, Rolldown uses bundlerTimings.
+  --checks.pluginTimings      Deprecated alias for bundlerTimings. Rolldown uses bundlerTimings if both options have values.
   --checks.preferBuiltinFeature Whether to emit warnings when a plugin that is covered by a built-in feature is used.
   --checks.sourcemapBroken    Whether to emit warnings when a plugin transforms code without generating a sourcemap.
   --checks.toleratedTransform Whether to emit warnings when detecting tolerated transform.
@@ -195,7 +195,7 @@ OPTIONS
   --checks.mixedExports       Whether to emit warnings when the way to export values is ambiguous.
   --checks.moduleLevelDirective Whether to emit warnings for module-level directives other than \`use strict\`.
   --checks.namespaceConflict  Whether to emit warnings when multiple star re-exports provide the same name from different modules.
-  --checks.pluginTimings      PluginTimings is a deprecated alias for bundlerTimings. If bundlerTimings and pluginTimings have values, Rolldown uses bundlerTimings.
+  --checks.pluginTimings      Deprecated alias for bundlerTimings. Rolldown uses bundlerTimings if both options have values.
   --checks.preferBuiltinFeature Whether to emit warnings when a plugin that is covered by a built-in feature is used.
   --checks.sourcemapBroken    Whether to emit warnings when a plugin transforms code without generating a sourcemap.
   --checks.toleratedTransform Whether to emit warnings when detecting tolerated transform.
@@ -347,7 +347,7 @@ OPTIONS
   --checks.mixedExports       Whether to emit warnings when the way to export values is ambiguous.
   --checks.moduleLevelDirective Whether to emit warnings for module-level directives other than \`use strict\`.
   --checks.namespaceConflict  Whether to emit warnings when multiple star re-exports provide the same name from different modules.
-  --checks.pluginTimings      PluginTimings is a deprecated alias for bundlerTimings. If bundlerTimings and pluginTimings have values, Rolldown uses bundlerTimings.
+  --checks.pluginTimings      Deprecated alias for bundlerTimings. Rolldown uses bundlerTimings if both options have values.
   --checks.preferBuiltinFeature Whether to emit warnings when a plugin that is covered by a built-in feature is used.
   --checks.sourcemapBroken    Whether to emit warnings when a plugin transforms code without generating a sourcemap.
   --checks.toleratedTransform Whether to emit warnings when detecting tolerated transform.
@@ -499,7 +499,7 @@ OPTIONS
   --checks.mixedExports       Whether to emit warnings when the way to export values is ambiguous.
   --checks.moduleLevelDirective Whether to emit warnings for module-level directives other than \`use strict\`.
   --checks.namespaceConflict  Whether to emit warnings when multiple star re-exports provide the same name from different modules.
-  --checks.pluginTimings      PluginTimings is a deprecated alias for bundlerTimings. If bundlerTimings and pluginTimings have values, Rolldown uses bundlerTimings.
+  --checks.pluginTimings      Deprecated alias for bundlerTimings. Rolldown uses bundlerTimings if both options have values.
   --checks.preferBuiltinFeature Whether to emit warnings when a plugin that is covered by a built-in feature is used.
   --checks.sourcemapBroken    Whether to emit warnings when a plugin transforms code without generating a sourcemap.
   --checks.toleratedTransform Whether to emit warnings when detecting tolerated transform.

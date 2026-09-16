@@ -409,7 +409,7 @@ const ChecksOptionsSchema = v.strictObject({
   pluginTimings: v.pipe(
     v.optional(v.boolean()),
     v.description(
-      'pluginTimings is a deprecated alias for bundlerTimings. If bundlerTimings and pluginTimings have values, Rolldown uses bundlerTimings.',
+      'Deprecated alias for bundlerTimings. Rolldown uses bundlerTimings if both options have values.',
     ),
   ),
   duplicateShebang: v.pipe(

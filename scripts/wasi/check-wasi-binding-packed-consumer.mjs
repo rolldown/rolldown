@@ -476,6 +476,83 @@ function assertThreadedDisposeExercise(results) {
   }
 }
 
+// Counterpart of `renderDisposeInFlightExerciseSource`. Every property here
+// fails on a loader that tears the environment down over outstanding
+// `napi_async_work`, and each one fails differently, so the report says which:
+//
+//   - a missing marker means the child exited mid-disposal (no keep-alive),
+//   - `unsettled` async work means the completion callbacks were stranded,
+//   - a worker that never emitted `exit` means the pool outlived the disposal.
+function assertDisposeInFlightExercise(results, { marker, target, threaded }) {
+  for (const { stdout, runtimeVersion } of results) {
+    assert.ok(
+      stdout.includes(`"marker":"${marker}"`),
+      `The ${marker} exercise exited under ${runtimeVersion} without reporting a result (stdout: ${JSON.stringify(stdout)}), which is how a disposal that no longer holds the event loop open shows up`,
+    );
+    const result = JSON.parse(stdout);
+    assert.equal(
+      result.target,
+      target,
+      `The ${marker} exercise ran against ${result.target} under ${runtimeVersion}`,
+    );
+    assert.equal(
+      result.disposed,
+      true,
+      `Disposing over in-flight work never settled under ${runtimeVersion}`,
+    );
+    assert.deepEqual(
+      result.failures,
+      [],
+      `Disposing over in-flight work raised out-of-band failures under ${runtimeVersion}`,
+    );
+    assert.deepEqual(
+      result.workerErrors,
+      [],
+      `A WASI pool worker errored while disposing over in-flight work under ${runtimeVersion}`,
+    );
+    // The build is the realistic shape, not the drain's subject: it may finish
+    // or be cancelled depending on how far it got, and both are a settled
+    // promise. Only never settling is a defect.
+    assert.ok(
+      result.build === 'fulfilled' || result.build.startsWith('rejected:'),
+      `The bundle build disposed over never settled under ${runtimeVersion}: ${result.build}`,
+    );
+    // This is the drain's subject. Work already executing refuses cancellation
+    // and finishes normally; work still queued is cancelled and surfaces as the
+    // `AbortError` napi-rs maps `napi_cancelled` to. Which of the two a given
+    // task lands on depends on the pool, so accept either — but nothing else,
+    // and never `unsettled`.
+    assert.equal(
+      result.asyncWork.length,
+      8,
+      `The ${marker} exercise reported ${result.asyncWork.length} async-work outcomes under ${runtimeVersion}`,
+    );
+    for (const outcome of result.asyncWork) {
+      assert.ok(
+        outcome === 'fulfilled' || outcome.startsWith('rejected:AbortError:'),
+        `Async work outstanding at disposal settled as ${JSON.stringify(outcome)} under ${runtimeVersion}; stranded work reports "unsettled"`,
+      );
+    }
+    if (threaded) {
+      assert.ok(
+        result.workers >= 1,
+        `The threaded WASI build spawned no pool worker under ${runtimeVersion}, so the disposal never exercised worker termination`,
+      );
+      assert.equal(
+        result.exitedWorkers,
+        result.workers,
+        `Only ${result.exitedWorkers} of ${result.workers} threaded WASI pool workers exited under ${runtimeVersion} after disposing over in-flight work`,
+      );
+    } else {
+      assert.equal(
+        result.workers,
+        0,
+        `The threadless WASI binding spawned ${result.workers} pool workers under ${runtimeVersion}`,
+      );
+    }
+  }
+}
+
 function assertBrowserPackageExercise(stdout) {
   const result = JSON.parse(stdout);
   const resolution = result.resolution;
@@ -2123,6 +2200,253 @@ process.stdout.write(JSON.stringify({
 }))
 `;
 
+// Disposal has to survive being called while the addon still owes completion
+// callbacks, not just between operations.
+//
+// `napi_prepare_wasm_env_cleanup` — the barrier the settlement drain already
+// used — covers promise settlements sitting on the threadsafe-function queue.
+// It does not cover `napi_async_work`. A loader that destroyed the emnapi
+// context (or terminated the WASI pool workers) with a work outstanding left it
+// with no way to reach its completion callback: the promise never settled, and
+// the emnapi waiting-request counter that brackets every queued work never
+// returned to zero, which on Node keeps a `MessageChannel` port referenced and
+// the process alive forever. napi-rs#3528 closes that: the napi crate exports
+// `napi_wasm_async_work_pending` / `napi_wasm_cancel_pending_async_work`, and
+// @napi-rs/cli 3.10.2 drains through them (`__drainWasiAsyncWork` in the eager
+// loaders) before anything is torn down.
+//
+// Two things have to be in flight at once for this to mean anything:
+//
+//   - A real bundle build, because that is the shape a consumer disposes over.
+//     It does NOT by itself put anything in the async-work registry: rolldown
+//     runs bundling on the pluggable async runtime
+//     (`spawn_boxed_future`, crates/rolldown_binding/src/binding_bundler.rs),
+//     not on `napi_async_work`. Measured against this very build: the counter
+//     reads 0 for a bundle build's whole duration.
+//   - `transform()`, which is rolldown's one `napi::Task`
+//     (`EnhancedTransformTask`, crates/rolldown_binding/src/transform.rs), so
+//     it is what actually queues `napi_async_work`.
+//
+// Only the two eager loaders are covered here. The deferred loader's own drain
+// (`__drainInstanceAsyncWork`) is unreachable from a packed consumer: the
+// workerd path goes through `packages/rolldown/src/workerd-managed-instance.ts`,
+// whose facade refuses to dispose an instance with active binding operations at
+// all, and `scripts/wasi/check-workerd-packed-consumer.mjs` only ever reaches
+// that facade. napi-rs owns that half's coverage.
+//
+// Outstanding-ness is structural rather than timed: `transform()` queues its
+// work synchronously, completion callbacks are delivered on the JavaScript
+// thread, and nothing yields between the burst and `dispose()`. So every one of
+// them is still owed a callback at the moment disposal starts, on any machine.
+// Then each one has to settle — fulfilled if it ran to completion, or rejected
+// with the `AbortError` napi-rs turns `napi_cancelled` into. A loader without
+// the drain settles none of them and the child never exits, which is what
+// `runDisposeInFlightExercise` reports.
+function renderDisposeInFlightExerciseSource({ bindingPackage, marker }) {
+  return `
+import { createRequire } from 'node:module'
+
+const disposeTimeoutMs = 30_000
+// How long a settlement may take AFTER the disposal has settled. Reached only
+// when work was stranded, so it is a diagnosis budget, not a wait anyone pays
+// in the healthy case.
+const settleWaitMs = 15_000
+// How long a pool worker may take to emit 'exit' after that.
+const workerExitWaitMs = 5_000
+// Enough that the pool cannot have started, let alone finished, all of them.
+const asyncWorkCount = 8
+
+const nodeRequire = createRequire(import.meta.url)
+const { writeSync } = nodeRequire('node:fs')
+const workerThreads = nodeRequire('node:worker_threads')
+const NativeWorker = workerThreads.Worker
+const workers = []
+const workerErrors = []
+// Patch before the binding loads, exactly as the dispose-after-build exercise
+// does: the generated loader destructures Worker on first require, and the pool
+// workers are unreferenced, so nothing else would keep them observable.
+workerThreads.Worker = class extends NativeWorker {
+  constructor(filename, options) {
+    super(filename, options)
+    const record = { exited: false }
+    workers.push(record)
+    this.on('error', (error) => {
+      workerErrors.push(error && error.message ? error.message : String(error))
+    })
+    this.on('exit', () => {
+      record.exited = true
+    })
+  }
+}
+const countExitedWorkers = () => workers.filter((worker) => worker.exited).length
+
+const { rolldown } = await import('rolldown')
+const { getRuntimeCapabilities, transform } = await import('rolldown/experimental')
+
+// The build has to be inside the binding when disposal starts, not merely
+// requested from JavaScript. A load hook only runs once the Rust side is
+// driving the build, so it is the signal; holding it open keeps the build
+// unsettled across the disposal without the exercise having to guess a delay.
+let signalBuildInBinding
+const buildReachedBinding = new Promise((resolve) => {
+  signalBuildInBinding = resolve
+})
+let releaseBuild
+const buildHeld = new Promise((resolve) => {
+  releaseBuild = resolve
+})
+
+const bundle = await rolldown({
+  input: 'virtual:entry',
+  plugins: [{
+    name: 'root-package-dispose-in-flight-consumer',
+    resolveId(id) {
+      if (id === 'virtual:entry') return id
+    },
+    async load(id) {
+      if (id !== 'virtual:entry') return
+      signalBuildInBinding()
+      await buildHeld
+      return 'export default 1'
+    },
+  }],
+})
+
+// Read every binding-backed value up front. Once the binding is disposed its
+// emnapi context is gone, so any later call into it traps the wasm module.
+const target = getRuntimeCapabilities().target
+
+// Read the binding out of the require cache rather than loading a second copy:
+// only the instance the build runs on owns the work that must be drained.
+const rootRequire = createRequire(nodeRequire.resolve('rolldown/package.json'))
+const bindingEntry = rootRequire.resolve(${JSON.stringify(bindingPackage)})
+const loadedBinding = rootRequire.cache[bindingEntry]
+if (!loadedBinding) {
+  throw new Error('The build did not load ' + bindingEntry)
+}
+const dispose = loadedBinding.exports[Symbol.for('napi.rs.wasi.dispose')]
+if (typeof dispose !== 'function') {
+  throw new Error(
+    'The WASI binding must publish a dispose function, received ' + typeof dispose,
+  )
+}
+
+// Anything crashing out of band has to fail this consumer rather than be
+// swallowed, but it must not abort the run either: the report below is the
+// evidence. Collect and assert on them in the driver.
+const failures = []
+process.on('uncaughtException', (error) => {
+  failures.push('uncaughtException: ' + (error && error.stack ? error.stack : String(error)))
+})
+process.on('unhandledRejection', (error) => {
+  failures.push('unhandledRejection: ' + (error && error.stack ? error.stack : String(error)))
+})
+
+// Record a settlement the moment it happens. Attaching the handler at creation
+// is what keeps a cancelled task from being reported as an unhandled rejection
+// before the report gets to read it.
+const record = (promise) => {
+  const entry = {}
+  entry.promise = Promise.resolve(promise).then(
+    (value) => {
+      entry.settled = { status: 'fulfilled', value }
+    },
+    (reason) => {
+      entry.settled = { status: 'rejected', reason }
+    },
+  )
+  return entry
+}
+// REFERENCED on purpose, and only ever reached after the disposal has settled:
+// the loader's own keep-alive obligation is covered by the UNREFERENCED
+// watchdog below, so this cannot stand in for it. Stranded work would otherwise
+// leave the child with nothing to say.
+const settlementOf = (entry) => {
+  let timer
+  return Promise.race([
+    entry.promise.then(() => {
+      clearTimeout(timer)
+      return entry.settled
+    }),
+    new Promise((resolve) => {
+      timer = setTimeout(() => resolve({ status: 'unsettled' }), settleWaitMs)
+    }),
+  ])
+}
+const describe = (settlement) =>
+  settlement.status !== 'rejected'
+    ? settlement.status
+    : 'rejected:' +
+      (settlement.reason && settlement.reason.name ? settlement.reason.name : typeof settlement.reason) +
+      ':' +
+      String(settlement.reason && settlement.reason.message ? settlement.reason.message : settlement.reason).slice(0, 200)
+
+const buildRecord = record(bundle.generate().then((result) => result.output.length))
+await buildReachedBinding
+
+const source = 'export const value: number = 1\\n'.repeat(400)
+const workRecords = []
+for (let index = 0; index < asyncWorkCount; index += 1) {
+  workRecords.push(record(transform('in-flight-' + index + '.ts', source, {})))
+}
+// NO await between the outstanding work and the disposal: that is what makes
+// every one of these still owed a completion callback when disposal starts.
+const disposePromise = dispose()
+releaseBuild()
+
+// Mirror the driver's withTimeout here, but UNREFERENCED. Holding the event
+// loop open across a pending disposal is the loader's own job; a referenced
+// watchdog would supply that liveness and hide its loss. Without it Node simply
+// exits mid-disposal, and the driver reads the missing marker as exactly that.
+let disposeTimeout
+let disposed = false
+try {
+  await Promise.race([
+    Promise.resolve(disposePromise).then(() => {
+      disposed = true
+    }),
+    new Promise((_, reject) => {
+      disposeTimeout = setTimeout(
+        () =>
+          reject(
+            new Error('The WASI disposal never settled after ' + disposeTimeoutMs + 'ms'),
+          ),
+        disposeTimeoutMs,
+      )
+      disposeTimeout.unref()
+    }),
+  ])
+} finally {
+  clearTimeout(disposeTimeout)
+}
+
+const asyncWork = (await Promise.all(workRecords.map(settlementOf))).map(describe)
+const build = describe(await settlementOf(buildRecord))
+
+const workerExitDeadline = Date.now() + workerExitWaitMs
+while (countExitedWorkers() < workers.length && Date.now() < workerExitDeadline) {
+  await new Promise((resolve) => setTimeout(resolve, 50))
+}
+
+// writeSync, not process.stdout.write: a stranded-work run is killed by the
+// driver's timeout, and a buffered pipe write would be lost with it.
+writeSync(
+  1,
+  JSON.stringify({
+    marker: ${JSON.stringify(marker)},
+    target,
+    disposed,
+    build,
+    asyncWork,
+    workers: workers.length,
+    exitedWorkers: countExitedWorkers(),
+    workerErrors,
+    failures,
+  }),
+)
+`;
+}
+
 function renderThreadlessBindingTypeExercise(packageName) {
   return `
 import {
@@ -2172,9 +2496,32 @@ declare const instance: WorkerdRolldownInstance
 void [modules, instance, createInstance, rolldown]
 `;
 
+// A child that strands async work does not fail, it never ends: the promises
+// stay pending and the emnapi waiting-request counter keeps a `MessageChannel`
+// port referenced, so Node has no reason to exit. `run` kills it at
+// `consumerTimeoutMs` and throws something that says nothing about why, so name
+// the symptom here and hand over whatever the child managed to report first.
+async function runDisposeInFlightExercise(consumerDir, filename, source) {
+  try {
+    return await runNodeModule(consumerDir, filename, source, [], {
+      compareStdout: false,
+      returnAllResults: true,
+      env: {
+        NAPI_RS_ENFORCE_VERSION_CHECK: '1',
+        NAPI_RS_FORCE_WASI: 'error',
+      },
+    });
+  } catch (error) {
+    assert.fail(
+      `${filename} never exited (${error.killed ? `killed after ${consumerTimeoutMs}ms` : error.message}), which is how a disposal that strands outstanding napi_async_work shows up: the completion callbacks never run, so the promises stay pending and emnapi keeps the process alive. Partial stdout: ${JSON.stringify(error.stdout ?? '')}`,
+    );
+  }
+}
+
 async function exerciseRootPackageLayouts(consumerDir, packageManager, packedFlavors) {
   const packageDirs = getInstalledOptionalPackageDirs(consumerDir, packedFlavors);
   for (const flavor of ['threaded', 'threadless']) {
+    const threaded = flavor === 'threaded';
     await withOnlyOptionalFlavor(packageDirs, flavor, async () => {
       const rootResult = await runNodeModule(
         consumerDir,
@@ -2209,6 +2556,22 @@ async function exerciseRootPackageLayouts(consumerDir, packageManager, packedFla
         );
       }
 
+      assertDisposeInFlightExercise(
+        await runDisposeInFlightExercise(
+          consumerDir,
+          `exercise-root-${flavor}-dispose-in-flight.mjs`,
+          renderDisposeInFlightExerciseSource({
+            bindingPackage: packedFlavors.get(flavor).name,
+            marker: `${flavor}-wasi-dispose-in-flight`,
+          }),
+        ),
+        {
+          marker: `${flavor}-wasi-dispose-in-flight`,
+          target: threaded ? 'wasi-threads' : 'wasi',
+          threaded,
+        },
+      );
+
       if (flavor === 'threadless') {
         for (const wasmSubpath of ['wasm', 'wasm.wasm']) {
           const workerdResult = await runNodeModule(
@@ -2225,7 +2588,7 @@ async function exerciseRootPackageLayouts(consumerDir, packageManager, packedFla
     });
   }
   console.log(
-    `Validated separate threaded and threadless ${packageManager} root layouts, including threaded WASI disposal after a real build`,
+    `Validated separate threaded and threadless ${packageManager} root layouts, including threaded WASI disposal after a real build and both flavors' disposal over in-flight async work`,
   );
 }
 

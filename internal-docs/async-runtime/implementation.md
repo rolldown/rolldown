@@ -930,7 +930,24 @@ build-order coupling is needed to keep one flavor from overwriting the other.
   emit `exit` before the disposal counts as successful, because a settled
   promise alone is equally consistent with a `__terminateWasiWorkers` that
   returns without terminating anything. Uncaught exceptions and worker `error`
-  events during the disposal fail it too. The threaded Chromium
+  events during the disposal fail it too. A sibling scenario per eager flavor
+  pins the 3.10.2 drain the same way: it holds a real bundle build inside the
+  binding with a `load` hook, fires a burst of `transform()` calls, and disposes
+  with no await in between. The build is the realistic shape but not the
+  drain's subject — rolldown runs bundling on the pluggable async runtime
+  (`spawn_boxed_future`), and the async-work counter measurably reads 0 for a
+  build's whole duration — so `transform()` (`EnhancedTransformTask`, the one
+  `napi::Task` rolldown owns) is what queues `napi_async_work`. Those tasks are
+  outstanding by construction rather than by timing: `transform()` queues
+  synchronously, completion callbacks are delivered on the JavaScript thread,
+  and nothing yields before `dispose()`. Each then has to settle — fulfilled if
+  it ran to completion, or rejected with the `AbortError` napi-rs maps
+  `napi_cancelled` to. Without the drain none of them settle and the child never
+  exits, so the driver turns its own kill into a message naming that symptom.
+  The deferred loader's `__drainInstanceAsyncWork` stays covered by the napi-rs
+  specs: the workerd facade in `workerd-managed-instance.ts` refuses to dispose
+  an instance with active binding operations at all, so no packed consumer can
+  reach it. The threaded Chromium
   exercise raw-imports the packed
   `rolldown-binding.wasi-browser.js` the same way and completes a build purely
   on the loader's own gated bootstrap — no package entry ever runs there — so

@@ -1,0 +1,29 @@
+crates/rolldown/src/stages/generate_stage/minify_chunks.rs
+  s_8d5c341ef39b90::t_27ca0548ad7d2e 26-27,49,118,140-142,145-148
+crates/rolldown_binding/src/types/binding_normalized_options.rs
+  s_8d5c341ef39b90::t_08fd4da87d65c1 298
+crates/rolldown_binding/src/utils/minify_options_conversion.rs
+  s_8d5c341ef39b90::t_45ac076fa9780e 79,83
+crates/rolldown_binding/src/utils/normalize_binding_options.rs
+  s_8d5c341ef39b90::t_6544b49e91a142 694-697
+crates/rolldown_common/src/inner_bundler_options/types/minify_options.rs
+  s_8d5c341ef39b90::t_04169cf9c0b58f 113,145,165-171,187,214,242
+packages/rolldown/tests/behaviors/minify-ascii-only.test.ts
+  s_8d5c341ef39b90::t_555ab305d1210b 1-40
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "96328c6c371b70983ee420487d69c6491036c594",
+  "prompts": {},
+  "sessions": {
+    "s_8d5c341ef39b90": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019fd2a4-9dd6-7050-9aa2-fd882e51e24d",
+        "model": "unknown"
+      },
+      "human_author": "Cameron <cameron.clark@hey.com>"
+    }
+  }
+}

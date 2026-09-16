@@ -1,0 +1,26 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+//#region lib.cjs
+var require_lib = /* @__PURE__ */ __commonJSMin(((exports) => {
+	exports.answer = 42;
+	exports.read = (exports$1) => exports.answer;
+	exports.blocked = exports.answer + { answer: 0 }.answer;
+}));
+//#endregion
+//#region main.cjs
+var require_main = /* @__PURE__ */ __commonJSMin(((exports) => {
+	const lib = require_lib();
+	exports.answer = lib.answer;
+	if (exports.answer !== 42 || lib.read({ answer: 0 }) !== 42 || lib.blocked !== 42) throw new Error("Top-level this must reference the CommonJS exports object");
+}));
+//#endregion
+export default require_main();
+
+```

@@ -1,0 +1,21 @@
+packages/rolldown/src/rolldown-binding.wasi-browser.js
+  s_f30c7a748d8dde::t_8eeaa366035b9c 100-128,451-509,513,518-524,554-556,772
+packages/rolldown/src/rolldown-binding.wasi.cjs
+  s_f30c7a748d8dde::t_38749ff3f13190 202-230,553-611,615,620-626,656-658,1060,1090-1093
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "01c39d7423f13b4d5c989e709501538a6e7ce03c",
+  "prompts": {},
+  "sessions": {
+    "s_f30c7a748d8dde": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a0a8f7-818c-7a12-b6b8-28354783c5f6",
+        "model": "unknown"
+      },
+      "human_author": "shulaoda <165626830+shulaoda@users.noreply.github.com>"
+    }
+  }
+}

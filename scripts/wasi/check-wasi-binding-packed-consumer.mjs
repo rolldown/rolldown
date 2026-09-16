@@ -2458,10 +2458,18 @@ try {
   const browserManifest = JSON.parse(
     await readFile(path.join(stagedBrowserDir, 'package.json'), 'utf8'),
   );
+  // Both manifests are versioned in git by bump-version.js -- nothing stamps them
+  // after this check runs. That script skips `private` workspace packages
+  // (scripts/misc/bump-version.js:59) and @rolldown/browser is one, so the
+  // pkg.pr.new canary flow gives the root `+commit.<sha>` build metadata the
+  // browser package never receives. Build metadata carries no semver precedence,
+  // so compare the release versions: the two must stay on the same release, and
+  // only that canary suffix may differ.
+  const releaseVersion = (version) => version.split('+', 1)[0];
   assert.equal(
-    browserManifest.version,
-    rootPackageManifest.version,
-    '@rolldown/browser must use the root release version before packing',
+    releaseVersion(browserManifest.version),
+    releaseVersion(rootPackageManifest.version),
+    '@rolldown/browser must be on the root release version before packing (bump-version.js skips it while it is private)',
   );
   const browserTarball = await pack(stagedBrowserDir, packDir);
   const browserConsumer = path.join(tempDir, 'browser-consumer');

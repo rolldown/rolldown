@@ -98,6 +98,35 @@ let __emnapiContext
 
 const __wasiDisposeSymbol = Symbol.for('napi.rs.wasi.dispose')
 const __wasiWorkers = new Set()
+// The thread manager has to be reachable *before* anything that can throw
+// during load or registration. Initialization can fail after the pool has
+// already spawned workers, and the rollback still has to mark their
+// terminations as expected — but `__napiModule` is assigned only when
+// instantiation RETURNS, so on exactly that path it is still undefined. A
+// plugin factory runs while the emnapi module is being created, before the
+// wasm is loaded and before any registration function runs, and its context
+// carries the very same manager instance.
+let __wasiThreadManager
+
+function __captureWasiThreadManager(context) {
+  if (context && context.PThread) {
+    __wasiThreadManager = context.PThread
+  }
+  return {}
+}
+
+function __getWasiThreadManager() {
+  const manager =
+    __wasiThreadManager !== undefined
+      ? __wasiThreadManager
+      : __napiModule
+        ? __napiModule.PThread
+        : undefined
+  if (manager && typeof manager.terminateWorker === 'function') {
+    return manager
+  }
+  return undefined
+}
 let __napiInstance
 let __emnapiContextDestroyed = false
 let __emnapiContextDestroyPromise
@@ -451,13 +480,80 @@ function __destroyEmnapiContext() {
   return destroyPromise
 }
 
+/**
+ * Holds the event loop open until `work` settles.
+ *
+ * Nothing else can: the pool workers are deliberately unreferenced so an idle
+ * binding cannot keep a process alive, and referencing them again for the
+ * termination does not hold either — emnapi unreferences a worker the moment it
+ * reports `async-thread-ready`, which for a worker that was still starting
+ * lands *after* the termination began. Without a handle of its own, an
+ * `await dispose()` with nothing else pending exits the process with its
+ * promise unsettled, and everything after the `await` is skipped.
+ *
+ * The timer is cleared as soon as the work settles, so this never outlives the
+ * disposal that asked for it.
+ */
+function __keepEventLoopAliveUntil(work) {
+  const setTimer = globalThis.setInterval
+  const clearTimer = globalThis.clearInterval
+  if (typeof setTimer !== 'function' || typeof clearTimer !== 'function') {
+    return work
+  }
+  let timer
+  try {
+    timer = setTimer(function () {}, 50)
+  } catch {
+    return work
+  }
+  const release = function () {
+    try {
+      clearTimer(timer)
+    } catch {}
+  }
+  return work.then(
+    (value) => {
+      release()
+      return value
+    },
+    (error) => {
+      release()
+      throw error
+    },
+  )
+}
+
+/**
+ * `@emnapi/wasi-threads` counts a worker exit as expected only when its own
+ * thread manager performed the termination. A bare `worker.terminate()` reaches
+ * the manager's `exit` listener instead, which reports
+ * `worker (tid = N) sent an error! ... stopped with exit code 1` and rethrows
+ * inside the emit — aborting the `once('exit')` that backs the terminate
+ * promise, so disposal never settles and the process dies with an uncaught
+ * exception. Mark the termination through the manager first.
+ *
+ * The manager comes from `__getWasiThreadManager`, not from `__napiModule`:
+ * the initialization rollback runs on the one path where instantiation never
+ * returned, so `__napiModule` is still undefined there while the workers it
+ * spawned are already registered and loaded.
+ *
+ * Not `terminateAllThreads()`: that one recreates the pool it just shut down.
+ */
 function __terminateWasiWorkers() {
   const cleanupErrors = []
   const pending = []
+  const threadManager = __getWasiThreadManager()
 
   for (const worker of __wasiWorkers) {
     let result
     try {
+      if (threadManager) {
+        threadManager.terminateWorker(worker)
+        // `terminateWorker` leaves behind a reporter that logs every message
+        // still queued on the port, which Node flushes on exit. Nothing is
+        // listening for those any more.
+        worker.onmessage = undefined
+      }
       result = worker.terminate()
     } catch (error) {
       cleanupErrors.push(error)
@@ -487,7 +583,9 @@ function __terminateWasiWorkers() {
       )
     }
   }
-  return pending.length > 0 ? Promise.all(pending).then(finish) : finish()
+  return pending.length > 0
+    ? __keepEventLoopAliveUntil(Promise.all(pending)).then(finish)
+    : finish()
 }
 
 function __finishWasiDisposal() {
@@ -704,7 +802,7 @@ try {
     context: __emnapiContext,
     asyncWorkPoolSize: __asyncWorkPoolSize,
     reuseWorker: { size: __asyncWorkPoolSize + __workerPoolSize },
-    plugins: [__emnapiAsyncWorkPlugin, __emnapiTSFNPlugin],
+    plugins: [__captureWasiThreadManager, __emnapiAsyncWorkPlugin, __emnapiTSFNPlugin],
     wasi: __wasi,
     onCreateWorker() {
       const worker = new Worker(new URL('./wasi-worker-browser.mjs', import.meta.url), {

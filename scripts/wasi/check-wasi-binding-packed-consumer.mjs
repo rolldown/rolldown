@@ -428,6 +428,36 @@ function assertRootPackageExercise(stdout, flavor) {
   });
 }
 
+// @napi-rs/cli 3.10.0 tore the threaded WASI pool down with a bare
+// `worker.terminate()`, which @emnapi/wasi-threads never recorded as an
+// expected termination: its worker exit listener rethrew `Worker stopped with
+// exit code 1` and killed the consumer right after
+// `Symbol.for('napi.rs.wasi.dispose')` settled. 3.10.1 routes the termination
+// through the captured thread manager, so a real build followed by a disposal
+// has to stay clean on every runtime we support.
+function assertThreadedDisposeExercise(results) {
+  for (const { stdout, runtimeVersion } of results) {
+    const result = JSON.parse(stdout);
+    const workers = result.workers;
+    delete result.workers;
+    assert.deepEqual(
+      result,
+      {
+        marker: 'threaded-wasi-dispose',
+        target: 'wasi-threads',
+        outputs: 1,
+        disposed: true,
+        workerErrors: [],
+      },
+      `Disposing the threaded WASI binding after a real build failed under ${runtimeVersion}`,
+    );
+    assert.ok(
+      workers >= 1,
+      `The threaded WASI build spawned no pool worker under ${runtimeVersion}, so the disposal never exercised worker termination`,
+    );
+  }
+}
+
 function assertBrowserPackageExercise(stdout) {
   const result = JSON.parse(stdout);
   const resolution = result.resolution;
@@ -1932,6 +1962,123 @@ try {
 }
 `;
 
+// Disposing the threaded flavor only means anything once a build has actually
+// spawned the WASI pool workers, so this exercise bundles first and disposes
+// the very module instance that build ran on.
+const threadedDisposeExerciseSource = `
+import { createRequire } from 'node:module'
+
+const disposeTimeoutMs = 30_000
+// A stray worker exit lands on the tick right after the disposal settles, so
+// hold the process open long enough for one to surface.
+const drainMs = 500
+
+const nodeRequire = createRequire(import.meta.url)
+const { writeSync } = nodeRequire('node:fs')
+const workerThreads = nodeRequire('node:worker_threads')
+const NativeWorker = workerThreads.Worker
+let workers = 0
+const workerErrors = []
+// Patch before the binding loads: the generated loader destructures Worker the
+// first time it is required.
+workerThreads.Worker = class extends NativeWorker {
+  constructor(filename, options) {
+    workers += 1
+    super(filename, options)
+    this.on('error', (error) => {
+      workerErrors.push(error && error.message ? error.message : String(error))
+    })
+  }
+}
+
+const { rolldown } = await import('rolldown')
+const { getRuntimeCapabilities } = await import('rolldown/experimental')
+
+const bundle = await rolldown({
+  input: 'virtual:entry',
+  plugins: [{
+    name: 'root-package-threaded-dispose-consumer',
+    resolveId(id) {
+      if (id === 'virtual:entry') return id
+    },
+    load(id) {
+      if (id === 'virtual:entry') return 'export default 1'
+    },
+  }],
+})
+let outputs
+try {
+  outputs = (await bundle.generate()).output.length
+} finally {
+  await bundle.close()
+}
+// Read every binding-backed value up front. Once the binding is disposed its
+// emnapi context is gone, so any later call into it traps the wasm module.
+const target = getRuntimeCapabilities().target
+
+// Read the binding out of the require cache rather than loading a second copy:
+// only the instance the build ran on owns the workers that must go away.
+const rootRequire = createRequire(nodeRequire.resolve('rolldown/package.json'))
+const bindingEntry = rootRequire.resolve('@rolldown/binding-wasm32-wasi')
+const loadedBinding = rootRequire.cache[bindingEntry]
+if (!loadedBinding) {
+  throw new Error('The build did not load ' + bindingEntry)
+}
+const dispose = loadedBinding.exports[Symbol.for('napi.rs.wasi.dispose')]
+if (typeof dispose !== 'function') {
+  throw new Error(
+    'The threaded WASI binding must publish a dispose function, received ' + typeof dispose,
+  )
+}
+
+// A crash during disposal has to fail this consumer instead of being swallowed.
+// Write synchronously: the immediate exit would drop a buffered pipe write.
+const failDisposal = (reason) => (error) => {
+  writeSync(
+    2,
+    'THREADED WASI DISPOSE FAILED (' + reason + '): ' +
+      (error && error.stack ? error.stack : String(error)) + '\\n',
+  )
+  process.exit(1)
+}
+process.on('uncaughtException', failDisposal('uncaughtException'))
+process.on('unhandledRejection', failDisposal('unhandledRejection'))
+
+// The driver's withTimeout lives in the parent process, so mirror it here. The
+// timer doubles as the keep-alive that stops Node from exiting while the
+// disposal is still in flight.
+let disposeTimeout
+let disposed = false
+try {
+  await Promise.race([
+    Promise.resolve(dispose()).then(() => {
+      disposed = true
+    }),
+    new Promise((_, reject) => {
+      disposeTimeout = setTimeout(
+        () =>
+          reject(
+            new Error('The threaded WASI disposal never settled after ' + disposeTimeoutMs + 'ms'),
+          ),
+        disposeTimeoutMs,
+      )
+    }),
+  ])
+} finally {
+  clearTimeout(disposeTimeout)
+}
+await new Promise((resolve) => setTimeout(resolve, drainMs))
+
+process.stdout.write(JSON.stringify({
+  marker: 'threaded-wasi-dispose',
+  target,
+  outputs,
+  disposed,
+  workers,
+  workerErrors,
+}))
+`;
+
 function renderThreadlessBindingTypeExercise(packageName) {
   return `
 import {
@@ -1999,6 +2146,25 @@ async function exerciseRootPackageLayouts(consumerDir, packageManager, packedFla
       );
       assertRootPackageExercise(rootResult.stdout, flavor);
 
+      if (flavor === 'threaded') {
+        assertThreadedDisposeExercise(
+          await runNodeModule(
+            consumerDir,
+            'exercise-root-threaded-dispose.mjs',
+            threadedDisposeExerciseSource,
+            [],
+            {
+              compareStdout: false,
+              returnAllResults: true,
+              env: {
+                NAPI_RS_ENFORCE_VERSION_CHECK: '1',
+                NAPI_RS_FORCE_WASI: 'error',
+              },
+            },
+          ),
+        );
+      }
+
       if (flavor === 'threadless') {
         for (const wasmSubpath of ['wasm', 'wasm.wasm']) {
           const workerdResult = await runNodeModule(
@@ -2014,7 +2180,9 @@ async function exerciseRootPackageLayouts(consumerDir, packageManager, packedFla
       }
     });
   }
-  console.log(`Validated separate threaded and threadless ${packageManager} root layouts`);
+  console.log(
+    `Validated separate threaded and threadless ${packageManager} root layouts, including threaded WASI disposal after a real build`,
+  );
 }
 
 try {

@@ -57,8 +57,13 @@ catalog:
   # codegen patches that used to add all four, so an older cli silently
   # regenerates loaders without them. The cli peer-requires the same
   # `^1.7.1 || ^2.0.0-alpha.4` emnapi line as the pins above, so it moves with
-  # them.
-  '@napi-rs/cli': ^3.10.0
+  # them. 3.10.1 raises the floor again (napi-rs#3526): the threaded loader
+  # terminates its WASI pool workers through the captured emnapi thread manager
+  # and holds the event loop open until those terminations settle, so
+  # `Symbol.for('napi.rs.wasi.dispose')` after a real build no longer kills the
+  # process with `Worker stopped with exit code 1`
+  # (scripts/wasi/check-wasi-binding-packed-consumer.mjs exercises it).
+  '@napi-rs/cli': ^3.10.1
   '@napi-rs/wasm-runtime': ~1.2.4
   '@oxc-node/cli': ^0.1.0
   '@oxc-node/core': ^0.1.0

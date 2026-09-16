@@ -820,11 +820,18 @@ this section possible: no restore step, no drift-allowlist arm, and no
 build-order coupling is needed to keep one flavor from overwriting the other.
 
 - The per-flavor naming and loader codegen (napi-rs#3353) ship in the released
-  `@napi-rs/cli`, pinned to `^3.10.0` in the workspace catalog — the floor is
+  `@napi-rs/cli`, pinned to `^3.10.1` in the workspace catalog — the floor is
   the loader contract itself (`__napiBindingTarget`, the raw-destroy settlement
   wrapper, `napi.wasm.threadlessInitialMemory`, and the
   `napi.wasm.asyncRuntime` host bootstrap); rolldown used to add all four with
-  local codegen patches and no longer does. A build whose
+  local codegen patches and no longer does. 3.10.1 (napi-rs#3526) added the
+  fifth seam: `__terminateWasiWorkers` marks each termination through the
+  emnapi thread manager captured by the `__captureWasiThreadManager` plugin,
+  and `__keepEventLoopAliveUntil` holds a timer until the terminations settle.
+  Without both, disposing the THREADED binding after a real build made
+  `@emnapi/wasi-threads` treat the worker exit as a failure and rethrow
+  `Worker stopped with exit code 1` out of its exit listener — the disposal
+  either died with an uncaught exception or never settled at all. A build whose
   target is NOT wasi regenerates
   EVERY declared wasi flavor's loader set, each with `hasThreads` derived from
   its own triple, so loader regeneration is deterministic and byte-identical to
@@ -878,7 +885,12 @@ build-order coupling is needed to keep one flavor from overwriting the other.
 - `scripts/wasi/check-wasi-binding-packed-consumer.mjs` imports the published
   threadless package root through both its CJS and browser conditions, executes
   an async binding build, and requires the generated task/timer bootstrap to
-  report `timers: true`. The threaded Chromium exercise raw-imports the packed
+  report `timers: true`. Its threaded root layout additionally bundles and then
+  calls `Symbol.for('napi.rs.wasi.dispose')` on the very binding instance that
+  build loaded, on every runtime it validates: the disposal has to settle
+  within 30s and leave no uncaught exception or worker `error` behind, which is
+  what pins the 3.10.1 worker-termination seam above. The threaded Chromium
+  exercise raw-imports the packed
   `rolldown-binding.wasi-browser.js` the same way and completes a build purely
   on the loader's own gated bootstrap — no package entry ever runs there — so
   it pins the same `timers: true` contract for the threaded flavor. Its

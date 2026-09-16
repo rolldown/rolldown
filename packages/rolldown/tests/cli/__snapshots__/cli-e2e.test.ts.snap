@@ -24,7 +24,7 @@ OPTIONS
   --advancedChunks.minSize <advancedChunks.minSize>Minimum size of the chunk.
   --assetFileNames <name>     Name pattern for asset files.
   --banner <banner>           Code to insert the top of the bundled file (outside the wrapper function).
-  --checks.bundlerTimings     This option controls warnings for plugins and option callbacks that use a significant part of the build time.
+  --checks.bundlerTimings     Whether to emit warnings when plugins and option callbacks take significant time during the build process.
   --checks.cannotCallNamespace Whether to emit warnings when a namespace is called as a function.
   --checks.circularDependency Whether to emit warnings when detecting circular dependency.
   --checks.commonJsVariableInEsm Whether to emit warnings when a CommonJS variable is used in an ES module.
@@ -176,7 +176,7 @@ OPTIONS
   --advancedChunks.minSize <advancedChunks.minSize>Minimum size of the chunk.
   --assetFileNames <name>     Name pattern for asset files.
   --banner <banner>           Code to insert the top of the bundled file (outside the wrapper function).
-  --checks.bundlerTimings     This option controls warnings for plugins and option callbacks that use a significant part of the build time.
+  --checks.bundlerTimings     Whether to emit warnings when plugins and option callbacks take significant time during the build process.
   --checks.cannotCallNamespace Whether to emit warnings when a namespace is called as a function.
   --checks.circularDependency Whether to emit warnings when detecting circular dependency.
   --checks.commonJsVariableInEsm Whether to emit warnings when a CommonJS variable is used in an ES module.
@@ -328,7 +328,7 @@ OPTIONS
   --advancedChunks.minSize <advancedChunks.minSize>Minimum size of the chunk.
   --assetFileNames <name>     Name pattern for asset files.
   --banner <banner>           Code to insert the top of the bundled file (outside the wrapper function).
-  --checks.bundlerTimings     This option controls warnings for plugins and option callbacks that use a significant part of the build time.
+  --checks.bundlerTimings     Whether to emit warnings when plugins and option callbacks take significant time during the build process.
   --checks.cannotCallNamespace Whether to emit warnings when a namespace is called as a function.
   --checks.circularDependency Whether to emit warnings when detecting circular dependency.
   --checks.commonJsVariableInEsm Whether to emit warnings when a CommonJS variable is used in an ES module.
@@ -480,7 +480,7 @@ OPTIONS
   --advancedChunks.minSize <advancedChunks.minSize>Minimum size of the chunk.
   --assetFileNames <name>     Name pattern for asset files.
   --banner <banner>           Code to insert the top of the bundled file (outside the wrapper function).
-  --checks.bundlerTimings     This option controls warnings for plugins and option callbacks that use a significant part of the build time.
+  --checks.bundlerTimings     Whether to emit warnings when plugins and option callbacks take significant time during the build process.
   --checks.cannotCallNamespace Whether to emit warnings when a namespace is called as a function.
   --checks.circularDependency Whether to emit warnings when detecting circular dependency.
   --checks.commonJsVariableInEsm Whether to emit warnings when a CommonJS variable is used in an ES module.

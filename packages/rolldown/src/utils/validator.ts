@@ -403,7 +403,7 @@ const ChecksOptionsSchema = v.strictObject({
   bundlerTimings: v.pipe(
     v.optional(v.boolean()),
     v.description(
-      'This option controls warnings for plugins and option callbacks that use a significant part of the build time',
+      'Whether to emit warnings when plugins and option callbacks take significant time during the build process',
     ),
   ),
   pluginTimings: v.pipe(

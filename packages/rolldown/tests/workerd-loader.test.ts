@@ -644,6 +644,48 @@ describe.sequential('managed workerd loader', () => {
     expect(destroy).toHaveBeenCalledOnce();
   });
 
+  test('retains the open object when a terminal close rejects', async () => {
+    const closeTerminalError = new Error('terminal close failure');
+    let fail = true;
+    class BindingBundler {
+      closed = false;
+
+      close(): Promise<void> {
+        return Promise.resolve();
+      }
+
+      // The raw `closed` flag flips when the terminal close STARTS, so a
+      // rejection arrives with `closed === true` while the close stays
+      // retryable.
+      closeTerminal(): Promise<void> {
+        this.closed = true;
+        return fail ? Promise.reject(closeTerminalError) : Promise.resolve();
+      }
+    }
+    const rawBinding = {
+      BindingBundler,
+      registerCurrentThreadTaskHost() {},
+      registerTimerHost() {},
+    };
+    const destroy = vi.fn();
+    const instance = await createManagedStub(rawBinding, destroy);
+    const bundler = new instance.exports.BindingBundler();
+
+    await expect(bundler.closeTerminal()).rejects.toBe(closeTerminalError);
+    // The token is retained, so disposal stays refused and a close retry
+    // remains possible.
+    await expect(instance.dispose()).rejects.toThrow(/1 open binding object/);
+    expect(destroy).not.toHaveBeenCalled();
+    expect(instance.disposed).toBe(false);
+
+    fail = false;
+    await bundler.closeTerminal();
+    await instance.dispose();
+
+    expect(destroy).toHaveBeenCalledOnce();
+    expect(instance.disposed).toBe(true);
+  });
+
   test('mediates returned callables and retargets mutable raw function fields', async () => {
     let closeCalls = 0;
     class BindingCallableRecord {

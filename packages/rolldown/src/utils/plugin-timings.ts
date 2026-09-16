@@ -247,8 +247,9 @@ export function measureHookCost<T extends (...args: never[]) => unknown>(
 }
 
 /**
- * The owner shown for user callbacks the core invokes directly rather than through a
- * plugin. One shared identity: they are all configured on the same options object.
+ * The shared owner for callbacks that users configure directly on the output options.
+ * Code-splitting groups use their group objects as owner keys. Each group then has separate
+ * timing rows.
  */
 export const OUTPUT_OPTIONS_OWNER: TimingOwner = {
   key: Symbol('output options'),

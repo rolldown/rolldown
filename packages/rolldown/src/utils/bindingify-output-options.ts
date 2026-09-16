@@ -368,17 +368,16 @@ function bindingifyCodeSplitting(
       },
       groups: groups?.map((group) => {
         const { name, test, ...restGroup } = group;
+        // The group object supplies a stable key across repeated outputs.
+        // Different group objects remain separate when their labels match.
+        const timingOwner =
+          timings === undefined ? OUTPUT_OPTIONS_OWNER : { ...OUTPUT_OPTIONS_OWNER, key: group };
         return {
           ...restGroup,
           test:
             typeof test === 'function'
               ? batchTest(
-                  measureHookCost(
-                    timings,
-                    OUTPUT_OPTIONS_OWNER,
-                    'codeSplitting groups[].test',
-                    test,
-                  ),
+                  measureHookCost(timings, timingOwner, 'codeSplitting groups[].test', test),
                 )
               : test,
           // The core calls this classifier directly rather than through a plugin, so it
@@ -387,12 +386,7 @@ function bindingifyCodeSplitting(
           name:
             typeof name === 'function'
               ? batchName(
-                  measureHookCost(
-                    timings,
-                    OUTPUT_OPTIONS_OWNER,
-                    'codeSplitting groups[].name',
-                    name,
-                  ),
+                  measureHookCost(timings, timingOwner, 'codeSplitting groups[].name', name),
                   getChunkingContext,
                 )
               : name,

@@ -38,6 +38,10 @@ impl GenerateStage<'_> {
       self.finalized_module_namespace_ref_usage(chunk_graph, &order_state);
     }
 
+    // Lowering is final, so every member of a candidate has its wrapper; the sweep below has not
+    // run, so the registry demand this registers keeps the runtime alive.
+    self.select_inline_common_chunks(chunk_graph, &mut order_state, used_symbol_refs_builder);
+
     // The runtime sweep must observe the final namespace/external facts above. Order wrappers
     // carry their runtime demand in `OrderWrapState`, outside the link-stage metadata inspected
     // by the sweep, so conservatively keep the runtime whenever that synthetic demand exists.

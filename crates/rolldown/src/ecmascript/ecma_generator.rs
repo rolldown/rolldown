@@ -76,7 +76,7 @@ impl Generator for EcmaGenerator {
       })
       .collect();
 
-    let rendered_modules: FxHashMap<ModuleId, RenderedModule> = rendered_module_sources
+    let mut rendered_modules: FxHashMap<ModuleId, RenderedModule> = rendered_module_sources
       .iter()
       .map(|rendered_module_source| {
         let RenderedModuleSource { module_idx, module_id, exec_order, sources } =
@@ -95,6 +95,12 @@ impl Generator for EcmaGenerator {
         (module_id.clone(), RenderedModule::new(sources.clone(), rendered_exports, *exec_order))
       })
       .collect();
+    // The modules of every carried inline common chunk record are part of this file.
+    for record_idx in ctx.inline_state.carried_by(ctx.chunk_idx) {
+      for (module_id, rendered_module) in &ctx.inline_renders[record_idx].rendered_modules {
+        rendered_modules.entry(module_id.clone()).or_insert_with(|| rendered_module.clone());
+      }
+    }
 
     let rendered_chunk = Arc::new(generate_rendered_chunk(ctx, rendered_modules));
 

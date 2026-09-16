@@ -2,9 +2,11 @@ use std::collections::VecDeque;
 
 use arcstr::ArcStr;
 use itertools::Itertools;
+use oxc_str::CompactStr;
 use rolldown_common::{
-  AddonRenderContext, ExportsKind, ExternalModule, ImportAttribute, ImportRecordIdx,
-  ImportRecordMeta, ModuleIdx, ModuleTable, RUNTIME_MODULE_KEY, Specifier, SymbolRef,
+  AddonRenderContext, ChunkIdx, CrossChunkImportItem, ExportsKind, ExternalModule, ImportAttribute,
+  ImportRecordIdx, ImportRecordMeta, ModuleIdx, ModuleTable, RUNTIME_MODULE_KEY, Specifier,
+  SymbolRef,
 };
 use rolldown_sourcemap::SourceJoiner;
 use rolldown_utils::{concat_string, ecmascript::to_module_import_export_name};
@@ -17,11 +19,14 @@ use crate::{
 };
 use json_escape_simd::escape;
 
-use super::utils::{is_use_strict_directive, render_chunk_directives};
+use super::{
+  share_factory::render_inline_records,
+  utils::{is_use_strict_directive, render_chunk_directives},
+};
 
 #[expect(clippy::needless_pass_by_value)]
 pub fn render_esm<'code>(
-  ctx: &GenerateContext<'_>,
+  ctx: &GenerateContext<'code>,
   addon_render_context: AddonRenderContext<'code>,
   module_sources: &'code RenderedModuleSources,
 ) -> SourceJoiner<'code> {
@@ -53,6 +58,10 @@ pub fn render_esm<'code>(
   if let Some(imports) = render_esm_chunk_imports(ctx) {
     source_joiner.append_source(imports);
   }
+
+  // Registrations and bridges of inline common chunk records come right after the imports and
+  // before anything of this file's own runs.
+  render_inline_records(ctx, &mut source_joiner);
 
   if let Some(entry_module) = ctx.chunk.entry_module(&ctx.link_output.module_table) {
     if matches!(entry_module.exports_kind, ExportsKind::Esm) {
@@ -329,42 +338,92 @@ fn render_chunk_content<'code>(
   }
 }
 
+/// The import specifiers one chunk needs from `exporter_id`, spelled with that chunk's names. A
+/// carrier calls this for itself and for every record it carries, so a record's imports are
+/// printed with the record's names into the carrier's file.
+fn collect_esm_import_specifiers(
+  ctx: &GenerateContext<'_>,
+  exporter_id: ChunkIdx,
+  items: &[CrossChunkImportItem],
+  canonical_names: &FxHashMap<SymbolRef, CompactStr>,
+  specifiers: &mut Vec<String>,
+  default_alias: &mut Vec<ArcStr>,
+) {
+  // Track seen canonical refs to avoid duplicate imports.
+  // Multiple import_refs can resolve to the same canonical_ref (e.g., re-exports from CJS modules),
+  // and we only need to import once per unique canonical symbol.
+  let mut seen_canonical_refs: FxHashSet<SymbolRef> = FxHashSet::default();
+  specifiers.extend(items.iter().filter_map(|item| {
+    let canonical_ref = ctx.link_output.symbol_db.canonical_ref_for(item.import_ref);
+    // Skip if we've already processed this canonical symbol
+    if !seen_canonical_refs.insert(canonical_ref) {
+      return None;
+    }
+    let imported =
+      ctx.link_output.symbol_db.canonical_name_for_or_original(canonical_ref, canonical_names);
+    let alias = &ctx.render_export_items_index_vec[exporter_id]
+      .get(&item.import_ref)
+      .expect("should have export item index")[0];
+    if alias.as_str() == imported {
+      Some(to_module_import_export_name(alias.as_str()))
+    } else {
+      if alias.as_str() == "default" {
+        default_alias.push(imported.into());
+        return None;
+      }
+      Some(concat_string!(to_module_import_export_name(alias), " as ", imported))
+    }
+  }));
+}
+
 fn render_esm_chunk_imports(ctx: &GenerateContext<'_>) -> Option<String> {
   let mut s = String::new();
-  ctx.chunk.imports_from_other_chunks.iter().for_each(|(exporter_id, items)| {
-    let importee_chunk = &ctx.chunk_graph.chunk_table[*exporter_id];
+  let carried = ctx.inline_state.carried_by(ctx.chunk_idx);
+  // A carrier also prints the imports of the records it carries: its own importees first, then
+  // the ones only a carried record has.
+  let mut importees = ctx.chunk.imports_from_other_chunks.keys().copied().collect::<Vec<_>>();
+  for record_idx in carried {
+    for importee in ctx.chunk_graph.chunk_table[*record_idx].imports_from_other_chunks.keys() {
+      if !importees.contains(importee) {
+        importees.push(*importee);
+      }
+    }
+  }
+  for exporter_id in importees {
+    let importee_chunk = &ctx.chunk_graph.chunk_table[exporter_id];
     let mut default_alias = vec![];
-    // Track seen canonical refs to avoid duplicate imports.
-    // Multiple import_refs can resolve to the same canonical_ref (e.g., re-exports from CJS modules),
-    // and we only need to import once per unique canonical symbol.
-    let mut seen_canonical_refs: FxHashSet<SymbolRef> = FxHashSet::default();
-    let mut specifiers = items
-      .iter()
-      .filter_map(|item| {
-        let canonical_ref = ctx.link_output.symbol_db.canonical_ref_for(item.import_ref);
-        // Skip if we've already processed this canonical symbol
-        if !seen_canonical_refs.insert(canonical_ref) {
-          return None;
-        }
-        let imported = ctx
-          .link_output
-          .symbol_db
-          .canonical_name_for_or_original(canonical_ref, &ctx.chunk.canonical_names);
-        let alias = &ctx.render_export_items_index_vec[*exporter_id]
-          .get(&item.import_ref)
-          .expect("should have export item index")[0];
-        if alias.as_str() == imported {
-          Some(to_module_import_export_name(alias.as_str()))
-        } else {
-          if alias.as_str() == "default" {
-            default_alias.push(imported.into());
-            return None;
-          }
-          Some(concat_string!(to_module_import_export_name(alias), " as ", imported))
-        }
-      })
-      .collect::<Vec<_>>();
+    let mut specifiers = vec![];
+    if let Some(items) = ctx.chunk.imports_from_other_chunks.get(&exporter_id) {
+      collect_esm_import_specifiers(
+        ctx,
+        exporter_id,
+        items,
+        &ctx.chunk.canonical_names,
+        &mut specifiers,
+        &mut default_alias,
+      );
+    }
+    for record_idx in carried {
+      let record_chunk = &ctx.chunk_graph.chunk_table[*record_idx];
+      if let Some(items) = record_chunk.imports_from_other_chunks.get(&exporter_id) {
+        collect_esm_import_specifiers(
+          ctx,
+          exporter_id,
+          items,
+          &record_chunk.canonical_names,
+          &mut specifiers,
+          &mut default_alias,
+        );
+      }
+    }
     specifiers.sort_unstable();
+    if !carried.is_empty() {
+      // The same symbol under the same name, needed by this file and by a carried record (or by
+      // two records), is one binding.
+      specifiers.dedup();
+      default_alias.sort_unstable();
+      default_alias.dedup();
+    }
 
     s.push_str(&create_import_declaration(
       &ctx.link_output.module_table,
@@ -373,7 +432,7 @@ fn render_esm_chunk_imports(ctx: &GenerateContext<'_>) -> Option<String> {
       &ctx.chunk.import_path_for(importee_chunk),
       None,
     ));
-  });
+  }
   let mut rendered_external_import_namespace_modules = FxHashSet::default();
   // render external imports
   ctx.chunk.direct_imports_from_external_modules.iter().for_each(|(importee_id, named_imports)| {

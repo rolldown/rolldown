@@ -45,20 +45,22 @@ type IndexImportsFromOtherChunks =
 /// `emitFile` consumer relies on — are a contract and keep whatever they declare.
 const THENABLE_HAZARD_EXPORT_NAME: &str = "then";
 
-struct CrossChunkLinkState {
-  index_chunk_exported_symbols: IndexChunkExportedSymbols,
-  index_chunk_direct_imports_from_external_modules: IndexChunkImportsFromExternalModules,
-  index_chunk_indirect_imports_from_external_modules: IndexChunkAllImportsFromExternalModules,
-  index_imports_from_other_chunks: IndexImportsFromOtherChunks,
+pub(super) struct CrossChunkLinkState {
+  pub(super) index_chunk_exported_symbols: IndexChunkExportedSymbols,
+  pub(super) index_chunk_direct_imports_from_external_modules: IndexChunkImportsFromExternalModules,
+  pub(super) index_chunk_indirect_imports_from_external_modules:
+    IndexChunkAllImportsFromExternalModules,
+  pub(super) index_imports_from_other_chunks: IndexImportsFromOtherChunks,
   index_cross_chunk_imports: IndexCrossChunkImports,
-  index_cross_chunk_dynamic_imports: IndexCrossChunkDynamicImports,
-  index_chunk_dynamic_imports_from_external_modules: IndexChunkDynamicImportsFromExternalModules,
+  pub(super) index_cross_chunk_dynamic_imports: IndexCrossChunkDynamicImports,
+  pub(super) index_chunk_dynamic_imports_from_external_modules:
+    IndexChunkDynamicImportsFromExternalModules,
   order_live_symbols: FxHashSet<SymbolRef>,
   symbol_chunk_table: SymbolChunkTable,
 }
 
 #[derive(Clone, Copy)]
-enum FinalEsmInitMetadataAvailability<'a> {
+pub(super) enum FinalEsmInitMetadataAvailability<'a> {
   /// The prediction pass runs before wrapper selection and final chunk topology are fixed.
   Unavailable,
   /// Final cross-chunk linking can only receive metadata through the sealed boundary.
@@ -465,7 +467,7 @@ impl GenerateStage<'_> {
       .collect()
   }
 
-  fn compute_cross_chunk_link_state(
+  pub(super) fn compute_cross_chunk_link_state(
     &self,
     chunk_graph: &ChunkGraph,
     used_symbol_refs_view: UsedSymbolRefsView<'_>,

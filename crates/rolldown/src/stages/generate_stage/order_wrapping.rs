@@ -1231,7 +1231,10 @@ impl GenerateStage<'_> {
   /// because it counts the runtime chunk's consumers and facade creation is what settles them. So
   /// the two are split: this returns the obligation and `apply_order_wraps` discharges it once the
   /// facade topology is final.
-  fn ensure_runtime_module_for_order_wraps(&mut self, chunk_graph: &mut ChunkGraph) -> bool {
+  pub(super) fn ensure_runtime_module_for_order_wraps(
+    &mut self,
+    chunk_graph: &mut ChunkGraph,
+  ) -> bool {
     let runtime_idx = self.link_output.runtime.id();
     if let Some(runtime_chunk_idx) = chunk_graph.module_to_chunk[runtime_idx] {
       if self.options.code_splitting.is_disabled() {
@@ -1388,7 +1391,7 @@ impl GenerateStage<'_> {
       .collect_vec()
   }
 
-  fn renumber_live_chunks(&self, chunk_graph: &mut ChunkGraph) {
+  pub(super) fn renumber_live_chunks(&self, chunk_graph: &mut ChunkGraph) {
     let live_chunks = chunk_graph
       .chunk_table
       .iter_enumerated()

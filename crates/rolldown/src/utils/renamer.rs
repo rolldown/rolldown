@@ -186,6 +186,39 @@ impl<'name> Renamer<'name> {
     self.resolver.resolve(CompactStr::new(hint), |_, _| true)
   }
 
+  /// Like [`Self::create_conflictless_name`], but also skips names bound in a nested scope of
+  /// any of `modules`, for a chunk-level binding that references inside those modules resolve to.
+  pub fn create_conflictless_name_for_modules(
+    &mut self,
+    hint: &str,
+    modules: &[ModuleIdx],
+  ) -> CompactStr {
+    let symbol_db = self.symbol_db;
+    self.resolver.resolve(CompactStr::new(hint), |candidate, _| {
+      !modules.iter().any(|module_idx| has_nested_scope_binding(symbol_db, *module_idx, candidate))
+    })
+  }
+
+  /// Bind `symbol_ref` to the name another chunk printed in the same output file already chose
+  /// for it, so both print one import specifier. When that name would let a nested binding of
+  /// the owning module capture the reference, only reserve it and let the symbol be named later.
+  pub fn preassign_symbol(&mut self, symbol_ref: SymbolRef, name: CompactStr) {
+    let canonical_ref = symbol_ref.canonical_ref(self.symbol_db);
+    if !self.canonical_names.contains_key(&canonical_ref) {
+      let is_original_name = self.symbol_db.original_name(canonical_ref) == name;
+      if Self::is_name_available_with(
+        self.symbol_db,
+        self.entry_module_idx,
+        &name,
+        canonical_ref,
+        is_original_name,
+      ) {
+        self.canonical_names.insert(canonical_ref, name.clone());
+      }
+    }
+    self.resolver.reserve(name);
+  }
+
   pub fn register_nested_scope_symbols(&mut self, symbol_ref: SymbolRef, original_name: &str) {
     let canonical_ref = symbol_ref.canonical_ref(self.symbol_db);
     if self.canonical_names.contains_key(&canonical_ref) {

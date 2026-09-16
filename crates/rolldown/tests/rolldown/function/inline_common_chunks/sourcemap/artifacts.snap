@@ -1,0 +1,154 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## a.js
+
+```js
+import { i as __share_require, n as __share, r as __share_export, t as __esmMin } from "./rolldown-runtime.js";
+__share("shared", (exports) => {
+	//#region shared.js
+	function bump() {
+		count += 1;
+		return count;
+	}
+	var count;
+	function init_shared() {
+		return (init_shared = __esmMin((() => {
+			globalThis.events.push("S body");
+			count = 0;
+		})))();
+	}
+	//#endregion
+	__share_export(exports, {
+		n: () => count,
+		r: () => init_shared,
+		t: () => bump
+	});
+});
+var share_shared = __share_require("shared");
+//#region a.js
+function init_a() {
+	return (init_a = __esmMin((() => {
+		share_shared.r();
+		globalThis.events.push("A " + share_shared.n + " " + (0, share_shared.t)());
+	})))();
+}
+//#endregion
+init_a();
+
+//# sourceMappingURL=a.js.map
+```
+
+## b.js
+
+```js
+import { i as __share_require, n as __share, r as __share_export, t as __esmMin } from "./rolldown-runtime.js";
+__share("shared", (exports) => {
+	//#region shared.js
+	function bump() {
+		count += 1;
+		return count;
+	}
+	var count;
+	function init_shared() {
+		return (init_shared = __esmMin((() => {
+			globalThis.events.push("S body");
+			count = 0;
+		})))();
+	}
+	//#endregion
+	__share_export(exports, {
+		n: () => count,
+		r: () => init_shared,
+		t: () => bump
+	});
+});
+var share_shared = __share_require("shared");
+//#region b.js
+function init_b() {
+	return (init_b = __esmMin((() => {
+		share_shared.r();
+		globalThis.events.push("B " + share_shared.n + " " + (0, share_shared.t)());
+	})))();
+}
+//#endregion
+init_b();
+
+//# sourceMappingURL=b.js.map
+```
+
+## rolldown-runtime.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+export { __share_require as i, __share as n, __share_export as r, __esmMin as t };
+
+```
+
+# Sourcemap Visualizer
+
+```
+- ../shared.js
+(2:0) "export function " --> (3:1) "function "
+(2:16) "bump() " --> (3:10) "bump() "
+(2:23) "{\n" --> (3:17) "{\n"
+(3:2) "count += " --> (4:2) "count += "
+(3:11) "1;\n" --> (4:11) "1;\n"
+(4:2) "return " --> (5:2) "return "
+(4:9) "count;\n" --> (5:9) "count;\n"
+(5:0) "}\n" --> (6:1) "}\n"
+(0:0) "globalThis." --> (10:3) "globalThis."
+(0:11) "events." --> (10:14) "events."
+(0:18) "push(" --> (10:21) "push("
+(0:23) "'S body'" --> (10:26) "\"S body\""
+(0:31) ");\n" --> (10:34) ");\n"
+(1:11) "count = " --> (11:3) "count = "
+(1:19) "0;\n" --> (11:11) "0;\n"
+- ../a.js
+(1:0) "globalThis." --> (26:2) "globalThis."
+(1:11) "events." --> (26:13) "events."
+(1:18) "push(" --> (26:20) "push("
+(1:23) "'A ' + " --> (26:25) "\"A \" + "
+(1:30) "count + " --> (26:32) "share_shared."
+(1:30) "count + " --> (26:45) "n + "
+(1:38) "' ' + " --> (26:49) "\" \" + ("
+(1:38) "' ' + " --> (26:56) "0, "
+(1:44) "bump(" --> (26:59) "share_shared."
+(1:44) "bump(" --> (26:72) "t)"
+(1:44) "bump(" --> (26:74) "("
+(1:49) ")" --> (26:75) ")"
+(1:50) ");\n" --> (26:76) ");\n"
+
+- ../shared.js
+(2:0) "export function " --> (3:1) "function "
+(2:16) "bump() " --> (3:10) "bump() "
+(2:23) "{\n" --> (3:17) "{\n"
+(3:2) "count += " --> (4:2) "count += "
+(3:11) "1;\n" --> (4:11) "1;\n"
+(4:2) "return " --> (5:2) "return "
+(4:9) "count;\n" --> (5:9) "count;\n"
+(5:0) "}\n" --> (6:1) "}\n"
+(0:0) "globalThis." --> (10:3) "globalThis."
+(0:11) "events." --> (10:14) "events."
+(0:18) "push(" --> (10:21) "push("
+(0:23) "'S body'" --> (10:26) "\"S body\""
+(0:31) ");\n" --> (10:34) ");\n"
+(1:11) "count = " --> (11:3) "count = "
+(1:19) "0;\n" --> (11:11) "0;\n"
+- ../b.js
+(1:0) "globalThis." --> (26:2) "globalThis."
+(1:11) "events." --> (26:13) "events."
+(1:18) "push(" --> (26:20) "push("
+(1:23) "'B ' + " --> (26:25) "\"B \" + "
+(1:30) "count + " --> (26:32) "share_shared."
+(1:30) "count + " --> (26:45) "n + "
+(1:38) "' ' + " --> (26:49) "\" \" + ("
+(1:38) "' ' + " --> (26:56) "0, "
+(1:44) "bump(" --> (26:59) "share_shared."
+(1:44) "bump(" --> (26:72) "t)"
+(1:44) "bump(" --> (26:74) "("
+(1:49) ")" --> (26:75) ")"
+(1:50) ");\n" --> (26:76) ");\n"
+```

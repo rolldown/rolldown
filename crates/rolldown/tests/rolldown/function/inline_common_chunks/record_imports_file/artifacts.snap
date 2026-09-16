@@ -1,0 +1,198 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## a.js
+
+```js
+import { i as __share_require, n as __share, r as __share_export, t as __esmMin } from "./rolldown-runtime.js";
+import { n as init_c, t as helper } from "./c2.js";
+__share("s1", (exports) => {
+	//#region s1.js
+	var s1;
+	function init_s1() {
+		return (init_s1 = __esmMin((() => {
+			init_c();
+			s1 = helper + "!";
+		})))();
+	}
+	//#endregion
+	__share_export(exports, {
+		n: () => s1,
+		t: () => init_s1
+	});
+});
+var share_s1 = __share_require("s1");
+//#region a.js
+var helper$1;
+function init_a() {
+	return (init_a = __esmMin((() => {
+		share_s1.t();
+		helper$1 = "local";
+		helper$1 += "";
+		globalThis.events.push("A " + helper$1 + " " + share_s1.n);
+	})))();
+}
+//#endregion
+init_a();
+
+```
+
+## b.js
+
+```js
+import { i as __share_require, n as __share, r as __share_export, t as __esmMin } from "./rolldown-runtime.js";
+import { n as init_c, t as helper } from "./c2.js";
+__share("s1", (exports) => {
+	//#region s1.js
+	var s1;
+	function init_s1() {
+		return (init_s1 = __esmMin((() => {
+			init_c();
+			s1 = helper + "!";
+		})))();
+	}
+	//#endregion
+	__share_export(exports, {
+		n: () => s1,
+		t: () => init_s1
+	});
+});
+var share_s1 = __share_require("s1");
+//#region b.js
+function init_b() {
+	return (init_b = __esmMin((() => {
+		share_s1.t();
+		globalThis.events.push("B " + share_s1.n);
+	})))();
+}
+//#endregion
+init_b();
+
+```
+
+## c.js
+
+```js
+import { n as init_c } from "./c2.js";
+init_c();
+
+```
+
+## c2.js
+
+```js
+import { t as __esmMin } from "./rolldown-runtime.js";
+//#region c.js
+var helper;
+function init_c() {
+	return (init_c = __esmMin((() => {
+		helper = String(globalThis.__h ?? "h");
+		globalThis.events.push("C body");
+	})))();
+}
+//#endregion
+export { init_c as n, helper as t };
+
+```
+
+## rolldown-runtime.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+export { __share_require as i, __share as n, __share_export as r, __esmMin as t };
+
+```
+
+# Variant: off: [inline_common_chunks_max_size: 0]
+
+## Assets
+
+### a.js
+
+```js
+import { n as s1, t as init_s1 } from "./s1.js";
+import { t as __esmMin } from "./rolldown-runtime.js";
+//#region a.js
+var helper;
+function init_a() {
+	return (init_a = __esmMin((() => {
+		init_s1();
+		helper = "local";
+		helper += "";
+		globalThis.events.push("A " + helper + " " + s1);
+	})))();
+}
+//#endregion
+init_a();
+
+```
+
+### b.js
+
+```js
+import { n as s1, t as init_s1 } from "./s1.js";
+import { t as __esmMin } from "./rolldown-runtime.js";
+//#region b.js
+function init_b() {
+	return (init_b = __esmMin((() => {
+		init_s1();
+		globalThis.events.push("B " + s1);
+	})))();
+}
+//#endregion
+init_b();
+
+```
+
+### c.js
+
+```js
+import { n as init_c } from "./c2.js";
+init_c();
+
+```
+
+### c2.js
+
+```js
+import { t as __esmMin } from "./rolldown-runtime.js";
+//#region c.js
+var helper;
+function init_c() {
+	return (init_c = __esmMin((() => {
+		helper = String(globalThis.__h ?? "h");
+		globalThis.events.push("C body");
+	})))();
+}
+//#endregion
+export { init_c as n, helper as t };
+
+```
+
+### rolldown-runtime.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+export { __esmMin as t };
+
+```
+
+### s1.js
+
+```js
+import { n as init_c, t as helper } from "./c2.js";
+import { t as __esmMin } from "./rolldown-runtime.js";
+//#region s1.js
+var s1;
+function init_s1() {
+	return (init_s1 = __esmMin((() => {
+		init_c();
+		s1 = helper + "!";
+	})))();
+}
+//#endregion
+export { s1 as n, init_s1 as t };
+
+```

@@ -1,0 +1,286 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## a.js
+
+```js
+import { i as __share_require, n as __share, r as __share_export, t as __esmMin } from "./rolldown-runtime.js";
+__share("s3", (exports) => {
+	//#region s3.js
+	function tag(strings, ...values) {
+		return (this === void 0 ? "U" : "B") + strings.join("|") + values.join(",");
+	}
+	var base;
+	function init_s3() {
+		return (init_s3 = __esmMin((() => {
+			globalThis.events.push("S3");
+			base = { n: 3 };
+		})))();
+	}
+	//#endregion
+	__share_export(exports, {
+		n: () => init_s3,
+		r: () => tag,
+		t: () => base
+	});
+});
+__share("s1", (exports) => {
+	var share_s3 = __share_require("s3");
+	//#region s1.js
+	var one, tagged, C;
+	function init_s1() {
+		return (init_s1 = __esmMin((() => {
+			share_s3.n();
+			globalThis.events.push("S1");
+			one = share_s3.t.n + 1;
+			tagged = (0, share_s3.r)`t${one}`;
+			C = class {
+				constructor() {
+					this.k = "c";
+				}
+			};
+		})))();
+	}
+	//#endregion
+	__share_export(exports, {
+		i: () => tagged,
+		n: () => init_s1,
+		r: () => one,
+		t: () => C
+	});
+});
+var share_s3 = __share_require("s3");
+var share_s1 = __share_require("s1");
+//#region a.js
+function init_a() {
+	return (init_a = __esmMin((() => {
+		share_s1.n();
+		share_s3.n();
+		globalThis.events.push("A " + share_s1.r + " " + share_s1.i + " " + new share_s1.t().k + " " + share_s3.t.n);
+	})))();
+}
+//#endregion
+init_a();
+
+```
+
+## b.js
+
+```js
+import { i as __share_require, n as __share, r as __share_export, t as __esmMin } from "./rolldown-runtime.js";
+__share("s3", (exports) => {
+	//#region s3.js
+	function tag(strings, ...values) {
+		return (this === void 0 ? "U" : "B") + strings.join("|") + values.join(",");
+	}
+	var base;
+	function init_s3() {
+		return (init_s3 = __esmMin((() => {
+			globalThis.events.push("S3");
+			base = { n: 3 };
+		})))();
+	}
+	//#endregion
+	__share_export(exports, {
+		n: () => init_s3,
+		r: () => tag,
+		t: () => base
+	});
+});
+__share("s1", (exports) => {
+	var share_s3 = __share_require("s3");
+	//#region s1.js
+	var one, tagged, C;
+	function init_s1() {
+		return (init_s1 = __esmMin((() => {
+			share_s3.n();
+			globalThis.events.push("S1");
+			one = share_s3.t.n + 1;
+			tagged = (0, share_s3.r)`t${one}`;
+			C = class {
+				constructor() {
+					this.k = "c";
+				}
+			};
+		})))();
+	}
+	//#endregion
+	__share_export(exports, {
+		i: () => tagged,
+		n: () => init_s1,
+		r: () => one,
+		t: () => C
+	});
+});
+var share_s3 = __share_require("s3");
+var share_s1 = __share_require("s1");
+//#region b.js
+function init_b() {
+	return (init_b = __esmMin((() => {
+		share_s1.n();
+		share_s3.n();
+		globalThis.events.push("B " + share_s1.r + " " + (0, share_s3.r)`b${share_s1.r}` + " " + share_s1.i + " " + new share_s1.t().k);
+	})))();
+}
+//#endregion
+init_b();
+
+```
+
+## c.js
+
+```js
+import { i as __share_require, n as __share, r as __share_export, t as __esmMin } from "./rolldown-runtime.js";
+__share("s3", (exports) => {
+	//#region s3.js
+	function tag(strings, ...values) {
+		return (this === void 0 ? "U" : "B") + strings.join("|") + values.join(",");
+	}
+	var base;
+	function init_s3() {
+		return (init_s3 = __esmMin((() => {
+			globalThis.events.push("S3");
+			base = { n: 3 };
+		})))();
+	}
+	//#endregion
+	__share_export(exports, {
+		n: () => init_s3,
+		r: () => tag,
+		t: () => base
+	});
+});
+var share_s3 = __share_require("s3");
+//#region c.js
+function init_c() {
+	return (init_c = __esmMin((() => {
+		share_s3.n();
+		globalThis.events.push("C " + share_s3.t.n + " " + (0, share_s3.r)`c`);
+	})))();
+}
+//#endregion
+init_c();
+
+```
+
+## rolldown-runtime.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+export { __share_require as i, __share as n, __share_export as r, __esmMin as t };
+
+```
+
+# Variant: off: [inline_common_chunks_max_size: 0]
+
+## Assets
+
+### a.js
+
+```js
+import { n as init_s3, t as base } from "./s3.js";
+import { i as tagged, n as init_s1, r as one, t as C } from "./s1.js";
+import { t as __esmMin } from "./rolldown-runtime.js";
+//#region a.js
+function init_a() {
+	return (init_a = __esmMin((() => {
+		init_s1();
+		init_s3();
+		globalThis.events.push("A " + one + " " + tagged + " " + new C().k + " " + base.n);
+	})))();
+}
+//#endregion
+init_a();
+
+```
+
+### b.js
+
+```js
+import { n as init_s3, r as tag } from "./s3.js";
+import { i as tagged, n as init_s1, r as one, t as C } from "./s1.js";
+import { t as __esmMin } from "./rolldown-runtime.js";
+//#region b.js
+function init_b() {
+	return (init_b = __esmMin((() => {
+		init_s1();
+		init_s3();
+		globalThis.events.push("B " + one + " " + tag`b${one}` + " " + tagged + " " + new C().k);
+	})))();
+}
+//#endregion
+init_b();
+
+```
+
+### c.js
+
+```js
+import { n as init_s3, r as tag, t as base } from "./s3.js";
+import { t as __esmMin } from "./rolldown-runtime.js";
+//#region c.js
+function init_c() {
+	return (init_c = __esmMin((() => {
+		init_s3();
+		globalThis.events.push("C " + base.n + " " + tag`c`);
+	})))();
+}
+//#endregion
+init_c();
+
+```
+
+### rolldown-runtime.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+export { __esmMin as t };
+
+```
+
+### s1.js
+
+```js
+import { n as init_s3, r as tag, t as base } from "./s3.js";
+import { t as __esmMin } from "./rolldown-runtime.js";
+//#region s1.js
+var one, tagged, C;
+function init_s1() {
+	return (init_s1 = __esmMin((() => {
+		init_s3();
+		globalThis.events.push("S1");
+		one = base.n + 1;
+		tagged = tag`t${one}`;
+		C = class {
+			constructor() {
+				this.k = "c";
+			}
+		};
+	})))();
+}
+//#endregion
+export { tagged as i, init_s1 as n, one as r, C as t };
+
+```
+
+### s3.js
+
+```js
+import { t as __esmMin } from "./rolldown-runtime.js";
+//#region s3.js
+function tag(strings, ...values) {
+	return (this === void 0 ? "U" : "B") + strings.join("|") + values.join(",");
+}
+var base;
+function init_s3() {
+	return (init_s3 = __esmMin((() => {
+		globalThis.events.push("S3");
+		base = { n: 3 };
+	})))();
+}
+//#endregion
+export { init_s3 as n, tag as r, base as t };
+
+```

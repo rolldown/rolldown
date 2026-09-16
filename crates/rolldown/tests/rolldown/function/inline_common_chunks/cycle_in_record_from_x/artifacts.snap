@@ -1,0 +1,106 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## a.js
+
+```js
+import { i as __share_require, n as __share, r as __share_export, t as __esmMin } from "./rolldown-runtime.js";
+__share("x", (exports) => {
+	//#region y.js
+	function y() {
+		return "y";
+	}
+	function init_y() {
+		return (init_y = __esmMin((() => {
+			init_x();
+			globalThis.events.push("Y body " + x() + " xv");
+		})))();
+	}
+	//#endregion
+	//#region x.js
+	function x() {
+		return "x(" + y() + ")";
+	}
+	function init_x() {
+		return (init_x = __esmMin((() => {
+			init_y();
+			globalThis.events.push("X body yv");
+		})))();
+	}
+	//#endregion
+	__share_export(exports, {
+		i: () => y,
+		n: () => x,
+		r: () => init_y,
+		t: () => init_x
+	});
+});
+var share_x = __share_require("x");
+//#region a.js
+function init_a() {
+	return (init_a = __esmMin((() => {
+		share_x.t();
+		globalThis.events.push("A " + (0, share_x.n)());
+	})))();
+}
+//#endregion
+init_a();
+
+```
+
+## b.js
+
+```js
+import { i as __share_require, n as __share, r as __share_export, t as __esmMin } from "./rolldown-runtime.js";
+__share("x", (exports) => {
+	//#region y.js
+	function y() {
+		return "y";
+	}
+	function init_y() {
+		return (init_y = __esmMin((() => {
+			init_x();
+			globalThis.events.push("Y body " + x() + " xv");
+		})))();
+	}
+	//#endregion
+	//#region x.js
+	function x() {
+		return "x(" + y() + ")";
+	}
+	function init_x() {
+		return (init_x = __esmMin((() => {
+			init_y();
+			globalThis.events.push("X body yv");
+		})))();
+	}
+	//#endregion
+	__share_export(exports, {
+		i: () => y,
+		n: () => x,
+		r: () => init_y,
+		t: () => init_x
+	});
+});
+var share_x = __share_require("x");
+//#region b.js
+function init_b() {
+	return (init_b = __esmMin((() => {
+		share_x.r();
+		globalThis.events.push("B " + (0, share_x.i)() + "yv");
+	})))();
+}
+//#endregion
+init_b();
+
+```
+
+## rolldown-runtime.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+export { __share_require as i, __share as n, __share_export as r, __esmMin as t };
+
+```

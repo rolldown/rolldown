@@ -1,0 +1,215 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## a.js
+
+```js
+import { i as __share_require, n as __share, r as __share_export, t as __esmMin } from "./rolldown-runtime.js";
+__share("shared", (exports) => {
+	//#region shared.js
+	function bump() {
+		count += 1;
+		return this === void 0 ? "this:undefined" : "this:bound";
+	}
+	var count, marker;
+	function init_shared() {
+		return (init_shared = __esmMin((() => {
+			globalThis.events.push("S body");
+			count = 0;
+			marker = { tag: "shared" };
+		})))();
+	}
+	//#endregion
+	__share_export(exports, {
+		i: () => marker,
+		n: () => count,
+		r: () => init_shared,
+		t: () => bump
+	});
+});
+var share_shared = __share_require("shared");
+//#region a.js
+function init_a() {
+	return (init_a = __esmMin((() => {
+		share_shared.r();
+		globalThis.events.push("A " + share_shared.n + " " + (0, share_shared.t)() + " " + share_shared.n);
+		globalThis.markers.push(share_shared.i);
+	})))();
+}
+//#endregion
+init_a();
+
+```
+
+## b.js
+
+```js
+import { i as __share_require, n as __share, r as __share_export, t as __esmMin } from "./rolldown-runtime.js";
+__share("shared", (exports) => {
+	//#region shared.js
+	function bump() {
+		count += 1;
+		return this === void 0 ? "this:undefined" : "this:bound";
+	}
+	var count, marker;
+	function init_shared() {
+		return (init_shared = __esmMin((() => {
+			globalThis.events.push("S body");
+			count = 0;
+			marker = { tag: "shared" };
+		})))();
+	}
+	//#endregion
+	__share_export(exports, {
+		i: () => marker,
+		n: () => count,
+		r: () => init_shared,
+		t: () => bump
+	});
+});
+var share_shared = __share_require("shared");
+//#region b.js
+function init_b() {
+	return (init_b = __esmMin((() => {
+		share_shared.r();
+		globalThis.events.push("B " + share_shared.n + " " + (0, share_shared.t)?.() + " " + share_shared.n);
+		globalThis.markers.push(share_shared.i);
+	})))();
+}
+//#endregion
+init_b();
+
+```
+
+## rolldown-runtime.js
+
+```js
+//#region \0rolldown/runtime.js
+var __create = Object.create;
+var __defProp = Object.defineProperty;
+var __esmMin = (fn, res, err) => () => {
+	if (err) throw err[0];
+	try {
+		return fn && (res = fn(fn = 0)), res;
+	} catch (e) {
+		throw err = [e], e;
+	}
+};
+var __share_factories = /* @__PURE__ */ __create(null);
+var __share_records = /* @__PURE__ */ __create(null);
+var __share = (id, factory) => {
+	if (!(id in __share_factories)) __share_factories[id] = factory;
+};
+var __share_require = (id) => {
+	var record = __share_records[id];
+	if (record) {
+		if (record.failed) throw record.error;
+		return record.exports;
+	}
+	var factory = __share_factories[id];
+	if (!factory) throw new Error("Shared chunk \"" + id + "\" was not registered before it was required.");
+	record = __share_records[id] = {
+		exports: {},
+		failed: false,
+		error: void 0
+	};
+	try {
+		factory(record.exports);
+	} catch (error) {
+		record.failed = true;
+		record.error = error;
+		throw error;
+	}
+	return record.exports;
+};
+var __share_export = (target, all) => {
+	for (var name in all) __defProp(target, name, {
+		get: all[name],
+		enumerable: true
+	});
+};
+//#endregion
+export { __share_require as i, __share as n, __share_export as r, __esmMin as t };
+
+```
+
+# Variant: off: [inline_common_chunks_max_size: 0]
+
+## Assets
+
+### a.js
+
+```js
+import { i as marker, n as count, r as init_shared, t as bump } from "./shared.js";
+import { t as __esmMin } from "./rolldown-runtime.js";
+//#region a.js
+function init_a() {
+	return (init_a = __esmMin((() => {
+		init_shared();
+		globalThis.events.push("A " + count + " " + bump() + " " + count);
+		globalThis.markers.push(marker);
+	})))();
+}
+//#endregion
+init_a();
+
+```
+
+### b.js
+
+```js
+import { i as marker, n as count, r as init_shared, t as bump } from "./shared.js";
+import { t as __esmMin } from "./rolldown-runtime.js";
+//#region b.js
+function init_b() {
+	return (init_b = __esmMin((() => {
+		init_shared();
+		globalThis.events.push("B " + count + " " + bump?.() + " " + count);
+		globalThis.markers.push(marker);
+	})))();
+}
+//#endregion
+init_b();
+
+```
+
+### rolldown-runtime.js
+
+```js
+//#region \0rolldown/runtime.js
+var __esmMin = (fn, res, err) => () => {
+	if (err) throw err[0];
+	try {
+		return fn && (res = fn(fn = 0)), res;
+	} catch (e) {
+		throw err = [e], e;
+	}
+};
+//#endregion
+export { __esmMin as t };
+
+```
+
+### shared.js
+
+```js
+import { t as __esmMin } from "./rolldown-runtime.js";
+//#region shared.js
+function bump() {
+	count += 1;
+	return this === void 0 ? "this:undefined" : "this:bound";
+}
+var count, marker;
+function init_shared() {
+	return (init_shared = __esmMin((() => {
+		globalThis.events.push("S body");
+		count = 0;
+		marker = { tag: "shared" };
+	})))();
+}
+//#endregion
+export { marker as i, count as n, init_shared as r, bump as t };
+
+```

@@ -122,18 +122,6 @@ A second frontend that produces `BundlerOptions` (the JSON test config) is the
 concrete proof that the convergence point is `BundlerOptions`, not the NAPI
 binding.
 
-## Timing Check Alias
-
-`checks.bundlerTimings` replaces `checks.pluginTimings`.
-`checks.pluginTimings` remains a deprecated alias.
-The JavaScript recorder and the Rust diagnostic filter use `bundlerTimings ?? pluginTimings ?? true`.
-Both options control the existing `PluginTimings` event.
-The implementation keeps all internal timing names and the `PLUGIN_TIMINGS` diagnostic code.
-
-The generator in `tasks/generator/src/generators/checks.rs` adds the alias to the TypeScript options.
-The generator also adds the alias to the validation schema and the NAPI binding.
-The test harnesses use `false` only if neither option has a value.
-
 ## Unresolved Questions
 
 - The intent doc comment on `NormalizedBundlerOptions` references

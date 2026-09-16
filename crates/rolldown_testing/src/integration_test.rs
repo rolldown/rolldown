@@ -682,7 +682,7 @@ impl IntegrationTest {
       }
     }
 
-    // Disable bundler timings by default in tests to reduce snapshot noise
+    // The test harness disables bundler timings by default to reduce snapshot noise.
     if let Some(checks) = &mut options.checks {
       checks.bundler_timings.get_or_insert(checks.plugin_timings.unwrap_or(false));
     } else {

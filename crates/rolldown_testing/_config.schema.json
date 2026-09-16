@@ -1505,7 +1505,7 @@
           ]
         },
         "pluginTimings": {
-          "description": "Deprecated alias for `bundler_timings`. The new option takes precedence.",
+          "description": "`plugin_timings` is a deprecated alias for `bundler_timings`. If `bundler_timings` and `plugin_timings` have values, Rolldown uses `bundler_timings`.",
           "type": [
             "boolean",
             "null"

@@ -1974,7 +1974,7 @@ export interface BindingChecksOptions {
   preferBuiltinFeature?: boolean
   couldNotCleanDirectory?: boolean
   bundlerTimings?: boolean
-  /** Deprecated alias for `bundler_timings`. The new option takes precedence. */
+  /** `plugin_timings` is a deprecated alias for `bundler_timings`. If `bundler_timings` and `plugin_timings` have values, Rolldown uses `bundler_timings`. */
   pluginTimings?: boolean
   duplicateShebang?: boolean
   unsupportedTsconfigOption?: boolean

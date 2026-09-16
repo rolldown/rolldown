@@ -23,7 +23,7 @@ pub struct BindingChecksOptions {
   pub prefer_builtin_feature: Option<bool>,
   pub could_not_clean_directory: Option<bool>,
   pub bundler_timings: Option<bool>,
-  /// Deprecated alias for `bundler_timings`. The new option takes precedence.
+  /// `plugin_timings` is a deprecated alias for `bundler_timings`. If `bundler_timings` and `plugin_timings` have values, Rolldown uses `bundler_timings`.
   pub plugin_timings: Option<bool>,
   pub duplicate_shebang: Option<bool>,
   pub unsupported_tsconfig_option: Option<bool>,

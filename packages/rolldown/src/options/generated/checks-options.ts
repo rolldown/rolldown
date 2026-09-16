@@ -152,7 +152,7 @@ export interface ChecksOptions {
   couldNotCleanDirectory?: boolean;
 
   /**
-   * Whether to emit warnings when plugins take significant time during the build process.
+   * This option controls warnings for plugins and option callbacks that use a significant part of the build time.
    *
    * {@include ../docs/checks-plugin-timings.md}
    * @default true
@@ -160,7 +160,7 @@ export interface ChecksOptions {
   bundlerTimings?: boolean;
 
   /**
-   * @deprecated Use {@linkcode bundlerTimings} instead. `bundlerTimings` takes precedence when both options are set.
+   * @deprecated Use {@linkcode bundlerTimings}. If `bundlerTimings` and `pluginTimings` have values, Rolldown uses `bundlerTimings`.
    */
   pluginTimings?: boolean;
 

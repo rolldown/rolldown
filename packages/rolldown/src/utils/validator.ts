@@ -403,12 +403,14 @@ const ChecksOptionsSchema = v.strictObject({
   bundlerTimings: v.pipe(
     v.optional(v.boolean()),
     v.description(
-      'Whether to emit warnings when plugins take significant time during the build process',
+      'This option controls warnings for plugins and option callbacks that use a significant part of the build time',
     ),
   ),
   pluginTimings: v.pipe(
     v.optional(v.boolean()),
-    v.description('Deprecated alias for bundlerTimings; bundlerTimings takes precedence'),
+    v.description(
+      'pluginTimings is a deprecated alias for bundlerTimings. If bundlerTimings and pluginTimings have values, Rolldown uses bundlerTimings.',
+    ),
   ),
   duplicateShebang: v.pipe(
     v.optional(v.boolean()),

@@ -173,8 +173,9 @@ fn generate_check_inner_options_and_binding(
     });
     let resolved_value = if let Some(alias) = alias {
       let alias_ident = quote::format_ident!("{}", alias.to_snake_case());
-      let description =
-        format!(" Deprecated alias for `{snake_case}`. The new option takes precedence.");
+      let description = format!(
+        " `{alias_ident}` is a deprecated alias for `{snake_case}`. If `{snake_case}` and `{alias_ident}` have values, Rolldown uses `{snake_case}`."
+      );
       struct_fields.push(quote! {
         #[doc = #description]
         pub #alias_ident: Option<bool>,
@@ -270,7 +271,7 @@ fn generate_check_options(
       fields.push(format!(
         r"
     /**
-     * @deprecated Use {{@linkcode {camel_case}}} instead. `{camel_case}` takes precedence when both options are set.
+     * @deprecated Use {{@linkcode {camel_case}}}. If `{camel_case}` and `{alias}` have values, Rolldown uses `{camel_case}`.
      */
     {alias}?: boolean",
       ));
@@ -322,7 +323,7 @@ fn generate_validate_check_options(
       fields.push(format!(
         r#"{alias}: v.pipe(
     v.optional(v.boolean()),
-    v.description("Deprecated alias for {camel_case}; {camel_case} takes precedence"),
+    v.description("{alias} is a deprecated alias for {camel_case}. If {camel_case} and {alias} have values, Rolldown uses {camel_case}."),
   ),"#,
       ));
     }

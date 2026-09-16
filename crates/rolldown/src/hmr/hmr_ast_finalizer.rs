@@ -25,7 +25,9 @@ use rolldown_utils::{
 };
 use rustc_hash::FxHashMap;
 
-use crate::hmr::utils::{HmrAstBuilder, MODULE_EXPORTS_NAME_FOR_ESM, create_request_lazy_call};
+use crate::hmr::utils::{
+  HmrAstBuilder, LAZY_PROXY_QUERY, MODULE_EXPORTS_NAME_FOR_ESM, create_request_lazy_call,
+};
 
 pub struct HmrAstFinalizer<'me, 'ast> {
   // Outside input
@@ -586,7 +588,7 @@ impl<'ast> HmrAstFinalizer<'_, 'ast> {
     };
 
     // TODO: hyf0 should switch to a more robust way to identify lazy proxy modules
-    if importee.id.contains("?rolldown-lazy=1") {
+    if importee.id.contains(LAZY_PROXY_QUERY) {
       *it = create_request_lazy_call(&importee.id, &importee.stable_id, self);
       return;
     }

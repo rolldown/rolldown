@@ -23,7 +23,7 @@ Data shared across all connected browser tabs:
 | Build Output      | Bundled JS files on disk/memory                                         |
 | Watched Files     | Files monitored for changes                                             |
 
-**Key behavior**: Once a lazy module is fetched by any client, all subsequent clients receive the fetched template (which imports the real module directly). The build output is refreshed after lazy compilation, so future page loads get the fetched template without needing a `/lazy` request.
+**Key behavior**: Once a lazy module is fetched by any client, the build output is refreshed and the importer's `requestLazy` thunk imports the real module's chunk, so future page loads make no `/lazy` request. The proxy switches to the fetched template server-side; its body is never executed in the browser.
 
 ### Client Scope
 
@@ -64,11 +64,11 @@ After successful lazy compilation:
 1. `DevEngine` notifies the coordinator via `ModuleChanged` (carrying the **raw proxy id**, `?rolldown-lazy=1` included)
 2. Coordinator first calls `update_watch_paths()` — watch files discovered during the lazy compile would otherwise be dropped when the rebuild task starts; this step is what makes later edits to the lazy module trigger rebuilds at all
 3. Coordinator queues a `Rebuild` task with the proxy id as the changed file and marks output as stale
-4. The rebuild swaps the stub for the fetched template in the build output; future page loads get it directly (no `/lazy` request needed)
+4. The rebuild gives the real module its own chunk and rewrites the importer's thunk to import it; future page loads make no `/lazy` request
 
 The raw proxy id is deliberately **not** normalized: during the partial rebuild it resolves back to itself (the resolver preserves the query), string-matches the proxy module's key in the incremental cache, and forces the proxy's `load` hook to re-run — which now returns the fetched template. Normalizing to the real module id would invalidate the wrong module and leave the cached stub proxy in place.
 
-A successful background rebuild is **silent** to connected clients: output is swapped in place and no websocket message is sent (the running page keeps the code it got from `/lazy`). A reload fires only if a `FullReload` was already pending or the server is recovering from a previously-broadcast build error. `Rebuild` tasks never generate HMR updates and merge only with other `Rebuild`s, so the `?rolldown-lazy=1` pseudo-path can never leak into HMR-update computation — though plugins do observe it once through the `watch_change` hook.
+A successful background rebuild is **silent** to connected clients: output is swapped in place and no websocket message is sent (the running page keeps the code it got from `/lazy`). The refreshed entry points the route's `requestLazy` thunk at the real module's new chunk, so the next page load serves the route from the build output (see design.md "The `requestLazy` Entry Point"). A reload fires only if a `FullReload` was already pending or the server is recovering from a previously-broadcast build error. `Rebuild` tasks never generate HMR updates and merge only with other `Rebuild`s, so the `?rolldown-lazy=1` pseudo-path can never leak into HMR-update computation — though plugins do observe it once through the `watch_change` hook.
 
 ## Known Limitations
 
@@ -220,7 +220,7 @@ On **failure**, neither step runs: a failed lazy compile queues no rebuild and t
 The error contract (no longer "POC — Err or panic is fine"):
 
 - **Unknown module id** → `Err("Lazy entry module not found in cache. module_id=...")` in `HmrStage::compile_lazy_entry`; the napi binding surfaces it as a rejected promise prefixed `Failed to compile lazy entry: ...`; the dev-server middleware answers HTTP 500 (missing `id`/`clientId` params fall through to `next()`; success sets `Content-Type: application/javascript`)
-- **Init errors are catchable (#9981)**: the lazy chunk only registers factories; `requestLazy` runs `initModule` itself once the chunk has evaluated, inside the promise it hands back to the consumer. An error thrown while the lazy module initializes therefore rejects that promise, hence the consumer's `await import(...)` — try/catch works, and without a handler exactly one `unhandledrejection` fires. The rejection is memoized like a native `import()` of a throwing module; a retry could not work, since a factory registers its module before running its body. Pinned on both the **cold** path (first `/lazy` compile) and the **warm** path (fetched proxy after rebuild + reload) by the lazy-init-error specs (#9975 added the original failing spec; #9981 rewrote and split it)
+- **Init errors are catchable (#9981)**: the lazy chunk only registers factories; `requestLazy` runs `initModule` itself once the chunk has evaluated, inside the promise it hands back to the consumer. An error thrown while the lazy module initializes therefore rejects that promise, hence the consumer's `await import(...)` — try/catch works, and without a handler exactly one `unhandledrejection` fires. The rejection is memoized like a native `import()` of a throwing module; a retry could not work, since a factory registers its module before running its body. Pinned on both the **cold** path (first `/lazy` compile) and the **warm** path (reload after the rebuild, where the thunk imports the real module's chunk and a top-level throw rejects that `import()`) by the lazy-init-error specs (#9975 added the original failing spec; #9981 rewrote and split it)
 - **Runtime `loadExports` miss** does not throw — it warns and returns `{}`
 - The one remaining panic: calling `compile_lazy_entry` before any bundle has been built
 
@@ -266,7 +266,7 @@ After `/lazy`, the real module and its sync deps are ordinary watched graph modu
 │    per real module id (dedup across importers)                          │
 │  - Factory already registered on this client → initModule, no request   │
 │  - Otherwise fetchChunk():                                              │
-│      /@vite/lazy?id=<encoded proxy id>&clientId=xxx                    │
+│      /@vite/lazy?id=<encoded proxy id>&clientId=xxx                     │
 │  - Browser waits on the memoized promise                                │
 └─────────────────────────────────────────────────────────────────────────┘
                                     ↓
@@ -309,8 +309,9 @@ After `/lazy`, the real module and its sync deps are ordinary watched graph modu
 ├─────────────────────────────────────────────────────────────────────────┤
 │  - DevEngine sends CoordinatorMsg::ModuleChanged { proxyModuleId }      │
 │  - Coordinator: update_watch_paths() → queue Rebuild → mark stale       │
-│  - Rebuild updates build output with fetched template                   │
-│  - Silent to connected clients; future page loads skip /lazy            │
+│  - Rebuild: real module gets its own chunk; the entry's thunk becomes   │
+│    requestLazy(realId, () => import("./route-<hash>.js"))               │
+│  - Silent to connected clients; future page loads serve that chunk      │
 └─────────────────────────────────────────────────────────────────────────┘
 ```
 
@@ -477,15 +478,16 @@ The injected helper function is inserted **after** any directive prologues (e.g.
 
 E2E playground: `packages/test-dev-server/tests/playground/lazy-compilation/` (one dev server config with `experimental.devMode.lazy: true` + an alias plugin):
 
-| Spec                        | Pins                                                                              |
-| --------------------------- | --------------------------------------------------------------------------------- |
-| `basic`                     | lazy module arrives in exactly one JS request (`/@vite/lazy`), no stub chunk      |
-| `aliased-import`            | idempotent proxy-id creation under alias re-entrancy (vite#22454)                 |
-| `emitted-asset`             | assets emitted during lazy compile are servable on first load (vite#22596)        |
-| `lazy-init-error`           | init errors catchable with try/catch — cold and warm paths (#9975/#9981)          |
-| `lazy-init-error-unhandled` | exactly one `unhandledrejection` without a handler — cold and warm paths          |
-| `nested-dynamic-import`     | nested lazy `import()` inside a lazy chunk resolves on first click                |
-| `shared-module`             | export-name preservation in shared chunks (#9132) + watch/auto-reload after fetch |
+| Spec                        | Pins                                                                                    |
+| --------------------------- | --------------------------------------------------------------------------------------- |
+| `basic`                     | lazy module arrives in exactly one JS request (`/@vite/lazy`), no stub chunk            |
+| `aliased-import`            | idempotent proxy-id creation under alias re-entrancy (vite#22454)                       |
+| `emitted-asset`             | assets emitted during lazy compile are servable on first load (vite#22596)              |
+| `lazy-init-error`           | init errors catchable with try/catch — cold and warm paths (#9975/#9981)                |
+| `lazy-init-error-unhandled` | exactly one `unhandledrejection` without a handler — cold and warm paths                |
+| `nested-dynamic-import`     | nested lazy `import()` inside a lazy chunk resolves on first click                      |
+| `shared-module`             | export-name preservation in shared chunks (#9132) + watch/auto-reload after fetch       |
+| `warm-reload`               | a reload after the first fetch loads the route from the build output, not `/@vite/lazy` |
 
 Several specs use `retry: 0` because the bugs only reproduce on the first interaction with a fresh server. Unit test: `packages/rolldown/tests/dev/dev-lazy-compile.test.ts` pins the unknown-id rejection (#9969), the `requestLazy` rewrite, and that the emitted URL does not reference `encodeURIComponent` (a user binding of that name in the importer must not break the lazy route).
 

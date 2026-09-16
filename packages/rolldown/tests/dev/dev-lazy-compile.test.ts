@@ -633,8 +633,83 @@ test(
 
     const code = fs.readFileSync(path.join(dir, 'dist', 'main.js'), 'utf8');
     expect(code).toContain('requestLazy');
-    // The lazy module's body must not be in the entry.
-    expect(code).not.toContain(`'lazy'`);
+    expect(code).not.toContain('value = "lazy"');
+  },
+);
+
+test(
+  'a fetched proxy rewrites the import to the real module chunk in the next full build',
+  { timeout: TEST_TIMEOUT },
+  async ({ onTestFinished }) => {
+    const uniqueId = crypto.randomUUID().slice(0, 8);
+    const dir = path.join(import.meta.dirname, 'temp', `dev-lazy-warm-${uniqueId}`);
+    fs.mkdirSync(dir, { recursive: true });
+    fs.writeFileSync(path.join(dir, 'main.js'), `import('./lazy.js').then((m) => m.value);\n`);
+    fs.writeFileSync(path.join(dir, 'lazy.js'), `export const value = 'lazy';\n`);
+
+    const engine = await dev(
+      { input: path.join(dir, 'main.js'), experimental: { devMode: { lazy: true } } },
+      { dir: path.join(dir, 'dist') },
+      {},
+    );
+
+    onTestFinished(async () => {
+      await engine.close();
+      if (!process.env.CI) {
+        fs.rmSync(dir, { recursive: true, force: true });
+      }
+    });
+
+    await engine.run();
+    const entry = path.join(dir, 'dist', 'main.js');
+    expect(fs.readFileSync(entry, 'utf8')).toContain('/@vite/lazy?id=');
+
+    await engine.registerClient('c1');
+    await engine.compileEntry(`${path.join(dir, 'lazy.js')}?rolldown-lazy=1`, 'c1');
+    await engine.ensureLatestBuildOutput();
+
+    const code = fs.readFileSync(entry, 'utf8');
+    expect(code).not.toContain('/@vite/lazy');
+    const chunkFile = code.match(
+      // The stable id is cwd-relative, so only its file name is pinned here.
+      /__rolldown_runtime__\.requestLazy\("[^"]*\/lazy\.js", \(\) => import\("\.\/([^"]+\.js)"\)\)/,
+    )?.[1];
+    expect(chunkFile).toBeDefined();
+    expect(fs.readFileSync(path.join(dir, 'dist', chunkFile!), 'utf8')).toContain('value = "lazy"');
+  },
+);
+
+test(
+  'a fetched proxy keeps asking the server when the real module has no chunk of its own',
+  { timeout: TEST_TIMEOUT },
+  async ({ onTestFinished }) => {
+    const uniqueId = crypto.randomUUID().slice(0, 8);
+    const dir = path.join(import.meta.dirname, 'temp', `dev-lazy-warm-nosplit-${uniqueId}`);
+    fs.mkdirSync(dir, { recursive: true });
+    fs.writeFileSync(path.join(dir, 'main.js'), `import('./lazy.js').then((m) => m.value);\n`);
+    fs.writeFileSync(path.join(dir, 'lazy.js'), `export const value = 'lazy';\n`);
+
+    const engine = await dev(
+      { input: path.join(dir, 'main.js'), experimental: { devMode: { lazy: true } } },
+      { dir: path.join(dir, 'dist'), codeSplitting: false },
+      {},
+    );
+
+    onTestFinished(async () => {
+      await engine.close();
+      if (!process.env.CI) {
+        fs.rmSync(dir, { recursive: true, force: true });
+      }
+    });
+
+    await engine.run();
+    await engine.registerClient('c1');
+    await engine.compileEntry(`${path.join(dir, 'lazy.js')}?rolldown-lazy=1`, 'c1');
+    await engine.ensureLatestBuildOutput();
+
+    const code = fs.readFileSync(path.join(dir, 'dist', 'main.js'), 'utf8');
+    expect(code).toContain('/@vite/lazy?id=');
+    expect(code).not.toContain('value = "lazy"');
   },
 );
 

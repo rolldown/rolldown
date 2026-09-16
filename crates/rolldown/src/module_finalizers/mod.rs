@@ -26,7 +26,9 @@ use rolldown_ecmascript_utils::{
 };
 use rolldown_error::EmptyImportMetaKind;
 
-use crate::hmr::utils::create_request_lazy_call;
+use crate::hmr::utils::{
+  LAZY_PROXY_QUERY, create_request_lazy_call, create_request_lazy_call_with_thunk,
+};
 use std::borrow::Cow;
 
 mod finalizer_context;
@@ -1715,7 +1717,7 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
     // Leave it for `try_rewrite_import_expression`, which emits the `requestLazy` call.
     if self.ctx.options.is_dev_mode_enabled()
       && let Module::Normal(importee) = &self.ctx.modules[importee_id]
-      && importee.id.contains("?rolldown-lazy=1")
+      && importee.id.contains(LAZY_PROXY_QUERY)
     {
       return None;
     }
@@ -2631,6 +2633,46 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
     }
   }
 
+  fn create_lazy_boundary_call(&self, importee: &NormalModule) -> ast::Expression<'ast> {
+    match self.lazy_real_module_chunk_path(importee) {
+      // Fetched proxy: a fresh page loads the real module's chunk instead of recompiling it.
+      Some((stable_real_id, chunk_path)) => create_request_lazy_call_with_thunk(
+        stable_real_id,
+        ast::Expression::new_import_expression(
+          SPAN,
+          Expression::new_string_literal(
+            SPAN,
+            oxc::ast::ast::Str::from_str_in(&chunk_path, self),
+            None,
+            self,
+          ),
+          None,
+          None,
+          self,
+        ),
+        self,
+      ),
+      None => create_request_lazy_call(&importee.id, &importee.stable_id, self),
+    }
+  }
+
+  /// A stub proxy has no imports. A fetched proxy imports the real module, so that import record
+  /// is the fetched state. `None` when the real module has no chunk of its own
+  /// (`codeSplitting: false`).
+  fn lazy_real_module_chunk_path(&self, proxy: &NormalModule) -> Option<(&str, String)> {
+    let real_id = proxy.id.strip_suffix(LAZY_PROXY_QUERY)?;
+    let (real_idx, real) = proxy.import_records.iter().find_map(|rec| {
+      let idx = rec.resolved_module?;
+      match &self.ctx.modules[idx] {
+        Module::Normal(m) if m.id.as_ref() == real_id => Some((idx, m)),
+        _ => None,
+      }
+    })?;
+    let chunk_idx = self.ctx.chunk_graph.entry_module_to_entry_chunk.get(&real_idx)?;
+    let chunk = self.ctx.chunk_graph.chunk_table.get(*chunk_idx)?;
+    Some((real.stable_id.as_str(), self.ctx.chunk.import_path_for(chunk)))
+  }
+
   fn try_rewrite_import_expression(&self, node: &mut ast::Expression<'ast>) -> bool {
     let ast::Expression::ImportExpression(expr) = node else {
       return false;
@@ -2683,9 +2725,9 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
     // proxy's own chunk — a chunk nothing fetches.
     if self.ctx.options.is_dev_mode_enabled()
       && let Module::Normal(importee) = &self.ctx.modules[importee_idx]
-      && importee.id.contains("?rolldown-lazy=1")
+      && importee.id.contains(LAZY_PROXY_QUERY)
     {
-      *node = create_request_lazy_call(&importee.id, &importee.stable_id, self);
+      *node = self.create_lazy_boundary_call(importee);
       return true;
     }
 

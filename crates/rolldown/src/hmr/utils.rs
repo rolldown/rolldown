@@ -194,7 +194,7 @@ impl<'any, 'ast> HmrAstBuilder<'any, 'ast> for ScopeHoistingFinalizer<'any, 'ast
   }
 }
 
-const LAZY_PROXY_QUERY: &str = "?rolldown-lazy=1";
+pub const LAZY_PROXY_QUERY: &str = "?rolldown-lazy=1";
 
 /// The characters JS `encodeURIComponent` leaves as-is.
 const URI_COMPONENT_ENCODE_SET: &percent_encoding::AsciiSet = &percent_encoding::NON_ALPHANUMERIC
@@ -210,8 +210,8 @@ const URI_COMPONENT_ENCODE_SET: &percent_encoding::AsciiSet = &percent_encoding:
 
 /// `__rolldown_runtime__.requestLazy("<stable_real_id>", () => import(`/@vite/lazy?id=<encoded proxy id>&clientId=${__rolldown_runtime__.clientId}`))`
 ///
-/// The one shape both codegen paths emit for a lazy boundary, so a boundary never becomes a
-/// chunk the browser fetches.
+/// The thunk asks the server for the module. HMR patches always emit this shape: a patch is not
+/// a chunk, so it has no chunk URL.
 ///
 /// The proxy id is percent-encoded here rather than by emitting `encodeURIComponent(...)`: the
 /// call lands in the importer's own scope, where a user binding of that name would shadow the
@@ -256,7 +256,23 @@ where
     ast::Expression::new_template_literal(SPAN, quasis, expressions, builder)
   };
 
-  // () => import(`/@vite/lazy?...`)
+  let stable_real_id = stable_proxy_id.strip_suffix(LAZY_PROXY_QUERY).unwrap_or(stable_proxy_id);
+  create_request_lazy_call_with_thunk(
+    stable_real_id,
+    ast::Expression::new_import_expression(SPAN, url_expr, None, None, builder),
+    builder,
+  )
+}
+
+/// `__rolldown_runtime__.requestLazy("<stable_real_id>", () => <fetch_expr>)`
+pub fn create_request_lazy_call_with_thunk<'ast, B>(
+  stable_real_id: &str,
+  fetch_expr: ast::Expression<'ast>,
+  builder: &B,
+) -> ast::Expression<'ast>
+where
+  B: oxc::ast::builder::GetAstBuilder<'ast> + GetAllocator<'ast>,
+{
   let fetch_chunk = ast::Expression::new_arrow_function_expression(
     SPAN,
     /* async */ false,
@@ -269,9 +285,7 @@ where
       builder,
     ),
     None,
-    ast::ArrowFunctionBody::from(ast::Expression::new_import_expression(
-      SPAN, url_expr, None, None, builder,
-    )),
+    ast::ArrowFunctionBody::from(fetch_expr),
     builder,
   );
 
@@ -280,13 +294,9 @@ where
     ast::Expression::new_identifier(SPAN, "__rolldown_runtime__.requestLazy", builder),
     None,
     [
-      // Stripping the marker recovers the id the delivered chunk registers a factory under.
       ast::Argument::new_string_literal(
         SPAN,
-        ast::Str::from_str_in(
-          stable_proxy_id.strip_suffix(LAZY_PROXY_QUERY).unwrap_or(stable_proxy_id),
-          builder,
-        ),
+        ast::Str::from_str_in(stable_real_id, builder),
         None,
         builder,
       ),

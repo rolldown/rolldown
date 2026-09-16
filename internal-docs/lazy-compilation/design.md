@@ -100,6 +100,8 @@ The proxy id is percent-encoded at compile time (`create_request_lazy_call`), no
 
 Both codegen paths emit this same shape — the full build from `try_rewrite_import_expression`, HMR patches from `rewrite_dynamic_import` — so a lazy boundary never becomes a chunk the browser fetches, and a cold lazy route costs one request.
 
+The thunk changes once the proxy is **fetched**. The background rebuild that follows the first `/@vite/lazy` request gives the real module a chunk of its own, and the full build then emits `requestLazy('lazy.js', () => import('./lazy-<hash>.js'))` (`lazy_real_module_chunk_path` in `module_finalizers/mod.rs`). A fresh page loads the route from the build output in one static request and never asks the server to compile it again. The thunk stays on `/@vite/lazy` when the real module has no chunk of its own (`codeSplitting: false`) and inside HMR patches, which are not chunks and have no chunk URL to give.
+
 The first argument is the **real** module's stable id, known at compile time; the boundary's own id appears only inside the thunk's URL. `requestLazy` memoizes the promise under that id, which is the dedup point: one request no matter how many places import the module. `removeModuleCache` drops the memo, so a module edited after being lazily loaded is re-run rather than served stale.
 
 Nothing is registered under the proxy id in the client. A cache entry with no factory behind it reads as "executed" to the HMR boundary walk, which would turn a patch arriving mid-load into a full page reload.
@@ -131,7 +133,7 @@ const lazyExports = (async () => {
 export { lazyExports as 'rolldown:exports' };
 ```
 
-This body is not executed either. Its `import($MODULE_ID)` is load-bearing at **scan** time: it is the edge `compile_lazy_entry` follows to pull the real module and its dependencies into the partial build. `$MODULE_ID` is the absolute path (used for resolution only); `$STABLE_MODULE_ID` is the cwd-relative stable id.
+This body is not executed either. Its `import($MODULE_ID)` is what matters at **scan** time: it is the edge `compile_lazy_entry` follows to pull the real module and its dependencies into the partial build, and in the next full build it is the edge the finalizer reads to tell a fetched proxy from a stub and to find the real module's chunk. That chunk is what the importer's `requestLazy` thunk targets from then on. The proxy's own chunk is still emitted but nothing fetches it. `$MODULE_ID` is the absolute path (used for resolution only); `$STABLE_MODULE_ID` is the cwd-relative stable id.
 
 The state transition is managed by `LazyCompilationContext.mark_as_fetched()`.
 
@@ -146,7 +148,7 @@ The dev server handles `/@vite/lazy?id=...&clientId=...` requests:
 5. Partial scan from the proxy module - plugin returns the fetched template, whose `import($MODULE_ID)` triggers compilation of the actual module. The chunk carries `registerFactory` calls only; `requestLazy` runs the module once the chunk has evaluated
 6. Assets emitted during the compile are delivered via the `onAdditionalAssets` callback **before** the code is returned, so they are servable when the chunk executes (#9815)
 7. **Return compiled JS directly** (`Content-Type: application/javascript`) - the browser loads it as an ES module; compile failures answer HTTP 500
-8. **Notify coordinator** - trigger a background rebuild so future page loads get the fetched template without a `/lazy` request
+8. **Notify coordinator** - trigger a background rebuild. It gives the real module a chunk and rewrites the importer's thunk to import that chunk, so future page loads serve the route from the build output without a `/lazy` request
 
 ## Related
 

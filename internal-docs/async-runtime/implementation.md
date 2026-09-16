@@ -549,6 +549,20 @@ raw deferred loader. The root keeps both optional packages for historical
 threaded fallback compatibility; its generated `rolldown/workerd` facade
 therefore forwards to the same managed factory.
 
+Binding package versions have one ordering rule across the release workflows.
+The generated loader hard-codes the version it expects from each
+`@rolldown/binding-*` package (`NAPI_RS_ENFORCE_VERSION_CHECK` turns that
+comparison into a throw, which `check-wasi-binding-packed-consumer.mjs`
+exercises), and napi takes that literal from `packages/rolldown/package.json`
+while `napi build` runs. pnpm normalizes a manifest version when it packs, so
+semver build metadata never survives into a published package: the
+pkg.pr.new preview flow's `+commit.<sha>` canary reaches the loader literal but
+not the binding manifests the consumer installs. `reusable-release-build.yml`
+therefore runs `Build Node binding` before `Determine Version`, so the loader
+expects the release version every published manifest actually carries. The npm
+release flow is unaffected — it calls the reusable build with `version: noop`
+and takes the release version from git.
+
 Staging also owns package-directory recovery. A clean checkout bootstraps only
 the missing napi-generated WASI package skeletons in an isolated directory,
 while release staging preserves an already downloaded package-local Wasm binary

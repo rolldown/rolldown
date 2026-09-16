@@ -869,13 +869,15 @@ build-order coupling is needed to keep one flavor from overwriting the other.
   (napi-rs#3530) adds no seam — it fixes the cli's own write path: the
   filesystem transaction that stages a generated file now re-copies a source
   whose drift since the copy is metadata only (a mode or mtime/ctime re-stamp
-  over identical bytes) instead of failing the build, and when it does fail it
-  names the fields that moved rather than emitting one message for eight
-  conditions. The Pkg Preview FreeBSD build is what hit it: FreeBSD cannot
-  supply a complete process execution identity, so the cross-process
-  reconciliation lock runs degraded (lock-free) there and a re-stamp under a
-  concurrent staging pass aborted the whole build. A build
-  whose target is NOT wasi regenerates
+  over identical bytes), for up to three snapshot attempts. The retry is
+  bounded, not a pass: the build still fails if the metadata has not settled
+  within those three attempts, and it fails on the first attempt if the
+  identity or the content moved. When it fails it names the fields that drifted
+  rather than emitting one message for eight conditions. The Pkg Preview
+  FreeBSD build is what hit it: FreeBSD cannot supply a complete process
+  execution identity, so the cross-process reconciliation lock runs degraded
+  (lock-free) there and a re-stamp under a concurrent staging pass aborted the
+  whole build. A build whose target is NOT wasi regenerates
   EVERY declared wasi flavor's loader set, each with `hasThreads` derived from
   its own triple, so loader regeneration is deterministic and byte-identical to
   the committed copies on every host and under every build variant. A wasi

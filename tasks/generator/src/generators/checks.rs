@@ -173,8 +173,12 @@ fn generate_check_inner_options_and_binding(
     });
     let resolved_value = if let Some(alias) = alias {
       let alias_ident = quote::format_ident!("{}", alias.to_snake_case());
+      // The doc comment is reused verbatim by the JSON schema and the NAPI typings, where
+      // serde and napi rename every field to camelCase. Name the camelCase spelling, which
+      // is the one two of those three surfaces actually use.
+      let camel_case = name.to_lower_camel_case();
       let description = format!(
-        " `{alias_ident}` is a deprecated alias for `{snake_case}`. If `{snake_case}` and `{alias_ident}` have values, Rolldown uses `{snake_case}`."
+        " Deprecated alias for `{camel_case}`. Rolldown uses `{camel_case}` if both options have values."
       );
       struct_fields.push(quote! {
         #[doc = #description]

@@ -1,4 +1,7 @@
 import type { BindingChunkingContext, BindingOutputOptions } from '../binding.cjs';
+import type { LogHandler } from '../log/log-handler';
+import { logMissingCodeSplittingGroupDebugName } from '../log/logs';
+import { LOG_LEVEL_WARN } from '../log/logging';
 import type {
   CodeSplittingGroup,
   CodeSplittingNameFunction,
@@ -21,6 +24,7 @@ import {
 export function bindingifyOutputOptions(
   outputOptions: OutputOptions,
   pluginContextData: PluginContextData,
+  onLog: LogHandler,
   timings: PluginTimingsRecorder | undefined,
 ): BindingOutputOptions {
   const {
@@ -74,6 +78,7 @@ export function bindingifyOutputOptions(
     outputOptions.advancedChunks,
     manualChunks,
     pluginContextData,
+    onLog,
     timings,
   );
 
@@ -248,6 +253,7 @@ function bindingifyCodeSplitting(
   advancedChunks: OutputOptions['advancedChunks'],
   manualChunks: OutputOptions['manualChunks'],
   pluginContextData: PluginContextData,
+  onLog: LogHandler,
   timings: PluginTimingsRecorder | undefined,
 ): {
   inlineDynamicImports: BindingOutputOptions['inlineDynamicImports'];
@@ -373,7 +379,7 @@ function bindingifyCodeSplitting(
         chunkingContext = undefined;
       },
       groups: groups?.map((group, index) => {
-        const { name, test, ...restGroup } = group;
+        const { debugName, name, test, ...restGroup } = group;
         // The group object supplies a stable key across repeated outputs.
         // Different group objects remain separate when their labels match.
         // The migration creates a new group for each output. The original `manualChunks`
@@ -384,13 +390,37 @@ function bindingifyCodeSplitting(
             ? OUTPUT_OPTIONS_OWNER
             : { ...OUTPUT_OPTIONS_OWNER, key: timingKey };
         // Each group gets its own row, so the rows have to be tellable apart. The position
-        // is the one identity every group has.
+        // is the one identity every group has; a label replaces it when there is one.
         const groupName = `${chunksOptionName} groups[${index}]`;
+        let testTimingName = `${groupName}.test`;
+        let nameTimingName = `${groupName}.name`;
+        if (timings !== undefined) {
+          if (chunksOptionName === 'manualChunks') {
+            nameTimingName = 'manualChunks';
+          } else {
+            const label = debugName ?? (typeof name === 'string' ? name : undefined);
+            if (label === undefined) {
+              if (typeof name === 'function' && !timings.warnedMissingGroupLabels.has(timingKey)) {
+                timings.warnedMissingGroupLabels.add(timingKey);
+                onLog(
+                  LOG_LEVEL_WARN,
+                  logMissingCodeSplittingGroupDebugName(
+                    `output.${chunksOptionName}.groups[${index}]`,
+                  ),
+                );
+              }
+            } else {
+              const labelSuffix = ` ${JSON.stringify(label)}`;
+              testTimingName = `${chunksOptionName} groups[].test${labelSuffix}`;
+              nameTimingName = `${chunksOptionName} groups[].name${labelSuffix}`;
+            }
+          }
+        }
         return {
           ...restGroup,
           test:
             typeof test === 'function'
-              ? batchTest(measureHookCost(timings, timingOwner, `${groupName}.test`, test))
+              ? batchTest(measureHookCost(timings, timingOwner, testTimingName, test))
               : test,
           // The core calls this classifier directly rather than through a plugin, so it
           // belongs to no plugin's rows — and it runs once per module, which is how it ends
@@ -398,7 +428,7 @@ function bindingifyCodeSplitting(
           name:
             typeof name === 'function'
               ? batchName(
-                  measureHookCost(timings, timingOwner, `${groupName}.name`, name),
+                  measureHookCost(timings, timingOwner, nameTimingName, name),
                   getChunkingContext,
                 )
               : name,

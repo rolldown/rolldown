@@ -11,7 +11,11 @@ The clock starts and stops **inside the JavaScript callback**, not around the ca
 
 2. **Detection threshold**: a warning is triggered when plugin time (total build time minus link stage time) exceeds 100x the link stage time. This threshold was determined by studying plugin impact on real-world projects. The link stage is the one part of a build that runs no plugins at all, which is what makes it a usable baseline.
 
-3. **Rows**: up to 12 callbacks are listed, sorted by measured time, each shown as a share of total build time with its call count. Only callbacks costing at least 1 second get a line. User callbacks configured on the options rather than on a plugin — `external`, `treeshake.moduleSideEffects`, the file-name and addon callbacks, and the [`output.advancedChunks`](/reference/OutputOptions.advancedChunks) `groups[].name` classifier and `groups[].test` predicate — appear under `input options` / `output options`.
+3. **Rows**: The report lists up to 12 callbacks. It sorts the callbacks by measured time. Each row shows its build-time share and call count. Only callbacks that cost at least 1 second get a row. Option callbacks appear under `input options` or `output options`.
+
+   These callbacks include `external`, `treeshake.moduleSideEffects`, file-name callbacks, and addon callbacks. They also include `manualChunks` and the group callbacks in [`output.codeSplitting`](/reference/OutputOptions.codeSplitting). The deprecated [`output.advancedChunks`](/reference/OutputOptions.advancedChunks) option uses the same group callbacks.
+
+   Code-splitting rows include a group label. Rolldown uses `debugName` first. It uses a string `name` when `debugName` is absent. Set `debugName` when `name` is a function. When the group has no label, Rolldown warns once for that group and uses its index.
 
    The headline figure is the wall time in which at least one measured callback ran. Overlap counts once. The figure can be more than the build time, because `closeBundle` runs after the build clock stops. The message says so when that happens. The rows can add up to more than the headline figure, because callbacks can overlap. One callback can run inside another: `this.emitFile()` in `buildStart` runs your `assetFileNames`, and that time counts for both. Two `async` callbacks can also run at the same time.
 

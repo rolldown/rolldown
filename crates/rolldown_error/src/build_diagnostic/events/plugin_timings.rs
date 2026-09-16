@@ -297,7 +297,7 @@ mod tests {
         row_with_kind(
           PluginTimingKind::OutputOption,
           "output options",
-          "codeSplitting groups[].name",
+          "codeSplitting groups[].name \"vendor\"",
           2_000.0,
           900,
           1,
@@ -313,7 +313,7 @@ mod tests {
       rows,
       vec![
         "  - plugin slow-plugin transform (60%, 6.0s, 500 calls)",
-        "  - output options codeSplitting groups[].name (20%, 2.0s, 900 calls)",
+        "  - output options codeSplitting groups[].name \"vendor\" (20%, 2.0s, 900 calls)",
         "  - plugin async-plugin resolveId (3000 calls)",
       ]
     );

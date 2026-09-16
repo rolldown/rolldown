@@ -475,6 +475,101 @@ function __drainWasmEnvCleanup(__instance) {
   })()
 }
 
+// A real, *referenced* timer for the async-work wait below, which polls the
+// addon rather than interleaving with the @emnapi/core dispatch: a zero-delay
+// macrotask there would spin the loop instead of yielding it. Falls back to the
+// macrotask scheduler on a host without timers.
+function __scheduleTimer(__callback, __delay) {
+  const __setTimer = globalThis.setTimeout
+  if (typeof __setTimer !== 'function') {
+    __scheduleMacrotask(__callback)
+    return
+  }
+  try {
+    __setTimer(__callback, __delay)
+  } catch {
+    __scheduleMacrotask(__callback)
+  }
+}
+
+// How often to re-read `napi_wasm_async_work_pending` while waiting. The wait
+// ends when the addon reports zero, so this only decides how promptly disposal
+// notices — not how long it waits.
+const __WASI_ASYNC_WORK_POLL_INTERVAL_MS = 1
+
+/**
+ * Settles this instance's outstanding `napi_async_work` before the teardown
+ * that would strand it.
+ *
+ * The same hole the eager loaders had, and the same fix: the environment
+ * cleanup barrier covers promise settlements queued on the threadsafe-function
+ * queue and says nothing about `napi_async_work`, so destroying the context
+ * with a work still outstanding leaves its completion callback with nowhere to
+ * run and its promise unsettled forever.
+ *
+ * This flavor is threadless, so `compute` runs on the JavaScript thread inside
+ * the macrotask that dequeued it: while this is running, any outstanding work
+ * is queued rather than executing, and `napi_wasm_cancel_pending_async_work`
+ * can take all of it. The poll is still what decides when the drain is done —
+ * cancellation delivers those completions from a later macrotask, not
+ * synchronously.
+ *
+ * Per instance, from that instance's own exports: two instances of this loader
+ * have separate registries and must not wait on each other.
+ *
+ * Both exports are optional, so an addon built against a napi crate that
+ * predates them keeps the previous behavior.
+ *
+ * Returns nothing when there is nothing outstanding, which keeps disposal
+ * synchronous in the common case. No deadline: giving up would destroy the
+ * environment with a completion callback still owed.
+ */
+function __drainInstanceAsyncWork(__instance) {
+  const __exports = __instance?.exports
+  const __pending = __exports?.napi_wasm_async_work_pending
+  const __cancelPending = __exports?.napi_wasm_cancel_pending_async_work
+  if (typeof __pending !== 'function' || typeof __cancelPending !== 'function') {
+    return
+  }
+
+  const __readPending = () => {
+    try {
+      return __pending()
+    } catch (__error) {
+      // A trap is the only way this call fails: it reads a counter and cannot
+      // allocate or call back into JavaScript. A trapped instance can no longer
+      // run anything, so its outstanding work is unreachable by definition and
+      // best-effort is the honest answer. Anything else means the export is not
+      // what this loader thinks it is — a defect worth surfacing.
+      if (__error instanceof globalThis.WebAssembly.RuntimeError) {
+        return 0
+      }
+      throw __error
+    }
+  }
+
+  if (!__readPending()) {
+    return
+  }
+  try {
+    __cancelPending()
+  } catch {
+    // Cancellation only bounds the wait. Failing it means waiting for the queue
+    // to run instead, which the poll below already does.
+  }
+  if (!__readPending()) {
+    return
+  }
+
+  return (async () => {
+    while (__readPending()) {
+      await new Promise((__resolve) => {
+        __scheduleTimer(__resolve, __WASI_ASYNC_WORK_POLL_INTERVAL_MS)
+      })
+    }
+  })()
+}
+
 function __createLifecycleReentryError(__operation) {
   const __error = new Error(
     __operation +
@@ -990,7 +1085,15 @@ async function __createInstance(
     if (__lifecycleState !== 'failed') {
       __lifecycleState = 'disposal'
     }
-    // Settle what the barrier cancelled before the environment stops
+    // Outstanding async work first, while the environment is still completely
+    // live: its completion callbacks run addon code, and the barrier and
+    // `Context.destroy()` below each take that away. Undefined unless work is
+    // outstanding.
+    const __asyncWorkDrained = __drainInstanceAsyncWork(__napiInstance)
+    if (__asyncWorkDrained) {
+      await __asyncWorkDrained
+    }
+    // Then settle what the barrier cancelled, before the environment stops
     // accepting JavaScript calls. Undefined unless something is queued, so
     // an idle disposal is not delayed by a single turn.
     const __drained = __prepareForDisposal()
@@ -1174,6 +1277,14 @@ async function __createInstance(
     // so a failure before beforeInit costs no extra turn.
     let __settlementsUnreached = false
     try {
+      // Registration can start async work too, and this path destroys the same
+      // environment its completions need. A drain that cannot finish leaves the
+      // work outstanding, so it counts as settlements unreached and stops the
+      // rollback short of destroying, exactly like a failed barrier drain.
+      const __asyncWorkDrained = __drainInstanceAsyncWork(__napiInstance)
+      if (__asyncWorkDrained) {
+        await __asyncWorkDrained
+      }
       const __drained = __prepareForDisposal()
       if (__drained) {
         await __drained

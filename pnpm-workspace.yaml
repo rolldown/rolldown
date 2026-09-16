@@ -63,7 +63,16 @@ catalog:
   # `Symbol.for('napi.rs.wasi.dispose')` after a real build no longer kills the
   # process with `Worker stopped with exit code 1`
   # (scripts/wasi/check-wasi-binding-packed-consumer.mjs exercises it).
-  '@napi-rs/cli': ^3.10.1
+  # 3.10.2 raises it once more (napi-rs#3528): every loader now settles the
+  # addon's outstanding `napi_async_work` before anything is torn down --
+  # `__drainWasiAsyncWork` in the eager loaders, `__drainInstanceAsyncWork` in
+  # the deferred one -- through the `napi_wasm_async_work_pending` /
+  # `napi_wasm_cancel_pending_async_work` exports that napi 3.12.6 adds. An
+  # older cli regenerates loaders that destroy the emnapi context over an
+  # outstanding work instead, which strands its completion callback: the promise
+  # never settles and emnapi keeps the process alive. The same packed-consumer
+  # check exercises this one too.
+  '@napi-rs/cli': ^3.10.2
   '@napi-rs/wasm-runtime': ~1.2.4
   '@oxc-node/cli': ^0.1.0
   '@oxc-node/core': ^0.1.0

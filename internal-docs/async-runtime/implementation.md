@@ -331,9 +331,9 @@ CurrentThread timer:
 - `crates/rolldown_utils/Cargo.toml` — `napi-async-runtime = { version =
 "0.2.0", default-features = false }` from crates.io (napi-free
   consumption). The root `Cargo.toml` pins
-  the napi stack to **published crates.io releases** — `napi 3.12.1`,
-  `napi-build 2.4.1`, `napi-derive 3.6.3` (resolving `napi-derive-backend
-6.1.2` and `napi-sys 3.3.0`) — and carries **no** `[patch.crates-io]`
+  the napi stack to **published crates.io releases** — `napi 3.12.6`,
+  `napi-build 2.4.3`, `napi-derive 3.6.7` (resolving `napi-derive-backend
+6.1.3` and `napi-sys 3.3.1`) — and carries **no** `[patch.crates-io]`
   section: that single registry `napi` node covers `rolldown_binding` **and**
   every `oxc_*_napi`. The comment above those pins records why the minimum is
   a pin rather than a range.
@@ -839,7 +839,7 @@ this section possible: no restore step, no drift-allowlist arm, and no
 build-order coupling is needed to keep one flavor from overwriting the other.
 
 - The per-flavor naming and loader codegen (napi-rs#3353) ship in the released
-  `@napi-rs/cli`, pinned to `^3.10.1` in the workspace catalog — the floor is
+  `@napi-rs/cli`, pinned to `^3.10.2` in the workspace catalog — the floor is
   the loader contract itself (`__napiBindingTarget`, the raw-destroy settlement
   wrapper, `napi.wasm.threadlessInitialMemory`, and the
   `napi.wasm.asyncRuntime` host bootstrap); rolldown used to add all four with
@@ -850,8 +850,23 @@ build-order coupling is needed to keep one flavor from overwriting the other.
   Without both, disposing the THREADED binding after a real build made
   `@emnapi/wasi-threads` treat the worker exit as a failure and rethrow
   `Worker stopped with exit code 1` out of its exit listener — the disposal
-  either died with an uncaught exception or never settled at all. A build whose
-  target is NOT wasi regenerates
+  either died with an uncaught exception or never settled at all. 3.10.2
+  (napi-rs#3528) added the sixth: every loader settles the addon's outstanding
+  `napi_async_work` before anything is torn down — `__drainWasiAsyncWork` in the
+  eager loaders, `__drainInstanceAsyncWork` in the deferred one. It reads the
+  `napi_wasm_async_work_pending` / `napi_wasm_cancel_pending_async_work`
+  exports that napi 3.12.6 / napi-build 2.4.3 add (the crate versions the
+  workspace now pins, alongside napi-derive 3.6.7): cancel what no thread has
+  started, then poll until nothing is owed a completion callback. The barrier
+  the previous seams run brackets promise settlements on the
+  threadsafe-function queue, never async work, so before this a disposal that
+  destroyed the emnapi context — or terminated the pool threads — over an
+  outstanding work left it unable to reach its completion callback. The promise
+  never settled and the emnapi waiting-request counter never returned to zero,
+  which on Node keeps a `MessageChannel` port referenced and the process alive
+  forever. Both exports are optional, so a binding built against an older napi
+  crate degrades to the previous behavior instead of failing to load. A build
+  whose target is NOT wasi regenerates
   EVERY declared wasi flavor's loader set, each with `hasThreads` derived from
   its own triple, so loader regeneration is deterministic and byte-identical to
   the committed copies on every host and under every build variant. A wasi

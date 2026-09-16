@@ -1284,6 +1284,17 @@
           "items": {
             "$ref": "#/$defs/MatchGroup"
           }
+        },
+        "experimentalInlineCommonChunks": {
+          "description": "See internal-docs/inline-common-chunks/design.md. Experimental.",
+          "anyOf": [
+            {
+              "$ref": "#/$defs/InlineCommonChunksOptions"
+            },
+            {
+              "type": "null"
+            }
+          ]
         }
       },
       "additionalProperties": false
@@ -1386,6 +1397,31 @@
       "enum": [
         "$initial"
       ]
+    },
+    "InlineCommonChunksOptions": {
+      "description": "`output.codeSplitting.experimentalInlineCommonChunks`, as the user wrote it.\n\nSee internal-docs/inline-common-chunks/design.md.",
+      "type": "object",
+      "properties": {
+        "maxSize": {
+          "description": "A candidate's pre-render size must be strictly smaller than this. `0` (the default) turns\nthe feature off.",
+          "type": [
+            "number",
+            "null"
+          ],
+          "format": "double"
+        },
+        "exclude": {
+          "description": "Module id matchers with the same rules as `CodeSplittingGroup.test`. A candidate is kept as\na file when any of its modules matches.",
+          "type": [
+            "array",
+            "null"
+          ],
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "additionalProperties": false
     },
     "ChecksOptions": {
       "type": "object",
@@ -2000,6 +2036,15 @@
               "type": "null"
             }
           ]
+        },
+        "inlineCommonChunksMaxSize": {
+          "description": "Sets `codeSplitting.experimentalInlineCommonChunks.maxSize`, keeping every other\n`codeSplitting` field of the base config. `0` turns the feature off.",
+          "type": [
+            "integer",
+            "null"
+          ],
+          "format": "uint64",
+          "minimum": 0
         },
         "_snapshot": {
           "description": "Whether to include the output in the snapshot for this config variant.",

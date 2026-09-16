@@ -73,12 +73,14 @@ catalog:
   # never settles and emnapi keeps the process alive. The same packed-consumer
   # check exercises this one too.
   # 3.10.3 raises it once more (napi-rs#3530): the filesystem transaction that
-  # writes the generated bindings retries a source whose drift is metadata only
-  # -- a mode or mtime/ctime re-stamp over identical bytes -- for up to 3
-  # snapshot attempts. The retry is bounded, not a pass: the build still fails
-  # if the metadata has not settled within those attempts, and it fails at once
-  # if the identity or the content moved. Either way the error names the fields
-  # that drifted. Before that one message stood for eight conditions and any
+  # writes the generated bindings retries a source whose drift is soft -- a
+  # mode or mtime/ctime re-stamp, or a same-size content change seen between
+  # two copies -- for up to 3 snapshot attempts, and accepts a copy only when
+  # its metadata is stable and its bytes match the previous attempt. The retry
+  # is bounded, not a pass: the build still fails if the drift has not settled
+  # within those attempts, and it fails at once when the identity or the shape
+  # moved (dev, ino, size, bytes read, path). Either way the error names the
+  # fields that drifted. Before that one message stood for eight conditions and any
   # re-stamp aborted the build; FreeBSD hits it because it cannot provide a
   # complete process execution identity, so the cross-process reconciliation
   # lock runs degraded (lock-free) there.

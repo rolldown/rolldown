@@ -868,12 +868,14 @@ build-order coupling is needed to keep one flavor from overwriting the other.
   crate degrades to the previous behavior instead of failing to load. 3.10.3
   (napi-rs#3530) adds no seam — it fixes the cli's own write path: the
   filesystem transaction that stages a generated file now re-copies a source
-  whose drift since the copy is metadata only (a mode or mtime/ctime re-stamp
-  over identical bytes), for up to three snapshot attempts. The retry is
-  bounded, not a pass: the build still fails if the metadata has not settled
-  within those three attempts, and it fails on the first attempt if the
-  identity or the content moved. When it fails it names the fields that drifted
-  rather than emitting one message for eight conditions. The Pkg Preview
+  whose drift since the copy is soft (a mode or mtime/ctime re-stamp, or a
+  same-size content change seen between two copies), for up to three snapshot
+  attempts, and accepts a copy only when its metadata is stable and its bytes
+  match the previous attempt. The retry is bounded, not a pass: the build still
+  fails if the drift has not settled within those three attempts, and it fails
+  on the first attempt when the identity or the shape moved (dev, ino, size,
+  bytes read, path). When it fails it names the fields that drifted rather
+  than emitting one message for eight conditions. The Pkg Preview
   FreeBSD build is what hit it: FreeBSD cannot supply a complete process
   execution identity, so the cross-process reconciliation lock runs degraded
   (lock-free) there and a re-stamp under a concurrent staging pass aborted the

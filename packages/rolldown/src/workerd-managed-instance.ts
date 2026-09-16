@@ -770,7 +770,11 @@ function __createManagedBindingFacade(__binding: any, __state: any) {
         }
       },
       () => {
-        if (!__closesBindingObject && !__terminallyClosesBindingObject) return;
+        // A rejected `closeTerminal` stays retryable: the raw `closed` flag
+        // flips when the terminal close STARTS, so it cannot witness
+        // settlement here. Keep the token so disposal stays refused and the
+        // retried close can still run.
+        if (!__closesBindingObject) return;
         __releaseIfReportsClosed();
       },
     );

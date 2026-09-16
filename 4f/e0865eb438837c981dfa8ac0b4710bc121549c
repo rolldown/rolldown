@@ -1,0 +1,93 @@
+crates/rolldown_binding/src/binding_dev_engine.rs
+  s_51e302715717cc::t_0d327c40925b5b 52,63,71-74,76,147,160
+crates/rolldown_binding/src/binding_dev_options.rs
+  s_51e302715717cc::t_64353ba46c563c 21
+crates/rolldown_binding/src/options/binding_input_options/binding_watch_option.rs
+  s_51e302715717cc::t_9e6c5a1f0cf729 16,35
+crates/rolldown_common/src/inner_bundler_options/types/watch_option.rs
+  s_51e302715717cc::t_02dee7240aba23 39-46
+crates/rolldown_dev/Cargo.toml
+  s_879c5ac934e1b5::t_f0a0a1a392296f 34
+crates/rolldown_dev/src/bundle_coordinator.rs
+  s_879c5ac934e1b5::t_f15f6bf5e44ab6 15,17,47,64,74,192-195,500-503,507,510-512
+crates/rolldown_dev/src/dev_engine.rs
+  s_879c5ac934e1b5::t_dbff8e32a6e224 12,72-75,105,116
+crates/rolldown_dev_common/src/types/dev_options.rs
+  s_51e302715717cc::t_a3846252c0f02b 72,93
+crates/rolldown_dev_common/src/types/dev_watch_options.rs
+  s_51e302715717cc::t_82b1555ca4c74c 30-31,38-39,46-54
+crates/rolldown_fs_watcher/src/config.rs
+  s_879c5ac934e1b5::t_922157f44e9bc9 3-4,49-51,65,84,86-94
+crates/rolldown_fs_watcher/src/event_map.rs
+  s_51e302715717cc::t_2c47b8febd4aaf 29-31,44-50,71,75,84-100,122-170
+crates/rolldown_fs_watcher/src/lib.rs
+  s_879c5ac934e1b5::t_22aec1b82f0ea4 8,15
+crates/rolldown_fs_watcher/src/notify/debounced.rs
+  s_879c5ac934e1b5::t_da67ec613add7b 4,7,11
+crates/rolldown_fs_watcher/src/notify/mod.rs
+  s_879c5ac934e1b5::t_f87afae3d5192c 2,9,13,32,36,49,53
+crates/rolldown_fs_watcher/src/watch_filter.rs
+  s_ecc0031d64696a::t_da1f3c5a341eef 1-198
+crates/rolldown_watcher/Cargo.toml
+  s_8991e67c18d971::t_95db4e27cac706 26
+crates/rolldown_watcher/src/watch_task.rs
+  s_879c5ac934e1b5::t_e0abb04a19e65a 10-11,13,20,31-32,40-41,63-70,77,97,130,243-249,256-257,265-267,270-272,278,283-285,288,312,314-316,352-355,358-360
+crates/rolldown_watcher/src/watcher.rs
+  s_8991e67c18d971::t_161f8b4b555efc 12,158
+internal-docs/dev-engine/implementation.md
+  s_879c5ac934e1b5::t_178885aa8ee308 365-373,575-577
+packages/rolldown/src/api/dev/dev-engine.ts
+  s_51e302715717cc::t_faa917b5f30565 132
+packages/rolldown/src/api/dev/dev-options.ts
+  s_51e302715717cc::t_54212cf1baf82f 64,66-68,74,76-78,83-92
+packages/rolldown/src/options/input-options.ts
+  s_51e302715717cc::t_0e449b0e2ab3e5 156,158-162,176,178-181,194-211
+packages/rolldown/src/plugin/docs/plugin-context-addwatchfile.md
+  s_879c5ac934e1b5::t_82c8b912531b40 1-5
+packages/rolldown/src/utils/bindingify-input-options.ts
+  s_51e302715717cc::t_82e1a2dd2628b8 331
+packages/rolldown/src/utils/validator.ts
+  s_51e302715717cc::t_1304fb61777808 301
+packages/rolldown/tests/dev/dev-watch.test.ts
+  s_8991e67c18d971::t_e6048b894004e5 10,215-399
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "4fe0865eb438837c981dfa8ac0b4710bc121549c",
+  "prompts": {},
+  "sessions": {
+    "s_51e302715717cc": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a0a3d0-0864-7f52-ab65-7b070d336660",
+        "model": "unknown"
+      },
+      "human_author": "shulaoda <165626830+shulaoda@users.noreply.github.com>"
+    },
+    "s_879c5ac934e1b5": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a0a3cf-84ae-7851-a6cd-bb716bf1c9e3",
+        "model": "unknown"
+      },
+      "human_author": "shulaoda <165626830+shulaoda@users.noreply.github.com>"
+    },
+    "s_8991e67c18d971": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a0a3cf-e2c6-7c92-a310-fbb9c510c38a",
+        "model": "unknown"
+      },
+      "human_author": "shulaoda <165626830+shulaoda@users.noreply.github.com>"
+    },
+    "s_ecc0031d64696a": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a0a875-71b6-7e22-9d84-cd83835277f9",
+        "model": "unknown"
+      },
+      "human_author": "shulaoda <165626830+shulaoda@users.noreply.github.com>"
+    }
+  }
+}

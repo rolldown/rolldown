@@ -1014,6 +1014,14 @@ const OutputOptionsSchema = v.strictObject({
     v.optional(v.boolean()),
     v.description('Keep function and class names after bundling'),
   ),
+  experimentalInlineCommonChunks: v.optional(
+    v.strictObject({
+      maxSize: v.pipe(
+        v.optional(v.number()),
+        v.description('Inline automatic common chunks below this source-byte threshold'),
+      ),
+    }),
+  ),
   strictExecutionOrder: v.pipe(
     v.optional(v.boolean()),
     v.description('Preserve source module execution order across generated chunks.'),

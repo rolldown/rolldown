@@ -214,6 +214,10 @@ bitflags! {
         const UnknownExportsRead = 1 << 7;
         /// Top-level return statement (only valid in CommonJS)
         const TopLevelReturn = 1 << 8;
+        /// The module contains `import.meta`, whose value is tied to its physical output module.
+        const ImportMeta = 1 << 9;
+        /// The module contains `import()`, whose relative specifier is tied to its physical output module.
+        const DynamicImport = 1 << 10;
         const ModuleOrExports = Self::ModuleRef.bits() | Self::ExportsRef.bits();
     }
 }

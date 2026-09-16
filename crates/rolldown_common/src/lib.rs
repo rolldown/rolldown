@@ -34,6 +34,7 @@ pub mod bundler_options {
       dev_mode_options::DevModeOptions,
       devtools_options::DevtoolsOptions,
       es_module_flag::EsModuleFlag,
+      experimental_inline_common_chunks_options::ExperimentalInlineCommonChunksOptions,
       experimental_options::{
         ChunkOptimizationOption, ChunkOptimizationOptions, ExperimentalOptions,
       },

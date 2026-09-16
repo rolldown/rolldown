@@ -11,6 +11,7 @@ use rustc_hash::FxHashMap;
 
 use crate::{
   chunk_graph::ChunkGraph,
+  ecmascript::format::share_factory::InlinedChunkRender,
   stages::{
     generate_stage::order_wrap_state::{EsmInitTarget, OrderWrapState},
     link_stage::LinkStageOutput,
@@ -39,6 +40,10 @@ pub struct GenerateContext<'a> {
   /// Pre-resolved paths for external modules (always a `FxHashMap` variant).
   /// Used instead of `options.paths` in sync rendering code to avoid deadlocks.
   pub resolved_paths: Option<&'a PathsOutputOption>,
+  /// Rendered `experimentalInlineCommonChunks` factories, keyed by the chunk they replaced.
+  pub inline_renders: &'a FxHashMap<ChunkIdx, InlinedChunkRender>,
+  /// The chunk that prints the shared registry, when the feature placed anything.
+  pub inline_registry_chunk: Option<ChunkIdx>,
 }
 
 impl GenerateContext<'_> {

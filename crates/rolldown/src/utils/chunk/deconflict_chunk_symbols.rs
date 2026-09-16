@@ -12,10 +12,18 @@ use crate::{
 use arcstr::ArcStr;
 use rolldown_common::{Chunk, ChunkIdx, ChunkKind, GetLocalDb, OutputFormat, SymbolRef, WrapKind};
 use rolldown_utils::ecmascript::legitimize_identifier_name;
+
 use rustc_hash::{FxHashMap, FxHashSet};
 
+#[derive(Debug, Clone, Copy)]
+pub enum InlineRegistryBindingMode {
+  None,
+  Imported,
+  Defined,
+}
+
 #[tracing::instrument(level = "trace", skip_all)]
-#[expect(clippy::too_many_arguments)]
+#[expect(clippy::too_many_arguments, clippy::too_many_lines)]
 pub fn deconflict_chunk_symbols(
   chunk_idx: ChunkIdx,
   chunk: &mut Chunk,
@@ -25,8 +33,22 @@ pub fn deconflict_chunk_symbols(
   format: OutputFormat,
   index_chunk_id_to_name: &FxHashMap<ChunkIdx, ArcStr>,
   chunk_assignments: ChunkAssignments<'_>,
+  reserved_names: &[CompactStr],
+  generated_reserved_names: &[&str],
+  inline_registry_binding_mode: InlineRegistryBindingMode,
 ) {
   let mut renamer = Renamer::new(chunk.entry_module_idx(), &link_output.symbol_db, format);
+  // These bindings are written by the generator, not by a module, so reserve them before a user
+  // symbol can claim them. Callers pass only the names emitted in this logical or physical chunk.
+  for name in generated_reserved_names {
+    renamer.reserve(CompactStr::new(name));
+  }
+  // A carried chunk's body keeps the names it was deconflicted with. Reserve its declarations and
+  // unresolved globals so host declarations cannot capture references inside the factory; any
+  // imports copied out of that factory also become top-level bindings in this chunk.
+  for name in reserved_names {
+    renamer.reserve(name.clone());
+  }
   // Reserve global scope symbols (unresolved references) to prevent generating conflicting names.
   // These are identifiers referenced but not defined in the module's scope (e.g., `console`, `window`).
   chunk
@@ -47,6 +69,22 @@ pub fn deconflict_chunk_symbols(
     .for_each(|name| {
       renamer.reserve(CompactStr::new(name));
     });
+
+  match inline_registry_binding_mode {
+    InlineRegistryBindingMode::None => {}
+    InlineRegistryBindingMode::Imported => {
+      chunk.inline_share_define_name =
+        Some(renamer.create_conflictless_name("__rd_share").to_string());
+      chunk.inline_share_require_name =
+        Some(renamer.create_conflictless_name("__rd_share_require").to_string());
+    }
+    InlineRegistryBindingMode::Defined => {
+      renamer.reserve(CompactStr::new("__rd_share"));
+      renamer.reserve(CompactStr::new("__rd_share_require"));
+      chunk.inline_share_define_name = Some("__rd_share".to_string());
+      chunk.inline_share_require_name = Some("__rd_share_require".to_string());
+    }
+  }
 
   if matches!(format, OutputFormat::Iife | OutputFormat::Umd | OutputFormat::Cjs) {
     // deconflict iife introduce symbols by external
@@ -203,6 +241,22 @@ pub fn deconflict_chunk_symbols(
   chunk.imports_from_other_chunks.iter().flat_map(|(_, items)| items.iter()).for_each(|item| {
     renamer.add_symbol_in_root_scope(item.import_ref, true);
   });
+
+  chunk.inline_binding_names_for_other_chunks = chunk
+    .required_inline_chunks
+    .iter()
+    .map(|id| {
+      (
+        *id,
+        renamer
+          .create_conflictless_name(&legitimize_identifier_name(&format!(
+            "share_{}",
+            index_chunk_id_to_name[id]
+          )))
+          .to_string(),
+      )
+    })
+    .collect();
 
   chunk.require_binding_names_for_other_chunks = chunk
     .imports_from_other_chunks

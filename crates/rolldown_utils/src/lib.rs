@@ -1,5 +1,10 @@
 // We keep some standalone utilities here
 
+/// Re-export of the shared scheduler, which lives in the `napi-async-runtime`
+/// crate, under the in-repo `rolldown_utils::async_runtime::*` paths.
+pub mod async_runtime {
+  pub use napi_async_runtime::*;
+}
 pub mod base64;
 mod bitset;
 pub mod dashmap;
@@ -15,6 +20,7 @@ pub mod percent_encoding;
 pub mod rayon;
 pub mod rustc_hash;
 pub mod sanitize_filename;
+pub mod time;
 pub mod xxhash;
 pub use bitset::BitSet;
 pub use index_bitset::IndexBitSet;

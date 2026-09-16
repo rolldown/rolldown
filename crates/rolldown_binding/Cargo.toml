@@ -24,7 +24,10 @@ derive_more = { workspace = true }
 futures = { workspace = true }
 indexmap = { workspace = true }
 itertools = { workspace = true }
-napi = { workspace = true }
+# `async-runtime` (= napi4) is the pluggable async-runtime SPI plus `AsyncTask`;
+# it deliberately does NOT enable `napi/async` (= tokio_rt), so the shared
+# scheduler never drags tokio in through napi.
+napi = { workspace = true, features = ["async-runtime"] }
 napi-derive = { workspace = true }
 num_cpus = { workspace = true }
 oxc = { workspace = true }
@@ -97,6 +100,7 @@ napi-build = { workspace = true }
 chrome-tracing = ["rolldown_tracing/chrome-tracing"]
 default_global_allocator = []
 disable_panic_hook = []
+runtime-submission-failure-test = []
 # Wrap mimalloc with allocation counters exposed via `getNativeMemoryStats()`.
 # Costs a few atomic ops per allocation, so it is off by default.
 tracking_allocator = ["dep:rolldown_tracking_allocator"]

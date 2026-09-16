@@ -32,17 +32,60 @@ onlyBuiltDependencies:
   - tree-sitter
 
 overrides:
+  # napi-build 2.4.2 links the emnapi v2 C archives; pin the exact release so a range change cannot silently swap them.
+  emnapi: 2.0.0-alpha.5
   vitepress>vite: npm:rolldown-vite@latest
 
 catalog:
   '@babel/core': ^7.29.7
   '@babel/preset-env': ^7.29.7
   '@babel/preset-typescript': ^7.29.7
+  # the .wasm links emnapi v2 C archives, so a v1 JS runtime is an ABI mismatch (see the `emnapi` override above).
+  # scripts/wasi/check-workerd-packed-consumer.mjs asserts these exact versions, so bump both together.
   '@emnapi/core': 2.0.0-alpha.5
   '@emnapi/runtime': 2.0.0-alpha.5
   '@jridgewell/trace-mapping': ^0.3.31
-  '@napi-rs/cli': ^3.10.0
-  '@napi-rs/wasm-runtime': ~1.2.2
+  # JavaScript host protocol for the `napi-async-runtime` bindings; the cli emits
+  # imports of it into the generated WASI loaders when `napi.wasm.asyncRuntime`
+  # is set, so it moves with the cli floor below.
+  '@napi-rs/async-runtime': ^0.2.0
+  # floor pin: the generated loaders are the contract. From 3.10.0 the cli itself
+  # exports `__napiBindingTarget` (napi-rs#3515), wraps the raw emnapi context
+  # destroy behind the cleanup barrier (#3514), honors
+  # `napi.wasm.threadlessInitialMemory` (#3516) and installs the CurrentThread
+  # hosts for `napi.wasm.asyncRuntime` (#3517). Rolldown deleted the local
+  # codegen patches that used to add all four, so an older cli silently
+  # regenerates loaders without them. The cli peer-requires the same
+  # `^1.7.1 || ^2.0.0-alpha.4` emnapi line as the pins above, so it moves with
+  # them. 3.10.1 raises the floor again (napi-rs#3526): the threaded loader
+  # terminates its WASI pool workers through the captured emnapi thread manager
+  # and holds the event loop open until those terminations settle, so
+  # `Symbol.for('napi.rs.wasi.dispose')` after a real build no longer kills the
+  # process with `Worker stopped with exit code 1`
+  # (scripts/wasi/check-wasi-binding-packed-consumer.mjs exercises it).
+  # 3.10.2 raises it once more (napi-rs#3528): every loader now settles the
+  # addon's outstanding `napi_async_work` before anything is torn down --
+  # `__drainWasiAsyncWork` in the eager loaders, `__drainInstanceAsyncWork` in
+  # the deferred one -- through the `napi_wasm_async_work_pending` /
+  # `napi_wasm_cancel_pending_async_work` exports that napi 3.12.6 adds. An
+  # older cli regenerates loaders that destroy the emnapi context over an
+  # outstanding work instead, which strands its completion callback: the promise
+  # never settles and emnapi keeps the process alive. The same packed-consumer
+  # check exercises this one too.
+  # 3.10.3 raises it once more (napi-rs#3530): the filesystem transaction that
+  # writes the generated bindings retries a source whose drift is soft -- a
+  # mode or mtime/ctime re-stamp, or a same-size content change seen between
+  # two copies -- for up to 3 snapshot attempts, and accepts a copy only when
+  # its metadata is stable and its bytes match the previous attempt. The retry
+  # is bounded, not a pass: the build still fails if the drift has not settled
+  # within those attempts, and it fails at once when the identity or the shape
+  # moved (dev, ino, size, bytes read, path). Either way the error names the
+  # fields that drifted. Before that one message stood for eight conditions and any
+  # re-stamp aborted the build; FreeBSD hits it because it cannot provide a
+  # complete process execution identity, so the cross-process reconciliation
+  # lock runs degraded (lock-free) there.
+  '@napi-rs/cli': ^3.10.3
+  '@napi-rs/wasm-runtime': ~1.2.4
   '@oxc-node/cli': ^0.1.0
   '@oxc-node/core': ^0.1.0
   '@oxc-project/runtime': '=0.150.0'
@@ -61,6 +104,7 @@ catalog:
   '@types/ws': ^8.18.0
   acorn: ^8.17.0
   astring: ^1.9.0
+  buffer: ^6.0.3
   cac: ^7.0.0
   chalk: ^5.3.0
   change-case: ^5.4.4
@@ -68,6 +112,7 @@ catalog:
   consola: ^3.4.2
   dedent: ^1.5.3
   diff: ^9.0.0
+  # `overrides.emnapi` above pins the same version; keep both in sync.
   emnapi: 2.0.0-alpha.5
   esbuild: ^0.28.0
   estree-toolkit: ^1.7.8
@@ -79,6 +124,7 @@ catalog:
   glob: ^13.0.0
   lodash-es: ^4.17.21
   micromatch: ^4.0.8
+  miniflare: ^4.20260611.0
   oxc-parser: '=0.150.0'
   oxc-transform: '=0.150.0'
   pathe: ^2.0.3
@@ -102,6 +148,7 @@ catalog:
   vitest: ^4.1.6
   vue: ^3.5.35
   web-tree-sitter: ^0.27.0
+  wrangler: ^4.100.0
   ws: ^8.20.1
   zx: ^8.1.2
 
@@ -137,6 +184,7 @@ trustPolicyExclude:
 verifyDepsBeforeRun: install
 
 minimumReleaseAgeExclude:
+  - '@napi-rs/async-runtime'
   - '@napi-rs/cli'
   - '@oxc-minify/*'
   - '@oxc-parser/*'

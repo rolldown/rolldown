@@ -21,11 +21,10 @@
 //
 // Usage: `just setup-vite` (or `vp run --filter @rolldown-internal/scripts setup-vite`)
 
-import { execFileSync } from 'node:child_process';
 import nodeFs from 'node:fs';
 import { createRequire } from 'node:module';
 import nodePath from 'node:path';
-import { ensureViteCheckout, repoRoot, run, viteDir } from './checkout.js';
+import { ensureViteCheckout, repoRoot, run, runNode, viteDir } from './checkout.js';
 
 const localRolldownDir = nodePath.join(repoRoot, 'packages', 'rolldown');
 
@@ -74,11 +73,7 @@ if (current !== target) {
 // See internal-docs/dev-server-test-harness/implementation.md.
 nodeFs.rmSync(nodePath.join(vitePkgDir, 'dist'), { recursive: true, force: true });
 const rolldownCli = nodePath.join(localRolldownDir, 'bin', 'cli.mjs');
-console.log(`[setup-vite] node ${rolldownCli} --config rolldown.config.ts`);
-execFileSync(process.execPath, [rolldownCli, '--config', 'rolldown.config.ts'], {
-  cwd: vitePkgDir,
-  stdio: 'inherit',
-});
+runNode(rolldownCli, ['--config', 'rolldown.config.ts'], vitePkgDir);
 
 // 5. Verify the override took: resolving `rolldown` from the vite package must
 // land inside the workspace copy. Failing loudly here beats silently running

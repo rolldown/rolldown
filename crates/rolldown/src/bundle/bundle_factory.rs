@@ -30,6 +30,7 @@ pub struct BundleFactoryOptions {
   pub plugins: Vec<SharedPluginable>,
   pub session: Option<rolldown_devtools::Session>,
   pub disable_tracing_setup: bool,
+  pub defer_close_on_error: bool,
 }
 
 pub struct BundleFactory {
@@ -37,13 +38,13 @@ pub struct BundleFactory {
   pub fs: OsFileSystem,
   pub options: SharedOptions,
   pub resolver: SharedResolver<OsFileSystem>,
-  pub file_emitter: SharedFileEmitter,
   /// Warnings collected during bundle factory creation.
   /// These warnings are transferred to the first created `Bundle` via `create_bundle()` or `create_incremental_bundle()`.
   pub warnings: Vec<BuildDiagnostic>,
   pub session: rolldown_devtools::Session,
   pub(crate) _log_guard: Option<Box<dyn Any + Send>>,
   pub last_bundle_handle: Option<BundleHandle>,
+  defer_close_on_error: bool,
 
   // Used to share module info across multiple plugin drivers for incremental builds
   module_infos_for_incremental_build: SharedModuleInfoDashMap,
@@ -72,13 +73,10 @@ impl BundleFactory {
 
     let inner_plugins_result = apply_inner_plugins(&options, &mut opts.plugins);
 
-    let file_emitter = Arc::new(FileEmitter::new(Arc::clone(&options)));
-
     let plugin_driver_factory = PluginDriverFactory::new(opts.plugins, &resolver);
 
     Ok(Self {
       plugin_driver_factory,
-      file_emitter,
       resolver,
       options,
       fs,
@@ -87,6 +85,7 @@ impl BundleFactory {
       session,
       bundle_id_seed: 0,
       last_bundle_handle: None,
+      defer_close_on_error: opts.defer_close_on_error,
       module_infos_for_incremental_build: Arc::default(),
       transform_dependencies_for_incremental_build: Arc::default(),
       lazy_compilation_context: inner_plugins_result.lazy_compilation_context,
@@ -133,7 +132,20 @@ impl BundleFactory {
       self.transform_dependencies_for_incremental_build = Arc::default();
     }
 
-    Ok(self.build_bundle(self.fs.clone(), Arc::clone(&self.resolver), cache))
+    // Incremental builds must reuse the preceding handle's emitter so HMR/lazy
+    // compilation can drain assets emitted outside a full bundle pass.
+    // See internal-docs/bundler-data-lifecycle/implementation.md.
+    let file_emitter = if bundle_mode.is_full_build() {
+      Arc::new(FileEmitter::new(Arc::clone(&self.options)))
+    } else {
+      self
+        .last_bundle_handle
+        .as_ref()
+        .map(|handle| Arc::clone(&handle.plugin_driver().file_emitter))
+        .ok_or_else(|| anyhow::anyhow!("Incremental bundle requires a previous bundle handle."))?
+    };
+
+    Ok(self.build_bundle(self.fs.clone(), Arc::clone(&self.resolver), file_emitter, cache))
   }
 
   /// Create a bundle with a custom filesystem and resolver.
@@ -145,7 +157,8 @@ impl BundleFactory {
   ) -> Bundle<Fs> {
     self.module_infos_for_incremental_build.clear();
     self.transform_dependencies_for_incremental_build = Arc::default();
-    self.build_bundle(fs, resolver, ScanStageCache::default())
+    let file_emitter = Arc::new(FileEmitter::new(Arc::clone(&self.options)));
+    self.build_bundle(fs, resolver, file_emitter, ScanStageCache::default())
   }
 
   /// Live handle to the plugin-facing module infos. The `Arc` identity is stable for the
@@ -159,12 +172,11 @@ impl BundleFactory {
     &mut self,
     fs: Fs,
     resolver: SharedResolver<Fs>,
+    file_emitter: SharedFileEmitter,
     cache: ScanStageCache,
   ) -> Bundle<Fs> {
-    // Every build passes through here exactly once before any scan/link work
-    // starts. Wait for the previous build's deferred drops to retire so they
-    // can never overlap this build's rayon work; a no-op in steady state.
-    // See `utils::defer_drop` for the full invariant.
+    // Sole entry point for every build: retire the previous build's deferred
+    // drops before any scan/link work touches the rayon pool.
     crate::utils::defer_drop::drain();
 
     let bundle_span = self.generate_unique_bundle_span();
@@ -172,7 +184,7 @@ impl BundleFactory {
     let transform_dependencies = Arc::clone(&self.transform_dependencies_for_incremental_build);
 
     let plugin_driver = self.plugin_driver_factory.create_plugin_driver(
-      &self.file_emitter,
+      &file_emitter,
       &self.options,
       &self.session,
       &bundle_span,
@@ -183,11 +195,13 @@ impl BundleFactory {
       fs,
       options: Arc::clone(&self.options),
       resolver,
-      file_emitter: Arc::clone(&self.file_emitter),
+      file_emitter,
       plugin_driver,
       warnings: std::mem::take(&mut self.warnings),
       bundle_span,
       cache,
+      close_state: Arc::default(),
+      defer_close_on_error: self.defer_close_on_error,
     };
     self.last_bundle_handle = Some(bundle.context());
     bundle

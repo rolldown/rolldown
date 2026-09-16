@@ -4,6 +4,10 @@ type VoidNullable<T = void> = T | null | undefined | void
 export type BindingStringOrRegex = string | RegExp
 export type BindingResult<T> = { errors: BindingError[], isBindingErrors: boolean } | T
 
+
+/** The WASI flavor this loader instantiates. */
+export declare const __napiBindingTarget: 'wasm32-wasi'
+
 export interface CodegenOptions {
   /**
    * Remove whitespace.
@@ -11,6 +15,24 @@ export interface CodegenOptions {
    * @default true
    */
   removeWhitespace?: boolean
+  /**
+   * Escape non-ASCII characters in string literals, untagged template literals, regular
+   * expression literals and identifier names.
+   *
+   * Uses `\uXXXX` for characters up to U+FFFF and `\u{...}` for higher code points.
+   * Regular expressions use escaped UTF-16 surrogate pairs for higher code points instead;
+   * escaping changes the observable `RegExp.prototype.source` value.
+   *
+   * Code point escapes (`\u{...}`) require ES2015 or later; this option does not provide
+   * ES5-compatible output.
+   *
+   * Non-ASCII characters are left unescaped in tagged template quasis (whose raw text is
+   * observable), JSX names and text, JSX attribute strings, hashbangs and preserved comments.
+   * JavaScript expressions inside tagged templates and JSX are escaped normally.
+   *
+   * @default false
+   */
+  asciiOnly?: boolean
   /**
    * How to handle legal comments (comments containing `@license`, `@preserve`, or starting with `//!`/`/*!`).
    *
@@ -1875,6 +1897,13 @@ export declare class TsconfigCache {
   /** Get the number of cached entries. */
   size(): number
 }
+
+/**
+ * Panics on purpose. CI calls this to check that a published binding can produce a
+ * symbolicated backtrace from its separately published debug info.
+ * See `scripts/misc/verify-debuginfo.mjs` and internal-docs/panic-symbolication/implementation.md
+ */
+export declare function __internalForcePanic(): void
 
 export interface AliasItem {
   find: string

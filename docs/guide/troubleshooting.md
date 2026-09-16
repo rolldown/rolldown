@@ -201,3 +201,71 @@ Usually, a plugin will only omit the sourcemap if it (the plugin, not the bundle
 This error means Node.js found the `rolldown` package but not the platform-specific native package. It is usually caused by a known npm bug with optional dependencies ([npm/cli#4828](https://github.com/npm/cli/issues/4828)); if you installed with npm, removing `node_modules` and `package-lock.json` and reinstalling fixes it.
 
 It can also happen when the config file lives in a symlinked directory that points into another project, for example one shared between Windows and WSL ([#9854](https://github.com/rolldown/rolldown/issues/9854)). Node.js resolves the config to its real path before resolving its imports, so `import ... from 'rolldown'` can pick up a `node_modules` installed for a different platform. Keep the config outside the symlinked directory, or run with the `NODE_OPTIONS=--preserve-symlinks` environment variable set (not compatible with pnpm, whose `node_modules` layout relies on symlinks).
+
+## Error: "Rolldown panicked" {#panic-debug-info}
+
+A panic is always a bug in Rolldown. Report it with the [panic report template](https://github.com/rolldown/rolldown/issues/new?template=panic_report.yml).
+
+The release build strips the published binding, so the backtrace shows no file names and no line numbers. `RUST_BACKTRACE=1` does not add them:
+
+```text
+Rolldown panicked. This is a bug in Rolldown, not your code.
+
+thread '<unnamed>' panicked at crates/rolldown/src/some_file.rs:42:5:
+called `Option::unwrap()` on a `None` value
+stack backtrace:
+note: Some details are omitted, run with `RUST_BACKTRACE=full` for a verbose backtrace.
+```
+
+Each release attaches the debug info of the binding as a separate archive. Put that archive next to the `.node` file. The backtrace then shows the missing frames. Rust finds the unpacked file automatically, so you need no other setting.
+
+Three platforms have an archive:
+
+| Platform          | Binding package                    | Archive                                                  |
+| ----------------- | ---------------------------------- | -------------------------------------------------------- |
+| Linux x64 (glibc) | `@rolldown/binding-linux-x64-gnu`  | `rolldown-binding.linux-x64-gnu.node.debuginfo.tar.zst`  |
+| macOS arm64       | `@rolldown/binding-darwin-arm64`   | `rolldown-binding.darwin-arm64.node.debuginfo.tar.zst`   |
+| Windows x64       | `@rolldown/binding-win32-x64-msvc` | `rolldown-binding.win32-x64-msvc.node.debuginfo.tar.zst` |
+
+The steps below use macOS arm64. Replace the names for your platform.
+
+```sh
+# 1. Read the installed version.
+node -p "require('rolldown/package.json').version"
+
+# 2. Download the archive from the release with that version.
+gh release download v1.2.3 --repo rolldown/rolldown \
+  --pattern 'rolldown-binding.darwin-arm64.node.debuginfo.tar.zst'
+
+# 3. Decompress the archive, then unpack it into the binding package.
+zstd -d rolldown-binding.darwin-arm64.node.debuginfo.tar.zst
+tar -xf rolldown-binding.darwin-arm64.node.debuginfo.tar \
+  -C node_modules/@rolldown/binding-darwin-arm64/
+
+# 4. Run the build again.
+RUST_BACKTRACE=1 npx rolldown -c
+```
+
+Step 3 needs the `zstd` command. Most package managers provide it, for example `brew install zstd` or `apt install zstd`.
+
+You can also do step 2 in a browser:
+
+1. Open the [releases page](https://github.com/rolldown/rolldown/releases).
+2. Find the tag with the same version.
+3. Download the archive from the assets of that tag.
+
+Each frame now shows a source file and a line number. Paste this backtrace into the issue:
+
+```text
+stack backtrace:
+   0: rust_begin_unwind
+             at /rustc/<hash>/library/std/src/panicking.rs:679:5
+   1: core::panicking::panic_fmt
+             at /rustc/<hash>/library/core/src/panicking.rs:80:14
+   2: rolldown::some_module::some_function
+             at ./crates/rolldown/src/some_file.rs:42:5
+```
+
+::: tip
+The next `npm install` replaces the binding package and deletes the unpacked file. Unpack the archive again after each install.
+:::

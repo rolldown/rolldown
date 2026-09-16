@@ -1,0 +1,23 @@
+packages/rolldown/src/utils/bindingify-output-options.ts
+  s_73418731c2f755::t_edc5591f7809bc 371-374,380,389
+packages/rolldown/src/utils/plugin-timings.ts
+  s_73418731c2f755::t_5d35f1e4eb004f 250-252
+packages/rolldown/tests/code-splitting-group-timings.test.ts
+  s_73418731c2f755::t_f2fc11e3e6c737 1-130
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "061ec9b316120a771d47dae18dd34e63d0c133ce",
+  "prompts": {},
+  "sessions": {
+    "s_73418731c2f755": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a0a33f-ac9b-7372-b380-06a95006f42f",
+        "model": "unknown"
+      },
+      "human_author": "IWANABETHATGUY <iwanabethatguy@qq.com>"
+    }
+  }
+}

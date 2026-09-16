@@ -27,6 +27,9 @@ catalogs:
     '@napi-rs/async-runtime':
       specifier: ^0.2.0
       version: 0.2.0
+    '@napi-rs/cli':
+      specifier: ^3.10.3
+      version: 3.10.3
     '@napi-rs/wasm-runtime':
       specifier: ~1.2.4
       version: 1.2.4
@@ -270,7 +273,6 @@ catalogs:
       version: 5.51.2
 
 overrides:
-  '@napi-rs/cli': file:./.napi-validation/napi-rs-cli.tgz
   emnapi: 2.0.0-alpha.5
   vitepress>vite: npm:rolldown-vite@latest
 
@@ -601,8 +603,8 @@ importers:
         specifier: 'catalog:'
         version: 0.2.0
       '@napi-rs/cli':
-        specifier: file:../../.napi-validation/napi-rs-cli.tgz
-        version: file:.napi-validation/napi-rs-cli.tgz(@emnapi/core@2.0.0-alpha.5)(@emnapi/runtime@2.0.0-alpha.5)(@types/node@24.10.3)(emnapi@2.0.0-alpha.5)(supports-color@10.2.2)
+        specifier: 'catalog:'
+        version: 3.10.3(@emnapi/core@2.0.0-alpha.5)(@emnapi/runtime@2.0.0-alpha.5)(@types/node@24.10.3)(emnapi@2.0.0-alpha.5)(supports-color@10.2.2)
       '@napi-rs/wasm-runtime':
         specifier: 'catalog:'
         version: 1.2.4(@emnapi/core@2.0.0-alpha.5)(@emnapi/runtime@2.0.0-alpha.5)
@@ -1149,8 +1151,8 @@ importers:
         version: 8.8.5
     devDependencies:
       '@napi-rs/cli':
-        specifier: file:../.napi-validation/napi-rs-cli.tgz
-        version: file:.napi-validation/napi-rs-cli.tgz(@emnapi/core@2.0.0-alpha.5)(@emnapi/runtime@2.0.0-alpha.5)(@types/node@24.10.3)(emnapi@2.0.0-alpha.5)(supports-color@10.2.2)
+        specifier: 'catalog:'
+        version: 3.10.3(@emnapi/core@2.0.0-alpha.5)(@emnapi/runtime@2.0.0-alpha.5)(@types/node@24.10.3)(emnapi@2.0.0-alpha.5)(supports-color@10.2.2)
       '@oxc-node/cli':
         specifier: 'catalog:'
         version: 0.1.0
@@ -3465,9 +3467,8 @@ packages:
     resolution: {integrity: sha512-b5uPvNCtpAD79XEbv/XVyetjgMP9LRNrGmDGCQdl1bK9NehemrJMwnUKbk3l1+u2EG9NCfttW2SE/2JdJoPgIw==}
     engines: {node: ^20.19.0 || ^22.13.0 || >=23.5.0}
 
-  '@napi-rs/cli@file:.napi-validation/napi-rs-cli.tgz':
-    resolution: {integrity: sha512-UUsPSeTIEQl34wBqWqNFYLbJVZVa5cHdG8mYYblIV/IZ5dxLxxvfhFWUs4cfNoi4utUowPGM2ADcN25p2RqQpg==, tarball: file:.napi-validation/napi-rs-cli.tgz}
-    version: 3.10.2
+  '@napi-rs/cli@3.10.3':
+    resolution: {integrity: sha512-RdHgxFNFUi7vSoLow7uqhigx6nhFBqe1nI8EL0hux66foc8wQ/4OL9WLlVRRkw+y67K7+BIHvYsEUn/cNpMsjA==}
     engines: {node: ^20.17.0 || ^22.13.0 || >= 23.5.0}
     hasBin: true
     peerDependencies:
@@ -11229,7 +11230,7 @@ snapshots:
 
   '@napi-rs/async-runtime@0.2.0': {}
 
-  '@napi-rs/cli@file:.napi-validation/napi-rs-cli.tgz(@emnapi/core@2.0.0-alpha.5)(@emnapi/runtime@2.0.0-alpha.5)(@types/node@24.10.3)(emnapi@2.0.0-alpha.5)(supports-color@10.2.2)':
+  '@napi-rs/cli@3.10.3(@emnapi/core@2.0.0-alpha.5)(@emnapi/runtime@2.0.0-alpha.5)(@types/node@24.10.3)(emnapi@2.0.0-alpha.5)(supports-color@10.2.2)':
     dependencies:
       '@inquirer/prompts': 8.5.2(@types/node@24.10.3)
       '@napi-rs/cross-toolchain': 1.0.3(supports-color@10.2.2)

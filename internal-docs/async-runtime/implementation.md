@@ -839,7 +839,7 @@ this section possible: no restore step, no drift-allowlist arm, and no
 build-order coupling is needed to keep one flavor from overwriting the other.
 
 - The per-flavor naming and loader codegen (napi-rs#3353) ship in the released
-  `@napi-rs/cli`, pinned to `^3.10.2` in the workspace catalog — the floor is
+  `@napi-rs/cli`, pinned to `^3.10.3` in the workspace catalog — the floor is
   the loader contract itself (`__napiBindingTarget`, the raw-destroy settlement
   wrapper, `napi.wasm.threadlessInitialMemory`, and the
   `napi.wasm.asyncRuntime` host bootstrap); rolldown used to add all four with
@@ -865,7 +865,16 @@ build-order coupling is needed to keep one flavor from overwriting the other.
   never settled and the emnapi waiting-request counter never returned to zero,
   which on Node keeps a `MessageChannel` port referenced and the process alive
   forever. Both exports are optional, so a binding built against an older napi
-  crate degrades to the previous behavior instead of failing to load. A build
+  crate degrades to the previous behavior instead of failing to load. 3.10.3
+  (napi-rs#3530) adds no seam — it fixes the cli's own write path: the
+  filesystem transaction that stages a generated file now re-copies a source
+  whose drift since the copy is metadata only (a mode or mtime/ctime re-stamp
+  over identical bytes) instead of failing the build, and when it does fail it
+  names the fields that moved rather than emitting one message for eight
+  conditions. The Pkg Preview FreeBSD build is what hit it: FreeBSD cannot
+  supply a complete process execution identity, so the cross-process
+  reconciliation lock runs degraded (lock-free) there and a re-stamp under a
+  concurrent staging pass aborted the whole build. A build
   whose target is NOT wasi regenerates
   EVERY declared wasi flavor's loader set, each with `hasThreads` derived from
   its own triple, so loader regeneration is deterministic and byte-identical to

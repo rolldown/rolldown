@@ -32,11 +32,6 @@ onlyBuiltDependencies:
   - tree-sitter
 
 overrides:
-  # TEMPORARY - downstream validation of the unreleased napi-rs head, remove before merge.
-  # Replaces the registry `@napi-rs/cli` (the catalog floor below stays untouched) with a
-  # tarball packed from napi-rs 6a576ef3b33672b21b7fd29acf993e92c9dd1497, so CI exercises the
-  # loaders/codegen that ship after the next cli release instead of 3.10.2.
-  '@napi-rs/cli': file:./.napi-validation/napi-rs-cli.tgz
   # napi-build 2.4.2 links the emnapi v2 C archives; pin the exact release so a range change cannot silently swap them.
   emnapi: 2.0.0-alpha.5
   vitepress>vite: npm:rolldown-vite@latest
@@ -77,7 +72,15 @@ catalog:
   # outstanding work instead, which strands its completion callback: the promise
   # never settles and emnapi keeps the process alive. The same packed-consumer
   # check exercises this one too.
-  '@napi-rs/cli': ^3.10.2
+  # 3.10.3 raises it once more (napi-rs#3530): the filesystem transaction that
+  # writes the generated bindings re-copies a source whose drift is metadata
+  # only -- a mode or mtime/ctime re-stamp on otherwise identical bytes -- and
+  # only fails when the identity or the content actually moved, naming the
+  # fields that did. Before that one message stood for eight conditions and any
+  # re-stamp aborted the build; FreeBSD hits it because it cannot provide a
+  # complete process execution identity, so the cross-process reconciliation
+  # lock runs degraded (lock-free) there.
+  '@napi-rs/cli': ^3.10.3
   '@napi-rs/wasm-runtime': ~1.2.4
   '@oxc-node/cli': ^0.1.0
   '@oxc-node/core': ^0.1.0

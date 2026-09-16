@@ -16,6 +16,8 @@ The binding supplies a private `internalInvalidateModuleInfoCache` callback on t
 
 When `entriesAware: true`, a group's modules are further split by **which entry points can reach them**. This produces per-entry-set chunks instead of one monolithic group chunk.
 
+The same split is applied automatically when a group with `entriesAware: false` contains an async module (one with top-level await or a static dependency on it) whose static dependencies can reach a dynamic import, and that import's target entry reaches another group member but not the async module. The target may also be a user-defined or emitted entry. A monolithic group can otherwise put the awaiting module and a dependency of its awaited dynamic import into one output chunk. The dynamic chunk then statically imports the awaiting chunk, and neither chunk finishes evaluating. For groups with this risk, `entriesAwareMergeThreshold` keeps subgroups containing async modules separate so a merge cannot recreate the cycle.
+
 #### How it works
 
 Each module has a **bitset** representing which entries can reach it. After collecting all modules into the group, we split them into subgroups by their bitset pattern:

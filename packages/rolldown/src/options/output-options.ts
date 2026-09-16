@@ -941,6 +941,9 @@ export type CodeSplittingGroup = {
    * When `false` (default), all matching modules are merged into a single chunk.
    * Every entry that uses any of these modules must load the entire chunk — even
    * modules it doesn't need.
+   * A group containing top-level await or a static dependency on it may still be
+   * split when that module can reach a dynamic import whose target needs another
+   * group member but not the async module.
    *
    * When `true`, matching modules are grouped by which entries actually import them.
    * Modules shared by the same set of entries go into the same chunk, while modules
@@ -962,7 +965,9 @@ export type CodeSplittingGroup = {
    * closest neighboring subgroup.
    *
    * This option only works when {@linkcode CodeSplittingGroup.entriesAware | entriesAware}
-   * is `true`. Set to `0` to disable subgroup merging.
+   * is `true`. For a group where merging could create an async dynamic-import
+   * cycle, it keeps subgroups containing top-level await or a static dependency
+   * on it separate. Set to `0` to disable subgroup merging.
    *
    * @default 0
    */

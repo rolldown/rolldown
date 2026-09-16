@@ -1,0 +1,12 @@
+{
+  "snapshot": false,
+  "config": {
+    "input": [
+      { "name": "main", "import": "main.js" },
+      { "name": "lazy", "import": "lazy.js" }
+    ],
+    "codeSplitting": {
+      "groups": [{ "name": "app", "test": "bootstrap|shared" }]
+    }
+  }
+}

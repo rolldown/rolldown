@@ -123,14 +123,14 @@ impl BuildEvent for PluginTimings {
       // Without this branch, the headline reads "7.4s of this 7.1s build". That looks like
       // a bug.
       format!(
-        "JS callbacks ran for {}. The build took {}. Callbacks such as `closeBundle` run \
-         after the build ends, so callback time can be more than build time.",
+        "JavaScript callbacks ran for {}. The build took {}. Callbacks such as `closeBundle` \
+         run after the build ends, so callback time can be more than build time.",
         format_duration(self.busy_ms),
         format_duration(self.build_ms)
       )
     } else {
       format!(
-        "JS callbacks ran for {} of this {} build ({}%).",
+        "JavaScript callbacks ran for {} of this {} build ({}%).",
         format_duration(self.busy_ms),
         format_duration(self.build_ms),
         share(self.busy_ms)
@@ -311,7 +311,10 @@ mod tests {
         "  - plugin async-plugin resolveId (3000 calls)",
       ]
     );
-    assert!(message.contains("JS callbacks ran for 8.0s of this 10.0s build (80%)"), "{message}");
+    assert!(
+      message.contains("JavaScript callbacks ran for 8.0s of this 10.0s build (80%)"),
+      "{message}"
+    );
     assert!(message.contains("The slowest callbacks, timed inside each callback"), "{message}");
     assert!(
       message.contains("https://rolldown.rs/reference/InputOptions.checks#bundlertimings"),
@@ -409,7 +412,10 @@ mod tests {
     // `closeBundle` runs after the build clock stopped, so its span can exceed the build.
     let message =
       render(4_000.0, 6_000.0, vec![row("late", "closeBundle", 6_000.0, 1, 1)]).unwrap();
-    assert!(message.contains("JS callbacks ran for 6.0s. The build took 4.0s."), "{message}");
+    assert!(
+      message.contains("JavaScript callbacks ran for 6.0s. The build took 4.0s."),
+      "{message}"
+    );
     assert!(message.contains("callback time can be more than build time"), "{message}");
     assert!(message.contains("(100%, 6.0s, 1 call)"), "{message}");
     assert!(!message.contains("150%"), "{message}");

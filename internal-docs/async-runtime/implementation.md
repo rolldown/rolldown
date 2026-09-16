@@ -887,9 +887,16 @@ build-order coupling is needed to keep one flavor from overwriting the other.
   an async binding build, and requires the generated task/timer bootstrap to
   report `timers: true`. Its threaded root layout additionally bundles and then
   calls `Symbol.for('napi.rs.wasi.dispose')` on the very binding instance that
-  build loaded, on every runtime it validates: the disposal has to settle
-  within 30s and leave no uncaught exception or worker `error` behind, which is
-  what pins the 3.10.1 worker-termination seam above. The threaded Chromium
+  build loaded, on every runtime it validates. Two properties make that pin the
+  3.10.1 seams above rather than merely exercise them. The exercise's own 30s
+  watchdog is UNREFERENCED, so the loader alone holds the event loop open while
+  the disposal is in flight: drop `__keepEventLoopAliveUntil` and Node exits
+  mid-disposal, and the driver reads the missing result marker as exactly that.
+  And it retains every `Worker` the loader constructs and requires each one to
+  emit `exit` before the disposal counts as successful, because a settled
+  promise alone is equally consistent with a `__terminateWasiWorkers` that
+  returns without terminating anything. Uncaught exceptions and worker `error`
+  events during the disposal fail it too. The threaded Chromium
   exercise raw-imports the packed
   `rolldown-binding.wasi-browser.js` the same way and completes a build purely
   on the loader's own gated bootstrap — no package entry ever runs there — so

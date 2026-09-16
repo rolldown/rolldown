@@ -437,9 +437,19 @@ function assertRootPackageExercise(stdout, flavor) {
 // has to stay clean on every runtime we support.
 function assertThreadedDisposeExercise(results) {
   for (const { stdout, runtimeVersion } of results) {
+    // The exercise unrefs its own watchdog, so the loader alone holds the event
+    // loop open while the disposal is in flight. A loader that stops doing that
+    // lets Node exit mid-disposal: the child ends successfully having written
+    // nothing, which is exactly what this first assertion catches.
+    assert.ok(
+      stdout.includes('"marker":"threaded-wasi-dispose"'),
+      `The threaded WASI dispose exercise exited under ${runtimeVersion} without reporting a result (stdout: ${JSON.stringify(stdout)}), which is how a disposal that no longer holds the event loop open shows up`,
+    );
     const result = JSON.parse(stdout);
     const workers = result.workers;
+    const exitedWorkers = result.exitedWorkers;
     delete result.workers;
+    delete result.exitedWorkers;
     assert.deepEqual(
       result,
       {
@@ -454,6 +464,14 @@ function assertThreadedDisposeExercise(results) {
     assert.ok(
       workers >= 1,
       `The threaded WASI build spawned no pool worker under ${runtimeVersion}, so the disposal never exercised worker termination`,
+    );
+    // A settled disposal promise proves nothing on its own: a loader that skips
+    // termination outright settles just as fast. Only the workers' own `exit`
+    // events show the pool actually went away.
+    assert.equal(
+      exitedWorkers,
+      workers,
+      `Only ${exitedWorkers} of ${workers} threaded WASI pool workers exited under ${runtimeVersion} after the disposal settled`,
     );
   }
 }
@@ -1970,26 +1988,37 @@ import { createRequire } from 'node:module'
 
 const disposeTimeoutMs = 30_000
 // A stray worker exit lands on the tick right after the disposal settles, so
-// hold the process open long enough for one to surface.
+// hold the process open long enough for one to surface. This timer stays
+// REFERENCED on purpose: it only ever runs once the disposal has settled, so it
+// cannot stand in for the liveness the loader owes while one is in flight.
 const drainMs = 500
+// How long a pool worker may take to emit 'exit' after that.
+const workerExitWaitMs = 5_000
 
 const nodeRequire = createRequire(import.meta.url)
 const { writeSync } = nodeRequire('node:fs')
 const workerThreads = nodeRequire('node:worker_threads')
 const NativeWorker = workerThreads.Worker
-let workers = 0
+const workers = []
 const workerErrors = []
 // Patch before the binding loads: the generated loader destructures Worker the
-// first time it is required.
+// first time it is required. Every constructed worker is retained with its own
+// 'exit' record: the pool workers are unreferenced, so without this the process
+// could exit over a still-running worker and call the teardown a success.
 workerThreads.Worker = class extends NativeWorker {
   constructor(filename, options) {
-    workers += 1
     super(filename, options)
+    const record = { exited: false }
+    workers.push(record)
     this.on('error', (error) => {
       workerErrors.push(error && error.message ? error.message : String(error))
     })
+    this.on('exit', () => {
+      record.exited = true
+    })
   }
 }
+const countExitedWorkers = () => workers.filter((worker) => worker.exited).length
 
 const { rolldown } = await import('rolldown')
 const { getRuntimeCapabilities } = await import('rolldown/experimental')
@@ -2044,9 +2073,11 @@ const failDisposal = (reason) => (error) => {
 process.on('uncaughtException', failDisposal('uncaughtException'))
 process.on('unhandledRejection', failDisposal('unhandledRejection'))
 
-// The driver's withTimeout lives in the parent process, so mirror it here. The
-// timer doubles as the keep-alive that stops Node from exiting while the
-// disposal is still in flight.
+// The driver's withTimeout lives in the parent process, so mirror it here --
+// but UNREFERENCED. Holding the event loop open across a pending disposal is
+// the loader's own job; a referenced watchdog here would supply that liveness
+// and hide its loss. Without it Node simply exits mid-disposal, and the driver
+// reads the missing marker as exactly that.
 let disposeTimeout
 let disposed = false
 try {
@@ -2062,6 +2093,7 @@ try {
           ),
         disposeTimeoutMs,
       )
+      disposeTimeout.unref()
     }),
   ])
 } finally {
@@ -2069,12 +2101,24 @@ try {
 }
 await new Promise((resolve) => setTimeout(resolve, drainMs))
 
+// A settled disposal is not a terminated pool. Wait, bounded, until every
+// worker the loader built has reported 'exit'. This poll is REFERENCED so the
+// mismatch is always reported rather than turning into a silent exit: it runs
+// only once the disposal has settled, which is strictly after the unreferenced
+// watchdog above has done its job, so it cannot stand in for the loader's own
+// keep-alive either.
+const workerExitDeadline = Date.now() + workerExitWaitMs
+while (countExitedWorkers() < workers.length && Date.now() < workerExitDeadline) {
+  await new Promise((resolve) => setTimeout(resolve, 50))
+}
+
 process.stdout.write(JSON.stringify({
   marker: 'threaded-wasi-dispose',
   target,
   outputs,
   disposed,
-  workers,
+  workers: workers.length,
+  exitedWorkers: countExitedWorkers(),
   workerErrors,
 }))
 `;

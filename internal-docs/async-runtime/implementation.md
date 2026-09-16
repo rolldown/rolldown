@@ -524,11 +524,16 @@ import to the npm polyfill and bundles that implementation too; packed
 validation rejects any remaining `buffer`, `node:buffer`, emnapi, or wasm
 runtime import. Managed workerd consumers therefore do not depend on Node
 compatibility flags.
-`@rolldown/browser` nevertheless stays `private: true`, so `vp pm publish -r`
-skips it. The reason is the prerelease ABI line recorded in
-`scripts/wasi/check-workerd-packed-consumer.mjs`: the `.wasm` links the emnapi
+`@rolldown/browser` publishes normally through the recursive `vp pm publish -r`
+in `publish-to-npm.yml`. An earlier revision of this branch marked it
+`private: true` while the loader needed a pnpm-patched `@napi-rs/wasm-runtime`;
+that patch is gone (no `patchedDependencies`, no `patches/`) and every runtime
+dependency now resolves from the registry, so the gate was lifted. The
+prerelease ABI line recorded in
+`scripts/wasi/check-workerd-packed-consumer.mjs` — the `.wasm` links the emnapi
 `2.0.0-alpha` C archives and the manifest pins the matching `2.0.0-alpha`
-runtimes, so publishing is gated on emnapi v2 going stable.
+runtimes — is a drift guard, not a publish gate: the released
+`@rolldown/browser@1.2.8` already ships that prerelease runtime line.
 The same build
 emits the threadless CJS/browser/deferred loaders plus a dedicated release
 artifact containing the threaded CJS/browser/Node-worker/browser-worker graph.

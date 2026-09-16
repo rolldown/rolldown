@@ -25,10 +25,10 @@ const tempDir = await mkdtemp(path.join(tmpdir(), 'rolldown-workerd-consumer-'))
 // dist stays fully bundled (the AST scans below forbid bare runtime imports),
 // but the manifest deliberately declares the registry emnapi v2 line: the .wasm
 // links the emnapi 2.0.0-alpha C archives, so a v1 JS runtime is an ABI mismatch.
-// @rolldown/browser stays `private: true` while these deps sit on the
-// 2.0.0-alpha prerelease line. These pins are the ABI line a
-// future registry consumer must resolve; drift must fail CI until this script is
-// updated deliberately.
+// The published @rolldown/browser already ships this prerelease runtime line
+// (1.2.8 on npm declares @emnapi/core 2.0.0-alpha.4), so these pins are not a
+// publish gate — they are the ABI line a registry consumer must resolve, and
+// drift must fail CI until this script is updated deliberately.
 const expectedRegistryRuntimeDependencies = {
   '@emnapi/core': '2.0.0-alpha.5',
   '@emnapi/runtime': '2.0.0-alpha.5',

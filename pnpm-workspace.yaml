@@ -32,6 +32,11 @@ onlyBuiltDependencies:
   - tree-sitter
 
 overrides:
+  # TEMPORARY - downstream validation of the unreleased napi-rs head, remove before merge.
+  # Replaces the registry `@napi-rs/cli` (the catalog floor below stays untouched) with a
+  # tarball packed from napi-rs 6a576ef3b33672b21b7fd29acf993e92c9dd1497, so CI exercises the
+  # loaders/codegen that ship after the next cli release instead of 3.10.2.
+  '@napi-rs/cli': file:./.napi-validation/napi-rs-cli.tgz
   # napi-build 2.4.2 links the emnapi v2 C archives; pin the exact release so a range change cannot silently swap them.
   emnapi: 2.0.0-alpha.5
   vitepress>vite: npm:rolldown-vite@latest

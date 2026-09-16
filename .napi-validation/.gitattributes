@@ -1,0 +1,3 @@
+# The repo root sets `* text eol=lf`, which would rewrite this gzip stream on
+# checkout and hand CI a corrupt tarball. Keep it byte-exact.
+*.tgz -text

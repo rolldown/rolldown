@@ -130,7 +130,12 @@ export async function createBundlerOptions(
     );
 
     // Convert `OutputOptions` to `BindingOutputOptions`
-    const bindingOutputOptions = bindingifyOutputOptions(outputOptions, pluginContextData, timings);
+    const bindingOutputOptions = bindingifyOutputOptions(
+      outputOptions,
+      pluginContextData,
+      onLog,
+      timings,
+    );
 
     return {
       bundlerOptions: {

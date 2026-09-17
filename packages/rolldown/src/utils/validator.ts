@@ -855,6 +855,7 @@ const AdvancedChunksSchema = v.strictObject({
   groups: v.optional(
     v.array(
       v.strictObject({
+        debugName: v.optional(v.string()),
         name: v.union([v.string(), AdvancedChunksNameFunctionSchema]),
         test: v.optional(v.union([StringOrRegExpSchema, AdvancedChunksTestFunctionSchema])),
         priority: v.optional(v.number()),

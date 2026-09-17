@@ -219,6 +219,7 @@ impl<'a> GenerateStage<'a> {
           &order_state,
           &order_live_symbols,
           self.options.format,
+          self.options.platform,
           &index_chunk_id_to_name,
           chunk_assignments,
         );

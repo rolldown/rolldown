@@ -9,40 +9,22 @@ where
   tokio::spawn(future)
 }
 
-/// `async` here is only used to satisfy the wasm shim version of `block_on_spawn_all`.
-/// This function allow you to spawn non-static futures in parallel and wait for all of them to finish.
-#[expect(clippy::unused_async)]
-pub async fn block_on_spawn_all<Iter, Out>(iter: Iter) -> Vec<Out>
-where
-  Iter: Iterator,
-  Out: Send + 'static,
-  Iter::Item: Future<Output = Out> + Send,
-{
-  #[cfg(target_arch = "wasm32")]
-  {
-    use futures::future::join_all;
-    join_all(iter).await
-  }
-  #[cfg(not(target_arch = "wasm32"))]
-  {
-    use async_scoped::TokioScope;
-    let (_ret, collections) =
-      async_scoped::Scope::scope_and_block(|scope: &mut TokioScope<'_, _>| {
-        iter.into_iter().for_each(|fut| scope.spawn(fut));
-      });
-    collections.into_iter().map(Result::unwrap).collect()
-  }
-}
-
-#[expect(clippy::collection_is_never_read)]
-async fn _test_block_on_spawn_all_non_static_future() {
-  let mut words = String::new();
-  let non_static_future = async {
-    words.push_str("hello");
-  };
-  let _ = block_on_spawn_all(std::iter::once(non_static_future)).await;
-}
-
+/// Blocks the current thread until `f` completes.
+///
+/// Only call this function when `f` can make progress on this thread alone. Two
+/// kinds of work need another thread. A spawned task needs a worker thread to
+/// poll it. A JS callback that re-enters rolldown needs the runtime too. `f`
+/// then never completes, and the build deadlocks (#10664).
+///
+/// On targets that are not wasm, this function calls `block_in_place`. That
+/// function moves this worker thread's scheduler work to the blocking pool.
+/// `ROLLDOWN_MAX_BLOCKING_THREADS` limits that pool to 4 threads by default.
+/// When the pool is full, no thread remains to run the scheduler work.
+///
+/// On wasm, this function calls `futures::executor::block_on`. That function
+/// polls `f` on this thread and holds the thread. The same rule applies.
+///
+/// Use `.await` in place of this function whenever you can.
 pub fn block_on<F: Future>(f: F) -> F::Output {
   #[cfg(target_family = "wasm")]
   {

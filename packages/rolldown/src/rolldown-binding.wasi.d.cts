@@ -1973,6 +1973,8 @@ export interface BindingChecksOptions {
   configurationFieldConflict?: boolean
   preferBuiltinFeature?: boolean
   couldNotCleanDirectory?: boolean
+  bundlerTimings?: boolean
+  /** Deprecated alias for `bundlerTimings`. Rolldown uses `bundlerTimings` if both options have values. */
   pluginTimings?: boolean
   duplicateShebang?: boolean
   unsupportedTsconfigOption?: boolean

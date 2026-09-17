@@ -112,7 +112,7 @@ impl BuildEvent for PluginTimings {
   }
 
   fn message(&self, _opts: &DiagnosticOptions) -> String {
-    const DOC_LINK: &str = "https://rolldown.rs/reference/InputOptions.checks#plugintimings";
+    const DOC_LINK: &str = "https://rolldown.rs/reference/InputOptions.checks#bundlertimings";
 
     #[expect(clippy::cast_possible_truncation)]
     let percent = |ms: f64| -> i64 { (ms / self.build_ms * 100.0).round() as i64 };

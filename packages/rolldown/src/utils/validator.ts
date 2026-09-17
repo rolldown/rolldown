@@ -400,10 +400,16 @@ const ChecksOptionsSchema = v.strictObject({
     v.optional(v.boolean()),
     v.description('Whether to emit warnings when Rolldown could not clean the output directory'),
   ),
+  bundlerTimings: v.pipe(
+    v.optional(v.boolean()),
+    v.description(
+      'Whether to emit warnings when plugins and option callbacks take significant time during the build process',
+    ),
+  ),
   pluginTimings: v.pipe(
     v.optional(v.boolean()),
     v.description(
-      'Whether to emit warnings when plugins take significant time during the build process',
+      'Deprecated alias for bundlerTimings. Rolldown uses bundlerTimings if both options have values.',
     ),
   ),
   duplicateShebang: v.pipe(

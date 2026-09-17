@@ -682,11 +682,11 @@ impl IntegrationTest {
       }
     }
 
-    // Disable plugin timings in tests to reduce snapshot noise
+    // The test harness disables bundler timings by default to reduce snapshot noise.
     if let Some(checks) = &mut options.checks {
-      checks.plugin_timings = Some(false);
+      checks.bundler_timings.get_or_insert(checks.plugin_timings.unwrap_or(false));
     } else {
-      options.checks = Some(ChecksOptions { plugin_timings: Some(false), ..Default::default() });
+      options.checks = Some(ChecksOptions { bundler_timings: Some(false), ..Default::default() });
     }
   }
 

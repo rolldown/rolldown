@@ -256,6 +256,8 @@ function bindingifyCodeSplitting(
   let inlineDynamicImports: boolean | undefined;
   let effectiveChunksOption: Exclude<OutputOptions['codeSplitting'], boolean> | undefined;
   let migratedManualChunksGroup: CodeSplittingGroup | undefined;
+  // Rows name the option the user actually wrote, not the one they were migrated into.
+  let chunksOptionName: 'codeSplitting' | 'advancedChunks' | 'manualChunks' = 'codeSplitting';
 
   // Handle codeSplitting boolean values
   if (codeSplitting === false) {
@@ -297,6 +299,7 @@ function bindingifyCodeSplitting(
   } else {
     // codeSplitting is an object (advanced config)
     effectiveChunksOption = codeSplitting;
+    chunksOptionName = 'codeSplitting';
     // Ignore inlineDynamicImports if codeSplitting object is specified
     if (inlineDynamicImportsOption != null) {
       logger.warn(
@@ -317,6 +320,7 @@ function bindingifyCodeSplitting(
     if (advancedChunks != null) {
       logger.warn('`advancedChunks` option is deprecated, please use `codeSplitting` instead.');
       effectiveChunksOption = advancedChunks;
+      chunksOptionName = 'advancedChunks';
     }
   } else if (advancedChunks != null) {
     logger.warn(
@@ -330,6 +334,7 @@ function bindingifyCodeSplitting(
       '`manualChunks` option is ignored because the `codeSplitting` option is specified.',
     );
   } else if (manualChunks != null) {
+    chunksOptionName = 'manualChunks';
     migratedManualChunksGroup = {
       name(moduleId, ctx) {
         return manualChunks(moduleId, {
@@ -367,7 +372,7 @@ function bindingifyCodeSplitting(
         chunkingContext?.clearModuleInfoCache();
         chunkingContext = undefined;
       },
-      groups: groups?.map((group) => {
+      groups: groups?.map((group, index) => {
         const { name, test, ...restGroup } = group;
         // The group object supplies a stable key across repeated outputs.
         // Different group objects remain separate when their labels match.
@@ -378,13 +383,14 @@ function bindingifyCodeSplitting(
           timings === undefined
             ? OUTPUT_OPTIONS_OWNER
             : { ...OUTPUT_OPTIONS_OWNER, key: timingKey };
+        // Each group gets its own row, so the rows have to be tellable apart. The position
+        // is the one identity every group has.
+        const groupName = `${chunksOptionName} groups[${index}]`;
         return {
           ...restGroup,
           test:
             typeof test === 'function'
-              ? batchTest(
-                  measureHookCost(timings, timingOwner, 'codeSplitting groups[].test', test),
-                )
+              ? batchTest(measureHookCost(timings, timingOwner, `${groupName}.test`, test))
               : test,
           // The core calls this classifier directly rather than through a plugin, so it
           // belongs to no plugin's rows — and it runs once per module, which is how it ends
@@ -392,7 +398,7 @@ function bindingifyCodeSplitting(
           name:
             typeof name === 'function'
               ? batchName(
-                  measureHookCost(timings, timingOwner, 'codeSplitting groups[].name', name),
+                  measureHookCost(timings, timingOwner, `${groupName}.name`, name),
                   getChunkingContext,
                 )
               : name,

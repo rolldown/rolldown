@@ -84,14 +84,46 @@ describe('code-splitting group timings', () => {
 
     const recorder = pluginTimingsRecorderFor(inputOptions);
     expect(recorder.costs.size).toBe(2);
-    expect(recorder.costs.get(firstGroup)?.get('codeSplitting groups[].test')).toMatchObject({
+    expect(recorder.costs.get(firstGroup)?.get('codeSplitting groups[0].test')).toMatchObject({
       calls: 2,
       ms: 20,
     });
-    expect(recorder.costs.get(secondGroup)?.get('codeSplitting groups[].test')).toMatchObject({
+    expect(recorder.costs.get(secondGroup)?.get('codeSplitting groups[1].test')).toMatchObject({
       calls: 2,
       ms: 60,
     });
+  });
+
+  it('tells two groups apart by position', async () => {
+    const clock = fakeClock();
+    const inputOptions: InputOptions = { checks: { bundlerTimings: true } };
+    const slow: CodeSplittingGroup = {
+      name: () => {
+        clock.advance(40);
+        return 'shared';
+      },
+    };
+    const fast: CodeSplittingGroup = {
+      name: () => {
+        clock.advance(10);
+        return 'shared';
+      },
+    };
+    const { bundlerOptions } = await createBundlerOptions(
+      inputOptions,
+      { codeSplitting: { groups: [slow, fast] } },
+      false,
+      true,
+    );
+    const groups = getBindingGroups(bundlerOptions);
+    runName(groups[0]);
+    runName(groups[1]);
+
+    // Both groups carry the same label, so the position is what separates the rows.
+    expect(summarizePluginTimings(inputOptions).rows.map((row) => row.hook)).toEqual([
+      'codeSplitting groups[0].name',
+      'codeSplitting groups[1].name',
+    ]);
   });
 
   it('keeps the test and name rows for one group', async () => {
@@ -122,8 +154,8 @@ describe('code-splitting group timings', () => {
     expect(summarizePluginTimings(inputOptions)).toMatchObject({
       busyMs: 30,
       rows: [
-        { hook: 'codeSplitting groups[].test', calls: 1, ms: 10 },
-        { hook: 'codeSplitting groups[].name', calls: 1, ms: 20 },
+        { hook: 'codeSplitting groups[0].test', calls: 1, ms: 10 },
+        { hook: 'codeSplitting groups[0].name', calls: 1, ms: 20 },
       ],
     });
   });
@@ -150,7 +182,7 @@ describe('code-splitting group timings', () => {
 
     const recorder = pluginTimingsRecorderFor(inputOptions);
     expect(recorder.costs.size).toBe(1);
-    expect(recorder.costs.get(manualChunks)?.get('codeSplitting groups[].name')).toMatchObject({
+    expect(recorder.costs.get(manualChunks)?.get('manualChunks groups[0].name')).toMatchObject({
       calls: 2,
       ms: 1_200,
     });

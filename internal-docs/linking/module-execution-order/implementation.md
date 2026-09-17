@@ -10,9 +10,9 @@ Source: `crates/rolldown/src/stages/link_stage/sort_modules.rs`.
 
 The order is defined by a small set of rules, in precedence order:
 
-1. **Runtime module is always first.** `sorted_modules[0] == runtime.id()` is asserted at the end of the pass. Generated helpers (`__commonJS`, `__toESM`, etc.) must be defined before any module that references them.
+1. **Runtime module is always first.** `sorted_modules[0] == runtime.id()` is asserted at the end of the pass. Generated helpers (`__commonJS`, `__toESM`, etc.) must be defined before any module that references them. A plugin may add imports to the runtime; their dependencies are traversed immediately after the runtime, before the entry roots.
 2. **User-defined entries execute in declaration order.** The order in which entries appear in `options.input` is preserved. Non-user entries (dynamic-import and emitted entries) are canonicalized earlier, in `LinkStage::new` (`crates/rolldown/src/stages/link_stage/mod.rs:142`), by sorting on `(item.kind, module.id().as_str())`. That sorted suffix is what this pass consumes — `sort_modules` itself does no entry reordering. (The `Module#debug_id` wording in the `sort_modules` source-code doc comment is stale; the authoritative key is the module id string.)
-3. **Dependencies execute before dependents, along acyclic edges.** For any non-back edge `A → B` that `sort_modules` traverses, `B.exec_order < A.exec_order`. Back edges in cycles are the exception: when the algorithm revisits an already-executed ancestor it is skipped (that's where cycle detection fires), so a module on a cycle can receive its `exec_order` before a transitive dependency further along the cycle. Downstream stages must not assume strict topological order across cycles.
+3. **Dependencies execute before dependents, along acyclic edges.** For any non-back edge `A → B` that `sort_modules` traverses, `B.exec_order < A.exec_order`. The runtime's plugin-added imports are processed after the runtime itself, so helper definitions precede modules that need them. Back edges in cycles are another exception: when the algorithm revisits an already-executed ancestor it is skipped (that's where cycle detection fires), so a module on a cycle can receive its `exec_order` before a transitive dependency further along the cycle. Downstream stages must not assume strict topological order across cycles.
 4. **`require(...)` is treated as a static import.** Because ES `import` statements are hoisted, required modules are placed after static imports. Among `require` calls, the first one encountered during AST scan wins — as the doc comment shows, for:
    ```js
    () => require('b');
@@ -31,33 +31,23 @@ The pass is an **iterative post-order DFS** with an explicit `execution_stack: V
 
 ```rust
 enum Status {
-  ToBeExecuted(ModuleIdx),  // pre-visit: needs its deps pushed
-  WaitForExit(ModuleIdx),   // post-visit: deps are done, assign exec_order
+  ToBeExecuted(ModuleIdx),  // pre-visit: schedule the module
+  WaitForExit(ModuleIdx),   // post-visit: assign exec_order
 }
 ```
 
-On its first real visit, a `ModuleIdx` goes through the `ToBeExecuted → WaitForExit` pair: popped as `ToBeExecuted` (pre-order), its own `WaitForExit` (post-order sentinel) is pushed, then its dependencies are pushed above it. When the sentinel is popped, every transitive dependency has already been assigned a lower `exec_order` — the iterative equivalent of "assign order after returning from the recursive call." Later incoming edges may push additional `ToBeExecuted(id)` entries for the same module (e.g. the second importer in a diamond); these are popped and short-circuited by the `executed_ids` membership check rather than re-entering the pre/post pair. The complexity section below spells out the consequences for the total push count.
+On its first real visit, a `ModuleIdx` goes through the `ToBeExecuted → WaitForExit` pair: popped as `ToBeExecuted` (pre-order), its own `WaitForExit` (post-order sentinel) is pushed. For modules other than the runtime, dependencies are pushed above that sentinel, so their traversal completes before the module receives its `exec_order`; back edges follow the cycle rule above. The runtime receives its order before its import roots are traversed. Later incoming edges may push additional `ToBeExecuted(id)` entries for the same module (e.g. the second importer in a diamond); these are popped and short-circuited by the `executed_ids` membership check rather than re-entering the pre/post pair. The complexity section below spells out the consequences for the total push count.
 
 ### Seeding the stack
 
-```rust
-let mut execution_stack = self
-  .entries
-  .keys()
-  .rev()
-  .map(|&idx| Status::ToBeExecuted(idx))
-  .chain(iter::once(Status::ToBeExecuted(self.runtime.id())))
-  .collect();
-```
-
-Entries are pushed **in reverse**, then the runtime is pushed **last** — because a `Vec` stack pops from the end, this makes the runtime pop first and entries pop in original declaration order. That single `.rev() + chain` pair is what pins down rules (1) and (2) above.
+The stack contains, from bottom to top, reversed entry roots, reversed runtime import targets, then the runtime. A `Vec` stack pops from the end, so it processes the runtime first, its import roots in source order, and then entries in declaration order. Runtime import targets use the same static/dynamic edge filter as ordinary dependencies below.
 
 ### Visiting dependencies
 
 On `ToBeExecuted(id)`:
 
 - If `id` is already in `executed_ids`, it is skipped (may trigger a cycle diagnostic; see below).
-- Otherwise, `id` is inserted into `executed_ids`, a `WaitForExit(id)` sentinel is pushed, and the module's import records are filtered and pushed in reverse:
+- Otherwise, `id` is inserted into `executed_ids` and a `WaitForExit(id)` sentinel is pushed. For every module except the runtime, its import records are filtered and pushed in reverse:
   ```rust
   rec.kind.is_static()
     || (self.options.code_splitting.is_disabled() && rec.kind.is_dynamic())

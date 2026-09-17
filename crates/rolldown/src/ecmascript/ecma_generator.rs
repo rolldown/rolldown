@@ -92,7 +92,26 @@ impl Generator for EcmaGenerator {
             }
           })
           .collect::<Vec<_>>();
-        (module_id.clone(), RenderedModule::new(sources.clone(), rendered_exports, *exec_order))
+        let deferred_runtime_imports = (*module_idx == ctx.link_output.runtime.id()
+          && !ctx.chunk.deferred_runtime_imports.is_empty())
+        .then(|| {
+          ctx
+            .chunk
+            .deferred_runtime_imports
+            .iter()
+            .map(|(_, code)| code.as_str())
+            .collect::<Vec<_>>()
+            .join("\n")
+        });
+        (
+          module_id.clone(),
+          RenderedModule::new(
+            sources.clone(),
+            deferred_runtime_imports,
+            rendered_exports,
+            *exec_order,
+          ),
+        )
       })
       .collect();
 

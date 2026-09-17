@@ -32,12 +32,26 @@ impl LinkStage<'_> {
   #[tracing::instrument(level = "debug", skip_all)]
   pub(super) fn sort_modules(&mut self) {
     // The runtime module should always be the first module to be executed
+    // See internal-docs/linking/module-execution-order/implementation.md.
+    let runtime_id = self.runtime.id();
     let mut execution_stack = self
       .entries
       .keys()
       .rev()
       .map(|&module_idx| Status::ToBeExecuted(module_idx))
-      .chain(iter::once(Status::ToBeExecuted(self.runtime.id())))
+      .chain(
+        self.module_table[runtime_id]
+          .import_records()
+          .iter()
+          .filter(|rec| {
+            rec.kind.is_static()
+              || (self.options.code_splitting.is_disabled() && rec.kind.is_dynamic())
+          })
+          .filter_map(|rec| rec.resolved_module)
+          .rev()
+          .map(Status::ToBeExecuted),
+      )
+      .chain(iter::once(Status::ToBeExecuted(runtime_id)))
       .collect::<Vec<_>>();
 
     let mut next_exec_order = 0;
@@ -78,18 +92,20 @@ impl LinkStage<'_> {
             );
             stack_indexes_of_executing_id.insert(id, execution_stack.len() - 1);
 
-            execution_stack.extend(
-              self.module_table[id]
-                .import_records()
-                .iter()
-                .filter(|rec| {
-                  rec.kind.is_static()
-                    || (self.options.code_splitting.is_disabled() && rec.kind.is_dynamic())
-                })
-                .filter_map(|rec| rec.resolved_module)
-                .rev()
-                .map(Status::ToBeExecuted),
-            );
+            if id != runtime_id {
+              execution_stack.extend(
+                self.module_table[id]
+                  .import_records()
+                  .iter()
+                  .filter(|rec| {
+                    rec.kind.is_static()
+                      || (self.options.code_splitting.is_disabled() && rec.kind.is_dynamic())
+                  })
+                  .filter_map(|rec| rec.resolved_module)
+                  .rev()
+                  .map(Status::ToBeExecuted),
+              );
+            }
           }
         }
         Status::WaitForExit(id) => {

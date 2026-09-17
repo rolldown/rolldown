@@ -157,8 +157,14 @@ pub fn render_modules_with_peek_runtime_module_at_first<'a>(
   }
 
   // chunk content
+  let mut deferred_runtime_imports = ctx.chunk.deferred_runtime_imports.iter().peekable();
   module_sources_peekable.for_each(
-    |RenderedModuleSource { sources: module_render_output, .. }| {
+    |RenderedModuleSource { sources: module_render_output, exec_order, .. }| {
+      while let Some((_, deferred)) =
+        deferred_runtime_imports.next_if(|(order, _)| *order < *exec_order)
+      {
+        source_joiner.append_source(deferred.clone());
+      }
       if let Some(emitted_sources) = module_render_output {
         for source in emitted_sources.as_ref() {
           source_joiner.append_source(source);
@@ -166,6 +172,9 @@ pub fn render_modules_with_peek_runtime_module_at_first<'a>(
       }
     },
   );
+  for (_, deferred) in deferred_runtime_imports {
+    source_joiner.append_source(deferred.clone());
+  }
 }
 
 pub fn render_chunk_directives<'a, T: Iterator<Item = &'a &'a str>>(directives: T) -> String {

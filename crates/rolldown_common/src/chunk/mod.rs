@@ -110,6 +110,8 @@ pub struct Chunk {
   pub insert_map: FxHashMap<ModuleIdx, Vec<(ModuleIdx, ImportRecordIdx)>>,
   pub remove_map: FxHashMap<ModuleIdx, Vec<ImportRecordIdx>>,
   pub transformed_parts_rendered: FxIndexMap<(ModuleIdx, ImportRecordIdx), String>,
+  /// Runtime import calls paired with the last execution order they must follow.
+  pub deferred_runtime_imports: Vec<(u32, String)>,
   pub module_groups: Vec<ModuleGroup>,
   pub module_idx_to_group_idx: FxHashMap<ModuleIdx, usize>,
   pub module_idx_to_render_concatenated_module:

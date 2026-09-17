@@ -17,11 +17,11 @@ Related code:
 The relevant prefix of `LinkStage::link()` (in `mod.rs`) runs roughly:
 
 ```
-sort_modules
 compute_tla
 determine_module_exports_kind   <- this file
 determine_safely_merge_cjs_ns
 wrap_modules
+sort_modules
 generate_lazy_export
 determine_side_effects
 bind_imports_and_exports

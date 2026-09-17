@@ -190,8 +190,8 @@ impl GenerateStage<'_> {
   /// reflect real evaluation order. A `Common` chunk keys on `modules[0]` — the lowest-`exec_order`
   /// module after `sort_chunk_modules`.
   ///
-  /// This keying is sensitive to chunk *membership*: the runtime module has `exec_order` 0 and
-  /// `sort_chunk_modules` always places it first, so any chunk hosting the runtime keys on 0. The
+  /// This keying is sensitive to chunk *membership*: without plugin-added imports, the runtime
+  /// module has `exec_order` 0, so any chunk hosting the runtime keys on 0. The
   /// provisional call in `generate_chunks` runs before the post-chunking
   /// `sweep_unused_runtime_module`, so a still-live chunk the sweep later strips the runtime out of
   /// would otherwise keep an `exec_order` derived from a module it no longer contains — sorting

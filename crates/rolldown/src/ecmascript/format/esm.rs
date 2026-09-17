@@ -198,8 +198,14 @@ fn render_chunk_content<'code>(
 
   // If there is no concatenate_wrapping_modules, just concate all modules by exec order.
   if ctx.chunk.module_groups.is_empty() {
+    let mut deferred_runtime_imports = ctx.chunk.deferred_runtime_imports.iter().peekable();
     module_sources.iter().for_each(
-      |RenderedModuleSource { sources: module_render_output, module_idx, .. }| {
+      |RenderedModuleSource { sources: module_render_output, module_idx, exec_order, .. }| {
+        while let Some((_, deferred)) =
+          deferred_runtime_imports.next_if(|(order, _)| *order < *exec_order)
+        {
+          source_joiner.append_source(deferred.clone());
+        }
         if let Some(emitted_sources) = module_render_output {
           for source in emitted_sources.as_ref() {
             source_joiner.append_source(source);
@@ -210,6 +216,9 @@ fn render_chunk_content<'code>(
         }
       },
     );
+    for (_, deferred) in deferred_runtime_imports {
+      source_joiner.append_source(deferred.clone());
+    }
     return;
   }
   let module_idx_to_source_idx = module_sources.iter().enumerate().fold(
@@ -222,7 +231,21 @@ fn render_chunk_content<'code>(
   let profiler_names = ctx.options.profiler_names;
   let is_pife_for_module_wrappers_enabled =
     ctx.options.optimization.is_pife_for_module_wrappers_enabled();
+  let mut deferred_runtime_imports = ctx.chunk.deferred_runtime_imports.iter().peekable();
   for group in &ctx.chunk.module_groups {
+    if deferred_runtime_imports.peek().is_some() {
+      let first_exec_order = group
+        .modules
+        .iter()
+        .map(|idx| ctx.link_output.module_table[*idx].exec_order())
+        .min()
+        .unwrap_or(u32::MAX);
+      while let Some((_, deferred)) =
+        deferred_runtime_imports.next_if(|(order, _)| *order < first_exec_order)
+      {
+        source_joiner.append_source(deferred.clone());
+      }
+    }
     // If the group is not belong to any concatenated module, we just render it as a single module.
     if group.modules.len() == 1 {
       let source =
@@ -326,6 +349,9 @@ fn render_chunk_content<'code>(
   }
   if let Some(prelude) = dev_graph_prelude.take() {
     source_joiner.append_source(prelude);
+  }
+  for (_, deferred) in deferred_runtime_imports {
+    source_joiner.append_source(deferred.clone());
   }
 }
 

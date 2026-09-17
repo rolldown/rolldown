@@ -233,11 +233,11 @@ impl<'a> LinkStage<'a> {
 
   #[tracing::instrument(level = "debug", skip_all)]
   pub fn link(mut self) -> (LinkStageOutput, IndexEcmaAst, UsedSymbolRefsBuilder) {
-    self.sort_modules();
     self.compute_tla();
     self.determine_module_exports_kind();
     self.determine_safely_merge_cjs_ns();
     self.wrap_modules();
+    self.sort_modules();
     self.generate_lazy_export();
     self.determine_side_effects();
     self.bind_imports_and_exports();

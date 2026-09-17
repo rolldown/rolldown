@@ -107,6 +107,7 @@ pub struct ScopeHoistingFinalizer<'me, 'ast: 'me> {
   pub needs_hosted_top_level_binding: bool,
   pub module_namespace_included: bool,
   pub transferred_import_record: FxIndexMap<ImportRecordIdx, String>,
+  pub deferred_runtime_imports: Vec<(u32, String)>,
   pub rendered_concatenated_wrapped_module_parts: RenderedConcatenatedModuleParts,
   pub json_module_inlined_prop: Option<Box<FxHashMap<SymbolId, ast::Expression<'ast>>>>,
   /// Reference ids of `import.meta.ROLLDOWN_FILE_URL_*` accesses that no emitted file matches.
@@ -1839,12 +1840,25 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
   #[expect(clippy::too_many_lines)]
   fn remove_unused_top_level_stmt(&mut self, program: &mut ast::Program<'ast>) -> usize {
     let mut last_import_stmt_idx = None;
+    let mut runtime_import_exec_order = 0;
 
     let old_body = program.body.take_in(self);
     // the first statement info is the namespace variable declaration
     // skip first statement info to make sure `program.body` has same index as `stmt_infos`
     old_body.into_iter().enumerate().zip(self.ctx.stmt_infos.iter_enumerated().skip(1)).for_each(
       |((_top_stmt_idx, mut top_stmt), (stmt_info_idx, stmt_info))| {
+        let mut defer_runtime_import = false;
+        if self.ctx.idx == self.ctx.runtime.id()
+          && let Some(import_decl) = top_stmt.as_import_declaration()
+          && let Some(module_idx) = self.ctx.module.import_records
+            [self.ctx.module.imports[&import_decl.node_id()]]
+            .resolved_module
+        {
+          runtime_import_exec_order =
+            runtime_import_exec_order.max(self.ctx.modules[module_idx].exec_order());
+          defer_runtime_import = import_decl.specifiers.as_ref().is_none_or(|list| list.is_empty())
+            && self.ctx.chunk_graph.module_to_chunk[module_idx] == Some(self.ctx.chunk_idx);
+        }
         let is_order_runtime_stmt =
           self.ctx.order_wrap_state.forces_runtime_stmt(self.ctx.runtime, self.ctx.idx, stmt_info);
         let is_stmt_included =
@@ -2253,9 +2267,16 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
             };
           }
         }
-        program.body.push(top_stmt);
-        if is_module_decl {
-          last_import_stmt_idx = Some(program.body.len());
+        if defer_runtime_import {
+          // See internal-docs/code-splitting/implementation.md.
+          self
+            .deferred_runtime_imports
+            .push((runtime_import_exec_order, top_stmt.to_source_string()));
+        } else {
+          program.body.push(top_stmt);
+          if is_module_decl {
+            last_import_stmt_idx = Some(program.body.len());
+          }
         }
       },
     );

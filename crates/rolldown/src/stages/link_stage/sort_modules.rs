@@ -31,13 +31,14 @@ impl LinkStage<'_> {
   /// - We only ensure execution order is relative correct, which means imported/required modules are executed before the module that imports/require them.
   #[tracing::instrument(level = "debug", skip_all)]
   pub(super) fn sort_modules(&mut self) {
-    // The runtime module should always be the first module to be executed
+    // See internal-docs/linking/module-execution-order/implementation.md.
+    let runtime_id = self.runtime.id();
     let mut execution_stack = self
       .entries
       .keys()
       .rev()
       .map(|&module_idx| Status::ToBeExecuted(module_idx))
-      .chain(iter::once(Status::ToBeExecuted(self.runtime.id())))
+      .chain(iter::once(Status::ToBeExecuted(runtime_id)))
       .collect::<Vec<_>>();
 
     let mut next_exec_order = 0;
@@ -93,6 +94,19 @@ impl LinkStage<'_> {
           }
         }
         Status::WaitForExit(id) => {
+          debug_assert!(stack_indexes_of_executing_id.contains_key(&id));
+          stack_indexes_of_executing_id.remove(&id);
+          if !self.metas[id].wrap_kind().is_none()
+            && self.module_table[runtime_id].exec_order() == u32::MAX
+          {
+            let runtime = self.module_table[runtime_id].as_normal_mut().unwrap();
+            runtime.exec_order = next_exec_order;
+            sorted_modules.push(runtime_id);
+            next_exec_order += 1;
+          }
+          if id == runtime_id && self.module_table[id].exec_order() != u32::MAX {
+            continue;
+          }
           match &mut self.module_table[id] {
             Module::Normal(module) => {
               debug_assert_eq!(module.exec_order, u32::MAX);
@@ -105,8 +119,6 @@ impl LinkStage<'_> {
             }
           }
           next_exec_order += 1;
-          debug_assert!(stack_indexes_of_executing_id.contains_key(&id));
-          stack_indexes_of_executing_id.remove(&id);
         }
       }
     }
@@ -122,10 +134,13 @@ impl LinkStage<'_> {
     }
 
     self.sorted_modules = sorted_modules;
-    debug_assert_eq!(
-      self.sorted_modules.first().copied(),
-      Some(self.runtime.id()),
-      "runtime module should always be the first module in the sorted modules"
+    debug_assert!(
+      self
+        .sorted_modules
+        .iter()
+        .take_while(|&&id| id != runtime_id)
+        .all(|&id| self.metas[id].wrap_kind().is_none()),
+      "runtime helpers should execute before wrapped modules"
     );
   }
 }

@@ -1138,10 +1138,6 @@ impl GenerateStage<'_> {
     let Some(runtime_module) = module_table[runtime_module_idx].as_normal() else {
       return;
     };
-    if Self::runtime_has_live_internal_import(runtime_module, runtime_chunk_idx, chunk_graph) {
-      return;
-    }
-
     let runtime_chunk = &chunk_graph.chunk_table[runtime_chunk_idx];
     if runtime_chunk.modules.len() != 1 || runtime_chunk.modules[0] != runtime_module_idx {
       return;
@@ -1200,6 +1196,14 @@ impl GenerateStage<'_> {
       return;
     };
     if target_chunk_idx == runtime_chunk_idx {
+      return;
+    }
+    // See internal-docs/code-splitting/implementation.md.
+    if Self::runtime_has_live_internal_import_outside_host(
+      runtime_module,
+      target_chunk_idx,
+      chunk_graph,
+    ) {
       return;
     }
     let runtime_chunk_helpers =
@@ -1266,18 +1270,18 @@ impl GenerateStage<'_> {
     .then_some(host)
   }
 
-  fn runtime_has_live_internal_import(
+  fn runtime_has_live_internal_import_outside_host(
     runtime_module: &NormalModule,
-    runtime_chunk_idx: ChunkIdx,
+    host_chunk_idx: ChunkIdx,
     chunk_graph: &ChunkGraph,
   ) -> bool {
     runtime_module
       .import_records
       .iter()
       .filter_map(|rec| chunk_graph.module_to_chunk[rec.resolved_module?])
-      .any(|target_chunk_idx| {
-        target_chunk_idx != runtime_chunk_idx
-          && !chunk_graph.post_chunk_optimization_operations.contains_key(&target_chunk_idx)
+      .any(|import_chunk_idx| {
+        import_chunk_idx != host_chunk_idx
+          && !chunk_graph.post_chunk_optimization_operations.contains_key(&import_chunk_idx)
       })
   }
 

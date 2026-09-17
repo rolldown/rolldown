@@ -8,6 +8,7 @@ use rolldown_common::{
 pub type FinalizerMutableFields = (
   FxIndexMap<ImportRecordIdx, String>, // transferred_import_record
   RenderedConcatenatedModuleParts,     // rendered_concatenated_wrapped_module_parts
+  Vec<(u32, String)>,                  // deferred_runtime_imports
   Vec<BuildDiagnostic>,                // diagnostics
 );
 
@@ -147,6 +148,7 @@ impl<'me> ScopeHoistingFinalizerContext<'me> {
         needs_hosted_top_level_binding: false,
         module_namespace_included,
         transferred_import_record,
+        deferred_runtime_imports: vec![],
         rendered_concatenated_wrapped_module_parts: RenderedConcatenatedModuleParts::default(),
         json_module_inlined_prop: need_inline_json_prop.then(|| Box::new(FxHashMap::default())),
         missing_file_reference_ids: FxIndexMap::default(),
@@ -201,6 +203,7 @@ impl<'me> ScopeHoistingFinalizerContext<'me> {
       (
         finalizer.transferred_import_record,
         finalizer.rendered_concatenated_wrapped_module_parts,
+        finalizer.deferred_runtime_imports,
         diagnostics,
       )
     })

@@ -77,21 +77,26 @@ impl GenerateStage<'_> {
           let (
             transferred_import_record,
             rendered_concatenated_wrapped_module_parts,
+            deferred_runtime_imports,
             module_diagnostics,
           ) = ctx.finalize_normal_module(ast, ast_scope);
 
           let payload = (!transferred_import_record.is_empty()
             || !matches!(concatenated_wrapped_module_kind, ConcatenateWrappedModuleKind::None))
           .then_some((idx, transferred_import_record, rendered_concatenated_wrapped_module_parts));
-          Some((payload, module_diagnostics))
+          Some((payload, idx, deferred_runtime_imports, module_diagnostics))
         })
         .collect::<Vec<_>>()
     });
 
     let mut normalized_transfer_parts_rendered_maps = FxHashMap::default();
     let mut diagnostics = vec![];
-    for (payload, module_diagnostics) in finalized {
+    for (payload, idx, deferred_runtime_imports, module_diagnostics) in finalized {
       diagnostics.extend(module_diagnostics);
+      if !deferred_runtime_imports.is_empty() {
+        let chunk_idx = chunk_graph.module_to_chunk[idx].expect("should have chunk idx");
+        chunk_graph.chunk_table[chunk_idx].deferred_runtime_imports = deferred_runtime_imports;
+      }
       let Some((idx, transferred_import_record, rendered_concatenated_module_parts)) = payload
       else {
         continue;

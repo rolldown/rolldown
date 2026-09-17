@@ -147,11 +147,11 @@ impl BuildEvent for PluginTimings {
       let mut listed_ms = 0.0;
       for row in &self.measured {
         listed_ms += row.ms;
-        out.push_str("\n  - ");
-        write_callback_owner(&mut out, row);
         let _ = write!(
           out,
-          " {} ({}%, {}, {} call{})",
+          "\n  - {}{} {} ({}%, {}, {} call{})",
+          owner_prefix(row.kind),
+          row.owner,
           row.hook,
           share(row.ms),
           format_duration(row.ms),
@@ -164,7 +164,7 @@ impl BuildEvent for PluginTimings {
         let _ = write!(out, "\n  … and {} more callbacks over 1s", self.measured_hidden);
       }
       // These sentences explain the gap between the headline and the rows. Without them, a
-      // reader cannot tell whether the gap is unmeasurable callbacks, callbacks under the floor,
+      // reader cannot tell whether the gap is unmeasurable hooks, callbacks under the floor,
       // or core work. The comparison uses unclamped percentages: with both clamped at 100%,
       // the shares hide a real difference in either direction. The rows are a sum of spans
       // and the headline is their union. The sign of the difference is meaningful, but its
@@ -191,7 +191,7 @@ impl BuildEvent for PluginTimings {
           targets.push("callbacks under 1s");
         }
         // The sentence shows no numbers. If it showed the sum next to the headline, a reader
-        // would subtract them, and that difference is not the time of the omitted hooks. A
+        // would subtract them, and that difference is not the time of the omitted callbacks. A
         // gap with nothing omitted cannot happen, because a union is at most the sum of its
         // spans. But a sentence that ends in nothing is worse than no sentence, so the check
         // stays.
@@ -215,9 +215,15 @@ impl BuildEvent for PluginTimings {
         plural(u32::try_from(total).unwrap_or(u32::MAX)),
       );
       for row in &self.unmeasurable {
-        out.push_str("\n  - ");
-        write_callback_owner(&mut out, row);
-        let _ = write!(out, " {} ({} call{})", row.hook, row.calls, plural(row.calls));
+        let _ = write!(
+          out,
+          "\n  - {}{} {} ({} call{})",
+          owner_prefix(row.kind),
+          row.owner,
+          row.hook,
+          row.calls,
+          plural(row.calls)
+        );
       }
       if self.unmeasurable_hidden > 0 {
         let _ = write!(out, "\n  … and {} more", self.unmeasurable_hidden);
@@ -229,13 +235,13 @@ impl BuildEvent for PluginTimings {
   }
 }
 
-fn write_callback_owner(out: &mut String, row: &PluginTiming) {
-  match row.kind {
-    PluginTimingKind::Plugin => {
-      let _ = write!(out, "plugin {}", row.owner);
-    }
-    PluginTimingKind::OutputOption => out.push_str("output options"),
-    PluginTimingKind::InputOption => out.push_str("input options"),
+/// The owners the core invokes directly already name themselves — `input options`,
+/// `output options`. Only a plugin name needs saying what it is, which also keeps a plugin
+/// called `output options` from reading like one of them.
+fn owner_prefix(kind: PluginTimingKind) -> &'static str {
+  match kind {
+    PluginTimingKind::Plugin => "plugin ",
+    PluginTimingKind::OutputOption | PluginTimingKind::InputOption => "",
   }
 }
 
@@ -290,7 +296,7 @@ mod tests {
         row("slow-plugin", "transform", 6_000.0, 500, 1),
         row_with_kind(
           PluginTimingKind::OutputOption,
-          "ignored",
+          "output options",
           "codeSplitting groups[].name",
           2_000.0,
           900,
@@ -331,7 +337,14 @@ mod tests {
     let message = render(
       10_000.0,
       8_000.0,
-      vec![row_with_kind(PluginTimingKind::InputOption, "ignored", "external", 5_000.0, 9, 4)],
+      vec![row_with_kind(
+        PluginTimingKind::InputOption,
+        "input options",
+        "external",
+        5_000.0,
+        9,
+        4,
+      )],
     )
     .unwrap();
 
@@ -368,7 +381,7 @@ mod tests {
     .unwrap();
     // No row here is under the floor, so the sentence must not name such rows. The sentence
     // has no arithmetic: the rows are a sum of spans and the headline is their union, so
-    // their difference is not the cost of the omitted hooks.
+    // their difference is not the cost of the omitted callbacks.
     assert!(
       message.contains("Additional callback time came from the callbacks below."),
       "{message}"

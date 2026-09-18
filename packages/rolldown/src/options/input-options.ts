@@ -224,6 +224,14 @@ export type DevModeOptions =
        */
       skipCommonRuntimeInjection?: boolean;
       lazy?: boolean;
+      /**
+       * Public base path of the dev server.
+       *
+       * URLs of dev-server endpoints referenced from generated code (currently the
+       * lazy compilation endpoint `/@vite/lazy`) are prefixed with it.
+       * @default '/'
+       */
+      base?: string;
     };
 
 export type OptimizationOptions = {

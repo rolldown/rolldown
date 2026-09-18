@@ -1,0 +1,8 @@
+{
+  "_comment": "A constant imported through a static cycle can still be in its TDZ. The coercion in b.js must stay and throw.",
+  "config": {
+    "input": [{ "name": "main", "import": "./a.js" }],
+    "minify": false
+  },
+  "snapshot": false
+}

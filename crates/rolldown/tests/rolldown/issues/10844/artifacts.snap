@@ -1,0 +1,58 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+//#region src/cycle-b.js
+function b() {
+	return "b";
+}
+function lazy() {
+	return Promise.resolve().then(() => (init_cycle_a(), cycle_a_exports));
+}
+var init_cycle_b = __esmMin((() => {
+	init_cycle_a();
+}));
+//#endregion
+//#region src/m1.js
+function m1() {
+	return "m1";
+}
+//#endregion
+//#region src/m2.js
+function m2() {
+	return "m2";
+}
+//#endregion
+//#region src/messages-index.js
+var init_messages_index = __esmMin((() => {}));
+//#endregion
+//#region src/messages.js
+var init_messages = __esmMin((() => {
+	init_messages_index();
+}));
+//#endregion
+//#region src/cycle-a.js
+var cycle_a_exports = /* @__PURE__ */ __exportAll({ hub: () => hub });
+function hub() {
+	return m1() + m2() + b();
+}
+var init_cycle_a = __esmMin((() => {
+	init_cycle_b();
+	init_messages();
+}));
+//#endregion
+//#region main.js
+init_cycle_a();
+init_cycle_b();
+if (hub() !== "m1m2b") throw new Error(`expected hub() to be 'm1m2b', got '${hub()}'`);
+lazy().then((mod) => {
+	if (mod.hub() !== "m1m2b") throw new Error(`expected lazily imported hub() to be 'm1m2b', got '${mod.hub()}'`);
+});
+//#endregion
+
+```

@@ -1992,8 +1992,19 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
                     false,
                     false,
                   );
-                  let mut init_expr =
-                    ast::Expression::new_call_expression(SPAN, wrapper_ref, None, [], false, self);
+                  // Mirror `wrapped_esm_init_call_expr`'s `/* @__PURE__ */` annotation: a re-export
+                  // target whose `__esm` closure is empty has a no-op `init_*()`, and without the
+                  // annotation neither the call nor the empty wrapper it keeps alive can be
+                  // dropped by the default `dce-only` minify.
+                  let mut init_expr = ast::Expression::new_call_expression_with_pure(
+                    SPAN,
+                    wrapper_ref,
+                    None,
+                    [],
+                    false,
+                    self.ctx.final_esm_init_metadata.init_is_noop(importee.idx),
+                    self,
+                  );
                   if importee_linking_info.is_tla_or_contains_tla_dependency {
                     init_expr = ast::Expression::new_await_expression(SPAN, init_expr, self);
                   }

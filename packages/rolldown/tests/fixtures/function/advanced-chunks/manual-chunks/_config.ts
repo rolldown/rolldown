@@ -36,8 +36,8 @@ export default defineTest({
     const otherLibs = findChunkStartWith('other-libs-');
 
     expect(ui.moduleIds).toMatchObject([/lib-ui[\\/]index.js$/]);
-
     expect(otherLibs.moduleIds).toMatchObject([
+      /\0rolldown[\\/]runtime.js$/,
       /lib-npm-a[\\/]index.js$/,
       /lib-npm-b[\\/]index.js$/,
     ]);

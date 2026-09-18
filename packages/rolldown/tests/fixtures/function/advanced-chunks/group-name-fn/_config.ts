@@ -44,6 +44,7 @@ export default defineTest({
     expect(ui.moduleIds).toMatchObject([/lib-ui[\\/]index.js$/]);
 
     expect(otherLibs.moduleIds).toMatchObject([
+      /\0rolldown[\\/]runtime.js$/,
       /lib-npm-a[\\/]index.js$/,
       /lib-npm-b[\\/]index.js$/,
     ]);

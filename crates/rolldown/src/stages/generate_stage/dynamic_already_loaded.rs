@@ -7,7 +7,7 @@ use rolldown_common::{
   UsedSymbolRefsBuilder, UsedSymbolRefsView, WrapKind,
   dynamic_import_usage::DynamicImportExportsUsage,
 };
-use rolldown_utils::BitSet;
+use rolldown_utils::{BitSet, IndexBitSet};
 use rustc_hash::{FxHashMap, FxHashSet};
 
 use crate::chunk_graph::ChunkGraph;
@@ -56,6 +56,7 @@ impl GenerateStage<'_> {
   pub(super) fn optimize_dynamic_entry_bits(
     &mut self,
     index_splitting_info: &mut IndexSplittingInfo,
+    module_is_assigned: &IndexBitSet<ModuleIdx>,
     chunk_graph: &mut ChunkGraph,
     entries_len: u32,
     used_symbol_refs_builder: &mut UsedSymbolRefsBuilder,
@@ -103,43 +104,57 @@ impl GenerateStage<'_> {
     );
 
     let mut changed = false;
-    for atom_idx in 0..atoms.len() {
-      let original_dependent_entries = atoms[atom_idx].dependent_entries.clone();
-      let dependent_entries = atoms[atom_idx].dependent_entries.index_of_one().collect::<Vec<_>>();
-      let atom_bit: u32 = atom_idx.try_into().expect("Too many atoms, u32 overflowed.");
-      for entry_idx in dependent_entries {
-        if already_loaded_atoms_by_entry[entry_idx as usize].has_bit(atom_bit) {
-          atoms[atom_idx].dependent_entries.clear_bit(entry_idx);
+    loop {
+      let mut any_committed = false;
+      for atom_idx in 0..atoms.len() {
+        let original_dependent_entries = atoms[atom_idx].dependent_entries.clone();
+        let dependent_entries =
+          atoms[atom_idx].dependent_entries.index_of_one().collect::<Vec<_>>();
+        let atom_bit: u32 = atom_idx.try_into().expect("Too many atoms, u32 overflowed.");
+        for entry_idx in dependent_entries {
+          if already_loaded_atoms_by_entry[entry_idx as usize].has_bit(atom_bit) {
+            let module_idxs = &atoms[atom_idx].modules;
+
+            if should_skip_entry(module_idxs, module_is_assigned) {
+              continue;
+            }
+
+            atoms[atom_idx].dependent_entries.clear_bit(entry_idx);
+          }
+        }
+        let action = if atoms[atom_idx].dependent_entries == original_dependent_entries {
+          ReducedEntriesAction::Avoid
+        } else {
+          self.can_use_reduced_dependent_entries(
+            &atoms[atom_idx],
+            &original_dependent_entries,
+            &atoms[atom_idx].dependent_entries,
+            chunk_graph,
+            &dynamic_entry_modules_by_entry,
+          )
+        };
+        if !matches!(action, ReducedEntriesAction::Avoid)
+          && !Self::reduced_atom_graph_has_static_cycle(
+            &atoms,
+            &atom_dependencies.cycle,
+            &host_atom_by_entry_bit,
+          )
+        {
+          any_committed = true;
+          changed = true;
+          if let ReducedEntriesAction::ApplyWithNamespaceExtraction {
+            entry_chunk_idx,
+            entry_module_idx,
+          } = action
+          {
+            namespace_extractions.insert((entry_chunk_idx, entry_module_idx));
+          }
+        } else {
+          atoms[atom_idx].dependent_entries = original_dependent_entries;
         }
       }
-      let action = if atoms[atom_idx].dependent_entries == original_dependent_entries {
-        ReducedEntriesAction::Avoid
-      } else {
-        self.can_use_reduced_dependent_entries(
-          &atoms[atom_idx],
-          &original_dependent_entries,
-          &atoms[atom_idx].dependent_entries,
-          chunk_graph,
-          &dynamic_entry_modules_by_entry,
-        )
-      };
-      if !matches!(action, ReducedEntriesAction::Avoid)
-        && !Self::reduced_atom_graph_has_static_cycle(
-          &atoms,
-          &atom_dependencies.cycle,
-          &host_atom_by_entry_bit,
-        )
-      {
-        changed = true;
-        if let ReducedEntriesAction::ApplyWithNamespaceExtraction {
-          entry_chunk_idx,
-          entry_module_idx,
-        } = action
-        {
-          namespace_extractions.insert((entry_chunk_idx, entry_module_idx));
-        }
-      } else {
-        atoms[atom_idx].dependent_entries = original_dependent_entries;
+      if !any_committed {
+        break;
       }
     }
 
@@ -403,18 +418,21 @@ impl GenerateStage<'_> {
           }
           continue;
         }
+
         for dep_module_idx in self.predicted_static_import_targets(module_idx) {
           add(dep_module_idx, &mut reachability_deps);
           add(dep_module_idx, &mut cycle_deps);
         }
 
         let mut service_targets = vec![];
+
         self.entry_export_service_targets(
           module_idx,
           used_symbol_refs_builder.view(),
           true,
           &mut service_targets,
         );
+
         for dep_module_idx in service_targets {
           add(dep_module_idx, &mut cycle_deps);
         }
@@ -722,6 +740,7 @@ impl GenerateStage<'_> {
         for importer_entry_idx in index_splitting_info[*importer_idx].bits.index_of_one() {
           dynamically_dependent_entries_by_dynamic_entry[dynamic_entry_idx]
             .set_bit(importer_entry_idx);
+
           dynamic_imports_by_entry[importer_entry_idx as usize].set_bit(dynamic_entry_bit);
         }
       }
@@ -898,4 +917,13 @@ impl GenerateStage<'_> {
 
     already_loaded_atoms_by_entry
   }
+}
+
+fn should_skip_entry(module_idxs: &[ModuleIdx], captured_modules: &IndexBitSet<ModuleIdx>) -> bool {
+  for module_id in module_idxs {
+    if captured_modules.has_bit(*module_id) {
+      return true;
+    }
+  }
+  false
 }

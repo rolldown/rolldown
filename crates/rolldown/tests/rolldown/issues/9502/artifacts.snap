@@ -3,18 +3,10 @@ source: crates/rolldown_testing/src/integration_test.rs
 ---
 # Assets
 
-## rolldown-runtime.js
-
-```js
-// HIDDEN [\0rolldown/runtime.js]
-export { __esmMin as n, __exportAll as r, __commonJSMin as t };
-
-```
-
 ## shared.js
 
 ```js
-import { n as __esmMin, r as __exportAll } from "./rolldown-runtime.js";
+// HIDDEN [\0rolldown/runtime.js]
 //#region shared.js
 var shared_exports = /* @__PURE__ */ __exportAll({ extend: () => extend });
 var extend;
@@ -22,7 +14,7 @@ var init_shared = __esmMin((() => {
 	extend = Object.assign;
 }));
 //#endregion
-export { init_shared as n, shared_exports as r, extend as t };
+export { __exportAll as a, __commonJSMin as i, init_shared as n, shared_exports as r, extend as t };
 
 ```
 
@@ -40,8 +32,7 @@ export { slot };
 ## vue.js
 
 ```js
-import { r as __exportAll, t as __commonJSMin } from "./rolldown-runtime.js";
-import { n as init_shared, t as extend } from "./shared.js";
+import { a as __exportAll, i as __commonJSMin, n as init_shared, t as extend } from "./shared.js";
 //#region compiler-core.cjs
 var require_compiler_core = /* @__PURE__ */ __commonJSMin((() => {
 	init_shared();

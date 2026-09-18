@@ -22,6 +22,8 @@ pub enum InvalidOptionType {
   HashLengthTooShort { pattern_name: String, received: usize, min: usize, chunk_count: u32 },
   InvalidEmittedFileName(String),
   NulByteInFilename { pattern_name: String },
+  InlineCommonChunksInvalidMaxSize(String),
+  InlineCommonChunksRequirement(&'static str),
 }
 
 #[derive(Debug)]
@@ -109,6 +111,12 @@ impl BuildEvent for InvalidOption {
         }
         InvalidOptionType::NulByteInFilename { pattern_name } => {
           format!("The \"{pattern_name}\" pattern (or the value returned from the function) would result in a filename with invalid null byte(s) (\\0). This is usually caused by using virtual module IDs (which start with \\0) directly in filenames. Use the module ID without the \\0 prefix, or filter out virtual modules from chunk.moduleIds.")
+        }
+        InvalidOptionType::InlineCommonChunksInvalidMaxSize(value) => {
+          format!("Invalid value {value} for option \"output.codeSplitting.experimentalInlineCommonChunks.maxSize\" - it must be a non-negative safe integer (`0` disables the feature).")
+        }
+        InvalidOptionType::InlineCommonChunksRequirement(requirement) => {
+          format!("Invalid option combination for \"output.codeSplitting.experimentalInlineCommonChunks\" - a `maxSize` greater than 0 requires {requirement}.")
         }
     }
   }

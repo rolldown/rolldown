@@ -1,0 +1,108 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## a.js
+
+```js
+import { i as __share_require, n as __share, r as __share_export, t as __esmMin } from "./rolldown-runtime.js";
+__share("shared", (exports) => {
+	//#region shared.js
+	function bump() {
+		count += 1;
+		return count;
+	}
+	var count;
+	function init_shared() {
+		return (init_shared = __esmMin((() => {
+			globalThis.events.push("S body");
+			count = 0;
+		})))();
+	}
+	//#endregion
+	__share_export(exports, {
+		n: () => count,
+		r: () => init_shared,
+		t: () => bump
+	});
+});
+var share_shared = __share_require("shared");
+//#region a.js
+function init_a() {
+	return (init_a = __esmMin((() => {
+		share_shared.r();
+		globalThis.events.push("A " + share_shared.n + " " + (0, share_shared.t)());
+	})))();
+}
+//#endregion
+init_a();
+
+```
+
+## b.js
+
+```js
+import { i as __share_require, n as __share, r as __share_export, t as __esmMin } from "./rolldown-runtime.js";
+__share("shared", (exports) => {
+	//#region shared.js
+	function bump() {
+		count += 1;
+		return count;
+	}
+	var count;
+	function init_shared() {
+		return (init_shared = __esmMin((() => {
+			globalThis.events.push("S body");
+			count = 0;
+		})))();
+	}
+	//#endregion
+	__share_export(exports, {
+		n: () => count,
+		r: () => init_shared,
+		t: () => bump
+	});
+});
+var share_shared = __share_require("shared");
+//#region b.js
+function init_b() {
+	return (init_b = __esmMin((() => {
+		share_shared.r();
+		globalThis.events.push("B " + share_shared.n + " " + (0, share_shared.t)());
+	})))();
+}
+//#endregion
+init_b();
+
+```
+
+## rolldown-runtime.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+export { __share_require as i, __share as n, __share_export as r, __esmMin as t };
+
+```
+
+# Variant: minify: [minify: true]
+
+## Assets
+
+### a.js
+
+```js
+import{i as e,n as t,r as n,t as r}from"./rolldown-runtime.js";t(`shared`,e=>{function t(){return i+=1,i}var i;function a(){return(a=r((()=>{globalThis.events.push(`S body`),i=0})))()}n(e,{n:()=>i,r:()=>a,t:()=>t})});var i=e(`shared`);function a(){return(a=r((()=>{i.r(),globalThis.events.push(`A `+i.n+` `+(0,i.t)())})))()}a();
+```
+
+### b.js
+
+```js
+import{i as e,n as t,r as n,t as r}from"./rolldown-runtime.js";t(`shared`,e=>{function t(){return i+=1,i}var i;function a(){return(a=r((()=>{globalThis.events.push(`S body`),i=0})))()}n(e,{n:()=>i,r:()=>a,t:()=>t})});var i=e(`shared`);function a(){return(a=r((()=>{i.r(),globalThis.events.push(`B `+i.n+` `+(0,i.t)())})))()}a();
+```
+
+### rolldown-runtime.js
+
+```js
+var e=Object.create,t=Object.defineProperty,n=(e,t,n)=>()=>{if(n)throw n[0];try{return e&&(t=e(e=0)),t}catch(e){throw n=[e],e}},r=/* @__PURE__ */ e(null),i=/* @__PURE__ */ e(null),a=(e,t)=>{e in r||(r[e]=t)},o=e=>{var t=i[e];if(t){if(t.failed)throw t.error;return t.exports}var n=r[e];if(!n)throw Error(`Shared chunk "`+e+`" was not registered before it was required.`);t=i[e]={exports:{},failed:!1,error:void 0};try{n(t.exports)}catch(e){throw t.failed=!0,t.error=e,e}return t.exports},s=(e,n)=>{for(var r in n)t(e,r,{get:n[r],enumerable:!0})};export{o as i,a as n,s as r,n as t};
+```

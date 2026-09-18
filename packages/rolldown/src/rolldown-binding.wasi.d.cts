@@ -2422,6 +2422,15 @@ export interface BindingInjectImportNamespace {
   from: string
 }
 
+/**
+ * `output.codeSplitting.experimentalInlineCommonChunks`. `exclude` entries use the same shape
+ * as `BindingMatchGroup.test`, including the batched function shim.
+ */
+export interface BindingInlineCommonChunksOptions {
+  maxSize?: number
+  exclude?: Array<string | RegExp | ((ids: Array<string>) => Uint8Array)>
+}
+
 export interface BindingInlineConstConfig {
   mode?: string
   pass?: number
@@ -2548,6 +2557,7 @@ export interface BindingManualCodeSplittingOptions {
   maxSize?: number
   minModuleSize?: number
   maxModuleSize?: number
+  experimentalInlineCommonChunks?: BindingInlineCommonChunksOptions
   internalInvalidateModuleInfoCache?: () => void
 }
 

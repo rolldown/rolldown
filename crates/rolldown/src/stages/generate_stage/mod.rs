@@ -39,6 +39,10 @@ struct PreGeneratedChunkName {
 
 type DevtoolsPackageInfoEntry = (action::PackageInfo, FxIndexSet<String>, FxIndexSet<u32>);
 
+/// Representative chunk names keyed by chunk, plus the registry id of every inline common chunk
+/// record (records have a name but no file).
+type ChunkNamingResult = (FxHashMap<ChunkIdx, ArcStr>, Vec<(ChunkIdx, ArcStr)>);
+
 fn is_devtools_source_importer(module_id: &str, cwd: &str, cwd_slash: &str) -> bool {
   fn is_path_inside(path: &str, parent: &str) -> bool {
     let parent = parent.trim_end_matches(['/', '\\']);
@@ -89,8 +93,9 @@ use crate::{
   type_alias::IndexEcmaAst,
   types::generator::GenerateContext,
   utils::chunk::{
-    deconflict_chunk_symbols::deconflict_chunk_symbols,
-    determine_export_mode::determine_export_mode, generate_pre_rendered_chunk,
+    deconflict_chunk_symbols::{InlineDeconflictPlan, deconflict_chunk_symbols},
+    determine_export_mode::determine_export_mode,
+    generate_pre_rendered_chunk,
     render_chunk_exports::get_chunk_export_names,
   },
   utils::external_import_interop::ChunkAssignments,
@@ -105,6 +110,7 @@ mod detect_ineffective_dynamic_imports;
 mod dynamic_already_loaded;
 mod finalize_chunk_plan;
 mod finalize_modules;
+mod inline_common_chunks;
 mod manual_code_splitting;
 mod minify_chunks;
 mod order_analysis;
@@ -117,6 +123,7 @@ mod runtime_module_sweep;
 mod simulated_facade_inclusion;
 
 pub use compute_wrapped_esm_init_metadata::{FinalEsmInitMetadata, Sealed};
+pub use inline_common_chunks::InlineCommonChunksState;
 
 pub struct GenerateStage<'a> {
   link_output: &'a mut LinkStageOutput,
@@ -130,6 +137,8 @@ pub struct GenerateStage<'a> {
   /// `paths` option, it is resolved asynchronously here before entering sync rendering code,
   /// avoiding the need for `invoke_sync` which can cause deadlocks.
   resolved_paths: Option<PathsOutputOption>,
+  /// Decisions of `experimentalInlineCommonChunks`; disabled (and empty) unless the option is on.
+  inline_state: InlineCommonChunksState,
 }
 
 impl<'a> GenerateStage<'a> {
@@ -139,7 +148,14 @@ impl<'a> GenerateStage<'a> {
     options: &'a SharedOptions,
     plugin_driver: &'a SharedPluginDriver,
   ) -> Self {
-    Self { link_output, ast_table, options, plugin_driver, resolved_paths: None }
+    Self {
+      link_output,
+      ast_table,
+      options,
+      plugin_driver,
+      resolved_paths: None,
+      inline_state: InlineCommonChunksState::default(),
+    }
   }
 
   #[tracing::instrument(level = "debug", skip_all)]
@@ -148,6 +164,7 @@ impl<'a> GenerateStage<'a> {
     mut used_symbol_refs_builder: UsedSymbolRefsBuilder,
   ) -> BuildResult<BundleOutput> {
     self.plugin_driver.render_start(self.options).await?;
+    self.prepare_inline_common_chunks().await?;
     let mut chunk_graph = self.generate_chunks(&mut used_symbol_refs_builder).await?;
 
     let order_state = self.finalize_chunk_plan(&mut chunk_graph, &mut used_symbol_refs_builder)?;
@@ -167,6 +184,9 @@ impl<'a> GenerateStage<'a> {
       &order_state,
       &final_esm_init_metadata,
     );
+    // Records stayed live chunks through the pass above, so their own edges are derived like
+    // any other chunk's; this turns those logical edges into the physical file graph.
+    self.apply_inline_common_chunks_links(&mut chunk_graph);
 
     self.ensure_lazy_module_initialization_order(&mut chunk_graph);
 
@@ -184,8 +204,11 @@ impl<'a> GenerateStage<'a> {
     if !warnings.is_empty() {
       self.link_output.diagnostics.extend(warnings);
     }
-    let index_chunk_id_to_name =
+    let (index_chunk_id_to_name, inline_record_ids) =
       self.generate_chunk_name_and_preliminary_filenames(&mut chunk_graph).await?;
+    for (chunk_idx, id) in inline_record_ids {
+      self.inline_state.set_record_id(chunk_idx, id);
+    }
     set_emitted_chunk_preliminary_filenames(&self.plugin_driver.file_emitter, &chunk_graph);
 
     let rendered_modules =
@@ -204,6 +227,15 @@ impl<'a> GenerateStage<'a> {
           .is_some_and(|rendered_modules| rendered_modules.contains(&importer_idx))
       },
     );
+    // Inline common chunk records are named first, one after another: a record's names are fixed
+    // once, then shared by every file that prints it, so those files reserve them below.
+    let inline_deconflict_plans = self.deconflict_inline_records(
+      &mut chunk_graph,
+      &order_state,
+      &order_live_symbols,
+      self.options.format,
+      &index_chunk_id_to_name,
+    );
     debug_span!("deconflict_chunk_symbols").in_scope(|| {
       // Borrow the chunk table mutably alongside the assignment tables it does not touch, so
       // deconflicting can attribute recorded external interop to the chunk it belongs to.
@@ -211,18 +243,30 @@ impl<'a> GenerateStage<'a> {
         &mut chunk_graph;
       let chunk_assignments =
         ChunkAssignments::new(&*module_to_chunk, &*post_chunk_optimization_operations);
-      chunk_table.par_iter_mut_enumerated().for_each(|(chunk_idx, chunk)| {
-        deconflict_chunk_symbols(
-          chunk_idx,
-          chunk,
-          self.link_output,
-          &order_state,
-          &order_live_symbols,
-          self.options.format,
-          &index_chunk_id_to_name,
-          chunk_assignments,
-        );
-      });
+      let inline_state = &self.inline_state;
+      let no_inline_plan = InlineDeconflictPlan::default();
+      let inline_outputs = chunk_table
+        .par_iter_mut_enumerated()
+        .filter(|(chunk_idx, _)| !inline_state.is_record(*chunk_idx))
+        .map(|(chunk_idx, chunk)| {
+          let output = deconflict_chunk_symbols(
+            chunk_idx,
+            chunk,
+            self.link_output,
+            &order_state,
+            &order_live_symbols,
+            self.options.format,
+            &index_chunk_id_to_name,
+            chunk_assignments,
+            inline_deconflict_plans.get(&chunk_idx).unwrap_or(&no_inline_plan),
+            false,
+          );
+          (chunk_idx, output)
+        })
+        .collect::<Vec<_>>();
+      for (chunk_idx, output) in inline_outputs {
+        self.inline_state.set_bridge_names(chunk_idx, output.bridge_names);
+      }
     });
 
     // Pre-resolve paths for external modules to avoid sync JS callbacks during rendering.
@@ -256,7 +300,7 @@ impl<'a> GenerateStage<'a> {
   async fn generate_chunk_name_and_preliminary_filenames(
     &self,
     chunk_graph: &mut ChunkGraph,
-  ) -> BuildResult<FxHashMap<ChunkIdx, ArcStr>> {
+  ) -> BuildResult<ChunkNamingResult> {
     let modules = &self.link_output.module_table.modules;
 
     let mut index_chunk_id_to_representative_name = FxHashMap::default();
@@ -392,11 +436,25 @@ impl<'a> GenerateStage<'a> {
 
     let mut index_pre_generated_names: IndexVec<ChunkIdx, PreGeneratedChunkName> =
       try_join_all(index_pre_generated_names_futures).await?.into();
+    let index_record_module_ids: FxHashMap<ChunkIdx, Vec<rolldown_common::ModuleId>> = self
+      .inline_state
+      .record_indices()
+      .map(|record_idx| {
+        let module_ids = chunk_graph.chunk_table[record_idx]
+          .modules
+          .iter()
+          .map(|module_idx| modules[*module_idx].id().as_str().into())
+          .collect();
+        (record_idx, module_ids)
+      })
+      .collect();
 
     let mut hash_placeholder_generator = HashPlaceholderGenerator::default();
 
     let used_name_counts = FxDashMap::default();
     let output_dir = absolutize_path_buf(self.options.cwd.join(&self.options.out_dir));
+    let mut used_record_ids: FxHashMap<ArcStr, u32> = FxHashMap::default();
+    let mut record_ids = Vec::new();
 
     for chunk_id in &chunk_graph.sorted_chunk_idx_vec {
       let chunk = &mut chunk_graph.chunk_table[*chunk_id];
@@ -410,8 +468,28 @@ impl<'a> GenerateStage<'a> {
       // Notice we didn't used deconflict name here, chunk names are allowed to be duplicated.
       index_chunk_id_to_representative_name
         .insert(*chunk_id, pre_generated_chunk_name.representative_chunk_name.clone());
-      let pre_rendered_chunk =
+      if self.inline_state.is_record(*chunk_id) {
+        // A record keeps the `[name]` a common chunk would get as its registry id, made unique
+        // within the build, but it is no file: no filename template runs and nothing below is
+        // assigned. See internal-docs/inline-common-chunks/implementation.md.
+        let chunk_name = pre_generated_chunk_name.chunk_name.clone();
+        let count = used_record_ids.entry(chunk_name.clone()).or_insert(0);
+        *count += 1;
+        let id =
+          if *count == 1 { chunk_name.clone() } else { format!("{chunk_name}{count}").into() };
+        record_ids.push((*chunk_id, id));
+        chunk.name = Some(chunk_name);
+        continue;
+      }
+      let mut pre_rendered_chunk =
         generate_pre_rendered_chunk(chunk, &pre_generated_chunk_name.chunk_name, self.link_output);
+      // The modules of every carried record are printed into this file, so `chunkFileNames` and
+      // the rendered chunk see them among `moduleIds`.
+      for record_idx in self.inline_state.carried_by(*chunk_id) {
+        pre_rendered_chunk
+          .module_ids
+          .extend(index_record_module_ids.get(record_idx).into_iter().flatten().cloned());
+      }
       let preliminary_filename = chunk
         .generate_preliminary_filename(
           self.options,
@@ -442,7 +520,7 @@ impl<'a> GenerateStage<'a> {
       chunk.preliminary_sourcemap_filename = preliminary_sourcemap_filename;
       chunk.pre_rendered_chunk = Some(pre_rendered_chunk);
     }
-    Ok(index_chunk_id_to_representative_name)
+    Ok((index_chunk_id_to_representative_name, record_ids))
   }
 
   fn compute_chunk_output_exports(
@@ -477,6 +555,8 @@ impl<'a> GenerateStage<'a> {
           render_export_items_index_vec: &IndexVec::default(),
           chunk_idx,
           resolved_paths: self.resolved_paths.as_ref(),
+          inline_state: &self.inline_state,
+          inline_renders: &FxHashMap::default(),
         },
         entry_module,
         &export_names,

@@ -12,6 +12,7 @@ pub mod filename_template;
 pub mod generated_code_options;
 pub mod hash_characters;
 pub mod inject_import;
+pub mod inline_common_chunks_options;
 pub mod input_item;
 pub mod invalidate_js_side_cache;
 pub mod is_external;

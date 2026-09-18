@@ -1014,6 +1014,41 @@ export type CodeSplittingGroup = {
 export type AdvancedChunksGroup = CodeSplittingGroup;
 
 /**
+ * Options for `codeSplitting.experimentalInlineCommonChunks`.
+ *
+ * Small common chunks produced by automatic code splitting are replaced by a factory function
+ * that is copied into every chunk reading them. A registry in the runtime chunk makes sure the
+ * chunk's modules keep one state, one execution and one set of export identities across all copies,
+ * so no entry downloads code it could not reach before.
+ *
+ * @experimental This feature is experimental. Its behavior and option shape may change in any release.
+ *
+ * @category Code Splitting
+ */
+export type ExperimentalInlineCommonChunksOptions = {
+  /**
+   * Common chunks whose pre-render size (the sum of the transformed source sizes of their modules,
+   * in bytes) is strictly smaller than this value are candidates for inlining.
+   *
+   * A value greater than `0` requires `output.format: 'es'`, `output.strictExecutionOrder: true`,
+   * an explicit `preserveEntrySignatures: false`, code splitting to be enabled, and
+   * `output.preserveModules`, `experimental.devMode` and `experimental.onDemandWrapping` to be off.
+   * Any other configuration is an error.
+   *
+   * @default 0
+   */
+  maxSize?: number;
+  /**
+   * Module id matchers with the same rules as {@linkcode CodeSplittingGroup.test | test}. A common
+   * chunk is kept as a file when any of its modules matches.
+   */
+  exclude?:
+    | StringOrRegExp
+    | CodeSplittingTestFunction
+    | Array<StringOrRegExp | CodeSplittingTestFunction>;
+};
+
+/**
  * Configuration options for advanced code splitting.
  *
  * @category Code Splitting
@@ -1047,6 +1082,12 @@ export type CodeSplittingOptions = {
    * Groups to be used for code splitting.
    */
   groups?: CodeSplittingGroup[];
+  /**
+   * Replace small automatic common chunks with factory copies in their consumers.
+   *
+   * @experimental This feature is experimental. Its behavior and option shape may change in any release.
+   */
+  experimentalInlineCommonChunks?: ExperimentalInlineCommonChunksOptions;
 };
 
 /**

@@ -285,6 +285,84 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
   fn wrapper_is_reachable_in_chunk(&self, wrapper_ref: SymbolRef) -> bool {
     let canonical_ref = self.ctx.symbol_db.canonical_ref_for(wrapper_ref);
     self.ctx.chunk.canonical_names.contains_key(&canonical_ref)
+      || self.inline_bridge_member(canonical_ref).is_some()
+  }
+
+  /// `Some((bridge, export_name))` when `canonical_ref` is owned by an inline common chunk record
+  /// this chunk reads: the reference renders as `bridge.export_name`, a live getter read.
+  /// See internal-docs/inline-common-chunks/implementation.md ("Consumer references").
+  fn inline_bridge_member(&self, canonical_ref: SymbolRef) -> Option<(&'me str, &'me str)> {
+    let owner_chunk = self.ctx.symbol_db.get(canonical_ref).chunk_idx?;
+    let bridge = self.ctx.inline_state.bridge_for_symbol_owner(self.ctx.chunk_idx, owner_chunk)?;
+    let export_name = self.ctx.chunk_graph.chunk_table[owner_chunk]
+      .exports_to_other_chunks
+      .get(&canonical_ref)?
+      .first()?;
+    Some((bridge.as_str(), export_name.as_str()))
+  }
+
+  /// `bridge.name`, or `bridge["name"]` when the export name is not an identifier, like the
+  /// other two sites that spell a bridge read (`inline_bridge_pattern`, the record's getter table).
+  fn bridge_member_expr(&self, bridge: &str, export_name: &str) -> Expression<'ast> {
+    if is_validate_identifier_name(export_name) {
+      Expression::new_member_access_expr(bridge, export_name, self)
+    } else {
+      Expression::new_computed_member_expression(
+        SPAN,
+        Expression::new_id_ref_expr(SPAN, bridge, self),
+        Expression::new_string_literal(
+          SPAN,
+          oxc::ast::ast::Str::from_str_in(export_name, self),
+          None,
+          self,
+        ),
+        false,
+        self,
+      )
+    }
+  }
+
+  /// Whether `ident_ref` resolves to a symbol read through an inline common chunk bridge. Such a
+  /// callee or template tag must render as `(0, bridge.f)` so the call sees `this === undefined`,
+  /// exactly like a namespace member callee does today.
+  fn identifier_is_bridge_member(&self, ident_ref: &ast::IdentifierReference<'ast>) -> bool {
+    let Some(reference_id) = ident_ref.reference_id.get() else { return false };
+    let Some(symbol_id) = self.scope.symbol_id_for(reference_id) else { return false };
+    let symbol_ref: SymbolRef = (self.ctx.idx, symbol_id).into();
+    let canonical_ref = self.ctx.symbol_db.canonical_ref_resolving_namespace(symbol_ref);
+    self.inline_bridge_member(canonical_ref).is_some()
+  }
+
+  /// A member expression that resolves to exactly a bridge member (`ns.f` where `f` is owned by a
+  /// record this chunk reads), rewritten with the `this` guard for a callee position.
+  fn try_rewrite_bridge_member_callee(
+    &self,
+    member_expr: &ast::MemberExpression<'ast>,
+  ) -> Option<Expression<'ast>> {
+    let MemberExprRefResolution {
+      resolved: Some(object_ref),
+      prop_and_related_span_list: props,
+      target_commonjs_exported_symbol: target_commonjs_exported_symbol_meta,
+      ..
+    } = self.ctx.linking_info.resolved_member_expr_refs.get(&member_expr.node_id())?
+    else {
+      return None;
+    };
+    if !props.is_empty()
+      || target_commonjs_exported_symbol_meta
+        .is_some_and(|(symbol_ref, _)| self.ctx.constant_value_map.contains_key(&symbol_ref))
+    {
+      return None;
+    }
+    let canonical_ref = self.ctx.symbol_db.canonical_ref_resolving_namespace(*object_ref);
+    self.inline_bridge_member(canonical_ref)?;
+    let (expr, _) = self.finalized_expr_for_symbol_ref(
+      *object_ref,
+      true,
+      target_commonjs_exported_symbol_meta
+        .is_some_and(|(_symbol, is_exports_default)| !is_exports_default),
+    );
+    Some(expr)
   }
 
   fn wrapped_esm_init_stmt_for_import_record(
@@ -538,6 +616,49 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
     true
   }
 
+  /// The callee of a plain call: an identifier callee is renamed with the callee flag set (a
+  /// namespace member or inline common chunk bridge member becomes `(0, ns.f)`), a call to a
+  /// side-effect-free function is marked pure, and a member callee resolving to a bridge member
+  /// gets the same `this` guard.
+  fn rewrite_call_callee(&self, call_expr: &mut ast::CallExpression<'ast>) {
+    if let Some(ident_ref) = call_expr.callee.as_identifier_mut() {
+      let is_empty_function = ident_ref
+        .reference_id
+        .get()
+        .and_then(|ref_id| self.scope.scoping().get_reference(ref_id).symbol_id())
+        .map(|id| {
+          let symbol_ref = self.ctx.symbol_db.canonical_ref_for((self.ctx.idx, id).into());
+          symbol_ref.is_side_effect_free_function(self.ctx.symbol_db, self.ctx.modules)
+            && symbol_ref.is_not_reassigned(self.ctx.symbol_db)
+        })
+        .unwrap_or(false);
+      if is_empty_function {
+        call_expr.pure = true;
+      } else if let Some(new_expr) = self.try_rewrite_identifier_reference_expr(ident_ref, true) {
+        call_expr.callee = new_expr;
+      }
+    } else if let Some(new_callee) = call_expr
+      .callee
+      .as_member_expression()
+      .and_then(|member_expr| self.try_rewrite_bridge_member_callee(member_expr))
+    {
+      call_expr.callee = new_callee;
+    }
+  }
+
+  /// An optional-call callee or template tag that is an inline common chunk bridge member,
+  /// rewritten with the `this` guard. Anything else is left to the ordinary walk.
+  fn try_rewrite_bridge_callee(&self, callee: &ast::Expression<'ast>) -> Option<Expression<'ast>> {
+    match callee {
+      ast::Expression::Identifier(ident_ref) if self.identifier_is_bridge_member(ident_ref) => {
+        self.try_rewrite_identifier_reference_expr(ident_ref, true)
+      }
+      callee => callee
+        .as_member_expression()
+        .and_then(|member_expr| self.try_rewrite_bridge_member_callee(member_expr)),
+    }
+  }
+
   /// `optimize_namespace_alias_transform` is a flag to determine whether optimize interop code with commonjs
   /// e.g.
   /// We could try to rewrite `import_cjs.default.exported` into `import_cjs.exported`
@@ -576,6 +697,9 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
       }
     }
     let mut hint = FinalizedExprProcessHint::empty();
+    // A property read of a bridge or a namespace binds `this` when called, so a callee is wrapped
+    // as `(0, expr)`.
+    let mut needs_this_guard = false;
     let mut expr = if self.ctx.modules[canonical_ref.owner].is_external() {
       // For mixed-mode externals, ESM importers use the node-mode binding name
       if self.ctx.module.should_consider_node_esm_spec_for_static_import() {
@@ -588,6 +712,9 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
       } else {
         Expression::new_id_ref_expr(SPAN, self.canonical_name_for(canonical_ref), self)
       }
+    } else if let Some((bridge, export_name)) = self.inline_bridge_member(canonical_ref) {
+      needs_this_guard = true;
+      self.bridge_member_expr(bridge, export_name)
     } else {
       match self.ctx.options.format {
         rolldown_common::OutputFormat::Cjs => {
@@ -629,20 +756,21 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
           self,
         );
       }
+      needs_this_guard = true;
+    }
 
-      if preserve_this_semantic_if_needed {
-        expr = Expression::new_seq_in_parens(
-          ast::Expression::new_numeric_literal(
-            SPAN,
-            0.0,
-            Some("0".into()),
-            NumberBase::Decimal,
-            self,
-          ),
-          expr,
+    if needs_this_guard && preserve_this_semantic_if_needed {
+      expr = Expression::new_seq_in_parens(
+        ast::Expression::new_numeric_literal(
+          SPAN,
+          0.0,
+          Some("0".into()),
+          NumberBase::Decimal,
           self,
-        );
-      }
+        ),
+        expr,
+        self,
+      );
     }
 
     (expr, hint)

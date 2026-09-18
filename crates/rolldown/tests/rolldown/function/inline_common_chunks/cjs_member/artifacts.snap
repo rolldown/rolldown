@@ -1,0 +1,159 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## a.js
+
+```js
+import { a as __share_require, i as __share_export, n as __esmMin, o as __toESM, r as __share, t as __commonJSMin } from "./rolldown-runtime.js";
+__share("cjs", (exports) => {
+	//#region cjs.js
+	var require_cjs = /* @__PURE__ */ __commonJSMin(((exports, module) => {
+		let n = 0;
+		module.exports = {
+			bump() {
+				n += 1;
+				return n;
+			},
+			self() {
+				return module.exports;
+			}
+		};
+		globalThis.events.push("CJS body");
+	}));
+	//#endregion
+	__share_export(exports, { t: () => require_cjs });
+});
+var share_cjs = __share_require("cjs");
+//#region a.js
+var import_cjs;
+function init_a() {
+	return (init_a = __esmMin((() => {
+		import_cjs = /* @__PURE__ */ __toESM(share_cjs.t());
+		globalThis.events.push("A " + (0, import_cjs.bump)() + " " + (import_cjs.default.self() === import_cjs.default));
+		globalThis.markers.push(import_cjs.default);
+	})))();
+}
+//#endregion
+init_a();
+
+```
+
+## b.js
+
+```js
+import { a as __share_require, i as __share_export, n as __esmMin, o as __toESM, r as __share, t as __commonJSMin } from "./rolldown-runtime.js";
+__share("cjs", (exports) => {
+	//#region cjs.js
+	var require_cjs = /* @__PURE__ */ __commonJSMin(((exports, module) => {
+		let n = 0;
+		module.exports = {
+			bump() {
+				n += 1;
+				return n;
+			},
+			self() {
+				return module.exports;
+			}
+		};
+		globalThis.events.push("CJS body");
+	}));
+	//#endregion
+	__share_export(exports, { t: () => require_cjs });
+});
+var share_cjs = __share_require("cjs");
+//#region b.js
+var import_cjs;
+function init_b() {
+	return (init_b = __esmMin((() => {
+		import_cjs = /* @__PURE__ */ __toESM(share_cjs.t());
+		globalThis.events.push("B " + import_cjs.default.bump() + " " + import_cjs.bump());
+		globalThis.markers.push(import_cjs.default);
+	})))();
+}
+//#endregion
+init_b();
+
+```
+
+## rolldown-runtime.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+export { __share_require as a, __share_export as i, __esmMin as n, __toESM as o, __share as r, __commonJSMin as t };
+
+```
+
+# Variant: off: [inline_common_chunks_max_size: 0]
+
+## Assets
+
+### a.js
+
+```js
+import { t as require_cjs } from "./cjs.js";
+import { n as __esmMin, r as __toESM } from "./rolldown-runtime.js";
+//#region a.js
+var import_cjs;
+function init_a() {
+	return (init_a = __esmMin((() => {
+		import_cjs = /* @__PURE__ */ __toESM(require_cjs());
+		globalThis.events.push("A " + (0, import_cjs.bump)() + " " + (import_cjs.default.self() === import_cjs.default));
+		globalThis.markers.push(import_cjs.default);
+	})))();
+}
+//#endregion
+init_a();
+
+```
+
+### b.js
+
+```js
+import { t as require_cjs } from "./cjs.js";
+import { n as __esmMin, r as __toESM } from "./rolldown-runtime.js";
+//#region b.js
+var import_cjs;
+function init_b() {
+	return (init_b = __esmMin((() => {
+		import_cjs = /* @__PURE__ */ __toESM(require_cjs());
+		globalThis.events.push("B " + import_cjs.default.bump() + " " + import_cjs.bump());
+		globalThis.markers.push(import_cjs.default);
+	})))();
+}
+//#endregion
+init_b();
+
+```
+
+### cjs.js
+
+```js
+import { t as __commonJSMin } from "./rolldown-runtime.js";
+//#region cjs.js
+var require_cjs = /* @__PURE__ */ __commonJSMin(((exports, module) => {
+	let n = 0;
+	module.exports = {
+		bump() {
+			n += 1;
+			return n;
+		},
+		self() {
+			return module.exports;
+		}
+	};
+	globalThis.events.push("CJS body");
+}));
+//#endregion
+export { require_cjs as t };
+
+```
+
+### rolldown-runtime.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+export { __esmMin as n, __toESM as r, __commonJSMin as t };
+
+```

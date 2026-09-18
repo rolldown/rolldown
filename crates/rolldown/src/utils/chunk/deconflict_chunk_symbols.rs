@@ -11,9 +11,33 @@ use crate::{
 };
 use arcstr::ArcStr;
 use rolldown_common::{Chunk, ChunkIdx, ChunkKind, GetLocalDb, OutputFormat, SymbolRef, WrapKind};
-use rolldown_utils::ecmascript::legitimize_identifier_name;
+use rolldown_utils::{concat_string, ecmascript::legitimize_identifier_name};
 use rustc_hash::{FxHashMap, FxHashSet};
 
+/// Names a chunk shares an output file with under `experimentalInlineCommonChunks`. Empty for a
+/// chunk that neither is a record nor carries one. See
+/// internal-docs/inline-common-chunks/implementation.md ("Deconflicting").
+#[derive(Debug, Default)]
+pub struct InlineDeconflictPlan {
+  /// Symbols this chunk imports that another chunk in the same file already named; this chunk
+  /// uses the same name so one import specifier serves both.
+  pub preassigned: Vec<(SymbolRef, CompactStr)>,
+  /// Module-scope names other chunks in the same file use (their import bindings) and globals
+  /// their code reads, which this chunk must not declare.
+  pub reserved: Vec<CompactStr>,
+  /// Records this chunk reads directly, with their registry ids; each gets a bridge binding.
+  pub bridges: Vec<(ChunkIdx, ArcStr)>,
+}
+
+#[derive(Default)]
+pub struct InlineDeconflictOutput {
+  pub bridge_names: FxHashMap<ChunkIdx, CompactStr>,
+  pub exports_param: Option<CompactStr>,
+}
+
+/// `inline` and `is_record` belong to `experimentalInlineCommonChunks`: the names this chunk
+/// shares an output file with, and whether it is a record (which also names the `exports`
+/// parameter of its factory).
 #[tracing::instrument(level = "trace", skip_all)]
 #[expect(clippy::too_many_arguments)]
 pub fn deconflict_chunk_symbols(
@@ -25,7 +49,9 @@ pub fn deconflict_chunk_symbols(
   format: OutputFormat,
   index_chunk_id_to_name: &FxHashMap<ChunkIdx, ArcStr>,
   chunk_assignments: ChunkAssignments<'_>,
-) {
+  inline: &InlineDeconflictPlan,
+  is_record: bool,
+) -> InlineDeconflictOutput {
   let mut renamer = Renamer::new(chunk.entry_module_idx(), &link_output.symbol_db, format);
   // Reserve global scope symbols (unresolved references) to prevent generating conflicting names.
   // These are identifiers referenced but not defined in the module's scope (e.g., `console`, `window`).
@@ -47,6 +73,7 @@ pub fn deconflict_chunk_symbols(
     .for_each(|name| {
       renamer.reserve(CompactStr::new(name));
     });
+  reserve_inline_names(&mut renamer, inline);
 
   if matches!(format, OutputFormat::Iife | OutputFormat::Umd | OutputFormat::Cjs) {
     // deconflict iife introduce symbols by external
@@ -273,9 +300,46 @@ pub fn deconflict_chunk_symbols(
     chunk.node_mode_external_ns_names = node_mode_names;
   }
 
+  let inline_output = name_inline_bindings(&mut renamer, chunk, inline, is_record);
+
   rename_shadowing_symbols_in_nested_scopes(chunk, link_output, format, &mut renamer);
 
   chunk.canonical_names = renamer.into_canonical_names();
+  inline_output
+}
+
+/// Names other chunks printed into the same output file already use: reserved outright, or shared
+/// when this chunk imports the very same symbol.
+fn reserve_inline_names(renamer: &mut Renamer<'_>, inline: &InlineDeconflictPlan) {
+  for name in &inline.reserved {
+    renamer.reserve(name.clone());
+  }
+  for (symbol_ref, name) in &inline.preassigned {
+    renamer.preassign_symbol(*symbol_ref, name.clone());
+  }
+}
+
+/// A bridge is read wherever a record symbol was referenced, including inside nested scopes, so
+/// its name must be free in every nested scope of the chunk's modules, like an import binding.
+/// A record additionally names the `exports` parameter of its factory.
+fn name_inline_bindings(
+  renamer: &mut Renamer<'_>,
+  chunk: &Chunk,
+  inline: &InlineDeconflictPlan,
+  is_record: bool,
+) -> InlineDeconflictOutput {
+  let mut inline_output = InlineDeconflictOutput::default();
+  for (record, id) in &inline.bridges {
+    let hint_source = concat_string!("share_", id);
+    let hint = legitimize_identifier_name(&hint_source);
+    inline_output
+      .bridge_names
+      .insert(*record, renamer.create_conflictless_name_for_modules(&hint, &chunk.modules));
+  }
+  if is_record {
+    inline_output.exports_param = Some(renamer.create_conflictless_name("exports"));
+  }
+  inline_output
 }
 
 /// Collect the canonical names of things that are emitted at the chunk's root scope and thus

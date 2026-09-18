@@ -11,14 +11,19 @@ use rolldown_common::{
 use rolldown_devtools::{action, trace_action, trace_action_enabled};
 use rolldown_error::{BatchedBuildDiagnostic, BuildResult, Diagnostics};
 use rolldown_utils::{
+  index_vec_ext::IndexVecRefExt as _,
   indexmap::{FxIndexMap, FxIndexSet},
   rayon::{IntoParallelRefIterator, ParallelIterator},
 };
+use rustc_hash::FxHashMap;
 
 use crate::{
   BundleOutput,
   chunk_graph::ChunkGraph,
-  ecmascript::ecma_generator::EcmaGenerator,
+  ecmascript::{
+    ecma_generator::EcmaGenerator,
+    format::share_factory::{RenderedRecord, render_record},
+  },
   type_alias::{AssetVec, IndexChunkToInstances, IndexEcmaAst, IndexInstantiatedChunks},
   types::generator::{GenerateContext, GenerateOutput, Generator},
   utils::{
@@ -159,7 +164,8 @@ impl GenerateStage<'_> {
       index_vec![FxIndexSet::default(); chunk_graph.chunk_table.len()];
     let mut index_instantiated_chunks: IndexInstantiatedChunks =
       IndexVec::with_capacity(chunk_graph.chunk_table.len());
-    let chunk_index_to_codegen_rets = self.create_chunk_to_codegen_ret_map(chunk_graph, ast_table);
+    let mut chunk_index_to_codegen_rets =
+      self.create_chunk_to_codegen_ret_map(chunk_graph, ast_table);
     let render_export_items_index_vec = &chunk_graph
       .chunk_table
       .chunks
@@ -172,6 +178,16 @@ impl GenerateStage<'_> {
         map
       })
       .collect();
+    // Phase A: every inline common chunk record is rendered once; the carriers borrow the result.
+    let inline_renders = self.render_inline_records(
+      chunk_graph,
+      &mut chunk_index_to_codegen_rets,
+      diagnostics,
+      used_symbol_refs,
+      order_state,
+      render_export_items_index_vec,
+    );
+    let inline_renders = &inline_renders;
 
     try_join_all(
       chunk_index_to_codegen_rets
@@ -180,7 +196,9 @@ impl GenerateStage<'_> {
         .filter_map(|(idx, module_id_to_codegen_ret)| {
           let chunk_idx =
             ChunkIdx::from_raw(u32::try_from(idx).expect("chunk index should fit in u32"));
-          if chunk_graph.post_chunk_optimization_operations.contains_key(&chunk_idx) {
+          if chunk_graph.post_chunk_optimization_operations.contains_key(&chunk_idx)
+            || self.inline_state.is_record(chunk_idx)
+          {
             return None;
           }
           let chunk = chunk_graph.chunk_table.get(chunk_idx)?;
@@ -201,6 +219,8 @@ impl GenerateStage<'_> {
               module_id_to_codegen_ret,
               render_export_items_index_vec,
               resolved_paths,
+              inline_state: &self.inline_state,
+              inline_renders,
             };
             let ecma_chunks_future = EcmaGenerator::instantiate_chunk(&mut ecma_ctx);
             let ecma_chunks = ecma_chunks_future.await?;
@@ -232,6 +252,45 @@ impl GenerateStage<'_> {
     Ok((index_instantiated_chunks, index_chunk_to_instances))
   }
 
+  /// Renders each inline common chunk record's factory body once, with the record's own chunk
+  /// context (its names, its exports). Takes the records' codegen results out of
+  /// `chunk_index_to_codegen_rets`; the records are skipped when the files are instantiated.
+  fn render_inline_records(
+    &self,
+    chunk_graph: &ChunkGraph,
+    chunk_index_to_codegen_rets: &mut [Vec<Option<ModuleRenderOutput>>],
+    diagnostics: &mut Diagnostics,
+    used_symbol_refs: &UsedSymbolRefs,
+    order_state: &super::order_wrap_state::OrderWrapState,
+    render_export_items_index_vec: &IndexVec<ChunkIdx, FxIndexMap<SymbolRef, Vec<CompactStr>>>,
+  ) -> FxHashMap<ChunkIdx, RenderedRecord> {
+    let no_renders = FxHashMap::default();
+    let mut renders = FxHashMap::default();
+    for (record_idx, _) in self.inline_state.records() {
+      let module_id_to_codegen_ret =
+        std::mem::take(&mut chunk_index_to_codegen_rets[record_idx.index()]);
+      let mut ctx = GenerateContext {
+        chunk_idx: record_idx,
+        chunk: &chunk_graph.chunk_table[record_idx],
+        options: self.options,
+        link_output: self.link_output,
+        used_symbol_refs,
+        order_wrap_state: order_state,
+        chunk_graph,
+        plugin_driver: self.plugin_driver,
+        module_id_to_codegen_ret,
+        render_export_items_index_vec,
+        resolved_paths: self.resolved_paths.as_ref(),
+        inline_state: &self.inline_state,
+        inline_renders: &no_renders,
+      };
+      let (rendered, warnings) = render_record(&mut ctx);
+      diagnostics.extend(warnings);
+      renders.insert(record_idx, rendered);
+    }
+    renders
+  }
+
   /// Create a IndexVecMap from chunk index to related modules codegen return list.
   /// e.g.
   /// modules of chunk1: [ecma1, ecma2, external1]
@@ -256,8 +315,10 @@ impl GenerateStage<'_> {
     );
     chunk_graph
       .chunk_table
-      .par_iter()
-      .map(|item| {
+      .par_iter_enumerated()
+      .map(|(chunk_idx, item)| {
+        // A record's modules are printed inside a factory function.
+        let is_inline_record = self.inline_state.is_record(chunk_idx);
         item
           .modules
           .par_iter()
@@ -266,6 +327,7 @@ impl GenerateStage<'_> {
               let ast = ast_table[module.idx].as_ref().expect("should have ast");
               #[expect(clippy::bool_to_int_with_if)]
               let initial_indent = if needs_extra_indent
+                || is_inline_record
                 || !matches!(
                   self.link_output.metas[module_idx].concatenated_wrapped_module_kind,
                   ConcatenateWrappedModuleKind::None

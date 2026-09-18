@@ -3197,6 +3197,7 @@ dependencies = [
  "memchr",
  "oxc",
  "oxc_sourcemap",
+ "rustc-hash",
 ]
 
 [[package]]

@@ -110,6 +110,7 @@ pub struct LinkingMetadata {
   pub stmt_info_included: IndexBitSet<StmtInfoIdx>,
   /// Tracks whether the module is included after tree-shaking.
   pub is_included: bool,
+  pub is_inlined_dead_dynamic_import_namespace_module_idx: Option<SymbolRef>,
 }
 
 impl LinkingMetadata {

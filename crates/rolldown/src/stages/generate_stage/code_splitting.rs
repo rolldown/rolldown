@@ -1088,6 +1088,7 @@ impl GenerateStage<'_> {
       );
     }
 
+    self.try_inline_dynamic_chunk(chunk_graph);
     self.try_merge_runtime_chunk(chunk_graph, None, RuntimeMergeCascade::Full);
 
     Ok(())
@@ -1284,6 +1285,68 @@ impl GenerateStage<'_> {
           }
         }
       }
+    }
+  }
+
+  pub fn try_inline_dynamic_chunk(&mut self, chunk_graph: &mut ChunkGraph) {
+    let to_inline: Vec<(ChunkIdx, ModuleIdx, ModuleIdx,ChunkIdx)> = chunk_graph
+      .chunk_table
+      .iter_enumerated()
+      .filter_map(|(dynamic_chunk_idx, chunk)| {
+        let is_dynamic = matches!(
+          chunk.kind,
+          ChunkKind::EntryPoint { meta, .. } if meta == ChunkMeta::DynamicImported
+        );
+        if !is_dynamic || chunk.modules.len() != 1 {
+          return None;
+        }
+        if chunk.has_side_effect(&self.link_output.module_table) {
+          return  None;
+        }
+
+        let dynamic_module_idx = chunk.modules[0];
+        let normal_module = self.link_output.module_table[dynamic_module_idx].as_normal()?;
+
+        let can_inline = normal_module.ecma_view.importers.is_empty()
+          && normal_module.ecma_view.dynamic_importers.len() == 1
+          && matches!(
+            self.link_output.dynamic_import_exports_usage_map.get(&dynamic_module_idx),
+            Some(rolldown_common::dynamic_import_usage::DynamicImportExportsUsage::Partial(set)) if set.is_empty()
+          );
+        if !can_inline {
+          return None;
+        }
+
+        let importer_idx = normal_module.ecma_view.dynamic_importers_idx[0];
+        let importer_chunk_idx = chunk_graph.module_to_chunk[importer_idx]?;
+
+        Some((dynamic_chunk_idx, dynamic_module_idx, importer_idx,importer_chunk_idx))
+      })
+      .collect();
+
+    for (dynamic_chunk_idx, dynamic_module_idx, importer_idx, importer_chunk_idx) in to_inline {
+      let dynamic_module_namespace_ref = &self.link_output.module_table[dynamic_module_idx]
+        .as_normal()
+        .unwrap()
+        .namespace_object_ref;
+      self.link_output.metas[importer_idx].is_inlined_dead_dynamic_import_namespace_module_idx =
+        Some(*dynamic_module_namespace_ref);
+
+      chunk_graph.add_module_to_chunk(
+        dynamic_module_idx,
+        importer_chunk_idx,
+        self.link_output.metas[dynamic_module_idx].depended_runtime_helper,
+      );
+
+      chunk_graph.entry_module_to_entry_chunk.insert(dynamic_module_idx, importer_chunk_idx);
+      chunk_graph
+        .post_chunk_optimization_operations
+        .insert(dynamic_chunk_idx, PostChunkOptimizationOperation::Removed);
+      chunk_graph
+        .common_chunk_exported_facade_chunk_namespace
+        .entry(importer_chunk_idx)
+        .or_default()
+        .insert(dynamic_module_idx);
     }
   }
 }

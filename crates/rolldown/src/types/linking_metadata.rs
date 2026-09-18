@@ -40,6 +40,10 @@ pub struct LinkingMetadata {
   /// `wrapper_ref` is the `require_cjs` identifier in above example.
   pub wrapper_ref: Option<SymbolRef>,
   pub wrapper_stmt_info: Option<StmtInfoIdx>,
+  /// Alias of the CJS wrapper's `exports` parameter, declared as the first statement of the
+  /// wrapper body. Only a direct-eval module needs it. There, nested `exports` bindings keep their
+  /// source name, and one of them captures the bare `exports` that a top-level `this` emits.
+  pub cjs_exports_alias_ref: Option<SymbolRef>,
   /// The module representation decided during linking.
   wrap_kind: WrapKind,
   // Store the export info for each module, including export named declaration and export star declaration.

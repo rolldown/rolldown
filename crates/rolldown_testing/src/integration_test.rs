@@ -63,10 +63,21 @@ impl IntegrationTest {
     Self { test_meta, test_folder_path }
   }
 
-  pub async fn bundle(&self, mut options: BundlerOptions) -> BuildResult<BundleOutput> {
+  pub async fn bundle(&self, options: BundlerOptions) -> BuildResult<BundleOutput> {
+    self.bundle_with_plugins(options, vec![]).await
+  }
+
+  /// Like [`Self::run_with_plugins`], but hands back the output so a test can assert on it
+  /// directly instead of through a snapshot.
+  pub async fn bundle_with_plugins(
+    &self,
+    mut options: BundlerOptions,
+    plugins: Vec<SharedPluginable>,
+  ) -> BuildResult<BundleOutput> {
     self.apply_test_defaults(&mut options);
 
-    let mut bundler = Bundler::new(options)?;
+    let mut bundler =
+      BundlerBuilder::default().with_options(options).with_plugins(plugins).build()?;
 
     if self.test_meta.write_to_disk {
       if bundler.options().out_dir.as_path().is_dir() {

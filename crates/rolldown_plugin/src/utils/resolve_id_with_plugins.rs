@@ -5,7 +5,7 @@ use crate::{
 use nodejs_built_in_modules::is_nodejs_builtin_module;
 use rolldown_common::{ImportKind, ModuleDefFormat, ModuleId, PackageJson, ResolvedId};
 use rolldown_fs::FileSystem;
-use rolldown_resolver::{ResolveError, Resolver};
+use rolldown_resolver::{PackageScopes, ResolveError, Resolver};
 use rolldown_utils::dataurl::is_data_url;
 use std::{path::Path, sync::Arc};
 use sugar_path::SugarPath;
@@ -47,23 +47,57 @@ pub fn infer_module_def_format(
   ModuleDefFormat::Unknown
 }
 
+/// Applies normal resolution's precedence for `"type"` to the recovered manifests.
+///
+/// `oxc_resolver` reads `"type"` from the nearest scope for `.js` and `.ts` only, and rolldown
+/// then falls back to the owning manifest for every js-like extension. Taking the nearest
+/// manifest for all four would invert the answer for `.jsx` and `.tsx`.
+fn recovered_module_def_format(id: &str, scopes: &PackageScopes) -> ModuleDefFormat {
+  let oxc_reads_nearest =
+    matches!(Path::new(id).extension().and_then(|ext| ext.to_str()), Some("js" | "ts"));
+  if oxc_reads_nearest {
+    let format = infer_module_def_format(id, scopes.nearest.as_ref());
+    if !matches!(format, ModuleDefFormat::Unknown) {
+      return format;
+    }
+  }
+  infer_module_def_format(id, scopes.side_effects_owner.as_ref())
+}
+
 /// Builds the `ResolvedId` for an id a plugin resolved.
+///
+/// A `resolveId` hook may return a bare id string, which carries no `packageJsonPath`, so the
+/// manifests are recovered from the id instead. Otherwise a module's `package.json#sideEffects`
+/// policy and its module format would depend on the specifier that reached it.
+/// See <https://github.com/rolldown/rolldown/issues/10909>.
 fn resolved_id_from_hook_output<Fs: FileSystem>(
   resolver: &Resolver<Fs>,
   r: HookResolveIdOutput,
 ) -> anyhow::Result<ResolvedId> {
-  let package_json = r
-    .package_json_path
-    .as_ref()
-    .map(|p| resolver.try_get_package_json_or_create(p.as_path()))
-    .transpose()?;
+  let id = ModuleId::new(r.id);
+  // The hook's own `packageJsonPath` is its answer for both questions. Only the recovery path
+  // has to tell them apart, because `"type"` and `sideEffects` come from different manifests.
+  let scopes = match &r.package_json_path {
+    Some(path) => {
+      let package_json = resolver.try_get_package_json_or_create(path.as_path())?;
+      PackageScopes {
+        nearest: Some(Arc::clone(&package_json)),
+        side_effects_owner: Some(package_json),
+      }
+    }
+    // Only a real filesystem id has a package to find; virtual and bare ids have none.
+    None => match id.as_path() {
+      Some(path) => resolver.package_scopes(path)?,
+      None => PackageScopes::default(),
+    },
+  };
   Ok(ResolvedId {
-    module_def_format: infer_module_def_format(r.id.as_str(), package_json.as_ref()),
-    id: ModuleId::new(r.id),
+    module_def_format: recovered_module_def_format(id.as_str(), &scopes),
+    id,
     external: r.external.unwrap_or_default(),
     normalize_external_id: r.normalize_external_id,
     side_effects: r.side_effects,
-    package_json,
+    package_json: scopes.side_effects_owner,
     ..Default::default()
   })
 }

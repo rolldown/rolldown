@@ -35,6 +35,8 @@ pub struct Resolver<Fs: FileSystem = OsFileSystem> {
   // Resolver for `new URL(..., import.meta.url)`
   new_url_resolver: ResolverGeneric<Fs>,
   package_json_cache: FxDashMap<PathBuf, Arc<PackageJson>>,
+  /// Keyed by a module's parent directory, so one walk serves every module in it.
+  package_scopes_cache: FxDashMap<PathBuf, PackageScopes>,
 }
 
 impl<Fs: FileSystem + Clone + 'static> Resolver<Fs> {
@@ -64,6 +66,7 @@ impl<Fs: FileSystem + Clone + 'static> Resolver<Fs> {
       css_resolver,
       new_url_resolver,
       package_json_cache: DashMap::default(),
+      package_scopes_cache: DashMap::default(),
     }
   }
 
@@ -72,6 +75,19 @@ impl<Fs: FileSystem + Clone + 'static> Resolver<Fs> {
   pub fn clone_default_resolver(&self) -> ResolverGeneric<Fs> {
     self.default_resolver.clone_with_options(self.default_resolver.options().clone())
   }
+}
+
+/// The two `package.json` files that govern a module, which Node.js looks up by different rules.
+///
+/// `"type"` comes from the nearest manifest, while `sideEffects` globs are written relative to a
+/// package root, so inside `node_modules` the two can be different files.
+#[derive(Debug, Default, Clone)]
+pub struct PackageScopes {
+  /// The nearest manifest, which decides `"type"` and so the module format.
+  pub nearest: Option<Arc<PackageJson>>,
+  /// The manifest whose `sideEffects` globs own the module: the package root inside
+  /// `node_modules`, the nearest manifest everywhere else.
+  pub side_effects_owner: Option<Arc<PackageJson>>,
 }
 
 #[derive(Debug)]
@@ -101,6 +117,7 @@ impl<Fs: FileSystem> Resolver<Fs> {
     // All resolvers share the same cache, so just clear one of them is ok.
     self.default_resolver.clear_cache();
     self.package_json_cache.clear();
+    self.package_scopes_cache.clear();
   }
 
   pub fn resolve_tsconfig<T: AsRef<Path>>(
@@ -128,6 +145,58 @@ impl<Fs: FileSystem> Resolver<Fs> {
       self.package_json_cache.insert(path.to_path_buf(), Arc::clone(&pkg_json));
       Ok(pkg_json)
     }
+  }
+
+  /// The `package.json` files that govern `path`, for a file the internal resolver never saw.
+  ///
+  /// This keeps both policies independent of the specifier that reached the module. See
+  /// <https://github.com/rolldown/rolldown/issues/10909>.
+  ///
+  /// # Errors
+  ///
+  /// Returns an error if a `package.json` on the way up exists but does not parse.
+  pub fn package_scopes(&self, path: &Path) -> anyhow::Result<PackageScopes> {
+    let Some(dir) = path.parent() else { return Ok(PackageScopes::default()) };
+    if let Some(cached) = self.package_scopes_cache.get(dir) {
+      return Ok(cached.clone());
+    }
+    let scopes = self.walk_up_package_scopes(dir)?;
+    self.package_scopes_cache.insert(dir.to_path_buf(), scopes.clone());
+    Ok(scopes)
+  }
+
+  /// Collects both manifests in one walk, each following the rule `oxc_resolver` applies when it
+  /// resolves the same file itself. The two rules differ inside `node_modules`, so a single
+  /// manifest cannot serve both; see [`PackageScopes`].
+  fn walk_up_package_scopes(&self, dir: &Path) -> anyhow::Result<PackageScopes> {
+    let inside_node_modules = dir.components().any(|c| c.as_os_str() == "node_modules");
+    let mut scopes = PackageScopes::default();
+    let mut cursor = Some(dir);
+    while let Some(current) = cursor {
+      if current.file_name().is_some_and(|name| name == "node_modules") {
+        break;
+      }
+      let parent = current.parent();
+      // `node_modules/@scope` is not a package directory, so stop below it.
+      let is_scope_dir = parent.is_some_and(|p| p.file_name().is_some_and(|n| n == "node_modules"))
+        && current.file_name().is_some_and(|n| n.as_encoded_bytes().starts_with(b"@"));
+      if is_scope_dir {
+        break;
+      }
+      let manifest = current.join("package.json");
+      if self.fs.exists(&manifest) {
+        let package_json = self.try_get_package_json_or_create(&manifest)?;
+        if scopes.nearest.is_none() {
+          scopes.nearest = Some(Arc::clone(&package_json));
+        }
+        scopes.side_effects_owner = Some(package_json);
+        if !inside_node_modules {
+          break;
+        }
+      }
+      cursor = parent;
+    }
+    Ok(scopes)
   }
 
   /// Resolves a module specifier to an absolute path.

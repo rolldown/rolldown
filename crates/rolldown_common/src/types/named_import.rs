@@ -23,6 +23,7 @@ pub struct NamedImport {
   /// For case C, the `imported_as` is a `SymbolRef` from `foo2`.
   pub imported_as: SymbolRef,
   pub record_idx: ImportRecordIdx,
+  pub is_reexport: bool,
 }
 
 #[derive(Debug, Clone, Hash, PartialEq, Eq)]
@@ -34,6 +35,13 @@ pub enum Specifier {
 impl Specifier {
   pub fn is_star(&self) -> bool {
     matches!(self, Self::Star)
+  }
+
+  pub fn get_literal(&self) -> Option<&CompactStr> {
+    match self {
+      Self::Star => None,
+      Self::Literal(atom) => Some(atom),
+    }
   }
 }
 

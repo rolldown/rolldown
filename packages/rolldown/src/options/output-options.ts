@@ -54,6 +54,20 @@ export interface GeneratedCodeOptions {
   profilerNames?: boolean;
 }
 
+/**
+ * Experimental policy for replacing small automatic common chunks with factory definitions in
+ * their consumers.
+ */
+export interface ExperimentalInlineCommonChunksOptions {
+  /**
+   * Common chunks whose source size is below this threshold may be inlined. This uses transformed
+   * module source bytes because final rendered size is not available when placement is decided.
+   *
+   * @default 0
+   */
+  maxSize?: number;
+}
+
 /** @inline */
 export type ModuleFormat = 'es' | 'cjs' | 'esm' | 'module' | 'commonjs' | 'iife' | 'umd';
 
@@ -762,6 +776,16 @@ export interface OutputOptions {
    * @default false
    */
   keepNames?: boolean;
+  /**
+   * Replace eligible small automatic common chunks with runtime-registered factories carried by
+   * their consumers, removing the corresponding network requests while preserving one logical
+   * module instance per loaded registry module.
+   *
+   * This initial experimental implementation supports ES output with code splitting enabled,
+   * `preserveEntrySignatures: false`, and wrap-all strict execution order. Enabling the option
+   * automatically enables {@linkcode strictExecutionOrder} when that option is omitted.
+   */
+  experimentalInlineCommonChunks?: ExperimentalInlineCommonChunksOptions;
   /**
    * Preserve source module execution order across generated chunks.
    *

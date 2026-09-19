@@ -78,9 +78,15 @@ ChunkGraph
     │
     ├─ compute_cross_chunk_links()                    Determine cross-chunk imports/exports
     │
+    ├─ select_inline_common_chunks()                  Optional late physical factory placement
+    │
     ├─ ensure_lazy_module_initialization_order()      Reorder wrapped module init calls
     │
-    └─ merge_cjs_namespace()                          Merge CJS namespace objects
+    ├─ merge_cjs_namespace()                          Merge CJS namespace objects
+    │
+    ├─ deconflict + finalize modules                  Name and rewrite final symbol references
+    │
+    └─ render_chunk_to_assets()                       Render logical factories, then emitted files
 ```
 
 **Key files:**
@@ -94,6 +100,9 @@ ChunkGraph
 - `crates/rolldown/src/stages/generate_stage/dynamic_already_loaded.rs` — Rollup-style dynamic import already-loaded atom reduction
 - `crates/rolldown/src/stages/generate_stage/chunk_optimizer.rs` — merge/optimization
 - `crates/rolldown/src/stages/generate_stage/runtime_module_sweep.rs` — post-optimization runtime-demand sweep
+- `crates/rolldown/src/stages/generate_stage/inline_common_chunks.rs` — optional late selection,
+  factory placement, and physical-file graph rewiring; see
+  [the standalone blueprint](../inline-common-chunks/implementation.md)
 - `crates/rolldown/src/chunk_graph.rs` — output data structure
 - `crates/rolldown_utils/src/bitset.rs` — compact reachability representation
 - `crates/rolldown/src/types/linking_metadata.rs` — immutable link-stage `wrap_kind()`
@@ -427,9 +436,17 @@ pub struct ChunkGraph {
 - `chunk_table` — All chunks, indexed by `ChunkIdx`. May contain removed chunks (marked in `post_chunk_optimization_operations`) since re-indexing would be expensive.
 - `module_to_chunk` — Which chunk each module belongs to. O(1) lookup.
 
+`experimentalInlineCommonChunks` does not change `module_to_chunk`. A selected common chunk remains
+the logical owner used by linking and finalization, while `Chunk::carried_inline_chunks` records its
+additional physical factory placements and the renderer omits the logical chunk's own asset. This is
+a late exception to the default one-owner/one-file correspondence, documented in
+[the inline common chunks blueprint](../inline-common-chunks/implementation.md).
+
 ## Related
 
 - [rust-bundler](../rust-bundler/implementation.md) — Build lifecycle
+- [inline common chunks](../inline-common-chunks/implementation.md) — late physical duplication of
+  eligible automatic common chunks
 - `crates/rolldown/src/stages/generate_stage/mod.rs` — Generate stage entry point
 - `crates/rolldown/src/stages/generate_stage/manual_code_splitting.rs` — User-defined chunk groups
 - #8595 — Bug caused by bit position / chunk index mismatch when external entries exist

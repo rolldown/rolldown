@@ -38,6 +38,28 @@ fn has_non_recursive_dependency_capture(options: &ManualCodeSplittingOptions) ->
   }
 }
 
+fn experimental_inline_common_chunks_enabled(options: &crate::BundlerOptions) -> bool {
+  options
+    .experimental_inline_common_chunks
+    .as_ref()
+    .and_then(|options| options.max_size)
+    .is_some_and(|max_size| max_size.is_finite() && max_size > 0.0)
+}
+
+fn inline_common_chunks_incompatible_option(
+  option: &str,
+  value: impl Into<String>,
+  required: &str,
+) -> BuildDiagnostic {
+  BuildDiagnostic::invalid_option(
+    InvalidOptionType::ExperimentalInlineCommonChunksIncompatibleOption {
+      option: option.to_string(),
+      value: value.into(),
+      required: required.to_string(),
+    },
+  )
+}
+
 fn verify_raw_options(raw_options: &crate::BundlerOptions) -> BuildResult<Vec<BuildDiagnostic>> {
   let mut warnings: Vec<BuildDiagnostic> = Vec::new();
   let mut errors: Vec<BuildDiagnostic> = Vec::new();
@@ -98,6 +120,58 @@ fn verify_raw_options(raw_options: &crate::BundlerOptions) -> BuildResult<Vec<Bu
     }
     // `codeSplitting: false` and the object form (manual groups) are mutually exclusive
     // by construction, so a "disabled + groups" conflict can no longer be expressed.
+  }
+
+  if experimental_inline_common_chunks_enabled(raw_options) {
+    let format = raw_options.format.unwrap_or(OutputFormat::Esm);
+    if !matches!(format, OutputFormat::Esm) {
+      errors.push(inline_common_chunks_incompatible_option(
+        "output.format",
+        format.to_string(),
+        "\"es\"",
+      ));
+    }
+    if matches!(raw_options.code_splitting, Some(CodeSplittingMode::Bool(false))) {
+      errors.push(inline_common_chunks_incompatible_option(
+        "output.codeSplitting",
+        "false",
+        "enabled",
+      ));
+    }
+    if raw_options.preserve_modules == Some(true) {
+      errors.push(inline_common_chunks_incompatible_option(
+        "output.preserveModules",
+        "true",
+        "false",
+      ));
+    }
+    let preserve_entry_signatures =
+      raw_options.preserve_entry_signatures.unwrap_or(PreserveEntrySignatures::ExportsOnly);
+    if !matches!(preserve_entry_signatures, PreserveEntrySignatures::False) {
+      errors.push(inline_common_chunks_incompatible_option(
+        "preserveEntrySignatures",
+        format!("\"{preserve_entry_signatures}\""),
+        "false",
+      ));
+    }
+    if raw_options.strict_execution_order == Some(false) {
+      errors.push(inline_common_chunks_incompatible_option(
+        "output.strictExecutionOrder",
+        "false",
+        "true or omitted",
+      ));
+    }
+    if raw_options
+      .experimental
+      .as_ref()
+      .is_some_and(rolldown_common::ExperimentalOptions::is_on_demand_wrapping_enabled)
+    {
+      errors.push(inline_common_chunks_incompatible_option(
+        "experimental.onDemandWrapping",
+        "true",
+        "false",
+      ));
+    }
   }
 
   // Manual chunk grouping arrives via the merged `codeSplitting` object form (`Advanced`).
@@ -164,6 +238,8 @@ pub fn prepare_build_context(
   mut raw_options: crate::BundlerOptions,
 ) -> BuildResult<PrepareBuildContext> {
   let mut warnings = verify_raw_options(&raw_options)?;
+
+  let inline_common_chunks_enabled = experimental_inline_common_chunks_enabled(&raw_options);
 
   let format = raw_options.format.unwrap_or(crate::OutputFormat::Esm);
 
@@ -478,7 +554,10 @@ pub fn prepare_build_context(
       .unwrap_or_else(|| determine_minify_internal_exports_default(Some(format), &raw_minify)),
     clean_dir,
     context: raw_options.context.unwrap_or_default(),
-    strict_execution_order: raw_options.strict_execution_order.unwrap_or(false),
+    experimental_inline_common_chunks: raw_options.experimental_inline_common_chunks,
+    strict_execution_order: raw_options
+      .strict_execution_order
+      .unwrap_or(inline_common_chunks_enabled),
     strict: raw_options.strict.unwrap_or_default(),
   };
 

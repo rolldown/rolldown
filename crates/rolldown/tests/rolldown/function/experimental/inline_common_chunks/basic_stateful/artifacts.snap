@@ -1,0 +1,134 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## a.js
+
+```js
+import { t as __esmMin$1 } from "./chunks/rolldown-runtime-Bbf6g9GV.js";
+import { __rd_share, __rd_share_require } from "./chunks/rolldown-runtime-Bbf6g9GV.js";
+import { t as __esmMin } from "./chunks/rolldown-runtime-Bbf6g9GV.js";
+__rd_share("rd:m81nxts0EPRKGeNnw-79cQ", (__rd_m, __rd_e, __rd_def, __rd_req) => {
+	//#region shared.js
+	function increment() {
+		globalThis.events.push(this === void 0 ? "plain-this" : "bound-this");
+		value++;
+	}
+	var value;
+	function init_shared() {
+		return (init_shared = __esmMin((() => {
+			globalThis.events.push("shared:init");
+			value = 0;
+		})))();
+	}
+	//#endregion
+	__rd_def(__rd_e, {
+		n: () => init_shared,
+		r: () => value,
+		t: () => increment
+	});
+});
+var share_shared = __rd_share_require("rd:m81nxts0EPRKGeNnw-79cQ");
+//#region a.js
+function init_a() {
+	return (init_a = __esmMin$1((() => {
+		share_shared.n();
+		(0, share_shared.t)();
+		globalThis.events.push(`a:${share_shared.r}`);
+	})))();
+}
+//#endregion
+init_a();
+
+```
+
+## b.js
+
+```js
+import { t as __esmMin$1 } from "./chunks/rolldown-runtime-Bbf6g9GV.js";
+import { __rd_share, __rd_share_require } from "./chunks/rolldown-runtime-Bbf6g9GV.js";
+import { t as __esmMin } from "./chunks/rolldown-runtime-Bbf6g9GV.js";
+__rd_share("rd:m81nxts0EPRKGeNnw-79cQ", (__rd_m, __rd_e, __rd_def, __rd_req) => {
+	//#region shared.js
+	function increment() {
+		globalThis.events.push(this === void 0 ? "plain-this" : "bound-this");
+		value++;
+	}
+	var value;
+	function init_shared() {
+		return (init_shared = __esmMin((() => {
+			globalThis.events.push("shared:init");
+			value = 0;
+		})))();
+	}
+	//#endregion
+	__rd_def(__rd_e, {
+		n: () => init_shared,
+		r: () => value,
+		t: () => increment
+	});
+});
+var share_shared = __rd_share_require("rd:m81nxts0EPRKGeNnw-79cQ");
+//#region b.js
+function init_b() {
+	return (init_b = __esmMin$1((() => {
+		share_shared.n();
+		(0, share_shared.t)();
+		globalThis.events.push(`b:${share_shared.r}`);
+	})))();
+}
+//#endregion
+init_b();
+
+```
+
+## chunks/rolldown-runtime-Bbf6g9GV.js
+
+```js
+var __rd_factories = {}, __rd_records = {};
+function __rd_share(id, factory) {
+	if (__rd_factories[id] === void 0) __rd_factories[id] = factory;
+}
+function __rd_share_define(target, all) {
+	for (var name in all) Object.defineProperty(target, name, {
+		get: all[name],
+		enumerable: true
+	});
+}
+function __rd_share_require(id) {
+	var record = __rd_records[id];
+	if (record !== void 0) {
+		if (record.failed) throw record.error;
+		return record.module.exports;
+	}
+	var factory = __rd_factories[id];
+	if (factory === void 0) throw new Error("Shared module " + id + " is not defined");
+	record = __rd_records[id] = {
+		module: { exports: {} },
+		failed: false,
+		error: void 0
+	};
+	try {
+		factory(record.module, record.module.exports, __rd_share_define, __rd_share_require);
+	} catch (error) {
+		record.failed = true;
+		record.error = error;
+		throw error;
+	}
+	return record.module.exports;
+}
+export { __rd_share, __rd_share_require };
+//#region \0rolldown/runtime.js
+var __esmMin = (fn, res, err) => () => {
+	if (err) throw err[0];
+	try {
+		return fn && (res = fn(fn = 0)), res;
+	} catch (e) {
+		throw err = [e], e;
+	}
+};
+//#endregion
+export { __esmMin as t };
+
+```

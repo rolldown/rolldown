@@ -586,6 +586,16 @@
             }
           ]
         },
+        "experimentalInlineCommonChunks": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ExperimentalInlineCommonChunksOptions"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
         "strictExecutionOrder": {
           "type": [
             "boolean",
@@ -1797,6 +1807,21 @@
           "type": "string"
         }
       ]
+    },
+    "ExperimentalInlineCommonChunksOptions": {
+      "description": "Experimental policy for replacing small automatic common chunks with factory definitions in\ntheir consumers. The threshold uses module source bytes because rendered chunk sizes are not\navailable when placement is decided.",
+      "type": "object",
+      "properties": {
+        "maxSize": {
+          "description": "Common chunks whose transformed module source size is below this byte threshold may be\ninlined. Zero or an omitted value disables the feature.",
+          "type": [
+            "number",
+            "null"
+          ],
+          "format": "double"
+        }
+      },
+      "additionalProperties": false
     },
     "StrictMode": {
       "description": "Controls whether `\"use strict\"` is emitted in the output.\n\nSee [`rollupjs.org/configuration-options/#output-strict`](https://rollupjs.org/configuration-options/#output-strict).",

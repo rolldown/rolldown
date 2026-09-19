@@ -116,6 +116,22 @@ pub struct Chunk {
     FxHashMap<ModuleIdx, RenderedConcatenatedModuleParts>,
   /// Pre-computed export mode for the chunk
   pub output_exports: OutputExports,
+  /// Set when `experimentalInlineCommonChunks` replaced this chunk with factory placements. The
+  /// chunk stays live in the chunk graph — its modules still finalize against it — but it is not
+  /// emitted as a file. The key is stable across content-only changes because it is derived from
+  /// the chunk's module identities.
+  pub inline_share_key: Option<ArcStr>,
+  /// Inlined chunks whose `__rd_share` factory this chunk carries, in registration order.
+  pub carried_inline_chunks: Vec<ChunkIdx>,
+  /// Inlined chunks this chunk executes with `__rd_share_require` at its own top level, in evaluation
+  /// order. For an inlined chunk this is what its factory body executes first.
+  pub required_inline_chunks: Vec<ChunkIdx>,
+  /// Local binding name this chunk uses for each inlined chunk's exports object.
+  pub inline_binding_names_for_other_chunks: FxHashMap<ChunkIdx, String>,
+  /// Local names for the registry imports/definitions in this physical chunk. They may differ from
+  /// the exported names so unresolved globals in user code keep resolving globally.
+  pub inline_share_define_name: Option<String>,
+  pub inline_share_require_name: Option<String>,
 }
 
 impl Chunk {

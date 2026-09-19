@@ -557,6 +557,13 @@ impl<'ast> VisitJsMut<'ast> for ScopeHoistingFinalizer<'_, 'ast> {
           }
         }
       }
+      ast::Expression::TaggedTemplateExpression(tagged) => {
+        if let Some(ident_ref) = tagged.tag.as_identifier_mut()
+          && let Some(new_expr) = self.try_rewrite_identifier_reference_expr(ident_ref, true)
+        {
+          tagged.tag = new_expr;
+        }
+      }
       // inline dynamic import
       ast::Expression::ImportExpression(import_expr) => {
         if let Some(new_expr) = self.try_rewrite_inline_dynamic_import_expr(import_expr) {
@@ -616,6 +623,11 @@ impl<'ast> VisitJsMut<'ast> for ScopeHoistingFinalizer<'_, 'ast> {
         // import.meta.hot?.accept()
         if let ast::ChainElement::CallExpression(call_expr) = &mut chain_expr.expression {
           self.rewrite_hot_accept_call_deps(call_expr);
+          if let Some(ident_ref) = call_expr.callee.as_identifier_mut()
+            && let Some(new_expr) = self.try_rewrite_identifier_reference_expr(ident_ref, true)
+          {
+            call_expr.callee = new_expr;
+          }
         }
         let chain_span = chain_expr.span;
         if let Some(new_expr) = chain_expr

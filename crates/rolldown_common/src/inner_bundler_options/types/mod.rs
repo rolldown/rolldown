@@ -7,6 +7,7 @@ pub mod defer_sync_scan_data_option;
 pub mod dev_mode_options;
 pub mod devtools_options;
 pub mod es_module_flag;
+pub mod experimental_inline_common_chunks_options;
 pub mod experimental_options;
 pub mod filename_template;
 pub mod generated_code_options;

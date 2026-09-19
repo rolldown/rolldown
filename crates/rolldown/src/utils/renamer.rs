@@ -182,6 +182,30 @@ impl<'name> Renamer<'name> {
     slot.insert(resolved);
   }
 
+  /// Assign the canonical name of a CJS `exports` alias.
+  ///
+  /// The alias sits inside the wrapper body of a direct-eval module, where eval resolves every
+  /// source binding by its source name. So the renamer moves the alias, never a source binding.
+  /// A candidate name must be free at chunk scope, and free in every scope of this module, root
+  /// and nested. The shortcuts in [`Self::is_name_available_with`] do not apply. The preferred
+  /// name gets the same check as a suffixed one, and an entry module gets no exemption.
+  pub fn add_cjs_exports_alias(&mut self, symbol_ref: SymbolRef, scoping: &Scoping) {
+    let canonical_ref = symbol_ref.canonical_ref(self.symbol_db);
+    let original_name = self.symbol_db.original_name(canonical_ref);
+    let mut candidate = original_name.clone();
+    for count in 1u32.. {
+      if !self.resolver.contains(&candidate)
+        && !scoping.iter_bindings().any(|(_, bindings)| bindings.contains_key(candidate.as_str()))
+      {
+        break;
+      }
+      candidate =
+        concat_string!(original_name.as_str(), "$", itoa::Buffer::new().format(count)).into();
+    }
+    self.resolver.reserve(candidate.clone());
+    self.canonical_names.insert(canonical_ref, candidate);
+  }
+
   pub fn create_conflictless_name(&mut self, hint: &str) -> CompactStr {
     self.resolver.resolve(CompactStr::new(hint), |_, _| true)
   }
@@ -469,10 +493,17 @@ impl NestedScopeRenamer<'_, '_> {
       return;
     }
 
+    // Direct eval resolves CJS wrapper bindings by their original source names. Preserve only
+    // those two names in an eval-bearing CJS module; external IIFE/UMD factory names still need
+    // the ordinary collision protection below.
+    let preserve_cjs_wrapper_names = is_cjs_wrapped && self.module.meta.has_eval();
+
     // Skip root scope (index 0), check nested scopes only
     for (_, bindings) in self.scoping.iter_bindings().skip(1) {
       for (&name, symbol_id) in bindings {
-        if wrapper_param_names.contains(name.into()) {
+        if wrapper_param_names.contains(name.into())
+          && !(preserve_cjs_wrapper_names && matches!(name.as_str(), "exports" | "module"))
+        {
           let symbol_ref = (self.module_idx, *symbol_id).into();
           self.renamer.register_nested_scope_symbols(symbol_ref, name.as_str());
         }
@@ -490,9 +521,9 @@ impl NestedScopeRenamer<'_, '_> {
   /// - `__dirname` — the `import.meta.dirname` rewrite
   ///
   /// Those identifiers mean the CommonJS ambient bindings, so a nested binding of the same name
-  /// must not capture them. `module`/`exports` are deliberately not in the set: nothing injects
-  /// them into nested scopes, and `rename_bindings_shadowing_wrapper_params` already covers the
-  /// CJS-wrapped-module case.
+  /// must not capture them. `module`/`exports` are deliberately not in the set:
+  /// `rename_bindings_shadowing_wrapper_params` covers a CJS-wrapped module, and there the
+  /// top-level `this` rewrite reaches the wrapper parameter through its own alias.
   ///
   /// A `var` binding is hoisted, so it shadows even an injected call inside its own initializer:
   ///

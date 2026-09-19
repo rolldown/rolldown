@@ -150,6 +150,7 @@ impl<Fs: FileSystem> Resolver<Fs> {
   /// The `package.json` files that govern `path`, for a file the internal resolver never saw.
   ///
   /// This keeps both policies independent of the specifier that reached the module. See
+  /// `internal-docs/module-side-effects/implementation.md` and
   /// <https://github.com/rolldown/rolldown/issues/10909>.
   ///
   /// # Errors

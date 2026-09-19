@@ -818,6 +818,7 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "cow-utils",
+ "flate2",
  "heck",
  "oxc",
  "oxc_resolver",
@@ -2944,6 +2945,7 @@ name = "rolldown_plugin_oxc_runtime"
 version = "1.2.9"
 dependencies = [
  "arcstr",
+ "flate2",
  "phf",
  "rolldown_common",
  "rolldown_plugin",

@@ -1,0 +1,27 @@
+{
+  "snapshot": false,
+  "config": {
+    "input": [
+      { "name": "first", "import": "first.js" },
+      { "name": "second", "import": "second.js" }
+    ],
+    "codeSplitting": {
+      "groups": [{ "name": "app", "test": "async|shared" }]
+    }
+  },
+  "configVariants": [
+    {
+      "_configName": "entries-aware-merge-threshold",
+      "codeSplitting": {
+        "groups": [
+          {
+            "name": "app",
+            "test": "async|shared",
+            "entriesAware": true,
+            "entriesAwareMergeThreshold": 100000
+          }
+        ]
+      }
+    }
+  ]
+}

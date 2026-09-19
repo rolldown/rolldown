@@ -351,6 +351,10 @@ When we run `node ./main.js`, the traversal order of the modules would be `main.
 
 With forcefully generated `runtime.js`, the bundler ensures any chunk that depends on runtime code would first load `runtime.js` before executing itself. This guarantees that the runtime code is always executed before any other chunks, preventing circular import issues.
 
+### Why can a group produce multiple chunks?
+
+Rolldown splits a group by entry reachability when a module with top-level await (or a static dependency on it) can reach a dynamic import whose target needs another group member but not that async module. Otherwise, the awaiting module and a dependency of its awaited dynamic import could share a chunk: the dynamic chunk would import the awaiting chunk, so neither would finish evaluating. These chunks use entry-qualified names such as `app~main.js`. For groups with this risk, `entriesAwareMergeThreshold` keeps subgroups containing async modules separate.
+
 ### Why does the group contain modules that don't satisfy the constraints?
 
 When a module is captured by a group, Rolldown will try to capture its dependencies recursively without considering constraints. This is because Rolldown is only allowed to mangle the exports of non-entry chunks by default.

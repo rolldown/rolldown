@@ -6,6 +6,20 @@
 
 Source: `crates/rolldown/src/stages/link_stage/sort_modules.rs`.
 
+### Precondition: stable `ModuleIdx`
+
+Determinism here is relative to the module table it is handed. `ModuleIdx` is assigned in the
+scan stage, while module-task completion messages are handled
+(`crates/rolldown/src/module_loader/module_loader.rs`), and those tasks run in parallel. The
+loader therefore handles completions one wave at a time in a fixed order, so index assignment
+does not depend on which importer happens to finish first. Without that, two runs over the same
+input can produce different index assignments, and every pass that walks the module table by
+index — this one included — silently walks a different graph.
+
+`crates/rolldown/tests/rolldown/function/deterministic_module_idx` pins this by scanning the
+same fixture twice with the two importers finishing in opposite orders and comparing the module
+table.
+
 ## Guarantees
 
 The order is defined by a small set of rules, in precedence order:

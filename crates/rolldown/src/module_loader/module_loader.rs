@@ -127,6 +127,25 @@ pub struct ModuleLoader<'a, Fs: FileSystem + Clone + 'static> {
   tla_keyword_span_map: FxHashMap<ModuleIdx, Span>,
 }
 
+/// Stable ordering key for module-loader messages.
+///
+/// Module tasks run in parallel, so completion messages arrive in a nondeterministic order.
+/// `ModuleIdx` is handed out while handling them (`try_spawn_new_task`), so that order leaks
+/// into module indices - and into every link-stage pass that walks the module table by index.
+/// Ordering each wave of completions by this key keeps index assignment reproducible without
+/// serializing the work itself.
+fn module_loader_msg_order_key(msg: &ModuleLoaderMsg) -> (u8, String) {
+  match msg {
+    // The runtime module keeps its position at the front.
+    ModuleLoaderMsg::RuntimeNormalModuleDone(_) => (0, String::new()),
+    ModuleLoaderMsg::NormalModuleDone(result) => (1, result.module.id().to_string()),
+    ModuleLoaderMsg::ExternalModuleDone(result) => (1, result.id.to_string()),
+    ModuleLoaderMsg::FetchModule(resolved_id) => (2, resolved_id.id.to_string()),
+    ModuleLoaderMsg::AddEntryModule(msg) => (3, msg.reference_id.to_string()),
+    ModuleLoaderMsg::BuildErrors(_) => (4, String::new()),
+  }
+}
+
 pub struct ModuleLoaderOutput {
   // Stored all modules
   pub module_table: HybridIndexVec<ModuleIdx, Module>,
@@ -478,8 +497,23 @@ impl<'a, Fs: FileSystem + Clone + 'static> ModuleLoader<'a, Fs> {
     let mut runtime_brief = None;
     let mut overrode_preserve_entry_signature_map = FxHashMap::default();
 
-    while self.remaining > 0 {
-      let Some(msg) = self.rx.recv().await else {
+    // Completions are handled one wave at a time, ordered by `module_loader_msg_order_key`,
+    // so that `ModuleIdx` assignment does not depend on which task happens to finish first.
+    let mut wave: VecDeque<ModuleLoaderMsg> = VecDeque::new();
+    while self.remaining > 0 || !wave.is_empty() {
+      if wave.is_empty() {
+        let wave_size = self.remaining;
+        let mut batch = Vec::with_capacity(wave_size as usize);
+        for _ in 0..wave_size {
+          let Some(msg) = self.rx.recv().await else {
+            break;
+          };
+          batch.push(msg);
+        }
+        batch.sort_by_cached_key(module_loader_msg_order_key);
+        wave.extend(batch);
+      }
+      let Some(msg) = wave.pop_front() else {
         break;
       };
       match msg {

@@ -66,18 +66,15 @@ export async function createBundlerOptions(
     return value;
   };
 
-  assertParallelPluginOptionsSupported(
-    readPluginOption(() => inputOptions.plugins),
-    readPluginOption(() => outputOptions.plugins),
-  );
-  const inputPlugins = await normalizePluginOption(
-    readPluginOption(() => inputOptions.plugins),
-    closeCallbackScope,
-  );
-  const outputPlugins = await normalizePluginOption(
-    readPluginOption(() => outputOptions.plugins),
-    closeCallbackScope,
-  );
+  // One snapshot per object for both consumers: an accessor-backed `plugins`
+  // has to fire exactly once, or the preflight read would swallow the plugins
+  // the accessor only serves once. Same shape as the `outputOptions` hook
+  // result below. See internal-docs/async-runtime/implementation.md.
+  const inputPluginOption = readPluginOption(() => inputOptions.plugins);
+  const outputPluginOption = readPluginOption(() => outputOptions.plugins);
+  assertParallelPluginOptionsSupported(inputPluginOption, outputPluginOption);
+  const inputPlugins = await normalizePluginOption(inputPluginOption, closeCallbackScope);
+  const outputPlugins = await normalizePluginOption(outputPluginOption, closeCallbackScope);
 
   const logLevel = inputOptions.logLevel || LOG_LEVEL_INFO;
   const inputObjectPlugins = getObjectPlugins(inputPlugins);

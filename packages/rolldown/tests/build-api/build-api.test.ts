@@ -1,8 +1,16 @@
+import { getDevWatchOptionsForCi } from '@rolldown/test-dev-server';
+import crypto from 'node:crypto';
+import fs from 'node:fs';
 import path from 'node:path';
 import { Worker } from 'node:worker_threads';
-import { isWasiTest } from '@tests/runtime-flavor';
+import { isSingleThread, isWasiTest } from '@tests/runtime-flavor';
 import { build, type InputOptions, type OutputOptions, type Plugin, rolldown } from 'rolldown';
-import { defineParallelPlugin, viteDynamicImportVarsPlugin } from 'rolldown/experimental';
+import {
+  defineParallelPlugin,
+  DevEngine,
+  scan,
+  viteDynamicImportVarsPlugin,
+} from 'rolldown/experimental';
 import { expect, test, vi } from 'vitest';
 
 // @ts-ignore This focused test intentionally reaches package source outside the test rootDir.
@@ -1544,6 +1552,182 @@ test('build reads plugins on the `outputOptions` hook result once', async () => 
 
   expect(hookPluginReads).toBeGreaterThan(0);
   expect(renderChunkCalls).toBe(1);
+});
+
+// `createBundlerOptions` used to read `plugins` twice on each options object:
+// once for the synchronous parallel-plugin preflight, then again for
+// `normalizePluginOption`. Both consumers now share one snapshot, so each
+// object is read exactly one time fewer than it was. An accessor that serves
+// a finite number of reads therefore keeps its plugins, the way it does on a
+// release without the preflight.
+test('rolldown reads each plugin option one time fewer', async () => {
+  let inputPluginReads = 0;
+  let outputPluginReads = 0;
+  let buildStarts = 0;
+  let renderChunkCalls = 0;
+  const inputPlugin: Plugin = {
+    name: 'counted-input-plugin',
+    buildStart() {
+      buildStarts += 1;
+    },
+  };
+  const outputPlugin: Plugin = {
+    name: 'counted-output-plugin',
+    renderChunk() {
+      renderChunkCalls += 1;
+    },
+  };
+
+  // Tuned to the read count this fix leaves behind: one more read and the
+  // accessor answers `undefined`, which is exactly what used to happen.
+  const inputOptions = Object.defineProperty(
+    { input: './main.js', cwd: import.meta.dirname },
+    'plugins',
+    {
+      configurable: true,
+      enumerable: true,
+      get() {
+        inputPluginReads += 1;
+        return inputPluginReads <= 5 ? [inputPlugin] : undefined;
+      },
+    },
+  ) as InputOptions;
+  const outputOptions = Object.defineProperty({}, 'plugins', {
+    configurable: true,
+    enumerable: true,
+    get() {
+      outputPluginReads += 1;
+      return outputPluginReads <= 4 ? [outputPlugin] : undefined;
+    },
+  }) as OutputOptions;
+
+  const bundle = await rolldown(inputOptions);
+  await bundle.generate(outputOptions);
+  await bundle.close();
+
+  // The public-boundary preflights at `rolldown()` and the `options` hook are
+  // documented reads and stay; only the duplicate inside `createBundlerOptions`
+  // is gone, so these are the previous counts minus one per object.
+  expect(inputPluginReads).toBe(5);
+  expect(outputPluginReads).toBe(4);
+  expect(buildStarts).toBe(1);
+  expect(renderChunkCalls).toBe(1);
+});
+
+test.skipIf(isSingleThread)(
+  'dev engine reads each plugin option one time fewer',
+  { timeout: 60_000 },
+  async ({ onTestFinished }) => {
+    const dir = path.join(
+      import.meta.dirname,
+      'temp',
+      `dev-plugin-option-reads-${crypto.randomUUID().slice(0, 8)}`,
+    );
+    fs.mkdirSync(dir, { recursive: true });
+    fs.writeFileSync(path.join(dir, 'main.js'), 'console.log(1)\n');
+
+    let inputPluginReads = 0;
+    let outputPluginReads = 0;
+    let buildStarts = 0;
+    let renderChunkCalls = 0;
+    const inputPlugin: Plugin = {
+      name: 'counted-input-plugin',
+      buildStart() {
+        buildStarts += 1;
+      },
+    };
+    const outputPlugin: Plugin = {
+      name: 'counted-output-plugin',
+      renderChunk() {
+        renderChunkCalls += 1;
+      },
+    };
+
+    const inputOptions = Object.defineProperty(
+      { input: path.join(dir, 'main.js'), experimental: { devMode: true } },
+      'plugins',
+      {
+        configurable: true,
+        enumerable: true,
+        get() {
+          inputPluginReads += 1;
+          return inputPluginReads <= 3 ? [inputPlugin] : undefined;
+        },
+      },
+    ) as InputOptions;
+    const outputOptions = Object.defineProperty({ dir: path.join(dir, 'dist') }, 'plugins', {
+      configurable: true,
+      enumerable: true,
+      get() {
+        outputPluginReads += 1;
+        return outputPluginReads <= 3 ? [outputPlugin] : undefined;
+      },
+    }) as OutputOptions;
+
+    const engine = await DevEngine.create(inputOptions, outputOptions, {
+      watch: getDevWatchOptionsForCi(),
+    });
+    onTestFinished(async () => {
+      await engine.close().catch(() => {});
+      if (!process.env.CI) fs.rmSync(dir, { recursive: true, force: true });
+    });
+
+    await engine.run();
+    await engine.ensureCurrentBuildFinish();
+
+    expect(inputPluginReads).toBeLessThanOrEqual(3);
+    expect(outputPluginReads).toBeLessThanOrEqual(3);
+    expect(buildStarts).toBeGreaterThanOrEqual(1);
+    expect(renderChunkCalls).toBeGreaterThanOrEqual(1);
+  },
+);
+
+test('scan reads each plugin option one time fewer', async () => {
+  let inputPluginReads = 0;
+  let outputPluginReads = 0;
+  let buildStarts = 0;
+  let outputOptionsCalls = 0;
+  const inputPlugin: Plugin = {
+    name: 'counted-input-plugin',
+    buildStart() {
+      buildStarts += 1;
+    },
+  };
+  const outputPlugin: Plugin = {
+    name: 'counted-output-plugin',
+    outputOptions() {
+      outputOptionsCalls += 1;
+      return null;
+    },
+  };
+
+  const inputOptions = Object.defineProperty(
+    { input: './main.js', cwd: import.meta.dirname },
+    'plugins',
+    {
+      configurable: true,
+      enumerable: true,
+      get() {
+        inputPluginReads += 1;
+        return inputPluginReads <= 4 ? [inputPlugin] : undefined;
+      },
+    },
+  ) as InputOptions;
+  const outputOptions = Object.defineProperty({}, 'plugins', {
+    configurable: true,
+    enumerable: true,
+    get() {
+      outputPluginReads += 1;
+      return outputPluginReads <= 4 ? [outputPlugin] : undefined;
+    },
+  }) as OutputOptions;
+
+  await scan(inputOptions, outputOptions);
+
+  expect(inputPluginReads).toBeLessThanOrEqual(4);
+  expect(outputPluginReads).toBeLessThanOrEqual(4);
+  expect(buildStarts).toBe(1);
+  expect(outputOptionsCalls).toBe(1);
 });
 
 test('supports closeBundle hook', async () => {

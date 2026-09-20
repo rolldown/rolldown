@@ -51,7 +51,7 @@ where
 }
 
 /// `async` here is only used to satisfy the wasm shim version of `block_on_spawn_all`.
-/// This function allow you to spawn non-static futures in parallel and wait for all of them to finish.
+/// This function polls non-static futures concurrently in the caller's task and waits for all of them to finish.
 pub async fn block_on_spawn_all<Iter, Out>(iter: Iter) -> Vec<Out>
 where
   Iter: Iterator,

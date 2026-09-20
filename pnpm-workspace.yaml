@@ -23,15 +23,9 @@ allowBuilds:
   vue-demi: true
   workerd: true
 
-# Kept for pnpm 10 (used on Node 20 in CI). pnpm 11 reads `allowBuilds` instead.
-onlyBuiltDependencies:
-  - '@parcel/watcher'
-  - esbuild
-  - oxc-resolver
-  - sharp
-  - tree-sitter
-
 overrides:
+  # 12.10 dropped the Node 20 prebuilds, which the CI matrix still covers
+  better-sqlite3: 12.9.0
   vitepress>vite: npm:rolldown-vite@latest
 
 catalog:
@@ -129,20 +123,20 @@ shellEmulator: true
 
 trustPolicy: no-downgrade
 
+trustPolicyExcludePrune: true
 trustPolicyExclude:
   - chokidar@4.0.3
   - semver@6.3.1
   - rxjs@7.8.2
 
 verifyDepsBeforeRun: install
-
+minimumReleaseAgeExcludePrune: true
 minimumReleaseAgeExclude:
   - '@napi-rs/cli'
   - '@oxc-minify/*'
   - '@oxc-parser/*'
   - '@oxc-transform/*'
   - '@oxc-project/*'
-  - oxc-minify
   - oxc-parser
   - oxc-transform
   - '@voidzero-dev/*'

@@ -170,14 +170,19 @@ function wrapCallbackProperties<T extends object>(
 ): T | undefined {
   if (!options) return options;
 
-  const callbackDescriptors = new Map<PropertyKey, PropertyDescriptor>();
+  // Every callback key is read exactly once, here. A key the bounded walk
+  // found no descriptor for may be served by a `Proxy` `get` trap, and a trap
+  // is free to answer differently on every read, so this first value is the
+  // only one the binding may ever see.
+  const snapshot = new Map<PropertyKey, PropertyDescriptor>();
+  const pinnedDescriptors = new Map<PropertyKey, PropertyDescriptor>();
+  let descriptorlessKey = false;
+
   for (const key of keys) {
     const descriptor = findPropertyDescriptor(options, key);
-    const callback = readPropertyOnce(options, key, runBuildCallback);
+    const callback = readPropertyOnce(options, key, descriptor, runBuildCallback);
     const isAccessor = descriptor !== undefined && !('value' in descriptor);
-    if (typeof callback !== 'function' && !isAccessor) continue;
-
-    callbackDescriptors.set(key, {
+    const snapshotted: PropertyDescriptor = {
       configurable: true,
       enumerable: descriptor?.enumerable ?? true,
       value:
@@ -188,28 +193,94 @@ function wrapCallbackProperties<T extends object>(
             }
           : callback,
       writable: true,
-    });
+    };
+    snapshot.set(key, snapshotted);
+    if (descriptor === undefined) {
+      descriptorlessKey = true;
+    } else if (typeof callback === 'function' || isAccessor) {
+      pinnedDescriptors.set(key, snapshotted);
+    }
   }
-  if (callbackDescriptors.size === 0) return options;
+
+  if (descriptorlessKey) {
+    // At least one key can be trap-served, so the binding must never read the
+    // original object for a callback key again.
+    return createCallbackSnapshotView(options, snapshot);
+  }
+
+  // Every key resolved through a descriptor, so re-reading cannot produce a
+  // different value and the plain-object result stands.
+  if (pinnedDescriptors.size === 0) return options;
 
   const descriptors = Object.getOwnPropertyDescriptors(options);
-  for (const [key, descriptor] of callbackDescriptors) {
+  for (const [key, descriptor] of pinnedDescriptors) {
     Reflect.set(descriptors, key, descriptor);
   }
   return Object.create(Object.getPrototypeOf(options), descriptors) as T;
 }
 
+/**
+ * Binding-facing view of a callback-bearing built-in config. Snapshotted
+ * callback keys are answered from a private target, so N-API cannot re-read
+ * them and a stateful `get` trap cannot hand the native side a raw callback.
+ * Everything else is delegated to the original object with the original
+ * receiver, so required fields a `get` trap serves - and that no descriptor
+ * walk can see - still reach the binding.
+ */
+function createCallbackSnapshotView<T extends object>(
+  options: T,
+  snapshot: Map<PropertyKey, PropertyDescriptor>,
+): T {
+  // Owning the snapshotted keys on a private target keeps the `Proxy`
+  // invariants satisfiable even when the original config is frozen.
+  const target: Record<PropertyKey, unknown> = {};
+  for (const [key, descriptor] of snapshot) {
+    Object.defineProperty(target, key, descriptor);
+  }
+
+  return new Proxy(target, {
+    get(target, key, receiver) {
+      if (snapshot.has(key)) return Reflect.get(target, key, receiver);
+      return Reflect.get(options, key, options);
+    },
+    getOwnPropertyDescriptor(target, key) {
+      if (snapshot.has(key)) return Reflect.getOwnPropertyDescriptor(target, key);
+      const descriptor = Reflect.getOwnPropertyDescriptor(options, key);
+      // A `Proxy` may not report a non-configurable property its target does
+      // not have, so mirror it before answering with it.
+      if (descriptor && !descriptor.configurable) {
+        Object.defineProperty(target, key, descriptor);
+      }
+      return descriptor;
+    },
+    getPrototypeOf() {
+      return Reflect.getPrototypeOf(options);
+    },
+    has(target, key) {
+      return snapshot.has(key) || Reflect.has(options, key);
+    },
+    ownKeys(target) {
+      const keys = new Set<string | symbol>(Reflect.ownKeys(target));
+      for (const key of Reflect.ownKeys(options)) {
+        keys.add(key);
+      }
+      return [...keys];
+    },
+  }) as unknown as T;
+}
+
 function readPropertyOnce<T extends object, K extends keyof T>(
   object: T,
   key: K,
+  descriptor: PropertyDescriptor | undefined,
   runBuildCallback?: BuildCallbackRunner,
 ): T[K] | undefined {
-  const descriptor = findPropertyDescriptor(object, key);
-  // The walk above is what bounds a cyclic or fabricated prototype chain, so
-  // it has to run before any read. With no descriptor the read still has to go
-  // through `Reflect.get` so that a `Proxy` serving the callback from its `get`
-  // trap is observed rather than masked by an `undefined` snapshot, matching
-  // `readPropertyOnce` in `utils/create-bundler-option.ts`.
+  // The bounded walk that produced `descriptor` is what bounds a cyclic or
+  // fabricated prototype chain, so it has already run before this read. With
+  // no descriptor the read still has to go through `Reflect.get` so that a
+  // `Proxy` serving the callback from its `get` trap is observed rather than
+  // masked by an `undefined` snapshot, matching `readPropertyOnce` in
+  // `utils/create-bundler-option.ts`.
   if (!descriptor) return Reflect.get(object, key, object) as T[K] | undefined;
   if ('value' in descriptor) return descriptor.value;
   // oxlint-disable-next-line typescript/unbound-method -- invoked with its receiver below

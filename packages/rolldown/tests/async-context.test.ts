@@ -1,6 +1,8 @@
 import { AsyncLocalStorage } from 'node:async_hooks';
 import { spawnSync } from 'node:child_process';
+import { mkdtemp, rm } from 'node:fs/promises';
 import { createRequire } from 'node:module';
+import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { Buffer } from 'node:buffer';
@@ -373,6 +375,140 @@ test('a Proxy-served built-in callback does not displace sibling data callbacks'
   expect(typeof options.onDebug).toBe('function');
 });
 
+function reporterConfigTrap(served: Record<string, unknown>): BindingViteReporterPluginConfig {
+  // Nothing is an own property, so only the `get` trap can answer. A host that
+  // computes its reporter config lazily produces exactly this shape.
+  return new Proxy({} as BindingViteReporterPluginConfig, {
+    get(_target, key) {
+      return typeof key === 'string' && key in served ? served[key] : undefined;
+    },
+  });
+}
+
+test('a stateful built-in callback trap cannot swap in a raw callback after the snapshot', () => {
+  let runnerCalls = 0;
+  const runBuildCallback: BuildCallbackRunner = (callback) => {
+    runnerCalls += 1;
+    return callback();
+  };
+
+  // N-API reads each field by name after the wrapping pass, so a trap that
+  // answers differently on the second read used to hand it the raw callback.
+  const buildConfig = (values: readonly unknown[]) => {
+    const state = { reads: 0 };
+    const config = new Proxy({} as BindingViteReporterPluginConfig, {
+      get(target, key, receiver) {
+        if (key !== 'logInfo') return Reflect.get(target, key, receiver);
+        const value = values[Math.min(state.reads, values.length - 1)];
+        state.reads += 1;
+        return value;
+      },
+    });
+    return { config, state };
+  };
+
+  let rawCalls = 0;
+  const rawLogInfo = () => {
+    rawCalls += 1;
+  };
+
+  const hidden = buildConfig([undefined, rawLogInfo]);
+  const hiddenOptions = bindingifyBuiltInPlugin(viteReporterPlugin(hidden.config), runBuildCallback)
+    .options as BindingViteReporterPluginConfig;
+
+  expect(hidden.state.reads).toBe(1);
+  expect(hiddenOptions).not.toBe(hidden.config);
+  expect(hiddenOptions.logInfo).toBeUndefined();
+  expect(hiddenOptions.logInfo).toBeUndefined();
+  expect(hidden.state.reads).toBe(1);
+  expect(rawCalls).toBe(0);
+  expect(runnerCalls).toBe(0);
+
+  const revoked = buildConfig([rawLogInfo, undefined]);
+  const revokedOptions = bindingifyBuiltInPlugin(
+    viteReporterPlugin(revoked.config),
+    runBuildCallback,
+  ).options as BindingViteReporterPluginConfig;
+
+  const wrapped = revokedOptions.logInfo;
+  expect(typeof wrapped).toBe('function');
+  expect(wrapped).not.toBe(rawLogInfo);
+  expect(revokedOptions.logInfo).toBe(wrapped);
+  expect(revoked.state.reads).toBe(1);
+
+  wrapped!('built');
+  expect(runnerCalls).toBe(1);
+  expect(rawCalls).toBe(1);
+});
+
+test('a trap-served built-in config keeps its required fields and runs its callback', async () => {
+  let viewRunnerCalls = 0;
+  const messages: string[] = [];
+  const reentrancy: Promise<unknown>[] = [];
+  let bundle: Awaited<ReturnType<typeof rolldown>> | undefined;
+  const served = {
+    root: import.meta.dirname,
+    isTty: false,
+    isLib: false,
+    assetsDir: 'assets',
+    chunkLimit: 500,
+    warnLargeChunks: true,
+    reportCompressedSize: false,
+    logInfo: (message: string) => {
+      messages.push(message);
+      // Entering the runner is what makes this reentrancy fail, so a rejection
+      // here is the proof that `logInfo` ran inside `runBuildCallback`.
+      if (bundle) reentrancy.push(bundle.generate({ format: 'esm' }).catch((error) => error));
+    },
+  };
+
+  // The wrapping pass may not drop the required fields the trap serves, or the
+  // binding rejects the config with ``Missing field `root```.
+  const view = bindingifyBuiltInPlugin(
+    viteReporterPlugin(reporterConfigTrap(served)),
+    (callback) => {
+      viewRunnerCalls += 1;
+      return callback();
+    },
+  ).options as BindingViteReporterPluginConfig;
+
+  expect(view.root).toBe(served.root);
+  expect(view.chunkLimit).toBe(500);
+  expect(view.assetsDir).toBe('assets');
+  expect(typeof view.logInfo).toBe('function');
+  expect(viewRunnerCalls).toBe(0);
+
+  bundle = await rolldown({
+    input: 'entry.js',
+    plugins: [
+      {
+        name: 'virtual-entry',
+        resolveId: (id) => (id === 'entry.js' ? id : null),
+        load: (id) => (id === 'entry.js' ? 'export const value = 1;' : null),
+      },
+      viteReporterPlugin(reporterConfigTrap(served)),
+    ],
+  });
+  // `logInfo` is the reporter's `writeBundle` reporting hook, so the build has
+  // to reach disk for the callback to run at all.
+  const outDir = await mkdtemp(path.join(tmpdir(), 'rolldown-trap-served-reporter-'));
+  try {
+    await bundle.write({ dir: outDir, format: 'esm' });
+  } finally {
+    await bundle.close();
+    await rm(outDir, { force: true, recursive: true });
+  }
+
+  expect(messages.length).toBeGreaterThan(0);
+  expect(reentrancy.length).toBeGreaterThan(0);
+  for (const settled of await Promise.all(reentrancy)) {
+    expect(settled).toBeInstanceOf(Error);
+    expect((settled as Error).message).toContain(
+      "Cannot call bundle.generate() or bundle.write() from one of the same bundle's active JavaScript callbacks",
+    );
+  }
+});
+
 test('browser preflight detects direct data-property plugin callbacks', () => {
   const plugin = {
     name: 'direct-data-callback',
@@ -407,6 +543,53 @@ test('browser preflight detects Proxy-served built-in plugin callbacks', () => {
   expect(
     bindingOptionsRequireAsyncContext({ plugins: [bindingPlugin] } as never, {} as never, false),
   ).toBe(true);
+});
+
+test('browser preflight answers from the snapshot the binding reads', () => {
+  const logInfo = () => {};
+  // Every field, callback included, is trap-served: the preflight only looks at
+  // own data properties, so the view has to carry the snapshot as one.
+  const trapServed = bindingifyBuiltInPlugin(
+    viteReporterPlugin(
+      reporterConfigTrap({
+        root: import.meta.dirname,
+        isTty: false,
+        isLib: false,
+        assetsDir: 'assets',
+        chunkLimit: 500,
+        warnLargeChunks: true,
+        reportCompressedSize: false,
+        logInfo,
+      }),
+    ),
+    (callback) => callback(),
+  );
+
+  expect(Object.getOwnPropertyDescriptor(trapServed.options as object, 'logInfo')).toMatchObject({
+    writable: true,
+  });
+  expect(
+    bindingOptionsRequireAsyncContext({ plugins: [trapServed] } as never, {} as never, false),
+  ).toBe(true);
+
+  // A trap that only turns callable on the second read must not leave the
+  // preflight answering `false` while the binding reads a callback.
+  let reads = 0;
+  const stateful = new Proxy({} as BindingViteReporterPluginConfig, {
+    get(target, key, receiver) {
+      if (key !== 'logInfo') return Reflect.get(target, key, receiver);
+      reads += 1;
+      return reads === 1 ? undefined : logInfo;
+    },
+  });
+  const statefulPlugin = bindingifyBuiltInPlugin(viteReporterPlugin(stateful), (callback) =>
+    callback(),
+  );
+  const statefulOptions = statefulPlugin.options as BindingViteReporterPluginConfig;
+
+  expect(typeof statefulOptions.logInfo === 'function').toBe(
+    bindingOptionsRequireAsyncContext({ plugins: [statefulPlugin] } as never, {} as never, false),
+  );
 });
 
 test(

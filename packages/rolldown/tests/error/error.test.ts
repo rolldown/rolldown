@@ -536,6 +536,41 @@ describe('Error output format', () => {
       expect(removeAnsiColors(error.message)).toMatchSnapshot();
     }
   });
+
+  // An output-option callback is not wrapped by the plugin hook normalizer, so a
+  // thrown `undefined`/`null` reaches the summary formatter verbatim. Formatting
+  // it must not throw over the original failure.
+  // See internal-docs/async-runtime/implementation.md.
+  test.each([
+    ['undefined', undefined],
+    ['null', null],
+  ])('summarizes a %s thrown by an output-option callback', async (label, thrown) => {
+    const build = await rolldown({
+      input: './main.js',
+      cwd: import.meta.dirname,
+    });
+    try {
+      const error: any = await build
+        .generate({
+          entryFileNames: () => {
+            throw thrown;
+          },
+        })
+        .then(
+          () => undefined,
+          (e: unknown) => e,
+        );
+      expect(error).toBeInstanceOf(Error);
+      expect(error.message).not.toContain('Cannot convert undefined or null to object');
+      expect(error.message).toContain('Build failed with 1 error');
+      expect(error.message).toContain(`Error: ${label}`);
+      // the exact thrown value still reaches the caller
+      expect(error.errors).toHaveLength(1);
+      expect(error.errors[0]).toBe(thrown);
+    } finally {
+      await build.close();
+    }
+  });
 });
 
 // oxlint-disable no-control-regex

@@ -450,7 +450,10 @@ shares it rather than copying it; `ToNapiValue for JsError` hands the retained
 value back verbatim on the owning JavaScript thread — not
 `JsError::into_value`, which gates reuse on `napi_is_error` and would replace a
 thrown primitive with a synthesized `Error` — and `normalizeBindingError`
-returns that `field0` object directly. None of those capture paths is
+returns that `field0` object directly. A retained primitive can therefore be
+`null` or `undefined`, so `getErrorMessage` renders those as text rather than
+reading properties off them, while the exposed `errors` entry stays the exact
+value the callback threw. None of those capture paths is
 target-gated. Updating the napi-rs revision requires rerunning the threaded,
 threadless, browser-build, and packed-browser metadata regressions before
 retaining the universal support claim.

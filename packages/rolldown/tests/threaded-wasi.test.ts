@@ -132,3 +132,43 @@ test.runIf(capabilities.target === 'wasi-threads' || expectThreadedWasi)(
     }
   },
 );
+
+test.runIf(capabilities.target === 'wasi-threads' || expectThreadedWasi)(
+  'summarizes a nullish output-option rejection across the threaded worker boundary',
+  async () => {
+    const bundle = await rolldown({
+      input: 'entry',
+      plugins: [
+        {
+          name: 'threaded-nullish-rejection-probe',
+          resolveId(id) {
+            if (id === 'entry') return '\0entry';
+          },
+          load(id) {
+            if (id === '\0entry') return 'export default 1';
+          },
+        },
+      ],
+    });
+
+    try {
+      const failure = await bundle
+        .generate({
+          entryFileNames: () => {
+            throw undefined;
+          },
+        })
+        .catch((error: unknown) => error);
+      expect(failure).toBeInstanceOf(Error);
+      expect((failure as Error).message).not.toContain(
+        'Cannot convert undefined or null to object',
+      );
+      expect((failure as Error).message).toContain('Error: undefined');
+      // the retained primitive still reaches the caller unchanged
+      expect((failure as { errors?: unknown[] }).errors).toHaveLength(1);
+      expect((failure as { errors: unknown[] }).errors[0]).toBe(undefined);
+    } finally {
+      await bundle.close();
+    }
+  },
+);

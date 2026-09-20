@@ -253,6 +253,26 @@ try {
       await metadataBundle.close();
     }
 
+    // An output-option callback is not wrapped by the plugin hook normalizer, so
+    // a thrown `undefined` reaches the summary formatter verbatim here too.
+    const nullishBundle = await createVirtualBundle(browserApi, {});
+    try {
+      const failure = await nullishBundle
+        .generate({
+          entryFileNames: () => {
+            throw undefined;
+          },
+        })
+        .catch((error) => error);
+      assert.ok(failure instanceof Error, 'A nullish rejection must still produce an Error');
+      assert.doesNotMatch(failure.message, /Cannot convert undefined or null to object/);
+      assert.match(failure.message, /Error: undefined/);
+      assert.equal(failure.errors?.length, 1);
+      assert.equal(failure.errors[0], undefined);
+    } finally {
+      await nullishBundle.close();
+    }
+
     for (const operation of ['generate', 'write', 'close']) {
       let bundle;
       let reentrantError;

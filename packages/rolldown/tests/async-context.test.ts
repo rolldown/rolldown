@@ -375,11 +375,16 @@ test('a Proxy-served built-in callback does not displace sibling data callbacks'
   expect(typeof options.onDebug).toBe('function');
 });
 
-function reporterConfigTrap(served: Record<string, unknown>): BindingViteReporterPluginConfig {
-  // Nothing is an own property, so only the `get` trap can answer. A host that
-  // computes its reporter config lazily produces exactly this shape.
-  return new Proxy({} as BindingViteReporterPluginConfig, {
-    get(_target, key) {
+function reporterConfigTrap(
+  served: Record<string, unknown>,
+  own: Record<string, unknown> = {},
+): BindingViteReporterPluginConfig {
+  // Only what `own` carries is an own property; every other field can be
+  // answered by the `get` trap alone. A host that computes its reporter config
+  // lazily produces exactly this shape.
+  return new Proxy(Object.assign({} as BindingViteReporterPluginConfig, own), {
+    get(target, key, receiver) {
+      if (Reflect.getOwnPropertyDescriptor(target, key)) return Reflect.get(target, key, receiver);
       return typeof key === 'string' && key in served ? served[key] : undefined;
     },
   });
@@ -492,6 +497,77 @@ test('a trap-served built-in config keeps its required fields and runs its callb
   // `logInfo` is the reporter's `writeBundle` reporting hook, so the build has
   // to reach disk for the callback to run at all.
   const outDir = await mkdtemp(path.join(tmpdir(), 'rolldown-trap-served-reporter-'));
+  try {
+    await bundle.write({ dir: outDir, format: 'esm' });
+  } finally {
+    await bundle.close();
+    await rm(outDir, { force: true, recursive: true });
+  }
+
+  expect(messages.length).toBeGreaterThan(0);
+  expect(reentrancy.length).toBeGreaterThan(0);
+  for (const settled of await Promise.all(reentrancy)) {
+    expect(settled).toBeInstanceOf(Error);
+    expect((settled as Error).message).toContain(
+      "Cannot call bundle.generate() or bundle.write() from one of the same bundle's active JavaScript callbacks",
+    );
+  }
+});
+
+test('an own built-in callback on a trap-served config keeps the trap-served fields', async () => {
+  let viewRunnerCalls = 0;
+  const messages: string[] = [];
+  const reentrancy: Promise<unknown>[] = [];
+  let bundle: Awaited<ReturnType<typeof rolldown>> | undefined;
+  const served = {
+    root: import.meta.dirname,
+    isTty: false,
+    isLib: false,
+    assetsDir: 'assets',
+    chunkLimit: 500,
+    warnLargeChunks: true,
+    reportCompressedSize: false,
+  };
+  const logInfo = (message: string) => {
+    messages.push(message);
+    // Entering the runner is what makes this reentrancy fail, so a rejection
+    // here is the proof that `logInfo` ran inside `runBuildCallback`.
+    if (bundle) reentrancy.push(bundle.generate({ format: 'esm' }).catch((error) => error));
+  };
+
+  // The callback is an own data property, so a descriptor answers for it, but
+  // every required field still comes from the `get` trap. Rebuilding the
+  // options from the original's own descriptors would drop all of them and the
+  // binding would reject the config with ``Missing field `root```.
+  const view = bindingifyBuiltInPlugin(
+    viteReporterPlugin(reporterConfigTrap(served, { logInfo })),
+    (callback) => {
+      viewRunnerCalls += 1;
+      return callback();
+    },
+  ).options as BindingViteReporterPluginConfig;
+
+  expect(view.root).toBe(served.root);
+  expect(view.chunkLimit).toBe(500);
+  expect(view.assetsDir).toBe('assets');
+  expect(typeof view.logInfo).toBe('function');
+  expect(view.logInfo).not.toBe(logInfo);
+  expect(viewRunnerCalls).toBe(0);
+
+  bundle = await rolldown({
+    input: 'entry.js',
+    plugins: [
+      {
+        name: 'virtual-entry',
+        resolveId: (id) => (id === 'entry.js' ? id : null),
+        load: (id) => (id === 'entry.js' ? 'export const value = 1;' : null),
+      },
+      viteReporterPlugin(reporterConfigTrap(served, { logInfo })),
+    ],
+  });
+  // `logInfo` is the reporter's `writeBundle` reporting hook, so the build has
+  // to reach disk for the callback to run at all.
+  const outDir = await mkdtemp(path.join(tmpdir(), 'rolldown-own-callback-reporter-'));
   try {
     await bundle.write({ dir: outDir, format: 'esm' });
   } finally {

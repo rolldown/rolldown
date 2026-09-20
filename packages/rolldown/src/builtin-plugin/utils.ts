@@ -175,8 +175,7 @@ function wrapCallbackProperties<T extends object>(
   // is free to answer differently on every read, so this first value is the
   // only one the binding may ever see.
   const snapshot = new Map<PropertyKey, PropertyDescriptor>();
-  const pinnedDescriptors = new Map<PropertyKey, PropertyDescriptor>();
-  let descriptorlessKey = false;
+  let wrappedKey = false;
 
   for (const key of keys) {
     const descriptor = findPropertyDescriptor(options, key);
@@ -195,28 +194,22 @@ function wrapCallbackProperties<T extends object>(
       writable: true,
     };
     snapshot.set(key, snapshotted);
-    if (descriptor === undefined) {
-      descriptorlessKey = true;
-    } else if (typeof callback === 'function' || isAccessor) {
-      pinnedDescriptors.set(key, snapshotted);
+    // A key with no descriptor may be served by a `get` trap that answers
+    // differently on the next read; a wrapped callback and an accessor-read
+    // value must likewise never be read from the original object again.
+    if (descriptor === undefined || typeof callback === 'function' || isAccessor) {
+      wrappedKey = true;
     }
   }
 
-  if (descriptorlessKey) {
-    // At least one key can be trap-served, so the binding must never read the
-    // original object for a callback key again.
-    return createCallbackSnapshotView(options, snapshot);
-  }
+  // Nothing had to be wrapped or pinned, so the original object stands and a
+  // callback-free config stays inert.
+  if (!wrappedKey) return options;
 
-  // Every key resolved through a descriptor, so re-reading cannot produce a
-  // different value and the plain-object result stands.
-  if (pinnedDescriptors.size === 0) return options;
-
-  const descriptors = Object.getOwnPropertyDescriptors(options);
-  for (const [key, descriptor] of pinnedDescriptors) {
-    Reflect.set(descriptors, key, descriptor);
-  }
-  return Object.create(Object.getPrototypeOf(options), descriptors) as T;
+  // Anything else goes to the binding as the overlay, whatever found the keys:
+  // rebuilding a plain object from the original's own descriptors would drop
+  // the fields only a `get` trap can answer.
+  return createCallbackSnapshotView(options, snapshot);
 }
 
 /**

@@ -147,9 +147,13 @@ option adapters.
   Every callback key is read exactly once inside the boundary: from the
   descriptor the bounded walk found, or, when it found none, through
   `Reflect.get`, so a callback a `Proxy` serves only from its `get` trap is
-  wrapped rather than handed to N-API raw. When every key came from a
-  descriptor the options are rebuilt as a plain object, as before. When any key
-  had none, the binding-facing view is a snapshot overlay instead: it answers
+  wrapped rather than handed to N-API raw. The snapshot overlay is now the only
+  wrapped shape, whatever found the keys: rebuilding the options as a plain
+  object from the original's own descriptors dropped every field that only a
+  `get` trap can answer, so a config whose callback is an own property lost its
+  trap-served siblings. The overlay is used whenever a key was wrapped or
+  pinned, or had no descriptor and so may be trap-served; a config that needed
+  none of that is handed over untouched and stays inert. The overlay answers
   every callback key - function, non-function, or `undefined` - from that first
   read, so N-API's `napi_get_named_property` cannot reach a trap a second time
   and collect a raw callback, and it delegates every other property to the

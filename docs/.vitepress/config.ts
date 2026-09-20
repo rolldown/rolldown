@@ -283,8 +283,10 @@ const config = defineConfig({
       options: {
         appId: process.env.ALGOLIA_APP_ID || '',
         apiKey: process.env.ALGOLIA_API_KEY || '',
+        // DocSearch 5 requires `indices`; `indexName` remains for VitePress compatibility.
         indexName: 'rolldown',
-      },
+        indices: ['rolldown'],
+      } satisfies DefaultTheme.AlgoliaSearchOptions & { indices: string[] },
     },
 
     // banner: {

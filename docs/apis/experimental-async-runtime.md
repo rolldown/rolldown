@@ -96,17 +96,10 @@ the JavaScript host thread safe. Query `blockOnJsThreadSafe`,
 `watchSupported`, `devSupported`, and `timers` from
 `getRuntimeCapabilities()` before enabling features that depend on them.
 
-::: warning Known issue: Worker teardown with an armed watch debounce
-
-On the native artifact under `ROLLDOWN_RUNTIME=single`, a Node `Worker` that
-is torn down while a watch debounce timer is still armed can hang instead of
-exiting: the host timer relay has no thread of its own to finish on once the
-worker's event loop stops. The fix is upstream in `napi-async-runtime` and
-ships when its 0.2.1 release lands and Rolldown's pin moves. Until then, close
-the watcher before terminating the worker, or leave the default `MultiThread`
-flavor in place — the multi-thread timer service thread is unaffected.
-
-:::
+Earlier native builds under `ROLLDOWN_RUNTIME=single` could hang when a Node
+`Worker` was torn down while a watch debounce timer was still armed. That was
+fixed upstream in `napi-async-runtime` 0.2.1 (napi-rs#3489), and the 0.2.2
+release Rolldown pins carries the fix.
 
 On the native artifact, `ROLLDOWN_RUNTIME=single` (or a `CurrentThread`
 override) governs the shared scheduler only: async polling moves to the

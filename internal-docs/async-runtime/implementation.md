@@ -48,10 +48,12 @@ routes every JS-triggered async operation through that adapter into the
 crate's fallible `try_*` API.
 
 The vendored copy is deliberate, not a fork: `RolldownAsyncRuntime` mirrors
-`napi-async-runtime` 0.2.0's own `adapter.rs` method for method. It exists
-only because 0.2.0 has no public API for installing that adapter from a
-downstream crate. When 0.2.1 exposes one, the vendored struct is deleted and
-the crate's adapter is installed directly; until then, edits to the mirrored
+`napi-async-runtime` 0.2.2's own `adapter.rs` method for method. The crate has
+exposed a public `install` since 0.2.0, but only behind its default `napi`
+feature, which also compiles that adapter's own `#[napi]` exports under names
+this binding already owns (`BindingRuntimeFlavor`, `BindingRuntimeMetrics`,
+`getAsyncRuntimeMetrics`, among others) — so the pin keeps
+`default-features = false` and the vendored struct stays. Edits to the mirrored
 methods must track upstream rather than diverge from it.
 
 - `crates/rolldown_binding/src/async_runtime.rs` — `struct RolldownAsyncRuntime`,
@@ -427,7 +429,7 @@ browser-build, and packed-browser tests exercise this contract;
 `pluginErrorMetadata` is therefore a universal public-support invariant rather
 than a target capability.
 
-This invariant depends on the workspace's `napi 3.12.1` registry pin (§9).
+This invariant depends on the workspace's `napi 3.12.7` registry pin (§9).
 Synchronous
 threadsafe-function exceptions use
 `Error::capture_unknown_with_status_and_diagnostics`, and Promise rejections use
@@ -858,9 +860,10 @@ build-order coupling is needed to keep one flavor from overwriting the other.
   `napi_async_work` before anything is torn down — `__drainWasiAsyncWork` in the
   eager loaders, `__drainInstanceAsyncWork` in the deferred one. It reads the
   `napi_wasm_async_work_pending` / `napi_wasm_cancel_pending_async_work`
-  exports that napi 3.12.7 / napi-build 2.4.4 add (the crate versions the
-  workspace now pins, alongside napi-derive 3.6.8): cancel what no thread has
-  started, then poll until nothing is owed a completion callback. The barrier
+  exports that napi 3.12.6 / napi-build 2.4.3 added in napi-rs#3528, and that
+  the pinned napi 3.12.7 / napi-build 2.4.4 (with napi-derive 3.6.8) carry
+  unchanged: cancel what no thread has started, then poll until nothing is
+  owed a completion callback. The barrier
   the previous seams run brackets promise settlements on the
   threadsafe-function queue, never async work, so before this a disposal that
   destroyed the emnapi context — or terminated the pool threads — over an

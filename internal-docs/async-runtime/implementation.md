@@ -329,14 +329,17 @@ CurrentThread timer:
   `AsyncTask`, but deliberately **not** `napi/async` (which would pull
   `tokio_rt`), so every target compiles the shared runtime (Principle 9).
 - `crates/rolldown_utils/Cargo.toml` — `napi-async-runtime = { version =
-"0.2.0", default-features = false }` from crates.io (napi-free
+"0.2.2", default-features = false }` from crates.io (napi-free
   consumption). The root `Cargo.toml` pins
-  the napi stack to **published crates.io releases** — `napi 3.12.6`,
-  `napi-build 2.4.3`, `napi-derive 3.6.7` (resolving `napi-derive-backend
-6.1.3` and `napi-sys 3.3.1`) — and carries **no** `[patch.crates-io]`
+  the napi stack to **published crates.io releases** — `napi 3.12.7`,
+  `napi-build 2.4.4`, `napi-derive 3.6.8` (resolving `napi-derive-backend
+6.1.4` and `napi-sys 3.3.2`) — and carries **no** `[patch.crates-io]`
   section: that single registry `napi` node covers `rolldown_binding` **and**
   every `oxc_*_napi`. The comment above those pins records why the minimum is
-  a pin rather than a range.
+  a pin rather than a range. 3.12.7 (napi-rs#3536) hardens the same teardown:
+  an `AsyncTask` completion delivered on a draining env settles as a no-op
+  instead of aborting a debug build, and the `napi_async_work` handle is freed
+  on every path. The drain the loaders call is unchanged.
 - `crates/rolldown_binding/build.rs` — emits `cargo::rustc-cfg=rolldown_wasi_threads`
   only for `wasm32-wasip1-threads` (the two WASI targets are otherwise
   cfg-indistinguishable); consumed by `compiled_target()`.
@@ -855,8 +858,8 @@ build-order coupling is needed to keep one flavor from overwriting the other.
   `napi_async_work` before anything is torn down — `__drainWasiAsyncWork` in the
   eager loaders, `__drainInstanceAsyncWork` in the deferred one. It reads the
   `napi_wasm_async_work_pending` / `napi_wasm_cancel_pending_async_work`
-  exports that napi 3.12.6 / napi-build 2.4.3 add (the crate versions the
-  workspace now pins, alongside napi-derive 3.6.7): cancel what no thread has
+  exports that napi 3.12.7 / napi-build 2.4.4 add (the crate versions the
+  workspace now pins, alongside napi-derive 3.6.8): cancel what no thread has
   started, then poll until nothing is owed a completion callback. The barrier
   the previous seams run brackets promise settlements on the
   threadsafe-function queue, never async work, so before this a disposal that

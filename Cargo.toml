@@ -271,9 +271,17 @@ syn = { version = "3", default-features = false }
 # `napi_wasm_async_work_pending` / `napi_wasm_cancel_pending_async_work`, plus the
 # `--export-if-defined` linker args that reach them, so a WASI loader can settle outstanding
 # `napi_async_work` before disposal instead of stranding it. Pairs with @napi-rs/cli >= 3.10.2.
-napi = { version = "3.12.6", features = ["anyhow", "tracing", "object_indexmap"] }
-napi-build = { version = "2.4.3" }
-napi-derive = { version = "3.6.7", default-features = false, features = ["type-def", "tracing"] }
+# napi 3.12.7 / napi-sys 3.3.2 (napi-rs#3536) then make that handshake survive the other teardown
+# order: a Worker terminated while an `AsyncTask` is still in flight delivers its completion
+# callback on a draining env, where `napi_resolve_deferred`/`napi_reject_deferred` answer
+# `napi_pending_exception` (module API < 10) or `napi_cannot_run_js` (API >= 10). The crate now
+# treats those as a no-op settle, frees the `napi_async_work` handle on every completion path, and
+# marks the work terminal before freeing it. Nothing in the drain the loaders use changed —
+# `napi_cancelled` still becomes the same `AbortError` — so this is hardening, not a new floor.
+# napi-build 2.4.4 / napi-derive 3.6.8 ride along with clippy-only diffs and no codegen change.
+napi = { version = "3.12.7", features = ["anyhow", "tracing", "object_indexmap"] }
+napi-build = { version = "2.4.4" }
+napi-derive = { version = "3.6.8", default-features = false, features = ["type-def", "tracing"] }
 
 # oxc crates with the same version
 oxc = { version = "0.150.0", features = [

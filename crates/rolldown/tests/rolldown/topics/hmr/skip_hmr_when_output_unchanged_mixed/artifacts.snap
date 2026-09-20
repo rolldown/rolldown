@@ -70,7 +70,7 @@ process.on("beforeExit", (code) => {
 ```js
 __rolldown_runtime__.registerGraph({ids:["b.js","hub.js","a.js"],localCount:2,edges:[[],[2,0]],dynamicEdges:[[],[]]});
 //#region b.js
-__rolldown_runtime__.registerFactory("b.js", "esm", (function(__rolldown_module_id__) {
+__rolldown_runtime__.registerFactory("b.js", (function(__rolldown_module_id__) {
 	try {
 		var __rolldown_exports__ = __rolldown_runtime__.__exportAll({ b: () => b });
 		__rolldown_runtime__.registerModule(__rolldown_module_id__, { exports: __rolldown_exports__ });
@@ -82,7 +82,7 @@ __rolldown_runtime__.registerFactory("b.js", "esm", (function(__rolldown_module_
 
 //#endregion
 //#region hub.js
-__rolldown_runtime__.registerFactory("hub.js", "esm", (function(__rolldown_module_id__) {
+__rolldown_runtime__.registerFactory("hub.js", (function(__rolldown_module_id__) {
 	try {
 		var __rolldown_exports__ = __rolldown_runtime__.__exportAll({ combined: () => combined });
 		__rolldown_runtime__.registerModule(__rolldown_module_id__, { exports: __rolldown_exports__ });
@@ -123,7 +123,7 @@ __rolldown_runtime__.registerFactory("hub.js", "esm", (function(__rolldown_modul
 ```js
 __rolldown_runtime__.registerGraph({ids:["a.js","hub.js","b.js"],localCount:2,edges:[[],[0,2]],dynamicEdges:[[],[]]});
 //#region a.js
-__rolldown_runtime__.registerFactory("a.js", "esm", (function(__rolldown_module_id__) {
+__rolldown_runtime__.registerFactory("a.js", (function(__rolldown_module_id__) {
 	try {
 		var __rolldown_exports__ = __rolldown_runtime__.__exportAll({ a: () => a });
 		__rolldown_runtime__.registerModule(__rolldown_module_id__, { exports: __rolldown_exports__ });
@@ -135,7 +135,7 @@ __rolldown_runtime__.registerFactory("a.js", "esm", (function(__rolldown_module_
 
 //#endregion
 //#region hub.js
-__rolldown_runtime__.registerFactory("hub.js", "esm", (function(__rolldown_module_id__) {
+__rolldown_runtime__.registerFactory("hub.js", (function(__rolldown_module_id__) {
 	try {
 		var __rolldown_exports__ = __rolldown_runtime__.__exportAll({ combined: () => combined });
 		__rolldown_runtime__.registerModule(__rolldown_module_id__, { exports: __rolldown_exports__ });

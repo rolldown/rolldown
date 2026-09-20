@@ -839,7 +839,7 @@ this section possible: no restore step, no drift-allowlist arm, and no
 build-order coupling is needed to keep one flavor from overwriting the other.
 
 - The per-flavor naming and loader codegen (napi-rs#3353) ship in the released
-  `@napi-rs/cli`, pinned to `^3.10.3` in the workspace catalog — the floor is
+  `@napi-rs/cli`, pinned to `^3.10.4` in the workspace catalog — the floor is
   the loader contract itself (`__napiBindingTarget`, the raw-destroy settlement
   wrapper, `napi.wasm.threadlessInitialMemory`, and the
   `napi.wasm.asyncRuntime` host bootstrap); rolldown used to add all four with
@@ -879,7 +879,11 @@ build-order coupling is needed to keep one flavor from overwriting the other.
   FreeBSD build is what hit it: FreeBSD cannot supply a complete process
   execution identity, so the cross-process reconciliation lock runs degraded
   (lock-free) there and a re-stamp under a concurrent staging pass aborted the
-  whole build. A build whose target is NOT wasi regenerates
+  whole build. 3.10.4 adds nothing the branch needs — it only relaxes the
+  cli's ESM-to-CommonJS declaration guard, which rolldown never reaches
+  because its `--dts` is already `binding.d.cts` — and is named in the catalog
+  only so the range tracks the version main resolved (#10913), the one that
+  regenerates the loaders committed here. A build whose target is NOT wasi regenerates
   EVERY declared wasi flavor's loader set, each with `hasThreads` derived from
   its own triple, so loader regeneration is deterministic and byte-identical to
   the committed copies on every host and under every build variant. A wasi

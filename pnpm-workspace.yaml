@@ -84,7 +84,12 @@ catalog:
   # re-stamp aborted the build; FreeBSD hits it because it cannot provide a
   # complete process execution identity, so the cross-process reconciliation
   # lock runs degraded (lock-free) there.
-  '@napi-rs/cli': ^3.10.3
+  # 3.10.4 is not a floor of its own -- it changes no loader or template, only
+  # the ESM-to-CommonJS guard in `prepareWasiBindingTypeDef`, which rolldown
+  # never reaches because its `--dts` is already `binding.d.cts`. It is named
+  # here so the range tracks the version renovate resolved on main (#10913),
+  # which is what regenerates the committed loaders.
+  '@napi-rs/cli': ^3.10.4
   '@napi-rs/wasm-runtime': ~1.2.4
   '@oxc-node/cli': ^0.1.0
   '@oxc-node/core': ^0.1.0

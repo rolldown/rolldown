@@ -1,5 +1,9 @@
 import type { BindingChunkingContext, BindingOutputOptions } from '../binding.cjs';
+import type { LogHandler } from '../log/log-handler';
+import { logMissingCodeSplittingGroupDebugName } from '../log/logs';
+import { LOG_LEVEL_WARN } from '../log/logging';
 import type {
+  CodeSplittingGroup,
   CodeSplittingNameFunction,
   CodeSplittingTestFunction,
   OutputOptions,
@@ -22,6 +26,7 @@ import {
 export function bindingifyOutputOptions(
   outputOptions: OutputOptions,
   pluginContextData: PluginContextData,
+  onLog: LogHandler,
   timings: PluginTimingsRecorder | undefined,
   runBuildCallback?: BuildCallbackRunner,
 ): BindingOutputOptions {
@@ -76,6 +81,7 @@ export function bindingifyOutputOptions(
     outputOptions.advancedChunks,
     manualChunks,
     pluginContextData,
+    onLog,
     timings,
     runBuildCallback,
   );
@@ -269,6 +275,7 @@ function bindingifyCodeSplitting(
   advancedChunks: OutputOptions['advancedChunks'],
   manualChunks: OutputOptions['manualChunks'],
   pluginContextData: PluginContextData,
+  onLog: LogHandler,
   timings: PluginTimingsRecorder | undefined,
   runBuildCallback?: BuildCallbackRunner,
 ): {
@@ -277,6 +284,9 @@ function bindingifyCodeSplitting(
 } {
   let inlineDynamicImports: boolean | undefined;
   let effectiveChunksOption: Exclude<OutputOptions['codeSplitting'], boolean> | undefined;
+  let migratedManualChunksGroup: CodeSplittingGroup | undefined;
+  // Rows name the option the user actually wrote, not the one they were migrated into.
+  let chunksOptionName: 'codeSplitting' | 'advancedChunks' | 'manualChunks' = 'codeSplitting';
 
   // Handle codeSplitting boolean values
   if (codeSplitting === false) {
@@ -318,6 +328,7 @@ function bindingifyCodeSplitting(
   } else {
     // codeSplitting is an object (advanced config)
     effectiveChunksOption = codeSplitting;
+    chunksOptionName = 'codeSplitting';
     // Ignore inlineDynamicImports if codeSplitting object is specified
     if (inlineDynamicImportsOption != null) {
       logger.warn(
@@ -338,6 +349,7 @@ function bindingifyCodeSplitting(
     if (advancedChunks != null) {
       logger.warn('`advancedChunks` option is deprecated, please use `codeSplitting` instead.');
       effectiveChunksOption = advancedChunks;
+      chunksOptionName = 'advancedChunks';
     }
   } else if (advancedChunks != null) {
     logger.warn(
@@ -351,16 +363,16 @@ function bindingifyCodeSplitting(
       '`manualChunks` option is ignored because the `codeSplitting` option is specified.',
     );
   } else if (manualChunks != null) {
+    chunksOptionName = 'manualChunks';
+    migratedManualChunksGroup = {
+      name(moduleId, ctx) {
+        return manualChunks(moduleId, {
+          getModuleInfo: (id) => ctx.getModuleInfo(id),
+        });
+      },
+    };
     effectiveChunksOption = {
-      groups: [
-        {
-          name(moduleId, ctx) {
-            return manualChunks(moduleId, {
-              getModuleInfo: (id) => ctx.getModuleInfo(id),
-            });
-          },
-        },
-      ],
+      groups: [migratedManualChunksGroup],
     };
   }
 
@@ -408,20 +420,49 @@ function bindingifyCodeSplitting(
         chunkingContext?.clearModuleInfoCache();
         chunkingContext = undefined;
       },
-      groups: groups?.map((group) => {
-        const { name, test, ...restGroup } = group;
+      groups: groups?.map((group, index) => {
+        const { debugName, name, test, ...restGroup } = group;
+        // The group object supplies a stable key across repeated outputs.
+        // Different group objects remain separate when their labels match.
+        // The migration creates a new group for each output. The original `manualChunks`
+        // callback keeps one timing row across repeated outputs.
+        const timingKey = group === migratedManualChunksGroup ? (manualChunks ?? group) : group;
+        const timingOwner =
+          timings === undefined
+            ? OUTPUT_OPTIONS_OWNER
+            : { ...OUTPUT_OPTIONS_OWNER, key: timingKey };
+        // Each group gets its own row, so the rows have to be tellable apart. The position
+        // is the one identity every group has; a label replaces it when there is one.
+        const groupName = `${chunksOptionName} groups[${index}]`;
+        let testTimingName = `${groupName}.test`;
+        let nameTimingName = `${groupName}.name`;
+        if (timings !== undefined) {
+          if (chunksOptionName === 'manualChunks') {
+            nameTimingName = 'manualChunks';
+          } else {
+            const label = debugName ?? (typeof name === 'string' ? name : undefined);
+            if (label === undefined) {
+              if (typeof name === 'function' && !timings.warnedMissingGroupLabels.has(timingKey)) {
+                timings.warnedMissingGroupLabels.add(timingKey);
+                onLog(
+                  LOG_LEVEL_WARN,
+                  logMissingCodeSplittingGroupDebugName(
+                    `output.${chunksOptionName}.groups[${index}]`,
+                  ),
+                );
+              }
+            } else {
+              const labelSuffix = ` ${JSON.stringify(label)}`;
+              testTimingName = `${chunksOptionName} groups[].test${labelSuffix}`;
+              nameTimingName = `${chunksOptionName} groups[].name${labelSuffix}`;
+            }
+          }
+        }
         return {
           ...restGroup,
           test: wrapOptionalBuildCallback(
             typeof test === 'function'
-              ? batchTest(
-                  measureHookCost(
-                    timings,
-                    OUTPUT_OPTIONS_OWNER,
-                    'codeSplitting groups[].test',
-                    test,
-                  ),
-                )
+              ? batchTest(measureHookCost(timings, timingOwner, testTimingName, test))
               : test,
             runBuildCallback,
           ),
@@ -432,12 +473,7 @@ function bindingifyCodeSplitting(
             typeof name === 'function'
               ? wrapOptionalBuildCallback(
                   batchName(
-                    measureHookCost(
-                      timings,
-                      OUTPUT_OPTIONS_OWNER,
-                      'codeSplitting groups[].name',
-                      name,
-                    ),
+                    measureHookCost(timings, timingOwner, nameTimingName, name),
                     getChunkingContext,
                     pluginContextData,
                   ),

@@ -354,7 +354,7 @@ fn discard_panic_payload(payload: Box<dyn Any + Send>) {
 ///
 /// The gate lives here because the clocks it needs — the build and the link stage — are only
 /// visible on this side; what the callbacks actually cost is only visible on the other. The
-/// diagnostic then goes out through the usual path, so `checks.pluginTimings` filters it
+/// diagnostic then goes out through the usual path, so `checks.bundlerTimings` filters it
 /// like any other.
 async fn report_plugin_timings(handles: &[BundleHandle]) -> anyhow::Result<()> {
   let Some(last) = handles.last() else {

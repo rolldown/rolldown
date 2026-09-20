@@ -78,7 +78,7 @@ export { __exportAll as t };
 ```js
 __rolldown_runtime__.registerGraph({ids:["hmr.js","heavy.js"],localCount:1,edges:[[1]],dynamicEdges:[[]]});
 //#region hmr.js
-__rolldown_runtime__.registerFactory("hmr.js", "esm", (function(__rolldown_module_id__) {
+__rolldown_runtime__.registerFactory("hmr.js", (function(__rolldown_module_id__) {
 	try {
 		var __rolldown_exports__ = __rolldown_runtime__.__exportAll({ value: () => value });
 		__rolldown_runtime__.registerModule(__rolldown_module_id__, { exports: __rolldown_exports__ });

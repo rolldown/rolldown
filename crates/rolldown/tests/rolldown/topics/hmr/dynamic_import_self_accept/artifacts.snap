@@ -62,7 +62,7 @@ export { __exportAll as t };
 ```js
 __rolldown_runtime__.registerGraph({ids:["app.js","foo.js"],localCount:2,edges:[[],[]],dynamicEdges:[[1],[]]});
 //#region app.js
-__rolldown_runtime__.registerFactory("app.js", "esm", (function(__rolldown_module_id__) {
+__rolldown_runtime__.registerFactory("app.js", (function(__rolldown_module_id__) {
 	try {
 		__rolldown_runtime__.registerModule(__rolldown_module_id__);
 		const hot_app = __rolldown_runtime__.createModuleHotContext(__rolldown_module_id__);
@@ -75,7 +75,7 @@ __rolldown_runtime__.registerFactory("app.js", "esm", (function(__rolldown_modul
 
 //#endregion
 //#region foo.js
-__rolldown_runtime__.registerFactory("foo.js", "esm", (function(__rolldown_module_id__) {
+__rolldown_runtime__.registerFactory("foo.js", (function(__rolldown_module_id__) {
 	try {
 		var __rolldown_exports__ = __rolldown_runtime__.__exportAll({ value: () => value });
 		__rolldown_runtime__.registerModule(__rolldown_module_id__, { exports: __rolldown_exports__ });

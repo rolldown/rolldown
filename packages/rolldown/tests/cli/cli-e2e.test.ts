@@ -93,6 +93,14 @@ describe('basic arguments', () => {
 });
 
 describe('cli options for bundling', () => {
+  it.each(['bundler-timings', 'plugin-timings'])('accepts --checks.%s', async (option) => {
+    const cwd = cliFixturesDir('no-config');
+    const status = await execa('rolldown', ['index.js', `--checks.${option}`], { cwd });
+    expect(status.exitCode).toBe(0);
+    expect(status.stderr).not.toContain('Invalid');
+    expect(status.stderr).not.toContain('Unknown');
+  });
+
   it('should handle `--input` and positional args as entries', async () => {
     const cwd = cliFixturesDir('cli-multi-entries');
     const status = await $({ cwd })`rolldown 1.ts --input ./2.js`;

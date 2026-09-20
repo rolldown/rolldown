@@ -245,22 +245,13 @@ impl<'ast> Traverse<'ast, ()> for HmrAstFinalizer<'_, 'ast> {
     // mark the callback as PIFE because the callback is executed when this chunk is loaded
     user_code_wrapper.pife = self.use_pife_for_module_wrappers;
 
-    // __rolldown_runtime__.registerFactory(stable_id, kind, function (__rolldown_module_id__) { [user code] })
+    // __rolldown_runtime__.registerFactory(stable_id, function (__rolldown_module_id__) { [user code] })
     // Every factory is id-addressed and registry-gated at runtime; re-execution policy
     // is runtime data (evictions), never a per-payload flag.
-    let mut register_factory_args = oxc::allocator::Vec::with_capacity_in(3, self);
+    let mut register_factory_args = oxc::allocator::Vec::with_capacity_in(2, self);
     register_factory_args.push(ast::Argument::new_string_literal(
       SPAN,
       oxc::ast::ast::Str::from_str_in(&self.module.stable_id, self),
-      None,
-      self,
-    ));
-    register_factory_args.push(ast::Argument::new_string_literal(
-      SPAN,
-      oxc::ast::ast::Str::from_str_in(
-        if self.module.exports_kind.is_commonjs() { "cjs" } else { "esm" },
-        self,
-      ),
       None,
       self,
     ));

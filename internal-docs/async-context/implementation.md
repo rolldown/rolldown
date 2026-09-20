@@ -146,8 +146,15 @@ option adapters.
   callback-bearing native built-ins and wraps each configured callback.
   Every callback key's value comes from exactly one `[[Get]]` - a
   `Reflect.get` with the original receiver - which is the same operation
-  N-API's `napi_get_named_property` performs, so the binding never sees a
-  different value than any other JS reader. The descriptor the bounded walk
+  N-API's `napi_get_named_property` performs, so the binding sees the same
+  value a JS reader performing that `[[Get]]` at that moment would see. The
+  moment is not the one N-API would have picked. The callback keys are read
+  here, during option conversion, before the native call reads anything; a
+  config handed to N-API untouched had all of its fields read later, inside
+  the native call, in the binding struct's field order. That order was never
+  a contract, so a trap whose answer for one key depends on an earlier read
+  of another key now sees its conversion-time answer pinned.
+  The descriptor the bounded walk
   found decides only whether that read is user code: an accessor getter is read
   inside the boundary, while a plain data property, or a key no descriptor
   answered for, is read outside it, so a callback-free config stays inert and

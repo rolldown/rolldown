@@ -161,7 +161,13 @@ option adapters.
   the same single read taken outside it, so a callback-free config stays inert
   and needs no provider. A getter-less accessor is read like the rest rather
   than skipped, because there is nothing to call and a `get` trap may still be
-  what answers for the key. A callback a `Proxy` serves from its `get` trap is
+  what answers for the key. A `Proxy` `get` trap that answers such a plain
+  read is user code too, and it runs outside the boundary on purpose: the
+  boundary covers callback execution, not option reads, and guarding the read
+  would demand a provider for every callback-free build. A trap that starts a
+  build of the same bundle from inside that read is therefore not rejected;
+  this is the same as a config handed to N-API untouched, where the trap ran
+  inside the native call with no guard at all. A callback a `Proxy` serves from its `get` trap is
   therefore wrapped rather than handed to N-API raw, even when the target owns
   a rival descriptor for that key. The snapshot overlay is now the only
   wrapped shape, whatever found the keys: rebuilding the options as a plain
@@ -196,9 +202,12 @@ option adapters.
   the hook runner applies before calling it, so presence and execution never
   disagree: a hook only a `get` trap can answer for is guarded, and a falsy
   answer no runner would ever call leaves a callback-free build unguarded. Only
-  an accessor that has a getter is deferred, because only calling a getter is
-  user code; that read happens inside the boundary, once per snapshot, and
-  counts as present on its own.
+  an accessor that has a getter is deferred, because calling a getter is user
+  code the walk can see in advance; that read happens inside the boundary,
+  once per snapshot, and counts as present on its own. A `Proxy` `get` trap
+  that answers the eager read is user code too, and it runs outside the
+  boundary for the reason given for built-in options above: the boundary
+  covers hook execution, not option reads.
 
 Internal callbacks such as deferred scan-data collection and cache invalidation
 are not wrapped because they do not invoke user code. This distinction keeps

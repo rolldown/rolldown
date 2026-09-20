@@ -31,7 +31,10 @@ import { TransformPluginContextImpl } from './transform-plugin-context';
 // normalized options, and for load/transform their specialized contexts). On
 // the threadless-WASI flavor, where GC finalizers cannot be relied on, the
 // wrappers release each box once its hook settles, and arguments a callback
-// may legally retain are handed over as plain-data snapshots first.
+// may legally retain are handed over as plain-data snapshots first. A
+// MagicString the hook RETURNS is released the same way: `sendMagicString`
+// moves its contents into the native sourcemap channel and leaves the object
+// dead to JavaScript, so the wrapper drops what is left of it too.
 //
 // The two BUILD-scoped plugin contexts are the exception: rollup lets a plugin
 // keep `buildStart`/`buildEnd`'s context and use it later (vite's
@@ -192,6 +195,11 @@ export function bindingifyTransform(
       // Hoisted for the same reason: the `meta.magicString` getter below mints
       // this box lazily, and the `finally` has to be able to reach it.
       let magicStringInstance: RolldownMagicString | undefined;
+      // The MagicString the hook RETURNED, which may be one the plugin built
+      // itself rather than the box above. `sendMagicString` moves only the
+      // string out of it and leaves the mapping table behind, and the object is
+      // dead to JavaScript from that moment on, so the `finally` drops it too.
+      let sentMagicString: RolldownMagicString | undefined;
       // Flipped in the `finally`: a FIRST `meta.magicString` mint through a
       // retained `meta` after the hook settles would escape the cleanup below
       // and leak on a flavor with no GC finalizers, so the getter refuses it
@@ -274,6 +282,8 @@ export function bindingifyTransform(
         } else if (ret.code instanceof RolldownMagicString) {
           let magicString = ret.code as RolldownMagicString;
           normalizedCode = magicString.toString();
+          // Marked BEFORE the send, so a send that throws still releases it.
+          sentMagicString = magicString;
           // If the option is not enable we should just return soucemapJsonString
           let fallbackSourcemap = ctx.sendMagicString(magicString);
           if (fallbackSourcemap != undefined) {
@@ -310,6 +320,11 @@ export function bindingifyTransform(
           // this still has work to do; it reports `freed: false` instead of
           // throwing once there is nothing left.
           magicStringInstance?.dropInner();
+          // Same reasoning for a MagicString the hook returned: after
+          // `sendMagicString` it is unusable from JavaScript, so dropping it
+          // cannot break any legal use. `dropInner` is idempotent, so the
+          // common case where this IS `magicStringInstance` needs no guard.
+          sentMagicString?.dropInner();
         }
       }
     },

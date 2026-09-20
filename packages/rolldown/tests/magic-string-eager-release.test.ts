@@ -114,6 +114,59 @@ describe('native MagicString ownership on the threadless-WASI dist', () => {
   );
 
   distTest(
+    'the transform wrapper releases a MagicString the hook built and returned',
+    async () => {
+      const { build, RolldownMagicString: MagicString } = (await import(
+        distEntryPath
+      )) as typeof browserEntryTypes;
+      const { getRuntimeSupport } = (await import(
+        distExperimentalPath
+      )) as typeof browserExperimentalTypes;
+      // Guard the premise: on a lazy flavor the wrapper drops nothing.
+      expect(getRuntimeSupport().threadlessWasi).toBe(true);
+
+      let ownMagicString: RolldownMagicString | undefined;
+
+      const result = await build({
+        input: ENTRY_ID,
+        write: false,
+        experimental: { nativeMagicString: true },
+        output: { format: 'esm', sourcemap: true },
+        plugins: [
+          virtualEntryPlugin(),
+          {
+            name: 'own-magic-string',
+            transform(code: string, id: string) {
+              if (id !== ENTRY_ID) return null;
+              // NOT `meta.magicString`: a box the plugin minted itself. The
+              // wrapper's settle-time cleanup only reached the one the getter
+              // mints, so this one's mapping table -- the bulk of the ~9x
+              // footprint -- stayed resident for the life of the isolate even
+              // though `sendMagicString` had already made the object unusable.
+              ownMagicString = new MagicString(code);
+              ownMagicString.append('\nconsole.log("own-transformed");');
+              return { code: ownMagicString, map: null };
+            },
+          },
+        ],
+      });
+
+      // The hook still did its job and the map still came through the channel.
+      expect(result.output[0].code).toContain('own-transformed');
+      expect(result.output[0].map?.mappings).toBeTruthy();
+
+      expect(ownMagicString).toBeDefined();
+      // Already released by the wrapper: nothing is left for this call.
+      expect(ownMagicString!.dropInner()).toEqual({
+        freed: false,
+        reason: 'Memory has already been freed',
+      });
+      expect(() => ownMagicString!.toString()).toThrow(/no longer usable/);
+    },
+    180_000,
+  );
+
+  distTest(
     'a retained meta refuses to mint a magicString after its hook settled',
     async () => {
       const { build } = (await import(distEntryPath)) as typeof browserEntryTypes;

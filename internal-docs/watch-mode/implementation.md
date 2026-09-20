@@ -804,14 +804,16 @@ view of that same configuration. The caller's object IS the view's target, so
 `[[Set]]` are trapped.
 
 The rule is **one read per descriptor epoch**. An epoch is the shape and the
-identity of the target's CURRENT own `watch` descriptor, re-derived on every
-`[[Get]]` — inspecting a descriptor calls nothing:
+identity of the target's CURRENT own `watch` descriptor — and, when there is no
+own descriptor, the identity of the direct prototype, because that is what
+resolves `watch` then. It is re-derived on every `[[Get]]`; inspecting a
+descriptor or a prototype calls nothing:
 
-| own descriptor of `watch`          | epoch                   |
-| ---------------------------------- | ----------------------- |
-| none (inherited, or deleted)       | `none`                  |
-| data property holding `v`          | `data(v)` (`Object.is`) |
-| accessor with getter `g` (or none) | `accessor(g)`           |
+| own descriptor of `watch`          | epoch                        |
+| ---------------------------------- | ---------------------------- |
+| none (inherited, or deleted)       | `none(p)` (direct prototype) |
+| data property holding `v`          | `data(v)` (`Object.is`)      |
+| accessor with getter `g` (or none) | `accessor(g)`                |
 
 Two answers are **forced**, because the `Proxy` `get` invariant admits nothing
 else — and each equals what any legal read produces, so no read is taken:
@@ -831,6 +833,17 @@ A **write** of `watch` through the view opens a new epoch by itself: a setter
 inherited from the prototype changes backing state and leaves the own
 descriptor untouched, so the memo is dropped after every successful write and
 the next read observes what the setter did.
+
+A **prototype swap** through the view — `Object.setPrototypeOf(options, { watch:
+{ skipWrite: true } })` in an `options` hook — is delegated to the configuration
+like every other non-`[[Get]]`/`[[Set]]` operation, and changes what an
+inherited `watch` resolves to while leaving every own descriptor alone. That is
+why the `none` epoch carries the direct prototype identity: the swap opens a new
+epoch and the next read resolves through the new chain. The epoch covers the own
+descriptor and the direct prototype identity; edits to a prototype object made
+without going through the view — redefining `watch` on it through an alias the
+caller kept — are not observed, because the view observes the configuration
+object itself, not objects further up its chain.
 
 The memo is seeded at construction, for every shape, from the enablement read —
 under the epoch `createWatcher()` probes **before** taking that read, and passes

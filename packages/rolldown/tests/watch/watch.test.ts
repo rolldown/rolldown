@@ -2464,6 +2464,60 @@ test.concurrent(
   },
 );
 
+// An `options` hook may swap the configuration's PROTOTYPE instead of touching
+// `watch` itself. The view has no `setPrototypeOf` trap, so the swap reaches
+// the configuration, yet neither state has an own `watch` descriptor - the
+// epoch was `none` before and after, the memo answered, and the bundle was
+// written despite the new prototype's `skipWrite`, which main's later live read
+// honoured. The `none` epoch carries the direct prototype identity now, so the
+// swap opens a new epoch and the next read resolves through the new chain.
+test.concurrent(
+  'watch honours a prototype an options hook swaps in through the view',
+  { retry: TEST_RETRY, timeout: TEST_TIMEOUT },
+  async ({ task, expect, onTestFinished }) => {
+    const retryCount = task.result?.retryCount ?? 0;
+    const { input, output, dir } = createTestInputAndOutput(
+      'watch-option-prototype-swap',
+      retryCount,
+    );
+    let getterCalls = 0;
+    const oldPrototype = {
+      get watch(): WatchOptions['watch'] {
+        getterCalls += 1;
+        return { watcher: { usePolling: true, pollInterval: 50 } };
+      },
+    };
+    const watcher = _watch(
+      Object.assign(Object.create(oldPrototype), {
+        input,
+        output: { file: output },
+        plugins: [
+          {
+            name: 'swap-prototype',
+            options(options: WatchOptions) {
+              Object.setPrototypeOf(options, {
+                watch: { skipWrite: true, watcher: { usePolling: true, pollInterval: 50 } },
+              });
+            },
+          },
+        ],
+      }) as WatchOptions,
+    );
+    onTestFinished(async () => {
+      await watcher.close();
+      if (!process.env.CI) {
+        fs.rmSync(dir, { recursive: true, force: true });
+      }
+    });
+    await waitBuildFinished(watcher);
+
+    // The new prototype's `skipWrite` is honoured.
+    expect(fs.existsSync(output)).toBe(false);
+    // The old getter answered the enablement filter and is gone from the chain.
+    expect(getterCalls).toBe(1);
+  },
+);
+
 test.concurrent(
   '#5260',
   { retry: TEST_RETRY, timeout: TEST_TIMEOUT },

@@ -750,10 +750,12 @@ function createSetupError(errors: unknown[], message: string): unknown {
  * `warnMultiplePollingOptions` see what the filter saw.
  *
  * The rule is ONE READ PER DESCRIPTOR EPOCH. An epoch is the shape and the
- * identity of the target's CURRENT own `watch` descriptor: no own descriptor
- * at all, a data property holding a given value, or an accessor with a given
- * getter (possibly none). Every `[[Get]]` of `watch` re-derives the epoch -
- * inspecting a descriptor calls nothing - and:
+ * identity of the target's CURRENT own `watch` descriptor: a data property
+ * holding a given value, an accessor with a given getter (possibly none), or
+ * no own descriptor at all - and in that last case the epoch also carries the
+ * identity of the direct prototype, because that is what resolves `watch`
+ * then. Every `[[Get]]` of `watch` re-derives the epoch - inspecting a
+ * descriptor or a prototype calls nothing - and:
  *
  * - where the `Proxy` `get` invariant FIXES the answer, the view gives that
  *   answer and takes no read at all. That is a non-configurable non-writable
@@ -793,7 +795,14 @@ function createSetupError(errors: unknown[], message: string): unknown {
  * `Object.preventExtensions` applied to the view by an `options` hook satisfies
  * the `Proxy` invariants instead of making a later `ownKeys` throw.
  * Redefinition, deletion and setter calls all change the own descriptor, which
- * is the one thing the rule above reads.
+ * the rule above reads. `Object.setPrototypeOf(view, ...)` is delegated too,
+ * and it changes what an inherited `watch` resolves to while leaving every own
+ * descriptor alone - hence the direct prototype identity in the epoch above, so
+ * a swap through the view opens a new epoch and the next read is one fresh
+ * read through the new chain. Edits to a PROTOTYPE OBJECT made without going
+ * through the view - redefining `watch` on it through an alias the caller kept
+ * - stay out of contract: the view observes the configuration object itself,
+ * not objects further up its chain.
  *
  * A plain `Object.create` shadow would hide the configuration's own keys, so an
  * `options` hook doing `{ ...options }` - what Vite's config plugins do - would
@@ -802,9 +811,13 @@ function createSetupError(errors: unknown[], message: string): unknown {
  *
  * See internal-docs/watch-mode/implementation.md.
  */
-/** The shape and identity of the own `watch` descriptor a read was taken under. */
+/**
+ * The shape and identity of the own `watch` descriptor a read was taken under,
+ * plus - when there is no own descriptor - the identity of the direct
+ * prototype, which is what resolves `watch` in that case.
+ */
 type WatchEpoch =
-  | { kind: 'none' }
+  | { kind: 'none'; prototype: object | null }
   | { kind: 'data'; value: unknown }
   | { kind: 'accessor'; getter: (() => unknown) | undefined };
 
@@ -819,10 +832,15 @@ type WatchProbe =
   | { forced: true; value: WatchOptions['watch'] }
   | { forced: false; epoch: WatchEpoch };
 
-/** Inspect the own `watch` descriptor. Calls nothing, so it is free to repeat. */
+/**
+ * Inspect the own `watch` descriptor, and the direct prototype when there is
+ * none. Runs no getter, so it is free to repeat.
+ */
 function probeWatchEpoch(option: WatchOptions): WatchProbe {
   const descriptor = Reflect.getOwnPropertyDescriptor(option, 'watch');
-  if (!descriptor) return { forced: false, epoch: { kind: 'none' } };
+  if (!descriptor) {
+    return { forced: false, epoch: { kind: 'none', prototype: Reflect.getPrototypeOf(option) } };
+  }
   if ('value' in descriptor) {
     if (!descriptor.configurable && !descriptor.writable) {
       return { forced: true, value: descriptor.value as WatchOptions['watch'] };
@@ -845,7 +863,9 @@ function createWatchOptionSnapshotView(
   const sameEpoch = (left: WatchEpoch, right: WatchEpoch): boolean => {
     if (left.kind === 'data') return right.kind === 'data' && Object.is(left.value, right.value);
     if (left.kind === 'accessor') return right.kind === 'accessor' && left.getter === right.getter;
-    return right.kind === 'none';
+    // No own descriptor: the direct prototype is what resolves `watch`, so a
+    // prototype swap through the view opens a new epoch.
+    return right.kind === 'none' && left.prototype === right.prototype;
   };
 
   // The original is the receiver, the same `this` the filter's read used, so a

@@ -2410,6 +2410,60 @@ test.concurrent(
   },
 );
 
+// The enablement read is user code and may change the descriptor that
+// identifies its own epoch: an INHERITED getter that installs an own data
+// shadow on the configuration before returning the stale value. The epoch was
+// probed after that read, so the stale value was memoised under the shape the
+// read had just created, the shadow was never observed, and the bundle was
+// written - while main's later live read saw it. The epoch is probed before
+// the read now, so the next access sees a changed epoch and takes one fresh
+// read.
+test.concurrent(
+  'watch sees an own watch shadow the enablement read installed',
+  { retry: TEST_RETRY, timeout: TEST_TIMEOUT },
+  async ({ task, expect, onTestFinished }) => {
+    const retryCount = task.result?.retryCount ?? 0;
+    const { input, output, dir } = createTestInputAndOutput(
+      'watch-option-self-shadowing-getter',
+      retryCount,
+    );
+    let getterCalls = 0;
+    const stale: WatchOptions['watch'] = { watcher: { usePolling: true, pollInterval: 50 } };
+    const shadow: WatchOptions['watch'] = {
+      skipWrite: true,
+      watcher: { usePolling: true, pollInterval: 50 },
+    };
+    const prototype = {
+      get watch(): WatchOptions['watch'] {
+        getterCalls += 1;
+        Object.defineProperty(config, 'watch', {
+          configurable: true,
+          enumerable: true,
+          writable: true,
+          value: shadow,
+        });
+        return stale;
+      },
+    };
+    const config = Object.assign(Object.create(prototype), {
+      input,
+      output: { file: output },
+    }) as WatchOptions;
+    const watcher = _watch(config);
+    onTestFinished(async () => {
+      await watcher.close();
+      if (!process.env.CI) {
+        fs.rmSync(dir, { recursive: true, force: true });
+      }
+    });
+    await waitBuildFinished(watcher);
+
+    expect(fs.existsSync(output)).toBe(false);
+    // The shadow answers every later read, so the getter never runs again.
+    expect(getterCalls).toBe(1);
+  },
+);
+
 test.concurrent(
   '#5260',
   { retry: TEST_RETRY, timeout: TEST_TIMEOUT },

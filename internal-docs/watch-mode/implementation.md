@@ -832,12 +832,23 @@ inherited from the prototype changes backing state and leaves the own
 descriptor untouched, so the memo is dropped after every successful write and
 the next read observes what the setter did.
 
-The memo is seeded at construction, for every shape, from the enablement read,
-so the first downstream read re-runs nothing. A `watch` getter that
-materializes `{ skipWrite: true, watcher: { ... } }` once keeps those settings,
-and a `watch` that an `options` hook assigns, redefines as a fresh accessor, or
-replaces through the caller's own alias is honoured — including after
-`Object.freeze`, which lands in the forced case above rather than throwing.
+The memo is seeded at construction, for every shape, from the enablement read —
+under the epoch `createWatcher()` probes **before** taking that read, and passes
+in. The read is user code and is free to change the very descriptor that
+identifies its epoch: an inherited getter that installs an own data shadow
+(`{ skipWrite: true }`) on the configuration before returning the stale value
+does exactly that. An epoch probed afterwards would file the stale value under
+the shape the read had just created, so the shadow would never be observed and
+the bundle would be written, while main's later live read saw it. Seeded under
+the pre-read epoch, the next access sees a changed epoch and takes one fresh
+read. A forced pre-read probe seeds nothing, because a forced epoch takes no
+read at all.
+
+A `watch` getter that materializes `{ skipWrite: true, watcher: { ... } }` once
+keeps those settings, and a `watch` that an `options` hook assigns, redefines as
+a fresh accessor, or replaces through the caller's own alias is honoured —
+including after `Object.freeze`, which lands in the forced case above rather
+than throwing.
 
 Both traps pass the ORIGINAL object as the receiver whenever the view itself is
 the receiver, so a configuration whose `input`, `output` or `watch` getter reads

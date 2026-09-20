@@ -565,9 +565,15 @@ export async function createWatcher(
     // Walk first and discard the result: the walk is what bounds a cyclic or
     // fabricated prototype chain, and it has to throw here, before the read.
     findPropertyDescriptorInPrototypeChain(option, 'watch', 'inspecting watch options');
+    // Probe BEFORE the read. The read is user code and is free to change the
+    // very descriptor that identifies its epoch - an inherited getter that
+    // installs an own data shadow on the way out is exactly that - so an epoch
+    // taken afterwards would file this value under the shape that REPLACED it
+    // and the view would replay it forever.
+    const seededProbe = probeWatchEpoch(option);
     const watch = Reflect.get(option, 'watch', option) as WatchOptions['watch'];
     if (watch === false) continue;
-    enabledOptions.push(createWatchOptionSnapshotView(option, watch));
+    enabledOptions.push(createWatchOptionSnapshotView(option, watch, seededProbe));
   }
   if (enabledOptions.length === 0) {
     throw new TypeError('watch() requires at least one configuration with watch enabled');
@@ -767,8 +773,15 @@ function createSetupError(errors: unknown[], message: string): unknown {
  * and the next read is the one read that observes what the setter did.
  *
  * The memo is seeded at construction, for every shape, from the read the
- * enablement filter already took, so the first downstream read re-runs
- * nothing. Every read passes the original as the receiver - the same `this`
+ * enablement filter already took, under the epoch the caller probed BEFORE
+ * taking it. The read is user code and may change the descriptor that
+ * identifies its own epoch - an inherited getter that installs an own data
+ * shadow before returning the stale value does exactly that - so an epoch
+ * probed after the read would file the stale value under the shape that
+ * replaced it, and no later read would ever see the shadow. Seeded under the
+ * pre-read epoch, the next access sees a changed epoch and takes one fresh
+ * read. A forced pre-read probe seeds nothing, because a forced epoch takes no
+ * read at all. Every read passes the original as the receiver - the same `this`
  * the filter's read used - so a getter backed by a private field works and
  * cannot re-enter this view. Every other key is delegated with the original as
  * the receiver for the same reason, unless the receiver is some object derived
@@ -789,42 +802,46 @@ function createSetupError(errors: unknown[], message: string): unknown {
  *
  * See internal-docs/watch-mode/implementation.md.
  */
+/** The shape and identity of the own `watch` descriptor a read was taken under. */
+type WatchEpoch =
+  | { kind: 'none' }
+  | { kind: 'data'; value: unknown }
+  | { kind: 'accessor'; getter: (() => unknown) | undefined };
+
+/**
+ * Either the answer the `Proxy` `get` invariant fixes - which equals what any
+ * legal read produces, so no read is taken - or the epoch a read belongs to.
+ *
+ * Kept here rather than imported: the browser harness maps this module's
+ * imports by hand.
+ */
+type WatchProbe =
+  | { forced: true; value: WatchOptions['watch'] }
+  | { forced: false; epoch: WatchEpoch };
+
+/** Inspect the own `watch` descriptor. Calls nothing, so it is free to repeat. */
+function probeWatchEpoch(option: WatchOptions): WatchProbe {
+  const descriptor = Reflect.getOwnPropertyDescriptor(option, 'watch');
+  if (!descriptor) return { forced: false, epoch: { kind: 'none' } };
+  if ('value' in descriptor) {
+    if (!descriptor.configurable && !descriptor.writable) {
+      return { forced: true, value: descriptor.value as WatchOptions['watch'] };
+    }
+    return { forced: false, epoch: { kind: 'data', value: descriptor.value } };
+  }
+  // oxlint-disable-next-line typescript/unbound-method -- epoch key only, never invoked through it
+  const getter = descriptor.get;
+  if (!descriptor.configurable && getter === undefined) return { forced: true, value: undefined };
+  // A configurable accessor with no getter has nothing to call, but an
+  // original that is a `Proxy` answers it from its `get` trap, so still read.
+  return { forced: false, epoch: { kind: 'accessor', getter } };
+}
+
 function createWatchOptionSnapshotView(
   option: WatchOptions,
   watch: WatchOptions['watch'],
+  seededProbe: WatchProbe,
 ): WatchOptions {
-  /** The shape and identity of the own `watch` descriptor a read was taken under. */
-  type WatchEpoch =
-    | { kind: 'none' }
-    | { kind: 'data'; value: unknown }
-    | { kind: 'accessor'; getter: (() => unknown) | undefined };
-
-  /**
-   * Either the answer the `Proxy` `get` invariant fixes - which equals what any
-   * legal read produces, so no read is taken - or the epoch a read belongs to.
-   */
-  type WatchProbe =
-    | { forced: true; value: WatchOptions['watch'] }
-    | { forced: false; epoch: WatchEpoch };
-
-  /** Inspect the own descriptor. Calls nothing, so it is free to repeat. */
-  const probe = (): WatchProbe => {
-    const descriptor = Reflect.getOwnPropertyDescriptor(option, 'watch');
-    if (!descriptor) return { forced: false, epoch: { kind: 'none' } };
-    if ('value' in descriptor) {
-      if (!descriptor.configurable && !descriptor.writable) {
-        return { forced: true, value: descriptor.value as WatchOptions['watch'] };
-      }
-      return { forced: false, epoch: { kind: 'data', value: descriptor.value } };
-    }
-    // oxlint-disable-next-line typescript/unbound-method -- epoch key only, never invoked through it
-    const getter = descriptor.get;
-    if (!descriptor.configurable && getter === undefined) return { forced: true, value: undefined };
-    // A configurable accessor with no getter has nothing to call, but an
-    // original that is a `Proxy` answers it from its `get` trap, so still read.
-    return { forced: false, epoch: { kind: 'accessor', getter } };
-  };
-
   const sameEpoch = (left: WatchEpoch, right: WatchEpoch): boolean => {
     if (left.kind === 'data') return right.kind === 'data' && Object.is(left.value, right.value);
     if (left.kind === 'accessor') return right.kind === 'accessor' && left.getter === right.getter;
@@ -838,18 +855,18 @@ function createWatchOptionSnapshotView(
     Reflect.get(option, 'watch', option) as WatchOptions['watch'];
 
   // Seed the memo from the read the enablement filter already took, under the
-  // epoch that was current when it took it - whatever the shape.
-  const seeded = probe();
-  let memo: { epoch: WatchEpoch; value: WatchOptions['watch'] } | undefined = seeded.forced
+  // epoch probed BEFORE that read - whatever the shape. Probing afterwards
+  // would file the value under an epoch the read itself may have opened.
+  let memo: { epoch: WatchEpoch; value: WatchOptions['watch'] } | undefined = seededProbe.forced
     ? undefined
-    : { epoch: seeded.epoch, value: watch };
+    : { epoch: seededProbe.epoch, value: watch };
 
   const view = new Proxy(option, {
     get(target, key, receiver) {
       if (key !== 'watch') {
         return Reflect.get(target, key, receiver === view ? target : receiver);
       }
-      const current = probe();
+      const current = probeWatchEpoch(option);
       if (current.forced) return current.value;
       if (memo && sameEpoch(memo.epoch, current.epoch)) return memo.value;
       memo = { epoch: current.epoch, value: readWatch() };

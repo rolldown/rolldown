@@ -430,18 +430,30 @@ browser-build, and packed-browser tests exercise this contract;
 than a target capability.
 
 This invariant depends on the workspace's `napi 3.12.7` registry pin (§9).
-Synchronous
-threadsafe-function exceptions use
-`Error::capture_unknown_with_status_and_diagnostics`, and Promise rejections use
-`Error::from_unknown_without_coercion`; both retain the exact JavaScript value
-through an owning-environment `napi_ref`. Rolldown's
-`downcast_napi_error_diagnostics` and `BindingError::from_napi_error` preserve
-that reference with `try_clone`, napi-rs `JsError::into_value` reuses it on the
-owning JavaScript thread, and `normalizeBindingError` returns the resulting
-`field0` object directly. None of those capture paths is target-gated. Updating
-the napi-rs revision requires rerunning the threaded, threadless, browser-build,
-and packed-browser metadata regressions before retaining the universal support
-claim.
+Both capture paths run the same function,
+`Error::from_unknown_without_coercion` (napi-rs#3423, first released in `napi
+3.12.1`): Promise rejections reach it from the `catch` handler
+`Promise::from_napi_value` installs, and a threadsafe-function callback that
+throws synchronously reaches it from `call_js_cb_raw`, which clears the pending
+exception, captures it there, and keeps `PendingException` as the resulting
+error's status. Retention covers any thrown value, primitives included —
+`retain_value_without_coercion` stores the value as a plain data property on a
+private holder object and takes the owning-environment `napi_ref` on that
+holder, because `napi_create_reference` refuses non-objects below Node-API 10 —
+and `reason` and `cause` are read as data properties, so capturing runs no user
+getter. Every hook wrapper in `bindingify-build-hooks.ts` and
+`bindingify-output-hooks.ts` is `async`, so a plugin hook that throws lands on
+the Promise path and the synchronous capture covers callbacks that are not.
+Rolldown's `downcast_napi_error_diagnostics` and
+`BindingError::from_napi_error` preserve that reference with `try_clone`, which
+shares it rather than copying it; `ToNapiValue for JsError` hands the retained
+value back verbatim on the owning JavaScript thread — not
+`JsError::into_value`, which gates reuse on `napi_is_error` and would replace a
+thrown primitive with a synthesized `Error` — and `normalizeBindingError`
+returns that `field0` object directly. None of those capture paths is
+target-gated. Updating the napi-rs revision requires rerunning the threaded,
+threadless, browser-build, and packed-browser metadata regressions before
+retaining the universal support claim.
 
 Parallel JavaScript plugins are a native-only workflow. The wasm binding
 compiles out the cross-environment parallel plugin registry, so

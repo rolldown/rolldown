@@ -585,6 +585,79 @@ test('an own built-in callback on a trap-served config keeps the trap-served fie
   }
 });
 
+test("a built-in callback served by a get trap wins over the target's own descriptor", () => {
+  let runnerCalls = 0;
+  const runBuildCallback: BuildCallbackRunner = (callback) => {
+    runnerCalls += 1;
+    return callback();
+  };
+  let trapReads = 0;
+  const ownResolver = () => 'from-own-descriptor';
+  const trapResolver = () => 'from-get-trap';
+  // N-API reads every field with `napi_get_named_property`, which is a plain
+  // `[[Get]]`, so the trap's answer is the one the native side would see. An
+  // own data descriptor on the target must not shadow it.
+  const config = new Proxy(
+    { include: ['**/*.js'], resolver: ownResolver },
+    {
+      get(target, key, receiver) {
+        if (key !== 'resolver') return Reflect.get(target, key, receiver);
+        trapReads += 1;
+        return trapResolver;
+      },
+    },
+  );
+
+  const options = bindingifyBuiltInPlugin(viteDynamicImportVarsPlugin(config), runBuildCallback)
+    .options as BindingViteDynamicImportVarsPluginConfig;
+
+  // One `[[Get]]` per callback key, and a data read is not user code, so it
+  // stays outside the boundary.
+  expect(trapReads).toBe(1);
+  expect(runnerCalls).toBe(0);
+  expect(options.resolver).not.toBe(trapResolver);
+  expect(options.resolver).not.toBe(ownResolver);
+  expect(options.resolver!('entry.js', 'importer.js')).toBe('from-get-trap');
+  expect(runnerCalls).toBe(1);
+  // Reading the view never reaches the trap again.
+  expect(trapReads).toBe(1);
+  // What the binding got is what any other JS reader gets.
+  expect((Reflect.get(config, 'resolver') as typeof trapResolver)()).toBe('from-get-trap');
+});
+
+test('a trap-served built-in callback over an own non-function placeholder is still wrapped', () => {
+  let runnerCalls = 0;
+  const runBuildCallback: BuildCallbackRunner = (callback) => {
+    runnerCalls += 1;
+    return callback();
+  };
+  let rawCalls = 0;
+  const rawLogInfo = () => {
+    rawCalls += 1;
+  };
+  // The target owns `logInfo` as `undefined`, so the descriptor walk reports a
+  // data property. Answering from it left the config unwrapped while N-API
+  // still asked the trap and ran the real callback raw.
+  const config = new Proxy({ logInfo: undefined } as BindingViteReporterPluginConfig, {
+    get(target, key, receiver) {
+      return key === 'logInfo' ? rawLogInfo : Reflect.get(target, key, receiver);
+    },
+  });
+
+  const options = bindingifyBuiltInPlugin(viteReporterPlugin(config), runBuildCallback)
+    .options as BindingViteReporterPluginConfig;
+
+  expect(options).not.toBe(config);
+  expect(typeof options.logInfo).toBe('function');
+  expect(options.logInfo).not.toBe(rawLogInfo);
+  expect(runnerCalls).toBe(0);
+
+  options.logInfo!('built');
+
+  expect(rawCalls).toBe(1);
+  expect(runnerCalls).toBe(1);
+});
+
 test('browser preflight detects direct data-property plugin callbacks', () => {
   const plugin = {
     name: 'direct-data-callback',

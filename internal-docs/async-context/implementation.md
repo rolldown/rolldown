@@ -144,10 +144,16 @@ option adapters.
 - `bindingify-plugin.ts` wraps every build and output plugin hook.
 - `builtin-plugin/utils.ts` maintains exhaustive callback-key inventories for
   callback-bearing native built-ins and wraps each configured callback.
-  Every callback key is read exactly once inside the boundary: from the
-  descriptor the bounded walk found, or, when it found none, through
-  `Reflect.get`, so a callback a `Proxy` serves only from its `get` trap is
-  wrapped rather than handed to N-API raw. The snapshot overlay is now the only
+  Every callback key's value comes from exactly one `[[Get]]` - a
+  `Reflect.get` with the original receiver - which is the same operation
+  N-API's `napi_get_named_property` performs, so the binding never sees a
+  different value than any other JS reader. The descriptor the bounded walk
+  found decides only whether that read is user code: an accessor getter is read
+  inside the boundary, while a plain data property, or a key no descriptor
+  answered for, is read outside it, so a callback-free config stays inert and
+  needs no provider. A callback a `Proxy` serves from its `get` trap is
+  therefore wrapped rather than handed to N-API raw, even when the target owns
+  a rival descriptor for that key. The snapshot overlay is now the only
   wrapped shape, whatever found the keys: rebuilding the options as a plain
   object from the original's own descriptors dropped every field that only a
   `get` trap can answer, so a config whose callback is an own property lost its

@@ -269,18 +269,22 @@ function readPropertyOnce<T extends object, K extends keyof T>(
   runBuildCallback?: BuildCallbackRunner,
 ): T[K] | undefined {
   // The bounded walk that produced `descriptor` is what bounds a cyclic or
-  // fabricated prototype chain, so it has already run before this read. With
-  // no descriptor the read still has to go through `Reflect.get` so that a
-  // `Proxy` serving the callback from its `get` trap is observed rather than
-  // masked by an `undefined` snapshot, matching `readPropertyOnce` in
-  // `utils/create-bundler-option.ts`.
-  if (!descriptor) return Reflect.get(object, key, object) as T[K] | undefined;
-  if ('value' in descriptor) return descriptor.value;
-  // oxlint-disable-next-line typescript/unbound-method -- invoked with its receiver below
-  const getter = descriptor.get;
-  if (!getter) return undefined;
-  const read = () => Reflect.apply(getter, object, []);
-  return runBuildCallback ? runBuildCallback(read, String(key)) : read();
+  // fabricated prototype chain, so it has already run before this read. The
+  // value itself always comes from this one `[[Get]]` with the original
+  // receiver - the very operation N-API's `napi_get_named_property` performs -
+  // so the binding can never see a value that differs from what any other JS
+  // reader gets. The descriptor only classifies the read.
+  const read = () => Reflect.get(object, key, object) as T[K] | undefined;
+  if (descriptor && !('value' in descriptor)) {
+    // oxlint-disable-next-line typescript/unbound-method -- only tested for presence, never invoked
+    if (!descriptor.get) return undefined;
+    // An accessor read runs user code, so it belongs inside the boundary.
+    return runBuildCallback ? runBuildCallback(read, String(key)) : read();
+  }
+  // A data property, or a key the walk found no descriptor for, is a plain
+  // read: it stays outside the boundary, so a callback-free config asks for no
+  // async context provider.
+  return read();
 }
 
 function findPropertyDescriptor(object: object, key: PropertyKey): PropertyDescriptor | undefined {

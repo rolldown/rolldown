@@ -11,7 +11,7 @@ import type {
 import type { PluginContextData } from '../plugin/plugin-context-data';
 import { ChunkingContextImpl } from '../types/chunking-context';
 import { transformAssetSource } from './asset-source';
-import { unimplemented } from './misc';
+import { arraify, unimplemented } from './misc';
 import { transformRenderedChunk } from './transform-rendered-chunk';
 import { logger } from '../cli/logger';
 import {
@@ -372,12 +372,34 @@ function bindingifyCodeSplitting(
   // Transform effectiveChunksOption to binding format
   let advancedChunksResult: BindingOutputOptions['manualCodeSplitting'];
   if (effectiveChunksOption != null) {
-    const { groups, ...restOptions } = effectiveChunksOption;
+    const { groups, experimentalInlineCommonChunks, ...restOptions } = effectiveChunksOption;
     let chunkingContext: ChunkingContextImpl | undefined;
     const getChunkingContext = (bindingContext: BindingChunkingContext) =>
       (chunkingContext ??= new ChunkingContextImpl(bindingContext, pluginContextData));
     advancedChunksResult = {
       ...restOptions,
+      experimentalInlineCommonChunks:
+        experimentalInlineCommonChunks == null
+          ? undefined
+          : {
+              maxSize: experimentalInlineCommonChunks.maxSize,
+              exclude:
+                experimentalInlineCommonChunks.exclude == null
+                  ? undefined
+                  : arraify(experimentalInlineCommonChunks.exclude).map((matcher) =>
+                      typeof matcher === 'function'
+                        ? batchTest(
+                            measureHookCost(
+                              timings,
+                              OUTPUT_OPTIONS_OWNER,
+                              'codeSplitting.experimentalInlineCommonChunks.exclude',
+                              matcher,
+                            ),
+                            'output.codeSplitting.experimentalInlineCommonChunks.exclude',
+                          )
+                        : matcher,
+                    ),
+            },
       internalInvalidateModuleInfoCache: () => {
         chunkingContext?.clearModuleInfoCache();
         chunkingContext = undefined;
@@ -454,7 +476,10 @@ function bindingifyCodeSplitting(
  *
  * The result is a `Uint8Array`, which crosses as a buffer instead of one tagged value per id.
  */
-function batchTest(test: CodeSplittingTestFunction): (ids: string[]) => Uint8Array {
+function batchTest(
+  test: CodeSplittingTestFunction,
+  optionName = 'output.codeSplitting.groups[].test',
+): (ids: string[]) => Uint8Array {
   return (ids) => {
     const results = new Uint8Array(ids.length);
     for (let index = 0; index < ids.length; index++) {
@@ -462,7 +487,7 @@ function batchTest(test: CodeSplittingTestFunction): (ids: string[]) => Uint8Arr
       // napi reports the type of the array, not of the bad element, so the check runs here.
       if (result != null && typeof result !== 'boolean') {
         throw new TypeError(
-          `\`output.codeSplitting.groups[].test\` returned ${typeof result} for module "${
+          `\`${optionName}\` returned ${typeof result} for module "${
             ids[index]
           }", but expected a boolean, null or undefined.`,
         );

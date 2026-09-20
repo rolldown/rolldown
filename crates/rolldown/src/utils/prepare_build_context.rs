@@ -4,10 +4,11 @@ use arcstr::ArcStr;
 use itertools::Either;
 use oxc::{transformer::EngineTargets, transformer_plugins::InjectGlobalVariablesConfig};
 use rolldown_common::{
-  AttachDebugInfo, CodeSplittingMode, GlobalsOutputOption, InjectImport, JsxOptions, JsxPreset,
-  LegalComments, ManualCodeSplittingOptions, MinifyOptions, ModuleType, NormalizedBundlerOptions,
-  OutputFormat, Platform, PreserveEntrySignatures, RawTransformOptions, TransformOptions,
-  TreeshakeOptions, TsConfig, merge_transform_options_with_tsconfig, normalize_optimization_option,
+  AttachDebugInfo, CodeSplittingMode, GlobalsOutputOption, InjectImport, InlineCommonChunksOptions,
+  JsxOptions, JsxPreset, LegalComments, ManualCodeSplittingOptions, MinifyOptions, ModuleType,
+  NormalizedBundlerOptions, NormalizedInlineCommonChunksOptions, OutputFormat, Platform,
+  PreserveEntrySignatures, RawTransformOptions, TransformOptions, TreeshakeOptions, TsConfig,
+  merge_transform_options_with_tsconfig, normalize_optimization_option,
 };
 use rolldown_error::{BuildDiagnostic, BuildResult, InvalidOptionType};
 use rolldown_fs::{OsFileSystem, OxcResolverFileSystem as _};
@@ -154,9 +155,75 @@ fn verify_raw_options(raw_options: &crate::BundlerOptions) -> BuildResult<Vec<Bu
         }
       }
     }
+
+    if let Some(inline_common_chunks) = &manual_code_splitting.experimental_inline_common_chunks {
+      verify_inline_common_chunks_options(raw_options, inline_common_chunks, &mut errors);
+    }
   }
 
   if errors.is_empty() { Ok(warnings) } else { Err(errors.into()) }
+}
+
+/// `experimentalInlineCommonChunks` only works on one output shape. Anything else is a
+/// configuration error rather than a silent fallback, because a candidate kept as a file and a
+/// candidate that was never eligible must stay distinguishable. See
+/// internal-docs/inline-common-chunks/design.md.
+fn verify_inline_common_chunks_options(
+  raw_options: &crate::BundlerOptions,
+  options: &InlineCommonChunksOptions,
+  errors: &mut Vec<BuildDiagnostic>,
+) {
+  let max_size = match options.max_size {
+    None => return,
+    Some(max_size) => {
+      if !inline_common_chunks_max_size_is_valid(max_size) {
+        errors.push(BuildDiagnostic::invalid_option(
+          InvalidOptionType::InlineCommonChunksInvalidMaxSize(max_size.to_string()),
+        ));
+        return;
+      }
+      max_size
+    }
+  };
+  if max_size == 0.0 {
+    return;
+  }
+  let mut require = |condition: bool, requirement: &'static str| {
+    if !condition {
+      errors.push(BuildDiagnostic::invalid_option(
+        InvalidOptionType::InlineCommonChunksRequirement(requirement),
+      ));
+    }
+  };
+  require(
+    matches!(raw_options.format.unwrap_or(OutputFormat::Esm), OutputFormat::Esm),
+    "`output.format` to be `'es'`",
+  );
+  require(
+    raw_options.strict_execution_order == Some(true),
+    "`output.strictExecutionOrder` to be `true`",
+  );
+  require(
+    matches!(raw_options.preserve_entry_signatures, Some(PreserveEntrySignatures::False)),
+    "`preserveEntrySignatures` to be explicitly set to `false`",
+  );
+  require(raw_options.preserve_modules != Some(true), "`output.preserveModules` to be off");
+  let experimental = raw_options.experimental.as_ref();
+  require(
+    experimental.is_none_or(|experimental| experimental.dev_mode.is_none()),
+    "`experimental.devMode` to be off",
+  );
+  require(
+    experimental.is_none_or(|experimental| !experimental.is_on_demand_wrapping_enabled()),
+    "`experimental.onDemandWrapping` to be off",
+  );
+}
+
+/// A non-negative safe integer, the same range `Number.isSafeInteger` accepts. `f64` is what the
+/// binding hands over, so the check is done on the raw number rather than after a lossy cast.
+fn inline_common_chunks_max_size_is_valid(max_size: f64) -> bool {
+  const MAX_SAFE_INTEGER: f64 = 9_007_199_254_740_991.0;
+  max_size.is_finite() && max_size >= 0.0 && max_size.fract() == 0.0 && max_size <= MAX_SAFE_INTEGER
 }
 
 #[expect(clippy::too_many_lines)] // This function is long, but it's mostly just mapping values
@@ -176,6 +243,17 @@ pub fn prepare_build_context(
     Some(mode @ CodeSplittingMode::Bool(_)) => (mode, None),
     None => (CodeSplittingMode::default(), None),
   };
+
+  // `verify_raw_options` already rejected an invalid `maxSize` and every unmet precondition, so
+  // the lossy cast below only ever sees a non-negative safe integer.
+  #[expect(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
+  let inline_common_chunks = manual_code_splitting
+    .as_ref()
+    .and_then(|options| options.experimental_inline_common_chunks.as_ref())
+    .map(|options| NormalizedInlineCommonChunksOptions {
+      max_size: options.max_size.unwrap_or(0.0) as u64,
+      exclude: options.exclude.clone().unwrap_or_default(),
+    });
 
   let preserve_entry_signatures = if let Some(manual_code_splitting) = &manual_code_splitting
     && has_non_recursive_dependency_capture(manual_code_splitting)
@@ -433,6 +511,7 @@ pub fn prepare_build_context(
     code_splitting,
     dynamic_import_in_cjs: raw_options.dynamic_import_in_cjs.unwrap_or(true),
     manual_code_splitting,
+    inline_common_chunks,
     checks: raw_options.checks.unwrap_or_default().into(),
     watch: raw_options.watch.unwrap_or_default(),
     legal_comments: raw_options.legal_comments.unwrap_or(LegalComments::Inline),

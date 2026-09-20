@@ -304,6 +304,25 @@ impl OrderWrapState {
     );
   }
 
+  /// Register a runtime-helper demand that no module statement carries: the registry calls a
+  /// carrier or record prints for `experimentalInlineCommonChunks`. The synthetic statement
+  /// declares and references nothing; it only makes the helpers reach `required_runtime_helpers`
+  /// (the sweep gate and the finalizer's runtime filter), the chunk's depended symbols (the import
+  /// from the runtime chunk), and the runtime symbol closure.
+  pub(crate) fn insert_runtime_helper_demand(
+    &mut self,
+    chunk_idx: ChunkIdx,
+    helpers: RuntimeHelper,
+  ) {
+    let stmt_idx = self.add_synthetic_statement(OrderSyntheticStmt {
+      declared_symbols: vec![],
+      referenced_symbols: vec![],
+      runtime_helpers: helpers,
+      chunk: None,
+    });
+    self.assign_synthetic_statement_chunk(stmt_idx, chunk_idx);
+  }
+
   pub(crate) fn add_synthetic_statement(
     &mut self,
     stmt: OrderSyntheticStmt,

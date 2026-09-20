@@ -1,0 +1,115 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## a.js
+
+```js
+import { i as __share_require, n as __share, r as __share_export, t as __esmMin } from "./rolldown-runtime.js";
+__share("shared", (exports) => {
+	//#region shared.js
+	function bump() {
+		return ++n;
+	}
+	var n;
+	function init_shared() {
+		return (init_shared = __esmMin((() => {
+			n = 0;
+		})))();
+	}
+	//#endregion
+	__share_export(exports, {
+		n: () => init_shared,
+		t: () => bump
+	});
+});
+var share_shared = __share_require("shared");
+//#region a.js
+function init_a() {
+	return (init_a = __esmMin((async () => {
+		share_shared.n();
+		globalThis.events.push("A S");
+		await import("./lazy.js");
+	})))();
+}
+//#endregion
+await init_a();
+
+```
+
+## b.js
+
+```js
+import { i as __share_require, n as __share, r as __share_export, t as __esmMin } from "./rolldown-runtime.js";
+__share("shared", (exports) => {
+	//#region shared.js
+	function bump() {
+		return ++n;
+	}
+	var n;
+	function init_shared() {
+		return (init_shared = __esmMin((() => {
+			n = 0;
+		})))();
+	}
+	//#endregion
+	__share_export(exports, {
+		n: () => init_shared,
+		t: () => bump
+	});
+});
+var share_shared = __share_require("shared");
+//#region b.js
+function init_b() {
+	return (init_b = __esmMin((() => {
+		share_shared.n();
+		globalThis.events.push("B " + (0, share_shared.t)());
+	})))();
+}
+//#endregion
+init_b();
+
+```
+
+## lazy.js
+
+```js
+import { i as __share_require, n as __share, r as __share_export, t as __esmMin } from "./rolldown-runtime.js";
+__share("shared", (exports) => {
+	//#region shared.js
+	function bump() {
+		return ++n;
+	}
+	var n;
+	function init_shared() {
+		return (init_shared = __esmMin((() => {
+			n = 0;
+		})))();
+	}
+	//#endregion
+	__share_export(exports, {
+		n: () => init_shared,
+		t: () => bump
+	});
+});
+var share_shared = __share_require("shared");
+//#region lazy.js
+function init_lazy() {
+	return (init_lazy = __esmMin((() => {
+		share_shared.n();
+		globalThis.events.push("L S" + (0, share_shared.t)());
+	})))();
+}
+//#endregion
+init_lazy();
+
+```
+
+## rolldown-runtime.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+export { __share_require as i, __share as n, __share_export as r, __esmMin as t };
+
+```

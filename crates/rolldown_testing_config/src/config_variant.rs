@@ -1,7 +1,8 @@
 use rolldown_common::{
   AddonOutputOption, BundlerOptions, ChunkOptimizationOption, CodeSplittingMode, CommentsOptions,
-  ExperimentalOptions, InlineConstOption, OptimizationOption, OutputExports, OutputFormat,
-  PreserveEntrySignatures, StrictMode, TreeshakeOptions, deserialize_inline_const,
+  ExperimentalOptions, InlineConstOption, ManualCodeSplittingOptions, OptimizationOption,
+  OutputExports, OutputFormat, PreserveEntrySignatures, StrictMode, TreeshakeOptions,
+  deserialize_inline_const,
 };
 use schemars::JsonSchema;
 use serde::Deserialize;
@@ -39,6 +40,9 @@ pub struct ConfigVariant {
   pub outro: Option<String>,
   pub comments: Option<CommentsOptions>,
   pub chunk_optimization: Option<ChunkOptimizationOption>,
+  /// Sets `codeSplitting.experimentalInlineCommonChunks.maxSize`, keeping every other
+  /// `codeSplitting` field of the base config. `0` turns the feature off.
+  pub inline_common_chunks_max_size: Option<u64>,
   // --- non-bundler options are start with `_`
   /// Whether to include the output in the snapshot for this config variant.
   #[serde(rename = "_snapshot")]
@@ -143,6 +147,19 @@ impl ConfigVariant {
         ..config.experimental.unwrap_or_default()
       });
     }
+    if let Some(max_size) = self.inline_common_chunks_max_size {
+      let mut manual = match config.code_splitting.take() {
+        Some(CodeSplittingMode::Advanced(options)) => options,
+        _ => ManualCodeSplittingOptions::default(),
+      };
+      let mut inline = manual.experimental_inline_common_chunks.take().unwrap_or_default();
+      #[expect(clippy::cast_precision_loss)]
+      {
+        inline.max_size = Some(max_size as f64);
+      }
+      manual.experimental_inline_common_chunks = Some(inline);
+      config.code_splitting = Some(CodeSplittingMode::Advanced(manual));
+    }
     config
   }
 
@@ -195,6 +212,9 @@ impl ConfigVariant {
     }
     if let Some(preserve_modules) = &self.preserve_modules {
       fields.push(format!("preserve_modules: {preserve_modules:?}"));
+    }
+    if let Some(inline_common_chunks_max_size) = &self.inline_common_chunks_max_size {
+      fields.push(format!("inline_common_chunks_max_size: {inline_common_chunks_max_size:?}"));
     }
     if let Some(inline_const) = &self.inline_const {
       fields.push(format!("inline_const: {inline_const:?}"));

@@ -1,0 +1,87 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## a.js
+
+```js
+import { n as r, t as init_r } from "./r.js";
+import { n as init_g, r as readR } from "./grp.js";
+import { t as __esmMin } from "./rolldown-runtime.js";
+//#region a.js
+function init_a() {
+	return (init_a = __esmMin((() => {
+		init_g();
+		init_r();
+		globalThis.events.push("A " + readR() + r);
+	})))();
+}
+//#endregion
+init_a();
+
+```
+
+## b.js
+
+```js
+import { n as r, t as init_r } from "./r.js";
+import { t as __esmMin } from "./rolldown-runtime.js";
+//#region b.js
+function init_b() {
+	return (init_b = __esmMin((() => {
+		init_r();
+		globalThis.events.push("B " + r);
+	})))();
+}
+//#endregion
+init_b();
+
+```
+
+## grp.js
+
+```js
+import { n as r, t as init_r } from "./r.js";
+import { t as __esmMin } from "./rolldown-runtime.js";
+//#region g.js
+function readR() {
+	return r;
+}
+var g;
+function init_g() {
+	return (init_g = __esmMin((() => {
+		init_r();
+		g = String(globalThis.__g ?? "g");
+	})))();
+}
+//#endregion
+export { init_g as n, readR as r, g as t };
+
+```
+
+## r.js
+
+```js
+import { n as init_g, t as g } from "./grp.js";
+import { t as __esmMin } from "./rolldown-runtime.js";
+//#region r.js
+var r;
+function init_r() {
+	return (init_r = __esmMin((() => {
+		init_g();
+		r = "r" + g;
+	})))();
+}
+//#endregion
+export { r as n, init_r as t };
+
+```
+
+## rolldown-runtime.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+export { __esmMin as t };
+
+```

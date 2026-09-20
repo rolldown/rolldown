@@ -71,6 +71,7 @@ impl GenerateStage<'_> {
             resolved_paths: self.resolved_paths.as_ref(),
             resolved_file_urls,
             has_enum_inlining,
+            inline_state: &self.inline_state,
           };
 
           let concatenated_wrapped_module_kind = ctx.linking_info.concatenated_wrapped_module_kind;

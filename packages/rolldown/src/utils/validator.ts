@@ -38,6 +38,7 @@ import type {
   MinifyOptions,
   ModuleFormat,
   CodeSplittingOptions,
+  ExperimentalInlineCommonChunksOptions,
   GeneratedCodePreset,
   GeneratedCodeOptions,
 } from '../options/output-options';
@@ -845,6 +846,29 @@ const AdvancedChunksTestFunctionSchema = v.pipe(
 );
 isTypeTrue<IsSchemaSubType<typeof AdvancedChunksTestFunctionSchema, CodeSplittingTestFunction>>();
 
+const InlineCommonChunksExcludeItemSchema = v.union([
+  StringOrRegExpSchema,
+  AdvancedChunksTestFunctionSchema,
+]);
+
+const ExperimentalInlineCommonChunksSchema = v.strictObject({
+  maxSize: v.pipe(
+    v.optional(v.number()),
+    v.description(
+      'Common chunks smaller than this many source bytes are inlined into their consumers',
+    ),
+  ),
+  exclude: v.optional(
+    v.union([InlineCommonChunksExcludeItemSchema, v.array(InlineCommonChunksExcludeItemSchema)]),
+  ),
+});
+isTypeTrue<
+  IsSchemaSubType<
+    typeof ExperimentalInlineCommonChunksSchema,
+    ExperimentalInlineCommonChunksOptions
+  >
+>();
+
 const AdvancedChunksSchema = v.strictObject({
   includeDependenciesRecursively: v.optional(v.boolean()),
   minSize: v.optional(v.number()),
@@ -871,6 +895,7 @@ const AdvancedChunksSchema = v.strictObject({
       }),
     ),
   ),
+  experimentalInlineCommonChunks: v.optional(ExperimentalInlineCommonChunksSchema),
 });
 isTypeTrue<IsSchemaSubType<typeof AdvancedChunksSchema, CodeSplittingOptions>>();
 

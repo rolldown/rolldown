@@ -26,7 +26,7 @@ use crate::{
   module_finalizers::{ScopeHoistingFinalizer, TraverseState},
   stages::{
     generate_stage::{
-      FinalEsmInitMetadata, Sealed,
+      FinalEsmInitMetadata, InlineCommonChunksState, Sealed,
       order_wrap_state::{EsmInitOrigin, EsmInitTarget, OrderWrapState},
     },
     link_stage::SafelyMergeCjsNsInfo,
@@ -68,6 +68,8 @@ pub struct ScopeHoistingFinalizerContext<'me> {
   /// True if any module in the bundle has enum member values to inline.
   /// Allows skipping enum inlining checks in the hot visitor path for enum-free bundles.
   pub has_enum_inlining: bool,
+  /// `experimentalInlineCommonChunks`: records and the bridges this chunk reads them through.
+  pub inline_state: &'me InlineCommonChunksState,
 }
 
 #[derive(Clone, Copy, Debug)]

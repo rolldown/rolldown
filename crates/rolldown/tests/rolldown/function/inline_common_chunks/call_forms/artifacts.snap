@@ -1,0 +1,117 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## a.js
+
+```js
+import { i as __share_require, n as __share, r as __share_export, t as __esmMin } from "./rolldown-runtime.js";
+__share("shared", (exports) => {
+	//#region shared.js
+	function f() {
+		return this === void 0;
+	}
+	function tag() {
+		return this === void 0;
+	}
+	var K, obj;
+	function init_shared() {
+		return (init_shared = __esmMin((() => {
+			K = class {
+				constructor() {
+					this.ok = true;
+				}
+			};
+			obj = { m() {
+				return this === obj;
+			} };
+		})))();
+	}
+	//#endregion
+	__share_export(exports, {
+		a: () => tag,
+		i: () => obj,
+		n: () => f,
+		r: () => init_shared,
+		t: () => K
+	});
+});
+var share_shared = __share_require("shared");
+//#region a.js
+function init_a() {
+	return (init_a = __esmMin((() => {
+		share_shared.r();
+		globalThis.events.push([
+			(0, share_shared.n)(),
+			(0, share_shared.n)?.(),
+			(0, share_shared.n)(),
+			(0, share_shared.n)?.(),
+			(0, share_shared.a)`x`,
+			(0, share_shared.a)`x`,
+			new share_shared.t().ok,
+			new share_shared.t().ok,
+			share_shared.i.m(),
+			share_shared.i.m()
+		].join());
+	})))();
+}
+//#endregion
+init_a();
+
+```
+
+## b.js
+
+```js
+import { i as __share_require, n as __share, r as __share_export, t as __esmMin } from "./rolldown-runtime.js";
+__share("shared", (exports) => {
+	//#region shared.js
+	function f() {
+		return this === void 0;
+	}
+	function tag() {
+		return this === void 0;
+	}
+	var K, obj;
+	function init_shared() {
+		return (init_shared = __esmMin((() => {
+			K = class {
+				constructor() {
+					this.ok = true;
+				}
+			};
+			obj = { m() {
+				return this === obj;
+			} };
+		})))();
+	}
+	//#endregion
+	__share_export(exports, {
+		a: () => tag,
+		i: () => obj,
+		n: () => f,
+		r: () => init_shared,
+		t: () => K
+	});
+});
+var share_shared = __share_require("shared");
+//#region b.js
+function init_b() {
+	return (init_b = __esmMin((() => {
+		share_shared.r();
+		globalThis.events.push(String((0, share_shared.n)()));
+	})))();
+}
+//#endregion
+init_b();
+
+```
+
+## rolldown-runtime.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+export { __share_require as i, __share as n, __share_export as r, __esmMin as t };
+
+```

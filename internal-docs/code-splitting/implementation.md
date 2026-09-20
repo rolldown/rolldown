@@ -69,6 +69,7 @@ ChunkGraph
     │    ├─ apply_order_wraps()                      Lower the plan into wrappers and topology edits
     │    │    └─ ensure_runtime_module_for_order_wraps()   Re-place the runtime, then sole-consumer fold
     │    ├─ recompute metadata if topology changed
+    │    ├─ select_inline_common_chunks()            experimentalInlineCommonChunks: pick records, register registry demand
     │    ├─ sweep_unused_runtime_module()            Drop a runtime with no source or order-state demand
     │    └─ validate final output shape
     │
@@ -77,6 +78,8 @@ ChunkGraph
     ├─ compute_wrapped_esm_init_metadata()            Produce Sealed<FinalEsmInitMetadata>
     │
     ├─ compute_cross_chunk_links()                    Determine cross-chunk imports/exports
+    │
+    ├─ apply_inline_common_chunks_links()             experimentalInlineCommonChunks: project record edges onto files
     │
     ├─ ensure_lazy_module_initialization_order()      Reorder wrapped module init calls
     │
@@ -94,6 +97,7 @@ ChunkGraph
 - `crates/rolldown/src/stages/generate_stage/dynamic_already_loaded.rs` — Rollup-style dynamic import already-loaded atom reduction
 - `crates/rolldown/src/stages/generate_stage/chunk_optimizer.rs` — merge/optimization
 - `crates/rolldown/src/stages/generate_stage/runtime_module_sweep.rs` — post-optimization runtime-demand sweep
+- `crates/rolldown/src/stages/generate_stage/inline_common_chunks/` — `experimentalInlineCommonChunks`: selection, placement, physical projection, record deconfliction (see `internal-docs/inline-common-chunks/`)
 - `crates/rolldown/src/chunk_graph.rs` — output data structure
 - `crates/rolldown_utils/src/bitset.rs` — compact reachability representation
 - `crates/rolldown/src/types/linking_metadata.rs` — immutable link-stage `wrap_kind()`
@@ -258,6 +262,8 @@ The merge target must not create a static cycle or force unrelated entry chunks 
 - **Safe target found** → runtime moves into that chunk, and the empty standalone runtime chunk is marked removed.
 - **No safe target** → keep the standalone runtime chunk. Runtime imports that resolve only to externals are ignored for chunk-cycle checks; live internal runtime imports keep the runtime standalone instead.
 
+With `experimentalInlineCommonChunks` enabled (`maxSize > 0`), `try_merge_runtime_chunk` returns before any of this: the registry demand that feature registers on carriers and records (`insert_runtime_helper_demand`) appears after every merge proof has run, so the standalone runtime placed above is final, and the post-order-lowering fold below is skipped for the same reason. See `internal-docs/inline-common-chunks/implementation.md`.
+
 ### Post-Order-Lowering Runtime Fold (`ensure_runtime_module_for_order_wraps`)
 
 Order lowering can invalidate the placement the merge above decided. Synthetic wrappers and importer overlays add helper demand that lives only in `OrderWrapState`, never in link-stage metadata, so a chunk with no pre-lowering demand can become a consumer — and that new consumer may sit in a static cycle with the runtime's current host. `ensure_runtime_module_for_order_wraps` therefore restores the standalone-first baseline at the end of `apply_order_wraps()` when code splitting is enabled: a runtime co-hosted in a user chunk is evicted into a fresh standalone chunk, and a runtime that was never placed is materialized standalone. (With code splitting disabled, the single-chunk placement above stands.) These (re)minted chunks carry synthetic all-live-union bits so they sort and name as a universal source; the bits are not reachability facts.
@@ -276,7 +282,7 @@ The fold is deliberately narrower than the optimization-time merge:
 
 Tree-shaking includes runtime helpers at link time, before chunks exist, and some of its reasons are pessimistic: a star re-export chain ending at an external module registers `__reExport`/`__exportAll` demand that only chunking can invalidate. `find_entry_level_external_module` performs that walk-back (flattening the chain to chunk-level `export * from '<external>'` statements and re-propagating `has_dynamic_exports` to `false` through transitive star importers), and `finalized_module_namespace_ref_usage` then drops the namespace objects that only served the chain. The finalizer consequently emits no helper call — but the runtime module was already included and placed, so it used to ship as a dead chunk plus bare imports (#9374, #7233).
 
-`sweep_unused_runtime_module` (in `runtime_module_sweep.rs`) closes that gap. It runs near the tail of `finalize_chunk_plan()`, after `try_merge_runtime_chunk`, order lowering, and the final namespace/external walk-back, but before liveness is sealed and cross-chunk links are derived. It re-derives runtime demand from the same post-walk-back facts the module finalizer renders from, through four source-module channels: per-module `depended_runtime_helper` flags (with `ReExport` discounted unless some included `export * from './normal'` importee still has `has_dynamic_exports` — the exact condition the finalizer checks; CommonJS importees always keep it), the namespace-object channel gated on `namespace_included` (sharing `LinkingMetadata::ns_star_external_re_export_emitted` with the finalizer so the prediction cannot diverge from the emission), runtime-owned symbols referenced by included statements, and `referenced_symbols_by_entry_point_chunk`. If `OrderWrapState` reports synthetic runtime-helper demand, the sweep is skipped conservatively because that demand does not live in link-stage metadata.
+`sweep_unused_runtime_module` (in `runtime_module_sweep.rs`) closes that gap. It runs near the tail of `finalize_chunk_plan()`, after `try_merge_runtime_chunk`, order lowering, and the final namespace/external walk-back, but before liveness is sealed and cross-chunk links are derived. It re-derives runtime demand from the same post-walk-back facts the module finalizer renders from, through four source-module channels: per-module `depended_runtime_helper` flags (with `ReExport` discounted unless some included `export * from './normal'` importee still has `has_dynamic_exports` — the exact condition the finalizer checks; CommonJS importees always keep it), the namespace-object channel gated on `namespace_included` (sharing `LinkingMetadata::ns_star_external_re_export_emitted` with the finalizer so the prediction cannot diverge from the emission), runtime-owned symbols referenced by included statements, and `referenced_symbols_by_entry_point_chunk`. If `OrderWrapState` reports synthetic runtime-helper demand, the sweep is skipped conservatively because that demand does not live in link-stage metadata. `experimentalInlineCommonChunks` registers its `__share`/`__share_require`/`__share_export` demand through that same channel right before the sweep (`select_inline_common_chunks`), which is what keeps the runtime alive when a record is selected; with nothing selected the sweep runs as usual.
 
 The sweep is **all-or-nothing and conservative**: any remaining demand — or any bail-out condition (tree-shaking disabled, runtime not included, runtime has side effects as in dev/HMR mode) — leaves everything exactly as tree-shaking decided. Only a runtime with zero demand is un-included: its statement/module inclusion is cleared, its symbols are purged from `used_symbol_refs` via `remove_owned_by`, it is removed from its chunk, and a now-empty chunk is tombstoned with `PostChunkOptimizationOperation::Removed`.
 

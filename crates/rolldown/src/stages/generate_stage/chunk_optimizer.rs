@@ -1126,6 +1126,12 @@ impl GenerateStage<'_> {
     additional_runtime_consumers: Option<&FxHashSet<ChunkIdx>>,
     cascade: RuntimeMergeCascade,
   ) {
+    // `experimentalInlineCommonChunks` registers registry demand on carriers after every merge
+    // proof below has run, so a merged runtime could end up imported by files the proof never
+    // counted. The runtime stays a standalone chunk while the feature is on.
+    if self.options.is_inline_common_chunks_enabled() {
+      return;
+    }
     let runtime_module_idx = self.link_output.runtime.id();
     let Some(runtime_chunk_idx) = chunk_graph.module_to_chunk[runtime_module_idx] else {
       return;

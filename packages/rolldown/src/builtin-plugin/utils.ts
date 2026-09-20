@@ -173,14 +173,13 @@ function wrapCallbackProperties<T extends object>(
   const callbackDescriptors = new Map<PropertyKey, PropertyDescriptor>();
   for (const key of keys) {
     const descriptor = findPropertyDescriptor(options, key);
-    if (!descriptor) continue;
     const callback = readPropertyOnce(options, key, runBuildCallback);
-    const isAccessor = !('value' in descriptor);
+    const isAccessor = descriptor !== undefined && !('value' in descriptor);
     if (typeof callback !== 'function' && !isAccessor) continue;
 
     callbackDescriptors.set(key, {
       configurable: true,
-      enumerable: descriptor.enumerable ?? true,
+      enumerable: descriptor?.enumerable ?? true,
       value:
         typeof callback === 'function'
           ? (...args: unknown[]) => {
@@ -206,7 +205,12 @@ function readPropertyOnce<T extends object, K extends keyof T>(
   runBuildCallback?: BuildCallbackRunner,
 ): T[K] | undefined {
   const descriptor = findPropertyDescriptor(object, key);
-  if (!descriptor) return undefined;
+  // The walk above is what bounds a cyclic or fabricated prototype chain, so
+  // it has to run before any read. With no descriptor the read still has to go
+  // through `Reflect.get` so that a `Proxy` serving the callback from its `get`
+  // trap is observed rather than masked by an `undefined` snapshot, matching
+  // `readPropertyOnce` in `utils/create-bundler-option.ts`.
+  if (!descriptor) return Reflect.get(object, key, object) as T[K] | undefined;
   if ('value' in descriptor) return descriptor.value;
   // oxlint-disable-next-line typescript/unbound-method -- invoked with its receiver below
   const getter = descriptor.get;

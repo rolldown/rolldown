@@ -5,14 +5,18 @@ import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { Buffer } from 'node:buffer';
 import { rolldown } from 'rolldown';
-import { viteDynamicImportVarsPlugin } from 'rolldown/experimental';
+import { viteDynamicImportVarsPlugin, viteReporterPlugin } from 'rolldown/experimental';
 import { describe, expect, test } from 'vitest';
 
 // @ts-ignore These focused tests intentionally reach package source outside the test rootDir.
-import { bindingifyBuiltInPlugin } from '../src/builtin-plugin/utils';
+import { bindingifyBuiltInPlugin, BuiltinPlugin } from '../src/builtin-plugin/utils';
 // @ts-ignore These focused tests intentionally reach package source outside the test rootDir.
 import type { BuildCallbackRunner } from '../src/plugin/bindingify-plugin';
-import type { BindingViteDynamicImportVarsPluginConfig } from '../src/binding.cjs';
+import type {
+  BindingViteDynamicImportVarsPluginConfig,
+  BindingViteReporterPluginConfig,
+  BindingViteResolvePluginConfig,
+} from '../src/binding.cjs';
 import type {
   configureAsyncContext,
   createAsyncContext,
@@ -312,6 +316,63 @@ test.each([
   expect(resolver('entry.js', 'importer.js')).toBe(marker);
 });
 
+test('built-in callbacks served from a Proxy get trap enter the build callback runner', () => {
+  let runnerCalls = 0;
+  const runBuildCallback: BuildCallbackRunner = (callback) => {
+    runnerCalls += 1;
+    return callback();
+  };
+  let resolverCalls = 0;
+  const resolver = () => {
+    resolverCalls += 1;
+    return 'from-get-trap';
+  };
+  // N-API reads built-in options by named property, so a `get` trap that never
+  // shows up as a descriptor still hands the native side a callback.
+  const config = new Proxy(
+    { include: ['**/*.js'] },
+    {
+      get(target, key, receiver) {
+        return key === 'resolver' ? resolver : Reflect.get(target, key, receiver);
+      },
+    },
+  );
+
+  const bindingPlugin = bindingifyBuiltInPlugin(
+    viteDynamicImportVarsPlugin(config),
+    runBuildCallback,
+  );
+  const options = bindingPlugin.options as BindingViteDynamicImportVarsPluginConfig;
+
+  expect(options).not.toBe(config);
+  expect(options.resolver).not.toBe(resolver);
+  expect(options.resolver!('entry.js', 'importer.js')).toBe('from-get-trap');
+  expect(runnerCalls).toBe(1);
+  expect(resolverCalls).toBe(1);
+});
+
+test('a Proxy-served built-in callback does not displace sibling data callbacks', () => {
+  const runBuildCallback: BuildCallbackRunner = (callback) => callback();
+  const onDebug = () => {};
+  const config = new Proxy(
+    { onWarn: () => {} },
+    {
+      get(target, key, receiver) {
+        return key === 'onDebug' ? onDebug : Reflect.get(target, key, receiver);
+      },
+    },
+  ) as unknown as BindingViteResolvePluginConfig;
+
+  const bindingPlugin = bindingifyBuiltInPlugin(
+    new BuiltinPlugin('builtin:vite-resolve', config),
+    runBuildCallback,
+  );
+  const options = bindingPlugin.options as BindingViteResolvePluginConfig;
+
+  expect(typeof options.onWarn).toBe('function');
+  expect(typeof options.onDebug).toBe('function');
+});
+
 test('browser preflight detects direct data-property plugin callbacks', () => {
   const plugin = {
     name: 'direct-data-callback',
@@ -329,6 +390,22 @@ test('browser preflight detects direct data-property plugin callbacks', () => {
       {} as never,
       false,
     ),
+  ).toBe(true);
+});
+
+test('browser preflight detects Proxy-served built-in plugin callbacks', () => {
+  const logInfo = () => {};
+  const config = new Proxy({} as BindingViteReporterPluginConfig, {
+    get(target, key, receiver) {
+      return key === 'logInfo' ? logInfo : Reflect.get(target, key, receiver);
+    },
+  });
+  const bindingPlugin = bindingifyBuiltInPlugin(viteReporterPlugin(config), (callback) =>
+    callback(),
+  );
+
+  expect(
+    bindingOptionsRequireAsyncContext({ plugins: [bindingPlugin] } as never, {} as never, false),
   ).toBe(true);
 });
 

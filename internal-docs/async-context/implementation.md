@@ -145,7 +145,10 @@ option adapters.
 - `builtin-plugin/utils.ts` maintains exhaustive callback-key inventories for
   callback-bearing native built-ins and wraps each configured callback.
   Accessor-backed callback properties are read once inside the boundary and
-  replaced with data properties before N-API converts the options. Wrappers are
+  replaced with data properties before N-API converts the options. A key with
+  no descriptor is still read through `Reflect.get` after the bounded walk, so
+  a callback a `Proxy` serves only from its `get` trap is wrapped rather than
+  handed to N-API raw. Wrappers are
   installed even when no build runner is present because N-API may invoke them
   as detached functions; each wrapper applies the callback with its original
   options object as the receiver.

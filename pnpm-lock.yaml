@@ -1128,9 +1128,6 @@ importers:
       '@oxc-node/cli':
         specifier: 'catalog:'
         version: 0.1.0
-      '@oxlint/plugins':
-        specifier: ^1.82.0
-        version: 1.82.0
       acorn:
         specifier: 'catalog:'
         version: 8.18.0
@@ -4836,10 +4833,6 @@ packages:
 
   '@oxlint/plugins@1.79.0':
     resolution: {integrity: sha512-S0uyoxakDINJ4DPgqxGlEEvrdSMeQb7Z2lKVjxoY2gwsbZbfg2Xr8Klfeo5ZeraHmmdBCELFUHkSe6KEmBpMvg==}
-    engines: {node: ^12.22.0 || ^14.17.0 || >=16.0.0}
-
-  '@oxlint/plugins@1.82.0':
-    resolution: {integrity: sha512-IDF4UXBNOaCeLoEpVxf5Bg85KOWdeuBEkbo1rGzS2vXcbD+GT1asBSeeTC+5BgW6NFTHVByd6N5giHsFPGtwAA==}
     engines: {node: ^12.22.0 || ^14.17.0 || >=16.0.0}
 
   '@peggyjs/from-mem@3.1.1':
@@ -12171,8 +12164,6 @@ snapshots:
     optional: true
 
   '@oxlint/plugins@1.79.0': {}
-
-  '@oxlint/plugins@1.82.0': {}
 
   '@peggyjs/from-mem@3.1.1':
     dependencies:

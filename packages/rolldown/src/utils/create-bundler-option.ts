@@ -308,7 +308,6 @@ type SnapshotPluginHookName = 'onLog' | 'outputOptions';
 
 interface CapturedPluginHook {
   plugin: Plugin;
-  enumerable: boolean;
   /**
    * Set when the bounded walk found an accessor that has a getter: calling that
    * getter is user code, so the read is deferred to `snapshot()`, which the
@@ -327,7 +326,7 @@ interface CapturedPluginHooks {
    * has to happen inside the boundary.
    */
   present: boolean;
-  /** One overlay list per consumer; never re-reads an already captured value. */
+  /** One view list per consumer; never re-reads an already captured value. */
   snapshot: () => Plugin[];
 }
 
@@ -340,6 +339,15 @@ interface CapturedPluginHooks {
  * whether the read calls user code, the same rule `builtin-plugin/utils.ts`
  * applies to built-in option callbacks. See
  * internal-docs/async-context/implementation.md.
+ *
+ * `snapshot()` hands each consumer a view of the plugin that answers the hook
+ * key from the captured value and delegates everything else to the plugin
+ * itself, as the target AND as the receiver. An `Object.create(plugin, ...)`
+ * overlay delegated too, but with itself as the receiver: `plugin.name` - read
+ * unsnapshotted by `PluginDriver.callOutputOptionsHook` and by `getLogger` -
+ * then threw `Cannot read private member` for a class plugin whose `name`
+ * getter is backed by one. Enumerability comes from the plugin for the same
+ * reason.
  */
 function capturePluginHooks(
   plugins: Plugin[],
@@ -348,14 +356,13 @@ function capturePluginHooks(
   let present = false;
   const captured = plugins.map((plugin): CapturedPluginHook => {
     const descriptor = findPropertyDescriptor(plugin, hookName);
-    const enumerable = descriptor?.enumerable ?? true;
     // oxlint-disable-next-line typescript/unbound-method -- only tested for shape, never invoked
     if (descriptor && !('value' in descriptor) && typeof descriptor.get === 'function') {
       // An accessor with a getter: calling that getter is user code, so the
       // read belongs inside the boundary and the entry counts as present on its
       // own - whatever the getter returns, running it is what must be guarded.
       present = true;
-      return { plugin, enumerable, deferred: true, value: undefined };
+      return { plugin, deferred: true, value: undefined };
     }
     // Every other shape - a data property, a getter-less accessor, or a key the
     // walk found no descriptor for - is one plain read. A getter-less accessor
@@ -363,23 +370,36 @@ function capturePluginHooks(
     // observe the hook at all.
     const value = Reflect.get(plugin, hookName, plugin);
     if (hookWouldRun(value)) present = true;
-    return { plugin, enumerable, deferred: false, value };
+    return { plugin, deferred: false, value };
   });
 
   return {
     present,
     snapshot: () =>
-      captured.map(
-        ({ plugin, enumerable, deferred, value }) =>
-          Object.create(plugin, {
-            [hookName]: {
-              configurable: true,
-              enumerable,
-              value: deferred ? readPropertyOnce(plugin, hookName) : value,
-              writable: true,
-            },
-          }) as Plugin,
-      ),
+      captured.map(({ plugin, deferred, value }) => {
+        // The deferred read happens here, inside `snapshot()`, which every
+        // caller invokes inside the callback boundary.
+        const hookValue = deferred ? readPropertyOnce(plugin, hookName) : value;
+        const view: Plugin = new Proxy(plugin, {
+          get(target, key, receiver) {
+            if (key === hookName) return hookValue;
+            // The plugin is the receiver, so `plugin.name` - which
+            // `callOutputOptionsHook` and `getLogger` read straight off this
+            // view - reaches a getter backed by a private field. An object
+            // derived from the view keeps its own receiver.
+            return Reflect.get(target, key, receiver === view ? target : receiver);
+          },
+          has(target, key) {
+            if (Reflect.has(target, key)) return true;
+            // The key is answered by the `get` trap, so report it - unless
+            // there is nothing to report, which is also the only case where a
+            // non-extensible plugin would make this violate the `has`
+            // invariant.
+            return key === hookName && hookValue !== undefined;
+          },
+        });
+        return view;
+      }),
   };
 }
 
@@ -396,6 +416,13 @@ function hookWouldRun(value: unknown): boolean {
   return Boolean(value);
 }
 
+/**
+ * Overlay of the input options whose `onLog` and `onwarn` answer the one read
+ * this pass took. `Object.create` is enough here, unlike the plugin hook view
+ * above: every consumer - the two {@linkcode hookWouldRun} presence tests and
+ * {@linkcode getOnLog} - reads `onLog` and `onwarn` and nothing else, so no
+ * read is ever delegated to the original with the overlay as its receiver.
+ */
 function snapshotInputLogHandlers(inputOptions: InputOptions): InputOptions {
   return Object.create(inputOptions, {
     onLog: {

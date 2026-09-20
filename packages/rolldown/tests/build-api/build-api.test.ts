@@ -4,7 +4,15 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { Worker } from 'node:worker_threads';
 import { isSingleThread, isWasiTest } from '@tests/runtime-flavor';
-import { build, type InputOptions, type OutputOptions, type Plugin, rolldown } from 'rolldown';
+import {
+  build,
+  type InputOptions,
+  type LogLevel,
+  type OutputOptions,
+  type Plugin,
+  rolldown,
+  type RolldownLog,
+} from 'rolldown';
 import {
   defineParallelPlugin,
   DevEngine,
@@ -1020,6 +1028,97 @@ test('a plugin serving onLog from a proxy get trap runs the handler inside the r
     message: expect.stringMatching(/active JavaScript callbacks/),
   });
   await bundle.close();
+});
+
+// `capturePluginHooks().snapshot()` built `Object.create(plugin, { [hookName]:
+// ... })`, so every read the overlay did not own ran with the OVERLAY as the
+// receiver: `plugin.name` - read by `PluginDriver.callOutputOptionsHook` and by
+// `getLogger` - threw `Cannot read private member` for a class plugin whose
+// `name` getter is backed by one. Main hands the plugin itself to both
+// consumers; the snapshot view does too.
+test('a class plugin whose name getter reads a private field keeps its outputOptions hook', async () => {
+  let hookCalls = 0;
+  class OutputOptionsPlugin {
+    #name: string;
+    constructor(name: string) {
+      this.#name = name;
+    }
+    get name(): string {
+      return this.#name;
+    }
+    outputOptions(options: OutputOptions): OutputOptions {
+      hookCalls += 1;
+      return { ...options, entryFileNames: 'from-class-plugin.js' };
+    }
+  }
+
+  const bundle = await rolldown({
+    input: './main.js',
+    cwd: import.meta.dirname,
+    plugins: [new OutputOptionsPlugin('class-output-options')],
+  });
+  const { output } = await bundle.generate();
+  await bundle.close();
+
+  expect(hookCalls).toBe(1);
+  expect(output[0].fileName).toBe('from-class-plugin.js');
+});
+
+test('a class plugin whose name getter reads a private field keeps its onLog hook', async () => {
+  const virtualId = '\0class-plugin-on-log';
+  const codes: string[] = [];
+  class LogPlugin {
+    #name: string;
+    constructor(name: string) {
+      this.#name = name;
+    }
+    get name(): string {
+      return this.#name;
+    }
+    onLog(_level: LogLevel, log: RolldownLog): boolean {
+      codes.push(log.code!);
+      return false;
+    }
+  }
+
+  const bundle = await rolldown({
+    cwd: import.meta.dirname,
+    input: virtualId,
+    plugins: [evalWarningsPlugin(virtualId, 2), new LogPlugin('class-on-log')],
+  });
+  await bundle.generate({});
+  await bundle.close();
+
+  expect(codes.filter((code) => code === 'EVAL')).toHaveLength(2);
+});
+
+test('a plain-object plugin still reaches both hook consumers through the snapshot view', async () => {
+  const virtualId = '\0plain-object-plugin-hooks';
+  const codes: string[] = [];
+  let hookCalls = 0;
+  const plugin: Plugin = {
+    name: 'plain-object-hooks',
+    outputOptions(options) {
+      hookCalls += 1;
+      return { ...options, entryFileNames: 'plain-object-hooks.js' };
+    },
+    onLog(_level, log) {
+      codes.push(log.code!);
+      return false;
+    },
+  };
+
+  const bundle = await rolldown({
+    cwd: import.meta.dirname,
+    input: virtualId,
+    plugins: [evalWarningsPlugin(virtualId, 1), plugin],
+  });
+  const { output } = await bundle.generate({});
+  await bundle.close();
+
+  expect(hookCalls).toBe(1);
+  expect(output[0].fileName).toBe('plain-object-hooks.js');
+  expect(codes.filter((code) => code === 'EVAL')).toHaveLength(1);
 });
 
 test('input options serving onLog from a proxy get trap run the handler inside the reentrancy guard', async () => {

@@ -207,7 +207,11 @@ option adapters.
   once per snapshot, and counts as present on its own. A `Proxy` `get` trap
   that answers the eager read is user code too, and it runs outside the
   boundary for the reason given for built-in options above: the boundary
-  covers hook execution, not option reads.
+  covers hook execution, not option reads. The list handed to the hook runner
+  and to the logger is one view per plugin: the plugin is the `Proxy` target
+  AND the receiver for every key but the hook, so `plugin.name` - which both
+  consumers read unsnapshotted - still reaches a getter backed by a private
+  field.
 
 Internal callbacks such as deferred scan-data collection and cache invalidation
 are not wrapped because they do not invoke user code. This distinction keeps

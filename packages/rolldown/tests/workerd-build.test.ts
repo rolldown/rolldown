@@ -233,8 +233,75 @@ describe('workerd build() owned-instance disposal parking', () => {
     vi.doUnmock('../src/binding.cjs');
     vi.doUnmock('../src/workerd-managed-instance');
     vi.doUnmock('../src/api/rolldown');
+    vi.doUnmock('../src/api/rolldown/rolldown-build');
     vi.resetModules();
   });
+
+  /**
+   * A queued step whose first `close()` rejects the way a rejected terminal
+   * close does: `__nativeCloseSettled` stays false and the build keeps
+   * retryable cleanup ownership. The cleanup retry then settles the terminal
+   * close, unless `retryError` is set, in which case ownership is never
+   * released.
+   */
+  interface FailingCloseStep {
+    closeError: Error;
+    generateError?: Error;
+    retryError?: Error;
+  }
+
+  interface FakeCleanupRecord {
+    closeCalls: number;
+    retryCalls: number;
+    retryable: boolean;
+    settled: boolean;
+    retry: () => Promise<unknown[]>;
+  }
+
+  /** Stands in for `rolldown-build.ts`'s private `buildCleanupOwnership` map. */
+  const fakeCleanupRecords = new WeakMap<object, FakeCleanupRecord>();
+
+  function makeFailingCloseBundle(step: FailingCloseStep): object {
+    const record: FakeCleanupRecord = {
+      closeCalls: 0,
+      retryCalls: 0,
+      retryable: true,
+      settled: false,
+      retry: async () => {
+        record.retryCalls += 1;
+        if (step.retryError) throw step.retryError;
+        record.settled = true;
+        record.retryable = false;
+        return [];
+      },
+    };
+    const bundle = {
+      generate: async () => {
+        if (step.generateError) throw step.generateError;
+        return { output: [{ type: 'chunk' }] };
+      },
+      close: async () => {
+        record.closeCalls += 1;
+        // First close: the terminal close rejected, so nothing settled and the
+        // cleanup stays retryable (rolldown-build.ts clears #nativeClosePromise).
+        if (record.closeCalls === 1) throw step.closeError;
+        record.settled = true;
+        record.retryable = false;
+      },
+      get __nativeCloseSettled(): boolean {
+        return record.settled;
+      },
+      __whenNativeCloseSettled: async () => {},
+    };
+    fakeCleanupRecords.set(bundle, record);
+    return bundle;
+  }
+
+  function cleanupRecord(bundle: object): FakeCleanupRecord {
+    const record = fakeCleanupRecords.get(bundle);
+    if (!record) throw new Error('harness: no cleanup record for this bundle');
+    return record;
+  }
 
   /**
    * Fresh copy of the source entry with the workerd-bundle marker set, its
@@ -244,7 +311,8 @@ describe('workerd build() owned-instance disposal parking', () => {
    */
   async function loadHarness(
     instanceQueue: FakeOwnedInstance[],
-    buildQueue: Array<'ok' | Error>,
+    buildQueue: Array<'ok' | Error | FailingCloseStep>,
+    bundleSink: object[] = [],
   ): Promise<Pick<typeof workerdEntryTypes, 'build' | 'createWorkerdBundle'>> {
     vi.resetModules();
     vi.doMock('../src/binding.cjs', () => ({ __isWorkerdBindingProxy: true }));
@@ -255,18 +323,32 @@ describe('workerd build() owned-instance disposal parking', () => {
         return next;
       }),
     }));
+    // The real ownership map is private to rolldown-build.ts and only a real
+    // RolldownBuild registers in it, so the two @internal cleanup entry points
+    // read this harness's records instead.
+    vi.doMock('../src/api/rolldown/rolldown-build', () => ({
+      hasRetryableBuildCleanup: (bundle: object) =>
+        fakeCleanupRecords.get(bundle)?.retryable ?? false,
+      retryRolldownBuildCleanup: (bundle: object) =>
+        fakeCleanupRecords.get(bundle)?.retry() ?? Promise.resolve([]),
+    }));
     vi.doMock('../src/api/rolldown', () => ({
       rolldown: vi.fn(async () => {
         const step = buildQueue.shift() ?? 'ok';
-        return {
-          generate: async () => {
-            if (step !== 'ok') throw step;
-            return { output: [{ type: 'chunk' }] };
-          },
-          close: async () => {},
-          __nativeCloseSettled: true,
-          __whenNativeCloseSettled: async () => {},
-        };
+        const bundle =
+          step === 'ok' || step instanceof Error
+            ? {
+                generate: async () => {
+                  if (step !== 'ok') throw step;
+                  return { output: [{ type: 'chunk' }] };
+                },
+                close: async () => {},
+                __nativeCloseSettled: true,
+                __whenNativeCloseSettled: async () => {},
+              }
+            : makeFailingCloseBundle(step);
+        bundleSink.push(bundle);
+        return bundle;
       }),
     }));
     // @ts-ignore This focused unit test intentionally reaches the package source outside the test rootDir.
@@ -332,6 +414,74 @@ describe('workerd build() owned-instance disposal parking', () => {
     const result = await build({ module: wasmModule, input: 'x' });
     expect(result.output).toHaveLength(1);
     expect(transient.dispose).toHaveBeenCalledTimes(2);
+  });
+
+  test('a rejected close is retried, so the owned instance is disposed instead of parked', async () => {
+    const closeError = new Error('onLog threw on the plugin-timings warning');
+    const owned = fakeOwnedInstance(() => {});
+    const later = fakeOwnedInstance(() => {});
+    const bundles: object[] = [];
+    const { build } = await loadHarness([owned, later], [{ closeError }, 'ok'], bundles);
+
+    // The close failure is still what the caller sees: the retry only exists
+    // to hand the instance's binding object back.
+    const rejection: unknown = await build({ module: wasmModule, input: 'x' }).catch((e) => e);
+    expect(rejection).toBe(closeError);
+
+    const record = cleanupRecord(bundles[0]);
+    expect(record.closeCalls).toBe(1);
+    expect(record.retryCalls).toBe(1);
+    expect(record.settled).toBe(true);
+
+    // Disposed right there, and never parked: a later build does not touch it.
+    expect(owned.dispose).toHaveBeenCalledTimes(1);
+    await build({ module: wasmModule, input: 'x' });
+    expect(owned.dispose).toHaveBeenCalledTimes(1);
+  });
+
+  test('a rejected close on the generate-failure branch is retried too', async () => {
+    const generateError = new Error('generate failed');
+    const closeError = new Error('close failed');
+    const owned = fakeOwnedInstance(() => {});
+    const bundles: object[] = [];
+    const { build } = await loadHarness([owned], [{ closeError, generateError }], bundles);
+
+    const rejection: unknown = await build({ module: wasmModule, input: 'x' }).catch((e) => e);
+    // Unchanged surface for this branch: build error first, close error second.
+    expect(rejection).toBeInstanceOf(AggregateError);
+    const aggregate = rejection as AggregateError;
+    expect(aggregate.message).toBe('Build and bundle close both failed');
+    expect(aggregate.errors).toStrictEqual([generateError, closeError]);
+
+    expect(cleanupRecord(bundles[0]).retryCalls).toBe(1);
+    expect(owned.dispose).toHaveBeenCalledTimes(1);
+  });
+
+  test('a close whose cleanup retry also fails still parks with the aggregate surface', async () => {
+    const closeError = new Error('onLog threw on the plugin-timings warning');
+    const retryError = new Error('cleanup retry failed too');
+    // Ownership is never released, so the facade keeps refusing disposal.
+    const disposeError = new Error(
+      'Cannot dispose this workerd Rolldown instance with 1 open binding object',
+    );
+    const stuck = fakeOwnedInstance(() => {
+      throw disposeError;
+    });
+    const bundles: object[] = [];
+    const { build } = await loadHarness([stuck], [{ closeError, retryError }], bundles);
+
+    const rejection: unknown = await build({ module: wasmModule, input: 'x' }).catch((e) => e);
+    expect(rejection).toBeInstanceOf(AggregateError);
+    const aggregate = rejection as AggregateError;
+    expect(aggregate.message).toBe('Build and workerd instance disposal both failed');
+    expect(aggregate.errors).toStrictEqual([closeError, disposeError]);
+    expect(aggregate.cause).toBe(closeError);
+
+    const record = cleanupRecord(bundles[0]);
+    expect(record.retryCalls).toBe(1);
+    expect(record.retryable).toBe(true);
+    // Immediate attempt + one re-attempt, then parked, exactly as before.
+    expect(stuck.dispose).toHaveBeenCalledTimes(2);
   });
 
   test('createWorkerdBundle() also drains parked instances', async () => {
@@ -568,6 +718,75 @@ describe('workerd build() against the built dist', () => {
         await instanceA.dispose().catch(() => {});
         await instanceB.dispose();
       }
+    },
+    180_000,
+  );
+
+  // A plugin-bound build (>= 3 s of plugin time) makes the terminal close
+  // report PLUGIN_TIMINGS through onLog, so a throwing onLog rejects the close
+  // with the native bundle still holding the instance's binding object.
+  function slowPluginOptions(codes: string[], onLogError: Error) {
+    return {
+      input: 'virt:entry.js',
+      plugins: [
+        {
+          name: 'slow-load',
+          resolveId: (id: string) => (id === 'virt:entry.js' ? id : undefined),
+          load: async (id: string) => {
+            if (id !== 'virt:entry.js') return undefined;
+            await new Promise((resolve) => setTimeout(resolve, 3_500));
+            return 'export const a = 1;\n';
+          },
+        },
+      ],
+      onLog: (_level: string, log: unknown) => {
+        const code = (log as { code?: string }).code;
+        codes.push(code ?? '');
+        if (code === 'PLUGIN_TIMINGS') throw onLogError;
+      },
+      output: { format: 'esm' as const },
+    };
+  }
+
+  distTest(
+    'a close() rejected after the build still releases the caller-owned instance',
+    async () => {
+      const { workerd, wasmModule } = await loadDistWorkerd();
+      const instance = await workerd.createInstance(wasmModule);
+      const codes: string[] = [];
+      const onLogError = new Error('onLog threw on the plugin-timings warning');
+      try {
+        const rejection: unknown = await workerd
+          .build({ instance, ...slowPluginOptions(codes, onLogError) })
+          .catch((error: unknown) => error);
+        expect(codes).toContain('PLUGIN_TIMINGS');
+        // Unchanged surface: the close failure itself is what build() reports.
+        expect(rejection).toBe(onLogError);
+        // The terminal close was retried, so no binding object is left open.
+        await instance.dispose();
+        expect(instance.disposed).toBe(true);
+      } finally {
+        await instance.dispose().catch(() => {});
+      }
+    },
+    180_000,
+  );
+
+  distTest(
+    'a close() rejected after the build still disposes the private module: instance',
+    async () => {
+      const { workerd, wasmModule } = await loadDistWorkerd();
+      const codes: string[] = [];
+      const onLogError = new Error('onLog threw on the plugin-timings warning');
+
+      const rejection: unknown = await workerd
+        .build({ module: wasmModule, ...slowPluginOptions(codes, onLogError) })
+        .catch((error: unknown) => error);
+      expect(codes).toContain('PLUGIN_TIMINGS');
+      expect(rejection).toBe(onLogError);
+      // Nothing is left to own the bundle, so the instance must already be
+      // disposed here; a parked one would keep ~64 MiB of Wasm memory alive.
+      expect(workerd.getWorkerdRuntimeStats().liveInstances).toBe(0);
     },
     180_000,
   );

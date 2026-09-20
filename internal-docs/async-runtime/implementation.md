@@ -763,6 +763,15 @@ lifetime. Each barrier token records the original raw `close` function. Only a
 call to that exact function can release the token, and object/prototype proxies
 reject assignment, definition, or deletion of `close`, so replacing it with a
 no-op cannot bypass disposal.
+Because the token survives a rejected close, whoever still holds the bundle has
+to run the terminal close again. `workerd-build.ts`'s `build()` owns the bundle
+it creates and drops it on the way out, so it retries once through the build's
+`@internal` cleanup entry points (`hasRetryableBuildCleanup` /
+`retryRolldownBuildCleanup`) and then reports the original close failure.
+Without that retry a plugin-bound build whose `onLog` throws on the close-time
+`PLUGIN_TIMINGS` warning holds the token for good: `dispose()` stays refused,
+and a `module:` build parks a private instance whose Wasm memory (~64 MiB) can
+never be reclaimed.
 Managed caller-provided memories are claimed once for the lifetime of the
 memory object before emnapi instantiation begins. Failed initialization keeps
 the claim because emnapi or Wasm import setup may already have mutated the

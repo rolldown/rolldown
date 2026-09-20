@@ -4,7 +4,11 @@
 // per-instance exports entered here.
 import * as bindingNamespace from './binding.cjs';
 import { rolldown } from './api/rolldown';
-import type { RolldownBuild } from './api/rolldown/rolldown-build';
+import {
+  hasRetryableBuildCleanup,
+  retryRolldownBuildCleanup,
+  type RolldownBuild,
+} from './api/rolldown/rolldown-build';
 import { __enterWorkerdBinding, __exitWorkerdBinding } from './binding-workerd-proxy';
 import type { InputOptions } from './options/input-options';
 import type { OutputOptions } from './options/output-options';
@@ -296,6 +300,43 @@ export async function build(options: WorkerdBuildOptions): Promise<RolldownOutpu
   return buildWithInstance(instance!, inputOptions, output, stripAnsi);
 }
 
+/**
+ * `close()` on a bundle this frame owns, with one cleanup retry.
+ *
+ * A rejected `close()` can leave the native terminal close retryable: the
+ * bundle clears its memoized close promise and keeps cleanup ownership without
+ * marking terminal settlement. One real trigger is a plugin-bound build (>= 3 s
+ * of plugin time), whose terminal close reports `PLUGIN_TIMINGS` through
+ * `onLog` — a throwing `onLog` rejects the close after the native cleanup has
+ * already started.
+ *
+ * The managed facade keeps the bundler's open-object token on such a rejection
+ * (the raw `closed` flag flips when the terminal close STARTS, so it cannot
+ * witness settlement), and this frame holds the ONLY reference to the bundle:
+ * `build()` drops it on the way out. Without the retry, nothing can ever call
+ * the terminal close again — `dispose()` stays refused forever and a `module:`
+ * build parks an instance whose Wasm memory can never be reclaimed.
+ *
+ * The retry only exists to hand that ownership back, so the ORIGINAL close
+ * failure is what the caller sees either way; `api/build.ts` aggregates its
+ * retry failures because its caller keeps the bundle and can act on them.
+ *
+ * See internal-docs/async-runtime/implementation.md.
+ */
+async function closeBundleWithRetry(bundle: RolldownBuild): Promise<void> {
+  try {
+    await bundle.close();
+  } catch (error) {
+    if (bundle.__nativeCloseSettled || !hasRetryableBuildCleanup(bundle)) throw error;
+    try {
+      await retryRolldownBuildCleanup(bundle);
+    } catch {
+      // Ownership could not be handed back; report the original failure.
+    }
+    throw error;
+  }
+}
+
 async function buildWithInstance(
   instance: WorkerdRolldownInstance,
   inputOptions: InputOptions,
@@ -314,7 +355,7 @@ async function buildWithInstance(
       void result.output;
     } catch (error) {
       try {
-        await bundle.close();
+        await closeBundleWithRetry(bundle);
       } catch (closeError) {
         throw new AggregateError([error, closeError], 'Build and bundle close both failed', {
           cause: error,
@@ -322,7 +363,7 @@ async function buildWithInstance(
       }
       throw error;
     }
-    await bundle.close();
+    await closeBundleWithRetry(bundle);
     return result;
   } catch (error) {
     throw stripAnsi ? stripAnsiFromError(error) : error;

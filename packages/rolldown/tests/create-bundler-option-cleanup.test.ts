@@ -181,12 +181,11 @@ test.each([
   expect(mocks.bindingifyInputOptions).not.toHaveBeenCalled();
 });
 
-// `accessorCalls` pins the consequence of the walk `readPropertyOnce` performs
-// and discards: without it the same TypeError still surfaces - the snapshot's
-// `enumerable` walk throws right after - but only after `Reflect.get` has
-// already executed the accessor. This case slips past `hasDefinedProperty`
-// because the first plugin owns `outputOptions`, so the over-deep second plugin
-// is first traversed by `readPropertyOnce` itself.
+// `accessorCalls` pins the consequence of the bounded walk `capturePluginHooks`
+// performs before it reads: the walk is what refuses the over-deep chain, and
+// it has to run BEFORE the `Reflect.get` that would execute the accessor.
+// Without that order the same TypeError still surfaces - a later walk throws -
+// but only after the accessor has already run.
 test('refuses an over-deep plugin prototype chain before reading the hook off it', async () => {
   let accessorCalls = 0;
   let overDeepPlugin = Object.create(null, {
@@ -205,7 +204,8 @@ test('refuses an over-deep plugin prototype chain before reading the hook off it
   await expect(
     createBundlerOptions(
       {
-        // Owned so `hasUserLogCallback` short-circuits before walking any plugin.
+        // An owned handler, so nothing about this case depends on discovering
+        // one on a plugin.
         onLog() {},
         plugins: [
           { name: 'owns-output-options', outputOptions: (options) => options },

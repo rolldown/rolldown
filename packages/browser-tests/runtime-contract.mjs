@@ -215,6 +215,56 @@ try {
       supported: false,
     });
 
+    // A hook only a `get` trap answers for. No descriptor walk can see it, so
+    // hook presence has to be decided by the value the options capture read,
+    // or this build runs the hook with no provider behind it.
+    let trapServedOutputOptionsCalls = 0;
+    const trapServedPlugin = new Proxy(
+      {
+        name: 'browser-trap-served-output-options',
+        resolveId(id) {
+          if (id === 'virtual:entry') return id;
+        },
+        load(id) {
+          if (id === 'virtual:entry') return 'export default 1';
+        },
+      },
+      {
+        get(target, key, receiver) {
+          if (key === 'outputOptions') {
+            return (options) => {
+              trapServedOutputOptionsCalls += 1;
+              return options;
+            };
+          }
+          return Reflect.get(target, key, receiver);
+        },
+      },
+    );
+    assert.equal(
+      Object.getOwnPropertyDescriptor(trapServedPlugin, 'outputOptions'),
+      undefined,
+      'The trap-served hook must answer no descriptor walk',
+    );
+    const trapServedBundle = await browserApi.rolldown({
+      cwd: '/',
+      input: 'virtual:entry',
+      plugins: [trapServedPlugin],
+    });
+    const trapServedError = await trapServedBundle.generate().catch((error) => error);
+    assert.equal(trapServedError?.name, 'AsyncContextUnavailableError');
+    assert.equal(trapServedError?.code, 'ERR_ROLLDOWN_ASYNC_CONTEXT_UNAVAILABLE');
+    assert.equal(
+      trapServedOutputOptionsCalls,
+      0,
+      'Unavailable async context must fail before a trap-served outputOptions hook',
+    );
+    await trapServedBundle.close();
+    assert.deepEqual(experimentalApi.getAsyncContextSupport(), {
+      source: 'unavailable',
+      supported: false,
+    });
+
     experimentalApi.configureAsyncContext({
       createStorage: () => new AsyncLocalStorage(),
     });

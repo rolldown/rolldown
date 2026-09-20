@@ -188,7 +188,11 @@ option adapters.
   callback reaches the same boundary through its generated code-splitting
   group.
 - The `outputOptions` plugin hook runs through the runner before binding option
-  conversion.
+  conversion. Whether a plugin supplies `outputOptions` - or `onLog` - is
+  decided by the value the capture read, not by the descriptor alone, so a hook
+  only a `get` trap can answer for is seen and reaches the boundary. An
+  accessor's read is still user code, so it stays deferred and happens inside
+  that boundary, once per snapshot.
 
 Internal callbacks such as deferred scan-data collection and cache invalidation
 are not wrapped because they do not invoke user code. This distinction keeps

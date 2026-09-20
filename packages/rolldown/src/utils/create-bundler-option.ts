@@ -81,22 +81,22 @@ export async function createBundlerOptions(
 
   const logLevel = inputOptions.logLevel || LOG_LEVEL_INFO;
   const inputObjectPlugins = getObjectPlugins(inputPlugins);
-  const hasUserLogCallback =
-    hasDefinedProperty(inputOptions, 'onLog') ||
-    hasDefinedProperty(inputOptions, 'onwarn') ||
-    inputObjectPlugins.some((plugin) => hasDefinedProperty(plugin, 'onLog'));
+  // Capture the plugin `onLog` hooks once, up front: presence is decided by the
+  // captured VALUE, so a plugin whose handler only a `get` trap can answer for
+  // is seen here and reaches the reentrancy guard like any other.
+  const pluginLogHooks = capturePluginHooks(inputObjectPlugins, 'onLog');
   // Read once, like Rollup and like the plugin-less path: an accessor-backed
   // `onLog`/`onwarn` on the input options must not be re-run per log entry.
-  // `snapshotPluginHooks` stays inside `invokeLogger` on purpose - plugin
+  // The plugin snapshot stays inside `invokeLogger` on purpose - plugin
   // `onLog` accessors have to execute inside the reentrancy guard.
-  const inputLogHandlers = getOnLog(snapshotInputLogHandlers(inputOptions), logLevel);
+  const snapshottedInputOptions = snapshotInputLogHandlers(inputOptions);
+  const hasUserLogCallback =
+    snapshottedInputOptions.onLog != null ||
+    snapshottedInputOptions.onwarn != null ||
+    pluginLogHooks.present;
+  const inputLogHandlers = getOnLog(snapshottedInputOptions, logLevel);
   const invokeLogger: LogHandler = (level, log) =>
-    getLogger(
-      snapshotPluginHooks(inputObjectPlugins, 'onLog'),
-      inputLogHandlers,
-      logLevel,
-      watchMode,
-    )(level, log);
+    getLogger(pluginLogHooks.snapshot(), inputLogHandlers, logLevel, watchMode)(level, log);
   const onLog: LogHandler =
     runBuildCallback && hasUserLogCallback
       ? (level, log) => runBuildCallback(() => invokeLogger(level, log), 'onLog')
@@ -105,9 +105,10 @@ export async function createBundlerOptions(
   // The `outputOptions` hook is called with the input plugins and the output plugins.
   // Snapshotting makes accessor-backed hooks execute exactly once and only inside the guard.
   const outputOptionPlugins = getObjectPlugins([...inputPlugins, ...outputPlugins]);
+  const outputOptionsHooks = capturePluginHooks(outputOptionPlugins, 'outputOptions');
   const callOutputOptionsHook = () =>
     PluginDriver.callOutputOptionsHook(
-      snapshotPluginHooks(outputOptionPlugins, 'outputOptions'),
+      outputOptionsHooks.snapshot(),
       outputOptions,
       onLog,
       logLevel,
@@ -115,9 +116,7 @@ export async function createBundlerOptions(
     );
   const invokeOutputOptionsHook = () =>
     closeCallbackScope ? closeCallbackScope.run(callOutputOptionsHook) : callOutputOptionsHook();
-  const hasOutputOptionsHook = outputOptionPlugins.some((plugin) =>
-    hasDefinedProperty(plugin, 'outputOptions'),
-  );
+  const hasOutputOptionsHook = outputOptionsHooks.present;
   outputOptions =
     runBuildCallback && hasOutputOptionsHook
       ? runBuildCallback(callOutputOptionsHook, 'outputOptions')
@@ -293,18 +292,74 @@ export interface BundlerOptionWithStopWorker {
 
 type SnapshotPluginHookName = 'onLog' | 'outputOptions';
 
-function snapshotPluginHooks(plugins: Plugin[], hookName: SnapshotPluginHookName): Plugin[] {
-  return plugins.map((plugin) => {
-    const hook = readPropertyOnce(plugin, hookName);
-    return Object.create(plugin, {
-      [hookName]: {
-        configurable: true,
-        enumerable: findPropertyDescriptor(plugin, hookName)?.enumerable ?? true,
-        value: hook,
-        writable: true,
-      },
-    }) as Plugin;
+interface CapturedPluginHook {
+  plugin: Plugin;
+  enumerable: boolean;
+  /**
+   * Set when the bounded walk found an accessor: reading it runs user code, so
+   * the read is deferred to `snapshot()`, which the callers invoke inside the
+   * callback boundary.
+   */
+  deferred: boolean;
+  /** What the capture read. Only meaningful when `deferred` is false. */
+  value: unknown;
+}
+
+interface CapturedPluginHooks {
+  /** Whether any plugin supplies the hook, decided by the captured value. */
+  present: boolean;
+  /** One overlay list per consumer; never re-reads an already captured value. */
+  snapshot: () => Plugin[];
+}
+
+/**
+ * Reads a hook off every plugin exactly once and decides from the captured
+ * VALUE - never from the descriptor alone - whether that plugin supplies it. A
+ * `Proxy` serving the hook from its `get` trap answers no descriptor walk, so a
+ * descriptor-only test reports "no hook" for a hook that is then found and run,
+ * and the run happens outside the callback boundary. The descriptor decides only
+ * whether the read itself is user code, the same rule `builtin-plugin/utils.ts`
+ * applies to built-in option callbacks. See
+ * internal-docs/async-context/implementation.md.
+ */
+function capturePluginHooks(
+  plugins: Plugin[],
+  hookName: SnapshotPluginHookName,
+): CapturedPluginHooks {
+  let present = false;
+  const captured = plugins.map((plugin): CapturedPluginHook => {
+    const descriptor = findPropertyDescriptor(plugin, hookName);
+    const enumerable = descriptor?.enumerable ?? true;
+    if (descriptor && !('value' in descriptor)) {
+      // An accessor: its read runs user code and belongs inside the boundary,
+      // so only whether a getter exists is known here.
+      // oxlint-disable-next-line typescript/unbound-method -- only tested for presence, never invoked
+      if (descriptor.get != null) present = true;
+      return { plugin, enumerable, deferred: true, value: undefined };
+    }
+    // A data property, or a key the walk found no descriptor for: reading it
+    // now runs no user code on an ordinary object, and on a `Proxy` the `get`
+    // trap is the only way to observe the hook at all.
+    const value = Reflect.get(plugin, hookName, plugin);
+    if (value != null) present = true;
+    return { plugin, enumerable, deferred: false, value };
   });
+
+  return {
+    present,
+    snapshot: () =>
+      captured.map(
+        ({ plugin, enumerable, deferred, value }) =>
+          Object.create(plugin, {
+            [hookName]: {
+              configurable: true,
+              enumerable,
+              value: deferred ? readPropertyOnce(plugin, hookName) : value,
+              writable: true,
+            },
+          }) as Plugin,
+      ),
+  };
 }
 
 function snapshotInputLogHandlers(inputOptions: InputOptions): InputOptions {
@@ -322,12 +377,6 @@ function snapshotInputLogHandlers(inputOptions: InputOptions): InputOptions {
       writable: true,
     },
   }) as InputOptions;
-}
-
-function hasDefinedProperty(object: object, key: PropertyKey): boolean {
-  const descriptor = findPropertyDescriptor(object, key);
-  if (!descriptor) return false;
-  return 'value' in descriptor ? descriptor.value != null : descriptor.get != null;
 }
 
 function readPropertyOnce<T extends object, K extends keyof T>(

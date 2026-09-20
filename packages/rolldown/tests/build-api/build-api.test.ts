@@ -930,6 +930,119 @@ test('an accessor-backed outputOptions hook is read once per build, not once per
   expect(output[0].fileName).toBe('accessor-once.js');
 });
 
+// A `get` trap answers no descriptor walk, so deciding hook presence from the
+// descriptor alone reported "no hook" for a hook the snapshot's `Reflect.get`
+// then found and ran - outside the boundary, where a same-bundle `generate()`
+// is admitted. Presence is decided by the captured value instead; see
+// `capturePluginHooks` in `src/utils/create-bundler-option.ts`.
+test('a plugin serving outputOptions from a proxy get trap runs the hook inside the reentrancy guard', async () => {
+  let bundle: Awaited<ReturnType<typeof rolldown>>;
+  let trapReads = 0;
+  let hookCalls = 0;
+  let reentrantAttempt: Promise<unknown> | undefined;
+  const plugin = new Proxy<Plugin>(
+    { name: 'proxied-output-options-guard' },
+    {
+      get(object, key, receiver) {
+        if (key === 'outputOptions') {
+          trapReads += 1;
+          return (options: OutputOptions): OutputOptions => {
+            hookCalls += 1;
+            reentrantAttempt ??= bundle.generate().catch((error) => error);
+            return options;
+          };
+        }
+        return Reflect.get(object, key, receiver);
+      },
+    },
+  );
+
+  bundle = await rolldown({
+    input: './main.js',
+    cwd: import.meta.dirname,
+    plugins: [plugin],
+  });
+  await bundle.generate();
+
+  expect(hookCalls).toBe(1);
+  // Deciding presence must add no second read: the trap still fires once.
+  expect(trapReads).toBe(1);
+  await expect(reentrantAttempt).resolves.toMatchObject({
+    message: expect.stringMatching(/active JavaScript callbacks/),
+  });
+  await bundle.close();
+});
+
+test('a plugin serving onLog from a proxy get trap runs the handler inside the reentrancy guard', async () => {
+  const virtualId = '\0proxy-plugin-on-log-guard';
+  let bundle: Awaited<ReturnType<typeof rolldown>>;
+  let trapReads = 0;
+  let handlerCalls = 0;
+  let reentrantAttempt: Promise<unknown> | undefined;
+  const plugin = new Proxy<Plugin>(
+    { name: 'proxied-on-log-guard' },
+    {
+      get(object, key, receiver) {
+        if (key === 'onLog') {
+          trapReads += 1;
+          return (): boolean => {
+            handlerCalls += 1;
+            reentrantAttempt ??= bundle.generate().catch((error) => error);
+            return false;
+          };
+        }
+        return Reflect.get(object, key, receiver);
+      },
+    },
+  );
+
+  bundle = await rolldown({
+    cwd: import.meta.dirname,
+    input: virtualId,
+    plugins: [evalWarningsPlugin(virtualId, 1), plugin],
+  });
+  await bundle.generate({});
+
+  expect(handlerCalls).toBeGreaterThan(0);
+  expect(trapReads).toBe(1);
+  await expect(reentrantAttempt).resolves.toMatchObject({
+    message: expect.stringMatching(/active JavaScript callbacks/),
+  });
+  await bundle.close();
+});
+
+test('input options serving onLog from a proxy get trap run the handler inside the reentrancy guard', async () => {
+  const virtualId = '\0proxy-input-on-log-guard';
+  let bundle: Awaited<ReturnType<typeof rolldown>>;
+  let handlerCalls = 0;
+  let reentrantAttempt: Promise<unknown> | undefined;
+  const onLog: InputOptions['onLog'] = () => {
+    handlerCalls += 1;
+    reentrantAttempt ??= bundle.generate().catch((error) => error);
+  };
+  const target: InputOptions = {
+    cwd: import.meta.dirname,
+    input: virtualId,
+    plugins: [evalWarningsPlugin(virtualId, 1)],
+  };
+
+  bundle = await rolldown(
+    new Proxy(target, {
+      get(object, key, receiver) {
+        if (key === 'onLog') return onLog;
+        return Reflect.get(object, key, receiver);
+      },
+    }),
+  );
+  await bundle.generate({});
+
+  expect(handlerCalls).toBeGreaterThan(0);
+  await expect(reentrantAttempt).resolves.toMatchObject({
+    message: expect.stringMatching(/active JavaScript callbacks/),
+  });
+  await bundle.close();
+});
+
 test(
   'detached plugin descendants can generate after their hook settles',
   { timeout: 5_000 },

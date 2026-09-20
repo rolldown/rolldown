@@ -677,57 +677,87 @@ function __createManagedBindingFacade(__binding: any, __state: any) {
     const __existing = __seen.get(__value);
     if (__existing) return __existing;
 
-    const __clone = Array.isArray(__value) ? [] : Object.create(Reflect.getPrototypeOf(__value));
-    __seen.set(__value, __clone);
-    __rawByWrapper.set(__clone, __value);
-    const __defined = new Set();
-    const __descriptorPrototypes = new Set();
-    let __descriptorOwner = __value;
-    while (__descriptorOwner !== null && __descriptorOwner !== Object.prototype) {
-      __assertUnseenPrototype(__descriptorPrototypes, __descriptorOwner);
-      for (const __key of Reflect.ownKeys(__descriptorOwner)) {
-        if (
-          __defined.has(__key) ||
-          __key === 'constructor' ||
-          (Array.isArray(__value) && __key === 'length')
-        ) {
-          continue;
+    // A forwarding view, not a materialized copy. Rebuilding from
+    // `Reflect.ownKeys` plus `Reflect.getOwnPropertyDescriptor` reads
+    // `descriptor.value`, so a `Proxy` serving or decorating a field from its
+    // `get` trap was never consulted and the binding got the target's stale
+    // value - or nothing at all for a trap-only proxy. N-API reads an argument
+    // with `napi_get_named_property`, a plain `[[Get]]`, so the view performs
+    // exactly that read and prepares what it returns. It is handed straight to
+    // the raw binding export in this realm, so nothing has to materialize it.
+    //
+    // Each key is prepared once and pinned: the binding is free to read the
+    // same key twice, and a stateful `get` trap must not be able to answer the
+    // second read with a value the first one did not carry - a raw callback,
+    // say, where the first read handed over a wrapped one.
+    const __target: any = Array.isArray(__value) ? [] : {};
+    const __preparedByKey = new Map();
+    const __read = (__key: any) => {
+      if (__preparedByKey.has(__key)) return __preparedByKey.get(__key);
+      const __prepared = __prepareBindingArgument(
+        Reflect.get(__value, __key, __value),
+        __seen,
+        __value,
+      );
+      __preparedByKey.set(__key, __prepared);
+      return __prepared;
+    };
+    const __view = new Proxy(__target, {
+      defineProperty(__target, __key, __attributes) {
+        __preparedByKey.delete(__key);
+        return Reflect.defineProperty(__value, __key, __attributes);
+      },
+      deleteProperty(__target, __key) {
+        __preparedByKey.delete(__key);
+        return Reflect.deleteProperty(__value, __key);
+      },
+      get(__target, __key) {
+        return __read(__key);
+      },
+      getOwnPropertyDescriptor(__target, __key) {
+        const __descriptor = Reflect.getOwnPropertyDescriptor(__value, __key);
+        if (!__descriptor) return undefined;
+        // Report what `get` answers with, so a reader that goes through
+        // descriptors sees prepared values too and never a raw accessor.
+        const __reported = {
+          configurable: __descriptor.configurable,
+          enumerable: __descriptor.enumerable,
+          value: __read(__key),
+          writable: 'writable' in __descriptor ? __descriptor.writable : true,
+        };
+        // A `Proxy` may not report a non-configurable property its target does
+        // not have, so pin it on the target before answering with it.
+        if (!__reported.configurable) {
+          Reflect.defineProperty(__target, __key, __reported);
         }
-        const __descriptor = Reflect.getOwnPropertyDescriptor(__descriptorOwner, __key);
-        if (!__descriptor) continue;
-        __defined.add(__key);
-        if ('value' in __descriptor) {
-          __descriptor.value = __prepareBindingArgument(__descriptor.value, __seen, __value);
-        } else {
-          const __get = __descriptor.get;
-          const __set = __descriptor.set;
-          __descriptor.get =
-            typeof __get === 'function'
-              ? function () {
-                  return __prepareBindingArgument(
-                    Reflect.apply(__get, __value, []),
-                    new WeakMap(),
-                    __value,
-                  );
-                }
-              : undefined;
-          __descriptor.set =
-            typeof __set === 'function'
-              ? function (__nextValue: any) {
-                  Reflect.apply(__set, __value, [
-                    __prepareBindingArgument(__nextValue, new WeakMap(), __value),
-                  ]);
-                }
-              : undefined;
+        return __reported;
+      },
+      getPrototypeOf() {
+        return Reflect.getPrototypeOf(__value);
+      },
+      has(__target, __key) {
+        return Reflect.has(__value, __key);
+      },
+      ownKeys(__target) {
+        const __keys = new Set(Reflect.ownKeys(__target));
+        for (const __key of Reflect.ownKeys(__value)) {
+          __keys.add(__key);
         }
-        Reflect.defineProperty(__clone, __key, __descriptor);
-      }
-      __descriptorOwner = Reflect.getPrototypeOf(__descriptorOwner);
-    }
-    if (Array.isArray(__value)) {
-      Reflect.set(__clone, 'length', __value.length, __clone);
-    }
-    return __clone;
+        return [...__keys];
+      },
+      set(__target, __key, __nextValue) {
+        __preparedByKey.delete(__key);
+        return Reflect.set(
+          __value,
+          __key,
+          __prepareBindingArgument(__nextValue, new WeakMap(), __value),
+          __value,
+        );
+      },
+    });
+    __seen.set(__value, __view);
+    __rawByWrapper.set(__view, __value);
+    return __view;
   };
   const __prepareBindingArguments = (__values: any) => {
     const __seen = new WeakMap();

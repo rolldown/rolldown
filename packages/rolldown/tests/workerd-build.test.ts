@@ -604,6 +604,58 @@ describe('workerd build() against the built dist', () => {
     180_000,
   );
 
+  // The managed instance used to rebuild each binding argument from
+  // `Reflect.ownKeys` + `Reflect.getOwnPropertyDescriptor` and copy
+  // `descriptor.value`, so a `Proxy` argument's `get` trap was never consulted:
+  // the binding saw the target's stale value, or nothing at all when only the
+  // trap could answer. N-API reads arguments with `napi_get_named_property` -- a
+  // plain `[[Get]]` -- so both shapes work on the native binding and on
+  // rolldown 1.2.9, and must work here.
+  const TS_SOURCE = 'const a: number = 1; export { a };';
+
+  distTest(
+    'binding arguments are read through a Proxy get trap',
+    async () => {
+      const { workerd, wasmModule } = await loadDistWorkerd();
+      const instance = await workerd.createInstance(wasmModule);
+      try {
+        const exports = instance.exports as unknown as {
+          transformSync: (
+            filename: string,
+            code: string,
+            options: unknown,
+          ) => { code: string; errors: unknown[] };
+        };
+
+        // Only the trap says `ts`; the target still says `js`.
+        const staleValueProxy = new Proxy(
+          { lang: 'js' },
+          {
+            get: (target, key, receiver) =>
+              key === 'lang' ? 'ts' : Reflect.get(target, key, receiver),
+          },
+        );
+        // Nothing to find by descriptor at all; only the trap answers.
+        const trapOnlyProxy = new Proxy(
+          {},
+          { get: (_target, key) => (key === 'lang' ? 'ts' : undefined) },
+        );
+
+        for (const options of [{ lang: 'ts' }, staleValueProxy, trapOnlyProxy]) {
+          const result = exports.transformSync('input.js', TS_SOURCE, options);
+          expect(result.errors).toEqual([]);
+          expect(result.code).toContain('const a = 1;');
+        }
+
+        // The control: parsed as JavaScript, the type annotation is a syntax error.
+        expect(exports.transformSync('input.js', TS_SOURCE, { lang: 'js' }).errors).not.toEqual([]);
+      } finally {
+        await instance.dispose();
+      }
+    },
+    180_000,
+  );
+
   distTest(
     'createWorkerdBundle() generates repeatedly and excludes other instances until close',
     async () => {

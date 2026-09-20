@@ -746,6 +746,18 @@ inherited static methods around operation accounting, and close-bearing objects
 returned by inherited factories enter the same disposal barrier as instances of
 exported constructors. Their retained wrappers and methods reject after
 disposal.
+An input record reaches the binding as a forwarding view of the caller's object,
+not as a materialized copy. Rebuilding one from `Reflect.ownKeys` plus
+`Reflect.getOwnPropertyDescriptor` reads `descriptor.value`, so a `Proxy`
+argument was answered from its target rather than its `get` trap and a trap-only
+argument arrived empty, where the native binding accepts both. N-API reads an
+argument with `napi_get_named_property` — a plain `[[Get]]` — so the view
+performs exactly that read, mediates what it returns, and delegates `has`,
+`ownKeys`, descriptors and the prototype to the original. Each key is prepared
+once and pinned on the view, so a second N-API read of the same key cannot reach
+a stateful trap and collect a raw callback where the first read handed over a
+mediated one. The view is passed straight to the raw export in the same realm,
+so nothing downstream has to materialize it.
 The imported Buffer constructor is injected into emnapi. Before classifying an
 input as a record, the public facade uses the realm-neutral
 `ArrayBuffer.isView` check plus captured intrinsic `ArrayBuffer` and

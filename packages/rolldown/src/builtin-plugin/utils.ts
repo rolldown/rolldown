@@ -270,15 +270,19 @@ function readPropertyOnce<T extends object, K extends keyof T>(
   // so the binding can never see a value that differs from what any other JS
   // reader gets. The descriptor only classifies the read.
   const read = () => Reflect.get(object, key, object) as T[K] | undefined;
-  if (descriptor && !('value' in descriptor)) {
-    // oxlint-disable-next-line typescript/unbound-method -- only tested for presence, never invoked
-    if (!descriptor.get) return undefined;
-    // An accessor read runs user code, so it belongs inside the boundary.
+  // oxlint-disable-next-line typescript/unbound-method -- only tested for shape, never invoked
+  if (descriptor && !('value' in descriptor) && typeof descriptor.get === 'function') {
+    // An accessor with a getter: calling that getter is user code, so the read
+    // belongs inside the boundary.
     return runBuildCallback ? runBuildCallback(read, String(key)) : read();
   }
-  // A data property, or a key the walk found no descriptor for, is a plain
-  // read: it stays outside the boundary, so a callback-free config asks for no
-  // async context provider.
+  // Every other shape - a data property, a getter-less accessor, or a key the
+  // walk found no descriptor for - is a plain read: nothing gets called, so it
+  // stays outside the boundary and a callback-free config asks for no async
+  // context provider. A getter-less accessor is read like the rest rather than
+  // skipped: skipping it would pin `undefined` without spending the one
+  // `[[Get]]` this pass owes the key, and would drop a callback a `Proxy` `get`
+  // trap answers for while N-API's own `[[Get]]` would still have found it.
   return read();
 }
 

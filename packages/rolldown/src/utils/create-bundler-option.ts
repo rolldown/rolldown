@@ -82,8 +82,9 @@ export async function createBundlerOptions(
   const logLevel = inputOptions.logLevel || LOG_LEVEL_INFO;
   const inputObjectPlugins = getObjectPlugins(inputPlugins);
   // Capture the plugin `onLog` hooks once, up front: presence is decided by the
-  // captured VALUE, so a plugin whose handler only a `get` trap can answer for
-  // is seen here and reaches the reentrancy guard like any other.
+  // captured VALUE, with the same test the log runner applies before calling
+  // it, so a plugin whose handler only a `get` trap can answer for is seen here
+  // and reaches the reentrancy guard like any other.
   const pluginLogHooks = capturePluginHooks(inputObjectPlugins, 'onLog');
   // Read once, like Rollup and like the plugin-less path: an accessor-backed
   // `onLog`/`onwarn` on the input options must not be re-run per log entry.
@@ -91,8 +92,8 @@ export async function createBundlerOptions(
   // `onLog` accessors have to execute inside the reentrancy guard.
   const snapshottedInputOptions = snapshotInputLogHandlers(inputOptions);
   const hasUserLogCallback =
-    snapshottedInputOptions.onLog != null ||
-    snapshottedInputOptions.onwarn != null ||
+    hookWouldRun(snapshottedInputOptions.onLog) ||
+    hookWouldRun(snapshottedInputOptions.onwarn) ||
     pluginLogHooks.present;
   const inputLogHandlers = getOnLog(snapshottedInputOptions, logLevel);
   const invokeLogger: LogHandler = (level, log) =>
@@ -296,9 +297,9 @@ interface CapturedPluginHook {
   plugin: Plugin;
   enumerable: boolean;
   /**
-   * Set when the bounded walk found an accessor: reading it runs user code, so
-   * the read is deferred to `snapshot()`, which the callers invoke inside the
-   * callback boundary.
+   * Set when the bounded walk found an accessor that has a getter: calling that
+   * getter is user code, so the read is deferred to `snapshot()`, which the
+   * callers invoke inside the callback boundary.
    */
   deferred: boolean;
   /** What the capture read. Only meaningful when `deferred` is false. */
@@ -306,7 +307,12 @@ interface CapturedPluginHook {
 }
 
 interface CapturedPluginHooks {
-  /** Whether any plugin supplies the hook, decided by the captured value. */
+  /**
+   * Whether any plugin supplies the hook. A value the capture read is judged
+   * with {@linkcode hookWouldRun}, the test its consumer applies; a deferred
+   * getter always counts, because calling the getter is itself user code that
+   * has to happen inside the boundary.
+   */
   present: boolean;
   /** One overlay list per consumer; never re-reads an already captured value. */
   snapshot: () => Plugin[];
@@ -318,7 +324,7 @@ interface CapturedPluginHooks {
  * `Proxy` serving the hook from its `get` trap answers no descriptor walk, so a
  * descriptor-only test reports "no hook" for a hook that is then found and run,
  * and the run happens outside the callback boundary. The descriptor decides only
- * whether the read itself is user code, the same rule `builtin-plugin/utils.ts`
+ * whether the read calls user code, the same rule `builtin-plugin/utils.ts`
  * applies to built-in option callbacks. See
  * internal-docs/async-context/implementation.md.
  */
@@ -330,18 +336,20 @@ function capturePluginHooks(
   const captured = plugins.map((plugin): CapturedPluginHook => {
     const descriptor = findPropertyDescriptor(plugin, hookName);
     const enumerable = descriptor?.enumerable ?? true;
-    if (descriptor && !('value' in descriptor)) {
-      // An accessor: its read runs user code and belongs inside the boundary,
-      // so only whether a getter exists is known here.
-      // oxlint-disable-next-line typescript/unbound-method -- only tested for presence, never invoked
-      if (descriptor.get != null) present = true;
+    // oxlint-disable-next-line typescript/unbound-method -- only tested for shape, never invoked
+    if (descriptor && !('value' in descriptor) && typeof descriptor.get === 'function') {
+      // An accessor with a getter: calling that getter is user code, so the
+      // read belongs inside the boundary and the entry counts as present on its
+      // own - whatever the getter returns, running it is what must be guarded.
+      present = true;
       return { plugin, enumerable, deferred: true, value: undefined };
     }
-    // A data property, or a key the walk found no descriptor for: reading it
-    // now runs no user code on an ordinary object, and on a `Proxy` the `get`
-    // trap is the only way to observe the hook at all.
+    // Every other shape - a data property, a getter-less accessor, or a key the
+    // walk found no descriptor for - is one plain read. A getter-less accessor
+    // has nothing to call, and on a `Proxy` the `get` trap is the only way to
+    // observe the hook at all.
     const value = Reflect.get(plugin, hookName, plugin);
-    if (value != null) present = true;
+    if (hookWouldRun(value)) present = true;
     return { plugin, enumerable, deferred: false, value };
   });
 
@@ -360,6 +368,19 @@ function capturePluginHooks(
           }) as Plugin,
       ),
   };
+}
+
+/**
+ * The test every consumer of these values applies before calling one:
+ * `getSortedPlugins`, `PluginDriver.callOutputOptionsHook` and `getLogger` all
+ * gate a plugin hook on its truthiness, and `getOnLog` gates the input
+ * `onLog`/`onwarn` handlers the same way. Presence has to ask exactly this, or
+ * the build guards a value nobody runs - a falsy answer from a `get` trap makes
+ * a callback-free browser build demand an async context provider - or runs a
+ * value it never guarded.
+ */
+function hookWouldRun(value: unknown): boolean {
+  return Boolean(value);
 }
 
 function snapshotInputLogHandlers(inputOptions: InputOptions): InputOptions {

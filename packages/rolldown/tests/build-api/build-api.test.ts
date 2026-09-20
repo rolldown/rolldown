@@ -5,6 +5,9 @@ import { build, type InputOptions, type OutputOptions, type Plugin, rolldown } f
 import { defineParallelPlugin, viteDynamicImportVarsPlugin } from 'rolldown/experimental';
 import { expect, test, vi } from 'vitest';
 
+// @ts-ignore This focused test intentionally reaches package source outside the test rootDir.
+import { createBundlerOptions } from '../../src/utils/create-bundler-option';
+
 test('rolldown write twice', async () => {
   const bundle = await rolldown({
     input: './main.js',
@@ -1042,6 +1045,169 @@ test('input options serving onLog from a proxy get trap run the handler inside t
   });
   await bundle.close();
 });
+
+// A setter-only accessor is a descriptor with nothing to call. Treating every
+// accessor as "deferred, and present only if it has a getter" reported "no
+// hook" for a `get` trap that serves a real one, and the snapshot then found it
+// and ran it outside the reentrancy guard. Only a GETTER is user code; every
+// other shape is the single eager read, judged by the value it returned. See
+// `capturePluginHooks` in `src/utils/create-bundler-option.ts`.
+test('a plugin whose outputOptions descriptor is a setter-only accessor runs the trap-served hook inside the reentrancy guard', async () => {
+  let bundle: Awaited<ReturnType<typeof rolldown>>;
+  let trapReads = 0;
+  let hookCalls = 0;
+  let reentrantAttempt: Promise<unknown> | undefined;
+  const plugin = new Proxy<Plugin>(
+    { name: 'setter-only-output-options' },
+    {
+      get(object, key, receiver) {
+        if (key === 'outputOptions') {
+          trapReads += 1;
+          return (options: OutputOptions): OutputOptions => {
+            hookCalls += 1;
+            reentrantAttempt ??= bundle.generate().catch((error) => error);
+            return options;
+          };
+        }
+        return Reflect.get(object, key, receiver);
+      },
+      getOwnPropertyDescriptor(object, key) {
+        if (key === 'outputOptions') {
+          return { configurable: true, enumerable: true, set: () => {} };
+        }
+        return Reflect.getOwnPropertyDescriptor(object, key);
+      },
+    },
+  );
+  const descriptor = Object.getOwnPropertyDescriptor(plugin, 'outputOptions')!;
+  expect('value' in descriptor).toBe(false);
+  expect(typeof descriptor.get).toBe('undefined');
+  expect(typeof descriptor.set).toBe('function');
+
+  bundle = await rolldown({
+    input: './main.js',
+    cwd: import.meta.dirname,
+    plugins: [plugin],
+  });
+  await bundle.generate();
+
+  expect(hookCalls).toBe(1);
+  // Reading the hook eagerly must add no second read: the trap still fires once.
+  expect(trapReads).toBe(1);
+  await expect(reentrantAttempt).resolves.toMatchObject({
+    message: expect.stringMatching(/active JavaScript callbacks/),
+  });
+  await bundle.close();
+});
+
+test('a plugin whose onLog descriptor is a setter-only accessor runs the trap-served handler inside the reentrancy guard', async () => {
+  const virtualId = '\0setter-only-plugin-on-log';
+  let bundle: Awaited<ReturnType<typeof rolldown>>;
+  let trapReads = 0;
+  let handlerCalls = 0;
+  let reentrantAttempt: Promise<unknown> | undefined;
+  const plugin = new Proxy<Plugin>(
+    { name: 'setter-only-on-log' },
+    {
+      get(object, key, receiver) {
+        if (key === 'onLog') {
+          trapReads += 1;
+          return (): boolean => {
+            handlerCalls += 1;
+            reentrantAttempt ??= bundle.generate().catch((error) => error);
+            return false;
+          };
+        }
+        return Reflect.get(object, key, receiver);
+      },
+      getOwnPropertyDescriptor(object, key) {
+        if (key === 'onLog') {
+          return { configurable: true, enumerable: true, set: () => {} };
+        }
+        return Reflect.getOwnPropertyDescriptor(object, key);
+      },
+    },
+  );
+  const descriptor = Object.getOwnPropertyDescriptor(plugin, 'onLog')!;
+  expect('value' in descriptor).toBe(false);
+  expect(typeof descriptor.get).toBe('undefined');
+
+  bundle = await rolldown({
+    cwd: import.meta.dirname,
+    input: virtualId,
+    plugins: [evalWarningsPlugin(virtualId, 1), plugin],
+  });
+  await bundle.generate({});
+
+  expect(handlerCalls).toBeGreaterThan(0);
+  expect(trapReads).toBe(1);
+  await expect(reentrantAttempt).resolves.toMatchObject({
+    message: expect.stringMatching(/active JavaScript callbacks/),
+  });
+  await bundle.close();
+});
+
+// The other half of the same rule: a `get` trap may answer with a falsy value,
+// and every hook runner - `getSortedPlugins`, `callOutputOptionsHook`,
+// `getLogger` - skips one. Deciding presence with `!= null` instead of the
+// runner's own test entered the callback runner for a hook nobody ever calls,
+// which costs a genuinely callback-free browser build its async-context
+// provider.
+test.each(['outputOptions', 'onLog'] as const)(
+  'a falsy %s served by a proxy get trap enters no callback runner',
+  async (hookName) => {
+    let trapReads = 0;
+    const plugin = new Proxy<Plugin>(
+      { name: `falsy-${hookName}` },
+      {
+        get(object, key, receiver) {
+          if (key === hookName) {
+            trapReads += 1;
+            return false;
+          }
+          return Reflect.get(object, key, receiver);
+        },
+      },
+    );
+    expect(Object.getOwnPropertyDescriptor(plugin, hookName)).toBeUndefined();
+
+    const bundle = await rolldown({
+      input: './main.js',
+      cwd: import.meta.dirname,
+      plugins: [plugin],
+    });
+    const { output } = await bundle.generate();
+    await bundle.close();
+    expect(output[0].fileName).toBe('main.js');
+
+    // Whether the runner was entered is visible only inside the options
+    // factory, so ask it directly with a counting runner.
+    trapReads = 0;
+    const runnerEntries: (string | undefined)[] = [];
+    const option = await createBundlerOptions(
+      {
+        input: './main.js',
+        cwd: import.meta.dirname,
+        logLevel: 'silent',
+        plugins: [plugin],
+      },
+      {},
+      false,
+      undefined,
+      false,
+      (callback, name) => {
+        runnerEntries.push(name);
+        return callback();
+      },
+    );
+    // Emitting a log is what reaches the log handler, wrapped or not.
+    option.onLog('warn', { message: 'probe' });
+    option.releaseOptionBoxes();
+
+    expect(runnerEntries).toEqual([]);
+    expect(trapReads).toBe(1);
+  },
+);
 
 test(
   'detached plugin descendants can generate after their hook settles',

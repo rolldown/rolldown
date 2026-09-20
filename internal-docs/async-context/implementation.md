@@ -155,10 +155,13 @@ option adapters.
   a contract, so a trap whose answer for one key depends on an earlier read
   of another key now sees its conversion-time answer pinned.
   The descriptor the bounded walk
-  found decides only whether that read is user code: an accessor getter is read
-  inside the boundary, while a plain data property, or a key no descriptor
-  answered for, is read outside it, so a callback-free config stays inert and
-  needs no provider. A callback a `Proxy` serves from its `get` trap is
+  found decides only whether the read calls user code: an accessor that has a
+  getter is read inside the boundary, while every other shape - a data
+  property, a getter-less accessor, or a key no descriptor answered for - is
+  the same single read taken outside it, so a callback-free config stays inert
+  and needs no provider. A getter-less accessor is read like the rest rather
+  than skipped, because there is nothing to call and a `get` trap may still be
+  what answers for the key. A callback a `Proxy` serves from its `get` trap is
   therefore wrapped rather than handed to N-API raw, even when the target owns
   a rival descriptor for that key. The snapshot overlay is now the only
   wrapped shape, whatever found the keys: rebuilding the options as a plain
@@ -189,10 +192,13 @@ option adapters.
   group.
 - The `outputOptions` plugin hook runs through the runner before binding option
   conversion. Whether a plugin supplies `outputOptions` - or `onLog` - is
-  decided by the value the capture read, not by the descriptor alone, so a hook
-  only a `get` trap can answer for is seen and reaches the boundary. An
-  accessor's read is still user code, so it stays deferred and happens inside
-  that boundary, once per snapshot.
+  decided by the value the capture read, judged with the same truthiness test
+  the hook runner applies before calling it, so presence and execution never
+  disagree: a hook only a `get` trap can answer for is guarded, and a falsy
+  answer no runner would ever call leaves a callback-free build unguarded. Only
+  an accessor that has a getter is deferred, because only calling a getter is
+  user code; that read happens inside the boundary, once per snapshot, and
+  counts as present on its own.
 
 Internal callbacks such as deferred scan-data collection and cache invalidation
 are not wrapped because they do not invoke user code. This distinction keeps

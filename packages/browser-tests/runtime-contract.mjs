@@ -265,6 +265,95 @@ try {
       supported: false,
     });
 
+    // A setter-only accessor descriptor over a `get` trap that serves a real
+    // hook. The descriptor answers the walk, but there is nothing to call, so
+    // only the trap's value can decide presence: classifying it as a deferred
+    // accessor reported "no hook" and ran the trap-served hook with no provider
+    // behind it.
+    let setterOnlyOutputOptionsCalls = 0;
+    const setterOnlyPlugin = new Proxy(
+      {
+        name: 'browser-setter-only-output-options',
+        resolveId(id) {
+          if (id === 'virtual:entry') return id;
+        },
+        load(id) {
+          if (id === 'virtual:entry') return 'export default 1';
+        },
+      },
+      {
+        get(target, key, receiver) {
+          if (key === 'outputOptions') {
+            return (options) => {
+              setterOnlyOutputOptionsCalls += 1;
+              return options;
+            };
+          }
+          return Reflect.get(target, key, receiver);
+        },
+        getOwnPropertyDescriptor(target, key) {
+          if (key === 'outputOptions') {
+            return { configurable: true, enumerable: true, set: () => {} };
+          }
+          return Reflect.getOwnPropertyDescriptor(target, key);
+        },
+      },
+    );
+    const setterOnlyDescriptor = Object.getOwnPropertyDescriptor(setterOnlyPlugin, 'outputOptions');
+    assert.equal(
+      typeof setterOnlyDescriptor?.get,
+      'undefined',
+      'The setter-only descriptor must report no getter',
+    );
+    assert.equal(
+      typeof setterOnlyDescriptor?.set,
+      'function',
+      'The setter-only descriptor must report a setter',
+    );
+    const setterOnlyBundle = await browserApi.rolldown({
+      cwd: '/',
+      input: 'virtual:entry',
+      plugins: [setterOnlyPlugin],
+    });
+    const setterOnlyError = await setterOnlyBundle.generate().catch((error) => error);
+    assert.equal(setterOnlyError?.name, 'AsyncContextUnavailableError');
+    assert.equal(setterOnlyError?.code, 'ERR_ROLLDOWN_ASYNC_CONTEXT_UNAVAILABLE');
+    assert.equal(
+      setterOnlyOutputOptionsCalls,
+      0,
+      'Unavailable async context must fail before a setter-only-descriptor outputOptions hook',
+    );
+    await setterOnlyBundle.close();
+    assert.deepEqual(experimentalApi.getAsyncContextSupport(), {
+      source: 'unavailable',
+      supported: false,
+    });
+
+    // The other half of the rule: every hook runner skips a falsy hook, so a
+    // `get` trap answering `false` leaves this build genuinely callback-free
+    // and it must not ask for a provider at all.
+    const falsyHookPlugin = new Proxy(
+      { name: 'browser-falsy-hooks' },
+      {
+        get(target, key, receiver) {
+          if (key === 'outputOptions' || key === 'onLog') return false;
+          return Reflect.get(target, key, receiver);
+        },
+      },
+    );
+    const falsyHookBundle = await browserApi.rolldown({
+      cwd: '/',
+      input: '/entry.js',
+      plugins: [falsyHookPlugin],
+    });
+    const falsyHookOutput = await falsyHookBundle.generate();
+    assert.equal(falsyHookOutput.output[0].fileName, 'entry.js');
+    await falsyHookBundle.close();
+    assert.deepEqual(experimentalApi.getAsyncContextSupport(), {
+      source: 'unavailable',
+      supported: false,
+    });
+
     experimentalApi.configureAsyncContext({
       createStorage: () => new AsyncLocalStorage(),
     });

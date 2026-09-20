@@ -673,6 +673,57 @@ test('a trap-served built-in callback over an own non-function placeholder is st
   expect(runnerCalls).toBe(1);
 });
 
+test('a trap-served built-in callback over a getter-less accessor is still read and wrapped', () => {
+  let runnerCalls = 0;
+  const runBuildCallback: BuildCallbackRunner = (callback) => {
+    runnerCalls += 1;
+    return callback();
+  };
+  let rawCalls = 0;
+  const rawLogInfo = () => {
+    rawCalls += 1;
+  };
+  // A setter-only accessor: the bounded walk finds a descriptor, but there is
+  // nothing to call, so the read is not user code. Skipping the read for want
+  // of a getter pinned `undefined` and dropped the callback the `get` trap -
+  // and N-API's own `[[Get]]` - would have found.
+  const target = {} as BindingViteReporterPluginConfig;
+  Object.defineProperty(target, 'logInfo', {
+    configurable: true,
+    enumerable: true,
+    set() {},
+  });
+  let trapReads = 0;
+  const config = new Proxy(target, {
+    get(object, key, receiver) {
+      if (key !== 'logInfo') return Reflect.get(object, key, receiver);
+      trapReads += 1;
+      return rawLogInfo;
+    },
+  });
+  const descriptor = Object.getOwnPropertyDescriptor(config, 'logInfo')!;
+  expect('value' in descriptor).toBe(false);
+  expect(typeof descriptor.get).toBe('undefined');
+
+  const options = bindingifyBuiltInPlugin(viteReporterPlugin(config), runBuildCallback)
+    .options as BindingViteReporterPluginConfig;
+  const readsAfterWrapping = trapReads;
+
+  // One `[[Get]]` per callback key, and a getter-less read calls nothing, so it
+  // stays outside the boundary.
+  expect(readsAfterWrapping).toBe(1);
+  expect(typeof options.logInfo).toBe('function');
+  expect(options.logInfo).not.toBe(rawLogInfo);
+  expect(runnerCalls).toBe(0);
+
+  options.logInfo!('built');
+
+  expect(rawCalls).toBe(1);
+  expect(runnerCalls).toBe(1);
+  // Reading the view never reaches the trap again.
+  expect(trapReads).toBe(1);
+});
+
 test('a stateful trap over an own callback cannot hand N-API a raw callback on the second read', () => {
   let runnerCalls = 0;
   const runBuildCallback: BuildCallbackRunner = (callback) => {

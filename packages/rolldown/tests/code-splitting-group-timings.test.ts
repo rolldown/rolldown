@@ -37,14 +37,25 @@ function runTest(group: BindingMatchGroup): void {
   group.test(['entry.js']);
 }
 
+// The native side mints a fresh context box per batch, so every `runName` call
+// gets its own fake. On the threadless-WASI flavor `getChunkingContext`
+// (`src/utils/bindingify-output-options.ts`) releases the box it is replacing
+// through `releaseOrDefer`, which calls `dropInner()` on it, so the fake has to
+// answer that call. Native and threaded-WASI builds leave the release to GC
+// finalizers and never touch it. `getModuleInfo` is the only other member a
+// group callback can reach through the box.
+function fakeChunkingContext(): BindingChunkingContext {
+  return {
+    dropInner: () => ({ freed: true }),
+    getModuleInfo: () => null,
+  };
+}
+
 function runName(group: BindingMatchGroup): void {
   if (typeof group.name !== 'function') {
     throw new Error('Expected a code-splitting name callback');
   }
-  // `BindingChunkingContext` also declares `dropInner`, which this fake has no
-  // need for: `retainContextBox` only touches a box on the threadless-WASI
-  // flavor, and these tests are not it.
-  group.name(['entry.js'], { getModuleInfo: () => null } as unknown as BindingChunkingContext);
+  group.name(['entry.js'], fakeChunkingContext());
 }
 
 afterEach(() => {

@@ -29,6 +29,7 @@ import {
   waitForRetryableCleanupTurn,
 } from '../../utils/retryable-cleanup';
 import { arraify } from '../../utils/misc';
+import { findPropertyDescriptorInPrototypeChain } from '../../utils/prototype-chain';
 import type { WatcherEmitter } from './watch-emitter';
 
 interface WatchResultClose {
@@ -552,9 +553,21 @@ export async function createWatcher(
   // Snapshot config entries and relevant watch/output getters before starting
   // options hooks or parallel workers. A later throwing getter must not
   // abandon setup already running for an earlier watch configuration.
-  const enabledOptions = materializePresentValues(options).filter(
-    (option) => option.watch !== false,
-  );
+  // One read of `watch` per configuration, shared by every consumer: the
+  // enablement filter here, `bindingifyInputOptions` and
+  // `warnMultiplePollingOptions` each used to re-run an accessor-backed
+  // `watch`, so a getter that answers once had its `skipWrite` and `watcher`
+  // settings silently dropped - the very settings main honours. Everything
+  // downstream reads the snapshot through a view of the configuration.
+  const enabledOptions: WatchOptions[] = [];
+  for (const option of materializePresentValues(options)) {
+    // Walk first and discard the result: the walk is what bounds a cyclic or
+    // fabricated prototype chain, and it has to throw here, before the read.
+    findPropertyDescriptorInPrototypeChain(option, 'watch', 'inspecting watch options');
+    const watch = Reflect.get(option, 'watch', option) as WatchOptions['watch'];
+    if (watch === false) continue;
+    enabledOptions.push(createWatchOptionSnapshotView(option, watch));
+  }
   if (enabledOptions.length === 0) {
     throw new TypeError('watch() requires at least one configuration with watch enabled');
   }
@@ -721,6 +734,68 @@ async function throwWatcherSetupErrorAfterCleanup(
 
 function createSetupError(errors: unknown[], message: string): unknown {
   return errors.length === 1 ? errors[0] : new AggregateError(errors, message);
+}
+
+/**
+ * View of one watch configuration whose only difference from the original is
+ * that `[[Get]]` of `watch` answers with the snapshot the enablement filter
+ * already took. Everything else - reads, writes, `ownKeys`, descriptors and the
+ * prototype - is delegated to the original object with the original receiver,
+ * so `bindingifyInputOptions` and `warnMultiplePollingOptions` see what the
+ * filter saw without the accessor running again.
+ *
+ * A plain `Object.create` shadow would hide the configuration's own keys, so an
+ * `options` hook doing `{ ...options }` - what Vite's config plugins do - would
+ * see nothing but `watch`; rebuilding a plain object from the original's own
+ * descriptors would instead drop the fields only a `get` trap can answer. Same
+ * shape as `createCallbackSnapshotView` in `builtin-plugin/utils.ts`.
+ */
+function createWatchOptionSnapshotView(
+  option: WatchOptions,
+  watch: WatchOptions['watch'],
+): WatchOptions {
+  // The private target owns nothing; it only exists to carry non-configurable
+  // properties mirrored off the original, which is what keeps the `Proxy`
+  // invariants satisfiable when that original is frozen.
+  const target: Record<PropertyKey, unknown> = {};
+
+  return new Proxy(target, {
+    defineProperty(_target, key, attributes) {
+      return Reflect.defineProperty(option, key, attributes);
+    },
+    deleteProperty(_target, key) {
+      return Reflect.deleteProperty(option, key);
+    },
+    get(_target, key) {
+      if (key === 'watch') return watch;
+      return Reflect.get(option, key, option);
+    },
+    getOwnPropertyDescriptor(target, key) {
+      const descriptor = Reflect.getOwnPropertyDescriptor(option, key);
+      // A `Proxy` may not report a non-configurable property its target does
+      // not have, so mirror it before answering with it.
+      if (descriptor && !descriptor.configurable) {
+        Object.defineProperty(target, key, descriptor);
+      }
+      return descriptor;
+    },
+    getPrototypeOf() {
+      return Reflect.getPrototypeOf(option);
+    },
+    has(_target, key) {
+      return Reflect.has(option, key);
+    },
+    ownKeys(target) {
+      const keys = new Set<string | symbol>(Reflect.ownKeys(target));
+      for (const key of Reflect.ownKeys(option)) {
+        keys.add(key);
+      }
+      return [...keys];
+    },
+    set(_target, key, value) {
+      return Reflect.set(option, key, value, option);
+    },
+  }) as WatchOptions;
 }
 
 function materializePresentValues<T>(values: T[]): T[] {

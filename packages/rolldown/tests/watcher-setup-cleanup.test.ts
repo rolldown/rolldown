@@ -377,7 +377,9 @@ test('watcher runs options once per enabled config and delegates config hooks to
     maxActiveOptionsHooks = Math.max(maxActiveOptionsHooks, activeOptionsHooks);
     await Promise.resolve();
     activeOptionsHooks -= 1;
-    return option === first ? processedFirst : processedSecond;
+    // The hook now receives the watch-option snapshot view, not the caller's
+    // object, so tell the two configs apart by the output array they carry.
+    return option.output === firstOutputs ? processedFirst : processedSecond;
   });
   mocks.createBundlerOptions.mockImplementation(async (inputOptions) =>
     createBundlerOption(undefined, inputOptions),
@@ -1115,6 +1117,53 @@ test('the first watcher run is deferred to a host turn', async () => {
 
   expect(mocks.bindingRun).toHaveBeenCalledOnce();
   await expect(withTimeout(emitter.close(), 'deferred watcher run close')).resolves.toBeUndefined();
+});
+
+// The enablement filter reads `watch` to decide whether a configuration is on.
+// That read used to be a third one, ahead of `bindingifyInputOptions` and
+// `warnMultiplePollingOptions`, so a configuration that materializes its
+// `watch` block once lost `skipWrite` and the watcher settings. One read now
+// feeds every consumer through the snapshot view.
+test('watcher reads an accessor-backed watch option once and shares the snapshot', async () => {
+  const onLog = vi.fn();
+  const reads = [0, 0];
+  const makeConfig = (index: number) =>
+    Object.defineProperty({ output: {} }, 'watch', {
+      configurable: true,
+      enumerable: true,
+      get() {
+        reads[index] += 1;
+        return reads[index] === 1
+          ? { skipWrite: true, watcher: { usePolling: true, pollInterval: 77 } }
+          : undefined;
+      },
+    });
+  // `beforeEach` only clears this mock, so restore the pass-through an earlier
+  // test replaced.
+  mocks.callOptionsHook.mockImplementation(async (option) => option);
+  mocks.createBundlerOptions.mockImplementation(async (inputOptions) =>
+    createBundlerOption(undefined, inputOptions, onLog),
+  );
+
+  const emitter = new WatcherEmitter();
+  await createWatcher(emitter, [makeConfig(0), makeConfig(1)]);
+
+  expect(reads).toEqual([1, 1]);
+  // What `bindingifyInputOptions` reads on its way to the binding.
+  expect(mocks.createBundlerOptions.mock.calls.map(([inputOptions]) => inputOptions.watch)).toEqual(
+    [
+      { skipWrite: true, watcher: { usePolling: true, pollInterval: 77 } },
+      { skipWrite: true, watcher: { usePolling: true, pollInterval: 77 } },
+    ],
+  );
+  // What `warnMultiplePollingOptions` reads: it only finds the second polling
+  // configuration if the snapshot survived that far.
+  expect(onLog).toHaveBeenCalledWith('warn', {
+    code: 'MULTIPLE_WATCHER_OPTION',
+    message: 'Found multiple watcher options at watch options, using first one to start watcher.',
+  });
+
+  await withTimeout(emitter.close(), 'watch option snapshot close');
 });
 
 function createBundlerOption(stopWorkers: () => Promise<void>, inputOptions = {}, onLog = vi.fn()) {

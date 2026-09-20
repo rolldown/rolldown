@@ -1959,6 +1959,43 @@ test.concurrent(
   },
 );
 
+// The parallel-plugin-era enablement filter read `watch` a third time, ahead of
+// `bindingifyInputOptions`, so a configuration that materializes its `watch`
+// block once handed the binding `undefined` and wrote the bundle anyway.
+test.concurrent(
+  'watch reads an accessor-backed watch option once',
+  { retry: TEST_RETRY, timeout: TEST_TIMEOUT },
+  async ({ task, expect, onTestFinished }) => {
+    const retryCount = task.result?.retryCount ?? 0;
+    const { input, output, dir } = createTestInputAndOutput('watch-option-read-once', retryCount);
+    let watchReads = 0;
+    // `_watch` on purpose: the local `watch()` wrapper injects polling by
+    // reading and reassigning `watch`, which this accessor exists to count.
+    const watcher = _watch(
+      Object.defineProperty({ input, output: { file: output } }, 'watch', {
+        configurable: true,
+        enumerable: true,
+        get() {
+          watchReads += 1;
+          return watchReads === 1
+            ? { skipWrite: true, watcher: { usePolling: true, pollInterval: 50 } }
+            : undefined;
+        },
+      }) as WatchOptions,
+    );
+    onTestFinished(async () => {
+      await watcher.close();
+      if (!process.env.CI) {
+        fs.rmSync(dir, { recursive: true, force: true });
+      }
+    });
+    await waitBuildFinished(watcher);
+
+    expect(watchReads).toBe(1);
+    expect(fs.existsSync(output)).toBe(false);
+  },
+);
+
 test.concurrent(
   '#5260',
   { retry: TEST_RETRY, timeout: TEST_TIMEOUT },

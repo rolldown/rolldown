@@ -348,6 +348,12 @@ interface CapturedPluginHooks {
  * then threw `Cannot read private member` for a class plugin whose `name`
  * getter is backed by one. Enumerability comes from the plugin for the same
  * reason.
+ *
+ * The one thing the view cannot answer freely is a hook the plugin has since
+ * pinned down: where the plugin's own descriptor is non-configurable, the
+ * `Proxy` `get` invariant fixes the answer, and the view gives that answer
+ * instead of the captured value - otherwise the read throws `TypeError`
+ * before any hook runs.
  */
 function capturePluginHooks(
   plugins: Plugin[],
@@ -382,21 +388,41 @@ function capturePluginHooks(
         const hookValue = deferred ? readPropertyOnce(plugin, hookName) : value;
         const view: Plugin = new Proxy(plugin, {
           get(target, key, receiver) {
-            if (key === hookName) return hookValue;
+            if (key === hookName) {
+              // A hook the plugin replaced after this pass read it - a getter
+              // redefining itself as a frozen data property, another callback
+              // overwriting a sibling plugin's hook and freezing it - leaves an
+              // own descriptor the `get` invariant fixes the answer for. Answer
+              // with it: reporting the captured value there is a `TypeError`
+              // thrown before any hook runs. The check only inspects the
+              // descriptor; it never calls anything.
+              const descriptor = Reflect.getOwnPropertyDescriptor(target, hookName);
+              if (descriptor && !descriptor.configurable) {
+                // A non-configurable non-writable data property admits exactly
+                // its own value.
+                if ('value' in descriptor) {
+                  if (!descriptor.writable) return descriptor.value;
+                  // oxlint-disable-next-line typescript/unbound-method -- shape test only, never invoked
+                } else if (descriptor.get === undefined) {
+                  // A non-configurable accessor with nothing to call admits
+                  // exactly `undefined`.
+                  return undefined;
+                }
+              }
+              return hookValue;
+            }
             // The plugin is the receiver, so `plugin.name` - which
             // `callOutputOptionsHook` and `getLogger` read straight off this
             // view - reaches a getter backed by a private field. An object
             // derived from the view keeps its own receiver.
             return Reflect.get(target, key, receiver === view ? target : receiver);
           },
-          has(target, key) {
-            if (Reflect.has(target, key)) return true;
-            // The key is answered by the `get` trap, so report it - unless
-            // there is nothing to report, which is also the only case where a
-            // non-extensible plugin would make this violate the `has`
-            // invariant.
-            return key === hookName && hookValue !== undefined;
-          },
+          // No `has` trap: every consumer of these views - `getSortedPlugins`,
+          // `PluginDriver.callOutputOptionsHook` and `getLogger` - reaches the
+          // hook by reading it, never by `in`, `Reflect.has`, `Object.keys` or
+          // `for...in`. Reporting a key the plugin does not own would violate
+          // the `has` invariant on a frozen plugin for no consumer's benefit,
+          // so the default delegation answers.
         });
         return view;
       }),

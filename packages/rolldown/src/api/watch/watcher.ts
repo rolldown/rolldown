@@ -553,13 +553,13 @@ export async function createWatcher(
   // Snapshot config entries and relevant watch/output getters before starting
   // options hooks or parallel workers. A later throwing getter must not
   // abandon setup already running for an earlier watch configuration.
-  // One read of `watch` per configuration and per later shape of it: the
-  // enablement filter here, `bindingifyInputOptions` and
-  // `warnMultiplePollingOptions` each used to re-run an accessor-backed
-  // `watch`, so a getter that answers once had its `skipWrite` and `watcher`
-  // settings silently dropped - the very settings main honours. Everything
-  // downstream reads `watch` through a view of the configuration that answers
-  // from the live own descriptor and memoises what it had to call.
+  // One read of `watch` per descriptor epoch: the enablement filter here,
+  // `bindingifyInputOptions` and `warnMultiplePollingOptions` each used to
+  // re-run an accessor-backed `watch`, so a getter that answers once had its
+  // `skipWrite` and `watcher` settings silently dropped - the very settings
+  // main honours. Everything downstream reads `watch` through a view of the
+  // configuration that memoises this read and retakes it only when the own
+  // descriptor changes shape or a write through the view opens a new epoch.
   const enabledOptions: WatchOptions[] = [];
   for (const option of materializePresentValues(options)) {
     // Walk first and discard the result: the walk is what bounds a cyclic or
@@ -739,36 +739,40 @@ function createSetupError(errors: unknown[], message: string): unknown {
 
 /**
  * View of one watch configuration whose only difference from the original is
- * that `[[Get]]` of `watch` answers without re-running a getter the enablement
- * filter already ran, so `bindingifyInputOptions` and
+ * that `[[Get]]` of `watch` answers without re-running a read the enablement
+ * filter already took, so `bindingifyInputOptions` and
  * `warnMultiplePollingOptions` see what the filter saw.
  *
- * The answer is derived from the target's CURRENT own descriptor, never from a
- * slot the traps maintain, so nothing has to be intercepted to keep it honest:
+ * The rule is ONE READ PER DESCRIPTOR EPOCH. An epoch is the shape and the
+ * identity of the target's CURRENT own `watch` descriptor: no own descriptor
+ * at all, a data property holding a given value, or an accessor with a given
+ * getter (possibly none). Every `[[Get]]` of `watch` re-derives the epoch -
+ * inspecting a descriptor calls nothing - and:
  *
- * - an own data property answers with its value. That is live, so a `watch` an
- *   `options` hook assigns - through the view or through the caller's own
- *   alias - is honoured, and it is exactly what the `get` invariant demands of
- *   a non-configurable non-writable property, so freezing the configuration
- *   afterwards cannot make the next read throw.
- * - an own accessor with no getter answers `undefined`: there is nothing to
- *   call, and `undefined` is what a plain read produces. That is also what the
- *   `get` invariant demands when such a descriptor is non-configurable.
- * - an own accessor with a getter answers from the memo when the memo holds
- *   that same getter's result, and otherwise calls it once and memoises it. A
- *   hook installing a fresh `watch` getter - what
- *   `Object.defineProperty(options, 'watch', { get() { ... } })` does - is
- *   therefore honoured, at one call.
- * - no own descriptor at all - inherited, or deleted - answers from the memo
- *   the filter's read seeded, so deleting an inherited `watch` through the view
- *   costs no second getter call.
+ * - where the `Proxy` `get` invariant FIXES the answer, the view gives that
+ *   answer and takes no read at all. That is a non-configurable non-writable
+ *   data property (its own value) and a non-configurable accessor with no
+ *   getter (`undefined`). Both equal what any legal read produces, so an
+ *   `options` hook that replaces `watch` through the caller's own alias and
+ *   then freezes the configuration is honoured rather than throwing.
+ * - otherwise, the memo answers when it was taken in this same epoch, and a
+ *   new epoch takes exactly one read: `Reflect.get(original, 'watch',
+ *   original)`. One read, not a descriptor lookalike - so a getter runs once,
+ *   and an original that is itself a `Proxy` answers through its `get` trap,
+ *   which no descriptor can stand in for.
  *
- * A getter therefore runs at most once per distinct shape, and every memoised
- * read passes the original as the receiver - the same `this` the filter's read
- * used - so a getter backed by a private field works and cannot re-enter this
- * view. Every other key is delegated with the original as the receiver for the
- * same reason, unless the receiver is some object derived from the view
- * (`Object.create(view)`), which keeps its own.
+ * A write of `watch` through the view opens a new epoch on its own: a setter
+ * inherited from the prototype changes backing state and leaves the own
+ * descriptor untouched, so the memo is dropped after every successful write
+ * and the next read is the one read that observes what the setter did.
+ *
+ * The memo is seeded at construction, for every shape, from the read the
+ * enablement filter already took, so the first downstream read re-runs
+ * nothing. Every read passes the original as the receiver - the same `this`
+ * the filter's read used - so a getter backed by a private field works and
+ * cannot re-enter this view. Every other key is delegated with the original as
+ * the receiver for the same reason, unless the receiver is some object derived
+ * from the view (`Object.create(view)`), which keeps its own.
  *
  * The original configuration IS the `Proxy` target, so `ownKeys`, descriptors,
  * `has`, the prototype, `preventExtensions`, `defineProperty` and `delete` are
@@ -789,49 +793,75 @@ function createWatchOptionSnapshotView(
   option: WatchOptions,
   watch: WatchOptions['watch'],
 ): WatchOptions {
-  /** What one read produced, kept under the shape that produced it. */
-  type WatchMemo =
-    | { kind: 'accessor'; getter: () => unknown; value: WatchOptions['watch'] }
-    | { kind: 'none'; value: WatchOptions['watch'] };
+  /** The shape and identity of the own `watch` descriptor a read was taken under. */
+  type WatchEpoch =
+    | { kind: 'none' }
+    | { kind: 'data'; value: unknown }
+    | { kind: 'accessor'; getter: (() => unknown) | undefined };
 
-  const ownDescriptor = Reflect.getOwnPropertyDescriptor(option, 'watch');
-  // oxlint-disable-next-line typescript/unbound-method -- memo key only, never invoked through it
-  const ownGetter = ownDescriptor && !('value' in ownDescriptor) ? ownDescriptor.get : undefined;
-  // Seed the memo with the read the enablement filter already took. A shape
-  // that answers on its own - an own data property, or an own accessor with no
-  // getter - never consults the memo, so it seeds none.
-  let memo: WatchMemo | undefined = ownGetter
-    ? { kind: 'accessor', getter: ownGetter, value: watch }
-    : ownDescriptor
-      ? undefined
-      : { kind: 'none', value: watch };
+  /**
+   * Either the answer the `Proxy` `get` invariant fixes - which equals what any
+   * legal read produces, so no read is taken - or the epoch a read belongs to.
+   */
+  type WatchProbe =
+    | { forced: true; value: WatchOptions['watch'] }
+    | { forced: false; epoch: WatchEpoch };
+
+  /** Inspect the own descriptor. Calls nothing, so it is free to repeat. */
+  const probe = (): WatchProbe => {
+    const descriptor = Reflect.getOwnPropertyDescriptor(option, 'watch');
+    if (!descriptor) return { forced: false, epoch: { kind: 'none' } };
+    if ('value' in descriptor) {
+      if (!descriptor.configurable && !descriptor.writable) {
+        return { forced: true, value: descriptor.value as WatchOptions['watch'] };
+      }
+      return { forced: false, epoch: { kind: 'data', value: descriptor.value } };
+    }
+    // oxlint-disable-next-line typescript/unbound-method -- epoch key only, never invoked through it
+    const getter = descriptor.get;
+    if (!descriptor.configurable && getter === undefined) return { forced: true, value: undefined };
+    // A configurable accessor with no getter has nothing to call, but an
+    // original that is a `Proxy` answers it from its `get` trap, so still read.
+    return { forced: false, epoch: { kind: 'accessor', getter } };
+  };
+
+  const sameEpoch = (left: WatchEpoch, right: WatchEpoch): boolean => {
+    if (left.kind === 'data') return right.kind === 'data' && Object.is(left.value, right.value);
+    if (left.kind === 'accessor') return right.kind === 'accessor' && left.getter === right.getter;
+    return right.kind === 'none';
+  };
 
   // The original is the receiver, the same `this` the filter's read used, so a
-  // getter reading a private field works and cannot re-enter this view.
+  // getter reading a private field works, a `get` trap on a `Proxy` original
+  // answers, and neither can re-enter this view.
   const readWatch = (): WatchOptions['watch'] =>
     Reflect.get(option, 'watch', option) as WatchOptions['watch'];
+
+  // Seed the memo from the read the enablement filter already took, under the
+  // epoch that was current when it took it - whatever the shape.
+  const seeded = probe();
+  let memo: { epoch: WatchEpoch; value: WatchOptions['watch'] } | undefined = seeded.forced
+    ? undefined
+    : { epoch: seeded.epoch, value: watch };
 
   const view = new Proxy(option, {
     get(target, key, receiver) {
       if (key !== 'watch') {
         return Reflect.get(target, key, receiver === view ? target : receiver);
       }
-      const descriptor = Reflect.getOwnPropertyDescriptor(target, 'watch');
-      if (descriptor && 'value' in descriptor) return descriptor.value;
-      // oxlint-disable-next-line typescript/unbound-method -- memo key only, never invoked through it
-      const getter = descriptor?.get;
-      if (getter) {
-        if (!memo || memo.kind !== 'accessor' || memo.getter !== getter) {
-          memo = { kind: 'accessor', getter, value: readWatch() };
-        }
-        return memo.value;
-      }
-      if (descriptor) return undefined;
-      if (!memo || memo.kind !== 'none') memo = { kind: 'none', value: readWatch() };
+      const current = probe();
+      if (current.forced) return current.value;
+      if (memo && sameEpoch(memo.epoch, current.epoch)) return memo.value;
+      memo = { epoch: current.epoch, value: readWatch() };
       return memo.value;
     },
     set(target, key, value, receiver) {
-      return Reflect.set(target, key, value, receiver === view ? target : receiver);
+      const written = Reflect.set(target, key, value, receiver === view ? target : receiver);
+      // A write opens a new epoch even when the own descriptor is unchanged -
+      // an inherited setter updating backing state is exactly that - so drop
+      // the memo and let the next read be the one read that observes it.
+      if (written && key === 'watch') memo = undefined;
+      return written;
     },
   }) as WatchOptions;
   return view;

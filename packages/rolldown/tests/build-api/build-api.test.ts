@@ -1121,6 +1121,123 @@ test('a plain-object plugin still reaches both hook consumers through the snapsh
   expect(codes.filter((code) => code === 'EVAL')).toHaveLength(1);
 });
 
+// The snapshot view's `get` trap answered the captured value unconditionally,
+// but the target is the live plugin. A deferred `outputOptions` getter that
+// redefines itself as a frozen data property holding a DIFFERENT function left
+// the view answering a value the `Proxy` `get` invariant forbids, so
+// `getSortedPlugins` threw `TypeError` before either hook ran. Where the own
+// descriptor is non-configurable the invariant fixes the answer, and the view
+// gives that answer.
+test('a plugin whose outputOptions getter freezes a replacement hook runs the replacement', async () => {
+  const calls: string[] = [];
+  const replacement = (options: OutputOptions): OutputOptions => {
+    calls.push('replacement');
+    return { ...options, entryFileNames: 'self-replacing.js' };
+  };
+  const plugin = {
+    name: 'self-replacing-output-options',
+    get outputOptions(): unknown {
+      Object.defineProperty(plugin, 'outputOptions', {
+        configurable: false,
+        enumerable: true,
+        writable: false,
+        value: replacement,
+      });
+      return (options: OutputOptions): OutputOptions => {
+        calls.push('captured');
+        return { ...options, entryFileNames: 'captured.js' };
+      };
+    },
+  } as unknown as Plugin;
+
+  const bundle = await rolldown({
+    input: './main.js',
+    cwd: import.meta.dirname,
+    plugins: [plugin],
+  });
+  const { output } = await bundle.generate();
+  await bundle.close();
+
+  expect(calls).toEqual(['replacement']);
+  expect(output[0].fileName).toBe('self-replacing.js');
+});
+
+// Same invariant, reached from the eager capture side: another plugin's
+// callback overwrites a sibling's already-captured `onLog` and freezes the
+// sibling, so the frozen own descriptor and the captured value disagree.
+test('a plugin whose onLog another callback replaces and freezes runs the replacement', async () => {
+  const virtualId = '\0frozen-replaced-on-log';
+  const codes: string[] = [];
+  const logPlugin = {
+    name: 'replaced-on-log',
+    onLog(_level: LogLevel, log: RolldownLog) {
+      codes.push(`captured:${log.code}`);
+      return false;
+    },
+  } as unknown as Plugin;
+  const freezer: Plugin = {
+    name: 'freeze-sibling-on-log',
+    outputOptions(options) {
+      Object.defineProperty(logPlugin, 'onLog', {
+        configurable: true,
+        enumerable: true,
+        writable: true,
+        value: (_level: LogLevel, log: RolldownLog) => {
+          codes.push(`replaced:${log.code}`);
+          return false;
+        },
+      });
+      Object.freeze(logPlugin);
+      return options;
+    },
+  };
+
+  const bundle = await rolldown({
+    cwd: import.meta.dirname,
+    input: virtualId,
+    plugins: [evalWarningsPlugin(virtualId, 1), logPlugin, freezer],
+  });
+  await bundle.generate({});
+  await bundle.close();
+
+  expect(codes).toEqual(['replaced:EVAL']);
+});
+
+// The view has no `has` trap: no consumer reaches a hook by `in`,
+// `Reflect.has`, `Object.keys` or `for...in`, and reporting a key a frozen
+// plugin does not own would violate the `has` invariant. A frozen class
+// instance keeps its prototype hooks either way.
+test('a frozen class plugin with prototype hooks still runs both hooks', async () => {
+  const virtualId = '\0frozen-class-prototype-hooks';
+  const codes: string[] = [];
+  let hookCalls = 0;
+  class FrozenPlugin {
+    name = 'frozen-class-prototype-hooks';
+    outputOptions(options: OutputOptions): OutputOptions {
+      hookCalls += 1;
+      return { ...options, entryFileNames: 'frozen-prototype.js' };
+    }
+    onLog(_level: LogLevel, log: RolldownLog): boolean {
+      codes.push(log.code!);
+      return false;
+    }
+  }
+  const plugin = Object.freeze(new FrozenPlugin()) as unknown as Plugin;
+
+  const bundle = await rolldown({
+    cwd: import.meta.dirname,
+    input: virtualId,
+    plugins: [evalWarningsPlugin(virtualId, 1), plugin],
+  });
+  const { output } = await bundle.generate({});
+  await bundle.close();
+
+  expect(Object.isFrozen(plugin)).toBe(true);
+  expect(hookCalls).toBe(1);
+  expect(output[0].fileName).toBe('frozen-prototype.js');
+  expect(codes.filter((code) => code === 'EVAL')).toHaveLength(1);
+});
+
 test('input options serving onLog from a proxy get trap run the handler inside the reentrancy guard', async () => {
   const virtualId = '\0proxy-input-on-log-guard';
   let bundle: Awaited<ReturnType<typeof rolldown>>;

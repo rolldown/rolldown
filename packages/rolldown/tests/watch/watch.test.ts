@@ -2285,6 +2285,131 @@ test.concurrent(
   },
 );
 
+// The `set` trap forwarded the write but left the memo alone, so an `options`
+// hook assigning `options.watch` through an INHERITED setter updated the
+// backing state while every later read replayed the pre-hook value and the
+// bundle was written anyway. A successful write opens a new read epoch now.
+test.concurrent(
+  'watch honours an inherited watch setter an options hook assigns through',
+  { retry: TEST_RETRY, timeout: TEST_TIMEOUT },
+  async ({ task, expect, onTestFinished }) => {
+    const retryCount = task.result?.retryCount ?? 0;
+    const { input, output, dir } = createTestInputAndOutput(
+      'watch-option-inherited-set',
+      retryCount,
+    );
+    let getterCalls = 0;
+    let backing: WatchOptions['watch'] = { watcher: { usePolling: true, pollInterval: 50 } };
+    const prototype = {
+      get watch(): WatchOptions['watch'] {
+        getterCalls += 1;
+        return backing;
+      },
+      set watch(value: WatchOptions['watch']) {
+        backing = value;
+      },
+    };
+    const watcher = _watch(
+      Object.assign(Object.create(prototype), {
+        input,
+        output: { file: output },
+        plugins: [
+          {
+            name: 'assign-inherited-watch',
+            options(options: WatchOptions) {
+              options.watch = { skipWrite: true, watcher: { usePolling: true, pollInterval: 50 } };
+            },
+          },
+        ],
+      }) as WatchOptions,
+    );
+    onTestFinished(async () => {
+      await watcher.close();
+      if (!process.env.CI) {
+        fs.rmSync(dir, { recursive: true, force: true });
+      }
+    });
+    await waitBuildFinished(watcher);
+
+    expect((backing as { skipWrite?: boolean }).skipWrite).toBe(true);
+    // One read for the enablement filter, one for the epoch the write opened.
+    expect(getterCalls).toBe(2);
+    expect(fs.existsSync(output)).toBe(false);
+  },
+);
+
+// A configuration that is itself a `Proxy` answers `watch` from its `get`
+// trap, which no descriptor can stand in for. The view used to answer the
+// target's own data value instead of reading, so `skipWrite` was dropped and
+// the bundle was written.
+test.concurrent(
+  'watch follows a proxy configuration answering watch over an own data property',
+  { retry: TEST_RETRY, timeout: TEST_TIMEOUT },
+  async ({ task, expect, onTestFinished }) => {
+    const retryCount = task.result?.retryCount ?? 0;
+    const { input, output, dir } = createTestInputAndOutput('watch-option-proxy-data', retryCount);
+    const target: WatchOptions = { input, output: { file: output }, watch: {} };
+    const watcher = _watch(
+      new Proxy(target, {
+        get(proxyTarget, key, receiver) {
+          if (key === 'watch') {
+            return { skipWrite: true, watcher: { usePolling: true, pollInterval: 50 } };
+          }
+          return Reflect.get(proxyTarget, key, receiver);
+        },
+      }),
+    );
+    onTestFinished(async () => {
+      await watcher.close();
+      if (!process.env.CI) {
+        fs.rmSync(dir, { recursive: true, force: true });
+      }
+    });
+    await waitBuildFinished(watcher);
+
+    expect(fs.existsSync(output)).toBe(false);
+  },
+);
+
+// Same, over an own accessor with no getter: nothing to call, but the `get`
+// trap of the caller's own `Proxy` still answers, and the descriptor is
+// configurable so the `get` invariant fixes nothing.
+test.concurrent(
+  'watch follows a proxy configuration answering watch over a getter-less accessor',
+  { retry: TEST_RETRY, timeout: TEST_TIMEOUT },
+  async ({ task, expect, onTestFinished }) => {
+    const retryCount = task.result?.retryCount ?? 0;
+    const { input, output, dir } = createTestInputAndOutput(
+      'watch-option-proxy-accessor',
+      retryCount,
+    );
+    const target = Object.defineProperty({ input, output: { file: output } }, 'watch', {
+      configurable: true,
+      enumerable: true,
+      set(_value: unknown) {},
+    }) as WatchOptions;
+    const watcher = _watch(
+      new Proxy(target, {
+        get(proxyTarget, key, receiver) {
+          if (key === 'watch') {
+            return { skipWrite: true, watcher: { usePolling: true, pollInterval: 50 } };
+          }
+          return Reflect.get(proxyTarget, key, receiver);
+        },
+      }),
+    );
+    onTestFinished(async () => {
+      await watcher.close();
+      if (!process.env.CI) {
+        fs.rmSync(dir, { recursive: true, force: true });
+      }
+    });
+    await waitBuildFinished(watcher);
+
+    expect(fs.existsSync(output)).toBe(false);
+  },
+);
+
 test.concurrent(
   '#5260',
   { retry: TEST_RETRY, timeout: TEST_TIMEOUT },

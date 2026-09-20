@@ -803,22 +803,41 @@ view of that same configuration. The caller's object IS the view's target, so
 `defineProperty` and `delete` delegate by construction; only `[[Get]]` and
 `[[Set]]` are trapped.
 
-`[[Get]]` of `watch` is derived from the target's CURRENT own descriptor, never
-from a slot the traps maintain:
+The rule is **one read per descriptor epoch**. An epoch is the shape and the
+identity of the target's CURRENT own `watch` descriptor, re-derived on every
+`[[Get]]` — inspecting a descriptor calls nothing:
 
-| own descriptor of `watch`    | answer                                                                    |
-| ---------------------------- | ------------------------------------------------------------------------- |
-| data property                | its value, live                                                           |
-| accessor with no getter      | `undefined`                                                               |
-| accessor with getter `g`     | the memo when the memo holds `g`'s result, else one call to `g`, memoised |
-| none (inherited, or deleted) | the memo the enablement read seeded                                       |
+| own descriptor of `watch`          | epoch                   |
+| ---------------------------------- | ----------------------- |
+| none (inherited, or deleted)       | `none`                  |
+| data property holding `v`          | `data(v)` (`Object.is`) |
+| accessor with getter `g` (or none) | `accessor(g)`           |
 
-A getter therefore runs at most once per distinct shape. A `watch` getter that
+Two answers are **forced**, because the `Proxy` `get` invariant admits nothing
+else — and each equals what any legal read produces, so no read is taken:
+
+| forced case                                  | answer        |
+| -------------------------------------------- | ------------- |
+| non-configurable, non-writable data property | its own value |
+| non-configurable accessor with no getter     | `undefined`   |
+
+Everywhere else the memo answers when it was taken in this same epoch, and a
+new epoch takes exactly one read — `Reflect.get(original, 'watch', original)`,
+not a descriptor lookalike, so a getter runs once and an original that is
+itself a `Proxy` answers through its `get` trap, which no descriptor can stand
+in for.
+
+A **write** of `watch` through the view opens a new epoch by itself: a setter
+inherited from the prototype changes backing state and leaves the own
+descriptor untouched, so the memo is dropped after every successful write and
+the next read observes what the setter did.
+
+The memo is seeded at construction, for every shape, from the enablement read,
+so the first downstream read re-runs nothing. A `watch` getter that
 materializes `{ skipWrite: true, watcher: { ... } }` once keeps those settings,
 and a `watch` that an `options` hook assigns, redefines as a fresh accessor, or
 replaces through the caller's own alias is honoured — including after
-`Object.freeze`, because answering with the live own value is exactly what the
-`Proxy` `get` invariants demand of a non-configurable non-writable property.
+`Object.freeze`, which lands in the forced case above rather than throwing.
 
 Both traps pass the ORIGINAL object as the receiver whenever the view itself is
 the receiver, so a configuration whose `input`, `output` or `watch` getter reads

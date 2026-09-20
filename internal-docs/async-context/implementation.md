@@ -208,10 +208,18 @@ option adapters.
   that answers the eager read is user code too, and it runs outside the
   boundary for the reason given for built-in options above: the boundary
   covers hook execution, not option reads. The list handed to the hook runner
-  and to the logger is one view per plugin: the plugin is the `Proxy` target
-  AND the receiver for every key but the hook, so `plugin.name` - which both
-  consumers read unsnapshotted - still reaches a getter backed by a private
-  field.
+  and to the logger is one view per plugin: an internal-only facade whose
+  `Proxy` target is a fresh empty object, so no invariant can force a live
+  answer, and whose traps answer the hook key from the captured value and
+  delegate every other key to the plugin with the plugin as the receiver - so
+  `plugin.name`, which both consumers read unsnapshotted, still reaches a getter
+  backed by a private field. A hook the plugin gains or replaces after the
+  capture is not observed, which is what keeps presence and execution in
+  agreement: a late hook answered live would run outside the guard the presence
+  flags installed. The private-target trick is safe only because no consumer of
+  these views is user code; a view handed to user code keeps the original as its
+  target instead (`createWatchOptionSnapshotView`, see
+  [../watch-mode/implementation.md](../watch-mode/implementation.md)).
 
 Internal callbacks such as deferred scan-data collection and cache invalidation
 are not wrapped because they do not invoke user code. This distinction keeps

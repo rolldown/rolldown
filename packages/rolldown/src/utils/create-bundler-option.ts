@@ -340,20 +340,38 @@ interface CapturedPluginHooks {
  * applies to built-in option callbacks. See
  * internal-docs/async-context/implementation.md.
  *
- * `snapshot()` hands each consumer a view of the plugin that answers the hook
- * key from the captured value and delegates everything else to the plugin
- * itself, as the target AND as the receiver. An `Object.create(plugin, ...)`
- * overlay delegated too, but with itself as the receiver: `plugin.name` - read
- * unsnapshotted by `PluginDriver.callOutputOptionsHook` and by `getLogger` -
- * then threw `Cannot read private member` for a class plugin whose `name`
- * getter is backed by one. Enumerability comes from the plugin for the same
- * reason.
+ * `snapshot()` hands each consumer a view that answers the hook key from the
+ * captured value and delegates everything else to the plugin, with the plugin
+ * as the receiver. An `Object.create(plugin, ...)` overlay delegated too, but
+ * with itself as the receiver: `plugin.name` - read unsnapshotted by
+ * `PluginDriver.callOutputOptionsHook` and by `getLogger` - then threw
+ * `Cannot read private member` for a class plugin whose `name` getter is
+ * backed by one.
  *
- * The one thing the view cannot answer freely is a hook the plugin has since
- * pinned down: where the plugin's own descriptor is non-configurable, the
- * `Proxy` `get` invariant fixes the answer, and the view gives that answer
- * instead of the captured value - otherwise the read throws `TypeError`
- * before any hook runs.
+ * The view is a facade over a PRIVATE, empty, extensible target rather than a
+ * `Proxy` on the plugin. A target with no own keys carries no `get`, `has`,
+ * `ownKeys` or `getOwnPropertyDescriptor` invariant, so nothing the plugin does
+ * afterwards can force a live answer out of the facade: a hook the plugin gains
+ * or replaces after this pass read it - a getter redefining itself as a frozen
+ * data property, another callback freezing a sibling's `onLog` - is simply not
+ * observed. That is the documented conversion-time read model: presence was
+ * decided from the captured value, `hasUserLogCallback` and `hasOutputOptionsHook`
+ * were decided with it, and a hook the facade did not capture would run outside
+ * the reentrancy guard those flags install.
+ *
+ * INTERNAL ONLY. The private-target trick works here because no consumer of
+ * these views is user code: `getSortedPlugins`, `getObjectPlugins` and
+ * `getParallelPluginInfo` only inspect them, `PluginDriver.callOutputOptionsHook`
+ * and `getLogger` call the hook with a `MinimalPluginContextImpl` (or a literal
+ * log context) as `this`, never the view. A view handed to user code must keep
+ * the original as the `Proxy` target so that freezing or sealing it stays
+ * legal - see `createWatchOptionSnapshotView` in `api/watch/watcher.ts`.
+ *
+ * `builtin-plugin/utils.ts`'s `createCallbackSnapshotView` is the same shape but
+ * not reusable as is: it pins delegated non-configurable descriptors onto its
+ * private target, always delegates with the original as the receiver, and traps
+ * no `set`/`defineProperty`/`deleteProperty`, so writes would land on the
+ * private target instead of the plugin.
  */
 function capturePluginHooks(
   plugins: Plugin[],
@@ -386,44 +404,65 @@ function capturePluginHooks(
         // The deferred read happens here, inside `snapshot()`, which every
         // caller invokes inside the callback boundary.
         const hookValue = deferred ? readPropertyOnce(plugin, hookName) : value;
-        const view: Plugin = new Proxy(plugin, {
-          get(target, key, receiver) {
-            if (key === hookName) {
-              // A hook the plugin replaced after this pass read it - a getter
-              // redefining itself as a frozen data property, another callback
-              // overwriting a sibling plugin's hook and freezing it - leaves an
-              // own descriptor the `get` invariant fixes the answer for. Answer
-              // with it: reporting the captured value there is a `TypeError`
-              // thrown before any hook runs. The check only inspects the
-              // descriptor; it never calls anything.
-              const descriptor = Reflect.getOwnPropertyDescriptor(target, hookName);
-              if (descriptor && !descriptor.configurable) {
-                // A non-configurable non-writable data property admits exactly
-                // its own value.
-                if ('value' in descriptor) {
-                  if (!descriptor.writable) return descriptor.value;
-                  // oxlint-disable-next-line typescript/unbound-method -- shape test only, never invoked
-                } else if (descriptor.get === undefined) {
-                  // A non-configurable accessor with nothing to call admits
-                  // exactly `undefined`.
-                  return undefined;
-                }
-              }
-              return hookValue;
-            }
+        // A fresh, extensible object with no own keys. Because the facade never
+        // reports one of ITS keys as non-configurable, and never reports the
+        // target as non-extensible, every trap below is free to answer from the
+        // plugin or from the captured value without meeting an invariant.
+        const target: Record<PropertyKey, never> = {};
+        const view: Plugin = new Proxy(target, {
+          get(_target, key, receiver) {
+            // The captured value wins, whatever the plugin looks like now.
+            if (key === hookName) return hookValue;
             // The plugin is the receiver, so `plugin.name` - which
             // `callOutputOptionsHook` and `getLogger` read straight off this
             // view - reaches a getter backed by a private field. An object
             // derived from the view keeps its own receiver.
-            return Reflect.get(target, key, receiver === view ? target : receiver);
+            return Reflect.get(plugin, key, receiver === view ? plugin : receiver);
           },
-          // No `has` trap: every consumer of these views - `getSortedPlugins`,
-          // `PluginDriver.callOutputOptionsHook` and `getLogger` - reaches the
-          // hook by reading it, never by `in`, `Reflect.has`, `Object.keys` or
-          // `for...in`. Reporting a key the plugin does not own would violate
-          // the `has` invariant on a frozen plugin for no consumer's benefit,
-          // so the default delegation answers.
-        });
+          has(_target, key) {
+            // Same answer the `get` trap gives, so `in` cannot disagree with a
+            // read. No consumer reaches a hook this way, but a facade whose
+            // `has` contradicted its `get` would be a trap for the next one.
+            if (key === hookName) return hookValue !== undefined;
+            return Reflect.has(plugin, key);
+          },
+          getPrototypeOf() {
+            // `getObjectPlugins` tests `plugin instanceof BuiltinPlugin`.
+            return Reflect.getPrototypeOf(plugin);
+          },
+          ownKeys() {
+            const keys = Reflect.ownKeys(plugin);
+            // Only add the hook key when the facade answers for it and the
+            // plugin does not already list it - `ownKeys` rejects duplicates.
+            if (hookValue !== undefined && !keys.includes(hookName)) {
+              return [...keys, hookName];
+            }
+            return keys;
+          },
+          getOwnPropertyDescriptor(_target, key) {
+            if (key === hookName) {
+              return hookValue === undefined
+                ? undefined
+                : { configurable: true, enumerable: true, value: hookValue, writable: true };
+            }
+            const descriptor = Reflect.getOwnPropertyDescriptor(plugin, key);
+            // A facade may not report a non-configurable key its target lacks,
+            // and the target deliberately has none, so report the plugin's
+            // descriptor as configurable. Only `getParallelPluginInfo` reads
+            // these, and it looks at `value` alone.
+            if (descriptor) descriptor.configurable = true;
+            return descriptor;
+          },
+          defineProperty(_target, key, descriptor) {
+            return Reflect.defineProperty(plugin, key, descriptor);
+          },
+          deleteProperty(_target, key) {
+            return Reflect.deleteProperty(plugin, key);
+          },
+          set(_target, key, newValue, receiver) {
+            return Reflect.set(plugin, key, newValue, receiver === view ? plugin : receiver);
+          },
+        }) as unknown as Plugin;
         return view;
       }),
   };

@@ -1121,14 +1121,12 @@ test('a plain-object plugin still reaches both hook consumers through the snapsh
   expect(codes.filter((code) => code === 'EVAL')).toHaveLength(1);
 });
 
-// The snapshot view's `get` trap answered the captured value unconditionally,
-// but the target is the live plugin. A deferred `outputOptions` getter that
-// redefines itself as a frozen data property holding a DIFFERENT function left
-// the view answering a value the `Proxy` `get` invariant forbids, so
-// `getSortedPlugins` threw `TypeError` before either hook ran. Where the own
-// descriptor is non-configurable the invariant fixes the answer, and the view
-// gives that answer.
-test('a plugin whose outputOptions getter freezes a replacement hook runs the replacement', async () => {
+// The snapshot view is a facade over a private target, so a deferred
+// `outputOptions` getter that redefines itself as a frozen data property
+// holding a DIFFERENT function cannot force the live value on it: no `Proxy`
+// invariant reaches a target with no own keys. The captured hook - the one
+// whose presence decided `hasOutputOptionsHook` - runs, and nothing throws.
+test('a plugin whose outputOptions getter freezes a replacement hook still runs the captured hook', async () => {
   const calls: string[] = [];
   const replacement = (options: OutputOptions): OutputOptions => {
     calls.push('replacement');
@@ -1158,14 +1156,14 @@ test('a plugin whose outputOptions getter freezes a replacement hook runs the re
   const { output } = await bundle.generate();
   await bundle.close();
 
-  expect(calls).toEqual(['replacement']);
-  expect(output[0].fileName).toBe('self-replacing.js');
+  expect(calls).toEqual(['captured']);
+  expect(output[0].fileName).toBe('captured.js');
 });
 
-// Same invariant, reached from the eager capture side: another plugin's
-// callback overwrites a sibling's already-captured `onLog` and freezes the
-// sibling, so the frozen own descriptor and the captured value disagree.
-test('a plugin whose onLog another callback replaces and freezes runs the replacement', async () => {
+// Same rule, reached from the eager capture side: another plugin's callback
+// overwrites a sibling's already-captured `onLog` and freezes the sibling, so
+// the frozen own descriptor and the captured value disagree. The capture wins.
+test('a plugin whose onLog another callback replaces and freezes still runs the captured hook', async () => {
   const virtualId = '\0frozen-replaced-on-log';
   const codes: string[] = [];
   const logPlugin = {
@@ -1200,13 +1198,67 @@ test('a plugin whose onLog another callback replaces and freezes runs the replac
   await bundle.generate({});
   await bundle.close();
 
-  expect(codes).toEqual(['replaced:EVAL']);
+  expect(codes).toEqual(['captured:EVAL']);
 });
 
-// The view has no `has` trap: no consumer reaches a hook by `in`,
-// `Reflect.has`, `Object.keys` or `for...in`, and reporting a key a frozen
-// plugin does not own would violate the `has` invariant. A frozen class
-// instance keeps its prototype hooks either way.
+// A plugin that gains a hook AFTER the capture pass read it is not observed at
+// all. It has to be: presence was decided without that hook, so
+// `hasUserLogCallback` stayed false and the log path is not wrapped in
+// `runBuildCallback` - a hook answered live there would run outside the
+// reentrancy guard and could re-enter `bundle.generate()`.
+test('a hook installed after capture is not observed and cannot escape the callback guard', async () => {
+  const virtualId = '\0late-installed-frozen-on-log';
+  let bundle: Awaited<ReturnType<typeof rolldown>>;
+  let handlerCalls = 0;
+  let reentrantAttempt: Promise<unknown> | undefined;
+  const defaultHandled: string[] = [];
+  const bare = { name: 'bare-without-on-log' } as Plugin;
+  // Runs inside `createBundlerOptions`, after `onLog` was captured from `bare`
+  // and after `hasUserLogCallback` was decided from that capture.
+  const installer: Plugin = {
+    name: 'install-frozen-sibling-on-log',
+    outputOptions(options) {
+      if (Object.getOwnPropertyDescriptor(bare, 'onLog')) return options;
+      Object.defineProperty(bare, 'onLog', {
+        configurable: false,
+        enumerable: true,
+        writable: false,
+        value: (_level: LogLevel, _log: RolldownLog) => {
+          handlerCalls += 1;
+          reentrantAttempt ??= bundle.generate().catch((error) => error);
+          return false;
+        },
+      });
+      return options;
+    },
+  };
+
+  // No input `onLog`/`onwarn` and no captured plugin hook, so the default
+  // handler is the only one, and `hasUserLogCallback` is false.
+  const warn = vi.spyOn(console, 'warn').mockImplementation((message: unknown) => {
+    defaultHandled.push(String(message));
+  });
+  try {
+    bundle = await rolldown({
+      cwd: import.meta.dirname,
+      input: virtualId,
+      plugins: [evalWarningsPlugin(virtualId, 1), bare, installer],
+    });
+    await bundle.generate({});
+    await bundle.close();
+  } finally {
+    warn.mockRestore();
+  }
+
+  expect(handlerCalls).toBe(0);
+  expect(reentrantAttempt).toBeUndefined();
+  // The log still reaches the default handler.
+  expect(defaultHandled.filter((message) => message.includes('direct `eval`'))).toHaveLength(1);
+});
+
+// The facade's `has` trap agrees with its `get` trap, and reports the plugin's
+// own keys otherwise. A frozen class instance keeps its prototype hooks, which
+// the facade answers through the plugin.
 test('a frozen class plugin with prototype hooks still runs both hooks', async () => {
   const virtualId = '\0frozen-class-prototype-hooks';
   const codes: string[] = [];

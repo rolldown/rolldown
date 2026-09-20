@@ -725,19 +725,40 @@ describe('workerd build() against the built dist', () => {
   // A plugin-bound build (>= 3 s of plugin time) makes the terminal close
   // report PLUGIN_TIMINGS through onLog, so a throwing onLog rejects the close
   // with the native bundle still holding the instance's binding object.
+  //
+  // `BuildTimings::is_plugin_bound` (crates/rolldown_plugin/src/types/build_timings.rs)
+  // gates that report on two clocks: the build must run >= 3 s, AND its link
+  // stage must be non-zero and under a hundredth of the rest of the build. The
+  // 3.5 s sleep below covers the first. The second is why this build needs a
+  // real module graph rather than one module: the dist runs on the WASI shim,
+  // whose monotonic clock is quantized to whole milliseconds, so a link stage
+  // shorter than a millisecond elapses as 0 us and the gate bails out on
+  // `link_stage_micros == 0`. That is what made these two cases flaky.
+  //
+  // Measured against this dist, reporting rate over 15 runs each: 1 module
+  // 12/15, 8 modules 9/15, 20 modules 15/15, 200 modules 15/15. 200 keeps the
+  // link stage about ten times over the 1 ms floor while leaving it far under
+  // the other end of the gate -- a 1500-module graph still reports, and this
+  // one only adds ~0.3 s to a 3.5 s case.
+  const TIMINGS_LINK_GRAPH_MODULES = 200;
+
   function slowPluginOptions(codes: string[], onLogError: Error) {
+    const graph = makeVirtualGraph(TIMINGS_LINK_GRAPH_MODULES);
     return {
       input: 'virt:entry.js',
       plugins: [
         {
+          // Listed first so it owns the entry: the sleep must run exactly once,
+          // and the graph plugin below supplies everything the entry pulls in.
           name: 'slow-load',
           resolveId: (id: string) => (id === 'virt:entry.js' ? id : undefined),
           load: async (id: string) => {
             if (id !== 'virt:entry.js') return undefined;
             await new Promise((resolve) => setTimeout(resolve, 3_500));
-            return 'export const a = 1;\n';
+            return "import { value } from 'virt:mod-0.js';\nexport const a = value;\n";
           },
         },
+        graph.plugin(),
       ],
       onLog: (_level: string, log: unknown) => {
         const code = (log as { code?: string }).code;

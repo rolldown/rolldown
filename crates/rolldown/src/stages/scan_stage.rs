@@ -206,10 +206,18 @@ impl<Fs: FileSystem + Clone + 'static> ScanStage<Fs> {
   }
 
   fn create_sourcemap_channel(&self) -> SourcemapChannel {
-    // A thread-capability proxy, not deadlock protection: wasm cannot select
-    // MultiThread, so this is what keeps `thread::spawn` off the threadless
-    // artifact. Every other flavor generates its maps inline instead.
-    if !rolldown_utils::futures::is_multi_threaded() {
+    // A target capability, not a scheduler flavor: the only question is whether
+    // `std::thread::spawn` is available here. Native keeps the dedicated
+    // sourcemap thread on every flavor, `CurrentThread` included -- the drainer
+    // below is an OS thread, not a runtime task, so it cannot starve the
+    // executor that feeds it, and `Terminate` is sent inside `fetch_modules`,
+    // before `process_sourcemap_handler` joins, so no flavor ends up waiting on
+    // itself. Both wasm artifacts generate their maps inline; for the threaded
+    // one that is deliberate (its workers belong to the napi runtime
+    // lifecycle), a possible follow-up rather than a regression.
+    // See `rolldown_utils::futures::can_spawn_os_threads`, and
+    // `crates/rolldown/src/utils/defer_drop.rs` for the same gate.
+    if !rolldown_utils::futures::can_spawn_os_threads() {
       return (None, None);
     }
 

@@ -75,8 +75,15 @@ pub fn block_on<F: Future>(f: F) -> F::Output {
   crate::async_runtime::block_on(f)
 }
 
-/// Whether the selected executor runs the multi-thread flavor.
+/// Whether this target may create OS threads with `std::thread::spawn`.
+///
+/// `std::thread::spawn` must stay off every wasm artifact: the threadless
+/// `wasm32-wasip1` build has no threads at all, and the threaded build's
+/// workers are owned by the napi runtime lifecycle rather than by us. Native
+/// targets spawn freely, on every scheduler flavor -- this is a compile-time
+/// property of the target, never a function of the runtime flavor the process
+/// happens to have selected.
 #[inline]
-pub fn is_multi_threaded() -> bool {
-  crate::async_runtime::is_multi_threaded()
+pub const fn can_spawn_os_threads() -> bool {
+  cfg!(not(target_family = "wasm"))
 }

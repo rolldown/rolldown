@@ -1166,6 +1166,63 @@ test('watcher reads an accessor-backed watch option once and shares the snapshot
   await withTimeout(emitter.close(), 'watch option snapshot close');
 });
 
+// The view answered the filter's snapshot for `watch` while forwarding writes
+// to the original, so a `watch` an `options` hook assigned never reached
+// `bindingifyInputOptions` - `{ watch: {} }` plus a hook selecting `skipWrite`
+// wrote the bundle anyway.
+test('watcher forwards a watch option the options hook writes', async () => {
+  const written = { skipWrite: true, watcher: { usePolling: true, pollInterval: 88 } };
+  mocks.callOptionsHook.mockImplementation(async (option) => {
+    option.watch = written;
+    return option;
+  });
+  mocks.createBundlerOptions.mockImplementation(async (inputOptions) =>
+    createBundlerOption(undefined, inputOptions),
+  );
+
+  const emitter = new WatcherEmitter();
+  await createWatcher(emitter, [{ output: {}, watch: {} }]);
+
+  // What `bindingifyInputOptions` reads on its way to the binding.
+  expect(mocks.createBundlerOptions.mock.calls.map(([inputOptions]) => inputOptions.watch)).toEqual(
+    [written],
+  );
+
+  await withTimeout(emitter.close(), 'watch option hook write close');
+});
+
+// The view used to carry an empty private target, so `Object.freeze` in an
+// `options` hook made that target non-extensible while `ownKeys` still reported
+// the original's keys; the next `ownKeys` threw `TypeError`. The original is
+// the `Proxy` target now, so the integrity operations land on it and every
+// invariant holds.
+test('watcher survives an options hook freezing the configuration', async () => {
+  let frozen;
+  let keys;
+  mocks.callOptionsHook.mockImplementation(async (option) => {
+    Object.freeze(option);
+    frozen = Object.isFrozen(option);
+    keys = Object.keys(option);
+    return option;
+  });
+  mocks.createBundlerOptions.mockImplementation(async (inputOptions) =>
+    createBundlerOption(undefined, inputOptions),
+  );
+
+  const emitter = new WatcherEmitter();
+  await expect(
+    createWatcher(emitter, [{ output: {}, watch: { skipWrite: true } }]),
+  ).resolves.toBeUndefined();
+
+  expect(frozen).toBe(true);
+  expect(keys).toEqual(['output', 'watch']);
+  expect(mocks.createBundlerOptions.mock.calls.map(([inputOptions]) => inputOptions.watch)).toEqual(
+    [{ skipWrite: true }],
+  );
+
+  await withTimeout(emitter.close(), 'frozen watch option close');
+});
+
 function createBundlerOption(stopWorkers: () => Promise<void>, inputOptions = {}, onLog = vi.fn()) {
   return {
     bundlerOptions: {},

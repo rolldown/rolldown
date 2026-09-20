@@ -1996,6 +1996,88 @@ test.concurrent(
   },
 );
 
+// The snapshot view answered the enablement filter's snapshot for `watch` while
+// forwarding writes to the original, so a `watch` an `options` hook assigned
+// went somewhere nothing downstream read: `skipWrite` was dropped and the
+// bundle written anyway.
+test.concurrent(
+  'watch follows a watch option written by an options hook',
+  { retry: TEST_RETRY, timeout: TEST_TIMEOUT },
+  async ({ task, expect, onTestFinished }) => {
+    const retryCount = task.result?.retryCount ?? 0;
+    const { input, output, dir } = createTestInputAndOutput('watch-option-hook-write', retryCount);
+    let readBack: WatchOptions['watch'];
+    const watcher = watch({
+      input,
+      output: { file: output },
+      watch: {},
+      plugins: [
+        {
+          name: 'assign-skip-write',
+          options(options) {
+            options.watch = { skipWrite: true, watcher: { usePolling: true, pollInterval: 50 } };
+            readBack = options.watch;
+          },
+        },
+      ],
+    });
+    onTestFinished(async () => {
+      await watcher.close();
+      if (!process.env.CI) {
+        fs.rmSync(dir, { recursive: true, force: true });
+      }
+    });
+    await waitBuildFinished(watcher);
+
+    expect(readBack).toEqual({
+      skipWrite: true,
+      watcher: { usePolling: true, pollInterval: 50 },
+    });
+    expect(fs.existsSync(output)).toBe(false);
+  },
+);
+
+// The view used to carry an empty private target, so `Object.freeze` inside an
+// `options` hook made that target non-extensible while `ownKeys` still reported
+// the original's keys - the next `ownKeys` threw `TypeError` and `watch()`
+// emitted `ERROR` instead of building.
+test.concurrent(
+  'watch survives an options hook freezing the configuration',
+  { retry: TEST_RETRY, timeout: TEST_TIMEOUT },
+  async ({ task, expect, onTestFinished }) => {
+    const retryCount = task.result?.retryCount ?? 0;
+    const { input, output, dir } = createTestInputAndOutput('watch-option-frozen', retryCount);
+    let frozen: boolean | undefined;
+    let keys: string[] | undefined;
+    const watcher = watch({
+      input,
+      output: { file: output },
+      watch: { skipWrite: true },
+      plugins: [
+        {
+          name: 'freeze-options',
+          options(options) {
+            Object.freeze(options);
+            frozen = Object.isFrozen(options);
+            keys = Object.keys(options);
+          },
+        },
+      ],
+    });
+    onTestFinished(async () => {
+      await watcher.close();
+      if (!process.env.CI) {
+        fs.rmSync(dir, { recursive: true, force: true });
+      }
+    });
+    await waitBuildFinished(watcher);
+
+    expect(frozen).toBe(true);
+    expect(keys).toEqual(['input', 'output', 'watch', 'plugins']);
+    expect(fs.existsSync(output)).toBe(false);
+  },
+);
+
 test.concurrent(
   '#5260',
   { retry: TEST_RETRY, timeout: TEST_TIMEOUT },

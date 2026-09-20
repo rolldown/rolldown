@@ -168,8 +168,12 @@ async function closeBuild(build: RolldownBuild): Promise<void> {
       retryError = caughtError;
     }
     if (!getRetryableCleanup(retryError) && !hasRetryableBuildCleanup(build)) {
+      // Terminal diagnostics first; otherwise the close failure itself is what
+      // the caller has to see. A recovered retry releases ownership but does not
+      // undo the close error - `retryCleanupFromError` rethrows the original -
+      // and main's `finally { await build.close() }` rejects with it.
       throwCloseErrors(deliveredTerminalErrors, 'Build close failed');
-      return;
+      throw retryError;
     }
     if (!getRetryableCleanup(retryError)) throw retryError;
 
@@ -182,7 +186,6 @@ async function closeBuild(build: RolldownBuild): Promise<void> {
     }
     if (!getRetryableCleanup(finalRetryError) && !hasRetryableBuildCleanup(build)) {
       throwCloseErrors(deliveredTerminalErrors, 'Build close failed');
-      return;
     }
     throw finalRetryError;
   }

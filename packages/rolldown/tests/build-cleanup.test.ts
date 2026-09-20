@@ -73,7 +73,7 @@ test('build surfaces terminal diagnostics after recovering a transport failure',
   expect(getRetryableCleanup(error)).toBeUndefined();
 });
 
-test('build resolves after its immediate cleanup retry releases ownership', async () => {
+test('build rethrows its close error after the immediate cleanup retry releases ownership', async () => {
   const cleanupError = new Error('runtime release failed');
   let ownsResources = true;
   mocks.close.mockRejectedValueOnce(cleanupError);
@@ -83,8 +83,12 @@ test('build resolves after its immediate cleanup retry releases ownership', asyn
   });
   mocks.hasRetryableBuildCleanup.mockImplementation(() => ownsResources);
 
-  await expect(build({ input: 'entry.js', write: false })).resolves.toEqual({ output: [] });
+  const error = await build({ input: 'entry.js', write: false }).catch((error: unknown) => error);
 
+  // The retry released the resources; it did not undo the failed close. main's
+  // `finally { await build.close() }` rejects with exactly this error, so
+  // resolving here would drop a failure the caller asked about.
+  expect(error).toBe(cleanupError);
   expect(mocks.close).toHaveBeenCalledOnce();
   expect(mocks.retryRolldownBuildCleanup).toHaveBeenCalledOnce();
 });
@@ -208,13 +212,18 @@ test('build awaits final native close retry outside setup recovery', async () =>
     expect(vi.getTimerCount()).toBe(1);
 
     await vi.runOnlyPendingTimersAsync();
-    const output = await operation;
+    const error = await operation.catch((error: unknown) => error);
 
-    expect(output).toEqual({ output: [] });
+    // The final retry released ownership; the close failures it retried are
+    // still what the caller has to see.
+    expect(error).toBeInstanceOf(AggregateError);
+    expect((error as AggregateError).errors).toEqual([firstTransportError, secondTransportError]);
+    expect((error as AggregateError).cause).toBe(firstTransportError);
     expect(mocks.close).toHaveBeenCalledOnce();
     expect(mocks.retryRolldownBuildCleanup).toHaveBeenCalledTimes(2);
     expect(ownsResources).toBe(false);
     expect(getRetryableCleanup(firstTransportError)).toBeUndefined();
+    expect(getRetryableCleanup(error)).toBeUndefined();
     expect(vi.getTimerCount()).toBe(0);
   } finally {
     vi.useRealTimers();

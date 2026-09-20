@@ -1990,6 +1990,11 @@ test.skipIf(isWasiTest)(
     );
 
     try {
+      // The retry terminates the worker that failed, so nothing leaks — but a
+      // recovered cleanup does not undo the close failure. main runs
+      // `finally { await build.close() }`, whose `await this.#stopWorkers?.()`
+      // rejects with exactly this error, and the sibling case above pins the
+      // same rejection on an explicit `bundle.close()`.
       await expect(
         build({
           input: './main.js',
@@ -1997,7 +2002,7 @@ test.skipIf(isWasiTest)(
           plugins: [parallelPlugin({ state })],
           write: false,
         }),
-      ).resolves.toBeDefined();
+      ).rejects.toBe(cleanupError);
       expect(terminateCalls.size).toBe(Atomics.load(state, 0));
       for (const [worker, calls] of terminateCalls) {
         expect(calls).toBe(failedWorkers.has(worker) ? 2 : 1);

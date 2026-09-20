@@ -84,11 +84,16 @@ catalog:
   # re-stamp aborted the build; FreeBSD hits it because it cannot provide a
   # complete process execution identity, so the cross-process reconciliation
   # lock runs degraded (lock-free) there.
-  # 3.10.4 is not a floor of its own -- it changes no loader or template, only
-  # the ESM-to-CommonJS guard in `prepareWasiBindingTypeDef`, which rolldown
-  # never reaches because its `--dts` is already `binding.d.cts`. It is named
-  # here so the range tracks the version renovate resolved on main (#10913),
-  # which is what regenerates the committed loaders.
+  # 3.10.4 is not a floor of its own -- it changes no loader or template. Its
+  # ESM-to-CommonJS guard change in `prepareWasiBindingTypeDef` is unreachable
+  # here because rolldown's `--dts` is already `binding.d.cts`, and the one
+  # change rolldown does reach on every wasi typedef derivation --
+  # `collectRelativeDeclarationSpecifierReferences` now also rebases
+  # `declare module '<relative>'` names and multi-argument `import()` and
+  # `require()` specifiers -- is a no-op for the current typedef, which
+  # contains neither. It is named here so the range tracks the version
+  # renovate resolved on main (#10913), which is what regenerates the
+  # committed loaders.
   '@napi-rs/cli': ^3.10.4
   '@napi-rs/wasm-runtime': ~1.2.4
   '@oxc-node/cli': ^0.1.0

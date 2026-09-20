@@ -882,14 +882,19 @@ build-order coupling is needed to keep one flavor from overwriting the other.
   FreeBSD build is what hit it: FreeBSD cannot supply a complete process
   execution identity, so the cross-process reconciliation lock runs degraded
   (lock-free) there and a re-stamp under a concurrent staging pass aborted the
-  whole build. 3.10.4 adds nothing the branch needs — it only relaxes the
-  cli's ESM-to-CommonJS declaration guard, which rolldown never reaches
-  because its `--dts` is already `binding.d.cts` — and is named in the catalog
-  only so the range tracks the version main resolved (#10913), the one that
-  regenerates the loaders committed here. A build whose target is NOT wasi regenerates
-  EVERY declared wasi flavor's loader set, each with `hasThreads` derived from
-  its own triple, so loader regeneration is deterministic and byte-identical to
-  the committed copies on every host and under every build variant. A wasi
+  whole build. 3.10.4 adds nothing the branch needs: it changes no loader or
+  template, its relaxed ESM-to-CommonJS declaration guard is unreachable here
+  because rolldown's `--dts` is already `binding.d.cts`, and the one change
+  rolldown does reach on every wasi typedef derivation —
+  `collectRelativeDeclarationSpecifierReferences` now also rebases
+  `declare module '<relative>'` names and multi-argument `import()` and
+  `require()` specifiers — is a no-op for the current typedef, which contains
+  neither. It is named in the catalog only so the range tracks the version
+  main resolved (#10913), the one that regenerates the loaders committed here.
+  A build whose target is NOT wasi regenerates EVERY declared wasi flavor's
+  loader set, each with `hasThreads` derived from its own triple, so loader
+  regeneration is deterministic and byte-identical to the committed copies on
+  every host and under every build variant. A wasi
   build regenerates only the flavor being built, and it alone owns that
   flavor's export list: a non-wasi build re-derives each flavor's loaders from
   the `// napi-rs-artifact-metadata:` header of the COMMITTED

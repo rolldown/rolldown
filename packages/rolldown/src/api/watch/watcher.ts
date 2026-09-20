@@ -553,12 +553,13 @@ export async function createWatcher(
   // Snapshot config entries and relevant watch/output getters before starting
   // options hooks or parallel workers. A later throwing getter must not
   // abandon setup already running for an earlier watch configuration.
-  // One read of `watch` per configuration, shared by every consumer: the
+  // One read of `watch` per configuration and per later shape of it: the
   // enablement filter here, `bindingifyInputOptions` and
   // `warnMultiplePollingOptions` each used to re-run an accessor-backed
   // `watch`, so a getter that answers once had its `skipWrite` and `watcher`
   // settings silently dropped - the very settings main honours. Everything
-  // downstream reads the snapshot through a view of the configuration.
+  // downstream reads `watch` through a view of the configuration that answers
+  // from the live own descriptor and memoises what it had to call.
   const enabledOptions: WatchOptions[] = [];
   for (const option of materializePresentValues(options)) {
     // Walk first and discard the result: the walk is what bounds a cyclic or
@@ -738,81 +739,102 @@ function createSetupError(errors: unknown[], message: string): unknown {
 
 /**
  * View of one watch configuration whose only difference from the original is
- * that `[[Get]]` of `watch` answers with the snapshot the enablement filter
- * already took, so `bindingifyInputOptions` and `warnMultiplePollingOptions`
- * see what the filter saw without the accessor running again.
+ * that `[[Get]]` of `watch` answers without re-running a getter the enablement
+ * filter already ran, so `bindingifyInputOptions` and
+ * `warnMultiplePollingOptions` see what the filter saw.
  *
- * The original configuration IS the `Proxy` target, so every operation this
- * view does not override - `ownKeys`, descriptors, `has`, the prototype,
- * `preventExtensions` - is delegated by construction, and `Object.freeze`,
- * `Object.seal` or `Object.preventExtensions` applied to the view by an
- * `options` hook satisfies the `Proxy` invariants instead of making a later
- * `ownKeys` throw. Writes to `watch` through the view reach the original and
- * refresh the snapshot, so a hook assigning `watch` is honoured downstream.
+ * The answer is derived from the target's CURRENT own descriptor, never from a
+ * slot the traps maintain, so nothing has to be intercepted to keep it honest:
+ *
+ * - an own data property answers with its value. That is live, so a `watch` an
+ *   `options` hook assigns - through the view or through the caller's own
+ *   alias - is honoured, and it is exactly what the `get` invariant demands of
+ *   a non-configurable non-writable property, so freezing the configuration
+ *   afterwards cannot make the next read throw.
+ * - an own accessor with no getter answers `undefined`: there is nothing to
+ *   call, and `undefined` is what a plain read produces. That is also what the
+ *   `get` invariant demands when such a descriptor is non-configurable.
+ * - an own accessor with a getter answers from the memo when the memo holds
+ *   that same getter's result, and otherwise calls it once and memoises it. A
+ *   hook installing a fresh `watch` getter - what
+ *   `Object.defineProperty(options, 'watch', { get() { ... } })` does - is
+ *   therefore honoured, at one call.
+ * - no own descriptor at all - inherited, or deleted - answers from the memo
+ *   the filter's read seeded, so deleting an inherited `watch` through the view
+ *   costs no second getter call.
+ *
+ * A getter therefore runs at most once per distinct shape, and every memoised
+ * read passes the original as the receiver - the same `this` the filter's read
+ * used - so a getter backed by a private field works and cannot re-enter this
+ * view. Every other key is delegated with the original as the receiver for the
+ * same reason, unless the receiver is some object derived from the view
+ * (`Object.create(view)`), which keeps its own.
+ *
+ * The original configuration IS the `Proxy` target, so `ownKeys`, descriptors,
+ * `has`, the prototype, `preventExtensions`, `defineProperty` and `delete` are
+ * delegated by construction, and `Object.freeze`, `Object.seal` or
+ * `Object.preventExtensions` applied to the view by an `options` hook satisfies
+ * the `Proxy` invariants instead of making a later `ownKeys` throw.
+ * Redefinition, deletion and setter calls all change the own descriptor, which
+ * is the one thing the rule above reads.
  *
  * A plain `Object.create` shadow would hide the configuration's own keys, so an
  * `options` hook doing `{ ...options }` - what Vite's config plugins do - would
  * see nothing but `watch`; rebuilding a plain object from the original's own
  * descriptors would instead drop the fields only a `get` trap can answer.
+ *
+ * See internal-docs/watch-mode/implementation.md.
  */
 function createWatchOptionSnapshotView(
   option: WatchOptions,
   watch: WatchOptions['watch'],
 ): WatchOptions {
-  // What the view answers for `watch`, or `undefined` once a `delete` through
-  // the view took the property away and there is no snapshot left to answer
-  // with.
-  let snapshot: { value: WatchOptions['watch'] } | undefined = { value: watch };
+  /** What one read produced, kept under the shape that produced it. */
+  type WatchMemo =
+    | { kind: 'accessor'; getter: () => unknown; value: WatchOptions['watch'] }
+    | { kind: 'none'; value: WatchOptions['watch'] };
 
-  // Recompute the answer after a write reached the original. Reading the OWN
-  // descriptor back never runs an accessor.
-  //
-  // This is also what keeps the `get` invariant satisfiable: a `Proxy` whose
-  // target owns `watch` as a non-configurable non-writable data property must
-  // answer with exactly that value, and one whose target owns it as a
-  // non-configurable accessor without a getter must answer `undefined`. The
-  // initial snapshot satisfies both by construction - it came from
-  // `Reflect.get(option, 'watch', option)`, which returns the data value in the
-  // first case and `undefined` in the second. A non-configurable accessor that
-  // does have a getter constrains nothing, so the snapshot stands and the
-  // getter still runs only once.
-  const refreshSnapshot = (written: { value: unknown } | undefined): void => {
-    const descriptor = Reflect.getOwnPropertyDescriptor(option, 'watch');
-    if (descriptor && 'value' in descriptor) {
-      snapshot = { value: descriptor.value as WatchOptions['watch'] };
-    } else if (descriptor && !descriptor.configurable && descriptor.get === undefined) {
-      snapshot = { value: undefined };
-    } else if (written) {
-      snapshot = { value: written.value as WatchOptions['watch'] };
-    }
-  };
+  const ownDescriptor = Reflect.getOwnPropertyDescriptor(option, 'watch');
+  // oxlint-disable-next-line typescript/unbound-method -- memo key only, never invoked through it
+  const ownGetter = ownDescriptor && !('value' in ownDescriptor) ? ownDescriptor.get : undefined;
+  // Seed the memo with the read the enablement filter already took. A shape
+  // that answers on its own - an own data property, or an own accessor with no
+  // getter - never consults the memo, so it seeds none.
+  let memo: WatchMemo | undefined = ownGetter
+    ? { kind: 'accessor', getter: ownGetter, value: watch }
+    : ownDescriptor
+      ? undefined
+      : { kind: 'none', value: watch };
 
-  return new Proxy(option, {
-    defineProperty(target, key, attributes) {
-      if (!Reflect.defineProperty(target, key, attributes)) return false;
-      if (key === 'watch') {
-        refreshSnapshot('value' in attributes ? { value: attributes.value } : undefined);
-      }
-      return true;
-    },
-    deleteProperty(target, key) {
-      if (!Reflect.deleteProperty(target, key)) return false;
-      if (key === 'watch') snapshot = undefined;
-      return true;
-    },
+  // The original is the receiver, the same `this` the filter's read used, so a
+  // getter reading a private field works and cannot re-enter this view.
+  const readWatch = (): WatchOptions['watch'] =>
+    Reflect.get(option, 'watch', option) as WatchOptions['watch'];
+
+  const view = new Proxy(option, {
     get(target, key, receiver) {
-      if (key === 'watch' && snapshot) return snapshot.value;
-      return Reflect.get(target, key, receiver);
+      if (key !== 'watch') {
+        return Reflect.get(target, key, receiver === view ? target : receiver);
+      }
+      const descriptor = Reflect.getOwnPropertyDescriptor(target, 'watch');
+      if (descriptor && 'value' in descriptor) return descriptor.value;
+      // oxlint-disable-next-line typescript/unbound-method -- memo key only, never invoked through it
+      const getter = descriptor?.get;
+      if (getter) {
+        if (!memo || memo.kind !== 'accessor' || memo.getter !== getter) {
+          memo = { kind: 'accessor', getter, value: readWatch() };
+        }
+        return memo.value;
+      }
+      if (descriptor) return undefined;
+      if (!memo || memo.kind !== 'none') memo = { kind: 'none', value: readWatch() };
+      return memo.value;
     },
     set(target, key, value, receiver) {
-      if (key !== 'watch') return Reflect.set(target, key, value, receiver);
-      // The original is the receiver, so an own or inherited setter runs
-      // against the configuration itself instead of re-entering this view.
-      if (!Reflect.set(target, key, value, option)) return false;
-      refreshSnapshot({ value });
-      return true;
+      return Reflect.set(target, key, value, receiver === view ? target : receiver);
     },
   }) as WatchOptions;
+  return view;
 }
 
 function materializePresentValues<T>(values: T[]): T[] {

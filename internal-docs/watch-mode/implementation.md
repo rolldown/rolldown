@@ -793,6 +793,38 @@ authoritative. The multiple-watcher-option warning counts input configs, not
 their expanded output tasks; multiple outputs from one config therefore do not
 produce a false warning.
 
+### One read of `watch` per configuration
+
+`createWatcher()` (`packages/rolldown/src/api/watch/watcher.ts`) reads `watch`
+once per configuration to decide enablement, then hands the later readers —
+`bindingifyInputOptions()` and the multiple-watcher-option warning — a `Proxy`
+view of that same configuration. The caller's object IS the view's target, so
+`ownKeys`, descriptors, `has`, the prototype, `preventExtensions`,
+`defineProperty` and `delete` delegate by construction; only `[[Get]]` and
+`[[Set]]` are trapped.
+
+`[[Get]]` of `watch` is derived from the target's CURRENT own descriptor, never
+from a slot the traps maintain:
+
+| own descriptor of `watch`    | answer                                                                    |
+| ---------------------------- | ------------------------------------------------------------------------- |
+| data property                | its value, live                                                           |
+| accessor with no getter      | `undefined`                                                               |
+| accessor with getter `g`     | the memo when the memo holds `g`'s result, else one call to `g`, memoised |
+| none (inherited, or deleted) | the memo the enablement read seeded                                       |
+
+A getter therefore runs at most once per distinct shape. A `watch` getter that
+materializes `{ skipWrite: true, watcher: { ... } }` once keeps those settings,
+and a `watch` that an `options` hook assigns, redefines as a fresh accessor, or
+replaces through the caller's own alias is honoured — including after
+`Object.freeze`, because answering with the live own value is exactly what the
+`Proxy` `get` invariants demand of a non-configurable non-writable property.
+
+Both traps pass the ORIGINAL object as the receiver whenever the view itself is
+the receiver, so a configuration whose `input`, `output` or `watch` getter reads
+a private field works and no getter can re-enter the view. A receiver derived
+from the view (`Object.create(view)`) keeps its own.
+
 Environment variables set during watch mode:
 
 ```

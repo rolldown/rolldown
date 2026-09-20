@@ -2078,6 +2078,213 @@ test.concurrent(
   },
 );
 
+// An `options` hook installing a fresh `watch` accessor - what
+// `Object.defineProperty(options, 'watch', { get() { ... } })` does - was
+// ignored: the view's `defineProperty` trap refreshed a snapshot slot, no
+// branch matched an accessor that has a getter, the getter never ran and the
+// bundle was written anyway. The view answers from the live own descriptor
+// now, so the new getter is found - and called exactly once.
+test.concurrent(
+  'watch follows a watch accessor an options hook defines',
+  { retry: TEST_RETRY, timeout: TEST_TIMEOUT },
+  async ({ task, expect, onTestFinished }) => {
+    const retryCount = task.result?.retryCount ?? 0;
+    const { input, output, dir } = createTestInputAndOutput('watch-option-hook-define', retryCount);
+    let getterCalls = 0;
+    const watcher = _watch({
+      input,
+      output: { file: output },
+      watch: { watcher: { usePolling: true, pollInterval: 50 } },
+      plugins: [
+        {
+          name: 'define-skip-write',
+          options(options) {
+            Object.defineProperty(options, 'watch', {
+              configurable: true,
+              enumerable: true,
+              get() {
+                getterCalls += 1;
+                return { skipWrite: true, watcher: { usePolling: true, pollInterval: 50 } };
+              },
+            });
+          },
+        },
+      ],
+    });
+    onTestFinished(async () => {
+      await watcher.close();
+      if (!process.env.CI) {
+        fs.rmSync(dir, { recursive: true, force: true });
+      }
+    });
+    await waitBuildFinished(watcher);
+
+    expect(getterCalls).toBe(1);
+    expect(fs.existsSync(output)).toBe(false);
+  },
+);
+
+// The view forwarded reads with itself as the receiver, so a class-instance
+// configuration whose getters read private fields threw `Cannot read private
+// member` and `watch()` rejected. The original is the receiver now.
+test.concurrent(
+  'watch accepts a class-instance configuration with private-field getters',
+  { retry: TEST_RETRY, timeout: TEST_TIMEOUT },
+  async ({ task, expect, onTestFinished }) => {
+    const retryCount = task.result?.retryCount ?? 0;
+    const { input, output, dir } = createTestInputAndOutput('watch-option-class', retryCount);
+    class WatchConfig {
+      #input: string;
+      #output: { file: string };
+      #watch: WatchOptions['watch'];
+      constructor(entry: string, file: string) {
+        this.#input = entry;
+        this.#output = { file };
+        this.#watch = { skipWrite: true, watcher: { usePolling: true, pollInterval: 50 } };
+      }
+      get input(): string {
+        return this.#input;
+      }
+      get output(): { file: string } {
+        return this.#output;
+      }
+      get watch(): WatchOptions['watch'] {
+        return this.#watch;
+      }
+    }
+    const watcher = _watch(new WatchConfig(input, output) as WatchOptions);
+    onTestFinished(async () => {
+      await watcher.close();
+      if (!process.env.CI) {
+        fs.rmSync(dir, { recursive: true, force: true });
+      }
+    });
+    await waitBuildFinished(watcher);
+
+    expect(fs.existsSync(output)).toBe(false);
+  },
+);
+
+// An accessor with no getter has nothing to call, so the view answers
+// `undefined` for it - the value a plain read produces, and the only answer the
+// `get` invariant permits when such a descriptor is non-configurable.
+test.concurrent(
+  'watch treats a setter-only watch accessor as no watch options',
+  { retry: TEST_RETRY, timeout: TEST_TIMEOUT },
+  async ({ task, expect, onTestFinished }) => {
+    const retryCount = task.result?.retryCount ?? 0;
+    const { input, output, dir } = createTestInputAndOutput('watch-option-setter-only', retryCount);
+    const writes: unknown[] = [];
+    const watcher = _watch(
+      Object.defineProperty({ input, output: { file: output } }, 'watch', {
+        configurable: false,
+        enumerable: true,
+        set(value: unknown) {
+          writes.push(value);
+        },
+      }) as WatchOptions,
+    );
+    onTestFinished(async () => {
+      await watcher.close();
+      if (!process.env.CI) {
+        fs.rmSync(dir, { recursive: true, force: true });
+      }
+    });
+    await waitBuildFinished(watcher);
+
+    expect(writes).toEqual([]);
+    expect(fs.existsSync(output)).toBe(true);
+  },
+);
+
+// Mutation through the caller's own alias never reaches the traps, so the view
+// kept answering the snapshot for a `watch` the alias had replaced - and once
+// `Object.freeze` made that own data property non-configurable and
+// non-writable, the `get` invariant turned the next read into a `TypeError`
+// and `watch()` emitted `ERROR`. The live own descriptor answers both.
+test.concurrent(
+  'watch follows a watch option replaced through the original object and then frozen',
+  { retry: TEST_RETRY, timeout: TEST_TIMEOUT },
+  async ({ task, expect, onTestFinished }) => {
+    const retryCount = task.result?.retryCount ?? 0;
+    const { input, output, dir } = createTestInputAndOutput(
+      'watch-option-alias-freeze',
+      retryCount,
+    );
+    const config: WatchOptions = {
+      input,
+      output: { file: output },
+      watch: { watcher: { usePolling: true, pollInterval: 50 } },
+      plugins: [
+        {
+          name: 'replace-then-freeze',
+          options() {
+            config.watch = { skipWrite: true, watcher: { usePolling: true, pollInterval: 50 } };
+            Object.freeze(config);
+          },
+        },
+      ],
+    };
+    const watcher = _watch(config);
+    onTestFinished(async () => {
+      await watcher.close();
+      if (!process.env.CI) {
+        fs.rmSync(dir, { recursive: true, force: true });
+      }
+    });
+    await waitBuildFinished(watcher);
+
+    expect(Object.isFrozen(config)).toBe(true);
+    expect(fs.existsSync(output)).toBe(false);
+  },
+);
+
+// Deleting an inherited `watch` through the view removes nothing - the
+// property is not own - but it used to clear the snapshot, so the next reader
+// ran the prototype's getter a second time. The memo the filter's read seeded
+// still answers.
+test.concurrent(
+  'watch keeps one read when an inherited watch is deleted through the view',
+  { retry: TEST_RETRY, timeout: TEST_TIMEOUT },
+  async ({ task, expect, onTestFinished }) => {
+    const retryCount = task.result?.retryCount ?? 0;
+    const { input, output, dir } = createTestInputAndOutput('watch-option-inherited', retryCount);
+    let getterCalls = 0;
+    let deleted: boolean | undefined;
+    const prototype = {
+      get watch(): WatchOptions['watch'] {
+        getterCalls += 1;
+        return { skipWrite: true, watcher: { usePolling: true, pollInterval: 50 } };
+      },
+    };
+    const watcher = _watch(
+      Object.assign(Object.create(prototype), {
+        input,
+        output: { file: output },
+        plugins: [
+          {
+            name: 'delete-inherited-watch',
+            options(options: WatchOptions) {
+              deleted = delete options.watch;
+            },
+          },
+        ],
+      }) as WatchOptions,
+    );
+    onTestFinished(async () => {
+      await watcher.close();
+      if (!process.env.CI) {
+        fs.rmSync(dir, { recursive: true, force: true });
+      }
+    });
+    await waitBuildFinished(watcher);
+
+    expect(deleted).toBe(true);
+    expect(getterCalls).toBe(1);
+    expect(fs.existsSync(output)).toBe(false);
+  },
+);
+
 test.concurrent(
   '#5260',
   { retry: TEST_RETRY, timeout: TEST_TIMEOUT },

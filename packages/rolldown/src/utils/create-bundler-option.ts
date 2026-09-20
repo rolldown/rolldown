@@ -70,10 +70,26 @@ export async function createBundlerOptions(
   // has to fire exactly once, or the preflight read would swallow the plugins
   // the accessor only serves once. Same shape as the `outputOptions` hook
   // result below. See internal-docs/async-runtime/implementation.md.
+  //
+  // The input side runs all the way through normalization before the output
+  // options are read at all, which is the order every release before this
+  // branch had. A supported thenable input plugin settles inside that `await`,
+  // and an accessor-backed `output.plugins` may answer differently once it
+  // has; reading both up front took an answer from a state the build never ran
+  // in, so an output plugin materialized by that settling lost its
+  // `outputOptions` hook while its `renderChunk` still ran off the later
+  // hook-result read.
+  //
+  // `assertParallelPluginOptionsSupported` is variadic but keeps no state
+  // across its arguments and returns on the first descriptor it finds, with no
+  // combined message, so one call per object is the same check. Each call is
+  // still synchronous and still precedes its own object's normalization, which
+  // is the boundary internal-docs/async-runtime/implementation.md describes.
   const inputPluginOption = readPluginOption(() => inputOptions.plugins);
-  const outputPluginOption = readPluginOption(() => outputOptions.plugins);
-  assertParallelPluginOptionsSupported(inputPluginOption, outputPluginOption);
+  assertParallelPluginOptionsSupported(inputPluginOption);
   const inputPlugins = await normalizePluginOption(inputPluginOption, closeCallbackScope);
+  const outputPluginOption = readPluginOption(() => outputOptions.plugins);
+  assertParallelPluginOptionsSupported(outputPluginOption);
   const outputPlugins = await normalizePluginOption(outputPluginOption, closeCallbackScope);
 
   const logLevel = inputOptions.logLevel || LOG_LEVEL_INFO;

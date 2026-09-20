@@ -1730,6 +1730,70 @@ test('scan reads each plugin option one time fewer', async () => {
   expect(outputOptionsCalls).toBe(1);
 });
 
+// `createBundlerOptions` captured both plugin properties before the input
+// plugins were normalized, so a supported thenable input plugin settled only
+// after an accessor-backed `output.plugins` had already been asked: the getter
+// answered `[]`, the output plugin's `outputOptions` hook never ran, and only
+// the later hook-result read picked the plugin up - ESM output although the
+// hook selected another format, with that same plugin's `renderChunk` running
+// on it. Every release before this branch read the output side after input
+// normalization.
+test('input plugins settle before the output plugin snapshot', async () => {
+  let inputSettled = false;
+  let buildStarts = 0;
+  let outputOptionsCalls = 0;
+  let renderChunkCalls = 0;
+  const inputPlugin: Plugin = {
+    name: 'counted-input-plugin',
+    buildStart() {
+      buildStarts += 1;
+    },
+  };
+  const outputPlugin: Plugin = {
+    name: 'counted-output-plugin',
+    outputOptions(options) {
+      outputOptionsCalls += 1;
+      return { ...options, format: 'iife' };
+    },
+    renderChunk() {
+      renderChunkCalls += 1;
+    },
+  };
+
+  const inputOptions = {
+    input: './main.js',
+    cwd: import.meta.dirname,
+    // A fresh thenable per read, so the flag tracks the settling of the read
+    // `createBundlerOptions` itself made rather than an earlier one.
+    get plugins() {
+      inputSettled = false;
+      return {
+        // oxlint-disable-next-line unicorn/no-thenable -- the supported thenable plugin option under test
+        then(resolve: (plugins: Plugin[]) => void) {
+          void Promise.resolve().then(() => {
+            inputSettled = true;
+            resolve([inputPlugin]);
+          });
+        },
+      };
+    },
+  } as unknown as InputOptions;
+  const outputOptions = {
+    get plugins() {
+      return inputSettled ? [outputPlugin] : [];
+    },
+  } as OutputOptions;
+
+  const bundle = await rolldown(inputOptions);
+  const result = await bundle.generate(outputOptions);
+  await bundle.close();
+
+  expect(buildStarts).toBe(1);
+  expect(outputOptionsCalls).toBe(1);
+  expect(renderChunkCalls).toBe(1);
+  expect(result.output[0].code).toContain('(function() {');
+});
+
 test('supports closeBundle hook', async () => {
   let closeBundleCalls = 0;
   try {

@@ -102,20 +102,24 @@ export function bindingifyOutputOptions(
     ),
     sourcemapExcludeSources,
     sourcemapIgnoreList: wrapOptionalBuildCallback(
-      measureIfFunction(
-        timings,
-        OUTPUT_OPTIONS_OWNER,
-        'sourcemapIgnoreList',
-        sourcemapIgnoreList ?? /node_modules/,
+      batchSourcemapIgnoreList(
+        measureIfFunction(
+          timings,
+          OUTPUT_OPTIONS_OWNER,
+          'sourcemapIgnoreList',
+          sourcemapIgnoreList ?? /node_modules/,
+        ),
       ),
       runBuildCallback,
     ),
     sourcemapPathTransform: wrapOptionalBuildCallback(
-      measureIfFunction(
-        timings,
-        OUTPUT_OPTIONS_OWNER,
-        'sourcemapPathTransform',
-        sourcemapPathTransform,
+      batchSourcemapPathTransform(
+        measureIfFunction(
+          timings,
+          OUTPUT_OPTIONS_OWNER,
+          'sourcemapPathTransform',
+          sourcemapPathTransform,
+        ),
       ),
       runBuildCallback,
     ),
@@ -567,4 +571,67 @@ export function wrapOptionalBuildCallback<Value>(
   if (!runBuildCallback || typeof value !== 'function') return value;
   const callback = value as (...args: unknown[]) => unknown;
   return ((...args: unknown[]) => runBuildCallback(() => callback(...args))) as Value;
+}
+
+/**
+ * Wraps a per-source `sourcemapIgnoreList` in the batched shim that the binding expects.
+ *
+ * The loop runs in JS so that a sourcemap makes one napi crossing, not one per source. The old
+ * Rust loop also awaited each call before it started the next.
+ *
+ * The result is a `Uint8Array`, which crosses as a buffer instead of one tagged value per source.
+ *
+ * A boolean, string or regular expression passes through. Rust reads those without a call.
+ */
+function batchSourcemapIgnoreList(
+  ignoreList: OutputOptions['sourcemapIgnoreList'],
+): BindingOutputOptions['sourcemapIgnoreList'] {
+  if (typeof ignoreList !== 'function') {
+    return ignoreList;
+  }
+  return (sources, sourcemapPath) => {
+    const results = new Uint8Array(sources.length);
+    for (let index = 0; index < sources.length; index++) {
+      const result = ignoreList(sources[index], sourcemapPath);
+      // napi reports the type of the array, not of the bad element, so the check runs here.
+      if (typeof result !== 'boolean') {
+        throw new TypeError(
+          `\`output.sourcemapIgnoreList\` returned ${typeof result} for source "${
+            sources[index]
+          }", but expected a boolean.`,
+        );
+      }
+      results[index] = result ? 1 : 0;
+    }
+    return results;
+  };
+}
+
+/**
+ * The `sourcemapPathTransform` counterpart of {@linkcode batchSourcemapIgnoreList}.
+ *
+ * A path cannot be reduced to a byte, so this batch is still an array of strings. napi reports the
+ * type of the array, not of the bad element, so the check runs here.
+ */
+function batchSourcemapPathTransform(
+  pathTransform: OutputOptions['sourcemapPathTransform'],
+): BindingOutputOptions['sourcemapPathTransform'] {
+  if (typeof pathTransform !== 'function') {
+    return pathTransform;
+  }
+  return (sources, sourcemapPath) => {
+    const results: string[] = [];
+    for (let index = 0; index < sources.length; index++) {
+      const result = pathTransform(sources[index], sourcemapPath);
+      if (typeof result !== 'string') {
+        throw new TypeError(
+          `\`output.sourcemapPathTransform\` returned ${typeof result} for source "${
+            sources[index]
+          }", but expected a string.`,
+        );
+      }
+      results.push(result);
+    }
+    return results;
+  };
 }

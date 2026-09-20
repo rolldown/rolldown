@@ -2663,9 +2663,13 @@ export interface BindingOutputOptions {
   sourcemap?: 'file' | 'inline' | 'hidden'
   sourcemapFileNames?: string | ((chunk: PreRenderedChunk) => string)
   sourcemapBaseUrl?: string
-  sourcemapIgnoreList?: boolean | string | RegExp | ((source: string, sourcemapPath: string) => boolean)
+  sourcemapIgnoreList?: boolean | string | RegExp | ((sources: Array<string>, sourcemapPath: string) => Uint8Array)
   sourcemapDebugIds?: boolean
-  sourcemapPathTransform?: (source: string, sourcemapPath: string) => string
+  /**
+   * Batched like `sourcemapIgnoreList` above. One call rewrites every source of a sourcemap,
+   * and the returned array matches the source array by index.
+   */
+  sourcemapPathTransform?: (sources: Array<string>, sourcemapPath: string) => Array<string>
   sourcemapExcludeSources?: boolean
   strict?: boolean | 'auto'
   minify?: boolean | 'dce-only' | MinifyOptions

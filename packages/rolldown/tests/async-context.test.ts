@@ -242,17 +242,32 @@ describe.sequential('browser async-context contract', () => {
       };
 
       // Option setup may only reach for a provider once it has a callback to
-      // run. A config carrying none must stay inert, so making proxy-served
-      // callbacks work must not become an unconditional read of every
-      // callback key.
+      // run. Every callback key is read, and the overlay always pins what that
+      // read returned, but building the overlay runs no user code, so a config
+      // carrying no callback still stays inert.
+      const config = { include: ['**/*.js'] };
       const bindingPlugin = bindingifyBuiltInPlugin(
-        viteDynamicImportVarsPlugin({ include: ['**/*.js'] }),
+        viteDynamicImportVarsPlugin(config),
         runBuildCallback,
       );
+      const options = bindingPlugin.options as BindingViteDynamicImportVarsPluginConfig;
 
+      expect(options).not.toBe(config);
+      expect(options.resolver).toBeUndefined();
+      // The pinned key is an own `undefined` data property, so the browser
+      // preflight - which only inspects own data properties - finds no callback
+      // on the overlay and demands no provider.
+      expect(Object.getOwnPropertyDescriptor(options as object, 'resolver')).toMatchObject({
+        value: undefined,
+        writable: true,
+      });
       expect(
-        (bindingPlugin.options as BindingViteDynamicImportVarsPluginConfig).resolver,
-      ).toBeUndefined();
+        bindingOptionsRequireAsyncContext(
+          { plugins: [bindingPlugin] } as never,
+          {} as never,
+          false,
+        ),
+      ).toBe(false);
       expect(runnerCalls).toBe(0);
     });
   });
@@ -656,6 +671,49 @@ test('a trap-served built-in callback over an own non-function placeholder is st
 
   expect(rawCalls).toBe(1);
   expect(runnerCalls).toBe(1);
+});
+
+test('a stateful trap over an own callback cannot hand N-API a raw callback on the second read', () => {
+  let runnerCalls = 0;
+  const runBuildCallback: BuildCallbackRunner = (callback) => {
+    runnerCalls += 1;
+    return callback();
+  };
+  let rawCalls = 0;
+  const rawLogInfo = () => {
+    rawCalls += 1;
+  };
+  // The target owns `logInfo` as a data *function*, so the bounded walk reports
+  // a plain data property and nothing about the key looks trap-served. The trap
+  // still answers a non-function on the first read and the raw callback on the
+  // second - and the second read is the one N-API performs with
+  // `napi_get_named_property`. Handing the original object over would collect
+  // that raw callback and run it outside `runBuildCallback`.
+  let trapReads = 0;
+  const target: Partial<BindingViteReporterPluginConfig> = { logInfo: rawLogInfo };
+  const config = new Proxy(target, {
+    get(target, key, receiver) {
+      if (key !== 'logInfo') return Reflect.get(target, key, receiver);
+      trapReads += 1;
+      return trapReads === 1 ? undefined : rawLogInfo;
+    },
+  }) as BindingViteReporterPluginConfig;
+
+  const options = bindingifyBuiltInPlugin(viteReporterPlugin(config), runBuildCallback)
+    .options as BindingViteReporterPluginConfig;
+  // Handing `config` to `expect` makes the matcher read the trapped key itself,
+  // so the counter is taken before any assertion touches the original object.
+  const readsAfterWrapping = trapReads;
+
+  expect(options === config).toBe(false);
+  expect(readsAfterWrapping).toBe(1);
+  // The overlay pins what that one read returned, so N-API's second read - and
+  // every later reader - gets the pinned value instead of reaching the trap.
+  expect(options.logInfo).toBeUndefined();
+  expect(options.logInfo).toBeUndefined();
+  expect(trapReads).toBe(1);
+  expect(rawCalls).toBe(0);
+  expect(runnerCalls).toBe(0);
 });
 
 test('browser preflight detects direct data-property plugin callbacks', () => {

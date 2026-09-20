@@ -157,15 +157,17 @@ option adapters.
   wrapped shape, whatever found the keys: rebuilding the options as a plain
   object from the original's own descriptors dropped every field that only a
   `get` trap can answer, so a config whose callback is an own property lost its
-  trap-served siblings. The overlay is used whenever a key was wrapped or
-  pinned, or had no descriptor and so may be trap-served; a config that needed
-  none of that is handed over untouched and stays inert. The overlay answers
-  every callback key - function, non-function, or `undefined` - from that first
-  read, so N-API's `napi_get_named_property` cannot reach a trap a second time
-  and collect a raw callback, and it delegates every other property to the
-  original object with the original receiver, so required fields the same trap
-  serves still reach the binding. The overlay owns the snapshot on a private
-  target, which keeps the `Proxy` invariants satisfiable over a frozen config.
+  trap-served siblings. The overlay is unconditional: the pass reads every
+  callback key exactly once and always pins what it read, so N-API never
+  performs a second read on the original, and a callback-free config still
+  needs no provider because building the overlay runs no user code. The overlay
+  answers every callback key - function, non-function, or `undefined` - from
+  that first read, so N-API's `napi_get_named_property` cannot reach a trap a
+  second time and collect a raw callback, and it delegates every other property
+  to the original object with the original receiver, so required fields the
+  same trap serves still reach the binding. The overlay owns the snapshot on a
+  private target, which keeps the `Proxy` invariants satisfiable over a frozen
+  config.
   Wrappers are
   installed even when no build runner is present because N-API may invoke them
   as detached functions; each wrapper applies the callback with its original

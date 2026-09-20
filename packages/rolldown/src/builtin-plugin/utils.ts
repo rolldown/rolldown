@@ -175,12 +175,10 @@ function wrapCallbackProperties<T extends object>(
   // is free to answer differently on every read, so this first value is the
   // only one the binding may ever see.
   const snapshot = new Map<PropertyKey, PropertyDescriptor>();
-  let wrappedKey = false;
 
   for (const key of keys) {
     const descriptor = findPropertyDescriptor(options, key);
     const callback = readPropertyOnce(options, key, descriptor, runBuildCallback);
-    const isAccessor = descriptor !== undefined && !('value' in descriptor);
     const snapshotted: PropertyDescriptor = {
       configurable: true,
       enumerable: descriptor?.enumerable ?? true,
@@ -194,21 +192,18 @@ function wrapCallbackProperties<T extends object>(
       writable: true,
     };
     snapshot.set(key, snapshotted);
-    // A key with no descriptor may be served by a `get` trap that answers
-    // differently on the next read; a wrapped callback and an accessor-read
-    // value must likewise never be read from the original object again.
-    if (descriptor === undefined || typeof callback === 'function' || isAccessor) {
-      wrappedKey = true;
-    }
   }
 
-  // Nothing had to be wrapped or pinned, so the original object stands and a
-  // callback-free config stays inert.
-  if (!wrappedKey) return options;
-
-  // Anything else goes to the binding as the overlay, whatever found the keys:
-  // rebuilding a plain object from the original's own descriptors would drop
-  // the fields only a `get` trap can answer.
+  // The pass performs exactly one `[[Get]]` per callback key, so it must always
+  // pin what it read. Handing the original object over instead lets N-API's
+  // `napi_get_named_property` read the same key a second time, where a stateful
+  // `get` trap is free to answer with a raw callback. A callback-free config
+  // still asks for no async context provider, because building the overlay runs
+  // no user code and enters no runner.
+  //
+  // The overlay is what the binding gets, whatever found the keys: rebuilding a
+  // plain object from the original's own descriptors would drop the fields only
+  // a `get` trap can answer.
   return createCallbackSnapshotView(options, snapshot);
 }
 

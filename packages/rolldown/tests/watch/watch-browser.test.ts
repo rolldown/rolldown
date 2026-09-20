@@ -198,6 +198,7 @@ async function buildBrowserWatcherHarness(): Promise<string> {
           if (importer === asyncContextPath && id === './prototype-chain') {
             return prototypeChainPath;
           }
+          if (id === '../../utils/prototype-chain') return prototypeChainPath;
           if (id === '../../utils/close-callback-scope') return closeCallbackScopePath;
           if (id === '../../binding.cjs') return '\0binding';
           if (id === '../../runtime-lifecycle' || id === '../runtime-lifecycle') {

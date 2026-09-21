@@ -616,10 +616,10 @@ impl NestedScopeRenamer<'_, '_> {
     // `require()` of a wrapped importee — the finalizer rewrites it to the importee's chunk-root
     // facades: `require_x()` for a CJS-wrapped importee, `(init_x(), __toCommonJS(xxx_exports))`
     // for a wrapped-ESM one. A root-scope local sharing one of those final names shadows the read
-    // (issue #9882, require()/namespace channel). We mirror the finalizer's gate
-    // (`module_finalizers/mod.rs`): an importee whose require is actually used. Both facades live
-    // in the importee module, so a same-named root-scope local here is a genuine shadowing local —
-    // except for a self-require, which the owner guard rules out.
+    // (issue #9882, require()/namespace channel). Each facade gets its own gate below, because the
+    // finalizer drops the namespace half alone. Both facades live in the importee module, so a
+    // same-named root-scope local here is a genuine shadowing local — except for a self-require,
+    // which `is_shadowable_chunk_binding` drops (a known miss, see its doc).
     for rec in &self.module.import_records {
       let Some(importee_idx) = rec.resolved_module else {
         continue;
@@ -665,10 +665,11 @@ impl NestedScopeRenamer<'_, '_> {
 
   /// Whether a root-scope local of this module could shadow `symbol_ref`'s final name.
   ///
-  /// CJS output reaches a symbol owned by another chunk through a member access on that chunk's
-  /// require binding (`require_other.foo`, see `finalized_expr_for_cross_chunk_symbol`), so the
-  /// name never resolves against this module's scopes and nothing can shadow it. A facade owned by
-  /// this very module (a self-`require`) is not a chunk-root binding either.
+  /// Under CJS output a cross-chunk symbol is reached as `require_other.foo` (see
+  /// `finalized_expr_for_cross_chunk_symbol`), so the *member* name is unshadowable — but the base
+  /// `require_other` is itself a bare chunk-root binding, which this gate still skips. A facade
+  /// owned by this very module (a self-`require`) is skipped too, although it does render at chunk
+  /// root. Both are known misses, not sound exclusions.
   fn is_shadowable_chunk_binding(
     &self,
     symbol_ref: SymbolRef,

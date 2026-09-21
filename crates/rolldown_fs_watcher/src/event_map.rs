@@ -1,8 +1,8 @@
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 use notify::{
   EventKind,
-  event::{ModifyKind, RenameMode},
+  event::{CreateKind, ModifyKind, RemoveKind, RenameMode},
 };
 
 /// Rolldown-level change kind produced from a notify event.
@@ -30,30 +30,49 @@ pub enum FsChangeKind {
 /// See `internal-docs/watch-mode/implementation.md` ("Notify Event Mapping")
 /// and `internal-docs/dev-engine/implementation.md` ("From fs event to queued task").
 pub fn map_notify_event(kind: &EventKind, paths: Vec<PathBuf>) -> Vec<(PathBuf, FsChangeKind)> {
+  fn is_file_candidate(path: &Path) -> bool {
+    !path.metadata().is_ok_and(|metadata| metadata.is_dir())
+  }
+
   match kind {
-    EventKind::Create(_) | EventKind::Modify(ModifyKind::Name(RenameMode::To)) => {
+    EventKind::Create(CreateKind::Folder) | EventKind::Remove(RemoveKind::Folder) => Vec::new(),
+    EventKind::Create(CreateKind::File) => {
       paths.into_iter().map(|path| (path, FsChangeKind::Create)).collect()
     }
-    EventKind::Modify(ModifyKind::Name(RenameMode::From)) | EventKind::Remove(_) => {
+    EventKind::Remove(_) | EventKind::Modify(ModifyKind::Name(RenameMode::From)) => {
       paths.into_iter().map(|path| (path, FsChangeKind::Delete)).collect()
     }
-    EventKind::Modify(ModifyKind::Name(RenameMode::Both)) => map_rename_both(paths),
-    EventKind::Modify(_) => paths.into_iter().map(|path| (path, FsChangeKind::Update)).collect(),
+    EventKind::Create(_) | EventKind::Modify(ModifyKind::Name(RenameMode::To)) => paths
+      .into_iter()
+      .filter(|path| is_file_candidate(path))
+      .map(|path| (path, FsChangeKind::Create))
+      .collect(),
+    EventKind::Modify(ModifyKind::Name(RenameMode::Both)) => {
+      if paths.get(1).is_some_and(|path| !is_file_candidate(path)) {
+        return Vec::new();
+      }
+      let mut paths = paths.into_iter();
+      let mut result = Vec::new();
+      if let Some(from) = paths.next() {
+        result.push((from, FsChangeKind::Delete));
+      }
+      if let Some(to) = paths.next() {
+        result.push((to, FsChangeKind::Create));
+      }
+      result
+    }
+    EventKind::Any => paths
+      .into_iter()
+      .filter(|path| is_file_candidate(path))
+      .map(|path| (path, FsChangeKind::Update))
+      .collect(),
+    EventKind::Modify(_) => paths
+      .into_iter()
+      .filter(|path| is_file_candidate(path))
+      .map(|path| (path, FsChangeKind::Update))
+      .collect(),
     _ => Vec::new(),
   }
-}
-
-/// `RenameMode::Both` carries `[from_path, to_path]`. Extra paths are ignored.
-fn map_rename_both(paths: Vec<PathBuf>) -> Vec<(PathBuf, FsChangeKind)> {
-  let mut paths = paths.into_iter();
-  let mut result = Vec::new();
-  if let Some(from) = paths.next() {
-    result.push((from, FsChangeKind::Delete));
-  }
-  if let Some(to) = paths.next() {
-    result.push((to, FsChangeKind::Create));
-  }
-  result
 }
 
 #[cfg(test)]
@@ -133,5 +152,21 @@ mod tests {
   fn access_is_ignored() {
     let got = map_notify_event(&EventKind::Access(AccessKind::Read), vec![path("a.js")]);
     assert!(got.is_empty());
+  }
+
+  #[test]
+  fn explicit_directory_event_is_ignored_by_file_mapper() {
+    let got = map_notify_event(
+      &EventKind::Create(CreateKind::Folder),
+      vec![PathBuf::from(env!("CARGO_MANIFEST_DIR"))],
+    );
+    assert!(got.is_empty());
+  }
+
+  #[test]
+  fn missing_path_is_a_file_candidate() {
+    let path = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("missing-watch-candidate");
+    let got = map_notify_event(&EventKind::Remove(RemoveKind::Any), vec![path.clone()]);
+    assert_eq!(got, vec![(path, FsChangeKind::Delete)]);
   }
 }

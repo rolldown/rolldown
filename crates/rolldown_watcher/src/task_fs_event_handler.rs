@@ -29,11 +29,9 @@ impl FsEventHandler for TaskFsEventHandler {
         let changes: Vec<FileChangeEvent> = fs_events
           .into_iter()
           .flat_map(|fs_event| {
-            map_notify_event(&fs_event.detail.kind, fs_event.detail.paths).into_iter().map(
-              |(path, kind)| {
-                FileChangeEvent::new(path.to_string_lossy().into_owned(), watcher_change_kind(kind))
-              },
-            )
+            map_notify_event(&fs_event.detail.kind, fs_event.detail.paths)
+              .into_iter()
+              .map(|(path, kind)| FileChangeEvent::new(path, watcher_change_kind(kind)))
           })
           .collect();
 

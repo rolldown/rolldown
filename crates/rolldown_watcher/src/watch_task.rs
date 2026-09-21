@@ -1,7 +1,7 @@
 use arcstr::ArcStr;
 use rolldown::{Bundler, BundlerBuilder, BundlerConfig};
 use rolldown_common::{
-  BundleMode, Log, LogLevel, NormalizedBundlerOptions, ScanMode, WatcherChangeKind,
+  BundleMode, Log, LogLevel, NormalizedBundlerOptions, ScanMode, WatchPath, WatcherChangeKind,
 };
 use rolldown_error::{
   BatchedBuildDiagnostic, BuildDiagnostic, BuildResult, Diagnostic, DiagnosticOptions, ResultExt,
@@ -9,7 +9,6 @@ use rolldown_error::{
 };
 use rolldown_fs_watcher::{FsWatcher, RecursiveMode};
 use rolldown_utils::{dashmap::FxDashSet, pattern_filter};
-use std::path::Path;
 use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::time::Instant;
@@ -26,7 +25,7 @@ pub struct WatchTask {
   bundler: Arc<TokioMutex<Bundler>>,
   options: Arc<NormalizedBundlerOptions>,
   fs_watcher: std::sync::Mutex<FsWatcher>,
-  watched_files: FxDashSet<ArcStr>,
+  watched_files: FxDashSet<WatchPath>,
   pub(crate) needs_rebuild: bool,
   closed: Arc<AtomicBool>,
 }
@@ -232,26 +231,28 @@ impl WatchTask {
   /// Separated from `&self` to allow calling from closures during build.
   fn update_watch_files_from(
     fs_watcher: &std::sync::Mutex<FsWatcher>,
-    watched_files: &FxDashSet<ArcStr>,
+    watched_files: &FxDashSet<WatchPath>,
     options: &NormalizedBundlerOptions,
     files: &[ArcStr],
   ) -> BuildResult<()> {
     let mut fs_watcher = fs_watcher.lock().expect("fs_watcher lock poisoned");
     let mut watcher_paths = fs_watcher.paths_mut();
+    let mut added_files = Vec::new();
 
     for file in files {
-      let file_str = file.as_str();
-      if watched_files.contains(file_str) {
+      let watch_path = WatchPath::new(file.as_str(), &options.cwd);
+      if watched_files.contains(&watch_path) {
         continue;
       }
-      let path = Path::new(file_str);
-      if !path.exists() {
+      let path = watch_path.as_path();
+      if !path.exists() && !path.parent().is_some_and(std::path::Path::exists) {
         continue;
       }
+      let file_str = path.to_string_lossy();
       if pattern_filter::filter(
         options.watch.exclude.as_deref(),
         options.watch.include.as_deref(),
-        file_str,
+        &file_str,
         options.cwd.to_string_lossy().as_ref(),
       )
       .inner()
@@ -259,7 +260,7 @@ impl WatchTask {
         match watcher_paths.add(path, RecursiveMode::NonRecursive) {
           Ok(()) => {
             tracing::debug!(name = "notify watch", path = ?path);
-            watched_files.insert(file.clone());
+            added_files.push(watch_path);
           }
           Err(e) => {
             tracing::debug!(name = "notify watch skipped", path = ?path, error = ?e);
@@ -269,13 +270,16 @@ impl WatchTask {
     }
 
     watcher_paths.commit().map_err_to_unhandleable()?;
+    for file in added_files {
+      watched_files.insert(file);
+    }
 
     Ok(())
   }
 
   /// Mark this task as needing rebuild if the changed file is in our watch list.
   /// Returns `true` if the file is relevant to this task.
-  pub(crate) fn mark_needs_rebuild(&mut self, path: &str) -> bool {
+  pub(crate) fn mark_needs_rebuild(&mut self, path: &WatchPath) -> bool {
     if self.is_watched_file(path) {
       self.needs_rebuild = true;
       return true;
@@ -284,23 +288,24 @@ impl WatchTask {
   }
 
   /// Call on_invalidate callback if the path is in watch list
-  pub(crate) async fn call_on_invalidate(&self, path: &str) {
-    if self.is_watched_file(path) {
-      let bundler = self.bundler.lock().await;
-      if let Some(on_invalidate) = &bundler.options().watch.on_invalidate {
-        on_invalidate.call(path);
-      }
+  pub(crate) async fn call_on_invalidate(&self, path: &WatchPath) {
+    let bundler = self.bundler.lock().await;
+    if let Some(on_invalidate) = &bundler.options().watch.on_invalidate {
+      on_invalidate.call(&path.to_string());
     }
   }
 
   /// Call watch_change plugin hook
   #[tracing::instrument(level = "debug", skip(self))]
-  pub(crate) async fn call_watch_change(&self, path: &str, kind: WatcherChangeKind) {
+  pub(crate) async fn call_watch_change(&self, path: &WatchPath, kind: WatcherChangeKind) {
+    if !self.is_watched_file(path) {
+      return;
+    }
     let bundler = self.bundler.lock().await;
     if let Some(plugin_driver) =
       bundler.last_bundle_handle.as_ref().map(rolldown::BundleHandle::plugin_driver)
     {
-      let _ = plugin_driver.watch_change(path, kind).await.map_err(|e| {
+      let _ = plugin_driver.watch_change(&path.to_string(), kind).await.map_err(|e| {
         tracing::error!("watch_change plugin hook error: {e:?}");
       });
     }
@@ -324,18 +329,8 @@ impl WatchTask {
     bundler.close().await.map_err(Into::into)
   }
 
-  fn is_watched_file(&self, path: &str) -> bool {
-    if self.watched_files.contains(path) {
-      return true;
-    }
-
-    // Windows path normalization
-    #[cfg(windows)]
-    if self.watched_files.contains(path.replace('\\', "/").as_str()) {
-      return true;
-    }
-
-    false
+  fn is_watched_file(&self, path: &WatchPath) -> bool {
+    path.as_path().ancestors().any(|path| self.watched_files.contains(path))
   }
 }
 

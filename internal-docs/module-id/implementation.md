@@ -2,7 +2,7 @@
 
 ## Summary
 
-Module IDs are the primary keys for the entire bundler — module graph, caches, plugin APIs, HMR, watch files. In Rolldown they're string-based (`ArcStr`), so path identity depends on exact string equality. This doc describes how paths flow through the system, where mismatches can occur, and how Rollup handles the same problem.
+Module IDs are the primary keys for the module graph, caches, plugin APIs, and HMR. In Rolldown they're string-based (`ArcStr`). Rollup-facing watch targets retain that string identity, while filesystem watch matching uses the path-based `WatchPath`.
 
 ## How Rollup Does It
 
@@ -76,15 +76,15 @@ Note: some plugins may internally assume `/` separators when doing string matchi
 
 ### Where Path Identity Matters
 
-| Subsystem                  | Key type                  | Normalization                        | Risk                                              |
-| -------------------------- | ------------------------- | ------------------------------------ | ------------------------------------------------- |
-| Module graph lookup        | `ModuleId` (ArcStr)       | None                                 | Resolver output must be consistent                |
-| Scan stage cache           | `ModuleId` → `VisitState` | None                                 | Same path resolved differently = duplicate module |
-| `module_idx_by_abs_path`   | `ArcStr`                  | `to_slash()` at insertion            | HMR changed-file paths must match                 |
-| Plugin `get_module_info()` | `&str` lookup             | None                                 | Plugin must use exact module ID                   |
-| Plugin `add_watch_file()`  | `ArcStr` into `FxDashSet` | None                                 | Watch set uses raw strings                        |
-| Watch file comparison      | `ArcStr` eq               | `#[cfg(windows)]` backslash fallback | Fragile                                           |
-| Resolver package cache     | `PathBuf`                 | PathBuf component comparison         | Handles separator differences                     |
+| Subsystem                  | Key type                  | Normalization                    | Risk                                              |
+| -------------------------- | ------------------------- | -------------------------------- | ------------------------------------------------- |
+| Module graph lookup        | `ModuleId` (ArcStr)       | None                             | Resolver output must be consistent                |
+| Scan stage cache           | `ModuleId` → `VisitState` | None                             | Same path resolved differently = duplicate module |
+| `module_idx_by_abs_path`   | `ArcStr`                  | `to_slash()` at insertion        | HMR changed-file paths must match                 |
+| Plugin `get_module_info()` | `&str` lookup             | None                             | Plugin must use exact module ID                   |
+| Plugin `add_watch_file()`  | `ArcStr`                  | None                             | Preserves the Rollup-facing value                 |
+| Watch file comparison      | `WatchPath`               | absolute + lexical normalization | Symlink aliases remain distinct                   |
+| Resolver package cache     | `PathBuf`                 | PathBuf component comparison     | Handles separator differences                     |
 
 ### Existing Normalization Utilities
 
@@ -124,9 +124,7 @@ Hash is consistent with equality — safe to use in `HashSet`/`HashMap`.
 
 - **Should module IDs be normalized at creation time?** Rollup does **not** normalize module ID separators — on Windows, plugins see `\` in module IDs. Rolldown currently matches this behavior. Should Rolldown diverge and normalize to `/` in `ModuleId::new()` for simpler cross-platform logic? This would change the observable module ID on Windows but could simplify plugin filter matching and internal comparisons.
 
-- **Should the watch file set use `PathBuf` instead of `ArcStr`?** `PathBuf` handles trailing slashes, double slashes, `.` segments, and Windows separators. The downside is losing cheap `ArcStr` cloning and `&str` lookups. See [watch-mode.md](../watch-mode/implementation.md) for the watch-specific discussion.
-
-- **`..` segments and symlinks** — Neither `PathBuf` comparison nor string comparison handles these. In practice, `..` shouldn't appear in resolver output (resolvers canonicalize), and symlinks are a rare edge case. Should Rolldown guarantee anything here?
+- **Symlinks** — lexical watch-path normalization removes `..` but does not resolve symlink aliases. Should Rolldown guarantee anything here?
 
 ## Related
 

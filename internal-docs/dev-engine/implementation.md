@@ -347,15 +347,9 @@ one is present.
 via the shared `rolldown_fs_watcher::map_notify_event` helper (same
 mapping as build watch):
 
-| `notify` `EventKind`                          | `WatcherChangeKind`                          |
-| --------------------------------------------- | -------------------------------------------- |
-| `Create(_)`                                   | `Create`                                     |
-| `Modify(Name(RenameMode::To))`                | `Create`                                     |
-| `Modify(Name(RenameMode::Both))`              | `Delete` (`paths[0]`), `Create` (`paths[1]`) |
-| `Modify(Name(RenameMode::From))`, `Remove(_)` | `Delete`                                     |
-| `Modify(_)` (other)                           | `Update`                                     |
-| `Modify(Metadata(_))` on macOS non-polling    | ignored (FBM-only; skipped before mapping)   |
-| `Access(_)`                                   | ignored                                      |
+The shared mapper drops explicit directory events and treats an ambiguous path as a file candidate unless current metadata confirms it is a directory. Deletes and rename-from events are always retained because the original path may already be absent or reused. `RenameMode::Both` uses the destination to classify the pair. Access events, and macOS non-polling metadata events, are ignored.
+
+Mapped paths are normalized as `WatchPath` and retained only when the path or one of its ancestors is registered. The queued `changed_files` map still contains the actual changed file path, not the directory watch root.
 
 It then calls `handle_file_changes`. Note that `rolldown_dev` does no
 debouncing or Delete+Create consolidation of its own — it dispatches each

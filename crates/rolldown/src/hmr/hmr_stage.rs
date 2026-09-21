@@ -1,5 +1,6 @@
 use std::{
   ops::{Deref, DerefMut},
+  path::Path,
   sync::{
     Arc,
     atomic::{AtomicU32, Ordering},
@@ -126,7 +127,8 @@ impl<'a, Fs: FileSystem + Clone + 'static> HmrStage<'a, Fs> {
     // the update empty. Vite ships hook-returned modules unconditionally.
     let mut hook_selected_modules = FxHashSet::default();
     for (changed_file_path, event) in changed_file_paths {
-      let changed_file_path = ArcStr::from(changed_file_path.to_slash());
+      let changed_path = Path::new(changed_file_path);
+      let changed_file_path = ArcStr::from(changed_path.to_slash());
 
       // Default affected set: the file's own module (kept even for deletes — the hook contract
       // passes the deleted module itself; importer expansion happens after the chain) plus every
@@ -143,7 +145,12 @@ impl<'a, Fs: FileSystem + Clone + 'static> HmrStage<'a, Fs> {
         .plugin_driver
         .transform_dependencies
         .iter()
-        .filter_map(|entry| entry.value().contains(&changed_file_path).then_some(*entry.key()))
+        .filter_map(|entry| {
+          changed_path
+            .ancestors()
+            .any(|ancestor| entry.value().contains(ancestor))
+            .then_some(*entry.key())
+        })
         .collect::<Vec<_>>();
       transform_dep_modules
         .sort_unstable_by_key(|module_idx| self.module_table().modules[*module_idx].stable_id());

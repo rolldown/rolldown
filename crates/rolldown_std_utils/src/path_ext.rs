@@ -132,6 +132,12 @@ pub fn path_buf_to_slash(path: PathBuf) -> String {
   path.into_slash()
 }
 
+/// Lexically normalize an owned path without filesystem I/O.
+#[inline]
+pub fn normalize_path_buf(path: PathBuf) -> PathBuf {
+  path.into_normalized()
+}
+
 /// Normalize an owned path, then consume it into a `/`-separated UTF-8 string.
 ///
 /// Prefer this when `path` was just created by `join` or another owned operation.
@@ -145,7 +151,7 @@ pub fn path_buf_to_slash(path: PathBuf) -> String {
 /// required to satisfy that invariant.
 #[inline]
 pub fn normalize_path_buf_to_slash(path: PathBuf) -> String {
-  path.into_normalized().into_slash()
+  normalize_path_buf(path).into_slash()
 }
 
 #[test]

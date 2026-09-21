@@ -1,5 +1,5 @@
 use crate::file_change_event::FileChangeEvent;
-use rolldown_common::WatcherChangeKind;
+use rolldown_common::{WatchPath, WatcherChangeKind};
 use rolldown_utils::indexmap::FxIndexMap;
 use std::time::{Duration, Instant};
 
@@ -18,7 +18,7 @@ pub enum WatcherState {
   #[default]
   Idle,
   /// Collecting changes before triggering a build
-  Debouncing { changes: FxIndexMap<String, WatcherChangeKind>, deadline: Instant },
+  Debouncing { changes: FxIndexMap<WatchPath, WatcherChangeKind>, deadline: Instant },
   /// Watcher is closing
   Closing,
   /// Watcher has closed
@@ -60,7 +60,7 @@ impl WatcherState {
   ///
   /// Returns (new_state, changes_to_build) if transitioning to Idle,
   /// otherwise returns (self, None)
-  pub fn on_debounce_timeout(self) -> (Self, Option<FxIndexMap<String, WatcherChangeKind>>) {
+  pub fn on_debounce_timeout(self) -> (Self, Option<FxIndexMap<WatchPath, WatcherChangeKind>>) {
     match self {
       WatcherState::Debouncing { changes, .. } => {
         if changes.is_empty() {
@@ -123,8 +123,8 @@ impl WatcherState {
 ///
 /// See "Kind Consolidation" in `internal-docs/watch-mode/implementation.md` for the full rule table.
 fn merge_change_kind(
-  changes: &mut FxIndexMap<String, WatcherChangeKind>,
-  path: String,
+  changes: &mut FxIndexMap<WatchPath, WatcherChangeKind>,
+  path: WatchPath,
   new_kind: WatcherChangeKind,
 ) {
   if let Some(old_kind) = changes.get(&path).copied() {
@@ -157,10 +157,14 @@ mod tests {
     Duration::from_millis(100)
   }
 
+  fn watch_path(path: &str) -> WatchPath {
+    WatchPath::from_absolute(path)
+  }
+
   #[test]
   fn test_idle_to_debouncing_on_file_changes() {
     let state = WatcherState::Idle;
-    let entries = vec![FileChangeEvent::new("test.js".into(), WatcherChangeKind::Update)];
+    let entries = vec![FileChangeEvent::new("test.js", WatcherChangeKind::Update)];
     let new_state = state.on_file_changes(entries, default_duration());
 
     assert!(new_state.is_debouncing());
@@ -169,8 +173,8 @@ mod tests {
   #[test]
   fn test_debouncing_accumulates_changes() {
     let state = WatcherState::Idle;
-    let batch1 = vec![FileChangeEvent::new("test1.js".into(), WatcherChangeKind::Update)];
-    let batch2 = vec![FileChangeEvent::new("test2.js".into(), WatcherChangeKind::Create)];
+    let batch1 = vec![FileChangeEvent::new("test1.js", WatcherChangeKind::Update)];
+    let batch2 = vec![FileChangeEvent::new("test2.js", WatcherChangeKind::Create)];
 
     let state = state.on_file_changes(batch1, default_duration());
     let state = state.on_file_changes(batch2, default_duration());
@@ -185,7 +189,7 @@ mod tests {
   #[test]
   fn test_debounce_timeout_to_idle() {
     let mut changes = FxIndexMap::default();
-    changes.insert("test.js".to_string(), WatcherChangeKind::Update);
+    changes.insert(watch_path("test.js"), WatcherChangeKind::Update);
     let state = WatcherState::Debouncing { changes, deadline: Instant::now() };
 
     let (new_state, changes) = state.on_debounce_timeout();
@@ -198,15 +202,15 @@ mod tests {
   #[test]
   fn test_create_then_update_consolidates_to_create() {
     let state = WatcherState::Idle;
-    let batch1 = vec![FileChangeEvent::new("test.js".into(), WatcherChangeKind::Create)];
-    let batch2 = vec![FileChangeEvent::new("test.js".into(), WatcherChangeKind::Update)];
+    let batch1 = vec![FileChangeEvent::new("test.js", WatcherChangeKind::Create)];
+    let batch2 = vec![FileChangeEvent::new("test.js", WatcherChangeKind::Update)];
 
     let state = state.on_file_changes(batch1, default_duration());
     let state = state.on_file_changes(batch2, default_duration());
 
     if let WatcherState::Debouncing { changes, .. } = state {
       assert_eq!(changes.len(), 1);
-      assert_eq!(changes["test.js"], WatcherChangeKind::Create);
+      assert_eq!(changes[&watch_path("test.js")], WatcherChangeKind::Create);
     } else {
       panic!("Expected Debouncing state");
     }
@@ -215,8 +219,8 @@ mod tests {
   #[test]
   fn test_create_then_delete_cancels_out() {
     let state = WatcherState::Idle;
-    let batch1 = vec![FileChangeEvent::new("test.js".into(), WatcherChangeKind::Create)];
-    let batch2 = vec![FileChangeEvent::new("test.js".into(), WatcherChangeKind::Delete)];
+    let batch1 = vec![FileChangeEvent::new("test.js", WatcherChangeKind::Create)];
+    let batch2 = vec![FileChangeEvent::new("test.js", WatcherChangeKind::Delete)];
 
     let state = state.on_file_changes(batch1, default_duration());
     let state = state.on_file_changes(batch2, default_duration());
@@ -231,15 +235,15 @@ mod tests {
   #[test]
   fn test_delete_then_create_consolidates_to_update() {
     let state = WatcherState::Idle;
-    let batch1 = vec![FileChangeEvent::new("test.js".into(), WatcherChangeKind::Delete)];
-    let batch2 = vec![FileChangeEvent::new("test.js".into(), WatcherChangeKind::Create)];
+    let batch1 = vec![FileChangeEvent::new("test.js", WatcherChangeKind::Delete)];
+    let batch2 = vec![FileChangeEvent::new("test.js", WatcherChangeKind::Create)];
 
     let state = state.on_file_changes(batch1, default_duration());
     let state = state.on_file_changes(batch2, default_duration());
 
     if let WatcherState::Debouncing { changes, .. } = state {
       assert_eq!(changes.len(), 1);
-      assert_eq!(changes["test.js"], WatcherChangeKind::Update);
+      assert_eq!(changes[&watch_path("test.js")], WatcherChangeKind::Update);
     } else {
       panic!("Expected Debouncing state");
     }
@@ -249,14 +253,14 @@ mod tests {
   fn test_batch_create_then_update_within_single_call() {
     let state = WatcherState::Idle;
     let entries = vec![
-      FileChangeEvent::new("test.js".into(), WatcherChangeKind::Create),
-      FileChangeEvent::new("test.js".into(), WatcherChangeKind::Update),
+      FileChangeEvent::new("test.js", WatcherChangeKind::Create),
+      FileChangeEvent::new("test.js", WatcherChangeKind::Update),
     ];
     let state = state.on_file_changes(entries, default_duration());
 
     if let WatcherState::Debouncing { changes, .. } = state {
       assert_eq!(changes.len(), 1);
-      assert_eq!(changes["test.js"], WatcherChangeKind::Create);
+      assert_eq!(changes[&watch_path("test.js")], WatcherChangeKind::Create);
     } else {
       panic!("Expected Debouncing state");
     }
@@ -272,7 +276,7 @@ mod tests {
   #[test]
   fn test_empty_entries_keeps_debouncing_without_deadline_reset() {
     let state = WatcherState::Idle;
-    let entries = vec![FileChangeEvent::new("test.js".into(), WatcherChangeKind::Update)];
+    let entries = vec![FileChangeEvent::new("test.js", WatcherChangeKind::Update)];
     let state = state.on_file_changes(entries, default_duration());
     let deadline_before = match &state {
       WatcherState::Debouncing { deadline, .. } => *deadline,
@@ -293,8 +297,8 @@ mod tests {
   #[test]
   fn test_debounce_timeout_with_empty_changes_after_consolidation() {
     let state = WatcherState::Idle;
-    let batch1 = vec![FileChangeEvent::new("a.js".into(), WatcherChangeKind::Create)];
-    let batch2 = vec![FileChangeEvent::new("a.js".into(), WatcherChangeKind::Delete)];
+    let batch1 = vec![FileChangeEvent::new("a.js", WatcherChangeKind::Create)];
+    let batch2 = vec![FileChangeEvent::new("a.js", WatcherChangeKind::Delete)];
 
     let state = state.on_file_changes(batch1, default_duration());
     let state = state.on_file_changes(batch2, default_duration());
@@ -328,7 +332,7 @@ mod tests {
   #[test]
   fn test_closing_ignores_file_changes() {
     let state = WatcherState::Closing;
-    let entries = vec![FileChangeEvent::new("test.js".into(), WatcherChangeKind::Update)];
+    let entries = vec![FileChangeEvent::new("test.js", WatcherChangeKind::Update)];
     let new_state = state.on_file_changes(entries, default_duration());
 
     assert!(matches!(new_state, WatcherState::Closing));

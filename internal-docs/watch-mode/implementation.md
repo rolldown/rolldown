@@ -88,7 +88,7 @@ Watcher (public API)
                                     ├── WatchTask 0
                                     │   ├── bundler: Arc<TokioMutex<Bundler>>
                                     │   ├── fs_watcher: FsWatcher (owned, per-task)
-                                    │   ├── watched_files: FxDashSet<ArcStr>
+                                    │   ├── watched_files: FxDashSet<WatchPath>
                                     │   └── needs_rebuild: bool
                                     └── WatchTask N ...
 
@@ -164,7 +164,7 @@ Any ──(Close)──→ Closing → Closed
 ```rust
 enum WatcherState {
     Idle,
-    Debouncing { changes: FxIndexMap<String, WatcherChangeKind>, deadline: Instant },
+    Debouncing { changes: FxIndexMap<WatchPath, WatcherChangeKind>, deadline: Instant },
     Closing,
     Closed,
 }
@@ -313,10 +313,12 @@ Configured via `WatcherOptions`, fires **immediately** on file change (before de
 
 ## File Watching
 
-- After each build, `bundler.watch_files()` returns the current set.
+- After each build, `bundler.watch_files()` returns the raw Rollup-facing watch targets.
 - `WatchTask::update_watch_files()` diffs against the current set — new files are added to the per-task `FsWatcher`.
 - `include`/`exclude` patterns filter which files are watched (via `pattern_filter`).
-- Files are watched **non-recursively** (individual file watches).
+- Watch paths are absolute and lexically normalized. An event is relevant when its path is equal to, or a descendant of, a watch path. Transform dependencies use the same rule.
+- Physical registration is still non-recursive. Switching every target to recursive mode is blocked on the notify file-to-directory transition fixes; until then, directory watches only receive backend-provided non-recursive events.
+- A missing path is registered when its direct parent exists. Nested missing paths remain unsupported by notify.
 - Batch operations: `fs_watcher.paths_mut()` returns a guard for batching adds, committed via `.commit()`.
 
 ### Backend selection
@@ -353,7 +355,7 @@ This matches the legacy watcher's approach (`with_cached_bundle`), where `watch_
 
 ### Missing File Recovery
 
-When an import resolves to a non-existent file, the build errors. Watch mode relies on the resolver cache being cleared before each rebuild (`bundler.clear_resolver_cache()`). The expected recovery workflow is: create the missing file, then manually edit a watched file (e.g. noop edit to the importer) to trigger a rebuild. The resolver re-evaluates the import with a fresh cache and succeeds. This matches Rollup's behavior — Rollup only watches successfully loaded modules.
+An explicit `addWatchFile` target can be missing as long as its direct parent exists. An unresolved import is not automatically registered, so its recovery workflow is still: create the file, then edit an already watched file. The resolver cache is cleared before the rebuild and resolves it again.
 
 ### Notify Event Mapping
 
@@ -361,12 +363,15 @@ Shared with bundled dev through `rolldown_fs_watcher::map_notify_event`.
 Do not re-implement this table in `rolldown_dev` or `rolldown_watcher`.
 
 ```
-notify::EventKind::Create(_)                              → WatcherChangeKind::Create
+notify::EventKind::Create(File)                           → WatcherChangeKind::Create
+notify::EventKind::Create(Folder)                         → ignored
+notify::EventKind::Create(Any/Other)                      → Create unless currently a directory
 notify::EventKind::Modify(Name(RenameMode::To))           → WatcherChangeKind::Create
 notify::EventKind::Modify(Name(RenameMode::Both))         → per-path (see below)
 notify::EventKind::Modify(Name(RenameMode::From))         → WatcherChangeKind::Delete
-notify::EventKind::Remove(_)                              → WatcherChangeKind::Delete
-notify::EventKind::Modify(_)  (other)                     → WatcherChangeKind::Update
+notify::EventKind::Remove(Folder)                         → ignored
+notify::EventKind::Remove(File/Any/Other)                 → WatcherChangeKind::Delete
+notify::EventKind::Modify(_)  (other)                     → Update unless currently a directory
 notify::EventKind::Access(_)                              → None (ignored — prevents infinite rebuild loops on Linux)
 ```
 
@@ -374,11 +379,11 @@ notify::EventKind::Access(_)                              → None (ignored — 
 
 **Access filtering:** The build process reads watched source files, which on Linux triggers `IN_OPEN`/`IN_CLOSE_NOWRITE` events. Without filtering, these cause infinite rebuild loops.
 
+**Directory filtering:** Explicit folder events are removed before they reach `changed_files`. For ambiguous create/modify events, only a path currently confirmed as a directory is removed. Deletes and rename-from events fail open because the old path may already be absent or reused. `RenameMode::Both` uses only the destination as type evidence.
+
 ### Path Identity
 
-The watch set stores paths as raw `ArcStr` strings. The `notify` crate reports events with OS-native paths. If these don't match exactly, `is_watched_file()` fails silently. The current `#[cfg(windows)]` backslash fallback is a symptom.
-
-**Recommendation:** Use `PathBuf` for the watched file set instead of `ArcStr`. This handles trailing slashes, double separators, `.` segments, and Windows `\` vs `/` — all common mismatch sources between resolver output and notify events.
+Plugin and bundle state keep watch targets as `ArcStr`, preserving values passed to `addWatchFile` and avoiding path conversion for ordinary builds. Dev and build watch convert each target to `WatchPath` at the filesystem-watcher boundary; transform dependencies do the same when they are recorded for HMR. `WatchPath` stores an absolute, lexically normalized `Arc<Path>`. `Borrow<Path>` enables O(path-depth) ancestor lookup in the hash set, so directory targets match descendant file events without scanning all watched paths.
 
 See [module-id.md](../module-id/implementation.md) for the full analysis of path identity across the bundler, `PathBuf` comparison behavior, and Rollup's approach.
 

@@ -6,7 +6,7 @@ use crate::watcher::WatcherConfig;
 use crate::watcher_msg::WatcherMsg;
 use crate::watcher_state::WatcherState;
 use oxc_index::IndexVec;
-use rolldown_common::WatcherChangeKind;
+use rolldown_common::{WatchPath, WatcherChangeKind};
 use rolldown_utils::indexmap::FxIndexMap;
 use std::future::Future;
 use std::mem;
@@ -150,17 +150,21 @@ impl<H: WatcherEventHandler> WatchCoordinator<H> {
   /// 5. For each task needing rebuild: BundleStart → build → BundleEnd/Error
   /// 6. handler.on_event(End)
   /// 7. drain_buffered_events
-  async fn run_build_sequence(&mut self, changes: FxIndexMap<String, WatcherChangeKind>) -> bool {
+  async fn run_build_sequence(
+    &mut self,
+    changes: FxIndexMap<WatchPath, WatcherChangeKind>,
+  ) -> bool {
     // Step 1 & 2: Notify handler and plugin hooks for each change
     for (path, kind) in &changes {
-      if !self.dispatch_change(path.as_str(), *kind).await {
+      let path = path.to_string();
+      if !self.dispatch_change(&path, *kind).await {
         return false;
       }
     }
 
     for task in &self.tasks {
       for (path, kind) in &changes {
-        task.call_watch_change(path.as_str(), *kind).await;
+        task.call_watch_change(path, *kind).await;
       }
     }
 

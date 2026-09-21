@@ -624,16 +624,16 @@ impl NestedScopeRenamer<'_, '_> {
       let Some(importee_idx) = rec.resolved_module else {
         continue;
       };
-      if rec.meta.contains(ImportRecordMeta::IsRequireUnused) {
-        continue;
-      }
       let Some(importee) = self.link_output.module_table[importee_idx].as_normal() else {
         continue;
       };
       // The namespace object only backs the wrapped-ESM rewrite; a CommonJS importee is read
-      // through its `require_x` wrapper alone.
-      let namespace_object_ref = (!matches!(importee.exports_kind, ExportsKind::CommonJs))
-        .then_some(importee.namespace_object_ref);
+      // through its `require_x` wrapper alone. An unused require drops the `__toCommonJS(ns)`
+      // half of that rewrite, but the finalizer still emits the wrapper call, so the wrapper
+      // name stays shadowable.
+      let namespace_object_ref = (!matches!(importee.exports_kind, ExportsKind::CommonJs)
+        && !rec.meta.contains(ImportRecordMeta::IsRequireUnused))
+      .then_some(importee.namespace_object_ref);
       // The wrapper facade is what a bundled `require_<basename>` local collides with. Rolldown's
       // own CJS output names require-locals from the same namespace it derives wrapper names from
       // (`require_<basename>`, `$N`-suffixed for duplicate basenames), so re-bundling it lands a

@@ -18,6 +18,9 @@ pub struct BindingHookResolveIdOutput {
   /// we could get the related package json object via the path string.
   #[napi(ts_type = "string | null")]
   pub package_json_path: Option<String>,
+  /// @internal `true` keeps the id without `package.json` metadata when `packageJsonPath` is
+  /// absent, so that no module format is inferred for it.
+  pub skip_package_json_lookup: Option<bool>,
 }
 
 impl TryFrom<BindingHookResolveIdOutput> for rolldown_plugin::HookResolveIdOutput {
@@ -30,6 +33,7 @@ impl TryFrom<BindingHookResolveIdOutput> for rolldown_plugin::HookResolveIdOutpu
       normalize_external_id: value.normalize_external_id,
       side_effects: value.module_side_effects.map(TryInto::try_into).transpose()?,
       package_json_path: value.package_json_path,
+      skip_package_json_lookup: value.skip_package_json_lookup.unwrap_or(false),
     })
   }
 }

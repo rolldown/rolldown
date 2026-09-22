@@ -243,6 +243,8 @@ pub struct BindingHookJsResolveIdOutput {
   pub external: Option<BindingResolvedExternal>,
   #[napi(ts_type = "boolean | 'no-treeshake'")]
   pub module_side_effects: Option<BindingHookSideEffects>,
+  /// @internal The hook opted out of the `package.json` lookup for this id.
+  pub skip_package_json_lookup: bool,
 }
 
 impl From<HookResolveIdOutput> for BindingHookJsResolveIdOutput {
@@ -251,6 +253,7 @@ impl From<HookResolveIdOutput> for BindingHookJsResolveIdOutput {
       id: value.id.to_string(),
       external: value.external.map(Into::into),
       module_side_effects: value.side_effects.map(Into::into),
+      skip_package_json_lookup: value.skip_package_json_lookup,
     }
   }
 }

@@ -2320,6 +2320,8 @@ export interface BindingHookJsResolveIdOutput {
   id: string
   external?: boolean | 'absolute' | 'relative'
   moduleSideEffects?: boolean | 'no-treeshake'
+  /** @internal The hook opted out of the `package.json` lookup for this id. */
+  skipPackageJsonLookup: boolean
 }
 
 export interface BindingHookLoadOutput {
@@ -2381,6 +2383,11 @@ export interface BindingHookResolveIdOutput {
    * we could get the related package json object via the path string.
    */
   packageJsonPath?: string | null
+  /**
+   * @internal `true` keeps the id without `package.json` metadata when `packageJsonPath` is
+   * absent, so that no module format is inferred for it.
+   */
+  skipPackageJsonLookup?: boolean
 }
 
 export type BindingHookSideEffects = boolean | string
@@ -2668,6 +2675,8 @@ export interface BindingPluginContextResolvedId {
   packageJsonPath?: string
   external: boolean | 'absolute' | 'relative'
   moduleSideEffects?: boolean | 'no-treeshake'
+  /** @internal The hook that produced this id opted out of the `package.json` lookup. */
+  skipPackageJsonLookup: boolean
 }
 
 export interface BindingPluginContextResolveOptions {

@@ -98,6 +98,7 @@ export function bindingifyResolveId(
         normalizeExternalId: false,
         moduleSideEffects: exist.moduleSideEffects ?? undefined,
         packageJsonPath: ret.packageJsonPath,
+        skipPackageJsonLookup: ret.skipPackageJsonLookup ?? undefined,
       };
     },
     filter: bindingifyResolveIdFilter(options.filter),
@@ -133,6 +134,7 @@ export function bindingifyResolveDynamicImport(
         id: ret.id,
         external: ret.external,
         packageJsonPath: ret.packageJsonPath,
+        skipPackageJsonLookup: ret.skipPackageJsonLookup ?? undefined,
       };
 
       if (ret.moduleSideEffects !== null) {

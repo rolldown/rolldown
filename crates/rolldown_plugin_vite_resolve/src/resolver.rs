@@ -423,6 +423,7 @@ impl Resolver {
           package_json_path: (!legacy_inconsistent_cjs_interop)
             .then(|| result.package_json().map(|pj| pj.realpath().to_str().unwrap().to_string()))
             .flatten(),
+          skip_package_json_lookup: legacy_inconsistent_cjs_interop,
           ..Default::default()
         }))
       }

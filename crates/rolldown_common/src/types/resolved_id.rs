@@ -44,6 +44,9 @@ pub struct ResolvedId {
   pub package_json: Option<Arc<PackageJson>>,
   pub side_effects: Option<HookSideEffects>,
   pub is_external_without_side_effects: bool,
+  /// The hook that produced this id opted out of the `package.json` lookup. A hook that forwards
+  /// the id as its own answer keeps the opt-out.
+  pub skip_package_json_lookup: bool,
 }
 
 impl ResolvedId {
@@ -58,6 +61,7 @@ impl ResolvedId {
       package_json: None,
       side_effects: None,
       is_external_without_side_effects: false,
+      skip_package_json_lookup: false,
     }
   }
 
@@ -85,6 +89,7 @@ impl ResolvedId {
       package_json: None,
       side_effects: None,
       is_external_without_side_effects: true,
+      skip_package_json_lookup: false,
     }
   }
 }

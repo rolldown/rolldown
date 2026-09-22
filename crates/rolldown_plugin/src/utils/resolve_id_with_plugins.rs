@@ -48,18 +48,34 @@ pub fn infer_module_def_format(
 }
 
 /// Builds the `ResolvedId` for an id a plugin resolved.
+///
+/// A `resolveId` hook may return a bare id string, which carries no `packageJsonPath`. This
+/// function then resolves the id like an import of it. Otherwise a module's
+/// `package.json#sideEffects` policy and its module format would depend on the specifier.
+/// See <https://github.com/rolldown/rolldown/issues/10909>.
 fn resolved_id_from_hook_output<Fs: FileSystem>(
   resolver: &Resolver<Fs>,
   r: HookResolveIdOutput,
 ) -> anyhow::Result<ResolvedId> {
-  let package_json = r
-    .package_json_path
-    .as_ref()
-    .map(|p| resolver.try_get_package_json_or_create(p.as_path()))
-    .transpose()?;
+  let id = ModuleId::new(r.id);
+  let (module_def_format, package_json) = match &r.package_json_path {
+    Some(path) => {
+      let package_json = resolver.try_get_package_json_or_create(path.as_path())?;
+      (infer_module_def_format(id.as_str(), Some(&package_json)), Some(package_json))
+    }
+    // Only a real filesystem id has a package to find; virtual and bare ids have none.
+    None => match id.as_path().map(|path| resolver.resolve_absolute_path(path)) {
+      Some(Ok(resolved)) => (resolved.module_def_format, resolved.package_json),
+      Some(Err(err @ (ResolveError::Json(_) | ResolveError::IOError(_)))) => {
+        return Err(err.into());
+      }
+      // The id may name a file that only a `load` hook can produce.
+      Some(Err(_)) | None => (infer_module_def_format(id.as_str(), None), None),
+    },
+  };
   Ok(ResolvedId {
-    module_def_format: infer_module_def_format(r.id.as_str(), package_json.as_ref()),
-    id: ModuleId::new(r.id),
+    module_def_format,
+    id,
     external: r.external.unwrap_or_default(),
     normalize_external_id: r.normalize_external_id,
     side_effects: r.side_effects,

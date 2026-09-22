@@ -26,6 +26,8 @@ import type {
   getAsyncContextSupport,
 } from '../src/utils/async-context';
 // @ts-ignore This focused test intentionally reaches package source outside the test rootDir.
+import { trackAsyncCallbackSettlement } from '../src/utils/async-context';
+// @ts-ignore This focused test intentionally reaches package source outside the test rootDir.
 import { bindingOptionsRequireAsyncContext } from '../src/utils/create-bundler-option';
 
 type AsyncContextModule = {
@@ -1066,6 +1068,70 @@ console.log('async callback settlement completed')
     expect(child.stdout).toContain('async callback settlement completed');
   },
 );
+
+test('native promise callback results settle the callback before the caller sees them', async () => {
+  const events: string[] = [];
+  const track = (result: unknown) =>
+    trackAsyncCallbackSettlement(result, () => events.push('settled')) as Promise<unknown>;
+
+  await expect(
+    track(Promise.resolve('value')).then((value) => events.push(`fulfilled:${value}`)),
+  ).resolves.toBeDefined();
+  const failure = new Error('callback failed');
+  await expect(
+    track(Promise.reject(failure)).catch((error) => events.push(`rejected:${error === failure}`)),
+  ).resolves.toBeDefined();
+  expect(events).toEqual(['settled', 'fulfilled:value', 'settled', 'rejected:true']);
+
+  const settlementError = new Error('settlement failed');
+  const throwingTrack = trackAsyncCallbackSettlement(Promise.resolve('value'), () => {
+    throw settlementError;
+  });
+  await expect(throwingTrack).rejects.toBe(settlementError);
+
+  // Past the read `Promise.resolve` performs, a fulfilled value keeps the
+  // classification read plus the one adoption by the promise handed back,
+  // like any other settled value.
+  let thenReads = 0;
+  // oxlint-disable-next-line unicorn/no-thenable -- the accessor-backed `then` is what is under test
+  const terminal = Object.defineProperty({}, 'then', {
+    get() {
+      thenReads += 1;
+      return undefined;
+    },
+  });
+  const fulfilled = Promise.resolve(terminal);
+  expect(thenReads).toBe(1);
+  await expect(track(fulfilled)).resolves.toBe(terminal);
+  expect(thenReads).toBe(3);
+});
+
+test('a Proxy over a native promise is not treated as a native promise', async () => {
+  const traps: string[] = [];
+  const target = Promise.resolve('value');
+  const proxy = new Proxy(target, {
+    get(target, key) {
+      traps.push(`get:${String(key)}`);
+      return Reflect.get(target, key, target);
+    },
+    getPrototypeOf(target) {
+      traps.push('getPrototypeOf');
+      return Reflect.getPrototypeOf(target);
+    },
+    getOwnPropertyDescriptor(target, key) {
+      traps.push(`getOwnPropertyDescriptor:${String(key)}`);
+      return Reflect.getOwnPropertyDescriptor(target, key);
+    },
+  });
+  let settled = 0;
+  const result = trackAsyncCallbackSettlement(proxy, () => {
+    settled += 1;
+  }) as Promise<unknown>;
+  // The built-in `then` rejects a receiver that is not a promise.
+  await expect(result).rejects.toBeInstanceOf(TypeError);
+  expect(settled).toBe(1);
+  expect(traps).toEqual(['get:then']);
+});
 
 async function importBrowserAsyncContext(): Promise<AsyncContextModule> {
   const bundle = await rolldown({

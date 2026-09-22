@@ -7,8 +7,10 @@ import {
 interface CloseCallbackInvocation {
   active: boolean;
   browserCloseIdentityRetained: boolean;
-  closeDependenciesByPromise: WeakMap<Promise<void>, Set<string>>;
-  closeDependencyUnregisters: Set<() => void>;
+  // Created on the first close requested inside the callback; most callbacks
+  // never request one.
+  closeDependenciesByPromise?: WeakMap<Promise<void>, Set<string>>;
+  closeDependencyUnregisters?: Set<() => void>;
   closeIdentity?: string;
   parent?: CloseCallbackInvocation;
   scope: CloseCallbackScope;
@@ -26,6 +28,8 @@ const closeDependencies = new Map<string, Map<string, number>>();
 const browserCloseIdentityCounts = new Map<string, number>();
 let browserInvocation: CloseCallbackInvocation | undefined;
 let nextCloseIdentity = 0n;
+// See internal-docs/async-context/implementation.md.
+const scopeEnteringCallbacks = new WeakSet<Function>();
 
 class CloseDependencyPromise extends Promise<void> {
   readonly #browserCandidates: BrowserCloseDependencyCandidate[] = [];
@@ -62,11 +66,11 @@ class CloseDependencyPromise extends Promise<void> {
     const unregister = () => {
       if (!candidate.active) return;
       candidate.active = false;
-      invocation.closeDependencyUnregisters.delete(unregister);
+      invocation.closeDependencyUnregisters?.delete(unregister);
     };
     candidate.unregister = unregister;
     this.#browserCandidates.push(candidate);
-    invocation.closeDependencyUnregisters.add(unregister);
+    (invocation.closeDependencyUnregisters ??= new Set()).add(unregister);
   }
 
   // oxlint-disable-next-line unicorn/no-thenable -- Promise observation is the dependency signal.
@@ -97,6 +101,19 @@ class CloseDependencyPromise extends Promise<void> {
 export function createCloseIdentity(namespace: string): string {
   nextCloseIdentity += 1n;
   return `${namespace}:${nextCloseIdentity}`;
+}
+
+/**
+ * Marks a callback whose every call already enters the close-callback scope of
+ * the options it is placed in: the `BuildCallbackRunner` that `RolldownBuild`
+ * passes to `createBundlerOptions` runs each callback through that build's
+ * {@linkcode CloseCallbackScope.run}. {@linkcode CloseCallbackScope.wrapCallbacks}
+ * hands a marked callback over as it is, so one call enters the scope once.
+ * Only mark a callback that ignores its `this`.
+ */
+export function markScopeEnteringCallback<F extends Function>(callback: F): F {
+  scopeEnteringCallbacks.add(callback);
+  return callback;
 }
 
 /**
@@ -132,8 +149,6 @@ export class CloseCallbackScope {
     const invocation: CloseCallbackInvocation = {
       active: true,
       browserCloseIdentityRetained: false,
-      closeDependenciesByPromise: new WeakMap(),
-      closeDependencyUnregisters: new Set(),
       closeIdentity,
       parent: this.#currentInvocation(),
       scope: this,
@@ -374,10 +389,11 @@ export class CloseCallbackScope {
     sourceIdentity: string,
     targetIdentity: string,
   ): void {
-    let targets = sourceInvocation.closeDependenciesByPromise.get(closePromise);
+    const targetsByPromise = (sourceInvocation.closeDependenciesByPromise ??= new WeakMap());
+    let targets = targetsByPromise.get(closePromise);
     if (!targets) {
       targets = new Set();
-      sourceInvocation.closeDependenciesByPromise.set(closePromise, targets);
+      targetsByPromise.set(closePromise, targets);
     }
     if (targets.has(targetIdentity)) return;
     targets.add(targetIdentity);
@@ -391,7 +407,7 @@ export class CloseCallbackScope {
 
     const unregister = () => {
       if (!targets.delete(targetIdentity)) return;
-      sourceInvocation.closeDependencyUnregisters.delete(unregister);
+      sourceInvocation.closeDependencyUnregisters?.delete(unregister);
 
       const registeredDependencies = closeDependencies.get(sourceIdentity);
       const count = registeredDependencies?.get(targetIdentity);
@@ -405,7 +421,7 @@ export class CloseCallbackScope {
         registeredDependencies!.set(targetIdentity, count - 1);
       }
     };
-    sourceInvocation.closeDependencyUnregisters.add(unregister);
+    (sourceInvocation.closeDependencyUnregisters ??= new Set()).add(unregister);
     void closePromise.then(unregister, unregister);
   }
 
@@ -433,7 +449,9 @@ export class CloseCallbackScope {
   #finishInvocation(invocation: CloseCallbackInvocation): void {
     if (!invocation.active) return;
     invocation.active = false;
-    for (const unregister of invocation.closeDependencyUnregisters) unregister();
+    if (invocation.closeDependencyUnregisters) {
+      for (const unregister of invocation.closeDependencyUnregisters) unregister();
+    }
     if (!invocation.browserCloseIdentityRetained || invocation.closeIdentity === undefined) return;
 
     invocation.browserCloseIdentityRetained = false;
@@ -464,6 +482,7 @@ export class CloseCallbackScope {
   }
 
   #wrapCallback(callback: Function, receiver?: object): Function {
+    if (scopeEnteringCallbacks.has(callback)) return callback;
     const run = <T>(invoke: () => T) => this.run(invoke);
     return function (this: unknown, ...args: unknown[]) {
       return run(() => Reflect.apply(callback, receiver ?? this, args));

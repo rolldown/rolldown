@@ -15,7 +15,7 @@ import {
 } from '../plugin/parallel-plugin';
 import { bindingifyInputOptions } from './bindingify-input-options';
 import { bindingifyOutputOptions } from './bindingify-output-options';
-import type { CloseCallbackScope } from './close-callback-scope';
+import { type CloseCallbackScope, markScopeEnteringCallback } from './close-callback-scope';
 import { initializeParallelPlugins } from './initialize-parallel-plugins';
 import {
   measureIfFunction,
@@ -35,7 +35,7 @@ import {
   normalizePlugins,
 } from './normalize-plugin-option';
 import { getParallelPluginInfo } from './parallel-plugin';
-import { findPropertyDescriptorInPrototypeChain } from './prototype-chain';
+import { findPropertyDescriptor } from '../builtin-plugin/utils';
 
 export async function createBundlerOptions(
   inputOptions: InputOptions,
@@ -113,7 +113,9 @@ export async function createBundlerOptions(
     getLogger(pluginLogHooks.snapshot(), inputLogHandlers, logLevel, watchMode)(level, log);
   const onLog: LogHandler =
     runBuildCallback && hasUserLogCallback
-      ? (level, log) => runBuildCallback(() => invokeLogger(level, log), 'onLog')
+      ? markScopeEnteringCallback<LogHandler>((level, log) =>
+          runBuildCallback(() => invokeLogger(level, log), 'onLog'),
+        )
       : invokeLogger;
 
   // The `outputOptions` hook is called with the input plugins and the output plugins.
@@ -517,10 +519,6 @@ function readPropertyOnce<T extends object, K extends keyof T>(
   // one read, so accessor-backed hooks keep firing once, inside the guard.
   findPropertyDescriptor(object, key);
   return Reflect.get(object, key, object) as T[K] | undefined;
-}
-
-function findPropertyDescriptor(object: object, key: PropertyKey): PropertyDescriptor | undefined {
-  return findPropertyDescriptorInPrototypeChain(object, key, 'inspecting callback options');
 }
 
 /** @internal */

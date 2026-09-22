@@ -1,4 +1,5 @@
 import { AsyncLocalStorage } from 'node:async_hooks';
+import { types } from 'node:util';
 import { hasCallableThenWithoutInvokingAccessor } from './prototype-chain';
 
 export interface AsyncContext<T> {
@@ -157,40 +158,82 @@ export function trackAsyncCallbackSettlement<T>(
   }
 
   let publicPromise: Promise<unknown> | undefined;
+  const getPublicPromise = () => publicPromise;
+  if (isPlainNativePromise(result, then)) {
+    // Fast path: `then` is the built-in method of a plain native promise, so
+    // calling it runs no user code and needs neither the deferred job nor the
+    // scope `settleThenable` gives a custom `then`. Every caller invokes this
+    // tracker inside the context `runSynchronousCallback` enters, so the
+    // reactions see the same store either way. The fulfilled value is
+    // classified by `resolveThenable`, exactly as on the general path. See
+    // internal-docs/async-context/implementation.md.
+    publicPromise = new Promise<unknown>((resolve, reject) => {
+      const { fulfill, fail } = createSettlementHandlers(onSettled, resolve, reject);
+      try {
+        void Reflect.apply(then, result, [
+          (value: unknown) =>
+            resolveThenable(
+              value,
+              new Set<object>([result]),
+              runSynchronousCallback,
+              getPublicPromise,
+              fulfill,
+              fail,
+            ),
+          fail,
+        ]);
+      } catch (error) {
+        fail(error);
+      }
+    });
+    return publicPromise as T;
+  }
+
   const settlementPromise = assimilateThenable(
     result,
     then,
     runSynchronousCallback,
-    () => publicPromise,
+    getPublicPromise,
   );
-  // The settled value stays boxed until here so that no intermediate promise
-  // runs the Promise Resolution Procedure on it. Unboxing below is the single
-  // adoption the caller's promise performs, matching the specified one-time
-  // `then` lookup. Deactivation happens first, so a `then` that only turns
-  // callable during that adoption cannot keep the callback active.
   publicPromise = new Promise<unknown>((resolve, reject) => {
-    void settlementPromise.then(
-      (settled) => {
-        try {
-          onSettled();
-        } catch (error) {
-          reject(error);
-          return;
-        }
-        resolve(settled.value);
-      },
-      (error: unknown) => {
-        try {
-          onSettled();
-        } catch (settlementError) {
-          reject(settlementError);
-          return;
-        }
-        reject(error);
-      },
-    );
+    const { fulfill, fail } = createSettlementHandlers(onSettled, resolve, reject);
+    void settlementPromise.then(fulfill, fail);
   });
   return publicPromise as T;
+}
+
+/**
+ * The settled value stays boxed until here so that no intermediate promise
+ * runs the Promise Resolution Procedure on it. Unboxing in `fulfill` is the
+ * single adoption the caller's promise performs, matching the specified
+ * one-time `then` lookup. Deactivation happens first, so a `then` that only
+ * turns callable during that adoption cannot keep the callback active.
+ */
+function createSettlementHandlers(
+  onSettled: () => void,
+  resolve: (value: unknown) => void,
+  reject: (reason?: unknown) => void,
+): { fulfill: (settled: SettledValue) => void; fail: (error: unknown) => void } {
+  return {
+    fulfill: (settled) => {
+      try {
+        onSettled();
+      } catch (error) {
+        reject(error);
+        return;
+      }
+      resolve(settled.value);
+    },
+    fail: (error) => {
+      try {
+        onSettled();
+      } catch (settlementError) {
+        reject(settlementError);
+        return;
+      }
+      reject(error);
+    },
+  };
 }
 
 const NODE_ASYNC_CONTEXT_PROVIDER: AsyncContextProvider = {
@@ -415,6 +458,31 @@ function getNativeAsyncContextProvider(): AsyncContextProvider | undefined {
 
 function runCallback(callback: () => void): void {
   callback();
+}
+
+// Captured at module evaluation, so a later patch of the global promise
+// methods is never mistaken for the built-in one.
+// oxlint-disable-next-line typescript/unbound-method -- compared by identity, applied with its receiver
+const nativePromiseThen = Promise.prototype.then;
+const nativePromisePrototype = Promise.prototype;
+
+/**
+ * Whether `then` (already read from `value`) is the built-in method of a real,
+ * unsubclassed native promise, so calling it synchronously runs no user code.
+ * Every check here runs no user code either: `types.isPromise` is a brand
+ * check a `Proxy` fails without reaching a trap, and only after it passes are
+ * `[[GetPrototypeOf]]` and `[[GetOwnProperty]]` asked, which a real promise
+ * answers as an ordinary object. Browser builds have no trap-free brand check,
+ * so they always take the general path.
+ */
+function isPlainNativePromise(value: object, then: Function): value is Promise<unknown> {
+  return (
+    !import.meta.browserBuild &&
+    then === nativePromiseThen &&
+    types.isPromise(value) &&
+    Object.getPrototypeOf(value) === nativePromisePrototype &&
+    !Object.hasOwn(value, 'constructor')
+  );
 }
 
 type SynchronousCallbackRunner = (callback: () => void) => void;

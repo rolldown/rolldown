@@ -27,7 +27,7 @@ import { error, logPluginError } from '../log/logs';
 import type { InputOptions } from '../options/input-options';
 import type { OutputOptions } from '../options/output-options';
 import type { TypeAssert } from '../types/assert';
-import type { CloseCallbackScope } from '../utils/close-callback-scope';
+import { type CloseCallbackScope, markScopeEnteringCallback } from '../utils/close-callback-scope';
 import {
   bindingifyCloseWatcher,
   bindingifyHotUpdate,
@@ -59,6 +59,13 @@ export interface BindingifyPluginArgs {
   runBuildCallback?: BuildCallbackRunner;
 }
 
+/**
+ * Runs a user callback inside the build's callback boundary. The one runner,
+ * `RolldownBuild`'s, also enters the close-callback scope it passes to
+ * `createBundlerOptions`, so a callback that calls the runner first is marked
+ * with `markScopeEnteringCallback` and `wrapCallbacks` does not enter that
+ * scope a second time. See internal-docs/async-context/implementation.md.
+ */
 export type BuildCallbackRunner = <T>(callback: () => T, callbackName?: string) => T;
 
 type BindingPluginCallbackName = {
@@ -261,7 +268,7 @@ function wrapHandlers(
     // plugin's own work rather than the wrapper's promise machinery.
     const handler = raw && measureHookCost(timings, owner, hookName, raw);
     if (handler) {
-      plugin[hookName] = (...args: any[]) => {
+      const wrapped = (...args: any[]) => {
         const invoke = async () => {
           try {
             return await handler(...args);
@@ -278,6 +285,7 @@ function wrapHandlers(
         };
         return runBuildCallback ? runBuildCallback(invoke, hookName) : invoke();
       };
+      plugin[hookName] = runBuildCallback ? markScopeEnteringCallback(wrapped) : wrapped;
     }
   }
   return plugin;

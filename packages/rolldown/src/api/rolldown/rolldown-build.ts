@@ -5,7 +5,11 @@ import {
   createRequiredAsyncContext,
   trackAsyncCallbackSettlement,
 } from '../../utils/async-context';
-import { CloseCoordinator, type CloseAttemptResult } from '../../runtime-lifecycle';
+import {
+  CloseCoordinator,
+  type CloseAttemptResult,
+  throwCloseErrors,
+} from '../../runtime-lifecycle';
 import type { HasProperty, TypeAssert } from '../../types/assert';
 import type { RolldownOutput } from '../../types/rolldown-output';
 import { RolldownOutputImpl } from '../../types/rolldown-output-impl';
@@ -377,16 +381,7 @@ export class RolldownBuild {
         cleanupErrors.push(error);
       }
     }
-    if (cleanupErrors.length === 1) {
-      throw cleanupErrors[0];
-    }
-    if (cleanupErrors.length > 1) {
-      throw new AggregateError(
-        cleanupErrors,
-        'Multiple parallel-plugin worker cleanup attempts failed',
-        { cause: cleanupErrors[0] },
-      );
-    }
+    throwCloseErrors(cleanupErrors, 'Multiple parallel-plugin worker cleanup attempts failed');
     return result;
   }
 
@@ -478,12 +473,7 @@ export class RolldownBuild {
       if (owner.stopAttempt === attempt) {
         owner.stopAttempt = undefined;
       }
-      if (errors.length === 1) {
-        throw errors[0];
-      }
-      throw new AggregateError(errors, 'Parallel-plugin worker shutdown failed', {
-        cause: errors[0],
-      });
+      throwCloseErrors(errors, 'Parallel-plugin worker shutdown failed');
     }
   }
 
@@ -512,6 +502,10 @@ export class RolldownBuild {
 
     return buildCallContext.run(invocation, () => {
       try {
+        // Callbacks routed through this runner are marked with
+        // `markScopeEnteringCallback`, so this is the only place their calls
+        // enter the close-callback scope. See
+        // internal-docs/async-context/implementation.md.
         return trackAsyncCallbackSettlement(this.#closeCallbackScope.run(callback), deactivate);
       } catch (error) {
         deactivate();

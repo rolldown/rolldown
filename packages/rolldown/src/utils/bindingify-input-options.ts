@@ -22,7 +22,7 @@ import type { Plugin, RolldownPlugin } from '../plugin';
 import { bindingifyPlugin, type BuildCallbackRunner } from '../plugin/bindingify-plugin';
 import type { PluginContextData } from '../plugin/plugin-context-data';
 import { wrapOptionalBuildCallback } from './bindingify-output-options';
-import type { CloseCallbackScope } from './close-callback-scope';
+import { type CloseCallbackScope, markScopeEnteringCallback } from './close-callback-scope';
 import { arraify } from './misc';
 import { normalizedStringOrRegex } from './normalize-string-or-regex';
 import {
@@ -177,11 +177,16 @@ function bindingifyExternal(
     if (typeof external === 'function') {
       // Runs once per import specifier, so a slow one is felt across the whole graph.
       const measured = measureHookCost(timings, INPUT_OPTIONS_OWNER, 'external', external);
-      return (id, importer, isResolved) => {
+      const wrapped: Extract<BindingInputOptions['external'], Function> = (
+        id,
+        importer,
+        isResolved,
+      ) => {
         if (id.startsWith('\0')) return false;
         const invoke = () => measured(id, importer, isResolved);
         return (runBuildCallback ? runBuildCallback(invoke) : invoke()) ?? false;
       };
+      return runBuildCallback ? markScopeEnteringCallback(wrapped) : wrapped;
     }
     return arraify(external);
   }

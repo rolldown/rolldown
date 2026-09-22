@@ -495,7 +495,7 @@ impl BundleCoordinator {
       if !self.watched_files.contains(path)
         && pattern_filter::filter(exclude, include, &path.to_string_lossy(), &cwd_str).inner()
       {
-        match paths_mut.add(path, RecursiveMode::NonRecursive) {
+        match paths_mut.add(path, RecursiveMode::Recursive) {
           Ok(()) => {
             added_files.push(watch_path);
           }

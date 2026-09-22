@@ -257,7 +257,7 @@ impl WatchTask {
       )
       .inner()
       {
-        match watcher_paths.add(path, RecursiveMode::NonRecursive) {
+        match watcher_paths.add(path, RecursiveMode::Recursive) {
           Ok(()) => {
             tracing::debug!(name = "notify watch", path = ?path);
             added_files.push(watch_path);
@@ -329,7 +329,7 @@ impl WatchTask {
   }
 
   fn is_watched_file(&self, path: &str) -> bool {
-    self.watched_files.contains(Path::new(path))
+    Path::new(path).ancestors().any(|ancestor| self.watched_files.contains(ancestor))
   }
 }
 

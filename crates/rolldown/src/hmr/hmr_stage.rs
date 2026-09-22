@@ -147,7 +147,12 @@ impl<'a, Fs: FileSystem + Clone + 'static> HmrStage<'a, Fs> {
         .plugin_driver
         .transform_dependencies
         .iter()
-        .filter_map(|entry| entry.value().contains(changed_path).then_some(*entry.key()))
+        .filter_map(|entry| {
+          changed_path
+            .ancestors()
+            .any(|ancestor| entry.value().contains(ancestor))
+            .then_some(*entry.key())
+        })
         .collect::<Vec<_>>();
       transform_dep_modules
         .sort_unstable_by_key(|module_idx| self.module_table().modules[*module_idx].stable_id());

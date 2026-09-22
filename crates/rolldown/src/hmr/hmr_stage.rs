@@ -91,7 +91,9 @@ impl<'a, Fs: FileSystem + Clone + 'static> HmrStage<'a, Fs> {
     Self { input }
   }
 
-  /// Stage order is documented in `internal-docs/dev-engine/implementation.md`
+  /// See `internal-docs/hmr/design.md` for the principles and invariants this
+  /// stage implements. Stage order is documented in
+  /// `internal-docs/dev-engine/implementation.md`
   /// ("Inside `compute_hmr_update_for_file_changes`").
   #[expect(clippy::too_many_lines)]
   pub async fn compute_hmr_update_for_file_changes(
@@ -507,8 +509,8 @@ impl<'a, Fs: FileSystem + Clone + 'static> HmrStage<'a, Fs> {
   /// entry-chunk execution; `initModule` returns them without a factory). Both are
   /// server-derived; selection never reads client-reported runtime state. Contrast
   /// with HMR patches, whose affected set must re-run and therefore subtracts the
-  /// ship map only. The ship map itself is written only when the serving middleware
-  /// observes the response complete.
+  /// ship map only. The ship map itself is written only by the delivery notification
+  /// (`DevEngine::notify_payload_delivered`).
   pub async fn compile_lazy_entry(
     &mut self,
     module_id: &str,

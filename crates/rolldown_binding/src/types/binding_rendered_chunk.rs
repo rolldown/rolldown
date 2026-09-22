@@ -4,7 +4,7 @@ use rolldown_common::RollupRenderedChunk;
 
 use crate::types::binding_rendered_module::BindingRenderedModule;
 
-use super::external_memory_status::ExternalMemoryStatus;
+use super::external_memory_status::{ExternalMemoryStatus, release_arc};
 
 #[napi_derive::napi]
 #[derive(Debug)]
@@ -28,26 +28,7 @@ impl BindingRenderedChunk {
 
   #[napi(enumerable = false)]
   pub fn drop_inner(&mut self) -> ExternalMemoryStatus {
-    match self.inner.take() {
-      None => ExternalMemoryStatus {
-        freed: false,
-        reason: Some("Memory has already been freed".to_string()),
-      },
-      Some(arc) => {
-        let strong_count = Arc::strong_count(&arc);
-        if strong_count > 1 {
-          ExternalMemoryStatus {
-            freed: false,
-            reason: Some(format!(
-              "Data has been dropped, but there are {} other strong reference(s) referring to this data on the native side, so the memory may not be released.",
-              strong_count - 1
-            )),
-          }
-        } else {
-          ExternalMemoryStatus { freed: true, reason: None }
-        }
-      }
-    }
+    release_arc(&mut self.inner)
   }
 
   #[napi(getter)]

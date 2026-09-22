@@ -28,6 +28,11 @@ use crate::types::js_callback::JsCallback;
 
 struct RolldownAsyncRuntime;
 
+/// Every async-runtime error reaches JavaScript as a plain reason string.
+fn to_napi_error(error: impl std::fmt::Display) -> napi::Error {
+  napi::Error::from_reason(error.to_string())
+}
+
 // SAFETY: `shutdown` closes admission, waits for the scheduler generation to quiesce,
 // joins native workers and releases active resources. Independently, napi-rs permanently
 // retains the native image once a module that registered this backend exported
@@ -42,14 +47,12 @@ unsafe impl AsyncRuntime for RolldownAsyncRuntime {
         handle.detach();
         Ok(())
       }
-      Err((error, task)) => {
-        Err(AsyncRuntimeRejection::new(task, napi::Error::from_reason(error.to_string())))
-      }
+      Err((error, task)) => Err(AsyncRuntimeRejection::new(task, to_napi_error(error))),
     }
   }
 
   fn block_on(&self, future: Pin<&mut dyn Future<Output = ()>>) -> napi::Result<()> {
-    try_block_on_dyn(future).map_err(|error| napi::Error::from_reason(error.to_string()))
+    try_block_on_dyn(future).map_err(to_napi_error)
   }
 
   fn spawn_blocking(
@@ -62,18 +65,16 @@ unsafe impl AsyncRuntime for RolldownAsyncRuntime {
         handle.detach();
         Ok(())
       }
-      Err((error, work)) => {
-        Err(AsyncRuntimeRejection::new(work, napi::Error::from_reason(error.to_string())))
-      }
+      Err((error, work)) => Err(AsyncRuntimeRejection::new(work, to_napi_error(error))),
     }
   }
 
   fn start(&self) -> napi::Result<()> {
-    start().map_err(|error| napi::Error::from_reason(error.to_string()))
+    start().map_err(to_napi_error)
   }
 
   fn shutdown(&self) -> napi::Result<()> {
-    shutdown().map_err(|error| napi::Error::from_reason(error.to_string()))
+    shutdown().map_err(to_napi_error)
   }
 
   // Two-phase teardown, mirrored from the napi-async-runtime 0.2.3 adapter
@@ -82,7 +83,7 @@ unsafe impl AsyncRuntime for RolldownAsyncRuntime {
   // event loop between the phases: on wasm32-wasip1-threads the JS thread may be the one a
   // running blocking closure is waiting on.
   fn begin_shutdown(&self) -> napi::Result<bool> {
-    begin_shutdown().map_err(|error| napi::Error::from_reason(error.to_string()))
+    begin_shutdown().map_err(to_napi_error)
   }
 
   fn shutdown_work_pending(&self) -> bool {
@@ -90,7 +91,7 @@ unsafe impl AsyncRuntime for RolldownAsyncRuntime {
   }
 
   fn finish_shutdown(&self) -> napi::Result<()> {
-    finish_shutdown().map_err(|error| napi::Error::from_reason(error.to_string()))
+    finish_shutdown().map_err(to_napi_error)
   }
 }
 
@@ -277,7 +278,7 @@ pub fn configure_async_runtime(options: BindingRuntimeOptions) -> napi::Result<(
       "the multi-thread runtime is unavailable in this WebAssembly build",
     ));
   }
-  configure_partial(patch).map_err(|error| napi::Error::from_reason(error.to_string()))
+  configure_partial(patch).map_err(to_napi_error)
 }
 
 #[napi]
@@ -558,16 +559,9 @@ fn current_thread_task_host_napi_result(
 }
 
 fn contain_current_thread_task_host_unwind<T>(operation: impl FnOnce() -> T) -> Option<T> {
-  match std::panic::catch_unwind(std::panic::AssertUnwindSafe(operation)) {
-    Ok(value) => Some(value),
-    Err(payload) => {
-      if let Err(nested) = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| drop(payload)))
-      {
-        std::mem::forget(nested);
-      }
-      None
-    }
-  }
+  std::panic::catch_unwind(std::panic::AssertUnwindSafe(operation))
+    .map_err(rolldown_std_utils::discard_panic_payload)
+    .ok()
 }
 
 #[cfg(test)]
@@ -826,21 +820,15 @@ impl NativeCurrentThreadTaskHostInner {
   fn dispatch(&self, delivery: CurrentThreadTaskDelivery) -> bool {
     let data: *mut std::ffi::c_void =
       Box::into_raw(Box::new(NativeCurrentThreadTaskHostPayload::new(delivery))).cast();
-    let Some(status) =
-      self.call_threadsafe_function_with(data, |threadsafe_function, data| unsafe {
-        napi::sys::napi_call_threadsafe_function(
-          threadsafe_function,
-          data,
-          napi::sys::ThreadsafeFunctionCallMode::nonblocking,
-        )
-      })
-    else {
-      unsafe {
-        drop(Box::<NativeCurrentThreadTaskHostPayload>::from_raw(data.cast()));
-      }
-      return false;
-    };
-    if status != napi::sys::Status::napi_ok {
+    let status = self.call_threadsafe_function_with(data, |threadsafe_function, data| unsafe {
+      napi::sys::napi_call_threadsafe_function(
+        threadsafe_function,
+        data,
+        napi::sys::ThreadsafeFunctionCallMode::nonblocking,
+      )
+    });
+    // `None` (host not live) and a non-ok status both mean Node-API did not take the payload.
+    if status != Some(napi::sys::Status::napi_ok) {
       unsafe {
         drop(Box::<NativeCurrentThreadTaskHostPayload>::from_raw(data.cast()));
       }
@@ -1098,39 +1086,31 @@ impl RelayIdAllocator {
 struct RelayIdExhausted;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
-#[repr(u8)]
 enum RelayCancellationAccounting {
-  HostHealth = 0,
-  CleanupOnly = 1,
+  HostHealth,
+  CleanupOnly,
 }
 
+#[derive(Default)]
 struct HostTimerRelayHealth {
-  cancellation_accounting: std::sync::atomic::AtomicU8,
+  /// `true` means [`RelayCancellationAccounting::CleanupOnly`]; starts as `HostHealth`.
+  cleanup_only: std::sync::atomic::AtomicBool,
   failure_recorded: std::sync::atomic::AtomicBool,
-}
-
-impl Default for HostTimerRelayHealth {
-  fn default() -> Self {
-    Self {
-      cancellation_accounting: std::sync::atomic::AtomicU8::new(
-        RelayCancellationAccounting::HostHealth as u8,
-      ),
-      failure_recorded: std::sync::atomic::AtomicBool::new(false),
-    }
-  }
 }
 
 impl HostTimerRelayHealth {
   fn set_cancellation_accounting(&self, accounting: RelayCancellationAccounting) {
-    self.cancellation_accounting.store(accounting as u8, std::sync::atomic::Ordering::Release);
+    self.cleanup_only.store(
+      accounting == RelayCancellationAccounting::CleanupOnly,
+      std::sync::atomic::Ordering::Release,
+    );
   }
 
   fn cancellation_accounting(&self) -> RelayCancellationAccounting {
-    match self.cancellation_accounting.load(std::sync::atomic::Ordering::Acquire) {
-      value if value == RelayCancellationAccounting::CleanupOnly as u8 => {
-        RelayCancellationAccounting::CleanupOnly
-      }
-      _ => RelayCancellationAccounting::HostHealth,
+    if self.cleanup_only.load(std::sync::atomic::Ordering::Acquire) {
+      RelayCancellationAccounting::CleanupOnly
+    } else {
+      RelayCancellationAccounting::HostHealth
     }
   }
 
@@ -1409,13 +1389,10 @@ fn take_pending_host_timer(
 }
 
 fn run_host_timer_cleanup_safely(cleanup: impl FnOnce()) {
-  if let Err(payload) = std::panic::catch_unwind(std::panic::AssertUnwindSafe(cleanup))
-    && let Err(nested_payload) =
-      std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| drop(payload)))
-  {
-    // Quarantine the nested payload so a panicking payload destructor cannot unwind
+  if let Err(payload) = std::panic::catch_unwind(std::panic::AssertUnwindSafe(cleanup)) {
+    // Quarantines a nested payload so a panicking payload destructor cannot unwind
     // through the napi env cleanup hook either.
-    std::mem::forget(nested_payload);
+    rolldown_std_utils::discard_panic_payload(payload);
   }
 }
 
@@ -1498,6 +1475,54 @@ fn recover_host_timer_failure(recover: impl FnOnce(), diagnostic: std::fmt::Argu
   });
 }
 
+/// The stderr line for one [`HostTimerFailureAction`]. It is formatted lazily, so the
+/// text is still written after `recover` ran and inside the same unwind boundary.
+struct HostTimerFailureDiagnostic<'a> {
+  action: HostTimerFailureAction,
+  /// `"callback"` (schedule relay) or `"cancellation callback"`.
+  callback: &'static str,
+  /// `"failed"` or `"could not be queued"`.
+  operation: &'static str,
+  /// Only the cancellation diagnostics name the relay.
+  relay_id: Option<u32>,
+  error: &'a napi::Error,
+}
+
+impl std::fmt::Display for HostTimerFailureDiagnostic<'_> {
+  fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    fn for_relay(f: &mut std::fmt::Formatter<'_>, relay_id: Option<u32>) -> std::fmt::Result {
+      match relay_id {
+        Some(relay_id) => write!(f, " for relay {relay_id}"),
+        None => Ok(()),
+      }
+    }
+
+    let Self { action, callback, operation, relay_id, error } = *self;
+    write!(f, "rolldown: host timer {callback} {operation}")?;
+    match action {
+      HostTimerFailureAction::Duplicate => {
+        for_relay(f, relay_id)?;
+        f.write_str(" after this relay failure was already accounted")?;
+      }
+      HostTimerFailureAction::EvictHost => {
+        for_relay(f, relay_id)?;
+        f.write_str(" (host gone, evicting)")?;
+      }
+      HostTimerFailureAction::EvictHostAfterStrikes(strikes) => {
+        write!(f, " {strikes} times in a row, evicting this timer host")?;
+        if let Some(relay_id) = relay_id {
+          write!(f, " (relay {relay_id})")?;
+        }
+      }
+      HostTimerFailureAction::Retry(strikes) => {
+        for_relay(f, relay_id)?;
+        write!(f, " ({strikes}/{HOST_TIMER_MAX_TRANSIENT_FAILURES} before eviction)")?;
+      }
+    }
+    write!(f, ": {error}")
+  }
+}
+
 impl JsTimerHostInner {
   fn lock_pending(
     &self,
@@ -1546,110 +1571,30 @@ impl JsTimerHostInner {
       return;
     }
 
-    match record_host_timer_failure(
+    let action = record_host_timer_failure(
       &self.transient_failures,
       relay_health,
       error.status,
       self.is_live(),
-    ) {
-      HostTimerFailureAction::Duplicate => {
-        recover_host_timer_failure(
-          || {},
-          format_args!(
-            "rolldown: host timer cancellation callback {operation} for relay {relay_id} after \
-             this relay failure was already accounted: {error}"
-          ),
-        );
-      }
-      HostTimerFailureAction::EvictHost => {
-        recover_host_timer_failure(
-          || self.evict(),
-          format_args!(
-            "rolldown: host timer cancellation callback {operation} for relay {relay_id} (host \
-             gone, evicting): {error}"
-          ),
-        );
-      }
-      HostTimerFailureAction::EvictHostAfterStrikes(strikes) => {
-        recover_host_timer_failure(
-          || self.evict(),
-          format_args!(
-            "rolldown: host timer cancellation callback {operation} {strikes} times in a row, \
-             evicting this timer host (relay {relay_id}): {error}"
-          ),
-        );
-      }
-      HostTimerFailureAction::Retry(strikes) => {
-        recover_host_timer_failure(
-          || {},
-          format_args!(
-            "rolldown: host timer cancellation callback {operation} for relay {relay_id} \
-             ({strikes}/{HOST_TIMER_MAX_TRANSIENT_FAILURES} before eviction): {error}"
-          ),
-        );
-      }
-    }
-  }
-
-  fn cancel_relay(
-    self: &std::sync::Arc<Self>,
-    relay_id: u32,
-    relay_health: std::sync::Arc<HostTimerRelayHealth>,
-  ) {
-    let callback_inner = std::sync::Arc::clone(self);
-    let callback_health = std::sync::Arc::clone(&relay_health);
-    let status = self.cancel_callback.call_with_return_value(
-      FnArgs { data: (relay_id,) },
-      ThreadsafeFunctionCallMode::NonBlocking,
-      move |result, _| {
-        let error = match result {
-          Ok(napi::Either::A(())) => {
-            if callback_health.cancellation_accounting() == RelayCancellationAccounting::HostHealth
-            {
-              reset_host_timer_failures_after_success(
-                &callback_inner.transient_failures,
-                &callback_health,
-              );
-            }
-            return Ok(());
-          }
-          Ok(napi::Either::B(invalid)) => napi::Error::new(
-            napi::Status::InvalidArg,
-            format!(
-              "The timer cancellation callback returned `{}`, but expected `undefined`.",
-              invalid.value_type.to_string().to_ascii_lowercase()
-            ),
-          ),
-          Err(error) => error,
-        };
-        callback_inner.handle_cancellation_failure(relay_id, &callback_health, error, false);
-        Ok(())
-      },
     );
-    if status != napi::Status::Ok {
-      let error = napi::Error::new(status, "Threadsafe timer cancellation callback call failed");
-      self.handle_cancellation_failure(relay_id, &relay_health, error, true);
-    }
-  }
-
-  fn mark_relay_callback_complete(&self, id: TimerId, relay_id: u32) -> bool {
-    let mut pending = self.lock_pending();
-    match pending.get_mut(&id) {
-      Some(slot) if slot.relay_id == relay_id => {
-        slot.schedule_state = RelayScheduleState::CallbackComplete;
-        false
-      }
-      _ => true,
-    }
-  }
-
-  fn take_pending_relay(
-    &self,
-    id: TimerId,
-    relay_id: u32,
-    accounting: RelayCancellationAccounting,
-  ) -> Option<PendingHostTimer> {
-    take_pending_host_timer(&self.pending, id, relay_id, accounting)
+    recover_host_timer_failure(
+      || match action {
+        HostTimerFailureAction::EvictHost | HostTimerFailureAction::EvictHostAfterStrikes(_) => {
+          self.evict();
+        }
+        HostTimerFailureAction::Duplicate | HostTimerFailureAction::Retry(_) => {}
+      },
+      format_args!(
+        "{}",
+        HostTimerFailureDiagnostic {
+          action,
+          callback: "cancellation callback",
+          operation,
+          relay_id: Some(relay_id),
+          error: &error,
+        }
+      ),
+    );
   }
 
   async fn invoke_schedule_callback(
@@ -1717,11 +1662,18 @@ impl PendingRelayState for JsTimerHostInner {
     relay_id: u32,
     accounting: RelayCancellationAccounting,
   ) -> Option<PendingHostTimer> {
-    JsTimerHostInner::take_pending_relay(self, id, relay_id, accounting)
+    take_pending_host_timer(&self.pending, id, relay_id, accounting)
   }
 
   fn mark_relay_callback_complete(&self, id: TimerId, relay_id: u32) -> bool {
-    JsTimerHostInner::mark_relay_callback_complete(self, id, relay_id)
+    let mut pending = self.lock_pending();
+    match pending.get_mut(&id) {
+      Some(slot) if slot.relay_id == relay_id => {
+        slot.schedule_state = RelayScheduleState::CallbackComplete;
+        false
+      }
+      _ => true,
+    }
   }
 
   fn cancel_relay(
@@ -1729,7 +1681,40 @@ impl PendingRelayState for JsTimerHostInner {
     relay_id: u32,
     relay_health: std::sync::Arc<HostTimerRelayHealth>,
   ) {
-    JsTimerHostInner::cancel_relay(self, relay_id, relay_health);
+    let callback_inner = std::sync::Arc::clone(self);
+    let callback_health = std::sync::Arc::clone(&relay_health);
+    let status = self.cancel_callback.call_with_return_value(
+      FnArgs { data: (relay_id,) },
+      ThreadsafeFunctionCallMode::NonBlocking,
+      move |result, _| {
+        let error = match result {
+          Ok(napi::Either::A(())) => {
+            if callback_health.cancellation_accounting() == RelayCancellationAccounting::HostHealth
+            {
+              reset_host_timer_failures_after_success(
+                &callback_inner.transient_failures,
+                &callback_health,
+              );
+            }
+            return Ok(());
+          }
+          Ok(napi::Either::B(invalid)) => napi::Error::new(
+            napi::Status::InvalidArg,
+            format!(
+              "The timer cancellation callback returned `{}`, but expected `undefined`.",
+              invalid.value_type.to_string().to_ascii_lowercase()
+            ),
+          ),
+          Err(error) => error,
+        };
+        callback_inner.handle_cancellation_failure(relay_id, &callback_health, error, false);
+        Ok(())
+      },
+    );
+    if status != napi::Status::Ok {
+      let error = napi::Error::new(status, "Threadsafe timer cancellation callback call failed");
+      self.handle_cancellation_failure(relay_id, &relay_health, error, true);
+    }
   }
 }
 
@@ -1826,56 +1811,32 @@ impl TimerDriver for JsTimerHost {
             error.status,
             inner.is_live(),
           );
-          match action {
-            HostTimerFailureAction::EvictHost => {
-              recover_host_timer_failure(
-                || inner.evict(),
-                format_args!("rolldown: host timer callback failed (host gone, evicting): {error}"),
-              );
-            }
-            HostTimerFailureAction::EvictHostAfterStrikes(strikes) => {
-              recover_host_timer_failure(
-                || inner.evict(),
-                format_args!(
-                  "rolldown: host timer callback failed {strikes} times in a row, evicting this \
-                   timer host: {error}"
-                ),
-              );
-            }
-            HostTimerFailureAction::Retry(strikes) => {
-              recover_host_timer_failure(
-                || {
-                  if let Some(pending) =
-                    inner.take_pending_relay(id, relay_id, RelayCancellationAccounting::CleanupOnly)
-                  {
-                    // The callback may have armed a timeout before failing, so cleanup
-                    // still cancels -- without adding a second strike for the same
-                    // relay failure.
-                    retire_pending_relay(&inner, pending);
-                  }
-                },
-                format_args!(
-                  "rolldown: host timer callback failed \
-                   ({strikes}/{HOST_TIMER_MAX_TRANSIENT_FAILURES} before eviction): {error}"
-                ),
-              );
-            }
-            HostTimerFailureAction::Duplicate => {
-              recover_host_timer_failure(
-                || {
-                  if let Some(pending) =
-                    inner.take_pending_relay(id, relay_id, RelayCancellationAccounting::CleanupOnly)
-                  {
-                    retire_pending_relay(&inner, pending);
-                  }
-                },
-                format_args!(
-                  "rolldown: host timer callback failed after this relay failure was already \
-                   accounted: {error}"
-                ),
-              );
-            }
-          }
+          recover_host_timer_failure(
+            || match action {
+              HostTimerFailureAction::EvictHost
+              | HostTimerFailureAction::EvictHostAfterStrikes(_) => inner.evict(),
+              HostTimerFailureAction::Retry(_) | HostTimerFailureAction::Duplicate => {
+                if let Some(pending) =
+                  inner.take_pending_relay(id, relay_id, RelayCancellationAccounting::CleanupOnly)
+                {
+                  // The callback may have armed a timeout before failing, so cleanup
+                  // still cancels -- without adding a second strike for the same
+                  // relay failure.
+                  retire_pending_relay(&inner, pending);
+                }
+              }
+            },
+            format_args!(
+              "{}",
+              HostTimerFailureDiagnostic {
+                action,
+                callback: "callback",
+                operation: "failed",
+                relay_id: None,
+                error: &error,
+              }
+            ),
+          );
           relay_drop_guard.disarm();
         }
       }
@@ -2011,14 +1972,14 @@ fn install_async_runtime_backend() {
 #[cfg(all(feature = "runtime-submission-failure-test", not(target_family = "wasm")))]
 #[napi(js_name = "__rolldownTestStopAsyncRuntime")]
 pub fn stop_async_runtime_for_submission_failure_test() -> napi::Result<()> {
-  shutdown().map_err(|error| napi::Error::from_reason(error.to_string()))
+  shutdown().map_err(to_napi_error)
 }
 
 /// Restart the scheduler after `__rolldownTestStopAsyncRuntime`.
 #[cfg(all(feature = "runtime-submission-failure-test", not(target_family = "wasm")))]
 #[napi(js_name = "__rolldownTestStartAsyncRuntime")]
 pub fn start_async_runtime_for_submission_failure_test() -> napi::Result<()> {
-  start().map_err(|error| napi::Error::from_reason(error.to_string()))
+  start().map_err(to_napi_error)
 }
 
 /// What this binding is -- backend, flavor, target -- and the capabilities
@@ -3636,6 +3597,80 @@ mod tests {
       failures.load(Ordering::SeqCst),
       2,
       "a later success from the same relay must not hide its cancellation failure"
+    );
+  }
+
+  #[test]
+  fn host_timer_failure_diagnostics_keep_their_text() {
+    use napi::Status;
+
+    use super::HostTimerFailureDiagnostic;
+
+    let error = napi::Error::new(Status::GenericFailure, "boom");
+    let render = |action, callback, operation, relay_id| {
+      HostTimerFailureDiagnostic { action, callback, operation, relay_id, error: &error }
+        .to_string()
+    };
+    let strikes = 2;
+    let relay_id = 7;
+    for operation in ["failed", "could not be queued"] {
+      let cancellation =
+        |action| render(action, "cancellation callback", operation, Some(relay_id));
+      assert_eq!(
+        cancellation(HostTimerFailureAction::Duplicate),
+        format!(
+          "rolldown: host timer cancellation callback {operation} for relay {relay_id} after \
+           this relay failure was already accounted: {error}"
+        ),
+      );
+      assert_eq!(
+        cancellation(HostTimerFailureAction::EvictHost),
+        format!(
+          "rolldown: host timer cancellation callback {operation} for relay {relay_id} (host \
+           gone, evicting): {error}"
+        ),
+      );
+      assert_eq!(
+        cancellation(HostTimerFailureAction::EvictHostAfterStrikes(strikes)),
+        format!(
+          "rolldown: host timer cancellation callback {operation} {strikes} times in a row, \
+           evicting this timer host (relay {relay_id}): {error}"
+        ),
+      );
+      assert_eq!(
+        cancellation(HostTimerFailureAction::Retry(strikes)),
+        format!(
+          "rolldown: host timer cancellation callback {operation} for relay {relay_id} \
+           ({strikes}/{HOST_TIMER_MAX_TRANSIENT_FAILURES} before eviction): {error}"
+        ),
+      );
+    }
+
+    let relay = |action| render(action, "callback", "failed", None);
+    assert_eq!(
+      relay(HostTimerFailureAction::EvictHost),
+      format!("rolldown: host timer callback failed (host gone, evicting): {error}"),
+    );
+    assert_eq!(
+      relay(HostTimerFailureAction::EvictHostAfterStrikes(strikes)),
+      format!(
+        "rolldown: host timer callback failed {strikes} times in a row, evicting this \
+         timer host: {error}"
+      ),
+    );
+    assert_eq!(
+      relay(HostTimerFailureAction::Retry(strikes)),
+      format!(
+        "rolldown: host timer callback failed \
+         ({strikes}/{HOST_TIMER_MAX_TRANSIENT_FAILURES} before eviction): {error}"
+      ),
+    );
+    assert_eq!(
+      relay(HostTimerFailureAction::Duplicate),
+      format!(
+        "rolldown: host timer callback failed after this relay failure was already \
+         accounted: {error}"
+      ),
     );
   }
 }

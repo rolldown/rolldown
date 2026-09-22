@@ -181,7 +181,7 @@ Routing happens in `BundleCoordinator::run` (`bundle_coordinator.rs:98-150`):
 | `GetState`                 | `create_state_snapshot`, reply               |
 | `EnsureLatestBundleOutput` | `ensure_latest_bundle_output`, reply         |
 | `TriggerFullBuild`         | `trigger_full_build` (no reply)              |
-| `GetWatchedFiles`          | reply with the `watched_files` set           |
+| `GetWatchedFiles`          | reply with the watched paths of the watcher  |
 | `ModuleChanged`            | queue a `Rebuild`, schedule                  |
 | `Close`                    | await running task, then `break` the loop    |
 

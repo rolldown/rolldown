@@ -8,7 +8,10 @@ use notify::{RecursiveMode, TargetMode, WatchMode, Watcher};
 use notify_debouncer_full::{RecommendedCache, new_debouncer_opt};
 use rolldown_error::{BuildResult, ResultExt};
 
-use crate::{FsEventHandler, FsWatcherConfig, PathsMut, watcher::WatcherBackend};
+use crate::{
+  FsEventHandler, FsWatcherConfig,
+  watcher::{PathsMut, WatcherBackend},
+};
 
 pub fn create_backend<F: FsEventHandler>(
   event_handler: F,
@@ -71,10 +74,6 @@ impl PathsMut for NotifyPathsMutAdapter<'_> {
       .add(path, WatchMode { recursive_mode, target_mode: TargetMode::TrackPath })
       .map_err_to_unhandleable()
       .map_err(Into::into)
-  }
-
-  fn remove(&mut self, path: &Path) -> BuildResult<()> {
-    self.0.remove(path).map_err_to_unhandleable().map_err(Into::into)
   }
 
   fn commit(self: Box<Self>) -> BuildResult<()> {

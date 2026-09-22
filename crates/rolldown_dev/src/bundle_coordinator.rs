@@ -14,13 +14,10 @@ use rolldown_common::{WatchPath, WatcherChangeKind};
 use rolldown_dev_common::types::{DevCallbackError, DevCallbackResult};
 use rolldown_error::BuildResult;
 use rolldown_fs_watcher::{
-  FsChangeKind, FsEventResult, FsWatcher, PathsMut, RecursiveMode, map_notify_event,
+  FsChangeKind, FsEventResult, PathsSource, RecursiveMode, map_notify_event,
 };
 use rolldown_utils::{
-  dashmap::FxDashSet,
-  futures::spawn_detached,
-  indexmap::{FxIndexMap, FxIndexSet},
-  pattern_filter,
+  dashmap::FxDashSet, futures::spawn_detached, indexmap::FxIndexMap, pattern_filter,
 };
 use rustc_hash::FxHashSet;
 
@@ -53,19 +50,6 @@ struct WatchRegistrationErrorEvent {
   observed: bool,
 }
 
-/// The slice of the watcher `BundleCoordinator` drives - the local seam that
-/// lets tests substitute failing or recording watchers for path registration.
-/// Rationale on `rolldown_watcher`'s `TaskFsWatcher`, the same seam there.
-pub trait CoordinatorFsWatcher: Send {
-  fn paths_mut(&mut self) -> Box<dyn PathsMut + '_>;
-}
-
-impl CoordinatorFsWatcher for FsWatcher {
-  fn paths_mut(&mut self) -> Box<dyn PathsMut + '_> {
-    FsWatcher::paths_mut(self)
-  }
-}
-
 /// BundleCoordinator - coordinates build tasks and manages initial build state
 pub struct BundleCoordinator {
   bundler: Arc<Mutex<Bundler>>,
@@ -74,7 +58,7 @@ pub struct BundleCoordinator {
   /// field doc on `DevEngine::next_hmr_patch_id`.
   next_hmr_patch_id: Arc<AtomicU32>,
   rx: CoordinatorReceiver,
-  watcher: StdMutex<Box<dyn CoordinatorFsWatcher>>,
+  watcher: StdMutex<Box<dyn PathsSource>>,
   watched_files: FxDashSet<WatchPath>,
   /// Tracks the state of the initial build
   state: CoordinatorState,
@@ -96,7 +80,7 @@ impl BundleCoordinator {
     bundler: Arc<Mutex<Bundler>>,
     ctx: SharedDevContext,
     rx: CoordinatorReceiver,
-    watcher: impl CoordinatorFsWatcher + 'static,
+    watcher: impl PathsSource + 'static,
     next_hmr_patch_id: Arc<AtomicU32>,
   ) -> Self {
     Self {
@@ -770,61 +754,75 @@ impl BundleCoordinator {
   /// unwatched, so re-offering a path that is already registered is free and a
   /// path that arrives from both sources is added once.
   async fn update_watch_paths_including(&self, extra: &[ArcStr]) -> BuildResult<()> {
-    let (mut watch_files, cwd) = {
-      let bundler = self.bundler.lock().await;
-      (
-        bundler
-          .watch_files()
-          .iter()
-          .map(|watch_file| watch_file.clone())
-          .collect::<FxIndexSet<_>>(),
-        bundler.options().cwd.clone(),
-      )
-    };
-    watch_files.extend(extra.iter().cloned());
-    let watch_files = watch_files.into_iter().collect::<Vec<_>>();
-
     let include = self.ctx.options.watch_include.as_deref();
     let exclude = self.ctx.options.watch_exclude.as_deref();
+    // Filter while holding the bundler lock rather than copying the whole
+    // live set out first.
+    let new_watch_paths = {
+      let bundler = self.bundler.lock().await;
+      let live = bundler.watch_files();
+      let cwd = &bundler.options().cwd;
+      let cwd_str = cwd.to_string_lossy();
+      let new_watch_path = |watch_file: &str| {
+        Self::new_watch_path(&self.watched_files, watch_file, cwd, &cwd_str, include, exclude)
+      };
+      let mut new_watch_paths = live
+        .iter()
+        .filter_map(|watch_file| new_watch_path(watch_file.as_str()))
+        .collect::<Vec<_>>();
+      // Each path is offered once, live entries first: `extra` skips what the
+      // live set already offered and any repeat of itself.
+      let mut offered_extra = FxHashSet::default();
+      new_watch_paths.extend(
+        extra
+          .iter()
+          .filter(|watch_file| !live.contains(*watch_file) && offered_extra.insert(*watch_file))
+          .filter_map(|watch_file| new_watch_path(watch_file.as_str())),
+      );
+      new_watch_paths
+    };
 
-    Self::update_watch_paths_from(
-      &self.watcher,
-      &self.watched_files,
-      &watch_files,
-      &cwd,
-      include,
-      exclude,
-    )
+    Self::register_watch_paths(&self.watcher, &self.watched_files, new_watch_paths)
   }
 
-  fn update_watch_paths_from(
-    watcher: &StdMutex<Box<dyn CoordinatorFsWatcher>>,
+  /// `watch_file` as a [`WatchPath`] when it is not registered yet and passes
+  /// the `watch.include` / `watch.exclude` filter.
+  fn new_watch_path(
     watched_files: &FxDashSet<WatchPath>,
-    watch_files: &[ArcStr],
+    watch_file: &str,
     cwd: &Path,
+    cwd_str: &str,
     include: Option<&[rolldown_utils::pattern_filter::StringOrRegex]>,
     exclude: Option<&[rolldown_utils::pattern_filter::StringOrRegex]>,
+  ) -> Option<WatchPath> {
+    let watch_path = WatchPath::new(watch_file, cwd);
+    let path = watch_path.as_path();
+    (!watched_files.contains(path)
+      && pattern_filter::filter(exclude, include, &path.to_string_lossy(), cwd_str).inner())
+    .then_some(watch_path)
+  }
+
+  /// Add `new_watch_paths` in one paths transaction and publish the added
+  /// ones to `watched_files` only after it commits.
+  fn register_watch_paths(
+    watcher: &StdMutex<Box<dyn PathsSource>>,
+    watched_files: &FxDashSet<WatchPath>,
+    new_watch_paths: Vec<WatchPath>,
   ) -> BuildResult<()> {
-    let cwd_str = cwd.to_string_lossy();
     let mut watcher = watcher.lock().ok().context("Failed to acquire watcher lock")?;
     let mut paths_mut = watcher.paths_mut();
     let mut pending_watch_files = Vec::new();
-    for watch_file in watch_files {
-      let watch_path = WatchPath::new(watch_file.as_str(), cwd);
+    for watch_path in new_watch_paths {
       let path = watch_path.as_path();
-      if !watched_files.contains(path)
-        && pattern_filter::filter(exclude, include, &path.to_string_lossy(), &cwd_str).inner()
-      {
-        // Recursive so a directory passed to `addWatchFile` covers its
-        // descendants (#10944); for a plain file it is the same as NonRecursive.
-        match paths_mut.add(path, RecursiveMode::Recursive) {
-          Ok(()) => pending_watch_files.push(watch_path),
-          // `addWatchFile` accepts nonexistent and virtual paths, so a refused
-          // registration must not fail the build. Skipped paths are retried on
-          // later builds because they never enter `watched_files`.
-          Err(error) => {
-            tracing::debug!(name = "notify watch skipped", path = ?path, error = ?error);
-          }
+      // Recursive so a directory passed to `addWatchFile` covers its
+      // descendants (#10944); for a plain file it is the same as NonRecursive.
+      match paths_mut.add(path, RecursiveMode::Recursive) {
+        Ok(()) => pending_watch_files.push(watch_path),
+        // `addWatchFile` accepts nonexistent and virtual paths, so a refused
+        // registration must not fail the build. Skipped paths are retried on
+        // later builds because they never enter `watched_files`.
+        Err(error) => {
+          tracing::debug!(name = "notify watch skipped", path = ?path, error = ?error);
         }
       }
     }
@@ -861,7 +859,8 @@ mod tests {
   use futures::channel::oneshot;
   use rolldown::{BundlerOptions, DevModeOptions, ExperimentalOptions};
   use rolldown_error::BatchedBuildDiagnostic;
-  use rolldown_fs_watcher::FsWatcherConfig;
+  use rolldown_fs_watcher::{FsWatcher, FsWatcherConfig, PathsMut};
+  use rolldown_workspace::TestDir;
   use std::{
     fs,
     path::{Path, PathBuf},
@@ -872,32 +871,33 @@ mod tests {
     time::{Duration, timeout},
   };
 
-  static NEXT_TEST_DIR: AtomicUsize = AtomicUsize::new(0);
   const LIVENESS_TIMEOUT: Duration = Duration::from_secs(10);
 
-  struct TestDir(PathBuf);
-
-  impl TestDir {
-    fn new() -> Self {
-      let path = std::env::temp_dir().join(format!(
-        "rolldown-dev-watch-registration-{}-{}",
-        std::process::id(),
-        NEXT_TEST_DIR.fetch_add(1, Ordering::Relaxed)
-      ));
-      fs::create_dir_all(&path).expect("create test directory");
-      // Module ids are canonical, so a `/var` -> `/private/var` temp dir would
-      // stop a changed path from resolving to its module and silently turn HMR
-      // into a no-op. `dunce` keeps that realpath behaviour while dropping the
-      // `\\?\` verbatim prefix `std::fs::canonicalize` adds on Windows, which
-      // the resolver cannot resolve an entry from.
-      Self(dunce::canonicalize(&path).expect("canonicalize test directory"))
-    }
-  }
-
-  impl Drop for TestDir {
-    fn drop(&mut self) {
-      let _ = fs::remove_dir_all(&self.0);
-    }
+  /// The registration step of `update_watch_paths_including`, over a given
+  /// list instead of the bundler's live set.
+  fn update_watch_paths_from(
+    watcher: &StdMutex<Box<dyn PathsSource>>,
+    watched_files: &FxDashSet<WatchPath>,
+    watch_files: &[ArcStr],
+    cwd: &Path,
+    include: Option<&[rolldown_utils::pattern_filter::StringOrRegex]>,
+    exclude: Option<&[rolldown_utils::pattern_filter::StringOrRegex]>,
+  ) -> BuildResult<()> {
+    let cwd_str = cwd.to_string_lossy();
+    let new_watch_paths = watch_files
+      .iter()
+      .filter_map(|watch_file| {
+        BundleCoordinator::new_watch_path(
+          watched_files,
+          watch_file.as_str(),
+          cwd,
+          &cwd_str,
+          include,
+          exclude,
+        )
+      })
+      .collect();
+    BundleCoordinator::register_watch_paths(watcher, watched_files, new_watch_paths)
   }
 
   fn create_observation_test_coordinator() -> BundleCoordinator {
@@ -959,7 +959,7 @@ mod tests {
     }
   }
 
-  impl CoordinatorFsWatcher for CommitFailingWatcher {
+  impl PathsSource for CommitFailingWatcher {
     fn paths_mut(&mut self) -> Box<dyn PathsMut + '_> {
       Box::new(CommitFailingPaths {
         commit_attempts: Arc::clone(&self.commit_attempts),
@@ -1000,7 +1000,7 @@ mod tests {
     }
   }
 
-  impl CoordinatorFsWatcher for AddFailingWatcher {
+  impl PathsSource for AddFailingWatcher {
     fn paths_mut(&mut self) -> Box<dyn PathsMut + '_> {
       Box::new(AddFailingPaths {
         commit_attempts: Arc::clone(&self.commit_attempts),
@@ -1036,7 +1036,7 @@ mod tests {
     }
   }
 
-  impl CoordinatorFsWatcher for RecordingWatcher {
+  impl PathsSource for RecordingWatcher {
     fn paths_mut(&mut self) -> Box<dyn PathsMut + '_> {
       Box::new(RecordingPaths { added: Arc::clone(&self.added), pending: Vec::new() })
     }
@@ -1045,7 +1045,7 @@ mod tests {
   #[test]
   fn failed_watch_add_commits_and_publishes_only_successful_additions() {
     let commit_attempts = Arc::new(AtomicUsize::new(0));
-    let watcher: Box<dyn CoordinatorFsWatcher> = Box::new(AddFailingWatcher {
+    let watcher: Box<dyn PathsSource> = Box::new(AddFailingWatcher {
       commit_attempts: Arc::clone(&commit_attempts),
       fail_commit: false,
     });
@@ -1056,7 +1056,7 @@ mod tests {
     let successful_after = ArcStr::from("/virtual/project/after.js");
     let watch_files = [successful_before.clone(), failed.clone(), successful_after.clone()];
 
-    BundleCoordinator::update_watch_paths_from(
+    update_watch_paths_from(
       &watcher,
       &watched_files,
       &watch_files,
@@ -1202,7 +1202,7 @@ mod tests {
   #[test]
   fn watch_add_and_commit_failures_are_aggregated_without_publication() {
     let commit_attempts = Arc::new(AtomicUsize::new(0));
-    let watcher: Box<dyn CoordinatorFsWatcher> = Box::new(AddFailingWatcher {
+    let watcher: Box<dyn PathsSource> = Box::new(AddFailingWatcher {
       commit_attempts: Arc::clone(&commit_attempts),
       fail_commit: true,
     });
@@ -1214,7 +1214,7 @@ mod tests {
 
     // The refused add is skipped by contract; only the commit failure is a
     // build error, and nothing is published when the commit fails.
-    let error = BundleCoordinator::update_watch_paths_from(
+    let error = update_watch_paths_from(
       &watcher,
       &watched_files,
       &watch_files,
@@ -1236,7 +1236,7 @@ mod tests {
   #[test]
   fn failed_watch_commit_is_not_published_and_is_retried() {
     let commit_attempts = Arc::new(AtomicUsize::new(0));
-    let watcher: Box<dyn CoordinatorFsWatcher> = Box::new(CommitFailingWatcher {
+    let watcher: Box<dyn PathsSource> = Box::new(CommitFailingWatcher {
       commit_attempts: Arc::clone(&commit_attempts),
       failures_before_success: 1,
     });
@@ -1244,7 +1244,7 @@ mod tests {
     let watched_files = FxDashSet::default();
     let watch_file = ArcStr::from("/virtual/project/input.js");
 
-    let first = BundleCoordinator::update_watch_paths_from(
+    let first = update_watch_paths_from(
       &watcher,
       &watched_files,
       std::slice::from_ref(&watch_file),
@@ -1256,7 +1256,7 @@ mod tests {
     assert!(!watched_files.contains(Path::new(watch_file.as_str())));
     assert_eq!(commit_attempts.load(Ordering::SeqCst), 1);
 
-    BundleCoordinator::update_watch_paths_from(
+    update_watch_paths_from(
       &watcher,
       &watched_files,
       std::slice::from_ref(&watch_file),
@@ -1271,12 +1271,12 @@ mod tests {
 
   #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
   async fn recovered_module_registration_failure_reaches_queued_observers_once() {
-    let test_dir = TestDir::new();
-    let input = test_dir.0.join("main.js");
+    let test_dir = TestDir::new_canonical("rolldown-dev-watch-registration");
+    let input = test_dir.path().join("main.js");
     fs::write(&input, "export const value = 1;").expect("write test input");
 
     let mut bundler = Bundler::new(BundlerOptions {
-      cwd: Some(test_dir.0.clone()),
+      cwd: Some(test_dir.path().to_path_buf()),
       input: Some(vec![input.to_string_lossy().into_owned().into()]),
       experimental: Some(ExperimentalOptions {
         incremental_build: Some(true),
@@ -1410,12 +1410,12 @@ mod tests {
 
   #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
   async fn active_close_retains_final_build_watch_registration_failure() {
-    let test_dir = TestDir::new();
-    let input = test_dir.0.join("main.js");
+    let test_dir = TestDir::new_canonical("rolldown-dev-watch-registration");
+    let input = test_dir.path().join("main.js");
     fs::write(&input, "export const value = 1;").expect("write test input");
 
     let mut bundler = Bundler::new(BundlerOptions {
-      cwd: Some(test_dir.0.clone()),
+      cwd: Some(test_dir.path().to_path_buf()),
       input: Some(vec![input.to_string_lossy().into_owned().into()]),
       experimental: Some(ExperimentalOptions {
         incremental_build: Some(true),
@@ -1525,12 +1525,12 @@ mod tests {
   /// instead of racing for it.
   #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
   async fn module_changed_registers_snapshot_paths_dropped_by_a_handle_replacement() {
-    let test_dir = TestDir::new();
-    let input = test_dir.0.join("main.js");
+    let test_dir = TestDir::new_canonical("rolldown-dev-watch-registration");
+    let input = test_dir.path().join("main.js");
     fs::write(&input, "export const value = 1;").expect("write test input");
 
     let mut bundler = Bundler::new(BundlerOptions {
-      cwd: Some(test_dir.0.clone()),
+      cwd: Some(test_dir.path().to_path_buf()),
       input: Some(vec![input.to_string_lossy().into_owned().into()]),
       experimental: Some(ExperimentalOptions {
         incremental_build: Some(true),
@@ -1544,7 +1544,7 @@ mod tests {
 
     // Stand in for `compile_lazy_entry`, which records the lazily compiled
     // module's sources on the handle it just built with.
-    let lazy = test_dir.0.join("lazy.css");
+    let lazy = test_dir.path().join("lazy.css");
     fs::write(&lazy, ".lazy { color: teal; }").expect("write lazy source");
     let lazy = ArcStr::from(lazy.to_string_lossy().into_owned());
     bundler.watch_files().insert(lazy.clone());
@@ -1614,12 +1614,12 @@ mod tests {
   /// the `ErrorStage::Rebuild` recovery branch of `handle_file_changes`.
   #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
   async fn bundle_completed_registers_paths_dropped_by_the_rebuild_handle() {
-    let test_dir = TestDir::new();
-    let input = test_dir.0.join("main.js");
+    let test_dir = TestDir::new_canonical("rolldown-dev-watch-registration");
+    let input = test_dir.path().join("main.js");
     fs::write(&input, "export const value = 1;").expect("write test input");
 
     let mut bundler = Bundler::new(BundlerOptions {
-      cwd: Some(test_dir.0.clone()),
+      cwd: Some(test_dir.path().to_path_buf()),
       input: Some(vec![input.to_string_lossy().into_owned().into()]),
       experimental: Some(ExperimentalOptions {
         incremental_build: Some(true),
@@ -1633,7 +1633,7 @@ mod tests {
 
     // The edit introduces a module the initial build never saw, so only this
     // task can register it.
-    let dependency = test_dir.0.join("dep.js");
+    let dependency = test_dir.path().join("dep.js");
     fs::write(&dependency, "export const dep = 1;").expect("write the new dependency");
     fs::write(&input, "import './dep.js';\nexport const value = 2;").expect("rewrite test input");
 

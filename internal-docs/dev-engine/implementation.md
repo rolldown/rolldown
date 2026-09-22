@@ -965,11 +965,15 @@ output is fresh). This works because `update_watch_paths()` runs even
 after a failed build (`handle_bundle_completed`, §11), so files that
 were already parsed are watched. Creating a watcher path transaction can pause
 event delivery on backends such as macOS FSEvents until the transaction is
-committed. The coordinator therefore records individual `add` failures,
+committed (FSEvents restarts its stream and drops the events in between). The
+coordinator therefore first keeps only the paths not yet in its `watched_files`
+set that pass `watch.include` / `watch.exclude`. Inside the transaction it skips a
+refused `add` (logged at debug level; `addWatchFile` accepts nonexistent and
+virtual paths, and a skipped path is offered again on the next build),
 continues staging the remaining paths, and always calls `commit`. If commit
-succeeds, only paths whose `add` succeeded are published to the coordinator's
-`watched_files` set; if commit fails, none of the staged paths are published.
-Add and commit failures are aggregated when both occur.
+succeeds, only paths whose `add` succeeded are published to `watched_files`;
+if commit fails, none of the staged paths are published and the commit error
+is the registration failure.
 
 Watch-registration failures use explicit lifecycle observers rather than one
 permanent error slot. `wait_for_ongoing_bundle` and

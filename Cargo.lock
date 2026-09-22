@@ -2716,7 +2716,6 @@ dependencies = [
  "anyhow",
  "arcstr",
  "async-lock",
- "dunce",
  "futures",
  "rolldown",
  "rolldown-notify",

@@ -8,7 +8,7 @@ use rolldown_error::{
   BatchedBuildDiagnostic, BuildDiagnostic, BuildResult, Diagnostic, DiagnosticOptions,
   filter_out_disabled_diagnostics,
 };
-use rolldown_fs_watcher::{FsWatcher, PathsMut, RecursiveMode};
+use rolldown_fs_watcher::RecursiveMode;
 use rolldown_utils::{dashmap::FxDashSet, pattern_filter};
 use std::path::{Component, Path, PathBuf};
 use std::sync::Arc;
@@ -27,19 +27,9 @@ oxc_index::define_index_type! {
   pub struct WatchGroupIdx = u32;
 }
 
-/// The slice of the watcher a watch task drives. `rolldown_fs_watcher`
-/// collapsed its backends behind the concrete [`FsWatcher`], so this local
-/// seam is what lets tests substitute failing or recording watchers for path
-/// registration.
-pub trait TaskFsWatcher: Send {
-  fn paths_mut(&mut self) -> Box<dyn PathsMut + '_>;
-}
-
-impl TaskFsWatcher for FsWatcher {
-  fn paths_mut(&mut self) -> Box<dyn PathsMut + '_> {
-    FsWatcher::paths_mut(self)
-  }
-}
+/// The slice of the watcher a watch task drives: the path-registration seam
+/// shared with the dev engine, under this crate's name.
+pub use rolldown_fs_watcher::PathsSource as TaskFsWatcher;
 
 /// Per-task data container that owns a bundler and shares its config group's
 /// file-system watcher.
@@ -485,6 +475,8 @@ pub enum WatchTaskBuildError {
 #[cfg(test)]
 mod tests {
   use super::*;
+  use rolldown_fs_watcher::PathsMut;
+  use rolldown_workspace::TestDir;
   use std::{
     fs,
     path::{Path, PathBuf},
@@ -493,28 +485,6 @@ mod tests {
       atomic::{AtomicBool, AtomicUsize, Ordering},
     },
   };
-
-  static NEXT_TEST_DIR: AtomicUsize = AtomicUsize::new(0);
-
-  struct TestDir(PathBuf);
-
-  impl TestDir {
-    fn new() -> Self {
-      let path = std::env::temp_dir().join(format!(
-        "rolldown-watch-registration-{}-{}",
-        std::process::id(),
-        NEXT_TEST_DIR.fetch_add(1, Ordering::Relaxed)
-      ));
-      fs::create_dir_all(&path).expect("create test directory");
-      Self(path)
-    }
-  }
-
-  impl Drop for TestDir {
-    fn drop(&mut self) {
-      let _ = fs::remove_dir_all(&self.0);
-    }
-  }
 
   struct CommitFailingWatcher {
     commit_attempts: Arc<AtomicUsize>,
@@ -615,7 +585,7 @@ mod tests {
     names
       .iter()
       .map(|name| {
-        let file = test_dir.0.join(name);
+        let file = test_dir.path().join(name);
         fs::write(&file, "export const value = 1;").expect("write input");
         ArcStr::from(
           dunce::canonicalize(file).expect("canonicalize input").to_string_lossy().as_ref(),
@@ -644,9 +614,10 @@ mod tests {
 
   #[test]
   fn failed_watch_add_commits_attempts_later_paths_and_publishes_successes() {
-    let test_dir = TestDir::new();
+    let test_dir = TestDir::new("rolldown-watch-registration");
     let watch_files = create_watch_files(&test_dir, &["before.js", "fail.js", "after.js"]);
-    let options = NormalizedBundlerOptions { cwd: test_dir.0.clone(), ..Default::default() };
+    let options =
+      NormalizedBundlerOptions { cwd: test_dir.path().to_path_buf(), ..Default::default() };
     let AddFailingWatcherFixture { watcher, add_attempts, commit_attempts, event_delivery_paused } =
       create_add_failing_watcher(false);
     let watched_files = FxDashSet::default();
@@ -686,9 +657,10 @@ mod tests {
 
   #[test]
   fn watch_add_and_commit_failures_are_aggregated_without_publication() {
-    let test_dir = TestDir::new();
+    let test_dir = TestDir::new("rolldown-watch-registration");
     let watch_files = create_watch_files(&test_dir, &["success.js", "fail.js"]);
-    let options = NormalizedBundlerOptions { cwd: test_dir.0.clone(), ..Default::default() };
+    let options =
+      NormalizedBundlerOptions { cwd: test_dir.path().to_path_buf(), ..Default::default() };
     let AddFailingWatcherFixture { watcher, add_attempts, commit_attempts, event_delivery_paused } =
       create_add_failing_watcher(true);
     let watched_files = FxDashSet::default();
@@ -723,8 +695,8 @@ mod tests {
 
   #[test]
   fn failed_watch_commit_is_not_published_and_is_retried() {
-    let test_dir = TestDir::new();
-    let file = test_dir.0.join("input.js");
+    let test_dir = TestDir::new("rolldown-watch-registration");
+    let file = test_dir.path().join("input.js");
     fs::write(&file, "export const value = 1;").expect("write input");
     let file = dunce::canonicalize(file).expect("canonicalize input");
     let watch_file = ArcStr::from(file.to_string_lossy().as_ref());
@@ -783,9 +755,10 @@ mod tests {
 
   #[test]
   fn sibling_task_adopts_group_registered_paths_without_backend_transaction() {
-    let test_dir = TestDir::new();
+    let test_dir = TestDir::new("rolldown-watch-registration");
     let watch_files = create_watch_files(&test_dir, &["shared.js"]);
-    let options = NormalizedBundlerOptions { cwd: test_dir.0.clone(), ..Default::default() };
+    let options =
+      NormalizedBundlerOptions { cwd: test_dir.path().to_path_buf(), ..Default::default() };
     let AddFailingWatcherFixture { watcher, commit_attempts, event_delivery_paused, .. } =
       create_add_failing_watcher(false);
     let group_registered_files = FxDashSet::default();

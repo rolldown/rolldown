@@ -1,3 +1,4 @@
+import { sep } from 'node:path';
 import { defineTest } from 'rolldown-tests';
 import { expect } from 'vitest';
 
@@ -29,6 +30,6 @@ export default defineTest({
     const sources = JSON.parse(map.source as string).sources as string[];
 
     expect(seen.length).toBeGreaterThan(1);
-    expect(sources).toStrictEqual(seen.map((source) => `prefixed/${source}`));
+    expect(sources).toStrictEqual(seen.map((source) => `prefixed/${source}`.replaceAll(sep, '/')));
   },
 });

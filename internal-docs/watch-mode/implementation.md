@@ -88,7 +88,7 @@ Watcher (public API)
                                     ├── WatchTask 0
                                     │   ├── bundler: Arc<TokioMutex<Bundler>>
                                     │   ├── fs_watcher: FsWatcher (owned, per-task)
-                                    │   ├── watched_files: FxDashSet<ArcStr>
+                                    │   ├── watched_files: FxDashSet<WatchPath>
                                     │   └── needs_rebuild: bool
                                     └── WatchTask N ...
 
@@ -305,7 +305,7 @@ All watch-related hooks are **blocking** — the coordinator awaits their comple
 Plugin context additions in watch mode:
 
 - `this.meta.watchMode` — `true` when running in watch mode
-- `this.addWatchFile(id)` — Add a file to the watch set (not in module graph)
+- `this.addWatchFile(id)` — Add a path to the watch set (not in module graph). The path can be a file, a directory or missing, see [File Watching](#file-watching)
 
 ### onInvalidate Callback
 
@@ -313,11 +313,19 @@ Configured via `WatcherOptions`, fires **immediately** on file change (before de
 
 ## File Watching
 
-- After each build, `bundler.watch_files()` returns the current set.
-- `WatchTask::update_watch_files()` diffs against the current set — new files are added to the per-task `FsWatcher`.
-- `include`/`exclude` patterns filter which files are watched (via `pattern_filter`).
-- Files are watched **non-recursively** (individual file watches).
-- Batch operations: `fs_watcher.paths_mut()` returns a guard for batching adds, committed via `.commit()`.
+- After each build, `bundler.watch_files()` returns the current set: the modules read from disk, their tsconfig files, and the raw strings plugins passed to `this.addWatchFile`.
+- `WatchTask::update_watch_files()` diffs against the current set — new paths are added to the per-task `FsWatcher`.
+- `include`/`exclude` patterns filter which watch paths are registered (via `pattern_filter`). They apply to the registered path only, not to files below a watched directory. This matches Rollup.
+- Batch operations: `fs_watcher.paths_mut()` returns a guard for batching adds, committed via `.commit()`. A path only enters `watched_files` after the commit succeeded, so a skipped path is tried again with the next build.
+
+### Watch Paths
+
+A watch path can be a **file**, a **directory** or **missing**, like in Rollup. Bundled dev follows the same rules.
+
+- Every path is registered with `RecursiveMode::Recursive` and `TargetMode::TrackPath`. notify ignores the recursive mode for a file. `TrackPath` follows the path: a missing path is watched once it is created, and a path that changes between a file and a directory stays watched.
+- notify tracks a missing path through its parent directory. inotify, kqueue and Windows fail without the parent, FSEvents and poll do not need it. On kqueue and Windows one failing path currently fails the whole batch, which is to be fixed in notify.
+- A change is relevant when its path is a watch path or lies below one: `is_watched_file` looks the ancestors of the changed path up in `watched_files`.
+- Directory events are not filtered out yet.
 
 ### Backend selection
 
@@ -355,6 +363,8 @@ This matches the legacy watcher's approach (`with_cached_bundle`), where `watch_
 
 When an import resolves to a non-existent file, the build errors. Watch mode relies on the resolver cache being cleared before each rebuild (`bundler.clear_resolver_cache()`). The expected recovery workflow is: create the missing file, then manually edit a watched file (e.g. noop edit to the importer) to trigger a rebuild. The resolver re-evaluates the import with a fresh cache and succeeds. This matches Rollup's behavior — Rollup only watches successfully loaded modules.
 
+This is different from a missing path a plugin passed to `this.addWatchFile`: that path is watched (see [Watch Paths](#watch-paths)), so creating it triggers a rebuild.
+
 ### Notify Event Mapping
 
 Shared with bundled dev through `rolldown_fs_watcher::map_notify_event`.
@@ -376,9 +386,9 @@ notify::EventKind::Access(_)                              → None (ignored — 
 
 ### Path Identity
 
-The watch set stores paths as raw `ArcStr` strings. The `notify` crate reports events with OS-native paths. If these don't match exactly, `is_watched_file()` fails silently. The current `#[cfg(windows)]` backslash fallback is a symptom.
+Watch files are absolute and normalized before they reach the watcher: module ids come from the resolver, and a path passed to `this.addWatchFile` is resolved against `cwd` and normalized (`WatchPath`) when it is added. `FsWatcher` keeps them as `PathBuf`, the form notify reports events in, and `Path` compares by components, so `\` vs `/` on Windows is not a mismatch. A changed path is looked up together with its ancestors, which is how a change below a watched directory is found; the transform dependencies HMR records are `WatchPath`s and are matched the same way.
 
-**Recommendation:** Use `PathBuf` for the watched file set instead of `ArcStr`. This handles trailing slashes, double separators, `.` segments, and Windows `\` vs `/` — all common mismatch sources between resolver output and notify events.
+Symbolic links are not resolved, while FSEvents reports canonical paths.
 
 See [module-id.md](../module-id/implementation.md) for the full analysis of path identity across the bundler, `PathBuf` comparison behavior, and Rollup's approach.
 

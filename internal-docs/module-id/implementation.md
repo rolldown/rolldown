@@ -76,15 +76,15 @@ Note: some plugins may internally assume `/` separators when doing string matchi
 
 ### Where Path Identity Matters
 
-| Subsystem                  | Key type                  | Normalization                        | Risk                                              |
-| -------------------------- | ------------------------- | ------------------------------------ | ------------------------------------------------- |
-| Module graph lookup        | `ModuleId` (ArcStr)       | None                                 | Resolver output must be consistent                |
-| Scan stage cache           | `ModuleId` → `VisitState` | None                                 | Same path resolved differently = duplicate module |
-| `module_idx_by_abs_path`   | `ArcStr`                  | `to_slash()` at insertion            | HMR changed-file paths must match                 |
-| Plugin `get_module_info()` | `&str` lookup             | None                                 | Plugin must use exact module ID                   |
-| Plugin `add_watch_file()`  | `ArcStr` into `FxDashSet` | None                                 | Watch set uses raw strings                        |
-| Watch file comparison      | `ArcStr` eq               | `#[cfg(windows)]` backslash fallback | Fragile                                           |
-| Resolver package cache     | `PathBuf`                 | PathBuf component comparison         | Handles separator differences                     |
+| Subsystem                  | Key type                     | Normalization                                              | Risk                                              |
+| -------------------------- | ---------------------------- | ---------------------------------------------------------- | ------------------------------------------------- |
+| Module graph lookup        | `ModuleId` (ArcStr)          | None                                                       | Resolver output must be consistent                |
+| Scan stage cache           | `ModuleId` → `VisitState`    | None                                                       | Same path resolved differently = duplicate module |
+| `module_idx_by_abs_path`   | `ArcStr`                     | `to_slash()` at insertion                                  | HMR changed-file paths must match                 |
+| Plugin `get_module_info()` | `&str` lookup                | None                                                       | Plugin must use exact module ID                   |
+| Plugin `add_watch_file()`  | `ArcStr` into `FxDashSet`    | Resolved against `cwd` and normalized at insertion         | Same form as the resolver output                  |
+| Watch file comparison      | `PathBuf` set in `FsWatcher` | Absolute and normalized paths, `Path` component comparison | Symbolic links are not resolved                   |
+| Resolver package cache     | `PathBuf`                    | PathBuf component comparison                               | Handles separator differences                     |
 
 ### Existing Normalization Utilities
 

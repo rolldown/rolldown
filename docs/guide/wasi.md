@@ -6,9 +6,11 @@ Rolldown publishes two WASI flavors:
 - `wasm32-wasip1` uses an unshared-memory, threadless loader.
   `@rolldown/browser` uses this flavor.
 
-Both run the shared tokio-free scheduler on its CurrentThread flavor: that
-scheduler has no MultiThread executor on WebAssembly, so every WASI artifact
-reports `backend: 'shared'`, `flavor: 'CurrentThread'` and `threads: false`.
+Both run the shared tokio-free scheduler on its CurrentThread flavor: Rolldown
+does not enable the MultiThread executor on WebAssembly
+(`configureAsyncRuntime({ flavor: 'MultiThread' })` throws there), so every WASI
+artifact reports `backend: 'shared'`, `flavor: 'CurrentThread'` and
+`threads: false`.
 The real OS threads in `wasm32-wasip1-threads` change the loader, not the
 executor.
 

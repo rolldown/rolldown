@@ -48,7 +48,7 @@ routes every JS-triggered async operation through that adapter into the
 crate's fallible `try_*` API.
 
 The vendored copy is deliberate, not a fork: `RolldownAsyncRuntime` mirrors
-`napi-async-runtime` 0.2.2's own `adapter.rs` method for method. The crate has
+`napi-async-runtime` 0.2.3's own `adapter.rs` method for method. The crate has
 exposed a public `install` since 0.2.0, but only behind its default `napi`
 feature, which also compiles that adapter's own `#[napi]` exports under names
 this binding already owns (`BindingRuntimeFlavor`, `BindingRuntimeMetrics`,
@@ -62,6 +62,13 @@ methods must track upstream rather than diverge from it.
   - `block_on` → `try_block_on_dyn(future)`
   - `spawn_blocking` → `try_spawn_blocking(work).detach()`
   - `start` / `shutdown` → the crate's `start()` / `shutdown()`
+  - `begin_shutdown` / `shutdown_work_pending` / `finish_shutdown` → the crate's
+    `begin_shutdown()` / `runtime_work_pending()` / `finish_shutdown()`. These
+    are the two-phase teardown hooks napi 3.13.0 calls only from its wasm
+    cleanup exports (`napi_prepare_wasm_env_cleanup_begin` /
+    `napi_wasm_runtime_work_pending` / `napi_prepare_wasm_env_cleanup_finish`),
+    so a cli >= 3.10.5 loader can turn the event loop between the phases.
+    `shutdown` is still begin + finish; native napi calls only `shutdown`.
   - The `unsafe impl` SAFETY comment records the no-tokio / waker-retention
     justification (napi permanently pins the native image after export — see
     Principle 7's addon-retention note).
@@ -123,8 +130,10 @@ crate freezes after first use.
     `ROLLDOWN_PARK_DEADLINE_MS`, `ROLLDOWN_DRAIN_LINGER_US`.
   - `resolve_runtime_config_for(target, env)` — pure defaults table. Native ⇒
     MultiThread; wasm ⇒ CurrentThread, normalizing an inherited
-    `ROLLDOWN_RUNTIME=multi` because the crate has no wasm MultiThread executor
-    (Principle 1). MultiThread worker count `= requested.max(2)` (truthful
+    `ROLLDOWN_RUNTIME=multi` because Rolldown ships no wasm MultiThread
+    (Principle 1). napi-async-runtime 0.2.3 would build one on
+    `wasm32-wasip1-threads`, but parking_lot_core's stable wasm parker panics
+    on a contended park there. MultiThread worker count `= requested.max(2)` (truthful
     two-worker minimum); CurrentThread `= 1`.
   - `clamp_shared_blocking_tasks()` — blocking cap: CurrentThread ⇒ 1;
     MultiThread ⇒ `requested.min(worker_threads - 1).max(1)` (reserve one
@@ -136,7 +145,10 @@ crate freezes after first use.
 RuntimeOptionsPatch` — the **256-ceiling / positive-integer / atomic-reject**
     validation for the JS `configureAsyncRuntime` path
     (`MAX_ASYNC_RUNTIME_WORKER_THREADS`).
-  - `configure_async_runtime()` (`#[napi]`) → the crate's `configure_partial`
+  - `configure_async_runtime()` (`#[napi]`) → rejects a MultiThread patch on
+    every non-native `compiled_target()` with 0.2.2's error text (0.2.3 no
+    longer rejects it on `wasm32-wasip1-threads`; turning it on is a product
+    call), else the crate's `configure_partial`
     (merge+validate+commit under the controller mutex, frozen after the first
     backend); `get_async_runtime_config()` → `configured_options()` is the
     reporting authority.
@@ -331,17 +343,21 @@ CurrentThread timer:
   `AsyncTask`, but deliberately **not** `napi/async` (which would pull
   `tokio_rt`), so every target compiles the shared runtime (Principle 9).
 - `crates/rolldown_utils/Cargo.toml` — `napi-async-runtime = { version =
-"0.2.2", default-features = false }` from crates.io (napi-free
+"0.2.3", default-features = false }` from crates.io (napi-free
   consumption). The root `Cargo.toml` pins
-  the napi stack to **published crates.io releases** — `napi 3.12.7`,
-  `napi-build 2.4.4`, `napi-derive 3.6.8` (resolving `napi-derive-backend
+  the napi stack to **published crates.io releases** — `napi 3.13.0`,
+  `napi-build 2.5.0`, `napi-derive 3.6.9` (resolving `napi-derive-backend
 6.1.4` and `napi-sys 3.3.2`) — and carries **no** `[patch.crates-io]`
   section: that single registry `napi` node covers `rolldown_binding` **and**
   every `oxc_*_napi`. The comment above those pins records why the minimum is
   a pin rather than a range. 3.12.7 (napi-rs#3536) hardens the same teardown:
   an `AsyncTask` completion delivered on a draining env settles as a no-op
   instead of aborting a debug build, and the `napi_async_work` handle is freed
-  on every path. The drain the loaders call is unchanged.
+  on every path. The drain the loaders call is unchanged. 3.13.0 / napi-build
+  2.5.0 (napi-rs#3541) add the two-phase wasm cleanup trio (see the method
+  map in §1) and emit a `napi_wasi_threads` cfg that duplicates
+  `rolldown_wasi_threads`; napi-rs#3540 checks External payload provenance,
+  which rolldown does not use.
 - `crates/rolldown_binding/build.rs` — emits `cargo::rustc-cfg=rolldown_wasi_threads`
   only for `wasm32-wasip1-threads` (the two WASI targets are otherwise
   cfg-indistinguishable); consumed by `compiled_target()`.
@@ -429,7 +445,7 @@ browser-build, and packed-browser tests exercise this contract;
 `pluginErrorMetadata` is therefore a universal public-support invariant rather
 than a target capability.
 
-This invariant depends on the workspace's `napi 3.12.7` registry pin (§9).
+This invariant depends on the workspace's `napi 3.13.0` registry pin (§9).
 Both capture paths run the same function,
 `Error::from_unknown_without_coercion` (napi-rs#3423, first released in `napi
 3.12.1`): Promise rejections reach it from the `catch` handler
@@ -886,7 +902,7 @@ this section possible: no restore step, no drift-allowlist arm, and no
 build-order coupling is needed to keep one flavor from overwriting the other.
 
 - The per-flavor naming and loader codegen (napi-rs#3353) ship in the released
-  `@napi-rs/cli`, pinned to `^3.10.4` in the workspace catalog — the floor is
+  `@napi-rs/cli`, pinned to `^3.10.5` in the workspace catalog — the floor is
   the loader contract itself (`__napiBindingTarget`, the raw-destroy settlement
   wrapper, `napi.wasm.threadlessInitialMemory`, and the
   `napi.wasm.asyncRuntime` host bootstrap); rolldown used to add all four with
@@ -903,7 +919,7 @@ build-order coupling is needed to keep one flavor from overwriting the other.
   eager loaders, `__drainInstanceAsyncWork` in the deferred one. It reads the
   `napi_wasm_async_work_pending` / `napi_wasm_cancel_pending_async_work`
   exports that napi 3.12.6 / napi-build 2.4.3 added in napi-rs#3528, and that
-  the pinned napi 3.12.7 / napi-build 2.4.4 (with napi-derive 3.6.8) carry
+  the pinned napi 3.13.0 / napi-build 2.5.0 (with napi-derive 3.6.9) carry
   unchanged: cancel what no thread has started, then poll until nothing is
   owed a completion callback. The barrier
   the previous seams run brackets promise settlements on the
@@ -936,6 +952,15 @@ build-order coupling is needed to keep one flavor from overwriting the other.
   `require()` specifiers — is a no-op for the current typedef, which contains
   neither. It is named in the catalog only so the range tracks the version
   main resolved (#10913), the one that regenerates the loaders committed here.
+  3.10.5 (napi-rs#3541) raises the floor again: `dispose()` and rollback call
+  `__prepareWasmEnvCleanupWithTurns`, which runs
+  `napi_prepare_wasm_env_cleanup_begin`, turns the event loop while
+  `napi_wasm_runtime_work_pending` reports live work, then runs
+  `napi_prepare_wasm_env_cleanup_finish`; the exit and raw-destroy paths keep
+  the single blocking call, and `__destroyEmnapiContext` gains an
+  `if (__isPreparingWasmEnvCleanup())` reentrancy guard right after the barrier,
+  which is the anchor `binding-loader-codegen.ts` and the packed-consumer check
+  now match. A loader without the trio (older napi) falls back to the single call.
   A build whose target is NOT wasi regenerates EVERY declared wasi flavor's
   loader set, each with `hasThreads` derived from its own triple, so loader
   regeneration is deterministic and byte-identical to the committed copies on
@@ -947,7 +972,11 @@ build-order coupling is needed to keep one flavor from overwriting the other.
   never from the native type-def. So a merge that takes upstream's copy of a
   committed wasi loader silently drops this branch's exports from the next
   native build (`assertAsyncRuntimeHostExports` fails) until that flavor's
-  wasi build runs again. Loaders need no restore step;
+  wasi build runs again. Every build also asserts the anchors of all four eager
+  loaders, so after a cli bump that moves an anchor, run the native build FIRST
+  (it re-renders every flavor), then the two wasi builds, then native again;
+  a wasi build first fails on the other flavor's stale loader and rolls back.
+  Loaders need no restore step;
   CI's "Check no diff" in `reusable-native-build.yml` has full coverage of all
   committed loaders. Declarations do: `binding.d.cts` keeps whichever flavor
   built last, so the native build must run last — which is why ci.yml restores

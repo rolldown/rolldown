@@ -283,9 +283,12 @@ syn = { version = "3", default-features = false }
 # marks the work terminal before freeing it. Nothing in the drain the loaders use changed —
 # `napi_cancelled` still becomes the same `AbortError` — so this is hardening, not a new floor.
 # napi-build 2.4.4 / napi-derive 3.6.8 ride along with clippy-only diffs and no codegen change.
-napi = { version = "3.12.7", features = ["anyhow", "tracing", "object_indexmap"] }
-napi-build = { version = "2.4.4" }
-napi-derive = { version = "3.6.8", default-features = false, features = ["type-def", "tracing"] }
+# napi 3.13.0 / napi-build 2.5.0 (napi-rs#3541) split wasm cleanup into the two-phase trio
+# (`napi_prepare_wasm_env_cleanup_begin` / `_work_pending` / `_finish`, pairs with @napi-rs/cli
+# >= 3.10.5) and emit the `napi_wasi_threads` cfg; napi-rs#3540 adds External payload provenance.
+napi = { version = "3.13.0", features = ["anyhow", "tracing", "object_indexmap"] }
+napi-build = { version = "2.5.0" }
+napi-derive = { version = "3.6.9", default-features = false, features = ["type-def", "tracing"] }
 
 # oxc crates with the same version
 oxc = { version = "0.151.0", features = [

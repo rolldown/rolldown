@@ -15,12 +15,12 @@ use rolldown_utils::async_runtime::{
   CurrentThreadTaskDelivery, CurrentThreadTaskDriver, CurrentThreadTaskDriverId,
   MAX_ASYNC_RUNTIME_WORKER_THREADS, RuntimeFlavor, RuntimeMetricsSnapshot, RuntimeOptions,
   RuntimeOptionsPatch, TimerDriver, TimerDriverId, TimerId,
-  acknowledge_current_thread_task_delivery, configure, configure_partial, configured_options,
-  drive_current_thread_tasks, fail_current_thread_task_delivery, max_async_runtime_worker_threads,
-  metrics, register_current_thread_task_driver, register_timer_driver,
-  request_current_thread_task_drain, reset_metrics, shutdown, start, try_block_on_dyn, try_spawn,
-  try_spawn_blocking, try_spawn_detached, unregister_current_thread_task_driver,
-  unregister_timer_driver,
+  acknowledge_current_thread_task_delivery, begin_shutdown, configure, configure_partial,
+  configured_options, drive_current_thread_tasks, fail_current_thread_task_delivery,
+  finish_shutdown, max_async_runtime_worker_threads, metrics, register_current_thread_task_driver,
+  register_timer_driver, request_current_thread_task_drain, reset_metrics, runtime_work_pending,
+  shutdown, start, try_block_on_dyn, try_spawn, try_spawn_blocking, try_spawn_detached,
+  unregister_current_thread_task_driver, unregister_timer_driver,
 };
 
 use crate::types::js_callback::InvalidReturnValue;
@@ -74,6 +74,23 @@ unsafe impl AsyncRuntime for RolldownAsyncRuntime {
 
   fn shutdown(&self) -> napi::Result<()> {
     shutdown().map_err(|error| napi::Error::from_reason(error.to_string()))
+  }
+
+  // Two-phase teardown, mirrored from the napi-async-runtime 0.2.3 adapter
+  // (crates/async-runtime/src/adapter.rs). `shutdown` above stays begin + finish. napi calls
+  // these three only from its wasm cleanup exports, so a loader that can yield turns the JS
+  // event loop between the phases: on wasm32-wasip1-threads the JS thread may be the one a
+  // running blocking closure is waiting on.
+  fn begin_shutdown(&self) -> napi::Result<bool> {
+    begin_shutdown().map_err(|error| napi::Error::from_reason(error.to_string()))
+  }
+
+  fn shutdown_work_pending(&self) -> bool {
+    runtime_work_pending()
+  }
+
+  fn finish_shutdown(&self) -> napi::Result<()> {
+    finish_shutdown().map_err(|error| napi::Error::from_reason(error.to_string()))
   }
 }
 
@@ -247,8 +264,20 @@ fn safe_js_number(value: u64) -> f64 {
 /// Override the async runtime's flavor and thread counts. Must be called
 /// before the first async binding call.
 pub fn configure_async_runtime(options: BindingRuntimeOptions) -> napi::Result<()> {
-  configure_partial(options.try_into()?)
-    .map_err(|error| napi::Error::from_reason(error.to_string()))
+  let patch: RuntimeOptionsPatch = options.try_into()?;
+  // napi-async-runtime 0.2.3 accepts MultiThread on wasm32-wasip1-threads. Rolldown does not
+  // ship it there yet (parking_lot_core's stable wasm parker panics on the first contended
+  // park), so every WebAssembly artifact keeps its CurrentThread-only contract here, the same
+  // way `resolve_runtime_config_for` normalizes `ROLLDOWN_RUNTIME=multi`. The message is the
+  // one 0.2.2 returned from `configure_partial`, so the JS-visible error does not change.
+  if compiled_target() != ResolvedRuntimeTarget::Native
+    && patch.flavor == Some(RuntimeFlavor::MultiThread)
+  {
+    return Err(napi::Error::from_reason(
+      "the multi-thread runtime is unavailable in this WebAssembly build",
+    ));
+  }
+  configure_partial(patch).map_err(|error| napi::Error::from_reason(error.to_string()))
 }
 
 #[napi]
@@ -386,10 +415,12 @@ fn resolve_runtime_config_for(
   let default_flavor =
     if native { RuntimeFlavor::MultiThread } else { RuntimeFlavor::CurrentThread };
   let requested_flavor = resolve_runtime_flavor(env.runtime.as_deref(), default_flavor);
-  // The shared scheduler has no MultiThread executor on WebAssembly (`rolldown_utils`
-  // does not compile Rayon there). Normalize the unsupported override before the
-  // module-init hook calls `configure`, so loading a WASI artifact cannot panic because
-  // `ROLLDOWN_RUNTIME=multi` leaked in from a native process environment.
+  // Rolldown ships CurrentThread only on WebAssembly. napi-async-runtime 0.2.3 would
+  // build a MultiThread executor on wasm32-wasip1-threads, but parking_lot_core's stable
+  // wasm parker panics there, and threadless wasm32-wasip1 still rejects it. Normalize the
+  // override before the module-init hook calls `configure`, so loading a WASI artifact never
+  // starts MultiThread because `ROLLDOWN_RUNTIME=multi` leaked in from a native process
+  // environment. `configure_async_runtime` holds the same line for the explicit JS opt-in.
   let flavor = if native { requested_flavor } else { RuntimeFlavor::CurrentThread };
   let requested_worker_threads = if native {
     resolve_thread_count(
@@ -3489,9 +3520,10 @@ mod tests {
       assert_eq!(resolved.max_blocking_tasks, 1);
 
       // `ROLLDOWN_WORKER_THREADS` does not apply on wasm, and an inherited
-      // `ROLLDOWN_RUNTIME=multi` must be normalized before module init: `configure`
-      // rejects MultiThread on every shared WebAssembly build, and panicking while
-      // loading the addon is not an acceptable configuration error.
+      // `ROLLDOWN_RUNTIME=multi` must be normalized before module init: Rolldown ships
+      // CurrentThread only on every WebAssembly build (`configure_async_runtime` rejects
+      // the explicit MultiThread opt-in there), and threadless wasm32-wasip1 `configure`
+      // would reject it and panic while loading the addon.
       let overridden = resolve(
         target,
         &RuntimeEnv {

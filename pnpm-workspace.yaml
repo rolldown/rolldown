@@ -94,7 +94,14 @@ catalog:
   # contains neither. It is named here so the range tracks the version
   # renovate resolved on main (#10913), which is what regenerates the
   # committed loaders.
-  '@napi-rs/cli': ^3.10.4
+  # 3.10.5 raises it once more (napi-rs#3541): `dispose()` and rollback tear
+  # down in two phases -- `napi_prepare_wasm_env_cleanup_begin`, event-loop
+  # turns while `napi_wasm_runtime_work_pending` reports live work, then
+  # `napi_prepare_wasm_env_cleanup_finish` -- so a blocking closure on the
+  # threaded artifact that waits on the JavaScript thread can finish instead of
+  # being joined inside one call. The exports come from napi 3.13.0; an older
+  # cli keeps the single blocking `napi_prepare_wasm_env_cleanup` call.
+  '@napi-rs/cli': ^3.10.5
   '@napi-rs/wasm-runtime': ~1.2.4
   '@oxc-node/cli': ^0.1.0
   '@oxc-node/core': ^0.1.0

@@ -1,19 +1,37 @@
 import { rolldown } from 'rolldown';
-import { getRuntimeCapabilities, getRuntimeSupport } from 'rolldown/experimental';
+import {
+  configureAsyncRuntime,
+  getAsyncRuntimeConfig,
+  getRuntimeCapabilities,
+  getRuntimeSupport,
+} from 'rolldown/experimental';
 import { expect, test } from 'vitest';
 
 const capabilities = getRuntimeCapabilities();
 const expectThreadedWasi = process.env.ROLLDOWN_EXPECT_WASI_THREADS === '1';
 
 test.runIf(capabilities.target === 'wasi-threads' || expectThreadedWasi)(
+  'rejects the MultiThread opt-in on threaded WASI',
+  () => {
+    // Rolldown's own guard, not the scheduler's: napi-async-runtime 0.2.3 would accept it.
+    expect(() => configureAsyncRuntime({ flavor: 'MultiThread' })).toThrow(
+      'the multi-thread runtime is unavailable in this WebAssembly build',
+    );
+    // A rejected configure leaves the configuration untouched.
+    expect(getAsyncRuntimeConfig().flavor).toBe('CurrentThread');
+  },
+);
+
+test.runIf(capabilities.target === 'wasi-threads' || expectThreadedWasi)(
   'executes threaded WASI while overlapping builds survive a concurrent close',
   { timeout: 20_000 },
   async () => {
-    // The resolver normalizes every non-native target to CurrentThread
-    // (`crates/rolldown_binding/src/async_runtime.rs`): the shared scheduler has
-    // no MultiThread executor on WebAssembly because `napi-async-runtime` does
-    // not compile Rayon there, so the real OS threads in `wasm32-wasip1-threads`
-    // change the loader, not the executor.
+    // The resolver normalizes every non-native target to CurrentThread, and
+    // `configureAsyncRuntime` rejects MultiThread there
+    // (`crates/rolldown_binding/src/async_runtime.rs`): napi-async-runtime 0.2.3
+    // could build a MultiThread executor on `wasm32-wasip1-threads`, but Rolldown
+    // does not ship it (parking_lot_core's stable wasm parker panics), so the real
+    // OS threads change the loader, not the executor.
     expect(capabilities).toMatchObject({
       backend: 'shared',
       flavor: 'CurrentThread',

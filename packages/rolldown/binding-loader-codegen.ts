@@ -35,14 +35,19 @@ const WASI_CONTEXT_DESTROY_WRAP_WIRING = `__emnapiContext = __wrapEmnapiContextD
   __isPreparingWasmEnvCleanup,
 )`;
 // Settlement barrier: the cleanup preparation must precede the context
-// destroy, or the TSFN cleanup hook discards pending napi async work.
+// destroy, or the TSFN cleanup hook discards pending napi async work. Since
+// `@napi-rs/cli` 3.10.5 (napi-rs#3541) a reentrancy guard sits between the two
+// and returns while the barrier is still running.
 const WASI_CONTEXT_DESTROY_SETTLEMENT = `  __prepareWasmEnvCleanup()
-  const result = __emnapiContext.destroy()
+  if (__isPreparingWasmEnvCleanup()) {
 `;
 // The disposal chain runs prepare -> drain -> destroy -> worker termination
 // and publishes Symbol.for('napi.rs.wasi.dispose') on the binding exports.
 const WASI_DISPOSAL_CHAIN_SIGNATURES = [
   'function __prepareWasmEnvCleanup() {',
+  // `@napi-rs/cli` >= 3.10.5 (napi-rs#3541): the yielding two-phase cleanup
+  // (begin, event-loop turns while work is pending, finish) used by dispose.
+  'function __prepareWasmEnvCleanupWithTurns() {',
   'function __drainWasmEnvCleanup() {',
   'function __destroyEmnapiContext() {',
   'function __terminateWasiWorkers() {',

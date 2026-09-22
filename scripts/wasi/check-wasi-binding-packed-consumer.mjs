@@ -956,13 +956,13 @@ function assertThreadlessNodeLifecycle(code, loader) {
       `${loader} must contain exactly one ${signature}`,
     );
   }
-  // The settlement barrier runs before the only raw context destroy.
-  // (Staged copies are reprinted, so stay tolerant of formatting.)
+  // The settlement barrier runs before the only raw context destroy, followed
+  // by the cli 3.10.5 reentrancy guard. (Staged copies are reprinted, which
+  // drops the guard's braces, so stay tolerant of formatting.)
   assert.equal(
-    code.match(/__prepareWasmEnvCleanup\(\);?\n\s*const result = __emnapiContext\.destroy\(\);?/g)
-      ?.length,
+    code.match(/__prepareWasmEnvCleanup\(\);?\n\s*if \(__isPreparingWasmEnvCleanup\(\)\)/g)?.length,
     1,
-    `${loader} must run the wasm-env cleanup barrier directly before the context destroy`,
+    `${loader} must run the wasm-env cleanup barrier, then the reentrancy guard, before the context destroy`,
   );
   // The settlement drain polls the wasm export and rejects retryably.
   assert.ok(

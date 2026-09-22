@@ -40,9 +40,11 @@ assert.equal(
   true,
   'the published threaded-WASI artifact is built on the shared scheduler',
 );
-// The MultiThread executor is Rayon-backed and Rayon is not compiled for wasm,
-// so the resolver normalizes every non-native target to CurrentThread: the real
-// OS threads of `wasm32-wasip1-threads` change the loader, not the executor.
+// Rolldown ships CurrentThread only on WebAssembly: napi-async-runtime 0.2.3 could
+// build a MultiThread executor on `wasm32-wasip1-threads`, but parking_lot_core's
+// stable wasm parker panics there. The resolver normalizes every non-native target
+// to CurrentThread and `configureAsyncRuntime` rejects MultiThread, so the real OS
+// threads of `wasm32-wasip1-threads` change the loader, not the executor.
 assert.equal(
   runtimeCapabilities.flavor,
   'CurrentThread',

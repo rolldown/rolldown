@@ -66,19 +66,11 @@ impl<'me> NotifyPathsMutAdapter<'me> {
 
 impl PathsMut for NotifyPathsMutAdapter<'_> {
   fn add(&mut self, path: &Path, recursive_mode: RecursiveMode) -> BuildResult<()> {
-    let is_watchable = match path.metadata() {
-      Ok(_) => true,
-      Err(error) if error.kind() == std::io::ErrorKind::NotFound => {
-        path.parent().is_some_and(Path::exists)
-      }
-      Err(_) => false,
-    };
-    let result = if is_watchable {
-      self.0.add(path, WatchMode { recursive_mode, target_mode: TargetMode::TrackPath })
-    } else {
-      Err(::notify::Error::path_not_found().add_path(path.to_path_buf()))
-    };
-    result.map_err_to_unhandleable().map_err(Into::into)
+    self
+      .0
+      .add(path, WatchMode { recursive_mode, target_mode: TargetMode::TrackPath })
+      .map_err_to_unhandleable()
+      .map_err(Into::into)
   }
 
   fn remove(&mut self, path: &Path) -> BuildResult<()> {

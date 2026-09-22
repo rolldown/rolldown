@@ -1207,6 +1207,101 @@ describe.sequential('managed workerd loader', () => {
     expect(destroy).toHaveBeenCalledOnce();
   });
 
+  test('bounds every facade prototype walk at 256 objects and rejects cycles', async () => {
+    const limitMessage = 'Managed workerd value prototype chain exceeds the traversal limit';
+    const cycleMessage = 'Cyclic prototype chain detected in a managed workerd value';
+    // `length` objects in total, `deepest` last, then `null`.
+    const prototypeChain = (length: number, deepest: object = Object.create(null)): object => {
+      let head = deepest;
+      for (let index = 1; index < length; index += 1) {
+        head = Object.create(head);
+      }
+      return head;
+    };
+    const cyclic: object = new Proxy({}, { getPrototypeOf: () => cyclic });
+    const throwingPrototype = new Proxy(
+      {},
+      {
+        getPrototypeOf() {
+          throw new Error('prototype read failed');
+        },
+      },
+    );
+
+    // Binding class prototypes are walked up to `Object.prototype` at setup.
+    for (const [prototype, message] of [
+      [prototypeChain(257), limitMessage],
+      [cyclic, cycleMessage],
+    ] as const) {
+      function DeepBinding() {}
+      DeepBinding.prototype = prototype;
+      await expect(
+        createManagedStub({
+          DeepBinding,
+          registerCurrentThreadTaskHost() {},
+          registerTimerHost() {},
+        }),
+      ).rejects.toThrow(message);
+    }
+    function BoundaryBinding() {}
+    BoundaryBinding.prototype = prototypeChain(256);
+
+    let returned: unknown;
+    let received: unknown;
+    const instance = await createManagedStub({
+      BoundaryBinding,
+      accept(value: unknown) {
+        received = value;
+      },
+      read() {
+        return returned;
+      },
+      registerCurrentThreadTaskHost() {},
+      registerTimerHost() {},
+    });
+
+    // Results: the walk starts at the value's prototype and does not swallow
+    // a throwing prototype read past the first one.
+    returned = Object.create(prototypeChain(256));
+    expect(instance.exports.read()).toBe(returned);
+    returned = Object.create(prototypeChain(257));
+    await expect(instance.exports.read()).rejects.toThrow(limitMessage);
+    returned = cyclic;
+    await expect(instance.exports.read()).rejects.toThrow(cycleMessage);
+    returned = Object.create(throwingPrototype);
+    await expect(instance.exports.read()).rejects.toThrow('prototype read failed');
+
+    // Arguments: the same bound, but a throwing prototype read ends the walk
+    // and the value still crosses as an input record.
+    const accepted = Object.create(prototypeChain(256));
+    instance.exports.accept(accepted);
+    expect(Object.getPrototypeOf(received)).toBe(Object.getPrototypeOf(accepted));
+    expect(() => instance.exports.accept(Object.create(prototypeChain(257)))).toThrow(limitMessage);
+    expect(() => instance.exports.accept(cyclic)).toThrow(cycleMessage);
+    const throwingInput = Object.create(throwingPrototype);
+    instance.exports.accept(throwingInput);
+    expect(Object.getPrototypeOf(received)).toBe(throwingPrototype);
+
+    // A thenable that resolves to itself: the `then` lookup walks from the
+    // value itself, so 256 objects find `then` and 257 hit the bound.
+    const selfResolving = () => {
+      const deepest = Object.create(null);
+      // oxlint-disable-next-line unicorn/no-thenable -- verifies the bounded self-resolution check
+      deepest.then = function (this: unknown, resolve: (value: unknown) => void) {
+        resolve(this);
+      };
+      return deepest;
+    };
+    returned = prototypeChain(256, selfResolving());
+    await expect(instance.exports.read()).rejects.toThrow(
+      'Thenable cycle detected while settling a managed workerd call',
+    );
+    returned = prototypeChain(257, selfResolving());
+    await expect(instance.exports.read()).rejects.toThrow(limitMessage);
+
+    await instance.dispose();
+  });
+
   test('mediates callback-delivered binding objects for intrinsic subclasses', async () => {
     let retainedContext: BindingContext | undefined;
     class BindingContext {

@@ -381,6 +381,40 @@ function __createManagedBindingFacade(__binding: any, __state: any) {
     }
     __seen.add(__prototype);
   };
+  // Visits `__start`, then each prototype after it, until `__visit` returns
+  // something other than `undefined` or the walk reaches `null` or `__end`. A
+  // throwing `[[GetPrototypeOf]]` ends the walk with `__stopOnPrototypeError`
+  // and propagates otherwise.
+  const __walkPrototypeChain = (
+    __start: any,
+    __visit: (__object: any) => any,
+    __end: any = null,
+    __stopOnPrototypeError = false,
+  ): any => {
+    // The first object can neither repeat nor exceed the bound, so the Set is
+    // only allocated once the walk reaches a second one.
+    let __seen: Set<unknown> | undefined;
+    let __first = true;
+    for (let __current = __start; __current !== null && __current !== __end;) {
+      if (!__first) {
+        __seen ??= new Set([__start]);
+        __assertUnseenPrototype(__seen, __current);
+      }
+      __first = false;
+      const __result = __visit(__current);
+      if (__result !== undefined) return __result;
+      try {
+        __current = Reflect.getPrototypeOf(__current);
+      } catch (__error) {
+        if (__stopOnPrototypeError) return undefined;
+        throw __error;
+      }
+    }
+  };
+  // Hoisted so the per-value walks below allocate no visitor closure.
+  const __visitNothing = () => undefined;
+  const __visitBindingPrototype = (__candidate: any) =>
+    __bindingPrototypes.has(__candidate) ? true : undefined;
   for (const __key of Reflect.ownKeys(__binding)) {
     // Projected away below, so their function prototypes must not be mistaken
     // for binding-object prototypes either.
@@ -394,14 +428,14 @@ function __createManagedBindingFacade(__binding: any, __state: any) {
     ) {
       const __prototype = __value.prototype;
       __bindingPrototypes.add(__prototype);
-      const __seen = new Set();
-      let __constructorPrototype = __prototype;
-      while (__constructorPrototype !== null && __constructorPrototype !== Object.prototype) {
-        __assertUnseenPrototype(__seen, __constructorPrototype);
-        __bindingPrototypes.add(__constructorPrototype);
-        __bindingConstructorPrototypes.add(__constructorPrototype);
-        __constructorPrototype = Reflect.getPrototypeOf(__constructorPrototype);
-      }
+      __walkPrototypeChain(
+        __prototype,
+        (__constructorPrototype) => {
+          __bindingPrototypes.add(__constructorPrototype);
+          __bindingConstructorPrototypes.add(__constructorPrototype);
+        },
+        Object.prototype,
+      );
     }
   }
   const __isInputRecord = (__value: any) => {
@@ -410,7 +444,6 @@ function __createManagedBindingFacade(__binding: any, __state: any) {
       return false;
     }
     if (__isPlainContainer(__value)) return true;
-    const __seen = new Set();
     let __prototype;
     try {
       __prototype = Reflect.getPrototypeOf(__value);
@@ -418,26 +451,13 @@ function __createManagedBindingFacade(__binding: any, __state: any) {
       return true;
     }
     if (__inputPassthroughPrototypes.has(__prototype)) return false;
-    while (__prototype !== null) {
-      __assertUnseenPrototype(__seen, __prototype);
-      try {
-        __prototype = Reflect.getPrototypeOf(__prototype);
-      } catch {
-        return true;
-      }
-    }
+    // Only bounds the chain: a prototype that cannot be read still leaves an
+    // input record.
+    __walkPrototypeChain(__prototype, __visitNothing, null, true);
     return true;
   };
-  const __findPropertyDescriptor = (__value: any, __key: any) => {
-    const __seen = new Set();
-    let __owner = __value;
-    while (__owner !== null) {
-      __assertUnseenPrototype(__seen, __owner);
-      const __descriptor = Reflect.getOwnPropertyDescriptor(__owner, __key);
-      if (__descriptor) return __descriptor;
-      __owner = Reflect.getPrototypeOf(__owner);
-    }
-  };
+  const __findPropertyDescriptor = (__value: any, __key: any) =>
+    __walkPrototypeChain(__value, (__owner) => Reflect.getOwnPropertyDescriptor(__owner, __key));
   const __isCallablePropertyDescriptor = (__descriptor: any) =>
     __descriptor !== undefined &&
     (('value' in __descriptor && typeof __descriptor.value === 'function') ||
@@ -452,13 +472,7 @@ function __createManagedBindingFacade(__binding: any, __state: any) {
     } catch {
       return false;
     }
-    const __seen = new Set();
-    while (__prototype !== null) {
-      __assertUnseenPrototype(__seen, __prototype);
-      if (__bindingPrototypes.has(__prototype)) return true;
-      __prototype = Reflect.getPrototypeOf(__prototype);
-    }
-    return false;
+    return __walkPrototypeChain(__prototype, __visitBindingPrototype) === true;
   };
   const __isConstructor = (__value: any) => {
     try {

@@ -1,5 +1,4 @@
 import assert from 'node:assert/strict';
-import { execFile } from 'node:child_process';
 import { existsSync } from 'node:fs';
 import { createServer } from 'node:http';
 import { createRequire } from 'node:module';
@@ -17,15 +16,13 @@ import {
 } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
-import { promisify } from 'node:util';
 import { fileURLToPath } from 'node:url';
 
 import { parse } from 'acorn';
 import { chromium } from 'playwright-chromium';
 
-import { findBareRuntimeImports } from './bare-runtime-imports.mjs';
+import { createRun, fileDependency, findBareRuntimeImports } from './bare-runtime-imports.mjs';
 
-const execFileAsync = promisify(execFile);
 const repoRoot = fileURLToPath(new URL('../../', import.meta.url));
 const rootPackageDir = path.join(repoRoot, 'packages/rolldown');
 const browserPackageDir = path.join(repoRoot, 'packages/browser');
@@ -136,18 +133,7 @@ const yarnVersion = '1.22.22';
 const tempDir = await mkdtemp(path.join(tmpdir(), 'rolldown-wasi-packed-consumer-'));
 let runtimeNodes = [];
 
-async function run(command, args, options = {}) {
-  return execFileAsync(command, args, {
-    maxBuffer: 20 * 1024 * 1024,
-    timeout: consumerTimeoutMs,
-    ...options,
-    env: {
-      ...process.env,
-      COREPACK_ENABLE_DOWNLOAD_PROMPT: '0',
-      ...options.env,
-    },
-  });
-}
+const run = createRun({ timeout: consumerTimeoutMs });
 
 async function resolveRuntimeNodes() {
   const currentVersion = process.versions.node;
@@ -261,10 +247,6 @@ async function withTimeout(promise, timeoutMs, label) {
   } finally {
     clearTimeout(timeout);
   }
-}
-
-function fileDependency(fromDir, tarball) {
-  return `file:${path.relative(fromDir, tarball).split(path.sep).join('/')}`;
 }
 
 function getInstalledOptionalPackageDirs(consumerDir, packedFlavors) {

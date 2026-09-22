@@ -1,17 +1,14 @@
 import assert from 'node:assert/strict';
 import { AsyncLocalStorage } from 'node:async_hooks';
-import { execFile } from 'node:child_process';
 import { mkdtemp, mkdir, readFile, readdir, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
-import { promisify } from 'node:util';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 
 import { Miniflare } from 'miniflare';
 
-import { findBareRuntimeImports } from './bare-runtime-imports.mjs';
+import { createRun, fileDependency, findBareRuntimeImports } from './bare-runtime-imports.mjs';
 
-const execFileAsync = promisify(execFile);
 const repoRoot = fileURLToPath(new URL('../../', import.meta.url));
 const browserPackageDir = path.join(repoRoot, 'packages/browser');
 const wranglerPackageDir = path.dirname(
@@ -35,22 +32,7 @@ const expectedRegistryRuntimeDependencies = {
   '@napi-rs/wasm-runtime': '~1.2.4',
 };
 
-async function run(command, args, options = {}) {
-  return execFileAsync(command, args, {
-    maxBuffer: 20 * 1024 * 1024,
-    ...options,
-    env: {
-      ...process.env,
-      COREPACK_ENABLE_DOWNLOAD_PROMPT: '0',
-      WRANGLER_SEND_METRICS: 'false',
-      ...options.env,
-    },
-  });
-}
-
-function fileDependency(fromDir, tarball) {
-  return `file:${path.relative(fromDir, tarball).split(path.sep).join('/')}`;
-}
+const run = createRun({ env: { WRANGLER_SEND_METRICS: 'false' } });
 
 async function assertInstallableWithPnpm(tarball, version) {
   const consumerDir = path.join(tempDir, `install-pnpm-${version}`);

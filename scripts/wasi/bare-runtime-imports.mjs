@@ -3,10 +3,42 @@
 // the result deep-equals `[]`, so a walker that silently stopped matching would
 // make all three publish gates pass vacuously — the positive control at the
 // bottom of this module is what keeps that from happening.
+//
+// It also holds the two small process helpers both packed-consumer gates share
+// (`createRun`, `fileDependency`).
 
 import assert from 'node:assert/strict';
+import { execFile } from 'node:child_process';
+import path from 'node:path';
+import { promisify } from 'node:util';
 
 import { parse } from 'acorn';
+
+const execFileAsync = promisify(execFile);
+
+// Returns the gate's `run(command, args, options)`: a 20 MiB output buffer and
+// no corepack download prompt, plus the gate's own `defaults` (e.g. a timeout
+// or extra env). Per-call options and env win over both.
+export function createRun({ env: defaultEnv, ...defaultOptions } = {}) {
+  return async function run(command, args, options = {}) {
+    return execFileAsync(command, args, {
+      maxBuffer: 20 * 1024 * 1024,
+      ...defaultOptions,
+      ...options,
+      env: {
+        ...process.env,
+        COREPACK_ENABLE_DOWNLOAD_PROMPT: '0',
+        ...defaultEnv,
+        ...options.env,
+      },
+    });
+  };
+}
+
+// A `file:` dependency spec pointing at `tarball`, relative to the consumer.
+export function fileDependency(fromDir, tarball) {
+  return `file:${path.relative(fromDir, tarball).split(path.sep).join('/')}`;
+}
 
 // A bare specifier that survives into a shipped artifact resolves from the
 // registry instead of the vendored copy, which breaks the emnapi ABI the .wasm

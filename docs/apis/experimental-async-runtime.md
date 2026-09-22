@@ -98,7 +98,7 @@ the JavaScript host thread safe. Query `blockOnJsThreadSafe`,
 
 Earlier native builds under `ROLLDOWN_RUNTIME=single` could hang when a Node
 `Worker` was torn down while a watch debounce timer was still armed. That was
-fixed upstream in `napi-async-runtime` 0.2.1 (napi-rs#3489), and the 0.2.2
+fixed upstream in `napi-async-runtime` 0.2.1 (napi-rs#3489), and the 0.2.3
 release Rolldown pins carries the fix.
 
 On the native artifact, `ROLLDOWN_RUNTIME=single` (or a `CurrentThread`
@@ -113,8 +113,8 @@ single-thread mode. Only the WebAssembly artifacts, which compile without
 Rayon, execute on a single lane.
 
 Every WebAssembly artifact remains `CurrentThread`, including the published
-threaded build for `wasm32-wasip1-threads`: the shared scheduler has no
-WebAssembly multi-thread executor, so that target gains threads for napi-rs
-host work but not a parallel executor. Consequently `wasm32-wasip1-threads`
+threaded build for `wasm32-wasip1-threads`: Rolldown rejects the
+multi-thread flavor on every WebAssembly build, so that target gains threads
+for napi-rs host work but not a parallel executor. Consequently `wasm32-wasip1-threads`
 reports `devSupported: false`: `dev()` is unavailable there. Watch mode is
 unsupported on every WASI artifact.

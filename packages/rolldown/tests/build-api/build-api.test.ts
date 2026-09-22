@@ -356,12 +356,12 @@ test.skipIf(isWasiTest)(
     const originalTerminate = Object.getOwnPropertyDescriptor(Worker.prototype, 'terminate')!
       .value as (this: Worker) => Promise<number>;
     const terminateCalls = new Map<Worker, number>();
-    const terminateSpy = vi
-      .spyOn(Worker.prototype, 'terminate')
-      .mockImplementation(function (this: Worker) {
-        terminateCalls.set(this, (terminateCalls.get(this) ?? 0) + 1);
-        return Reflect.apply(originalTerminate, this, []);
-      });
+    const terminateSpy = vi.spyOn(Worker.prototype, 'terminate').mockImplementation(function (
+      this: Worker,
+    ) {
+      terminateCalls.set(this, (terminateCalls.get(this) ?? 0) + 1);
+      return Reflect.apply(originalTerminate, this, []);
+    });
     const state = new Int32Array(new SharedArrayBuffer(Int32Array.BYTES_PER_ELEMENT * 2));
     const parallelPlugin = defineParallelPlugin<{ state: Int32Array }>(
       path.join(import.meta.dirname, 'parallel-close-plugin.mjs'),
@@ -398,17 +398,17 @@ test.skipIf(isWasiTest)(
     const terminateCalls = new Map<Worker, number>();
     const failedWorkers = new WeakSet<Worker>();
     let injectedFailure = false;
-    const terminateSpy = vi
-      .spyOn(Worker.prototype, 'terminate')
-      .mockImplementation(function (this: Worker) {
-        terminateCalls.set(this, (terminateCalls.get(this) ?? 0) + 1);
-        if (!injectedFailure) {
-          injectedFailure = true;
-          failedWorkers.add(this);
-          return Promise.reject(cleanupError);
-        }
-        return Reflect.apply(originalTerminate, this, []);
-      });
+    const terminateSpy = vi.spyOn(Worker.prototype, 'terminate').mockImplementation(function (
+      this: Worker,
+    ) {
+      terminateCalls.set(this, (terminateCalls.get(this) ?? 0) + 1);
+      if (!injectedFailure) {
+        injectedFailure = true;
+        failedWorkers.add(this);
+        return Promise.reject(cleanupError);
+      }
+      return Reflect.apply(originalTerminate, this, []);
+    });
     const state = new Int32Array(new SharedArrayBuffer(Int32Array.BYTES_PER_ELEMENT * 2));
     const parallelPlugin = defineParallelPlugin<{ state: Int32Array }>(
       path.join(import.meta.dirname, 'parallel-close-plugin.mjs'),
@@ -2133,12 +2133,12 @@ test.skipIf(isWasiTest)(
       .value as (this: Worker) => Promise<number>;
     const state = new Int32Array(new SharedArrayBuffer(Int32Array.BYTES_PER_ELEMENT * 2));
     const closeCountsAtTermination: number[] = [];
-    const terminateSpy = vi
-      .spyOn(Worker.prototype, 'terminate')
-      .mockImplementation(function (this: Worker) {
-        closeCountsAtTermination.push(Atomics.load(state, 1));
-        return Reflect.apply(originalTerminate, this, []);
-      });
+    const terminateSpy = vi.spyOn(Worker.prototype, 'terminate').mockImplementation(function (
+      this: Worker,
+    ) {
+      closeCountsAtTermination.push(Atomics.load(state, 1));
+      return Reflect.apply(originalTerminate, this, []);
+    });
     const parallelPlugin = defineParallelPlugin<{ state: Int32Array }>(
       path.join(import.meta.dirname, 'parallel-close-plugin.mjs'),
     );
@@ -2256,17 +2256,17 @@ test.skipIf(isWasiTest)(
     const terminateCalls = new Map<Worker, number>();
     const failedWorkers = new WeakSet<Worker>();
     let injectedFailure = false;
-    const terminateSpy = vi
-      .spyOn(Worker.prototype, 'terminate')
-      .mockImplementation(function (this: Worker) {
-        terminateCalls.set(this, (terminateCalls.get(this) ?? 0) + 1);
-        if (!injectedFailure) {
-          injectedFailure = true;
-          failedWorkers.add(this);
-          return Promise.reject(cleanupError);
-        }
-        return Reflect.apply(originalTerminate, this, []);
-      });
+    const terminateSpy = vi.spyOn(Worker.prototype, 'terminate').mockImplementation(function (
+      this: Worker,
+    ) {
+      terminateCalls.set(this, (terminateCalls.get(this) ?? 0) + 1);
+      if (!injectedFailure) {
+        injectedFailure = true;
+        failedWorkers.add(this);
+        return Promise.reject(cleanupError);
+      }
+      return Reflect.apply(originalTerminate, this, []);
+    });
 
     const state = new Int32Array(new SharedArrayBuffer(Int32Array.BYTES_PER_ELEMENT * 2));
     const parallelPlugin = defineParallelPlugin<{ state: Int32Array }>(
@@ -2304,17 +2304,17 @@ test.skipIf(isWasiTest)(
     const terminateCalls = new Map<Worker, number>();
     const failedWorkers = new WeakSet<Worker>();
     let injectedFailure = false;
-    const terminateSpy = vi
-      .spyOn(Worker.prototype, 'terminate')
-      .mockImplementation(function (this: Worker) {
-        terminateCalls.set(this, (terminateCalls.get(this) ?? 0) + 1);
-        if (!injectedFailure) {
-          injectedFailure = true;
-          failedWorkers.add(this);
-          return Promise.reject(cleanupError);
-        }
-        return Reflect.apply(originalTerminate, this, []);
-      });
+    const terminateSpy = vi.spyOn(Worker.prototype, 'terminate').mockImplementation(function (
+      this: Worker,
+    ) {
+      terminateCalls.set(this, (terminateCalls.get(this) ?? 0) + 1);
+      if (!injectedFailure) {
+        injectedFailure = true;
+        failedWorkers.add(this);
+        return Promise.reject(cleanupError);
+      }
+      return Reflect.apply(originalTerminate, this, []);
+    });
 
     const state = new Int32Array(new SharedArrayBuffer(Int32Array.BYTES_PER_ELEMENT * 2));
     const parallelPlugin = defineParallelPlugin<{ state: Int32Array }>(

@@ -301,7 +301,8 @@ File change detected by the config group's shared FsWatcher
   → GroupFsEventHandler sends WatcherMsg::FileChanges { group_index }
   → process_file_changes():
       - GroupFsEventHandler already mapped notify EventKind → WatcherChangeKind (Create/Update/Delete)
-      - for EVERY member task of the group whose watched_files contains the path:
+      - for EVERY member task of the group whose watched_files contains the path
+        or one of its ancestor directories (addWatchFile of a directory):
           task.mark_needs_rebuild(path) → sets needs_rebuild = true
           task.call_on_invalidate(path) → fires immediately, before debounce
       - State: Idle → Debouncing, or extends deadline

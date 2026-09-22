@@ -157,9 +157,11 @@ default, maximum)` — shared clamp; treats `0`/garbage as unset so it cannot
   panic the constructor's `validate()`.
 - `crates/rolldown_binding/src/lib.rs` — `init()` (`#[module_init]`) — forces
   `resolved_runtime_config()` at load on every artifact.
-- `crates/rolldown_utils/src/lib.rs` / `src/time.rs` —
+- `crates/rolldown_utils/src/lib.rs` (re-export of `napi-async-runtime`) —
   `MAX_ASYNC_RUNTIME_WORKER_THREADS = 256`; `max_async_runtime_worker_threads()`
-  = `256.min(rayon::max_num_threads())` native, `1` on wasm.
+  = `256.min(rayon::max_num_threads())` wherever OS threads exist (`255` on
+  `wasm32-wasip1-threads`), `1` on `wasm32-wasip1`. Rolldown reads it only on
+  native, in `resolve_runtime_config_for`.
 
 ---
 

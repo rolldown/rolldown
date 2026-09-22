@@ -27,6 +27,10 @@ Position is load-bearing in two directions:
 1. **`wrap_kind` and `wrapper_ref` must already exist.** Every CJS/ESM-wrap arm reads `metas[importee.idx].wrap_kind()` and dereferences `wrapper_ref.unwrap()`. `wrap_modules` and `generate_lazy_export` populate them.
 2. **`include_statements` must run after.** Tree-shaking traverses `stmt_info.referenced_symbols` and joins `depended_runtime_helper` against included statements. Without the data this pass writes, wrappers and helpers would be silently dropped from the output.
 
+`determine_side_effects` propagates effects from dependencies to their importers through a worklist. User-defined verdicts remain authoritative. Re-exports that need wrapper initialization or a `__reExport` call also start propagation. Each module enters the worklist at most once, so the pass takes O(modules + imports).
+
+A recursive cache can finish one member of an import cycle before it discovers an effectful dependency of another member. For `a → b → a` and `a → effect`, it can cache `b` as effect-free before discovering `effect`. A separate entry that imports `b` then loses the effect. The fixture `crates/rolldown/tests/rolldown/tree_shaking/multi_entry_side_effect_cycle` reproduces this without constant refinement.
+
 ## Dispatch
 
 For each `(importer, stmt_info, rec)` triple this pass dispatches on `rec.kind`, the importee's `WrapKind`, and (for `Import`) whether the record is a re-export-all (`export *`).

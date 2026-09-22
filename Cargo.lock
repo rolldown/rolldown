@@ -2659,6 +2659,7 @@ dependencies = [
  "rolldown_plugin_vite_transform",
  "rolldown_plugin_vite_web_worker_post",
  "rolldown_sourcemap",
+ "rolldown_std_utils",
  "rolldown_tracing",
  "rolldown_tracking_allocator",
  "rolldown_utils",
@@ -2723,6 +2724,7 @@ dependencies = [
  "rolldown_dev_common",
  "rolldown_error",
  "rolldown_fs_watcher",
+ "rolldown_std_utils",
  "rolldown_utils",
  "rolldown_workspace",
  "rustc-hash",
@@ -2749,6 +2751,7 @@ version = "1.2.9"
 dependencies = [
  "blake3",
  "rolldown_devtools_action",
+ "rolldown_std_utils",
  "rustc-hash",
  "serde",
  "serde_json",
@@ -3334,6 +3337,7 @@ dependencies = [
  "rolldown_common",
  "rolldown_error",
  "rolldown_fs_watcher",
+ "rolldown_std_utils",
  "rolldown_utils",
  "rolldown_workspace",
  "sugar_path",
@@ -3344,6 +3348,9 @@ dependencies = [
 [[package]]
 name = "rolldown_workspace"
 version = "1.2.9"
+dependencies = [
+ "dunce",
+]
 
 [[package]]
 name = "ropey"

@@ -14,3 +14,7 @@ doctest = false
 
 [lints]
 workspace = true
+
+[dependencies]
+# Strips the `\\?\` verbatim prefix `std::fs::canonicalize` returns on Windows.
+dunce = { workspace = true }

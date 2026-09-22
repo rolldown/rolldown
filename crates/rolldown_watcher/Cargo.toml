@@ -25,6 +25,7 @@ rolldown = { workspace = true, features = ["experimental"] }
 rolldown_common = { workspace = true }
 rolldown_error = { workspace = true }
 rolldown_fs_watcher = { workspace = true }
+rolldown_std_utils = { workspace = true }
 rolldown_utils = { workspace = true }
 tracing = { workspace = true }
 

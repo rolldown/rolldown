@@ -154,6 +154,7 @@ impl<Fs: FileSystem> Resolver<Fs> {
   /// The same `package.json` and `"type"` rules as [`Resolver::resolve`] apply, so a module gets
   /// one policy for every specifier that reaches it. The id is final, so no alias, `tsconfig`
   /// path, or extension rewrite applies to it. See
+  /// `internal-docs/module-side-effects/implementation.md` and
   /// <https://github.com/rolldown/rolldown/issues/10909>.
   ///
   /// # Errors

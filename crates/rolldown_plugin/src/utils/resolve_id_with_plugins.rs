@@ -52,7 +52,8 @@ pub fn infer_module_def_format(
 /// A `resolveId` hook may return a bare id string, which carries no `packageJsonPath`. This
 /// function then resolves the id like an import of it. Otherwise a module's
 /// `package.json#sideEffects` policy and its module format would depend on the specifier.
-/// See <https://github.com/rolldown/rolldown/issues/10909>.
+/// See `internal-docs/module-side-effects/design.md` and
+/// <https://github.com/rolldown/rolldown/issues/10909>.
 fn resolved_id_from_hook_output<Fs: FileSystem>(
   resolver: &Resolver<Fs>,
   r: HookResolveIdOutput,

@@ -101,9 +101,10 @@ async fn bundle_with(
     .collect()
 }
 
-/// A module's side-effect policy must not depend on the specifier that reached it. In #10909 it
-/// broke that. The module loader picked the winning resolution in task-completion order, so the
-/// same input produced two different bundles. One importer is enough to pin the invariant.
+/// A module's side-effect policy must not depend on the specifier that reached it
+/// (`internal-docs/module-side-effects/design.md`, principle 2). #10909 broke that. The module
+/// loader picked the winning resolution in task-completion order, so the same input produced two
+/// different bundles. One importer is enough to pin the invariant.
 #[tokio::test(flavor = "multi_thread")]
 async fn plugin_resolved_id_keeps_package_side_effects_policy() {
   let code = bundle("./entry.js").await;

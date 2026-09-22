@@ -246,9 +246,6 @@ impl WatchTask {
         continue;
       }
       let path = watch_path.as_path();
-      if !path.exists() {
-        continue;
-      }
       if pattern_filter::filter(
         options.watch.exclude.as_deref(),
         options.watch.include.as_deref(),

@@ -842,6 +842,54 @@ test.concurrent(
 );
 
 test.concurrent(
+  'PluginContext addWatchFile with a missing path',
+  { retry: TEST_RETRY, timeout: TEST_TIMEOUT },
+  async ({ task, expect, onTestFinished }) => {
+    const retryCount = task.result?.retryCount ?? 0;
+    const { dir: cwd } = createTestWithMultiFiles('addWatchFile-missing', retryCount, {
+      'main.js': `console.log(1)`,
+    });
+    const missingFile = path.join(cwd, 'missing.txt');
+    const missingDir = path.join(cwd, 'missing-dir');
+
+    const watcher = watch({
+      cwd,
+      input: 'main.js',
+      output: { dir: path.join(cwd, 'dist') },
+      plugins: [
+        {
+          name: 'test',
+          buildStart() {
+            this.addWatchFile(missingFile);
+            this.addWatchFile(missingDir);
+          },
+        },
+      ],
+    });
+    onTestFinished(async () => {
+      await watcher.close();
+      if (!process.env.CI) {
+        fs.rmSync(cwd, { recursive: true, force: true });
+      }
+    });
+    await waitBuildFinished(watcher);
+
+    const changes: string[] = [];
+    watcher.on('change', (id, { event }) => {
+      changes.push(`${event} ${id}`);
+    });
+
+    await editFile(missingFile, '1');
+    await expect.poll(() => changes, { timeout: 10_000 }).toContain(`create ${missingFile}`);
+
+    const fileInDir = path.join(missingDir, 'data.txt');
+    fs.mkdirSync(missingDir);
+    await editFile(fileInDir, '1');
+    await expect.poll(() => changes, { timeout: 10_000 }).toContain(`create ${fileInDir}`);
+  },
+);
+
+test.concurrent(
   'watch include/exclude',
   { retry: TEST_RETRY, timeout: TEST_TIMEOUT },
   async ({ task, expect, onTestFinished }) => {

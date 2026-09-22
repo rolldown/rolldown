@@ -1044,7 +1044,9 @@ mod tests {
 
     closed.store(true, Ordering::Relaxed);
     close_notify.notify(usize::MAX);
-    tx.unbounded_send(WatcherMsg::Close).expect("send close");
+    // Same order as `Watcher::publish_close`. The coordinator may already have seen
+    // `closed` and returned, dropping `rx`, so a `Disconnected` send is expected.
+    let _ = tx.unbounded_send(WatcherMsg::Close);
     tokio::time::timeout(Duration::from_secs(10), handle)
       .await
       .expect("coordinator should close")
@@ -1106,7 +1108,9 @@ mod tests {
     .expect("initial build should reach both registration attempts");
     closed.store(true, Ordering::Relaxed);
     close_notify.notify(usize::MAX);
-    tx.unbounded_send(WatcherMsg::Close).expect("send close");
+    // Same order as `Watcher::publish_close`. The coordinator may already have seen
+    // `closed` and returned, dropping `rx`, so a `Disconnected` send is expected.
+    let _ = tx.unbounded_send(WatcherMsg::Close);
 
     tokio::time::timeout(Duration::from_secs(10), handle)
       .await
@@ -1407,7 +1411,9 @@ mod tests {
 
     closed.store(true, Ordering::Relaxed);
     close_notify.notify(usize::MAX);
-    tx.unbounded_send(WatcherMsg::Close).expect("send close");
+    // Same order as `Watcher::publish_close`. The coordinator may already have seen
+    // `closed` and returned, dropping `rx`, so a `Disconnected` send is expected.
+    let _ = tx.unbounded_send(WatcherMsg::Close);
     tokio::time::timeout(Duration::from_secs(30), handle)
       .await
       .expect("coordinator should close")
@@ -1535,7 +1541,9 @@ mod tests {
 
     closed.store(true, Ordering::Relaxed);
     close_notify.notify(usize::MAX);
-    tx.unbounded_send(WatcherMsg::Close).expect("send close");
+    // Same order as `Watcher::publish_close`. The coordinator may already have seen
+    // `closed` and returned, dropping `rx`, so a `Disconnected` send is expected.
+    let _ = tx.unbounded_send(WatcherMsg::Close);
     tokio::time::timeout(Duration::from_secs(30), handle)
       .await
       .expect("coordinator should close")
@@ -1734,7 +1742,9 @@ mod tests {
 
     fixture.closed.store(true, Ordering::Relaxed);
     fixture.close_notify.notify(usize::MAX);
-    fixture.tx.unbounded_send(WatcherMsg::Close).expect("send close");
+    // Same order as `Watcher::publish_close`. The coordinator may already have seen
+    // `closed` and returned, dropping `rx`, so a `Disconnected` send is expected.
+    let _ = fixture.tx.unbounded_send(WatcherMsg::Close);
     tokio::time::timeout(Duration::from_secs(30), fixture.handle)
       .await
       .expect("coordinator should close")
@@ -1939,7 +1949,9 @@ mod tests {
 
     closed.store(true, Ordering::Relaxed);
     close_notify.notify(usize::MAX);
-    tx.unbounded_send(WatcherMsg::Close).expect("send close");
+    // Same order as `Watcher::publish_close`. The coordinator may already have seen
+    // `closed` and returned, dropping `rx`, so a `Disconnected` send is expected.
+    let _ = tx.unbounded_send(WatcherMsg::Close);
     tokio::time::timeout(Duration::from_secs(30), handle)
       .await
       .expect("coordinator should close")

@@ -13,6 +13,8 @@ readme = "../../README.md"
 rolldown-notify = { workspace = true }
 rolldown-notify-debouncer-full = { workspace = true }
 rolldown_error = { workspace = true }
+rustc-hash = { workspace = true }
+tracing = { workspace = true }
 
 [lints]
 workspace = true

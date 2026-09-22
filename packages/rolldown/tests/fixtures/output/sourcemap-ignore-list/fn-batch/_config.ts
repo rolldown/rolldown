@@ -1,3 +1,4 @@
+import { sep } from 'node:path';
 import { defineTest } from 'rolldown-tests';
 import { expect } from 'vitest';
 
@@ -28,12 +29,11 @@ export default defineTest({
 
     const parsed = JSON.parse(map.source as string);
     const ignored = parsed.x_google_ignoreList as number[];
-    const vendorIndex = (parsed.sources as string[]).findIndex((source) =>
-      source.includes('vendor'),
-    );
+    const sources = parsed.sources as string[];
+    const vendorIndex = sources.findIndex((source) => source.includes('vendor'));
 
     expect(vendorIndex).toBeGreaterThanOrEqual(0);
     expect(ignored).toStrictEqual([vendorIndex]);
-    expect(seen).toStrictEqual(parsed.sources);
+    expect(seen.map((source) => source.replaceAll(sep, '/'))).toStrictEqual(sources);
   },
 });

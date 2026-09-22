@@ -31,7 +31,7 @@ pub trait HmrAstBuilder<'any, 'ast> {
 
   /// How to refer to the current module id at the emission site.
   ///
-  /// The HMR/lazy path wraps each module body in `createEsmInitializer(id, function () { … })`,
+  /// The HMR/lazy path wraps each module body in `registerFactory(id, function () { … })`,
   /// so inside the body the id is available as an identifier (`__rolldown_module_id__`) passed in
   /// by the runtime. The main-bundle path has no such wrapper, so it still needs to emit the
   /// stable id as a string literal.
@@ -161,8 +161,7 @@ impl<'any, 'ast> HmrAstBuilder<'any, 'ast> for HmrAstFinalizer<'any, 'ast> {
   }
 
   /// HMR/lazy path: each module body is wrapped in
-  /// `createEsmInitializer(id, function (__rolldown_module_id__) { … })`
-  /// (or `createCjsInitializer(id, function (exports, module, __rolldown_module_id__) { … })`),
+  /// `registerFactory(id, function (__rolldown_module_id__) { … })`,
   /// so the id is in lexical scope as a parameter.
   fn module_id_argument(&self) -> ast::Argument<'ast> {
     ast::Argument::new_identifier(SPAN, MODULE_ID_PARAM_FOR_HMR, &self.builder())

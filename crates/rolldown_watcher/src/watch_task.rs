@@ -1,7 +1,7 @@
 use arcstr::ArcStr;
 use rolldown::{Bundler, BundlerBuilder, BundlerConfig};
 use rolldown_common::{
-  BundleMode, Log, LogLevel, NormalizedBundlerOptions, ScanMode, WatcherChangeKind,
+  BundleMode, Log, LogLevel, NormalizedBundlerOptions, ScanMode, WatchPath, WatcherChangeKind,
 };
 use rolldown_error::{
   BatchedBuildDiagnostic, BuildDiagnostic, BuildResult, Diagnostic, DiagnosticOptions, ResultExt,
@@ -26,7 +26,7 @@ pub struct WatchTask {
   bundler: Arc<TokioMutex<Bundler>>,
   options: Arc<NormalizedBundlerOptions>,
   fs_watcher: std::sync::Mutex<FsWatcher>,
-  watched_files: FxDashSet<ArcStr>,
+  watched_files: FxDashSet<WatchPath>,
   pub(crate) needs_rebuild: bool,
   closed: Arc<AtomicBool>,
 }
@@ -232,34 +232,35 @@ impl WatchTask {
   /// Separated from `&self` to allow calling from closures during build.
   fn update_watch_files_from(
     fs_watcher: &std::sync::Mutex<FsWatcher>,
-    watched_files: &FxDashSet<ArcStr>,
+    watched_files: &FxDashSet<WatchPath>,
     options: &NormalizedBundlerOptions,
     files: &[ArcStr],
   ) -> BuildResult<()> {
     let mut fs_watcher = fs_watcher.lock().expect("fs_watcher lock poisoned");
     let mut watcher_paths = fs_watcher.paths_mut();
+    let mut added_files = Vec::new();
 
     for file in files {
-      let file_str = file.as_str();
-      if watched_files.contains(file_str) {
+      let watch_path = WatchPath::new(file.as_str(), &options.cwd);
+      if watched_files.contains(&watch_path) {
         continue;
       }
-      let path = Path::new(file_str);
+      let path = watch_path.as_path();
       if !path.exists() {
         continue;
       }
       if pattern_filter::filter(
         options.watch.exclude.as_deref(),
         options.watch.include.as_deref(),
-        file_str,
+        path.to_string_lossy().as_ref(),
         options.cwd.to_string_lossy().as_ref(),
       )
       .inner()
       {
-        match watcher_paths.add(path, RecursiveMode::NonRecursive) {
+        match watcher_paths.add(path, RecursiveMode::Recursive) {
           Ok(()) => {
             tracing::debug!(name = "notify watch", path = ?path);
-            watched_files.insert(file.clone());
+            added_files.push(watch_path);
           }
           Err(e) => {
             tracing::debug!(name = "notify watch skipped", path = ?path, error = ?e);
@@ -269,6 +270,9 @@ impl WatchTask {
     }
 
     watcher_paths.commit().map_err_to_unhandleable()?;
+    for file in added_files {
+      watched_files.insert(file);
+    }
 
     Ok(())
   }
@@ -325,17 +329,7 @@ impl WatchTask {
   }
 
   fn is_watched_file(&self, path: &str) -> bool {
-    if self.watched_files.contains(path) {
-      return true;
-    }
-
-    // Windows path normalization
-    #[cfg(windows)]
-    if self.watched_files.contains(path.replace('\\', "/").as_str()) {
-      return true;
-    }
-
-    false
+    Path::new(path).ancestors().any(|ancestor| self.watched_files.contains(ancestor))
   }
 }
 

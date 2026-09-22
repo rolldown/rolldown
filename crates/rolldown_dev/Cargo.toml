@@ -33,9 +33,9 @@ rolldown_error = { workspace = true }
 rolldown_fs_watcher = { workspace = true }
 rolldown_utils = { workspace = true }
 rustc-hash = { workspace = true }
-sugar_path = { workspace = true }
 tokio = { workspace = true, features = ["rt", "macros", "sync", "time"] }
 tracing = { workspace = true }
 
 [dev-dependencies]
 rolldown_workspace = { workspace = true }
+sugar_path = { workspace = true }

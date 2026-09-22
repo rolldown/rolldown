@@ -12,6 +12,7 @@ Implementation: `crates/rolldown_std_utils/src/path_ext.rs`. Module-id identity:
 | `relative_path_to_slash(target, base)`        | Relative path as `/`-separated `String`            |
 | `relative_path_as_js_specifier(target, base)` | Same, JS form: `.` / `./…` / `../…`                |
 | `absolute_path_to_relative_slash(path, cwd)`  | Absolute → cwd-relative slash string               |
+| `normalize_path_buf(path)`                    | Lexically normalize an owned `PathBuf`             |
 | `normalize_path_buf_to_slash(path)`           | Normalize owned `PathBuf` → slash `String`         |
 | `path_buf_to_slash(path)`                     | Owned `PathBuf` → slash `String` without normalize |
 | `PathExt::expect_to_slash`                    | Borrowed path → slash `String`                     |

@@ -616,9 +616,9 @@ true` and calls `rebuild()`.
 Per changed file:
 
 1. **Default affected set** — the file's own module, plus every module
-   that registered the file with `addWatchFile` (transform
-   dependencies), in a stable order: own module first, then
-   registrants sorted by stable id.
+   that registered the file, or a directory above it, with
+   `addWatchFile` (transform dependencies, stored as `WatchPath`), in a
+   stable order: own module first, then registrants sorted by stable id.
 2. **`hotUpdate` plugin chain** (dev-only, off by default) — runs only
    when the `hotUpdate` dev option is `true`. It stays off until
    file-to-module invalidation is complete (rolldown/rolldown#10714),

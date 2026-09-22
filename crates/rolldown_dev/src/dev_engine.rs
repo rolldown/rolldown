@@ -14,7 +14,7 @@ use rolldown_common::{HmrLazyChunkOutput, HmrStampTable};
 use rolldown_dev_common::types::DevCallbackError;
 use rolldown_error::{BatchedBuildDiagnostic, BuildResult, ResultExt};
 use rolldown_fs_watcher::{FsWatcher, FsWatcherConfig};
-use rolldown_utils::futures::try_spawn;
+use rolldown_utils::futures::{RetainedStart, try_spawn};
 use rustc_hash::FxHashMap;
 #[cfg(feature = "testing")]
 use rustc_hash::FxHashSet;
@@ -47,37 +47,10 @@ use rolldown_utils::indexmap::FxIndexMap;
 #[cfg(feature = "testing")]
 use std::path::PathBuf;
 
-pub struct CoordinatorState {
-  coordinator: Option<PendingCoordinatorFuture>,
-  handle: Option<CoordinatorTaskFuture>,
-}
-
-impl CoordinatorState {
-  /// Start the retained coordinator future. When submission fails (e.g. the
-  /// async runtime rejected the spawn), the coordinator is retained so a later
-  /// call can retry after a runtime restart.
-  fn try_start<E>(
-    &mut self,
-    start: impl FnOnce(
-      PendingCoordinatorFuture,
-    ) -> Result<CoordinatorTaskFuture, (E, PendingCoordinatorFuture)>,
-  ) -> Result<(), E> {
-    let Some(coordinator) = self.coordinator.take() else {
-      return Ok(());
-    };
-
-    match start(coordinator) {
-      Ok(handle) => {
-        self.handle = Some(handle);
-        Ok(())
-      }
-      Err((error, coordinator)) => {
-        self.coordinator = Some(coordinator);
-        Err(error)
-      }
-    }
-  }
-}
+/// The coordinator future before `run()`, then its spawned handle. A rejected
+/// submission keeps the coordinator so a later `run()` can retry after a
+/// runtime restart.
+type CoordinatorState = RetainedStart<PendingCoordinatorFuture, CoordinatorTaskFuture>;
 
 impl WatchRegistrationErrorObservation {
   async fn finish(mut self) -> BuildResult<()> {
@@ -189,10 +162,7 @@ impl DevEngine {
       coordinator_sender: coordinator_tx,
       bundler,
       dev_context: Arc::clone(&ctx),
-      coordinator_state: Arc::new(Mutex::new(CoordinatorState {
-        coordinator: Some(coordinator),
-        handle: None,
-      })),
+      coordinator_state: Arc::new(Mutex::new(CoordinatorState::new(coordinator))),
       close_future: std::sync::Mutex::new(None),
       clients,
       is_closed: AtomicBool::new(false),
@@ -214,16 +184,15 @@ impl DevEngine {
   pub async fn run(&self) -> BuildResult<()> {
     let mut coordinator_state = self.coordinator_state.lock().await;
 
-    let start_result = coordinator_state.try_start(|coordinator| match try_spawn(coordinator) {
-      Ok(join_handle) => {
+    let start_result = coordinator_state.try_start(|coordinator| {
+      try_spawn(coordinator).map(|join_handle| {
         let coordinator_handle = Box::pin(async move {
           join_handle.await.map_err(|error| {
             Arc::<str>::from(format!("DevEngine coordinator task failed: {error}"))
           })
         }) as PinBoxSendStaticFuture<CoordinatorTaskResult>;
-        Ok(coordinator_handle.shared())
-      }
-      Err((error, coordinator)) => Err((error, coordinator)),
+        coordinator_handle.shared()
+      })
     });
     if let Err(error) = start_result {
       return Err(anyhow::anyhow!("DevEngine coordinator task submission failed: {error}").into());
@@ -600,7 +569,7 @@ impl DevEngine {
       if coordinator_state.handle.is_none() {
         // `close()` before `run()` has no task to coordinate. Drop the
         // unstarted coordinator (and its watcher) and close the bundler here.
-        coordinator_state.coordinator.take();
+        coordinator_state.pending.take();
       }
       coordinator_state.handle.clone()
     };
@@ -846,11 +815,11 @@ mod tests {
     let coordinator: PendingCoordinatorFuture = Box::pin(async move {
       runs_task.fetch_add(1, Ordering::SeqCst);
     });
-    let mut state = CoordinatorState { coordinator: Some(coordinator), handle: None };
+    let mut state = CoordinatorState::new(coordinator);
 
     let error = state.try_start(|coordinator| Err(("runtime stopped", coordinator))).unwrap_err();
     assert_eq!(error, "runtime stopped");
-    assert!(state.coordinator.is_some());
+    assert!(state.pending.is_some());
     assert!(state.handle.is_none());
     assert_eq!(runs.load(Ordering::SeqCst), 0);
 
@@ -869,7 +838,7 @@ mod tests {
       .expect("accepted coordinator must publish its handle")
       .await
       .expect("retained coordinator must complete");
-    assert!(state.coordinator.is_none());
+    assert!(state.pending.is_none());
     assert_eq!(runs.load(Ordering::SeqCst), 1);
   }
 }

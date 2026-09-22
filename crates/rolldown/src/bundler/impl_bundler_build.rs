@@ -118,9 +118,9 @@ mod tests {
     HookBuildStartArgs, HookCloseBundleArgs, HookNoopReturn, HookUsage, Plugin, PluginContext,
     Pluginable,
   };
+  use rolldown_workspace::TestDir;
   use std::{
     borrow::Cow,
-    path::PathBuf,
     sync::{
       Arc,
       atomic::{AtomicUsize, Ordering},
@@ -165,28 +165,16 @@ mod tests {
     }
   }
 
-  struct TestDir(PathBuf);
-
-  impl TestDir {
-    fn new(name: &str) -> Self {
-      let path = std::env::temp_dir()
-        .join(format!("rolldown-bundler-close-gate-{name}-{}", std::process::id()));
-      std::fs::create_dir_all(&path).expect("create test directory");
-      std::fs::write(path.join("main.js"), "export const value = 1;\n").expect("write entry");
-      Self(path)
-    }
-  }
-
-  impl Drop for TestDir {
-    fn drop(&mut self) {
-      let _ = std::fs::remove_dir_all(&self.0);
-    }
+  fn test_dir(name: &str) -> TestDir {
+    let dir = TestDir::new(&format!("rolldown-bundler-close-gate-{name}"));
+    std::fs::write(dir.path().join("main.js"), "export const value = 1;\n").expect("write entry");
+    dir
   }
 
   fn create_bundler(dir: &TestDir, plugin: FailingClosePlugin) -> Bundler {
     Bundler::with_plugins(
       BundlerOptions {
-        cwd: Some(dir.0.clone()),
+        cwd: Some(dir.path().to_path_buf()),
         input: Some(vec![InputItem {
           name: Some("main".to_string()),
           import: "./main.js".to_string(),
@@ -206,7 +194,7 @@ mod tests {
   async fn close_failure_after_successful_build_is_delivered_once_then_builds_resume() {
     let build_start_calls = Arc::new(AtomicUsize::new(0));
     let close_calls = Arc::new(AtomicUsize::new(0));
-    let dir = TestDir::new("successful-build");
+    let dir = test_dir("successful-build");
     let mut bundler = create_bundler(
       &dir,
       FailingClosePlugin {
@@ -249,7 +237,7 @@ mod tests {
   async fn failed_scan_close_failure_is_delivered_once_then_rebuilds() {
     let build_start_calls = Arc::new(AtomicUsize::new(0));
     let close_calls = Arc::new(AtomicUsize::new(0));
-    let dir = TestDir::new("failed-scan");
+    let dir = test_dir("failed-scan");
     let mut bundler = create_bundler(
       &dir,
       FailingClosePlugin {

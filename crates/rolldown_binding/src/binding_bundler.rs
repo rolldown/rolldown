@@ -20,8 +20,8 @@ use napi_derive::napi;
 use rolldown::{Bundle, BundleHandle, BundlerConfig};
 use rolldown_error::{BatchedBuildDiagnostic, BuildDiagnostic, PluginTimings};
 use rolldown_plugin::BuildTimings;
+use rolldown_std_utils::discard_panic_payload;
 use std::{
-  any::Any,
   panic::{AssertUnwindSafe, catch_unwind},
   path::Path,
   sync::Arc,
@@ -342,12 +342,6 @@ fn append_close_failure_binding_errors(
     loc: None,
     pos: None,
   }));
-}
-
-fn discard_panic_payload(payload: Box<dyn Any + Send>) {
-  if let Err(nested_payload) = catch_unwind(AssertUnwindSafe(|| drop(payload))) {
-    std::mem::forget(nested_payload);
-  }
 }
 
 /// Ask the JavaScript side what its plugin callbacks cost, and warn if it is worth saying.

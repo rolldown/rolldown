@@ -1,5 +1,4 @@
 use std::{
-  any::Any,
   error::Error,
   fmt as std_fmt,
   panic::{AssertUnwindSafe, catch_unwind},
@@ -10,6 +9,7 @@ use std::{
   },
 };
 
+use rolldown_std_utils::{discard_panic_payload, panic_payload_message};
 use tracing::{Dispatch, Metadata, Subscriber, subscriber::Interest};
 use tracing_subscriber::{
   fmt,
@@ -222,22 +222,6 @@ impl Drop for DebugTracerLease {
     // writer backend has drained the session.
     writer::send_best_effort(LogCommand::CloseSession { session: self.session.clone(), ack: None });
     release_tracer_interest();
-  }
-}
-
-fn panic_payload_message(payload: &(dyn Any + Send)) -> String {
-  if let Some(message) = payload.downcast_ref::<String>() {
-    message.clone()
-  } else if let Some(message) = payload.downcast_ref::<&str>() {
-    (*message).to_string()
-  } else {
-    "non-string panic payload".to_string()
-  }
-}
-
-fn discard_panic_payload(payload: Box<dyn Any + Send>) {
-  if let Err(nested_payload) = catch_unwind(AssertUnwindSafe(|| drop(payload))) {
-    std::mem::forget(nested_payload);
   }
 }
 

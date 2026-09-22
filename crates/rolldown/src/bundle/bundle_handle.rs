@@ -1,7 +1,6 @@
 use std::{
-  any::Any,
   fmt,
-  panic::{AssertUnwindSafe, catch_unwind},
+  panic::AssertUnwindSafe,
   sync::{Arc, Mutex},
 };
 
@@ -9,6 +8,7 @@ use futures::{FutureExt, future::BoxFuture, future::Shared};
 use rolldown_common::SharedNormalizedBundlerOptions;
 use rolldown_error::BuildDiagnostic;
 use rolldown_plugin::{HookCloseBundleArgs, SharedPluginDriver};
+use rolldown_std_utils::{discard_panic_payload, panic_payload_message};
 
 type CloseResult = Result<(), Arc<anyhow::Error>>;
 type CloseFuture = Shared<BoxFuture<'static, CloseResult>>;
@@ -48,24 +48,6 @@ impl fmt::Display for SharedCloseError {
 impl std::error::Error for SharedCloseError {
   fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
     Some(self.0.root_cause())
-  }
-}
-
-fn panic_payload_message(payload: &(dyn Any + Send)) -> &str {
-  if let Some(message) = payload.downcast_ref::<String>() {
-    message
-  } else if let Some(message) = payload.downcast_ref::<&str>() {
-    message
-  } else {
-    "non-string panic payload"
-  }
-}
-
-fn discard_panic_payload(payload: Box<dyn Any + Send>) {
-  // A hostile payload destructor can panic again; leak only that nested payload,
-  // whose destructor is likewise untrusted.
-  if let Err(nested_payload) = catch_unwind(AssertUnwindSafe(|| drop(payload))) {
-    std::mem::forget(nested_payload);
   }
 }
 
@@ -209,7 +191,9 @@ impl BundleHandle {
             {
               Ok(result) => result.map_err(Arc::new),
               Err(payload) => {
-                let message = panic_payload_message(&*payload).to_owned();
+                let message = panic_payload_message(&*payload);
+                // A hostile payload destructor can panic again; the shared helper
+                // leaks only that nested payload, whose destructor is likewise untrusted.
                 discard_panic_payload(payload);
                 Err(Arc::new(anyhow::anyhow!("closeBundle hook panicked: {message}")))
               }

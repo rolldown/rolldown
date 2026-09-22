@@ -89,10 +89,12 @@ fed to `configure`; the crate picks the executor from `RuntimeOptions.flavor`.
 
 ## 2. Rust-core consumption (facades, module loader, Rayon)
 
-- `crates/rolldown_utils/src/futures.rs` — thin facades `spawn`, `try_spawn`,
-  `spawn_detached`, `spawn_blocking`, `block_on`, `block_on_spawn_all`, each
-  delegating to `crate::async_runtime::*`; `JoinHandle` / `JoinError` /
-  `SpawnError` re-exported from the crate.
+- `crates/rolldown_utils/src/futures.rs` — the facade. `spawn_detached`,
+  `try_spawn_detached`, `spawn_blocking`, `block_on` and `JoinHandle` /
+  `JoinError` / `SpawnError` are plain re-exports of `crate::async_runtime::*`.
+  `spawn` and `try_spawn` stay one-line wrappers only because they take one
+  generic parameter (`<F>`) where the runtime's take two (`<F, T>`).
+  `block_on_spawn_all` is a plain `join_all` in the caller's task.
 - `crates/rolldown/src/module_loader/module_loader.rs`:
   - `spawn_module_task()` — boxes the (large) module future once at the spawn
     boundary, wraps it in `supervised_module_task`, submits via

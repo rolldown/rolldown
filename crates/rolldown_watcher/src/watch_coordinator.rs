@@ -14,13 +14,14 @@ use futures::{StreamExt, pin_mut, select_biased};
 use oxc_index::IndexVec;
 use rolldown_common::WatcherChangeKind;
 use rolldown_error::{BatchedBuildDiagnostic, BuildDiagnostic};
+use rolldown_std_utils::{discard_panic_payload_retrying, panic_payload_message};
 use rolldown_utils::indexmap::{FxIndexMap, FxIndexSet};
 use std::any::Any;
 use std::error::Error;
 use std::fmt;
 use std::future::Future;
 use std::mem;
-use std::panic::{AssertUnwindSafe, catch_unwind};
+use std::panic::AssertUnwindSafe;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
@@ -105,30 +106,12 @@ impl CoordinatorCloseFailure {
 
   fn from_panic(context: &str, payload: Box<dyn Any + Send + 'static>) -> Self {
     let message = format!("{context}: {}", panic_payload_message(&*payload));
-    discard_panic_payload(payload);
+    discard_panic_payload_retrying(payload);
     Self { message: message.into(), source: None }
   }
 
   pub fn message(&self) -> &str {
     &self.message
-  }
-}
-
-fn panic_payload_message(payload: &(dyn Any + Send)) -> &str {
-  if let Some(message) = payload.downcast_ref::<String>() {
-    message
-  } else if let Some(message) = payload.downcast_ref::<&str>() {
-    message
-  } else {
-    "non-string panic payload"
-  }
-}
-
-fn discard_panic_payload(payload: Box<dyn Any + Send + 'static>) {
-  if let Err(payload) = catch_unwind(AssertUnwindSafe(|| drop(payload)))
-    && let Err(nested_payload) = catch_unwind(AssertUnwindSafe(|| drop(payload)))
-  {
-    mem::forget(nested_payload);
   }
 }
 
@@ -781,6 +764,7 @@ mod tests {
   use rolldown_error::BuildResult;
   use rolldown_fs_watcher::PathsMut;
   use rolldown_utils::dashmap::FxDashSet;
+  use rolldown_workspace::TestDir;
   use std::{
     borrow::Cow,
     fs,
@@ -792,7 +776,7 @@ mod tests {
   };
   use tokio::sync::Notify;
 
-  static NEXT_TEST_DIR: AtomicUsize = AtomicUsize::new(0);
+  const TEST_DIR_PREFIX: &str = "rolldown-watch-coordinator-registration";
 
   /// Group membership for tasks that each form their own config group
   /// (the multi-config layout).
@@ -805,26 +789,6 @@ mod tests {
     let mut groups = IndexVec::new();
     groups.push((0..task_count).map(WatchTaskIdx::from_usize).collect());
     groups
-  }
-
-  struct TestDir(PathBuf);
-
-  impl TestDir {
-    fn new() -> Self {
-      let path = std::env::temp_dir().join(format!(
-        "rolldown-watch-coordinator-registration-{}-{}",
-        std::process::id(),
-        NEXT_TEST_DIR.fetch_add(1, Ordering::Relaxed)
-      ));
-      fs::create_dir_all(&path).expect("create test directory");
-      Self(path)
-    }
-  }
-
-  impl Drop for TestDir {
-    fn drop(&mut self) {
-      let _ = fs::remove_dir_all(&self.0);
-    }
   }
 
   struct RegistrationFailingWatcher {
@@ -954,7 +918,7 @@ mod tests {
     closed: &Arc<AtomicBool>,
     close_bundle_calls: &Arc<AtomicUsize>,
   ) -> RegistrationTestTask {
-    let input = test_dir.0.join("main.js");
+    let input = test_dir.path().join("main.js");
     fs::write(&input, "export const value = 1;").expect("write input");
     let input = dunce::canonicalize(input).expect("canonicalize input");
     let commit_attempts = Arc::new(AtomicUsize::new(0));
@@ -969,7 +933,7 @@ mod tests {
     let task = WatchTask::new(
       BundlerConfig::new(
         BundlerOptions {
-          cwd: Some(test_dir.0.clone()),
+          cwd: Some(test_dir.path().to_path_buf()),
           input: Some(vec![input.to_string_lossy().into_owned().into()]),
           file: Some("dist/out.js".into()),
           ..Default::default()
@@ -988,7 +952,7 @@ mod tests {
 
   #[tokio::test(flavor = "multi_thread")]
   async fn coordinator_retries_scan_registration_failure_without_emitting_error() {
-    let test_dir = TestDir::new();
+    let test_dir = TestDir::new(TEST_DIR_PREFIX);
     let (tx, rx) = mpsc::unbounded();
     let closed = Arc::new(AtomicBool::new(false));
     let close_notify = Arc::new(Event::new());
@@ -1072,7 +1036,7 @@ mod tests {
 
   #[tokio::test(flavor = "multi_thread")]
   async fn coordinator_close_interrupts_registration_backoff() {
-    let test_dir = TestDir::new();
+    let test_dir = TestDir::new(TEST_DIR_PREFIX);
     let (tx, rx) = mpsc::unbounded();
     let closed = Arc::new(AtomicBool::new(false));
     let close_notify = Arc::new(Event::new());
@@ -1125,7 +1089,7 @@ mod tests {
 
   #[tokio::test(flavor = "multi_thread")]
   async fn coordinator_stops_after_bounded_registration_retries() {
-    let test_dir = TestDir::new();
+    let test_dir = TestDir::new(TEST_DIR_PREFIX);
     let (_tx, rx) = mpsc::unbounded();
     let closed = Arc::new(AtomicBool::new(false));
     let close_notify = Arc::new(Event::new());
@@ -1332,8 +1296,8 @@ mod tests {
 
   #[tokio::test(flavor = "multi_thread")]
   async fn second_save_during_rebuild_still_reports_change_and_watch_change() {
-    let test_dir = TestDir::new();
-    let input = test_dir.0.join("main.js");
+    let test_dir = TestDir::new(TEST_DIR_PREFIX);
+    let input = test_dir.path().join("main.js");
     fs::write(&input, "export const value = 1;").expect("write input");
     let input = dunce::canonicalize(input).expect("canonicalize input");
     let cwd = input.parent().expect("input has parent").to_path_buf();
@@ -1465,8 +1429,8 @@ mod tests {
   /// this pins the remaining cross-config drain behavior.
   #[tokio::test(flavor = "multi_thread")]
   async fn same_save_sibling_message_stays_in_one_rebuild_envelope() {
-    let test_dir = TestDir::new();
-    let input = test_dir.0.join("main.js");
+    let test_dir = TestDir::new(TEST_DIR_PREFIX);
+    let input = test_dir.path().join("main.js");
     fs::write(&input, "export const value = 1;").expect("write input");
     let input = dunce::canonicalize(input).expect("canonicalize input");
     let cwd = input.parent().expect("input has parent").to_path_buf();
@@ -1760,9 +1724,9 @@ mod tests {
   /// still fires for the envelope.
   #[tokio::test(flavor = "multi_thread")]
   async fn group_change_hitting_one_member_rebuilds_only_that_member() {
-    let test_dir = TestDir::new();
-    let input_a = test_dir.0.join("a.js");
-    let input_b = test_dir.0.join("b.js");
+    let test_dir = TestDir::new(TEST_DIR_PREFIX);
+    let input_a = test_dir.path().join("a.js");
+    let input_b = test_dir.path().join("b.js");
     fs::write(&input_a, "export const a = 1;").expect("write input a");
     fs::write(&input_b, "export const b = 1;").expect("write input b");
     let input_a = dunce::canonicalize(input_a).expect("canonicalize input a");
@@ -1803,8 +1767,8 @@ mod tests {
   /// `BundleEnd`, and the envelope still terminates with `End` — no hang.
   #[tokio::test(flavor = "multi_thread")]
   async fn sibling_error_mid_envelope_still_emits_end() {
-    let test_dir = TestDir::new();
-    let input = test_dir.0.join("main.js");
+    let test_dir = TestDir::new(TEST_DIR_PREFIX);
+    let input = test_dir.path().join("main.js");
     fs::write(&input, "export const value = 1;").expect("write input");
     let input = dunce::canonicalize(input).expect("canonicalize input");
     let input_str = input.to_string_lossy().into_owned();
@@ -1863,8 +1827,8 @@ mod tests {
   /// events buffered while it is open, blinding the whole group.
   #[tokio::test(flavor = "multi_thread")]
   async fn group_sibling_adopts_shared_registration_with_a_single_commit() {
-    let test_dir = TestDir::new();
-    let input = test_dir.0.join("main.js");
+    let test_dir = TestDir::new(TEST_DIR_PREFIX);
+    let input = test_dir.path().join("main.js");
     fs::write(&input, "export const value = 1;").expect("write input");
     let input = dunce::canonicalize(input).expect("canonicalize input");
     let input_str = input.to_string_lossy().into_owned();
@@ -1889,7 +1853,7 @@ mod tests {
       let task = WatchTask::new(
         BundlerConfig::new(
           BundlerOptions {
-            cwd: Some(test_dir.0.clone()),
+            cwd: Some(test_dir.path().to_path_buf()),
             input: Some(vec![input_str.clone().into()]),
             file: Some(out_file.into()),
             ..Default::default()

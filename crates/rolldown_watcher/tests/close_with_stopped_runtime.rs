@@ -10,7 +10,7 @@ use rolldown::{BundlerConfig, BundlerOptions};
 use rolldown_common::WatcherChangeKind;
 use rolldown_utils::async_runtime;
 use rolldown_watcher::{WatchEvent, Watcher, WatcherConfig, WatcherEventHandler};
-use std::path::PathBuf;
+use rolldown_workspace::TestDir;
 use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
 
@@ -43,34 +43,17 @@ impl WatcherEventHandler for Probe {
   }
 }
 
-struct TestDir(PathBuf);
-
-impl TestDir {
-  fn new() -> Self {
-    let path =
-      std::env::temp_dir().join(format!("rolldown-watcher-stopped-runtime-{}", std::process::id()));
-    std::fs::create_dir_all(&path).expect("create test directory");
-    Self(path)
-  }
-}
-
-impl Drop for TestDir {
-  fn drop(&mut self) {
-    let _ = std::fs::remove_dir_all(&self.0);
-  }
-}
-
 #[test]
 fn close_rejected_by_a_stopped_runtime_stays_retryable() {
-  let dir = TestDir::new();
-  let input = dir.0.join("main.js");
+  let dir = TestDir::new("rolldown-watcher-stopped-runtime");
+  let input = dir.path().join("main.js");
   std::fs::write(&input, "export const value = 1;\n").expect("write input");
 
   let dropped = Arc::new(AtomicBool::new(false));
   let closes = Arc::new(AtomicUsize::new(0));
   let config = BundlerConfig::new(
     BundlerOptions {
-      cwd: Some(dir.0.clone()),
+      cwd: Some(dir.path().to_path_buf()),
       input: Some(vec![input.to_string_lossy().into_owned().into()]),
       ..Default::default()
     },

@@ -59,12 +59,12 @@
 /// - Both `ClassicBundler` and core `Bundler` benefit from `Bundle` improvements
 /// - The codebase maintains clear separation of concerns, preventing the wrong mental model that caused bugs previously
 /// - Development is more maintainable as changes are made at the appropriate abstraction level
-use crate::utils::{DetachedFutureSpawn, try_spawn_detached_future};
 use rolldown::{Bundle, BundleFactory, BundleFactoryOptions, BundleHandle, BundlerOptions};
 use rolldown_common::BundleMode;
 use rolldown_error::{BuildDiagnostic, BuildResult};
 use rolldown_plugin::__inner::SharedPluginable;
-use rolldown_utils::futures::spawn_blocking;
+use rolldown_std_utils::{discard_panic_payload, panic_payload_message};
+use rolldown_utils::futures::{spawn_blocking, try_spawn_detached};
 use std::{
   any::Any,
   collections::VecDeque,
@@ -332,7 +332,7 @@ impl ClassicBundlerOperationGuard {
 }
 
 fn submit_failure_close(task: ClassicBundlerFailureCloseTask) {
-  if let DetachedFutureSpawn::Rejected(task) = try_spawn_detached_future(task) {
+  if let Err(task) = try_spawn_detached(task) {
     drop(task);
   }
 }
@@ -548,22 +548,6 @@ impl ClassicBundlerCloseFailure {
 
   pub(crate) fn source(&self) -> Option<&anyhow::Error> {
     self.source.as_deref()
-  }
-}
-
-fn panic_payload_message(payload: &(dyn Any + Send)) -> &str {
-  if let Some(message) = payload.downcast_ref::<String>() {
-    message
-  } else if let Some(message) = payload.downcast_ref::<&str>() {
-    message
-  } else {
-    "non-string panic payload"
-  }
-}
-
-fn discard_panic_payload(payload: Box<dyn Any + Send>) {
-  if let Err(nested_payload) = catch_unwind(AssertUnwindSafe(|| drop(payload))) {
-    std::mem::forget(nested_payload);
   }
 }
 

@@ -10,12 +10,12 @@ use rolldown_dev::{
   BundlerConfig, BundlingFuture, DevCallbackResult, DevEngine, DevOptions, DevWatchOptions,
   RebuildStrategy,
 };
+use rolldown_workspace::TestDir;
 use std::{
   borrow::Cow,
   fs,
   future::{Future, poll_fn},
   panic::panic_any,
-  path::PathBuf,
   sync::{
     Arc, Condvar, Mutex,
     atomic::{AtomicUsize, Ordering},
@@ -27,29 +27,9 @@ use tokio::{
   time::{Duration, timeout},
 };
 
-static NEXT_TEST_DIR: AtomicUsize = AtomicUsize::new(0);
+const TEST_DIR_PREFIX: &str = "rolldown-dev-close-race";
 const LIVENESS_TIMEOUT: Duration = Duration::from_secs(10);
 const BUNDLING_PANIC_MESSAGE: &str = "deterministic bundling task panic";
-
-struct TestDir(PathBuf);
-
-impl TestDir {
-  fn new() -> Self {
-    let path = std::env::temp_dir().join(format!(
-      "rolldown-dev-close-race-{}-{}",
-      std::process::id(),
-      NEXT_TEST_DIR.fetch_add(1, Ordering::Relaxed)
-    ));
-    fs::create_dir_all(&path).expect("create test directory");
-    Self(path)
-  }
-}
-
-impl Drop for TestDir {
-  fn drop(&mut self) {
-    let _ = fs::remove_dir_all(&self.0);
-  }
-}
 
 #[derive(Debug)]
 struct CallbackGate {
@@ -130,8 +110,8 @@ impl Plugin for LifecyclePlugin {
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn close_waits_for_hmr_rebuild_before_closing_the_final_bundle_handle() {
-  let test_dir = TestDir::new();
-  let input = test_dir.0.join("main.js");
+  let test_dir = TestDir::new(TEST_DIR_PREFIX);
+  let input = test_dir.path().join("main.js");
   fs::write(&input, "export const value = 1;").expect("write initial input");
 
   let build_start_calls = Arc::new(AtomicUsize::new(0));
@@ -147,7 +127,7 @@ async fn close_waits_for_hmr_rebuild_before_closing_the_final_bundle_handle() {
     DevEngine::new(
       BundlerConfig::new(
         BundlerOptions {
-          cwd: Some(test_dir.0.clone()),
+          cwd: Some(test_dir.path().to_path_buf()),
           input: Some(vec![input.to_string_lossy().into_owned().into()]),
           experimental: Some(ExperimentalOptions {
             incremental_build: Some(true),
@@ -261,8 +241,8 @@ impl Plugin for GatedFailingClosePlugin {
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn concurrent_and_late_close_callers_replay_the_terminal_failure() {
-  let test_dir = TestDir::new();
-  let input = test_dir.0.join("main.js");
+  let test_dir = TestDir::new(TEST_DIR_PREFIX);
+  let input = test_dir.path().join("main.js");
   fs::write(&input, "export const value = 1;").expect("write input");
 
   let calls = Arc::new(AtomicUsize::new(0));
@@ -272,7 +252,7 @@ async fn concurrent_and_late_close_callers_replay_the_terminal_failure() {
     DevEngine::new(
       BundlerConfig::new(
         BundlerOptions {
-          cwd: Some(test_dir.0.clone()),
+          cwd: Some(test_dir.path().to_path_buf()),
           input: Some(vec![input.to_string_lossy().into_owned().into()]),
           experimental: Some(ExperimentalOptions {
             incremental_build: Some(true),
@@ -396,8 +376,8 @@ struct CallbackPanicPayload(&'static str);
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn close_contains_a_panicked_bundling_future_and_runs_fallback_cleanup() {
-  let test_dir = TestDir::new();
-  let input = test_dir.0.join("main.js");
+  let test_dir = TestDir::new(TEST_DIR_PREFIX);
+  let input = test_dir.path().join("main.js");
   fs::write(&input, "export const value = 1;").expect("write input");
 
   let close_calls = Arc::new(AtomicUsize::new(0));
@@ -405,7 +385,7 @@ async fn close_contains_a_panicked_bundling_future_and_runs_fallback_cleanup() {
     DevEngine::new(
       BundlerConfig::new(
         BundlerOptions {
-          cwd: Some(test_dir.0.clone()),
+          cwd: Some(test_dir.path().to_path_buf()),
           input: Some(vec![input.to_string_lossy().into_owned().into()]),
           experimental: Some(ExperimentalOptions {
             incremental_build: Some(true),
@@ -457,13 +437,13 @@ async fn close_contains_a_panicked_bundling_future_and_runs_fallback_cleanup() {
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn concurrent_close_completes_while_wait_for_close_is_parked() {
-  let test_dir = TestDir::new();
-  let input = test_dir.0.join("main.js");
+  let test_dir = TestDir::new(TEST_DIR_PREFIX);
+  let input = test_dir.path().join("main.js");
   fs::write(&input, "export const value = 1;").expect("write initial input");
   let engine = DevEngine::new(
     BundlerConfig::new(
       BundlerOptions {
-        cwd: Some(test_dir.0.clone()),
+        cwd: Some(test_dir.path().to_path_buf()),
         input: Some(vec![input.to_string_lossy().into_owned().into()]),
         experimental: Some(ExperimentalOptions {
           incremental_build: Some(true),

@@ -17,6 +17,7 @@ use std::{
 #[cfg(any(test, all(target_family = "wasm", not(rolldown_wasi_threads))))]
 use std::sync::Mutex;
 
+use rolldown_std_utils::{discard_panic_payload, panic_payload_message};
 use rustc_hash::{FxHashMap, FxHashSet};
 use serde::ser::{SerializeMap, Serializer as _};
 
@@ -315,22 +316,6 @@ where
   rx
 }
 
-fn panic_payload_message(payload: &(dyn Any + Send)) -> String {
-  if let Some(message) = payload.downcast_ref::<String>() {
-    message.clone()
-  } else if let Some(message) = payload.downcast_ref::<&str>() {
-    (*message).to_string()
-  } else {
-    "non-string panic payload".to_string()
-  }
-}
-
-fn discard_panic_payload(payload: Box<dyn Any + Send>) {
-  if let Err(nested_payload) = catch_unwind(AssertUnwindSafe(|| drop(payload))) {
-    std::mem::forget(nested_payload);
-  }
-}
-
 fn panic_failure(
   operation: DevtoolsWriterOperation,
   path: Arc<str>,
@@ -475,6 +460,8 @@ struct WriterState<W: Write = File> {
   owners_by_session: FxHashMap<DevtoolsLogicalSessionKey, FxHashSet<DevtoolsSessionKey>>,
   failures_by_session: FxHashMap<DevtoolsLogicalSessionKey, Vec<DevtoolsWriterFailure>>,
   failures_by_owner: FxHashMap<DevtoolsSessionKey, Vec<DevtoolsWriterFailure>>,
+  /// Scratch buffer for one JSON line, reused across writes. See `write_json_line`.
+  line: Vec<u8>,
 }
 
 impl<W: Write> Default for WriterState<W> {
@@ -486,6 +473,7 @@ impl<W: Write> Default for WriterState<W> {
       owners_by_session: FxHashMap::default(),
       failures_by_session: FxHashMap::default(),
       failures_by_owner: FxHashMap::default(),
+      line: Vec::new(),
     }
   }
 }
@@ -605,7 +593,7 @@ impl<W: Write> WriterState<W> {
 
     let write_result = {
       let file = self.files.get_mut(&filename).expect("file was opened above");
-      write_event(&mut file.writer, action_value, &mut file.hashes)
+      write_event(&mut file.writer, action_value, &mut file.hashes, &mut self.line)
     };
     if let Err(error) = write_result {
       self.record_failure(
@@ -732,6 +720,7 @@ fn write_event<W: Write>(
   file: &mut W,
   action_value: &serde_json::Value,
   existing_hashes: &mut FxHashSet<String>,
+  line: &mut Vec<u8>,
 ) -> Result<(), serde_json::Error> {
   let serde_json::Value::Object(action_meta) = action_value else {
     unreachable!("action_meta should always be an object")
@@ -750,7 +739,7 @@ fn write_event<W: Write>(
         reason = "the hash must only be inserted after its complete StringRef line is written"
       )]
       if !existing_hashes.contains(&hash) {
-        write_json_line(file, |serializer| {
+        write_json_line(file, line, |serializer| {
           let mut map = serializer.serialize_map(None)?;
           map.serialize_entry("action", "StringRef")?;
           map.serialize_entry("id", &hash)?;
@@ -762,7 +751,7 @@ fn write_event<W: Write>(
     }
   }
 
-  write_json_line(file, |serializer| {
+  write_json_line(file, line, |serializer| {
     let mut map = serializer.serialize_map(None)?;
     map.serialize_entry("timestamp", &current_utc_timestamp_ms())?;
     for (key, value) in action_meta {
@@ -786,14 +775,17 @@ fn is_structural_identity_field(key: &str) -> bool {
   matches!(key, "action" | "build_id" | "session_id")
 }
 
+/// Serializes one complete line into `line` before writing it, so a failed
+/// serialization writes nothing. `line` is cleared first and reused across calls.
 fn write_json_line(
   file: &mut impl Write,
+  line: &mut Vec<u8>,
   serialize: impl FnOnce(&mut serde_json::Serializer<&mut Vec<u8>>) -> Result<(), serde_json::Error>,
 ) -> Result<(), serde_json::Error> {
-  let mut line = Vec::new();
-  serialize(&mut serde_json::Serializer::new(&mut line))?;
+  line.clear();
+  serialize(&mut serde_json::Serializer::new(&mut *line))?;
   line.push(b'\n');
-  file.write_all(&line).map_err(serde_json::Error::io)
+  file.write_all(line).map_err(serde_json::Error::io)
 }
 
 fn current_utc_timestamp_ms() -> u128 {
@@ -1075,8 +1067,9 @@ mod tests {
     let mut meta_hashes = FxHashSet::default();
     let mut log_hashes = FxHashSet::default();
 
-    write_event(&mut meta, &action, &mut meta_hashes).expect("write meta");
-    write_event(&mut logs, &action, &mut log_hashes).expect("write logs");
+    let mut line = Vec::new();
+    write_event(&mut meta, &action, &mut meta_hashes, &mut line).expect("write meta");
+    write_event(&mut logs, &action, &mut log_hashes, &mut line).expect("write logs");
 
     for output in [meta, logs] {
       let events = String::from_utf8(output)
@@ -1110,7 +1103,7 @@ mod tests {
     let mut output = Vec::new();
     let mut hashes = FxHashSet::default();
 
-    write_event(&mut output, &action, &mut hashes).expect("write action");
+    write_event(&mut output, &action, &mut hashes, &mut Vec::new()).expect("write action");
 
     let events = String::from_utf8(output)
       .expect("utf8 output")

@@ -13,7 +13,7 @@ use rolldown::BundlerConfig;
 use rolldown_error::BuildResult;
 use rolldown_fs_watcher::{FsWatcher, FsWatcherConfig};
 use rolldown_utils::dashmap::FxDashSet;
-use rolldown_utils::futures::try_spawn;
+use rolldown_utils::futures::{RetainedStart, try_spawn};
 use std::fmt;
 use std::future::Future;
 use std::pin::Pin;
@@ -107,37 +107,9 @@ impl std::error::Error for SharedCoordinatorCloseError {
   }
 }
 
-struct CoordinatorState {
-  /// The coordinator future, before `run()` is called.
-  coordinator: Option<PendingCoordinatorFuture>,
-  /// The spawned handle, after `run()` is called. Shared so multiple callers can await.
-  handle: Option<CoordinatorFuture>,
-}
-
-impl CoordinatorState {
-  // See internal-docs/watch-mode/implementation.md for retry ownership.
-  fn try_start<E>(
-    &mut self,
-    start: impl FnOnce(
-      PendingCoordinatorFuture,
-    ) -> Result<CoordinatorFuture, (E, PendingCoordinatorFuture)>,
-  ) -> Result<(), E> {
-    let Some(coordinator) = self.coordinator.take() else {
-      return Ok(());
-    };
-
-    match start(coordinator) {
-      Ok(handle) => {
-        self.handle = Some(handle);
-        Ok(())
-      }
-      Err((error, coordinator)) => {
-        self.coordinator = Some(coordinator);
-        Err(error)
-      }
-    }
-  }
-}
+/// The coordinator future before `run()`, then its spawned handle. The handle
+/// is `Shared` so multiple callers can await it.
+type CoordinatorState = RetainedStart<PendingCoordinatorFuture, CoordinatorFuture>;
 
 /// The main watcher that manages multiple bundlers.
 ///
@@ -179,10 +151,7 @@ impl Watcher {
       Box::pin(coordinator.run());
 
     Ok(Self {
-      coordinator_state: std::sync::Mutex::new(CoordinatorState {
-        coordinator: Some(coordinator_future),
-        handle: None,
-      }),
+      coordinator_state: std::sync::Mutex::new(CoordinatorState::new(coordinator_future)),
       tx,
       closed,
       close_notify,
@@ -193,8 +162,8 @@ impl Watcher {
   /// Spawn the coordinator. Accepted and completed starts are idempotent; a
   /// runtime-rejected start retains the coordinator for a later retry.
   pub fn run(&self) -> Result<(), WatcherStartError> {
-    self.start_coordinator(|coordinator| match try_spawn(coordinator) {
-      Ok(join_handle) => {
+    let result = self.coordinator_state.lock().unwrap().try_start(|coordinator| {
+      try_spawn(coordinator).map(|join_handle| {
         let handle: PendingCoordinatorFuture = Box::pin(async move {
           match join_handle.await {
             Ok(result) => result,
@@ -203,19 +172,9 @@ impl Watcher {
             )))),
           }
         });
-        Ok(handle.shared())
-      }
-      Err((error, coordinator)) => Err((error, coordinator)),
-    })
-  }
-
-  fn start_coordinator<E: std::error::Error + Send + Sync + 'static>(
-    &self,
-    start: impl FnOnce(
-      PendingCoordinatorFuture,
-    ) -> Result<CoordinatorFuture, (E, PendingCoordinatorFuture)>,
-  ) -> Result<(), WatcherStartError> {
-    let result = self.coordinator_state.lock().unwrap().try_start(start);
+        handle.shared()
+      })
+    });
     result.map_err(WatcherStartError::new)
   }
 
@@ -315,11 +274,11 @@ mod tests {
   use crate::{CoordinatorCloseFailure, FileChangeEvent, WatchEvent};
   use rolldown::{BundlerOptions, plugin};
   use rolldown_common::WatcherChangeKind;
+  use rolldown_workspace::TestDir;
   use std::{
     borrow::Cow,
     fs,
     panic::panic_any,
-    path::PathBuf,
     sync::{
       Arc,
       atomic::{AtomicUsize, Ordering},
@@ -327,28 +286,6 @@ mod tests {
     time::Duration,
   };
   use tokio::sync::Notify;
-
-  static NEXT_TEST_DIR: AtomicUsize = AtomicUsize::new(0);
-
-  struct TestDir(PathBuf);
-
-  impl TestDir {
-    fn new() -> Self {
-      let path = std::env::temp_dir().join(format!(
-        "rolldown-watcher-lifecycle-{}-{}",
-        std::process::id(),
-        NEXT_TEST_DIR.fetch_add(1, Ordering::Relaxed)
-      ));
-      fs::create_dir_all(&path).expect("create test directory");
-      Self(path)
-    }
-  }
-
-  impl Drop for TestDir {
-    fn drop(&mut self) {
-      let _ = fs::remove_dir_all(&self.0);
-    }
-  }
 
   struct RecordingHandler {
     end: Arc<Notify>,
@@ -803,8 +740,8 @@ mod tests {
 
   #[tokio::test(flavor = "multi_thread")]
   async fn watch_change_error_runs_cleanup_and_replays_through_close() {
-    let test_dir = TestDir::new();
-    let input = test_dir.0.join("main.js");
+    let test_dir = TestDir::new("rolldown-watcher-lifecycle");
+    let input = test_dir.path().join("main.js");
     fs::write(&input, "export const value = 1;").expect("write input");
     let input = dunce::canonicalize(input).expect("canonicalize input");
     let cwd = input.parent().expect("input has parent").to_path_buf();

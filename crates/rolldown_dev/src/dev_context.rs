@@ -2,7 +2,7 @@ use std::{
   any::Any,
   fmt,
   future::Future,
-  panic::{AssertUnwindSafe, catch_unwind, resume_unwind},
+  panic::{AssertUnwindSafe, resume_unwind},
   pin::Pin,
   sync::{Arc, Mutex, PoisonError, atomic::AtomicBool},
   task::{Context, Poll},
@@ -14,6 +14,7 @@ use futures::{FutureExt, future::Shared};
 use rolldown_common::HmrStampTable;
 use rolldown_dev_common::types::{DevCallbackError, DevCallbackResult};
 use rolldown_error::{BatchedBuildDiagnostic, BuildResult};
+use rolldown_std_utils::discard_panic_payload_retrying;
 use rustc_hash::FxHashMap;
 
 use crate::{
@@ -79,7 +80,7 @@ impl Drop for OpaquePanicPayload {
   fn drop(&mut self) {
     let payload = self.payload.get_mut().unwrap_or_else(PoisonError::into_inner).take();
     if let Some(payload) = payload {
-      discard_panic_payload(payload);
+      discard_panic_payload_retrying(payload);
     }
   }
 }
@@ -145,14 +146,6 @@ impl Future for BundlingFuture {
       Poll::Ready(BundlingTaskOutcome::Completed(result)) => Poll::Ready(result),
       Poll::Ready(BundlingTaskOutcome::Panicked(payload)) => payload.resume(),
     }
-  }
-}
-
-fn discard_panic_payload(payload: Box<dyn Any + Send>) {
-  if let Err(payload) = catch_unwind(AssertUnwindSafe(|| drop(payload)))
-    && let Err(nested_payload) = catch_unwind(AssertUnwindSafe(|| drop(payload)))
-  {
-    std::mem::forget(nested_payload);
   }
 }
 

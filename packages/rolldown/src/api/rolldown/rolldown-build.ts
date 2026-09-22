@@ -502,10 +502,6 @@ export class RolldownBuild {
 
     return buildCallContext.run(invocation, () => {
       try {
-        // Callbacks routed through this runner are marked with
-        // `markScopeEnteringCallback`, so this is the only place their calls
-        // enter the close-callback scope. See
-        // internal-docs/async-context/implementation.md.
         return trackAsyncCallbackSettlement(this.#closeCallbackScope.run(callback), deactivate);
       } catch (error) {
         deactivate();

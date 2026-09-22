@@ -11,7 +11,6 @@ import { error, logPluginError } from '../log/logs';
 import type { BuildCallbackRunner } from '../plugin/bindingify-plugin';
 import type { PluginContextData } from '../plugin/plugin-context-data';
 import type { TypeAssert } from '../types/assert';
-import { markScopeEnteringCallback } from '../utils/close-callback-scope';
 import { findPropertyDescriptorInPrototypeChain } from '../utils/prototype-chain';
 import type { ViteManifestPluginConfig } from './vite-manifest-plugin';
 
@@ -185,7 +184,10 @@ function wrapCallbackProperties<T extends object>(
       enumerable: descriptor?.enumerable ?? true,
       value:
         typeof callback === 'function'
-          ? wrapBuiltinCallback(options, key, callback, runBuildCallback)
+          ? (...args: unknown[]) => {
+              const invoke = () => Reflect.apply(callback, options, args);
+              return runBuildCallback ? runBuildCallback(invoke, String(key)) : invoke();
+            }
           : callback,
       writable: true,
     };
@@ -203,19 +205,6 @@ function wrapCallbackProperties<T extends object>(
   // plain object from the original's own descriptors would drop the fields only
   // a `get` trap can answer.
   return createCallbackSnapshotView(options, snapshot);
-}
-
-function wrapBuiltinCallback(
-  options: object,
-  key: PropertyKey,
-  callback: Function,
-  runBuildCallback: BuildCallbackRunner | undefined,
-): (...args: unknown[]) => unknown {
-  const wrapped = (...args: unknown[]) => {
-    const invoke = () => Reflect.apply(callback, options, args);
-    return runBuildCallback ? runBuildCallback(invoke, String(key)) : invoke();
-  };
-  return runBuildCallback ? markScopeEnteringCallback(wrapped) : wrapped;
 }
 
 /**

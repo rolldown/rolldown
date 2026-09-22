@@ -207,7 +207,7 @@ thread, so each timer is delegated to the JS event loop via `schedule`/`cancel`
 callbacks registered per env.
 
 - `crates/rolldown_utils/src/time.rs` — `sleep_until(deadline) -> Sleep` — the
-  facade (delegates to `napi_async_runtime::sleep_until`).
+  facade (a `pub use` re-export of `napi_async_runtime::sleep_until`).
 - `crates/rolldown_watcher/src/watch_coordinator.rs` — the sole consumer
   (watch-mode debounce; a comment notes tokio's `sleep_until` would panic
   here).

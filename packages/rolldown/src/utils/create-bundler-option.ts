@@ -15,7 +15,7 @@ import {
 } from '../plugin/parallel-plugin';
 import { bindingifyInputOptions } from './bindingify-input-options';
 import { bindingifyOutputOptions } from './bindingify-output-options';
-import { type CloseCallbackScope, markScopeEnteringCallback } from './close-callback-scope';
+import type { CloseCallbackScope } from './close-callback-scope';
 import { initializeParallelPlugins } from './initialize-parallel-plugins';
 import {
   measureIfFunction,
@@ -113,9 +113,7 @@ export async function createBundlerOptions(
     getLogger(pluginLogHooks.snapshot(), inputLogHandlers, logLevel, watchMode)(level, log);
   const onLog: LogHandler =
     runBuildCallback && hasUserLogCallback
-      ? markScopeEnteringCallback<LogHandler>((level, log) =>
-          runBuildCallback(() => invokeLogger(level, log), 'onLog'),
-        )
+      ? (level, log) => runBuildCallback(() => invokeLogger(level, log), 'onLog')
       : invokeLogger;
 
   // The `outputOptions` hook is called with the input plugins and the output plugins.

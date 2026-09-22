@@ -17,7 +17,10 @@ use rolldown_fs_watcher::{
   FsChangeKind, FsEventResult, PathsSource, RecursiveMode, map_notify_event,
 };
 use rolldown_utils::{
-  dashmap::FxDashSet, futures::spawn_detached, indexmap::FxIndexMap, pattern_filter,
+  dashmap::FxDashSet,
+  futures::spawn_detached,
+  indexmap::{FxIndexMap, FxIndexSet},
+  pattern_filter,
 };
 use rustc_hash::FxHashSet;
 
@@ -754,75 +757,61 @@ impl BundleCoordinator {
   /// unwatched, so re-offering a path that is already registered is free and a
   /// path that arrives from both sources is added once.
   async fn update_watch_paths_including(&self, extra: &[ArcStr]) -> BuildResult<()> {
+    let (mut watch_files, cwd) = {
+      let bundler = self.bundler.lock().await;
+      (
+        bundler
+          .watch_files()
+          .iter()
+          .map(|watch_file| watch_file.clone())
+          .collect::<FxIndexSet<_>>(),
+        bundler.options().cwd.clone(),
+      )
+    };
+    watch_files.extend(extra.iter().cloned());
+    let watch_files = watch_files.into_iter().collect::<Vec<_>>();
+
     let include = self.ctx.options.watch_include.as_deref();
     let exclude = self.ctx.options.watch_exclude.as_deref();
-    // Filter while holding the bundler lock rather than copying the whole
-    // live set out first.
-    let new_watch_paths = {
-      let bundler = self.bundler.lock().await;
-      let live = bundler.watch_files();
-      let cwd = &bundler.options().cwd;
-      let cwd_str = cwd.to_string_lossy();
-      let new_watch_path = |watch_file: &str| {
-        Self::new_watch_path(&self.watched_files, watch_file, cwd, &cwd_str, include, exclude)
-      };
-      let mut new_watch_paths = live
-        .iter()
-        .filter_map(|watch_file| new_watch_path(watch_file.as_str()))
-        .collect::<Vec<_>>();
-      // Each path is offered once, live entries first: `extra` skips what the
-      // live set already offered and any repeat of itself.
-      let mut offered_extra = FxHashSet::default();
-      new_watch_paths.extend(
-        extra
-          .iter()
-          .filter(|watch_file| !live.contains(*watch_file) && offered_extra.insert(*watch_file))
-          .filter_map(|watch_file| new_watch_path(watch_file.as_str())),
-      );
-      new_watch_paths
-    };
 
-    Self::register_watch_paths(&self.watcher, &self.watched_files, new_watch_paths)
+    Self::update_watch_paths_from(
+      &self.watcher,
+      &self.watched_files,
+      &watch_files,
+      &cwd,
+      include,
+      exclude,
+    )
   }
 
-  /// `watch_file` as a [`WatchPath`] when it is not registered yet and passes
-  /// the `watch.include` / `watch.exclude` filter.
-  fn new_watch_path(
-    watched_files: &FxDashSet<WatchPath>,
-    watch_file: &str,
-    cwd: &Path,
-    cwd_str: &str,
-    include: Option<&[rolldown_utils::pattern_filter::StringOrRegex]>,
-    exclude: Option<&[rolldown_utils::pattern_filter::StringOrRegex]>,
-  ) -> Option<WatchPath> {
-    let watch_path = WatchPath::new(watch_file, cwd);
-    let path = watch_path.as_path();
-    (!watched_files.contains(path)
-      && pattern_filter::filter(exclude, include, &path.to_string_lossy(), cwd_str).inner())
-    .then_some(watch_path)
-  }
-
-  /// Add `new_watch_paths` in one paths transaction and publish the added
-  /// ones to `watched_files` only after it commits.
-  fn register_watch_paths(
+  fn update_watch_paths_from(
     watcher: &StdMutex<Box<dyn PathsSource>>,
     watched_files: &FxDashSet<WatchPath>,
-    new_watch_paths: Vec<WatchPath>,
+    watch_files: &[ArcStr],
+    cwd: &Path,
+    include: Option<&[rolldown_utils::pattern_filter::StringOrRegex]>,
+    exclude: Option<&[rolldown_utils::pattern_filter::StringOrRegex]>,
   ) -> BuildResult<()> {
+    let cwd_str = cwd.to_string_lossy();
     let mut watcher = watcher.lock().ok().context("Failed to acquire watcher lock")?;
     let mut paths_mut = watcher.paths_mut();
     let mut pending_watch_files = Vec::new();
-    for watch_path in new_watch_paths {
+    for watch_file in watch_files {
+      let watch_path = WatchPath::new(watch_file.as_str(), cwd);
       let path = watch_path.as_path();
-      // Recursive so a directory passed to `addWatchFile` covers its
-      // descendants (#10944); for a plain file it is the same as NonRecursive.
-      match paths_mut.add(path, RecursiveMode::Recursive) {
-        Ok(()) => pending_watch_files.push(watch_path),
-        // `addWatchFile` accepts nonexistent and virtual paths, so a refused
-        // registration must not fail the build. Skipped paths are retried on
-        // later builds because they never enter `watched_files`.
-        Err(error) => {
-          tracing::debug!(name = "notify watch skipped", path = ?path, error = ?error);
+      if !watched_files.contains(path)
+        && pattern_filter::filter(exclude, include, &path.to_string_lossy(), &cwd_str).inner()
+      {
+        // Recursive so a directory passed to `addWatchFile` covers its
+        // descendants (#10944); for a plain file it is the same as NonRecursive.
+        match paths_mut.add(path, RecursiveMode::Recursive) {
+          Ok(()) => pending_watch_files.push(watch_path),
+          // `addWatchFile` accepts nonexistent and virtual paths, so a refused
+          // registration must not fail the build. Skipped paths are retried on
+          // later builds because they never enter `watched_files`.
+          Err(error) => {
+            tracing::debug!(name = "notify watch skipped", path = ?path, error = ?error);
+          }
         }
       }
     }
@@ -872,33 +861,6 @@ mod tests {
   };
 
   const LIVENESS_TIMEOUT: Duration = Duration::from_secs(10);
-
-  /// The registration step of `update_watch_paths_including`, over a given
-  /// list instead of the bundler's live set.
-  fn update_watch_paths_from(
-    watcher: &StdMutex<Box<dyn PathsSource>>,
-    watched_files: &FxDashSet<WatchPath>,
-    watch_files: &[ArcStr],
-    cwd: &Path,
-    include: Option<&[rolldown_utils::pattern_filter::StringOrRegex]>,
-    exclude: Option<&[rolldown_utils::pattern_filter::StringOrRegex]>,
-  ) -> BuildResult<()> {
-    let cwd_str = cwd.to_string_lossy();
-    let new_watch_paths = watch_files
-      .iter()
-      .filter_map(|watch_file| {
-        BundleCoordinator::new_watch_path(
-          watched_files,
-          watch_file.as_str(),
-          cwd,
-          &cwd_str,
-          include,
-          exclude,
-        )
-      })
-      .collect();
-    BundleCoordinator::register_watch_paths(watcher, watched_files, new_watch_paths)
-  }
 
   fn create_observation_test_coordinator() -> BundleCoordinator {
     let bundler = Bundler::new(BundlerOptions::default()).expect("create test bundler");
@@ -1056,7 +1018,7 @@ mod tests {
     let successful_after = ArcStr::from("/virtual/project/after.js");
     let watch_files = [successful_before.clone(), failed.clone(), successful_after.clone()];
 
-    update_watch_paths_from(
+    BundleCoordinator::update_watch_paths_from(
       &watcher,
       &watched_files,
       &watch_files,
@@ -1214,7 +1176,7 @@ mod tests {
 
     // The refused add is skipped by contract; only the commit failure is a
     // build error, and nothing is published when the commit fails.
-    let error = update_watch_paths_from(
+    let error = BundleCoordinator::update_watch_paths_from(
       &watcher,
       &watched_files,
       &watch_files,
@@ -1244,7 +1206,7 @@ mod tests {
     let watched_files = FxDashSet::default();
     let watch_file = ArcStr::from("/virtual/project/input.js");
 
-    let first = update_watch_paths_from(
+    let first = BundleCoordinator::update_watch_paths_from(
       &watcher,
       &watched_files,
       std::slice::from_ref(&watch_file),
@@ -1256,7 +1218,7 @@ mod tests {
     assert!(!watched_files.contains(Path::new(watch_file.as_str())));
     assert_eq!(commit_attempts.load(Ordering::SeqCst), 1);
 
-    update_watch_paths_from(
+    BundleCoordinator::update_watch_paths_from(
       &watcher,
       &watched_files,
       std::slice::from_ref(&watch_file),

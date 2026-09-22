@@ -5,7 +5,7 @@ import { rolldown } from 'rolldown';
 import type { Plugin } from 'rolldown';
 import { rollup } from 'rollup';
 import * as ts from 'typescript';
-import { expect, test, vi } from 'vitest';
+import { expect, test } from 'vitest';
 
 import type { configureAsyncContext } from '../src/utils/async-context';
 import { CloseCallbackScope } from '../src/utils/close-callback-scope';
@@ -1082,62 +1082,6 @@ test(
     expect(output.output[0].code).toContain('const value = 1');
   },
 );
-
-test('each plugin hook call enters the close-callback scope once', async ({ onTestFinished }) => {
-  // A close-callback invocation is the store `CloseCallbackScope` enters on
-  // its `AsyncLocalStorage`. Re-entering the same invocation (the settlement
-  // tracker does) adds nothing; only a fresh scope entry adds one.
-  const closeInvocations = new Set<object>();
-  // oxlint-disable-next-line typescript/unbound-method -- applied with its receiver below
-  const run = AsyncLocalStorage.prototype.run;
-  const runSpy = vi.spyOn(AsyncLocalStorage.prototype, 'run').mockImplementation(function (
-    this: AsyncLocalStorage<unknown>,
-    store,
-    callback,
-    ...args
-  ) {
-    if (store && typeof store === 'object' && 'scope' in store && 'closeIdentity' in store) {
-      closeInvocations.add(store);
-    }
-    return Reflect.apply(run, this, [store, callback, ...args]);
-  });
-  onTestFinished(() => runSpy.mockRestore());
-
-  const measure = async (importCount: number) => {
-    const imports = Array.from({ length: importCount }, (_, index) => `\0hook-count-${index}`);
-    let hookCalls = 0;
-    const bundle = await rolldown({
-      input: '\0hook-count-entry',
-      plugins: [
-        {
-          name: 'hook-count',
-          resolveId(id) {
-            hookCalls += 1;
-            return id;
-          },
-          load(id) {
-            hookCalls += 1;
-            if (id !== '\0hook-count-entry') return 'export default 1';
-            return imports.map((importId) => `import ${JSON.stringify(importId)};`).join('\n');
-          },
-        },
-      ],
-    });
-    try {
-      const invocationsBefore = closeInvocations.size;
-      await bundle.generate({});
-      return { hookCalls, invocations: closeInvocations.size - invocationsBefore };
-    } finally {
-      await bundle.close();
-    }
-  };
-
-  const small = await measure(1);
-  const large = await measure(3);
-
-  expect(large.hookCalls - small.hookCalls).toBe(4);
-  expect(large.invocations - small.invocations).toBe(large.hookCalls - small.hookCalls);
-});
 
 let browserCloseCallbackScopePromise: Promise<typeof CloseCallbackScope> | undefined;
 let browserCloseCallbackModuleIndex = 0;

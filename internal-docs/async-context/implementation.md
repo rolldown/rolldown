@@ -112,18 +112,6 @@ callable during it cannot leave the callback active. Data-property thenables use
 the same assimilation and cycle detection. Build and dev callback settlement
 share this resolver.
 
-A plain native promise takes a shorter path on Node builds. When the cached
-`then` is the built-in `Promise.prototype.then` captured at module load and the
-result passes `util.types.isPromise` (a brand check a `Proxy` fails without
-reaching a trap), has the intrinsic prototype, and has no own `constructor`,
-calling `then` runs no user code. The tracker then attaches it synchronously
-instead of in a later job, and hands each fulfilled value to the same
-resolve-time classification as above, so `then` reads, cycle checks and
-deactivation-before-adoption are unchanged; only the extra promises and
-microtask turns go away. Every caller invokes the tracker inside the context
-its `runSynchronousCallback` enters, so the reactions see the same store.
-Browser builds have no trap-free brand check and always use the general path.
-
 The shared `utils/prototype-chain.ts` walker is used by logger/output-hook
 discovery and callback-bearing built-in option access. It tracks visited
 identities and allows at most 256 inspected objects. Cyclic proxies therefore
@@ -154,16 +142,6 @@ blocking an unrelated caller from closing the engine.
 option adapters.
 
 - `bindingify-plugin.ts` wraps every build and output plugin hook.
-- `CloseCallbackScope.wrapCallbacks()` then wraps every function left in the
-  binding options with the close-callback scope. `RolldownBuild`'s runner
-  already runs each callback through that same scope, so a wrapper that calls
-  the runner first - plugin hooks, functional `external`, built-in option
-  callbacks, and the composed logger - is marked with
-  `markScopeEnteringCallback()` and handed over unwrapped. One hook call
-  therefore enters the close scope once. Watch and dev pass no runner, mark
-  nothing, and keep the `wrapCallbacks()` wrapper as their only scope entry.
-  Output-option wrappers in `bindingify-output-options.ts` are not marked yet
-  and still enter the scope twice.
 - `builtin-plugin/utils.ts` maintains exhaustive callback-key inventories for
   callback-bearing native built-ins and wraps each configured callback.
   Every callback key's value comes from exactly one `[[Get]]` - a

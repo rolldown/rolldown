@@ -3,11 +3,11 @@ use std::sync::{
   atomic::{AtomicU64, Ordering},
 };
 
-use arcstr::ArcStr;
 use dashmap::DashMap;
 use oxc_index::IndexVec;
 use rolldown_common::{
   ModuleIdx, PluginIdx, SharedFileEmitter, SharedModuleInfoDashMap, SharedNormalizedBundlerOptions,
+  WatchPath,
 };
 use rolldown_resolver::Resolver;
 use rolldown_utils::dashmap::FxDashSet;
@@ -46,7 +46,7 @@ impl PluginDriverFactory {
     session: &rolldown_devtools::Session,
     initial_bundle_span: &tracing::Span,
     module_infos: SharedModuleInfoDashMap,
-    transform_dependencies: Arc<DashMap<ModuleIdx, Arc<FxDashSet<ArcStr>>>>,
+    transform_dependencies: Arc<DashMap<ModuleIdx, Arc<FxDashSet<WatchPath>>>>,
   ) -> Arc<crate::plugin_driver::PluginDriver> {
     let close_identity = next_close_identity();
     let watch_files = Arc::new(FxDashSet::default());

@@ -1,6 +1,6 @@
 use std::{
   collections::VecDeque,
-  path::PathBuf,
+  path::{Path, PathBuf},
   sync::{Arc, Mutex as StdMutex, atomic::AtomicU32},
 };
 
@@ -10,7 +10,7 @@ use async_lock::Mutex;
 use futures::StreamExt;
 #[cfg(target_os = "macos")]
 use notify::EventKind;
-use rolldown_common::WatcherChangeKind;
+use rolldown_common::{WatchPath, WatcherChangeKind};
 use rolldown_dev_common::types::{DevCallbackError, DevCallbackResult};
 use rolldown_error::BuildResult;
 use rolldown_fs_watcher::{
@@ -23,7 +23,6 @@ use rolldown_utils::{
   pattern_filter,
 };
 use rustc_hash::FxHashSet;
-use sugar_path::SugarPath;
 
 use rolldown::Bundler;
 
@@ -76,7 +75,7 @@ pub struct BundleCoordinator {
   next_hmr_patch_id: Arc<AtomicU32>,
   rx: CoordinatorReceiver,
   watcher: StdMutex<Box<dyn CoordinatorFsWatcher>>,
-  watched_files: FxDashSet<ArcStr>,
+  watched_files: FxDashSet<WatchPath>,
   /// Tracks the state of the initial build
   state: CoordinatorState,
   /// File changes that arrived during initial build
@@ -779,7 +778,7 @@ impl BundleCoordinator {
           .iter()
           .map(|watch_file| watch_file.clone())
           .collect::<FxIndexSet<_>>(),
-        bundler.options().cwd.to_string_lossy().into_owned(),
+        bundler.options().cwd.clone(),
       )
     };
     watch_files.extend(extra.iter().cloned());
@@ -800,27 +799,31 @@ impl BundleCoordinator {
 
   fn update_watch_paths_from(
     watcher: &StdMutex<Box<dyn CoordinatorFsWatcher>>,
-    watched_files: &FxDashSet<ArcStr>,
+    watched_files: &FxDashSet<WatchPath>,
     watch_files: &[ArcStr],
-    cwd: &str,
+    cwd: &Path,
     include: Option<&[rolldown_utils::pattern_filter::StringOrRegex]>,
     exclude: Option<&[rolldown_utils::pattern_filter::StringOrRegex]>,
   ) -> BuildResult<()> {
+    let cwd_str = cwd.to_string_lossy();
     let mut watcher = watcher.lock().ok().context("Failed to acquire watcher lock")?;
     let mut paths_mut = watcher.paths_mut();
     let mut pending_watch_files = Vec::new();
     for watch_file in watch_files {
-      let watch_file = &**watch_file;
-      if !watched_files.contains(watch_file)
-        && pattern_filter::filter(exclude, include, watch_file, cwd).inner()
+      let watch_path = WatchPath::new(watch_file.as_str(), cwd);
+      let path = watch_path.as_path();
+      if !watched_files.contains(path)
+        && pattern_filter::filter(exclude, include, &path.to_string_lossy(), &cwd_str).inner()
       {
-        match paths_mut.add(watch_file.as_path(), RecursiveMode::NonRecursive) {
-          Ok(()) => pending_watch_files.push(ArcStr::from(watch_file)),
+        // Recursive so a directory passed to `addWatchFile` covers its
+        // descendants (#10944); for a plain file it is the same as NonRecursive.
+        match paths_mut.add(path, RecursiveMode::Recursive) {
+          Ok(()) => pending_watch_files.push(watch_path),
           // `addWatchFile` accepts nonexistent and virtual paths, so a refused
           // registration must not fail the build. Skipped paths are retried on
           // later builds because they never enter `watched_files`.
           Err(error) => {
-            tracing::debug!(name = "notify watch skipped", path = ?watch_file.as_path(), error = ?error);
+            tracing::debug!(name = "notify watch skipped", path = ?path, error = ?error);
           }
         }
       }
@@ -831,8 +834,8 @@ impl BundleCoordinator {
     // See internal-docs/dev-engine/implementation.md.
     let commit_result = paths_mut.commit();
     if commit_result.is_ok() {
-      for watch_file in pending_watch_files {
-        watched_files.insert(watch_file);
+      for watch_path in pending_watch_files {
+        watched_files.insert(watch_path);
       }
     }
 
@@ -1057,16 +1060,16 @@ mod tests {
       &watcher,
       &watched_files,
       &watch_files,
-      "/virtual/project",
+      Path::new("/virtual/project"),
       None,
       None,
     )
     .expect("a failed watcher addition must not fail the build");
 
     assert_eq!(commit_attempts.load(Ordering::SeqCst), 1);
-    assert!(watched_files.contains(successful_before.as_str()));
-    assert!(!watched_files.contains(failed.as_str()));
-    assert!(watched_files.contains(successful_after.as_str()));
+    assert!(watched_files.contains(Path::new(successful_before.as_str())));
+    assert!(!watched_files.contains(Path::new(failed.as_str())));
+    assert!(watched_files.contains(Path::new(successful_after.as_str())));
   }
 
   #[test]
@@ -1215,7 +1218,7 @@ mod tests {
       &watcher,
       &watched_files,
       &watch_files,
-      "/virtual/project",
+      Path::new("/virtual/project"),
       None,
       None,
     )
@@ -1226,8 +1229,8 @@ mod tests {
     assert!(message.contains("intentional watcher commit failure"));
     assert_eq!(error.len(), 1);
     assert_eq!(commit_attempts.load(Ordering::SeqCst), 1);
-    assert!(!watched_files.contains(successful_add.as_str()));
-    assert!(!watched_files.contains(failed_add.as_str()));
+    assert!(!watched_files.contains(Path::new(successful_add.as_str())));
+    assert!(!watched_files.contains(Path::new(failed_add.as_str())));
   }
 
   #[test]
@@ -1245,24 +1248,24 @@ mod tests {
       &watcher,
       &watched_files,
       std::slice::from_ref(&watch_file),
-      "/virtual/project",
+      Path::new("/virtual/project"),
       None,
       None,
     );
     assert!(first.is_err());
-    assert!(!watched_files.contains(watch_file.as_str()));
+    assert!(!watched_files.contains(Path::new(watch_file.as_str())));
     assert_eq!(commit_attempts.load(Ordering::SeqCst), 1);
 
     BundleCoordinator::update_watch_paths_from(
       &watcher,
       &watched_files,
       std::slice::from_ref(&watch_file),
-      "/virtual/project",
+      Path::new("/virtual/project"),
       None,
       None,
     )
     .expect("second watcher commit should retry and succeed");
-    assert!(watched_files.contains(watch_file.as_str()));
+    assert!(watched_files.contains(Path::new(watch_file.as_str())));
     assert_eq!(commit_attempts.load(Ordering::SeqCst), 2);
   }
 
@@ -1487,7 +1490,7 @@ mod tests {
     assert!(close_error.to_string().contains("intentional watcher commit failure"));
     assert_eq!(close_error.len(), 1);
     assert_eq!(commit_attempts.load(Ordering::SeqCst), 1);
-    assert!(!coordinator.watched_files.contains(input.to_string_lossy().as_ref()));
+    assert!(!coordinator.watched_files.contains(input.as_path()));
   }
 
   #[test]

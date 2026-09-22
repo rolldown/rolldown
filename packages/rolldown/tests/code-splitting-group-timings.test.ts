@@ -102,13 +102,13 @@ describe('code-splitting group timings', () => {
     const recorder = pluginTimingsRecorderFor(inputOptions);
     expect(recorder.costs.size).toBe(2);
     expect(
-      recorder.costs.get(firstGroup)?.get('codeSplitting groups[].test "shared"'),
+      recorder.costs.get(firstGroup)?.get('codeSplitting groups[0].test "shared"'),
     ).toMatchObject({
       calls: 2,
       ms: 20,
     });
     expect(
-      recorder.costs.get(secondGroup)?.get('codeSplitting groups[].test "shared"'),
+      recorder.costs.get(secondGroup)?.get('codeSplitting groups[1].test "shared"'),
     ).toMatchObject({
       calls: 2,
       ms: 60,
@@ -182,8 +182,8 @@ describe('code-splitting group timings', () => {
     expect(summarizePluginTimings(inputOptions)).toMatchObject({
       busyMs: 30,
       rows: [
-        { hook: 'codeSplitting groups[].test "dynamic group"', calls: 1, ms: 10 },
-        { hook: 'codeSplitting groups[].name "dynamic group"', calls: 1, ms: 20 },
+        { hook: 'codeSplitting groups[0].test "dynamic group"', calls: 1, ms: 10 },
+        { hook: 'codeSplitting groups[0].name "dynamic group"', calls: 1, ms: 20 },
       ],
     });
   });
@@ -211,7 +211,7 @@ describe('code-splitting group timings', () => {
     runTest(bindingGroup);
 
     expect(summarizePluginTimings(inputOptions).rows).toMatchObject([
-      { hook: 'codeSplitting groups[].test "report label"' },
+      { hook: 'codeSplitting groups[0].test "report label"' },
     ]);
   });
 

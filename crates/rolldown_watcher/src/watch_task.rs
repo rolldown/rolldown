@@ -2,7 +2,7 @@ use arcstr::ArcStr;
 use async_lock::Mutex as TokioMutex;
 use rolldown::{BundleHandle, Bundler, BundlerBuilder, BundlerConfig};
 use rolldown_common::{
-  BundleMode, Log, LogLevel, NormalizedBundlerOptions, ScanMode, WatcherChangeKind,
+  BundleMode, Log, LogLevel, NormalizedBundlerOptions, ScanMode, WatchPath, WatcherChangeKind,
 };
 use rolldown_error::{
   BatchedBuildDiagnostic, BuildDiagnostic, BuildResult, Diagnostic, DiagnosticOptions,
@@ -57,10 +57,10 @@ pub struct WatchTask {
   /// backend. Consulted before opening a paths transaction so a sibling's
   /// duplicate discovery adopts the existing registration instead of
   /// restarting the shared stream.
-  group_registered_files: Arc<FxDashSet<ArcStr>>,
+  group_registered_files: Arc<FxDashSet<WatchPath>>,
   /// Paths THIS task watches. `mark_needs_rebuild` and `is_watched_file`
   /// consult it, so adopted group paths must land here too.
-  watched_files: FxDashSet<ArcStr>,
+  watched_files: FxDashSet<WatchPath>,
   pub(crate) needs_rebuild: bool,
   closed: Arc<AtomicBool>,
 }
@@ -69,7 +69,7 @@ impl WatchTask {
   pub(crate) fn new(
     config: BundlerConfig,
     fs_watcher: Arc<std::sync::Mutex<Box<dyn TaskFsWatcher>>>,
-    group_registered_files: Arc<FxDashSet<ArcStr>>,
+    group_registered_files: Arc<FxDashSet<WatchPath>>,
     closed: &Arc<AtomicBool>,
   ) -> BuildResult<Self> {
     // Validation: dev_mode not allowed with watch
@@ -295,8 +295,8 @@ impl WatchTask {
   /// Separated from `&self` to allow calling from closures during build.
   fn update_watch_files_from(
     fs_watcher: &std::sync::Mutex<Box<dyn TaskFsWatcher>>,
-    watched_files: &FxDashSet<ArcStr>,
-    group_registered_files: &FxDashSet<ArcStr>,
+    watched_files: &FxDashSet<WatchPath>,
+    group_registered_files: &FxDashSet<WatchPath>,
     options: &NormalizedBundlerOptions,
     files: &[ArcStr],
   ) -> BuildResult<()> {
@@ -310,28 +310,29 @@ impl WatchTask {
     // into this task's watch set without touching the backend.
     let mut new_files = Vec::new();
     for file in files {
-      let file_str = file.as_str();
-      if watched_files.contains(file_str) {
+      let watch_path = WatchPath::new(file.as_str(), &options.cwd);
+      if watched_files.contains(&watch_path) {
         continue;
       }
-      if !Path::new(file_str).exists() {
+      let path = watch_path.as_path();
+      if !path.exists() {
         continue;
       }
       if pattern_filter::filter(
         options.watch.exclude.as_deref(),
         options.watch.include.as_deref(),
-        file_str,
+        path.to_string_lossy().as_ref(),
         options.cwd.to_string_lossy().as_ref(),
       )
       .inner()
       {
-        if group_registered_files.contains(file_str) {
+        if group_registered_files.contains(&watch_path) {
           // The shared backend already delivers events for this path; only
           // this task's own watch set — the input of `mark_needs_rebuild` and
           // `is_watched_file` — still has to learn about it.
-          watched_files.insert(file.clone());
+          watched_files.insert(watch_path);
         } else {
-          new_files.push(file.clone());
+          new_files.push(watch_path);
         }
       }
     }
@@ -344,12 +345,12 @@ impl WatchTask {
     let mut pending_watch_files = Vec::new();
     let mut errors = Vec::new();
 
-    for file in new_files {
-      let path = Path::new(file.as_str());
-      match watcher_paths.add(path, RecursiveMode::NonRecursive) {
+    for watch_path in new_files {
+      let path = watch_path.as_path();
+      match watcher_paths.add(path, RecursiveMode::Recursive) {
         Ok(()) => {
           tracing::debug!(name = "notify watch", path = ?path);
-          pending_watch_files.push(file);
+          pending_watch_files.push(watch_path);
         }
         Err(error) => errors.extend(error.into_vec()),
       }
@@ -432,17 +433,7 @@ impl WatchTask {
   }
 
   fn is_watched_file(&self, path: &str) -> bool {
-    if self.watched_files.contains(path) {
-      return true;
-    }
-
-    // Windows path normalization
-    #[cfg(windows)]
-    if self.watched_files.contains(path.replace('\\', "/").as_str()) {
-      return true;
-    }
-
-    false
+    Path::new(path).ancestors().any(|ancestor| self.watched_files.contains(ancestor))
   }
 }
 
@@ -682,15 +673,15 @@ mod tests {
       !event_delivery_paused.load(Ordering::SeqCst),
       "commit must restart event delivery after an add failure"
     );
-    assert!(watched_files.contains(watch_files[0].as_str()));
-    assert!(!watched_files.contains(watch_files[1].as_str()));
-    assert!(watched_files.contains(watch_files[2].as_str()));
-    assert!(group_registered_files.contains(watch_files[0].as_str()));
+    assert!(watched_files.contains(Path::new(watch_files[0].as_str())));
+    assert!(!watched_files.contains(Path::new(watch_files[1].as_str())));
+    assert!(watched_files.contains(Path::new(watch_files[2].as_str())));
+    assert!(group_registered_files.contains(Path::new(watch_files[0].as_str())));
     assert!(
-      !group_registered_files.contains(watch_files[1].as_str()),
+      !group_registered_files.contains(Path::new(watch_files[1].as_str())),
       "a failed add must stay unregistered for the whole group so the retry re-adds it"
     );
-    assert!(group_registered_files.contains(watch_files[2].as_str()));
+    assert!(group_registered_files.contains(Path::new(watch_files[2].as_str())));
   }
 
   #[test]
@@ -722,8 +713,8 @@ mod tests {
       !event_delivery_paused.load(Ordering::SeqCst),
       "the fake backend must observe transaction finalization"
     );
-    assert!(!watched_files.contains(watch_files[0].as_str()));
-    assert!(!watched_files.contains(watch_files[1].as_str()));
+    assert!(!watched_files.contains(Path::new(watch_files[0].as_str())));
+    assert!(!watched_files.contains(Path::new(watch_files[1].as_str())));
     assert!(
       group_registered_files.is_empty(),
       "a failed commit must not publish any path to the group set"
@@ -756,9 +747,9 @@ mod tests {
       std::slice::from_ref(&watch_file),
     );
     assert!(first.is_err());
-    assert!(!watched_files.contains(watch_file.as_str()));
+    assert!(!watched_files.contains(Path::new(watch_file.as_str())));
     assert!(
-      !group_registered_files.contains(watch_file.as_str()),
+      !group_registered_files.contains(Path::new(watch_file.as_str())),
       "a failed commit must not publish the path to the group set, \
        or the retry would adopt an unregistered path"
     );
@@ -772,8 +763,8 @@ mod tests {
       std::slice::from_ref(&watch_file),
     )
     .expect("second watcher commit should retry and succeed");
-    assert!(watched_files.contains(watch_file.as_str()));
-    assert!(group_registered_files.contains(watch_file.as_str()));
+    assert!(watched_files.contains(Path::new(watch_file.as_str())));
+    assert!(group_registered_files.contains(Path::new(watch_file.as_str())));
     assert_eq!(commit_attempts.load(Ordering::SeqCst), 2);
 
     WatchTask::update_watch_files_from(
@@ -811,8 +802,8 @@ mod tests {
     )
     .expect("first registration should commit");
     assert_eq!(commit_attempts.load(Ordering::SeqCst), 1);
-    assert!(task_a_watched_files.contains(watch_files[0].as_str()));
-    assert!(group_registered_files.contains(watch_files[0].as_str()));
+    assert!(task_a_watched_files.contains(Path::new(watch_files[0].as_str())));
+    assert!(group_registered_files.contains(Path::new(watch_files[0].as_str())));
 
     // Sibling task B discovers the same path (the group members share one
     // module graph). It must adopt the group's registration: another paths
@@ -836,7 +827,7 @@ mod tests {
       "event delivery must stay uninterrupted during adoption"
     );
     assert!(
-      task_b_watched_files.contains(watch_files[0].as_str()),
+      task_b_watched_files.contains(Path::new(watch_files[0].as_str())),
       "adoption must land in the sibling's own watch set so it still marks itself dirty"
     );
   }

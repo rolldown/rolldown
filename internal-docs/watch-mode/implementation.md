@@ -132,7 +132,7 @@ Watcher (public API)
                                     ├── WatchTask 0  ─┐ config group 0 shares
                                     │   ├── bundler: Arc<TokioMutex<Bundler>>
                                     │   ├── fs_watcher: Arc<Mutex<Box<dyn TaskFsWatcher>>> (ONE FsWatcher per config group)
-                                    │   ├── watched_files: FxDashSet<ArcStr> (per task)
+                                    │   ├── watched_files: FxDashSet<WatchPath> (per task)
                                     │   └── needs_rebuild: bool
                                     ├── WatchTask 1  ─┘ the same fs_watcher Arc
                                     └── WatchTask N ... (next group → next fs watcher)
@@ -152,7 +152,7 @@ Data flow:
 
 - `Watcher` only holds lifecycle state (`tx`, the close signal, and `coordinator_state`) — lightweight, no bundler access. The state retains the boxed coordinator future until runtime submission succeeds, and restores it on rejection. `publish_close()` sets the atomic flag, notification, and actor message without spawning; N-API calls it synchronously before returning the close promise so a JavaScript listener cannot return into a new build before close is visible. The async `close()` future enters through the selected runtime, starts a not-yet-running coordinator, and awaits its shared result.
 - `WatchCoordinator` owns ALL mutable state. No external mutation.
-- ONE `FsWatcher` exists per config group, shared by that group's `WatchTask`s via `Arc<std::sync::Mutex<Box<dyn TaskFsWatcher>>>` — `TaskFsWatcher` is a crate-local seam over the concrete `FsWatcher`, kept so tests can substitute failing or recording watchers. A save of a file watched by several outputs of one config is therefore delivered exactly once, carrying the group identity, instead of racing per-output on independent notify streams (the pre-group design behind [#10613](https://github.com/rolldown/rolldown/issues/10613)). Watched-path membership stays per task (`watched_files`), but backend registration is deduplicated group-wide through a shared registered-path set (`group_registered_files: Arc<FxDashSet<ArcStr>>`, created next to the shared watcher in `create_tasks`): a path a sibling member already committed is adopted into the member's own `watched_files` without touching the backend. Members must not re-register a sibling's path — on macOS a `paths_mut()` transaction stops the group's shared FSEvents stream, drops the events buffered meanwhile, and restarts from "now" on commit, so a duplicate registration would blind the whole group.
+- ONE `FsWatcher` exists per config group, shared by that group's `WatchTask`s via `Arc<std::sync::Mutex<Box<dyn TaskFsWatcher>>>` — `TaskFsWatcher` is a crate-local seam over the concrete `FsWatcher`, kept so tests can substitute failing or recording watchers. A save of a file watched by several outputs of one config is therefore delivered exactly once, carrying the group identity, instead of racing per-output on independent notify streams (the pre-group design behind [#10613](https://github.com/rolldown/rolldown/issues/10613)). Watched-path membership stays per task (`watched_files`), but backend registration is deduplicated group-wide through a shared registered-path set (`group_registered_files: Arc<FxDashSet<WatchPath>>`, created next to the shared watcher in `create_tasks`): a path a sibling member already committed is adopted into the member's own `watched_files` without touching the backend. Members must not re-register a sibling's path — on macOS a `paths_mut()` transaction stops the group's shared FSEvents stream, drops the events buffered meanwhile, and restarts from "now" on commit, so a duplicate registration would blind the whole group.
 - Bundler is `Arc<TokioMutex<>>` (where `TokioMutex` aliases `async_lock::Mutex`, not tokio's) because event data structs carry a clone for consumer access (e.g. `BUNDLE_END.result`).
 
 ### Three-Layer Stack
@@ -537,7 +537,7 @@ Configured via `WatcherOptions`, fires **immediately** on file change (before de
 - After each build, `bundler.watch_files()` returns the current set.
 - `WatchTask::update_watch_files()` diffs against the task's own `watched_files` set and the group-level `group_registered_files` set — a path a sibling output already registered on the config group's shared `FsWatcher` is adopted into the task's own set without a backend call; only paths new to the whole group are added to the backend.
 - `include`/`exclude` patterns filter which files are watched (via `pattern_filter`).
-- Files are watched **non-recursively** (individual file watches).
+- Files are watched **recursively**, so a directory passed to `addWatchFile` covers its descendants; for a plain file this is the same as a single-file watch.
 - Batch operations: `fs_watcher.paths_mut()` returns a guard for batching adds, committed via `.commit()`.
 - Opening a path transaction may pause event delivery until commit — on macOS it stops the
   group's shared FSEvents stream and the commit restarts it from "now", dropping events buffered

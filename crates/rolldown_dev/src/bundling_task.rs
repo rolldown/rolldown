@@ -73,9 +73,10 @@ impl BundlingTask {
     }
   }
 
-  /// Rebuild precedes Hmr: if both stages errored in the same task (only
-  /// possible after the auto-upgrade rewrite), `Rebuild` is reported so
-  /// recovery forces a fresh rebuild on the next file change.
+  /// Rebuild precedes Hmr: if both stages errored in the same task (an
+  /// `HmrRebuild` whose HMR error went to a callback and whose rebuild then
+  /// failed too), `Rebuild` is reported so recovery forces a fresh rebuild on
+  /// the next file change.
   fn final_error_stage(&self) -> Option<ErrorStage> {
     if self.rebuild_errored {
       Some(ErrorStage::Rebuild)
@@ -265,8 +266,9 @@ impl BundlingTask {
     // `HmrUpdate::Patch`. A `HmrUpdate::Noop` sends nothing, so it never advances the
     // counter. The client enforces a strict `seq === lastSeq + 1`, so consuming a seq
     // without delivering an envelope would leave a gap and trigger a spurious full reload.
-    // A client that disconnected during compute is simply absent here; its update is
-    // dropped unstamped.
+    // A client that disconnected during compute has no session here, so its patch keeps
+    // `seq: 0`. It is not filtered out: the loop below still records it as a pending
+    // payload and `on_hmr_updates` still receives it; the consumer finds no client for it.
     if let Ok(client_updates) = &mut hmr_result {
       let mut client_sessions = self.dev_context.clients.lock().await;
       for update in client_updates.iter_mut() {
@@ -280,9 +282,8 @@ impl BundlingTask {
     }
 
     // Record each rendered patch as pending (only if successful): the delivery
-    // notification max-merges its stamps into `shipped[C]` when the serving
-    // middleware sees the response for `patch.filename` complete. `carried` is
-    // handed over instead of cloned — the binding layer drops it (it stays
+    // notification for `patch.filename` max-merges its stamps into `shipped[C]`.
+    // `carried` is handed over instead of cloned — the binding layer drops it (it stays
     // server-side), so the pending entry is its only consumer from here on.
     if let Ok(client_updates) = &mut hmr_result {
       for update in client_updates.iter_mut() {

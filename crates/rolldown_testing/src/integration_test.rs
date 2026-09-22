@@ -266,7 +266,9 @@ impl IntegrationTest {
         );
         let watched_files = dev_engine.get_watched_files().await.unwrap();
         assert!(
-          changed_files.iter().all(|(file, _)| watched_files.contains(file)),
+          changed_files.iter().all(|(file, _)| std::path::Path::new(file)
+            .ancestors()
+            .any(|path| path.to_str().is_some_and(|path| watched_files.contains(path)))),
           "All changed files must be in watched files: {changed_files:#?} not in {watched_files:#?}"
         );
         dev_engine

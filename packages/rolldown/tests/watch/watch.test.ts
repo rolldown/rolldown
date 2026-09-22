@@ -2789,6 +2789,60 @@ test.concurrent(
 );
 
 test.concurrent(
+  'PluginContext addWatchFile with a directory',
+  { retry: TEST_RETRY, timeout: TEST_TIMEOUT },
+  async ({ task, expect, onTestFinished }) => {
+    const retryCount = task.result?.retryCount ?? 0;
+    const { dir: cwd } = createTestWithMultiFiles('addWatchFile-dir', retryCount, {
+      'main.js': `console.log(1)`,
+    });
+    const watchedDir = path.join(cwd, 'content');
+    const nestedFile = path.join(watchedDir, 'nested', 'data.txt');
+    fs.mkdirSync(path.dirname(nestedFile), { recursive: true });
+    fs.writeFileSync(nestedFile, '1');
+
+    const watcher = watch({
+      cwd,
+      input: 'main.js',
+      output: { dir: path.join(cwd, 'dist') },
+      plugins: [
+        {
+          name: 'test',
+          buildStart() {
+            this.addWatchFile(watchedDir);
+          },
+        },
+      ],
+    });
+    onTestFinished(async () => {
+      await watcher.close();
+      if (!process.env.CI) {
+        fs.rmSync(cwd, { recursive: true, force: true });
+      }
+    });
+    await waitBuildFinished(watcher);
+
+    const changedIds: string[] = [];
+    watcher.on('change', (id) => {
+      changedIds.push(id);
+    });
+    let rebuilds = 0;
+    watcher.on('event', (event) => {
+      if (event.code === 'BUNDLE_END') rebuilds++;
+    });
+
+    await editFile(nestedFile, '2');
+    await expect.poll(() => changedIds, { timeout: 10_000 }).toContain(nestedFile);
+    await expect.poll(() => rebuilds, { timeout: 10_000 }).toBeGreaterThan(0);
+
+    const createdFile = path.join(watchedDir, 'created', 'data.txt');
+    fs.mkdirSync(path.dirname(createdFile));
+    await editFile(createdFile, '1');
+    await expect.poll(() => changedIds, { timeout: 10_000 }).toContain(createdFile);
+  },
+);
+
+test.concurrent(
   'watch include/exclude',
   { retry: TEST_RETRY, timeout: TEST_TIMEOUT },
   async ({ task, expect, onTestFinished }) => {

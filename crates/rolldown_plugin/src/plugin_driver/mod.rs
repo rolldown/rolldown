@@ -16,10 +16,9 @@ use arcstr::ArcStr;
 use dashmap::DashMap;
 use rolldown_common::{
   ModuleId, ModuleIdx, ModuleInfo, ModuleLoaderMsg, PluginIdx, SharedFileEmitter,
-  SharedModuleInfoDashMap,
+  SharedModuleInfoDashMap, WatchPath,
 };
 use rolldown_utils::dashmap::FxDashSet;
-use sugar_path::SugarPath;
 
 use crate::{
   __inner::SharedPluginable,
@@ -42,7 +41,7 @@ pub struct PluginDriver {
   pub watch_files: Arc<FxDashSet<ArcStr>>,
   pub module_infos: SharedModuleInfoDashMap,
   /// Module dependencies tracked during load/transform hooks for HMR invalidation
-  pub transform_dependencies: Arc<DashMap<ModuleIdx, Arc<FxDashSet<ArcStr>>>>,
+  pub transform_dependencies: Arc<DashMap<ModuleIdx, Arc<FxDashSet<WatchPath>>>>,
   context_load_completion_manager: ContextLoadCompletionManager,
   pub(crate) tx: Arc<Mutex<Option<futures::channel::mpsc::UnboundedSender<ModuleLoaderMsg>>>>,
   /// Outlives the `Bundle` through `BundleHandle`, which is how the binding reads them
@@ -105,9 +104,7 @@ impl PluginDriver {
     &self.plugins
   }
 
-  pub fn add_transform_dependency(&self, module_idx: ModuleIdx, dependency: &str) {
-    let dependency = ArcStr::from(dependency.to_slash());
-
+  pub fn add_transform_dependency(&self, module_idx: ModuleIdx, dependency: WatchPath) {
     self
       .transform_dependencies
       .entry(module_idx)

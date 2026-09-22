@@ -15,7 +15,7 @@ The clock starts and stops **inside the JavaScript callback**, not around the ca
 
    These callbacks include `external`, `treeshake.moduleSideEffects`, file-name callbacks, and addon callbacks. They also include `manualChunks` and the group callbacks in [`output.codeSplitting`](/reference/OutputOptions.codeSplitting). The deprecated [`output.advancedChunks`](/reference/OutputOptions.advancedChunks) option uses the same group callbacks.
 
-   Code-splitting rows include a group label. Rolldown uses `debugName` first. It uses a string `name` when `debugName` is absent. Set `debugName` when `name` is a function. When the group has no label, Rolldown warns once for that group and uses its index.
+   Code-splitting rows include the group index and an available label. Rolldown uses `debugName` first. It uses a string `name` when `debugName` is absent. Set `debugName` when `name` is a function. When the group has no label, Rolldown warns once for that group.
 
    The headline figure is the wall time in which at least one measured callback ran. Overlap counts once. The figure can be more than the build time, because `closeBundle` runs after the build clock stops. The message says so when that happens. The rows can add up to more than the headline figure, because callbacks can overlap. One callback can run inside another: `this.emitFile()` in `buildStart` runs your `assetFileNames`, and that time counts for both. Two `async` callbacks can also run at the same time.
 

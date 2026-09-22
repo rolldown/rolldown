@@ -150,6 +150,8 @@ aggregates them exactly once.
 - [implementation.md](./implementation.md) — the dev engine's
   implementation map (components, message protocol, state machine,
   per-stage data flow)
+- [hmr/design.md](../hmr/design.md) — why HMR boundary decisions run in
+  the browser, and the per-client ship map the engine keeps for it
 - [bundler-data-lifecycle](../bundler-data-lifecycle/implementation.md) — `BundleMode`,
   `Bundle` / `BundleFactory`, and the `ScanStageCache` lifecycle the dev
   engine's incremental builds run through

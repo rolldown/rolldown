@@ -503,8 +503,9 @@ impl BindingDevEngine {
     })
   }
 
-  /// Delivery notification from the serving middleware: the response for
-  /// `filename` completed, so record its modules as shipped to that client.
+  /// Delivery notification for the payload `filename`: the client reported that it
+  /// ran the payload, so record its modules as shipped to that client. See
+  /// `DevEngine::notify_payload_delivered`.
   #[napi(ts_return_type = "Promise<void>")]
   pub fn notify_payload_delivered<'env>(
     &self,

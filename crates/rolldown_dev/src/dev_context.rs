@@ -239,15 +239,14 @@ pub struct DevContext {
   /// Dev-engine-wide rebuild-stamp ship map of the versioned delivery protocol.
   pub stamp_table: Arc<TokioMutex<HmrStampTable>>,
   /// Rendered-but-not-yet-delivered payloads, keyed by output filename. The
-  /// delivery notification consumes an entry when the serving middleware sees
-  /// the response for that filename complete.
+  /// delivery notification (`DevEngine::notify_payload_delivered`) consumes an entry.
   pub pending_payloads: Arc<TokioMutex<FxHashMap<String, PendingPayload>>>,
   /// Boot-evaluated map of the latest written bundle output: module stable id →
   /// render stamp of the copy the entry chunk evaluates at top level (computed
   /// statically — see `Bundler::compute_top_level_evaluated_modules`). Swapped whole
   /// after every successful rebuild; `register_client` freezes the then-current
-  /// `Arc` into the new session, since a hello can only come from the runtime
-  /// inside a served entry chunk.
+  /// `Arc` into the new session, since a hello can only come from a page that
+  /// loaded a served entry chunk.
   pub top_level_evaluated: TokioMutex<Arc<FxHashMap<ArcStr, u32>>>,
   /// Whether the previous bundling task errored. The next HMR compute passes it
   /// as `last_build_errored` to disable the unchanged-output suppression, so a
@@ -258,8 +257,7 @@ pub struct DevContext {
 
 impl DevContext {
   /// Record a rendered payload as pending so the delivery notification can
-  /// max-merge its stamps into that client's `shipped[C]` once the serving
-  /// middleware observes the response complete.
+  /// max-merge its stamps into that client's `shipped[C]`.
   ///
   /// Bounds per-client growth: past `MAX_PENDING_PAYLOADS_PER_CLIENT` entries
   /// the oldest ones are dropped — see the constant's doc for why that is safe.

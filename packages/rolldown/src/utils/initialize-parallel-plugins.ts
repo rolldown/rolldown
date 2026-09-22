@@ -3,6 +3,7 @@ import { MessageChannel, type MessagePort, Worker } from 'node:worker_threads';
 import { ParallelJsPluginRegistry } from '../binding.cjs';
 import type { RolldownPlugin } from '../plugin';
 import { assertParallelPluginsSupported } from '../plugin/parallel-plugin';
+import { throwCloseErrors } from '../runtime-lifecycle';
 import {
   cleanupAfterError,
   clearRetryableCleanup,
@@ -699,12 +700,7 @@ class WorkerSupervisor implements SupervisedWorker {
     if (hasTerminationError) {
       errors.push(terminationError);
     }
-    if (errors.length === 1) throw errors[0];
-    if (errors.length > 1) {
-      throw new AggregateError(errors, 'Parallel-plugin worker fault or shutdown failed', {
-        cause: errors[0],
-      });
-    }
+    throwCloseErrors(errors, 'Parallel-plugin worker fault or shutdown failed');
     return this.#exitCode;
   }
 

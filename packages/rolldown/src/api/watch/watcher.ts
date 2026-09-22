@@ -19,12 +19,9 @@ import {
   createBundlerOptions,
 } from '../../utils/create-bundler-option';
 import {
-  createCleanupFailureError,
+  cleanupAfterError,
+  createCombinedRetryableCleanup,
   getRetryableCleanup,
-  hasRetryableCleanupOwnership,
-  retryCleanupFromError,
-  runRetryableCleanup,
-  trackRetryableCleanupOwnership,
   type RetryableCleanup,
   waitForRetryableCleanupTurn,
 } from '../../utils/retryable-cleanup';
@@ -615,7 +612,7 @@ export async function createWatcher(
   }
   const workerCleanups = collectParallelPluginCleanups(bundlerOptions, setupErrors);
   if (setupErrors.length > 0) {
-    return throwWatcherSetupErrorAfterCleanup(
+    return cleanupAfterError(
       createSetupError(setupErrors, 'Watcher option setup failed'),
       createWatcherSetupCleanup(workerCleanups),
       'Watcher setup and parallel-plugin worker cleanup failed',
@@ -626,7 +623,7 @@ export async function createWatcher(
   try {
     warnMultiplePollingOptions(bundlerOptionsByConfig);
   } catch (error) {
-    return throwWatcherSetupErrorAfterCleanup(
+    return cleanupAfterError(
       error,
       createWatcherSetupCleanup(workerCleanups),
       'Watcher warning and parallel-plugin worker cleanup both failed',
@@ -656,7 +653,7 @@ export async function createWatcher(
       bundlerOptionsByConfig.map((configOptions) => configOptions.length),
     );
   } catch (error) {
-    return throwWatcherSetupErrorAfterCleanup(
+    return cleanupAfterError(
       error,
       createWatcherSetupCleanup(workerCleanups),
       'Watcher construction or parallel-plugin worker cleanup failed',
@@ -693,50 +690,12 @@ function collectParallelPluginCleanups(
 }
 
 function createWatcherSetupCleanup(
-  initialWorkerCleanups: RetryableCleanup[],
+  workerCleanups: RetryableCleanup[],
 ): RetryableCleanup | undefined {
-  if (initialWorkerCleanups.length === 0) return undefined;
-
-  let workerCleanups = initialWorkerCleanups;
-  const cleanup: RetryableCleanup = async () => {
-    const errors: unknown[] = [];
-    const ownedWorkerCleanups = workerCleanups;
-    const workerResults = await Promise.allSettled(
-      ownedWorkerCleanups.map((stopWorkers) => runRetryableCleanup(stopWorkers, false)),
-    );
-    workerCleanups = ownedWorkerCleanups.filter(
-      (stopWorkers, index) =>
-        workerResults[index].status === 'rejected' && hasRetryableCleanupOwnership(stopWorkers),
-    );
-    for (const result of workerResults) {
-      if (result.status === 'rejected') errors.push(result.reason);
-    }
-
-    if (errors.length === 1) throw errors[0];
-    if (errors.length > 1) {
-      throw new AggregateError(errors, 'Watcher parallel-plugin worker cleanup failed');
-    }
-  };
-  trackRetryableCleanupOwnership(cleanup, () => workerCleanups.length > 0);
-  return cleanup;
-}
-
-async function throwWatcherSetupErrorAfterCleanup(
-  error: unknown,
-  cleanup: RetryableCleanup | undefined,
-  message: string,
-  retryMessage: string,
-): Promise<never> {
-  if (!cleanup) throw error;
-  try {
-    await runRetryableCleanup(cleanup);
-  } catch (cleanupError) {
-    return retryCleanupFromError(
-      createCleanupFailureError(error, cleanupError, cleanup, message),
-      retryMessage,
-    );
-  }
-  throw error;
+  return createCombinedRetryableCleanup(
+    workerCleanups,
+    'Watcher parallel-plugin worker cleanup failed',
+  );
 }
 
 function createSetupError(errors: unknown[], message: string): unknown {

@@ -1,3 +1,4 @@
+import { throwCloseErrors } from '../../runtime-lifecycle';
 import type { MaybePromise } from '../../types/utils';
 import { type AsyncContext, createAsyncContext } from '../../utils/async-context';
 import { CloseCallbackScope, createCloseIdentity } from '../../utils/close-callback-scope';
@@ -181,12 +182,7 @@ export class WatcherEmitter implements RolldownWatcher {
         const errors = outcomes.flatMap((outcome) =>
           outcome.status === 'rejected' ? [outcome.reason] : [],
         );
-        if (errors.length === 1) throw errors[0];
-        if (errors.length > 1) {
-          throw new AggregateError(errors, 'Watcher close listeners failed', {
-            cause: errors[0],
-          });
-        }
+        throwCloseErrors(errors, 'Watcher close listeners failed');
       });
     } finally {
       // Match Rollup's terminal listener cleanup, including listeners added
@@ -267,14 +263,7 @@ export class WatcherEmitter implements RolldownWatcher {
             }
           }
 
-          if (errors.length === 1) throw errors[0];
-          if (errors.length > 1) {
-            throw new AggregateError(
-              errors,
-              'Watcher setup cleanup or close listener dispatch failed',
-              { cause: errors[0] },
-            );
-          }
+          throwCloseErrors(errors, 'Watcher setup cleanup or close listener dispatch failed');
         })();
       }
       return closePromise;
@@ -368,12 +357,7 @@ export class WatcherEmitter implements RolldownWatcher {
       } catch (reportError) {
         errors.push(reportError);
       }
-      if (errors.length === 1) throw errors[0];
-      if (errors.length > 1) {
-        throw new AggregateError(errors, 'Watcher setup terminal event listeners failed', {
-          cause: errors[0],
-        });
-      }
+      throwCloseErrors(errors, 'Watcher setup terminal event listeners failed');
     })();
     void reportPromise.then(resolveReportCompletion, (reportError: unknown) => {
       this.setupFailureReportFailure = { error: reportError };

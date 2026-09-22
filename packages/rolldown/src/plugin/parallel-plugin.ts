@@ -1,6 +1,7 @@
 import { pathToFileURL } from 'node:url';
 import { assertRuntimeFeature } from '../runtime-support';
 import { getParallelPluginInfo } from '../utils/parallel-plugin';
+import { getOwnDataProperty } from '../utils/prototype-chain';
 
 export type ParallelPlugin = {
   _parallel: {
@@ -73,15 +74,6 @@ function enqueueOwnArrayDataProperties(value: unknown[], pending: unknown[]): vo
   entries.sort((left, right) => right.index - left.index);
   for (const entry of entries) {
     pending.push(entry.value);
-  }
-}
-
-function getOwnDataProperty(value: object, key: PropertyKey): PropertyDescriptor | undefined {
-  try {
-    const descriptor = Object.getOwnPropertyDescriptor(value, key);
-    return descriptor && 'value' in descriptor ? descriptor : undefined;
-  } catch {
-    return undefined;
   }
 }
 

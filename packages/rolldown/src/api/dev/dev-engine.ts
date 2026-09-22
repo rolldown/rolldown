@@ -24,11 +24,8 @@ import {
   unwrapBindingResult,
 } from '../../utils/error';
 import {
-  createCleanupFailureError,
-  hasRetryableCleanupOwnership,
-  retryCleanupFromError,
-  runRetryableCleanup,
-  trackRetryableCleanupOwnership,
+  cleanupAfterError,
+  createCombinedRetryableCleanup,
   type RetryableCleanup,
 } from '../../utils/retryable-cleanup';
 import { normalizedStringOrRegex } from '../../utils/normalize-string-or-regex';
@@ -137,7 +134,7 @@ export class DevEngine {
         createBindingDevOptions(devOptions, callbackOwner),
       );
     } catch (error) {
-      return throwDevSetupErrorAfterCleanup(
+      return cleanupAfterError(
         error,
         createDevSetupCleanup(options.stopWorkers),
         'Dev engine option setup and parallel-plugin worker cleanup both failed',
@@ -158,7 +155,7 @@ export class DevEngine {
         closeIdentity,
       );
     } catch (error) {
-      return throwDevSetupErrorAfterCleanup(
+      return cleanupAfterError(
         error,
         createDevSetupCleanup(options.stopWorkers),
         'Dev engine setup and cleanup failed',
@@ -476,51 +473,10 @@ function runDevCallback<T>(owner: DevCallbackOwner, callback: () => T): T {
 }
 
 function createDevSetupCleanup(
-  initialStopWorkers: RetryableCleanup | undefined,
+  stopWorkers: RetryableCleanup | undefined,
 ): RetryableCleanup | undefined {
-  if (!initialStopWorkers) return undefined;
-
-  let stopWorkers: RetryableCleanup | undefined = initialStopWorkers;
-  const cleanup: RetryableCleanup = async () => {
-    const errors: unknown[] = [];
-    const ownedStopWorkers = stopWorkers;
-    try {
-      if (ownedStopWorkers) {
-        await runRetryableCleanup(ownedStopWorkers, false);
-      }
-      if (stopWorkers === ownedStopWorkers) {
-        stopWorkers = undefined;
-      }
-    } catch (error) {
-      if (ownedStopWorkers && !hasRetryableCleanupOwnership(ownedStopWorkers)) {
-        stopWorkers = undefined;
-      }
-      errors.push(error);
-    }
-
-    if (errors.length === 1) throw errors[0];
-    if (errors.length > 1) {
-      throw new AggregateError(errors, 'Dev engine parallel-plugin worker cleanup failed');
-    }
-  };
-  trackRetryableCleanupOwnership(cleanup, () => stopWorkers !== undefined);
-  return cleanup;
-}
-
-async function throwDevSetupErrorAfterCleanup(
-  error: unknown,
-  cleanup: RetryableCleanup | undefined,
-  message: string,
-  retryMessage: string,
-): Promise<never> {
-  if (!cleanup) throw error;
-  try {
-    await runRetryableCleanup(cleanup);
-  } catch (cleanupError) {
-    return retryCleanupFromError(
-      createCleanupFailureError(error, cleanupError, cleanup, message),
-      retryMessage,
-    );
-  }
-  throw error;
+  return createCombinedRetryableCleanup(
+    stopWorkers ? [stopWorkers] : [],
+    'Dev engine parallel-plugin worker cleanup failed',
+  );
 }

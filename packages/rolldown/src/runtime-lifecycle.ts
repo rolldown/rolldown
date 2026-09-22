@@ -1,3 +1,5 @@
+import { excludeDeliveredErrors } from './utils/retryable-cleanup';
+
 export interface CloseAttemptResult {
   errors: unknown[];
   retryable: boolean;
@@ -40,22 +42,8 @@ function recordCloseErrorDetails(
   terminalErrors: unknown[] | undefined,
 ): void {
   if (!terminalErrors || typeof error !== 'object' || error === null) return;
-  const terminalCounts = new Map<unknown, number>();
-  for (const terminalError of terminalErrors) {
-    terminalCounts.set(terminalError, (terminalCounts.get(terminalError) ?? 0) + 1);
-  }
-  const ownedCleanupErrors = errors.filter((candidate) => {
-    const remaining = terminalCounts.get(candidate) ?? 0;
-    if (remaining === 0) return true;
-    if (remaining === 1) {
-      terminalCounts.delete(candidate);
-    } else {
-      terminalCounts.set(candidate, remaining - 1);
-    }
-    return false;
-  });
   closeErrorDetails.set(error, {
-    ownedCleanupErrors,
+    ownedCleanupErrors: excludeDeliveredErrors(errors, terminalErrors),
     terminalErrors: [...terminalErrors],
   });
 }

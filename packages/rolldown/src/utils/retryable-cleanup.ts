@@ -280,19 +280,61 @@ export async function retryCleanupFromError(error: unknown, message: string): Pr
   throw error;
 }
 
-/** @internal Run owned cleanup while preserving both the primary failure and retry ownership. */
+/**
+ * @internal Run owned cleanup while preserving both the primary failure and retry ownership.
+ * With `retryMessage`, a failed cleanup is retried once immediately before the
+ * combined failure propagates.
+ */
 export async function cleanupAfterError(
   error: unknown,
   cleanup: RetryableCleanup | undefined,
   message: string,
+  retryMessage?: string,
 ): Promise<never> {
   if (!cleanup) throw error;
   try {
     await runRetryableCleanup(cleanup);
   } catch (cleanupError) {
-    throw createCleanupFailureError(error, cleanupError, cleanup, message);
+    const cleanupFailure = createCleanupFailureError(error, cleanupError, cleanup, message);
+    if (retryMessage === undefined) throw cleanupFailure;
+    return retryCleanupFromError(cleanupFailure, retryMessage);
   }
   throw error;
+}
+
+/**
+ * @internal Own several worker cleanups as one retryable setup cleanup. Each
+ * attempt runs every still-owned cleanup and keeps only the failed ones that
+ * still own resources.
+ */
+export function createCombinedRetryableCleanup(
+  initialCleanups: RetryableCleanup[],
+  aggregateMessage: string,
+): RetryableCleanup | undefined {
+  if (initialCleanups.length === 0) return undefined;
+
+  let cleanups = initialCleanups;
+  const cleanup: RetryableCleanup = async () => {
+    const errors: unknown[] = [];
+    const ownedCleanups = cleanups;
+    const results = await Promise.allSettled(
+      ownedCleanups.map((ownedCleanup) => runRetryableCleanup(ownedCleanup, false)),
+    );
+    cleanups = ownedCleanups.filter(
+      (ownedCleanup, index) =>
+        results[index].status === 'rejected' && hasRetryableCleanupOwnership(ownedCleanup),
+    );
+    for (const result of results) {
+      if (result.status === 'rejected') errors.push(result.reason);
+    }
+
+    if (errors.length === 1) throw errors[0];
+    if (errors.length > 1) {
+      throw new AggregateError(errors, aggregateMessage);
+    }
+  };
+  trackRetryableCleanupOwnership(cleanup, () => cleanups.length > 0);
+  return cleanup;
 }
 
 /** @internal Keep the primary error first while retaining only live cleanup ownership. */

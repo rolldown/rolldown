@@ -504,9 +504,11 @@ retryable cleanup owner. Cleanup is retried once immediately. If it still
 fails, the owner remains in the shared pending-cleanup registry so later
 parallel-plugin initialization can recover the workers instead of
 discarding them with the setup error. The registry and retry coalescing live in
-the platform-neutral `utils/retryable-cleanup.ts`; keeping them separate from
-worker startup prevents browser watch builds from retaining Node worker-thread
-code.
+the platform-neutral `utils/retryable-cleanup.ts`, together with the combined
+setup-cleanup owner (`createCombinedRetryableCleanup`) and the
+cleanup-then-retry step (`cleanupAfterError` with a retry message) that the dev
+engine setup path shares; keeping them separate from worker startup prevents
+browser watch builds from retaining Node worker-thread code.
 
 ### Error Recovery
 

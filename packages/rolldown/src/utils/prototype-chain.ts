@@ -41,3 +41,19 @@ export function hasCallableThenWithoutInvokingAccessor(value: object): boolean {
   // invoking user code again. Deleting it still permits mutable self-resolution.
   return typeof descriptor.get === 'function';
 }
+
+/**
+ * Read an own data descriptor without invoking accessors. Returns `undefined`
+ * for accessors, missing keys, and proxy traps that throw.
+ */
+export function getOwnDataProperty(
+  object: object,
+  key: PropertyKey,
+): PropertyDescriptor | undefined {
+  try {
+    const descriptor = Object.getOwnPropertyDescriptor(object, key);
+    return descriptor && 'value' in descriptor ? descriptor : undefined;
+  } catch {
+    return undefined;
+  }
+}

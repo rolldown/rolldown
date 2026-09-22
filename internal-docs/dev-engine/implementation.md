@@ -1245,7 +1245,9 @@ failure hands worker shutdown to one retryable setup-cleanup owner. A
 transient cleanup failure is retried
 immediately; if cleanup still fails, ownership remains in the shared
 pending-cleanup registry so a later option initialization can recover it
-instead of abandoning workers. The shared registry is implemented
+instead of abandoning workers. The shared registry, the setup-cleanup owner
+(`createCombinedRetryableCleanup`, shared with watcher setup) and the
+cleanup-then-retry step (`cleanupAfterError`) are implemented
 in platform-neutral `utils/retryable-cleanup.ts` so browser builds do not retain
 the Node-specific parallel-worker startup module. User-controlled `DevOptions`
 getters are materialized under the same setup-cleanup boundary. Top-level

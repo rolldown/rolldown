@@ -5,6 +5,7 @@ import path from 'node:path';
 import { cwd } from 'node:process';
 import { pathToFileURL } from 'node:url';
 import { rolldown } from '../api/rolldown';
+import { throwCloseErrors } from '../runtime-lifecycle';
 import type { ConfigExport } from './define-config';
 import type { OutputChunk } from '../types/rolldown-output';
 
@@ -112,7 +113,7 @@ async function bundleTsConfig(configFile: string, isEsm: boolean): Promise<Bundl
     }
   }
 
-  throwCollectedErrors(errors, 'Config bundling and cleanup both failed');
+  throwCloseErrors(errors, 'Config bundling and cleanup both failed');
   return { outputFile: outputFile!, outputFiles: outputFiles! };
 }
 
@@ -162,15 +163,8 @@ async function loadTsConfig(configFile: string): Promise<ConfigExport> {
   const errors: unknown[] = [];
   if (importFailed) errors.push(importError);
   if (cleanupError !== undefined) errors.push(cleanupError);
-  throwCollectedErrors(errors, 'Config import and cleanup both failed');
+  throwCloseErrors(errors, 'Config import and cleanup both failed');
   return config!;
-}
-
-function throwCollectedErrors(errors: unknown[], message: string): void {
-  if (errors.length > 1) {
-    throw new AggregateError(errors, message, { cause: errors[0] });
-  }
-  if (errors.length === 1) throw errors[0];
 }
 
 function isFilePathESM(filePath: string): boolean {

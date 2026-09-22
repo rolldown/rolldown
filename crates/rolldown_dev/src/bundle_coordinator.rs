@@ -5,17 +5,15 @@ use std::{
 };
 
 use anyhow::Context;
-use arcstr::ArcStr;
 use futures::FutureExt;
 #[cfg(target_os = "macos")]
 use notify::EventKind;
-use rolldown_common::WatcherChangeKind;
+use rolldown_common::{WatchPath, WatcherChangeKind};
 use rolldown_error::BuildResult;
 use rolldown_fs_watcher::{
   FsChangeKind, FsEventResult, FsWatcher, RecursiveMode, map_notify_event,
 };
 use rolldown_utils::{dashmap::FxDashSet, indexmap::FxIndexMap, pattern_filter};
-use sugar_path::SugarPath;
 use tokio::sync::Mutex;
 
 use rolldown::Bundler;
@@ -42,7 +40,7 @@ pub struct BundleCoordinator {
   next_hmr_patch_id: Arc<AtomicU32>,
   rx: CoordinatorReceiver,
   watcher: StdMutex<FsWatcher>,
-  watched_files: FxDashSet<ArcStr>,
+  watched_files: FxDashSet<WatchPath>,
   /// Tracks the state of the initial build
   state: CoordinatorState,
   /// File changes that arrived during initial build
@@ -482,22 +480,24 @@ impl BundleCoordinator {
   /// Update watcher paths based on current build output
   async fn update_watch_paths(&self) -> BuildResult<()> {
     let bundler = self.bundler.lock().await;
-    let cwd = bundler.options().cwd.to_string_lossy().to_string();
+    let cwd = &bundler.options().cwd;
+    let cwd_str = cwd.to_string_lossy();
 
     let include = self.ctx.options.watch_include.as_deref();
     let exclude = self.ctx.options.watch_exclude.as_deref();
 
     let mut watcher = self.watcher.lock().ok().context("Failed to acquire watcher lock")?;
     let mut paths_mut = watcher.paths_mut();
+    let mut added_files = Vec::new();
     for watch_file in bundler.watch_files().iter() {
-      let watch_file = watch_file.as_str();
-      if !self.watched_files.contains(watch_file)
-        && pattern_filter::filter(exclude, include, watch_file, &cwd).inner()
+      let watch_path = WatchPath::new(watch_file.as_str(), cwd);
+      let path = watch_path.as_path();
+      if !self.watched_files.contains(path)
+        && pattern_filter::filter(exclude, include, &path.to_string_lossy(), &cwd_str).inner()
       {
-        let path = watch_file.as_path();
         match paths_mut.add(path, RecursiveMode::NonRecursive) {
           Ok(()) => {
-            self.watched_files.insert(watch_file.to_string().into());
+            added_files.push(watch_path);
           }
           Err(error) => {
             tracing::debug!(name = "notify watch skipped", path = ?path, error = ?error);
@@ -506,6 +506,9 @@ impl BundleCoordinator {
       }
     }
     paths_mut.commit()?;
+    for file in added_files {
+      self.watched_files.insert(file);
+    }
     Ok(())
   }
 }

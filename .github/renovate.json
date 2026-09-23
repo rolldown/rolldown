@@ -37,6 +37,20 @@
         "oxc-resolver"
       ],
       "enabled": false
+    },
+    {
+      "description": "napi-rs, emnapi and wasm-runtime bumps are what breaks inside a real WebContainer, so their PRs opt into the WebContainer smoke test (see #10938)",
+      "matchDatasources": ["crate", "npm"],
+      "matchPackageNames": [
+        "napi",
+        "napi-build",
+        "napi-derive",
+        "@napi-rs/cli",
+        "@napi-rs/wasm-runtime",
+        "@emnapi/*",
+        "emnapi"
+      ],
+      "addLabels": ["ci: webcontainer"]
     }
   ]
 }

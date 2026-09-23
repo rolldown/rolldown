@@ -266,11 +266,14 @@ fn safe_js_number(value: u64) -> f64 {
 /// before the first async binding call.
 pub fn configure_async_runtime(options: BindingRuntimeOptions) -> napi::Result<()> {
   let patch: RuntimeOptionsPatch = options.try_into()?;
-  // napi-async-runtime 0.2.3 accepts MultiThread on wasm32-wasip1-threads. Rolldown does not
-  // ship it there yet (parking_lot_core's stable wasm parker panics on the first contended
-  // park), so every WebAssembly artifact keeps its CurrentThread-only contract here, the same
-  // way `resolve_runtime_config_for` normalizes `ROLLDOWN_RUNTIME=multi`. The message is the
-  // one 0.2.2 returned from `configure_partial`, so the JS-visible error does not change.
+  // napi-async-runtime 0.2.3 accepts MultiThread on wasm32-wasip1-threads, and the root
+  // Cargo.toml `[patch.crates-io]` gives parking_lot_core a working parker there. Rolldown
+  // still does not ship it: rolldown/rolldown#10697 (WASI out-of-bounds access under
+  // concurrent JS plugin hooks) is open, so every WebAssembly artifact keeps its
+  // CurrentThread-only contract here, the same way `resolve_runtime_config_for` normalizes
+  // `ROLLDOWN_RUNTIME=multi`. The message is the one 0.2.2 returned from
+  // `configure_partial`, so the JS-visible error does not change.
+  // See internal-docs/async-runtime/design.md
   if compiled_target() != ResolvedRuntimeTarget::Native
     && patch.flavor == Some(RuntimeFlavor::MultiThread)
   {
@@ -417,8 +420,9 @@ fn resolve_runtime_config_for(
     if native { RuntimeFlavor::MultiThread } else { RuntimeFlavor::CurrentThread };
   let requested_flavor = resolve_runtime_flavor(env.runtime.as_deref(), default_flavor);
   // Rolldown ships CurrentThread only on WebAssembly. napi-async-runtime 0.2.3 would
-  // build a MultiThread executor on wasm32-wasip1-threads, but parking_lot_core's stable
-  // wasm parker panics there, and threadless wasm32-wasip1 still rejects it. Normalize the
+  // build a MultiThread executor on wasm32-wasip1-threads (the parker is patched in the
+  // root Cargo.toml), but rolldown/rolldown#10697 is open and threadless wasm32-wasip1
+  // still rejects it. Normalize the
   // override before the module-init hook calls `configure`, so loading a WASI artifact never
   // starts MultiThread because `ROLLDOWN_RUNTIME=multi` leaked in from a native process
   // environment. `configure_async_runtime` holds the same line for the explicit JS opt-in.

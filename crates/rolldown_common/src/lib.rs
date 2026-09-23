@@ -222,7 +222,7 @@ pub use crate::{
   },
   types::used_external_symbols::{ExternalInteropUse, UsedExternalSymbols},
   types::used_symbol_refs::{UsedSymbolRefs, UsedSymbolRefsBuilder, UsedSymbolRefsView},
-  types::watch::WatcherChangeKind,
+  types::watch::{WatchPath, WatcherChangeKind},
   types::wrap_kind::WrapKind,
 };
 pub use bundler_options::*;

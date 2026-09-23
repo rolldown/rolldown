@@ -5,17 +5,13 @@ use std::{
 };
 
 use anyhow::Context;
-use arcstr::ArcStr;
 use futures::FutureExt;
 #[cfg(target_os = "macos")]
 use notify::EventKind;
 use rolldown_common::WatcherChangeKind;
 use rolldown_error::BuildResult;
-use rolldown_fs_watcher::{
-  FsChangeKind, FsEventResult, FsWatcher, RecursiveMode, map_notify_event,
-};
-use rolldown_utils::{dashmap::FxDashSet, indexmap::FxIndexMap, pattern_filter};
-use sugar_path::SugarPath;
+use rolldown_fs_watcher::{FsChangeKind, FsEventResult, FsWatcher, map_notify_event};
+use rolldown_utils::{indexmap::FxIndexMap, pattern_filter};
 use tokio::sync::Mutex;
 
 use rolldown::Bundler;
@@ -42,7 +38,6 @@ pub struct BundleCoordinator {
   next_hmr_patch_id: Arc<AtomicU32>,
   rx: CoordinatorReceiver,
   watcher: StdMutex<FsWatcher>,
-  watched_files: FxDashSet<ArcStr>,
   /// Tracks the state of the initial build
   state: CoordinatorState,
   /// File changes that arrived during initial build
@@ -67,7 +62,6 @@ impl BundleCoordinator {
       next_hmr_patch_id,
       rx,
       watcher: StdMutex::new(watcher),
-      watched_files: FxDashSet::default(),
       state: CoordinatorState::Initialized,
       queued_file_changes_waited_for_full_build: FxIndexMap::default(),
       // Initialize build state with initial build task
@@ -128,7 +122,13 @@ impl BundleCoordinator {
         }
         #[cfg(feature = "testing")]
         CoordinatorMsg::GetWatchedFiles { reply } => {
-          let result = self.watched_files.iter().map(|s| s.to_string()).collect();
+          let result = self
+            .watcher
+            .lock()
+            .map(|watcher| {
+              watcher.watched_paths().map(|path| path.to_string_lossy().into_owned()).collect()
+            })
+            .unwrap_or_default();
           let _ = reply.send(result);
         }
         CoordinatorMsg::ModuleChanged { module_id } => {
@@ -482,31 +482,16 @@ impl BundleCoordinator {
   /// Update watcher paths based on current build output
   async fn update_watch_paths(&self) -> BuildResult<()> {
     let bundler = self.bundler.lock().await;
-    let cwd = bundler.options().cwd.to_string_lossy().to_string();
+    let cwd = bundler.options().cwd.to_string_lossy();
 
     let include = self.ctx.options.watch_include.as_deref();
     let exclude = self.ctx.options.watch_exclude.as_deref();
 
     let mut watcher = self.watcher.lock().ok().context("Failed to acquire watcher lock")?;
-    let mut paths_mut = watcher.paths_mut();
-    for watch_file in bundler.watch_files().iter() {
-      let watch_file = watch_file.as_str();
-      if !self.watched_files.contains(watch_file)
-        && pattern_filter::filter(exclude, include, watch_file, &cwd).inner()
-      {
-        let path = watch_file.as_path();
-        match paths_mut.add(path, RecursiveMode::NonRecursive) {
-          Ok(()) => {
-            self.watched_files.insert(watch_file.to_string().into());
-          }
-          Err(error) => {
-            tracing::debug!(name = "notify watch skipped", path = ?path, error = ?error);
-          }
-        }
-      }
-    }
-    paths_mut.commit()?;
-    Ok(())
+    watcher
+      .watch_paths(bundler.watch_files().iter().map(|file| PathBuf::from(file.as_str())), |path| {
+        pattern_filter::filter(exclude, include, &path.to_string_lossy(), &cwd).inner()
+      })
   }
 }
 

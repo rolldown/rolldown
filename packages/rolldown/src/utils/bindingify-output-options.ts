@@ -394,7 +394,7 @@ function bindingifyCodeSplitting(
             ? OUTPUT_OPTIONS_OWNER
             : { ...OUTPUT_OPTIONS_OWNER, key: timingKey };
         // Each group gets its own row, so the rows have to be tellable apart. The position
-        // is the one identity every group has; a label replaces it when there is one.
+        // identifies the group in the config, and a label makes that position easier to read.
         const groupName = `${chunksOptionName} groups[${index}]`;
         let testTimingName = `${groupName}.test`;
         let nameTimingName = `${groupName}.name`;
@@ -415,8 +415,8 @@ function bindingifyCodeSplitting(
               }
             } else {
               const labelSuffix = ` ${JSON.stringify(label)}`;
-              testTimingName = `${chunksOptionName} groups[].test${labelSuffix}`;
-              nameTimingName = `${chunksOptionName} groups[].name${labelSuffix}`;
+              testTimingName = `${groupName}.test${labelSuffix}`;
+              nameTimingName = `${groupName}.name${labelSuffix}`;
             }
           }
         }

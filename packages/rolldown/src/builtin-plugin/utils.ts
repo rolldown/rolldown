@@ -24,47 +24,53 @@ export class BuiltinPlugin {
   ) {}
 }
 
+type CallableBuiltinPluginContext = {
+  plugin: BuiltinPlugin;
+  native: BindingCallableBuiltinPlugin;
+};
+
 export function makeBuiltinPluginCallable(
   plugin: BuiltinPlugin,
 ): BuiltinPlugin & BindingCallableBuiltinPluginLike {
-  let callablePlugin = new BindingCallableBuiltinPlugin(bindingifyBuiltInPlugin(plugin));
+  const context: CallableBuiltinPluginContext = {
+    plugin,
+    native: new BindingCallableBuiltinPlugin(bindingifyBuiltInPlugin(plugin)),
+  };
 
   const wrappedPlugin: Partial<BindingCallableBuiltinPluginLike> & BuiltinPlugin = plugin;
-  for (const key in callablePlugin) {
-    const wrappedHook = async function (...args: any[]) {
-      try {
-        // @ts-expect-error
-        return await callablePlugin[key](...args);
-      } catch (e: any) {
-        if (e instanceof Error && !e.stack?.includes('at ')) {
-          Error.captureStackTrace(
-            e,
-            // @ts-expect-error
-            wrappedPlugin[key],
-          );
-        }
-        return error(
-          logPluginError(e, plugin.name, {
-            hook: key,
-            id: key === 'transform' ? args[2] : undefined,
-          }),
-        );
-      }
-    };
-
-    const order = callablePlugin.getOrder(key);
+  for (const key in context.native) {
+    const wrappedHook = invokeBuiltinHook.bind(context, key);
+    const order = context.native.getOrder(key);
     if (order == undefined) {
       // @ts-expect-error
       wrappedPlugin[key] = wrappedHook;
     } else {
       // @ts-expect-error
-      wrappedPlugin[key] = {
-        handler: wrappedHook,
-        order,
-      };
+      wrappedPlugin[key] = { handler: wrappedHook, order };
     }
   }
   return wrappedPlugin as BuiltinPlugin & BindingCallableBuiltinPluginLike;
+}
+
+async function invokeBuiltinHook(this: CallableBuiltinPluginContext, key: string, ...args: any[]) {
+  try {
+    // @ts-expect-error
+    return await this.native[key](...args);
+  } catch (e: any) {
+    if (e instanceof Error && !e.stack?.includes('at ')) {
+      Error.captureStackTrace(
+        e,
+        // @ts-expect-error
+        this.plugin[key],
+      );
+    }
+    return error(
+      logPluginError(e, this.plugin.name, {
+        hook: key,
+        id: key === 'transform' ? args[2] : undefined,
+      }),
+    );
+  }
 }
 
 export function bindingifyBuiltInPlugin(plugin: BuiltinPlugin): BindingBuiltinPlugin {

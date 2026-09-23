@@ -87,8 +87,7 @@ Watcher (public API)
                                └── tasks: IndexVec<WatchTaskIdx, WatchTask>
                                     ├── WatchTask 0
                                     │   ├── bundler: Arc<TokioMutex<Bundler>>
-                                    │   ├── fs_watcher: FsWatcher (owned, per-task)
-                                    │   ├── watched_files: FxDashSet<ArcStr>
+                                    │   ├── fs_watcher: FsWatcher (owned, per-task, holds the watched paths)
                                     │   └── needs_rebuild: bool
                                     └── WatchTask N ...
 
@@ -314,10 +313,10 @@ Configured via `WatcherOptions`, fires **immediately** on file change (before de
 ## File Watching
 
 - After each build, `bundler.watch_files()` returns the current set.
-- `WatchTask::update_watch_files()` diffs against the current set — new files are added to the per-task `FsWatcher`.
+- `WatchTask::update_watch_files()` hands the set to the per-task `FsWatcher`, which registers the paths it does not watch yet. `FsWatcher::is_watched` answers whether a changed path is one of them, or lies below one.
 - `include`/`exclude` patterns filter which files are watched (via `pattern_filter`).
 - Files are watched **non-recursively** (individual file watches).
-- Batch operations: `fs_watcher.paths_mut()` returns a guard for batching adds, committed via `.commit()`.
+- `FsWatcher::watch_paths` registers a batch with notify and records a path only after the commit succeeded, so a skipped path is tried again with the next build.
 
 ### Backend selection
 
@@ -376,9 +375,9 @@ notify::EventKind::Access(_)                              → None (ignored — 
 
 ### Path Identity
 
-The watch set stores paths as raw `ArcStr` strings. The `notify` crate reports events with OS-native paths. If these don't match exactly, `is_watched_file()` fails silently. The current `#[cfg(windows)]` backslash fallback is a symptom.
+Watch files are absolute and normalized before they reach the watcher: module ids come from the resolver, and a path passed to `this.addWatchFile` is resolved against `cwd` and normalized (`WatchPath`) when it is added. `FsWatcher` keeps them as `PathBuf`, the form notify reports events in, and `Path` compares by components, so `\` vs `/` on Windows is not a mismatch. A changed path is looked up together with its ancestors, which is how a change below a watched directory is found; the transform dependencies HMR records are `WatchPath`s and are matched the same way.
 
-**Recommendation:** Use `PathBuf` for the watched file set instead of `ArcStr`. This handles trailing slashes, double separators, `.` segments, and Windows `\` vs `/` — all common mismatch sources between resolver output and notify events.
+Symbolic links are not resolved, while FSEvents reports canonical paths.
 
 See [module-id.md](../module-id/implementation.md) for the full analysis of path identity across the bundler, `PathBuf` comparison behavior, and Rollup's approach.
 

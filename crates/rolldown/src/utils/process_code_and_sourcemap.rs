@@ -227,7 +227,7 @@ fn process_sourcemap_related_reference(
 ) -> BuildResult<()> {
   source.push('\n');
   match comment_kind {
-    CommentKind::Line => {
+    CommentKind::Line | CommentKind::HtmlOpen | CommentKind::HtmlClose => {
       source.push_str("//");
       reference_body_processor(source)?;
     }

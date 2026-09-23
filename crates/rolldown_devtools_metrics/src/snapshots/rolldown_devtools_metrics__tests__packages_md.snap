@@ -1,0 +1,23 @@
+---
+source: crates/rolldown_devtools_metrics/src/tests.rs
+expression: "render::render_packages(&report)"
+---
+# Packages
+
+3 packages (1 direct, 2 transitive). Top 3 by rendered size:
+
+| Size | Type | Used? | Modules | Package |
+| --- | --- | --- | --- | --- |
+| 1.2 kB | direct | yes | 1 | `foo@1.0.0` |
+| 300 B | transitive | yes | 0 | `foo@2.0.0` |
+| 50 B | transitive | no | 0 | `bar@1.0.0` |
+
+## Duplicate versions
+
+Same package shipped at multiple versions — deduping can cut size.
+
+1 package affected:
+
+| Package | Versions (size) |
+| --- | --- |
+| `foo` | 1.0.0 (1.2 kB), 2.0.0 (300 B) |

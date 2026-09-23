@@ -1,4 +1,6 @@
+import { execa } from 'execa';
 import nodePath from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { viteResolvePlugin } from 'rolldown/experimental';
 import { expect, test } from 'vitest';
 
@@ -71,5 +73,13 @@ test('resolveId rejects an invalid `options.kind`', async () => {
 
   await expect(resolveId(DUAL_FORMAT_PACKAGE, importer, { kind: 'not-a-kind' })).rejects.toThrow(
     'Invalid import kind',
+  );
+});
+
+test('callable builtin callbacks follow the JavaScript owner lifetime', async () => {
+  await execa(
+    process.execPath,
+    ['--expose-gc', fileURLToPath(new URL('./callable-builtin-gc.mjs', import.meta.url))],
+    { timeout: 15000 },
   );
 });

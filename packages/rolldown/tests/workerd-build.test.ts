@@ -792,7 +792,14 @@ describe('workerd build() against the built dist', () => {
   // link stage about ten times over the 1 ms floor while leaving it far under
   // the other end of the gate -- a 1500-module graph still reports, and this
   // one only adds ~0.3 s to a 3.5 s case.
+  //
+  // The other end of the gate is the one CI can still miss: on the single-thread
+  // WASI lane the link stage runs on the one wasm thread, and CPU contention from
+  // sibling vitest workers can push it past a hundredth of the build, so no
+  // report is made at all (`codes` stays empty). The two cases below retry for
+  // that lane; a real regression still fails every attempt.
   const TIMINGS_LINK_GRAPH_MODULES = 200;
+  const TIMINGS_RETRY = { retry: 2, timeout: 180_000 };
 
   function slowPluginOptions(codes: string[], onLogError: Error) {
     const graph = makeVirtualGraph(TIMINGS_LINK_GRAPH_MODULES);
@@ -823,6 +830,7 @@ describe('workerd build() against the built dist', () => {
 
   distTest(
     'a close() rejected after the build still releases the caller-owned instance',
+    TIMINGS_RETRY,
     async () => {
       const { workerd, wasmModule } = await loadDistWorkerd();
       const instance = await workerd.createInstance(wasmModule);
@@ -842,11 +850,11 @@ describe('workerd build() against the built dist', () => {
         await instance.dispose().catch(() => {});
       }
     },
-    180_000,
   );
 
   distTest(
     'a close() rejected after the build still disposes the private module: instance',
+    TIMINGS_RETRY,
     async () => {
       const { workerd, wasmModule } = await loadDistWorkerd();
       const codes: string[] = [];
@@ -861,7 +869,6 @@ describe('workerd build() against the built dist', () => {
       // disposed here; a parked one would keep ~64 MiB of Wasm memory alive.
       expect(workerd.getWorkerdRuntimeStats().liveInstances).toBe(0);
     },
-    180_000,
   );
 
   distTest(

@@ -110,7 +110,7 @@ pub enum EventKind {
   ///
   /// See [`output.cleanDir`](https://rolldown.rs/reference/OutputOptions.cleanDir).
   CouldNotCleanDirectory = 38,
-  /// Whether to emit warnings when plugins take significant time during the build process.
+  /// Whether to emit warnings when plugins and option callbacks take significant time during the build process.
   ///
   /// {@include ../docs/checks-plugin-timings.md}
   PluginTimings = 39,

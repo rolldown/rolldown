@@ -264,7 +264,9 @@ impl IntegrationTest {
         );
         let watched_files = dev_engine.get_watched_files().await.unwrap();
         assert!(
-          changed_files.iter().all(|(file, _)| watched_files.contains(file)),
+          changed_files.iter().all(|(file, _)| std::path::Path::new(file)
+            .ancestors()
+            .any(|path| path.to_str().is_some_and(|path| watched_files.contains(path)))),
           "All changed files must be in watched files: {changed_files:#?} not in {watched_files:#?}"
         );
         dev_engine
@@ -682,11 +684,11 @@ impl IntegrationTest {
       }
     }
 
-    // Disable plugin timings in tests to reduce snapshot noise
+    // The test harness disables bundler timings by default to reduce snapshot noise.
     if let Some(checks) = &mut options.checks {
-      checks.plugin_timings = Some(false);
+      checks.bundler_timings.get_or_insert(checks.plugin_timings.unwrap_or(false));
     } else {
-      options.checks = Some(ChecksOptions { plugin_timings: Some(false), ..Default::default() });
+      options.checks = Some(ChecksOptions { bundler_timings: Some(false), ..Default::default() });
     }
   }
 

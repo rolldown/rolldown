@@ -1583,8 +1583,9 @@ export declare class BindingDevEngine {
    */
   registerClient(clientId: string): Promise<void>
   /**
-   * Delivery notification from the serving middleware: the response for
-   * `filename` completed, so record its modules as shipped to that client.
+   * Delivery notification for the payload `filename`: the client reported that it
+   * ran the payload, so record its modules as shipped to that client. See
+   * `DevEngine::notify_payload_delivered`.
    */
   notifyPayloadDelivered(filename: string): Promise<void>
   removeClient(clientId: string): Promise<void>
@@ -1973,6 +1974,8 @@ export interface BindingChecksOptions {
   configurationFieldConflict?: boolean
   preferBuiltinFeature?: boolean
   couldNotCleanDirectory?: boolean
+  bundlerTimings?: boolean
+  /** Deprecated alias for `bundlerTimings`. Rolldown uses `bundlerTimings` if both options have values. */
   pluginTimings?: boolean
   duplicateShebang?: boolean
   unsupportedTsconfigOption?: boolean
@@ -2625,9 +2628,13 @@ export interface BindingOutputOptions {
   sourcemap?: 'file' | 'inline' | 'hidden'
   sourcemapFileNames?: string | ((chunk: PreRenderedChunk) => string)
   sourcemapBaseUrl?: string
-  sourcemapIgnoreList?: boolean | string | RegExp | ((source: string, sourcemapPath: string) => boolean)
+  sourcemapIgnoreList?: boolean | string | RegExp | ((sources: Array<string>, sourcemapPath: string) => Uint8Array)
   sourcemapDebugIds?: boolean
-  sourcemapPathTransform?: (source: string, sourcemapPath: string) => string
+  /**
+   * Batched like `sourcemapIgnoreList` above. One call rewrites every source of a sourcemap,
+   * and the returned array matches the source array by index.
+   */
+  sourcemapPathTransform?: (sources: Array<string>, sourcemapPath: string) => Array<string>
   sourcemapExcludeSources?: boolean
   strict?: boolean | 'auto'
   minify?: boolean | 'dce-only' | MinifyOptions

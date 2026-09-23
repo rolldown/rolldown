@@ -88,7 +88,7 @@ export class DevRuntime {
   /**
    * Re-runnable factories from HMR patches and lazy chunks. The initial bundle stays
    * scope-hoisted and contributes none.
-   * @type {Map<string, { kind: 'esm' | 'cjs', fn: (id: string) => void }>}
+   * @type {Map<string, (id: string) => void>}
    */
   factories = new Map();
   /**
@@ -138,11 +138,10 @@ export class DevRuntime {
 
   /**
    * @param {string} id
-   * @param {'esm' | 'cjs'} kind
    * @param {(id: string) => void} fn
    */
-  registerFactory(id, kind, fn) {
-    this.factories.set(id, { kind, fn });
+  registerFactory(id, fn) {
+    this.factories.set(id, fn);
   }
 
   /**
@@ -210,7 +209,7 @@ export class DevRuntime {
     if (!factory) {
       throw new MissingFactoryError(id);
     }
-    factory.fn(id);
+    factory(id);
     return this.loadExports(id);
   }
 

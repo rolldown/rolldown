@@ -63,7 +63,7 @@ __rolldown_runtime__.registerModule("main.js", { exports: main_exports });
 ```js
 __rolldown_runtime__.registerGraph({ids:["dep.js","hmr.js","reexport.js"],localCount:3,edges:[[],[2],[0]],dynamicEdges:[[],[],[]]});
 //#region dep.js
-__rolldown_runtime__.registerFactory("dep.js", "esm", (function(__rolldown_module_id__) {
+__rolldown_runtime__.registerFactory("dep.js", (function(__rolldown_module_id__) {
 	try {
 		var __rolldown_exports__ = __rolldown_runtime__.__exportAll({ value: () => value });
 		__rolldown_runtime__.registerModule(__rolldown_module_id__, { exports: __rolldown_exports__ });
@@ -76,7 +76,7 @@ __rolldown_runtime__.registerFactory("dep.js", "esm", (function(__rolldown_modul
 //#endregion
 //#region hmr.js
 import * as import_node_assert_10 from "node:assert";
-__rolldown_runtime__.registerFactory("hmr.js", "esm", (function(__rolldown_module_id__) {
+__rolldown_runtime__.registerFactory("hmr.js", (function(__rolldown_module_id__) {
 	try {
 		var __rolldown_exports__ = __rolldown_runtime__.__exportAll({});
 		__rolldown_runtime__.registerModule(__rolldown_module_id__, { exports: __rolldown_exports__ });
@@ -91,7 +91,7 @@ __rolldown_runtime__.registerFactory("hmr.js", "esm", (function(__rolldown_modul
 
 //#endregion
 //#region reexport.js
-__rolldown_runtime__.registerFactory("reexport.js", "esm", (function(__rolldown_module_id__) {
+__rolldown_runtime__.registerFactory("reexport.js", (function(__rolldown_module_id__) {
 	try {
 		var __rolldown_exports__ = __rolldown_runtime__.__exportAll({ NS: () => import_dep_20 });
 		__rolldown_runtime__.registerModule(__rolldown_module_id__, { exports: __rolldown_exports__ });

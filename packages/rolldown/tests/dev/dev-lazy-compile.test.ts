@@ -747,7 +747,7 @@ test('a repeat lazy import after an HMR update sees the new exports', async () =
 
   const id = 'lazy.js';
   const registerVersion = (v: string) =>
-    runtime.registerFactory(id, 'esm', (moduleId: string) => {
+    runtime.registerFactory(id, (moduleId: string) => {
       runtime.registerModule(moduleId, { exports: runtime.__exportAll({ v: () => v }) });
     });
 

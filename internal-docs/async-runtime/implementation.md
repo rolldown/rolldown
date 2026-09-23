@@ -134,8 +134,9 @@ crate freezes after first use.
     MultiThread; wasm ⇒ CurrentThread, normalizing an inherited
     `ROLLDOWN_RUNTIME=multi` because Rolldown ships no wasm MultiThread
     (Principle 1). napi-async-runtime 0.2.3 would build one on
-    `wasm32-wasip1-threads`, but parking_lot_core's stable wasm parker panics
-    on a contended park there. MultiThread worker count `= requested.max(2)` (truthful
+    `wasm32-wasip1-threads`; the guard stays only for
+    [#10697](https://github.com/rolldown/rolldown/issues/10697).
+    MultiThread worker count `= requested.max(2)` (truthful
     two-worker minimum); CurrentThread `= 1`.
   - `clamp_shared_blocking_tasks()` — blocking cap: CurrentThread ⇒ 1;
     MultiThread ⇒ `requested.min(worker_threads - 1).max(1)` (reserve one
@@ -149,8 +150,9 @@ RuntimeOptionsPatch` — the **256-ceiling / positive-integer / atomic-reject**
     (`MAX_ASYNC_RUNTIME_WORKER_THREADS`).
   - `configure_async_runtime()` (`#[napi]`) → rejects a MultiThread patch on
     every non-native `compiled_target()` with 0.2.2's error text (0.2.3 no
-    longer rejects it on `wasm32-wasip1-threads`; turning it on is a product
-    call), else the crate's `configure_partial`
+    longer rejects it on `wasm32-wasip1-threads`; the guard stays for
+    [#10697](https://github.com/rolldown/rolldown/issues/10697), and turning it
+    on after that is a product call), else the crate's `configure_partial`
     (merge+validate+commit under the controller mutex, frozen after the first
     backend); `get_async_runtime_config()` → `configured_options()` is the
     reporting authority.
@@ -164,6 +166,17 @@ default, maximum)` — shared clamp; treats `0`/garbage as unset so it cannot
   = `256.min(rayon::max_num_threads())` wherever OS threads exist (`255` on
   `wasm32-wasip1-threads`), `1` on `wasm32-wasip1`. Rolldown reads it only on
   native, in `resolve_runtime_config_for`.
+- Root `Cargo.toml` `[patch.crates-io]` — `parking_lot_core` 0.9.12 picks a
+  panicking parker ("Parking not supported on this platform") on
+  `wasm32-wasip1-threads`, since stable rustc never sets
+  `target_feature = "atomics"` (rust-lang/rust#77839), so any contended
+  `dashmap`/`parking_lot` lock would panic. The patch pins the napi-rs fork
+  (branch `wasi-threads-parker`), which detects the threaded WASI triples in
+  `core/build.rs` and parks on std's futex `Mutex`/`Condvar`. It is a git patch
+  because the renamed crates.io forks (`parking_lot_core-napi`, ...) cannot
+  replace a crates.io dependency through `[patch]`, so the rev must keep the
+  original crate names. Drop it once a released `parking_lot_core` ships
+  [Amanieu/parking_lot#538](https://github.com/Amanieu/parking_lot/pull/538).
 
 ---
 

@@ -356,3 +356,16 @@ opt-level = "s"
 # it will strip these information for non-debug files
 debug = "full"
 strip = "none"
+
+# parking_lot_core 0.9.12 picks a panicking thread parker ("Parking not supported on this
+# platform") on wasm32-wasip1-threads, because stable rustc never sets
+# `target_feature = "atomics"` there (rust-lang/rust#77839). The napi-rs fork detects the
+# threaded WASI triples in core/build.rs and parks on std's futex Mutex/Condvar instead.
+# Upstream PR: https://github.com/Amanieu/parking_lot/pull/538
+# The rev must keep the original crate names (branch `wasi-threads-parker`): the renamed
+# crates.io forks (`parking_lot_core-napi`, ...) cannot stand in for a crates.io dependency
+# through [patch], and the fork's master carries those renamed manifests.
+# Drop this patch once a released parking_lot_core ships the change.
+# See internal-docs/async-runtime/implementation.md
+[patch.crates-io]
+parking_lot_core = { git = "https://github.com/napi-rs/parking_lot", rev = "ac046ba44e72159e90e36b7323b1058ba1d48ad2" }

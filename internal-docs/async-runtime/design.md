@@ -29,10 +29,13 @@ Rust core — see [implementation.md](./implementation.md).
 1. **Thread availability is a build/runtime property, not an assumption.**
    WebAssembly builds use the current-thread flavor. `napi-async-runtime`
    offers a multi-thread executor on `wasm32-wasip1-threads` since 0.2.3, but
-   Rolldown rejects that flavor on every WebAssembly build: `parking_lot`'s
-   stable wasm parker panics there, and concurrent JS plugin hooks still hit
+   Rolldown rejects that flavor on every WebAssembly build because concurrent
+   JS plugin hooks still hit
    [#10697](https://github.com/rolldown/rolldown/issues/10697) (guard in
    [`configure_async_runtime`](../../crates/rolldown_binding/src/async_runtime.rs)).
+   The other blocker, `parking_lot_core`'s panicking stable wasm parker, is
+   closed by a git `[patch.crates-io]` in the root `Cargo.toml` (see
+   [implementation.md](./implementation.md)).
    Threadless `wasm32-wasip1` must not import shared memory, construct
    workers, park with `Atomics.wait`, or call `std::thread::spawn`. Native
    builds default to the multi-thread flavor. The public capability contract follows from that: binding dev mode

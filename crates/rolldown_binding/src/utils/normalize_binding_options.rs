@@ -289,16 +289,16 @@ fn normalize_sourcemap_ignore_list_option(
       rolldown::SourceMapIgnoreList::from_string_or_regex(string_or_regex.inner())
     }
     Either3::C(ts_fn) => {
-      rolldown::SourceMapIgnoreList::new(Arc::new(move |source, sourcemap_path| {
+      rolldown::SourceMapIgnoreList::new(Arc::new(move |sources, sourcemap_path| {
         let ts_fn = Arc::clone(&ts_fn);
-        let source = source.to_string();
         let sourcemap_path = sourcemap_path.to_string();
         Box::pin(async move {
           ts_fn
-            .invoke_async((source, sourcemap_path).into())
+            .invoke_async((sources, sourcemap_path).into())
             .await
             .context("sourcemapIgnoreList option")
             .map_err(anyhow::Error::from)
+            .map(|flags| flags.iter().map(|flag| *flag != 0).collect())
         })
       }))
     }
@@ -306,16 +306,15 @@ fn normalize_sourcemap_ignore_list_option(
 }
 
 fn normalize_sourcemap_path_transform_option(
-  sourcemap_path_transform: Option<JsCallback<FnArgs<(String, String)>, String>>,
+  sourcemap_path_transform: Option<JsCallback<FnArgs<(Vec<String>, String)>, Vec<String>>>,
 ) -> Option<rolldown::SourceMapPathTransform> {
   sourcemap_path_transform.map(|ts_fn| {
-    rolldown::SourceMapPathTransform::new(Arc::new(move |source, sourcemap_path| {
+    rolldown::SourceMapPathTransform::new(Arc::new(move |sources, sourcemap_path| {
       let ts_fn = Arc::clone(&ts_fn);
-      let source = source.to_string();
       let sourcemap_path = sourcemap_path.to_string();
       Box::pin(async move {
         ts_fn
-          .invoke_async((source, sourcemap_path).into())
+          .invoke_async((sources, sourcemap_path).into())
           .await
           .context("sourcemapPathTransform option")
           .map_err(anyhow::Error::from)
@@ -326,16 +325,13 @@ fn normalize_sourcemap_path_transform_option(
 
 fn normalize_invalidate_js_side_cache_option(
   invalidate_js_side_cache: Option<JsCallback>,
+  error_context: &'static str,
 ) -> Option<rolldown::InvalidateJsSideCache> {
   invalidate_js_side_cache.map(|ts_fn| {
     rolldown::InvalidateJsSideCache::new(Arc::new(move || {
       let ts_fn = Arc::clone(&ts_fn);
       Box::pin(async move {
-        ts_fn
-          .invoke_async(())
-          .await
-          .context("invalidateJsSideCache option")
-          .map_err(anyhow::Error::from)
+        ts_fn.invoke_async(()).await.context(error_context).map_err(anyhow::Error::from)
       })
     }))
   })
@@ -367,6 +363,10 @@ fn normalize_code_splitting(
   let manual_code_splitting = manual_code_splitting
     .map(|inner| -> napi::Result<ManualCodeSplittingOptions> {
       Ok(ManualCodeSplittingOptions {
+        internal_invalidate_module_info_cache: normalize_invalidate_js_side_cache_option(
+          inner.internal_invalidate_module_info_cache,
+          "internalInvalidateModuleInfoCache callback",
+        ),
         min_size: inner.min_size,
         min_share_count: inner.min_share_count,
         min_module_size: inner.min_module_size,
@@ -474,8 +474,10 @@ pub fn normalize_binding_options(
     normalize_sourcemap_ignore_list_option(output_options.sourcemap_ignore_list);
   let sourcemap_path_transform =
     normalize_sourcemap_path_transform_option(output_options.sourcemap_path_transform);
-  let invalidate_js_side_cache =
-    normalize_invalidate_js_side_cache_option(input_options.invalidate_js_side_cache);
+  let invalidate_js_side_cache = normalize_invalidate_js_side_cache_option(
+    input_options.invalidate_js_side_cache,
+    "invalidateJsSideCache option",
+  );
   let on_log = normalize_on_log_option(input_options.on_log);
 
   let mut module_types = None;
@@ -687,6 +689,10 @@ pub fn normalize_binding_options(
                 None => true,
                 Some(Either::A(bool)) => *bool,
                 Some(Either::B(codegen_opts)) => codegen_opts.remove_whitespace.unwrap_or(true),
+              },
+              ascii_only: match &opts.codegen {
+                Some(Either::B(codegen_opts)) => codegen_opts.ascii_only.unwrap_or(false),
+                None | Some(Either::A(_)) => false,
               },
             }))
           }

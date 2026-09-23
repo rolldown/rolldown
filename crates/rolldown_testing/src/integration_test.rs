@@ -1,20 +1,19 @@
-use std::path::PathBuf;
-use std::sync::Arc;
 use std::{
   fs,
   io::{Read, Write},
-  path::Path,
+  path::{Path, PathBuf},
   process::Command,
+  sync::Arc,
 };
 
 use anyhow::Context;
 use oxc::parser::{ParseOptions, Parser};
 use oxc::span::SourceType;
 use rolldown::{
-  BundleOutput, Bundler, BundlerBuilder, BundlerOptions, IsExternal, OutputFormat, Platform,
-  SourceMapType, plugin::__inner::SharedPluginable,
+  BundleOutput, Bundler, BundlerBuilder, BundlerOptions, ChecksOptions, IsExternal,
+  NormalizedBundlerOptions, OutputFormat, Platform, SourceMapType,
+  plugin::{__inner::SharedPluginable, Plugin},
 };
-use rolldown::{ChecksOptions, NormalizedBundlerOptions};
 use rolldown_common::Output;
 use rolldown_dev::{BundlerConfig, DevEngine, DevOptions, DevWatchOptions};
 use rolldown_error::BuildResult;
@@ -132,7 +131,7 @@ impl IntegrationTest {
           .with_options(ParseOptions { allow_return_outside_function: true, ..Default::default() })
           .parse();
 
-        if ret.panicked || !ret.diagnostics.is_empty() {
+        if ret.fatal_error || !ret.diagnostics.is_empty() {
           let errors_str = ret
             .diagnostics
             .iter()
@@ -265,7 +264,9 @@ impl IntegrationTest {
         );
         let watched_files = dev_engine.get_watched_files().await.unwrap();
         assert!(
-          changed_files.iter().all(|(file, _)| watched_files.contains(file)),
+          changed_files.iter().all(|(file, _)| std::path::Path::new(file)
+            .ancestors()
+            .any(|path| path.to_str().is_some_and(|path| watched_files.contains(path)))),
           "All changed files must be in watched files: {changed_files:#?} not in {watched_files:#?}"
         );
         dev_engine
@@ -565,7 +566,7 @@ impl IntegrationTest {
   ) {
     // Registered last so it runs right before the internal dce pass; see the module docs of
     // `preserve_region_markers` for why snapshots need markers kept intact.
-    plugins.push(Arc::new(PreserveRegionMarkersPlugin));
+    plugins.push(Plugin::new_shared(PreserveRegionMarkersPlugin));
 
     let test_folder_path = &self.test_folder_path;
 
@@ -683,11 +684,11 @@ impl IntegrationTest {
       }
     }
 
-    // Disable plugin timings in tests to reduce snapshot noise
+    // The test harness disables bundler timings by default to reduce snapshot noise.
     if let Some(checks) = &mut options.checks {
-      checks.plugin_timings = Some(false);
+      checks.bundler_timings.get_or_insert(checks.plugin_timings.unwrap_or(false));
     } else {
-      options.checks = Some(ChecksOptions { plugin_timings: Some(false), ..Default::default() });
+      options.checks = Some(ChecksOptions { bundler_timings: Some(false), ..Default::default() });
     }
   }
 

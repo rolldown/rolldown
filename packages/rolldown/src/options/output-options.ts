@@ -142,6 +142,10 @@ export interface CommentsOptions {
 
 /** @inline @category Code Splitting */
 export interface ChunkingContext {
+  /**
+   * The returned object and its dependency arrays are reused within the current chunking pass.
+   * Treat graph fields as read-only. `meta` properties and the `moduleSideEffects` field remain mutable.
+   */
   getModuleInfo(moduleId: string): ModuleInfo | null;
 }
 
@@ -793,6 +797,12 @@ export type BuiltinModuleTag = '$initial';
 
 /** @category Code Splitting */
 export type CodeSplittingGroup = {
+  /**
+   * `debugName` gives this group a label in the bundler timing report.
+   *
+   * Set this option when `name` is a function. This option does not change the chunk name.
+   */
+  debugName?: string;
   /**
    * Name of the group. It will be also used as the name of the chunk and replace the `[name]` placeholder in the {@linkcode OutputOptions.chunkFileNames | output.chunkFileNames} option.
    *

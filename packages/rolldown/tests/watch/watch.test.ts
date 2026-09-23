@@ -1,7 +1,7 @@
 import crypto from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
-import type { RolldownWatcher, WatchOptions } from 'rolldown';
+import type { ModuleInfo, RolldownWatcher, WatchOptions } from 'rolldown';
 import { rolldown, watch as _watch } from 'rolldown';
 import { sleep } from 'rolldown-tests/utils';
 import { test, vi } from 'vitest';
@@ -614,6 +614,59 @@ console.log(a + 1000)
 );
 
 test.concurrent(
+  'chunking module-info cache refreshes incoming edges in incremental builds',
+  { retry: TEST_RETRY, timeout: TEST_TIMEOUT },
+  async ({ task, expect, onTestFinished }) => {
+    const { dir: cwd } = createTestWithMultiFiles(
+      'chunking-module-info-cache',
+      task.result?.retryCount ?? 0,
+      {
+        'main.js': `import './dep.js'; console.log('main')`,
+        'dep.js': `console.log('dep')`,
+      },
+    );
+    const main = path.join(cwd, 'main.js');
+    const dep = path.join(cwd, 'dep.js');
+    let latestInfo: ModuleInfo | undefined;
+    const watcher = watch({
+      cwd,
+      input: 'main.js',
+      experimental: { incrementalBuild: true },
+      output: {
+        codeSplitting: {
+          groups: [
+            {
+              name(_id, context) {
+                latestInfo = context.getModuleInfo(dep)!;
+                expect(context.getModuleInfo(dep)).toBe(latestInfo);
+                return null;
+              },
+            },
+          ],
+        },
+      },
+    });
+    onTestFinished(async () => {
+      await watcher.close();
+      if (!process.env.CI) {
+        fs.rmSync(cwd, { recursive: true, force: true });
+      }
+    });
+    await waitBuildFinished(watcher);
+    const firstInfo = latestInfo!;
+    expect(firstInfo.importers).toEqual([main]);
+    expect(firstInfo.dynamicImporters).toEqual([]);
+
+    watcher.clear('event');
+    await editFile(main, `import('./dep.js'); console.log('main')`);
+    await waitBuildFinished(watcher);
+    expect(latestInfo === firstInfo).toBe(false);
+    expect(latestInfo!.importers).toEqual([]);
+    expect(latestInfo!.dynamicImporters).toEqual([main]);
+  },
+);
+
+test.concurrent(
   'watch sync ast of newly added ast',
   { retry: TEST_RETRY, timeout: TEST_TIMEOUT },
   async ({ task, onTestFinished }) => {
@@ -731,6 +784,60 @@ test.concurrent(
     // edit file
     await editFile(foo, 'console.log(2)\n');
     await expect.poll(() => changeFn).toBeCalled();
+  },
+);
+
+test.concurrent(
+  'PluginContext addWatchFile with a directory',
+  { retry: TEST_RETRY, timeout: TEST_TIMEOUT },
+  async ({ task, expect, onTestFinished }) => {
+    const retryCount = task.result?.retryCount ?? 0;
+    const { dir: cwd } = createTestWithMultiFiles('addWatchFile-dir', retryCount, {
+      'main.js': `console.log(1)`,
+    });
+    const watchedDir = path.join(cwd, 'content');
+    const nestedFile = path.join(watchedDir, 'nested', 'data.txt');
+    fs.mkdirSync(path.dirname(nestedFile), { recursive: true });
+    fs.writeFileSync(nestedFile, '1');
+
+    const watcher = watch({
+      cwd,
+      input: 'main.js',
+      output: { dir: path.join(cwd, 'dist') },
+      plugins: [
+        {
+          name: 'test',
+          buildStart() {
+            this.addWatchFile(watchedDir);
+          },
+        },
+      ],
+    });
+    onTestFinished(async () => {
+      await watcher.close();
+      if (!process.env.CI) {
+        fs.rmSync(cwd, { recursive: true, force: true });
+      }
+    });
+    await waitBuildFinished(watcher);
+
+    const changedIds: string[] = [];
+    watcher.on('change', (id) => {
+      changedIds.push(id);
+    });
+    let rebuilds = 0;
+    watcher.on('event', (event) => {
+      if (event.code === 'BUNDLE_END') rebuilds++;
+    });
+
+    await editFile(nestedFile, '2');
+    await expect.poll(() => changedIds, { timeout: 10_000 }).toContain(nestedFile);
+    await expect.poll(() => rebuilds, { timeout: 10_000 }).toBeGreaterThan(0);
+
+    const createdFile = path.join(watchedDir, 'created', 'data.txt');
+    fs.mkdirSync(path.dirname(createdFile));
+    await editFile(createdFile, '1');
+    await expect.poll(() => changedIds, { timeout: 10_000 }).toContain(createdFile);
   },
 );
 
@@ -1290,6 +1397,46 @@ test.concurrent(
     await editFile(path.join(dir, 'a.js'), `import { b } from './b.js'\nexport const a = b + 1`);
     await waitBuildFinished(watcher);
     expect(onLogFn).toBeCalled();
+  },
+);
+
+test.concurrent(
+  'watch should preserve plugin attribution in sourcemap warnings',
+  { retry: TEST_RETRY, timeout: TEST_TIMEOUT },
+  async ({ task, expect, onTestFinished }) => {
+    const retryCount = task.result?.retryCount ?? 0;
+    const { dir } = createTestWithMultiFiles('watch-sourcemap-warning-plugin', retryCount, {
+      'main.js': `console.log('main')`,
+    });
+    onTestFinished(() => {
+      if (!process.env.CI) {
+        fs.rmSync(dir, { recursive: true, force: true });
+      }
+    });
+
+    const pluginName = 'test-sourcemap-plugin';
+    const onLogFn = vi.fn();
+    const watcher = watch({
+      input: path.join(dir, 'main.js'),
+      output: { dir: path.join(dir, 'dist'), sourcemap: true },
+      plugins: [
+        {
+          name: pluginName,
+          transform(code) {
+            return { code: code + '\n// touched\n' };
+          },
+        },
+      ],
+      onLog(_level, log) {
+        if (log.code === 'SOURCEMAP_BROKEN') {
+          onLogFn(log.plugin);
+        }
+      },
+    });
+    onTestFinished(async () => await watcher.close());
+
+    await waitBuildFinished(watcher);
+    expect(onLogFn).toHaveBeenCalledWith(pluginName);
   },
 );
 

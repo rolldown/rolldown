@@ -1,6 +1,6 @@
 [package]
 name = "rolldown_fs_watcher"
-version = "1.2.6"
+version = "1.2.9"
 edition.workspace = true
 homepage.workspace = true
 license.workspace = true
@@ -13,6 +13,8 @@ readme = "../../README.md"
 rolldown-notify = { workspace = true }
 rolldown-notify-debouncer-full = { workspace = true }
 rolldown_error = { workspace = true }
+rustc-hash = { workspace = true }
+tracing = { workspace = true }
 
 [lints]
 workspace = true

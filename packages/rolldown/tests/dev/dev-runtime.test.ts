@@ -77,7 +77,7 @@ test('initModule is registry-gated and returns the live exports', async () => {
   const factory = vi.fn((id: string) => {
     runtime.registerModule(id, { exports: { value: 1 } });
   });
-  runtime.registerFactory('foo.js', 'esm', factory);
+  runtime.registerFactory('foo.js', factory);
 
   expect(runtime.isExecuted('foo.js')).toBe(false);
   expect(runtime.hasFactory('foo.js')).toBe(true);
@@ -104,7 +104,7 @@ test('initModule throws MissingFactoryError when no factory is mapped', async ()
 test('removeModuleCache deletes only the registry entry, fires the hook, and re-arms the factory', async () => {
   const { runtime } = await createRuntime();
   let generation = 0;
-  runtime.registerFactory('foo.js', 'esm', (id: string) => {
+  runtime.registerFactory('foo.js', (id: string) => {
     generation += 1;
     runtime.registerModule(id, { exports: { generation } });
   });
@@ -127,7 +127,7 @@ test('removeModuleCache deletes only the registry entry, fires the hook, and re-
 
 test('a factory that throws mid-body stays registered', async () => {
   const { runtime } = await createRuntime();
-  runtime.registerFactory('broken.js', 'esm', (id: string) => {
+  runtime.registerFactory('broken.js', (id: string) => {
     runtime.registerModule(id, { exports: {} });
     throw new Error('boom');
   });

@@ -48,6 +48,7 @@ impl BindingDevEngine {
 
     let rebuild_strategy =
       dev_options.as_ref().and_then(|opts| opts.rebuild_strategy).map(Into::into);
+    let hot_update = dev_options.as_ref().and_then(|opts| opts.hot_update);
     // Take ownership of watch so we can consume Vec fields (include/exclude).
     let watch_options = dev_options.and_then(|opts| opts.watch);
     let watcher_enabled = watch_options.as_ref().and_then(|watch| watch.enabled);
@@ -163,6 +164,7 @@ impl BindingDevEngine {
       on_additional_assets,
       rebuild_strategy,
       watch: dev_watch_options,
+      hot_update,
     };
 
     let inner = rolldown_dev::DevEngine::new(bundler_config, rolldown_dev_options)
@@ -251,8 +253,9 @@ impl BindingDevEngine {
     })
   }
 
-  /// Delivery notification from the serving middleware: the response for
-  /// `filename` completed, so record its modules as shipped to that client.
+  /// Delivery notification for the payload `filename`: the client reported that it
+  /// ran the payload, so record its modules as shipped to that client. See
+  /// `DevEngine::notify_payload_delivered`.
   #[napi(ts_return_type = "Promise<void>")]
   pub fn notify_payload_delivered<'env>(
     &self,

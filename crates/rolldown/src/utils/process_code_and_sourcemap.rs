@@ -1,6 +1,5 @@
 use std::path::Path;
 
-use futures::future::try_join_all;
 use oxc::ast::CommentKind;
 use rolldown_common::{NormalizedBundlerOptions, OutputAsset, SourceMapType};
 use rolldown_error::{BuildResult, ResultExt};
@@ -45,28 +44,48 @@ pub async fn prepare_sourcemap(
   let map_path = file_dir.join(&map_filename);
 
   if let Some(source_map_ignore_list) = &options.sourcemap_ignore_list {
-    let mut x_google_ignore_list = vec![];
-    for (index, source) in map.get_sources().enumerate() {
-      let source = source.as_path().relative(file_dir);
-      let should_ignore = match source_map_ignore_list {
-        rolldown_common::SourceMapIgnoreList::Boolean(_)
-        | rolldown_common::SourceMapIgnoreList::StringOrRegex(_) => {
-          // Fast path: no async overhead for static values (boolean/string/regex)
-          source_map_ignore_list.exec_static(source.to_string_lossy().as_ref())
-        }
-        rolldown_common::SourceMapIgnoreList::Fn(_) => {
-          // Slow path: async function call only when needed
-          source_map_ignore_list
-            .exec_dynamic(source.to_string_lossy().as_ref(), map_path.to_string_lossy().as_ref())
-            .await?
-        }
-      };
+    let relative_sources = map
+      .get_sources()
+      .map(|source| source.as_path().relative(file_dir).to_string_lossy().into_owned())
+      .collect::<Vec<_>>();
 
-      if should_ignore {
-        #[expect(clippy::cast_possible_truncation)]
-        x_google_ignore_list.push(index as u32);
+    let ignored = match source_map_ignore_list {
+      rolldown_common::SourceMapIgnoreList::Boolean(_)
+      | rolldown_common::SourceMapIgnoreList::StringOrRegex(_) => {
+        // Fast path: no async overhead for static values (boolean/string/regex)
+        relative_sources
+          .iter()
+          .map(|source| source_map_ignore_list.exec_static(source))
+          .collect::<Vec<_>>()
       }
-    }
+      rolldown_common::SourceMapIgnoreList::Fn(_) => {
+        // Slow path: one call decides every source, so the napi boundary is crossed once per
+        // sourcemap instead of once per source.
+        let source_count = relative_sources.len();
+        let ignored = source_map_ignore_list
+          .exec_dynamic(relative_sources, map_path.to_string_lossy().as_ref())
+          .await?;
+        if ignored.len() != source_count {
+          return Err(
+            anyhow::anyhow!(
+              "`sourcemapIgnoreList` returned {} results for {} sources",
+              ignored.len(),
+              source_count
+            )
+            .into(),
+          );
+        }
+        ignored
+      }
+    };
+
+    #[expect(clippy::cast_possible_truncation)]
+    let x_google_ignore_list = ignored
+      .into_iter()
+      .enumerate()
+      .filter_map(|(index, should_ignore)| should_ignore.then_some(index as u32))
+      .collect::<Vec<_>>();
+
     if !x_google_ignore_list.is_empty() {
       map.set_x_google_ignore_list(x_google_ignore_list);
     }
@@ -74,21 +93,32 @@ pub async fn prepare_sourcemap(
 
   if let Some(sourcemap_path_transform) = &options.sourcemap_path_transform {
     let map_path = map_path.to_string_lossy();
-    let sources = try_join_all(map.get_sources().map(async |source| {
-      let source = source.as_path().relative(file_dir);
-      let source =
-        sourcemap_path_transform.call(source.to_string_lossy().as_ref(), map_path.as_ref()).await?;
-      #[cfg(windows)]
-      {
-        // Normalize the windows path.
-        Ok::<_, anyhow::Error>(source.replace(std::path::MAIN_SEPARATOR, "/"))
-      }
-      #[cfg(not(windows))]
-      {
-        Ok::<_, anyhow::Error>(source)
-      }
-    }))
-    .await?;
+    let relative_sources = map
+      .get_sources()
+      .map(|source| source.as_path().relative(file_dir).to_string_lossy().into_owned())
+      .collect::<Vec<_>>();
+    let source_count = relative_sources.len();
+
+    // One call rewrites every source, so the napi boundary is crossed once per sourcemap instead
+    // of once per source.
+    let sources = sourcemap_path_transform.call(relative_sources, map_path.as_ref()).await?;
+    if sources.len() != source_count {
+      return Err(
+        anyhow::anyhow!(
+          "`sourcemapPathTransform` returned {} results for {} sources",
+          sources.len(),
+          source_count
+        )
+        .into(),
+      );
+    }
+
+    #[cfg(windows)]
+    // Normalize the windows path.
+    let sources = sources
+      .into_iter()
+      .map(|source| source.replace(std::path::MAIN_SEPARATOR, "/"))
+      .collect::<Vec<_>>();
 
     map.set_sources(sources);
   } else if cfg!(windows) {

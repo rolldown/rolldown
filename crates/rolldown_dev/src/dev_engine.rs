@@ -62,7 +62,13 @@ pub struct DevEngine {
 }
 
 impl DevEngine {
-  pub fn new(config: BundlerConfig, options: DevOptions) -> BuildResult<Self> {
+  pub fn new(mut config: BundlerConfig, options: DevOptions) -> BuildResult<Self> {
+    // The HMR stage diffs against the scan-stage snapshot, which is only kept
+    // when incremental build is on. Without it the first file change unwraps a
+    // `None` snapshot and panics the worker. `prepare_build_context` already
+    // forces this for `dev_mode`, but `dev()` is reachable without it.
+    config.options.experimental.get_or_insert_default().incremental_build = Some(true);
+
     // Build the bundler from config
     let bundler = BundlerBuilder::default()
       .with_options(config.options)
@@ -298,8 +304,8 @@ impl DevEngine {
 
   /// Client-connect signal (the clientId hello): creates the per-client session with an
   /// empty ship map and the current top-level-evaluated map frozen in. The hello comes from
-  /// the runtime inside the entry chunk, so it doubles as the entry delivery
-  /// notification. (A client that loaded an output older than the latest rebuild
+  /// the dev client script of a page that loaded a served entry chunk, so it doubles as
+  /// the entry delivery notification. (A client that loaded an output older than the latest rebuild
   /// gets the newer map; the mismatched entries then read as current copies the client
   /// does not hold — the reload fallback covers that window until the hello carries a
   /// build id.) Reconnects arrive as fresh clientIds, which is the per-client reset.
@@ -320,9 +326,15 @@ impl DevEngine {
     self.dev_context.pending_payloads.lock().await.retain(|_, p| p.client_id != client_id);
   }
 
-  /// Delivery notification from the serving middleware: the response for `filename`
-  /// completed. Max-merges the pending entry's stamps into that client's shipped[C] —
-  /// idempotent, and a late or repeated delivery can never move the record backwards.
+  /// Delivery notification for the payload `filename`. The dev server calls this when
+  /// the client reports that it ran the payload: Vite appends a
+  /// `__rolldown_runtime__.payloadDelivered(filename)` statement to the end of every
+  /// patch and lazy chunk, so the report means every `registerFactory` in the payload
+  /// has run. A completed HTTP response is not enough — the bytes may not have
+  /// evaluated yet, and a later chunk would then omit a factory the client does not
+  /// hold (rolldown/rolldown#10774). Max-merges the pending entry's stamps into that
+  /// client's shipped[C] — idempotent, and a late or repeated delivery can never move
+  /// the record backwards.
   pub async fn notify_payload_delivered(&self, filename: &str) {
     let Some(pending) = self.dev_context.pending_payloads.lock().await.remove(filename) else {
       return;
@@ -396,10 +408,9 @@ impl DevEngine {
     drop(stamp_table);
 
     if let Ok(output) = &mut result {
-      // Record the rendered chunk as pending: the delivery notification
-      // max-merges its stamps into `shipped[C]` when the serving middleware
-      // sees the response for `output.filename` complete. The binding layer
-      // drops `carried`, so hand it to the pending entry instead of cloning.
+      // Record the rendered chunk as pending: the delivery notification for
+      // `output.filename` max-merges its stamps into `shipped[C]`. The binding
+      // layer drops `carried`, so hand it to the pending entry instead of cloning.
       self
         .dev_context
         .insert_pending_payload(
@@ -577,5 +588,22 @@ impl From<CoordinatorStateSnapshot> for BundleState {
       last_error_stage: snapshot.last_error_stage,
       has_stale_output: snapshot.has_stale_output,
     }
+  }
+}
+
+#[cfg(test)]
+mod tests {
+  use rolldown::{BundlerConfig, BundlerOptions};
+
+  #[test]
+  fn dev_engine_forces_incremental_build_on() {
+    let engine = super::DevEngine::new(
+      BundlerConfig::new(BundlerOptions::default(), vec![]),
+      crate::DevOptions::default(),
+    )
+    .unwrap();
+    assert!(
+      engine.bundler.try_lock().unwrap().options().experimental.is_incremental_build_enabled()
+    );
   }
 }

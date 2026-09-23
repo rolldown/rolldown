@@ -78,6 +78,12 @@ export interface ChecksOptions {
   filenameConflict?: boolean;
 
   /**
+   * Whether to emit warnings for module-level directives other than `use strict`.
+   * @default true
+   * */
+  moduleLevelDirective?: boolean;
+
+  /**
    * Whether to emit warnings when a CommonJS variable is used in an ES module.
    *
    * CommonJS variables like `module` and `exports` are treated as global variables in ES modules and may not work as expected.
@@ -146,11 +152,16 @@ export interface ChecksOptions {
   couldNotCleanDirectory?: boolean;
 
   /**
-   * Whether to emit warnings when plugins take significant time during the build process.
+   * Whether to emit warnings when plugins and option callbacks take significant time during the build process.
    *
    * {@include ../docs/checks-plugin-timings.md}
    * @default true
    * */
+  bundlerTimings?: boolean;
+
+  /**
+   * @deprecated Use {@linkcode bundlerTimings}. If `bundlerTimings` and `pluginTimings` have values, Rolldown uses `bundlerTimings`.
+   */
   pluginTimings?: boolean;
 
   /**

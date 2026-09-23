@@ -64,12 +64,20 @@ jobs:
     name: Publish npm Packages
     runs-on: ubuntu-latest
     environment: release
+    timeout-minutes: 300
     permissions:
       id-token: write # for `npm publish --provenance`
+    env:
+      # npm publish-time scanning makes a successful upload temporarily
+      # unavailable to installs. After each dependency tier becomes visible on
+      # this runner's registry edge, allow time for other CDN edges to settle.
+      # Native bindings can stay hidden for ~90 minutes (#10721).
+      PUBLISH_PROPAGATION_MIN_SECONDS: '60'
+      PUBLISH_PROPAGATION_TIMEOUT_SECONDS: '7200'
     steps:
       - uses: taiki-e/checkout-action@7d1e50e93dc4fb3bba58f85018fadf77898aee8b # v1.4.2
 
-      - uses: voidzero-dev/setup-vp@1b32467adbe183473499fd9d5d372c3ed9641754 # v1.18.0
+      - uses: voidzero-dev/setup-vp@9fd26ff49f9b5e6276c2b493da4454ad4527f7f4 # v1.20.0
         with:
           version: '0.2.1'
           cache: true
@@ -119,6 +127,10 @@ jobs:
           find ./packages/ -type d -maxdepth 1 -exec cp LICENSE {} \;
           find ./packages/ -type d -maxdepth 1 -exec cp THIRD-PARTY-LICENSE {} \;
 
+      - name: Install npm
+        # Needed before any `npm publish` so OIDC provenance uses a current npm.
+        run: npm install -g npm
+
       - name: Publish(Dry Run)
         # `NAPI_DRY_RUN` makes rolldown's `prepublishOnly` hook pass `--dry-run`
         # through to `napi pre-publish`. Without it, the hook publishes the
@@ -128,10 +140,28 @@ jobs:
         run: |
           vp pm publish -r --tag latest --dry-run --no-git-checks
 
-      - name: Publish
-        run: |
-          npm install -g npm
-          vp pm publish -r --tag latest --no-git-checks
+      # `npm publish` can succeed before npm's malware scan makes the tarball
+      # installable. Publish bindings first, wait until they resolve, then
+      # publish packages that pin them in optionalDependencies (#10721, #10723).
+      - name: Publish binding packages
+        run: vp run --filter rolldown prepublishOnly
+
+      - name: Wait for binding packages
+        run: node scripts/misc/wait-for-npm-packages.mjs --from-binding-dirs packages/rolldown/npm
+
+      - name: Publish npm packages
+        # Bindings are already on npm. Skip napi's optional publish so this
+        # step only uploads rolldown / @rolldown/browser / @rolldown/debug.
+        env:
+          NAPI_SKIP_OPTIONAL_PUBLISH: '1'
+        run: vp pm publish -r --tag latest --no-git-checks
+
+      - name: Wait for published packages
+        run: >-
+          node scripts/misc/wait-for-npm-packages.mjs
+          --from-package-json packages/rolldown/package.json
+          --from-package-json packages/browser/package.json
+          --from-package-json packages/debug/package.json
 
   release:
     needs: [check, publish]
@@ -152,6 +182,14 @@ jobs:
             echo EOF
           } >> $GITHUB_OUTPUT
 
+      # Debug info split out of the release bindings; see internal-docs/panic-symbolication/implementation.md
+      - name: Download Debug Info Artifacts
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          path: debuginfo
+          pattern: debuginfo-*
+          merge-multiple: true
+
       - name: Create GitHub Release
         id: github_release
         env:
@@ -164,7 +202,8 @@ jobs:
           url=$(gh release create "$TAG_NAME" \
             --target "$TARGET" \
             --title "$TAG_NAME" \
-            --notes "$NOTES")
+            --notes "$NOTES" \
+            debuginfo/*.debuginfo.tar.zst)
           echo "url=$url" >> "$GITHUB_OUTPUT"
 
       - name: Notify Discord

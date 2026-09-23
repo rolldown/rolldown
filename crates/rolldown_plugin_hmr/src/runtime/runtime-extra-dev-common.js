@@ -88,7 +88,7 @@ export class DevRuntime {
   /**
    * Re-runnable factories from HMR patches and lazy chunks. The initial bundle stays
    * scope-hoisted and contributes none.
-   * @type {Map<string, { kind: 'esm' | 'cjs', fn: (id: string) => void }>}
+   * @type {Map<string, (id: string) => void>}
    */
   factories = new Map();
   /**
@@ -138,11 +138,10 @@ export class DevRuntime {
 
   /**
    * @param {string} id
-   * @param {'esm' | 'cjs'} kind
    * @param {(id: string) => void} fn
    */
-  registerFactory(id, kind, fn) {
-    this.factories.set(id, { kind, fn });
+  registerFactory(id, fn) {
+    this.factories.set(id, fn);
   }
 
   /**
@@ -191,6 +190,9 @@ export class DevRuntime {
    */
   removeModuleCache(id) {
     this.moduleCache.delete(id);
+    // `registerModule` installs a fresh namespace on every run, so a kept memo would hand a
+    // later `import()` the pre-edit exports forever.
+    this.lazyRequests.delete(id);
     this.hooks?.onModuleCacheRemoval(id);
   }
 
@@ -207,7 +209,7 @@ export class DevRuntime {
     if (!factory) {
       throw new MissingFactoryError(id);
     }
-    factory.fn(id);
+    factory(id);
     return this.loadExports(id);
   }
 
@@ -222,6 +224,45 @@ export class DevRuntime {
       console.warn(`Module ${id} not found`);
       return {};
     }
+  }
+
+  /** @type {Map<string, Promise<any>>} */
+  lazyRequests = new Map();
+
+  /**
+   * The entry point for a lazy `import()`. `id` is the module the boundary stands for; the
+   * boundary's own id appears only inside `fetchChunk`'s URL.
+   *
+   * Nothing is registered under the boundary id, deliberately. A cache entry with no factory
+   * behind it reads as "executed" to the HMR boundary walk, and `applyUpdate` turns an
+   * updated-but-factory-less module into a full page reload.
+   *
+   * A rejection is memoized like any other outcome, matching `import()` of a module that
+   * threw. Retrying could not work anyway: a factory registers its module before running its
+   * body, so re-running `initModule` would return half-initialized exports as success.
+   *
+   * @param {string} id
+   * @param {() => Promise<unknown>} fetchChunk
+   * @returns {Promise<any>}
+   */
+  requestLazy(id, fetchChunk) {
+    const pending = this.lazyRequests.get(id);
+    if (pending) {
+      return pending;
+    }
+
+    // Factories outlive `removeModuleCache`, so an evicted module can be re-run without the
+    // server — and must be, since the memo went with the cache entry. `Promise.resolve` keeps
+    // a synchronous `initModule` throw from escaping the call site.
+    const runnableHere = this.moduleCache.has(id) || this.factories.has(id);
+    const promise = runnableHere
+      ? Promise.resolve().then(() => this.initModule(id))
+      : Promise.resolve()
+          .then(fetchChunk)
+          .then(() => this.initModule(id));
+
+    this.lazyRequests.set(id, promise);
+    return promise;
   }
 
   /**

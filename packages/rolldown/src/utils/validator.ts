@@ -358,6 +358,10 @@ const ChecksOptionsSchema = v.strictObject({
       'Whether to emit warnings when files generated have the same name with different contents',
     ),
   ),
+  moduleLevelDirective: v.pipe(
+    v.optional(v.boolean()),
+    v.description('Whether to emit warnings for module-level directives other than `use strict`'),
+  ),
   commonJsVariableInEsm: v.pipe(
     v.optional(v.boolean()),
     v.description('Whether to emit warnings when a CommonJS variable is used in an ES module'),
@@ -396,10 +400,16 @@ const ChecksOptionsSchema = v.strictObject({
     v.optional(v.boolean()),
     v.description('Whether to emit warnings when Rolldown could not clean the output directory'),
   ),
+  bundlerTimings: v.pipe(
+    v.optional(v.boolean()),
+    v.description(
+      'Whether to emit warnings when plugins and option callbacks take significant time during the build process',
+    ),
+  ),
   pluginTimings: v.pipe(
     v.optional(v.boolean()),
     v.description(
-      'Whether to emit warnings when plugins take significant time during the build process',
+      'Deprecated alias for bundlerTimings. Rolldown uses bundlerTimings if both options have values.',
     ),
   ),
   duplicateShebang: v.pipe(
@@ -500,6 +510,7 @@ isTypeTrue<IsSchemaSubType<typeof ManglePropertiesOptionsSchema, ManglePropertie
 
 const CodegenOptionsSchema = v.strictObject({
   removeWhitespace: v.optional(v.boolean()),
+  asciiOnly: v.optional(v.boolean()),
   legalComments: v.optional(
     v.union([
       v.literal('none'),
@@ -844,6 +855,7 @@ const AdvancedChunksSchema = v.strictObject({
   groups: v.optional(
     v.array(
       v.strictObject({
+        debugName: v.optional(v.string()),
         name: v.union([v.string(), AdvancedChunksNameFunctionSchema]),
         test: v.optional(v.union([StringOrRegExpSchema, AdvancedChunksTestFunctionSchema])),
         priority: v.optional(v.number()),

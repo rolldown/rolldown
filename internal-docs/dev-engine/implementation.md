@@ -74,9 +74,40 @@ around as `SharedDevContext = Arc<DevContext>`:
 pub struct DevContext {
   pub options: NormalizedDevOptions,
   pub coordinator_tx: CoordinatorSender,   // clone to send messages in
-  pub clients: SharedClients,              // connected HMR clients
+  pub clients: SharedClients,              // client id → ClientSession
+  pub stamp_table: Arc<Mutex<HmrStampTable>>,            // module id → rebuild stamp
+  pub pending_payloads: Arc<Mutex<FxHashMap<String, PendingPayload>>>,
+  pub top_level_evaluated: Mutex<Arc<FxHashMap<ArcStr, u32>>>,
+  pub last_task_errored: AtomicBool,
 }
 ```
+
+The HMR-related fields (`dev_context.rs:30-51`):
+
+- `clients` — one `ClientSession { shipped, top_level_evaluated, next_seq }`
+  per connected client (`types/client_session.rs`). `shipped` is the
+  ship map `shipped[C]`: module stable id → rebuild stamp of the copy
+  the client holds. See [hmr/design.md](../hmr/design.md) for why the
+  server keeps this record and nothing else about the client.
+- `stamp_table` — `HmrStampTable`
+  (`crates/rolldown_common/src/hmr/hmr_stamp_table.rs`): the engine-wide
+  rebuild counter plus, per module stable id, the stamp of the rebuild
+  that last changed it.
+- `pending_payloads` — rendered payloads (patches and lazy chunks) that
+  no client has acknowledged yet, keyed by output filename. Each
+  `PendingPayload { client_id, modules }` (`types/pending_payload.rs`)
+  lists the modules and stamps the payload carries.
+  `insert_pending_payload` (`dev_context.rs:59`) keeps at most
+  `MAX_PENDING_PAYLOADS_PER_CLIENT = 8` entries per client and drops the
+  oldest beyond that; a dropped entry only means a later push re-ships
+  or full-reloads those modules.
+- `top_level_evaluated` — the boot-evaluated map of the latest written
+  bundle: the modules the entry chunk runs at top level, with their
+  stamps. Recomputed after every successful rebuild (§10) and frozen
+  into each new session at hello (§15, `register_client`).
+- `last_task_errored` — written at the end of every task
+  (`bundling_task.rs:92`); the next HMR compute reads it as
+  `last_build_errored` to turn off unchanged-output suppression.
 
 ### Browser runtime ownership
 
@@ -150,7 +181,7 @@ Routing happens in `BundleCoordinator::run` (`bundle_coordinator.rs:98-150`):
 | `GetState`                 | `create_state_snapshot`, reply               |
 | `EnsureLatestBundleOutput` | `ensure_latest_bundle_output`, reply         |
 | `TriggerFullBuild`         | `trigger_full_build` (no reply)              |
-| `GetWatchedFiles`          | reply with the `watched_files` set           |
+| `GetWatchedFiles`          | reply with the watched paths of the watcher  |
 | `ModuleChanged`            | queue a `Rebuild`, schedule                  |
 | `Close`                    | await running task, then `break` the loop    |
 
@@ -442,19 +473,16 @@ finishes (see §11).
 
 ---
 
-## 9. `RebuildStrategy` and the `Hmr → HmrRebuild` upgrade
+## 9. `RebuildStrategy` and the tsconfig upgrade to `FullBuild`
 
 `RebuildStrategy` (`crates/rolldown_dev_common/src/types/rebuild_strategy.rs`):
 
 ```rust
 pub enum RebuildStrategy {
   Always,   // incremental rebuild ALWAYS issued after HMR
-  Auto,     // (default) rebuild only if HMR updates contain a full-reload
-  Never,    // never rebuild after HMR
+  Never,    // (default) never rebuild after HMR
 }
 ```
-
-It influences the dev engine in **two** places:
 
 ### 9a. At queue time (`handle_file_changes`)
 
@@ -462,43 +490,48 @@ It influences the dev engine in **two** places:
 let task_input = if rebuild_strategy.is_always() {
   TaskInput::HmrRebuild { changed_files }   // Always
 } else {
-  TaskInput::Hmr { changed_files }          // Auto or Never
+  TaskInput::Hmr { changed_files }          // Never
 };
 ```
 
-`Always` commits to a rebuild up front. `Auto` and `Never` queue an
-HMR-only task.
+`Always` commits to a rebuild up front. `Never` queues an HMR-only task.
+This is the only place the strategy is read (`bundle_coordinator.rs:212`
+and `:231`).
 
-### 9b. At run time (`bundling_task.rs:104-114`) — the auto-upgrade
+The engine never decides at run time that an update needs a full page
+reload: the HMR boundary decision lives in the browser (see
+[hmr/design.md](../hmr/design.md)), so an `Hmr` task stays `Hmr`
+whatever the HMR result is (`bundling_task.rs:182-185`). A patch-only
+task leaves `has_stale_bundle_output` set (§12); a client that reloads
+itself lands on the stale-access regeneration path (§13).
 
-After HMR generation, the bundling task may **rewrite its own input**:
+### 9b. At run time (`bundling_task.rs:128-168`) — the tsconfig upgrade
 
-```rust
-if rebuild_strategy.is_auto()
-  && has_full_reload_update         // a generated HMR update is a full reload
-  && !self.input.requires_rebuild() // input was a pure Hmr
-{
-  self.input = TaskInput::HmrRebuild { changed_files: … };
-}
-```
+Before HMR generation, the bundling task checks whether any changed file
+is a known tsconfig. A tsconfig edit changes how every module it governs
+is transformed, which no patch or partial scan can express. The task
+then:
 
-The rationale: whether a change is hot-swappable or requires a full page
-reload is not knowable until the HMR diff is computed. So with `Auto`,
-the coordinator queues a cheap `Hmr`, the task computes the HMR diff, and
-_then_ — if the diff turned out to be a full-reload — the task upgrades
-itself to `HmrRebuild` and performs the rebuild. `Always` skips this
-deferral by always rebuilding; `Never` never rebuilds at run time.
+1. clears the resolver cache and the transform tsconfig cache;
+2. sends `HmrUpdate::FullReload { reason: "tsconfig change" }` to every
+   connected client through `on_hmr_updates` — the only full reload the
+   engine itself originates;
+3. **rewrites its own input** to `TaskInput::FullBuild`
+   (`bundling_task.rs:168`), so the rebuild runs with `ScanMode::Full`
+   (§10) and HMR generation is skipped.
 
 Consequence: the `TaskInput` variant the coordinator queued is not
 necessarily the variant that runs. A coordinator-queued `Hmr` can become
-a `HmrRebuild` mid-task.
+a `FullBuild` mid-task; the coordinator still sees it as an `InProgress`
+task and closes it out through the `InProgress` arm of §11.
 
 ---
 
 ## 10. `BundlingTask` — executing one unit of work
 
-`BundlingTask::run` (`bundling_task.rs:58-81`) calls `run_inner`, then
-sends `BundleCompleted` back to the coordinator with two fields:
+`BundlingTask::run` (`bundling_task.rs:85-103`) calls `run_inner`,
+stores `DevContext::last_task_errored`, then sends `BundleCompleted` back
+to the coordinator with two fields:
 
 - `error_stage: Option<ErrorStage>` — `None` on success; on error,
   identifies which stage produced it.
@@ -517,10 +550,12 @@ sends `BundleCompleted` back to the coordinator with two fields:
 | `false`           | `true`        | `Some(Hmr)`            |
 | `false`           | `false`       | `None`                 |
 
-`Rebuild` wins because of the auto-upgrade path (§9b): an `Hmr` task can
-be rewritten to `HmrRebuild` mid-task, then fail in rebuild. In that
-case both flags are set; reporting `Rebuild` is conservative — the next
-file change forces a rebuild, which is what's needed to confirm the fix.
+`Rebuild` wins because one task can fail in both stages: an `HmrRebuild`
+task whose HMR generation errors still continues to the rebuild when a
+callback received the error (§16c), and the rebuild can then fail too.
+In that case both flags are set; reporting `Rebuild` is conservative —
+the next file change forces a rebuild, which is what's needed to confirm
+the fix.
 
 Set sites:
 
@@ -534,26 +569,47 @@ Set sites:
 re-runs the hook against the new changed files — sufficient retry
 without forcing a rebuild.
 
-`run_inner` (`bundling_task.rs:83-122`) does, in order:
+`run_inner` (`bundling_task.rs:106-192`) does, in order:
 
 1. **`watchChange` plugin hook** — for each changed file, calls
    `plugin_driver.watch_change` on the last bundle handle.
-2. **HMR generation** — if `require_generate_hmr_update()`, calls
-   `generate_hmr_updates`, which sets `has_full_reload_update`.
-3. **Auto-upgrade** — the §9b `Hmr → HmrRebuild` rewrite.
+2. **tsconfig check** — the §9b upgrade: a changed tsconfig sends a
+   `FullReload` to every client and rewrites the input to `FullBuild`.
+3. **HMR generation** — if `require_generate_hmr_update()`, calls
+   `generate_hmr_updates`.
 4. **Rebuild** — if `requires_rebuild()`, sets `has_rebuild_happen =
 true` and calls `rebuild()`.
 
-### `generate_hmr_updates` (`bundling_task.rs:124-186`)
+### `generate_hmr_updates` (`bundling_task.rs:197-311`)
 
 - Locks the `Bundler`.
-- Collects `ClientHmrInput` for every connected client from
-  `dev_context.clients`.
-- Calls `bundler.compute_hmr_update_for_file_changes(...)`.
-- Scans the resulting updates; if any `is_full_reload()`, sets
-  `has_full_reload_update = true`.
+- Snapshots `(client_id, shipped)` for every connected client from
+  `dev_context.clients`, then releases the clients lock. The snapshots
+  become one `ClientHmrInput { client_id, shipped }` per client
+  (`crates/rolldown_common/src/hmr/client_hmr_input.rs`). The compute
+  reads only the ship map; it never sees client execution state.
+- Locks `dev_context.stamp_table` and calls
+  `bundler.compute_hmr_update_for_file_changes(...)` with the changed
+  files, the client inputs, the stamp table, `next_hmr_patch_id`,
+  `last_build_errored`, and `hot_update`.
+  `last_build_errored` is `DevContext::last_task_errored`;
+  `hot_update` is the dev option (`bundling_task.rs:234-235`).
+- Assigns `patch.seq` from `session.next_seq` for every
+  `HmrUpdate::Patch` (`bundling_task.rs:249-253`). A `Noop` sends
+  nothing, so it does not advance the counter; the client requires
+  `seq === lastSeq + 1`, and a skipped number would read as a gap. A
+  client that disconnected during the compute has no session, so its
+  patch keeps `seq: 0`. It is not filtered out: it is still recorded as
+  a pending payload and still passed to `on_hmr_updates`; the consumer
+  finds no client for it.
+- Records every `Patch` as a `PendingPayload` under `patch.filename`,
+  moving `patch.carried` (the modules and stamps it ships) into the
+  entry (`bundling_task.rs:264-275`). `shipped[C]` is written only when
+  the client acknowledges delivery of that filename (§15,
+  `notify_payload_delivered`).
 - On error, sets `self.hmr_errored = true`.
-- Invokes the `on_hmr_updates` callback if configured.
+- Drains emitted assets through `on_additional_assets` (§17), then
+  invokes the `on_hmr_updates` callback if configured.
 
 ### Inside `compute_hmr_update_for_file_changes` (`hmr_stage.rs`)
 
@@ -563,8 +619,12 @@ Per changed file:
    that registered the file with `addWatchFile` (transform
    dependencies), in a stable order: own module first, then
    registrants sorted by stable id.
-2. **`hotUpdate` plugin chain** (dev-only) — plugins run in hook order;
-   each may replace the set. Module ids cross the hook
+2. **`hotUpdate` plugin chain** (dev-only, off by default) — runs only
+   when the `hotUpdate` dev option is `true`. It stays off until
+   file-to-module invalidation is complete (rolldown/rolldown#10714),
+   because the set the hook receives is not yet correct for query-variant
+   modules. When enabled, plugins run in hook order and each may replace
+   the set. Module ids cross the hook
    slash-normalized, in the same convention as `file`; returned ids
    with native separators still round-trip. An empty return suppresses
    this file's update. Ids the graph does not know are dropped. Lazy-compilation
@@ -588,10 +648,25 @@ Then, across all files of the batch:
    build (recovery must reach clients stuck on the overlay), and
    modules a `hotUpdate` hook explicitly returned (the change may live
    outside the module's own code, so identical output proves nothing).
-6. **Refetch and patch** — one partial scan and cache merge, then the
-   per-client update-superset walk picks the factories to ship.
+6. **Refetch and stamp** — one partial scan and cache merge. Then the
+   stamp table starts a new rebuild number and stamps every changed or
+   newly added module with it (`hmr_stage.rs:371-377`).
+7. **Superset walk** — `collect_client_update_superset`
+   (`hmr_stage.rs:451`) walks up static and dynamic importers from the
+   changed modules, stopping at self-accepting modules and at accepting
+   importer edges. This is a prediction of what any client's walk may
+   re-run; the client makes the real decision (see
+   [hmr/design.md](../hmr/design.md)).
+8. **Per-client patch** — for each `ClientHmrInput`, the carried set is
+   `(affected ∖ shipped[C]) ∪ { m : latest[m] > shipped[C][m] }`
+   (`hmr_stage.rs:408-444`): modules the client lacks, plus every
+   module the client holds at an older stamp. `render_hmr_patch`
+   returns `HmrUpdate::Noop` when nothing is carried and no id changed
+   (`hmr_stage.rs:727-729`); otherwise an `HmrPatch` with `changed_ids`,
+   `carried`, and `seq: 0` — the dev engine assigns the real `seq`
+   afterwards.
 
-### `rebuild` (`bundling_task.rs:189-223`)
+### `rebuild` (`bundling_task.rs:314-353`)
 
 - Locks the `Bundler`.
 - Picks the scan mode:
@@ -605,6 +680,11 @@ Then, across all files of the batch:
 - Calls `bundler.incremental_write(scan_mode)` if `skip_write` is
   false, else `bundler.incremental_generate(scan_mode)`.
 - On error, sets `self.rebuild_errored = true`.
+- On success, recomputes `DevContext::top_level_evaluated` from the new
+  snapshot (`compute_top_level_evaluated_modules`,
+  `impl_bundler_hmr.rs:81`; call at `bundling_task.rs:343-347`). A
+  client that connects after this rebuild freezes this map into its
+  session at hello.
 - Invokes the `on_output` callback if configured.
 
 Only `TaskInput::FullBuild` produces `ScanMode::Full`. Every other
@@ -944,14 +1024,20 @@ barrel state. Relevant methods:
 ### HMR reads `Bundler::cache`
 
 `impl_bundler_hmr.rs` builds an `HmrStageInput` from `&mut self.cache`
-(`Bundler::cache`) at three call sites:
+(`Bundler::cache`) at two call sites:
 
-- `compute_hmr_update_for_file_changes` — file-change-driven HMR.
-- `compute_update_for_calling_invalidate` — programmatic `invalidate()`.
-- `compile_lazy_entry` — lazy-compilation entry compilation.
+- `compute_hmr_update_for_file_changes` (`:28`) — file-change-driven HMR.
+- `compile_lazy_entry` (`:121`) — lazy-compilation entry compilation.
 
 `HmrStage` then reads the cache's snapshot (e.g. `module_table()` in
 `hmr/hmr_stage.rs` calls `get_snapshot()`).
+`compute_top_level_evaluated_modules` (`:81`) reads
+`self.cache.snapshot()` directly, without an `HmrStage`.
+
+`import.meta.hot.invalidate()` never reaches the bundler: Vite's
+`BundledDevHMRClient.applyInvalidate` handles it in the browser from
+the factories the client already holds (see
+[hmr/design.md](../hmr/design.md), principle 1).
 
 ---
 
@@ -968,14 +1054,26 @@ Beyond `ensure_latest_bundle_output`, the public methods on `DevEngine`
 | `wait_for_close()`                               | awaits the coordinator's join handle                                                           |
 | `wait_for_ongoing_bundle()`                      | `GetState`, awaits any running future                                                          |
 | `get_bundle_state()`                             | `GetState` → `BundleState { last_build_errored, has_stale_output }`                            |
-| `invalidate(caller, first_invalidated_by)`       | locks the bundler, calls `compute_update_for_calling_invalidate` per client                    |
-| `compile_lazy_entry(proxy_module_id, client_id)` | compiles a lazy entry; on success sends `ModuleChanged`                                        |
+| `register_client(client_id)`                     | hello: new `ClientSession`, empty ship map, boot-evaluated map frozen in (`dev_engine.rs:306`) |
+| `remove_client(client_id)`                       | disconnect: drops the session and its pending payloads (`dev_engine.rs:318`)                   |
+| `notify_payload_delivered(filename)`             | delivery ack: max-merges the pending payload's stamps into `shipped[C]` (`dev_engine.rs:332`)  |
+| `compile_lazy_entry(proxy_module_id, client_id)` | compiles a lazy entry, records it as a pending payload, then sends `ModuleChanged`             |
 | `close()`                                        | sends `Close`, runs `closeBundle`, awaits coordinator shutdown                                 |
 | `is_closed()` / `bundler_options()`              | accessors                                                                                      |
 
 `ModuleChanged` handling (`bundle_coordinator.rs:123-140`): updates watch
 paths, queues a `TaskInput::Rebuild` for the changed module, sets
 `has_stale_bundle_output = true`, schedules.
+
+The three client-session methods are the engine's whole view of a
+client. Vite's server calls them from three client messages: the hello
+(`vite:client-connected`), the disconnect, and the `payloadDelivered`
+ack that Vite appends after the last `registerFactory` of every patch
+and lazy chunk. Because the ack runs after every factory registration
+in the payload, `shipped[C]` can never list a factory the client did not
+register. The reasoning is in [hmr/design.md](../hmr/design.md),
+principle 2. All three return `()` and never fail; a
+`notify_payload_delivered` for an unknown filename or client is a no-op.
 
 The `#[cfg(feature = "testing")]` methods —
 `ensure_task_with_changed_files`, `get_watched_files`,
@@ -999,9 +1097,11 @@ audience.
   failures.
 - **Binding consumer** — the framework or tool integrating `rolldown_dev`
   (typically Vite). Owns the engine lifecycle: constructs it, calls `run`,
-  routes HMR client messages into `invalidate`, calls `close` on shutdown.
-  Sees errors when it calls the engine at the wrong time (`invalidate`
-  after `close`, `ensure_latest_build_output` before `run`, etc.). They
+  routes client connect / disconnect / delivery-ack messages into
+  `register_client` / `remove_client` / `notify_payload_delivered`, calls
+  `close` on shutdown. Sees errors when it calls the engine at the wrong
+  time (`compile_lazy_entry` after `close`, `ensure_latest_build_output`
+  before `run`, etc.). They
   are responsible for sequencing correctly; we surface the misuse so they
   can detect their own bug.
 - **Us** — `rolldown_dev` itself. Sees invariant violations as panics
@@ -1024,8 +1124,8 @@ Examples:
 
 - `Bundler::compute_hmr_update_for_file_changes` — diagnostics from HMR
   computation, surfaced inside `BundlingTask::generate_hmr_updates`.
-- `Bundler::compute_update_for_calling_invalidate` — diagnostics from the
-  programmatic `invalidate()` path, surfaced by `DevEngine::invalidate`.
+- `Bundler::compile_lazy_entry` — diagnostics from compiling a lazy
+  entry, surfaced by `DevEngine::compile_lazy_entry` (`dev_engine.rs:362`).
 - `Bundler::incremental_write` / `incremental_generate` — diagnostics from a
   rebuild, surfaced inside `BundlingTask::rebuild`.
 - `plugin_driver.watch_change` — an `anyhow::Error` from a plugin's
@@ -1066,14 +1166,13 @@ and return a single result use `BindingResult<T> = Either<BindingErrors, T>`
 on the boundary, and the JS wrapper calls `unwrapBindingResult` to either
 return the success value or throw a `BundleError`.
 
-Used by: `invalidate`, `ensureLatestBuildOutput`, `getBundleState`,
-`waitForOngoingBundle`. The thrown error reaches whichever audience called
-the method:
+Used by: `ensureLatestBuildOutput` (`binding_dev_engine.rs:216-219`,
+unwrapped in `packages/rolldown/src/api/dev/dev-engine.ts:168`). The
+other napi methods that can fail (`run`, `ensureCurrentBuildFinish`,
+`getBundleState`, `compileEntry`, `close`) convert their error to a plain
+`napi::Error` with a reason string instead. The thrown error reaches
+whichever audience called the method:
 
-- `invalidate` is typically called by the binding consumer's HMR layer in
-  response to an end-user HMR client message. The thrown error is observed
-  by the consumer; whether to propagate it to the end user is the
-  consumer's decision.
 - `ensureLatestBuildOutput` is called by the consumer's dev-server
   middleware before serving a request. The consumer handles or propagates.
 - `close`, `run`, lifecycle-shaped methods are consumer-driven by
@@ -1127,8 +1226,8 @@ early.
 
 Lifecycle errors (engine closed, coordinator gone, channel dropped) are
 surfaced **to the binding consumer**, not silently swallowed. Vite needs
-to see that it called `invalidate` after `close` so it can fix the
-sequencing; swallowing hides the misuse and lets it metastasize.
+to see that it called `compile_lazy_entry` after `close` so it can fix
+the sequencing; swallowing hides the misuse and lets the bug spread.
 
 **Per-method exception**: a method MAY return `Ok` instead of the lifecycle
 error when "nothing to do, return" is the obviously correct answer for
@@ -1296,13 +1395,13 @@ only the delivering callback changes per operation:
 flowchart TD
   %% ===== triggers =====
   T1([initial load]) --> FULL["TaskInput: FullBuild"]
-  T2([file edit]) --> D{"HMR result?"}
+  T2([file edit]) --> D{"rebuild_strategy?"}
   T3([dynamic import]) --> LAZY["compileEntry (DevEngine)"]
+  T4([stale page load / ModuleChanged]) --> REB["TaskInput: Rebuild"]
 
-  %% ===== dispatch (run_inner) =====
-  D -->|"non-HMR rebuild"| REB["TaskInput: Rebuild"]
-  D -->|"accepted patch"| HMR["TaskInput: Hmr"]
-  D -->|"full reload"| HR["TaskInput: HmrRebuild"]
+  %% ===== dispatch (handle_file_changes) =====
+  D -->|"Never (default)"| HMR["TaskInput: Hmr"]
+  D -->|"Always"| HR["TaskInput: HmrRebuild"]
 
   %% ===== function chains =====
   FULL --> RB
@@ -1377,7 +1476,12 @@ inside a `generateBundle` hook (that hook does not run for patches). It is a
 | Public dev API, coordinator spawn              | `crates/rolldown_dev/src/dev_engine.rs`                         |
 | State machine, queueing, scheduling            | `crates/rolldown_dev/src/bundle_coordinator.rs`                 |
 | One unit of build work                         | `crates/rolldown_dev/src/bundling_task.rs`                      |
-| Shared context                                 | `crates/rolldown_dev/src/dev_context.rs`                        |
+| Shared context, pending-payload cap            | `crates/rolldown_dev/src/dev_context.rs`                        |
+| `ClientSession` (ship map `shipped[C]`)        | `crates/rolldown_dev/src/types/client_session.rs`               |
+| `PendingPayload` (rendered, not yet acked)     | `crates/rolldown_dev/src/types/pending_payload.rs`              |
+| `HmrStampTable` (module id → rebuild stamp)    | `crates/rolldown_common/src/hmr/hmr_stamp_table.rs`             |
+| `ClientHmrInput` (per-client compute input)    | `crates/rolldown_common/src/hmr/client_hmr_input.rs`            |
+| HMR stage (superset walk, per-client patch)    | `crates/rolldown/src/hmr/hmr_stage.rs`                          |
 | `CoordinatorState` enum                        | `crates/rolldown_dev/src/types/coordinator_state.rs`            |
 | `TaskInput` enum, merge rules                  | `crates/rolldown_dev/src/types/task_input.rs`                   |
 | `CoordinatorMsg` enum                          | `crates/rolldown_dev/src/types/coordinator_msg.rs`              |
@@ -1395,6 +1499,8 @@ inside a `generateBundle` hook (that hook does not run for patches). It is a
 
 - [design.md](./design.md) — the dev engine's design principles and the
   rebuild / error-flow contract this machinery realizes
+- [hmr/design.md](../hmr/design.md) — the client-side HMR model that
+  `compute_hmr_update_for_file_changes` and the ship map serve
 - [bundler-data-lifecycle](../bundler-data-lifecycle/implementation.md) — `BundleMode`,
   `Bundle` / `BundleFactory`, and the `ScanStageCache` lifecycle the dev
   engine's incremental builds run through

@@ -109,4 +109,4 @@ module.exports = Object.prototype.hasOwnProperty.call(m, 'module.exports')
   : { ...m };
 ```
 
-The `'module.exports'` named export follows [Node.js CommonJS namespace semantics](https://nodejs.org/api/esm.html#commonjs-namespaces) and preserves the raw CommonJS export, including callable, `null`, and `undefined` values. Environments or generated modules that don't expose this marker retain the namespace-copy fallback. Node.js built-in modules use their default export directly.
+The `'module.exports'` named export follows [Node.js CommonJS namespace semantics](https://nodejs.org/api/esm.html#commonjs-namespaces). Node.js v23.0.0 and later adds it to the namespace of every CommonJS module, so `require()` receives the exact `module.exports` value, including callable, `null`, and `undefined` values. Modules that don't expose this export fall back to a plain copy of the namespace. Node.js built-in modules use their default export directly.

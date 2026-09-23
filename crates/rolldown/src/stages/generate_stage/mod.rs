@@ -162,7 +162,7 @@ impl<'a> GenerateStage<'a> {
       &ast_table,
       &chunk_graph,
       &order_state,
-      &used_symbol_refs,
+      used_symbol_refs.view(),
     );
 
     self.compute_cross_chunk_links(

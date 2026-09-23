@@ -8,7 +8,7 @@ use rolldown_common::{
   ChunkIdx, ConcatenateWrappedModuleKind, ConstExportMeta, ImportKind, ImportRecordIdx,
   ImportRecordMeta, IndexModules, InlineConstMode, Module, ModuleIdx,
   ModuleNamespaceIncludedReason, NormalModule, StmtInfoIdx, StmtInfos, SymbolRef, SymbolRefDb,
-  WrapKind,
+  UsedSymbolRefsView, WrapKind,
 };
 use rolldown_ecmascript::EcmaAst;
 use rolldown_utils::{index_vec_ext::IndexVecRefExt, rayon::ParallelIterator as _};
@@ -27,7 +27,6 @@ use crate::{
 
 use super::{
   GenerateStage,
-  compute_cross_chunk_links::UsedSymbolRefsView,
   order_wrap_state::{EsmInitOrigin, OrderImportKey, OrderWrapState},
 };
 
@@ -90,7 +89,7 @@ impl GenerateStage<'_> {
     ast_table: &IndexEcmaAst,
     chunk_graph: &ChunkGraph,
     order_state: &OrderWrapState,
-    used_symbol_refs: &dyn UsedSymbolRefsView,
+    used_symbol_refs: UsedSymbolRefsView<'_>,
   ) -> Sealed<FinalEsmInitMetadata> {
     let keep_names = self.options.keep_names;
     // Dev mode emits an HMR header (`createModuleHotContext` / `registerModule`) into every
@@ -164,7 +163,7 @@ struct EsmInitTargetContext<'a> {
   symbol_db: &'a SymbolRefDb,
   constant_value_map: &'a FxHashMap<SymbolRef, ConstExportMeta>,
   inline_const_mode: Option<InlineConstMode>,
-  used_symbol_refs: &'a dyn UsedSymbolRefsView,
+  used_symbol_refs: UsedSymbolRefsView<'a>,
 }
 
 /// Whether calling the module's `init_*()` is a no-op because nothing lands inside its `__esm`

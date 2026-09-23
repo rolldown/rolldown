@@ -650,7 +650,7 @@ impl GenerateStage<'_> {
       &self.ast_table,
       chunk_graph,
       order_state,
-      used_symbol_refs,
+      used_symbol_refs_builder.view(),
     );
     self.lowered_static_import_edges(
       chunk_graph,

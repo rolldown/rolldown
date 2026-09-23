@@ -17,7 +17,7 @@ on:
 jobs:
   run:
     name: Browser
-    # both suites live in packages/browser-tests and need the same wasm build, so they share one job.
+    # all three suites live in packages/browser-tests and need the same wasm build, so they share one job.
     # A PR can carry the `ci: webcontainer` label without touching node code, hence the `or`.
     if: ${{ inputs.changed || inputs.webcontainer }}
     runs-on: ubuntu-latest
@@ -49,6 +49,12 @@ jobs:
       - name: Browser Smoke Test
         if: ${{ inputs.changed }}
         run: just test-browser
+
+      # plain Node, no WebContainer: the packed `rolldown` with no binding installed has to load
+      # the packed WASI binding through webcontainer-fallback.cjs, the path vite.new takes
+      - name: WebContainer Fallback Test
+        if: ${{ inputs.changed }}
+        run: just test-webcontainer-fallback
 
       # opt-in only, and slower: it boots a WebContainer from StackBlitz's CDN
       - name: WebContainer Smoke Test

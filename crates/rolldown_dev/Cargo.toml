@@ -13,7 +13,6 @@ readme = "../../README.md"
 
 [lib]
 doctest = false
-test = false
 
 [lints]
 workspace = true

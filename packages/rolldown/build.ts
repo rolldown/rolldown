@@ -236,6 +236,7 @@ function patchBindingJs(): Plugin {
 if (!nativeBinding && globalThis.process?.versions?.["webcontainer"]) {
   try {
     nativeBinding = require('./webcontainer-fallback.cjs');
+    __napiLoadedBindingTarget = 'wasm32-wasi';
   } catch (err) {
     loadErrors.push(err)
   }

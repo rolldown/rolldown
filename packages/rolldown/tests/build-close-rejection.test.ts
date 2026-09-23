@@ -13,7 +13,11 @@ import { expect, test } from 'vitest';
 // gates that report on two clocks: the build must run >= 3 s, AND its link stage
 // must be non-zero and under a hundredth of the rest of the build. The sleep
 // covers the first; the module graph keeps the link stage clear of the
-// quantization floor on the WebAssembly clock.
+// quantization floor on the WebAssembly clock. On the single-thread WASI lane
+// the link stage runs on the one wasm thread, so CPU contention from sibling
+// vitest workers can push it past that hundredth and no report is made at all
+// (measured: link 51-136 ms against a 60-97 ms limit under an 8-way load).
+// The retry below covers that lane; a real regression still fails every attempt.
 const LINK_GRAPH_MODULES = 200;
 
 function makeVirtualGraph(moduleCount: number): Map<string, string> {
@@ -39,7 +43,7 @@ function makeVirtualGraph(moduleCount: number): Map<string, string> {
 
 test(
   'build rejects with the onLog error its terminal close reported',
-  { timeout: 180_000 },
+  { timeout: 180_000, retry: 2 },
   async () => {
     const files = makeVirtualGraph(LINK_GRAPH_MODULES);
     const codes: string[] = [];

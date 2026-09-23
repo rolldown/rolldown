@@ -117,6 +117,8 @@
     "build-binding:profile": "pnpm build-binding --profile profile --features chrome-tracing",
     "build-binding:wasi": "pnpm build-binding --target wasm32-wasip1-threads",
     "build-binding:wasi:release": "pnpm build-binding --profile release-wasi --target wasm32-wasip1-threads",
+    "build-binding:wasi-single": "pnpm build-binding --target wasm32-wasip1",
+    "build-binding:wasi-single:release": "pnpm build-binding --profile release-wasi --target wasm32-wasip1",
     "# Scrips for node #": "_",
     "build-node": "node --enable-source-maps --import @oxc-node/core/register -C dev ./build.ts",
     "build-types-check": "tsc -p ./tsconfig.check.json",
@@ -127,8 +129,8 @@
     "build-native:memory-profile": "pnpm run build-binding:profile --features default_global_allocator && pnpm run build-js-glue",
     "build-wasi:debug": "TARGET='rolldown-wasi' pnpm run --sequential '/^build-(binding|binding:wasi|node)$/'",
     "build-wasi:release": "TARGET='rolldown-wasi' pnpm run --sequential '/^build-(binding|binding:wasi:release|node)$/'",
-    "build-browser-pkg:debug": "TARGET='browser' pnpm run --sequential '/^build-(binding:wasi|node)$/'",
-    "build-browser-pkg:release": "TARGET='browser' pnpm run --sequential '/^build-(binding:wasi:release|node)$/'",
+    "build-browser-pkg:debug": "TARGET='browser' pnpm run --sequential '/^build-(binding:wasi-single|node)$/'",
+    "build-browser-pkg:release": "TARGET='browser' pnpm run --sequential '/^build-(binding:wasi-single:release|node)$/'",
     "# Scrips for docs #": "_",
     "prepublishOnly": "napi pre-publish -t npm --no-gh-release ${NAPI_DRY_RUN:+--dry-run} ${NAPI_SKIP_OPTIONAL_PUBLISH:+--skip-optional-publish}",
     "publint": "publint ."
@@ -140,9 +142,11 @@
   "devDependencies": {
     "@emnapi/core": "catalog:",
     "@emnapi/runtime": "catalog:",
+    "@napi-rs/async-runtime": "catalog:",
     "@napi-rs/cli": "catalog:",
     "@napi-rs/wasm-runtime": "catalog:",
     "@oxc-node/cli": "catalog:",
+    "buffer": "catalog:",
     "cac": "catalog:",
     "consola": "catalog:",
     "emnapi": "catalog:",
@@ -164,6 +168,7 @@
     "binaryName": "rolldown-binding",
     "dtsHeader": "type MaybePromise<T> = T | Promise<T>\ntype Nullable<T> = T | null | undefined\ntype VoidNullable<T = void> = T | null | undefined | void\nexport type BindingStringOrRegex = string | RegExp\nexport type BindingResult<T> = { errors: BindingError[], isBindingErrors: boolean } | T\n\n",
     "packageName": "@rolldown/binding",
+    "rootPublisher": "pnpm",
     "targets": [
       "aarch64-apple-darwin",
       "aarch64-linux-android",
@@ -175,6 +180,7 @@
       "armv7-unknown-linux-gnueabihf",
       "powerpc64le-unknown-linux-gnu",
       "s390x-unknown-linux-gnu",
+      "wasm32-wasip1",
       "wasm32-wasip1-threads",
       "x86_64-apple-darwin",
       "x86_64-pc-windows-msvc",
@@ -183,10 +189,14 @@
       "x86_64-unknown-linux-musl"
     ],
     "wasm": {
+      "asyncRuntime": true,
       "initialMemory": 16384,
+      "threadlessInitialMemory": 1027,
+      "maximumMemory": 65536,
       "browser": {
         "fs": true,
         "asyncInit": true,
+        "buffer": true,
         "errorEvent": true
       }
     }

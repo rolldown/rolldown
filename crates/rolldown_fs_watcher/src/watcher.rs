@@ -33,6 +33,23 @@ impl FsWatcher {
   }
 }
 
+/// The slice of a watcher that path registration drives: open a batch
+/// transaction on the watched paths.
+///
+/// [`FsWatcher`] hides its notify backends behind one concrete type, so this
+/// seam is what lets the watch-mode and dev-engine tests substitute failing or
+/// recording watchers for path registration.
+/// See internal-docs/watch-mode/implementation.md.
+pub trait PathsSource: Send {
+  fn paths_mut(&mut self) -> Box<dyn PathsMut + '_>;
+}
+
+impl PathsSource for FsWatcher {
+  fn paths_mut(&mut self) -> Box<dyn PathsMut + '_> {
+    FsWatcher::paths_mut(self)
+  }
+}
+
 pub trait WatcherBackend: Send {
   fn watch(&mut self, path: &Path, recursive_mode: RecursiveMode) -> BuildResult<()>;
 

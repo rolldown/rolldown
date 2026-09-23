@@ -206,10 +206,28 @@ impl<Fs: FileSystem + Clone + 'static> ScanStage<Fs> {
   }
 
   fn create_sourcemap_channel(&self) -> SourcemapChannel {
+    // A target capability, not a scheduler flavor: the only question is whether
+    // `std::thread::spawn` is available here. Native keeps the dedicated
+    // sourcemap thread on every flavor, `CurrentThread` included -- the drainer
+    // below is an OS thread, not a runtime task, so it cannot starve the
+    // executor that feeds it, and `Terminate` is sent inside `fetch_modules`,
+    // before `process_sourcemap_handler` joins, so no flavor ends up waiting on
+    // itself. Both wasm artifacts generate their maps inline; for the threaded
+    // one that is deliberate (its workers belong to the napi runtime
+    // lifecycle), a possible follow-up rather than a regression.
+    // See `rolldown_utils::futures::can_spawn_os_threads`, and
+    // `crates/rolldown/src/utils/defer_drop.rs` for the same gate.
+    if !rolldown_utils::futures::can_spawn_os_threads() {
+      return (None, None);
+    }
+
     if self.options.experimental.is_native_magic_string_enabled()
       && self.options.is_sourcemap_enabled()
     {
       let (tx, rx) = std::sync::mpsc::channel::<SourceMapGenMsg>();
+      // Dedicated OS thread, never a runtime `spawn_blocking`: a drainer that
+      // took this consumer inline would block in `rx.recv()` forever, leaving
+      // the module tasks that feed the channel unpolled -> deadlock.
       let handler = thread::spawn(move || {
         let mut map: FxHashMap<ModuleIdx, Vec<_>> = FxHashMap::default();
         while let Ok(msg) = rx.recv() {

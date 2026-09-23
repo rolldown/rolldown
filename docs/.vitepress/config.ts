@@ -14,6 +14,7 @@ const sidebarForGuide: DefaultTheme.SidebarItem[] = [
     items: [
       { text: 'Introduction', link: '/guide/introduction.md' },
       { text: 'Getting Started', link: '/guide/getting-started.md' },
+      { text: 'WASI and workerd', link: '/guide/wasi.md' },
       { text: 'Notable Features', link: '/guide/notable-features.md' },
       {
         text: 'Troubleshooting',
@@ -64,6 +65,10 @@ const sidebarForApi: DefaultTheme.SidebarItem[] = [
     text: 'API',
     items: [
       { text: 'Bundler API', link: '/apis/bundler-api.md' },
+      {
+        text: 'Experimental Async Runtime',
+        link: '/apis/experimental-async-runtime.md',
+      },
       {
         text: 'Plugin API',
         link: '/apis/plugin-api.md',

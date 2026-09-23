@@ -211,6 +211,7 @@ impl IntegrationTest {
                 .last_mut()
                 .expect("Expected a vec to collect HMR outputs for current step")
                 .push(result);
+              Box::pin(async { Ok(()) })
             }))
           },
           on_output: {
@@ -222,6 +223,7 @@ impl IntegrationTest {
                 .last_mut()
                 .expect("Expected a vec to collect build outputs for current step")
                 .push(bundle_result);
+              Box::pin(async { Ok(()) })
             }))
           },
           watch: Some(DevWatchOptions {

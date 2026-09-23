@@ -1,28 +1,36 @@
 import { type BindingError, type BindingResult } from '../binding.cjs';
 import type { RolldownError } from '../log/logging';
 
-export function unwrapBindingResult<T>(container: BindingResult<T>): T {
-  if (
+interface BindingErrorsContainer {
+  errors: BindingError[];
+  isBindingErrors: boolean;
+}
+
+function isBindingErrors(container: unknown): container is BindingErrorsContainer {
+  return (
     typeof container === 'object' &&
     container !== null &&
     'isBindingErrors' in container &&
-    container.isBindingErrors
-  ) {
+    container.isBindingErrors === true
+  );
+}
+
+export function unwrapBindingResult<T>(container: BindingResult<T>): T {
+  if (isBindingErrors(container)) {
     throw aggregateBindingErrorsIntoJsError(container.errors);
   }
   return container as T;
 }
 
 export function normalizeBindingResult<T>(container: BindingResult<T>): T | Error {
-  if (
-    typeof container === 'object' &&
-    container !== null &&
-    'isBindingErrors' in container &&
-    container.isBindingErrors
-  ) {
+  if (isBindingErrors(container)) {
     return aggregateBindingErrorsIntoJsError(container.errors);
   }
   return container as T;
+}
+
+export function normalizeBindingResultErrors<T>(container: BindingResult<T>): Error[] {
+  return isBindingErrors(container) ? container.errors.map(normalizeBindingError) : [];
 }
 
 export function normalizeBindingError(e: BindingError): Error {
@@ -86,6 +94,14 @@ export function aggregateBindingErrorsIntoJsError(rawErrors: BindingError[]): Bu
 }
 
 function getErrorMessage(e: RolldownError): string {
+  // A JavaScript callback may reject with anything, and that value reaches us
+  // unchanged. `Object.hasOwn` throws on `null`/`undefined`, so render those
+  // here instead of losing the whole report to a secondary `TypeError`.
+  // See internal-docs/async-runtime/implementation.md.
+  if (e === null || e === undefined) {
+    return `Error: ${String(e)}`;
+  }
+
   // If the `kind` field is present, we assume it represents
   // a custom error defined by rolldown on the Rust side.
   if (Object.hasOwn(e, 'kind')) {

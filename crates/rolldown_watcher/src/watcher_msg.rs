@@ -1,7 +1,7 @@
 use crate::file_change_event::FileChangeEvent;
-use crate::watch_task::WatchTaskIdx;
+use crate::watch_task::WatchGroupIdx;
 
 pub enum WatcherMsg {
-  FileChanges { task_index: WatchTaskIdx, changes: Vec<FileChangeEvent> },
+  FileChanges { group_index: WatchGroupIdx, changes: Vec<FileChangeEvent> },
   Close,
 }

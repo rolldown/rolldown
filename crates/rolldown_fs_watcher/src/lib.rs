@@ -11,4 +11,4 @@ pub use ::notify::RecursiveMode;
 pub use config::FsWatcherConfig;
 pub use event::{FsEvent, FsEventHandler, FsEventResult};
 pub use event_map::{FsChangeKind, map_notify_event};
-pub use watcher::{FsWatcher, PathsMut};
+pub use watcher::{FsWatcher, PathsMut, PathsSource};

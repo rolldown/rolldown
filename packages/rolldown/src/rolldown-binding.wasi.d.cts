@@ -1518,10 +1518,14 @@ export interface TypeScriptOptions {
 export declare class BindingBundleEndEventData {
   output: string
   duration: number
+  get taskIndex(): number
+  get closeIdentity(): string
   get result(): BindingWatcherBundler
 }
 
 export declare class BindingBundleErrorEventData {
+  get taskIndex(): number
+  get closeIdentity(): string
   get result(): BindingWatcherBundler
   get error(): Array<BindingError>
 }
@@ -1536,6 +1540,10 @@ export declare class BindingBundler {
   getWatchFiles(): Array<string>
 }
 
+export declare class BindingBundleStartEventData {
+  taskIndex: number
+}
+
 export declare class BindingCallableBuiltinPlugin {
   constructor(plugin: BindingBuiltinPlugin)
   getOrder(hookName: string): string | null
@@ -1546,11 +1554,13 @@ export declare class BindingCallableBuiltinPlugin {
 }
 
 export declare class BindingChunkingContext {
+  dropInner(): ExternalMemoryStatus
   getModuleInfo(moduleId: string): BindingModuleInfo | null
 }
 
 /** A decoded source map with mappings as an array of arrays instead of VLQ-encoded string. */
 export declare class BindingDecodedMap {
+  dropInner(): ExternalMemoryStatus
   /** The source map version (always 3). */
   get version(): number
   /** The generated file name. */
@@ -1572,8 +1582,8 @@ export declare class BindingDecodedMap {
 
 export declare class BindingDevEngine {
   constructor(options: BindingBundlerOptions, devOptions?: BindingDevOptions | undefined | null)
-  run(): Promise<void>
-  ensureCurrentBuildFinish(): Promise<void>
+  run(): Promise<BindingResult<undefined>>
+  ensureCurrentBuildFinish(): Promise<BindingResult<undefined>>
   getBundleState(): Promise<BindingBundleState>
   ensureLatestBuildOutput(): Promise<BindingResult<undefined>>
   triggerFullBuild(): void
@@ -1589,7 +1599,7 @@ export declare class BindingDevEngine {
    */
   notifyPayloadDelivered(filename: string): Promise<void>
   removeClient(clientId: string): Promise<void>
-  close(): Promise<void>
+  close(): Promise<BindingResult<undefined>>
   /**
    * Compile a lazy entry module and return HMR-style patch code.
    *
@@ -1597,7 +1607,7 @@ export declare class BindingDevEngine {
    * The module was previously stubbed with a proxy, and now we need to compile the
    * actual module and its dependencies.
    */
-  compileEntry(moduleId: string, clientId: string): Promise<BindingLazyChunkOutput>
+  compileEntry(moduleId: string, clientId: string): Promise<BindingResult<BindingLazyChunkOutput>>
   /**
    * Same data the plugin-context `getModuleInfo` returns, readable from the engine
    * handle at any time (no hook context needed).
@@ -1607,12 +1617,18 @@ export declare class BindingDevEngine {
 }
 
 export declare class BindingLoadPluginContext {
+  dropInner(): ExternalMemoryStatus
   inner(): BindingPluginContext
   addWatchFile(file: string): void
 }
 
 export declare class BindingMagicString {
   constructor(source: string, options?: BindingMagicStringOptions | undefined | null)
+  /**
+   * Releases the source text and its UTF-16 mapping table — together about nine
+   * times the source bytes — without waiting for a finalizer.
+   */
+  dropInner(): ExternalMemoryStatus
   get original(): string
   get filename(): string | null
   get indentExclusionRanges(): Array<Array<number>> | Array<number> | null
@@ -1707,10 +1723,12 @@ export declare class BindingModuleInfo {
   exports: Array<string>
   isEntry: boolean
   inputFormat: 'es' | 'cjs' | 'unknown'
+  dropInner(): ExternalMemoryStatus
   get code(): string | null
 }
 
 export declare class BindingNormalizedOptions {
+  dropInner(): ExternalMemoryStatus
   get input(): Array<string> | Record<string, string>
   get cwd(): string
   get platform(): 'node' | 'browser' | 'neutral'
@@ -1782,6 +1800,8 @@ export declare class BindingOutputChunk {
 }
 
 export declare class BindingPluginContext {
+  dropInner(): ExternalMemoryStatus
+  closeIdentity(): string
   load(specifier: string, sideEffects: boolean | 'no-treeshake' | undefined, packageJsonPath?: string): Promise<void>
   resolve(specifier: string, importer?: string | undefined | null, extraOptions?: BindingPluginContextResolveOptions | undefined | null): Promise<BindingPluginContextResolvedId | null>
   emitFile(file: BindingEmittedAsset, assetFilename?: string | undefined | null, fnSanitizedFileName?: string | undefined | null): string
@@ -1794,6 +1814,7 @@ export declare class BindingPluginContext {
 }
 
 export declare class BindingRenderedChunk {
+  dropInner(): ExternalMemoryStatus
   get name(): string
   get isEntry(): boolean
   get isDynamicEntry(): boolean
@@ -1807,16 +1828,19 @@ export declare class BindingRenderedChunk {
 }
 
 export declare class BindingRenderedChunkMeta {
+  dropInner(): ExternalMemoryStatus
   get chunks(): Record<string, BindingRenderedChunk>
 }
 
 export declare class BindingRenderedModule {
+  dropInner(): ExternalMemoryStatus
   get code(): string | null
   get renderedExports(): Array<string>
 }
 
 /** A source map object with properties matching the SourceMap V3 specification. */
 export declare class BindingSourceMap {
+  dropInner(): ExternalMemoryStatus
   /** The source map version (always 3). */
   get version(): number
   /** The generated file name. */
@@ -1838,6 +1862,7 @@ export declare class BindingSourceMap {
 }
 
 export declare class BindingTransformPluginContext {
+  dropInner(): ExternalMemoryStatus
   getCombinedSourcemap(): string
   inner(): BindingPluginContext
   addWatchFile(file: string): void
@@ -1845,14 +1870,14 @@ export declare class BindingTransformPluginContext {
 }
 
 export declare class BindingWatcher {
-  constructor(options: BindingBundlerOptions[], listener: (data: BindingWatcherEvent) => void)
+  constructor(options: BindingBundlerOptions[], listener: (data: BindingWatcherEvent) => void, groupSizes: Array<number>)
   run(): Promise<void>
   /**
    * Gives consumers a reliable way to await the watcher's completion.
    * The Node.js layer relies on the pending Promise to keep the process from exiting.
    */
   waitForClose(): Promise<void>
-  close(): Promise<void>
+  close(): Promise<BindingWatcherCloseResult>
 }
 
 /**
@@ -1871,6 +1896,7 @@ export declare class BindingWatcherChangeData {
 export declare class BindingWatcherEvent {
   eventKind(): string
   bundleEventKind(): string
+  bundleStartData(): BindingBundleStartEventData
   bundleEndData(): BindingBundleEndEventData
   bundleErrorData(): BindingBundleErrorEventData
   watchChangeData(): BindingWatcherChangeData
@@ -2396,6 +2422,11 @@ export interface BindingHookTransformOutput {
   moduleType?: string
 }
 
+export interface BindingHostRegistration {
+  high: number
+  low: number
+}
+
 export interface BindingHotUpdateArgs {
   kind: 'create' | 'update' | 'delete'
   /** Normalized absolute path of the changed file. */
@@ -2832,6 +2863,104 @@ export interface BindingResolveOptions {
   yarnPnp?: boolean
 }
 
+/**
+ * What this binding is -- backend, flavor, target -- and the capabilities
+ * that follow from it. Never re-read from the environment.
+ */
+export interface BindingRuntimeCapabilities {
+  /**
+   * The scheduler this binding was compiled with: always `'shared'`.
+   * `'tokio'` appears only on legacy bindings.
+   */
+  backend: 'tokio' | 'shared'
+  /**
+   * The executor flavor in effect, including any pre-first-use
+   * `configureAsyncRuntime` override.
+   */
+  flavor: BindingRuntimeFlavor
+  /**
+   * The compile target: 'native', 'wasi' (threadless `wasm32-wasip1`) or
+   * 'wasi-threads' (`wasm32-wasip1-threads`).
+   */
+  target: 'native' | 'wasi' | 'wasi-threads'
+  /** The binding is a WebAssembly/WASI artifact (`target !== 'native'`). */
+  wasi: boolean
+  /**
+   * The binding runs the shared async runtime: always true, and false only
+   * on legacy bindings.
+   */
+  asyncRuntimeBuild: boolean
+  /**
+   * The scheduler spreads its work over several executor threads (`flavor
+   * === 'MultiThread'`). This describes the scheduler alone: on native
+   * artifacts Rolldown's data-parallel compute runs on a separate pool sized
+   * from the CPU count, so `false` does not mean single-threaded execution.
+   */
+  threads: boolean
+  /**
+   * A timer facility backs `sleep_until`, which the watch-mode debounce
+   * needs. Always true on MultiThread; on CurrentThread it is true while a
+   * live `registerTimerHost` registrant exists, which every public package
+   * entry installs at import.
+   */
+  timers: boolean
+  /**
+   * Dev mode is supported by this runtime: true on MultiThread, false on
+   * CurrentThread.
+   */
+  devSupported: boolean
+  /**
+   * Watch mode is supported by this artifact: true on native, false on every
+   * wasm artifact. Fixed per artifact, independent of the live `timers` state.
+   */
+  watchSupported: boolean
+  /**
+   * A `block_on` entered from the JavaScript thread may await a JavaScript
+   * continuation without starving it. Currently false on every artifact.
+   */
+  blockOnJsThreadSafe: boolean
+}
+
+export interface BindingRuntimeConfig {
+  flavor: BindingRuntimeFlavor
+  workerThreads: number
+  maxBlockingTasks: number
+  /**
+   * MultiThread drainer idle-linger budget in microseconds (`0` disables
+   * lingering). Read-only: not settable through `configureAsyncRuntime`.
+   */
+  drainLingerUs: number
+}
+
+export type BindingRuntimeFlavor = 'CurrentThread' | 'MultiThread'
+
+export interface BindingRuntimeMetrics {
+  flavor: BindingRuntimeFlavor
+  workerThreads: number
+  maxBlockingTasks: number
+  tasksSpawned: number
+  tasksCompleted: number
+  tasksPanicked: number
+  runnableSchedules: number
+  runnablePolls: number
+  queuedRunnables: number
+  maxQueuedRunnables: number
+  activeRunnables: number
+  maxActiveRunnables: number
+  blockingTasksStarted: number
+  blockingTasksCompleted: number
+  activeBlockingTasks: number
+  maxActiveBlockingTasks: number
+}
+
+export interface BindingRuntimeOptions {
+  flavor?: BindingRuntimeFlavor
+  /** Positive integer worker count. Values above 256 are rejected. */
+  workerThreads?: number
+  /** Positive integer blocking-task limit. Values above 256 are rejected. */
+  maxBlockingTasks?: number
+}
+
 export interface BindingSourcemap {
   inner: string | BindingJsonSourcemap
 }
@@ -3053,6 +3182,11 @@ export interface BindingViteTransformPluginConfig {
   yarnPnp?: boolean
 }
 
+export interface BindingWatcherCloseResult {
+  errors: Array<BindingError>
+  nativeOwnedCloseIdentities: Array<string>
+}
+
 export interface BindingWatchOption {
   skipWrite?: boolean
   include?: Array<BindingStringOrRegex>
@@ -3068,6 +3202,12 @@ export interface BindingWatchOption {
 }
 
 export declare function collapseSourcemaps(sourcemapChain: Array<BindingSourcemap>): BindingJsonSourcemap
+
+/**
+ * Override the async runtime's flavor and thread counts. Must be called
+ * before the first async binding call.
+ */
+export declare function configureAsyncRuntime(options: BindingRuntimeOptions): void
 
 export declare function enhancedTransform(filename: string, sourceText: string, options: BindingEnhancedTransformOptions | undefined | null, cache: TsconfigCache | undefined | null, yarnPnp: boolean): Promise<BindingEnhancedTransformResult>
 
@@ -3086,13 +3226,37 @@ export interface ExternalMemoryStatus {
 export type FilterTokenKind = 'Id' | 'ImporterId' | 'Code' | 'ModuleType' | 'And' | 'Or' | 'Not' | 'Include' | 'Exclude' | 'CleanUrl' | 'QueryKey' | 'QueryValue'
 
 /**
+ * Return the async runtime configuration in effect, including any
+ * pre-first-use `configureAsyncRuntime` override.
+ */
+export declare function getAsyncRuntimeConfig(): BindingRuntimeConfig
+
+/** Return a snapshot of the shared async runtime's task and scheduler counters. */
+export declare function getAsyncRuntimeMetrics(): BindingRuntimeMetrics
+
+/**
+ * Return the CurrentThread task-host ABI version this binding implements.
+ * Check it before calling either async-runtime host registration.
+ */
+export declare function getCurrentThreadTaskHostContractVersion(): number
+
+/**
  * Returns the Rust-side allocator counters, or `None` when this binding was
  * built without the `tracking_allocator` cargo feature (the default —
  * tracking costs a few atomic operations per allocation).
  */
 export declare function getNativeMemoryStats(): BindingNativeMemoryStats | null
 
+/** Report the loaded binding's runtime capabilities. */
+export declare function getRuntimeCapabilities(): BindingRuntimeCapabilities
+
 export declare function initTraceSubscriber(): TraceSubscriberGuard | null
+
+/**
+ * Return whether the given CurrentThread task- or timer-host registration is
+ * still live. A registration already evicted natively reads false.
+ */
+export declare function isCurrentThreadHostRegistrationActive(registrationHigh: number, registrationLow: number): boolean
 
 export interface JsChangedOutputs {
   deleted: Set<string>
@@ -3152,7 +3316,32 @@ export interface PreRenderedChunk {
   exports: Array<string>
 }
 
+/**
+ * Install the native host turn that polls CurrentThread runnables. Call it
+ * once per importing environment; passing a JavaScript callback throws.
+ */
+export declare function registerCurrentThreadTaskHost(registrationHigh: number, registrationLow: number, dispatch?: never): void
+
 export declare function registerPlugins(id: number, plugins: Array<BindingPluginWithIndex>): void
+
+/**
+ * Install the host timer callbacks (a `setTimeout`/`clearTimeout` pair) that
+ * back CurrentThread timers, such as the watch-mode debounce. Each importing
+ * environment registers its own host, and every live host receives each timer.
+ */
+export declare function registerTimerHost(registrationHigh: number, registrationLow: number, schedule: (id: number, ms: number) => Promise<void>, cancel: (id: number) => void): void
+
+/**
+ * Reserve a CurrentThread host registration capability. The returned words
+ * must be passed back to exactly one host registration call.
+ */
+export declare function reserveCurrentThreadHostRegistration(): BindingHostRegistration
+
+/**
+ * Reset the cumulative async runtime counters to zero. Live gauges and their
+ * lifetime high-water marks are left untouched.
+ */
+export declare function resetAsyncRuntimeMetrics(): void
 
 /**
  * Starts a new measuring window: the peak restarts from the current live
@@ -3164,15 +3353,25 @@ export declare function resetNativeMemoryStats(): void
 export declare function resolveTsconfig(filename: string, cache: TsconfigCache | undefined | null, yarnPnp: boolean): BindingTsconfigResult | null
 
 /**
- * Release one holder of the tokio runtime, shutting it down once none are left.
- *
- * This is required for the wasm target with `tokio_unstable` cfg.
- * In the wasm runtime, the `park` threads will hang there until the tokio::Runtime is shutdown.
+ * A no-op kept for compatibility; the async runtime follows the N-API
+ * environment lifecycle.
  */
 export declare function shutdownAsyncRuntime(): void
 
-/** Acquire one holder of the tokio runtime, starting it if it is not running. */
+/**
+ * A no-op kept for compatibility; the async runtime follows the N-API
+ * environment lifecycle.
+ */
 export declare function startAsyncRuntime(): void
+
+/** Evict one host installed by `registerCurrentThreadTaskHost`. */
+export declare function unregisterCurrentThreadTaskHost(registrationHigh: number, registrationLow: number): void
+
+/**
+ * Evict one callback installed by `registerTimerHost`; pending sleeps are
+ * woken so they can reselect another live environment.
+ */
+export declare function unregisterTimerHost(registrationHigh: number, registrationLow: number): void
 
 export interface ViteImportGlobMeta {
   isSubImportsPattern?: boolean

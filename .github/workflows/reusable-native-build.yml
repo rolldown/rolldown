@@ -47,6 +47,9 @@ jobs:
       - name: Build Native Rolldown
         run: just build-rolldown
 
+      # Non-wasi builds regenerate every declared wasi flavor's loaders byte-identically
+      # (each with its own `hasThreads`) and need no restore step; only the inactive
+      # flavor's `.d.cts` is preserved — see internal-docs/async-runtime/implementation.md §14.
       - name: Check no diff
         run: git diff --exit-code
 

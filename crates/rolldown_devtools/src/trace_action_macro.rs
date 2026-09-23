@@ -8,6 +8,6 @@ macro_rules! trace_action {
 #[macro_export]
 macro_rules! trace_action_enabled {
   () => {
-    tracing::enabled!(tracing::Level::TRACE)
+    tracing::event_enabled!(tracing::Level::TRACE, devtoolsAction)
   };
 }

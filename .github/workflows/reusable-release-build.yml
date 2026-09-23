@@ -81,6 +81,11 @@ jobs:
             build: |
               vp run --filter rolldown build-binding:wasi:release
 
+          - os: ubuntu-latest
+            target: wasm32-wasip1
+            build: |
+              vp run --filter rolldown build-binding:wasi-single:release
+
     name: Build ${{ matrix.target }}
     runs-on: ${{ matrix.os }}
     steps:
@@ -264,6 +269,11 @@ jobs:
           version: '0.2.1'
           cache: true
 
+      # Runs BEFORE "Determine Version" on purpose: napi bakes the version this
+      # step sees into the generated binding loader's package version check, and
+      # pnpm drops semver build metadata when it packs, so a loader that expects
+      # the `commit` preset's `+commit.<sha>` can never match the published
+      # `@rolldown/binding-*` manifests. See internal-docs/async-runtime/implementation.md
       - name: Build Node binding
         # This binary is only used to build the node package itself. It's won't be published.
         run: vp run --filter rolldown build-binding
@@ -310,13 +320,15 @@ jobs:
           save-cache: false
 
       - name: Add WASI target
-        run: rustup target add wasm32-wasip1-threads
+        run: rustup target add wasm32-wasip1-threads wasm32-wasip1
 
       - uses: voidzero-dev/setup-vp@9fd26ff49f9b5e6276c2b493da4454ad4527f7f4 # v1.20.0
         with:
           version: '0.2.1'
           cache: true
 
+      # Same ordering rule as the node package job above: the version this step
+      # sees is the one napi bakes into the generated binding loader.
       - name: Build Node binding
         # This binary is only used to build the node package itself. It's won't be published.
         run: vp run --filter rolldown build-binding
@@ -331,6 +343,20 @@ jobs:
         # Binaries are built in the previous steps. Unlike in local development, we only need to build the node package itself.
         run: vp run --filter "@rolldown/browser" build:release
 
+      # Publish-path guard: a dropped loader or wasm in the browser dist must fail here,
+      # not after publish.
+      - name: Assert `@rolldown/browser` WASI dist file set
+        run: node scripts/wasi/check-wasi-dist-files.mjs single packages/browser/dist
+
+      - name: Assert browser CurrentThread timer registration
+        run: node packages/browser-tests/runtime-contract.mjs packages/browser/dist
+
+      - name: Test packed browser package in Wrangler and Miniflare
+        run: node scripts/wasi/check-workerd-packed-consumer.mjs
+
+      - name: Exercise published workerd entry lifecycle and memory canary
+        run: node --expose-gc packages/workerd-tests/memory.mjs --loader=packages/browser/dist/workerd.mjs --wasm=packages/browser/dist/rolldown-binding.wasm32-wasip1.wasm --max-rss-growth-mb=128
+
       - name: Upload `@rolldown/browser` Artifact
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
@@ -338,6 +364,14 @@ jobs:
           name: browser-artifact
           path: |
             packages/browser/dist/**
+
+      - name: Upload bundled threaded WASI loaders
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          if-no-files-found: error
+          name: threaded-wasi-loader-artifact
+          path: |
+            packages/rolldown/artifacts/threaded-wasi-loaders/**
 
   build-rolldown-debug:
     strategy:

@@ -53,6 +53,9 @@ describe('checks.bundlerTimings alias', () => {
         },
         {},
         false,
+        undefined,
+        undefined,
+        undefined,
         true,
       );
       expect(bundlerOptions.inputOptions.checks).toEqual(checks);
@@ -107,6 +110,9 @@ describe('checks.bundlerTimings alias', () => {
         { checks: { [option]: true } },
         {},
         false,
+        undefined,
+        undefined,
+        undefined,
         false,
       );
       expect(bundlerOptions.inputOptions.pluginTimings).toBeUndefined();

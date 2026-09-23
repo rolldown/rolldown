@@ -27,14 +27,36 @@ export class BuiltinPlugin {
 type CallableBuiltinPluginContext = {
   plugin: BuiltinPlugin;
   native: BindingCallableBuiltinPlugin;
+  callbacks: Function[];
 };
 
 export function makeBuiltinPluginCallable(
   plugin: BuiltinPlugin,
 ): BuiltinPlugin & BindingCallableBuiltinPluginLike {
+  const callbacks: Function[] = [];
+  const binding = bindingifyBuiltInPlugin(plugin);
+  const options = binding.options;
+  if (options !== null && (typeof options === 'object' || typeof options === 'function')) {
+    binding.options = new Proxy(
+      {},
+      {
+        get(_target, key) {
+          const value = Reflect.get(options, key);
+          if (typeof value !== 'function') return value;
+          callbacks.push(value);
+          return invokeWeakCallback.bind(
+            undefined,
+            new WeakRef(value),
+            `${plugin.name}.${String(key)}`,
+          );
+        },
+      },
+    );
+  }
   const context: CallableBuiltinPluginContext = {
     plugin,
-    native: new BindingCallableBuiltinPlugin(bindingifyBuiltInPlugin(plugin)),
+    native: new BindingCallableBuiltinPlugin(binding),
+    callbacks,
   };
 
   const wrappedPlugin: Partial<BindingCallableBuiltinPluginLike> & BuiltinPlugin = plugin;
@@ -71,6 +93,14 @@ async function invokeBuiltinHook(this: CallableBuiltinPluginContext, key: string
       }),
     );
   }
+}
+
+function invokeWeakCallback(reference: WeakRef<Function>, name: string, ...args: unknown[]) {
+  const callback = reference.deref();
+  if (!callback) {
+    throw new Error(`The callback for ${name} was released`);
+  }
+  return Reflect.apply(callback, undefined, args);
 }
 
 export function bindingifyBuiltInPlugin(plugin: BuiltinPlugin): BindingBuiltinPlugin {

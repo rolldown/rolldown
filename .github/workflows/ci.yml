@@ -173,9 +173,9 @@ jobs:
     with:
       changed: ${{ needs.changes.outputs.node-changes == 'true' }}
 
-  # Runs the packed @rolldown/browser in a real browser page on every PR that touches node code. The
-  # `ci: webcontainer` label adds the WebContainer suite to the same job; it never runs on path
-  # changes or on main.
+  # Runs the packed @rolldown/browser in a real browser page, and the packed `rolldown` through its
+  # WebContainer fallback in plain Node, on every PR that touches node code. The `ci: webcontainer`
+  # label adds the WebContainer suite to the same job; it never runs on path changes or on main.
   browser:
     needs: changes
     uses: ./.github/workflows/reusable-browser.yml

@@ -1,0 +1,46 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+//#region lib.cjs
+//#endregion
+//#region main.js
+var main_default = (/* @__PURE__ */ __toESM((/* @__PURE__ */ __commonJSMin(((exports, module) => {
+	const exports$1 = { tag: "root-local" };
+	function read(exports$2) {
+		return [exports$2.tag, exports$1.tag];
+	}
+	module.exports = { read };
+})))())).default.read({ tag: "param" });
+//#endregion
+export { main_default as default };
+
+```
+
+# Variant: cjs: [format: Cjs]
+
+## Assets
+
+### main.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+//#region lib.cjs
+//#endregion
+//#region main.js
+var main_default = (/* @__PURE__ */ __toESM((/* @__PURE__ */ __commonJSMin(((exports, module) => {
+	const exports$1 = { tag: "root-local" };
+	function read(exports$2) {
+		return [exports$2.tag, exports$1.tag];
+	}
+	module.exports = { read };
+})))())).default.read({ tag: "param" });
+//#endregion
+module.exports = main_default;
+
+```

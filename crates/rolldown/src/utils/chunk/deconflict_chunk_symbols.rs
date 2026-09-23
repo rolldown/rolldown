@@ -57,7 +57,8 @@ pub fn deconflict_chunk_symbols(
     Some(inline) => (&inline.modules, &inline.chunks),
     None => (&chunk.modules, &own_chunk),
   };
-  let mut renamer = Renamer::new(chunk.entry_module_idx(), &link_output.symbol_db, format);
+  let mut renamer =
+    Renamer::new(chunk.entry_module_idx(), &link_output.symbol_db, &link_output.metas, format);
   // Reserve global scope symbols (unresolved references) to prevent generating conflicting names.
   // These are identifiers referenced but not defined in the module's scope (e.g., `console`, `window`).
   modules
@@ -304,7 +305,7 @@ pub fn deconflict_chunk_symbols(
     chunk.node_mode_external_ns_names = node_mode_names;
   }
 
-  let inline_names = inline.map(|inline| name_inline_bindings(&mut renamer, inline, link_output));
+  let inline_names = inline.map(|inline| name_inline_bindings(&mut renamer, inline));
 
   rename_shadowing_symbols_in_nested_scopes(chunk_idx, modules, link_output, format, &mut renamer);
 
@@ -315,23 +316,11 @@ pub fn deconflict_chunk_symbols(
 /// A bridge is read wherever a record symbol was referenced, including inside nested scopes, so
 /// its name must be free in every nested scope of the file's modules, like an import binding.
 /// The factories' `exports` parameter avoids everything the file declares and reads.
-fn name_inline_bindings(
-  renamer: &mut Renamer<'_>,
-  inline: &InlineNamingInput,
-  link_output: &LinkStageOutput,
-) -> FileInlineNames {
-  // A CommonJS-wrapped module's root scope is emitted inside its `__commonJS` closure, where a
-  // local named like a bridge would shadow it.
-  let cjs_wrapped = inline
-    .modules
-    .iter()
-    .copied()
-    .filter(|module_idx| matches!(link_output.metas[*module_idx].wrap_kind(), WrapKind::Cjs))
-    .collect::<Vec<_>>();
+fn name_inline_bindings(renamer: &mut Renamer<'_>, inline: &InlineNamingInput) -> FileInlineNames {
   let bridges = inline
     .file_bridges
     .iter()
-    .map(|(record, name)| (*record, bridge_name(renamer, name, &inline.modules, &cjs_wrapped)))
+    .map(|(record, name)| (*record, bridge_name(renamer, name, &inline.modules)))
     .collect();
   let factory_bridges = inline
     .factories
@@ -339,7 +328,7 @@ fn name_inline_bindings(
     .map(|(record, reads)| {
       let names = reads
         .iter()
-        .map(|(other, name)| (*other, bridge_name(renamer, name, &inline.modules, &cjs_wrapped)))
+        .map(|(other, name)| (*other, bridge_name(renamer, name, &inline.modules)))
         .collect();
       (*record, names)
     })
@@ -352,15 +341,10 @@ fn name_inline_bindings(
   FileInlineNames { exports_param, bridges, factory_bridges }
 }
 
-fn bridge_name(
-  renamer: &mut Renamer<'_>,
-  chunk_name: &str,
-  modules: &[ModuleIdx],
-  cjs_wrapped: &[ModuleIdx],
-) -> CompactStr {
+fn bridge_name(renamer: &mut Renamer<'_>, chunk_name: &str, modules: &[ModuleIdx]) -> CompactStr {
   let hint_source = concat_string!("share_", chunk_name);
   let hint = legitimize_identifier_name(&hint_source);
-  renamer.create_conflictless_name_for_modules(&hint, modules, cjs_wrapped)
+  renamer.create_conflictless_name_for_modules(&hint, modules)
 }
 
 /// Collect the canonical names of things that are emitted at the chunk's root scope and thus

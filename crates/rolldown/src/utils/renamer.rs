@@ -13,6 +13,7 @@ use rolldown_common::{
 use rolldown_utils::concat_string;
 
 use crate::stages::link_stage::LinkStageOutput;
+use crate::types::linking_metadata::LinkingMetadataVec;
 use crate::utils::chunk::conflict_resolver::ConflictResolver;
 
 #[derive(Debug)]
@@ -22,6 +23,7 @@ pub struct Renamer<'name> {
   /// Final symbol → name mappings.
   canonical_names: FxHashMap<SymbolRef, CompactStr>,
   symbol_db: &'name SymbolRefDb,
+  metas: &'name LinkingMetadataVec,
   /// Entry module index for this chunk, if any.
   entry_module_idx: Option<ModuleIdx>,
 }
@@ -30,6 +32,7 @@ impl<'name> Renamer<'name> {
   pub fn new(
     base_module_index: Option<ModuleIdx>,
     symbol_db: &'name SymbolRefDb,
+    metas: &'name LinkingMetadataVec,
     format: OutputFormat,
   ) -> Self {
     // Port from https://github.com/rollup/rollup/blob/master/src/Chunk.ts#L1377-L1394.
@@ -44,6 +47,7 @@ impl<'name> Renamer<'name> {
     Self {
       canonical_names: FxHashMap::default(),
       symbol_db,
+      metas,
       resolver: ConflictResolver::new(
         manual_reserved
           .iter()
@@ -120,22 +124,27 @@ impl<'name> Renamer<'name> {
   #[inline]
   fn is_name_available_with(
     symbol_db: &SymbolRefDb,
+    metas: &LinkingMetadataVec,
     entry_module_idx: Option<ModuleIdx>,
     candidate_name: &str,
     symbol_ref: SymbolRef,
     is_original_name: bool,
   ) -> bool {
     if let Some(entry_idx) = entry_module_idx {
-      if symbol_ref.owner == entry_idx {
-        // Entry module symbols can use their original names freely - shadowing is
-        // handled by reference-based renaming of nested bindings later
+      // Entry module symbols can use their original names freely - shadowing is
+      // handled by reference-based renaming of nested bindings later. A CJS-wrapped
+      // entry is the exception: its root-scope locals render inside the `__commonJS`
+      // closure unreserved, and nothing later renames them apart.
+      if symbol_ref.owner == entry_idx && !is_cjs_wrapped(metas, entry_idx) {
         return true;
       }
     }
 
     // Renamed candidates must not conflict with own module's nested bindings
     // (original names are allowed to shadow - that's intentional)
-    if !is_original_name && has_nested_scope_binding(symbol_db, symbol_ref.owner, candidate_name) {
+    if !is_original_name
+      && has_unreserved_binding(symbol_db, metas, symbol_ref.owner, candidate_name)
+    {
       return false;
     }
 
@@ -169,10 +178,12 @@ impl<'name> Renamer<'name> {
     // Bind the fields the `accept` closure reads as locals so the borrow of
     // `self.resolver` (mutable, in `resolve`) does not overlap a borrow of `self`.
     let symbol_db = self.symbol_db;
+    let metas = self.metas;
     let entry_module_idx = self.entry_module_idx;
     let resolved = self.resolver.resolve(original_name, |candidate, is_original| {
       Self::is_name_available_with(
         symbol_db,
+        metas,
         entry_module_idx,
         candidate,
         canonical_ref,
@@ -187,21 +198,20 @@ impl<'name> Renamer<'name> {
   }
 
   /// Like [`Self::create_conflictless_name`], but also skips names bound in a nested scope of
-  /// any of `modules`, and names bound at the root of the `cjs_wrapped` modules among them (that
-  /// root scope is emitted inside a `__commonJS` closure): a chunk-level binding that references
+  /// any of `modules`, and names bound at the root of the CJS-wrapped ones among them (that root
+  /// scope is emitted inside a `__commonJS` closure): a chunk-level binding that references
   /// inside those modules resolve to must stay visible from all of them.
   pub fn create_conflictless_name_for_modules(
     &mut self,
     hint: &str,
     modules: &[ModuleIdx],
-    cjs_wrapped: &[ModuleIdx],
   ) -> CompactStr {
     let symbol_db = self.symbol_db;
+    let metas = self.metas;
     self.resolver.resolve(CompactStr::new(hint), |candidate, _| {
-      !modules.iter().any(|module_idx| has_nested_scope_binding(symbol_db, *module_idx, candidate))
-        && !cjs_wrapped
-          .iter()
-          .any(|module_idx| has_root_scope_binding(symbol_db, *module_idx, candidate))
+      !modules
+        .iter()
+        .any(|module_idx| has_unreserved_binding(symbol_db, metas, *module_idx, candidate))
     })
   }
 
@@ -225,7 +235,7 @@ impl<'name> Renamer<'name> {
       // a nested scope of the same module. Without this check, renaming `child`
       // to `child$1` could collide with an existing `child$1` binding in the
       // same scope (e.g. from Gleam's variable shadowing convention).
-      if has_nested_scope_binding(self.symbol_db, symbol_ref.owner, &name) {
+      if has_unreserved_binding(self.symbol_db, self.metas, symbol_ref.owner, &name) {
         self.resolver.reserve(name);
         continue;
       }
@@ -273,23 +283,32 @@ impl<'name> Renamer<'name> {
   }
 }
 
-/// Returns true if `name` exists in any nested (non-root) scope of the module.
-/// Returns false for modules without AST (external modules).
-fn has_nested_scope_binding(symbol_db: &SymbolRefDb, module_idx: ModuleIdx, name: &str) -> bool {
+/// Returns true if `name` is bound in a scope of the module whose bindings the conflict resolver
+/// does not know about. Returns false for modules without AST (external modules).
+///
+/// That is every nested scope, plus the root scope of a CJS-wrapped module: its root-scope locals
+/// render inside the `__commonJS` closure and mostly keep their original names without being
+/// reserved (see `add_symbol_in_root_scope`), so a candidate landing on one of them either
+/// redeclares it or captures references to it.
+fn has_unreserved_binding(
+  symbol_db: &SymbolRefDb,
+  metas: &LinkingMetadataVec,
+  module_idx: ModuleIdx,
+  name: &str,
+) -> bool {
   let Some(db) = &symbol_db[module_idx] else {
     return false;
   };
-  // Skip root scope (index 0), check nested scopes only
-  db.ast_scopes.scoping().iter_bindings().skip(1).any(|(_, bindings)| bindings.contains_key(name))
+  let skipped_scopes = usize::from(!is_cjs_wrapped(metas, module_idx));
+  db.ast_scopes
+    .scoping()
+    .iter_bindings()
+    .skip(skipped_scopes)
+    .any(|(_, bindings)| bindings.contains_key(name))
 }
 
-/// Returns true if `name` is bound in the root scope of the module.
-fn has_root_scope_binding(symbol_db: &SymbolRefDb, module_idx: ModuleIdx, name: &str) -> bool {
-  let Some(db) = &symbol_db[module_idx] else {
-    return false;
-  };
-  let scoping = db.ast_scopes.scoping();
-  scoping.get_binding(scoping.root_scope_id(), name.into()).is_some()
+fn is_cjs_wrapped(metas: &LinkingMetadataVec, module_idx: ModuleIdx) -> bool {
+  matches!(metas[module_idx].wrap_kind(), WrapKind::Cjs)
 }
 
 /// Context for renaming nested scope symbols that would shadow top-level symbols.

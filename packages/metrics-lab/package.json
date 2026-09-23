@@ -2,7 +2,7 @@
   "name": "@rolldown/metrics-lab",
   "version": "0.0.0",
   "private": true,
-  "description": "Browser-loading perf harness for agent loops: throttled runs, first-paint coverage, boot CPU profile, fused verdict.",
+  "description": "Load-performance harness for agent loops: throttled browser runs with first-paint coverage and boot profile, node/deno startup runs, static deferral planning on the module graph.",
   "bin": {
     "metrics-lab": "./harness.mjs"
   },

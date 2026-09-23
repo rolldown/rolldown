@@ -2798,6 +2798,8 @@ dependencies = [
  "rolldown-notify",
  "rolldown-notify-debouncer-full",
  "rolldown_error",
+ "rustc-hash",
+ "tracing",
 ]
 
 [[package]]

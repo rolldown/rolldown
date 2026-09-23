@@ -1,14 +1,14 @@
 use arcstr::ArcStr;
 use rolldown::{Bundler, BundlerBuilder, BundlerConfig};
 use rolldown_common::{
-  BundleMode, Log, LogLevel, NormalizedBundlerOptions, ScanMode, WatchPath, WatcherChangeKind,
+  BundleMode, Log, LogLevel, NormalizedBundlerOptions, ScanMode, WatcherChangeKind,
 };
 use rolldown_error::{
-  BatchedBuildDiagnostic, BuildDiagnostic, BuildResult, Diagnostic, DiagnosticOptions, ResultExt,
+  BatchedBuildDiagnostic, BuildDiagnostic, BuildResult, Diagnostic, DiagnosticOptions,
   filter_out_disabled_diagnostics,
 };
-use rolldown_fs_watcher::{FsWatcher, RecursiveMode};
-use rolldown_utils::{dashmap::FxDashSet, pattern_filter};
+use rolldown_fs_watcher::FsWatcher;
+use rolldown_utils::pattern_filter;
 use std::path::Path;
 use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, Ordering};
@@ -26,7 +26,6 @@ pub struct WatchTask {
   bundler: Arc<TokioMutex<Bundler>>,
   options: Arc<NormalizedBundlerOptions>,
   fs_watcher: std::sync::Mutex<FsWatcher>,
-  watched_files: FxDashSet<WatchPath>,
   pub(crate) needs_rebuild: bool,
   closed: Arc<AtomicBool>,
 }
@@ -56,12 +55,10 @@ impl WatchTask {
       .build()?;
 
     let options = Arc::clone(bundler.options());
-
     Ok(Self {
       bundler: Arc::new(TokioMutex::new(bundler)),
       options,
       fs_watcher: std::sync::Mutex::new(fs_watcher),
-      watched_files: FxDashSet::default(),
       needs_rebuild: true,
       closed: Arc::clone(closed),
     })
@@ -77,10 +74,9 @@ impl WatchTask {
     let start_time = Instant::now();
 
     let skip_write = self.options.watch.skip_write;
-    // Use field-level borrows so the closure can capture fs_watcher/watched_files/options
+    // Use field-level borrows so the closure can capture fs_watcher/options
     // without conflicting with the &mut self borrow on bundler.
     let fs_watcher_ref = &self.fs_watcher;
-    let watched_files_ref = &self.watched_files;
     let options_ref = &*self.options;
 
     // Scope the bundler lock to minimize lock duration
@@ -110,12 +106,7 @@ impl WatchTask {
           // (so files are watched even on error — enables recovery when user fixes the issue)
           let watch_files: Vec<ArcStr> =
             bundle.get_watch_files().iter().map(|f| f.clone()).collect();
-          Self::update_watch_files_from(
-            fs_watcher_ref,
-            watched_files_ref,
-            options_ref,
-            &watch_files,
-          )?;
+          Self::update_watch_files_from(fs_watcher_ref, options_ref, &watch_files)?;
 
           let scan_output = scan_result?;
 
@@ -225,56 +216,30 @@ impl WatchTask {
 
   /// Update watched files by adding new ones to the fs watcher.
   fn update_watch_files(&self, files: &[ArcStr]) -> BuildResult<()> {
-    Self::update_watch_files_from(&self.fs_watcher, &self.watched_files, &self.options, files)
+    Self::update_watch_files_from(&self.fs_watcher, &self.options, files)
   }
 
   /// Static helper: update FS watcher with newly discovered files.
   /// Separated from `&self` to allow calling from closures during build.
   fn update_watch_files_from(
     fs_watcher: &std::sync::Mutex<FsWatcher>,
-    watched_files: &FxDashSet<WatchPath>,
     options: &NormalizedBundlerOptions,
     files: &[ArcStr],
   ) -> BuildResult<()> {
-    let mut fs_watcher = fs_watcher.lock().expect("fs_watcher lock poisoned");
-    let mut watcher_paths = fs_watcher.paths_mut();
-    let mut added_files = Vec::new();
-
-    for file in files {
-      let watch_path = WatchPath::new(file.as_str(), &options.cwd);
-      if watched_files.contains(&watch_path) {
-        continue;
-      }
-      let path = watch_path.as_path();
-      if !path.exists() {
-        continue;
-      }
-      if pattern_filter::filter(
-        options.watch.exclude.as_deref(),
-        options.watch.include.as_deref(),
-        path.to_string_lossy().as_ref(),
-        options.cwd.to_string_lossy().as_ref(),
-      )
-      .inner()
-      {
-        match watcher_paths.add(path, RecursiveMode::Recursive) {
-          Ok(()) => {
-            tracing::debug!(name = "notify watch", path = ?path);
-            added_files.push(watch_path);
-          }
-          Err(e) => {
-            tracing::debug!(name = "notify watch skipped", path = ?path, error = ?e);
-          }
-        }
-      }
-    }
-
-    watcher_paths.commit().map_err_to_unhandleable()?;
-    for file in added_files {
-      watched_files.insert(file);
-    }
-
-    Ok(())
+    let cwd = options.cwd.to_string_lossy();
+    fs_watcher.lock().expect("fs_watcher lock poisoned").watch_paths(
+      files.iter().map(ArcStr::as_str),
+      |path| {
+        path.exists()
+          && pattern_filter::filter(
+            options.watch.exclude.as_deref(),
+            options.watch.include.as_deref(),
+            &path.to_string_lossy(),
+            &cwd,
+          )
+          .inner()
+      },
+    )
   }
 
   /// Mark this task as needing rebuild if the changed file is in our watch list.
@@ -329,7 +294,7 @@ impl WatchTask {
   }
 
   fn is_watched_file(&self, path: &str) -> bool {
-    Path::new(path).ancestors().any(|ancestor| self.watched_files.contains(ancestor))
+    self.fs_watcher.lock().expect("fs_watcher lock poisoned").is_watched(Path::new(path))
   }
 }
 

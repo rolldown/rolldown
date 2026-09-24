@@ -28,7 +28,7 @@ Everything lives in `.github/workflows/reusable-release-build.yml`, gated on a `
    - Windows: `rolldown_binding.pdb`. The name must match the CodeView record in the DLL.
 
 4. `Upload Debug Info Artifact` uploads it as `debuginfo-<target>`.
-5. `verify-debuginfo` (one job per enabled target) downloads the binding and the archive, then runs `scripts/misc/verify-debuginfo.mjs`. That script calls `__internalForcePanic()` on the binding twice: once without the archive, asserting no source-location frames, then again after unpacking the archive next to the `.node`, asserting an `internal_force_panic` frame with a source location. On Linux it also checks with `readelf` that the `.node` has no `.debug_*` sections.
+5. `verify-debuginfo` (one Linux job per enabled target) downloads the binding and the archive, then runs `scripts/misc/verify-debuginfo.mjs`. The script parses both files and never loads the binding. It checks that the `.node` has no debug info, and that the archive entry carries the ID the lookup below matches on: the `.gnu_debuglink` name and CRC32 on ELF, `LC_UUID` on Mach-O, the CodeView GUID and age on Windows. No panic runs, so the published binding needs no panic trigger. The cost: CI does not check that `backtrace-rs` finds the file at run time. That needs a real panic and the steps in [Reproducing a panic locally](#reproducing-a-panic-locally).
 6. The `release` job in `publish-to-npm.yml` downloads `debuginfo-*` and passes the archives to `gh release create`.
 
 ## How the side file is found

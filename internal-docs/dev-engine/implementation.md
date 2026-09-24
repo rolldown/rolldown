@@ -156,7 +156,7 @@ coordinator is one of these messages:
 
 ```rust
 pub enum CoordinatorMsg {
-  WatchEvent(FsEventResult),                 // raw fs-watcher event batch
+  WatchEvent(FsEventResult),                 // fs-watcher event batch (path + kind)
   BundleCompleted {                          // a BundlingTask finished
     error_stage: Option<ErrorStage>,         // None on success; see §10
     has_generated_bundle_output: bool,
@@ -373,25 +373,18 @@ one is present.
 
 ## 6. From fs event to queued task — `handle_watch_event`
 
-`handle_watch_event` (`bundle_coordinator.rs`) translates a raw
-`notify` event batch into a `FxIndexMap<PathBuf, WatcherChangeKind>`
-via the shared `rolldown_fs_watcher::map_notify_event` helper (same
-mapping as build watch):
-
-| `notify` `EventKind`                          | `WatcherChangeKind`                          |
-| --------------------------------------------- | -------------------------------------------- |
-| `Create(_)`                                   | `Create`                                     |
-| `Modify(Name(RenameMode::To))`                | `Create`                                     |
-| `Modify(Name(RenameMode::Both))`              | `Delete` (`paths[0]`), `Create` (`paths[1]`) |
-| `Modify(Name(RenameMode::From))`, `Remove(_)` | `Delete`                                     |
-| `Modify(_)` (other)                           | `Update`                                     |
-| `Modify(Metadata(_))` on macOS non-polling    | ignored (FBM-only; skipped before mapping)   |
-| `Access(_)`                                   | ignored                                      |
+`handle_watch_event` (`bundle_coordinator.rs`) collects an `FsEvent` batch
+from `rolldown_fs_watcher` into a `FxIndexMap<PathBuf, WatcherChangeKind>`.
+The events already carry the `WatcherChangeKind`: `rolldown_fs_watcher`
+maps notify events the same way for build watch and bundled dev, reports
+files only (directory events are expanded or dropped), reports a missing
+path as `Delete`, drops metadata changes that cannot be a write, and splits
+a `Name(Both)` rename into `Delete`+`Create`. See "Notify Event Mapping" in
+`internal-docs/watch-mode/implementation.md` for the table.
 
 It then calls `handle_file_changes`. Note that `rolldown_dev` does no
 debouncing or Delete+Create consolidation of its own — it dispatches each
-raw watcher event batch straight through. A `Name(Both)` rename is split
-into `Delete`+`Create` at mapping time; that is not debounce consolidation.
+watcher event batch straight through.
 
 ---
 

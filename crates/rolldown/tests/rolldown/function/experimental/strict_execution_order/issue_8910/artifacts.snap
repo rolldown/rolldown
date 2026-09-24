@@ -6,7 +6,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## node0.js
 
 ```js
-import { n as __esmMin } from "./rolldown-runtime.js";
+import { i as __esmMin } from "./node12.js";
 //#region node0.js
 var node_0;
 //#endregion
@@ -30,7 +30,7 @@ export default require_node1();
 ## node12.js
 
 ```js
-import { n as __esmMin, r as __exportAll, t as __commonJSMin } from "./rolldown-runtime.js";
+// HIDDEN [\0rolldown/runtime.js]
 //#region node2.js
 var node2_exports = /* @__PURE__ */ __exportAll({ node_2: () => node_2 });
 var node_2;
@@ -48,15 +48,7 @@ var require_node1 = /* @__PURE__ */ __commonJSMin(((exports) => {
 	exports.node_1 = 1;
 }));
 //#endregion
-export { init_node2 as n, node2_exports as r, require_node1 as t };
-
-```
-
-## rolldown-runtime.js
-
-```js
-// HIDDEN [\0rolldown/runtime.js]
-export { __esmMin as n, __exportAll as r, __commonJSMin as t };
+export { __esmMin as i, init_node2 as n, node2_exports as r, require_node1 as t };
 
 ```
 
@@ -67,7 +59,7 @@ export { __esmMin as n, __exportAll as r, __commonJSMin as t };
 ### node0.js
 
 ```js
-import { n as __esmMin } from "./rolldown-runtime.js";
+import { i as __esmMin } from "./node12.js";
 //#region node0.js
 var node_0;
 //#endregion
@@ -91,7 +83,7 @@ export default require_node1();
 ### node12.js
 
 ```js
-import { n as __esmMin, r as __exportAll, t as __commonJSMin } from "./rolldown-runtime.js";
+// HIDDEN [\0rolldown/runtime.js]
 //#region node2.js
 var node2_exports = /* @__PURE__ */ __exportAll({ node_2: () => node_2 });
 var node_2;
@@ -109,14 +101,6 @@ var require_node1 = /* @__PURE__ */ __commonJSMin(((exports) => {
 	exports.node_1 = 1;
 }));
 //#endregion
-export { init_node2 as n, node2_exports as r, require_node1 as t };
-
-```
-
-### rolldown-runtime.js
-
-```js
-// HIDDEN [\0rolldown/runtime.js]
-export { __esmMin as n, __exportAll as r, __commonJSMin as t };
+export { __esmMin as i, init_node2 as n, node2_exports as r, require_node1 as t };
 
 ```

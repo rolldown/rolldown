@@ -10,6 +10,7 @@ use rolldown_error::{BuildResult, ResultExt};
 
 use crate::{
   FsEventHandler, FsWatcherConfig,
+  event_map::EventMapper,
   watcher::{PathsMut, WatcherBackend},
 };
 
@@ -24,7 +25,10 @@ pub fn create_backend<F: FsEventHandler>(
   match (config.use_polling, config.use_debounce) {
     (true, false) => Ok(Box::new(immediate::NotifyWatcher(
       ::notify::PollWatcher::new(
-        immediate::NotifyEventHandlerAdapter(event_handler),
+        immediate::NotifyEventHandlerAdapter {
+          handler: event_handler,
+          mapper: EventMapper::new(config),
+        },
         config.to_notify_config(),
       )
       .map_err_to_unhandleable()?,
@@ -33,7 +37,10 @@ pub fn create_backend<F: FsEventHandler>(
       new_debouncer_opt::<_, ::notify::PollWatcher, RecommendedCache>(
         config.debounce_delay_duration(),
         config.debounce_tick_rate(),
-        debounced::DebouncedNotifyEventHandlerAdapter(event_handler),
+        debounced::DebouncedNotifyEventHandlerAdapter {
+          handler: event_handler,
+          mapper: EventMapper::new(config),
+        },
         RecommendedCache::new(),
         config.to_notify_config(),
       )
@@ -41,7 +48,10 @@ pub fn create_backend<F: FsEventHandler>(
     ))),
     (false, false) => Ok(Box::new(immediate::NotifyWatcher(
       ::notify::RecommendedWatcher::new(
-        immediate::NotifyEventHandlerAdapter(event_handler),
+        immediate::NotifyEventHandlerAdapter {
+          handler: event_handler,
+          mapper: EventMapper::new(config),
+        },
         config.to_notify_config(),
       )
       .map_err_to_unhandleable()?,
@@ -50,7 +60,10 @@ pub fn create_backend<F: FsEventHandler>(
       new_debouncer_opt::<_, ::notify::RecommendedWatcher, RecommendedCache>(
         config.debounce_delay_duration(),
         config.debounce_tick_rate(),
-        debounced::DebouncedNotifyEventHandlerAdapter(event_handler),
+        debounced::DebouncedNotifyEventHandlerAdapter {
+          handler: event_handler,
+          mapper: EventMapper::new(config),
+        },
         RecommendedCache::new(),
         config.to_notify_config(),
       )

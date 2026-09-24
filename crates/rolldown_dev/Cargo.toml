@@ -25,7 +25,6 @@ anyhow = { workspace = true }
 arcstr = { workspace = true }
 futures = { workspace = true }
 rolldown = { workspace = true, features = ["experimental"] }
-rolldown-notify = { workspace = true }
 rolldown_common = { workspace = true }
 rolldown_dev_common = { workspace = true }
 rolldown_error = { workspace = true }

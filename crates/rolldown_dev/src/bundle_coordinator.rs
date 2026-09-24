@@ -6,11 +6,9 @@ use std::{
 
 use anyhow::Context;
 use futures::FutureExt;
-#[cfg(target_os = "macos")]
-use notify::EventKind;
 use rolldown_common::WatcherChangeKind;
 use rolldown_error::BuildResult;
-use rolldown_fs_watcher::{FsChangeKind, FsEventResult, FsWatcher, map_notify_event};
+use rolldown_fs_watcher::{FsEventResult, FsWatcher};
 use rolldown_utils::{indexmap::FxIndexMap, pattern_filter};
 use tokio::sync::Mutex;
 
@@ -163,32 +161,12 @@ impl BundleCoordinator {
 
   /// Handle file change events from watcher.
   ///
-  /// Rename mapping is shared with build watch via [`map_notify_event`].
   /// See `internal-docs/dev-engine/implementation.md` ("From fs event to queued task").
   async fn handle_watch_event(&mut self, watch_event: FsEventResult) {
     match watch_event {
-      Ok(batched_events) => {
-        let mut changed_files = FxIndexMap::default();
-        for batched_event in batched_events {
-          #[cfg(target_os = "macos")]
-          if matches!(
-            batched_event.detail.kind,
-            EventKind::Modify(notify::event::ModifyKind::Metadata(_))
-          ) && !self.ctx.options.use_polling
-          {
-            // kqueue on mac emits metadata events often; they do not affect the
-            // build in most cases. Polling prefers metadata over content events,
-            // so those must still be mapped.
-            continue;
-          }
-
-          for (path, kind) in
-            map_notify_event(&batched_event.detail.kind, batched_event.detail.paths)
-          {
-            changed_files.insert(path, watcher_change_kind(kind));
-          }
-        }
-
+      Ok(fs_events) => {
+        let changed_files =
+          fs_events.into_iter().map(|fs_event| (fs_event.path, fs_event.kind)).collect();
         self.handle_file_changes(changed_files).await;
       }
       Err(e) => {
@@ -492,13 +470,5 @@ impl BundleCoordinator {
       .watch_paths(bundler.watch_files().iter().map(|file| PathBuf::from(file.as_str())), |path| {
         pattern_filter::filter(exclude, include, &path.to_string_lossy(), &cwd).inner()
       })
-  }
-}
-
-fn watcher_change_kind(kind: FsChangeKind) -> WatcherChangeKind {
-  match kind {
-    FsChangeKind::Create => WatcherChangeKind::Create,
-    FsChangeKind::Update => WatcherChangeKind::Update,
-    FsChangeKind::Delete => WatcherChangeKind::Delete,
   }
 }

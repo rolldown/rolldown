@@ -834,6 +834,14 @@ test.concurrent(
     await expect.poll(() => changedIds, { timeout: 10_000 }).toContain(nestedFile);
     await expect.poll(() => rebuilds, { timeout: 10_000 }).toBeGreaterThan(0);
 
+    // the backends report a moved-in directory, not its files; the files are still the change
+    const outsideTree = path.join(cwd, 'outside-tree');
+    const movedFile = path.join(watchedDir, 'tree', 'deep', 'data.txt');
+    fs.mkdirSync(path.join(outsideTree, 'deep'), { recursive: true });
+    fs.writeFileSync(path.join(outsideTree, 'deep', 'data.txt'), '1');
+    fs.renameSync(outsideTree, path.join(watchedDir, 'tree'));
+    await expect.poll(() => changedIds, { timeout: 10_000 }).toContain(movedFile);
+
     const createdFile = path.join(watchedDir, 'created', 'data.txt');
     fs.mkdirSync(path.dirname(createdFile));
     await editFile(createdFile, '1');

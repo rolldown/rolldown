@@ -2800,6 +2800,7 @@ dependencies = [
  "rolldown_error",
  "rustc-hash",
  "tracing",
+ "walkdir",
 ]
 
 [[package]]

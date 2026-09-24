@@ -23,6 +23,12 @@ Data shared across all connected browser tabs:
 | Build Output      | Bundled JS files on disk/memory                                         |
 | Watched Files     | Files monitored for changes                                             |
 
+The `/@vite/lazy` endpoint path is prefixed with `experimental.devMode.base` (the dev server's
+public base path) everywhere it is generated — the full build's lazy-import rewrite
+(`module_finalizers`) and the HMR finalizer's nested-import rewrite both pass `base` to
+`create_request_lazy_call`, which prefixes the endpoint via `crate::hmr::utils::lazy_endpoint_url`
+(trailing slashes of `base` are trimmed; no `base` means the historical root-absolute path).
+
 **Key behavior**: Once a lazy module is fetched by any client, all subsequent clients receive the fetched template (which imports the real module directly). The build output is refreshed after lazy compilation, so future page loads get the fetched template without needing a `/lazy` request.
 
 ### Client Scope

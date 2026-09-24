@@ -873,6 +873,8 @@ impl<'a, Fs: FileSystem + Clone + 'static> HmrStage<'a, Fs> {
     let use_pife_for_module_wrappers =
       self.options.optimization.is_pife_for_module_wrappers_enabled();
     let modules = &self.module_table().modules;
+    let lazy_base =
+      self.options.experimental.dev_mode.as_ref().and_then(|dev_mode| dev_mode.base.clone());
 
     ast.program.with_mut(|fields| {
       // Re-running semantic re-stamps every NodeId. The NodeId-keyed side-table lookups
@@ -894,6 +896,7 @@ impl<'a, Fs: FileSystem + Clone + 'static> HmrStage<'a, Fs> {
         generated_static_import_stmts_from_external: FxIndexMap::default(),
         unique_index,
         named_exports: FxHashMap::default(),
+        lazy_base,
       };
 
       traverse_mut(&mut finalizer, fields.allocator, fields.program, scoping, ());

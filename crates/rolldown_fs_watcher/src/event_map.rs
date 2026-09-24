@@ -1,19 +1,28 @@
-use std::{fs, io, path::PathBuf};
+use std::{
+  fs, io,
+  path::{Path, PathBuf},
+};
 
 use notify::{
   Event as NotifyEvent, EventKind,
   event::{MetadataKind, ModifyKind, RenameMode},
 };
 use rolldown_common::WatcherChangeKind;
+use walkdir::WalkDir;
 
 use crate::FsEvent;
 
 /// Translates a notify event into [`FsEvent`]s, the same way for build watch and bundled dev.
 ///
 /// The backends report a kind and a path, and the kind is not always right: FSEvents reports
-/// `Name(Any)` for both sides of a rename and repeats earlier flags of a path. So the kind is
-/// taken where it is clear, and the disk decides the rest:
+/// `Name(Any)` for both sides of a rename and repeats earlier flags of a path, and no backend
+/// reports the files of a directory that appears. So the kind is taken where it is clear, and
+/// the disk decides the rest:
 ///
+/// - Only files are reported, like the `add`/`change`/`unlink` events of chokidar. A directory
+///   that appears is reported as `Create` of every file below it; a directory that disappears is
+///   reported as `Delete` of the directory, since its files are unknown by then; a modified
+///   directory is not reported.
 /// - A path that no longer exists is reported as `Delete`, whatever the backend said.
 /// - A metadata change is reported as `Update` when it can be a write: `touch` is one on every
 ///   platform, and polling reports every write as `WriteTime`. Permission, ownership, extended
@@ -57,14 +66,29 @@ pub fn map_notify_event(event: NotifyEvent, events: &mut Vec<FsEvent>) {
   }
 }
 
-/// Reports `kind` for a path that should exist now, unless the disk says it is gone.
+/// Reports `kind` for a path that should exist now, after a look at the disk: a directory stands
+/// for the files below it, a missing path is deleted.
 fn push_present(path: PathBuf, kind: WatcherChangeKind, events: &mut Vec<FsEvent>) {
   match fs::symlink_metadata(&path) {
+    Ok(metadata) if metadata.is_dir() => {
+      if kind == WatcherChangeKind::Create {
+        push_files_below(&path, events);
+      }
+    }
     Err(error) if error.kind() == io::ErrorKind::NotFound => {
       events.push(FsEvent::new(path, WatcherChangeKind::Delete));
     }
     _ => events.push(FsEvent::new(path, kind)),
   }
+}
+
+fn push_files_below(dir: &Path, events: &mut Vec<FsEvent>) {
+  let files = WalkDir::new(dir)
+    .into_iter()
+    .filter_map(Result::ok)
+    .filter(|entry| !entry.file_type().is_dir())
+    .map(|entry| FsEvent::new(entry.into_path(), WatcherChangeKind::Create));
+  events.extend(files);
 }
 
 #[cfg(all(test, not(windows)))]
@@ -83,7 +107,7 @@ mod tests {
   use super::map_notify_event;
   use crate::FsEvent;
 
-  /// A fresh directory holding `a.js`.
+  /// A fresh directory holding `a.js`, `nested/b.js` and the empty directory `nested/empty`.
   struct Fixture(PathBuf);
 
   impl Fixture {
@@ -91,8 +115,9 @@ mod tests {
       let dir =
         std::env::temp_dir().join(format!("rolldown_fs_watcher_{}_{name}", std::process::id()));
       let _ = fs::remove_dir_all(&dir);
-      fs::create_dir_all(&dir).unwrap();
+      fs::create_dir_all(dir.join("nested/empty")).unwrap();
       fs::write(dir.join("a.js"), "").unwrap();
+      fs::write(dir.join("nested/b.js"), "").unwrap();
       Self(dir)
     }
 
@@ -182,5 +207,36 @@ mod tests {
     ] {
       assert!(map(EventKind::Modify(ModifyKind::Metadata(kind)), &[&a]).is_empty());
     }
+  }
+
+  #[test]
+  fn directory_events() {
+    let fixture = Fixture::new("directory_events");
+    let dir = fixture.0.clone();
+
+    // a directory that appears stands for the files below it
+    let files_below = [(fixture.path("a.js"), Create), (fixture.path("nested/b.js"), Create)];
+    for kind in [
+      EventKind::Create(CreateKind::Folder),
+      EventKind::Modify(ModifyKind::Name(RenameMode::To)),
+      EventKind::Modify(ModifyKind::Name(RenameMode::Any)),
+    ] {
+      assert_eq!(map(kind, &[&dir]), files_below);
+    }
+    assert!(
+      map(EventKind::Create(CreateKind::Folder), &[&fixture.path("nested/empty")]).is_empty()
+    );
+
+    // a modified directory is not reported
+    assert!(map(EventKind::Modify(ModifyKind::Metadata(MetadataKind::Any)), &[&dir]).is_empty());
+    assert!(map(EventKind::Modify(ModifyKind::Data(DataChange::Content)), &[&dir]).is_empty());
+
+    // a directory that disappears is reported itself
+    fs::remove_dir_all(&dir).unwrap();
+    assert_eq!(map(EventKind::Remove(RemoveKind::Folder), &[&dir]), [(dir.clone(), Delete)]);
+    assert_eq!(
+      map(EventKind::Modify(ModifyKind::Name(RenameMode::From)), &[&dir]),
+      [(dir, Delete)]
+    );
   }
 }

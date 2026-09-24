@@ -1,4 +1,37 @@
 
+## [1.2.11] - 2026-09-24
+
+### 🚀 Features
+
+- watch: report only file events (#10974) by @shulaoda
+
+### 🐛 Bug Fixes
+
+- sourcemap: preserve names through `collapse_sourcemaps` (#9486) by @eoin
+- watch: map metadata events by kind and missing paths as deleted (#10973) by @shulaoda
+
+### 🚜 Refactor
+
+- rolldown_fs_watcher: hand the handler file events instead of notify results (#10980) by @shulaoda
+- rolldown_fs_watcher: share one event handler adapter between the notify watchers (#10979) by @shulaoda
+- rolldown_fs_watcher: register every path with one watch mode (#10978) by @shulaoda
+- rolldown_fs_watcher: tweak the backend traits and the event mapping (#10977) by @shulaoda
+- watch: translate notify events inside FsWatcher (#10972) by @shulaoda
+
+### 📚 Documentation
+
+- watch: update the fs watcher layout and the dev coordinator message (#10981) by @shulaoda
+- watch: document the event translation in FsWatcher (#10975) by @shulaoda
+
+### ◀️ Revert
+
+- "perf(dev/lazy): fetch a lazy route in one request" (#10789) (#10982) by @h-a-n-a
+
+### ❤️ New Contributors
+
+* @eoin made their first contribution in [#9486](https://github.com/rolldown/rolldown/pull/9486)
+
+
 ## [1.2.10] - 2026-09-23
 
 ### 🚀 Features

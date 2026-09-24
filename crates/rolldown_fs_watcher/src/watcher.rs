@@ -1,6 +1,5 @@
 use std::path::{Path, PathBuf};
 
-use notify::RecursiveMode;
 use rolldown_error::BuildResult;
 use rustc_hash::FxHashSet;
 
@@ -37,7 +36,7 @@ impl FsWatcher {
       if self.watched_paths.contains(&path) || added_paths.contains(&path) || !is_wanted(&path) {
         continue;
       }
-      match paths_mut.add(&path, RecursiveMode::Recursive) {
+      match paths_mut.add(&path) {
         Ok(()) => {
           tracing::debug!(name = "notify watch", ?path);
           added_paths.insert(path);

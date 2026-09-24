@@ -16,7 +16,7 @@ pub trait WatcherBackend: Send {
 }
 
 pub trait PathsMut {
-  fn add(&mut self, path: &Path, recursive_mode: RecursiveMode) -> BuildResult<()>;
+  fn add(&mut self, path: &Path) -> BuildResult<()>;
 
   fn commit(self: Box<Self>) -> BuildResult<()>;
 }
@@ -76,12 +76,10 @@ impl<'me> NotifyPathsMutAdapter<'me> {
 }
 
 impl PathsMut for NotifyPathsMutAdapter<'_> {
-  fn add(&mut self, path: &Path, recursive_mode: RecursiveMode) -> BuildResult<()> {
-    self
-      .0
-      .add(path, WatchMode { recursive_mode, target_mode: TargetMode::TrackPath })
-      .map_err_to_unhandleable()
-      .map_err(Into::into)
+  fn add(&mut self, path: &Path) -> BuildResult<()> {
+    let watch_mode =
+      WatchMode { recursive_mode: RecursiveMode::Recursive, target_mode: TargetMode::TrackPath };
+    self.0.add(path, watch_mode).map_err_to_unhandleable().map_err(Into::into)
   }
 
   fn commit(self: Box<Self>) -> BuildResult<()> {

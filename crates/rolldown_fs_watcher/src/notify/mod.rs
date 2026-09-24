@@ -72,9 +72,14 @@ impl<'me> NotifyPathsMutAdapter<'me> {
 
 impl PathsMut for NotifyPathsMutAdapter<'_> {
   fn add(&mut self, path: &Path) -> BuildResult<()> {
-    let watch_mode =
-      WatchMode { recursive_mode: RecursiveMode::Recursive, target_mode: TargetMode::TrackPath };
-    self.0.add(path, watch_mode).map_err_to_unhandleable().map_err(Into::into)
+    self
+      .0
+      .add(
+        path,
+        WatchMode { recursive_mode: RecursiveMode::Recursive, target_mode: TargetMode::TrackPath },
+      )
+      .map_err_to_unhandleable()
+      .map_err(Into::into)
   }
 
   fn commit(self: Box<Self>) -> BuildResult<()> {
@@ -91,7 +96,7 @@ impl<T: FsEventHandler> NotifyEventHandlerAdapter<T> {
       event_map::map_notify_event(notify_event, &mut events);
     }
     if !events.is_empty() {
-      self.0.handle_event(Ok(events));
+      self.0.handle_events(events);
     }
   }
 }

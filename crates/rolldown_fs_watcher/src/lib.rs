@@ -6,5 +6,5 @@ mod notify;
 mod watcher;
 
 pub use config::FsWatcherConfig;
-pub use event::{FsEvent, FsEventHandler, FsEventResult};
+pub use event::{FsEvent, FsEventHandler};
 pub use watcher::FsWatcher;

@@ -8,7 +8,7 @@ use anyhow::Context;
 use futures::FutureExt;
 use rolldown_common::WatcherChangeKind;
 use rolldown_error::BuildResult;
-use rolldown_fs_watcher::{FsEventResult, FsWatcher};
+use rolldown_fs_watcher::{FsEvent, FsWatcher};
 use rolldown_utils::{indexmap::FxIndexMap, pattern_filter};
 use tokio::sync::Mutex;
 
@@ -162,17 +162,9 @@ impl BundleCoordinator {
   /// Handle file change events from watcher.
   ///
   /// See `internal-docs/dev-engine/implementation.md` ("From fs event to queued task").
-  async fn handle_watch_event(&mut self, watch_event: FsEventResult) {
-    match watch_event {
-      Ok(fs_events) => {
-        let changed_files =
-          fs_events.into_iter().map(|fs_event| (fs_event.path, fs_event.kind)).collect();
-        self.handle_file_changes(changed_files).await;
-      }
-      Err(e) => {
-        tracing::error!("notify error: {e:?}");
-      }
-    }
+  async fn handle_watch_event(&mut self, events: Vec<FsEvent>) {
+    let changed_files = events.into_iter().map(|event| (event.path, event.kind)).collect();
+    self.handle_file_changes(changed_files).await;
   }
 
   /// Handle file changes based on initial build state

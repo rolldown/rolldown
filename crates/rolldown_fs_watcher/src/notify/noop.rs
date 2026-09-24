@@ -3,7 +3,7 @@ use std::path::Path;
 use notify::RecursiveMode;
 use rolldown_error::BuildResult;
 
-use crate::watcher::{PathsMut, WatcherBackend};
+use super::{PathsMut, WatcherBackend};
 
 pub(super) struct NoopWatcher;
 

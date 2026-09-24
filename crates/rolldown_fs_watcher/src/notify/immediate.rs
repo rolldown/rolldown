@@ -1,11 +1,7 @@
 use notify::Watcher as NotifyWatcherTrait;
 
-use super::NotifyPathsMutAdapter;
-use crate::{
-  FsEventHandler,
-  event_map::map_notify_event,
-  watcher::{PathsMut, WatcherBackend},
-};
+use super::{NotifyPathsMutAdapter, PathsMut, WatcherBackend, event_map::map_notify_event};
+use crate::FsEventHandler;
 
 pub(super) struct NotifyWatcher<W: NotifyWatcherTrait>(pub(super) W);
 

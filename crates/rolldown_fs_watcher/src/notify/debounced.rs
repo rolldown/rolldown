@@ -3,12 +3,8 @@ use notify_debouncer_full::{
   DebounceEventHandler, DebounceEventResult, Debouncer, RecommendedCache,
 };
 
-use super::NotifyPathsMutAdapter;
-use crate::{
-  FsEventHandler,
-  event_map::map_notify_event,
-  watcher::{PathsMut, WatcherBackend},
-};
+use super::{NotifyPathsMutAdapter, PathsMut, WatcherBackend, event_map::map_notify_event};
+use crate::FsEventHandler;
 
 pub(super) struct DebouncedNotifyWatcher<W: NotifyWatcherTrait>(
   pub(super) Debouncer<W, RecommendedCache>,

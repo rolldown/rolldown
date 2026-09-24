@@ -827,7 +827,6 @@ module.exports.BindingWatcherEvent = nativeBinding.BindingWatcherEvent
 module.exports.ParallelJsPluginRegistry = nativeBinding.ParallelJsPluginRegistry
 module.exports.TraceSubscriberGuard = nativeBinding.TraceSubscriberGuard
 module.exports.TsconfigCache = nativeBinding.TsconfigCache
-module.exports.__internalForcePanic = nativeBinding.__internalForcePanic
 module.exports.BindingAttachDebugInfo = nativeBinding.BindingAttachDebugInfo
 module.exports.BindingBuiltinPluginName = nativeBinding.BindingBuiltinPluginName
 module.exports.BindingChunkModuleOrderBy = nativeBinding.BindingChunkModuleOrderBy

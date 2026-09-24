@@ -91,7 +91,33 @@ pub fn collapse_sourcemaps(sourcemap_chain: &[&oxc_sourcemap::SourceMap<'_>]) ->
   chain_with_offsets.reverse();
   let last_offset = append_names(last_map);
 
-  let tokens: Box<[Token]> = last_map
+  // `last_offset` counts the names of every map before the last one. When it is 0, no traced
+  // token can carry a name, so the remap loop skips the per-step name tracking.
+  let tokens = if last_offset == 0 {
+    remap_tokens::<false>(last_map, &chain_with_offsets, last_offset)
+  } else {
+    remap_tokens::<true>(last_map, &chain_with_offsets, last_offset)
+  };
+
+  SourceMap::new(
+    None,
+    merged_names,
+    None,
+    first_map.get_sources().map(|s| Cow::Owned(s.to_owned())).collect(),
+    first_map.get_source_contents().map(|x| x.map(|s| Cow::Owned(s.to_owned()))).collect(),
+    tokens,
+    None,
+  )
+}
+
+/// Remaps `last_map`'s tokens through `chain`, the earlier maps with the nearest one first.
+/// `TRACK_NAMES` is a const so that a chain without names compiles without the name work.
+fn remap_tokens<const TRACK_NAMES: bool>(
+  last_map: &oxc_sourcemap::SourceMap<'_>,
+  chain: &[(&oxc_sourcemap::SourceMap<'_>, Vec<&[Token]>, u32)],
+  last_offset: u32,
+) -> Box<[Token]> {
+  last_map
     .get_source_view_tokens()
     .filter_map(|token| {
       let unmapped_token =
@@ -102,7 +128,7 @@ pub fn collapse_sourcemaps(sourcemap_chain: &[&oxc_sourcemap::SourceMap<'_>]) ->
 
       let mut original_token = token;
       let mut name_id = token.get_name_id().map(|id| id + last_offset);
-      for (sourcemap, lookup_table, offset) in &chain_with_offsets {
+      for (sourcemap, lookup_table, offset) in chain {
         let traced = sourcemap.lookup_source_view_token_approx(
           lookup_table,
           original_token.get_src_line(),
@@ -111,8 +137,10 @@ pub fn collapse_sourcemaps(sourcemap_chain: &[&oxc_sourcemap::SourceMap<'_>]) ->
         if traced.get_source_id().is_none() {
           return Some(unmapped_token());
         }
-        // Prefer the name from this (earlier) map; otherwise carry forward the downstream one.
-        name_id = traced.get_name_id().map(|id| id + offset).or(name_id);
+        if TRACK_NAMES {
+          // Prefer the name from this (earlier) map; otherwise carry forward the downstream one.
+          name_id = traced.get_name_id().map(|id| id + offset).or(name_id);
+        }
         original_token = traced;
       }
 
@@ -125,17 +153,7 @@ pub fn collapse_sourcemaps(sourcemap_chain: &[&oxc_sourcemap::SourceMap<'_>]) ->
         name_id,
       ))
     })
-    .collect();
-
-  SourceMap::new(
-    None,
-    merged_names,
-    None,
-    first_map.get_sources().map(|s| Cow::Owned(s.to_owned())).collect(),
-    first_map.get_source_contents().map(|x| x.map(|s| Cow::Owned(s.to_owned()))).collect(),
-    tokens,
-    None,
-  )
+    .collect()
 }
 
 #[test]

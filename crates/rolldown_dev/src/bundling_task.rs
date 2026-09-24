@@ -7,7 +7,7 @@ use std::{
 };
 
 use arcstr::ArcStr;
-use rolldown_common::{ClientHmrInput, ClientHmrUpdate, HmrUpdate, ScanMode};
+use rolldown_common::{ClientHmrInput, ClientHmrUpdate, HmrUpdate, ScanMode, WatcherChangeKind};
 use rolldown_utils::indexmap::FxIndexMap;
 use rustc_hash::FxHashMap;
 use tokio::sync::Mutex;
@@ -82,13 +82,29 @@ impl BundlingTask {
     }
   }
 
+  /// The resolver caches misses as well as hits, and `clear_resolver_cache`
+  /// is its only invalidation. Clear it when this task could resolve a path
+  /// differently than the last one did. See
+  /// `internal-docs/dev-engine/implementation.md` §9c.
+  fn should_clear_resolver_cache(&self) -> bool {
+    // A failed task may have cached the miss that made it fail. The file
+    // can be back without a create event: a missing file the watcher never
+    // saw, followed by an importer edit, or a recreate reported as an update.
+    self.dev_context.last_task_errored.load(Ordering::Relaxed)
+      || self.input.changed_files().iter().any(|(path, event)| {
+        matches!(event, WatcherChangeKind::Create | WatcherChangeKind::Delete)
+          || path.file_name().is_some_and(|name| name == "package.json")
+      })
+  }
+
   pub async fn run(mut self) {
     tracing::trace!("[BundlingTask] starts to run.\n - Task Input: {:#?}", self.input);
     self.run_inner().await;
 
     let has_generated_bundle_output = self.has_rebuild_happen;
     let error_stage = self.final_error_stage();
-    // Feeds the next task's noop-upgrade check — see `DevContext::last_task_errored`.
+    // Feeds the next task's noop-upgrade check and resolver cache clear — see
+    // `DevContext::last_task_errored`.
     self.dev_context.last_task_errored.store(error_stage.is_some(), Ordering::Relaxed);
 
     tracing::trace!(
@@ -145,6 +161,8 @@ impl BundlingTask {
       if changed_tsconfig || self.input.requires_full_rebuild() {
         bundler.clear_resolver_cache();
         bundler.clear_transform_tsconfig_cache();
+      } else if self.should_clear_resolver_cache() {
+        bundler.clear_resolver_cache();
       }
       changed_tsconfig
     };

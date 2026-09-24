@@ -63,12 +63,12 @@ impl FsWatcher {
 #[cfg(all(test, not(windows)))]
 mod tests {
   use super::*;
-  use crate::FsEventResult;
+  use crate::FsEvent;
 
   struct NoopHandler;
 
   impl FsEventHandler for NoopHandler {
-    fn handle_event(&mut self, _event: FsEventResult) {}
+    fn handle_events(&mut self, _events: Vec<FsEvent>) {}
   }
 
   #[test]

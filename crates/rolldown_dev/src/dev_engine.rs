@@ -500,7 +500,7 @@ impl DevEngine {
     if !events.is_empty() {
       // Send WatchEvent message to coordinator (simulates real file change)
       // The coordinator will automatically schedule a build via handle_file_changes
-      let _ = self.coordinator_sender.send(CoordinatorMsg::WatchEvent(Ok(events)));
+      let _ = self.coordinator_sender.send(CoordinatorMsg::WatchEvent(events));
     }
 
     // Send ScheduleBuild to ensure WatchEvent is processed (FIFO),

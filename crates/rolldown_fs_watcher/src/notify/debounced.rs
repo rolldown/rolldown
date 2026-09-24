@@ -20,7 +20,11 @@ impl<T: FsEventHandler> DebounceEventHandler for NotifyEventHandlerAdapter<T> {
   fn handle_event(&mut self, event_result: DebounceEventResult) {
     match event_result {
       Ok(debounced_events) => self.deliver(debounced_events.into_iter().map(|event| event.event)),
-      Err(errors) => self.0.handle_event(Err(errors)),
+      Err(errors) => {
+        for error in errors {
+          tracing::error!("notify error: {error:?}");
+        }
+      }
     }
   }
 }

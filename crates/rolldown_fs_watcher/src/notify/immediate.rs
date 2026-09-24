@@ -15,7 +15,7 @@ impl<T: FsEventHandler> ::notify::EventHandler for NotifyEventHandlerAdapter<T> 
   fn handle_event(&mut self, event_result: ::notify::Result<::notify::Event>) {
     match event_result {
       Ok(event) => self.deliver([event]),
-      Err(error) => self.0.handle_event(Err(vec![error])),
+      Err(error) => tracing::error!("notify error: {error:?}"),
     }
   }
 }

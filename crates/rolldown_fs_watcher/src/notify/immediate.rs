@@ -3,7 +3,7 @@ use notify::Watcher as NotifyWatcherTrait;
 use super::NotifyPathsMutAdapter;
 use crate::{
   FsEventHandler,
-  event_map::EventMapper,
+  event_map::map_notify_event,
   watcher::{PathsMut, WatcherBackend},
 };
 
@@ -15,22 +15,19 @@ impl<W: NotifyWatcherTrait + Send> WatcherBackend for NotifyWatcher<W> {
   }
 }
 
-pub(super) struct NotifyEventHandlerAdapter<T: FsEventHandler> {
-  pub(super) handler: T,
-  pub(super) mapper: EventMapper,
-}
+pub(super) struct NotifyEventHandlerAdapter<T: FsEventHandler>(pub(super) T);
 
 impl<T: FsEventHandler> ::notify::EventHandler for NotifyEventHandlerAdapter<T> {
   fn handle_event(&mut self, event_result: ::notify::Result<::notify::Event>) {
     match event_result {
       Ok(event) => {
         let mut events = Vec::new();
-        self.mapper.map(event, &mut events);
+        map_notify_event(event, &mut events);
         if !events.is_empty() {
-          self.handler.handle_event(Ok(events));
+          self.0.handle_event(Ok(events));
         }
       }
-      Err(error) => self.handler.handle_event(Err(vec![error])),
+      Err(error) => self.0.handle_event(Err(vec![error])),
     }
   }
 }

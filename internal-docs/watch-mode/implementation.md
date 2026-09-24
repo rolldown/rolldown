@@ -140,14 +140,14 @@ rolldown_watcher/
 rolldown_fs_watcher/
 ├── lib.rs                     // Public exports: FsWatcher, FsWatcherConfig, FsEvent*
 ├── config.rs                  // FsWatcherConfig (enabled, use_polling, use_debounce, …)
-├── event.rs                   // FsEvent (path + WatcherChangeKind), FsEventHandler, FsEventResult
-├── event_map.rs               // map_notify_event: notify events → FsEvents, files only
-├── watcher.rs                 // public FsWatcher + internal WatcherBackend + PathsMut
-└── notify/
-    ├── mod.rs                 // create_backend() — selects backend from config
+├── event.rs                   // FsEvent (path + WatcherChangeKind), FsEventHandler
+├── watcher.rs                 // FsWatcher: the watched paths, on top of a WatcherBackend
+└── notify/                    // everything that speaks notify
+    ├── mod.rs                 // WatcherBackend + PathsMut traits, create_backend() — selects backend from config
     ├── immediate.rs           // recommended / poll, no debounce
     ├── debounced.rs           // recommended / poll + notify-debouncer-full
-    └── noop.rs                // no-op backend when enabled: false
+    ├── noop.rs                // no-op backend when enabled: false
+    └── event_map.rs           // map_notify_event: notify events → FsEvents, files only
 ```
 
 ## State Machine

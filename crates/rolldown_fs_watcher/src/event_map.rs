@@ -1,66 +1,78 @@
+use std::{fs, io, path::PathBuf};
+
 use notify::{
   Event as NotifyEvent, EventKind,
-  event::{ModifyKind, RenameMode},
+  event::{MetadataKind, ModifyKind, RenameMode},
 };
 use rolldown_common::WatcherChangeKind;
 
-use crate::{FsEvent, FsWatcherConfig};
+use crate::FsEvent;
 
-/// Translates notify events into [`FsEvent`]s, the same way for build watch and bundled dev.
+/// Translates a notify event into [`FsEvent`]s, the same way for build watch and bundled dev.
 ///
-/// Rename events map `Name(From)` → `Delete`, `Name(To)` → `Create` and `Name(Both)` → `Delete`
-/// for `paths[0]`, `Create` for `paths[1]`. `Access` and unknown kinds produce nothing; reading
+/// The backends report a kind and a path, and the kind is not always right: FSEvents reports
+/// `Name(Any)` for both sides of a rename and repeats earlier flags of a path. So the kind is
+/// taken where it is clear, and the disk decides the rest:
+///
+/// - A path that no longer exists is reported as `Delete`, whatever the backend said.
+/// - A metadata change is reported as `Update` when it can be a write: `touch` is one on every
+///   platform, and polling reports every write as `WriteTime`. Permission, ownership, extended
+///   attribute and access time changes are not reported.
+///
+/// Renames map `Name(From)` → `Delete`, `Name(To)` → `Create` and `Name(Both)` → `Delete` for
+/// `paths[0]`, `Create` for `paths[1]`. `Access` and unknown kinds produce nothing; reading
 /// watched files on Linux would otherwise loop (`IN_OPEN`).
 ///
 /// See `internal-docs/watch-mode/implementation.md` ("Notify Event Mapping").
-pub struct EventMapper {
-  /// Whether `Modify(Metadata(_))` is ignored: on macOS the native backend reports metadata
-  /// changes often, and they do not affect a build in most cases. Polling reports a content
-  /// change as `Metadata(WriteTime)`, so they must be kept there.
-  ignore_metadata_events: bool,
-}
-
-impl EventMapper {
-  pub fn new(config: &FsWatcherConfig) -> Self {
-    Self { ignore_metadata_events: cfg!(target_os = "macos") && !config.use_polling }
-  }
-
-  pub fn map(&self, event: NotifyEvent, events: &mut Vec<FsEvent>) {
-    match event.kind {
-      EventKind::Create(_) | EventKind::Modify(ModifyKind::Name(RenameMode::To)) => {
-        events.extend(
-          event.paths.into_iter().map(|path| FsEvent::new(path, WatcherChangeKind::Create)),
-        );
+pub fn map_notify_event(event: NotifyEvent, events: &mut Vec<FsEvent>) {
+  match event.kind {
+    EventKind::Create(_)
+    | EventKind::Modify(ModifyKind::Name(RenameMode::To | RenameMode::Any | RenameMode::Other)) => {
+      for path in event.paths {
+        push_present(path, WatcherChangeKind::Create, events);
       }
-      EventKind::Remove(_) | EventKind::Modify(ModifyKind::Name(RenameMode::From)) => {
-        events.extend(
-          event.paths.into_iter().map(|path| FsEvent::new(path, WatcherChangeKind::Delete)),
-        );
-      }
-      EventKind::Modify(ModifyKind::Name(RenameMode::Both)) => {
-        // `[from_path, to_path]`, extra paths are ignored.
-        let mut paths = event.paths.into_iter();
-        if let Some(from) = paths.next() {
-          events.push(FsEvent::new(from, WatcherChangeKind::Delete));
-        }
-        if let Some(to) = paths.next() {
-          events.push(FsEvent::new(to, WatcherChangeKind::Create));
-        }
-      }
-      EventKind::Modify(ModifyKind::Metadata(_)) if self.ignore_metadata_events => {}
-      EventKind::Modify(_) => {
-        events.extend(
-          event.paths.into_iter().map(|path| FsEvent::new(path, WatcherChangeKind::Update)),
-        );
-      }
-      _ => {}
     }
+    EventKind::Remove(_) | EventKind::Modify(ModifyKind::Name(RenameMode::From)) => {
+      events
+        .extend(event.paths.into_iter().map(|path| FsEvent::new(path, WatcherChangeKind::Delete)));
+    }
+    EventKind::Modify(ModifyKind::Name(RenameMode::Both)) => {
+      // `[from_path, to_path]`, extra paths are ignored.
+      let mut paths = event.paths.into_iter();
+      if let Some(from) = paths.next() {
+        events.push(FsEvent::new(from, WatcherChangeKind::Delete));
+      }
+      if let Some(to) = paths.next() {
+        push_present(to, WatcherChangeKind::Create, events);
+      }
+    }
+    EventKind::Modify(ModifyKind::Metadata(kind))
+      if !matches!(kind, MetadataKind::Any | MetadataKind::WriteTime) => {}
+    EventKind::Modify(_) => {
+      for path in event.paths {
+        push_present(path, WatcherChangeKind::Update, events);
+      }
+    }
+    _ => {}
   }
 }
 
-#[cfg(test)]
+/// Reports `kind` for a path that should exist now, unless the disk says it is gone.
+fn push_present(path: PathBuf, kind: WatcherChangeKind, events: &mut Vec<FsEvent>) {
+  match fs::symlink_metadata(&path) {
+    Err(error) if error.kind() == io::ErrorKind::NotFound => {
+      events.push(FsEvent::new(path, WatcherChangeKind::Delete));
+    }
+    _ => events.push(FsEvent::new(path, kind)),
+  }
+}
+
+#[cfg(all(test, not(windows)))]
 mod tests {
-  use std::path::PathBuf;
+  use std::{
+    fs,
+    path::{Path, PathBuf},
+  };
 
   use notify::{
     Event as NotifyEvent, EventKind,
@@ -68,69 +80,107 @@ mod tests {
   };
   use rolldown_common::WatcherChangeKind::{self, Create, Delete, Update};
 
-  use super::EventMapper;
+  use super::map_notify_event;
   use crate::FsEvent;
 
-  fn map(kind: EventKind, paths: &[&str]) -> Vec<(PathBuf, WatcherChangeKind)> {
-    map_with(&EventMapper { ignore_metadata_events: false }, kind, paths)
+  /// A fresh directory holding `a.js`.
+  struct Fixture(PathBuf);
+
+  impl Fixture {
+    fn new(name: &str) -> Self {
+      let dir =
+        std::env::temp_dir().join(format!("rolldown_fs_watcher_{}_{name}", std::process::id()));
+      let _ = fs::remove_dir_all(&dir);
+      fs::create_dir_all(&dir).unwrap();
+      fs::write(dir.join("a.js"), "").unwrap();
+      Self(dir)
+    }
+
+    fn path(&self, path: &str) -> PathBuf {
+      self.0.join(path)
+    }
   }
 
-  fn map_with(
-    mapper: &EventMapper,
-    kind: EventKind,
-    paths: &[&str],
-  ) -> Vec<(PathBuf, WatcherChangeKind)> {
+  impl Drop for Fixture {
+    fn drop(&mut self) {
+      let _ = fs::remove_dir_all(&self.0);
+    }
+  }
+
+  fn map(kind: EventKind, paths: &[&Path]) -> Vec<(PathBuf, WatcherChangeKind)> {
     let mut event = NotifyEvent::new(kind);
-    event.paths = paths.iter().map(PathBuf::from).collect();
+    event.paths = paths.iter().map(|path| path.to_path_buf()).collect();
     let mut events = Vec::new();
-    mapper.map(event, &mut events);
+    map_notify_event(event, &mut events);
+    events.sort_by(|a, b| a.path.cmp(&b.path));
     events.into_iter().map(|FsEvent { path, kind }| (path, kind)).collect()
-  }
-
-  fn path(s: &str) -> PathBuf {
-    PathBuf::from(s)
   }
 
   #[test]
   fn file_events() {
-    assert_eq!(map(EventKind::Create(CreateKind::File), &["a.js"]), [(path("a.js"), Create)]);
+    let fixture = Fixture::new("file_events");
+    let a = fixture.path("a.js");
+    assert_eq!(map(EventKind::Create(CreateKind::File), &[&a]), [(a.clone(), Create)]);
     assert_eq!(
-      map(EventKind::Modify(ModifyKind::Data(DataChange::Content)), &["a.js"]),
-      [(path("a.js"), Update)]
+      map(EventKind::Modify(ModifyKind::Data(DataChange::Content)), &[&a]),
+      [(a.clone(), Update)]
     );
-    assert_eq!(map(EventKind::Remove(RemoveKind::File), &["a.js"]), [(path("a.js"), Delete)]);
+    assert_eq!(map(EventKind::Remove(RemoveKind::File), &[&a]), [(a.clone(), Delete)]);
+    assert!(map(EventKind::Access(AccessKind::Read), &[&a]).is_empty());
+    assert!(map(EventKind::Any, &[&a]).is_empty());
   }
 
   #[test]
   fn rename_events() {
+    let fixture = Fixture::new("rename_events");
+    let (old, new) = (fixture.path("old.js"), fixture.path("a.js"));
     assert_eq!(
-      map(EventKind::Modify(ModifyKind::Name(RenameMode::From)), &["old.js"]),
-      [(path("old.js"), Delete)]
+      map(EventKind::Modify(ModifyKind::Name(RenameMode::From)), &[&old]),
+      [(old.clone(), Delete)]
     );
     assert_eq!(
-      map(EventKind::Modify(ModifyKind::Name(RenameMode::To)), &["new.js"]),
-      [(path("new.js"), Create)]
+      map(EventKind::Modify(ModifyKind::Name(RenameMode::To)), &[&new]),
+      [(new.clone(), Create)]
     );
     assert_eq!(
-      map(EventKind::Modify(ModifyKind::Name(RenameMode::Both)), &["old.js", "new.js"]),
-      [(path("old.js"), Delete), (path("new.js"), Create)]
+      map(EventKind::Modify(ModifyKind::Name(RenameMode::Both)), &[&old, &new]),
+      [(new.clone(), Create), (old.clone(), Delete)]
     );
     assert_eq!(
-      map(EventKind::Modify(ModifyKind::Name(RenameMode::Both)), &["old.js"]),
-      [(path("old.js"), Delete)]
+      map(EventKind::Modify(ModifyKind::Name(RenameMode::Both)), &[&old]),
+      [(old.clone(), Delete)]
     );
+    // FSEvents reports both sides of a rename as `Any`; the disk tells them apart.
+    assert_eq!(map(EventKind::Modify(ModifyKind::Name(RenameMode::Any)), &[&old]), [(old, Delete)]);
+    assert_eq!(map(EventKind::Modify(ModifyKind::Name(RenameMode::Any)), &[&new]), [(new, Create)]);
   }
 
   #[test]
-  fn ignored_events() {
-    assert!(map(EventKind::Access(AccessKind::Read), &["a.js"]).is_empty());
-    assert!(map(EventKind::Any, &["a.js"]).is_empty());
+  fn missing_path_events() {
+    let fixture = Fixture::new("missing_path_events");
+    let missing = fixture.path("missing.js");
+    assert_eq!(map(EventKind::Create(CreateKind::File), &[&missing]), [(missing.clone(), Delete)]);
+    assert_eq!(
+      map(EventKind::Modify(ModifyKind::Data(DataChange::Content)), &[&missing]),
+      [(missing, Delete)]
+    );
   }
 
   #[test]
   fn metadata_events() {
-    let kind = EventKind::Modify(ModifyKind::Metadata(MetadataKind::WriteTime));
-    assert_eq!(map(kind, &["a.js"]), [(path("a.js"), Update)]);
-    assert!(map_with(&EventMapper { ignore_metadata_events: true }, kind, &["a.js"]).is_empty());
+    let fixture = Fixture::new("metadata_events");
+    let a = fixture.path("a.js");
+    for kind in [MetadataKind::Any, MetadataKind::WriteTime] {
+      assert_eq!(map(EventKind::Modify(ModifyKind::Metadata(kind)), &[&a]), [(a.clone(), Update)]);
+    }
+    for kind in [
+      MetadataKind::AccessTime,
+      MetadataKind::Permissions,
+      MetadataKind::Ownership,
+      MetadataKind::Extended,
+      MetadataKind::Other,
+    ] {
+      assert!(map(EventKind::Modify(ModifyKind::Metadata(kind)), &[&a]).is_empty());
+    }
   }
 }

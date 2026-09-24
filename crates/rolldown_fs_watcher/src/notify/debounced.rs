@@ -3,7 +3,7 @@ use notify_debouncer_full::{
   DebounceEventHandler, DebounceEventResult, Debouncer, RecommendedCache,
 };
 
-use super::{NotifyPathsMutAdapter, PathsMut, WatcherBackend, event_map::map_notify_event};
+use super::{NotifyEventHandlerAdapter, NotifyPathsMutAdapter, PathsMut, WatcherBackend};
 use crate::FsEventHandler;
 
 pub(super) struct DebouncedNotifyWatcher<W: NotifyWatcherTrait>(
@@ -16,20 +16,10 @@ impl<W: NotifyWatcherTrait + Send> WatcherBackend for DebouncedNotifyWatcher<W> 
   }
 }
 
-pub(super) struct DebouncedNotifyEventHandlerAdapter<T: FsEventHandler>(pub(super) T);
-
-impl<T: FsEventHandler> DebounceEventHandler for DebouncedNotifyEventHandlerAdapter<T> {
+impl<T: FsEventHandler> DebounceEventHandler for NotifyEventHandlerAdapter<T> {
   fn handle_event(&mut self, event_result: DebounceEventResult) {
     match event_result {
-      Ok(debounced_events) => {
-        let mut events = Vec::new();
-        for debounced_event in debounced_events {
-          map_notify_event(debounced_event.event, &mut events);
-        }
-        if !events.is_empty() {
-          self.0.handle_event(Ok(events));
-        }
-      }
+      Ok(debounced_events) => self.deliver(debounced_events.into_iter().map(|event| event.event)),
       Err(errors) => self.0.handle_event(Err(errors)),
     }
   }

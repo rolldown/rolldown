@@ -156,7 +156,7 @@ coordinator is one of these messages:
 
 ```rust
 pub enum CoordinatorMsg {
-  WatchEvent(FsEventResult),                 // fs-watcher event batch (path + kind)
+  WatchEvent(Vec<FsEvent>),                  // fs-watcher event batch (path + kind)
   BundleCompleted {                          // a BundlingTask finished
     error_stage: Option<ErrorStage>,         // None on success; see §10
     has_generated_bundle_output: bool,

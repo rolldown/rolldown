@@ -72,26 +72,24 @@ pub fn collapse_sourcemaps(sourcemap_chain: &[&oxc_sourcemap::SourceMap<'_>]) ->
   let first_map = sourcemap_chain.first().expect("sourcemap_chain should not be empty");
   let chain_without_last = &sourcemap_chain[..sourcemap_chain.len() - 1];
 
-  // Concatenate each map's names into one pool and record the starting index of each map's
-  // names. A token's merged name_id is then `local_id + offset_for_that_map`.
+  // Concatenate each map's names into one pool, in chain order. A token's merged name_id is then
+  // `local_id + offset`, where `offset` is the pool index of that map's first name.
   let mut merged_names: Vec<Cow<'static, str>> = Vec::new();
-  let mut offsets: Vec<u32> = Vec::with_capacity(sourcemap_chain.len());
-  for map in sourcemap_chain {
+  let mut append_names = |map: &oxc_sourcemap::SourceMap<'_>| {
     #[expect(clippy::cast_possible_truncation)]
     let offset = merged_names.len() as u32;
-    offsets.push(offset);
     merged_names.extend(map.get_names().map(|n| Cow::Owned(n.to_owned())));
-  }
-  let last_offset = *offsets.last().expect("sourcemap_chain should not be empty");
+    offset
+  };
 
   // Pre-compute lookup tables paired with their offsets in reverse order so we avoid reversing
   // on every token lookup.
-  let chain_with_offsets: Vec<_> = chain_without_last
+  let mut chain_with_offsets: Vec<_> = chain_without_last
     .iter()
-    .zip(&offsets[..offsets.len() - 1])
-    .rev()
-    .map(|(sourcemap, offset)| (*sourcemap, sourcemap.generate_lookup_table(), *offset))
+    .map(|sourcemap| (*sourcemap, sourcemap.generate_lookup_table(), append_names(sourcemap)))
     .collect();
+  chain_with_offsets.reverse();
+  let last_offset = append_names(last_map);
 
   let tokens: Box<[Token]> = last_map
     .get_source_view_tokens()

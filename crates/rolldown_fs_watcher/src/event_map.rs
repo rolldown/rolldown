@@ -1,59 +1,61 @@
-use std::path::PathBuf;
-
 use notify::{
-  EventKind,
+  Event as NotifyEvent, EventKind,
   event::{ModifyKind, RenameMode},
 };
+use rolldown_common::WatcherChangeKind;
 
-/// Rolldown-level change kind produced from a notify event.
+use crate::{FsEvent, FsWatcherConfig};
+
+/// Translates notify events into [`FsEvent`]s, the same way for build watch and bundled dev.
 ///
-/// This is intentionally a local type so `rolldown_fs_watcher` does not depend
-/// on `rolldown_common`. Callers map it onto `WatcherChangeKind`.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum FsChangeKind {
-  Create,
-  Update,
-  Delete,
+/// Rename events map `Name(From)` → `Delete`, `Name(To)` → `Create` and `Name(Both)` → `Delete`
+/// for `paths[0]`, `Create` for `paths[1]`. `Access` and unknown kinds produce nothing; reading
+/// watched files on Linux would otherwise loop (`IN_OPEN`).
+///
+/// See `internal-docs/watch-mode/implementation.md` ("Notify Event Mapping").
+pub struct EventMapper {
+  /// Whether `Modify(Metadata(_))` is ignored: on macOS the native backend reports metadata
+  /// changes often, and they do not affect a build in most cases. Polling reports a content
+  /// change as `Metadata(WriteTime)`, so they must be kept there.
+  ignore_metadata_events: bool,
 }
 
-/// Map a notify event to `(path, kind)` pairs.
-///
-/// Rename events are mapped the same way in build watch and bundled dev:
-///
-/// - `Name(From)` → `Delete` (move out of a watched path)
-/// - `Name(To)` → `Create` (move onto a watched path)
-/// - `Name(Both)` → `Delete` for `paths[0]`, `Create` for `paths[1]` (rename in place)
-///
-/// `Access` and other unhandled kinds produce no changes. `Access` is ignored
-/// because reading watched files on Linux would otherwise loop (`IN_OPEN`).
-///
-/// See `internal-docs/watch-mode/implementation.md` ("Notify Event Mapping")
-/// and `internal-docs/dev-engine/implementation.md` ("From fs event to queued task").
-pub fn map_notify_event(kind: &EventKind, paths: Vec<PathBuf>) -> Vec<(PathBuf, FsChangeKind)> {
-  match kind {
-    EventKind::Create(_) | EventKind::Modify(ModifyKind::Name(RenameMode::To)) => {
-      paths.into_iter().map(|path| (path, FsChangeKind::Create)).collect()
-    }
-    EventKind::Modify(ModifyKind::Name(RenameMode::From)) | EventKind::Remove(_) => {
-      paths.into_iter().map(|path| (path, FsChangeKind::Delete)).collect()
-    }
-    EventKind::Modify(ModifyKind::Name(RenameMode::Both)) => map_rename_both(paths),
-    EventKind::Modify(_) => paths.into_iter().map(|path| (path, FsChangeKind::Update)).collect(),
-    _ => Vec::new(),
+impl EventMapper {
+  pub fn new(config: &FsWatcherConfig) -> Self {
+    Self { ignore_metadata_events: cfg!(target_os = "macos") && !config.use_polling }
   }
-}
 
-/// `RenameMode::Both` carries `[from_path, to_path]`. Extra paths are ignored.
-fn map_rename_both(paths: Vec<PathBuf>) -> Vec<(PathBuf, FsChangeKind)> {
-  let mut paths = paths.into_iter();
-  let mut result = Vec::new();
-  if let Some(from) = paths.next() {
-    result.push((from, FsChangeKind::Delete));
+  pub fn map(&self, event: NotifyEvent, events: &mut Vec<FsEvent>) {
+    match event.kind {
+      EventKind::Create(_) | EventKind::Modify(ModifyKind::Name(RenameMode::To)) => {
+        events.extend(
+          event.paths.into_iter().map(|path| FsEvent::new(path, WatcherChangeKind::Create)),
+        );
+      }
+      EventKind::Remove(_) | EventKind::Modify(ModifyKind::Name(RenameMode::From)) => {
+        events.extend(
+          event.paths.into_iter().map(|path| FsEvent::new(path, WatcherChangeKind::Delete)),
+        );
+      }
+      EventKind::Modify(ModifyKind::Name(RenameMode::Both)) => {
+        // `[from_path, to_path]`, extra paths are ignored.
+        let mut paths = event.paths.into_iter();
+        if let Some(from) = paths.next() {
+          events.push(FsEvent::new(from, WatcherChangeKind::Delete));
+        }
+        if let Some(to) = paths.next() {
+          events.push(FsEvent::new(to, WatcherChangeKind::Create));
+        }
+      }
+      EventKind::Modify(ModifyKind::Metadata(_)) if self.ignore_metadata_events => {}
+      EventKind::Modify(_) => {
+        events.extend(
+          event.paths.into_iter().map(|path| FsEvent::new(path, WatcherChangeKind::Update)),
+        );
+      }
+      _ => {}
+    }
   }
-  if let Some(to) = paths.next() {
-    result.push((to, FsChangeKind::Create));
-  }
-  result
 }
 
 #[cfg(test)]
@@ -61,77 +63,74 @@ mod tests {
   use std::path::PathBuf;
 
   use notify::{
-    EventKind,
-    event::{AccessKind, CreateKind, DataChange, ModifyKind, RemoveKind, RenameMode},
+    Event as NotifyEvent, EventKind,
+    event::{AccessKind, CreateKind, DataChange, MetadataKind, ModifyKind, RemoveKind, RenameMode},
   };
+  use rolldown_common::WatcherChangeKind::{self, Create, Delete, Update};
 
-  use super::{FsChangeKind, map_notify_event};
+  use super::EventMapper;
+  use crate::FsEvent;
+
+  fn map(kind: EventKind, paths: &[&str]) -> Vec<(PathBuf, WatcherChangeKind)> {
+    map_with(&EventMapper { ignore_metadata_events: false }, kind, paths)
+  }
+
+  fn map_with(
+    mapper: &EventMapper,
+    kind: EventKind,
+    paths: &[&str],
+  ) -> Vec<(PathBuf, WatcherChangeKind)> {
+    let mut event = NotifyEvent::new(kind);
+    event.paths = paths.iter().map(PathBuf::from).collect();
+    let mut events = Vec::new();
+    mapper.map(event, &mut events);
+    events.into_iter().map(|FsEvent { path, kind }| (path, kind)).collect()
+  }
 
   fn path(s: &str) -> PathBuf {
     PathBuf::from(s)
   }
 
   #[test]
-  fn create_maps_to_create() {
-    let got = map_notify_event(&EventKind::Create(CreateKind::File), vec![path("a.js")]);
-    assert_eq!(got, vec![(path("a.js"), FsChangeKind::Create)]);
-  }
-
-  #[test]
-  fn remove_maps_to_delete() {
-    let got = map_notify_event(&EventKind::Remove(RemoveKind::File), vec![path("a.js")]);
-    assert_eq!(got, vec![(path("a.js"), FsChangeKind::Delete)]);
-  }
-
-  #[test]
-  fn content_modify_maps_to_update() {
-    let got = map_notify_event(
-      &EventKind::Modify(ModifyKind::Data(DataChange::Content)),
-      vec![path("a.js")],
+  fn file_events() {
+    assert_eq!(map(EventKind::Create(CreateKind::File), &["a.js"]), [(path("a.js"), Create)]);
+    assert_eq!(
+      map(EventKind::Modify(ModifyKind::Data(DataChange::Content)), &["a.js"]),
+      [(path("a.js"), Update)]
     );
-    assert_eq!(got, vec![(path("a.js"), FsChangeKind::Update)]);
+    assert_eq!(map(EventKind::Remove(RemoveKind::File), &["a.js"]), [(path("a.js"), Delete)]);
   }
 
   #[test]
-  fn rename_from_maps_to_delete() {
-    let got = map_notify_event(
-      &EventKind::Modify(ModifyKind::Name(RenameMode::From)),
-      vec![path("old.js")],
-    );
-    assert_eq!(got, vec![(path("old.js"), FsChangeKind::Delete)]);
-  }
-
-  #[test]
-  fn rename_to_maps_to_create() {
-    let got =
-      map_notify_event(&EventKind::Modify(ModifyKind::Name(RenameMode::To)), vec![path("new.js")]);
-    assert_eq!(got, vec![(path("new.js"), FsChangeKind::Create)]);
-  }
-
-  #[test]
-  fn rename_both_maps_to_delete_then_create() {
-    let got = map_notify_event(
-      &EventKind::Modify(ModifyKind::Name(RenameMode::Both)),
-      vec![path("old.js"), path("new.js")],
+  fn rename_events() {
+    assert_eq!(
+      map(EventKind::Modify(ModifyKind::Name(RenameMode::From)), &["old.js"]),
+      [(path("old.js"), Delete)]
     );
     assert_eq!(
-      got,
-      vec![(path("old.js"), FsChangeKind::Delete), (path("new.js"), FsChangeKind::Create)]
+      map(EventKind::Modify(ModifyKind::Name(RenameMode::To)), &["new.js"]),
+      [(path("new.js"), Create)]
+    );
+    assert_eq!(
+      map(EventKind::Modify(ModifyKind::Name(RenameMode::Both)), &["old.js", "new.js"]),
+      [(path("old.js"), Delete), (path("new.js"), Create)]
+    );
+    assert_eq!(
+      map(EventKind::Modify(ModifyKind::Name(RenameMode::Both)), &["old.js"]),
+      [(path("old.js"), Delete)]
     );
   }
 
   #[test]
-  fn rename_both_with_only_from_path_maps_to_delete() {
-    let got = map_notify_event(
-      &EventKind::Modify(ModifyKind::Name(RenameMode::Both)),
-      vec![path("old.js")],
-    );
-    assert_eq!(got, vec![(path("old.js"), FsChangeKind::Delete)]);
+  fn ignored_events() {
+    assert!(map(EventKind::Access(AccessKind::Read), &["a.js"]).is_empty());
+    assert!(map(EventKind::Any, &["a.js"]).is_empty());
   }
 
   #[test]
-  fn access_is_ignored() {
-    let got = map_notify_event(&EventKind::Access(AccessKind::Read), vec![path("a.js")]);
-    assert!(got.is_empty());
+  fn metadata_events() {
+    let kind = EventKind::Modify(ModifyKind::Metadata(MetadataKind::WriteTime));
+    assert_eq!(map(kind, &["a.js"]), [(path("a.js"), Update)]);
+    assert!(map_with(&EventMapper { ignore_metadata_events: true }, kind, &["a.js"]).is_empty());
   }
 }

@@ -9,5 +9,4 @@ mod watcher;
 
 pub use config::FsWatcherConfig;
 pub use event::{FsEvent, FsEventHandler, FsEventResult};
-pub use event_map::{FsChangeKind, map_notify_event};
 pub use watcher::FsWatcher;

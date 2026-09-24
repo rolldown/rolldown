@@ -2698,7 +2698,6 @@ dependencies = [
  "arcstr",
  "futures",
  "rolldown",
- "rolldown-notify",
  "rolldown_common",
  "rolldown_dev_common",
  "rolldown_error",
@@ -2797,6 +2796,7 @@ version = "1.2.10"
 dependencies = [
  "rolldown-notify",
  "rolldown-notify-debouncer-full",
+ "rolldown_common",
  "rolldown_error",
  "rustc-hash",
  "tracing",

@@ -1,20 +1,26 @@
-use std::time::Instant;
+use std::path::PathBuf;
 
-use notify::{Error as NotifyError, Event as NotifyEvent};
+use notify::Error as NotifyError;
+use rolldown_common::WatcherChangeKind;
 
 pub type FsEventResult = Result<Vec<FsEvent>, Vec<NotifyError>>;
 
-/// A filesystem event emitted by a watcher backend.
+/// A change of a file, translated from the events of the notify backend.
+///
+/// See `internal-docs/watch-mode/implementation.md` ("Notify Event Mapping").
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct FsEvent {
-  /// The original event.
-  pub detail: NotifyEvent,
+  pub path: PathBuf,
+  pub kind: WatcherChangeKind,
+}
 
-  /// The time at which the event occurred.
-  pub time: Instant,
+impl FsEvent {
+  pub fn new(path: PathBuf, kind: WatcherChangeKind) -> Self {
+    Self { path, kind }
+  }
 }
 
 pub trait FsEventHandler: Send + 'static {
-  /// Handles an event.
+  /// Handles a batch of events. The batch is never empty.
   fn handle_event(&mut self, event: FsEventResult);
 }

@@ -1,10 +1,9 @@
-use std::time::Instant;
-
 use notify::Watcher as NotifyWatcherTrait;
 
 use super::NotifyPathsMutAdapter;
 use crate::{
-  FsEvent, FsEventHandler,
+  FsEventHandler,
+  event_map::EventMapper,
   watcher::{PathsMut, WatcherBackend},
 };
 
@@ -16,13 +15,22 @@ impl<W: NotifyWatcherTrait + Send> WatcherBackend for NotifyWatcher<W> {
   }
 }
 
-pub(super) struct NotifyEventHandlerAdapter<T: FsEventHandler>(pub(super) T);
+pub(super) struct NotifyEventHandlerAdapter<T: FsEventHandler> {
+  pub(super) handler: T,
+  pub(super) mapper: EventMapper,
+}
 
 impl<T: FsEventHandler> ::notify::EventHandler for NotifyEventHandlerAdapter<T> {
   fn handle_event(&mut self, event_result: ::notify::Result<::notify::Event>) {
-    let event = event_result
-      .map_err(|error| vec![error])
-      .map(|event| vec![FsEvent { detail: event, time: Instant::now() }]);
-    self.0.handle_event(event);
+    match event_result {
+      Ok(event) => {
+        let mut events = Vec::new();
+        self.mapper.map(event, &mut events);
+        if !events.is_empty() {
+          self.handler.handle_event(Ok(events));
+        }
+      }
+      Err(error) => self.handler.handle_event(Err(vec![error])),
+    }
   }
 }

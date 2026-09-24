@@ -494,20 +494,7 @@ impl DevEngine {
     // covers the first, leaving the rest racing the caller's assertions.
     let events = changed_files
       .into_iter()
-      .map(|(path, event)| {
-        let notify_event = notify::Event {
-          kind: if event == WatcherChangeKind::Delete {
-            notify::EventKind::Remove(notify::event::RemoveKind::Any)
-          } else {
-            notify::EventKind::Modify(notify::event::ModifyKind::Data(
-              notify::event::DataChange::Any,
-            ))
-          },
-          paths: vec![path],
-          attrs: notify::event::EventAttributes::default(),
-        };
-        rolldown_fs_watcher::FsEvent { detail: notify_event, time: std::time::Instant::now() }
-      })
+      .map(|(path, kind)| rolldown_fs_watcher::FsEvent::new(path, kind))
       .collect::<Vec<_>>();
 
     if !events.is_empty() {

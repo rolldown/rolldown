@@ -1,6 +1,5 @@
 use std::path::Path;
 
-use notify::RecursiveMode;
 use rolldown_error::BuildResult;
 
 use super::{PathsMut, WatcherBackend};
@@ -16,7 +15,7 @@ impl WatcherBackend for NoopWatcher {
 struct NoopPathsMut;
 
 impl PathsMut for NoopPathsMut {
-  fn add(&mut self, _path: &Path, _recursive_mode: RecursiveMode) -> BuildResult<()> {
+  fn add(&mut self, _path: &Path) -> BuildResult<()> {
     Ok(())
   }
 

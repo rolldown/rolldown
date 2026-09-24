@@ -4,14 +4,11 @@ use notify::RecursiveMode;
 use rolldown_error::BuildResult;
 use rustc_hash::FxHashSet;
 
-use crate::{FsEventHandler, FsWatcherConfig};
+use crate::{
+  FsEventHandler, FsWatcherConfig,
+  notify::{WatcherBackend, create_backend},
+};
 
-/// The filesystem watcher used by Rolldown. It owns the set of watched paths.
-///
-/// Construction selects the notify implementation from [`FsWatcherConfig`]. The concrete
-/// recommended, polling, immediate, and debounced types remain internal.
-///
-/// See `internal-docs/watch-mode/implementation.md` ("File Watching").
 pub struct FsWatcher {
   backend: Box<dyn WatcherBackend>,
   watched_paths: FxHashSet<PathBuf>,
@@ -20,16 +17,14 @@ pub struct FsWatcher {
 impl FsWatcher {
   pub fn new<F: FsEventHandler>(event_handler: F, config: &FsWatcherConfig) -> BuildResult<Self> {
     Ok(Self {
-      backend: crate::notify::create_backend(event_handler, config)?,
+      backend: create_backend(event_handler, config)?,
       watched_paths: FxHashSet::default(),
     })
   }
 
-  /// Starts watching the paths that are not watched yet and that `is_wanted` accepts.
-  ///
-  /// The paths must be absolute and normalized, see `WatchPath` in `rolldown_common`. A directory
-  /// is watched with everything below it. A path notify cannot watch is skipped, so it is tried
-  /// again with the next call.
+  /// Paths must be absolute and normalized (`WatchPath` in `rolldown_common`). A directory is
+  /// watched with everything below it. A path notify cannot watch is skipped and tried again
+  /// next time.
   pub fn watch_paths<P: AsRef<Path>>(
     &mut self,
     paths: impl IntoIterator<Item = P>,
@@ -57,26 +52,13 @@ impl FsWatcher {
     Ok(())
   }
 
-  /// Whether a change of `path` concerns a watched path: `path` is one, or lies below one.
   pub fn is_watched(&self, path: &Path) -> bool {
     path.ancestors().any(|ancestor| self.watched_paths.contains(ancestor))
   }
 
-  /// The watched paths, absolute and normalized.
   pub fn watched_paths(&self) -> impl Iterator<Item = &Path> {
     self.watched_paths.iter().map(PathBuf::as_path)
   }
-}
-
-pub trait WatcherBackend: Send {
-  fn paths_mut(&mut self) -> Box<dyn PathsMut + '_>;
-}
-
-/// A trait for batch manipulation of watched paths.
-pub trait PathsMut {
-  fn add(&mut self, path: &Path, recursive_mode: RecursiveMode) -> BuildResult<()>;
-
-  fn commit(self: Box<Self>) -> BuildResult<()>;
 }
 
 #[cfg(all(test, not(windows)))]
@@ -106,7 +88,6 @@ mod tests {
       )
       .unwrap();
 
-    // asked about once per path
     assert_eq!(
       asked,
       [

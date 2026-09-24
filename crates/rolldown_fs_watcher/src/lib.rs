@@ -1,9 +1,7 @@
-//! This crate provides a customized filesystem watcher functionalities for `rolldown`.
-//! Notify is a low-level library. It's not easy to use it directly.
+//! Rolldown's file watcher on top of notify.
 
 mod config;
 mod event;
-mod event_map;
 mod notify;
 mod watcher;
 

@@ -1,4 +1,5 @@
 mod debounced;
+mod event_map;
 mod immediate;
 mod noop;
 
@@ -8,10 +9,17 @@ use notify::{RecursiveMode, TargetMode, WatchMode, Watcher};
 use notify_debouncer_full::{RecommendedCache, new_debouncer_opt};
 use rolldown_error::{BuildResult, ResultExt};
 
-use crate::{
-  FsEventHandler, FsWatcherConfig,
-  watcher::{PathsMut, WatcherBackend},
-};
+use crate::{FsEventHandler, FsWatcherConfig};
+
+pub trait WatcherBackend: Send {
+  fn paths_mut(&mut self) -> Box<dyn PathsMut + '_>;
+}
+
+pub trait PathsMut {
+  fn add(&mut self, path: &Path, recursive_mode: RecursiveMode) -> BuildResult<()>;
+
+  fn commit(self: Box<Self>) -> BuildResult<()>;
+}
 
 pub fn create_backend<F: FsEventHandler>(
   event_handler: F,

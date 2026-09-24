@@ -12,29 +12,11 @@ use walkdir::WalkDir;
 
 use crate::FsEvent;
 
-/// Translates a notify event into [`FsEvent`]s, the same way for build watch and bundled dev.
-///
-/// The backends report a kind and a path, and the kind is not always right: FSEvents reports
-/// `Name(Any)` for both sides of a rename and repeats earlier flags of a path, and no backend
-/// reports the files of a directory that appears. So the kind is taken where it is clear, and
-/// the disk decides the rest:
-///
-/// - Only files are reported, like the `add`/`change`/`unlink` events of chokidar. A directory
-///   that appears is reported as `Create` of every file below it; a directory that disappears is
-///   reported as `Delete` of the directory, since its files are unknown by then; a modified
-///   directory is not reported.
-/// - A path that no longer exists is reported as `Delete`, whatever the backend said.
-/// - A metadata change is reported as `Update` when it can be a write: `touch` is one on every
-///   platform, and polling reports every write as `WriteTime`. Permission, ownership, extended
-///   attribute and access time changes are not reported.
-///
-/// Renames map `Name(From)` → `Delete`, `Name(To)` → `Create` and `Name(Both)` → `Delete` for
-/// `paths[0]`, `Create` for `paths[1]`. `Access` and unknown kinds produce nothing; reading
-/// watched files on Linux would otherwise loop (`IN_OPEN`).
-///
-/// See `internal-docs/watch-mode/implementation.md` ("Notify Event Mapping").
+/// Files only, like chokidar's `add`/`change`/`unlink`; the table is in "Notify Event Mapping" of
+/// `internal-docs/watch-mode/implementation.md`.
 pub fn map_notify_event(event: NotifyEvent, events: &mut Vec<FsEvent>) {
   match event.kind {
+    // FSEvents and kqueue do not tell the side of a rename; the disk does.
     EventKind::Create(_)
     | EventKind::Modify(ModifyKind::Name(RenameMode::To | RenameMode::Any | RenameMode::Other)) => {
       for path in event.paths {
@@ -55,6 +37,7 @@ pub fn map_notify_event(event: NotifyEvent, events: &mut Vec<FsEvent>) {
         push_present(to, WatcherChangeKind::Create, events);
       }
     }
+    // A write can show as metadata only: `touch` everywhere, every write with polling.
     EventKind::Modify(ModifyKind::Metadata(kind))
       if !matches!(kind, MetadataKind::Any | MetadataKind::WriteTime) => {}
     EventKind::Modify(_) => {
@@ -62,19 +45,20 @@ pub fn map_notify_event(event: NotifyEvent, events: &mut Vec<FsEvent>) {
         push_present(path, WatcherChangeKind::Update, events);
       }
     }
+    // `Access` too: reading a watched file is not a change, and would loop on Linux (`IN_OPEN`).
     _ => {}
   }
 }
 
-/// Reports `kind` for a path that should exist now, after a look at the disk: a directory stands
-/// for the files below it, a missing path is deleted.
 fn push_present(path: PathBuf, kind: WatcherChangeKind, events: &mut Vec<FsEvent>) {
   match fs::symlink_metadata(&path) {
+    // No backend reports the files of a directory that appears, e.g. one moved in.
     Ok(metadata) if metadata.is_dir() => {
       if kind == WatcherChangeKind::Create {
         push_files_below(&path, events);
       }
     }
+    // FSEvents repeats earlier flags of a path, and names both sides of a rename `Name(Any)`.
     Err(error) if error.kind() == io::ErrorKind::NotFound => {
       events.push(FsEvent::new(path, WatcherChangeKind::Delete));
     }
@@ -107,7 +91,6 @@ mod tests {
   use super::map_notify_event;
   use crate::FsEvent;
 
-  /// A fresh directory holding `a.js`, `nested/b.js` and the empty directory `nested/empty`.
   struct Fixture(PathBuf);
 
   impl Fixture {
@@ -214,7 +197,6 @@ mod tests {
     let fixture = Fixture::new("directory_events");
     let dir = fixture.0.clone();
 
-    // a directory that appears stands for the files below it
     let files_below = [(fixture.path("a.js"), Create), (fixture.path("nested/b.js"), Create)];
     for kind in [
       EventKind::Create(CreateKind::Folder),
@@ -227,11 +209,9 @@ mod tests {
       map(EventKind::Create(CreateKind::Folder), &[&fixture.path("nested/empty")]).is_empty()
     );
 
-    // a modified directory is not reported
     assert!(map(EventKind::Modify(ModifyKind::Metadata(MetadataKind::Any)), &[&dir]).is_empty());
     assert!(map(EventKind::Modify(ModifyKind::Data(DataChange::Content)), &[&dir]).is_empty());
 
-    // a directory that disappears is reported itself
     fs::remove_dir_all(&dir).unwrap();
     assert_eq!(map(EventKind::Remove(RemoveKind::Folder), &[&dir]), [(dir.clone(), Delete)]);
     assert_eq!(

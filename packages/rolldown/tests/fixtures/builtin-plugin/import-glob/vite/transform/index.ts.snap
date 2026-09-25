@@ -98,20 +98,20 @@ const rawImportModule = /* #__PURE__ */ Object.assign({
 	"./modules/b.ts": () => Promise.resolve().then(() => b_exports)
 });
 const excludeSelf = /* #__PURE__ */ Object.assign({ "./sibling.ts": () => import("./sibling.js") });
-const excludeSelfRaw = /* #__PURE__ */ Object.assign({ "./sibling.ts": () => import("./sibling3.js") });
-const customQueryString = /* #__PURE__ */ Object.assign({ "./sibling.ts": () => import("./sibling2.js") });
+const excludeSelfRaw = /* #__PURE__ */ Object.assign({ "./sibling.ts": () => import("./sibling2.js") });
+const customQueryString = /* #__PURE__ */ Object.assign({ "./sibling.ts": () => import("./sibling3.js") });
 const parent = /* #__PURE__ */ Object.assign({});
 const rootMixedRelative = /* #__PURE__ */ Object.assign({
-	"/b/a.ts": () => import("./a3.js").then((m) => m["default"]),
-	"/b/b.ts": () => import("./b3.js").then((m) => m["default"]),
-	"/b/index.ts": () => import("./b5.js").then((m) => m["default"])
+	"/b/a.ts": () => import("./a2.js").then((m) => m["default"]),
+	"/b/b.ts": () => import("./b2.js").then((m) => m["default"]),
+	"/b/index.ts": () => import("./b3.js").then((m) => m["default"])
 });
 const cleverCwd1 = /* #__PURE__ */ Object.assign({ "./node_modules/framework/pages/hello.page.js": () => import("./hello.page.js") });
 const cleverCwd2 = /* #__PURE__ */ Object.assign({
 	"./modules/a.ts": () => import("./a.js").then((n) => n.t),
 	"./modules/b.ts": () => import("./b.js").then((n) => n.t),
-	"../b/a.ts": () => import("./a2.js"),
-	"../b/b.ts": () => import("./b2.js")
+	"../b/a.ts": () => import("./a3.js"),
+	"../b/b.ts": () => import("./b4.js")
 });
 const customBase = /* #__PURE__ */ Object.assign({
 	"./modules/a.ts": () => import("./a.js").then((n) => n.t),
@@ -120,14 +120,14 @@ const customBase = /* #__PURE__ */ Object.assign({
 	"./sibling.ts": () => import("./sibling.js")
 });
 const customRootBase = /* #__PURE__ */ Object.assign({
-	"./a.ts": () => import("./a2.js"),
-	"./b.ts": () => import("./b2.js"),
-	"./index.ts": () => import("./b4.js")
+	"./a.ts": () => import("./a3.js"),
+	"./b.ts": () => import("./b4.js"),
+	"./index.ts": () => import("./b5.js")
 });
 const customBaseParent = /* #__PURE__ */ Object.assign({
-	"../b/a.ts": () => import("./a2.js"),
-	"../b/b.ts": () => import("./b2.js"),
-	"../b/index.ts": () => import("./b4.js")
+	"../b/a.ts": () => import("./a3.js"),
+	"../b/b.ts": () => import("./b4.js"),
+	"../b/index.ts": () => import("./b5.js")
 });
 //#endregion
 export { basic, basicEager, basicEagerWithObjectKeys, basicEagerWithObjectValues, basicWithObjectKeys, basicWithObjectValues, cleverCwd1, cleverCwd2, customBase, customBaseParent, customQueryString, customRootBase, eagerAs, excludeSelf, excludeSelfRaw, ignore, ignoreWithObjectKeys, ignoreWithObjectValues, namedDefault, namedDefaultWithObjectKeys, namedDefaultWithObjectValues, namedEager, namedEagerWithObjectKeys, namedEagerWithObjectValues, parent, rawImportModule, rootMixedRelative };

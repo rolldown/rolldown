@@ -2,7 +2,9 @@ use std::sync::Arc;
 
 use rolldown_common::{ConcatenateWrappedModuleKind, PrependRenderedImport, UsedSymbolRefs};
 use rolldown_error::{BuildResult, Severity};
-use rolldown_utils::{index_vec_ext::IndexVecExt as _, rayon::ParallelIterator as _};
+use rolldown_utils::{
+  concat_string, index_vec_ext::IndexVecExt as _, rayon::ParallelIterator as _,
+};
 use rustc_hash::FxHashMap;
 use tracing::debug_span;
 
@@ -113,23 +115,46 @@ impl GenerateStage<'_> {
       Err(errors)?;
     }
 
-    if normalized_transfer_parts_rendered_maps.is_empty() {
-      return Ok(());
+    if !normalized_transfer_parts_rendered_maps.is_empty() {
+      for chunk in chunk_graph.chunk_table.iter_mut() {
+        for (module_idx, recs) in &chunk.insert_map {
+          let Some(module) = self.link_output.module_table[*module_idx].as_normal_mut() else {
+            continue;
+          };
+          for (importer_idx, rec_idx) in recs {
+            if let Some(rendered_string) =
+              normalized_transfer_parts_rendered_maps.get(&(*importer_idx, *rec_idx))
+            {
+              module
+                .ecma_view
+                .mutations
+                .push(Arc::new(PrependRenderedImport { intro: rendered_string.clone() }));
+            }
+          }
+        }
+      }
     }
-    for chunk in chunk_graph.chunk_table.iter_mut() {
-      for (module_idx, recs) in &chunk.insert_map {
-        let Some(module) = self.link_output.module_table[*module_idx].as_normal_mut() else {
+
+    // Render the eagerly injected init calls recorded by `ensure_lazy_module_initialization_order`
+    // for wrapped modules whose init call sites all live in later-executing chunks: the memoized
+    // wrapper call, named through this chunk's canonical names, prepended to the dependent
+    // module's output.
+    for chunk in chunk_graph.chunk_table.iter() {
+      for (target_idx, wrapped_modules) in &chunk.eager_init_map {
+        let intros = wrapped_modules
+          .iter()
+          .filter_map(|wrapped_idx| {
+            let wrapper_ref = self.link_output.metas[*wrapped_idx].wrapper_ref?;
+            let canonical_ref = self.link_output.symbol_db.canonical_ref_for(wrapper_ref);
+            let name = chunk.canonical_names.get(&canonical_ref)?;
+            Some(concat_string!(name.as_str(), "();\n"))
+          })
+          .collect::<Vec<_>>();
+        let Some(module) = self.link_output.module_table[*target_idx].as_normal_mut() else {
           continue;
         };
-        for (importer_idx, rec_idx) in recs {
-          if let Some(rendered_string) =
-            normalized_transfer_parts_rendered_maps.get(&(*importer_idx, *rec_idx))
-          {
-            module
-              .ecma_view
-              .mutations
-              .push(Arc::new(PrependRenderedImport { intro: rendered_string.clone() }));
-          }
+        for intro in intros {
+          module.ecma_view.mutations.push(Arc::new(PrependRenderedImport { intro }));
         }
       }
     }

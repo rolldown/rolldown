@@ -1,0 +1,9 @@
+{
+  "_comment": "Negative coverage for the #7449 eager-init injection: a.cjs is only required lazily inside a function, so it has no eager init site and must stay lazy even though the unwrapped b.js follows it in the vendor chunk.",
+  "config": {
+    "input": [{ "name": "index", "import": "./index.js" }],
+    "codeSplitting": {
+      "groups": [{ "name": "vendor", "test": "(a\\.cjs|b\\.js)" }]
+    }
+  }
+}

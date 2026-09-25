@@ -25,8 +25,9 @@ class TestHotContext {
    * @returns {void}
    */
   accept(...args) {
-    if (args.length === 0 || typeof args[0] === 'function') {
-      this.callbacks.push({ deps: this.moduleId, cb: args[0] ?? (() => {}) });
+    // Like Vite's client, a falsy first argument self-accepts and drops the callback.
+    if (typeof args[0] === 'function' || !args[0]) {
+      this.callbacks.push({ deps: this.moduleId, cb: args[0] || (() => {}) });
       return;
     }
     this.callbacks.push({ deps: args[0], cb: args[1] ?? (() => {}) });

@@ -1,14 +1,57 @@
 use oxc::allocator::GetAllocator;
 use oxc::ast::builder::AstBuilder;
 use oxc::{ast::ast, span::SPAN};
-use rolldown_common::NormalModule;
+use rolldown_common::{IndexModules, NormalModule};
 use rolldown_ecmascript::CJS_MODULE_REF;
 #[cfg(feature = "experimental")]
 use rolldown_ecmascript::CJS_ROLLDOWN_MODULE_REF;
+use rolldown_ecmascript_utils::ExpressionExt;
 
 #[cfg(feature = "experimental")]
 use crate::hmr::hmr_ast_finalizer::HmrAstFinalizer;
 use crate::module_finalizers::ScopeHoistingFinalizer;
+
+/// The runtime matches accepted deps by stable id, so each recorded dep is rewritten to it.
+pub fn rewrite_hot_accept_deps<'ast>(
+  call_expr: &mut ast::CallExpression<'ast>,
+  module: &NormalModule,
+  modules: &IndexModules,
+  builder: &AstBuilder<'ast>,
+) {
+  if !call_expr.callee.is_import_meta_hot_accept() {
+    return;
+  }
+  let rewrite = |expr: &mut ast::Expression<'ast>| {
+    let Some(request) = expr.as_static_module_request() else { return };
+    let Some(record_idx) =
+      module.hmr_info.module_request_to_import_record_idx.get(request.as_str())
+    else {
+      return;
+    };
+    let Some(module_idx) = module.import_records[*record_idx].resolved_module else { return };
+    *expr = ast::Expression::new_string_literal(
+      SPAN,
+      ast::Str::from_str_in(modules[module_idx].stable_id(), builder),
+      None,
+      builder,
+    );
+  };
+  match call_expr.arguments.first_mut() {
+    Some(ast::Argument::ArrayExpression(array_expression)) => {
+      array_expression
+        .elements
+        .iter_mut()
+        .filter_map(|element| element.as_expression_mut())
+        .for_each(rewrite);
+    }
+    Some(argument) => {
+      if let Some(expr) = argument.as_expression_mut() {
+        rewrite(expr);
+      }
+    }
+    None => {}
+  }
+}
 
 #[cfg(feature = "experimental")]
 pub static MODULE_EXPORTS_NAME_FOR_ESM: &str = "__rolldown_exports__";

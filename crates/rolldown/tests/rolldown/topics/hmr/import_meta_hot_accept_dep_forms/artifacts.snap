@@ -1,0 +1,434 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# warnings
+
+## INEFFECTIVE_DYNAMIC_IMPORT
+
+```text
+[INEFFECTIVE_DYNAMIC_IMPORT] array_one_arg/child.js is dynamically imported by array_one_arg/parent.js but also statically imported by array_one_arg/parent.js, dynamic import will not move module into another chunk.
+
+```
+
+## INEFFECTIVE_DYNAMIC_IMPORT
+
+```text
+[INEFFECTIVE_DYNAMIC_IMPORT] one_arg/child.js is dynamically imported by one_arg/parent.js but also statically imported by one_arg/parent.js, dynamic import will not move module into another chunk.
+
+```
+
+## INEFFECTIVE_DYNAMIC_IMPORT
+
+```text
+[INEFFECTIVE_DYNAMIC_IMPORT] template/child.js is dynamically imported by template/parent.js but also statically imported by template/parent.js, dynamic import will not move module into another chunk.
+
+```
+
+## INEFFECTIVE_DYNAMIC_IMPORT
+
+```text
+[INEFFECTIVE_DYNAMIC_IMPORT] template_array/a.js is dynamically imported by template_array/parent.js but also statically imported by template_array/parent.js, dynamic import will not move module into another chunk.
+
+```
+
+## INEFFECTIVE_DYNAMIC_IMPORT
+
+```text
+[INEFFECTIVE_DYNAMIC_IMPORT] template_array/b.js is dynamically imported by template_array/parent.js but also statically imported by template_array/parent.js, dynamic import will not move module into another chunk.
+
+```
+
+## INEFFECTIVE_DYNAMIC_IMPORT
+
+```text
+[INEFFECTIVE_DYNAMIC_IMPORT] three_args/child.js is dynamically imported by three_args/parent.js but also statically imported by three_args/parent.js, dynamic import will not move module into another chunk.
+
+```
+
+# Assets
+
+## main.js
+
+```js
+import assert from "node:assert";
+// HIDDEN [\0rolldown/runtime.js]
+__rolldown_runtime__.registerGraph({
+	ids: [
+		"one_arg/child.js",
+		"one_arg/parent.js",
+		"three_args/child.js",
+		"three_args/parent.js",
+		"template/child.js",
+		"template/parent.js",
+		"template_array/a.js",
+		"template_array/b.js",
+		"template_array/parent.js",
+		"falsy_deps/self.js",
+		"falsy_deps/parent.js",
+		"array_one_arg/child.js",
+		"array_one_arg/parent.js",
+		"main.js"
+	],
+	localCount: 14,
+	edges: [
+		[],
+		[0],
+		[],
+		[2],
+		[],
+		[4],
+		[],
+		[],
+		[6, 7],
+		[],
+		[9],
+		[],
+		[11],
+		[
+			1,
+			3,
+			5,
+			8,
+			10,
+			12
+		]
+	],
+	dynamicEdges: [
+		[],
+		[],
+		[],
+		[],
+		[],
+		[],
+		[],
+		[],
+		[],
+		[],
+		[],
+		[],
+		[],
+		[]
+	]
+});
+//#region one_arg/child.js
+var child_exports$3 = /* @__PURE__ */ __exportAll({ count: () => 0 });
+__rolldown_runtime__.createModuleHotContext("one_arg/child.js");
+__rolldown_runtime__.registerModule("one_arg/child.js", { exports: child_exports$3 });
+globalThis.one_argChildRuns = (globalThis.one_argChildRuns ?? 0) + 1;
+//#endregion
+//#region one_arg/parent.js
+var parent_exports$5 = /* @__PURE__ */ __exportAll({});
+const parent_hot$5 = __rolldown_runtime__.createModuleHotContext("one_arg/parent.js");
+__rolldown_runtime__.registerModule("one_arg/parent.js", { exports: parent_exports$5 });
+globalThis.one_argParentRuns = (globalThis.one_argParentRuns ?? 0) + 1;
+parent_hot$5.accept("one_arg/child.js");
+//#endregion
+//#region three_args/child.js
+var child_exports$2 = /* @__PURE__ */ __exportAll({ count: () => 0 });
+__rolldown_runtime__.createModuleHotContext("three_args/child.js");
+__rolldown_runtime__.registerModule("three_args/child.js", { exports: child_exports$2 });
+globalThis.three_argsChildRuns = (globalThis.three_argsChildRuns ?? 0) + 1;
+//#endregion
+//#region three_args/parent.js
+var parent_exports$4 = /* @__PURE__ */ __exportAll({});
+const parent_hot$4 = __rolldown_runtime__.createModuleHotContext("three_args/parent.js");
+__rolldown_runtime__.registerModule("three_args/parent.js", { exports: parent_exports$4 });
+globalThis.three_argsParentRuns = (globalThis.three_argsParentRuns ?? 0) + 1;
+globalThis.three_argsSaw = 0;
+parent_hot$4.accept("three_args/child.js", (mod) => {
+	globalThis.three_argsSaw = mod.count;
+}, "extra");
+//#endregion
+//#region template/child.js
+var child_exports$1 = /* @__PURE__ */ __exportAll({ count: () => 0 });
+__rolldown_runtime__.createModuleHotContext("template/child.js");
+__rolldown_runtime__.registerModule("template/child.js", { exports: child_exports$1 });
+globalThis.templateChildRuns = (globalThis.templateChildRuns ?? 0) + 1;
+//#endregion
+//#region template/parent.js
+var parent_exports$3 = /* @__PURE__ */ __exportAll({});
+const parent_hot$3 = __rolldown_runtime__.createModuleHotContext("template/parent.js");
+__rolldown_runtime__.registerModule("template/parent.js", { exports: parent_exports$3 });
+globalThis.templateParentRuns = (globalThis.templateParentRuns ?? 0) + 1;
+globalThis.templateSaw = 0;
+parent_hot$3.accept("template/child.js", (mod) => {
+	globalThis.templateSaw = mod.count;
+});
+//#endregion
+//#region template_array/a.js
+var a_exports = /* @__PURE__ */ __exportAll({ count: () => 0 });
+__rolldown_runtime__.createModuleHotContext("template_array/a.js");
+__rolldown_runtime__.registerModule("template_array/a.js", { exports: a_exports });
+globalThis.template_array_aRuns = (globalThis.template_array_aRuns ?? 0) + 1;
+//#endregion
+//#region template_array/b.js
+var b_exports = /* @__PURE__ */ __exportAll({ count: () => 0 });
+__rolldown_runtime__.createModuleHotContext("template_array/b.js");
+__rolldown_runtime__.registerModule("template_array/b.js", { exports: b_exports });
+globalThis.template_array_bRuns = (globalThis.template_array_bRuns ?? 0) + 1;
+//#endregion
+//#region template_array/parent.js
+var parent_exports$2 = /* @__PURE__ */ __exportAll({});
+const parent_hot$2 = __rolldown_runtime__.createModuleHotContext("template_array/parent.js");
+__rolldown_runtime__.registerModule("template_array/parent.js", { exports: parent_exports$2 });
+globalThis.template_arrayParentRuns = (globalThis.template_arrayParentRuns ?? 0) + 1;
+globalThis.template_arraySaw = [0, 0];
+parent_hot$2.accept(["template_array/a.js", "template_array/b.js"], ([newA, newB]) => {
+	if (newA) globalThis.template_arraySaw[0] = newA.count;
+	if (newB) globalThis.template_arraySaw[1] = newB.count;
+});
+//#endregion
+//#region falsy_deps/self.js
+var self_exports = /* @__PURE__ */ __exportAll({ count: () => 0 });
+const self_hot = __rolldown_runtime__.createModuleHotContext("falsy_deps/self.js");
+__rolldown_runtime__.registerModule("falsy_deps/self.js", { exports: self_exports });
+globalThis.falsy_depsSelfRuns = (globalThis.falsy_depsSelfRuns ?? 0) + 1;
+self_hot.accept(void 0, () => {
+	globalThis.falsy_depsCallbackRan = true;
+});
+//#endregion
+//#region falsy_deps/parent.js
+var parent_exports$1 = /* @__PURE__ */ __exportAll({});
+__rolldown_runtime__.createModuleHotContext("falsy_deps/parent.js");
+__rolldown_runtime__.registerModule("falsy_deps/parent.js", { exports: parent_exports$1 });
+globalThis.falsy_depsParentRuns = (globalThis.falsy_depsParentRuns ?? 0) + 1;
+//#endregion
+//#region array_one_arg/child.js
+var child_exports = /* @__PURE__ */ __exportAll({ count: () => 0 });
+__rolldown_runtime__.createModuleHotContext("array_one_arg/child.js");
+__rolldown_runtime__.registerModule("array_one_arg/child.js", { exports: child_exports });
+globalThis.array_one_argChildRuns = (globalThis.array_one_argChildRuns ?? 0) + 1;
+//#endregion
+//#region array_one_arg/parent.js
+var parent_exports = /* @__PURE__ */ __exportAll({});
+const parent_hot = __rolldown_runtime__.createModuleHotContext("array_one_arg/parent.js");
+__rolldown_runtime__.registerModule("array_one_arg/parent.js", { exports: parent_exports });
+globalThis.array_one_argParentRuns = (globalThis.array_one_argParentRuns ?? 0) + 1;
+parent_hot.accept(["array_one_arg/child.js"]);
+//#endregion
+//#region main.js
+var main_exports = /* @__PURE__ */ __exportAll({});
+__rolldown_runtime__.createModuleHotContext("main.js");
+__rolldown_runtime__.registerModule("main.js", { exports: main_exports });
+process.on("beforeExit", (code) => {
+	if (code !== 0) return;
+	assert.strictEqual(globalThis.one_argChildRuns, 2);
+	assert.strictEqual(globalThis.one_argParentRuns, 1);
+	assert.strictEqual(globalThis.three_argsChildRuns, 2);
+	assert.strictEqual(globalThis.three_argsParentRuns, 1);
+	assert.strictEqual(globalThis.three_argsSaw, 1);
+	assert.strictEqual(globalThis.templateChildRuns, 2);
+	assert.strictEqual(globalThis.templateParentRuns, 1);
+	assert.strictEqual(globalThis.templateSaw, 1);
+	assert.strictEqual(globalThis.template_array_aRuns, 2);
+	assert.strictEqual(globalThis.template_array_bRuns, 2);
+	assert.strictEqual(globalThis.template_arrayParentRuns, 1);
+	assert.deepStrictEqual(globalThis.template_arraySaw, [1, 1]);
+	assert.strictEqual(globalThis.array_one_argChildRuns, 2);
+	assert.strictEqual(globalThis.array_one_argParentRuns, 1);
+	assert.strictEqual(globalThis.falsy_depsSelfRuns, 2);
+	assert.strictEqual(globalThis.falsy_depsParentRuns, 1);
+	assert.strictEqual(globalThis.falsy_depsCallbackRan, void 0);
+});
+//#endregion
+
+```
+
+# HMR Step 0
+
+## Code
+
+```js
+__rolldown_runtime__.registerGraph({ids:["one_arg/child.js"],localCount:1,edges:[[]],dynamicEdges:[[]]});
+//#region one_arg/child.js
+__rolldown_runtime__.registerFactory("one_arg/child.js", (function(__rolldown_module_id__) {
+	try {
+		var __rolldown_exports__ = __rolldown_runtime__.__exportAll({ count: () => count });
+		__rolldown_runtime__.registerModule(__rolldown_module_id__, { exports: __rolldown_exports__ });
+		const hot_child = __rolldown_runtime__.createModuleHotContext(__rolldown_module_id__);
+		globalThis.one_argChildRuns = (globalThis.one_argChildRuns ?? 0) + 1;
+		const count = 1;
+	} finally {}
+}));
+
+//#endregion
+```
+
+## Meta
+
+- update type: patch
+
+### Changed Ids
+
+- one_arg/child.js
+
+# HMR Step 1
+
+## Code
+
+```js
+__rolldown_runtime__.registerGraph({ids:["three_args/child.js"],localCount:1,edges:[[]],dynamicEdges:[[]]});
+//#region three_args/child.js
+__rolldown_runtime__.registerFactory("three_args/child.js", (function(__rolldown_module_id__) {
+	try {
+		var __rolldown_exports__ = __rolldown_runtime__.__exportAll({ count: () => count });
+		__rolldown_runtime__.registerModule(__rolldown_module_id__, { exports: __rolldown_exports__ });
+		const hot_child = __rolldown_runtime__.createModuleHotContext(__rolldown_module_id__);
+		globalThis.three_argsChildRuns = (globalThis.three_argsChildRuns ?? 0) + 1;
+		const count = 1;
+	} finally {}
+}));
+
+//#endregion
+```
+
+## Meta
+
+- update type: patch
+
+### Changed Ids
+
+- three_args/child.js
+
+# HMR Step 2
+
+## Code
+
+```js
+__rolldown_runtime__.registerGraph({ids:["template/child.js"],localCount:1,edges:[[]],dynamicEdges:[[]]});
+//#region template/child.js
+__rolldown_runtime__.registerFactory("template/child.js", (function(__rolldown_module_id__) {
+	try {
+		var __rolldown_exports__ = __rolldown_runtime__.__exportAll({ count: () => count });
+		__rolldown_runtime__.registerModule(__rolldown_module_id__, { exports: __rolldown_exports__ });
+		const hot_child = __rolldown_runtime__.createModuleHotContext(__rolldown_module_id__);
+		globalThis.templateChildRuns = (globalThis.templateChildRuns ?? 0) + 1;
+		const count = 1;
+	} finally {}
+}));
+
+//#endregion
+```
+
+## Meta
+
+- update type: patch
+
+### Changed Ids
+
+- template/child.js
+
+# HMR Step 3
+
+## Code
+
+```js
+__rolldown_runtime__.registerGraph({ids:["template_array/a.js"],localCount:1,edges:[[]],dynamicEdges:[[]]});
+//#region template_array/a.js
+__rolldown_runtime__.registerFactory("template_array/a.js", (function(__rolldown_module_id__) {
+	try {
+		var __rolldown_exports__ = __rolldown_runtime__.__exportAll({ count: () => count });
+		__rolldown_runtime__.registerModule(__rolldown_module_id__, { exports: __rolldown_exports__ });
+		const hot_a = __rolldown_runtime__.createModuleHotContext(__rolldown_module_id__);
+		globalThis.template_array_aRuns = (globalThis.template_array_aRuns ?? 0) + 1;
+		const count = 1;
+	} finally {}
+}));
+
+//#endregion
+```
+
+## Meta
+
+- update type: patch
+
+### Changed Ids
+
+- template_array/a.js
+
+# HMR Step 4
+
+## Code
+
+```js
+__rolldown_runtime__.registerGraph({ids:["template_array/b.js"],localCount:1,edges:[[]],dynamicEdges:[[]]});
+//#region template_array/b.js
+__rolldown_runtime__.registerFactory("template_array/b.js", (function(__rolldown_module_id__) {
+	try {
+		var __rolldown_exports__ = __rolldown_runtime__.__exportAll({ count: () => count });
+		__rolldown_runtime__.registerModule(__rolldown_module_id__, { exports: __rolldown_exports__ });
+		const hot_b = __rolldown_runtime__.createModuleHotContext(__rolldown_module_id__);
+		globalThis.template_array_bRuns = (globalThis.template_array_bRuns ?? 0) + 1;
+		const count = 1;
+	} finally {}
+}));
+
+//#endregion
+```
+
+## Meta
+
+- update type: patch
+
+### Changed Ids
+
+- template_array/b.js
+
+# HMR Step 5
+
+## Code
+
+```js
+__rolldown_runtime__.registerGraph({ids:["falsy_deps/self.js"],localCount:1,edges:[[]],dynamicEdges:[[]]});
+//#region falsy_deps/self.js
+__rolldown_runtime__.registerFactory("falsy_deps/self.js", (function(__rolldown_module_id__) {
+	try {
+		var __rolldown_exports__ = __rolldown_runtime__.__exportAll({ count: () => count });
+		__rolldown_runtime__.registerModule(__rolldown_module_id__, { exports: __rolldown_exports__ });
+		const hot_self = __rolldown_runtime__.createModuleHotContext(__rolldown_module_id__);
+		globalThis.falsy_depsSelfRuns = (globalThis.falsy_depsSelfRuns ?? 0) + 1;
+		const count = 1;
+		hot_self.accept(undefined, () => {
+			globalThis.falsy_depsCallbackRan = true;
+		});
+	} finally {}
+}));
+
+//#endregion
+```
+
+## Meta
+
+- update type: patch
+
+### Changed Ids
+
+- falsy_deps/self.js
+
+# HMR Step 6
+
+## Code
+
+```js
+__rolldown_runtime__.registerGraph({ids:["array_one_arg/child.js"],localCount:1,edges:[[]],dynamicEdges:[[]]});
+//#region array_one_arg/child.js
+__rolldown_runtime__.registerFactory("array_one_arg/child.js", (function(__rolldown_module_id__) {
+	try {
+		var __rolldown_exports__ = __rolldown_runtime__.__exportAll({ count: () => count });
+		__rolldown_runtime__.registerModule(__rolldown_module_id__, { exports: __rolldown_exports__ });
+		const hot_child = __rolldown_runtime__.createModuleHotContext(__rolldown_module_id__);
+		globalThis.array_one_argChildRuns = (globalThis.array_one_argChildRuns ?? 0) + 1;
+		const count = 1;
+	} finally {}
+}));
+
+//#endregion
+```
+
+## Meta
+
+- update type: patch
+
+### Changed Ids
+
+- array_one_arg/child.js

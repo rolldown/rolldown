@@ -61,9 +61,24 @@ process.on("beforeExit", (code) => {
 
 # HMR Step 0
 
-## Meta
+## Errors
 
-- update type: noop
+### UNRESOLVED_IMPORT
+
+```text
+[UNRESOLVED_IMPORT] Could not resolve './child.js' in parent.js
+   ╭─[ parent.js:1:37 ]
+   │
+ 1 │ import { value as childValue } from './child.js';
+   │                                     ──────┬─────  
+   │                                           ╰─────── Module not found.
+   │ 
+   │ Help: 'parent.js' is imported by the following path:
+   │         - parent.js
+   │         - main.js
+───╯
+
+```
 
 # HMR Step 1
 
@@ -117,3 +132,4 @@ __rolldown_runtime__.registerFactory("parent.js", (function(__rolldown_module_id
 ### Changed Ids
 
 - child.js
+- parent.js

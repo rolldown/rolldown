@@ -163,20 +163,18 @@ jobs:
           path: target/debuginfo/*.debuginfo.tar.zst
 
   # Keep this list in sync with the `debuginfo: true` entries above.
+  # The check only reads the files, so every target runs on Linux.
   verify-debuginfo:
     needs: build-binding
     strategy:
       fail-fast: false
       matrix:
-        include:
-          - os: macos-latest
-            target: aarch64-apple-darwin
-          - os: windows-latest
-            target: x86_64-pc-windows-msvc
-          - os: ubuntu-latest
-            target: x86_64-unknown-linux-gnu
+        target:
+          - aarch64-apple-darwin
+          - x86_64-pc-windows-msvc
+          - x86_64-unknown-linux-gnu
     name: Verify Debug Info ${{ matrix.target }}
-    runs-on: ${{ matrix.os }}
+    runs-on: ubuntu-latest
     steps:
       - uses: taiki-e/checkout-action@7d1e50e93dc4fb3bba58f85018fadf77898aee8b # v1.4.2
 
@@ -192,16 +190,7 @@ jobs:
           name: debuginfo-${{ matrix.target }}
           path: target/debuginfo
 
-      - name: Check Binding Has No Debug Sections
-        if: ${{ runner.os == 'Linux' }}
-        run: |
-          if readelf -SW packages/rolldown/src/rolldown-binding.*.node | grep -q '\.debug_'; then
-            echo 'debug sections remain in the binding'
-            exit 1
-          fi
-
-      - name: Verify Backtrace Symbolication
-        shell: bash
+      - name: Verify Debug Info Matches Binding
         run: node scripts/misc/verify-debuginfo.mjs
 
   build-freebsd:

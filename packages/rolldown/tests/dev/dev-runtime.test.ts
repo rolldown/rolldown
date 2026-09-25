@@ -35,6 +35,23 @@ test('the packaged runtime base is byte-identical to the bundled runtime base', 
   );
 });
 
+// Vite serves the runtime from the installed package at dev time and finds the files the entry
+// imports by this name pattern (`getRolldownDevRuntimeFiles` in vite). Renaming or moving them
+// breaks every bundled-dev page in the browser.
+test('the runtime entry imports only siblings named experimental-runtime*.mjs', () => {
+  const entryUrl = new URL(import.meta.resolve('rolldown/experimental/runtime'));
+  expect(entryUrl.pathname.endsWith('/experimental-runtime.mjs')).toBe(true);
+
+  const imports = [...fs.readFileSync(entryUrl, 'utf8').matchAll(/\bfrom\s*['"]([^'"]+)['"]/g)].map(
+    (match) => match[1],
+  );
+  expect(imports.length).toBeGreaterThan(0);
+  for (const specifier of imports) {
+    expect(specifier).toMatch(/^\.\/experimental-runtime[^/]*\.mjs$/);
+    expect(fs.existsSync(new URL(specifier, entryUrl))).toBe(true);
+  }
+});
+
 test('the package does not emit a separate runtime injection source', () => {
   const runtimeSourceUrl = new URL(
     './experimental-runtime-source.mjs',

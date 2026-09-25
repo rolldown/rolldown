@@ -1,6 +1,6 @@
 import fs from 'node:fs';
 import nodePath from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 
 import { dts } from 'rolldown-plugin-dts';
 import * as ts from 'typescript';
@@ -8,6 +8,7 @@ import * as ts from 'typescript';
 import { CopyAddonPlugin } from './copy-addon-plugin';
 import type { BuildOptions, Plugin } from './src/index';
 import { build } from './src/index';
+import { readDefaultDevRuntimeSource } from './src/utils/default-dev-runtime';
 import { styleText } from './src/utils/style-text';
 
 const __dirname = nodePath.join(fileURLToPath(import.meta.url), '..');
@@ -64,10 +65,6 @@ const runtimeBaseInputFile = nodePath.resolve(
   __dirname,
   '../../crates/rolldown/src/runtime/runtime-base.js',
 );
-const defaultRuntimeInputFile = nodePath.resolve(
-  __dirname,
-  '../../crates/rolldown_plugin_hmr/src/runtime/runtime-extra-dev-default.js',
-);
 
 const configs: BuildOptions[] = [
   withShared({
@@ -108,7 +105,8 @@ if (buildMeta.target === 'browser-pkg') {
   for (const config of configs) {
     await build(config);
   }
-  generateRuntimeEntry();
+  await buildRuntimeEntry();
+  generateRuntimeTypes();
 })();
 
 function withShared({
@@ -161,9 +159,7 @@ function withShared({
       target: 'node22',
       define: {
         'import.meta.browserBuild': String(isBrowserBuild),
-        __RUNTIME_STRING__: isBrowserBuild
-          ? JSON.stringify(readDefaultDevRuntimeSource())
-          : 'undefined',
+        __RUNTIME_STRING__: JSON.stringify(readDefaultDevRuntimeSource()),
       },
     },
   };
@@ -249,30 +245,30 @@ if (!nativeBinding && globalThis.process?.versions?.["webcontainer"]) {
   };
 }
 
-// Prefix the common runtime with its canonical compiler-helper imports for standalone ESM use.
-// The default runtime loader removes this generated first line before injecting the source into a
-// bundle, where the same helpers are already in scope.
-function generateRuntimeEntry() {
+// Vite serves this file to the browser as is, so it must have no imports.
+// See internal-docs/dev-engine/implementation.md
+async function buildRuntimeEntry() {
+  const helperNames = Object.keys(await import(pathToFileURL(runtimeBaseInputFile).href));
+  await build({
+    input: { 'experimental-runtime': commonRuntimeInputFile },
+    platform: 'neutral',
+    transform: {
+      inject: Object.fromEntries(helperNames.map((name) => [name, [runtimeBaseInputFile, name]])),
+    },
+    output: {
+      dir: buildMeta.buildOutputDir,
+      format: 'esm',
+      entryFileNames: '[name].mjs',
+    },
+  });
+}
+
+function generateRuntimeTypes() {
   const outputFile = nodePath.resolve(buildMeta.buildOutputDir, 'experimental-runtime.d.ts');
 
   console.log(styleText('green', '[build:done]'), 'Generating dts from', commonRuntimeInputFile);
 
-  const { commonRuntimeSource, defaultRuntimeSource } = readDevRuntimeSources();
-  const runtimeHelperImport =
-    "import { __exportAll, __reExport, __toCommonJS, __toESM } from './experimental-runtime-base.mjs';\n";
-  fs.writeFileSync(
-    nodePath.resolve(buildMeta.buildOutputDir, 'experimental-runtime.mjs'),
-    runtimeHelperImport + commonRuntimeSource,
-  );
-  fs.copyFileSync(
-    runtimeBaseInputFile,
-    nodePath.resolve(buildMeta.buildOutputDir, 'experimental-runtime-base.mjs'),
-  );
-  fs.writeFileSync(
-    nodePath.resolve(buildMeta.buildOutputDir, 'experimental-default-runtime.mjs'),
-    defaultRuntimeSource,
-  );
-
+  const commonRuntimeSource = fs.readFileSync(commonRuntimeInputFile, 'utf-8');
   const result = ts.transpileDeclaration(commonRuntimeSource, {
     compilerOptions: {
       ...getTsconfigCompilerOptionsForFile(commonRuntimeInputFile),
@@ -291,18 +287,6 @@ function generateRuntimeEntry() {
   } else {
     throw new Error('Failed to generate d.ts from runtime-extra-dev.js');
   }
-}
-
-function readDevRuntimeSources() {
-  return {
-    commonRuntimeSource: fs.readFileSync(commonRuntimeInputFile, 'utf-8'),
-    defaultRuntimeSource: fs.readFileSync(defaultRuntimeInputFile, 'utf-8'),
-  };
-}
-
-function readDefaultDevRuntimeSource() {
-  const { commonRuntimeSource, defaultRuntimeSource } = readDevRuntimeSources();
-  return `${commonRuntimeSource}\n${defaultRuntimeSource}`;
 }
 
 function getTsconfigCompilerOptionsForFile(file: string) {

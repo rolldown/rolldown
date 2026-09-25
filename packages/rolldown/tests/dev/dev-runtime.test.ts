@@ -2,6 +2,8 @@ import fs from 'node:fs';
 
 import { expect, test, vi } from 'vitest';
 
+import { getDefaultDevRuntime } from '../../src/utils/default-dev-runtime';
+
 async function createRuntime() {
   const runtimeUrl = import.meta.resolve('rolldown/experimental/runtime');
   const { DevRuntime, MissingFactoryError } = await import(runtimeUrl);
@@ -16,49 +18,42 @@ test('the standalone runtime uses the canonical runtime helpers', async () => {
   const esmModule = runtime.__toCommonJS({ default: commonJsModule });
   expect(esmModule.__esModule).toBe(true);
   expect(esmModule.default).toBe(commonJsModule);
+  expect(runtime.__exportAll({ value: () => 1 }).value).toBe(1);
+  const reExportTarget: Record<string, unknown> = {};
+  runtime.__reExport(reExportTarget, { value: 2 });
+  expect(reExportTarget.value).toBe(2);
 });
 
-test('the packaged runtime base is byte-identical to the bundled runtime base', () => {
-  const packagedRuntimeBaseUrl = new URL(
-    './experimental-runtime-base.mjs',
-    import.meta.resolve('rolldown/experimental/runtime'),
-  );
-  const bundledRuntimeBaseUrl = new URL(
-    '../../../../crates/rolldown/src/runtime/runtime-base.js',
-    import.meta.url,
-  );
-
-  expect(fs.existsSync(packagedRuntimeBaseUrl)).toBe(true);
-  if (!fs.existsSync(packagedRuntimeBaseUrl)) return;
-  expect(fs.readFileSync(packagedRuntimeBaseUrl, 'utf8')).toBe(
-    fs.readFileSync(bundledRuntimeBaseUrl, 'utf8'),
-  );
+test('the runtime entry exports only the runtime classes', async () => {
+  const runtimeModule = await import(import.meta.resolve('rolldown/experimental/runtime'));
+  expect(Object.keys(runtimeModule).sort()).toEqual(['DevRuntime', 'MissingFactoryError']);
 });
 
-// Vite serves the runtime from the installed package at dev time and finds the files the entry
-// imports by this name pattern (`getRolldownDevRuntimeFiles` in vite). Renaming or moving them
-// breaks every bundled-dev page in the browser.
-test('the runtime entry imports only siblings named experimental-runtime*.mjs', () => {
+// Vite serves this file to the browser as is.
+test('the runtime entry is a single file with no imports', () => {
   const entryUrl = new URL(import.meta.resolve('rolldown/experimental/runtime'));
   expect(entryUrl.pathname.endsWith('/experimental-runtime.mjs')).toBe(true);
 
-  const imports = [...fs.readFileSync(entryUrl, 'utf8').matchAll(/\bfrom\s*['"]([^'"]+)['"]/g)].map(
-    (match) => match[1],
-  );
-  expect(imports.length).toBeGreaterThan(0);
-  for (const specifier of imports) {
-    expect(specifier).toMatch(/^\.\/experimental-runtime[^/]*\.mjs$/);
-    expect(fs.existsSync(new URL(specifier, entryUrl))).toBe(true);
-  }
+  const source = fs.readFileSync(entryUrl, 'utf8');
+  expect(source).not.toMatch(/^\s*import\b/m);
+  expect(source).not.toMatch(/\bfrom\s*['"]/);
 });
 
-test('the package does not emit a separate runtime injection source', () => {
-  const runtimeSourceUrl = new URL(
-    './experimental-runtime-source.mjs',
-    import.meta.resolve('rolldown/experimental/runtime'),
-  );
+test('the package emits no other runtime source file', () => {
+  const distDir = new URL('.', import.meta.resolve('rolldown/experimental/runtime'));
+  const runtimeFiles = fs
+    .readdirSync(distDir)
+    .filter((name) => name.includes('runtime') && name.endsWith('.mjs'));
 
-  expect(fs.existsSync(runtimeSourceUrl)).toBe(false);
+  expect(runtimeFiles).toEqual(['experimental-runtime.mjs']);
+});
+
+test('the default runtime loads when running from source', () => {
+  const runtime = getDefaultDevRuntime('example.test', 1234);
+
+  expect(runtime).toContain('class DevRuntime');
+  expect(runtime).toContain('example.test:1234');
+  expect(runtime).not.toContain('$ADDR');
 });
 
 test('registerGraph maintains static + dynamic reverse indexes; getImporters unions them', async () => {

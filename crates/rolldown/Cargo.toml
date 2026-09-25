@@ -36,6 +36,7 @@ oxc_ecmascript = { workspace = true }
 oxc_index = { workspace = true }
 oxc_str = { workspace = true }
 oxc_traverse = { workspace = true }
+percent-encoding = { workspace = true }
 petgraph = { workspace = true }
 rayon = { workspace = true }
 rolldown_common = { workspace = true }

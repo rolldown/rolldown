@@ -147,7 +147,12 @@ impl<'a, Fs: FileSystem + Clone + 'static> HmrStage<'a, Fs> {
         .plugin_driver
         .transform_dependencies
         .iter()
-        .filter_map(|entry| entry.value().contains(changed_path).then_some(*entry.key()))
+        .filter_map(|entry| {
+          changed_path
+            .ancestors()
+            .any(|ancestor| entry.value().contains(ancestor))
+            .then_some(*entry.key())
+        })
         .collect::<Vec<_>>();
       transform_dep_modules
         .sort_unstable_by_key(|module_idx| self.module_table().modules[*module_idx].stable_id());
@@ -673,9 +678,15 @@ impl<'a, Fs: FileSystem + Clone + 'static> HmrStage<'a, Fs> {
       source_joiner.append_source_dyn(source);
     }
 
-    // Registrations only — deliberately no execute-entry tail; `requestLazy` runs the module.
-    // Executing here would run it inside the proxy's async wrapper, turning a throw from its
-    // body into a floating rejection instead of one that reaches the importer.
+    // A lazy chunk is delivery + execute-entry — no walk, no cache removals. The tail is the
+    // one uniform re-execution gate: the stub removed the proxy id from the cache, so this misses the
+    // registry and runs the fetched-template factory.
+    let entry_stable_id = self.module_table().modules[entry_module_idx].stable_id().as_str();
+    source_joiner.append_source(format!(
+      "__rolldown_runtime__.initModule({})",
+      json_escape_simd::escape(entry_stable_id)
+    ));
+
     let (mut code, mut map) = source_joiner.join();
 
     let lazy_patch_id = self.next_hmr_patch_id.fetch_add(1, Ordering::Relaxed);

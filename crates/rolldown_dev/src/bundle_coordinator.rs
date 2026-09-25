@@ -6,14 +6,10 @@ use std::{
 
 use anyhow::Context;
 use futures::FutureExt;
-#[cfg(target_os = "macos")]
-use notify::EventKind;
-use rolldown_common::{WatchPath, WatcherChangeKind};
+use rolldown_common::WatcherChangeKind;
 use rolldown_error::BuildResult;
-use rolldown_fs_watcher::{
-  FsChangeKind, FsEventResult, FsWatcher, RecursiveMode, map_notify_event,
-};
-use rolldown_utils::{dashmap::FxDashSet, indexmap::FxIndexMap, pattern_filter};
+use rolldown_fs_watcher::{FsEvent, FsWatcher};
+use rolldown_utils::{indexmap::FxIndexMap, pattern_filter};
 use tokio::sync::Mutex;
 
 use rolldown::Bundler;
@@ -40,7 +36,6 @@ pub struct BundleCoordinator {
   next_hmr_patch_id: Arc<AtomicU32>,
   rx: CoordinatorReceiver,
   watcher: StdMutex<FsWatcher>,
-  watched_files: FxDashSet<WatchPath>,
   /// Tracks the state of the initial build
   state: CoordinatorState,
   /// File changes that arrived during initial build
@@ -65,7 +60,6 @@ impl BundleCoordinator {
       next_hmr_patch_id,
       rx,
       watcher: StdMutex::new(watcher),
-      watched_files: FxDashSet::default(),
       state: CoordinatorState::Initialized,
       queued_file_changes_waited_for_full_build: FxIndexMap::default(),
       // Initialize build state with initial build task
@@ -126,7 +120,13 @@ impl BundleCoordinator {
         }
         #[cfg(feature = "testing")]
         CoordinatorMsg::GetWatchedFiles { reply } => {
-          let result = self.watched_files.iter().map(|s| s.to_string()).collect();
+          let result = self
+            .watcher
+            .lock()
+            .map(|watcher| {
+              watcher.watched_paths().map(|path| path.to_string_lossy().into_owned()).collect()
+            })
+            .unwrap_or_default();
           let _ = reply.send(result);
         }
         CoordinatorMsg::ModuleChanged { module_id } => {
@@ -161,38 +161,10 @@ impl BundleCoordinator {
 
   /// Handle file change events from watcher.
   ///
-  /// Rename mapping is shared with build watch via [`map_notify_event`].
   /// See `internal-docs/dev-engine/implementation.md` ("From fs event to queued task").
-  async fn handle_watch_event(&mut self, watch_event: FsEventResult) {
-    match watch_event {
-      Ok(batched_events) => {
-        let mut changed_files = FxIndexMap::default();
-        for batched_event in batched_events {
-          #[cfg(target_os = "macos")]
-          if matches!(
-            batched_event.detail.kind,
-            EventKind::Modify(notify::event::ModifyKind::Metadata(_))
-          ) && !self.ctx.options.use_polling
-          {
-            // kqueue on mac emits metadata events often; they do not affect the
-            // build in most cases. Polling prefers metadata over content events,
-            // so those must still be mapped.
-            continue;
-          }
-
-          for (path, kind) in
-            map_notify_event(&batched_event.detail.kind, batched_event.detail.paths)
-          {
-            changed_files.insert(path, watcher_change_kind(kind));
-          }
-        }
-
-        self.handle_file_changes(changed_files).await;
-      }
-      Err(e) => {
-        tracing::error!("notify error: {e:?}");
-      }
-    }
+  async fn handle_watch_event(&mut self, events: Vec<FsEvent>) {
+    let changed_files = events.into_iter().map(|event| (event.path, event.kind)).collect();
+    self.handle_file_changes(changed_files).await;
   }
 
   /// Handle file changes based on initial build state
@@ -480,43 +452,15 @@ impl BundleCoordinator {
   /// Update watcher paths based on current build output
   async fn update_watch_paths(&self) -> BuildResult<()> {
     let bundler = self.bundler.lock().await;
-    let cwd = &bundler.options().cwd;
-    let cwd_str = cwd.to_string_lossy();
+    let cwd = bundler.options().cwd.to_string_lossy();
 
     let include = self.ctx.options.watch_include.as_deref();
     let exclude = self.ctx.options.watch_exclude.as_deref();
 
     let mut watcher = self.watcher.lock().ok().context("Failed to acquire watcher lock")?;
-    let mut paths_mut = watcher.paths_mut();
-    let mut added_files = Vec::new();
-    for watch_file in bundler.watch_files().iter() {
-      let watch_path = WatchPath::new(watch_file.as_str(), cwd);
-      let path = watch_path.as_path();
-      if !self.watched_files.contains(path)
-        && pattern_filter::filter(exclude, include, &path.to_string_lossy(), &cwd_str).inner()
-      {
-        match paths_mut.add(path, RecursiveMode::NonRecursive) {
-          Ok(()) => {
-            added_files.push(watch_path);
-          }
-          Err(error) => {
-            tracing::debug!(name = "notify watch skipped", path = ?path, error = ?error);
-          }
-        }
-      }
-    }
-    paths_mut.commit()?;
-    for file in added_files {
-      self.watched_files.insert(file);
-    }
-    Ok(())
-  }
-}
-
-fn watcher_change_kind(kind: FsChangeKind) -> WatcherChangeKind {
-  match kind {
-    FsChangeKind::Create => WatcherChangeKind::Create,
-    FsChangeKind::Update => WatcherChangeKind::Update,
-    FsChangeKind::Delete => WatcherChangeKind::Delete,
+    watcher
+      .watch_paths(bundler.watch_files().iter().map(|file| PathBuf::from(file.as_str())), |path| {
+        pattern_filter::filter(exclude, include, &path.to_string_lossy(), &cwd).inner()
+      })
   }
 }

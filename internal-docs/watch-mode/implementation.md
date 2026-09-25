@@ -87,13 +87,12 @@ Watcher (public API)
                                └── tasks: IndexVec<WatchTaskIdx, WatchTask>
                                     ├── WatchTask 0
                                     │   ├── bundler: Arc<TokioMutex<Bundler>>
-                                    │   ├── fs_watcher: FsWatcher (owned, per-task)
-                                    │   ├── watched_files: FxDashSet<ArcStr>
+                                    │   ├── fs_watcher: FsWatcher (owned, per-task, holds the watched paths)
                                     │   └── needs_rebuild: bool
                                     └── WatchTask N ...
 
 Data flow:
-  FsWatcher ──(TaskFsEventHandler: maps notify events → FileChangeEvent)──→ WatcherMsg::FileChanges ──→ WatchCoordinator
+  FsWatcher ──(FsEvent: path + WatcherChangeKind)──→ TaskFsEventHandler ──→ WatcherMsg::FileChanges ──→ WatchCoordinator
   WatchCoordinator ──→ dispatch_event / dispatch_change / dispatch_restart
                          └── await_handler_or_close()
                                ├── handler.on_*().await ──→ Consumer (NAPI/Rust)
@@ -131,7 +130,7 @@ rolldown_watcher/
 ├── watcher.rs                 // Watcher (public API) + WatcherConfig
 ├── watch_coordinator.rs       // WatchCoordinator (actor + event loop)
 ├── watch_task.rs              // WatchTask (bundler + fs watcher) + WatchTaskIdx + BuildOutcome
-├── task_fs_event_handler.rs   // TaskFsEventHandler (notify → FileChangeEvent mapping)
+├── task_fs_event_handler.rs   // TaskFsEventHandler (FsEvent → FileChangeEvent)
 ├── handler.rs                 // WatcherEventHandler async trait
 ├── event.rs                   // WatchEvent, BundleStartEventData, BundleEndEventData, WatchErrorEventData
 ├── file_change_event.rs       // FileChangeEvent (path + kind)
@@ -141,13 +140,14 @@ rolldown_watcher/
 rolldown_fs_watcher/
 ├── lib.rs                     // Public exports: FsWatcher, FsWatcherConfig, FsEvent*
 ├── config.rs                  // FsWatcherConfig (enabled, use_polling, use_debounce, …)
-├── event.rs                   // FsEvent, FsEventHandler, FsEventResult
-├── watcher.rs                 // public FsWatcher + internal WatcherBackend + PathsMut
-└── notify/
-    ├── mod.rs                 // create_backend() — selects backend from config
+├── event.rs                   // FsEvent (path + WatcherChangeKind), FsEventHandler
+├── watcher.rs                 // FsWatcher: the watched paths, on top of a WatcherBackend
+└── notify/                    // everything that speaks notify
+    ├── mod.rs                 // WatcherBackend + PathsMut traits, create_backend() — selects backend from config
     ├── immediate.rs           // recommended / poll, no debounce
     ├── debounced.rs           // recommended / poll + notify-debouncer-full
-    └── noop.rs                // no-op backend when enabled: false
+    ├── noop.rs                // no-op backend when enabled: false
+    └── event_map.rs           // map_notify_event: notify events → FsEvents, files only
 ```
 
 ## State Machine
@@ -243,7 +243,6 @@ Watcher spawns coordinator
 File change detected by per-task FsWatcher
   → TaskFsEventHandler sends WatcherMsg::FileChanges
   → process_fs_event():
-      - Maps notify EventKind → WatcherChangeKind (Create/Update/Delete)
       - task.invalidate(path) → sets needs_rebuild = true
       - task.call_on_invalidate(path) → fires immediately, before debounce
       - State: Idle → Debouncing, or extends deadline
@@ -314,10 +313,10 @@ Configured via `WatcherOptions`, fires **immediately** on file change (before de
 ## File Watching
 
 - After each build, `bundler.watch_files()` returns the current set.
-- `WatchTask::update_watch_files()` diffs against the current set — new files are added to the per-task `FsWatcher`.
+- `WatchTask::update_watch_files()` hands the set to the per-task `FsWatcher`, which registers the paths it does not watch yet. `FsWatcher::is_watched` answers whether a changed path is one of them, or lies below one.
 - `include`/`exclude` patterns filter which files are watched (via `pattern_filter`).
 - Files are watched **non-recursively** (individual file watches).
-- Batch operations: `fs_watcher.paths_mut()` returns a guard for batching adds, committed via `.commit()`.
+- `FsWatcher::watch_paths` registers a batch with notify and records a path only after the commit succeeded, so a skipped path is tried again with the next build.
 
 ### Backend selection
 
@@ -357,28 +356,37 @@ When an import resolves to a non-existent file, the build errors. Watch mode rel
 
 ### Notify Event Mapping
 
-Shared with bundled dev through `rolldown_fs_watcher::map_notify_event`.
+`rolldown_fs_watcher` translates notify events into `FsEvent`s (`path` + `WatcherChangeKind`) in `map_notify_event`, before they reach `rolldown_watcher` or bundled dev.
 Do not re-implement this table in `rolldown_dev` or `rolldown_watcher`.
 
 ```
-notify::EventKind::Create(_)                              → WatcherChangeKind::Create
-notify::EventKind::Modify(Name(RenameMode::To))           → WatcherChangeKind::Create
+notify::EventKind::Create(_)                              → WatcherChangeKind::Create   (disk-checked)
+notify::EventKind::Modify(Name(RenameMode::To))           → WatcherChangeKind::Create   (disk-checked)
+notify::EventKind::Modify(Name(RenameMode::Any | Other))  → WatcherChangeKind::Create   (disk-checked; FSEvents/kqueue do not tell the side)
 notify::EventKind::Modify(Name(RenameMode::Both))         → per-path (see below)
 notify::EventKind::Modify(Name(RenameMode::From))         → WatcherChangeKind::Delete
 notify::EventKind::Remove(_)                              → WatcherChangeKind::Delete
-notify::EventKind::Modify(_)  (other)                     → WatcherChangeKind::Update
+notify::EventKind::Modify(Metadata(Any | WriteTime))      → WatcherChangeKind::Update   (disk-checked)
+notify::EventKind::Modify(Metadata(_))  (other)           → None (permissions, ownership, extended attributes, access time)
+notify::EventKind::Modify(_)  (other)                     → WatcherChangeKind::Update   (disk-checked)
 notify::EventKind::Access(_)                              → None (ignored — prevents infinite rebuild loops on Linux)
 ```
 
-**Rename handling:** Linux inotify can emit `Modify(Name(Both))` when both source and destination are known in a single rename event. This event carries two paths `[from, to]`. The event handler splits it into two `FileChangeEvent`s: `Delete` for the source path and `Create` for the destination path. This preserves both signals — the delete ensures stale cache entries are invalidated, and the create triggers missing-dir rebuilds. `RenameMode::To` and `RenameMode::From` are the single-path equivalents.
+**Disk-checked:** the backends' kinds are not always right — FSEvents reports `Name(Any)` for both sides of a rename and repeats earlier flags of a path (a `Create` for the old name of a renamed file), and no backend reports the files of a directory that appears. So for a kind that says the path exists now, the disk decides: a missing path is reported as `Delete`; a directory is reported as `Create` of every file below it (for `Create`), or not at all (for `Update`).
+
+**Directories:** only files are reported, like chokidar's `add`/`change`/`unlink`. A directory that appears is expanded into its files, because the backends do not report the files of a moved-in directory and can miss a file written right after `mkdir`. A directory that disappears is reported as `Delete` of the directory itself, since its files are unknown by then; consumers match it against watched paths by ancestors. A modified directory is not reported.
+
+**Rename handling:** Linux inotify can emit `Modify(Name(Both))` when both source and destination are known in a single rename event. This event carries two paths `[from, to]`. `map_notify_event` splits it into two events: `Delete` for the source path and `Create` for the destination path. This preserves both signals — the delete ensures stale cache entries are invalidated, and the create triggers missing-dir rebuilds. `RenameMode::To` and `RenameMode::From` are the single-path equivalents.
+
+**Metadata filtering:** `touch` is a metadata change on every native backend (FSEvents reports only `Metadata(Any)` for it), and polling reports a write as `Metadata(WriteTime)`, so those are `Update`. Kinds that cannot be a write are dropped; FSEvents reports `Extended` next to every write. `chmod` is `Metadata(Any)` on inotify and kqueue too, which costs a harmless extra rebuild.
 
 **Access filtering:** The build process reads watched source files, which on Linux triggers `IN_OPEN`/`IN_CLOSE_NOWRITE` events. Without filtering, these cause infinite rebuild loops.
 
 ### Path Identity
 
-The watch set stores paths as raw `ArcStr` strings. The `notify` crate reports events with OS-native paths. If these don't match exactly, `is_watched_file()` fails silently. The current `#[cfg(windows)]` backslash fallback is a symptom.
+Watch files are absolute and normalized before they reach the watcher: module ids come from the resolver, and a path passed to `this.addWatchFile` is resolved against `cwd` and normalized (`WatchPath`) when it is added. `FsWatcher` keeps them as `PathBuf`, the form notify reports events in, and `Path` compares by components, so `\` vs `/` on Windows is not a mismatch. A changed path is looked up together with its ancestors, which is how a change below a watched directory is found; the transform dependencies HMR records are `WatchPath`s and are matched the same way.
 
-**Recommendation:** Use `PathBuf` for the watched file set instead of `ArcStr`. This handles trailing slashes, double separators, `.` segments, and Windows `\` vs `/` — all common mismatch sources between resolver output and notify events.
+Symbolic links are not resolved, while FSEvents reports canonical paths.
 
 See [module-id.md](../module-id/implementation.md) for the full analysis of path identity across the bundler, `PathBuf` comparison behavior, and Rollup's approach.
 

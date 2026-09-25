@@ -62,7 +62,7 @@ impl TransformPluginContext {
     })
   }
 
-  /// Add a file as a dependency.
+  /// Add a file or a directory as a watch dependency.
   pub fn add_watch_file(&self, file: &str) {
     // Skip all operations for virtual modules (starting with \0)
     // Virtual modules can't be refetched from disk during HMR

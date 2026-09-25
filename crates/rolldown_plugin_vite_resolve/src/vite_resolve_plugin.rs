@@ -287,6 +287,7 @@ impl Plugin for ViteResolvePlugin {
         return Ok(Some(HookResolveIdOutput {
           id: ArcStr::from(path.to_slash()),
           package_json_path,
+          skip_package_json_lookup: self.legacy_inconsistent_cjs_interop,
           ..Default::default()
         }));
       }
@@ -304,7 +305,11 @@ impl Plugin for ViteResolvePlugin {
         res = finalized.into();
       }
       self.debug_log(|| format!("[@fs] {} -> {}", id.cyan(), res.dimmed())).await?;
-      return Ok(Some(HookResolveIdOutput { id: res.into(), ..Default::default() }));
+      return Ok(Some(HookResolveIdOutput {
+        id: res.into(),
+        skip_package_json_lookup: self.legacy_inconsistent_cjs_interop,
+        ..Default::default()
+      }));
     }
 
     // file url as path
@@ -327,6 +332,7 @@ impl Plugin for ViteResolvePlugin {
       return Ok(Some(HookResolveIdOutput {
         id: res.into(),
         package_json_path,
+        skip_package_json_lookup: self.legacy_inconsistent_cjs_interop,
         ..Default::default()
       }));
     }
@@ -372,7 +378,11 @@ impl Plugin for ViteResolvePlugin {
         self
           .debug_log(|| format!("[glob-tsconfig-paths] {} -> {}", id.cyan(), mapped.dimmed()))
           .await?;
-        return Ok(Some(HookResolveIdOutput { id: mapped.into(), ..Default::default() }));
+        return Ok(Some(HookResolveIdOutput {
+          id: mapped.into(),
+          skip_package_json_lookup: self.legacy_inconsistent_cjs_interop,
+          ..Default::default()
+        }));
       }
     }
 

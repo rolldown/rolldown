@@ -116,6 +116,11 @@ export interface ModuleOptions {
   // this is used to sync state between Rust and JavaScript
   invalidate?: boolean;
   packageJsonPath?: string;
+  /**
+   * @internal `true` keeps the id without `package.json` metadata when `packageJsonPath` is
+   * absent, so that no module format is inferred for it.
+   */
+  skipPackageJsonLookup?: boolean;
 }
 
 /** @category Plugin APIs */

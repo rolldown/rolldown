@@ -13,8 +13,11 @@ const FIXTURE_DIR: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/tests/rolldown/i
 /// Resolves the aliases the way `vite-tsconfig-paths` does: it asks `ctx.resolve` for the real
 /// file, then returns only the id string. That is a supported `resolveId` return type, so the
 /// resulting module must still get its `package.json#sideEffects` policy.
-#[derive(Debug)]
-struct IdStringAlias;
+#[derive(Debug, Default)]
+struct IdStringAlias {
+  /// Set on the returned id, as the Vite resolver does for `legacyInconsistentCjsInterop`.
+  skip_package_json_lookup: bool,
+}
 
 impl Plugin for IdStringAlias {
   fn name(&self) -> Cow<'static, str> {
@@ -38,13 +41,21 @@ impl Plugin for IdStringAlias {
       // Returned as a ready absolute path. `ctx.resolve` would already apply `resolve.alias` to
       // the resolved file, and the point is a hook whose own answer differs from the alias.
       "@alias-src" => {
-        return Ok(Some(HookResolveIdOutput::from_id(format!("{FIXTURE_DIR}/alias-src/index.js"))));
+        return Ok(Some(HookResolveIdOutput {
+          id: format!("{FIXTURE_DIR}/alias-src/index.js").into(),
+          skip_package_json_lookup: self.skip_package_json_lookup,
+          ..Default::default()
+        }));
       }
       _ => return Ok(None),
     };
     let resolved =
       ctx.resolve(target, args.importer, None).await?.expect("the target should resolve");
-    Ok(Some(HookResolveIdOutput::from_id(resolved.id.as_arc_str().clone())))
+    Ok(Some(HookResolveIdOutput {
+      id: resolved.id.as_arc_str().clone(),
+      skip_package_json_lookup: self.skip_package_json_lookup,
+      ..Default::default()
+    }))
   }
 
   fn register_hook_usage(&self) -> HookUsage {
@@ -54,7 +65,7 @@ impl Plugin for IdStringAlias {
 
 /// Bundles `entry` with the alias plugin and joins every emitted chunk.
 async fn bundle(entry: &str) -> String {
-  bundle_with(entry, vec![Plugin::new_shared(IdStringAlias)], None).await
+  bundle_with(entry, vec![Plugin::new_shared(IdStringAlias::default())], None).await
 }
 
 async fn bundle_with(
@@ -154,12 +165,36 @@ async fn plugin_resolved_id_reads_metadata_from_the_returned_path() {
     )]),
     ..Default::default()
   };
-  let code =
-    bundle_with("./alias-entry.js", vec![Plugin::new_shared(IdStringAlias)], Some(resolve)).await;
+  let code = bundle_with(
+    "./alias-entry.js",
+    vec![Plugin::new_shared(IdStringAlias::default())],
+    Some(resolve),
+  )
+  .await;
 
   assert!(
     code.contains("ALIAS SOURCE MUST SURVIVE"),
     "`alias-src` declares `sideEffects: true`, so its module must survive even though an alias \
      maps its path elsewhere. Output:\n{code}"
+  );
+}
+
+/// A hook can keep its id without `package.json` metadata on purpose. The Vite resolver does so
+/// for `legacyInconsistentCjsInterop`, which opts out of format inference. The lookup must not
+/// undo that. The `.jsx` importer takes its format from `fmt`'s `"type": "module"`, which
+/// selects Node interop for its CommonJS import. Without the lookup it keeps Babel interop.
+#[tokio::test(flavor = "multi_thread")]
+async fn plugin_resolved_id_can_skip_package_json_lookup() {
+  let inferred = bundle("./aliased-jsx-format.js").await;
+  let opt_out = vec![Plugin::new_shared(IdStringAlias { skip_package_json_lookup: true })];
+  let skipped = bundle_with("./aliased-jsx-format.js", opt_out, None).await;
+
+  assert!(
+    inferred.contains("__toESM(") && inferred.contains(", 1)"),
+    "the inferred `\"type\": \"module\"` selects Node interop. Output:\n{inferred}"
+  );
+  assert!(
+    skipped.contains("__toESM(") && !skipped.contains(", 1)"),
+    "an id that skips the lookup has no format, so it keeps Babel interop. Output:\n{skipped}"
   );
 }

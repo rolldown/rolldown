@@ -8,6 +8,10 @@ pub struct HookResolveIdOutput {
   pub normalize_external_id: Option<bool>,
   pub side_effects: Option<HookSideEffects>,
   pub package_json_path: Option<String>,
+  /// `true` keeps `id` without `package.json` metadata when `package_json_path` is `None`.
+  /// Otherwise rolldown looks the manifest up from `id`, so that the module gets the same policy
+  /// as through direct resolution.
+  pub skip_package_json_lookup: bool,
 }
 
 impl HookResolveIdOutput {
@@ -24,6 +28,7 @@ impl HookResolveIdOutput {
       package_json_path: resolved_id
         .package_json
         .map(|p| p.realpath().to_string_lossy().to_string()),
+      skip_package_json_lookup: resolved_id.skip_package_json_lookup,
     }
   }
 }

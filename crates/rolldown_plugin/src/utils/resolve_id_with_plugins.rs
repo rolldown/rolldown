@@ -63,6 +63,9 @@ fn resolved_id_from_hook_output<Fs: FileSystem>(
       let package_json = resolver.try_get_package_json_or_create(path.as_path())?;
       (infer_module_def_format(id.as_str(), Some(&package_json)), Some(package_json))
     }
+    // The hook may keep the id bare on purpose, as the Vite resolver does for
+    // `legacyInconsistentCjsInterop`.
+    None if r.skip_package_json_lookup => (infer_module_def_format(id.as_str(), None), None),
     // Only a real filesystem id has a package to find; virtual and bare ids have none.
     None => match id.as_path().map(|path| resolver.resolve_absolute_path(path)) {
       Some(Ok(resolved)) => (resolved.module_def_format, resolved.package_json),
@@ -80,6 +83,7 @@ fn resolved_id_from_hook_output<Fs: FileSystem>(
     normalize_external_id: r.normalize_external_id,
     side_effects: r.side_effects,
     package_json,
+    skip_package_json_lookup: r.skip_package_json_lookup,
     ..Default::default()
   })
 }

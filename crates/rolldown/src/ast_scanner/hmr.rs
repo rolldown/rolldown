@@ -1,10 +1,15 @@
 use super::AstScanner;
-use oxc::ast::ast;
+use oxc::{
+  ast::ast,
+  span::{GetSpan, Span},
+};
 use rolldown_common::{EcmaModuleAstUsage, ImportKind, ImportRecordMeta};
 use rolldown_ecmascript_utils::ExpressionExt;
-use rustc_hash::FxHashMap;
+use rolldown_error::BuildDiagnostic;
 
 impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
+  /// Follows Vite's `lexAcceptedHmrDeps`: any first argument that is not a static string or
+  /// an array makes the module self-accepting, and a dep that is not a static string is an error.
   pub(crate) fn try_extract_hmr_info_from_hot_accept_call(
     &mut self,
     call_expr: &ast::CallExpression<'ast>,
@@ -12,76 +17,67 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
     if !self.immutable_ctx.options.is_dev_mode_enabled() {
       return;
     }
-    // Possible call patterns for `import.meta.hot.accept`:
-    // - `import.meta.hot.accept()`
-    // - `import.meta.hot.accept((newModule) => {})`
-    // - `import.meta.hot.accept('./dep.js', ...)`
-    // - `import.meta.hot.accept(['./dep1.js', './dep2.js'], ...)`
-
-    // Check whether the callee is `import.meta.hot.accept`.
     if !call_expr.callee.is_import_meta_hot_accept() {
       return;
     }
 
-    let mut module_request_to_import_record_idx = FxHashMap::default();
-
-    match call_expr.arguments.as_slice() {
-      // `import.meta.hot.accept()`
-      // `import.meta.hot.accept(<any expression>)`
-      [] | [_] => {
+    match call_expr.arguments.first() {
+      Some(ast::Argument::ArrayExpression(array_expression)) => {
+        for element in &array_expression.elements {
+          match element.as_expression() {
+            Some(expr) if expr.as_static_module_request().is_some() => {
+              self.add_hot_accept_dep(expr, call_expr);
+            }
+            _ if element.is_elision() => {}
+            _ => self.report_non_static_hot_accept_dep(element.span()),
+          }
+        }
+      }
+      Some(argument) => match argument.as_expression() {
+        Some(expr) if expr.as_static_module_request().is_some() => {
+          self.add_hot_accept_dep(expr, call_expr);
+        }
+        Some(ast::Expression::TemplateLiteral(template)) => {
+          self.report_non_static_hot_accept_dep(template.span);
+        }
+        _ => {
+          self.result.ast_usage.insert(EcmaModuleAstUsage::HmrSelfAccept);
+        }
+      },
+      None => {
         self.result.ast_usage.insert(EcmaModuleAstUsage::HmrSelfAccept);
       }
-      // `import.meta.hot.accept('./dep.js', <any expression>)`
-      [ast::Argument::StringLiteral(string_literal), _] => {
-        module_request_to_import_record_idx.insert(
-          string_literal.value.as_str().into(),
-          self.add_import_record(
-            &string_literal.value,
-            ImportKind::HotAccept,
-            string_literal.span,
-            call_expr.span,
-            ImportRecordMeta::empty(),
-            None,
-          ),
-        );
-      }
-      // `import.meta.hot.accept(['./dep1.js', './dep2.js'], <any expression>)`
-      [ast::Argument::ArrayExpression(array_expression), _] => {
-        module_request_to_import_record_idx.extend(
-          array_expression
-            .elements
-            .iter()
-            .filter_map(|element| {
-              if let ast::ArrayExpressionElement::StringLiteral(string_literal) = element {
-                Some((string_literal.value, string_literal.span))
-              } else {
-                None
-              }
-            })
-            .map(|(lit, span)| {
-              (
-                lit.as_str().into(),
-                self.add_import_record(
-                  &lit,
-                  ImportKind::HotAccept,
-                  span,
-                  call_expr.span,
-                  ImportRecordMeta::empty(),
-                  None,
-                ),
-              )
-            }),
-        );
-      }
-      _ => {
-        // TODO(hyf0): Unsupported call pattern, maybe we should raise a warning here?
-      }
     }
+  }
 
+  fn report_non_static_hot_accept_dep(&mut self, span: Span) {
+    self.result.errors.push(BuildDiagnostic::unsupported_feature(
+      self.immutable_ctx.id.as_arc_str().clone(),
+      self.immutable_ctx.source.clone(),
+      span,
+      "`import.meta.hot.accept()` can only accept string literals or an array of string literals."
+        .to_string(),
+    ));
+  }
+
+  fn add_hot_accept_dep(
+    &mut self,
+    expr: &ast::Expression<'ast>,
+    call_expr: &ast::CallExpression<'ast>,
+  ) {
+    let Some(request) = expr.as_static_module_request() else { return };
+    let record_idx = self.add_import_record(
+      &request,
+      ImportKind::HotAccept,
+      expr.span(),
+      call_expr.span,
+      ImportRecordMeta::empty(),
+      None,
+    );
     self
       .result
       .hmr_info
       .module_request_to_import_record_idx
-      .extend(module_request_to_import_record_idx);
+      .insert(request.as_str().into(), record_idx);
   }
 }

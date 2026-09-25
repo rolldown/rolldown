@@ -348,40 +348,12 @@ impl<'ast> HmrAstFinalizer<'_, 'ast> {
   }
 
   pub fn rewrite_hot_accept_call_deps(&self, call_expr: &mut ast::CallExpression<'ast>) {
-    // Check whether the callee is `import.meta.hot.accept`.
-    if !call_expr.callee.is_import_meta_hot_accept() {
-      return;
-    }
-
-    if call_expr.arguments.is_empty() {
-      // `import.meta.hot.accept()`
-      return;
-    }
-
-    match &mut call_expr.arguments[0] {
-      ast::Argument::StringLiteral(string_literal) => {
-        // `import.meta.hot.accept('./dep.js', ...)`
-        let import_record = &self.module.import_records
-          [self.module.hmr_info.module_request_to_import_record_idx[string_literal.value.as_str()]];
-        let Some(module_idx) = import_record.resolved_module else { return };
-        // Use stable module ID for consistent runtime lookup
-        string_literal.value = Str::from_str_in(self.modules[module_idx].stable_id(), self);
-      }
-      ast::Argument::ArrayExpression(array_expression) => {
-        // `import.meta.hot.accept(['./dep1.js', './dep2.js'], ...)`
-        array_expression.elements.iter_mut().for_each(|element| {
-          if let ast::ArrayExpressionElement::StringLiteral(string_literal) = element {
-            let import_record =
-              &self.module.import_records[self.module.hmr_info.module_request_to_import_record_idx
-                [string_literal.value.as_str()]];
-            let Some(module_idx) = import_record.resolved_module else { return };
-            // Use stable module ID for consistent runtime lookup
-            string_literal.value = Str::from_str_in(self.modules[module_idx].stable_id(), self);
-          }
-        });
-      }
-      _ => {}
-    }
+    crate::hmr::utils::rewrite_hot_accept_deps(
+      call_expr,
+      self.module,
+      self.modules,
+      &self.ast_builder,
+    );
   }
 
   pub fn rewrite_import_meta_hot(&self, expr: &mut ast::Expression<'ast>) {

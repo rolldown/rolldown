@@ -283,6 +283,7 @@
   
 ### Import attributes is not supported
  - rollup@form@import-attributes@attribute-shapes: handles special shapes of attributes
+ - rollup@form@import-attributes@escapes-attribute-values: serializes quotes, backslashes and line terminators in import attribute values
  - rollup@form@import-attributes@keep-dynamic-assertions: keep import attributes for dynamic imports@generates es
  - rollup@form@import-attributes@keep-dynamic-attributes: keep import attributes for dynamic imports@generates es
  - rollup@form@import-attributes@keeps-static-assertions: keeps any import assertions on input@generates es

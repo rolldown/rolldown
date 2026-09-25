@@ -77,8 +77,9 @@ fn edge_bindings<'a>(
 /// `bindings[i][j]` lists the export names `ids[i]` imports through static edge `edges[i][j]`
 /// (re-exports included), `"*"` for anything that reads the whole namespace, and an empty
 /// list for a side-effect-only import. It is only filled for edges into a module that calls
-/// `import.meta.hot.acceptExports`; other entries are `null`, and the key is left out when
-/// no edge qualifies. The runtime reads a missing entry as `"*"`.
+/// `import.meta.hot.acceptExports`; other entries are `null`. `bindings` is an object keyed
+/// by row, holding only rows with such an edge, and the key is left out when no row has
+/// one. The runtime reads a missing row or entry as `"*"`.
 ///
 /// `ids[0, local_count)` are the carried modules in input order; `ids[local_count, ..)` are
 /// foreign edge targets interned on first use. Returns `None` when the payload carries no rows.
@@ -105,8 +106,8 @@ pub fn render_register_graph_source(
   }
 
   let mut edges: Vec<Vec<usize>> = Vec::with_capacity(local_count);
-  // Sparse `(row, bindings)`: few modules import a module that calls `acceptExports`, so
-  // rows without such an edge cost nothing.
+  // Sparse `(row, bindings)`: few modules import a module that calls `acceptExports`, and a
+  // chunk's prelude lists all of its modules, so rows without such an edge are not emitted.
   let mut bindings: Vec<(usize, Vec<Option<Vec<&str>>>)> = Vec::new();
   let mut dynamic_edges: Vec<Vec<usize>> = Vec::with_capacity(local_count);
   // Reused across modules: dedup import records targeting the same module without a
@@ -178,40 +179,40 @@ pub fn render_register_graph_source(
     }
     source.push(']');
   }
+  source.push(']');
   if !bindings.is_empty() {
-    source.push_str("],bindings:[");
-    let mut rows = bindings.iter().peekable();
-    for i in 0..local_count {
-      if i > 0 {
+    source.push_str(",bindings:{");
+    for (n, (row, out_bindings)) in bindings.iter().enumerate() {
+      if n > 0 {
         source.push(',');
       }
-      source.push('[');
-      if let Some((_, out_bindings)) = rows.next_if(|(row, _)| *row == i) {
-        // trailing `null`s are dropped: a missing entry reads the same as `null`
-        let len = out_bindings.iter().rposition(Option::is_some).map_or(0, |pos| pos + 1);
-        for (j, names) in out_bindings[..len].iter().enumerate() {
-          if j > 0 {
-            source.push(',');
-          }
-          match names {
-            None => source.push_str("null"),
-            Some(names) => {
-              source.push('[');
-              for (k, name) in names.iter().enumerate() {
-                if k > 0 {
-                  source.push(',');
-                }
-                source.push_str(&escape(name));
+      source.push_str(itoa::Buffer::new().format(*row));
+      source.push_str(":[");
+      // trailing `null`s are dropped: a missing entry reads the same as `null`
+      let len = out_bindings.iter().rposition(Option::is_some).map_or(0, |pos| pos + 1);
+      for (j, names) in out_bindings[..len].iter().enumerate() {
+        if j > 0 {
+          source.push(',');
+        }
+        match names {
+          None => source.push_str("null"),
+          Some(names) => {
+            source.push('[');
+            for (k, name) in names.iter().enumerate() {
+              if k > 0 {
+                source.push(',');
               }
-              source.push(']');
+              source.push_str(&escape(name));
             }
+            source.push(']');
           }
         }
       }
       source.push(']');
     }
+    source.push('}');
   }
-  source.push_str("],dynamicEdges:[");
+  source.push_str(",dynamicEdges:[");
   for (i, out_edges) in dynamic_edges.iter().enumerate() {
     if i > 0 {
       source.push(',');

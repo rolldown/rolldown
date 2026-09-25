@@ -672,13 +672,16 @@ the option off would walk into an importer whose factory was never shipped,
 and it would full-reload.
 
 The browser makes this decision on its own copy of the graph. Each
-patch's `registerGraph` prelude carries, per static edge, the export names
+`registerGraph` prelude (in initial chunks and in patches) carries, per
+static edge, the export names
 the importer reads (`bindings[i][j]`): `"*"` for a whole-namespace read
 (`import * as ns`, `export * from`, `require()`, non-JS records; the same
 sentinel Vite's `importAnalysis` uses), an empty list for a side-effect-only
 import. The field is filled only for edges into a module that calls
-`acceptExports`; a `null` or missing entry means `"*"`, and the key is
-left out when no edge qualifies. The runtime keeps the names in
+`acceptExports`; a `null` or missing entry means `"*"`. `bindings` is an
+object keyed by row (`bindings:{1:[["a"]]}`), because a chunk's prelude
+lists every module of the chunk and most rows have no such edge. The key is
+left out when no row qualifies. The runtime keeps the names in
 `staticImports` and exposes them through `getImportedBindings`.
 
 Known gaps in this walk, kept on purpose for now:

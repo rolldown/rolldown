@@ -26,9 +26,9 @@ class Module {
  * Compiler-emitted module-graph delta — topology (static + dynamic edges).
  * `ids[0, localCount)` are the modules this payload carries; `ids[localCount, …)` are foreign edge targets.
  * `edges[i]` / `dynamicEdges[i]` are the static / dynamic-`import()` out-edges of `ids[i]`.
- * `bindings[i][j]` are the export names `ids[i]` imports through `edges[i][j]`; a missing or
- * `null` entry means the whole namespace.
- * @typedef {{ ids: string[], localCount: number, edges: number[][], bindings?: (string[] | null)[][], dynamicEdges?: number[][] }} ModuleGraphDelta
+ * `bindings[i][j]` are the export names `ids[i]` imports through `edges[i][j]`. `bindings` holds
+ * only some rows; a missing row, or a missing or `null` entry, means the whole namespace.
+ * @typedef {{ ids: string[], localCount: number, edges: number[][], bindings?: Record<number, (string[] | null)[]>, dynamicEdges?: number[][] }} ModuleGraphDelta
  * @typedef {{ createModuleHotContext(moduleId: string): any, onModuleCacheRemoval(moduleId: string): void }} DevRuntimeHooks
  */
 

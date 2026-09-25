@@ -97,7 +97,7 @@ test('registerGraph keeps the export names each static edge imports', async () =
     ids: ['app.js', 'named.js', 'effect.js', 'lazy.js'],
     localCount: 4,
     edges: [[1, 2], [], [], []],
-    bindings: [[['a', 'default'], []], [], [], []],
+    bindings: { 0: [['a', 'default'], []] },
     dynamicEdges: [[3], [], [], []],
   });
   expect(runtime.getImportedBindings('app.js', 'named.js')).toEqual(['a', 'default']);
@@ -111,7 +111,7 @@ test('registerGraph keeps the export names each static edge imports', async () =
     ids: ['both.js', 'dep.js'],
     localCount: 2,
     edges: [[1], []],
-    bindings: [[['a']], []],
+    bindings: { 0: [['a']] },
     dynamicEdges: [[1], []],
   });
   expect(runtime.getImportedBindings('both.js', 'dep.js')).toEqual(['a', '*']);
@@ -119,7 +119,7 @@ test('registerGraph keeps the export names each static edge imports', async () =
     ids: ['both.js', 'dep.js'],
     localCount: 2,
     edges: [[1], []],
-    bindings: [[['*', 'a']], []],
+    bindings: { 0: [['*', 'a']] },
     dynamicEdges: [[1], []],
   });
   expect(runtime.getImportedBindings('both.js', 'dep.js')).toEqual(['*', 'a']);
@@ -129,20 +129,21 @@ test('registerGraph keeps the export names each static edge imports', async () =
     ids: ['app.js', 'named.js'],
     localCount: 2,
     edges: [[1], []],
-    bindings: [[['b']], []],
+    bindings: { 0: [['b']] },
   });
   expect(runtime.getImportedBindings('app.js', 'named.js')).toEqual(['b']);
 
-  // `null` and missing trailing entries mean "imports everything"
+  // `null` and missing trailing entries mean "imports everything", and so does a missing row
   runtime.registerGraph({
-    ids: ['sparse.js', 'x.js', 'y.js', 'z.js'],
-    localCount: 4,
-    edges: [[1, 2, 3], [], [], []],
-    bindings: [[null, ['a']], [], [], []],
+    ids: ['sparse.js', 'x.js', 'y.js', 'z.js', 'no-row.js'],
+    localCount: 5,
+    edges: [[1, 2, 3], [], [], [], [1]],
+    bindings: { 0: [null, ['a']] },
   });
   expect(runtime.getImportedBindings('sparse.js', 'x.js')).toEqual(['*']);
   expect(runtime.getImportedBindings('sparse.js', 'y.js')).toEqual(['a']);
   expect(runtime.getImportedBindings('sparse.js', 'z.js')).toEqual(['*']);
+  expect(runtime.getImportedBindings('no-row.js', 'x.js')).toEqual(['*']);
 
   // a payload without `bindings` (an older compiler) is read as "imports everything"
   runtime.registerGraph({

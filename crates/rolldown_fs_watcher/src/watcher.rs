@@ -37,8 +37,8 @@ impl FsWatcher {
       }
       new_paths.insert(path.to_path_buf());
     }
-    // Opening a native batch can stop the FSEvents stream even when nothing is added.
-    // Keep unchanged watch sets live; see internal-docs/watch-mode/implementation.md.
+    // Even an empty notify batch restarts the FSEvents stream and loses edits made meanwhile.
+    // See internal-docs/watch-mode/implementation.md.
     if new_paths.is_empty() {
       return Ok(());
     }
@@ -175,6 +175,7 @@ mod tests {
       fn new(use_debounce: bool) -> Self {
         let path = std::env::temp_dir()
           .join(format!("rolldown_empty_watch_batch_{}_{use_debounce}", std::process::id()));
+        let _ = fs::remove_dir_all(&path);
         fs::create_dir_all(&path).unwrap();
         // FSEvents reports canonical paths, including macOS's /var -> /private/var alias.
         Self(path.canonicalize().unwrap())
@@ -207,7 +208,8 @@ mod tests {
 
       watcher
         .watch_paths([&excluded], |_| {
-          // Place a save inside the old stopped-stream window without relying on sleeps or a burst race.
+          // Place a save inside the old stopped-stream window
+          // without relying on sleeps or a burst race.
           fs::write(&entry, "export const value = 1").unwrap();
           let events = rx
             .recv_timeout(Duration::from_secs(2))

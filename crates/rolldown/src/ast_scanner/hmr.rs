@@ -18,6 +18,11 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
     // - `import.meta.hot.accept('./dep.js', ...)`
     // - `import.meta.hot.accept(['./dep1.js', './dep2.js'], ...)`
 
+    // Only the flag is recorded: the client reads the accepted names when the call runs.
+    if call_expr.callee.is_import_meta_hot_accept_exports() {
+      self.result.ast_usage.insert(EcmaModuleAstUsage::HmrAcceptExports);
+      return;
+    }
     // Check whether the callee is `import.meta.hot.accept`.
     if !call_expr.callee.is_import_meta_hot_accept() {
       return;

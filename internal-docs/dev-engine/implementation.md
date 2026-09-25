@@ -659,6 +659,57 @@ Then, across all files of the batch:
    `carried`, and `seq: 0` — the dev engine assigns the real `seq`
    afterwards.
 
+The superset walk (`collect_client_update_superset` in `hmr_stage.rs`)
+starts from the changed modules and follows importer edges (static and
+dynamic `import()`). It stops at a self-accepting module and at an importer
+that accepts the module as a dependency. It does not stop at an importer
+that reads only export names the module accepts through
+`import.meta.hot.acceptExports`. Only the browser makes that decision:
+Vite's bundled-dev client skips such an importer only when
+`experimental.hmrPartialAccept` is on, and it reads the accepted names from
+the call at run time. If the server skipped the importer too, a client with
+the option off would walk into an importer whose factory was never shipped,
+and it would full-reload.
+
+The browser makes this decision on its own copy of the graph. Each
+`registerGraph` prelude (in initial chunks and in patches) carries, per
+static edge, the export names
+the importer reads (`bindings[i][j]`): `"*"` for a whole-namespace read
+(`import * as ns`, `export * from`, `require()`, non-JS records; the same
+sentinel Vite's `importAnalysis` uses), an empty list for a side-effect-only
+import. The field is filled only for edges into a module that calls
+`acceptExports`; a `null` or missing entry means `"*"`. `bindings` is an
+object keyed by row (`bindings:{1:[["a"]]}`), because a chunk's prelude
+lists every module of the chunk and most rows have no such edge. The key is
+left out when no row qualifies. The runtime keeps the names in
+`staticImports` and exposes them through `getImportedBindings`.
+
+Known gaps in this walk, kept on purpose for now:
+
+- **The two sides decide from different generations.** The server reads
+  the post-rebuild `hmr_info`; the browser reads the hot context of the
+  module still evaluated there. When an edit adds or widens an `accept`
+  declaration, the server skips an importer that the browser's older
+  context still walks into. If that importer has an accepting ancestor,
+  the browser needs its factory and none was shipped; otherwise the
+  browser finds no boundary. Either way that client full-reloads once,
+  then the reload loads the new generation and the two agree. Plain
+  `accept()` has had this shape since the walk was written. Follow-up:
+  keep the pre-rebuild `hmr_info` of a changed module (as the
+  unchanged-output check keeps the pre-rebuild render) and skip an
+  importer only when the old declaration already covered it. That removes the reload in the accepting-ancestor case; the
+  no-ancestor case needs the browser to learn the new declaration before
+  it walks.
+- **`"*"` is a plain string.** A module may export a name literally spelled
+  `"*"` (`export { x as "*" }`). If such a module also calls
+  `acceptExports(["*"])`, a namespace importer is read as covered and is
+  not re-run. Vite's unbundled server has the same collision
+  (`importAnalysis.ts` writes `'*'` into `importedBindings`, and
+  `areAllImportsAccepted` in `server/hmr.ts` compares it as a name). The
+  payload keeps the string so the Vite bundled-dev client can share one
+  rule. A tagged marker is possible later, but it must change on both
+  sides in the same release.
+
 ### `rebuild` (`bundling_task.rs:314-353`)
 
 - Locks the `Bundler`.

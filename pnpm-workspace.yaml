@@ -31,9 +31,6 @@ onlyBuiltDependencies:
   - sharp
   - tree-sitter
 
-overrides:
-  vitepress>vite: npm:rolldown-vite@latest
-
 catalog:
   '@babel/core': ^7.29.7
   '@babel/preset-env': ^7.29.7

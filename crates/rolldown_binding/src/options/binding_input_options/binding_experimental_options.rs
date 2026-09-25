@@ -14,6 +14,7 @@ pub struct BindingExperimentalOptions {
   pub native_magic_string: Option<bool>,
   pub chunk_optimization: Option<Either<bool, BindingChunkOptimizationOptions>>,
   pub lazy_barrel: Option<bool>,
+  pub build_cache: Option<Either<bool, BindingBuildCacheOptions>>,
 }
 
 impl TryFrom<BindingExperimentalOptions> for rolldown_common::ExperimentalOptions {
@@ -38,7 +39,24 @@ impl TryFrom<BindingExperimentalOptions> for rolldown_common::ExperimentalOption
         Either::B(v) => rolldown_common::ChunkOptimizationOption::Options(v.into()),
       }),
       lazy_barrel: value.lazy_barrel,
+      build_cache: value.build_cache.map(|v| match v {
+        Either::A(v) => rolldown_common::BuildCacheOption::Bool(v),
+        Either::B(v) => rolldown_common::BuildCacheOption::Options(v.into()),
+      }),
     })
+  }
+}
+
+#[napi_derive::napi(object, object_to_js = false)]
+#[derive(Debug, Default)]
+pub struct BindingBuildCacheOptions {
+  pub dir: Option<String>,
+  pub key: Option<String>,
+}
+
+impl From<BindingBuildCacheOptions> for rolldown_common::BuildCacheOptions {
+  fn from(value: BindingBuildCacheOptions) -> Self {
+    Self { dir: value.dir, key: value.key }
   }
 }
 

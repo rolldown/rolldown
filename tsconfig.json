@@ -13,7 +13,8 @@
     "esModuleInterop": true,
     "forceConsistentCasingInFileNames": true,
     "strict": true,
-    "skipLibCheck": true
+    "skipLibCheck": true,
+    "allowImportingTsExtensions": true
   },
   "references": [
     { "path": "./crates/rolldown/src/runtime" },

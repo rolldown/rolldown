@@ -1,0 +1,29 @@
+crates/rolldown_binding/src/options/plugin/binding_callable_builtin_plugin.rs
+  s_e34cfa888262dc::t_7b7210dda00a37 225-228,232,247-249,258
+packages/rolldown/src/binding.d.cts
+  s_e34cfa888262dc::t_56fab71a49be36 2306-2310
+packages/rolldown/src/builtin-plugin/utils.ts
+  s_e34cfa888262dc::t_03ec6929c8d0ef 49-50
+packages/rolldown/tests/builtin-plugin/fixtures/tsconfig-paths/src/dir/a.js
+  s_e34cfa888262dc::t_2f636a50d6d128 1
+packages/rolldown/tests/builtin-plugin/fixtures/tsconfig-paths/src/main.ts
+  s_e34cfa888262dc::t_13df6f0ffb935e 1
+packages/rolldown/tests/builtin-plugin/fixtures/tsconfig-paths/tsconfig.json
+  s_e34cfa888262dc::t_0ddb0be004bad4 1-7
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "992dedc4e78ae75e343438ee358c31b398d2bff9",
+  "prompts": {},
+  "sessions": {
+    "s_e34cfa888262dc": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "88416034-9bed-4328-95c3-3e5e0e990ab5",
+        "model": "claude-opus-5"
+      },
+      "human_author": "Yunfei He <i.heyunfei@gmail.com>"
+    }
+  }
+}

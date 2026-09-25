@@ -1,0 +1,30 @@
+Cargo.toml
+  s_8639e824358207::t_74a6d366e7de48 269,280-287
+Cargo.lock
+  s_8d5c341ef39b90::t_edaad6095021c1 1564-1565,1602-1604,1616-1618,1634-1636,1646-1648,1658-1660,1680-1682,1693-1695,1702-1704,1720-1722,1741-1743,1763-1765,1781-1783,1800-1802,1826-1828,1849-1851,1865-1867,1889-1891,1906-1908,1964-1966,2003-2005,2017-2019,2030-2032,2051-2053,2066-2068,2096-2098,2119-2120
+  s_8d5c341ef39b90::t_c604d141774ae5 1563,2121
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "7136a44d676a14c082f6e45505fa1cf2310fef7a",
+  "prompts": {},
+  "sessions": {
+    "s_8639e824358207": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a09e62-ca3f-73d0-83a3-ddc37ab1ab78",
+        "model": "unknown"
+      },
+      "human_author": "Cameron <cameron.clark@hey.com>"
+    },
+    "s_8d5c341ef39b90": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019fd2a4-9dd6-7050-9aa2-fd882e51e24d",
+        "model": "gpt-5.6-sol"
+      },
+      "human_author": "Cameron <cameron.clark@hey.com>"
+    }
+  }
+}

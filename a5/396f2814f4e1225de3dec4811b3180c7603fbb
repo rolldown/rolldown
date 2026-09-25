@@ -1,0 +1,298 @@
+crates/rolldown/tests/rolldown/function/experimental/strict_execution_order/cjs_reexport_barrel_effectful_carrier/main.js
+  s_a263216b342109::t_061fd050c8e402 1-7
+crates/rolldown/tests/rolldown/function/experimental/strict_execution_order/cjs_reexport_barrel_per_record_chunks/node_modules/split-barrel/root.js
+  s_0d9d9f3dab497d::t_5f2df4b3cacbf1 1
+crates/rolldown/tests/rolldown/function/experimental/strict_execution_order/emergent_cycle_eager_reexport_overlay/a/forwarder.js
+  s_0d9d9f3dab497d::t_a0fdbdb178a32b 1-5,10
+internal-docs/code-splitting/implementation.md
+  s_0d9d9f3dab497d::t_a7385495efb2ae 50-51,91,109-112,114-117,157-160
+crates/rolldown/tests/rolldown/function/experimental/strict_execution_order/cjs_reexport_barrel_consumer_local/_config.json
+  s_0d9d9f3dab497d::t_9d66f2f6a738bc 1-32
+crates/rolldown/tests/rolldown/function/experimental/strict_execution_order/cjs_reexport_barrel_side_effect_boundary/node_modules/pure-boundary-barrel/index.js
+  s_0d9d9f3dab497d::t_014af481b817ff 1-3
+crates/rolldown/tests/rolldown/function/experimental/strict_execution_order/cjs_reexport_barrel_side_effect_boundary/main.js
+  s_0d9d9f3dab497d::t_baae9161e635e9 1-6
+crates/rolldown/tests/rolldown/function/experimental/strict_execution_order/cjs_reexport_barrel_namespace_routing/route-opaque.js
+  s_0d9d9f3dab497d::t_9330f01668c9ae 1-5
+crates/rolldown/tests/rolldown/function/experimental/strict_execution_order/cjs_reexport_barrel_namespace_routing/artifacts.snap
+  s_0d9d9f3dab497d::t_0344dadfc647d1 1-284
+crates/rolldown/tests/rolldown/function/experimental/strict_execution_order/cjs_reexport_barrel_require_cycle_fallback/_config.json
+  s_0d9d9f3dab497d::t_bbdd246c5b8ef8 1-19
+crates/rolldown/tests/rolldown/function/experimental/strict_execution_order/cjs_reexport_barrel_require_fallback/node_modules/required-barrel/cn.js
+  s_0d9d9f3dab497d::t_40709e990f1227 1-3
+crates/rolldown/tests/rolldown/function/experimental/strict_execution_order/emergent_cycle_eager_reexport_overlay/main.js
+  s_0d9d9f3dab497d::t_c55015b2bfa881 1,3-8,13-14
+crates/rolldown/tests/rolldown/function/experimental/strict_execution_order/cjs_reexport_barrel_per_record_chunks/route-a.js
+  s_0d9d9f3dab497d::t_e22f355f8fe1cb 1-5
+crates/rolldown/tests/rolldown/function/experimental/strict_execution_order/cjs_reexport_barrel_consumer_local/main.js
+  s_0d9d9f3dab497d::t_c60fdd3cf2a1fa 1-11
+crates/rolldown/tests/rolldown/function/experimental/strict_execution_order/cjs_reexport_barrel_per_record_chunks/node_modules/split-barrel/a.cjs
+  s_0d9d9f3dab497d::t_7f4869eb6715b6 1-3
+crates/rolldown/tests/rolldown/function/experimental/strict_execution_order/emergent_cycle_partial_forwarder/a/carrier.cjs.js
+  s_0d9d9f3dab497d::t_7960105ffbc4cf 1-2
+crates/rolldown/tests/rolldown/function/experimental/strict_execution_order/cjs_reexport_barrel_side_effect_boundary/node_modules/pure-boundary-barrel/cn.js
+  s_0d9d9f3dab497d::t_8fdd9cffb3213f 1-3
+crates/rolldown/tests/rolldown/function/experimental/strict_execution_order/cjs_reexport_barrel_effectful_carrier/outer.js
+  s_a263216b342109::t_3c81012fc43613 1
+crates/rolldown/tests/rolldown/function/experimental/strict_execution_order/cjs_reexport_barrel_namespace_routing/node_modules/namespace-barrel/b.cjs
+  s_0d9d9f3dab497d::t_4e31c91205fd8c 1-3
+crates/rolldown/tests/rolldown/function/experimental/strict_execution_order/cjs_reexport_barrel_require_fallback/main.js
+  s_0d9d9f3dab497d::t_0d2b4e6ba44789 1-5
+crates/rolldown/tests/rolldown/function/experimental/strict_execution_order/cjs_reexport_barrel_require_fallback/node_modules/required-barrel/clone.cjs
+  s_0d9d9f3dab497d::t_fea7a0c8c85e61 1
+crates/rolldown/tests/rolldown/function/experimental/strict_execution_order/emergent_cycle_eager_reexport_overlay/b/eagerhaz.js
+  s_0d9d9f3dab497d::t_9078b2e0b68473 1-3
+crates/rolldown/tests/rolldown/function/experimental/strict_execution_order/cjs_reexport_barrel_require_fallback/_test.mjs
+  s_0d9d9f3dab497d::t_c5aee5e8c66695 1-12
+crates/rolldown/tests/rolldown/function/experimental/strict_execution_order/cjs_reexport_barrel_namespace_routing/_test.mjs
+  s_0d9d9f3dab497d::t_81555b5278ca1f 1-71
+crates/rolldown/tests/rolldown/function/experimental/strict_execution_order/emergent_cycle_eager_reexport_overlay/a/carrier.cjs.js
+  s_0d9d9f3dab497d::t_e2ae6f31eb3480 1-3
+internal-docs/code-splitting/design.md
+  s_0d9d9f3dab497d::t_a5facfcc8b62d0 108-129,139-161,280-287,303-318,347,350,372-373,397,409,412-413,428-432,435,456-458,472,485,500,509
+crates/rolldown/tests/rolldown/function/experimental/strict_execution_order/cjs_reexport_barrel_effectful_carrier/_test.mjs
+  s_0d9d9f3dab497d::t_1cbe2968ff8810 1-70
+crates/rolldown/tests/rolldown/function/experimental/strict_execution_order/emergent_cycle_partial_forwarder/_test.mjs
+  s_0d9d9f3dab497d::t_d396c382fb736c 3-6
+crates/rolldown/src/esm_init_obligations.rs
+  s_0d9d9f3dab497d::t_11281e9b687275 45,86-90,159-178,198,210-255,263,271-272,299,304-313,389-392,396-506,519,551,620,624-633,647,677-717,794,858,860-885,895-897,906,922-940,946-992,996-1038
+crates/rolldown/tests/rolldown/function/experimental/strict_execution_order/cjs_reexport_barrel_cycle_fallback/main.js
+  s_0d9d9f3dab497d::t_8ccdf33dc25c53 1-5
+crates/rolldown/src/stages/generate_stage/compute_wrapped_esm_init_metadata.rs
+  s_a263216b342109::t_8734795dfb600b 18-20,70,78,214,219,283-300,382-384,397,412
+crates/rolldown/tests/rolldown/function/experimental/strict_execution_order/cjs_carrier_pure_value_gap/_test.mjs
+  s_a263216b342109::t_9645a1ad9d18a9 2,5-20
+crates/rolldown/tests/rolldown/function/experimental/strict_execution_order/cjs_reexport_barrel_shared_importee/node_modules/shared-importee-barrel/barrel-a.js
+  s_0d9d9f3dab497d::t_19336636dcfe55 1
+crates/rolldown/src/stages/generate_stage/compute_cross_chunk_links.rs
+  s_a263216b342109::t_432bfac83e3c3d 4,520-527,600-608,798-817,825-831,930-936
+crates/rolldown/tests/rolldown/function/experimental/strict_execution_order/cjs_reexport_barrel_require_cycle_fallback/main.js
+  s_0d9d9f3dab497d::t_d6fac110931f91 1-5
+crates/rolldown/tests/rolldown/function/experimental/strict_execution_order/cjs_reexport_barrel_require_cycle_fallback/barrel.js
+  s_0d9d9f3dab497d::t_c1ee2bbaafccb5 1-3
+crates/rolldown/tests/rolldown/function/experimental/strict_execution_order/cjs_reexport_barrel_shared_importee/_config.json
+  s_0d9d9f3dab497d::t_ac78bb3e547987 1-19
+crates/rolldown/tests/rolldown/function/experimental/strict_execution_order/emergent_cycle_partial_forwarder/b/eagerhaz.js
+  s_0d9d9f3dab497d::t_675ae76a3dc7dc 1-2
+crates/rolldown/tests/rolldown/function/experimental/strict_execution_order/cjs_reexport_barrel_namespace_routing/main.js
+  s_0d9d9f3dab497d::t_db87d9a1786773 1-6
+crates/rolldown/src/utils/chunk/deconflict_chunk_symbols.rs
+  s_0d9d9f3dab497d::t_58fd8bc462de73 143-152
+crates/rolldown/tests/rolldown/function/experimental/strict_execution_order/cjs_reexport_barrel_namespace_routing/node_modules/namespace-barrel/a.cjs
+  s_0d9d9f3dab497d::t_e57630578b8a3d 1-3
+crates/rolldown/tests/rolldown/function/experimental/strict_execution_order/cjs_reexport_barrel_side_effect_boundary/node_modules/pure-boundary-barrel/package.json
+  s_0d9d9f3dab497d::t_bba022e3fd70c1 1-7
+crates/rolldown/tests/rolldown/function/experimental/strict_execution_order/cjs_reexport_barrel_side_effect_boundary/artifacts.snap
+  s_0d9d9f3dab497d::t_8cda2015ca38c2 1-226
+crates/rolldown/tests/rolldown/function/experimental/strict_execution_order/cjs_reexport_barrel_shared_importee/main.js
+  s_0d9d9f3dab497d::t_2c72dea34977fe 1-4
+crates/rolldown/tests/rolldown/function/experimental/strict_execution_order/emergent_cycle_eager_reexport_overlay/artifacts.snap
+  s_0d9d9f3dab497d::t_33393b5488c904 9,11,25,33,35-36,49,57-58,60
+crates/rolldown/tests/rolldown/function/experimental/strict_execution_order/cjs_reexport_barrel_monolithic_esm_namespace/artifacts.snap
+  s_a263216b342109::t_646f4df0bcc129 1-122
+crates/rolldown/tests/rolldown/function/experimental/strict_execution_order/cjs_reexport_barrel_effectful_carrier/effect-before.cjs
+  s_0d9d9f3dab497d::t_70f2d8f33f1d12 1-3
+crates/rolldown/tests/rolldown/function/experimental/strict_execution_order/cjs_reexport_barrel_side_effect_boundary/node_modules/nested-effectful-clone/index.cjs
+  s_0d9d9f3dab497d::t_4b78d90e34e5ef 1-3
+crates/rolldown/tests/rolldown/function/experimental/strict_execution_order/cjs_reexport_barrel_per_record_chunks/node_modules/split-barrel/package.json
+  s_0d9d9f3dab497d::t_1d27a08e443423 1-7
+crates/rolldown/tests/rolldown/function/experimental/strict_execution_order/cjs_reexport_barrel_require_cycle_fallback/bridge.js
+  s_0d9d9f3dab497d::t_0018bd3e01d19b 1-5
+crates/rolldown/tests/rolldown/function/experimental/strict_execution_order/cjs_reexport_barrel_side_effect_boundary/node_modules/pure-nested-leaf/package.json
+  s_0d9d9f3dab497d::t_ee30b0e7eb3e23 1-7
+crates/rolldown/tests/rolldown/function/experimental/strict_execution_order/cjs_reexport_barrel_require_cycle_fallback/node_modules/pure-cycle-leaf/package.json
+  s_0d9d9f3dab497d::t_66635a689fdf13 1-7
+crates/rolldown/src/stages/generate_stage/order_wrap_state.rs
+  s_a263216b342109::t_9f79aee81b48db 11-12,20-27,148,222,224-229,231-253,258,260-264,267-269,273-301,381-392,398,402-469,668-695
+crates/rolldown/tests/rolldown/function/experimental/strict_execution_order/cjs_reexport_barrel_shared_importee/node_modules/shared-importee-barrel/root.js
+  s_0d9d9f3dab497d::t_627182cb271f50 1-2
+crates/rolldown/tests/rolldown/function/experimental/strict_execution_order/cjs_reexport_barrel_shared_importee/route-b.js
+  s_0d9d9f3dab497d::t_17c8575a7115c5 1-5
+crates/rolldown/tests/rolldown/function/experimental/strict_execution_order/cjs_reexport_barrel_side_effect_boundary/ancestor.js
+  s_0d9d9f3dab497d::t_0525e2173a5b69 1-3
+crates/rolldown/tests/rolldown/function/experimental/strict_execution_order/cjs_reexport_barrel_effectful_carrier/effect-after.cjs
+  s_0d9d9f3dab497d::t_0c0d6b7463df4a 1-3
+crates/rolldown/src/types/generator.rs
+  s_0d9d9f3dab497d::t_475d94bce68499 66-70,72-82,84
+crates/rolldown/tests/rolldown/function/experimental/strict_execution_order/cjs_reexport_barrel_consumer_local/artifacts.snap
+  s_0d9d9f3dab497d::t_11c87c4dceb9cd 1-287,289-294,299,305-308,310-322,324-371,372-760
+crates/rolldown/tests/rolldown/function/experimental/strict_execution_order/cjs_reexport_barrel_shared_importee/node_modules/shared-importee-barrel/shared.cjs
+  s_0d9d9f3dab497d::t_e6021b635eb294 1-3
+crates/rolldown/tests/rolldown/function/experimental/strict_execution_order/cjs_reexport_barrel_side_effect_boundary/node_modules/inner-effectful-barrel/index.js
+  s_0d9d9f3dab497d::t_80303679c8ce15 1-2
+crates/rolldown/tests/rolldown/function/experimental/strict_execution_order/cjs_reexport_barrel_effectful_carrier/bare.js
+  s_0d9d9f3dab497d::t_1bf4207d3aaa5c 1-3
+crates/rolldown/tests/rolldown/function/experimental/strict_execution_order/cjs_reexport_barrel_consumer_local/node_modules/pure-barrel/cn.js
+  s_0d9d9f3dab497d::t_b542aa90a0d936 1-5
+crates/rolldown/tests/rolldown/function/experimental/strict_execution_order/cjs_reexport_barrel_require_cycle_fallback/_test.mjs
+  s_a263216b342109::t_814bf39932af95 1-8
+crates/rolldown/tests/rolldown/function/experimental/strict_execution_order/cjs_reexport_barrel_require_fallback/node_modules/required-barrel/package.json
+  s_0d9d9f3dab497d::t_4fdd99af7a43d8 1-7
+crates/rolldown/tests/rolldown/function/experimental/strict_execution_order/cjs_reexport_barrel_consumer_local/route.js
+  s_0d9d9f3dab497d::t_f42913d45a2e15 1-7
+crates/rolldown/tests/rolldown/function/experimental/strict_execution_order/cjs_reexport_barrel_namespace_routing/node_modules/namespace-barrel/stack.js
+  s_0d9d9f3dab497d::t_125379a071c1b5 1-5
+crates/rolldown/tests/rolldown/function/experimental/strict_execution_order/cjs_reexport_barrel_namespace_routing/node_modules/namespace-barrel/cn.js
+  s_0d9d9f3dab497d::t_c60200fe6bbae8 1-3
+crates/rolldown/tests/rolldown/function/experimental/strict_execution_order/cjs_reexport_barrel_per_record_chunks/_test.mjs
+  s_0d9d9f3dab497d::t_c1c3474dcbb2e0 1-57
+crates/rolldown/tests/rolldown/function/experimental/strict_execution_order/emergent_cycle_eager_reexport_overlay/b/definer.js
+  s_0d9d9f3dab497d::t_a99ed776a6867c 2-3
+crates/rolldown/tests/rolldown/function/experimental/strict_execution_order/cjs_reexport_barrel_effectful_carrier/artifacts.snap
+  s_0d9d9f3dab497d::t_f450a36db48247 1-254
+crates/rolldown/tests/rolldown/function/experimental/strict_execution_order/cjs_reexport_barrel_shared_importee/node_modules/shared-importee-barrel/barrel-b.js
+  s_0d9d9f3dab497d::t_919c207434414e 1
+crates/rolldown/tests/rolldown/function/experimental/strict_execution_order/cjs_reexport_barrel_per_record_chunks/node_modules/split-barrel/index.js
+  s_0d9d9f3dab497d::t_aba43c198b50ee 1-3
+crates/rolldown/src/module_finalizers/finalizer_context.rs
+  s_0d9d9f3dab497d::t_273032f048a01e 141
+crates/rolldown/tests/rolldown/function/experimental/strict_execution_order/cjs_reexport_barrel_side_effect_boundary/node_modules/nested-effectful-clone/package.json
+  s_0d9d9f3dab497d::t_bc0a0e4506ab2f 1-5
+crates/rolldown/tests/rolldown/function/experimental/strict_execution_order/cjs_reexport_barrel_side_effect_boundary/node_modules/pure-nested-leaf/index.js
+  s_0d9d9f3dab497d::t_591f1c832723ce 1
+crates/rolldown/tests/rolldown/function/experimental/strict_execution_order/cjs_reexport_barrel_per_record_chunks/artifacts.snap
+  s_0d9d9f3dab497d::t_348460c7aa093a 1-236
+crates/rolldown/tests/rolldown/function/experimental/strict_execution_order/cjs_reexport_barrel_effectful_carrier/route.js
+  s_a263216b342109::t_d7460f4fb32a72 1-5
+crates/rolldown/tests/rolldown/function/experimental/strict_execution_order/cjs_reexport_barrel_require_fallback/_config.json
+  s_0d9d9f3dab497d::t_d45676e28e6711 1-19
+crates/rolldown/tests/rolldown/function/experimental/strict_execution_order/retained_star_renamed_cycle/artifacts.snap
+  s_0d9d9f3dab497d::t_b1b49649318473 11,20,89
+crates/rolldown/tests/rolldown/function/experimental/strict_execution_order/cjs_reexport_barrel_consumer_local/_test.mjs
+  s_0d9d9f3dab497d::t_9dedd2675d7641 1-55
+crates/rolldown/tests/rolldown/function/experimental/strict_execution_order/cjs_reexport_barrel_cycle_fallback/leaf.js
+  s_0d9d9f3dab497d::t_e4fbdeadb848ff 1-5
+crates/rolldown/tests/rolldown/function/experimental/strict_execution_order/cjs_reexport_barrel_per_record_chunks/node_modules/split-barrel/b.cjs
+  s_0d9d9f3dab497d::t_544dedd133a3fa 1-3
+crates/rolldown/tests/rolldown/function/experimental/strict_execution_order/cjs_reexport_barrel_require_fallback/route.cjs
+  s_0d9d9f3dab497d::t_cedb9c40113b5a 1-5
+crates/rolldown/tests/rolldown/function/experimental/strict_execution_order/cjs_reexport_barrel_cycle_fallback/barrel.js
+  s_0d9d9f3dab497d::t_208fc232bc283e 1-2
+crates/rolldown/tests/rolldown/function/experimental/strict_execution_order/emergent_cycle_eager_reexport_overlay/a/a-first.js
+  s_0d9d9f3dab497d::t_01eb433dcd028c 1-3
+crates/rolldown/tests/rolldown/function/experimental/strict_execution_order/cjs_reexport_barrel_require_cycle_fallback/node_modules/pure-cycle-leaf/index.js
+  s_0d9d9f3dab497d::t_edb58d3347b059 1
+crates/rolldown/tests/rolldown/function/experimental/strict_execution_order/cjs_reexport_barrel_shared_importee/node_modules/shared-importee-barrel/package.json
+  s_0d9d9f3dab497d::t_37caf1bb2c0355 1-7
+crates/rolldown/tests/rolldown/function/experimental/strict_execution_order/cjs_reexport_barrel_per_record_chunks/node_modules/split-barrel/cn.js
+  s_0d9d9f3dab497d::t_265dcfcedf7da6 1-3
+crates/rolldown/tests/rolldown/function/experimental/strict_execution_order/cjs_reexport_barrel_effectful_carrier/node_modules/pure-leaves/cn.js
+  s_0d9d9f3dab497d::t_f14415e8827278 1-5
+crates/rolldown/tests/rolldown/function/experimental/strict_execution_order/cjs_reexport_barrel_monolithic_require_namespace/artifacts.snap
+  s_0d9d9f3dab497d::t_848227dca65a90 1-128
+crates/rolldown/tests/rolldown/function/experimental/strict_execution_order/cjs_reexport_barrel_namespace_routing/_config.json
+  s_0d9d9f3dab497d::t_1fe294b7d5f4f6 1-19
+crates/rolldown/tests/rolldown/function/experimental/strict_execution_order/cjs_reexport_barrel_cycle_fallback/dep.cjs
+  s_0d9d9f3dab497d::t_3f864f3dde3e2a 1-3
+crates/rolldown/tests/rolldown/function/experimental/strict_execution_order/emergent_cycle_partial_forwarder/main.js
+  s_0d9d9f3dab497d::t_8da85129c65395 1-2,5-9
+crates/rolldown/tests/rolldown/function/experimental/strict_execution_order/cjs_reexport_barrel_require_fallback/artifacts.snap
+  s_0d9d9f3dab497d::t_786a3255f4986c 1-156
+crates/rolldown/tests/rolldown/function/experimental/strict_execution_order/cjs_reexport_barrel_cycle_fallback/_test.mjs
+  s_0d9d9f3dab497d::t_0240a3f658c240 1-8
+crates/rolldown/tests/rolldown/function/experimental/strict_execution_order/emergent_cycle_eager_reexport_overlay/_test.mjs
+  s_0d9d9f3dab497d::t_c7eead54834494 3-7
+crates/rolldown/tests/rolldown/function/experimental/strict_execution_order/cjs_reexport_barrel_nested_namespace/artifacts.snap
+  s_a263216b342109::t_31d029ae73f706 1-109
+crates/rolldown/tests/rolldown/function/experimental/strict_execution_order/cjs_reexport_barrel_consumer_local/node_modules/pure-barrel/package.json
+  s_0d9d9f3dab497d::t_fb061cf84a4d29 1-7
+crates/rolldown/tests/rolldown/function/experimental/strict_execution_order/cjs_carrier_pure_value_gap/artifacts.snap
+  s_a263216b342109::t_e7d563d343bf20 9-11,20,52,55,62,67-72,74,81-82,90,155-157,166,203,206,213,218-223,225,232-233,241
+crates/rolldown/tests/rolldown/function/experimental/strict_execution_order/cjs_reexport_barrel_per_record_chunks/route-b.js
+  s_0d9d9f3dab497d::t_380e6bb68a7033 1-5
+crates/rolldown/tests/rolldown/function/experimental/strict_execution_order/cjs_reexport_barrel_effectful_carrier/node_modules/pure-leaves/package.json
+  s_0d9d9f3dab497d::t_86f133ae3acb7a 1-10
+crates/rolldown/src/module_finalizers/impl_visit_mut.rs
+  s_0d9d9f3dab497d::t_a007a0ebe39576 8,23-25,29-121,414-415
+crates/rolldown/tests/rolldown/function/experimental/strict_execution_order/cjs_reexport_barrel_consumer_local/node_modules/pure-barrel/index.js
+  s_0d9d9f3dab497d::t_062dfc61fd0ef0 1-3
+crates/rolldown/tests/rolldown/function/experimental/strict_execution_order/cjs_reexport_barrel_consumer_local/node_modules/pure-barrel/stack.js
+  s_0d9d9f3dab497d::t_cd36cfb8681376 1-9
+crates/rolldown/tests/rolldown/function/experimental/strict_execution_order/cjs_reexport_barrel_require_fallback/node_modules/required-barrel/index.js
+  s_0d9d9f3dab497d::t_449cfa37d2b7a8 1-2
+crates/rolldown/tests/rolldown/function/experimental/strict_execution_order/cjs_reexport_barrel_require_cycle_fallback/a.cjs
+  s_0d9d9f3dab497d::t_9d9e7d310f5375 1-5
+crates/rolldown/tests/rolldown/function/experimental/strict_execution_order/cjs_reexport_barrel_per_record_chunks/main.js
+  s_0d9d9f3dab497d::t_5ce9508cba8eb8 1-6
+crates/rolldown/tests/rolldown/function/experimental/strict_execution_order/cjs_reexport_barrel_side_effect_boundary/node_modules/inner-effectful-barrel/package.json
+  s_0d9d9f3dab497d::t_bc101434a6555f 1-6
+crates/rolldown/tests/rolldown/function/experimental/strict_execution_order/cjs_reexport_barrel_cycle_fallback/artifacts.snap
+  s_0d9d9f3dab497d::t_dbe16de11d9c2f 1-90
+crates/rolldown/tests/rolldown/function/experimental/strict_execution_order/cjs_reexport_barrel_consumer_local/node_modules/pure-barrel/clone-deep.cjs
+  s_0d9d9f3dab497d::t_91742a42b374de 1-5
+crates/rolldown/tests/rolldown/function/experimental/strict_execution_order/emergent_cycle_partial_forwarder/artifacts.snap
+  s_0d9d9f3dab497d::t_b8adce1ce2ce8e 9,11,25,33,35-36,60,68-69,71
+crates/rolldown/src/stages/generate_stage/order_wrapping.rs
+  s_0d9d9f3dab497d::t_a1a34756aa95e2 3,6,9,28-29,31,57-74,120-400,462,475-476,481-509,618-625,1393-1399,1442-1444,1492-1498,1513-1516,1567,1590,1606-1613
+crates/rolldown/src/utils/chunk/render_chunk_exports.rs
+  s_0d9d9f3dab497d::t_5dd3d8117bc123 16,58-85
+crates/rolldown/tests/rolldown/function/experimental/strict_execution_order/cjs_reexport_barrel_namespace_routing/node_modules/namespace-barrel/package.json
+  s_0d9d9f3dab497d::t_e2306f55b6b609 1-7
+crates/rolldown/tests/rolldown/function/experimental/strict_execution_order/cjs_reexport_barrel_side_effect_boundary/node_modules/effectful-clone/index.cjs
+  s_0d9d9f3dab497d::t_6e40f3ca50b311 1-3
+crates/rolldown/tests/rolldown/function/experimental/strict_execution_order/cjs_reexport_barrel_effectful_carrier/barrel.js
+  s_0d9d9f3dab497d::t_29e5970522a40f 1-4
+crates/rolldown/tests/rolldown/function/experimental/strict_execution_order/cjs_reexport_barrel_side_effect_boundary/route.js
+  s_0d9d9f3dab497d::t_f25d3a43511297 1-5
+crates/rolldown/tests/rolldown/function/experimental/strict_execution_order/cjs_reexport_barrel_shared_importee/_test.mjs
+  s_0d9d9f3dab497d::t_c793b3cf91c534 1-12
+crates/rolldown/tests/rolldown/function/experimental/strict_execution_order/cjs_reexport_barrel_per_record_chunks/_config.json
+  s_0d9d9f3dab497d::t_c450033d406110 1-19
+crates/rolldown/tests/rolldown/function/experimental/strict_execution_order/cjs_reexport_barrel_shared_importee/artifacts.snap
+  s_0d9d9f3dab497d::t_adb3f6d9974cbf 1-195
+crates/rolldown/tests/rolldown/function/experimental/strict_execution_order/cjs_reexport_barrel_namespace_routing/route-static.js
+  s_0d9d9f3dab497d::t_5ec4aa90a90a8f 1-5
+crates/rolldown/src/stages/generate_stage/order_analysis.rs
+  s_0d9d9f3dab497d::t_f7d9ae37781dd6 15-17,97-117,181-189,365-374,407,459,479,542,587-645,665-666,679-680,682-692
+crates/rolldown/tests/rolldown/function/experimental/strict_execution_order/cjs_reexport_barrel_namespace_routing/node_modules/namespace-barrel/index.js
+  s_0d9d9f3dab497d::t_4a0f56eb0f19f1 1-4
+crates/rolldown/tests/rolldown/function/experimental/strict_execution_order/cjs_reexport_barrel_cycle_fallback/_config.json
+  s_0d9d9f3dab497d::t_60fac66f643032 1-19
+crates/rolldown/tests/rolldown/function/experimental/strict_execution_order/cjs_reexport_barrel_require_cycle_fallback/artifacts.snap
+  s_0d9d9f3dab497d::t_307916d60a6082 1-108
+crates/rolldown/tests/rolldown/function/experimental/strict_execution_order/cjs_reexport_barrel_require_cycle_fallback/b.cjs
+  s_0d9d9f3dab497d::t_408af85b602c0b 1-3
+crates/rolldown/tests/rolldown/function/experimental/strict_execution_order/cjs_reexport_barrel_effectful_carrier/node_modules/pure-leaves/stack.js
+  s_0d9d9f3dab497d::t_471339974459c3 1-3
+crates/rolldown/tests/rolldown/function/experimental/strict_execution_order/cjs_reexport_barrel_side_effect_boundary/node_modules/effectful-clone/package.json
+  s_0d9d9f3dab497d::t_30ab653bb30713 1-5
+crates/rolldown/tests/rolldown/function/experimental/strict_execution_order/cjs_reexport_barrel_side_effect_boundary/_test.mjs
+  s_0d9d9f3dab497d::t_d9a08ef4a9ab74 1-53
+crates/rolldown/tests/rolldown/function/experimental/strict_execution_order/cjs_reexport_barrel_side_effect_boundary/_config.json
+  s_0d9d9f3dab497d::t_e4a78dc8afb412 1-19
+crates/rolldown/src/module_finalizers/mod.rs
+  s_0d9d9f3dab497d::t_73d665d2566735 42,45,98,201-215,318-329,363-382,402-406,1814-1836
+  s_a263216b342109::t_10cf97265607f5 1919-1922,1930-1931,1938
+crates/rolldown/tests/rolldown/function/experimental/strict_execution_order/emergent_cycle_partial_forwarder/a/forwarder.js
+  s_0d9d9f3dab497d::t_7c1d6998db3684 4-5
+crates/rolldown/tests/rolldown/function/experimental/strict_execution_order/cjs_reexport_barrel_shared_importee/route-a.js
+  s_0d9d9f3dab497d::t_677f696101837b 1-5
+crates/rolldown/tests/rolldown/function/experimental/strict_execution_order/cjs_reexport_barrel_effectful_carrier/_config.json
+  s_0d9d9f3dab497d::t_0401f46c70c26e 1-23
+crates/rolldown/src/stages/generate_stage/mod.rs
+  s_0d9d9f3dab497d::t_bd48468b86796b 169,171
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "a5396f2814f4e1225de3dec4811b3180c7603fbb",
+  "prompts": {},
+  "sessions": {
+    "s_0d9d9f3dab497d": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019fa2b8-c711-7a23-bc1e-0b9d4e5701a6",
+        "model": "gpt-5.6-sol"
+      },
+      "human_author": "Yunfei He <i.heyunfei@gmail.com>"
+    },
+    "s_a263216b342109": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019fa32f-2224-7331-92fc-284bb0b3b993",
+        "model": "gpt-5.6-sol"
+      },
+      "human_author": "Yunfei He <i.heyunfei@gmail.com>"
+    }
+  }
+}

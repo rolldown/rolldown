@@ -1,0 +1,83 @@
+crates/rolldown/src/esm_init_obligations.rs
+  s_0d9d9f3dab497d::t_11281e9b687275 45,86-90,159-178,198,210-254,262,270-271,298,303-312,388-391,395-505,518,550,619,623-632,646,676-716,793,857,859-884,894-896,905,921-939,945-991,995-1037
+crates/rolldown/src/module_finalizers/mod.rs
+  s_0d9d9f3dab497d::t_73d665d2566735 42,45,98,201-215,263-274,327-331,1709-1731
+crates/rolldown/src/stages/generate_stage/compute_cross_chunk_links.rs
+  s_a263216b342109::t_432bfac83e3c3d 4,520-527,600-608,796-815,823-829,897-903
+crates/rolldown/src/stages/generate_stage/compute_wrapped_esm_init_metadata.rs
+  s_a263216b342109::t_8734795dfb600b 17-19,69,77,213,218,350-352,365,380
+crates/rolldown/src/stages/generate_stage/order_wrap_state.rs
+  s_a263216b342109::t_9f79aee81b48db 10-11,19-26,140,213,215-243,248,250-254,257-259,263-291,323-334,340,344-411,578-605
+crates/rolldown/src/types/generator.rs
+  s_0d9d9f3dab497d::t_475d94bce68499 66-70,72-82,84
+crates/rolldown/src/utils/chunk/render_chunk_exports.rs
+  s_0d9d9f3dab497d::t_5dd3d8117bc123 16,58-85
+crates/rolldown/tests/rolldown/function/experimental/strict_execution_order/cjs_carrier_pure_value_gap/_test.mjs
+  s_a263216b342109::t_9645a1ad9d18a9 2,5-20
+crates/rolldown/tests/rolldown/function/experimental/strict_execution_order/cjs_carrier_pure_value_gap/artifacts.snap
+  s_a263216b342109::t_e7d563d343bf20 9-11,20,52,55,62,67-72,74,81-82,90,155-157,166,203,206,213,218-223,225,232-233,241
+crates/rolldown/tests/rolldown/function/experimental/strict_execution_order/cjs_reexport_barrel_consumer_local/artifacts.snap
+  s_0d9d9f3dab497d::t_11c87c4dceb9cd 1-771
+crates/rolldown/tests/rolldown/function/experimental/strict_execution_order/cjs_reexport_barrel_cycle_fallback/artifacts.snap
+  s_0d9d9f3dab497d::t_dbe16de11d9c2f 1-90
+crates/rolldown/tests/rolldown/function/experimental/strict_execution_order/cjs_reexport_barrel_effectful_carrier/_test.mjs
+  s_0d9d9f3dab497d::t_1cbe2968ff8810 1-70
+crates/rolldown/tests/rolldown/function/experimental/strict_execution_order/cjs_reexport_barrel_effectful_carrier/artifacts.snap
+  s_0d9d9f3dab497d::t_f450a36db48247 1-270
+crates/rolldown/tests/rolldown/function/experimental/strict_execution_order/cjs_reexport_barrel_effectful_carrier/main.js
+  s_a263216b342109::t_061fd050c8e402 1-7
+crates/rolldown/tests/rolldown/function/experimental/strict_execution_order/cjs_reexport_barrel_effectful_carrier/outer.js
+  s_a263216b342109::t_3c81012fc43613 1
+crates/rolldown/tests/rolldown/function/experimental/strict_execution_order/cjs_reexport_barrel_effectful_carrier/route.js
+  s_a263216b342109::t_d7460f4fb32a72 1-5
+crates/rolldown/tests/rolldown/function/experimental/strict_execution_order/cjs_reexport_barrel_namespace_routing/_test.mjs
+  s_0d9d9f3dab497d::t_81555b5278ca1f 1-71
+crates/rolldown/tests/rolldown/function/experimental/strict_execution_order/cjs_reexport_barrel_namespace_routing/artifacts.snap
+  s_0d9d9f3dab497d::t_0344dadfc647d1 1-284
+crates/rolldown/tests/rolldown/function/experimental/strict_execution_order/cjs_reexport_barrel_per_record_chunks/_test.mjs
+  s_0d9d9f3dab497d::t_c1c3474dcbb2e0 1-57
+crates/rolldown/tests/rolldown/function/experimental/strict_execution_order/cjs_reexport_barrel_per_record_chunks/artifacts.snap
+  s_0d9d9f3dab497d::t_348460c7aa093a 1-236
+crates/rolldown/tests/rolldown/function/experimental/strict_execution_order/cjs_reexport_barrel_require_cycle_fallback/_test.mjs
+  s_a263216b342109::t_814bf39932af95 1-8
+crates/rolldown/tests/rolldown/function/experimental/strict_execution_order/cjs_reexport_barrel_require_cycle_fallback/artifacts.snap
+  s_0d9d9f3dab497d::t_307916d60a6082 1-108
+crates/rolldown/tests/rolldown/function/experimental/strict_execution_order/cjs_reexport_barrel_require_fallback/artifacts.snap
+  s_0d9d9f3dab497d::t_786a3255f4986c 1-156
+crates/rolldown/tests/rolldown/function/experimental/strict_execution_order/cjs_reexport_barrel_shared_importee/artifacts.snap
+  s_0d9d9f3dab497d::t_adb3f6d9974cbf 1-195
+crates/rolldown/tests/rolldown/function/experimental/strict_execution_order/cjs_reexport_barrel_side_effect_boundary/_test.mjs
+  s_0d9d9f3dab497d::t_d9a08ef4a9ab74 1-53
+crates/rolldown/tests/rolldown/function/experimental/strict_execution_order/cjs_reexport_barrel_side_effect_boundary/artifacts.snap
+  s_0d9d9f3dab497d::t_8cda2015ca38c2 1-226
+crates/rolldown/tests/rolldown/function/experimental/strict_execution_order/emergent_cycle_eager_reexport_overlay/artifacts.snap
+  s_0d9d9f3dab497d::t_33393b5488c904 9,11,25,33,35-36,49,57-58,60
+crates/rolldown/tests/rolldown/function/experimental/strict_execution_order/emergent_cycle_partial_forwarder/artifacts.snap
+  s_0d9d9f3dab497d::t_b8adce1ce2ce8e 9,11,25,33,35-36,60,68-69,71
+crates/rolldown/tests/rolldown/function/experimental/strict_execution_order/retained_star_renamed_cycle/artifacts.snap
+  s_0d9d9f3dab497d::t_b1b49649318473 11,20,96
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "0a22803ff16305cc4d512b29a91c216091809493",
+  "prompts": {},
+  "sessions": {
+    "s_0d9d9f3dab497d": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019fa2b8-c711-7a23-bc1e-0b9d4e5701a6",
+        "model": "gpt-5.6-sol"
+      },
+      "human_author": "Yunfei He <i.heyunfei@gmail.com>"
+    },
+    "s_a263216b342109": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019fa32f-2224-7331-92fc-284bb0b3b993",
+        "model": "gpt-5.6-sol"
+      },
+      "human_author": "Yunfei He <i.heyunfei@gmail.com>"
+    }
+  }
+}

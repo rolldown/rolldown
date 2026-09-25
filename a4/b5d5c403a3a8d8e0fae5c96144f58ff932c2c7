@@ -1,0 +1,19 @@
+packages/rolldown/tests/src/load-binding.ts
+  s_41b44e2ad40db5::t_71c5f4323c1ca4 3,7-10,12,21
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "a4b5d5c403a3a8d8e0fae5c96144f58ff932c2c7",
+  "prompts": {},
+  "sessions": {
+    "s_41b44e2ad40db5": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a0cd0f-13a7-7213-9410-1b4a18739aeb",
+        "model": "unknown"
+      },
+      "human_author": "IWANABETHATGUY <iwanabethatguy@qq.com>"
+    }
+  }
+}

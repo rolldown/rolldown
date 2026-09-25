@@ -1,0 +1,19 @@
+test262
+  s_81f51ad7ad827d::t_08f7b92da76e30 1
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "ec72237ab4d6ef4205f584a4aa754b8bee3d968d",
+  "prompts": {},
+  "sessions": {
+    "s_81f51ad7ad827d": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a08492-8999-7f62-b1ab-c8dd15db620a",
+        "model": "unknown"
+      },
+      "human_author": "shulaoda <165626830+shulaoda@users.noreply.github.com>"
+    }
+  }
+}

@@ -1,0 +1,47 @@
+crates/rolldown_binding/src/generated/binding_checks_options.rs
+  s_3180aad80935e1::t_f86a923bc6b666 25-26,56
+crates/rolldown_common/src/generated/checks_options.rs
+  s_3180aad80935e1::t_9ab03746f117e4 33-34,112-115
+crates/rolldown_testing/_config.schema.json
+  s_3180aad80935e1::t_0e29a777037f86 1501-1506,1508
+crates/rolldown_testing/src/integration_test.rs
+  s_3180aad80935e1::t_c5001ba444c632 685,687,689
+internal-docs/options/design.md
+  s_3180aad80935e1::t_1bcd1594c034d5 125-132
+packages/rolldown/src/options/docs/checks-plugin-timings.md
+  s_3180aad80935e1::t_4b26159e36eed5 1-5
+packages/rolldown/src/options/generated/checks-options.ts
+  s_3180aad80935e1::t_41825e6525de5a 160-164
+packages/rolldown/src/utils/create-bundler-option.ts
+  s_3180aad80935e1::t_93941739cb8f98 73-74
+packages/rolldown/src/utils/validator.ts
+  s_3180aad80935e1::t_1777bd19141903 403,409-412
+packages/rolldown/tests/bundler-timings-options.test.ts
+  s_3180aad80935e1::t_04244469e82a50 1-124
+packages/rolldown/tests/cli/__snapshots__/cli-e2e.test.ts.snap
+  s_3180aad80935e1::t_54657079fb1194 27,46,179,198,331,350,483,502
+packages/rolldown/tests/cli/cli-e2e.test.ts
+  s_3180aad80935e1::t_58c4976263029f 95-102
+packages/rolldown/tests/src/fixture-utils.ts
+  s_3180aad80935e1::t_0ccfab6d160ebe 12
+packages/rollup-tests/test/utils.js
+  s_3180aad80935e1::t_7b4ea246fc44d1 389
+tasks/generator/src/generators/checks.rs
+  s_3180aad80935e1::t_15bc41e1fbad0d 22-30,159-160,164-165,174-188,190,246-247,251-252,269-277,296-297,302-303,321-328
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "056d0ac586c3fe503a3acb11934b93081450a42c",
+  "prompts": {},
+  "sessions": {
+    "s_3180aad80935e1": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a08560-b40a-7f02-bb78-d7a470d8bc47",
+        "model": "unknown"
+      },
+      "human_author": "IWANABETHATGUY <iwanabethatguy@qq.com>"
+    }
+  }
+}

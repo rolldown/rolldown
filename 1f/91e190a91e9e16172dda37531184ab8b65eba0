@@ -1,0 +1,23 @@
+crates/rolldown_dev/src/bundle_coordinator.rs
+  s_9884f18bac89b9::t_d6093753b3a2b9 501-509,509
+crates/rolldown_plugin_vite_import_glob/src/utils.rs
+  s_9884f18bac89b9::t_8ef809b89448b9 30-32,481-492,505,509-516,676-684
+crates/rolldown_plugin_vite_import_glob/src/lib.rs
+  s_9884f18bac89b9::t_c204750d57c1f8 50
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "1f91e190a91e9e16172dda37531184ab8b65eba0",
+  "prompts": {},
+  "sessions": {
+    "s_9884f18bac89b9": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "f727b224-19a0-40d2-afa2-3412a5570143",
+        "model": "claude-opus-5"
+      },
+      "human_author": "shulaoda <165626830+shulaoda@users.noreply.github.com>"
+    }
+  }
+}

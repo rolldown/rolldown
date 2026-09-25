@@ -1,0 +1,39 @@
+Cargo.toml
+  s_8d5c341ef39b90::t_81fe53caf274ba 265,276,279-285
+Cargo.lock
+  s_8d5c341ef39b90::t_5004a0557b902c 1592,1630,1643,1660,1671,1682,1702,1714,1722,1740,1760,1781,1798,1816,1841,1861,1876,1899,1915,1972,2010,2023,2035,2055,2069,2098,2120
+crates/rolldown/tests/esbuild/ts/ts_experimental_decorators_mangle_props_assign_semantics/artifacts.snap
+  s_8d5c341ef39b90::t_9cae39d156a274 17-18
+crates/rolldown/tests/esbuild/ts/ts_experimental_decorators_mangle_props_define_semantics/artifacts.snap
+  s_8d5c341ef39b90::t_6547ab5e945fcd 16-17
+crates/rolldown/tests/esbuild/ts/ts_experimental_decorators_mangle_props_methods/artifacts.snap
+  s_8d5c341ef39b90::t_f00fcc6cb71366 16-17
+crates/rolldown/tests/esbuild/ts/ts_experimental_decorators_mangle_props_static_assign_semantics/artifacts.snap
+  s_8d5c341ef39b90::t_5e5b2eed9d63d4 24,27
+crates/rolldown/tests/esbuild/ts/ts_experimental_decorators_mangle_props_static_define_semantics/artifacts.snap
+  s_8d5c341ef39b90::t_8edcb09ba467f0 16-17
+crates/rolldown/tests/esbuild/ts/ts_experimental_decorators_mangle_props_static_methods/artifacts.snap
+  s_8d5c341ef39b90::t_396ec30dc59a76 16-17
+crates/rolldown/tests/esbuild/default/mangle_props_key_comment/artifacts.snap
+  s_8d5c341ef39b90::t_770a0dd1c32513 11-23
+crates/rolldown/tests/esbuild/default/mangle_props_key_comment_minify/artifacts.snap
+  s_8d5c341ef39b90::t_fc36d7d4f8692f 12,17,21
+crates/rolldown/tests/esbuild/default/preserve_key_comment/artifacts.snap
+  s_8d5c341ef39b90::t_76a592cba48bd7 11-22
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "dcdc335c627a86f382c7c1e3601c997540feafa6",
+  "prompts": {},
+  "sessions": {
+    "s_8d5c341ef39b90": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019fd2a4-9dd6-7050-9aa2-fd882e51e24d",
+        "model": "gpt-5.6-sol"
+      },
+      "human_author": "Cameron <cameron.clark@hey.com>"
+    }
+  }
+}

@@ -1,0 +1,73 @@
+crates/rolldown/tests/rolldown/function/experimental/strict_execution_order/retained_star_smart_constant_cycle/artifacts.snap
+  s_a263216b342109::t_06bfb6a288be2a 1-195
+crates/rolldown/tests/rolldown/function/experimental/strict_execution_order/dynamic_entry_retained_star_named/artifacts.snap
+  s_a263216b342109::t_4364bc3beb17f0 10,51,59,66,74,90,134,145,152,160
+internal-docs/code-splitting/implementation.md
+  s_0d9d9f3dab497d::t_a721af922cb4ee 102-105
+crates/rolldown/tests/rolldown/function/experimental/strict_execution_order/retained_star_renamed_cycle/artifacts.snap
+  s_a263216b342109::t_3aac46d28b4a5c 10-11,20,34-37,45,53,57,64,72,88-89,102,116-119,127,135,142,149,157
+crates/rolldown/tests/rolldown/function/experimental/strict_execution_order/esm_dynamic_entry_external_star_keeps_facade/artifacts.snap
+  s_a263216b342109::t_4e82b72656f773 1-93
+crates/rolldown/tests/rolldown/function/experimental/strict_execution_order/dynamic_entry_retained_star_fanout/artifacts.snap
+  s_a263216b342109::t_37db1671013ed2 10,63,71,79,87,103,159,170,178,186
+crates/rolldown/src/stages/generate_stage/compute_wrapped_esm_init_metadata.rs
+  s_a263216b342109::t_68b2705ce1d5a8 9-10,236-248,251
+crates/rolldown/tests/rolldown/function/experimental/strict_execution_order/esm_dynamic_entry_transitive_external_star_keeps_facade/artifacts.snap
+  s_a263216b342109::t_d49d2a13cac573 1-123
+crates/rolldown/tests/rolldown/function/experimental/strict_execution_order/retained_star_renamed_cycle/_test.mjs
+  s_a263216b342109::t_f1f4115825976e 1-2,4-22
+crates/rolldown/tests/rolldown/function/experimental/strict_execution_order/retained_star_opaque_cycle/artifacts.snap
+  s_a263216b342109::t_95ed0d3645a17e 1-189
+crates/rolldown/tests/rolldown/function/experimental/strict_execution_order/dynamic_entry_retained_star/artifacts.snap
+  s_a263216b342109::t_463dd813410488 10,51,59,66,74,90,134,145,152,160
+internal-docs/code-splitting/design.md
+  s_0d9d9f3dab497d::t_6f7145649f57c6 58-67,78-84,89-93,112-122
+crates/rolldown/src/module_finalizers/mod.rs
+  s_a263216b342109::t_db3ffdcb1e98cb 16-18,768-793,805-809
+crates/rolldown/tests/rolldown/function/experimental/strict_execution_order/cjs_dynamic_entry_external_star_keeps_facade/_config.json
+  s_0d9d9f3dab497d::t_1e86a1dc865405 1-23
+crates/rolldown/tests/rolldown/function/experimental/strict_execution_order/cjs_dynamic_entry_external_star_keeps_facade/_test.mjs
+  s_0d9d9f3dab497d::t_ba2f87dbdadd94 1-23
+crates/rolldown/tests/rolldown/function/experimental/strict_execution_order/cjs_dynamic_entry_external_star_keeps_facade/artifacts.snap
+  s_a263216b342109::t_713f89d3e0714c 1-138
+crates/rolldown/tests/rolldown/function/experimental/strict_execution_order/cjs_dynamic_entry_external_star_keeps_facade/main.js
+  s_0d9d9f3dab497d::t_4d0b81b6eb34bb 1
+crates/rolldown/tests/rolldown/function/experimental/strict_execution_order/cjs_dynamic_entry_external_star_keeps_facade/node_modules/external/index.js
+  s_0d9d9f3dab497d::t_d973d9ef257ff0 1-9
+crates/rolldown/tests/rolldown/function/experimental/strict_execution_order/cjs_dynamic_entry_external_star_keeps_facade/node_modules/external/package.json
+  s_0d9d9f3dab497d::t_ee635f2fb15211 1-4
+crates/rolldown/tests/rolldown/function/experimental/strict_execution_order/cjs_dynamic_entry_external_star_keeps_facade/node_modules/primitive/index.js
+  s_0d9d9f3dab497d::t_2a972707978aa7 1
+crates/rolldown/tests/rolldown/function/experimental/strict_execution_order/cjs_dynamic_entry_external_star_keeps_facade/node_modules/primitive/package.json
+  s_0d9d9f3dab497d::t_31b0d2c66068f9 1-4
+crates/rolldown/tests/rolldown/function/experimental/strict_execution_order/cjs_dynamic_entry_external_star_keeps_facade/reader.js
+  s_0d9d9f3dab497d::t_d76271e3a83ae4 1-5
+crates/rolldown/tests/rolldown/function/experimental/strict_execution_order/cjs_dynamic_entry_external_star_keeps_facade/target.js
+  s_0d9d9f3dab497d::t_6506b943bf0d13 1-10
+crates/rolldown/tests/rolldown/function/experimental/strict_execution_order/cjs_dynamic_entry_transitive_external_star/artifacts.snap
+  s_a263216b342109::t_de16ddc84810af 1-171
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "21c6ff0314d8fe1c0a4c679b6ec90a5e090759a5",
+  "prompts": {},
+  "sessions": {
+    "s_0d9d9f3dab497d": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019fa2b8-c711-7a23-bc1e-0b9d4e5701a6",
+        "model": "gpt-5.6-sol"
+      },
+      "human_author": "Yunfei He <i.heyunfei@gmail.com>"
+    },
+    "s_a263216b342109": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019fa32f-2224-7331-92fc-284bb0b3b993",
+        "model": "gpt-5.6-sol"
+      },
+      "human_author": "Yunfei He <i.heyunfei@gmail.com>"
+    }
+  }
+}

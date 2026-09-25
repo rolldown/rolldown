@@ -1,0 +1,23 @@
+crates/rolldown/src/ast_scanner/mod.rs
+  s_d71a0208f02e40::t_fa7dec6d705269 358-360
+crates/rolldown/tests/rolldown/cjs_compat/top_level_this_exports/main.cjs
+  s_d71a0208f02e40::t_cfc70a8a7308ad 3
+internal-docs/linking/determine-module-exports-kind/implementation.md
+  s_d71a0208f02e40::t_7c614541d99b8d 69-71
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "34f290652b5b47da183278aee43cb097c4b3309a",
+  "prompts": {},
+  "sessions": {
+    "s_d71a0208f02e40": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a09f27-2ba0-74d2-8817-7c608c9ffa5a",
+        "model": "unknown"
+      },
+      "human_author": "IWANABETHATGUY <iwanabethatguy@qq.com>"
+    }
+  }
+}

@@ -1,0 +1,21 @@
+crates/rolldown_plugin_vite_import_glob/src/lib.rs
+  s_9884f18bac89b9::t_8ffbb5d328e79c 1,4-7,9,11-15,17,20-21,24-60,69,77-153,155-162,165-178
+crates/rolldown_plugin_vite_import_glob/src/utils.rs
+  s_9884f18bac89b9::t_30fe1c67da8ec2 20-21,32-38,88-92,491-513,526,530-542,702-710
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "f5314184979af0ad144c6a382770b6b032c2bc60",
+  "prompts": {},
+  "sessions": {
+    "s_9884f18bac89b9": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "f727b224-19a0-40d2-afa2-3412a5570143",
+        "model": "unknown"
+      },
+      "human_author": "shulaoda <165626830+shulaoda@users.noreply.github.com>"
+    }
+  }
+}

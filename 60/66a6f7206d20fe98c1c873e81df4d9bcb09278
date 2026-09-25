@@ -1,0 +1,49 @@
+crates/rolldown/src/esm_init_obligations.rs
+  s_a6f305dc0983c0::t_ad3b92249030a5 28-29
+crates/rolldown/src/module_finalizers/finalizer_context.rs
+  s_a6f305dc0983c0::t_bd1443214945bf 28-31,52
+crates/rolldown/src/module_finalizers/impl_visit_mut.rs
+  s_a6f305dc0983c0::t_e9dac6c7216024 212-213
+crates/rolldown/src/module_finalizers/mod.rs
+  s_a6f305dc0983c0::t_58ec8e2ec1cc2b 189,1532,1758-1759,1762-1764
+crates/rolldown/src/stages/generate_stage/compute_cross_chunk_links.rs
+  s_1524eb9f9fabad::t_7482f2e9628c54 1,44-60,84,94-99,241-244,252-257,274,314,343,352,469,504-512,627,631-639,659,663-665,667-668,674-675
+crates/rolldown/src/stages/generate_stage/compute_wrapped_esm_init_metadata.rs
+  s_a6f305dc0983c0::t_8e03814e045709 1-4,27-77,79-80,82,85-86,100,119,126,131
+crates/rolldown/src/stages/generate_stage/finalize_modules.rs
+  s_a6f305dc0983c0::t_567455e9ddcabe 14,25,63
+crates/rolldown/src/stages/generate_stage/mod.rs
+  s_a6f305dc0983c0::t_49565f8c38a8e5 117-118,151,159-160,162-167,238
+crates/rolldown/src/stages/generate_stage/order_analysis.rs
+  s_a6f305dc0983c0::t_cae2d988f0e41c 487-489
+crates/rolldown/src/stages/generate_stage/order_wrapping.rs
+  s_a6f305dc0983c0::t_a71385ce7aca5f 593-597
+internal-docs/code-splitting/design.md
+  s_a6f305dc0983c0::t_13e9a090a25040 240,242,277-299,322,352,372-374,389
+internal-docs/code-splitting/implementation.md
+  s_a6f305dc0983c0::t_b29d4d48f64203 3,75-76,89-90,101-102
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "6066a6f7206d20fe98c1c873e81df4d9bcb09278",
+  "prompts": {},
+  "sessions": {
+    "s_1524eb9f9fabad": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019f8761-7347-7b70-b3f1-24c54174fc35",
+        "model": "gpt-5.6-sol"
+      },
+      "human_author": "Yunfei He <i.heyunfei@gmail.com>"
+    },
+    "s_a6f305dc0983c0": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019f7eb6-4cde-75c0-a32b-d790440743fc",
+        "model": "gpt-5.6-sol"
+      },
+      "human_author": "Yunfei He <i.heyunfei@gmail.com>"
+    }
+  }
+}

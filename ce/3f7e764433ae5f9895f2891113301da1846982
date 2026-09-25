@@ -1,0 +1,19 @@
+packages/rolldown/src/builtin-plugin/utils.ts
+  s_41b44e2ad40db5::t_d311042c4239b6 27-31,35-38,41-43,49,55-75
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "ce3f7e764433ae5f9895f2891113301da1846982",
+  "prompts": {},
+  "sessions": {
+    "s_41b44e2ad40db5": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a0cd0f-13a7-7213-9410-1b4a18739aeb",
+        "model": "unknown"
+      },
+      "human_author": "IWANABETHATGUY <iwanabethatguy@qq.com>"
+    }
+  }
+}

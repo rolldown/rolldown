@@ -1,0 +1,33 @@
+packages/rolldown/src/builtin-plugin/utils.ts
+  s_41b44e2ad40db5::t_9a66abc0e4f7ba 30,36-55,58-59,98-105
+packages/rolldown/tests/builtin-plugin/callable-builtin-gc.mjs
+  s_41b44e2ad40db5::t_a925df4d410211 1-157
+packages/rolldown/tests/builtin-plugin/callable-builtin-mock.mjs
+  s_41b44e2ad40db5::t_fb2915e30451fc 1-20
+packages/rolldown/tests/builtin-plugin/callable-builtin-ownership.mjs
+  s_41b44e2ad40db5::t_1288031a362168 1-67
+packages/rolldown/tests/builtin-plugin/callable-builtin.test.ts
+  s_41b44e2ad40db5::t_d52a6f8fccddd0 1-106
+packages/rolldown/tests/builtin-plugin/vite-resolve.test.ts
+  s_41b44e2ad40db5::t_e0c772443a7118 1,3,78-85
+packages/rolldown/tests/package.json
+  s_41b44e2ad40db5::t_f2ebfe60c9e01e 39
+pnpm-lock.yaml
+  s_41b44e2ad40db5::t_ee21b369242f88 680-682
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "7b0941f41a506b67746c0f82bb1062439c9f8d1f",
+  "prompts": {},
+  "sessions": {
+    "s_41b44e2ad40db5": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a0cd0f-13a7-7213-9410-1b4a18739aeb",
+        "model": "unknown"
+      },
+      "human_author": "IWANABETHATGUY <iwanabethatguy@qq.com>"
+    }
+  }
+}

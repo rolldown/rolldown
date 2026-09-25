@@ -1,0 +1,37 @@
+crates/rolldown_error/src/build_diagnostic/events/plugin_timings.rs
+  s_73418731c2f755::t_07cc2446724158 294,310
+packages/rolldown/src/log/logs.ts
+  s_73418731c2f755::t_0ffd1f5dc950d7 10,59-65
+packages/rolldown/src/options/docs/checks-plugin-timings.md
+  s_73418731c2f755::t_e889341efc6896 18-22
+packages/rolldown/src/options/output-options.ts
+  s_73418731c2f755::t_f8f6bd12376aab 800-805
+packages/rolldown/src/utils/bindingify-output-options.ts
+  s_73418731c2f755::t_f9c3b758939e47 2-4,27,81,256,265,307,328,342,380-381,391-417,422,430
+packages/rolldown/src/utils/create-bundler-option.ts
+  s_73418731c2f755::t_b6837fc8e3ab38 133-138
+packages/rolldown/src/utils/plugin-timings.ts
+  s_73418731c2f755::t_259ad4e5f0d101 102-103,131
+packages/rolldown/src/utils/validator.ts
+  s_73418731c2f755::t_a9ad9df86ac5d1 858
+packages/rolldown/tests/code-splitting-group-timings.test.ts
+  s_73418731c2f755::t_a847887b3ee928 87-89,93-95,105,130-131,136-243,246-252,272,276
+packages/rolldown/tests/validate-option.test.ts
+  s_73418731c2f755::t_7e899e55ada7cb 80-108
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "d275f6469571d726c286562af7bc4658d4157924",
+  "prompts": {},
+  "sessions": {
+    "s_73418731c2f755": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a0a33f-ac9b-7372-b380-06a95006f42f",
+        "model": "unknown"
+      },
+      "human_author": "IWANABETHATGUY <iwanabethatguy@qq.com>"
+    }
+  }
+}

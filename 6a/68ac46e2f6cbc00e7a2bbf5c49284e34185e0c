@@ -1,0 +1,21 @@
+crates/rolldown_error/src/build_diagnostic/events/plugin_timings.rs
+  s_73418731c2f755::t_3b2863c1ff0cd6 11-12,114,126-127,133,144-145,150-151,154,164,167,172,186,189,191,199-200,211-213,218-220,232-241,256-266,269,291-298,309,311,314-319,326-348,369-372,384,386-387,390-392,412-413,434,438,448-451,456,464-467,472,474-477
+packages/rolldown/src/options/docs/checks-plugin-timings.md
+  s_73418731c2f755::t_7c87f6de682abd 18,23,25,27,29
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "6a68ac46e2f6cbc00e7a2bbf5c49284e34185e0c",
+  "prompts": {},
+  "sessions": {
+    "s_73418731c2f755": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a0a33f-ac9b-7372-b380-06a95006f42f",
+        "model": "unknown"
+      },
+      "human_author": "IWANABETHATGUY <iwanabethatguy@qq.com>"
+    }
+  }
+}

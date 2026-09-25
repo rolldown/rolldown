@@ -1,0 +1,27 @@
+crates/rolldown_common/src/utils/enhanced_transform.rs
+  s_8d5c341ef39b90::t_ade99ad5def04a 358
+crates/rolldown_ecmascript/src/ecma_compiler.rs
+  s_8d5c341ef39b90::t_7412b30866384c 36
+crates/rolldown_plugin_utils/src/parse_program.rs
+  s_8d5c341ef39b90::t_d1ba488fc15f5e 29
+crates/rolldown_plugin_vite_transform/src/lib.rs
+  s_8d5c341ef39b90::t_93821820f06497 70
+crates/rolldown_testing/src/integration_test.rs
+  s_8d5c341ef39b90::t_2abd2a99e9c5d2 135
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "2ef10c689f73174ee8163df5bcf1485fa5ee7833",
+  "prompts": {},
+  "sessions": {
+    "s_8d5c341ef39b90": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019fd2a4-9dd6-7050-9aa2-fd882e51e24d",
+        "model": "gpt-5.6-sol"
+      },
+      "human_author": "Cameron <cameron.clark@hey.com>"
+    }
+  }
+}

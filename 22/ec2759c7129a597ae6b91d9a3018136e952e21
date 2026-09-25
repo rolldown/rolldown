@@ -1,0 +1,19 @@
+.gitignore
+  s_edfd7cbf971263::t_0e57c9f52c04c9 65-69
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "22ec2759c7129a597ae6b91d9a3018136e952e21",
+  "prompts": {},
+  "sessions": {
+    "s_edfd7cbf971263": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019feb4b-b9f0-77e2-8465-73222abdd3ed",
+        "model": "unknown"
+      },
+      "human_author": "Cameron <cameron.clark@hey.com>"
+    }
+  }
+}

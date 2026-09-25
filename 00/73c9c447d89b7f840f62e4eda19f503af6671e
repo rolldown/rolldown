@@ -1,0 +1,21 @@
+internal-docs/dev-server-test-harness/implementation.md
+  s_ab90a7be046a09::t_9310682d21b0fc 152,161-173
+scripts/src/setup-vite/main.ts
+  s_ab90a7be046a09::t_a62f11426b96b1 24,71-74,76-81
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "0073c9c447d89b7f840f62e4eda19f503af6671e",
+  "prompts": {},
+  "sessions": {
+    "s_ab90a7be046a09": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a0a40f-e01c-7362-aee2-8f7c73ae1b95",
+        "model": "unknown"
+      },
+      "human_author": "shulaoda <165626830+shulaoda@users.noreply.github.com>"
+    }
+  }
+}

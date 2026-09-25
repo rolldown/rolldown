@@ -1,0 +1,21 @@
+Cargo.lock
+  s_8d5c341ef39b90::t_c588bfae8f0955 1568,1631,1644,1661,1672,1683,1703,1715,1723,1733,1753,1774,1791,1809,1833,1853,1868,1891,1907,1964,2002,2016,2028,2048,2062,2091,2113
+Cargo.toml
+  s_8d5c341ef39b90::t_2b38718d69d178 265,276,279-285
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "c1721f03d5096d3ac6baa8cc38e22b6cd34e84c7",
+  "prompts": {},
+  "sessions": {
+    "s_8d5c341ef39b90": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019fd2a4-9dd6-7050-9aa2-fd882e51e24d",
+        "model": "unknown"
+      },
+      "human_author": "Cameron <cameron.clark@hey.com>"
+    }
+  }
+}

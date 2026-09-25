@@ -1,0 +1,25 @@
+packages/rolldown/tests/asset-file-names-timings.test.ts
+  s_3180aad80935e1::t_8c8f5391d5489a 8-12
+packages/rolldown/tests/sanitize-file-name-timings.test.ts
+  s_3180aad80935e1::t_f3c57f0fe024c0 8-12
+packages/rolldown/tests/src/load-binding.ts
+  s_3180aad80935e1::t_993f21c020eb4f 1-18
+packages/rolldown/tests/tsconfig.json
+  s_3180aad80935e1::t_f2b7dbb0bdfd06 3-10,18-19
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "4cdbf5bbb3d57ac999c0e1e57c55ba189c0c1e5d",
+  "prompts": {},
+  "sessions": {
+    "s_3180aad80935e1": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a08560-b40a-7f02-bb78-d7a470d8bc47",
+        "model": "unknown"
+      },
+      "human_author": "IWANABETHATGUY <iwanabethatguy@qq.com>"
+    }
+  }
+}

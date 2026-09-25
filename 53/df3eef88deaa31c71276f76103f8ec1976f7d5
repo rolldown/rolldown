@@ -1,0 +1,23 @@
+crates/rolldown/src/stages/generate_stage/compute_cross_chunk_links.rs
+  s_1524eb9f9fabad::t_26260ee0f8f08a 327
+crates/rolldown/src/stages/generate_stage/compute_wrapped_esm_init_metadata.rs
+  s_1524eb9f9fabad::t_aaa6c6e078ccf6 29
+crates/rolldown/src/stages/generate_stage/mod.rs
+  s_1524eb9f9fabad::t_36b4f1783ea64e 117
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "53df3eef88deaa31c71276f76103f8ec1976f7d5",
+  "prompts": {},
+  "sessions": {
+    "s_1524eb9f9fabad": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019f8761-7347-7b70-b3f1-24c54174fc35",
+        "model": "gpt-5.6-sol"
+      },
+      "human_author": "Yunfei He <i.heyunfei@gmail.com>"
+    }
+  }
+}

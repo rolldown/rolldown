@@ -1,0 +1,21 @@
+packages/rolldown/tests/asset-file-names-timings.test.ts
+  s_3180aad80935e1::t_a9829dc50fc884 1-156
+packages/rolldown/tests/sanitize-file-name-timings.test.ts
+  s_3180aad80935e1::t_59a6b7174f6404 1-148
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "69b67a120d3b82b1705bf2dc9d0adf942b247c29",
+  "prompts": {},
+  "sessions": {
+    "s_3180aad80935e1": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a08560-b40a-7f02-bb78-d7a470d8bc47",
+        "model": "unknown"
+      },
+      "human_author": "IWANABETHATGUY <iwanabethatguy@qq.com>"
+    }
+  }
+}

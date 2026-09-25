@@ -1,0 +1,19 @@
+crates/rolldown/src/types/scan_stage_cache.rs
+  s_d35b6306f1ab7b::t_ec4a60797c0d53 150,231-242
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "370d7c8b121118d875385a482b44985b7472bee1",
+  "prompts": {},
+  "sessions": {
+    "s_d35b6306f1ab7b": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a084bb-08d7-7873-996e-e05af43d099e",
+        "model": "unknown"
+      },
+      "human_author": "shulaoda <165626830+shulaoda@users.noreply.github.com>"
+    }
+  }
+}

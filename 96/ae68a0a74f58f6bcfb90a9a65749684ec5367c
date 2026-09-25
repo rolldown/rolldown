@@ -1,0 +1,51 @@
+crates/rolldown_binding/src/generated/binding_checks_options.rs
+  s_73418731c2f755::t_62dd1ac1d01a92 26
+crates/rolldown_common/src/generated/checks_options.rs
+  s_73418731c2f755::t_f4c623e6d2c0fe 34
+crates/rolldown_error/src/types/event_kind.rs
+  s_73418731c2f755::t_e7026643fb3e75 113
+crates/rolldown_testing/_config.schema.json
+  s_7df2e0eaa921ec::t_420119ea56fabb 1508
+crates/rolldown_testing/src/integration_test.rs
+  s_73418731c2f755::t_a669b46891df34 685
+internal-docs/options/design.md
+  s_73418731c2f755::t_4c99fcb20d3535 127-135
+packages/rolldown/src/binding.d.cts
+  s_73418731c2f755::t_00a73d42abe1aa 1982
+packages/rolldown/src/options/docs/checks-plugin-timings.md
+  s_73418731c2f755::t_8bffce468b8e82 1-2,4-8
+packages/rolldown/src/options/generated/checks-options.ts
+  s_73418731c2f755::t_1198af8f9ec86b 155,163
+packages/rolldown/src/rolldown-binding.wasi.d.cts
+  s_73418731c2f755::t_edeb9fdd543c8c 1977
+packages/rolldown/src/utils/validator.ts
+  s_73418731c2f755::t_d810b571e85ccc 406,411-413
+packages/rolldown/tests/cli/__snapshots__/cli-e2e.test.ts.snap
+  s_73418731c2f755::t_46abb6ea835259 46,198,350,502
+tasks/generator/src/generators/checks.rs
+  s_73418731c2f755::t_15d82cae0686ec 176-178,274,326
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "96ae68a0a74f58f6bcfb90a9a65749684ec5367c",
+  "prompts": {},
+  "sessions": {
+    "s_73418731c2f755": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a0a33f-ac9b-7372-b380-06a95006f42f",
+        "model": "unknown"
+      },
+      "human_author": "IWANABETHATGUY <iwanabethatguy@qq.com>"
+    },
+    "s_7df2e0eaa921ec": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a0a893-bafc-7460-b929-154e3e40628c",
+        "model": "unknown"
+      },
+      "human_author": "IWANABETHATGUY <iwanabethatguy@qq.com>"
+    }
+  }
+}

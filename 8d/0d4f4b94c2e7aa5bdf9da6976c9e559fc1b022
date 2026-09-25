@@ -1,0 +1,19 @@
+internal-docs/cache/implementation.md
+  s_d35b6306f1ab7b::t_714c385ab62bb4 343-347
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "8d0d4f4b94c2e7aa5bdf9da6976c9e559fc1b022",
+  "prompts": {},
+  "sessions": {
+    "s_d35b6306f1ab7b": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a084bb-08d7-7873-996e-e05af43d099e",
+        "model": "unknown"
+      },
+      "human_author": "shulaoda <165626830+shulaoda@users.noreply.github.com>"
+    }
+  }
+}

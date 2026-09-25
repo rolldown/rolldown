@@ -1,0 +1,23 @@
+packages/rolldown/src/options/docs/checks-plugin-timings.md
+  s_3b9f137beb1e36::t_179c297bbbe7a6 18
+packages/rolldown/src/utils/bindingify-output-options.ts
+  s_3b9f137beb1e36::t_bc1e360083d27f 393,414-415
+packages/rolldown/tests/code-splitting-group-timings.test.ts
+  s_3b9f137beb1e36::t_45b83ef3f39b7e 88,94,162-163,188
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "807df6b9204b3a1bd60dd90e003368855543e016",
+  "prompts": {},
+  "sessions": {
+    "s_3b9f137beb1e36": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a0aea6-1abd-7812-9dba-dc2786369a2b",
+        "model": "unknown"
+      },
+      "human_author": "IWANABETHATGUY <iwanabethatguy@qq.com>"
+    }
+  }
+}

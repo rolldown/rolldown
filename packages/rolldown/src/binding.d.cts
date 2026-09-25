@@ -1904,13 +1904,6 @@ export declare class TsconfigCache {
   size(): number
 }
 
-/**
- * Panics on purpose. CI calls this to check that a published binding can produce a
- * symbolicated backtrace from its separately published debug info.
- * See `scripts/misc/verify-debuginfo.mjs` and internal-docs/panic-symbolication/implementation.md
- */
-export declare function __internalForcePanic(): void
-
 export interface AliasItem {
   find: string
   replacements: Array<string | undefined | null>

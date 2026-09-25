@@ -8,7 +8,7 @@ use arcstr::ArcStr;
 use dashmap::DashMap;
 use oxc_resolver::{
   ModuleType, PackageJson as OxcPackageJson, PackageType, Resolution, ResolveError,
-  ResolverGeneric, TsConfig as OxcTsConfig,
+  ResolveOptions as OxcResolveOptions, ResolverGeneric, TsConfig as OxcTsConfig,
 };
 use rolldown_common::{
   ImportKind, ModuleDefFormat, ModuleId, PackageJson, Platform, ResolveOptions, ResolvedId,
@@ -34,6 +34,9 @@ pub struct Resolver<Fs: FileSystem = OsFileSystem> {
   css_resolver: ResolverGeneric<Fs>,
   // Resolver for `new URL(..., import.meta.url)`
   new_url_resolver: ResolverGeneric<Fs>,
+  // Resolver for an absolute path a plugin returned. The id is final, so this one applies no
+  // rewrite and only attaches the manifests.
+  exact_path_resolver: ResolverGeneric<Fs>,
   package_json_cache: FxDashMap<PathBuf, Arc<PackageJson>>,
 }
 
@@ -54,6 +57,20 @@ impl<Fs: FileSystem + Clone + 'static> Resolver<Fs> {
     let require_resolver = default_resolver.clone_with_options(config.require_options);
     let css_resolver = default_resolver.clone_with_options(config.css_options);
     let new_url_resolver = default_resolver.clone_with_options(config.new_url_options);
+    let exact_path_resolver = default_resolver.clone_with_options(OxcResolveOptions {
+      alias: vec![],
+      fallback: vec![],
+      alias_fields: vec![],
+      extension_alias: vec![],
+      extensions: vec![],
+      main_files: vec![],
+      roots: vec![],
+      restrictions: vec![],
+      tsconfig: None,
+      prefer_absolute: false,
+      prefer_relative: false,
+      ..default_resolver.options().clone()
+    });
 
     Self {
       fs,
@@ -63,6 +80,7 @@ impl<Fs: FileSystem + Clone + 'static> Resolver<Fs> {
       require_resolver,
       css_resolver,
       new_url_resolver,
+      exact_path_resolver,
       package_json_cache: DashMap::default(),
     }
   }
@@ -130,6 +148,22 @@ impl<Fs: FileSystem> Resolver<Fs> {
     }
   }
 
+  /// Resolves an absolute path the internal resolver never saw, for example an id that a
+  /// `resolveId` hook returned as a bare string.
+  ///
+  /// The same `package.json` and `"type"` rules as [`Resolver::resolve`] apply, so a module gets
+  /// one policy for every specifier that reaches it. The id is final, so no alias, `tsconfig`
+  /// path, or extension rewrite applies to it. See
+  /// <https://github.com/rolldown/rolldown/issues/10909>.
+  ///
+  /// # Errors
+  /// Returns a `ResolveError` if the path does not exist or a `package.json` on the way up does
+  /// not parse.
+  pub fn resolve_absolute_path(&self, path: &Path) -> Result<ResolveReturn, ResolveError> {
+    let specifier = path.to_str().expect("Should be valid utf8");
+    self.exact_path_resolver.resolve_file(path, specifier).map(|info| self.resolve_return(&info))
+  }
+
   /// Resolves a module specifier to an absolute path.
   ///
   /// # Arguments
@@ -177,15 +211,15 @@ impl<Fs: FileSystem> Resolver<Fs> {
         self.try_rollup_compatibility_resolve(selected_resolver, importer, specifier, resolution);
     }
 
-    resolution.map(|info| {
-      let package_json = info.package_json().map(|p| self.cached_package_json(p));
-      let module_def_format = infer_module_def_format(&info);
-      ResolveReturn {
-        path: info.full_path().to_str().expect("Should be valid utf8").into(),
-        module_def_format,
-        package_json,
-      }
-    })
+    resolution.map(|info| self.resolve_return(&info))
+  }
+
+  fn resolve_return(&self, info: &Resolution) -> ResolveReturn {
+    ResolveReturn {
+      path: info.full_path().to_str().expect("Should be valid utf8").into(),
+      module_def_format: infer_module_def_format(info),
+      package_json: info.package_json().map(|p| self.cached_package_json(p)),
+    }
   }
 
   fn cached_package_json(&self, oxc_pkg_json: &OxcPackageJson) -> Arc<PackageJson> {

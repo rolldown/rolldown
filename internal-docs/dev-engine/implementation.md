@@ -661,16 +661,17 @@ Then, across all files of the batch:
 
 The superset walk (`collect_client_update_superset` in `hmr_stage.rs`)
 starts from the changed modules and follows importer edges (static and
-dynamic `import()`). It stops at a self-accepting module, at an importer
-that accepts the module as a dependency, and — since
-`import.meta.hot.acceptExports` — at an importer that reads only export
-names the module accepts (`imports_only_accepted_exports` in
-`module_graph_delta.rs`). The accepted names come from the scanner
-(`HmrInfo::accepted_exports`); they are `None` when the argument is not a
-string literal or a list of string literals, and then the importer is
-walked as usual.
+dynamic `import()`). It stops at a self-accepting module and at an importer
+that accepts the module as a dependency. It does not stop at an importer
+that reads only export names the module accepts through
+`import.meta.hot.acceptExports`. Only the browser makes that decision:
+Vite's bundled-dev client skips such an importer only when
+`experimental.hmrPartialAccept` is on, and it reads the accepted names from
+the call at run time. If the server skipped the importer too, a client with
+the option off would walk into an importer whose factory was never shipped,
+and it would full-reload.
 
-The browser repeats the same decision on its own copy of the graph. Each
+The browser makes this decision on its own copy of the graph. Each
 patch's `registerGraph` prelude carries, per static edge, the export names
 the importer reads (`bindings[i][j]`): `"*"` for a whole-namespace read
 (`import * as ns`, `export * from`, `require()`, non-JS records; the same
@@ -684,17 +685,16 @@ Known gaps in this walk, kept on purpose for now:
 
 - **The two sides decide from different generations.** The server reads
   the post-rebuild `hmr_info`; the browser reads the hot context of the
-  module still evaluated there. When an edit adds or widens an `accept` /
-  `acceptExports` declaration, the server skips an importer that the
-  browser's older context still walks into. If that importer has an
-  accepting ancestor, the browser needs its factory and none was shipped;
-  otherwise the browser finds no boundary. Either way that client
-  full-reloads once, then the reload loads the new generation and the two
-  agree. Plain `accept()` has had this shape since the walk was written;
-  `acceptExports` follows it. Follow-up: keep the pre-rebuild `hmr_info`
-  of a changed module (as the unchanged-output check keeps the pre-rebuild
-  render) and skip an importer only when the old declaration already
-  covered it. That removes the reload in the accepting-ancestor case; the
+  module still evaluated there. When an edit adds or widens an `accept`
+  declaration, the server skips an importer that the browser's older
+  context still walks into. If that importer has an accepting ancestor,
+  the browser needs its factory and none was shipped; otherwise the
+  browser finds no boundary. Either way that client full-reloads once,
+  then the reload loads the new generation and the two agree. Plain
+  `accept()` has had this shape since the walk was written. Follow-up:
+  keep the pre-rebuild `hmr_info` of a changed module (as the
+  unchanged-output check keeps the pre-rebuild render) and skip an
+  importer only when the old declaration already covered it. That removes the reload in the accepting-ancestor case; the
   no-ancestor case needs the browser to learn the new declaration before
   it walks.
 - **`"*"` is a plain string.** A module may export a name literally spelled

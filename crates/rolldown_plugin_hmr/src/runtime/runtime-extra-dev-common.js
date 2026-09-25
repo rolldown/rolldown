@@ -59,7 +59,8 @@ export class DevRuntime {
   /**
    * Static import edges from `registerGraph` — entries persist across `removeModuleCache`
    * and change only by replacement from a newer payload (last write wins).
-   * @type {Map<string, { edges: string[], bindings: string[][] }>}
+   * `bindings` is the payload row as sent; `getImportedBindings` resolves a missing entry.
+   * @type {Map<string, { edges: string[], bindings: (string[] | null)[] | undefined }>}
    */
   staticImports = new Map();
   /**
@@ -118,8 +119,7 @@ export class DevRuntime {
         }
         importerSet.add(id);
       }
-      const bindings = edges.map((_, j) => delta.bindings?.[i]?.[j] ?? ['*']);
-      this.staticImports.set(id, { edges, bindings });
+      this.staticImports.set(id, { edges, bindings: delta.bindings?.[i] });
 
       // Dynamic `import()` edges are maintained in a parallel reverse index with the same
       // last-write-wins bookkeeping; `getImporters` unions the two.
@@ -181,7 +181,7 @@ export class DevRuntime {
   getImportedBindings(importer, id) {
     const record = this.staticImports.get(importer);
     const j = record ? record.edges.indexOf(id) : -1;
-    const names = j === -1 ? undefined : record?.bindings[j];
+    const names = j === -1 ? undefined : (record?.bindings?.[j] ?? ['*']);
     if (!this.dynamicImports.get(importer)?.edges.includes(id)) {
       return names;
     }

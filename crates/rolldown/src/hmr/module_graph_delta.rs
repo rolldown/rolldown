@@ -1,5 +1,4 @@
 use json_escape_simd::escape;
-use oxc_str::CompactStr;
 use rolldown_common::{
   ImportKind, ImportRecordIdx, ImportRecordMeta, Module, ModuleIdx, ModuleTable, NormalModule,
   RUNTIME_MODULE_KEY, Specifier,
@@ -35,20 +34,35 @@ pub fn static_import_bindings(module: &NormalModule) -> FxHashMap<ImportRecordId
   names_by_record
 }
 
-/// Whether every export name `importer` reads from `module` is in `accepted`.
-pub fn imports_only_accepted_exports(
-  importer: &NormalModule,
-  module_idx: ModuleIdx,
-  accepted: &FxHashSet<CompactStr>,
-) -> bool {
-  let bindings = static_import_bindings(importer);
-  importer.import_records.iter_enumerated().all(|(record_idx, record)| {
-    // a dynamic `import()` reads the whole namespace
-    record.resolved_module != Some(module_idx)
-      || bindings
-        .get(&record_idx)
-        .is_some_and(|names| names.iter().all(|name| accepted.contains(*name)))
-  })
+/// `bindings[i]` for one module: per static edge in `out_edges`, the names read through it
+/// when the target calls `import.meta.hot.acceptExports`, else `None`.
+fn edge_bindings<'a>(
+  module_table: &ModuleTable,
+  module: &'a NormalModule,
+  out_edges: &[usize],
+  id_to_index: &FxHashMap<ModuleIdx, usize>,
+) -> Vec<Option<Vec<&'a str>>> {
+  let names_by_record = static_import_bindings(module);
+  let mut out_bindings: Vec<Option<Vec<&str>>> = vec![None; out_edges.len()];
+  for (record_idx, record) in module.import_records.iter_enumerated() {
+    if !record.kind.is_static() {
+      continue;
+    }
+    let Some(target_idx) = record.resolved_module else { continue };
+    let Module::Normal(target) = &module_table.modules[target_idx] else { continue };
+    if !target.is_hmr_partially_accepting_module() {
+      continue;
+    }
+    let Some(target_pos) = id_to_index.get(&target_idx) else { continue };
+    let Some(edge_pos) = out_edges.iter().position(|pos| pos == target_pos) else { continue };
+    let names = out_bindings[edge_pos].get_or_insert_with(Vec::new);
+    for name in names_by_record.get(&record_idx).into_iter().flatten() {
+      if !names.contains(name) {
+        names.push(name);
+      }
+    }
+  }
+  out_bindings
 }
 
 /// Renders the compiler-emitted `__rolldown_runtime__.registerGraph(...)` prelude for a
@@ -91,24 +105,24 @@ pub fn render_register_graph_source(
   }
 
   let mut edges: Vec<Vec<usize>> = Vec::with_capacity(local_count);
-  let mut bindings: Vec<Vec<Option<Vec<&str>>>> = Vec::with_capacity(local_count);
-  let mut any_bindings = false;
+  // Sparse `(row, bindings)`: few modules import a module that calls `acceptExports`, so
+  // rows without such an edge cost nothing.
+  let mut bindings: Vec<(usize, Vec<Option<Vec<&str>>>)> = Vec::new();
   let mut dynamic_edges: Vec<Vec<usize>> = Vec::with_capacity(local_count);
   // Reused across modules: dedup import records targeting the same module without a
   // linear rescan of the edge list per record (quadratic for high-fan-out modules).
-  let mut static_edge_pos: FxHashMap<usize, usize> = FxHashMap::default();
+  let mut seen_static = FxHashSet::default();
   let mut seen_dynamic = FxHashSet::default();
   for i in 0..local_count {
     let Module::Normal(module) = &module_table.modules[ids[i]] else {
       unreachable!("carried rows are filtered to normal modules above");
     };
-    static_edge_pos.clear();
+    seen_static.clear();
     seen_dynamic.clear();
-    let names_by_record = static_import_bindings(module);
+    let mut needs_bindings = false;
     let mut out_edges = Vec::new();
-    let mut out_bindings: Vec<Option<Vec<&str>>> = Vec::new();
     let mut dyn_out_edges = Vec::new();
-    for (record_idx, record) in module.import_records.iter_enumerated() {
+    for record in &module.import_records {
       // Static edges and dynamic `import()` edges both ship; the runtime keeps them in
       // separate reverse indexes but unions them in `getImporters`. `HotAccept` records
       // are not import edges and are skipped.
@@ -125,26 +139,18 @@ pub fn render_register_graph_source(
         ids.len() - 1
       });
       if record.kind.is_static() {
-        let edge_pos = *static_edge_pos.entry(target_pos).or_insert_with(|| {
+        if seen_static.insert(target_pos) {
           out_edges.push(target_pos);
-          out_bindings.push(None);
-          out_edges.len() - 1
-        });
-        if target.is_hmr_partially_accepting_module() {
-          let names = out_bindings[edge_pos].get_or_insert_with(Vec::new);
-          for name in names_by_record.get(&record_idx).into_iter().flatten() {
-            if !names.contains(name) {
-              names.push(name);
-            }
-          }
-          any_bindings = true;
         }
+        needs_bindings |= target.is_hmr_partially_accepting_module();
       } else if seen_dynamic.insert(target_pos) {
         dyn_out_edges.push(target_pos);
       }
     }
+    if needs_bindings {
+      bindings.push((i, edge_bindings(module_table, module, &out_edges, &id_to_index)));
+    }
     edges.push(out_edges);
-    bindings.push(out_bindings);
     dynamic_edges.push(dyn_out_edges);
   }
 
@@ -172,30 +178,33 @@ pub fn render_register_graph_source(
     }
     source.push(']');
   }
-  if any_bindings {
+  if !bindings.is_empty() {
     source.push_str("],bindings:[");
-    for (i, out_bindings) in bindings.iter().enumerate() {
+    let mut rows = bindings.iter().peekable();
+    for i in 0..local_count {
       if i > 0 {
         source.push(',');
       }
       source.push('[');
-      // trailing `null`s are dropped: a missing entry reads the same as `null`
-      let len = out_bindings.iter().rposition(Option::is_some).map_or(0, |pos| pos + 1);
-      for (j, names) in out_bindings[..len].iter().enumerate() {
-        if j > 0 {
-          source.push(',');
-        }
-        match names {
-          None => source.push_str("null"),
-          Some(names) => {
-            source.push('[');
-            for (k, name) in names.iter().enumerate() {
-              if k > 0 {
-                source.push(',');
+      if let Some((_, out_bindings)) = rows.next_if(|(row, _)| *row == i) {
+        // trailing `null`s are dropped: a missing entry reads the same as `null`
+        let len = out_bindings.iter().rposition(Option::is_some).map_or(0, |pos| pos + 1);
+        for (j, names) in out_bindings[..len].iter().enumerate() {
+          if j > 0 {
+            source.push(',');
+          }
+          match names {
+            None => source.push_str("null"),
+            Some(names) => {
+              source.push('[');
+              for (k, name) in names.iter().enumerate() {
+                if k > 0 {
+                  source.push(',');
+                }
+                source.push_str(&escape(name));
               }
-              source.push_str(&escape(name));
+              source.push(']');
             }
-            source.push(']');
           }
         }
       }

@@ -113,21 +113,35 @@ The HMR-related fields (`dev_context.rs:30-51`):
 
 The HMR plugin appends `experimental.devMode.implement`. The Rust layer
 deliberately has no default implementation. The JavaScript API keeps its default
-client in `crates/rolldown_plugin_hmr/src/runtime/runtime-extra-dev-default.js`;
-option normalization reads the standalone common runtime from its package export,
-removes its generated first-line helper import, and reads the default runtime
-through the package-internal `#default-runtime` import. It then joins them after
-substituting the server address. Rust consumers and the integration test harness
-provide the complete implementation explicitly.
+client in `crates/rolldown_plugin_hmr/src/runtime/runtime-extra-dev-default.js`.
+`packages/rolldown/build.ts` inlines the common runtime and the default client
+into the JS glue as the `__RUNTIME_STRING__` constant, as their exact source text.
+`getDefaultDevRuntime` (`packages/rolldown/src/utils/default-dev-runtime.ts`)
+substitutes the server address into it. When the package runs from source through
+the `dev` export condition, `build.ts` never runs and the constant is undefined.
+`getDefaultDevRuntime` then reads the same two files from `crates/` with
+`readDefaultDevRuntimeSource`, which `build.ts` also uses to fill the constant. In
+built output the constant is a string literal, so this branch is removed. Rust
+consumers and the integration test harness provide the complete implementation
+explicitly.
 
 The reusable runtime classes are also built as the ESM entry
 `rolldown/experimental/runtime`; its package export points at the matching
 generated declaration file so custom runtime implementations can import both
-the values and their types from one specifier. The entry imports its helpers from
-an unmodified copy of `crates/rolldown/src/runtime/runtime-base.js`, which is the
-same source the Rust core includes in generated bundles. Removing the standalone
-entry's generated helper import recovers the verbatim common runtime source for
-injection, so generated bundle output does not change.
+the values and their types from one specifier. Vite serves this entry to the
+browser as is, so it must be one file with no imports. `buildRuntimeEntry` in
+`build.ts` bundles the common runtime with Rolldown. The `inject` option binds
+the helper names that the common runtime reads as free variables to
+`crates/rolldown/src/runtime/runtime-base.js`, the same helper source the Rust
+core includes in generated bundles. Tree shaking drops the helpers the runtime
+does not use, and the entry exports only the runtime classes.
+
+The package holds the common runtime twice: bundled in the entry, and as source
+text in `__RUNTIME_STRING__`. This is on purpose. The injected copy must be the
+exact source, and must not declare the helpers again, because the runtime
+module it is appended to already has them. The bundled entry is neither. Both
+copies are built from the same file in the same build, so they cannot drift
+apart.
 
 ### Threading model
 

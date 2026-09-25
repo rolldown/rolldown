@@ -4,7 +4,7 @@ use oxc::{
   ast::ast,
   span::{GetSpan, SPAN},
 };
-use rolldown_common::{IndexModules, NormalModule};
+use rolldown_common::{IndexModules, NormalModule, lazy_proxy_target};
 use rolldown_ecmascript::CJS_MODULE_REF;
 #[cfg(feature = "experimental")]
 use rolldown_ecmascript::CJS_ROLLDOWN_MODULE_REF;
@@ -236,4 +236,45 @@ impl<'any, 'ast> HmrAstBuilder<'any, 'ast> for ScopeHoistingFinalizer<'any, 'ast
   fn cjs_module_name() -> &'static str {
     CJS_MODULE_REF
   }
+}
+
+/// `__rolldown_runtime__.requestLazy("<stable_real_id>", "<proxy_module_id>")`
+///
+/// The one shape both codegen paths emit for a lazy boundary, so a boundary never becomes a
+/// chunk the browser fetches.
+///
+/// The emitted code carries ids only. The runtime's `loadLazyChunk` builds the request, so the
+/// dev server decides the URL (Vite adds its `base`).
+pub fn create_request_lazy_call<'ast, B>(
+  proxy_module_id: &str,
+  stable_proxy_id: &str,
+  builder: &B,
+) -> ast::Expression<'ast>
+where
+  B: oxc::ast::builder::GetAstBuilder<'ast> + GetAllocator<'ast>,
+{
+  ast::Expression::new_call_expression(
+    SPAN,
+    ast::Expression::new_identifier(SPAN, "__rolldown_runtime__.requestLazy", builder),
+    None,
+    [
+      ast::Argument::new_string_literal(
+        SPAN,
+        ast::Str::from_str_in(
+          lazy_proxy_target(stable_proxy_id).unwrap_or(stable_proxy_id),
+          builder,
+        ),
+        None,
+        builder,
+      ),
+      ast::Argument::new_string_literal(
+        SPAN,
+        ast::Str::from_str_in(proxy_module_id, builder),
+        None,
+        builder,
+      ),
+    ],
+    false,
+    builder,
+  )
 }

@@ -10,7 +10,7 @@ export default defineDevConfig({
     treeshake: false,
     experimental: {
       // Non-lazy: dynamic import() targets compile into the initial build (no lazy
-      // proxy). Lazy dynamic-import HMR is a separate follow-up.
+      // proxy). `hmr-lazy-dynamic-import-self-accept` is the lazy variant.
       devMode: { lazy: false },
     },
   },

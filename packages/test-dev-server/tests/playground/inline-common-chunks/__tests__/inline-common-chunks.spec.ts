@@ -1,20 +1,13 @@
 import { describe, expect, test } from 'vitest';
 import { editFile, page, plantReloadMarker, readReloadMarker, waitForBuildStable } from '~utils';
 
-// Lazy compilation compiles `route-a` and `route-b` on first load. The rebuild that follows
-// makes their shared `shared.js` -> `leaf.js` a small common chunk, which
+// `route-a` and `route-b` share `shared.js` -> `leaf.js`, a small common chunk that
 // `experimentalInlineCommonChunks` prints into both route chunks. An edit to `leaf.js` then has
 // to reach the routes' self-accept boundaries through the inlined modules.
 
 describe('inline-common-chunks', () => {
-  test('both route chunks carry the shared modules after the lazy rebuild', async () => {
+  test('both route chunks carry the shared modules', async () => {
     await waitForBuildStable();
-    await expect.poll(() => page.textContent('.a')).toBe('a:leaf-v1');
-    await expect.poll(() => page.textContent('.b')).toBe('b:leaf-v1');
-
-    // Load the output of the rebuild around the compiled routes.
-    await waitForBuildStable();
-    await page.reload({ waitUntil: 'domcontentloaded' });
     await expect.poll(() => page.textContent('.a')).toBe('a:leaf-v1');
     await expect.poll(() => page.textContent('.b')).toBe('b:leaf-v1');
 

@@ -64,6 +64,7 @@ export function bindingifyOutputOptions(
     manualChunks,
     topLevelVar,
     cleanDir,
+    experimentalInlineCommonChunks,
     strictExecutionOrder,
   } = outputOptions;
 
@@ -158,6 +159,7 @@ export function bindingifyOutputOptions(
     topLevelVar,
     minifyInternalExports: outputOptions.minifyInternalExports,
     cleanDir,
+    experimentalInlineCommonChunks,
     strictExecutionOrder,
     strict: outputOptions.strict,
   };

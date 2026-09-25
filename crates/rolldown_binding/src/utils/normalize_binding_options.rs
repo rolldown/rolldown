@@ -756,6 +756,9 @@ pub fn normalize_binding_options(
     top_level_var: output_options.top_level_var,
     minify_internal_exports: output_options.minify_internal_exports,
     clean_dir: output_options.clean_dir,
+    experimental_inline_common_chunks: output_options
+      .experimental_inline_common_chunks
+      .map(|inner| rolldown::ExperimentalInlineCommonChunksOptions { max_size: inner.max_size }),
     strict_execution_order: output_options.strict_execution_order,
     strict: output_options
       .strict

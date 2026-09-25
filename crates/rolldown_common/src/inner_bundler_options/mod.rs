@@ -25,6 +25,7 @@ use schemars::JsonSchema;
 use serde::{Deserialize, Deserializer};
 #[cfg(feature = "deserialize_bundler_options")]
 use serde_json::Value;
+use types::experimental_inline_common_chunks_options::ExperimentalInlineCommonChunksOptions;
 use types::experimental_options::ExperimentalOptions;
 #[cfg(feature = "deserialize_bundler_options")]
 use types::minify_options::SimpleMinifyOptions;
@@ -248,6 +249,7 @@ pub struct BundlerOptions {
   pub clean_dir: Option<bool>,
   pub context: Option<String>,
   pub tsconfig: Option<TsConfig>,
+  pub experimental_inline_common_chunks: Option<ExperimentalInlineCommonChunksOptions>,
   pub strict_execution_order: Option<bool>,
   pub strict: Option<StrictMode>,
 }

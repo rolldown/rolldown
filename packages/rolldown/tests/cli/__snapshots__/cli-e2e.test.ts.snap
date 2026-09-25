@@ -62,6 +62,7 @@ OPTIONS
   --entryFileNames <name>     Name pattern for emitted entry chunks.
   --environment <environment> Pass additional settings to the config file via process.ENV.
   --esModule                  Always generate \`__esModule\` marks in non-ESM formats, defaults to \`if-default-prop\` (use \`--no-esModule\` to always disable).
+  --experimentalInlineCommonChunks.maxSize <experimentalInlineCommonChunks.maxSize>Inline automatic common chunks below this source-byte threshold.
   --exports <exports>         Specify a export mode (auto, named, default, none).
   --extend                    Extend global variable defined by name in IIFE / UMD formats.
   --footer <footer>           Code to insert the bottom of the bundled file (outside the wrapper function).
@@ -214,6 +215,7 @@ OPTIONS
   --entryFileNames <name>     Name pattern for emitted entry chunks.
   --environment <environment> Pass additional settings to the config file via process.ENV.
   --esModule                  Always generate \`__esModule\` marks in non-ESM formats, defaults to \`if-default-prop\` (use \`--no-esModule\` to always disable).
+  --experimentalInlineCommonChunks.maxSize <experimentalInlineCommonChunks.maxSize>Inline automatic common chunks below this source-byte threshold.
   --exports <exports>         Specify a export mode (auto, named, default, none).
   --extend                    Extend global variable defined by name in IIFE / UMD formats.
   --footer <footer>           Code to insert the bottom of the bundled file (outside the wrapper function).
@@ -366,6 +368,7 @@ OPTIONS
   --entryFileNames <name>     Name pattern for emitted entry chunks.
   --environment <environment> Pass additional settings to the config file via process.ENV.
   --esModule                  Always generate \`__esModule\` marks in non-ESM formats, defaults to \`if-default-prop\` (use \`--no-esModule\` to always disable).
+  --experimentalInlineCommonChunks.maxSize <experimentalInlineCommonChunks.maxSize>Inline automatic common chunks below this source-byte threshold.
   --exports <exports>         Specify a export mode (auto, named, default, none).
   --extend                    Extend global variable defined by name in IIFE / UMD formats.
   --footer <footer>           Code to insert the bottom of the bundled file (outside the wrapper function).
@@ -518,6 +521,7 @@ OPTIONS
   --entryFileNames <name>     Name pattern for emitted entry chunks.
   --environment <environment> Pass additional settings to the config file via process.ENV.
   --esModule                  Always generate \`__esModule\` marks in non-ESM formats, defaults to \`if-default-prop\` (use \`--no-esModule\` to always disable).
+  --experimentalInlineCommonChunks.maxSize <experimentalInlineCommonChunks.maxSize>Inline automatic common chunks below this source-byte threshold.
   --exports <exports>         Specify a export mode (auto, named, default, none).
   --extend                    Extend global variable defined by name in IIFE / UMD formats.
   --footer <footer>           Code to insert the bottom of the bundled file (outside the wrapper function).

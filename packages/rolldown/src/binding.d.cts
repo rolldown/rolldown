@@ -2261,6 +2261,10 @@ export interface BindingExperimentalDevModeOptions {
   lazy?: boolean
 }
 
+export interface BindingExperimentalInlineCommonChunksOptions {
+  maxSize?: number
+}
+
 export interface BindingExperimentalOptions {
   viteMode?: boolean
   resolveNewUrlToAsset?: boolean
@@ -2653,6 +2657,7 @@ export interface BindingOutputOptions {
   topLevelVar?: boolean
   minifyInternalExports?: boolean
   cleanDir?: boolean
+  experimentalInlineCommonChunks?: BindingExperimentalInlineCommonChunksOptions
   strictExecutionOrder?: boolean
 }
 

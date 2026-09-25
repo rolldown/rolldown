@@ -12,6 +12,7 @@ use rustc_hash::{FxHashMap, FxHashSet};
 
 use super::code_splitting_mode::CodeSplittingMode;
 use super::comments::CommentsOptions;
+use super::experimental_inline_common_chunks_options::ExperimentalInlineCommonChunksOptions;
 use super::experimental_options::ExperimentalOptions;
 use super::generated_code_options::GeneratedCodeOptions;
 use super::legal_comments::LegalComments;
@@ -118,6 +119,7 @@ pub struct NormalizedBundlerOptions {
   pub minify_internal_exports: bool,
   pub clean_dir: bool,
   pub context: String,
+  pub experimental_inline_common_chunks: Option<ExperimentalInlineCommonChunksOptions>,
   pub strict_execution_order: bool,
   pub strict: StrictMode,
 }
@@ -198,6 +200,7 @@ impl Default for NormalizedBundlerOptions {
       minify_internal_exports: Default::default(),
       clean_dir: false,
       context: Default::default(),
+      experimental_inline_common_chunks: None,
       strict_execution_order: false,
       strict: StrictMode::default(),
     }
@@ -227,6 +230,18 @@ impl NormalizedBundlerOptions {
   /// plan from the execution-order analysis instead of deferring every eligible module.
   pub fn is_strict_on_demand_wrapping_enabled(&self) -> bool {
     self.strict_execution_order && self.experimental.is_on_demand_wrapping_enabled()
+  }
+
+  /// Pre-render byte ceiling for `experimentalInlineCommonChunks`. Zero means the feature is
+  /// off, which is the default and produces output identical to a build without the option.
+  pub fn inline_common_chunks_max_size(&self) -> f64 {
+    let Some(inline) = self.experimental_inline_common_chunks.as_ref() else { return 0.0 };
+    let Some(max_size) = inline.max_size else { return 0.0 };
+    if max_size.is_finite() && max_size > 0.0 { max_size } else { 0.0 }
+  }
+
+  pub fn is_inline_common_chunks_enabled(&self) -> bool {
+    self.inline_common_chunks_max_size() > 0.0
   }
 
   pub fn has_manual_code_splitting_groups(&self) -> bool {

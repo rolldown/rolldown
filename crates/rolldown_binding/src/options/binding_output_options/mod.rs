@@ -40,6 +40,12 @@ pub type SourcemapIgnoreListOutputOption =
 
 #[napi_derive::napi(object, object_to_js = false)]
 #[derive(Debug)]
+pub struct BindingExperimentalInlineCommonChunksOptions {
+  pub max_size: Option<f64>,
+}
+
+#[napi_derive::napi(object, object_to_js = false)]
+#[derive(Debug)]
 pub struct BindingOutputOptions<'env> {
   // --- Options Rolldown doesn't need to be supported
   // /** @deprecated Use the "renderDynamicImport" plugin hook instead. */
@@ -161,5 +167,6 @@ pub struct BindingOutputOptions<'env> {
   pub top_level_var: Option<bool>,
   pub minify_internal_exports: Option<bool>,
   pub clean_dir: Option<bool>,
+  pub experimental_inline_common_chunks: Option<BindingExperimentalInlineCommonChunksOptions>,
   pub strict_execution_order: Option<bool>,
 }

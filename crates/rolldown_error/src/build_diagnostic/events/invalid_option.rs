@@ -13,15 +13,37 @@ pub enum InvalidOptionType {
   InvalidContext(String),
   IncludeDependenciesRecursivelyWithConflictPreserveEntrySignatures(String),
   IncludeDependenciesRecursivelyWithImplicitPreserveEntrySignatures,
-  InvalidFilenamePattern { pattern: String, pattern_name: String },
-  InvalidFilenameSubstitution { name: String, pattern_name: String },
+  ExperimentalInlineCommonChunksIncompatibleOption {
+    option: String,
+    value: String,
+    required: String,
+  },
+  InvalidFilenamePattern {
+    pattern: String,
+    pattern_name: String,
+  },
+  InvalidFilenameSubstitution {
+    name: String,
+    pattern_name: String,
+  },
   CodeSplittingDisabledWithMultipleInputs,
   CodeSplittingDisabledWithPreserveModules,
   ManglePropertiesWithMultipleChunks,
-  HashLengthTooLong { pattern_name: String, received: usize, max: usize },
-  HashLengthTooShort { pattern_name: String, received: usize, min: usize, chunk_count: u32 },
+  HashLengthTooLong {
+    pattern_name: String,
+    received: usize,
+    max: usize,
+  },
+  HashLengthTooShort {
+    pattern_name: String,
+    received: usize,
+    min: usize,
+    chunk_count: u32,
+  },
   InvalidEmittedFileName(String),
-  NulByteInFilename { pattern_name: String },
+  NulByteInFilename {
+    pattern_name: String,
+  },
 }
 
 #[derive(Debug)]
@@ -77,6 +99,15 @@ impl BuildEvent for InvalidOption {
             "",
             "- Set `preserveEntrySignatures` either to `false` or 'allow-extension' in your config",
           ].join("\n")
+        }
+        InvalidOptionType::ExperimentalInlineCommonChunksIncompatibleOption {
+          option,
+          value,
+          required,
+        } => {
+          format!(
+            "Invalid option combination: output.experimentalInlineCommonChunks requires {option} to be {required}, but received {value}."
+          )
         }
         InvalidOptionType::InvalidFilenamePattern { pattern, pattern_name } => {
           format!(

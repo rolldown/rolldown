@@ -520,8 +520,9 @@ link + tree shaking
   -> lower plan into OrderWrapState + final ChunkGraph
   -> compute Sealed<FinalEsmInitMetadata> using LinkingMetadata + OrderWrapState
   -> compute cross-chunk links using EsmInitTarget + Sealed<FinalEsmInitMetadata>
+  -> optionally select inline common-chunk factory placements from the final logical chunk graph
   -> finalize modules using explicit interop/order wrapper cases + Sealed<FinalEsmInitMetadata>
-  -> render entry prologues using the shared EsmInitTarget view
+  -> render entry prologues and selected factories using the shared EsmInitTarget view
 ```
 
 ## Invariants
@@ -541,6 +542,10 @@ link + tree shaking
 - Emit, Register, Project, and pre-chunk placement resolve consumer-local records through the same target model.
 - Every order-wrapped entry has an explicit entry trigger.
 - Flag-off builds create no order wrappers or strict-only entry facades.
+- Inline common chunks require wrap-all order state, keep logical module ownership unchanged, and
+  register every required factory locally or in a static dependency that evaluates first. Their
+  separate design and validation boundary is documented in
+  [the inline common chunks blueprint](../inline-common-chunks/implementation.md).
 
 ## Verification
 

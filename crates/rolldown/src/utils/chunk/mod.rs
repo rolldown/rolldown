@@ -1,6 +1,7 @@
 use self::render_chunk_exports::get_chunk_export_names;
 use arcstr::ArcStr;
 use itertools::Itertools;
+use oxc_str::CompactStr;
 use rolldown_common::{
   Chunk, ChunkKind, ChunkMeta, ModuleId, ModuleIdx, ModuleTable, PreserveEntrySignatures,
   RenderedModule, RollupPreRenderedChunk, RollupRenderedChunk, SharedNormalizedBundlerOptions,
@@ -35,6 +36,8 @@ pub fn generate_pre_rendered_chunk(
   chunk: &Chunk,
   chunk_name: &ArcStr,
   graph: &LinkStageOutput,
+  carried_modules: &[ModuleIdx],
+  generated_exports: &[CompactStr],
 ) -> RollupPreRenderedChunk {
   let is_entry = matches!(&chunk.kind, ChunkKind::EntryPoint { meta, .. } if meta.intersects(ChunkMeta::UserDefinedEntry | ChunkMeta::EmittedChunk));
   let is_dynamic_entry = matches!(&chunk.kind, ChunkKind::EntryPoint { meta, .. } if !meta.intersects(ChunkMeta::UserDefinedEntry | ChunkMeta::EmittedChunk));
@@ -52,9 +55,18 @@ pub fn generate_pre_rendered_chunk(
     module_ids: chunk
       .modules
       .iter()
+      .chain(carried_modules)
       .map(|id| graph.module_table[*id].id().as_str().into())
       .collect(),
-    exports: get_chunk_export_names(chunk, graph),
+    exports: {
+      let mut exports = get_chunk_export_names(chunk, graph);
+      for name in generated_exports {
+        if !exports.contains(name) {
+          exports.push(name.clone());
+        }
+      }
+      exports
+    },
   }
 }
 

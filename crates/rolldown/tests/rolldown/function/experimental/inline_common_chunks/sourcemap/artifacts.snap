@@ -1,0 +1,171 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## a.js
+
+```js
+import { t as __esmMin$1 } from "./rolldown-runtime.js";
+import { __rd_share, __rd_share_require } from "./rolldown-runtime.js";
+import { t as __esmMin } from "./rolldown-runtime.js";
+__rd_share("rd:m81nxts0EPRKGeNnw-79cQ", (__rd_m, __rd_e, __rd_def, __rd_req) => {
+	//#region shared.js
+	function readMappedValue() {
+		return 42;
+	}
+	function init_shared() {
+		return (init_shared = __esmMin((() => {
+			globalThis.mappedInitializations = (globalThis.mappedInitializations ?? 0) + 1;
+		})))();
+	}
+	//#endregion
+	__rd_def(__rd_e, {
+		n: () => readMappedValue,
+		t: () => init_shared
+	});
+});
+var share_shared = __rd_share_require("rd:m81nxts0EPRKGeNnw-79cQ");
+//#region a.js
+function init_a() {
+	return (init_a = __esmMin$1((() => {
+		share_shared.t();
+		globalThis.values.push(`a:${(0, share_shared.n)()}`);
+	})))();
+}
+//#endregion
+init_a();
+
+//# sourceMappingURL=a.js.map
+```
+
+## b.js
+
+```js
+import { t as __esmMin$1 } from "./rolldown-runtime.js";
+import { __rd_share, __rd_share_require } from "./rolldown-runtime.js";
+import { t as __esmMin } from "./rolldown-runtime.js";
+__rd_share("rd:m81nxts0EPRKGeNnw-79cQ", (__rd_m, __rd_e, __rd_def, __rd_req) => {
+	//#region shared.js
+	function readMappedValue() {
+		return 42;
+	}
+	function init_shared() {
+		return (init_shared = __esmMin((() => {
+			globalThis.mappedInitializations = (globalThis.mappedInitializations ?? 0) + 1;
+		})))();
+	}
+	//#endregion
+	__rd_def(__rd_e, {
+		n: () => readMappedValue,
+		t: () => init_shared
+	});
+});
+var share_shared = __rd_share_require("rd:m81nxts0EPRKGeNnw-79cQ");
+//#region b.js
+function init_b() {
+	return (init_b = __esmMin$1((() => {
+		share_shared.t();
+		globalThis.values.push(`b:${(0, share_shared.n)()}`);
+	})))();
+}
+//#endregion
+init_b();
+
+//# sourceMappingURL=b.js.map
+```
+
+## rolldown-runtime.js
+
+```js
+var __rd_factories = {}, __rd_records = {};
+function __rd_share(id, factory) {
+	if (__rd_factories[id] === void 0) __rd_factories[id] = factory;
+}
+function __rd_share_define(target, all) {
+	for (var name in all) Object.defineProperty(target, name, {
+		get: all[name],
+		enumerable: true
+	});
+}
+function __rd_share_require(id) {
+	var record = __rd_records[id];
+	if (record !== void 0) {
+		if (record.failed) throw record.error;
+		return record.module.exports;
+	}
+	var factory = __rd_factories[id];
+	if (factory === void 0) throw new Error("Shared module " + id + " is not defined");
+	record = __rd_records[id] = {
+		module: { exports: {} },
+		failed: false,
+		error: void 0
+	};
+	try {
+		factory(record.module, record.module.exports, __rd_share_define, __rd_share_require);
+	} catch (error) {
+		record.failed = true;
+		record.error = error;
+		throw error;
+	}
+	return record.module.exports;
+}
+export { __rd_share, __rd_share_require };
+// HIDDEN [\0rolldown/runtime.js]
+export { __esmMin as t };
+
+```
+
+# Sourcemap Visualizer
+
+```
+- ../shared.js
+(3:0) "export function " --> (5:1) "function "
+(3:16) "readMappedValue() " --> (5:10) "readMappedValue() "
+(3:34) "{\n" --> (5:28) "{\n"
+(4:2) "return mappedValue;\n" --> (6:2) "return "
+(4:2) "return mappedValue;\n" --> (6:9) "42;\n"
+(5:0) "}\n" --> (7:1) "}\n"
+(0:0) "globalThis." --> (10:3) "globalThis."
+(0:11) "mappedInitializations = (" --> (10:14) "mappedInitializations = ("
+(0:36) "globalThis." --> (10:39) "globalThis."
+(0:47) "mappedInitializations ?? " --> (10:50) "mappedInitializations ?? "
+(0:72) "0) + " --> (10:75) "0) + "
+(0:77) "1;\n" --> (10:80) "1;\n"
+- ../a.js
+(1:0) "globalThis." --> (24:2) "globalThis."
+(1:11) "values." --> (24:13) "values."
+(1:18) "push(" --> (24:20) "push("
+(1:23) "`a:${" --> (24:25) "`a:${("
+(1:23) "`a:${" --> (24:31) "0, "
+(1:28) "readMappedValue(" --> (24:34) "share_shared."
+(1:28) "readMappedValue(" --> (24:47) "n)"
+(1:28) "readMappedValue(" --> (24:49) "("
+(1:44) ")}`" --> (24:50) ")}`"
+(1:47) ");\n" --> (24:53) ");\n"
+
+- ../shared.js
+(3:0) "export function " --> (5:1) "function "
+(3:16) "readMappedValue() " --> (5:10) "readMappedValue() "
+(3:34) "{\n" --> (5:28) "{\n"
+(4:2) "return mappedValue;\n" --> (6:2) "return "
+(4:2) "return mappedValue;\n" --> (6:9) "42;\n"
+(5:0) "}\n" --> (7:1) "}\n"
+(0:0) "globalThis." --> (10:3) "globalThis."
+(0:11) "mappedInitializations = (" --> (10:14) "mappedInitializations = ("
+(0:36) "globalThis." --> (10:39) "globalThis."
+(0:47) "mappedInitializations ?? " --> (10:50) "mappedInitializations ?? "
+(0:72) "0) + " --> (10:75) "0) + "
+(0:77) "1;\n" --> (10:80) "1;\n"
+- ../b.js
+(1:0) "globalThis." --> (24:2) "globalThis."
+(1:11) "values." --> (24:13) "values."
+(1:18) "push(" --> (24:20) "push("
+(1:23) "`b:${" --> (24:25) "`b:${("
+(1:23) "`b:${" --> (24:31) "0, "
+(1:28) "readMappedValue(" --> (24:34) "share_shared."
+(1:28) "readMappedValue(" --> (24:47) "n)"
+(1:28) "readMappedValue(" --> (24:49) "("
+(1:44) ")}`" --> (24:50) ")}`"
+(1:47) ");\n" --> (24:53) ");\n"
+```

@@ -1,0 +1,50 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+//#region core.js
+function count(x) {
+	return x * 2;
+}
+//#endregion
+//#region io.js
+function create() {
+	return 1;
+}
+//#endregion
+//#region main.js
+if (count(create()) !== 2) throw new Error("unexpected result");
+//#endregion
+
+```
+
+# Variant: [format: Iife]
+
+## Assets
+
+### main.js
+
+```js
+(function() {
+	// HIDDEN [\0rolldown/runtime.js]
+	//#region core.js
+	function count(x) {
+		return x * 2;
+	}
+	//#endregion
+	//#region io.js
+	function create() {
+		return 1;
+	}
+	//#endregion
+	//#region main.js
+	if (count(create()) !== 2) throw new Error("unexpected result");
+	//#endregion
+})();
+
+```

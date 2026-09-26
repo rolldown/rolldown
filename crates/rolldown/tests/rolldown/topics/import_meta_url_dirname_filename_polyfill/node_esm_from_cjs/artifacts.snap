@@ -1,0 +1,552 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+import { createRequire } from "node:module";
+import assert from "node:assert";
+import path from "node:path";
+// HIDDEN [\0rolldown/runtime.js]
+//#region local-bindings.cjs
+var require_local_bindings = /* @__PURE__ */ __commonJSMin(((exports, module) => {
+	function __dirname() {
+		return "local dirname";
+	}
+	function __filename() {
+		return "local filename";
+	}
+	function deleteLocalDirname() {
+		return false;
+	}
+	module.exports = [
+		__dirname(),
+		__filename(),
+		deleteLocalDirname()
+	];
+}));
+//#endregion
+//#region observer.cjs
+var require_observer = /* @__PURE__ */ __commonJSMin(((exports, module) => {
+	var __dirname = import.meta.dirname;
+	var __filename = import.meta.filename;
+	module.exports = {
+		wasmPath: __require("path").join(__dirname, "rosu_pp_js_bg.wasm"),
+		readPaths() {
+			return [__dirname, __filename];
+		}
+	};
+}));
+//#endregion
+//#region unresolved.cjs
+var require_unresolved = /* @__PURE__ */ __commonJSMin(((exports, module) => {
+	var __dirname = import.meta.dirname;
+	var __filename = import.meta.filename;
+	module.exports = function setPaths(dirname, filename) {
+		__dirname = dirname;
+		__filename = filename;
+		return [__dirname, __filename];
+	};
+}));
+//#endregion
+//#region values.cjs
+var require_values = /* @__PURE__ */ __commonJSMin(((exports, module) => {
+	var __dirname = import.meta.dirname;
+	var __filename = import.meta.filename;
+	var __dirname;
+	var __filename;
+	function getNestedValues() {
+		return [__dirname, __filename];
+	}
+	function getShadowedValues() {
+		return ["local dirname", "local filename"];
+	}
+	function setValues(values) {
+		__dirname = values.dirname;
+		__filename += values.filename;
+		[__dirname, __filename] = values;
+		({__dirname, __filename} = values);
+		({dirname: __dirname, filename: __filename} = values);
+		__dirname++;
+		__filename--;
+		return [__dirname, __filename];
+	}
+	function callAssignedDirname(fn) {
+		__dirname = fn;
+		return __dirname();
+	}
+	function deleteDirname() {
+		return [false, typeof __dirname];
+	}
+	function deleteParenthesizedDirname() {
+		return [false, typeof __dirname];
+	}
+	module.exports = {
+		dirname: __dirname,
+		filename: __filename,
+		nested: getNestedValues(),
+		shorthand: {
+			__dirname,
+			__filename
+		},
+		shadowed: getShadowedValues(),
+		setValues,
+		callAssignedDirname,
+		deleteDirname,
+		deleteParenthesizedDirname
+	};
+}));
+//#endregion
+//#region main.js
+var import_local_bindings = /* @__PURE__ */ __toESM(require_local_bindings());
+var import_observer = /* @__PURE__ */ __toESM(require_observer());
+var import_unresolved = /* @__PURE__ */ __toESM(require_unresolved());
+var import_values = /* @__PURE__ */ __toESM(require_values());
+const entryDirname = import.meta.dirname;
+const entryFilename = import.meta.filename;
+const expectedPaths = [entryDirname, entryFilename];
+assert.deepEqual(import_observer.default.readPaths(), expectedPaths);
+assert.equal(import_observer.default.wasmPath, path.join(entryDirname, "rosu_pp_js_bg.wasm"));
+assert.deepEqual(import_local_bindings.default, [
+	"local dirname",
+	"local filename",
+	false
+]);
+assert.equal(import_values.default.dirname, import.meta.dirname);
+assert.equal(import_values.default.filename, import.meta.filename);
+assert.deepEqual(import_values.default.nested, [import.meta.dirname, import.meta.filename]);
+assert.deepEqual(import_values.default.shorthand, {
+	__dirname: import.meta.dirname,
+	__filename: import.meta.filename
+});
+assert.deepEqual(import_values.default.shadowed, ["local dirname", "local filename"]);
+const values = Object.assign(["array dirname", "array filename"], {
+	dirname: 40,
+	filename: 50,
+	__dirname: 30,
+	__filename: 31
+});
+assert.deepEqual(import_values.default.setValues(values), [41, 49]);
+assert.equal(import_values.default.callAssignedDirname(function() {
+	return this;
+}), void 0);
+assert.deepEqual(import_values.default.deleteDirname(), [false, "function"]);
+assert.deepEqual(import_values.default.deleteParenthesizedDirname(), [false, "function"]);
+assert.deepEqual((0, import_unresolved.default)("unresolved dirname", "unresolved filename"), ["unresolved dirname", "unresolved filename"]);
+assert.deepEqual(import_observer.default.readPaths(), expectedPaths);
+assert.equal(import_observer.default.wasmPath, path.join(entryDirname, "rosu_pp_js_bg.wasm"));
+assert.equal(import.meta.dirname, entryDirname);
+assert.equal(import.meta.filename, entryFilename);
+assert.equal(typeof __dirname, "undefined");
+assert.equal(typeof __filename, "undefined");
+//#endregion
+export {};
+
+//# sourceMappingURL=main.js.map
+```
+
+# Sourcemap Visualizer
+
+```
+- ../local-bindings.cjs
+(0:0) "function " --> (29:1) "function "
+(0:9) "__dirname() " --> (29:10) "__dirname() "
+(0:21) "{\n" --> (29:22) "{\n"
+(1:2) "return " --> (30:2) "return "
+(1:9) "'local dirname';\n" --> (30:9) "\"local dirname\";\n"
+(2:0) "}\n" --> (31:1) "}\n"
+(4:0) "function " --> (32:1) "function "
+(4:9) "__filename() " --> (32:10) "__filename() "
+(4:22) "{\n" --> (32:23) "{\n"
+(5:2) "return " --> (33:2) "return "
+(5:9) "'local filename';\n" --> (33:9) "\"local filename\";\n"
+(6:0) "}\n" --> (34:1) "}\n"
+(8:0) "function " --> (35:1) "function "
+(8:9) "deleteLocalDirname() " --> (35:10) "deleteLocalDirname() "
+(8:30) "{\n" --> (35:31) "{\n"
+(9:2) "return " --> (36:2) "return "
+(9:9) "delete __dirname;\n" --> (36:9) "false;\n"
+(10:0) "}\n" --> (37:1) "}\n"
+(12:0) "module." --> (38:1) "module."
+(12:7) "exports = " --> (38:8) "exports = "
+(12:17) "[" --> (38:18) "[\n"
+(12:18) "__dirname(" --> (39:2) "__dirname("
+(12:28) "), " --> (39:12) "),\n"
+(12:31) "__filename(" --> (40:2) "__filename("
+(12:42) "), " --> (40:13) "),\n"
+(12:45) "deleteLocalDirname(" --> (41:2) "deleteLocalDirname("
+(12:64) ")" --> (41:21) ")\n"
+(12:65) "];\n" --> (42:1) "];\n"
+- ../observer.cjs
+(2:0) "module." --> (49:1) "module."
+(2:7) "exports = " --> (49:8) "exports = "
+(2:17) "{\n" --> (49:18) "{\n"
+(3:2) "wasmPath,\n" --> (50:2) "wasmPath: "
+(0:6) "wasmPath = require(" --> (50:12) "__require("
+(0:25) "'path'" --> (50:22) "\"path\""
+(0:31) ")" --> (50:28) ")"
+(0:32) "." --> (50:29) "."
+(0:33) "join(" --> (50:30) "join("
+(0:38) "__dirname, " --> (50:35) "__dirname, "
+(0:49) "'rosu_pp_js_bg.wasm');\n" --> (50:46) "\"rosu_pp_js_bg.wasm\""
+(3:2) "wasmPath,\n" --> (50:66) "),\n"
+(4:2) "readPaths() " --> (51:2) "readPaths() "
+(4:14) "{\n" --> (51:14) "{\n"
+(5:4) "return " --> (52:3) "return "
+(5:11) "[" --> (52:10) "["
+(5:12) "__dirname, " --> (52:11) "__dirname, "
+(5:23) "__filename" --> (52:22) "__filename"
+(5:33) "];\n" --> (52:32) "];\n"
+(6:2) "},\n" --> (53:2) "}\n"
+(7:0) "};\n" --> (54:1) "};\n"
+- ../unresolved.cjs
+(0:0) "module." --> (61:1) "module."
+(0:7) "exports = " --> (61:8) "exports = "
+(0:17) "function " --> (61:18) "function "
+(0:26) "setPaths(" --> (61:27) "setPaths("
+(0:35) "dirname, " --> (61:36) "dirname, "
+(0:44) "filename) " --> (61:45) "filename) "
+(0:54) "{\n" --> (61:55) "{\n"
+(1:2) "__dirname = " --> (62:2) "__dirname = "
+(1:14) "dirname;\n" --> (62:14) "dirname;\n"
+(2:2) "__filename = " --> (63:2) "__filename = "
+(2:15) "filename;\n" --> (63:15) "filename;\n"
+(3:2) "return " --> (64:2) "return "
+(3:9) "[" --> (64:9) "["
+(3:10) "__dirname, " --> (64:10) "__dirname, "
+(3:21) "__filename" --> (64:21) "__filename"
+(3:31) "];\n" --> (64:31) "];\n"
+(4:0) "};\n" --> (65:1) "};\n"
+- ../values.cjs
+(0:0) "var " --> (72:1) "var "
+(0:4) "__dirname;\n" --> (72:5) "__dirname;\n"
+(1:0) "var " --> (73:1) "var "
+(1:4) "__filename;\n" --> (73:5) "__filename;\n"
+(3:0) "function " --> (74:1) "function "
+(3:9) "getNestedValues() " --> (74:10) "getNestedValues() "
+(3:27) "{\n" --> (74:28) "{\n"
+(4:2) "return " --> (75:2) "return "
+(4:9) "[" --> (75:9) "["
+(4:10) "__dirname, " --> (75:10) "__dirname, "
+(4:21) "__filename" --> (75:21) "__filename"
+(4:31) "];\n" --> (75:31) "];\n"
+(5:0) "}\n" --> (76:1) "}\n"
+(7:0) "function " --> (77:1) "function "
+(7:9) "getShadowedValues() " --> (77:10) "getShadowedValues() "
+(7:29) "{\n" --> (77:30) "{\n"
+(10:2) "return " --> (78:2) "return "
+(10:9) "[" --> (78:9) "["
+(10:10) "__dirname, " --> (78:10) "\"local dirname\", "
+(10:21) "__filename" --> (78:27) "\"local filename\""
+(10:31) "];\n" --> (78:43) "];\n"
+(11:0) "}\n" --> (79:1) "}\n"
+(13:0) "function " --> (80:1) "function "
+(13:9) "setValues(" --> (80:10) "setValues("
+(13:19) "values) " --> (80:20) "values) "
+(13:27) "{\n" --> (80:28) "{\n"
+(14:2) "__dirname = " --> (81:2) "__dirname = "
+(14:14) "values." --> (81:14) "values."
+(14:21) "dirname;\n" --> (81:21) "dirname;\n"
+(15:2) "__filename += " --> (82:2) "__filename += "
+(15:16) "values." --> (82:16) "values."
+(15:23) "filename;\n" --> (82:23) "filename;\n"
+(16:2) "[" --> (83:2) "["
+(16:3) "__dirname, " --> (83:3) "__dirname, "
+(16:14) "__filename] = " --> (83:14) "__filename] = "
+(16:28) "values;\n" --> (83:28) "values;\n"
+(17:2) "(" --> (84:2) "("
+(17:3) "{ " --> (84:3) "{"
+(17:5) "__dirname, " --> (84:4) "__dirname, "
+(17:16) "__filename } = " --> (84:15) "__filename} = "
+(17:31) "values);\n" --> (84:29) "values);\n"
+(18:2) "(" --> (85:2) "("
+(18:3) "{ " --> (85:3) "{"
+(18:5) "dirname: " --> (85:4) "dirname: "
+(18:14) "__dirname, " --> (85:13) "__dirname, "
+(18:25) "filename: " --> (85:24) "filename: "
+(18:35) "__filename } = " --> (85:34) "__filename} = "
+(18:50) "values);\n" --> (85:48) "values);\n"
+(19:2) "__dirname++;\n" --> (86:2) "__dirname++;\n"
+(20:2) "__filename--;\n" --> (87:2) "__filename--;\n"
+(21:2) "return " --> (88:2) "return "
+(21:9) "[" --> (88:9) "["
+(21:10) "__dirname, " --> (88:10) "__dirname, "
+(21:21) "__filename" --> (88:21) "__filename"
+(21:31) "];\n" --> (88:31) "];\n"
+(22:0) "}\n" --> (89:1) "}\n"
+(24:0) "function " --> (90:1) "function "
+(24:9) "callAssignedDirname(" --> (90:10) "callAssignedDirname("
+(24:29) "fn) " --> (90:30) "fn) "
+(24:33) "{\n" --> (90:34) "{\n"
+(25:2) "__dirname = " --> (91:2) "__dirname = "
+(25:14) "fn;\n" --> (91:14) "fn;\n"
+(26:2) "return " --> (92:2) "return "
+(26:9) "__dirname(" --> (92:9) "__dirname("
+(26:19) ");\n" --> (92:19) ");\n"
+(27:0) "}\n" --> (93:1) "}\n"
+(29:0) "function " --> (94:1) "function "
+(29:9) "deleteDirname() " --> (94:10) "deleteDirname() "
+(29:25) "{\n" --> (94:26) "{\n"
+(30:2) "return " --> (95:2) "return "
+(30:9) "[" --> (95:9) "["
+(30:10) "delete __dirname, " --> (95:10) "false, "
+(30:28) "typeof " --> (95:17) "typeof "
+(30:35) "__dirname" --> (95:24) "__dirname"
+(30:44) "];\n" --> (95:33) "];\n"
+(31:0) "}\n" --> (96:1) "}\n"
+(33:0) "function " --> (97:1) "function "
+(33:9) "deleteParenthesizedDirname() " --> (97:10) "deleteParenthesizedDirname() "
+(33:38) "{\n" --> (97:39) "{\n"
+(35:2) "return " --> (98:2) "return "
+(35:9) "[" --> (98:9) "["
+(35:10) "delete ((__dirname)), " --> (98:10) "false, "
+(35:32) "typeof " --> (98:17) "typeof "
+(35:39) "__dirname" --> (98:24) "__dirname"
+(35:48) "];\n" --> (98:33) "];\n"
+(36:0) "}\n" --> (99:1) "}\n"
+(38:0) "module." --> (100:1) "module."
+(38:7) "exports = " --> (100:8) "exports = "
+(38:17) "{\n" --> (100:18) "{\n"
+(39:2) "dirname: " --> (101:2) "dirname: "
+(39:11) "__dirname,\n" --> (101:11) "__dirname,\n"
+(40:2) "filename: " --> (102:2) "filename: "
+(40:12) "__filename,\n" --> (102:12) "__filename,\n"
+(41:2) "nested: " --> (103:2) "nested: "
+(41:10) "getNestedValues(" --> (103:10) "getNestedValues("
+(41:26) "),\n" --> (103:26) "),\n"
+(42:2) "shorthand: " --> (104:2) "shorthand: "
+(42:13) "{ " --> (104:13) "{\n"
+(42:15) "__dirname, " --> (105:3) "__dirname,\n"
+(42:26) "__filename " --> (106:3) "__filename\n"
+(42:37) "},\n" --> (107:2) "},\n"
+(43:2) "shadowed: " --> (108:2) "shadowed: "
+(43:12) "getShadowedValues(" --> (108:12) "getShadowedValues("
+(43:30) "),\n" --> (108:30) "),\n"
+(44:2) "setValues,\n" --> (109:2) "setValues,\n"
+(45:2) "callAssignedDirname,\n" --> (110:2) "callAssignedDirname,\n"
+(46:2) "deleteDirname,\n" --> (111:2) "deleteDirname,\n"
+(47:2) "deleteParenthesizedDirname,\n" --> (112:2) "deleteParenthesizedDirname\n"
+(48:0) "};\n" --> (113:1) "};\n"
+- ../main.js
+(7:0) "const " --> (121:0) "const "
+(7:6) "entryDirname = " --> (121:6) "entryDirname = "
+(7:21) "import.meta." --> (121:21) "import.meta."
+(7:33) "dirname;\n" --> (121:33) "dirname;\n"
+(8:0) "const " --> (122:0) "const "
+(8:6) "entryFilename = " --> (122:6) "entryFilename = "
+(8:22) "import.meta." --> (122:22) "import.meta."
+(8:34) "filename;\n" --> (122:34) "filename;\n"
+(9:0) "const " --> (123:0) "const "
+(9:6) "expectedPaths = " --> (123:6) "expectedPaths = "
+(9:22) "[" --> (123:22) "["
+(9:23) "entryDirname, " --> (123:23) "entryDirname, "
+(9:37) "entryFilename" --> (123:37) "entryFilename"
+(9:50) "];\n" --> (123:50) "];\n"
+(11:0) "assert." --> (124:0) "assert."
+(11:7) "deepEqual(" --> (124:7) "deepEqual("
+(11:17) "observer." --> (124:17) "import_observer."
+(11:17) "observer." --> (124:33) "default."
+(11:26) "readPaths(" --> (124:41) "readPaths("
+(11:36) "), " --> (124:51) "), "
+(11:39) "expectedPaths" --> (124:54) "expectedPaths"
+(11:52) ");\n" --> (124:67) ");\n"
+(12:0) "assert." --> (125:0) "assert."
+(12:7) "equal(" --> (125:7) "equal("
+(12:13) "observer." --> (125:13) "import_observer."
+(12:13) "observer." --> (125:29) "default."
+(12:22) "wasmPath, " --> (125:37) "wasmPath, "
+(12:32) "path." --> (125:47) "path."
+(12:37) "join(" --> (125:52) "join("
+(12:42) "entryDirname, " --> (125:57) "entryDirname, "
+(12:56) "'rosu_pp_js_bg.wasm'" --> (125:71) "\"rosu_pp_js_bg.wasm\""
+(12:76) ")" --> (125:91) ")"
+(12:77) ");\n" --> (125:92) ");\n"
+(13:0) "assert." --> (126:0) "assert."
+(13:7) "deepEqual(" --> (126:7) "deepEqual("
+(13:17) "localBindings, " --> (126:17) "import_local_bindings."
+(13:17) "localBindings, " --> (126:39) "default, "
+(13:32) "[" --> (126:48) "[\n"
+(13:33) "'local dirname', " --> (127:1) "\"local dirname\",\n"
+(13:50) "'local filename', " --> (128:1) "\"local filename\",\n"
+(13:68) "false" --> (129:1) "false\n"
+(13:73) "]" --> (130:0) "]"
+(13:74) ");\n" --> (130:1) ");\n"
+(15:0) "assert." --> (131:0) "assert."
+(15:7) "equal(" --> (131:7) "equal("
+(15:13) "cjs." --> (131:13) "import_values."
+(15:13) "cjs." --> (131:27) "default."
+(15:17) "dirname, " --> (131:35) "dirname, "
+(15:26) "import.meta." --> (131:44) "import.meta."
+(15:38) "dirname" --> (131:56) "dirname"
+(15:45) ");\n" --> (131:63) ");\n"
+(16:0) "assert." --> (132:0) "assert."
+(16:7) "equal(" --> (132:7) "equal("
+(16:13) "cjs." --> (132:13) "import_values."
+(16:13) "cjs." --> (132:27) "default."
+(16:17) "filename, " --> (132:35) "filename, "
+(16:27) "import.meta." --> (132:45) "import.meta."
+(16:39) "filename" --> (132:57) "filename"
+(16:47) ");\n" --> (132:65) ");\n"
+(17:0) "assert." --> (133:0) "assert."
+(17:7) "deepEqual(" --> (133:7) "deepEqual("
+(17:17) "cjs." --> (133:17) "import_values."
+(17:17) "cjs." --> (133:31) "default."
+(17:21) "nested, " --> (133:39) "nested, "
+(17:29) "[" --> (133:47) "["
+(17:30) "import.meta." --> (133:48) "import.meta."
+(17:42) "dirname, " --> (133:60) "dirname, "
+(17:51) "import.meta." --> (133:69) "import.meta."
+(17:63) "filename" --> (133:81) "filename"
+(17:71) "]" --> (133:89) "]"
+(17:72) ");\n" --> (133:90) ");\n"
+(18:0) "assert." --> (134:0) "assert."
+(18:7) "deepEqual(" --> (134:7) "deepEqual("
+(18:17) "cjs." --> (134:17) "import_values."
+(18:17) "cjs." --> (134:31) "default."
+(18:21) "shorthand, " --> (134:39) "shorthand, "
+(18:32) "{\n" --> (134:50) "{\n"
+(19:2) "__dirname: " --> (135:1) "__dirname: "
+(19:13) "import.meta." --> (135:12) "import.meta."
+(19:25) "dirname,\n" --> (135:24) "dirname,\n"
+(20:2) "__filename: " --> (136:1) "__filename: "
+(20:14) "import.meta." --> (136:13) "import.meta."
+(20:26) "filename,\n" --> (136:25) "filename\n"
+(21:0) "}" --> (137:0) "}"
+(21:1) ");\n" --> (137:1) ");\n"
+(22:0) "assert." --> (138:0) "assert."
+(22:7) "deepEqual(" --> (138:7) "deepEqual("
+(22:17) "cjs." --> (138:17) "import_values."
+(22:17) "cjs." --> (138:31) "default."
+(22:21) "shadowed, " --> (138:39) "shadowed, "
+(22:31) "[" --> (138:49) "["
+(22:32) "'local dirname', " --> (138:50) "\"local dirname\", "
+(22:49) "'local filename'" --> (138:67) "\"local filename\""
+(22:65) "]" --> (138:83) "]"
+(22:66) ");\n" --> (138:84) ");\n"
+(24:0) "const " --> (139:0) "const "
+(24:6) "values = " --> (139:6) "values = "
+(24:15) "Object." --> (139:15) "Object."
+(24:22) "assign(" --> (139:22) "assign("
+(24:29) "[" --> (139:29) "["
+(24:30) "'array dirname', " --> (139:30) "\"array dirname\", "
+(24:47) "'array filename'" --> (139:47) "\"array filename\""
+(24:63) "], " --> (139:63) "], "
+(24:66) "{\n" --> (139:66) "{\n"
+(25:2) "dirname: " --> (140:1) "dirname: "
+(25:11) "40,\n" --> (140:10) "40,\n"
+(26:2) "filename: " --> (141:1) "filename: "
+(26:12) "50,\n" --> (141:11) "50,\n"
+(27:2) "__dirname: " --> (142:1) "__dirname: "
+(27:13) "30,\n" --> (142:12) "30,\n"
+(28:2) "__filename: " --> (143:1) "__filename: "
+(28:14) "31,\n" --> (143:13) "31\n"
+(29:0) "}" --> (144:0) "}"
+(29:1) ");\n" --> (144:1) ");\n"
+(30:0) "assert." --> (145:0) "assert."
+(30:7) "deepEqual(" --> (145:7) "deepEqual("
+(30:17) "cjs." --> (145:17) "import_values."
+(30:17) "cjs." --> (145:31) "default."
+(30:21) "setValues(" --> (145:39) "setValues("
+(30:31) "values" --> (145:49) "values"
+(30:37) "), " --> (145:55) "), "
+(30:40) "[" --> (145:58) "["
+(30:41) "41, " --> (145:59) "41, "
+(30:45) "49" --> (145:63) "49"
+(30:47) "]" --> (145:65) "]"
+(30:48) ");\n" --> (145:66) ");\n"
+(31:0) "assert." --> (146:0) "assert."
+(31:7) "equal(\n" --> (146:7) "equal("
+(32:2) "cjs." --> (146:13) "import_values."
+(32:2) "cjs." --> (146:27) "default."
+(32:6) "callAssignedDirname(" --> (146:35) "callAssignedDirname("
+(32:26) "function () " --> (146:55) "function() "
+(32:38) "{\n" --> (146:66) "{\n"
+(33:4) "return " --> (147:1) "return "
+(33:11) "this;\n" --> (147:8) "this;\n"
+(34:2) "}" --> (148:0) "}"
+(34:3) "),\n" --> (148:1) "), "
+(35:2) "undefined,\n" --> (148:4) "void "
+(35:2) "undefined,\n" --> (148:9) "0"
+(36:0) ");\n" --> (148:10) ");\n"
+(37:0) "assert." --> (149:0) "assert."
+(37:7) "deepEqual(" --> (149:7) "deepEqual("
+(37:17) "cjs." --> (149:17) "import_values."
+(37:17) "cjs." --> (149:31) "default."
+(37:21) "deleteDirname(" --> (149:39) "deleteDirname("
+(37:35) "), " --> (149:53) "), "
+(37:38) "[" --> (149:56) "["
+(37:39) "false, " --> (149:57) "false, "
+(37:46) "'function'" --> (149:64) "\"function\""
+(37:56) "]" --> (149:74) "]"
+(37:57) ");\n" --> (149:75) ");\n"
+(38:0) "assert." --> (150:0) "assert."
+(38:7) "deepEqual(" --> (150:7) "deepEqual("
+(38:17) "cjs." --> (150:17) "import_values."
+(38:17) "cjs." --> (150:31) "default."
+(38:21) "deleteParenthesizedDirname(" --> (150:39) "deleteParenthesizedDirname("
+(38:48) "), " --> (150:66) "), "
+(38:51) "[" --> (150:69) "["
+(38:52) "false, " --> (150:70) "false, "
+(38:59) "'function'" --> (150:77) "\"function\""
+(38:69) "]" --> (150:87) "]"
+(38:70) ");\n" --> (150:88) ");\n"
+(39:0) "assert." --> (151:0) "assert."
+(39:7) "deepEqual(" --> (151:7) "deepEqual(("
+(39:7) "deepEqual(" --> (151:18) "0, "
+(39:17) "setUnresolvedPaths(" --> (151:21) "import_unresolved."
+(39:17) "setUnresolvedPaths(" --> (151:39) "default)"
+(39:17) "setUnresolvedPaths(" --> (151:47) "("
+(39:36) "'unresolved dirname', " --> (151:48) "\"unresolved dirname\", "
+(39:58) "'unresolved filename'" --> (151:70) "\"unresolved filename\""
+(39:79) "), " --> (151:91) "), "
+(39:82) "[\n" --> (151:94) "["
+(40:2) "'unresolved dirname',\n" --> (151:95) "\"unresolved dirname\", "
+(41:2) "'unresolved filename',\n" --> (151:117) "\"unresolved filename\""
+(42:0) "]" --> (151:138) "]"
+(42:1) ");\n" --> (151:139) ");\n"
+(43:0) "assert." --> (152:0) "assert."
+(43:7) "deepEqual(" --> (152:7) "deepEqual("
+(43:17) "observer." --> (152:17) "import_observer."
+(43:17) "observer." --> (152:33) "default."
+(43:26) "readPaths(" --> (152:41) "readPaths("
+(43:36) "), " --> (152:51) "), "
+(43:39) "expectedPaths" --> (152:54) "expectedPaths"
+(43:52) ");\n" --> (152:67) ");\n"
+(44:0) "assert." --> (153:0) "assert."
+(44:7) "equal(" --> (153:7) "equal("
+(44:13) "observer." --> (153:13) "import_observer."
+(44:13) "observer." --> (153:29) "default."
+(44:22) "wasmPath, " --> (153:37) "wasmPath, "
+(44:32) "path." --> (153:47) "path."
+(44:37) "join(" --> (153:52) "join("
+(44:42) "entryDirname, " --> (153:57) "entryDirname, "
+(44:56) "'rosu_pp_js_bg.wasm'" --> (153:71) "\"rosu_pp_js_bg.wasm\""
+(44:76) ")" --> (153:91) ")"
+(44:77) ");\n" --> (153:92) ");\n"
+(45:0) "assert." --> (154:0) "assert."
+(45:7) "equal(" --> (154:7) "equal("
+(45:13) "import.meta." --> (154:13) "import.meta."
+(45:25) "dirname, " --> (154:25) "dirname, "
+(45:34) "entryDirname" --> (154:34) "entryDirname"
+(45:46) ");\n" --> (154:46) ");\n"
+(46:0) "assert." --> (155:0) "assert."
+(46:7) "equal(" --> (155:7) "equal("
+(46:13) "import.meta." --> (155:13) "import.meta."
+(46:25) "filename, " --> (155:25) "filename, "
+(46:35) "entryFilename" --> (155:35) "entryFilename"
+(46:48) ");\n" --> (155:48) ");\n"
+(49:0) "assert." --> (156:0) "assert."
+(49:7) "equal(" --> (156:7) "equal("
+(49:13) "typeof " --> (156:13) "typeof "
+(49:20) "__dirname, " --> (156:20) "__dirname, "
+(49:31) "'undefined'" --> (156:31) "\"undefined\""
+(49:42) ");\n" --> (156:42) ");\n"
+(50:0) "assert." --> (157:0) "assert."
+(50:7) "equal(" --> (157:7) "equal("
+(50:13) "typeof " --> (157:13) "typeof "
+(50:20) "__filename, " --> (157:20) "__filename, "
+(50:32) "'undefined'" --> (157:32) "\"undefined\""
+(50:43) ");\n" --> (157:43) ");\n"
+```

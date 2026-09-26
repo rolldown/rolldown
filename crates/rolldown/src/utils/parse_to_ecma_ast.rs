@@ -28,8 +28,9 @@ fn pure_esm_js_oxc_source_type(module_def_format: ModuleDefFormat) -> OxcSourceT
     ModuleDefFormat::EsmMjs | ModuleDefFormat::EsmMts | ModuleDefFormat::EsmPackageJson => {
       default_source_type.with_module(true)
     }
-    ModuleDefFormat::CjsPackageJson | ModuleDefFormat::Unknown => {
-      // treat unknown format as ESM for now: https://github.com/rolldown/rolldown/issues/7009
+    ModuleDefFormat::CjsPackageJson => default_source_type.with_unambiguous(true),
+    ModuleDefFormat::Unknown => {
+      // Rolldown defaults to ESM for files of unknown format
       default_source_type.with_module(true)
     }
   }

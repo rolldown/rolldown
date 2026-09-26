@@ -1,0 +1,17 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+//#region index.js
+var obj = {
+	a: 1,
+	b: 2
+};
+with(obj) exports.result = a + b;
+//#endregion
+
+```

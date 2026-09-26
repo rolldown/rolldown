@@ -1,11 +1,18 @@
 mod matcher;
 mod utils;
 
-use std::{borrow::Cow, path::PathBuf};
+use std::{
+  borrow::Cow,
+  path::{Path, PathBuf},
+};
 
 use arcstr::ArcStr;
 use oxc::ast_visit::VisitJs;
-use rolldown_plugin::{HookTransformOutput, HookTransformOutputMap, HookUsage, Plugin};
+use rolldown_common::WatcherChangeKind;
+use rolldown_plugin::{
+  HookHotUpdateArgs, HookHotUpdateReturn, HookTransformOutput, HookTransformOutputMap, HookUsage,
+  Plugin, PluginContext,
+};
 use rolldown_plugin_utils::parse_program;
 use rolldown_utils::dashmap::FxDashMap;
 use sugar_path::SugarPath as _;
@@ -26,7 +33,7 @@ impl Plugin for ViteImportGlobPlugin {
   }
 
   fn register_hook_usage(&self) -> HookUsage {
-    HookUsage::Transform
+    HookUsage::Transform | HookUsage::HotUpdate
   }
 
   async fn transform(
@@ -83,5 +90,51 @@ impl Plugin for ViteImportGlobPlugin {
       }));
     }
     Ok(None)
+  }
+
+  async fn hot_update(
+    &self,
+    _ctx: &PluginContext,
+    args: &HookHotUpdateArgs,
+  ) -> HookHotUpdateReturn {
+    // A content edit cannot change which files a glob matches, so `update` is declined
+    if matches!(args.kind, WatcherChangeKind::Update) || self.glob_matchers.is_empty() {
+      return Ok(None);
+    }
+
+    let mut selected = Vec::new();
+    let is_dir = Path::new(args.file.as_str()).is_dir();
+    for entry in &self.glob_matchers {
+      let id = entry.key();
+
+      // The walk excludes the glob's own module to keep it from importing itself
+      if id.as_str() == args.file.as_str() {
+        continue;
+      }
+
+      let matchers = entry.value();
+      let touched = matchers
+        .iter()
+        .any(|matcher| matcher.matches(&args.file) || matcher.touches_base(&args.file))
+        || (is_dir && matchers.iter().any(|matcher| matcher.may_gain_matches_below(&args.file)));
+
+      if touched {
+        selected.push(id.clone());
+      }
+    }
+
+    if selected.is_empty() {
+      return Ok(None);
+    }
+
+    // Appending rather than replacing, like vite's `[...oldModules, ...modules]`
+    let mut modules = Vec::with_capacity(args.modules.len() + selected.len());
+    modules.extend_from_slice(&args.modules);
+    for id in selected {
+      if !modules.contains(&id) {
+        modules.push(id);
+      }
+    }
+    Ok(Some(modules))
   }
 }

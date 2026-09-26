@@ -1,0 +1,24 @@
+{
+  "snapshot": false,
+  "config": {
+    "input": [{ "name": "main", "import": "main.js" }],
+    "codeSplitting": {
+      "groups": [{ "name": "app", "test": "bootstrap|shared" }]
+    }
+  },
+  "configVariants": [
+    {
+      "_configName": "entries-aware-merge-threshold",
+      "codeSplitting": {
+        "groups": [
+          {
+            "name": "app",
+            "test": "bootstrap|shared",
+            "entriesAware": true,
+            "entriesAwareMergeThreshold": 100000
+          }
+        ]
+      }
+    }
+  ]
+}

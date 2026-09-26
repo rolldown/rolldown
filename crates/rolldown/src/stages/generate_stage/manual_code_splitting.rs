@@ -54,6 +54,7 @@ struct EntriesAwareSubgroup {
   bits: BitSet,
   modules: FxHashSet<ModuleIdx>,
   sizes: f64,
+  merge_protected: bool,
 }
 
 oxc_index::define_index_type! {
@@ -95,7 +96,7 @@ struct ManualSplitter<'a> {
 
 impl ManualSplitter<'_> {
   async fn split(&mut self) -> BuildResult<()> {
-    let (mut module_groups, entries_aware_groups) = self.build_module_groups().await?;
+    let (module_groups, entries_aware_groups) = self.build_module_groups().await?;
 
     if module_groups.iter().all(|group| group.modules.is_empty())
       && entries_aware_groups.iter().all(|group| group.modules.is_empty())
@@ -103,15 +104,84 @@ impl ManualSplitter<'_> {
       return Ok(());
     }
 
-    self.process_entries_aware_groups(entries_aware_groups, &mut module_groups);
+    let mut entries_aware_groups = entries_aware_groups;
+    let mut plain_groups = IndexVec::default();
+    for group in module_groups {
+      if self.group_can_form_async_import_cycle(&group) {
+        // A dynamic import can wait on this async chunk while importing another member of it.
+        // See internal-docs/manual-code-splitting/implementation.md.
+        entries_aware_groups.push(group);
+      } else {
+        plain_groups.push(group);
+      }
+    }
 
-    let module_groups = self.into_priority_sorted_groups(module_groups);
+    self.process_entries_aware_groups(entries_aware_groups, &mut plain_groups);
+
+    let module_groups = self.into_priority_sorted_groups(plain_groups);
     if module_groups.is_empty() {
       return Ok(());
     }
 
     self.convert_groups_to_chunks(module_groups);
     Ok(())
+  }
+
+  fn group_can_form_async_import_cycle(&self, group: &ModuleGroup) -> bool {
+    let async_modules = group
+      .modules
+      .iter()
+      .copied()
+      .filter(|module_idx| self.link_output.metas[*module_idx].is_tla_or_contains_tla_dependency)
+      .collect_vec();
+    let Some((&first_async_module, other_async_modules)) = async_modules.split_first() else {
+      return false;
+    };
+
+    let mut group_bits = BitSet::new(self.flattened_entries.len().try_into().unwrap());
+    for module_idx in &group.modules {
+      group_bits.union(&self.index_splitting_info[*module_idx].bits);
+    }
+    let mut async_bits = self.index_splitting_info[first_async_module].bits.clone();
+    for module_idx in other_async_modules {
+      async_bits.intersect(&self.index_splitting_info[*module_idx].bits);
+    }
+
+    self.flattened_entries.iter().enumerate().any(|(entry_idx, entry)| {
+      let bit = u32::try_from(entry_idx).unwrap();
+      if !group_bits.has_bit(bit) || async_bits.has_bit(bit) {
+        return false;
+      }
+      let Some(entry_module) = self.link_output.module_table[entry.idx].as_normal() else {
+        return false;
+      };
+      if entry_module.ecma_view.dynamic_importers_idx.is_empty() {
+        return false;
+      }
+      async_modules.iter().copied().any(|module_idx| {
+        !self.index_splitting_info[module_idx].bits.has_bit(bit)
+          && self.static_dependencies_reach_dynamic_importer(module_idx, entry_module)
+      })
+    })
+  }
+
+  fn static_dependencies_reach_dynamic_importer(
+    &self,
+    module_idx: ModuleIdx,
+    dynamic_target: &NormalModule,
+  ) -> bool {
+    let mut visited = FxHashSet::default();
+    let mut pending = vec![module_idx];
+    while let Some(module_idx) = pending.pop() {
+      if !visited.insert(module_idx) {
+        continue;
+      }
+      if dynamic_target.ecma_view.dynamic_importers_idx.contains(&module_idx) {
+        return true;
+      }
+      pending.extend(self.link_output.metas[module_idx].dependencies.iter().copied());
+    }
+    false
   }
 
   /// Runs the checks that sit between a group's `test` call and its `name` call.
@@ -320,6 +390,13 @@ impl ManualSplitter<'_> {
       let match_group_index = group.match_group_index;
       let name = group.name.clone();
       let priority = group.priority;
+      let merge_threshold = if self.match_groups[match_group_index].entries_aware.unwrap_or(false) {
+        self.match_groups[match_group_index].entries_aware_merge_threshold.unwrap_or(0.0)
+      } else {
+        0.0
+      };
+      let protect_async_subgroups =
+        merge_threshold > 0.0 && self.group_can_form_async_import_cycle(&group);
 
       // Group modules by their bitset pattern into subgroups
       let mut bits_to_key: FxHashMap<BitSet, u32> = FxHashMap::default();
@@ -338,6 +415,7 @@ impl ManualSplitter<'_> {
                 bits: bits.clone(),
                 modules: FxHashSet::default(),
                 sizes: 0.0,
+                merge_protected: false,
               },
             );
             *vacant.insert(key)
@@ -346,12 +424,12 @@ impl ManualSplitter<'_> {
         let subgroup = subgroups.get_mut(&key).expect("subgroup key should exist");
         if subgroup.modules.insert(module_idx) {
           subgroup.sizes += self.link_output.module_table[module_idx].size() as f64;
+          subgroup.merge_protected |= protect_async_subgroups
+            && self.link_output.metas[module_idx].is_tla_or_contains_tla_dependency;
         }
       }
 
       // Optionally merge small subgroups
-      let merge_threshold =
-        self.match_groups[match_group_index].entries_aware_merge_threshold.unwrap_or(0.0);
       if merge_threshold > 0.0 && subgroups.len() > 1 {
         let keys: Vec<u32> = subgroups.keys().copied().collect();
         merge_entries_aware_subgroups(
@@ -478,12 +556,8 @@ impl ManualSplitter<'_> {
     let first_module_bits =
       &self.index_splitting_info[group.modules.iter().next().copied().expect("must have one")].bits;
 
-    let entries_aware = self.match_groups[group.match_group_index].entries_aware.unwrap_or(false);
-    let chunk_bits = if entries_aware {
-      group.entries_aware_bits.as_ref().unwrap_or(first_module_bits)
-    } else {
-      first_module_bits
-    };
+    let entries_aware = group.entries_aware_bits.is_some();
+    let chunk_bits = group.entries_aware_bits.as_ref().unwrap_or(first_module_bits);
 
     let chunk_name = if entries_aware {
       derive_entries_aware_chunk_name(
@@ -618,7 +692,10 @@ fn merge_entries_aware_subgroups(
     let Some(group) = subgroups.get(&group_key) else {
       continue;
     };
-    if is_below_merge_threshold(group.sizes, threshold) && !group.modules.is_empty() {
+    if !group.merge_protected
+      && is_below_merge_threshold(group.sizes, threshold)
+      && !group.modules.is_empty()
+    {
       unqualified_heap.push(Reverse((
         OrderedSize(group.sizes),
         group_key,
@@ -631,7 +708,8 @@ fn merge_entries_aware_subgroups(
     let Some(candidate_group) = subgroups.get(&candidate_key) else {
       continue;
     };
-    if candidate_group.modules.is_empty()
+    if candidate_group.merge_protected
+      || candidate_group.modules.is_empty()
       || candidate_version != current_version(&version_by_key, candidate_key)
       || !is_below_merge_threshold(candidate_group.sizes, threshold)
     {
@@ -649,7 +727,7 @@ fn merge_entries_aware_subgroups(
       let Some(target_group) = subgroups.get(&target_key) else {
         continue;
       };
-      if target_group.modules.is_empty() {
+      if target_group.merge_protected || target_group.modules.is_empty() {
         continue;
       }
 
@@ -674,7 +752,10 @@ fn merge_entries_aware_subgroups(
     let Some(target_group) = subgroups.get(&target_key) else {
       continue;
     };
-    if is_below_merge_threshold(target_group.sizes, threshold) && !target_group.modules.is_empty() {
+    if !target_group.merge_protected
+      && is_below_merge_threshold(target_group.sizes, threshold)
+      && !target_group.modules.is_empty()
+    {
       unqualified_heap.push(Reverse((
         OrderedSize(target_group.sizes),
         target_key,
@@ -705,6 +786,7 @@ fn merge_subgroups(
   to_group.modules.extend(from_group.modules.drain());
   to_group.sizes = sum_group_sizes(&to_group.modules, module_table);
   to_group.bits.union(&from_group.bits);
+  to_group.merge_protected |= from_group.merge_protected;
 }
 
 fn symmetric_difference_count(lhs: &BitSet, rhs: &BitSet) -> usize {

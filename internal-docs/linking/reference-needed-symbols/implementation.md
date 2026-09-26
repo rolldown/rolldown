@@ -192,6 +192,7 @@ A bug in any of (1)–(4) typically surfaces as a tree-shaking false-positive (h
 - **`safely_merge_cjs_ns_map` overrides per-record interop.** When an entry exists for the importee, `info.needs_interop` is authoritative; a single per-record check would compute the wrong answer for the merged case.
 - **`WrapKind::None` + `is_reexport_all` is intentional.** It exists for the "ESM importer re-exports a CJS-via-ESM intermediate that has dynamic exports" chain. Removing it breaks `__reExport` for indirect CJS reexports.
 - **`commonjs_treeshake` gates the importer namespace-ref push in the `Cjs` reexport arm.** When on, `include_commonjs_export_symbol` handles that path; when off, the namespace ref is pushed unconditionally.
+- **A wrapper call pushed for an import record belongs to the importer.** `include_statements` follows it only while the importer module is included. A re-export chain can include a barrel's re-export statement as the declaration of a binding it forwards, while the barrel itself stays tree-shaken. That barrel renders nothing, so its `init_foo()` is not demanded then; `demand_deferred_import_wrappers` demands it once the barrel is included. Following it early would include the importee without any entry reaching it, which leaves it in a stray chunk.
 - **CSS import kinds are `unreachable!` here.** A JS module's `import_records` cannot legally contain `AtImport` / `UrlImport`; the panic is a guard against an upstream classification bug.
 
 ## Related

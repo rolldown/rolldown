@@ -102,6 +102,13 @@ impl GenerateStage<'_> {
       atoms.len(),
     );
 
+    // Maintained incrementally so the static-cycle veto below doesn't rebuild the whole
+    // atom→group graph per candidate. The per-move probe is only exact on an acyclic graph,
+    // so fall back to the full check if a cycle already exists.
+    let mut incremental =
+      IncrementalGroupGraph::new(&atoms, &atom_dependencies.cycle, &host_atom_by_entry_bit);
+    let use_incremental = !incremental.has_any_cycle();
+
     let mut changed = false;
     for atom_idx in 0..atoms.len() {
       let original_dependent_entries = atoms[atom_idx].dependent_entries.clone();
@@ -123,12 +130,33 @@ impl GenerateStage<'_> {
           &dynamic_entry_modules_by_entry,
         )
       };
+      let creates_static_cycle = |atoms: &[ChunkAtom], incremental: &mut IncrementalGroupGraph| {
+        if use_incremental {
+          incremental.move_atom(atom_idx, &atoms[atom_idx].dependent_entries);
+          let cyclic = incremental.group_reaches_itself(incremental.group_of(atom_idx));
+          debug_assert_eq!(
+            cyclic,
+            Self::reduced_atom_graph_has_static_cycle(
+              atoms,
+              &atom_dependencies.cycle,
+              &host_atom_by_entry_bit,
+            ),
+            "incremental static-cycle check disagrees with the whole-graph check"
+          );
+          if cyclic {
+            incremental.move_atom(atom_idx, &original_dependent_entries);
+          }
+          cyclic
+        } else {
+          Self::reduced_atom_graph_has_static_cycle(
+            atoms,
+            &atom_dependencies.cycle,
+            &host_atom_by_entry_bit,
+          )
+        }
+      };
       if !matches!(action, ReducedEntriesAction::Avoid)
-        && !Self::reduced_atom_graph_has_static_cycle(
-          &atoms,
-          &atom_dependencies.cycle,
-          &host_atom_by_entry_bit,
-        )
+        && !creates_static_cycle(&atoms, &mut incremental)
       {
         changed = true;
         if let ReducedEntriesAction::ApplyWithNamespaceExtraction {
@@ -897,5 +925,219 @@ impl GenerateStage<'_> {
     }
 
     already_loaded_atoms_by_entry
+  }
+}
+
+/// Atoms grouped by identical `dependent_entries`, with the group-level dependency multigraph
+/// (the `cycle` edges plus the facade → host edges of `reduced_atom_graph_has_static_cycle`)
+/// kept up to date as atoms move between groups. Empty groups keep their id and have no edges.
+struct IncrementalGroupGraph {
+  group_by_bits: FxHashMap<BitSet, usize>,
+  atom_group: Vec<usize>,
+  group_size: Vec<u32>,
+  /// For a group whose bits are exactly one entry bit: that bit (the group is that entry's
+  /// facade chunk while it is non-empty).
+  facade_bit_of_group: Vec<Option<usize>>,
+  /// The atom `cycle` graph and its reverse.
+  deps: Vec<Vec<usize>>,
+  rdeps: Vec<Vec<usize>>,
+  /// entry bit → atom hosting that entry's module; and its inverse.
+  host_atom_by_entry_bit: Vec<Option<usize>>,
+  hosted_bits_by_atom: Vec<Vec<usize>>,
+  /// entry bit → the group whose bits are exactly that bit, once such a group exists.
+  facade_group_of_bit: Vec<Option<usize>>,
+  /// entry bit → the facade edge currently recorded for it, as (facade group, host group).
+  facade_edge: Vec<Option<(usize, usize)>>,
+  /// group → (successor group → multiplicity). Self-edges are not stored.
+  out: Vec<FxHashMap<usize, u32>>,
+}
+
+impl IncrementalGroupGraph {
+  fn new(
+    atoms: &[ChunkAtom],
+    atom_dependencies: &[Vec<usize>],
+    host_atom_by_entry_bit: &[Option<usize>],
+  ) -> Self {
+    let mut graph = Self {
+      group_by_bits: FxHashMap::default(),
+      atom_group: Vec::with_capacity(atoms.len()),
+      group_size: Vec::new(),
+      facade_bit_of_group: Vec::new(),
+      deps: atom_dependencies.to_vec(),
+      rdeps: vec![Vec::new(); atoms.len()],
+      host_atom_by_entry_bit: host_atom_by_entry_bit.to_vec(),
+      hosted_bits_by_atom: vec![Vec::new(); atoms.len()],
+      facade_group_of_bit: vec![None; host_atom_by_entry_bit.len()],
+      facade_edge: vec![None; host_atom_by_entry_bit.len()],
+      out: Vec::new(),
+    };
+    for atom in atoms {
+      let group = graph.group_for(&atom.dependent_entries);
+      graph.atom_group.push(group);
+      graph.group_size[group] += 1;
+    }
+    for (atom_idx, deps) in atom_dependencies.iter().enumerate() {
+      for &dep in deps {
+        graph.rdeps[dep].push(atom_idx);
+      }
+    }
+    for atom_idx in 0..atoms.len() {
+      let from = graph.atom_group[atom_idx];
+      for i in 0..graph.deps[atom_idx].len() {
+        let to = graph.atom_group[graph.deps[atom_idx][i]];
+        graph.add_edge(from, to);
+      }
+    }
+    for (entry_bit, host) in host_atom_by_entry_bit.iter().enumerate() {
+      if let Some(host_atom_idx) = *host {
+        graph.hosted_bits_by_atom[host_atom_idx].push(entry_bit);
+      }
+      graph.refresh_facade_edge(entry_bit);
+    }
+    graph
+  }
+
+  fn group_of(&self, atom_idx: usize) -> usize {
+    self.atom_group[atom_idx]
+  }
+
+  /// The group id for `bits`, creating an empty group if none exists yet.
+  fn group_for(&mut self, bits: &BitSet) -> usize {
+    if let Some(&group) = self.group_by_bits.get(bits) {
+      return group;
+    }
+    let group = self.out.len();
+    self.group_by_bits.insert(bits.clone(), group);
+    self.out.push(FxHashMap::default());
+    self.group_size.push(0);
+    let facade_bit =
+      if bits.bit_count() == 1 { bits.index_of_one().next().map(|b| b as usize) } else { None };
+    if let Some(bit) = facade_bit {
+      self.facade_group_of_bit[bit] = Some(group);
+    }
+    self.facade_bit_of_group.push(facade_bit);
+    group
+  }
+
+  fn add_edge(&mut self, from: usize, to: usize) {
+    if from != to {
+      *self.out[from].entry(to).or_insert(0) += 1;
+    }
+  }
+
+  fn remove_edge(&mut self, from: usize, to: usize) {
+    if from == to {
+      return;
+    }
+    if let Some(count) = self.out[from].get_mut(&to) {
+      *count -= 1;
+      if *count == 0 {
+        self.out[from].remove(&to);
+      }
+    }
+  }
+
+  /// Re-derive entry `bit`'s facade → host edge (same rule as
+  /// `reduced_atom_graph_has_static_cycle`): present while the singleton-bits group for `bit` is
+  /// non-empty, the entry has a host atom, and the host's group is a different group.
+  fn refresh_facade_edge(&mut self, bit: usize) {
+    if let Some((from, to)) = self.facade_edge[bit].take() {
+      self.remove_edge(from, to);
+    }
+    let Some(host_atom_idx) = self.host_atom_by_entry_bit[bit] else { return };
+    let Some(facade_group) = self.facade_group_of_bit[bit] else { return };
+    if self.group_size[facade_group] == 0 {
+      return;
+    }
+    let host_group = self.atom_group[host_atom_idx];
+    if facade_group != host_group {
+      self.add_edge(facade_group, host_group);
+      self.facade_edge[bit] = Some((facade_group, host_group));
+    }
+  }
+
+  /// Move `atom_idx` to the group for `bits`, together with its incident edges. Every edge this
+  /// adds is incident to the destination group.
+  fn move_atom(&mut self, atom_idx: usize, bits: &BitSet) {
+    let old_group = self.atom_group[atom_idx];
+    let new_group = self.group_for(bits);
+    if new_group == old_group {
+      return;
+    }
+    for i in 0..self.deps[atom_idx].len() {
+      let dep = self.deps[atom_idx][i];
+      // A self-dependency edge moves on both ends.
+      let dep_group = if dep == atom_idx { new_group } else { self.atom_group[dep] };
+      self.remove_edge(old_group, self.atom_group[dep]);
+      self.add_edge(new_group, dep_group);
+    }
+    for i in 0..self.rdeps[atom_idx].len() {
+      let rdep = self.rdeps[atom_idx][i];
+      if rdep == atom_idx {
+        continue;
+      }
+      let rdep_group = self.atom_group[rdep];
+      self.remove_edge(rdep_group, old_group);
+      self.add_edge(rdep_group, new_group);
+    }
+    self.atom_group[atom_idx] = new_group;
+    self.group_size[old_group] -= 1;
+    self.group_size[new_group] += 1;
+    // Facade edges that can change: entries this atom hosts (their host group moved), and the
+    // facade groups this move emptied or filled.
+    for i in 0..self.hosted_bits_by_atom[atom_idx].len() {
+      self.refresh_facade_edge(self.hosted_bits_by_atom[atom_idx][i]);
+    }
+    if let Some(bit) = self.facade_bit_of_group[old_group] {
+      self.refresh_facade_edge(bit);
+    }
+    if let Some(bit) = self.facade_bit_of_group[new_group] {
+      self.refresh_facade_edge(bit);
+    }
+  }
+
+  /// Whether `group` lies on a cycle.
+  fn group_reaches_itself(&self, group: usize) -> bool {
+    let mut visited = vec![false; self.out.len()];
+    let mut stack: Vec<usize> = self.out[group].keys().copied().collect();
+    while let Some(g) = stack.pop() {
+      if g == group {
+        return true;
+      }
+      if std::mem::replace(&mut visited[g], true) {
+        continue;
+      }
+      stack.extend(self.out[g].keys().copied());
+    }
+    false
+  }
+
+  /// Whether the graph has any cycle.
+  fn has_any_cycle(&self) -> bool {
+    let mut state = vec![0u8; self.out.len()];
+    for start in 0..self.out.len() {
+      if state[start] != 0 {
+        continue;
+      }
+      let mut stack = vec![(start, self.out[start].keys().copied().collect::<Vec<_>>())];
+      state[start] = 1;
+      while let Some((node, succ)) = stack.last_mut() {
+        if let Some(next) = succ.pop() {
+          match state[next] {
+            1 => return true,
+            0 => {
+              state[next] = 1;
+              let nexts = self.out[next].keys().copied().collect::<Vec<_>>();
+              stack.push((next, nexts));
+            }
+            _ => {}
+          }
+        } else {
+          state[*node] = 2;
+          stack.pop();
+        }
+      }
+    }
+    false
   }
 }

@@ -674,6 +674,9 @@ importers:
       source-map-js:
         specifier: ^1.2.1
         version: 1.2.1
+      terser:
+        specifier: catalog:rollup-tests
+        version: 5.51.2
       tsx:
         specifier: 'catalog:'
         version: 4.23.13

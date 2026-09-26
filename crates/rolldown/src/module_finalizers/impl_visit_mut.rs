@@ -256,6 +256,8 @@ impl<'ast> VisitJsMut<'ast> for ScopeHoistingFinalizer<'_, 'ast> {
         };
 
         let (commonjs_ref_expr, _) = self.finalized_expr_for_symbol_ref(commonjs_ref, false, false);
+        let shadows_amd_define =
+          self.scope.scoping().root_unresolved_references().contains_key("define");
 
         let mut stmts_inside_closure = allocator::Vec::new_in(self);
         stmts_inside_closure.append(&mut program.body);
@@ -264,6 +266,7 @@ impl<'ast> VisitJsMut<'ast> for ScopeHoistingFinalizer<'_, 'ast> {
           wrap_ref_name,
           commonjs_ref_expr,
           stmts_inside_closure,
+          shadows_amd_define,
           self.ctx.module.ast_usage,
           self.ctx.options.profiler_names,
           &self.ctx.module.stable_id,

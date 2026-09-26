@@ -15,7 +15,7 @@ use std::ffi::OsStr;
 use std::path::Path;
 use std::sync::Arc;
 use std::sync::Mutex;
-use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
+use std::sync::atomic::{AtomicBool, Ordering};
 
 #[derive(Debug, Default)]
 pub struct EmittedAsset {
@@ -79,7 +79,6 @@ pub struct FileEmitter {
   files: FxDashMap<ArcStr, OutputAsset>,
   chunks: FxDashMap<ArcStr, Arc<EmittedChunk>>,
   prebuilt_chunks: FxDashMap<ArcStr, Arc<EmittedPrebuiltChunk>>,
-  base_reference_id: AtomicUsize,
   /// True during the build phase (buildStart through buildEnd), false during the output
   /// phase. Dedup only re-picks the shortest same-source name while this is true; see the
   /// guard in `emit_file`.
@@ -109,7 +108,6 @@ impl FileEmitter {
       chunks: DashMap::default(),
       prebuilt_chunks: DashMap::default(),
       emitted_chunks: DashMap::default(),
-      base_reference_id: AtomicUsize::new(0),
       is_build_phase: AtomicBool::new(false),
       options,
       emitted_files: DashSet::default(),
@@ -142,7 +140,9 @@ impl FileEmitter {
       )?;
     // Only assign a reference id once we know we have a live sender — keeps
     // `emit_chunk` side-effect-free on the error path.
-    let reference_id = self.assign_reference_id(chunk.name.clone());
+    // Seed from the module id when unnamed — duplicate emits of the same id
+    // then share a reference id, matching duplicate named emits.
+    let reference_id = self.assign_reference_id(chunk.name.as_deref().unwrap_or(&chunk.id));
     sender
       .send(ModuleLoaderMsg::AddEntryModule(Box::new(AddEntryModuleMsg {
         chunk: Arc::clone(&chunk),
@@ -158,7 +158,7 @@ impl FileEmitter {
   }
 
   pub fn emit_prebuilt_chunk(&self, chunk: EmittedPrebuiltChunk) -> ArcStr {
-    let reference_id = self.assign_reference_id(Some(chunk.file_name.clone()));
+    let reference_id = self.assign_reference_id(&chunk.file_name);
     self.prebuilt_chunks.insert(reference_id.clone(), Arc::new(chunk));
     reference_id
   }
@@ -218,7 +218,10 @@ impl FileEmitter {
           return Ok(reference_id);
         }
         Entry::Vacant(entry) => {
-          let reference_id = self.assign_reference_id(None);
+          // Use the content hash (also the dedupe key, so unique per asset):
+          // a counter-based id depends on module processing order and makes
+          // builds nondeterministic.
+          let reference_id = self.assign_reference_id(&hash);
           // Insert into self.files while the VacantEntry holds its shard lock,
           // so any concurrent Occupied branch always finds the files entry.
           self.insert_new_file(
@@ -235,7 +238,8 @@ impl FileEmitter {
     }
 
     // File has explicit fileName, no deduplication needed
-    let reference_id = self.assign_reference_id(file.file_name.clone());
+    let reference_id =
+      self.assign_reference_id(file.file_name.as_deref().expect("file_name checked above"));
     self.insert_new_file(
       &mut file,
       &hash,
@@ -267,17 +271,13 @@ impl FileEmitter {
     Err(anyhow::anyhow!("Unable to get file name for unknown file: {reference_id}"))
   }
 
-  pub fn assign_reference_id(&self, filename: Option<ArcStr>) -> ArcStr {
-    xxhash_base64_url(
-      filename
-        .unwrap_or_else(|| {
-          self.base_reference_id.fetch_add(1, Ordering::Relaxed).to_string().into()
-        })
-        .as_bytes(),
-    )
-    // The reference id can be used for import.meta.ROLLDOWN_FILE_URL_referenceId and therefore needs to only contain characters allowed in identifiers.
-    .replace('-', "$")
-    .into()
+  pub fn assign_reference_id(&self, seed: &str) -> ArcStr {
+    // Reference ids must be pure functions of their seed so identical builds
+    // emit identical ids regardless of module processing order.
+    xxhash_base64_url(seed.as_bytes())
+      // The reference id can be used for import.meta.ROLLDOWN_FILE_URL_referenceId and therefore needs to only contain characters allowed in identifiers.
+      .replace('-', "$")
+      .into()
   }
 
   pub fn generate_file_name(
@@ -474,7 +474,6 @@ impl FileEmitter {
     self.prebuilt_chunks.clear();
     self.names.clear();
     self.source_hash_to_reference_id.clear();
-    self.base_reference_id.store(0, Ordering::Relaxed);
     self.is_build_phase.store(false, Ordering::Relaxed);
     self.emitted_files.clear();
     self.emitted_file_source_hashes.clear();
@@ -502,15 +501,45 @@ mod tests {
   fn assign_reference_id_is_always_22_chars() {
     let emitter = FileEmitter::new(Arc::new(NormalizedBundlerOptions::default()));
 
-    // Counter-based ids: assets emitted without an explicit file name.
-    for _ in 0..1000 {
-      assert_eq!(emitter.assign_reference_id(None).len(), 22);
+    // Seed-based ids: chunk names/ids, file names and content hashes, including edge cases.
+    for seed in ["a", "index.js", "assets/deeply/nested/asset.name.txt", ""] {
+      assert_eq!(emitter.assign_reference_id(seed).len(), 22, "seed={seed:?}");
     }
+  }
 
-    // Name/file-name-based ids: chunks and explicitly named files, including edge-case inputs.
-    for name in ["a", "index.js", "assets/deeply/nested/asset.name.txt", ""] {
-      assert_eq!(emitter.assign_reference_id(Some(ArcStr::from(name))).len(), 22, "name={name:?}");
-    }
+  /// Asset reference ids must depend only on content, not emission order — they leak
+  /// into pre-render code (e.g. Vite's `__VITE_ASSET__<id>__` placeholders), where
+  /// order-dependent ids make otherwise identical builds nondeterministic.
+  #[test]
+  fn asset_reference_ids_are_independent_of_emission_order() {
+    let emit = |emitter: &FileEmitter, name: &str, source: &str| {
+      emitter
+        .emit_file(
+          EmittedAsset {
+            name: Some(name.to_string()),
+            source: StrOrBytes::from(source.to_string()),
+            ..Default::default()
+          },
+          Some(FilenameTemplate::new(
+            "assets/[name]-[hash][extname]".to_string(),
+            "output.assetFileNames",
+          )),
+          Some(ArcStr::from(name)),
+        )
+        .unwrap()
+    };
+
+    let forward = FileEmitter::new(Arc::new(NormalizedBundlerOptions::default()));
+    let a1 = emit(&forward, "a.png", "aaaa");
+    let b1 = emit(&forward, "b.png", "bbbb");
+
+    let reverse = FileEmitter::new(Arc::new(NormalizedBundlerOptions::default()));
+    let b2 = emit(&reverse, "b.png", "bbbb");
+    let a2 = emit(&reverse, "a.png", "aaaa");
+
+    assert_eq!(a1, a2, "reference id for the same content must not depend on emission order");
+    assert_eq!(b1, b2, "reference id for the same content must not depend on emission order");
+    assert_ne!(a1, b1, "different content must produce different reference ids");
   }
 
   /// The emitter is reused across dev-mode rebuilds. An asset re-emitted with changed

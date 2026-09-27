@@ -82,8 +82,7 @@ function extractPropertySection(
   let section = contents.slice(startIndex, endIndex).trim();
 
   // Config-facing path: InputOptions stay top-level; OutputOptions nest under `output`.
-  const optionPath =
-    parentName === 'OutputOptions' ? `output.${propertyName}` : propertyName;
+  const optionPath = parentName === 'OutputOptions' ? `output.${propertyName}` : propertyName;
 
   section = section
     // Reduce each heading level by two (e.g., ### -> #)

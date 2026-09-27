@@ -76,6 +76,7 @@ impl DevEngine {
       .build()?;
 
     let module_infos = bundler.module_infos();
+    let cwd = bundler.options().cwd.clone();
     let bundler = Arc::new(Mutex::new(bundler));
 
     let normalized_options = normalize_dev_options(options);
@@ -106,6 +107,8 @@ impl DevEngine {
       debounce_tick_rate: ctx.options.debounce_tick_rate,
       use_polling: ctx.options.use_polling,
       use_debounce: ctx.options.use_debounce,
+      ignored: ctx.options.watch_exclude.clone(),
+      cwd,
     };
 
     let event_handler = BundleCoordinator::create_watcher_event_handler(coordinator_tx.clone());

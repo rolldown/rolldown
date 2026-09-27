@@ -885,6 +885,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "globstar"
+version = "0.0.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "58e3fa6992fa0e7d9b89aad26a1296903b52156ad0ecae1573ec09cef05c226e"
+
+[[package]]
 name = "half"
 version = "2.7.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2542,8 +2548,7 @@ dependencies = [
 [[package]]
 name = "rolldown-file-id"
 version = "0.2.10"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "62966a34acc45ec51dbdfa29a3641e30ae9ee22cd195756a55729050776e38a4"
+source = "git+https://github.com/rolldown/notify.git?rev=3b77886316ad2de1b4fe49b40ff58a77a10872ed#3b77886316ad2de1b4fe49b40ff58a77a10872ed"
 dependencies = [
  "windows-sys 0.61.2",
 ]
@@ -2551,8 +2556,7 @@ dependencies = [
 [[package]]
 name = "rolldown-notify"
 version = "10.5.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e233e1c24e0f4d8dc82251f9196c03f7c77fba9a5ca45e64c2fc96a57726de99"
+source = "git+https://github.com/rolldown/notify.git?rev=3b77886316ad2de1b4fe49b40ff58a77a10872ed#3b77886316ad2de1b4fe49b40ff58a77a10872ed"
 dependencies = [
  "bitflags",
  "inotify",
@@ -2571,8 +2575,7 @@ dependencies = [
 [[package]]
 name = "rolldown-notify-debouncer-full"
 version = "0.7.11"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ce455a17f7f338a23bfc92cf9ee9b7ed93fbdb646ef096da60cfd6fc9f68d3b1"
+source = "git+https://github.com/rolldown/notify.git?rev=3b77886316ad2de1b4fe49b40ff58a77a10872ed#3b77886316ad2de1b4fe49b40ff58a77a10872ed"
 dependencies = [
  "rolldown-file-id",
  "rolldown-notify",
@@ -2585,8 +2588,7 @@ dependencies = [
 [[package]]
 name = "rolldown-notify-types"
 version = "2.0.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1931923a28e14c01a27ca56669669eb3e3de4068859c34e17b96c93ba3a61afe"
+source = "git+https://github.com/rolldown/notify.git?rev=3b77886316ad2de1b4fe49b40ff58a77a10872ed#3b77886316ad2de1b4fe49b40ff58a77a10872ed"
 
 [[package]]
 name = "rolldown_binding"
@@ -2793,10 +2795,12 @@ dependencies = [
 name = "rolldown_fs_watcher"
 version = "1.2.11"
 dependencies = [
+ "globstar",
  "rolldown-notify",
  "rolldown-notify-debouncer-full",
  "rolldown_common",
  "rolldown_error",
+ "rolldown_utils",
  "rustc-hash",
  "tracing",
  "walkdir",

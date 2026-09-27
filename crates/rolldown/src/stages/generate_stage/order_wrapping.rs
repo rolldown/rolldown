@@ -1289,6 +1289,13 @@ impl GenerateStage<'_> {
         new_runtime_chunk_idx,
         self.link_output.metas[runtime_idx].depended_runtime_helper,
       );
+      // The former host derived its `exec_order` from the runtime module (`exec_order` 0) that
+      // the move above took out of it, so it would sort ahead of chunks it follows and its
+      // importers would evaluate it, and the externals it imports, too early. Re-derive every
+      // live chunk's order from its current lead module, as `finalize_chunk_plan` does after the
+      // runtime sweep.
+      chunk_graph.sort_chunk_modules(self.link_output, self.options);
+      self.assign_chunk_exec_orders(chunk_graph);
       self.clear_module_symbol_chunk_indices(runtime_idx);
       return true;
     }

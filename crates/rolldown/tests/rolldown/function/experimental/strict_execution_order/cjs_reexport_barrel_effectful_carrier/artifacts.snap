@@ -6,8 +6,8 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## bare.js
 
 ```js
-import { n as init_barrel_cjs_0, r as init_barrel_cjs_1 } from "./outer.js";
 import { n as __esmMin } from "./rolldown-runtime.js";
+import { n as init_barrel_cjs_0, r as init_barrel_cjs_1 } from "./outer.js";
 //#region bare.js
 function init_bare() {
 	return (init_bare = __esmMin((() => {
@@ -24,8 +24,8 @@ init_bare();
 ## main.js
 
 ```js
-import { n as init_barrel_cjs_0, r as init_barrel_cjs_1 } from "./outer.js";
 import { n as __esmMin } from "./rolldown-runtime.js";
+import { n as init_barrel_cjs_0, r as init_barrel_cjs_1 } from "./outer.js";
 //#region node_modules/pure-leaves/cn.js
 function cn(...values) {
 	return values.filter(Boolean).join(" ");
@@ -100,8 +100,8 @@ export { __esmMin as n, __toESM as r, __commonJSMin as t };
 ## route.js
 
 ```js
-import { n as init_barrel_cjs_0, r as init_barrel_cjs_1 } from "./outer.js";
 import { n as __esmMin } from "./rolldown-runtime.js";
+import { n as init_barrel_cjs_0, r as init_barrel_cjs_1 } from "./outer.js";
 //#region node_modules/pure-leaves/stack.js
 var Stack;
 function init_stack() {
@@ -133,8 +133,8 @@ export { stack };
 ### bare.js
 
 ```js
-import { n as init_barrel_cjs_0, r as init_barrel_cjs_1 } from "./outer.js";
 import { n as __esmMin } from "./rolldown-runtime.js";
+import { n as init_barrel_cjs_0, r as init_barrel_cjs_1 } from "./outer.js";
 //#region bare.js
 function init_bare() {
 	return (init_bare = __esmMin((() => {
@@ -151,8 +151,8 @@ init_bare();
 ### main.js
 
 ```js
-import { n as init_barrel_cjs_0, r as init_barrel_cjs_1 } from "./outer.js";
 import { n as __esmMin } from "./rolldown-runtime.js";
+import { n as init_barrel_cjs_0, r as init_barrel_cjs_1 } from "./outer.js";
 //#region node_modules/pure-leaves/cn.js
 function cn(...values) {
 	return values.filter(Boolean).join(" ");
@@ -227,8 +227,8 @@ export { __esmMin as n, __toESM as r, __commonJSMin as t };
 ### route.js
 
 ```js
-import { n as init_barrel_cjs_0, r as init_barrel_cjs_1 } from "./outer.js";
 import { n as __esmMin } from "./rolldown-runtime.js";
+import { n as init_barrel_cjs_0, r as init_barrel_cjs_1 } from "./outer.js";
 //#region node_modules/pure-leaves/stack.js
 var Stack;
 function init_stack() {

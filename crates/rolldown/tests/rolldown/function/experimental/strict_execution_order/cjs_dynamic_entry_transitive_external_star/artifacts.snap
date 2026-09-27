@@ -26,8 +26,8 @@ exports.loaded = loaded;
 
 ```js
 //! ManualCodeSplitting: [Group-Name: reader]
-const require_target = require("./target.js");
 const require_rolldown_runtime = require("./rolldown-runtime.js");
+const require_target = require("./target.js");
 //#region reader.js
 function read() {
 	globalThis.__externalStarLog.push(`reader:1`);
@@ -117,8 +117,8 @@ Object.defineProperty(exports, "__reExport", {
 ```js
 //! Dynamic Entry: [Entry-Module-Id: target.js] [Name: <none>]
 //! Common Chunk: [Shared-By: target.js]
-const require_reader = require("./reader.js");
 const require_rolldown_runtime = require("./rolldown-runtime.js");
+const require_reader = require("./reader.js");
 //#region barrel.js
 function init_barrel() {
 	return (init_barrel = require_rolldown_runtime.__esmMin((() => {})))();

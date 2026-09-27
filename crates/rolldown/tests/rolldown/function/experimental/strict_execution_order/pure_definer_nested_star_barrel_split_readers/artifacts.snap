@@ -58,8 +58,8 @@ export { vDef as n, outer_barrel_exports as t };
 ### a.js
 
 ```js
-import { i as vDef, t as init_outer_barrel } from "./outer-barrel.js";
 import { t as __esmMin } from "./rolldown-runtime.js";
+import { i as vDef, t as init_outer_barrel } from "./outer-barrel.js";
 //#region a.js
 var defValue;
 function init_a() {
@@ -78,8 +78,8 @@ export { defValue };
 ### b.js
 
 ```js
-import { n as outer_barrel_exports, t as init_outer_barrel } from "./outer-barrel.js";
 import { t as __esmMin } from "./rolldown-runtime.js";
+import { n as outer_barrel_exports, t as init_outer_barrel } from "./outer-barrel.js";
 //#region b.js
 var loaded;
 function init_b() {

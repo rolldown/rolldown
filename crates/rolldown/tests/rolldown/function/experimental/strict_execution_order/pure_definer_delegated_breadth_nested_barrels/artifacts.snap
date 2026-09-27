@@ -64,8 +64,8 @@ export { vDef as n, outer_exports as t };
 ### a.js
 
 ```js
-import { i as vDef, n as outer_exports, t as init_outer } from "./outer.js";
 import { t as __esmMin } from "./rolldown-runtime.js";
+import { i as vDef, n as outer_exports, t as init_outer } from "./outer.js";
 //#region a.js
 var defValue, nsObject;
 function init_a() {
@@ -85,8 +85,8 @@ export { defValue, nsObject };
 ### b.js
 
 ```js
-import { i as vDef, t as init_outer } from "./outer.js";
 import { t as __esmMin } from "./rolldown-runtime.js";
+import { i as vDef, t as init_outer } from "./outer.js";
 //#region b.js
 var sharedDef;
 function init_b() {

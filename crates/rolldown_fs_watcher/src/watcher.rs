@@ -1,22 +1,30 @@
-use std::path::{Path, PathBuf};
+use std::{
+  path::{Path, PathBuf},
+  sync::Arc,
+};
 
 use rolldown_error::BuildResult;
 use rustc_hash::FxHashSet;
 
 use crate::{
   FsEventHandler, FsWatcherConfig,
+  filter::IgnoreFilter,
   notify::{WatcherBackend, create_backend},
 };
 
 pub struct FsWatcher {
   backend: Box<dyn WatcherBackend>,
+  /// Shared with the backend as notify's ignore filter.
+  filter: Option<Arc<IgnoreFilter>>,
   watched_paths: FxHashSet<PathBuf>,
 }
 
 impl FsWatcher {
   pub fn new<F: FsEventHandler>(event_handler: F, config: &FsWatcherConfig) -> BuildResult<Self> {
+    let filter = config.ignore_filter()?.map(Arc::new);
     Ok(Self {
-      backend: create_backend(event_handler, config)?,
+      backend: create_backend(event_handler, config, filter.clone())?,
+      filter,
       watched_paths: FxHashSet::default(),
     })
   }
@@ -32,7 +40,11 @@ impl FsWatcher {
     let mut new_paths = FxHashSet::default();
     for path in paths {
       let path = path.as_ref();
-      if self.watched_paths.contains(path) || new_paths.contains(path) || !is_wanted(path) {
+      if self.watched_paths.contains(path)
+        || new_paths.contains(path)
+        || !is_wanted(path)
+        || self.filter.as_ref().is_some_and(|filter| filter.is_path_ignored(path))
+      {
         continue;
       }
       new_paths.insert(path.to_path_buf());
@@ -70,8 +82,16 @@ impl FsWatcher {
 
 #[cfg(test)]
 mod tests {
+  use std::{
+    fs,
+    sync::mpsc,
+    time::{Duration, Instant},
+  };
+
+  use rolldown_utils::pattern_filter::StringOrRegex;
+
   use super::*;
-  use crate::notify::PathsMut;
+  use crate::{FsEvent, notify::PathsMut};
 
   struct UnexpectedBatch;
 
@@ -81,10 +101,21 @@ mod tests {
     }
   }
 
+  struct ChannelHandler(mpsc::Sender<Vec<FsEvent>>);
+
+  impl FsEventHandler for ChannelHandler {
+    fn handle_events(&mut self, events: Vec<FsEvent>) {
+      self.0.send(events).unwrap();
+    }
+  }
+
   #[test]
   fn empty_watch_paths_does_not_open_batch() {
-    let mut watcher =
-      FsWatcher { backend: Box::new(UnexpectedBatch), watched_paths: FxHashSet::default() };
+    let mut watcher = FsWatcher {
+      backend: Box::new(UnexpectedBatch),
+      filter: None,
+      watched_paths: FxHashSet::default(),
+    };
     watcher.watch_paths(std::iter::empty::<&Path>(), |_| panic!("no paths to filter")).unwrap();
   }
 
@@ -93,6 +124,7 @@ mod tests {
     let path = std::env::current_dir().unwrap().join("entry.js");
     let mut watcher = FsWatcher {
       backend: Box::new(UnexpectedBatch),
+      filter: None,
       watched_paths: FxHashSet::from_iter([path.clone()]),
     };
     watcher
@@ -108,6 +140,7 @@ mod tests {
     let excluded = root.join("excluded.js");
     let mut watcher = FsWatcher {
       backend: Box::new(UnexpectedBatch),
+      filter: None,
       watched_paths: FxHashSet::from_iter([watched.clone()]),
     };
     let mut asked = Vec::new();
@@ -119,6 +152,24 @@ mod tests {
       .unwrap();
     assert_eq!(asked, std::slice::from_ref(&excluded));
     assert!(!watcher.is_watched(&excluded));
+  }
+
+  #[test]
+  fn ignored_paths_does_not_open_batch() {
+    let root = std::env::current_dir().unwrap();
+    let config = FsWatcherConfig {
+      ignored: Some(vec![StringOrRegex::String("**/*.log".to_string())]),
+      cwd: root.clone(),
+      ..FsWatcherConfig::default()
+    };
+    let mut watcher = FsWatcher {
+      backend: Box::new(UnexpectedBatch),
+      filter: config.ignore_filter().unwrap().map(Arc::new),
+      watched_paths: FxHashSet::default(),
+    };
+    let ignored = root.join("debug.log");
+    watcher.watch_paths([&ignored], |_| true).unwrap();
+    assert!(!watcher.is_watched(&ignored));
   }
 
   #[cfg(not(windows))]
@@ -162,12 +213,48 @@ mod tests {
     assert!(!watcher.is_watched(Path::new("/project/skipped.js")));
   }
 
+  /// The poll backend behaves the same on every platform.
+  #[test]
+  fn excluded_paths_are_not_reported() {
+    let root =
+      std::env::temp_dir().join(format!("rolldown_fs_watcher_excluded_{}", std::process::id()));
+    let _ = fs::remove_dir_all(&root);
+    fs::create_dir_all(&root).unwrap();
+    let (tx, rx) = mpsc::channel();
+    let config = FsWatcherConfig {
+      use_polling: true,
+      poll_interval: 10,
+      ignored: Some(vec![StringOrRegex::String("**/*.log".to_string())]),
+      cwd: root.clone(),
+      ..FsWatcherConfig::default()
+    };
+    let mut watcher = FsWatcher::new(ChannelHandler(tx), &config).unwrap();
+    watcher.watch_paths([&root], |_| true).unwrap();
+
+    fs::write(root.join("debug.log"), "").unwrap();
+    fs::write(root.join("index.js"), "").unwrap();
+
+    let index = root.join("index.js");
+    let mut paths = Vec::new();
+    let deadline = Instant::now() + Duration::from_secs(5);
+    while !paths.contains(&index) {
+      let events = rx
+        .recv_timeout(deadline.saturating_duration_since(Instant::now()))
+        .expect("index.js must be reported");
+      paths.extend(events.into_iter().map(|event| event.path));
+    }
+    // give a wrongly reported debug.log time to arrive
+    while let Ok(events) = rx.recv_timeout(Duration::from_millis(200)) {
+      paths.extend(events.into_iter().map(|event| event.path));
+    }
+    assert!(!paths.contains(&root.join("debug.log")), "{paths:?}");
+    drop(watcher);
+    let _ = fs::remove_dir_all(&root);
+  }
+
   #[cfg(target_os = "macos")]
   mod native {
-    use std::{fs, sync::mpsc, time::Duration};
-
     use super::*;
-    use crate::FsEvent;
 
     struct Fixture(PathBuf);
 
@@ -185,14 +272,6 @@ mod tests {
     impl Drop for Fixture {
       fn drop(&mut self) {
         let _ = fs::remove_dir_all(&self.0);
-      }
-    }
-
-    struct ChannelHandler(mpsc::Sender<Vec<FsEvent>>);
-
-    impl FsEventHandler for ChannelHandler {
-      fn handle_events(&mut self, events: Vec<FsEvent>) {
-        self.0.send(events).unwrap();
       }
     }
 

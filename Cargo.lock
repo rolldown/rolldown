@@ -885,6 +885,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "globstar"
+version = "0.0.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "58e3fa6992fa0e7d9b89aad26a1296903b52156ad0ecae1573ec09cef05c226e"
+
+[[package]]
 name = "half"
 version = "2.7.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2793,10 +2799,12 @@ dependencies = [
 name = "rolldown_fs_watcher"
 version = "1.2.12"
 dependencies = [
+ "globstar",
  "rolldown-notify",
  "rolldown-notify-debouncer-full",
  "rolldown_common",
  "rolldown_error",
+ "rolldown_utils",
  "rustc-hash",
  "tracing",
  "walkdir",
@@ -3689,7 +3697,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "32497e9a4c7b38532efcdebeef879707aa9f794296a4f0244f6f69e9bc8574bd"
 dependencies = [
  "fastrand",
- "getrandom 0.3.4",
+ "getrandom 0.4.3",
  "once_cell",
  "rustix",
  "windows-sys 0.61.2",
@@ -4359,3 +4367,13 @@ name = "zmij"
 version = "1.0.23"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "29666d0abbfad1e3dc4dcf6144730dd3a3ab225bbbdac83319345b1b44ccfc1b"
+
+[[patch.unused]]
+name = "rolldown-notify"
+version = "10.5.1"
+source = "git+https://github.com/rolldown/notify.git?rev=3b77886316ad2de1b4fe49b40ff58a77a10872ed#3b77886316ad2de1b4fe49b40ff58a77a10872ed"
+
+[[patch.unused]]
+name = "rolldown-notify-debouncer-full"
+version = "0.7.11"
+source = "git+https://github.com/rolldown/notify.git?rev=3b77886316ad2de1b4fe49b40ff58a77a10872ed#3b77886316ad2de1b4fe49b40ff58a77a10872ed"

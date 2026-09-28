@@ -1,0 +1,5 @@
+{
+  "_comment": "Regression for https://github.com/rolldown/rolldown/issues/11013. Const-folded import() and require() keep the identifier span, so the diagnostic must name the resolved specifier. A string literal, a template literal, a folded concatenation, and an escaped literal do too. ./dep.js still resolves.",
+  "expectExecuted": false,
+  "expectWarning": true
+}

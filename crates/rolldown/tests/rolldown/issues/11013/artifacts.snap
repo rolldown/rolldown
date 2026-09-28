@@ -1,0 +1,143 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# warnings
+
+## UNRESOLVED_IMPORT
+
+```text
+[UNRESOLVED_IMPORT] Could not resolve 'no-such-pkg-a' in main.js
+   ╭─[ main.js:8:18 ]
+   │
+ 8 │     await import(id),
+   │                  ─┬  
+   │                   ╰── Module not found, treating it as an external dependency
+───╯
+
+```
+
+## UNRESOLVED_IMPORT
+
+```text
+[UNRESOLVED_IMPORT] Could not resolve 'no-such-pkg-b' in main.js
+   ╭─[ main.js:9:18 ]
+   │
+ 9 │     await import(longerName),
+   │                  ─────┬────  
+   │                       ╰────── Module not found, treating it as an external dependency
+───╯
+
+```
+
+## UNRESOLVED_IMPORT
+
+```text
+[UNRESOLVED_IMPORT] Could not resolve 'no-such-pkg-c' in main.js
+    ╭─[ main.js:10:18 ]
+    │
+ 10 │     await import("no-such-pkg-c"),
+    │                  ───────┬───────  
+    │                         ╰───────── Module not found, treating it as an external dependency
+────╯
+
+```
+
+## UNRESOLVED_IMPORT
+
+```text
+[UNRESOLVED_IMPORT] Could not resolve 'no-such-pkg-d' in main.js
+    ╭─[ main.js:11:18 ]
+    │
+ 11 │     await import(a),
+    │                  ┬  
+    │                  ╰── Module not found, treating it as an external dependency
+────╯
+
+```
+
+## UNRESOLVED_IMPORT
+
+```text
+[UNRESOLVED_IMPORT] Could not resolve 'no-such-pkg-e' in main.js
+    ╭─[ main.js:16:13 ]
+    │
+ 16 │     require(required),
+    │             ────┬───  
+    │                 ╰───── Module not found, treating it as an external dependency
+────╯
+
+```
+
+## UNRESOLVED_IMPORT
+
+```text
+[UNRESOLVED_IMPORT] Could not resolve 'no-such-pkg-f' in main.js
+    ╭─[ main.js:13:18 ]
+    │
+ 13 │     await import(`no-such-pkg-f`),
+    │                  ───────┬───────  
+    │                         ╰───────── Module not found, treating it as an external dependency
+────╯
+
+```
+
+## UNRESOLVED_IMPORT
+
+```text
+[UNRESOLVED_IMPORT] Could not resolve 'no-such-pkg-g' in main.js
+    ╭─[ main.js:14:18 ]
+    │
+ 14 │     await import("no-such-" + "pkg-g"),
+    │                  ──────────┬─────────  
+    │                            ╰─────────── Module not found, treating it as an external dependency
+────╯
+
+```
+
+## UNRESOLVED_IMPORT
+
+```text
+[UNRESOLVED_IMPORT] Could not resolve 'no-such-pkg-h' in main.js
+    ╭─[ main.js:15:18 ]
+    │
+ 15 │     await import("no-such-\u0070kg-h"),
+    │                  ──────────┬─────────  
+    │                            ╰─────────── Module not found, treating it as an external dependency
+────╯
+
+```
+
+# Assets
+
+## dep.js
+
+```js
+//#region dep.js
+const ok = true;
+//#endregion
+export { ok };
+
+```
+
+## main.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+//#region main.js
+async function f() {
+	return [
+		await import("no-such-pkg-a"),
+		await import("no-such-pkg-b"),
+		await import("no-such-pkg-c"),
+		await import("no-such-pkg-d"),
+		await import("./dep.js"),
+		await import(`no-such-pkg-f`),
+		await import("no-such-pkg-g"),
+		await import("no-such-pkg-h"),
+		__require("no-such-pkg-e")
+	];
+}
+//#endregion
+export { f };
+
+```

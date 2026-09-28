@@ -1,0 +1,5 @@
+{
+  "_comment": "Same span bug as https://github.com/rolldown/rolldown/issues/11013, on the error path for a path-like specifier.",
+  "expectError": true,
+  "expectExecuted": false
+}

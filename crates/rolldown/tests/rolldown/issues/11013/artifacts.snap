@@ -35,7 +35,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 [UNRESOLVED_IMPORT] Could not resolve 'no-such-pkg-c' in main.js
     ╭─[ main.js:10:18 ]
     │
- 10 │     await import("no-such-pkg-c"),
+ 10 │     await import('no-such-pkg-c'),
     │                  ───────┬───────  
     │                         ╰───────── Module not found, treating it as an external dependency
 ────╯
@@ -87,7 +87,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 [UNRESOLVED_IMPORT] Could not resolve 'no-such-pkg-g' in main.js
     ╭─[ main.js:14:18 ]
     │
- 14 │     await import("no-such-" + "pkg-g"),
+ 14 │     await import('no-such-' + 'pkg-g'),
     │                  ──────────┬─────────  
     │                            ╰─────────── Module not found, treating it as an external dependency
 ────╯
@@ -100,7 +100,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 [UNRESOLVED_IMPORT] Could not resolve 'no-such-pkg-h' in main.js
     ╭─[ main.js:15:18 ]
     │
- 15 │     await import("no-such-\u0070kg-h"),
+ 15 │     await import('no-such-\u0070kg-h'),
     │                  ──────────┬─────────  
     │                            ╰─────────── Module not found, treating it as an external dependency
 ────╯

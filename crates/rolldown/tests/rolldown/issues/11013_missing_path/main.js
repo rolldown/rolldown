@@ -1,4 +1,4 @@
 export async function f() {
-  const missing = "./no-such-file.js";
+  const missing = './no-such-file.js';
   return import(missing);
 }

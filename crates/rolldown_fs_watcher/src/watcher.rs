@@ -220,6 +220,8 @@ mod tests {
       std::env::temp_dir().join(format!("rolldown_fs_watcher_excluded_{}", std::process::id()));
     let _ = fs::remove_dir_all(&root);
     fs::create_dir_all(&root).unwrap();
+    let seed = root.join("seed.js");
+    fs::write(&seed, "0").unwrap();
     let (tx, rx) = mpsc::channel();
     let config = FsWatcherConfig {
       use_polling: true,
@@ -231,11 +233,26 @@ mod tests {
     let mut watcher = FsWatcher::new(ChannelHandler(tx), &config).unwrap();
     watcher.watch_paths([&root], |_| true).unwrap();
 
+    // The poll backend takes its baseline on the scan after `watch_paths` returns, and a file
+    // created before that scan is never reported. Touch a known file until the backend reports
+    // it, which proves the baseline is taken.
+    let mut paths = Vec::new();
+    let deadline = Instant::now() + Duration::from_secs(10);
+    for tick in 1.. {
+      fs::write(&seed, tick.to_string()).unwrap();
+      match rx.recv_timeout(Duration::from_millis(50)) {
+        Ok(events) if events.iter().any(|event| event.path == seed) => break,
+        Ok(_) | Err(mpsc::RecvTimeoutError::Timeout) => {
+          assert!(Instant::now() < deadline, "the poll backend never reported seed.js");
+        }
+        Err(error) => panic!("{error}"),
+      }
+    }
+
     fs::write(root.join("debug.log"), "").unwrap();
     fs::write(root.join("index.js"), "").unwrap();
 
     let index = root.join("index.js");
-    let mut paths = Vec::new();
     let deadline = Instant::now() + Duration::from_secs(5);
     while !paths.contains(&index) {
       let events = rx

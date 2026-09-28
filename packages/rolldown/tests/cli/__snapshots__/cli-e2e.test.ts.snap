@@ -24,6 +24,7 @@ OPTIONS
   --advancedChunks.minSize <advancedChunks.minSize>Minimum size of the chunk.
   --assetFileNames <name>     Name pattern for asset files.
   --banner <banner>           Code to insert the top of the bundled file (outside the wrapper function).
+  --checks.bundlerTimings     Whether to emit warnings when plugins and option callbacks take significant time during the build process.
   --checks.cannotCallNamespace Whether to emit warnings when a namespace is called as a function.
   --checks.circularDependency Whether to emit warnings when detecting circular dependency.
   --checks.commonJsVariableInEsm Whether to emit warnings when a CommonJS variable is used in an ES module.
@@ -42,7 +43,7 @@ OPTIONS
   --checks.mixedExports       Whether to emit warnings when the way to export values is ambiguous.
   --checks.moduleLevelDirective Whether to emit warnings for module-level directives other than \`use strict\`.
   --checks.namespaceConflict  Whether to emit warnings when multiple star re-exports provide the same name from different modules.
-  --checks.pluginTimings      Whether to emit warnings when plugins take significant time during the build process.
+  --checks.pluginTimings      Deprecated alias for bundlerTimings. Rolldown uses bundlerTimings if both options have values.
   --checks.preferBuiltinFeature Whether to emit warnings when a plugin that is covered by a built-in feature is used.
   --checks.sourcemapBroken    Whether to emit warnings when a plugin transforms code without generating a sourcemap.
   --checks.toleratedTransform Whether to emit warnings when detecting tolerated transform.
@@ -175,6 +176,7 @@ OPTIONS
   --advancedChunks.minSize <advancedChunks.minSize>Minimum size of the chunk.
   --assetFileNames <name>     Name pattern for asset files.
   --banner <banner>           Code to insert the top of the bundled file (outside the wrapper function).
+  --checks.bundlerTimings     Whether to emit warnings when plugins and option callbacks take significant time during the build process.
   --checks.cannotCallNamespace Whether to emit warnings when a namespace is called as a function.
   --checks.circularDependency Whether to emit warnings when detecting circular dependency.
   --checks.commonJsVariableInEsm Whether to emit warnings when a CommonJS variable is used in an ES module.
@@ -193,7 +195,7 @@ OPTIONS
   --checks.mixedExports       Whether to emit warnings when the way to export values is ambiguous.
   --checks.moduleLevelDirective Whether to emit warnings for module-level directives other than \`use strict\`.
   --checks.namespaceConflict  Whether to emit warnings when multiple star re-exports provide the same name from different modules.
-  --checks.pluginTimings      Whether to emit warnings when plugins take significant time during the build process.
+  --checks.pluginTimings      Deprecated alias for bundlerTimings. Rolldown uses bundlerTimings if both options have values.
   --checks.preferBuiltinFeature Whether to emit warnings when a plugin that is covered by a built-in feature is used.
   --checks.sourcemapBroken    Whether to emit warnings when a plugin transforms code without generating a sourcemap.
   --checks.toleratedTransform Whether to emit warnings when detecting tolerated transform.
@@ -326,6 +328,7 @@ OPTIONS
   --advancedChunks.minSize <advancedChunks.minSize>Minimum size of the chunk.
   --assetFileNames <name>     Name pattern for asset files.
   --banner <banner>           Code to insert the top of the bundled file (outside the wrapper function).
+  --checks.bundlerTimings     Whether to emit warnings when plugins and option callbacks take significant time during the build process.
   --checks.cannotCallNamespace Whether to emit warnings when a namespace is called as a function.
   --checks.circularDependency Whether to emit warnings when detecting circular dependency.
   --checks.commonJsVariableInEsm Whether to emit warnings when a CommonJS variable is used in an ES module.
@@ -344,7 +347,7 @@ OPTIONS
   --checks.mixedExports       Whether to emit warnings when the way to export values is ambiguous.
   --checks.moduleLevelDirective Whether to emit warnings for module-level directives other than \`use strict\`.
   --checks.namespaceConflict  Whether to emit warnings when multiple star re-exports provide the same name from different modules.
-  --checks.pluginTimings      Whether to emit warnings when plugins take significant time during the build process.
+  --checks.pluginTimings      Deprecated alias for bundlerTimings. Rolldown uses bundlerTimings if both options have values.
   --checks.preferBuiltinFeature Whether to emit warnings when a plugin that is covered by a built-in feature is used.
   --checks.sourcemapBroken    Whether to emit warnings when a plugin transforms code without generating a sourcemap.
   --checks.toleratedTransform Whether to emit warnings when detecting tolerated transform.
@@ -477,6 +480,7 @@ OPTIONS
   --advancedChunks.minSize <advancedChunks.minSize>Minimum size of the chunk.
   --assetFileNames <name>     Name pattern for asset files.
   --banner <banner>           Code to insert the top of the bundled file (outside the wrapper function).
+  --checks.bundlerTimings     Whether to emit warnings when plugins and option callbacks take significant time during the build process.
   --checks.cannotCallNamespace Whether to emit warnings when a namespace is called as a function.
   --checks.circularDependency Whether to emit warnings when detecting circular dependency.
   --checks.commonJsVariableInEsm Whether to emit warnings when a CommonJS variable is used in an ES module.
@@ -495,7 +499,7 @@ OPTIONS
   --checks.mixedExports       Whether to emit warnings when the way to export values is ambiguous.
   --checks.moduleLevelDirective Whether to emit warnings for module-level directives other than \`use strict\`.
   --checks.namespaceConflict  Whether to emit warnings when multiple star re-exports provide the same name from different modules.
-  --checks.pluginTimings      Whether to emit warnings when plugins take significant time during the build process.
+  --checks.pluginTimings      Deprecated alias for bundlerTimings. Rolldown uses bundlerTimings if both options have values.
   --checks.preferBuiltinFeature Whether to emit warnings when a plugin that is covered by a built-in feature is used.
   --checks.sourcemapBroken    Whether to emit warnings when a plugin transforms code without generating a sourcemap.
   --checks.toleratedTransform Whether to emit warnings when detecting tolerated transform.

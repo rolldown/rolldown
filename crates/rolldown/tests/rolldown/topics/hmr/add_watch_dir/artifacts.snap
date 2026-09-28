@@ -1,0 +1,49 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## entry.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+__rolldown_runtime__.registerGraph({
+	ids: ["entry.js"],
+	localCount: 1,
+	edges: [[]],
+	dynamicEdges: [[]]
+});
+//#region entry.js
+__rolldown_runtime__.createModuleHotContext("entry.js");
+__rolldown_runtime__.registerModule("entry.js");
+console.log("input1\n");
+//#endregion
+
+```
+
+# HMR Step 0
+
+## Code
+
+```js
+__rolldown_runtime__.registerGraph({ids:["entry.js"],localCount:1,edges:[[]],dynamicEdges:[[]]});
+//#region entry.js
+__rolldown_runtime__.registerFactory("entry.js", (function(__rolldown_module_id__) {
+	try {
+		__rolldown_runtime__.registerModule(__rolldown_module_id__);
+		const hot_entry = __rolldown_runtime__.createModuleHotContext(__rolldown_module_id__);
+		const content = "input2\n";
+		console.log(content);
+	} finally {}
+}));
+
+//#endregion
+```
+
+## Meta
+
+- update type: patch
+
+### Changed Ids
+
+- entry.js

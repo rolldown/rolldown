@@ -230,7 +230,7 @@ export interface PluginContext extends MinimalPluginContext {
     /**
      * The path to be monitored.
      *
-     * This can be an absolute path to a file or directory or a path relative to the current working directory.
+     * This can be an absolute path to a file or directory, or a path relative to the `cwd` option.
      */
     id: string,
   ): void;

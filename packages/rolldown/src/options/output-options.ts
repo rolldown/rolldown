@@ -798,6 +798,12 @@ export type BuiltinModuleTag = '$initial';
 /** @category Code Splitting */
 export type CodeSplittingGroup = {
   /**
+   * `debugName` gives this group a label in the bundler timing report.
+   *
+   * Set this option when `name` is a function. This option does not change the chunk name.
+   */
+  debugName?: string;
+  /**
    * Name of the group. It will be also used as the name of the chunk and replace the `[name]` placeholder in the {@linkcode OutputOptions.chunkFileNames | output.chunkFileNames} option.
    *
    * For example,

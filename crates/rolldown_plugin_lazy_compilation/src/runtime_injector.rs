@@ -1,0 +1,161 @@
+use oxc::{
+  allocator::{Allocator, GetAllocator},
+  ast::{
+    ast::{
+      Argument, BindingIdentifier, BindingPattern, Expression, FormalParameter,
+      FormalParameterKind, FormalParameters, FunctionBody, IdentifierName, Statement,
+      VariableDeclarator,
+    },
+    builder::{AstBuilder, GetAstBuilder},
+  },
+  ast_visit::{VisitJsMut, walk_js_mut},
+  span::SPAN,
+};
+
+const HELPER_NAME: &str = "__unwrap_lazy_compilation_entry";
+
+pub struct LazyCompilationRuntimeInjector<'ast> {
+  ast_builder: AstBuilder<'ast>,
+  pub transformed_count: usize,
+}
+
+impl<'ast> LazyCompilationRuntimeInjector<'ast> {
+  pub fn new(allocator: &'ast Allocator) -> Self {
+    Self { ast_builder: AstBuilder::new(allocator), transformed_count: 0 }
+  }
+}
+
+impl<'ast> VisitJsMut<'ast> for LazyCompilationRuntimeInjector<'ast> {
+  fn visit_expression(&mut self, expr: &mut Expression<'ast>) {
+    // First visit children
+    walk_js_mut::walk_expression(self, expr);
+
+    // Then transform import expressions
+    if matches!(expr, Expression::ImportExpression(_)) {
+      // Transform: import(x) -> import(x).then(__unwrap_lazy_compilation_entry)
+      let import_expr = std::mem::replace(expr, Expression::new_null_literal(SPAN, self));
+
+      // Build: import_expr.then(__unwrap_lazy_compilation_entry)
+      *expr = Expression::new_call_expression(
+        SPAN,
+        Expression::new_static_member_expression(
+          SPAN,
+          import_expr,
+          IdentifierName::new(SPAN, "then", self),
+          false,
+          self,
+        ),
+        None,
+        [Argument::new_identifier(SPAN, HELPER_NAME, self)],
+        false,
+        self,
+      );
+
+      self.transformed_count += 1;
+    }
+  }
+}
+
+impl<'ast> GetAstBuilder<'ast> for LazyCompilationRuntimeInjector<'ast> {
+  type Builder = AstBuilder<'ast>;
+
+  #[inline]
+  fn builder(&self) -> &AstBuilder<'ast> {
+    &self.ast_builder
+  }
+}
+
+impl<'ast> GetAllocator<'ast> for LazyCompilationRuntimeInjector<'ast> {
+  #[inline]
+  fn allocator(&self) -> &'ast Allocator {
+    self.ast_builder.allocator()
+  }
+}
+
+/// Creates the helper function:
+/// ```js
+/// function __unwrap_lazy_compilation_entry(m) {
+///   var e = m['rolldown:exports'];
+///   return e ? e : m;
+/// }
+/// ```
+pub fn create_unwrap_lazy_compilation_entry_helper(allocator: &Allocator) -> Statement<'_> {
+  let ast_builder = AstBuilder::new(allocator);
+
+  // Parameter: m
+  let params = FormalParameters::boxed(
+    SPAN,
+    FormalParameterKind::FormalParameter,
+    [FormalParameter::new(
+      SPAN,
+      [],
+      BindingPattern::new_binding_identifier(SPAN, "m", &ast_builder),
+      None,
+      None,
+      false,
+      None,
+      false,
+      false,
+      &ast_builder,
+    )],
+    None,
+    &ast_builder,
+  );
+
+  // var e = m['rolldown:exports'];
+  let var_decl_stmt = Statement::new_variable_declaration(
+    SPAN,
+    oxc::ast::ast::VariableDeclarationKind::Var,
+    [VariableDeclarator::new(
+      SPAN,
+      BindingPattern::new_binding_identifier(SPAN, "e", &ast_builder),
+      None,
+      Some(Expression::new_computed_member_expression(
+        SPAN,
+        Expression::new_identifier(SPAN, "m", &ast_builder),
+        Expression::new_string_literal(SPAN, "rolldown:exports", None, &ast_builder),
+        false,
+        &ast_builder,
+      )),
+      false,
+      &ast_builder,
+    )],
+    false,
+    &ast_builder,
+  );
+
+  // return e ? e : m;
+  let return_stmt = Statement::new_return_statement(
+    SPAN,
+    Some(Expression::new_conditional_expression(
+      SPAN,
+      Expression::new_identifier(SPAN, "e", &ast_builder),
+      Expression::new_identifier(SPAN, "e", &ast_builder),
+      Expression::new_identifier(SPAN, "m", &ast_builder),
+      &ast_builder,
+    )),
+    &ast_builder,
+  );
+
+  // Function body with both statements
+  let mut body_stmts = oxc::allocator::Vec::with_capacity_in(2, &ast_builder);
+  body_stmts.push(var_decl_stmt);
+  body_stmts.push(return_stmt);
+  let body = FunctionBody::boxed(SPAN, [], body_stmts, &ast_builder);
+
+  // function __unwrap_lazy_compilation_entry(m) { ... }
+  Statement::new_function_declaration(
+    SPAN,
+    oxc::ast::ast::FunctionType::FunctionDeclaration,
+    Some(BindingIdentifier::new(SPAN, HELPER_NAME, &ast_builder)),
+    false, // generator
+    false, // async
+    false, // declare
+    None,  // type_parameters
+    None,  // this_param
+    params,
+    None, // return_type
+    Some(body),
+    &ast_builder,
+  )
+}

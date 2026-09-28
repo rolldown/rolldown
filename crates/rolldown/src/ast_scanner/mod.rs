@@ -355,6 +355,10 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
       self.result.this_expr_replace_map = generate_replace_this_expr_map(
         &self.top_level_this_expr_set,
         if exports_kind.is_commonjs() {
+          // The rewrite changes `this` to `exports`.
+          // The wrapper requires an `exports` parameter for the new reference.
+          // See internal-docs/linking/determine-module-exports-kind/implementation.md.
+          self.result.ast_usage.insert(EcmaModuleAstUsage::ExportsRef);
           ThisExprReplaceKind::Exports
         } else {
           ThisExprReplaceKind::Context

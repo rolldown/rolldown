@@ -12,7 +12,7 @@ import type {
   LogLevelOption,
   LogLevelWithError,
   LogOrStringHandler,
-} from '../log/logging';
+} from '../log/logging.ts';
 import type {
   DevModeOptions,
   ExternalOption,
@@ -21,7 +21,7 @@ import type {
   OnLogFunction,
   OnwarnFunction,
   OptimizationOptions,
-} from '../options/input-options';
+} from '../options/input-options.ts';
 import type {
   AddonFunction,
   CodeSplittingNameFunction,
@@ -40,13 +40,13 @@ import type {
   CodeSplittingOptions,
   GeneratedCodePreset,
   GeneratedCodeOptions,
-} from '../options/output-options';
-import type { RolldownOutputPluginOption, RolldownPluginOption } from '../plugin';
-import type { SourcemapIgnoreListOption, SourcemapPathTransformOption } from '../types/misc';
-import type { RenderedChunk } from '../types/rolldown-output';
-import type { AnyFn, StringOrRegExp } from '../types/utils';
-import { flattenValibotSchema } from './flatten-valibot-schema';
-import { styleText } from './style-text';
+} from '../options/output-options.ts';
+import type { RolldownOutputPluginOption, RolldownPluginOption } from '../plugin/index.ts';
+import type { SourcemapIgnoreListOption, SourcemapPathTransformOption } from '../types/misc.ts';
+import type { RenderedChunk } from '../types/rolldown-output.ts';
+import type { AnyFn, StringOrRegExp } from '../types/utils.ts';
+import { flattenValibotSchema } from './flatten-valibot-schema.ts';
+import { styleText } from './style-text.ts';
 import type {
   ChecksOptions,
   InputOption,
@@ -55,7 +55,7 @@ import type {
   TransformOptions,
   TreeshakingOptions,
   WatcherOptions,
-} from '..';
+} from '../index.ts';
 
 type IsSchemaSubType<
   SubTypeSchema extends v.BaseSchema<unknown, unknown, v.BaseIssue<unknown>>,
@@ -400,10 +400,16 @@ const ChecksOptionsSchema = v.strictObject({
     v.optional(v.boolean()),
     v.description('Whether to emit warnings when Rolldown could not clean the output directory'),
   ),
+  bundlerTimings: v.pipe(
+    v.optional(v.boolean()),
+    v.description(
+      'Whether to emit warnings when plugins and option callbacks take significant time during the build process',
+    ),
+  ),
   pluginTimings: v.pipe(
     v.optional(v.boolean()),
     v.description(
-      'Whether to emit warnings when plugins take significant time during the build process',
+      'Deprecated alias for bundlerTimings. Rolldown uses bundlerTimings if both options have values.',
     ),
   ),
   duplicateShebang: v.pipe(
@@ -850,6 +856,7 @@ const AdvancedChunksSchema = v.strictObject({
   groups: v.optional(
     v.array(
       v.strictObject({
+        debugName: v.optional(v.string()),
         name: v.union([v.string(), AdvancedChunksNameFunctionSchema]),
         test: v.optional(v.union([StringOrRegExpSchema, AdvancedChunksTestFunctionSchema])),
         priority: v.optional(v.number()),

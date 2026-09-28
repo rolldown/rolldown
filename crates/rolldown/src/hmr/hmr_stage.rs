@@ -1,5 +1,6 @@
 use std::{
   ops::{Deref, DerefMut},
+  path::Path,
   sync::{
     Arc,
     atomic::{AtomicU32, Ordering},
@@ -91,7 +92,9 @@ impl<'a, Fs: FileSystem + Clone + 'static> HmrStage<'a, Fs> {
     Self { input }
   }
 
-  /// Stage order is documented in `internal-docs/dev-engine/implementation.md`
+  /// See `internal-docs/hmr/design.md` for the principles and invariants this
+  /// stage implements. Stage order is documented in
+  /// `internal-docs/dev-engine/implementation.md`
   /// ("Inside `compute_hmr_update_for_file_changes`").
   #[expect(clippy::too_many_lines)]
   pub async fn compute_hmr_update_for_file_changes(
@@ -126,6 +129,7 @@ impl<'a, Fs: FileSystem + Clone + 'static> HmrStage<'a, Fs> {
     // the update empty. Vite ships hook-returned modules unconditionally.
     let mut hook_selected_modules = FxHashSet::default();
     for (changed_file_path, event) in changed_file_paths {
+      let changed_path = Path::new(changed_file_path);
       let changed_file_path = ArcStr::from(changed_file_path.to_slash());
 
       // Default affected set: the file's own module (kept even for deletes — the hook contract
@@ -143,7 +147,12 @@ impl<'a, Fs: FileSystem + Clone + 'static> HmrStage<'a, Fs> {
         .plugin_driver
         .transform_dependencies
         .iter()
-        .filter_map(|entry| entry.value().contains(&changed_file_path).then_some(*entry.key()))
+        .filter_map(|entry| {
+          changed_path
+            .ancestors()
+            .any(|ancestor| entry.value().contains(ancestor))
+            .then_some(*entry.key())
+        })
         .collect::<Vec<_>>();
       transform_dep_modules
         .sort_unstable_by_key(|module_idx| self.module_table().modules[*module_idx].stable_id());
@@ -507,8 +516,8 @@ impl<'a, Fs: FileSystem + Clone + 'static> HmrStage<'a, Fs> {
   /// entry-chunk execution; `initModule` returns them without a factory). Both are
   /// server-derived; selection never reads client-reported runtime state. Contrast
   /// with HMR patches, whose affected set must re-run and therefore subtracts the
-  /// ship map only. The ship map itself is written only when the serving middleware
-  /// observes the response complete.
+  /// ship map only. The ship map itself is written only by the delivery notification
+  /// (`DevEngine::notify_payload_delivered`).
   pub async fn compile_lazy_entry(
     &mut self,
     module_id: &str,
@@ -669,9 +678,15 @@ impl<'a, Fs: FileSystem + Clone + 'static> HmrStage<'a, Fs> {
       source_joiner.append_source_dyn(source);
     }
 
-    // Registrations only — deliberately no execute-entry tail; `requestLazy` runs the module.
-    // Executing here would run it inside the proxy's async wrapper, turning a throw from its
-    // body into a floating rejection instead of one that reaches the importer.
+    // A lazy chunk is delivery + execute-entry — no walk, no cache removals. The tail is the
+    // one uniform re-execution gate: the stub removed the proxy id from the cache, so this misses the
+    // registry and runs the fetched-template factory.
+    let entry_stable_id = self.module_table().modules[entry_module_idx].stable_id().as_str();
+    source_joiner.append_source(format!(
+      "__rolldown_runtime__.initModule({})",
+      json_escape_simd::escape(entry_stable_id)
+    ));
+
     let (mut code, mut map) = source_joiner.join();
 
     let lazy_patch_id = self.next_hmr_patch_id.fetch_add(1, Ordering::Relaxed);

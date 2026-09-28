@@ -35,6 +35,23 @@ test('the packaged runtime base is byte-identical to the bundled runtime base', 
   );
 });
 
+// Vite serves the runtime from the installed package at dev time and finds the files the entry
+// imports by this name pattern (`getRolldownDevRuntimeFiles` in vite). Renaming or moving them
+// breaks every bundled-dev page in the browser.
+test('the runtime entry imports only siblings named experimental-runtime*.mjs', () => {
+  const entryUrl = new URL(import.meta.resolve('rolldown/experimental/runtime'));
+  expect(entryUrl.pathname.endsWith('/experimental-runtime.mjs')).toBe(true);
+
+  const imports = [...fs.readFileSync(entryUrl, 'utf8').matchAll(/\bfrom\s*['"]([^'"]+)['"]/g)].map(
+    (match) => match[1],
+  );
+  expect(imports.length).toBeGreaterThan(0);
+  for (const specifier of imports) {
+    expect(specifier).toMatch(/^\.\/experimental-runtime[^/]*\.mjs$/);
+    expect(fs.existsSync(new URL(specifier, entryUrl))).toBe(true);
+  }
+});
+
 test('the package does not emit a separate runtime injection source', () => {
   const runtimeSourceUrl = new URL(
     './experimental-runtime-source.mjs',
@@ -72,12 +89,77 @@ test('registerGraph maintains static + dynamic reverse indexes; getImporters uni
   expect(runtime.getImporters('both.js')).toEqual(['app.js']);
 });
 
+test('registerGraph keeps the export names each static edge imports', async () => {
+  const { runtime } = await createRuntime();
+
+  // app → named (imports `a`, `default`), app → effect (side-effect only), app ⇢ lazy
+  runtime.registerGraph({
+    ids: ['app.js', 'named.js', 'effect.js', 'lazy.js'],
+    localCount: 4,
+    edges: [[1, 2], [], [], []],
+    bindings: { 0: [['a', 'default'], []] },
+    dynamicEdges: [[3], [], [], []],
+  });
+  expect(runtime.getImportedBindings('app.js', 'named.js')).toEqual(['a', 'default']);
+  expect(runtime.getImportedBindings('app.js', 'effect.js')).toEqual([]);
+  // a dynamic import() reads the whole namespace
+  expect(runtime.getImportedBindings('app.js', 'lazy.js')).toEqual(['*']);
+  expect(runtime.getImportedBindings('app.js', 'missing.js')).toBeUndefined();
+
+  // a static edge and a dynamic import() to the same module: the import() reads everything
+  runtime.registerGraph({
+    ids: ['both.js', 'dep.js'],
+    localCount: 2,
+    edges: [[1], []],
+    bindings: { 0: [['a']] },
+    dynamicEdges: [[1], []],
+  });
+  expect(runtime.getImportedBindings('both.js', 'dep.js')).toEqual(['a', '*']);
+  runtime.registerGraph({
+    ids: ['both.js', 'dep.js'],
+    localCount: 2,
+    edges: [[1], []],
+    bindings: { 0: [['*', 'a']] },
+    dynamicEdges: [[1], []],
+  });
+  expect(runtime.getImportedBindings('both.js', 'dep.js')).toEqual(['*', 'a']);
+
+  // re-carrying a module replaces its names (last write wins)
+  runtime.registerGraph({
+    ids: ['app.js', 'named.js'],
+    localCount: 2,
+    edges: [[1], []],
+    bindings: { 0: [['b']] },
+  });
+  expect(runtime.getImportedBindings('app.js', 'named.js')).toEqual(['b']);
+
+  // `null` and missing trailing entries mean "imports everything", and so does a missing row
+  runtime.registerGraph({
+    ids: ['sparse.js', 'x.js', 'y.js', 'z.js', 'no-row.js'],
+    localCount: 5,
+    edges: [[1, 2, 3], [], [], [], [1]],
+    bindings: { 0: [null, ['a']] },
+  });
+  expect(runtime.getImportedBindings('sparse.js', 'x.js')).toEqual(['*']);
+  expect(runtime.getImportedBindings('sparse.js', 'y.js')).toEqual(['a']);
+  expect(runtime.getImportedBindings('sparse.js', 'z.js')).toEqual(['*']);
+  expect(runtime.getImportedBindings('no-row.js', 'x.js')).toEqual(['*']);
+
+  // a payload without `bindings` (an older compiler) is read as "imports everything"
+  runtime.registerGraph({
+    ids: ['old.js', 'dep.js'],
+    localCount: 2,
+    edges: [[1], []],
+  });
+  expect(runtime.getImportedBindings('old.js', 'dep.js')).toEqual(['*']);
+});
+
 test('initModule is registry-gated and returns the live exports', async () => {
   const { runtime } = await createRuntime();
   const factory = vi.fn((id: string) => {
     runtime.registerModule(id, { exports: { value: 1 } });
   });
-  runtime.registerFactory('foo.js', 'esm', factory);
+  runtime.registerFactory('foo.js', factory);
 
   expect(runtime.isExecuted('foo.js')).toBe(false);
   expect(runtime.hasFactory('foo.js')).toBe(true);
@@ -104,7 +186,7 @@ test('initModule throws MissingFactoryError when no factory is mapped', async ()
 test('removeModuleCache deletes only the registry entry, fires the hook, and re-arms the factory', async () => {
   const { runtime } = await createRuntime();
   let generation = 0;
-  runtime.registerFactory('foo.js', 'esm', (id: string) => {
+  runtime.registerFactory('foo.js', (id: string) => {
     generation += 1;
     runtime.registerModule(id, { exports: { generation } });
   });
@@ -127,7 +209,7 @@ test('removeModuleCache deletes only the registry entry, fires the hook, and re-
 
 test('a factory that throws mid-body stays registered', async () => {
   const { runtime } = await createRuntime();
-  runtime.registerFactory('broken.js', 'esm', (id: string) => {
+  runtime.registerFactory('broken.js', (id: string) => {
     runtime.registerModule(id, { exports: {} });
     throw new Error('boom');
   });

@@ -28,7 +28,7 @@ console.log("input\n");
 ```js
 __rolldown_runtime__.registerGraph({ids:["entry.js"],localCount:1,edges:[[]],dynamicEdges:[[]]});
 //#region entry.js
-__rolldown_runtime__.registerFactory("entry.js", "esm", (function(__rolldown_module_id__) {
+__rolldown_runtime__.registerFactory("entry.js", (function(__rolldown_module_id__) {
 	try {
 		__rolldown_runtime__.registerModule(__rolldown_module_id__);
 		const hot_entry = __rolldown_runtime__.createModuleHotContext(__rolldown_module_id__);

@@ -26,7 +26,7 @@ use crate::{
   module_finalizers::{ScopeHoistingFinalizer, TraverseState},
   stages::{
     generate_stage::{
-      FinalEsmInitMetadata, Sealed,
+      FinalEsmInitMetadata, InlineCommonChunksState, Sealed,
       order_wrap_state::{EsmInitOrigin, EsmInitTarget, OrderWrapState},
     },
     link_stage::SafelyMergeCjsNsInfo,
@@ -36,8 +36,14 @@ use crate::{
 
 pub struct ScopeHoistingFinalizerContext<'me> {
   pub idx: ModuleIdx,
+  /// The output file the finalized code is printed in. For a module of an inline common chunk
+  /// record this is the carrier, not the record.
   pub chunk: &'me Chunk,
+  /// The chunk the module is placed in (`module_to_chunk`).
   pub chunk_idx: ChunkIdx,
+  /// The index of `chunk`. With `chunk_idx` it says which bridges resolve the module's reads of
+  /// inline common chunk records.
+  pub file_idx: ChunkIdx,
   pub module: &'me NormalModule,
   /// Statement-info table for the current module, threaded in from the
   /// link-stage side `IndexVec<ModuleIdx, StmtInfos>` (see `LinkStage.stmt_infos`).
@@ -68,6 +74,8 @@ pub struct ScopeHoistingFinalizerContext<'me> {
   /// True if any module in the bundle has enum member values to inline.
   /// Allows skipping enum inlining checks in the hot visitor path for enum-free bundles.
   pub has_enum_inlining: bool,
+  /// `experimentalInlineCommonChunks`: records and the bridges this chunk reads them through.
+  pub inline_state: &'me InlineCommonChunksState,
 }
 
 #[derive(Clone, Copy, Debug)]

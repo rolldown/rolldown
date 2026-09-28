@@ -16,7 +16,7 @@ __rolldown_runtime__.registerGraph({
 //#region exist-dep-cjs.js
 var require_exist_dep_cjs = /* @__PURE__ */ __commonJSMin(((exports, module) => {
 	__rolldown_runtime__.createModuleHotContext("exist-dep-cjs.js");
-	__rolldown_runtime__.registerModule("exist-dep-cjs.js", module);
+	__rolldown_runtime__.registerModule("exist-dep-cjs.js", module, 1);
 	exports.value = "exist-cjs";
 }));
 //#endregion
@@ -96,11 +96,11 @@ __rolldown_runtime__.registerFactory("hmr.js", (function(__rolldown_module_id__)
 		__rolldown_runtime__.registerModule(__rolldown_module_id__, { exports: __rolldown_exports__ });
 		const hot_hmr = __rolldown_runtime__.createModuleHotContext(__rolldown_module_id__);
 		async function foo() {
-			await (__rolldown_runtime__.initModule("exist-dep-cjs.js"), Promise.resolve().then(() => __rolldown_runtime__.__toDynamicImportESM(__rolldown_runtime__.loadExports("exist-dep-cjs.js")))).then(console.log);
+			await (__rolldown_runtime__.initModule("exist-dep-cjs.js"), Promise.resolve().then(() => /* @__PURE__ */ __rolldown_runtime__.__toESM(__rolldown_runtime__.loadExports("exist-dep-cjs.js")))).then(console.log);
 			await (__rolldown_runtime__.initModule("exist-dep-esm.js"), Promise.resolve().then(() => __rolldown_runtime__.loadExports("exist-dep-esm.js"))).then(console.log);
 		}
 		async function bar() {
-			await (__rolldown_runtime__.initModule("new-dep-cjs.js"), Promise.resolve().then(() => __rolldown_runtime__.__toDynamicImportESM(__rolldown_runtime__.loadExports("new-dep-cjs.js")))).then(console.log);
+			await (__rolldown_runtime__.initModule("new-dep-cjs.js"), Promise.resolve().then(() => /* @__PURE__ */ __rolldown_runtime__.__toESM(__rolldown_runtime__.loadExports("new-dep-cjs.js")))).then(console.log);
 			await (__rolldown_runtime__.initModule("new-dep-esm.js"), Promise.resolve().then(() => __rolldown_runtime__.loadExports("new-dep-esm.js"))).then(console.log);
 		}
 		hot_hmr.accept((mod) => {
@@ -117,7 +117,7 @@ __rolldown_runtime__.registerFactory("new-dep-cjs.js", (function(__rolldown_modu
 	try {
 		var __rolldown_module__ = { exports: {} };
 		var __rolldown_exports__ = __rolldown_module__.exports;
-		__rolldown_runtime__.registerModule(__rolldown_module_id__, __rolldown_module__);
+		__rolldown_runtime__.registerModule(__rolldown_module_id__, __rolldown_module__, 1);
 		const hot_new_dep_cjs = __rolldown_runtime__.createModuleHotContext(__rolldown_module_id__);
 		__rolldown_exports__.value = "new-cjs";
 	} finally {}

@@ -30,7 +30,7 @@ __rolldown_runtime__.registerGraph({
 //#region esm.js
 var import_cjs = /* @__PURE__ */ __toESM((/* @__PURE__ */ __commonJSMin(((exports, module) => {
 	__rolldown_runtime__.createModuleHotContext("cjs.js");
-	__rolldown_runtime__.registerModule("cjs.js", module);
+	__rolldown_runtime__.registerModule("cjs.js", module, 1);
 	module.exports.value = "cjs";
 })))());
 var esm_exports = /* @__PURE__ */ __exportAll({ value: () => value });

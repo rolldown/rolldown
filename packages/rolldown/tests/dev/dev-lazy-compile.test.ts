@@ -765,3 +765,131 @@ test('a repeat lazy import after an HMR update sees the new exports', async () =
   });
   expect(second.v).toBe('v2');
 });
+
+// vitejs/vite#23558: `import()` of a CommonJS module must resolve to its ESM view, with
+// `default` = `module.exports`, as a production build does.
+test(
+  'a lazy import of a CommonJS module resolves to its ESM view',
+  { timeout: TEST_TIMEOUT },
+  async ({ onTestFinished }) => {
+    const uniqueId = crypto.randomUUID().slice(0, 8);
+    const dir = path.join(import.meta.dirname, 'temp', `dev-lazy-cjs-${uniqueId}`);
+    fs.mkdirSync(dir, { recursive: true });
+    // `type: module`: the importer uses node-mode interop, as a production build would.
+    fs.writeFileSync(path.join(dir, 'package.json'), `{ "type": "module" }\n`);
+    fs.writeFileSync(path.join(dir, 'main.js'), `import('./lazy.cjs').then((m) => m.default);\n`);
+    fs.writeFileSync(
+      path.join(dir, 'lazy.cjs'),
+      `function Lazy() {}\nLazy.version = 'v1';\nmodule.exports = Lazy;\n`,
+    );
+
+    const engine = await dev(
+      {
+        input: path.join(dir, 'main.js'),
+        experimental: { devMode: { lazy: true, implement: '', skipCommonRuntimeInjection: true } },
+      },
+      { dir: path.join(dir, 'dist'), format: 'esm' },
+      {},
+    );
+
+    onTestFinished(async () => {
+      await engine.close();
+      if (!process.env.CI) {
+        fs.rmSync(dir, { recursive: true, force: true });
+      }
+    });
+
+    await engine.run();
+
+    // The importer passes its interop mode as the third argument.
+    const mainCode = fs.readFileSync(path.join(dir, 'dist', 'main.js'), 'utf8');
+    expect(mainCode).toMatch(/requestLazy\("[^"]*lazy\.cjs", \(\) => import\([^)]*\), 1\)/);
+
+    await engine.registerClient('cjs-client');
+    const chunk = await engine.compileEntry(
+      `${path.join(dir, 'lazy.cjs')}?rolldown-lazy=1`,
+      'cjs-client',
+    );
+    // The CommonJS module registers with the flag the runtime reads.
+    expect(chunk.code).toContain('registerModule(__rolldown_module_id__, __rolldown_module__, 1)');
+
+    const { DevRuntime } = await import(import.meta.resolve('rolldown/experimental/runtime'));
+    const runtime = new DevRuntime('cjs-client');
+    runtime.hooks = { createModuleHotContext: () => ({}), onModuleCacheRemoval: () => {} };
+    vm.runInThisContext(`(__rolldown_runtime__) => {\n${chunk.code}\n}`)(runtime);
+
+    const realId = /registerFactory\("([^"]*lazy\.cjs)"/.exec(chunk.code)![1];
+    const ns = await runtime.requestLazy(realId, async () => {}, 1);
+    expect(typeof ns.default).toBe('function');
+    expect(ns.default.version).toBe('v1');
+    expect(ns.version).toBe('v1');
+    expect(runtime.loadExports(realId)).toBe(ns.default);
+  },
+);
+
+// Resident module (no fetch): the view is still built, per importer, on top of the memoized run.
+test('requestLazy applies CommonJS interop per importer, on top of the memoized run', async () => {
+  const { DevRuntime } = await import(import.meta.resolve('rolldown/experimental/runtime'));
+  const runtime = new DevRuntime('cjs-resident-client');
+  runtime.hooks = { createModuleHotContext: () => ({}), onModuleCacheRemoval: () => {} };
+
+  // `__esModule` + own `default`: node mode keeps `default` = exports, Babel mode unwraps it.
+  const cjsExports = { __esModule: true, default: 'inner', named: 'n' };
+  const cjsId = 'transpiled.cjs';
+  runtime.registerFactory(cjsId, (moduleId: string) => {
+    runtime.registerModule(moduleId, { exports: cjsExports }, true);
+  });
+  runtime.initModule(cjsId);
+
+  const noFetch = async () => {
+    throw new Error('should not fetch: the module is resident');
+  };
+  const nodeView = await runtime.requestLazy(cjsId, noFetch, 1);
+  expect(nodeView.default).toBe(cjsExports);
+  expect(nodeView.named).toBe('n');
+  const babelView = await runtime.requestLazy(cjsId, noFetch);
+  expect(babelView.default).toBe('inner');
+  expect(babelView.named).toBe('n');
+
+  // ESM is handed back as is: no extra `default`, same namespace object each time.
+  const esmId = 'esm.js';
+  const esmNs = runtime.__exportAll({ value: () => 1 });
+  runtime.registerFactory(esmId, (moduleId: string) => {
+    runtime.registerModule(moduleId, { exports: esmNs });
+  });
+  expect(await runtime.requestLazy(esmId, noFetch, 1)).toBe(esmNs);
+  expect(await runtime.requestLazy(esmId, noFetch)).toBe(esmNs);
+});
+
+// After an HMR patch the module is evicted and its factory replaced. A repeat `import()` re-runs
+// it, and the new registration must carry the CommonJS flag again.
+test('a lazily imported CommonJS module keeps its ESM view after an HMR update', async () => {
+  const { DevRuntime } = await import(import.meta.resolve('rolldown/experimental/runtime'));
+  const runtime = new DevRuntime('cjs-update-client');
+  runtime.hooks = { createModuleHotContext: () => ({}), onModuleCacheRemoval: () => {} };
+
+  const id = 'lib.cjs';
+  const registerVersion = (version: string) =>
+    runtime.registerFactory(id, (moduleId: string) => {
+      const module = { exports: { version } };
+      runtime.registerModule(moduleId, module, 1);
+    });
+
+  const first = await runtime.requestLazy(id, async () => registerVersion('v1'), 1);
+  expect(first.default).toEqual({ version: 'v1' });
+
+  // What `applyUpdate` does for a patched module: new factory, evict, re-run.
+  registerVersion('v2');
+  runtime.removeModuleCache(id);
+  runtime.initModule(id);
+
+  const second = await runtime.requestLazy(
+    id,
+    async () => {
+      throw new Error('should not re-fetch: the factory is already registered');
+    },
+    1,
+  );
+  expect(second.default).toEqual({ version: 'v2' });
+  expect(second.version).toBe('v2');
+});

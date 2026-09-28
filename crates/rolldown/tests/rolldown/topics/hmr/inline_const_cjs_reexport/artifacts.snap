@@ -34,7 +34,7 @@ __rolldown_runtime__.registerGraph({
 //#region jsx-dev-runtime.development.js
 var require_jsx_dev_runtime_development = /* @__PURE__ */ __commonJSMin(((exports, module) => {
 	__rolldown_runtime__.createModuleHotContext("jsx-dev-runtime.development.js");
-	__rolldown_runtime__.registerModule("jsx-dev-runtime.development.js", module);
+	__rolldown_runtime__.registerModule("jsx-dev-runtime.development.js", module, 1);
 	exports.jsxDEV = function jsxDEV(type, props) {
 		return {
 			type,
@@ -46,7 +46,7 @@ var require_jsx_dev_runtime_development = /* @__PURE__ */ __commonJSMin(((export
 //#region jsx-dev-runtime.js
 var require_jsx_dev_runtime = /* @__PURE__ */ __commonJSMin(((exports, module) => {
 	__rolldown_runtime__.createModuleHotContext("jsx-dev-runtime.js");
-	__rolldown_runtime__.registerModule("jsx-dev-runtime.js", module);
+	__rolldown_runtime__.registerModule("jsx-dev-runtime.js", module, 1);
 	module.exports = require_jsx_dev_runtime_development();
 }));
 //#endregion

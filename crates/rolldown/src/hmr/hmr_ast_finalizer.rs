@@ -586,13 +586,12 @@ impl<'ast> HmrAstFinalizer<'_, 'ast> {
     };
 
     // TODO: hyf0 should switch to a more robust way to identify lazy proxy modules
+    let is_node_mode = self.module.should_consider_node_esm_spec_for_dynamic_import();
+
     if importee.id.contains("?rolldown-lazy=1") {
-      *it = create_request_lazy_call(&importee.id, &importee.stable_id, self);
+      *it = create_request_lazy_call(&importee.id, &importee.stable_id, is_node_mode, self);
       return;
     }
-
-    // FIXME: consider about CommonJS interop
-    let is_importee_cjs = importee.exports_kind == rolldown_common::ExportsKind::CommonJs;
 
     // __rolldown_runtime__.loadExports('./foo.js')
     // Use stable module ID for consistent runtime lookup
@@ -610,28 +609,12 @@ impl<'ast> HmrAstFinalizer<'_, 'ast> {
       self,
     );
 
-    if is_importee_cjs {
-      let is_node_cjs = importee.def_format.is_commonjs();
-
-      let mut args =
-        oxc::allocator::Vec::from_value_in(ast::Argument::from(load_exports_call_expr), self);
-      if is_node_cjs {
-        args.push(ast::Argument::new_numeric_literal(
-          SPAN,
-          1.0,
-          None,
-          ast::NumberBase::Decimal,
-          self,
-        ));
-      }
-
-      // __rolldown_runtime__.__toDynamicImportESM(__rolldown_runtime__.loadExports('./foo.js'), node_mode)
-      load_exports_call_expr = ast::Expression::new_call_expression(
-        SPAN,
-        Expression::new_identifier(SPAN, "__rolldown_runtime__.__toDynamicImportESM", self),
-        None,
-        args,
-        false,
+    if importee.exports_kind.is_commonjs() {
+      // __rolldown_runtime__.__toESM(__rolldown_runtime__.loadExports('./foo.js')[, 1])
+      load_exports_call_expr = Expression::new_to_esm_wrapper(
+        Expression::new_identifier(SPAN, "__rolldown_runtime__.__toESM", self),
+        load_exports_call_expr,
+        is_node_mode,
         self,
       );
     }

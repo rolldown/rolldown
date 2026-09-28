@@ -104,6 +104,14 @@ The first argument is the **real** module's stable id, known at compile time; th
 
 Nothing is registered under the proxy id in the client. A cache entry with no factory behind it reads as "executed" to the HMR boundary walk, which would turn a patch arriving mid-load into a full page reload.
 
+**CommonJS interop happens in the runtime, not at the call site.** A production build rewrites `import()` of a CommonJS module into `__toESM(require_x(), isNodeMode)`, so the importer sees `default` = `module.exports`. The lazy call site cannot do the same: the importer is compiled while the importee is still a stub, so its exports kind is unknown (vitejs/vite#23558). The split is:
+
+- The call site passes only what the importer knows: `is_node_mode` (`should_consider_node_esm_spec_for_dynamic_import`, the same choice a production build makes) as a third argument `1`.
+- A CommonJS module registers itself with `registerModule(id, module, 1)`. This is the same statement for the initial bundle, HMR patches and lazy chunks (`create_register_module_stmt`).
+- `requestLazy` memoizes the module run under the real id, then hands each caller `__toESM(exports, isNodeMode)` when the module registered as CommonJS, and the namespace as is otherwise. Interop is applied per caller because the mode is per importer.
+
+Pinned by the cjs-interop browser spec (fetched and resident module) and the CommonJS tests in `dev-lazy-compile.test.ts`.
+
 ### 3. Proxy Module States
 
 A proxy module has two states that determine what content the `LazyCompilationPlugin` returns:

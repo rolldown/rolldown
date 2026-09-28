@@ -1,0 +1,81 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## a.js
+
+```js
+import { t as init_shared } from "./shared.js";
+import { t as __esmMin } from "./rolldown-runtime.js";
+//#region a.js
+var m;
+function init_a() {
+	return (init_a = __esmMin((async () => {
+		init_shared();
+		m = await import("./lazy.js");
+		globalThis.events.push("A S" + m.s);
+	})))();
+}
+//#endregion
+await init_a();
+
+```
+
+## b.js
+
+```js
+import { t as init_shared } from "./shared.js";
+import { t as __esmMin } from "./rolldown-runtime.js";
+//#region b.js
+function init_b() {
+	return (init_b = __esmMin((() => {
+		init_shared();
+		globalThis.events.push("B S");
+	})))();
+}
+//#endregion
+init_b();
+
+```
+
+## lazy.js
+
+```js
+import { n as s, t as init_shared } from "./shared.js";
+import { t as __esmMin } from "./rolldown-runtime.js";
+//#region lazy.js
+function init_lazy() {
+	return (init_lazy = __esmMin((() => {
+		init_shared();
+	})))();
+}
+//#endregion
+init_lazy();
+export { s };
+
+```
+
+## rolldown-runtime.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+export { __esmMin as t };
+
+```
+
+## shared.js
+
+```js
+import { t as __esmMin } from "./rolldown-runtime.js";
+//#region shared.js
+var s;
+function init_shared() {
+	return (init_shared = __esmMin((() => {
+		s = "S";
+	})))();
+}
+//#endregion
+export { s as n, init_shared as t };
+
+```

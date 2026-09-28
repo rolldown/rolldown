@@ -1,6 +1,13 @@
 {
   "extends": "../../../tsconfig.json",
-  "include": ["src/*", "src/**/*", "**/_config.ts", "**/*.test.ts", "**/*.test-d.ts"],
+  "include": [
+    "src/*",
+    "src/**/*",
+    "**/_config.ts",
+    "**/*.test.ts",
+    "**/*.test-d.ts",
+    "../src/types.d.ts"
+  ],
   "compilerOptions": {
     "types": ["node", "vite/client"],
     // `../` rather than `./` so a test may unit-test the package's own internals, which
@@ -8,6 +15,7 @@
     // which files may be referenced.
     "rootDir": "../",
     "allowJs": true,
-    "isolatedDeclarations": false
+    "isolatedDeclarations": false,
+    "experimentalDecorators": true
   }
 }

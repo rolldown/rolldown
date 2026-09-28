@@ -1,4 +1,158 @@
 
+## [1.2.11] - 2026-09-24
+
+### 🚀 Features
+
+- watch: report only file events (#10974) by @shulaoda
+
+### 🐛 Bug Fixes
+
+- sourcemap: preserve names through `collapse_sourcemaps` (#9486) by @eoin
+- watch: map metadata events by kind and missing paths as deleted (#10973) by @shulaoda
+
+### 🚜 Refactor
+
+- rolldown_fs_watcher: hand the handler file events instead of notify results (#10980) by @shulaoda
+- rolldown_fs_watcher: share one event handler adapter between the notify watchers (#10979) by @shulaoda
+- rolldown_fs_watcher: register every path with one watch mode (#10978) by @shulaoda
+- rolldown_fs_watcher: tweak the backend traits and the event mapping (#10977) by @shulaoda
+- watch: translate notify events inside FsWatcher (#10972) by @shulaoda
+
+### 📚 Documentation
+
+- watch: update the fs watcher layout and the dev coordinator message (#10981) by @shulaoda
+- watch: document the event translation in FsWatcher (#10975) by @shulaoda
+
+### ◀️ Revert
+
+- "perf(dev/lazy): fetch a lazy route in one request" (#10789) (#10982) by @h-a-n-a
+
+### ❤️ New Contributors
+
+* @eoin made their first contribution in [#9486](https://github.com/rolldown/rolldown/pull/9486)
+
+
+## [1.2.10] - 2026-09-23
+
+### 🚀 Features
+
+- rolldown_plugin_esm_external_require: prefer 'module.exports' over a namespace spread (#10901) by @isker
+- watch: support directories in addWatchFile (#10944) by @shulaoda
+- label code-splitting timing rows (#10896) by @IWANABETHATGUY
+- separate code-splitting group timing rows (#10892) by @IWANABETHATGUY
+- clarify callback owners in the timing report (#10890) by @IWANABETHATGUY
+- add checks.bundlerTimings with deprecated pluginTimings alias (#10883) by @IWANABETHATGUY
+
+### 🐛 Bug Fixes
+
+- code-splitting: initialize leaves behind a re-exported namespace import (#10694) by @hyfdev
+- node: record the WASI target on the WebContainer binding fallback (#10952) by @shulaoda
+- dev: force incremental build on in DevEngine::new (#10958) by @o-alexandrov
+- tree-shaking: propagate side effects through cycles (#10893) by @IWANABETHATGUY
+- deconflict CJS locals that shadow a renamed require wrapper (#10793) by @logaretm
+- include group indexes in labeled `codeSplitting` timing rows (#10916) by @IWANABETHATGUY
+- docs: type-check Algolia `indices` option (#10934) by @shulaoda
+- docs: restore Algolia search (#10929) by @isker
+- tell code-splitting timing rows apart by position (#10903) by @IWANABETHATGUY
+
+### 🚜 Refactor
+
+- rolldown_fs_watcher: remove the single-path API (#10950) by @shulaoda
+- dev: register watch files through FsWatcher (#10949) by @shulaoda
+- watch: let FsWatcher own the watched paths (#10948) by @shulaoda
+- watch: identify watch files by normalized absolute path (#10943) by @shulaoda
+- plugin: build a plugin-resolved `ResolvedId` in one place (#10921) by @IWANABETHATGUY
+
+### 📚 Documentation
+
+- dev: add HMR design, align dev docs and engine comments (#10271) by @h-a-n-a
+
+### ⚡ Performance
+
+- batch `sourcemapPathTransform` calls (#10763) by @IWANABETHATGUY
+- batch `sourcemapIgnoreList` calls (#10762) by @IWANABETHATGUY
+- hmr: drop the unused kind argument from registerFactory (#10915) by @h-a-n-a
+
+### 🧪 Testing
+
+- handle Windows paths in sourcemap callback tests (#10942) by @IWANABETHATGUY
+
+### ⚙️ Miscellaneous Tasks
+
+- replace custom `ban-expect-assertions` JS lint with builtin `no-restricted-properties` (#10933) by @isker
+- deps: update napi (#10959) by @renovate[bot]
+- deps: upgrade oxc to 0.151.0 (#10939) by @camc314
+- deps: update test262 submodule for tests (#10941) by @rolldown-guard[bot]
+- deps: update npm packages (#10931) by @renovate[bot]
+- deps: update napi (#10928) by @renovate[bot]
+- deps: update dependency vite-plus to v0.3.3 (#10914) by @renovate[bot]
+- deps: update rust crates (#10932) by @renovate[bot]
+- deps: update github actions (#10930) by @renovate[bot]
+- deps: update dependency rolldown-plugin-dts to v0.28.6 (#10924) by @renovate[bot]
+- deps: update crate-ci/typos action to v1.50.2 (#10917) by @renovate[bot]
+- deps: update dependency @napi-rs/cli to v3.10.4 (#10913) by @renovate[bot]
+- deps: update napi (#10897) by @renovate[bot]
+
+### ❤️ New Contributors
+
+* @o-alexandrov made their first contribution in [#10958](https://github.com/rolldown/rolldown/pull/10958)
+
+
+## [1.2.9] - 2026-09-16
+
+### 🚀 Features
+
+- add `MODULE_LEVEL_DIRECTIVE` warning (#10791) by @sapphi-red
+
+### 🐛 Bug Fixes
+
+- handle CommonJS exports through top-level `this` (#10872) by @IWANABETHATGUY
+- scripts: make setup-vite CLI invocation work on Windows (#10885) by @shulaoda
+- remove deleted property from output bundle proxy target (#10815) by @Vladexy88x
+- treat module-scope `await using` as top-level await (#10739) by @MarshallOfSound
+- watch: preserve plugin attribution in warnings (#10473) by @Nic-Polumeyv
+- test-dev-server: link the workspace rolldown before building vite (#10857) by @h-a-n-a
+- minify: preserve annotation comments when minified (#10854) (#10855) by @justonemorenight
+
+### ⚡ Performance
+
+- dev/lazy: fetch a lazy route in one request (#10789) by @h-a-n-a
+- plugin: reduce binding binary size (#10776) by @Boshen
+- vite-reporter: reuse emitted sourcemap sizes (#10841) by @hyfdev
+
+### 🧪 Testing
+
+- dev: full-bundle-mode regression test for cyclic import binding (#9946) (#9947) by @ShMcK
+- cover asset option callback timings (#10870) by @IWANABETHATGUY
+
+### ⚙️ Miscellaneous Tasks
+
+- wait for npm bindings before publishing rolldown (#10866) by @shulaoda
+- deps: update dependency @napi-rs/cli to v3.10.1 (#10889) by @renovate[bot]
+- deps: update napi (#10888) by @renovate[bot]
+- compress debug info archives with zstd (#10778) by @IWANABETHATGUY
+- publish split debug info for release bindings (#10777) by @IWANABETHATGUY
+- rolldown_utils: simplify MIME guessing and remove UTF-8 check bypass (#10884) by @shulaoda
+- add npm bugs metadata for rolldown (#9694) by @kingshuaishuai
+- deps: upgrade oxc to 0.150.0 (#10877) by @camc314
+- deps: update rust crates (#10869) by @renovate[bot]
+- deps: update dependency vite-plus to v0.3.2 (#10878) by @renovate[bot]
+- deps: update rollup submodule for tests to v4.63.3 (#10880) by @rolldown-guard[bot]
+- deps: update test262 submodule for tests (#10881) by @rolldown-guard[bot]
+- deps: update github actions (#10867) by @renovate[bot]
+- deps: update npm packages (#10868) by @renovate[bot]
+- deps: update napi to v3.12.4 (#10862) by @renovate[bot]
+- deps: update napi (#10861) by @renovate[bot]
+
+### ❤️ New Contributors
+
+* @Vladexy88x made their first contribution in [#10815](https://github.com/rolldown/rolldown/pull/10815)
+* @MarshallOfSound made their first contribution in [#10739](https://github.com/rolldown/rolldown/pull/10739)
+* @kingshuaishuai made their first contribution in [#9694](https://github.com/rolldown/rolldown/pull/9694)
+* @ShMcK made their first contribution in [#9947](https://github.com/rolldown/rolldown/pull/9947)
+* @justonemorenight made their first contribution in [#10855](https://github.com/rolldown/rolldown/pull/10855)
+
+
 ## [1.2.8] - 2026-09-09
 
 ### 🚀 Features

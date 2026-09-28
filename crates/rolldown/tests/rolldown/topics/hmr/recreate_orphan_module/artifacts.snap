@@ -62,7 +62,7 @@ __rolldown_runtime__.registerModule("main.js", { exports: main_exports });
 ```js
 __rolldown_runtime__.registerGraph({ids:["parent.js"],localCount:1,edges:[[]],dynamicEdges:[[]]});
 //#region parent.js
-__rolldown_runtime__.registerFactory("parent.js", "esm", (function(__rolldown_module_id__) {
+__rolldown_runtime__.registerFactory("parent.js", (function(__rolldown_module_id__) {
 	try {
 		var __rolldown_exports__ = __rolldown_runtime__.__exportAll({
 			childValue: () => childValue,
@@ -110,7 +110,7 @@ __rolldown_runtime__.registerFactory("parent.js", "esm", (function(__rolldown_mo
 ```js
 __rolldown_runtime__.registerGraph({ids:["main.js","parent.js","child.js"],localCount:2,edges:[[1],[2]],dynamicEdges:[[],[]]});
 //#region main.js
-__rolldown_runtime__.registerFactory("main.js", "esm", (function(__rolldown_module_id__) {
+__rolldown_runtime__.registerFactory("main.js", (function(__rolldown_module_id__) {
 	try {
 		var __rolldown_exports__ = __rolldown_runtime__.__exportAll({});
 		__rolldown_runtime__.registerModule(__rolldown_module_id__, { exports: __rolldown_exports__ });
@@ -122,7 +122,7 @@ __rolldown_runtime__.registerFactory("main.js", "esm", (function(__rolldown_modu
 
 //#endregion
 //#region parent.js
-__rolldown_runtime__.registerFactory("parent.js", "esm", (function(__rolldown_module_id__) {
+__rolldown_runtime__.registerFactory("parent.js", (function(__rolldown_module_id__) {
 	try {
 		var __rolldown_exports__ = __rolldown_runtime__.__exportAll({
 			parentValue: () => parentValue,

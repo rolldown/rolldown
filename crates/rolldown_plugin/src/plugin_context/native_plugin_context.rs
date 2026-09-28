@@ -10,7 +10,7 @@ use derive_more::Debug;
 use rolldown_common::{
   FilenameTemplate, LogLevel, LogWithoutPlugin, ModuleDefFormat, ModuleId, ModuleLoaderMsg,
   PackageJson, PluginIdx, ResolvedId, SharedFileEmitter, SharedModuleInfoDashMap,
-  SharedNormalizedBundlerOptions, side_effects::HookSideEffects,
+  SharedNormalizedBundlerOptions, WatchPath, side_effects::HookSideEffects,
 };
 use rolldown_resolver::{ResolveError, Resolver};
 use rolldown_utils::dashmap::FxDashSet;
@@ -190,8 +190,9 @@ impl NativePluginContextImpl {
     self.resolver.cwd()
   }
 
+  /// The path is resolved against `cwd`, so the watch files are absolute and normalized.
   pub fn add_watch_file(&self, file: &str) {
-    self.watch_files.insert(file.into());
+    self.watch_files.insert(WatchPath::new(file, &self.options.cwd).to_string().into());
   }
 
   fn log(&self, level: LogLevel, log: LogWithoutPlugin) {

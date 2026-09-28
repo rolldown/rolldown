@@ -135,6 +135,8 @@ fn init() {
     create_custom_tokio_runtime(rt);
   }
 
+  // The published binding is stripped; its debug info ships separately.
+  // See internal-docs/panic-symbolication/implementation.md
   #[cfg(not(feature = "disable_panic_hook"))]
   {
     let default_hook = std::panic::take_hook();

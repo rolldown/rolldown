@@ -273,7 +273,7 @@ pub fn deconflict_chunk_symbols(
     chunk.node_mode_external_ns_names = node_mode_names;
   }
 
-  rename_shadowing_symbols_in_nested_scopes(chunk, link_output, format, &mut renamer);
+  rename_shadowing_symbols_in_nested_scopes(chunk_idx, chunk, link_output, format, &mut renamer);
 
   chunk.canonical_names = renamer.into_canonical_names();
 }
@@ -350,6 +350,7 @@ fn collect_chunk_scope_captured_names(
 /// symbols can keep their original names. However, we still need to handle cases
 /// where a nested binding would capture a reference to a top-level symbol.
 fn rename_shadowing_symbols_in_nested_scopes<'a>(
+  chunk_idx: ChunkIdx,
   chunk: &Chunk,
   link_output: &'a LinkStageOutput,
   output_format: OutputFormat,
@@ -381,6 +382,6 @@ fn rename_shadowing_symbols_in_nested_scopes<'a>(
     ));
 
     ctx.rename_bindings_shadowing_cjs_ambient_names(output_format);
-    ctx.rename_cjs_locals_shadowing_referenced_chunk_bindings();
+    ctx.rename_cjs_locals_shadowing_referenced_chunk_bindings(output_format, chunk_idx);
   }
 }

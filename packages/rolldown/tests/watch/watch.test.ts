@@ -788,6 +788,68 @@ test.concurrent(
 );
 
 test.concurrent(
+  'PluginContext addWatchFile with a directory',
+  { retry: TEST_RETRY, timeout: TEST_TIMEOUT },
+  async ({ task, expect, onTestFinished }) => {
+    const retryCount = task.result?.retryCount ?? 0;
+    const { dir: cwd } = createTestWithMultiFiles('addWatchFile-dir', retryCount, {
+      'main.js': `console.log(1)`,
+    });
+    const watchedDir = path.join(cwd, 'content');
+    const nestedFile = path.join(watchedDir, 'nested', 'data.txt');
+    fs.mkdirSync(path.dirname(nestedFile), { recursive: true });
+    fs.writeFileSync(nestedFile, '1');
+
+    const watcher = watch({
+      cwd,
+      input: 'main.js',
+      output: { dir: path.join(cwd, 'dist') },
+      plugins: [
+        {
+          name: 'test',
+          buildStart() {
+            this.addWatchFile(watchedDir);
+          },
+        },
+      ],
+    });
+    onTestFinished(async () => {
+      await watcher.close();
+      if (!process.env.CI) {
+        fs.rmSync(cwd, { recursive: true, force: true });
+      }
+    });
+    await waitBuildFinished(watcher);
+
+    const changedIds: string[] = [];
+    watcher.on('change', (id) => {
+      changedIds.push(id);
+    });
+    let rebuilds = 0;
+    watcher.on('event', (event) => {
+      if (event.code === 'BUNDLE_END') rebuilds++;
+    });
+
+    await editFile(nestedFile, '2');
+    await expect.poll(() => changedIds, { timeout: 10_000 }).toContain(nestedFile);
+    await expect.poll(() => rebuilds, { timeout: 10_000 }).toBeGreaterThan(0);
+
+    // the backends report a moved-in directory, not its files; the files are still the change
+    const outsideTree = path.join(cwd, 'outside-tree');
+    const movedFile = path.join(watchedDir, 'tree', 'deep', 'data.txt');
+    fs.mkdirSync(path.join(outsideTree, 'deep'), { recursive: true });
+    fs.writeFileSync(path.join(outsideTree, 'deep', 'data.txt'), '1');
+    fs.renameSync(outsideTree, path.join(watchedDir, 'tree'));
+    await expect.poll(() => changedIds, { timeout: 10_000 }).toContain(movedFile);
+
+    const createdFile = path.join(watchedDir, 'created', 'data.txt');
+    fs.mkdirSync(path.dirname(createdFile));
+    await editFile(createdFile, '1');
+    await expect.poll(() => changedIds, { timeout: 10_000 }).toContain(createdFile);
+  },
+);
+
+test.concurrent(
   'watch include/exclude',
   { retry: TEST_RETRY, timeout: TEST_TIMEOUT },
   async ({ task, expect, onTestFinished }) => {
@@ -1343,6 +1405,46 @@ test.concurrent(
     await editFile(path.join(dir, 'a.js'), `import { b } from './b.js'\nexport const a = b + 1`);
     await waitBuildFinished(watcher);
     expect(onLogFn).toBeCalled();
+  },
+);
+
+test.concurrent(
+  'watch should preserve plugin attribution in sourcemap warnings',
+  { retry: TEST_RETRY, timeout: TEST_TIMEOUT },
+  async ({ task, expect, onTestFinished }) => {
+    const retryCount = task.result?.retryCount ?? 0;
+    const { dir } = createTestWithMultiFiles('watch-sourcemap-warning-plugin', retryCount, {
+      'main.js': `console.log('main')`,
+    });
+    onTestFinished(() => {
+      if (!process.env.CI) {
+        fs.rmSync(dir, { recursive: true, force: true });
+      }
+    });
+
+    const pluginName = 'test-sourcemap-plugin';
+    const onLogFn = vi.fn();
+    const watcher = watch({
+      input: path.join(dir, 'main.js'),
+      output: { dir: path.join(dir, 'dist'), sourcemap: true },
+      plugins: [
+        {
+          name: pluginName,
+          transform(code) {
+            return { code: code + '\n// touched\n' };
+          },
+        },
+      ],
+      onLog(_level, log) {
+        if (log.code === 'SOURCEMAP_BROKEN') {
+          onLogFn(log.plugin);
+        }
+      },
+    });
+    onTestFinished(async () => await watcher.close());
+
+    await waitBuildFinished(watcher);
+    expect(onLogFn).toHaveBeenCalledWith(pluginName);
   },
 );
 

@@ -215,19 +215,19 @@ async fn bundle(plugin: SharedPluginable) -> Vec<Arc<OutputAsset>> {
 }
 
 async fn emit_assets(emits: Vec<Emit>) -> Vec<Arc<OutputAsset>> {
-  bundle(Arc::new(EmitPlugin { emits, concurrent: false })).await
+  bundle(Plugin::new_shared(EmitPlugin { emits, concurrent: false })).await
 }
 
 async fn emit_assets_concurrently(emits: Vec<Emit>) -> Vec<Arc<OutputAsset>> {
-  bundle(Arc::new(EmitPlugin { emits, concurrent: true })).await
+  bundle(Plugin::new_shared(EmitPlugin { emits, concurrent: true })).await
 }
 
 async fn emit_assets_in_render_chunk(emits: Vec<Emit>) -> Vec<Arc<OutputAsset>> {
-  bundle(Arc::new(RenderChunkEmitPlugin { emits })).await
+  bundle(Plugin::new_shared(RenderChunkEmitPlugin { emits })).await
 }
 
 async fn emit_assets_in_build_end(emits: Vec<Emit>) -> Vec<Arc<OutputAsset>> {
-  bundle(Arc::new(BuildEndEmitPlugin { emits })).await
+  bundle(Plugin::new_shared(BuildEndEmitPlugin { emits })).await
 }
 
 /// The surviving file name must be deterministic across emission orders and is
@@ -353,7 +353,7 @@ async fn build_end_emissions_still_use_shortest_name() {
 /// consumer, so the shorter output-phase name must not win or mutate the survivor.
 #[tokio::test(flavor = "multi_thread")]
 async fn build_then_output_phase_duplicate_keeps_build_name() {
-  let assets = bundle(Arc::new(CrossPhaseEmitPlugin {
+  let assets = bundle(Plugin::new_shared(CrossPhaseEmitPlugin {
     build_emits: vec![Emit::dedup("aaaa.txt")],
     render_emits: vec![Emit::dedup("z.txt")],
   }))

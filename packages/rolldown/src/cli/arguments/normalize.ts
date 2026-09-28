@@ -2,13 +2,13 @@
  * @description This file is used for normalize the options.
  * In CLI, the input options and output options are mixed together. We need to tell them apart.
  */
-import type { InputOptions } from '../../options/input-options';
-import type { OutputOptions } from '../../options/output-options';
-import { getInputCliKeys, getOutputCliKeys, validateCliOptions } from '../../utils/validator';
-import { logger } from '../logger';
-import type { ConfigLoader } from '../../utils/load-config';
-import type { CliOptions } from './alias';
-import { setNestedProperty } from './utils';
+import type { InputOptions } from '../../options/input-options.ts';
+import type { OutputOptions } from '../../options/output-options.ts';
+import { getInputCliKeys, getOutputCliKeys, validateCliOptions } from '../../utils/validator.ts';
+import { logger } from '../logger.ts';
+import type { ConfigLoader } from '../../utils/load-config.ts';
+import type { CliOptions } from './alias.ts';
+import { setNestedProperty } from './utils.ts';
 
 const reservedKeys = new Set(['help', 'version', 'config', 'watch', 'environment', 'configLoader']);
 

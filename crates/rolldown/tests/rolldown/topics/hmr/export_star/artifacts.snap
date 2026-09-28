@@ -96,7 +96,7 @@ function text(el, text) {
 __rolldown_runtime__.registerGraph({ids:["hmr.js","sub/index.js"],localCount:1,edges:[[1]],dynamicEdges:[[]]});
 //#region hmr.js
 import * as import_node_assert_00 from "node:assert";
-__rolldown_runtime__.registerFactory("hmr.js", "esm", (function(__rolldown_module_id__) {
+__rolldown_runtime__.registerFactory("hmr.js", (function(__rolldown_module_id__) {
 	try {
 		var __rolldown_exports__ = __rolldown_runtime__.__exportAll({});
 		__rolldown_runtime__.registerModule(__rolldown_module_id__, { exports: __rolldown_exports__ });

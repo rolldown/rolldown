@@ -1,7 +1,9 @@
-import { description, version } from '../../../package.json' with { type: 'json' };
-import { styleText } from '../../utils/style-text';
-import { options } from '../arguments';
-import { logger } from '../logger';
+import packageJson from '../../../package.json' with { type: 'json' };
+import { styleText } from '../../utils/style-text.ts';
+import { options } from '../arguments/index.ts';
+import { logger } from '../logger.ts';
+
+const { description, version } = packageJson;
 
 const examples = [
   {

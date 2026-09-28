@@ -295,6 +295,7 @@ impl BindingNormalizedOptions {
         }),
         codegen: Some(Either::B(codegen_options_to_napi_codegen_options(
           minify_options.remove_whitespace,
+          minify_options.ascii_only,
         ))),
         ..Default::default()
       }),

@@ -1498,7 +1498,14 @@
             "null"
           ]
         },
+        "bundlerTimings": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
         "pluginTimings": {
+          "description": "Deprecated alias for `bundlerTimings`. Rolldown uses `bundlerTimings` if both options have values.",
           "type": [
             "boolean",
             "null"

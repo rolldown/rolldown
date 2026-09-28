@@ -12,3 +12,4 @@ import './star-reexport-order/setup.js';
 import './circular-named-reexport/setup.js';
 import './circular-namespace-reexport/setup.js';
 import './circular-reexport/setup.js';
+import './circular-import-binding/setup.js';

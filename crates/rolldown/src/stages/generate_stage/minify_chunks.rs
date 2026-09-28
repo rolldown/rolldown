@@ -23,7 +23,8 @@ impl GenerateStage<'_> {
     options: &NormalizedBundlerOptions,
     chunks: &mut IndexInstantiatedChunks,
   ) -> BuildResult<Option<BTreeMap<String, Option<String>>>> {
-    let Some((compress, minify_options, remove_whitespace)) = chunk_minify_options(&options.minify)
+    let Some((compress, minify_options, remove_whitespace, ascii_only)) =
+      chunk_minify_options(&options.minify)
     else {
       return Ok(None);
     };
@@ -45,10 +46,11 @@ impl GenerateStage<'_> {
       }
       let codegen_options = CodegenOptions {
         minify: remove_whitespace,
+        ascii_only,
         comments: CommentOptions {
           normal: !remove_whitespace,
           jsdoc: options.comments.jsdoc && !remove_whitespace,
-          annotation: options.comments.annotation && !remove_whitespace,
+          annotation: options.comments.annotation,
           legal: if options.comments.legal || !remove_whitespace {
             codegen::LegalComment::Inline
           } else {
@@ -113,7 +115,7 @@ impl GenerateStage<'_> {
     options: &NormalizedBundlerOptions,
     outputs: &[Output],
   ) -> BuildResult<()> {
-    let Some((_, minify_options, _)) = chunk_minify_options(&options.minify) else {
+    let Some((_, minify_options, _, _)) = chunk_minify_options(&options.minify) else {
       return Ok(());
     };
     if minify_options.mangle_properties.is_some()
@@ -135,11 +137,15 @@ impl GenerateStage<'_> {
   }
 }
 
-fn chunk_minify_options(options: &MinifyOptions) -> Option<(bool, &OxcMinifierOptions, bool)> {
+fn chunk_minify_options(
+  options: &MinifyOptions,
+) -> Option<(bool, &OxcMinifierOptions, bool, bool)> {
   match options {
     MinifyOptions::Disabled => None,
-    MinifyOptions::DeadCodeEliminationOnly(options) => Some((false, options, false)),
-    MinifyOptions::Enabled(options) => Some((true, &options.options, options.remove_whitespace)),
+    MinifyOptions::DeadCodeEliminationOnly(options) => Some((false, options, false, false)),
+    MinifyOptions::Enabled(options) => {
+      Some((true, &options.options, options.remove_whitespace, options.ascii_only))
+    }
   }
 }
 

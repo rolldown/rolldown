@@ -593,7 +593,7 @@ impl<'ast> HmrAstFinalizer<'_, 'ast> {
     // `.then(__unwrap_lazy_compilation_entry).then(m => m.X)`.
     //
     // In HMR partial bundles there's no separately bundled proxy chunk - the proxy module's
-    // body gets wrapped inside a `createEsmInitializer` and its top-level `export` is lost.
+    // body gets wrapped inside a `registerFactory` closure and its top-level `export` is lost.
     // To keep the same surface as the full build, we rewrite the dynamic import to:
     //
     //   import(`/@vite/lazy?id=...&clientId=...`)

@@ -15,8 +15,10 @@ use std::{
 use cow_utils::CowUtils;
 use owo_colors::Style;
 use rayon::iter::{IntoParallelRefIterator, ParallelIterator};
+use rolldown_common::SourceMapType;
 use rolldown_plugin::{HookUsage, Plugin, PluginContext};
 use rolldown_std_utils::relative_path_to_slash;
+use rustc_hash::FxHashMap;
 use sugar_path::SugarPath as _;
 
 pub type LogInfoFn =
@@ -133,6 +135,21 @@ impl Plugin for ViteReporterPlugin {
       let mut biggest_compress_size = 0;
 
       let mut log_entries = Vec::with_capacity(args.bundle.len());
+      let asset_size_by_filename =
+        if matches!(args.options.sourcemap, Some(SourceMapType::File | SourceMapType::Hidden)) {
+          args
+            .bundle
+            .iter()
+            .filter_map(|output| match output {
+              rolldown_common::Output::Asset(asset) => {
+                Some((asset.filename.as_str(), asset.source.as_bytes().len()))
+              }
+              rolldown_common::Output::Chunk(_) => None,
+            })
+            .collect::<FxHashMap<_, _>>()
+        } else {
+          FxHashMap::default()
+        };
 
       if self.report_compressed_size {
         utils::log_info("computing gzip size...");
@@ -166,7 +183,13 @@ impl Plugin for ViteReporterPlugin {
             name: &chunk.filename,
             size: chunk.code.len(),
             group: utils::AssetGroup::JS,
-            map_size: chunk.map.as_ref().map(|m| m.to_json_string().len()),
+            map_size: chunk.map.as_ref().map(|map| {
+              chunk
+                .sourcemap_filename
+                .as_deref()
+                .and_then(|filename| asset_size_by_filename.get(filename).copied())
+                .unwrap_or_else(|| map.to_json_string().len())
+            }),
             compressed_size: pre_compute_size.as_ref().and_then(|v| v[idx]),
           },
           rolldown_common::Output::Asset(asset) => {

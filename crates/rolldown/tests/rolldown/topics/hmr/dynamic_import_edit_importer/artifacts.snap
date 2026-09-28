@@ -62,7 +62,7 @@ export { __exportAll as t };
 ```js
 __rolldown_runtime__.registerGraph({ids:["app.js","foo.js"],localCount:1,edges:[[]],dynamicEdges:[[1]]});
 //#region app.js
-__rolldown_runtime__.registerFactory("app.js", "esm", (function(__rolldown_module_id__) {
+__rolldown_runtime__.registerFactory("app.js", (function(__rolldown_module_id__) {
 	try {
 		__rolldown_runtime__.registerModule(__rolldown_module_id__);
 		const hot_app = __rolldown_runtime__.createModuleHotContext(__rolldown_module_id__);

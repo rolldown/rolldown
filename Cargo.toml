@@ -228,8 +228,8 @@ regex = { version = "1.13.0", default-features = false, features = [
   "unicode-case",
 ] }
 regress = "0.12.0"
-rolldown-notify = "10.5.0"
-rolldown-notify-debouncer-full = "0.7.9"
+rolldown-notify = "11.0.0"
+rolldown-notify-debouncer-full = "0.8.0"
 rustc-hash = { version = "2.1.3" }
 schemars = "1.2.1"
 self_cell = "1.2.2"
@@ -332,9 +332,3 @@ opt-level = "s"
 # it will strip these information for non-debug files
 debug = "full"
 strip = "none"
-
-# Trial integration of rolldown/notify#122 (`Config::with_ignored`).
-# Replace with a version bump once the pull request is released.
-[patch.crates-io]
-rolldown-notify = { git = "https://github.com/rolldown/notify.git", rev = "3b77886316ad2de1b4fe49b40ff58a77a10872ed" }
-rolldown-notify-debouncer-full = { git = "https://github.com/rolldown/notify.git", rev = "3b77886316ad2de1b4fe49b40ff58a77a10872ed" }

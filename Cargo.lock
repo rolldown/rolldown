@@ -2547,16 +2547,18 @@ dependencies = [
 
 [[package]]
 name = "rolldown-file-id"
-version = "0.2.10"
-source = "git+https://github.com/rolldown/notify.git?rev=3b77886316ad2de1b4fe49b40ff58a77a10872ed#3b77886316ad2de1b4fe49b40ff58a77a10872ed"
+version = "0.2.11"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "76c1d1beeaaa4dc5da10a197d4826f83adec1f40ee6e79d90ccdcfd5bcfb41c3"
 dependencies = [
  "windows-sys 0.61.2",
 ]
 
 [[package]]
 name = "rolldown-notify"
-version = "10.5.1"
-source = "git+https://github.com/rolldown/notify.git?rev=3b77886316ad2de1b4fe49b40ff58a77a10872ed#3b77886316ad2de1b4fe49b40ff58a77a10872ed"
+version = "11.0.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "43c65ad424b3737dcd3f32b96820fb77fea1a942fc6c7c54a788c68d7ace872e"
 dependencies = [
  "bitflags",
  "inotify",
@@ -2574,8 +2576,9 @@ dependencies = [
 
 [[package]]
 name = "rolldown-notify-debouncer-full"
-version = "0.7.11"
-source = "git+https://github.com/rolldown/notify.git?rev=3b77886316ad2de1b4fe49b40ff58a77a10872ed#3b77886316ad2de1b4fe49b40ff58a77a10872ed"
+version = "0.8.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "32cc46781e5070fc3285f4a82d4a915afb27fb5f75ec53939739d7a04e03fc3f"
 dependencies = [
  "rolldown-file-id",
  "rolldown-notify",
@@ -2587,8 +2590,9 @@ dependencies = [
 
 [[package]]
 name = "rolldown-notify-types"
-version = "2.0.2"
-source = "git+https://github.com/rolldown/notify.git?rev=3b77886316ad2de1b4fe49b40ff58a77a10872ed#3b77886316ad2de1b4fe49b40ff58a77a10872ed"
+version = "2.0.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "5ca46043afcb01d8dbb414ed52e863c62ebfecbefe370fdfe030983225c5ef7a"
 
 [[package]]
 name = "rolldown_binding"

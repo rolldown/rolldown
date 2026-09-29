@@ -2685,7 +2685,8 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
       && let Module::Normal(importee) = &self.ctx.modules[importee_idx]
       && importee.id.contains("?rolldown-lazy=1")
     {
-      *node = create_request_lazy_call(&importee.id, &importee.stable_id, self);
+      let is_node_mode = self.ctx.module.should_consider_node_esm_spec_for_dynamic_import();
+      *node = create_request_lazy_call(&importee.id, &importee.stable_id, is_node_mode, self);
       return true;
     }
 

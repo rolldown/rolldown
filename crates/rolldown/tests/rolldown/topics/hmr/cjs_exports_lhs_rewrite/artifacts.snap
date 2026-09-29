@@ -17,7 +17,7 @@ __rolldown_runtime__.registerGraph({
 //#region a.js
 var require_a = /* @__PURE__ */ __commonJSMin(((exports, module) => {
 	const a_hot = __rolldown_runtime__.createModuleHotContext("a.js");
-	__rolldown_runtime__.registerModule("a.js", module);
+	__rolldown_runtime__.registerModule("a.js", module, 1);
 	exports = module.exports = {};
 	exports.value = "v1";
 	module.exports.other = "o1";
@@ -45,7 +45,7 @@ __rolldown_runtime__.registerFactory("a.js", (function(__rolldown_module_id__) {
 	try {
 		var __rolldown_module__ = { exports: {} };
 		var __rolldown_exports__ = __rolldown_module__.exports;
-		__rolldown_runtime__.registerModule(__rolldown_module_id__, __rolldown_module__);
+		__rolldown_runtime__.registerModule(__rolldown_module_id__, __rolldown_module__, 1);
 		const hot_a = __rolldown_runtime__.createModuleHotContext(__rolldown_module_id__);
 		__rolldown_exports__ = __rolldown_module__.exports = {};
 		__rolldown_exports__.value = "v2";

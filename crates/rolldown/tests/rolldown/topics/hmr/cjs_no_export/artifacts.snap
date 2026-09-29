@@ -28,14 +28,14 @@ __rolldown_runtime__.registerGraph({
 //#region a.js
 var require_a = /* @__PURE__ */ __commonJSMin(((exports, module) => {
 	__rolldown_runtime__.createModuleHotContext("a.js");
-	__rolldown_runtime__.registerModule("a.js", module);
+	__rolldown_runtime__.registerModule("a.js", module, 1);
 	console.log("a");
 }));
 //#endregion
 //#region b.js
 var require_b = /* @__PURE__ */ __commonJSMin(((exports, module) => {
 	__rolldown_runtime__.createModuleHotContext("b.js");
-	__rolldown_runtime__.registerModule("b.js", module);
+	__rolldown_runtime__.registerModule("b.js", module, 1);
 	console.log("b");
 }));
 //#endregion

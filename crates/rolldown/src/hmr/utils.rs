@@ -79,17 +79,29 @@ pub trait HmrAstBuilder<'any, 'ast> {
       rolldown_common::ExportsKind::None => None,
     };
 
-    // __rolldown_runtime__.registerModule(moduleId[, module])
+    let mut arguments = oxc::allocator::Vec::from_iter_in(
+      std::iter::once(self.module_id_argument()).chain(module_exports),
+      &self.builder(),
+    );
+    // CommonJS passes a third argument `1`; `requestLazy` reads it to apply `__toESM`.
+    if self.module().exports_kind.is_commonjs() {
+      arguments.push(ast::Argument::new_numeric_literal(
+        SPAN,
+        1.0,
+        None,
+        ast::NumberBase::Decimal,
+        &self.builder(),
+      ));
+    }
+
+    // __rolldown_runtime__.registerModule(moduleId[, module[, 1]])
     // moduleId is either `__rolldown_module_id__` (HMR/lazy path) or the stable-id
     // string literal (main-bundle path).
     let register_call = ast::Expression::new_call_expression(
       SPAN,
       ast::Expression::new_identifier(SPAN, "__rolldown_runtime__.registerModule", &self.builder()),
       None,
-      oxc::allocator::Vec::from_iter_in(
-        std::iter::once(self.module_id_argument()).chain(module_exports),
-        &self.builder(),
-      ),
+      arguments,
       false,
       &self.builder(),
     );
@@ -207,7 +219,7 @@ const URI_COMPONENT_ENCODE_SET: &percent_encoding::AsciiSet = &percent_encoding:
   .remove(b'(')
   .remove(b')');
 
-/// `__rolldown_runtime__.requestLazy("<stable_real_id>", () => import(`/@vite/lazy?id=<encoded proxy id>&clientId=${__rolldown_runtime__.clientId}`))`
+/// `__rolldown_runtime__.requestLazy("<stable_real_id>", () => import(`/@vite/lazy?id=<encoded proxy id>&clientId=${__rolldown_runtime__.clientId}`)[, 1])`
 ///
 /// The one shape both codegen paths emit for a lazy boundary, so a boundary never becomes a
 /// chunk the browser fetches.
@@ -215,9 +227,13 @@ const URI_COMPONENT_ENCODE_SET: &percent_encoding::AsciiSet = &percent_encoding:
 /// The proxy id is percent-encoded here rather than by emitting `encodeURIComponent(...)`: the
 /// call lands in the importer's own scope, where a user binding of that name would shadow the
 /// global and produce a broken URL.
+///
+/// `is_node_mode` is the importer's interop choice, as in a production build. Whether the
+/// importee is CommonJS is unknown here, so the runtime decides that from its registration.
 pub fn create_request_lazy_call<'ast, B>(
   proxy_module_id: &str,
   stable_proxy_id: &str,
+  is_node_mode: bool,
   builder: &B,
 ) -> ast::Expression<'ast>
 where
@@ -274,10 +290,7 @@ where
     builder,
   );
 
-  ast::Expression::new_call_expression(
-    SPAN,
-    ast::Expression::new_identifier(SPAN, "__rolldown_runtime__.requestLazy", builder),
-    None,
+  let mut arguments = oxc::allocator::Vec::from_iter_in(
     [
       // Stripping the marker recovers the id the delivered chunk registers a factory under.
       ast::Argument::new_string_literal(
@@ -291,6 +304,23 @@ where
       ),
       ast::Argument::from(fetch_chunk),
     ],
+    builder,
+  );
+  if is_node_mode {
+    arguments.push(ast::Argument::new_numeric_literal(
+      SPAN,
+      1.0,
+      None,
+      ast::NumberBase::Decimal,
+      builder,
+    ));
+  }
+
+  ast::Expression::new_call_expression(
+    SPAN,
+    ast::Expression::new_identifier(SPAN, "__rolldown_runtime__.requestLazy", builder),
+    None,
+    arguments,
     false,
     builder,
   )

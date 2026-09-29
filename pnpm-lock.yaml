@@ -280,7 +280,7 @@ importers:
         specifier: ^2.1.0
         version: 2.2.1
       knip:
-        specifier: ^6.36.0
+        specifier: ^6.38.0
         version: 6.38.0
       playwright-chromium:
         specifier: ^1.63.0
@@ -356,7 +356,7 @@ importers:
         specifier: ^0.20.0
         version: 0.20.3(@types/node@24.10.3)(arktype@2.2.0)(kysely@0.29.5)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)(valibot@1.5.0(typescript@6.0.3))(vite@8.3.1(@types/node@24.10.3)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.51.2)(tsx@4.23.15)(yaml@2.9.1))(vitest@5.0.1)(vue@3.5.43(typescript@6.0.3))(zod@4.5.4)
       wrangler:
-        specifier: ^4.134.0
+        specifier: ^4.139.0
         version: 4.139.0(@cloudflare/workers-types@4.20260702.1)(@types/node@24.10.3)
 
   examples/basic-typescript:

@@ -627,9 +627,9 @@ dependencies = [
 
 [[package]]
 name = "fast-glob"
-version = "1.1.1"
+version = "1.1.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6d3f5d15b86ff37d2d23719f90657a53d5399abe0736dacb9e5fbe549314d349"
+checksum = "2a044ed96eb57253e806d08b74260638af189687e583f04947a5e11e75e0b0d1"
 dependencies = [
  "arrayvec",
 ]
@@ -1100,9 +1100,9 @@ dependencies = [
 
 [[package]]
 name = "jsonschema"
-version = "0.56.0"
+version = "0.58.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b6a806f80c1f5560431009ce5ec29b59d38f950e0cd7db5f1b8925e6d8104e21"
+checksum = "0a083dc3204bad08c6654f3648b2e840668d843044605df8850b16d2b24d307f"
 dependencies = [
  "ahash",
  "bytecount",
@@ -1128,18 +1128,18 @@ dependencies = [
 
 [[package]]
 name = "jsonschema-regex"
-version = "0.56.0"
+version = "0.58.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "cb862addfa7782108933abcf842fe25334523a9df5b89ea4d9620e3dd7b42181"
+checksum = "655372e8fbbefa3e5bd9b7397b4937bf75b4a71f1f84d85122cbd7758b57c8b0"
 dependencies = [
  "regex-syntax",
 ]
 
 [[package]]
 name = "jsonschema-value"
-version = "0.56.0"
+version = "0.58.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a05cd404c5ff6e2731dbbf7e290a27417750acfb59e329560a1d0af384c93fb0"
+checksum = "0a6ed45167e78187301842eab0510c7dd5d7e7d065d275ef0fe01ddd25f6607b"
 dependencies = [
  "ahash",
  "bytecount",
@@ -2412,9 +2412,9 @@ dependencies = [
 
 [[package]]
 name = "referencing"
-version = "0.56.0"
+version = "0.58.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a3b4a92fac7e28c27de3ad26df2ecb9e652f227b258e845af034052e5b22c96c"
+checksum = "c9bf6d3c834f2614907b0fd413854581ecb48f0a713ea5d6cdfbce36f24e700e"
 dependencies = [
  "ahash",
  "fluent-uri",
@@ -3574,9 +3574,9 @@ checksum = "0c790de23124f9ab44544d7ac05d60440adc586479ce501c1d6d7da3cd8c9cf5"
 
 [[package]]
 name = "smallvec"
-version = "1.16.1"
+version = "1.16.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ba467056f1b547ed52077911161fc86985becbc60e8e1857c8a144dab0def891"
+checksum = "f9395f0f0eee849a9b707b2f06bb92a6a422090e2123bb2ef8e87a0e61892a8e"
 dependencies = [
  "serde",
 ]

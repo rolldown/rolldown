@@ -1,0 +1,20 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+//#region main.jsx
+var require_main = /* @__PURE__ */ __commonJSMin(((exports, module) => {
+	var __dirname = import.meta.dirname;
+	var __filename = import.meta.filename;
+	module.exports = [<__dirname />, <__filename.Component />];
+}));
+//#endregion
+export default require_main();
+export {};
+
+```

@@ -12,7 +12,9 @@ use oxc::{
   span::{SPAN, Span},
 };
 use oxc_str::CompactStr;
-use rolldown_common::{ConcatenateWrappedModuleKind, SymbolRef, ThisExprReplaceKind};
+use rolldown_common::{
+  ConcatenateWrappedModuleKind, OutputFormat, Platform, SymbolRef, ThisExprReplaceKind,
+};
 use rolldown_ecmascript::ToSourceString;
 use rolldown_ecmascript_utils::{
   EsmWrapperBodyKind, EsmWrapperCallKind, EsmWrapperDeclKind, EsmWrapperStmtOptions, ExpressionExt,
@@ -26,7 +28,65 @@ use crate::module_finalizers::{
 
 use super::ScopeHoistingFinalizer;
 
+const CJS_AMBIENT_PATHS: [(&str, &str); 2] = [("__dirname", "dirname"), ("__filename", "filename")];
+
 impl<'ast> ScopeHoistingFinalizer<'_, 'ast> {
+  fn should_shim_cjs_ambient_paths(&self) -> bool {
+    matches!(
+      (self.ctx.options.platform, &self.ctx.options.format),
+      (Platform::Node, OutputFormat::Esm)
+    ) && self.ctx.module.exports_kind.is_commonjs()
+  }
+
+  fn cjs_ambient_path_root_var(&self, name: &str) -> Option<oxc::semantic::SymbolId> {
+    let scoping = self.scope.scoping();
+    let symbol_id = scoping.get_binding(scoping.root_scope_id(), name.into())?;
+    let flags = scoping.symbol_flags(symbol_id);
+    (flags.is_function_scoped_declaration() && !flags.is_function() && !flags.is_import())
+      .then_some(symbol_id)
+  }
+
+  fn is_cjs_ambient_path_reference(&self, id_ref: &ast::IdentifierReference<'ast>) -> bool {
+    self.should_shim_cjs_ambient_paths()
+      && CJS_AMBIENT_PATHS.iter().any(|(name, _)| id_ref.name == *name)
+  }
+
+  fn prepend_cjs_ambient_path_bindings(
+    &self,
+    statements: &mut allocator::Vec<'ast, Statement<'ast>>,
+  ) {
+    if !self.should_shim_cjs_ambient_paths() {
+      return;
+    }
+
+    for (name, property) in CJS_AMBIENT_PATHS {
+      let scoping = self.scope.scoping();
+      let binding_name = if let Some(symbol_id) = self.cjs_ambient_path_root_var(name) {
+        // A top-level `var` redeclares Node's wrapper parameter instead of shadowing it.
+        self.canonical_name_for((self.ctx.idx, symbol_id).into())
+      } else if scoping.get_binding(scoping.root_scope_id(), name.into()).is_some() {
+        // A lexical or function declaration shadows Node's wrapper binding.
+        continue;
+      } else if scoping.root_unresolved_references().contains_key(name)
+        || self.ctx.module.meta.has_eval()
+      {
+        // Direct eval can access CommonJS wrapper bindings without a static reference.
+        name
+      } else {
+        continue;
+      };
+
+      let init = ast::Expression::new_static_member_expression(
+        SPAN,
+        ast::Expression::new_import_meta(SPAN, self),
+        ast::IdentifierName::new(SPAN, property, self),
+        false,
+        self,
+      );
+      statements.push(Statement::new_var_decl(binding_name, init, self));
+    }
+  }
+
   fn append_order_cjs_carriers(&self, program: &mut ast::Program<'ast>) {
     let carrier_keys =
       self.ctx.order_wrap_state.order_cjs_carriers_for_importee(self.ctx.idx).to_vec();
@@ -258,6 +318,8 @@ impl<'ast> VisitJsMut<'ast> for ScopeHoistingFinalizer<'_, 'ast> {
         let (commonjs_ref_expr, _) = self.finalized_expr_for_symbol_ref(commonjs_ref, false, false);
 
         let mut stmts_inside_closure = allocator::Vec::new_in(self);
+        // CJS exposes these as mutable wrapper-local bindings, not as aliases to import.meta.
+        self.prepend_cjs_ambient_path_bindings(&mut stmts_inside_closure);
         stmts_inside_closure.append(&mut program.body);
 
         program.body.push(Statement::new_commonjs_wrapper_stmt(
@@ -481,6 +543,17 @@ impl<'ast> VisitJsMut<'ast> for ScopeHoistingFinalizer<'_, 'ast> {
   }
 
   fn visit_expression(&mut self, expr: &mut ast::Expression<'ast>) {
+    if let ast::Expression::UnaryExpression(unary_expr) = expr
+      && unary_expr.operator == ast::UnaryOperator::Delete
+      && let ast::Expression::Identifier(id_ref) = unary_expr.argument.without_parentheses()
+      && self.is_cjs_ambient_path_reference(id_ref)
+    {
+      // Sloppy CJS permits deleting a wrapper binding and evaluates it to false. The equivalent
+      // unqualified delete would be an early error in ESM output.
+      *expr = ast::Expression::new_boolean_literal(unary_expr.span, false, self);
+      return;
+    }
+
     // Handle keep_names for named class/function expressions in any expression context
     // (return statements, function args, array elements, etc.)
     if self.ctx.options.keep_names && self.ctx.runtime.id() != self.ctx.idx {

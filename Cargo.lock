@@ -2489,6 +2489,7 @@ dependencies = [
  "oxc_index",
  "oxc_str",
  "oxc_traverse",
+ "percent-encoding",
  "petgraph",
  "rayon",
  "regex",
@@ -2935,7 +2936,6 @@ version = "1.2.11"
 dependencies = [
  "anyhow",
  "arcstr",
- "oxc",
  "rolldown_common",
  "rolldown_plugin",
  "rolldown_utils",

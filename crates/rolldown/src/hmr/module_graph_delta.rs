@@ -81,6 +81,11 @@ fn edge_bindings<'a>(
 /// by row, holding only rows with such an edge, and the key is left out when no row has
 /// one. The runtime reads a missing row or entry as `"*"`.
 ///
+/// `dynamicEdges` has the same sparse shape: an object keyed by row, holding only rows with
+/// at least one `import()` edge, and left out when no row has one. A missing row means no
+/// dynamic edges. `edges` stays a dense array: most modules import something, and an empty
+/// row (`[]`) is shorter than a row key.
+///
 /// `ids[0, local_count)` are the carried modules in input order; `ids[local_count, ..)` are
 /// foreign edge targets interned on first use. Returns `None` when the payload carries no rows.
 pub fn render_register_graph_source(
@@ -109,7 +114,8 @@ pub fn render_register_graph_source(
   // Sparse `(row, bindings)`: few modules import a module that calls `acceptExports`, and a
   // chunk's prelude lists all of its modules, so rows without such an edge are not emitted.
   let mut bindings: Vec<(usize, Vec<Option<Vec<&str>>>)> = Vec::new();
-  let mut dynamic_edges: Vec<Vec<usize>> = Vec::with_capacity(local_count);
+  // Sparse `(row, dynamic edges)` for the same reason: few modules call `import()`.
+  let mut dynamic_edges: Vec<(usize, Vec<usize>)> = Vec::new();
   // Reused across modules: dedup import records targeting the same module without a
   // linear rescan of the edge list per record (quadratic for high-fan-out modules).
   let mut seen_static = FxHashSet::default();
@@ -152,7 +158,9 @@ pub fn render_register_graph_source(
       bindings.push((i, edge_bindings(module_table, module, &out_edges, &id_to_index)));
     }
     edges.push(out_edges);
-    dynamic_edges.push(dyn_out_edges);
+    if !dyn_out_edges.is_empty() {
+      dynamic_edges.push((i, dyn_out_edges));
+    }
   }
 
   let mut source = String::with_capacity(ids.len() * 32);
@@ -212,21 +220,25 @@ pub fn render_register_graph_source(
     }
     source.push('}');
   }
-  source.push_str(",dynamicEdges:[");
-  for (i, out_edges) in dynamic_edges.iter().enumerate() {
-    if i > 0 {
-      source.push(',');
-    }
-    source.push('[');
-    for (j, target_pos) in out_edges.iter().enumerate() {
-      if j > 0 {
+  if !dynamic_edges.is_empty() {
+    source.push_str(",dynamicEdges:{");
+    for (n, (row, out_edges)) in dynamic_edges.iter().enumerate() {
+      if n > 0 {
         source.push(',');
       }
-      source.push_str(itoa::Buffer::new().format(*target_pos));
+      source.push_str(itoa::Buffer::new().format(*row));
+      source.push_str(":[");
+      for (j, target_pos) in out_edges.iter().enumerate() {
+        if j > 0 {
+          source.push(',');
+        }
+        source.push_str(itoa::Buffer::new().format(*target_pos));
+      }
+      source.push(']');
     }
-    source.push(']');
+    source.push('}');
   }
-  source.push_str("]});");
+  source.push_str("});");
 
   tracing::debug!(
     target: "hmr",

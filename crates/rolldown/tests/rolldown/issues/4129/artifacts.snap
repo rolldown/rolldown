@@ -15,6 +15,7 @@ __rolldown_runtime__.registerGraph({
 });
 //#region lib.js
 var require_lib = /* @__PURE__ */ __commonJSMin(((exports, module) => {
+	if (__rolldown_runtime__.hasFactory("lib.js")) return module.exports = __rolldown_runtime__.initModule("lib.js");
 	__rolldown_runtime__.createModuleHotContext("lib.js");
 	__rolldown_runtime__.registerModule("lib.js", module);
 	exports.a = 1;

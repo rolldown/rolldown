@@ -1,0 +1,77 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+import assert from "node:assert";
+// HIDDEN [\0rolldown/runtime.js]
+__rolldown_runtime__.registerGraph({
+	ids: ["cfg.cjs", "main.js"],
+	localCount: 2,
+	edges: [[], [0]]
+});
+//#region cfg.cjs
+var require_cfg = /* @__PURE__ */ __commonJSMin(((exports, module) => {
+	if (__rolldown_runtime__.hasFactory("cfg.cjs")) return module.exports = __rolldown_runtime__.initModule("cfg.cjs");
+	__rolldown_runtime__.createModuleHotContext("cfg.cjs");
+	__rolldown_runtime__.registerModule("cfg.cjs", module);
+	module.exports = { value: "v1" };
+}));
+//#endregion
+//#region main.js
+var main_exports = /* @__PURE__ */ __exportAll({});
+__rolldown_runtime__.createModuleHotContext("main.js");
+__rolldown_runtime__.registerModule("main.js", { exports: main_exports });
+process.on("beforeExit", (code) => {
+	if (code !== 0) return;
+	assert.strictEqual(require_cfg().value, "v2");
+});
+//#endregion
+
+```
+
+# HMR Step 0
+
+## Code
+
+```js
+__rolldown_runtime__.registerGraph({ids:["cfg.cjs","main.js"],localCount:2,edges:[[],[0]]});
+//#region cfg.cjs
+__rolldown_runtime__.registerFactory("cfg.cjs", (function(__rolldown_module_id__) {
+	try {
+		var __rolldown_module__ = { exports: {} };
+		var __rolldown_exports__ = __rolldown_module__.exports;
+		__rolldown_runtime__.registerModule(__rolldown_module_id__, __rolldown_module__);
+		const hot_cfg = __rolldown_runtime__.createModuleHotContext(__rolldown_module_id__);
+		__rolldown_module__.exports = { value: "v2" };
+	} finally {}
+}));
+
+//#endregion
+//#region main.js
+import * as import_node_assert_10 from "node:assert";
+__rolldown_runtime__.registerFactory("main.js", (function(__rolldown_module_id__) {
+	try {
+		var __rolldown_exports__ = __rolldown_runtime__.__exportAll({});
+		__rolldown_runtime__.registerModule(__rolldown_module_id__, { exports: __rolldown_exports__ });
+		const hot_main = __rolldown_runtime__.createModuleHotContext(__rolldown_module_id__);
+		process.on("beforeExit", (code) => {
+			if (code !== 0) return;
+			import_node_assert_10.default.strictEqual((__rolldown_runtime__.initModule("cfg.cjs"), __rolldown_runtime__.loadExports("cfg.cjs")).value, "v2");
+		});
+	} finally {}
+}));
+
+//#endregion
+```
+
+## Meta
+
+- update type: patch
+
+### Changed Ids
+
+- cfg.cjs

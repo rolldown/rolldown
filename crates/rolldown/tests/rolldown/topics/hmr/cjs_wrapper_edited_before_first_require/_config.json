@@ -1,0 +1,8 @@
+{
+  "_comment": "cfg.cjs is edited before its first require(). The client walk skips it (it never ran), but the patch registers its new factory; the first require() must run that factory, not the old body in the entry chunk.",
+  "config": {
+    "experimental": {
+      "devMode": {}
+    }
+  }
+}

@@ -14,6 +14,7 @@ __rolldown_runtime__.registerGraph({
 });
 //#region exist-dep-cjs.js
 var require_exist_dep_cjs = /* @__PURE__ */ __commonJSMin(((exports, module) => {
+	if (__rolldown_runtime__.hasFactory("exist-dep-cjs.js")) return module.exports = __rolldown_runtime__.initModule("exist-dep-cjs.js");
 	__rolldown_runtime__.createModuleHotContext("exist-dep-cjs.js");
 	__rolldown_runtime__.registerModule("exist-dep-cjs.js", module);
 	exports.value = "exist-cjs";

@@ -2,7 +2,9 @@ use oxc::{
   ast::ast::{self, Expression},
   span::SPAN,
 };
-use rolldown_ecmascript_utils::{ExpressionExt, ExpressionFactoryExt as _};
+use rolldown_ecmascript_utils::{
+  ExpressionExt, ExpressionFactoryExt as _, MemberExpressionFactoryExt as _,
+};
 
 use crate::hmr::utils::HmrAstBuilder;
 
@@ -21,6 +23,40 @@ impl<'ast> ScopeHoistingFinalizer<'_, 'ast> {
     ret.push(self.create_register_module_stmt());
 
     ret
+  }
+
+  /// `if (__rolldown_runtime__.hasFactory(id)) return module.exports = __rolldown_runtime__.initModule(id);`
+  ///
+  /// Heads the body of a CommonJS wrapper in the entry chunk. The body runs at the first
+  /// `require_x()`, which can come after the file was edited; a patch may have registered
+  /// the newer code as a factory by then, and the old body must not run instead.
+  pub fn generate_cjs_wrapper_factory_dispatch_stmt(&self) -> ast::Statement<'ast> {
+    let runtime_call = |method: &str| {
+      ast::Expression::new_call_expression(
+        SPAN,
+        Expression::new_id_ref_expr(SPAN, method, self),
+        None,
+        oxc::allocator::Vec::from_iter_in([self.module_id_argument()], self),
+        false,
+        self,
+      )
+    };
+    let assign_exports = ast::Expression::new_assignment_expression(
+      SPAN,
+      ast::AssignmentOperator::Assign,
+      ast::AssignmentTarget::from(ast::SimpleAssignmentTarget::from(
+        ast::MemberExpression::new_member_access("module", "exports", self),
+      )),
+      runtime_call("__rolldown_runtime__.initModule"),
+      self,
+    );
+    ast::Statement::new_if_statement(
+      SPAN,
+      runtime_call("__rolldown_runtime__.hasFactory"),
+      ast::Statement::new_return_statement(SPAN, Some(assign_exports), self),
+      None,
+      self,
+    )
   }
 
   pub fn rewrite_import_meta_hot(&self, expr: &mut ast::Expression<'ast>) {

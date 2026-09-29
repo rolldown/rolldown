@@ -34,6 +34,7 @@ __rolldown_runtime__.registerGraph({
 });
 //#region data.json
 var require_data = /* @__PURE__ */ __commonJSMin(((exports, module) => {
+	if (__rolldown_runtime__.hasFactory("data.json")) return module.exports = __rolldown_runtime__.initModule("data.json");
 	__rolldown_runtime__.createModuleHotContext("data.json");
 	__rolldown_runtime__.registerModule("data.json", module);
 	module.exports = [

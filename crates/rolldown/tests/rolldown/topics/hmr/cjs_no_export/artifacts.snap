@@ -22,6 +22,7 @@ __rolldown_runtime__.registerGraph({
 });
 //#region a.js
 var require_a = /* @__PURE__ */ __commonJSMin(((exports, module) => {
+	if (__rolldown_runtime__.hasFactory("a.js")) return module.exports = __rolldown_runtime__.initModule("a.js");
 	__rolldown_runtime__.createModuleHotContext("a.js");
 	__rolldown_runtime__.registerModule("a.js", module);
 	console.log("a");
@@ -29,6 +30,7 @@ var require_a = /* @__PURE__ */ __commonJSMin(((exports, module) => {
 //#endregion
 //#region b.js
 var require_b = /* @__PURE__ */ __commonJSMin(((exports, module) => {
+	if (__rolldown_runtime__.hasFactory("b.js")) return module.exports = __rolldown_runtime__.initModule("b.js");
 	__rolldown_runtime__.createModuleHotContext("b.js");
 	__rolldown_runtime__.registerModule("b.js", module);
 	console.log("b");

@@ -62,6 +62,7 @@ var init_trigger_dep = __esmMin((() => {
 //#endregion
 //#region cases/require/cjs-lib-reassign-module-exports.js
 var require_cjs_lib_reassign_module_exports = /* @__PURE__ */ __commonJSMin(((exports, module) => {
+	if (__rolldown_runtime__.hasFactory("cases/require/cjs-lib-reassign-module-exports.js")) return module.exports = __rolldown_runtime__.initModule("cases/require/cjs-lib-reassign-module-exports.js");
 	init_trigger_dep();
 	__rolldown_runtime__.createModuleHotContext("cases/require/cjs-lib-reassign-module-exports.js");
 	__rolldown_runtime__.registerModule("cases/require/cjs-lib-reassign-module-exports.js", module);
@@ -73,6 +74,7 @@ var require_cjs_lib_reassign_module_exports = /* @__PURE__ */ __commonJSMin(((ex
 //#endregion
 //#region cases/require/cjs-lib.js
 var require_cjs_lib = /* @__PURE__ */ __commonJSMin(((exports, module) => {
+	if (__rolldown_runtime__.hasFactory("cases/require/cjs-lib.js")) return module.exports = __rolldown_runtime__.initModule("cases/require/cjs-lib.js");
 	init_trigger_dep();
 	__rolldown_runtime__.createModuleHotContext("cases/require/cjs-lib.js");
 	__rolldown_runtime__.registerModule("cases/require/cjs-lib.js", module);
@@ -90,6 +92,7 @@ var require_cjs_lib = /* @__PURE__ */ __commonJSMin(((exports, module) => {
 //#endregion
 //#region cases/require/umd-lib.js
 var require_umd_lib = /* @__PURE__ */ __commonJSMin(((exports, module) => {
+	if (__rolldown_runtime__.hasFactory("cases/require/umd-lib.js")) return module.exports = __rolldown_runtime__.initModule("cases/require/umd-lib.js");
 	init_trigger_dep();
 	__rolldown_runtime__.createModuleHotContext("cases/require/umd-lib.js");
 	__rolldown_runtime__.registerModule("cases/require/umd-lib.js", module);

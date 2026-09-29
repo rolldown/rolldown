@@ -40,6 +40,7 @@ var init_esm = __esmMin((() => {
 //#endregion
 //#region bridge.js
 var require_bridge = /* @__PURE__ */ __commonJSMin(((exports, module) => {
+	if (__rolldown_runtime__.hasFactory("bridge.js")) return module.exports = __rolldown_runtime__.initModule("bridge.js");
 	__rolldown_runtime__.createModuleHotContext("bridge.js");
 	__rolldown_runtime__.registerModule("bridge.js", module);
 	module.exports = (init_esm(), __toCommonJS(esm_exports));

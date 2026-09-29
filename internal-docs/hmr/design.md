@@ -379,6 +379,24 @@ the changed module.
     boot exports. Nothing errors and nothing reloads. It is not in
     `shipped[C]`, so the stale sweep never sees it; it ships only when
     a later edit puts it in the predicted set.
+- **Wrapped modules in the entry chunk that have not run yet** — the
+  entry chunk keeps CommonJS modules as `__commonJSMin` wrappers, and
+  some ESM modules as `__esmMin` wrappers. A wrapper runs its body at
+  the first `require_x()` / `init_x()` call, which can come after the
+  file was edited. The client walk skips a changed id that never ran,
+  which is right: nothing needs to re-run. But the new code must be in
+  place before the first call.
+  - A CommonJS wrapper starts with
+    `if (hasFactory(id)) return module.exports = initModule(id)`, so a
+    factory that a patch registered wins over the old body
+    (`generate_cjs_wrapper_factory_dispatch_stmt`,
+    `module_finalizers/hmr.rs`). Both runtime methods exist since 1.2.0.
+  - The factory exists only if the client loads the patch on a client
+    no-op. The Vite client does not do this yet, so the first call
+    still runs the old body there.
+  - ESM wrappers are not covered: importers read the wrapper's hoisted
+    bindings in the entry chunk's shared scope, so a factory's exports
+    would not reach them.
 - **Missing factory after the coverage check** — `MissingFactoryError`
   from `initModule` is not turned into a reload (Failure policy). Known
   entry points: the build-id gap above, and a payload that threw before

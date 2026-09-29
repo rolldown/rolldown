@@ -10,8 +10,7 @@ import "./rolldown-runtime.js";
 __rolldown_runtime__.registerGraph({
 	ids: ["entry.js"],
 	localCount: 1,
-	edges: [[]],
-	dynamicEdges: [[]]
+	edges: [[]]
 });
 //#region entry.js
 __rolldown_runtime__.createModuleHotContext("entry.js");
@@ -28,8 +27,7 @@ import "./rolldown-runtime.js";
 __rolldown_runtime__.registerGraph({
 	ids: ["index.js"],
 	localCount: 1,
-	edges: [[]],
-	dynamicEdges: [[]]
+	edges: [[]]
 });
 //#region index.js
 __rolldown_runtime__.createModuleHotContext("index.js");

@@ -31,8 +31,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 __rolldown_runtime__.registerGraph({
 	ids: ["main.js"],
 	localCount: 1,
-	edges: [[]],
-	dynamicEdges: [[]]
+	edges: [[]]
 });
 //#region main.js
 __rolldown_runtime__.createModuleHotContext("main.js");

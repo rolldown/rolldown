@@ -116,7 +116,7 @@ test('registerGraph maintains static + dynamic reverse indexes; getImporters uni
     ids: ['app.js', 'foo.js', 'lazy.js'],
     localCount: 3,
     edges: [[1], [], []],
-    dynamicEdges: [[2], [], []],
+    dynamicEdges: { 0: [2] },
   });
   expect(runtime.getImporters('foo.js')).toEqual(['app.js']);
   // the dynamic importer is returned too — the client-side dynamic-import HMR feature
@@ -129,11 +129,19 @@ test('registerGraph maintains static + dynamic reverse indexes; getImporters uni
     ids: ['app.js', 'both.js'],
     localCount: 2,
     edges: [[1], []],
-    dynamicEdges: [[1], []],
+    dynamicEdges: { 0: [1] },
   });
   expect(runtime.getImporters('foo.js')).toEqual([]);
   expect(runtime.getImporters('lazy.js')).toEqual([]);
   expect(runtime.getImporters('both.js')).toEqual(['app.js']);
+
+  // a re-carried row with no `dynamicEdges` entry has no dynamic edges
+  runtime.registerGraph({
+    ids: ['app.js'],
+    localCount: 1,
+    edges: [[]],
+  });
+  expect(runtime.getImporters('both.js')).toEqual([]);
 });
 
 test('registerGraph keeps the export names each static edge imports', async () => {
@@ -145,7 +153,7 @@ test('registerGraph keeps the export names each static edge imports', async () =
     localCount: 4,
     edges: [[1, 2], [], [], []],
     bindings: { 0: [['a', 'default'], []] },
-    dynamicEdges: [[3], [], [], []],
+    dynamicEdges: { 0: [3] },
   });
   expect(runtime.getImportedBindings('app.js', 'named.js')).toEqual(['a', 'default']);
   expect(runtime.getImportedBindings('app.js', 'effect.js')).toEqual([]);
@@ -159,7 +167,7 @@ test('registerGraph keeps the export names each static edge imports', async () =
     localCount: 2,
     edges: [[1], []],
     bindings: { 0: [['a']] },
-    dynamicEdges: [[1], []],
+    dynamicEdges: { 0: [1] },
   });
   expect(runtime.getImportedBindings('both.js', 'dep.js')).toEqual(['a', '*']);
   runtime.registerGraph({
@@ -167,7 +175,7 @@ test('registerGraph keeps the export names each static edge imports', async () =
     localCount: 2,
     edges: [[1], []],
     bindings: { 0: [['*', 'a']] },
-    dynamicEdges: [[1], []],
+    dynamicEdges: { 0: [1] },
   });
   expect(runtime.getImportedBindings('both.js', 'dep.js')).toEqual(['*', 'a']);
 

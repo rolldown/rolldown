@@ -696,6 +696,10 @@ object keyed by row (`bindings:{1:[["a"]]}`), because a chunk's prelude
 lists every module of the chunk and most rows have no such edge. The key is
 left out when no row qualifies. The runtime keeps the names in
 `staticImports` and exposes them through `getImportedBindings`.
+`dynamicEdges` has the same shape (`dynamicEdges:{0:[2]}`) for the same
+reason: few modules call `import()`. A missing row means no dynamic edges.
+`edges` stays a dense array, because most modules import something and an
+empty row (`[]`) is shorter than a row key.
 
 Known gaps in this walk, kept on purpose for now:
 

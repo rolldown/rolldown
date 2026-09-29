@@ -98,7 +98,7 @@ After merge:
   {A, B}  → [lib-a, lib-b, shared-dep]  size: 160
 ```
 
-The merge algorithm uses a min-heap to process smallest subgroups first. For each candidate, it finds the best target by minimizing **symmetric difference** of bitsets (prefer similar entry-point patterns), with size as tiebreaker.
+The merge algorithm uses a min-heap to process smallest subgroups first. For each candidate, it finds the best target by minimizing **symmetric difference** of bitsets (prefer similar entry-point patterns), with size as tiebreaker. Both candidate and target ties are finally resolved by subgroup key. When merging is enabled, the group's modules are sorted by execution order before assigning subgroup keys, so module loading order cannot affect merge decisions. Sorting is limited to the group's modules and skipped when the merge threshold is disabled.
 
 ## Related
 

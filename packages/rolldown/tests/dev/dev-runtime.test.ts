@@ -1,5 +1,10 @@
+import { getDevWatchOptionsForCi } from '@rolldown/test-dev-server';
+import crypto from 'node:crypto';
 import fs from 'node:fs';
+import path from 'node:path';
 
+import { RUNTIME_MODULE_ID } from 'rolldown';
+import { dev } from 'rolldown/experimental';
 import { expect, test, vi } from 'vitest';
 
 async function createRuntime() {
@@ -16,50 +21,92 @@ test('the standalone runtime uses the canonical runtime helpers', async () => {
   const esmModule = runtime.__toCommonJS({ default: commonJsModule });
   expect(esmModule.__esModule).toBe(true);
   expect(esmModule.default).toBe(commonJsModule);
+  expect(runtime.__exportAll({ value: () => 1 }).value).toBe(1);
+  const reExportTarget: Record<string, unknown> = {};
+  runtime.__reExport(reExportTarget, { value: 2 });
+  expect(reExportTarget.value).toBe(2);
 });
 
-test('the packaged runtime base is byte-identical to the bundled runtime base', () => {
-  const packagedRuntimeBaseUrl = new URL(
-    './experimental-runtime-base.mjs',
-    import.meta.resolve('rolldown/experimental/runtime'),
-  );
-  const bundledRuntimeBaseUrl = new URL(
-    '../../../../crates/rolldown/src/runtime/runtime-base.js',
-    import.meta.url,
-  );
-
-  expect(fs.existsSync(packagedRuntimeBaseUrl)).toBe(true);
-  if (!fs.existsSync(packagedRuntimeBaseUrl)) return;
-  expect(fs.readFileSync(packagedRuntimeBaseUrl, 'utf8')).toBe(
-    fs.readFileSync(bundledRuntimeBaseUrl, 'utf8'),
-  );
+test('the runtime entry exports only the runtime classes', async () => {
+  const runtimeModule = await import(import.meta.resolve('rolldown/experimental/runtime'));
+  expect(Object.keys(runtimeModule).sort()).toStrictEqual(['DevRuntime', 'MissingFactoryError']);
 });
 
-// Vite serves the runtime from the installed package at dev time and finds the files the entry
-// imports by this name pattern (`getRolldownDevRuntimeFiles` in vite). Renaming or moving them
-// breaks every bundled-dev page in the browser.
-test('the runtime entry imports only siblings named experimental-runtime*.mjs', () => {
+// Vite serves this file to the browser as is.
+test('the runtime entry is a single file with no imports', () => {
   const entryUrl = new URL(import.meta.resolve('rolldown/experimental/runtime'));
   expect(entryUrl.pathname.endsWith('/experimental-runtime.mjs')).toBe(true);
 
-  const imports = [...fs.readFileSync(entryUrl, 'utf8').matchAll(/\bfrom\s*['"]([^'"]+)['"]/g)].map(
-    (match) => match[1],
-  );
-  expect(imports.length).toBeGreaterThan(0);
-  for (const specifier of imports) {
-    expect(specifier).toMatch(/^\.\/experimental-runtime[^/]*\.mjs$/);
-    expect(fs.existsSync(new URL(specifier, entryUrl))).toBe(true);
-  }
+  const source = fs.readFileSync(entryUrl, 'utf8');
+  expect(source).not.toMatch(/^\s*import\b/m);
+  expect(source).not.toMatch(/\bfrom\s*['"]/);
 });
 
-test('the package does not emit a separate runtime injection source', () => {
-  const runtimeSourceUrl = new URL(
-    './experimental-runtime-source.mjs',
-    import.meta.resolve('rolldown/experimental/runtime'),
-  );
+test('the package emits no other runtime source file', () => {
+  const distDir = new URL('.', import.meta.resolve('rolldown/experimental/runtime'));
+  const runtimeFiles = fs
+    .readdirSync(distDir)
+    .filter((name) => name.includes('runtime') && name.endsWith('.mjs'));
 
-  expect(fs.existsSync(runtimeSourceUrl)).toBe(false);
+  expect(runtimeFiles).toStrictEqual(['experimental-runtime.mjs']);
 });
+
+// The HMR plugin's `transform` hook appends the runtime before oxc prints it again, so the
+// exact source is only visible to a later `transform` hook, not in the output.
+test(
+  'devMode injects the common runtime and the default client as their exact source',
+  {
+    timeout: 60_000,
+  },
+  async ({ onTestFinished }) => {
+    const dir = path.join(
+      import.meta.dirname,
+      'temp',
+      `default-runtime-${crypto.randomUUID().slice(0, 8)}`,
+    );
+    fs.mkdirSync(dir, { recursive: true });
+    const input = path.join(dir, 'main.js');
+    fs.writeFileSync(input, 'console.log(1);\n');
+
+    let runtimeModuleCode: string | undefined;
+    const engine = await dev(
+      {
+        input,
+        experimental: { devMode: { host: 'example.test', port: 1234 } },
+        plugins: [
+          {
+            name: 'capture-runtime-module',
+            transform(code, id) {
+              if (id === RUNTIME_MODULE_ID) runtimeModuleCode = code;
+            },
+          },
+        ],
+      },
+      { dir: path.join(dir, 'dist') },
+      { watch: getDevWatchOptionsForCi() },
+    );
+    onTestFinished(async () => {
+      await engine.close();
+      if (!process.env.CI) {
+        fs.rmSync(dir, { recursive: true, force: true });
+      }
+    });
+    engine.run().catch(() => {});
+    await engine.ensureCurrentBuildFinish();
+
+    const read = (file: string) =>
+      fs.readFileSync(
+        new URL(`../../../../crates/rolldown_plugin_hmr/src/runtime/${file}`, import.meta.url),
+        'utf8',
+      );
+    const expected = `${read('runtime-extra-dev-common.js')}\n${read(
+      'runtime-extra-dev-default.js',
+    )}`.replaceAll('$ADDR', 'example.test:1234');
+    expect(runtimeModuleCode?.endsWith(expected)).toBe(true);
+    // `skipCommonRuntimeInjection` stops Rust from adding its own copy.
+    expect(runtimeModuleCode?.split('class DevRuntime')).toHaveLength(2);
+  },
+);
 
 test('registerGraph maintains static + dynamic reverse indexes; getImporters unions them', async () => {
   const { runtime } = await createRuntime();

@@ -1676,7 +1676,7 @@ dependencies = [
  "oxc_ecmascript",
  "oxc_index",
  "oxc_semantic",
- "oxc_sourcemap",
+ "oxc_sourcemap 8.1.2",
  "oxc_span",
  "oxc_str",
  "oxc_syntax",
@@ -1847,7 +1847,7 @@ dependencies = [
  "oxc_minifier",
  "oxc_napi",
  "oxc_parser",
- "oxc_sourcemap",
+ "oxc_sourcemap 8.1.2",
  "oxc_span",
  "oxc_str",
  "rustc-hash",
@@ -2008,6 +2008,19 @@ dependencies = [
 ]
 
 [[package]]
+name = "oxc_sourcemap"
+version = "9.0.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "1133371a5fadc14b9f66a8fec14be3564a77647c7ab21b1ef0ec973bd82613ce"
+dependencies = [
+ "base64-simd",
+ "json-escape-simd",
+ "rustc-hash",
+ "serde",
+ "serde_json",
+]
+
+[[package]]
 name = "oxc_span"
 version = "0.151.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2066,7 +2079,7 @@ dependencies = [
  "napi-derive",
  "oxc",
  "oxc_napi",
- "oxc_sourcemap",
+ "oxc_sourcemap 8.1.2",
  "rustc-hash",
 ]
 
@@ -2611,7 +2624,7 @@ dependencies = [
  "oxc_parser_napi",
  "oxc_resolver",
  "oxc_resolver_napi",
- "oxc_sourcemap",
+ "oxc_sourcemap 9.0.0",
  "oxc_transform_napi",
  "regex",
  "rolldown",
@@ -2670,7 +2683,7 @@ dependencies = [
  "oxc_ecmascript",
  "oxc_index",
  "oxc_resolver",
- "oxc_sourcemap",
+ "oxc_sourcemap 9.0.0",
  "oxc_str",
  "rolldown_ecmascript",
  "rolldown_error",
@@ -2748,7 +2761,7 @@ version = "1.2.11"
 dependencies = [
  "arcstr",
  "oxc",
- "oxc_sourcemap",
+ "oxc_sourcemap 9.0.0",
  "oxc_str",
  "rolldown_error",
  "self_cell",
@@ -3199,7 +3212,7 @@ dependencies = [
  "criterion2",
  "memchr",
  "oxc",
- "oxc_sourcemap",
+ "oxc_sourcemap 9.0.0",
 ]
 
 [[package]]
@@ -3612,7 +3625,7 @@ dependencies = [
  "insta",
  "memchr",
  "oxc_index",
- "oxc_sourcemap",
+ "oxc_sourcemap 9.0.0",
  "regex",
  "rustc-hash",
  "serde",

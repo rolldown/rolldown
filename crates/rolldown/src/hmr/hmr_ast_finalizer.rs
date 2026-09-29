@@ -36,6 +36,7 @@ pub struct HmrAstFinalizer<'me, 'ast> {
 
   // Each module has a unique index, which is used to generate something that needs to be unique.
   pub unique_index: usize,
+  pub stamp: u32,
 
   // --- Internal state
   /// For

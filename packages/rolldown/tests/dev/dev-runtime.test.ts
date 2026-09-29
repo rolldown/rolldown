@@ -228,6 +228,57 @@ test('initModule is registry-gated and returns the live exports', async () => {
   expect(factory).toHaveBeenCalledTimes(1);
 });
 
+test('a payload that arrives late does not replace newer factories or graph rows', async () => {
+  const { runtime } = await createRuntime();
+
+  // an HMR patch rendered at stamp 2 lands first
+  runtime.registerGraph({
+    ids: ['foo.js', 'bar.js'],
+    localCount: 1,
+    edges: [[1]],
+    stamps: { 0: 2 },
+  });
+  runtime.registerFactory(
+    'foo.js',
+    (id: string) => runtime.registerModule(id, { exports: { v: 2 } }),
+    2,
+  );
+
+  // a lazy chunk rendered before that edit (stamp 1) lands after it
+  runtime.registerGraph({ ids: ['foo.js'], localCount: 1, edges: [[]], stamps: { 0: 1 } });
+  runtime.registerFactory(
+    'foo.js',
+    (id: string) => runtime.registerModule(id, { exports: { v: 1 } }),
+    1,
+  );
+
+  expect(runtime.getImporters('bar.js')).toEqual(['foo.js']);
+  expect(runtime.initModule('foo.js')).toEqual({ v: 2 });
+
+  // the same stamp replaces (the copies are the same), and so does a newer one
+  runtime.registerFactory(
+    'foo.js',
+    (id: string) => runtime.registerModule(id, { exports: { v: 3 } }),
+    3,
+  );
+  runtime.removeModuleCache('foo.js');
+  expect(runtime.initModule('foo.js')).toEqual({ v: 3 });
+});
+
+test('graph rows without stamps replace the row like before', async () => {
+  const { runtime } = await createRuntime();
+
+  runtime.registerGraph({
+    ids: ['foo.js', 'bar.js'],
+    localCount: 1,
+    edges: [[1]],
+    stamps: { 0: 2 },
+  });
+  // a full-build chunk carries no `stamps`
+  runtime.registerGraph({ ids: ['foo.js'], localCount: 1, edges: [[]] });
+  expect(runtime.getImporters('bar.js')).toEqual([]);
+});
+
 test('initModule throws MissingFactoryError when no factory is mapped', async () => {
   const { runtime, MissingFactoryError } = await createRuntime();
   expect(() => runtime.initModule('nope.js')).toThrow(MissingFactoryError);

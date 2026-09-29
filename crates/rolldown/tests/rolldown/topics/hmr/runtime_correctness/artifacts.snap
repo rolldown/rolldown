@@ -192,7 +192,7 @@ if (main_hot) main_hot.accept();
 ## Code
 
 ```js
-__rolldown_runtime__.registerGraph({ids:["cases/deconflict_import_bindings/foo.mjs","cases/deconflict_import_bindings/foo/index.mjs","cases/deconflict_import_bindings/index.js","cases/manual_reexport/barrel.js","cases/manual_reexport/index.js","cases/manual_reexport/lib.js","cases/require/cjs-lib-reassign-module-exports.js","cases/require/cjs-lib.js","cases/require/index.js","cases/require/umd-lib.js","main.js","trigger-dep.js"],localCount:12,edges:[[11],[11],[0,1,11],[5,11],[3,11],[11],[11],[11],[11,6,7,9],[11],[8,4,2],[]]});
+__rolldown_runtime__.registerGraph({ids:["cases/deconflict_import_bindings/foo.mjs","cases/deconflict_import_bindings/foo/index.mjs","cases/deconflict_import_bindings/index.js","cases/manual_reexport/barrel.js","cases/manual_reexport/index.js","cases/manual_reexport/lib.js","cases/require/cjs-lib-reassign-module-exports.js","cases/require/cjs-lib.js","cases/require/index.js","cases/require/umd-lib.js","main.js","trigger-dep.js"],localCount:12,edges:[[11],[11],[0,1,11],[5,11],[3,11],[11],[11],[11],[11,6,7,9],[11],[8,4,2],[]],stamps:{11:1}});
 //#region cases/deconflict_import_bindings/foo.mjs
 __rolldown_runtime__.registerFactory("cases/deconflict_import_bindings/foo.mjs", (function(__rolldown_module_id__) {
 	try {
@@ -417,7 +417,7 @@ __rolldown_runtime__.registerFactory("trigger-dep.js", (function(__rolldown_modu
 		const hot_trigger_dep = __rolldown_runtime__.createModuleHotContext(__rolldown_module_id__);
 		console.log("hmr");
 	} finally {}
-}));
+}), 1);
 
 //#endregion
 ```

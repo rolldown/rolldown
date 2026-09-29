@@ -59,7 +59,7 @@ export { __exportAll as t };
 ## Code
 
 ```js
-__rolldown_runtime__.registerGraph({ids:["app.js","foo.js"],localCount:1,edges:[[]],dynamicEdges:{0:[1]}});
+__rolldown_runtime__.registerGraph({ids:["app.js","foo.js"],localCount:1,edges:[[]],dynamicEdges:{0:[1]},stamps:{0:1}});
 //#region app.js
 __rolldown_runtime__.registerFactory("app.js", (function(__rolldown_module_id__) {
 	try {
@@ -70,7 +70,7 @@ __rolldown_runtime__.registerFactory("app.js", (function(__rolldown_module_id__)
 			console.log(".app-edited", mod.value);
 		});
 	} finally {}
-}));
+}), 1);
 
 //#endregion
 ```

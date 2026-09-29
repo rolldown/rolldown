@@ -1,0 +1,4 @@
+{
+  "_comment": "Same as `10999`, with the cycle wrapped because of a `require()` instead of an inlined dynamic import, and default code splitting.",
+  "config": {}
+}

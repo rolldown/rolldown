@@ -1,0 +1,6 @@
+{
+  "_comment": "Same as `10999`, but the cycle goes through `h2.js`, so `h1.js` reaches the later wrapper of `app.js` only transitively.",
+  "config": {
+    "codeSplitting": false
+  }
+}

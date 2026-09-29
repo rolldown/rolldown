@@ -397,6 +397,8 @@ Uses the immutable link-stage `wrap_kind()` from `LinkingMetadata`.
 
 A guard prevents transferring init calls from a lower-exec-order module to a higher one, which would incorrectly reorder execution.
 
+A second guard (`wrapped_init_reaches_later_module`) skips a transfer when the moved `init_*()` call would also initialize a module that executes after the target. A wrapped module's init first initializes the wrapped modules it imports, and through an import cycle one of them can come later in the chunk, with its `var init_* = __esmMin(...)` not yet assigned at the target. This happens when an unwrapped module sits inside a wrapped cycle, for example a JSON module (never wrapped) imported by a cycle that is wrapped because of an inlined dynamic import or a `require()`. The call then stays in its importer's wrapper. See `crates/rolldown/tests/rolldown/issues/10999/`, `10999_transitive/` and `10999_require/`.
+
 ### Helper: `js_import_order()`
 
 Iterative DFS from the chunk's roots. Only follows `ImportKind::Import` edges — `require()` and `import()` are inherently lazy so they don't contribute to eager initialization order. Returns modules in DFS visit order.

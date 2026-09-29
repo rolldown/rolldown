@@ -448,10 +448,18 @@ impl GenerateStage<'_> {
             {
               let transfer_item = pending_transfer
                 .extract_if(0.., |(midx, _, _)| wrapped_modules[0..*deps_length].contains(midx));
-              for (_midx, iidx, ridx) in transfer_item {
+              for (midx, iidx, ridx) in transfer_item {
                 // Should always avoid transfer any initialization from a low execution order module to a high execution order module.
                 if chunk_module_to_exec_order[&iidx] <= chunk_module_to_exec_order[&module_idx] {
                   // If the module is the same, we can skip the transfer.
+                  continue;
+                }
+                // The transferred init call also initializes the wrapped modules `midx` imports.
+                // Through an import cycle, one of them can be a module that executes after
+                // `module_idx`, whose wrapper is only assigned further down the chunk.
+                if self
+                  .wrapped_init_reaches_later_module(midx, chunk_module_to_exec_order[&module_idx])
+                {
                   continue;
                 }
                 insert_map.entry(module_idx).or_default().push((iidx, ridx));
@@ -467,6 +475,35 @@ impl GenerateStage<'_> {
       chunk.insert_map = insert_map;
       chunk.remove_map = remove_map;
     });
+  }
+
+  /// Whether calling the init function of the wrapped module `wrapped` also initializes a module
+  /// whose execution order is greater than `exec_order`. The init function can initialize the
+  /// wrapped modules its module imports or requires, so this follows those edges. Without an
+  /// import cycle, a module's dependencies always execute before it, so this can only happen
+  /// through a cycle.
+  /// See internal-docs/code-splitting/implementation.md#lazy-module-initialization-order.
+  fn wrapped_init_reaches_later_module(&self, wrapped: ModuleIdx, exec_order: u32) -> bool {
+    let mut stack = vec![wrapped];
+    let mut visited = FxHashSet::default();
+    while let Some(module_idx) = stack.pop() {
+      if !visited.insert(module_idx) {
+        continue;
+      }
+      let Some(module) = self.link_output.module_table[module_idx].as_normal() else {
+        continue;
+      };
+      if module.exec_order > exec_order {
+        return true;
+      }
+      stack.extend(module.import_records.iter().filter_map(|rec| {
+        let importee = rec.resolved_module?;
+        (matches!(rec.kind, ImportKind::Import | ImportKind::Require)
+          && !self.link_output.metas[importee].wrap_kind().is_none())
+        .then_some(importee)
+      }));
+    }
+    false
   }
 
   /// Only considering module eager initialization order, both `require()` and `import()` are lazy

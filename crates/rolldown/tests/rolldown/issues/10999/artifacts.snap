@@ -1,0 +1,49 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+//#region h1.js
+var h1;
+var init_h1 = __esmMin((() => {
+	init_app();
+	h1 = () => useApp() + "-h1";
+}));
+//#endregion
+//#region info.json
+var name = "-json";
+//#endregion
+//#region lazy.js
+var lazy_exports = /* @__PURE__ */ __exportAll({ default: () => lazy_default });
+var lazy_default;
+var init_lazy = __esmMin((() => {
+	init_app();
+	lazy_default = () => useApp() + name;
+}));
+//#endregion
+//#region app.js
+function run() {
+	return Promise.resolve().then(() => (init_lazy(), lazy_exports)).then((m) => [
+		h1(),
+		name,
+		m.default()
+	]);
+}
+function useApp() {
+	return "app";
+}
+var init_app = __esmMin((() => {
+	init_h1();
+}));
+//#endregion
+//#region main.js
+init_app();
+const result = run();
+//#endregion
+export { result };
+
+```

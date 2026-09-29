@@ -1,0 +1,6 @@
+{
+  "_comment": "`info.json` is not wrapped but sits inside the wrapped `app.js` <-> `h1.js` cycle. The init call of `h1.js` must not be moved in front of it, because it would call `init_app()` before that wrapper is assigned.",
+  "config": {
+    "codeSplitting": false
+  }
+}

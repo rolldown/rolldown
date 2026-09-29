@@ -10,7 +10,8 @@ use rolldown_utils::{
   pattern_filter::{StringOrRegex, get_matcher_string, normalize_path},
 };
 
-/// An ignored path is never watched or reported, nor is anything below an ignored directory.
+/// An ignored path is never watched or reported. A file is ignored if it matches, a directory
+/// if everything below it matches, a path of unknown kind if either holds.
 #[derive(Debug, Clone)]
 pub struct IgnoreFilter {
   glob: Option<Glob>,
@@ -47,20 +48,27 @@ impl IgnoreFilter {
   pub fn is_ignored(&self, path: &Path, kind: EntryKind) -> bool {
     let path = path.to_string_lossy();
     let path = normalize_path(&path);
-    self.glob.as_ref().is_some_and(|glob| {
-      let path = path.as_bytes();
-      match kind {
-        EntryKind::File => glob.is_match(path),
-        EntryKind::Dir => glob.match_dir(path).is_match(),
-        EntryKind::Unknown => glob.is_match(path) || glob.match_dir(path).is_match(),
-      }
-    }) || self.regexes.iter().any(|regex| regex.matches(&path))
+    match kind {
+      EntryKind::File => self.matches(&path),
+      EntryKind::Dir => self.matches_all_below(&path),
+      EntryKind::Unknown => self.matches(&path) || self.matches_all_below(&path),
+    }
   }
 
   /// Looks up the kind of `path` on disk.
   pub fn is_path_ignored(&self, path: &Path) -> bool {
     let kind = path.metadata().map_or(EntryKind::Unknown, |metadata| metadata.file_type().into());
     self.is_ignored(path, kind)
+  }
+
+  fn matches(&self, path: &str) -> bool {
+    self.glob.as_ref().is_some_and(|glob| glob.is_match(path.as_bytes()))
+      || self.regexes.iter().any(|regex| regex.matches(path))
+  }
+
+  /// A regex cannot tell whether it matches everything below a directory.
+  fn matches_all_below(&self, dir: &str) -> bool {
+    self.glob.as_ref().is_some_and(|glob| glob.match_dir(dir.as_bytes()).matches_all_below())
   }
 }
 
@@ -89,31 +97,29 @@ mod tests {
   #[test]
   fn globs_are_resolved_against_cwd() {
     let filter = filter(&[glob("**/node_modules/**"), glob("*.log")]);
-    for kind in [EntryKind::File, EntryKind::Dir, EntryKind::Unknown] {
-      assert!(filter.is_ignored(Path::new("/project/node_modules/pkg"), kind));
-      assert!(filter.is_ignored(Path::new("/project/src/node_modules/pkg/index.js"), kind));
-      assert!(filter.is_ignored(Path::new("/project/debug.log"), kind));
-      assert!(!filter.is_ignored(Path::new("/project/src/debug.log"), kind));
-      assert!(!filter.is_ignored(Path::new("/project/src/index.js"), kind));
-      assert!(!filter.is_ignored(Path::new("/other/debug.log"), kind));
+    assert!(
+      filter.is_ignored(Path::new("/project/src/node_modules/pkg/index.js"), EntryKind::File)
+    );
+    assert!(filter.is_ignored(Path::new("/project/debug.log"), EntryKind::File));
+    assert!(!filter.is_ignored(Path::new("/project/src/debug.log"), EntryKind::File));
+    assert!(!filter.is_ignored(Path::new("/other/debug.log"), EntryKind::File));
+  }
+
+  #[test]
+  fn kinds() {
+    let filter = filter(&[glob("src/**"), glob("**/*.log"), regex("node_modules")]);
+    for (path, file, dir) in [
+      ("/project/src", false, true),
+      ("/project/src/lib", true, true),
+      ("/project/foo.log", true, false),
+      ("/project/foo.log/a.js", false, false),
+      ("/project/node_modules", true, false),
+    ] {
+      let path = Path::new(path);
+      assert_eq!(filter.is_ignored(path, EntryKind::File), file, "{path:?} as a file");
+      assert_eq!(filter.is_ignored(path, EntryKind::Dir), dir, "{path:?} as a directory");
+      assert_eq!(filter.is_ignored(path, EntryKind::Unknown), file || dir, "{path:?}");
     }
-  }
-
-  #[test]
-  fn directories() {
-    let filter = filter(&[glob("src/**")]);
-    // `**` needs at least one segment, so the directory itself is not ignored
-    assert!(!filter.is_ignored(Path::new("/project/src"), EntryKind::Dir));
-    assert!(filter.is_ignored(Path::new("/project/src/lib"), EntryKind::Dir));
-    assert!(filter.is_ignored(Path::new("/project/src/lib"), EntryKind::Unknown));
-    assert!(!filter.is_ignored(Path::new("/project/tests"), EntryKind::Dir));
-  }
-
-  #[test]
-  fn regexes() {
-    let filter = filter(&[regex("node_modules")]);
-    assert!(filter.is_ignored(Path::new("/project/node_modules"), EntryKind::Dir));
-    assert!(!filter.is_ignored(Path::new("/project/src/index.js"), EntryKind::File));
   }
 
   #[test]

@@ -1,0 +1,70 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## app.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+//#region h1.js
+var h1;
+var init_h1 = __esmMin((() => {
+	init_app();
+	h1 = () => useApp() + "-h1";
+}));
+//#endregion
+//#region info.json
+var name = "-json";
+//#endregion
+//#region lazy.js
+var lazy_exports = /* @__PURE__ */ __exportAll({ default: () => lazy_default });
+var lazy_default;
+var init_lazy = __esmMin((() => {
+	init_app();
+	lazy_default = () => useApp() + name;
+}));
+//#endregion
+//#region app.js
+function run() {
+	const m = (init_lazy(), __toCommonJS(lazy_exports));
+	return [
+		h1(),
+		name,
+		m.default()
+	];
+}
+function useApp() {
+	return "app";
+}
+var init_app = __esmMin((() => {
+	init_h1();
+}));
+//#endregion
+export { run as n, init_app as t };
+
+```
+
+## main1.js
+
+```js
+import { n as run, t as init_app } from "./app.js";
+//#region main1.js
+init_app();
+const result = run();
+//#endregion
+export { result };
+
+```
+
+## main2.js
+
+```js
+import { n as run, t as init_app } from "./app.js";
+//#region main2.js
+init_app();
+const result = run();
+//#endregion
+export { result };
+
+```

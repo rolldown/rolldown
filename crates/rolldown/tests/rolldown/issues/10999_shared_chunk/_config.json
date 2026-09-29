@@ -1,0 +1,9 @@
+{
+  "_comment": "Same as `10999_require`, with two entries that share the chunk holding the cycle.",
+  "config": {
+    "input": [
+      { "name": "main1", "import": "./main1.js" },
+      { "name": "main2", "import": "./main2.js" }
+    ]
+  }
+}

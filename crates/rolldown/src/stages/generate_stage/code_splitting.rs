@@ -814,6 +814,23 @@ impl GenerateStage<'_> {
     }
   }
 
+  /// Whether an entry chunk for this module has exports, which `preserveEntrySignatures:
+  /// 'exports-only'` keeps fixed.
+  ///
+  /// Besides static exports, this counts exports that are only known at runtime
+  /// (`has_dynamic_exports`) and CommonJS modules: a CommonJS entry chunk exports the module's
+  /// `module.exports`. In CJS output, an export that other chunks need from that chunk would
+  /// either overwrite the value (another `module.exports =` in the `default` export mode) or be
+  /// written to the `exports` object after the module replaced it.
+  pub(super) fn entry_has_exports(&self, module_idx: ModuleIdx) -> bool {
+    let meta = &self.link_output.metas[module_idx];
+    !meta.is_canonical_exports_empty()
+      || meta.has_dynamic_exports
+      || self.link_output.module_table[module_idx]
+        .as_normal()
+        .is_some_and(|module| module.exports_kind.is_commonjs())
+  }
+
   fn init_entry_point(
     &self,
     chunk_graph: &mut ChunkGraph,
@@ -852,11 +869,10 @@ impl GenerateStage<'_> {
           | PreserveEntrySignatures::Strict
           | PreserveEntrySignatures::False => Some(finalized_preserve_entry_signatures),
           PreserveEntrySignatures::ExportsOnly => {
-            let meta = &self.link_output.metas[module.idx];
-            if meta.is_canonical_exports_empty() && !meta.has_dynamic_exports {
-              Some(PreserveEntrySignatures::AllowExtension)
-            } else {
+            if self.entry_has_exports(module.idx) {
               Some(PreserveEntrySignatures::Strict)
+            } else {
+              Some(PreserveEntrySignatures::AllowExtension)
             }
           }
         }

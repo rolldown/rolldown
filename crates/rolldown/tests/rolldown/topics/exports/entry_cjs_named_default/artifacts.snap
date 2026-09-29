@@ -6,9 +6,8 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## lib.js
 
 ```js
-// HIDDEN [\0rolldown/runtime.js]
 //#region lib.js
-var require_lib = /* @__PURE__ */ __commonJSMin(((exports, module) => {
+var require_lib = /* @__PURE__ */ require("./rolldown-runtime.js").__commonJSMin(((exports, module) => {
 	module.exports = { value: 42 };
 	module.exports.named = "named_value";
 }));
@@ -19,7 +18,6 @@ Object.defineProperty(exports, "default", {
 		return require_lib();
 	}
 });
-exports.__toESM = __toESM;
 
 ```
 
@@ -27,13 +25,33 @@ exports.__toESM = __toESM;
 
 ```js
 Object.defineProperty(exports, Symbol.toStringTag, { value: "Module" });
+const require_rolldown_runtime = require("./rolldown-runtime.js");
 const require_lib$1 = require("./lib.js");
 let node_assert = require("node:assert");
-node_assert = require_lib$1.__toESM(node_assert);
+node_assert = require_rolldown_runtime.__toESM(node_assert);
 //#region main.js
-var import_lib = /* @__PURE__ */ require_lib$1.__toESM(require_lib$1.default);
+var import_lib = /* @__PURE__ */ require_rolldown_runtime.__toESM(require_lib$1.default);
 node_assert.default.strictEqual(import_lib.default.value, 42);
 //#endregion
 exports.lib = import_lib.default;
+
+```
+
+## rolldown-runtime.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+Object.defineProperty(exports, "__commonJSMin", {
+	enumerable: true,
+	get: function() {
+		return __commonJSMin;
+	}
+});
+Object.defineProperty(exports, "__toESM", {
+	enumerable: true,
+	get: function() {
+		return __toESM;
+	}
+});
 
 ```

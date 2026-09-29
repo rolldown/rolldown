@@ -26,13 +26,6 @@ __rolldown_runtime__.registerGraph({
 			0
 		],
 		[3]
-	],
-	dynamicEdges: [
-		[],
-		[],
-		[],
-		[],
-		[]
 	]
 });
 //#region common.js
@@ -89,7 +82,7 @@ setInterval(sayMessage, 1e3);
 ## Code
 
 ```js
-__rolldown_runtime__.registerGraph({ids:["bar.js","common.js","foo.js","messenger.js"],localCount:4,edges:[[1],[],[1],[2,0,1]],dynamicEdges:[[],[],[],[]]});
+__rolldown_runtime__.registerGraph({ids:["bar.js","common.js","foo.js","messenger.js"],localCount:4,edges:[[1],[],[1],[2,0,1]]});
 //#region bar.js
 __rolldown_runtime__.registerFactory("bar.js", (function(__rolldown_module_id__) {
 	try {

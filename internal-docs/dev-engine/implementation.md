@@ -114,21 +114,34 @@ The HMR-related fields (`dev_context.rs:30-51`):
 
 The HMR plugin appends `experimental.devMode.implement`. The Rust layer
 deliberately has no default implementation. The JavaScript API keeps its default
-client in `crates/rolldown_plugin_hmr/src/runtime/runtime-extra-dev-default.js`;
-option normalization reads the standalone common runtime from its package export,
-removes its generated first-line helper import, and reads the default runtime
-through the package-internal `#default-runtime` import. It then joins them after
-substituting the server address. Rust consumers and the integration test harness
+client in `crates/rolldown_plugin_hmr/src/runtime/runtime-extra-dev-default.js`.
+`packages/rolldown/build.ts` inlines the common runtime and the default client
+into the JS glue as the `__RUNTIME_STRING__` constant, as their exact source text.
+`getDefaultDevRuntime` (`packages/rolldown/src/utils/default-dev-runtime.ts`)
+substitutes the server address into it. "Exact source" means the text that the
+HMR plugin's `transform` hook appends to the runtime module, before oxc parses and
+prints it again. Only `build.ts` fills the constant, so running
+`getDefaultDevRuntime` from the TypeScript source throws. The package source does
+not read files from `crates/`. Rust consumers and the integration test harness
 provide the complete implementation explicitly.
 
 The reusable runtime classes are also built as the ESM entry
 `rolldown/experimental/runtime`; its package export points at the matching
 generated declaration file so custom runtime implementations can import both
-the values and their types from one specifier. The entry imports its helpers from
-an unmodified copy of `crates/rolldown/src/runtime/runtime-base.js`, which is the
-same source the Rust core includes in generated bundles. Removing the standalone
-entry's generated helper import recovers the verbatim common runtime source for
-injection, so generated bundle output does not change.
+the values and their types from one specifier. Vite serves this entry to the
+browser as is, so it must be one file with no imports. `buildRuntimeEntry` in
+`build.ts` bundles the common runtime with Rolldown. The `inject` option binds
+the helper names that the common runtime reads as free variables to
+`crates/rolldown/src/runtime/runtime-base.js`, the same helper source the Rust
+core includes in generated bundles. Tree shaking drops the helpers the runtime
+does not use, and the entry exports only the runtime classes.
+
+The package holds the common runtime twice: bundled in the entry, and as source
+text in `__RUNTIME_STRING__`. This is on purpose. The injected copy must be the
+exact source, and must not declare the helpers again, because the runtime
+module it is appended to already has them. The bundled entry is neither. Both
+copies are built from the same file in the same build, so they cannot drift
+apart.
 
 ### Threading model
 
@@ -698,6 +711,61 @@ Then, across all files of the batch:
    (`hmr_stage.rs:727-729`); otherwise an `HmrPatch` with `changed_ids`,
    `carried`, and `seq: 0` — the dev engine assigns the real `seq`
    afterwards.
+
+The superset walk (`collect_client_update_superset` in `hmr_stage.rs`)
+starts from the changed modules and follows importer edges (static and
+dynamic `import()`). It stops at a self-accepting module and at an importer
+that accepts the module as a dependency. It does not stop at an importer
+that reads only export names the module accepts through
+`import.meta.hot.acceptExports`. Only the browser makes that decision:
+Vite's bundled-dev client skips such an importer only when
+`experimental.hmrPartialAccept` is on, and it reads the accepted names from
+the call at run time. If the server skipped the importer too, a client with
+the option off would walk into an importer whose factory was never shipped,
+and it would full-reload.
+
+The browser makes this decision on its own copy of the graph. Each
+`registerGraph` prelude (in initial chunks and in patches) carries, per
+static edge, the export names
+the importer reads (`bindings[i][j]`): `"*"` for a whole-namespace read
+(`import * as ns`, `export * from`, `require()`, non-JS records; the same
+sentinel Vite's `importAnalysis` uses), an empty list for a side-effect-only
+import. The field is filled only for edges into a module that calls
+`acceptExports`; a `null` or missing entry means `"*"`. `bindings` is an
+object keyed by row (`bindings:{1:[["a"]]}`), because a chunk's prelude
+lists every module of the chunk and most rows have no such edge. The key is
+left out when no row qualifies. The runtime keeps the names in
+`staticImports` and exposes them through `getImportedBindings`.
+`dynamicEdges` has the same shape (`dynamicEdges:{0:[2]}`) for the same
+reason: few modules call `import()`. A missing row means no dynamic edges.
+`edges` stays a dense array, because most modules import something and an
+empty row (`[]`) is shorter than a row key.
+
+Known gaps in this walk, kept on purpose for now:
+
+- **The two sides decide from different generations.** The server reads
+  the post-rebuild `hmr_info`; the browser reads the hot context of the
+  module still evaluated there. When an edit adds or widens an `accept`
+  declaration, the server skips an importer that the browser's older
+  context still walks into. If that importer has an accepting ancestor,
+  the browser needs its factory and none was shipped; otherwise the
+  browser finds no boundary. Either way that client full-reloads once,
+  then the reload loads the new generation and the two agree. Plain
+  `accept()` has had this shape since the walk was written. Follow-up:
+  keep the pre-rebuild `hmr_info` of a changed module (as the
+  unchanged-output check keeps the pre-rebuild render) and skip an
+  importer only when the old declaration already covered it. That removes the reload in the accepting-ancestor case; the
+  no-ancestor case needs the browser to learn the new declaration before
+  it walks.
+- **`"*"` is a plain string.** A module may export a name literally spelled
+  `"*"` (`export { x as "*" }`). If such a module also calls
+  `acceptExports(["*"])`, a namespace importer is read as covered and is
+  not re-run. Vite's unbundled server has the same collision
+  (`importAnalysis.ts` writes `'*'` into `importedBindings`, and
+  `areAllImportsAccepted` in `server/hmr.ts` compares it as a name). The
+  payload keeps the string so the Vite bundled-dev client can share one
+  rule. A tagged marker is possible later, but it must change on both
+  sides in the same release.
 
 ### `rebuild` (`bundling_task.rs:332-371`)
 

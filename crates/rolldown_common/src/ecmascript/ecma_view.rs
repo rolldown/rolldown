@@ -214,6 +214,8 @@ bitflags! {
         const UnknownExportsRead = 1 << 7;
         /// Top-level return statement (only valid in CommonJS)
         const TopLevelReturn = 1 << 8;
+        /// `import.meta.hot.acceptExports(...)` is called somewhere in the module
+        const HmrAcceptExports = 1 << 9;
         const ModuleOrExports = Self::ModuleRef.bits() | Self::ExportsRef.bits();
     }
 }

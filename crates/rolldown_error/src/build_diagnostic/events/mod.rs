@@ -120,18 +120,15 @@ impl<T: 'static + BuildEvent> AsAnyMut for T {
   }
 }
 
-/// A Hybrid string type used for diagnostic, e.g.
-/// for `UnresolvedError`, a specifier could be either a slice from raw source, or
-/// created during ast transformation. When the specifier came from raw source, we could
-/// use the `Span` information to give user better DX, otherwise, we could just use the string to
-/// create a fallback message.
-/// ## Panic
-/// they type is only used for store information, user should check the span could be referenced
-/// the raw source, or the user side may panic.
+/// Specifier text for a resolve diagnostic, with an optional source span for the label.
+///
+/// `String` is an import inserted during transformation, so it has no span in the original
+/// source. `Span.text` is the specifier that was resolved. The span only locates the import
+/// and may cover an identifier rather than a quoted literal.
 #[derive(Debug)]
 pub enum DiagnosableArcstr {
   String(ArcStr),
-  Span(Span),
+  Span { span: Span, text: ArcStr },
 }
 
 // --- end

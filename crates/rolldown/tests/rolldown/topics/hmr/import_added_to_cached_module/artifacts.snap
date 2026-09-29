@@ -20,12 +20,6 @@ __rolldown_runtime__.registerGraph({
 		[0],
 		[],
 		[1, 2]
-	],
-	dynamicEdges: [
-		[],
-		[],
-		[],
-		[]
 	]
 });
 //#region lib.js
@@ -60,7 +54,7 @@ __rolldown_runtime__.registerModule("main.js", { exports: main_exports });
 ## Code
 
 ```js
-__rolldown_runtime__.registerGraph({ids:["adder.js","lib.js"],localCount:1,edges:[[1]],dynamicEdges:[[]]});
+__rolldown_runtime__.registerGraph({ids:["adder.js","lib.js"],localCount:1,edges:[[1]]});
 //#region adder.js
 __rolldown_runtime__.registerFactory("adder.js", (function(__rolldown_module_id__) {
 	try {
@@ -90,7 +84,7 @@ __rolldown_runtime__.registerFactory("adder.js", (function(__rolldown_module_id_
 ## Code
 
 ```js
-__rolldown_runtime__.registerGraph({ids:["accepter.js","adder.js","lib.js"],localCount:3,edges:[[2],[2],[]],dynamicEdges:[[],[],[]]});
+__rolldown_runtime__.registerGraph({ids:["accepter.js","adder.js","lib.js"],localCount:3,edges:[[2],[2],[]]});
 //#region accepter.js
 __rolldown_runtime__.registerFactory("accepter.js", (function(__rolldown_module_id__) {
 	try {

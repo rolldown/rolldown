@@ -886,9 +886,9 @@ dependencies = [
 
 [[package]]
 name = "globstar"
-version = "0.0.3"
+version = "0.0.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "58e3fa6992fa0e7d9b89aad26a1296903b52156ad0ecae1573ec09cef05c226e"
+checksum = "5eb403f8548b623d8a2e74c1a6003b2c251f9dfcc357ab6bedbd144d5f272595"
 
 [[package]]
 name = "half"

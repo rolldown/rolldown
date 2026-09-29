@@ -271,20 +271,14 @@ test.concurrent(
   },
 );
 
-// Skipped acceptance test for https://github.com/rolldown/rolldown/issues/10487.
+// https://github.com/rolldown/rolldown/issues/10487
 //
-// DESIRED behavior, matching Vite's bundled dev and a cold build (covered
-// end-to-end by the `hmr-delete-self-watched` dev-server playground): deleting
-// a still-imported file must fail the round with an unresolved-import error,
-// and recreating the file must recover.
-//
-// The raw engine does not do this today: oxc_resolver caches every filesystem
-// lookup and watch events never invalidate the cache (only a full rebuild or a
-// tsconfig change clears it), so the importer's re-scan resolves the deleted
-// path from the stale cache and the round ends in a silent Noop that a server
-// restart contradicts. Skipped until per-event resolver-cache invalidation
-// lands — the fix un-skips this test.
-test.skip(
+// Deleting a still-imported file must fail the round with an unresolved-import
+// error, and recreating the file must recover. This matches Vite's bundled dev
+// and a cold build (covered end-to-end by the `hmr-delete-self-watched`
+// dev-server playground). oxc_resolver caches every filesystem lookup, so the
+// engine clears the resolver cache when a batch creates or deletes a file.
+test.concurrent(
   'deleting an imported file surfaces a resolve error and recreating it recovers',
   { retry: TEST_RETRY, timeout: TEST_TIMEOUT },
   async ({ task, expect, onTestFinished }) => {

@@ -1056,6 +1056,7 @@ export type ExperimentalInlineCommonChunksOptions = {
   /**
    * Common chunks whose pre-render size (the sum of the transformed source sizes of their modules,
    * in bytes) is strictly smaller than this value are candidates for inlining.
+   * Use `Infinity` to remove the size limit.
    *
    * A value greater than `0` requires `output.format: 'es'`, an explicit
    * `preserveEntrySignatures: false` and code splitting, and it turns on

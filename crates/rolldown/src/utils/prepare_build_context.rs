@@ -228,11 +228,15 @@ fn verify_inline_common_chunks_options(
   );
 }
 
-/// A non-negative safe integer, the same range `Number.isSafeInteger` accepts. `f64` is what the
+/// A non-negative safe integer or positive infinity. `f64` is what the
 /// binding hands over, so the check is done on the raw number rather than after a lossy cast.
 fn inline_common_chunks_max_size_is_valid(max_size: f64) -> bool {
   const MAX_SAFE_INTEGER: f64 = 9_007_199_254_740_991.0;
-  max_size.is_finite() && max_size >= 0.0 && max_size.fract() == 0.0 && max_size <= MAX_SAFE_INTEGER
+  max_size == f64::INFINITY
+    || (max_size.is_finite()
+      && max_size >= 0.0
+      && max_size.fract() == 0.0
+      && max_size <= MAX_SAFE_INTEGER)
 }
 
 #[expect(clippy::too_many_lines)] // This function is long, but it's mostly just mapping values
@@ -254,8 +258,8 @@ pub fn prepare_build_context(
   };
 
   // `verify_raw_options` already rejected an invalid `maxSize` and every unmet precondition, so
-  // the lossy cast below only ever sees a non-negative safe integer. `maxSize: 0` is the option
-  // left out: the normalized field is `Some` exactly when the feature is on.
+  // cast below only sees a non-negative safe integer or positive infinity, which saturates to
+  // `usize::MAX` (unlimited). `maxSize: 0` normalizes to `None`.
   #[expect(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
   let inline_common_chunks = manual_code_splitting
     .as_ref()

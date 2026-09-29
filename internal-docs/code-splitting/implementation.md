@@ -170,6 +170,8 @@ When the reduced bitset would put an atom into a single purely dynamic-imported 
 
 Every accepted reduction must also keep the regrouped static atom graph acyclic. "Already loaded" does not always mean "already initialized": if a reduced atom is moved into a chunk that statically imports one of its consumers, an ES module cycle can expose uninitialized bindings, including CJS wrapper functions.
 
+When `experimentalInlineCommonChunks` is enabled, module groups below its size threshold that pass its module-level checks keep their common placement instead of being reduced or merged into a single entry. The final inline selector still validates the completed graph. This lets a shared module be copied into its main and lazy consumers instead of forcing an entry-trigger facade; see `../inline-common-chunks/design.md#keeping-shared-code-available-for-inlining`.
+
 Runtime may participate in this bit reduction, but only as placement metadata. It is extracted into a standalone runtime chunk before manual and normal chunk materialization, so this pass does not assign runtime code to user chunks and does not need runtime-specific cycle handling.
 
 Top-level-await refinements are intentionally not modeled here yet. The existing chunk optimizer still bails out globally when any included module is TLA or contains a TLA dependency, so the awaited-dynamic-import safety path remains future work.

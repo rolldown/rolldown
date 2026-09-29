@@ -46,9 +46,20 @@ impl GenerateStage<'_> {
       .iter()
       .map(|chunk| chunk.imports_from_other_chunks.keys().copied().collect())
       .collect();
+    let dynamic_importees = chunk_graph
+      .chunk_table
+      .iter()
+      .map(|chunk| chunk.cross_chunk_dynamic_imports.iter().copied().collect())
+      .collect();
     let placement = compute_placement(
       &static_importees,
+      &dynamic_importees,
+      &self.untracked_dynamic_importers(chunk_graph),
       |chunk_idx| !chunk_graph.post_chunk_optimization_operations.contains_key(&chunk_idx),
+      |chunk_idx| {
+        chunk_graph.chunk_table[chunk_idx].is_user_defined_entry()
+          || chunk_graph.chunk_idx_to_reference_ids.contains_key(&chunk_idx)
+      },
       |chunk_idx| chunk_graph.chunk_table[chunk_idx].exec_order,
       &records,
     );
@@ -76,6 +87,16 @@ impl GenerateStage<'_> {
     for file in placement.reading_files.iter().copied() {
       let carried = placement.carried.get(&file).map_or(&[][..], Vec::as_slice);
       let file_chunk = &chunk_graph.chunk_table[file];
+      let cross_chunk_dynamic_imports = file_chunk
+        .cross_chunk_dynamic_imports
+        .iter()
+        .copied()
+        .chain(carried.iter().flat_map(|record| {
+          chunk_graph.chunk_table[*record].cross_chunk_dynamic_imports.iter().copied()
+        }))
+        .collect::<FxIndexSet<_>>()
+        .into_iter()
+        .collect::<Vec<_>>();
       // Evaluation order: the runtime chunk first, then the file's committed importees in order,
       // each record expanded in place into its own committed importees. A record the file reads
       // without carrying it expands into bare imports.
@@ -122,6 +143,7 @@ impl GenerateStage<'_> {
       let chunk = &mut chunk_graph.chunk_table[file];
       chunk.imports_from_other_chunks = imports_from_other_chunks.into_iter().collect();
       chunk.cross_chunk_imports = cross_chunk_imports;
+      chunk.cross_chunk_dynamic_imports = cross_chunk_dynamic_imports;
     }
 
     // Every edge to a record was replaced above; a file that still had one would import a file

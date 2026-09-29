@@ -117,7 +117,7 @@ impl BuildEvent for InvalidOption {
           format!("The \"{pattern_name}\" pattern (or the value returned from the function) would result in a filename with invalid null byte(s) (\\0). This is usually caused by using virtual module IDs (which start with \\0) directly in filenames. Use the module ID without the \\0 prefix, or filter out virtual modules from chunk.moduleIds.")
         }
         InvalidOptionType::InlineCommonChunksInvalidMaxSize(value) => {
-          format!("Invalid value {value} for option \"output.codeSplitting.experimentalInlineCommonChunks.maxSize\" - it must be a non-negative safe integer (`0` disables the feature).")
+          format!("Invalid value {value} for option \"output.codeSplitting.experimentalInlineCommonChunks.maxSize\" - it must be a non-negative safe integer or `Infinity` (`0` disables the feature).")
         }
         InvalidOptionType::InlineCommonChunksRequirement(requirement) => {
           format!("Invalid option combination for \"output.codeSplitting.experimentalInlineCommonChunks\" - a `maxSize` greater than 0 requires {requirement}.")

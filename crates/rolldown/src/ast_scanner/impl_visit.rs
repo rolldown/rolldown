@@ -13,9 +13,8 @@ use oxc::{
 use oxc_str::CompactStr;
 use rolldown_common::{
   ConstExportMeta, EcmaModuleAstUsage, EcmaViewMeta, ImportKind, ImportRecordMeta, LocalExport,
-  MemberExprObjectReferencedType, MemberExprRef, OutputFormat, RUNTIME_MODULE_KEY,
-  RolldownFileUrlReference, StmtInfoIdx, StmtInfoMeta, SymbolRefFlags,
-  dynamic_import_usage::DynamicImportExportsUsage,
+  MemberExprObjectReferencedType, MemberExprRef, RUNTIME_MODULE_KEY, RolldownFileUrlReference,
+  StmtInfoIdx, StmtInfoMeta, SymbolRefFlags, dynamic_import_usage::DynamicImportExportsUsage,
 };
 #[cfg(debug_assertions)]
 use rolldown_ecmascript::ToSourceString;
@@ -238,9 +237,7 @@ impl<'me, 'ast: 'me> VisitJs<'ast> for AstScanner<'me, 'ast> {
       );
       self.init_dynamic_import_binding_usage_info(import_rec_idx);
       self.result.imports.insert(expr.node_id(), import_rec_idx);
-    } else if matches!(self.immutable_ctx.options.format, OutputFormat::Cjs)
-      && !self.immutable_ctx.options.dynamic_import_in_cjs
-    {
+    } else {
       // No import record - either @vite-ignore or non-static dynamic import
       self.current_stmt_info.meta.insert(StmtInfoMeta::NonStaticDynamicImport);
     }
@@ -400,7 +397,7 @@ impl<'me, 'ast: 'me> VisitJs<'ast> for AstScanner<'me, 'ast> {
 
   fn visit_expression(&mut self, it: &Expression<'ast>) {
     if matches!(it, Expression::ImportMeta(_)) {
-      self.result.ast_usage.insert(EcmaModuleAstUsage::ImportMeta);
+      self.current_stmt_info.meta.insert(StmtInfoMeta::ImportMeta);
     }
     if self.is_root_scope()
       && matches!(

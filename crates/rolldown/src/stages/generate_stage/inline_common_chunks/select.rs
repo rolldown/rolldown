@@ -1,7 +1,7 @@
 use itertools::Itertools;
 use rolldown_common::{
-  Chunk, ChunkIdx, ChunkKind, ChunkReasonType, ConcatenateWrappedModuleKind, EcmaModuleAstUsage,
-  ImportKind, ImportRecordMeta, RuntimeHelper, StmtInfoMeta, SymbolOrMemberExprRef, WrapKind,
+  Chunk, ChunkIdx, ChunkKind, ChunkReasonType, ConcatenateWrappedModuleKind, ImportKind,
+  ImportRecordMeta, ModuleIdx, RuntimeHelper, StmtInfoMeta, SymbolOrMemberExprRef, WrapKind,
 };
 use rolldown_utils::indexmap::FxIndexSet;
 use rustc_hash::FxHashSet;
@@ -146,10 +146,17 @@ impl GenerateStage<'_> {
     // record such a file would print stays a file. Removing a record moves other records'
     // carriers, so the placement is recomputed until every record passes.
     let eval_files = self.eval_files(chunk_graph);
+    let untracked_dynamic_importers = self.untracked_dynamic_importers(chunk_graph);
     let placement = loop {
       let placement = compute_placement(
         &static_importees,
+        &link_state.index_cross_chunk_dynamic_imports,
+        &untracked_dynamic_importers,
         is_live,
+        |chunk_idx| {
+          chunk_graph.chunk_table[chunk_idx].is_user_defined_entry()
+            || chunk_graph.chunk_idx_to_reference_ids.contains_key(&chunk_idx)
+        },
         |chunk_idx| chunk_graph.chunk_table[chunk_idx].exec_order,
         &records,
       );
@@ -270,77 +277,111 @@ impl GenerateStage<'_> {
       return Some("imports an external module");
     }
     for module_idx in chunk.modules.iter().copied() {
-      let Some(module) = self.link_output.module_table[module_idx].as_normal() else {
-        return Some("member is not a normal module");
-      };
-      if self.link_output.entries.contains_key(&module_idx) {
-        return Some("hosts an entry module");
-      }
-      if self.inline_state.is_excluded_module(module_idx) {
-        return Some("member matches `exclude`");
+      if let Some(reason) = self.inline_common_chunk_module_bailout(module_idx) {
+        return Some(reason);
       }
       let meta = &self.link_output.metas[module_idx];
-      if meta.is_tla_or_contains_tla_dependency {
-        return Some("member uses top-level await");
-      }
-      if module.meta.has_eval() {
-        return Some("member uses direct eval");
-      }
-      if !matches!(meta.concatenated_wrapped_module_kind, ConcatenateWrappedModuleKind::None) {
-        return Some("member is a concatenated wrapped module");
-      }
       if order_state.esm_init_target(module_idx, meta).is_none()
         && !matches!(meta.wrap_kind(), WrapKind::Cjs)
       {
         return Some("member has no wrapper");
       }
-      for (stmt_info_idx, stmt_info) in self.link_output.stmt_infos[module_idx].iter_enumerated() {
-        if !meta.stmt_info_included.has_bit(stmt_info_idx) {
-          continue;
-        }
-        if stmt_info.meta.contains(StmtInfoMeta::NonStaticDynamicImport) {
-          return Some("member uses dynamic import");
-        }
-        for rec_idx in &stmt_info.import_records {
-          let rec = &module.import_records[*rec_idx];
-          match rec.kind {
-            ImportKind::Import | ImportKind::Require => match rec.resolved_module {
-              Some(importee_idx) => {
-                if self.link_output.module_table[importee_idx].is_external() {
-                  return Some("member imports an external module");
-                }
-              }
-              None => return Some("member has an unresolved import"),
-            },
-            ImportKind::DynamicImport => {
-              if !rec.meta.contains(ImportRecordMeta::DeadDynamicImport) {
-                return Some("member uses dynamic import");
-              }
-            }
-            ImportKind::AtImport
-            | ImportKind::UrlImport
-            | ImportKind::NewUrl
-            | ImportKind::HotAccept => return Some("member uses an unsupported import kind"),
-          }
-        }
+    }
+    if facts.max_size != usize::MAX && self.chunk_size(chunk) >= facts.max_size {
+      return Some("not smaller than maxSize");
+    }
+    None
+  }
+
+  pub(in crate::stages::generate_stage) fn prefers_inline_common_chunk(
+    &self,
+    modules: &[ModuleIdx],
+  ) -> bool {
+    let Some(options) = &self.options.inline_common_chunks else {
+      return false;
+    };
+    let mut size = 0;
+    let mut has_module = false;
+    for &module_idx in modules {
+      if module_idx == self.link_output.runtime.id() {
+        continue;
       }
-      if !meta.star_exports_from_external_modules.is_empty() {
-        // The finalizer prints `import * as ns from "ext"` and `__reExport` for it inside the
-        // module body; an import declaration cannot sit inside a factory.
-        return Some("member re-exports an external module's exports");
+      has_module = true;
+      if self.inline_common_chunk_module_bailout(module_idx).is_some() {
+        return false;
       }
-      if module.ecma_view.ast_usage.contains(EcmaModuleAstUsage::ImportMeta) {
+      size += self.link_output.module_table[module_idx].size();
+    }
+    has_module && (options.max_size == usize::MAX || size < options.max_size)
+  }
+
+  fn inline_common_chunk_module_bailout(&self, module_idx: ModuleIdx) -> Option<&'static str> {
+    let Some(module) = self.link_output.module_table[module_idx].as_normal() else {
+      return Some("member is not a normal module");
+    };
+    if self.link_output.entries.contains_key(&module_idx) {
+      return Some("hosts an entry module");
+    }
+    if self.inline_state.is_excluded_module(module_idx) {
+      return Some("member matches `exclude`");
+    }
+    let meta = &self.link_output.metas[module_idx];
+    if meta.is_tla_or_contains_tla_dependency {
+      return Some("member uses top-level await");
+    }
+    if module.meta.has_eval() {
+      return Some("member uses direct eval");
+    }
+    if !matches!(meta.concatenated_wrapped_module_kind, ConcatenateWrappedModuleKind::None) {
+      return Some("member is a concatenated wrapped module");
+    }
+    for (stmt_info_idx, stmt_info) in self.link_output.stmt_infos[module_idx].iter_enumerated() {
+      if !meta.stmt_info_included.has_bit(stmt_info_idx) {
+        continue;
+      }
+      if stmt_info.meta.contains(StmtInfoMeta::ImportMeta) {
         return Some("member uses import.meta");
       }
-      // The builtin asset and copy module types stand for an emitted file whose reference is
-      // rewritten in `renderChunk`, relative to the chunk that prints it; copies in two carriers
-      // would not agree.
-      if self.plugin_driver.file_emitter.file_ref_for_module(&module.id).is_some() {
-        return Some("member is an emitted asset");
+      if stmt_info.meta.contains(StmtInfoMeta::NonStaticDynamicImport) {
+        return Some("member uses dynamic import");
+      }
+      for rec_idx in &stmt_info.import_records {
+        let rec = &module.import_records[*rec_idx];
+        match rec.kind {
+          ImportKind::Import | ImportKind::Require => match rec.resolved_module {
+            Some(importee_idx) => {
+              if self.link_output.module_table[importee_idx].is_external() {
+                return Some("member imports an external module");
+              }
+            }
+            None => return Some("member has an unresolved import"),
+          },
+          ImportKind::DynamicImport => {
+            if !rec.meta.contains(ImportRecordMeta::DeadDynamicImport)
+              && !rec
+                .resolved_module
+                .is_some_and(|idx| self.link_output.module_table[idx].is_normal())
+            {
+              return Some("member uses dynamic import");
+            }
+          }
+          ImportKind::AtImport
+          | ImportKind::UrlImport
+          | ImportKind::NewUrl
+          | ImportKind::HotAccept => return Some("member uses an unsupported import kind"),
+        }
       }
     }
-    if self.chunk_size(chunk) >= facts.max_size {
-      return Some("not smaller than maxSize");
+    if !meta.star_exports_from_external_modules.is_empty() {
+      // The finalizer prints `import * as ns from "ext"` and `__reExport` for it inside the
+      // module body; an import declaration cannot sit inside a factory.
+      return Some("member re-exports an external module's exports");
+    }
+    // The builtin asset and copy module types stand for an emitted file whose reference is
+    // rewritten in `renderChunk`, relative to the chunk that prints it; copies in two carriers
+    // would not agree.
+    if self.plugin_driver.file_emitter.file_ref_for_module(&module.id).is_some() {
+      return Some("member is an emitted asset");
     }
     None
   }
@@ -378,6 +419,28 @@ impl GenerateStage<'_> {
       }
     }
     owners
+  }
+
+  pub(super) fn untracked_dynamic_importers(
+    &self,
+    chunk_graph: &ChunkGraph,
+  ) -> FxHashSet<ChunkIdx> {
+    self
+      .link_output
+      .module_table
+      .modules
+      .iter()
+      .filter_map(|module| module.as_normal())
+      .filter(|module| {
+        let meta = &self.link_output.metas[module.idx];
+        meta.is_included
+          && self.link_output.stmt_infos[module.idx].iter_enumerated().any(|(idx, stmt)| {
+            meta.stmt_info_included.has_bit(idx)
+              && stmt.meta.contains(StmtInfoMeta::NonStaticDynamicImport)
+          })
+      })
+      .filter_map(|module| chunk_graph.module_to_chunk[module.idx])
+      .collect()
   }
 
   /// The chunks holding an included module that uses direct `eval`.

@@ -4367,13 +4367,3 @@ name = "zmij"
 version = "1.0.23"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "29666d0abbfad1e3dc4dcf6144730dd3a3ab225bbbdac83319345b1b44ccfc1b"
-
-[[patch.unused]]
-name = "rolldown-notify"
-version = "10.5.1"
-source = "git+https://github.com/rolldown/notify.git?rev=3b77886316ad2de1b4fe49b40ff58a77a10872ed#3b77886316ad2de1b4fe49b40ff58a77a10872ed"
-
-[[patch.unused]]
-name = "rolldown-notify-debouncer-full"
-version = "0.7.11"
-source = "git+https://github.com/rolldown/notify.git?rev=3b77886316ad2de1b4fe49b40ff58a77a10872ed#3b77886316ad2de1b4fe49b40ff58a77a10872ed"

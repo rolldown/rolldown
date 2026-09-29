@@ -337,9 +337,3 @@ opt-level = "s"
 # it will strip these information for non-debug files
 debug = "full"
 strip = "none"
-
-# Trial integration of rolldown/notify#122 (`Config::with_ignored`).
-# Replace with a version bump once the pull request is released.
-[patch.crates-io]
-rolldown-notify = { git = "https://github.com/rolldown/notify.git", rev = "3b77886316ad2de1b4fe49b40ff58a77a10872ed" }
-rolldown-notify-debouncer-full = { git = "https://github.com/rolldown/notify.git", rev = "3b77886316ad2de1b4fe49b40ff58a77a10872ed" }

@@ -1419,7 +1419,8 @@ impl GenerateStage<'_> {
   /// - the target is the only consumer (helpers stay internal — no re-export),
   /// - the target is not a user-defined entry (a common chunk has no signature),
   /// - `preserveEntrySignatures` allows extra exports: `allow-extension`/`false`,
-  ///   or `exports-only` for an entry that declares no exports.
+  ///   or `exports-only` for an entry without exports (a CommonJS entry has a
+  ///   `default` export).
   fn runtime_merge_preserves_target_signature(
     &self,
     chunk_graph: &ChunkGraph,
@@ -1442,9 +1443,10 @@ impl GenerateStage<'_> {
       Some(PreserveEntrySignatures::AllowExtension | PreserveEntrySignatures::False) => true,
       Some(PreserveEntrySignatures::Strict) => false,
       // `exports-only` (the default) only fixes the signature of entries that
-      // actually declare exports; an export-less entry behaves like `false`.
+      // have exports (a CommonJS entry exports `module.exports` as `default`);
+      // an export-less entry behaves like `false`.
       Some(PreserveEntrySignatures::ExportsOnly) | None => {
-        self.link_output.metas[entry_module_idx].resolved_exports.is_empty()
+        !self.link_output.metas[entry_module_idx].entry_has_exports()
       }
     }
   }

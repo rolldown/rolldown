@@ -872,11 +872,10 @@ impl GenerateStage<'_> {
           | PreserveEntrySignatures::Strict
           | PreserveEntrySignatures::False => Some(finalized_preserve_entry_signatures),
           PreserveEntrySignatures::ExportsOnly => {
-            let meta = &self.link_output.metas[module.idx];
-            if meta.sorted_and_non_ambiguous_resolved_exports.is_empty() {
-              Some(PreserveEntrySignatures::AllowExtension)
-            } else {
+            if self.link_output.metas[module.idx].entry_has_exports() {
               Some(PreserveEntrySignatures::Strict)
+            } else {
+              Some(PreserveEntrySignatures::AllowExtension)
             }
           }
         }

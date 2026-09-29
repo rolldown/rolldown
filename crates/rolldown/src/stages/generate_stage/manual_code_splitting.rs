@@ -7,7 +7,7 @@ use std::{
 };
 
 use arcstr::ArcStr;
-use itertools::Itertools;
+use itertools::{Either, Itertools};
 use oxc_index::IndexVec;
 use rolldown_common::{
   Chunk, ChunkKind, ChunkingContext, EntryPoint, ManualCodeSplittingOptions, MatchGroup,
@@ -320,12 +320,25 @@ impl ManualSplitter<'_> {
       let match_group_index = group.match_group_index;
       let name = group.name.clone();
       let priority = group.priority;
+      let merge_threshold =
+        self.match_groups[match_group_index].entries_aware_merge_threshold.unwrap_or(0.0);
+      let group_modules = group.modules.into_iter();
+      // Merge ties use subgroup keys, so assign them in execution order.
+      // See internal-docs/manual-code-splitting/implementation.md.
+      let group_modules = if merge_threshold > 0.0 {
+        Either::Left(
+          group_modules
+            .sorted_unstable_by_key(|idx| self.link_output.module_table[*idx].exec_order()),
+        )
+      } else {
+        Either::Right(group_modules)
+      };
 
       // Group modules by their bitset pattern into subgroups
       let mut bits_to_key: FxHashMap<BitSet, u32> = FxHashMap::default();
       let mut subgroups: FxHashMap<u32, EntriesAwareSubgroup> = FxHashMap::default();
       let mut next_key: u32 = 0;
-      for module_idx in group.modules {
+      for module_idx in group_modules {
         let bits = &self.index_splitting_info[module_idx].bits;
         let key = match bits_to_key.entry(bits.clone()) {
           std::collections::hash_map::Entry::Occupied(occupied) => *occupied.get(),
@@ -350,8 +363,6 @@ impl ManualSplitter<'_> {
       }
 
       // Optionally merge small subgroups
-      let merge_threshold =
-        self.match_groups[match_group_index].entries_aware_merge_threshold.unwrap_or(0.0);
       if merge_threshold > 0.0 && subgroups.len() > 1 {
         let keys: Vec<u32> = subgroups.keys().copied().collect();
         merge_entries_aware_subgroups(

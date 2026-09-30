@@ -64,7 +64,7 @@ Per-client outcomes when a fetched lazy module is later edited (see "Editing a f
 After successful lazy compilation:
 
 1. `DevEngine` notifies the coordinator via `ModuleChanged` (carrying the **raw proxy id**, `?rolldown-lazy=1` included)
-2. Coordinator first calls `update_watch_paths()` — watch files discovered during the lazy compile would otherwise be dropped when the rebuild task starts; this step is what makes later edits to the lazy module trigger rebuilds at all
+2. Coordinator first calls `update_watch_paths_including()` — watch files discovered during the lazy compile would otherwise be dropped when the rebuild task starts; this step is what makes later edits to the lazy module trigger rebuilds at all
 3. Coordinator queues a `Rebuild` task with the proxy id as the changed file and marks output as stale
 4. The rebuild swaps the stub for the fetched template in the build output; future page loads get it directly (no `/lazy` request needed)
 
@@ -206,7 +206,7 @@ if result.is_ok() {
 
 The coordinator handles `ModuleChanged`:
 
-1. Call `update_watch_paths()` first (see "Data Lifecycle → Build Output Refresh" for why)
+1. Call `update_watch_paths_including()` first (see "Data Lifecycle → Build Output Refresh" for why)
 2. Queue a `TaskInput::Rebuild` with the raw proxy id as the changed file
 3. Set `has_stale_bundle_output = true`
 4. Schedule build if stale (runs immediately only when the coordinator is Idle/Failed; otherwise waits in the queue)
@@ -230,7 +230,7 @@ The error contract (no longer "POC — Err or panic is fine"):
 
 ### Editing a Fetched Lazy Module
 
-After `/lazy`, the real module and its sync deps are ordinary watched graph modules (thanks to the `update_watch_paths()` step), and an edit flows through the standard watch → per-client HMR path:
+After `/lazy`, the real module and its sync deps are ordinary watched graph modules (thanks to the `update_watch_paths_including()` step), and an edit flows through the standard watch → per-client HMR path:
 
 - The server walk (`collect_client_update_superset`, `hmr_stage.rs`) climbs static and dynamic importers, but proxy importers (`?rolldown-lazy=1`) are left out of the dynamic-importer index (`rebuild_importer_sets`, `crates/rolldown_common/src/ecmascript/ecma_view.rs`), so the walk stops at the lazy module. Every connected client gets a push with `changedIds`; the patch carries what that client lacks or holds stale
 - The boundary decision runs in the browser (Vite `BundledDevHMRClient`). If the lazy module self-accepts (`import.meta.hot.accept()`), a client that executed it applies a hot update. Otherwise the client walk crosses the proxy edge, finds no executed importer, and sends `vite:bundled-dev:reload-needed`; the server answers that client with a full reload once the rebuild output lands (see [hmr/design.md](../hmr/design.md), "Failure policy" and "Lazy dynamic-import HMR"). Pinned by the shared-module spec's watch/auto-reload test
@@ -308,7 +308,7 @@ After `/lazy`, the real module and its sync deps are ordinary watched graph modu
 │ 7. BUILD OUTPUT REFRESH (Background)                                    │
 ├─────────────────────────────────────────────────────────────────────────┤
 │  - DevEngine sends CoordinatorMsg::ModuleChanged { proxyModuleId }      │
-│  - Coordinator: update_watch_paths() → queue Rebuild → mark stale       │
+│  - Coordinator: update_watch_paths_including() → queue Rebuild → mark stale       │
 │  - Rebuild updates build output with fetched template                   │
 │  - Silent to connected clients; future page loads skip /lazy            │
 └─────────────────────────────────────────────────────────────────────────┘

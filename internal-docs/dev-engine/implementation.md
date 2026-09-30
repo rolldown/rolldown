@@ -182,10 +182,6 @@ pub enum CoordinatorMsg {
   },
   ScheduleBuildIfStale { reply: … },         // ask coordinator to drain its queue
   GetState { reply: … },                     // snapshot of coordinator state
-  BeginWatchRegistrationErrorObservation { reply: … },
-  PreviewWatchRegistrationErrors { observer_id, reply: … },
-  AcknowledgeWatchRegistrationErrors { observer_id },
-  CancelWatchRegistrationErrorObservation { observer_id },
   EnsureLatestBundleOutput { reply: … },     // "I need a fresh full bundle"
   TriggerFullBuild,                           // unconditional full build (fire-and-forget)
   GetWatchedFiles { reply: … },              // list of watched paths
@@ -195,23 +191,19 @@ pub enum CoordinatorMsg {
 }
 ```
 
-Routing happens in `BundleCoordinator::run` (`bundle_coordinator.rs:129-186`):
+Routing happens in `BundleCoordinator::run` (`bundle_coordinator.rs:88-164`):
 
-| Message                                   | Handler                                                  |
-| ----------------------------------------- | -------------------------------------------------------- |
-| `WatchEvent`                              | `handle_watch_event` → `handle_file_changes`             |
-| `BundleCompleted`                         | `handle_bundle_completed`                                |
-| `ScheduleBuildIfStale`                    | `schedule_build_if_stale`, reply with result             |
-| `GetState`                                | `create_state_snapshot`, reply                           |
-| `BeginWatchRegistrationErrorObservation`  | register and return an owned lifecycle waiter            |
-| `PreviewWatchRegistrationErrors`          | freeze the waiter and return attached failures           |
-| `AcknowledgeWatchRegistrationErrors`      | consume the frozen failures after reply delivery         |
-| `CancelWatchRegistrationErrorObservation` | detach a dropped waiter without consuming failures       |
-| `EnsureLatestBundleOutput`                | `ensure_latest_bundle_output`, reply                     |
-| `TriggerFullBuild`                        | `trigger_full_build` (no reply)                          |
-| `GetWatchedFiles`                         | reply with the watched paths of the watcher              |
-| `ModuleChanged`                           | queue a `Rebuild`, schedule                              |
-| `Close`                                   | await running task, close final bundle, reply, then exit |
+| Message                    | Handler                                                  |
+| -------------------------- | -------------------------------------------------------- |
+| `WatchEvent`               | `handle_watch_event` → `handle_file_changes`             |
+| `BundleCompleted`          | `handle_bundle_completed`                                |
+| `ScheduleBuildIfStale`     | `schedule_build_if_stale`, reply with result             |
+| `GetState`                 | `create_state_snapshot`, reply                           |
+| `EnsureLatestBundleOutput` | `ensure_latest_bundle_output`, reply                     |
+| `TriggerFullBuild`         | `trigger_full_build` (no reply)                          |
+| `GetWatchedFiles`          | reply with the watched paths of the watcher              |
+| `ModuleChanged`            | queue a `Rebuild`, schedule                              |
+| `Close`                    | await running task, close final bundle, reply, then exit |
 
 The producers:
 
@@ -221,7 +213,6 @@ The producers:
 - A finishing **`BundlingTask`** sends `BundleCompleted` from its
   `run()` (`bundling_task.rs:75-80`).
 - The **`DevEngine`** sends `ScheduleBuildIfStale`, `GetState`,
-  the watch-registration observation lifecycle messages,
   `EnsureLatestBundleOutput`, `GetWatchedFiles`, `ModuleChanged`, and
   `Close` on behalf of its public API callers (the dev server, HTTP middleware,
   lazy-compilation endpoint, etc.).
@@ -1062,7 +1053,7 @@ watcher detects the change and triggers `handle_file_changes` (§7),
 which queues a new build. By the time the user refreshes the browser,
 the coordinator is either `InProgress` (build still running —
 `ensure_latest_bundle_output` waits for it) or `Idle` (build finished —
-output is fresh). This works because `update_watch_paths()` runs even
+output is fresh). This works because `update_watch_paths_including()` runs even
 after a failed build (`handle_bundle_completed`, §11), so files that
 were already parsed are watched. Creating a watcher path transaction can pause
 event delivery on backends such as macOS FSEvents until the transaction is
@@ -1073,36 +1064,9 @@ Inside the transaction it skips a refused `add` (logged at debug level;
 offered again on the next build), continues staging the remaining paths, and
 always calls `commit`. If commit succeeds, only paths whose `add` succeeded are
 recorded in the watcher's path set; if commit fails, none of the staged paths
-are recorded and the commit error is the registration failure.
-
-Watch-registration failures use explicit lifecycle observers rather than one
-permanent error slot. `wait_for_ongoing_bundle` and
-`ensure_latest_bundle_output` register an RAII-owned observer before waiting.
-The coordinator sends ownership itself in the begin reply, so dropping a reply
-that was already buffered still runs the token destructor and queues
-cancellation. Each failed path publication creates an event attached to every
-observer active at that point. The next publication attempt supersedes that failure occurrence,
-regardless of whether the retry succeeds or reports a new failure. Queued
-observers remain attached to every occurrence they overlapped, while callers
-that start later attach only to the current unresolved failure. Once an
-observer has acknowledged a superseded event, later callers do not attach to
-it; the event is removed after the already-attached observers finish. If a
-failure is superseded before any observer sees it, the first concurrently
-registered observer set receives it and acknowledgement then removes it. This
-preserves every in-flight waiter's failures without letting historical retry
-failures poison all future page-access ensures. Close registers its own
-observer before draining the final task, so an unresolved or never-observed
-registration failure still joins `closeBundle` failures. Every unpublished
-candidate remains eligible for retry.
-
-Finishing is a three-step protocol. `Preview` first moves the observer out of
-the active set, freezing the exact failure set before it replies. The caller
-then sends `Acknowledge` only after receiving that reply; acknowledgement marks
-and removes only the frozen failures. Until then the RAII token remains armed,
-and dropping either the operation or a buffered preview reply sends
-`Cancel`, which removes the observer without marking any failure observed.
-This prevents both leaked begin observers and diagnostics consumed by an
-undelivered finish reply.
+are recorded and the commit error is returned. The coordinator ignores it at
+all three call sites (`let _ =`), so the next build offers those
+paths again. Registration failures never reach `DevEngine` callers.
 
 **Edge case: recovery from a missing-import failure.** If the initial
 build failed because of a missing import, the missing file was never
@@ -1287,10 +1251,10 @@ for quiescence, final-handle selection, and error delivery.
 
 When close waits for an active build, that task queues `BundleCompleted` before
 its future resolves. The coordinator cannot process the queued message while
-the close handler owns the actor loop, so close performs the completion path's
-final watch-path publication itself after the task settles and before
-`Bundler::close()`. A publication failure joins any earlier registration
-failure, callback rejection, and `closeBundle` failure in the terminal result.
+the close handler owns the actor loop, so that message is dropped with the
+loop: close does not register watch paths. The terminal result is the task's
+callback result (or the retained `last_callback_error` when no task runs),
+followed by any `closeBundle` failure.
 
 `DevEngine::close()` sets `is_closed` before starting cleanup so new API work is
 rejected immediately. Cleanup itself is a separate shared future: concurrent

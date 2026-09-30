@@ -17,21 +17,15 @@ use rolldown_utils::{
   indexmap::{FxIndexMap, FxIndexSet},
   pattern_filter,
 };
-use rustc_hash::FxHashSet;
 
 use rolldown::Bundler;
 
 use crate::{
   bundling_task::BundlingTask,
   dev_context::{
-    BundlingFuture, RetainedDevCallbackErrors, SharedDevContext,
-    dev_callback_result_to_build_result, merge_build_results,
+    BundlingFuture, SharedDevContext, dev_callback_result_to_build_result, merge_build_results,
   },
-  type_aliases::{
-    BeginWatchRegistrationErrorObservationSender, CoordinatorReceiver, CoordinatorSender,
-    PreviewWatchRegistrationErrorsSender, WatchRegistrationErrorObservation,
-    WatchRegistrationErrorObserverId,
-  },
+  type_aliases::{CoordinatorReceiver, CoordinatorSender},
   types::{
     coordinator_msg::CoordinatorMsg, coordinator_state::CoordinatorState,
     coordinator_state_snapshot::CoordinatorStateSnapshot,
@@ -40,13 +34,6 @@ use crate::{
   },
   watcher_event_handler::WatcherEventHandler,
 };
-
-struct WatchRegistrationErrorEvent {
-  error: DevCallbackError,
-  pending_observers: FxHashSet<WatchRegistrationErrorObserverId>,
-  recovered: bool,
-  observed: bool,
-}
 
 /// BundleCoordinator - coordinates build tasks and manages initial build state
 pub struct BundleCoordinator {
@@ -66,10 +53,6 @@ pub struct BundleCoordinator {
   has_stale_bundle_output: bool,
   current_bundling_future: Option<BundlingFuture>,
   last_callback_error: Option<DevCallbackError>,
-  active_watch_registration_error_observers: FxHashSet<WatchRegistrationErrorObserverId>,
-  previewed_watch_registration_error_observers: FxHashSet<WatchRegistrationErrorObserverId>,
-  watch_registration_errors: VecDeque<WatchRegistrationErrorEvent>,
-  next_watch_registration_error_observer_id: WatchRegistrationErrorObserverId,
 }
 
 impl BundleCoordinator {
@@ -93,10 +76,6 @@ impl BundleCoordinator {
       has_stale_bundle_output: true,
       current_bundling_future: None,
       last_callback_error: None,
-      active_watch_registration_error_observers: FxHashSet::default(),
-      previewed_watch_registration_error_observers: FxHashSet::default(),
-      watch_registration_errors: VecDeque::new(),
-      next_watch_registration_error_observer_id: 1,
     }
   }
 
@@ -154,18 +133,6 @@ impl BundleCoordinator {
           let status = self.create_state_snapshot();
           let _ = reply.send(status);
         }
-        CoordinatorMsg::BeginWatchRegistrationErrorObservation { reply } => {
-          self.begin_watch_registration_error_observation_with_reply(reply);
-        }
-        CoordinatorMsg::PreviewWatchRegistrationErrors { observer_id, reply } => {
-          self.preview_watch_registration_errors_with_reply(observer_id, reply);
-        }
-        CoordinatorMsg::AcknowledgeWatchRegistrationErrors { observer_id } => {
-          self.acknowledge_watch_registration_errors(observer_id);
-        }
-        CoordinatorMsg::CancelWatchRegistrationErrorObservation { observer_id } => {
-          self.cancel_watch_registration_error_observation(observer_id);
-        }
         CoordinatorMsg::EnsureLatestBundleOutput { reply } => {
           let result = self.ensure_latest_bundle_output().await;
           let _ = reply.send(result);
@@ -202,10 +169,8 @@ impl BundleCoordinator {
   /// unioned with whatever the live handle holds - see
   /// `CoordinatorMsg::ModuleChanged` and
   /// `internal-docs/dev-engine/implementation.md`.
-  ///
-  /// A failed publication must outlive the build that this message schedules.
   async fn handle_module_changed(&mut self, module_id: String, watch_files: &[ArcStr]) {
-    let watch_paths_result = self.update_watch_paths_including(watch_files).await;
+    let _ = self.update_watch_paths_including(watch_files).await;
 
     let mut changed_files = FxIndexMap::default();
     changed_files.insert(PathBuf::from(&module_id), WatcherChangeKind::Update);
@@ -214,45 +179,25 @@ impl BundleCoordinator {
     self.has_stale_bundle_output = true;
 
     let _ = self.schedule_build_if_stale().await;
-    self.retain_watch_registration_result(watch_paths_result);
   }
 
   async fn close(&mut self) -> BuildResult<()> {
-    let watch_registration_error_observer = self.begin_watch_registration_error_observation();
     // A running task may replace `last_bundle_handle` after its HMR
     // stage. Wait for the complete task before closing the bundler so
     // `closeBundle` always runs on the final installed plugin driver.
     // See internal-docs/dev-engine/implementation.md.
     let callback_result = if let Some(bundling_future) = self.current_bundling_future.take() {
-      let callback_result = bundling_future.await;
-      // `BundlingTask::run` queued `BundleCompleted` before resolving, but the
-      // coordinator cannot process that message while this close handler owns
-      // the actor loop. Publish the final handle's watch paths here instead.
-      //
-      // This is the live handle only, so it is strictly narrower than the
-      // queued message: that task's `retired_watch_files` snapshot dies with
-      // the unprocessed message. Accepted, because registration at close only
-      // surfaces registration errors — no rebuild follows it, so a path missed
-      // here costs nothing.
-      let watch_paths_result = self.update_watch_paths().await;
-      self.retain_watch_registration_result(watch_paths_result);
-      callback_result
+      bundling_future.await
     } else if let Some(error) = self.last_callback_error.take() {
       Err(error)
     } else {
       Ok(())
     };
-    let watch_registration_error =
-      self.finish_watch_registration_error_observation(watch_registration_error_observer);
     let close_result = {
       let mut bundler = self.bundler.lock().await;
       bundler.close().await
     };
-    Self::merge_callback_registration_and_close_results(
-      callback_result,
-      watch_registration_error,
-      close_result,
-    )
+    Self::merge_callback_and_close_results(callback_result, close_result)
   }
 
   /// Handle file change events from watcher.
@@ -350,8 +295,7 @@ impl BundleCoordinator {
 
         // Even if the build failed, update the watch paths
         // so that a new full build is triggered by the change for those files
-        let watch_paths_result = self.update_watch_paths_including(watch_files).await;
-        self.retain_watch_registration_result(watch_paths_result);
+        let _ = self.update_watch_paths_including(watch_files).await;
 
         if error_stage.is_some() {
           // FullBuildFailed always recovers via FullBuild on next file change,
@@ -378,8 +322,7 @@ impl BundleCoordinator {
 
         // Register any new files this rebuild pulled into `watch_files`
         // (e.g. an edit that introduced a new transitive import).
-        let watch_paths_result = self.update_watch_paths_including(watch_files).await;
-        self.retain_watch_registration_result(watch_paths_result);
+        let _ = self.update_watch_paths_including(watch_files).await;
 
         if let Some(stage) = error_stage {
           self.set_initial_build_state(CoordinatorState::Failed { last_error_stage: stage });
@@ -553,164 +496,16 @@ impl BundleCoordinator {
     }
   }
 
-  fn merge_callback_registration_and_close_results(
+  /// The callback failure comes first, then the `closeBundle` failure.
+  fn merge_callback_and_close_results(
     callback_result: DevCallbackResult,
-    watch_registration_error: Option<DevCallbackError>,
     close_result: BuildResult<()>,
   ) -> BuildResult<()> {
-    let callback_result = dev_callback_result_to_build_result(callback_result);
-    let watch_registration_result = watch_registration_error
-      .map_or_else(|| Ok(()), |error| dev_callback_result_to_build_result(Err(error)));
-    let callback_and_registration_result =
-      merge_build_results(callback_result, watch_registration_result);
-    merge_build_results(callback_and_registration_result, close_result)
-  }
-
-  fn retain_watch_registration_result(&mut self, watch_paths_result: BuildResult<()>) {
-    // Every publication attempt supersedes the previous failure occurrence.
-    // Already-attached observers still receive older events, while a failed
-    // retry becomes a new event for current and future observers.
-    for error in &mut self.watch_registration_errors {
-      error.recovered = true;
-    }
-    self.prune_acknowledged_watch_registration_errors();
-
-    match watch_paths_result {
-      Ok(()) => {}
-      Err(error) => {
-        self.watch_registration_errors.push_back(WatchRegistrationErrorEvent {
-          error: Arc::new(error),
-          pending_observers: self.active_watch_registration_error_observers.clone(),
-          recovered: false,
-          observed: false,
-        });
-      }
-    }
-  }
-
-  fn begin_watch_registration_error_observation(&mut self) -> WatchRegistrationErrorObserverId {
-    let observer_id = self.next_watch_registration_error_observer_id;
-    self.next_watch_registration_error_observer_id =
-      self.next_watch_registration_error_observer_id.wrapping_add(1);
-    self.active_watch_registration_error_observers.insert(observer_id);
-
-    for error in &mut self.watch_registration_errors {
-      if !error.recovered || !error.observed {
-        error.pending_observers.insert(observer_id);
-      }
-    }
-
-    observer_id
-  }
-
-  fn begin_watch_registration_error_observation_with_reply(
-    &mut self,
-    reply: BeginWatchRegistrationErrorObservationSender,
-  ) {
-    if reply.is_canceled() {
-      return;
-    }
-
-    let observer_id = self.begin_watch_registration_error_observation();
-    let observation =
-      WatchRegistrationErrorObservation::new(observer_id, self.ctx.coordinator_tx.clone());
-    if let Err(mut observation) = reply.send(observation) {
-      let observer_id = observation.disarm();
-      self.cancel_watch_registration_error_observation(observer_id);
-    }
-  }
-
-  fn preview_watch_registration_errors_with_reply(
-    &mut self,
-    observer_id: WatchRegistrationErrorObserverId,
-    reply: PreviewWatchRegistrationErrorsSender,
-  ) {
-    let error = self.preview_watch_registration_errors(observer_id);
-    if reply.send(error).is_err() {
-      self.cancel_watch_registration_error_observation(observer_id);
-    }
-  }
-
-  fn preview_watch_registration_errors(
-    &mut self,
-    observer_id: WatchRegistrationErrorObserverId,
-  ) -> Option<DevCallbackError> {
-    if !self.active_watch_registration_error_observers.remove(&observer_id) {
-      return None;
-    }
-    let inserted = self.previewed_watch_registration_error_observers.insert(observer_id);
-    debug_assert!(inserted, "an active observer cannot already be previewed");
-    Self::merge_dev_callback_errors(
-      self
-        .watch_registration_errors
-        .iter()
-        .filter(|error| error.pending_observers.contains(&observer_id))
-        .map(|error| Arc::clone(&error.error))
-        .collect(),
-    )
-  }
-
-  fn acknowledge_watch_registration_errors(
-    &mut self,
-    observer_id: WatchRegistrationErrorObserverId,
-  ) {
-    if !self.previewed_watch_registration_error_observers.remove(&observer_id) {
-      return;
-    }
-    for error in &mut self.watch_registration_errors {
-      if error.pending_observers.remove(&observer_id) {
-        error.observed = true;
-      }
-    }
-    self.prune_acknowledged_watch_registration_errors();
-  }
-
-  fn finish_watch_registration_error_observation(
-    &mut self,
-    observer_id: WatchRegistrationErrorObserverId,
-  ) -> Option<DevCallbackError> {
-    let error = self.preview_watch_registration_errors(observer_id);
-    self.acknowledge_watch_registration_errors(observer_id);
-    error
-  }
-
-  fn cancel_watch_registration_error_observation(
-    &mut self,
-    observer_id: WatchRegistrationErrorObserverId,
-  ) {
-    self.active_watch_registration_error_observers.remove(&observer_id);
-    self.previewed_watch_registration_error_observers.remove(&observer_id);
-    for error in &mut self.watch_registration_errors {
-      error.pending_observers.remove(&observer_id);
-    }
-    self.prune_acknowledged_watch_registration_errors();
-  }
-
-  fn prune_acknowledged_watch_registration_errors(&mut self) {
-    self
-      .watch_registration_errors
-      .retain(|error| !(error.recovered && error.observed && error.pending_observers.is_empty()));
-  }
-
-  fn merge_dev_callback_errors(errors: Vec<DevCallbackError>) -> Option<DevCallbackError> {
-    let mut errors = errors.into_iter();
-    let first = errors.next()?;
-    let Some(second) = errors.next() else {
-      return Some(first);
-    };
-
-    Some(RetainedDevCallbackErrors::into_error(
-      std::iter::once(first).chain(std::iter::once(second)).chain(errors).collect(),
-    ))
+    merge_build_results(dev_callback_result_to_build_result(callback_result), close_result)
   }
 
   fn set_initial_build_state(&mut self, new_state: CoordinatorState) {
     self.state = new_state;
-  }
-
-  /// Update watcher paths based on current build output
-  async fn update_watch_paths(&self) -> BuildResult<()> {
-    self.update_watch_paths_including(&[]).await
   }
 
   /// Register `extra` **in addition to** the current bundle handle's watch
@@ -760,8 +555,9 @@ impl BundleCoordinator {
     // `addWatchFile` accepts nonexistent and virtual paths, so a refused
     // registration is skipped rather than failing the build; it never enters
     // the watcher's path set, so later builds offer it again. The batch is
-    // always committed, and a commit failure is the registration failure.
-    // See internal-docs/dev-engine/implementation.md.
+    // always committed. A commit failure is returned and the coordinator
+    // ignores it (`let _ =`); none of the batch is recorded, so the next build
+    // offers those paths again. See internal-docs/dev-engine/implementation.md.
     let watch_paths: Vec<WatchPath> =
       watch_files.iter().map(|watch_file| WatchPath::new(watch_file.as_str(), cwd)).collect();
     watcher.watch_paths(watch_paths.iter().map(WatchPath::as_path), |path| {
@@ -777,10 +573,8 @@ mod tests {
     DevOptions, DevWatchOptions, SharedClients, dev_context::DevContext, normalize_dev_options,
   };
   use futures::channel::mpsc::unbounded;
-  use futures::channel::oneshot;
   use rolldown::{BundlerOptions, DevModeOptions, ExperimentalOptions};
-  use rolldown_error::BatchedBuildDiagnostic;
-  use rolldown_fs_watcher::{FsWatcherConfig, PathsMut, WatcherBackend};
+  use rolldown_fs_watcher::{PathsMut, WatcherBackend};
   use rolldown_workspace::TestDir;
   use std::{
     fs,
@@ -793,33 +587,6 @@ mod tests {
   };
 
   const LIVENESS_TIMEOUT: Duration = Duration::from_secs(10);
-
-  fn create_observation_test_coordinator() -> BundleCoordinator {
-    let bundler = Bundler::new(BundlerOptions::default()).expect("create test bundler");
-    let (coordinator_tx, coordinator_rx) = unbounded();
-    // `enabled: false` = noop backend.
-    let watcher = FsWatcher::new(
-      BundleCoordinator::create_watcher_event_handler(coordinator_tx.clone()),
-      &FsWatcherConfig { enabled: false, ..FsWatcherConfig::default() },
-    )
-    .expect("create noop watcher");
-    let ctx = Arc::new(DevContext {
-      options: normalize_dev_options(DevOptions::default()),
-      coordinator_tx,
-      clients: SharedClients::default(),
-      stamp_table: Arc::new(Mutex::new(rolldown_common::HmrStampTable::default())),
-      pending_payloads: Arc::new(Mutex::new(rustc_hash::FxHashMap::default())),
-      top_level_evaluated: Mutex::new(Arc::new(rustc_hash::FxHashMap::default())),
-      last_task_errored: std::sync::atomic::AtomicBool::new(false),
-    });
-    BundleCoordinator::new(
-      Arc::new(Mutex::new(bundler)),
-      ctx,
-      coordinator_rx,
-      watcher,
-      Arc::new(AtomicU32::new(0)),
-    )
-  }
 
   fn is_registered(watcher: &StdMutex<FsWatcher>, path: &Path) -> bool {
     watcher.lock().expect("watcher lock").is_registered(path)
@@ -957,116 +724,7 @@ mod tests {
   }
 
   #[test]
-  fn dropped_begin_reply_does_not_register_watch_error_observer() {
-    let mut coordinator = create_observation_test_coordinator();
-    let (reply, receiver) = oneshot::channel();
-    drop(receiver);
-
-    coordinator.begin_watch_registration_error_observation_with_reply(reply);
-
-    assert!(coordinator.active_watch_registration_error_observers.is_empty());
-  }
-
-  #[test]
-  fn buffered_begin_reply_drop_cancels_watch_error_observer() {
-    let mut coordinator = create_observation_test_coordinator();
-    let (reply, receiver) = oneshot::channel();
-
-    coordinator.begin_watch_registration_error_observation_with_reply(reply);
-    assert_eq!(coordinator.active_watch_registration_error_observers.len(), 1);
-
-    drop(receiver);
-    let cancel = coordinator.rx.try_recv().expect("dropping the buffered token must cancel it");
-    let CoordinatorMsg::CancelWatchRegistrationErrorObservation { observer_id } = cancel else {
-      panic!("dropping the buffered token must enqueue observer cancellation");
-    };
-    coordinator.cancel_watch_registration_error_observation(observer_id);
-
-    assert!(coordinator.active_watch_registration_error_observers.is_empty());
-    assert!(coordinator.previewed_watch_registration_error_observers.is_empty());
-  }
-
-  #[test]
-  fn dropped_preview_reply_does_not_consume_watch_registration_errors() {
-    let mut coordinator = create_observation_test_coordinator();
-    let observer_id = coordinator.begin_watch_registration_error_observation();
-    let observation =
-      WatchRegistrationErrorObservation::new(observer_id, coordinator.ctx.coordinator_tx.clone());
-    coordinator.retain_watch_registration_result(Err(anyhow::anyhow!("previewed failure").into()));
-    let (reply, receiver) = oneshot::channel();
-
-    coordinator.preview_watch_registration_errors_with_reply(observer_id, reply);
-    drop(receiver);
-    drop(observation);
-    let cancel = coordinator.rx.try_recv().expect("dropping the observation must cancel it");
-    let CoordinatorMsg::CancelWatchRegistrationErrorObservation { observer_id } = cancel else {
-      panic!("dropping the observation must enqueue observer cancellation");
-    };
-    coordinator.cancel_watch_registration_error_observation(observer_id);
-    coordinator.retain_watch_registration_result(Ok(()));
-
-    let replacement = coordinator.begin_watch_registration_error_observation();
-    let error = coordinator
-      .finish_watch_registration_error_observation(replacement)
-      .expect("a dropped preview reply must leave the diagnostic for a later observer");
-    assert!(error.to_string().contains("previewed failure"));
-    assert!(coordinator.watch_registration_errors.is_empty());
-  }
-
-  #[test]
-  fn acknowledgement_consumes_only_the_frozen_preview() {
-    let mut coordinator = create_observation_test_coordinator();
-    let observer_id = coordinator.begin_watch_registration_error_observation();
-    coordinator.retain_watch_registration_result(Err(anyhow::anyhow!("first failure").into()));
-
-    let preview = coordinator
-      .preview_watch_registration_errors(observer_id)
-      .expect("the active observer must preview its first failure");
-    assert!(preview.to_string().contains("first failure"));
-    coordinator.retain_watch_registration_result(Err(anyhow::anyhow!("second failure").into()));
-    assert!(
-      !coordinator.watch_registration_errors[1].pending_observers.contains(&observer_id),
-      "failures published after preview must not enter its acknowledgement set"
-    );
-
-    coordinator.acknowledge_watch_registration_errors(observer_id);
-    let later = coordinator.begin_watch_registration_error_observation();
-    let error = coordinator
-      .finish_watch_registration_error_observation(later)
-      .expect("a later observer must receive the post-preview failure");
-    let error = dev_callback_result_to_build_result(Err(error))
-      .expect_err("the post-preview failure must remain a diagnostic");
-    assert_eq!(error.len(), 1);
-    assert!(error.to_string().contains("second failure"));
-  }
-
-  #[test]
-  fn cancelled_watch_error_observer_is_removed_from_current_and_later_events() {
-    let mut coordinator = create_observation_test_coordinator();
-    let observer_id = coordinator.begin_watch_registration_error_observation();
-    coordinator.retain_watch_registration_result(Err(
-      anyhow::anyhow!("failure while the observer was waiting").into(),
-    ));
-
-    coordinator.cancel_watch_registration_error_observation(observer_id);
-
-    coordinator.retain_watch_registration_result(Err(anyhow::anyhow!("later failure").into()));
-    assert!(
-      coordinator.finish_watch_registration_error_observation(observer_id).is_none(),
-      "a cancelled observer must not receive later failures"
-    );
-
-    let replacement_observer = coordinator.begin_watch_registration_error_observation();
-    let error = coordinator
-      .finish_watch_registration_error_observation(replacement_observer)
-      .expect("a later observer must still receive retained registration failures");
-    let message = error.to_string();
-    assert!(message.contains("failure while the observer was waiting"));
-    assert!(message.contains("later failure"));
-  }
-
-  #[test]
-  fn watch_add_and_commit_failures_are_aggregated_without_publication() {
+  fn refused_watch_add_is_skipped_and_commit_failure_is_returned_unpublished() {
     let commit_attempts = Arc::new(AtomicUsize::new(0));
     let watcher = FsWatcher::with_backend(Box::new(AddFailingWatcher {
       commit_attempts: Arc::clone(&commit_attempts),
@@ -1130,8 +788,10 @@ mod tests {
     assert_eq!(commit_attempts.load(Ordering::SeqCst), 2);
   }
 
+  /// `close()` drains the running task and reports its `onOutput` failure,
+  /// even though the task's `BundleCompleted` is never processed.
   #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
-  async fn recovered_module_registration_failure_reaches_queued_observers_once() {
+  async fn active_close_reports_the_running_task_callback_failure() {
     let test_dir = TestDir::new_canonical("rolldown-dev-watch-registration");
     let input = test_dir.path().join("main.js");
     fs::write(&input, "export const value = 1;").expect("write test input");
@@ -1152,7 +812,7 @@ mod tests {
     let callback_entered = Arc::new(Notify::new());
     let callback_release = Arc::new(Notify::new());
     let callback_error: DevCallbackError =
-      Arc::new(std::io::Error::other("intentional queued-build callback failure"));
+      Arc::new(std::io::Error::other("intentional running-task callback failure"));
     let (coordinator_tx, coordinator_rx) = unbounded();
     let ctx = Arc::new(DevContext {
       options: normalize_dev_options(DevOptions {
@@ -1181,143 +841,13 @@ mod tests {
       top_level_evaluated: Mutex::new(Arc::new(rustc_hash::FxHashMap::default())),
       last_task_errored: std::sync::atomic::AtomicBool::new(false),
     });
-    let commit_attempts = Arc::new(AtomicUsize::new(0));
-    let watcher = FsWatcher::with_backend(Box::new(CommitFailingWatcher {
-      commit_attempts: Arc::clone(&commit_attempts),
-      failures_before_success: 2,
-    }));
     let mut coordinator = BundleCoordinator::new(
       Arc::new(Mutex::new(bundler)),
       ctx,
       coordinator_rx,
-      watcher,
-      Arc::new(AtomicU32::new(0)),
-    );
-
-    let first_observer = coordinator.begin_watch_registration_error_observation();
-    let second_observer = coordinator.begin_watch_registration_error_observation();
-    coordinator.state = CoordinatorState::InProgress;
-    coordinator.current_bundling_future = Some(BundlingFuture::new(async { Ok(()) }));
-    coordinator.handle_module_changed(input.to_string_lossy().into_owned(), &[]).await;
-
-    assert_eq!(commit_attempts.load(Ordering::SeqCst), 1);
-
-    coordinator.handle_bundle_completed(None, true, None, &[]).await;
-    assert_eq!(commit_attempts.load(Ordering::SeqCst), 2);
-
-    let first_error = coordinator
-      .finish_watch_registration_error_observation(first_observer)
-      .expect("first queued observer must receive both registration failures");
-    assert!(first_error.to_string().contains("intentional watcher commit failure"));
-    let first_error = dev_callback_result_to_build_result(Err(first_error))
-      .expect_err("queued observer failures must remain diagnostics");
-    assert_eq!(first_error.len(), 2);
-    assert_eq!(coordinator.watch_registration_errors.len(), 2);
-
-    let late_observer = coordinator.begin_watch_registration_error_observation();
-    let late_error = coordinator
-      .finish_watch_registration_error_observation(late_observer)
-      .expect("late observer must receive only the current failed retry");
-    let late_error = dev_callback_result_to_build_result(Err(late_error))
-      .expect_err("the current failed retry must remain a diagnostic");
-    assert_eq!(
-      late_error.len(),
-      1,
-      "the superseded first failure must not poison later lifecycle calls"
-    );
-
-    let watch_paths_result = coordinator.update_watch_paths().await;
-    coordinator.retain_watch_registration_result(watch_paths_result);
-    assert_eq!(commit_attempts.load(Ordering::SeqCst), 3);
-
-    let second_error = coordinator
-      .finish_watch_registration_error_observation(second_observer)
-      .expect("second queued observer must receive both registration failures");
-    assert!(second_error.to_string().contains("intentional watcher commit failure"));
-    let second_error = dev_callback_result_to_build_result(Err(second_error))
-      .expect_err("queued observer failures must remain diagnostics");
-    assert_eq!(second_error.len(), 2);
-    assert!(coordinator.watch_registration_errors.is_empty());
-
-    let recovered_observer = coordinator.begin_watch_registration_error_observation();
-    assert!(
-      coordinator.finish_watch_registration_error_observation(recovered_observer).is_none(),
-      "acknowledged failures must not poison observers after recovery"
-    );
-
-    timeout(LIVENESS_TIMEOUT, callback_entered.notified())
-      .await
-      .expect("queued build callback must start before the liveness deadline");
-
-    let release_callback = async {
-      tokio::task::yield_now().await;
-      callback_release.notify_one();
-    };
-    let (close_result, ()) = tokio::join!(coordinator.close(), release_callback);
-    let close_error = close_result.expect_err("close must report the queued callback failure");
-    let message = close_error.to_string();
-    assert!(message.contains("intentional queued-build callback failure"));
-    assert!(!message.contains("intentional watcher commit failure"));
-    assert_eq!(close_error.len(), 1);
-  }
-
-  #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
-  async fn active_close_retains_final_build_watch_registration_failure() {
-    let test_dir = TestDir::new_canonical("rolldown-dev-watch-registration");
-    let input = test_dir.path().join("main.js");
-    fs::write(&input, "export const value = 1;").expect("write test input");
-
-    let mut bundler = Bundler::new(BundlerOptions {
-      cwd: Some(test_dir.path().to_path_buf()),
-      input: Some(vec![input.to_string_lossy().into_owned().into()]),
-      experimental: Some(ExperimentalOptions {
-        incremental_build: Some(true),
-        dev_mode: Some(DevModeOptions::default()),
-        ..Default::default()
-      }),
-      ..Default::default()
-    })
-    .expect("create test bundler");
-    bundler.generate().await.expect("generate initial bundle");
-
-    let callback_entered = Arc::new(Notify::new());
-    let callback_release = Arc::new(Notify::new());
-    let (coordinator_tx, coordinator_rx) = unbounded();
-    let ctx = Arc::new(DevContext {
-      options: normalize_dev_options(DevOptions {
-        on_output: Some({
-          let callback_entered = Arc::clone(&callback_entered);
-          let callback_release = Arc::clone(&callback_release);
-          Arc::new(move |_| {
-            let callback_entered = Arc::clone(&callback_entered);
-            let callback_release = Arc::clone(&callback_release);
-            Box::pin(async move {
-              callback_entered.notify_one();
-              callback_release.notified().await;
-              Ok(())
-            })
-          })
-        }),
-        watch: Some(DevWatchOptions { skip_write: Some(true), ..Default::default() }),
-        ..Default::default()
-      }),
-      coordinator_tx,
-      clients: SharedClients::default(),
-      stamp_table: Arc::new(Mutex::new(rolldown_common::HmrStampTable::default())),
-      pending_payloads: Arc::new(Mutex::new(rustc_hash::FxHashMap::default())),
-      top_level_evaluated: Mutex::new(Arc::new(rustc_hash::FxHashMap::default())),
-      last_task_errored: std::sync::atomic::AtomicBool::new(false),
-    });
-    let commit_attempts = Arc::new(AtomicUsize::new(0));
-    let watcher = FsWatcher::with_backend(Box::new(CommitFailingWatcher {
-      commit_attempts: Arc::clone(&commit_attempts),
-      failures_before_success: 1,
-    }));
-    let mut coordinator = BundleCoordinator::new(
-      Arc::new(Mutex::new(bundler)),
-      ctx,
-      coordinator_rx,
-      watcher,
+      FsWatcher::with_backend(Box::new(RecordingWatcher {
+        added: Arc::new(StdMutex::new(Vec::new())),
+      })),
       Arc::new(AtomicU32::new(0)),
     );
 
@@ -1327,8 +857,6 @@ mod tests {
     coordinator.queued_tasks.push_back(TaskInput::Rebuild { changed_files });
     coordinator.schedule_build_if_stale().await.expect("schedule the final active build");
 
-    assert!(coordinator.watch_registration_errors.is_empty());
-    assert_eq!(commit_attempts.load(Ordering::SeqCst), 0);
     timeout(LIVENESS_TIMEOUT, callback_entered.notified())
       .await
       .expect("active build callback must start before the liveness deadline");
@@ -1338,34 +866,25 @@ mod tests {
       callback_release.notify_one();
     };
     let (close_result, ()) = tokio::join!(coordinator.close(), release_callback);
-    let close_error =
-      close_result.expect_err("close must report final watch-path registration failure");
-    assert!(close_error.to_string().contains("intentional watcher commit failure"));
+    let close_error = close_result.expect_err("close must report the running task's callback");
+    assert!(close_error.to_string().contains("intentional running-task callback failure"));
     assert_eq!(close_error.len(), 1);
-    assert_eq!(commit_attempts.load(Ordering::SeqCst), 1);
-    assert!(!is_registered(&coordinator.watcher, input.as_path()));
   }
 
   #[test]
-  fn close_aggregates_callback_registration_and_close_failures() {
+  fn close_aggregates_callback_and_close_failures() {
     let callback_error: DevCallbackError =
       Arc::new(std::io::Error::other("intentional callback failure"));
-    let registration_error: DevCallbackError =
-      Arc::new(BatchedBuildDiagnostic::from(anyhow::anyhow!("intentional registration failure")));
     let close_result: BuildResult<()> =
       Err(anyhow::anyhow!("intentional closeBundle failure").into());
 
-    let error = BundleCoordinator::merge_callback_registration_and_close_results(
-      Err(callback_error),
-      Some(registration_error),
-      close_result,
-    )
-    .expect_err("all lifecycle failures must be aggregated");
-    let message = error.to_string();
-    assert!(message.contains("intentional callback failure"));
-    assert!(message.contains("intentional registration failure"));
-    assert!(message.contains("intentional closeBundle failure"));
-    assert_eq!(error.len(), 3);
+    let error =
+      BundleCoordinator::merge_callback_and_close_results(Err(callback_error), close_result)
+        .expect_err("both lifecycle failures must be aggregated");
+    let messages = error.into_vec().iter().map(ToString::to_string).collect::<Vec<_>>();
+    assert_eq!(messages.len(), 2);
+    assert!(messages[0].contains("intentional callback failure"), "{messages:?}");
+    assert!(messages[1].contains("intentional closeBundle failure"), "{messages:?}");
   }
 
   /// A module reached only through a dynamic import is added to

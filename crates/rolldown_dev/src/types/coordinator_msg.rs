@@ -2,10 +2,7 @@ use arcstr::ArcStr;
 use rolldown_dev_common::types::DevCallbackError;
 use rolldown_fs_watcher::FsEvent;
 
-use crate::type_aliases::{
-  BeginWatchRegistrationErrorObservationSender, CloseSender, EnsureLatestBundleOutputSender,
-  GetStateSender, PreviewWatchRegistrationErrorsSender, WatchRegistrationErrorObserverId,
-};
+use crate::type_aliases::{CloseSender, EnsureLatestBundleOutputSender, GetStateSender};
 #[cfg(feature = "testing")]
 use crate::type_aliases::{GetWatchedFilesSender, ScheduleBuildIfStaleSender};
 use crate::types::error_stage::ErrorStage;
@@ -40,19 +37,6 @@ pub enum CoordinatorMsg {
   },
   GetState {
     reply: GetStateSender,
-  },
-  BeginWatchRegistrationErrorObservation {
-    reply: BeginWatchRegistrationErrorObservationSender,
-  },
-  PreviewWatchRegistrationErrors {
-    observer_id: WatchRegistrationErrorObserverId,
-    reply: PreviewWatchRegistrationErrorsSender,
-  },
-  AcknowledgeWatchRegistrationErrors {
-    observer_id: WatchRegistrationErrorObserverId,
-  },
-  CancelWatchRegistrationErrorObservation {
-    observer_id: WatchRegistrationErrorObserverId,
   },
   EnsureLatestBundleOutput {
     reply: EnsureLatestBundleOutputSender,

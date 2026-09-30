@@ -28,7 +28,7 @@ use crate::{
     DevContext, PinBoxSendStaticFuture, dev_callback_result_to_build_result, merge_build_results,
   },
   normalize_dev_options,
-  type_aliases::{CoordinatorSender, WatchRegistrationErrorObservation},
+  type_aliases::CoordinatorSender,
   types::{
     coordinator_msg::CoordinatorMsg, coordinator_state_snapshot::CoordinatorStateSnapshot,
     error_stage::ErrorStage, pending_payload::PendingPayload,
@@ -51,37 +51,6 @@ use std::path::PathBuf;
 /// submission keeps the coordinator so a later `run()` can retry after a
 /// runtime restart.
 type CoordinatorState = RetainedStart<PendingCoordinatorFuture, CoordinatorTaskFuture>;
-
-impl WatchRegistrationErrorObservation {
-  async fn finish(mut self) -> BuildResult<()> {
-    let observer_id = self.observer_id();
-    let (reply_sender, reply_receiver) = futures::channel::oneshot::channel();
-    self
-      .coordinator_sender()
-      .unbounded_send(CoordinatorMsg::PreviewWatchRegistrationErrors {
-        observer_id,
-        reply: reply_sender,
-      })
-      .map_err_to_unhandleable()
-      .context("DevEngine: failed to preview watch-registration errors")?;
-
-    let error = reply_receiver
-      .await
-      .map_err_to_unhandleable()
-      .context("DevEngine: coordinator closed before previewing watch-registration errors")?;
-    let preview_result = DevEngine::retained_error_to_build_result(error);
-    let acknowledgement_result = self
-      .coordinator_sender()
-      .unbounded_send(CoordinatorMsg::AcknowledgeWatchRegistrationErrors { observer_id })
-      .map_err_to_unhandleable()
-      .context("DevEngine: failed to acknowledge previewed watch-registration errors")
-      .map_err(BatchedBuildDiagnostic::from);
-    if acknowledgement_result.is_ok() {
-      self.disarm();
-    }
-    merge_build_results(preview_result, acknowledgement_result)
-  }
-}
 
 pub struct DevEngine {
   coordinator_sender: CoordinatorSender,
@@ -240,13 +209,6 @@ impl DevEngine {
       return Ok(());
     }
 
-    let observation = self.begin_watch_registration_error_observation().await?;
-    let operation_result = self.wait_for_ongoing_bundle_inner().await;
-    let watch_registration_result = observation.finish().await;
-    merge_build_results(operation_result, watch_registration_result)
-  }
-
-  async fn wait_for_ongoing_bundle_inner(&self) -> BuildResult<()> {
     let (reply_sender, reply_receiver) = futures::channel::oneshot::channel();
     if let Err(err) =
       self.coordinator_sender.unbounded_send(CoordinatorMsg::GetState { reply: reply_sender })
@@ -287,13 +249,6 @@ impl DevEngine {
   pub async fn ensure_latest_bundle_output(&self) -> BuildResult<()> {
     self.create_error_if_closed()?;
 
-    let observation = self.begin_watch_registration_error_observation().await?;
-    let operation_result = self.ensure_latest_bundle_output_inner().await;
-    let watch_registration_result = observation.finish().await;
-    merge_build_results(operation_result, watch_registration_result)
-  }
-
-  async fn ensure_latest_bundle_output_inner(&self) -> BuildResult<()> {
     let mut loop_count = 0u32;
     loop {
       loop_count += 1;
@@ -675,25 +630,6 @@ impl DevEngine {
       .map_err_to_unhandleable()
       .context("DevEngine: coordinator closed before responding to GetState")
       .map_err(Into::into)
-  }
-
-  async fn begin_watch_registration_error_observation(
-    &self,
-  ) -> BuildResult<WatchRegistrationErrorObservation> {
-    let (reply_sender, reply_receiver) = futures::channel::oneshot::channel();
-    self
-      .coordinator_sender
-      .unbounded_send(CoordinatorMsg::BeginWatchRegistrationErrorObservation {
-        reply: reply_sender,
-      })
-      .map_err_to_unhandleable()
-      .context("DevEngine: failed to begin watch-registration error observation")?;
-
-    reply_receiver
-      .await
-      .map_err_to_unhandleable()
-      .context("DevEngine: coordinator closed before registering watch-error observer")
-      .map_err(BatchedBuildDiagnostic::from)
   }
 
   #[cfg(feature = "testing")]

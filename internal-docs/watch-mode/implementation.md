@@ -144,8 +144,6 @@ Data flow:
                          └── await_handler_or_close()
                                ├── handler.on_*().await ──→ Consumer (NAPI/Rust)
                                └── close_notify ─────────→ stop the callback wait and run handle_close()
-                   └── registration failure → close hidden attempt → delayed bounded task retry
-                                               └── exhaustion → handle_close() with replayable error
 ```
 
 **Ownership rules:**
@@ -205,23 +203,10 @@ rolldown_fs_watcher/
 Idle ──(FsEvent)──→ Debouncing
 Debouncing ──(more FsEvents)──→ Debouncing (extend deadline, coalesce changes)
 Debouncing ──(timeout)──→ run rebuild sequence → drain buffered → Idle or Debouncing
-Task build ──(watch registration failure)──→ delayed retry (25ms, 100ms, 250ms)
-Delayed retry ──(success)──→ finish the same public build event cycle
-Delayed retry ──(exhausted)──→ Closing with replayable registration error
 Any ──(Close)──→ Closing → Closed
 ```
 
 **No explicit Building state.** The coordinator's event loop blocks during build (it `await`s). Fs events buffer in the unbounded `futures::channel::mpsc` channel. After build, `drain_buffered_events()` via `try_recv()` picks them up.
-Registration backoff is likewise a coordinator sub-phase rather than a `WatcherState` variant. It
-waits only for close (the `closed` flag and `close_notify`, which `Watcher::publish_close` sets
-before it queues `WatcherMsg::Close`) and its fixed delay; file-change messages stay queued in the
-channel. Marking a task dirty during the backoff would let the retry build clear `needs_rebuild`
-before the change's `change`/`watchChange` ran, so the later envelope would run the hooks (where
-plugins drop caches) and then skip the build, leaving stale output. Left queued, the change is
-drained after the retry build like any change that arrived during a build: it marks the task again,
-and the rebuild loop (or, after the initial build, the normal debounce) dispatches
-`change`/`watchChange` before the task's next build. Not reading the channel also keeps an event
-flood from starving the retry deadline, so recovery stays bounded.
 
 ```rust
 enum WatcherState {
@@ -333,7 +318,7 @@ File change detected by the config group's shared FsWatcher
               - candidates are filtered before the watcher is locked: paths
                 already in the task's `watched_files` are skipped; if none
                 remain the function returns without locking the watcher
-              - the rest go to the shared watcher's `try_watch_paths`, which
+              - the rest go to the shared watcher's `watch_paths`, which
                 skips paths a sibling already registered (no native batch for
                 them) and opens a batch only for group-new paths; the macOS
                 FSEvents backend stops delivery for the whole group while a
@@ -341,17 +326,18 @@ File change detected by the config group's shared FsWatcher
                 buffered events
               - an opened batch attempts every group-new addition and is
                 always committed, including after an individual add fails
+              - a refused add is skipped (debug `notify watch skipped`) and
+                offered again by the next registration, as in main
               - the watcher records a path only when its add and the commit
                 both succeed, and the task adopts exactly the candidates the
-                watcher then holds (sibling registrations included); on
-                failure neither set gains the path, so the next build attempt
-                retries the registration; add and commit diagnostics are
-                aggregated
-            - if either registration operation fails, close the unreported
-              bundle attempt and retry the task after 25ms, 100ms, then 250ms
-              without emitting another `BUNDLE_START`
-            - after the third retry fails, stop the coordinator and replay the
-              registration failure through `watcher.close()`
+                watcher then holds (sibling registrations included)
+            - a commit failure in the scan phase becomes this build's `ERROR`
+              event; in the render phase `build()` returns `Err` and the
+              coordinator logs `Fatal build error` without closing (main parity)
+            - `needs_rebuild` is cleared before the render-phase registration
+              (main clears it after): otherwise a persistent commit failure
+              would keep the task dirty and the same-envelope rebuild loop
+              (step 5, which main lacks) would rebuild it forever
          c. handler.on_event(BUNDLE_END or ERROR)
       6. handler.on_event(END)
       7. drain_buffered_events() → process events that arrived during build
@@ -550,13 +536,8 @@ Configured via `WatcherOptions`, fires **immediately** on file change (before de
 - `WatchTask::update_watch_files()` diffs against the task's own `watched_files` set, then hands the new candidates to the config group's shared `FsWatcher`. The watcher's own path set is the group-wide registered set: a path a sibling output already registered is skipped there without opening a native batch, and the task adopts it into its own `watched_files`; only paths new to the whole group reach the backend. `FsWatcher::is_watched` is not used for task membership, because the shared set also holds paths only a sibling watches.
 - `include`/`exclude` patterns filter which files are watched (via `pattern_filter`).
 - Files are watched **recursively**, so a directory passed to `addWatchFile` covers its descendants; for a plain file this is the same as a single-file watch.
-- `FsWatcher::watch_paths` / `try_watch_paths` filter and deduplicate new paths before opening a notify batch. If none remain, they leave the backend untouched: on macOS, opening a batch stops the group's shared FSEvents stream, and committing even an empty batch restarts it from "now", potentially losing edits in between. Steady-state rebuilds, where every path is already in the task's `watched_files`, return before locking the watcher at all.
-- Build watch registers through `FsWatcher::try_watch_paths`: an opened batch attempts every group-new candidate and is always committed, including when an individual `PathsMut::add` fails. A path is recorded in the watcher's set only when its add and the commit both succeed, and the task adopts exactly the candidates the watcher then holds, so on failure neither set gains the path and the next build retries it. Add and commit diagnostics are aggregated when both occur. (Bundled dev uses `watch_paths`, which skips a refused add instead; see `internal-docs/dev-engine/implementation.md`.)
-- Any add or commit failure aborts that build attempt; neither is logged and skipped. The
-  coordinator closes the unreported bundle handle and retries the whole task with
-  25ms/100ms/250ms backoff inside the same public `BUNDLE_START` cycle. Close remains interruptible
-  during backoff. Exhaustion fails closed and the registration diagnostics become part of the
-  stable result replayed by every `watcher.close()`.
+- `FsWatcher::watch_paths` filters and deduplicates new paths before opening a notify batch. If none remain, it leaves the backend untouched: on macOS, opening a batch stops the group's shared FSEvents stream, and committing even an empty batch restarts it from "now", potentially losing edits in between. Steady-state rebuilds, where every path is already in the task's `watched_files`, return before locking the watcher at all.
+- Build watch and bundled dev both register through `FsWatcher::watch_paths`: an opened batch attempts every group-new candidate, skips a refused add with a debug log, and is always committed. A path is recorded only when its add and the commit both succeed, and the task adopts exactly the candidates the watcher holds, so a skipped path is offered again on the next build. This is main's rule: a refused add is transient (the path may appear or become watchable later), so it is retried on the next registration rather than failing the build. A commit failure is returned to the caller (build watch: `ERROR` event or logged fatal build error; dev: see `internal-docs/dev-engine/implementation.md`); it never closes the watcher.
 - `BUNDLE_END.output` follows Rollup's `path.resolve(output.file || output.dir)` behavior. Relative
   paths are resolved against the normalized bundler `cwd`, and `.` / `..` components are removed
   lexically without requiring the output path to exist.

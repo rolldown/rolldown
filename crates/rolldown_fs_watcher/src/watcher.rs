@@ -1,6 +1,6 @@
 use std::path::{Path, PathBuf};
 
-use rolldown_error::{BatchedBuildDiagnostic, BuildResult};
+use rolldown_error::BuildResult;
 use rustc_hash::FxHashSet;
 
 use crate::{
@@ -33,38 +33,7 @@ impl FsWatcher {
   pub fn watch_paths<P: AsRef<Path>>(
     &mut self,
     paths: impl IntoIterator<Item = P>,
-    is_wanted: impl FnMut(&Path) -> bool,
-  ) -> BuildResult<()> {
-    self.register_paths(paths, is_wanted, |path, error| {
-      tracing::debug!(name = "notify watch skipped", ?path, ?error);
-    })
-  }
-
-  /// Like [`Self::watch_paths`], but a path notify refuses is an error instead of a skip.
-  ///
-  /// Every new path is still attempted and the batch is still committed, so event delivery
-  /// resumes; add and commit diagnostics are aggregated. As with `watch_paths`, a path is
-  /// recorded only after its add and the commit both succeed, so a failed path is attempted
-  /// again by the next call. Build watch uses this to retry registration with backoff.
-  pub fn try_watch_paths<P: AsRef<Path>>(
-    &mut self,
-    paths: impl IntoIterator<Item = P>,
-    is_wanted: impl FnMut(&Path) -> bool,
-  ) -> BuildResult<()> {
-    let mut errors = Vec::new();
-    if let Err(error) =
-      self.register_paths(paths, is_wanted, |_, error| errors.extend(error.into_vec()))
-    {
-      errors.extend(error.into_vec());
-    }
-    if errors.is_empty() { Ok(()) } else { Err(BatchedBuildDiagnostic::new(errors)) }
-  }
-
-  fn register_paths<P: AsRef<Path>>(
-    &mut self,
-    paths: impl IntoIterator<Item = P>,
     mut is_wanted: impl FnMut(&Path) -> bool,
-    mut on_refused: impl FnMut(&Path, BatchedBuildDiagnostic),
   ) -> BuildResult<()> {
     let mut new_paths = FxHashSet::default();
     for path in paths {
@@ -87,7 +56,7 @@ impl FsWatcher {
         true
       }
       Err(error) => {
-        on_refused(path, error);
+        tracing::debug!(name = "notify watch skipped", ?path, ?error);
         false
       }
     });

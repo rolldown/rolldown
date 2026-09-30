@@ -83,10 +83,7 @@ impl WatchTask {
 
   /// Run a build and return the outcome for the caller to emit events.
   #[tracing::instrument(level = "debug", skip_all)]
-  pub(crate) async fn build(
-    &mut self,
-    task_index: WatchTaskIdx,
-  ) -> Result<BuildOutcome, WatchTaskBuildError> {
+  pub(crate) async fn build(&mut self, task_index: WatchTaskIdx) -> BuildResult<BuildOutcome> {
     if !self.needs_rebuild {
       return Ok(BuildOutcome::Skipped);
     }
@@ -122,32 +119,26 @@ impl WatchTask {
           // (so files are watched even on error — enables recovery when user fixes the issue)
           let watch_files: Vec<ArcStr> =
             bundle.get_watch_files().iter().map(|f| f.clone()).collect();
-          if let Err(diagnostics) = Self::update_watch_files_from(
+          Self::update_watch_files_from(
             fs_watcher_ref,
             watched_files_ref,
             options_ref,
             &watch_files,
-          ) {
-            return Ok(WatchBuildStageResult::WatchRegistrationFailed(diagnostics));
+          )?;
+
+          let scan_output = scan_result?;
+
+          // Watcher closed mid-build: signal cancellation to the caller via `None`.
+          if closed.load(Ordering::Relaxed) {
+            return Ok(None);
           }
 
-          let build_result = match scan_result {
-            Ok(scan_output) => {
-              // Watcher closed mid-build: signal cancellation to the caller via `None`.
-              if closed.load(Ordering::Relaxed) {
-                Ok(None)
-              } else {
-                let output = if skip_write {
-                  bundle.bundle_generate(scan_output).await
-                } else {
-                  bundle.bundle_write(scan_output).await
-                };
-                output.map(Some)
-              }
-            }
-            Err(diagnostics) => Err(diagnostics),
+          let output = if skip_write {
+            bundle.bundle_generate(scan_output).await?
+          } else {
+            bundle.bundle_write(scan_output).await?
           };
-          Ok(WatchBuildStageResult::Build(build_result))
+          Ok(Some(output))
         })
         .await;
 
@@ -162,23 +153,17 @@ impl WatchTask {
       (result, new_watch_files, bundle_handle)
     };
 
-    let result = match result {
-      Ok(WatchBuildStageResult::Build(result)) => result,
-      Ok(WatchBuildStageResult::WatchRegistrationFailed(diagnostics)) => {
-        return Err(WatchTaskBuildError::WatchRegistration { diagnostics, bundle_handle });
-      }
-      Err(diagnostics) => Err(diagnostics),
-    };
+    // Cleared before the render-phase registration, unlike main: a commit
+    // failure there returns early, and a still-set flag would make the
+    // coordinator's same-envelope rebuild loop rebuild this task forever.
+    // See internal-docs/watch-mode/implementation.md.
+    self.needs_rebuild = false;
 
     // Also register any files discovered during render/write phase
-    if let Err(diagnostics) = self.update_watch_files(&new_watch_files) {
-      return Err(WatchTaskBuildError::WatchRegistration { diagnostics, bundle_handle });
-    }
+    self.update_watch_files(&new_watch_files)?;
 
     #[expect(clippy::cast_possible_truncation)]
     let duration = start_time.elapsed().as_millis() as u32;
-
-    self.needs_rebuild = false;
 
     match result {
       Ok(None) => Ok(BuildOutcome::Closed),
@@ -298,15 +283,14 @@ impl WatchTask {
     }
 
     let mut fs_watcher = fs_watcher.lock().expect("fs_watcher lock poisoned");
-    // A refused add is a registration failure here, not a skip: the
-    // coordinator retries the task with backoff. Every group-new path is
-    // still attempted and the batch always committed. See
-    // internal-docs/watch-mode/implementation.md.
-    let result = fs_watcher.try_watch_paths(candidates.iter().map(WatchPath::as_path), |_| true);
+    // A path notify refuses is skipped (debug log) and offered again on the
+    // next build, like main; the batch is always committed and a commit
+    // failure is returned. See internal-docs/watch-mode/implementation.md.
+    let result = fs_watcher.watch_paths(candidates.iter().map(WatchPath::as_path), |_| true);
     // Publish to this task exactly what the group watcher holds: paths a
     // sibling registered earlier, plus this batch's paths whose add and
     // commit both succeeded. Anything else stays out of both sets, so the next
-    // build attempt retries it.
+    // build offers it again.
     for watch_path in candidates {
       if fs_watcher.is_registered(watch_path.as_path()) {
         watched_files.insert(watch_path);
@@ -413,15 +397,6 @@ pub enum BuildOutcome {
   Closed,
 }
 
-enum WatchBuildStageResult<T> {
-  Build(T),
-  WatchRegistrationFailed(BatchedBuildDiagnostic),
-}
-
-pub enum WatchTaskBuildError {
-  WatchRegistration { diagnostics: BatchedBuildDiagnostic, bundle_handle: BundleHandle },
-}
-
 #[cfg(test)]
 mod tests {
   use super::*;
@@ -469,14 +444,12 @@ mod tests {
   }
 
   struct AddFailingWatcher {
-    fail_commit: bool,
     add_attempts: Arc<Mutex<Vec<PathBuf>>>,
     commit_attempts: Arc<AtomicUsize>,
     event_delivery_paused: Arc<AtomicBool>,
   }
 
   struct AddFailingPaths {
-    fail_commit: bool,
     add_attempts: Arc<Mutex<Vec<PathBuf>>>,
     commit_attempts: Arc<AtomicUsize>,
     event_delivery_paused: Arc<AtomicBool>,
@@ -501,9 +474,6 @@ mod tests {
     fn commit(self: Box<Self>) -> BuildResult<()> {
       self.commit_attempts.fetch_add(1, Ordering::SeqCst);
       self.event_delivery_paused.store(false, Ordering::SeqCst);
-      if self.fail_commit {
-        return Err(anyhow::anyhow!("intentional watcher commit failure").into());
-      }
       Ok(())
     }
   }
@@ -515,7 +485,6 @@ mod tests {
         "the preceding paths transaction must have restarted event delivery"
       );
       Box::new(AddFailingPaths {
-        fail_commit: self.fail_commit,
         add_attempts: Arc::clone(&self.add_attempts),
         commit_attempts: Arc::clone(&self.commit_attempts),
         event_delivery_paused: Arc::clone(&self.event_delivery_paused),
@@ -540,12 +509,11 @@ mod tests {
       .collect()
   }
 
-  fn create_add_failing_watcher(fail_commit: bool) -> AddFailingWatcherFixture {
+  fn create_add_failing_watcher() -> AddFailingWatcherFixture {
     let add_attempts = Arc::new(Mutex::new(Vec::new()));
     let commit_attempts = Arc::new(AtomicUsize::new(0));
     let event_delivery_paused = Arc::new(AtomicBool::new(false));
     let watcher = FsWatcher::with_backend(Box::new(AddFailingWatcher {
-      fail_commit,
       add_attempts: Arc::clone(&add_attempts),
       commit_attempts: Arc::clone(&commit_attempts),
       event_delivery_paused: Arc::clone(&event_delivery_paused),
@@ -558,33 +526,33 @@ mod tests {
     }
   }
 
+  /// Main parity: a path notify refuses is skipped, not a build error. Every
+  /// other path is still added and the batch committed, and the refused path
+  /// stays out of both sets so the next registration offers it again.
   #[test]
-  fn failed_watch_add_commits_attempts_later_paths_and_publishes_successes() {
+  fn refused_watch_add_is_skipped_commits_and_is_retried() {
     let test_dir = TestDir::new("rolldown-watch-registration");
     let watch_files = create_watch_files(&test_dir, &["before.js", "fail.js", "after.js"]);
     let options =
       NormalizedBundlerOptions { cwd: test_dir.path().to_path_buf(), ..Default::default() };
     let AddFailingWatcherFixture { watcher, add_attempts, commit_attempts, event_delivery_paused } =
-      create_add_failing_watcher(false);
+      create_add_failing_watcher();
     let watched_files = FxDashSet::default();
 
-    let error =
-      WatchTask::update_watch_files_from(&watcher, &watched_files, &options, &watch_files)
-        .expect_err("the failed watcher addition must be reported");
+    WatchTask::update_watch_files_from(&watcher, &watched_files, &options, &watch_files)
+      .expect("a refused watcher addition must be skipped, not reported");
 
-    assert!(error.to_string().contains("intentional watcher add failure"));
-    assert_eq!(error.len(), 1);
     // `FsWatcher` stages a batch from a hash set, so only the set of attempts is stable.
     let mut attempted = add_attempts.lock().expect("add attempts lock").clone();
     attempted.sort();
     let mut expected =
       watch_files.iter().map(|file| PathBuf::from(file.as_str())).collect::<Vec<_>>();
     expected.sort();
-    assert_eq!(attempted, expected, "an add failure must not skip later paths");
+    assert_eq!(attempted, expected, "a refused add must not skip later paths");
     assert_eq!(commit_attempts.load(Ordering::SeqCst), 1);
     assert!(
       !event_delivery_paused.load(Ordering::SeqCst),
-      "commit must restart event delivery after an add failure"
+      "commit must restart event delivery after a refused add"
     );
     assert!(watched_files.contains(Path::new(watch_files[0].as_str())));
     assert!(!watched_files.contains(Path::new(watch_files[1].as_str())));
@@ -592,42 +560,17 @@ mod tests {
     assert!(is_registered(&watcher, Path::new(watch_files[0].as_str())));
     assert!(
       !is_registered(&watcher, Path::new(watch_files[1].as_str())),
-      "a failed add must stay unregistered for the whole group so the retry re-adds it"
+      "a refused add must stay unregistered for the whole group so the next build re-adds it"
     );
     assert!(is_registered(&watcher, Path::new(watch_files[2].as_str())));
-  }
 
-  #[test]
-  fn watch_add_and_commit_failures_are_aggregated_without_publication() {
-    let test_dir = TestDir::new("rolldown-watch-registration");
-    let watch_files = create_watch_files(&test_dir, &["success.js", "fail.js"]);
-    let options =
-      NormalizedBundlerOptions { cwd: test_dir.path().to_path_buf(), ..Default::default() };
-    let AddFailingWatcherFixture { watcher, add_attempts, commit_attempts, event_delivery_paused } =
-      create_add_failing_watcher(true);
-    let watched_files = FxDashSet::default();
-
-    let error =
-      WatchTask::update_watch_files_from(&watcher, &watched_files, &options, &watch_files)
-        .expect_err("add and commit failures must both be reported");
-    let message = error.to_string();
-
-    assert!(message.contains("intentional watcher add failure"));
-    assert!(message.contains("intentional watcher commit failure"));
-    assert_eq!(error.len(), 2);
-    assert_eq!(add_attempts.lock().expect("add attempts lock").len(), watch_files.len());
-    assert_eq!(commit_attempts.load(Ordering::SeqCst), 1);
-    assert!(
-      !event_delivery_paused.load(Ordering::SeqCst),
-      "the fake backend must observe transaction finalization"
-    );
-    assert!(!watched_files.contains(Path::new(watch_files[0].as_str())));
-    assert!(!watched_files.contains(Path::new(watch_files[1].as_str())));
-    assert_eq!(
-      watcher.lock().expect("watcher lock").watched_paths().count(),
-      0,
-      "a failed commit must not publish any path to the group set"
-    );
+    // The next registration offers only the skipped path again.
+    WatchTask::update_watch_files_from(&watcher, &watched_files, &options, &watch_files)
+      .expect("a refused watcher addition must be skipped again");
+    let add_attempts = add_attempts.lock().expect("add attempts lock");
+    assert_eq!(add_attempts.len(), watch_files.len() + 1);
+    assert_eq!(add_attempts.last().map(PathBuf::as_path), Some(Path::new(watch_files[1].as_str())));
+    assert_eq!(commit_attempts.load(Ordering::SeqCst), 2);
   }
 
   #[test]
@@ -694,7 +637,7 @@ mod tests {
     let options =
       NormalizedBundlerOptions { cwd: test_dir.path().to_path_buf(), ..Default::default() };
     let AddFailingWatcherFixture { watcher, commit_attempts, event_delivery_paused, .. } =
-      create_add_failing_watcher(false);
+      create_add_failing_watcher();
     let task_a_watched_files = FxDashSet::default();
     let task_b_watched_files = FxDashSet::default();
 

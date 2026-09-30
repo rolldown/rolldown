@@ -39,7 +39,7 @@ jobs:
 
       - uses: voidzero-dev/setup-vp@3754dd7dbdb32bd8f6d28b6043de13ad3a75f21f # v1.21.1
         with:
-          version: '0.2.1'
+          version: '0.3.3'
           cache: true
 
       - name: Add WASI target

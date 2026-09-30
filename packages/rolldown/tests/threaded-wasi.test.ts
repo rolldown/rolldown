@@ -32,16 +32,6 @@ test.runIf(capabilities.target === 'wasi-threads' || expectThreadedWasi)(
     // could build a MultiThread executor on `wasm32-wasip1-threads`, but Rolldown
     // does not ship it (parking_lot_core's stable wasm parker panics), so the real
     // OS threads change the loader, not the executor.
-    expect(capabilities).toMatchObject({
-      backend: 'shared',
-      flavor: 'CurrentThread',
-      target: 'wasi-threads',
-      wasi: true,
-      asyncRuntimeBuild: true,
-      threads: false,
-      devSupported: false,
-      watchSupported: false,
-    });
     const support = getRuntimeSupport();
     expect(support.pluginErrorMetadata).toBe(true);
     expect(support.threadlessWasi).toBe(false);

@@ -60,21 +60,6 @@ test('bundle close retries a native transport rejection before completing', asyn
   expect(hasRetryableBuildCleanup(build)).toBe(false);
 });
 
-test('bundle close replays terminal native diagnostics after releasing ownership', async () => {
-  const closeError = new Error('closeBundle failed');
-  const build = new RolldownBuild({ input: 'entry.js' });
-  mocks.close.mockResolvedValue({
-    errors: [{ field0: closeError, type: 'JsError' }],
-    isBindingErrors: true,
-  });
-
-  await expect(build.close()).rejects.toBe(closeError);
-  await expect(build.close()).rejects.toBe(closeError);
-
-  expect(mocks.close).toHaveBeenCalledOnce();
-  expect(hasRetryableBuildCleanup(build)).toBe(false);
-});
-
 test('bundle cleanup retry excludes terminal diagnostics while preserving public replay', async () => {
   const terminalError = new Error('closeBundle failed');
   const build = new RolldownBuild({ input: 'entry.js' });

@@ -213,8 +213,15 @@ Any ──(Close)──→ Closing → Closed
 
 **No explicit Building state.** The coordinator's event loop blocks during build (it `await`s). Fs events buffer in the unbounded `futures::channel::mpsc` channel. After build, `drain_buffered_events()` via `try_recv()` picks them up.
 Registration backoff is likewise a coordinator sub-phase rather than a `WatcherState` variant. It
-continues to receive file-change and close messages while waiting, but the retry deadline is fixed
-so incoming changes cannot turn a bounded recovery into an indefinite wait.
+waits only for close (the `closed` flag and `close_notify`, which `Watcher::publish_close` sets
+before it queues `WatcherMsg::Close`) and its fixed delay; file-change messages stay queued in the
+channel. Marking a task dirty during the backoff would let the retry build clear `needs_rebuild`
+before the change's `change`/`watchChange` ran, so the later envelope would run the hooks (where
+plugins drop caches) and then skip the build, leaving stale output. Left queued, the change is
+drained after the retry build like any change that arrived during a build: it marks the task again,
+and the rebuild loop (or, after the initial build, the normal debounce) dispatches
+`change`/`watchChange` before the task's next build. Not reading the channel also keeps an event
+flood from starving the retry deadline, so recovery stays bounded.
 
 ```rust
 enum WatcherState {

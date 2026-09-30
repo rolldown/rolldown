@@ -522,38 +522,34 @@ impl<H: WatcherEventHandler> WatchCoordinator<H> {
     }
   }
 
-  async fn wait_for_registration_retry(&mut self, delay: Duration) -> bool {
-    let deadline = Instant::now() + delay;
-
-    loop {
-      let closed = Arc::clone(&self.closed);
-      let close_notify = Arc::clone(&self.close_notify);
-      // Listen before checking `closed`: `event_listener::Event` stores no
-      // permit, so a listener created after the notify would wait forever.
-      let wait_for_close = async move {
-        let listener = close_notify.listen();
-        if !closed.load(Ordering::Relaxed) {
-          listener.await;
-        }
+  /// Wait out one registration backoff. Returns `false` on close and `true`
+  /// when the delay elapsed.
+  async fn wait_for_registration_retry(&self, delay: Duration) -> bool {
+    // Listen before checking `closed`: `event_listener::Event` stores no
+    // permit, so a listener created after the notify would wait forever.
+    // `Watcher::publish_close` sets `closed` and notifies before it queues
+    // `WatcherMsg::Close`, so close stays prompt without reading the channel.
+    let wait_for_close = async {
+      let listener = self.close_notify.listen();
+      if !self.closed.load(Ordering::Relaxed) {
+        listener.await;
       }
-      .fuse();
-      let timeout = rolldown_utils::time::sleep_until(deadline).fuse();
-      pin_mut!(wait_for_close, timeout);
+    }
+    .fuse();
+    let timeout = rolldown_utils::time::sleep_until(Instant::now() + delay).fuse();
+    pin_mut!(wait_for_close, timeout);
 
-      // Biased: close, then message, then timeout. The message is handled after
-      // the select block ends so the `&mut self.rx` borrow is released before
-      // `process_file_changes` reborrows `&mut self`.
-      let msg = select_biased! {
-        () = wait_for_close => return false,
-        msg = self.rx.next() => msg,
-        () = timeout => return true,
-      };
-      match msg {
-        Some(WatcherMsg::FileChanges { group_index, changes }) => {
-          self.process_file_changes(group_index, changes).await;
-        }
-        Some(WatcherMsg::Close) | None => return false,
-      }
+    // File changes stay queued during the backoff. Marking a task dirty now
+    // would let the retry build clear `needs_rebuild` before the change's
+    // `change`/`watchChange` run, so the later envelope would skip the build
+    // after plugins dropped their caches. Drained after the retry build, the
+    // change marks the task once the flag is cleared and gets its hooks
+    // before its own build.
+    // Not reading the channel also keeps an event flood from starving the
+    // timeout. See internal-docs/watch-mode/implementation.md.
+    select_biased! {
+      () = wait_for_close => false,
+      () = timeout => true,
     }
   }
 
@@ -1125,6 +1121,268 @@ mod tests {
       WATCH_REGISTRATION_RETRY_DELAYS.len() + 1
     );
     assert_eq!(close_calls.load(Ordering::SeqCst), 1);
+  }
+
+  /// Logs `buildStart` and `watchChange` in call order.
+  #[derive(Debug)]
+  struct BuildOrderProbePlugin {
+    log: Arc<Mutex<Vec<String>>>,
+  }
+
+  impl plugin::Plugin for BuildOrderProbePlugin {
+    fn name(&self) -> Cow<'static, str> {
+      "watch-registration-build-order-probe".into()
+    }
+
+    fn register_hook_usage(&self) -> plugin::HookUsage {
+      plugin::HookUsage::BuildStart | plugin::HookUsage::WatchChange
+    }
+
+    async fn build_start(
+      &self,
+      _ctx: &plugin::PluginContext,
+      _args: &plugin::HookBuildStartArgs<'_>,
+    ) -> plugin::HookNoopReturn {
+      self.log.lock().expect("log lock").push("build".to_string());
+      Ok(())
+    }
+
+    async fn watch_change(
+      &self,
+      _ctx: &plugin::PluginContext,
+      path: &str,
+      _event: WatcherChangeKind,
+    ) -> plugin::HookNoopReturn {
+      let name = Path::new(path).file_name().expect("file name").to_string_lossy().into_owned();
+      self.log.lock().expect("log lock").push(format!("watchChange:{name}"));
+      Ok(())
+    }
+  }
+
+  /// A save that is already queued when the registration backoff starts must
+  /// not be marked dirty before the retry build: the retry would clear the
+  /// flag, and the later envelope would run `watchChange` (where plugins drop
+  /// their caches) and then skip the build. The save must instead get a build
+  /// that runs after its `watchChange`.
+  #[tokio::test(flavor = "multi_thread")]
+  async fn change_queued_during_registration_backoff_rebuilds_after_watch_change() {
+    let test_dir = TestDir::new(TEST_DIR_PREFIX);
+    let main = test_dir.path().join("main.js");
+    let dep = test_dir.path().join("dep.js");
+    fs::write(&dep, "export const dep = 1;").expect("write dep");
+    fs::write(&main, "import { dep } from './dep.js'; console.log(dep);").expect("write main");
+    let main = dunce::canonicalize(main).expect("canonicalize main");
+    let dep = dunce::canonicalize(dep).expect("canonicalize dep");
+
+    let (tx, rx) = mpsc::unbounded();
+    let closed = Arc::new(AtomicBool::new(false));
+    let close_notify = Arc::new(Event::new());
+    let log = Arc::new(Mutex::new(Vec::new()));
+    let add_attempts = Arc::new(AtomicUsize::new(0));
+    // The first add is refused, so the first build registers only one of the
+    // two files and the coordinator enters the registration backoff.
+    let fs_watcher = FsWatcher::with_backend(Box::new(RegistrationFailingWatcher {
+      fail_adds: 1,
+      fail_commits: 0,
+      add_attempts: Arc::clone(&add_attempts),
+      commit_attempts: Arc::new(AtomicUsize::new(0)),
+      commit_times: Arc::new(Mutex::new(Vec::new())),
+    }));
+    let task = WatchTask::new(
+      BundlerConfig::new(
+        BundlerOptions {
+          cwd: Some(test_dir.path().to_path_buf()),
+          input: Some(vec![main.to_string_lossy().into_owned().into()]),
+          file: Some("dist/out.js".into()),
+          ..Default::default()
+        },
+        vec![plugin::Pluginable::new_shared(BuildOrderProbePlugin { log: Arc::clone(&log) })],
+      ),
+      Arc::new(Mutex::new(fs_watcher)),
+      &closed,
+    )
+    .expect("create watch task");
+    let mut tasks = IndexVec::new();
+    tasks.push(task);
+    let events = Arc::new(Mutex::new(Vec::new()));
+    let coordinator = WatchCoordinator::new(
+      rx,
+      RecordingHandler {
+        events: Arc::clone(&events),
+        end: Arc::new(Notify::new()),
+        close_calls: Arc::new(AtomicUsize::new(0)),
+      },
+      tasks,
+      singleton_groups(1),
+      &WatcherConfig::default(),
+      Arc::clone(&closed),
+      Arc::clone(&close_notify),
+      Arc::default(),
+    );
+    // Queue the save before the coordinator starts. The initial build does not
+    // read the channel, so the backoff is the first place that could see it.
+    tx.unbounded_send(WatcherMsg::FileChanges {
+      group_index: WatchGroupIdx::from_usize(0),
+      changes: vec![
+        FileChangeEvent::new(main.to_string_lossy().into_owned(), WatcherChangeKind::Update),
+        FileChangeEvent::new(dep.to_string_lossy().into_owned(), WatcherChangeKind::Update),
+      ],
+    })
+    .expect("queue file change");
+    let handle = tokio::spawn(coordinator.run());
+
+    // Initial envelope plus the envelope for the queued save.
+    tokio::time::timeout(Duration::from_secs(10), async {
+      while events.lock().expect("events lock").iter().filter(|event| *event == "END").count() < 2 {
+        tokio::time::sleep(Duration::from_millis(5)).await;
+      }
+    })
+    .await
+    .expect("the queued save should produce a second envelope");
+
+    closed.store(true, Ordering::Relaxed);
+    close_notify.notify(usize::MAX);
+    // Same order as `Watcher::publish_close`.
+    let _ = tx.unbounded_send(WatcherMsg::Close);
+    tokio::time::timeout(Duration::from_secs(10), handle)
+      .await
+      .expect("coordinator should close")
+      .expect("coordinator task should not panic")
+      .expect("coordinator should close successfully");
+
+    assert!(add_attempts.load(Ordering::SeqCst) >= 2, "the first build must hit the refused add");
+    let log = log.lock().expect("log lock").clone();
+    let last_watch_change = log.iter().rposition(|entry| entry.starts_with("watchChange:"));
+    let last_build = log.iter().rposition(|entry| entry == "build");
+    assert!(last_watch_change.is_some(), "the queued save must reach watchChange; log={log:?}");
+    assert!(
+      last_build > last_watch_change,
+      "a build must run after the watchChange of the queued save; log={log:?}"
+    );
+    assert_eq!(
+      *events.lock().expect("events lock"),
+      ["START", "BUNDLE_START", "BUNDLE_END", "END", "START", "BUNDLE_START", "BUNDLE_END", "END"]
+    );
+  }
+
+  /// Stops and joins the flooding thread even when an assertion fails.
+  struct FloodGuard {
+    stop: Arc<AtomicBool>,
+    thread: Option<std::thread::JoinHandle<usize>>,
+  }
+
+  impl FloodGuard {
+    fn stop(&mut self) -> usize {
+      self.stop.store(true, Ordering::Relaxed);
+      self.thread.take().map_or(0, |thread| thread.join().expect("flood thread should not panic"))
+    }
+  }
+
+  impl Drop for FloodGuard {
+    fn drop(&mut self) {
+      self.stop.store(true, Ordering::Relaxed);
+      if let Some(thread) = self.thread.take() {
+        let _ = thread.join();
+      }
+    }
+  }
+
+  /// A steady stream of file events must not hold the registration backoff
+  /// open: the retry sequence finishes on its own delays while events keep
+  /// arriving. The flood is bounded by the test budget and by the coordinator
+  /// dropping its receiver.
+  #[tokio::test(flavor = "multi_thread")]
+  async fn registration_backoff_is_bounded_under_file_event_flood() {
+    const BUDGET: Duration = Duration::from_secs(5);
+    let test_dir = TestDir::new(TEST_DIR_PREFIX);
+    let (tx, rx) = mpsc::unbounded();
+    let closed = Arc::new(AtomicBool::new(false));
+    let close_notify = Arc::new(Event::new());
+    let close_bundle_calls = Arc::new(AtomicUsize::new(0));
+    let RegistrationTestTask { task, commit_attempts, .. } =
+      create_task(&test_dir, 0, usize::MAX, &closed, &close_bundle_calls);
+    let changed_path =
+      dunce::canonicalize(test_dir.path().join("main.js")).expect("canonicalize input");
+    let changed_path = changed_path.to_string_lossy().into_owned();
+    let mut tasks = IndexVec::new();
+    tasks.push(task);
+    let coordinator = WatchCoordinator::new(
+      rx,
+      RecordingHandler {
+        events: Arc::new(Mutex::new(Vec::new())),
+        end: Arc::new(Notify::new()),
+        close_calls: Arc::new(AtomicUsize::new(0)),
+      },
+      tasks,
+      singleton_groups(1),
+      &WatcherConfig::default(),
+      Arc::clone(&closed),
+      Arc::clone(&close_notify),
+      Arc::default(),
+    );
+
+    let stop = Arc::new(AtomicBool::new(false));
+    let mut flood = FloodGuard {
+      stop: Arc::clone(&stop),
+      thread: Some({
+        let tx = tx.clone();
+        std::thread::spawn(move || {
+          let started = Instant::now();
+          let mut sent = 0;
+          while !stop.load(Ordering::Relaxed) && started.elapsed() < BUDGET {
+            let msg = WatcherMsg::FileChanges {
+              group_index: WatchGroupIdx::from_usize(0),
+              changes: vec![FileChangeEvent::new(changed_path.clone(), WatcherChangeKind::Update)],
+            };
+            if tx.unbounded_send(msg).is_err() {
+              break;
+            }
+            sent += 1;
+            let gap = Instant::now();
+            while gap.elapsed() < Duration::from_micros(1) {
+              std::hint::spin_loop();
+            }
+          }
+          sent
+        })
+      }),
+    };
+
+    let started = Instant::now();
+    let handle = tokio::spawn(coordinator.run());
+    let finished = tokio::time::timeout(BUDGET, async {
+      while !handle.is_finished() {
+        tokio::time::sleep(Duration::from_millis(5)).await;
+      }
+    })
+    .await
+    .is_ok();
+    let elapsed = started.elapsed();
+    let sent = flood.stop();
+    if !finished {
+      closed.store(true, Ordering::Relaxed);
+      close_notify.notify(usize::MAX);
+      let _ = tx.unbounded_send(WatcherMsg::Close);
+    }
+    let result = tokio::time::timeout(Duration::from_secs(30), handle)
+      .await
+      .expect("coordinator should stop")
+      .expect("coordinator task should not panic");
+
+    assert!(
+      finished,
+      "registration retries must finish within {BUDGET:?} under a flood of {sent} events; \
+       commit attempts so far = {}",
+      commit_attempts.load(Ordering::SeqCst)
+    );
+    assert!(sent > 0, "the flood thread must have sent events");
+    let error = result.expect_err("exhausted watcher registration should fail closed");
+    assert!(
+      error.to_string().contains("watch task 0 file watcher registration failed after 3 retries")
+    );
+    assert_eq!(commit_attempts.load(Ordering::SeqCst), WATCH_REGISTRATION_RETRY_DELAYS.len() + 1);
+    let total_backoff: Duration = WATCH_REGISTRATION_RETRY_DELAYS.iter().sum();
+    assert!(elapsed >= total_backoff, "every retry must still wait for its delay");
   }
 
   #[test]

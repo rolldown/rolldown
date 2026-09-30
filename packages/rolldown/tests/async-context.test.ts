@@ -787,22 +787,6 @@ test('browser preflight detects direct data-property plugin callbacks', () => {
   ).toBe(true);
 });
 
-test('browser preflight detects Proxy-served built-in plugin callbacks', () => {
-  const logInfo = () => {};
-  const config = new Proxy({} as BindingViteReporterPluginConfig, {
-    get(target, key, receiver) {
-      return key === 'logInfo' ? logInfo : Reflect.get(target, key, receiver);
-    },
-  });
-  const bindingPlugin = bindingifyBuiltInPlugin(viteReporterPlugin(config), (callback) =>
-    callback(),
-  );
-
-  expect(
-    bindingOptionsRequireAsyncContext({ plugins: [bindingPlugin] } as never, {} as never, false),
-  ).toBe(true);
-});
-
 test('browser preflight answers from the snapshot the binding reads', () => {
   const logInfo = () => {};
   // Every field, callback included, is trap-served: the preflight only looks at

@@ -395,10 +395,23 @@ function bundleThreadedNodeWorkerRuntime(): Plugin {
         if (!runtimeRequire.test(code)) {
           throw new Error('Could not locate the threaded WASI worker runtime require');
         }
-        return code.replace(
-          runtimeRequire,
-          "import { instantiateNapiModuleSync, MessageHandler, getDefaultContext, emnapiAsyncWorkPlugin, emnapiTSFNPlugin } from '@napi-rs/wasm-runtime';",
-        );
+        // The template makes this require inside a `try` block (a failure
+        // there must raise the crash flags), where an `import` cannot go.
+        // Hoist the import to the top level and bind the same names in place.
+        const names = [
+          'instantiateNapiModuleSync',
+          'MessageHandler',
+          'getDefaultContext',
+          'emnapiAsyncWorkPlugin',
+          'emnapiTSFNPlugin',
+        ];
+        const runtimeImport = `import { ${names
+          .map((name) => `${name} as __wasmRuntime_${name}`)
+          .join(', ')} } from '@napi-rs/wasm-runtime';\n`;
+        const runtimeBindings = `const ${names
+          .map((name) => `${name} = __wasmRuntime_${name}`)
+          .join(', ')};`;
+        return runtimeImport + code.replace(runtimeRequire, runtimeBindings);
       },
     },
   };

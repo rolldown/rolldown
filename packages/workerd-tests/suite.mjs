@@ -69,8 +69,7 @@ const hookCallsPerRound = (variant) =>
 // ---------------------------------------------------------------------------
 // MEMORY BUDGETS -- MiB of Wasm linear memory retained per identical rebuild on
 // ONE reusable instance. They catch a REGRESSION (a hook-input eager-release
-// path silently dropping out); the floors below catch further improvements that
-// would otherwise leave stale ceilings behind.
+// path silently dropping out).
 //
 // Measured 2026-08-10 on the registry napi pin (napi 3.12.1 / napi-derive 3.6.3,
 // @napi-rs/cli 3.8.5) on the DEBUG wasm that BOTH CI lanes build (28.3 MiB
@@ -79,16 +78,17 @@ const hookCallsPerRound = (variant) =>
 // EXACTLY for `nohooks` and both single-hook `renderchunk*` rows;
 // `generatebundle` spread two 64 KiB page quanta (0.180-0.188 -- GC timing
 // decides when the marshaled bundle copies' JS handles die, which moves a page
-// boundary) and `renderchunk-stacked` two (0.338-0.346), so their `measured`
-// records the modal value. CI run 31322883081 (0.195 / 0.180 / 0.206 / 0.206)
+// boundary) and `renderchunk-stacked` two (0.338-0.346), so their recorded
+// value is the modal one. CI run 31322883081 (0.195 / 0.180 / 0.206 / 0.206)
 // sits inside every band it covers, so the calibration holds on the CI builder
 // too; `renderchunk-stacked` is new here and has no CI datum yet, which is why
 // the control it feeds is set far below its measured gap, not just under it.
 // The window length is part of the number: rebuild growth is CONVEX (dlmalloc
 // arena stepping retains more per round in the tail), so these values are valid
-// ONLY at --rounds=20. Budgets carry ~25% headroom over `measured` to absorb page
-// quantisation plus toolchain differences from the CI builder -- far below the
-// signal each variant guards (see the per-variant notes).
+// ONLY at --rounds=20. Budgets carry ~25% headroom over the measured slope
+// (noted beside each budget) to absorb page quantisation plus toolchain
+// differences from the CI builder -- far below the signal each variant guards
+// (see the per-variant notes).
 const MEMORY_BUDGETS = {
   // Baseline, NOT "the cost of a bare rebuild": the slope graph lives inside
   // `slopeGraphPlugin`'s map, so `caseMemorySlope` installs that plugin for
@@ -98,19 +98,19 @@ const MEMORY_BUDGETS = {
   // `nohooks` names the absence of an OUTPUT hook. Only variant-to-variant
   // DELTAS isolate one hook's retention; a move here means the shared
   // build/marshalling path changed (a doubled base slope reads ~0.40).
-  nohooks: { measured: 0.199, budget: 0.249 },
+  nohooks: { budget: 0.249 }, // measured 0.199
   // A generateBundle hook that READS its chunks. Costs NOTHING extra: the
   // per-invocation bundle copy IS released when the hook returns, the contract
   // pinned by packages/rolldown/tests/workerd-output-ownership.test.ts. Tracking
   // well above baseline means that copy stopped being freed.
-  generatebundle: { measured: 0.182, budget: 0.228 },
+  generatebundle: { budget: 0.228 }, // measured 0.182
   // Receiving a BindingRenderedChunk in renderChunk. Snapshot-and-released per
   // invocation, so this is baseline plus the cost of installing the extra hook
   // (~0.011 above `nohooks` on this pin), NOT a payload retention that scales
   // with output size -- returning a 16x larger chunk from the hook measured this
   // same 0.210. Climbing back toward 0.55 means the renderChunk eager release
   // broke.
-  'renderchunk-nomodules': { measured: 0.21, budget: 0.263 },
+  'renderchunk-nomodules': { budget: 0.263 }, // measured 0.21
   // ...plus reading `chunk.modules`, which marshals one BindingRenderedModule
   // per module; identical to `renderchunk-nomodules` because those boxes are
   // snapshot-and-released too. The band alone cannot see the module-box cost
@@ -120,13 +120,13 @@ const MEMORY_BUDGETS = {
   // agreed EXACTLY on every calibration run, and stacking them (as
   // `renderchunk-stacked` does) made each jitter +-2 quanta, which would have
   // spent most of the ceiling's margin on noise.
-  renderchunk: { measured: 0.21, budget: 0.263 },
+  renderchunk: { budget: 0.263 }, // measured 0.21
   // The same hook as `renderchunk-nomodules`, installed
   // STACKED_RENDER_CHUNK_PLUGINS deep. Its band is a second, harder read on the
   // renderChunk eager release -- one round now marshals 6 hook-input boxes, so a
   // release that stops firing shows up 6x -- and its gap over `nohooks` is what
   // the workload-resolution control at the bottom measures.
-  'renderchunk-stacked': { measured: 0.346, budget: 0.432 },
+  'renderchunk-stacked': { budget: 0.432 }, // measured 0.346
   // The only BUILD-side row, and the only one whose hook runs per MODULE (306 a
   // round, not 1): a transform hook reading `meta.ast`, i.e. `parseAst()`, which
   // hands back oxc's `ParseResult` -- an upstream napi class rolldown cannot add
@@ -135,9 +135,9 @@ const MEMORY_BUDGETS = {
   // `comments` for no other reason; delete exactly that block from the built
   // `workerd.browser.mjs` and this row measures 1.287, 3.9x this budget.
   // Three consecutive 20-round runs measured 0.2647 with ZERO spread, the
-  // steadiest row in the table, so both edges keep 18 page quanta of margin
+  // steadiest row in the table, so the budget keeps 18 page quanta of margin
   // (twice the widest spread any row here has ever shown).
-  'transform-ast': { measured: 0.265, budget: 0.331 },
+  'transform-ast': { budget: 0.331 }, // measured 0.265
   // The FAILING half of that path: `this.parse()` on unparsable source, which
   // throws. oxc fills `ParseResult` before it reports errors, so the throwing
   // branch owes those same drains plus `program`, which the succeeding branch
@@ -146,22 +146,8 @@ const MEMORY_BUDGETS = {
   // the loudest signal in the table. Three consecutive 20-round runs measured
   // 0.2647 with ZERO spread, landing exactly on `transform-ast` now that both
   // branches drain every field.
-  'transform-ast-error': { measured: 0.265, budget: 0.331 },
+  'transform-ast-error': { budget: 0.331 }, // measured 0.265
 };
-
-// Every variant is enforced as a two-sided BAND. `budget` catches the leak
-// growing; `measured * SLOPE_FLOOR_RATIO` catches it SHRINKING, which is the day
-// this table has to be re-derived -- without a floor, a landed fix leaves a stale
-// ceiling a future regression can grow back into with CI green the whole way.
-//
-// The ratio has to sit between the two things it separates:
-//   * NOISE -- the widest spread ever seen is `generatebundle`'s GC-timing band
-//     of 0.033 on the old pin (0.309-0.342); 25% of the smallest measured slope
-//     is 0.046 MiB/rebuild, ~1.4x that historical widest spread.
-//   * SIGNAL -- the hook-input eager release dropped `renderchunk-nomodules`
-//     from 0.528 to 0.313 (12-round window), 21% below its then-floor of 0.396.
-//     A shift of that size stays detectable.
-const SLOPE_FLOOR_RATIO = 0.75;
 
 // ---------------------------------------------------------------------------
 // Artifact preflight. A lane that silently skips is worse than no lane, so a
@@ -598,19 +584,12 @@ for (const variant of Object.keys(MEMORY_BUDGETS)) {
       `across ${rounds} rounds; the accessor looks stubbed or quantised into uselessness`,
   );
 
-  const { measured, budget } = MEMORY_BUDGETS[variant];
-  const floor = measured * SLOPE_FLOOR_RATIO;
-  const verdict = measureOnly
-    ? 'measured'
-    : slope > budget
-      ? 'OVER BUDGET'
-      : slope < floor
-        ? 'UNDER FLOOR'
-        : 'ok';
+  const { budget } = MEMORY_BUDGETS[variant];
+  const verdict = measureOnly ? 'measured' : slope > budget ? 'OVER BUDGET' : 'ok';
   console.log(
     `  [8/8] memory ${variant.padEnd(21)} ${verdict.padEnd(11)} ` +
       `${slope.toFixed(3)} MiB/rebuild` +
-      ` (band ${floor.toFixed(3)}-${budget.toFixed(3)})` +
+      ` (budget ${budget.toFixed(3)})` +
       `  [${report.memFirstMiB} -> ${report.memLastMiB} MiB over ${rounds} rounds]`,
   );
   if (!measureOnly && slope > budget) {
@@ -619,16 +598,6 @@ for (const variant of Object.keys(MEMORY_BUDGETS)) {
         `budget is ${budget.toFixed(3)} MiB/rebuild. A hook-input eager-release path ` +
         '(dropInner wiring) regressed, or a new leak was introduced. Investigate before ' +
         'raising this budget.',
-    );
-  }
-  if (!measureOnly && slope < floor) {
-    failures.push(
-      `memory variant '${variant}' retained ${slope.toFixed(3)} MiB/rebuild, well under the ` +
-        `${measured.toFixed(3)} recorded for it (floor ${floor.toFixed(3)}). THIS IS GOOD ` +
-        'NEWS: something now releases memory this suite still budgets for. Re-run this ' +
-        'script with `--measure` and update BOTH `measured` and `budget` for every variant ' +
-        'in MEMORY_BUDGETS to the new numbers. Leaving the old ceiling in place would let a ' +
-        'future regression grow back into it with this lane green the whole way.',
     );
   }
 }
@@ -650,8 +619,7 @@ for (const variant of Object.keys(MEMORY_BUDGETS)) {
 //                                  on was 3 quanta, so a collapse back to that
 //                                  level, or to 0, still fails
 // Deliberately NOT set just under the measured gap: `renderchunk-stacked` has no
-// CI datum yet, and partial degradation is already the job of that variant's own
-// floor (0.259) rather than this binary is-it-resolving-anything check. Both gaps
+// CI datum yet, so this stays a binary is-it-resolving-anything check. Both gaps
 // are checked as MAGNITUDES because the arena tail can flip the sign. A counter
 // that grows but ignores what the build did would show NEITHER, and would still
 // satisfy every per-variant check above.

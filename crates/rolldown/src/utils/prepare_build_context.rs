@@ -69,6 +69,16 @@ fn verify_raw_options(raw_options: &crate::BundlerOptions) -> BuildResult<Vec<Bu
     }
   }
 
+  // Dev mode only supports ESM output. See internal-docs/dev-engine/implementation.md.
+  if let Some(format @ (OutputFormat::Cjs | OutputFormat::Iife | OutputFormat::Umd)) =
+    raw_options.format
+    && raw_options.experimental.as_ref().is_some_and(|experimental| experimental.dev_mode.is_some())
+  {
+    errors.push(BuildDiagnostic::invalid_option(InvalidOptionType::UnsupportedDevModeFormat(
+      format.to_string(),
+    )));
+  }
+
   if let Some(format @ (OutputFormat::Umd | OutputFormat::Iife)) = raw_options.format {
     if matches!(
       &raw_options.code_splitting,

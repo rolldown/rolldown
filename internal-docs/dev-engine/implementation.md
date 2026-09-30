@@ -143,6 +143,21 @@ module it is appended to already has them. The bundled entry is neither. Both
 copies are built from the same file in the same build, so they cannot drift
 apart.
 
+### Output format: ESM only
+
+Dev mode only supports `output.format: "esm"`. Only the ESM renderer
+(`render_chunk_content` in `crates/rolldown/src/ecmascript/format/esm.rs`)
+writes the `registerGraph` prelude (§10). The CJS, IIFE, and UMD renderers
+do not, so their output would build with no error, but the browser runtime
+would have no module graph and HMR would break.
+
+`verify_raw_options` in `crates/rolldown/src/utils/prepare_build_context.rs`
+rejects `cjs`, `iife`, and `umd` when `experimental.devMode` is set, with an
+`INVALID_OPTION` error (`InvalidOptionType::UnsupportedDevModeFormat`). The
+check runs when the bundler is built, so it covers the `dev()` API, Vite
+bundled dev, and Rust callers. Support for other formats is not planned
+(rolldown#10902).
+
 ### Threading model
 
 - The `BundleCoordinator` runs in **one** dedicated tokio task

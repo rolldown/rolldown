@@ -5,6 +5,7 @@ use crate::{types::diagnostic_options::DiagnosticOptions, types::event_kind::Eve
 pub enum InvalidOptionType {
   UnsupportedInlineDynamicFormat(String),
   UnsupportedCodeSplittingFormat(String),
+  UnsupportedDevModeFormat(String),
   InvalidOutputFile,
   OutputFileWithoutName(String),
   InvalidOutputDirOption,
@@ -41,6 +42,9 @@ impl BuildEvent for InvalidOption {
         }
         InvalidOptionType::UnsupportedCodeSplittingFormat(format) => {
           format!("Invalid value \"{format}\" for option \"output.format\" - UMD and IIFE are not supported for code-splitting builds. For single entry builds, you can set `output.codeSplitting` to `false` to disable code-splitting.")
+        }
+        InvalidOptionType::UnsupportedDevModeFormat(format) => {
+          format!("Invalid value \"{format}\" for option \"output.format\" - \"experimental.devMode\" only supports the \"esm\" format. Set \"output.format\" to \"esm\" when using dev mode.")
         }
         InvalidOptionType::InvalidOutputFile => "Invalid value for option \"output.file\" - When building multiple chunks, the \"output.dir\" option must be used, not \"output.file\". You may set `output.codeSplitting` to `false` when using dynamic imports.".to_string(),
         InvalidOptionType::OutputFileWithoutName(file) => {

@@ -3,7 +3,7 @@
 // MultiThread with 4 workers. Each case sets its own flavor, so the lane's
 // `ROLLDOWN_RUNTIME` does not change what this script runs.
 //
-// Without the `wasm_heap_sync` allocator these loads trapped with "memory access out of
+// Without napi's `wasi_heap_sync` allocator lock these loads trapped with "memory access out of
 // bounds": V8 keeps a stale shared-memory size on threads that did not run memory.grow,
 // and bounds-checks memory.fill / memory.copy (and, on hosts without the wasm trap
 // handler, every load and store) against it. Without the fix, one run of this script
@@ -26,8 +26,8 @@
 //   --expect-grows E     `zero` or `some`: the number of memory.grow calls the heap-sync
 //                        allocator made during the child's life
 // Every child also checks the heap-sync invariant (no block ever ended past the
-// allocating thread's refreshed size) through the module's `rolldown_heap_sync_stat`
-// export, and prints its counters.
+// allocating thread's refreshed size) through the module's `napi_wasm_heap_sync_stat`
+// export (napi-rs), and prints its counters.
 import assert from 'node:assert/strict';
 import { spawn } from 'node:child_process';
 import { existsSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
@@ -254,17 +254,18 @@ function installHeapProbe() {
 
 function heapSyncCounters(probe) {
   assert.equal(
-    typeof probe.exports?.rolldown_heap_sync_stat,
+    typeof probe.exports?.napi_wasm_heap_sync_stat,
     'function',
-    'the threaded wasm exports rolldown_heap_sync_stat',
+    'the threaded wasm exports napi_wasm_heap_sync_stat',
   );
-  const stat = (index) => probe.exports.rolldown_heap_sync_stat(index);
+  const stat = (index) => probe.exports.napi_wasm_heap_sync_stat(index);
   return {
     grows: stat(0),
     lockRefreshes: stat(1),
     lateRefreshes: stat(2),
     breakPages: stat(3),
     heapEndPages: stat(4),
+    handoffRefreshes: stat(5),
     memoryPages: probe.memory ? probe.memory.buffer.byteLength / 65536 : -1,
   };
 }

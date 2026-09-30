@@ -77,8 +77,8 @@ const WASI_ASYNC_TEARDOWN_WAITS = [
 ] as const;
 const WASI_EXIT_LISTENER_HELPER = 'function __registerWasiExitListener() {';
 // Worker-crash latch, threaded Node flavor only (`rolldown-binding.wasi.cjs` +
-// `wasi-worker.mjs`; vendored `@napi-rs/cli`, napi-rs 9fb826ab + 9e9105f5 +
-// 727d836f + 11f52981 + 46edb4cd + 392f0216, until a cli release carries it).
+// `wasi-worker.mjs`; vendored `@napi-rs/cli` packed from napi-rs 22ee6c8d, branch
+// fix/wasi-crash-latch (napi-rs#3552), until a cli release carries it).
 // After a pool worker's wasm thread dies, no teardown may re-enter wasm: the
 // env cleanup waits for the dead thread's work to go idle in a raw
 // `memory.atomic.wait32`, which blocks the main thread forever and keeps a JS
@@ -98,6 +98,24 @@ const WASI_EXIT_LISTENER_HELPER = 'function __registerWasiExitListener() {';
 // threadId into a shared crash report before it raises the flag, so the
 // rejection's `cause` and `workerThreadId` do not depend on the 'error' event,
 // which terminating the workers can drop.
+// Addon crash flag bridge: the loader flag above only guards the next entry into
+// wasm. A cleanup call already inside wasm (the exit teardown's
+// `napi_prepare_wasm_env_cleanup`, the disposer's `..._finish`) waits on the dead
+// thread in short slices that check one word of the shared wasm memory. In
+// `beforeInit`, before any registration code runs, the loader reads that word's
+// address from `napi_wasm_thread_crash_flag_address` and passes each pool worker
+// an `Int32Array` view of it (`workerData.addonCrashFlag`). The worker raises it
+// with `Atomics.store` right after the loader flag, with no instance needed, so a
+// worker that fails while it loads raises it too; its setup (the runtime require
+// through `new MessageHandler`) is wrapped in a try/catch that raises both flags
+// and rethrows. Without the view it falls back to the `napi_wasm_thread_crashed`
+// export, which needs an instance.
+// CurrentThread host timers: a sleep arms a referenced `setTimeout` that only
+// the normal teardown releases, so a crash disposal would leave the process
+// alive until it fires. The loader hands the async-runtime host installer a
+// view of the binding (`__trackCurrentThreadHostTimers`) that records each
+// timer's cancel, and both crash paths (the crash disposal and the exit
+// listener) call `__releaseCurrentThreadHostTimers()`, which is plain JS.
 // See internal-docs/async-runtime/implementation.md (section 7, Loaders).
 const WASI_THREAD_CRASH_LATCH_LOADER_SIGNATURES = [
   'const __wasiThreadCrashFlag = new Int32Array(new SharedArrayBuffer(4))',
@@ -123,6 +141,7 @@ const WASI_THREAD_CRASH_LATCH_LOADER_SIGNATURES = [
     }
 `,
   `  __releaseEmnapiWaitingRequestHandle()
+  __releaseCurrentThreadHostTimers()
   let workerResult
   try {
     workerResult = __terminateWasiWorkers()
@@ -149,11 +168,61 @@ const WASI_THREAD_CRASH_LATCH_LOADER_SIGNATURES = [
   'function __readWasiThreadCrashReport() {',
   'function __getWasiThreadCrashError() {',
   '__recordWasiThreadCrashError(error, worker.threadId)',
+  // Addon crash flag bridge: read the address before registration, validate it,
+  // and hand the view to every pool worker.
+  'function __captureWasiAddonCrashFlag(instance) {',
+  'const getAddress = instance.exports.napi_wasm_thread_crash_flag_address',
+  `    if (address === 0 || address % 4 !== 0 || address + 4 > buffer.byteLength) {
+      return
+    }
+    __wasiAddonCrashFlag = new Int32Array(buffer, address, 1)
+`,
+  `    beforeInit({ instance }) {
+      __napiInstance = instance
+      __captureWasiAddonCrashFlag(instance)
+      for (const name of Object.keys(instance.exports)) {
+`,
+  'addonCrashFlag: __wasiAddonCrashFlag,',
+  // CurrentThread host timers: tracked through the binding view, released
+  // without entering wasm on both crash paths (the crash disposal above and
+  // the exit listener below).
+  'function __trackCurrentThreadHostTimers(binding) {',
+  '__trackCurrentThreadHostTimers(__napiModule.exports)',
+  'function __releaseCurrentThreadHostTimers() {',
+  `    // workers and leave.
+    __releaseCurrentThreadHostTimers()
+    try {
+      void Promise.resolve(__terminateWasiWorkers()).catch(() => {})
+    } catch {}
+    return
+  }
+`,
 ] as const;
 const WASI_THREAD_CRASH_LATCH_WORKER_SIGNATURES = [
-  'if (workerData && workerData.crashFlag instanceof Int32Array) {',
-  'Atomics.store(workerData.crashFlag, 0, 1)',
-  '__writeCrashReport(workerData.crashReport, args[0])',
+  // A failed setup (before the crash hook exists) raises both flags and rethrows.
+  `} catch (error) {
+  if (workerData && workerData.crashFlag instanceof Int32Array) {
+    __raiseWasiThreadCrashFlags(error)
+  }
+  throw error
+}
+`,
+  `if (workerData && workerData.crashFlag instanceof Int32Array) {
+  const __beforeReportError = handler.beforeReportError
+  handler.beforeReportError = function (...args) {
+    if (!__raiseWasiThreadCrashFlags(args[0])) {
+`,
+  'const __napiThreadCrashed = this.instance?.exports?.napi_wasm_thread_crashed',
+  'function __raiseWasiThreadCrashFlags(error) {',
+  // Report first, then the loader flag, then the addon flag.
+  `    __writeCrashReport(workerData.crashReport, error)
+  } catch {}
+  try {
+    Atomics.store(workerData.crashFlag, 0, 1)
+  } catch {}
+  const addonCrashFlag = workerData.addonCrashFlag
+`,
+  'Atomics.store(addonCrashFlag, 0, 1)',
   'function __writeCrashReport(report, error) {',
 ] as const;
 

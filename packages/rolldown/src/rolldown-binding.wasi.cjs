@@ -147,6 +147,7 @@ function __createWasiWorker(filename) {
           rootDir: __rootDir,
           crashFlag: __wasiThreadCrashFlag,
           crashReport: __wasiThreadCrashReport,
+          addonCrashFlag: __wasiAddonCrashFlag,
         },
       })
     } catch (error) {
@@ -182,6 +183,27 @@ let __wasiThreadCrashError
 // steps stop after a crash the way a public disposal's do.
 let __wasiInitializationRollbackActive = false
 let __wasiThreadCrashed = false
+
+// A view of the addon's crash flag, one word of the shared wasm memory, for the
+// pool workers: they raise it when their wasm thread dies, and the shutdown
+// waits inside the cleanup calls on this thread then trap instead of waiting on
+// the dead thread for good. Undefined for an addon built with an older napi.
+let __wasiAddonCrashFlag
+
+function __captureWasiAddonCrashFlag(instance) {
+  try {
+    const getAddress = instance.exports.napi_wasm_thread_crash_flag_address
+    if (typeof getAddress !== 'function') {
+      return
+    }
+    const address = getAddress() >>> 0
+    const buffer = __sharedMemory.buffer
+    if (address === 0 || address % 4 !== 0 || address + 4 > buffer.byteLength) {
+      return
+    }
+    __wasiAddonCrashFlag = new Int32Array(buffer, address, 1)
+  } catch {}
+}
 
 /**
  * Whether any wasm thread of this binding has died: a trap or an uncaught error
@@ -352,6 +374,7 @@ function __disposeWasiBindingAfterThreadCrash() {
     return __wasiThreadCrashDisposePromise
   }
   __releaseEmnapiWaitingRequestHandle()
+  __releaseCurrentThreadHostTimers()
   let workerResult
   try {
     workerResult = __terminateWasiWorkers()
@@ -567,6 +590,97 @@ function __disposeCurrentThreadHosts() {
     dispose()
   } catch (error) {
     __reportCurrentThreadHostDisposalError(error)
+  }
+}
+
+/**
+ * The CurrentThread timer host arms one referenced `setTimeout` per sleep in
+ * flight, so a long sleep holds the event loop open until it fires.
+ * `__disposeCurrentThreadHosts` releases them, but only
+ * `__destroyEmnapiContext` calls it, and the crash disposal never gets there:
+ * after a wasm thread died it must not enter wasm, and both the host
+ * unregister calls and a settled timer promise do. A dispose() that rejected
+ * after a crash then left the process alive until the longest sleep ended.
+ *
+ * So the loader keeps the package's own `cancel` for every timer in flight,
+ * and `__releaseCurrentThreadHostTimers` calls them after a crash. `cancel`
+ * is plain JavaScript: it clears the host timeout and resolves the package's
+ * promise. The promise the addon holds is the one below, and once released it
+ * never settles, so nothing is handed back to wasm. A sleep armed after that
+ * is never armed at all.
+ */
+const __currentThreadHostTimerCancels = new Set()
+let __currentThreadHostTimersReleased = false
+
+function __scheduleCurrentThreadHostTimer(schedule, cancel, id, ms) {
+  if (__currentThreadHostTimersReleased) {
+    return new Promise(() => {})
+  }
+  const scheduled = schedule(id, ms)
+  if (!__isThenable(scheduled)) {
+    return scheduled
+  }
+  const release = () => cancel(id)
+  __currentThreadHostTimerCancels.add(release)
+  const settle = (settleUnreleased) => (outcome) => {
+    __currentThreadHostTimerCancels.delete(release)
+    return __currentThreadHostTimersReleased
+      ? new Promise(() => {})
+      : settleUnreleased(outcome)
+  }
+  return Promise.resolve(scheduled).then(
+    settle((value) => value),
+    settle((error) => {
+      throw error
+    }),
+  )
+}
+
+/**
+ * The binding as `installCurrentThreadHosts` should see it: every export
+ * reads through, and `registerTimerHost` hands the addon a `schedule` that
+ * records its `cancel`. A binding without a callable `registerTimerHost` is
+ * passed through, so the package reports the mismatch as before.
+ */
+function __trackCurrentThreadHostTimers(binding) {
+  let registerTimerHost
+  try {
+    registerTimerHost = binding.registerTimerHost
+  } catch {
+    return binding
+  }
+  if (typeof registerTimerHost !== 'function') {
+    return binding
+  }
+  const view = Object.create(binding)
+  Object.defineProperty(view, 'registerTimerHost', {
+    configurable: true,
+    enumerable: true,
+    writable: true,
+    value: function (...args) {
+      const [, , schedule, cancel] = args
+      if (typeof schedule === 'function' && typeof cancel === 'function') {
+        args[2] = (id, ms) =>
+          __scheduleCurrentThreadHostTimer(schedule, cancel, id, ms)
+      }
+      return Reflect.apply(registerTimerHost, this, args)
+    },
+  })
+  return view
+}
+
+/**
+ * Clears every CurrentThread host timeout without entering wasm. Idempotent;
+ * a `cancel` that fails has already reported itself.
+ */
+function __releaseCurrentThreadHostTimers() {
+  __currentThreadHostTimersReleased = true
+  const releases = [...__currentThreadHostTimerCancels]
+  __currentThreadHostTimerCancels.clear()
+  for (const release of releases) {
+    try {
+      release()
+    } catch {}
   }
 }
 
@@ -1944,6 +2058,7 @@ function __disposeWasiBindingAtExit() {
     // the dead thread's work and would hang the exit forever — SIGTERM
     // included, since its JavaScript listener never gets a turn. Stop the
     // workers and leave.
+    __releaseCurrentThreadHostTimers()
     try {
       void Promise.resolve(__terminateWasiWorkers()).catch(() => {})
     } catch {}
@@ -2111,6 +2226,7 @@ try {
     },
     beforeInit({ instance }) {
       __napiInstance = instance
+      __captureWasiAddonCrashFlag(instance)
       for (const name of Object.keys(instance.exports)) {
         if (name.startsWith('__napi_register__')) {
           instance.exports[name]()
@@ -2120,7 +2236,7 @@ try {
   }))
   __publishWasiDispose(__napiModule.exports)
   __currentThreadHostsDisposer = __installCurrentThreadHosts(
-    __napiModule.exports,
+    __trackCurrentThreadHostTimers(__napiModule.exports),
   )
   // The CommonJS tail below aliases `__napiModule.exports`; a named module
   // export does not travel with it, so carry the marker on the binding itself

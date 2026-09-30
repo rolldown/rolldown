@@ -97,9 +97,9 @@ fed to `configure`; the crate picks the executor from `RuntimeOptions.flavor`.
   `JoinError` / `SpawnError` are plain re-exports of `crate::async_runtime::*`.
   `spawn` and `try_spawn` stay one-line wrappers only because they take one
   generic parameter (`<F>`) where the runtime's take two (`<F, T>`).
-  On wasm, `crate::async_runtime` swaps those entry points for versions that run
-  the thread-handoff hook at every poll and blocking-closure start
-  (`src/thread_handoff.rs`, see `../wasi-shared-memory-grow/implementation.md`).
+  On threaded WASI, napi-async-runtime itself refreshes the memory size at every
+  poll and blocking-closure start (see `../wasi-shared-memory-grow/implementation.md`),
+  so these stay plain re-exports there too.
   `block_on_spawn_all` is a plain `join_all` in the caller's task.
 - `crates/rolldown/src/module_loader/module_loader.rs`:
   - `spawn_module_task()` — boxes the (large) module future once at the spawn
@@ -368,18 +368,30 @@ missing host-contract export fails with `ERR_NAPI_ASYNC_RUNTIME_BINDING_MISMATCH
   rollback is latched the same way (46edb4cd). The worker writes its error and
   `threadId` into a shared crash report before it raises the flag, so the
   rejection's `cause` and `workerThreadId` survive the 'error' event being
-  dropped when the workers are terminated (392f0216). The test's in-flight case
-  arms the crash (next `sched_yield` in any pool worker) right after it calls
-  the disposer and holds the main thread in JavaScript until the worker has
-  raised the crash flag; both disposer cases check the cause and
-  `workerThreadId`. Known gap: the checks run between wasm calls, so they cannot
-  help a main thread that is already inside one when the worker dies. Measured
-  on the threaded debug build: with the crash landing at any time during the
-  barrier poll, 5 of 120 runs blocked for good inside
-  `napi_wasm_runtime_work_pending` (a wasm `atomic.wait`, no JavaScript runs
-  again), consistent with the dead worker holding something that call waits on.
-  Fixing that needs the poll exports to never block on pool threads (napi-rs
-  side), not a loader change.
+  dropped when the workers are terminated (392f0216). The loader's checks run
+  between wasm calls, so they cannot help a main thread that is already inside
+  one when the worker dies (measured before the fix: with the crash landing at
+  any time during the barrier poll, 5 of 120 runs blocked for good inside
+  `napi_wasm_runtime_work_pending`). napi-rs#3552 closes that inside wasm: the
+  work-pending poll never waits for a lock (491ddc27), the shutdown waits check
+  one word of the shared wasm memory between 1 ms slices and trap once it is set
+  (316e5e7f, e41c1ec1), and the loader hands every pool worker an `Int32Array`
+  view of that word (`napi_wasm_thread_crash_flag_address`, read in
+  `beforeInit` before any registration code, passed as
+  `workerData.addonCrashFlag`), which the worker raises right after the loader's
+  flag, also when it fails while it loads (522f1189). A condvar wait sliced
+  that way takes its mutex back through the same flag-checking path
+  (503dbc32). Both crash paths also clear the CurrentThread host timers without
+  entering wasm: the loader hands the host installer a binding view that
+  records each sleep's cancel (`__trackCurrentThreadHostTimers`) and calls
+  `__releaseCurrentThreadHostTimers()`, so an armed sleep no longer keeps the
+  process alive after a crash (22ee6c8d). `assertWasiThreadCrashLatch` pins
+  that bridge and the timer release too. The test's in-flight case arms the crash (next
+  `sched_yield` in any pool worker) right after it calls the disposer and
+  returns straight to the disposal's poll, so the crash can land while that
+  poll is inside wasm; both disposer cases check the cause and
+  `workerThreadId`. Not covered: a worker that fails before any of its own code
+  runs, or a thread spawned before `beforeInit`, raises no addon flag.
 
 ---
 
@@ -723,14 +735,10 @@ failure in Rolldown's post-build patching, validation, or loader generation
 restores every overwritten generated file and removes only files created by
 that invocation. The root facade is managed explicitly rather than by a broad
 JavaScript-file pattern, so unrelated sources remain outside the transaction.
-After a threaded (`wasm32-wasip1-threads`) napi build, and inside that
-transaction, it runs `scripts/wasi/rename-wasm-allocator-exports.mjs` on the
-threaded `.wasm` / `.debug.wasm`: the heap-sync allocator's `--wrap=malloc` /
-`--wrap=free` renames the `malloc` / `free` exports `@emnapi/core` calls, and the
-step points them back at the locked wrappers (see
-`../wasi-shared-memory-grow/implementation.md`). Every workflow that builds the
-threaded artifact goes through `build-binding.ts`, so none can skip it; a wasm
-that did would fail to load ("malloc is not exported").
+The threaded (`wasm32-wasip1-threads`) wasm needs no post-link step: napi-build
+links napi's heap-sync allocator lock and a shim whose `malloc` / `free` exports
+(the ones `@emnapi/core` calls) forward to the locked wrappers (see
+`../wasi-shared-memory-grow/implementation.md`).
 
 `@napi-rs/cli` renders the deferred workerd loader
 (`rolldown-binding.wasip1-deferred.js` and its `.d.ts`) on every threadless napi

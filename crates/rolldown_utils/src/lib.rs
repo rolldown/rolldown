@@ -4,14 +4,6 @@
 /// crate, under the in-repo `rolldown_utils::async_runtime::*` paths.
 pub mod async_runtime {
   pub use napi_async_runtime::*;
-  // Wasm: these names shadow the glob above with versions that run the thread-handoff hook
-  // at every poll and blocking-closure start. Native keeps the plain re-export.
-  // See internal-docs/wasi-shared-memory-grow/implementation.md
-  #[cfg(target_family = "wasm")]
-  pub use crate::thread_handoff::{
-    HandoffHook, block_on, block_on_dyn, on_thread_handoff, set_thread_handoff_hook, spawn,
-    spawn_blocking, spawn_detached, try_block_on_dyn, try_spawn, try_spawn_detached,
-  };
 }
 pub mod base64;
 mod bitset;
@@ -28,8 +20,6 @@ pub mod percent_encoding;
 pub mod rayon;
 pub mod rustc_hash;
 pub mod sanitize_filename;
-#[cfg(target_family = "wasm")]
-mod thread_handoff;
 pub mod time;
 pub mod xxhash;
 pub use bitset::BitSet;

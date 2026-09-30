@@ -59,17 +59,6 @@ unsafe impl AsyncRuntime for RolldownAsyncRuntime {
     &self,
     work: Box<dyn FnOnce() + Send + 'static>,
   ) -> std::result::Result<(), AsyncRuntimeRejection<Box<dyn FnOnce() + Send + 'static>>> {
-    // Threaded WASI: refresh this thread's view of the memory size before the closure runs on
-    // a blocking thread. `try_spawn_blocking` is the one entry `rolldown_utils` cannot wrap
-    // (its rejection returns the caller's closure), so the box is wrapped here; a rejection
-    // hands back the wrapped box, which runs the same work. `spawn` and `block_on` go through
-    // the wrapped `try_spawn` / `try_block_on_dyn`.
-    // See internal-docs/wasi-shared-memory-grow/implementation.md
-    #[cfg(all(target_family = "wasm", rolldown_wasi_threads))]
-    let work: Box<dyn FnOnce() + Send + 'static> = Box::new(move || {
-      rolldown_utils::async_runtime::on_thread_handoff();
-      work();
-    });
     // Same bounded blocking lane as Rolldown's own facade.
     match try_spawn_blocking(work) {
       Ok(handle) => {
@@ -280,7 +269,7 @@ pub fn configure_async_runtime(options: BindingRuntimeOptions) -> napi::Result<(
   // Only threadless wasm32-wasip1 rejects MultiThread: it has no threads to run workers
   // on. wasm32-wasip1-threads runs MultiThread by default (`resolve_runtime_config_for`)
   // and accepts either flavor here. The root Cargo.toml `[patch.crates-io]` gives
-  // parking_lot_core a working parker there, and `wasm_heap_sync` keeps each thread's
+  // parking_lot_core a working parker there, and napi's `wasi_heap_sync` keeps each thread's
   // view of the shared memory size fresh (the V8 bug behind the out-of-bounds traps, see
   // internal-docs/wasi-shared-memory-grow/design.md). The message is the one 0.2.2
   // returned from `configure_partial`, so the JS-visible error does not change.
@@ -1979,11 +1968,6 @@ pub fn unregister_timer_host(registration_high: u32, registration_low: u32) {
 
 #[napi_derive::module_init]
 fn install_async_runtime_backend() {
-  // Threaded WASI: refresh the memory size at every scheduler handoff (task poll, blocking
-  // closure start), before any work can be submitted. Threadless wasm never sets the hook.
-  // See internal-docs/wasi-shared-memory-grow/design.md
-  #[cfg(all(target_family = "wasm", rolldown_wasi_threads))]
-  rolldown_utils::async_runtime::set_thread_handoff_hook(crate::wasm_heap_sync::refresh_if_behind);
   // The same resolved snapshot `get_runtime_capabilities` reports from.
   let resolved = resolved_runtime_config();
   let options = RuntimeOptions {

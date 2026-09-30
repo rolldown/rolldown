@@ -53,7 +53,7 @@ jobs:
       # inherited by file-based napi-rs worker entrypoints.
       #
       # No retry on the MultiThread steps: they never had one, and a trap here is a
-      # regression of the `wasm_heap_sync` workaround (#10697), not a known flake.
+      # regression of napi's heap-sync workaround (#10697), not a known flake.
       - name: Node Test (threaded WASI, MultiThread default)
         run: timeout 300 vp run --filter rolldown-tests test:wasi-threaded
 
@@ -72,7 +72,7 @@ jobs:
       # flake ran: until the threaded artifact defaulted to MultiThread, this suite ran
       # on CurrentThread and was flaky (~1/3 of runs) with a "memory access out of
       # bounds" trap from a V8 bug with shared memory growth (#10697), now worked around
-      # by the `wasm_heap_sync` allocator (see
+      # by napi's heap-sync allocator lock (see
       # internal-docs/wasi-shared-memory-grow/design.md). The retry stays for the
       # workaround's known gaps; the stress step below runs without retries and fails
       # if the workaround regresses.
@@ -115,7 +115,7 @@ jobs:
       # (ROLLDOWN_RUNTIME=single), the default MultiThread (2 workers, builds only) and
       # MultiThread w4. Each case sets its own flavor, so one step covers both flavors
       # and a ROLLDOWN_RUNTIME=single copy of this step would run the same cases again.
-      # Without the `wasm_heap_sync` workaround one run fails nearly every time, so it
+      # Without napi's heap-sync workaround one run fails nearly every time, so it
       # is not retried. Each case has its own 60 s timeout.
       # See internal-docs/wasi-shared-memory-grow/design.md
       - name: Threaded WASI memory stress
@@ -206,7 +206,7 @@ jobs:
   # grow-ahead `malloc` + `free` pair, which the debug build kept. This
   # job builds the threaded wasm the way reusable-release-build.yml does
   # (`build-binding:wasi:release`: `release-wasi` profile, `TARGET_CC=clang`, the
-  # napi cli copy and the allocator export rename) and runs the allocator checks
+  # napi cli copy) and runs the allocator checks
   # against it. Its cache key is its own; the release workflow builds with no cache.
   # See internal-docs/wasi-shared-memory-grow/implementation.md
   release-threaded:

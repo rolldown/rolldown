@@ -372,3 +372,17 @@ strip = "none"
 # See internal-docs/async-runtime/implementation.md
 [patch.crates-io]
 parking_lot_core = { git = "https://github.com/napi-rs/parking_lot", rev = "eb33ab62f79d27d1c7880b60e06187be1cbd21f4" }
+# TEMPORARY: the unreleased napi-rs head 22ee6c8db9ae579aefc83dab6a06d9b03551c0fa (branch fix/wasi-crash-latch,
+# PR https://github.com/napi-rs/napi-rs/pull/3552), which owns the threaded WASI heap sync
+# (allocator lock, handoff refresh, crash flag). Replaced by the released versions, together with
+# the vendored cli tarball, in one later commit. All six crates, so the whole graph (oxc_*_napi
+# included) resolves to one napi / napi-sys: two napi-sys copies would give two MAX_SEEN_PAGES
+# statics. `version = "=3.6.9"` names the real napi-derive: that repo also holds a cli test
+# fixture package called napi-derive.
+# See internal-docs/wasi-shared-memory-grow/implementation.md
+napi = { git = "https://github.com/napi-rs/napi-rs", rev = "22ee6c8db9ae579aefc83dab6a06d9b03551c0fa" }
+napi-sys = { git = "https://github.com/napi-rs/napi-rs", rev = "22ee6c8db9ae579aefc83dab6a06d9b03551c0fa" }
+napi-build = { git = "https://github.com/napi-rs/napi-rs", rev = "22ee6c8db9ae579aefc83dab6a06d9b03551c0fa" }
+napi-derive = { git = "https://github.com/napi-rs/napi-rs", rev = "22ee6c8db9ae579aefc83dab6a06d9b03551c0fa", version = "=3.6.9" }
+napi-derive-backend = { git = "https://github.com/napi-rs/napi-rs", rev = "22ee6c8db9ae579aefc83dab6a06d9b03551c0fa" }
+napi-async-runtime = { git = "https://github.com/napi-rs/napi-rs", rev = "22ee6c8db9ae579aefc83dab6a06d9b03551c0fa" }

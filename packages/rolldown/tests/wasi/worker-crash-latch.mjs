@@ -21,10 +21,17 @@
 //   in-flight   the crash lands while a disposal is already running: once the builds
 //               are reading files, the child calls the disposer, then arms the
 //               injector, and the next `sched_yield` in any pool worker throws (the
-//               workers yield while the runtime shuts down). The disposal polls for
-//               runtime work the dead worker never finishes; it must stop and reject
-//               like the dispose case within IN_FLIGHT_SETTLE_MS (every call returns
-//               that one promise), and the process must exit on its own with code 0
+//               workers yield while the runtime shuts down). It arms right before
+//               the disposal's first poll turn and does not wait for the crash, so
+//               the worker can die while that poll is inside wasm: napi's poll never
+//               waits for a lock the dead worker may hold, and the worker raises the
+//               addon's crash flag, which ends napi's shutdown waits. The disposal
+//               polls for runtime work the dead worker never finishes; it must stop
+//               and reject like the dispose case within IN_FLIGHT_SETTLE_MS (every
+//               call returns that one promise), and the process must exit on its
+//               own with code 0. A run whose crash never fired (the disposal
+//               finished before any worker yielded, about 1 run in 60) proves
+//               nothing and runs again, up to IN_FLIGHT_NO_FIRE_ATTEMPTS in all
 //   control     no injection: the builds pass and the process exits 0
 // In both disposer cases the rejection's cause is the injected error (name and
 // message, taken from the worker's shared crash report when its 'error' event is
@@ -59,8 +66,10 @@ const CRASH_AT = '20';
 const IN_FLIGHT_CRASH_IMPORT = 'wasi_snapshot_preview1.sched_yield';
 const IN_FLIGHT_READS_BEFORE_DISPOSE = 50;
 const IN_FLIGHT_PROGRESS_TIMEOUT_MS = 10_000;
-const IN_FLIGHT_CRASH_WAIT_MS = 5_000;
 const IN_FLIGHT_SETTLE_MS = 5_000;
+// In-flight runs whose armed crash never fired (the disposal finished first) are
+// run again, up to this many attempts in all.
+const IN_FLIGHT_NO_FIRE_ATTEMPTS = 5;
 const CRASH_CONTROL = Symbol.for('rolldown.test.crashControl');
 const LOADER_CRASH_FLAG = Symbol.for('rolldown.test.loaderCrashFlag');
 const INJECTED_ERROR_NAME = 'RuntimeError';
@@ -100,15 +109,27 @@ async function runAll() {
     for (const mode of CASES) {
       for (let run = 1; run <= RUNS; run++) {
         const label = `${mode} #${run}`;
-        const crashLog = path.join(workDir, `${mode}-${run}.crash.log`);
-        const result = await spawnCase(mode, fixture, {
-          runtimeEnv: MULTI_THREAD_ENV,
-          inject: mode !== 'control',
-          crashLog,
-        });
-        const crashedThreads = [...readText(crashLog).matchAll(/^t(\d+) CRASH in /gm)].map(
-          (match) => Number(match[1]),
-        );
+        let result;
+        let crashedThreads;
+        for (let attempt = 1; ; attempt++) {
+          const crashLog = path.join(workDir, `${mode}-${run}-${attempt}.crash.log`);
+          result = await spawnCase(mode, fixture, {
+            runtimeEnv: MULTI_THREAD_ENV,
+            inject: mode !== 'control',
+            crashLog,
+          });
+          crashedThreads = [...readText(crashLog).matchAll(/^t(\d+) CRASH in /gm)].map((match) =>
+            Number(match[1]),
+          );
+          // In-flight only: the disposal may finish before any pool worker yields, so
+          // the armed crash never fires and the run proves nothing. Run it again.
+          const noFire =
+            mode === 'in-flight' &&
+            crashedThreads.length === 0 &&
+            /^DISPOSE_RESOLVED fired=false$/m.test(result.output);
+          if (!noFire || attempt === IN_FLIGHT_NO_FIRE_ATTEMPTS) break;
+          console.log(`RETRY ${label}: the armed crash did not fire before the disposal finished`);
+        }
         const problem = judge(mode, result, crashedThreads);
         console.log(`${problem ? 'FAIL' : 'PASS'} ${label} (code ${result.code}, ${result.ms} ms)`);
         if (problem) {
@@ -395,16 +416,12 @@ async function disposeInFlight(builds, getCrash) {
   const disposal = dispose();
   const again = dispose();
   // The disposal is in flight (its promise is out); only now can a worker crash.
+  // No wait for the loader's crash flag: the disposal's next poll turn calls into
+  // wasm right away, so the crash may land while that call is inside wasm, where
+  // the loader's own per-turn check cannot help. napi-rs#3552 makes that call
+  // return: the work-pending poll never waits for a lock, and the dying worker
+  // raises the addon's crash flag, which ends the shutdown waits.
   Atomics.store(control, 0, 1);
-  // Stay in JavaScript until the dying worker has raised the loader's crash flag,
-  // so the crash is visible before the disposal's next poll turn calls into wasm.
-  // The loader checks the flag at each turn; it cannot help a call that is already
-  // inside wasm and waiting on something the dead worker held, so this case does
-  // not let the crash land during such a call.
-  const crashWaitEnd = Date.now() + IN_FLIGHT_CRASH_WAIT_MS;
-  while (Atomics.load(loaderCrashFlag, 0) === 0 && Date.now() < crashWaitEnd) {
-    // Busy-wait: Atomics.wait is not allowed on the main thread.
-  }
   say(
     `ARMED reads=${Atomics.load(control, 1)} fired=${Atomics.load(control, 0) === 2} ` +
       `crash-flag=${Atomics.load(loaderCrashFlag, 0)}`,

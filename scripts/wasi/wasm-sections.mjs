@@ -1,15 +1,16 @@
-// Minimal, dependency-free reader/writer for the two wasm module sections the
-// threaded WASI build tooling needs: the export section (names and indices) and
-// the memory import (its declared minimum).
+// Minimal, dependency-free reader for the wasm module sections the threaded WASI
+// build tooling needs: the import section (names, and the memory import's
+// declared minimum), the export section (names and indices) and the code
+// section (one function's body, to see what a forwarder calls).
 //
-// Used by scripts/wasi/rename-wasm-allocator-exports.mjs,
-// scripts/wasi/check-wasi-dist-files.mjs and
+// Used by scripts/wasi/check-wasi-dist-files.mjs and
 // packages/rolldown/tests/wasi/threaded-memory-stress.mjs.
 // See internal-docs/wasi-shared-memory-grow/implementation.md
 
 const MAGIC = [0x00, 0x61, 0x73, 0x6d];
 const IMPORT_SECTION = 2;
 const EXPORT_SECTION = 7;
+const CODE_SECTION = 10;
 
 export const EXPORT_KIND_FUNCTION = 0;
 
@@ -24,17 +25,6 @@ function readU32(bytes, offset) {
     scale *= 128;
   }
   throw new Error(`LEB128 longer than 5 bytes at byte ${offset}`);
-}
-
-function encodeU32(value) {
-  const out = [];
-  do {
-    let byte = value % 128;
-    value = Math.floor(value / 128);
-    if (value !== 0) byte |= 0x80;
-    out.push(byte);
-  } while (value !== 0);
-  return Uint8Array.from(out);
 }
 
 function readName(bytes, offset) {
@@ -79,31 +69,15 @@ export function readExports(bytes) {
   return exports;
 }
 
-/** A copy of `bytes` whose export section holds exactly `exports`; every other byte is kept. */
-export function writeExports(bytes, exports) {
-  const section = readSections(bytes).find(({ id }) => id === EXPORT_SECTION);
-  if (!section) throw new Error('module has no export section');
-  const encoder = new TextEncoder();
-  const parts = [encodeU32(exports.length)];
-  for (const { name, kind, index } of exports) {
-    const encodedName = encoder.encode(name);
-    parts.push(encodeU32(encodedName.length), encodedName, Uint8Array.of(kind), encodeU32(index));
-  }
-  const content = concat(parts);
-  return concat([
-    bytes.subarray(0, section.start),
-    Uint8Array.of(EXPORT_SECTION),
-    encodeU32(content.length),
-    content,
-    bytes.subarray(section.end),
-  ]);
-}
-
-/** The imported memory's `{ module, name, minimum, maximum, shared }`, or null. */
-export function readMemoryImport(bytes) {
+/**
+ * The import section as `[{ module, name, kind }]` in module order; a memory
+ * import also has `{ minimum, maximum, shared }`.
+ */
+export function readImports(bytes) {
   const section = readSections(bytes).find(({ id }) => id === IMPORT_SECTION);
-  if (!section) return null;
+  if (!section) return [];
   let [count, offset] = readU32(bytes, section.contentStart);
+  const imports = [];
   while (count-- > 0) {
     let module, name;
     [module, offset] = readName(bytes, offset);
@@ -112,25 +86,75 @@ export function readMemoryImport(bytes) {
     switch (kind) {
       case 0: // function: type index
         [, offset] = readU32(bytes, offset);
+        imports.push({ module, name, kind });
         break;
       case 1: // table: reference type, limits
         offset = readLimits(bytes, offset + 1).offset;
+        imports.push({ module, name, kind });
         break;
       case 2: {
-        const { minimum, maximum, shared } = readLimits(bytes, offset);
-        return { module, name, minimum, maximum, shared };
+        const limits = readLimits(bytes, offset);
+        offset = limits.offset;
+        const { minimum, maximum, shared } = limits;
+        imports.push({ module, name, kind, minimum, maximum, shared });
+        break;
       }
       case 3: // global: value type, mutability
         offset += 2;
+        imports.push({ module, name, kind });
         break;
       case 4: // tag: attribute, type index
         [, offset] = readU32(bytes, offset + 1);
+        imports.push({ module, name, kind });
         break;
       default:
         throw new Error(`unknown import kind ${kind} for ${module}.${name}`);
     }
   }
-  return null;
+  if (offset !== section.end) throw new Error('import section has trailing bytes');
+  return imports;
+}
+
+/** The imported memory's `{ module, name, minimum, maximum, shared }`, or null. */
+export function readMemoryImport(bytes) {
+  const memory = readImports(bytes).find(({ kind }) => kind === 2);
+  if (!memory) return null;
+  const { module, name, minimum, maximum, shared } = memory;
+  return { module, name, minimum, maximum, shared };
+}
+
+const OPCODE_END = 0x0b;
+const OPCODE_CALL = 0x10;
+const OPCODE_RETURN_CALL = 0x12;
+const OPCODE_LOCAL_GET = 0x20;
+
+/**
+ * The function a one-argument forwarder at `functionIndex` calls: its body is
+ * exactly `local.get 0; call X; end` (or `return_call X`) with no locals.
+ * `undefined` for an imported function or any other body.
+ */
+export function readForwardTarget(bytes, functionIndex) {
+  const importedFunctions = readImports(bytes).filter(({ kind }) => kind === 0).length;
+  const bodyIndex = functionIndex - importedFunctions;
+  if (bodyIndex < 0) return undefined;
+  const section = readSections(bytes).find(({ id }) => id === CODE_SECTION);
+  if (!section) return undefined;
+  const [count, bodiesStart] = readU32(bytes, section.contentStart);
+  if (bodyIndex >= count) return undefined;
+  let offset = bodiesStart;
+  for (let i = 0; i < bodyIndex; i++) {
+    const [size, start] = readU32(bytes, offset);
+    offset = start + size;
+  }
+  const [size, start] = readU32(bytes, offset);
+  const end = start + size;
+  const [localGroups, opcodeAt] = readU32(bytes, start);
+  if (localGroups !== 0 || bytes[opcodeAt] !== OPCODE_LOCAL_GET) return undefined;
+  const [local, callAt] = readU32(bytes, opcodeAt + 1);
+  const opcode = bytes[callAt];
+  if (local !== 0 || (opcode !== OPCODE_CALL && opcode !== OPCODE_RETURN_CALL)) return undefined;
+  const [target, endAt] = readU32(bytes, callAt + 1);
+  return bytes[endAt] === OPCODE_END && endAt + 1 === end ? target : undefined;
 }
 
 function readLimits(bytes, offset) {
@@ -140,14 +164,4 @@ function readLimits(bytes, offset) {
   [minimum, offset] = readU32(bytes, offset + 1);
   if (flags & 1) [maximum, offset] = readU32(bytes, offset);
   return { minimum, maximum, shared: (flags & 2) !== 0, offset };
-}
-
-function concat(parts) {
-  const out = new Uint8Array(parts.reduce((sum, part) => sum + part.length, 0));
-  let offset = 0;
-  for (const part of parts) {
-    out.set(part, offset);
-    offset += part.length;
-  }
-  return out;
 }

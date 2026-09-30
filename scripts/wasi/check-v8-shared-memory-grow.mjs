@@ -1,6 +1,6 @@
 // Probe whether this Node's V8 still keeps a stale shared-memory size per thread
 // after another thread runs `memory.grow`. The threaded WASI binding works
-// around that in `crates/rolldown_binding/src/wasm_heap_sync.rs`; see
+// around that through napi-rs (napi's `wasi_heap_sync` allocator lock); see
 // internal-docs/wasi-shared-memory-grow/design.md ("When to remove").
 //
 // Two workers share one wasm memory. Worker B enters one long wasm activation

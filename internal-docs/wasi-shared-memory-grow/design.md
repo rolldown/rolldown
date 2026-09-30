@@ -1,5 +1,16 @@
 # WASI shared memory grow — Design & Principles
 
+> **Moved to napi-rs.** The allocator lock, the `sbrk` break, the handoff refresh
+> and the `malloc` / `free` export shim now live in napi / napi-sys / napi-build /
+> napi-async-runtime ([napi-rs/napi-rs#3552](https://github.com/napi-rs/napi-rs/pull/3552)),
+> so every napi-rs addon on `wasm32-wasip1-threads` gets them. Rolldown's own copy
+> (`crates/rolldown_binding/src/wasm_heap_sync.rs`, `rolldown_utils`'
+> `thread_handoff.rs`, the `--wrap` args in `build.rs` and the post-link export
+> rename) is deleted; rolldown keeps the dist check, the stress harness and the CI
+> steps. The why, the evidence and the measured tables below still hold; names like
+> `wasm_heap_sync.rs` or `HeapSyncAlloc` refer to rolldown's former copy, whose
+> design napi-rs took over. Where things live now: [implementation.md](./implementation.md).
+
 ## Summary
 
 The threaded WASI binding (`wasm32-wasip1-threads`) traps with "memory access out
@@ -7,7 +18,7 @@ of bounds" under concurrent load because of a V8 bug: a thread that did not run
 `memory.grow` keeps a stale memory size in its running wasm code, and `memory.fill`,
 `memory.copy`, Liftoff atomics and atomic wait/notify are bounds-checked against
 it; on hosts without V8's wasm trap handler, plain loads and stores are too.
-Rolldown works around it in its own allocator layer: one lock around every call
+The workaround (rolldown's own allocator layer at first, napi-rs's now) is one lock around every call
 into wasi-libc's dlmalloc, a `memory.grow(0)` refresh right after the lock is
 taken when another thread has seen a larger memory, and an `sbrk` hook that
 publishes every growth before the lock is released. The hook also hands dlmalloc
@@ -365,13 +376,14 @@ for this change, in a noisier set). Not profiled.
    results). The hook grows by itself, so the old `malloc` + `free` grow-ahead
    (and the `black_box` that kept LLVM from deleting it) is gone.
 
-5. **The allocator exports JS uses must be the wrappers, and a missed rename must
+5. **The allocator exports JS uses must be the wrappers, and a wrong one must
    fail loudly.** `@emnapi/core` calls the module's `malloc` / `free` exports from
-   JS, and `--wrap=malloc` removes the export named `malloc`. A post-link step
-   (`scripts/wasi/rename-wasm-allocator-exports.mjs`, run by `build-binding.ts`)
-   adds `malloc` / `free` for the locked JS entry points. If a build path skips it,
-   the module does not load ("malloc is not exported") and the dist check fails,
-   instead of shipping dlmalloc's unlocked entry points.
+   JS, and `--wrap=malloc` removes the export named `malloc`. Rolldown's former
+   copy fixed that with a post-link export rename; napi-build now links a small
+   shim whose `malloc` / `free` exports forward to `__wrap_malloc` /
+   `__wrap_free`. A wrong export would load and run without the lock, so the dist
+   check reads what the exported `malloc` / `free` bodies call, not just their
+   names, instead of shipping dlmalloc's unlocked entry points.
 6. **Threaded build only, no behavior change elsewhere.** The single-thread build
    has one thread and never sees a stale size; native builds keep mimalloc.
 
@@ -491,8 +503,8 @@ thread A                                 thread B (inside one poll)
 ```
 
 Refresh points that end it: every allocator call refreshes after it takes the
-lock (`wasm_heap_sync.rs`), every task poll and blocking-closure start (the
-handoff hook), and V8's own points (What refreshes a stale thread). The paths
+lock (napi's `wasi_heap_sync.rs`), every task poll and blocking-closure start
+(napi-async-runtime's handoff refresh), and V8's own points (What refreshes a stale thread). The paths
 that deliver a block inside one poll:
 
 | delivery path                                                                                                      | covered?                                                                                                                      |
@@ -606,16 +618,11 @@ class, G2 included.
 ## When to remove
 
 When every Node version the threaded WASI package supports ships
-v8/v8@34241014663390c72e08c123faef6fedf395be8e (or a backport of it), delete
-`crates/rolldown_binding/src/wasm_heap_sync.rs`, its `#[global_allocator]` in
-`lib.rs`, the `--wrap` link args in `build.rs`, the export rename
-(`scripts/wasi/rename-wasm-allocator-exports.mjs`, its call in
-`packages/rolldown/build-binding.ts`, and `scripts/wasi/wasm-sections.mjs` once
-nothing else reads it), the handoff hook
-(`crates/rolldown_utils/src/thread_handoff.rs`, its re-exports in
-`rolldown_utils/src/lib.rs`, and its registration and `spawn_blocking` wrap in
-`rolldown_binding/src/async_runtime.rs`), the heap-sync export checks in
-`scripts/wasi/check-wasi-dist-files.mjs`, the heap-sync options and scripts of
+v8/v8@34241014663390c72e08c123faef6fedf395be8e (or a backport of it), the
+workaround itself goes away in napi-rs (or rolldown opts out with
+`--cfg napi_wasi_no_heap_sync`). On the rolldown side, delete the heap-sync export
+checks in `scripts/wasi/check-wasi-dist-files.mjs` (and
+`scripts/wasi/wasm-sections.mjs` once nothing else reads it), the heap-sync options and scripts of
 `packages/rolldown/tests/wasi/threaded-memory-stress.mjs` with their CI steps,
 `scripts/wasi/check-v8-shared-memory-grow.*`, the `check:v8-shared-memory-grow`
 script in the root `package.json`, and this folder. Confirm first on each of those

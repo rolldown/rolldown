@@ -16,7 +16,12 @@ import * as fs from 'node:fs';
 import * as path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-import { EXPORT_KIND_FUNCTION, readExports } from './wasm-sections.mjs';
+import {
+  EXPORT_KIND_FUNCTION,
+  readExports,
+  readForwardTarget,
+  readImports,
+} from './wasm-sections.mjs';
 
 const REPO_ROOT = fileURLToPath(new URL('../../', import.meta.url));
 
@@ -124,65 +129,65 @@ if (
   process.exit(1);
 }
 
-// The threaded wasm must carry the heap-sync allocator that works around V8's
-// stale shared-memory size on threads that did not grow the memory; the
-// single-thread wasm must not (it has one thread, and build.rs only adds the
-// `--wrap` link args for wasm32-wasip1-threads). On the threaded wasm the
-// exports named `malloc` / `free` (what @emnapi/core calls) must be the locked
-// wrappers: packages/rolldown/build-binding.ts runs
-// scripts/wasi/rename-wasm-allocator-exports.mjs, which points them at the
-// functions exported as `rolldown_heap_sync_malloc` / `rolldown_heap_sync_free`
-// and drops `__wrap_malloc` / `__wrap_free`. A wasm that skipped that step has
-// no `malloc` export at all, so this check cannot pass on it.
+// The threaded wasm must carry napi's heap-sync allocator lock, which works around
+// V8's stale shared-memory size on threads that did not grow the memory; the
+// single-thread wasm must not (napi-build only adds the `--wrap` link args and the
+// export shim for wasm32-wasip1-threads). On the threaded wasm the exports named
+// `malloc` / `free` (what @emnapi/core calls) must reach the locked wrappers:
+// napi-build links a shim whose `malloc` / `free` exports forward to them. A wrong
+// export is silent (the module loads and runs, only without the lock), so check the
+// call target, not the name: the body of `malloc` must call the function exported
+// as `__wrap_malloc`, and the same for `free`.
 // See internal-docs/wasi-shared-memory-grow/implementation.md
 const HEAP_SYNC_EXPORTS = [
+  '__wrap_malloc',
+  '__wrap_free',
   '__wrap_calloc',
   '__wrap_realloc',
   '__wrap_posix_memalign',
   '__wrap_sbrk',
-  'rolldown_heap_sync_malloc',
-  'rolldown_heap_sync_free',
-  'rolldown_heap_sync_stat',
+  'napi_wasm_heap_sync_stat',
 ];
 const wasmFile = expected.find((f) => f.endsWith('.wasm'));
-const wasmExports = new Map(
-  readExports(new Uint8Array(fs.readFileSync(path.join(distDir, wasmFile)))).map((entry) => [
-    entry.name,
-    entry,
-  ]),
-);
+const wasmBytes = new Uint8Array(fs.readFileSync(path.join(distDir, wasmFile)));
+const wasmExports = new Map(readExports(wasmBytes).map((entry) => [entry.name, entry]));
 const heapSyncFailures = [];
 if (flavor === 'threaded') {
   for (const name of HEAP_SYNC_EXPORTS) {
     if (wasmExports.get(name)?.kind !== EXPORT_KIND_FUNCTION) {
       heapSyncFailures.push(
-        `missing function export ${name} (threaded wasm must link the heap-sync allocator)`,
+        `missing function export ${name} (threaded wasm must link napi's heap-sync allocator)`,
       );
     }
   }
   for (const name of ['malloc', 'free']) {
     const exported = wasmExports.get(name);
-    const marker = wasmExports.get(`rolldown_heap_sync_${name}`);
-    if (!exported) {
+    const wrapper = wasmExports.get(`__wrap_${name}`);
+    if (exported?.kind !== EXPORT_KIND_FUNCTION) {
       heapSyncFailures.push(
-        `missing export ${name} (scripts/wasi/rename-wasm-allocator-exports.mjs did not run)`,
+        `missing function export ${name} (napi-build's export shim is not linked)`,
       );
-    } else if (
-      !marker ||
-      exported.kind !== EXPORT_KIND_FUNCTION ||
-      exported.index !== marker.index
-    ) {
+      continue;
+    }
+    if (!wrapper) continue;
+    const target = readForwardTarget(wasmBytes, exported.index);
+    if (target !== wrapper.index) {
       heapSyncFailures.push(
-        `export ${name} is function ${exported.index}, not the heap-sync wrapper rolldown_heap_sync_${name} (function ${marker?.index})`,
+        `export ${name} (function ${exported.index}) calls function ${target ?? '(not a forwarder)'}, ` +
+          `not the heap-sync wrapper __wrap_${name} (function ${wrapper.index})`,
       );
     }
-    if (wasmExports.has(`__wrap_${name}`)) {
-      heapSyncFailures.push(`unexpected export __wrap_${name} (the rename step must drop it)`);
+  }
+  for (const { module, name, kind } of readImports(wasmBytes)) {
+    if (name.startsWith('__real_') || name.startsWith('__wrap_')) {
+      heapSyncFailures.push(
+        `unexpected import ${module}.${name} (kind ${kind}): a --wrap symbol was left unresolved`,
+      );
     }
   }
 } else {
   for (const name of wasmExports.keys()) {
-    if (name.startsWith('__wrap_') || name.startsWith('rolldown_heap_sync_')) {
+    if (name.startsWith('__wrap_') || name.startsWith('napi_wasm_heap_sync_')) {
       heapSyncFailures.push(`unexpected export ${name} (heap-sync allocator is threaded-only)`);
     }
   }
@@ -194,9 +199,11 @@ if (heapSyncFailures.length > 0) {
   }
   console.error();
   console.error(
-    'Check the `--wrap` link args in crates/rolldown_binding/build.rs, the ' +
-      '`rolldown_wasi_threads` cfg on crates/rolldown_binding/src/wasm_heap_sync.rs and the ' +
-      'rename step in packages/rolldown/build-binding.ts.',
+    "napi-rs owns the allocator lock: napi's `wasi_heap_sync` module (built for " +
+      'wasm32-wasip1-threads unless `--cfg napi_wasi_no_heap_sync` is set) and ' +
+      "napi-build's `wasi-heap-sync` feature (the `--wrap` link args and the " +
+      '`malloc` / `free` export shim). Check the napi / napi-build versions in ' +
+      'Cargo.lock and that the Rust `#[global_allocator]` ends in libc `malloc`.',
   );
   process.exit(1);
 }
@@ -210,6 +217,6 @@ for (const file of supportFiles) {
   packaged.push(`  ${file} (${size} bytes)`);
 }
 console.log(
-  `OK: '${flavor}' WASI dist file set complete in ${distDir} (heap-sync allocator ${flavor === 'threaded' ? 'linked, malloc/free renamed' : 'absent'}):`,
+  `OK: '${flavor}' WASI dist file set complete in ${distDir} (heap-sync allocator ${flavor === 'threaded' ? 'linked, malloc/free forward to __wrap_*' : 'absent'}):`,
 );
 console.log(packaged.join('\n'));

@@ -44,7 +44,7 @@ Rust core — see [implementation.md](./implementation.md).
    `[patch.crates-io]` in the root `Cargo.toml`, see
    [implementation.md](./implementation.md)), and the V8 shared-memory size
    bug behind the "memory access out of bounds" traps of #10697 (the
-   `wasm_heap_sync` allocator, see
+   heap-sync allocator lock, now in napi-rs, see
    [wasi-shared-memory-grow/design.md](../wasi-shared-memory-grow/design.md)).
    Threadless `wasm32-wasip1` must not import shared memory, construct
    workers, park with `Atomics.wait`, or call `std::thread::spawn`. Native

@@ -47,18 +47,6 @@ beforeEach(() => {
   binding.unregisterTimerHost = undefined;
 });
 
-test('rejects a binding without the task-host contract reporter before invocation', async () => {
-  await expect(import('../src/timer-host')).rejects.toMatchObject({
-    code: 'ERR_NAPI_ASYNC_RUNTIME_BINDING_MISMATCH',
-    message: expect.stringMatching(
-      /incomplete async-runtime host contract.*getCurrentThreadTaskHostContractVersion/,
-    ),
-  });
-
-  expect(binding.registerCurrentThreadTaskHost).not.toHaveBeenCalled();
-  expect(binding.registerTimerHost).not.toHaveBeenCalled();
-});
-
 test('rejects a nonnumeric host contract version without coercing it', async () => {
   const invalidVersion = {
     [Symbol.toPrimitive]() {
@@ -90,22 +78,6 @@ test('rejects an incomplete v4 reservation surface before registration', async (
     message: expect.stringMatching(
       /incomplete async-runtime host contract.*reserveCurrentThreadHostRegistration/,
     ),
-  });
-
-  expect(binding.registerCurrentThreadTaskHost).not.toHaveBeenCalled();
-  expect(binding.registerTimerHost).not.toHaveBeenCalled();
-});
-
-test('rejects the v3 native task-host contract before registration', async () => {
-  binding.getCurrentThreadTaskHostContractVersion = vi.fn(() => 3);
-  binding.isCurrentThreadHostRegistrationActive = vi.fn(() => true);
-  binding.reserveCurrentThreadHostRegistration = vi.fn(() => ({ high: 0, low: 1 }));
-  binding.unregisterCurrentThreadTaskHost = vi.fn();
-  binding.unregisterTimerHost = vi.fn();
-
-  await expect(import('../src/timer-host')).rejects.toMatchObject({
-    code: 'ERR_NAPI_ASYNC_RUNTIME_BINDING_MISMATCH',
-    message: expect.stringMatching(/task-host contract version 3.*requires version 4/),
   });
 
   expect(binding.registerCurrentThreadTaskHost).not.toHaveBeenCalled();

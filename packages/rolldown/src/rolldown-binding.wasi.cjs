@@ -188,6 +188,50 @@ function __hasWasiThreadCrashed() {
   return Boolean(manager && manager._fatalError)
 }
 
+let __wasiThreadCrashDisposePromise
+
+/**
+ * The public disposer after a wasm thread died. The normal chain drains async
+ * work, runs the environment cleanup barrier and destroys the context — every
+ * one of those re-enters wasm, and the barrier's shutdown waits for the dead
+ * thread's work in the same raw atomic wait `__disposeWasiBindingAtExit`
+ * avoids. An app that handled the worker's error and then disposes would block
+ * there for good. Only stop the workers, then reject: the binding was not
+ * cleaned up and cannot be, so reporting success would be a lie. The context
+ * is left as is and the 'exit' listener takes its short path too.
+ *
+ * Latched: every later call returns the same promise.
+ */
+function __disposeWasiBindingAfterThreadCrash() {
+  if (__wasiThreadCrashDisposePromise) {
+    return __wasiThreadCrashDisposePromise
+  }
+  const crashError = new Error(
+    'napi-rs: WASI binding cannot be disposed after a worker thread crashed',
+  )
+  try {
+    const manager = __getWasiThreadManager()
+    if (manager && manager._fatalError) {
+      crashError.cause = manager._fatalError
+    }
+  } catch {}
+  let workerResult
+  try {
+    workerResult = __terminateWasiWorkers()
+  } catch (terminateError) {
+    workerResult = Promise.reject(terminateError)
+  }
+  __wasiThreadCrashDisposePromise = Promise.resolve(workerResult).then(
+    () => {
+      throw crashError
+    },
+    (terminateError) => {
+      throw __attachCleanupErrors(crashError, [terminateError])
+    },
+  )
+  return __wasiThreadCrashDisposePromise
+}
+
 const __cwd = process.cwd()
 const __rootDir = __nodePath.parse(__cwd).root
 const __hostRoot =
@@ -1304,6 +1348,9 @@ function __startWasiDisposal() {
  * binding[Symbol.for('napi.rs.wasi.dispose')]()
  */
 function __disposeWasiBinding() {
+  if (!__wasiDisposed && __hasWasiThreadCrashed()) {
+    return __disposeWasiBindingAfterThreadCrash()
+  }
   if (__wasiDisposePromise) {
     return __wasiDisposePromise
   }

@@ -1,0 +1,319 @@
+// Worker-crash latch for the threaded WASI artifact, under MultiThread with 4 workers.
+//
+// When a pool worker's wasm thread dies, any teardown that re-enters wasm waits for
+// the dead thread's work to go idle, and that never happens. Without the latch in the
+// generated threaded Node loader:
+// - the exit listener blocks the main thread in a raw atomic wait, so the process
+//   never exits and ignores SIGTERM;
+// - the public disposer, binding[Symbol.for('napi.rs.wasi.dispose')](), drains into
+//   the cleanup barrier and its promise never settles.
+// See internal-docs/async-runtime/implementation.md (section 7, Loaders).
+//
+// Each run is a child process that preloads crash-injector-preload.mjs: in the pool
+// workers, the CRASH_AT-th `fd_read` call throws a RuntimeError, the same path a real
+// trap takes. 16 concurrent builds of a 300-module chain make sure a worker gets there.
+//   no-handler  no uncaughtException handler: must exit non-zero
+//   dispose     handles the crash, then awaits the disposer: must reject with the
+//               crash as its cause (latched: a second call returns the same
+//               promise), then process.exit(0) must exit with code 0
+//   control     no injection: the builds pass and the process exits 0
+// A crash run still alive after CRASH_CASE_TIMEOUT_MS is killed and counts as a hang.
+// Skips (exit 0) unless the artifact is the threaded WASI one and MultiThread works.
+import assert from 'node:assert/strict';
+import { spawn } from 'node:child_process';
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync, writeSync } from 'node:fs';
+import { createRequire } from 'node:module';
+import os from 'node:os';
+import path from 'node:path';
+import { fileURLToPath, pathToFileURL } from 'node:url';
+
+const CHILD_FLAG = '--run-worker-crash-latch-case';
+const MODULES = 300;
+const CONCURRENCY = 16;
+const RUNS = 3;
+// A crash case must be over well within this; the control case gets the stress
+// script's budget, since 16 debug-wasm builds on a slow runner can take a while.
+const CRASH_CASE_TIMEOUT_MS = 15_000;
+const CONTROL_TIMEOUT_MS = 60_000;
+const CRASH_IMPORT = 'wasi_snapshot_preview1.fd_read';
+const CRASH_AT = '20';
+const MULTI_THREAD_ENV = { ROLLDOWN_RUNTIME: 'multi', ROLLDOWN_WORKER_THREADS: '4' };
+const DISPOSE_SYMBOL = Symbol.for('napi.rs.wasi.dispose');
+const CRASH_DISPOSE_MESSAGE = 'cannot be disposed after a worker thread crashed';
+const CASES = ['no-handler', 'dispose', 'control'];
+
+const childIndex = process.argv.indexOf(CHILD_FLAG);
+if (childIndex >= 0) {
+  await runCase(process.argv[childIndex + 1], process.argv[childIndex + 2]);
+} else {
+  await runAll();
+}
+
+async function runAll() {
+  const { target, error: loadError } = await probe({});
+  if (loadError) {
+    throw new Error(`worker crash latch: rolldown failed to load: ${loadError}`);
+  }
+  if (target !== 'wasi-threads') {
+    console.log(`SKIP worker crash latch: needs the threaded WASI build, got target ${target}`);
+    return;
+  }
+  const { flavor, error } = await probe(MULTI_THREAD_ENV);
+  if (flavor !== 'MultiThread') {
+    console.log(`SKIP worker crash latch: MultiThread is not available (${error ?? flavor})`);
+    return;
+  }
+
+  const workDir = mkdtempSync(path.join(os.tmpdir(), 'rolldown-wasi-crash-latch-'));
+  const fixture = path.join(workDir, 'fixture');
+  const failures = [];
+  const started = Date.now();
+  try {
+    writeChain(fixture, MODULES);
+    for (const mode of CASES) {
+      for (let run = 1; run <= RUNS; run++) {
+        const label = `${mode} #${run}`;
+        const crashLog = path.join(workDir, `${mode}-${run}.crash.log`);
+        const result = await spawnCase(mode, fixture, {
+          runtimeEnv: MULTI_THREAD_ENV,
+          inject: mode !== 'control',
+          crashLog,
+        });
+        const crashed = readText(crashLog).includes('CRASH in');
+        const problem = judge(mode, result, crashed);
+        console.log(`${problem ? 'FAIL' : 'PASS'} ${label} (code ${result.code}, ${result.ms} ms)`);
+        if (problem) {
+          failures.push(label);
+          console.log(`--- ${label}: ${problem}\n${result.output.trim()}\n---`);
+        }
+      }
+    }
+  } finally {
+    rmSync(workDir, { force: true, recursive: true });
+  }
+  console.log(`threaded WASI worker crash latch finished in ${Date.now() - started} ms`);
+  if (failures.length > 0) {
+    throw new Error(`threaded WASI worker crash latch failed: ${failures.join(', ')}`);
+  }
+}
+
+async function probe(runtimeEnv) {
+  const result = await spawnCase('probe', '', { runtimeEnv });
+  const line = result.output.match(/^PROBE (.*)$/m);
+  if (!line) {
+    throw new Error(`worker crash latch: the probe failed\n${result.output.trim()}`);
+  }
+  return JSON.parse(line[1]);
+}
+
+function judge(mode, result, crashed) {
+  if (result.timedOut) {
+    return `still alive after ${result.timeoutMs} ms (hang)`;
+  }
+  if (result.signal) {
+    return `killed by signal ${result.signal}`;
+  }
+  if (mode === 'control') {
+    if (result.code !== 0 || !result.output.includes('BUILDS_OK')) {
+      return `exited with code ${result.code} without BUILDS_OK`;
+    }
+    return null;
+  }
+  if (!crashed || result.output.includes('BUILDS_OK')) {
+    return 'the injected worker crash did not fire';
+  }
+  if (mode === 'no-handler') {
+    return result.code === 0 ? 'exited with code 0 after an unhandled worker crash' : null;
+  }
+  if (!/^DISPOSE_REJECTED /m.test(result.output)) {
+    return `the disposer did not reject (exit code ${result.code})`;
+  }
+  if (!result.output.includes('DISPOSE_OK')) {
+    return `the disposer rejected with the wrong error (exit code ${result.code})`;
+  }
+  return result.code === 0 ? null : `exited with code ${result.code} after the disposer settled`;
+}
+
+function spawnCase(mode, fixture, { runtimeEnv, inject = false, crashLog }) {
+  const env = { ...process.env, ...runtimeEnv };
+  if (!('ROLLDOWN_RUNTIME' in runtimeEnv)) {
+    delete env.ROLLDOWN_RUNTIME;
+    delete env.ROLLDOWN_WORKER_THREADS;
+  }
+  delete env.ROLLDOWN_TEST_CRASH_IMPORT;
+  const args = [];
+  if (inject) {
+    env.ROLLDOWN_TEST_CRASH_IMPORT = CRASH_IMPORT;
+    env.ROLLDOWN_TEST_CRASH_AT = CRASH_AT;
+    env.ROLLDOWN_TEST_CRASH_LOG = crashLog;
+    args.push('--import', pathToFileURL(helper('crash-injector-preload.mjs')).href);
+  }
+  args.push(fileURLToPath(import.meta.url), CHILD_FLAG, mode, fixture);
+  const started = Date.now();
+  const child = spawn(process.execPath, args, { env, stdio: ['ignore', 'pipe', 'pipe'] });
+  let output = '';
+  child.stdout.on('data', (chunk) => (output += chunk));
+  child.stderr.on('data', (chunk) => (output += chunk));
+  let timedOut = false;
+  const timeoutMs = mode === 'control' ? CONTROL_TIMEOUT_MS : CRASH_CASE_TIMEOUT_MS;
+  const timer = setTimeout(() => {
+    timedOut = true;
+    child.kill('SIGKILL');
+  }, timeoutMs);
+  return new Promise((resolve, reject) => {
+    child.once('error', reject);
+    child.once('close', (code, signal) => {
+      clearTimeout(timer);
+      resolve({
+        code,
+        signal: timedOut ? null : signal,
+        timedOut,
+        timeoutMs,
+        output,
+        ms: Date.now() - started,
+      });
+    });
+  });
+}
+
+function helper(file) {
+  return fileURLToPath(new URL(`./${file}`, import.meta.url));
+}
+
+function readText(file) {
+  try {
+    return readFileSync(file, 'utf8');
+  } catch {
+    return '';
+  }
+}
+
+function writeChain(dir, count) {
+  // A linear import chain m0 -> m1 -> ...: every build reads all the files, so the
+  // pool workers call fd_read well past CRASH_AT.
+  mkdirSync(dir, { recursive: true });
+  const pad = 'a'.repeat(600);
+  for (let i = 0; i < count; i++) {
+    const source =
+      i < count - 1
+        ? `import { f${i + 1} } from './m${i + 1}.js';\n` +
+          `export function f${i}() { return f${i + 1}() + ${i} + '${pad}'.length; }\n`
+        : `export function f${i}() { return 1; }\n`;
+    writeFileSync(path.join(dir, `m${i}.js`), source);
+  }
+}
+
+// Child side. Output goes through writeSync: the process may die right after.
+function say(text) {
+  writeSync(1, `${text}\n`);
+}
+
+async function runCase(mode, fixture) {
+  if (mode === 'probe') {
+    const facts = {};
+    try {
+      const { getAsyncRuntimeConfig, getRuntimeCapabilities } =
+        await import('rolldown/experimental');
+      facts.target = getRuntimeCapabilities().target;
+      facts.flavor = getAsyncRuntimeConfig().flavor;
+    } catch (error) {
+      facts.error = String(error?.message ?? error);
+    }
+    say(`PROBE ${JSON.stringify(facts)}`);
+    return;
+  }
+
+  let crash;
+  let onCrash = () => {};
+  const crashed = new Promise((resolve) => (onCrash = resolve));
+  if (mode === 'dispose') {
+    process.on('uncaughtException', (error) => {
+      if (crash) return;
+      crash = error;
+      say(`CAUGHT ${error?.message}`);
+      onCrash();
+    });
+  }
+
+  const { rolldown } = await import('rolldown');
+  const { getAsyncRuntimeConfig } = await import('rolldown/experimental');
+  const config = getAsyncRuntimeConfig();
+  assert.equal(config.flavor, 'MultiThread');
+  assert.equal(config.workerThreads, Number(MULTI_THREAD_ENV.ROLLDOWN_WORKER_THREADS));
+
+  const once = async () => {
+    const bundle = await rolldown({ input: path.join(fixture, 'm0.js') });
+    try {
+      await bundle.generate({ format: 'esm' });
+    } finally {
+      await bundle.close();
+    }
+  };
+  const builds = Promise.all(Array.from({ length: CONCURRENCY }, once)).then(() =>
+    say('BUILDS_OK'),
+  );
+  if (mode !== 'dispose') {
+    await builds;
+    return;
+  }
+
+  // The builds that ran on the dead worker may never settle, so wait for whichever
+  // comes first. Builds that all pass mean the crash did not fire (the parent fails
+  // the run); builds that fail still wait for the crash report.
+  const first = await Promise.race([
+    crashed.then(() => 'crash'),
+    builds.then(
+      () => 'builds',
+      (error) => {
+        say(`BUILDS_ERROR ${error?.message}`);
+        return 'error';
+      },
+    ),
+  ]);
+  if (first === 'builds') {
+    return;
+  }
+  await crashed;
+
+  let dispose;
+  try {
+    dispose = findDisposer();
+  } catch (error) {
+    say(`NO_DISPOSER ${error?.message}`);
+    process.exit(1);
+  }
+  const disposal = dispose();
+  const again = dispose();
+  try {
+    await disposal;
+    say('DISPOSE_RESOLVED');
+  } catch (error) {
+    say(
+      `DISPOSE_REJECTED ${error?.message} | cause=${error?.cause?.message} | ` +
+        `same-promise=${again === disposal} | cause-is-crash=${error?.cause === crash}`,
+    );
+    if (
+      String(error?.message).includes(CRASH_DISPOSE_MESSAGE) &&
+      String(error?.cause?.message).includes('forced worker crash') &&
+      again === disposal
+    ) {
+      say('DISPOSE_OK');
+    }
+  }
+  // The crash path cannot destroy the emnapi context, so the requests the dead
+  // worker never finished keep emnapi's pending-request port referenced and the
+  // event loop would stay alive. End the app the way one would after a fatal
+  // error; this also runs the loader's exit listener after the crash disposal.
+  process.exit(0);
+}
+
+// The threaded loader publishes the disposer on its own exports. Take it from the
+// instance the builds ran on (the require cache), never from a second copy.
+function findDisposer() {
+  const require = createRequire(import.meta.url);
+  const found = Object.values(require.cache).filter(
+    (entry) => typeof entry?.exports?.[DISPOSE_SYMBOL] === 'function',
+  );
+  assert.equal(found.length, 1, 'expected exactly one loaded WASI binding with a disposer');
+  return found[0].exports[DISPOSE_SYMBOL];
+}

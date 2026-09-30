@@ -330,13 +330,21 @@ missing host-contract export fails with `ERR_NAPI_ASYNC_RUNTIME_BINDING_MISMATCH
   `assertWasiBindingContextLifecycle` pins the teardown seams (disposal chain,
   settlement barrier, raw-destroy wrapper), `assertWasiThreadCrashLatch` pins
   the worker-crash latch in the threaded Node loader and `wasi-worker.mjs`
-  (after a pool worker's wasm thread dies, the exit listener only terminates
-  the workers: re-entering wasm would wait forever on the dead thread's work in
-  a raw atomic wait, SIGTERM included), and `assertAsyncRuntimeHostExports`
-  pins the host exports on the native loader, so a cli bump that reshapes
-  any of them fails the build instead of regressing silently. The latch comes
-  from a vendored `@napi-rs/cli` tarball (`.napi-validation/`, pnpm
-  `overrides`) until a cli release carries it.
+  (after a pool worker's wasm thread dies, no teardown re-enters wasm, since it
+  would wait forever on the dead thread's work, in a raw atomic wait at exit,
+  SIGTERM included. So the exit listener only terminates the workers, and the
+  public `Symbol.for('napi.rs.wasi.dispose')` disposer terminates them and
+  rejects, latched, with the crash as its cause), and
+  `assertAsyncRuntimeHostExports` pins the host exports on the native loader,
+  so a cli bump that reshapes any of them fails the build instead of
+  regressing silently. The latch comes from a vendored `@napi-rs/cli` tarball
+  (`.napi-validation/`, pnpm `overrides`) until a cli release carries it.
+  `packages/rolldown/tests/wasi/worker-crash-latch.mjs` (CI step "Threaded
+  WASI worker crash latch") forces a pool worker crash and checks both paths.
+  The crash disposal leaves the emnapi context alone, so the dead worker's
+  unfinished requests keep emnapi's pending-request port referenced: the
+  process does not exit on its own afterwards, and the test ends it with
+  `process.exit`.
 
 ---
 

@@ -77,13 +77,16 @@ const WASI_ASYNC_TEARDOWN_WAITS = [
 ] as const;
 const WASI_EXIT_LISTENER_HELPER = 'function __registerWasiExitListener() {';
 // Worker-crash latch, threaded Node flavor only (`rolldown-binding.wasi.cjs` +
-// `wasi-worker.mjs`; vendored `@napi-rs/cli`, napi-rs 9fb826ab, until a cli
-// release carries it). After a pool worker's wasm thread dies, the exit
-// teardown must not re-enter wasm: the env cleanup waits for the dead thread's
-// work to go idle in a raw `memory.atomic.wait32`, which blocks the main thread
+// `wasi-worker.mjs`; vendored `@napi-rs/cli`, napi-rs 9fb826ab + 9e9105f5,
+// until a cli release carries it). After a pool worker's wasm thread dies, no
+// teardown may re-enter wasm: the env cleanup waits for the dead thread's work
+// to go idle in a raw `memory.atomic.wait32`, which blocks the main thread
 // forever and keeps a JS SIGTERM listener from ever running. The worker sets a
-// shared flag before emnapi reports the crash; the exit listener checks it
-// before any other teardown step and then only terminates the workers.
+// shared flag before emnapi reports the crash. Both disposers check it before
+// any other step: the exit listener then only terminates the workers, and the
+// public `Symbol.for('napi.rs.wasi.dispose')` disposer terminates them and
+// rejects (latched) instead of draining async work into the cleanup barrier,
+// where its promise would never settle.
 // See internal-docs/async-runtime/implementation.md (section 7, Loaders).
 const WASI_THREAD_CRASH_LATCH_LOADER_SIGNATURES = [
   'const __wasiThreadCrashFlag = new Int32Array(new SharedArrayBuffer(4))',
@@ -93,6 +96,12 @@ const WASI_THREAD_CRASH_LATCH_LOADER_SIGNATURES = [
   __wasiExitListenerRegistered = false
   if (__hasWasiThreadCrashed()) {
 `,
+  `function __disposeWasiBinding() {
+  if (!__wasiDisposed && __hasWasiThreadCrashed()) {
+    return __disposeWasiBindingAfterThreadCrash()
+  }
+`,
+  'function __disposeWasiBindingAfterThreadCrash() {',
 ] as const;
 const WASI_THREAD_CRASH_LATCH_WORKER_SIGNATURES = [
   'if (workerData && workerData.crashFlag instanceof Int32Array) {',

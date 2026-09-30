@@ -109,6 +109,14 @@ jobs:
       - name: Threaded WASI memory stress
         run: timeout 600 vp run --filter rolldown-tests test:wasi-threaded-stress
 
+      # Forces a pool worker's wasm thread to die (MultiThread w4, 16 concurrent
+      # builds) and checks the loader's crash latch: an unhandled crash exits
+      # non-zero, and the public disposer rejects instead of hanging. Each crash
+      # run has its own 15 s timeout. Not retried: a hang here is a regression.
+      # See internal-docs/async-runtime/implementation.md (section 7, Loaders).
+      - name: Threaded WASI worker crash latch
+        run: timeout 300 vp run --filter rolldown-tests test:wasi-worker-crash
+
       - name: Build Rolldown with non-threaded WASI binding
         run: just build-rolldown-wasi-single
 

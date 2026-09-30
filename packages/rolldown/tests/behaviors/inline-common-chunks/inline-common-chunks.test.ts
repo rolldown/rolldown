@@ -923,8 +923,6 @@ describe('preconditions', () => {
       /preserveEntrySignatures/,
     ],
     ['preserveModules', {}, { preserveModules: true }, /preserveModules/],
-    ['intro', {}, { intro: 'const __STATE__ = [];' }, /intro/],
-    ['outro', {}, { outro: () => 'const __CFG__ = 1;' }, /outro/],
     ['onDemandWrapping', { experimental: { onDemandWrapping: true } }, {}, /onDemandWrapping/],
   ])('%s is a configuration error', async (_label, input, output, message) => {
     await expect(attempt(input, output)).rejects.toThrow(/experimentalInlineCommonChunks/);

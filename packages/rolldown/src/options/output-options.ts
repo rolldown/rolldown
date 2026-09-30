@@ -1040,8 +1040,9 @@ export type AdvancedChunksGroup = CodeSplittingGroup;
  * - The option turns `strictExecutionOrder` on when it is omitted. Strict execution order has an
  *   open issue with top-level await inside static import cycles (rolldown/rolldown#9548), so run
  *   the application under `strictExecutionOrder: true` before adding this option.
- * - Code in `banner` or `footer` that modules read runs once per file with the option off and
- *   once per printing chunk with it on; `intro` and `outro` are rejected with the option.
+ * - Addons (`banner`, `intro`, `outro` and `footer`), including plugin hooks, apply to emitted
+ *   files. An inlined chunk shares the addon bindings of the file that registers its factory
+ *   first. Exclude modules that depend on separate file-local bindings or addon initialization order.
  * - A chunk that prints an inlined chunk names both sets of modules together, so a function or
  *   class in either can get a `$1`-style suffix when the other declares the same name, and the
  *   `.name` of an inlined chunk's function or class depends on which chunk loads first (under
@@ -1060,8 +1061,7 @@ export type ExperimentalInlineCommonChunksOptions = {
    * `preserveEntrySignatures: false` and code splitting, and it turns on
    * {@linkcode OutputOptions.strictExecutionOrder | strictExecutionOrder} when that option is
    * omitted. `output.strictExecutionOrder: false` is an error, `output.preserveModules`,
-   * `experimental.devMode` and `experimental.onDemandWrapping` must be off, and `output.intro`
-   * and `output.outro` must be unset.
+   * `experimental.devMode` and `experimental.onDemandWrapping` must be off.
    *
    * @default 0
    */

@@ -4,11 +4,11 @@ use arcstr::ArcStr;
 use itertools::Either;
 use oxc::{transformer::EngineTargets, transformer_plugins::InjectGlobalVariablesConfig};
 use rolldown_common::{
-  AddonOutputOption, AttachDebugInfo, CodeSplittingMode, GlobalsOutputOption, InjectImport,
-  InlineCommonChunksOptions, JsxOptions, JsxPreset, LegalComments, ManualCodeSplittingOptions,
-  MinifyOptions, ModuleType, NormalizedBundlerOptions, NormalizedInlineCommonChunksOptions,
-  OutputFormat, Platform, PreserveEntrySignatures, RawTransformOptions, TransformOptions,
-  TreeshakeOptions, TsConfig, merge_transform_options_with_tsconfig, normalize_optimization_option,
+  AttachDebugInfo, CodeSplittingMode, GlobalsOutputOption, InjectImport, InlineCommonChunksOptions,
+  JsxOptions, JsxPreset, LegalComments, ManualCodeSplittingOptions, MinifyOptions, ModuleType,
+  NormalizedBundlerOptions, NormalizedInlineCommonChunksOptions, OutputFormat, Platform,
+  PreserveEntrySignatures, RawTransformOptions, TransformOptions, TreeshakeOptions, TsConfig,
+  merge_transform_options_with_tsconfig, normalize_optimization_option,
 };
 use rolldown_error::{BuildDiagnostic, BuildResult, InvalidOptionType};
 use rolldown_fs::{OsFileSystem, OxcResolverFileSystem as _};
@@ -226,20 +226,6 @@ fn verify_inline_common_chunks_options(
     experimental.is_none_or(|experimental| !experimental.is_on_demand_wrapping_enabled()),
     "`experimental.onDemandWrapping` to be off",
   );
-  // `intro` and `outro` are printed inside each file's module scope; a record has no file of its
-  // own to receive them, so its copies would share the carrier's.
-  require(
-    addon_is_unset(raw_options.intro.as_ref()) && addon_is_unset(raw_options.outro.as_ref()),
-    "`output.intro` and `output.outro` to be unset",
-  );
-}
-
-fn addon_is_unset(addon: Option<&AddonOutputOption>) -> bool {
-  match addon {
-    None | Some(AddonOutputOption::String(None)) => true,
-    Some(AddonOutputOption::String(Some(text))) => text.is_empty(),
-    Some(AddonOutputOption::Fn(_)) => false,
-  }
 }
 
 /// A non-negative safe integer, the same range `Number.isSafeInteger` accepts. `f64` is what the

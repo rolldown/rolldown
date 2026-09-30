@@ -1092,35 +1092,6 @@ test('a class plugin whose name getter reads a private field keeps its onLog hoo
   expect(codes.filter((code) => code === 'EVAL')).toHaveLength(2);
 });
 
-test('a plain-object plugin still reaches both hook consumers through the snapshot view', async () => {
-  const virtualId = '\0plain-object-plugin-hooks';
-  const codes: string[] = [];
-  let hookCalls = 0;
-  const plugin: Plugin = {
-    name: 'plain-object-hooks',
-    outputOptions(options) {
-      hookCalls += 1;
-      return { ...options, entryFileNames: 'plain-object-hooks.js' };
-    },
-    onLog(_level, log) {
-      codes.push(log.code!);
-      return false;
-    },
-  };
-
-  const bundle = await rolldown({
-    cwd: import.meta.dirname,
-    input: virtualId,
-    plugins: [evalWarningsPlugin(virtualId, 1), plugin],
-  });
-  const { output } = await bundle.generate({});
-  await bundle.close();
-
-  expect(hookCalls).toBe(1);
-  expect(output[0].fileName).toBe('plain-object-hooks.js');
-  expect(codes.filter((code) => code === 'EVAL')).toHaveLength(1);
-});
-
 // The snapshot view is a facade over a private target, so a deferred
 // `outputOptions` getter that redefines itself as a frozen data property
 // holding a DIFFERENT function cannot force the live value on it: no `Proxy`

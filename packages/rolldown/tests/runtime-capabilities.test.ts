@@ -67,8 +67,9 @@ describe('getRuntimeCapabilities', () => {
     expect(caps.devSupported).toBe(caps.threads);
 
     // Threadless WASI schedules on the calling thread only. Threaded WASI
-    // defaults to that too but accepts a MultiThread opt-in, pinned in
-    // threaded-wasi.test.ts and wasi-runtime-lifecycle-case.mjs.
+    // defaults to MultiThread and runs CurrentThread under
+    // `ROLLDOWN_RUNTIME=single`, pinned in threaded-wasi.test.ts and
+    // wasi-runtime-lifecycle-case.mjs.
     if (caps.target === 'wasi') {
       expect(caps.flavor).toBe('CurrentThread');
       expect(caps.threads).toBe(false);

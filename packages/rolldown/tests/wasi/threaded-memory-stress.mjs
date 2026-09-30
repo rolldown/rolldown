@@ -1,5 +1,7 @@
-// Concurrency stress for the threaded WASI artifact, under CurrentThread and under
-// MultiThread with 4 workers.
+// Concurrency stress for the threaded WASI artifact, under CurrentThread
+// (`ROLLDOWN_RUNTIME=single`), under the default MultiThread (2 workers), and under
+// MultiThread with 4 workers. Each case sets its own flavor, so the lane's
+// `ROLLDOWN_RUNTIME` does not change what this script runs.
 //
 // Before the `wasm_heap_sync` allocator, these loads trapped with "memory access out of
 // bounds": V8 keeps a stale shared-memory size on threads that did not run memory.grow,
@@ -22,16 +24,21 @@ const MODULES = 300;
 const CONCURRENCY = 16;
 const CASE_TIMEOUT_MS = Number(process.env.ROLLDOWN_WASI_STRESS_CASE_TIMEOUT_MS ?? 60_000);
 
-const CURRENT_THREAD = { name: 'CurrentThread', env: {} };
+const CURRENT_THREAD = { name: 'CurrentThread', env: { ROLLDOWN_RUNTIME: 'single' } };
+// No `ROLLDOWN_RUNTIME`: the artifact's default, MultiThread with 2 workers.
+const DEFAULT_MULTI_THREAD = { name: 'MultiThread (default)', env: {} };
 const MULTI_THREAD = {
-  name: 'MultiThread',
+  name: 'MultiThread w4',
   env: { ROLLDOWN_RUNTIME: 'multi', ROLLDOWN_WORKER_THREADS: '4' },
 };
 
 // `bundle`: CONCURRENCY builds x 2 waves with an async JS plugin.
 // `parse` / `transform`: CONCURRENCY concurrent passes over every module, 3 times.
+// parse() and transform() run on emnapi's async-work pool, not on the scheduler, so
+// the default MultiThread case adds only a bundle load.
 const CASES = [
   { mode: 'bundle', runtime: CURRENT_THREAD },
+  { mode: 'bundle', runtime: DEFAULT_MULTI_THREAD },
   { mode: 'bundle', runtime: MULTI_THREAD },
   { mode: 'parse', runtime: CURRENT_THREAD },
   { mode: 'parse', runtime: MULTI_THREAD },
@@ -75,11 +82,10 @@ async function runAll() {
 }
 
 function spawnCase(mode, fixture, runtimeEnv) {
-  const env = { ...process.env, ...runtimeEnv };
-  if (!('ROLLDOWN_RUNTIME' in runtimeEnv)) {
-    delete env.ROLLDOWN_RUNTIME;
-    delete env.ROLLDOWN_WORKER_THREADS;
-  }
+  const env = { ...process.env };
+  delete env.ROLLDOWN_RUNTIME;
+  delete env.ROLLDOWN_WORKER_THREADS;
+  Object.assign(env, runtimeEnv);
   const started = Date.now();
   const child = spawn(
     process.execPath,
@@ -133,11 +139,11 @@ async function runCase(mode, fixture) {
 
   assert.equal(getRuntimeCapabilities().target, 'wasi-threads', 'needs the threaded WASI build');
   const config = getAsyncRuntimeConfig();
-  if (process.env.ROLLDOWN_RUNTIME === 'multi') {
-    assert.equal(config.flavor, 'MultiThread');
-    assert.equal(config.workerThreads, Number(process.env.ROLLDOWN_WORKER_THREADS));
-  } else {
+  if (process.env.ROLLDOWN_RUNTIME === 'single') {
     assert.equal(config.flavor, 'CurrentThread');
+  } else {
+    assert.equal(config.flavor, 'MultiThread');
+    assert.equal(config.workerThreads, Number(process.env.ROLLDOWN_WORKER_THREADS ?? 2));
   }
 
   const files = readdirSync(fixture)

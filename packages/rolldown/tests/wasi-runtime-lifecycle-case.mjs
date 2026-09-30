@@ -40,25 +40,35 @@ assert.equal(
   true,
   'the published threaded-WASI artifact is built on the shared scheduler',
 );
-// This suite pins the default shape: every WebAssembly artifact defaults to
-// CurrentThread. The threaded artifact also accepts a MultiThread opt-in, which
-// threaded-wasi.test.ts and tests/wasi/threaded-memory-stress.mjs cover; run this
-// suite without `ROLLDOWN_RUNTIME=multi`.
+// This suite pins the lane's shape. The threaded artifact defaults to MultiThread
+// with 2 workers (2 to 4 with `ROLLDOWN_WORKER_THREADS`); `ROLLDOWN_RUNTIME=single`
+// selects CurrentThread. CI runs the suite both ways. See `resolve_runtime_config_for`
+// in crates/rolldown_binding/src/async_runtime.rs.
+const laneIsSingle = ['single', 'single-thread', 'current', 'current-thread'].includes(
+  process.env.ROLLDOWN_RUNTIME ?? '',
+);
+const expectedFlavor = laneIsSingle ? 'CurrentThread' : 'MultiThread';
+const expectedWorkerThreads = laneIsSingle ? 1 : laneWorkerThreads();
+const expectedShape = {
+  flavor: expectedFlavor,
+  maxBlockingTasks: laneIsSingle ? 1 : expectedWorkerThreads - 1,
+  workerThreads: expectedWorkerThreads,
+};
 assert.equal(
   runtimeCapabilities.flavor,
-  'CurrentThread',
-  'every WebAssembly artifact defaults to the shared scheduler CurrentThread flavor',
+  expectedFlavor,
+  laneIsSingle
+    ? 'ROLLDOWN_RUNTIME=single selects CurrentThread on the threaded-WASI artifact'
+    : 'the threaded-WASI artifact defaults to the shared scheduler MultiThread flavor',
 );
 assert.equal(
   runtimeCapabilities.threads,
-  false,
-  'the threaded-WASI artifact schedules on the calling lane only',
+  !laneIsSingle,
+  laneIsSingle
+    ? 'CurrentThread schedules on the calling lane only'
+    : 'MultiThread runs the scheduler on its own worker threads',
 );
-assert.equal(
-  runtimeCapabilities.devSupported,
-  false,
-  'dev needs a MultiThread executor, which the default WebAssembly flavor is not',
-);
+assert.equal(runtimeCapabilities.devSupported, !laneIsSingle, 'dev needs a MultiThread executor');
 assert.deepEqual(
   Object.keys(runtimeConfig).sort(),
   ['drainLingerUs', 'flavor', 'maxBlockingTasks', 'workerThreads'],
@@ -70,12 +80,8 @@ assert.deepEqual(
     maxBlockingTasks: runtimeConfig.maxBlockingTasks,
     workerThreads: runtimeConfig.workerThreads,
   },
-  {
-    flavor: 'CurrentThread',
-    maxBlockingTasks: 1,
-    workerThreads: 1,
-  },
-  'the threaded-WASI artifact must report the shared scheduler single-lane shape',
+  expectedShape,
+  "the threaded-WASI artifact must report the lane's scheduler shape",
 );
 assert.equal(
   typeof runtimeConfig.drainLingerUs,
@@ -112,7 +118,7 @@ assert.equal(poolCapProbe.error, undefined, poolCapProbe.stderr);
 assert.equal(poolCapProbe.status, 0, poolCapProbe.stderr || poolCapProbe.stdout);
 // `NAPI_RS_ASYNC_WORK_POOL_SIZE` sized napi-rs' Tokio work pool, which this
 // artifact no longer has: the stray Tokio-era variable must NOT resize the
-// shared scheduler, and the artifact keeps its one-lane CurrentThread shape.
+// shared scheduler, and the artifact keeps the lane's shape.
 const poolCapReport = JSON.parse(poolCapProbe.stdout.trim().split('\n').at(-1));
 assert.equal(
   typeof poolCapReport.config.drainLingerUs,
@@ -125,19 +131,15 @@ assert.deepEqual(poolCapReport, {
     asyncRuntimeBuild: true,
     backend: 'shared',
     blockOnJsThreadSafe: false,
-    devSupported: false,
-    flavor: 'CurrentThread',
+    devSupported: !laneIsSingle,
+    flavor: expectedFlavor,
     target: 'wasi-threads',
-    threads: false,
+    threads: !laneIsSingle,
     timers: true,
     wasi: true,
     watchSupported: false,
   },
-  config: {
-    flavor: 'CurrentThread',
-    maxBlockingTasks: 1,
-    workerThreads: 1,
-  },
+  config: expectedShape,
 });
 
 await check('worker loader retries rejected inherited execArgv', () => {
@@ -288,19 +290,30 @@ await check('construction failures leave the shared runtime usable', async () =>
   await generateAndClose('restart-after-construction-failure');
 });
 
-// `dev()` needs a MultiThread executor and the default CurrentThread flavor is not
-// one, so the entry must fail closed through the capability contract instead of stalling
-// on a build that can never complete -- repeatably, leaving the runtime usable.
-await check(
-  'dev is rejected by the capability contract and leaves the runtime usable',
-  async () => {
+// `dev()` needs a MultiThread executor. On the default MultiThread flavor it builds and
+// closes, repeatably. CurrentThread is not one, so there the entry must fail closed
+// through the capability contract instead of stalling on a build that can never
+// complete -- repeatably. Either way the runtime stays usable.
+if (laneIsSingle) {
+  await check(
+    'dev is rejected by the capability contract and leaves the runtime usable',
+    async () => {
+      for (const label of ['threaded-wasi-dev-first', 'threaded-wasi-dev-restart']) {
+        await assert.rejects(runVirtualDevEngine(label), isDevUnsupported);
+      }
+
+      await generateAndClose('restart-after-unsupported-dev');
+    },
+  );
+} else {
+  await check('dev builds, closes and leaves the runtime usable', async () => {
     for (const label of ['threaded-wasi-dev-first', 'threaded-wasi-dev-restart']) {
-      await assert.rejects(runVirtualDevEngine(label), isDevUnsupported);
+      await runVirtualDevEngine(label);
     }
 
-    await generateAndClose('restart-after-unsupported-dev');
-  },
-);
+    await generateAndClose('restart-after-dev');
+  });
+}
 
 await check('a worker realm builds and closes in its own environment', async () => {
   const worker = new Worker(
@@ -503,6 +516,14 @@ await check('duplicate package copies share one binding', async () => {
 });
 
 console.log(JSON.stringify({ completed, target: getRuntimeCapabilities().target }));
+
+// `ROLLDOWN_WORKER_THREADS` on threaded WASI: default 2, clamped to [2, 4]; `0` or a
+// value that is not a plain positive integer counts as unset.
+function laneWorkerThreads() {
+  const raw = process.env.ROLLDOWN_WORKER_THREADS;
+  const parsed = raw && /^\d+$/.test(raw) ? Number(raw) : 0;
+  return parsed > 0 ? Math.min(Math.max(parsed, 2), 4) : 2;
+}
 
 async function check(name, operation) {
   await withTimeout(Promise.resolve().then(operation), 60_000, `${name} timed out`);

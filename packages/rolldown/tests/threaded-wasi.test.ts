@@ -10,43 +10,98 @@ import { expect, test } from 'vitest';
 const capabilities = getRuntimeCapabilities();
 const expectThreadedWasi = process.env.ROLLDOWN_EXPECT_WASI_THREADS === '1';
 
-test.runIf(capabilities.target === 'wasi-threads' || expectThreadedWasi)(
-  'accepts the MultiThread opt-in on threaded WASI',
+// The lane's flavor, read once at binding load: MultiThread by default on the
+// threaded artifact, CurrentThread under `ROLLDOWN_RUNTIME=single` (or an alias).
+// See `resolve_runtime_config_for` in crates/rolldown_binding/src/async_runtime.rs.
+const laneIsSingle = ['single', 'single-thread', 'current', 'current-thread'].includes(
+  process.env.ROLLDOWN_RUNTIME ?? '',
+);
+
+function expectMultiThreadShape() {
+  const config = getAsyncRuntimeConfig();
+  expect(config.flavor).toBe('MultiThread');
+  // 2 to 4 scheduler workers on threaded WASI.
+  expect(config.workerThreads).toBeGreaterThanOrEqual(2);
+  expect(config.workerThreads).toBeLessThanOrEqual(4);
+  // Blocking admission keeps one runnable lane free.
+  expect(config.maxBlockingTasks).toBeGreaterThanOrEqual(1);
+  expect(config.maxBlockingTasks).toBeLessThanOrEqual(config.workerThreads - 1);
+  // The capability report follows the configured flavor.
+  expect(getRuntimeCapabilities()).toMatchObject({
+    target: 'wasi-threads',
+    wasi: true,
+    flavor: 'MultiThread',
+    threads: true,
+    timers: true,
+    devSupported: true,
+    watchSupported: false,
+  });
+  // Parallel plugins and symlink traversal stay native-only on every WASI artifact.
+  expect(getRuntimeSupport()).toMatchObject({
+    dev: true,
+    watch: false,
+    parallelPlugins: false,
+    symlinks: false,
+    threadlessWasi: false,
+    workerd: false,
+  });
+}
+
+function expectCurrentThreadShape() {
+  expect(getAsyncRuntimeConfig()).toMatchObject({
+    flavor: 'CurrentThread',
+    workerThreads: 1,
+    maxBlockingTasks: 1,
+  });
+  expect(getRuntimeCapabilities()).toMatchObject({
+    target: 'wasi-threads',
+    wasi: true,
+    flavor: 'CurrentThread',
+    threads: false,
+    timers: true,
+    devSupported: false,
+    watchSupported: false,
+  });
+  expect(getRuntimeSupport()).toMatchObject({
+    dev: false,
+    watch: false,
+    parallelPlugins: false,
+    symlinks: false,
+    threadlessWasi: false,
+    workerd: false,
+  });
+}
+
+test.runIf((capabilities.target === 'wasi-threads' || expectThreadedWasi) && !laneIsSingle)(
+  'runs MultiThread by default on threaded WASI',
   () => {
-    // The default stays CurrentThread; MultiThread is an opt-in here and is rejected
-    // only on threadless WASI. See internal-docs/wasi-shared-memory-grow/design.md.
+    // See internal-docs/wasi-shared-memory-grow/design.md for why this is safe.
+    expectMultiThreadShape();
+    if (process.env.ROLLDOWN_WORKER_THREADS === undefined) {
+      expect(getAsyncRuntimeConfig()).toMatchObject({ workerThreads: 2, maxBlockingTasks: 1 });
+    }
+  },
+);
+
+test.runIf((capabilities.target === 'wasi-threads' || expectThreadedWasi) && laneIsSingle)(
+  'runs CurrentThread on threaded WASI under ROLLDOWN_RUNTIME=single',
+  () => {
+    expectCurrentThreadShape();
+  },
+);
+
+test.runIf(capabilities.target === 'wasi-threads' || expectThreadedWasi)(
+  'accepts either flavor before first use on threaded WASI',
+  () => {
+    // MultiThread is rejected only on threadless WASI.
     const initial = getAsyncRuntimeConfig();
     try {
+      configureAsyncRuntime({ flavor: 'CurrentThread' });
+      expectCurrentThreadShape();
+      // 2 from a CurrentThread start: the MultiThread minimum.
       configureAsyncRuntime({ flavor: 'MultiThread' });
-      const config = getAsyncRuntimeConfig();
-      expect(config.flavor).toBe('MultiThread');
-      // 2 from a CurrentThread start (the MultiThread minimum); 4 on the
-      // `ROLLDOWN_RUNTIME=multi ROLLDOWN_WORKER_THREADS=4` lane.
-      expect(config.workerThreads).toBeGreaterThanOrEqual(2);
-      expect(config.workerThreads).toBeLessThanOrEqual(4);
-      // Blocking admission keeps one runnable lane free.
-      expect(config.maxBlockingTasks).toBeGreaterThanOrEqual(1);
-      expect(config.maxBlockingTasks).toBeLessThanOrEqual(config.workerThreads - 1);
-
-      // The capability report follows the configured flavor.
-      expect(getRuntimeCapabilities()).toMatchObject({
-        target: 'wasi-threads',
-        wasi: true,
-        flavor: 'MultiThread',
-        threads: true,
-        timers: true,
-        devSupported: true,
-        watchSupported: false,
-      });
-      // Parallel plugins and symlink traversal stay native-only on every WASI artifact.
-      expect(getRuntimeSupport()).toMatchObject({
-        dev: true,
-        watch: false,
-        parallelPlugins: false,
-        symlinks: false,
-        threadlessWasi: false,
-        workerd: false,
-      });
+      expectMultiThreadShape();
+      expect(getAsyncRuntimeConfig().workerThreads).toBe(2);
     } finally {
       // Put back the lane's own configuration so the rest of this file runs on it.
       configureAsyncRuntime({
@@ -76,8 +131,8 @@ test.runIf(capabilities.target === 'wasi-threads' || expectThreadedWasi)(
   'executes threaded WASI while overlapping builds survive a concurrent close',
   { timeout: 20_000 },
   async () => {
-    // Runs on the lane's flavor: CurrentThread by default, MultiThread when the
-    // lane sets `ROLLDOWN_RUNTIME=multi` (`crates/rolldown_binding/src/async_runtime.rs`).
+    // Runs on the lane's flavor: MultiThread by default, CurrentThread when the
+    // lane sets `ROLLDOWN_RUNTIME=single` (`crates/rolldown_binding/src/async_runtime.rs`).
     const support = getRuntimeSupport();
     expect(support.pluginErrorMetadata).toBe(true);
     expect(support.threadlessWasi).toBe(false);

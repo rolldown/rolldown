@@ -5,12 +5,13 @@ import { getRuntimeCapabilities, getRuntimeSupport } from 'rolldown/experimental
 // at collection time.
 const capabilities = getRuntimeCapabilities();
 
-// The configured shared-runtime executor. Every WebAssembly build defaults to
-// 'CurrentThread'; threaded WASI can opt in to 'MultiThread'.
+// The configured shared-runtime executor. Native and threaded WASI builds default
+// to 'MultiThread' (ROLLDOWN_RUNTIME=single selects 'CurrentThread'); threadless
+// WASI is always 'CurrentThread'.
 export const runtimeFlavor: string = capabilities.flavor;
 
-// Everything scheduled on the calling thread: native with
-// ROLLDOWN_RUNTIME=single, or a WASI build on its default flavor.
+// Everything scheduled on the calling thread: native or threaded WASI with
+// ROLLDOWN_RUNTIME=single, or threadless WASI.
 export const isSingleThread: boolean = !capabilities.threads;
 
 // WebAssembly/WASI artifact ('wasi' or 'wasi-threads' target) -- distinct from a

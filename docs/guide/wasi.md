@@ -6,24 +6,25 @@ Rolldown publishes two WASI flavors:
 - `wasm32-wasip1` uses an unshared-memory, threadless loader.
   `@rolldown/browser` uses this flavor.
 
-Both run the shared tokio-free scheduler and default to its CurrentThread
-flavor, so by default every WASI artifact reports `backend: 'shared'`,
-`flavor: 'CurrentThread'` and `threads: false`.
+Both run the shared tokio-free scheduler and report `backend: 'shared'`.
 
-The threaded `wasm32-wasip1-threads` artifact also accepts the MultiThread
-flavor as an opt-in, with 2 to 4 scheduler workers:
+The threaded `wasm32-wasip1-threads` artifact defaults to the MultiThread
+flavor with 2 scheduler workers, and reports `flavor: 'MultiThread'` and
+`threads: true`. Set `ROLLDOWN_WORKER_THREADS` to use 2 to 4 workers. To run it
+on the CurrentThread flavor instead, set `ROLLDOWN_RUNTIME=single` in the
+environment, or call:
 
 ```js
 import { configureAsyncRuntime } from 'rolldown/experimental';
 
 // Before the first build, parse or transform call.
-configureAsyncRuntime({ flavor: 'MultiThread' });
+configureAsyncRuntime({ flavor: 'CurrentThread' });
 ```
 
-or `ROLLDOWN_RUNTIME=multi` (with an optional `ROLLDOWN_WORKER_THREADS` from 2
-to 4) in the environment. The threadless `wasm32-wasip1` artifact has no
-threads: `configureAsyncRuntime({ flavor: 'MultiThread' })` throws there and
-`ROLLDOWN_RUNTIME=multi` is ignored.
+The threadless `wasm32-wasip1` artifact has no threads. It always runs the
+CurrentThread flavor and reports `flavor: 'CurrentThread'` and
+`threads: false`: `configureAsyncRuntime({ flavor: 'MultiThread' })` throws
+there and `ROLLDOWN_RUNTIME=multi` is ignored.
 
 On hosts where V8 runs without its WebAssembly trap handler (for example AIX,
 32-bit Windows, or Node started with `--disable-wasm-trap-handler`), concurrent
@@ -49,16 +50,16 @@ runtime report.
 
 ## Support matrix
 
-| Feature                                          | Native MultiThread | Native CurrentThread  | Threaded WASI                                             | Threadless WASI                     |
-| ------------------------------------------------ | ------------------ | --------------------- | --------------------------------------------------------- | ----------------------------------- |
-| One-shot `rolldown()` / `build()`                | Yes                | Yes                   | Yes                                                       | Yes                                 |
-| `dev()`                                          | Yes                | No, fails immediately | MultiThread opt-in only; fails immediately on the default | No, fails immediately               |
-| `watch()`                                        | Yes                | Yes                   | No, fails immediately                                     | No, fails immediately               |
-| Async built-in-plugin resolution                 | Yes                | Yes                   | Yes                                                       | Yes                                 |
-| Complete plugin error metadata and cause chains  | Yes                | Yes                   | Yes                                                       | Yes                                 |
-| Symbolic-link traversal                          | Yes                | Yes                   | No                                                        | No                                  |
-| Managed deferred workerd loader                  | No                 | No                    | No                                                        | Through a public `./workerd` facade |
-| Native data released when its invocation settles | No                 | No                    | No                                                        | Yes, later reads throw              |
+| Feature                                          | Native MultiThread | Native CurrentThread  | Threaded WASI                                          | Threadless WASI                     |
+| ------------------------------------------------ | ------------------ | --------------------- | ------------------------------------------------------ | ----------------------------------- |
+| One-shot `rolldown()` / `build()`                | Yes                | Yes                   | Yes                                                    | Yes                                 |
+| `dev()`                                          | Yes                | No, fails immediately | Yes on the default; fails immediately on CurrentThread | No, fails immediately               |
+| `watch()`                                        | Yes                | Yes                   | No, fails immediately                                  | No, fails immediately               |
+| Async built-in-plugin resolution                 | Yes                | Yes                   | Yes                                                    | Yes                                 |
+| Complete plugin error metadata and cause chains  | Yes                | Yes                   | Yes                                                    | Yes                                 |
+| Symbolic-link traversal                          | Yes                | Yes                   | No                                                     | No                                  |
+| Managed deferred workerd loader                  | No                 | No                    | No                                                     | Through a public `./workerd` facade |
+| Native data released when its invocation settles | No                 | No                    | No                                                     | Yes, later reads throw              |
 
 In both WASI flavors, plugin hook failures retain the original JavaScript
 error's stack and custom properties, Rolldown's applicable `code`, `plugin`,

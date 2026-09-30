@@ -315,15 +315,17 @@ const threadlessCapabilities = {
   blockOnJsThreadSafe: false,
 };
 
+// The threaded artifact defaults to MultiThread (2 workers); this check runs it
+// without `ROLLDOWN_RUNTIME`.
 const threadedCapabilities = {
   backend: 'shared',
-  flavor: 'CurrentThread',
+  flavor: 'MultiThread',
   target: 'wasi-threads',
   wasi: true,
   asyncRuntimeBuild: true,
-  threads: false,
+  threads: true,
   timers: true,
-  devSupported: false,
+  devSupported: true,
   watchSupported: false,
   blockOnJsThreadSafe: false,
 };
@@ -397,7 +399,7 @@ function assertRootPackageExercise(stdout, flavor) {
     outputs: 1,
     capabilities: threadless ? threadlessCapabilities : threadedCapabilities,
     support: {
-      dev: false,
+      dev: !threadless,
       watch: false,
       dynamicImportVarsResolver: true,
       importGlobResolver: true,

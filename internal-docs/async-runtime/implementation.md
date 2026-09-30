@@ -136,15 +136,30 @@ crate freezes after first use.
   - `RuntimeEnv::from_process()` — the **only** env-read site: `ROLLDOWN_RUNTIME`,
     `ROLLDOWN_WORKER_THREADS`, `ROLLDOWN_MAX_BLOCKING_THREADS`,
     `ROLLDOWN_PARK_DEADLINE_MS`, `ROLLDOWN_DRAIN_LINGER_US`.
-  - `resolve_runtime_config_for(target, env)` — pure defaults table. Native ⇒
-    MultiThread; wasm ⇒ CurrentThread by default. Threadless `Wasi` is forced
-    to CurrentThread, normalizing an inherited `ROLLDOWN_RUNTIME=multi`
-    (Principle 1). `WasiThreads` honours `ROLLDOWN_RUNTIME=multi` and reads
-    `ROLLDOWN_WORKER_THREADS` with default 2 and ceiling 4 (the widest setting
-    the stress runs cover; see
+  - `resolve_runtime_config_for(target, env)` — pure defaults table:
+
+    | target        | default flavor | `ROLLDOWN_RUNTIME=single` | `=multi`      | `ROLLDOWN_WORKER_THREADS`    |
+    | ------------- | -------------- | ------------------------- | ------------- | ---------------------------- |
+    | `Native`      | MultiThread    | CurrentThread             | MultiThread   | host parallelism, cap 256    |
+    | `WasiThreads` | MultiThread    | CurrentThread             | MultiThread   | default 2, clamped to [2, 4] |
+    | `Wasi`        | CurrentThread  | CurrentThread             | CurrentThread | ignored (forced to one lane) |
+
+    Threadless `Wasi` is forced to CurrentThread, normalizing an inherited
+    `ROLLDOWN_RUNTIME=multi` (Principle 1). On `WasiThreads`,
+    `available_parallelism()` is 1, so the default of 2 is fixed, not
+    detected. 2 is the measured best (2026-09-30, M5 Max, release-wasi,
+    medians of 10 interleaved rounds): 16 concurrent builds took 571 ms on 2
+    workers vs 709 / 826 ms on 3 / 4 (1031 ms on 8 in another pass) and 552 ms
+    on CurrentThread; 32 builds with a JS plugin took 1922 ms on 2 workers vs
+    2069 ms on CurrentThread. The cause is wasi-libc dlmalloc's global lock,
+    which spins on `sched_yield`: 53% of sampled CPU on 8 workers, 16% on 2.
+    The first build pays about 21 ms more than CurrentThread for the Node
+    Worker startup of the pool (the same for any worker count). 4 is the
+    widest setting the stress runs cover (see
     [wasi-shared-memory-grow](../wasi-shared-memory-grow/implementation.md)).
     MultiThread worker count `= requested.max(2)` (truthful
     two-worker minimum); CurrentThread `= 1`.
+
   - `clamp_shared_blocking_tasks()` — blocking cap: CurrentThread ⇒ 1;
     MultiThread ⇒ `requested.min(worker_threads - 1).max(1)` (reserve one
     runnable lane, Principle 3).
@@ -171,8 +186,8 @@ default, maximum)` — shared clamp; treats `0`/garbage as unset so it cannot
 - `crates/rolldown_utils/src/lib.rs` (re-export of `napi-async-runtime`) —
   `MAX_ASYNC_RUNTIME_WORKER_THREADS = 256`; `max_async_runtime_worker_threads()`
   = `256.min(rayon::max_num_threads())` wherever OS threads exist (`255` on
-  `wasm32-wasip1-threads`), `1` on `wasm32-wasip1`. Rolldown reads it only on
-  native, in `resolve_runtime_config_for`.
+  `wasm32-wasip1-threads`), `1` on `wasm32-wasip1`. Rolldown reads it in
+  `resolve_runtime_config_for` on native and `WasiThreads`.
 - Root `Cargo.toml` `[patch.crates-io]` — `parking_lot_core` 0.9.12 picks a
   panicking parker ("Parking not supported on this platform") on
   `wasm32-wasip1-threads`, since stable rustc never sets
@@ -705,10 +720,10 @@ bundles on top of the cli's loader.
 The eager CJS and browser loaders for BOTH wasm
 flavors — `wasm32-wasip1` and threaded `wasm32-wasip1-threads` — register the
 v4 native CurrentThread runnable host and the JavaScript timer host before
-exposing the binding: since the registry napi pin, every wasm artifact defaults
-to the shared CurrentThread flavor (threaded WASI can opt in to MultiThread,
-Principle 1 of design.md), so a raw import of either shipped loader set must
-carry its own task/timer hosts or a build never completes. That bootstrap is
+exposing the binding: threadless WASI always runs the shared CurrentThread
+flavor and threaded WASI runs it under `ROLLDOWN_RUNTIME=single` (Principle 1
+of design.md), so a raw import of either shipped loader set must carry its own
+task/timer hosts or a build never completes. That bootstrap is
 `@napi-rs/cli`'s (`napi.wasm.asyncRuntime`), installed unconditionally by every
 generated loader, and it lives inside napi-rs's isolated-context initialization
 guard, so registration failure unregisters any installed host, destroys the

@@ -27,15 +27,19 @@ Rust core — see [implementation.md](./implementation.md).
 ## Design Principles
 
 1. **Thread availability is a build/runtime property, not an assumption.**
-   WebAssembly builds default to the current-thread flavor. Threadless
-   `wasm32-wasip1` supports only that flavor: the guard in
+   The default flavor follows the artifact's threads. Threadless
+   `wasm32-wasip1` supports only the current-thread flavor: the guard in
    [`configure_async_runtime`](../../crates/rolldown_binding/src/async_runtime.rs)
-   rejects the MultiThread opt-in there, and the resolver drops an inherited
-   `ROLLDOWN_RUNTIME=multi`. `wasm32-wasip1-threads` accepts the MultiThread
-   opt-in (`configureAsyncRuntime({ flavor: 'MultiThread' })`, or
-   `ROLLDOWN_RUNTIME=multi` with `ROLLDOWN_WORKER_THREADS` clamped to
-   [2, 4]) but does not default to it: making it the default is a product call
-   that is still open. Two blockers had to close first:
+   rejects a MultiThread request there, and the resolver drops an inherited
+   `ROLLDOWN_RUNTIME=multi`. `wasm32-wasip1-threads` defaults to the
+   multi-thread flavor with 2 workers (`ROLLDOWN_WORKER_THREADS` clamped to
+   [2, 4]); `ROLLDOWN_RUNTIME=single` or
+   `configureAsyncRuntime({ flavor: 'CurrentThread' })` opts out. Two workers
+   is the measured best there: every thread allocates through wasi-libc
+   dlmalloc, whose global lock spins on `sched_yield`, so 3, 4 or 8 workers
+   burn more CPU on that lock and build slower than 2 (see
+   [implementation.md](./implementation.md)). Two blockers had to close
+   before the multi-thread flavor could run there at all:
    `parking_lot_core`'s panicking stable wasm parker (a git
    `[patch.crates-io]` in the root `Cargo.toml`, see
    [implementation.md](./implementation.md)), and the V8 shared-memory size
@@ -406,8 +410,8 @@ Rust core — see [implementation.md](./implementation.md).
    synchronously submit diagnostic, cleanup, owner-release, or lifecycle work.
    The default detector-disabled runtime retains only predictable option
    branches and performs no admission atomics or publication locking.
-   Threaded-WASI artifacts run the same shared CurrentThread runtime as every
-   other artifact, so no JavaScript ownership protocol exists on any target:
+   Threaded-WASI artifacts run the same shared runtime as every other
+   artifact, so no JavaScript ownership protocol exists on any target:
    the N-API environment lifecycle owns the runtime everywhere, and there is
    nothing for a realm to reference-count.
    JavaScript close single-flight state is published before invoking cleanup,
@@ -457,10 +461,10 @@ Rust core — see [implementation.md](./implementation.md).
    scheduler, and the `just check-no-tokio` gate proves with
    `cargo tree -i tokio` that the shipped binding's dependency graph — native
    plus both WASI targets — and the CodSpeed bench harness stay tokio-free.
-   `wasm32-wasip1-threads` runs the current-thread flavor; napi-rs async work
-   there is served by the host loader's emnapi worker pool, not by a runtime
-   Rolldown owns. Threadless `wasm32-wasip1` runs the same flavor with no
-   workers at all.
+   `wasm32-wasip1-threads` runs the shared multi-thread flavor by default;
+   napi-rs async work there (`parse`, `transform`) is served by the host
+   loader's emnapi worker pool, not by a runtime Rolldown owns. Threadless
+   `wasm32-wasip1` runs the current-thread flavor with no workers at all.
 
 ## Background
 

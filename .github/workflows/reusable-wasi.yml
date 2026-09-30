@@ -44,16 +44,38 @@ jobs:
       - name: Build Rolldown with threaded WASI binding
         run: just build-rolldown-wasi
 
+      # The threaded artifact defaults to MultiThread (2 workers); ROLLDOWN_RUNTIME=single
+      # selects CurrentThread. Each threaded suite runs once per flavor: the default
+      # (MultiThread) first, then the CurrentThread variant.
+      #
       # Separate from `test:main` on purpose: managed-workerd tests need the threadless
       # Wasm file, and Node's `--input-type` child-process probes are invalid once
       # inherited by file-based napi-rs worker entrypoints.
       #
-      # The suite used to be flaky under the threaded wasm binding (~1/3 of runs):
-      # a "memory access out of bounds" trap from a V8 bug with shared memory
-      # growth (#10697), now worked around by the `wasm_heap_sync` allocator (see
+      # No retry on the MultiThread steps: they never had one, and a trap here is a
+      # regression of the `wasm_heap_sync` workaround (#10697), not a known flake.
+      - name: Node Test (threaded WASI, MultiThread default)
+        run: timeout 300 vp run --filter rolldown-tests test:wasi-threaded
+
+      # Catches a dropped entry in copy-addon-plugin.ts, which otherwise ships silently.
+      - name: Assert threaded WASI dist file set
+        run: node scripts/wasi/check-wasi-dist-files.mjs threaded
+
+      - name: Stability Test (threaded WASI, MultiThread default)
+        run: timeout 300 vp run --filter rolldown-tests test:stability
+
+      # Pins the lane's shape: MultiThread with 2 workers, and `dev()` builds.
+      - name: Threaded WASI Runtime Lifecycle Test (MultiThread default)
+        run: vp run --filter rolldown-tests test:wasi-runtime-lifecycle
+
+      # The retry lives on this CurrentThread step because this is where the historical
+      # flake ran: until the threaded artifact defaulted to MultiThread, this suite ran
+      # on CurrentThread and was flaky (~1/3 of runs) with a "memory access out of
+      # bounds" trap from a V8 bug with shared memory growth (#10697), now worked around
+      # by the `wasm_heap_sync` allocator (see
       # internal-docs/wasi-shared-memory-grow/design.md). The retry stays for the
-      # workaround's known gaps; the stress step below runs without retries and
-      # fails if the workaround regresses.
+      # workaround's known gaps; the stress step below runs without retries and fails
+      # if the workaround regresses.
       # Retry the whole step (the crash takes down the wasm process, so a per-test
       # retry cannot help); a real failure still fails all attempts and reds the job.
       # The crash also shows up as a hung suite: a dead worker is dropped
@@ -61,7 +83,9 @@ jobs:
       # stalls on the first attempt without ever retrying, eating the whole
       # 45-minute job budget. `timeout` caps each attempt so a hang becomes a
       # failed attempt (exit 124) and retries; the suite finishes in 1-2 min.
-      - name: Node Test (threaded WASI)
+      - name: Node Test (threaded WASI, CurrentThread, ROLLDOWN_RUNTIME=single)
+        env:
+          ROLLDOWN_RUNTIME: single
         run: |
           for attempt in 1 2 3; do
             if timeout 300 vp run --filter rolldown-tests test:wasi-threaded; then
@@ -76,35 +100,23 @@ jobs:
           done
           exit 1
 
-      # Catches a dropped entry in copy-addon-plugin.ts, which otherwise ships silently.
-      - name: Assert threaded WASI dist file set
-        run: node scripts/wasi/check-wasi-dist-files.mjs threaded
-
-      - name: Stability Test (threaded WASI)
-        run: vp run --filter rolldown-tests test:stability
-
-      # Pins the default CurrentThread shape, so it runs without ROLLDOWN_RUNTIME.
-      - name: Threaded WASI Runtime Lifecycle Test
-        run: vp run --filter rolldown-tests test:wasi-runtime-lifecycle
-
-      # The threaded artifact accepts the MultiThread opt-in; the default stays
-      # CurrentThread. Run the threaded suites again on MultiThread with 4 workers.
-      # No retry here: a trap on this lane is a regression, not a known flake.
-      - name: Node Test (threaded WASI, MultiThread)
+      - name: Stability Test (threaded WASI, CurrentThread, ROLLDOWN_RUNTIME=single)
         env:
-          ROLLDOWN_RUNTIME: multi
-          ROLLDOWN_WORKER_THREADS: '4'
-        run: timeout 300 vp run --filter rolldown-tests test:wasi-threaded
-
-      - name: Stability Test (threaded WASI, MultiThread)
-        env:
-          ROLLDOWN_RUNTIME: multi
-          ROLLDOWN_WORKER_THREADS: '4'
+          ROLLDOWN_RUNTIME: single
         run: timeout 300 vp run --filter rolldown-tests test:stability
 
-      # 16 concurrent builds, parse() and transform() calls under CurrentThread and
-      # MultiThread w4. Without the `wasm_heap_sync` workaround one run fails nearly
-      # every time, so it is not retried. Each case has its own 60 s timeout.
+      # Pins the CurrentThread shape: one lane, and `dev()` fails closed.
+      - name: Threaded WASI Runtime Lifecycle Test (CurrentThread, ROLLDOWN_RUNTIME=single)
+        env:
+          ROLLDOWN_RUNTIME: single
+        run: vp run --filter rolldown-tests test:wasi-runtime-lifecycle
+
+      # 16 concurrent builds, parse() and transform() calls under CurrentThread
+      # (ROLLDOWN_RUNTIME=single), the default MultiThread (2 workers, builds only) and
+      # MultiThread w4. Each case sets its own flavor, so one step covers both flavors
+      # and a ROLLDOWN_RUNTIME=single copy of this step would run the same cases again.
+      # Without the `wasm_heap_sync` workaround one run fails nearly every time, so it
+      # is not retried. Each case has its own 60 s timeout.
       # See internal-docs/wasi-shared-memory-grow/design.md
       - name: Threaded WASI memory stress
         run: timeout 600 vp run --filter rolldown-tests test:wasi-threaded-stress

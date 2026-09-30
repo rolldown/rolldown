@@ -9,8 +9,9 @@ of bounds" under concurrent load because of a V8 bug: a thread that did not run
 in its own allocator: after an allocation that may sit in pages this thread has not
 seen, the thread runs `memory.grow(0)`, which makes V8 reload the size. The same
 refresh runs at every scheduler handoff (task poll, blocking closure start), for
-work that moves between threads. The
-workaround lives only in the threaded build and goes away once the Node versions we
+work that moves between threads. The workaround is what lets the threaded build
+default to the MultiThread flavor (2 workers). It
+lives only in the threaded build and goes away once the Node versions we
 support ship the V8 fix. For the machinery, see
 [implementation.md](./implementation.md). Addresses #10697.
 
@@ -125,14 +126,15 @@ worker B: size stays stale until B handles that interrupt
 | code lane, debug                                              | 83/105 fail | 105/105 pass |
 | code lane, release-wasi                                       | 49/70 fail  | 70/70 pass   |
 
-The MultiThread rows were measured before the threaded WASI binding accepted the
-MultiThread opt-in (they lifted the guard in a local build). That binding now
-accepts it and still defaults to CurrentThread, which the CurrentThread rows
-cover. The "landing tree" rows ran on the commit that adds this workaround.
+The MultiThread rows were measured before the threaded WASI binding accepted
+MultiThread (they lifted the guard in a local build). That binding now defaults to
+MultiThread with 2 workers; `ROLLDOWN_RUNTIME=single` selects CurrentThread, which
+the CurrentThread rows cover. The "landing tree" rows ran on the commit that adds this workaround.
 
 The CI stress script `packages/rolldown/tests/wasi/threaded-memory-stress.mjs`
-runs six of these loads in one pass (builds with a JS plugin, parse and transform,
-each under CurrentThread and MultiThread w4). Against the release wasm files of
+runs these loads in one pass (builds with a JS plugin, parse and transform, each
+under CurrentThread and MultiThread w4, plus builds on the default MultiThread w2).
+The base vs heap-sync rounds below ran its first six-case version. Against the release wasm files of
 the table (base vs heap-sync), 3 interleaved rounds: base failed every round
 (4 or 5 of 6 cases trapped with "memory access out of bounds"), heap-sync passed
 every round.

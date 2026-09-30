@@ -278,12 +278,12 @@ fn safe_js_number(value: u64) -> f64 {
 pub fn configure_async_runtime(options: BindingRuntimeOptions) -> napi::Result<()> {
   let patch: RuntimeOptionsPatch = options.try_into()?;
   // Only threadless wasm32-wasip1 rejects MultiThread: it has no threads to run workers
-  // on. wasm32-wasip1-threads accepts the opt-in. The root Cargo.toml `[patch.crates-io]`
-  // gives parking_lot_core a working parker there, and `wasm_heap_sync` keeps each
-  // thread's view of the shared memory size fresh (the V8 bug behind the out-of-bounds
-  // traps, see internal-docs/wasi-shared-memory-grow/design.md). CurrentThread stays the
-  // default on every wasm artifact (`resolve_runtime_config_for`). The message is the one
-  // 0.2.2 returned from `configure_partial`, so the JS-visible error does not change.
+  // on. wasm32-wasip1-threads runs MultiThread by default (`resolve_runtime_config_for`)
+  // and accepts either flavor here. The root Cargo.toml `[patch.crates-io]` gives
+  // parking_lot_core a working parker there, and `wasm_heap_sync` keeps each thread's
+  // view of the shared memory size fresh (the V8 bug behind the out-of-bounds traps, see
+  // internal-docs/wasi-shared-memory-grow/design.md). The message is the one 0.2.2
+  // returned from `configure_partial`, so the JS-visible error does not change.
   // See internal-docs/async-runtime/design.md
   if !multi_thread_available(compiled_target()) && patch.flavor == Some(RuntimeFlavor::MultiThread)
   {
@@ -294,8 +294,8 @@ pub fn configure_async_runtime(options: BindingRuntimeOptions) -> napi::Result<(
   configure_partial(patch).map_err(to_napi_error)
 }
 
-/// Whether `configureAsyncRuntime` accepts the MultiThread opt-in on `target`: everywhere
-/// except threadless wasm32-wasip1. Split out so the unit tests cover every target.
+/// Whether `configureAsyncRuntime` accepts MultiThread on `target`: everywhere except
+/// threadless wasm32-wasip1. Split out so the unit tests cover every target.
 const fn multi_thread_available(target: ResolvedRuntimeTarget) -> bool {
   !matches!(target, ResolvedRuntimeTarget::Wasi)
 }
@@ -432,17 +432,24 @@ fn resolve_runtime_config_for(
 ) -> ResolvedRuntimeConfig {
   use crate::env_config::resolve_thread_count;
   let native = matches!(target, ResolvedRuntimeTarget::Native);
-  let default_flavor =
-    if native { RuntimeFlavor::MultiThread } else { RuntimeFlavor::CurrentThread };
-  let requested_flavor = resolve_runtime_flavor(env.runtime.as_deref(), default_flavor);
-  // Every wasm artifact defaults to CurrentThread. Threadless wasm32-wasip1 is forced to
-  // it: `ROLLDOWN_RUNTIME=multi` leaked in from a native process environment must not
-  // reach `configure` at module init there, and `configure_async_runtime` holds the same
-  // line for the explicit JS opt-in. wasm32-wasip1-threads honours `ROLLDOWN_RUNTIME=multi`
-  // and `ROLLDOWN_WORKER_THREADS`, clamped to [2, 4]: the default is 2, the MultiThread
-  // minimum, and 4 is the widest setting the stress runs cover. The memory-size workaround
-  // that makes it safe: internal-docs/wasi-shared-memory-grow/design.md.
   let threads = matches!(target, ResolvedRuntimeTarget::WasiThreads);
+  // Default flavor per target: native and wasm32-wasip1-threads run MultiThread,
+  // threadless wasm32-wasip1 runs CurrentThread. `ROLLDOWN_RUNTIME=single` selects
+  // CurrentThread on the first two.
+  //
+  // Threadless wasm32-wasip1 is forced to CurrentThread: `ROLLDOWN_RUNTIME=multi` leaked
+  // in from a native process environment must not reach `configure` at module init
+  // there, and `configure_async_runtime` holds the same line for the explicit JS request.
+  //
+  // wasm32-wasip1-threads reads `ROLLDOWN_WORKER_THREADS`, clamped to [2, 4], default 2.
+  // Two workers are the fastest measured setting there: every thread allocates through
+  // wasi-libc dlmalloc, whose global lock spins with `sched_yield`, so wider pools spend
+  // more CPU on that lock and build slower. 4 is the widest setting the stress runs
+  // cover. The memory-size workaround that makes MultiThread safe there:
+  // internal-docs/wasi-shared-memory-grow/design.md.
+  let default_flavor =
+    if native || threads { RuntimeFlavor::MultiThread } else { RuntimeFlavor::CurrentThread };
+  let requested_flavor = resolve_runtime_flavor(env.runtime.as_deref(), default_flavor);
   let flavor = if native || threads { requested_flavor } else { RuntimeFlavor::CurrentThread };
   let requested_worker_threads = if threads {
     resolve_thread_count(env.worker_threads.clone(), 2, max_async_runtime_worker_threads().min(4))
@@ -3380,34 +3387,47 @@ mod tests {
   }
 
   #[test]
-  fn shared_wasi_defaults_keep_runtime_options_parity() {
-    for target in [ResolvedRuntimeTarget::Wasi, ResolvedRuntimeTarget::WasiThreads] {
-      let resolved = resolve(target, &env());
-      assert_eq!(resolved.target, target);
-      assert_eq!(
-        resolved.flavor,
-        RuntimeFlavor::CurrentThread,
-        "the shared wasm default flavor is CurrentThread"
-      );
-      assert_eq!(
-        resolved.worker_threads, 1,
-        "CurrentThread reporting must match its single physical execution lane"
-      );
-      assert_eq!(resolved.max_blocking_tasks, 1);
+  fn shared_wasi_defaults_follow_each_artifact_thread_support() {
+    // Threadless wasm32-wasip1 has one execution lane: CurrentThread.
+    let threadless = resolve(ResolvedRuntimeTarget::Wasi, &env());
+    assert_eq!(threadless.target, ResolvedRuntimeTarget::Wasi);
+    assert_eq!(
+      (threadless.flavor, threadless.worker_threads, threadless.max_blocking_tasks),
+      (RuntimeFlavor::CurrentThread, 1, 1),
+      "threadless wasm defaults to CurrentThread and reports its single lane"
+    );
 
-      // An explicit `ROLLDOWN_RUNTIME=single` keeps the same shape on both targets.
-      let single = resolve(
-        target,
-        &RuntimeEnv {
-          runtime: Some("single".to_string()),
-          worker_threads: Some("9".to_string()),
-          ..RuntimeEnv::default()
-        },
-      );
-      assert_eq!(
-        (single.flavor, single.worker_threads, single.max_blocking_tasks),
-        (RuntimeFlavor::CurrentThread, 1, 1)
-      );
+    // wasm32-wasip1-threads defaults to MultiThread with two workers; blocking
+    // admission keeps one runnable lane.
+    let threaded = resolve(ResolvedRuntimeTarget::WasiThreads, &env());
+    assert_eq!(threaded.target, ResolvedRuntimeTarget::WasiThreads);
+    assert_eq!(
+      (threaded.flavor, threaded.worker_threads, threaded.max_blocking_tasks),
+      (RuntimeFlavor::MultiThread, 2, 1),
+      "threaded wasm defaults to MultiThread with two workers"
+    );
+  }
+
+  #[test]
+  fn wasi_single_runtime_env_selects_current_thread_on_both_targets() {
+    // `ROLLDOWN_RUNTIME=single` is the opt-out on wasm32-wasip1-threads and keeps the
+    // same one-lane shape on threadless wasm32-wasip1; a worker count is ignored.
+    for target in [ResolvedRuntimeTarget::Wasi, ResolvedRuntimeTarget::WasiThreads] {
+      for raw in ["single", "single-thread", "current", "current-thread"] {
+        let single = resolve(
+          target,
+          &RuntimeEnv {
+            runtime: Some(raw.to_string()),
+            worker_threads: Some("9".to_string()),
+            ..RuntimeEnv::default()
+          },
+        );
+        assert_eq!(
+          (single.flavor, single.worker_threads, single.max_blocking_tasks),
+          (RuntimeFlavor::CurrentThread, 1, 1),
+          "{target:?} ROLLDOWN_RUNTIME={raw}"
+        );
+      }
     }
   }
 
@@ -3431,36 +3451,40 @@ mod tests {
   }
 
   #[test]
-  fn threaded_wasi_honours_the_multi_thread_env_opt_in_within_two_to_four_workers() {
+  fn threaded_wasi_runs_multi_thread_by_default_within_two_to_four_workers() {
     // See internal-docs/wasi-shared-memory-grow/design.md for why this is safe now.
-    let resolve_threads = |worker_threads: Option<&str>, max_blocking_threads: Option<&str>| {
-      resolve(
-        ResolvedRuntimeTarget::WasiThreads,
-        &RuntimeEnv {
-          runtime: Some("multi".to_string()),
-          worker_threads: worker_threads.map(str::to_string),
-          max_blocking_threads: max_blocking_threads.map(str::to_string),
-          ..RuntimeEnv::default()
-        },
-      )
-    };
+    // `ROLLDOWN_RUNTIME` unset, `multi`, or unknown all give the MultiThread default.
+    for runtime in [None, Some("multi"), Some("multi-thread"), Some("turbo")] {
+      let resolve_threads = |worker_threads: Option<&str>, max_blocking_threads: Option<&str>| {
+        resolve(
+          ResolvedRuntimeTarget::WasiThreads,
+          &RuntimeEnv {
+            runtime: runtime.map(str::to_string),
+            worker_threads: worker_threads.map(str::to_string),
+            max_blocking_threads: max_blocking_threads.map(str::to_string),
+            ..RuntimeEnv::default()
+          },
+        )
+      };
 
-    // Clamped to the 4-worker ceiling; blocking admission keeps one runnable lane.
-    let wide = resolve_threads(Some("9"), Some("3"));
-    assert_eq!(wide.target, ResolvedRuntimeTarget::WasiThreads);
-    assert_eq!(wide.flavor, RuntimeFlavor::MultiThread);
-    assert_eq!((wide.worker_threads, wide.max_blocking_tasks), (4, 3));
+      // Clamped to the 4-worker ceiling; blocking admission keeps one runnable lane.
+      let wide = resolve_threads(Some("9"), Some("3"));
+      assert_eq!(wide.target, ResolvedRuntimeTarget::WasiThreads);
+      assert_eq!(wide.flavor, RuntimeFlavor::MultiThread, "ROLLDOWN_RUNTIME={runtime:?}");
+      assert_eq!((wide.worker_threads, wide.max_blocking_tasks), (4, 3));
 
-    // Unset defaults to the MultiThread minimum of two.
-    let unset = resolve_threads(None, None);
-    assert_eq!(
-      (unset.flavor, unset.worker_threads, unset.max_blocking_tasks),
-      (RuntimeFlavor::MultiThread, 2, 1)
-    );
+      // Unset defaults to two workers, the MultiThread minimum.
+      let unset = resolve_threads(None, None);
+      assert_eq!(
+        (unset.flavor, unset.worker_threads, unset.max_blocking_tasks),
+        (RuntimeFlavor::MultiThread, 2, 1),
+        "ROLLDOWN_RUNTIME={runtime:?}"
+      );
 
-    // Values inside the range pass through; below it rises to the minimum.
-    assert_eq!(resolve_threads(Some("3"), None).worker_threads, 3);
-    assert_eq!(resolve_threads(Some("1"), None).worker_threads, 2);
+      // Values inside the range pass through; below it rises to the minimum.
+      assert_eq!(resolve_threads(Some("3"), None).worker_threads, 3);
+      assert_eq!(resolve_threads(Some("1"), None).worker_threads, 2);
+    }
   }
 
   #[test]

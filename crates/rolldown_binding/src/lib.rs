@@ -45,10 +45,10 @@ static ALLOC: mimalloc_safe::MiMalloc = mimalloc_safe::MiMalloc;
 static ALLOC: rolldown_tracking_allocator::TrackingAllocator =
   rolldown_tracking_allocator::TrackingAllocator;
 
-// Threaded WASI: refresh each thread's view of the shared memory size after dlmalloc grows
-// it, working around a V8 bug. `rolldown_wasi_threads` is set by build.rs for
-// `wasm32-wasip1-threads` only; build.rs also routes libc's calloc / realloc / aligned
-// allocators here with `--wrap`. See internal-docs/wasi-shared-memory-grow/design.md
+// Threaded WASI: one lock around dlmalloc that refreshes each thread's view of the shared
+// memory size under it, working around a V8 bug. `rolldown_wasi_threads` is set by build.rs
+// for `wasm32-wasip1-threads` only; build.rs also routes every libc allocator entry and
+// `sbrk` here with `--wrap`. See internal-docs/wasi-shared-memory-grow/design.md
 #[cfg(all(target_family = "wasm", rolldown_wasi_threads))]
 mod wasm_heap_sync;
 #[cfg(all(target_family = "wasm", rolldown_wasi_threads))]

@@ -26,9 +26,12 @@ CurrentThread flavor and reports `flavor: 'CurrentThread'` and
 `threads: false`: `configureAsyncRuntime({ flavor: 'MultiThread' })` throws
 there and `ROLLDOWN_RUNTIME=multi` is ignored.
 
-On hosts where V8 runs without its WebAssembly trap handler (for example AIX,
-32-bit Windows, or Node started with `--disable-wasm-trap-handler`), concurrent
-work on the threaded artifact can hang.
+The threaded artifact works around a V8 bug with shared memory growth, including
+on hosts where V8 runs without its WebAssembly trap handler (for example AIX,
+32-bit Windows, or Node started with `--disable-wasm-trap-handler`). On such hosts
+a rare failure is still possible once the WebAssembly heap grows past about
+1 GiB. The threaded artifact's heap is limited to about 1.9 GiB: Node's WASI
+rejects memory addresses at or above 2 GiB.
 
 Query the loaded artifact instead of inferring support from environment
 variables:

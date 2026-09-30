@@ -126,4 +126,5 @@ data-parallel compute stays sequential on every WebAssembly build. The
 threadless `wasm32-wasip1` build always runs `CurrentThread` and rejects
 `MultiThread`. Watch mode is unsupported on every WASI artifact.
 On hosts where V8 runs without its WebAssembly trap handler (for example AIX or
-32-bit Windows), `MultiThread` on the threaded build can hang.
+32-bit Windows), `MultiThread` on the threaded build works as well; a rare failure
+is still possible there once the WebAssembly heap grows past about 1 GiB.

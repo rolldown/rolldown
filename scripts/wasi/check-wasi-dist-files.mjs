@@ -16,6 +16,8 @@ import * as fs from 'node:fs';
 import * as path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
+import { EXPORT_KIND_FUNCTION, readExports } from './wasm-sections.mjs';
+
 const REPO_ROOT = fileURLToPath(new URL('../../', import.meta.url));
 
 // Canonical per-flavor artifact sets. Keep in sync with the naming matrix in
@@ -122,27 +124,69 @@ if (
   process.exit(1);
 }
 
-// The threaded wasm must carry the heap-sync allocator wrappers that work around
-// V8's stale shared-memory size on threads that did not grow the memory; the
+// The threaded wasm must carry the heap-sync allocator that works around V8's
+// stale shared-memory size on threads that did not grow the memory; the
 // single-thread wasm must not (it has one thread, and build.rs only adds the
-// `--wrap` link args for wasm32-wasip1-threads). A missing wrapper means the
-// C-side calloc / realloc run unguarded again.
+// `--wrap` link args for wasm32-wasip1-threads). On the threaded wasm the
+// exports named `malloc` / `free` (what @emnapi/core calls) must be the locked
+// wrappers: packages/rolldown/build-binding.ts runs
+// scripts/wasi/rename-wasm-allocator-exports.mjs, which points them at the
+// functions exported as `rolldown_heap_sync_malloc` / `rolldown_heap_sync_free`
+// and drops `__wrap_malloc` / `__wrap_free`. A wasm that skipped that step has
+// no `malloc` export at all, so this check cannot pass on it.
 // See internal-docs/wasi-shared-memory-grow/implementation.md
-const HEAP_SYNC_EXPORTS = ['__wrap_calloc', '__wrap_realloc'];
+const HEAP_SYNC_EXPORTS = [
+  '__wrap_calloc',
+  '__wrap_realloc',
+  '__wrap_posix_memalign',
+  '__wrap_sbrk',
+  'rolldown_heap_sync_malloc',
+  'rolldown_heap_sync_free',
+  'rolldown_heap_sync_stat',
+];
 const wasmFile = expected.find((f) => f.endsWith('.wasm'));
-const wasmExports = new Set(
-  WebAssembly.Module.exports(
-    new WebAssembly.Module(fs.readFileSync(path.join(distDir, wasmFile))),
-  ).map(({ name }) => name),
+const wasmExports = new Map(
+  readExports(new Uint8Array(fs.readFileSync(path.join(distDir, wasmFile)))).map((entry) => [
+    entry.name,
+    entry,
+  ]),
 );
-const heapSyncFailures =
-  flavor === 'threaded'
-    ? HEAP_SYNC_EXPORTS.filter((name) => !wasmExports.has(name)).map(
-        (name) => `missing export ${name} (threaded wasm must link the heap-sync allocator)`,
-      )
-    : HEAP_SYNC_EXPORTS.filter((name) => wasmExports.has(name)).map(
-        (name) => `unexpected export ${name} (heap-sync allocator is threaded-only)`,
+const heapSyncFailures = [];
+if (flavor === 'threaded') {
+  for (const name of HEAP_SYNC_EXPORTS) {
+    if (wasmExports.get(name)?.kind !== EXPORT_KIND_FUNCTION) {
+      heapSyncFailures.push(
+        `missing function export ${name} (threaded wasm must link the heap-sync allocator)`,
       );
+    }
+  }
+  for (const name of ['malloc', 'free']) {
+    const exported = wasmExports.get(name);
+    const marker = wasmExports.get(`rolldown_heap_sync_${name}`);
+    if (!exported) {
+      heapSyncFailures.push(
+        `missing export ${name} (scripts/wasi/rename-wasm-allocator-exports.mjs did not run)`,
+      );
+    } else if (
+      !marker ||
+      exported.kind !== EXPORT_KIND_FUNCTION ||
+      exported.index !== marker.index
+    ) {
+      heapSyncFailures.push(
+        `export ${name} is function ${exported.index}, not the heap-sync wrapper rolldown_heap_sync_${name} (function ${marker?.index})`,
+      );
+    }
+    if (wasmExports.has(`__wrap_${name}`)) {
+      heapSyncFailures.push(`unexpected export __wrap_${name} (the rename step must drop it)`);
+    }
+  }
+} else {
+  for (const name of wasmExports.keys()) {
+    if (name.startsWith('__wrap_') || name.startsWith('rolldown_heap_sync_')) {
+      heapSyncFailures.push(`unexpected export ${name} (heap-sync allocator is threaded-only)`);
+    }
+  }
+}
 if (heapSyncFailures.length > 0) {
   console.error(`WASI heap-sync export check failed for flavor '${flavor}' in ${wasmFile}:`);
   for (const failure of heapSyncFailures) {
@@ -150,8 +194,9 @@ if (heapSyncFailures.length > 0) {
   }
   console.error();
   console.error(
-    'Check the `--wrap` link args in crates/rolldown_binding/build.rs and the ' +
-      '`rolldown_wasi_threads` cfg on crates/rolldown_binding/src/wasm_heap_sync.rs.',
+    'Check the `--wrap` link args in crates/rolldown_binding/build.rs, the ' +
+      '`rolldown_wasi_threads` cfg on crates/rolldown_binding/src/wasm_heap_sync.rs and the ' +
+      'rename step in packages/rolldown/build-binding.ts.',
   );
   process.exit(1);
 }
@@ -165,6 +210,6 @@ for (const file of supportFiles) {
   packaged.push(`  ${file} (${size} bytes)`);
 }
 console.log(
-  `OK: '${flavor}' WASI dist file set complete in ${distDir} (heap-sync exports ${flavor === 'threaded' ? 'present' : 'absent'}):`,
+  `OK: '${flavor}' WASI dist file set complete in ${distDir} (heap-sync allocator ${flavor === 'threaded' ? 'linked, malloc/free renamed' : 'absent'}):`,
 );
 console.log(packaged.join('\n'));

@@ -65,6 +65,9 @@ try {
   } finally {
     restoreInactiveWasiDeclaration();
   }
+  if (argsOptions.target === WASI_THREADS_TARGET) {
+    renameWasiAllocatorExports();
+  }
   validateWasiBindingContextLifecycles();
   validateAsyncRuntimeHostExports();
   if (argsOptions.target === WASI_THREADS_TARGET) {
@@ -119,6 +122,22 @@ function resolveRustcPath(): string {
     }).trim();
     return join(sysroot, 'bin', process.platform === 'win32' ? 'rustc.exe' : 'rustc');
   }
+}
+
+// The threaded link wraps `malloc` / `free` (crates/rolldown_binding/build.rs), which
+// renames the exports @emnapi/core calls. Point `malloc` / `free` at the heap-sync
+// wrappers in every wasm the build produced; without this step loading fails with
+// "malloc is not exported", and scripts/wasi/check-wasi-dist-files.mjs fails too.
+// See internal-docs/wasi-shared-memory-grow/implementation.md
+function renameWasiAllocatorExports(): void {
+  const artifacts = [`${WASI_BINARY_NAME}.wasm`, `${WASI_BINARY_NAME}.debug.wasm`]
+    .map((name) => join(__dirname, 'src', name))
+    .filter((artifact) => existsSync(artifact));
+  execFileSync(
+    process.execPath,
+    [join(__dirname, '../../scripts/wasi/rename-wasm-allocator-exports.mjs'), ...artifacts],
+    { stdio: 'inherit' },
+  );
 }
 
 function validateWasiReactorArtifacts(): void {

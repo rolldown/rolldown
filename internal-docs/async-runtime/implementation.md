@@ -706,6 +706,14 @@ failure in Rolldown's post-build patching, validation, or loader generation
 restores every overwritten generated file and removes only files created by
 that invocation. The root facade is managed explicitly rather than by a broad
 JavaScript-file pattern, so unrelated sources remain outside the transaction.
+After a threaded (`wasm32-wasip1-threads`) napi build, and inside that
+transaction, it runs `scripts/wasi/rename-wasm-allocator-exports.mjs` on the
+threaded `.wasm` / `.debug.wasm`: the heap-sync allocator's `--wrap=malloc` /
+`--wrap=free` renames the `malloc` / `free` exports `@emnapi/core` calls, and the
+step points them back at the locked wrappers (see
+`../wasi-shared-memory-grow/implementation.md`). Every workflow that builds the
+threaded artifact goes through `build-binding.ts`, so none can skip it; a wasm
+that did would fail to load ("malloc is not exported").
 
 `@napi-rs/cli` renders the deferred workerd loader
 (`rolldown-binding.wasip1-deferred.js` and its `.d.ts`) on every threadless napi

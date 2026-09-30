@@ -121,6 +121,38 @@ jobs:
       - name: Threaded WASI memory stress
         run: timeout 600 vp run --filter rolldown-tests test:wasi-threaded-stress
 
+      # The heap-sync allocator lock (#10697) on hosts without V8's wasm trap handler,
+      # where plain loads and stores are bounds-checked against a thread's stale memory
+      # size too. `--wasm-enforce-bounds-checks` stands in for such hosts, and
+      # `--disable-wasm-trap-handler` turns the handler off. Before the lock these runs
+      # trapped or hung (MultiThread w4 bundles: 0/20 and 0/10 passed). Not retried:
+      # one failure is a regression. See internal-docs/wasi-shared-memory-grow/design.md
+      - name: Threaded WASI heap sync without trap handler (bounds checks, 20 runs)
+        run: timeout 300 vp run --filter rolldown-tests test:wasi-threaded-stress:bounds-checks
+
+      - name: Threaded WASI heap sync without trap handler (handler off, 10 runs)
+        run: timeout 300 vp run --filter rolldown-tests test:wasi-threaded-stress:no-trap-handler
+
+      # The loader's shared memory starts at the module's minimum here, so the heap grows
+      # while four workers allocate (each run asserts that it did), under bounds checks:
+      # plain builds, then builds with an async JS plugin (blocks cross between the
+      # workers and the JS thread).
+      - name: Threaded WASI heap sync with forced growth (20 runs)
+        run: timeout 300 vp run --filter rolldown-tests test:wasi-threaded-stress:forced-growth
+
+      - name: Threaded WASI heap sync with forced growth and JS plugin handoff (20 runs)
+        run: timeout 300 vp run --filter rolldown-tests test:wasi-threaded-stress:handoff
+
+      # Holds 1.5 GiB inside wasm, then builds: the allocator uses the loader's initial
+      # memory before it grows, so the heap stays below 2^31 (Node's `node:wasi` rejects
+      # pointers above it). Before, the heap failed at about 1 GiB.
+      - name: Threaded WASI heap ceiling
+        run: timeout 300 vp run --filter rolldown-tests test:wasi-threaded-stress:heap-ceiling
+
+      # With the default loader, 16 builds never grow the memory.
+      - name: Threaded WASI heap grows only past the initial memory
+        run: timeout 300 vp run --filter rolldown-tests test:wasi-threaded-stress:no-growth
+
       # Forces a pool worker's wasm thread to die (MultiThread w4, 16 concurrent
       # builds) and checks the loader's crash latch: an unhandled crash exits
       # non-zero, and the public disposer rejects instead of hanging. Each crash

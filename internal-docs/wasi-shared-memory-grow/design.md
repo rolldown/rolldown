@@ -6,14 +6,18 @@ The threaded WASI binding (`wasm32-wasip1-threads`) traps with "memory access ou
 of bounds" under concurrent load because of a V8 bug: a thread that did not run
 `memory.grow` keeps a stale memory size in its running wasm code, and `memory.fill`,
 `memory.copy`, Liftoff atomics and atomic wait/notify are bounds-checked against
-it. Rolldown works around it in its own allocator: after an allocation that may
-sit in pages this thread has not seen, the thread runs `memory.grow(0)`, which
-makes V8 reload the size. The same refresh runs at every scheduler handoff (task
-poll, blocking closure start), for work that moves between threads. The
-workaround is what lets the threaded build default to the MultiThread flavor (2
-workers). It lives only in the threaded build and goes away once the Node
-versions we support ship the V8 fix. For the machinery, see
-[implementation.md](./implementation.md). Addresses #10697.
+it; on hosts without V8's wasm trap handler, plain loads and stores are too.
+Rolldown works around it in its own allocator layer: one lock around every call
+into wasi-libc's dlmalloc, a `memory.grow(0)` refresh right after the lock is
+taken when another thread has seen a larger memory, and an `sbrk` hook that
+publishes every growth before the lock is released. The hook also hands dlmalloc
+the pages the loader already created before it grows, so most loads never grow
+the memory at all. The same refresh runs at every scheduler handoff (task poll,
+blocking closure start), for work that moves between threads. The workaround is
+what lets the threaded build default to the MultiThread flavor (2 workers). It
+lives only in the threaded build and goes away once the Node versions we support
+ship the V8 fix. For the machinery, see [implementation.md](./implementation.md).
+Addresses #10697.
 
 ## The bug
 
@@ -190,8 +194,9 @@ every round.
 Timing is at noise level (CurrentThread release median 729 vs 723.5 ms;
 MultiThread vs a pre-grown base 479.5 vs 480 ms).
 
-Keeping the grow-ahead alive (`black_box`, principle 3), release-wasi, same five
-loads, 5 interleaved rounds, all 50 runs pass. Medians (ms), without -> with:
+Keeping the grow-ahead alive (the earlier `black_box` fix, before the lock and the
+break; principle 4), release-wasi, same five loads, 5 interleaved rounds, all 50
+runs pass. Medians (ms), without -> with:
 
 | load                                 | without | with | speedup |
 | ------------------------------------ | ------- | ---- | ------- |
@@ -205,7 +210,7 @@ loads, 5 interleaved rounds, all 50 runs pass. Medians (ms), without -> with:
 The "without" runs are noisy (16 builds: 615-1259 ms), the "with" runs much
 less so (319-506 ms). three10x x4 grows the heap to about 2.2 GiB of memory.
 
-The scheduler handoff refresh (principle 1), release-wasi, 10 interleaved rounds
+The scheduler handoff refresh (principle 2), release-wasi, 10 interleaved rounds
 of the five judge loads, without vs with the hook: 100/100 pass. Medians (ms):
 
 | load                                 | without | with  |
@@ -216,124 +221,192 @@ of the five judge loads, without vs with the hook: 100/100 pass. Medians (ms):
 | CurrentThread parse 16x3             | 450     | 440.5 |
 | CurrentThread transform 16x3         | 604.5   | 601   |
 
+#### The allocator lock and the break (2026-10-01)
+
+Three release-wasi artifacts through the CI stress script's options
+(`threaded-memory-stress.mjs`, MultiThread w4, node 24.21 arm64): **base**
+db90bbbcf (heap-sync allocator, dead grow-ahead), **grow-ahead** 64409a594 (the
+`black_box` fix), **lock** this change. 30 s per run.
+
+| load (runs)                                                   | base                     | grow-ahead           | lock                      |
+| ------------------------------------------------------------- | ------------------------ | -------------------- | ------------------------- |
+| builds + JS plugin, `--wasm-enforce-bounds-checks` (20)       | 0 pass (16 hang, 4 trap) | 18 pass (2 hang)     | 20 pass, 0 grows          |
+| the same, `--disable-wasm-trap-handler` (10)                  | 0 pass (9 hang, 1 trap)  | 10 pass              | 10 pass, 0 grows          |
+| 16 builds, loader memory = module minimum, bounds checks (20) | 0 pass (20 trap)         | 18 pass (2 trap)     | 20 pass, 12 grows each    |
+| builds + JS plugin, same memory and flag (20)                 | 0 pass (15 hang, 5 trap) | 17 pass (3 hang)     | 20 pass, 13-14 grows each |
+| hold 1536 MiB in wasm, then builds + JS plugin (3)            | 0 pass (os error 28)     | 0 pass (os error 28) | 3 pass                    |
+| 16 builds and default MT w2 builds, default loader (3 each)   | -                        | -                    | 6 pass, 0 grows           |
+
+The held block sat at 0x40000010-0xa0000010 on the grow-ahead artifact (wasi-libc's
+`sbrk` starts at the loader's 1 GiB); with the break it starts right after
+`__heap_end`, and the build that follows stays under 2^31 (29442 pages of memory in
+the debug run). Every lock run reported 0 blocks past the thread's refreshed size.
+The debug artifact CI builds passes the same CI steps: 20/20, 10/10, 20/20 (12
+grows each), 20/20 (14 grows each), ceiling and no-growth pass, and the default
+stress cases report 0 grows.
+
+Cost, release-wasi, judge loads, interleaved rounds, medians (ms) with [min-max]
+(a shared host with 3-4 cores of unrelated load; 150 runs, all pass):
+
+| load                                 | grow-ahead (10)    | lock (10)          | lock, no LOCK (10) |
+| ------------------------------------ | ------------------ | ------------------ | ------------------ |
+| MultiThread w4 16 builds             | 314.5 [303-347]    | 332.5 [323-356]    | -                  |
+| MultiThread w4 16 builds + JS plugin | 1528.5 [1470-1593] | 1626.5 [1552-1721] | -                  |
+| MultiThread w4 parse 16x3            | 218 [214-222]      | 249.5 [239-287]    | -                  |
+| CurrentThread parse 16x3             | 218 [215-235]      | 244.5 [237-258]    | -                  |
+| CurrentThread transform 16x3         | 634 [613-662]      | 636.5 [617-678]    | -                  |
+| second set: MT w4 16 builds          | 312 [303-586]      | 352.5 [318-538]    | 342 [304-514]      |
+| second set: MT w4 parse 16x3         | 229.5 [215-366]    | 265.5 [236-350]    | 249.5 [232-392]    |
+| second set: CT parse 16x3            | 238.5 [219-350]    | 259.5 [237-407]    | 245 [230-435]      |
+
+So the lock costs about 5-14% against the grow-ahead fix on builds and parse, and
+nothing on transform; it keeps most of the grow-ahead's 1.6-3.2x gain over base.
+"no LOCK" is the same build with the lock removed (not safe, measurement only): it
+lands between the two, so the lock is part of the cost, not all of it. Two
+variants did not help and were dropped: zeroing (`alloc_zeroed`) and copying
+(`realloc`) outside the lock (16 builds 348 / 343 ms vs 344.5, same set), and a
+plain load for the in-lock size check without `after` (387 vs 386). Not profiled.
+
 ## Design principles
 
-1. **Refresh where new pages enter a thread: the allocator and the scheduler
-   handoff.** The trapping operation is the first memset / memcpy / atomic on a block
-   in pages this thread has not seen. Pages reach a thread in two common ways:
-   - it allocates the block itself. Refreshing right after the allocation, before
-     the first touch, closes the window for every block the thread allocates.
-   - work moves onto it. A MultiThread task can allocate a `Vec` after growth on
-     worker A, yield, and resume on worker B, then `copy_from_slice` /
-     `write_bytes` / an atomic into the existing capacity without allocating on B.
-     A blocking closure built on one thread runs on another. So every task poll and
-     every blocking closure start refreshes when another thread has seen a larger
-     memory (`MAX_SEEN_PAGES > LOCAL_PAGES`). The scheduler queue orders A's
-     allocation before B's poll, so B's check sees A's size. Cost on the hot path:
-     one thread-local read and one atomic load.
-2. **`memory.grow(0)`, not `memory.size`.** Only a grow updates this thread's
+1. **Refresh under the allocator lock, and publish growth before unlocking.**
+   Without the trap handler the first stale access is dlmalloc's own chunk-header
+   store, made while dlmalloc holds its lock, so a refresh in a wrapper before the
+   call cannot close it: a thread waiting on dlmalloc's lock gets it right after the
+   growing thread unlocks and before that thread publishes the new size (see
+   Rejected alternatives). So Rolldown owns the lock:
+
+   ```
+   LOCK ─> behind (MAX_SEEN_PAGES > LOCAL_PAGES)? memory.grow(0)
+       ─> dlmalloc call ─> sbrk hook grows ─> memory.grow(0), publish MAX_SEEN_PAGES
+   UNLOCK (Release) ─> next holder's Acquire load sees the new size before dlmalloc runs
+   ```
+
+   `sbrk` is the only code that grows the memory, and dlmalloc only calls it under
+   this lock, so every thread that touches the heap is current before its first
+   store. calloc's memset and realloc's memcpy run inside dlmalloc, after the
+   refresh, so they need no special handling. The lock spins like dlmalloc's own
+   (`sched_yield` every 64 spins) and never uses `memory.atomic.wait`, which traps
+   on a browser main thread. It adds no new serialization: dlmalloc already had one
+   global lock.
+
+2. **Refresh at the scheduler handoff too.** A MultiThread task can allocate a
+   `Vec` on worker A, yield, and resume on worker B, then `copy_from_slice` /
+   `write_bytes` / an atomic into the existing capacity without entering the
+   allocator on B. A blocking closure built on one thread runs on another. So every
+   task poll and every blocking closure start refreshes when another thread has
+   seen a larger memory (`MAX_SEEN_PAGES > LOCAL_PAGES`). Cost on the hot path: one
+   thread-local read and one atomic load.
+3. **`memory.grow(0)`, not `memory.size`.** Only a grow updates this thread's
    memory size (see Mechanism); `memory.size` returns the same stale size the
    bounds checks use and updates nothing (one page short in every trap of the
-   probe; a `memory.size` variant fails 10/10 in release; it passed in debug only
-   because extra calls gave V8 more reload points).
-3. **Make growth rare.** The first thread to see a growth grows 16 MiB ahead
-   (malloc + free through dlmalloc), so the heap grows in a few large steps
-   instead of 64 KiB-2 MiB ones. LLVM removes a `malloc` + `free` pair whose block
-   is never used, so the pointer goes through `core::hint::black_box`. Without it
-   the release-wasi build had no call in `refresh` and never grew ahead; the first
-   numbers here (3015 -> 14 per CurrentThread run, 11600 -> 60 MultiThread) came
-   from a debug build. Release-wasi, 3 runs each, sbrk `memory.grow` calls and
-   `refresh()` calls per load, without -> with `black_box`:
+   probe; a `memory.size` variant fails 10/10 in release).
+4. **Use the memory the loader created before growing it.** wasi-libc's `sbrk`
+   starts at `memory.size`, which is the loader's initial memory (16384 pages,
+   1 GiB, from `napi.wasm.initialMemory`), so the pages between `__heap_end` (the
+   module's own initial memory, about 64 MiB) and 1 GiB were never used and the
+   heap grew from 1 GiB on. The hook keeps its own break starting at `__heap_end`:
 
-   | load                                          | grows              | refreshes            |
-   | --------------------------------------------- | ------------------ | -------------------- |
-   | MultiThread w4 16 builds                      | 2846-2848 -> 24    | 11277-11315 -> 52-59 |
-   | MultiThread w4 16 builds + JS plugin x2 waves | 3111-3131 -> 26-27 | 11719-12304 -> 65-72 |
-   | MultiThread w4 parse 16x3                     | 2824-2830 -> 25    | 13065-13090 -> 58-69 |
-   | default MultiThread w2 16 builds              | 2826-2830 -> 24    | 5624-5657 -> 29-31   |
-   | CurrentThread parse 16x3                      | 2820-2824 -> 25    | 12995-13271 -> 58-62 |
+   ```
+   before: [stack+data 64 MiB][ unused 960 MiB ][ heap, grows from 1 GiB ][ 2^31 wall ]
+   after:  [stack+data 64 MiB][ heap, no growth up to ~960 MiB ][ grows 16 MiB+ ][ 2^31 wall ]
+   ```
 
-   Each grow also makes V8 set page permissions over the whole memory
-   (`GrowWasmMemoryInPlace`, src/objects/backing-store.cc:534) and interrupts every
-   other thread, so fewer grows is also much faster (see Workaround results).
+   Those pages exist on every thread from instantiation, so no growth means no
+   stale size to begin with, and the heap reaches about 1.94 GiB before a pointer
+   crosses 2^31, where Node's `node:wasi` rejects it (`EINVAL`, os error 28, in any
+   WASI call that takes a pointer; nodejs/node#62671, open). Before, it failed at
+   about 1 GiB. When the break must pass the current memory, the hook grows at least
+   16 MiB at once: every growth interrupts every other thread, and V8 changes the
+   page permissions of the whole memory on each grow
+   (`GrowWasmMemoryInPlace`, src/objects/backing-store.cc:534), so a few large
+   steps are much faster than many small ones (the grow-ahead numbers in Workaround
+   results). The hook grows by itself, so the old `malloc` + `free` grow-ahead
+   (and the `black_box` that kept LLVM from deleting it) is gone.
 
-4. **Threaded build only, no behavior change elsewhere.** The single-thread build
+5. **The allocator exports JS uses must be the wrappers, and a missed rename must
+   fail loudly.** `@emnapi/core` calls the module's `malloc` / `free` exports from
+   JS, and `--wrap=malloc` removes the export named `malloc`. A post-link step
+   (`scripts/wasi/rename-wasm-allocator-exports.mjs`, run by `build-binding.ts`)
+   adds `malloc` / `free` for the locked JS entry points. If a build path skips it,
+   the module does not load ("malloc is not exported") and the dist check fails,
+   instead of shipping dlmalloc's unlocked entry points.
+6. **Threaded build only, no behavior change elsewhere.** The single-thread build
    has one thread and never sees a stale size; native builds keep mimalloc.
 
 ## Rejected alternatives
 
-- **Pre-grow the heap** (bigger loader `initial`, or malloc + free a large block at
-  startup). A bigger `initial` does nothing: dlmalloc still grows from the top of
-  memory (1 GiB, 1.5 GiB, 1.83 GiB initial all trap 10/10). Pre-growing through
-  dlmalloc (512 MiB) passes 45/45, but only until a load outgrows it, and heap
-  addresses at or above 2^31 break node:wasi calls (os error 28), so the headroom
-  cannot simply be raised.
-- **`memory.size` as the refresh.** Does not reload V8's bounds (principle 2).
+- **A bigger loader `initial`, or pre-growing through dlmalloc.** A bigger
+  `initial` did nothing on its own: wasi-libc's `sbrk` starts at the top of memory
+  (1 GiB, 1.5 GiB, 1.83 GiB initial all trapped 10/10). Pre-growing through
+  dlmalloc (512 MiB) passed 45/45, but only until a load outgrew it. The break
+  (principle 4) is the same idea done right: it uses the pages the loader already
+  made, without allocating them.
+- **Link the module's initial memory to the loader's** (`--initial-memory` = 1 GiB,
+  so dlmalloc's first segment covers it). Same effect on growth (0 grows up to
+  about 960 MiB, measured), but it ties the module to `napi.wasm.initialMemory`: a
+  loader or host that passes a smaller memory gets a `LinkError`.
+- **`memory.size` as the refresh.** Does not reload V8's bounds (principle 3).
 - **Refresh on the emnapi / JS side.** The traps are inside wasm (Rust and C
-  memset / memcpy), in activations that never return to JS, so a JS-side refresh
-  never runs on the trapping thread. emnapi's JS views have the same stale-size
-  hazard, but `@emnapi/wasi-threads` already refreshes those with `memory.grow(0)`, and in
-  rolldown runs the wasm trap always came first.
+  memset / memcpy, dlmalloc's header stores), in activations that never return to
+  JS, so a JS-side refresh never runs on the trapping thread.
 - **`--liftoff-only`.** Makes the trap rare but not impossible (1/20 and 1/5 in
-  the probes, see Evidence), and removes the MultiThread speedup (release, 16
-  builds x2 waves: 1107 ms vs 664 ms pre-grown).
-- **An extra lock around the allocator.** Passed the repro (25/25 debug, 10/10
-  release), but dlmalloc is already locked, so it cannot be fixing a race; the extra
-  calls only add points where V8 happens to reload the size. It leaves the
-  mechanism in place and serializes every allocation.
-- **Refresh before the allocation** (in every wrapper and `HeapSyncAlloc::alloc`,
-  run `memory.grow(0)` first when `MAX_SEEN_PAGES > LOCAL_PAGES`), to cover
-  dlmalloc's header stores on hosts without the trap handler. With
-  `--wasm-enforce-bounds-checks` on the release-wasi artifact it fails 110/110
-  like the current code (61 hang, 49 trap, against 76 / 34), and every trap is
-  still the same dlmalloc chunk-header store. The race stays open: a thread
-  waiting on the dlmalloc lock takes it right after the growing thread unlocks
-  and before that thread publishes the new size, so its check still sees no
-  change. Hot-path cost was within 1% (5 loads, 10 runs each). Closing it needs
-  a refresh after the lock is taken inside dlmalloc (a dlmalloc or `sbrk` hook,
-  or a replacement allocator that owns the lock), not in the wrappers.
+  the probes, see Evidence), and removes the MultiThread speedup.
+- **Refresh before the allocation** (in every wrapper, run `memory.grow(0)` first
+  when `MAX_SEEN_PAGES > LOCAL_PAGES`, with dlmalloc's own lock inside). With
+  `--wasm-enforce-bounds-checks` on the release-wasi artifact it failed 110/110
+  (61 hang, 49 trap), every trap the same dlmalloc chunk-header store: the waiter
+  takes dlmalloc's lock before the grower publishes (principle 1).
+- **An outer lock that only adds reload points** (an earlier experiment: a lock
+  around the allocator with no refresh under it and no `sbrk` hook). It passed the
+  default-host repro only because the extra calls gave V8 more places to reload.
+  The adopted lock is different: it refreshes after it is taken, and `sbrk`
+  publishes before it is released.
+- **Replace the allocator in Rust** (a `#[global_allocator]` over dlmalloc-rs).
+  Alone it leaves emnapi's and wasi-libc's C calls (about 20-30 thousand per load,
+  one per threadsafe-function call and per async work) on libc's dlmalloc, the same
+  heap, so it does not close the bug; defining all ten libc allocator symbols in
+  Rust would, but it is a bigger change for the same result.
+- **Export the wrapper as `malloc` without a post-link step.** Rust cannot give an
+  export a name other than its symbol on stable (`global_asm!` is unstable on
+  wasm), and `--export=__real_malloc` exports the unlocked dlmalloc entry under
+  `malloc`. A C shim with `__attribute__((export_name("malloc")))` works but needs a
+  wasm C compiler in every build; teaching emnapi to read another export name needs
+  an emnapi release. Both belong in the napi-rs follow-up that moves this layer
+  upstream.
+- **Host-driven worker loops** (a tokio-style hosted event loop, or a JS-resident
+  loop). They refresh only between tasks, where the handoff hook already does; the
+  traps are mid-task.
 
 ## Remaining gaps
 
-- A block that reaches a running thread mid-poll (a channel message, an `Arc`,
-  a threadsafe-function call on the JS thread) and is filled / copied / used with
-  atomics there before that thread's next allocation or poll boundary can still
-  hit its stale size. Task migration and blocking-closure entry are covered by
-  the handoff refresh (principle 1); after any allocation or poll start, the
-  thread covers every block allocated before it. With rare growth this was not
-  observed in the measured runs. The V8 fix closes it.
-- C code that calls `malloc` directly and then fills the block is not covered:
-  `malloc` cannot be wrapped (see [implementation.md](./implementation.md)).
-- Hosts without the V8 wasm trap handler bounds-check plain stores against the
-  cached size too. Measured with Node's `--wasm-enforce-bounds-checks` (hosts
-  without the handler should behave the same, not measured): dlmalloc's own
-  chunk-header store into pages another thread grew traps inside dlmalloc
-  (reached through `posix_memalign` or `malloc`), before the refresh and while
-  dlmalloc holds its lock. When the trap does not end the process, the lock is
-  never released and the process **hangs**: the main thread and the other
-  workers spin on `sched_yield` at about 400% CPU. The loader's worker-crash
-  latch cannot help, because it runs on the main thread's event loop, which
-  never gets control back. `free` and the unwrapped `malloc` that emnapi calls
-  from JS write chunk headers too.
+| gap                                                          | before the lock (db90bbbcf)                      | now                                                                                |
+| ------------------------------------------------------------ | ------------------------------------------------ | ---------------------------------------------------------------------------------- |
+| G1: dlmalloc header store on a host without the trap handler | trap inside dlmalloc's lock, then a **hang**     | closed on the measured host (Workaround results): the store runs after the refresh |
+| G2: a block received mid-poll after another thread grew      | open, rare                                       | open, but only once the heap passes the reserve (about 960 MiB); not observed      |
+| a crash while a thread holds the allocator lock              | the other threads spin (dlmalloc's lock)         | the same (our lock)                                                                |
+| heap pointer at or above 2^31                                | `EINVAL` from `node:wasi` at about 1 GiB of heap | at about 1.94 GiB of heap                                                          |
 
-  Direct MultiThread bundle runs, 4 workers, node 24.21 arm64:
+- **G2.** A block that reaches a running thread mid-poll (a channel message, an
+  `Arc`, a threadsafe-function call on the JS thread) and is filled / copied / used
+  with atomics there (or, without the trap handler, loaded or stored) before that
+  thread's next allocation or poll boundary can still hit a stale size, if another
+  thread grew the memory in between. Task migration and blocking-closure entry are
+  covered by the handoff refresh (principle 2), and every allocator entry refreshes.
+  Below the reserve nothing grows, so there is no stale size to hit; the forced
+  growth runs (loader memory at the module minimum, 12-14 grows per run, under
+  `--wasm-enforce-bounds-checks`) did not hit it either. Not proven closed; the V8
+  fix closes it.
+- **Crash inside the lock.** If a thread dies while it holds the lock (any trap in
+  dlmalloc), the others spin on `sched_yield` and the loader's worker-crash latch
+  cannot run, as with dlmalloc's own lock before.
+- **Not measured:** x64, Linux and Windows hosts, real hosts without the handler
+  (AIX, 32-bit Windows, FreeBSD arm64), and browsers (the wasi-browser loader asks
+  for the same 16384 pages, so the break should behave the same). The flag runs
+  used Node's `--wasm-enforce-bounds-checks` and `--disable-wasm-trap-handler` on
+  macOS arm64.
 
-  | Artifact     | `--wasm-enforce-bounds-checks` | Result                                |
-  | ------------ | ------------------------------ | ------------------------------------- |
-  | release-wasi | yes                            | 0/110 pass (76 hang, 34 trap)         |
-  | release-wasi | no                             | 10/10 pass                            |
-  | dev profile  | yes                            | 103/110 pass (1/10 fail in a control) |
-  | dev profile  | no                             | 30/30 pass                            |
-
-  A bigger loader `initial` (2 GiB, 3 GiB) does not help with the flag: 0/20
-  pass. A refresh before the allocation does not either (see Rejected
-  alternatives). Keeping the grow-ahead alive (principle 3) makes it rarer, not
-  gone: MultiThread w4 16 builds with the flag went from 0/10 to 10/10 pass (10
-  interleaved runs each), and from 0/13 to 10/13 and 0/8 to 5/8 in two earlier
-  sets. The table above was
-  measured while the release grow-ahead was dead code.
-
-  Which hosts lack the handler: Node's bundled
+- **Which hosts lack the handler** (where G1 mattered by default): Node's bundled
   `deps/v8/src/trap-handler/trap-handler.h` (v24.12.0 = V8 `13.6-lkgr`) sets
   `V8_TRAP_HANDLER_SUPPORTED` only for x64 on Linux (not Android), Windows,
   macOS and FreeBSD; arm64 on Linux (not Android), Windows and macOS; loong64
@@ -363,23 +436,28 @@ of the five judge loads, without vs with the hook: 100/100 pass. Medians (ms):
   only when forced (`NAPI_RS_FORCE_WASI`) or when the native binding fails to
   load.
 
-- Not measured with rolldown: browsers (wasi-browser loader), Node on x64 (the
-  pure V8 repro does trap on Node 25 x64).
-
 ## When to remove
 
 When every Node version the threaded WASI package supports ships
 v8/v8@34241014663390c72e08c123faef6fedf395be8e (or a backport of it), delete
 `crates/rolldown_binding/src/wasm_heap_sync.rs`, its `#[global_allocator]` in
-`lib.rs`, the `--wrap` link args in `build.rs`, the handoff hook
+`lib.rs`, the `--wrap` link args in `build.rs`, the export rename
+(`scripts/wasi/rename-wasm-allocator-exports.mjs`, its call in
+`packages/rolldown/build-binding.ts`, and `scripts/wasi/wasm-sections.mjs` once
+nothing else reads it), the handoff hook
 (`crates/rolldown_utils/src/thread_handoff.rs`, its re-exports in
 `rolldown_utils/src/lib.rs`, and its registration and `spawn_blocking` wrap in
-`rolldown_binding/src/async_runtime.rs`), the export check in
-`scripts/wasi/check-wasi-dist-files.mjs`, `scripts/wasi/check-v8-shared-memory-grow.*`,
-the `check:v8-shared-memory-grow` script in the root `package.json`, and this
-folder. Confirm first on each of those Node versions with
-`pnpm check:v8-shared-memory-grow` and `pnpm check:v8-shared-memory-grow --activation=warm`:
-remove the workaround only when case 1 stops trapping in both (verdict `ABSENT`).
+`rolldown_binding/src/async_runtime.rs`), the heap-sync export checks in
+`scripts/wasi/check-wasi-dist-files.mjs`, the heap-sync options and scripts of
+`packages/rolldown/tests/wasi/threaded-memory-stress.mjs` with their CI steps,
+`scripts/wasi/check-v8-shared-memory-grow.*`, the `check:v8-shared-memory-grow`
+script in the root `package.json`, and this folder. Confirm first on each of those
+Node versions with `pnpm check:v8-shared-memory-grow` and
+`pnpm check:v8-shared-memory-grow --activation=warm`: remove the workaround only
+when case 1 stops trapping in both (verdict `ABSENT`). Decide then whether to keep
+the `sbrk` break (principle 4, `--wrap=sbrk` and `__wrap_sbrk` without the lock):
+until Node accepts WASI pointers at or above 2^31, it is what raises the usable
+heap from about 1 GiB to about 1.94 GiB.
 
 ## Related
 

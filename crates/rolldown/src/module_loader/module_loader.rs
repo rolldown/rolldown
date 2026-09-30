@@ -1254,7 +1254,6 @@ mod tests {
 
       let message = rolldown_utils::futures::block_on(async { rx.next().await })
         .expect("supervisor must report a panicking module task");
-      let mut remaining = 1;
       match message {
         ModuleLoaderMsg::BuildErrors(errors) => {
           assert_eq!(errors.len(), 1);
@@ -1264,11 +1263,9 @@ mod tests {
               .contains("module loader task panicked before reporting completion"),
             "the task must be polled far enough to observe the panic, not merely rejected"
           );
-          remaining -= 1;
         }
         _ => panic!("module task panic must be converted to BuildErrors"),
       }
-      assert_eq!(remaining, 0, "the module loader must not wait forever after a task panic");
       assert!(rx.try_recv().is_err(), "a panic must produce exactly one completion error");
       done_tx.send(()).unwrap();
     });

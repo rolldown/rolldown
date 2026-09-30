@@ -62,7 +62,7 @@ function listGeneratedBindingSources(sourceDir: string): string[] {
     .map((entry) => entry.name);
 }
 
-export async function preserveGeneratedBindingSources<T>(
+async function preserveGeneratedBindingSources<T>(
   operation: () => T | Promise<T>,
   sourceDir: string = SOURCE_DIR,
 ): Promise<T> {

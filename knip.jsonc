@@ -41,6 +41,8 @@
         "src/rolldown-binding.wasip1-browser.js",
         "src/rolldown-binding.wasip1-deferred.js",
         "src/workerd.ts",
+        // build.ts aliases src/timer-host.ts to this stub by path for workerd bundles.
+        "src/workerd-stubs/timer-host.ts",
         "src/{wasi,webcontainer}-*.*",
         "src/api/experimental.ts",
       ],

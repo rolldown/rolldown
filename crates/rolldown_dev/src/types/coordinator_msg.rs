@@ -1,6 +1,6 @@
 use arcstr::ArcStr;
 use rolldown_dev_common::types::DevCallbackError;
-use rolldown_fs_watcher::FsEventResult;
+use rolldown_fs_watcher::FsEvent;
 
 use crate::type_aliases::{
   BeginWatchRegistrationErrorObservationSender, CloseSender, EnsureLatestBundleOutputSender,
@@ -13,7 +13,7 @@ use crate::types::error_stage::ErrorStage;
 /// Messages sent to the BundleCoordinator
 #[derive(Debug)]
 pub enum CoordinatorMsg {
-  WatchEvent(FsEventResult),
+  WatchEvent(Vec<FsEvent>),
   BundleCompleted {
     /// `None` on success; on error, identifies which stage produced it
     /// so the coordinator can pick the right recovery task variant on

@@ -131,14 +131,14 @@ Watcher (public API)
                                └── tasks: IndexVec<WatchTaskIdx, WatchTask>
                                     ├── WatchTask 0  ─┐ config group 0 shares
                                     │   ├── bundler: Arc<TokioMutex<Bundler>>
-                                    │   ├── fs_watcher: Arc<Mutex<Box<dyn TaskFsWatcher>>> (ONE FsWatcher per config group)
+                                    │   ├── fs_watcher: Arc<Mutex<FsWatcher>> (ONE per config group, holds the group's registered paths)
                                     │   ├── watched_files: FxDashSet<WatchPath> (per task)
                                     │   └── needs_rebuild: bool
                                     ├── WatchTask 1  ─┘ the same fs_watcher Arc
                                     └── WatchTask N ... (next group → next fs watcher)
 
 Data flow:
-  per-group FsWatcher ──(GroupFsEventHandler: maps notify events via map_notify_event → FileChangeEvent)──→ WatcherMsg::FileChanges { group_index } ──→ WatchCoordinator
+  per-group FsWatcher ──(FsEvent: path + WatcherChangeKind)──→ GroupFsEventHandler ──→ WatcherMsg::FileChanges { group_index } ──→ WatchCoordinator
   WatchCoordinator ──→ marks EVERY group member whose watch set contains the path
                    ──→ dispatch_event / dispatch_change / dispatch_restart
                          └── await_handler_or_close()
@@ -152,7 +152,7 @@ Data flow:
 
 - `Watcher` only holds lifecycle state (`tx`, the close signal, and `coordinator_state`) — lightweight, no bundler access. The state retains the boxed coordinator future until runtime submission succeeds, and restores it on rejection. `publish_close()` sets the atomic flag, notification, and actor message without spawning; N-API calls it synchronously before returning the close promise so a JavaScript listener cannot return into a new build before close is visible. The async `close()` future enters through the selected runtime, starts a not-yet-running coordinator, and awaits its shared result.
 - `WatchCoordinator` owns ALL mutable state. No external mutation.
-- ONE `FsWatcher` exists per config group, shared by that group's `WatchTask`s via `Arc<std::sync::Mutex<Box<dyn TaskFsWatcher>>>` — `TaskFsWatcher` is this crate's name for `rolldown_fs_watcher::PathsSource`, the one-method `paths_mut()` seam over the concrete `FsWatcher` that the dev engine's `BundleCoordinator` uses too, kept so tests can substitute failing or recording watchers. A save of a file watched by several outputs of one config is therefore delivered exactly once, carrying the group identity, instead of racing per-output on independent notify streams (the pre-group design behind [#10613](https://github.com/rolldown/rolldown/issues/10613)). Watched-path membership stays per task (`watched_files`), but backend registration is deduplicated group-wide through a shared registered-path set (`group_registered_files: Arc<FxDashSet<WatchPath>>`, created next to the shared watcher in `create_tasks`): a path a sibling member already committed is adopted into the member's own `watched_files` without touching the backend. Members must not re-register a sibling's path — on macOS a `paths_mut()` transaction stops the group's shared FSEvents stream, drops the events buffered meanwhile, and restarts from "now" on commit, so a duplicate registration would blind the whole group.
+- ONE `FsWatcher` exists per config group, shared by that group's `WatchTask`s via `Arc<std::sync::Mutex<FsWatcher>>`. A save of a file watched by several outputs of one config is therefore delivered exactly once, carrying the group identity, instead of racing per-output on independent notify streams (the pre-group design behind [#10613](https://github.com/rolldown/rolldown/issues/10613)). Watched-path membership stays per task (`watched_files`), but backend registration is deduplicated group-wide by the shared watcher's own registered-path set: a path a sibling member already registered is skipped by `FsWatcher` without a native batch and adopted into the member's own `watched_files`. Members must not re-register a sibling's path — on macOS a notify paths batch stops the group's shared FSEvents stream, drops the events buffered meanwhile, and restarts from "now" on commit, so a duplicate registration would blind the whole group. Tests substitute failing or recording backends through `FsWatcher::with_backend` (the public `WatcherBackend` / `PathsMut` traits), so the path bookkeeping under test is the production one; the dev engine's `BundleCoordinator` uses the same seam.
 - Bundler is `Arc<TokioMutex<>>` (where `TokioMutex` aliases `async_lock::Mutex`, not tokio's) because event data structs carry a clone for consumer access (e.g. `BUNDLE_END.result`).
 
 ### Three-Layer Stack
@@ -179,7 +179,7 @@ rolldown_watcher/
 ├── watcher.rs                 // Watcher (public API) + WatcherConfig
 ├── watch_coordinator.rs       // WatchCoordinator (actor + event loop, group membership maps)
 ├── watch_task.rs              // WatchTask (bundler + shared group fs watcher) + WatchTaskIdx + WatchGroupIdx + BuildOutcome
-├── task_fs_event_handler.rs   // GroupFsEventHandler (notify → FileChangeEvent mapping, one per config group)
+├── task_fs_event_handler.rs   // GroupFsEventHandler (FsEvent → FileChangeEvent, one per config group)
 ├── handler.rs                 // WatcherEventHandler async trait
 ├── event.rs                   // WatchEvent, BundleStartEventData, BundleEndEventData, WatchErrorEventData
 ├── file_change_event.rs       // FileChangeEvent (path + kind)
@@ -189,13 +189,14 @@ rolldown_watcher/
 rolldown_fs_watcher/
 ├── lib.rs                     // Public exports: FsWatcher, FsWatcherConfig, FsEvent*
 ├── config.rs                  // FsWatcherConfig (enabled, use_polling, use_debounce, …)
-├── event.rs                   // FsEvent, FsEventHandler, FsEventResult
-├── watcher.rs                 // public FsWatcher + internal WatcherBackend + PathsMut
-└── notify/
-    ├── mod.rs                 // create_backend() — selects backend from config
+├── event.rs                   // FsEvent (path + WatcherChangeKind), FsEventHandler
+├── watcher.rs                 // FsWatcher: the watched paths, on top of a WatcherBackend
+└── notify/                    // everything that speaks notify
+    ├── mod.rs                 // WatcherBackend + PathsMut traits, create_backend() — selects backend from config
     ├── immediate.rs           // recommended / poll, no debounce
     ├── debounced.rs           // recommended / poll + notify-debouncer-full
-    └── noop.rs                // no-op backend when enabled: false
+    ├── noop.rs                // no-op backend when enabled: false
+    └── event_map.rs           // map_notify_event: notify events → FsEvents, files only
 ```
 
 ## State Machine
@@ -300,7 +301,7 @@ Watcher spawns coordinator
 File change detected by the config group's shared FsWatcher
   → GroupFsEventHandler sends WatcherMsg::FileChanges { group_index }
   → process_file_changes():
-      - GroupFsEventHandler already mapped notify EventKind → WatcherChangeKind (Create/Update/Delete)
+      - rolldown_fs_watcher already mapped notify EventKind → WatcherChangeKind (Create/Update/Delete)
       - for EVERY member task of the group whose watched_files contains the path
         or one of its ancestor directories (addWatchFile of a directory):
           task.mark_needs_rebuild(path) → sets needs_rebuild = true
@@ -322,22 +323,23 @@ File change detected by the config group's shared FsWatcher
             - each full build owns independent plugin-driver and emitted-file
               state; a retained earlier result stays valid until its own close
             - update_watch_files() again with any render-phase files
-              - candidates are partitioned before the watcher is locked: paths
-                already in the task's `watched_files` are skipped, paths a
-                sibling committed to the group's shared backend (tracked in
-                `group_registered_files`) are adopted into the task set with
-                no backend call, and only group-new paths reach `new_files`
-              - if `new_files` is empty (all-registered or adoption-only), the
-                function returns before locking the watcher — no `paths_mut()`
-                transaction opens at all; the macOS FSEvents backend stops
-                delivery for the whole group when a transaction opens and
-                restarts from "now" on commit, dropping buffered events
-              - an opened transaction attempts every group-new addition and is
+              - candidates are filtered before the watcher is locked: paths
+                already in the task's `watched_files` are skipped; if none
+                remain the function returns without locking the watcher
+              - the rest go to the shared watcher's `try_watch_paths`, which
+                skips paths a sibling already registered (no native batch for
+                them) and opens a batch only for group-new paths; the macOS
+                FSEvents backend stops delivery for the whole group while a
+                batch is open and restarts from "now" on commit, dropping
+                buffered events
+              - an opened batch attempts every group-new addition and is
                 always committed, including after an individual add fails
-              - added paths are published to BOTH the task set and the group
-                set only after commit succeeds; on failure neither set gains
-                the path, so the next build attempt retries the registration;
-                add and commit diagnostics are aggregated
+              - the watcher records a path only when its add and the commit
+                both succeed, and the task adopts exactly the candidates the
+                watcher then holds (sibling registrations included); on
+                failure neither set gains the path, so the next build attempt
+                retries the registration; add and commit diagnostics are
+                aggregated
             - if either registration operation fails, close the unreported
               bundle attempt and retry the task after 25ms, 100ms, then 250ms
               without emitting another `BUNDLE_START`
@@ -538,18 +540,11 @@ Configured via `WatcherOptions`, fires **immediately** on file change (before de
 ## File Watching
 
 - After each build, `bundler.watch_files()` returns the current set.
-- `WatchTask::update_watch_files()` diffs against the task's own `watched_files` set and the group-level `group_registered_files` set — a path a sibling output already registered on the config group's shared `FsWatcher` is adopted into the task's own set without a backend call; only paths new to the whole group are added to the backend.
+- `WatchTask::update_watch_files()` diffs against the task's own `watched_files` set, then hands the new candidates to the config group's shared `FsWatcher`. The watcher's own path set is the group-wide registered set: a path a sibling output already registered is skipped there without opening a native batch, and the task adopts it into its own `watched_files`; only paths new to the whole group reach the backend. `FsWatcher::is_watched` is not used for task membership, because the shared set also holds paths only a sibling watches.
 - `include`/`exclude` patterns filter which files are watched (via `pattern_filter`).
 - Files are watched **recursively**, so a directory passed to `addWatchFile` covers its descendants; for a plain file this is the same as a single-file watch.
-- Batch operations: `fs_watcher.paths_mut()` returns a guard for batching adds, committed via `.commit()`.
-- Opening a path transaction may pause event delivery until commit — on macOS it stops the
-  group's shared FSEvents stream and the commit restarts it from "now", dropping events buffered
-  in between. A batch with no group-new paths (all-registered or adoption-only) therefore returns
-  before locking the watcher and never opens a transaction. An opened transaction attempts every
-  group-new candidate and is always committed, including when an individual `PathsMut::add`
-  fails. If commit succeeds, only paths whose additions succeeded enter `watched_files` and
-  `group_registered_files`; if commit fails, neither set gains any staged path, so the next build
-  retries the registration. Add and commit diagnostics are aggregated when both occur.
+- `FsWatcher::watch_paths` / `try_watch_paths` filter and deduplicate new paths before opening a notify batch. If none remain, they leave the backend untouched: on macOS, opening a batch stops the group's shared FSEvents stream, and committing even an empty batch restarts it from "now", potentially losing edits in between. Steady-state rebuilds, where every path is already in the task's `watched_files`, return before locking the watcher at all.
+- Build watch registers through `FsWatcher::try_watch_paths`: an opened batch attempts every group-new candidate and is always committed, including when an individual `PathsMut::add` fails. A path is recorded in the watcher's set only when its add and the commit both succeed, and the task adopts exactly the candidates the watcher then holds, so on failure neither set gains the path and the next build retries it. Add and commit diagnostics are aggregated when both occur. (Bundled dev uses `watch_paths`, which skips a refused add instead; see `internal-docs/dev-engine/implementation.md`.)
 - Any add or commit failure aborts that build attempt; neither is logged and skipped. The
   coordinator closes the unreported bundle handle and retries the whole task with
   25ms/100ms/250ms backoff inside the same public `BUNDLE_START` cycle. Close remains interruptible
@@ -598,28 +593,37 @@ When an import resolves to a non-existent file, the build errors. Watch mode rel
 
 ### Notify Event Mapping
 
-Shared with bundled dev through `rolldown_fs_watcher::map_notify_event`.
+`rolldown_fs_watcher` translates notify events into `FsEvent`s (`path` + `WatcherChangeKind`) in `map_notify_event`, before they reach `rolldown_watcher` or bundled dev.
 Do not re-implement this table in `rolldown_dev` or `rolldown_watcher`.
 
 ```
-notify::EventKind::Create(_)                              → WatcherChangeKind::Create
-notify::EventKind::Modify(Name(RenameMode::To))           → WatcherChangeKind::Create
+notify::EventKind::Create(_)                              → WatcherChangeKind::Create   (disk-checked)
+notify::EventKind::Modify(Name(RenameMode::To))           → WatcherChangeKind::Create   (disk-checked)
+notify::EventKind::Modify(Name(RenameMode::Any | Other))  → WatcherChangeKind::Create   (disk-checked; FSEvents/kqueue do not tell the side)
 notify::EventKind::Modify(Name(RenameMode::Both))         → per-path (see below)
 notify::EventKind::Modify(Name(RenameMode::From))         → WatcherChangeKind::Delete
 notify::EventKind::Remove(_)                              → WatcherChangeKind::Delete
-notify::EventKind::Modify(_)  (other)                     → WatcherChangeKind::Update
+notify::EventKind::Modify(Metadata(Any | WriteTime))      → WatcherChangeKind::Update   (disk-checked)
+notify::EventKind::Modify(Metadata(_))  (other)           → None (permissions, ownership, extended attributes, access time)
+notify::EventKind::Modify(_)  (other)                     → WatcherChangeKind::Update   (disk-checked)
 notify::EventKind::Access(_)                              → None (ignored — prevents infinite rebuild loops on Linux)
 ```
 
-**Rename handling:** Linux inotify can emit `Modify(Name(Both))` when both source and destination are known in a single rename event. This event carries two paths `[from, to]`. The event handler splits it into two `FileChangeEvent`s: `Delete` for the source path and `Create` for the destination path. This preserves both signals — the delete ensures stale cache entries are invalidated, and the create triggers missing-dir rebuilds. `RenameMode::To` and `RenameMode::From` are the single-path equivalents.
+**Disk-checked:** the backends' kinds are not always right — FSEvents reports `Name(Any)` for both sides of a rename and repeats earlier flags of a path (a `Create` for the old name of a renamed file), and no backend reports the files of a directory that appears. So for a kind that says the path exists now, the disk decides: a missing path is reported as `Delete`; a directory is reported as `Create` of every file below it (for `Create`), or not at all (for `Update`).
+
+**Directories:** only files are reported, like chokidar's `add`/`change`/`unlink`. A directory that appears is expanded into its files, because the backends do not report the files of a moved-in directory and can miss a file written right after `mkdir`. A directory that disappears is reported as `Delete` of the directory itself, since its files are unknown by then; consumers match it against watched paths by ancestors. A modified directory is not reported.
+
+**Rename handling:** Linux inotify can emit `Modify(Name(Both))` when both source and destination are known in a single rename event. This event carries two paths `[from, to]`. `map_notify_event` splits it into two events: `Delete` for the source path and `Create` for the destination path. This preserves both signals — the delete ensures stale cache entries are invalidated, and the create triggers missing-dir rebuilds. `RenameMode::To` and `RenameMode::From` are the single-path equivalents.
+
+**Metadata filtering:** `touch` is a metadata change on every native backend (FSEvents reports only `Metadata(Any)` for it), and polling reports a write as `Metadata(WriteTime)`, so those are `Update`. Kinds that cannot be a write are dropped; FSEvents reports `Extended` next to every write. `chmod` is `Metadata(Any)` on inotify and kqueue too, which costs a harmless extra rebuild.
 
 **Access filtering:** The build process reads watched source files, which on Linux triggers `IN_OPEN`/`IN_CLOSE_NOWRITE` events. Without filtering, these cause infinite rebuild loops.
 
 ### Path Identity
 
-The watch set stores paths as raw `ArcStr` strings. The `notify` crate reports events with OS-native paths. If these don't match exactly, `is_watched_file()` fails silently. The current `#[cfg(windows)]` backslash fallback is a symptom.
+Watch files are absolute and normalized before they reach the watcher: module ids come from the resolver, and a path passed to `this.addWatchFile` is resolved against `cwd` and normalized (`WatchPath`) when it is added. `FsWatcher` keeps them as `PathBuf`, the form notify reports events in, and `Path` compares by components, so `\` vs `/` on Windows is not a mismatch. A changed path is looked up together with its ancestors, which is how a change below a watched directory is found; the transform dependencies HMR records are `WatchPath`s and are matched the same way.
 
-**Recommendation:** Use `PathBuf` for the watched file set instead of `ArcStr`. This handles trailing slashes, double separators, `.` segments, and Windows `\` vs `/` — all common mismatch sources between resolver output and notify events.
+Symbolic links are not resolved, while FSEvents reports canonical paths.
 
 See [module-id.md](../module-id/implementation.md) for the full analysis of path identity across the bundler, `PathBuf` comparison behavior, and Rollup's approach.
 

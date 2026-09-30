@@ -10,8 +10,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 __rolldown_runtime__.registerGraph({
 	ids: ["entry.js"],
 	localCount: 1,
-	edges: [[]],
-	dynamicEdges: [[]]
+	edges: [[]]
 });
 //#region entry.js
 __rolldown_runtime__.createModuleHotContext("entry.js");
@@ -26,7 +25,7 @@ console.log("input\n");
 ## Code
 
 ```js
-__rolldown_runtime__.registerGraph({ids:["entry.js"],localCount:1,edges:[[]],dynamicEdges:[[]]});
+__rolldown_runtime__.registerGraph({ids:["entry.js"],localCount:1,edges:[[]]});
 //#region entry.js
 __rolldown_runtime__.registerFactory("entry.js", (function(__rolldown_module_id__) {
 	try {

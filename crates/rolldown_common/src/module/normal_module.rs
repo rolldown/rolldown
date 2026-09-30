@@ -263,6 +263,10 @@ impl NormalModule {
   pub fn can_accept_hmr_dependency_for(&self, module_id: &ModuleId) -> bool {
     self.hmr_info.deps.contains(module_id)
   }
+
+  pub fn is_hmr_partially_accepting_module(&self) -> bool {
+    self.ast_usage.contains(EcmaModuleAstUsage::HmrAcceptExports)
+  }
 }
 
 #[derive(Debug)]

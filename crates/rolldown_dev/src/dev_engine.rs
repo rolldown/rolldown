@@ -106,7 +106,13 @@ pub struct DevEngine {
 }
 
 impl DevEngine {
-  pub fn new(config: BundlerConfig, options: DevOptions) -> BuildResult<Self> {
+  pub fn new(mut config: BundlerConfig, options: DevOptions) -> BuildResult<Self> {
+    // The HMR stage diffs against the scan-stage snapshot, which is only kept
+    // when incremental build is on. Without it the first file change unwraps a
+    // `None` snapshot and panics the worker. `prepare_build_context` already
+    // forces this for `dev_mode`, but `dev()` is reachable without it.
+    config.options.experimental.get_or_insert_default().incremental_build = Some(true);
+
     // Build the bundler from config
     let bundler = BundlerBuilder::default()
       .with_options(config.options)
@@ -701,26 +707,13 @@ impl DevEngine {
     // covers the first, leaving the rest racing the caller's assertions.
     let events = changed_files
       .into_iter()
-      .map(|(path, event)| {
-        let notify_event = notify::Event {
-          kind: if event == WatcherChangeKind::Delete {
-            notify::EventKind::Remove(notify::event::RemoveKind::Any)
-          } else {
-            notify::EventKind::Modify(notify::event::ModifyKind::Data(
-              notify::event::DataChange::Any,
-            ))
-          },
-          paths: vec![path],
-          attrs: notify::event::EventAttributes::default(),
-        };
-        rolldown_fs_watcher::FsEvent { detail: notify_event, time: std::time::Instant::now() }
-      })
+      .map(|(path, kind)| rolldown_fs_watcher::FsEvent::new(path, kind))
       .collect::<Vec<_>>();
 
     if !events.is_empty() {
       // Send WatchEvent message to coordinator (simulates real file change)
       // The coordinator will automatically schedule a build via handle_file_changes
-      let _ = self.coordinator_sender.unbounded_send(CoordinatorMsg::WatchEvent(Ok(events)));
+      let _ = self.coordinator_sender.unbounded_send(CoordinatorMsg::WatchEvent(events));
     }
 
     // Send ScheduleBuild to ensure WatchEvent is processed (FIFO),
@@ -803,6 +796,7 @@ impl From<CoordinatorStateSnapshot> for BundleState {
 #[cfg(test)]
 mod tests {
   use super::*;
+  use rolldown::{BundlerConfig, BundlerOptions};
   use std::{
     convert::Infallible,
     sync::atomic::{AtomicUsize, Ordering},
@@ -840,5 +834,17 @@ mod tests {
       .expect("retained coordinator must complete");
     assert!(state.pending.is_none());
     assert_eq!(runs.load(Ordering::SeqCst), 1);
+  }
+
+  #[test]
+  fn dev_engine_forces_incremental_build_on() {
+    let engine = super::DevEngine::new(
+      BundlerConfig::new(BundlerOptions::default(), vec![]),
+      crate::DevOptions::default(),
+    )
+    .unwrap();
+    assert!(
+      engine.bundler.try_lock().unwrap().options().experimental.is_incremental_build_enabled()
+    );
   }
 }

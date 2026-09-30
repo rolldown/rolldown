@@ -1,7 +1,7 @@
 use crate::handler::WatcherEventHandler;
 use crate::task_fs_event_handler::GroupFsEventHandler;
 use crate::watch_coordinator::{CoordinatorCloseError, CoordinatorCloseResult, WatchCoordinator};
-use crate::watch_task::{TaskFsWatcher, WatchGroupIdx, WatchTask, WatchTaskIdx};
+use crate::watch_task::{WatchGroupIdx, WatchTask, WatchTaskIdx};
 use crate::watcher_msg::WatcherMsg;
 use anyhow::Result;
 use event_listener::Event;
@@ -12,7 +12,6 @@ use oxc_index::IndexVec;
 use rolldown::BundlerConfig;
 use rolldown_error::BuildResult;
 use rolldown_fs_watcher::{FsWatcher, FsWatcherConfig};
-use rolldown_utils::dashmap::FxDashSet;
 use rolldown_utils::futures::{RetainedStart, try_spawn};
 use std::fmt;
 use std::future::Future;
@@ -245,21 +244,15 @@ impl Watcher {
     for (index, group) in groups.into_iter().enumerate() {
       let group_index = WatchGroupIdx::from_usize(index);
       let fs_handler = GroupFsEventHandler { group_index, tx: tx.clone() };
-      let fs_watcher: Arc<std::sync::Mutex<Box<dyn TaskFsWatcher>>> =
-        Arc::new(std::sync::Mutex::new(Box::new(FsWatcher::new(fs_handler, &fs_watcher_config)?)));
-      // One registered-path set per group, paired with the group's shared
-      // watcher: a member consults it so paths a sibling already committed are
-      // adopted instead of re-registered, which on macOS would restart the
-      // shared FSEvents stream and drop the events buffered meanwhile.
-      let group_registered_files = Arc::new(FxDashSet::default());
+      // The group's one watcher also holds the group's registered-path set: a
+      // member's batch skips the paths a sibling already registered, which on
+      // macOS would otherwise restart the shared FSEvents stream and drop the
+      // events buffered meanwhile.
+      let fs_watcher =
+        Arc::new(std::sync::Mutex::new(FsWatcher::new(fs_handler, &fs_watcher_config)?));
       let mut members = Vec::with_capacity(group.len());
       for config in group {
-        let task = WatchTask::new(
-          config,
-          Arc::clone(&fs_watcher),
-          Arc::clone(&group_registered_files),
-          closed,
-        )?;
+        let task = WatchTask::new(config, Arc::clone(&fs_watcher), closed)?;
         members.push(tasks.push(task));
       }
       group_members.push(members);

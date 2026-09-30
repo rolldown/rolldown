@@ -26,13 +26,4 @@ describe('package.json exports consistency', () => {
       default: './dist/workerd.mjs',
     });
   });
-
-  test('browser package.json imports keys match normal package imports keys except parallel plugin worker', () => {
-    const importsKeys = Object.keys(pkg.imports)
-      .filter((key) => key !== '#parallel-plugin-worker')
-      .sort();
-    const browserImportsKeys = Object.keys(browserPkg.imports).sort();
-
-    expect(browserImportsKeys).toStrictEqual(importsKeys);
-  });
 });

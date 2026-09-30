@@ -8,7 +8,7 @@ use rolldown_error::{
   BatchedBuildDiagnostic, BuildDiagnostic, BuildResult, Diagnostic, DiagnosticOptions,
   filter_out_disabled_diagnostics,
 };
-use rolldown_fs_watcher::RecursiveMode;
+use rolldown_fs_watcher::FsWatcher;
 use rolldown_utils::{dashmap::FxDashSet, pattern_filter};
 use std::path::{Component, Path, PathBuf};
 use std::sync::Arc;
@@ -27,29 +27,20 @@ oxc_index::define_index_type! {
   pub struct WatchGroupIdx = u32;
 }
 
-/// The slice of the watcher a watch task drives: the path-registration seam
-/// shared with the dev engine, under this crate's name.
-pub use rolldown_fs_watcher::PathsSource as TaskFsWatcher;
-
 /// Per-task data container that owns a bundler and shares its config group's
 /// file-system watcher.
 pub struct WatchTask {
   bundler: Arc<TokioMutex<Bundler>>,
   options: Arc<NormalizedBundlerOptions>,
   /// Shared with every sibling output task of the same config group so one
-  /// save is delivered exactly once per group. The backend's path set is
-  /// idempotent, but a paths transaction is not: on macOS it restarts the
-  /// group's shared FSEvents stream and drops the events buffered while it is
-  /// open, so a path a sibling already registered must not be re-added (see
-  /// `group_registered_files`).
-  fs_watcher: Arc<std::sync::Mutex<Box<dyn TaskFsWatcher>>>,
-  /// Paths any member of this config group has committed to the shared
-  /// backend. Consulted before opening a paths transaction so a sibling's
-  /// duplicate discovery adopts the existing registration instead of
-  /// restarting the shared stream.
-  group_registered_files: Arc<FxDashSet<WatchPath>>,
+  /// save is delivered exactly once per group. The watcher's own registered
+  /// path set is the group-wide one: a path a sibling already registered is
+  /// skipped there without opening a native batch, which on macOS would
+  /// restart the group's shared FSEvents stream and drop the events buffered
+  /// while it is open.
+  fs_watcher: Arc<std::sync::Mutex<FsWatcher>>,
   /// Paths THIS task watches. `mark_needs_rebuild` and `is_watched_file`
-  /// consult it, so adopted group paths must land here too.
+  /// consult it, so paths a sibling registered must land here too.
   watched_files: FxDashSet<WatchPath>,
   pub(crate) needs_rebuild: bool,
   closed: Arc<AtomicBool>,
@@ -58,8 +49,7 @@ pub struct WatchTask {
 impl WatchTask {
   pub(crate) fn new(
     config: BundlerConfig,
-    fs_watcher: Arc<std::sync::Mutex<Box<dyn TaskFsWatcher>>>,
-    group_registered_files: Arc<FxDashSet<WatchPath>>,
+    fs_watcher: Arc<std::sync::Mutex<FsWatcher>>,
     closed: &Arc<AtomicBool>,
   ) -> BuildResult<Self> {
     // Validation: dev_mode not allowed with watch
@@ -81,12 +71,10 @@ impl WatchTask {
       .build()?;
 
     let options = Arc::clone(bundler.options());
-
     Ok(Self {
       bundler: Arc::new(TokioMutex::new(bundler)),
       options,
       fs_watcher,
-      group_registered_files,
       watched_files: FxDashSet::default(),
       needs_rebuild: true,
       closed: Arc::clone(closed),
@@ -109,7 +97,6 @@ impl WatchTask {
     // Use field-level borrows so the closure can capture fs_watcher/watched_files/options
     // without conflicting with the &mut self borrow on bundler.
     let fs_watcher_ref = &self.fs_watcher;
-    let group_registered_files_ref = &self.group_registered_files;
     let watched_files_ref = &self.watched_files;
     let options_ref = &*self.options;
 
@@ -138,7 +125,6 @@ impl WatchTask {
           if let Err(diagnostics) = Self::update_watch_files_from(
             fs_watcher_ref,
             watched_files_ref,
-            group_registered_files_ref,
             options_ref,
             &watch_files,
           ) {
@@ -272,99 +258,61 @@ impl WatchTask {
 
   /// Update watched files by adding new ones to the fs watcher.
   fn update_watch_files(&self, files: &[ArcStr]) -> BuildResult<()> {
-    Self::update_watch_files_from(
-      &self.fs_watcher,
-      &self.watched_files,
-      &self.group_registered_files,
-      &self.options,
-      files,
-    )
+    Self::update_watch_files_from(&self.fs_watcher, &self.watched_files, &self.options, files)
   }
 
   /// Static helper: update FS watcher with newly discovered files.
   /// Separated from `&self` to allow calling from closures during build.
   fn update_watch_files_from(
-    fs_watcher: &std::sync::Mutex<Box<dyn TaskFsWatcher>>,
+    fs_watcher: &std::sync::Mutex<FsWatcher>,
     watched_files: &FxDashSet<WatchPath>,
-    group_registered_files: &FxDashSet<WatchPath>,
     options: &NormalizedBundlerOptions,
     files: &[ArcStr],
   ) -> BuildResult<()> {
-    // Collect the genuinely new paths BEFORE opening the notify transaction.
-    // On macOS, opening `paths_mut()` stops the FSEvents stream and the commit
-    // restarts it from "now" — events delivered in between are dropped, not
-    // replayed. The stream is shared by every task in the group, so an open
-    // transaction blinds the whole group. Steady-state rebuilds, where every
-    // path is already registered, must not open a transaction at all, and a
-    // path a sibling task already committed to the shared backend is adopted
-    // into this task's watch set without touching the backend.
-    let mut new_files = Vec::new();
-    for file in files {
-      let watch_path = WatchPath::new(file.as_str(), &options.cwd);
-      if watched_files.contains(&watch_path) {
-        continue;
-      }
-      let path = watch_path.as_path();
-      if !path.exists() {
-        continue;
-      }
-      if pattern_filter::filter(
-        options.watch.exclude.as_deref(),
-        options.watch.include.as_deref(),
-        path.to_string_lossy().as_ref(),
-        options.cwd.to_string_lossy().as_ref(),
-      )
-      .inner()
-      {
-        if group_registered_files.contains(&watch_path) {
-          // The shared backend already delivers events for this path; only
-          // this task's own watch set — the input of `mark_needs_rebuild` and
-          // `is_watched_file` — still has to learn about it.
-          watched_files.insert(watch_path);
-        } else {
-          new_files.push(watch_path);
-        }
-      }
-    }
-    if new_files.is_empty() {
+    // Candidates are the paths new to THIS task. The group's shared
+    // `FsWatcher` opens a native batch only for the ones no member has
+    // registered yet: on macOS, opening a batch stops the FSEvents stream and
+    // the commit restarts it from "now", dropping events delivered in
+    // between, and the stream is shared by the whole group. Steady-state
+    // rebuilds, where every path is already in `watched_files`, return before
+    // locking the watcher.
+    let cwd = options.cwd.to_string_lossy();
+    let candidates: Vec<WatchPath> = files
+      .iter()
+      .map(|file| WatchPath::new(file.as_str(), &options.cwd))
+      .filter(|watch_path| {
+        let path = watch_path.as_path();
+        !watched_files.contains(watch_path)
+          && path.exists()
+          && pattern_filter::filter(
+            options.watch.exclude.as_deref(),
+            options.watch.include.as_deref(),
+            &path.to_string_lossy(),
+            &cwd,
+          )
+          .inner()
+      })
+      .collect();
+    if candidates.is_empty() {
       return Ok(());
     }
 
     let mut fs_watcher = fs_watcher.lock().expect("fs_watcher lock poisoned");
-    let mut watcher_paths = fs_watcher.paths_mut();
-    let mut pending_watch_files = Vec::new();
-    let mut errors = Vec::new();
-
-    for watch_path in new_files {
-      let path = watch_path.as_path();
-      match watcher_paths.add(path, RecursiveMode::Recursive) {
-        Ok(()) => {
-          tracing::debug!(name = "notify watch", path = ?path);
-          pending_watch_files.push(watch_path);
-        }
-        Err(error) => errors.extend(error.into_vec()),
-      }
-    }
-
-    // Opening a notify paths transaction can pause event delivery until commit.
-    // Always finalize it, including after add failures. See
+    // A refused add is a registration failure here, not a skip: the
+    // coordinator retries the task with backoff. Every group-new path is
+    // still attempted and the batch always committed. See
     // internal-docs/watch-mode/implementation.md.
-    // Publish only on commit success, and to BOTH sets: the group set must
-    // never claim a path the backend does not deliver events for, or a
-    // sibling's adoption would silently drop the path from the whole group's
-    // retry. On failure neither set gains the path, so the next build attempt
-    // retries the registration.
-    match watcher_paths.commit() {
-      Ok(()) => {
-        for file in pending_watch_files {
-          group_registered_files.insert(file.clone());
-          watched_files.insert(file);
-        }
+    let result = fs_watcher.try_watch_paths(candidates.iter().map(WatchPath::as_path), |_| true);
+    // Publish to this task exactly what the group watcher holds: paths a
+    // sibling registered earlier, plus this batch's paths whose add and
+    // commit both succeeded. Anything else stays out of both sets, so the next
+    // build attempt retries it.
+    for watch_path in candidates {
+      if fs_watcher.is_registered(watch_path.as_path()) {
+        watched_files.insert(watch_path);
       }
-      Err(error) => errors.extend(error.into_vec()),
     }
-
-    if errors.is_empty() { Ok(()) } else { Err(BatchedBuildDiagnostic::new(errors)) }
+    result
   }
 
   /// Mark this task as needing rebuild if the changed file is in our watch list.
@@ -422,6 +370,8 @@ impl WatchTask {
     bundler.close().await.map_err(Into::into)
   }
 
+  /// Per task, not per group: the shared watcher's set also holds the paths
+  /// only a sibling output watches.
   fn is_watched_file(&self, path: &str) -> bool {
     Path::new(path).ancestors().any(|ancestor| self.watched_files.contains(ancestor))
   }
@@ -475,7 +425,7 @@ pub enum WatchTaskBuildError {
 #[cfg(test)]
 mod tests {
   use super::*;
-  use rolldown_fs_watcher::PathsMut;
+  use rolldown_fs_watcher::{PathsMut, WatcherBackend};
   use rolldown_workspace::TestDir;
   use std::{
     fs,
@@ -496,12 +446,8 @@ mod tests {
   }
 
   impl PathsMut for CommitFailingPaths {
-    fn add(&mut self, path: &Path, _recursive_mode: RecursiveMode) -> BuildResult<()> {
+    fn add(&mut self, path: &Path) -> BuildResult<()> {
       self.pending.push(path.to_path_buf());
-      Ok(())
-    }
-
-    fn remove(&mut self, _path: &Path) -> BuildResult<()> {
       Ok(())
     }
 
@@ -513,7 +459,7 @@ mod tests {
     }
   }
 
-  impl TaskFsWatcher for CommitFailingWatcher {
+  impl WatcherBackend for CommitFailingWatcher {
     fn paths_mut(&mut self) -> Box<dyn PathsMut + '_> {
       Box::new(CommitFailingPaths {
         commit_attempts: Arc::clone(&self.commit_attempts),
@@ -537,22 +483,18 @@ mod tests {
   }
 
   struct AddFailingWatcherFixture {
-    watcher: std::sync::Mutex<Box<dyn TaskFsWatcher>>,
+    watcher: std::sync::Mutex<FsWatcher>,
     add_attempts: Arc<Mutex<Vec<PathBuf>>>,
     commit_attempts: Arc<AtomicUsize>,
     event_delivery_paused: Arc<AtomicBool>,
   }
 
   impl PathsMut for AddFailingPaths {
-    fn add(&mut self, path: &Path, _recursive_mode: RecursiveMode) -> BuildResult<()> {
+    fn add(&mut self, path: &Path) -> BuildResult<()> {
       self.add_attempts.lock().expect("add attempts lock").push(path.to_path_buf());
       if path.ends_with("fail.js") {
         return Err(anyhow::anyhow!("intentional watcher add failure").into());
       }
-      Ok(())
-    }
-
-    fn remove(&mut self, _path: &Path) -> BuildResult<()> {
       Ok(())
     }
 
@@ -566,7 +508,7 @@ mod tests {
     }
   }
 
-  impl TaskFsWatcher for AddFailingWatcher {
+  impl WatcherBackend for AddFailingWatcher {
     fn paths_mut(&mut self) -> Box<dyn PathsMut + '_> {
       assert!(
         !self.event_delivery_paused.swap(true, Ordering::SeqCst),
@@ -579,6 +521,10 @@ mod tests {
         event_delivery_paused: Arc::clone(&self.event_delivery_paused),
       })
     }
+  }
+
+  fn is_registered(watcher: &std::sync::Mutex<FsWatcher>, path: &Path) -> bool {
+    watcher.lock().expect("watcher lock").is_registered(path)
   }
 
   fn create_watch_files(test_dir: &TestDir, names: &[&str]) -> Vec<ArcStr> {
@@ -598,12 +544,12 @@ mod tests {
     let add_attempts = Arc::new(Mutex::new(Vec::new()));
     let commit_attempts = Arc::new(AtomicUsize::new(0));
     let event_delivery_paused = Arc::new(AtomicBool::new(false));
-    let watcher: Box<dyn TaskFsWatcher> = Box::new(AddFailingWatcher {
+    let watcher = FsWatcher::with_backend(Box::new(AddFailingWatcher {
       fail_commit,
       add_attempts: Arc::clone(&add_attempts),
       commit_attempts: Arc::clone(&commit_attempts),
       event_delivery_paused: Arc::clone(&event_delivery_paused),
-    });
+    }));
     AddFailingWatcherFixture {
       watcher: std::sync::Mutex::new(watcher),
       add_attempts,
@@ -621,24 +567,20 @@ mod tests {
     let AddFailingWatcherFixture { watcher, add_attempts, commit_attempts, event_delivery_paused } =
       create_add_failing_watcher(false);
     let watched_files = FxDashSet::default();
-    let group_registered_files = FxDashSet::default();
 
-    let error = WatchTask::update_watch_files_from(
-      &watcher,
-      &watched_files,
-      &group_registered_files,
-      &options,
-      &watch_files,
-    )
-    .expect_err("the failed watcher addition must be reported");
+    let error =
+      WatchTask::update_watch_files_from(&watcher, &watched_files, &options, &watch_files)
+        .expect_err("the failed watcher addition must be reported");
 
     assert!(error.to_string().contains("intentional watcher add failure"));
     assert_eq!(error.len(), 1);
-    assert_eq!(
-      *add_attempts.lock().expect("add attempts lock"),
-      watch_files.iter().map(|file| PathBuf::from(file.as_str())).collect::<Vec<_>>(),
-      "an add failure must not skip later paths"
-    );
+    // `FsWatcher` stages a batch from a hash set, so only the set of attempts is stable.
+    let mut attempted = add_attempts.lock().expect("add attempts lock").clone();
+    attempted.sort();
+    let mut expected =
+      watch_files.iter().map(|file| PathBuf::from(file.as_str())).collect::<Vec<_>>();
+    expected.sort();
+    assert_eq!(attempted, expected, "an add failure must not skip later paths");
     assert_eq!(commit_attempts.load(Ordering::SeqCst), 1);
     assert!(
       !event_delivery_paused.load(Ordering::SeqCst),
@@ -647,12 +589,12 @@ mod tests {
     assert!(watched_files.contains(Path::new(watch_files[0].as_str())));
     assert!(!watched_files.contains(Path::new(watch_files[1].as_str())));
     assert!(watched_files.contains(Path::new(watch_files[2].as_str())));
-    assert!(group_registered_files.contains(Path::new(watch_files[0].as_str())));
+    assert!(is_registered(&watcher, Path::new(watch_files[0].as_str())));
     assert!(
-      !group_registered_files.contains(Path::new(watch_files[1].as_str())),
+      !is_registered(&watcher, Path::new(watch_files[1].as_str())),
       "a failed add must stay unregistered for the whole group so the retry re-adds it"
     );
-    assert!(group_registered_files.contains(Path::new(watch_files[2].as_str())));
+    assert!(is_registered(&watcher, Path::new(watch_files[2].as_str())));
   }
 
   #[test]
@@ -664,16 +606,10 @@ mod tests {
     let AddFailingWatcherFixture { watcher, add_attempts, commit_attempts, event_delivery_paused } =
       create_add_failing_watcher(true);
     let watched_files = FxDashSet::default();
-    let group_registered_files = FxDashSet::default();
 
-    let error = WatchTask::update_watch_files_from(
-      &watcher,
-      &watched_files,
-      &group_registered_files,
-      &options,
-      &watch_files,
-    )
-    .expect_err("add and commit failures must both be reported");
+    let error =
+      WatchTask::update_watch_files_from(&watcher, &watched_files, &options, &watch_files)
+        .expect_err("add and commit failures must both be reported");
     let message = error.to_string();
 
     assert!(message.contains("intentional watcher add failure"));
@@ -687,8 +623,9 @@ mod tests {
     );
     assert!(!watched_files.contains(Path::new(watch_files[0].as_str())));
     assert!(!watched_files.contains(Path::new(watch_files[1].as_str())));
-    assert!(
-      group_registered_files.is_empty(),
+    assert_eq!(
+      watcher.lock().expect("watcher lock").watched_paths().count(),
+      0,
       "a failed commit must not publish any path to the group set"
     );
   }
@@ -705,23 +642,22 @@ mod tests {
       ..Default::default()
     };
     let commit_attempts = Arc::new(AtomicUsize::new(0));
-    let watcher: Box<dyn TaskFsWatcher> =
-      Box::new(CommitFailingWatcher { commit_attempts: Arc::clone(&commit_attempts) });
+    let watcher = FsWatcher::with_backend(Box::new(CommitFailingWatcher {
+      commit_attempts: Arc::clone(&commit_attempts),
+    }));
     let watcher = std::sync::Mutex::new(watcher);
     let watched_files = FxDashSet::default();
-    let group_registered_files = FxDashSet::default();
 
     let first = WatchTask::update_watch_files_from(
       &watcher,
       &watched_files,
-      &group_registered_files,
       &options,
       std::slice::from_ref(&watch_file),
     );
     assert!(first.is_err());
     assert!(!watched_files.contains(Path::new(watch_file.as_str())));
     assert!(
-      !group_registered_files.contains(Path::new(watch_file.as_str())),
+      !is_registered(&watcher, Path::new(watch_file.as_str())),
       "a failed commit must not publish the path to the group set, \
        or the retry would adopt an unregistered path"
     );
@@ -730,19 +666,17 @@ mod tests {
     WatchTask::update_watch_files_from(
       &watcher,
       &watched_files,
-      &group_registered_files,
       &options,
       std::slice::from_ref(&watch_file),
     )
     .expect("second watcher commit should retry and succeed");
     assert!(watched_files.contains(Path::new(watch_file.as_str())));
-    assert!(group_registered_files.contains(Path::new(watch_file.as_str())));
+    assert!(is_registered(&watcher, Path::new(watch_file.as_str())));
     assert_eq!(commit_attempts.load(Ordering::SeqCst), 2);
 
     WatchTask::update_watch_files_from(
       &watcher,
       &watched_files,
-      &group_registered_files,
       &options,
       std::slice::from_ref(&watch_file),
     )
@@ -761,35 +695,22 @@ mod tests {
       NormalizedBundlerOptions { cwd: test_dir.path().to_path_buf(), ..Default::default() };
     let AddFailingWatcherFixture { watcher, commit_attempts, event_delivery_paused, .. } =
       create_add_failing_watcher(false);
-    let group_registered_files = FxDashSet::default();
     let task_a_watched_files = FxDashSet::default();
     let task_b_watched_files = FxDashSet::default();
 
     // Task A of the group registers the path with the shared backend.
-    WatchTask::update_watch_files_from(
-      &watcher,
-      &task_a_watched_files,
-      &group_registered_files,
-      &options,
-      &watch_files,
-    )
-    .expect("first registration should commit");
+    WatchTask::update_watch_files_from(&watcher, &task_a_watched_files, &options, &watch_files)
+      .expect("first registration should commit");
     assert_eq!(commit_attempts.load(Ordering::SeqCst), 1);
     assert!(task_a_watched_files.contains(Path::new(watch_files[0].as_str())));
-    assert!(group_registered_files.contains(Path::new(watch_files[0].as_str())));
+    assert!(is_registered(&watcher, Path::new(watch_files[0].as_str())));
 
     // Sibling task B discovers the same path (the group members share one
     // module graph). It must adopt the group's registration: another paths
     // transaction would restart the shared FSEvents stream and drop the
     // events buffered while it is open.
-    WatchTask::update_watch_files_from(
-      &watcher,
-      &task_b_watched_files,
-      &group_registered_files,
-      &options,
-      &watch_files,
-    )
-    .expect("the sibling's duplicate batch must succeed");
+    WatchTask::update_watch_files_from(&watcher, &task_b_watched_files, &options, &watch_files)
+      .expect("the sibling's duplicate batch must succeed");
     assert_eq!(
       commit_attempts.load(Ordering::SeqCst),
       1,

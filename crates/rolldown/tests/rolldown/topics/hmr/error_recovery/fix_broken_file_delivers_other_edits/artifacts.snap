@@ -18,11 +18,6 @@ __rolldown_runtime__.registerGraph({
 		[],
 		[],
 		[0, 1]
-	],
-	dynamicEdges: [
-		[],
-		[],
-		[]
 	]
 });
 //#region a.js
@@ -88,7 +83,7 @@ __rolldown_runtime__.registerModule("main.js", { exports: main_exports });
 ## Code
 
 ```js
-__rolldown_runtime__.registerGraph({ids:["a.js","b.js"],localCount:2,edges:[[],[]],dynamicEdges:[[],[]]});
+__rolldown_runtime__.registerGraph({ids:["a.js","b.js"],localCount:2,edges:[[],[]]});
 //#region a.js
 __rolldown_runtime__.registerFactory("a.js", (function(__rolldown_module_id__) {
 	try {
@@ -143,11 +138,6 @@ __rolldown_runtime__.registerGraph({
 		[],
 		[],
 		[0, 1]
-	],
-	dynamicEdges: [
-		[],
-		[],
-		[]
 	]
 });
 //#region a.js

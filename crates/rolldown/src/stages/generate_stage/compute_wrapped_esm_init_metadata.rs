@@ -5,9 +5,10 @@ use std::ops::Deref;
 use oxc::ast::ast::{Declaration, Statement};
 use oxc_index::IndexVec;
 use rolldown_common::{
-  ChunkIdx, ConcatenateWrappedModuleKind, ImportKind, ImportRecordIdx, ImportRecordMeta,
-  IndexModules, Module, ModuleIdx, ModuleNamespaceIncludedReason, NormalModule, StmtInfoIdx,
-  StmtInfos, WrapKind,
+  ChunkIdx, ConcatenateWrappedModuleKind, ConstExportMeta, ImportKind, ImportRecordIdx,
+  ImportRecordMeta, IndexModules, InlineConstMode, Module, ModuleIdx,
+  ModuleNamespaceIncludedReason, NormalModule, StmtInfoIdx, StmtInfos, SymbolRef, SymbolRefDb,
+  UsedSymbolRefsView, WrapKind,
 };
 use rolldown_ecmascript::EcmaAst;
 use rolldown_utils::{index_vec_ext::IndexVecRefExt, rayon::ParallelIterator as _};
@@ -16,9 +17,11 @@ use rustc_hash::{FxHashMap, FxHashSet};
 use crate::{
   chunk_graph::ChunkGraph,
   esm_init_obligations::{
-    WrappedEsmInitTarget, collect_order_wrap_esm_init_targets, reexport_record_owns_hop,
+    WrappedEsmInitTarget, WrappedEsmInitTargetContext, collect_order_wrap_esm_init_targets,
+    collect_wrapped_esm_init_targets_for_import_record, import_record_has_live_binding_consumer,
+    importer_reexports_binding, reexport_record_owns_hop,
   },
-  type_alias::IndexEcmaAst,
+  type_alias::{IndexEcmaAst, IndexStmtInfos},
   types::linking_metadata::{LinkingMetadata, LinkingMetadataVec},
 };
 
@@ -86,13 +89,9 @@ impl GenerateStage<'_> {
     ast_table: &IndexEcmaAst,
     chunk_graph: &ChunkGraph,
     order_state: &OrderWrapState,
+    used_symbol_refs: UsedSymbolRefsView<'_>,
   ) -> Sealed<FinalEsmInitMetadata> {
     let keep_names = self.options.keep_names;
-    // Dev mode emits an HMR header (`createModuleHotContext` / `registerModule`) into every
-    // module's closure. That happens after this pass, so it is invisible to the AST check
-    // below — the same blind spot `shimmed_missing_exports` guards against. No wrapped module
-    // has an empty closure in dev, so nothing here can be a no-op.
-    let is_dev_mode = self.options.is_dev_mode_enabled();
     // Off-strict, lowering never mutates the chunk graph, so the liveness guard cannot fire.
     let strict = self.options.is_strict_execution_order_enabled();
     let metas = &self.link_output.metas;
@@ -106,8 +105,7 @@ impl GenerateStage<'_> {
           return None;
         }
         let init_target = order_state.esm_init_target(module_idx, meta)?;
-        let is_noop =
-          !is_dev_mode && init_is_noop(meta, ast_table[module_idx].as_ref(), keep_names);
+        let is_noop = init_is_noop(meta, ast_table[module_idx].as_ref(), keep_names);
         let targets_by_stmt = modules[module_idx]
           .as_normal()
           .zip(module_to_chunk[module_idx])
@@ -126,6 +124,11 @@ impl GenerateStage<'_> {
                 order_wrap: matches!(init_target.origin, EsmInitOrigin::ExecutionOrder),
                 execution_dependencies: &meta.execution_dependencies,
                 order_state,
+                stmt_infos_vec,
+                symbol_db: &self.link_output.symbol_db,
+                constant_value_map: &self.link_output.global_constant_symbol_map,
+                inline_const_mode: self.options.optimization.inline_const.map(|config| config.mode),
+                used_symbol_refs,
               },
             )
           })
@@ -150,6 +153,11 @@ struct EsmInitTargetContext<'a> {
   order_wrap: bool,
   execution_dependencies: &'a rolldown_utils::indexmap::FxIndexSet<ModuleIdx>,
   order_state: &'a OrderWrapState,
+  stmt_infos_vec: &'a IndexStmtInfos,
+  symbol_db: &'a SymbolRefDb,
+  constant_value_map: &'a FxHashMap<SymbolRef, ConstExportMeta>,
+  inline_const_mode: Option<InlineConstMode>,
+  used_symbol_refs: UsedSymbolRefsView<'a>,
 }
 
 /// Whether calling the module's `init_*()` is a no-op because nothing lands inside its `__esm`
@@ -272,6 +280,17 @@ fn transitive_esm_init_targets(
             namespace: namespace_reexport_is_retained,
           },
         ) {
+          // A non-forwarding excluded plain import can still carry importer-local binding demand:
+          // a statically folded member read, or a binding this module re-exports that downstream
+          // consumers reach through its export surface. Those consumers delegate wholesale to this
+          // module's `init_*`, so the wrapper must initialize the leaves that demand selects
+          // (issue #10690). Included plain imports emit at their own statement position instead.
+          if !stmt_is_included && !is_reexport {
+            let record_targets = excluded_plain_import_init_targets(module, meta, ctx, rec_idx);
+            if !record_targets.is_empty() {
+              targets_by_stmt.entry(stmt_idx).or_default().extend(record_targets);
+            }
+          }
           continue;
         }
         if stmt_is_included
@@ -342,6 +361,71 @@ fn transitive_esm_init_targets(
     }
   }
   targets_by_stmt
+}
+
+/// Resolve the binding demand of one excluded, non-forwarding plain-import record through the
+/// shared per-record router — the same resolver Emit runs for included statements — so the
+/// wrapper's excluded-statement metadata owns exactly the leaves and carriers this importer's
+/// consumers reach through it. Registration consumes the same metadata, which is what makes every
+/// collected wrapper reachable; the live-chunk filter below keeps emission from calling a wrapper
+/// that no live chunk declares.
+///
+/// The router runs only when the record carries binding demand: a live binding consumer
+/// (used binding, consumed facade, or member read in this module's included statements) or a
+/// binding this module re-exports, which downstream consumers reach through its export surface
+/// even when every read was statically folded away. A demand-less record — a side-effect-only
+/// import of a side-effect-free module, or dead named imports — was stripped by tree shaking
+/// deliberately, and routing it would resurrect that edge (the router initializes a wrapped
+/// importee wholesale, matching an included import's evaluation semantics).
+fn excluded_plain_import_init_targets(
+  module: &NormalModule,
+  meta: &LinkingMetadata,
+  ctx: &EsmInitTargetContext<'_>,
+  rec_idx: ImportRecordIdx,
+) -> Vec<WrappedEsmInitTarget> {
+  let router_ctx = WrappedEsmInitTargetContext {
+    importer: module,
+    importer_meta: meta,
+    modules: ctx.modules,
+    metas: ctx.metas,
+    stmt_infos: ctx.stmt_infos_vec,
+    symbol_db: ctx.symbol_db,
+    constant_value_map: ctx.constant_value_map,
+    inline_const_mode: ctx.inline_const_mode,
+    order_wrap_state: ctx.order_state,
+    // Only order-wrapped modules reach this router, and order wrapping exists only under strict
+    // execution order.
+    strict_execution_order: true,
+  };
+  let record_reexports_binding = module.named_imports.iter().any(|(imported_as_ref, import)| {
+    import.record_idx == rec_idx && importer_reexports_binding(module, *imported_as_ref)
+  });
+  if !record_reexports_binding
+    && !import_record_has_live_binding_consumer(&router_ctx, rec_idx, |symbol_ref| {
+      ctx.used_symbol_refs.contains(&symbol_ref)
+    })
+  {
+    return Vec::new();
+  }
+  collect_wrapped_esm_init_targets_for_import_record(
+    &router_ctx,
+    rec_idx,
+    |symbol_ref| ctx.used_symbol_refs.contains(&symbol_ref),
+    |_| true,
+    |forwarding_module_idx| ctx.module_to_chunk[forwarding_module_idx] == Some(ctx.chunk_idx),
+  )
+  .into_iter()
+  .filter(|target| match target {
+    WrappedEsmInitTarget::Module(module_idx) => ctx.order_state.esm_init_included_in_live_chunk(
+      &ctx.metas[*module_idx],
+      *module_idx,
+      ctx.chunk_graph,
+    ),
+    WrappedEsmInitTarget::CjsCarrier(key) => {
+      ctx.order_state.order_cjs_carrier_included_in_live_chunk(*key, ctx.chunk_graph)
+    }
+  })
+  .collect()
 }
 
 /// Whether an order-wrapped importer's `init_*` must forward through this static-import record.

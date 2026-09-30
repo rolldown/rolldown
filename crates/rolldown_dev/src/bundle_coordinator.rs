@@ -8,16 +8,11 @@ use anyhow::Context;
 use arcstr::ArcStr;
 use async_lock::Mutex;
 use futures::StreamExt;
-#[cfg(target_os = "macos")]
-use notify::EventKind;
 use rolldown_common::{WatchPath, WatcherChangeKind};
 use rolldown_dev_common::types::{DevCallbackError, DevCallbackResult};
 use rolldown_error::BuildResult;
-use rolldown_fs_watcher::{
-  FsChangeKind, FsEventResult, PathsSource, RecursiveMode, map_notify_event,
-};
+use rolldown_fs_watcher::{FsEvent, FsWatcher};
 use rolldown_utils::{
-  dashmap::FxDashSet,
   futures::spawn_detached,
   indexmap::{FxIndexMap, FxIndexSet},
   pattern_filter,
@@ -61,8 +56,7 @@ pub struct BundleCoordinator {
   /// field doc on `DevEngine::next_hmr_patch_id`.
   next_hmr_patch_id: Arc<AtomicU32>,
   rx: CoordinatorReceiver,
-  watcher: StdMutex<Box<dyn PathsSource>>,
-  watched_files: FxDashSet<WatchPath>,
+  watcher: StdMutex<FsWatcher>,
   /// Tracks the state of the initial build
   state: CoordinatorState,
   /// File changes that arrived during initial build
@@ -83,7 +77,7 @@ impl BundleCoordinator {
     bundler: Arc<Mutex<Bundler>>,
     ctx: SharedDevContext,
     rx: CoordinatorReceiver,
-    watcher: impl PathsSource + 'static,
+    watcher: FsWatcher,
     next_hmr_patch_id: Arc<AtomicU32>,
   ) -> Self {
     Self {
@@ -91,8 +85,7 @@ impl BundleCoordinator {
       ctx,
       next_hmr_patch_id,
       rx,
-      watcher: StdMutex::new(Box::new(watcher)),
-      watched_files: FxDashSet::default(),
+      watcher: StdMutex::new(watcher),
       state: CoordinatorState::Initialized,
       queued_file_changes_waited_for_full_build: FxIndexMap::default(),
       // Initialize build state with initial build task
@@ -182,7 +175,13 @@ impl BundleCoordinator {
         }
         #[cfg(feature = "testing")]
         CoordinatorMsg::GetWatchedFiles { reply } => {
-          let result = self.watched_files.iter().map(|s| s.to_string()).collect();
+          let result = self
+            .watcher
+            .lock()
+            .map(|watcher| {
+              watcher.watched_paths().map(|path| path.to_string_lossy().into_owned()).collect()
+            })
+            .unwrap_or_default();
           let _ = reply.send(result);
         }
         CoordinatorMsg::ModuleChanged { module_id, watch_files } => {
@@ -258,38 +257,10 @@ impl BundleCoordinator {
 
   /// Handle file change events from watcher.
   ///
-  /// Rename mapping is shared with build watch via [`map_notify_event`].
   /// See `internal-docs/dev-engine/implementation.md` ("From fs event to queued task").
-  async fn handle_watch_event(&mut self, watch_event: FsEventResult) {
-    match watch_event {
-      Ok(batched_events) => {
-        let mut changed_files = FxIndexMap::default();
-        for batched_event in batched_events {
-          #[cfg(target_os = "macos")]
-          if matches!(
-            batched_event.detail.kind,
-            EventKind::Modify(notify::event::ModifyKind::Metadata(_))
-          ) && !self.ctx.options.use_polling
-          {
-            // kqueue on mac emits metadata events often; they do not affect the
-            // build in most cases. Polling prefers metadata over content events,
-            // so those must still be mapped.
-            continue;
-          }
-
-          for (path, kind) in
-            map_notify_event(&batched_event.detail.kind, batched_event.detail.paths)
-          {
-            changed_files.insert(path, watcher_change_kind(kind));
-          }
-        }
-
-        self.handle_file_changes(changed_files).await;
-      }
-      Err(e) => {
-        tracing::error!("notify error: {e:?}");
-      }
-    }
+  async fn handle_watch_event(&mut self, events: Vec<FsEvent>) {
+    let changed_files = events.into_iter().map(|event| (event.path, event.kind)).collect();
+    self.handle_file_changes(changed_files).await;
   }
 
   /// Handle file changes based on initial build state
@@ -753,9 +724,9 @@ impl BundleCoordinator {
   /// `plugin_driver.watch_files` and drops whatever `extra` was capturing.
   /// Taking either one alone loses registrations, in opposite directions.
   ///
-  /// Registration is monotone: `watched_files` only grows and nothing is ever
-  /// unwatched, so re-offering a path that is already registered is free and a
-  /// path that arrives from both sources is added once.
+  /// Registration is monotone: the watcher's path set only grows and nothing
+  /// is ever unwatched, so re-offering a path that is already registered is
+  /// free and a path that arrives from both sources is added once.
   async fn update_watch_paths_including(&self, extra: &[ArcStr]) -> BuildResult<()> {
     let (mut watch_files, cwd) = {
       let bundler = self.bundler.lock().await;
@@ -774,19 +745,11 @@ impl BundleCoordinator {
     let include = self.ctx.options.watch_include.as_deref();
     let exclude = self.ctx.options.watch_exclude.as_deref();
 
-    Self::update_watch_paths_from(
-      &self.watcher,
-      &self.watched_files,
-      &watch_files,
-      &cwd,
-      include,
-      exclude,
-    )
+    Self::update_watch_paths_from(&self.watcher, &watch_files, &cwd, include, exclude)
   }
 
   fn update_watch_paths_from(
-    watcher: &StdMutex<Box<dyn PathsSource>>,
-    watched_files: &FxDashSet<WatchPath>,
+    watcher: &StdMutex<FsWatcher>,
     watch_files: &[ArcStr],
     cwd: &Path,
     include: Option<&[rolldown_utils::pattern_filter::StringOrRegex]>,
@@ -794,47 +757,16 @@ impl BundleCoordinator {
   ) -> BuildResult<()> {
     let cwd_str = cwd.to_string_lossy();
     let mut watcher = watcher.lock().ok().context("Failed to acquire watcher lock")?;
-    let mut paths_mut = watcher.paths_mut();
-    let mut pending_watch_files = Vec::new();
-    for watch_file in watch_files {
-      let watch_path = WatchPath::new(watch_file.as_str(), cwd);
-      let path = watch_path.as_path();
-      if !watched_files.contains(path)
-        && pattern_filter::filter(exclude, include, &path.to_string_lossy(), &cwd_str).inner()
-      {
-        // Recursive so a directory passed to `addWatchFile` covers its
-        // descendants (#10944); for a plain file it is the same as NonRecursive.
-        match paths_mut.add(path, RecursiveMode::Recursive) {
-          Ok(()) => pending_watch_files.push(watch_path),
-          // `addWatchFile` accepts nonexistent and virtual paths, so a refused
-          // registration must not fail the build. Skipped paths are retried on
-          // later builds because they never enter `watched_files`.
-          Err(error) => {
-            tracing::debug!(name = "notify watch skipped", path = ?path, error = ?error);
-          }
-        }
-      }
-    }
-
-    // Opening a notify paths transaction can pause event delivery until commit.
-    // Always finalize it, including when one or more additions failed.
+    // `addWatchFile` accepts nonexistent and virtual paths, so a refused
+    // registration is skipped rather than failing the build; it never enters
+    // the watcher's path set, so later builds offer it again. The batch is
+    // always committed, and a commit failure is the registration failure.
     // See internal-docs/dev-engine/implementation.md.
-    let commit_result = paths_mut.commit();
-    if commit_result.is_ok() {
-      for watch_path in pending_watch_files {
-        watched_files.insert(watch_path);
-      }
-    }
-
-    commit_result
-  }
-}
-
-fn watcher_change_kind(kind: FsChangeKind) -> WatcherChangeKind {
-  match kind {
-    FsChangeKind::Create => WatcherChangeKind::Create,
-    FsChangeKind::Update => WatcherChangeKind::Update,
-    FsChangeKind::Delete => WatcherChangeKind::Delete,
+    let watch_paths: Vec<WatchPath> =
+      watch_files.iter().map(|watch_file| WatchPath::new(watch_file.as_str(), cwd)).collect();
+    watcher.watch_paths(watch_paths.iter().map(WatchPath::as_path), |path| {
+      pattern_filter::filter(exclude, include, &path.to_string_lossy(), &cwd_str).inner()
+    })
   }
 }
 
@@ -848,7 +780,7 @@ mod tests {
   use futures::channel::oneshot;
   use rolldown::{BundlerOptions, DevModeOptions, ExperimentalOptions};
   use rolldown_error::BatchedBuildDiagnostic;
-  use rolldown_fs_watcher::{FsWatcher, FsWatcherConfig, PathsMut};
+  use rolldown_fs_watcher::{FsWatcherConfig, PathsMut, WatcherBackend};
   use rolldown_workspace::TestDir;
   use std::{
     fs,
@@ -889,6 +821,10 @@ mod tests {
     )
   }
 
+  fn is_registered(watcher: &StdMutex<FsWatcher>, path: &Path) -> bool {
+    watcher.lock().expect("watcher lock").is_registered(path)
+  }
+
   struct CommitFailingWatcher {
     commit_attempts: Arc<AtomicUsize>,
     failures_before_success: usize,
@@ -901,12 +837,8 @@ mod tests {
   }
 
   impl PathsMut for CommitFailingPaths {
-    fn add(&mut self, path: &Path, _recursive_mode: RecursiveMode) -> BuildResult<()> {
+    fn add(&mut self, path: &Path) -> BuildResult<()> {
       self.pending.push(path.to_path_buf());
-      Ok(())
-    }
-
-    fn remove(&mut self, _path: &Path) -> BuildResult<()> {
       Ok(())
     }
 
@@ -921,7 +853,7 @@ mod tests {
     }
   }
 
-  impl PathsSource for CommitFailingWatcher {
+  impl WatcherBackend for CommitFailingWatcher {
     fn paths_mut(&mut self) -> Box<dyn PathsMut + '_> {
       Box::new(CommitFailingPaths {
         commit_attempts: Arc::clone(&self.commit_attempts),
@@ -942,14 +874,10 @@ mod tests {
   }
 
   impl PathsMut for AddFailingPaths {
-    fn add(&mut self, path: &Path, _recursive_mode: RecursiveMode) -> BuildResult<()> {
+    fn add(&mut self, path: &Path) -> BuildResult<()> {
       if path.ends_with("fail.js") {
         return Err(anyhow::anyhow!("intentional watcher add failure").into());
       }
-      Ok(())
-    }
-
-    fn remove(&mut self, _path: &Path) -> BuildResult<()> {
       Ok(())
     }
 
@@ -962,7 +890,7 @@ mod tests {
     }
   }
 
-  impl PathsSource for AddFailingWatcher {
+  impl WatcherBackend for AddFailingWatcher {
     fn paths_mut(&mut self) -> Box<dyn PathsMut + '_> {
       Box::new(AddFailingPaths {
         commit_attempts: Arc::clone(&self.commit_attempts),
@@ -983,12 +911,8 @@ mod tests {
   }
 
   impl PathsMut for RecordingPaths {
-    fn add(&mut self, path: &Path, _recursive_mode: RecursiveMode) -> BuildResult<()> {
+    fn add(&mut self, path: &Path) -> BuildResult<()> {
       self.pending.push(path.to_path_buf());
-      Ok(())
-    }
-
-    fn remove(&mut self, _path: &Path) -> BuildResult<()> {
       Ok(())
     }
 
@@ -998,7 +922,7 @@ mod tests {
     }
   }
 
-  impl PathsSource for RecordingWatcher {
+  impl WatcherBackend for RecordingWatcher {
     fn paths_mut(&mut self) -> Box<dyn PathsMut + '_> {
       Box::new(RecordingPaths { added: Arc::clone(&self.added), pending: Vec::new() })
     }
@@ -1007,12 +931,11 @@ mod tests {
   #[test]
   fn failed_watch_add_commits_and_publishes_only_successful_additions() {
     let commit_attempts = Arc::new(AtomicUsize::new(0));
-    let watcher: Box<dyn PathsSource> = Box::new(AddFailingWatcher {
+    let watcher = FsWatcher::with_backend(Box::new(AddFailingWatcher {
       commit_attempts: Arc::clone(&commit_attempts),
       fail_commit: false,
-    });
+    }));
     let watcher = StdMutex::new(watcher);
-    let watched_files = FxDashSet::default();
     let successful_before = ArcStr::from("/virtual/project/before.js");
     let failed = ArcStr::from("/virtual/project/fail.js");
     let successful_after = ArcStr::from("/virtual/project/after.js");
@@ -1020,7 +943,6 @@ mod tests {
 
     BundleCoordinator::update_watch_paths_from(
       &watcher,
-      &watched_files,
       &watch_files,
       Path::new("/virtual/project"),
       None,
@@ -1029,9 +951,9 @@ mod tests {
     .expect("a failed watcher addition must not fail the build");
 
     assert_eq!(commit_attempts.load(Ordering::SeqCst), 1);
-    assert!(watched_files.contains(Path::new(successful_before.as_str())));
-    assert!(!watched_files.contains(Path::new(failed.as_str())));
-    assert!(watched_files.contains(Path::new(successful_after.as_str())));
+    assert!(is_registered(&watcher, Path::new(successful_before.as_str())));
+    assert!(!is_registered(&watcher, Path::new(failed.as_str())));
+    assert!(is_registered(&watcher, Path::new(successful_after.as_str())));
   }
 
   #[test]
@@ -1164,12 +1086,11 @@ mod tests {
   #[test]
   fn watch_add_and_commit_failures_are_aggregated_without_publication() {
     let commit_attempts = Arc::new(AtomicUsize::new(0));
-    let watcher: Box<dyn PathsSource> = Box::new(AddFailingWatcher {
+    let watcher = FsWatcher::with_backend(Box::new(AddFailingWatcher {
       commit_attempts: Arc::clone(&commit_attempts),
       fail_commit: true,
-    });
+    }));
     let watcher = StdMutex::new(watcher);
-    let watched_files = FxDashSet::default();
     let successful_add = ArcStr::from("/virtual/project/success.js");
     let failed_add = ArcStr::from("/virtual/project/fail.js");
     let watch_files = [successful_add.clone(), failed_add.clone()];
@@ -1178,7 +1099,6 @@ mod tests {
     // build error, and nothing is published when the commit fails.
     let error = BundleCoordinator::update_watch_paths_from(
       &watcher,
-      &watched_files,
       &watch_files,
       Path::new("/virtual/project"),
       None,
@@ -1191,43 +1111,40 @@ mod tests {
     assert!(message.contains("intentional watcher commit failure"));
     assert_eq!(error.len(), 1);
     assert_eq!(commit_attempts.load(Ordering::SeqCst), 1);
-    assert!(!watched_files.contains(Path::new(successful_add.as_str())));
-    assert!(!watched_files.contains(Path::new(failed_add.as_str())));
+    assert!(!is_registered(&watcher, Path::new(successful_add.as_str())));
+    assert!(!is_registered(&watcher, Path::new(failed_add.as_str())));
   }
 
   #[test]
   fn failed_watch_commit_is_not_published_and_is_retried() {
     let commit_attempts = Arc::new(AtomicUsize::new(0));
-    let watcher: Box<dyn PathsSource> = Box::new(CommitFailingWatcher {
+    let watcher = FsWatcher::with_backend(Box::new(CommitFailingWatcher {
       commit_attempts: Arc::clone(&commit_attempts),
       failures_before_success: 1,
-    });
+    }));
     let watcher = StdMutex::new(watcher);
-    let watched_files = FxDashSet::default();
     let watch_file = ArcStr::from("/virtual/project/input.js");
 
     let first = BundleCoordinator::update_watch_paths_from(
       &watcher,
-      &watched_files,
       std::slice::from_ref(&watch_file),
       Path::new("/virtual/project"),
       None,
       None,
     );
     assert!(first.is_err());
-    assert!(!watched_files.contains(Path::new(watch_file.as_str())));
+    assert!(!is_registered(&watcher, Path::new(watch_file.as_str())));
     assert_eq!(commit_attempts.load(Ordering::SeqCst), 1);
 
     BundleCoordinator::update_watch_paths_from(
       &watcher,
-      &watched_files,
       std::slice::from_ref(&watch_file),
       Path::new("/virtual/project"),
       None,
       None,
     )
     .expect("second watcher commit should retry and succeed");
-    assert!(watched_files.contains(Path::new(watch_file.as_str())));
+    assert!(is_registered(&watcher, Path::new(watch_file.as_str())));
     assert_eq!(commit_attempts.load(Ordering::SeqCst), 2);
   }
 
@@ -1283,10 +1200,10 @@ mod tests {
       last_task_errored: std::sync::atomic::AtomicBool::new(false),
     });
     let commit_attempts = Arc::new(AtomicUsize::new(0));
-    let watcher = CommitFailingWatcher {
+    let watcher = FsWatcher::with_backend(Box::new(CommitFailingWatcher {
       commit_attempts: Arc::clone(&commit_attempts),
       failures_before_success: 2,
-    };
+    }));
     let mut coordinator = BundleCoordinator::new(
       Arc::new(Mutex::new(bundler)),
       ctx,
@@ -1418,10 +1335,10 @@ mod tests {
       last_task_errored: std::sync::atomic::AtomicBool::new(false),
     });
     let commit_attempts = Arc::new(AtomicUsize::new(0));
-    let watcher = CommitFailingWatcher {
+    let watcher = FsWatcher::with_backend(Box::new(CommitFailingWatcher {
       commit_attempts: Arc::clone(&commit_attempts),
       failures_before_success: 1,
-    };
+    }));
     let mut coordinator = BundleCoordinator::new(
       Arc::new(Mutex::new(bundler)),
       ctx,
@@ -1452,7 +1369,7 @@ mod tests {
     assert!(close_error.to_string().contains("intentional watcher commit failure"));
     assert_eq!(close_error.len(), 1);
     assert_eq!(commit_attempts.load(Ordering::SeqCst), 1);
-    assert!(!coordinator.watched_files.contains(input.as_path()));
+    assert!(!is_registered(&coordinator.watcher, input.as_path()));
   }
 
   #[test]
@@ -1542,7 +1459,7 @@ mod tests {
       Arc::new(Mutex::new(bundler)),
       ctx,
       coordinator_rx,
-      RecordingWatcher { added: Arc::clone(&added) },
+      FsWatcher::with_backend(Box::new(RecordingWatcher { added: Arc::clone(&added) })),
       Arc::new(AtomicU32::new(0)),
     );
     coordinator.state = CoordinatorState::InProgress;
@@ -1625,7 +1542,7 @@ mod tests {
       Arc::clone(&bundler),
       Arc::clone(&ctx),
       coordinator_rx,
-      RecordingWatcher { added: Arc::clone(&added) },
+      FsWatcher::with_backend(Box::new(RecordingWatcher { added: Arc::clone(&added) })),
       Arc::new(AtomicU32::new(0)),
     );
     coordinator.state = CoordinatorState::InProgress;

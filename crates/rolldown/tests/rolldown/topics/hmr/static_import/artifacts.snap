@@ -42,18 +42,6 @@ __rolldown_runtime__.registerGraph({
 			7
 		],
 		[8]
-	],
-	dynamicEdges: [
-		[],
-		[],
-		[],
-		[],
-		[],
-		[],
-		[],
-		[],
-		[],
-		[]
 	]
 });
 //#region modules/dep-cjs.js
@@ -137,7 +125,7 @@ __rolldown_runtime__.registerModule("main.js", { exports: main_exports });
 ## Code
 
 ```js
-__rolldown_runtime__.registerGraph({ids:["hmr.js","modules/new-dep-cjs.js","modules/new-dep-esm.js","modules/dep-cjs.js","modules/dep-esm.js","modules/dep-cjs-default.js","modules/dep-esm-default.js","modules/dep-cjs-named.js","modules/dep-esm-named.js","modules/dep-cjs-namespace.js","modules/dep-esm-namespace.js"],localCount:3,edges:[[3,4,5,6,7,8,9,10,1,2],[],[]],dynamicEdges:[[],[],[]]});
+__rolldown_runtime__.registerGraph({ids:["hmr.js","modules/new-dep-cjs.js","modules/new-dep-esm.js","modules/dep-cjs.js","modules/dep-esm.js","modules/dep-cjs-default.js","modules/dep-esm-default.js","modules/dep-cjs-named.js","modules/dep-esm-named.js","modules/dep-cjs-namespace.js","modules/dep-esm-namespace.js"],localCount:3,edges:[[3,4,5,6,7,8,9,10,1,2],[],[]]});
 //#region hmr.js
 import * as import_node_assert_strict_00 from "node:assert/strict";
 __rolldown_runtime__.registerFactory("hmr.js", (function(__rolldown_module_id__) {

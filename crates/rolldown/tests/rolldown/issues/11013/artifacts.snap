@@ -1,0 +1,58 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# warnings
+
+## UNRESOLVED_IMPORT
+
+```text
+[UNRESOLVED_IMPORT] Could not resolve 'no-such-pkg-d' in main.js
+   ╭─[ main.js:4:24 ]
+   │
+ 4 │   return [await import(a), await import(existing), await import('no-such-\u0070kg-h')];
+   │                        ┬  
+   │                        ╰── Module not found, treating it as an external dependency
+───╯
+
+```
+
+## UNRESOLVED_IMPORT
+
+```text
+[UNRESOLVED_IMPORT] Could not resolve 'no-such-pkg-h' in main.js
+   ╭─[ main.js:4:65 ]
+   │
+ 4 │   return [await import(a), await import(existing), await import('no-such-\u0070kg-h')];
+   │                                                                 ──────────┬─────────  
+   │                                                                           ╰─────────── Module not found, treating it as an external dependency
+───╯
+
+```
+
+# Assets
+
+## dep.js
+
+```js
+//#region dep.js
+const ok = true;
+//#endregion
+export { ok };
+
+```
+
+## main.js
+
+```js
+//#region main.js
+async function f() {
+	return [
+		await import("no-such-pkg-d"),
+		await import("./dep.js"),
+		await import("no-such-pkg-h")
+	];
+}
+//#endregion
+export { f };
+
+```

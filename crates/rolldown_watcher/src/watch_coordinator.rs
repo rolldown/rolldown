@@ -758,12 +758,10 @@ impl<H: WatcherEventHandler> WatchCoordinator<H> {
 #[cfg(test)]
 mod tests {
   use super::*;
-  use crate::watch_task::TaskFsWatcher;
   use event_listener::Event;
   use rolldown::{BundlerConfig, BundlerOptions, plugin};
   use rolldown_error::BuildResult;
-  use rolldown_fs_watcher::PathsMut;
-  use rolldown_utils::dashmap::FxDashSet;
+  use rolldown_fs_watcher::{FsWatcher, PathsMut, WatcherBackend};
   use rolldown_workspace::TestDir;
   use std::{
     borrow::Cow,
@@ -809,20 +807,12 @@ mod tests {
   }
 
   impl PathsMut for RegistrationFailingPaths {
-    fn add(
-      &mut self,
-      path: &Path,
-      _recursive_mode: rolldown_fs_watcher::RecursiveMode,
-    ) -> BuildResult<()> {
+    fn add(&mut self, path: &Path) -> BuildResult<()> {
       let attempt = self.add_attempts.fetch_add(1, Ordering::SeqCst) + 1;
       if attempt <= self.fail_adds {
         return Err(anyhow::anyhow!("intentional watcher add failure {attempt}").into());
       }
       self.pending.push(path.to_path_buf());
-      Ok(())
-    }
-
-    fn remove(&mut self, _path: &Path) -> BuildResult<()> {
       Ok(())
     }
 
@@ -839,7 +829,7 @@ mod tests {
     }
   }
 
-  impl TaskFsWatcher for RegistrationFailingWatcher {
+  impl WatcherBackend for RegistrationFailingWatcher {
     fn paths_mut(&mut self) -> Box<dyn PathsMut + '_> {
       Box::new(RegistrationFailingPaths {
         fail_adds: self.fail_adds,
@@ -923,13 +913,13 @@ mod tests {
     let input = dunce::canonicalize(input).expect("canonicalize input");
     let commit_attempts = Arc::new(AtomicUsize::new(0));
     let commit_times = Arc::new(Mutex::new(Vec::new()));
-    let fs_watcher: Box<dyn TaskFsWatcher> = Box::new(RegistrationFailingWatcher {
+    let fs_watcher = FsWatcher::with_backend(Box::new(RegistrationFailingWatcher {
       fail_adds,
       fail_commits,
       add_attempts: Arc::new(AtomicUsize::new(0)),
       commit_attempts: Arc::clone(&commit_attempts),
       commit_times: Arc::clone(&commit_times),
-    });
+    }));
     let task = WatchTask::new(
       BundlerConfig::new(
         BundlerOptions {
@@ -943,7 +933,6 @@ mod tests {
         })],
       ),
       Arc::new(Mutex::new(fs_watcher)),
-      Arc::new(FxDashSet::default()),
       closed,
     )
     .expect("create watch task");
@@ -1183,15 +1172,7 @@ mod tests {
   struct NoopPaths;
 
   impl PathsMut for NoopPaths {
-    fn add(
-      &mut self,
-      _path: &Path,
-      _recursive_mode: rolldown_fs_watcher::RecursiveMode,
-    ) -> BuildResult<()> {
-      Ok(())
-    }
-
-    fn remove(&mut self, _path: &Path) -> BuildResult<()> {
+    fn add(&mut self, _path: &Path) -> BuildResult<()> {
       Ok(())
     }
 
@@ -1200,7 +1181,7 @@ mod tests {
     }
   }
 
-  impl TaskFsWatcher for NoopWatcher {
+  impl WatcherBackend for NoopWatcher {
     fn paths_mut(&mut self) -> Box<dyn PathsMut + '_> {
       Box::new(NoopPaths)
     }
@@ -1309,7 +1290,7 @@ mod tests {
     let watch_change_count = Arc::new(AtomicUsize::new(0));
 
     let mut tasks = IndexVec::new();
-    let fs_watcher: Box<dyn TaskFsWatcher> = Box::new(NoopWatcher);
+    let fs_watcher = FsWatcher::with_backend(Box::new(NoopWatcher));
     let task = WatchTask::new(
       BundlerConfig::new(
         BundlerOptions {
@@ -1323,7 +1304,6 @@ mod tests {
         })],
       ),
       Arc::new(Mutex::new(fs_watcher)),
-      Arc::new(FxDashSet::default()),
       &closed,
     )
     .expect("create watch task");
@@ -1442,7 +1422,7 @@ mod tests {
 
     let mut tasks = IndexVec::new();
     for out_file in ["dist0/out.js", "dist1/out.js"] {
-      let fs_watcher: Box<dyn TaskFsWatcher> = Box::new(NoopWatcher);
+      let fs_watcher = FsWatcher::with_backend(Box::new(NoopWatcher));
       let task = WatchTask::new(
         BundlerConfig::new(
           BundlerOptions {
@@ -1454,7 +1434,6 @@ mod tests {
           vec![],
         ),
         Arc::new(Mutex::new(fs_watcher)),
-        Arc::new(FxDashSet::default()),
         &closed,
       )
       .expect("create watch task");
@@ -1630,7 +1609,7 @@ mod tests {
     let mut tasks = IndexVec::new();
     for (input, out_file, plugins) in task_inputs {
       let cwd = input.parent().expect("input has parent").to_path_buf();
-      let fs_watcher: Box<dyn TaskFsWatcher> = Box::new(NoopWatcher);
+      let fs_watcher = FsWatcher::with_backend(Box::new(NoopWatcher));
       let task = WatchTask::new(
         BundlerConfig::new(
           BundlerOptions {
@@ -1642,7 +1621,6 @@ mod tests {
           plugins,
         ),
         Arc::new(Mutex::new(fs_watcher)),
-        Arc::new(FxDashSet::default()),
         &closed,
       )
       .expect("create watch task");
@@ -1838,15 +1816,14 @@ mod tests {
     let close_notify = Arc::new(Event::new());
     let add_attempts = Arc::new(AtomicUsize::new(0));
     let commit_attempts = Arc::new(AtomicUsize::new(0));
-    let fs_watcher: Box<dyn TaskFsWatcher> = Box::new(RegistrationFailingWatcher {
+    let fs_watcher = FsWatcher::with_backend(Box::new(RegistrationFailingWatcher {
       fail_adds: 0,
       fail_commits: 0,
       add_attempts: Arc::clone(&add_attempts),
       commit_attempts: Arc::clone(&commit_attempts),
       commit_times: Arc::new(Mutex::new(Vec::new())),
-    });
+    }));
     let fs_watcher = Arc::new(Mutex::new(fs_watcher));
-    let group_registered_files = Arc::new(FxDashSet::default());
 
     let mut tasks = IndexVec::new();
     for out_file in ["dist0/out.js", "dist1/out.js"] {
@@ -1861,7 +1838,6 @@ mod tests {
           vec![],
         ),
         Arc::clone(&fs_watcher),
-        Arc::clone(&group_registered_files),
         &closed,
       )
       .expect("create watch task");

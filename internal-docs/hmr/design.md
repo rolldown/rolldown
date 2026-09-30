@@ -197,11 +197,10 @@ per-payload re-run flag written into the generated code — that puts
 runtime policy into codegen and cannot express "re-run this time, skip
 next time".
 
-A lazy `import()` goes through the same gate (`requestLazy`, see
-[lazy-compilation/design.md](../lazy-compilation/design.md)). Removing
-a module from the cache also forgets its cached lazy load, so a lazy
-module edited after it loaded re-runs instead of being served from the
-old promise.
+A lazy `import()` goes through the same gate. The proxy stub removes
+its own id from the cache before it fetches the lazy chunk, and the
+chunk's `initModule` tail then re-runs it (see
+[lazy-compilation/design.md](../lazy-compilation/design.md)).
 
 `removeModuleCache` is also where cleanup lives: each removal runs the
 module's `hot.dispose` with its `hot.data` object — for every removed
@@ -384,7 +383,7 @@ the changed module.
   from `initModule` is not turned into a reload (Failure policy). Known
   entry points: the build-id gap above, and a payload that threw before
   its ack. The fix is a reload request from the apply queue's catch and
-  from `requestLazy`.
+  from the lazy proxy stub.
 - **Reloads from the client walk going past the prediction** — if the
   client walk often climbs past the server's predicted set, widen the
   server walk (more first-edit bytes, more hot coverage). Needs
@@ -401,10 +400,10 @@ the changed module.
 - [dev-engine/implementation.md](../dev-engine/implementation.md) — the
   step order inside `compute_hmr_update_for_file_changes`
 - [lazy-compilation/design.md](../lazy-compilation/design.md) — the
-  `requestLazy` entry point; lazy chunk sizing reads the ship map
+  `rolldown:exports` proxy contract; lazy chunk sizing reads the ship map
 - Runtime API (`runtime-extra-dev-common.js`): lifecycle methods
   `registerGraph`, `registerFactory`, `registerModule`, `initModule`,
-  `removeModuleCache`, `loadExports`, `requestLazy`; read-only queries
+  `removeModuleCache`, `loadExports`; read-only queries
   `getImporters`, `isExecuted`, `hasFactory`; hooks
   `createModuleHotContext`, `onModuleCacheRemoval`
 - Key code: `crates/rolldown/src/hmr/module_graph_delta.rs`,

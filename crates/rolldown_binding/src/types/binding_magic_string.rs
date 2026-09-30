@@ -340,7 +340,7 @@ impl BindingSourceMap {
   /// The list of source indices that should be excluded from debugging.
   #[napi(getter, js_name = "x_google_ignoreList")]
   pub fn x_google_ignore_list(&self) -> napi::Result<Option<Vec<u32>>> {
-    Ok(self.try_get_json()?.x_google_ignore_list.clone())
+    Ok(self.try_get_json()?.ignore_list.clone())
   }
 
   /// Returns the source map as a JSON string.
@@ -354,7 +354,7 @@ impl BindingSourceMap {
       sources_content: json.sources_content.as_ref(),
       names: &json.names,
       mappings: &json.mappings,
-      x_google_ignore_list: json.x_google_ignore_list.as_ref(),
+      x_google_ignore_list: json.ignore_list.as_ref(),
     };
     Ok(serde_json::to_string(&serializable).expect("should be able to serialize source map"))
   }
@@ -458,7 +458,7 @@ impl BindingDecodedMap {
   /// The list of source indices that should be excluded from debugging.
   #[napi(getter, js_name = "x_google_ignoreList")]
   pub fn x_google_ignore_list(&self) -> napi::Result<Option<Vec<u32>>> {
-    Ok(self.try_get_data()?.json.x_google_ignore_list.clone())
+    Ok(self.try_get_data()?.json.ignore_list.clone())
   }
 }
 
@@ -1345,7 +1345,7 @@ impl BindingMagicString {
         None,
       );
       if self.ignore_list {
-        m.set_x_google_ignore_list(vec![0]);
+        m.set_ignore_list(vec![0]);
       }
       m
     } else {
@@ -1387,7 +1387,7 @@ impl BindingMagicString {
         None,
       );
       if self.ignore_list {
-        m.set_x_google_ignore_list(vec![0]);
+        m.set_ignore_list(vec![0]);
       }
       m
     } else {

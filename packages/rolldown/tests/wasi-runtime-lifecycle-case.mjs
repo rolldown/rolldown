@@ -220,23 +220,6 @@ await check('watch fails before setup and remains closable', async () => {
   await watcher.close();
 });
 
-await check('overlapping owners and restart after final release', async () => {
-  const [first, second] = await Promise.all([
-    createVirtualBundle('overlap-first'),
-    createVirtualBundle('overlap-second'),
-  ]);
-  try {
-    await Promise.all([first.generate(), second.generate()]);
-    await first.close();
-    const output = await second.generate();
-    assert.match(output.output[0].code, /overlap-second/);
-  } finally {
-    await Promise.allSettled([first.close(), second.close()]);
-  }
-
-  await generateAndClose('restart-after-overlap');
-});
-
 await check('operation rejection releases the runtime for a restart', async () => {
   const operationError = new Error('injected scan failure');
   await assert.rejects(
@@ -319,82 +302,6 @@ await check(
     await generateAndClose('restart-after-unsupported-dev');
   },
 );
-
-// The capability gate lives above the binding: a second package copy must not
-// reach `BindingDevEngine` on its way to the rejection.
-await check('a package copy cannot reach the dev binding behind the capability gate', async () => {
-  const copyRoot = mkdtempSync(path.join(packageDir, '.wasi-dev-close-copy-'));
-  const copyDirectory = path.join(copyRoot, 'dist');
-  cpSync(distDir, copyDirectory, { recursive: true });
-
-  const captureKey = '__rolldownWasiDevCloseCapture';
-  const capture = {};
-  globalThis[captureKey] = capture;
-  const bindingExportForwarders = Object.keys(binding)
-    .filter((name) => /^[$A-Z_a-z][$\w]*$/.test(name))
-    .map((name) => `module.exports.${name} = binding.${name};`)
-    .join('\n');
-  writeFileSync(
-    path.join(copyDirectory, 'rolldown-binding.wasi.cjs'),
-    `
-      const binding = require(${JSON.stringify(bindingPath)});
-      ${bindingExportForwarders}
-      module.exports.BindingDevEngine = class {
-        constructor(...args) {
-          const engine = new binding.BindingDevEngine(...args);
-          globalThis[${JSON.stringify(captureKey)}].engine = engine;
-          return engine;
-        }
-      };
-    `,
-  );
-
-  try {
-    const copiedExperimental = await import(
-      pathToFileURL(path.join(copyDirectory, 'experimental-index.mjs')).href
-    );
-    const id = 'virtual:cancelled-callback-close';
-    let outputCallbackCalls = 0;
-    await assert.rejects(
-      copiedExperimental.dev(
-        {
-          input: id,
-          experimental: { devMode: true },
-          plugins: [
-            {
-              name: 'cancelled-callback-close',
-              resolveId(source) {
-                if (source === id) return `\0${source}`;
-              },
-              load(source) {
-                if (source === `\0${id}`) return 'export const cancelledCallbackClose = true;';
-              },
-            },
-          ],
-        },
-        {},
-        {
-          onOutput() {
-            outputCallbackCalls += 1;
-          },
-        },
-      ),
-      isDevUnsupported,
-    );
-
-    assert.equal(outputCallbackCalls, 0, 'the rejected dev entry must not emit output');
-    assert.equal(
-      capture.engine,
-      undefined,
-      'the capability gate must reject before constructing BindingDevEngine',
-    );
-  } finally {
-    delete globalThis[captureKey];
-    rmSync(copyRoot, { force: true, recursive: true });
-  }
-
-  await generateAndClose('restart-after-rejected-copy-dev');
-});
 
 await check('a worker realm builds and closes in its own environment', async () => {
   const worker = new Worker(

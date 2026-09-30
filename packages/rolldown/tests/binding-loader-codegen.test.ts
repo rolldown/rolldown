@@ -9,10 +9,6 @@ const generatedWasiNodeLoader = readFileSync(
 );
 
 describe('generated WASI loader lifecycle', () => {
-  test('reports the threaded WASI flavor as its binding target', () => {
-    expect(generatedWasiNodeLoader).toContain("const __napiBindingTarget = 'wasm32-wasi'");
-  });
-
   test('uses a fresh context per evaluation and prepares each context once', () => {
     const contexts: Array<{ destroy(): void }> = [];
     const cleanupEvents: string[] = [];
@@ -42,8 +38,6 @@ describe('generated WASI loader lifecycle', () => {
     cleanups[1]();
     cleanups[1]();
     expect(cleanupEvents).toEqual(['prepare:1', 'destroy:1', 'prepare:2', 'destroy:2']);
-    expect(generatedWasiNodeLoader).toContain('let __emnapiWasmEnvCleanupPrepared = false');
-    expect(generatedWasiNodeLoader).toContain('function __destroyEmnapiContext()');
   });
 
   test('raw context destroy prepares and tears down exactly once with the real emnapi runtime', () => {

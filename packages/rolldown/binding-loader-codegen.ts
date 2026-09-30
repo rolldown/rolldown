@@ -77,16 +77,18 @@ const WASI_ASYNC_TEARDOWN_WAITS = [
 ] as const;
 const WASI_EXIT_LISTENER_HELPER = 'function __registerWasiExitListener() {';
 // Worker-crash latch, threaded Node flavor only (`rolldown-binding.wasi.cjs` +
-// `wasi-worker.mjs`; vendored `@napi-rs/cli`, napi-rs 9fb826ab + 9e9105f5,
-// until a cli release carries it). After a pool worker's wasm thread dies, no
-// teardown may re-enter wasm: the env cleanup waits for the dead thread's work
-// to go idle in a raw `memory.atomic.wait32`, which blocks the main thread
-// forever and keeps a JS SIGTERM listener from ever running. The worker sets a
-// shared flag before emnapi reports the crash. Both disposers check it before
-// any other step: the exit listener then only terminates the workers, and the
-// public `Symbol.for('napi.rs.wasi.dispose')` disposer terminates them and
-// rejects (latched) instead of draining async work into the cleanup barrier,
-// where its promise would never settle.
+// `wasi-worker.mjs`; vendored `@napi-rs/cli`, napi-rs 9fb826ab + 9e9105f5 +
+// 727d836f, until a cli release carries it). After a pool worker's wasm thread
+// dies, no teardown may re-enter wasm: the env cleanup waits for the dead
+// thread's work to go idle in a raw `memory.atomic.wait32`, which blocks the
+// main thread forever and keeps a JS SIGTERM listener from ever running. The
+// worker sets a shared flag before emnapi reports the crash. Both disposers
+// check it before any other step: the exit listener then only terminates the
+// workers, and the public `Symbol.for('napi.rs.wasi.dispose')` disposer
+// terminates them and rejects (latched) instead of draining async work into the
+// cleanup barrier, where its promise would never settle. Before it terminates
+// them, it unrefs emnapi's waiting-request port: the dead thread's requests
+// never finish, so that port would keep the process alive for good.
 // See internal-docs/async-runtime/implementation.md (section 7, Loaders).
 const WASI_THREAD_CRASH_LATCH_LOADER_SIGNATURES = [
   'const __wasiThreadCrashFlag = new Int32Array(new SharedArrayBuffer(4))',
@@ -102,6 +104,17 @@ const WASI_THREAD_CRASH_LATCH_LOADER_SIGNATURES = [
   }
 `,
   'function __disposeWasiBindingAfterThreadCrash() {',
+  'function __releaseEmnapiWaitingRequestHandle() {',
+  `    const refHandle = refCounter && refCounter.refHandle
+    if (refHandle && typeof refHandle.unref === 'function') {
+      refHandle.unref()
+    }
+`,
+  `  __releaseEmnapiWaitingRequestHandle()
+  let workerResult
+  try {
+    workerResult = __terminateWasiWorkers()
+`,
 ] as const;
 const WASI_THREAD_CRASH_LATCH_WORKER_SIGNATURES = [
   'if (workerData && workerData.crashFlag instanceof Int32Array) {',

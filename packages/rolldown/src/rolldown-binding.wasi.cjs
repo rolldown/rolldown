@@ -191,6 +191,32 @@ function __hasWasiThreadCrashed() {
 let __wasiThreadCrashDisposePromise
 
 /**
+ * Let the event loop drain after a wasm thread died, without entering wasm.
+ *
+ * emnapi's `Context` keeps a `NodejsWaitingRequestCounter` on Node: a
+ * `MessagePort` (`refCounter.refHandle`) that it refs when the count of
+ * in-flight async work and threadsafe-function requests leaves zero and unrefs
+ * when it comes back. The requests the dead thread held never complete, so the
+ * count never returns to zero and the port holds the process open for good.
+ * `Context.destroy()` would not release it either — and it runs cleanup
+ * hooks, which is exactly what must not happen now. So unref the port directly.
+ * The count is left as is: it stays above zero, so a later request never refs
+ * the port again.
+ *
+ * The field is private in emnapi's typings, so read it defensively; a context
+ * without it (a non-Node host, a future emnapi) is left alone.
+ */
+function __releaseEmnapiWaitingRequestHandle() {
+  try {
+    const refCounter = __emnapiContext && __emnapiContext.refCounter
+    const refHandle = refCounter && refCounter.refHandle
+    if (refHandle && typeof refHandle.unref === 'function') {
+      refHandle.unref()
+    }
+  } catch {}
+}
+
+/**
  * The public disposer after a wasm thread died. The normal chain drains async
  * work, runs the environment cleanup barrier and destroys the context — every
  * one of those re-enters wasm, and the barrier's shutdown waits for the dead
@@ -198,7 +224,8 @@ let __wasiThreadCrashDisposePromise
  * avoids. An app that handled the worker's error and then disposes would block
  * there for good. Only stop the workers, then reject: the binding was not
  * cleaned up and cannot be, so reporting success would be a lie. The context
- * is left as is and the 'exit' listener takes its short path too.
+ * is not destroyed — only its waiting-request port is unrefed, so the process
+ * can exit on its own — and the 'exit' listener takes its short path too.
  *
  * Latched: every later call returns the same promise.
  */
@@ -215,6 +242,7 @@ function __disposeWasiBindingAfterThreadCrash() {
       crashError.cause = manager._fatalError
     }
   } catch {}
+  __releaseEmnapiWaitingRequestHandle()
   let workerResult
   try {
     workerResult = __terminateWasiWorkers()

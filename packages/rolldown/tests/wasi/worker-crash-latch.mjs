@@ -15,7 +15,9 @@
 //   no-handler  no uncaughtException handler: must exit non-zero
 //   dispose     handles the crash, then awaits the disposer: must reject with the
 //               crash as its cause (latched: a second call returns the same
-//               promise), then process.exit(0) must exit with code 0
+//               promise), then the process must exit on its own with code 0
+//               (no process.exit): the disposer unrefs emnapi's waiting-request
+//               port, which the dead worker's unfinished requests keep ref'd
 //   control     no injection: the builds pass and the process exits 0
 // A crash run still alive after CRASH_CASE_TIMEOUT_MS is killed and counts as a hang.
 // Skips (exit 0) unless the artifact is the threaded WASI one and MultiThread works.
@@ -34,6 +36,9 @@ const RUNS = 3;
 // A crash case must be over well within this; the control case gets the stress
 // script's budget, since 16 debug-wasm builds on a slow runner can take a while.
 const CRASH_CASE_TIMEOUT_MS = 15_000;
+// After the disposer settles, a dispose child that is still alive reports its live
+// handles this often, so a hang names what holds the event loop open.
+const LIVE_HANDLES_REPORT_MS = 2_000;
 const CONTROL_TIMEOUT_MS = 60_000;
 const CRASH_IMPORT = 'wasi_snapshot_preview1.fd_read';
 const CRASH_AT = '20';
@@ -108,6 +113,14 @@ async function probe(runtimeEnv) {
 
 function judge(mode, result, crashed) {
   if (result.timedOut) {
+    if (mode === 'dispose' && result.output.includes('DISPOSE_OK')) {
+      const reports = [...result.output.matchAll(/^STILL_ALIVE (.*)$/gm)];
+      const handles = reports.length > 0 ? reports[reports.length - 1][1] : 'not reported';
+      return (
+        `the disposer rejected as expected, but the process did not exit on its own ` +
+        `within ${result.timeoutMs} ms; live handles (process.getActiveResourcesInfo()): ${handles}`
+      );
+    }
     return `still alive after ${result.timeoutMs} ms (hang)`;
   }
   if (result.signal) {
@@ -131,7 +144,12 @@ function judge(mode, result, crashed) {
   if (!result.output.includes('DISPOSE_OK')) {
     return `the disposer rejected with the wrong error (exit code ${result.code})`;
   }
-  return result.code === 0 ? null : `exited with code ${result.code} after the disposer settled`;
+  if (!result.output.includes('DISPOSE_SETTLED')) {
+    return `exited with code ${result.code} before the disposer settled`;
+  }
+  return result.code === 0
+    ? null
+    : `exited on its own with code ${result.code} after the disposer settled, expected 0`;
 }
 
 function spawnCase(mode, fixture, { runtimeEnv, inject = false, crashLog }) {
@@ -300,11 +318,16 @@ async function runCase(mode, fixture) {
       say('DISPOSE_OK');
     }
   }
-  // The crash path cannot destroy the emnapi context, so the requests the dead
-  // worker never finished keep emnapi's pending-request port referenced and the
-  // event loop would stay alive. End the app the way one would after a fatal
-  // error; this also runs the loader's exit listener after the crash disposal.
-  process.exit(0);
+  say('DISPOSE_SETTLED');
+  // No process.exit: the event loop must drain by itself. The crash path cannot
+  // destroy the emnapi context, so the requests the dead worker never finished
+  // keep its waiting-request count above zero; the disposer unrefs that counter's
+  // port. The natural exit also runs the loader's exit listener after the crash
+  // disposal. If anything still holds the loop open, name it for the parent; the
+  // unref'd timer never keeps the process alive by itself.
+  setInterval(() => {
+    say(`STILL_ALIVE ${JSON.stringify(process.getActiveResourcesInfo())}`);
+  }, LIVE_HANDLES_REPORT_MS).unref();
 }
 
 // The threaded loader publishes the disposer on its own exports. Take it from the

@@ -341,9 +341,12 @@ missing host-contract export fails with `ERR_NAPI_ASYNC_RUNTIME_BINDING_MISMATCH
   (`.napi-validation/`, pnpm `overrides`) until a cli release carries it.
   `packages/rolldown/tests/wasi/worker-crash-latch.mjs` (CI step "Threaded
   WASI worker crash latch") forces a pool worker crash and checks both paths.
-  The crash disposal leaves the emnapi context alone, so the dead worker's
-  unfinished requests keep emnapi's pending-request port referenced: the
-  process does not exit on its own afterwards, and the test ends it with
+  The crash disposal does not destroy the emnapi context (that runs cleanup
+  hooks in wasm). The dead worker's unfinished requests keep emnapi's
+  waiting-request count above zero, and with it the counter's `MessagePort`
+  (`refCounter.refHandle`) referenced, so the disposer unrefs that port before
+  it terminates the workers (napi-rs 727d836f). The test's dispose case then
+  asserts that the process exits on its own with code 0, without
   `process.exit`.
 
 ---

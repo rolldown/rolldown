@@ -8,18 +8,24 @@ On `wasm32-wasip1-threads` only, every allocation goes through a thin layer over
 wasi-libc's dlmalloc that runs `memory.grow(0)` on the current thread when the
 returned block may lie in pages this thread's V8 bounds do not cover yet. Rust
 allocations reach it as the `#[global_allocator]`; C allocations (emnapi, wasi-libc)
-reach it through `--wrap` link args. A dist check keeps the wrappers in the threaded
+reach it through `--wrap` link args. Every task poll and blocking closure start runs
+the same check against the largest size any thread has seen, through a hook in
+`rolldown_utils::async_runtime`. A dist check keeps the wrappers in the threaded
 wasm and out of the single-thread one.
 
 ## Components
 
-| piece                       | file                                            | role                                                                                                                                                      |
-| --------------------------- | ----------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| cfg `rolldown_wasi_threads` | `crates/rolldown_binding/build.rs`              | set when cargo `TARGET` is `wasm32-wasip1-threads` (the two WASI targets have identical `rustc --print cfg` sets); declared with `cargo::rustc-check-cfg` |
-| `--wrap` link args          | `crates/rolldown_binding/build.rs`              | same branch as the cfg; `--wrap=calloc,realloc,aligned_alloc,posix_memalign`                                                                              |
-| global allocator            | `crates/rolldown_binding/src/lib.rs`            | `HeapSyncAlloc` under `cfg(all(target_family = "wasm", rolldown_wasi_threads))`                                                                           |
-| refresh logic + wrappers    | `crates/rolldown_binding/src/wasm_heap_sync.rs` | `needs_refresh`, `refresh`, `HeapSyncAlloc`, `__wrap_*`                                                                                                   |
-| artifact check              | `scripts/wasi/check-wasi-dist-files.mjs`        | threaded wasm must export `__wrap_calloc` and `__wrap_realloc`; single-thread wasm must not                                                               |
+| piece                       | file                                            | role                                                                                                                                                                                          |
+| --------------------------- | ----------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| cfg `rolldown_wasi_threads` | `crates/rolldown_binding/build.rs`              | set when cargo `TARGET` is `wasm32-wasip1-threads` (the two WASI targets have identical `rustc --print cfg` sets); declared with `cargo::rustc-check-cfg`                                     |
+| `--wrap` link args          | `crates/rolldown_binding/build.rs`              | same branch as the cfg; `--wrap=calloc,realloc,aligned_alloc,posix_memalign`                                                                                                                  |
+| global allocator            | `crates/rolldown_binding/src/lib.rs`            | `HeapSyncAlloc` under `cfg(all(target_family = "wasm", rolldown_wasi_threads))`                                                                                                               |
+| refresh logic + wrappers    | `crates/rolldown_binding/src/wasm_heap_sync.rs` | `needs_refresh`, `refresh`, `HeapSyncAlloc`, `__wrap_*`                                                                                                                                       |
+| handoff refresh             | `crates/rolldown_binding/src/wasm_heap_sync.rs` | `refresh_if_behind`: `refresh()` when `MAX_SEEN_PAGES > LOCAL_PAGES`                                                                                                                          |
+| handoff hook                | `crates/rolldown_utils/src/thread_handoff.rs`   | wasm only: `set_thread_handoff_hook`, `on_thread_handoff`, `HandoffHook<F>`, and hooked `spawn` / `try_spawn` / `(try_)spawn_detached` / `spawn_blocking` / `block_on` / `(try_)block_on_dyn` |
+| hook re-export              | `crates/rolldown_utils/src/lib.rs`              | on wasm, `async_runtime` re-exports the hooked names over the `napi_async_runtime::*` glob; native keeps the plain glob                                                                       |
+| hook registration           | `crates/rolldown_binding/src/async_runtime.rs`  | `install_async_runtime_backend` (module init) registers `refresh_if_behind`; the adapter's `spawn_blocking` boxes its closure with the hook                                                   |
+| artifact check              | `scripts/wasi/check-wasi-dist-files.mjs`        | threaded wasm must export `__wrap_calloc` and `__wrap_realloc`; single-thread wasm must not                                                                                                   |
 
 ## Data flow
 
@@ -34,6 +40,25 @@ C realloc  ──> __wrap_realloc ──> refresh old / malloc (real) ──> re
                                    memory.grow(0) ──> LOCAL_PAGES = size, MAX_SEEN_PAGES = max
                                    first to see growth? ──> malloc(16 MiB) + free, memory.grow(0) again
 ```
+
+Scheduler handoff (threaded WASI; the hook is unset on threadless wasm, so each
+call there is one load of an unset `OnceLock`; native does not compile it):
+
+```
+spawn / try_spawn / spawn_detached / block_on ──> HandoffHook(future)
+   every poll ──> on_thread_handoff ──> refresh_if_behind ──> inner.poll
+spawn_blocking (facade) / adapter spawn_blocking ──> closure:
+   on_thread_handoff ──> refresh_if_behind ──> body
+refresh_if_behind: MAX_SEEN_PAGES (Acquire) > LOCAL_PAGES? ──> refresh()
+```
+
+- `try_spawn_blocking` in `rolldown_utils` is not hooked: its rejection returns the
+  caller's closure, which a wrapper cannot give back. Its one in-tree caller, the
+  napi adapter, wraps its `Box<dyn FnOnce>` itself (a rejection returns the wrapped
+  box, which runs the same work).
+- Not covered: a block that arrives mid-poll (channel, `Arc`, a threadsafe-function
+  call on the JS thread) and is filled or copied before the next allocation or poll
+  boundary on that thread. See design.md, Remaining gaps.
 
 - `LOCAL_PAGES` (thread local): the size this thread's V8 bounds were last reloaded
   to. Only ever set from `memory.grow(0)` on this thread, so it never exceeds what V8

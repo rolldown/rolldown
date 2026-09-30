@@ -30,6 +30,14 @@
 //! plain stores), refreshes, and only then lets memset or memcpy touch the block: calloc zeroes
 //! and realloc copies here, after the refresh, instead of inside libc.
 //!
+//! # Scheduler handoff
+//!
+//! The allocator refresh covers blocks this thread allocates. A task can allocate on worker A,
+//! yield, and resume on worker B, then fill or copy into the existing capacity without
+//! allocating on B. [`refresh_if_behind`] closes that: it runs at every poll and blocking
+//! closure start and refreshes when `MAX_SEEN_PAGES > LOCAL_PAGES`. The scheduler queue orders
+//! A's allocation (and its `MAX_SEEN_PAGES` update) before B's poll, so B's Acquire load sees it.
+//!
 //! # Invariant
 //!
 //! `LOCAL_PAGES` never exceeds the size V8 checks on this thread: it is only set from the return
@@ -41,10 +49,15 @@
 //!
 //! # Remaining gaps
 //!
-//! - A block handed to another thread that then runs memcpy / memset / atomics on it before its
-//!   own next allocation still sees a stale size. The grow-ahead below makes growth rare (about
-//!   14 growth events per run instead of about 3000), which shrinks this window. Not observed in
-//!   the measured runs.
+//! - Work that moves to another thread through the scheduler is covered: [`refresh_if_behind`]
+//!   runs at the start of every task poll and blocking closure (the hook in
+//!   `rolldown_utils::async_runtime`, registered in `async_runtime.rs` at module init). So a
+//!   task that allocated on worker A and resumes on worker B refreshes on B before it touches
+//!   that capacity. What is left: a block that reaches a running thread mid-poll (a channel
+//!   message, an `Arc`, a threadsafe-function call on the JS thread) and is memset / memcpy'd /
+//!   touched with atomics there before that thread's next allocation or poll boundary. The
+//!   grow-ahead below makes growth rare (about 14 growth events per run instead of about 3000),
+//!   which shrinks this window. Not observed in the measured runs; the V8 fix closes it.
 //! - C code that calls `malloc` directly and then fills the block is not covered, because
 //!   `malloc` is not wrapped.
 //! - Hosts that run without the V8 wasm trap handler bounds-check plain stores against the cached
@@ -119,6 +132,19 @@ fn block_end(ptr: *mut c_void, size: usize) -> u64 {
 fn refresh_if_stale(end: u64) {
   let local = LOCAL_PAGES.with(Cell::get);
   if needs_refresh(end, local, MAX_SEEN_PAGES.load(Ordering::Acquire)) {
+    refresh();
+  }
+}
+
+/// Refresh when another thread has seen a larger memory than this thread.
+///
+/// Registered with `rolldown_utils::async_runtime::set_thread_handoff_hook` at module init,
+/// so it runs at the start of every task poll and blocking closure (where work migrates onto
+/// this thread). Hot path: one thread-local read and one atomic load.
+#[inline]
+pub fn refresh_if_behind() {
+  let local = LOCAL_PAGES.with(Cell::get);
+  if MAX_SEEN_PAGES.load(Ordering::Acquire) > local {
     refresh();
   }
 }

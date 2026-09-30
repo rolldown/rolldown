@@ -60,7 +60,10 @@ methods must track upstream rather than diverge from it.
   `unsafe impl AsyncRuntime` — the vendored napi backend. Method map:
   - `spawn` → `try_spawn(task).detach()`
   - `block_on` → `try_block_on_dyn(future)`
-  - `spawn_blocking` → `try_spawn_blocking(work).detach()`
+  - `spawn_blocking` → `try_spawn_blocking(work).detach()`. On threaded WASI
+    the box is first wrapped so the closure starts with the thread-handoff
+    refresh (`../wasi-shared-memory-grow/implementation.md`); `spawn` and
+    `block_on` get it through the hooked `try_spawn` / `try_block_on_dyn`.
   - `start` / `shutdown` → the crate's `start()` / `shutdown()`
   - `begin_shutdown` / `shutdown_work_pending` / `finish_shutdown` → the crate's
     `begin_shutdown()` / `runtime_work_pending()` / `finish_shutdown()`. These
@@ -94,6 +97,9 @@ fed to `configure`; the crate picks the executor from `RuntimeOptions.flavor`.
   `JoinError` / `SpawnError` are plain re-exports of `crate::async_runtime::*`.
   `spawn` and `try_spawn` stay one-line wrappers only because they take one
   generic parameter (`<F>`) where the runtime's take two (`<F, T>`).
+  On wasm, `crate::async_runtime` swaps those entry points for versions that run
+  the thread-handoff hook at every poll and blocking-closure start
+  (`src/thread_handoff.rs`, see `../wasi-shared-memory-grow/implementation.md`).
   `block_on_spawn_all` is a plain `join_all` in the caller's task.
 - `crates/rolldown/src/module_loader/module_loader.rs`:
   - `spawn_module_task()` — boxes the (large) module future once at the spawn

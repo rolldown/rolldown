@@ -7,7 +7,9 @@ of bounds" under concurrent load because of a V8 bug: a thread that did not run
 `memory.grow` keeps a stale memory size in optimized code, and `memory.fill`,
 `memory.copy` and atomics are bounds-checked against it. Rolldown works around it
 in its own allocator: after an allocation that may sit in pages this thread has not
-seen, the thread runs `memory.grow(0)`, which makes V8 reload the size. The
+seen, the thread runs `memory.grow(0)`, which makes V8 reload the size. The same
+refresh runs at every scheduler handoff (task poll, blocking closure start), for
+work that moves between threads. The
 workaround lives only in the threaded build and goes away once the Node versions we
 support ship the V8 fix. For the machinery, see
 [implementation.md](./implementation.md). Addresses #10697.
@@ -84,12 +86,32 @@ every round.
 Timing is at noise level (CurrentThread release median 729 vs 723.5 ms;
 MultiThread vs a pre-grown base 479.5 vs 480 ms).
 
+The scheduler handoff refresh (principle 1), release-wasi, 10 interleaved rounds
+of the five judge loads, without vs with the hook: 100/100 pass. Medians (ms):
+
+| load                                 | without | with  |
+| ------------------------------------ | ------- | ----- |
+| MultiThread w4 16 builds             | 567     | 563.5 |
+| MultiThread w4 16 builds + JS plugin | 1680    | 1671  |
+| MultiThread w4 parse 16x3            | 437     | 444.5 |
+| CurrentThread parse 16x3             | 450     | 440.5 |
+| CurrentThread transform 16x3         | 604.5   | 601   |
+
 ## Design principles
 
-1. **Refresh at the allocator, where the new pages enter a thread.** The trapping
-   operation is the first memset / memcpy into a block that malloc just returned.
-   Refreshing right after the allocation, before that first touch, closes the window
-   for every block the thread allocates itself.
+1. **Refresh where new pages enter a thread: the allocator and the scheduler
+   handoff.** The trapping operation is the first memset / memcpy / atomic on a block
+   in pages this thread has not seen. Pages reach a thread in two common ways:
+   - it allocates the block itself. Refreshing right after the allocation, before
+     the first touch, closes the window for every block the thread allocates.
+   - work moves onto it. A MultiThread task can allocate a `Vec` after growth on
+     worker A, yield, and resume on worker B, then `copy_from_slice` /
+     `write_bytes` / an atomic into the existing capacity without allocating on B.
+     A blocking closure built on one thread runs on another. So every task poll and
+     every blocking closure start refreshes when another thread has seen a larger
+     memory (`MAX_SEEN_PAGES > LOCAL_PAGES`). The scheduler queue orders A's
+     allocation before B's poll, so B's check sees A's size. Cost on the hot path:
+     one thread-local read and one atomic load.
 2. **`memory.grow(0)`, not `memory.size`.** Only a grow makes V8 reload the cached
    bounds of the running activation; `memory.size` returns the new size and leaves
    the bounds alone (a `memory.size` variant fails 10/10 in release; it passed in
@@ -135,11 +157,13 @@ MultiThread vs a pre-grown base 479.5 vs 480 ms).
 
 ## Remaining gaps
 
-- A block allocated by thread A, handed to thread B, and filled / copied / used
-  with atomics by B before B's own next allocation can still hit B's stale size.
-  After any allocation through the wrappers, B covers every block allocated
-  before it, so the window is only "no allocation on B in between"; with rare
-  growth it was not observed in the measured runs.
+- A block that reaches a running thread mid-poll (a channel message, an `Arc`,
+  a threadsafe-function call on the JS thread) and is filled / copied / used with
+  atomics there before that thread's next allocation or poll boundary can still
+  hit its stale size. Task migration and blocking-closure entry are covered by
+  the handoff refresh (principle 1); after any allocation or poll start, the
+  thread covers every block allocated before it. With rare growth this was not
+  observed in the measured runs. The V8 fix closes it.
 - C code that calls `malloc` directly and then fills the block is not covered:
   `malloc` cannot be wrapped (see [implementation.md](./implementation.md)).
 - Hosts without the V8 wasm trap handler bounds-check plain stores against the
@@ -205,7 +229,10 @@ MultiThread vs a pre-grown base 479.5 vs 480 ms).
 When every Node version the threaded WASI package supports ships
 v8/v8@34241014663390c72e08c123faef6fedf395be8e (or a backport of it), delete
 `crates/rolldown_binding/src/wasm_heap_sync.rs`, its `#[global_allocator]` in
-`lib.rs`, the `--wrap` link args in `build.rs`, the export check in
+`lib.rs`, the `--wrap` link args in `build.rs`, the handoff hook
+(`crates/rolldown_utils/src/thread_handoff.rs`, its re-exports in
+`rolldown_utils/src/lib.rs`, and its registration and `spawn_blocking` wrap in
+`rolldown_binding/src/async_runtime.rs`), the export check in
 `scripts/wasi/check-wasi-dist-files.mjs`, and this folder. Confirm first with the
 pure V8 repro (fill / copy / atomic on a page another thread grew).
 

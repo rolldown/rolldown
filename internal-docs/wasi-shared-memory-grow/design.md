@@ -30,7 +30,8 @@ thread A (out of heap)            thread B (optimized wasm, long activation)
   that stays in wasm (rayon workers, emnapi async work threads, dlmalloc's spin
   lock) keeps the old size.
 - Plain loads and stores do not trap: with the wasm trap handler (default Node on
-  arm64 and x64) they are checked by guard pages against the real size.
+  x64 and on most arm64 hosts, see Remaining gaps) they are checked by guard
+  pages against the real size.
 - It is not MultiThread-specific: the published CurrentThread artifact
   (`@rolldown/binding-wasm32-wasi@1.2.8`) traps under 16 concurrent
   `parse()` / `transform()` calls x3 (20/20), because emnapi async work threads
@@ -120,6 +121,17 @@ MultiThread vs a pre-grown base 479.5 vs 480 ms).
   release), but dlmalloc is already locked, so it cannot be fixing a race; the extra
   calls only add points where V8 happens to reload the size. It leaves the
   mechanism in place and serializes every allocation.
+- **Refresh before the allocation** (in every wrapper and `HeapSyncAlloc::alloc`,
+  run `memory.grow(0)` first when `MAX_SEEN_PAGES > LOCAL_PAGES`), to cover
+  dlmalloc's header stores on hosts without the trap handler. With
+  `--wasm-enforce-bounds-checks` on the release-wasi artifact it fails 110/110
+  like the current code (61 hang, 49 trap, against 76 / 34), and every trap is
+  still the same dlmalloc chunk-header store. The race stays open: a thread
+  waiting on the dlmalloc lock takes it right after the growing thread unlocks
+  and before that thread publishes the new size, so its check still sees no
+  change. Hot-path cost was within 1% (5 loads, 10 runs each). Closing it needs
+  a refresh after the lock is taken inside dlmalloc (a dlmalloc or `sbrk` hook,
+  or a replacement allocator that owns the lock), not in the wrappers.
 
 ## Remaining gaps
 
@@ -130,17 +142,61 @@ MultiThread vs a pre-grown base 479.5 vs 480 ms).
   growth it was not observed in the measured runs.
 - C code that calls `malloc` directly and then fills the block is not covered:
   `malloc` cannot be wrapped (see [implementation.md](./implementation.md)).
-- Hosts without the V8 wasm trap handler (measured with Node's
-  `--wasm-enforce-bounds-checks`; V8 builds without the trap handler should
-  match, not measured) bounds-check plain stores against the cached size too.
-  Then dlmalloc's own header write into pages another thread grew traps inside
-  dlmalloc (`HeapSyncAlloc::alloc` -> `System::alloc` ->
-  `__wrap_posix_memalign` -> dlmalloc), before the refresh and while dlmalloc
-  holds its lock. The lock is never released, so the process **hangs** instead
-  of exiting: the main thread and the other workers spin on `sched_yield` at
-  about 400% CPU. The loader's worker-crash latch cannot help, because it runs
-  on the main thread's event loop, which never gets control back. Measured:
-  7/110 direct MultiThread bundle runs hang with the flag, 0/30 without it.
+- Hosts without the V8 wasm trap handler bounds-check plain stores against the
+  cached size too. Measured with Node's `--wasm-enforce-bounds-checks` (hosts
+  without the handler should behave the same, not measured): dlmalloc's own
+  chunk-header store into pages another thread grew traps inside dlmalloc
+  (reached through `posix_memalign` or `malloc`), before the refresh and while
+  dlmalloc holds its lock. When the trap does not end the process, the lock is
+  never released and the process **hangs**: the main thread and the other
+  workers spin on `sched_yield` at about 400% CPU. The loader's worker-crash
+  latch cannot help, because it runs on the main thread's event loop, which
+  never gets control back. `free` and the unwrapped `malloc` that emnapi calls
+  from JS write chunk headers too.
+
+  Direct MultiThread bundle runs, 4 workers, node 24.21 arm64:
+
+  | Artifact     | `--wasm-enforce-bounds-checks` | Result                                |
+  | ------------ | ------------------------------ | ------------------------------------- |
+  | release-wasi | yes                            | 0/110 pass (76 hang, 34 trap)         |
+  | release-wasi | no                             | 10/10 pass                            |
+  | dev profile  | yes                            | 103/110 pass (1/10 fail in a control) |
+  | dev profile  | no                             | 30/30 pass                            |
+
+  A bigger loader `initial` (2 GiB, 3 GiB) does not help with the flag: 0/20
+  pass. A refresh before the allocation does not either (see Rejected
+  alternatives).
+
+  Which hosts lack the handler: Node's bundled
+  `deps/v8/src/trap-handler/trap-handler.h` (v24.12.0 = V8 `13.6-lkgr`) sets
+  `V8_TRAP_HANDLER_SUPPORTED` only for x64 on Linux (not Android), Windows,
+  macOS and FreeBSD; arm64 on Linux (not Android), Windows and macOS; loong64
+  and riscv64 on Linux. Older majors are narrower for arm64: v22.23.3 (V8 12.4)
+  has macOS and Linux only, v20.20.2 (V8 11.3) macOS only. Node's `src/node.cc`
+  (all three) installs the handler only on `__APPLE__ || __linux__ || _WIN32`
+  and not under `--disable-wasm-trap-handler`. Node has no runtime check for
+  it: no `process.config.variables` key, no `process.features` field; only the
+  flag in `process.execArgv` / `NODE_OPTIONS` can be seen.
+
+  | Official Node build        | Handler       | Native rolldown binding     |
+  | -------------------------- | ------------- | --------------------------- |
+  | darwin x64 / arm64         | yes           | yes                         |
+  | linux-x64, win-x64         | yes           | yes                         |
+  | linux-arm64                | Node 22+ only | yes                         |
+  | win-arm64                  | Node 24+ only | yes                         |
+  | linux-ppc64le              | no            | yes (`linux-ppc64-gnu`)     |
+  | linux-s390x                | no            | yes (`linux-s390x-gnu`)     |
+  | aix-ppc64                  | no            | **no** -> WASI fallback     |
+  | linux-armv7l (Node 20, 22) | no            | yes (`linux-arm-gnueabihf`) |
+  | win-x86 (Node 20, 22)      | no            | **no** -> WASI fallback     |
+
+  Node 24 no longer ships linux-armv7l or win-x86 (nodejs.org/dist/index.json).
+  Outside the official matrix, Android (V8 refuses the handler there) has native
+  bindings, and FreeBSD arm64 has none. So the threaded WASI package runs without
+  the handler by default on AIX, 32-bit Windows and FreeBSD arm64, and elsewhere
+  only when forced (`NAPI_RS_FORCE_WASI`) or when the native binding fails to
+  load.
+
 - Not measured with rolldown: browsers (wasi-browser loader), Node on x64 (the
   pure V8 repro does trap on Node 25 x64).
 

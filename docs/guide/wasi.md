@@ -25,6 +25,10 @@ to 4) in the environment. The threadless `wasm32-wasip1` artifact has no
 threads: `configureAsyncRuntime({ flavor: 'MultiThread' })` throws there and
 `ROLLDOWN_RUNTIME=multi` is ignored.
 
+On hosts where V8 runs without its WebAssembly trap handler (for example AIX,
+32-bit Windows, or Node started with `--disable-wasm-trap-handler`), concurrent
+work on the threaded artifact can hang.
+
 Query the loaded artifact instead of inferring support from environment
 variables:
 

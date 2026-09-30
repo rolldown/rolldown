@@ -11,8 +11,9 @@
 //! code on every other thread keeps its old size, and `memory.fill`, `memory.copy` and atomics
 //! are bounds-checked against it. So a thread that gets a block from the new pages and fills or
 //! copies it (memset, memcpy, calloc, realloc) traps with "memory access out of bounds". Plain
-//! loads and stores are not affected: on hosts with the wasm trap handler (default Node on
-//! arm64 and x64) they are checked by guard pages against the real size.
+//! loads and stores are not affected: on hosts with the wasm trap handler (default Node on x64
+//! and on most arm64 hosts, see Remaining gaps) they are checked by guard pages against the real
+//! size.
 //!
 //! # The workaround
 //!
@@ -46,16 +47,23 @@
 //!   the measured runs.
 //! - C code that calls `malloc` directly and then fills the block is not covered, because
 //!   `malloc` is not wrapped.
-//! - Hosts that run without the V8 wasm trap handler (measured with Node's
-//!   `--wasm-enforce-bounds-checks`; V8 builds without the trap handler should match, not
-//!   measured) bounds-check plain stores against the cached size too. Then dlmalloc's own header
-//!   write into pages another thread grew traps inside dlmalloc (`HeapSyncAlloc::alloc` ->
-//!   `System::alloc` -> `__wrap_posix_memalign` -> dlmalloc), before any refresh and while it
-//!   holds the dlmalloc lock. The lock is never released, so the main thread and the other
-//!   workers spin on `sched_yield` (about 400% CPU) and the process HANGS instead of exiting.
-//!   The loader's worker-crash latch cannot help: it runs on the main thread's event loop, which
-//!   never gets control back. Measured: 7/110 direct MultiThread bundle runs hang with the flag,
-//!   0/30 without it.
+//! - Hosts that run without the V8 wasm trap handler bounds-check plain stores against the cached
+//!   size too. V8 13.6 (Node 24) builds the handler only for x64 and arm64 on Linux, Windows and
+//!   macOS (plus x64 FreeBSD, loong64, riscv64); Node 22 lacks it on Windows arm64 and Node 20
+//!   on every arm64 host but macOS. Node turns it off with `--disable-wasm-trap-handler` and
+//!   exposes no runtime check for it. Measured with Node's
+//!   `--wasm-enforce-bounds-checks` (hosts without the handler should behave the same, not
+//!   measured): dlmalloc's own chunk-header store into pages another thread grew traps inside
+//!   dlmalloc (reached through `posix_memalign` or `malloc`), before any refresh and while it
+//!   holds the dlmalloc lock. When the trap does not end the process, the lock is never
+//!   released, the main thread and the other workers spin on `sched_yield` (about 400% CPU), and
+//!   the process HANGS. The loader's worker-crash latch cannot help: it runs on the main thread's
+//!   event loop, which never gets control back. Measured on direct MultiThread (4 workers)
+//!   bundle runs: the release-wasi artifact fails 110/110 (76 hang, 34 trap), the dev-profile
+//!   artifact 7/110 (1/10 in a control); without the flag 10/10 release runs pass. `free` and the
+//!   unwrapped `malloc` that emnapi calls from JS write chunk headers too. Closing this needs a
+//!   refresh after dlmalloc takes its lock (a dlmalloc or `sbrk` hook, or an allocator that owns
+//!   the lock); a refresh in these wrappers before the allocation does not (see design.md).
 //!
 //! Remove this module once the Node versions we support ship the V8 fix
 //! (v8/v8@34241014663390c72e08c123faef6fedf395be8e).

@@ -123,3 +123,5 @@ async work then runs on 2 to 4 scheduler workers, and the build reports
 `threads: true` and `devSupported: true`. Rolldown's data-parallel compute
 stays sequential on every WebAssembly build. The threadless `wasm32-wasip1`
 build rejects `MultiThread`. Watch mode is unsupported on every WASI artifact.
+On hosts where V8 runs without its WebAssembly trap handler (for example AIX or
+32-bit Windows), `MultiThread` on the threaded build can hang.

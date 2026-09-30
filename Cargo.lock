@@ -2199,7 +2199,7 @@ dependencies = [
 [[package]]
 name = "parking_lot_core"
 version = "0.9.12"
-source = "git+https://github.com/napi-rs/parking_lot?rev=ac046ba44e72159e90e36b7323b1058ba1d48ad2#ac046ba44e72159e90e36b7323b1058ba1d48ad2"
+source = "git+https://github.com/napi-rs/parking_lot?rev=eb33ab62f79d27d1c7880b60e06187be1cbd21f4#eb33ab62f79d27d1c7880b60e06187be1cbd21f4"
 dependencies = [
  "cfg-if",
  "libc",

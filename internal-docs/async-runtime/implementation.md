@@ -170,9 +170,12 @@ default, maximum)` — shared clamp; treats `0`/garbage as unset so it cannot
   panicking parker ("Parking not supported on this platform") on
   `wasm32-wasip1-threads`, since stable rustc never sets
   `target_feature = "atomics"` (rust-lang/rust#77839), so any contended
-  `dashmap`/`parking_lot` lock would panic. The patch pins the napi-rs fork
-  (branch `wasi-threads-parker`), which detects the threaded WASI triples in
-  `core/build.rs` and parks on std's futex `Mutex`/`Condvar`. It is a git patch
+  `dashmap`/`parking_lot` lock would panic. The patch pins the napi-rs fork at
+  `eb33ab62` (branch `wasi-threads-parker-0.9.12`): the `parking_lot_core-v0.9.12`
+  release tag plus one commit that detects the threaded WASI triples in
+  `core/build.rs` and parks on std's futex `Mutex`/`Condvar`. That change is
+  cfg-gated to those triples, so native builds compile exactly the crates.io
+  0.9.12 sources. It is a git patch
   because the renamed crates.io forks (`parking_lot_core-napi`, ...) cannot
   replace a crates.io dependency through `[patch]`, so the rev must keep the
   original crate names. Drop it once a released `parking_lot_core` ships

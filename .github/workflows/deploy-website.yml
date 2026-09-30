@@ -99,6 +99,7 @@ jobs:
         run: vp run docs:void
         env:
           VOID_PROJECT: rolldown
+          VOID_API_URL: https://api.void.cloud
           ALGOLIA_APP_ID: ${{ secrets.ALGOLIA_APP_ID }}
           ALGOLIA_API_KEY: ${{ secrets.ALGOLIA_API_KEY }}
 

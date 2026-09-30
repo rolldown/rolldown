@@ -730,6 +730,14 @@ impl LinkStage<'_> {
                     .is_none_or(|prop| prop.name.as_str() != "default");
                 let mut is_namespace_ref =
                   canonical_ref_owner.namespace_object_ref == canonical_ref || is_json_import_ns;
+                if strict_execution_order
+                  && is_namespace_ref
+                  && let Some(import) = module.named_imports.get(&member_expr_ref.object_ref)
+                  && let Specifier::Literal(name) = &import.imported
+                  && let Some(importee) = module.import_records[import.record_idx].resolved_module
+                {
+                  star_reexport_steps.push((importee, name.clone()));
+                }
                 let mut cursor = 0;
                 while cursor < member_expr_ref.prop_and_span_list.len() && is_namespace_ref {
                   let prop = &member_expr_ref.prop_and_span_list[cursor];
@@ -1012,19 +1020,29 @@ impl LinkStage<'_> {
       let mut recorded = FxHashSet::default();
       for (_, _, _, star_reexport_consumptions) in &resolved_meta_data {
         for (imported_as_ref, steps) in star_reexport_consumptions {
+          if !recorded.insert((*imported_as_ref, steps)) {
+            continue;
+          }
+          // Preserve the namespace's forwarding prefix and member hops as one initialization path.
+          // See internal-docs/code-splitting/implementation.md.
+          let mut path = vec![];
+          let mut visited = FxHashSet::default();
           for (module_idx, export_name) in steps {
-            if !recorded.insert((*module_idx, export_name.clone(), *imported_as_ref)) {
-              continue;
-            }
-            record_star_reexport_path(
+            collect_star_reexport_path(
               *module_idx,
               export_name,
-              *imported_as_ref,
               &self.module_table.modules,
               &self.metas,
-              &mut self.star_reexport_records_by_imported_symbol,
-              &mut FxHashSet::default(),
+              &mut path,
+              &mut visited,
             );
+          }
+          if !path.is_empty() {
+            let paths =
+              self.star_reexport_records_by_imported_symbol.entry(*imported_as_ref).or_default();
+            if !paths.contains(&path) {
+              paths.push(path);
+            }
           }
         }
       }
@@ -1728,6 +1746,7 @@ fn collect_star_reexport_path(
       return;
     };
     let Specifier::Literal(next_export_name) = &named_import.imported else {
+      path.push((module_idx, named_import.record_idx));
       return;
     };
     (named_import.record_idx, next_export_name.clone())

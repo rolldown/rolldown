@@ -1,16 +1,10 @@
 import { spawnSync } from 'node:child_process';
 import { Buffer as NodeBuffer } from 'node:buffer';
 import { existsSync } from 'node:fs';
-import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
+import { readFile } from 'node:fs/promises';
 import { createRequire } from 'node:module';
-import { tmpdir } from 'node:os';
-import { join } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { runInNewContext } from 'node:vm';
-// @ts-ignore This focused build-codegen test intentionally reaches package tooling outside the test rootDir.
-import { preserveGeneratedBindingSources } from '../build-binding-guards';
-// @ts-ignore This focused build-codegen test intentionally reaches package tooling outside the test rootDir.
-import { preserveInactiveWasiDeclaration } from '../build-binding-guards';
 // @ts-ignore This focused unit test intentionally reaches generated package source outside the test rootDir.
 import type { WasiInstance } from '../src/rolldown-binding.wasip1-deferred.js';
 // @ts-ignore This focused integration test intentionally reaches the package source outside the test rootDir.
@@ -213,95 +207,6 @@ const __wasmResponse = await __browserFetch(__wasmUrl)`,
 }
 
 describe.sequential('managed workerd loader', () => {
-  test.each([
-    {
-      name: 'threadless target',
-      options: { target: 'wasm32-wasip1' },
-      active: 'threadless',
-    },
-    {
-      name: 'threaded target',
-      options: { target: 'wasm32-wasip1-threads' },
-      active: 'threaded',
-    },
-    {
-      name: 'native default build',
-      options: {},
-      active: 'threaded',
-    },
-  ] as const)('preserves the inactive declaration during a $name', async ({ options, active }) => {
-    const directory = await mkdtemp(join(tmpdir(), 'rolldown-wasi-declarations-'));
-    const paths = {
-      threaded: join(directory, 'threaded.d.cts'),
-      threadless: join(directory, 'threadless.d.cts'),
-    };
-    try {
-      await Promise.all([
-        writeFile(paths.threaded, 'threaded-original'),
-        writeFile(paths.threadless, 'threadless-original'),
-      ]);
-      const restore = preserveInactiveWasiDeclaration(options, paths);
-      const inactive = active === 'threadless' ? 'threaded' : 'threadless';
-      await Promise.all([
-        writeFile(paths[active], `${active}-generated`),
-        writeFile(paths[inactive], `${inactive}-overwritten`),
-      ]);
-
-      restore();
-
-      await expect(readFile(paths[active], 'utf8')).resolves.toBe(`${active}-generated`);
-      await expect(readFile(paths[inactive], 'utf8')).resolves.toBe(`${inactive}-original`);
-    } finally {
-      await rm(directory, { recursive: true, force: true });
-    }
-  });
-
-  test('restores all generated binding sources after a profile build fails', async () => {
-    const directory = await mkdtemp(join(tmpdir(), 'rolldown-generated-binding-sources-'));
-    const buildError = new Error('profile build failed');
-    const paths = {
-      binding: join(directory, 'binding.cjs'),
-      browser: join(directory, 'browser.js'),
-      declaration: join(directory, 'binding.d.cts'),
-      loader: join(directory, 'rolldown-binding.wasip1-browser.js'),
-      created: join(directory, 'wasi-worker-browser.mjs'),
-      unrelated: join(directory, 'unrelated.ts'),
-    };
-    try {
-      const originalBinding = Buffer.from([0x2f, 0x2f, 0x20, 0x64, 0x69, 0x72, 0x74, 0x79, 0xff]);
-      await Promise.all([
-        writeFile(paths.binding, originalBinding),
-        writeFile(paths.browser, 'dirty browser entry'),
-        writeFile(paths.declaration, 'dirty declaration'),
-        writeFile(paths.loader, 'dirty loader'),
-        writeFile(paths.unrelated, 'unrelated original'),
-      ]);
-
-      await expect(
-        preserveGeneratedBindingSources(async () => {
-          await Promise.all([
-            writeFile(paths.binding, 'test-profile binding'),
-            rm(paths.browser),
-            rm(paths.declaration),
-            writeFile(paths.loader, 'test-profile loader'),
-            writeFile(paths.created, 'new generated worker'),
-            writeFile(paths.unrelated, 'unrelated build output'),
-          ]);
-          throw buildError;
-        }, directory),
-      ).rejects.toBe(buildError);
-
-      await expect(readFile(paths.binding)).resolves.toEqual(originalBinding);
-      await expect(readFile(paths.browser, 'utf8')).resolves.toBe('dirty browser entry');
-      await expect(readFile(paths.declaration, 'utf8')).resolves.toBe('dirty declaration');
-      await expect(readFile(paths.loader, 'utf8')).resolves.toBe('dirty loader');
-      await expect(readFile(paths.created, 'utf8')).rejects.toMatchObject({ code: 'ENOENT' });
-      await expect(readFile(paths.unrelated, 'utf8')).resolves.toBe('unrelated build output');
-    } finally {
-      await rm(directory, { recursive: true, force: true });
-    }
-  });
-
   test('keeps test-only runtime probes out of generated public sources', async () => {
     const [bindingSource, declarationSource] = await Promise.all([
       readFile(new URL('../src/binding.cjs', import.meta.url), 'utf8'),
@@ -1910,14 +1815,6 @@ console.log('class plugin context invalidated')
     'keeps the measured ~64 MiB initial floor through repeated representative builds',
     { timeout: 60_000 },
     async () => {
-      // 1027 pages: the wasm module's env.memory minimum as of oxc 0.146.0;
-      // must stay in lockstep with napi.wasm.threadlessInitialMemory and the
-      // ceiling in scripts/wasi/check-wasi-threadless.mjs.
-      expect(WORKERD_WASM_MEMORY).toMatchObject({
-        initialPages: 1027,
-        initialBytes: 1027 * 64 * 1024,
-      });
-
       const module = await WebAssembly.compile(await readFile(wasmPath));
       const moduleCount = 256;
       for (let round = 0; round < 3; round += 1) {

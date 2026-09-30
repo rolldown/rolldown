@@ -421,23 +421,20 @@ for this change, in a noisier set). Not profiled.
 
 ## Remaining gaps
 
-| gap                                                          | before the lock (db90bbbcf)                      | now                                                                                |
-| ------------------------------------------------------------ | ------------------------------------------------ | ---------------------------------------------------------------------------------- |
-| G1: dlmalloc header store on a host without the trap handler | trap inside dlmalloc's lock, then a **hang**     | closed on the measured host (Workaround results): the store runs after the refresh |
-| G2: a block received mid-poll after another thread grew      | open, rare                                       | open, but only once the heap passes the reserve (about 960 MiB); not observed      |
-| a crash while a thread holds the allocator lock              | the other threads spin (dlmalloc's lock)         | the same (our lock)                                                                |
-| heap pointer at or above 2^31                                | `EINVAL` from `node:wasi` at about 1 GiB of heap | at about 1.94 GiB of heap                                                          |
+| gap                                                          | before the lock (db90bbbcf)                      | now                                                                                                                               |
+| ------------------------------------------------------------ | ------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------- |
+| G1: dlmalloc header store on a host without the trap handler | trap inside dlmalloc's lock, then a **hang**     | closed on the measured host (Workaround results): the store runs after the refresh                                                |
+| G2: a block received mid-poll after another thread grew      | open, rare                                       | open: needs the heap past the loader memory and a handoff inside a short window; 0 hits in about 5,000 grows (G2 measured, below) |
+| a crash while a thread holds the allocator lock              | the other threads spin (dlmalloc's lock)         | the same (our lock)                                                                                                               |
+| heap pointer at or above 2^31                                | `EINVAL` from `node:wasi` at about 1 GiB of heap | at about 1.94 GiB of heap                                                                                                         |
 
-- **G2.** A block that reaches a running thread mid-poll (a channel message, an
-  `Arc`, a threadsafe-function call on the JS thread) and is filled / copied / used
-  with atomics there (or, without the trap handler, loaded or stored) before that
-  thread's next allocation or poll boundary can still hit a stale size, if another
-  thread grew the memory in between. Task migration and blocking-closure entry are
-  covered by the handoff refresh (principle 2), and every allocator entry refreshes.
-  Below the reserve nothing grows, so there is no stale size to hit; the forced
-  growth runs (loader memory at the module minimum, 12-14 grows per run, under
-  `--wasm-enforce-bounds-checks`) did not hit it either. Not proven closed; the V8
-  fix closes it.
+- **G2.** A block that thread A allocated right after A grew the memory, handed
+  to thread B inside one poll, and filled / copied / used with atomics there (or,
+  without the trap handler, loaded or stored) before B's next refresh point, hits
+  B's stale size. Task migration and blocking-closure entry are covered by the
+  handoff refresh (principle 2), and every allocator entry refreshes. Measured in
+  detail in G2 measured, below: rare, fatal when it fires, and no cheap fix closes
+  it; the V8 fix does.
 - **Crash inside the lock.** If a thread dies while it holds the lock (any trap in
   dlmalloc), the others spin on `sched_yield` and the loader's worker-crash latch
   cannot run, as with dlmalloc's own lock before.
@@ -476,6 +473,135 @@ for this change, in a noisier set). Not profiled.
   the handler by default on AIX, 32-bit Windows and FreeBSD arm64, and elsewhere
   only when forced (`NAPI_RS_FORCE_WASI`) or when the native binding fails to
   load.
+
+### G2 measured (2026-10-01)
+
+Node 24.21 arm64 unless noted; "release" is the release-wasi artifact of this
+branch.
+
+**The window.**
+
+```
+thread A                                 thread B (inside one poll)
+  LOCK, sbrk grows, publish, UNLOCK
+  allocates a block in the new pages ──> receives it
+                                         memory.copy / memory.fill / atomics on it
+                                           bounds check vs B's OLD size -> trap
+                                         next refresh point: closes the window
+```
+
+Refresh points that end it: every allocator call refreshes after it takes the
+lock (`wasm_heap_sync.rs`), every task poll and blocking-closure start (the
+handoff hook), and V8's own points (What refreshes a stale thread). The paths
+that deliver a block inside one poll:
+
+| delivery path                                                                                                      | covered?                                                                                                                      |
+| ------------------------------------------------------------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------- |
+| module loader `while ... self.rx.next().await` loop (`crates/rolldown/src/module_loader/module_loader.rs:541-562`) | no: futures-channel 0.3.34's queue reads the new node before it frees the old one, so the free's refresh comes after the read |
+| `Arc` / `Mutex` / `DashMap` / runtime queue reads                                                                  | no hook                                                                                                                       |
+| async-channel, async-broadcast, oneshot, std `mpsc`, when the value is ready in the same poll                      | no                                                                                                                            |
+| `spawn_blocking` results                                                                                           | yes: the waiting task is polled again, and the poll hook refreshes                                                            |
+| threadsafe-function call to JS                                                                                     | rarely open: JS calls refresh                                                                                                 |
+
+**What happens when it fires.** Pure V8 probe (two workers, one shared memory:
+A grows one page per round and hands B a pointer into it; B touches it inside
+one activation), node 24.21 and 22.22, 10 runs per cell:
+
+| B's access on the stale block                      | default host (trap handler) | `--wasm-enforce-bounds-checks` or `--disable-wasm-trap-handler` |
+| -------------------------------------------------- | --------------------------- | --------------------------------------------------------------- |
+| `memory.copy`, `memory.fill`, `i32.atomic.rmw.add` | trap 10/10                  | trap 10/10                                                      |
+| plain `i32.load` / `i32.store`                     | pass 10/10                  | trap 10/10                                                      |
+
+(`--wasm-enforce-bounds-checks` ran on 24.21 only.) The trap is
+`RuntimeError: memory access out of bounds` in the worker. What follows depends
+on what the dead thread held (5 or 10 runs per cell):
+
+| the dead thread held                               | result                         |
+| -------------------------------------------------- | ------------------------------ |
+| no lock, or a lock that only other workers take    | process exits 1 (5/5, 10/10)   |
+| a lock the main thread later takes (spin or futex) | process **hangs** (5/5, 10/10) |
+
+In rolldown the worker trap goes through emnapi's crash report and the loader's
+crash flag. Real artifact (release wasm, MultiThread w4, a `RuntimeError`
+injected at one import, at its 1st to 1000th call, 7 cells per site):
+
+| crash site                                        | no handler  | app `uncaughtException` handler                           |
+| ------------------------------------------------- | ----------- | --------------------------------------------------------- |
+| `fd_read`, `sched_yield`, `_emnapi_async_send_js` | exit 1, 7/7 | the in-flight builds never settle (32 pending after 20 s) |
+| `clock_time_get`                                  | hang 4/7    | hang 5/7, the other 2 never settle                        |
+
+The `clock_time_get` hang: the worker dies inside napi-async-runtime 0.2.3's
+`DriverParker::park_timeout` (`async_runtime.rs:7185-7204`), which reads the
+clock while it holds the parker mutex; the next `unpark()` (`:7096-7110`) on
+another thread then blocks on that mutex forever. `wake_one` (`:7583-7598`) has
+the same shape. The general class, a lock held by a thread that died, is being
+fixed in napi-rs PR #3552.
+
+**How rare.** A grow happens only once the heap break passes the loader memory
+(16384 pages, 1 GiB). Peak break, default loader memory:
+
+| load                                        | break (pages) | grows |
+| ------------------------------------------- | ------------- | ----- |
+| every CI stress case                        | 1696-4542     | 0     |
+| three                                       | 1747          | 0     |
+| three10x x1                                 | 7452          | 0     |
+| three10x x1 + sourcemap                     | 9993          | 0     |
+| three10x x2 at once                         | 13723-13919   | 0     |
+| three10x x4 at once                         | 22612-23117   | 23-26 |
+| three10x x4 at once + JS plugin + sourcemap | 32813-34590   | 48-53 |
+
+The last row passed with the break above 2^31. Only 4 or more heavy builds at
+once cross the loader memory. Growth on purpose (`late` = blocks past the
+thread's refreshed size):
+
+| run                                                                      | pass    | grows     | late |
+| ------------------------------------------------------------------------ | ------- | --------- | ---- |
+| builds + JS plugin, MT w4, loader memory = module minimum, bounds checks | 100/100 | 1441      | 0    |
+| the same, `--disable-wasm-trap-handler`                                  | 50/50   | 724       | 0    |
+| the same, default flags                                                  | 50/50   | 721       | 0    |
+| builds only, MT w4, loader memory = module minimum, bounds checks        | 50/50   | 600       | 0    |
+| three10x x4 + JS plugin, default loader memory, each flag (10 + 10)      | 20/20   | 278 / 280 | 0    |
+
+About 5,000 grows in all, 0 traps, 0 hangs. That shows the window is rare, not
+that it is closed.
+
+**How long the window is.** The same probe, but A grows, then spins D iterations
+(about 1.6 ns each) before it hands B the pointer; 10 runs per cell:
+
+| B's activation  | D = 0 | D = 1e5 (about 0.2 ms) | D = 3e5 | D = 1e6 (about 1.6 ms) |
+| --------------- | ----- | ---------------------- | ------- | ---------------------- |
+| cold (Liftoff)  | 10/10 | 10/10                  | 4/10    | 0/10                   |
+| warm (TurboFan) | 3/10  | 0/10                   | -       | -                      |
+
+A cold B stays stale until its tier-up budget runs out; calling a small wasm
+function on every spin did not refresh it in this probe. A warm B only misses a
+grow in the same loop pass.
+
+**Fix options.**
+
+| option                                                                     | verdict                                                                            |
+| -------------------------------------------------------------------------- | ---------------------------------------------------------------------------------- |
+| (i) refresh at every delivery point                                        | impossible in general: third-party channels and plain shared memory have no hook   |
+| (ii) stop the world on grow: the grower waits until every thread refreshed | rejected (below)                                                                   |
+| (iii-a) grow early by a margin in `__wrap_sbrk`                            | open product call (below)                                                          |
+| (iii-b) a bigger grow step                                                 | weaker than (iii-a): the block that triggers the grow still lands in the new pages |
+| (iii-c) a size check before each copy                                      | impossible: `memory.copy` is emitted inline                                        |
+
+- **(ii) is rejected.** A thread asleep in a std `Mutex` / `Condvar` futex wait
+  cannot acknowledge. It can also deadlock: A (holding the allocator lock) waits
+  for T1's acknowledgement, T1 waits for mutex M held by T2, T2 spins on the
+  allocator lock held by A. It turns any crash of one thread into a whole-process
+  hang, and JS entries would need hooks too.
+- **(iii-a) is the open product call.** Compute `needed_pages` from
+  `new_brk + MARGIN` (16-64 MiB), so the block that triggers the grow stays in
+  pages every thread already knows, and the new pages come into use only about
+  0.2-1.6 s later at the heaviest growth rate measured, far past the window above.
+  About one line. Cost: the memory size runs MARGIN ahead of the break (commit
+  charge on Windows). Not built or measured.
+
+V8's upstream fix (v8/v8@34241014663390c72e08c123faef6fedf395be8e, V8 15.7) makes
+bounds checks on shared memory read the current size, which closes the whole
+class, G2 included.
 
 ## When to remove
 

@@ -120,7 +120,10 @@ for (const bindingHook of ['buildStart', 'buildEnd'] as const) {
       expect(lateCallError).toBeUndefined();
       // Guards the premise: a writeBundle that never ran would pass vacuously.
       expect(writeBundleRan).toBe(true);
-      expect(watchFiles).toContain(watchedId);
+      // `addWatchFile` stores the id resolved against `cwd` and normalized
+      // (`NativePluginContextImpl::add_watch_file`), and `cwd` defaults to
+      // `process.cwd()`.
+      expect(watchFiles).toContain(nodePath.resolve(watchedId));
       expect(output[0].code).toContain('42');
     } finally {
       await rm(outDir, { recursive: true, force: true });

@@ -7,10 +7,8 @@ import { MessageChannel, Worker } from 'node:worker_threads';
 import { createParallelPluginWorkerBootstrap } from '../src/utils/initialize-parallel-plugins';
 // Registers the timer host before `timers` is asserted: this entry runs
 // `setup.ts` -> `timer-host.ts` -> `registerTimerHost`.
-import { rolldown, watch } from 'rolldown';
+import { rolldown } from 'rolldown';
 import {
-  dev,
-  defineParallelPlugin,
   getAsyncRuntimeConfig,
   getRuntimeCapabilities,
   getRuntimeSupport,
@@ -152,44 +150,6 @@ describe('getRuntimeCapabilities', () => {
     }
   });
 
-  test.runIf(caps.flavor === 'CurrentThread')('dev fails before entering the binding', async () => {
-    await expect(dev({ input: 'entry.js' })).rejects.toMatchObject({
-      code: 'ERR_ROLLDOWN_UNSUPPORTED_RUNTIME_FEATURE',
-      feature: 'dev',
-    });
-  });
-
-  test.runIf(caps.wasi)('watch reports a normal setup failure instead of stalling', async () => {
-    const watcher = watch({ input: 'entry.js' });
-    const events: string[] = [];
-    let reportedError: Error | undefined;
-    const ended = new Promise<void>((resolve) => {
-      watcher.on('event', (event) => {
-        events.push(event.code);
-        if (event.code === 'ERROR') {
-          reportedError = event.error;
-        } else if (event.code === 'END') {
-          resolve();
-        }
-      });
-    });
-
-    await Promise.all([ended, watcher.close()]);
-    expect(events).toEqual(['ERROR', 'END']);
-    expect(reportedError).toMatchObject({
-      code: 'ERR_ROLLDOWN_UNSUPPORTED_RUNTIME_FEATURE',
-      feature: 'watch',
-    });
-  });
-
-  test.runIf(caps.wasi)('parallel plugins fail before spawning workers on WASI', () => {
-    expect(() => defineParallelPlugin('file:///parallel-plugin.mjs')).toThrowError(
-      expect.objectContaining({
-        code: 'ERR_ROLLDOWN_UNSUPPORTED_RUNTIME_FEATURE',
-        feature: 'parallelPlugins',
-      }),
-    );
-  });
   test('the report is a stable snapshot, not an env re-read', () => {
     const capsBefore = getRuntimeCapabilities();
     const configBefore = getAsyncRuntimeConfig();

@@ -9,8 +9,8 @@ use oxc_str::CompactStr;
 use rolldown_common::{
   EcmaModuleAstUsage, ExportsKind, ImportRecordIdx, IndexModules, MemberExprObjectReferencedType,
   MemberExprRefResolution, Module, ModuleIdx, ModuleType, NamespaceAlias, NormalModule,
-  OutputFormat, ResolvedExport, Specifier, StmtInfos, SymbolOrMemberExprRef, SymbolRef,
-  SymbolRefDb, SymbolRefFlags,
+  OutputFormat, ResolvedExport, Specifier, StmtInfoIdx, StmtInfos, SymbolOrMemberExprRef,
+  SymbolRef, SymbolRefDb, SymbolRefFlags,
 };
 use rolldown_error::{
   AmbiguousExternalNamespaceModule, BuildDiagnostic, Diagnostics, EventKindSwitcher,
@@ -27,7 +27,13 @@ use rolldown_utils::{
 
 use rustc_hash::{FxHashMap, FxHashSet};
 
-use crate::{SharedOptions, types::linking_metadata::LinkingMetadataVec};
+use crate::{
+  SharedOptions,
+  types::{
+    linking_metadata::LinkingMetadataVec,
+    member_read_star_reexport_path::MemberReadStarReexportPath,
+  },
+};
 
 use super::LinkStage;
 
@@ -38,6 +44,10 @@ struct ImportTracker {
   pub imported: Specifier,
   pub imported_as: SymbolRef,
 }
+
+/// A namespace-member read that statically resolved through re-export hops: the reading statement,
+/// the resolved binding, and every (module, export) step the chain went through. Strict-only.
+type MemberReadConsumption = (StmtInfoIdx, SymbolRef, Vec<(ModuleIdx, CompactStr)>);
 
 #[derive(Debug)]
 pub struct MatchingContext {
@@ -689,9 +699,8 @@ impl LinkStage<'_> {
           let mut resolved_map = FxHashMap::default();
           let mut side_effects_dependency = vec![];
           let mut written_cjs_exports: Vec<SymbolRef> = vec![];
-          let mut star_reexport_consumptions: Vec<(SymbolRef, Vec<(ModuleIdx, CompactStr)>)> =
-            vec![];
-          stmt_infos.iter().for_each(|stmt_info| {
+          let mut star_reexport_consumptions: Vec<MemberReadConsumption> = vec![];
+          stmt_infos.iter_enumerated().for_each(|(stmt_info_idx, stmt_info)| {
             stmt_info.referenced_symbols.iter().for_each(|symbol_ref| {
               // `depended_refs` is used to store necessary symbols that must be included once the resolved symbol gets included
               let mut depended_refs: Vec<SymbolRef> = vec![];
@@ -952,12 +961,16 @@ impl LinkStage<'_> {
                 }
 
                 if cursor > 0 || target_commonjs_exported_symbol.is_some() {
-                  // Key the consumed steps by the final canonical ref: it is the symbol the
-                  // inclusion pass marks used for this read (an inlined constant never is, and
-                  // needs no init), which is exactly the usedness gate
-                  // `collect_frozen_reexport_usage` applies to this index.
+                  // Record the consumed steps with the reading statement and the final canonical
+                  // ref: `collect_frozen_reexport_usage` retains them only while that statement
+                  // is included and the symbol is used (an inlined constant never is, and needs
+                  // no init).
                   if !star_reexport_steps.is_empty() {
-                    star_reexport_consumptions.push((canonical_ref, star_reexport_steps));
+                    star_reexport_consumptions.push((
+                      stmt_info_idx,
+                      canonical_ref,
+                      star_reexport_steps,
+                    ));
                   }
                   resolved_map.insert(
                     member_expr_ref.node_id,
@@ -1015,13 +1028,15 @@ impl LinkStage<'_> {
     // A statically resolved namespace member read consumes re-export hops exactly like a named
     // import: without this, a side-effect-free definer reached only through an `export *` barrel
     // by namespace readers leaves the barrel's forwarding hop without retention evidence, and the
-    // wrapped barrel's `init_*` never initializes the definer (`collect_frozen_reexport_usage`
-    // keys its retained re-export paths off this same index).
+    // wrapped barrel's `init_*` never initializes the definer. `collect_frozen_reexport_usage`
+    // retains each recorded path while its reading statement is included.
     if strict_execution_order {
       let mut recorded = FxHashSet::default();
-      for (_, _, _, star_reexport_consumptions) in &resolved_meta_data {
-        for (imported_as_ref, steps) in star_reexport_consumptions {
-          if !recorded.insert((*imported_as_ref, steps)) {
+      for (module, (_, _, _, star_reexport_consumptions)) in
+        self.module_table.modules.iter().zip(&resolved_meta_data)
+      {
+        for (stmt_info_idx, resolved, steps) in star_reexport_consumptions {
+          if !recorded.insert((module.idx(), *stmt_info_idx, *resolved, steps)) {
             continue;
           }
           // Preserve the namespace's forwarding prefix and member hops as one initialization path.
@@ -1039,11 +1054,11 @@ impl LinkStage<'_> {
             );
           }
           if !path.is_empty() {
-            let paths =
-              self.star_reexport_records_by_imported_symbol.entry(*imported_as_ref).or_default();
-            if !paths.contains(&path) {
-              paths.push(path);
-            }
+            self.member_read_star_reexport_paths.push(MemberReadStarReexportPath {
+              reader: (module.idx(), *stmt_info_idx),
+              resolved: *resolved,
+              path,
+            });
           }
         }
       }

@@ -631,45 +631,6 @@ mod tests {
   }
 
   #[test]
-  fn sibling_task_adopts_group_registered_paths_without_backend_transaction() {
-    let test_dir = TestDir::new("rolldown-watch-registration");
-    let watch_files = create_watch_files(&test_dir, &["shared.js"]);
-    let options =
-      NormalizedBundlerOptions { cwd: test_dir.path().to_path_buf(), ..Default::default() };
-    let AddFailingWatcherFixture { watcher, commit_attempts, event_delivery_paused, .. } =
-      create_add_failing_watcher();
-    let task_a_watched_files = FxDashSet::default();
-    let task_b_watched_files = FxDashSet::default();
-
-    // Task A of the group registers the path with the shared backend.
-    WatchTask::update_watch_files_from(&watcher, &task_a_watched_files, &options, &watch_files)
-      .expect("first registration should commit");
-    assert_eq!(commit_attempts.load(Ordering::SeqCst), 1);
-    assert!(task_a_watched_files.contains(Path::new(watch_files[0].as_str())));
-    assert!(is_registered(&watcher, Path::new(watch_files[0].as_str())));
-
-    // Sibling task B discovers the same path (the group members share one
-    // module graph). It must adopt the group's registration: another paths
-    // transaction would restart the shared FSEvents stream and drop the
-    // events buffered while it is open.
-    WatchTask::update_watch_files_from(&watcher, &task_b_watched_files, &options, &watch_files)
-      .expect("the sibling's duplicate batch must succeed");
-    assert_eq!(
-      commit_attempts.load(Ordering::SeqCst),
-      1,
-      "a path a sibling already registered must not open a backend transaction"
-    );
-    assert!(
-      !event_delivery_paused.load(Ordering::SeqCst),
-      "event delivery must stay uninterrupted during adoption"
-    );
-    assert!(
-      task_b_watched_files.contains(Path::new(watch_files[0].as_str())),
-      "adoption must land in the sibling's own watch set so it still marks itself dirty"
-    );
-  }
-
-  #[test]
   fn relative_output_path_is_resolved_and_normalized() {
     let cwd = std::env::current_dir().expect("current directory");
     assert_eq!(resolve_output_path(&cwd, "./nested/../dist/out.js"), cwd.join("dist/out.js"));

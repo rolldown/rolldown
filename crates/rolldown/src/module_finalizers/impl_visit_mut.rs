@@ -15,7 +15,7 @@ use oxc_str::CompactStr;
 use rolldown_common::{ConcatenateWrappedModuleKind, SymbolRef, ThisExprReplaceKind};
 use rolldown_ecmascript::ToSourceString;
 use rolldown_ecmascript_utils::{
-  EsmWrapperBodyKind, EsmWrapperCallKind, EsmWrapperDeclKind, EsmWrapperStmtOptions, ExpressionExt,
+  EsmWrapperBodyKind, EsmWrapperCallKind, EsmWrapperDeclKind, EsmWrapperStmtOptions,
   ExpressionFactoryExt as _, JsxExt, JsxMemberExpressionObjectExt, StatementFactoryExt as _,
 };
 use rolldown_error::EmptyImportMetaKind;
@@ -538,23 +538,14 @@ impl<'ast> VisitJsMut<'ast> for ScopeHoistingFinalizer<'_, 'ast> {
         self.rewrite_hot_accept_call_deps(call_expr);
         if let Some(new_expr) = self.try_rewrite_global_require_call(call_expr) {
           *expr = new_expr;
-        } else if let Some(ident_ref) = call_expr.callee.as_identifier_mut() {
-          let is_empty_function = ident_ref
-            .reference_id
-            .get()
-            .and_then(|ref_id| self.scope.scoping().get_reference(ref_id).symbol_id())
-            .map(|id| {
-              let symbol_ref = self.ctx.symbol_db.canonical_ref_for((self.ctx.idx, id).into());
-              symbol_ref.is_side_effect_free_function(self.ctx.symbol_db, self.ctx.modules)
-                && symbol_ref.is_not_reassigned(self.ctx.symbol_db)
-            })
-            .unwrap_or(false);
-          if is_empty_function {
-            call_expr.pure = true;
-          } else if let Some(new_expr) = self.try_rewrite_identifier_reference_expr(ident_ref, true)
-          {
-            call_expr.callee = new_expr;
-          }
+        } else {
+          self.rewrite_call_callee(call_expr);
+        }
+      }
+      ast::Expression::TaggedTemplateExpression(tagged) => {
+        // A tag is called like a callee: a bridge member tag keeps `this === undefined`.
+        if let Some(new_tag) = self.try_rewrite_bridge_callee(&tagged.tag) {
+          tagged.tag = new_tag;
         }
       }
       // inline dynamic import
@@ -616,6 +607,11 @@ impl<'ast> VisitJsMut<'ast> for ScopeHoistingFinalizer<'_, 'ast> {
         // import.meta.hot?.accept()
         if let ast::ChainElement::CallExpression(call_expr) = &mut chain_expr.expression {
           self.rewrite_hot_accept_call_deps(call_expr);
+          // `f?.()` / `ns.f?.()` of a bridge member: the optional callee needs the same `this`
+          // guard as a plain call.
+          if let Some(new_callee) = self.try_rewrite_bridge_callee(&call_expr.callee) {
+            call_expr.callee = new_callee;
+          }
         }
         let chain_span = chain_expr.span;
         if let Some(new_expr) = chain_expr

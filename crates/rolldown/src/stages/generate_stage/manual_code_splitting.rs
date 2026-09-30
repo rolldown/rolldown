@@ -11,14 +11,14 @@ use itertools::{Either, Itertools};
 use oxc_index::IndexVec;
 use rolldown_common::{
   Chunk, ChunkKind, ChunkingContext, EntryPoint, ManualCodeSplittingOptions, MatchGroup,
-  MatchGroupName, MatchGroupTest, Module, ModuleIdx, ModuleTable, ModuleTagBitSet,
-  ModuleTagRegistry, NormalModule,
+  MatchGroupName, Module, ModuleIdx, ModuleTable, ModuleTagBitSet, ModuleTagRegistry, NormalModule,
 };
 use rolldown_error::BuildResult;
 use rolldown_plugin::SharedPluginDriver;
 use rolldown_utils::{BitSet, IndexBitSet, xxhash::xxhash_with_base};
 use rustc_hash::{FxHashMap, FxHashSet};
 
+use crate::utils::module_id_matcher::match_module_ids;
 use crate::{
   SharedOptions, chunk_graph::ChunkGraph, stages::link_stage::LinkStageOutput,
   types::linking_metadata::LinkingMetadataVec,
@@ -196,24 +196,9 @@ impl ManualSplitter<'_> {
     for (match_group_index, match_group) in self.match_groups.iter().copied().enumerate() {
       let matched = match &match_group.test {
         None => vec![true; candidate_modules.len()],
-        Some(MatchGroupTest::Regex(reg)) => {
-          candidate_modules.iter().map(|module| reg.matches(&module.id)).collect_vec()
-        }
-        Some(MatchGroupTest::Function(func)) => {
-          let module_ids =
-            candidate_modules.iter().map(|module| module.id.to_string()).collect_vec();
-          let results = func(module_ids).await?;
-          if results.len() != candidate_modules.len() {
-            return Err(
-              anyhow::anyhow!(
-                "a `codeSplitting` group `test` function returned {} results for {} modules",
-                results.len(),
-                candidate_modules.len()
-              )
-              .into(),
-            );
-          }
-          results
+        Some(test) => {
+          let ids = candidate_modules.iter().map(|module| module.id.as_str()).collect_vec();
+          match_module_ids(test, &ids, "a `codeSplitting` group `test` function").await?
         }
       };
 

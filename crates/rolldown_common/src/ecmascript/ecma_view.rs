@@ -216,6 +216,8 @@ bitflags! {
         const TopLevelReturn = 1 << 8;
         /// `import.meta.hot.acceptExports(...)` is called somewhere in the module
         const HmrAcceptExports = 1 << 9;
+        /// `import.meta` appears anywhere in the module, including in code tree shaking later drops.
+        const ImportMeta = 1 << 10;
         const ModuleOrExports = Self::ModuleRef.bits() | Self::ExportsRef.bits();
     }
 }

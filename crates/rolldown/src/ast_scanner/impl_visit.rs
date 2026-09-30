@@ -399,6 +399,9 @@ impl<'me, 'ast: 'me> VisitJs<'ast> for AstScanner<'me, 'ast> {
   }
 
   fn visit_expression(&mut self, it: &Expression<'ast>) {
+    if matches!(it, Expression::ImportMeta(_)) {
+      self.result.ast_usage.insert(EcmaModuleAstUsage::ImportMeta);
+    }
     if self.is_root_scope()
       && matches!(
         it,

@@ -7,8 +7,10 @@
 //!
 //! All threads of the `wasm32-wasip1-threads` build share one wasm memory, and wasi-libc's
 //! dlmalloc grows it with `memory.grow` (in `sbrk`) from whichever thread runs out of heap. V8
-//! refreshes the memory size cached for the running activation on that thread only. Optimized
-//! code on every other thread keeps its old size, and `memory.fill`, `memory.copy` and atomics
+//! updates the memory size on that thread only and asks every other thread to catch up at its
+//! next interrupt check. A thread in a long wasm activation checks late (baseline Liftoff code in
+//! a call-free loop only when its tier-up budget runs out or at a function entry; TurboFan code
+//! once per loop pass), so it keeps its old size, and `memory.fill`, `memory.copy` and atomics
 //! are bounds-checked against it. So a thread that gets a block from the new pages and fills or
 //! copies it (memset, memcpy, calloc, realloc) traps with "memory access out of bounds". Plain
 //! loads and stores are not affected: on hosts with the wasm trap handler (default Node on x64
@@ -17,11 +19,13 @@
 //!
 //! # The workaround
 //!
-//! `memory.grow(0)` on the stale thread makes V8 reload the size for that thread and returns
-//! it. `memory.size` does not help: it returns the new size but leaves the cached bounds alone
-//! (measured: a `memory.size` refresh fails 10/10 in release). So after each allocation we run
-//! `memory.grow(0)` when the block ends past what this thread last saw, or when any thread has
-//! seen a larger memory.
+//! `memory.grow(0)` on the stale thread makes V8 update the size for that thread and returns
+//! it. `memory.size` does not help: it returns the same stale size and updates nothing
+//! (measured: a `memory.size` refresh fails 10/10 in release, and in the two-worker probe it
+//! read one page short in every trap). `scripts/wasi/check-v8-shared-memory-grow.mjs`
+//! (`pnpm check:v8-shared-memory-grow`) shows whether a Node still has the bug. So after each
+//! allocation we run `memory.grow(0)` when the block ends past what this thread last saw, or
+//! when any thread has seen a larger memory.
 //!
 //! Rust allocations go through [`HeapSyncAlloc`] (the `#[global_allocator]`). `build.rs` links
 //! with `--wrap` for calloc, realloc, aligned_alloc and posix_memalign, so C callers (emnapi,

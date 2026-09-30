@@ -4,7 +4,7 @@
 
 The threaded WASI binding (`wasm32-wasip1-threads`) traps with "memory access out
 of bounds" under concurrent load because of a V8 bug: a thread that did not run
-`memory.grow` keeps a stale memory size in optimized code, and `memory.fill`,
+`memory.grow` keeps a stale memory size in its running wasm code, and `memory.fill`,
 `memory.copy` and atomics are bounds-checked against it. Rolldown works around it
 in its own allocator: after an allocation that may sit in pages this thread has not
 seen, the thread runs `memory.grow(0)`, which makes V8 reload the size. The same
@@ -17,7 +17,7 @@ support ship the V8 fix. For the machinery, see
 ## The bug
 
 ```
-thread A (out of heap)            thread B (optimized wasm, long activation)
+thread A (out of heap)            thread B (long wasm activation)
   dlmalloc -> sbrk
   memory.grow(n)  ── V8 refreshes A's cached size only
   hands out / frees blocks          malloc() -> block in the new pages
@@ -47,8 +47,27 @@ thread A (out of heap)            thread B (optimized wasm, long activation)
   worker B's `memory.fill` / `memory.copy` / `i32.atomic.store` on the new page trap
   at iteration 0-1; a plain store passes 3000/3000; `memory.size` before the fill
   still traps; `memory.grow(0)` before the fill passes.
-- `--liftoff-only` (no optimized code): 0/900 pure-V8 traps, rolldown MultiThread
-  10/10 pass.
+- Two-worker handoff probe (`scripts/wasi/check-v8-shared-memory-grow.mjs`, see
+  Mechanism below; worker B is already inside one long activation that never
+  allocates or grows, A grows one page per round and hands B a pointer into it),
+  20 runs x 200 rounds per cell, cells are node 24.12.0 / 24.21.0:
+
+  | B's activation               | no refresh         | `memory.grow(0)` | `memory.size`      |
+  | ---------------------------- | ------------------ | ---------------- | ------------------ |
+  | cold (first call, Liftoff)   | 20/20 / 20/20 trap | 0/20 / 0/20      | 20/20 / 20/20 trap |
+  | warm (tiered up to TurboFan) | 1/20 / 3/20 trap   | 0/20 / 0/20      | 0/20 / 6/20 trap   |
+  | cold, `--liftoff-only`       | 0/20 / 0/20        | 0/20 / 0/20      | 1/20 / 0/20 trap   |
+
+  Cold traps land in round 1 or 2; each of `memory.copy`, `memory.fill` and
+  `i32.atomic.rmw.add` traps on its own. `memory.size` returns the STALE size:
+  in every `memory.size` trap it read one page less than the memory had. A later
+  run of the committed script (2026-09-30) got warm 13/20 (24.12.0) and 8/20
+  (24.21.0), and cold `--liftoff-only` 1/20 with no refresh (24.12.0).
+
+- `--liftoff-only` is a near-pass control, not a clean one: the first pure-V8
+  runs had 0/900 traps and rolldown MultiThread passed 10/10, but the handoff
+  probe trapped 1/20 (above) and the earlier grow-race atomic shape trapped 1/5
+  (at iteration 2182 of 3000).
 - V8 fixed exactly this upstream: "[wasm] Atomic memory.size and dynamic bounds
   checks for shared memory", v8/v8@34241014663390c72e08c123faef6fedf395be8e
   (crrev 8466625, V8 bugs 529880019 / 533026477, 2026-09-29). Not in any Node
@@ -56,6 +75,41 @@ thread A (out of heap)            thread B (optimized wasm, long activation)
 - #10697 first read this as heap metadata corruption. Its V8 control used a plain
   store, which passes here too; `fill` / `copy` / atomics trap, a pre-grown heap
   cures it, and an allocator race would not be cured by pre-growing.
+
+### Mechanism (V8 source, node v24.12.0 `deps/v8`)
+
+```
+worker A: memory.grow(n)
+  WasmMemoryObject::Grow -> BroadcastSharedWasmMemoryGrow   (src/wasm/wasm-objects.cc:1223)
+    every other isolate: stack_guard()->RequestGrowSharedMemory()
+    own isolate only: UpdateSharedWasmMemoryObjects       (src/objects/backing-store.cc:855-869)
+
+worker B: size stays stale until B handles that interrupt
+  GROW_SHARED_MEMORY -> UpdateSharedWasmMemoryObjects       (src/execution/stack-guard.cc:337-339)
+  meanwhile memory.copy / memory.fill check against B's per-isolate instance size
+    memory_copy_wrapper / memory_fill_wrapper -> trusted_data->memory_size()
+                                                            (src/wasm/wasm-external-refs.cc:786-790, 806-807)
+```
+
+- The deterministic case is a thread whose activation is still Liftoff code: its
+  first call under Node's default dynamic tiering (wasm has no OSR, so a rayon /
+  emnapi worker loop entered once stays in that frame). With dynamic tiering
+  Liftoff emits no loop stack check (src/wasm/baseline/liftoff-compiler.cc:1415-1420);
+  it handles interrupts only when the tier-up budget runs out
+  (`Runtime_WasmTriggerTierUp`, src/runtime/runtime-wasm.cc:786-794) or at a
+  function-entry stack check. So a call-free loop keeps the old size for a whole
+  round: cold, 20/20 trap.
+- A warm TurboFan activation checks the stack on every loop pass, so it only
+  misses a grow requested in the same pass: a race, 1-6/20 in the probe.
+- `--liftoff-only` turns dynamic tiering off, so Liftoff loops stack-check again:
+  the same one-pass window as TurboFan, hit less often (1/20). Flag probes on
+  24.12.0 (cold, 5 runs each): `--no-wasm-dynamic-tiering` 0/5,
+  `--no-wasm-tier-up` and `--wasm-tiering-budget=2000000000` 5/5 trap,
+  `--no-liftoff` 3/5 trap.
+- `memory.grow(0)` on B goes through the same `Grow`, which ends in
+  `UpdateSharedWasmMemoryObjects` for B's own isolate (backing-store.cc:869), so
+  the size is current before the touch: 0/240 across all probe rows.
+  `memory.size` reads the stale size and handles no interrupt.
 
 ### Workaround results (release-wasi, interleaved A/B, same loads)
 
@@ -112,10 +166,11 @@ of the five judge loads, without vs with the hook: 100/100 pass. Medians (ms):
      memory (`MAX_SEEN_PAGES > LOCAL_PAGES`). The scheduler queue orders A's
      allocation before B's poll, so B's check sees A's size. Cost on the hot path:
      one thread-local read and one atomic load.
-2. **`memory.grow(0)`, not `memory.size`.** Only a grow makes V8 reload the cached
-   bounds of the running activation; `memory.size` returns the new size and leaves
-   the bounds alone (a `memory.size` variant fails 10/10 in release; it passed in
-   debug only because extra calls gave V8 more reload points).
+2. **`memory.grow(0)`, not `memory.size`.** Only a grow updates this thread's
+   memory size (see Mechanism); `memory.size` returns the same stale size the
+   bounds checks use and updates nothing (one page short in every trap of the
+   probe; a `memory.size` variant fails 10/10 in release; it passed in debug only
+   because extra calls gave V8 more reload points).
 3. **Make growth rare.** The first thread to see a growth grows 16 MiB ahead
    (malloc + free through dlmalloc), so the heap grows in a few large steps. Growth
    events, and so refreshes on every thread, drop from about 3000 to about 14 per
@@ -137,8 +192,9 @@ of the five judge loads, without vs with the hook: 100/100 pass. Medians (ms):
   already refreshes. emnapi's JS views have the same stale-size hazard, but
   `@emnapi/wasi-threads` already refreshes those with `memory.grow(0)`, and in
   rolldown runs the wasm trap always came first.
-- **`--liftoff-only`.** Removes the trap but also the MultiThread speedup
-  (release, 16 builds x2 waves: 1107 ms vs 664 ms pre-grown).
+- **`--liftoff-only`.** Makes the trap rare but not impossible (1/20 and 1/5 in
+  the probes, see Evidence), and removes the MultiThread speedup (release, 16
+  builds x2 waves: 1107 ms vs 664 ms pre-grown).
 - **An extra lock around the allocator.** Passed the repro (25/25 debug, 10/10
   release), but dlmalloc is already locked, so it cannot be fixing a race; the extra
   calls only add points where V8 happens to reload the size. It leaves the
@@ -233,8 +289,11 @@ v8/v8@34241014663390c72e08c123faef6fedf395be8e (or a backport of it), delete
 (`crates/rolldown_utils/src/thread_handoff.rs`, its re-exports in
 `rolldown_utils/src/lib.rs`, and its registration and `spawn_blocking` wrap in
 `rolldown_binding/src/async_runtime.rs`), the export check in
-`scripts/wasi/check-wasi-dist-files.mjs`, and this folder. Confirm first with the
-pure V8 repro (fill / copy / atomic on a page another thread grew).
+`scripts/wasi/check-wasi-dist-files.mjs`, `scripts/wasi/check-v8-shared-memory-grow.*`,
+the `check:v8-shared-memory-grow` script in the root `package.json`, and this
+folder. Confirm first on each of those Node versions with
+`pnpm check:v8-shared-memory-grow` and `pnpm check:v8-shared-memory-grow --activation=warm`:
+remove the workaround only when case 1 stops trapping in both (verdict `ABSENT`).
 
 ## Related
 

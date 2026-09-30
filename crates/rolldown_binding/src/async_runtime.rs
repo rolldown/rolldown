@@ -266,22 +266,27 @@ fn safe_js_number(value: u64) -> f64 {
 /// before the first async binding call.
 pub fn configure_async_runtime(options: BindingRuntimeOptions) -> napi::Result<()> {
   let patch: RuntimeOptionsPatch = options.try_into()?;
-  // napi-async-runtime 0.2.3 accepts MultiThread on wasm32-wasip1-threads, and the root
-  // Cargo.toml `[patch.crates-io]` gives parking_lot_core a working parker there. Rolldown
-  // still does not ship it: rolldown/rolldown#10697 (WASI out-of-bounds access under
-  // concurrent JS plugin hooks) is open, so every WebAssembly artifact keeps its
-  // CurrentThread-only contract here, the same way `resolve_runtime_config_for` normalizes
-  // `ROLLDOWN_RUNTIME=multi`. The message is the one 0.2.2 returned from
-  // `configure_partial`, so the JS-visible error does not change.
+  // Only threadless wasm32-wasip1 rejects MultiThread: it has no threads to run workers
+  // on. wasm32-wasip1-threads accepts the opt-in. The root Cargo.toml `[patch.crates-io]`
+  // gives parking_lot_core a working parker there, and `wasm_heap_sync` keeps each
+  // thread's view of the shared memory size fresh (the V8 bug behind the out-of-bounds
+  // traps, see internal-docs/wasi-shared-memory-grow/design.md). CurrentThread stays the
+  // default on every wasm artifact (`resolve_runtime_config_for`). The message is the one
+  // 0.2.2 returned from `configure_partial`, so the JS-visible error does not change.
   // See internal-docs/async-runtime/design.md
-  if compiled_target() != ResolvedRuntimeTarget::Native
-    && patch.flavor == Some(RuntimeFlavor::MultiThread)
+  if !multi_thread_available(compiled_target()) && patch.flavor == Some(RuntimeFlavor::MultiThread)
   {
     return Err(napi::Error::from_reason(
       "the multi-thread runtime is unavailable in this WebAssembly build",
     ));
   }
   configure_partial(patch).map_err(to_napi_error)
+}
+
+/// Whether `configureAsyncRuntime` accepts the MultiThread opt-in on `target`: everywhere
+/// except threadless wasm32-wasip1. Split out so the unit tests cover every target.
+const fn multi_thread_available(target: ResolvedRuntimeTarget) -> bool {
+  !matches!(target, ResolvedRuntimeTarget::Wasi)
 }
 
 #[napi]
@@ -419,23 +424,26 @@ fn resolve_runtime_config_for(
   let default_flavor =
     if native { RuntimeFlavor::MultiThread } else { RuntimeFlavor::CurrentThread };
   let requested_flavor = resolve_runtime_flavor(env.runtime.as_deref(), default_flavor);
-  // Rolldown ships CurrentThread only on WebAssembly. napi-async-runtime 0.2.3 would
-  // build a MultiThread executor on wasm32-wasip1-threads (the parker is patched in the
-  // root Cargo.toml), but rolldown/rolldown#10697 is open and threadless wasm32-wasip1
-  // still rejects it. Normalize the
-  // override before the module-init hook calls `configure`, so loading a WASI artifact never
-  // starts MultiThread because `ROLLDOWN_RUNTIME=multi` leaked in from a native process
-  // environment. `configure_async_runtime` holds the same line for the explicit JS opt-in.
-  let flavor = if native { requested_flavor } else { RuntimeFlavor::CurrentThread };
-  let requested_worker_threads = if native {
+  // Every wasm artifact defaults to CurrentThread. Threadless wasm32-wasip1 is forced to
+  // it: `ROLLDOWN_RUNTIME=multi` leaked in from a native process environment must not
+  // reach `configure` at module init there, and `configure_async_runtime` holds the same
+  // line for the explicit JS opt-in. wasm32-wasip1-threads honours `ROLLDOWN_RUNTIME=multi`
+  // and `ROLLDOWN_WORKER_THREADS`, clamped to [2, 4]: the default is 2, the MultiThread
+  // minimum, and 4 is the widest setting the stress runs cover. The memory-size workaround
+  // that makes it safe: internal-docs/wasi-shared-memory-grow/design.md.
+  let threads = matches!(target, ResolvedRuntimeTarget::WasiThreads);
+  let flavor = if native || threads { requested_flavor } else { RuntimeFlavor::CurrentThread };
+  let requested_worker_threads = if threads {
+    resolve_thread_count(env.worker_threads.clone(), 2, max_async_runtime_worker_threads().min(4))
+  } else if native {
     resolve_thread_count(
       env.worker_threads.clone(),
       detected_native_parallelism(),
       max_async_runtime_worker_threads(),
     )
   } else {
-    // `ROLLDOWN_WORKER_THREADS` does not apply on wasm, and the flavor above is
-    // forced to CurrentThread there, so this value is never read.
+    // `ROLLDOWN_WORKER_THREADS` does not apply on threadless wasm, and the flavor
+    // above is forced to CurrentThread there, so this value is never read.
     1
   };
   let worker_threads = match flavor {
@@ -3371,24 +3379,81 @@ mod tests {
       );
       assert_eq!(resolved.max_blocking_tasks, 1);
 
-      // `ROLLDOWN_WORKER_THREADS` does not apply on wasm, and an inherited
-      // `ROLLDOWN_RUNTIME=multi` must be normalized before module init: Rolldown ships
-      // CurrentThread only on every WebAssembly build (`configure_async_runtime` rejects
-      // the explicit MultiThread opt-in there), and threadless wasm32-wasip1 `configure`
-      // would reject it and panic while loading the addon.
-      let overridden = resolve(
+      // An explicit `ROLLDOWN_RUNTIME=single` keeps the same shape on both targets.
+      let single = resolve(
         target,
         &RuntimeEnv {
-          runtime: Some("multi".to_string()),
+          runtime: Some("single".to_string()),
           worker_threads: Some("9".to_string()),
-          max_blocking_threads: Some("3".to_string()),
           ..RuntimeEnv::default()
         },
       );
-      assert_eq!(overridden.flavor, RuntimeFlavor::CurrentThread);
-      assert_eq!(overridden.worker_threads, 1);
-      assert_eq!(overridden.max_blocking_tasks, 1);
+      assert_eq!(
+        (single.flavor, single.worker_threads, single.max_blocking_tasks),
+        (RuntimeFlavor::CurrentThread, 1, 1)
+      );
     }
+  }
+
+  #[test]
+  fn threadless_wasi_normalizes_an_inherited_multi_thread_request() {
+    // `ROLLDOWN_WORKER_THREADS` does not apply on threadless wasm, and an inherited
+    // `ROLLDOWN_RUNTIME=multi` must be normalized before module init: threadless
+    // wasm32-wasip1 `configure` would reject it and panic while loading the addon.
+    let overridden = resolve(
+      ResolvedRuntimeTarget::Wasi,
+      &RuntimeEnv {
+        runtime: Some("multi".to_string()),
+        worker_threads: Some("9".to_string()),
+        max_blocking_threads: Some("3".to_string()),
+        ..RuntimeEnv::default()
+      },
+    );
+    assert_eq!(overridden.flavor, RuntimeFlavor::CurrentThread);
+    assert_eq!(overridden.worker_threads, 1);
+    assert_eq!(overridden.max_blocking_tasks, 1);
+  }
+
+  #[test]
+  fn threaded_wasi_honours_the_multi_thread_env_opt_in_within_two_to_four_workers() {
+    // See internal-docs/wasi-shared-memory-grow/design.md for why this is safe now.
+    let resolve_threads = |worker_threads: Option<&str>, max_blocking_threads: Option<&str>| {
+      resolve(
+        ResolvedRuntimeTarget::WasiThreads,
+        &RuntimeEnv {
+          runtime: Some("multi".to_string()),
+          worker_threads: worker_threads.map(str::to_string),
+          max_blocking_threads: max_blocking_threads.map(str::to_string),
+          ..RuntimeEnv::default()
+        },
+      )
+    };
+
+    // Clamped to the 4-worker ceiling; blocking admission keeps one runnable lane.
+    let wide = resolve_threads(Some("9"), Some("3"));
+    assert_eq!(wide.target, ResolvedRuntimeTarget::WasiThreads);
+    assert_eq!(wide.flavor, RuntimeFlavor::MultiThread);
+    assert_eq!((wide.worker_threads, wide.max_blocking_tasks), (4, 3));
+
+    // Unset defaults to the MultiThread minimum of two.
+    let unset = resolve_threads(None, None);
+    assert_eq!(
+      (unset.flavor, unset.worker_threads, unset.max_blocking_tasks),
+      (RuntimeFlavor::MultiThread, 2, 1)
+    );
+
+    // Values inside the range pass through; below it rises to the minimum.
+    assert_eq!(resolve_threads(Some("3"), None).worker_threads, 3);
+    assert_eq!(resolve_threads(Some("1"), None).worker_threads, 2);
+  }
+
+  #[test]
+  fn configure_async_runtime_rejects_multi_thread_only_on_threadless_wasi() {
+    use super::multi_thread_available;
+
+    assert!(multi_thread_available(ResolvedRuntimeTarget::Native));
+    assert!(multi_thread_available(ResolvedRuntimeTarget::WasiThreads));
+    assert!(!multi_thread_available(ResolvedRuntimeTarget::Wasi));
   }
 
   /// Relay eviction must fire ONLY on host death, and the decision must be STRING-FREE

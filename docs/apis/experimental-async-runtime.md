@@ -24,10 +24,11 @@ after the first runtime generation starts.
 
 ## Artifacts
 
-| Artifact                                    | Backend | Supported flavor                 |
-| ------------------------------------------- | ------- | -------------------------------- |
-| Standard native npm binding                 | Shared  | `MultiThread` or `CurrentThread` |
-| Any WebAssembly binding (both WASI targets) | Shared  | `CurrentThread`                  |
+| Artifact                                        | Backend | Supported flavor                           |
+| ----------------------------------------------- | ------- | ------------------------------------------ |
+| Standard native npm binding                     | Shared  | `MultiThread` or `CurrentThread`           |
+| Threaded WASI binding (`wasm32-wasip1-threads`) | Shared  | `CurrentThread` (default) or `MultiThread` |
+| Threadless WASI binding (`wasm32-wasip1`)       | Shared  | `CurrentThread`                            |
 
 Use `getRuntimeCapabilities()` instead of inferring the backend or target from
 environment variables. Every binding reports `backend: 'shared'`; there is no
@@ -63,9 +64,11 @@ Native `ROLLDOWN_*` worker counts are capped at 256. Explicit
 instead of being silently clamped. Valid values still go through
 topology normalization: CurrentThread becomes `(1, 1)`, MultiThread promotes
 one worker to two, applies the platform worker cap, and limits blocking
-admission to one less than the effective worker count. On WebAssembly, the
-shared backend ignores the multi-thread request and reports one `CurrentThread`
-execution lane. Later environment changes have no effect.
+admission to one less than the effective worker count. On threaded WASI,
+`ROLLDOWN_RUNTIME=multi` is honoured and `ROLLDOWN_WORKER_THREADS` defaults to 2
+and is capped at 4. On threadless WASI, the shared backend ignores the
+multi-thread request and reports one `CurrentThread` execution lane. Later
+environment changes have no effect.
 
 Without thread-count overrides, the native runtime starts from
 `min(physical CPUs, process-available CPUs)`, promotes MultiThread to at least
@@ -109,12 +112,14 @@ scheduler topology. Rolldown's data-parallel compute is not part of the
 shared scheduler's topology: it keeps using Rayon's process-global pool,
 which is sized from the CPU count and spins up on first use. Native
 `CurrentThread` is therefore a scheduler-flavor knob, not a process-wide
-single-thread mode. Only the WebAssembly artifacts, which compile without
-Rayon, execute on a single lane.
+single-thread mode. Only the WebAssembly artifacts on their default
+`CurrentThread` flavor, which compile without Rayon, execute on a single lane.
 
-Every WebAssembly artifact remains `CurrentThread`, including the published
-threaded build for `wasm32-wasip1-threads`: Rolldown rejects the
-multi-thread flavor on every WebAssembly build, so that target gains threads
-for napi-rs host work but not a parallel executor. Consequently `wasm32-wasip1-threads`
-reports `devSupported: false`: `dev()` is unavailable there. Watch mode is
-unsupported on every WASI artifact.
+Every WebAssembly artifact defaults to `CurrentThread`, including the
+published threaded build for `wasm32-wasip1-threads`, which then reports
+`devSupported: false`. That build accepts `MultiThread` as an opt-in
+(`configureAsyncRuntime({ flavor: 'MultiThread' })` or `ROLLDOWN_RUNTIME=multi`):
+async work then runs on 2 to 4 scheduler workers, and the build reports
+`threads: true` and `devSupported: true`. Rolldown's data-parallel compute
+stays sequential on every WebAssembly build. The threadless `wasm32-wasip1`
+build rejects `MultiThread`. Watch mode is unsupported on every WASI artifact.

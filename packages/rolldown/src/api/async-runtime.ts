@@ -12,8 +12,9 @@ export type AsyncRuntimeFlavor = 'CurrentThread' | 'MultiThread';
  *
  * `MultiThread` promotes a requested single worker to two, applies the
  * platform worker cap, and limits blocking admission to `workerThreads - 1`;
- * `CurrentThread` normalizes both counts to one. Every WebAssembly build is
- * `CurrentThread` only. Without overrides, native builds start from the
+ * `CurrentThread` normalizes both counts to one. Every WebAssembly build
+ * defaults to `CurrentThread`; only the threaded `wasm32-wasip1-threads`
+ * build accepts `MultiThread`. Without overrides, native builds start from the
  * smaller of physical and process-available CPU counts.
  *
  * @experimental
@@ -81,8 +82,9 @@ export interface AsyncRuntimeMetrics extends AsyncRuntimeTopology {
 /**
  * Configure the shared async runtime before its first async operation.
  *
- * Native bindings support both flavors; every WebAssembly binding, including
- * `wasm32-wasip1-threads`, supports `CurrentThread` only.
+ * Native bindings support both flavors. WebAssembly bindings default to
+ * `CurrentThread`: the threaded `wasm32-wasip1-threads` binding also accepts
+ * `MultiThread`, and the threadless `wasm32-wasip1` binding throws for it.
  *
  * Configuration is process-wide for the loaded native binding and immutable
  * once the first real runtime generation starts. These are resolved at

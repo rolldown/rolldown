@@ -11,9 +11,59 @@ const capabilities = getRuntimeCapabilities();
 const expectThreadedWasi = process.env.ROLLDOWN_EXPECT_WASI_THREADS === '1';
 
 test.runIf(capabilities.target === 'wasi-threads' || expectThreadedWasi)(
-  'rejects the MultiThread opt-in on threaded WASI',
+  'accepts the MultiThread opt-in on threaded WASI',
   () => {
-    // Rolldown's own guard, not the scheduler's: napi-async-runtime 0.2.3 would accept it.
+    // The default stays CurrentThread; MultiThread is an opt-in here and is rejected
+    // only on threadless WASI. See internal-docs/wasi-shared-memory-grow/design.md.
+    const initial = getAsyncRuntimeConfig();
+    try {
+      configureAsyncRuntime({ flavor: 'MultiThread' });
+      const config = getAsyncRuntimeConfig();
+      expect(config.flavor).toBe('MultiThread');
+      // 2 from a CurrentThread start (the MultiThread minimum); 4 on the
+      // `ROLLDOWN_RUNTIME=multi ROLLDOWN_WORKER_THREADS=4` lane.
+      expect(config.workerThreads).toBeGreaterThanOrEqual(2);
+      expect(config.workerThreads).toBeLessThanOrEqual(4);
+      // Blocking admission keeps one runnable lane free.
+      expect(config.maxBlockingTasks).toBeGreaterThanOrEqual(1);
+      expect(config.maxBlockingTasks).toBeLessThanOrEqual(config.workerThreads - 1);
+
+      // The capability report follows the configured flavor.
+      expect(getRuntimeCapabilities()).toMatchObject({
+        target: 'wasi-threads',
+        wasi: true,
+        flavor: 'MultiThread',
+        threads: true,
+        timers: true,
+        devSupported: true,
+        watchSupported: false,
+      });
+      // Parallel plugins and symlink traversal stay native-only on every WASI artifact.
+      expect(getRuntimeSupport()).toMatchObject({
+        dev: true,
+        watch: false,
+        parallelPlugins: false,
+        symlinks: false,
+        threadlessWasi: false,
+        workerd: false,
+      });
+    } finally {
+      // Put back the lane's own configuration so the rest of this file runs on it.
+      configureAsyncRuntime({
+        flavor: initial.flavor,
+        workerThreads: initial.workerThreads,
+        maxBlockingTasks: initial.maxBlockingTasks,
+      });
+    }
+    expect(getAsyncRuntimeConfig()).toEqual(initial);
+    expect(getRuntimeCapabilities().flavor).toBe(initial.flavor);
+  },
+);
+
+test.runIf(capabilities.target === 'wasi' && !expectThreadedWasi)(
+  'rejects the MultiThread opt-in on threadless WASI',
+  () => {
+    // Rolldown's own guard: threadless wasm32-wasip1 has no threads to run workers on.
     expect(() => configureAsyncRuntime({ flavor: 'MultiThread' })).toThrow(
       'the multi-thread runtime is unavailable in this WebAssembly build',
     );
@@ -26,12 +76,8 @@ test.runIf(capabilities.target === 'wasi-threads' || expectThreadedWasi)(
   'executes threaded WASI while overlapping builds survive a concurrent close',
   { timeout: 20_000 },
   async () => {
-    // The resolver normalizes every non-native target to CurrentThread, and
-    // `configureAsyncRuntime` rejects MultiThread there
-    // (`crates/rolldown_binding/src/async_runtime.rs`): napi-async-runtime 0.2.3
-    // could build a MultiThread executor on `wasm32-wasip1-threads`, but Rolldown
-    // does not ship it (parking_lot_core's stable wasm parker panics), so the real
-    // OS threads change the loader, not the executor.
+    // Runs on the lane's flavor: CurrentThread by default, MultiThread when the
+    // lane sets `ROLLDOWN_RUNTIME=multi` (`crates/rolldown_binding/src/async_runtime.rs`).
     const support = getRuntimeSupport();
     expect(support.pluginErrorMetadata).toBe(true);
     expect(support.threadlessWasi).toBe(false);

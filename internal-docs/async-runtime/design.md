@@ -27,18 +27,24 @@ Rust core — see [implementation.md](./implementation.md).
 ## Design Principles
 
 1. **Thread availability is a build/runtime property, not an assumption.**
-   WebAssembly builds use the current-thread flavor. `napi-async-runtime`
-   offers a multi-thread executor on `wasm32-wasip1-threads` since 0.2.3, but
-   Rolldown rejects that flavor on every WebAssembly build because concurrent
-   JS plugin hooks still hit
-   [#10697](https://github.com/rolldown/rolldown/issues/10697) (guard in
-   [`configure_async_runtime`](../../crates/rolldown_binding/src/async_runtime.rs)).
-   The other blocker, `parking_lot_core`'s panicking stable wasm parker, is
-   closed by a git `[patch.crates-io]` in the root `Cargo.toml` (see
-   [implementation.md](./implementation.md)).
+   WebAssembly builds default to the current-thread flavor. Threadless
+   `wasm32-wasip1` supports only that flavor: the guard in
+   [`configure_async_runtime`](../../crates/rolldown_binding/src/async_runtime.rs)
+   rejects the MultiThread opt-in there, and the resolver drops an inherited
+   `ROLLDOWN_RUNTIME=multi`. `wasm32-wasip1-threads` accepts the MultiThread
+   opt-in (`configureAsyncRuntime({ flavor: 'MultiThread' })`, or
+   `ROLLDOWN_RUNTIME=multi` with `ROLLDOWN_WORKER_THREADS` clamped to
+   [2, 4]) but does not default to it: making it the default is a product call
+   that is still open. Two blockers had to close first:
+   `parking_lot_core`'s panicking stable wasm parker (a git
+   `[patch.crates-io]` in the root `Cargo.toml`, see
+   [implementation.md](./implementation.md)), and the V8 shared-memory size
+   bug behind the "memory access out of bounds" traps of #10697 (the
+   `wasm_heap_sync` allocator, see
+   [wasi-shared-memory-grow/design.md](../wasi-shared-memory-grow/design.md)).
    Threadless `wasm32-wasip1` must not import shared memory, construct
    workers, park with `Atomics.wait`, or call `std::thread::spawn`. Native
-   builds default to the multi-thread flavor. The public capability contract follows from that: binding dev mode
+   builds default to the multi-thread flavor. The public capability contract follows from the flavor in effect: binding dev mode
    is unsupported on current-thread and watch is unsupported on every WASI
    artifact. Reporting it is part of the contract, not an afterthought —
    `dev()` rejects before callback, plugin, or runtime setup, while `watch()`

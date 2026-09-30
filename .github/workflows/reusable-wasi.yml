@@ -48,10 +48,12 @@ jobs:
       # Wasm file, and Node's `--input-type` child-process probes are invalid once
       # inherited by file-based napi-rs worker entrypoints.
       #
-      # The suite is flaky under the threaded wasm binding (~1/3 of runs) because
-      # multiple wasm instances share one dlmalloc heap and corrupt it under
-      # concurrent allocation while the memory grows — a "memory access out of
-      # bounds" trap that has nothing to do with the code under test. See #10697.
+      # The suite used to be flaky under the threaded wasm binding (~1/3 of runs):
+      # a "memory access out of bounds" trap from a V8 bug with shared memory
+      # growth (#10697), now worked around by the `wasm_heap_sync` allocator (see
+      # internal-docs/wasi-shared-memory-grow/design.md). The retry stays for the
+      # workaround's known gaps; the stress step below runs without retries and
+      # fails if the workaround regresses.
       # Retry the whole step (the crash takes down the wasm process, so a per-test
       # retry cannot help); a real failure still fails all attempts and reds the job.
       # The crash also shows up as a hung suite: a dead worker is dropped
@@ -67,9 +69,9 @@ jobs:
             fi
 
             if [ "$attempt" -lt 3 ]; then
-              echo "::warning::wasi Node Test attempt ${attempt} failed or hung; retrying (known flake, see #10697)"
+              echo "::warning::wasi Node Test attempt ${attempt} failed or hung; retrying (see #10697)"
             else
-              echo "::warning::wasi Node Test attempt ${attempt} failed or hung; no more retries (known flake, see #10697)"
+              echo "::warning::wasi Node Test attempt ${attempt} failed or hung; no more retries (see #10697)"
             fi
           done
           exit 1
@@ -81,8 +83,31 @@ jobs:
       - name: Stability Test (threaded WASI)
         run: vp run --filter rolldown-tests test:stability
 
+      # Pins the default CurrentThread shape, so it runs without ROLLDOWN_RUNTIME.
       - name: Threaded WASI Runtime Lifecycle Test
         run: vp run --filter rolldown-tests test:wasi-runtime-lifecycle
+
+      # The threaded artifact accepts the MultiThread opt-in; the default stays
+      # CurrentThread. Run the threaded suites again on MultiThread with 4 workers.
+      # No retry here: a trap on this lane is a regression, not a known flake.
+      - name: Node Test (threaded WASI, MultiThread)
+        env:
+          ROLLDOWN_RUNTIME: multi
+          ROLLDOWN_WORKER_THREADS: '4'
+        run: timeout 300 vp run --filter rolldown-tests test:wasi-threaded
+
+      - name: Stability Test (threaded WASI, MultiThread)
+        env:
+          ROLLDOWN_RUNTIME: multi
+          ROLLDOWN_WORKER_THREADS: '4'
+        run: timeout 300 vp run --filter rolldown-tests test:stability
+
+      # 16 concurrent builds, parse() and transform() calls under CurrentThread and
+      # MultiThread w4. Without the `wasm_heap_sync` workaround one run fails nearly
+      # every time, so it is not retried. Each case has its own 60 s timeout.
+      # See internal-docs/wasi-shared-memory-grow/design.md
+      - name: Threaded WASI memory stress
+        run: timeout 600 vp run --filter rolldown-tests test:wasi-threaded-stress
 
       - name: Build Rolldown with non-threaded WASI binding
         run: just build-rolldown-wasi-single

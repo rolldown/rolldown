@@ -40,15 +40,14 @@ assert.equal(
   true,
   'the published threaded-WASI artifact is built on the shared scheduler',
 );
-// Rolldown ships CurrentThread only on WebAssembly: napi-async-runtime 0.2.3 could
-// build a MultiThread executor on `wasm32-wasip1-threads`, but parking_lot_core's
-// stable wasm parker panics there. The resolver normalizes every non-native target
-// to CurrentThread and `configureAsyncRuntime` rejects MultiThread, so the real OS
-// threads of `wasm32-wasip1-threads` change the loader, not the executor.
+// This suite pins the default shape: every WebAssembly artifact defaults to
+// CurrentThread. The threaded artifact also accepts a MultiThread opt-in, which
+// threaded-wasi.test.ts and tests/wasi/threaded-memory-stress.mjs cover; run this
+// suite without `ROLLDOWN_RUNTIME=multi`.
 assert.equal(
   runtimeCapabilities.flavor,
   'CurrentThread',
-  'every WebAssembly artifact resolves to the shared scheduler CurrentThread flavor',
+  'every WebAssembly artifact defaults to the shared scheduler CurrentThread flavor',
 );
 assert.equal(
   runtimeCapabilities.threads,
@@ -58,7 +57,7 @@ assert.equal(
 assert.equal(
   runtimeCapabilities.devSupported,
   false,
-  'dev needs a MultiThread executor, which no WebAssembly artifact has',
+  'dev needs a MultiThread executor, which the default WebAssembly flavor is not',
 );
 assert.deepEqual(
   Object.keys(runtimeConfig).sort(),
@@ -289,8 +288,8 @@ await check('construction failures leave the shared runtime usable', async () =>
   await generateAndClose('restart-after-construction-failure');
 });
 
-// `dev()` needs a MultiThread executor and no WebAssembly artifact has one, so
-// the entry must fail closed through the capability contract instead of stalling
+// `dev()` needs a MultiThread executor and the default CurrentThread flavor is not
+// one, so the entry must fail closed through the capability contract instead of stalling
 // on a build that can never complete -- repeatably, leaving the runtime usable.
 await check(
   'dev is rejected by the capability contract and leaves the runtime usable',

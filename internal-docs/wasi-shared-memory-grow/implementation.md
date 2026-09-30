@@ -72,6 +72,15 @@ real entry points (`__real_*`, or `malloc` itself), so they never re-enter.
   `__wrap_realloc`.
 - `node scripts/wasi/check-wasi-dist-files.mjs single [packages/browser/dist]` fails
   if the single-thread wasm carries them.
+- `vp run --filter rolldown-tests test:wasi-threaded-stress`
+  (`packages/rolldown/tests/wasi/threaded-memory-stress.mjs`, CI step "Threaded
+  WASI memory stress", no retry) runs 16 concurrent builds, `parse()` and
+  `transform()` calls under CurrentThread and MultiThread w4, each case in a child
+  process with a 60 s timeout. Without the workaround it traps on most cases.
+- CI also runs `test:wasi-threaded` and `test:stability` a second time with
+  `ROLLDOWN_RUNTIME=multi ROLLDOWN_WORKER_THREADS=4`, the MultiThread opt-in that
+  this workaround made safe to accept (see `../async-runtime/design.md`
+  principle 1).
 
 ## Related
 

@@ -14,8 +14,8 @@ import {
 import { describe, expect, test } from 'vitest';
 
 // Runs against whatever binding the worktree built and derives its
-// per-artifact expectations from the capability report (wasi =>
-// CurrentThread-only, thread counts pinned to one).
+// per-artifact expectations from the capability report (native-only cases
+// are gated on `capabilities.wasi`).
 
 const capabilities = getRuntimeCapabilities();
 const testsDir = fileURLToPath(new URL('.', import.meta.url));

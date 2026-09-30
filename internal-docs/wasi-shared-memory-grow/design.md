@@ -68,9 +68,17 @@ thread A (out of heap)            thread B (optimized wasm, long activation)
 | code lane, debug                                              | 83/105 fail | 105/105 pass |
 | code lane, release-wasi                                       | 49/70 fail  | 70/70 pass   |
 
-The MultiThread rows lift the WASI MultiThread guard in a local build only; the
-shipped WASI binding runs CurrentThread, which the CurrentThread rows cover. The
-"landing tree" rows ran on the commit that adds this workaround.
+The MultiThread rows were measured before the threaded WASI binding accepted the
+MultiThread opt-in (they lifted the guard in a local build). That binding now
+accepts it and still defaults to CurrentThread, which the CurrentThread rows
+cover. The "landing tree" rows ran on the commit that adds this workaround.
+
+The CI stress script `packages/rolldown/tests/wasi/threaded-memory-stress.mjs`
+runs six of these loads in one pass (builds with a JS plugin, parse and transform,
+each under CurrentThread and MultiThread w4). Against the release wasm files of
+the table (base vs heap-sync), 3 interleaved rounds: base failed every round
+(4 or 5 of 6 cases trapped with "memory access out of bounds"), heap-sync passed
+every round.
 
 Timing is at noise level (CurrentThread release median 729 vs 723.5 ms;
 MultiThread vs a pre-grown base 479.5 vs 480 ms).

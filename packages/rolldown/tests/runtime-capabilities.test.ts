@@ -66,9 +66,10 @@ describe('getRuntimeCapabilities', () => {
     expect(caps.watchSupported).toBe(!caps.wasi);
     expect(caps.devSupported).toBe(caps.threads);
 
-    // Every shared-runtime WebAssembly artifact -- wasi and wasi-threads
-    // alike -- schedules on the calling thread only.
-    if (caps.wasi) {
+    // Threadless WASI schedules on the calling thread only. Threaded WASI
+    // defaults to that too but accepts a MultiThread opt-in, pinned in
+    // threaded-wasi.test.ts and wasi-runtime-lifecycle-case.mjs.
+    if (caps.target === 'wasi') {
       expect(caps.flavor).toBe('CurrentThread');
       expect(caps.threads).toBe(false);
       expect(getAsyncRuntimeConfig()).toMatchObject({

@@ -131,11 +131,12 @@ crate freezes after first use.
     `ROLLDOWN_WORKER_THREADS`, `ROLLDOWN_MAX_BLOCKING_THREADS`,
     `ROLLDOWN_PARK_DEADLINE_MS`, `ROLLDOWN_DRAIN_LINGER_US`.
   - `resolve_runtime_config_for(target, env)` — pure defaults table. Native ⇒
-    MultiThread; wasm ⇒ CurrentThread, normalizing an inherited
-    `ROLLDOWN_RUNTIME=multi` because Rolldown ships no wasm MultiThread
-    (Principle 1). napi-async-runtime 0.2.3 would build one on
-    `wasm32-wasip1-threads`; the guard stays only for
-    [#10697](https://github.com/rolldown/rolldown/issues/10697).
+    MultiThread; wasm ⇒ CurrentThread by default. Threadless `Wasi` is forced
+    to CurrentThread, normalizing an inherited `ROLLDOWN_RUNTIME=multi`
+    (Principle 1). `WasiThreads` honours `ROLLDOWN_RUNTIME=multi` and reads
+    `ROLLDOWN_WORKER_THREADS` with default 2 and ceiling 4 (the widest setting
+    the stress runs cover; see
+    [wasi-shared-memory-grow](../wasi-shared-memory-grow/implementation.md)).
     MultiThread worker count `= requested.max(2)` (truthful
     two-worker minimum); CurrentThread `= 1`.
   - `clamp_shared_blocking_tasks()` — blocking cap: CurrentThread ⇒ 1;
@@ -148,11 +149,11 @@ crate freezes after first use.
 RuntimeOptionsPatch` — the **256-ceiling / positive-integer / atomic-reject**
     validation for the JS `configureAsyncRuntime` path
     (`MAX_ASYNC_RUNTIME_WORKER_THREADS`).
-  - `configure_async_runtime()` (`#[napi]`) → rejects a MultiThread patch on
-    every non-native `compiled_target()` with 0.2.2's error text (0.2.3 no
-    longer rejects it on `wasm32-wasip1-threads`; the guard stays for
-    [#10697](https://github.com/rolldown/rolldown/issues/10697), and turning it
-    on after that is a product call), else the crate's `configure_partial`
+  - `configure_async_runtime()` (`#[napi]`) → rejects a MultiThread patch
+    when `multi_thread_available(compiled_target())` is false (threadless
+    `Wasi` only) with 0.2.2's error text; `WasiThreads` accepts it (an
+    explicit JS `workerThreads` is not clamped to 4, only to the crate's
+    256 ceiling). Otherwise the crate's `configure_partial`
     (merge+validate+commit under the controller mutex, frozen after the first
     backend); `get_async_runtime_config()` → `configured_options()` is the
     reporting authority.
@@ -681,8 +682,9 @@ bundles on top of the cli's loader.
 The eager CJS and browser loaders for BOTH wasm
 flavors — `wasm32-wasip1` and threaded `wasm32-wasip1-threads` — register the
 v4 native CurrentThread runnable host and the JavaScript timer host before
-exposing the binding: since the registry napi pin, every wasm artifact runs the
-shared CurrentThread flavor, so a raw import of either shipped loader set must
+exposing the binding: since the registry napi pin, every wasm artifact defaults
+to the shared CurrentThread flavor (threaded WASI can opt in to MultiThread,
+Principle 1 of design.md), so a raw import of either shipped loader set must
 carry its own task/timer hosts or a build never completes. That bootstrap is
 `@napi-rs/cli`'s (`napi.wasm.asyncRuntime`), installed unconditionally by every
 generated loader, and it lives inside napi-rs's isolated-context initialization

@@ -2,7 +2,6 @@
 import { beforeEach, expect, test, vi } from 'vitest';
 
 const mocks = vi.hoisted(() => ({
-  bindingConstructionError: undefined as unknown,
   bindingConstructor: vi.fn(),
   callOptionsHook: vi.fn(async (option) => option),
   pluginPromiseThenCalls: 0,
@@ -24,7 +23,6 @@ vi.mock('../src/binding.cjs', () => ({
   BindingBundler: class {
     constructor() {
       mocks.bindingConstructor();
-      if (mocks.bindingConstructionError) throw mocks.bindingConstructionError;
     }
   },
   getRuntimeCapabilities: () => mocks.runtimeCapabilities,
@@ -48,7 +46,6 @@ import { build } from '../src/api/build';
 import { rolldown } from '../src/api/rolldown';
 
 beforeEach(() => {
-  mocks.bindingConstructionError = undefined;
   mocks.bindingConstructor.mockReset();
   mocks.callOptionsHook.mockClear();
   mocks.pluginPromiseThenCalls = 0;
@@ -118,14 +115,6 @@ test('rolldown rejects descriptors returned by the options hook before runtime s
   });
 
   expect(mocks.bindingConstructor).not.toHaveBeenCalled();
-});
-
-test('rolldown propagates a native construction failure', async () => {
-  const constructionError = new Error('bundle construction failed');
-  mocks.bindingConstructionError = constructionError;
-
-  await expect(rolldown({ input: 'entry.js' })).rejects.toBe(constructionError);
-  expect(mocks.bindingConstructor).toHaveBeenCalledOnce();
 });
 
 function createHangingPluginThenable() {

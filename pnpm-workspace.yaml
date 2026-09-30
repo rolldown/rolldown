@@ -34,10 +34,12 @@ onlyBuiltDependencies:
 overrides:
   # TEMPORARY - replaced by a released `@napi-rs/cli` once upstream ships the worker-crash latch.
   # Swaps the registry cli (the catalog floor below stays untouched) for a tarball packed from
-  # napi-rs 727d836f (branch fix/wasi-crash-latch, sha256 8aff7039...d84f). After a WASI worker
+  # napi-rs 392f0216 (branch fix/wasi-crash-latch, sha256 45e7c0fa...ca5e). After a WASI worker
   # crashed, its threaded Node loader skips the wasm teardown: the process exit no longer blocks the
   # main thread forever in a raw atomic wait on the dead worker, the public disposer rejects instead
-  # of never settling, and it unrefs emnapi's waiting-request port so the process can exit on its own.
+  # of never settling (also when the crash lands while a disposal or an initialization rollback is
+  # already running), it unrefs emnapi's waiting-request port so the process can exit on its own, and
+  # the rejection carries the worker's error and threadId from a shared crash report.
   '@napi-rs/cli': file:./.napi-validation/napi-rs-cli.tgz
   # napi-build 2.4.2 links the emnapi v2 C archives; pin the exact release so a range change cannot silently swap them.
   emnapi: 2.0.0-alpha.5

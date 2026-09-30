@@ -18,7 +18,17 @@
 //               promise), then the process must exit on its own with code 0
 //               (no process.exit): the disposer unrefs emnapi's waiting-request
 //               port, which the dead worker's unfinished requests keep ref'd
+//   in-flight   the crash lands while a disposal is already running: once the builds
+//               are reading files, the child calls the disposer, then arms the
+//               injector, and the next `sched_yield` in any pool worker throws (the
+//               workers yield while the runtime shuts down). The disposal polls for
+//               runtime work the dead worker never finishes; it must stop and reject
+//               like the dispose case within IN_FLIGHT_SETTLE_MS (every call returns
+//               that one promise), and the process must exit on its own with code 0
 //   control     no injection: the builds pass and the process exits 0
+// In both disposer cases the rejection's cause is the injected error (name and
+// message, taken from the worker's shared crash report when its 'error' event is
+// lost), and `workerThreadId` is the threadId of a worker that crashed.
 // A crash run still alive after CRASH_CASE_TIMEOUT_MS is killed and counts as a hang.
 // Skips (exit 0) unless the artifact is the threaded WASI one and MultiThread works.
 import assert from 'node:assert/strict';
@@ -28,6 +38,7 @@ import { createRequire } from 'node:module';
 import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
+import { threadId } from 'node:worker_threads';
 
 const CHILD_FLAG = '--run-worker-crash-latch-case';
 const MODULES = 300;
@@ -42,10 +53,21 @@ const LIVE_HANDLES_REPORT_MS = 2_000;
 const CONTROL_TIMEOUT_MS = 60_000;
 const CRASH_IMPORT = 'wasi_snapshot_preview1.fd_read';
 const CRASH_AT = '20';
+// In-flight case: the import that throws once armed (the pool workers' runtime
+// yields while the builds run), how many `fd_read` calls must have happened before
+// the disposer is called, and how long the disposal may take to settle after that.
+const IN_FLIGHT_CRASH_IMPORT = 'wasi_snapshot_preview1.sched_yield';
+const IN_FLIGHT_READS_BEFORE_DISPOSE = 50;
+const IN_FLIGHT_PROGRESS_TIMEOUT_MS = 10_000;
+const IN_FLIGHT_CRASH_WAIT_MS = 5_000;
+const IN_FLIGHT_SETTLE_MS = 5_000;
+const CRASH_CONTROL = Symbol.for('rolldown.test.crashControl');
+const LOADER_CRASH_FLAG = Symbol.for('rolldown.test.loaderCrashFlag');
+const INJECTED_ERROR_NAME = 'RuntimeError';
 const MULTI_THREAD_ENV = { ROLLDOWN_RUNTIME: 'multi', ROLLDOWN_WORKER_THREADS: '4' };
 const DISPOSE_SYMBOL = Symbol.for('napi.rs.wasi.dispose');
 const CRASH_DISPOSE_MESSAGE = 'cannot be disposed after a worker thread crashed';
-const CASES = ['no-handler', 'dispose', 'control'];
+const CASES = ['no-handler', 'dispose', 'in-flight', 'control'];
 
 const childIndex = process.argv.indexOf(CHILD_FLAG);
 if (childIndex >= 0) {
@@ -84,8 +106,10 @@ async function runAll() {
           inject: mode !== 'control',
           crashLog,
         });
-        const crashed = readText(crashLog).includes('CRASH in');
-        const problem = judge(mode, result, crashed);
+        const crashedThreads = [...readText(crashLog).matchAll(/^t(\d+) CRASH in /gm)].map(
+          (match) => Number(match[1]),
+        );
+        const problem = judge(mode, result, crashedThreads);
         console.log(`${problem ? 'FAIL' : 'PASS'} ${label} (code ${result.code}, ${result.ms} ms)`);
         if (problem) {
           failures.push(label);
@@ -111,15 +135,19 @@ async function probe(runtimeEnv) {
   return JSON.parse(line[1]);
 }
 
-function judge(mode, result, crashed) {
+function judge(mode, result, crashedThreads) {
+  const disposes = mode === 'dispose' || mode === 'in-flight';
   if (result.timedOut) {
-    if (mode === 'dispose' && result.output.includes('DISPOSE_OK')) {
+    if (disposes && result.output.includes('DISPOSE_OK')) {
       const reports = [...result.output.matchAll(/^STILL_ALIVE (.*)$/gm)];
       const handles = reports.length > 0 ? reports[reports.length - 1][1] : 'not reported';
       return (
         `the disposer rejected as expected, but the process did not exit on its own ` +
         `within ${result.timeoutMs} ms; live handles (process.getActiveResourcesInfo()): ${handles}`
       );
+    }
+    if (disposes && result.output.includes('DISPOSE_PENDING')) {
+      return `the disposer never settled after the crash (hang, killed after ${result.timeoutMs} ms)`;
     }
     return `still alive after ${result.timeoutMs} ms (hang)`;
   }
@@ -132,7 +160,7 @@ function judge(mode, result, crashed) {
     }
     return null;
   }
-  if (!crashed || result.output.includes('BUILDS_OK')) {
+  if (crashedThreads.length === 0 || result.output.includes('BUILDS_OK')) {
     return 'the injected worker crash did not fire';
   }
   if (mode === 'no-handler') {
@@ -142,7 +170,17 @@ function judge(mode, result, crashed) {
     return `the disposer did not reject (exit code ${result.code})`;
   }
   if (!result.output.includes('DISPOSE_OK')) {
-    return `the disposer rejected with the wrong error (exit code ${result.code})`;
+    return (
+      `the disposer's rejection failed its checks: latch message, injected cause, ` +
+      `workerThreadId, case checks (exit code ${result.code})`
+    );
+  }
+  const workerThreadId = Number(result.output.match(/^WORKER_THREAD_ID (\d+)$/m)?.[1]);
+  if (!crashedThreads.includes(workerThreadId)) {
+    return (
+      `the rejection names worker thread ${workerThreadId}, but the crashed ` +
+      `worker threads are ${JSON.stringify(crashedThreads)}`
+    );
   }
   if (!result.output.includes('DISPOSE_SETTLED')) {
     return `exited with code ${result.code} before the disposer settled`;
@@ -159,11 +197,15 @@ function spawnCase(mode, fixture, { runtimeEnv, inject = false, crashLog }) {
     delete env.ROLLDOWN_WORKER_THREADS;
   }
   delete env.ROLLDOWN_TEST_CRASH_IMPORT;
+  delete env.ROLLDOWN_TEST_CRASH_ARMED;
   const args = [];
   if (inject) {
-    env.ROLLDOWN_TEST_CRASH_IMPORT = CRASH_IMPORT;
+    env.ROLLDOWN_TEST_CRASH_IMPORT = mode === 'in-flight' ? IN_FLIGHT_CRASH_IMPORT : CRASH_IMPORT;
     env.ROLLDOWN_TEST_CRASH_AT = CRASH_AT;
     env.ROLLDOWN_TEST_CRASH_LOG = crashLog;
+    if (mode === 'in-flight') {
+      env.ROLLDOWN_TEST_CRASH_ARMED = '1';
+    }
     args.push('--import', pathToFileURL(helper('crash-injector-preload.mjs')).href);
   }
   args.push(fileURLToPath(import.meta.url), CHILD_FLAG, mode, fixture);
@@ -244,7 +286,7 @@ async function runCase(mode, fixture) {
   let crash;
   let onCrash = () => {};
   const crashed = new Promise((resolve) => (onCrash = resolve));
-  if (mode === 'dispose') {
+  if (mode === 'dispose' || mode === 'in-flight') {
     process.on('uncaughtException', (error) => {
       if (crash) return;
       crash = error;
@@ -270,6 +312,10 @@ async function runCase(mode, fixture) {
   const builds = Promise.all(Array.from({ length: CONCURRENCY }, once)).then(() =>
     say('BUILDS_OK'),
   );
+  if (mode === 'in-flight') {
+    await disposeInFlight(builds, () => crash);
+    return;
+  }
   if (mode !== 'dispose') {
     await builds;
     return;
@@ -306,18 +352,115 @@ async function runCase(mode, fixture) {
     await disposal;
     say('DISPOSE_RESOLVED');
   } catch (error) {
-    say(
-      `DISPOSE_REJECTED ${error?.message} | cause=${error?.cause?.message} | ` +
-        `same-promise=${again === disposal} | cause-is-crash=${error?.cause === crash}`,
-    );
-    if (
-      String(error?.message).includes(CRASH_DISPOSE_MESSAGE) &&
-      String(error?.cause?.message).includes('forced worker crash') &&
-      again === disposal
-    ) {
-      say('DISPOSE_OK');
-    }
+    reportCrashRejection(error, CRASH_IMPORT, [again === disposal]);
   }
+  settleAndExitNaturally();
+}
+
+// The in-flight case: the disposal is already running when the worker dies.
+async function disposeInFlight(builds, getCrash) {
+  const control = globalThis[CRASH_CONTROL];
+  assert.ok(control instanceof Int32Array, 'the crash injector control buffer is missing');
+  let buildsDone = false;
+  builds.then(
+    () => (buildsDone = true),
+    (error) => {
+      buildsDone = true;
+      say(`BUILDS_ERROR ${error?.message}`);
+    },
+  );
+  // Call the disposer only once the builds are reading files, so its async-work
+  // drain has work to wait for that the dead worker will never finish.
+  const deadline = Date.now() + IN_FLIGHT_PROGRESS_TIMEOUT_MS;
+  while (Atomics.load(control, 1) < IN_FLIGHT_READS_BEFORE_DISPOSE) {
+    if (buildsDone || Date.now() > deadline) {
+      say(`NO_PROGRESS reads=${Atomics.load(control, 1)} builds-done=${buildsDone}`);
+      process.exit(1);
+    }
+    await new Promise((resolve) => setTimeout(resolve, 1));
+  }
+  if (getCrash() !== undefined || Atomics.load(control, 0) !== 0) {
+    say('CRASHED_BEFORE_DISPOSE');
+    process.exit(1);
+  }
+  let dispose;
+  try {
+    dispose = findDisposer();
+  } catch (error) {
+    say(`NO_DISPOSER ${error?.message}`);
+    process.exit(1);
+  }
+  const loaderCrashFlag = globalThis[LOADER_CRASH_FLAG];
+  assert.ok(loaderCrashFlag instanceof Int32Array, "the loader's crash flag was not captured");
+  const disposal = dispose();
+  const again = dispose();
+  // The disposal is in flight (its promise is out); only now can a worker crash.
+  Atomics.store(control, 0, 1);
+  // Stay in JavaScript until the dying worker has raised the loader's crash flag,
+  // so the crash is visible before the disposal's next poll turn calls into wasm.
+  // The loader checks the flag at each turn; it cannot help a call that is already
+  // inside wasm and waiting on something the dead worker held, so this case does
+  // not let the crash land during such a call.
+  const crashWaitEnd = Date.now() + IN_FLIGHT_CRASH_WAIT_MS;
+  while (Atomics.load(loaderCrashFlag, 0) === 0 && Date.now() < crashWaitEnd) {
+    // Busy-wait: Atomics.wait is not allowed on the main thread.
+  }
+  say(
+    `ARMED reads=${Atomics.load(control, 1)} fired=${Atomics.load(control, 0) === 2} ` +
+      `crash-flag=${Atomics.load(loaderCrashFlag, 0)}`,
+  );
+  // Reported only while something else still holds the event loop open.
+  const pending = setTimeout(() => {
+    say(`DISPOSE_PENDING fired=${Atomics.load(control, 0) === 2} after ${IN_FLIGHT_SETTLE_MS} ms`);
+  }, IN_FLIGHT_SETTLE_MS);
+  pending.unref();
+  const started = Date.now();
+  try {
+    await disposal;
+    say(`DISPOSE_RESOLVED fired=${Atomics.load(control, 0) === 2}`);
+  } catch (error) {
+    const ms = Date.now() - started;
+    say(`DISPOSE_SETTLE_MS ${ms}`);
+    const later = dispose();
+    reportCrashRejection(error, IN_FLIGHT_CRASH_IMPORT, [
+      again === disposal,
+      later === disposal,
+      ms <= IN_FLIGHT_SETTLE_MS,
+    ]);
+    later.catch(() => {});
+  } finally {
+    clearTimeout(pending);
+  }
+  settleAndExitNaturally();
+}
+
+// The disposer's rejection after a crash: the latch error, with the injected
+// worker error as its cause and the crashed worker's threadId. `checks` are the
+// case's own conditions (latched promise, bounded settle time).
+function reportCrashRejection(error, crashImport, checks) {
+  const cause = error?.cause;
+  const workerThreadId = error?.workerThreadId;
+  say(
+    `DISPOSE_REJECTED ${error?.message} | cause=${cause?.name}: ${cause?.message} | ` +
+      `workerThreadId=${workerThreadId} | checks=${JSON.stringify(checks)}`,
+  );
+  if (Number.isInteger(workerThreadId)) {
+    say(`WORKER_THREAD_ID ${workerThreadId}`);
+  }
+  if (
+    String(error?.message).includes(CRASH_DISPOSE_MESSAGE) &&
+    cause?.name === INJECTED_ERROR_NAME &&
+    cause?.message === `forced worker crash in ${crashImport} (test)` &&
+    Number.isInteger(workerThreadId) &&
+    workerThreadId > 0 &&
+    workerThreadId !== threadId &&
+    checks.every(Boolean)
+  ) {
+    say('DISPOSE_OK');
+  }
+}
+
+function settleAndExitNaturally() {
   say('DISPOSE_SETTLED');
   // No process.exit: the event loop must drain by itself. The crash path cannot
   // destroy the emnapi context, so the requests the dead worker never finished

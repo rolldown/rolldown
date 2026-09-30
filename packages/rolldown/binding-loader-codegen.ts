@@ -78,17 +78,26 @@ const WASI_ASYNC_TEARDOWN_WAITS = [
 const WASI_EXIT_LISTENER_HELPER = 'function __registerWasiExitListener() {';
 // Worker-crash latch, threaded Node flavor only (`rolldown-binding.wasi.cjs` +
 // `wasi-worker.mjs`; vendored `@napi-rs/cli`, napi-rs 9fb826ab + 9e9105f5 +
-// 727d836f, until a cli release carries it). After a pool worker's wasm thread
-// dies, no teardown may re-enter wasm: the env cleanup waits for the dead
-// thread's work to go idle in a raw `memory.atomic.wait32`, which blocks the
-// main thread forever and keeps a JS SIGTERM listener from ever running. The
-// worker sets a shared flag before emnapi reports the crash. Both disposers
-// check it before any other step: the exit listener then only terminates the
-// workers, and the public `Symbol.for('napi.rs.wasi.dispose')` disposer
-// terminates them and rejects (latched) instead of draining async work into the
-// cleanup barrier, where its promise would never settle. Before it terminates
-// them, it unrefs emnapi's waiting-request port: the dead thread's requests
-// never finish, so that port would keep the process alive for good.
+// 727d836f + 11f52981 + 46edb4cd + 392f0216, until a cli release carries it).
+// After a pool worker's wasm thread dies, no teardown may re-enter wasm: the
+// env cleanup waits for the dead thread's work to go idle in a raw
+// `memory.atomic.wait32`, which blocks the main thread forever and keeps a JS
+// SIGTERM listener from ever running. The worker sets a shared flag before
+// emnapi reports the crash. Both disposers check it before any other step: the
+// exit listener then only terminates the workers, and the public
+// `Symbol.for('napi.rs.wasi.dispose')` disposer terminates them and rejects
+// (latched) instead of draining async work into the cleanup barrier, where its
+// promise would never settle. Before it terminates them, it unrefs emnapi's
+// waiting-request port: the dead thread's requests never finish, so that port
+// would keep the process alive for good.
+// A crash that lands while a public disposal is already running is caught by
+// the poll turns and step boundaries (`__abortWasiDisposalIfThreadCrashed`);
+// the in-flight promise then settles through the crash disposal, and later
+// calls get that same promise. The initialization rollback runs the same polls
+// and steps and is stopped the same way. The worker writes its error and
+// threadId into a shared crash report before it raises the flag, so the
+// rejection's `cause` and `workerThreadId` do not depend on the 'error' event,
+// which terminating the workers can drop.
 // See internal-docs/async-runtime/implementation.md (section 7, Loaders).
 const WASI_THREAD_CRASH_LATCH_LOADER_SIGNATURES = [
   'const __wasiThreadCrashFlag = new Int32Array(new SharedArrayBuffer(4))',
@@ -99,6 +108,9 @@ const WASI_THREAD_CRASH_LATCH_LOADER_SIGNATURES = [
   if (__hasWasiThreadCrashed()) {
 `,
   `function __disposeWasiBinding() {
+  if (__wasiDisposePromise) {
+    return __wasiDisposePromise
+  }
   if (!__wasiDisposed && __hasWasiThreadCrashed()) {
     return __disposeWasiBindingAfterThreadCrash()
   }
@@ -115,10 +127,34 @@ const WASI_THREAD_CRASH_LATCH_LOADER_SIGNATURES = [
   try {
     workerResult = __terminateWasiWorkers()
 `,
+  // In-flight disposal: every poll turn and step boundary stops the chain after
+  // a crash, and the barrier's finish is skipped instead of joining dead work.
+  'function __abortWasiDisposalIfThreadCrashed() {',
+  'function __settleWasiDisposalAfterThreadCrash(resolve, reject) {',
+  `      await __yieldWasmRuntimePollTurn(pace)
+      __abortWasiDisposalIfThreadCrashed()
+`,
+  '})().then(finishCleanupUnlessCrashed, finishCleanupUnlessCrashed)',
+  `          __scheduleTimer(resolve, __WASI_ASYNC_WORK_POLL_INTERVAL_MS)
+        })
+        __abortWasiDisposalIfThreadCrashed()
+`,
+  // Initialization rollback: same latch, through its own wrapper.
+  'let __wasiInitializationRollbackActive = false',
+  'function __runWasiInitializationRollbackSteps() {',
+  'function __rollbackWasiInitializationAfterThreadCrash() {',
+  // Shared crash report: the worker's error and threadId for the rejection.
+  'const __wasiThreadCrashReport = new SharedArrayBuffer(4096)',
+  'crashReport: __wasiThreadCrashReport,',
+  'function __readWasiThreadCrashReport() {',
+  'function __getWasiThreadCrashError() {',
+  '__recordWasiThreadCrashError(error, worker.threadId)',
 ] as const;
 const WASI_THREAD_CRASH_LATCH_WORKER_SIGNATURES = [
   'if (workerData && workerData.crashFlag instanceof Int32Array) {',
   'Atomics.store(workerData.crashFlag, 0, 1)',
+  '__writeCrashReport(workerData.crashReport, args[0])',
+  'function __writeCrashReport(report, error) {',
 ] as const;
 
 /**

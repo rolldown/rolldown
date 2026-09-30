@@ -2,7 +2,7 @@ import fs from 'node:fs'
 import { createRequire } from 'node:module'
 import { parse } from 'node:path'
 import { WASI } from 'node:wasi'
-import { parentPort, Worker, workerData } from 'node:worker_threads'
+import { parentPort, threadId, Worker, workerData } from 'node:worker_threads'
 
 const require = createRequire(import.meta.url)
 
@@ -82,13 +82,59 @@ const handler = new MessageHandler({
 // beforeReportError (which runs emnapi_thread_crashed, so the main thread may
 // throw 'unwind' and start exiting) before the 'error' event is even posted.
 // A loader that predates the flag passes none.
+//
+// The error itself goes into the shared crash report first. The 'error' event
+// that would carry it is dropped when the loader terminates this worker before
+// the event is sent, so the report is the only copy the loader can count on.
+// Layout: three Int32 words — state (0 empty, 1 writing, 2 written), byte
+// length, threadId — then the UTF-8 JSON of { name, message, stack }. Only the
+// first worker to crash writes it, and it is complete before the flag is raised.
 if (workerData && workerData.crashFlag instanceof Int32Array) {
   const __beforeReportError = handler.beforeReportError
   handler.beforeReportError = function (...args) {
     try {
+      __writeCrashReport(workerData.crashReport, args[0])
+    } catch {}
+    try {
       Atomics.store(workerData.crashFlag, 0, 1)
     } catch {}
     return __beforeReportError.apply(this, args)
+  }
+}
+
+function __writeCrashReport(report, error) {
+  if (!(report instanceof SharedArrayBuffer) || report.byteLength <= 12) {
+    return
+  }
+  const header = new Int32Array(report, 0, 3)
+  if (Atomics.compareExchange(header, 0, 0, 1) !== 0) {
+    return
+  }
+  let length = 0
+  try {
+    const body = new Uint8Array(report, 12)
+    const isObject =
+      error !== null && (typeof error === 'object' || typeof error === 'function')
+    const name = isObject && typeof error.name === 'string' ? error.name : 'Error'
+    const message = isObject && typeof error.message === 'string'
+      ? error.message
+      : String(error)
+    const stack = isObject && typeof error.stack === 'string' ? error.stack : undefined
+    const encoder = new TextEncoder()
+    let bytes = encoder.encode(JSON.stringify({ name, message, stack }))
+    if (bytes.length > body.length) {
+      bytes = encoder.encode(
+        JSON.stringify({ name, message: message.slice(0, body.length >> 3) }),
+      )
+    }
+    if (bytes.length <= body.length) {
+      body.set(bytes)
+      length = bytes.length
+    }
+    Atomics.store(header, 2, threadId)
+  } finally {
+    Atomics.store(header, 1, length)
+    Atomics.store(header, 0, 2)
   }
 }
 

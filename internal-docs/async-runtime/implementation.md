@@ -362,7 +362,24 @@ missing host-contract export fails with `ERR_NAPI_ASYNC_RUNTIME_BINDING_MISMATCH
   (`refCounter.refHandle`) referenced, so the disposer unrefs that port before
   it terminates the workers (napi-rs 727d836f). The test's dispose case then
   asserts that the process exits on its own with code 0, without
-  `process.exit`.
+  `process.exit`. A crash that lands after a public disposal has started is
+  caught at each poll turn and step boundary, and the in-flight promise settles
+  through the same crash disposal (napi-rs 11f52981); the initialization
+  rollback is latched the same way (46edb4cd). The worker writes its error and
+  `threadId` into a shared crash report before it raises the flag, so the
+  rejection's `cause` and `workerThreadId` survive the 'error' event being
+  dropped when the workers are terminated (392f0216). The test's in-flight case
+  arms the crash (next `sched_yield` in any pool worker) right after it calls
+  the disposer and holds the main thread in JavaScript until the worker has
+  raised the crash flag; both disposer cases check the cause and
+  `workerThreadId`. Known gap: the checks run between wasm calls, so they cannot
+  help a main thread that is already inside one when the worker dies. Measured
+  on the threaded debug build: with the crash landing at any time during the
+  barrier poll, 5 of 120 runs blocked for good inside
+  `napi_wasm_runtime_work_pending` (a wasm `atomic.wait`, no JavaScript runs
+  again), consistent with the dead worker holding something that call waits on.
+  Fixing that needs the poll exports to never block on pool threads (napi-rs
+  side), not a loader change.
 
 ---
 

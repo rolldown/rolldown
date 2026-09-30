@@ -1,5 +1,6 @@
 // Guard that a built dist contains EXACTLY the expected WASI artifact set for
-// its flavor. packages/rolldown/copy-addon-plugin.ts copies that set into dist;
+// its flavor, and that only the threaded wasm links the heap-sync allocator.
+// packages/rolldown/copy-addon-plugin.ts copies that set into dist;
 // if its list drops a file (as happened with `wasip1-deferred`) the package
 // ships without it while every build stays green. This guard holds its OWN copy
 // of the canonical sets so that drift fails loudly here.
@@ -121,6 +122,40 @@ if (
   process.exit(1);
 }
 
+// The threaded wasm must carry the heap-sync allocator wrappers that work around
+// V8's stale shared-memory size on threads that did not grow the memory; the
+// single-thread wasm must not (it has one thread, and build.rs only adds the
+// `--wrap` link args for wasm32-wasip1-threads). A missing wrapper means the
+// C-side calloc / realloc run unguarded again.
+// See internal-docs/wasi-shared-memory-grow/implementation.md
+const HEAP_SYNC_EXPORTS = ['__wrap_calloc', '__wrap_realloc'];
+const wasmFile = expected.find((f) => f.endsWith('.wasm'));
+const wasmExports = new Set(
+  WebAssembly.Module.exports(
+    new WebAssembly.Module(fs.readFileSync(path.join(distDir, wasmFile))),
+  ).map(({ name }) => name),
+);
+const heapSyncFailures =
+  flavor === 'threaded'
+    ? HEAP_SYNC_EXPORTS.filter((name) => !wasmExports.has(name)).map(
+        (name) => `missing export ${name} (threaded wasm must link the heap-sync allocator)`,
+      )
+    : HEAP_SYNC_EXPORTS.filter((name) => wasmExports.has(name)).map(
+        (name) => `unexpected export ${name} (heap-sync allocator is threaded-only)`,
+      );
+if (heapSyncFailures.length > 0) {
+  console.error(`WASI heap-sync export check failed for flavor '${flavor}' in ${wasmFile}:`);
+  for (const failure of heapSyncFailures) {
+    console.error(`  ${failure}`);
+  }
+  console.error();
+  console.error(
+    'Check the `--wrap` link args in crates/rolldown_binding/build.rs and the ' +
+      '`rolldown_wasi_threads` cfg on crates/rolldown_binding/src/wasm_heap_sync.rs.',
+  );
+  process.exit(1);
+}
+
 const packaged = expected.map((f) => {
   const { size } = fs.statSync(path.join(distDir, f));
   return `  ${f} (${size} bytes)`;
@@ -129,5 +164,7 @@ for (const file of supportFiles) {
   const { size } = fs.statSync(path.join(distDir, file));
   packaged.push(`  ${file} (${size} bytes)`);
 }
-console.log(`OK: '${flavor}' WASI dist file set complete in ${distDir}:`);
+console.log(
+  `OK: '${flavor}' WASI dist file set complete in ${distDir} (heap-sync exports ${flavor === 'threaded' ? 'present' : 'absent'}):`,
+);
 console.log(packaged.join('\n'));

@@ -5,9 +5,11 @@
 // mapping table, together about nine times the source bytes -- stays resident
 // forever unless the hook wrapper releases it when the invocation settles.
 //
-// The fixture test `fixtures/plugin/native-magic-string-eager-release` covers
-// the same contract on whichever flavor the suite runs against; this one pins
-// the threadless half without needing the whole suite switched over to it.
+// The fixture tests `fixtures/plugin/native-magic-string-eager-release` and
+// `fixtures/plugin/render-chunk/native-magic-string-interleave` cover the
+// `meta.magicString` box, the retained-meta mint and the concurrent renderChunk
+// case on whichever flavor the suite runs against; this one pins a box the
+// plugin built itself, which no fixture covers.
 import { existsSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { describe, expect, test } from 'vitest';
@@ -43,76 +45,6 @@ function virtualEntryPlugin(): {
 }
 
 describe('native MagicString ownership on the threadless-WASI dist', () => {
-  distTest(
-    'the transform and renderChunk wrappers release the magicString they minted',
-    async () => {
-      const { build } = (await import(distEntryPath)) as typeof browserEntryTypes;
-      const { getRuntimeSupport } = (await import(
-        distExperimentalPath
-      )) as typeof browserExperimentalTypes;
-      // Guard the premise: without this the assertions below would pass
-      // vacuously against a lazy flavor.
-      expect(getRuntimeSupport().threadlessWasi).toBe(true);
-
-      let transformMagicString: RolldownMagicString | undefined;
-      let renderChunkMagicString: RolldownMagicString | undefined;
-
-      const result = await build({
-        input: ENTRY_ID,
-        write: false,
-        experimental: { nativeMagicString: true },
-        output: { format: 'esm', sourcemap: true },
-        plugins: [
-          virtualEntryPlugin(),
-          {
-            name: 'magic-string-probe',
-            transform(_code, _id, meta) {
-              if (!meta?.magicString) return null;
-              transformMagicString = meta.magicString;
-              transformMagicString.append('\nconsole.log("transformed");');
-              // Returning it hands the string itself to `sendMagicString`,
-              // which leaves the mapping table -- the bulk of the footprint --
-              // behind; `map: null` says the map went out-of-band.
-              return { code: transformMagicString, map: null };
-            },
-            renderChunk(_code, _chunk, _options, meta) {
-              if (!meta.magicString) return null;
-              renderChunkMagicString = meta.magicString;
-              renderChunkMagicString.append('\n// rendered');
-              return renderChunkMagicString;
-            },
-          },
-        ],
-      });
-
-      // Both hooks still did their job.
-      const code = result.output[0].code;
-      expect(code).toContain('transformed');
-      expect(code).toContain('// rendered');
-
-      for (const [label, box] of [
-        ['transform', transformMagicString],
-        ['renderChunk', renderChunkMagicString],
-      ] as const) {
-        expect(box, label).toBeDefined();
-        // Already released by the hook wrapper: nothing is left for this call.
-        expect(box!.dropInner(), label).toEqual({
-          freed: false,
-          reason: 'Memory has already been freed',
-        });
-        // A repeated drop reports, it never crashes.
-        expect(box!.dropInner(), label).toEqual({
-          freed: false,
-          reason: 'Memory has already been freed',
-        });
-        // A released instance refuses reads instead of handing back the empty
-        // `MagicString` left behind.
-        expect(() => box!.toString(), label).toThrow(/no longer usable/);
-      }
-    },
-    180_000,
-  );
-
   distTest(
     'the transform wrapper releases a MagicString the hook built and returned',
     async () => {
@@ -162,125 +94,6 @@ describe('native MagicString ownership on the threadless-WASI dist', () => {
         reason: 'Memory has already been freed',
       });
       expect(() => ownMagicString!.toString()).toThrow(/no longer usable/);
-    },
-    180_000,
-  );
-
-  distTest(
-    'a retained meta refuses to mint a magicString after its hook settled',
-    async () => {
-      const { build } = (await import(distEntryPath)) as typeof browserEntryTypes;
-      const { getRuntimeSupport } = (await import(
-        distExperimentalPath
-      )) as typeof browserExperimentalTypes;
-      // Guard the premise: on a lazy flavor the late mint below would succeed
-      // and the assertions would test nothing.
-      expect(getRuntimeSupport().threadlessWasi).toBe(true);
-
-      let retainedTransformMeta: { magicString?: RolldownMagicString } | undefined;
-      let retainedRenderChunkMeta: { magicString?: RolldownMagicString } | undefined;
-
-      await build({
-        input: ENTRY_ID,
-        write: false,
-        experimental: { nativeMagicString: true },
-        output: { format: 'esm' },
-        plugins: [
-          virtualEntryPlugin(),
-          {
-            name: 'meta-retainer',
-            // Retain both metas WITHOUT reading `magicString`: the wrappers'
-            // settle-time cleanup then has nothing to release, and only the
-            // getter itself can stop a post-settle FIRST mint from leaking a
-            // box no finalizer will ever free.
-            transform(_code, id, meta) {
-              if (id === ENTRY_ID) {
-                retainedTransformMeta = meta;
-              }
-              return null;
-            },
-            renderChunk(_code, _chunk, _options, meta) {
-              retainedRenderChunkMeta = meta;
-              return null;
-            },
-          },
-        ],
-      });
-
-      expect(retainedTransformMeta).toBeDefined();
-      expect(retainedRenderChunkMeta).toBeDefined();
-      // Denied instead of minted: a box allocated here could never be
-      // released, and the error surface matches what reads of an eagerly
-      // released box already throw.
-      expect(() => retainedTransformMeta!.magicString).toThrow(/no longer usable/);
-      expect(() => retainedRenderChunkMeta!.magicString).toThrow(/no longer usable/);
-    },
-    180_000,
-  );
-
-  distTest(
-    'concurrent renderChunk invocations each keep their own magicString',
-    async () => {
-      const { build } = (await import(distEntryPath)) as typeof browserEntryTypes;
-      const { getRuntimeSupport } = (await import(
-        distExperimentalPath
-      )) as typeof browserExperimentalTypes;
-      expect(getRuntimeSupport().threadlessWasi).toBe(true);
-
-      // Per-chunk renderChunk invocations run concurrently on the Rust side,
-      // so chunk a's hook yields until chunk b's invocation has fully settled
-      // and only then reads `meta.magicString` IN-hook. It must see its OWN
-      // chunk -- not chunk b's code, and not the box b's cleanup released.
-      const files = new Map([
-        ['virt:a.js', 'export const A_MARKER = "chunk-a-marker";\nconsole.log(A_MARKER);\n'],
-        ['virt:b.js', 'export const B_MARKER = "chunk-b-marker";\nconsole.log(B_MARKER);\n'],
-      ]);
-      let resolveBDone!: () => void;
-      const bDone = new Promise<void>((resolve) => {
-        resolveBDone = resolve;
-      });
-      const observed: Record<string, string> = {};
-
-      await build({
-        input: { a: 'virt:a.js', b: 'virt:b.js' },
-        write: false,
-        experimental: { nativeMagicString: true },
-        output: { format: 'esm' },
-        plugins: [
-          {
-            name: 'virtual-two-chunks',
-            resolveId: (id: string) => (files.has(id) ? id : undefined),
-            load: (id: string) => files.get(id),
-          },
-          {
-            name: 'interleave-probe',
-            async renderChunk(_code, chunk, _options, meta) {
-              if (chunk.fileName.startsWith('a')) {
-                await Promise.race([
-                  bDone,
-                  new Promise((_, reject) =>
-                    setTimeout(
-                      () => reject(new Error('renderChunk invocations did not interleave')),
-                      10_000,
-                    ),
-                  ),
-                ]);
-                // One macrotask more, so b's wrapper cleanup has run too.
-                await new Promise((resolve) => setTimeout(resolve, 20));
-              }
-              observed[chunk.fileName] = meta.magicString!.original;
-              if (chunk.fileName.startsWith('b')) {
-                resolveBDone();
-              }
-              return null;
-            },
-          },
-        ],
-      });
-
-      expect(observed['a.js']).toContain('chunk-a-marker');
-      expect(observed['a.js']).not.toContain('chunk-b-marker');
-      expect(observed['b.js']).toContain('chunk-b-marker');
     },
     180_000,
   );

@@ -5,14 +5,14 @@
 The threaded WASI binding (`wasm32-wasip1-threads`) traps with "memory access out
 of bounds" under concurrent load because of a V8 bug: a thread that did not run
 `memory.grow` keeps a stale memory size in its running wasm code, and `memory.fill`,
-`memory.copy` and atomics are bounds-checked against it. Rolldown works around it
-in its own allocator: after an allocation that may sit in pages this thread has not
-seen, the thread runs `memory.grow(0)`, which makes V8 reload the size. The same
-refresh runs at every scheduler handoff (task poll, blocking closure start), for
-work that moves between threads. The workaround is what lets the threaded build
-default to the MultiThread flavor (2 workers). It
-lives only in the threaded build and goes away once the Node versions we
-support ship the V8 fix. For the machinery, see
+`memory.copy`, Liftoff atomics and atomic wait/notify are bounds-checked against
+it. Rolldown works around it in its own allocator: after an allocation that may
+sit in pages this thread has not seen, the thread runs `memory.grow(0)`, which
+makes V8 reload the size. The same refresh runs at every scheduler handoff (task
+poll, blocking closure start), for work that moves between threads. The
+workaround is what lets the threaded build default to the MultiThread flavor (2
+workers). It lives only in the threaded build and goes away once the Node
+versions we support ship the V8 fix. For the machinery, see
 [implementation.md](./implementation.md). Addresses #10697.
 
 ## The bug
@@ -29,12 +29,14 @@ thread A (out of heap)            thread B (long wasm activation)
 
 - wasi-libc's dlmalloc grows the one shared memory from whichever thread runs out
   of heap (`sbrk` is the only `memory.grow` site in the module).
-- The stale size is per activation. A JS -> wasm entry refreshes it, so a thread
-  that stays in wasm (rayon workers, emnapi async work threads, dlmalloc's spin
-  lock) keeps the old size.
-- Plain loads and stores do not trap: with the wasm trap handler (default Node on
-  x64 and on most arm64 hosts, see Remaining gaps) they are checked by guard
-  pages against the real size.
+- The stale size stays until the thread handles V8's grow interrupt, which only
+  some code paths do (see "What refreshes a stale thread" below). Returning to JS
+  and entering wasm again does not do it by itself. So a thread that stays in
+  wasm (rayon workers, emnapi async work threads, dlmalloc's spin lock) keeps the
+  old size.
+- Plain loads and stores do not trap, and neither do TurboFan atomics: with the
+  wasm trap handler (default Node on x64 and on most arm64 hosts, see Remaining
+  gaps) they are checked by guard pages against the real size.
 - It is not MultiThread-specific: the published CurrentThread artifact
   (`@rolldown/binding-wasm32-wasi@1.2.8`) traps under 16 concurrent
   `parse()` / `transform()` calls x3 (20/20), because emnapi async work threads
@@ -112,6 +114,52 @@ worker B: size stays stale until B handles that interrupt
   the size is current before the touch: 0/240 across all probe rows.
   `memory.size` reads the stale size and handles no interrupt.
 
+Which operations check the cached size:
+
+| operation                                  | trap handler on (default) | trap handler off / `--wasm-enforce-bounds-checks` |
+| ------------------------------------------ | ------------------------- | ------------------------------------------------- |
+| `memory.fill` / `memory.copy` (both tiers) | cached size, can trap     | cached size, can trap                             |
+| Liftoff atomics, wait/notify (both tiers)  | cached size, can trap     | cached size, can trap                             |
+| TurboFan atomic load / store / rmw         | guard pages, safe         | cached size, can trap                             |
+| plain load / store                         | guard pages, safe         | cached size, can trap                             |
+
+Liftoff forces the check on atomics (src/wasm/baseline/liftoff-compiler.cc:5649-5650);
+TurboFan omits it under the trap handler
+(src/wasm/turboshaft-graph-interface.cc:4094-4096, 7162-7165) and keeps it for
+wait/notify (:3921, :3943). Measured: a TurboFan `i32.atomic.rmw.add` on a new
+page passed 20/20 while the thread's size was stale in 196-199 of 200 rounds.
+
+#### What refreshes a stale thread
+
+Every "yes" below is one code path that runs `StackGuard::HandleInterrupts` for
+B's pending grow interrupt. Two-worker probes, node 24.12.0 and 24.21.0, 20 runs x
+200 rounds per cell (the event-loop row: 40 runs of a runtime-shaped probe),
+"traps" = runs with "memory access out of bounds":
+
+| B does this between "A grew" and "B touches"                         | refreshes? | traps           |
+| -------------------------------------------------------------------- | ---------- | --------------- |
+| `memory.grow(0)` (in wasm or in JS)                                  | yes        | 0/20, all tiers |
+| `wait32` on a private word, expected = its value, timeout 0          | yes        | 0/160           |
+| a futex wait (wasm `wait32` or JS `Atomics.wait`) that sleeps        | yes        | 0/20            |
+| call a Liftoff function (its entry stack check)                      | yes        | 0/20            |
+| call a TurboFan non-leaf function that is not inlined                | yes        | 0/20            |
+| call any JS function or JS builtin (emnapi imports, `Atomics.store`) | yes        | 0/20            |
+| return to the Worker event loop (postMessage, `waitAsync`)           | yes        | 0/40            |
+| nothing (stay in one activation)                                     | no         | 20/20           |
+| `memory.size`                                                        | no, stale  | 20/20 cold      |
+| a futex wait that returns not-equal                                  | no         | 20/20           |
+| `memory.atomic.notify`                                               | no         | 20/20           |
+| call a TurboFan leaf function, or an inlined one                     | no         | 20/20 cold      |
+| return to JS and enter wasm again, nothing else                      | **no**     | 20/20           |
+
+- A futex wait handles the interrupt only after its value check, so a wait that
+  returns not-equal leaves the size stale; one that sleeps is woken by the grow
+  and refreshes (src/execution/futex-emulation.cc:395, 405-428). So an idle
+  worker parked in a futex is current when it wakes.
+- The JS -> wasm wrapper checks only the real stack limit, not interrupts
+  (src/builtins/arm64/builtins-arm64.cc:4229-4470). The refresh people see after a JS call comes
+  from the called function's entry stack check or from a JS builtin on the way.
+
 ### Workaround results (release-wasi, interleaved A/B, same loads)
 
 | run (5 loads x 10 interleaved rounds unless noted)            | base        | heap-sync    |
@@ -141,6 +189,21 @@ every round.
 
 Timing is at noise level (CurrentThread release median 729 vs 723.5 ms;
 MultiThread vs a pre-grown base 479.5 vs 480 ms).
+
+Keeping the grow-ahead alive (`black_box`, principle 3), release-wasi, same five
+loads, 5 interleaved rounds, all 50 runs pass. Medians (ms), without -> with:
+
+| load                                 | without | with | speedup |
+| ------------------------------------ | ------- | ---- | ------- |
+| MultiThread w4 16 builds             | 700     | 419  | 1.7x    |
+| MultiThread w4 16 builds + JS plugin | 2654    | 1702 | 1.6x    |
+| MultiThread w4 parse 16x3            | 556     | 251  | 2.2x    |
+| CurrentThread parse 16x3             | 796     | 248  | 3.2x    |
+| CurrentThread transform 16x3         | 748     | 792  | noise   |
+| MultiThread w4 three10x x4 (3 runs)  | 17108   | 1495 | 11x     |
+
+The "without" runs are noisy (16 builds: 615-1259 ms), the "with" runs much
+less so (319-506 ms). three10x x4 grows the heap to about 2.2 GiB of memory.
 
 The scheduler handoff refresh (principle 1), release-wasi, 10 interleaved rounds
 of the five judge loads, without vs with the hook: 100/100 pass. Medians (ms):
@@ -174,9 +237,26 @@ of the five judge loads, without vs with the hook: 100/100 pass. Medians (ms):
    probe; a `memory.size` variant fails 10/10 in release; it passed in debug only
    because extra calls gave V8 more reload points).
 3. **Make growth rare.** The first thread to see a growth grows 16 MiB ahead
-   (malloc + free through dlmalloc), so the heap grows in a few large steps. Growth
-   events, and so refreshes on every thread, drop from about 3000 to about 14 per
-   CurrentThread run (11600 to 60 for MultiThread).
+   (malloc + free through dlmalloc), so the heap grows in a few large steps
+   instead of 64 KiB-2 MiB ones. LLVM removes a `malloc` + `free` pair whose block
+   is never used, so the pointer goes through `core::hint::black_box`. Without it
+   the release-wasi build had no call in `refresh` and never grew ahead; the first
+   numbers here (3015 -> 14 per CurrentThread run, 11600 -> 60 MultiThread) came
+   from a debug build. Release-wasi, 3 runs each, sbrk `memory.grow` calls and
+   `refresh()` calls per load, without -> with `black_box`:
+
+   | load                                          | grows              | refreshes            |
+   | --------------------------------------------- | ------------------ | -------------------- |
+   | MultiThread w4 16 builds                      | 2846-2848 -> 24    | 11277-11315 -> 52-59 |
+   | MultiThread w4 16 builds + JS plugin x2 waves | 3111-3131 -> 26-27 | 11719-12304 -> 65-72 |
+   | MultiThread w4 parse 16x3                     | 2824-2830 -> 25    | 13065-13090 -> 58-69 |
+   | default MultiThread w2 16 builds              | 2826-2830 -> 24    | 5624-5657 -> 29-31   |
+   | CurrentThread parse 16x3                      | 2820-2824 -> 25    | 12995-13271 -> 58-62 |
+
+   Each grow also makes V8 set page permissions over the whole memory
+   (`GrowWasmMemoryInPlace`, src/objects/backing-store.cc:534) and interrupts every
+   other thread, so fewer grows is also much faster (see Workaround results).
+
 4. **Threaded build only, no behavior change elsewhere.** The single-thread build
    has one thread and never sees a stale size; native builds keep mimalloc.
 
@@ -190,9 +270,9 @@ of the five judge loads, without vs with the hook: 100/100 pass. Medians (ms):
   cannot simply be raised.
 - **`memory.size` as the refresh.** Does not reload V8's bounds (principle 2).
 - **Refresh on the emnapi / JS side.** The traps are inside wasm (Rust and C
-  memset / memcpy), in activations that never return to JS; a JS -> wasm entry
-  already refreshes. emnapi's JS views have the same stale-size hazard, but
-  `@emnapi/wasi-threads` already refreshes those with `memory.grow(0)`, and in
+  memset / memcpy), in activations that never return to JS, so a JS-side refresh
+  never runs on the trapping thread. emnapi's JS views have the same stale-size
+  hazard, but `@emnapi/wasi-threads` already refreshes those with `memory.grow(0)`, and in
   rolldown runs the wasm trap always came first.
 - **`--liftoff-only`.** Makes the trap rare but not impossible (1/20 and 1/5 in
   the probes, see Evidence), and removes the MultiThread speedup (release, 16
@@ -247,7 +327,11 @@ of the five judge loads, without vs with the hook: 100/100 pass. Medians (ms):
 
   A bigger loader `initial` (2 GiB, 3 GiB) does not help with the flag: 0/20
   pass. A refresh before the allocation does not either (see Rejected
-  alternatives).
+  alternatives). Keeping the grow-ahead alive (principle 3) makes it rarer, not
+  gone: MultiThread w4 16 builds with the flag went from 0/10 to 10/10 pass (10
+  interleaved runs each), and from 0/13 to 10/13 and 0/8 to 5/8 in two earlier
+  sets. The table above was
+  measured while the release grow-ahead was dead code.
 
   Which hosts lack the handler: Node's bundled
   `deps/v8/src/trap-handler/trap-handler.h` (v24.12.0 = V8 `13.6-lkgr`) sets

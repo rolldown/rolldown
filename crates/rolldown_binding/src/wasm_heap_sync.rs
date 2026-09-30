@@ -10,12 +10,14 @@
 //! updates the memory size on that thread only and asks every other thread to catch up at its
 //! next interrupt check. A thread in a long wasm activation checks late (baseline Liftoff code in
 //! a call-free loop only when its tier-up budget runs out or at a function entry; TurboFan code
-//! once per loop pass), so it keeps its old size, and `memory.fill`, `memory.copy` and atomics
-//! are bounds-checked against it. So a thread that gets a block from the new pages and fills or
+//! once per loop pass), so it keeps its old size, and `memory.fill`, `memory.copy`, Liftoff
+//! atomics and atomic wait/notify are bounds-checked against it. Returning to JS and entering
+//! wasm again does not refresh it by itself; a JS call, a Liftoff or non-leaf TurboFan call, or
+//! a futex wait that sleeps does. So a thread that gets a block from the new pages and fills or
 //! copies it (memset, memcpy, calloc, realloc) traps with "memory access out of bounds". Plain
-//! loads and stores are not affected: on hosts with the wasm trap handler (default Node on x64
-//! and on most arm64 hosts, see Remaining gaps) they are checked by guard pages against the real
-//! size.
+//! loads and stores and TurboFan atomics are not affected: on hosts with the wasm trap handler
+//! (default Node on x64 and on most arm64 hosts, see Remaining gaps) they are checked by guard
+//! pages against the real size.
 //!
 //! # The workaround
 //!
@@ -60,8 +62,9 @@
 //!   that capacity. What is left: a block that reaches a running thread mid-poll (a channel
 //!   message, an `Arc`, a threadsafe-function call on the JS thread) and is memset / memcpy'd /
 //!   touched with atomics there before that thread's next allocation or poll boundary. The
-//!   grow-ahead below makes growth rare (about 14 growth events per run instead of about 3000),
-//!   which shrinks this window. Not observed in the measured runs; the V8 fix closes it.
+//!   grow-ahead below makes growth rare (release-wasi, 16 MultiThread builds: about 24 heap
+//!   grows instead of about 2850), which shrinks this window. Not observed in the measured
+//!   runs; the V8 fix closes it.
 //! - C code that calls `malloc` directly and then fills the block is not covered, because
 //!   `malloc` is not wrapped.
 //! - Hosts that run without the V8 wasm trap handler bounds-check plain stores against the cached
@@ -103,9 +106,10 @@ thread_local! {
 }
 
 /// When a thread is the first to see the heap grow, it extends dlmalloc's top by this much in
-/// one `memory.grow` (malloc then free), so the heap grows in a few large steps instead of about
-/// one page at a time. Every growth event costs one refresh on every thread, so fewer events
-/// mean fewer refreshes (measured: 3015 -> 14 per CurrentThread run, 11600 -> 60 MultiThread).
+/// one `memory.grow` (malloc then free), so the heap grows in a few large steps instead of
+/// 64 KiB-2 MiB ones. Every growth event costs one refresh on every thread, so fewer events
+/// mean fewer refreshes (measured, release-wasi, 16 MultiThread w4 builds: 2848 -> 24 grows,
+/// about 11300 -> 55 refreshes) and a much faster run (see design.md principle 3).
 /// 16 MiB is a small share of the 4 GiB maximum and of the 1 GiB initial threaded memory.
 const GROW_AHEAD: usize = 16 << 20;
 
@@ -170,7 +174,11 @@ fn refresh() {
     // First thread to see this growth: grow ahead once. malloc is not wrapped, so this does
     // not re-enter; the block comes from the top and merges back into it on free.
     unsafe {
-      let p = malloc(GROW_AHEAD);
+      // `black_box` keeps the grow-ahead. LLVM treats `malloc` as the allocation builtin and
+      // removes a `malloc` + `free` pair whose block is never used, so without it the release
+      // build had no call in `refresh` and grew the heap in 64 KiB-2 MiB steps. A call to a
+      // symbol LLVM does not know as malloc (such as `__real_malloc`) would not need it.
+      let p = core::hint::black_box(malloc(GROW_AHEAD));
       if !p.is_null() {
         free(p);
       }

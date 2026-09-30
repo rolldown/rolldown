@@ -41,6 +41,10 @@ C realloc  ──> __wrap_realloc ──> refresh old / malloc (real) ──> re
                                    first to see growth? ──> malloc(16 MiB) + free, memory.grow(0) again
 ```
 
+The grow-ahead's pointer goes through `core::hint::black_box`: LLVM removes an
+unused `malloc` + `free` pair, and the release build lost the grow-ahead that way
+(design.md principle 3).
+
 Scheduler handoff (threaded WASI; the hook is unset on threadless wasm, so each
 call there is one load of an unset `OnceLock`; native does not compile it):
 

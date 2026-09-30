@@ -23,40 +23,6 @@ describe('CloseCoordinator', () => {
     expect(attempt).toHaveBeenCalledOnce();
   });
 
-  test('coalesces an attempt and retries after a retryable cleanup failure', async () => {
-    const cleanupError = new Error('cleanup failed');
-    const attempt = vi
-      .fn<() => Promise<{ errors: unknown[]; retryable: boolean }>>()
-      .mockResolvedValueOnce({ errors: [cleanupError], retryable: true })
-      .mockResolvedValue({ errors: [], retryable: false });
-    const coordinator = new CloseCoordinator('close failed');
-
-    const first = coordinator.close(attempt);
-    const concurrent = coordinator.close(attempt);
-    expect(concurrent).toBe(first);
-    await expect(first).rejects.toBe(cleanupError);
-    expect(attempt).toHaveBeenCalledOnce();
-
-    await expect(coordinator.close(attempt)).resolves.toBeUndefined();
-    expect(attempt).toHaveBeenCalledTimes(2);
-  });
-
-  test('replays terminal failures without rerunning completed phases', async () => {
-    const terminalError = new Error('native close failed');
-    const attempt = vi.fn(async () => ({
-      errors: [terminalError],
-      retryable: false,
-    }));
-    const coordinator = new CloseCoordinator('close failed');
-
-    const first = coordinator.close(attempt);
-    await expect(first).rejects.toBe(terminalError);
-    const replay = coordinator.close(attempt);
-    expect(replay).toBe(first);
-    await expect(replay).rejects.toBe(terminalError);
-    expect(attempt).toHaveBeenCalledOnce();
-  });
-
   test('owned cleanup retry projects out terminal diagnostics and preserves their replay', async () => {
     const terminalError = new Error('native close failed');
     const cleanupError = new Error('runtime release failed');

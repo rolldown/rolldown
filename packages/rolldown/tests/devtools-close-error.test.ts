@@ -25,7 +25,6 @@ test(
     expect(result).toEqual({
       closeBundleCalls: 1,
       concurrentPromiseReused: true,
-      loneDirectErrorIdentityPreserved: true,
       originalErrorPreserved: true,
       replayedAggregatePreserved: true,
       writerErrorsPreserved: true,

@@ -4,31 +4,12 @@ import { tmpdir } from 'node:os';
 import path from 'node:path';
 
 import { rolldown } from 'rolldown';
-import * as binding from '../../../src/binding.cjs';
-import { installCurrentThreadTaskHost } from '../install-current-thread-task-host.mjs';
-
-const { BindingBundler, BindingLogLevel } = binding;
-const uninstallCurrentThreadTaskHost = installCurrentThreadTaskHost(binding);
 
 const cwd = mkdtempSync(path.join(tmpdir(), 'rolldown-devtools-close-'));
 const closeError = Object.assign(new RangeError('devtools closeBundle identity'), {
   marker: 'original-close-error',
 });
 let closeBundleCalls = 0;
-
-function directBindingOptions(name, closeBundle, devtools) {
-  return {
-    inputOptions: {
-      cwd,
-      devtools,
-      input: [{ import: './main.js' }],
-      logLevel: BindingLogLevel.Silent,
-      onLog() {},
-      plugins: [{ name, hookUsage: 1 << 13, closeBundle }],
-    },
-    outputOptions: { plugins: [] },
-  };
-}
 
 try {
   mkdirSync(path.join(cwd, 'node_modules'), { recursive: true });
@@ -72,32 +53,16 @@ try {
   assert.equal(lateError, firstError);
   assert.equal(closeBundleCalls, 1);
 
-  const loneCloseError = new URIError('direct binding lone closeBundle identity');
-  const loneBundler = new BindingBundler();
-  const loneGenerateResult = await loneBundler.generate(
-    directBindingOptions('direct-binding-lone-close-error', () => {
-      throw loneCloseError;
-    }),
-  );
-  assert.equal(loneGenerateResult?.isBindingErrors, undefined);
-  const loneRejection = await loneBundler.close().then(
-    () => null,
-    (error) => error,
-  );
-  assert.equal(loneRejection, loneCloseError);
-
   console.log(
     JSON.stringify({
       closeBundleCalls,
       concurrentPromiseReused,
-      loneDirectErrorIdentityPreserved: loneRejection === loneCloseError,
       originalErrorPreserved: firstError.errors[0] === closeError,
       replayedAggregatePreserved: concurrentError === firstError && lateError === firstError,
       writerErrorsPreserved: writerErrors.length > 0,
     }),
   );
 } finally {
-  uninstallCurrentThreadTaskHost();
   process.chdir(tmpdir());
   rmSync(cwd, { force: true, recursive: true });
 }

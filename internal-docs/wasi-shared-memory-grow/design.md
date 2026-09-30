@@ -285,11 +285,51 @@ for this change, in a noisier set). Not profiled.
 
    `sbrk` is the only code that grows the memory, and dlmalloc only calls it under
    this lock, so every thread that touches the heap is current before its first
-   store. calloc's memset and realloc's memcpy run inside dlmalloc, after the
-   refresh, so they need no special handling. The lock spins like dlmalloc's own
-   (`sched_yield` every 64 spins) and never uses `memory.atomic.wait`, which traps
-   on a browser main thread. It adds no new serialization: dlmalloc already had one
-   global lock.
+   store. calloc's memset and realloc's memcpy also run after the refresh, so they
+   need no special handling. The lock spins like dlmalloc's own (`sched_yield`
+   every 64 spins) and never uses `memory.atomic.wait`, which traps on a browser
+   main thread.
+
+   **Trade-off: the lock also covers calloc's fill and realloc's copy.** It is
+   wider than dlmalloc's own lock. In the linked wasi-libc (rustc 1.98.1's
+   self-contained `libc.a`, `dlmalloc.c.obj`), `calloc` calls `dlmalloc`, which
+   releases dlmalloc's lock (`_gm_+448`) before it returns, and only then runs
+   `memory.fill`. `realloc` releases that lock after its in-place attempt; when
+   the block cannot grow in place it calls `dlmalloc`, runs `memory.copy`, then
+   calls `dlfree`, and the copy runs between those two locked calls. Before, a
+   large fill or copy blocked no one; under our lock every other thread's
+   allocator call waits for it.
+
+   ```
+   dlmalloc alone:  [dl lock: pick chunk] fill / copy          other threads allocate
+   with LOCK:       LOCK [dl lock: pick chunk] fill / copy UNLOCK   other threads wait
+   ```
+
+   Kept this way on purpose:
+   - Moving the work out did not help on the measured loads: zeroing
+     (`alloc_zeroed`) and copying (`realloc`) outside the lock was one of the two
+     dropped variants in Workaround results (16 builds 343-348 ms medians against
+     344.5 ms for this change). So the lock's measured cost (about 8% on 16
+     builds, 10-11% on parse) is not the fill and copy.
+   - The realloc half is not free. dlmalloc exports no in-place-only entry (no
+     `realloc_in_place` in the object), so copying outside the lock means malloc,
+     copy, free: two lock acquisitions per realloc instead of one, and no in-place
+     growth, where dlmalloc extends a block into the free space after it without
+     copying at all. The calloc half (malloc under the lock, fill after it) costs
+     nothing extra, and nothing was gained either.
+   - When it would matter: several threads at once making large zeroed
+     allocations, or large reallocs that cannot grow in place, so one thread's
+     multi-MiB fill or copy holds the others. Worst on a browser main thread,
+     which spins while it waits. Not measured: there is no large-allocation
+     contention benchmark and no browser benchmark.
+   - If it shows up in a profile (time spinning in `locked` behind a `calloc` or
+     `realloc` frame): do calloc as malloc under the lock and fill after it, and
+     for reallocs above a size threshold do malloc and free under the lock with
+     the copy between them, keeping dlmalloc's `realloc` (and its in-place path)
+     for smaller blocks; large blocks then always move, so measure both. Filling
+     or copying outside the lock is safe: taking the lock refreshed this thread,
+     and `after` checked the new block against that size, the same argument
+     `HeapSyncAlloc`'s large-alignment path already relies on.
 
 2. **Refresh at the scheduler handoff too.** A MultiThread task can allocate a
    `Vec` on worker A, yield, and resume on worker B, then `copy_from_slice` /

@@ -44,8 +44,9 @@ JS (@emnapi/core) ──> export malloc / free = rolldown_heap_sync_* ───�
                                                                          v
 locked(f):  LOCK (CAS; spin, sched_yield every 64 spins; no atomic.wait)
             LOCAL_PAGES == 0 || MAX_SEEN_PAGES > LOCAL_PAGES ? memory.grow(0)
-            f = __real_xxx(...)            dlmalloc: its own lock, chunk headers,
-              └─ sbrk ──> __wrap_sbrk        calloc's memset, realloc's memcpy
+            f = __real_xxx(...)            dlmalloc: its own lock around chunk
+              └─ sbrk ──> __wrap_sbrk        headers; calloc's memset, realloc's
+                                             memcpy after that lock, still in LOCK
             after(ptr, size): block end > LOCAL_PAGES? count + refresh (never seen)
             UNLOCK (Release)
 
@@ -74,6 +75,12 @@ __wrap_sbrk(n)  (only called by dlmalloc, so always under LOCK):
   `prepend_alloc`, `__wrap_sbrk` and `sched_yield`). Inside the object the public
   names are thin wrappers over static `dl*` functions, so `realloc`'s internal
   `malloc` is not redirected by `--wrap`.
+- `LOCK` is held longer than dlmalloc's own lock: the real `calloc` runs
+  `memory.fill` after `dlmalloc` returns (and has released its lock), and the
+  real `realloc`'s move path runs `memory.copy` between its `dlmalloc` and
+  `dlfree` calls. Both still run inside `locked`, so a large zeroed allocation or
+  realloc copy holds every other thread's allocator calls. Kept on purpose; see
+  [design.md](./design.md), principle 1 (trade-off).
 - `memory.grow(n > 0)` exists in exactly one place, `__wrap_sbrk`; wasi-libc's own
   `sbrk.c.obj` is no longer linked. `memory.grow(0)` runs in `grow_zero` (the lock,
   the hook, the handoff refresh).

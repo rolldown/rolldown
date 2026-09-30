@@ -40,9 +40,12 @@
 //!
 //! Only `sbrk` grows the memory, and it only runs under `LOCK`, so the thread that grows
 //! publishes the new size before any other thread can enter dlmalloc, and that thread
-//! refreshes before dlmalloc touches a byte. calloc's memset and realloc's memcpy run inside
-//! dlmalloc, after the refresh. The lock is the same serialization dlmalloc's own lock already
-//! imposes; it spins like dlmalloc's, so it is safe on a browser main thread.
+//! refreshes before dlmalloc touches a byte. calloc's memset and realloc's memcpy run after the
+//! refresh too. wasi-libc runs them after dlmalloc has released its own lock, but still inside
+//! `LOCK`, so `LOCK` is wider than dlmalloc's lock: a large zeroed allocation or realloc copy
+//! holds every other thread's allocator calls (kept on purpose, see
+//! internal-docs/wasi-shared-memory-grow/design.md, principle 1). The lock spins like
+//! dlmalloc's, so it is safe on a browser main thread.
 //!
 //! # The break
 //!

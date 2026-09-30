@@ -196,9 +196,6 @@ Result: PASS
 Expected: error (type: SyntaxError, phase: parse)
 Actual:
 An export name cannot include a unicode lone surrogate
-An export name cannot include a unicode lone surrogate
-An export name cannot include a unicode lone surrogate
-Duplicated export '�d83c'
 ---
 
 # language/module-code/early-export-unresolvable.js

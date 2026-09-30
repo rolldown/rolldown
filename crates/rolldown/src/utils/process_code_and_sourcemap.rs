@@ -80,14 +80,14 @@ pub async fn prepare_sourcemap(
     };
 
     #[expect(clippy::cast_possible_truncation)]
-    let x_google_ignore_list = ignored
+    let ignore_list = ignored
       .into_iter()
       .enumerate()
       .filter_map(|(index, should_ignore)| should_ignore.then_some(index as u32))
       .collect::<Vec<_>>();
 
-    if !x_google_ignore_list.is_empty() {
-      map.set_x_google_ignore_list(x_google_ignore_list);
+    if !ignore_list.is_empty() {
+      map.set_ignore_list(ignore_list);
     }
   }
 
@@ -227,7 +227,7 @@ fn process_sourcemap_related_reference(
 ) -> BuildResult<()> {
   source.push('\n');
   match comment_kind {
-    CommentKind::Line => {
+    CommentKind::Line | CommentKind::HtmlOpen | CommentKind::HtmlClose => {
       source.push_str("//");
       reference_body_processor(source)?;
     }

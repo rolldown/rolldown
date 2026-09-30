@@ -1,0 +1,24 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+Object.defineProperty(exports, Symbol.toStringTag, { value: "Module" });
+//#region main.js
+let value = 1;
+function update() {
+	value++;
+}
+//#endregion
+Object.defineProperty(exports, "\n\"\\'", {
+	enumerable: true,
+	get: function() {
+		return value;
+	}
+});
+exports.update = update;
+
+```

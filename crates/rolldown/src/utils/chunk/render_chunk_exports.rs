@@ -439,9 +439,9 @@ pub fn render_chunk_exports(
 #[inline]
 pub fn render_object_define_property(key: &str, value: &str) -> String {
   concat_string!(
-    "Object.defineProperty(exports, '",
-    key,
-    "', {
+    "Object.defineProperty(exports, ",
+    serde_json::to_string(key).unwrap(),
+    ", {
   enumerable: true,
   get: function () {
     return ",
@@ -455,9 +455,9 @@ pub fn render_object_define_property(key: &str, value: &str) -> String {
 #[inline]
 pub fn render_object_define_property_value(key: &str, value: &str) -> String {
   concat_string!(
-    "Object.defineProperty(exports, '",
-    key,
-    "', {
+    "Object.defineProperty(exports, ",
+    serde_json::to_string(key).unwrap(),
+    ", {
   enumerable: true,
   value: ",
     value,

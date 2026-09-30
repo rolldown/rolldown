@@ -5,7 +5,10 @@ use crate::{
     collect_wrapped_esm_init_targets_for_module_namespace,
   },
   type_alias::{IndexEcmaAst, IndexStmtInfos},
-  types::linking_metadata::{LinkingMetadata, LinkingMetadataVec},
+  types::{
+    linking_metadata::{LinkingMetadata, LinkingMetadataVec},
+    member_read_star_reexport_path::MemberReadStarReexportPath,
+  },
   utils::external_import_interop::import_record_needs_interop,
 };
 use itertools::Itertools;
@@ -53,6 +56,7 @@ pub(super) struct OrderLoweringInput<'a> {
   pub(super) export_chains: &'a FxHashMap<SymbolRef, Vec<SymbolRef>>,
   pub(super) star_reexport_records_by_imported_symbol:
     &'a FxHashMap<SymbolRef, Vec<Vec<(ModuleIdx, ImportRecordIdx)>>>,
+  pub(super) member_read_star_reexport_paths: &'a [MemberReadStarReexportPath],
   pub(super) used_symbol_refs_builder: &'a UsedSymbolRefsBuilder,
   pub(super) cyclic_modules: &'a FxHashSet<ModuleIdx>,
   pub(super) tree_shaking: bool,
@@ -479,6 +483,7 @@ impl GenerateStage<'_> {
       star_reexport_records_by_imported_symbol: &self
         .link_output
         .star_reexport_records_by_imported_symbol,
+      member_read_star_reexport_paths: &self.link_output.member_read_star_reexport_paths,
       used_symbol_refs_builder,
       cyclic_modules: &cyclic_modules,
       tree_shaking: self.options.treeshake.is_some(),
@@ -1224,18 +1229,16 @@ impl GenerateStage<'_> {
   /// Normalize the runtime module onto a standalone chunk. Returns whether the caller still owes
   /// the runtime-chunk merge re-proof (`fold_runtime_chunk_after_order_lowering`).
   ///
-  /// The baseline `try_merge_runtime_chunk` calls run before order analysis, so a pre-lowering
-  /// merge never proved anything about the helper demand the wrappers and overlays above added.
-  /// Evicting a co-hosted runtime first restores the standalone shape that proof requires; by this
-  /// point lowering has materialized every order-introduced demand in [`OrderWrapState`], so the
-  /// re-proof sees the complete consumer set.
+  /// Eviction changes chunk order and helper-import edges, so on-demand analysis must observe
+  /// the standalone runtime before selecting wrappers. The entry-facade edge query also needs
+  /// the runtime placed so it can resolve helper symbols to their chunk.
   ///
-  /// Normalizing has to happen before the entry-facade edge query — resolving a depended symbol to
-  /// its chunk needs the runtime module to sit in one — while the re-proof has to happen after it,
-  /// because it counts the runtime chunk's consumers and facade creation is what settles them. So
-  /// the two are split: this returns the obligation and `apply_order_wraps` discharges it once the
-  /// facade topology is final.
-  fn ensure_runtime_module_for_order_wraps(&mut self, chunk_graph: &mut ChunkGraph) -> bool {
+  /// The caller folds the runtime after lowering and facade creation, when [`OrderWrapState`]
+  /// contains the complete helper demand and the runtime's consumer set is final.
+  pub(super) fn ensure_runtime_module_for_order_wraps(
+    &mut self,
+    chunk_graph: &mut ChunkGraph,
+  ) -> bool {
     let runtime_idx = self.link_output.runtime.id();
     if let Some(runtime_chunk_idx) = chunk_graph.module_to_chunk[runtime_idx] {
       if self.options.code_splitting.is_disabled() {
@@ -1284,6 +1287,13 @@ impl GenerateStage<'_> {
         new_runtime_chunk_idx,
         self.link_output.metas[runtime_idx].depended_runtime_helper,
       );
+      // The former host derived its `exec_order` from the runtime module (`exec_order` 0) that
+      // the move above took out of it, so it would sort ahead of chunks it follows and its
+      // importers would evaluate it, and the externals it imports, too early. Re-derive every
+      // live chunk's order from its current lead module, as `finalize_chunk_plan` does after the
+      // runtime sweep.
+      chunk_graph.sort_chunk_modules(self.link_output, self.options);
+      self.assign_chunk_exec_orders(chunk_graph);
       self.clear_module_symbol_chunk_indices(runtime_idx);
       return true;
     }
@@ -1327,6 +1337,7 @@ impl GenerateStage<'_> {
       runtime_chunk_idx,
       self.link_output.metas[runtime_idx].depended_runtime_helper,
     );
+    self.assign_chunk_exec_orders(chunk_graph);
     self.clear_module_symbol_chunk_indices(runtime_idx);
     true
   }
@@ -1340,7 +1351,7 @@ impl GenerateStage<'_> {
   /// entry chunk — including the zero-module facades minted above — a `__toCommonJS` demand that
   /// is invisible here, so a fold could hand an entry chunk with no demand at all a brand-new
   /// require edge into a user chunk. Other formats keep the standalone/evicted layout.
-  fn fold_runtime_chunk_after_order_lowering(
+  pub(super) fn fold_runtime_chunk_after_order_lowering(
     &self,
     chunk_graph: &mut ChunkGraph,
     order_state: &OrderWrapState,
@@ -1392,7 +1403,7 @@ impl GenerateStage<'_> {
       .collect_vec()
   }
 
-  fn renumber_live_chunks(&self, chunk_graph: &mut ChunkGraph) {
+  pub(super) fn renumber_live_chunks(&self, chunk_graph: &mut ChunkGraph) {
     let live_chunks = chunk_graph
       .chunk_table
       .iter_enumerated()
@@ -1572,54 +1583,75 @@ pub(super) fn collect_frozen_reexport_usage(
     }
   }
 
-  let mut root_paths =
-    FxHashMap::<(ModuleIdx, ImportRecordIdx), Vec<(ModuleIdx, ImportRecordIdx)>>::default();
-  for (imported_as_ref, paths) in input.star_reexport_records_by_imported_symbol {
-    // A namespace-keyed path (recorded for a whole consumed namespace by
-    // `record_namespace_consumed_star_reexport_paths`, or a member read resolving to a
-    // namespace-valued binding) is consumed exactly when that namespace object is materialized:
-    // an included namespace retains every non-ambiguous export, so its star chains are
-    // execution-relevant; symbol-level usedness would conflate routes (a leaf used through a
-    // direct import elsewhere must not retain a barrel path nobody consumes).
+  // A namespace-keyed path (recorded for a whole consumed namespace by
+  // `record_namespace_consumed_star_reexport_paths`, or a member read resolving to a
+  // namespace-valued binding) is consumed exactly when that namespace object is materialized:
+  // an included namespace retains every non-ambiguous export, so its star chains are
+  // execution-relevant; symbol-level usedness would conflate routes (a leaf used through a
+  // direct import elsewhere must not retain a barrel path nobody consumes).
+  let symbol_is_consumed = |imported_as_ref: SymbolRef, root: (ModuleIdx, ImportRecordIdx)| {
     let key_is_namespace = input.modules[imported_as_ref.owner]
       .as_normal()
-      .is_some_and(|module| module.namespace_object_ref == *imported_as_ref);
+      .is_some_and(|module| module.namespace_object_ref == imported_as_ref);
+    if key_is_namespace {
+      // `namespace_included` here is the provisional pre-wrap value: `finalize_chunk_plan` runs
+      // `finalized_module_namespace_ref_usage` before order analysis/lowering and re-runs it
+      // only after. The skew is safe — the post-wrap refinement can only ADD namespaces
+      // demanded by import overlays (`requires_namespace`: `export *` of a dynamic-exports
+      // importee, `require` interop, splitting-disabled dynamic import), and those routes
+      // discharge their breadth at runtime through `__reExport`/`__toCommonJS` glue rather
+      // than statically routed init forwarding. An opaque `import * as` consumer — the demand
+      // this gate exists for — is a link-time fact the provisional pass already observes.
+      input.linking[imported_as_ref.owner].namespace_included
+    } else {
+      input.used_symbol_refs_builder.contains(&imported_as_ref)
+        || consumed_facades.contains(&imported_as_ref)
+        || input.linking[root.0]
+          .referenced_symbols_by_entry_point_chunk
+          .iter()
+          .any(|(symbol_ref, _)| *symbol_ref == imported_as_ref)
+    }
+  };
+
+  let mut root_paths =
+    FxHashMap::<(ModuleIdx, ImportRecordIdx), Vec<(ModuleIdx, ImportRecordIdx)>>::default();
+  let mut retain_path = |path: &[(ModuleIdx, ImportRecordIdx)],
+                         root: (ModuleIdx, ImportRecordIdx)| {
+    root_paths.entry(root).or_default().extend(path.iter().copied());
+    // An ancestor's excluded-hop traversal stops at the first init-owning barrel it meets and
+    // delegates the rest of the chain to that barrel's own `init_*`
+    // (`collect_order_wrap_esm_init_targets` pushes the owning wrapper without descending).
+    // That delegation is only sound if the owning barrel itself carries the remainder as
+    // retained evidence, so record each such suffix as that barrel's own root — otherwise its
+    // interior hop forwards nothing and the chain's pure leaf is never initialized.
+    for (position, record) in path.iter().copied().enumerate().skip(1) {
+      if module_owns_reexport_init(input, state, record.0) {
+        root_paths.entry(record).or_default().extend(path[position..].iter().copied());
+      }
+    }
+  };
+  for (imported_as_ref, paths) in input.star_reexport_records_by_imported_symbol {
     for path in paths {
       let Some(root) = path.first().copied() else {
         continue;
       };
-      let consumer_is_used = if key_is_namespace {
-        // `namespace_included` here is the provisional pre-wrap value: `finalize_chunk_plan` runs
-        // `finalized_module_namespace_ref_usage` before order analysis/lowering and re-runs it
-        // only after. The skew is safe — the post-wrap refinement can only ADD namespaces
-        // demanded by import overlays (`requires_namespace`: `export *` of a dynamic-exports
-        // importee, `require` interop, splitting-disabled dynamic import), and those routes
-        // discharge their breadth at runtime through `__reExport`/`__toCommonJS` glue rather
-        // than statically routed init forwarding. An opaque `import * as` consumer — the demand
-        // this gate exists for — is a link-time fact the provisional pass already observes.
-        input.linking[imported_as_ref.owner].namespace_included
-      } else {
-        input.used_symbol_refs_builder.contains(imported_as_ref)
-          || consumed_facades.contains(imported_as_ref)
-          || input.linking[root.0]
-            .referenced_symbols_by_entry_point_chunk
-            .iter()
-            .any(|(symbol_ref, _)| symbol_ref == imported_as_ref)
-      };
-      if consumer_is_used {
-        root_paths.entry(root).or_default().extend(path.iter().copied());
-        // An ancestor's excluded-hop traversal stops at the first init-owning barrel it meets and
-        // delegates the rest of the chain to that barrel's own `init_*`
-        // (`collect_order_wrap_esm_init_targets` pushes the owning wrapper without descending).
-        // That delegation is only sound if the owning barrel itself carries the remainder as
-        // retained evidence, so record each such suffix as that barrel's own root — otherwise its
-        // interior hop forwards nothing and the chain's pure leaf is never initialized.
-        for (position, record) in path.iter().copied().enumerate().skip(1) {
-          if module_owns_reexport_init(input, state, record.0) {
-            root_paths.entry(record).or_default().extend(path[position..].iter().copied());
-          }
-        }
+      if symbol_is_consumed(*imported_as_ref, root) {
+        retain_path(path, root);
       }
+    }
+  }
+  // A member-read path is consumed only while the statement that reads through the namespace is
+  // included: the resolved leaf being used elsewhere (a direct import in another module) is no
+  // evidence that this reader's forwarding hops execute.
+  for member_read in input.member_read_star_reexport_paths {
+    let Some(root) = member_read.path.first().copied() else {
+      continue;
+    };
+    let (reader_module, reader_stmt) = member_read.reader;
+    if input.linking[reader_module].stmt_info_included.has_bit(reader_stmt)
+      && symbol_is_consumed(member_read.resolved, root)
+    {
+      retain_path(&member_read.path, root);
     }
   }
 

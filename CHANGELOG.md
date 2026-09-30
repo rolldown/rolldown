@@ -1,4 +1,68 @@
 
+## [1.2.12] - 2026-09-30
+
+### 🚀 Features
+
+- inline common chunks containing import() and deduplicate shared code in lazy chunks (#11034) by @hyfdev
+- experimental `inlineCommonChunks` support (#10899) by @hyfdev
+- dev: ship imported bindings for HMR partial accept (#10856) by @h-a-n-a
+
+### 🐛 Bug Fixes
+
+- chunking: re-derive chunk exec orders after the runtime leaves its host chunk (#11005) by @hyfdev
+- code-splitting: gate member-read init paths on the reading statement (#11039) by @hyfdev
+- code-splitting: retain initialization paths through re-exported namespaces (#11037) by @hyfdev
+- dev: reject non-ESM output formats in dev mode (#11038) by @h-a-n-a
+- dev: align `import.meta.hot.accept` deps with Vite (#10997) by @h-a-n-a
+- dev: clear the resolver cache when a file is created or deleted (#10986) by @waltuov
+- error: name the resolved specifier in unresolved import diagnostics (#11014) by @linyiru
+- make entries-aware chunk merging deterministic (#11002) by @hyfdev
+- watch: avoid restarting macOS watcher for unchanged paths (#10992) by @sep2
+
+### 🚜 Refactor
+
+- dev: ship the dev runtime entry as one file (#10998) by @h-a-n-a
+- binding: remove `__internalForcePanic` (#10989) by @IWANABETHATGUY
+
+### 📚 Documentation
+
+- fix cloudflare preview builds (#10996) by @sapphi-red
+- fix build config loader warning (#10994) by @sapphi-red
+- deps: use Vite 8 (#10993) by @sapphi-red
+
+### ⚡ Performance
+
+- dev: only ship rows with dynamic edges in registerGraph (#11019) by @h-a-n-a
+
+### 🧪 Testing
+
+- code-splitting: cover more re-exported namespace shapes (#11042) by @hyfdev
+- webcontainer: cover the WebContainer download fallback in plain Node (#10966) by @shulaoda
+- dev: pin the runtime entry file layout that Vite serves (#10983) by @h-a-n-a
+
+### ⚙️ Miscellaneous Tasks
+
+- pin VOID_API_URL for the docs deploy (#11041) by @shulaoda
+- opt into the WebContainer smoke test for napi bumps and loader changes (#10967) by @shulaoda
+- deps: upgrade oxc to 0.152.0 (#11018) by @camc314
+- deps: update rust crates (#11012) by @renovate[bot]
+- deps: update npm packages (#11011) by @renovate[bot]
+- deps: update crate-ci/typos action to v1.50.3 (#11023) by @renovate[bot]
+- deps: update test262 submodule for tests (#11022) by @rolldown-guard[bot]
+- deps: update rollup submodule for tests to v4.63.5 (#11021) by @rolldown-guard[bot]
+- deps: update dependency vite-plus to v1 (#11017) by @renovate[bot]
+- deps: update github actions (#11010) by @renovate[bot]
+- remove `CLAUDE.md` (#10925) by @iiio2
+- verify release debug info by matching file IDs (#10988) by @IWANABETHATGUY
+- deps: update rollup submodule for tests to v4.63.4 (#10940) by @rolldown-guard[bot]
+
+### ❤️ New Contributors
+
+* @waltuov made their first contribution in [#10986](https://github.com/rolldown/rolldown/pull/10986)
+* @linyiru made their first contribution in [#11014](https://github.com/rolldown/rolldown/pull/11014)
+* @sep2 made their first contribution in [#10992](https://github.com/rolldown/rolldown/pull/10992)
+
+
 ## [1.2.11] - 2026-09-24
 
 ### 🚀 Features

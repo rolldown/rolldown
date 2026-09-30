@@ -6,8 +6,8 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## dynamic.js
 
 ```js
-import { n as init_read, r as read } from "./main2.js";
 import { t as __esmMin } from "./rolldown-runtime.js";
+import { n as init_read, r as read } from "./main2.js";
 //#region dynamic.js
 function init_dynamic() {
 	return (init_dynamic = __esmMin((() => {
@@ -86,8 +86,8 @@ export { __esmMin as t };
 ### dynamic.js
 
 ```js
-import { n as init_read, r as read } from "./main2.js";
 import { t as __esmMin } from "./rolldown-runtime.js";
+import { n as init_read, r as read } from "./main2.js";
 //#region dynamic.js
 function init_dynamic() {
 	return (init_dynamic = __esmMin((() => {

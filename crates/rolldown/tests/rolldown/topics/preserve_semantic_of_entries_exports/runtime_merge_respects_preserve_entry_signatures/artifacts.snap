@@ -144,8 +144,8 @@ Object.defineProperty(exports, "init_lib", {
 
 ```js
 Object.defineProperty(exports, Symbol.toStringTag, { value: "Module" });
-const require_lib = require("./lib2.js");
 const require_rolldown_runtime = require("./rolldown-runtime.js");
+const require_lib = require("./lib2.js");
 let node_assert = require("node:assert");
 node_assert = require_rolldown_runtime.__toESM(node_assert);
 //#region main.js

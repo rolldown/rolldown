@@ -92,11 +92,12 @@ IMPORTANT: The project uses `just` as a task runner. Always prefer `just` comman
 # Browser CI
 
 - The default CI's `Browser` job loads the packed `@rolldown/browser` in a real Chrome page: Vite serves an app that imports it through the `browser` export condition, and the test bundles with it. No label — it runs on every PR that touches node code, and it is what catches node builtins leaking into the browser build. Locally: `just test-browser`.
+- The same job also runs `just test-webcontainer-fallback` on every PR that touches node code: plain Node, no WebContainer. It installs the packed `rolldown` with no binding and checks that `webcontainer-fallback.cjs` loads the packed WASI binding, the path vite.new takes. The `ci: webcontainer` suite below deliberately skips that path (#10938).
 
 # WebContainer CI
 
 - The `ci: webcontainer` label adds a second suite to that same `Browser` job: it installs and builds the packed `rolldown` / `@rolldown/browser` artifacts inside a WebContainer. Activation works exactly like `ci: windows` above. Locally: `just test-webcontainer` (needs network — WebContainer boots from StackBlitz's CDN).
-- **ALWAYS add this label when a PR touches anything napi-rs related** (napi / emnapi / wasm-runtime versions, the binding loader and glue, the `napi` config, `webcontainer-fallback.cjs`, binding packaging or publish steps). Pure wasm behavior changes don't need it — the default CI's `wasi` job already runs the test suite against the wasm binding; this label checks that the packed packages install and work inside WebContainer.
+- Renovate adds the label to napi / emnapi / wasm-runtime bumps, and CI opts in by itself when a PR touches the loader glue or the suite (the `webcontainer-changes` filter in `ci.yml`). **Still add it by hand for anything else napi-rs related** that those two paths cannot see, such as a manual version bump or a change to the binding publish steps. Pure wasm behavior changes don't need it: the default CI's `wasi` job already runs the test suite against the wasm binding, while this label checks that the packed packages install and work inside WebContainer.
 
 # Common Pitfalls & Best Practices
 

@@ -1,0 +1,98 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## imported-barrel.js
+
+```js
+Object.defineProperty(exports, Symbol.toStringTag, { value: "Module" });
+require("./imported.js");
+let node_https = require("node:https");
+Object.defineProperty(exports, "foo", {
+	enumerable: true,
+	get: function() {
+		return node_https.request;
+	}
+});
+
+```
+
+## imported.js
+
+```js
+Object.defineProperty(exports, Symbol.toStringTag, { value: "Module" });
+let node_https = require("node:https");
+Object.defineProperty(exports, "foo", {
+	enumerable: true,
+	get: function() {
+		return node_https.request;
+	}
+});
+
+```
+
+## reexported-barrel.js
+
+```js
+Object.defineProperty(exports, Symbol.toStringTag, { value: "Module" });
+require("./reexported.js");
+let node_https = require("node:https");
+Object.defineProperty(exports, "foo", {
+	enumerable: true,
+	get: function() {
+		return node_https.request;
+	}
+});
+
+```
+
+## reexported.js
+
+```js
+Object.defineProperty(exports, Symbol.toStringTag, { value: "Module" });
+let node_https = require("node:https");
+Object.defineProperty(exports, "foo", {
+	enumerable: true,
+	get: function() {
+		return node_https.request;
+	}
+});
+
+```
+
+# Variant: esm: [format: Esm]
+
+## Assets
+
+### imported-barrel.js
+
+```js
+import { foo } from "./imported.js";
+export { foo };
+
+```
+
+### imported.js
+
+```js
+import { request as foo } from "node:https";
+export { foo };
+
+```
+
+### reexported-barrel.js
+
+```js
+import { foo } from "./reexported.js";
+export { foo };
+
+```
+
+### reexported.js
+
+```js
+import { request as foo } from "node:https";
+export { foo };
+
+```

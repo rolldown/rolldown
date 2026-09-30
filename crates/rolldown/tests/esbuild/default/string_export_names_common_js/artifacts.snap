@@ -16,6 +16,11 @@ Object.defineProperty(exports, "all the stuff", {
 		return foo;
 	}
 });
-exports["some export"] = foo["some import"];
+Object.defineProperty(exports, "some export", {
+	enumerable: true,
+	get: function() {
+		return foo["some import"];
+	}
+});
 
 ```

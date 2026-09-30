@@ -77,6 +77,21 @@ const handler = new MessageHandler({
   },
 })
 
+// Tell the loader thread synchronously that this wasm thread died, so its 'exit'
+// teardown does not re-enter wasm and wait on this thread forever. emnapi calls
+// beforeReportError (which runs emnapi_thread_crashed, so the main thread may
+// throw 'unwind' and start exiting) before the 'error' event is even posted.
+// A loader that predates the flag passes none.
+if (workerData && workerData.crashFlag instanceof Int32Array) {
+  const __beforeReportError = handler.beforeReportError
+  handler.beforeReportError = function (...args) {
+    try {
+      Atomics.store(workerData.crashFlag, 0, 1)
+    } catch {}
+    return __beforeReportError.apply(this, args)
+  }
+}
+
 globalThis.onmessage = function (e) {
   handler.handle(e)
 }

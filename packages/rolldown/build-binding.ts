@@ -12,6 +12,7 @@ import {
 import {
   assertAsyncRuntimeHostExports,
   assertWasiBindingContextLifecycle,
+  assertWasiThreadCrashLatch,
 } from './binding-loader-codegen';
 import {
   assertThreadlessMemoryConfig,
@@ -153,4 +154,8 @@ function validateWasiBindingContextLifecycles(): void {
   ]) {
     assertWasiBindingContextLifecycle(readFileSync(bindingPath, 'utf8'));
   }
+  assertWasiThreadCrashLatch(
+    readFileSync(join(sourceDir, 'rolldown-binding.wasi.cjs'), 'utf8'),
+    readFileSync(join(sourceDir, 'wasi-worker.mjs'), 'utf8'),
+  );
 }

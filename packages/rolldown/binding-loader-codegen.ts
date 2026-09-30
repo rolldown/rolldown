@@ -76,6 +76,28 @@ const WASI_ASYNC_TEARDOWN_WAITS = [
   },
 ] as const;
 const WASI_EXIT_LISTENER_HELPER = 'function __registerWasiExitListener() {';
+// Worker-crash latch, threaded Node flavor only (`rolldown-binding.wasi.cjs` +
+// `wasi-worker.mjs`; vendored `@napi-rs/cli`, napi-rs 9fb826ab, until a cli
+// release carries it). After a pool worker's wasm thread dies, the exit
+// teardown must not re-enter wasm: the env cleanup waits for the dead thread's
+// work to go idle in a raw `memory.atomic.wait32`, which blocks the main thread
+// forever and keeps a JS SIGTERM listener from ever running. The worker sets a
+// shared flag before emnapi reports the crash; the exit listener checks it
+// before any other teardown step and then only terminates the workers.
+// See internal-docs/async-runtime/implementation.md (section 7, Loaders).
+const WASI_THREAD_CRASH_LATCH_LOADER_SIGNATURES = [
+  'const __wasiThreadCrashFlag = new Int32Array(new SharedArrayBuffer(4))',
+  'function __hasWasiThreadCrashed() {',
+  'crashFlag: __wasiThreadCrashFlag,',
+  `function __disposeWasiBindingAtExit() {
+  __wasiExitListenerRegistered = false
+  if (__hasWasiThreadCrashed()) {
+`,
+] as const;
+const WASI_THREAD_CRASH_LATCH_WORKER_SIGNATURES = [
+  'if (workerData && workerData.crashFlag instanceof Int32Array) {',
+  'Atomics.store(workerData.crashFlag, 0, 1)',
+] as const;
 
 /**
  * Assert the upstream (`@napi-rs/cli` >= 3.10.0) context lifecycle seams and
@@ -128,6 +150,20 @@ export function assertWasiBindingContextLifecycle(source: string): void {
     throw new Error(
       `Unexpected NAPI-RS WASI loader template for exit-time teardown: expected one exit listener helper, found ${exitListenerCount}`,
     );
+  }
+}
+
+/**
+ * Assert the worker-crash latch in the threaded Node loader and its pool
+ * worker. The threadless and browser loaders have no latch (no pool workers
+ * or no exit teardown), so only these two files are checked.
+ */
+export function assertWasiThreadCrashLatch(loaderSource: string, workerSource: string): void {
+  for (const signature of WASI_THREAD_CRASH_LATCH_LOADER_SIGNATURES) {
+    assertExactlyOne(loaderSource, signature, 'WASI thread crash latch (loader)');
+  }
+  for (const signature of WASI_THREAD_CRASH_LATCH_WORKER_SIGNATURES) {
+    assertExactlyOne(workerSource, signature, 'WASI thread crash latch (worker)');
   }
 }
 

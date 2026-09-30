@@ -322,9 +322,15 @@ missing host-contract export fails with `ERR_NAPI_ASYNC_RUNTIME_BINDING_MISMATCH
   loader rewriting of its own. What is left in
   `packages/rolldown/binding-loader-codegen.ts` is assertion-only:
   `assertWasiBindingContextLifecycle` pins the teardown seams (disposal chain,
-  settlement barrier, raw-destroy wrapper) and `assertAsyncRuntimeHostExports`
+  settlement barrier, raw-destroy wrapper), `assertWasiThreadCrashLatch` pins
+  the worker-crash latch in the threaded Node loader and `wasi-worker.mjs`
+  (after a pool worker's wasm thread dies, the exit listener only terminates
+  the workers: re-entering wasm would wait forever on the dead thread's work in
+  a raw atomic wait, SIGTERM included), and `assertAsyncRuntimeHostExports`
   pins the host exports on the native loader, so a cli bump that reshapes
-  either fails the build instead of regressing silently.
+  any of them fails the build instead of regressing silently. The latch comes
+  from a vendored `@napi-rs/cli` tarball (`.napi-validation/`, pnpm
+  `overrides`) until a cli release carries it.
 
 ---
 

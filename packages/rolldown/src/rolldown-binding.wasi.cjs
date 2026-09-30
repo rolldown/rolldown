@@ -142,7 +142,11 @@ function __createWasiWorker(filename) {
       return new Worker(filename, {
         env: process.env,
         execArgv: __workerExecArgv,
-        workerData: { hostRoot: __hostRoot, rootDir: __rootDir },
+        workerData: {
+          hostRoot: __hostRoot,
+          rootDir: __rootDir,
+          crashFlag: __wasiThreadCrashFlag,
+        },
       })
     } catch (error) {
       if (!error || error.code !== 'ERR_WORKER_INVALID_EXEC_ARGV') {
@@ -156,6 +160,32 @@ function __createWasiWorker(filename) {
       __workerExecArgv = __nextWorkerExecArgv
     }
   }
+}
+
+// Set to 1 by a pool worker (see wasi-worker.mjs) right before it reports that
+// its wasm thread died. Shared memory, so this thread reads it synchronously even
+// while the worker's 'error' event is still queued behind the code that is
+// exiting right now.
+const __wasiThreadCrashFlag = new Int32Array(new SharedArrayBuffer(4))
+let __wasiThreadCrashed = false
+
+/**
+ * Whether any wasm thread of this binding has died: a trap or an uncaught error
+ * in a pool worker, including one that failed to load after its thread spawn
+ * had already been reported as started.
+ *
+ * After that the shared wasm state cannot be trusted: a lock the dead thread
+ * held stays held, and a join or park that waits on it — the async runtime's
+ * `finish_shutdown` waiting for the dead thread's work to go idle — blocks
+ * this thread forever in a raw `memory.atomic.wait32`, which neither
+ * emnapi's crash check nor a signal can interrupt.
+ */
+function __hasWasiThreadCrashed() {
+  if (__wasiThreadCrashed || Atomics.load(__wasiThreadCrashFlag, 0) !== 0) {
+    return true
+  }
+  const manager = __getWasiThreadManager()
+  return Boolean(manager && manager._fatalError)
 }
 
 const __cwd = process.cwd()
@@ -1586,6 +1616,16 @@ function __removeWasiExitListener() {
 
 function __disposeWasiBindingAtExit() {
   __wasiExitListenerRegistered = false
+  if (__hasWasiThreadCrashed()) {
+    // Never re-enter wasm after a thread died: the environment cleanup joins
+    // the dead thread's work and would hang the exit forever — SIGTERM
+    // included, since its JavaScript listener never gets a turn. Stop the
+    // workers and leave.
+    try {
+      void Promise.resolve(__terminateWasiWorkers()).catch(() => {})
+    } catch {}
+    return
+  }
   // An 'exit' handler cannot yield, so it cannot wait for queued promise
   // settlements the way __startWasiDisposal does — the process is leaving and
   // those promises have no observer left anyway. Run the synchronous teardown
@@ -1700,6 +1740,10 @@ try {
     onCreateWorker() {
       const worker = __createWasiWorker(__nodePath.join(__dirname, 'wasi-worker.mjs'))
       __wasiWorkers.add(worker)
+      // Registered before emnapi's own listeners, which rethrow the error.
+      worker.on('error', () => {
+        __wasiThreadCrashed = true
+      })
       worker.onmessage = ({ data }) => {
         __wasmCreateOnMessageForFsProxy(__nodeFs)(data)
       }

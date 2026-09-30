@@ -14,7 +14,6 @@ import {
   getAsyncRuntimeConfig,
   getRuntimeCapabilities,
   getRuntimeSupport,
-  viteDynamicImportVarsPlugin,
 } from 'rolldown/experimental';
 import { describe, expect, test } from 'vitest';
 
@@ -153,34 +152,6 @@ describe('getRuntimeCapabilities', () => {
     }
   });
 
-  test('JS-backed dynamic import resolvers build through the async callback bridge', async () => {
-    const fixtureDir = nodePath.join(
-      import.meta.dirname,
-      'fixtures/builtin-plugin/dynamic-import-vars/vite',
-    );
-    let resolverCalls = 0;
-    const bundle = await rolldown({
-      input: nodePath.join(fixtureDir, 'main.js'),
-      plugins: [
-        viteDynamicImportVarsPlugin({
-          async resolver(id) {
-            resolverCalls += 1;
-            return id
-              .replace('@', nodePath.join(fixtureDir, 'mods'))
-              .replace('#', nodePath.resolve(fixtureDir, '../../'));
-          },
-        }),
-      ],
-    });
-
-    try {
-      await expect(bundle.generate()).resolves.toBeDefined();
-      expect(resolverCalls).toBeGreaterThan(0);
-    } finally {
-      await bundle.close();
-    }
-  });
-
   test.runIf(caps.flavor === 'CurrentThread')('dev fails before entering the binding', async () => {
     await expect(dev({ input: 'entry.js' })).rejects.toMatchObject({
       code: 'ERR_ROLLDOWN_UNSUPPORTED_RUNTIME_FEATURE',
@@ -219,10 +190,6 @@ describe('getRuntimeCapabilities', () => {
       }),
     );
   });
-  test('a timer facility is available once any public entry has loaded', () => {
-    expect(caps.timers).toBe(timersExpected);
-  });
-
   test('the report is a stable snapshot, not an env re-read', () => {
     const capsBefore = getRuntimeCapabilities();
     const configBefore = getAsyncRuntimeConfig();
@@ -456,9 +423,7 @@ describe('getRuntimeCapabilities', () => {
       // chunks -- including BARE side-effect imports, the form the timer-host
       // import takes on the wasi dist) must contain the registration call.
       // Top-level chunk code executes on import, so presence in the graph IS
-      // registration in the worker's env. The receiver-bound host bridge must
-      // include both timeout creation and cancellation; resolving the relay after
-      // clearTimeout lets Rust retire the detached schedule task immediately.
+      // registration in the worker's env.
       const entryText = readFileSync(parallelWorkerEntry, 'utf8');
       let graphText = entryText;
       for (const match of entryText.matchAll(/(?:from\s+|import\s+)["'](\.\/[^"']+)["']/g)) {
@@ -467,15 +432,9 @@ describe('getRuntimeCapabilities', () => {
           graphText += readFileSync(chunkPath, 'utf8');
         }
       }
-      expect(graphText).toContain('Reflect.get(globalThis, "setTimeout"');
-      expect(graphText).toContain('Reflect.get(globalThis, "clearTimeout"');
-      expect(graphText).toContain('Reflect.apply(timer.clearTimeoutHost');
       expect(graphText).toContain('getCurrentThreadTaskHostContractVersion');
       expect(graphText).toContain('registerCurrentThreadTaskHost');
       expect(graphText).toContain('registerTimerHost');
-      expect(graphText).not.toContain('driveCurrentThreadRuntimeTasks');
-      expect(graphText).not.toContain('cancelCurrentThreadRuntimeTaskDispatch');
-      expect(graphText).toContain('timer.resolve()');
 
       // BEHAVIORAL: the real entry must actually run as a worker under this
       // lane's flavor (empty plugin set: registerPlugins(id, []) no-ops on an

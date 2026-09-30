@@ -84,8 +84,8 @@ export { load, loadOther };
 ### other.js
 
 ```js
-import { i as init_group, r as init_item } from "./story.js";
 import { n as __exportAll, t as __esmMin } from "./rolldown-runtime.js";
+import { i as init_group, r as init_item } from "./story.js";
 //#region motion.js
 var motion$1;
 function init_motion() {
@@ -130,8 +130,8 @@ export { __exportAll as n, __esmMin as t };
 ### story.js
 
 ```js
-import { r as init_react } from "./other.js";
 import { n as __exportAll, t as __esmMin } from "./rolldown-runtime.js";
+import { r as init_react } from "./other.js";
 //#region group.js
 var Group;
 function init_group() {

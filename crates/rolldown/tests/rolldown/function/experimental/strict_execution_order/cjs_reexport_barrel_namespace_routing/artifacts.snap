@@ -23,8 +23,8 @@ export { init_cn as n, cn as t };
 ## main.js
 
 ```js
-import { n as init_cn, t as cn } from "./cn.js";
 import { n as __esmMin } from "./rolldown-runtime.js";
+import { n as init_cn, t as cn } from "./cn.js";
 //#region main.js
 var loadStatic, loadOpaque;
 function init_main() {
@@ -52,9 +52,9 @@ export { __toESM as i, __esmMin as n, __exportAll as r, __commonJSMin as t };
 ## route-opaque.js
 
 ```js
+import { i as __toESM, n as __esmMin, r as __exportAll, t as __commonJSMin } from "./rolldown-runtime.js";
 import { n as init_cn, t as cn } from "./cn.js";
 import { n as init_stack, t as Stack } from "./stack.js";
-import { i as __toESM, n as __esmMin, r as __exportAll, t as __commonJSMin } from "./rolldown-runtime.js";
 //#region node_modules/namespace-barrel/a.cjs
 var require_a = /* @__PURE__ */ __commonJSMin(((exports, module) => {
 	globalThis.__events.push("cjs-a");
@@ -105,8 +105,8 @@ export { value };
 ## route-static.js
 
 ```js
-import { n as init_stack, t as Stack } from "./stack.js";
 import { n as __esmMin } from "./rolldown-runtime.js";
+import { n as init_stack, t as Stack } from "./stack.js";
 //#region route-static.js
 var value;
 function init_route_static() {
@@ -165,8 +165,8 @@ export { init_cn as n, cn as t };
 ### main.js
 
 ```js
-import { n as init_cn, t as cn } from "./cn.js";
 import { n as __esmMin } from "./rolldown-runtime.js";
+import { n as init_cn, t as cn } from "./cn.js";
 //#region main.js
 var loadStatic, loadOpaque;
 function init_main() {
@@ -194,9 +194,9 @@ export { __toESM as i, __esmMin as n, __exportAll as r, __commonJSMin as t };
 ### route-opaque.js
 
 ```js
+import { i as __toESM, n as __esmMin, r as __exportAll, t as __commonJSMin } from "./rolldown-runtime.js";
 import { n as init_cn, t as cn } from "./cn.js";
 import { n as init_stack, t as Stack } from "./stack.js";
-import { i as __toESM, n as __esmMin, r as __exportAll, t as __commonJSMin } from "./rolldown-runtime.js";
 //#region node_modules/namespace-barrel/a.cjs
 var require_a = /* @__PURE__ */ __commonJSMin(((exports, module) => {
 	globalThis.__events.push("cjs-a");
@@ -247,8 +247,8 @@ export { value };
 ### route-static.js
 
 ```js
-import { n as init_stack, t as Stack } from "./stack.js";
 import { n as __esmMin } from "./rolldown-runtime.js";
+import { n as init_stack, t as Stack } from "./stack.js";
 //#region route-static.js
 var value;
 function init_route_static() {

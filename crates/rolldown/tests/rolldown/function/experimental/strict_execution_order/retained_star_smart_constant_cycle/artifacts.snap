@@ -27,9 +27,9 @@ if (pageA.y !== 1e3 || pageA.common !== "common" || pageA._ !== void 0) throw ne
 ## page-a.js
 
 ```js
+import { t as __esmMin } from "./rolldown-runtime.js";
 import { t as y } from "./const.js";
 import "./page-b.js";
-import { t as __esmMin } from "./rolldown-runtime.js";
 //#region common.js
 function init() {
 	globalThis.value = typeof globalThis.value === "number" ? globalThis.value + 1 : 0;
@@ -58,8 +58,8 @@ export { _, common, y };
 ## page-b.js
 
 ```js
-import { t as y } from "./const.js";
 import { n as __exportAll, t as __esmMin } from "./rolldown-runtime.js";
+import { t as y } from "./const.js";
 //#region bridge.js
 function x() {
 	return 1;
@@ -127,9 +127,9 @@ await init_main();
 ### page-a.js
 
 ```js
+import { t as __esmMin } from "./rolldown-runtime.js";
 import { n as y, t as init_const } from "./const.js";
 import "./page-b.js";
-import { t as __esmMin } from "./rolldown-runtime.js";
 //#region common.js
 function init() {
 	globalThis.value = typeof globalThis.value === "number" ? globalThis.value + 1 : 0;
@@ -159,8 +159,8 @@ export { _, common, y };
 ### page-b.js
 
 ```js
-import { n as y, t as init_const } from "./const.js";
 import { n as __exportAll, t as __esmMin } from "./rolldown-runtime.js";
+import { n as y, t as init_const } from "./const.js";
 //#region bridge.js
 function x() {
 	return 1;

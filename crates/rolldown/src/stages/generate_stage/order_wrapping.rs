@@ -1229,18 +1229,16 @@ impl GenerateStage<'_> {
   /// Normalize the runtime module onto a standalone chunk. Returns whether the caller still owes
   /// the runtime-chunk merge re-proof (`fold_runtime_chunk_after_order_lowering`).
   ///
-  /// The baseline `try_merge_runtime_chunk` calls run before order analysis, so a pre-lowering
-  /// merge never proved anything about the helper demand the wrappers and overlays above added.
-  /// Evicting a co-hosted runtime first restores the standalone shape that proof requires; by this
-  /// point lowering has materialized every order-introduced demand in [`OrderWrapState`], so the
-  /// re-proof sees the complete consumer set.
+  /// Eviction changes chunk order and helper-import edges, so on-demand analysis must observe
+  /// the standalone runtime before selecting wrappers. The entry-facade edge query also needs
+  /// the runtime placed so it can resolve helper symbols to their chunk.
   ///
-  /// Normalizing has to happen before the entry-facade edge query — resolving a depended symbol to
-  /// its chunk needs the runtime module to sit in one — while the re-proof has to happen after it,
-  /// because it counts the runtime chunk's consumers and facade creation is what settles them. So
-  /// the two are split: this returns the obligation and `apply_order_wraps` discharges it once the
-  /// facade topology is final.
-  fn ensure_runtime_module_for_order_wraps(&mut self, chunk_graph: &mut ChunkGraph) -> bool {
+  /// The caller folds the runtime after lowering and facade creation, when [`OrderWrapState`]
+  /// contains the complete helper demand and the runtime's consumer set is final.
+  pub(super) fn ensure_runtime_module_for_order_wraps(
+    &mut self,
+    chunk_graph: &mut ChunkGraph,
+  ) -> bool {
     let runtime_idx = self.link_output.runtime.id();
     if let Some(runtime_chunk_idx) = chunk_graph.module_to_chunk[runtime_idx] {
       if self.options.code_splitting.is_disabled() {
@@ -1289,6 +1287,13 @@ impl GenerateStage<'_> {
         new_runtime_chunk_idx,
         self.link_output.metas[runtime_idx].depended_runtime_helper,
       );
+      // The former host derived its `exec_order` from the runtime module (`exec_order` 0) that
+      // the move above took out of it, so it would sort ahead of chunks it follows and its
+      // importers would evaluate it, and the externals it imports, too early. Re-derive every
+      // live chunk's order from its current lead module, as `finalize_chunk_plan` does after the
+      // runtime sweep.
+      chunk_graph.sort_chunk_modules(self.link_output, self.options);
+      self.assign_chunk_exec_orders(chunk_graph);
       self.clear_module_symbol_chunk_indices(runtime_idx);
       return true;
     }
@@ -1332,6 +1337,7 @@ impl GenerateStage<'_> {
       runtime_chunk_idx,
       self.link_output.metas[runtime_idx].depended_runtime_helper,
     );
+    self.assign_chunk_exec_orders(chunk_graph);
     self.clear_module_symbol_chunk_indices(runtime_idx);
     true
   }
@@ -1345,7 +1351,7 @@ impl GenerateStage<'_> {
   /// entry chunk — including the zero-module facades minted above — a `__toCommonJS` demand that
   /// is invisible here, so a fold could hand an entry chunk with no demand at all a brand-new
   /// require edge into a user chunk. Other formats keep the standalone/evicted layout.
-  fn fold_runtime_chunk_after_order_lowering(
+  pub(super) fn fold_runtime_chunk_after_order_lowering(
     &self,
     chunk_graph: &mut ChunkGraph,
     order_state: &OrderWrapState,
@@ -1397,7 +1403,7 @@ impl GenerateStage<'_> {
       .collect_vec()
   }
 
-  fn renumber_live_chunks(&self, chunk_graph: &mut ChunkGraph) {
+  pub(super) fn renumber_live_chunks(&self, chunk_graph: &mut ChunkGraph) {
     let live_chunks = chunk_graph
       .chunk_table
       .iter_enumerated()

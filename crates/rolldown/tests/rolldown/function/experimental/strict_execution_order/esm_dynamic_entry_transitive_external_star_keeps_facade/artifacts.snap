@@ -25,8 +25,8 @@ export { loaded };
 
 ```js
 //! ManualCodeSplitting: [Group-Name: reader]
-import { t as init_target } from "./target.js";
 import { t as __esmMin } from "./rolldown-runtime.js";
+import { t as init_target } from "./target.js";
 //#region reader.js
 function read() {
 	globalThis.__externalStarLog.push(`reader:1`);
@@ -88,8 +88,8 @@ export { __exportAll as n, __reExport as r, __esmMin as t };
 ```js
 //! Dynamic Entry: [Entry-Module-Id: target.js] [Name: <none>]
 //! Common Chunk: [Shared-By: target.js]
-import { n as read, t as init_reader } from "./reader.js";
 import { t as __esmMin } from "./rolldown-runtime.js";
+import { n as read, t as init_reader } from "./reader.js";
 //#region barrel.js
 function init_barrel() {
 	return (init_barrel = __esmMin((() => {})))();

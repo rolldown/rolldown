@@ -65,8 +65,8 @@ export { __toESM as a, __toCommonJS as i, __esmMin as n, __exportAll as r, __com
 ## route.js
 
 ```js
-import { i as required_barrel_exports, r as init_required_barrel } from "./main2.js";
 import { i as __toCommonJS, t as __commonJSMin } from "./rolldown-runtime.js";
+import { i as required_barrel_exports, r as init_required_barrel } from "./main2.js";
 //#region route.cjs
 var require_route = /* @__PURE__ */ __commonJSMin(((exports, module) => {
 	const ns = (init_required_barrel(), __toCommonJS(required_barrel_exports));
@@ -144,8 +144,8 @@ export { __toESM as a, __toCommonJS as i, __esmMin as n, __exportAll as r, __com
 ### route.js
 
 ```js
-import { i as required_barrel_exports, r as init_required_barrel } from "./main2.js";
 import { i as __toCommonJS, t as __commonJSMin } from "./rolldown-runtime.js";
+import { i as required_barrel_exports, r as init_required_barrel } from "./main2.js";
 //#region route.cjs
 var require_route = /* @__PURE__ */ __commonJSMin(((exports, module) => {
 	const ns = (init_required_barrel(), __toCommonJS(required_barrel_exports));

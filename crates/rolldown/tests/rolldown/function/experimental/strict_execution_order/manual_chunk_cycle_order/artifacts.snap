@@ -23,9 +23,9 @@ init_m1();
 ## g.js
 
 ```js
+import { t as __esmMin } from "./rolldown-runtime.js";
 import { t as init_m0 } from "./m0.js";
 import { t as init_m3 } from "./m3.js";
-import { t as __esmMin } from "./rolldown-runtime.js";
 //#region m2.js
 function init_m2() {
 	return (init_m2 = __esmMin((() => {
@@ -65,8 +65,8 @@ export { init_m0 as t };
 ## m3.js
 
 ```js
-import { n as init_m2 } from "./g.js";
 import { t as __esmMin } from "./rolldown-runtime.js";
+import { n as init_m2 } from "./g.js";
 //#region m3.js
 function init_m3() {
 	return (init_m3 = __esmMin((() => {
@@ -120,9 +120,9 @@ init_m1();
 ### g.js
 
 ```js
+import { t as __esmMin } from "./rolldown-runtime.js";
 import { t as init_m0 } from "./m0.js";
 import { t as init_m3 } from "./m3.js";
-import { t as __esmMin } from "./rolldown-runtime.js";
 //#region m2.js
 function init_m2() {
 	return (init_m2 = __esmMin((() => {
@@ -162,8 +162,8 @@ export { init_m0 as t };
 ### m3.js
 
 ```js
-import { n as init_m2 } from "./g.js";
 import { t as __esmMin } from "./rolldown-runtime.js";
+import { n as init_m2 } from "./g.js";
 //#region m3.js
 function init_m3() {
 	return (init_m3 = __esmMin((() => {

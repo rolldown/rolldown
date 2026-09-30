@@ -54,8 +54,8 @@ export { setup as n, init_main as t };
 ### dyn.js
 
 ```js
-import { i as setup, n as init_intermediate, r as init_setup } from "./main2.js";
 import { t as __esmMin } from "./rolldown-runtime.js";
+import { i as setup, n as init_intermediate, r as init_setup } from "./main2.js";
 //#region dyn.js
 function init_dyn() {
 	return (init_dyn = __esmMin((() => {

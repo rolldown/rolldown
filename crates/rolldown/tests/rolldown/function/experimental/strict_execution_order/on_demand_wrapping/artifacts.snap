@@ -28,8 +28,8 @@ export { require_dynamic as t };
 ## main.js
 
 ```js
-import { t as require_dynamic } from "./dynamic2.js";
 import { n as __esmMin } from "./rolldown-runtime.js";
+import { t as require_dynamic } from "./dynamic2.js";
 import { strictEqual } from "node:assert";
 //#region sideeffects.js
 function init_sideeffects() {
@@ -108,8 +108,8 @@ export { require_dynamic as t };
 ### main.js
 
 ```js
-import { t as require_dynamic } from "./dynamic2.js";
 import { n as __esmMin } from "./rolldown-runtime.js";
+import { t as require_dynamic } from "./dynamic2.js";
 import { strictEqual } from "node:assert";
 //#region sideeffects.js
 function init_sideeffects() {

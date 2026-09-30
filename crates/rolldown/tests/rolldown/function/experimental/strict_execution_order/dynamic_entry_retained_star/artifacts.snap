@@ -17,8 +17,8 @@ console.log(pageA.common, pageA._);
 ## page-a.js
 
 ```js
-import "./page-b.js";
 import { t as __esmMin } from "./rolldown-runtime.js";
+import "./page-b.js";
 import assert from "node:assert";
 //#region common.js
 function foo() {
@@ -100,8 +100,8 @@ await init_main();
 ### page-a.js
 
 ```js
-import "./page-b.js";
 import { t as __esmMin } from "./rolldown-runtime.js";
+import "./page-b.js";
 import assert from "node:assert";
 //#region common.js
 function foo() {

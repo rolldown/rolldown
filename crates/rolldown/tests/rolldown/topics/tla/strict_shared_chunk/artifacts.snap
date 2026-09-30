@@ -42,8 +42,8 @@ export { shared as t };
 ### a.js
 
 ```js
-import { n as shared, t as init_shared } from "./shared.js";
 import { t as __esmMin } from "./rolldown-runtime.js";
+import { n as shared, t as init_shared } from "./shared.js";
 //#region a.js
 var a;
 function init_a() {
@@ -61,8 +61,8 @@ export { a };
 ### b.js
 
 ```js
-import { n as shared, t as init_shared } from "./shared.js";
 import { t as __esmMin } from "./rolldown-runtime.js";
+import { n as shared, t as init_shared } from "./shared.js";
 //#region b.js
 var b;
 function init_b() {

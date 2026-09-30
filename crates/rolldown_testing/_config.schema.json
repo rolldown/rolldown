@@ -1284,6 +1284,17 @@
           "items": {
             "$ref": "#/$defs/MatchGroup"
           }
+        },
+        "experimentalInlineCommonChunks": {
+          "description": "See internal-docs/inline-common-chunks/design.md. Experimental.",
+          "anyOf": [
+            {
+              "$ref": "#/$defs/InlineCommonChunksOptions"
+            },
+            {
+              "type": "null"
+            }
+          ]
         }
       },
       "additionalProperties": false
@@ -1386,6 +1397,21 @@
       "enum": [
         "$initial"
       ]
+    },
+    "InlineCommonChunksOptions": {
+      "description": "`output.codeSplitting.experimentalInlineCommonChunks`, as the user wrote it.\n\nSee internal-docs/inline-common-chunks/design.md.",
+      "type": "object",
+      "properties": {
+        "maxSize": {
+          "description": "A candidate's pre-render size must be strictly smaller than this. `0` (the default) turns\nthe feature off; positive infinity removes the size limit.",
+          "type": [
+            "number",
+            "null"
+          ],
+          "format": "double"
+        }
+      },
+      "additionalProperties": false
     },
     "ChecksOptions": {
       "type": "object",

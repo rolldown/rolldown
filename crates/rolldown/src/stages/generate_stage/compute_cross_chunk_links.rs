@@ -45,20 +45,57 @@ type IndexImportsFromOtherChunks =
 /// `emitFile` consumer relies on — are a contract and keep whatever they declare.
 const THENABLE_HAZARD_EXPORT_NAME: &str = "then";
 
-struct CrossChunkLinkState {
-  index_chunk_exported_symbols: IndexChunkExportedSymbols,
-  index_chunk_direct_imports_from_external_modules: IndexChunkImportsFromExternalModules,
-  index_chunk_indirect_imports_from_external_modules: IndexChunkAllImportsFromExternalModules,
+pub(super) struct CrossChunkLinkState {
+  pub(super) index_chunk_exported_symbols: IndexChunkExportedSymbols,
+  pub(super) index_chunk_direct_imports_from_external_modules: IndexChunkImportsFromExternalModules,
+  pub(super) index_chunk_indirect_imports_from_external_modules:
+    IndexChunkAllImportsFromExternalModules,
   index_imports_from_other_chunks: IndexImportsFromOtherChunks,
   index_cross_chunk_imports: IndexCrossChunkImports,
-  index_cross_chunk_dynamic_imports: IndexCrossChunkDynamicImports,
-  index_chunk_dynamic_imports_from_external_modules: IndexChunkDynamicImportsFromExternalModules,
+  pub(super) index_cross_chunk_dynamic_imports: IndexCrossChunkDynamicImports,
+  pub(super) index_chunk_dynamic_imports_from_external_modules:
+    IndexChunkDynamicImportsFromExternalModules,
   order_live_symbols: FxHashSet<SymbolRef>,
   symbol_chunk_table: SymbolChunkTable,
 }
 
+impl CrossChunkLinkState {
+  /// The chunk that owns `symbol_ref` once this derivation is committed: the chunk whose included
+  /// or synthetic statement declares it, which for an order wrapper's interop symbols is not the
+  /// chunk of the module that owns the symbol.
+  pub(super) fn symbol_chunk(
+    &self,
+    symbol_ref: SymbolRef,
+    symbols: &SymbolRefDb,
+  ) -> Option<ChunkIdx> {
+    self.symbol_chunk_table.chunk_of(symbol_ref, symbols)
+  }
+
+  /// The static importees `commit_cross_chunk_links` writes for every chunk: the edges this
+  /// derivation found plus the ones chunk merging pre-wrote on `Chunk::imports_from_other_chunks`
+  /// (a user-defined entry chunk referencing a chunk merged into another). Inline common chunk
+  /// selection decides on this table; the commit's debug assertion checks that the written
+  /// `imports_from_other_chunks` keys are exactly this table.
+  pub(super) fn static_importee_table(
+    &self,
+    chunk_graph: &ChunkGraph,
+  ) -> IndexVec<ChunkIdx, FxHashSet<ChunkIdx>> {
+    chunk_graph
+      .chunk_table
+      .iter_enumerated()
+      .map(|(chunk_idx, chunk)| {
+        self.index_imports_from_other_chunks[chunk_idx]
+          .keys()
+          .copied()
+          .chain(chunk.imports_from_other_chunks.keys().copied())
+          .collect()
+      })
+      .collect()
+  }
+}
+
 #[derive(Clone, Copy)]
-enum FinalEsmInitMetadataAvailability<'a> {
+pub(super) enum FinalEsmInitMetadataAvailability<'a> {
   /// The prediction pass runs before wrapper selection and final chunk topology are fixed.
   Unavailable,
   /// Final cross-chunk linking can only receive metadata through the sealed boundary.
@@ -100,14 +137,20 @@ impl SymbolChunkTable {
 }
 
 impl GenerateStage<'_> {
+  /// The final cross-chunk link pass is `compute_cross_chunk_link_state` followed by this commit,
+  /// the single writer of the cross-chunk facts: symbol ownership, export names, and every
+  /// chunk's import and export tables come from `state` and nothing else. `generate()` keeps the
+  /// two halves apart because `experimentalInlineCommonChunks` decides on the derived state and
+  /// registers runtime demand in between; see internal-docs/inline-common-chunks/implementation.md.
   #[tracing::instrument(level = "debug", skip_all)]
-  pub fn compute_cross_chunk_links(
+  pub(super) fn commit_cross_chunk_links(
     &mut self,
     chunk_graph: &mut ChunkGraph,
+    state: CrossChunkLinkState,
     used_symbol_refs: &UsedSymbolRefs,
-    order_state: &super::order_wrap_state::OrderWrapState,
-    final_esm_init_metadata: &Sealed<FinalEsmInitMetadata>,
   ) {
+    #[cfg(debug_assertions)]
+    let predicted_static_import_edges = state.static_importee_table(chunk_graph);
     let CrossChunkLinkState {
       index_chunk_exported_symbols,
       index_chunk_direct_imports_from_external_modules,
@@ -118,30 +161,12 @@ impl GenerateStage<'_> {
       index_chunk_dynamic_imports_from_external_modules,
       order_live_symbols,
       symbol_chunk_table,
-    } = self.compute_cross_chunk_link_state(
-      chunk_graph,
-      used_symbol_refs.view(),
-      order_state,
-      FinalEsmInitMetadataAvailability::Sealed(final_esm_init_metadata),
-    );
+    } = state;
     // The single flush of symbol->chunk ownership into the shared symbol database. Everything
     // downstream that reads `chunk_idx` — the module finalizer and the chunk-export generator
     // rendering CJS cross-chunk references — sees exactly this pass's derivation; the what-if
     // passes (prediction, the entry-facade edge query) never write at all.
     self.commit_symbol_chunk_table(&symbol_chunk_table);
-
-    #[cfg(debug_assertions)]
-    let predicted_static_import_edges: IndexVec<ChunkIdx, FxHashSet<ChunkIdx>> =
-      index_imports_from_other_chunks
-        .iter_enumerated()
-        .map(|(chunk_idx, importee_map)| {
-          importee_map
-            .keys()
-            .copied()
-            .chain(chunk_graph.chunk_table[chunk_idx].imports_from_other_chunks.keys().copied())
-            .collect()
-        })
-        .collect();
 
     #[cfg(debug_assertions)]
     self.debug_assert_module_level_static_import_prediction(
@@ -465,7 +490,7 @@ impl GenerateStage<'_> {
       .collect()
   }
 
-  fn compute_cross_chunk_link_state(
+  pub(super) fn compute_cross_chunk_link_state(
     &self,
     chunk_graph: &ChunkGraph,
     used_symbol_refs_view: UsedSymbolRefsView<'_>,
@@ -570,13 +595,17 @@ impl GenerateStage<'_> {
   fn collect_dynamic_chunk_import(
     &self,
     chunk_graph: &ChunkGraph,
+    importer_idx: ModuleIdx,
     import_record: &ResolvedImportRecord,
     importee_module_idx: ModuleIdx,
     cross_chunk_dynamic_imports: &mut FxIndexSet<ChunkIdx>,
   ) {
-    // The resolved module is not included in the module graph, skip it.
     if !self.link_output.metas[importee_module_idx].is_included
       || !matches!(import_record.kind, ImportKind::DynamicImport)
+      || import_record.meta.contains(ImportRecordMeta::DeadDynamicImport)
+      || import_record.dynamic_import_expr_info.as_ref().is_some_and(|info| {
+        !self.link_output.metas[importer_idx].stmt_info_included.has_bit(info.stmt_info_idx)
+      })
     {
       return;
     }
@@ -639,6 +668,7 @@ impl GenerateStage<'_> {
             .for_each(|(rec, module_idx)| match &self.link_output.module_table[module_idx] {
               Module::Normal(_) => self.collect_dynamic_chunk_import(
                 chunk_graph,
+                module.idx,
                 rec,
                 module_idx,
                 cross_chunk_dynamic_imports,

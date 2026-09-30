@@ -1,0 +1,148 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## direct.js
+
+```js
+//#region group.js
+const Group = { name: "Group" };
+//#endregion
+//#region direct.js
+const group = () => Group;
+//#endregion
+export { group };
+
+```
+
+## main.js
+
+```js
+//#region main.js
+const loadOther = () => import("./other.js");
+const loadDirect = () => import("./direct.js");
+//#endregion
+export { loadDirect, loadOther };
+
+```
+
+## other.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+//#region motion.js
+const motion$1 = {};
+//#endregion
+//#region react.js
+var motion;
+function init_react() {
+	return (init_react = __esmMin((() => {
+		motion = motion$1;
+	})))();
+}
+//#endregion
+//#region other.js
+var check;
+function init_other() {
+	return (init_other = __esmMin((() => {
+		init_react();
+		check = () => motion;
+	})))();
+}
+//#endregion
+init_other();
+export { check };
+
+```
+
+# Variant: wrap-all: [on_demand_wrapping: false]
+
+## Assets
+
+### direct.js
+
+```js
+import { t as __esmMin } from "./rolldown-runtime.js";
+//#region group.js
+var Group;
+function init_group() {
+	return (init_group = __esmMin((() => {
+		Group = { name: "Group" };
+	})))();
+}
+//#endregion
+//#region direct.js
+var group;
+function init_direct() {
+	return (init_direct = __esmMin((() => {
+		init_group();
+		group = () => Group;
+	})))();
+}
+//#endregion
+init_direct();
+export { group };
+
+```
+
+### main.js
+
+```js
+import { t as __esmMin } from "./rolldown-runtime.js";
+//#region main.js
+var loadOther, loadDirect;
+function init_main() {
+	return (init_main = __esmMin((() => {
+		loadOther = () => import("./other.js");
+		loadDirect = () => import("./direct.js");
+	})))();
+}
+//#endregion
+init_main();
+export { loadDirect, loadOther };
+
+```
+
+### other.js
+
+```js
+import { t as __esmMin } from "./rolldown-runtime.js";
+//#region motion.js
+var motion$1;
+function init_motion() {
+	return (init_motion = __esmMin((() => {
+		motion$1 = {};
+	})))();
+}
+//#endregion
+//#region react.js
+var motion;
+function init_react() {
+	return (init_react = __esmMin((() => {
+		init_motion();
+		motion = motion$1;
+	})))();
+}
+//#endregion
+//#region other.js
+var check;
+function init_other() {
+	return (init_other = __esmMin((() => {
+		init_react();
+		check = () => motion;
+	})))();
+}
+//#endregion
+init_other();
+export { check };
+
+```
+
+### rolldown-runtime.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+export { __esmMin as t };
+
+```

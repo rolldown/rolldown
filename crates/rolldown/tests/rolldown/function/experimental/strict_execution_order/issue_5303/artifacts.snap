@@ -6,8 +6,8 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## main.js
 
 ```js
-import { t as init_foo } from "./test.js";
 import { t as __esmMin } from "./rolldown-runtime.js";
+import { t as init_foo } from "./test.js";
 //#region setup.js
 globalThis.globalValue = "foo";
 //#endregion
@@ -62,8 +62,8 @@ export { init_foo as t };
 ### main.js
 
 ```js
-import { t as init_foo } from "./test.js";
 import { t as __esmMin } from "./rolldown-runtime.js";
+import { t as init_foo } from "./test.js";
 //#region setup.js
 function init_setup() {
 	return (init_setup = __esmMin((() => {

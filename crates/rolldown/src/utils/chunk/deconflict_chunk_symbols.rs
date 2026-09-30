@@ -1,7 +1,10 @@
 use oxc_str::CompactStr;
 
 use crate::{
-  stages::{generate_stage::order_wrap_state::OrderWrapState, link_stage::LinkStageOutput},
+  stages::{
+    generate_stage::{FileInlineNames, order_wrap_state::OrderWrapState},
+    link_stage::LinkStageOutput,
+  },
   utils::{
     external_import_interop::{
       ChunkAssignments, chunk_external_interop_modes, chunk_has_node_esm_reader,
@@ -10,12 +13,33 @@ use crate::{
   },
 };
 use arcstr::ArcStr;
-use rolldown_common::{Chunk, ChunkIdx, ChunkKind, GetLocalDb, OutputFormat, SymbolRef, WrapKind};
-use rolldown_utils::ecmascript::legitimize_identifier_name;
+use rolldown_common::{
+  Chunk, ChunkIdx, ChunkKind, GetLocalDb, ModuleIdx, OutputFormat, SymbolRef, WrapKind,
+};
+use rolldown_utils::{concat_string, ecmascript::legitimize_identifier_name};
 use rustc_hash::{FxHashMap, FxHashSet};
 
+/// What `experimentalInlineCommonChunks` adds to one file's naming. The modules and synthetic
+/// statements of every record the file carries are named in the file's namespace, because their
+/// factories are printed into it; the file also declares one bridge per record it reads, one per
+/// record each carried factory reads, and the factories' `exports` parameter. See
+/// internal-docs/inline-common-chunks/implementation.md ("Deconflicting").
+#[derive(Debug)]
+pub struct InlineNamingInput {
+  /// The file's own modules and every carried record's, in ascending execution order.
+  pub modules: Vec<ModuleIdx>,
+  /// The file's chunk and every carried record.
+  pub chunks: Vec<ChunkIdx>,
+  /// Records the file reads directly, with the chunk name the bridge is named after.
+  pub file_bridges: Vec<(ChunkIdx, ArcStr)>,
+  /// Carried records, each with the records its factory reads.
+  pub factories: Vec<(ChunkIdx, Vec<(ChunkIdx, ArcStr)>)>,
+}
+
+/// `inline` is `Some` for a file that reads inline common chunk records, see [`InlineNamingInput`].
 #[tracing::instrument(level = "trace", skip_all)]
 #[expect(clippy::too_many_arguments)]
+#[expect(clippy::too_many_lines)]
 pub fn deconflict_chunk_symbols(
   chunk_idx: ChunkIdx,
   chunk: &mut Chunk,
@@ -25,12 +49,18 @@ pub fn deconflict_chunk_symbols(
   format: OutputFormat,
   index_chunk_id_to_name: &FxHashMap<ChunkIdx, ArcStr>,
   chunk_assignments: ChunkAssignments<'_>,
-) {
+  inline: Option<&InlineNamingInput>,
+) -> Option<FileInlineNames> {
+  // The modules and chunks whose root-scope declarations land in this file.
+  let own_chunk = [chunk_idx];
+  let (modules, chunks): (&[ModuleIdx], &[ChunkIdx]) = match inline {
+    Some(inline) => (&inline.modules, &inline.chunks),
+    None => (&chunk.modules, &own_chunk),
+  };
   let mut renamer = Renamer::new(chunk.entry_module_idx(), &link_output.symbol_db, format);
   // Reserve global scope symbols (unresolved references) to prevent generating conflicting names.
   // These are identifiers referenced but not defined in the module's scope (e.g., `console`, `window`).
-  chunk
-    .modules
+  modules
     .iter()
     .copied()
     .filter_map(|idx| {
@@ -96,7 +126,8 @@ pub fn deconflict_chunk_symbols(
   }
 
   let chunk_scope_captured_names = collect_chunk_scope_captured_names(
-    chunk_idx,
+    chunks,
+    modules,
     chunk,
     link_output,
     order_wrap_state,
@@ -105,21 +136,19 @@ pub fn deconflict_chunk_symbols(
     &renamer,
   );
 
-  // The renamer relies on `chunk.modules` being in ascending exec_order so that
+  // The renamer relies on `modules` being in ascending exec_order so that
   // `.rev()` yields entry-first / descending exec_order — the same priority as
   // `deconflict_order_key`. Enforce that invariant in debug builds (was only a
   // prose + pinned-SHA comment before).
   debug_assert!(
-    chunk
-      .modules
+    modules
       .iter()
       .filter_map(|idx| link_output.module_table[*idx].as_normal().map(|m| m.exec_order))
       .is_sorted(),
-    "chunk.modules must be in ascending exec_order for deconfliction"
+    "modules must be in ascending exec_order for deconfliction"
   );
 
-  chunk
-    .modules
+  modules
     .iter()
     .copied()
     // Starts with entry module
@@ -189,7 +218,9 @@ pub fn deconflict_chunk_symbols(
         });
     });
 
-  for synthetic in order_wrap_state.synthetic_statements_for_chunk(chunk_idx) {
+  for synthetic in
+    chunks.iter().flat_map(|idx| order_wrap_state.synthetic_statements_for_chunk(*idx))
+  {
     for declared_symbol in synthetic.declared_symbols.iter().filter(|item| item.is_normal()) {
       renamer.add_symbol_in_root_scope(declared_symbol.inner(), true);
     }
@@ -273,9 +304,63 @@ pub fn deconflict_chunk_symbols(
     chunk.node_mode_external_ns_names = node_mode_names;
   }
 
-  rename_shadowing_symbols_in_nested_scopes(chunk_idx, chunk, link_output, format, &mut renamer);
+  let inline_names = inline.map(|inline| name_inline_bindings(&mut renamer, inline, link_output));
+
+  rename_shadowing_symbols_in_nested_scopes(chunk_idx, modules, link_output, format, &mut renamer);
 
   chunk.canonical_names = renamer.into_canonical_names();
+  inline_names
+}
+
+/// A bridge is read wherever a record symbol was referenced, including inside nested scopes, so
+/// its name must be free in every nested scope of the file's modules, like an import binding.
+/// The factories' `exports` parameter avoids everything the file declares and reads.
+fn name_inline_bindings(
+  renamer: &mut Renamer<'_>,
+  inline: &InlineNamingInput,
+  link_output: &LinkStageOutput,
+) -> FileInlineNames {
+  // A CommonJS-wrapped module's root scope is emitted inside its `__commonJS` closure, where a
+  // local named like a bridge would shadow it.
+  let cjs_wrapped = inline
+    .modules
+    .iter()
+    .copied()
+    .filter(|module_idx| matches!(link_output.metas[*module_idx].wrap_kind(), WrapKind::Cjs))
+    .collect::<Vec<_>>();
+  let bridges = inline
+    .file_bridges
+    .iter()
+    .map(|(record, name)| (*record, bridge_name(renamer, name, &inline.modules, &cjs_wrapped)))
+    .collect();
+  let factory_bridges = inline
+    .factories
+    .iter()
+    .map(|(record, reads)| {
+      let names = reads
+        .iter()
+        .map(|(other, name)| (*other, bridge_name(renamer, name, &inline.modules, &cjs_wrapped)))
+        .collect();
+      (*record, names)
+    })
+    .collect();
+  let exports_param = if inline.factories.is_empty() {
+    CompactStr::new_const("exports")
+  } else {
+    renamer.create_conflictless_name("exports")
+  };
+  FileInlineNames { exports_param, bridges, factory_bridges }
+}
+
+fn bridge_name(
+  renamer: &mut Renamer<'_>,
+  chunk_name: &str,
+  modules: &[ModuleIdx],
+  cjs_wrapped: &[ModuleIdx],
+) -> CompactStr {
+  let hint_source = concat_string!("share_", chunk_name);
+  let hint = legitimize_identifier_name(&hint_source);
+  renamer.create_conflictless_name_for_modules(&hint, modules, cjs_wrapped)
 }
 
 /// Collect the canonical names of things that are emitted at the chunk's root scope and thus
@@ -288,8 +373,10 @@ pub fn deconflict_chunk_symbols(
 /// point, and if any of them ends up renamed in the deconfliction loop, the conflict that
 /// triggered the rename would have been the user-source local — which is exactly the case we
 /// want to catch.
+#[expect(clippy::too_many_arguments)]
 fn collect_chunk_scope_captured_names(
-  chunk_idx: ChunkIdx,
+  chunks: &[ChunkIdx],
+  modules: &[ModuleIdx],
   chunk: &Chunk,
   link_output: &LinkStageOutput,
   order_wrap_state: &OrderWrapState,
@@ -298,7 +385,9 @@ fn collect_chunk_scope_captured_names(
   renamer: &Renamer<'_>,
 ) -> FxHashSet<CompactStr> {
   let mut captured: FxHashSet<CompactStr> = FxHashSet::default();
-  for synthetic in order_wrap_state.synthetic_statements_for_chunk(chunk_idx) {
+  for synthetic in
+    chunks.iter().flat_map(|idx| order_wrap_state.synthetic_statements_for_chunk(*idx))
+  {
     for declared in &synthetic.declared_symbols {
       captured.insert(CompactStr::new(declared.inner().name(&link_output.symbol_db)));
     }
@@ -317,7 +406,7 @@ fn collect_chunk_scope_captured_names(
   }
   // CJS wrapper facades (e.g. `require_foo`) are rendered at chunk scope and captured by every
   // CJS-wrapped module's closure in this chunk.
-  for module_idx in chunk.modules.iter().copied() {
+  for module_idx in modules.iter().copied() {
     if let Some(wrapper_ref) = link_output.metas[module_idx].wrapper_ref {
       let canonical_ref = link_output.symbol_db.canonical_ref_for(wrapper_ref);
       captured.insert(CompactStr::new(canonical_ref.name(&link_output.symbol_db)));
@@ -351,13 +440,13 @@ fn collect_chunk_scope_captured_names(
 /// where a nested binding would capture a reference to a top-level symbol.
 fn rename_shadowing_symbols_in_nested_scopes<'a>(
   chunk_idx: ChunkIdx,
-  chunk: &Chunk,
+  modules: &[ModuleIdx],
   link_output: &'a LinkStageOutput,
   output_format: OutputFormat,
   renamer: &mut Renamer<'a>,
 ) {
   // Same as above, starts with entry module to give entry module symbols naming priority.
-  for module_idx in chunk.modules.iter().copied().rev() {
+  for module_idx in modules.iter().copied().rev() {
     let Some(module) = link_output.module_table[module_idx].as_normal() else {
       continue;
     };

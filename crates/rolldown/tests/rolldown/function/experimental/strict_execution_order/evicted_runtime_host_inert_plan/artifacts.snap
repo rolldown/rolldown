@@ -1,0 +1,163 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## a.js
+
+```js
+//#region \0rolldown/runtime.js
+var __defProp = Object.defineProperty;
+var __exportAll = (all, no_symbols) => {
+	let target = {};
+	for (var name in all) __defProp(target, name, {
+		get: all[name],
+		enumerable: true
+	});
+	if (!no_symbols) __defProp(target, Symbol.toStringTag, { value: "Module" });
+	return target;
+};
+//#endregion
+//#region c.js
+//#endregion
+//#region a.js
+console.log("A", Object.keys(/* @__PURE__ */ __exportAll({ c: () => 1 })).join());
+//#endregion
+
+```
+
+## e0.js
+
+```js
+import { t as p } from "./group-b.js";
+import "./a.js";
+//#region q.js
+console.log("Q");
+//#endregion
+//#region e0.js
+console.log("E0", Object.keys(p).join());
+//#endregion
+
+```
+
+## e1.js
+
+```js
+import "./a.js";
+//#region e1.js
+console.log("E1");
+//#endregion
+
+```
+
+## group-b.js
+
+```js
+//#region p.js
+const p = {};
+//#endregion
+//#region b.js
+console.log("B");
+//#endregion
+export { p as t };
+
+```
+
+## z.js
+
+```js
+//#region z.js
+console.log("Z");
+//#endregion
+
+```
+
+# Variant: on-demand-cjs: [format: Cjs]
+
+## Assets
+
+### a.js
+
+```js
+//#region c.js
+//#endregion
+//#region a.js
+console.log("A", Object.keys(/* @__PURE__ */ require("./rolldown-runtime.js").__exportAll({ c: () => 1 })).join());
+//#endregion
+
+```
+
+### e0.js
+
+```js
+const require_group_b = require("./group-b.js");
+require("./a.js");
+//#region q.js
+console.log("Q");
+//#endregion
+//#region e0.js
+console.log("E0", Object.keys(require_group_b.p).join());
+//#endregion
+
+```
+
+### e1.js
+
+```js
+require("./a.js");
+//#region e1.js
+console.log("E1");
+//#endregion
+
+```
+
+### group-b.js
+
+```js
+//#region p.js
+const p = {};
+//#endregion
+//#region b.js
+console.log("B");
+//#endregion
+Object.defineProperty(exports, "p", {
+	enumerable: true,
+	get: function() {
+		return p;
+	}
+});
+
+```
+
+### rolldown-runtime.js
+
+```js
+//#region \0rolldown/runtime.js
+var __defProp = Object.defineProperty;
+var __exportAll = (all, no_symbols) => {
+	let target = {};
+	for (var name in all) __defProp(target, name, {
+		get: all[name],
+		enumerable: true
+	});
+	if (!no_symbols) __defProp(target, Symbol.toStringTag, { value: "Module" });
+	return target;
+};
+//#endregion
+Object.defineProperty(exports, "__exportAll", {
+	enumerable: true,
+	get: function() {
+		return __exportAll;
+	}
+});
+
+```
+
+### z.js
+
+```js
+//#region z.js
+console.log("Z");
+//#endregion
+
+```

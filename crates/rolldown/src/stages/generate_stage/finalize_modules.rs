@@ -1,6 +1,8 @@
 use std::sync::Arc;
 
-use rolldown_common::{ConcatenateWrappedModuleKind, PrependRenderedImport, UsedSymbolRefs};
+use rolldown_common::{
+  ChunkIdx, ConcatenateWrappedModuleKind, PrependRenderedImport, UsedSymbolRefs,
+};
 use rolldown_error::{BuildResult, Severity};
 use rolldown_utils::{index_vec_ext::IndexVecExt as _, rayon::ParallelIterator as _};
 use rustc_hash::FxHashMap;
@@ -11,7 +13,11 @@ use crate::{
   type_alias::IndexEcmaAst,
 };
 
-use super::{FinalEsmInitMetadata, GenerateStage, Sealed, resolve_file_urls::ResolvedFileUrls};
+use super::{
+  FinalEsmInitMetadata, GenerateStage, Sealed,
+  inline_common_chunks::{BridgeCallees, bare_bridge_callee},
+  resolve_file_urls::ResolvedFileUrls,
+};
 
 impl GenerateStage<'_> {
   #[tracing::instrument(level = "debug", skip_all)]
@@ -26,6 +32,26 @@ impl GenerateStage<'_> {
   ) -> BuildResult<()> {
     let has_enum_inlining = self.link_output.has_enum_inlining;
     let has_required_order_runtime = !order_state.required_runtime_helpers().is_empty();
+    let bridge_callees: FxHashMap<ChunkIdx, BridgeCallees> =
+      if self.inline_state.reading_files().is_empty() {
+        FxHashMap::default()
+      } else {
+        let wrapper_refs = self.wrapper_refs(order_state);
+        self
+          .inline_state
+          .reading_files()
+          .iter()
+          .map(|&file| {
+            let callees = self.inline_state.bridge_callees(
+              file,
+              chunk_graph,
+              &wrapper_refs,
+              &self.link_output.symbol_db,
+            );
+            (file, callees)
+          })
+          .collect()
+      };
     // Off-strict, lowering never mutates the chunk graph, so the liveness guard cannot fire.
     let strict = self.options.is_strict_execution_order_enabled();
 
@@ -38,6 +64,9 @@ impl GenerateStage<'_> {
               m.idx == self.link_output.runtime.id() && has_required_order_runtime;
             (self.link_output.metas[m.idx].is_included || is_required_order_runtime)
               && (!strict || chunk_graph.module_is_in_live_chunk(*idx))
+              // A record's modules are finalized per carrier, on clones, by
+              // `finalize_inline_copies` below.
+              && !chunk_graph.module_to_chunk[*idx].is_some_and(|c| self.inline_state.is_record(c))
           })
         })
         .filter_map(|(idx, ast)| {
@@ -51,6 +80,7 @@ impl GenerateStage<'_> {
             idx,
             chunk,
             chunk_idx,
+            file_idx: chunk_idx,
             chunk_graph,
             symbol_db: &self.link_output.symbol_db,
             linking_info,
@@ -71,14 +101,22 @@ impl GenerateStage<'_> {
             resolved_paths: self.resolved_paths.as_ref(),
             resolved_file_urls,
             has_enum_inlining,
+            inline_state: &self.inline_state,
           };
 
           let concatenated_wrapped_module_kind = ctx.linking_info.concatenated_wrapped_module_kind;
           let (
             transferred_import_record,
             rendered_concatenated_wrapped_module_parts,
-            module_diagnostics,
+            mut module_diagnostics,
           ) = ctx.finalize_normal_module(ast, ast_scope);
+          if let Some(callees) = bridge_callees.get(&chunk_idx) {
+            module_diagnostics.extend(bare_bridge_callee(
+              ast.program(),
+              callees,
+              &module.stable_id,
+            ));
+          }
 
           let payload = (!transferred_import_record.is_empty()
             || !matches!(concatenated_wrapped_module_kind, ConcatenateWrappedModuleKind::None))
@@ -112,6 +150,15 @@ impl GenerateStage<'_> {
       let errors = self.link_output.diagnostics.extract_errors();
       Err(errors)?;
     }
+
+    self.finalize_inline_copies(
+      chunk_graph,
+      ast_table,
+      resolved_file_urls,
+      used_symbol_refs,
+      order_state,
+      final_esm_init_metadata,
+    )?;
 
     if normalized_transfer_parts_rendered_maps.is_empty() {
       return Ok(());

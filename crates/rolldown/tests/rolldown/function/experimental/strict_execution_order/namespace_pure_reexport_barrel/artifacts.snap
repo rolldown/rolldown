@@ -6,8 +6,8 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## ca.js
 
 ```js
-import { t as init_cyc_b } from "./cb.js";
 import { t as __esmMin } from "./rolldown-runtime.js";
+import { t as init_cyc_b } from "./cb.js";
 //#region cyc-a.js
 function init_cyc_a() {
 	return (init_cyc_a = __esmMin((() => {
@@ -23,8 +23,8 @@ export { init_cyc_a as t };
 ## cb.js
 
 ```js
-import { t as init_cyc_a } from "./ca.js";
 import { t as __esmMin } from "./rolldown-runtime.js";
+import { t as init_cyc_a } from "./ca.js";
 //#region cyc-b.js
 function init_cyc_b() {
 	return (init_cyc_b = __esmMin((() => {
@@ -40,8 +40,8 @@ export { init_cyc_b as t };
 ## dynamic-page.js
 
 ```js
-import { t as init_cyc_a } from "./ca.js";
 import { n as __exportAll, t as __esmMin } from "./rolldown-runtime.js";
+import { t as init_cyc_a } from "./ca.js";
 //#region linear.js
 function makeUnit() {
 	return { value: 7 };
@@ -143,8 +143,8 @@ export { __exportAll as n, __esmMin as t };
 ### ca.js
 
 ```js
-import { t as init_cyc_b } from "./cb.js";
 import { t as __esmMin } from "./rolldown-runtime.js";
+import { t as init_cyc_b } from "./cb.js";
 //#region cyc-a.js
 function init_cyc_a() {
 	return (init_cyc_a = __esmMin((() => {
@@ -160,8 +160,8 @@ export { init_cyc_a as t };
 ### cb.js
 
 ```js
-import { t as init_cyc_a } from "./ca.js";
 import { t as __esmMin } from "./rolldown-runtime.js";
+import { t as init_cyc_a } from "./ca.js";
 //#region cyc-b.js
 function init_cyc_b() {
 	return (init_cyc_b = __esmMin((() => {
@@ -177,8 +177,8 @@ export { init_cyc_b as t };
 ### dynamic-page.js
 
 ```js
-import { t as init_cyc_a } from "./ca.js";
 import { n as __exportAll, t as __esmMin } from "./rolldown-runtime.js";
+import { t as init_cyc_a } from "./ca.js";
 //#region linear.js
 function makeUnit() {
 	return { value: 7 };

@@ -216,6 +216,17 @@ pub fn render_chunk_exports(
         .map(|(exported_name, export_ref)| {
           let canonical_ref = link_output.symbol_db.canonical_ref_for(export_ref);
           let symbol = link_output.symbol_db.get(canonical_ref);
+          // An ESM export needs a binding of this file; a symbol an inline common chunk record
+          // owns is reachable only through a bridge, so selection keeps such a record a file.
+          assert!(
+            symbol
+              .chunk_idx
+              .is_none_or(|owner| owner == ctx.chunk_idx || !ctx.inline_state.is_record(owner)),
+            "chunk {:?} exports `{}`, a symbol of inline common chunk record {:?}",
+            ctx.chunk_idx,
+            exported_name,
+            symbol.chunk_idx
+          );
           let canonical_name = link_output
             .symbol_db
             .canonical_name_for_or_original(canonical_ref, &chunk.canonical_names);
@@ -428,9 +439,9 @@ pub fn render_chunk_exports(
 #[inline]
 pub fn render_object_define_property(key: &str, value: &str) -> String {
   concat_string!(
-    "Object.defineProperty(exports, '",
-    key,
-    "', {
+    "Object.defineProperty(exports, ",
+    serde_json::to_string(key).unwrap(),
+    ", {
   enumerable: true,
   get: function () {
     return ",
@@ -444,9 +455,9 @@ pub fn render_object_define_property(key: &str, value: &str) -> String {
 #[inline]
 pub fn render_object_define_property_value(key: &str, value: &str) -> String {
   concat_string!(
-    "Object.defineProperty(exports, '",
-    key,
-    "', {
+    "Object.defineProperty(exports, ",
+    serde_json::to_string(key).unwrap(),
+    ", {
   enumerable: true,
   value: ",
     value,

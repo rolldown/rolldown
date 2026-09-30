@@ -6,8 +6,8 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## main.js
 
 ```js
-import { t as init_reader } from "./reader.js";
 import { t as __esmMin } from "./rolldown-runtime.js";
+import { t as init_reader } from "./reader.js";
 export * from "external";
 //#region setup.js
 globalThis.setupValue = "ready";
@@ -53,8 +53,8 @@ export { __esmMin as t };
 ### main.js
 
 ```js
-import { t as init_reader } from "./reader.js";
 import { t as __esmMin } from "./rolldown-runtime.js";
+import { t as init_reader } from "./reader.js";
 export * from "external";
 //#region setup.js
 function init_setup() {

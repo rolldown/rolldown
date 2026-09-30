@@ -39,8 +39,8 @@ global.foo.log();
 ### entry1.js
 
 ```js
-import { t as init_run_dep } from "./run-dep.js";
 import { t as __esmMin } from "./rolldown-runtime.js";
+import { t as init_run_dep } from "./run-dep.js";
 //#region init-dep-1.js
 function init_init_dep_1() {
 	return (init_init_dep_1 = __esmMin((() => {
@@ -63,8 +63,8 @@ init_entry1();
 ### entry2.js
 
 ```js
-import { t as init_run_dep } from "./run-dep.js";
 import { t as __esmMin } from "./rolldown-runtime.js";
+import { t as init_run_dep } from "./run-dep.js";
 //#region init-dep-2.js
 function init_init_dep_2() {
 	return (init_init_dep_2 = __esmMin((() => {
@@ -114,8 +114,8 @@ export { init_run_dep as t };
 ### entry1.js
 
 ```js
-import { t as init_run_dep } from "./run-dep.js";
 import { t as __esmMin } from "./rolldown-runtime.js";
+import { t as init_run_dep } from "./run-dep.js";
 //#region init-dep-1.js
 global.foo = { log: () => console.log("foo.log() (from entry 1) called") };
 //#endregion
@@ -133,8 +133,8 @@ init_entry1();
 ### entry2.js
 
 ```js
-import { t as init_run_dep } from "./run-dep.js";
 import { t as __esmMin } from "./rolldown-runtime.js";
+import { t as init_run_dep } from "./run-dep.js";
 //#region init-dep-2.js
 global.foo = { log: () => console.log("foo.log() (from entry 2) called") };
 //#endregion

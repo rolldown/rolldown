@@ -186,6 +186,25 @@ impl<'name> Renamer<'name> {
     self.resolver.resolve(CompactStr::new(hint), |_, _| true)
   }
 
+  /// Like [`Self::create_conflictless_name`], but also skips names bound in a nested scope of
+  /// any of `modules`, and names bound at the root of the `cjs_wrapped` modules among them (that
+  /// root scope is emitted inside a `__commonJS` closure): a chunk-level binding that references
+  /// inside those modules resolve to must stay visible from all of them.
+  pub fn create_conflictless_name_for_modules(
+    &mut self,
+    hint: &str,
+    modules: &[ModuleIdx],
+    cjs_wrapped: &[ModuleIdx],
+  ) -> CompactStr {
+    let symbol_db = self.symbol_db;
+    self.resolver.resolve(CompactStr::new(hint), |candidate, _| {
+      !modules.iter().any(|module_idx| has_nested_scope_binding(symbol_db, *module_idx, candidate))
+        && !cjs_wrapped
+          .iter()
+          .any(|module_idx| has_root_scope_binding(symbol_db, *module_idx, candidate))
+    })
+  }
+
   pub fn register_nested_scope_symbols(&mut self, symbol_ref: SymbolRef, original_name: &str) {
     let canonical_ref = symbol_ref.canonical_ref(self.symbol_db);
     if self.canonical_names.contains_key(&canonical_ref) {
@@ -262,6 +281,15 @@ fn has_nested_scope_binding(symbol_db: &SymbolRefDb, module_idx: ModuleIdx, name
   };
   // Skip root scope (index 0), check nested scopes only
   db.ast_scopes.scoping().iter_bindings().skip(1).any(|(_, bindings)| bindings.contains_key(name))
+}
+
+/// Returns true if `name` is bound in the root scope of the module.
+fn has_root_scope_binding(symbol_db: &SymbolRefDb, module_idx: ModuleIdx, name: &str) -> bool {
+  let Some(db) = &symbol_db[module_idx] else {
+    return false;
+  };
+  let scoping = db.ast_scopes.scoping();
+  scoping.get_binding(scoping.root_scope_id(), name.into()).is_some()
 }
 
 /// Context for renaming nested scope symbols that would shadow top-level symbols.

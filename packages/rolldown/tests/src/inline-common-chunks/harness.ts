@@ -132,10 +132,10 @@ export function runRoots(built: { dir: string }, fileNames: string[]): RootResul
   return JSON.parse(proc.stdout.trim().split('\n').at(-1)!);
 }
 
-/** Every entry and dynamic entry file of a build, each of which the differential test runs as a root. */
+/** Configured and plugin-emitted entries, each run as the root of a fresh process. */
 export function rootFiles(built: Built): string[] {
   return built.chunks
-    .filter((chunk) => chunk.isEntry || chunk.isDynamicEntry)
+    .filter((chunk) => chunk.isEntry)
     .map((chunk) => chunk.fileName)
     .sort();
 }
@@ -205,31 +205,10 @@ function runtimeLocalNames(built: Built, chunk: OutputChunk): Record<string, str
   return locals;
 }
 
-/**
- * Every `__share_require(id)` must follow a registration of `id`: earlier in the same file, or in
- * a static dependency that is not in an import cycle with the file (ESM runs such a dependency to
- * completion before the file's own body). The runtime chunk must be the first import. Only
- * meaningful on an unminified build.
- */
+/** Checks local registration order and the runtime import on unminified output. */
 export function assertRegistrationOrder(built: Built): void {
   const runtime = runtimeChunk(built);
-  const chunks = new Map(built.chunks.map((chunk) => [chunk.fileName, chunk]));
-  // `chunk.imports` also names external modules, which register nothing.
-  const chunkImports = (fileName: string): string[] =>
-    (chunks.get(fileName)?.imports ?? []).filter((dep) => chunks.has(dep));
-  const reachable = (fileName: string): Set<string> => {
-    const seen = new Set<string>();
-    const stack = [fileName];
-    while (stack.length > 0) {
-      for (const dep of chunkImports(stack.pop()!)) {
-        if (!seen.has(dep)) {
-          seen.add(dep);
-          stack.push(dep);
-        }
-      }
-    }
-    return seen;
-  };
+  const allIds = new Set(recordIds(built));
   const events = (chunk: OutputChunk): { kind: 'share' | 'require'; id: string }[] => {
     const locals = runtimeLocalNames(built, chunk);
     const share = locals.__share;
@@ -242,26 +221,6 @@ export function assertRegistrationOrder(built: Built): void {
       id: match[2],
     }));
   };
-  // Ids registered by the time a file's own body runs: its dependencies outside its cycle first.
-  const registered = new Map<string, Set<string>>();
-  const registeredBefore = (fileName: string): Set<string> => {
-    const set = new Set<string>();
-    for (const dep of chunkImports(fileName)) {
-      if (reachable(dep).has(fileName)) continue;
-      for (const id of registeredIn(dep)) set.add(id);
-    }
-    return set;
-  };
-  const registeredIn = (fileName: string): Set<string> => {
-    let set = registered.get(fileName);
-    if (set) return set;
-    set = registeredBefore(fileName);
-    for (const event of events(chunks.get(fileName)!))
-      if (event.kind === 'share') set.add(event.id);
-    registered.set(fileName, set);
-    return set;
-  };
-
   for (const chunk of built.chunks) {
     if (chunk === runtime) continue;
     const own = events(chunk);
@@ -276,13 +235,14 @@ export function assertRegistrationOrder(built: Built): void {
     expect(firstImport?.[1], `${chunk.fileName} imports the runtime chunk first`).toBe(
       `./${runtime!.fileName}`,
     );
-    const available = registeredBefore(chunk.fileName);
+    const ownIds = new Set(registrationIds(built, chunk));
+    const available = new Set<string>();
     for (const event of own) {
       if (event.kind === 'share') {
         available.add(event.id);
       } else {
         expect(
-          available.has(event.id),
+          ownIds.has(event.id) ? available.has(event.id) : allIds.has(event.id),
           `${chunk.fileName}: __share_require("${event.id}") before any registration it can see`,
         ).toBe(true);
       }

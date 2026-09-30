@@ -1403,7 +1403,7 @@
       "type": "object",
       "properties": {
         "maxSize": {
-          "description": "A candidate's pre-render size must be strictly smaller than this. `0` (the default) turns\nthe feature off.",
+          "description": "A candidate's pre-render size must be strictly smaller than this. `0` (the default) turns\nthe feature off; positive infinity removes the size limit.",
           "type": [
             "number",
             "null"

@@ -22,13 +22,8 @@ import {
 } from '../../src/inline-common-chunks/harness';
 import { getOutputChunk } from '../../src/utils';
 
-// `experimentalInlineCommonChunks` prints a small common chunk's modules into the files that read
-// it, except files whose static dependency outside their import cycle already prints them, instead
-// of writing it as its own file. The differential cases build twice, with the option off and on,
-// run every entry and dynamic entry as the root of a fresh Node process, and require the same
-// logs, exports, identities and errors. The registration order check parses the `on` output:
-// every `__share_require(id)` follows a `__share(id, ...)` earlier in the same file or in a static
-// dependency outside the file's import cycle.
+// Differential cases run configured and emitted entries with inlining off and on, following
+// their static and dynamic imports and comparing logs, exports, identities and errors.
 
 // `String(globalThis.__x ?? ...)` keeps a value from being inlined as a constant, so the entries
 // really read the shared binding.
@@ -228,6 +223,342 @@ describe('experimentalInlineCommonChunks', () => {
       },
     });
     expectInlined(pair, 'shared.js');
+  });
+
+  test.each([
+    `export function unused() { return import.meta.url; }`,
+    `export const unused = import.meta.url;`,
+  ])('discarded import.meta does not prevent inlining: %s', async (unused) => {
+    const pair = await differential(`discarded-import-meta-${unused.includes('function')}`, {
+      input: { a: './a.js', b: './b.js' },
+      modules: {
+        ...twoEntries,
+        './shared.js': shared['./shared.js'] + unused,
+      },
+    });
+    expectInlined(pair, 'shared.js');
+    expect(pair.on.chunks.every((chunk) => !chunk.code.includes('import.meta'))).toBe(true);
+  });
+
+  test.each([false, true])(
+    'a shared dynamic loader keeps one target, minify=%s',
+    async (minify) => {
+      const pair = await differential(`shared-dynamic-loader-${minify}`, {
+        input: { a: './a.js', b: './b.js' },
+        modules: {
+          './shared.js': `
+          globalThis.__log('shared');
+          export const load = () => import('./lazy.js');
+        `,
+          './lazy.js': `globalThis.__log('lazy'); export const value = { n: 42 };`,
+          './a.js': `import { load } from './shared.js'; globalThis.__chain = load().then(m => globalThis.__log('A', __id(m.value)));`,
+          './b.js': `import { load } from './shared.js'; globalThis.__chain = load().then(m => globalThis.__log('B', __id(m.value)));`,
+        },
+        output: { minify },
+      });
+      if (!minify) expectInlined(pair, 'shared.js');
+      expect(
+        pair.on.chunks.filter((chunk) => chunk.moduleIds.includes('./shared.js')),
+      ).toHaveLength(2);
+      expect(pair.on.chunks).toHaveLength(4);
+      const lazy = chunkContaining(pair.on, 'lazy.js')!;
+      for (const entry of pair.on.chunks.filter((chunk) => chunk.isEntry)) {
+        expect(entry.dynamicImports).toEqual([lazy.fileName]);
+      }
+      for (const roots of [
+        ['a.js', 'b.js'],
+        ['b.js', 'a.js'],
+      ]) {
+        expect(runRoots(pair.on, roots)).toEqual(runRoots(pair.off, roots));
+      }
+    },
+  );
+
+  test.each(['unused function', 'discarded import'] as const)(
+    'dynamic import metadata follows tree shaking: %s',
+    async (kind) => {
+      const pair = await differential(`tree-shaken-dynamic-import-metadata-${kind}`, {
+        input: { a: './a.js', b: './b.js', keeper: './keeper.js' },
+        modules: {
+          './shared.js':
+            kind === 'unused function'
+              ? `export const state = { count: 42 }; export function unused() { return import('./lazy.js'); }`
+              : `export const state = { count: 42 }; globalThis.__chain = import('./lazy.js').then(() => globalThis.__log('done'));`,
+          './a.js': `import { state } from './shared.js'; globalThis.__log('a', state.count);`,
+          './b.js': `import { state } from './shared.js'; globalThis.__log('b', state.count);`,
+          './lazy.js': `${kind === 'unused function' ? "globalThis.__log('lazy');" : ''} export const value = { count: 1 };`,
+          './keeper.js': `import { value } from './lazy.js'; globalThis.__log('keeper', value.count);`,
+        },
+      });
+      expectInlined(pair, 'shared.js');
+      for (const built of [pair.off, pair.on]) {
+        expect(chunkContaining(built, 'lazy.js')).toBeDefined();
+        for (const chunk of built.chunks.filter((chunk) =>
+          chunk.moduleIds.includes('./shared.js'),
+        )) {
+          expect(chunk.code).not.toContain('import(');
+          expect(chunk.dynamicImports).toEqual([]);
+        }
+      }
+    },
+  );
+
+  test.each([false, true])(
+    'copied dynamic imports use carrier paths and target hashes, cjs=%s',
+    async (cjs) => {
+      const build = (value: number) =>
+        buildCase(`dynamic-loader-hashes-${cjs}-${value}`, 'on', {
+          input: { a: './a.js', b: './b.js' },
+          modules: {
+            './shared.js': `export const load = () => import('./lazy.${cjs ? 'cjs' : 'js'}');`,
+            [`./lazy.${cjs ? 'cjs' : 'js'}`]: cjs
+              ? `module.exports = { value: ${value} };`
+              : `export const value = ${value};`,
+            './a.js': `import { load } from './shared.js'; globalThis.__chain = load().then(m => globalThis.__log('value', m.${cjs ? 'default.' : ''}value));`,
+            './b.js': `import { load } from './shared.js'; globalThis.__chain = load().then(m => globalThis.__log('value', m.${cjs ? 'default.' : ''}value));`,
+          },
+          output: {
+            entryFileNames: (chunk) =>
+              `${chunk.name === 'a' ? 'one' : 'two/nested'}/[name]-[hash].js`,
+            chunkFileNames: 'chunks/[name]-[hash].js',
+          },
+        });
+      const before = await build(42);
+      const after = await build(43);
+      for (const [built, value] of [
+        [before, 42],
+        [after, 43],
+      ] as const) {
+        const lazy = chunkContaining(built, cjs ? 'lazy.cjs' : 'lazy.js')!;
+        expect(
+          built.chunks.filter((chunk) => chunk.moduleIds.includes('./shared.js')),
+        ).toHaveLength(2);
+        for (const entry of built.chunks.filter((chunk) => chunk.isEntry)) {
+          expect(entry.dynamicImports).toEqual([lazy.fileName]);
+          const result = runRoot(built, entry.fileName);
+          expect(result.error).toBeNull();
+          expect(result.logs).toEqual([`value:string ${value}:number`]);
+        }
+      }
+      for (const entry of before.chunks.filter((chunk) => chunk.isEntry)) {
+        expect(after.chunks.find((chunk) => chunk.name === entry.name)!.fileName).not.toBe(
+          entry.fileName,
+        );
+      }
+    },
+  );
+
+  test.each([false, true])(
+    'a main and lazy reader share a record without an entry facade, minify=%s',
+    async (minify) => {
+      const pair = await differential(`main-lazy-record-${minify}`, {
+        input: { main: './main.js' },
+        modules: {
+          ...shared,
+          './main.js': `
+          import { marker, bump } from './shared.js';
+          globalThis.__log('main', __id(marker), bump());
+          globalThis.__chain = import('./lazy.js').then(() => globalThis.__log('loaded'));
+        `,
+          './lazy.js': `
+          import { marker, bump } from './shared.js';
+          globalThis.__log('lazy', __id(marker), bump());
+        `,
+        },
+        output: { minify },
+        inline: { maxSize: Infinity },
+      });
+      expect(pair.on.chunks).toHaveLength(3);
+      expect(
+        pair.on.chunks.filter((chunk) => chunk.moduleIds.includes('./shared.js')),
+      ).toHaveLength(1);
+      const main = pair.on.chunks.find((chunk) => chunk.isEntry)!;
+      expect(main.moduleIds).toContain('./main.js');
+      expect(main.imports).toEqual([runtimeChunk(pair.on)!.fileName]);
+    },
+  );
+
+  test.each(
+    [false, true].flatMap((allParents) =>
+      [false, true].flatMap((copiedLoader) =>
+        [false, true].map((minify) => ({ allParents, copiedLoader, minify })),
+      ),
+    ),
+  )('lazy factory availability: %j', async ({ allParents, copiedLoader, minify }) => {
+    const load = copiedLoader ? 'load()' : "import('./lazy.js')";
+    const loaderImport = copiedLoader ? "import { load } from './loader.js';" : '';
+    const pair = await differential(`async-parents-${allParents}-${copiedLoader}-${minify}`, {
+      input: { a: './a.js', b: './b.js' },
+      modules: {
+        ...shared,
+        './loader.js': `export const load = () => import('./lazy.js');`,
+        './a.js': `
+          ${loaderImport}
+          import { marker, count, bump } from './shared.js';
+          globalThis.__log('A', __id(marker), bump(), count);
+          globalThis.__chain = ${load};
+        `,
+        './b.js': `
+          ${loaderImport}
+          ${allParents ? "import { marker, count, bump } from './shared.js'; globalThis.__log('B', __id(marker), bump(), count);" : "globalThis.__log('B');"}
+          globalThis.__chain = ${load};
+        `,
+        './lazy.js': `
+          import { marker, count, bump } from './shared.js';
+          globalThis.__log('lazy', __id(marker), bump(), count);
+        `,
+      },
+      output: { minify },
+      inline: { maxSize: Infinity },
+    });
+    const lazy = chunkContaining(pair.on, 'lazy.js')!;
+    expect(lazy.moduleIds.includes('./shared.js')).toBe(!allParents);
+    for (const roots of [['a.js'], ['b.js'], ['a.js', 'b.js'], ['b.js', 'a.js']]) {
+      const result = runRoots(pair.on, roots);
+      expect(result.error).toBeNull();
+      expect(result).toEqual(runRoots(pair.off, roots));
+    }
+  });
+
+  test.each(
+    ['computed', 'ignored'].flatMap((kind) =>
+      [false, true].map((parentHasShared) => ({ kind, parentHasShared })),
+    ),
+  )(
+    'an untracked dynamic parent contributes its registrations: %j',
+    async ({ kind, parentHasShared }) => {
+      const pair = await differential(`untracked-parent-${kind}-${parentHasShared}`, {
+        input: { a: './a.js', b: './b.js' },
+        modules: {
+          './shared.js': `export const state = { count: 0 };`,
+          './a.js': `import { state } from './shared.js'; globalThis.__log('a', state.count); globalThis.load = () => import('./lazy.js');`,
+          './b.js': `
+          ${parentHasShared ? "import { state } from './shared.js'; globalThis.__log('b', state.count);" : ''}
+          const target = globalThis.__target ?? './lazy.js';
+          globalThis.__chain = ${kind === 'computed' ? 'import(target)' : "import(/* @vite-ignore */ './lazy.js')"}
+            .then(m => globalThis.__log('lazy', m.value.count));
+        `,
+          './lazy.js': `import { state } from './shared.js'; export const value = state;`,
+        },
+      });
+      const lazy = chunkContaining(pair.on, 'lazy.js')!;
+      expect(lazy.moduleIds.includes('./shared.js')).toBe(!parentHasShared);
+      expect(runRoot(pair.on, 'b.js').error).toBeNull();
+    },
+  );
+
+  test.each(['configured', 'emitted'] as const)(
+    'a %s entry supplies its own factories when it is also dynamically imported',
+    async (kind) => {
+      const pair = await differential(`async-parent-entry-${kind}`, {
+        input:
+          kind === 'configured' ? { main: './main.js', lazy: './lazy.js' } : { main: './main.js' },
+        modules: {
+          ...shared,
+          './main.js': `import { bump } from './shared.js'; globalThis.__log(bump()); globalThis.__chain = import('./lazy.js');`,
+          './lazy.js': `import { bump } from './shared.js'; globalThis.__log('lazy', bump());`,
+        },
+        plugins:
+          kind === 'emitted'
+            ? [
+                {
+                  name: 'lazy-entry',
+                  buildStart() {
+                    this.emitFile({ type: 'chunk', id: './lazy.js', fileName: 'lazy.js' });
+                  },
+                },
+              ]
+            : [],
+      });
+      const lazy = pair.on.chunks.find((chunk) => chunk.fileName === 'lazy.js')!;
+      expect(lazy.isEntry).toBe(true);
+      expect(lazy.moduleIds).toContain('./shared.js');
+      expect(runRoot(pair.on, lazy.fileName).error).toBeNull();
+    },
+  );
+
+  test('nested lazy loads inherit a registration through a static dependency', async () => {
+    const pair = await differential('nested-async-registration', {
+      input: { main: './main.js' },
+      modules: {
+        ...shared,
+        './main.js': `import { marker } from './shared.js'; globalThis.__log('main', __id(marker)); globalThis.__chain = import('./first.js').then(m => m.load());`,
+        './first.js': `export const load = () => import('./second.js');`,
+        './second.js': `import { read } from './reader.js'; globalThis.__log('second', read());`,
+        './reader.js': `import { marker } from './shared.js'; export const read = () => __id(marker);`,
+      },
+      output: { codeSplitting: { groups: [{ name: 'reader', test: /reader\.js$/ }] } },
+    });
+    expect(pair.on.chunks.filter((chunk) => chunk.moduleIds.includes('./shared.js'))).toHaveLength(
+      1,
+    );
+    const result = runRoot(pair.on, 'main.js');
+    expect(result.error).toBeNull();
+    expect(result).toEqual(runRoot(pair.off, 'main.js'));
+  });
+
+  test.each([false, true])(
+    'concurrent lazy readers share the entry factory, minify=%s',
+    async (minify) => {
+      const pair = await differential(`concurrent-async-registration-${minify}`, {
+        input: { main: './main.js' },
+        modules: {
+          './shared.js': `globalThis.__log('shared'); export const state = { count: 0 };`,
+          './main.js': `
+          import { state } from './shared.js';
+          globalThis.__chain = Promise.all([import('./left.js'), import('./right.js')])
+            .then(([left, right]) => globalThis.__log(left.same(state), right.same(state), state.count));
+        `,
+          './left.js': `import { state } from './shared.js'; state.count++; export const same = value => value === state;`,
+          './right.js': `import { state } from './shared.js'; state.count++; export const same = value => value === state;`,
+        },
+        output: { minify },
+      });
+      expect(
+        pair.on.chunks.filter((chunk) => chunk.moduleIds.includes('./shared.js')),
+      ).toHaveLength(1);
+      expect(runRoot(pair.on, 'main.js').logs).toEqual([
+        'shared:string',
+        'true:boolean true:boolean 2:number',
+      ]);
+    },
+  );
+
+  test.each([
+    ['too large', { maxSize: 1 }],
+    ['excluded', { maxSize: Infinity, exclude: /shared\.js$/ }],
+  ] as const)('entry merging still applies when shared code is %s', async (label, inline) => {
+    const pair = await differential(`main-lazy-${label}`, {
+      input: { main: './main.js' },
+      modules: {
+        ...shared,
+        './main.js': `import { bump } from './shared.js'; globalThis.__log(bump()); globalThis.__chain = import('./lazy.js');`,
+        './lazy.js': `import { bump } from './shared.js'; globalThis.__log(bump());`,
+      },
+      inline,
+    });
+    expect(pair.on.chunks).toHaveLength(pair.off.chunks.length);
+    expect(pair.on.chunks.find((chunk) => chunk.isEntry)!.moduleIds).toEqual([]);
+    expect(recordIds(pair.on)).toEqual([]);
+  });
+
+  test.each([
+    `const request = globalThis.__request ?? './runtime-target.js'; export const load = () => import(request);`,
+    `export const load = () => import(/* @vite-ignore */ './runtime-target.js');`,
+  ])('untracked relative imports keep their original output directory: %s', async (source) => {
+    const pair = await buildBoth(`untracked-import-${source.startsWith('const')}`, {
+      input: { a: './a.js', b: './b.js' },
+      modules: {
+        './shared.js': source,
+        './a.js': `import { load } from './shared.js'; globalThis.__chain = load().then(m => globalThis.__log(m.value));`,
+        './b.js': `import { load } from './shared.js'; globalThis.__chain = load().then(m => globalThis.__log(m.value));`,
+      },
+      output: { entryFileNames: '[name]/entry.js', chunkFileNames: 'chunks/[name].js' },
+      files: { 'chunks/runtime-target.js': `export const value = 42;` },
+    });
+    compareRoots(pair);
+    expectKeptAsFile(pair, 'shared.js');
+    expect(runRoot(pair.on, 'a/entry.js').logs).toEqual(['42:number']);
   });
 
   test('every call form keeps `this === undefined` for record functions', async () => {
@@ -750,20 +1081,6 @@ describe('kept as a file', () => {
       'shared.js',
     ],
     [
-      'a member with a retained dynamic import',
-      {
-        input: { a: './a.js', b: './b.js' },
-        modules: ab(
-          `export const s = String(globalThis.__s ?? 'S'); export const load = () => import('./lazy.js');`,
-          {
-            './lazy.js': `export const l = 1;`,
-            './a.js': `import { s, load } from './shared.js'; const m = await load(); globalThis.__log('A', s, m.l);`,
-          },
-        ),
-      },
-      'shared.js',
-    ],
-    [
       'a member importing an external module',
       {
         input: { a: './a.js', b: './b.js' },
@@ -929,7 +1246,7 @@ describe('preconditions', () => {
     await expect(attempt(input, output)).rejects.toThrow(message);
   });
 
-  test.each([-1, 1.5, Number.NaN, Number.POSITIVE_INFINITY, 2 ** 53])(
+  test.each([-1, 1.5, Number.NaN, Number.NEGATIVE_INFINITY, 2 ** 53])(
     'maxSize %p is a configuration error',
     async (maxSize) => {
       await expect(
@@ -937,6 +1254,15 @@ describe('preconditions', () => {
       ).rejects.toThrow(/maxSize/);
     },
   );
+
+  test('Infinity removes the size limit', async () => {
+    const chunks = await attempt(
+      {},
+      { codeSplitting: { experimentalInlineCommonChunks: { maxSize: Infinity } } },
+    );
+    expect(chunks).toHaveLength(3);
+    expect(chunks.filter((chunk) => chunk.moduleIds.includes('./shared.js'))).toHaveLength(2);
+  });
 
   test('an omitted strictExecutionOrder is turned on', async () => {
     const chunks = await attempt({}, { strictExecutionOrder: undefined });

@@ -48,7 +48,10 @@ impl LinkStage<'_> {
             depended_runtime_helper_map.push(RuntimeHelper::Require, stmt_info_idx);
           }
           // Handle non-static dynamic imports like `import(foo)` or `import('a' + 'b')`
-          if stmt_info.meta.intersects(StmtInfoMeta::NonStaticDynamicImport) {
+          if stmt_info.meta.intersects(StmtInfoMeta::NonStaticDynamicImport)
+            && matches!(self.options.format, OutputFormat::Cjs)
+            && !self.options.dynamic_import_in_cjs
+          {
             depended_runtime_helper_map.push(RuntimeHelper::ToEsm, stmt_info_idx);
           }
           stmt_info.import_records.iter().for_each(|rec_id| {

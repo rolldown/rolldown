@@ -16,7 +16,7 @@ use super::manual_code_splitting_options::MatchGroupTest;
 )]
 pub struct InlineCommonChunksOptions {
   /// A candidate's pre-render size must be strictly smaller than this. `0` (the default) turns
-  /// the feature off.
+  /// the feature off; positive infinity removes the size limit.
   pub max_size: Option<f64>,
   /// Module id matchers with the same rules as `CodeSplittingGroup.test`. A candidate is kept as
   /// a file when any of its modules matches.
@@ -29,7 +29,7 @@ pub struct InlineCommonChunksOptions {
 /// it from an absent option.
 #[derive(Debug, Clone)]
 pub struct NormalizedInlineCommonChunksOptions {
-  /// Source bytes; always above zero.
+  /// Source bytes; always above zero. `usize::MAX` removes the size limit.
   pub max_size: usize,
   pub exclude: Vec<MatchGroupTest>,
 }

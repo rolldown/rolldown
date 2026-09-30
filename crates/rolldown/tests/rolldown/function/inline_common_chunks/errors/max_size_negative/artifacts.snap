@@ -6,6 +6,6 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## INVALID_OPTION
 
 ```text
-[INVALID_OPTION] Invalid value -1 for option "output.codeSplitting.experimentalInlineCommonChunks.maxSize" - it must be a non-negative safe integer (`0` disables the feature).
+[INVALID_OPTION] Invalid value -1 for option "output.codeSplitting.experimentalInlineCommonChunks.maxSize" - it must be a non-negative safe integer or `Infinity` (`0` disables the feature).
 
 ```

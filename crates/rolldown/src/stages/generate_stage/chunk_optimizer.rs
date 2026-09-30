@@ -406,14 +406,16 @@ impl GenerateStage<'_> {
         }
         let chunk_idxs: Vec<_> = bits.index_of_one().map(ChunkIdx::from_raw).collect();
 
-        let merge_target = self.try_insert_into_existing_chunk(
-          &chunk_idxs,
-          &static_entry_chunk_reference,
-          chunk_graph,
-          &dynamic_entry_to_dynamic_importers,
-          temp_chunk,
-          temp_chunk_graph,
-        );
+        let merge_target = self
+          .try_insert_into_existing_chunk(
+            &chunk_idxs,
+            &static_entry_chunk_reference,
+            chunk_graph,
+            &dynamic_entry_to_dynamic_importers,
+            temp_chunk,
+            temp_chunk_graph,
+          )
+          .filter(|_| !self.prefers_inline_common_chunk(&temp_chunk.modules));
 
         Some((bits.clone(), *temp_chunk_idx, chunk_idxs, merge_target))
       })

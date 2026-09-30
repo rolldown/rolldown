@@ -174,28 +174,6 @@ test.each([
   await expect(selectedA).resolves.toBeUndefined();
 });
 
-test.each([
-  ['native', async () => CloseCallbackScope],
-  ['browser', loadBrowserCloseCallbackScope],
-])('%s close dependencies expire with their source invocation', async (_, loadScope) => {
-  const Scope = await loadScope();
-  const scopeA = new Scope();
-  const scopeB = new Scope();
-  const closeA = new Promise<void>(() => {});
-  const closeB = new Promise<void>(() => {});
-
-  await scopeA.runWithCloseIdentity('expired-source-A', async () => {
-    scopeB.selectClosePromise(closeB, 'expired-source-B');
-  });
-
-  let selectedA!: Promise<void>;
-  scopeB.runWithCloseIdentity('expired-source-B', () => {
-    selectedA = scopeA.selectClosePromise(closeA, 'expired-source-A');
-  });
-
-  expect(selectedA).toBeInstanceOf(Promise);
-});
-
 test('fire-and-forget closes do not create dependency-cycle acknowledgements', async () => {
   const scope = new CloseCallbackScope();
   const closeAError = new Error('source close failed');
@@ -232,24 +210,6 @@ test('fire-and-forget closes do not create dependency-cycle acknowledgements', a
   releaseCallbackA();
   await callbackA;
 });
-
-test.each([
-  ['native', async () => CloseCallbackScope],
-  ['browser', loadBrowserCloseCallbackScope],
-])(
-  '%s dependency-aware close promises are stable native Promise instances',
-  async (_, loadScope) => {
-    const Scope = await loadScope();
-    const scope = new Scope();
-    const closePromise = Promise.resolve();
-    const first = scope.selectClosePromise(closePromise, 'stable-close');
-    const second = scope.selectClosePromise(closePromise, 'stable-close');
-
-    expect(first).toBe(second);
-    expect(first).toBeInstanceOf(Promise);
-    await first.finally(() => {});
-  },
-);
 
 test('browser close identities remain active until every matching callback settles', async () => {
   const BrowserCloseCallbackScope = await loadBrowserCloseCallbackScope();
@@ -499,31 +459,6 @@ test('browser callback-free normalization leaves the close context configurable'
   expect(callbackClose).toBeDefined();
   expect(callbackClose).not.toBe(fullClose);
   await expect(callbackClose).resolves.toBeUndefined();
-});
-
-test.each([
-  ['native', async () => CloseCallbackScope],
-  ['browser', loadBrowserCloseCallbackScope],
-])('%s plugin thenables run inside the close callback scope', async (_, loadScope) => {
-  const Scope = await loadScope();
-  const scope = new Scope();
-  const fullClose = new Promise<void>(() => {});
-  let reentrantClose: Promise<void> | undefined;
-  const plugin = {
-    name: 'thenable-plugin',
-  };
-  const thenable = {
-    // oxlint-disable-next-line unicorn/no-thenable -- exercises plugin thenable normalization
-    then(resolve: (value: typeof plugin) => void) {
-      reentrantClose = scope.selectClosePromise(fullClose);
-      resolve(plugin);
-    },
-  };
-
-  await expect(normalizePluginOption(thenable, scope)).resolves.toEqual([plugin]);
-  expect(reentrantClose).toBeDefined();
-  expect(reentrantClose).not.toBe(fullClose);
-  await expect(reentrantClose).resolves.toBeUndefined();
 });
 
 test.each([

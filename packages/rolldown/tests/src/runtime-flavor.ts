@@ -15,7 +15,9 @@ export const isSingleThread: boolean = !capabilities.threads;
 
 // WebAssembly/WASI artifact ('wasi' or 'wasi-threads' target) -- distinct from a
 // native binding in single-thread mode. Gates wasm-boundary skips (watch,
-// symlink traversal).
+// symlink traversal, parallel plugins): these stay false on every WASI
+// artifact, including threaded WASI on MultiThread, so a test that needs one
+// of them gates on this as well as on `isSingleThread`.
 export const isWasiTest: boolean = capabilities.wasi;
 
 // Threadless WASI only ('wasi' target without threads): neither `isWasiTest`

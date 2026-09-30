@@ -130,9 +130,17 @@ MultiThread vs a pre-grown base 479.5 vs 480 ms).
   growth it was not observed in the measured runs.
 - C code that calls `malloc` directly and then fills the block is not covered:
   `malloc` cannot be wrapped (see [implementation.md](./implementation.md)).
-- Hosts without the wasm trap handler (`--wasm-enforce-bounds-checks`, some
-  32-bit hosts) bounds-check plain stores against the cached size too, so
-  dlmalloc's own header writes can trap before the refresh (1/6 with the flag).
+- Hosts without the V8 wasm trap handler (measured with Node's
+  `--wasm-enforce-bounds-checks`; V8 builds without the trap handler should
+  match, not measured) bounds-check plain stores against the cached size too.
+  Then dlmalloc's own header write into pages another thread grew traps inside
+  dlmalloc (`HeapSyncAlloc::alloc` -> `System::alloc` ->
+  `__wrap_posix_memalign` -> dlmalloc), before the refresh and while dlmalloc
+  holds its lock. The lock is never released, so the process **hangs** instead
+  of exiting: the main thread and the other workers spin on `sched_yield` at
+  about 400% CPU. The loader's worker-crash latch cannot help, because it runs
+  on the main thread's event loop, which never gets control back. Measured:
+  7/110 direct MultiThread bundle runs hang with the flag, 0/30 without it.
 - Not measured with rolldown: browsers (wasi-browser loader), Node on x64 (the
   pure V8 repro does trap on Node 25 x64).
 

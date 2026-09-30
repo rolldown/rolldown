@@ -46,9 +46,16 @@
 //!   the measured runs.
 //! - C code that calls `malloc` directly and then fills the block is not covered, because
 //!   `malloc` is not wrapped.
-//! - Hosts that run without the trap handler (`--wasm-enforce-bounds-checks`, some 32-bit
-//!   hosts) bounds-check plain stores against the cached size too, so dlmalloc's own header
-//!   writes can trap before any refresh (measured 1/6 with the flag).
+//! - Hosts that run without the V8 wasm trap handler (measured with Node's
+//!   `--wasm-enforce-bounds-checks`; V8 builds without the trap handler should match, not
+//!   measured) bounds-check plain stores against the cached size too. Then dlmalloc's own header
+//!   write into pages another thread grew traps inside dlmalloc (`HeapSyncAlloc::alloc` ->
+//!   `System::alloc` -> `__wrap_posix_memalign` -> dlmalloc), before any refresh and while it
+//!   holds the dlmalloc lock. The lock is never released, so the main thread and the other
+//!   workers spin on `sched_yield` (about 400% CPU) and the process HANGS instead of exiting.
+//!   The loader's worker-crash latch cannot help: it runs on the main thread's event loop, which
+//!   never gets control back. Measured: 7/110 direct MultiThread bundle runs hang with the flag,
+//!   0/30 without it.
 //!
 //! Remove this module once the Node versions we support ship the V8 fix
 //! (v8/v8@34241014663390c72e08c123faef6fedf395be8e).

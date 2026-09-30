@@ -5,7 +5,7 @@ import type { ModuleInfo, RolldownWatcher, RolldownWatcherEvent, WatchOptions } 
 import { rolldown, watch as _watch } from 'rolldown';
 import { defineParallelPlugin } from 'rolldown/experimental';
 import { sleep } from 'rolldown-tests/utils';
-import { isSingleThread } from '@tests/runtime-flavor';
+import { isSingleThread, isWasiTest } from '@tests/runtime-flavor';
 import { test, vi } from 'vitest';
 
 const TEST_RETRY = 3;
@@ -797,8 +797,10 @@ test.concurrent(
   },
 );
 
+// Parallel plugins and watch() stay native-only, so threaded WASI on
+// MultiThread still skips.
 test
-  .skipIf(isSingleThread)
+  .skipIf(isSingleThread || isWasiTest)
   .concurrent(
     'watcher close closes every retained result before parallel workers terminate',
     { retry: TEST_RETRY, timeout: TEST_TIMEOUT },

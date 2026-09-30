@@ -1,5 +1,5 @@
 import { getDevWatchOptionsForCi } from '@rolldown/test-dev-server';
-import { isSingleThread } from '@tests/runtime-flavor';
+import { isSingleThread, isWasiTest } from '@tests/runtime-flavor';
 import crypto from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
@@ -438,7 +438,9 @@ test.skipIf(isSingleThread)(
   },
 );
 
-test.skipIf(isSingleThread)(
+// Dev needs threads; parallel plugins stay native-only, so threaded WASI on
+// MultiThread (dev supported) still skips.
+test.skipIf(isSingleThread || isWasiTest)(
   'close waits for an active parallel-plugin build before terminating workers',
   { timeout: TEST_TIMEOUT },
   async ({ onTestFinished }) => {

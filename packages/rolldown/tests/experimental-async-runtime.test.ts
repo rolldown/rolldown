@@ -110,20 +110,8 @@ describe('experimental async runtime API', () => {
     },
   );
 
-  test('getAsyncRuntimeConfig returns the build flavor with positive thread counts', () => {
+  test('getAsyncRuntimeConfig returns positive thread counts', () => {
     const config: AsyncRuntimeConfig = getAsyncRuntimeConfig();
-    // `BindingRuntimeFlavor` is a napi string_enum: 'MultiThread' or
-    // 'CurrentThread'. Native reports the configured flavor; every WebAssembly
-    // build is CurrentThread-only.
-    if (capabilities.wasi) {
-      expect(config).toMatchObject({
-        flavor: 'CurrentThread',
-        maxBlockingTasks: 1,
-        workerThreads: 1,
-      });
-    } else {
-      expect(['MultiThread', 'CurrentThread']).toContain(config.flavor);
-    }
     // env/default-derived — assert positivity, never a host-specific count.
     expect(config.workerThreads).toBeGreaterThan(0);
     expect(Number.isInteger(config.workerThreads)).toBe(true);

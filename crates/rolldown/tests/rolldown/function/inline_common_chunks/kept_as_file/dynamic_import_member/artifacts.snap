@@ -6,8 +6,8 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## a.js
 
 ```js
-import { n as load, r as s, t as init_shared } from "./shared.js";
 import { t as __esmMin } from "./rolldown-runtime.js";
+import { n as load, r as s, t as init_shared } from "./shared.js";
 //#region a.js
 var m;
 function init_a() {
@@ -25,8 +25,8 @@ await init_a();
 ## b.js
 
 ```js
-import { r as s, t as init_shared } from "./shared.js";
 import { t as __esmMin } from "./rolldown-runtime.js";
+import { r as s, t as init_shared } from "./shared.js";
 //#region b.js
 function init_b() {
 	return (init_b = __esmMin((() => {

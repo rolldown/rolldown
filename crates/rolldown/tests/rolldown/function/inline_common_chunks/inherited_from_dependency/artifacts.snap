@@ -25,8 +25,8 @@ init_a();
 ## b.js
 
 ```js
-import { n as viaV, t as init_v } from "./vendor.js";
 import { t as __esmMin } from "./rolldown-runtime.js";
+import { n as viaV, t as init_v } from "./vendor.js";
 //#region b.js
 function init_b() {
 	return (init_b = __esmMin((() => {

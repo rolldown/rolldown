@@ -112,8 +112,8 @@ export { __share_require as i, __share as n, __share_export as r, __esmMin as t 
 ### a.js
 
 ```js
-import { n as s1, t as init_s1 } from "./s1.js";
 import { t as __esmMin } from "./rolldown-runtime.js";
+import { n as s1, t as init_s1 } from "./s1.js";
 //#region a.js
 var helper;
 function init_a() {
@@ -132,8 +132,8 @@ init_a();
 ### b.js
 
 ```js
-import { n as s1, t as init_s1 } from "./s1.js";
 import { t as __esmMin } from "./rolldown-runtime.js";
+import { n as s1, t as init_s1 } from "./s1.js";
 //#region b.js
 function init_b() {
 	return (init_b = __esmMin((() => {
@@ -182,8 +182,8 @@ export { __esmMin as t };
 ### s1.js
 
 ```js
-import { n as init_c, t as helper } from "./c2.js";
 import { t as __esmMin } from "./rolldown-runtime.js";
+import { n as init_c, t as helper } from "./c2.js";
 //#region s1.js
 var s1;
 function init_s1() {

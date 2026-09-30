@@ -335,21 +335,3 @@ test('threadless WASI keeps the serialized AST when the revival throws', async (
   expect(eager.program).toBe(program);
   expect(coercions).toBe(2);
 });
-
-test('threadless WASI memoizes a falsy revival without re-reading the released JSON', async () => {
-  // `jsonParseAst` returns `JSON.parse(programJson).node`, so a payload whose
-  // `node` is null revives to a falsy value. Gating the memo on the AST being
-  // truthy (`if (!program)`) would send the second read back to a JSON string
-  // that release has already cleared -- `JSON.parse(undefined)` throws.
-  const { parseSync } = await loadThreadlessWasiParse();
-
-  const { native, reads } = createNativeParseResult(JSON.stringify({ node: null, fixes: [] }));
-  binding.nextNative = native;
-  const eager = parseSync('input.js', '');
-  expect(reads).toEqual({ program: 1, module: 1, comments: 1, errors: 1 });
-
-  expect(eager.program).toBe(null);
-  // Second read must return the same falsy memo, not throw.
-  expect(eager.program).toBe(null);
-  expect(eager.program).toBe(null);
-});

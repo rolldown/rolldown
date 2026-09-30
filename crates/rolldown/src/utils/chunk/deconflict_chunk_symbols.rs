@@ -113,18 +113,6 @@ pub fn deconflict_chunk_symbols(
     }
     ChunkKind::Common => {}
   }
-  if matches!(format, OutputFormat::Esm) {
-    chunk.direct_imports_from_external_modules.iter().for_each(|(module, _)| {
-      let db = link_output.symbol_db.local_db(*module);
-      db.classic_data.iter_enumerated().for_each(|(symbol, _)| {
-        let symbol_ref = (*module, symbol).into();
-        if link_output.used_external_symbols.contains(&symbol_ref) {
-          renamer.add_symbol_in_root_scope(symbol_ref, true);
-        }
-      });
-    });
-  }
-
   let chunk_scope_captured_names = collect_chunk_scope_captured_names(
     chunks,
     modules,
@@ -226,11 +214,21 @@ pub fn deconflict_chunk_symbols(
     }
   }
 
-  // Though, those symbols in `imports_from_other_chunks` doesn't belong to this chunk, but in the final output, they still behave
-  // like declared in this chunk. This is because we need to generate import statements in this chunk to import symbols from other
-  // statements. Those `import {...} from './other-chunk.js'` will declared these outside symbols in this chunk, so symbols that
-  // point to them can be resolved in runtime.
-  // So we add them in the deconflict process to generate conflict-less names in this chunk.
+  // Import bindings are declared at this chunk's root scope too (`import { x } from "./other-chunk.js"`
+  // and, under esm, `import { x } from "external"`), so they take part in deconfliction. They are named
+  // after the modules' own declarations: a local keeps its name and the import gets the suffix, the
+  // same priority rollup and esbuild use (issue #11035).
+  if matches!(format, OutputFormat::Esm) {
+    chunk.direct_imports_from_external_modules.iter().for_each(|(module, _)| {
+      let db = link_output.symbol_db.local_db(*module);
+      db.classic_data.iter_enumerated().for_each(|(symbol, _)| {
+        let symbol_ref = (*module, symbol).into();
+        if link_output.used_external_symbols.contains(&symbol_ref) {
+          renamer.add_symbol_in_root_scope(symbol_ref, true);
+        }
+      });
+    });
+  }
   chunk.imports_from_other_chunks.iter().flat_map(|(_, items)| items.iter()).for_each(|item| {
     renamer.add_symbol_in_root_scope(item.import_ref, true);
   });

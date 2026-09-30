@@ -1337,6 +1337,7 @@ impl GenerateStage<'_> {
       runtime_chunk_idx,
       self.link_output.metas[runtime_idx].depended_runtime_helper,
     );
+    self.assign_chunk_exec_orders(chunk_graph);
     self.clear_module_symbol_chunk_indices(runtime_idx);
     true
   }

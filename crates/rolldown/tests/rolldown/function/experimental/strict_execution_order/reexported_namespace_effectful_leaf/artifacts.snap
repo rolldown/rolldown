@@ -89,8 +89,8 @@ export { init_color as n, setOpacity as r, init_css as t };
 ### first.js
 
 ```js
-import { r as setOpacity, t as init_css } from "./css.js";
 import { t as __esmMin } from "./rolldown-runtime.js";
+import { r as setOpacity, t as init_css } from "./css.js";
 import assert from "node:assert";
 //#region theme.js
 var theme;
@@ -141,8 +141,8 @@ export { __esmMin as t };
 ### second.js
 
 ```js
-import { r as setOpacity, t as init_css } from "./css.js";
 import { t as __esmMin } from "./rolldown-runtime.js";
+import { r as setOpacity, t as init_css } from "./css.js";
 import assert from "node:assert";
 //#region second.js
 function init_second() {

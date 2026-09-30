@@ -6,8 +6,8 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## admin.js
 
 ```js
-import { n as init_app_admin } from "./apps~personal~admin~theming.js";
 import { t as __esmMin } from "./rolldown-runtime.js";
+import { n as init_app_admin } from "./apps~personal~admin~theming.js";
 //#region admin.js
 function init_admin() {
 	return (init_admin = __esmMin((() => {
@@ -23,8 +23,8 @@ init_admin();
 ## apps~personal~admin~theming.js
 
 ```js
-import { n as PaletteIcon, r as init_palette_icon } from "./personal2.js";
 import { t as __esmMin } from "./rolldown-runtime.js";
+import { n as PaletteIcon, r as init_palette_icon } from "./personal2.js";
 //#region app-personal.js
 function init_app_personal() {
 	return (init_app_personal = __esmMin((() => {
@@ -63,8 +63,8 @@ init_personal();
 ## personal2.js
 
 ```js
-import { r as init_app_personal } from "./apps~personal~admin~theming.js";
 import { t as __esmMin } from "./rolldown-runtime.js";
+import { r as init_app_personal } from "./apps~personal~admin~theming.js";
 //#region palette-icon.js
 var PaletteIcon;
 function init_palette_icon() {
@@ -97,8 +97,8 @@ export { __esmMin as t };
 ## theming.js
 
 ```js
-import { t as init_app_theming } from "./apps~personal~admin~theming.js";
 import { t as __esmMin } from "./rolldown-runtime.js";
+import { t as init_app_theming } from "./apps~personal~admin~theming.js";
 //#region theming.js
 function init_theming() {
 	return (init_theming = __esmMin((() => {
@@ -118,8 +118,8 @@ init_theming();
 ### admin.js
 
 ```js
-import { n as init_app_admin } from "./apps~personal~admin~theming.js";
 import { t as __esmMin } from "./rolldown-runtime.js";
+import { n as init_app_admin } from "./apps~personal~admin~theming.js";
 //#region admin.js
 function init_admin() {
 	return (init_admin = __esmMin((() => {
@@ -135,8 +135,8 @@ init_admin();
 ### apps~personal~admin~theming.js
 
 ```js
-import { n as PaletteIcon, r as init_palette_icon } from "./personal2.js";
 import { t as __esmMin } from "./rolldown-runtime.js";
+import { n as PaletteIcon, r as init_palette_icon } from "./personal2.js";
 //#region app-personal.js
 function init_app_personal() {
 	return (init_app_personal = __esmMin((() => {
@@ -175,8 +175,8 @@ init_personal();
 ### personal2.js
 
 ```js
-import { r as init_app_personal } from "./apps~personal~admin~theming.js";
 import { t as __esmMin } from "./rolldown-runtime.js";
+import { r as init_app_personal } from "./apps~personal~admin~theming.js";
 //#region palette-icon.js
 var PaletteIcon;
 function init_palette_icon() {
@@ -209,8 +209,8 @@ export { __esmMin as t };
 ### theming.js
 
 ```js
-import { t as init_app_theming } from "./apps~personal~admin~theming.js";
 import { t as __esmMin } from "./rolldown-runtime.js";
+import { t as init_app_theming } from "./apps~personal~admin~theming.js";
 //#region theming.js
 function init_theming() {
 	return (init_theming = __esmMin((() => {

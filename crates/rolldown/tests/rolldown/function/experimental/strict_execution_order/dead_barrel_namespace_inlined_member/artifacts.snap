@@ -90,8 +90,8 @@ await import("./page-a.js").then(console.log);
 ### page-a.js
 
 ```js
-import { n as y, t as init_constants } from "./constants.js";
 import { t as __esmMin } from "./rolldown-runtime.js";
+import { n as y, t as init_constants } from "./constants.js";
 import assert from "node:assert";
 //#region page-a.js
 function render() {
@@ -112,8 +112,8 @@ export { render };
 ### page-b.js
 
 ```js
-import "./constants.js";
 import { t as __esmMin } from "./rolldown-runtime.js";
+import "./constants.js";
 import assert from "node:assert";
 //#region page-b.js
 function render() {}
@@ -179,8 +179,8 @@ await init_main();
 ### page-a.js
 
 ```js
-import { n as y, t as init_constants } from "./constants.js";
 import { t as __esmMin } from "./rolldown-runtime.js";
+import { n as y, t as init_constants } from "./constants.js";
 import assert from "node:assert";
 //#region page-a.js
 function render() {
@@ -201,8 +201,8 @@ export { render };
 ### page-b.js
 
 ```js
-import "./constants.js";
 import { t as __esmMin } from "./rolldown-runtime.js";
+import "./constants.js";
 import assert from "node:assert";
 //#region page-b.js
 function render() {}

@@ -29,8 +29,8 @@ if (namespaceCopy.x() !== 1 || namespaceCopy.common !== "common" || namespaceCop
 ## page-a.js
 
 ```js
-import { t as x } from "./bridge.js";
 import { t as __esmMin } from "./rolldown-runtime.js";
+import { t as x } from "./bridge.js";
 //#region common.js
 function init() {
 	globalThis.value = typeof globalThis.value === "number" ? globalThis.value + 1 : 0;
@@ -59,8 +59,8 @@ export { _, _ as underscoreLeaf, common, common as commonLeaf, x };
 ## page-b.js
 
 ```js
-import { t as x } from "./bridge.js";
 import { t as __esmMin } from "./rolldown-runtime.js";
+import { t as x } from "./bridge.js";
 //#region page-b.js
 function init_page_b() {
 	return (init_page_b = __esmMin((() => {
@@ -122,8 +122,8 @@ await init_main();
 ### page-a.js
 
 ```js
-import { n as x } from "./bridge.js";
 import { t as __esmMin } from "./rolldown-runtime.js";
+import { n as x } from "./bridge.js";
 //#region common.js
 function init() {
 	globalThis.value = typeof globalThis.value === "number" ? globalThis.value + 1 : 0;
@@ -152,8 +152,8 @@ export { _, _ as underscoreLeaf, common, common as commonLeaf, x };
 ### page-b.js
 
 ```js
-import { n as x } from "./bridge.js";
 import { t as __esmMin } from "./rolldown-runtime.js";
+import { n as x } from "./bridge.js";
 //#region page-b.js
 function init_page_b() {
 	return (init_page_b = __esmMin((() => {

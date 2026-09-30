@@ -1,0 +1,35 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## flags.js
+
+```js
+//#region flags.js
+const DEV = false;
+const PROD = true;
+let mutable = false;
+mutable = globalThis.mutable;
+const object = { toString() {
+	console.log("COERCION");
+	return "";
+} };
+//#endregion
+export { DEV, PROD, mutable, object };
+
+```
+
+## main.js
+
+```js
+import { mutable, object } from "./flags.js";
+//#region main.js
+if (console.log("TEST_EFFECT"), false);
+console.log("LIVE_ELSE");
+console.log("LIVE_TRUE");
+if (mutable) console.log("MUTABLE");
+`${object}`;
+//#endregion
+
+```

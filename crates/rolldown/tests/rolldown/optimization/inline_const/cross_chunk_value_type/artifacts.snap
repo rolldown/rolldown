@@ -6,11 +6,11 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## main.js
 
 ```js
-
+import"./test.js";
 ```
 
-## main2.js
+## test.js
 
 ```js
-
+const e=`bE d d%b%lD b/DbE%n&%b/b& m`;export{e as $walks};
 ```

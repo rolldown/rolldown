@@ -7,15 +7,15 @@ use oxc::ast::ast::{
 };
 use oxc::ast::match_member_expression;
 use oxc::ast_visit::{VisitJs, walk_js};
-use oxc::semantic::{NodeId, ScopeFlags, SymbolId};
+use oxc::semantic::{NodeId, ReferenceId, ScopeFlags, SymbolId};
 use oxc::transformer::EngineTargets;
-use oxc_ecmascript::GlobalContext;
 use oxc_ecmascript::side_effects::{
   MayHaveSideEffects, MayHaveSideEffectsContext, PropertyReadSideEffects,
 };
+use oxc_ecmascript::{GlobalContext, ValueType};
 use rolldown_common::{AstScopes, FlatOptions, SharedNormalizedBundlerOptions, StmtEvalFlags};
 use rolldown_ecmascript_utils::ExpressionExt;
-use rustc_hash::FxHashSet;
+use rustc_hash::{FxHashMap, FxHashSet};
 
 use crate::utils;
 
@@ -126,6 +126,21 @@ pub struct StmtEvalAnalyzer<'a> {
   /// Property reads on ES module namespace objects are guaranteed side-effect-free
   /// because namespace objects are frozen/sealed by spec with no getters.
   namespace_object_symbol_ids: Option<&'a FxHashSet<SymbolId>>,
+  /// Value types of linked immutable primitive bindings. Lets Oxc prove that coercing them
+  /// (e.g. template interpolation, string concatenation) cannot run user code or throw.
+  constant_value_type: Option<&'a dyn Fn(ReferenceId) -> Option<ValueType>>,
+  /// Known condition values, kept separate from evaluating the condition's side effects.
+  constant_conditions: Option<&'a ConstantConditions>,
+}
+
+/// Known boolean values of conditions, keyed by [`condition_key`].
+///
+/// Keyed by address rather than `NodeId`: nodes synthesized after semantic analysis may share
+/// `NodeId::DUMMY`, and the AST cannot move while it is borrowed for analysis.
+pub type ConstantConditions = FxHashMap<usize, bool>;
+
+pub fn condition_key(expr: &Expression) -> usize {
+  std::ptr::from_ref(expr).addr()
 }
 
 impl<'a> StmtEvalAnalyzer<'a> {
@@ -142,7 +157,23 @@ impl<'a> StmtEvalAnalyzer<'a> {
       flat_options,
       side_effect_free_call_expr_node_ids,
       namespace_object_symbol_ids,
+      constant_value_type: None,
+      constant_conditions: None,
     }
+  }
+
+  pub fn with_constants(
+    mut self,
+    value_type: &'a dyn Fn(ReferenceId) -> Option<ValueType>,
+    conditions: &'a ConstantConditions,
+  ) -> Self {
+    self.constant_value_type = Some(value_type);
+    self.constant_conditions = Some(conditions);
+    self
+  }
+
+  fn constant_condition(&self, expr: &Expression) -> Option<bool> {
+    self.constant_conditions?.get(&condition_key(expr)).copied()
   }
 
   /// Check if a call expression has been marked pure by cross-module optimization.
@@ -422,10 +453,24 @@ impl<'a> StmtEvalAnalyzer<'a> {
       ),
       Expression::SequenceExpression(s) => self.fold_compound(expr, &s.expressions),
       Expression::TemplateLiteral(t) => self.fold_compound(expr, &t.expressions),
-      Expression::ConditionalExpression(c) => {
-        self.fold_compound(expr, [&c.test, &c.consequent, &c.alternate])
+      Expression::ConditionalExpression(c) => match self.constant_condition(&c.test) {
+        Some(true) => self.analyze_expr(&c.test) | self.analyze_expr(&c.consequent),
+        Some(false) => self.analyze_expr(&c.test) | self.analyze_expr(&c.alternate),
+        None => self.fold_compound(expr, [&c.test, &c.consequent, &c.alternate]),
+      },
+      Expression::LogicalExpression(e) => {
+        let value = self.constant_condition(&e.left);
+        let short_circuits = match e.operator {
+          ast::LogicalOperator::And => value == Some(false),
+          ast::LogicalOperator::Or => value == Some(true),
+          ast::LogicalOperator::Coalesce => false,
+        };
+        if short_circuits {
+          self.analyze_expr(&e.left)
+        } else {
+          self.fold_compound(expr, [&e.left, &e.right])
+        }
       }
-      Expression::LogicalExpression(e) => self.fold_compound(expr, [&e.left, &e.right]),
       Expression::BinaryExpression(e) => self.fold_compound(expr, [&e.left, &e.right]),
       Expression::UnaryExpression(e) => self.fold_compound(expr, [&e.argument]),
 
@@ -639,9 +684,18 @@ impl<'a> StmtEvalAnalyzer<'a> {
         self.analyze_expr(&while_stmt.test) | self.analyze_stmt(&while_stmt.body)
       }
       Statement::IfStatement(if_stmt) => {
-        self.analyze_expr(&if_stmt.test)
-          | self.analyze_stmt(&if_stmt.consequent)
-          | if_stmt.alternate.as_ref().map(|s| self.analyze_stmt(s)).unwrap_or_default()
+        let test = self.analyze_expr(&if_stmt.test);
+        match self.constant_condition(&if_stmt.test) {
+          Some(true) => test | self.analyze_stmt(&if_stmt.consequent),
+          Some(false) => {
+            test | if_stmt.alternate.as_ref().map(|s| self.analyze_stmt(s)).unwrap_or_default()
+          }
+          None => {
+            test
+              | self.analyze_stmt(&if_stmt.consequent)
+              | if_stmt.alternate.as_ref().map(|s| self.analyze_stmt(s)).unwrap_or_default()
+          }
+        }
       }
       Statement::ReturnStatement(ret_stmt) => {
         ret_stmt.argument.as_ref().map(|expr| self.analyze_expr(expr)).unwrap_or_default()
@@ -1042,6 +1096,10 @@ fn for_each_eager_chain_child<'a>(expr: &'a Expression, visit: impl FnMut(EagerC
 impl GlobalContext<'_> for StmtEvalAnalyzer<'_> {
   fn is_global_reference(&self, reference: &IdentifierReference<'_>) -> bool {
     self.is_unresolved_reference(reference)
+  }
+
+  fn value_type_for_reference_id(&self, reference_id: ReferenceId) -> Option<ValueType> {
+    self.constant_value_type.and_then(|value_type| value_type(reference_id))
   }
 }
 

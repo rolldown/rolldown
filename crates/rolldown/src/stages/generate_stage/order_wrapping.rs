@@ -5,7 +5,10 @@ use crate::{
     collect_wrapped_esm_init_targets_for_module_namespace,
   },
   type_alias::{IndexEcmaAst, IndexStmtInfos},
-  types::linking_metadata::{LinkingMetadata, LinkingMetadataVec},
+  types::{
+    linking_metadata::{LinkingMetadata, LinkingMetadataVec},
+    member_read_star_reexport_path::MemberReadStarReexportPath,
+  },
   utils::external_import_interop::import_record_needs_interop,
 };
 use itertools::Itertools;
@@ -53,6 +56,7 @@ pub(super) struct OrderLoweringInput<'a> {
   pub(super) export_chains: &'a FxHashMap<SymbolRef, Vec<SymbolRef>>,
   pub(super) star_reexport_records_by_imported_symbol:
     &'a FxHashMap<SymbolRef, Vec<Vec<(ModuleIdx, ImportRecordIdx)>>>,
+  pub(super) member_read_star_reexport_paths: &'a [MemberReadStarReexportPath],
   pub(super) used_symbol_refs_builder: &'a UsedSymbolRefsBuilder,
   pub(super) cyclic_modules: &'a FxHashSet<ModuleIdx>,
   pub(super) tree_shaking: bool,
@@ -479,6 +483,7 @@ impl GenerateStage<'_> {
       star_reexport_records_by_imported_symbol: &self
         .link_output
         .star_reexport_records_by_imported_symbol,
+      member_read_star_reexport_paths: &self.link_output.member_read_star_reexport_paths,
       used_symbol_refs_builder,
       cyclic_modules: &cyclic_modules,
       tree_shaking: self.options.treeshake.is_some(),
@@ -1572,54 +1577,75 @@ pub(super) fn collect_frozen_reexport_usage(
     }
   }
 
-  let mut root_paths =
-    FxHashMap::<(ModuleIdx, ImportRecordIdx), Vec<(ModuleIdx, ImportRecordIdx)>>::default();
-  for (imported_as_ref, paths) in input.star_reexport_records_by_imported_symbol {
-    // A namespace-keyed path (recorded for a whole consumed namespace by
-    // `record_namespace_consumed_star_reexport_paths`, or a member read resolving to a
-    // namespace-valued binding) is consumed exactly when that namespace object is materialized:
-    // an included namespace retains every non-ambiguous export, so its star chains are
-    // execution-relevant; symbol-level usedness would conflate routes (a leaf used through a
-    // direct import elsewhere must not retain a barrel path nobody consumes).
+  // A namespace-keyed path (recorded for a whole consumed namespace by
+  // `record_namespace_consumed_star_reexport_paths`, or a member read resolving to a
+  // namespace-valued binding) is consumed exactly when that namespace object is materialized:
+  // an included namespace retains every non-ambiguous export, so its star chains are
+  // execution-relevant; symbol-level usedness would conflate routes (a leaf used through a
+  // direct import elsewhere must not retain a barrel path nobody consumes).
+  let symbol_is_consumed = |imported_as_ref: SymbolRef, root: (ModuleIdx, ImportRecordIdx)| {
     let key_is_namespace = input.modules[imported_as_ref.owner]
       .as_normal()
-      .is_some_and(|module| module.namespace_object_ref == *imported_as_ref);
+      .is_some_and(|module| module.namespace_object_ref == imported_as_ref);
+    if key_is_namespace {
+      // `namespace_included` here is the provisional pre-wrap value: `finalize_chunk_plan` runs
+      // `finalized_module_namespace_ref_usage` before order analysis/lowering and re-runs it
+      // only after. The skew is safe — the post-wrap refinement can only ADD namespaces
+      // demanded by import overlays (`requires_namespace`: `export *` of a dynamic-exports
+      // importee, `require` interop, splitting-disabled dynamic import), and those routes
+      // discharge their breadth at runtime through `__reExport`/`__toCommonJS` glue rather
+      // than statically routed init forwarding. An opaque `import * as` consumer — the demand
+      // this gate exists for — is a link-time fact the provisional pass already observes.
+      input.linking[imported_as_ref.owner].namespace_included
+    } else {
+      input.used_symbol_refs_builder.contains(&imported_as_ref)
+        || consumed_facades.contains(&imported_as_ref)
+        || input.linking[root.0]
+          .referenced_symbols_by_entry_point_chunk
+          .iter()
+          .any(|(symbol_ref, _)| *symbol_ref == imported_as_ref)
+    }
+  };
+
+  let mut root_paths =
+    FxHashMap::<(ModuleIdx, ImportRecordIdx), Vec<(ModuleIdx, ImportRecordIdx)>>::default();
+  let mut retain_path = |path: &[(ModuleIdx, ImportRecordIdx)],
+                         root: (ModuleIdx, ImportRecordIdx)| {
+    root_paths.entry(root).or_default().extend(path.iter().copied());
+    // An ancestor's excluded-hop traversal stops at the first init-owning barrel it meets and
+    // delegates the rest of the chain to that barrel's own `init_*`
+    // (`collect_order_wrap_esm_init_targets` pushes the owning wrapper without descending).
+    // That delegation is only sound if the owning barrel itself carries the remainder as
+    // retained evidence, so record each such suffix as that barrel's own root — otherwise its
+    // interior hop forwards nothing and the chain's pure leaf is never initialized.
+    for (position, record) in path.iter().copied().enumerate().skip(1) {
+      if module_owns_reexport_init(input, state, record.0) {
+        root_paths.entry(record).or_default().extend(path[position..].iter().copied());
+      }
+    }
+  };
+  for (imported_as_ref, paths) in input.star_reexport_records_by_imported_symbol {
     for path in paths {
       let Some(root) = path.first().copied() else {
         continue;
       };
-      let consumer_is_used = if key_is_namespace {
-        // `namespace_included` here is the provisional pre-wrap value: `finalize_chunk_plan` runs
-        // `finalized_module_namespace_ref_usage` before order analysis/lowering and re-runs it
-        // only after. The skew is safe — the post-wrap refinement can only ADD namespaces
-        // demanded by import overlays (`requires_namespace`: `export *` of a dynamic-exports
-        // importee, `require` interop, splitting-disabled dynamic import), and those routes
-        // discharge their breadth at runtime through `__reExport`/`__toCommonJS` glue rather
-        // than statically routed init forwarding. An opaque `import * as` consumer — the demand
-        // this gate exists for — is a link-time fact the provisional pass already observes.
-        input.linking[imported_as_ref.owner].namespace_included
-      } else {
-        input.used_symbol_refs_builder.contains(imported_as_ref)
-          || consumed_facades.contains(imported_as_ref)
-          || input.linking[root.0]
-            .referenced_symbols_by_entry_point_chunk
-            .iter()
-            .any(|(symbol_ref, _)| symbol_ref == imported_as_ref)
-      };
-      if consumer_is_used {
-        root_paths.entry(root).or_default().extend(path.iter().copied());
-        // An ancestor's excluded-hop traversal stops at the first init-owning barrel it meets and
-        // delegates the rest of the chain to that barrel's own `init_*`
-        // (`collect_order_wrap_esm_init_targets` pushes the owning wrapper without descending).
-        // That delegation is only sound if the owning barrel itself carries the remainder as
-        // retained evidence, so record each such suffix as that barrel's own root — otherwise its
-        // interior hop forwards nothing and the chain's pure leaf is never initialized.
-        for (position, record) in path.iter().copied().enumerate().skip(1) {
-          if module_owns_reexport_init(input, state, record.0) {
-            root_paths.entry(record).or_default().extend(path[position..].iter().copied());
-          }
-        }
+      if symbol_is_consumed(*imported_as_ref, root) {
+        retain_path(path, root);
       }
+    }
+  }
+  // A member-read path is consumed only while the statement that reads through the namespace is
+  // included: the resolved leaf being used elsewhere (a direct import in another module) is no
+  // evidence that this reader's forwarding hops execute.
+  for member_read in input.member_read_star_reexport_paths {
+    let Some(root) = member_read.path.first().copied() else {
+      continue;
+    };
+    let (reader_module, reader_stmt) = member_read.reader;
+    if input.linking[reader_module].stmt_info_included.has_bit(reader_stmt)
+      && symbol_is_consumed(member_read.resolved, root)
+    {
+      retain_path(&member_read.path, root);
     }
   }
 

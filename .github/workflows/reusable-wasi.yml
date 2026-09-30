@@ -200,3 +200,85 @@ jobs:
       # `@example/native-magic-string` is excluded because it depends on a native-only addon.
       - name: Build Examples
         run: vp run --filter '@example/*' --filter '!@example/native-magic-string' --filter '!@example/typescript' build
+
+  # The `run` job tests the debug-profile threaded wasm. The heap-sync workaround
+  # (#10697) is sensitive to the build profile: release-wasi once removed its
+  # grow-ahead `malloc` + `free` pair, which the debug build kept. This
+  # job builds the threaded wasm the way reusable-release-build.yml does
+  # (`build-binding:wasi:release`: `release-wasi` profile, `TARGET_CC=clang`, the
+  # napi cli copy and the allocator export rename) and runs the allocator checks
+  # against it. Its cache key is its own; the release workflow builds with no cache.
+  # See internal-docs/wasi-shared-memory-grow/implementation.md
+  release-threaded:
+    name: WASI (threaded, release artifact)
+    if: ${{ inputs.changed }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Setup Rust
+        uses: oxc-project/setup-rust@3d6fb132fbe7cdcb66bf8ec193911c2945369d12 # v1.0.17
+        with:
+          cache-key: release-build-wasi
+          save-cache: ${{ github.ref_name == 'main' }}
+
+      - uses: voidzero-dev/setup-vp@3754dd7dbdb32bd8f6d28b6043de13ad3a75f21f # v1.21.1
+        with:
+          version: '0.2.1'
+          cache: true
+
+      - name: Add threaded WASI target
+        run: rustup target add wasm32-wasip1-threads
+
+      # `build-wasi:release` = the native binding (build.ts bundles the package with
+      # it), then `build-binding:wasi:release` (the release workflow's command), then
+      # the threaded dist. `TARGET_CC` matches the release workflow's build step.
+      - name: Build Rolldown with release threaded WASI binding
+        env:
+          TARGET_CC: clang
+        run: vp run --filter rolldown build-wasi:release
+
+      # The dist gets only the stripped `.wasm` (copy-addon-plugin.ts), the file the
+      # release workflow uploads and `@rolldown/binding-wasm32-wasi` ships. The loader
+      # prefers a colocated `.debug.wasm`, so fail if one is there. Compare the hash
+      # with the `bindings-wasm32-wasip1-threads` artifact of a release run.
+      - name: Assert the dist carries the release wasm
+        run: |
+          rm -f packages/rolldown/src/rolldown-binding.wasm32-wasi.debug.wasm
+          if [ -e packages/rolldown/dist/rolldown-binding.wasm32-wasi.debug.wasm ]; then
+            echo "::error::dist has rolldown-binding.wasm32-wasi.debug.wasm; the loader would pick it"
+            exit 1
+          fi
+          cmp packages/rolldown/src/rolldown-binding.wasm32-wasi.wasm packages/rolldown/dist/rolldown-binding.wasm32-wasi.wasm
+          sha256sum packages/rolldown/dist/rolldown-binding.wasm32-wasi.wasm
+
+      - name: Assert threaded WASI dist file set
+        run: node scripts/wasi/check-wasi-dist-files.mjs threaded
+
+      # Not retried: one failure is a regression of the release artifact.
+      - name: Node Test (threaded WASI, MultiThread default)
+        run: timeout 300 vp run --filter rolldown-tests test:wasi-threaded
+
+      - name: Threaded WASI heap sync without trap handler (bounds checks, 20 runs)
+        run: timeout 300 vp run --filter rolldown-tests test:wasi-threaded-stress:bounds-checks
+
+      - name: Threaded WASI heap sync without trap handler (handler off, 10 runs)
+        run: timeout 300 vp run --filter rolldown-tests test:wasi-threaded-stress:no-trap-handler
+
+      - name: Threaded WASI heap sync with forced growth (20 runs)
+        run: timeout 300 vp run --filter rolldown-tests test:wasi-threaded-stress:forced-growth
+
+      - name: Threaded WASI heap sync with forced growth and JS plugin handoff (20 runs)
+        run: timeout 300 vp run --filter rolldown-tests test:wasi-threaded-stress:handoff
+
+      - name: Threaded WASI heap ceiling
+        run: timeout 300 vp run --filter rolldown-tests test:wasi-threaded-stress:heap-ceiling
+
+      - name: Threaded WASI heap grows only past the initial memory
+        run: timeout 300 vp run --filter rolldown-tests test:wasi-threaded-stress:no-growth
+
+      - name: Threaded WASI worker crash latch
+        run: timeout 300 vp run --filter rolldown-tests test:wasi-worker-crash

@@ -154,7 +154,8 @@ threaded napi build, inside the build-artifact transaction, on the `.wasm` and
 the `.debug.wasm`; the napi cli copies a fresh wasm from the target dir on every
 build, so a warm rebuild renames again. Every workflow that builds the threaded
 artifact goes through `build-binding.ts`: `reusable-wasi.yml`
-(`just build-rolldown-wasi`), `reusable-release-build.yml`
+(`just build-rolldown-wasi`, and `build-wasi:release` in its `release-threaded`
+job), `reusable-release-build.yml`
 (`build-binding:wasi:release`) and `reusable-browser.yml`
 (`packages/browser-tests/scripts/prepare-fixture.mjs`). A path that skips it
 fails closed: the module does not load, and the dist check fails.
@@ -162,11 +163,11 @@ fails closed: the module does not load, and the dist check fails.
 ## Checks
 
 - `node scripts/wasi/check-wasi-dist-files.mjs threaded` (CI `reusable-wasi.yml`,
-  after the threaded build) fails unless the threaded wasm exports the wrappers
-  (`__wrap_calloc`, `__wrap_realloc`, `__wrap_posix_memalign`, `__wrap_sbrk`,
-  `rolldown_heap_sync_malloc` / `_free` / `_stat`), `malloc` and `free` have the
-  function index of `rolldown_heap_sync_malloc` / `_free`, and `__wrap_malloc` /
-  `__wrap_free` are gone. The un-renamed wasm has no `malloc` export, so it fails.
+  after the debug and the release threaded builds) fails unless the threaded wasm
+  exports the wrappers (`__wrap_calloc`, `__wrap_realloc`, `__wrap_posix_memalign`,
+  `__wrap_sbrk`, `rolldown_heap_sync_malloc` / `_free` / `_stat`), `malloc` and
+  `free` have the function index of `rolldown_heap_sync_malloc` / `_free`, and
+  `__wrap_malloc` / `__wrap_free` are gone. The un-renamed wasm has no `malloc` export, so it fails.
 - `node scripts/wasi/check-wasi-dist-files.mjs single [packages/browser/dist]` fails
   if the single-thread wasm carries any `__wrap_*` or `rolldown_heap_sync_*` export.
 - `packages/rolldown/tests/wasi/threaded-memory-stress.mjs` runs each case in a
@@ -196,6 +197,18 @@ fails closed: the module does not load, and the dist check fails.
 - CI also runs `test:wasi-threaded`, `test:stability` and
   `test:wasi-runtime-lifecycle` on the default MultiThread flavor, and again with
   `ROLLDOWN_RUNTIME=single` for CurrentThread.
+- The steps above use the debug-profile wasm (`just build-rolldown-wasi`). The
+  allocator code is profile-sensitive (in `release-wasi` LLVM removed the unused
+  grow-ahead `malloc` + `free` pair that the debug build kept, fixed in 64409a594
+  with `black_box`), so the `release-threaded` job in `reusable-wasi.yml` builds
+  the wasm with `build-wasi:release` (the release
+  workflow's `build-binding:wasi:release` with `TARGET_CC=clang`, after the native
+  binding that bundles the dist) and runs the dist check, `test:wasi-threaded`,
+  every script in the table except `test:wasi-threaded-stress`, and
+  `test:wasi-worker-crash` against it. The dist holds only the stripped `.wasm`;
+  the job removes `src/*.debug.wasm`, fails if the dist has one (the loader would
+  pick it), checks the dist wasm equals the `src` one, and prints its sha256 to
+  compare with the release run's `bindings-wasm32-wasip1-threads` artifact.
 
 ## Related
 

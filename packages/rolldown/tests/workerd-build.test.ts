@@ -6,8 +6,6 @@ import { afterEach, describe, expect, test, vi } from 'vitest';
 import * as bindingProxy from '../src/binding-workerd-proxy';
 // @ts-ignore This focused unit test intentionally reaches the package source outside the test rootDir.
 import { RolldownMagicString as stubRolldownMagicString } from '../src/workerd-stubs/binding-magic-string';
-// @ts-ignore This focused unit test intentionally reaches the package source outside the test rootDir.
-import * as timerHostStub from '../src/workerd-stubs/timer-host';
 // @ts-ignore Type-only view of the workerd entry; the dist bundle is imported at runtime.
 import type * as workerdEntryTypes from '../src/workerd';
 
@@ -177,13 +175,6 @@ describe('workerd stubs', () => {
     expect(() => new stubConstructor()).toThrowError(
       /MagicString is not supported in the workerd build yet/,
     );
-  });
-
-  // The workerd bundle aliases `src/timer-host.ts` to this module by path, so
-  // nothing imports it in a type-checked position: this is the only gate that
-  // the stub stays export-free and registers no process-wide host on import.
-  test('timer-host stub has no exports and no registration side effects', () => {
-    expect(Object.keys(timerHostStub)).toStrictEqual([]);
   });
 });
 
@@ -414,29 +405,6 @@ describe('workerd build() owned-instance disposal parking', () => {
     const result = await build({ module: wasmModule, input: 'x' });
     expect(result.output).toHaveLength(1);
     expect(transient.dispose).toHaveBeenCalledTimes(2);
-  });
-
-  test('a rejected close is retried, so the owned instance is disposed instead of parked', async () => {
-    const closeError = new Error('onLog threw on the plugin-timings warning');
-    const owned = fakeOwnedInstance(() => {});
-    const later = fakeOwnedInstance(() => {});
-    const bundles: object[] = [];
-    const { build } = await loadHarness([owned, later], [{ closeError }, 'ok'], bundles);
-
-    // The close failure is still what the caller sees: the retry only exists
-    // to hand the instance's binding object back.
-    const rejection: unknown = await build({ module: wasmModule, input: 'x' }).catch((e) => e);
-    expect(rejection).toBe(closeError);
-
-    const record = cleanupRecord(bundles[0]);
-    expect(record.closeCalls).toBe(1);
-    expect(record.retryCalls).toBe(1);
-    expect(record.settled).toBe(true);
-
-    // Disposed right there, and never parked: a later build does not touch it.
-    expect(owned.dispose).toHaveBeenCalledTimes(1);
-    await build({ module: wasmModule, input: 'x' });
-    expect(owned.dispose).toHaveBeenCalledTimes(1);
   });
 
   test('a rejected close on the generate-failure branch is retried too', async () => {

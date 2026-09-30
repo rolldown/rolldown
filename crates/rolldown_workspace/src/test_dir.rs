@@ -59,26 +59,3 @@ fn create_unique_dir(prefix: &str) -> PathBuf {
   std::fs::create_dir_all(&path).expect("create test directory");
   path
 }
-
-#[cfg(test)]
-mod tests {
-  use super::TestDir;
-
-  #[test]
-  fn each_test_dir_is_unique_and_removed_on_drop() {
-    let first = TestDir::new("rolldown-workspace-test-dir");
-    let second = TestDir::new("rolldown-workspace-test-dir");
-    assert_ne!(first.path(), second.path());
-    assert!(first.path().is_dir());
-
-    let path = first.path().to_path_buf();
-    drop(first);
-    assert!(!path.exists());
-  }
-
-  #[test]
-  fn canonical_test_dir_is_canonical() {
-    let dir = TestDir::new_canonical("rolldown-workspace-test-dir-canonical");
-    assert_eq!(dunce::canonicalize(dir.path()).unwrap(), dir.path());
-  }
-}

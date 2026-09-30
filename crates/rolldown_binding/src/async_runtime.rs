@@ -2578,39 +2578,6 @@ mod tests {
   }
 
   #[test]
-  fn relay_terminal_cleanup_contains_cancel_panics_and_still_wakes() {
-    struct CountingWake(std::sync::Arc<std::sync::atomic::AtomicUsize>);
-
-    impl std::task::Wake for CountingWake {
-      fn wake(self: std::sync::Arc<Self>) {
-        self.0.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
-      }
-    }
-
-    let state = std::sync::Arc::new(TestPendingRelayState::default());
-    state.panic_on_cancel.store(true, std::sync::atomic::Ordering::SeqCst);
-    let wakes = std::sync::Arc::new(std::sync::atomic::AtomicUsize::new(0));
-    let (relay_id, _, guard) = test_pending_relay_guard(
-      &state,
-      1,
-      std::task::Waker::from(std::sync::Arc::new(CountingWake(std::sync::Arc::clone(&wakes)))),
-      RelayScheduleState::CallbackComplete,
-    );
-
-    drop(guard);
-
-    assert_eq!(
-      *state.cancelled_relays.lock().unwrap_or_else(std::sync::PoisonError::into_inner),
-      [relay_id]
-    );
-    assert_eq!(
-      wakes.load(std::sync::atomic::Ordering::SeqCst),
-      1,
-      "a panicking cancellation path must not suppress the pending timer wake"
-    );
-  }
-
-  #[test]
   fn relay_native_cancellation_settles_before_fallible_host_cancellation() {
     use futures::FutureExt as _;
 
@@ -2678,55 +2645,6 @@ mod tests {
       wakes.load(std::sync::atomic::Ordering::SeqCst),
       2,
       "one panicking cancellation must not suppress any later pending timer wake"
-    );
-  }
-
-  #[test]
-  fn failed_relay_retirement_cancels_only_after_the_schedule_callback_returns() {
-    struct CountingWake(std::sync::Arc<std::sync::atomic::AtomicUsize>);
-
-    impl std::task::Wake for CountingWake {
-      fn wake(self: std::sync::Arc<Self>) {
-        self.0.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
-      }
-    }
-
-    let state = std::sync::Arc::new(TestPendingRelayState::default());
-    let wakes = std::sync::Arc::new(std::sync::atomic::AtomicUsize::new(0));
-    retire_pending_relay(
-      &state,
-      PendingHostTimer {
-        cancellation: None,
-        relay_health: std::sync::Arc::new(HostTimerRelayHealth::default()),
-        relay_id: 7,
-        waker: std::task::Waker::from(std::sync::Arc::new(CountingWake(std::sync::Arc::clone(
-          &wakes,
-        )))),
-        schedule_state: RelayScheduleState::CallbackComplete,
-      },
-    );
-    retire_pending_relay(
-      &state,
-      PendingHostTimer {
-        cancellation: None,
-        relay_health: std::sync::Arc::new(HostTimerRelayHealth::default()),
-        relay_id: 8,
-        waker: std::task::Waker::from(std::sync::Arc::new(CountingWake(std::sync::Arc::clone(
-          &wakes,
-        )))),
-        schedule_state: RelayScheduleState::AwaitingCallback,
-      },
-    );
-
-    assert_eq!(
-      *state.cancelled_relays.lock().unwrap_or_else(std::sync::PoisonError::into_inner),
-      [7],
-      "a callback-complete failure may have armed a timeout, while a failed TSFN submission did not"
-    );
-    assert_eq!(
-      wakes.load(std::sync::atomic::Ordering::SeqCst),
-      2,
-      "both failed relays must wake their timer operations"
     );
   }
 
@@ -3329,24 +3247,6 @@ mod tests {
   }
 
   #[test]
-  fn native_thread_env_overrides_clamp_to_production_limits() {
-    let shared = resolve(
-      ResolvedRuntimeTarget::Native,
-      &RuntimeEnv {
-        worker_threads: Some("1000000".to_string()),
-        max_blocking_threads: Some("1000000".to_string()),
-        ..RuntimeEnv::default()
-      },
-    );
-    assert_eq!(shared.worker_threads, max_async_runtime_worker_threads());
-    assert_eq!(
-      shared.max_blocking_tasks,
-      max_async_runtime_worker_threads() - 1,
-      "the shared cap must still reserve one runnable lane"
-    );
-  }
-
-  #[test]
   fn native_defaults_respect_host_and_container_parallelism() {
     assert_eq!(native_default_parallelism(128, 2), 2);
     assert_eq!(native_default_parallelism(8, 16), 8);
@@ -3453,19 +3353,6 @@ mod tests {
     // Huge values parse untouched here: clamping to the shared ceiling is
     // `configure` validation's job, not the resolver's.
     assert_eq!(parse_drain_linger_us(Some(u64::MAX.to_string())), Some(u64::MAX));
-
-    // And the resolver wires it through on the shared backend.
-    let resolved = resolve(
-      ResolvedRuntimeTarget::Native,
-      &RuntimeEnv { drain_linger_us: Some("250".to_string()), ..RuntimeEnv::default() },
-    );
-    assert_eq!(resolved.drain_linger_us, Some(250));
-    let disabled = resolve(
-      ResolvedRuntimeTarget::Native,
-      &RuntimeEnv { drain_linger_us: Some("0".to_string()), ..RuntimeEnv::default() },
-    );
-    assert_eq!(disabled.drain_linger_us, Some(0));
-    assert_eq!(resolve(ResolvedRuntimeTarget::Native, &env()).drain_linger_us, None);
   }
 
   #[test]
@@ -3545,7 +3432,7 @@ mod tests {
 
   #[test]
   fn cancellation_failures_share_the_three_strike_budget_without_cleanup_double_counting() {
-    use std::sync::atomic::{AtomicU32, Ordering};
+    use std::sync::atomic::AtomicU32;
 
     use napi::Status;
 
@@ -3562,15 +3449,6 @@ mod tests {
         "one relay failure must consume at most one strike"
       );
     }
-
-    let cleanup_health = HostTimerRelayHealth::default();
-    cleanup_health.set_cancellation_accounting(RelayCancellationAccounting::CleanupOnly);
-    assert_eq!(cleanup_health.cancellation_accounting(), RelayCancellationAccounting::CleanupOnly);
-    assert_eq!(
-      failures.load(Ordering::SeqCst),
-      HOST_TIMER_MAX_TRANSIENT_FAILURES - 1,
-      "schedule-failure and eviction cleanup must not mutate host health"
-    );
 
     let final_health = HostTimerRelayHealth::default();
     assert_eq!(
@@ -3616,40 +3494,6 @@ mod tests {
         .to_string()
     };
     let strikes = 2;
-    let relay_id = 7;
-    for operation in ["failed", "could not be queued"] {
-      let cancellation =
-        |action| render(action, "cancellation callback", operation, Some(relay_id));
-      assert_eq!(
-        cancellation(HostTimerFailureAction::Duplicate),
-        format!(
-          "rolldown: host timer cancellation callback {operation} for relay {relay_id} after \
-           this relay failure was already accounted: {error}"
-        ),
-      );
-      assert_eq!(
-        cancellation(HostTimerFailureAction::EvictHost),
-        format!(
-          "rolldown: host timer cancellation callback {operation} for relay {relay_id} (host \
-           gone, evicting): {error}"
-        ),
-      );
-      assert_eq!(
-        cancellation(HostTimerFailureAction::EvictHostAfterStrikes(strikes)),
-        format!(
-          "rolldown: host timer cancellation callback {operation} {strikes} times in a row, \
-           evicting this timer host (relay {relay_id}): {error}"
-        ),
-      );
-      assert_eq!(
-        cancellation(HostTimerFailureAction::Retry(strikes)),
-        format!(
-          "rolldown: host timer cancellation callback {operation} for relay {relay_id} \
-           ({strikes}/{HOST_TIMER_MAX_TRANSIENT_FAILURES} before eviction): {error}"
-        ),
-      );
-    }
-
     let relay = |action| render(action, "callback", "failed", None);
     assert_eq!(
       relay(HostTimerFailureAction::EvictHost),

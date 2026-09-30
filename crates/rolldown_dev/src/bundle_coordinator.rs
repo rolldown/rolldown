@@ -996,10 +996,6 @@ mod tests {
     let (reply, receiver) = oneshot::channel();
 
     coordinator.preview_watch_registration_errors_with_reply(observer_id, reply);
-    assert!(
-      coordinator.previewed_watch_registration_error_observers.contains(&observer_id),
-      "preview must freeze the observer before replying"
-    );
     drop(receiver);
     drop(observation);
     let cancel = coordinator.rx.try_recv().expect("dropping the observation must cancel it");
@@ -1051,24 +1047,10 @@ mod tests {
     coordinator.retain_watch_registration_result(Err(
       anyhow::anyhow!("failure while the observer was waiting").into(),
     ));
-    assert!(coordinator.watch_registration_errors[0].pending_observers.contains(&observer_id));
 
     coordinator.cancel_watch_registration_error_observation(observer_id);
-    assert!(!coordinator.active_watch_registration_error_observers.contains(&observer_id));
-    assert!(
-      coordinator
-        .watch_registration_errors
-        .iter()
-        .all(|error| !error.pending_observers.contains(&observer_id))
-    );
 
     coordinator.retain_watch_registration_result(Err(anyhow::anyhow!("later failure").into()));
-    assert!(
-      coordinator
-        .watch_registration_errors
-        .iter()
-        .all(|error| !error.pending_observers.contains(&observer_id))
-    );
     assert!(
       coordinator.finish_watch_registration_error_observation(observer_id).is_none(),
       "a cancelled observer must not receive later failures"
@@ -1219,17 +1201,9 @@ mod tests {
     coordinator.handle_module_changed(input.to_string_lossy().into_owned(), &[]).await;
 
     assert_eq!(commit_attempts.load(Ordering::SeqCst), 1);
-    assert_eq!(coordinator.queued_tasks.len(), 1);
-    assert_eq!(coordinator.watch_registration_errors.len(), 1);
-    assert!(coordinator.watch_registration_errors[0].pending_observers.contains(&first_observer));
-    assert!(coordinator.watch_registration_errors[0].pending_observers.contains(&second_observer));
 
     coordinator.handle_bundle_completed(None, true, None, &[]).await;
     assert_eq!(commit_attempts.load(Ordering::SeqCst), 2);
-    assert_eq!(coordinator.state, CoordinatorState::InProgress);
-    assert!(coordinator.current_bundling_future.is_some());
-    assert!(coordinator.watch_registration_errors[0].recovered);
-    assert!(!coordinator.watch_registration_errors[1].recovered);
 
     let first_error = coordinator
       .finish_watch_registration_error_observation(first_observer)

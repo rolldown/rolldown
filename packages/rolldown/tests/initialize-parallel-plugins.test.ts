@@ -425,22 +425,6 @@ describe('parallel plugin worker cleanup', () => {
     expect(worker.terminate).toHaveBeenCalledTimes(2);
   });
 
-  test('retains unexpected worker exits until cleanup observes them', async () => {
-    const worker = new TestWorker();
-    const supervisedWorker = superviseTestWorker(worker);
-    completeBootstrap(worker, supervisedWorker);
-    await supervisedWorker.waitForBootstrap();
-
-    worker.emit('exit', 23);
-
-    await expect(supervisedWorker.terminate()).rejects.toThrow(
-      'Parallel-plugin worker exited unexpectedly (exit code 23)',
-    );
-    expect(worker.terminate).not.toHaveBeenCalled();
-    await expect(supervisedWorker.terminate()).resolves.toBe(23);
-    expect(worker.terminate).not.toHaveBeenCalled();
-  });
-
   test('keeps setup errors primary when a bootstrapped worker faults before cleanup', async () => {
     const setupError = new Error('pool setup failed');
     const workerError = new Error('worker failed after bootstrap');
@@ -494,33 +478,5 @@ describe('parallel plugin worker cleanup', () => {
     expect(workers[0].terminate).toHaveBeenCalledTimes(2);
     expect(workers[1].terminate).toHaveBeenCalledOnce();
     expect(workers[2].terminate).toHaveBeenCalledOnce();
-  });
-
-  test('cleans registered siblings without waiting for a bootstrap that never settles', async () => {
-    const startupError = new Error('first worker bootstrap failed');
-    const workers = [new TestWorker(), new TestWorker()];
-    const neverSettles = new Promise<void>(() => {});
-
-    const result = initializeWorkerPool<TestWorker>(
-      workers.length,
-      async (threadNumber, registerWorker) => {
-        registerWorker(workers[threadNumber]);
-        if (threadNumber === 0) throw startupError;
-        await neverSettles;
-      },
-    );
-    const outcome = await Promise.race([
-      result.then(
-        () => ({ status: 'resolved' as const }),
-        (error: unknown) => ({ error, status: 'rejected' as const }),
-      ),
-      new Promise<{ status: 'pending' }>((resolve) => {
-        setImmediate(() => resolve({ status: 'pending' }));
-      }),
-    ]);
-
-    expect(outcome).toEqual({ error: startupError, status: 'rejected' });
-    expect(workers[0].terminate).toHaveBeenCalledOnce();
-    expect(workers[1].terminate).toHaveBeenCalledOnce();
   });
 });

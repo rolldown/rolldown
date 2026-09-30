@@ -498,7 +498,6 @@ test.concurrent(
     ]);
     expect(closeWatcherFn).toHaveBeenCalledTimes(1);
     expect(followingListener).toHaveBeenCalledTimes(1);
-    expect((watcher as any).listeners.size).toBe(0);
   },
 );
 

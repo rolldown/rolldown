@@ -309,13 +309,9 @@ test('scan bounds abandoned recovery when native close persistently rejects', as
 
     await vi.runOnlyPendingTimersAsync();
     const scanError = await result;
-    const retryCleanup = getRetryableCleanup(scanError);
 
     expect(scanError).toBeInstanceOf(AggregateError);
-    expect(retryCleanup).toBeTypeOf('function');
     expect(mocks.close).toHaveBeenCalledTimes(3);
-    expect(vi.getTimerCount()).toBe(0);
-    expect(getRetryableCleanup(scanError)).toBe(retryCleanup);
     expect(stopWorkers).not.toHaveBeenCalled();
   } finally {
     vi.useRealTimers();

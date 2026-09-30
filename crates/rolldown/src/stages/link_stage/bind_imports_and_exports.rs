@@ -217,7 +217,8 @@ impl LinkStage<'_> {
         .collect::<FxHashMap<_, _>>();
 
       let mut module_stack = vec![];
-      // The star-export origin map only feeds `record_star_reexport_path`, which is strict-only.
+      // The star-export origin map only feeds `collect_star_reexport_path`, whose callers are all
+      // strict-only.
       let mut star_export_record_by_name =
         self.options.is_strict_execution_order_enabled().then(FxHashMap::default);
       if module.has_star_export() || module.ast_usage.contains(EcmaModuleAstUsage::IsCjsReexport) {

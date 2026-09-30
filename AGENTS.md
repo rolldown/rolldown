@@ -92,6 +92,7 @@ IMPORTANT: The project uses `just` as a task runner. Always prefer `just` comman
 # Browser CI
 
 - The default CI's `Browser` job loads the packed `@rolldown/browser` in a real Chrome page: Vite serves an app that imports it through the `browser` export condition, and the test bundles with it. No label — it runs on every PR that touches node code, and it is what catches node builtins leaking into the browser build. Locally: `just test-browser`.
+- The same job also runs `just test-webcontainer-fallback` on every PR that touches node code: plain Node, no WebContainer. It installs the packed `rolldown` with no binding and checks that `webcontainer-fallback.cjs` loads the packed WASI binding, the path vite.new takes. The `ci: webcontainer` suite below deliberately skips that path (#10938).
 
 # WebContainer CI
 

@@ -6,8 +6,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## a.js
 
 ```js
-import { t as value } from "./entry-a.js";
-export { value };
+export { t as value } from "./entry-a.js";
 
 ```
 
@@ -95,8 +94,7 @@ export { __esmMin as t };
 ### a.js
 
 ```js
-import { t as value } from "./entry-a.js";
-export { value };
+export { t as value } from "./entry-a.js";
 
 ```
 

@@ -17,15 +17,13 @@ export { a_exports as t };
 ## entry.js
 
 ```js
-import { t as a_exports } from "./a.js";
-export { a_exports as a };
+export { t as a } from "./a.js";
 
 ```
 
 ## main.js
 
 ```js
-import { t as a_exports } from "./a.js";
-export { a_exports as a };
+export { t as a } from "./a.js";
 
 ```

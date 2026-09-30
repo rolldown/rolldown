@@ -19,7 +19,6 @@ export { p, q };
 ## b.js
 
 ```js
-import { p, q } from "./a.js";
-export { p, q };
+export { p, q } from "./a.js";
 
 ```

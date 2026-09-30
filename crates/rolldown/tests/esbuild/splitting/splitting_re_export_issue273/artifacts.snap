@@ -16,7 +16,6 @@ export { a };
 ## b.js
 
 ```js
-import { a } from "./a.js";
-export { a };
+export { a } from "./a.js";
 
 ```

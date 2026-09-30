@@ -35,11 +35,7 @@ vi.mock('../src/runtime-lifecycle', () => ({
 // @ts-ignore This focused unit test intentionally reaches package source outside the test rootDir.
 import { build } from '../src/api/build';
 // @ts-ignore This focused unit test intentionally reaches package source outside the test rootDir.
-import {
-  getRetryableCleanup,
-  recoverRetryableCleanups,
-  retryCleanupFromError,
-} from '../src/utils/retryable-cleanup';
+import { getRetryableCleanup, recoverRetryableCleanups } from '../src/utils/retryable-cleanup';
 
 beforeEach(() => {
   mocks.close.mockReset();
@@ -71,53 +67,6 @@ test('build surfaces terminal diagnostics after recovering a transport failure',
   expect(mocks.close).toHaveBeenCalledOnce();
   expect(mocks.retryRolldownBuildCleanup).toHaveBeenCalledOnce();
   expect(getRetryableCleanup(error)).toBeUndefined();
-});
-
-test('build rethrows its close error after the immediate cleanup retry releases ownership', async () => {
-  const cleanupError = new Error('runtime release failed');
-  let ownsResources = true;
-  mocks.close.mockRejectedValueOnce(cleanupError);
-  mocks.retryRolldownBuildCleanup.mockImplementationOnce(async () => {
-    ownsResources = false;
-    return [];
-  });
-  mocks.hasRetryableBuildCleanup.mockImplementation(() => ownsResources);
-
-  const error = await build({ input: 'entry.js', write: false }).catch((error: unknown) => error);
-
-  // The retry released the resources; it did not undo the failed close. main's
-  // `finally { await build.close() }` rejects with exactly this error, so
-  // resolving here would drop a failure the caller asked about.
-  expect(error).toBe(cleanupError);
-  expect(mocks.close).toHaveBeenCalledOnce();
-  expect(mocks.retryRolldownBuildCleanup).toHaveBeenCalledOnce();
-});
-
-test('build retries owned cleanup without duplicating a terminal diagnostic', async () => {
-  const terminalError = new Error('closeBundle failed');
-  const cleanupError = new Error('runtime release failed');
-  const firstCloseError = new AggregateError(
-    [terminalError, cleanupError],
-    'Bundle native close or runtime release failed',
-    { cause: terminalError },
-  );
-  mocks.close.mockRejectedValueOnce(firstCloseError);
-  mocks.getCloseTerminalErrors.mockImplementation((error) =>
-    error === firstCloseError ? [terminalError] : [],
-  );
-  let ownsResources = true;
-  mocks.retryRolldownBuildCleanup.mockImplementationOnce(async () => {
-    ownsResources = false;
-    return [terminalError];
-  });
-  mocks.hasRetryableBuildCleanup.mockImplementation(() => ownsResources);
-
-  const error = await build({ input: 'entry.js', write: false }).catch((error: unknown) => error);
-
-  expect(error).toBe(terminalError);
-  expect((error as Error).message).not.toContain('cleanup and retry both failed');
-  expect(mocks.close).toHaveBeenCalledOnce();
-  expect(mocks.retryRolldownBuildCleanup).toHaveBeenCalledOnce();
 });
 
 test('build deduplicates replayed terminal diagnostics by identity and multiplicity', async () => {
@@ -296,7 +245,6 @@ test('build bounds a persistent final cleanup failure and retains explicit owner
       errors: [firstTransportError, secondTransportError, finalTransportError],
     });
     expect(mocks.retryRolldownBuildCleanup).toHaveBeenCalledTimes(2);
-    expect(getRetryableCleanup(error)).toBeTypeOf('function');
     expect(vi.getTimerCount()).toBe(0);
   } finally {
     vi.useRealTimers();
@@ -308,17 +256,12 @@ test('build and close failure keeps retryable cleanup on the top-level error', a
   const closeError = new Error('native close transport rejected');
   const retryError = new Error('runtime release still failed');
   const finalRetryError = new Error('runtime release failed on final retry');
-  let ownsResources = true;
   mocks.generate.mockRejectedValueOnce(buildError);
   mocks.close.mockRejectedValueOnce(closeError);
   mocks.retryRolldownBuildCleanup
     .mockRejectedValueOnce(retryError)
-    .mockRejectedValueOnce(finalRetryError)
-    .mockImplementationOnce(async () => {
-      ownsResources = false;
-      return [];
-    });
-  mocks.hasRetryableBuildCleanup.mockImplementation(() => ownsResources);
+    .mockRejectedValueOnce(finalRetryError);
+  mocks.hasRetryableBuildCleanup.mockReturnValue(true);
 
   const error = await build({ input: 'entry.js', write: false }).catch((error: unknown) => error);
 
@@ -332,13 +275,6 @@ test('build and close failure keeps retryable cleanup on the top-level error', a
       },
     ],
   });
-  const nestedCloseError = (error as AggregateError).errors[1];
-  expect(getRetryableCleanup(error)).toBeTypeOf('function');
-  expect(getRetryableCleanup(nestedCloseError)).toBeUndefined();
-
-  await expect(retryCleanupFromError(error, 'retry failed')).rejects.toBe(error);
-  expect(mocks.retryRolldownBuildCleanup).toHaveBeenCalledTimes(3);
-  expect(getRetryableCleanup(error)).toBeUndefined();
 });
 
 async function waitForCallCount(

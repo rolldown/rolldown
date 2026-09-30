@@ -23,7 +23,6 @@
     "test:wasi": "ROLLDOWN_WASI_TEST=1 vp run test:main",
     "test:stability": "node ./stability/issue-3453/src/build.mjs && node ./stability/issue-3453/verify.mjs",
     "test:wasi-runtime-lifecycle": "node ./wasi-runtime-lifecycle.mjs",
-    "test:wasi-runtime": "node ./wasi/runtime-lifecycle.mjs",
     "test:types": "vitest run --typecheck.only --reporter verbose --hideSkippedTests"
   },
   "dependencies": {

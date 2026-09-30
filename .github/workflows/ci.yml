@@ -31,8 +31,9 @@ jobs:
       node-changes: "${{ (steps.filter.outputs.node-changes == 'true') || (github.ref_name == 'main') || (steps.pr-labels.outputs.run-windows == 'true') }}"
       # Allows opting into Windows CI per-PR by adding the `ci: windows` label.
       run-windows: "${{ steps.pr-labels.outputs.run-windows == 'true' }}"
-      # Allows opting into the WebContainer smoke test per-PR by adding the `ci: webcontainer` label.
-      run-webcontainer: "${{ steps.pr-labels.outputs.run-webcontainer == 'true' }}"
+      # The WebContainer smoke test is opt-in: the `ci: webcontainer` label, or a PR that touches the
+      # binding loader glue and its packaging (the `webcontainer-changes` filter below). Never on main.
+      run-webcontainer: "${{ (steps.pr-labels.outputs.run-webcontainer == 'true') || (github.event_name == 'pull_request' && steps.filter.outputs.webcontainer-changes == 'true') }}"
     steps:
       # Reruns keep the original event payload, so query the current labels instead.
       - name: Read pull request labels
@@ -82,10 +83,22 @@ jobs:
               - 'examples/**'
               - 'scripts/**'
               - 'rollup'
+            # the generated binding loader, its WebContainer fallback and the suite itself: only a
+            # real WebContainer run exercises these, so a PR touching them opts in without the label
+            webcontainer-changes:
+              - '.github/workflows/reusable-browser.yml'
+              - 'packages/browser-tests/**'
+              - 'packages/rolldown/build.ts'
+              - 'packages/rolldown/package.json'
+              - 'packages/rolldown/src/binding.cjs'
+              - 'packages/rolldown/src/rolldown-binding.wasi*'
+              - 'packages/rolldown/src/wasi-worker*'
+              - 'packages/rolldown/src/webcontainer-fallback.cjs'
       - name: Show outputs
         run: |
           echo "Rust changes: ${{ (steps.filter.outputs.rust-changes == 'true') || (github.ref_name == 'main') || (steps.pr-labels.outputs.run-windows == 'true') }}"
           echo "Node changes: ${{ (steps.filter.outputs.node-changes == 'true') || (github.ref_name == 'main') || (steps.pr-labels.outputs.run-windows == 'true') }}"
+          echo "WebContainer: ${{ (steps.pr-labels.outputs.run-webcontainer == 'true') || (github.event_name == 'pull_request' && steps.filter.outputs.webcontainer-changes == 'true') }}"
 
   rust-validation:
     name: Rust Validation
@@ -175,7 +188,8 @@ jobs:
 
   # Runs the packed @rolldown/browser in a real browser page, and the packed `rolldown` through its
   # WebContainer fallback in plain Node, on every PR that touches node code. The `ci: webcontainer`
-  # label adds the WebContainer suite to the same job; it never runs on path changes or on main.
+  # label, or a change to the loader glue (the `webcontainer-changes` filter), adds the WebContainer
+  # suite to the same job; it never runs on main.
   browser:
     needs: changes
     uses: ./.github/workflows/reusable-browser.yml

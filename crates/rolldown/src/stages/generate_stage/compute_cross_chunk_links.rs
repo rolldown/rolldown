@@ -595,13 +595,17 @@ impl GenerateStage<'_> {
   fn collect_dynamic_chunk_import(
     &self,
     chunk_graph: &ChunkGraph,
+    importer_idx: ModuleIdx,
     import_record: &ResolvedImportRecord,
     importee_module_idx: ModuleIdx,
     cross_chunk_dynamic_imports: &mut FxIndexSet<ChunkIdx>,
   ) {
-    // The resolved module is not included in the module graph, skip it.
     if !self.link_output.metas[importee_module_idx].is_included
       || !matches!(import_record.kind, ImportKind::DynamicImport)
+      || import_record.meta.contains(ImportRecordMeta::DeadDynamicImport)
+      || import_record.dynamic_import_expr_info.as_ref().is_some_and(|info| {
+        !self.link_output.metas[importer_idx].stmt_info_included.has_bit(info.stmt_info_idx)
+      })
     {
       return;
     }
@@ -664,6 +668,7 @@ impl GenerateStage<'_> {
             .for_each(|(rec, module_idx)| match &self.link_output.module_table[module_idx] {
               Module::Normal(_) => self.collect_dynamic_chunk_import(
                 chunk_graph,
+                module.idx,
                 rec,
                 module_idx,
                 cross_chunk_dynamic_imports,

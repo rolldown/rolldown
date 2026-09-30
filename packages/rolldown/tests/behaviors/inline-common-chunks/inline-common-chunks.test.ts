@@ -274,6 +274,35 @@ describe('experimentalInlineCommonChunks', () => {
     },
   );
 
+  test.each(['unused function', 'discarded import'] as const)(
+    'dynamic import metadata follows tree shaking: %s',
+    async (kind) => {
+      const pair = await differential(`tree-shaken-dynamic-import-metadata-${kind}`, {
+        input: { a: './a.js', b: './b.js', keeper: './keeper.js' },
+        modules: {
+          './shared.js':
+            kind === 'unused function'
+              ? `export const state = { count: 42 }; export function unused() { return import('./lazy.js'); }`
+              : `export const state = { count: 42 }; globalThis.__chain = import('./lazy.js').then(() => globalThis.__log('done'));`,
+          './a.js': `import { state } from './shared.js'; globalThis.__log('a', state.count);`,
+          './b.js': `import { state } from './shared.js'; globalThis.__log('b', state.count);`,
+          './lazy.js': `${kind === 'unused function' ? "globalThis.__log('lazy');" : ''} export const value = { count: 1 };`,
+          './keeper.js': `import { value } from './lazy.js'; globalThis.__log('keeper', value.count);`,
+        },
+      });
+      expectInlined(pair, 'shared.js');
+      for (const built of [pair.off, pair.on]) {
+        expect(chunkContaining(built, 'lazy.js')).toBeDefined();
+        for (const chunk of built.chunks.filter((chunk) =>
+          chunk.moduleIds.includes('./shared.js'),
+        )) {
+          expect(chunk.code).not.toContain('import(');
+          expect(chunk.dynamicImports).toEqual([]);
+        }
+      }
+    },
+  );
+
   test.each([false, true])(
     'copied dynamic imports use carrier paths and target hashes, cjs=%s',
     async (cjs) => {

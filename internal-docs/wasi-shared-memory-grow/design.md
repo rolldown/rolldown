@@ -226,7 +226,8 @@ of the five judge loads, without vs with the hook: 100/100 pass. Medians (ms):
 Three release-wasi artifacts through the CI stress script's options
 (`threaded-memory-stress.mjs`, MultiThread w4, node 24.21 arm64): **base**
 db90bbbcf (heap-sync allocator, dead grow-ahead), **grow-ahead** 64409a594 (the
-`black_box` fix), **lock** this change. 30 s per run.
+`black_box` fix; both built before the branch's main merge), **lock** this change.
+30 s per run.
 
 | load (runs)                                                   | base                     | grow-ahead           | lock                      |
 | ------------------------------------------------------------- | ------------------------ | -------------------- | ------------------------- |
@@ -245,27 +246,27 @@ The debug artifact CI builds passes the same CI steps: 20/20, 10/10, 20/20 (12
 grows each), 20/20 (14 grows each), ceiling and no-growth pass, and the default
 stress cases report 0 grows.
 
-Cost, release-wasi, judge loads, interleaved rounds, medians (ms) with [min-max]
-(a shared host with 3-4 cores of unrelated load; 150 runs, all pass):
+Cost, release-wasi, judge loads, 10 interleaved rounds, all 150 runs pass. All
+three artifacts are built from the same tree (the branch after its main merge):
+the grow-ahead code, this change, and this change with the lock removed (not safe,
+measurement only). Medians (ms) with [min-max]:
 
-| load                                 | grow-ahead (10)    | lock (10)          | lock, no LOCK (10) |
-| ------------------------------------ | ------------------ | ------------------ | ------------------ |
-| MultiThread w4 16 builds             | 314.5 [303-347]    | 332.5 [323-356]    | -                  |
-| MultiThread w4 16 builds + JS plugin | 1528.5 [1470-1593] | 1626.5 [1552-1721] | -                  |
-| MultiThread w4 parse 16x3            | 218 [214-222]      | 249.5 [239-287]    | -                  |
-| CurrentThread parse 16x3             | 218 [215-235]      | 244.5 [237-258]    | -                  |
-| CurrentThread transform 16x3         | 634 [613-662]      | 636.5 [617-678]    | -                  |
-| second set: MT w4 16 builds          | 312 [303-586]      | 352.5 [318-538]    | 342 [304-514]      |
-| second set: MT w4 parse 16x3         | 229.5 [215-366]    | 265.5 [236-350]    | 249.5 [232-392]    |
-| second set: CT parse 16x3            | 238.5 [219-350]    | 259.5 [237-407]    | 245 [230-435]      |
+| load                                 | grow-ahead       | lock               | lock removed     |
+| ------------------------------------ | ---------------- | ------------------ | ---------------- |
+| MultiThread w4 16 builds             | 310.5 [303-326]  | 334.5 [325-349]    | 312 [307-339]    |
+| MultiThread w4 16 builds + JS plugin | 1518 [1472-1563] | 1589.5 [1559-1693] | 1540 [1510-1629] |
+| MultiThread w4 parse 16x3            | 218.5 [216-231]  | 241 [238-275]      | 228 [224-358]    |
+| CurrentThread parse 16x3             | 216.5 [216-237]  | 240.5 [238-258]    | 231.5 [226-260]  |
+| CurrentThread transform 16x3         | 623.5 [615-667]  | 640 [626-701]      | 624.5 [618-681]  |
 
-So the lock costs about 5-14% against the grow-ahead fix on builds and parse, and
-nothing on transform; it keeps most of the grow-ahead's 1.6-3.2x gain over base.
-"no LOCK" is the same build with the lock removed (not safe, measurement only): it
-lands between the two, so the lock is part of the cost, not all of it. Two
-variants did not help and were dropped: zeroing (`alloc_zeroed`) and copying
-(`realloc`) outside the lock (16 builds 348 / 343 ms vs 344.5, same set), and a
-plain load for the in-lock size check without `after` (387 vs 386). Not profiled.
+So this change costs about 8% on 16 builds, 5% with a JS plugin, 10-11% on parse
+and 3% on transform against the grow-ahead fix, and keeps most of that fix's
+1.6-3.2x gain over base. With the lock removed the builds match the grow-ahead
+fix, so the lock is the build cost; parse keeps 4-7% (the wrappers and the direct
+dlmalloc entry path; not isolated). Two variants did not help and were dropped:
+zeroing (`alloc_zeroed`) and copying (`realloc`) outside the lock, and a plain
+load for the in-lock size check without `after` (16 builds 343-348 ms vs 344.5
+for this change, in a noisier set). Not profiled.
 
 ## Design principles
 

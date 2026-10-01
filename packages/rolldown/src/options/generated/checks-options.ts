@@ -106,7 +106,7 @@ export interface ChecksOptions {
   /**
    * Whether to emit warnings when `import.meta` is not supported with the output format and is replaced with an empty object (`{}`).
    *
-   * See [`import.meta` in Non-ESM Output Formats page](https://rolldown.rs/in-depth/non-esm-output-formats#import-meta) for more details.
+   * See [`import.meta` in Non-ESM Output Formats page](https://rolldown.rs/in-depth/non-esm-output-formats#importmeta) for more details.
    * @default true
    * */
   emptyImportMeta?: boolean;

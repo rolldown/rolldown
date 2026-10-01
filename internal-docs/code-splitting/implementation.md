@@ -397,18 +397,13 @@ The function iterates over every chunk in the `ChunkGraph` and performs six step
 
 **Step 3 — Classify modules via DFS (`js_import_order`).** Runs iterative DFS from roots, following only `ImportKind::Import` edges (skipping `require()` and `import()` since those are inherently lazy). Each visited module is classified:
 
-- JSON module → skipped. The pass does not use it as a target or as a dependency. A JSON module declares only data. It has no side effects, and it has no code that depends on the initialization of another module.
+- JSON module → skipped: it is neither a target nor a dependency. A JSON module declares only data, so it has no side effects and needs no other module to initialize first.
 - `WrapKind::Cjs` or `WrapKind::Esm` → pushed onto a `wrapped_modules` list
 - `WrapKind::None` → records how many wrapped modules appeared before it in DFS order (its "wrapped dependency count")
 
 Uses the immutable link-stage `wrap_kind()` from `LinkingMetadata`.
 
-The JSON skip also keeps this model correct. `generate_lazy_export` removes the wrapper of an object JSON module, even when a wrapped module imports it. Thus, an object JSON module is the only unwrapped module that a wrapped module can import. Without the skip, this sequence can occur (#10999, `crates/rolldown/tests/rolldown/issues/10999*`):
-
-1. A wrapped importer of the JSON module comes before the JSON module in DFS order. But the importer must run after the JSON module.
-2. The pass moves the init call of another wrapped module in front of the JSON module.
-3. Through an import cycle, the moved call reaches the wrapper of the importer.
-4. The `var init_* = __esmMin(...)` statement of that wrapper comes later in the chunk, so the bundle throws `init_* is not a function`.
+The skip also prevents a crash. `generate_lazy_export` removes the wrapper of an object JSON module, even when a wrapped module imports it. The wrapped modules before such a module in DFS order can then include its importers, which must run after it. Without the skip, the pass can move an init call in front of the JSON module. Through an import cycle, that call can reach an importer's wrapper before the chunk assigns it. The bundle then throws `init_* is not a function` (#10999, `crates/rolldown/tests/rolldown/issues/10999*`).
 
 **Step 4 — Determine modules to check.** Collects all unwrapped modules that have wrapped dependencies, plus the wrapped modules they depend on (up to the maximum dependency count). If this set is empty, no reordering is needed and the function returns early.
 

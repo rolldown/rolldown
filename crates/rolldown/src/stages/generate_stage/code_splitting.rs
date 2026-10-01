@@ -385,8 +385,8 @@ impl GenerateStage<'_> {
       let js_import_order = self.js_import_order(&roots, &chunk_module_to_exec_order);
       for idx in js_import_order {
         // This pass does not use a JSON module as a target or as a dependency (#10999). A JSON
-        // module declares only data. It has no side effects, and it has no code that depends on
-        // the initialization of another module. See internal-docs/code-splitting/implementation.md.
+        // module declares only data, so it has no side effects and needs no other module to
+        // initialize first. See internal-docs/code-splitting/implementation.md.
         if self.link_output.module_table[idx]
           .as_normal()
           .is_some_and(|module| matches!(module.module_type, ModuleType::Json))

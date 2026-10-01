@@ -1100,6 +1100,15 @@ build-order coupling is needed to keep one flavor from overwriting the other.
   hangs the build); a synchronous throw drops and terminates that Worker and
   stops. Nothing in it can fail the load. The load failure still raises the
   crash flags, so the disposer rejects later, as for any pool Worker that dies.
+  An idle preloaded Worker that fails to load still latches although no wasm
+  thread waits on it; conservative on purpose: making it pool-local would
+  need the napi-rs template to skip Workers still in the pool without a tid,
+  and realistic load failures are systemic anyway. A spawn that already took
+  a still-loading preloaded Worker hangs the build if that load fails,
+  exactly like a fresh Worker without the preload: emnapi reports the spawn
+  as started before the load (`wasi-threads.js` 789-798, `waitThreadStart`
+  off); the drop only covers Workers no spawn has taken; the fix belongs
+  upstream.
   The same block wraps `configureAsyncRuntime` on `__napiModule.exports`
   (`__matchWasiPoolWorkersToConfigure`), because the count is read at load
   and a later configure would otherwise leave the pool at the old count
@@ -1129,7 +1138,8 @@ build-order coupling is needed to keep one flavor from overwriting the other.
   (`test:wasi-pool-preload`, debug and release-threaded jobs: Workers at
   import = `workerThreads`, none more on the first builds, none under
   CurrentThread, an import-only process exits on its own, a preloaded Worker
-  that fails to load is replaced, a configure to CurrentThread after or
+  that fails to load is replaced and the disposer then rejects latched with
+  the load failure as cause, a configure to CurrentThread after or
   during the load ends the preloaded Workers and builds like the single case,
   a configure to 4 Workers preloads 4). Measured: see §3 (first-build cost).
 - The deferred workerd loader is the cli's output too, not a rolldown render:

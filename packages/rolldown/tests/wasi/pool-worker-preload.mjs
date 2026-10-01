@@ -18,7 +18,8 @@
 //                 process must exit on its own, code 0, within IMPORT_ONLY_EXIT_MS
 //   load-failure  the N preloaded Workers fail to instantiate the wasm: each raises
 //                 the loader's crash flag and exits; they leave the pool, so the
-//                 next build creates N fresh Workers and succeeds
+//                 next build creates N fresh Workers and succeeds; the public
+//                 disposer then rejects as latched, with the load failure as cause
 //   configure-single        once the N preloaded Workers loaded, the public
 //                 configureAsyncRuntime({ flavor: 'CurrentThread' }): all N exit, and
 //                 the builds create what the single case's builds create
@@ -33,6 +34,7 @@
 import assert from 'node:assert/strict';
 import { spawn } from 'node:child_process';
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync, writeSync } from 'node:fs';
+import { createRequire } from 'node:module';
 import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -53,6 +55,10 @@ const POOL_WORKER_FILE = 'wasi-worker.mjs';
 const LOAD_FAILURE_WORKER = fileURLToPath(
   new URL('./pool-preload-load-failure-worker.mjs', import.meta.url),
 );
+// Thrown by LOAD_FAILURE_WORKER's wasm instantiate.
+const LOAD_FAILURE_MESSAGE = 'forced pool worker load failure (test)';
+const DISPOSE_SYMBOL = Symbol.for('napi.rs.wasi.dispose');
+const CRASH_DISPOSE_MESSAGE = 'cannot be disposed after a worker thread crashed';
 const CASES = {
   default: { env: {} },
   'workers-4': { env: { ROLLDOWN_WORKER_THREADS: '4' }, workerThreads: 4 },
@@ -164,7 +170,17 @@ function judge(mode, spec, result, byBuilds) {
     if (facts.byBuilds !== preloaded) {
       return `the builds created ${facts.byBuilds} pool Workers, expected ${preloaded} fresh ones`;
     }
-    return facts.builds === 'ok' ? null : `builds: ${facts.builds}`;
+    if (facts.builds !== 'ok') return `builds: ${facts.builds}`;
+    // The load failure latched the binding, although the builds ran on fresh
+    // Workers: the public disposer rejects with it as the cause.
+    const dispose = facts.dispose;
+    if (!dispose?.message?.includes(CRASH_DISPOSE_MESSAGE)) {
+      return `disposer: ${JSON.stringify(dispose)}, expected a rejection "${CRASH_DISPOSE_MESSAGE}"`;
+    }
+    if (dispose.cause !== LOAD_FAILURE_MESSAGE) {
+      return `disposer cause ${JSON.stringify(dispose.cause)}, expected "${LOAD_FAILURE_MESSAGE}"`;
+    }
+    return null;
   }
   if (spec.configure) {
     return judgeConfigure(spec, result, facts, byBuilds) ?? judgeBuilds(facts);
@@ -389,7 +405,26 @@ async function runCase(mode, fixture) {
     facts.builds = `failed: ${String(error?.message).slice(0, 300)}`;
   }
   facts.byBuilds = poolWorkers.length - beforeBuilds;
+  if (mode === 'load-failure') {
+    try {
+      await findDisposer()();
+      facts.dispose = 'resolved';
+    } catch (error) {
+      facts.dispose = { message: error?.message, cause: error?.cause?.message };
+    }
+  }
   say(`RESULT ${JSON.stringify(facts)}`);
+}
+
+// The threaded loader publishes the disposer on its own exports. Take it from the
+// instance the builds ran on (the require cache), never from a second copy.
+function findDisposer() {
+  const require = createRequire(import.meta.url);
+  const found = Object.values(require.cache).filter(
+    (entry) => typeof entry?.exports?.[DISPOSE_SYMBOL] === 'function',
+  );
+  assert.equal(found.length, 1, 'expected exactly one loaded WASI binding with a disposer');
+  return found[0].exports[DISPOSE_SYMBOL];
 }
 
 async function waitUntil(done) {

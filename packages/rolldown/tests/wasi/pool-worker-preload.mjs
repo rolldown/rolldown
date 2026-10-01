@@ -24,10 +24,12 @@
 //                 configureAsyncRuntime({ flavor: 'CurrentThread' }): all N exit, and
 //                 the builds create what the single case's builds create
 //   configure-single-early  the same configure right after the import, while the
-//                 N Workers still load
+//                 N Workers still load (none of them may have reported 'loaded')
 //   configure-4   configureAsyncRuntime({ workerThreads: 4 }) right after the import:
 //                 4 pool Workers before the builds, none more from them
 // The configure cases also fail on emnapi's 'terminated worker' report in the output.
+// After their builds, the public disposer must resolve and the loader crash flag
+// must stay 0: terminating idle or still-loading Workers is not a crash.
 // Every case fails on an uncaught exception or unhandled rejection, and a child
 // still alive after CASE_TIMEOUT_MS is killed and counts as a hang.
 // Skips (exit 0) unless the artifact is the threaded WASI one and MultiThread works.
@@ -183,7 +185,9 @@ function judge(mode, spec, result, byBuilds) {
     return null;
   }
   if (spec.configure) {
-    return judgeConfigure(spec, result, facts, byBuilds) ?? judgeBuilds(facts);
+    return (
+      judgeConfigure(spec, result, facts, byBuilds) ?? judgeBuilds(facts) ?? judgeDispose(facts)
+    );
   }
   if (flavor === 'MultiThread' && facts.byBuilds !== 0) {
     return `the first builds created ${facts.byBuilds} more pool Workers, expected 0`;
@@ -193,6 +197,16 @@ function judge(mode, spec, result, byBuilds) {
 
 function judgeBuilds(facts) {
   return facts.builds === 'ok' ? null : `builds: ${facts.builds}`;
+}
+
+// The configure terminated idle or still-loading Workers. That is no crash: the
+// binding is not latched, so the public disposer resolves.
+function judgeDispose(facts) {
+  if (facts.dispose !== 'resolved') {
+    return `disposer: ${JSON.stringify(facts.dispose)}, expected it to resolve`;
+  }
+  if (facts.crashFlag !== 0) return `loader crash flag ${facts.crashFlag}, expected 0`;
+  return null;
 }
 
 // After the import read N Workers into the pool, the public configureAsyncRuntime
@@ -206,8 +220,12 @@ function judgeConfigure(spec, result, facts, byBuilds) {
     return `config after configure ${JSON.stringify(facts.configured)}`;
   }
   const count = facts.configured.flavor === 'MultiThread' ? facts.configured.workerThreads : 0;
-  if (spec.waitLoaded && facts.loadedBeforeConfigure !== facts.afterImport) {
-    return `${facts.loadedBeforeConfigure} of ${facts.afterImport} preloaded Workers loaded before the configure`;
+  // waitLoaded: every preloaded Worker had loaded. Otherwise the configure ran in
+  // the macrotask that constructed them, so none had (see runCase): this is what
+  // proves the early case hit Workers that were still loading.
+  const loaded = spec.waitLoaded ? facts.afterImport : 0;
+  if (facts.loadedBeforeConfigure !== loaded) {
+    return `${facts.loadedBeforeConfigure} of ${facts.afterImport} preloaded Workers loaded before the configure, expected ${loaded}`;
   }
   // Idle Workers above the new count exit; none of the others do.
   const exited = Math.max(facts.afterImport - count, 0);
@@ -334,12 +352,34 @@ async function runCase(mode, fixture) {
     return;
   }
 
-  const { rolldown } = await import('rolldown');
+  // The binding loads while rolldown/experimental evaluates: the loader constructs
+  // the preloaded pool Workers right then, synchronously.
   const { configureAsyncRuntime, getAsyncRuntimeConfig } = await import('rolldown/experimental');
   failPoolWorkers = false;
   const afterImport = poolWorkers.length;
   const { flavor, workerThreads: configured } = getAsyncRuntimeConfig();
   const facts = { flavor, workerThreads: configured, afterImport, errors };
+  const readCrashFlag = () => (crashFlag instanceof Int32Array ? Atomics.load(crashFlag, 0) : null);
+  const spec = CASES[mode];
+  const preloaded = poolWorkers.slice(0, afterImport);
+  const configure = () => {
+    facts.loadedBeforeConfigure = preloaded.filter((worker) => worker.loaded).length;
+    try {
+      configureAsyncRuntime(spec.configure);
+      facts.configure = 'ok';
+    } catch (error) {
+      facts.configure = `threw: ${error?.message}`;
+    }
+    facts.configured = getAsyncRuntimeConfig();
+  };
+  // Configure right after the import, before this macrotask ends. A Worker's
+  // 'loaded' reaches this thread as a message event, which is a macrotask, and
+  // the Workers were constructed in this same macrotask: the module evaluation
+  // above runs synchronously (no top-level await) and only microtasks run between
+  // it and here. So no 'loaded' can have arrived, and `judge` requires 0. The
+  // rolldown import comes after: loading new modules can yield to the event loop.
+  if (spec.configure && !spec.waitLoaded) configure();
+  const { rolldown } = await import('rolldown');
 
   if (mode === 'import-only') {
     say(`RESULT ${JSON.stringify(facts)}`);
@@ -355,23 +395,14 @@ async function runCase(mode, fixture) {
     // One more turn, so emnapi's rejection handlers (and the preload's drop) ran.
     await new Promise((resolve) => setTimeout(resolve, 20));
     facts.failedExited = poolWorkers.filter((worker) => worker.fail && worker.exited).length;
-    facts.crashFlag = crashFlag instanceof Int32Array ? Atomics.load(crashFlag, 0) : null;
+    facts.crashFlag = readCrashFlag();
   }
 
-  const spec = CASES[mode];
   if (spec.configure) {
-    const preloaded = poolWorkers.slice(0, afterImport);
     if (spec.waitLoaded) {
       await waitUntil(() => preloaded.every((worker) => worker.loaded));
+      configure();
     }
-    facts.loadedBeforeConfigure = preloaded.filter((worker) => worker.loaded).length;
-    try {
-      configureAsyncRuntime(spec.configure);
-      facts.configure = 'ok';
-    } catch (error) {
-      facts.configure = `threw: ${error?.message}`;
-    }
-    facts.configured = getAsyncRuntimeConfig();
     const { flavor: nextFlavor, workerThreads: nextCount } = facts.configured;
     const keep = nextFlavor === 'MultiThread' ? nextCount : 0;
     await waitUntil(() => preloaded.filter((worker) => worker.exited).length >= afterImport - keep);
@@ -405,13 +436,17 @@ async function runCase(mode, fixture) {
     facts.builds = `failed: ${String(error?.message).slice(0, 300)}`;
   }
   facts.byBuilds = poolWorkers.length - beforeBuilds;
-  if (mode === 'load-failure') {
+  if (mode === 'load-failure' || spec.configure) {
     try {
       await findDisposer()();
       facts.dispose = 'resolved';
     } catch (error) {
       facts.dispose = { message: error?.message, cause: error?.cause?.message };
     }
+  }
+  if (spec.configure) {
+    // Read after the disposer: it terminates the remaining Workers too.
+    facts.crashFlag = readCrashFlag();
   }
   say(`RESULT ${JSON.stringify(facts)}`);
 }

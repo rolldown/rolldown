@@ -151,6 +151,8 @@ export default defineConfig({
       'scripts/snap-diff/summary',
       'scripts/src/esbuild-tests/snap-diff/**/*.md',
       'packages/debug/src/generated/**',
+      // A JavaScript template literal, which doc-kit evaluates
+      'docs/theme/template.html',
     ],
   },
 });

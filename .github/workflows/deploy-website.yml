@@ -43,17 +43,17 @@ jobs:
           cache: true
 
       - name: Generate API reference
-        run: vp run --filter rolldown-docs generate
+        run: vp run --filter rolldown-docs reference
 
       - name: Build Docs
         if: github.ref_name != 'main'
         run: vp run --filter rolldown-docs build
 
       # Deterministic fingerprint of the deployable content: git-tracked docs sources plus the
-      # generated TypeDoc reference (docs/reference). It is used as a GitHub Actions cache key to
-      # identify an already-deployed state — so a packages/rolldown/src change that doesn't alter
+      # generated API reference (docs/reference). It is used as a GitHub Actions cache key
+      # to identify an already-deployed state — so a packages/rolldown/src change that doesn't alter
       # the public API (and therefore the reference) keeps the same fingerprint and is not
-      # redeployed. The built site is never hashed (it isn't reproducible); TypeDoc output is.
+      # redeployed. The built site is never hashed (it isn't reproducible); the reference is.
       - name: Fingerprint docs content
         id: fingerprint
         if: github.ref_name == 'main'
@@ -100,8 +100,6 @@ jobs:
         env:
           VOID_PROJECT: rolldown
           VOID_API_URL: https://api.void.cloud
-          ALGOLIA_APP_ID: ${{ secrets.ALGOLIA_APP_ID }}
-          ALGOLIA_API_KEY: ${{ secrets.ALGOLIA_API_KEY }}
 
       # Mark this fingerprint as deployed so the next identical-content run skips. The marker
       # file's contents are unused (the cache key is the fingerprint); an evicted marker only

@@ -4,9 +4,10 @@
 
 ## Summary
 
-The workaround now lives in napi-rs (napi-rs/napi-rs#3552; rolldown pins its
-unreleased head through the root `Cargo.toml` `[patch.crates-io]` and a vendored
-`@napi-rs/cli` tarball until a release carries it). On `wasm32-wasip1-threads`
+The workaround now lives in napi-rs (napi-rs/napi-rs#3552, released as napi 3.14.0 /
+napi-sys 3.4.0 / napi-build 2.6.0 / napi-async-runtime 0.2.4, which the root
+`Cargo.toml` pins; the loaders still come from a vendored `@napi-rs/cli` tarball of
+the same source until `@napi-rs/cli` 3.10.6 is installable). On `wasm32-wasip1-threads`
 only, napi takes one spin lock around every call into wasi-libc's dlmalloc and
 refreshes the thread's view of the memory size (`memory.grow(0)`) under it when
 another thread has seen a larger memory; its `sbrk` hands out the pages between the
@@ -50,7 +51,7 @@ cli/docs/wasi.md                    "Shared memory growth on wasm32-wasip1-threa
 | scheduler handoff refresh   | napi-async-runtime `crates/async-runtime/src/async_runtime.rs` (`on_thread_handoff`), napi `async_work.rs` / `tokio_runtime.rs`                    |
 | crash flag in linear memory | napi-sys `crates/sys/src/wasi_thread_crash.rs`, exported by napi as `napi_wasm_thread_crash_flag_address` / `napi_wasm_thread_crashed`             |
 | opt-out                     | `--cfg napi_wasi_no_heap_sync` in an addon's target rustflags (rolldown does not set it)                                                           |
-| version pin                 | root `Cargo.toml` `[patch.crates-io]`: all six napi crates at one rev                                                                              |
+| version pin                 | root `Cargo.toml` `[workspace.dependencies]`: napi 3.14.0, napi-build 2.6.0, napi-derive 3.6.10 (napi-sys 3.4.0, napi-async-runtime 0.2.4)         |
 | dist check                  | `scripts/wasi/check-wasi-dist-files.mjs` with `scripts/wasi/wasm-sections.mjs` (Checks below)                                                      |
 | stress harness              | `packages/rolldown/tests/wasi/threaded-memory-stress.mjs` and its scripts in `packages/rolldown/tests/package.json`                                |
 | worker-crash latch test     | `packages/rolldown/tests/wasi/worker-crash-latch.mjs` (+ `crash-injector-{preload,worker}.mjs`)                                                    |
@@ -60,14 +61,15 @@ cli/docs/wasi.md                    "Shared memory growth on wasm32-wasip1-threa
 ## One napi-sys in the graph
 
 `MAX_SEEN_PAGES` is a static in napi-sys. If the graph held two napi-sys copies
-(a git one for rolldown's napi and a crates.io one for an `oxc_*_napi` crate, say),
+(say a git one for rolldown's napi and a crates.io one for an `oxc_*_napi` crate),
 the allocator would publish growth into one copy and the handoff refresh would
-read the other, which never moves. So the `[patch.crates-io]` block patches all six
-napi crates (napi, napi-sys, napi-build, napi-derive, napi-derive-backend,
-napi-async-runtime) to one rev. Check after any change to it:
+read the other, which never moves. So all six napi crates (napi, napi-sys,
+napi-build, napi-derive, napi-derive-backend, napi-async-runtime) come from
+crates.io releases that every `oxc_*_napi` crate accepts too. Check after any
+change to the napi pins:
 
 ```
-cargo tree --target wasm32-wasip1-threads -i napi-sys      # exactly one, the patched source
+cargo tree --target wasm32-wasip1-threads -i napi-sys      # exactly one, from the registry
 cargo tree --target wasm32-wasip1-threads -d --depth 0     # no napi* line
 ```
 

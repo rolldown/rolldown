@@ -431,13 +431,13 @@ CurrentThread timer:
   `AsyncTask`, but deliberately **not** `napi/async` (which would pull
   `tokio_rt`), so every target compiles the shared runtime (Principle 9).
 - `crates/rolldown_utils/Cargo.toml` — `napi-async-runtime = { version =
-"0.2.3", default-features = false }` from crates.io (napi-free
+"0.2.4", default-features = false }` from crates.io (napi-free
   consumption). The root `Cargo.toml` pins
-  the napi stack to **published crates.io releases** — `napi 3.13.0`,
-  `napi-build 2.5.0`, `napi-derive 3.6.9` (resolving `napi-derive-backend
-6.1.4` and `napi-sys 3.3.2`) — and carries **no** `[patch.crates-io]`
-  section: that single registry `napi` node covers `rolldown_binding` **and**
-  every `oxc_*_napi`. The comment above those pins records why the minimum is
+  the napi stack to **published crates.io releases** — `napi 3.14.0`,
+  `napi-build 2.6.0`, `napi-derive 3.6.10` (resolving `napi-derive-backend
+6.1.4` and `napi-sys 3.4.0`) — and its `[patch.crates-io]` section patches
+  **no** napi crate (only `parking_lot_core`): that single registry `napi`
+  node covers `rolldown_binding` **and** every `oxc_*_napi`. The comment above those pins records why the minimum is
   a pin rather than a range. 3.12.7 (napi-rs#3536) hardens the same teardown:
   an `AsyncTask` completion delivered on a draining env settles as a no-op
   instead of aborting a debug build, and the `napi_async_work` handle is freed
@@ -533,7 +533,7 @@ browser-build, and packed-browser tests exercise this contract;
 `pluginErrorMetadata` is therefore a universal public-support invariant rather
 than a target capability.
 
-This invariant depends on the workspace's `napi 3.13.0` registry pin (§9).
+This invariant depends on the workspace's `napi 3.14.0` registry pin (§9).
 Both capture paths run the same function,
 `Error::from_unknown_without_coercion` (napi-rs#3423, first released in `napi
 3.12.1`): Promise rejections reach it from the `catch` handler
@@ -1012,7 +1012,7 @@ build-order coupling is needed to keep one flavor from overwriting the other.
   eager loaders, `__drainInstanceAsyncWork` in the deferred one. It reads the
   `napi_wasm_async_work_pending` / `napi_wasm_cancel_pending_async_work`
   exports that napi 3.12.6 / napi-build 2.4.3 added in napi-rs#3528, and that
-  the pinned napi 3.13.0 / napi-build 2.5.0 (with napi-derive 3.6.9) carry
+  the pinned napi 3.14.0 / napi-build 2.6.0 (with napi-derive 3.6.10) carry
   unchanged: cancel what no thread has started, then poll until nothing is
   owed a completion callback. The barrier
   the previous seams run brackets promise settlements on the

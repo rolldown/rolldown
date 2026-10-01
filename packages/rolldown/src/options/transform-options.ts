@@ -11,7 +11,7 @@ export interface TransformOptions extends Omit<
    *
    * @example
    * **Replace the global variable `IS_PROD` with `true`**
-   * ```js [rolldown.config.js]
+   * ```js displayName="rolldown.config.js"
    * export default defineConfig({
    *   transform: { define: { IS_PROD: 'true' } }
    * })
@@ -30,7 +30,7 @@ export interface TransformOptions extends Omit<
    * ```
    *
    * **Replace the property accessor `process.env.NODE_ENV` with `'production'`**
-   * ```js [rolldown.config.js]
+   * ```js displayName="rolldown.config.js"
    * export default defineConfig({
    *   transform: { define: { 'process.env.NODE_ENV': "'production'" } }
    * })

@@ -15,7 +15,7 @@ export type RolldownOptionsFunction = (
  * A helper to define a rolldown configuration with type hints.
  *
  * @example
- * ```js [rolldown.config.js]
+ * ```js displayName="rolldown.config.js"
  * import { defineConfig } from 'rolldown';
  *
  * export default defineConfig({

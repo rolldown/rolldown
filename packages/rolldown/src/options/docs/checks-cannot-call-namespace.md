@@ -1,6 +1,4 @@
-::: code-group
-
-```js [main.js]
+```js displayName="main.js"
 import * as utils from './utils.js';
 
 // This will trigger the warning
@@ -8,10 +6,8 @@ import * as utils from './utils.js';
 utils();
 ```
 
-```js [utils.js]
+```js displayName="utils.js"
 export function greet() {
   return 'Hello';
 }
 ```
-
-:::

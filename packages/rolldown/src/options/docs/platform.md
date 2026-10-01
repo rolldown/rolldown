@@ -55,9 +55,8 @@ Optimized for browser environments:
 - **Target**: Browser runtime behavior
 - **Built-ins**: Node.js built-in modules are not polyfilled by default
 
-:::tip
-For browser builds, you may want to use [rolldown-plugin-node-polyfills](https://github.com/rolldown/rolldown-plugin-node-polyfills) to polyfill Node.js built-ins if needed.
-:::
+> [!TIP]
+> For browser builds, you may want to use [rolldown-plugin-node-polyfills](https://github.com/rolldown/rolldown-plugin-node-polyfills) to polyfill Node.js built-ins if needed.
 
 ##### `'neutral'`
 

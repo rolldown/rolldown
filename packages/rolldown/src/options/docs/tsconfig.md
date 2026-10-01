@@ -26,15 +26,18 @@ export default {
 };
 ```
 
+<!--
+  Separate code blocks, not tabs
+-->
+
 ```js
 export default {
   tsconfig: '/absolute/path/to/tsconfig.json',
 };
 ```
 
-:::tip
-Rolldown respects `references` and `include`/`exclude` patterns in tsconfig, while esbuild does not. If you need esbuild-compatible behavior, specify a tsconfig without `references`. You can use [`extends`](https://www.typescriptlang.org/tsconfig/#extends) to share the options between the two.
-:::
+> [!TIP]
+> Rolldown respects `references` and `include`/`exclude` patterns in tsconfig, while esbuild does not. If you need esbuild-compatible behavior, specify a tsconfig without `references`. You can use [`extends`](https://www.typescriptlang.org/tsconfig/#extends) to share the options between the two.
 
 #### What's used from tsconfig
 
@@ -96,6 +99,5 @@ export default {
 };
 ```
 
-:::tip
-For TypeScript projects, it's recommended to use `tsconfig: true` for auto-discovery or specify an explicit path to ensure consistent compilation behavior and enable path mapping.
-:::
+> [!TIP]
+> For TypeScript projects, it's recommended to use `tsconfig: true` for auto-discovery or specify an explicit path to ensure consistent compilation behavior and enable path mapping.

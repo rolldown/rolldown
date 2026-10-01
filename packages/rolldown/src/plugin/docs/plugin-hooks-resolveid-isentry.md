@@ -1,4 +1,5 @@
-::: details Define custom proxy modules for entry points
+<details>
+<summary>Define custom proxy modules for entry points</summary>
 
 This can be used for instance as a mechanism to define custom proxy modules for entry points. The following plugin will proxy all entry points to inject a polyfill import.
 
@@ -68,4 +69,4 @@ function injectPolyfillPlugin() {
 }
 ```
 
-:::
+</details>

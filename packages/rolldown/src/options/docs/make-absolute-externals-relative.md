@@ -44,9 +44,10 @@ import './lib/utils.js'; // → import './lib/utils.js' (as-is)
 import '/project/lib/utils.js'; // → import '/project/lib/utils.js' (as-is)
 ```
 
-::: warning Deduplication issue with `false`
-Setting `makeAbsoluteExternalsRelative: false` disables the normalization of relative specifiers. This means `'./utils'` imported from `src/a.js` and `'./utils'` imported from `src/b/c.js` may be treated as the same external module, even though they refer to different files. Use `false` only if you are certain all your external specifiers are already unique (e.g. bare package names).
-:::
+> [!WARNING]
+> **Deduplication issue with `false`**
+>
+> Setting `makeAbsoluteExternalsRelative: false` disables the normalization of relative specifiers. This means `'./utils'` imported from `src/a.js` and `'./utils'` imported from `src/b/c.js` may be treated as the same external module, even though they refer to different files. Use `false` only if you are certain all your external specifiers are already unique (e.g. bare package names).
 
 #### Example
 

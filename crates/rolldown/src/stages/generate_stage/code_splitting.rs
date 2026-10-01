@@ -384,9 +384,9 @@ impl GenerateStage<'_> {
       let mut none_wrapped_module_to_wrapped_dependency_length = FxHashMap::default();
       let js_import_order = self.js_import_order(&roots, &chunk_module_to_exec_order);
       for idx in js_import_order {
-        // A JSON module only declares data. It has no side effects to order and no code that
-        // observes another module's init, so it is neither a target nor a dependency (#10999).
-        // See internal-docs/code-splitting/implementation.md.
+        // This pass does not use a JSON module as a target or as a dependency (#10999). A JSON
+        // module declares only data. It has no side effects, and it has no code that depends on
+        // the initialization of another module. See internal-docs/code-splitting/implementation.md.
         if self.link_output.module_table[idx]
           .as_normal()
           .is_some_and(|module| matches!(module.module_type, ModuleType::Json))

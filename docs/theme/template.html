@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="en-US" data-variant="rolldown"${metadata.theme ? ' data-theme="' + metadata.theme + '" data-forced-theme' : ''}>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>${title}</title>
+    <meta property="og:title" content="${title}" />
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content="https://rolldown.rs${metadata.path.replace(/(^|\/)index$/, '$1')}" />
+    <link rel="canonical" href="https://rolldown.rs${metadata.path.replace(/(^|\/)index$/, '$1')}" />
+
+    <link rel="preload" href="${root}assets/fonts/inter-roman-latin.woff2" as="font" type="font/woff2" crossorigin />
+    <link rel="preload" href="${root}assets/fonts/APK-Protocol-Medium.woff2" as="font" type="font/woff2" crossorigin />
+
+    ${assets}
+
+    ${head}
+
+    <script>
+      // Applies the color scheme before the first paint. Pages may force one
+      // through their "theme" frontmatter. (This template is evaluated as a
+      // JavaScript template literal, so it must not contain backticks.)
+      (function () {
+        var root = document.documentElement;
+        if (root.hasAttribute('data-forced-theme')) return;
+        var preference = localStorage.getItem('theme') || 'system';
+        var dark =
+          preference === 'dark' ||
+          (preference === 'system' && matchMedia('(prefers-color-scheme: dark)').matches);
+        root.setAttribute('data-theme', dark ? 'dark' : 'light');
+        root.style.colorScheme = dark ? 'dark' : 'light';
+      })();
+    </script>
+    <script type="speculationrules">
+      ${speculationRules}
+    </script>
+  </head>
+
+  <body>
+    <div id="root">${dehydrated}</div>
+  </body>
+</html>

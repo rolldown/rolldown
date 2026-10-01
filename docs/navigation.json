@@ -1,0 +1,381 @@
+{
+  "nav": [
+    {
+      "text": "Guide",
+      "link": "/guide/getting-started",
+      "activeMatch": "^/(guide|in-depth|glossary)/"
+    },
+    {
+      "text": "Reference",
+      "link": "/reference/",
+      "activeMatch": "^/reference/"
+    },
+    {
+      "text": "Plugins",
+      "link": "/builtin-plugins/",
+      "activeMatch": "^/builtin-plugins/"
+    },
+    {
+      "text": "API",
+      "link": "/apis/bundler-api",
+      "activeMatch": "^/apis/"
+    },
+    {
+      "text": "REPL",
+      "link": "https://repl.rolldown.rs/"
+    },
+    {
+      "text": "Resources",
+      "items": [
+        {
+          "text": "Team",
+          "link": "/team"
+        },
+        {
+          "text": "Contribute",
+          "link": "/contribution-guide/"
+        },
+        {
+          "text": "Roadmap",
+          "link": "https://github.com/rolldown/rolldown/discussions/153"
+        }
+      ],
+      "activeMatch": "^/(team|acknowledgements|contribution-guide|development-guide)"
+    }
+  ],
+  "sidebar": {
+    "/guide/": [
+      {
+        "text": "Guide",
+        "items": [
+          {
+            "text": "Introduction",
+            "link": "/guide/introduction"
+          },
+          {
+            "text": "Getting Started",
+            "link": "/guide/getting-started"
+          },
+          {
+            "text": "Notable Features",
+            "link": "/guide/notable-features"
+          },
+          {
+            "text": "Troubleshooting",
+            "link": "/guide/troubleshooting"
+          }
+        ]
+      },
+      {
+        "text": "In-Depth",
+        "collapsed": true,
+        "items": [
+          {
+            "text": "Why Bundlers",
+            "link": "/in-depth/why-bundlers"
+          },
+          {
+            "text": "Why Plugin Hook Filter",
+            "link": "/in-depth/why-plugin-hook-filter"
+          },
+          {
+            "text": "Module Types",
+            "link": "/in-depth/module-types"
+          },
+          {
+            "text": "External Modules",
+            "link": "/in-depth/external-modules"
+          },
+          {
+            "text": "Directives",
+            "link": "/in-depth/directives"
+          },
+          {
+            "text": "Automatic Code Splitting",
+            "link": "/in-depth/automatic-code-splitting"
+          },
+          {
+            "text": "Manual Code Splitting",
+            "link": "/in-depth/manual-code-splitting"
+          },
+          {
+            "text": "Bundling CJS",
+            "link": "/in-depth/bundling-cjs"
+          },
+          {
+            "text": "Non ESM Output Formats",
+            "link": "/in-depth/non-esm-output-formats"
+          },
+          {
+            "text": "Top Level Await",
+            "link": "/in-depth/tla-in-rolldown"
+          },
+          {
+            "text": "Dead Code Elimination",
+            "link": "/in-depth/dead-code-elimination"
+          },
+          {
+            "text": "Lazy Barrel Optimization",
+            "link": "/in-depth/lazy-barrel-optimization"
+          },
+          {
+            "text": "Native MagicString",
+            "link": "/in-depth/native-magic-string"
+          }
+        ]
+      },
+      {
+        "text": "Glossary",
+        "collapsed": true,
+        "items": [
+          {
+            "text": "Barrel Module",
+            "link": "/glossary/barrel-module"
+          },
+          {
+            "text": "Entry",
+            "link": "/glossary/entry"
+          },
+          {
+            "text": "Entry Chunk",
+            "link": "/glossary/entry-chunk"
+          },
+          {
+            "text": "Entry Name",
+            "link": "/glossary/entry-name"
+          },
+          {
+            "text": "User-defined Entry",
+            "link": "/glossary/user-defined-entry"
+          }
+        ]
+      }
+    ],
+    "/in-depth/": "/guide/",
+    "/glossary/": "/guide/",
+    "/apis/": [
+      {
+        "text": "API",
+        "items": [
+          {
+            "text": "Bundler API",
+            "link": "/apis/bundler-api"
+          },
+          {
+            "text": "Plugin API",
+            "link": "/apis/plugin-api",
+            "items": [
+              {
+                "text": "Hook Filters",
+                "link": "/apis/plugin-api/hook-filters"
+              },
+              {
+                "text": "File URLs",
+                "link": "/apis/plugin-api/file-urls"
+              },
+              {
+                "text": "Source Code Transformations",
+                "link": "/apis/plugin-api/transformations"
+              },
+              {
+                "text": "Inter-plugin communication",
+                "link": "/apis/plugin-api/inter-plugin-communication"
+              }
+            ]
+          },
+          {
+            "text": "Command Line Interface",
+            "link": "/apis/cli"
+          },
+          {
+            "text": "Rust Crates",
+            "link": "/apis/rust-crates"
+          }
+        ]
+      }
+    ],
+    "/builtin-plugins/": [
+      {
+        "text": "Built-in Plugins",
+        "items": [
+          {
+            "text": "Introduction",
+            "link": "/builtin-plugins/"
+          },
+          {
+            "text": "builtin:bundle-analyzer",
+            "link": "/builtin-plugins/bundle-analyzer"
+          },
+          {
+            "text": "builtin:esm-external-require",
+            "link": "/builtin-plugins/esm-external-require"
+          },
+          {
+            "text": "builtin:replace",
+            "link": "/builtin-plugins/replace"
+          }
+        ]
+      }
+    ],
+    "/contribution-guide/": [
+      {
+        "text": "Contribution Guide",
+        "items": [
+          {
+            "text": "Overview",
+            "link": "/contribution-guide/"
+          },
+          {
+            "text": "Etiquette",
+            "link": "https://developer.mozilla.org/en-US/docs/MDN/Community/Open_source_etiquette"
+          }
+        ]
+      },
+      {
+        "text": "Development Guide",
+        "items": [
+          {
+            "text": "Setup the project",
+            "link": "/development-guide/setup-the-project"
+          },
+          {
+            "text": "Building and running",
+            "link": "/development-guide/building-and-running"
+          },
+          {
+            "text": "Testing",
+            "link": "/development-guide/testing"
+          },
+          {
+            "text": "Benchmarking",
+            "link": "/development-guide/benchmarking"
+          },
+          {
+            "text": "Tracing/Logging",
+            "link": "/development-guide/tracing-logging"
+          },
+          {
+            "text": "Profiling",
+            "link": "/development-guide/profiling"
+          },
+          {
+            "text": "Docs",
+            "link": "/development-guide/docs"
+          },
+          {
+            "text": "Coding Style",
+            "link": "/development-guide/coding-style"
+          }
+        ]
+      }
+    ],
+    "/development-guide/": "/contribution-guide/",
+    "/team": [
+      {
+        "text": "Team",
+        "link": "/team"
+      },
+      {
+        "text": "Acknowledgements",
+        "link": "/acknowledgements"
+      }
+    ],
+    "/acknowledgements": "/team"
+  },
+  "reference": {
+    "starred": [
+      "Function.build",
+      "Function.rolldown",
+      "Function.watch",
+      "Interface.Plugin",
+      "Interface.PluginContext",
+      "Variable.VERSION",
+      "Function.defineConfig",
+      "Function.minify",
+      "Function.parse",
+      "Function.transform",
+      "Class.Visitor"
+    ],
+    "categories": [
+      "Programmatic APIs",
+      "Plugin APIs",
+      "Code Splitting",
+      "Config",
+      "Builtin Plugins",
+      "Utilities"
+    ]
+  },
+  "socialLinks": [
+    {
+      "icon": "x",
+      "label": "X.com",
+      "link": "https://x.com/rolldown_rs"
+    },
+    {
+      "icon": "bluesky",
+      "label": "Bluesky",
+      "link": "https://bsky.app/profile/rolldown.rs"
+    },
+    {
+      "icon": "discord",
+      "label": "Discord",
+      "link": "https://chat.rolldown.rs"
+    },
+    {
+      "icon": "github",
+      "label": "GitHub",
+      "link": "https://github.com/rolldown/rolldown"
+    }
+  ],
+  "editLink": {
+    "pattern": "https://github.com/rolldown/rolldown/edit/main/docs/:path"
+  },
+  "footer": {
+    "copyright": "© 2025-present VoidZero Inc. and Rolldown contributors.",
+    "nav": [
+      {
+        "title": "Rolldown",
+        "items": [
+          {
+            "text": "Guide",
+            "link": "/guide/getting-started"
+          },
+          {
+            "text": "Reference",
+            "link": "/reference/"
+          },
+          {
+            "text": "Plugins",
+            "link": "/builtin-plugins/"
+          },
+          {
+            "text": "API",
+            "link": "/apis/bundler-api"
+          },
+          {
+            "text": "Contribute",
+            "link": "/contribution-guide/"
+          },
+          {
+            "text": "REPL",
+            "link": "https://repl.rolldown.rs/"
+          }
+        ]
+      },
+      {
+        "title": "Resources",
+        "items": [
+          {
+            "text": "Roadmap",
+            "link": "https://github.com/rolldown/rolldown/discussions/153"
+          },
+          {
+            "text": "Team",
+            "link": "/team"
+          }
+        ]
+      }
+    ],
+    "social": ["github", "discord", "bluesky", "x"]
+  }
+}

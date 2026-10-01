@@ -1,0 +1,17 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+//#region configure.js
+globalThis.configureCount = (globalThis.configureCount ?? 0) + 1;
+//#endregion
+//#region value.js
+const value = "used-value";
+//#endregion
+export { value };
+
+```

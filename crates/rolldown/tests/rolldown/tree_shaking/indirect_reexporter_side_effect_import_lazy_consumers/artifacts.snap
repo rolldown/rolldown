@@ -1,0 +1,190 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## library.js
+
+```js
+//#region library/configure.js
+globalThis.configureCount = (globalThis.configureCount ?? 0) + 1;
+globalThis.Library = globalThis.Library || {};
+globalThis.Library.VERSION = "1.0.0";
+//#endregion
+//#region library/read.js
+const readConfigured = () => globalThis.Library?.VERSION ?? "unconfigured";
+//#endregion
+export { readConfigured as t };
+
+```
+
+## main.js
+
+```js
+//#region main.js
+globalThis.loadA = () => import("./route-a.js");
+globalThis.loadB = () => import("./route-b.js");
+//#endregion
+
+```
+
+## route-a.js
+
+```js
+import { t as readConfigured } from "./library.js";
+//#region route-a.js
+const a = () => `a:${readConfigured()}`;
+//#endregion
+export { a };
+
+```
+
+## route-b.js
+
+```js
+import { t as readConfigured } from "./library.js";
+//#region library/other.js
+const other = "other";
+//#endregion
+//#region route-b.js
+const b = () => `b:${readConfigured()}:${other}`;
+//#endregion
+export { b };
+
+```
+
+# Variant: strict-inline-common-chunks: [code_splitting: enabled] [preserve_entry_signatures: False] [strict_execution_order: true]
+
+## Assets
+
+### main.js
+
+```js
+import { t as __esmMin } from "./rolldown-runtime.js";
+//#region main.js
+function init_main() {
+	return (init_main = __esmMin((() => {
+		globalThis.loadA = () => import("./route-a.js");
+		globalThis.loadB = () => import("./route-b.js");
+	})))();
+}
+//#endregion
+init_main();
+
+```
+
+### rolldown-runtime.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+export { __share_require as i, __share as n, __share_export as r, __esmMin as t };
+
+```
+
+### route-a.js
+
+```js
+import { i as __share_require, n as __share, r as __share_export, t as __esmMin } from "./rolldown-runtime.js";
+__share("library-dTTnfY5P", (exports) => {
+	//#region library/configure.js
+	function init_configure() {
+		return (init_configure = __esmMin((() => {
+			globalThis.configureCount = (globalThis.configureCount ?? 0) + 1;
+			globalThis.Library = globalThis.Library || {};
+			globalThis.Library.VERSION = "1.0.0";
+		})))();
+	}
+	//#endregion
+	//#region library/read.js
+	var readConfigured;
+	function init_read() {
+		return (init_read = __esmMin((() => {
+			readConfigured = () => globalThis.Library?.VERSION ?? "unconfigured";
+		})))();
+	}
+	//#endregion
+	//#region library/index.js
+	function init_library() {
+		return (init_library = __esmMin((() => {
+			init_configure();
+		})))();
+	}
+	//#endregion
+	__share_export(exports, {
+		n: () => init_read,
+		r: () => readConfigured,
+		t: () => init_library
+	});
+});
+var share_library = __share_require("library-dTTnfY5P");
+//#region route-a.js
+var a;
+function init_route_a() {
+	return (init_route_a = __esmMin((() => {
+		share_library.t(), share_library.n();
+		a = () => `a:${(0, share_library.r)()}`;
+	})))();
+}
+//#endregion
+init_route_a();
+export { a };
+
+```
+
+### route-b.js
+
+```js
+import { i as __share_require, n as __share, r as __share_export, t as __esmMin } from "./rolldown-runtime.js";
+__share("library-dTTnfY5P", (exports) => {
+	//#region library/configure.js
+	function init_configure() {
+		return (init_configure = __esmMin((() => {
+			globalThis.configureCount = (globalThis.configureCount ?? 0) + 1;
+			globalThis.Library = globalThis.Library || {};
+			globalThis.Library.VERSION = "1.0.0";
+		})))();
+	}
+	//#endregion
+	//#region library/read.js
+	var readConfigured;
+	function init_read() {
+		return (init_read = __esmMin((() => {
+			readConfigured = () => globalThis.Library?.VERSION ?? "unconfigured";
+		})))();
+	}
+	//#endregion
+	//#region library/index.js
+	function init_library() {
+		return (init_library = __esmMin((() => {
+			init_configure();
+		})))();
+	}
+	//#endregion
+	__share_export(exports, {
+		n: () => init_read,
+		r: () => readConfigured,
+		t: () => init_library
+	});
+});
+var share_library = __share_require("library-dTTnfY5P");
+//#region library/other.js
+var other;
+function init_other() {
+	return (init_other = __esmMin((() => {
+		other = "other";
+	})))();
+}
+//#endregion
+//#region route-b.js
+var b;
+function init_route_b() {
+	return (init_route_b = __esmMin((() => {
+		share_library.t(), share_library.n(), init_other();
+		b = () => `b:${(0, share_library.r)()}:${other}`;
+	})))();
+}
+//#endregion
+init_route_b();
+export { b };
+
+```

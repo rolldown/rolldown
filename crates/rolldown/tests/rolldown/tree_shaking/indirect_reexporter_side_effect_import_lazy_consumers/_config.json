@@ -1,0 +1,23 @@
+{
+  "configName": "default",
+  "config": {
+    "input": [
+      {
+        "name": "main",
+        "import": "./main.js"
+      }
+    ]
+  },
+  "configVariants": [
+    {
+      "_configName": "strict-inline-common-chunks",
+      "strictExecutionOrder": true,
+      "preserveEntrySignatures": "false",
+      "codeSplitting": {
+        "experimentalInlineCommonChunks": {
+          "maxSize": 4096
+        }
+      }
+    }
+  ]
+}

@@ -1,0 +1,43 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+//#region foo.js
+const foo = {};
+//#endregion
+//#region helper.js
+function modified() {
+	return "modified";
+}
+//#endregion
+//#region reexporter-indirect.js
+foo.indirect = modified();
+//#endregion
+//#region reexporter-chain-3.js
+foo.chain3 = "modified";
+//#endregion
+//#region reexporter-chain-2.js
+foo.chain2 = "modified";
+//#endregion
+//#region namespace-source.js
+const namespaceFoo = {};
+//#endregion
+//#region reexporter-namespace.js
+namespaceFoo.namespace = "modified";
+//#endregion
+//#region main.js
+const observed = {
+	fooIndirect: foo,
+	fooDirect: foo,
+	fooChained: foo,
+	fooPure: foo,
+	namespaceFoo
+};
+//#endregion
+export { observed };
+
+```

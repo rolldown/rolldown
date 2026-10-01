@@ -1,0 +1,6 @@
+{
+  "sideEffects": [
+    "**/*.css",
+    "**/configure.{js,mjs,esnext,ts}"
+  ]
+}

@@ -1,0 +1,448 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## entry.js
+
+```js
+//#region entry.js
+function loadLightA() {
+	return import("./light-consumer-a.js");
+}
+function loadLightB() {
+	return import("./light-consumer-b.js");
+}
+function loadHeavy() {
+	return import("./heavy-consumer.js");
+}
+//#endregion
+export { loadHeavy, loadLightA, loadLightB };
+
+```
+
+## heavy-consumer.js
+
+```js
+import "./library.js";
+//#region library/heavy.js
+const HEAVY_MARKER = "heavy-marker";
+const HEAVY_PAYLOAD = "heavy-payload-01:heavy-payload-02:heavy-payload-03:heavy-payload-04:heavy-payload-05:heavy-payload-06:heavy-payload-07:heavy-payload-08";
+function heavyValue() {
+	return `${HEAVY_MARKER}:${HEAVY_PAYLOAD}`;
+}
+//#endregion
+//#region heavy-consumer.js
+globalThis.fixtureLog.push(`consumer-heavy:${heavyValue()}`);
+const value = heavyValue();
+//#endregion
+export { value };
+
+```
+
+## library.js
+
+```js
+//#region library/configure.js
+globalThis.fixtureInitializationCount = (globalThis.fixtureInitializationCount ?? 0) + 1;
+globalThis.fixtureLog.push("initialize");
+//#endregion
+
+```
+
+## light-consumer-a.js
+
+```js
+import "./library.js";
+//#region library/light-a.js
+const LIGHT_A_MARKER = "light-a-marker";
+function lightValueA() {
+	return LIGHT_A_MARKER;
+}
+//#endregion
+//#region light-consumer-a.js
+globalThis.fixtureLog.push(`consumer-light-a:${lightValueA()}`);
+const value = lightValueA();
+//#endregion
+export { value };
+
+```
+
+## light-consumer-b.js
+
+```js
+import "./library.js";
+//#region library/light-b.js
+const LIGHT_B_MARKER = "light-b-marker";
+function lightValueB() {
+	return LIGHT_B_MARKER;
+}
+//#endregion
+//#region light-consumer-b.js
+globalThis.fixtureLog.push(`consumer-light-b:${lightValueB()}`);
+const value = lightValueB();
+//#endregion
+export { value };
+
+```
+
+# Variant: strict-on-demand: [on_demand_wrapping: true] [strict_execution_order: true]
+
+## Assets
+
+### entry.js
+
+```js
+//#region entry.js
+function loadLightA() {
+	return import("./light-consumer-a.js");
+}
+function loadLightB() {
+	return import("./light-consumer-b.js");
+}
+function loadHeavy() {
+	return import("./heavy-consumer.js");
+}
+//#endregion
+export { loadHeavy, loadLightA, loadLightB };
+
+```
+
+### heavy-consumer.js
+
+```js
+import "./library.js";
+//#region library/heavy.js
+const HEAVY_MARKER = "heavy-marker";
+const HEAVY_PAYLOAD = "heavy-payload-01:heavy-payload-02:heavy-payload-03:heavy-payload-04:heavy-payload-05:heavy-payload-06:heavy-payload-07:heavy-payload-08";
+function heavyValue() {
+	return `${HEAVY_MARKER}:${HEAVY_PAYLOAD}`;
+}
+//#endregion
+//#region heavy-consumer.js
+globalThis.fixtureLog.push(`consumer-heavy:${heavyValue()}`);
+const value = heavyValue();
+//#endregion
+export { value };
+
+```
+
+### library.js
+
+```js
+//#region library/configure.js
+globalThis.fixtureInitializationCount = (globalThis.fixtureInitializationCount ?? 0) + 1;
+globalThis.fixtureLog.push("initialize");
+//#endregion
+
+```
+
+### light-consumer-a.js
+
+```js
+import "./library.js";
+//#region library/light-a.js
+const LIGHT_A_MARKER = "light-a-marker";
+function lightValueA() {
+	return LIGHT_A_MARKER;
+}
+//#endregion
+//#region light-consumer-a.js
+globalThis.fixtureLog.push(`consumer-light-a:${lightValueA()}`);
+const value = lightValueA();
+//#endregion
+export { value };
+
+```
+
+### light-consumer-b.js
+
+```js
+import "./library.js";
+//#region library/light-b.js
+const LIGHT_B_MARKER = "light-b-marker";
+function lightValueB() {
+	return LIGHT_B_MARKER;
+}
+//#endregion
+//#region light-consumer-b.js
+globalThis.fixtureLog.push(`consumer-light-b:${lightValueB()}`);
+const value = lightValueB();
+//#endregion
+export { value };
+
+```
+
+# Variant: strict-wrap-all: [strict_execution_order: true]
+
+## Assets
+
+### entry.js
+
+```js
+import { t as __esmMin } from "./rolldown-runtime.js";
+//#region entry.js
+function loadLightA() {
+	return import("./light-consumer-a.js");
+}
+function loadLightB() {
+	return import("./light-consumer-b.js");
+}
+function loadHeavy() {
+	return import("./heavy-consumer.js");
+}
+function init_entry() {
+	return (init_entry = __esmMin((() => {})))();
+}
+//#endregion
+init_entry();
+export { loadHeavy, loadLightA, loadLightB };
+
+```
+
+### heavy-consumer.js
+
+```js
+import { t as __esmMin } from "./rolldown-runtime.js";
+import { t as init_library } from "./library.js";
+//#region library/heavy.js
+function heavyValue() {
+	return `${HEAVY_MARKER}:${HEAVY_PAYLOAD}`;
+}
+var HEAVY_MARKER, HEAVY_PAYLOAD;
+function init_heavy() {
+	return (init_heavy = __esmMin((() => {
+		HEAVY_MARKER = "heavy-marker";
+		HEAVY_PAYLOAD = "heavy-payload-01:heavy-payload-02:heavy-payload-03:heavy-payload-04:heavy-payload-05:heavy-payload-06:heavy-payload-07:heavy-payload-08";
+	})))();
+}
+//#endregion
+//#region heavy-consumer.js
+var value;
+function init_heavy_consumer() {
+	return (init_heavy_consumer = __esmMin((() => {
+		init_library(), init_heavy();
+		globalThis.fixtureLog.push(`consumer-heavy:${heavyValue()}`);
+		value = heavyValue();
+	})))();
+}
+//#endregion
+init_heavy_consumer();
+export { value };
+
+```
+
+### library.js
+
+```js
+import { t as __esmMin } from "./rolldown-runtime.js";
+//#region library/configure.js
+function init_configure() {
+	return (init_configure = __esmMin((() => {
+		globalThis.fixtureInitializationCount = (globalThis.fixtureInitializationCount ?? 0) + 1;
+		globalThis.fixtureLog.push("initialize");
+	})))();
+}
+//#endregion
+//#region library/index.js
+function init_library() {
+	return (init_library = __esmMin((() => {
+		init_configure();
+	})))();
+}
+//#endregion
+export { init_library as t };
+
+```
+
+### light-consumer-a.js
+
+```js
+import { t as __esmMin } from "./rolldown-runtime.js";
+import { t as init_library } from "./library.js";
+//#region library/light-a.js
+function lightValueA() {
+	return LIGHT_A_MARKER;
+}
+var LIGHT_A_MARKER;
+function init_light_a() {
+	return (init_light_a = __esmMin((() => {
+		LIGHT_A_MARKER = "light-a-marker";
+	})))();
+}
+//#endregion
+//#region light-consumer-a.js
+var value;
+function init_light_consumer_a() {
+	return (init_light_consumer_a = __esmMin((() => {
+		init_library(), init_light_a();
+		globalThis.fixtureLog.push(`consumer-light-a:${lightValueA()}`);
+		value = lightValueA();
+	})))();
+}
+//#endregion
+init_light_consumer_a();
+export { value };
+
+```
+
+### light-consumer-b.js
+
+```js
+import { t as __esmMin } from "./rolldown-runtime.js";
+import { t as init_library } from "./library.js";
+//#region library/light-b.js
+function lightValueB() {
+	return LIGHT_B_MARKER;
+}
+var LIGHT_B_MARKER;
+function init_light_b() {
+	return (init_light_b = __esmMin((() => {
+		LIGHT_B_MARKER = "light-b-marker";
+	})))();
+}
+//#endregion
+//#region light-consumer-b.js
+var value;
+function init_light_consumer_b() {
+	return (init_light_consumer_b = __esmMin((() => {
+		init_library(), init_light_b();
+		globalThis.fixtureLog.push(`consumer-light-b:${lightValueB()}`);
+		value = lightValueB();
+	})))();
+}
+//#endregion
+init_light_consumer_b();
+export { value };
+
+```
+
+### rolldown-runtime.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+export { __esmMin as t };
+
+```
+
+# Variant: preserve-modules: [preserve_modules: true]
+
+## Assets
+
+### entry.js
+
+```js
+//#region entry.js
+function loadLightA() {
+	return import("./light-consumer-a.js");
+}
+function loadLightB() {
+	return import("./light-consumer-b.js");
+}
+function loadHeavy() {
+	return import("./heavy-consumer.js");
+}
+//#endregion
+export { loadHeavy, loadLightA, loadLightB };
+
+```
+
+### heavy-consumer.js
+
+```js
+import { heavyValue } from "./library/heavy.js";
+import "./library/index.js";
+//#region heavy-consumer.js
+globalThis.fixtureLog.push(`consumer-heavy:${heavyValue()}`);
+const value = heavyValue();
+//#endregion
+export { value };
+
+```
+
+### library/configure.js
+
+```js
+//#region library/configure.js
+globalThis.fixtureInitializationCount = (globalThis.fixtureInitializationCount ?? 0) + 1;
+globalThis.fixtureLog.push("initialize");
+//#endregion
+
+```
+
+### library/heavy.js
+
+```js
+//#region library/heavy.js
+const HEAVY_MARKER = "heavy-marker";
+const HEAVY_PAYLOAD = "heavy-payload-01:heavy-payload-02:heavy-payload-03:heavy-payload-04:heavy-payload-05:heavy-payload-06:heavy-payload-07:heavy-payload-08";
+function heavyValue() {
+	return `${HEAVY_MARKER}:${HEAVY_PAYLOAD}`;
+}
+//#endregion
+export { heavyValue };
+
+```
+
+### library/index.js
+
+```js
+import "./configure.js";
+import { lightValueA } from "./light-a.js";
+import { lightValueB } from "./light-b.js";
+import { heavyValue } from "./heavy.js";
+export { heavyValue, lightValueA, lightValueB };
+
+```
+
+### library/light-a.js
+
+```js
+//#region library/light-a.js
+const LIGHT_A_MARKER = "light-a-marker";
+function lightValueA() {
+	return LIGHT_A_MARKER;
+}
+//#endregion
+export { LIGHT_A_MARKER, lightValueA };
+
+```
+
+### library/light-b.js
+
+```js
+//#region library/light-b.js
+const LIGHT_B_MARKER = "light-b-marker";
+function lightValueB() {
+	return LIGHT_B_MARKER;
+}
+//#endregion
+export { LIGHT_B_MARKER, lightValueB };
+
+```
+
+### light-consumer-a.js
+
+```js
+import { lightValueA } from "./library/light-a.js";
+import "./library/index.js";
+//#region light-consumer-a.js
+globalThis.fixtureLog.push(`consumer-light-a:${lightValueA()}`);
+const value = lightValueA();
+//#endregion
+export { value };
+
+```
+
+### light-consumer-b.js
+
+```js
+import { lightValueB } from "./library/light-b.js";
+import "./library/index.js";
+//#region light-consumer-b.js
+globalThis.fixtureLog.push(`consumer-light-b:${lightValueB()}`);
+const value = lightValueB();
+//#endregion
+export { value };
+
+```

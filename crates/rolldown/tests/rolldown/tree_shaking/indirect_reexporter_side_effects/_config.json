@@ -1,0 +1,11 @@
+{
+  "config": {
+    "strictExecutionOrder": true,
+    "experimental": {
+      "onDemandWrapping": true
+    },
+    "treeshake": {
+      "moduleSideEffects": false
+    }
+  }
+}

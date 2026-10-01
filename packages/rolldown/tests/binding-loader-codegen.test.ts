@@ -3,7 +3,7 @@ import { createRequire } from 'node:module';
 import { fileURLToPath } from 'node:url';
 import { describe, expect, test } from 'vitest';
 
-import { assertWasiThreadPoolPreload } from '../binding-loader-codegen';
+import { assertWasiThreadCrashLatch, assertWasiThreadPoolPreload } from '../binding-loader-codegen';
 
 const generatedWasiNodeLoader = readFileSync(
   fileURLToPath(new URL('../src/rolldown-binding.wasi.cjs', import.meta.url)),
@@ -115,6 +115,37 @@ describe('generated WASI loader pool worker preload seam', () => {
     expect(() => assertWasiThreadPoolPreload(moved)).toThrow(
       /preload call between the load try\/catch and the CommonJS export tail/,
     );
+  });
+});
+
+// After a crash disposal no emnapi deferred call may enter wasm (napi-rs
+// e6e50eb4); the cli emits the gate, rolldown only checks the seam.
+// See internal-docs/async-runtime/implementation.md (section 7, the crash latch).
+describe('generated WASI loader crash-disposal re-entry gate', () => {
+  const wasiWorker = readFileSync(
+    fileURLToPath(new URL('../src/wasi-worker.mjs', import.meta.url)),
+    'utf8',
+  );
+
+  test('the committed threaded loader carries it', () => {
+    expect(() => assertWasiThreadCrashLatch(generatedWasiNodeLoader, wasiWorker)).not.toThrow();
+  });
+
+  test('a loader without one of its pieces fails the build', () => {
+    for (const [search, replacement] of [
+      // The deferred-call hook, its use by the context, and the gate's close.
+      ['function __wasiSetImmediate(callback) {', 'function __wasiDeferCall(callback) {'],
+      ['features: { setImmediate: __wasiSetImmediate }', 'features: {}'],
+      ['  __wasiReentryClosed = true\n', ''],
+    ]) {
+      expect(generatedWasiNodeLoader).toContain(search);
+      expect(() =>
+        assertWasiThreadCrashLatch(
+          generatedWasiNodeLoader.replace(search, replacement),
+          wasiWorker,
+        ),
+      ).toThrow(/WASI thread crash latch \(loader\)/);
+    }
   });
 });
 

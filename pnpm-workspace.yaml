@@ -34,7 +34,7 @@ onlyBuiltDependencies:
 overrides:
   # TEMPORARY - replaced by released `@napi-rs/cli` / `@emnapi/*` once upstream ships the
   # threaded WASI pool preload. Validates rolldown against two unreleased heads:
-  # - napi-rs 564bc4fc (branch feat/wasi-thread-pool-preload, PR napi-rs/napi-rs#3558):
+  # - napi-rs e6e50eb4 (branch feat/wasi-thread-pool-preload, PR napi-rs/napi-rs#3558):
   #   `@napi-rs/cli` packed as 3.10.6. Its threaded Node loader reads the addon's `napi_wasm_runtime_pool_workers` export after the load and keeps
   #   that many Workers loading in emnapi's idle reuse pool (`__reconcileWasiThreadPool`), and
   #   wraps `configureAsyncRuntime` so a later configure shrinks or grows that pool. The export
@@ -42,7 +42,9 @@ overrides:
   #   first use only releases idle Workers. A Worker the reconcile terminates stays in
   #   `__wasiWorkers` until its own `terminate()` settles (`__untrackWasiWorkerOnExit`), so a
   #   disposal right after a shrink still waits for it to exit. It still carries the
-  #   worker-crash latch of napi-rs 22ee6c8d.
+  #   worker-crash latch of napi-rs 22ee6c8d. emnapi's deferred calls go through the loader's
+  #   `__wasiSetImmediate`, which drops them once `__disposeWasiBindingAfterThreadCrash` has set
+  #   `__wasiReentryClosed`, so none re-enters wasm after a crash disposal.
   # - emnapi cc2f9b2 (branch feat/wasi-threads-background-pool-preload, PR toyobayashi/emnapi#239):
   #   `@emnapi/wasi-threads` 2.2.0 takes a terminated Worker out of the pool and ignores a late
   #   'loaded' from it; a load that fails after thread-spawn returned is printed instead of
@@ -56,7 +58,7 @@ overrides:
   #   with only `version` set to 2.0.0-alpha.6, so the archives are byte-identical to alpha.5.
   #   The emnapi head's own archives were not rebuilt; its C changes since alpha.5 are two
   #   allocation-failure checks (emnapi#237) and NAN coverage this build does not link.
-  # sha256: napi-rs-cli.tgz f68f764e2258458b95faa3d01a66e0f5e535607186d6edbd7fb9c069c361fd47
+  # sha256: napi-rs-cli.tgz 3f4f8b3c5ad33660cdab9eae00198a1601834f55e405aaba5574321eb665ef0c
   #         emnapi-core.tgz d3a519b61d8a4b7cccaf3a51e85018cdac656a2a35840e258deef0445edd6511
   #         emnapi-runtime.tgz 2cbe43bbee50ca321911283267ba025f1d9552098d3f4beb193d41fc40e10b55
   #         emnapi-wasi-threads.tgz f4c934b40a8a60763115a1da4e570fc8f2a549f9c0fac468c6a91169a154e110

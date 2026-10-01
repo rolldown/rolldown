@@ -399,6 +399,15 @@ missing host-contract export fails with `ERR_NAPI_ASYNC_RUNTIME_BINDING_MISMATCH
   poll is inside wasm; both disposer cases check the cause and
   `workerThreadId`. Not covered: a worker that fails before any of its own code
   runs, or a thread spawned before `beforeInit`, raises no addon flag.
+  Re-entry gate (napi-rs e6e50eb4): the release-threaded `load-failure` case hung
+  1 CI run in 3 because the crash disposal terminated a healthy pool Worker that
+  held napi's heap-sync lock, and an emnapi `setImmediate` queued earlier (TSFN
+  finalizer -> dealloc) then spun on that lock on the main thread. emnapi's
+  deferred calls now go through the loader's `__wasiSetImmediate`, which drops
+  them once `__disposeWasiBindingAfterThreadCrash` has set `__wasiReentryClosed`.
+  Still ungated: `FinalizationRegistry` `_free` on GC, async-send type 1
+  `Promise.then`, `_emnapi_next_tick`. Open product call: should an idle preloaded
+  Worker's load failure latch the crash flag at all (75b6f9a01 pins yes)?
 
 ---
 
@@ -1103,9 +1112,11 @@ build-order coupling is needed to keep one flavor from overwriting the other.
   load still latches the crash flag (the disposer rejects), as for any pool
   Worker that dies.
   Validated against unreleased heads until the releases ship: napi-rs
-  564bc4fc (napi-rs/napi-rs#3558, six crates via `[patch.crates-io]` plus the
-  cli tarball) and emnapi cc2f9b2 (toyobayashi/emnapi#239, tarballs); see the
-  comments in `Cargo.toml` and `pnpm-workspace.yaml`. Expected release floors:
+  e6e50eb4 (napi-rs/napi-rs#3558, six crates via `[patch.crates-io]` plus the
+  cli tarball; the crates are unchanged since 4d6f0a6f, the loader adds the
+  crash-disposal re-entry gate described in §7) and emnapi cc2f9b2
+  (toyobayashi/emnapi#239, tarballs); see the comments in `Cargo.toml` and
+  `pnpm-workspace.yaml`. Expected release floors:
   `@napi-rs/cli` >= 3.11.0, `napi-async-runtime` >= 0.2.5,
   `@emnapi/core` >= 2.0.0-alpha.6 with `@emnapi/wasi-threads` >= 2.2.0.
   Rolldown checks: `assertWasiThreadPoolPreload` (`binding-loader-codegen.ts`)

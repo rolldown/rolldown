@@ -3279,7 +3279,7 @@ packages:
     engines: {node: ^20.19.0 || ^22.13.0 || >=23.5.0}
 
   '@napi-rs/cli@file:.napi-validation/napi-rs-cli.tgz':
-    resolution: {integrity: sha512-P/cfDFRFesckSVT0kB/8iJgvg61SU27/e3X96AWWJQHN6IgDNzF88i7fNNxVNlGJjqbCpd2+HPLmrxfRV1APyw==, tarball: file:.napi-validation/napi-rs-cli.tgz}
+    resolution: {integrity: sha512-0iLh/GWo11lGJ2SjzrpV824yV3/DJ2ay+KQUOrTT2LHUz4c0aB78mpVcG74iZG26BrlT6BJ2gD0D/OWd9TP3Lw==, tarball: file:.napi-validation/napi-rs-cli.tgz}
     version: 3.10.6
     engines: {node: ^20.17.0 || ^22.13.0 || >= 23.5.0}
     hasBin: true

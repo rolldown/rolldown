@@ -29,11 +29,19 @@ const WASI_CONTEXT_DESTROY_WRAP_HELPER = `function __wrapEmnapiContextDestroyFor
 ) {`;
 // Indentation differs per flavor (2 spaces in the browser ESM loaders, 4 in
 // the Node CommonJS ones), so this anchor is matched whitespace-normalized.
-const WASI_CONTEXT_DESTROY_WRAP_WIRING = `__emnapiContext = __wrapEmnapiContextDestroyForSettlement(
-  __emnapiCreateContext({ autoDestroy: false }),
+// The threaded Node loader also hands emnapi its crash-disposal re-entry gate
+// (`__wasiSetImmediate`, pinned by the crash latch below); the other flavors
+// pass `{ autoDestroy: false }` alone.
+const WASI_CONTEXT_OPTIONS = '{ autoDestroy: false }';
+const WASI_THREADED_NODE_CONTEXT_OPTIONS =
+  '{ autoDestroy: false, features: { setImmediate: __wasiSetImmediate } }';
+function wasiContextDestroyWrapWiring(contextOptions: string): string {
+  return `__emnapiContext = __wrapEmnapiContextDestroyForSettlement(
+  __emnapiCreateContext(${contextOptions}),
   __prepareWasmEnvCleanup,
   __isPreparingWasmEnvCleanup,
 )`;
+}
 // Settlement barrier: the cleanup preparation must precede the context
 // destroy, or the TSFN cleanup hook discards pending napi async work. Since
 // `@napi-rs/cli` 3.10.5 (napi-rs#3541) a reentrancy guard sits between the two
@@ -142,6 +150,8 @@ const WASI_THREAD_CRASH_LATCH_LOADER_SIGNATURES = [
 `,
   `  __releaseEmnapiWaitingRequestHandle()
   __releaseCurrentThreadHostTimers()
+  // No call into wasm after this: see \`__wasiSetImmediate\`.
+  __wasiReentryClosed = true
   let workerResult
   try {
     workerResult = __terminateWasiWorkers()
@@ -183,6 +193,10 @@ const WASI_THREAD_CRASH_LATCH_LOADER_SIGNATURES = [
       for (const name of Object.keys(instance.exports)) {
 `,
   'addonCrashFlag: __wasiAddonCrashFlag,',
+  // Re-entry gate: emnapi's deferred calls (setImmediate feature) are dropped
+  // once the crash disposal above has closed it, so none enters wasm after the
+  // workers are terminated (a terminated worker may hold a wasm heap lock).
+  'function __wasiSetImmediate(callback) {',
   // CurrentThread host timers: tracked through the binding view, released
   // without entering wasm on both crash paths (the crash disposal above and
   // the exit listener below).
@@ -299,11 +313,21 @@ export function assertWasiBindingContextLifecycle(source: string): void {
     'WASI context destroy settlement barrier',
   );
   assertExactlyOne(source, WASI_CONTEXT_DESTROY_WRAP_HELPER, 'WASI context destroy wrapper');
-  assertExactlyOneNormalized(
-    source,
-    WASI_CONTEXT_DESTROY_WRAP_WIRING,
-    'WASI context destroy settlement wiring',
+  const normalizedSource = normalizeWhitespace(source);
+  const wiringCount = [WASI_CONTEXT_OPTIONS, WASI_THREADED_NODE_CONTEXT_OPTIONS].reduce(
+    (count, contextOptions) =>
+      count +
+      countOccurrences(
+        normalizedSource,
+        normalizeWhitespace(wasiContextDestroyWrapWiring(contextOptions)),
+      ),
+    0,
   );
+  if (wiringCount !== 1) {
+    throw new Error(
+      `Unexpected NAPI-RS loader template for WASI context destroy settlement wiring: expected 1 anchor, found ${wiringCount}`,
+    );
+  }
   assertExactlyOne(source, WASI_DISPOSE_PUBLICATION, 'WASI dispose symbol publication');
   const isCommonJs = cjsDirectImportCount === 1;
   const exitListenerCount = countOccurrences(source, WASI_EXIT_LISTENER_HELPER);
@@ -323,6 +347,11 @@ export function assertWasiThreadCrashLatch(loaderSource: string, workerSource: s
   for (const signature of WASI_THREAD_CRASH_LATCH_LOADER_SIGNATURES) {
     assertExactlyOne(loaderSource, signature, 'WASI thread crash latch (loader)');
   }
+  assertExactlyOneNormalized(
+    loaderSource,
+    wasiContextDestroyWrapWiring(WASI_THREADED_NODE_CONTEXT_OPTIONS),
+    'WASI thread crash latch (loader)',
+  );
   for (const signature of WASI_THREAD_CRASH_LATCH_WORKER_SIGNATURES) {
     assertExactlyOne(workerSource, signature, 'WASI thread crash latch (worker)');
   }

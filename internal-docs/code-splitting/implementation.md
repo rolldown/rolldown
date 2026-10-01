@@ -403,7 +403,7 @@ The function iterates over every chunk in the `ChunkGraph` and performs six step
 
 Uses the immutable link-stage `wrap_kind()` from `LinkingMetadata`.
 
-The skip also prevents a crash. `generate_lazy_export` removes the wrapper of an object JSON module, even when a wrapped module imports it. The wrapped modules before such a module in DFS order can then include its importers, which must run after it. Without the skip, the pass can move an init call in front of the JSON module. Through an import cycle, that call can reach an importer's wrapper before the chunk assigns it. The bundle then throws `init_* is not a function` (#10999, `crates/rolldown/tests/rolldown/issues/10999*`).
+`generate_lazy_export` removes the wrapper of an object JSON module, even when a wrapped module imports it. Thus, an object JSON module is the only unwrapped module that a wrapped module can import. The wrapped modules before such a module in DFS order can include its importers, which must run after it. Without the skip, the pass can move an init call in front of the JSON module. Through an import cycle, that call can reach an importer's wrapper before the chunk assigns it. The bundle then throws `init_* is not a function` (#10999, `crates/rolldown/tests/rolldown/issues/10999*`).
 
 **Step 4 — Determine modules to check.** Collects all unwrapped modules that have wrapped dependencies, plus the wrapped modules they depend on (up to the maximum dependency count). If this set is empty, no reordering is needed and the function returns early.
 

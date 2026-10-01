@@ -56,6 +56,22 @@ Rust core — see [implementation.md](./implementation.md).
    closable-emitter lifecycle rather than throwing, so a caller's teardown
    path stays the same shape on every artifact.
 
+   On threaded WASI under Node, the pool's Workers are started when the
+   binding loads, not on the first build: the loader preloads one per
+   configured MultiThread worker, which takes the Worker boot off the first
+   build. It lives in rolldown's build step, as a patch to the generated
+   loader, because neither upstream piece can do it today: emnapi's own
+   preload (`reuseWorker.size > 0`) throws on the synchronous CommonJS load,
+   and the napi-rs loader keeps emnapi's thread manager private. The cost:
+   a process that only imports rolldown pays about 1 ms more load time and
+   about 20 MB more peak RSS for Workers it never uses, and the count is read
+   at load, so a later `configureAsyncRuntime` gets stale Workers (CurrentThread
+   leaves the preloaded ones idle and unref'd; a larger count adds the rest
+   lazily). The next batched napi-rs / emnapi release should take it upstream
+   (emnapi: allow a sized pool with a synchronous instantiate; napi-rs: a
+   loader option), and the patch goes away. See
+   [implementation.md](./implementation.md) §13, "Pool worker preload".
+
 2. **CPU and async work share a pool.** Module-task futures run on the same
    Rayon pool used by link and generate stages. Nested Rayon work therefore
    uses the current pool instead of creating a second CPU pool.

@@ -161,6 +161,13 @@ jobs:
       - name: Threaded WASI worker crash latch
         run: timeout 300 vp run --filter rolldown-tests test:wasi-worker-crash
 
+      # The loader preloads one pool Worker per MultiThread worker at load: checks
+      # the counts per flavor, that an import-only process exits on its own, and
+      # that a preloaded Worker which fails to load leaves the pool.
+      # See internal-docs/async-runtime/implementation.md (section 13, "Pool worker preload").
+      - name: Threaded WASI pool worker preload
+        run: timeout 300 vp run --filter rolldown-tests test:wasi-pool-preload
+
       - name: Build Rolldown with non-threaded WASI binding
         run: just build-rolldown-wasi-single
 
@@ -282,3 +289,6 @@ jobs:
 
       - name: Threaded WASI worker crash latch
         run: timeout 300 vp run --filter rolldown-tests test:wasi-worker-crash
+
+      - name: Threaded WASI pool worker preload
+        run: timeout 300 vp run --filter rolldown-tests test:wasi-pool-preload

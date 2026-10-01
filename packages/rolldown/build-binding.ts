@@ -1,5 +1,5 @@
 import { execFileSync } from 'node:child_process';
-import { existsSync, readFileSync } from 'node:fs';
+import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -12,7 +12,9 @@ import {
 import {
   assertAsyncRuntimeHostExports,
   assertWasiBindingContextLifecycle,
+  assertWasiPoolWorkerPreload,
   assertWasiThreadCrashLatch,
+  insertWasiPoolWorkerPreload,
 } from './binding-loader-codegen';
 import {
   assertThreadlessMemoryConfig,
@@ -65,6 +67,7 @@ try {
   } finally {
     restoreInactiveWasiDeclaration();
   }
+  insertWasiPoolWorkerPreloadIntoLoader();
   validateWasiBindingContextLifecycles();
   validateAsyncRuntimeHostExports();
   if (argsOptions.target === WASI_THREADS_TARGET) {
@@ -144,6 +147,18 @@ function validateWasiReactorArtifacts(): void {
   }
 }
 
+// Every build re-renders the threaded Node loader (a non-wasi build from its
+// metadata header), so every build inserts the pool worker preload again.
+// See internal-docs/async-runtime/implementation.md (section 13, "Pool worker preload").
+function insertWasiPoolWorkerPreloadIntoLoader(): void {
+  const loaderPath = join(__dirname, 'src', 'rolldown-binding.wasi.cjs');
+  const source = readFileSync(loaderPath, 'utf8');
+  const patched = insertWasiPoolWorkerPreload(source);
+  if (patched !== source) {
+    writeFileSync(loaderPath, patched);
+  }
+}
+
 function validateWasiBindingContextLifecycles(): void {
   const sourceDir = join(__dirname, 'src');
   for (const bindingPath of [
@@ -154,8 +169,10 @@ function validateWasiBindingContextLifecycles(): void {
   ]) {
     assertWasiBindingContextLifecycle(readFileSync(bindingPath, 'utf8'));
   }
+  const threadedLoader = readFileSync(join(sourceDir, 'rolldown-binding.wasi.cjs'), 'utf8');
   assertWasiThreadCrashLatch(
-    readFileSync(join(sourceDir, 'rolldown-binding.wasi.cjs'), 'utf8'),
+    threadedLoader,
     readFileSync(join(sourceDir, 'wasi-worker.mjs'), 'utf8'),
   );
+  assertWasiPoolWorkerPreload(threadedLoader);
 }

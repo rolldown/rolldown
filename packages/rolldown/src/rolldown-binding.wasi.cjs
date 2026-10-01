@@ -2266,6 +2266,50 @@ try {
   __runWasiInitializationRollback(rollback)
   throw rollback.error
 }
+// Inserted by rolldown's build (packages/rolldown/binding-loader-codegen.ts).
+// Preload the MultiThread pool: one loading Worker per configured worker goes
+// into emnapi's reuse pool now, so the first build's thread spawns pop a Worker
+// that is already booting instead of creating one. Nothing waits on them.
+// See internal-docs/async-runtime/implementation.md (section 13, "Pool worker preload").
+function __preloadWasiPoolWorkers(binding) {
+  const manager = __getWasiThreadManager()
+  if (
+    !manager ||
+    !Array.isArray(manager.unusedWorkers) ||
+    typeof manager.allocateUnusedWorker !== 'function' ||
+    typeof manager.loadWasmModuleToWorker !== 'function'
+  ) {
+    return
+  }
+  const config = binding.getAsyncRuntimeConfig()
+  const count = config.flavor === 'MultiThread' ? config.workerThreads >>> 0 : 0
+  // emnapi terminates a pooled Worker that failed to load but leaves it in the
+  // pool, where a spawn would take it. Drop it, so a spawn creates a fresh one.
+  const drop = (worker) => {
+    const index = manager.unusedWorkers.indexOf(worker)
+    if (index !== -1) {
+      manager.unusedWorkers.splice(index, 1)
+    }
+  }
+  for (let i = manager.unusedWorkers.length; i < count; i++) {
+    let worker
+    try {
+      worker = manager.allocateUnusedWorker()
+      manager.loadWasmModuleToWorker(worker).catch(() => drop(worker))
+    } catch {
+      if (worker !== undefined) {
+        drop(worker)
+        try {
+          manager.terminateWorker(worker)
+        } catch {}
+      }
+      return
+    }
+  }
+}
+try {
+  __preloadWasiPoolWorkers(__napiModule.exports)
+} catch {}
 module.exports = __napiModule.exports
 module.exports.LegalCommentsMode = __napiModule.exports.LegalCommentsMode
 module.exports.minify = __napiModule.exports.minify

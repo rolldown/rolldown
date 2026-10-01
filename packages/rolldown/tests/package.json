@@ -31,6 +31,7 @@
     "test:wasi-threaded-stress:heap-ceiling": "node ./wasi/threaded-memory-stress.mjs --cases bundle-mt4 --hold-mib 1536",
     "test:wasi-threaded-stress:no-growth": "node ./wasi/threaded-memory-stress.mjs --cases build-mt4,bundle-mt --expect-grows zero",
     "test:wasi-worker-crash": "node ./wasi/worker-crash-latch.mjs",
+    "test:wasi-pool-preload": "node ./wasi/pool-worker-preload.mjs",
     "test:types": "vitest run --typecheck.only --reporter verbose --hideSkippedTests"
   },
   "dependencies": {

@@ -225,6 +225,82 @@ const WASI_THREAD_CRASH_LATCH_WORKER_SIGNATURES = [
   'Atomics.store(addonCrashFlag, 0, 1)',
   'function __writeCrashReport(report, error) {',
 ] as const;
+// Pool worker preload, threaded Node flavor only (`rolldown-binding.wasi.cjs`).
+// The one rewrite rolldown applies to a generated loader. `reuseWorker: true`
+// starts emnapi's pool empty, so each thread the MultiThread runtime spawns on
+// the first build boots a Worker and loads the wasm into it first (about 24 ms
+// of the first build). The loader keeps emnapi's thread
+// manager private, and emnapi's own preload (`reuseWorker.size > 0`) cannot
+// run on this synchronous CommonJS load, so the build inserts this right after
+// the load succeeded: one loading Worker per configured MultiThread worker goes
+// into the pool, and a thread spawn pops it instead of creating one. It reads
+// the count from `getAsyncRuntimeConfig()`, which reads options only and does
+// not start the runtime. Nothing waits on the Workers, and nothing in it can
+// fail the load. Until a napi-rs / emnapi release offers this upstream.
+// See internal-docs/async-runtime/implementation.md (section 13, "Pool worker preload").
+const WASI_POOL_PRELOAD_ANCHORS = [
+  // The pool the preloaded Workers go into, and a spawn takes them from.
+  'reuseWorker: true,',
+  // The manager, captured by a plugin before the wasm loads.
+  '__captureWasiThreadManager,',
+  'function __getWasiThreadManager() {',
+  // Where the worker count comes from.
+  'module.exports.getAsyncRuntimeConfig = __napiModule.exports.getAsyncRuntimeConfig\n',
+] as const;
+// Right after the load try/catch, before the CommonJS export tail.
+const WASI_POOL_PRELOAD_INSERTION_POINT = `  throw rollback.error
+}
+module.exports = __napiModule.exports
+`;
+const WASI_POOL_PRELOAD_CODE = `// Inserted by rolldown's build (packages/rolldown/binding-loader-codegen.ts).
+// Preload the MultiThread pool: one loading Worker per configured worker goes
+// into emnapi's reuse pool now, so the first build's thread spawns pop a Worker
+// that is already booting instead of creating one. Nothing waits on them.
+// See internal-docs/async-runtime/implementation.md (section 13, "Pool worker preload").
+function __preloadWasiPoolWorkers(binding) {
+  const manager = __getWasiThreadManager()
+  if (
+    !manager ||
+    !Array.isArray(manager.unusedWorkers) ||
+    typeof manager.allocateUnusedWorker !== 'function' ||
+    typeof manager.loadWasmModuleToWorker !== 'function'
+  ) {
+    return
+  }
+  const config = binding.getAsyncRuntimeConfig()
+  const count = config.flavor === 'MultiThread' ? config.workerThreads >>> 0 : 0
+  // emnapi terminates a pooled Worker that failed to load but leaves it in the
+  // pool, where a spawn would take it. Drop it, so a spawn creates a fresh one.
+  const drop = (worker) => {
+    const index = manager.unusedWorkers.indexOf(worker)
+    if (index !== -1) {
+      manager.unusedWorkers.splice(index, 1)
+    }
+  }
+  for (let i = manager.unusedWorkers.length; i < count; i++) {
+    let worker
+    try {
+      worker = manager.allocateUnusedWorker()
+      manager.loadWasmModuleToWorker(worker).catch(() => drop(worker))
+    } catch {
+      if (worker !== undefined) {
+        drop(worker)
+        try {
+          manager.terminateWorker(worker)
+        } catch {}
+      }
+      return
+    }
+  }
+}
+try {
+  __preloadWasiPoolWorkers(__napiModule.exports)
+} catch {}
+`;
+const WASI_POOL_PRELOAD_PLACED = `  throw rollback.error
+}
+${WASI_POOL_PRELOAD_CODE}module.exports = __napiModule.exports
+`;
 
 /**
  * Assert the upstream (`@napi-rs/cli` >= 3.10.0) context lifecycle seams and
@@ -292,6 +368,42 @@ export function assertWasiThreadCrashLatch(loaderSource: string, workerSource: s
   for (const signature of WASI_THREAD_CRASH_LATCH_WORKER_SIGNATURES) {
     assertExactlyOne(workerSource, signature, 'WASI thread crash latch (worker)');
   }
+}
+
+/**
+ * Insert the pool worker preload into the generated threaded Node loader and
+ * return the result. Idempotent: a loader that already carries it in place is
+ * returned unchanged. Throws when the loader no longer matches the anchors, so
+ * a cli template change cannot drop the preload silently.
+ */
+export function insertWasiPoolWorkerPreload(loaderSource: string): string {
+  const placed = countOccurrences(loaderSource, WASI_POOL_PRELOAD_CODE);
+  if (placed === 0) {
+    assertExactlyOne(
+      loaderSource,
+      WASI_POOL_PRELOAD_INSERTION_POINT,
+      'WASI pool worker preload insertion point',
+    );
+    loaderSource = loaderSource.replace(
+      WASI_POOL_PRELOAD_INSERTION_POINT,
+      () => WASI_POOL_PRELOAD_PLACED,
+    );
+  }
+  assertWasiPoolWorkerPreload(loaderSource);
+  return loaderSource;
+}
+
+/**
+ * Assert that the threaded Node loader carries the pool worker preload exactly
+ * once, right after the load try/catch, and that everything it relies on is
+ * still there.
+ */
+export function assertWasiPoolWorkerPreload(loaderSource: string): void {
+  for (const anchor of WASI_POOL_PRELOAD_ANCHORS) {
+    assertExactlyOne(loaderSource, anchor, 'WASI pool worker preload');
+  }
+  assertExactlyOne(loaderSource, WASI_POOL_PRELOAD_CODE, 'WASI pool worker preload code');
+  assertExactlyOne(loaderSource, WASI_POOL_PRELOAD_PLACED, 'WASI pool worker preload placement');
 }
 
 export function assertAsyncRuntimeHostExports(

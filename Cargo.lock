@@ -1333,7 +1333,7 @@ dependencies = [
 [[package]]
 name = "napi"
 version = "3.14.0"
-source = "git+https://github.com/napi-rs/napi-rs?rev=4d6f0a6fad0629d521e2b2236b4e5bc16fc45752#4d6f0a6fad0629d521e2b2236b4e5bc16fc45752"
+source = "git+https://github.com/napi-rs/napi-rs?rev=564bc4fca433aaabf4511124fc3f57a0a8e27c08#564bc4fca433aaabf4511124fc3f57a0a8e27c08"
 dependencies = [
  "anyhow",
  "bitflags",
@@ -1353,7 +1353,7 @@ dependencies = [
 [[package]]
 name = "napi-async-runtime"
 version = "0.2.4"
-source = "git+https://github.com/napi-rs/napi-rs?rev=4d6f0a6fad0629d521e2b2236b4e5bc16fc45752#4d6f0a6fad0629d521e2b2236b4e5bc16fc45752"
+source = "git+https://github.com/napi-rs/napi-rs?rev=564bc4fca433aaabf4511124fc3f57a0a8e27c08#564bc4fca433aaabf4511124fc3f57a0a8e27c08"
 dependencies = [
  "arc-swap",
  "async-task",
@@ -1367,12 +1367,12 @@ dependencies = [
 [[package]]
 name = "napi-build"
 version = "2.6.0"
-source = "git+https://github.com/napi-rs/napi-rs?rev=4d6f0a6fad0629d521e2b2236b4e5bc16fc45752#4d6f0a6fad0629d521e2b2236b4e5bc16fc45752"
+source = "git+https://github.com/napi-rs/napi-rs?rev=564bc4fca433aaabf4511124fc3f57a0a8e27c08#564bc4fca433aaabf4511124fc3f57a0a8e27c08"
 
 [[package]]
 name = "napi-derive"
 version = "3.6.10"
-source = "git+https://github.com/napi-rs/napi-rs?rev=4d6f0a6fad0629d521e2b2236b4e5bc16fc45752#4d6f0a6fad0629d521e2b2236b4e5bc16fc45752"
+source = "git+https://github.com/napi-rs/napi-rs?rev=564bc4fca433aaabf4511124fc3f57a0a8e27c08#564bc4fca433aaabf4511124fc3f57a0a8e27c08"
 dependencies = [
  "convert_case",
  "ctor",
@@ -1385,7 +1385,7 @@ dependencies = [
 [[package]]
 name = "napi-derive-backend"
 version = "6.1.4"
-source = "git+https://github.com/napi-rs/napi-rs?rev=4d6f0a6fad0629d521e2b2236b4e5bc16fc45752#4d6f0a6fad0629d521e2b2236b4e5bc16fc45752"
+source = "git+https://github.com/napi-rs/napi-rs?rev=564bc4fca433aaabf4511124fc3f57a0a8e27c08#564bc4fca433aaabf4511124fc3f57a0a8e27c08"
 dependencies = [
  "convert_case",
  "proc-macro2",
@@ -1397,7 +1397,7 @@ dependencies = [
 [[package]]
 name = "napi-sys"
 version = "3.4.0"
-source = "git+https://github.com/napi-rs/napi-rs?rev=4d6f0a6fad0629d521e2b2236b4e5bc16fc45752#4d6f0a6fad0629d521e2b2236b4e5bc16fc45752"
+source = "git+https://github.com/napi-rs/napi-rs?rev=564bc4fca433aaabf4511124fc3f57a0a8e27c08#564bc4fca433aaabf4511124fc3f57a0a8e27c08"
 dependencies = [
  "libloading",
 ]

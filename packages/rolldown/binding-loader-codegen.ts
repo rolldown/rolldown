@@ -240,6 +240,9 @@ const WASI_THREAD_POOL_PRELOAD_LOADER_SIGNATURES = [
   'reuseWorker: true,',
   'function __getWasiThreadManager() {',
   "const __wasiThreadPoolReconcileSymbol = Symbol.for('napi.rs.wasi.reconcileThreadPool')",
+  // A Worker the reconcile terminates stays tracked until it has exited, so a
+  // disposal right after a shrink waits for it.
+  'function __untrackWasiWorkerOnExit(worker) {',
   '  __publishWasiThreadPoolReconcile(__napiModule.exports)\n',
   // The configure wrap. The export tail reads the wrapped function back off the
   // binding, so the ESM namespace in dist sees it too.

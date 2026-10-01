@@ -1089,8 +1089,11 @@ build-order coupling is needed to keep one flavor from overwriting the other.
   a backend has started, since its pool threads already exist; an atomic, no
   lock) and fills emnapi's idle reuse pool to that count, without waiting.
   It also wraps `configureAsyncRuntime`, so a later configure terminates the
-  idle Workers above the new count and preloads the missing ones; the export
-  tail reads the wrapped function back, so the dist's ESM namespace sees it and
+  idle Workers above the new count and preloads the missing ones. A Worker it
+  terminates stays in the loader's `__wasiWorkers` set until its own
+  `terminate()` settles (`__untrackWasiWorkerOnExit`), so a disposal right
+  after a shrink still waits for it to exit. The export tail reads the
+  wrapped function back, so the dist's ESM namespace sees it and
   `src/api/async-runtime.ts` needs no change. After the first build the
   configuration is frozen (a configure throws, and the wrapper skips the
   reconcile), and a reconcile then only releases idle Workers. emnapi takes a
@@ -1100,7 +1103,7 @@ build-order coupling is needed to keep one flavor from overwriting the other.
   load still latches the crash flag (the disposer rejects), as for any pool
   Worker that dies.
   Validated against unreleased heads until the releases ship: napi-rs
-  4d6f0a6f (napi-rs/napi-rs#3558, six crates via `[patch.crates-io]` plus the
+  564bc4fc (napi-rs/napi-rs#3558, six crates via `[patch.crates-io]` plus the
   cli tarball) and emnapi cc2f9b2 (toyobayashi/emnapi#239, tarballs); see the
   comments in `Cargo.toml` and `pnpm-workspace.yaml`. Expected release floors:
   `@napi-rs/cli` >= 3.11.0, `napi-async-runtime` >= 0.2.5,

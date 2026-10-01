@@ -93,6 +93,8 @@ describe('generated WASI loader pool worker preload seam', () => {
     for (const [search, replacement] of [
       // The count source.
       ['exports?.napi_wasm_runtime_pool_workers', 'exports?.napi_wasm_runtime_pool_size'],
+      // The until-exit tracking of a Worker the reconcile terminates.
+      ['function __untrackWasiWorkerOnExit(worker) {', 'function __untrackWasiWorker(worker) {'],
       // The configure wrap, and the export tail that reads it back.
       ['  __wrapWasiConfigureAsyncRuntime(__napiModule.exports)\n', ''],
       ['module.exports.configureAsyncRuntime = __napiModule.exports.configureAsyncRuntime\n', ''],

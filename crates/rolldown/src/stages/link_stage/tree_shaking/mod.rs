@@ -9,4 +9,5 @@ pub use include_statements::{
   SymbolIncludeReason, include_symbol,
 };
 pub use on_demand::compute_body_demand_keys;
+pub(super) use on_demand::for_each_indirect_reexporter_body;
 pub use passes::include_runtime_symbol;

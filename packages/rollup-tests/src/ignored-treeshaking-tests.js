@@ -30,8 +30,6 @@ const ignoreTests = [
   "rollup@form@pure-comments-disabled: does not rely on pure annotations if they are disabled",
   "rollup@form@tdz-access-in-declaration: detect accessing TDZ variables within the declaration",
   "rollup@function@tree-shake-variable-declarations-2: remove unused variables from declarations (#1831)",
-  "rollup@function@respect-default-export-reexporter-side-effects: respect side-effects in reexporting modules even if moduleSideEffects are off",
-  "rollup@function@respect-reexporter-side-effects: respect side-effects in reexporting modules even if moduleSideEffects are off",
   "rollup@function@namespace-member-side-effects@assignment: checks side effects when reassigning namespace members",
   "rollup@form@mutations-in-imports: track mutations of imports",
   "rollup@form@destructured-known-arguments: tracks known argument values through destructuring",

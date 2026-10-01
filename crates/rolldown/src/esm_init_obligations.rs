@@ -97,7 +97,9 @@ pub fn record_is_init_obligation(
   }
   match purpose {
     ObligationPurpose::Emit | ObligationPurpose::Register => {
-      stmt_is_included && !order_state.is_nested_reexport_record(importer.idx, rec_idx)
+      stmt_is_included
+        && !order_state.is_nested_reexport_record(importer.idx, rec_idx)
+        && !order_state.is_forwarding_only_record(importer.idx, rec_idx)
     }
     ObligationPurpose::Project => {
       stmt_is_included
@@ -377,8 +379,11 @@ fn collect_esm_init_targets_for_record(
   let record = &ctx.importer.import_records[rec_idx];
   let Some(importee_idx) = record.resolved_module else { return targets };
   let importee_meta = &ctx.metas[importee_idx];
+  let importee_is_effect_only_forwarder =
+    ctx.order_wrap_state.is_effect_only_forwarder(importee_idx);
   let route_through_transparent_wrapper =
-    ctx.order_wrap_state.reexport_init_is_transparent(importee_idx)
+    (ctx.order_wrap_state.reexport_init_is_transparent(importee_idx)
+      || importee_is_effect_only_forwarder)
       && !importee_meta.has_dynamic_exports
       && (record_consumes_static_bindings(ctx.importer, record, rec_idx)
         || ctx.order_wrap_state.is_consumer_local_reexport_route(importee_idx));
@@ -410,6 +415,10 @@ fn collect_esm_init_targets_for_record(
     if !route_through_transparent_wrapper {
       targets.push(WrappedEsmInitTarget::Module(importee_idx));
       return targets;
+    }
+    // Run the forwarder's own effects; its bindings are routed below.
+    if importee_is_effect_only_forwarder {
+      targets.push(WrappedEsmInitTarget::Module(importee_idx));
     }
   }
 
@@ -501,7 +510,7 @@ fn collect_esm_init_targets_for_record(
     targets.retain(|target| !discharged.contains(target));
   }
 
-  if route_through_transparent_wrapper {
+  if route_through_transparent_wrapper && !importee_is_effect_only_forwarder {
     targets.sort_by_key(|target| consumer_local_target_order(ctx, importee_idx, *target));
   }
 

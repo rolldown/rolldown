@@ -27,7 +27,7 @@ use crate::{
 
 use super::{
   on_demand::{
-    compute_body_demand_keys, is_gated_side_effect_stmt, side_effects_included_on_demand,
+    for_each_indirect_reexporter_body, is_gated_side_effect_stmt, side_effects_included_on_demand,
   },
   passes::{
     collect_depended_runtime_helpers, include_cjs_bailout_exports, include_runtime_symbol,
@@ -97,6 +97,9 @@ pub struct IncludeContext<'a> {
   /// [`side_effects_included_on_demand`]). Consulted by [`include_symbol`] as symbols become
   /// used.
   pub body_demand_keys: &'a FxHashMap<SymbolRef, ModuleIdx>,
+  /// Side-effect-free ESM modules with observable execution bodies. Used indirect re-exports of
+  /// these modules demand their bodies; pure forwarding modules remain transparent.
+  pub indirect_reexport_body_modules: &'a FxHashSet<ModuleIdx>,
   /// The second module-inclusion bit: modules whose *gated* side-effect statements have joined
   /// because their body was demanded. Distinct from `is_module_included_vec` (structural
   /// inclusion), which deliberately skips those statements for
@@ -129,6 +132,7 @@ impl<'a> IncludeContext<'a> {
     module_namespace_included_reason: &'a mut ModuleNamespaceReasonVec,
     entry_module_idxs: &'a FxHashSet<ModuleIdx>,
     body_demand_keys: &'a FxHashMap<SymbolRef, ModuleIdx>,
+    indirect_reexport_body_modules: &'a FxHashSet<ModuleIdx>,
   ) -> Self {
     Self {
       modules,
@@ -152,6 +156,7 @@ impl<'a> IncludeContext<'a> {
       json_module_none_self_reference_included_symbol: FxHashMap::default(),
       entry_module_idxs,
       body_demand_keys,
+      indirect_reexport_body_modules,
       body_demand_swept: FxHashSet::default(),
       pending: Vec::new(),
     }
@@ -278,13 +283,8 @@ impl LinkStage<'_> {
       .iter()
       .any(|m| m.as_normal().is_some_and(|n| !n.ecma_view.enum_member_value_map.is_empty()));
     let entry_module_idxs = self.user_defined_entry_module_idxs();
-    let body_demand_keys = compute_body_demand_keys(
-      &self.module_table.modules,
-      &self.stmt_infos,
-      &self.symbols,
-      self.options.treeshake.is_some(),
-      &entry_module_idxs,
-    );
+    let (body_demand_keys, indirect_reexport_body_modules) =
+      self.compute_on_demand_inclusion_inputs(&entry_module_idxs);
     let context = &mut IncludeContext::new(
       &self.module_table.modules,
       &self.stmt_infos,
@@ -301,6 +301,7 @@ impl LinkStage<'_> {
       &mut module_namespace_included_reason,
       &entry_module_idxs,
       &body_demand_keys,
+      &indirect_reexport_body_modules,
     );
 
     let (user_defined_entries, mut dynamic_entries): (Vec<_>, Vec<_>) =
@@ -462,6 +463,7 @@ impl LinkStage<'_> {
       &mut module_namespace_included_reason,
       &entry_module_idxs,
       &body_demand_keys,
+      &indirect_reexport_body_modules,
     );
     include_runtime_symbol(context, &self.runtime, depended_runtime_helper);
 
@@ -475,6 +477,7 @@ impl LinkStage<'_> {
     for (module_idx, meta) in self.metas.iter_mut_enumerated() {
       meta.is_included = is_module_included_vec.has_bit(module_idx);
     }
+    self.indirect_reexport_body_modules = indirect_reexport_body_modules;
 
     tracing::trace!(
       included_modules = self.metas.iter().filter(|meta| meta.is_included).count(),
@@ -659,6 +662,15 @@ fn handle_include_symbol(
   symbol_ref: SymbolRef,
   include_reason: SymbolIncludeReason,
 ) {
+  let is_simulated_facade_include =
+    include_reason.contains(SymbolIncludeReason::SimulatedFacadeChunk);
+
+  // Using an indirectly re-exported binding executes the re-exporter even when it is declared
+  // side-effect-free. Demand it before the constant-inline bypass below.
+  if !is_simulated_facade_include {
+    demand_indirect_reexporter_bodies(ctx, symbol_ref);
+  }
+
   let mut canonical_ref = ctx.symbols.canonical_ref_for(symbol_ref);
 
   if is_bypassed_inlined_constant(ctx, canonical_ref, include_reason) {
@@ -670,7 +682,7 @@ fn handle_include_symbol(
   // body-demand it (the namespace statement's getters were already narrowed to link-time
   // used symbols, mirroring the `WorkItem::Module` gate below). Resurrecting gated
   // statements here would also let inclusion grow after chunk assignment finished (#10337).
-  if !include_reason.contains(SymbolIncludeReason::SimulatedFacadeChunk) {
+  if !is_simulated_facade_include {
     drain_body_demand_stmts(ctx, canonical_ref);
   }
 
@@ -740,8 +752,30 @@ fn drain_body_demand_stmts(ctx: &mut IncludeContext, canonical_ref: SymbolRef) {
   let Some(&module_idx) = ctx.body_demand_keys.get(&canonical_ref) else {
     return;
   };
+  enqueue_body_demand_stmts(ctx, module_idx);
+}
+
+/// Demand the body of every indirect re-exporter that using `symbol_ref` executes.
+fn demand_indirect_reexporter_bodies(ctx: &mut IncludeContext, symbol_ref: SymbolRef) {
+  let modules = ctx.modules;
+  let normal_symbol_exports_chain_map = ctx.normal_symbol_exports_chain_map;
+  let indirect_reexport_body_modules = ctx.indirect_reexport_body_modules;
+  for_each_indirect_reexporter_body(
+    symbol_ref,
+    modules,
+    normal_symbol_exports_chain_map,
+    indirect_reexport_body_modules,
+    |module_idx| {
+      if enqueue_body_demand_stmts(ctx, module_idx) {
+        ctx.pending.push(WorkItem::Module(module_idx));
+      }
+    },
+  );
+}
+
+fn enqueue_body_demand_stmts(ctx: &mut IncludeContext, module_idx: ModuleIdx) -> bool {
   if !ctx.body_demand_swept.insert(module_idx) {
-    return;
+    return false;
   }
   if let Module::Normal(_) = &ctx.modules[module_idx] {
     ctx.stmt_infos[module_idx].iter_enumerated_without_namespace_stmt().for_each(
@@ -752,6 +786,7 @@ fn drain_body_demand_stmts(ctx: &mut IncludeContext, canonical_ref: SymbolRef) {
       },
     );
   }
+  true
 }
 
 /// Follow the CJS-interop alias: the canonical of `import { a } from './cjs.js'` points at the
@@ -1025,6 +1060,7 @@ fn handle_include_statement(
       if let Some(resolved_ref) = member_expr_resolution.resolved {
         member_expr_resolution.depended_refs.iter().for_each(|sym_ref| {
           enqueue_declaring_statements(ctx, sym_ref);
+          demand_indirect_reexporter_bodies(ctx, *sym_ref);
         });
         ctx.pending.push(WorkItem::Symbol(resolved_ref, include_kind));
         // When the member expression resolves to a specific CJS export property

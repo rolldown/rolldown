@@ -1567,6 +1567,26 @@ impl GenerateStage<'_> {
             imports_from_other_chunks.entry(importee_chunk_idx).or_default();
           }
 
+          // A used binding can execute a retained indirect re-exporter that no import record of
+          // this module points at, so keep that execution edge as a bare chunk import.
+          for dep_idx in &self.link_output.metas[module_idx].indirect_reexport_load_dependencies {
+            // Wrapped modules run through their `init_*` obligation instead.
+            if self.options.is_strict_execution_order_enabled()
+              && order_state.esm_init_target(*dep_idx, &self.link_output.metas[*dep_idx]).is_some()
+            {
+              continue;
+            }
+            let Some(importee_chunk_idx) = chunk_graph.module_to_chunk[*dep_idx] else {
+              continue;
+            };
+            if importee_chunk_idx == chunk_id {
+              continue;
+            }
+            index_cross_chunk_imports[chunk_id].insert(importee_chunk_idx);
+            let imports_from_other_chunks = &mut index_imports_from_other_chunks[chunk_id];
+            imports_from_other_chunks.entry(importee_chunk_idx).or_default();
+          }
+
           // Runtime module may have side effects (e.g. dev/HMR mode) without an import record.
           if self.link_output.metas[module_idx].has_side_effectful_runtime_dep {
             let runtime_idx = self.link_output.runtime.id();

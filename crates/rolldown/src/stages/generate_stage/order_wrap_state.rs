@@ -41,6 +41,9 @@ pub struct OrderWrapState {
   runtime_symbols: FxHashSet<SymbolRef>,
   nested_reexport_records: FxHashSet<(ModuleIdx, ImportRecordIdx)>,
   consumed_reexport_facades: FxHashSet<SymbolRef>,
+  /// Effect-only forwarders mapped to the records their wrapper skips; see
+  /// `GenerateStage::mark_effect_only_forwarders`.
+  effect_only_forwarders: FxHashMap<ModuleIdx, FxHashSet<ImportRecordIdx>>,
 }
 
 impl OrderWrapState {
@@ -418,6 +421,29 @@ impl OrderWrapState {
 
   pub(crate) fn reexport_init_is_transparent(&self, module_idx: ModuleIdx) -> bool {
     self.reexport_init_transparent.contains(&module_idx)
+  }
+
+  pub(crate) fn set_effect_only_forwarder(
+    &mut self,
+    module_idx: ModuleIdx,
+    forwarding_only_records: impl IntoIterator<Item = ImportRecordIdx>,
+  ) {
+    let records: FxHashSet<_> = forwarding_only_records.into_iter().collect();
+    if !records.is_empty() {
+      self.effect_only_forwarders.insert(module_idx, records);
+    }
+  }
+
+  pub(crate) fn is_effect_only_forwarder(&self, module_idx: ModuleIdx) -> bool {
+    self.effect_only_forwarders.contains_key(&module_idx)
+  }
+
+  pub(crate) fn is_forwarding_only_record(
+    &self,
+    module_idx: ModuleIdx,
+    rec_idx: ImportRecordIdx,
+  ) -> bool {
+    self.effect_only_forwarders.get(&module_idx).is_some_and(|records| records.contains(&rec_idx))
   }
 
   pub(crate) fn set_consumer_local_reexport_route(&mut self, module_idx: ModuleIdx) {

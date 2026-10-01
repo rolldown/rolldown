@@ -90,6 +90,7 @@ impl GenerateStage<'_> {
       json_module_none_self_reference_included_symbol: FxHashMap::default(),
       entry_module_idxs: &self.link_output.user_defined_entry_modules,
       body_demand_keys: &body_demand_keys,
+      indirect_reexport_body_modules: &self.link_output.indirect_reexport_body_modules,
       body_demand_swept: FxHashSet::default(),
       pending: Vec::new(),
     };

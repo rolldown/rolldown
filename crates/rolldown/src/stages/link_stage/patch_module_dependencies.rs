@@ -4,7 +4,7 @@ use rolldown_utils::{
 };
 use rustc_hash::FxHashSet;
 
-use super::LinkStage;
+use super::{LinkStage, tree_shaking::for_each_indirect_reexporter_body};
 
 impl LinkStage<'_> {
   #[tracing::instrument(level = "debug", skip_all)]
@@ -22,11 +22,13 @@ impl LinkStage<'_> {
       .map(|(namespace_ref, _)| *namespace_ref)
       .collect();
 
+    let tree_shaking = self.options.treeshake.is_some();
     let processed_module_results = self
       .metas
       .par_iter_enumerated()
       .map(|(module_idx, meta)| {
         let mut extended_dependencies = FxIndexSet::default();
+        let mut indirect_reexport_load_dependencies = FxIndexSet::default();
         if !meta.depended_runtime_helper.is_empty() {
           extended_dependencies.insert(self.runtime.id());
         }
@@ -62,9 +64,18 @@ impl LinkStage<'_> {
           }
         };
 
+        let mut note_indirect_reexporters = |symbol_ref| {
+          self.note_indirect_reexporters(
+            module_idx,
+            symbol_ref,
+            &mut indirect_reexport_load_dependencies,
+          );
+        };
+
         // Symbols from runtime are referenced by bundler not import statements.
         meta.referenced_symbols_by_entry_point_chunk.iter().for_each(
           |(symbol_ref, _came_from_cjs)| {
+            note_indirect_reexporters(*symbol_ref);
             let canonical_ref = self.symbols.canonical_ref_for(*symbol_ref);
             extended_dependencies.insert(canonical_ref.owner);
             // An entry export may resolve to a facade binding whose value lives on a CJS
@@ -88,7 +99,12 @@ impl LinkStage<'_> {
 
         let Module::Normal(_) = &self.module_table[module_idx] else {
           // External modules are not rendered, so they never need a runtime-helper edge.
-          return (module_idx, extended_dependencies, RuntimeHelper::default());
+          return (
+            module_idx,
+            extended_dependencies,
+            indirect_reexport_load_dependencies,
+            RuntimeHelper::default(),
+          );
         };
 
         self.stmt_infos[module_idx]
@@ -100,6 +116,7 @@ impl LinkStage<'_> {
             stmt_info.referenced_symbols.iter().for_each(|reference_ref| {
               match reference_ref {
                 rolldown_common::SymbolOrMemberExprRef::Symbol(sym_ref) => {
+                  note_indirect_reexporters(*sym_ref);
                   let canonical_ref = self.symbols.canonical_ref_for(*sym_ref);
                   extended_dependencies.insert(canonical_ref.owner);
                   let symbol = self.symbols.get(canonical_ref);
@@ -109,6 +126,13 @@ impl LinkStage<'_> {
                   note_external_interop(canonical_ref);
                 }
                 rolldown_common::SymbolOrMemberExprRef::MemberExpr(member_expr) => {
+                  note_indirect_reexporters(member_expr.object_ref);
+                  if let Some(resolution) = member_expr.resolution(&meta.resolved_member_expr_refs)
+                  {
+                    for depended_ref in &resolution.depended_refs {
+                      note_indirect_reexporters(*depended_ref);
+                    }
+                  }
                   match member_expr.represent_symbol_ref(&meta.resolved_member_expr_refs) {
                     Some(sym_ref) => {
                       let canonical_ref = self.symbols.canonical_ref_for(sym_ref);
@@ -144,7 +168,7 @@ impl LinkStage<'_> {
         } else {
           RuntimeHelper::default()
         };
-        (module_idx, extended_dependencies, inherited_runtime)
+        (module_idx, extended_dependencies, indirect_reexport_load_dependencies, inherited_runtime)
       })
       .collect::<Vec<_>>();
 
@@ -174,9 +198,15 @@ impl LinkStage<'_> {
     // Currently, only the `toESM` helper needs to be transitively included.
     //
     //
-    let tree_shaking = self.options.treeshake.is_some();
     let strict_execution_order = self.options.is_strict_execution_order_enabled();
-    for (module_idx, extended_dependencies, runtime_helper) in processed_module_results {
+    for (
+      module_idx,
+      mut extended_dependencies,
+      indirect_reexport_load_dependencies,
+      runtime_helper,
+    ) in processed_module_results
+    {
+      extended_dependencies.extend(indirect_reexport_load_dependencies.iter().copied());
       // Symbol-derived dependencies always force their owner module to be loaded. Import-record
       // targets (what `meta.dependencies` holds at this point) only do so when evaluating them
       // has side effects — the same edge semantics `include_side_effectful_dependencies` uses
@@ -225,6 +255,7 @@ impl LinkStage<'_> {
       let meta = &mut self.metas[module_idx];
       meta.dependencies.extend(extended_dependencies);
       meta.load_dependencies = load_dependencies;
+      meta.indirect_reexport_load_dependencies = indirect_reexport_load_dependencies;
       if let Some(execution_dependencies) = execution_dependencies {
         meta.execution_dependencies = execution_dependencies;
       }
@@ -256,5 +287,25 @@ impl LinkStage<'_> {
         }
       }
     }
+  }
+
+  /// Record the indirect re-exporters whose bodies a reference from `importer_idx` executes.
+  fn note_indirect_reexporters(
+    &self,
+    importer_idx: ModuleIdx,
+    symbol_ref: SymbolRef,
+    indirect_reexport_load_dependencies: &mut FxIndexSet<ModuleIdx>,
+  ) {
+    for_each_indirect_reexporter_body(
+      symbol_ref,
+      &self.module_table.modules,
+      &self.normal_symbol_exports_chain_map,
+      &self.indirect_reexport_body_modules,
+      |reexporter_idx| {
+        if reexporter_idx != importer_idx && self.metas[reexporter_idx].is_included {
+          indirect_reexport_load_dependencies.insert(reexporter_idx);
+        }
+      },
+    );
   }
 }

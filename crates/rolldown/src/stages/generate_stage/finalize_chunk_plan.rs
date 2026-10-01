@@ -1,8 +1,9 @@
-use rolldown_common::UsedSymbolRefsBuilder;
 #[cfg(debug_assertions)]
-use rolldown_common::{ChunkIdx, ChunkKind, WrapKind};
+use rolldown_common::{ChunkIdx, ChunkKind};
+use rolldown_common::{
+  ImportKind, ImportRecordMeta, ModuleIdx, SymbolRef, UsedSymbolRefsBuilder, WrapKind,
+};
 use rolldown_error::BuildResult;
-#[cfg(debug_assertions)]
 use rustc_hash::FxHashSet;
 
 use crate::{
@@ -16,6 +17,59 @@ use super::order_analysis::OrderWrapPlan;
 use super::order_wrap_state::OrderWrapState;
 
 impl GenerateStage<'_> {
+  /// Under wrap-all strict execution order, a side-effect-free indirect re-exporter retained only
+  /// for its own effects (`import './configure.js'; import { a } from './a.js'; export { a }`)
+  /// would initialize, and load, every module it forwards. Mark its records that only forward
+  /// bindings of side-effect-free modules so consumers initialize those owners directly.
+  fn mark_effect_only_forwarders(&self, order_state: &mut OrderWrapState) {
+    if !self.options.is_strict_execution_order_enabled()
+      || self.options.experimental.is_on_demand_wrapping_enabled()
+    {
+      return;
+    }
+    let modules = &self.link_output.module_table.modules;
+    let metas = &self.link_output.metas;
+    let is_plain_pure_module = |idx: ModuleIdx| {
+      matches!(metas[idx].wrap_kind(), WrapKind::None)
+        && modules[idx].as_normal().is_some_and(|m| !m.side_effects.has_side_effects())
+    };
+    for &module_idx in &self.link_output.indirect_reexport_body_modules {
+      let (Some(module), meta) = (modules[module_idx].as_normal(), &metas[module_idx]) else {
+        continue;
+      };
+      if !meta.is_included
+        || !matches!(meta.wrap_kind(), WrapKind::None)
+        || meta.has_dynamic_exports
+        || meta.namespace_included
+        || !module.named_exports.values().all(|e| module.named_imports.contains_key(&e.referenced))
+      {
+        continue;
+      }
+      // Imported bindings read by the forwarder's own retained statements keep their records.
+      let locally_read: FxHashSet<SymbolRef> = self.link_output.stmt_infos[module_idx]
+        .iter_enumerated()
+        .filter(|(idx, info)| {
+          meta.stmt_info_included.has_bit(*idx) && info.import_records.is_empty()
+        })
+        .flat_map(|(_, info)| info.referenced_symbols.iter().map(|r| *r.symbol_ref()))
+        .collect();
+      let forwarding_only_records =
+        module.import_records.iter_enumerated().filter_map(|(idx, rec)| {
+          let mut locals =
+            module.named_imports.iter().filter(|(_, import)| import.record_idx == idx).peekable();
+          let forwards_only = rec.kind == ImportKind::Import
+            && !rec
+              .meta
+              .intersects(ImportRecordMeta::IsExportStar | ImportRecordMeta::IsReExportOnly)
+            && rec.resolved_module.is_some_and(is_plain_pure_module)
+            && locals.peek().is_some()
+            && locals.all(|(local_ref, _)| !locally_read.contains(local_ref));
+          forwards_only.then_some(idx)
+        });
+      order_state.set_effect_only_forwarder(module_idx, forwarding_only_records);
+    }
+  }
+
   /// Apply order wrapping and entry facades before deriving final output metadata.
   pub(super) fn finalize_chunk_plan(
     &mut self,
@@ -26,6 +80,7 @@ impl GenerateStage<'_> {
     // external-export facts. Prepare those inputs on the provisional topology first.
     self.find_entry_level_external_module(chunk_graph);
     let mut order_state = OrderWrapState::default();
+    self.mark_effect_only_forwarders(&mut order_state);
     self.finalized_module_namespace_ref_usage(chunk_graph, &order_state);
 
     let mut order_analysis = self.analyze_execution_order(chunk_graph, used_symbol_refs_builder);

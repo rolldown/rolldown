@@ -235,7 +235,10 @@ fn transitive_esm_init_targets(
     }
     for &rec_idx in &stmt_info.import_records {
       let rec = &module.import_records[rec_idx];
-      if rec.kind != ImportKind::Import {
+      // Consumers of an effect-only forwarder initialize these binding owners themselves.
+      if rec.kind != ImportKind::Import
+        || ctx.order_state.is_forwarding_only_record(module.idx, rec_idx)
+      {
         continue;
       }
       let is_reexport =

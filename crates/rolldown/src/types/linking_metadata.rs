@@ -80,6 +80,9 @@ pub struct LinkingMetadata {
   /// its subtree) into its chunk group (#8920). Populated by `patch_module_dependencies`; with
   /// tree-shaking disabled it equals [`Self::dependencies`].
   pub load_dependencies: FxIndexSet<ModuleIdx>,
+  /// Subset of [`Self::load_dependencies`] contributed by used indirect re-exporters, kept so
+  /// cross-chunk linking can emit their execution edges.
+  pub indirect_reexport_load_dependencies: FxIndexSet<ModuleIdx>,
   /// Retained evaluation dependencies, excluding entry targets kept only for placement.
   pub execution_dependencies: FxIndexSet<ModuleIdx>,
   // `None` the member expression resolve to a ambiguous export.

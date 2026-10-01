@@ -37,6 +37,20 @@ const require = createRequire(import.meta.url);
 console.log(JSON.stringify(Object.keys(require.cache).filter((id) => id.endsWith('rolldown-binding.wasi.cjs'))));
 `;
 
+// TEMPORARY: prepare-fixture.mjs stages the workspace's `file:` overrides (the unreleased emnapi
+// pins the packed binding depends on) next to the tarballs; without them a consumer outside the
+// repo resolves those versions from the registry. Nothing is staged once the pins are gone.
+function applyStagedOverrides(dir: string) {
+  const staged = path.join(fixtures, '.napi-validation');
+  if (!fs.existsSync(staged)) {
+    return;
+  }
+  fs.cpSync(staged, path.join(dir, '.napi-validation'), { recursive: true });
+  // the host pnpm (10+) reads overrides from pnpm-workspace.yaml, and JSON is valid YAML
+  const overrides = fs.readFileSync(path.join(staged, 'overrides.json'), 'utf8');
+  fs.writeFileSync(path.join(dir, 'pnpm-workspace.yaml'), `overrides: ${overrides}`);
+}
+
 function run(command: string, args: string[], cwd: string) {
   const result = spawnSync(command, args, { cwd, encoding: 'utf8' });
   if (result.status !== 0) {
@@ -55,12 +69,14 @@ afterAll(() => {
 test('the packed rolldown loads the packed WASI binding through its WebContainer fallback', () => {
   fs.rmSync(fallbackDir, { recursive: true, force: true });
   fs.mkdirSync(fallbackDir, { recursive: true });
+  applyStagedOverrides(fallbackDir);
   run('pnpm', ['add', path.join(fixtures, 'rolldown-binding-wasm32-wasi.tgz')], fallbackDir);
   expect(fs.existsSync(bindingEntry)).toBe(true);
 
   // no optional dependencies, so no native binding can be found and only the fallback is left
   fs.writeFileSync(path.join(app, 'package.json'), '{}');
   fs.writeFileSync(path.join(app, '.npmrc'), 'optional=false\n');
+  applyStagedOverrides(app);
   run('pnpm', ['add', path.join(fixtures, 'rolldown.tgz')], app);
 
   fs.writeFileSync(path.join(app, 'index.js'), 'export const value = 1;\n');

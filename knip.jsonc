@@ -16,11 +16,7 @@
     },
     "docs": {
       // The theme is referenced by path in doc-kit.config.mjs
-      "entry": [
-        "doc-kit.config.mjs",
-        "theme/**/*.jsx",
-        "theme/styles.css",
-      ],
+      "entry": ["doc-kit.config.mjs", "theme/**/*.jsx", "theme/styles.css"],
       // Modules the doc-kit configuration defines
       "ignoreUnresolved": ["#theme/data", "#theme/reference-pages"],
       "ignoreDependencies": [

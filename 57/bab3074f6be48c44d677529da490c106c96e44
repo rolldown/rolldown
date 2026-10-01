@@ -1,0 +1,31 @@
+crates/rolldown_binding/src/options/plugin/config/binding_vite_transform_plugin_config.rs
+  s_75ceef5a41c727::t_a56f4a960e94ed 16,52-55
+packages/rolldown/src/binding.d.cts
+  s_33246730c53b37::t_39e91720ce766d 3012
+crates/rolldown_plugin_vite_transform/src/lib.rs
+  s_33246730c53b37::t_f6194be7b726f2 30,32-37
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "57bab3074f6be48c44d677529da490c106c96e44",
+  "prompts": {},
+  "sessions": {
+    "s_33246730c53b37": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019fd6dc-a162-71e1-9d6c-912ef290d22d",
+        "model": "gpt-5.6-sol"
+      },
+      "human_author": "sapphi-red <green@sapphi.red>"
+    },
+    "s_75ceef5a41c727": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019fd715-6bc7-7ce1-9b14-71e7992d3f0e",
+        "model": "gpt-5.6-sol"
+      },
+      "human_author": "sapphi-red <green@sapphi.red>"
+    }
+  }
+}

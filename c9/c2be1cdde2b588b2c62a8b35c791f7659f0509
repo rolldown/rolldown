@@ -1,0 +1,23 @@
+docs/superpowers/plans/2026-07-23-module-representation-metadata.md
+  s_792eba8c768726::t_dcb9f329d65cd9 166-168,330-332
+internal-docs/module-representation/design.md
+  s_792eba8c768726::t_ba954c8ff22718 10-11
+internal-docs/module-representation/implementation.md
+  s_792eba8c768726::t_345796b99561ff 1-30
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "c9c2be1cdde2b588b2c62a8b35c791f7659f0509",
+  "prompts": {},
+  "sessions": {
+    "s_792eba8c768726": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019f8e3a-ea6e-7263-80d8-76fd52f03da2",
+        "model": "unknown"
+      },
+      "human_author": "sapphi-red <green@sapphi.red>"
+    }
+  }
+}

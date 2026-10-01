@@ -1,0 +1,27 @@
+packages/rolldown/src/binding.d.cts
+  s_e506ac547b5ec1::t_c9b0e35255ea0e 2237
+crates/rolldown_binding/src/options/binding_input_options/binding_experimental_options.rs
+  s_e506ac547b5ec1::t_91f38c9d0744b5 66,72
+crates/rolldown_plugin_hmr/src/hmr_plugin.rs
+  s_e506ac547b5ec1::t_f0b32ffe559f51 1,3-4,16,35-36
+crates/rolldown_testing/src/integration_test.rs
+  s_e506ac547b5ec1::t_6ec9d072ef3718 670-674
+packages/rolldown/src/utils/bindingify-input-options.ts
+  s_e506ac547b5ec1::t_a8e3a0655868ed 30,122,124-127
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "f833444abf8829d6aaaebbccb076ebb2f656911b",
+  "prompts": {},
+  "sessions": {
+    "s_e506ac547b5ec1": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019f6faa-7a7d-7500-b59c-dd73d37827a9",
+        "model": "gpt-5.6-sol"
+      },
+      "human_author": "sapphi-red <green@sapphi.red>"
+    }
+  }
+}

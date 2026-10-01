@@ -1,0 +1,43 @@
+crates/rolldown_binding/src/options/plugin/binding_callable_builtin_plugin.rs
+  s_792eba8c768726::t_8872df96c60a83 248-251,260
+crates/rolldown_binding/src/options/plugin/types/binding_hook_load_output.rs
+  s_792eba8c768726::t_585e3cb5744498 1,17-20,32
+crates/rolldown_binding/src/options/plugin/types/binding_hook_transform_output.rs
+  s_792eba8c768726::t_b0f769c3893a8f 2,20-23,42,59
+crates/rolldown_binding/src/types/binding_module_info.rs
+  s_792eba8c768726::t_e22d0c29a208b5 25-28,64
+packages/rolldown/src/binding.d.cts
+  s_792eba8c768726::t_2bf705cc3b1c66 1690,2284,2304,2373
+packages/rolldown/src/index.ts
+  s_792eba8c768726::t_4a392b2181099b 74,197
+packages/rolldown/src/plugin/bindingify-build-hooks.ts
+  s_792eba8c768726::t_ca4351dc61e48c 305,359
+packages/rolldown/src/plugin/index.ts
+  s_792eba8c768726::t_c9a5d2ea38782f 54-65,192-197
+packages/rolldown/src/types/module-info.ts
+  s_792eba8c768726::t_d523e44979007f 1,53-58
+packages/rolldown/src/utils/transform-module-info.ts
+  s_792eba8c768726::t_13142650707792 22
+packages/rolldown/tests/fixtures/plugin/context/represent-type/_config.ts
+  s_792eba8c768726::t_54329e385cf08a 1-24
+packages/rolldown/tests/fixtures/plugin/context/represent-type/main.js
+  s_792eba8c768726::t_8be892561a6596 1
+packages/rolldown/tests/module-representation.test-d.ts
+  s_792eba8c768726::t_2f0a78203436d9 1-27
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "e9ad0c3d12320d8fd6cdfda14abdecd843a87622",
+  "prompts": {},
+  "sessions": {
+    "s_792eba8c768726": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019f8e3a-ea6e-7263-80d8-76fd52f03da2",
+        "model": "gpt-5.6-sol"
+      },
+      "human_author": "sapphi-red <green@sapphi.red>"
+    }
+  }
+}

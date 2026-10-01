@@ -1,0 +1,19 @@
+.github/workflows/deploy-website.yml
+  s_25bbef8889ef3b::t_31d5ebcf02e6d1 102
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "7cefc8405ef9a4cfb5abad46f40b5ae62f5f9c70",
+  "prompts": {},
+  "sessions": {
+    "s_25bbef8889ef3b": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "ea2852a1-ed4b-46c5-ad1c-266750416999",
+        "model": "unknown"
+      },
+      "human_author": "shulaoda <165626830+shulaoda@users.noreply.github.com>"
+    }
+  }
+}

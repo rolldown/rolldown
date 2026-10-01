@@ -384,18 +384,16 @@ impl GenerateStage<'_> {
       let mut none_wrapped_module_to_wrapped_dependency_length = FxHashMap::default();
       let js_import_order = self.js_import_order(&roots, &chunk_module_to_exec_order);
       for idx in js_import_order {
-        // This pass does not use a JSON module as a target or as a dependency (#10999). A JSON
-        // module declares only data, so it has no side effects and needs no other module to
-        // initialize first. See internal-docs/code-splitting/implementation.md.
-        if self.link_output.module_table[idx]
-          .as_normal()
-          .is_some_and(|module| matches!(module.module_type, ModuleType::Json))
-        {
-          continue;
-        }
         match self.link_output.metas[idx].wrap_kind() {
           WrapKind::None => {
-            if !wrapped_modules.is_empty() {
+            // An unwrapped JSON module declares only data, so it needs no other module to
+            // initialize first and is never a target (#10999). A wrapped JSON module stays a
+            // dependency: its data exists only after its wrapper runs.
+            // See internal-docs/code-splitting/implementation.md.
+            let is_json = self.link_output.module_table[idx]
+              .as_normal()
+              .is_some_and(|module| matches!(module.module_type, ModuleType::Json));
+            if !wrapped_modules.is_empty() && !is_json {
               none_wrapped_module_to_wrapped_dependency_length.insert(idx, wrapped_modules.len());
             }
           }

@@ -397,9 +397,8 @@ The function iterates over every chunk in the `ChunkGraph` and performs six step
 
 **Step 3 — Classify modules via DFS (`js_import_order`).** Runs iterative DFS from roots, following only `ImportKind::Import` edges (skipping `require()` and `import()` since those are inherently lazy). Each visited module is classified:
 
-- JSON module → skipped: it is neither a target nor a dependency. A JSON module declares only data, so it has no side effects and needs no other module to initialize first.
 - `WrapKind::Cjs` or `WrapKind::Esm` → pushed onto a `wrapped_modules` list
-- `WrapKind::None` → records how many wrapped modules appeared before it in DFS order (its "wrapped dependency count")
+- `WrapKind::None` → records how many wrapped modules appeared before it in DFS order (its "wrapped dependency count"), except for a JSON module. An unwrapped JSON module declares only data, so it needs no other module to initialize first and is never a target. A wrapped JSON module stays in `wrapped_modules`, because its data exists only after its wrapper runs.
 
 Uses the immutable link-stage `wrap_kind()` from `LinkingMetadata`.
 

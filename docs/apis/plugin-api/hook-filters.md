@@ -6,46 +6,45 @@ Hook filters allow Rolldown to skip unnecessary Rust-to-JS calls by evaluating f
 
 Instead of checking conditions inside your hook:
 
-```js{5}
+```js highlight="5"
 export default function myPlugin() {
   return {
     name: 'example',
     transform(code, id) {
       if (!id.endsWith('.data')) {
         // early return
-        return
+        return;
       }
       // perform actual transform
-      return transformedCode
+      return transformedCode;
     },
-  }
+  };
 }
 ```
 
 Use the object hook format with a `filter` property:
 
-```js{5-7}
+```js highlight="5-7"
 export default function myPlugin() {
   return {
     name: 'example',
     transform: {
       filter: {
-        id: /\.data$/
+        id: /\.data$/,
       },
       handler(code) {
         // perform actual transform
-        return transformedCode
+        return transformedCode;
       },
-    }
-  }
+    },
+  };
 }
 ```
 
 Rolldown evaluates the filter on the Rust side and only calls your handler when the filter matches.
 
-::: tip
-[`@rolldown/pluginutils`](https://npmx.dev/package/@rolldown/pluginutils) exports some utilities for hook filters like `exactRegex` and `prefixRegex`.
-:::
+> [!TIP]
+> [`@rolldown/pluginutils`](https://npmx.dev/package/@rolldown/pluginutils) exports some utilities for hook filters like `exactRegex` and `prefixRegex`.
 
 ## Filter Properties
 

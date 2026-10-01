@@ -2,18 +2,19 @@
 
 ## Quick Guide
 
-:::tip TLDR
-run `just test-update` to run all rust and node.js tests and update snapshots automatically
-:::
+> [!TIP]
+> **TLDR**
+>
+> run `just test-update` to run all rust and node.js tests and update snapshots automatically
 
 We have two groups of test suites: one for Rust, and one for Node.js.
 
-:::warning Test principle you should respect
-
-1. When adding new feature with options, always make sure adding related tests in JavaScript side if possible.
-
-Here are some details about how to choose a test technique [details](#how-to-choose-test-technique)
-:::
+> [!WARNING]
+> **Test principle you should respect**
+>
+> 1. When adding new feature with options, always make sure adding related tests in JavaScript side if possible.
+>
+> Here are some details about how to choose a test technique [details](#how-to-choose-test-technique)
 
 - `just test` for running all tests.
 - `just test-update` for running all tests and updating snapshots automatically
@@ -100,7 +101,8 @@ If a test case folder contains any files named `*.hmr-*.js`, the test will run i
 3. Then, HMR step 1 begins: files with `.hmr-1.js` are used to overwrite the corresponding files in the temporary directory, and an HMR patch is generated.
 4. This process repeats for step 2, 3, and so on. Files like `*.hmr-2.js`, `*.hmr-3.js`, etc., are applied step by step.
 
-:::details Example
+<details>
+<summary>Example</summary>
 
 If the test folder has these files:
 
@@ -120,7 +122,7 @@ The test will go through these steps:
    - `main.js` and `sub.js` remain as in Step 1
    - `sub2.js` is added using the contents of `sub2.hmr-2.js`
 
-:::
+</details>
 
 ### Manual testing
 
@@ -188,13 +190,11 @@ Names of tests in `fixture.test.ts` are defined with their folder names. `tests/
 
 To run the `tests/fixtures/resolve/alias` test, you could use `just test-node-rolldown -t resolve/alias`.
 
-:::info
-
-- `just test-node-rolldown -t aaa bbb` is different from `just test-node-rolldown -t "aaa bbb"`. The former will run tests that either contains `aaa` or `bbb`, while the latter will run tests, whose name contain `aaa bbb`.
-
-- For more advanced usage, please refer to https://vitest.dev/guide/filtering.
-
-:::
+> [!NOTE]
+>
+> - `just test-node-rolldown -t aaa bbb` is different from `just test-node-rolldown -t "aaa bbb"`. The former will run tests that either contains `aaa` or `bbb`, while the latter will run tests, whose name contain `aaa bbb`.
+>
+> - For more advanced usage, please refer to https://vitest.dev/guide/filtering.
 
 ## Dev server tests
 
@@ -243,9 +243,10 @@ describe('<name>', () => {
 });
 ```
 
-:::warning Synchronize on the server's async work — never sleep
-Poll the DOM with `expect.poll`, `await waitForBuildStable()` before a follow-up edit, or wait on a browser log with `untilBrowserLogAfter`. A fixed `sleep` is both flaky and slow.
-:::
+> [!WARNING]
+> **Synchronize on the server's async work — never sleep**
+>
+> Poll the DOM with `expect.poll`, `await waitForBuildStable()` before a follow-up edit, or wait on a browser log with `untilBrowserLogAfter`. A fixed `sleep` is both flaky and slow.
 
 #### Asserting on Vite's signals
 
@@ -333,9 +334,11 @@ This will run only tests whose names match "function". For more filtering option
 Our Rust test infra is powerful enough to cover most of the case of JavaScript (plugin, passing function inside config).
 But since JavaScript side user is still our first class user, try to put tests in JavaScript side if possible.
 Here are some experience about what test technique you should use.
-:::tip TLDR
-Add test in JavaScript side if you don't want to wasting time on deciding which way to use.
-:::
+
+> [!TIP]
+> **TLDR**
+>
+> Add test in JavaScript side if you don't want to wasting time on deciding which way to use.
 
 #### Prefer Rust
 

@@ -10,7 +10,7 @@ By default, Rolldown determines the module type of a module based on its file ex
 
 In this case, users need to explicitly tell Rolldown that files with the `.data` extension should be treated as the JSON module type. This can be done via the `moduleTypes` option in the config:
 
-```js [rolldown.config.js]
+```js displayName="rolldown.config.js"
 export default {
   moduleTypes: {
     '.data': 'json',

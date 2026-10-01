@@ -15,9 +15,7 @@ Plugins allow you to customize Rolldown's behavior by, for example, transpiling 
 
 The following example shows a Rolldown plugin that intercepts import requests to `virtual:example` and returns a custom content for it.
 
-::: code-group
-
-```js [rolldown-plugin-example.js]
+```js displayName="rolldown-plugin-example.js"
 const id = 'virtual:example';
 const resolvedId = '\0' + id;
 
@@ -42,7 +40,7 @@ export default function examplePlugin() {
 }
 ```
 
-```js [rolldown.config.js]
+```js displayName="rolldown.config.js"
 import { defineConfig } from 'rolldown';
 import examplePlugin from './rolldown-plugin-example.js';
 
@@ -51,14 +49,11 @@ export default defineConfig({
 });
 ```
 
-:::
-
-::: warning Hook Filters
-
-This example plugin does not use [Hook Filters](/apis/plugin-api/hook-filters) for simplicity.
-To improve performance, it is recommended to use them when possible.
-
-:::
+> [!WARNING]
+> **Hook Filters**
+>
+> This example plugin does not use [Hook Filters](/apis/plugin-api/hook-filters) for simplicity.
+> To improve performance, it is recommended to use them when possible.
 
 ## Conventions
 
@@ -71,7 +66,9 @@ To improve performance, it is recommended to use them when possible.
 
 <!-- TODO: add a guide how to test a plugin -->
 
-### Virtual Modules Convention {#virtual-modules}
+<div id="virtual-modules"></div>
+
+### Virtual Modules Convention
 
 Virtual modules are a useful scheme that allows you to pass build time information or helper functions to source files using normal ESM import syntax. A virtual module is a module that does not exist on the file system and is instead resolved and provided by a plugin, as shown in the [example above](#example).
 
@@ -108,57 +105,68 @@ Build hooks are run during the build phase. They are mainly concerned with locat
 
 The first hook of the build phase is [`options`](/reference/Interface.Plugin#options), the last one is always [`buildEnd`](/reference/Interface.Plugin#buildend). If there is a build error, [`closeBundle`](/reference/Interface.Plugin#closebundle) will be called after that.
 
-```dot+hooks-graph
-# styles
-sequential: fillcolor="#ffe8cc", dark$fillcolor="#9d4f1a"
-parallel: fillcolor="#ffcccc", dark$fillcolor="#8a2a2a"
-first: fillcolor="#fff4cc", dark$fillcolor="#9d7a1a"
-internal: fillcolor="#f0f0f0", dark$fillcolor="#3a3a3a"
-sync: color="#3c3c43", dark$color="#dfdfd6"
-async: color="#ff7e17", dark$color="#cc5f1a", penwidth=1
+```dot
+digraph {
+    bgcolor="transparent";
+    rankdir=TB;
+    node [shape=box, style=filled, fontname="Arial", margin="0.2,0.1", color="${#3c3c43|#dfdfd6}", fontcolor="${#3c3c43|#dfdfd6}"];
+    edge [fontname="Arial", color="${#3c3c43|#dfdfd6}"];
 
-# nodes
-watchChange(/reference/Interface.Plugin#watchchange): parallel, async
-closeWatcher(/reference/Interface.Plugin#closewatcher): parallel, async
-options(/reference/Interface.Plugin#options): sequential, async
-outputOptions(/reference/Interface.Plugin#outputoptions): sequential, async
-buildStart(/reference/Interface.Plugin#buildstart): parallel, async
-resolveId(/reference/Interface.Plugin#resolveid): first, async
-load(/reference/Interface.Plugin#load): first, async
-transform(/reference/Interface.Plugin#transform): sequential, async
-moduleParsed(/reference/Interface.Plugin#moduleparsed): parallel, async
-internalTransform: internal
-resolveDynamicImport(/reference/Interface.Plugin#resolvedynamicimport): first, async
-buildEnd(/reference/Interface.Plugin#buildend): parallel, async
+    // Node definitions with styling
+    watchchange [label="watchChange", fillcolor="${#ffcccc|#8a2a2a}", color="${#ff7e17|#cc5f1a}", penwidth=1, style="filled,rounded", href="/reference/Interface.Plugin#watchchange"];
+    closewatcher [label="closeWatcher", fillcolor="${#ffcccc|#8a2a2a}", color="${#ff7e17|#cc5f1a}", penwidth=1, style="filled,rounded", href="/reference/Interface.Plugin#closewatcher"];
+    options [label="options", fillcolor="${#ffe8cc|#9d4f1a}", color="${#ff7e17|#cc5f1a}", penwidth=1, style="filled,rounded", href="/reference/Interface.Plugin#options"];
+    outputoptions [label="outputOptions", fillcolor="${#ffe8cc|#9d4f1a}", color="${#ff7e17|#cc5f1a}", penwidth=1, style="filled,rounded", href="/reference/Interface.Plugin#outputoptions"];
+    buildstart [label="buildStart", fillcolor="${#ffcccc|#8a2a2a}", color="${#ff7e17|#cc5f1a}", penwidth=1, style="filled,rounded", href="/reference/Interface.Plugin#buildstart"];
+    resolveid [label="resolveId", fillcolor="${#fff4cc|#9d7a1a}", color="${#ff7e17|#cc5f1a}", penwidth=1, style="filled,rounded", href="/reference/Interface.Plugin#resolveid"];
+    load [label="load", fillcolor="${#fff4cc|#9d7a1a}", color="${#ff7e17|#cc5f1a}", penwidth=1, style="filled,rounded", href="/reference/Interface.Plugin#load"];
+    transform [label="transform", fillcolor="${#ffe8cc|#9d4f1a}", color="${#ff7e17|#cc5f1a}", penwidth=1, style="filled,rounded", href="/reference/Interface.Plugin#transform"];
+    moduleparsed [label="moduleParsed", fillcolor="${#ffcccc|#8a2a2a}", color="${#ff7e17|#cc5f1a}", penwidth=1, style="filled,rounded", href="/reference/Interface.Plugin#moduleparsed"];
+    internaltransform [label="internalTransform", fillcolor="${#f0f0f0|#3a3a3a}", style="filled,rounded", color=transparent];
+    resolvedynamicimport [label="resolveDynamicImport", fillcolor="${#fff4cc|#9d7a1a}", color="${#ff7e17|#cc5f1a}", penwidth=1, style="filled,rounded", href="/reference/Interface.Plugin#resolvedynamicimport"];
+    buildend [label="buildEnd", fillcolor="${#ffcccc|#8a2a2a}", color="${#ff7e17|#cc5f1a}", penwidth=1, style="filled,rounded", href="/reference/Interface.Plugin#buildend"];
 
-# edges
-options -> outputOptions
-outputOptions -> buildStart
-buildStart -> resolveId: each entry
-resolveId .-> buildEnd: external
-resolveId -> load: non-external
-load -> transform
-transform -> internalTransform
-internalTransform -> moduleParsed
-moduleParsed .-> buildEnd: no imports
-moduleParsed -> resolveDynamicImport: each import()
-resolveDynamicImport -> load: non-external
-moduleParsed -> resolveId: each import
-resolveDynamicImport .-> buildEnd: external
-resolveDynamicImport -> resolveId: unresolved
+    // Main flow
+    options -> outputoptions [penwidth=2];
+    outputoptions -> buildstart [penwidth=2];
+    buildstart -> resolveid [label="each entry", fontcolor="${#3c3c43|#dfdfd6}", penwidth=2];
+    resolveid -> buildend [label="external", fontcolor="${#3c3c43|#dfdfd6}", style=dashed, penwidth=2];
+    resolveid -> load [label="non-external", fontcolor="${#3c3c43|#dfdfd6}", penwidth=2];
+    load -> transform [penwidth=2];
+    transform -> internaltransform [penwidth=2];
+    internaltransform -> moduleparsed [penwidth=2];
+    moduleparsed -> buildend [label="no imports", fontcolor="${#3c3c43|#dfdfd6}", style=dashed, penwidth=2];
+    moduleparsed -> resolvedynamicimport [label="each import()", fontcolor="${#3c3c43|#dfdfd6}", penwidth=2];
+    resolvedynamicimport -> load [label="non-external", fontcolor="${#3c3c43|#dfdfd6}", penwidth=2];
+    moduleparsed -> resolveid [label="each import", fontcolor="${#3c3c43|#dfdfd6}", penwidth=2];
+    resolvedynamicimport -> buildend [label="external", fontcolor="${#3c3c43|#dfdfd6}", style=dashed, penwidth=2];
+    resolvedynamicimport -> resolveid [label="unresolved", fontcolor="${#3c3c43|#dfdfd6}", penwidth=2];
+    // Legend
+    legend [shape=plaintext, style="", fillcolor=transparent, margin=0, fontsize=11, fontcolor="${#3c3c43|#dfdfd6}", label=<
+        <table border="1" color="${#3c3c43|#dfdfd6}" style="rounded" cellborder="0" cellspacing="4" cellpadding="2">
+            <tr><td colspan="2" align="right"><b>Legend</b></td></tr>
+            <tr><td width="10" height="10" fixedsize="true" border="2" color="transparent" bgcolor="${#ffe8cc|#9d4f1a}"></td><td align="left">sequential</td></tr>
+            <tr><td width="10" height="10" fixedsize="true" border="2" color="transparent" bgcolor="${#ffcccc|#8a2a2a}"></td><td align="left">parallel</td></tr>
+            <tr><td width="10" height="10" fixedsize="true" border="2" color="transparent" bgcolor="${#fff4cc|#9d7a1a}"></td><td align="left">first</td></tr>
+            <tr><td width="10" height="10" fixedsize="true" border="2" color="transparent" bgcolor="${#f0f0f0|#3a3a3a}"></td><td align="left">internal</td></tr>
+            <tr><td width="10" height="10" fixedsize="true" border="2" color="${#3c3c43|#dfdfd6}" bgcolor="transparent"></td><td align="left">sync</td></tr>
+            <tr><td width="10" height="10" fixedsize="true" border="2" color="${#ff7e17|#cc5f1a}" bgcolor="transparent"></td><td align="left">async</td></tr>
+        </table>
+    >];
+    { rank=source; legend; }
+}
 ```
 
 Note that `internalTransform` in the graph above is not a plugin hook, it is the step where Rolldown transforms non-JS code to JS.
 
 Additionally, in watch mode the [`watchChange`](/reference/Interface.Plugin#watchchange) hook can be triggered at any time to notify a new run will be triggered once the current run has generated its outputs. Also, when watcher closes, the [`closeWatcher`](/reference/Interface.Plugin#closewatcher) hook will be triggered.
 
-::: warning Unsupported Hooks
-
-The following Build Hooks are supported by Rollup, but not by Rolldown:
-
-- `shouldTransformCachedModule` ([#4389](https://github.com/rolldown/rolldown/issues/4389))
-
-:::
+> [!WARNING]
+> **Unsupported Hooks**
+>
+> The following Build Hooks are supported by Rollup, but not by Rolldown:
+>
+> - `shouldTransformCachedModule` ([#4389](https://github.com/rolldown/rolldown/issues/4389))
 
 ### Output Generation Hooks
 
@@ -168,80 +176,90 @@ The first hook of the output generation phase is [`renderStart`](/reference/Inte
 
 Additionally, [`closeBundle`](/reference/Interface.Plugin#closebundle) can be called as the very last hook, but it is the responsibility of the User to manually call [`bundle.close()`](/reference/Interface.RolldownBuild#close) to trigger this. The CLI will always make sure this is the case.
 
-```dot+hooks-graph
-# config
-margin=150,0
+```dot
+digraph {
+    bgcolor="transparent";
+    rankdir=TB;
+    node [shape=box, style=filled, fontname="Arial", margin="0.2,0.1", color="${#3c3c43|#dfdfd6}", fontcolor="${#3c3c43|#dfdfd6}"];
+    edge [fontname="Arial", color="${#3c3c43|#dfdfd6}"];
 
-# styles
-sequential: fillcolor="#ffe8cc", dark$fillcolor="#9d4f1a"
-parallel: fillcolor="#ffcccc", dark$fillcolor="#8a2a2a"
-first: fillcolor="#fff4cc", dark$fillcolor="#9d7a1a"
-internal: fillcolor="#f0f0f0", dark$fillcolor="#3a3a3a"
-sync: color="#3c3c43", dark$color="#dfdfd6"
-async: color="#ff7e17", dark$color="#cc5f1a", penwidth=1
-!option: fillcolor="transparent"
-!invisible: label="", shape=circle, fixedsize=true, width=0.2, height=0.2, style=filled, fillcolor="#ffffff"
+    // Node definitions with styling
+    renderstart [label="renderStart", fillcolor="${#ffcccc|#8a2a2a}", color="${#3c3c43|#dfdfd6}", style="filled,rounded", href="/reference/Interface.Plugin#renderstart"];
+    resolvefileurl [label="resolveFileUrl", fillcolor="${#fff4cc|#9d7a1a}", color="${#3c3c43|#dfdfd6}", style="filled,rounded", href="/reference/Interface.Plugin#resolvefileurl"];
+    banner [label="banner", fillcolor="${#ffe8cc|#9d4f1a}", color="${#3c3c43|#dfdfd6}", style="filled,rounded", href="/reference/Interface.Plugin#banner"];
+    footer [label="footer", fillcolor="${#ffe8cc|#9d4f1a}", color="${#3c3c43|#dfdfd6}", style="filled,rounded", href="/reference/Interface.Plugin#footer"];
+    intro [label="intro", fillcolor="${#ffe8cc|#9d4f1a}", color="${#3c3c43|#dfdfd6}", style="filled,rounded", href="/reference/Interface.Plugin#intro"];
+    outro [label="outro", fillcolor="${#ffe8cc|#9d4f1a}", color="${#3c3c43|#dfdfd6}", style="filled,rounded", href="/reference/Interface.Plugin#outro"];
+    renderchunk [label="renderChunk", fillcolor="${#ffe8cc|#9d4f1a}", color="${#3c3c43|#dfdfd6}", style="filled,rounded", href="/reference/Interface.Plugin#renderchunk"];
+    minify [label="minify", fillcolor="${#f0f0f0|#3a3a3a}", style="filled,rounded", color=transparent];
+    postbanner [label="postBanner", fillcolor="transparent", color="${#3c3c43|#dfdfd6}", style="filled,rounded"];
+    postfooter [label="postFooter", fillcolor="transparent", color="${#3c3c43|#dfdfd6}", style="filled,rounded"];
+    augmentchunkhash [label="augmentChunkHash", fillcolor="${#ffe8cc|#9d4f1a}", color="${#ff7e17|#cc5f1a}", penwidth=1, style="filled,rounded", href="/reference/Interface.Plugin#augmentchunkhash"];
+    generatebundle [label="generateBundle", fillcolor="${#ffe8cc|#9d4f1a}", color="${#3c3c43|#dfdfd6}", style="filled,rounded", href="/reference/Interface.Plugin#generatebundle"];
+    writebundle [label="writeBundle", fillcolor="${#ffcccc|#8a2a2a}", color="${#3c3c43|#dfdfd6}", style="filled,rounded", href="/reference/Interface.Plugin#writebundle"];
+    rendererror [label="renderError", fillcolor="${#ffcccc|#8a2a2a}", color="${#3c3c43|#dfdfd6}", style="filled,rounded", href="/reference/Interface.Plugin#rendererror"];
+    closebundle [label="closeBundle", fillcolor="${#ffcccc|#8a2a2a}", color="${#3c3c43|#dfdfd6}", style="filled,rounded", href="/reference/Interface.Plugin#closebundle"];
+    beforeimportmeta [label="", shape="circle", fixedsize="true", width=0.2, height=0.2, style="filled", fillcolor="${#3c3c43|#dfdfd6}", color=transparent];
+    beforeaddons [label="", shape="circle", fixedsize="true", width=0.2, height=0.2, style="filled", fillcolor="${#3c3c43|#dfdfd6}", color=transparent];
+    afteraddons [label="", shape="circle", fixedsize="true", width=0.2, height=0.2, style="filled", fillcolor="${#3c3c43|#dfdfd6}", color=transparent];
 
-# nodes
-renderStart(/reference/Interface.Plugin#renderstart): parallel, sync
-resolveFileUrl(/reference/Interface.Plugin#resolvefileurl): first, sync
-banner(/reference/Interface.Plugin#banner): sequential, sync
-footer(/reference/Interface.Plugin#footer): sequential, sync
-intro(/reference/Interface.Plugin#intro): sequential, sync
-outro(/reference/Interface.Plugin#outro): sequential, sync
-renderChunk(/reference/Interface.Plugin#renderchunk): sequential, sync
-minify: internal
-postBanner: option, sync
-postFooter: option, sync
-augmentChunkHash(/reference/Interface.Plugin#augmentchunkhash): sequential, async
-generateBundle(/reference/Interface.Plugin#generatebundle): sequential, sync
-writeBundle(/reference/Interface.Plugin#writebundle): parallel, sync
-renderError(/reference/Interface.Plugin#rendererror): parallel, sync
-closeBundle(/reference/Interface.Plugin#closebundle): parallel, sync
-beforeImportMeta: invisible
-beforeAddons: invisible
-afterAddons: invisible
+    // Main flow
+    renderstart -> beforeimportmeta [label="each chunk", fontcolor="${#3c3c43|#dfdfd6}", penwidth=2];
+    beforeimportmeta -> resolvefileurl [label="each import.meta.ROLLDOWN_FILE_URL_*", fontcolor="${#3c3c43|#dfdfd6}", penwidth=2];
+    resolvefileurl -> beforeimportmeta [penwidth=2];
+    beforeimportmeta -> beforeaddons [penwidth=2];
+    augmentchunkhash -> generatebundle [penwidth=2];
+    generatebundle -> writebundle [penwidth=2];
+    writebundle -> closebundle [style=dashed, penwidth=2];
+    afteraddons -> beforeimportmeta [label="next chunk", fontcolor="${#3c3c43|#dfdfd6}", style=dashed, constraint=false, penwidth=2];
+    afteraddons -> renderchunk [label="each chunk", fontcolor="${#3c3c43|#dfdfd6}", penwidth=2];
+    renderchunk -> minify [penwidth=2];
+    minify -> postbanner [penwidth=2];
+    minify -> postfooter [penwidth=2];
+    postbanner -> augmentchunkhash [penwidth=2];
+    postfooter -> augmentchunkhash [penwidth=2];
+    augmentchunkhash -> renderchunk [label="next chunk", fontcolor="${#3c3c43|#dfdfd6}", style=dashed, constraint=false, penwidth=2];
+    rendererror -> closebundle [style=dashed, penwidth=2];
 
-# groups
-generateChunks: beforeAddons, banner, footer, intro, outro, afterAddons
+    // Subgraphs
+    subgraph cluster_generatechunks {
+        style=invis;
+        label="";
 
-# edges
-renderStart -> beforeImportMeta: each chunk
-beforeImportMeta -> resolveFileUrl: each import.meta.ROLLDOWN_FILE_URL_*
-resolveFileUrl -> beforeImportMeta
-beforeImportMeta -> beforeAddons
-augmentChunkHash -> generateBundle
-generateBundle -> writeBundle
-writeBundle .-> closeBundle
-beforeAddons -> banner
-beforeAddons -> footer
-beforeAddons -> intro
-beforeAddons -> outro
-banner -> afterAddons
-footer -> afterAddons
-intro -> afterAddons
-outro -> afterAddons
-afterAddons .-> beforeImportMeta: next chunk, constraint=false
-afterAddons -> renderChunk: each chunk
-renderChunk -> minify
-minify -> postBanner
-minify -> postFooter
-postBanner -> augmentChunkHash
-postFooter -> augmentChunkHash
-augmentChunkHash .-> renderChunk: next chunk, constraint=false
-renderError .-> closeBundle
+        beforeaddons -> banner [penwidth=2];
+        beforeaddons -> footer [penwidth=2];
+        beforeaddons -> intro [penwidth=2];
+        beforeaddons -> outro [penwidth=2];
+        banner -> afteraddons [penwidth=2];
+        footer -> afteraddons [penwidth=2];
+        intro -> afteraddons [penwidth=2];
+        outro -> afteraddons [penwidth=2];
+    }
+    // Legend
+    legend [shape=plaintext, style="", fillcolor=transparent, margin=0, fontsize=11, fontcolor="${#3c3c43|#dfdfd6}", label=<
+        <table border="1" color="${#3c3c43|#dfdfd6}" style="rounded" cellborder="0" cellspacing="4" cellpadding="2">
+            <tr><td colspan="2" align="right"><b>Legend</b></td></tr>
+            <tr><td width="10" height="10" fixedsize="true" border="2" color="transparent" bgcolor="${#ffe8cc|#9d4f1a}"></td><td align="left">sequential</td></tr>
+            <tr><td width="10" height="10" fixedsize="true" border="2" color="transparent" bgcolor="${#ffcccc|#8a2a2a}"></td><td align="left">parallel</td></tr>
+            <tr><td width="10" height="10" fixedsize="true" border="2" color="transparent" bgcolor="${#fff4cc|#9d7a1a}"></td><td align="left">first</td></tr>
+            <tr><td width="10" height="10" fixedsize="true" border="2" color="transparent" bgcolor="${#f0f0f0|#3a3a3a}"></td><td align="left">internal</td></tr>
+            <tr><td width="10" height="10" fixedsize="true" border="2" color="${#3c3c43|#dfdfd6}" bgcolor="transparent"></td><td align="left">sync</td></tr>
+            <tr><td width="10" height="10" fixedsize="true" border="2" color="${#ff7e17|#cc5f1a}" bgcolor="transparent"></td><td align="left">async</td></tr>
+        </table>
+    >];
+    { rank=source; legend; }
+}
 ```
 
 Note that `minify` in the graph above is not a plugin hook and is the step where Rolldown runs the minifier. Also note that `postBanner` and `postFooter` are not plugin hooks, these are output options and do not have corresponding hooks, unlike `banner` and `footer`.
 
-::: warning Unsupported Hooks
-
-The following Output Generation Hooks are supported by Rollup, but not by Rolldown:
-
-- `resolveImportMeta` ([#1010](https://github.com/rolldown/rolldown/issues/1010))
-- `renderDynamicImport` ([#4532](https://github.com/rolldown/rolldown/issues/4532))
-
-:::
+> [!WARNING]
+> **Unsupported Hooks**
+>
+> The following Output Generation Hooks are supported by Rollup, but not by Rolldown:
+>
+> - `resolveImportMeta` ([#1010](https://github.com/rolldown/rolldown/issues/1010))
+> - `renderDynamicImport` ([#4532](https://github.com/rolldown/rolldown/issues/4532))
 
 ## Plugin Context
 

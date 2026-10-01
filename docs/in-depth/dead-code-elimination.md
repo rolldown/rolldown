@@ -26,9 +26,10 @@ console.log(add(2, 3));
 
 In this example, `multiply` is never imported and has no side effects, so Rolldown removes it from the final bundle.
 
-::: tip Tree-Shaking
-Tree-shaking is a related term [popularized by Rollup](https://rollupjs.org/faqs/#what-is-tree-shaking). It refers to a specific technique for dead code elimination that works by "shaking" the syntax tree to remove unused code.
-:::
+> [!TIP]
+> **Tree-Shaking**
+>
+> Tree-shaking is a related term [popularized by Rollup](https://rollupjs.org/faqs/#what-is-tree-shaking). It refers to a specific technique for dead code elimination that works by "shaking" the syntax tree to remove unused code.
 
 ## What Are Side Effects?
 
@@ -78,24 +79,22 @@ If `button` and `widget` are never used, Rolldown removes both calls entirely. W
 
 The annotation must appear **immediately before** the call or `new` expression for it to apply. If it is placed elsewhere, Rolldown emits an `INVALID_ANNOTATION` warning.
 
-::: warning Common invalid positions
+> [!WARNING]
+> **Common invalid positions**
+>
+> ```js
+> // Before a non-call expression
+> /* @__PURE__ */ globalThis.createElement;
+>
+> // Before a declaration
+> /* @__PURE__ */ function foo() {}
+>
+> // Between an identifier and `=` in a variable declarator
+> const foo /* @__PURE__ */ = bar();
+> ```
 
-```js
-// Before a non-call expression
-/* @__PURE__ */ globalThis.createElement;
-
-// Before a declaration
-/* @__PURE__ */ function foo() {}
-
-// Between an identifier and `=` in a variable declarator
-const foo /* @__PURE__ */ = bar();
-```
-
-:::
-
-::: tip
-The annotation can also be written as `/* #__PURE__ */` (with `#` instead of `@`) for compatibility with other tools.
-:::
+> [!TIP]
+> The annotation can also be written as `/* #__PURE__ */` (with `#` instead of `@`) for compatibility with other tools.
 
 ### `@__NO_SIDE_EFFECTS__`
 
@@ -124,11 +123,12 @@ This can be more convenient than adding `@__PURE__` to every call site when you 
 
 While you can mark individual expressions or functions, you can also mark entire modules as side-effect-free. If you mark a module as side-effect-free, Rolldown will treat every statement in that module as side-effect-free when none of its exports are used.
 
-::: details What does "none of its exports are used" mean?
+<details>
+<summary>What does "none of its exports are used" mean?</summary>
 
 This refers to the exports that are **defined in the module itself**, not re-exports from other modules.
 
-```js [utils.js]
+```js displayName="utils.js"
 // assume that this file is marked as side-effect-free
 window.loaded = true; // side effect
 
@@ -149,7 +149,7 @@ In this example:
 - If you `import { add } from './utils.js'`, the module is considered "used" because `add` is defined in `utils.js`
 - If you only `import { multiply } from './utils.js'`, the module is considered "unused" because `multiply` is just re-exported, not defined here
 
-:::
+</details>
 
 For example, consider this case:
 
@@ -172,58 +172,58 @@ If `math.js` is marked as side-effect-free, the output will be:
 console.log('main');
 ```
 
-:::: warning This is conditional
-
-The statements are only treated as side-effect-free when none of the module's exports are used. If any export is used, side effects are preserved.
-
-::: details Example
-
-For example, consider this case:
-
-```js
-// math.js (marked as side-effect-free)
-window.myGlobal = 'hello'; // side effect: modifies global
-
-export function add(a, b) {
-  return a + b;
-}
-
-// main.js
-import { add } from './math.js';
-console.log('main', add(2, 3));
-```
-
-The output will be:
-
-```js
-window.myGlobal = 'hello';
-
-function add(a, b) {
-  return a + b;
-}
-
-console.log('main', add(2, 3));
-```
-
-On the other hand, if you mark every statement in `math.js` as side-effect-free, the output will be:
-
-```js
-function add(a, b) {
-  return a + b;
-}
-
-console.log('main', add(2, 3));
-```
-
-:::
-
-::::
+> [!WARNING]
+> **This is conditional**
+>
+> The statements are only treated as side-effect-free when none of the module's exports are used. If any export is used, side effects are preserved.
+>
+> <details>
+> <summary>Example</summary>
+>
+> For example, consider this case:
+>
+> ```js
+> // math.js (marked as side-effect-free)
+> window.myGlobal = 'hello'; // side effect: modifies global
+>
+> export function add(a, b) {
+>   return a + b;
+> }
+>
+> // main.js
+> import { add } from './math.js';
+> console.log('main', add(2, 3));
+> ```
+>
+> The output will be:
+>
+> ```js
+> window.myGlobal = 'hello';
+>
+> function add(a, b) {
+>   return a + b;
+> }
+>
+> console.log('main', add(2, 3));
+> ```
+>
+> On the other hand, if you mark every statement in `math.js` as side-effect-free, the output will be:
+>
+> ```js
+> function add(a, b) {
+>   return a + b;
+> }
+>
+> console.log('main', add(2, 3));
+> ```
+>
+> </details>
 
 #### `sideEffects` in package.json
 
 The `sideEffects` field in `package.json` tells bundlers which files in your package have side effects:
 
-```json [package.json]
+```json displayName="package.json"
 {
   "name": "my-library",
   "sideEffects": false
@@ -234,7 +234,7 @@ Setting `sideEffects: false` marks all files in the package as side-effect-free,
 
 You can also specify an array of files that have side effects:
 
-```json [package.json]
+```json displayName="package.json"
 {
   "name": "my-library",
   "sideEffects": ["./src/polyfill.js", "**/*.css"]
@@ -245,23 +245,23 @@ This tells Rolldown that most files have no side effects and can be removed if u
 
 The array accepts glob patterns (supports `*`, `**`, `{a,b}`, `[a-z]`). Patterns like `*.css` that do not include a `/` will be treated as `**/*.css`.
 
-::: warning CSS Files
-If your library imports CSS files, make sure to include them in the `sideEffects` array. Otherwise, the CSS imports may be removed:
-
-```json [package.json]
-{
-  "name": "my-component-library",
-  "sideEffects": ["**/*.css", "**/*.scss"]
-}
-```
-
-:::
+> [!WARNING]
+> **CSS Files**
+>
+> If your library imports CSS files, make sure to include them in the `sideEffects` array. Otherwise, the CSS imports may be removed:
+>
+> ```json displayName="package.json"
+> {
+>   "name": "my-component-library",
+>   "sideEffects": ["**/*.css", "**/*.scss"]
+> }
+> ```
 
 #### Plugin Hook: `moduleSideEffects`
 
 Plugins can return [`moduleSideEffects`](/reference/Interface.SourceDescription#modulesideeffects) from the `resolveId`, `load`, or `transform` hooks to override side effect detection for specific modules:
 
-```js [rolldown.config.js]
+```js displayName="rolldown.config.js"
 export default {
   plugins: [
     {
@@ -304,25 +304,25 @@ my-component-lib/
          └── Modal.css
 ```
 
-::: code-group
+<!--
+  Adjacent code blocks render as tabs; this comment keeps the tree out of them.
+-->
 
-```js [src/index.js]
+```js displayName="src/index.js"
 export { Button } from './components/Button.js';
 export { Modal } from './components/Modal.js';
 ```
 
-```js [src/components/Button.js]
+```js displayName="src/components/Button.js"
 import './Button.css';
 export function Button(props) {
   /* ... */
 }
 ```
 
-:::
-
 To ensure unused components can be removed, mark only the CSS files as having side effects:
 
-```json [package.json]
+```json displayName="package.json"
 {
   "name": "my-component-lib",
   "sideEffects": ["**/*.css"]

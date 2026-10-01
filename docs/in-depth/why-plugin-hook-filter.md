@@ -222,7 +222,7 @@ Rolldown uses parallel processing (like the [producer-consumer problem](https://
 
 **Dependency Graph**
 
-```dot [Dependency Graph]
+```dot displayName="Dependency Graph"
 digraph {
     bgcolor="transparent";
     rankdir=TB;

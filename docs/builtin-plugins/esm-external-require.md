@@ -2,9 +2,10 @@
 
 The `esmExternalRequirePlugin` is a built-in Rolldown plugin that converts CommonJS `require()` calls for external dependencies into ESM `import` statements, ensuring compatibility in environments that don't support the Node.js module API.
 
-:::tip NOTE
-This plugin sets `resolveId.meta.order` to `'pre'` to ensure external requires are resolved before other plugins. Additionally, it sets `enforce: 'pre'` by default for Vite compatibility.
-:::
+> [!TIP]
+> **NOTE**
+>
+> This plugin sets `resolveId.meta.order` to `'pre'` to ensure external requires are resolved before other plugins. Additionally, it sets `enforce: 'pre'` by default for Vite compatibility.
 
 ## Why This Is Needed
 
@@ -39,9 +40,10 @@ export default defineConfig({
 });
 ```
 
-:::warning The plugin must own its externals
-List each module in this plugin's `external` option or in the top-level `external` option, never both. Top-level `external` wins during resolution, so the plugin skips duplicated modules entirely. The build succeeds with a warning while the output keeps calling `require()` on the external module at runtime.
-:::
+> [!WARNING]
+> **The plugin must own its externals**
+>
+> List each module in this plugin's `external` option or in the top-level `external` option, never both. Top-level `external` wins during resolution, so the plugin skips duplicated modules entirely. The build succeeds with a warning while the output keeps calling `require()` on the external module at runtime.
 
 ## Options
 

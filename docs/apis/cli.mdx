@@ -12,7 +12,7 @@ Rolldown also natively supports TypeScript configuration files.
 
 Consult the [reference](/reference/) for a comprehensive list of options you can include in your config file.
 
-```js [rolldown.config.js]
+```js displayName="rolldown.config.js"
 export default {
   input: 'src/main.js',
   output: {
@@ -35,7 +35,7 @@ If no config file is found, Rolldown will show an error.
 
 You can also export a function from your config file. The function will be called with command line arguments so you can dynamically adapt your configuration:
 
-```js [rolldown.config.js]
+```js displayName="rolldown.config.js"
 import { defineConfig } from 'rolldown';
 
 export default defineConfig((commandLineArgs) => {
@@ -64,7 +64,7 @@ The `native` loader is more simple and is planned to be the default in the futur
 
 Since Rolldown ships with TypeScript typings, you can leverage your IDE's intellisense with JSDoc type hints:
 
-```js [rolldown.config.js]
+```js displayName="rolldown.config.js"
 /** @type {import('rolldown').RolldownOptions} */
 export default {
   // ...
@@ -73,7 +73,7 @@ export default {
 
 Alternatively you can use the `defineConfig` helper, which provides intellisense without the need for JSDoc annotations:
 
-```js [rolldown.config.js]
+```js displayName="rolldown.config.js"
 import { defineConfig } from 'rolldown';
 
 export default defineConfig({
@@ -85,7 +85,7 @@ export default defineConfig({
 
 To build different bundles from different inputs, you can supply an array of configuration objects:
 
-```js [rolldown.config.js]
+```js displayName="rolldown.config.js"
 import { defineConfig } from 'rolldown';
 
 export default defineConfig([
@@ -100,62 +100,53 @@ export default defineConfig([
 ]);
 ```
 
-::: tip Different outputs with same inputs
-
-You can also supply an array for the `output` option to generate multiple outputs from the same input:
-
-```js [rolldown.config.js]
-import { defineConfig } from 'rolldown';
-
-export default defineConfig({
-  input: 'src/main.js',
-  output: [
-    { format: 'esm', entryFileNames: 'bundle.esm.js' },
-    { format: 'cjs', entryFileNames: 'bundle.cjs.js' },
-  ],
-});
-```
-
-:::
+> [!TIP]
+> **Different outputs with same inputs**
+>
+> You can also supply an array for the `output` option to generate multiple outputs from the same input:
+>
+> ```js displayName="rolldown.config.js"
+> import { defineConfig } from 'rolldown';
+>
+> export default defineConfig({
+>   input: 'src/main.js',
+>   output: [
+>     { format: 'esm', entryFileNames: 'bundle.esm.js' },
+>     { format: 'cjs', entryFileNames: 'bundle.cjs.js' },
+>   ],
+> });
+> ```
 
 ## Command Line Flags
 
 Flags can be passed as `--foo`, `--foo <value>`, or `--foo=<value>`. Boolean flags like `--minify` don't need a value, while key-value options like `--transform.define` use comma-separated syntax: `--transform.define key:value,key2:value2`. Many flags have short aliases (e.g., `-m` for `--minify`, `-f` for `--format`).
 
-::: warning Disabling boolean flags
+> [!WARNING]
+> **Disabling boolean flags**
+>
+> To turn a boolean flag _off_, prefix it with `--no-`, e.g. `--no-minify` or `--no-codeSplitting`. Passing `false` as a value—`--minify false` or `--codeSplitting=false`—is **not** supported and will error, because the value is read as the string `"false"` rather than a boolean. This matches [Rollup's CLI behavior](https://rollupjs.org/command-line-interface/) (`--no-treeshake`, etc.).
+>
+> Some flags accept either a boolean or an object (e.g. `codeSplitting`). For those you can:
+>
+> - enable with defaults: `--codeSplitting`
+> - disable: `--no-codeSplitting`
+> - set nested fields with dot-notation: `--codeSplitting.minSize 30000`
 
-To turn a boolean flag _off_, prefix it with `--no-`, e.g. `--no-minify` or `--no-codeSplitting`. Passing `false` as a value—`--minify false` or `--codeSplitting=false`—is **not** supported and will error, because the value is read as the string `"false"` rather than a boolean. This matches [Rollup's CLI behavior](https://rollupjs.org/command-line-interface/) (`--no-treeshake`, etc.).
-
-Some flags accept either a boolean or an object (e.g. `codeSplitting`). For those you can:
-
-- enable with defaults: `--codeSplitting`
-- disable: `--no-codeSplitting`
-- set nested fields with dot-notation: `--codeSplitting.minSize 30000`
-
-:::
-
-::: info Integration into other tools
-
-Note that your shell interprets arguments before Rolldown sees them—quotes and wildcards may behave unexpectedly. For advanced build processes or integration into other tools, consider using the [JavaScript API](/apis/bundler-api) instead. Key differences when switching from config files to the API:
-
-- Configuration must be an object (not a Promise or function)
-- Run [`rolldown.rolldown`](/reference/Function.rolldown) separately for each set of `inputOptions` (no config arrays)
-- Use [`bundle.generate(outputOptions)`](/reference/Interface.RolldownBuild#generate) or [`bundle.write(outputOptions)`](/reference/Interface.RolldownBuild#write) instead of the `output` option
-
-:::
+> [!NOTE]
+> **Integration into other tools**
+>
+> Note that your shell interprets arguments before Rolldown sees them—quotes and wildcards may behave unexpectedly. For advanced build processes or integration into other tools, consider using the [JavaScript API](/apis/bundler-api) instead. Key differences when switching from config files to the API:
+>
+> - Configuration must be an object (not a Promise or function)
+> - Run [`rolldown.rolldown`](/reference/Function.rolldown) separately for each set of `inputOptions` (no config arrays)
+> - Use [`bundle.generate(outputOptions)`](/reference/Interface.RolldownBuild#generate) or [`bundle.write(outputOptions)`](/reference/Interface.RolldownBuild#write) instead of the `output` option
 
 Many options have command line flag equivalents.
 See the [reference](/reference/) for details of those flags.
 In those cases, any arguments passed here will override the config file, if you're using one.
 This is a list of all supported flags:
 
-<script setup>
-import { data } from '../data-loading/cli-help.data'
-</script>
-
-```sh-vue
-{{ data.help }}
-```
+<CliHelp />
 
 The flags listed below are only available via the command line interface.
 
@@ -182,9 +173,10 @@ Show the installed version number.
 
 Rebuild the bundle when source files change on disk.
 
-::: info `ROLLDOWN_WATCH` env
-While in watch mode, the `ROLLDOWN_WATCH` and `ROLLUP_WATCH` environment variable will be set to `true` by Rolldown's command line interface and can be checked by other processes. Plugins should instead check [`this.meta.watchMode`](/reference/Interface.PluginContextMeta#watchmode), which is independent of the command line interface.
-:::
+> [!NOTE]
+> **`ROLLDOWN_WATCH` env**
+>
+> While in watch mode, the `ROLLDOWN_WATCH` and `ROLLUP_WATCH` environment variable will be set to `true` by Rolldown's command line interface and can be checked by other processes. Plugins should instead check [`this.meta.watchMode`](/reference/Interface.PluginContextMeta#watchmode), which is independent of the command line interface.
 
 ### `--environment <values>`
 
@@ -202,17 +194,17 @@ This will set `process.env.INCLUDE_DEPS = 'true'` and `process.env.BUILD = 'prod
 You can invoke this option multiple times.
 In that case, subsequently set variables will overwrite previous definitions.
 
-::: tip Overwriting the values
-If you have `package.json` scripts:
-
-```json
-{
-  "scripts": {
-    "build": "rolldown -c --environment BUILD:production"
-  }
-}
-```
-
-you can call this script with `npm run build -- --environment BUILD:development` to set `process.env.BUILD="development"`.
-
-:::
+> [!TIP]
+> **Overwriting the values**
+>
+> If you have `package.json` scripts:
+>
+> ```json
+> {
+>   "scripts": {
+>     "build": "rolldown -c --environment BUILD:production"
+>   }
+> }
+> ```
+>
+> you can call this script with `npm run build -- --environment BUILD:development` to set `process.env.BUILD="development"`.

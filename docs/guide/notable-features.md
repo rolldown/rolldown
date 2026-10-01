@@ -14,9 +14,8 @@ Similar to [esbuild's `platform` option](https://esbuild.github.io/api/#platform
 
 - The default output format is always `esm` regardless of platform.
 
-:::tip
-Rolldown does not polyfill Node built-ins when targeting the browser. You can opt-in to it with [rolldown-plugin-node-polyfills](https://github.com/rolldown/rolldown-plugin-node-polyfills).
-:::
+> [!TIP]
+> Rolldown does not polyfill Node built-ins when targeting the browser. You can opt-in to it with [rolldown-plugin-node-polyfills](https://github.com/rolldown/rolldown-plugin-node-polyfills).
 
 ## Built-in transforms
 
@@ -24,7 +23,7 @@ Rolldown supports the following transforms out of the box, powered by [Oxc](http
 The transform is configurable via the [`transform`](/reference/InputOptions.transform) option.
 The following transforms are supported:
 
-- TypeScript
+- <span>TypeScript</span>
   - Sets configurations based on the `tsconfig.json` when the [`tsconfig`](/reference/InputOptions.tsconfig) option is provided.
   - Supported legacy decorators and decorator metadata.
 - JSX
@@ -53,11 +52,10 @@ When top-level [`tsconfig`](/reference/InputOptions.tsconfig) option is provided
 
 This feature provides a way to replace global identifiers with constant expressions. Aligns with the respective options in [Vite](https://vite.dev/config/shared-options.html#define) and [esbuild](https://esbuild.github.io/api/#define).
 
-::: tip `@rollup/plugin-replace` behaves differently
-
-Note it behaves differently from [`@rollup/plugin-replace`](https://github.com/rollup/plugins/tree/master/packages/replace) as the replacement is AST-based, so the value to be replaced must be a valid identifier or member expression. Use the built-in [`replacePlugin`](/builtin-plugins/replace) for that purpose.
-
-:::
+> [!TIP]
+> **`@rollup/plugin-replace` behaves differently**
+>
+> Note it behaves differently from [`@rollup/plugin-replace`](https://github.com/rollup/plugins/tree/master/packages/replace) as the replacement is AST-based, so the value to be replaced must be a valid identifier or member expression. Use the built-in [`replacePlugin`](/builtin-plugins/replace) for that purpose.
 
 ## Inject
 

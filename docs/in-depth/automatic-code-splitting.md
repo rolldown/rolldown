@@ -121,40 +121,36 @@ globalThis.value.push('abc');
 
 The chunks will be generated as follows:
 
-::: code-group
-
-```js [entry-a.js]
+```js displayName="entry-a.js"
 import './common-ab.js';
 import './common-abc.js';
 ```
 
-```js [entry-b.js]
+```js displayName="entry-b.js"
 import './common-ab.js';
 import './common-bc.js';
 import './common-abc.js';
 ```
 
-```js [entry-c.js]
+```js displayName="entry-c.js"
 import './common-bc.js';
 import './common-abc.js';
 ```
 
-```js [common-ab.js]
+```js displayName="common-ab.js"
 globalThis.value = globalThis.value || [];
 globalThis.value.push('ab');
 ```
 
-```js [common-bc.js]
+```js displayName="common-bc.js"
 globalThis.value = globalThis.value || [];
 globalThis.value.push('bc');
 ```
 
-```js [common-abc.js]
+```js displayName="common-abc.js"
 globalThis.value = globalThis.value || [];
 globalThis.value.push('abc');
 ```
-
-:::
 
 The following diagram shows how entries share dependencies and how modules are grouped into chunks:
 
@@ -259,7 +255,7 @@ You may ask why automatic code splitting doesn't place `shared-by-*.js` files in
 
 For the example above, if a single common chunk were created, it will be like:
 
-```js [common-all.js]
+```js displayName="common-all.js"
 globalThis.value = globalThis.value || [];
 globalThis.value.push('ab');
 globalThis.value = globalThis.value || [];
@@ -293,7 +289,7 @@ Rolldown will try to calculate the order by emulating the execution, starting fr
 
 In this case, the execution order is `[foo.js, entry.js]`. So the bundle output will be like:
 
-```js [output.js]
+```js displayName="output.js"
 // foo.js
 var foo = 'foo';
 
@@ -326,24 +322,20 @@ import './execution.js';
 
 The bundle output will be:
 
-::: code-group
-
-```js [entry.js]
+```js displayName="entry.js"
 import './common-execution.js';
 
 // setup.js
 globalThis.value = 'hello, world';
 ```
 
-```js [dyn-entry.js]
+```js displayName="dyn-entry.js"
 import './common-execution.js';
 ```
 
-```js [common-execution.js]
+```js displayName="common-execution.js"
 console.log(globalThis.value);
 ```
-
-:::
 
 `common-execution.js` is a common chunk. It is generated because `execution.js` is imported by both `entry.js` and `dyn-entry.js`.
 
@@ -401,11 +393,10 @@ digraph {
 
 This example shows the problem, before bundling, the code outputs `hello, world`, but after bundling, it outputs `undefined`. Currently, there's no easy way to solve this problem, as well for other bundlers that output ESM.
 
-::: info Related issues for other bundlers
-
-- [evanw/esbuild#399](https://github.com/evanw/esbuild/issues/399)
-- [rollup/rollup#4539](https://github.com/rollup/rollup/issues/4539)
-
-:::
+> [!NOTE]
+> **Related issues for other bundlers**
+>
+> - [evanw/esbuild#399](https://github.com/evanw/esbuild/issues/399)
+> - [rollup/rollup#4539](https://github.com/rollup/rollup/issues/4539)
 
 There are some discussions on how to solve this problem. One way is to move modules into additional common chunks whenever their original order would be violated, but that can fragment the output. Rolldown instead offers [`strictExecutionOrder`](/reference/OutputOptions.strictExecutionOrder), which wraps ESM module bodies so they can run in source order while keeping ESM output. When a wrapped dynamic entry ends up sharing its implementation chunk with other code, the rewritten `import()` triggers the implementation itself. Strict mode emits a small entry facade only where a real file is still needed — for example when another chunk statically loads the entry's chunk, or for chunks a plugin emits — so the output chunk shape can still change. By default strict mode wraps every eligible module; the experimental `onDemandWrapping` mode derives a conservative subset from predicted chunk execution hazards.

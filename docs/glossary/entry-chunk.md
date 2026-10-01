@@ -44,9 +44,7 @@ export default defineConfig({
 
 Rolldown will create outputs like:
 
-::: code-group
-
-```js [app.js]
+```js displayName="app.js"
 import { component } from './common.js';
 
 function render(component) {
@@ -56,17 +54,15 @@ function render(component) {
 render(component);
 ```
 
-```js [lib.js]
+```js displayName="lib.js"
 export { component } from './common.js';
 ```
 
-```js [common.js]
+```js displayName="common.js"
 export function component() {
   return 'Hello World';
 }
 ```
-
-:::
 
 - `lib.js` is created because we need to create the export signature `export { component }` and export it in `lib.js`.
 - For `app.js`, though it doesn't export anything, we still need to create `app.js` as the executing point of the app.

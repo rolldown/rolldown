@@ -95,11 +95,10 @@ The `__toESM` helper ensures that CommonJS exports are properly converted to ES 
 
 By default, Rolldown tries to keep the semantics of `require` and does not convert `require` against external modules to `import`. This is because the semantics of `require` are different from `import` in ES modules. For example, `require` are evaluated lazily, while `import` are evaluated before the code is executed.
 
-::: tip Still want to convert `require` to `import`?
-
-If you want to convert `require` calls to `import` statements, you can use [the built-in `esmExternalRequirePlugin`](/builtin-plugins/esm-external-require). Note that the plugin must own the externals it converts: list them in the plugin's `external` option, not in the top-level `external` option.
-
-:::
+> [!TIP]
+> **Still want to convert `require` to `import`?**
+>
+> If you want to convert `require` calls to `import` statements, you can use [the built-in `esmExternalRequirePlugin`](/builtin-plugins/esm-external-require). Note that the plugin must own the externals it converts: list them in the plugin's `external` option, not in the top-level `external` option.
 
 For [`platform: 'node'`](../guide/notable-features.md#platform-presets), Rolldown will generate a `require` function from [`module.createRequire`](https://nodejs.org/docs/latest/api/module.html#modulecreaterequirefilename). This keeps the semantics of `require` completely intact. Note that compared to converting to `import`, there's two downsides to this approach:
 
@@ -108,9 +107,7 @@ For [`platform: 'node'`](../guide/notable-features.md#platform-presets), Rolldow
 
 For other platforms, Rolldown will leave it as-is, allowing the running environment to provide a `require` function or inject one manually. For example, you can inject the `require` function that returns the value obtained by `import` by using [`inject` feature](../guide/notable-features.md#inject).
 
-::: code-group
-
-```js [rolldown.config.js]
+```js displayName="rolldown.config.js"
 import path from 'node:path';
 export default {
   inject: {
@@ -119,7 +116,7 @@ export default {
 };
 ```
 
-```js [require.js]
+```js displayName="require.js"
 import fs from 'node:fs';
 
 export default (id) => {
@@ -129,8 +126,6 @@ export default (id) => {
   throw new Error(`Requiring ${JSON.stringify(id)} is not allowed.`);
 };
 ```
-
-:::
 
 ### Ambiguous `default` import from CJS modules
 
@@ -147,25 +142,22 @@ If it matches one of the conditions below, the `default` import is the `module.e
 
 The last condition handles CJS modules that set `__esModule` without actually shipping a `default` export (for example tslib's UMD build). Without it, the `default` import would be `undefined`. `@rollup/plugin-commonjs` handles this case with the same fallback.
 
-:::: details Behavior in details
+<details>
+<summary>Behavior in details</summary>
 
 Let's assume the following ESM importer module and CJS importee module:
 
-::: code-group
-
-```js [index.js]
+```js displayName="index.js"
 import foo from './importee.cjs';
 console.log(foo);
 ```
 
-```js [importee.cjs]
+```js displayName="importee.cjs"
 Object.defineProperty(module.exports, '__esModule', {
   value: true,
 });
 module.exports.default = 'foo';
 ```
-
-:::
 
 In the first interpretation, the way [Babel](https://babel.dev/) interprets, this code will print `foo`. In this interpretation, the behavior is changed based on the `__esModule` flag. `__esModule` is commonly set by transformers to indicate that the module was written in ESM syntax (e.g. `export default 'foo'` in this case) and was transformed to CJS syntax. The rationale for this behavior is that the transformed module should behave the same as the original module did without the transformation. [`@rollup/plugin-commonjs`](https://github.com/rollup/plugins/tree/master/packages/commonjs) uses this interpretation by default.
 
@@ -173,13 +165,14 @@ In the second interpretation, the way Node.js interprets, this code will print `
 
 These two interpretations expects different values for `default` imports and Rolldown has to decide which one to use.
 
-::::
+</details>
 
-::: details What is the rationale for this heuristic?
+<details>
+<summary>What is the rationale for this heuristic?</summary>
 
 Rolldown's heuristic is based on the assumption that the files affected by Node.js's module determination concept are expected to be runnable in Node.js. For ESM files to be runnable in Node.js, they need to have `.mjs` or the closest `package.json` to have a `type` field set to `module` ([so that the ESM loader is used](https://nodejs.org/api/packages.html#determining-module-system)), and the code should be written in a way that expects the Node.js interpretation. On the otherhand, for files written in ESM syntax but not marked as ESM in the Node.js's module determination concept, the code is highly likely to be transformed by other tools, which commonly follows the Babel's interpretation.
 
-:::
+</details>
 
 #### Recommendations for Library Authors
 

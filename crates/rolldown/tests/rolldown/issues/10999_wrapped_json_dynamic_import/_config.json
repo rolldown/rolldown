@@ -1,0 +1,7 @@
+{
+  "_comment": "With code splitting disabled, JSON used by both static and dynamic import stays wrapped. Its initialization must precede an eager consumer in an import cycle.",
+  "config": {
+    "codeSplitting": false
+  },
+  "snapshot": false
+}

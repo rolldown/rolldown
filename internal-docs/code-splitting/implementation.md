@@ -398,9 +398,11 @@ The function iterates over every chunk in the `ChunkGraph` and performs six step
 **Step 3 — Classify modules via DFS (`js_import_order`).** Runs iterative DFS from roots, following only `ImportKind::Import` edges (skipping `require()` and `import()` since those are inherently lazy). Each visited module is classified:
 
 - `WrapKind::Cjs` or `WrapKind::Esm` → pushed onto a `wrapped_modules` list
-- `WrapKind::None` → records how many wrapped modules appeared before it in DFS order (its "wrapped dependency count")
+- `WrapKind::None` → records how many wrapped modules appeared before it in DFS order (its "wrapped dependency count"), except for a JSON module. An unwrapped JSON module declares only data, so it needs no other module to initialize first and is never a target. A wrapped JSON module stays in `wrapped_modules`, because its data exists only after its wrapper runs.
 
 Uses the immutable link-stage `wrap_kind()` from `LinkingMetadata`.
+
+`generate_lazy_export` removes the wrapper of an object JSON module, even when a wrapped module imports it. Thus, an object JSON module is the only unwrapped module that a wrapped module can import. The wrapped modules before such a module in DFS order can include its importers, which must run after it. Without the skip, the pass can move an init call in front of the JSON module. Through an import cycle, that call can reach an importer's wrapper before the chunk assigns it. The bundle then throws `init_* is not a function` (#10999, `crates/rolldown/tests/rolldown/issues/10999*`).
 
 **Step 4 — Determine modules to check.** Collects all unwrapped modules that have wrapped dependencies, plus the wrapped modules they depend on (up to the maximum dependency count). If this set is empty, no reordering is needed and the function returns early.
 

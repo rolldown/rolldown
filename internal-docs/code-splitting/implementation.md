@@ -397,12 +397,13 @@ The function iterates over every chunk in the `ChunkGraph` and performs six step
 
 **Step 3 — Classify modules via DFS (`js_import_order`).** Runs iterative DFS from roots, following only `ImportKind::Import` edges (skipping `require()` and `import()` since those are inherently lazy). Each visited module is classified:
 
+- JSON module → skipped. It only declares data, so it has no side effects to order and no code that observes another module's init. It is neither a target nor a dependency.
 - `WrapKind::Cjs` or `WrapKind::Esm` → pushed onto a `wrapped_modules` list
-- `WrapKind::None` → records how many wrapped modules appeared before it in DFS order (its "wrapped dependency count"), unless a wrapped module imports it (`is_imported_by_wrapped_module`)
+- `WrapKind::None` → records how many wrapped modules appeared before it in DFS order (its "wrapped dependency count")
 
 Uses the immutable link-stage `wrap_kind()` from `LinkingMetadata`.
 
-The exception exists because the wrapped modules before such a module can include its own importers, which must run after it. Moving their init calls in front of it runs them out of order. Through an import cycle, the moved init also reaches a wrapper whose `var init_* = __esmMin(...)` is only assigned further down the chunk, and the bundle throws `init_* is not a function` (#10999, `crates/rolldown/tests/rolldown/issues/10999*`). No other target can cause this crash: a target that sits between two members of a wrapped cycle in execution order is always reachable from one of them, so a wrapped module imports it. Wrapping spreads to every import of a wrapped module, so such a module has no wrapper only because `generate_lazy_export` removed it again from an object JSON module. That module only declares data, so it never needs an earlier init.
+The JSON skip is also what keeps this model correct. `generate_lazy_export` removes the wrapper of an object JSON module, even when a wrapped module imports it, so it is the only unwrapped module that a wrapped module can import. The wrapped modules before such a module in DFS order can include its own importers, which must run after it. Moving their init calls in front of it can call a wrapper whose `var init_* = __esmMin(...)` is assigned further down the chunk, and the bundle throws `init_* is not a function` (#10999, `crates/rolldown/tests/rolldown/issues/10999*`).
 
 **Step 4 — Determine modules to check.** Collects all unwrapped modules that have wrapped dependencies, plus the wrapped modules they depend on (up to the maximum dependency count). If this set is empty, no reordering is needed and the function returns early.
 

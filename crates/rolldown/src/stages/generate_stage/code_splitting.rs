@@ -21,7 +21,7 @@ use oxc_index::{IndexVec, index_vec};
 use rolldown_common::{
   Chunk, ChunkIdx, ChunkKind, ChunkMeta, EntryPointKind, ExportsKind, ImportKind, ImportRecordIdx,
   ImportRecordMeta, IndexModules, Module, ModuleId, ModuleIdx, ModuleNamespaceIncludedReason,
-  ModuleTag, ModuleTagBitSet, ModuleTagRegistry, PostChunkOptimizationOperation,
+  ModuleTag, ModuleTagBitSet, ModuleTagRegistry, ModuleType, PostChunkOptimizationOperation,
   PreserveEntrySignatures, RetainedExportSymbols, SymbolRef, UsedSymbolRefs, UsedSymbolRefsBuilder,
   WrapKind,
 };
@@ -384,9 +384,18 @@ impl GenerateStage<'_> {
       let mut none_wrapped_module_to_wrapped_dependency_length = FxHashMap::default();
       let js_import_order = self.js_import_order(&roots, &chunk_module_to_exec_order);
       for idx in js_import_order {
+        // A JSON module only declares data. It has no side effects to order and no code that
+        // observes another module's init, so it is neither a target nor a dependency (#10999).
+        // See internal-docs/code-splitting/implementation.md.
+        if self.link_output.module_table[idx]
+          .as_normal()
+          .is_some_and(|module| matches!(module.module_type, ModuleType::Json))
+        {
+          continue;
+        }
         match self.link_output.metas[idx].wrap_kind() {
           WrapKind::None => {
-            if !wrapped_modules.is_empty() && !self.is_imported_by_wrapped_module(idx) {
+            if !wrapped_modules.is_empty() {
               none_wrapped_module_to_wrapped_dependency_length.insert(idx, wrapped_modules.len());
             }
           }
@@ -467,19 +476,6 @@ impl GenerateStage<'_> {
       chunk.insert_map = insert_map;
       chunk.remove_map = remove_map;
     });
-  }
-
-  /// Whether a wrapped module imports `module_idx`. Such a module does not depend on the wrapped
-  /// modules before it in import order, because they can include its own importer, which runs
-  /// after it (#10999). See internal-docs/code-splitting/implementation.md.
-  fn is_imported_by_wrapped_module(&self, module_idx: ModuleIdx) -> bool {
-    self.link_output.module_table[module_idx].as_normal().is_some_and(|module| {
-      module
-        .importers_idx
-        .iter()
-        .chain(&module.dynamic_importers_idx)
-        .any(|importer_idx| !self.link_output.metas[*importer_idx].wrap_kind().is_none())
-    })
   }
 
   /// Only considering module eager initialization order, both `require()` and `import()` are lazy

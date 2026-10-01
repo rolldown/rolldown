@@ -386,7 +386,7 @@ impl GenerateStage<'_> {
       for idx in js_import_order {
         match self.link_output.metas[idx].wrap_kind() {
           WrapKind::None => {
-            if !wrapped_modules.is_empty() {
+            if !wrapped_modules.is_empty() && !self.is_imported_by_wrapped_module(idx) {
               none_wrapped_module_to_wrapped_dependency_length.insert(idx, wrapped_modules.len());
             }
           }
@@ -467,6 +467,19 @@ impl GenerateStage<'_> {
       chunk.insert_map = insert_map;
       chunk.remove_map = remove_map;
     });
+  }
+
+  /// Whether a wrapped module imports `module_idx`. Such a module does not depend on the wrapped
+  /// modules before it in import order, because they can include its own importer, which runs
+  /// after it (#10999). See internal-docs/code-splitting/implementation.md.
+  fn is_imported_by_wrapped_module(&self, module_idx: ModuleIdx) -> bool {
+    self.link_output.module_table[module_idx].as_normal().is_some_and(|module| {
+      module
+        .importers_idx
+        .iter()
+        .chain(&module.dynamic_importers_idx)
+        .any(|importer_idx| !self.link_output.metas[*importer_idx].wrap_kind().is_none())
+    })
   }
 
   /// Only considering module eager initialization order, both `require()` and `import()` are lazy

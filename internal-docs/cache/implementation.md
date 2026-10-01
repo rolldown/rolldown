@@ -39,13 +39,13 @@ incremental build knows what to invalidate / can answer plugin queries.
 
 ### 3. Within-build memoization
 
-| Type                                | Location                                                                      | Stores                                                                                                             |
-| ----------------------------------- | ----------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------ |
-| `PackageJsonCache`                  | `crates/rolldown_plugin_vite_resolve/src/package_json_cache.rs:9`             | `side_effects_cache: FxDashMap<PathBuf, Arc<PackageJson>>`, `optional_peer_dep_cache: FxDashMap<PathBuf, Arc<…>>`. |
-| `ResolverCaches`                    | `crates/rolldown_plugin_vite_resolve/src/resolver.rs:77`                      | `package_json: PackageJsonCache`, `importer_exists: FxDashSet<String>`.                                            |
-| `TsconfigCache`                     | `crates/rolldown_binding/src/transform_cache.rs:12`                           | `resolver: Arc<Resolver>`, `cache: FxDashMap<PathBuf, Arc<TsConfig>>`. NAPI-exposed (`#[napi]`).                   |
-| `RawTransformOptions` `cache` field | `crates/rolldown_common/src/inner_bundler_options/types/transform_options.rs` | tsconfig → compiled Oxc transform options.                                                                         |
-| oxc_resolver internal cache         | external crate, held by the bundler-level `SharedResolver`                    | filesystem/path metadata.                                                                                          |
+| Type                                | Location                                                                      | Stores                                                                                                              |
+| ----------------------------------- | ----------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------- |
+| `PackageJsonCache`                  | `crates/rolldown_plugin_vite_resolve/src/package_json_cache.rs:9`             | `side_effects_cache: FxDashMap<PathBuf, Arc<PackageJson>>`, `optional_peer_dep_cache: FxDashMap<PathBuf, Arc<…>>`.  |
+| `ResolverCaches`                    | `crates/rolldown_plugin_vite_resolve/src/resolver.rs:77`                      | `package_json: PackageJsonCache`, `importer_exists: FxDashSet<String>`.                                             |
+| `TsconfigCache`                     | `packages/rolldown/src/utils/resolve-tsconfig.ts`                             | Wraps oxc-resolver's `ResolverFactory` and passes it to the binding so resolve and transform APIs reuse its caches. |
+| `RawTransformOptions` `cache` field | `crates/rolldown_common/src/inner_bundler_options/types/transform_options.rs` | tsconfig → compiled Oxc transform options.                                                                          |
+| oxc_resolver internal cache         | external crate, held by the bundler-level `SharedResolver`                    | filesystem/path metadata.                                                                                           |
 
 ### 4. Plugin scratch state (in `PluginContext.meta()`)
 

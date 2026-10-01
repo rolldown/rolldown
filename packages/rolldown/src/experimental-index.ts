@@ -17,7 +17,6 @@ export {
   type ResolveResult,
   ResolverFactory,
 } from './binding.cjs';
-export { resolveTsconfig } from './utils/resolve-tsconfig';
 
 export { defineParallelPlugin } from './plugin/parallel-plugin';
 
@@ -141,5 +140,9 @@ export const TsconfigCache: typeof TsconfigCache_ = TsconfigCache_;
 export type TsconfigRawOptions = TsconfigRawOptions_;
 /** @deprecated Use from `rolldown/utils` instead. */
 export type TsconfigCompilerOptions = TsconfigCompilerOptions_;
+
+import { resolveTsconfigSync as resolveTsconfigSync_ } from './utils/resolve-tsconfig';
+/** @deprecated Use from `rolldown/utils` instead. */
+export const resolveTsconfig: typeof resolveTsconfigSync_ = resolveTsconfigSync_;
 
 // #endregion

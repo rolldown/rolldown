@@ -64,10 +64,12 @@ Rust core — see [implementation.md](./implementation.md).
    preload (`reuseWorker.size > 0`) throws on the synchronous CommonJS load,
    and the napi-rs loader keeps emnapi's thread manager private. The cost:
    a process that only imports rolldown pays about 1 ms more load time and
-   about 20 MB more peak RSS for Workers it never uses, and the count is read
-   at load, so a later `configureAsyncRuntime` gets stale Workers (CurrentThread
-   leaves the preloaded ones idle and unref'd; a larger count adds the rest
-   lazily). The next batched napi-rs / emnapi release should take it upstream
+   about 20 MB more peak RSS for Workers it never uses. The count is read at
+   load, so the patch also wraps `configureAsyncRuntime`: a later configure
+   (docs/guide/wasi.md recommends `CurrentThread` right after the import)
+   terminates the idle Workers above the new count and preloads the missing
+   ones, so the pool matches the configured runtime, not the one at load.
+   The next batched napi-rs / emnapi release should take it upstream
    (emnapi: allow a sized pool with a synchronous instantiate; napi-rs: a
    loader option), and the patch goes away. See
    [implementation.md](./implementation.md) §13, "Pool worker preload".

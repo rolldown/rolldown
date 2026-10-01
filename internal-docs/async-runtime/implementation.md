@@ -1100,17 +1100,38 @@ build-order coupling is needed to keep one flavor from overwriting the other.
   hangs the build); a synchronous throw drops and terminates that Worker and
   stops. Nothing in it can fail the load. The load failure still raises the
   crash flags, so the disposer rejects later, as for any pool Worker that dies.
+  The same block wraps `configureAsyncRuntime` on `__napiModule.exports`
+  (`__matchWasiPoolWorkersToConfigure`), because the count is read at load
+  and a later configure would otherwise leave the pool at the old count
+  (CurrentThread kept 2 idle Workers, about +21 MB after a build). The wrapper
+  calls the original first (a throw propagates and skips the rest), then,
+  in a `try`/`catch`, pops the idle Workers above the new count off the end
+  of `unusedWorkers` (last in first out, like a spawn takes them), passes
+  each to `terminateWorker`, and resets its `onmessage`: `terminateWorker`
+  installs a reporter, and a Worker still loading posts `loaded` after it,
+  which printed `received "loaded" command from terminated worker` in 4 of
+  106 race runs without the reset (0 of 93 with it). Then
+  `__preloadWasiPoolWorkers` tops the pool up to a larger count. A Worker
+  that a spawn already took is not in `unusedWorkers` and is left alone.
+  RSS does not return at once when they terminate (113 MB 1.5 s after the
+  configure vs 99 MB without a preload), but after a build it is back to the
+  no-preload baseline (170-176 MB vs 172-174 MB; 193-195 MB without the
+  wrapper).
   `binding-loader-codegen.ts` (`insertWasiPoolWorkerPreload`,
   `assertWasiPoolWorkerPreload`) is idempotent and throws when an anchor
   (`reuseWorker: true,`, `__captureWasiThreadManager,`,
-  `function __getWasiThreadManager() {`, the `getAsyncRuntimeConfig` export,
-  the insertion point) is not there exactly once. Tests:
+  `function __getWasiThreadManager() {`, the `getAsyncRuntimeConfig` and
+  `configureAsyncRuntime` exports in the tail, the insertion point) is not
+  there exactly once. Tests:
   `tests/binding-loader-codegen.test.ts` (insertion, anchors, stubbed manager
-  incl. the synchronous throw) and `tests/wasi/pool-worker-preload.mjs`
+  incl. the synchronous throw and the configure wrapper) and
+  `tests/wasi/pool-worker-preload.mjs`
   (`test:wasi-pool-preload`, debug and release-threaded jobs: Workers at
   import = `workerThreads`, none more on the first builds, none under
   CurrentThread, an import-only process exits on its own, a preloaded Worker
-  that fails to load is replaced). Measured: see §3 (first-build cost).
+  that fails to load is replaced, a configure to CurrentThread after or
+  during the load ends the preloaded Workers and builds like the single case,
+  a configure to 4 Workers preloads 4). Measured: see §3 (first-build cost).
 - The deferred workerd loader is the cli's output too, not a rolldown render:
   `rolldown-binding.wasip1-deferred.js` and its `.d.ts` come out of the same
   `build-binding:wasi-single` run as the eager pair and are committed verbatim,

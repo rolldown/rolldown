@@ -19,6 +19,14 @@
 //   load-failure  the N preloaded Workers fail to instantiate the wasm: each raises
 //                 the loader's crash flag and exits; they leave the pool, so the
 //                 next build creates N fresh Workers and succeeds
+//   configure-single        once the N preloaded Workers loaded, the public
+//                 configureAsyncRuntime({ flavor: 'CurrentThread' }): all N exit, and
+//                 the builds create what the single case's builds create
+//   configure-single-early  the same configure right after the import, while the
+//                 N Workers still load
+//   configure-4   configureAsyncRuntime({ workerThreads: 4 }) right after the import:
+//                 4 pool Workers before the builds, none more from them
+// The configure cases also fail on emnapi's 'terminated worker' report in the output.
 // Every case fails on an uncaught exception or unhandled rejection, and a child
 // still alive after CASE_TIMEOUT_MS is killed and counts as a hang.
 // Skips (exit 0) unless the artifact is the threaded WASI one and MultiThread works.
@@ -39,6 +47,8 @@ const CASE_TIMEOUT_MS = 30_000;
 const IMPORT_ONLY_EXIT_MS = 5_000;
 // How long the load-failure child waits for the failing Workers to exit.
 const LOAD_FAILURE_EXIT_TIMEOUT_MS = 10_000;
+// How long a configure child waits for the preloaded Workers to load or exit.
+const CONFIGURE_WAIT_TIMEOUT_MS = 10_000;
 const POOL_WORKER_FILE = 'wasi-worker.mjs';
 const LOAD_FAILURE_WORKER = fileURLToPath(
   new URL('./pool-preload-load-failure-worker.mjs', import.meta.url),
@@ -49,6 +59,19 @@ const CASES = {
   single: { env: { ROLLDOWN_RUNTIME: 'single' }, flavor: 'CurrentThread' },
   'import-only': { env: {} },
   'load-failure': { env: {} },
+  // Each builds what `single` builds: they run after it, see `judge`.
+  'configure-single': {
+    env: {},
+    configure: { flavor: 'CurrentThread' },
+    waitLoaded: true,
+    baseline: 'single',
+  },
+  'configure-single-early': {
+    env: {},
+    configure: { flavor: 'CurrentThread' },
+    baseline: 'single',
+  },
+  'configure-4': { env: {}, configure: { workerThreads: 4 } },
 };
 
 const childIndex = process.argv.indexOf(CHILD_FLAG);
@@ -76,6 +99,8 @@ async function runAll() {
   const workDir = mkdtempSync(path.join(os.tmpdir(), 'rolldown-wasi-pool-preload-'));
   const fixture = path.join(workDir, 'fixture');
   const failures = [];
+  // The pool Workers each case's builds created, per run: a baseline for later cases.
+  const byBuilds = new Map();
   const started = Date.now();
   try {
     writeChain(fixture, MODULES);
@@ -83,7 +108,11 @@ async function runAll() {
       for (let run = 1; run <= RUNS; run++) {
         const label = `${mode} #${run}`;
         const result = await spawnCase(mode, fixture, spec.env);
-        const problem = judge(mode, spec, result);
+        const problem = judge(mode, spec, result, byBuilds);
+        const facts = JSON.parse(result.output.match(/^RESULT (.*)$/m)?.[1] ?? 'null');
+        if (facts && typeof facts.byBuilds === 'number') {
+          byBuilds.set(mode, [...(byBuilds.get(mode) ?? []), facts.byBuilds]);
+        }
         console.log(`${problem ? 'FAIL' : 'PASS'} ${label} (code ${result.code}, ${result.ms} ms)`);
         if (problem) {
           failures.push(label);
@@ -102,7 +131,7 @@ async function runAll() {
   }
 }
 
-function judge(mode, spec, result) {
+function judge(mode, spec, result, byBuilds) {
   if (result.timedOut) return `still alive after ${CASE_TIMEOUT_MS} ms (hang)`;
   if (result.signal) return `killed by signal ${result.signal}`;
   if (result.code !== 0) return `exited with code ${result.code}`;
@@ -137,10 +166,52 @@ function judge(mode, spec, result) {
     }
     return facts.builds === 'ok' ? null : `builds: ${facts.builds}`;
   }
+  if (spec.configure) {
+    return judgeConfigure(spec, result, facts, byBuilds) ?? judgeBuilds(facts);
+  }
   if (flavor === 'MultiThread' && facts.byBuilds !== 0) {
     return `the first builds created ${facts.byBuilds} more pool Workers, expected 0`;
   }
+  return judgeBuilds(facts);
+}
+
+function judgeBuilds(facts) {
   return facts.builds === 'ok' ? null : `builds: ${facts.builds}`;
+}
+
+// After the import read N Workers into the pool, the public configureAsyncRuntime
+// matches the idle pool to its count.
+function judgeConfigure(spec, result, facts, byBuilds) {
+  if (facts.configure !== 'ok') return `configureAsyncRuntime: ${facts.configure}`;
+  // A Worker that was terminated while it loaded must not be reported.
+  if (result.output.includes('terminated worker')) return `emnapi reported a terminated worker`;
+  const expected = { ...facts.configured, ...spec.configure };
+  if (JSON.stringify(expected) !== JSON.stringify(facts.configured)) {
+    return `config after configure ${JSON.stringify(facts.configured)}`;
+  }
+  const count = facts.configured.flavor === 'MultiThread' ? facts.configured.workerThreads : 0;
+  if (spec.waitLoaded && facts.loadedBeforeConfigure !== facts.afterImport) {
+    return `${facts.loadedBeforeConfigure} of ${facts.afterImport} preloaded Workers loaded before the configure`;
+  }
+  // Idle Workers above the new count exit; none of the others do.
+  const exited = Math.max(facts.afterImport - count, 0);
+  if (facts.preloadedExited !== exited) {
+    return `${facts.preloadedExited} preloaded Workers exited after the configure, expected ${exited}`;
+  }
+  if (facts.beforeBuilds !== Math.max(facts.afterImport, count)) {
+    return `${facts.beforeBuilds} pool Workers before the builds, expected ${Math.max(facts.afterImport, count)}`;
+  }
+  if (count > 0) {
+    return facts.byBuilds === 0
+      ? null
+      : `the first builds created ${facts.byBuilds} more pool Workers, expected 0`;
+  }
+  // CurrentThread: the builds create what they create without a preload.
+  const baseline = byBuilds.get(spec.baseline) ?? [];
+  if (baseline.length === 0 || baseline.some((value) => value !== facts.byBuilds)) {
+    return `the builds created ${facts.byBuilds} pool Workers, the ${spec.baseline} case's created ${JSON.stringify(baseline)}`;
+  }
+  return null;
 }
 
 function spawnCase(mode, fixture, runtimeEnv) {
@@ -224,8 +295,11 @@ async function runCase(mode, fixture) {
       }
       super(filename, options);
       if (isPool) {
-        const record = { fail, exited: false };
+        const record = { fail, loaded: false, exited: false };
         this.once('exit', () => (record.exited = true));
+        this.on('message', (data) => {
+          if (data?.__emnapi__?.type === 'loaded') record.loaded = true;
+        });
         poolWorkers.push(record);
       }
     }
@@ -245,7 +319,7 @@ async function runCase(mode, fixture) {
   }
 
   const { rolldown } = await import('rolldown');
-  const { getAsyncRuntimeConfig } = await import('rolldown/experimental');
+  const { configureAsyncRuntime, getAsyncRuntimeConfig } = await import('rolldown/experimental');
   failPoolWorkers = false;
   const afterImport = poolWorkers.length;
   const { flavor, workerThreads: configured } = getAsyncRuntimeConfig();
@@ -268,7 +342,30 @@ async function runCase(mode, fixture) {
     facts.crashFlag = crashFlag instanceof Int32Array ? Atomics.load(crashFlag, 0) : null;
   }
 
+  const spec = CASES[mode];
+  if (spec.configure) {
+    const preloaded = poolWorkers.slice(0, afterImport);
+    if (spec.waitLoaded) {
+      await waitUntil(() => preloaded.every((worker) => worker.loaded));
+    }
+    facts.loadedBeforeConfigure = preloaded.filter((worker) => worker.loaded).length;
+    try {
+      configureAsyncRuntime(spec.configure);
+      facts.configure = 'ok';
+    } catch (error) {
+      facts.configure = `threw: ${error?.message}`;
+    }
+    facts.configured = getAsyncRuntimeConfig();
+    const { flavor: nextFlavor, workerThreads: nextCount } = facts.configured;
+    const keep = nextFlavor === 'MultiThread' ? nextCount : 0;
+    await waitUntil(() => preloaded.filter((worker) => worker.exited).length >= afterImport - keep);
+    // One more turn, so a 'loaded' from a terminated Worker would arrive now.
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    facts.preloadedExited = preloaded.filter((worker) => worker.exited).length;
+  }
+
   const beforeBuilds = poolWorkers.length;
+  facts.beforeBuilds = beforeBuilds;
   const plugin = {
     name: 'pool-preload-js-plugin',
     // Called from the pool threads through a threadsafe function on every module.
@@ -293,4 +390,11 @@ async function runCase(mode, fixture) {
   }
   facts.byBuilds = poolWorkers.length - beforeBuilds;
   say(`RESULT ${JSON.stringify(facts)}`);
+}
+
+async function waitUntil(done) {
+  const deadline = Date.now() + CONFIGURE_WAIT_TIMEOUT_MS;
+  while (!done() && Date.now() <= deadline) {
+    await new Promise((resolve) => setTimeout(resolve, 5));
+  }
 }

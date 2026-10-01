@@ -4,7 +4,7 @@
   "compatibility_date": "2026-09-04",
   "previews": {},
   "assets": {
-    "directory": "./.vitepress/dist",
+    "directory": "./dist",
     "html_handling": "auto-trailing-slash",
     "not_found_handling": "404-page",
   },

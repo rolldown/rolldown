@@ -94,6 +94,6 @@
   },
   "inference": {
     "appType": "static",
-    "outputDir": ".vitepress/dist"
+    "outputDir": "dist"
   }
 }

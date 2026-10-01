@@ -1,6 +1,5 @@
 {
   "compilerOptions": {
-    "outDir": "dist",
     "target": "esnext",
     "module": "esnext",
     "moduleResolution": "bundler",
@@ -10,9 +9,10 @@
     "strict": true,
     "noUnusedLocals": true,
     "skipLibCheck": true,
-    "jsx": "preserve",
+    "jsx": "react-jsx",
+    "jsxImportSource": "preact",
     "noEmit": true,
     "allowImportingTsExtensions": true
   },
-  "include": ["src/**/*", ".vitepress/**/*"]
+  "include": ["theme/**/*", "doc-kit.config.mjs", "typedoc.config.mjs"]
 }

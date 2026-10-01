@@ -140,7 +140,7 @@ to = "/in-depth/automatic-code-splitting"
 from = "/options/output-clean-dir"
 to = "/reference/OutputOptions.cleanDir"
 
-# https://github.com/okineadev/vitepress-plugin-llms#netlify
+# The Markdown sources of the pages, and llms.txt / llms-full.txt
 [[redirects]]
 from = "/*.txt"
 status = 301

@@ -1333,8 +1333,7 @@ dependencies = [
 [[package]]
 name = "napi"
 version = "3.14.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "15301c22171e8397a7b17beb3c75bf486bf67ca3bdad8ea347835b770df61969"
+source = "git+https://github.com/napi-rs/napi-rs?rev=4d6f0a6fad0629d521e2b2236b4e5bc16fc45752#4d6f0a6fad0629d521e2b2236b4e5bc16fc45752"
 dependencies = [
  "anyhow",
  "bitflags",
@@ -1354,8 +1353,7 @@ dependencies = [
 [[package]]
 name = "napi-async-runtime"
 version = "0.2.4"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "83a30fbbb1fe5ef885a2a79d26256a2e040ba03abfe922a9b20f455a69a2736f"
+source = "git+https://github.com/napi-rs/napi-rs?rev=4d6f0a6fad0629d521e2b2236b4e5bc16fc45752#4d6f0a6fad0629d521e2b2236b4e5bc16fc45752"
 dependencies = [
  "arc-swap",
  "async-task",
@@ -1369,41 +1367,37 @@ dependencies = [
 [[package]]
 name = "napi-build"
 version = "2.6.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b899b545d3aa6dca985939059f258c5488d34e4ecf39c274e20009748f4b846d"
+source = "git+https://github.com/napi-rs/napi-rs?rev=4d6f0a6fad0629d521e2b2236b4e5bc16fc45752#4d6f0a6fad0629d521e2b2236b4e5bc16fc45752"
 
 [[package]]
 name = "napi-derive"
 version = "3.6.10"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d11174f7507d7f6cdd69874f541eff194e81c95652b775e69036bcf8d5b7a805"
+source = "git+https://github.com/napi-rs/napi-rs?rev=4d6f0a6fad0629d521e2b2236b4e5bc16fc45752#4d6f0a6fad0629d521e2b2236b4e5bc16fc45752"
 dependencies = [
  "convert_case",
  "ctor",
  "napi-derive-backend",
  "proc-macro2",
  "quote",
- "syn 2.0.119",
+ "syn 3.0.6",
 ]
 
 [[package]]
 name = "napi-derive-backend"
 version = "6.1.4"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "fd6856fe1686867da90ed0dc292d7c0c87a695eb7c578b913360f33619ee01e3"
+source = "git+https://github.com/napi-rs/napi-rs?rev=4d6f0a6fad0629d521e2b2236b4e5bc16fc45752#4d6f0a6fad0629d521e2b2236b4e5bc16fc45752"
 dependencies = [
  "convert_case",
  "proc-macro2",
  "quote",
  "semver",
- "syn 2.0.119",
+ "syn 3.0.6",
 ]
 
 [[package]]
 name = "napi-sys"
 version = "3.4.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e22a4f25c16a5c5411d987cd6fbd48313522ae1789ade2d6dd3efdc6d40a0fc8"
+source = "git+https://github.com/napi-rs/napi-rs?rev=4d6f0a6fad0629d521e2b2236b4e5bc16fc45752#4d6f0a6fad0629d521e2b2236b4e5bc16fc45752"
 dependencies = [
  "libloading",
 ]

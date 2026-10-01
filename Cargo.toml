@@ -380,3 +380,18 @@ strip = "none"
 # See internal-docs/async-runtime/implementation.md
 [patch.crates-io]
 parking_lot_core = { git = "https://github.com/napi-rs/parking_lot", rev = "eb33ab62f79d27d1c7880b60e06187be1cbd21f4" }
+# TEMPORARY - validates the threaded WASI pool preload against the unreleased napi-rs head
+# 4d6f0a6f (branch feat/wasi-thread-pool-preload, PR napi-rs/napi-rs#3558; pairs with the cli
+# tarball in pnpm-workspace.yaml). napi-async-runtime adds the `napi_wasm_runtime_pool_workers`
+# export the generated threaded loader reads to size emnapi's idle Worker pool. Once a backend
+# has started it reads 0 (its pool threads already exist), so a reconcile after the first use
+# only releases idle Workers. All six crates, so the graph keeps one napi-sys (`oxc_*_napi`
+# included). napi-derive needs the exact version because the napi-rs repo also holds a fixture
+# crate named `napi-derive`. Replaced by the released versions.
+# See internal-docs/async-runtime/implementation.md (section 13, "Pool worker preload").
+napi = { git = "https://github.com/napi-rs/napi-rs", rev = "4d6f0a6fad0629d521e2b2236b4e5bc16fc45752" }
+napi-sys = { git = "https://github.com/napi-rs/napi-rs", rev = "4d6f0a6fad0629d521e2b2236b4e5bc16fc45752" }
+napi-build = { git = "https://github.com/napi-rs/napi-rs", rev = "4d6f0a6fad0629d521e2b2236b4e5bc16fc45752" }
+napi-derive = { git = "https://github.com/napi-rs/napi-rs", rev = "4d6f0a6fad0629d521e2b2236b4e5bc16fc45752", version = "=3.6.10" }
+napi-derive-backend = { git = "https://github.com/napi-rs/napi-rs", rev = "4d6f0a6fad0629d521e2b2236b4e5bc16fc45752" }
+napi-async-runtime = { git = "https://github.com/napi-rs/napi-rs", rev = "4d6f0a6fad0629d521e2b2236b4e5bc16fc45752" }

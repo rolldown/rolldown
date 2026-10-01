@@ -1,5 +1,6 @@
 // Guard that a built dist contains EXACTLY the expected WASI artifact set for
-// its flavor, and that only the threaded wasm links the heap-sync allocator.
+// its flavor, and that only the threaded wasm links the heap-sync allocator and
+// exports the pool size its loader preloads (`napi_wasm_runtime_pool_workers`).
 // packages/rolldown/copy-addon-plugin.ts copies that set into dist;
 // if its list drops a file (as happened with `wasip1-deferred`) the package
 // ships without it while every build stays green. This guard holds its OWN copy
@@ -204,6 +205,21 @@ if (heapSyncFailures.length > 0) {
       "napi-build's `wasi-heap-sync` feature (the `--wrap` link args and the " +
       '`malloc` / `free` export shim). Check the napi / napi-build versions in ' +
       'Cargo.lock and that the Rust `#[global_allocator]` ends in libc `malloc`.',
+  );
+  process.exit(1);
+}
+
+// The threaded loader sizes emnapi's idle Worker pool from this export
+// (napi-async-runtime, threaded WASI only). Without it the loader skips the preload
+// silently and the first build boots its Workers again.
+// See internal-docs/async-runtime/implementation.md (section 13, "Pool worker preload").
+const POOL_WORKERS_EXPORT = 'napi_wasm_runtime_pool_workers';
+const poolExported = wasmExports.get(POOL_WORKERS_EXPORT)?.kind === EXPORT_KIND_FUNCTION;
+if (flavor === 'threaded' ? !poolExported : wasmExports.has(POOL_WORKERS_EXPORT)) {
+  console.error(
+    flavor === 'threaded'
+      ? `WASI pool preload export check failed: ${wasmFile} has no function export ${POOL_WORKERS_EXPORT} (napi-async-runtime)`
+      : `WASI pool preload export check failed: ${wasmFile} exports ${POOL_WORKERS_EXPORT}, which only the threaded wasm has`,
   );
   process.exit(1);
 }

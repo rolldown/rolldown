@@ -3,7 +3,7 @@ import { createRequire } from 'node:module';
 import { fileURLToPath } from 'node:url';
 import { describe, expect, test } from 'vitest';
 
-import { insertWasiPoolWorkerPreload } from '../binding-loader-codegen';
+import { assertWasiThreadPoolPreload } from '../binding-loader-codegen';
 
 const generatedWasiNodeLoader = readFileSync(
   fileURLToPath(new URL('../src/rolldown-binding.wasi.cjs', import.meta.url)),
@@ -82,253 +82,39 @@ describe('generated WASI loader lifecycle', () => {
   });
 });
 
+// The cli emits the preload; rolldown only checks the seam.
 // See internal-docs/async-runtime/implementation.md (section 13, "Pool worker preload").
-describe('generated WASI loader pool worker preload', () => {
-  test('the committed loader carries it once, and inserting it again changes nothing', () => {
-    expect(generatedWasiNodeLoader.split('function __preloadWasiPoolWorkers(').length - 1).toBe(1);
-    expect(insertWasiPoolWorkerPreload(generatedWasiNodeLoader)).toBe(generatedWasiNodeLoader);
-
-    const start = generatedWasiNodeLoader.indexOf("// Inserted by rolldown's build");
-    const call = '__matchWasiPoolWorkersToConfigure(__napiModule.exports)\n} catch {}\n';
-    const end = generatedWasiNodeLoader.indexOf(call, start) + call.length;
-    const unpatched = generatedWasiNodeLoader.slice(0, start) + generatedWasiNodeLoader.slice(end);
-    expect(unpatched).not.toContain('__preloadWasiPoolWorkers');
-    expect(unpatched).not.toContain('__matchWasiPoolWorkersToConfigure');
-    expect(insertWasiPoolWorkerPreload(unpatched)).toBe(generatedWasiNodeLoader);
+describe('generated WASI loader pool worker preload seam', () => {
+  test('the committed threaded loader carries it', () => {
+    expect(() => assertWasiThreadPoolPreload(generatedWasiNodeLoader)).not.toThrow();
   });
 
-  test('a loader that no longer matches its anchors fails the build', () => {
-    expect(() =>
-      insertWasiPoolWorkerPreload(
-        generatedWasiNodeLoader.replace('reuseWorker: true,', 'reuseWorker: false,'),
-      ),
-    ).toThrow(/WASI pool worker preload/);
-    expect(() =>
-      insertWasiPoolWorkerPreload(
-        generatedWasiNodeLoader.replace(
-          '}\nmodule.exports = __napiModule.exports\n',
-          '}\n\nmodule.exports = __napiModule.exports\n',
-        ),
-      ),
-    ).toThrow(/WASI pool worker preload placement/);
-    // The export tail must read the wrapped configureAsyncRuntime back.
-    expect(() =>
-      insertWasiPoolWorkerPreload(
-        generatedWasiNodeLoader.replace(
-          'module.exports.configureAsyncRuntime = __napiModule.exports.configureAsyncRuntime\n',
-          '',
-        ),
-      ),
-    ).toThrow(/WASI pool worker preload/);
-  });
-
-  test('puts one loading worker per MultiThread worker into the pool', () => {
-    const manager = createThreadManagerStub();
-    executeGeneratedWasiNodeLoader({
-      createContext: () => ({ destroy() {} }),
-      threadManager: manager,
-      runtimeConfig: () => ({ flavor: 'MultiThread', workerThreads: 3 }),
-    });
-    expect(manager.allocated).toHaveLength(3);
-    expect(manager.loaded).toEqual(manager.allocated);
-    expect(manager.unusedWorkers).toEqual(manager.allocated);
-  });
-
-  test('preloads nothing under CurrentThread', () => {
-    const manager = createThreadManagerStub();
-    executeGeneratedWasiNodeLoader({
-      createContext: () => ({ destroy() {} }),
-      threadManager: manager,
-      runtimeConfig: () => ({ flavor: 'CurrentThread', workerThreads: 1 }),
-    });
-    expect(manager.allocated).toHaveLength(0);
-  });
-
-  test('drops a worker that failed to load from the pool', async () => {
-    const manager = createThreadManagerStub((worker) =>
-      worker.id === 1 ? Promise.reject(new Error('load failed')) : Promise.resolve(worker),
-    );
-    executeGeneratedWasiNodeLoader({
-      createContext: () => ({ destroy() {} }),
-      threadManager: manager,
-      runtimeConfig: () => ({ flavor: 'MultiThread', workerThreads: 3 }),
-    });
-    await new Promise((resolve) => setTimeout(resolve, 0));
-    expect(manager.unusedWorkers.map((worker) => worker.id)).toEqual([0, 2]);
-  });
-
-  test('stops at a synchronous failure and terminates that worker', () => {
-    const manager = createThreadManagerStub((worker) => {
-      if (worker.id === 1) throw new Error('load threw');
-      return Promise.resolve(worker);
-    });
-    executeGeneratedWasiNodeLoader({
-      createContext: () => ({ destroy() {} }),
-      threadManager: manager,
-      runtimeConfig: () => ({ flavor: 'MultiThread', workerThreads: 3 }),
-    });
-    expect(manager.allocated.map((worker) => worker.id)).toEqual([0, 1]);
-    expect(manager.unusedWorkers.map((worker) => worker.id)).toEqual([0]);
-    expect(manager.terminated.map((worker) => worker.id)).toEqual([1]);
-  });
-
-  test('never fails the load', () => {
-    const manager = createThreadManagerStub();
-    const execution = executeGeneratedWasiNodeLoader({
-      createContext: () => ({ destroy() {} }),
-      threadManager: manager,
-      runtimeConfig: () => {
-        throw new Error('no config');
-      },
-    });
-    expect(manager.allocated).toHaveLength(0);
-    expect(execution.exports.getAsyncRuntimeConfig).toBeTypeOf('function');
-  });
-
-  test('a configure to CurrentThread terminates every idle worker, newest first', () => {
-    const manager = createThreadManagerStub();
-    const runtime = createRuntimeConfigStub({ flavor: 'MultiThread', workerThreads: 3 });
-    const execution = executeGeneratedWasiNodeLoader({
-      createContext: () => ({ destroy() {} }),
-      threadManager: manager,
-      runtimeConfig: runtime.get,
-      configureAsyncRuntime: runtime.configure,
-    });
-    expect(manager.unusedWorkers).toHaveLength(3);
-    configureGenerated(execution, { flavor: 'CurrentThread' });
-    expect(runtime.calls).toEqual([{ flavor: 'CurrentThread' }]);
-    expect(manager.unusedWorkers).toHaveLength(0);
-    expect(manager.terminated.map((worker) => worker.id)).toEqual([2, 1, 0]);
-    // The reporter terminateWorker() left behind is gone again.
-    for (const worker of manager.terminated) {
-      expect(worker.onmessage).toBeUndefined();
+  test('a loader without one of its pieces fails the build', () => {
+    for (const [search, replacement] of [
+      // The count source.
+      ['exports?.napi_wasm_runtime_pool_workers', 'exports?.napi_wasm_runtime_pool_size'],
+      // The configure wrap, and the export tail that reads it back.
+      ['  __wrapWasiConfigureAsyncRuntime(__napiModule.exports)\n', ''],
+      ['module.exports.configureAsyncRuntime = __napiModule.exports.configureAsyncRuntime\n', ''],
+      // The preload call itself.
+      ['try {\n  __reconcileWasiThreadPool()\n} catch {}\n', ''],
+    ]) {
+      expect(generatedWasiNodeLoader).toContain(search);
+      expect(() =>
+        assertWasiThreadPoolPreload(generatedWasiNodeLoader.replace(search, replacement)),
+      ).toThrow(/WASI thread pool preload/);
     }
-    expect(manager.allocated).toHaveLength(3);
   });
 
-  test('a configure that throws leaves the pool alone and rethrows', () => {
-    const manager = createThreadManagerStub();
-    const runtime = createRuntimeConfigStub({ flavor: 'MultiThread', workerThreads: 2 });
-    const execution = executeGeneratedWasiNodeLoader({
-      createContext: () => ({ destroy() {} }),
-      threadManager: manager,
-      runtimeConfig: runtime.get,
-      configureAsyncRuntime: () => {
-        // The configure fails, but the config it would read says CurrentThread:
-        // only the throw keeps the reconcile from running.
-        runtime.config = { flavor: 'CurrentThread', workerThreads: 1 };
-        throw new Error('the runtime already started');
-      },
-    });
-    expect(() => configureGenerated(execution, { flavor: 'CurrentThread' })).toThrow(
-      'the runtime already started',
+  test('a preload call outside the load-to-export-tail window fails the build', () => {
+    const call = 'try {\n  __reconcileWasiThreadPool()\n} catch {}\n';
+    const tail = 'module.exports = __napiModule.exports\n';
+    const moved = generatedWasiNodeLoader.replace(call, '').replace(tail, `${tail}${call}`);
+    expect(() => assertWasiThreadPoolPreload(moved)).toThrow(
+      /preload call between the load try\/catch and the CommonJS export tail/,
     );
-    expect(manager.unusedWorkers.map((worker) => worker.id)).toEqual([0, 1]);
-    expect(manager.terminated).toHaveLength(0);
-    expect(manager.allocated).toHaveLength(2);
-  });
-
-  test('a configure to more workers preloads the missing ones', () => {
-    const manager = createThreadManagerStub();
-    const runtime = createRuntimeConfigStub({ flavor: 'MultiThread', workerThreads: 2 });
-    const execution = executeGeneratedWasiNodeLoader({
-      createContext: () => ({ destroy() {} }),
-      threadManager: manager,
-      runtimeConfig: runtime.get,
-      configureAsyncRuntime: runtime.configure,
-    });
-    configureGenerated(execution, { workerThreads: 4 });
-    expect(manager.allocated).toHaveLength(4);
-    expect(manager.loaded).toEqual(manager.allocated);
-    expect(manager.unusedWorkers).toEqual(manager.allocated);
-    expect(manager.terminated).toHaveLength(0);
-  });
-
-  test('the wrapped configure passes its receiver, arguments and result through', () => {
-    const manager = createThreadManagerStub();
-    const runtime = createRuntimeConfigStub({ flavor: 'MultiThread', workerThreads: 2 });
-    const result = { configured: true };
-    const receivers: unknown[] = [];
-    const execution = executeGeneratedWasiNodeLoader({
-      createContext: () => ({ destroy() {} }),
-      threadManager: manager,
-      runtimeConfig: runtime.get,
-      configureAsyncRuntime(this: unknown, options: unknown) {
-        receivers.push(this);
-        runtime.configure(options as RuntimeConfigPatch);
-        return result;
-      },
-    });
-    expect(configureGenerated(execution, { workerThreads: 2 })).toBe(result);
-    expect(receivers).toEqual([execution.exports]);
-    expect(runtime.calls).toEqual([{ workerThreads: 2 }]);
-    expect(manager.terminated).toHaveLength(0);
-    expect(manager.allocated).toHaveLength(2);
   });
 });
-
-interface PoolWorkerStub {
-  id: number;
-  onmessage?: unknown;
-}
-
-interface RuntimeConfigStub {
-  flavor: string;
-  workerThreads: number;
-}
-
-type RuntimeConfigPatch = Partial<RuntimeConfigStub>;
-
-// A mutable runtime config: getAsyncRuntimeConfig() reads it, and the stub
-// configureAsyncRuntime() merges its options into it, the way the binding does.
-function createRuntimeConfigStub(initial: RuntimeConfigStub) {
-  const runtime = {
-    config: initial,
-    calls: [] as RuntimeConfigPatch[],
-    get: () => runtime.config,
-    configure: (options: RuntimeConfigPatch) => {
-      runtime.calls.push(options);
-      runtime.config = { ...runtime.config, ...options };
-    },
-  };
-  return runtime;
-}
-
-function configureGenerated(
-  execution: { exports: Record<string, unknown> },
-  options: RuntimeConfigPatch,
-): unknown {
-  return (execution.exports.configureAsyncRuntime as (options: RuntimeConfigPatch) => unknown)(
-    options,
-  );
-}
-
-function createThreadManagerStub(
-  load: (worker: PoolWorkerStub) => Promise<unknown> = (worker) => Promise.resolve(worker),
-) {
-  const manager = {
-    unusedWorkers: [] as PoolWorkerStub[],
-    allocated: [] as PoolWorkerStub[],
-    loaded: [] as PoolWorkerStub[],
-    terminated: [] as PoolWorkerStub[],
-    allocateUnusedWorker() {
-      const worker: PoolWorkerStub = { id: manager.allocated.length, onmessage: () => {} };
-      manager.allocated.push(worker);
-      manager.unusedWorkers.push(worker);
-      return worker;
-    },
-    loadWasmModuleToWorker(worker: PoolWorkerStub) {
-      manager.loaded.push(worker);
-      return load(worker);
-    },
-    terminateWorker(worker: PoolWorkerStub) {
-      manager.terminated.push(worker);
-      // emnapi replaces the handler with a reporter that logs every message.
-      worker.onmessage = () => {};
-    },
-  };
-  return manager;
-}
 
 interface GeneratedWasiNodeLoaderOptions {
   createContext: () => {
@@ -337,10 +123,6 @@ interface GeneratedWasiNodeLoaderOptions {
     suppressDestroy?: () => void;
   };
   prepareCleanup?: () => void;
-  // Handed to the loader's plugins as `PThread`, the way emnapi does.
-  threadManager?: object;
-  runtimeConfig?: () => { flavor: string; workerThreads: number };
-  configureAsyncRuntime?: (options: never) => unknown;
 }
 
 class WorkerStub {
@@ -376,10 +158,7 @@ function createHostIntegrationExports(): Record<string, unknown> {
 function executeGeneratedWasiNodeLoader({
   createContext,
   prepareCleanup = () => {},
-  threadManager,
-  runtimeConfig,
-  configureAsyncRuntime,
-}: GeneratedWasiNodeLoaderOptions): { cleanup(): void; exports: Record<string, unknown> } {
+}: GeneratedWasiNodeLoaderOptions): { cleanup(): void } {
   const module: { exports: Record<string, unknown> } = { exports: {} };
   const listeners = {
     beforeExit: [] as Array<() => void>,
@@ -410,14 +189,8 @@ function executeGeneratedWasiNodeLoader({
               _wasm: Uint8Array,
               options: {
                 beforeInit(input: { instance: { exports: Record<string, () => void> } }): void;
-                plugins?: unknown[];
               },
             ) {
-              if (threadManager) {
-                for (const plugin of options.plugins ?? []) {
-                  if (typeof plugin === 'function') plugin({ PThread: threadManager });
-                }
-              }
               const instance = {
                 exports: {
                   napi_prepare_wasm_env_cleanup: prepareCleanup,
@@ -427,13 +200,7 @@ function executeGeneratedWasiNodeLoader({
               return {
                 instance,
                 module: {},
-                napiModule: {
-                  exports: {
-                    ...createHostIntegrationExports(),
-                    ...(runtimeConfig ? { getAsyncRuntimeConfig: runtimeConfig } : {}),
-                    ...(configureAsyncRuntime ? { configureAsyncRuntime } : {}),
-                  },
-                },
+                napiModule: { exports: createHostIntegrationExports() },
               };
             },
           };
@@ -489,7 +256,6 @@ function executeGeneratedWasiNodeLoader({
     { Memory: class {} },
   );
   return {
-    exports: module.exports,
     cleanup() {
       const listener = listeners.exit.at(-1) ?? listeners.beforeExit.at(-1);
       if (!listener) {

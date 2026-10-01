@@ -15,12 +15,6 @@ catalogs:
     '@babel/preset-typescript':
       specifier: ^7.29.7
       version: 7.29.7
-    '@emnapi/core':
-      specifier: 2.0.0-alpha.5
-      version: 2.0.0-alpha.5
-    '@emnapi/runtime':
-      specifier: 2.0.0-alpha.5
-      version: 2.0.0-alpha.5
     '@jridgewell/trace-mapping':
       specifier: ^0.3.31
       version: 0.3.31
@@ -271,7 +265,10 @@ catalogs:
 
 overrides:
   '@napi-rs/cli': file:./.napi-validation/napi-rs-cli.tgz
-  emnapi: 2.0.0-alpha.5
+  '@emnapi/core': file:./.napi-validation/emnapi-core.tgz
+  '@emnapi/runtime': file:./.napi-validation/emnapi-runtime.tgz
+  '@emnapi/wasi-threads': file:./.napi-validation/emnapi-wasi-threads.tgz
+  emnapi: file:./.napi-validation/emnapi.tgz
 
 importers:
 
@@ -548,14 +545,14 @@ importers:
   packages/browser:
     dependencies:
       '@emnapi/core':
-        specifier: 'catalog:'
-        version: 2.0.0-alpha.5
+        specifier: file:../../.napi-validation/emnapi-core.tgz
+        version: file:.napi-validation/emnapi-core.tgz
       '@emnapi/runtime':
-        specifier: 'catalog:'
-        version: 2.0.0-alpha.5
+        specifier: file:../../.napi-validation/emnapi-runtime.tgz
+        version: file:.napi-validation/emnapi-runtime.tgz
       '@napi-rs/wasm-runtime':
         specifier: 'catalog:'
-        version: 1.2.4(@emnapi/core@2.0.0-alpha.5)(@emnapi/runtime@2.0.0-alpha.5)
+        version: 1.2.4(@emnapi/core@file:.napi-validation/emnapi-core.tgz)(@emnapi/runtime@file:.napi-validation/emnapi-runtime.tgz)
 
   packages/browser-tests:
     devDependencies:
@@ -591,20 +588,20 @@ importers:
         version: 1.0.1
     devDependencies:
       '@emnapi/core':
-        specifier: 'catalog:'
-        version: 2.0.0-alpha.5
+        specifier: file:../../.napi-validation/emnapi-core.tgz
+        version: file:.napi-validation/emnapi-core.tgz
       '@emnapi/runtime':
-        specifier: 'catalog:'
-        version: 2.0.0-alpha.5
+        specifier: file:../../.napi-validation/emnapi-runtime.tgz
+        version: file:.napi-validation/emnapi-runtime.tgz
       '@napi-rs/async-runtime':
         specifier: 'catalog:'
         version: 0.2.0
       '@napi-rs/cli':
         specifier: file:../../.napi-validation/napi-rs-cli.tgz
-        version: file:.napi-validation/napi-rs-cli.tgz(@emnapi/core@2.0.0-alpha.5)(@emnapi/runtime@2.0.0-alpha.5)(@types/node@24.10.3)(emnapi@2.0.0-alpha.5(node-addon-api@8.9.2))(supports-color@10.2.2)
+        version: file:.napi-validation/napi-rs-cli.tgz(@emnapi/core@file:.napi-validation/emnapi-core.tgz)(@emnapi/runtime@file:.napi-validation/emnapi-runtime.tgz)(@types/node@24.10.3)(emnapi@file:.napi-validation/emnapi.tgz(node-addon-api@8.9.2))(supports-color@10.2.2)
       '@napi-rs/wasm-runtime':
         specifier: 'catalog:'
-        version: 1.2.4(@emnapi/core@2.0.0-alpha.5)(@emnapi/runtime@2.0.0-alpha.5)
+        version: 1.2.4(@emnapi/core@file:.napi-validation/emnapi-core.tgz)(@emnapi/runtime@file:.napi-validation/emnapi-runtime.tgz)
       '@oxc-node/cli':
         specifier: 'catalog:'
         version: 0.1.3
@@ -618,8 +615,8 @@ importers:
         specifier: 'catalog:'
         version: 3.4.2
       emnapi:
-        specifier: 2.0.0-alpha.5
-        version: 2.0.0-alpha.5(node-addon-api@8.9.2)
+        specifier: file:../../.napi-validation/emnapi.tgz
+        version: file:.napi-validation/emnapi.tgz(node-addon-api@8.9.2)
       execa:
         specifier: 'catalog:'
         version: 9.6.1
@@ -1149,7 +1146,7 @@ importers:
     devDependencies:
       '@napi-rs/cli':
         specifier: file:../.napi-validation/napi-rs-cli.tgz
-        version: file:.napi-validation/napi-rs-cli.tgz(@emnapi/core@2.0.0-alpha.5)(@emnapi/runtime@2.0.0-alpha.5)(@types/node@24.10.3)(emnapi@2.0.0-alpha.5(node-addon-api@8.9.2))(supports-color@10.2.2)
+        version: file:.napi-validation/napi-rs-cli.tgz(@emnapi/core@file:.napi-validation/emnapi-core.tgz)(@emnapi/runtime@file:.napi-validation/emnapi-runtime.tgz)(@types/node@24.10.3)(emnapi@file:.napi-validation/emnapi.tgz(node-addon-api@8.9.2))(supports-color@10.2.2)
       '@oxc-node/cli':
         specifier: 'catalog:'
         version: 0.1.3
@@ -1967,35 +1964,17 @@ packages:
   '@drizzle-team/brocli@0.10.2':
     resolution: {integrity: sha512-z33Il7l5dKjUgGULTqBsQBQwckHh5AbIuxhdsIxDDiZAzBOrZO6q9ogcWC65kU382AfynTfgNumVcNIjuIua6w==}
 
-  '@emnapi/core@1.11.2':
-    resolution: {integrity: sha512-TC8MkTuZUtcTSiFeuC0ksCh9QIJ5+F21MvZ4Wn4ORfYaFJ/0dsiudv5tVkejgwZlwQ39jL9WWDe2lz8x0WglOA==}
+  '@emnapi/core@file:.napi-validation/emnapi-core.tgz':
+    resolution: {integrity: sha512-MNVvMV7WtEJMgqaWJMvCyupK7Oi8sZctUIgPRZTsiS3cVvefk8DXPflOU3MSBddtj/rrYHygpYgpHDgwXnI3+w==, tarball: file:.napi-validation/emnapi-core.tgz}
+    version: 2.0.0-alpha.6
 
-  '@emnapi/core@1.9.2':
-    resolution: {integrity: sha512-UC+ZhH3XtczQYfOlu3lNEkdW/p4dsJ1r/bP7H8+rhao3TTTMO1ATq/4DdIi23XuGoFY+Cz0JmCbdVl0hz9jZcA==}
+  '@emnapi/runtime@file:.napi-validation/emnapi-runtime.tgz':
+    resolution: {integrity: sha512-9taz8hVoZRZskpyiBq7XiXjrLqwWNnmtHE50d1k6dqBqcLn4EU3rw3gJJg+j9P5d6Z9Pv5QRLIvIkQBK5r01Ow==, tarball: file:.napi-validation/emnapi-runtime.tgz}
+    version: 2.0.0-alpha.6
 
-  '@emnapi/core@2.0.0-alpha.5':
-    resolution: {integrity: sha512-DbeLFquQJyYGwM3LzPdjvb4IRmAAQuTzEmqUGtIAYxlAO4ArfUZ7WMytLWDSsCAYm6MZJNeojaawQQiFrFVehg==}
-
-  '@emnapi/runtime@1.11.2':
-    resolution: {integrity: sha512-kyOl3X0DuTiT1h2ft8r2fYO8JYtU9a9Xis/zBSiGArNaagCOWx90N1k2wxp18czFDH+OgcWGb5ZP/XMt3dcyPA==}
-
-  '@emnapi/runtime@1.11.3':
-    resolution: {integrity: sha512-Xz4Tpyki7XyrpbUK1jR1AhdAdaXyhhY4lZ3neLodmhpuWfy2PAQN5B46sAiU4liOXGLkHypn/qU+jvfWSCYYLA==}
-
-  '@emnapi/runtime@1.9.2':
-    resolution: {integrity: sha512-3U4+MIWHImeyu1wnmVygh5WlgfYDtyf0k8AbLhMFxOipihf6nrWC4syIm/SwEeec0mNSafiiNnMJwbza/Is6Lw==}
-
-  '@emnapi/runtime@2.0.0-alpha.5':
-    resolution: {integrity: sha512-SS4jUXRklsrPKTEtW92WHdneh9QBrZGmRyeYEac2ktLN3ie1wd/BrkBbk4DqPWKhjSFfrR8NClXwMlfZ73m60A==}
-
-  '@emnapi/wasi-threads@1.2.1':
-    resolution: {integrity: sha512-uTII7OYF+/Mes/MrcIOYp5yOtSMLBWSIoLPpcgwipoiKbli6k322tcoFsxoIIxPDqW01SQGAgko4EzZi2BNv2w==}
-
-  '@emnapi/wasi-threads@1.2.2':
-    resolution: {integrity: sha512-c95qOXkHdydNKhscBTebqEC1CVAZpyqOfVfBzQ1qgzyl3gfeldUjIggDbIZgDKsHLgnsM+igH7TJ/eAasaVuMA==}
-
-  '@emnapi/wasi-threads@2.1.0':
-    resolution: {integrity: sha512-DM18NXgQ5coifswrwhFgrqeW/UiFRaLj0aLKU0cp0FoYjEfP/hj/yUeF+Hz754ViG+jQmG2HIeDCUeQsPnRwOA==}
+  '@emnapi/wasi-threads@file:.napi-validation/emnapi-wasi-threads.tgz':
+    resolution: {integrity: sha512-JP7OYH38Q7+pyTAe14raZHLQIK7BDKbdwji+Xi3pcd/6QkJYQH3SX4wu6EplGrGJWRepoNzedfm0G3B9Z4e9Rw==, tarball: file:.napi-validation/emnapi-wasi-threads.tgz}
+    version: 2.2.0
 
   '@emotion/is-prop-valid@1.2.2':
     resolution: {integrity: sha512-uNsoYd37AFmaCdXlg6EYD1KaPOaRWRByMCYzbKUX4+hhMfrxdVSelShywL4JVaAeM/eHUOSprYBQls+/neX3pw==}
@@ -3300,14 +3279,14 @@ packages:
     engines: {node: ^20.19.0 || ^22.13.0 || >=23.5.0}
 
   '@napi-rs/cli@file:.napi-validation/napi-rs-cli.tgz':
-    resolution: {integrity: sha512-afioJvHzy2YNNujj5iJX0x1rrv6962Ijdf68DnKnWxLVskn1+PpJp1yGtJAiRTFtkT5vlxjA7IK4m6H28ShkbQ==, tarball: file:.napi-validation/napi-rs-cli.tgz}
-    version: 3.10.5
+    resolution: {integrity: sha512-WOlzSffYyoNQ9TLn4krBJ9RzoygK3EKoBjHhNvVhfdK+qzOF0JEGSWQZV1W/9zwApmGvVBMaT5hp+bOaO29wQQ==, tarball: file:.napi-validation/napi-rs-cli.tgz}
+    version: 3.10.6
     engines: {node: ^20.17.0 || ^22.13.0 || >= 23.5.0}
     hasBin: true
     peerDependencies:
       '@emnapi/core': ^1.7.1 || ^2.0.0-alpha.4
       '@emnapi/runtime': ^1.7.1 || ^2.0.0-alpha.4
-      emnapi: 2.0.0-alpha.5
+      emnapi: ^1.7.1 || ^2.0.0-alpha.4
     peerDependenciesMeta:
       '@emnapi/core':
         optional: true
@@ -3651,6 +3630,7 @@ packages:
 
   '@napi-rs/wasm-runtime@1.2.4':
     resolution: {integrity: sha512-AJxoUD2/15ESHbvpcyjU274nsAPLuOtPHCk0vKJM5pj//Fg/B1FXNWjPnXTT9PymCYYiHo4zPj0ZomXBKhoy7g==}
+    version: 1.2.4
     engines: {node: ^20.19.0 || ^22.13.0 || >=23.5.0}
     peerDependencies:
       '@emnapi/core': ^1.7.1 || ^2.0.0-alpha.4
@@ -6753,8 +6733,9 @@ packages:
     resolution: {integrity: sha512-gYCwo7kh5S3IDyZPLZf6hSS0MnZT8QmJFqYvbqlDZSbwdZlY6QZWxJ4i/6UhITOJ4XzyI647Bm2MXKCLqnJ4nQ==}
     engines: {node: '>4.0'}
 
-  emnapi@2.0.0-alpha.5:
-    resolution: {integrity: sha512-E8LRA0oYT1KKPLMLtwWF1BNrXSpNNnOBlu1PU4m5wmBh8cNvrhm28UreTvfwJ2gg60ruyfylk4uCaJUXVhvSSg==}
+  emnapi@file:.napi-validation/emnapi.tgz:
+    resolution: {integrity: sha512-GUCiiGXIq5KqfIHs9l1QGcCrP6A7zd1GaQDczunW+Vd6uoCxqMmYt7WoioJi++VmMwgk4iuUBOfWjzDStkBAxQ==, tarball: file:.napi-validation/emnapi.tgz}
+    version: 2.0.0-alpha.6
     peerDependencies:
       node-addon-api: '>= 6.1.0'
     peerDependenciesMeta:
@@ -10140,53 +10121,16 @@ snapshots:
 
   '@drizzle-team/brocli@0.10.2': {}
 
-  '@emnapi/core@1.11.2':
+  '@emnapi/core@file:.napi-validation/emnapi-core.tgz':
     dependencies:
-      '@emnapi/wasi-threads': 1.2.2
-      tslib: 2.8.1
-    optional: true
-
-  '@emnapi/core@1.9.2':
-    dependencies:
-      '@emnapi/wasi-threads': 1.2.1
-      tslib: 2.8.1
-    optional: true
-
-  '@emnapi/core@2.0.0-alpha.5':
-    dependencies:
-      '@emnapi/wasi-threads': 2.1.0
+      '@emnapi/wasi-threads': file:.napi-validation/emnapi-wasi-threads.tgz
       tslib: 2.8.1
 
-  '@emnapi/runtime@1.11.2':
-    dependencies:
-      tslib: 2.8.1
-    optional: true
-
-  '@emnapi/runtime@1.11.3':
-    dependencies:
-      tslib: 2.8.1
-    optional: true
-
-  '@emnapi/runtime@1.9.2':
-    dependencies:
-      tslib: 2.8.1
-    optional: true
-
-  '@emnapi/runtime@2.0.0-alpha.5':
+  '@emnapi/runtime@file:.napi-validation/emnapi-runtime.tgz':
     dependencies:
       tslib: 2.8.1
 
-  '@emnapi/wasi-threads@1.2.1':
-    dependencies:
-      tslib: 2.8.1
-    optional: true
-
-  '@emnapi/wasi-threads@1.2.2':
-    dependencies:
-      tslib: 2.8.1
-    optional: true
-
-  '@emnapi/wasi-threads@2.1.0':
+  '@emnapi/wasi-threads@file:.napi-validation/emnapi-wasi-threads.tgz':
     dependencies:
       tslib: 2.8.1
 
@@ -10819,17 +10763,17 @@ snapshots:
 
   '@img/sharp-wasm32@0.34.5':
     dependencies:
-      '@emnapi/runtime': 1.11.3
+      '@emnapi/runtime': file:.napi-validation/emnapi-runtime.tgz
     optional: true
 
   '@img/sharp-wasm32@0.35.2':
     dependencies:
-      '@emnapi/runtime': 1.11.3
+      '@emnapi/runtime': file:.napi-validation/emnapi-runtime.tgz
     optional: true
 
   '@img/sharp-wasm32@0.35.4':
     dependencies:
-      '@emnapi/runtime': 1.11.3
+      '@emnapi/runtime': file:.napi-validation/emnapi-runtime.tgz
     optional: true
 
   '@img/sharp-webcontainers-wasm32@0.35.2':
@@ -11038,7 +10982,7 @@ snapshots:
 
   '@napi-rs/async-runtime@0.2.0': {}
 
-  '@napi-rs/cli@file:.napi-validation/napi-rs-cli.tgz(@emnapi/core@2.0.0-alpha.5)(@emnapi/runtime@2.0.0-alpha.5)(@types/node@24.10.3)(emnapi@2.0.0-alpha.5(node-addon-api@8.9.2))(supports-color@10.2.2)':
+  '@napi-rs/cli@file:.napi-validation/napi-rs-cli.tgz(@emnapi/core@file:.napi-validation/emnapi-core.tgz)(@emnapi/runtime@file:.napi-validation/emnapi-runtime.tgz)(@types/node@24.10.3)(emnapi@file:.napi-validation/emnapi.tgz(node-addon-api@8.9.2))(supports-color@10.2.2)':
     dependencies:
       '@inquirer/prompts': 8.5.2(@types/node@24.10.3)
       '@napi-rs/cross-toolchain': 1.0.3(supports-color@10.2.2)
@@ -11053,9 +10997,9 @@ snapshots:
       typanion: 3.14.0
       typescript: 6.0.3
     optionalDependencies:
-      '@emnapi/core': 2.0.0-alpha.5
-      '@emnapi/runtime': 2.0.0-alpha.5
-      emnapi: 2.0.0-alpha.5(node-addon-api@8.9.2)
+      '@emnapi/core': file:.napi-validation/emnapi-core.tgz
+      '@emnapi/runtime': file:.napi-validation/emnapi-runtime.tgz
+      emnapi: file:.napi-validation/emnapi.tgz(node-addon-api@8.9.2)
     transitivePeerDependencies:
       - '@napi-rs/cross-toolchain-arm64-target-aarch64'
       - '@napi-rs/cross-toolchain-arm64-target-armv7'
@@ -11170,9 +11114,9 @@ snapshots:
 
   '@napi-rs/lzma-wasm32-wasi@1.5.1':
     dependencies:
-      '@emnapi/core': 1.11.2
-      '@emnapi/runtime': 1.11.2
-      '@napi-rs/wasm-runtime': 1.2.4(@emnapi/core@1.11.2)(@emnapi/runtime@1.11.2)
+      '@emnapi/core': file:.napi-validation/emnapi-core.tgz
+      '@emnapi/runtime': file:.napi-validation/emnapi-runtime.tgz
+      '@napi-rs/wasm-runtime': 1.2.4(@emnapi/core@file:.napi-validation/emnapi-core.tgz)(@emnapi/runtime@file:.napi-validation/emnapi-runtime.tgz)
     optional: true
 
   '@napi-rs/lzma-win32-arm64-msvc@1.5.1':
@@ -11242,9 +11186,9 @@ snapshots:
 
   '@napi-rs/tar-wasm32-wasi@1.1.1':
     dependencies:
-      '@emnapi/core': 1.11.2
-      '@emnapi/runtime': 1.11.2
-      '@napi-rs/wasm-runtime': 1.2.4(@emnapi/core@1.11.2)(@emnapi/runtime@1.11.2)
+      '@emnapi/core': file:.napi-validation/emnapi-core.tgz
+      '@emnapi/runtime': file:.napi-validation/emnapi-runtime.tgz
+      '@napi-rs/wasm-runtime': 1.2.4(@emnapi/core@file:.napi-validation/emnapi-core.tgz)(@emnapi/runtime@file:.napi-validation/emnapi-runtime.tgz)
     optional: true
 
   '@napi-rs/tar-win32-arm64-msvc@1.1.1':
@@ -11275,24 +11219,10 @@ snapshots:
       '@napi-rs/tar-win32-ia32-msvc': 1.1.1
       '@napi-rs/tar-win32-x64-msvc': 1.1.1
 
-  '@napi-rs/wasm-runtime@1.2.4(@emnapi/core@1.11.2)(@emnapi/runtime@1.11.2)':
+  '@napi-rs/wasm-runtime@1.2.4(@emnapi/core@file:.napi-validation/emnapi-core.tgz)(@emnapi/runtime@file:.napi-validation/emnapi-runtime.tgz)':
     dependencies:
-      '@emnapi/core': 1.11.2
-      '@emnapi/runtime': 1.11.2
-      '@tybys/wasm-util': 0.10.3
-    optional: true
-
-  '@napi-rs/wasm-runtime@1.2.4(@emnapi/core@1.9.2)(@emnapi/runtime@1.9.2)':
-    dependencies:
-      '@emnapi/core': 1.9.2
-      '@emnapi/runtime': 1.9.2
-      '@tybys/wasm-util': 0.10.3
-    optional: true
-
-  '@napi-rs/wasm-runtime@1.2.4(@emnapi/core@2.0.0-alpha.5)(@emnapi/runtime@2.0.0-alpha.5)':
-    dependencies:
-      '@emnapi/core': 2.0.0-alpha.5
-      '@emnapi/runtime': 2.0.0-alpha.5
+      '@emnapi/core': file:.napi-validation/emnapi-core.tgz
+      '@emnapi/runtime': file:.napi-validation/emnapi-runtime.tgz
       '@tybys/wasm-util': 0.10.3
 
   '@napi-rs/wasm-tools-android-arm-eabi@1.1.0':
@@ -11324,9 +11254,9 @@ snapshots:
 
   '@napi-rs/wasm-tools-wasm32-wasi@1.1.0':
     dependencies:
-      '@emnapi/core': 1.9.2
-      '@emnapi/runtime': 1.9.2
-      '@napi-rs/wasm-runtime': 1.2.4(@emnapi/core@1.9.2)(@emnapi/runtime@1.9.2)
+      '@emnapi/core': file:.napi-validation/emnapi-core.tgz
+      '@emnapi/runtime': file:.napi-validation/emnapi-runtime.tgz
+      '@napi-rs/wasm-runtime': 1.2.4(@emnapi/core@file:.napi-validation/emnapi-core.tgz)(@emnapi/runtime@file:.napi-validation/emnapi-runtime.tgz)
     optional: true
 
   '@napi-rs/wasm-tools-win32-arm64-msvc@1.1.0':
@@ -11714,9 +11644,9 @@ snapshots:
 
   '@oxc-resolver/binding-wasm32-wasi@11.24.2':
     dependencies:
-      '@emnapi/core': 1.11.2
-      '@emnapi/runtime': 1.11.2
-      '@napi-rs/wasm-runtime': 1.2.4(@emnapi/core@1.11.2)(@emnapi/runtime@1.11.2)
+      '@emnapi/core': file:.napi-validation/emnapi-core.tgz
+      '@emnapi/runtime': file:.napi-validation/emnapi-runtime.tgz
+      '@napi-rs/wasm-runtime': 1.2.4(@emnapi/core@file:.napi-validation/emnapi-core.tgz)(@emnapi/runtime@file:.napi-validation/emnapi-runtime.tgz)
     optional: true
 
   '@oxc-resolver/binding-win32-arm64-msvc@11.24.2':
@@ -13712,7 +13642,7 @@ snapshots:
 
   email-validator@2.0.4: {}
 
-  emnapi@2.0.0-alpha.5(node-addon-api@8.9.2):
+  emnapi@file:.napi-validation/emnapi.tgz(node-addon-api@8.9.2):
     optionalDependencies:
       node-addon-api: 8.9.2
 

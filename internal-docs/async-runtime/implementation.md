@@ -155,11 +155,13 @@ crate freezes after first use.
     which spins on `sched_yield`: 53% of sampled CPU on 8 workers, 16% on 2.
     Without the pool worker preload (§13), the first build paid about 21 ms
     more than CurrentThread for the Node Worker startup of the pool (the same
-    for any worker count). With it (2026-10-01, M5 Max, release-wasi, 20
-    interleaved fresh processes, medians): first build 63.8 → 39.7 ms (20/20
-    faster), import + first build 110.4 → 88.1 ms, binding load +1.2 ms, and
-    the first build is now 3.6 ms faster than CurrentThread's; an import-only
-    process peaks 19 MB higher (97 → 116 MB). 4 is the
+    for any worker count). With the upstream preload (2026-10-01, M5 Max,
+    release-wasi, 20 interleaved fresh processes, medians, same wasm, loader
+    swapped): first build 73.1 → 43.0 ms (20/20 faster), import + first build
+    130.2 → 102.0 ms, binding load +2.4 ms, and the first build is 6.2 ms
+    faster than CurrentThread's (20/20); an import-only process peaks 19 MB
+    higher (105 → 124 MB, 10 rounds). Equal to rolldown's former loader patch
+    within noise (paired median deltas: first build +0.4 ms, load -0.2 ms). 4 is the
     widest setting the stress runs cover (see
     [wasi-shared-memory-grow](../wasi-shared-memory-grow/implementation.md)).
     MultiThread worker count `= requested.max(2)` (truthful
@@ -344,9 +346,9 @@ missing host-contract export fails with `ERR_NAPI_ASYNC_RUNTIME_BINDING_MISMATCH
   plugins) and the `wasip1` pair (`'wasm32-wasip1'`). Note that
   `__napiBindingTarget` reports the artifact's `platformArchABI`, which is not
   the spelling `getRuntimeCapabilities().target` uses (`native` / `wasi` /
-  `wasi-threads`). All of it is emitted by `@napi-rs/cli`; rolldown's only
-  rewrite is the pool worker preload in the threaded Node loader (§13). The
-  rest of `packages/rolldown/binding-loader-codegen.ts` is assertion-only:
+  `wasi-threads`). All of it is emitted by `@napi-rs/cli`; rolldown keeps no
+  loader rewriting of its own. What is left in
+  `packages/rolldown/binding-loader-codegen.ts` is assertion-only:
   `assertWasiBindingContextLifecycle` pins the teardown seams (disposal chain,
   settlement barrier, raw-destroy wrapper), `assertWasiThreadCrashLatch` pins
   the worker-crash latch in the threaded Node loader and `wasi-worker.mjs`
@@ -1080,68 +1082,37 @@ build-order coupling is needed to keep one flavor from overwriting the other.
   built last, so the native build must run last — which is why ci.yml restores
   it after `just build-browser`.
 - **Pool worker preload** (threaded Node loader `rolldown-binding.wasi.cjs`
-  only; why: [design.md](./design.md) Principle 1). The loader passes
-  `reuseWorker: true`, so emnapi's pool starts empty and each thread the
-  MultiThread runtime spawns on the first build boots a Worker and loads the
-  wasm first. `build-binding.ts` (`insertWasiPoolWorkerPreloadIntoLoader`)
-  inserts `__preloadWasiPoolWorkers` right after the load `try`/`catch`
-  (`throw rollback.error` / `}`), before the CommonJS export tail
-  (`module.exports = __napiModule.exports`), after EVERY build, since every
-  build re-renders this loader. It takes the manager from `__getWasiThreadManager()`, reads the count
-  from `getAsyncRuntimeConfig()` (`MultiThread` → `workerThreads`, else 0; it
-  reads options only and does not start the runtime), and for each missing
-  Worker calls emnapi's public `allocateUnusedWorker()` (through the loader's
-  `onCreateWorker`: unref'd, tracked in `__wasiWorkers`, crash flags in
-  `workerData`) and `loadWasmModuleToWorker(worker)` without waiting. A spawn
-  pops the Worker through `getNewWorker`, which the async-work and TSFN plugins
-  wrap to add their listeners, so a preloaded Worker serves plugin calls like a
-  fresh one. A Worker that fails to load is spliced out of `unusedWorkers`
-  (emnapi terminates it but leaves it in the pool, and a spawn that took it
-  hangs the build); a synchronous throw drops and terminates that Worker and
-  stops. Nothing in it can fail the load. The load failure still raises the
-  crash flags, so the disposer rejects later, as for any pool Worker that dies.
-  An idle preloaded Worker that fails to load still latches although no wasm
-  thread waits on it; conservative on purpose: making it pool-local would
-  need the napi-rs template to skip Workers still in the pool without a tid,
-  and realistic load failures are systemic anyway. A spawn that already took
-  a still-loading preloaded Worker hangs the build if that load fails,
-  exactly like a fresh Worker without the preload: emnapi reports the spawn
-  as started before the load (`wasi-threads.js` 789-798, `waitThreadStart`
-  off); the drop only covers Workers no spawn has taken; the fix belongs
-  upstream.
-  The same block wraps `configureAsyncRuntime` on `__napiModule.exports`
-  (`__matchWasiPoolWorkersToConfigure`), because the count is read at load
-  and a later configure would otherwise leave the pool at the old count
-  (CurrentThread kept 2 idle Workers, about +21 MB after a build). The wrapper
-  calls the original first (a throw propagates and skips the rest), then,
-  in a `try`/`catch`, pops the idle Workers above the new count off the end
-  of `unusedWorkers` (last in first out, like a spawn takes them), passes
-  each to `terminateWorker`, and resets its `onmessage`: `terminateWorker`
-  installs a reporter, and a Worker still loading posts `loaded` after it,
-  which printed `received "loaded" command from terminated worker` in 4 of
-  106 race runs without the reset (0 of 93 with it). Then
-  `__preloadWasiPoolWorkers` tops the pool up to a larger count. A Worker
-  that a spawn already took is not in `unusedWorkers` and is left alone.
-  RSS does not return at once when they terminate (113 MB 1.5 s after the
-  configure vs 99 MB without a preload), but after a build it is back to the
-  no-preload baseline (170-176 MB vs 172-174 MB; 193-195 MB without the
-  wrapper).
-  `binding-loader-codegen.ts` (`insertWasiPoolWorkerPreload`,
-  `assertWasiPoolWorkerPreload`) is idempotent and throws when an anchor
-  (`reuseWorker: true,`, `__captureWasiThreadManager,`,
-  `function __getWasiThreadManager() {`, the `getAsyncRuntimeConfig` and
-  `configureAsyncRuntime` exports in the tail, the insertion point) is not
-  there exactly once. Tests:
-  `tests/binding-loader-codegen.test.ts` (insertion, anchors, stubbed manager
-  incl. the synchronous throw and the configure wrapper) and
-  `tests/wasi/pool-worker-preload.mjs`
-  (`test:wasi-pool-preload`, debug and release-threaded jobs: Workers at
-  import = `workerThreads`, none more on the first builds, none under
-  CurrentThread, an import-only process exits on its own, a preloaded Worker
-  that fails to load is replaced and the disposer then rejects latched with
-  the load failure as cause, a configure to CurrentThread after or
-  during the load ends the preloaded Workers and builds like the single case,
-  a configure to 4 Workers preloads 4). Measured: see §3 (first-build cost).
+  only; why: [design.md](./design.md) Principle 1). Upstream owns it; rolldown
+  keeps no copy. The napi-rs threaded loader runs `__reconcileWasiThreadPool()`
+  after the load `try`/`catch`: it reads `napi_wasm_runtime_pool_workers`
+  (napi-async-runtime: `workerThreads` under MultiThread, else 0, and 0 once
+  a backend has started, since its pool threads already exist; an atomic, no
+  lock) and fills emnapi's idle reuse pool to that count, without waiting.
+  It also wraps `configureAsyncRuntime`, so a later configure terminates the
+  idle Workers above the new count and preloads the missing ones; the export
+  tail reads the wrapped function back, so the dist's ESM namespace sees it and
+  `src/api/async-runtime.ts` needs no change. After the first build the
+  configuration is frozen (a configure throws, and the wrapper skips the
+  reconcile), and a reconcile then only releases idle Workers. emnapi takes a
+  terminated Worker out of the pool; an idle preload whose load failed is
+  replaced by a fresh, unloaded Worker (the next spawn loads it), and a load
+  that fails after a spawn took the Worker is printed, not rethrown. A failed
+  load still latches the crash flag (the disposer rejects), as for any pool
+  Worker that dies.
+  Validated against unreleased heads until the releases ship: napi-rs
+  4d6f0a6f (napi-rs/napi-rs#3558, six crates via `[patch.crates-io]` plus the
+  cli tarball) and emnapi cc2f9b2 (toyobayashi/emnapi#239, tarballs); see the
+  comments in `Cargo.toml` and `pnpm-workspace.yaml`. Expected release floors:
+  `@napi-rs/cli` >= 3.11.0, `napi-async-runtime` >= 0.2.5,
+  `@emnapi/core` >= 2.0.0-alpha.6 with `@emnapi/wasi-threads` >= 2.2.0.
+  Rolldown checks: `assertWasiThreadPoolPreload` (`binding-loader-codegen.ts`)
+  pins the seam in the committed loader, `check-wasi-dist-files.mjs` requires
+  the export on the threaded wasm only, and `tests/wasi/pool-worker-preload.mjs`
+  (`test:wasi-pool-preload`, debug and release-threaded jobs) checks the
+  behavior end to end (Workers at import = `workerThreads`, none more on the
+  first builds, none under CurrentThread, import-only exits, load failure,
+  configure to CurrentThread after or during the load, configure to 4).
+  Measured: see §3 (first-build cost).
 - The deferred workerd loader is the cli's output too, not a rolldown render:
   `rolldown-binding.wasip1-deferred.js` and its `.d.ts` come out of the same
   `build-binding:wasi-single` run as the eager pair and are committed verbatim,

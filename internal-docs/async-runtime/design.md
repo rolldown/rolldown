@@ -59,20 +59,19 @@ Rust core — see [implementation.md](./implementation.md).
    On threaded WASI under Node, the pool's Workers are started when the
    binding loads, not on the first build: the loader preloads one per
    configured MultiThread worker, which takes the Worker boot off the first
-   build. It lives in rolldown's build step, as a patch to the generated
-   loader, because neither upstream piece can do it today: emnapi's own
-   preload (`reuseWorker.size > 0`) throws on the synchronous CommonJS load,
-   and the napi-rs loader keeps emnapi's thread manager private. The cost:
-   a process that only imports rolldown pays about 1 ms more load time and
-   about 20 MB more peak RSS for Workers it never uses. The count is read at
-   load, so the patch also wraps `configureAsyncRuntime`: a later configure
-   (docs/guide/wasi.md recommends `CurrentThread` right after the import)
-   terminates the idle Workers above the new count and preloads the missing
-   ones, so the pool matches the configured runtime, not the one at load.
-   The next batched napi-rs / emnapi release should take it upstream
-   (emnapi: allow a sized pool with a synchronous instantiate; napi-rs: a
-   loader option), and the patch goes away. See
-   [implementation.md](./implementation.md) §13, "Pool worker preload".
+   build. Upstream owns it, and rolldown keeps no loader patch for it: the
+   napi-rs threaded loader reads the count from napi-async-runtime's
+   `napi_wasm_runtime_pool_workers` export (0 once the runtime has started)
+   and fills emnapi's idle pool, and emnapi takes a terminated Worker out of
+   that pool and puts a fresh one in place of an idle Worker that failed to
+   load. The cost: a process that only imports rolldown pays about 1 ms more
+   load time and about 20 MB more peak RSS for Workers it never uses. The
+   count is read at load, so the loader also wraps `configureAsyncRuntime`: a
+   later configure (docs/guide/wasi.md recommends `CurrentThread` right after
+   the import) terminates the idle Workers above the new count and preloads
+   the missing ones, so the pool matches the configured runtime, not the one
+   at load. See [implementation.md](./implementation.md) §13, "Pool worker
+   preload".
 
 2. **CPU and async work share a pool.** Module-task futures run on the same
    Rayon pool used by link and generate stages. Nested Rayon work therefore

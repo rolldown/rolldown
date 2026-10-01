@@ -1,10 +1,17 @@
 // Pool worker preload in the threaded WASI Node loader.
 //
-// The build inserts a preload into the generated `rolldown-binding.wasi.cjs`: right
-// after the binding loads, one Worker per configured MultiThread worker goes into
-// emnapi's reuse pool and starts loading the wasm, so the first build's thread spawns
-// take a Worker that is already booting instead of creating one.
-// See internal-docs/async-runtime/implementation.md (section 13, "Pool worker preload").
+// The napi-rs cli emits it into the generated `rolldown-binding.wasi.cjs`
+// (`__reconcileWasiThreadPool`; rolldown keeps no loader rewrite of its own): right
+// after the binding loads, the loader reads the addon's `napi_wasm_runtime_pool_workers`
+// export (napi-async-runtime) and puts that many Workers into emnapi's reuse pool,
+// each loading the wasm, so the first build's thread spawns take a Worker that is
+// already booting instead of creating one. It also wraps `configureAsyncRuntime`, so a
+// later configure matches the idle pool to the new count. emnapi
+// (@emnapi/wasi-threads >= 2.2.0) takes a terminated Worker out of the pool and
+// puts a fresh, unloaded Worker in place of an idle one whose load failed.
+// This test is rolldown's end-to-end check of that upstream behavior.
+// See internal-docs/async-runtime/implementation.md (section 13, "Pool worker preload")
+// and the napi-rs cli docs (docs/wasi.md, "Thread pool preload").
 //
 // Each case is a child process that wraps `node:worker_threads` Worker before it
 // imports rolldown and counts the pool Workers (`wasi-worker.mjs`) the loader creates:
@@ -17,8 +24,9 @@
 //   import-only   imports and returns: the idle preloaded Workers are unref'd, so the
 //                 process must exit on its own, code 0, within IMPORT_ONLY_EXIT_MS
 //   load-failure  the N preloaded Workers fail to instantiate the wasm: each raises
-//                 the loader's crash flag and exits; they leave the pool, so the
-//                 next build creates N fresh Workers and succeeds; the public
+//                 the loader's crash flag and exits; emnapi puts a fresh, unloaded
+//                 Worker in each one's pool slot, so N more exist before the builds,
+//                 the builds take those (none more) and succeed; the public
 //                 disposer then rejects as latched, with the load failure as cause
 //   configure-single        once the N preloaded Workers loaded, the public
 //                 configureAsyncRuntime({ flavor: 'CurrentThread' }): all N exit, and
@@ -154,6 +162,11 @@ function judge(mode, spec, result, byBuilds) {
     return `workerThreads ${facts.workerThreads}, expected ${spec.workerThreads}`;
   }
   const preloaded = flavor === 'MultiThread' ? facts.workerThreads : 0;
+  // No Worker at all under MultiThread: the loader carries no preload (a cli or
+  // emnapi that lost it, or an addon without the pool-size export).
+  if (flavor === 'MultiThread' && facts.afterImport === 0) {
+    return `no pool Worker right after the import under MultiThread, expected ${preloaded}: the loader did not preload the pool`;
+  }
   if (facts.afterImport !== preloaded) {
     return `${facts.afterImport} pool Workers right after the import, expected ${preloaded}`;
   }
@@ -168,9 +181,14 @@ function judge(mode, spec, result, byBuilds) {
       return `${facts.failedExited} of ${preloaded} failing Workers exited`;
     }
     if (facts.crashFlag !== 1) return `loader crash flag ${facts.crashFlag}, expected 1`;
-    // The failed Workers left the pool, so the build replaces each one.
-    if (facts.byBuilds !== preloaded) {
-      return `the builds created ${facts.byBuilds} pool Workers, expected ${preloaded} fresh ones`;
+    // emnapi (@emnapi/wasi-threads >= 2.2.0) replaced each failed idle preload with
+    // a fresh, unloaded Worker, so the pool keeps its size and the builds load those.
+    const replaced = facts.beforeBuilds - facts.afterImport;
+    if (replaced !== preloaded) {
+      return `${replaced} pool Workers replaced the failed preloads before the builds, expected ${preloaded}`;
+    }
+    if (facts.byBuilds !== 0) {
+      return `the builds created ${facts.byBuilds} more pool Workers, expected 0 (they take the replacements)`;
     }
     if (facts.builds !== 'ok') return `builds: ${facts.builds}`;
     // The load failure latched the binding, although the builds ran on fresh

@@ -54,6 +54,10 @@ pub fn legitimize_json_local_binding_name(
 }
 
 pub fn legitimize_identifier_name(name: &str) -> Cow<'_, str> {
+  if name.is_empty() {
+    return Cow::Borrowed("_");
+  }
+
   let mut chars_indices = name.char_indices();
 
   let mut first_invalid_char_index = None;

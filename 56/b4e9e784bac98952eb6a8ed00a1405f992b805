@@ -1,0 +1,19 @@
+docs/superpowers/specs/2026-08-06-vite-resolve-explicit-tsconfig-design.md
+  s_33246730c53b37::t_d8ff4265f352db 1-28
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "56b4e9e784bac98952eb6a8ed00a1405f992b805",
+  "prompts": {},
+  "sessions": {
+    "s_33246730c53b37": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019fd6dc-a162-71e1-9d6c-912ef290d22d",
+        "model": "unknown"
+      },
+      "human_author": "sapphi-red <green@sapphi.red>"
+    }
+  }
+}

@@ -1,0 +1,21 @@
+packages/rolldown/tests/fixtures/output/sourcemap-filenames/path-transform-batch/_config.ts
+  s_c3796e0cf8beab::t_ec7c30310ae76a 1,33
+packages/rolldown/tests/fixtures/output/sourcemap-ignore-list/fn-batch/_config.ts
+  s_c3796e0cf8beab::t_2e8ccc06631100 1,32-33,37
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "37721316d6a9826519c36a5e7c962c608c316155",
+  "prompts": {},
+  "sessions": {
+    "s_c3796e0cf8beab": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a0c2e6-bbe2-7eb3-b896-3153a99a0efe",
+        "model": "unknown"
+      },
+      "human_author": "IWANABETHATGUY <iwanabethatguy@qq.com>"
+    }
+  }
+}

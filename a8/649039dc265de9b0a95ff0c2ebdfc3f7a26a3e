@@ -1,0 +1,23 @@
+packages/rolldown/src/builtin-plugin/utils.ts
+  s_d9310ade8fd8df::t_c3fef467cd0835 30-44,84-95
+packages/rolldown/tests/builtin-plugin/callable-builtin-gc.mjs
+  s_d9310ade8fd8df::t_2d234ca43bef4e 1-146
+packages/rolldown/tests/builtin-plugin/vite-resolve.test.ts
+  s_d9310ade8fd8df::t_ef9f1cb1cfe892 1,3,78-85
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "a8649039dc265de9b0a95ff0c2ebdfc3f7a26a3e",
+  "prompts": {},
+  "sessions": {
+    "s_d9310ade8fd8df": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a0cc24-72ec-7573-aab3-34748e35e421",
+        "model": "unknown"
+      },
+      "human_author": "IWANABETHATGUY <iwanabethatguy@qq.com>"
+    }
+  }
+}

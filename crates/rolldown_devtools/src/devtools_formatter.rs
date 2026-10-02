@@ -1,4 +1,4 @@
-use std::sync::Arc;
+use std::{path::Path, sync::Arc};
 
 use crate::{
   types::{ContextData, DevtoolsActionFieldExtractor},
@@ -84,7 +84,9 @@ where
       .get("action")
       .is_some_and(|v| v == "SessionMeta");
 
-    let target = devtools_log_target(output_root, session_id, is_session_meta);
+    let Some(target) = devtools_log_target(output_root, session_id, is_session_meta) else {
+      return Ok(());
+    };
 
     writer::send(LogCommand::Write {
       session: target.session,
@@ -97,18 +99,18 @@ where
 
 struct DevtoolsLogTarget {
   session: DevtoolsLogicalSessionKey,
-  filename: Arc<str>,
+  filename: Arc<Path>,
 }
 
 fn devtools_log_target(
-  output_root: &str,
+  output_root_field: &str,
   session_id: &str,
   is_session_meta: bool,
-) -> DevtoolsLogTarget {
-  let session =
-    DevtoolsLogicalSessionKey::from_output_root(session_id.into(), Arc::from(output_root));
+) -> Option<DevtoolsLogTarget> {
+  let output_root = writer::decode_output_root(output_root_field)?;
+  let session = DevtoolsLogicalSessionKey::from_output_root(session_id.into(), output_root);
   let filename = session.log_filename(is_session_meta);
-  DevtoolsLogTarget { session, filename }
+  Some(DevtoolsLogTarget { session, filename })
 }
 
 // For prop value pair like: `id: "${call_id}"`, extract `call_id` so we can look up its value from context data.
@@ -153,31 +155,49 @@ pub fn inject_context_data(meta: &mut serde_json::Value, context_data: &FxHashMa
 
 #[cfg(test)]
 mod tests {
-  use std::path::Path;
-
   use super::devtools_log_target;
+  use crate::writer::encode_output_root;
 
   #[test]
   fn log_target_uses_the_tracer_output_root() {
     let output_root = std::env::temp_dir().join("rolldown-devtools-formatter");
     let absolute = output_root.join("sid_1").join("meta.json");
-    let target = devtools_log_target(&output_root.to_string_lossy(), "sid_1", true);
+    let target = devtools_log_target(&encode_output_root(&output_root), "sid_1", true)
+      .expect("encoded output root");
 
-    assert_eq!(target.filename.as_ref(), absolute.to_string_lossy());
-    assert_eq!(Path::new(target.session.output_root()), output_root);
+    assert_eq!(target.filename.as_ref(), absolute);
+    assert_eq!(target.session.output_root(), output_root);
   }
 
   #[test]
   fn unsafe_session_id_is_one_path_component() {
     let output_root = std::env::temp_dir().join("rolldown-devtools-formatter-unsafe");
-    let target = devtools_log_target(&output_root.to_string_lossy(), "../../outside", false);
-    let session_directory =
-      Path::new(target.filename.as_ref()).parent().expect("session directory");
+    let target = devtools_log_target(&encode_output_root(&output_root), "../../outside", false)
+      .expect("encoded output root");
+    let session_directory = target.filename.parent().expect("session directory");
 
     assert_eq!(session_directory.parent().expect("output root"), output_root);
     assert_eq!(
       session_directory.file_name().expect("encoded session component"),
       "~2e2e2f2e2e2f6f757473696465"
     );
+  }
+
+  #[test]
+  fn unencoded_output_root_field_is_rejected() {
+    assert!(devtools_log_target("/plain/output/root", "sid_1", false).is_none());
+  }
+
+  #[cfg(unix)]
+  #[test]
+  fn non_utf8_output_root_keeps_its_bytes() {
+    use std::{ffi::OsStr, os::unix::ffi::OsStrExt};
+
+    let output_root = std::env::temp_dir().join(OsStr::from_bytes(b"rolldown-\xff-devtools"));
+    let target = devtools_log_target(&encode_output_root(&output_root), "sid_1", false)
+      .expect("encoded output root");
+
+    assert_eq!(target.session.output_root(), output_root);
+    assert_eq!(target.filename.as_ref(), output_root.join("sid_1").join("logs.json"));
   }
 }

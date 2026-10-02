@@ -1,6 +1,7 @@
 use std::{
   any::Any,
   error::Error,
+  ffi::{OsStr, OsString},
   fmt,
   fs::{File, OpenOptions},
   io::{self, BufWriter, Write},
@@ -37,8 +38,14 @@ impl DevtoolsSessionKey {
     }
   }
 
-  pub fn output_root(&self) -> &str {
+  pub fn output_root(&self) -> &Path {
     self.session.output_root()
+  }
+
+  /// The output root as the string a `CONTEXT_devtools_output_root` span field carries;
+  /// [`decode_output_root`] restores the exact path, non-UTF-8 bytes included.
+  pub fn output_root_field(&self) -> String {
+    encode_output_root(self.session.output_root())
   }
 
   pub fn session_id(&self) -> &str {
@@ -52,7 +59,7 @@ impl DevtoolsSessionKey {
 
 #[derive(Clone, Debug, Eq, Hash, PartialEq)]
 pub struct DevtoolsLogicalSessionKey {
-  output_root: Arc<str>,
+  output_root: Arc<Path>,
   session_id: Arc<str>,
 }
 
@@ -61,11 +68,11 @@ impl DevtoolsLogicalSessionKey {
     Self { output_root: canonical_output_root(cwd), session_id }
   }
 
-  pub(crate) fn from_output_root(session_id: Arc<str>, output_root: Arc<str>) -> Self {
+  pub(crate) fn from_output_root(session_id: Arc<str>, output_root: Arc<Path>) -> Self {
     Self { output_root, session_id }
   }
 
-  pub(crate) fn output_root(&self) -> &str {
+  pub(crate) fn output_root(&self) -> &Path {
     &self.output_root
   }
 
@@ -73,18 +80,94 @@ impl DevtoolsLogicalSessionKey {
     &self.session_id
   }
 
-  pub(crate) fn log_filename(&self, is_session_meta: bool) -> Arc<str> {
+  pub(crate) fn log_filename(&self, is_session_meta: bool) -> Arc<Path> {
     let filename = if is_session_meta { "meta.json" } else { "logs.json" };
-    Path::new(self.output_root())
-      .join(safe_session_path_component(self.session_id()))
-      .join(filename)
-      .to_string_lossy()
-      .into_owned()
-      .into()
+    self.output_root().join(safe_session_path_component(self.session_id())).join(filename).into()
   }
 }
 
-fn canonical_output_root(cwd: &Path) -> Arc<str> {
+// The output root keeps the canonical cwd's exact bytes (internal-docs/devtools/design.md,
+// "Output identity"), but it reaches the formatter through a string-only span field. UTF-8
+// roots travel verbatim; any other root travels as its hex-encoded OS units (bytes on
+// Unix/WASI, UTF-16 units on Windows). The prefix keeps the two forms unambiguous.
+const OUTPUT_ROOT_UTF8_PREFIX: &str = "utf8:";
+const OUTPUT_ROOT_RAW_PREFIX: &str = "raw:";
+
+pub fn encode_output_root(root: &Path) -> String {
+  if let Some(text) = root.to_str() {
+    return format!("{OUTPUT_ROOT_UTF8_PREFIX}{text}");
+  }
+  let mut field = String::from(OUTPUT_ROOT_RAW_PREFIX);
+  for unit in os_units(root.as_os_str()) {
+    let _ = fmt::Write::write_fmt(&mut field, format_args!("{unit:04x}"));
+  }
+  field
+}
+
+/// Inverse of [`encode_output_root`]; `None` for a field this crate did not encode.
+pub fn decode_output_root(field: &str) -> Option<Arc<Path>> {
+  if let Some(text) = field.strip_prefix(OUTPUT_ROOT_UTF8_PREFIX) {
+    return Some(Path::new(text).into());
+  }
+  let hex = field.strip_prefix(OUTPUT_ROOT_RAW_PREFIX)?;
+  if hex.len() % 4 != 0 {
+    return None;
+  }
+  let units = (0..hex.len())
+    .step_by(4)
+    .map(|start| hex.get(start..start + 4).and_then(|unit| u16::from_str_radix(unit, 16).ok()))
+    .collect::<Option<Vec<u16>>>()?;
+  os_string_from_units(&units).map(|root| PathBuf::from(root).into())
+}
+
+#[cfg(windows)]
+fn os_units(value: &OsStr) -> Vec<u16> {
+  use std::os::windows::ffi::OsStrExt;
+  value.encode_wide().collect()
+}
+
+#[cfg(windows)]
+#[expect(clippy::unnecessary_wraps, reason = "matches the byte-unit platforms' signature")]
+fn os_string_from_units(units: &[u16]) -> Option<OsString> {
+  use std::os::windows::ffi::OsStringExt;
+  Some(OsString::from_wide(units))
+}
+
+#[cfg(any(unix, target_os = "wasi"))]
+fn os_units(value: &OsStr) -> Vec<u16> {
+  #[cfg(unix)]
+  use std::os::unix::ffi::OsStrExt;
+  #[cfg(target_os = "wasi")]
+  use std::os::wasi::ffi::OsStrExt;
+  value.as_bytes().iter().copied().map(u16::from).collect()
+}
+
+#[cfg(any(unix, target_os = "wasi"))]
+fn os_string_from_units(units: &[u16]) -> Option<OsString> {
+  #[cfg(unix)]
+  use std::os::unix::ffi::OsStringExt;
+  #[cfg(target_os = "wasi")]
+  use std::os::wasi::ffi::OsStringExt;
+  let bytes = units.iter().map(|&unit| u8::try_from(unit).ok()).collect::<Option<Vec<u8>>>()?;
+  Some(OsString::from_vec(bytes))
+}
+
+#[cfg(not(any(unix, windows, target_os = "wasi")))]
+fn os_units(value: &OsStr) -> Vec<u16> {
+  value.to_string_lossy().encode_utf16().collect()
+}
+
+#[cfg(not(any(unix, windows, target_os = "wasi")))]
+fn os_string_from_units(units: &[u16]) -> Option<OsString> {
+  String::from_utf16(units).ok().map(OsString::from)
+}
+
+/// Diagnostic text for a path in a [`DevtoolsWriterFailure`]; never used as an identity.
+fn display_path(path: &Path) -> Arc<str> {
+  path.to_string_lossy().into_owned().into()
+}
+
+fn canonical_output_root(cwd: &Path) -> Arc<Path> {
   let cwd = if cwd.as_os_str().is_empty() {
     std::env::current_dir().unwrap_or_else(|_| PathBuf::from(Component::CurDir.as_os_str()))
   } else {
@@ -97,7 +180,7 @@ fn canonical_output_root(cwd: &Path) -> Arc<str> {
   };
   let canonical_cwd =
     std::fs::canonicalize(&absolute_cwd).unwrap_or_else(|_| normalize_path(&absolute_cwd));
-  canonical_cwd.join("node_modules").join(".rolldown").to_string_lossy().into_owned().into()
+  canonical_cwd.join("node_modules").join(".rolldown").into()
 }
 
 fn normalize_path(path: &Path) -> PathBuf {
@@ -178,7 +261,7 @@ fn is_windows_reserved_name(value: &str) -> bool {
 /// Commands sent to the devtools log-writer backend.
 pub enum LogCommand {
   RegisterSessionOwner { session: DevtoolsSessionKey },
-  Write { session: DevtoolsLogicalSessionKey, filename: Arc<str>, action_value: serde_json::Value },
+  Write { session: DevtoolsLogicalSessionKey, filename: Arc<Path>, action_value: serde_json::Value },
   CloseSession { session: DevtoolsSessionKey, ack: Option<Sender<DevtoolsWriterResult>> },
 }
 
@@ -454,8 +537,8 @@ struct WriterFile<W: Write> {
 
 // See internal-docs/devtools/implementation.md.
 struct WriterState<W: Write = File> {
-  files: FxHashMap<Arc<str>, WriterFile<W>>,
-  files_by_session: FxHashMap<DevtoolsLogicalSessionKey, FxHashSet<Arc<str>>>,
+  files: FxHashMap<Arc<Path>, WriterFile<W>>,
+  files_by_session: FxHashMap<DevtoolsLogicalSessionKey, FxHashSet<Arc<Path>>>,
   dir_ensured: FxHashSet<DevtoolsLogicalSessionKey>,
   owners_by_session: FxHashMap<DevtoolsLogicalSessionKey, FxHashSet<DevtoolsSessionKey>>,
   failures_by_session: FxHashMap<DevtoolsLogicalSessionKey, Vec<DevtoolsWriterFailure>>,
@@ -485,7 +568,7 @@ impl WriterState<File> {
       LogCommand::Write { session, filename, action_value } => {
         self.write_contained(
           &session,
-          filename,
+          &filename,
           &action_value,
           |directory| std::fs::create_dir_all(directory),
           |filename| {
@@ -518,21 +601,20 @@ impl<W: Write> WriterState<W> {
   fn write_contained<EnsureDirectory, OpenFile>(
     &mut self,
     session: &DevtoolsLogicalSessionKey,
-    filename: Arc<str>,
+    filename: &Arc<Path>,
     action_value: &serde_json::Value,
     ensure_directory: EnsureDirectory,
     open_file: OpenFile,
   ) where
     EnsureDirectory: FnOnce(&Path) -> io::Result<()>,
-    OpenFile: FnOnce(&str) -> io::Result<BufWriter<W>>,
+    OpenFile: FnOnce(&Path) -> io::Result<BufWriter<W>>,
   {
-    let failure_path = Arc::clone(&filename);
     if let Err(payload) = catch_unwind(AssertUnwindSafe(|| {
       self.write(session, filename, action_value, ensure_directory, open_file);
     })) {
       self.record_failure(
         session,
-        &panic_failure(DevtoolsWriterOperation::ProcessCommand, failure_path, payload),
+        &panic_failure(DevtoolsWriterOperation::ProcessCommand, display_path(filename), payload),
       );
     }
   }
@@ -540,20 +622,20 @@ impl<W: Write> WriterState<W> {
   fn write<EnsureDirectory, OpenFile>(
     &mut self,
     session: &DevtoolsLogicalSessionKey,
-    filename: Arc<str>,
+    filename: &Arc<Path>,
     action_value: &serde_json::Value,
     ensure_directory: EnsureDirectory,
     open_file: OpenFile,
   ) where
     EnsureDirectory: FnOnce(&Path) -> io::Result<()>,
-    OpenFile: FnOnce(&str) -> io::Result<BufWriter<W>>,
+    OpenFile: FnOnce(&Path) -> io::Result<BufWriter<W>>,
   {
     if self.owners_by_session.get(session).is_none_or(FxHashSet::is_empty) {
       return;
     }
 
     if !self.dir_ensured.contains(session)
-      && let Some(parent) = Path::new(filename.as_ref()).parent()
+      && let Some(parent) = filename.parent()
     {
       match ensure_directory(parent) {
         Ok(()) => {
@@ -564,7 +646,7 @@ impl<W: Write> WriterState<W> {
             session,
             &DevtoolsWriterFailure::new(
               DevtoolsWriterOperation::CreateDirectory,
-              parent.to_string_lossy().into_owned().into(),
+              display_path(parent),
               error,
             ),
           );
@@ -572,33 +654,41 @@ impl<W: Write> WriterState<W> {
       }
     }
 
-    if !self.files.contains_key(&filename) {
+    if !self.files.contains_key(filename) {
       match open_file(filename.as_ref()) {
         Ok(writer) => {
           self
             .files
-            .insert(Arc::clone(&filename), WriterFile { writer, hashes: FxHashSet::default() });
+            .insert(Arc::clone(filename), WriterFile { writer, hashes: FxHashSet::default() });
         }
         Err(error) => {
           self.record_failure(
             session,
-            &DevtoolsWriterFailure::new(DevtoolsWriterOperation::OpenFile, filename, error),
+            &DevtoolsWriterFailure::new(
+              DevtoolsWriterOperation::OpenFile,
+              display_path(filename),
+              error,
+            ),
           );
           return;
         }
       }
     }
 
-    self.files_by_session.entry(session.clone()).or_default().insert(Arc::clone(&filename));
+    self.files_by_session.entry(session.clone()).or_default().insert(Arc::clone(filename));
 
     let write_result = {
-      let file = self.files.get_mut(&filename).expect("file was opened above");
+      let file = self.files.get_mut(filename).expect("file was opened above");
       write_event(&mut file.writer, action_value, &mut file.hashes, &mut self.line)
     };
     if let Err(error) = write_result {
       self.record_failure(
         session,
-        &DevtoolsWriterFailure::new(DevtoolsWriterOperation::WriteEvent, filename, error),
+        &DevtoolsWriterFailure::new(
+          DevtoolsWriterOperation::WriteEvent,
+          display_path(filename),
+          error,
+        ),
       );
     }
   }
@@ -649,7 +739,7 @@ impl<W: Write> WriterState<W> {
 
     let mut failures = Vec::new();
     for filename in filenames {
-      let failure_path = Arc::clone(&filename);
+      let failure_path = display_path(&filename);
       let flush_result = catch_unwind(AssertUnwindSafe(|| {
         if remove {
           self.files.remove(&filename).map(|mut file| file.writer.flush())
@@ -901,7 +991,7 @@ mod tests {
     state.register_owner(owner.clone());
     state.write_contained(
       &session,
-      session.log_filename(false),
+      &session.log_filename(false),
       &serde_json::json!({ "action": "BuildStart" }),
       |_| Ok(()),
       |_| Ok(BufWriter::with_capacity(0, PanickingWriter)),
@@ -925,7 +1015,7 @@ mod tests {
     state.register_owner(owner.clone());
     state.write_contained(
       &session,
-      Arc::clone(&filename),
+      &filename,
       &serde_json::json!({ "action": "BuildStart" }),
       |_| Ok(()),
       |_| Ok(BufWriter::with_capacity(0, PanickingFlushWriter)),
@@ -934,7 +1024,7 @@ mod tests {
     let error = state.close_session(&owner).expect_err("flush panic should be retained");
     assert_eq!(error.failures().len(), 1);
     assert_eq!(error.failures()[0].operation(), DevtoolsWriterOperation::FlushFile);
-    assert_eq!(error.failures()[0].path(), filename.as_ref());
+    assert_eq!(Path::new(error.failures()[0].path()), filename.as_ref());
     assert!(error.failures()[0].to_string().contains("injected flush panic"));
     assert_session_clean(&state, &session);
     assert!(state.files.is_empty());
@@ -1125,7 +1215,7 @@ mod tests {
 
     let owner = session_key(&root, "open-error-session");
     let session = owner.logical_session().clone();
-    let filename: Arc<str> = filename.to_string_lossy().into_owned().into();
+    let filename: Arc<Path> = filename.into();
     let mut state = WriterState::default();
     state.register_owner(owner.clone());
     state.handle(LogCommand::Write {
@@ -1137,7 +1227,7 @@ mod tests {
 
     assert_eq!(error.failures().len(), 1);
     assert_eq!(error.failures()[0].operation(), DevtoolsWriterOperation::OpenFile);
-    assert_eq!(error.failures()[0].path(), filename.as_ref());
+    assert_eq!(Path::new(error.failures()[0].path()), filename.as_ref());
     assert_session_clean(&state, &session);
 
     fs::remove_dir_all(root).expect("remove test directory");
@@ -1149,21 +1239,21 @@ mod tests {
     fs::create_dir_all(&cwd).expect("create cwd");
     let owner = session_key(&cwd, "aggregated-error-session");
     let session = owner.logical_session().clone();
-    let write_filename: Arc<str> = "session/write-error.json".into();
-    let flush_filename: Arc<str> = "session/flush-error.json".into();
+    let write_filename: Arc<Path> = Path::new("session/write-error.json").into();
+    let flush_filename: Arc<Path> = Path::new("session/flush-error.json").into();
     let mut state = WriterState::<TestWriter>::default();
     state.register_owner(owner.clone());
 
     state.write_contained(
       &session,
-      Arc::clone(&write_filename),
+      &write_filename,
       &serde_json::json!({ "action": "BuildStart" }),
       |_| Err(io::Error::other("injected directory failure")),
       |_| Ok(BufWriter::with_capacity(0, TestWriter { fail_write: true, fail_flush: false })),
     );
     state.write_contained(
       &session,
-      Arc::clone(&flush_filename),
+      &flush_filename,
       &serde_json::json!({ "action": "BuildEnd" }),
       |_| Ok(()),
       |_| Ok(BufWriter::with_capacity(0, TestWriter { fail_write: false, fail_flush: true })),
@@ -1181,8 +1271,8 @@ mod tests {
       ]
     );
     assert_eq!(error.failures()[0].path(), "session");
-    assert_eq!(error.failures()[1].path(), write_filename.as_ref());
-    assert_eq!(error.failures()[2].path(), flush_filename.as_ref());
+    assert_eq!(Path::new(error.failures()[1].path()), write_filename.as_ref());
+    assert_eq!(Path::new(error.failures()[2].path()), flush_filename.as_ref());
     assert_session_clean(&state, &session);
     assert!(state.files.is_empty());
 
@@ -1199,13 +1289,13 @@ mod tests {
     assert_eq!(session, *second.logical_session());
     assert_ne!(first, second);
 
-    let filename: Arc<str> = session.log_filename(false);
+    let filename: Arc<Path> = session.log_filename(false);
     let mut state = WriterState::<TestWriter>::default();
     state.register_owner(first.clone());
     state.register_owner(second.clone());
     state.write_contained(
       &session,
-      Arc::clone(&filename),
+      &filename,
       &serde_json::json!({ "action": "BuildStart" }),
       |_| Ok(()),
       |_| Ok(BufWriter::with_capacity(0, TestWriter { fail_write: true, fail_flush: false })),
@@ -1232,12 +1322,12 @@ mod tests {
     fs::create_dir_all(&cwd).expect("create cwd");
     let first = session_key(&cwd, "shared-session");
     let session = first.logical_session().clone();
-    let filename: Arc<str> = session.log_filename(false);
+    let filename: Arc<Path> = session.log_filename(false);
     let mut state = WriterState::<TestWriter>::default();
     state.register_owner(first.clone());
     state.write_contained(
       &session,
-      filename,
+      &filename,
       &serde_json::json!({ "action": "BuildStart" }),
       |_| Err(io::Error::other("injected directory failure")),
       |_| Ok(BufWriter::new(TestWriter { fail_write: false, fail_flush: false })),
@@ -1268,7 +1358,7 @@ mod tests {
     for owner in [&first, &second] {
       state.write_contained(
         owner.logical_session(),
-        owner.logical_session().log_filename(false),
+        &owner.logical_session().log_filename(false),
         &serde_json::json!({ "action": "BuildStart" }),
         |_| {
           directory_attempts.set(directory_attempts.get() + 1);

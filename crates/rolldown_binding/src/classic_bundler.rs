@@ -775,7 +775,7 @@ impl ClassicBundler {
     let session_span = tracing::debug_span!(
       "session",
       CONTEXT_session_id = self.session_id.as_ref(),
-      CONTEXT_devtools_output_root = debug_tracer.session_key().output_root()
+      CONTEXT_devtools_output_root = debug_tracer.session_key().output_root_field().as_str()
     );
     self.debug_tracer = Some(debug_tracer);
     // Update the `session` with the actual session span

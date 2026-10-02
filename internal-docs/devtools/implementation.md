@@ -222,6 +222,12 @@ Formatter writes carry the logical key made from the canonical
 close commands carry the public key, which adds a unique owner ID. Reusing an
 ID in different cwd values cannot merge state, while same-root/same-ID owners
 intentionally append to the same files without sharing close ownership.
+The root stays a `Path` end to end. The session span field
+`CONTEXT_devtools_output_root` can only hold a string, so
+`DevtoolsSessionKey::output_root_field()` writes `utf8:<path>` or, for a
+non-UTF-8 root, `raw:<hex OS units>`, and the formatter decodes it back
+(`writer.rs` `encode_output_root` / `decode_output_root`); a field without
+either prefix is dropped like missing context.
 
 Each backend serializes access to this state, so write, register, and close commands cannot interleave inside a file operation. Writes with no active owner are ignored, preventing late events from reopening a finalized session. `CloseSession` flushes the addressed logical session, unregisters exactly one owner, and only removes shared state for the final owner. The ack returns `Result<(), DevtoolsWriterError>` containing that owner's retained failures. When the threaded backend's process-global channel disconnects, the writer flushes and clears any remaining state best-effort.
 

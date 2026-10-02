@@ -142,6 +142,34 @@ subtracts the ship map only. The entry chunk is scope-hoisted (principle 3) and 
 re-runnable code. A patch that re-runs it must ship its factory once;
 after that the ship map covers it.
 
+A lazy chunk also carries what its own code reaches. A module that runs
+from a payload calls `initModule` on each static dep, and a dep that
+never ran in this client needs a factory. The server cannot see which
+modules ran, so it walks static imports from the lazy entry
+(`collect_unheld_sync_deps`, `hmr_stage.rs`) and sorts each module it
+reaches:
+
+- **Boot-evaluated, current copy** — its exports are live. The walk
+  stops: the entry chunk ran its static deps too.
+- **Shipped, current copy** — not carried, but the walk goes through it.
+  A payload can carry a module the client never ran (a patch carries
+  importers of the changed module whether or not they ran), so its deps
+  may be missing.
+- **Anything else** — carried, and the walk goes through it.
+
+Example: tab B has not opened a route yet. An edit of `shared.js`
+carries `route.js` to tab B, because `route.js` imports `shared.js`.
+Tab B never runs it. When tab B opens the route, the lazy chunk walks
+through `route.js` and carries `dep.js`.
+
+```mermaid
+flowchart LR
+  main["main.js — boot-evaluated"] --> shared["shared.js — boot-evaluated: stop"]
+  main -. "import()" .-> route["route.js — shipped by the patch: walk through"]
+  route --> shared
+  route --> dep["dep.js — not held: carry"]
+```
+
 ### 3. The module graph ships as compiler data
 
 The client walk needs the import graph. Webpack learns it by

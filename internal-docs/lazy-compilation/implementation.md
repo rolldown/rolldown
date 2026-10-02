@@ -86,7 +86,7 @@ Entry
     └── shared.js (sync dep)
 ```
 
-1. **Server-side selection**: when collecting the sync deps for a lazy chunk, `collect_sync_dependencies_for_client` (`hmr_stage.rs`) skips modules whose current copy the requesting client holds — in its ship map (factory shipped) or its boot-evaluated map (run by the entry chunk)
+1. **Server-side selection**: when collecting the sync deps for a lazy chunk, `collect_unheld_sync_deps` (`hmr_stage.rs`) skips modules whose current copy the requesting client holds — in its ship map (factory shipped) or its boot-evaluated map (run by the entry chunk)
 2. **Runtime module-cache gate**: every module in a chunk is a `__rolldown_runtime__.registerFactory(stableId, factory)` call, and `initModule` (`runtime-extra-dev-common.js`) runs the factory only when the id is not yet in the module cache. Registering a factory twice overwrites the map entry; the module body runs once
 
 Two `/lazy` requests in quick succession, before the first chunk's delivery ack arrives, both see an unmarked ship map and both carry `shared.js` — duplicate bytes, safe: the second registration overwrites the first and the module cache gate runs the body once.
@@ -162,7 +162,7 @@ When `load` is called for a proxy module:
 `Bundler::compile_lazy_entry(module_id, client_id, shipped, evaluated, stamp_table, next_hmr_patch_id)` (`impl_bundler_hmr.rs`) → `HmrStage::compile_lazy_entry(module_id, client_id, shipped, evaluated, stamp_table)` (the `client_id` param is unused at this layer — per-client tailoring comes solely from the two maps):
 
 1. Look the proxy up in the module cache (the #9969 gate), then run `ScanMode::Partial([proxy's resolved id])`
-2. `collect_sync_dependencies_for_client` walks the proxy's static deps plus the proxy's own dynamic import, **stopping** at any module whose current copy the client holds: its stable id is in `shipped` or `evaluated` with a stamp that `stamp_table.is_stale` reports as current; external modules are dropped and the rest sorted by id
+2. `collect_unheld_sync_deps` walks the proxy's static deps plus the proxy's own dynamic import. A module whose current copy is in `evaluated` (a stamp that `stamp_table.is_stale` reports as current) **stops** the walk. A module whose current copy is in `shipped` is not carried, but the walk goes through it: a patch may have carried it to a client that never ran it, so its deps may be missing (see [hmr/design.md](../hmr/design.md), principle 2). Every other module is carried; external modules are dropped and the rest sorted by id
 3. Each module is rendered by `HmrAstFinalizer` into a factory registration (`impl_traverse_for_hmr_ast_finalizer.rs`):
 
    ```js
@@ -490,6 +490,7 @@ E2E playground: `packages/test-dev-server/tests/playground/lazy-compilation/` (o
 | `lazy-init-error-unhandled` | exactly one `unhandledrejection` without a handler — cold and warm paths          |
 | `nested-dynamic-import`     | nested lazy `import()` inside a lazy chunk resolves on first click                |
 | `shared-module`             | export-name preservation in shared chunks (#9132) + watch/auto-reload after fetch |
+| `walk-through-shipped`      | a lazy chunk carries the deps of a module that a patch shipped but never ran      |
 
 Several specs use `retry: 0` because the bugs only reproduce on the first interaction with a fresh server. Unit test: `packages/rolldown/tests/dev/dev-lazy-compile.test.ts` pins the unknown-id rejection (#9969).
 

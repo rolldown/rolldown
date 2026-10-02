@@ -19,7 +19,7 @@ impl Bundler {
     with_fn: impl AsyncFnOnce(&mut Bundle) -> BuildResult<T>,
   ) -> BuildResult<T> {
     let cache = mem::take(&mut self.cache);
-    let mut bundle = self.bundle_factory.create_bundle(bundle_mode, Some(cache))?;
+    let mut bundle = self.create_bundle(bundle_mode, Some(cache))?;
     // Do NOT `?` the build result here. The cache must be moved back into the
     // `Bundler` on every outcome; bailing on `Err` would drop `bundle` and leave
     // `Bundler::cache` at the `default()` (snapshot = None) that `mem::take`

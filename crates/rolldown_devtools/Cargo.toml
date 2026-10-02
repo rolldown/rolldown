@@ -13,12 +13,12 @@ readme = "../../README.md"
 workspace = true
 
 [lib]
-test = false
 doctest = false
 
 [dependencies]
 blake3 = { workspace = true }
 rolldown_devtools_action = { workspace = true }
+rolldown_std_utils = { workspace = true }
 rustc-hash = { workspace = true }
 serde = { workspace = true, features = ["derive", "rc"] }
 serde_json = { workspace = true }

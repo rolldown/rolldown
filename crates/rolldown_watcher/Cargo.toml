@@ -17,17 +17,30 @@ workspace = true
 [dependencies]
 anyhow = { workspace = true }
 arcstr = { workspace = true }
+async-lock = { workspace = true }
+event-listener = { workspace = true }
 futures = { workspace = true }
 oxc_index = { workspace = true }
 rolldown = { workspace = true, features = ["experimental"] }
 rolldown_common = { workspace = true }
 rolldown_error = { workspace = true }
 rolldown_fs_watcher = { workspace = true }
+rolldown_std_utils = { workspace = true }
 rolldown_utils = { workspace = true }
-tokio = { workspace = true, features = ["rt", "macros", "sync", "time"] }
 tracing = { workspace = true }
 
 [dev-dependencies]
+# Strips the `\\?\` verbatim prefix `std::fs::canonicalize` returns on Windows.
+dunce = { workspace = true }
 rolldown_workspace = { workspace = true }
 sugar_path = { workspace = true }
-tokio = { workspace = true, features = ["rt", "macros", "sync", "rt-multi-thread", "signal"] }
+# tokio backs this crate's #[tokio::test] suites and examples/watch.rs's
+# #[tokio::main]; production code runs on the runtime-agnostic facade.
+tokio = { workspace = true, features = [
+  "rt",
+  "macros",
+  "sync",
+  "rt-multi-thread",
+  "signal",
+  "time",
+] }

@@ -34,4 +34,12 @@ describe('loadConfig native configLoader', () => {
     const config = await loadConfig(path.join(fixtures, 'native.config.mjs'));
     expect(config).toStrictEqual({ input: './entry.js' });
   });
+
+  it('keeps bundled dynamic imports available to a deferred config function', async () => {
+    const config = await loadConfig(path.join(fixtures, 'dynamic-function.config.ts'));
+    if (typeof config !== 'function') {
+      throw new TypeError('expected bundled config function');
+    }
+    await expect(config({})).resolves.toStrictEqual({ input: './dynamic-entry.js' });
+  });
 });

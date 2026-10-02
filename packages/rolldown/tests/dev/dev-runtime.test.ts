@@ -3,6 +3,7 @@ import crypto from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
 
+import { isSingleThread } from '@tests/runtime-flavor';
 import { RUNTIME_MODULE_ID } from 'rolldown';
 import { dev } from 'rolldown/experimental';
 import { expect, test, vi } from 'vitest';
@@ -53,7 +54,8 @@ test('the package emits no other runtime source file', () => {
 
 // The HMR plugin's `transform` hook appends the runtime before oxc prints it again, so the
 // exact source is only visible to a later `transform` hook, not in the output.
-test(
+// `dev()` needs a MultiThread runtime; the single-thread (CurrentThread) flavor rejects it.
+test.skipIf(isSingleThread)(
   'devMode injects the common runtime and the default client as their exact source',
   {
     timeout: 60_000,

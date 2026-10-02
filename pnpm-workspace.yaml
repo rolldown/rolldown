@@ -31,15 +31,118 @@ onlyBuiltDependencies:
   - sharp
   - tree-sitter
 
+overrides:
+  # TEMPORARY - replaced by released `@napi-rs/cli` / `@emnapi/*` once upstream ships the
+  # threaded WASI pool preload. Validates rolldown against two unreleased heads:
+  # - napi-rs e6e50eb4 (branch feat/wasi-thread-pool-preload, PR napi-rs/napi-rs#3558):
+  #   `@napi-rs/cli` packed as 3.10.6. Its threaded Node loader reads the addon's `napi_wasm_runtime_pool_workers` export after the load and keeps
+  #   that many Workers loading in emnapi's idle reuse pool (`__reconcileWasiThreadPool`), and
+  #   wraps `configureAsyncRuntime` so a later configure shrinks or grows that pool. The export
+  #   reads 0 once the backend has started (its pool threads exist), so a reconcile after the
+  #   first use only releases idle Workers. A Worker the reconcile terminates stays in
+  #   `__wasiWorkers` until its own `terminate()` settles (`__untrackWasiWorkerOnExit`), so a
+  #   disposal right after a shrink still waits for it to exit. It still carries the
+  #   worker-crash latch of napi-rs 22ee6c8d. emnapi's deferred calls go through the loader's
+  #   `__wasiSetImmediate`, which drops them once `__disposeWasiBindingAfterThreadCrash` has set
+  #   `__wasiReentryClosed`, so none re-enters wasm after a crash disposal.
+  # - emnapi cc2f9b2 (branch feat/wasi-threads-background-pool-preload, PR toyobayashi/emnapi#239):
+  #   `@emnapi/wasi-threads` 2.2.0 takes a terminated Worker out of the pool and ignores a late
+  #   'loaded' from it; a load that fails after thread-spawn returned is printed instead of
+  #   rethrown (no unhandled rejection), and an idle preload whose load failed is replaced by a
+  #   fresh unloaded Worker, so the pool keeps its size. `@emnapi/core` 2.0.0-alpha.6 pins it
+  #   exactly. `@emnapi/runtime` 2.0.0-alpha.6 moves with core: core alpha.6 hands the env
+  #   address to the runtime's `Env` as a function (emnapi#237), which runtime alpha.5 does not
+  #   read. `emnapi` (the C
+  #   archives) must report the same version, or `napi build` refuses to link ("emnapi version
+  #   mismatch"): emnapi.tgz is the registry 2.0.0-alpha.5 package (sha512 E8LRA0oY...SSg==)
+  #   with only `version` set to 2.0.0-alpha.6, so the archives are byte-identical to alpha.5.
+  #   The emnapi head's own archives were not rebuilt; its C changes since alpha.5 are two
+  #   allocation-failure checks (emnapi#237) and NAN coverage this build does not link.
+  # sha256: napi-rs-cli.tgz 3f4f8b3c5ad33660cdab9eae00198a1601834f55e405aaba5574321eb665ef0c
+  #         emnapi-core.tgz d3a519b61d8a4b7cccaf3a51e85018cdac656a2a35840e258deef0445edd6511
+  #         emnapi-runtime.tgz 2cbe43bbee50ca321911283267ba025f1d9552098d3f4beb193d41fc40e10b55
+  #         emnapi-wasi-threads.tgz f4c934b40a8a60763115a1da4e570fc8f2a549f9c0fac468c6a91169a154e110
+  #         emnapi.tgz 85c7d600dba93afa229815ca676beacb290113b29dce8b2c929ad887e841fd14
+  # The catalog keeps the registry versions (alpha.5): `@rolldown/browser` declares them and
+  # scripts/wasi/check-workerd-packed-consumer.mjs installs them from the registry. The keys stay
+  # unscoped: overrides see the `catalog:` spec, not a version, so a `@2.0.0-alpha.5` selector
+  # never matches. That also folds the optional emnapi 1.x copies of the wasm32 platform
+  # packages (sharp, lzma, tar) into these tarballs; none of them installs outside wasm32.
+  '@napi-rs/cli': file:./.napi-validation/napi-rs-cli.tgz
+  '@emnapi/core': file:./.napi-validation/emnapi-core.tgz
+  '@emnapi/runtime': file:./.napi-validation/emnapi-runtime.tgz
+  '@emnapi/wasi-threads': file:./.napi-validation/emnapi-wasi-threads.tgz
+  # napi-build 2.4.2 links the emnapi v2 C archives; pin the exact release so a range change cannot silently swap them.
+  # TEMPORARY: the relabelled alpha.5 archives (see above); back to the release with the tarballs.
+  emnapi: file:./.napi-validation/emnapi.tgz
+
 catalog:
   '@babel/core': ^7.29.7
   '@babel/preset-env': ^7.29.7
   '@babel/preset-typescript': ^7.29.7
+  # the .wasm links emnapi v2 C archives, so a v1 JS runtime is an ABI mismatch (see the `emnapi` override above).
+  # scripts/wasi/check-workerd-packed-consumer.mjs asserts these exact versions, so bump both together.
   '@emnapi/core': 2.0.0-alpha.5
   '@emnapi/runtime': 2.0.0-alpha.5
   '@jridgewell/trace-mapping': ^0.3.31
-  '@napi-rs/cli': ^3.10.0
-  '@napi-rs/wasm-runtime': ~1.2.2
+  # JavaScript host protocol for the `napi-async-runtime` bindings; the cli emits
+  # imports of it into the generated WASI loaders when `napi.wasm.asyncRuntime`
+  # is set, so it moves with the cli floor below.
+  '@napi-rs/async-runtime': ^0.2.0
+  # floor pin: the generated loaders are the contract. From 3.10.0 the cli itself
+  # exports `__napiBindingTarget` (napi-rs#3515), wraps the raw emnapi context
+  # destroy behind the cleanup barrier (#3514), honors
+  # `napi.wasm.threadlessInitialMemory` (#3516) and installs the CurrentThread
+  # hosts for `napi.wasm.asyncRuntime` (#3517). Rolldown deleted the local
+  # codegen patches that used to add all four, so an older cli silently
+  # regenerates loaders without them. The cli peer-requires the same
+  # `^1.7.1 || ^2.0.0-alpha.4` emnapi line as the pins above, so it moves with
+  # them. 3.10.1 raises the floor again (napi-rs#3526): the threaded loader
+  # terminates its WASI pool workers through the captured emnapi thread manager
+  # and holds the event loop open until those terminations settle, so
+  # `Symbol.for('napi.rs.wasi.dispose')` after a real build no longer kills the
+  # process with `Worker stopped with exit code 1`
+  # (scripts/wasi/check-wasi-binding-packed-consumer.mjs exercises it).
+  # 3.10.2 raises it once more (napi-rs#3528): every loader now settles the
+  # addon's outstanding `napi_async_work` before anything is torn down --
+  # `__drainWasiAsyncWork` in the eager loaders, `__drainInstanceAsyncWork` in
+  # the deferred one -- through the `napi_wasm_async_work_pending` /
+  # `napi_wasm_cancel_pending_async_work` exports that napi 3.12.6 adds. An
+  # older cli regenerates loaders that destroy the emnapi context over an
+  # outstanding work instead, which strands its completion callback: the promise
+  # never settles and emnapi keeps the process alive. The same packed-consumer
+  # check exercises this one too.
+  # 3.10.3 raises it once more (napi-rs#3530): the filesystem transaction that
+  # writes the generated bindings retries a source whose drift is soft -- a
+  # mode or mtime/ctime re-stamp, or a same-size content change seen between
+  # two copies -- for up to 3 snapshot attempts, and accepts a copy only when
+  # its metadata is stable and its bytes match the previous attempt. The retry
+  # is bounded, not a pass: the build still fails if the drift has not settled
+  # within those attempts, and it fails at once when the identity or the shape
+  # moved (dev, ino, size, bytes read, path). Either way the error names the
+  # fields that drifted. Before that one message stood for eight conditions and any
+  # re-stamp aborted the build; FreeBSD hits it because it cannot provide a
+  # complete process execution identity, so the cross-process reconciliation
+  # lock runs degraded (lock-free) there.
+  # 3.10.4 is not a floor of its own -- it changes no loader or template. Its
+  # ESM-to-CommonJS guard change in `prepareWasiBindingTypeDef` is unreachable
+  # here because rolldown's `--dts` is already `binding.d.cts`, and the one
+  # change rolldown does reach on every wasi typedef derivation --
+  # `collectRelativeDeclarationSpecifierReferences` now also rebases
+  # `declare module '<relative>'` names and multi-argument `import()` and
+  # `require()` specifiers -- is a no-op for the current typedef, which
+  # contains neither. It is named here so the range tracks the version
+  # renovate resolved on main (#10913), which is what regenerates the
+  # committed loaders.
+  # 3.10.5 raises it once more (napi-rs#3541): `dispose()` and rollback tear
+  # down in two phases -- `napi_prepare_wasm_env_cleanup_begin`, event-loop
+  # turns while `napi_wasm_runtime_work_pending` reports live work, then
+  # `napi_prepare_wasm_env_cleanup_finish` -- so a blocking closure on the
+  # threaded artifact that waits on the JavaScript thread can finish instead of
+  # being joined inside one call. The exports come from napi 3.13.0; an older
+  # cli keeps the single blocking `napi_prepare_wasm_env_cleanup` call.
+  '@napi-rs/cli': ^3.10.5
+  '@napi-rs/wasm-runtime': ~1.2.4
   '@oxc-node/cli': ^0.1.0
   '@oxc-node/core': ^0.1.0
   '@oxc-project/runtime': '=0.152.0'
@@ -58,6 +161,7 @@ catalog:
   '@types/ws': ^8.18.0
   acorn: ^8.17.0
   astring: ^1.9.0
+  buffer: ^6.0.3
   cac: ^7.0.0
   chalk: ^5.3.0
   change-case: ^5.4.4
@@ -65,6 +169,7 @@ catalog:
   consola: ^3.4.2
   dedent: ^1.5.3
   diff: ^9.0.0
+  # `overrides.emnapi` above pins the same version; keep both in sync.
   emnapi: 2.0.0-alpha.5
   esbuild: ^0.28.0
   estree-toolkit: ^1.7.8
@@ -76,6 +181,7 @@ catalog:
   glob: ^13.0.0
   lodash-es: ^4.17.21
   micromatch: ^4.0.8
+  miniflare: ^4.20260611.0
   oxc-parser: '=0.152.0'
   oxc-transform: '=0.152.0'
   pathe: ^2.0.3
@@ -99,6 +205,7 @@ catalog:
   vitest: ^4.1.6
   vue: ^3.5.35
   web-tree-sitter: ^0.27.0
+  wrangler: ^4.100.0
   ws: ^8.20.1
   zx: ^8.1.2
 
@@ -134,6 +241,7 @@ trustPolicyExclude:
 verifyDepsBeforeRun: install
 
 minimumReleaseAgeExclude:
+  - '@napi-rs/async-runtime'
   - '@napi-rs/cli'
   - '@oxc-minify/*'
   - '@oxc-parser/*'

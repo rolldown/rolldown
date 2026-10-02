@@ -13,8 +13,17 @@
 // browser: the same @rolldown/browser tarball, installed into tests/browser, the app the
 //   real-browser suite loads through Vite.
 import { execFileSync } from 'node:child_process';
-import { copyFileSync, readdirSync, renameSync, rmSync, statSync } from 'node:fs';
-import { dirname, join, resolve } from 'node:path';
+import {
+  copyFileSync,
+  mkdirSync,
+  readFileSync,
+  readdirSync,
+  renameSync,
+  rmSync,
+  statSync,
+  writeFileSync,
+} from 'node:fs';
+import { basename, dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const packageRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..');
@@ -103,6 +112,7 @@ function packNodePackages() {
   }
 
   const fixtureDir = join(fixtures, 'node');
+  stageWorkspaceFileOverrides(fixtureDir);
   pack(rolldownPackage, fixtureDir, /^rolldown-\d.*\.tgz$/, 'rolldown.tgz');
   pack(
     npmDir,
@@ -110,6 +120,33 @@ function packNodePackages() {
     /^rolldown-binding-wasm32-wasi-\d.*\.tgz$/,
     'rolldown-binding-wasm32-wasi.tgz',
   );
+}
+
+// TEMPORARY, goes away with the `file:` overrides in the root pnpm-workspace.yaml (the unreleased
+// @emnapi/* pins). The napi cli writes the installed emnapi version into the packed WASI binding's
+// dependencies, so a consumer outside the repo resolves it from the registry, which does not have
+// it. Copy those tarballs next to the fixtures with an overrides.json mapping each package to its
+// copy; the consumers in tests/webcontainer and tests/webcontainer-fallback apply it in the form
+// their pnpm reads. With no `file:` override left, this only removes what an earlier run staged.
+function stageWorkspaceFileOverrides(fixtureDir) {
+  const stageDir = join(fixtureDir, '.napi-validation');
+  rmSync(stageDir, { recursive: true, force: true });
+
+  const workspace = readFileSync(join(repoRoot, 'pnpm-workspace.yaml'), 'utf8');
+  const block = workspace.match(/^overrides:\n((?:[ \t].*\n|\n)*)/m)?.[1] ?? '';
+  const entries = [...block.matchAll(/^ {2}'?([^'\s:#][^'\s:]*)'?: file:(\S+)$/gm)];
+  if (entries.length === 0) {
+    return;
+  }
+
+  mkdirSync(stageDir);
+  const overrides = {};
+  for (const [, name, file] of entries) {
+    copyFileSync(resolve(repoRoot, file), join(stageDir, basename(file)));
+    overrides[name] = `file:./.napi-validation/${basename(file)}`;
+  }
+  writeFileSync(join(stageDir, 'overrides.json'), `${JSON.stringify(overrides, null, 2)}\n`);
+  console.log(`[prepare-fixture] staged ${entries.length} workspace file: overrides`);
 }
 
 // `--ignore-workspace` keeps this out of the repo's pnpm workspace, so `@rolldown/browser` comes

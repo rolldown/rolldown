@@ -6,7 +6,8 @@ import {
   WASI as __WASI,
 } from '@napi-rs/wasm-runtime'
 import { createContext as __emnapiCreateContext } from '@emnapi/runtime'
-import { memfs } from '@napi-rs/wasm-runtime/fs'
+import { installCurrentThreadHosts as __installCurrentThreadHosts } from '@napi-rs/async-runtime'
+import { memfs, Buffer } from '@napi-rs/wasm-runtime/fs'
 
 export const __napiBindingTarget = 'wasm32-wasi'
 function __napiStampBindingTarget(exportsObject, target) {
@@ -156,6 +157,36 @@ let __completeWasiDisposal = function () {}
 // that stopped short of destroying the context. See
 // `__rollbackWasiInitialization`.
 let __retainWasiRollbackForRetry = function () {}
+
+let __currentThreadHostsDisposer
+
+function __reportCurrentThreadHostDisposalError(error) {
+  try {
+    const consoleHost = globalThis.console
+    if (consoleHost && typeof consoleHost.error === 'function') {
+      consoleHost.error(error)
+    }
+  } catch {}
+}
+
+/**
+ * Unregister the CurrentThread task and timer hosts this loader installed.
+ * Idempotent, and never throws: an unregister failure must not abort
+ * `Context.destroy()`, which would retain the whole environment over a
+ * bookkeeping error. The failure is reported instead.
+ */
+function __disposeCurrentThreadHosts() {
+  const dispose = __currentThreadHostsDisposer
+  if (dispose === undefined) {
+    return
+  }
+  __currentThreadHostsDisposer = undefined
+  try {
+    dispose()
+  } catch (error) {
+    __reportCurrentThreadHostDisposalError(error)
+  }
+}
 
 function __isThenable(value) {
   return (
@@ -809,6 +840,7 @@ function __destroyEmnapiContext() {
     return __emnapiContextDestroyPromise
   }
 
+  __disposeCurrentThreadHosts()
   __prepareWasmEnvCleanup()
   if (__isPreparingWasmEnvCleanup()) {
     // Reached from inside the synchronous barrier — a promise hook one of the
@@ -1347,6 +1379,36 @@ function __rollbackWasiInitialization() {
   return __rollbackWasmEnvForWasiInitialization()
 }
 
+// A view of the addon's crash flag, one word of the shared wasm memory, for the
+// pool workers: they raise it when their wasm thread dies, and the shutdown
+// waits inside the cleanup calls on this thread then trap instead of waiting on
+// the dead thread for good. Undefined for an addon built with an older napi.
+let __wasiAddonCrashFlag
+
+function __captureWasiAddonCrashFlag(instance) {
+  try {
+    const getAddress = instance.exports.napi_wasm_thread_crash_flag_address
+    if (typeof getAddress !== 'function') {
+      return
+    }
+    const address = getAddress() >>> 0
+    const buffer = __sharedMemory.buffer
+    if (address === 0 || address % 4 !== 0 || address + 4 > buffer.byteLength) {
+      return
+    }
+    __wasiAddonCrashFlag = new Int32Array(buffer, address, 1)
+  } catch {}
+}
+
+function __shareWasiAddonCrashFlag(worker) {
+  if (__wasiAddonCrashFlag === undefined) {
+    return
+  }
+  try {
+    worker.postMessage({ __napiRsAddonCrashFlag: __wasiAddonCrashFlag })
+  } catch {}
+}
+
 let __wasiModule
 let __napiModule
 
@@ -1357,7 +1419,8 @@ try {
     __isPreparingWasmEnvCleanup,
   )
   __emnapiContext.suppressDestroy()
-  
+    __emnapiContext.features.Buffer = Buffer
+
   ;({
     instance: __napiInstance,
     module: __wasiModule,
@@ -1377,6 +1440,7 @@ try {
         type: 'module',
       })
       __wasiWorkers.add(worker)
+      __shareWasiAddonCrashFlag(worker)
       worker.addEventListener('message', __wasmCreateOnMessageForFsProxy(__fs))
 
       worker.addEventListener('message', (event) => {
@@ -1406,6 +1470,10 @@ try {
     },
     beforeInit({ instance }) {
       __napiInstance = instance
+      __captureWasiAddonCrashFlag(instance)
+      for (const worker of __wasiWorkers) {
+        __shareWasiAddonCrashFlag(worker)
+      }
       for (const name of Object.keys(instance.exports)) {
         if (name.startsWith('__napi_register__')) {
           instance.exports[name]()
@@ -1414,6 +1482,9 @@ try {
     },
   }))
   __publishWasiDispose(__napiModule.exports)
+  __currentThreadHostsDisposer = __installCurrentThreadHosts(
+    __napiModule.exports,
+  )
   // The default export hands out this object; a named module export does not
   // travel with it, so carry the marker on the binding itself too. After the
   // host install, which hands the same object to addon-provided registration
@@ -1451,6 +1522,7 @@ export const transformSync = __napiModule.exports.transformSync
 export const BindingBundleEndEventData = __napiModule.exports.BindingBundleEndEventData
 export const BindingBundleErrorEventData = __napiModule.exports.BindingBundleErrorEventData
 export const BindingBundler = __napiModule.exports.BindingBundler
+export const BindingBundleStartEventData = __napiModule.exports.BindingBundleStartEventData
 export const BindingCallableBuiltinPlugin = __napiModule.exports.BindingCallableBuiltinPlugin
 export const BindingChunkingContext = __napiModule.exports.BindingChunkingContext
 export const BindingDecodedMap = __napiModule.exports.BindingDecodedMap
@@ -1483,14 +1555,27 @@ export const BindingPluginOrder = __napiModule.exports.BindingPluginOrder
 export const BindingPropertyReadSideEffects = __napiModule.exports.BindingPropertyReadSideEffects
 export const BindingPropertyWriteSideEffects = __napiModule.exports.BindingPropertyWriteSideEffects
 export const BindingRebuildStrategy = __napiModule.exports.BindingRebuildStrategy
+export const BindingRuntimeFlavor = __napiModule.exports.BindingRuntimeFlavor
 export const collapseSourcemaps = __napiModule.exports.collapseSourcemaps
+export const configureAsyncRuntime = __napiModule.exports.configureAsyncRuntime
 export const enhancedTransform = __napiModule.exports.enhancedTransform
 export const enhancedTransformSync = __napiModule.exports.enhancedTransformSync
 export const FilterTokenKind = __napiModule.exports.FilterTokenKind
+export const getAsyncRuntimeConfig = __napiModule.exports.getAsyncRuntimeConfig
+export const getAsyncRuntimeMetrics = __napiModule.exports.getAsyncRuntimeMetrics
+export const getCurrentThreadTaskHostContractVersion = __napiModule.exports.getCurrentThreadTaskHostContractVersion
 export const getNativeMemoryStats = __napiModule.exports.getNativeMemoryStats
+export const getRuntimeCapabilities = __napiModule.exports.getRuntimeCapabilities
 export const initTraceSubscriber = __napiModule.exports.initTraceSubscriber
+export const isCurrentThreadHostRegistrationActive = __napiModule.exports.isCurrentThreadHostRegistrationActive
+export const registerCurrentThreadTaskHost = __napiModule.exports.registerCurrentThreadTaskHost
 export const registerPlugins = __napiModule.exports.registerPlugins
+export const registerTimerHost = __napiModule.exports.registerTimerHost
+export const reserveCurrentThreadHostRegistration = __napiModule.exports.reserveCurrentThreadHostRegistration
+export const resetAsyncRuntimeMetrics = __napiModule.exports.resetAsyncRuntimeMetrics
 export const resetNativeMemoryStats = __napiModule.exports.resetNativeMemoryStats
 export const resolveTsconfig = __napiModule.exports.resolveTsconfig
 export const shutdownAsyncRuntime = __napiModule.exports.shutdownAsyncRuntime
 export const startAsyncRuntime = __napiModule.exports.startAsyncRuntime
+export const unregisterCurrentThreadTaskHost = __napiModule.exports.unregisterCurrentThreadTaskHost
+export const unregisterTimerHost = __napiModule.exports.unregisterTimerHost

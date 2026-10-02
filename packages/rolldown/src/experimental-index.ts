@@ -1,11 +1,26 @@
+// Required side effect on every entry that loads the binding: a driver must be
+// registered before the first CurrentThread sleep arms (see timer-host.ts).
+import './timer-host';
+
 export { dev } from './api/dev';
 export { DevEngine } from './api/dev/dev-engine';
 export type { DevOptions, DevWatchOptions } from './api/dev/dev-options';
 export { freeExternalMemory, scan } from './api/experimental';
 export {
+  type AsyncRuntimeConfig,
+  type AsyncRuntimeFlavor,
+  type AsyncRuntimeMetrics,
+  type AsyncRuntimeOptions,
+  configureAsyncRuntime,
+  getAsyncRuntimeConfig,
+  getAsyncRuntimeMetrics,
+  resetAsyncRuntimeMetrics,
+} from './api/async-runtime';
+export {
   type BindingClientHmrUpdate,
   type BindingNativeMemoryStats,
   BindingRebuildStrategy,
+  type BindingRuntimeCapabilities,
   getNativeMemoryStats,
   isolatedDeclaration,
   type IsolatedDeclarationsOptions,
@@ -18,6 +33,21 @@ export {
   ResolverFactory,
 } from './binding.cjs';
 export { resolveTsconfig } from './utils/resolve-tsconfig';
+export {
+  AsyncContextUnavailableError,
+  configureAsyncContext,
+  getAsyncContextSupport,
+  type AsyncContextProvider,
+  type AsyncContextStorage,
+  type AsyncContextSupport,
+} from './utils/async-context';
+export {
+  getRuntimeCapabilitiesCompat as getRuntimeCapabilities,
+  getRuntimeSupport,
+  type RuntimeFeature,
+  type RuntimeSupport,
+  UnsupportedRuntimeFeatureError,
+} from './runtime-support';
 
 export { defineParallelPlugin } from './plugin/parallel-plugin';
 

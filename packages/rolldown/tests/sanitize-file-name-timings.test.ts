@@ -40,6 +40,9 @@ describe('sanitizeFileName timings', () => {
         inputOptions,
         outputOptions,
         false,
+        undefined,
+        undefined,
+        undefined,
         true,
       );
       const bindingSanitizeFileName = bundlerOptions.outputOptions.sanitizeFileName;

@@ -40,6 +40,9 @@ describe('assetFileNames timings', () => {
         inputOptions,
         outputOptions,
         false,
+        undefined,
+        undefined,
+        undefined,
         true,
       );
       const bindingAssetFileNames = bundlerOptions.outputOptions.assetFileNames;

@@ -3,12 +3,16 @@ import type {
   BindingOutputs,
   BindingPluginContext,
   BindingPluginOptions,
-  BindingResult,
 } from '../binding.cjs';
 import { RolldownMagicString } from '../binding-magic-string';
 import { bindingifySourcemap } from '../types/sourcemap';
 import { aggregateBindingErrorsIntoJsError, unwrapBindingResult } from '../utils/error';
-import { transformRenderedChunk } from '../utils/transform-rendered-chunk';
+import {
+  dropBindingOutputs,
+  releaseOrDefer,
+  shouldEagerlyFreeOutputs,
+} from '../utils/threadless-free';
+import { snapshotRenderedChunk, transformRenderedChunk } from '../utils/transform-rendered-chunk';
 import {
   type ChangedOutputs,
   collectChangedBundle,
@@ -17,18 +21,30 @@ import {
 import { bindingifyRenderChunkFilter } from './bindingify-hook-filter';
 import type { BindingifyPluginArgs } from './bindingify-plugin';
 import { bindingifyHook, type PluginHookWithBindingExt } from './bindingify-plugin-hook-meta';
+import type { RenderedChunkMeta } from './index';
 import { createPluginContext } from './plugin-context';
 
+// Every hook invocation marshals fresh boxes (plugin context, rendered chunk,
+// module info, normalized options). On the threadless-WASI flavor, where GC
+// finalizers cannot be relied on, the wrappers release each box once its hook
+// settles. Arguments a callback may legally retain are handed over as
+// plain-data snapshots first, so a retained argument keeps working as data; a
+// retained plugin context used after its hook settles throws a clear
+// post-release error on this flavor only.
 export function bindingifyRenderStart(
   args: BindingifyPluginArgs,
 ): PluginHookWithBindingExt<BindingPluginOptions['renderStart']> {
   return bindingifyHook(args.plugin.renderStart, ({ handler }) => ({
     plugin: async (ctx, opts) => {
-      await handler.call(
-        createPluginContext(args, ctx),
-        args.pluginContextData.getOutputOptions(opts),
-        args.pluginContextData.getInputOptions(opts),
-      );
+      try {
+        await handler.call(
+          createPluginContext(args, ctx),
+          args.pluginContextData.getOutputOptions(opts),
+          args.pluginContextData.getInputOptions(opts),
+        );
+      } finally {
+        releaseOrDefer(ctx);
+      }
     },
   }));
 }
@@ -37,99 +53,150 @@ export function bindingifyRenderChunk(
 ): PluginHookWithBindingExt<BindingPluginOptions['renderChunk'], BindingHookFilter | undefined> {
   return bindingifyHook(args.plugin.renderChunk, ({ handler, options }) => ({
     plugin: async (ctx, code, chunk, opts, meta) => {
-      // cache the chunks binding to deduplicated avoid clone chunks
-      if (args.pluginContextData.getRenderChunkMeta() == null) {
-        args.pluginContextData.setRenderChunkMeta({
-          chunks: Object.fromEntries(
-            Object.entries(meta.chunks).map(([key, value]) => [key, transformRenderedChunk(value)]),
-          ),
-        });
-      }
-      const renderChunkMeta = args.pluginContextData.getRenderChunkMeta()!;
+      // Hoisted so the box the `magicString` getter below mints lazily can be
+      // released in the `finally` on the threadless flavor.
+      let magicStringInstance: RolldownMagicString | undefined;
+      // Flipped in the `finally`: a FIRST `meta.magicString` mint through a
+      // retained meta after the hook settles would escape the cleanup below
+      // and leak on a flavor with no GC finalizers, so the getter refuses it
+      // there instead.
+      let settled = false;
+      try {
+        // cache the chunks binding to deduplicated avoid clone chunks
+        if (args.pluginContextData.getRenderChunkMeta() == null) {
+          args.pluginContextData.setRenderChunkMeta({
+            chunks: Object.fromEntries(
+              Object.entries(meta.chunks).map(([key, value]) => [
+                key,
+                // On the threadless flavor the cached meta must be plain data:
+                // it outlives this invocation, and the per-chunk boxes minted
+                // by `meta.chunks` would otherwise wait for finalizers.
+                shouldEagerlyFreeOutputs()
+                  ? snapshotRenderedChunk(value)
+                  : transformRenderedChunk(value),
+              ]),
+            ),
+          });
+        }
+        // Per-chunk invocations of this hook run concurrently (the Rust side
+        // drives them through `try_join_all`), so only the chunks map is
+        // shared through the cache; the meta object handed to the hook is
+        // built per invocation. A getter defined on the shared object instead
+        // would be clobbered by whichever invocation started last, and a hook
+        // reading `meta.magicString` after an `await` would get another
+        // chunk's code -- or, on the threadless flavor, a box that
+        // invocation's cleanup already released.
+        const renderChunkMeta: RenderedChunkMeta = {
+          chunks: args.pluginContextData.getRenderChunkMeta()!.chunks,
+        };
 
-      // Add lazy-loaded magicString if nativeMagicString is enabled
-      let magicStringInstance: RolldownMagicString;
-      if (args.options.experimental?.nativeMagicString) {
-        Object.defineProperty(renderChunkMeta, 'magicString', {
-          get() {
-            if (magicStringInstance) {
+        // Add lazy-loaded magicString if nativeMagicString is enabled
+        if (args.options.experimental?.nativeMagicString) {
+          Object.defineProperty(renderChunkMeta, 'magicString', {
+            get() {
+              if (magicStringInstance) {
+                return magicStringInstance;
+              }
+              if (settled && shouldEagerlyFreeOutputs()) {
+                throw new Error(
+                  'meta.magicString is no longer usable: its renderChunk hook has already settled, and a MagicString minted now could never be released on this flavor. Read it while the hook runs.',
+                );
+              }
+              magicStringInstance = new RolldownMagicString(code);
               return magicStringInstance;
-            }
-            magicStringInstance = new RolldownMagicString(code);
-            return magicStringInstance;
-          },
-          configurable: true,
-        });
-      }
+            },
+          });
+        }
 
-      const ret = await handler.call(
-        createPluginContext(args, ctx),
-        code,
-        transformRenderedChunk(chunk),
-        args.pluginContextData.getOutputOptions(opts),
-        renderChunkMeta,
-      );
+        const ret = await handler.call(
+          createPluginContext(args, ctx),
+          code,
+          shouldEagerlyFreeOutputs() ? snapshotRenderedChunk(chunk) : transformRenderedChunk(chunk),
+          args.pluginContextData.getOutputOptions(opts),
+          renderChunkMeta,
+        );
 
-      if (ret == null) {
-        return;
-      }
+        if (ret == null) {
+          return;
+        }
 
-      // Handle MagicString return value directly
-      if (ret instanceof RolldownMagicString) {
-        const normalizedCode = ret.toString();
-        const generatedMap = ret.generateMap();
-        return {
-          code: normalizedCode,
-          map: bindingifySourcemap({
+        // Handle MagicString return value directly
+        if (ret instanceof RolldownMagicString) {
+          const normalizedCode = ret.toString();
+          const generatedMap = ret.generateMap();
+          const map = bindingifySourcemap({
             file: generatedMap.file,
             mappings: generatedMap.mappings,
             names: generatedMap.names,
             sources: generatedMap.sources,
             sourcesContent: generatedMap.sourcesContent.map((s) => s ?? null),
-          }),
-        };
-      }
-
-      if (typeof ret === 'string') {
-        return { code: ret };
-      }
-
-      // Handle object return with code as MagicString
-      if (ret.code instanceof RolldownMagicString) {
-        const magicString = ret.code as RolldownMagicString;
-        const normalizedCode = magicString.toString();
-        // If map is explicitly null, don't generate sourcemap (opt-out)
-        // If map is undefined, auto-generate from MagicString
-        if (ret.map === null) {
-          return { code: normalizedCode, map: null };
+          });
+          // Every field is copied out above, so the native map box has no
+          // reader left; nothing else holds it, so it drops directly.
+          if (shouldEagerlyFreeOutputs()) {
+            generatedMap.dropInner();
+          }
+          return { code: normalizedCode, map };
         }
-        if (ret.map === undefined) {
-          const generatedMap = magicString.generateMap();
-          return {
-            code: normalizedCode,
-            map: bindingifySourcemap({
+
+        if (typeof ret === 'string') {
+          return { code: ret };
+        }
+
+        // Handle object return with code as MagicString
+        if (ret.code instanceof RolldownMagicString) {
+          const magicString = ret.code as RolldownMagicString;
+          const normalizedCode = magicString.toString();
+          // If map is explicitly null, don't generate sourcemap (opt-out)
+          // If map is undefined, auto-generate from MagicString
+          if (ret.map === null) {
+            return { code: normalizedCode, map: null };
+          }
+          if (ret.map === undefined) {
+            const generatedMap = magicString.generateMap();
+            const map = bindingifySourcemap({
               file: generatedMap.file,
               mappings: generatedMap.mappings,
               names: generatedMap.names,
               sources: generatedMap.sources,
               sourcesContent: generatedMap.sourcesContent.map((s) => s ?? null),
-            }),
+            });
+            // Same as the direct-return branch above: every field is copied
+            // out, so the native map box has no reader left.
+            if (shouldEagerlyFreeOutputs()) {
+              generatedMap.dropInner();
+            }
+            return { code: normalizedCode, map };
+          }
+          return {
+            code: normalizedCode,
+            map: bindingifySourcemap(ret.map),
           };
         }
+
+        if (ret.map === null) {
+          return { code: ret.code, map: null };
+        }
+
         return {
-          code: normalizedCode,
+          code: ret.code,
           map: bindingifySourcemap(ret.map),
         };
+      } finally {
+        settled = true;
+        if (shouldEagerlyFreeOutputs()) {
+          // The chunk box was released by `snapshotRenderedChunk`; the meta
+          // box is read on the first invocation only (the snapshot above is
+          // cached), so every invocation's copy can go, as can the context.
+          meta.dropInner();
+          releaseOrDefer(ctx);
+          // The `magicString` getter mints a box holding the chunk source plus
+          // its UTF-16 mapping table, ~9x the source bytes. The getter is only
+          // installed under `experimental.nativeMagicString` and only runs if
+          // the hook read it, so this stays undefined otherwise.
+          magicStringInstance?.dropInner();
+        }
       }
-
-      if (ret.map === null) {
-        return { code: ret.code, map: null };
-      }
-
-      return {
-        code: ret.code,
-        map: bindingifySourcemap(ret.map),
-      };
     },
     filter: bindingifyRenderChunkFilter(options.filter),
   }));
@@ -140,7 +207,17 @@ export function bindingifyAugmentChunkHash(
 ): PluginHookWithBindingExt<BindingPluginOptions['augmentChunkHash']> {
   return bindingifyHook(args.plugin.augmentChunkHash, ({ handler }) => ({
     plugin: async (ctx, chunk) => {
-      return handler.call(createPluginContext(args, ctx), transformRenderedChunk(chunk));
+      try {
+        // The hook is typed sync, but a handler may still return a thenable at runtime and
+        // release must follow its settlement.
+        // oxlint-disable-next-line typescript/await-thenable
+        return await handler.call(
+          createPluginContext(args, ctx),
+          shouldEagerlyFreeOutputs() ? snapshotRenderedChunk(chunk) : transformRenderedChunk(chunk),
+        );
+      } finally {
+        releaseOrDefer(ctx);
+      }
     },
   }));
 }
@@ -150,7 +227,14 @@ export function bindingifyResolveFileUrl(
 ): PluginHookWithBindingExt<BindingPluginOptions['resolveFileUrl']> {
   return bindingifyHook(args.plugin.resolveFileUrl, ({ handler }) => ({
     plugin: async (ctx, resolveFileUrlArgs) => {
-      return handler.call(createPluginContext(args, ctx), resolveFileUrlArgs);
+      try {
+        // The hook is typed sync, but a handler may still return a thenable at runtime and
+        // release must follow its settlement.
+        // oxlint-disable-next-line typescript/await-thenable
+        return await handler.call(createPluginContext(args, ctx), resolveFileUrlArgs);
+      } finally {
+        releaseOrDefer(ctx);
+      }
     },
   }));
 }
@@ -160,7 +244,11 @@ export function bindingifyRenderError(
 ): PluginHookWithBindingExt<BindingPluginOptions['renderError']> {
   return bindingifyHook(args.plugin.renderError, ({ handler }) => ({
     plugin: async (ctx, err) => {
-      await handler.call(createPluginContext(args, ctx), aggregateBindingErrorsIntoJsError(err));
+      try {
+        await handler.call(createPluginContext(args, ctx), aggregateBindingErrorsIntoJsError(err));
+      } finally {
+        releaseOrDefer(ctx);
+      }
     },
   }));
 }
@@ -168,25 +256,40 @@ export function bindingifyRenderError(
 function createOutputBundle(
   args: BindingifyPluginArgs,
   ctx: BindingPluginContext,
-  bundle: BindingResult<BindingOutputs>,
+  outputs: BindingOutputs,
 ) {
   const changed = {
     updated: new Set(),
     deleted: new Set(),
   } as ChangedOutputs;
   const context = createPluginContext(args, ctx);
-  const output = transformToOutputBundle(context, unwrapBindingResult(bundle), changed);
+  const output = transformToOutputBundle(context, outputs, changed);
   return { changed, context, output };
 }
 
+// Each generateBundle/writeBundle invocation gets its own marshaled bundle
+// copy: fresh boxes sharing the build's native `Arc`s (`js_plugin.rs` marshals
+// `args.bundle.clone()`). On the threadless-WASI flavor they must be released
+// after `collectChangedBundle` finished its native reads and before Rust
+// applies the changes, so Rust sees our references gone and can `Arc::get_mut`
+// in place. Plugins that stash `bundle` past the hook then get throwing getters
+// for not-yet-read fields, on this flavor only.
 export function bindingifyGenerateBundle(
   args: BindingifyPluginArgs,
 ): PluginHookWithBindingExt<BindingPluginOptions['generateBundle']> {
   return bindingifyHook(args.plugin.generateBundle, ({ handler }) => ({
     plugin: async (ctx, bundle, isWrite, opts) => {
-      const { changed, context, output } = createOutputBundle(args, ctx, bundle);
-      await handler.call(context, args.pluginContextData.getOutputOptions(opts), output, isWrite);
-      return collectChangedBundle(changed, output);
+      const outputs = unwrapBindingResult(bundle);
+      try {
+        const { changed, context, output } = createOutputBundle(args, ctx, outputs);
+        await handler.call(context, args.pluginContextData.getOutputOptions(opts), output, isWrite);
+        return collectChangedBundle(changed, output);
+      } finally {
+        if (shouldEagerlyFreeOutputs()) {
+          dropBindingOutputs(outputs);
+          releaseOrDefer(ctx);
+        }
+      }
     },
   }));
 }
@@ -196,9 +299,17 @@ export function bindingifyWriteBundle(
 ): PluginHookWithBindingExt<BindingPluginOptions['writeBundle']> {
   return bindingifyHook(args.plugin.writeBundle, ({ handler }) => ({
     plugin: async (ctx, bundle, opts) => {
-      const { changed, context, output } = createOutputBundle(args, ctx, bundle);
-      await handler.call(context, args.pluginContextData.getOutputOptions(opts), output);
-      return collectChangedBundle(changed, output);
+      const outputs = unwrapBindingResult(bundle);
+      try {
+        const { changed, context, output } = createOutputBundle(args, ctx, outputs);
+        await handler.call(context, args.pluginContextData.getOutputOptions(opts), output);
+        return collectChangedBundle(changed, output);
+      } finally {
+        if (shouldEagerlyFreeOutputs()) {
+          dropBindingOutputs(outputs);
+          releaseOrDefer(ctx);
+        }
+      }
     },
   }));
 }
@@ -208,10 +319,18 @@ export function bindingifyCloseBundle(
 ): PluginHookWithBindingExt<BindingPluginOptions['closeBundle']> {
   return bindingifyHook(args.plugin.closeBundle, ({ handler }) => ({
     plugin: async (ctx, err) => {
-      await handler.call(
-        createPluginContext(args, ctx),
-        err ? aggregateBindingErrorsIntoJsError(err) : undefined,
-      );
+      try {
+        const invokeHook = () =>
+          handler.call(
+            createPluginContext(args, ctx),
+            err ? aggregateBindingErrorsIntoJsError(err) : undefined,
+          );
+        await (args.closeCallbackScope
+          ? args.closeCallbackScope.runWithCloseIdentity(ctx.closeIdentity(), invokeHook)
+          : invokeHook());
+      } finally {
+        releaseOrDefer(ctx);
+      }
     },
   }));
 }
@@ -223,10 +342,22 @@ export function bindingifyAddonHook<K extends 'banner' | 'footer' | 'intro' | 'o
   return bindingifyHook(args.plugin[name], ({ handler }) => ({
     plugin: async (ctx, chunk) => {
       if (typeof handler === 'string') {
+        if (shouldEagerlyFreeOutputs()) {
+          // A string addon never reads its boxes; release them right away.
+          chunk.dropInner();
+          releaseOrDefer(ctx);
+        }
         return handler;
       }
 
-      return handler.call(createPluginContext(args, ctx), transformRenderedChunk(chunk));
+      try {
+        return await handler.call(
+          createPluginContext(args, ctx),
+          shouldEagerlyFreeOutputs() ? snapshotRenderedChunk(chunk) : transformRenderedChunk(chunk),
+        );
+      } finally {
+        releaseOrDefer(ctx);
+      }
     },
   }));
 }

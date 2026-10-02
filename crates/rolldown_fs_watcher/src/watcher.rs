@@ -15,10 +15,16 @@ pub struct FsWatcher {
 
 impl FsWatcher {
   pub fn new<F: FsEventHandler>(event_handler: F, config: &FsWatcherConfig) -> BuildResult<Self> {
-    Ok(Self {
-      backend: create_backend(event_handler, config)?,
-      watched_paths: FxHashSet::default(),
-    })
+    Ok(Self::with_backend(create_backend(event_handler, config)?))
+  }
+
+  /// Build a watcher over a caller-supplied backend.
+  ///
+  /// The notify backends stay crate-private; this is the seam that lets the watch-mode and
+  /// dev-engine tests substitute failing or recording backends while path bookkeeping stays in
+  /// `FsWatcher`. See internal-docs/watch-mode/implementation.md.
+  pub fn with_backend(backend: Box<dyn WatcherBackend>) -> Self {
+    Self { backend, watched_paths: FxHashSet::default() }
   }
 
   /// Paths must be absolute and normalized (`WatchPath` in `rolldown_common`). A directory is
@@ -61,6 +67,11 @@ impl FsWatcher {
 
   pub fn is_watched(&self, path: &Path) -> bool {
     path.ancestors().any(|ancestor| self.watched_paths.contains(ancestor))
+  }
+
+  /// Whether `path` itself was registered, without the ancestor lookup of [`Self::is_watched`].
+  pub fn is_registered(&self, path: &Path) -> bool {
+    self.watched_paths.contains(path)
   }
 
   pub fn watched_paths(&self) -> impl Iterator<Item = &Path> {

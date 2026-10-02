@@ -53,3 +53,50 @@ export function transformChunkModules(
   }
   return result;
 }
+
+/**
+ * Like {@linkcode transformRenderedChunk}, but copies every field to plain JS
+ * data (modules included) and releases the native box immediately, for the
+ * threadless-WASI flavor. A callback that retains the returned chunk past its
+ * hook keeps working: nothing on it reads through the released box.
+ */
+export function snapshotRenderedChunk(chunk: BindingRenderedChunk): RenderedChunk {
+  const snapshot: RenderedChunk = {
+    type: 'chunk',
+    name: chunk.name,
+    isEntry: chunk.isEntry,
+    isDynamicEntry: chunk.isDynamicEntry,
+    facadeModuleId: chunk.facadeModuleId,
+    moduleIds: chunk.moduleIds,
+    exports: chunk.exports,
+    fileName: chunk.fileName,
+    imports: chunk.imports,
+    dynamicImports: chunk.dynamicImports,
+    modules: snapshotChunkModules(chunk.modules),
+  };
+  chunk.dropInner();
+  return snapshot;
+}
+
+/**
+ * Like {@linkcode transformChunkModules}, but copies every rendered module to
+ * plain JS data and releases each native box immediately, for the
+ * threadless-WASI flavor.
+ */
+export function snapshotChunkModules(
+  modules: BindingRenderedChunk['modules'],
+): RenderedChunk['modules'] {
+  const result: RenderedChunk['modules'] = {};
+  for (let i = 0; i < modules.values.length; i++) {
+    const key = modules.keys[i];
+    const box = modules.values[i];
+    const code = box.code;
+    result[key] = {
+      code,
+      renderedLength: code?.length || 0,
+      renderedExports: box.renderedExports,
+    };
+    box.dropInner();
+  }
+  return result;
+}

@@ -11,6 +11,15 @@ import {
 // the app under test, shared by every scenario; only the dependencies differ
 const APP = 'tests/fixtures/app';
 
+const APPLY_STAGED_OVERRIDES = `
+const fs = require('fs');
+if (fs.existsSync('.napi-validation/overrides.json')) {
+  const pkg = JSON.parse(fs.readFileSync('package.json', 'utf8'));
+  pkg.pnpm = { overrides: JSON.parse(fs.readFileSync('.napi-validation/overrides.json', 'utf8')) };
+  fs.writeFileSync('package.json', JSON.stringify(pkg, null, 2));
+}
+`;
+
 export interface Scenario {
   /** fixture directory holding this scenario's package.json and packed tarballs */
   overlay: string;
@@ -36,6 +45,11 @@ export function defineScenario(scenario: Scenario) {
     await webcontainer.mount(APP);
     await webcontainer.mount(scenario.overlay);
     await expectNoPreexistingDist(webcontainer);
+
+    // TEMPORARY: prepare-fixture.mjs stages the workspace's `file:` overrides (the unreleased
+    // emnapi pins the packed WASI binding depends on) in the node overlay; WebContainer runs
+    // pnpm 8, which reads overrides from package.json only. A no-op once the pins are gone.
+    await webcontainer.runCommand('node', ['-e', APPLY_STAGED_OVERRIDES]);
 
     const install = await run(webcontainer, 'pnpm install --no-frozen-lockfile');
     expect(install, install.output).toMatchObject({ exitCode: 0 });

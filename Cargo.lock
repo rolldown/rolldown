@@ -59,6 +59,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "arc-swap"
+version = "1.9.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "c049c0be4daef0b145cb3555416b3b8ef5b7888a38aea1a3a155801fe7b0810b"
+dependencies = [
+ "rustversion",
+]
+
+[[package]]
 name = "arcstr"
 version = "1.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -69,6 +78,18 @@ name = "arrayvec"
 version = "0.7.8"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "d3fb67a6e08acf24fdeccbac2cb6ac4305825bd1f117462e0e6f2f193345ad56"
+
+[[package]]
+name = "async-broadcast"
+version = "0.7.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "435a87a52755b8f27fcf321ac4f04b2802e337c8c4872923137471ec39c37532"
+dependencies = [
+ "event-listener",
+ "event-listener-strategy",
+ "futures-core",
+ "pin-project-lite",
+]
 
 [[package]]
 name = "async-channel"
@@ -83,15 +104,21 @@ dependencies = [
 ]
 
 [[package]]
-name = "async-scoped"
-version = "0.9.0"
+name = "async-lock"
+version = "3.4.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4042078ea593edffc452eef14e99fdb2b120caa4ad9618bcdeabc4a023b98740"
+checksum = "290f7f2596bd5b78a9fec8088ccd89180d7f9f55b94b0576823bbbdc72ee8311"
 dependencies = [
- "futures",
- "pin-project",
- "tokio",
+ "event-listener",
+ "event-listener-strategy",
+ "pin-project-lite",
 ]
+
+[[package]]
+name = "async-task"
+version = "4.7.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "8b75356056920673b02621b35afd0f7dda9306d03c79a30f5c56c44cf256e3de"
 
 [[package]]
 name = "autocfg"
@@ -134,9 +161,9 @@ dependencies = [
  "rolldown_resolver",
  "rolldown_sourcemap",
  "rolldown_tracking_allocator",
+ "rolldown_utils",
  "rolldown_workspace",
  "rustc-hash",
- "tokio",
 ]
 
 [[package]]
@@ -432,7 +459,6 @@ dependencies = [
  "oorandom",
  "serde",
  "serde_json",
- "tokio",
 ]
 
 [[package]]
@@ -595,11 +621,10 @@ checksum = "120339709b24832c07464b0838828361b735d793c409b8ca3147db0dae601542"
 
 [[package]]
 name = "event-listener"
-version = "5.4.1"
+version = "5.4.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e13b66accf52311f30a0db42147dadea9850cb48cd070028831ae5f5d4b856ab"
+checksum = "5a23add41df1562121a9393cb065eab5146a1242410f23a644851e90cfd669d2"
 dependencies = [
- "concurrent-queue",
  "parking",
  "pin-project-lite",
 ]
@@ -1307,9 +1332,8 @@ dependencies = [
 
 [[package]]
 name = "napi"
-version = "3.13.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "3b12638855cec016784a7e17cc4ecbdee7ca8b0a3456aa50640d0ee5ed1a42f8"
+version = "3.14.0"
+source = "git+https://github.com/napi-rs/napi-rs?rev=e6e50eb4d16c68b170d267424528a884e028993a#e6e50eb4d16c68b170d267424528a884e028993a"
 dependencies = [
  "anyhow",
  "bitflags",
@@ -1323,48 +1347,57 @@ dependencies = [
  "rustc-hash",
  "serde",
  "serde_json",
- "tokio",
  "tracing",
 ]
 
 [[package]]
+name = "napi-async-runtime"
+version = "0.2.4"
+source = "git+https://github.com/napi-rs/napi-rs?rev=e6e50eb4d16c68b170d267424528a884e028993a#e6e50eb4d16c68b170d267424528a884e028993a"
+dependencies = [
+ "arc-swap",
+ "async-task",
+ "crossbeam-deque",
+ "futures",
+ "napi-sys",
+ "rayon",
+ "rustc-hash",
+]
+
+[[package]]
 name = "napi-build"
-version = "2.5.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0941983559cd62bfa7f04646a16428967a847365adeef27711e4e3927046bbed"
+version = "2.6.0"
+source = "git+https://github.com/napi-rs/napi-rs?rev=e6e50eb4d16c68b170d267424528a884e028993a#e6e50eb4d16c68b170d267424528a884e028993a"
 
 [[package]]
 name = "napi-derive"
-version = "3.6.9"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6b1d232c24dc6754979b27efdf2047a5849efc7c92c1245de87e6bedbb9f5c3c"
+version = "3.6.10"
+source = "git+https://github.com/napi-rs/napi-rs?rev=e6e50eb4d16c68b170d267424528a884e028993a#e6e50eb4d16c68b170d267424528a884e028993a"
 dependencies = [
  "convert_case",
  "ctor",
  "napi-derive-backend",
  "proc-macro2",
  "quote",
- "syn 2.0.119",
+ "syn 3.0.6",
 ]
 
 [[package]]
 name = "napi-derive-backend"
 version = "6.1.4"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "fd6856fe1686867da90ed0dc292d7c0c87a695eb7c578b913360f33619ee01e3"
+source = "git+https://github.com/napi-rs/napi-rs?rev=e6e50eb4d16c68b170d267424528a884e028993a#e6e50eb4d16c68b170d267424528a884e028993a"
 dependencies = [
  "convert_case",
  "proc-macro2",
  "quote",
  "semver",
- "syn 2.0.119",
+ "syn 3.0.6",
 ]
 
 [[package]]
 name = "napi-sys"
-version = "3.3.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6801fc65ba4d7035636e93635e281113f00410401a237dcd4f55b1565ead2115"
+version = "3.4.0"
+source = "git+https://github.com/napi-rs/napi-rs?rev=e6e50eb4d16c68b170d267424528a884e028993a#e6e50eb4d16c68b170d267424528a884e028993a"
 dependencies = [
  "libloading",
 ]
@@ -2161,8 +2194,7 @@ dependencies = [
 [[package]]
 name = "parking_lot_core"
 version = "0.9.12"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2621685985a2ebf1c516881c026032ac7deafcda1a2c9b7850dc81e3dfcb64c1"
+source = "git+https://github.com/napi-rs/parking_lot?rev=eb33ab62f79d27d1c7880b60e06187be1cbd21f4#eb33ab62f79d27d1c7880b60e06187be1cbd21f4"
 dependencies = [
  "cfg-if",
  "libc",
@@ -2245,26 +2277,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "c6fd9027e2d9319be6349febd1db4e8d02aa544921200c9b777720ac34a3aa89"
 dependencies = [
  "siphasher",
-]
-
-[[package]]
-name = "pin-project"
-version = "1.1.13"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2466b2336ed02bcdca6b294417127b90ec92038d1d5c4fbeac971a922e0e0924"
-dependencies = [
- "pin-project-internal",
-]
-
-[[package]]
-name = "pin-project-internal"
-version = "1.1.13"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c96395f0a926bc13b1c17622aaddda1ecb55d49c8f1bf9777e4d877800a43f8b"
-dependencies = [
- "proc-macro2",
- "quote",
- "syn 2.0.119",
 ]
 
 [[package]]
@@ -2640,6 +2652,7 @@ dependencies = [
  "rolldown_plugin_vite_transform",
  "rolldown_plugin_vite_web_worker_post",
  "rolldown_sourcemap",
+ "rolldown_std_utils",
  "rolldown_tracing",
  "rolldown_tracking_allocator",
  "rolldown_utils",
@@ -2663,6 +2676,7 @@ dependencies = [
  "dashmap",
  "derive_more",
  "fast-glob",
+ "futures",
  "insta",
  "itertools",
  "num-bigint 0.5.1",
@@ -2686,7 +2700,6 @@ dependencies = [
  "smallvec",
  "string_wizard",
  "sugar_path",
- "tokio",
 ]
 
 [[package]]
@@ -2695,12 +2708,14 @@ version = "1.2.12"
 dependencies = [
  "anyhow",
  "arcstr",
+ "async-lock",
  "futures",
  "rolldown",
  "rolldown_common",
  "rolldown_dev_common",
  "rolldown_error",
  "rolldown_fs_watcher",
+ "rolldown_std_utils",
  "rolldown_utils",
  "rolldown_workspace",
  "rustc-hash",
@@ -2727,6 +2742,7 @@ version = "1.2.12"
 dependencies = [
  "blake3",
  "rolldown_devtools_action",
+ "rolldown_std_utils",
  "rustc-hash",
  "serde",
  "serde_json",
@@ -2808,9 +2824,11 @@ version = "1.2.12"
 dependencies = [
  "anyhow",
  "arcstr",
+ "async-broadcast",
  "bitflags",
  "dashmap",
  "derive_more",
+ "futures",
  "nodejs-built-in-modules",
  "oxc_index",
  "rolldown_common",
@@ -2826,7 +2844,6 @@ dependencies = [
  "serde_json",
  "string_wizard",
  "sugar_path",
- "tokio",
  "tracing",
  "typedmap",
 ]
@@ -2983,7 +3000,6 @@ dependencies = [
  "rolldown_utils",
  "serde_json",
  "string_wizard",
- "tokio",
 ]
 
 [[package]]
@@ -3252,6 +3268,7 @@ dependencies = [
 name = "rolldown_tracing"
 version = "1.2.12"
 dependencies = [
+ "rolldown_devtools",
  "tracing",
  "tracing-chrome",
  "tracing-subscriber",
@@ -3270,7 +3287,6 @@ version = "1.2.12"
 dependencies = [
  "anyhow",
  "arcstr",
- "async-scoped",
  "base-encode",
  "base64-simd",
  "cow-utils",
@@ -3284,6 +3300,7 @@ dependencies = [
  "itoa",
  "memchr",
  "mime",
+ "napi-async-runtime",
  "nom",
  "oxc",
  "oxc_index",
@@ -3297,7 +3314,6 @@ dependencies = [
  "serde_json",
  "simdutf8",
  "sugar_path",
- "tokio",
  "uuid",
  "xxhash-rust",
 ]
@@ -3308,12 +3324,16 @@ version = "1.2.12"
 dependencies = [
  "anyhow",
  "arcstr",
+ "async-lock",
+ "dunce",
+ "event-listener",
  "futures",
  "oxc_index",
  "rolldown",
  "rolldown_common",
  "rolldown_error",
  "rolldown_fs_watcher",
+ "rolldown_std_utils",
  "rolldown_utils",
  "rolldown_workspace",
  "sugar_path",
@@ -3324,6 +3344,9 @@ dependencies = [
 [[package]]
 name = "rolldown_workspace"
 version = "1.2.12"
+dependencies = [
+ "dunce",
+]
 
 [[package]]
 name = "ropey"

@@ -83,8 +83,8 @@ pub fn derive_benchmark_items(
   ret
 }
 
-/// Walk a directory recursively and load all files into a `MemoryFileSystem`.
-/// This is used in benchmarks to eliminate disk I/O from the timed section.
+/// Load a directory tree into a `MemoryFileSystem`, keeping disk I/O out of
+/// the timed section.
 pub fn preload_into_memory_fs(dir: &Path) -> MemoryFileSystem {
   let mut fs = MemoryFileSystem::default();
   for entry in ignore::WalkBuilder::new(dir)
@@ -105,8 +105,7 @@ pub fn preload_into_memory_fs(dir: &Path) -> MemoryFileSystem {
   fs
 }
 
-/// Precomputed benchmark context: factory, MemoryFileSystem, and resolver config.
-/// Created once per benchmark item (outside the timed loop).
+/// Precomputed per-item benchmark context, built outside the timed loop.
 pub struct BenchContext {
   pub factory: BundleFactory,
   pub mem_fs: MemoryFileSystem,
@@ -129,9 +128,8 @@ impl BenchContext {
   }
 }
 
-/// Create a `BenchContext` for a given set of bundler options.
-/// This performs all one-time setup (option normalization, FS preloading, resolver creation)
-/// so the timed loop only measures bundling work.
+/// Create a `BenchContext`, doing all one-time setup (option normalization, FS
+/// preloading, resolver creation) so the timed loop only measures bundling.
 pub fn create_bench_context(options: &BundlerOptions) -> BenchContext {
   let cwd = options
     .cwd
@@ -158,6 +156,7 @@ pub fn create_bench_context(options: &BundlerOptions) -> BenchContext {
     plugins: vec![],
     session: None,
     disable_tracing_setup: true,
+    defer_close_on_error: false,
   })
   .expect("Failed to create bundle factory");
   BenchContext { factory, mem_fs, cwd, platform, tsconfig, raw_resolve }
@@ -169,6 +168,20 @@ pub enum BenchMode {
   Bundle,
 }
 
+/// Criterion executor running on the same shared runtime as `generate()`'s
+/// internal spawns, so there is no cross-runtime wakeup hop.
+struct SharedRuntimeExecutor;
+
+impl criterion::async_executor::AsyncExecutor for SharedRuntimeExecutor {
+  fn block_on<T>(&self, future: impl std::future::Future<Output = T>) -> T {
+    rolldown_utils::async_runtime::block_on(future)
+  }
+}
+
+// The shared runtime's configuration freezes on the first submission, so pin
+// it exactly once before any benchmark iteration runs.
+static CONFIGURE_SHARED_RUNTIME: std::sync::Once = std::sync::Once::new();
+
 pub fn run_bench_group(
   c: &mut Criterion,
   group_name: &str,
@@ -177,28 +190,43 @@ pub fn run_bench_group(
   items: Vec<(&str, BundlerOptions)>,
 ) {
   let mut group = c.benchmark_group(group_name);
-  let runtime = tokio::runtime::Builder::new_multi_thread()
-    .worker_threads(8)
-    .enable_all()
-    .max_blocking_threads(4)
-    .build()
-    .expect("Failed to build tokio runtime");
+  // Pin a fixed configuration so bench numbers stay comparable across runs;
+  // production resolves these limits from the environment instead.
+  CONFIGURE_SHARED_RUNTIME.call_once(|| {
+    rolldown_utils::async_runtime::configure(rolldown_utils::async_runtime::RuntimeOptions {
+      flavor: rolldown_utils::async_runtime::RuntimeFlavor::MultiThread,
+      worker_threads: 8,
+      max_blocking_tasks: 4,
+      ..Default::default()
+    })
+    .expect("Failed to configure the shared async runtime");
+  });
 
   for (name, options) in items {
     for item in derive_benchmark_items(derive_options, name, options) {
       let mut ctx = create_bench_context(&item.options);
       group.bench_function(format!("{group_name}@{}", item.name), |b| {
-        b.to_async(&runtime).iter(|| {
+        b.to_async(SharedRuntimeExecutor).iter(|| {
           let bundle = ctx.factory.create_bundle_with_fs(ctx.mem_fs.clone(), ctx.create_resolver());
           async {
-            match mode {
-              BenchMode::Scan => {
-                bundle.scan().await.expect("Failed to scan");
+            // Spawn rather than poll inline: criterion's thread is not a
+            // runtime worker, so inline polling would run the root future's
+            // `par_iter` sections on rayon's global pool — a second thread pool
+            // production never has, which CodSpeed's simulation bills.
+            // Boxed because the root state machine is large and would otherwise
+            // be memcpy-ed at every non-inlined hop of the spawn chain.
+            rolldown_utils::async_runtime::spawn(Box::pin(async move {
+              match mode {
+                BenchMode::Scan => {
+                  bundle.scan().await.expect("Failed to scan");
+                }
+                BenchMode::Bundle => {
+                  bundle.generate().await.expect("Failed to bundle");
+                }
               }
-              BenchMode::Bundle => {
-                bundle.generate().await.expect("Failed to bundle");
-              }
-            }
+            }))
+            .await
+            .expect("bench bundling task failed");
           }
         });
       });

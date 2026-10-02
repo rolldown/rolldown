@@ -173,8 +173,9 @@ anyhow = "1.0.103"
 append-only-vec = "0.1.8"
 arcstr = { version = "1.2.0", default-features = false }
 ariadne = { package = "rolldown-ariadne", version = "0.6.0" }
+async-broadcast = "0.7.2"
 async-channel = "2.5.0"
-async-scoped = "0.9.0"
+async-lock = "3.4.2"
 base-encode = "0.3.1"
 base64-simd = "0.8.0"
 bitflags = "2.13.0"
@@ -184,6 +185,7 @@ criterion2 = { version = "3.0.4", default-features = false }
 dashmap = "6.2.1"
 derive_more = { version = "2.1.1", features = ["debug"] }
 dunce = "1.0.5" # Normalize Windows paths to the most compatible format, avoiding UNC where possible
+event-listener = "5.4.1"
 fast-glob = "1.1.0"
 flate2 = { version = "1.1.10", features = ["zlib-rs"] }
 form_urlencoded = "1.2.2"
@@ -203,7 +205,14 @@ json-escape-simd = "3.1.1"
 json-strip-comments = "3"
 jsonschema = { version = "0.58.0", default-features = false }
 memchr = "2.8.2"
-mimalloc-safe = "0.1.64"
+# 0.1.67 carries mimalloc v3.5.2, which upstreamed the association of the process-init thread's
+# theap with the thread-done hook (the idea behind microsoft/mimalloc#1393, closed unmerged).
+# The napi-rs fork still patches `mi_process_init` to set `_mi_process_is_initialized` *before*
+# `mi_process_setup_auto_thread_done`, otherwise `_mi_theap_default()` returns the empty theap
+# under `MI_TLS_RECURSE_GUARD` (macOS/Android) and the association is silently skipped.
+# Without that hook, the thread that first loads the addon (e.g. a Node worker) leaves its theap
+# registered under a thread id the OS may reuse, aborting Linux debug builds on exit (0.1.65).
+mimalloc-safe = "0.1.67"
 mime = "0.3.17"
 nodejs-built-in-modules = "1.0.0"
 nom = "8.0.0"
@@ -261,9 +270,33 @@ syn = { version = "3", default-features = false }
 # napi
 # Keep the `tracing` feature on: `#[napi]` logs every binding call, which helps debug deadlocks
 # (e.g. #7289) by showing which napi function is pending.
-napi = { version = "3", features = ["async", "anyhow", "tracing", "object_indexmap"] }
-napi-build = { version = "2" }
-napi-derive = { version = "3", default-features = false, features = ["type-def", "tracing"] }
+# Minimum versions: the first registry releases with the napi-rs#3423 content rolldown needs (borrow tracker, non-Error rejection identity, wasm teardown barrier, addon pinning).
+# napi 3.12.6 / napi-build 2.4.3 add the async-work half of that teardown handshake (napi-rs#3528):
+# `napi_wasm_async_work_pending` / `napi_wasm_cancel_pending_async_work`, plus the
+# `--export-if-defined` linker args that reach them, so a WASI loader can settle outstanding
+# `napi_async_work` before disposal instead of stranding it. Pairs with @napi-rs/cli >= 3.10.2.
+# napi 3.12.7 / napi-sys 3.3.2 (napi-rs#3536) then make that handshake survive the other teardown
+# order: a Worker terminated while an `AsyncTask` is still in flight delivers its completion
+# callback on a draining env, where `napi_resolve_deferred`/`napi_reject_deferred` answer
+# `napi_pending_exception` (module API < 10) or `napi_cannot_run_js` (API >= 10). The crate now
+# treats those as a no-op settle, frees the `napi_async_work` handle on every completion path, and
+# marks the work terminal before freeing it. Nothing in the drain the loaders use changed —
+# `napi_cancelled` still becomes the same `AbortError` — so this is hardening, not a new floor.
+# napi-build 2.4.4 / napi-derive 3.6.8 ride along with clippy-only diffs and no codegen change.
+# napi 3.13.0 / napi-build 2.5.0 (napi-rs#3541) split wasm cleanup into the two-phase trio
+# (`napi_prepare_wasm_env_cleanup_begin` / `_work_pending` / `_finish`, pairs with @napi-rs/cli
+# >= 3.10.5) and emit the `napi_wasi_threads` cfg; napi-rs#3540 adds External payload provenance.
+# napi 3.14.0 / napi-sys 3.4.0 / napi-build 2.6.0 / napi-async-runtime 0.2.4 (napi-rs#3552) own
+# the threaded WASI heap sync: one allocator lock around wasi-libc's dlmalloc with a refresh of
+# the thread's memory size under it (`--wrap` link args from napi-build's `wasi-heap-sync`
+# feature, which napi turns on for its own build-dependency), the same refresh at every
+# scheduler handoff, and the worker-crash flag (pairs with @napi-rs/cli >= 3.10.6).
+# napi-derive 3.6.10 rides along. Every `oxc_*_napi` crate must resolve to this same napi /
+# napi-sys: two napi-sys copies would give two MAX_SEEN_PAGES statics.
+# See internal-docs/wasi-shared-memory-grow/implementation.md
+napi = { version = "3.14.0", features = ["anyhow", "tracing", "object_indexmap"] }
+napi-build = { version = "2.6.0" }
+napi-derive = { version = "3.6.10", default-features = false, features = ["type-def", "tracing"] }
 
 # oxc crates with the same version
 oxc = { version = "0.152.0", features = [
@@ -331,3 +364,37 @@ opt-level = "s"
 # it will strip these information for non-debug files
 debug = "full"
 strip = "none"
+
+# parking_lot_core 0.9.12 picks a panicking thread parker ("Parking not supported on this
+# platform") on wasm32-wasip1-threads, because stable rustc never sets
+# `target_feature = "atomics"` there (rust-lang/rust#77839). The napi-rs fork detects the
+# threaded WASI triples in core/build.rs and parks on std's futex Mutex/Condvar instead.
+# Upstream PR: https://github.com/Amanieu/parking_lot/pull/538
+# The rev is the tip of branch `wasi-threads-parker-0.9.12`: the `parking_lot_core-v0.9.12`
+# release tag plus that one parker commit (core/build.rs, core/src/thread_parker/{mod.rs,
+# wasi_threads.rs}). The change is cfg-gated to the threaded WASI triples, so native builds
+# compile exactly the crates.io 0.9.12 sources. It keeps the original crate names: the
+# renamed crates.io forks (`parking_lot_core-napi`, ...) cannot stand in for a crates.io
+# dependency through [patch], and the fork's master carries those renamed manifests.
+# Drop this patch once a released parking_lot_core ships the change.
+# See internal-docs/async-runtime/implementation.md
+[patch.crates-io]
+parking_lot_core = { git = "https://github.com/napi-rs/parking_lot", rev = "eb33ab62f79d27d1c7880b60e06187be1cbd21f4" }
+# TEMPORARY - validates the threaded WASI pool preload against the unreleased napi-rs head
+# e6e50eb4 (branch feat/wasi-thread-pool-preload, PR napi-rs/napi-rs#3558; pairs with the cli
+# tarball in pnpm-workspace.yaml). The crates are unchanged since 4d6f0a6f (only two unit
+# tests gained a cfg); the head adds the cli loader's until-exit tracking of a shrunk pool
+# Worker and its crash-disposal re-entry gate (no emnapi deferred call re-enters wasm after
+# `__disposeWasiBindingAfterThreadCrash`). napi-async-runtime adds the `napi_wasm_runtime_pool_workers` export the generated
+# threaded loader reads to size emnapi's idle Worker pool. Once a backend
+# has started it reads 0 (its pool threads already exist), so a reconcile after the first use
+# only releases idle Workers. All six crates, so the graph keeps one napi-sys (`oxc_*_napi`
+# included). napi-derive needs the exact version because the napi-rs repo also holds a fixture
+# crate named `napi-derive`. Replaced by the released versions.
+# See internal-docs/async-runtime/implementation.md (section 13, "Pool worker preload").
+napi = { git = "https://github.com/napi-rs/napi-rs", rev = "e6e50eb4d16c68b170d267424528a884e028993a" }
+napi-sys = { git = "https://github.com/napi-rs/napi-rs", rev = "e6e50eb4d16c68b170d267424528a884e028993a" }
+napi-build = { git = "https://github.com/napi-rs/napi-rs", rev = "e6e50eb4d16c68b170d267424528a884e028993a" }
+napi-derive = { git = "https://github.com/napi-rs/napi-rs", rev = "e6e50eb4d16c68b170d267424528a884e028993a", version = "=3.6.10" }
+napi-derive-backend = { git = "https://github.com/napi-rs/napi-rs", rev = "e6e50eb4d16c68b170d267424528a884e028993a" }
+napi-async-runtime = { git = "https://github.com/napi-rs/napi-rs", rev = "e6e50eb4d16c68b170d267424528a884e028993a" }

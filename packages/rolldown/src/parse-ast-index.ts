@@ -1,3 +1,7 @@
+// This entry loads the binding (parse/parseSync); every such entry registers
+// the CurrentThread timer host at import (see timer-host.ts).
+import './timer-host';
+
 import type { Program } from '@oxc-project/types';
 import type {
   ParseResult as BindingParseResult,
@@ -19,6 +23,10 @@ export type ParseResult = BindingParseResult;
 export type ParserOptions = BindingParserOptions;
 
 function wrap(result: ParseResult, filename: string | undefined, sourceText: string) {
+  // No drain here: `wrapParseResult` in `utils/parse.ts` already reads every
+  // native getter on the threadless-WASI flavor, for failed and successful
+  // parses alike. Touching this wrapper's `program` getter would only run
+  // `jsonParseAst` over an AST the error path throws away.
   if (result.errors.length > 0) {
     return normalizeParseError(filename, sourceText, result.errors);
   }

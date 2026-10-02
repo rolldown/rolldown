@@ -7,4 +7,5 @@ mod watcher;
 
 pub use config::FsWatcherConfig;
 pub use event::{FsEvent, FsEventHandler};
+pub use notify::{PathsMut, WatcherBackend};
 pub use watcher::FsWatcher;

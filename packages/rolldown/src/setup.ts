@@ -1,6 +1,7 @@
 import { isMainThread } from 'node:worker_threads';
 import { initTraceSubscriber } from './binding.cjs';
 import { onExit } from './utils/signal-exit';
+import './timer-host';
 
 if (!import.meta.browserBuild && isMainThread) {
   const subscriberGuard = initTraceSubscriber();

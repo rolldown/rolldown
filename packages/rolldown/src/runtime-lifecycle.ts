@@ -1,0 +1,92 @@
+import { excludeDeliveredErrors } from './utils/retryable-cleanup';
+
+export interface CloseAttemptResult {
+  errors: unknown[];
+  retryable: boolean;
+  terminalErrors?: unknown[];
+}
+
+interface CloseErrorDetails {
+  ownedCleanupErrors: unknown[];
+  terminalErrors: unknown[];
+}
+
+const closeErrorDetails = new WeakMap<object, CloseErrorDetails>();
+
+export function throwCloseErrors(
+  errors: unknown[],
+  aggregateMessage: string,
+  terminalErrors?: unknown[],
+): void {
+  if (errors.length === 1) {
+    recordCloseErrorDetails(errors[0], errors, terminalErrors);
+    throw errors[0];
+  }
+  if (errors.length > 1) {
+    const aggregate = new AggregateError(errors, aggregateMessage, { cause: errors[0] });
+    recordCloseErrorDetails(aggregate, errors, terminalErrors);
+    throw aggregate;
+  }
+}
+
+/** @internal Retrieve terminal diagnostics carried by a close failure. */
+export function getCloseTerminalErrors(error: unknown): readonly unknown[] {
+  return typeof error === 'object' && error !== null
+    ? (closeErrorDetails.get(error)?.terminalErrors ?? [])
+    : [];
+}
+
+function recordCloseErrorDetails(
+  error: unknown,
+  errors: unknown[],
+  terminalErrors: unknown[] | undefined,
+): void {
+  if (!terminalErrors || typeof error !== 'object' || error === null) return;
+  closeErrorDetails.set(error, {
+    ownedCleanupErrors: excludeDeliveredErrors(errors, terminalErrors),
+    terminalErrors: [...terminalErrors],
+  });
+}
+
+/**
+ * Coalesce concurrent close calls and replay terminal results. Attempts with
+ * retryable cleanup failures are cleared after settlement so a later close
+ * can retry only the phases that retained ownership.
+ */
+export class CloseCoordinator {
+  #closePromise: Promise<void> | undefined;
+  readonly #aggregateMessage: string;
+
+  constructor(aggregateMessage: string) {
+    this.#aggregateMessage = aggregateMessage;
+  }
+
+  close(attempt: () => Promise<CloseAttemptResult>): Promise<void> {
+    return (this.#closePromise ??= Promise.resolve().then(() => this.#run(attempt)));
+  }
+
+  /**
+   * @internal Retry the shared close attempt while projecting out replayed
+   * terminal diagnostics. The caller receives those diagnostics separately.
+   */
+  async retryOwnedCleanup(attempt: () => Promise<CloseAttemptResult>): Promise<unknown[]> {
+    try {
+      await this.close(attempt);
+      return [];
+    } catch (error) {
+      const details =
+        typeof error === 'object' && error !== null ? closeErrorDetails.get(error) : undefined;
+      if (!details) throw error;
+      throwCloseErrors(details.ownedCleanupErrors, this.#aggregateMessage, details.terminalErrors);
+      return [...details.terminalErrors];
+    }
+  }
+
+  async #run(attempt: () => Promise<CloseAttemptResult>): Promise<void> {
+    const { errors, retryable, terminalErrors = [] } = await attempt();
+    if (retryable) {
+      this.#closePromise = undefined;
+    }
+    throwCloseErrors(errors, this.#aggregateMessage, terminalErrors);
+  }
+}

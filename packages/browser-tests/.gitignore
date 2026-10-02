@@ -2,6 +2,8 @@
 tests/fixtures/browser/rolldown-browser.tgz
 tests/fixtures/node/rolldown.tgz
 tests/fixtures/node/rolldown-binding-wasm32-wasi.tgz
+# TEMPORARY: the workspace `file:` overrides prepare-fixture.mjs stages for the unreleased emnapi pins
+tests/fixtures/node/.napi-validation/
 # the page app installs the packed tarball, so its lockfile is build output too
 tests/browser/pnpm-lock.yaml
 # vitest browser mode failure screenshots

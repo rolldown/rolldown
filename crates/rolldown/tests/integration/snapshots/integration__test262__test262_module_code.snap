@@ -54,10 +54,12 @@ Actual: Runtime execution succeeded
 
 # language/module-code/ambiguous-export-bindings/namespace-unambiguous-if-import-source-and-export.js
 Result: FAIL
-Reason: Incorrect ambiguous export detection in Rolldown
+Reason: source phase imports are not supported in Rolldown
 Expected: success
 Actual:
-"namespace-import-source-and-export-reexport_FIXTURE.js" re-exports "mod" from one of the modules "namespace-import-source-and-export-1_FIXTURE.js" and "namespace-import-source-and-export-2_FIXTURE.js" (will be ignored).
+Runtime error: Failed to import test module: Error [ERR_MODULE_NOT_FOUND]: Cannot find package '<module source>' imported from <temp>/main.js
+  code: 'ERR_MODULE_NOT_FOUND'
+}
 ---
 
 # language/module-code/ambiguous-export-bindings/namespace-unambiguous-if-import-star-as-and-export.js

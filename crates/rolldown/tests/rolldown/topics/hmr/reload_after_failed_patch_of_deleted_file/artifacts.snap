@@ -1,0 +1,133 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+import assert from "node:assert";
+// HIDDEN [\0rolldown/runtime.js]
+__rolldown_runtime__.registerGraph({
+	ids: [
+		"child.js",
+		"parent.js",
+		"main.js"
+	],
+	localCount: 3,
+	edges: [
+		[],
+		[0],
+		[1]
+	]
+});
+//#region child.js
+var child_exports = /* @__PURE__ */ __exportAll({ child: () => "c1" });
+__rolldown_runtime__.createModuleHotContext("child.js");
+__rolldown_runtime__.registerModule("child.js", { exports: child_exports });
+//#endregion
+//#region parent.js
+var parent_exports = /* @__PURE__ */ __exportAll({ value: () => value });
+const parent_hot = __rolldown_runtime__.createModuleHotContext("parent.js");
+__rolldown_runtime__.registerModule("parent.js", { exports: parent_exports });
+const value = "c1";
+parent_hot.accept();
+//#endregion
+//#region main.js
+var main_exports = /* @__PURE__ */ __exportAll({});
+__rolldown_runtime__.createModuleHotContext("main.js");
+__rolldown_runtime__.registerModule("main.js", { exports: main_exports });
+process.on("beforeExit", (code) => {
+	if (code !== 0) return;
+	assert.strictEqual(globalThis.__reload_after_failed_patch_of_deleted_file_step, 2);
+});
+//#endregion
+
+//# sourceMappingURL=main.js.map
+```
+
+# HMR Step 0
+
+## Errors
+
+### UNHANDLEABLE_ERROR
+
+```text
+[UNHANDLEABLE_ERROR] Something went wrong inside rolldown, please report this problem at https://github.com/rolldown/rolldown/issues.
+simulated failure while rendering an HMR patch
+
+```
+
+# HMR Step 1
+
+## Meta
+
+- update type: full-reload
+- reason: an earlier hot update failed
+
+## Build Output
+
+### Assets
+
+#### main.js
+
+```js
+import assert from "node:assert";
+// HIDDEN [\0rolldown/runtime.js]
+__rolldown_runtime__.registerGraph({
+	ids: ["parent.js", "main.js"],
+	localCount: 2,
+	edges: [[], [0]]
+});
+//#region parent.js
+var parent_exports = /* @__PURE__ */ __exportAll({ value: () => value });
+const parent_hot = __rolldown_runtime__.createModuleHotContext("parent.js");
+__rolldown_runtime__.registerModule("parent.js", { exports: parent_exports });
+const value = "no-child";
+globalThis.__reload_after_failed_patch_of_deleted_file_step = 1;
+parent_hot.accept();
+//#endregion
+//#region main.js
+var main_exports = /* @__PURE__ */ __exportAll({});
+__rolldown_runtime__.createModuleHotContext("main.js");
+__rolldown_runtime__.registerModule("main.js", { exports: main_exports });
+process.on("beforeExit", (code) => {
+	if (code !== 0) return;
+	assert.strictEqual(globalThis.__reload_after_failed_patch_of_deleted_file_step, 2);
+});
+//#endregion
+
+//# sourceMappingURL=main.js.map
+```
+
+# HMR Step 2
+
+## Code
+
+```js
+__rolldown_runtime__.registerGraph({ids:["parent.js"],localCount:1,edges:[[]]});
+//#region parent.js
+import * as import_node_assert_00 from "node:assert";
+__rolldown_runtime__.registerFactory("parent.js", (function(__rolldown_module_id__) {
+	try {
+		var __rolldown_exports__ = __rolldown_runtime__.__exportAll({ value: () => value });
+		__rolldown_runtime__.registerModule(__rolldown_module_id__, { exports: __rolldown_exports__ });
+		const hot_parent = __rolldown_runtime__.createModuleHotContext(__rolldown_module_id__);
+		const value = "still-updating";
+		import_node_assert_00.default.strictEqual(globalThis.__reload_after_failed_patch_of_deleted_file_step, 1);
+		globalThis.__reload_after_failed_patch_of_deleted_file_step = 2;
+		hot_parent.accept();
+	} finally {}
+}));
+
+//#endregion
+//# sourceMappingURL=hmr_patch_1.js.map
+```
+
+## Meta
+
+- update type: patch
+
+### Changed Ids
+
+- parent.js

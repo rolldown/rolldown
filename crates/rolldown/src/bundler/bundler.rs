@@ -18,6 +18,18 @@ pub struct Bundler {
   pub(super) bundle_factory: BundleFactory,
   #[cfg_attr(not(feature = "experimental"), allow(dead_code))]
   pub(super) cache: ScanStageCache,
+  /// An HMR update has three stages:
+  ///
+  /// 1. Refetch the changed modules.
+  /// 2. Merge them into the module graph.
+  /// 3. Render each client's patch.
+  ///
+  /// A failure in step 1 leaves the graph unchanged, so the next update retries the edit. A
+  /// failure in step 2 or 3 loses the edit: no client ran it, and the graph already has it.
+  /// This flag records that loss. While it is set, the dev engine reloads every client and
+  /// runs a full build. A successful full build clears it. It lives outside `cache` because
+  /// a full scan drops `cache`, even when the scan fails.
+  pub(super) lost_hmr_update: bool,
   pub(super) closed: bool,
   /// Whether the terminal close failure of the current `last_bundle_handle` has
   /// already been delivered to this bundler's caller. The handle replays its
@@ -47,6 +59,7 @@ impl Bundler {
       bundle_factory,
       session: rolldown_devtools::Session::dummy(),
       cache: ScanStageCache::default(),
+      lost_hmr_update: false,
       closed: false,
       last_close_failure_delivered: false,
     })

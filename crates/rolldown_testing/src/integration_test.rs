@@ -58,6 +58,35 @@ fn default_test_input_item() -> rolldown::InputItem {
   rolldown::InputItem { name: Some("main".to_string()), import: "./main.js".to_string() }
 }
 
+fn read_output_files(dir: &Path) -> Vec<(PathBuf, Vec<u8>)> {
+  let mut files = vec![];
+  let mut dirs = vec![dir.to_path_buf()];
+  while let Some(dir) = dirs.pop() {
+    let Ok(entries) = fs::read_dir(&dir) else { continue };
+    for entry in entries {
+      let path = entry.unwrap().path();
+      if path.is_dir() {
+        dirs.push(path);
+      } else {
+        let content = fs::read(&path).unwrap();
+        files.push((path, content));
+      }
+    }
+  }
+  files
+}
+
+fn restore_output_files(dir: &Path, files: &[(PathBuf, Vec<u8>)]) {
+  fs::remove_dir_all(dir)
+    .or_else(|err| if err.kind() == std::io::ErrorKind::NotFound { Ok(()) } else { Err(err) })
+    .unwrap();
+  fs::create_dir_all(dir).unwrap();
+  for (path, content) in files {
+    fs::create_dir_all(path.parent().unwrap()).unwrap();
+    fs::write(path, content).unwrap();
+  }
+}
+
 impl IntegrationTest {
   pub fn new(test_meta: TestMeta, test_folder_path: PathBuf) -> Self {
     Self { test_meta, test_folder_path }
@@ -252,8 +281,16 @@ impl IntegrationTest {
       dev_engine.run().await.unwrap();
       dev_engine.create_client_for_testing().await;
 
+      // Later builds overwrite the output directory, but a client keeps running the output it
+      // loaded until it reloads. Keep the files the test client loaded.
+      let mut client_output = read_output_files(Path::new(&output_dir));
+      // The last step that reloaded the test client: a full reload, or a full build from
+      // `full_build_after_steps`, whose build succeeded. The client then runs the output of that
+      // reload and only the patches of later steps.
+      let mut reloaded_after_step = None;
+
       // Process HMR steps
-      for hmr_edit_files in hmr_steps {
+      for (step, hmr_edit_files) in hmr_steps.iter().enumerate() {
         // Prepare new vecs for this step's callbacks
         hmr_updates_by_steps.lock().unwrap().push(vec![]);
         build_results_by_steps.lock().unwrap().push(vec![]);
@@ -280,6 +317,36 @@ impl IntegrationTest {
         // Optionally wait for async builds to complete
         if self.test_meta.dev.ensure_latest_build_output_for_each_step {
           dev_engine.ensure_latest_bundle_output().await.unwrap();
+        }
+
+        // Like Vite, ignore an update with no changed files.
+        let full_reload = hmr_updates_by_steps.lock().unwrap().last().is_some_and(|updates| {
+          updates
+            .iter()
+            .flatten()
+            .filter(|(_, changed_files)| !changed_files.is_empty())
+            .flat_map(|(updates, _)| updates)
+            .any(|u| u.update.is_full_reload())
+        });
+        let full_build = self.test_meta.dev.full_build_after_steps.contains(&step);
+        if full_build {
+          dev_engine.trigger_full_build().unwrap();
+        }
+        if full_reload || full_build {
+          dev_engine.ensure_latest_bundle_output().await.unwrap();
+          // Like Vite, reload only after a successful build. A failed build drops the reload,
+          // and the client keeps the output and patches it already had.
+          let build_succeeded = build_results_by_steps
+            .lock()
+            .unwrap()
+            .last()
+            .and_then(|results| results.last())
+            .is_some_and(Result::is_ok);
+          if build_succeeded {
+            dev_engine.create_client_for_testing().await;
+            client_output = read_output_files(Path::new(&output_dir));
+            reloaded_after_step = Some(step);
+          }
         }
 
         // Compare the incremental scan state with a fresh full build of the
@@ -359,9 +426,16 @@ impl IntegrationTest {
             }
           }
 
+          if self.test_meta.write_to_disk {
+            restore_output_files(Path::new(&output_dir), &client_output);
+          }
+
           // Process HMR updates and patches for execution
           let mut patch_chunks: Vec<(String, Vec<String>)> = vec![];
-          for step_output in &build_snapshot.hmr_steps {
+          for (step, step_output) in build_snapshot.hmr_steps.iter().enumerate() {
+            if reloaded_after_step.is_some_and(|reloaded| step <= reloaded) {
+              continue;
+            }
             if let Ok((client_updates, _changed_files)) = &step_output.hmr_updates {
               for hmr_update in client_updates {
                 match &hmr_update.update {
@@ -370,13 +444,11 @@ impl IntegrationTest {
                     fs::write(&output_path, &patch.code).unwrap();
                     patch_chunks.push((format!("./{}", patch.filename), patch.changed_ids.clone()));
                   }
-                  rolldown_common::HmrUpdate::FullReload { reason } => {
-                    assert!(
-                      !self.should_execute_output(),
-                      "execute_output should be false when full reload happens; reason: {reason:?}"
-                    );
-                  }
-                  rolldown_common::HmrUpdate::Noop => {}
+                  // A full reload that ran reloads the test client, which skips this step. One
+                  // left here was dropped, as Vite drops it: its build failed, or it had no
+                  // changed files.
+                  rolldown_common::HmrUpdate::FullReload { .. }
+                  | rolldown_common::HmrUpdate::Noop => {}
                 }
               }
             }

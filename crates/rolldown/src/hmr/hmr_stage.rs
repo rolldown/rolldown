@@ -48,6 +48,7 @@ pub struct HmrStageInput<'a, Fs: FileSystem + Clone + 'static> {
   pub resolver: SharedResolver<Fs>,
   pub plugin_driver: SharedPluginDriver,
   pub cache: &'a mut ScanStageCache,
+  pub lost_hmr_update: &'a mut bool,
   pub next_hmr_patch_id: Arc<AtomicU32>,
 }
 
@@ -113,6 +114,8 @@ impl<'a, Fs: FileSystem + Clone + 'static> HmrStage<'a, Fs> {
       clients = %clients.iter().map(|client| client.client_id).join(", "),
       "[HmrStage] starts computing HMR updates"
     );
+    // An earlier lost update stays lost: this one does not carry its edit.
+    let lost_before = *self.lost_hmr_update;
 
     // 1. Identify changed modules — per changed file: compute the default affected set, then (if
     // the hook is enabled and any plugin registered `hotUpdate`) let the plugin replace-chain
@@ -331,6 +334,8 @@ impl<'a, Fs: FileSystem + Clone + 'static> HmrStage<'a, Fs> {
         "added modules"
       );
 
+      // From here on, a failure leaves the graph with an edit that no client received.
+      *self.lost_hmr_update = true;
       let plugin_driver = Arc::clone(&self.plugin_driver);
       self.cache.merge(module_loader_output.into(), &plugin_driver)?;
 
@@ -451,6 +456,7 @@ impl<'a, Fs: FileSystem + Clone + 'static> HmrStage<'a, Fs> {
       client_updates.push(ClientHmrUpdate { client_id: client.client_id.to_string(), update });
     }
 
+    *self.lost_hmr_update = lost_before;
     Ok(client_updates)
   }
 
@@ -595,18 +601,12 @@ impl<'a, Fs: FileSystem + Clone + 'static> HmrStage<'a, Fs> {
     let options = Arc::clone(&self.options);
     self.cache.update_defer_sync_data(&options).await?;
 
-    // Collect all sync dependencies, stopping at modules whose current copy this client
-    // already holds — factory resident per the ship map, or exports live per the
-    // top-level-evaluated map. Overlapping concurrent lazy compiles both see an
-    // unmarked ship map and re-ship shared factories — duplicate idempotent bytes, never
-    // a missing factory.
     let mut modules_to_be_updated = FxIndexSet::default();
-    self.collect_sync_dependencies_for_client(
+    modules_to_be_updated.insert(entry_module_idx);
+    self.collect_unheld_sync_deps(
       entry_module_idx,
+      &ClientHeldCopies { shipped, evaluated, stamp_table },
       &mut modules_to_be_updated,
-      shipped,
-      evaluated,
-      stamp_table,
     );
 
     // Remove external modules - no way to "compile" them
@@ -955,55 +955,56 @@ struct ModuleRenderInput {
   pub ecma_ast: EcmaAst,
 }
 
+struct ClientHeldCopies<'a> {
+  shipped: &'a FxHashMap<ArcStr, u32>,
+  evaluated: &'a FxHashMap<ArcStr, u32>,
+  stamp_table: &'a HmrStampTable,
+}
+
+impl ClientHeldCopies<'_> {
+  fn holds_current(&self, map: &FxHashMap<ArcStr, u32>, stable_id: &str) -> bool {
+    map.get(stable_id).is_some_and(|stamp| !self.stamp_table.is_stale(stable_id, *stamp))
+  }
+}
+
 impl<Fs: FileSystem + Clone + 'static> HmrStage<'_, Fs> {
-  fn collect_sync_dependencies_for_client(
+  /// Goes through shipped modules: a patch can carry a module the client never ran. See
+  /// internal-docs/hmr/design.md, principle 2.
+  fn collect_unheld_sync_deps(
     &self,
-    proxy_entry_idx: ModuleIdx,
-    result: &mut FxIndexSet<ModuleIdx>,
-    shipped: &FxHashMap<ArcStr, u32>,
-    evaluated: &FxHashMap<ArcStr, u32>,
-    stamp_table: &HmrStampTable,
+    entry: ModuleIdx,
+    held: &ClientHeldCopies<'_>,
+    out: &mut FxIndexSet<ModuleIdx>,
   ) {
     let modules = &self.module_table().modules;
-    let mut stack = vec![proxy_entry_idx];
+    let mut visited = FxHashSet::from_iter([entry]);
+    let mut to_walk = vec![entry];
 
-    while let Some(module_idx) = stack.pop() {
-      if !result.insert(module_idx) {
-        continue;
-      }
-
+    while let Some(module_idx) = to_walk.pop() {
       let Module::Normal(module) = &modules[module_idx] else {
         continue;
       };
-
       for rec in &module.import_records {
-        // For the proxy entry module, also follow dynamic imports.
-        // The proxy's fetched template has `import($MODULE_ID)` pointing to the real module.
-        // We need to include the real module and its sync dependencies in the patch.
-        let should_follow = rec.kind.is_static()
-          || (module_idx == proxy_entry_idx && rec.kind == ImportKind::DynamicImport);
-
-        if should_follow && let Some(dep_idx) = rec.resolved_module {
-          // A module with N importers hits this edge check N times; the cheap
-          // visited test spares the ship-map string hashing for all but the first.
-          if result.contains(&dep_idx) {
-            continue;
-          }
-          if let Module::Normal(normal_dep) = &modules[dep_idx] {
-            // Skip deps whose current copy this client already holds: factory
-            // resident per the ship map, or exports live per the top-level-evaluated
-            // map (a lazy import never re-runs an evaluated module, so
-            // `initModule` serves it without a factory).
-            let stable_id = normal_dep.stable_id.as_str();
-            let holds_current = |map: &FxHashMap<ArcStr, u32>| {
-              map.get(stable_id).is_some_and(|stamp| !stamp_table.is_stale(stable_id, *stamp))
-            };
-            if holds_current(shipped) || holds_current(evaluated) {
-              continue;
-            }
-          }
-          stack.push(dep_idx);
+        // The proxy entry's fetched template reaches the real module through `import()`.
+        let follow =
+          rec.kind.is_static() || (module_idx == entry && rec.kind == ImportKind::DynamicImport);
+        let Some(dep_idx) = rec.resolved_module.filter(|_| follow) else {
+          continue;
+        };
+        if !visited.insert(dep_idx) {
+          continue;
         }
+        let Module::Normal(dep) = &modules[dep_idx] else {
+          continue;
+        };
+        let stable_id = dep.stable_id.as_str();
+        if held.holds_current(held.evaluated, stable_id) {
+          continue;
+        }
+        if !held.holds_current(held.shipped, stable_id) {
+          out.insert(dep_idx);
+        }
+        to_walk.push(dep_idx);
       }
     }
   }

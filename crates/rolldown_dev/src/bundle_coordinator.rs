@@ -237,7 +237,8 @@ impl BundleCoordinator {
         // Recovery choice (per Design principles §3 corollary): a Rebuild-stage
         // failure left the bundle output stale w.r.t. source, so the recovery
         // task must include a rebuild. An Hmr-stage failure (incl. watch_change
-        // hook) is recoverable by re-running the Hmr task alone.
+        // hook) is recoverable by re-running the Hmr task alone, which becomes a
+        // full build when the failed update already merged its edit (`run_inner`).
         let force_rebuild = matches!(last_error_stage, ErrorStage::Rebuild);
         let task_input = if force_rebuild || self.ctx.options.rebuild_strategy.is_always() {
           TaskInput::HmrRebuild { changed_files }

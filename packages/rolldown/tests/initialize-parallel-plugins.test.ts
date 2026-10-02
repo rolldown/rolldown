@@ -123,10 +123,12 @@ describe('parallel plugin worker cleanup', () => {
       rejection = error;
     }
     expect(rejection).toMatchObject({ code: 'ERR_WORKER_INVALID_EXEC_ARGV' });
+    // Node 20/22 reject `--test-isolation=process` in a worker; Node 24+ accept it.
+    const rejectsTestIsolation = (rejection as Error).message.includes('--test-isolation=process');
 
     const kept = dropRejectedWorkerExecArgv(execArgv, rejection);
     expect(kept).toEqual([
-      '--test-isolation=process',
+      ...(rejectsTestIsolation ? [] : ['--test-isolation=process']),
       '--conditions',
       'development',
       '--trace-warnings',

@@ -19,10 +19,7 @@ use rolldown_error::{
 #[cfg(not(target_family = "wasm"))]
 use rolldown_utils::rayon::IndexedParallelIterator;
 use rolldown_utils::{
-  ecmascript::{
-    is_validate_identifier_name, legitimize_identifier_name,
-    none_preserved_keyword_or_global_object_ext,
-  },
+  ecmascript::{is_validate_identifier_name, legitimize_identifier_name},
   index_vec_ext::{IndexVecExt, IndexVecRefExt},
   indexmap::{FxIndexMap, FxIndexSet},
   rayon::{IntoParallelRefIterator, IntoParallelRefMutIterator, ParallelIterator},
@@ -1704,11 +1701,7 @@ impl BindImportsAndExportsContext<'_> {
               .shimmed_missing_exports
               .entry(imported.clone())
               .or_insert_with(|| {
-                let mut name = legitimize_identifier_name(imported);
-                if !none_preserved_keyword_or_global_object_ext(&name) {
-                  name = Cow::Owned(format!("_{name}"));
-                }
-                self.symbol_db.create_facade_root_symbol_ref(tracker.importee, &name)
+                self.symbol_db.create_facade_root_symbol_ref(tracker.importee, imported.as_str())
               });
             return MatchImportKind::Normal(MatchImportKindNormal {
               symbol: *shimmed_symbol_ref,

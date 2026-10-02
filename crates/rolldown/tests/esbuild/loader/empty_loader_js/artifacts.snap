@@ -12,14 +12,14 @@ import assert from "node:assert/strict";
 var b_exports = /* @__PURE__ */ __exportAll({});
 //#endregion
 //#region c.empty
-var _default = void 0;
+var default$1 = void 0;
 //#endregion
 //#region d.empty
 var named = void 0;
 //#endregion
 //#region entry.js
 assert.deepEqual(b_exports, Object.defineProperty({}, Symbol.toStringTag, { value: "Module" }));
-assert.deepEqual(_default, void 0);
+assert.deepEqual(default$1, void 0);
 assert.equal(named, void 0);
 //#endregion
 

@@ -27,7 +27,7 @@ console.log(replace.test);
 console.log(replace2.test);
 console.log(collide);
 console.log(external_pkg.re_export);
-console.log(external_pkg2["re.export"]);
+console.log(external_pkg2.re.export);
 //#endregion
 
 ```

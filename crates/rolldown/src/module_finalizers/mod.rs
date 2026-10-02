@@ -13,10 +13,9 @@ use oxc::{
 };
 use rolldown_common::{
   AstScopes, Chunk, ChunkIdx, ChunkKind, ConcatenateWrappedModuleKind, ExportsKind,
-  ImportRecordIdx, ImportRecordMeta, InlineConstMode, MemberExprProp, MemberExprRefResolution,
-  Module, ModuleIdx, ModuleNamespaceIncludedReason, ModuleType, NamespaceAlias, NormalModule,
-  OutputExports, OutputFormat, Platform, RenderedConcatenatedModuleParts, Specifier, SymbolRef,
-  WrapKind,
+  ImportRecordIdx, ImportRecordMeta, InlineConstMode, MemberExprRefResolution, Module, ModuleIdx,
+  ModuleNamespaceIncludedReason, ModuleType, NamespaceAlias, NormalModule, OutputExports,
+  OutputFormat, Platform, RenderedConcatenatedModuleParts, Specifier, SymbolRef, WrapKind,
 };
 use rolldown_ecmascript::ToSourceString;
 use rolldown_ecmascript_utils::{
@@ -753,10 +752,11 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
 
     if let Some(ns_alias) = namespace_alias {
       if !optimize_namespace_alias_transform {
-        expr = Expression::new_member_expr_or_ident_ref(
-          expr,
-          &[MemberExprProp { name: ns_alias.property_name.clone(), span: SPAN, optional: false }],
+        expr = ast::Expression::new_static_member_expression(
           SPAN,
+          expr,
+          IdentifierName::new_id_name(SPAN, &ns_alias.property_name, self),
+          false,
           self,
         );
       }

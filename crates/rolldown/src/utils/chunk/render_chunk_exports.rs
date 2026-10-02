@@ -1,7 +1,6 @@
 use std::borrow::Cow;
 use std::fmt::Write as _;
 
-use json_escape_simd::escape;
 use oxc_str::CompactStr;
 use rolldown_common::{
   Chunk, ChunkKind, ExportsKind, IndexModules, ModuleIdx, NormalizedBundlerOptions, OutputExports,
@@ -239,7 +238,9 @@ pub fn render_chunk_exports(
             s.push_str("var ");
             s.push_str(canonical_name);
             s.push_str(" = ");
-            s.push_str(&property_access_str(canonical_ns_name, property_name));
+            s.push_str(canonical_ns_name);
+            s.push('.');
+            s.push_str(property_name);
             s.push_str(";\n");
           }
 
@@ -393,8 +394,7 @@ pub fn render_chunk_exports(
           s.push('\n');
           // Only generate require statement if this external module hasn't been imported yet
           if imported_external_modules.insert(external.namespace_ref) {
-            let import_path = escape(&external.get_import_path(chunk, ctx.resolved_paths));
-            writeln!(s, "var {binding_ref_name} = require({import_path});").unwrap();
+            writeln!(s, "var {} = require(\"{}\");", binding_ref_name, external.get_import_path(chunk, ctx.resolved_paths)).unwrap();
           }
           s.push_str(&import_stmt);
         });
@@ -417,7 +417,7 @@ pub fn render_chunk_exports(
                   let property_name = &ns_alias.property_name;
                   render_object_define_property(
                     &exported_name,
-                    &property_access_str(canonical_ns_name, property_name),
+                    &concat_string!(canonical_ns_name, ".", property_name),
                   )
                 }
                 _ => render_object_define_property(&exported_name, canonical_name),

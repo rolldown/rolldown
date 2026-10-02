@@ -143,17 +143,17 @@ impl BundlingTask {
 
     // A tsconfig edit affects every module the tsconfig governs, which HMR
     // patches and partial scans cannot represent. Clear the caches, tell
-    // clients to fully reload, and fall back to a full rebuild.
-    let changed_tsconfig = {
+    // clients to fully reload, and fall back to a full rebuild. A lost HMR
+    // update (`Bundler::has_lost_hmr_update`) takes the same path in every
+    // task kind: no client ran its edit. This includes the `FullBuild` that
+    // recovers from a failed full build; nothing else reloads the clients then.
+    let reload_reason = {
       let bundler = self.bundler.lock().await;
       let changed_tsconfig = self
         .input
         .changed_files()
         .keys()
         .any(|path| bundler.options().transform_options.is_known_tsconfig(path));
-      if changed_tsconfig {
-        tracing::trace!("[BundlingTask] detects a tsconfig change, upgrading to a full rebuild");
-      }
       // A bare full build carries no changed-file list (startup, restart,
       // failure recovery), so whether a tsconfig changed cannot be answered
       // there. Clear defensively; full builds are rare and the clears are
@@ -164,21 +164,37 @@ impl BundlingTask {
       } else if self.should_clear_resolver_cache() {
         bundler.clear_resolver_cache();
       }
-      changed_tsconfig
+      if changed_tsconfig {
+        tracing::trace!("[BundlingTask] detects a tsconfig change, upgrading to a full rebuild");
+        Some("tsconfig change")
+      } else if bundler.has_lost_hmr_update() {
+        tracing::trace!(
+          "[BundlingTask] an earlier HMR update was lost, upgrading to a full rebuild"
+        );
+        Some("an earlier hot update failed")
+      } else {
+        None
+      }
     };
-    if changed_tsconfig {
+    if let Some(reload_reason) = reload_reason {
       if let Some(on_hmr_updates) = self.dev_context.options.on_hmr_updates.as_ref() {
-        let changed_files = self
+        let mut changed_files = self
           .input
           .changed_files()
           .keys()
           .map(|path| path.to_string_lossy().to_string())
           .collect::<Vec<_>>();
+        // A `FullBuild` carries no changed files, and Vite ignores an update with an empty
+        // `changedFiles`, so the reload would be dropped. `"*"` is not a path, only a
+        // workaround: remove it once Vite delivers a `FullReload` with no changed files.
+        if changed_files.is_empty() {
+          changed_files.push("*".to_owned());
+        }
         let updates = (self.dev_context.clients.lock().await)
           .keys()
           .map(|client_id| ClientHmrUpdate {
             client_id: client_id.clone(),
-            update: HmrUpdate::FullReload { reason: "tsconfig change".to_owned() },
+            update: HmrUpdate::FullReload { reason: reload_reason.to_owned() },
           })
           .collect();
         on_hmr_updates(Ok((updates, changed_files)));

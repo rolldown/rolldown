@@ -48,6 +48,7 @@ pub struct HmrStageInput<'a, Fs: FileSystem + Clone + 'static> {
   pub resolver: SharedResolver<Fs>,
   pub plugin_driver: SharedPluginDriver,
   pub cache: &'a mut ScanStageCache,
+  pub lost_hmr_update: &'a mut bool,
   pub next_hmr_patch_id: Arc<AtomicU32>,
 }
 
@@ -113,6 +114,8 @@ impl<'a, Fs: FileSystem + Clone + 'static> HmrStage<'a, Fs> {
       clients = %clients.iter().map(|client| client.client_id).join(", "),
       "[HmrStage] starts computing HMR updates"
     );
+    // An earlier lost update stays lost: this one does not carry its edit.
+    let lost_before = *self.lost_hmr_update;
 
     // 1. Identify changed modules — per changed file: compute the default affected set, then (if
     // the hook is enabled and any plugin registered `hotUpdate`) let the plugin replace-chain
@@ -331,6 +334,8 @@ impl<'a, Fs: FileSystem + Clone + 'static> HmrStage<'a, Fs> {
         "added modules"
       );
 
+      // From here on, a failure leaves the graph with an edit that no client received.
+      *self.lost_hmr_update = true;
       let plugin_driver = Arc::clone(&self.plugin_driver);
       self.cache.merge(module_loader_output.into(), &plugin_driver)?;
 
@@ -451,6 +456,7 @@ impl<'a, Fs: FileSystem + Clone + 'static> HmrStage<'a, Fs> {
       client_updates.push(ClientHmrUpdate { client_id: client.client_id.to_string(), update });
     }
 
+    *self.lost_hmr_update = lost_before;
     Ok(client_updates)
   }
 

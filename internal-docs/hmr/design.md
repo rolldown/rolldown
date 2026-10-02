@@ -340,7 +340,9 @@ build error already on screen, the shared Vite client hook
 page never fully loaded.
 
 The engine emits a full reload on its own only when the graph must be
-rebuilt from scratch (a tsconfig change, `bundling_task.rs`). Vite's
+rebuilt from scratch: a tsconfig change, or an update that failed after
+it merged its edit into the graph, so no client received the edit
+(`bundling_task.rs`). Vite's
 server sends its own reload in two more places. Once after the initial
 build, for the fallback page. And when a page request finds the output
 stale or the last HMR stage failed (`triggerBundleRegenerationIfStale`,

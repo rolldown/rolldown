@@ -30,6 +30,12 @@ const preloadSpoofChildPath = nodePath.join(
   'parallel-worker-bootstrap',
   'preload-spoof-child.mjs',
 );
+const nodeTestRunnerChildPath = nodePath.join(
+  testsDir,
+  'fixtures',
+  'parallel-worker-bootstrap',
+  'node-test-runner-child.mjs',
+);
 const preloadSpoofPath = nodePath.join(
   testsDir,
   'fixtures',
@@ -75,6 +81,54 @@ test.skipIf(isWasiTest)(
         timeout: 25_000,
       },
     );
+
+    expect(child.error).toBeUndefined();
+    expect(child.signal).toBeNull();
+    expect(child.status, child.stderr || child.stdout).toBe(0);
+    expect(child.stdout).toContain('parallel worker bootstrap completed');
+  },
+);
+
+test.skipIf(isWasiTest)(
+  'parallel file workers drop process-wide execArgv a worker rejects',
+  { timeout: 30_000 },
+  () => {
+    const child = spawnSync(
+      process.execPath,
+      [
+        '--v8-pool-size=4',
+        '--use-largepages=off',
+        '--stack-trace-limit=10',
+        '--max-old-space-size=4096',
+        '--title',
+        'rolldown-parallel-test',
+        bootstrapChildPath,
+      ],
+      {
+        cwd: testsDir,
+        encoding: 'utf8',
+        env: { ...process.env },
+        timeout: 25_000,
+      },
+    );
+
+    expect(child.error).toBeUndefined();
+    expect(child.signal).toBeNull();
+    expect(child.status, child.stderr || child.stdout).toBe(0);
+    expect(child.stdout).toContain('parallel worker bootstrap completed');
+  },
+);
+
+test.skipIf(isWasiTest)(
+  'parallel file workers start under the process-isolated node --test runner',
+  { timeout: 30_000 },
+  () => {
+    const child = spawnSync(process.execPath, ['--test', nodeTestRunnerChildPath], {
+      cwd: testsDir,
+      encoding: 'utf8',
+      env: { ...process.env },
+      timeout: 25_000,
+    });
 
     expect(child.error).toBeUndefined();
     expect(child.signal).toBeNull();

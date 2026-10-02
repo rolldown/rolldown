@@ -1,8 +1,10 @@
 // @ts-nocheck These focused unit tests intentionally reach package source outside the test rootDir.
 import { EventEmitter } from 'node:events';
+import { Worker } from 'node:worker_threads';
 import {
   createParallelPluginWorkerEnv,
   createWorkerBootstrapAuthentication,
+  dropRejectedWorkerExecArgv,
   initializeWorkerPool,
   sanitizeFileWorkerExecArgv,
   superviseWorker,
@@ -97,6 +99,42 @@ describe('parallel plugin worker cleanup', () => {
     expect(
       sanitizeFileWorkerExecArgv(['--input-type', 'commonjs', '--require', './register.cjs']),
     ).toEqual([]);
+  });
+
+  test('drops the process-wide flags a worker rejects and keeps the rest', async () => {
+    // The shape `node --test` (process isolation) gives a test file, plus
+    // common process-wide flags in both `=` and separate-value form.
+    const execArgv = [
+      '--test-isolation=process',
+      '--v8-pool-size=4',
+      '--node-snapshot',
+      '--use-largepages=off',
+      '--max-old-space-size=4096',
+      '--title',
+      'rolldown-worker-test',
+      '--conditions',
+      'development',
+      '--trace-warnings',
+    ];
+    let rejection: unknown;
+    try {
+      new Worker('', { eval: true, execArgv });
+    } catch (error) {
+      rejection = error;
+    }
+    expect(rejection).toMatchObject({ code: 'ERR_WORKER_INVALID_EXEC_ARGV' });
+
+    const kept = dropRejectedWorkerExecArgv(execArgv, rejection);
+    expect(kept).toEqual([
+      '--test-isolation=process',
+      '--conditions',
+      'development',
+      '--trace-warnings',
+    ]);
+    const worker = new Worker('', { eval: true, execArgv: kept });
+    await worker.terminate();
+
+    expect(dropRejectedWorkerExecArgv(execArgv, new Error('other'))).toBeUndefined();
   });
 
   test('clears NODE_OPTIONS without mutating the parent environment', () => {

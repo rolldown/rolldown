@@ -101,6 +101,54 @@ export function sanitizeFileWorkerExecArgv(execArgv: readonly string[]): string[
   return sanitized;
 }
 
+const INVALID_WORKER_EXEC_ARGV_PREFIX = 'Initiated Worker with invalid execArgv flags: ';
+
+/**
+ * @internal Remove the flags a `new Worker()` call rejected with
+ * `ERR_WORKER_INVALID_EXEC_ARGV`. An explicit `execArgv` accepts only per-thread
+ * options, so process-wide and V8 flags the parent legitimately carries
+ * (`--max-old-space-size`, `--title`, or the `--v8-pool-size` / `--node-snapshot`
+ * entries `node --test` adds) make construction throw; they already apply to the
+ * whole process, so the worker loses nothing without them. Node names the
+ * rejected flags only in the error message, and throws before the thread starts
+ * or the transfer list is consumed, so one retry without them is safe. Returns
+ * `undefined` when the error is anything else or names nothing to remove.
+ * See internal-docs/dev-engine/implementation.md.
+ */
+export function dropRejectedWorkerExecArgv(
+  execArgv: readonly string[],
+  error: unknown,
+): string[] | undefined {
+  if (
+    !(error instanceof Error) ||
+    (error as NodeJS.ErrnoException).code !== 'ERR_WORKER_INVALID_EXEC_ARGV'
+  ) {
+    return undefined;
+  }
+  const start = error.message.indexOf(INVALID_WORKER_EXEC_ARGV_PREFIX);
+  if (start === -1) {
+    return undefined;
+  }
+  const rejected = new Set(
+    error.message.slice(start + INVALID_WORKER_EXEC_ARGV_PREFIX.length).split(', '),
+  );
+  const kept: string[] = [];
+  for (let index = 0; index < execArgv.length; index += 1) {
+    const argument = execArgv[index];
+    if (!rejected.has(argument)) {
+      kept.push(argument);
+      continue;
+    }
+    // `execArgv` holds no positional arguments, so a non-flag entry after a
+    // rejected `--flag` is that flag's separate value, which Node does not name.
+    const next = execArgv[index + 1];
+    if (!argument.includes('=') && next !== undefined && !next.startsWith('-')) {
+      index += 1;
+    }
+  }
+  return kept.length === execArgv.length ? undefined : kept;
+}
+
 /** @internal Create an isolated worker environment without inherited Node preload hooks. */
 export function createParallelPluginWorkerEnv(
   source: NodeJS.ProcessEnv = process.env,
@@ -444,13 +492,23 @@ async function initializeWorker(
       threadNumber,
       watchMode,
     };
-    const worker = new Worker(bootstrap, {
+    const workerOptions = {
       env: createParallelPluginWorkerEnv(),
       eval: true,
       workerData,
       execArgv: sanitizeFileWorkerExecArgv(process.execArgv),
       transferList: [workerPort],
-    });
+    };
+    let worker: Worker;
+    try {
+      worker = new Worker(bootstrap, workerOptions);
+    } catch (error) {
+      const execArgv = dropRejectedWorkerExecArgv(workerOptions.execArgv, error);
+      if (!execArgv) {
+        throw error;
+      }
+      worker = new Worker(bootstrap, { ...workerOptions, execArgv });
+    }
     supervisedWorker = new WorkerSupervisor(
       worker,
       terminationSlot,

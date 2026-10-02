@@ -1422,8 +1422,15 @@ initialized pool does not pin process exit. The worker is created with
 `--input-type`, which would break the CommonJS bootstrap, and the preload hooks
 an eval worker actually replays (`--require`/`-r`,
 `--loader`/`--experimental-loader`) are removed, while condition, diagnostic,
-and runtime flags are preserved. The owned `stopWorkers()` path remains the
-explicit termination boundary.
+and runtime flags are preserved. An explicit `execArgv` accepts only per-thread
+options: process-wide and V8 flags (`--max-old-space-size`, `--title`, the
+`--v8-pool-size` / `--node-snapshot` entries `node --test` adds) make
+`new Worker()` throw `ERR_WORKER_INVALID_EXEC_ARGV` before the thread starts or
+the transfer list is consumed. Node names those flags only in the error message,
+so construction retries once without them (`dropRejectedWorkerExecArgv`); they
+already apply to the whole process. Leaving `execArgv` out instead would let
+the worker inherit `--input-type` and `--require`. The owned `stopWorkers()`
+path remains the explicit termination boundary.
 
 The public `devSupported` capability is exercised against the actual artifact,
 not inferred from thread availability alone. `dev()` needs a MultiThread

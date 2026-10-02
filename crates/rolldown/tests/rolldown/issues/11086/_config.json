@@ -1,0 +1,6 @@
+{
+  "_comment": "On platform node, the runtime module imports `node:module`. Resolving that import must not load the broken tsconfig.json.",
+  "config": {
+    "platform": "node"
+  }
+}

@@ -238,9 +238,7 @@ pub fn render_chunk_exports(
             s.push_str("var ");
             s.push_str(canonical_name);
             s.push_str(" = ");
-            s.push_str(canonical_ns_name);
-            s.push('.');
-            s.push_str(property_name);
+            s.push_str(&property_access_str(canonical_ns_name, property_name));
             s.push_str(";\n");
           }
 
@@ -417,7 +415,7 @@ pub fn render_chunk_exports(
                   let property_name = &ns_alias.property_name;
                   render_object_define_property(
                     &exported_name,
-                    &concat_string!(canonical_ns_name, ".", property_name),
+                    &property_access_str(canonical_ns_name, property_name),
                   )
                 }
                 _ => render_object_define_property(&exported_name, canonical_name),

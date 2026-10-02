@@ -1,6 +1,7 @@
 use std::borrow::Cow;
 use std::fmt::Write as _;
 
+use json_escape_simd::escape;
 use oxc_str::CompactStr;
 use rolldown_common::{
   Chunk, ChunkKind, ExportsKind, IndexModules, ModuleIdx, NormalizedBundlerOptions, OutputExports,
@@ -392,7 +393,8 @@ pub fn render_chunk_exports(
           s.push('\n');
           // Only generate require statement if this external module hasn't been imported yet
           if imported_external_modules.insert(external.namespace_ref) {
-            writeln!(s, "var {} = require(\"{}\");", binding_ref_name, external.get_import_path(chunk, ctx.resolved_paths)).unwrap();
+            let import_path = escape(&external.get_import_path(chunk, ctx.resolved_paths));
+            writeln!(s, "var {binding_ref_name} = require({import_path});").unwrap();
           }
           s.push_str(&import_stmt);
         });

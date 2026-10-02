@@ -197,7 +197,7 @@ describe('experimentalInlineCommonChunks', () => {
   });
 
   test('dynamic import consumers, including concurrent loads, share the record', async () => {
-    const pair = await differential('dynamic-consumers', {
+    const pair = await buildBoth('dynamic-consumers', {
       input: { main: './main.js', s: './static.js' },
       modules: {
         ...shared,
@@ -222,6 +222,23 @@ describe('experimentalInlineCommonChunks', () => {
         `,
       },
     });
+    const results = [pair.off, pair.on].map((built) => {
+      const result = runRoot(built, 'main.js');
+      // Concurrent imports can evaluate either consumer first.
+      result.logs.splice(1, 2, ...result.logs.slice(1, 3).sort());
+      expect(result.logs).toEqual([
+        'S body:string',
+        'L1:string this:undefined:string #1:string',
+        'L2:string this:undefined:string #1:string',
+        'main:string 1:number 2:number',
+        'static:string 2:number #1:string',
+      ]);
+      expect(result.error).toBeNull();
+      return result;
+    });
+    expect(results[1]).toEqual(results[0]);
+    compareRoots(pair, ['s.js']);
+    assertRegistrationOrder(pair.on);
     expectInlined(pair, 'shared.js');
   });
 

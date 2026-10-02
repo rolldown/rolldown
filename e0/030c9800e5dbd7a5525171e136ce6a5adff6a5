@@ -1,0 +1,19 @@
+tasks/ls_lint/src/main.rs
+  s_e4c6def3f81fc0::t_56d630a205d727 3-4,54-84,86-88,91,109,133-138
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "e0030c9800e5dbd7a5525171e136ce6a5adff6a5",
+  "prompts": {},
+  "sessions": {
+    "s_e4c6def3f81fc0": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "5109669f-0417-4592-b207-141f5b4782b8",
+        "model": "unknown"
+      },
+      "human_author": "IWANABETHATGUY <iwanabethatguy@qq.com>"
+    }
+  }
+}

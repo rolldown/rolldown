@@ -62,7 +62,7 @@ process.on("beforeExit", (code) => {
 ## Code
 
 ```js
-__rolldown_runtime__.registerGraph({ids:["b.js","hub.js","a.js"],localCount:2,edges:[[],[2,0]]});
+__rolldown_runtime__.registerGraph({ids:["b.js","hub.js","a.js"],localCount:2,edges:[[],[2,0]],stamps:{0:1}});
 //#region b.js
 __rolldown_runtime__.registerFactory("b.js", (function(__rolldown_module_id__) {
 	try {
@@ -72,7 +72,7 @@ __rolldown_runtime__.registerFactory("b.js", (function(__rolldown_module_id__) {
 		const b = "b2";
 		globalThis.__mixed_runs_b = (globalThis.__mixed_runs_b ?? 0) + 1;
 	} finally {}
-}));
+}), 1);
 
 //#endregion
 //#region hub.js
@@ -115,7 +115,7 @@ __rolldown_runtime__.registerFactory("hub.js", (function(__rolldown_module_id__)
 ## Code
 
 ```js
-__rolldown_runtime__.registerGraph({ids:["a.js","hub.js","b.js"],localCount:2,edges:[[],[0,2]]});
+__rolldown_runtime__.registerGraph({ids:["a.js","hub.js","b.js"],localCount:2,edges:[[],[0,2]],stamps:{0:3}});
 //#region a.js
 __rolldown_runtime__.registerFactory("a.js", (function(__rolldown_module_id__) {
 	try {
@@ -125,7 +125,7 @@ __rolldown_runtime__.registerFactory("a.js", (function(__rolldown_module_id__) {
 		const a = "a2";
 		globalThis.__mixed_runs_a = (globalThis.__mixed_runs_a ?? 0) + 1;
 	} finally {}
-}));
+}), 3);
 
 //#endregion
 //#region hub.js

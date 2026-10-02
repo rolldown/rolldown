@@ -82,7 +82,7 @@ setInterval(sayMessage, 1e3);
 ## Code
 
 ```js
-__rolldown_runtime__.registerGraph({ids:["bar.js","common.js","foo.js","messenger.js"],localCount:4,edges:[[1],[],[1],[2,0,1]]});
+__rolldown_runtime__.registerGraph({ids:["bar.js","common.js","foo.js","messenger.js"],localCount:4,edges:[[1],[],[1],[2,0,1]],stamps:{1:1}});
 //#region bar.js
 __rolldown_runtime__.registerFactory("bar.js", (function(__rolldown_module_id__) {
 	try {
@@ -104,7 +104,7 @@ __rolldown_runtime__.registerFactory("common.js", (function(__rolldown_module_id
 		const hot_common = __rolldown_runtime__.createModuleHotContext(__rolldown_module_id__);
 		const prefix = "prefix-new:";
 	} finally {}
-}));
+}), 1);
 
 //#endregion
 //#region foo.js

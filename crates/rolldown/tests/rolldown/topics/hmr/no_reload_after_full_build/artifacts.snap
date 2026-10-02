@@ -115,7 +115,7 @@ process.on("beforeExit", (code) => {
 ## Code
 
 ```js
-__rolldown_runtime__.registerGraph({ids:["other.js"],localCount:1,edges:[[]]});
+__rolldown_runtime__.registerGraph({ids:["other.js"],localCount:1,edges:[[]],stamps:{0:2}});
 //#region other.js
 __rolldown_runtime__.registerFactory("other.js", (function(__rolldown_module_id__) {
 	try {
@@ -126,7 +126,7 @@ __rolldown_runtime__.registerFactory("other.js", (function(__rolldown_module_id_
 		globalThis.__no_reload_after_full_build_other_runs = (globalThis.__no_reload_after_full_build_other_runs ?? 0) + 1;
 		hot_other.accept();
 	} finally {}
-}));
+}), 2);
 
 //#endregion
 //# sourceMappingURL=hmr_patch_1.js.map

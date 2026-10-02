@@ -775,7 +775,11 @@ Then, across all files of the batch:
    merge sets `Bundler::lost_hmr_update`, and the update clears it only
    when it returns its patches (§9b). Then the stamp table starts a
    new rebuild number and stamps every changed or newly added module
-   with it.
+   with it. When an edit changes a module's `exports_kind` or lazy
+   export, it also stamps and carries every importer of that module,
+   because their factories render different interop code (see
+   [hmr/design.md](../hmr/design.md), "Registration keeps the newest
+   copy").
 7. **Superset walk** — `collect_client_update_superset`
    (`hmr_stage.rs`) walks up static and dynamic importers from the
    changed modules, stopping at self-accepting modules and at accepting

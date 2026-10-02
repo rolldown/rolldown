@@ -54,7 +54,7 @@ __rolldown_runtime__.registerModule("main.js", { exports: main_exports });
 ## Code
 
 ```js
-__rolldown_runtime__.registerGraph({ids:["adder.js","lib.js"],localCount:2,edges:[[1],[]]});
+__rolldown_runtime__.registerGraph({ids:["adder.js","lib.js"],localCount:2,edges:[[1],[]],stamps:{0:1}});
 //#region adder.js
 __rolldown_runtime__.registerFactory("adder.js", (function(__rolldown_module_id__) {
 	try {
@@ -66,7 +66,7 @@ __rolldown_runtime__.registerFactory("adder.js", (function(__rolldown_module_id_
 		const tag = `adder-${import_lib_00.value}`;
 		hot_adder.accept();
 	} finally {}
-}));
+}), 1);
 
 //#endregion
 //#region lib.js
@@ -95,7 +95,7 @@ __rolldown_runtime__.registerFactory("lib.js", (function(__rolldown_module_id__)
 ## Code
 
 ```js
-__rolldown_runtime__.registerGraph({ids:["accepter.js","adder.js","lib.js"],localCount:3,edges:[[2],[2],[]]});
+__rolldown_runtime__.registerGraph({ids:["accepter.js","adder.js","lib.js"],localCount:3,edges:[[2],[2],[]],stamps:{1:1,2:2}});
 //#region accepter.js
 __rolldown_runtime__.registerFactory("accepter.js", (function(__rolldown_module_id__) {
 	try {
@@ -121,7 +121,7 @@ __rolldown_runtime__.registerFactory("adder.js", (function(__rolldown_module_id_
 		const tag = `adder-${import_lib_10.value}`;
 		hot_adder.accept();
 	} finally {}
-}));
+}), 1);
 
 //#endregion
 //#region lib.js
@@ -132,7 +132,7 @@ __rolldown_runtime__.registerFactory("lib.js", (function(__rolldown_module_id__)
 		const hot_lib = __rolldown_runtime__.createModuleHotContext(__rolldown_module_id__);
 		const value = "lib-edited";
 	} finally {}
-}));
+}), 2);
 
 //#endregion
 ```

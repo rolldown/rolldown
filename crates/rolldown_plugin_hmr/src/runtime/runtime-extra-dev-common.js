@@ -29,7 +29,8 @@ class Module {
  * `bindings[i][j]` are the export names `ids[i]` imports through `edges[i][j]`. `bindings` holds
  * only some rows; a missing row, or a missing or `null` entry, means the whole namespace.
  * `dynamicEdges` also holds only some rows; a missing row means no dynamic edges.
- * @typedef {{ ids: string[], localCount: number, edges: number[][], bindings?: Record<number, (string[] | null)[]>, dynamicEdges?: Record<number, number[]> }} ModuleGraphDelta
+ * `stamps[i]` is the rebuild stamp of `ids[i]`; a missing row means 0.
+ * @typedef {{ ids: string[], localCount: number, edges: number[][], bindings?: Record<number, (string[] | null)[]>, dynamicEdges?: Record<number, number[]>, stamps?: Record<number, number> }} ModuleGraphDelta
  * @typedef {{ createModuleHotContext(moduleId: string): any, onModuleCacheRemoval(moduleId: string): void }} DevRuntimeHooks
  */
 
@@ -96,6 +97,14 @@ export class DevRuntime {
    */
   factories = new Map();
   /**
+   * A late payload (a slow lazy chunk after an HMR patch) must not replace newer rows or
+   * factories.
+   * @type {Map<string, number>}
+   */
+  rowStamps = new Map();
+  /** @type {Map<string, number>} */
+  factoryStamps = new Map();
+  /**
    * Installed by the dev client at boot. The runtime is a store + executor and makes
    * no HMR decisions; accepting, disposing, and reloading live behind these hooks.
    * @type {DevRuntimeHooks | null}
@@ -108,6 +117,15 @@ export class DevRuntime {
   registerGraph(delta) {
     for (let i = 0; i < delta.localCount; i++) {
       const id = delta.ids[i];
+      if (delta.stamps) {
+        const stamp = delta.stamps[i] ?? 0;
+        if (stamp < (this.rowStamps.get(id) ?? 0)) continue;
+        this.rowStamps.set(id, stamp);
+      } else {
+        // A full-build chunk has no stamps. It runs its code right away, so its row always
+        // replaces the old one.
+        this.rowStamps.delete(id);
+      }
       const edges = delta.edges[i].map((j) => delta.ids[j]);
       for (const target of this.staticImports.get(id)?.edges ?? []) {
         this.importers.get(target)?.delete(id);
@@ -143,8 +161,11 @@ export class DevRuntime {
   /**
    * @param {string} id
    * @param {(id: string) => void} fn
+   * @param {number} [stamp]
    */
-  registerFactory(id, fn) {
+  registerFactory(id, fn, stamp = 0) {
+    if (stamp < (this.factoryStamps.get(id) ?? 0)) return;
+    this.factoryStamps.set(id, stamp);
     this.factories.set(id, fn);
   }
 

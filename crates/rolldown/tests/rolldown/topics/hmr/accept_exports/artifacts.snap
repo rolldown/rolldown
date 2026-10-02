@@ -336,7 +336,7 @@ export { a };
 ## Code
 
 ```js
-__rolldown_runtime__.registerGraph({ids:["main.js","named/importer.js","named/target.js","non_accepted/importer.js","promoted/importer.js","side_effect/importer.js","default_import/importer.js","dynamic_import/importer.js","reexport_named/importer.js","reexport_star/importer.js","multi_record/importer.js"],localCount:3,edges:[[1,3,4,5,6,7,8,9,10],[2],[]],bindings:{1:[["a"]]}});
+__rolldown_runtime__.registerGraph({ids:["main.js","named/importer.js","named/target.js","non_accepted/importer.js","promoted/importer.js","side_effect/importer.js","default_import/importer.js","dynamic_import/importer.js","reexport_named/importer.js","reexport_star/importer.js","multi_record/importer.js"],localCount:3,edges:[[1,3,4,5,6,7,8,9,10],[2],[]],bindings:{1:[["a"]]},stamps:{2:1}});
 //#region main.js
 import * as import_node_assert_00 from "node:assert";
 __rolldown_runtime__.registerFactory("main.js", (function(__rolldown_module_id__) {
@@ -427,7 +427,7 @@ __rolldown_runtime__.registerFactory("named/target.js", (function(__rolldown_mod
 			import_node_assert_20.default.fail("the last generation has no further edit to accept");
 		});
 	} finally {}
-}));
+}), 1);
 
 //#endregion
 ```
@@ -445,7 +445,7 @@ __rolldown_runtime__.registerFactory("named/target.js", (function(__rolldown_mod
 ## Code
 
 ```js
-__rolldown_runtime__.registerGraph({ids:["non_accepted/importer.js","non_accepted/target.js"],localCount:2,edges:[[1],[]],bindings:{0:[["b"]]}});
+__rolldown_runtime__.registerGraph({ids:["non_accepted/importer.js","non_accepted/target.js"],localCount:2,edges:[[1],[]],bindings:{0:[["b"]]},stamps:{1:2}});
 //#region non_accepted/importer.js
 __rolldown_runtime__.registerFactory("non_accepted/importer.js", (function(__rolldown_module_id__) {
 	try {
@@ -481,7 +481,7 @@ __rolldown_runtime__.registerFactory("non_accepted/target.js", (function(__rolld
 			import_node_assert_10.default.fail("the last generation has no further edit to accept");
 		});
 	} finally {}
-}));
+}), 2);
 
 //#endregion
 ```
@@ -499,7 +499,7 @@ __rolldown_runtime__.registerFactory("non_accepted/target.js", (function(__rolld
 ## Code
 
 ```js
-__rolldown_runtime__.registerGraph({ids:["main.js","promoted/importer.js","promoted/target.js","named/importer.js","non_accepted/importer.js","side_effect/importer.js","default_import/importer.js","dynamic_import/importer.js","reexport_named/importer.js","reexport_star/importer.js","multi_record/importer.js"],localCount:3,edges:[[3,4,1,5,6,7,8,9,10],[2],[]],bindings:{1:[["*"]]}});
+__rolldown_runtime__.registerGraph({ids:["main.js","promoted/importer.js","promoted/target.js","named/importer.js","non_accepted/importer.js","side_effect/importer.js","default_import/importer.js","dynamic_import/importer.js","reexport_named/importer.js","reexport_star/importer.js","multi_record/importer.js"],localCount:3,edges:[[3,4,1,5,6,7,8,9,10],[2],[]],bindings:{1:[["*"]]},stamps:{2:3}});
 //#region main.js
 import * as import_node_assert_00 from "node:assert";
 __rolldown_runtime__.registerFactory("main.js", (function(__rolldown_module_id__) {
@@ -589,7 +589,7 @@ __rolldown_runtime__.registerFactory("promoted/target.js", (function(__rolldown_
 			import_node_assert_20.default.fail("the last generation has no further edit to accept");
 		});
 	} finally {}
-}));
+}), 3);
 
 //#endregion
 ```
@@ -607,7 +607,7 @@ __rolldown_runtime__.registerFactory("promoted/target.js", (function(__rolldown_
 ## Code
 
 ```js
-__rolldown_runtime__.registerGraph({ids:["main.js","side_effect/importer.js","side_effect/target.js","named/importer.js","non_accepted/importer.js","promoted/importer.js","default_import/importer.js","dynamic_import/importer.js","reexport_named/importer.js","reexport_star/importer.js","multi_record/importer.js"],localCount:3,edges:[[3,4,5,1,6,7,8,9,10],[2],[]],bindings:{1:[[]]}});
+__rolldown_runtime__.registerGraph({ids:["main.js","side_effect/importer.js","side_effect/target.js","named/importer.js","non_accepted/importer.js","promoted/importer.js","default_import/importer.js","dynamic_import/importer.js","reexport_named/importer.js","reexport_star/importer.js","multi_record/importer.js"],localCount:3,edges:[[3,4,5,1,6,7,8,9,10],[2],[]],bindings:{1:[[]]},stamps:{2:4}});
 //#region main.js
 import * as import_node_assert_00 from "node:assert";
 __rolldown_runtime__.registerFactory("main.js", (function(__rolldown_module_id__) {
@@ -693,7 +693,7 @@ __rolldown_runtime__.registerFactory("side_effect/target.js", (function(__rolldo
 			import_node_assert_20.default.fail("the last generation has no further edit to accept");
 		});
 	} finally {}
-}));
+}), 4);
 
 //#endregion
 ```
@@ -711,7 +711,7 @@ __rolldown_runtime__.registerFactory("side_effect/target.js", (function(__rolldo
 ## Code
 
 ```js
-__rolldown_runtime__.registerGraph({ids:["default_import/importer.js","default_import/target.js","main.js","named/importer.js","non_accepted/importer.js","promoted/importer.js","side_effect/importer.js","dynamic_import/importer.js","reexport_named/importer.js","reexport_star/importer.js","multi_record/importer.js"],localCount:3,edges:[[1],[],[3,4,5,6,0,7,8,9,10]],bindings:{0:[["default"]]}});
+__rolldown_runtime__.registerGraph({ids:["default_import/importer.js","default_import/target.js","main.js","named/importer.js","non_accepted/importer.js","promoted/importer.js","side_effect/importer.js","dynamic_import/importer.js","reexport_named/importer.js","reexport_star/importer.js","multi_record/importer.js"],localCount:3,edges:[[1],[],[3,4,5,6,0,7,8,9,10]],bindings:{0:[["default"]]},stamps:{1:5}});
 //#region default_import/importer.js
 __rolldown_runtime__.registerFactory("default_import/importer.js", (function(__rolldown_module_id__) {
 	try {
@@ -743,7 +743,7 @@ __rolldown_runtime__.registerFactory("default_import/target.js", (function(__rol
 			import_node_assert_10.default.fail("the last generation has no further edit to accept");
 		});
 	} finally {}
-}));
+}), 5);
 
 //#endregion
 //#region main.js
@@ -820,7 +820,7 @@ __rolldown_runtime__.registerFactory("main.js", (function(__rolldown_module_id__
 ## Code
 
 ```js
-__rolldown_runtime__.registerGraph({ids:["dynamic_import/importer.js","dynamic_import/target.js"],localCount:2,edges:[[],[]],dynamicEdges:{0:[1]}});
+__rolldown_runtime__.registerGraph({ids:["dynamic_import/importer.js","dynamic_import/target.js"],localCount:2,edges:[[],[]],dynamicEdges:{0:[1]},stamps:{1:6}});
 //#region dynamic_import/importer.js
 __rolldown_runtime__.registerFactory("dynamic_import/importer.js", (function(__rolldown_module_id__) {
 	try {
@@ -852,7 +852,7 @@ __rolldown_runtime__.registerFactory("dynamic_import/target.js", (function(__rol
 			import_node_assert_10.default.fail("the last generation has no further edit to accept");
 		});
 	} finally {}
-}));
+}), 6);
 
 //#endregion
 ```
@@ -870,7 +870,7 @@ __rolldown_runtime__.registerFactory("dynamic_import/target.js", (function(__rol
 ## Code
 
 ```js
-__rolldown_runtime__.registerGraph({ids:["reexport_named/importer.js","reexport_named/target.js"],localCount:2,edges:[[1],[]],bindings:{0:[["b"]]}});
+__rolldown_runtime__.registerGraph({ids:["reexport_named/importer.js","reexport_named/target.js"],localCount:2,edges:[[1],[]],bindings:{0:[["b"]]},stamps:{1:7}});
 //#region reexport_named/importer.js
 __rolldown_runtime__.registerFactory("reexport_named/importer.js", (function(__rolldown_module_id__) {
 	try {
@@ -905,7 +905,7 @@ __rolldown_runtime__.registerFactory("reexport_named/target.js", (function(__rol
 			import_node_assert_10.default.fail("the last generation has no further edit to accept");
 		});
 	} finally {}
-}));
+}), 7);
 
 //#endregion
 ```
@@ -923,7 +923,7 @@ __rolldown_runtime__.registerFactory("reexport_named/target.js", (function(__rol
 ## Code
 
 ```js
-__rolldown_runtime__.registerGraph({ids:["reexport_star/importer.js","reexport_star/target.js"],localCount:2,edges:[[1],[]],bindings:{0:[["*"]]}});
+__rolldown_runtime__.registerGraph({ids:["reexport_star/importer.js","reexport_star/target.js"],localCount:2,edges:[[1],[]],bindings:{0:[["*"]]},stamps:{1:8}});
 //#region reexport_star/importer.js
 __rolldown_runtime__.registerFactory("reexport_star/importer.js", (function(__rolldown_module_id__) {
 	try {
@@ -958,7 +958,7 @@ __rolldown_runtime__.registerFactory("reexport_star/target.js", (function(__roll
 			import_node_assert_10.default.fail("the last generation has no further edit to accept");
 		});
 	} finally {}
-}));
+}), 8);
 
 //#endregion
 ```
@@ -976,7 +976,7 @@ __rolldown_runtime__.registerFactory("reexport_star/target.js", (function(__roll
 ## Code
 
 ```js
-__rolldown_runtime__.registerGraph({ids:["multi_record/importer.js","multi_record/target.js"],localCount:2,edges:[[1],[]],bindings:{0:[["a","b"]]}});
+__rolldown_runtime__.registerGraph({ids:["multi_record/importer.js","multi_record/target.js"],localCount:2,edges:[[1],[]],bindings:{0:[["a","b"]]},stamps:{1:9}});
 //#region multi_record/importer.js
 __rolldown_runtime__.registerFactory("multi_record/importer.js", (function(__rolldown_module_id__) {
 	try {
@@ -1012,7 +1012,7 @@ __rolldown_runtime__.registerFactory("multi_record/target.js", (function(__rolld
 			import_node_assert_10.default.fail("the last generation has no further edit to accept");
 		});
 	} finally {}
-}));
+}), 9);
 
 //#endregion
 ```

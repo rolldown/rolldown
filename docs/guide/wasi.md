@@ -135,14 +135,10 @@ configure a provider and retry the same build.
 
 ## Managed workerd loader
 
-::: warning Not on the registry yet
+::: info Version requirement
 
-`@rolldown/browser` is not published while its `.wasm` links the emnapi
-`2.0.0-alpha` C archives and its manifest pins the matching `2.0.0-alpha`
-JavaScript runtimes: a stable release must not put that prerelease ABI line in
-front of registry consumers. The latest published version has no `./workerd`
-subpath, so the imports below throw `ERR_PACKAGE_PATH_NOT_EXPORTED`. Use a
-`pkg.pr.new` build until the emnapi v2 line has a stable release.
+`@rolldown/browser` 1.2.12 and earlier have no `./workerd` subpath, so the
+imports below throw `ERR_PACKAGE_PATH_NOT_EXPORTED` there. Use a later release.
 
 :::
 

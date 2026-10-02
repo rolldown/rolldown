@@ -48,7 +48,8 @@ routes every JS-triggered async operation through that adapter into the
 crate's fallible `try_*` API.
 
 The vendored copy is deliberate, not a fork: `RolldownAsyncRuntime` mirrors
-`napi-async-runtime` 0.2.3's own `adapter.rs` method for method. The crate has
+`napi-async-runtime` 0.2.4's own `adapter.rs` method for method (unchanged
+in the temporary `[patch.crates-io]` git pin `e6e50eb4`, see §9). The crate has
 exposed a public `install` since 0.2.0, but only behind its default `napi`
 feature, which also compiles that adapter's own `#[napi]` exports under names
 this binding already owns (`BindingRuntimeFlavor`, `BindingRuntimeMetrics`,
@@ -451,9 +452,10 @@ CurrentThread timer:
   consumption). The root `Cargo.toml` pins
   the napi stack to **published crates.io releases** — `napi 3.14.0`,
   `napi-build 2.6.0`, `napi-derive 3.6.10` (resolving `napi-derive-backend
-6.1.4` and `napi-sys 3.4.0`) — and its `[patch.crates-io]` section patches
-  **no** napi crate (only `parking_lot_core`): that single registry `napi`
-  node covers `rolldown_binding` **and** every `oxc_*_napi`. The comment above those pins records why the minimum is
+6.1.4` and `napi-sys 3.4.0`). Its `[patch.crates-io]` section always holds
+  `parking_lot_core` (§3); until the pool-preload releases ship it also,
+  TEMPORARILY, git-pins all six napi-rs crates to `e6e50eb4` (§13). Either way
+  one `napi` node covers `rolldown_binding` **and** every `oxc_*_napi`. The comment above those pins records why the minimum is
   a pin rather than a range. 3.12.7 (napi-rs#3536) hardens the same teardown:
   an `AsyncTask` completion delivered on a draining env settles as a no-op
   instead of aborting a debug build, and the `napi_async_work` handle is freed

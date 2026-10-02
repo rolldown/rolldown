@@ -3,19 +3,25 @@
 Every Rolldown binding runs a shared scheduler that executes async polling,
 CPU work, and bounded blocking work in one scheduling domain on the default
 `MultiThread` flavor (see [CurrentThread](#currentthread) for that flavor's
-narrower scope). Only the native artifact has a topology to configure, so
-check the loaded artifact first:
+narrower scope). The native and threaded WASI (`wasm32-wasip1-threads`)
+artifacts default to `MultiThread` and accept either flavor; the threadless
+WASI (`wasm32-wasip1`) artifact always runs `CurrentThread`. Check the loaded
+artifact first:
 
 ```ts
 import { configureAsyncRuntime, getRuntimeCapabilities } from 'rolldown/experimental';
 
-if (!getRuntimeCapabilities().wasi) {
+const { target } = getRuntimeCapabilities();
+if (target === 'native') {
   configureAsyncRuntime({
     flavor: 'MultiThread',
     workerThreads: 12,
     maxBlockingTasks: 8,
   });
+} else if (target === 'wasi-threads') {
+  configureAsyncRuntime({ flavor: 'CurrentThread' });
 }
+// target === 'wasi' (threadless) has nothing to configure.
 ```
 
 `configureAsyncRuntime` must run before the binding's first async operation.
@@ -26,8 +32,8 @@ after the first runtime generation starts.
 
 | Artifact                                        | Backend | Supported flavor                           |
 | ----------------------------------------------- | ------- | ------------------------------------------ |
-| Standard native npm binding                     | Shared  | `MultiThread` or `CurrentThread`           |
-| Threaded WASI binding (`wasm32-wasip1-threads`) | Shared  | `CurrentThread` (default) or `MultiThread` |
+| Standard native npm binding                     | Shared  | `MultiThread` (default) or `CurrentThread` |
+| Threaded WASI binding (`wasm32-wasip1-threads`) | Shared  | `MultiThread` (default) or `CurrentThread` |
 | Threadless WASI binding (`wasm32-wasip1`)       | Shared  | `CurrentThread`                            |
 
 Use `getRuntimeCapabilities()` instead of inferring the backend or target from
@@ -102,8 +108,9 @@ the JavaScript host thread safe. Query `blockOnJsThreadSafe`,
 
 Earlier native builds under `ROLLDOWN_RUNTIME=single` could hang when a Node
 `Worker` was torn down while a watch debounce timer was still armed. That was
-fixed upstream in `napi-async-runtime` 0.2.1 (napi-rs#3489), and the 0.2.3
-release Rolldown pins carries the fix.
+fixed upstream in `napi-async-runtime` 0.2.1 (napi-rs#3489), and the 0.2.4
+release Rolldown pins carries the fix (until 0.2.5 ships, the build
+temporarily patches it to the unreleased napi-rs commit `e6e50eb4`).
 
 On the native artifact, `ROLLDOWN_RUNTIME=single` (or a `CurrentThread`
 override) governs the shared scheduler only: async polling moves to the

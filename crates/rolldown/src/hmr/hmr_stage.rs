@@ -13,7 +13,7 @@ use oxc::ast::builder::AstBuilder;
 use oxc_traverse::traverse_mut;
 use rolldown_common::{
   ClientHmrInput, ClientHmrUpdate, HmrLazyChunkOutput, HmrPatch, HmrStampTable, HmrUpdate,
-  ImportKind, Module, ModuleIdx, ModuleTable, ScanMode, WatcherChangeKind,
+  ImportKind, Module, ModuleIdx, ModuleTable, NormalModule, ScanMode, WatcherChangeKind,
 };
 use rolldown_ecmascript::{EcmaAst, EcmaCompiler, PrintCommentsOptions, PrintOptions};
 use rolldown_error::BuildResult;
@@ -286,6 +286,16 @@ impl<'a, Fs: FileSystem + Clone + 'static> HmrStage<'a, Fs> {
         .collect::<FxHashMap<_, _>>()
     };
 
+    let modules = &self.module_table().modules;
+    let pre_rebuild_static_deps = changed_modules
+      .iter()
+      .filter_map(|module_idx| {
+        let module = modules[*module_idx].as_normal()?;
+        let deps = static_deps(module).map(|dep_idx| modules[dep_idx].id().clone());
+        Some((*module_idx, deps.collect::<FxHashSet<_>>()))
+      })
+      .collect::<FxHashMap<_, _>>();
+
     // 1. Do ONE module refetch and cache merge — the update-superset walk (which
     // selects the factories to ship) runs on the post-rebuild table; boundary
     // decisions belong to the client's own walk.
@@ -405,6 +415,19 @@ impl<'a, Fs: FileSystem + Clone + 'static> HmrStage<'a, Fs> {
       })
       .collect::<Vec<_>>();
 
+    // A re-run importer needs a factory for each import the rebuild added.
+    let modules = &self.module_table().modules;
+    let added_static_deps = changed_modules
+      .iter()
+      .chain(new_added_modules.iter())
+      .filter_map(|module_idx| modules[*module_idx].as_normal())
+      .flat_map(|module| {
+        let before = pre_rebuild_static_deps.get(&module.idx);
+        static_deps(module)
+          .filter(move |dep| before.is_none_or(|before| !before.contains(modules[*dep].id())))
+      })
+      .collect::<FxIndexSet<_>>();
+
     let mut affected = self.collect_client_update_superset(&changed_modules);
     affected.extend(new_added_modules.iter().copied());
     affected.retain(|idx| self.module_table().modules[*idx].is_normal());
@@ -450,6 +473,21 @@ impl<'a, Fs: FileSystem + Clone + 'static> HmrStage<'a, Fs> {
             }
           }
         }
+      }
+
+      if !added_static_deps.is_empty() {
+        let held = ClientHeldCopies {
+          shipped: client.shipped,
+          evaluated: client.top_level_evaluated,
+          stamp_table,
+        };
+        self.collect_unheld_sync_deps(
+          &[],
+          added_static_deps.iter().copied(),
+          None,
+          &held,
+          &mut carried,
+        );
       }
 
       let update = self.render_hmr_patch(carried, changed_ids.clone(), stamp_table).await?;
@@ -604,7 +642,9 @@ impl<'a, Fs: FileSystem + Clone + 'static> HmrStage<'a, Fs> {
     let mut modules_to_be_updated = FxIndexSet::default();
     modules_to_be_updated.insert(entry_module_idx);
     self.collect_unheld_sync_deps(
-      entry_module_idx,
+      &[entry_module_idx],
+      [],
+      Some(entry_module_idx),
       &ClientHeldCopies { shipped, evaluated, stamp_table },
       &mut modules_to_be_updated,
     );
@@ -967,44 +1007,61 @@ impl ClientHeldCopies<'_> {
   }
 }
 
+fn static_deps(module: &NormalModule) -> impl Iterator<Item = ModuleIdx> + '_ {
+  module
+    .import_records
+    .iter()
+    .filter(|rec| rec.kind.is_static())
+    .filter_map(|rec| rec.resolved_module)
+}
+
 impl<Fs: FileSystem + Clone + 'static> HmrStage<'_, Fs> {
   /// Goes through shipped modules: a patch can carry a module the client never ran. See
-  /// internal-docs/hmr/design.md, principle 2.
+  /// internal-docs/hmr/design.md, principle 2. `walk_from` modules are never carried.
   fn collect_unheld_sync_deps(
     &self,
-    entry: ModuleIdx,
+    walk_from: &[ModuleIdx],
+    targets: impl IntoIterator<Item = ModuleIdx>,
+    follow_dynamic_of: Option<ModuleIdx>,
     held: &ClientHeldCopies<'_>,
     out: &mut FxIndexSet<ModuleIdx>,
   ) {
     let modules = &self.module_table().modules;
-    let mut visited = FxHashSet::from_iter([entry]);
-    let mut to_walk = vec![entry];
+    let mut visited = walk_from.iter().copied().collect::<FxHashSet<_>>();
+    let mut to_walk = walk_from.to_vec();
+    let mut to_sort = targets.into_iter().collect::<Vec<_>>();
 
-    while let Some(module_idx) = to_walk.pop() {
+    loop {
+      while let Some(module_idx) = to_sort.pop() {
+        if !visited.insert(module_idx) {
+          continue;
+        }
+        let Module::Normal(module) = &modules[module_idx] else {
+          continue;
+        };
+        let stable_id = module.stable_id.as_str();
+        if held.holds_current(held.evaluated, stable_id) {
+          continue;
+        }
+        if !held.holds_current(held.shipped, stable_id) {
+          out.insert(module_idx);
+        }
+        to_walk.push(module_idx);
+      }
+
+      let Some(module_idx) = to_walk.pop() else {
+        break;
+      };
       let Module::Normal(module) = &modules[module_idx] else {
         continue;
       };
       for rec in &module.import_records {
         // The proxy entry's fetched template reaches the real module through `import()`.
-        let follow =
-          rec.kind.is_static() || (module_idx == entry && rec.kind == ImportKind::DynamicImport);
-        let Some(dep_idx) = rec.resolved_module.filter(|_| follow) else {
-          continue;
-        };
-        if !visited.insert(dep_idx) {
-          continue;
+        let follow = rec.kind.is_static()
+          || (Some(module_idx) == follow_dynamic_of && rec.kind == ImportKind::DynamicImport);
+        if follow && let Some(dep_idx) = rec.resolved_module {
+          to_sort.push(dep_idx);
         }
-        let Module::Normal(dep) = &modules[dep_idx] else {
-          continue;
-        };
-        let stable_id = dep.stable_id.as_str();
-        if held.holds_current(held.evaluated, stable_id) {
-          continue;
-        }
-        if !held.holds_current(held.shipped, stable_id) {
-          out.insert(dep_idx);
-        }
-        to_walk.push(dep_idx);
       }
     }
   }

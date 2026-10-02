@@ -106,7 +106,7 @@ The HMR-related fields (`dev_context.rs:30-51`):
   stamps. Recomputed after every successful rebuild (§10) and frozen
   into each new session at hello (§15, `register_client`).
 - `last_task_errored` — written at the end of every task
-  (`bundling_task.rs:108`); the next HMR compute reads it as
+  (`bundling_task.rs:106`); the next HMR compute reads it as
   `last_build_errored` to turn off unchanged-output suppression, and the
   next task reads it to clear the resolver cache (§9c).
 
@@ -220,7 +220,7 @@ The producers:
   created by `BundleCoordinator::create_watcher_event_handler` and wired
   to the same `coordinator_tx`.
 - A finishing **`BundlingTask`** sends `BundleCompleted` from its
-  `run()` (`bundling_task.rs:75-80`).
+  `run()` (`bundling_task.rs:73-78`).
 - The **`DevEngine`** sends `ScheduleBuildIfStale`, `GetState`,
   `EnsureLatestBundleOutput`, `GetWatchedFiles`, `ModuleChanged`,
   `Close` on behalf of its public API callers (the dev server, HTTP
@@ -525,11 +525,11 @@ and `:231`).
 The engine never decides at run time that an update needs a full page
 reload: the HMR boundary decision lives in the browser (see
 [hmr/design.md](../hmr/design.md)), so an `Hmr` task stays `Hmr`
-whatever the HMR result is (`bundling_task.rs:205-215`). A patch-only
+whatever the HMR result is (`bundling_task.rs:203-213`). A patch-only
 task leaves `has_stale_bundle_output` set (§12); a client that reloads
 itself lands on the stale-access regeneration path (§13).
 
-### 9b. At run time (`bundling_task.rs:144-203`) — the full-reload upgrade
+### 9b. At run time (`bundling_task.rs:142-201`) — the full-reload upgrade
 
 Before HMR generation, the bundling task upgrades itself to a full build
 in two cases, which no patch or partial scan can express:
@@ -561,7 +561,7 @@ In both cases the task then:
    `changedFiles`. This is a workaround until Vite delivers a
    `FullReload` with no changed files;
 2. **rewrites its own input** to `TaskInput::FullBuild`
-   (`bundling_task.rs:202`), so the rebuild runs with `ScanMode::Full`
+   (`bundling_task.rs:200`), so the rebuild runs with `ScanMode::Full`
    (§10) and HMR generation is skipped. A successful full build clears
    the lost-update flag (see
    [bundler-data-lifecycle](../bundler-data-lifecycle/implementation.md)).
@@ -608,7 +608,7 @@ Triggers that arrive while a full build runs are queued, and the next
 `FullBuild` absorbs them (`TaskInput::merge_with`). So there is at most
 one full build per trigger, often fewer.
 
-### 9c. Resolver cache invalidation at run time (`bundling_task.rs:89-98`, `:164-166`)
+### 9c. Resolver cache invalidation at run time (`bundling_task.rs:87-96`, `:162-164`)
 
 oxc_resolver caches every filesystem lookup, misses as well as hits, and
 its only invalidation is the whole-cache `clear_cache()`
@@ -650,7 +650,7 @@ would need a new oxc_resolver API.
 
 ## 10. `BundlingTask` — executing one unit of work
 
-`BundlingTask::run` (`bundling_task.rs:100-119`) calls `run_inner`,
+`BundlingTask::run` (`bundling_task.rs:98-117`) calls `run_inner`,
 stores `DevContext::last_task_errored`, then sends `BundleCompleted` back
 to the coordinator with two fields:
 
@@ -690,7 +690,7 @@ Set sites:
 re-runs the hook against the new changed files — sufficient retry
 without forcing a rebuild.
 
-`run_inner` (`bundling_task.rs:122-226`) does, in order:
+`run_inner` (`bundling_task.rs:120-224`) does, in order:
 
 1. **`watchChange` plugin hook** — for each changed file, calls
    `plugin_driver.watch_change` on the last bundle handle.
@@ -702,22 +702,23 @@ without forcing a rebuild.
 4. **Rebuild** — if `requires_rebuild()`, sets `has_rebuild_happen =
 true` and calls `rebuild()`.
 
-### `generate_hmr_updates` (`bundling_task.rs:231-346`)
+### `generate_hmr_updates` (`bundling_task.rs:229-350`)
 
 - Locks the `Bundler`.
-- Snapshots `(client_id, shipped)` for every connected client from
-  `dev_context.clients`, then releases the clients lock. The snapshots
-  become one `ClientHmrInput { client_id, shipped }` per client
+- Snapshots `(client_id, shipped, top_level_evaluated)` for every
+  connected client from `dev_context.clients`, then releases the clients
+  lock. The snapshots become one
+  `ClientHmrInput { client_id, shipped, top_level_evaluated }` per client
   (`crates/rolldown_common/src/hmr/client_hmr_input.rs`). The compute
-  reads only the ship map; it never sees client execution state.
+  reads only these server records; it never sees client execution state.
 - Locks `dev_context.stamp_table` and calls
   `bundler.compute_hmr_update_for_file_changes(...)` with the changed
   files, the client inputs, the stamp table, `next_hmr_patch_id`,
   `last_build_errored`, and `hot_update`.
   `last_build_errored` is `DevContext::last_task_errored`;
-  `hot_update` is the dev option (`bundling_task.rs:268-269`).
+  `hot_update` is the dev option (`bundling_task.rs:272-273`).
 - Assigns `patch.seq` from `session.next_seq` for every
-  `HmrUpdate::Patch` (`bundling_task.rs:282-292`). A `Noop` sends
+  `HmrUpdate::Patch` (`bundling_task.rs:286-296`). A `Noop` sends
   nothing, so it does not advance the counter; the client requires
   `seq === lastSeq + 1`, and a skipped number would read as a gap. A
   client that disconnected during the compute has no session, so its
@@ -726,7 +727,7 @@ true` and calls `rebuild()`.
   finds no client for it.
 - Records every `Patch` as a `PendingPayload` under `patch.filename`,
   moving `patch.carried` (the modules and stamps it ships) into the
-  entry (`bundling_task.rs:298-313`). `shipped[C]` is written only when
+  entry (`bundling_task.rs:302-317`). `shipped[C]` is written only when
   the client acknowledges delivery of that filename (§15,
   `notify_payload_delivered`).
 - On error, sets `self.hmr_errored = true`.
@@ -774,21 +775,24 @@ Then, across all files of the batch:
    merge sets `Bundler::lost_hmr_update`, and the update clears it only
    when it returns its patches (§9b). Then the stamp table starts a
    new rebuild number and stamps every changed or newly added module
-   with it (`hmr_stage.rs:371-377`).
+   with it.
 7. **Superset walk** — `collect_client_update_superset`
-   (`hmr_stage.rs:451`) walks up static and dynamic importers from the
+   (`hmr_stage.rs`) walks up static and dynamic importers from the
    changed modules, stopping at self-accepting modules and at accepting
    importer edges. This is a prediction of what any client's walk may
    re-run; the client makes the real decision (see
    [hmr/design.md](../hmr/design.md)).
 8. **Per-client patch** — for each `ClientHmrInput`, the carried set is
-   `(affected ∖ shipped[C]) ∪ { m : latest[m] > shipped[C][m] }`
-   (`hmr_stage.rs:408-444`): modules the client lacks, plus every
-   module the client holds at an older stamp. `render_hmr_patch`
-   returns `HmrUpdate::Noop` when nothing is carried and no id changed
-   (`hmr_stage.rs:727-729`); otherwise an `HmrPatch` with `changed_ids`,
-   `carried`, and `seq: 0` — the dev engine assigns the real `seq`
-   afterwards.
+   `(affected ∖ shipped[C]) ∪ { m : latest[m] > shipped[C][m] }`: modules
+   the client lacks, plus every module the client holds at an older
+   stamp. When the rebuild added static imports, the carried set also
+   gets the part of their static closure the client does not hold
+   (`collect_unheld_sync_deps`, which reads the ship map and the
+   boot-evaluated map; see [hmr/design.md](../hmr/design.md),
+   principle 2). `render_hmr_patch` returns `HmrUpdate::Noop` when
+   nothing is carried and no id changed; otherwise an `HmrPatch` with
+   `changed_ids`, `carried`, and `seq: 0` — the dev engine assigns the
+   real `seq` afterwards.
 
 The superset walk (`collect_client_update_superset` in `hmr_stage.rs`)
 starts from the changed modules and follows importer edges (static and
@@ -845,7 +849,7 @@ Known gaps in this walk, kept on purpose for now:
   rule. A tagged marker is possible later, but it must change on both
   sides in the same release.
 
-### `rebuild` (`bundling_task.rs:349-389`)
+### `rebuild` (`bundling_task.rs:353-393`)
 
 - Locks the `Bundler`.
 - Picks the scan mode:
@@ -861,7 +865,7 @@ Known gaps in this walk, kept on purpose for now:
 - On error, sets `self.rebuild_errored = true`.
 - On success, recomputes `DevContext::top_level_evaluated` from the new
   snapshot (`compute_top_level_evaluated_modules`,
-  `impl_bundler_hmr.rs:81`; call at `bundling_task.rs:378-382`). A
+  `impl_bundler_hmr.rs:81`; call at `bundling_task.rs:382-386`). A
   client that connects after this rebuild freezes this map into its
   session at hello.
 - Invokes the `on_output` callback if configured.
@@ -1508,7 +1512,7 @@ Existing panic sites in `rolldown_dev` that are intentional, not punts:
   owned by the coordinator task, which only shuts down on the `Close`
   message. The fs watcher cannot trigger that path; if its `send` fails, our
   shutdown ordering is wrong.
-- `crates/rolldown_dev/src/bundling_task.rs:71` — same pattern on the final
+- `crates/rolldown_dev/src/bundling_task.rs:69` — same pattern on the final
   `BundleCompleted` send. The coordinator awaits any in-flight `BundlingTask`
   before processing `Close` (§4), so by construction the receiver is alive
   when this send runs.

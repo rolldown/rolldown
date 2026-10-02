@@ -142,12 +142,11 @@ subtracts the ship map only. The entry chunk is scope-hoisted (principle 3) and 
 re-runnable code. A patch that re-runs it must ship its factory once;
 after that the ship map covers it.
 
-A lazy chunk also carries what its own code reaches. A module that runs
+Both kinds also carry what their own code reaches. A module that runs
 from a payload calls `initModule` on each static dep, and a dep that
 never ran in this client needs a factory. The server cannot see which
-modules ran, so it walks static imports from the lazy entry
-(`collect_unheld_sync_deps`, `hmr_stage.rs`) and sorts each module it
-reaches:
+modules ran, so it walks static imports (`collect_unheld_sync_deps`,
+`hmr_stage.rs`) and sorts each module it reaches:
 
 - **Boot-evaluated, current copy** — its exports are live. The walk
   stops: the entry chunk ran its static deps too.
@@ -156,6 +155,15 @@ reaches:
   importers of the changed module whether or not they ran), so its deps
   may be missing.
 - **Anything else** — carried, and the walk goes through it.
+
+A lazy chunk walks from its entry. A patch walks only from the static
+imports the rebuild added: the new deps of a changed module and every
+dep of a new module. The old deps of a module that ran have run too.
+Walking from every carried module would ship the whole static closure
+whenever the boot-evaluated map is empty (several user entries). Even
+so, with an empty map an edit that adds an import can carry modules the
+client already ran. That costs bytes once; the ship map covers them
+afterwards.
 
 Example: tab B has not opened a route yet. An edit of `shared.js`
 carries `route.js` to tab B, because `route.js` imports `shared.js`.

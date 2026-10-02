@@ -6,10 +6,8 @@ use std::{
   },
 };
 
-use arcstr::ArcStr;
 use rolldown_common::{ClientHmrInput, ClientHmrUpdate, HmrUpdate, ScanMode, WatcherChangeKind};
 use rolldown_utils::indexmap::FxIndexMap;
-use rustc_hash::FxHashMap;
 use tokio::sync::Mutex;
 
 use rolldown::Bundler;
@@ -238,21 +236,27 @@ impl BundlingTask {
       .collect::<FxIndexMap<_, _>>();
 
     // Read-only per-client inputs for this push. No seq here: it is assigned after compute,
-    // only to the patches we actually deliver (see below). Snapshot the ids and ship maps
+    // only to the patches we actually deliver (see below). Snapshot the ids and per-client maps
     // and release the clients lock before the compute await — the compute only reads the
     // snapshot, and a delivery notification landing mid-compute is folded into the next
     // push either way; holding the lock would block connect/disconnect and delivery
     // notifications for the whole rebuild.
-    let client_snapshots: Vec<(String, FxHashMap<ArcStr, u32>)> = {
+    let client_snapshots = {
       let client_sessions = self.dev_context.clients.lock().await;
       client_sessions
         .iter()
-        .map(|(client_key, client)| (client_key.clone(), client.shipped.clone()))
-        .collect()
+        .map(|(client_key, client)| {
+          (client_key.clone(), client.shipped.clone(), Arc::clone(&client.top_level_evaluated))
+        })
+        .collect::<Vec<_>>()
     };
     let client_inputs: Vec<ClientHmrInput> = client_snapshots
       .iter()
-      .map(|(client_id, shipped)| ClientHmrInput { client_id: client_id.as_str(), shipped })
+      .map(|(client_id, shipped, top_level_evaluated)| ClientHmrInput {
+        client_id: client_id.as_str(),
+        shipped,
+        top_level_evaluated,
+      })
       .collect();
 
     // Compute HMR updates for all clients in one call. After an errored task the

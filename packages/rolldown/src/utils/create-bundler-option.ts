@@ -102,15 +102,22 @@ export async function createBundlerOptions(
   // Read once, like Rollup and like the plugin-less path: an accessor-backed
   // `onLog`/`onwarn` on the input options must not be re-run per log entry.
   // The plugin snapshot stays inside `invokeLogger` on purpose - plugin
-  // `onLog` accessors have to execute inside the reentrancy guard.
+  // `onLog` accessors have to execute inside the reentrancy guard - but it is
+  // taken on the first log entry only and reused: a fresh snapshot per entry
+  // allocated one view per plugin per log and re-ran every `onLog` getter on
+  // each entry, against the conversion-time read model. A snapshot that throws
+  // is not kept, so the next entry reads again.
   const snapshottedInputOptions = snapshotInputLogHandlers(inputOptions);
   const hasUserLogCallback =
     hookWouldRun(snapshottedInputOptions.onLog) ||
     hookWouldRun(snapshottedInputOptions.onwarn) ||
     pluginLogHooks.present;
   const inputLogHandlers = getOnLog(snapshottedInputOptions, logLevel);
-  const invokeLogger: LogHandler = (level, log) =>
-    getLogger(pluginLogHooks.snapshot(), inputLogHandlers, logLevel, watchMode)(level, log);
+  let pluginLogger: LogHandler | undefined;
+  const invokeLogger: LogHandler = (level, log) => {
+    pluginLogger ??= getLogger(pluginLogHooks.snapshot(), inputLogHandlers, logLevel, watchMode);
+    return pluginLogger(level, log);
+  };
   const onLog: LogHandler =
     runBuildCallback && hasUserLogCallback
       ? (level, log) => runBuildCallback(() => invokeLogger(level, log), 'onLog')
@@ -402,7 +409,7 @@ function capturePluginHooks(
     snapshot: () =>
       captured.map(({ plugin, deferred, value }) => {
         // The deferred read happens here, inside `snapshot()`, which every
-        // caller invokes inside the callback boundary.
+        // caller invokes inside the callback boundary, once per consumer.
         const hookValue = deferred ? readPropertyOnce(plugin, hookName) : value;
         // A fresh, extensible object with no own keys. Because the facade never
         // reports one of ITS keys as non-configurable, and never reports the

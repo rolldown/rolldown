@@ -204,7 +204,9 @@ option adapters.
   answer no runner would ever call leaves a callback-free build unguarded. Only
   an accessor that has a getter is deferred, because calling a getter is user
   code the walk can see in advance; that read happens inside the boundary,
-  once per snapshot, and counts as present on its own. A `Proxy` `get` trap
+  once per snapshot, and counts as present on its own. The logger takes its
+  snapshot on the first log entry and reuses it for the rest of the build, so
+  an `onLog` getter runs once rather than once per entry. A `Proxy` `get` trap
   that answers the eager read is user code too, and it runs outside the
   boundary for the reason given for built-in options above: the boundary
   covers hook execution, not option reads. The list handed to the hook runner

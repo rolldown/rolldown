@@ -830,6 +830,35 @@ test('onLog accessors execute once inside the reentrancy guard', async () => {
   await bundle.close();
 });
 
+test('onLog accessors are read once across every log entry of a build', async () => {
+  const virtualId = '\0on-log-accessor-many-warnings';
+  let getterCalls = 0;
+  const codes: string[] = [];
+  const plugin: Plugin = {
+    name: 'on-log-accessor-many-warnings',
+    get onLog() {
+      getterCalls += 1;
+      return (_level: LogLevel, log: RolldownLog) => {
+        codes.push(log.code!);
+        return false;
+      };
+    },
+  };
+  const bundle = await rolldown({
+    cwd: import.meta.dirname,
+    input: virtualId,
+    plugins: [evalWarningsPlugin(virtualId, 5), plugin],
+  });
+  try {
+    await bundle.generate();
+  } finally {
+    await bundle.close();
+  }
+
+  expect(codes).toEqual(['EVAL', 'EVAL', 'EVAL', 'EVAL', 'EVAL']);
+  expect(getterCalls).toBe(1);
+});
+
 // The option snapshot installs the value it read as an OWN property on
 // `Object.create(userObject, ...)`, so a wrong read permanently masks the user's
 // hook rather than merely going stale. See `readPropertyOnce` in

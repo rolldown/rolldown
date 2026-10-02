@@ -59,7 +59,9 @@ pub enum ObligationPurpose {
   /// Finalizer emission at AST statement positions. Only *included* statements are visited (the
   /// finalizer's excluded statements consume the precomputed transitive metadata instead), and a
   /// nested re-export record emits nothing — a wrapped ancestor barrel walks through it and owns
-  /// that init itself.
+  /// that init itself. A re-export-transparent wrapper emits nothing at all: its consumers route
+  /// through it to the leaves they read
+  /// (internal-docs/code-splitting/design.md#tree-shaking-parity-across-strict-modes).
   Emit,
   /// Cross-chunk `init_*` symbol registration. Same contract as [`ObligationPurpose::Emit`]:
   /// included statements only, nested records skipped — registration and emission must stay in
@@ -72,7 +74,10 @@ pub enum ObligationPurpose {
   /// nested records are *kept*: projection may over-approximate — an extra edge only ever wraps
   /// more, and wrapping more is always legal — but must never drop an edge source, so it declines
   /// the nested-ownership refinement Emit/Register apply. A binding-less excluded plain import
-  /// stays out on every purpose: tree shaking stripped that side-effect edge deliberately.
+  /// stays out on every purpose: tree shaking stripped that side-effect edge deliberately. The
+  /// records of a re-export-transparent wrapper are kept too: chunk placement resolves a
+  /// consumer-local route from the record that imports it, and for a route behind the wrapper
+  /// that record is the wrapper's own.
   Project,
 }
 
@@ -97,7 +102,9 @@ pub fn record_is_init_obligation(
   }
   match purpose {
     ObligationPurpose::Emit | ObligationPurpose::Register => {
-      stmt_is_included && !order_state.is_nested_reexport_record(importer.idx, rec_idx)
+      stmt_is_included
+        && !order_state.reexport_init_is_transparent(importer.idx)
+        && !order_state.is_nested_reexport_record(importer.idx, rec_idx)
     }
     ObligationPurpose::Project => {
       stmt_is_included
@@ -379,7 +386,6 @@ fn collect_esm_init_targets_for_record(
   let importee_meta = &ctx.metas[importee_idx];
   let route_through_transparent_wrapper =
     ctx.order_wrap_state.reexport_init_is_transparent(importee_idx)
-      && !importee_meta.has_dynamic_exports
       && (record_consumes_static_bindings(ctx.importer, record, rec_idx)
         || ctx.order_wrap_state.is_consumer_local_reexport_route(importee_idx));
 
@@ -729,9 +735,7 @@ fn symbol_is_always_inlined(ctx: &WrappedEsmInitTargetContext<'_>, symbol_ref: S
 }
 
 /// Whether this record has a statically resolvable binding consumer. A side-effect-only import has
-/// no binding path to route and must keep calling a transparent wrapper directly. Dynamic-export
-/// namespaces are filtered by the caller because their runtime re-export glue is not statically
-/// replaceable with canonical leaf targets.
+/// no binding path to route and must keep calling a transparent wrapper directly.
 fn record_consumes_static_bindings(
   importer: &NormalModule,
   record: &ResolvedImportRecord,

@@ -315,7 +315,7 @@ Configured via `WatcherOptions`, fires **immediately** on file change (before de
 - After each build, `bundler.watch_files()` returns the current set.
 - `WatchTask::update_watch_files()` hands the set to the per-task `FsWatcher`, which registers the paths it does not watch yet. `FsWatcher::is_watched` answers whether a changed path is one of them, or lies below one.
 - `include`/`exclude` patterns filter which files are watched (via `pattern_filter`).
-- Files are watched **non-recursively** (individual file watches).
+- A file is watched by itself, a directory with everything below it. A path that does not exist yet is registered as a directory, since its type is unknown.
 - `FsWatcher::watch_paths` filters and deduplicates new paths before opening a notify batch. If none remain, it leaves the backend untouched: on macOS, opening a batch stops the FSEvents stream, and committing even an empty batch restarts it from "now", potentially losing edits in between. A path is recorded only after registration and commit succeed, so a skipped path is tried again with the next build.
 
 ### Backend selection

@@ -3,7 +3,7 @@ mod event_map;
 mod immediate;
 mod noop;
 
-use std::path::Path;
+use std::{fs, path::Path};
 
 use notify::{Event, RecursiveMode, TargetMode, WatchMode, Watcher};
 use notify_debouncer_full::{RecommendedCache, new_debouncer_opt};
@@ -72,12 +72,15 @@ impl<'me> NotifyPathsMutAdapter<'me> {
 
 impl PathsMut for NotifyPathsMutAdapter<'_> {
   fn add(&mut self, path: &Path) -> BuildResult<()> {
+    // Windows makes a recursive file watch a parent subtree watch.
+    // Root fix: rolldown notify fork.
+    let recursive_mode = match fs::metadata(path) {
+      Ok(metadata) if !metadata.is_dir() => RecursiveMode::NonRecursive,
+      _ => RecursiveMode::Recursive,
+    };
     self
       .0
-      .add(
-        path,
-        WatchMode { recursive_mode: RecursiveMode::Recursive, target_mode: TargetMode::TrackPath },
-      )
+      .add(path, WatchMode { recursive_mode, target_mode: TargetMode::TrackPath })
       .map_err_to_unhandleable()
       .map_err(Into::into)
   }
@@ -98,5 +101,64 @@ impl<T: FsEventHandler> NotifyEventHandlerAdapter<T> {
     if !events.is_empty() {
       self.0.handle_events(events);
     }
+  }
+}
+
+#[cfg(test)]
+mod tests {
+  use std::{
+    fs,
+    path::{Path, PathBuf},
+    sync::{Arc, Mutex},
+  };
+
+  use notify::{RecursiveMode, TargetMode, WatchMode};
+
+  use super::{NotifyPathsMutAdapter, PathsMut};
+
+  struct Recorder(Arc<Mutex<Vec<(PathBuf, WatchMode)>>>);
+
+  impl ::notify::PathsMut for Recorder {
+    fn add(&mut self, path: &Path, watch_mode: WatchMode) -> ::notify::Result<()> {
+      self.0.lock().unwrap().push((path.to_path_buf(), watch_mode));
+      Ok(())
+    }
+
+    fn remove(&mut self, _path: &Path) -> ::notify::Result<()> {
+      Ok(())
+    }
+
+    fn commit(self: Box<Self>) -> ::notify::Result<()> {
+      Ok(())
+    }
+  }
+
+  #[test]
+  fn watch_mode_by_target() {
+    let dir = std::env::temp_dir()
+      .join(format!("rolldown_fs_watcher_{}_watch_mode_by_target", std::process::id()));
+    let _ = fs::remove_dir_all(&dir);
+    fs::create_dir_all(&dir).unwrap();
+    let file = dir.join("a.js");
+    fs::write(&file, "").unwrap();
+    let missing = dir.join("missing.js");
+
+    let recorded = Arc::new(Mutex::new(Vec::new()));
+    let mut paths_mut = NotifyPathsMutAdapter::new(Box::new(Recorder(Arc::clone(&recorded))));
+    paths_mut.add(&file).unwrap();
+    paths_mut.add(&dir).unwrap();
+    paths_mut.add(&missing).unwrap();
+    Box::new(paths_mut).commit().unwrap();
+    let _ = fs::remove_dir_all(&dir);
+
+    let mode = |recursive_mode| WatchMode { recursive_mode, target_mode: TargetMode::TrackPath };
+    assert_eq!(
+      *recorded.lock().unwrap(),
+      [
+        (file, mode(RecursiveMode::NonRecursive)),
+        (dir, mode(RecursiveMode::Recursive)),
+        (missing, mode(RecursiveMode::Recursive)),
+      ]
+    );
   }
 }

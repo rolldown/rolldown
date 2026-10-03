@@ -1,0 +1,32 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## base.js
+
+```js
+//#region shared.js
+const shared = 1;
+//#endregion
+export { shared };
+
+```
+
+## main.js
+
+```js
+
+```
+
+## middle.js
+
+```js
+
+```
+
+## top.js
+
+```js
+
+```

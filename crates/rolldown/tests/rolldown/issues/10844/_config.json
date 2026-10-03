@@ -1,0 +1,6 @@
+{
+  "_comment": "Reproduces the wrapper cost reported in #10844 (and the bundle-size half of #10843). A dynamic import() of an import-cycle member under `codeSplitting: false` wraps every module transitively reachable from the cycle, including the `export * as m` barrel and the per-message modules behind it. Those message modules contain nothing but hoisted function declarations, so their `__esm` closures are empty and `init_is_noop` classifies them as no-ops - but the `export * from` lowering emitted their `init_*()` calls without the `/* @__PURE__ */` annotation, so neither the calls nor the now-unused empty wrappers could be dropped.",
+  "config": {
+    "codeSplitting": false
+  }
+}

@@ -1,0 +1,19 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+//#region main.js
+var hello_exports = /* @__PURE__ */ Object.freeze({ __proto__: null });
+async function test() {
+	const a = await Promise.resolve().then(() => hello_exports);
+	const b = await Promise.resolve().then(() => hello_exports);
+	console.log(a === b);
+}
+test();
+//#endregion
+
+```

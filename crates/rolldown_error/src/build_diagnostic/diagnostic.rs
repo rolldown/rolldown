@@ -214,6 +214,14 @@ impl Diagnostic {
     self.kind.clone()
   }
 
+  /// Code frame around the error's first label.
+  pub fn frame(&self) -> Option<String> {
+    let span = self.labels.first()?.span();
+    let source = self.files.get(span.source())?;
+    let frame = render_code_frame(source, span.start());
+    (!frame.is_empty()).then_some(frame)
+  }
+
   /// Render many diagnostics at once, sharing per-source work across all of them.
   ///
   /// Rendering diagnostics one by one rebuilds the ariadne `Source` (its rope and
@@ -269,6 +277,67 @@ impl Diagnostic {
   }
 }
 
+const LINE_TRUNCATE_LENGTH: usize = 120;
+const MIN_CHARACTERS_SHOWN_AFTER_LOCATION: usize = 10;
+const ELLIPSIS: &str = "...";
+
+// Only leading tabs are expanded, each to two spaces.
+fn tabs_to_spaces(value: &str) -> String {
+  let leading_tabs = value.bytes().take_while(|&byte| byte == b'\t').count();
+  if leading_tabs == 0 {
+    return value.to_string();
+  }
+  let mut expanded = "  ".repeat(leading_tabs);
+  expanded.push_str(&value[leading_tabs..]);
+  expanded
+}
+
+fn render_code_frame(source: &str, byte_offset: usize) -> String {
+  let offset = byte_offset.min(source.len());
+  let before = source.get(..offset).unwrap_or(source);
+  let line = before.bytes().filter(|&byte| byte == b'\n').count() + 1;
+  let byte_column = offset - before.rfind('\n').map_or(0, |index| index + 1);
+
+  let all: Vec<&str> = source.split('\n').collect();
+  if line > all.len() {
+    return String::new();
+  }
+  let error_line = all[line - 1];
+  let location_width =
+    tabs_to_spaces(error_line.get(..byte_column).unwrap_or(error_line)).chars().count();
+  let max_line_length = (location_width + MIN_CHARACTERS_SHOWN_AFTER_LOCATION + ELLIPSIS.len())
+    .max(LINE_TRUNCATE_LENGTH);
+
+  let frame_start = line.saturating_sub(3);
+  let mut frame_end = (line + 2).min(all.len());
+  let mut lines: Vec<&str> = all[frame_start..frame_end].to_vec();
+  while lines.last().is_some_and(|last| last.trim().is_empty()) {
+    lines.pop();
+    frame_end -= 1;
+  }
+
+  let digits = frame_end.to_string().len();
+  lines
+    .iter()
+    .enumerate()
+    .map(|(index, source_line)| {
+      let line_no = frame_start + index + 1;
+      let mut displayed = tabs_to_spaces(source_line);
+      if displayed.chars().count() > max_line_length {
+        displayed = displayed.chars().take(max_line_length - ELLIPSIS.len()).collect();
+        displayed.push_str(ELLIPSIS);
+      }
+      if line_no == line {
+        let indent = digits + 2 + location_width;
+        format!("{line_no:>digits$}: {displayed}\n{:indent$}^", "")
+      } else {
+        format!("{line_no:>digits$}: {displayed}")
+      }
+    })
+    .collect::<Vec<_>>()
+    .join("\n")
+}
+
 /// Primary source location of a diagnostic's first label.
 #[derive(Debug, Clone)]
 pub struct DiagnosticPrimaryLocation {
@@ -290,5 +359,38 @@ pub struct RenderedDiagnostic {
 impl Display for Diagnostic {
   fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
     self.convert_to_string(false).fmt(f)
+  }
+}
+
+#[cfg(test)]
+mod tests {
+  use super::{Severity, render_code_frame};
+
+  #[test]
+  fn code_frame_points_at_offset() {
+    assert_eq!(render_code_frame("a\nbcd\nef", 3), "1: a\n2: bcd\n    ^\n3: ef");
+  }
+
+  #[test]
+  fn code_frame_expands_tabs_and_aligns_caret() {
+    assert_eq!(render_code_frame("\tfoo", 1), "1:   foo\n     ^");
+  }
+
+  #[test]
+  fn code_frame_preserves_non_leading_tabs() {
+    assert_eq!(render_code_frame("ab\tcd", 3), "1: ab\tcd\n      ^");
+  }
+
+  #[test]
+  fn code_frame_truncates_long_lines() {
+    let frame = render_code_frame(&"x".repeat(200), 0);
+    let first_line = frame.lines().next().unwrap();
+    assert_eq!(first_line, format!("1: {}...", "x".repeat(117)));
+  }
+
+  #[test]
+  fn frame_returns_none_without_labels() {
+    let diagnostic = super::Diagnostic::new("X".to_string(), "title".to_string(), Severity::Error);
+    assert_eq!(diagnostic.frame(), None);
   }
 }

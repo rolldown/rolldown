@@ -55,6 +55,8 @@ impl ViteImportGlobPlugin {
 
 /// Tells whether a created or deleted path changes the result of one `import.meta.glob` call,
 /// without walking the filesystem again.
+///
+/// See `internal-docs/import-meta-glob/design.md`.
 #[derive(Debug)]
 pub struct GlobMatcher {
   /// In original case: the walk itself is never case-folded, only the glob comparison is.

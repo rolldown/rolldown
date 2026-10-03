@@ -9,6 +9,10 @@ readme = "../../README.md"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
+[lints.rust]
+# TODO: remove once oxc upstream upgrades to Rust 1.99. Same reason as in the workspace `Cargo.toml`.
+deprecated = "allow"
+
 [dependencies]
 memchr = { workspace = true }
 oxc_index = { workspace = true }

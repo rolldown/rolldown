@@ -13,7 +13,7 @@ Based on the code in `crates/rolldown/src/module_finalizers/mod.rs` (lines 330-3
 
 | #   | Chunk Type | WrapKind | OutputExports | Export Name | Expected Result              | Test Coverage                                                                                           |
 | --- | ---------- | -------- | ------------- | ----------- | ---------------------------- | ------------------------------------------------------------------------------------------------------- |
-| 1   | Entry      | Cjs      | Default       | default     | `require_binding`            | `entry_cjs_default_default` (BUG FOUND)                                                                 |
+| 1   | Entry      | Cjs      | Default       | default     | `require_binding`            | `entry_cjs_default_default`                                                                             |
 | 2   | Entry      | Cjs      | Named         | default     | `require_binding.default`    | `entry_cjs_named_default`                                                                               |
 | 3   | Entry      | Cjs      | Named         | named       | `require_binding.exportName` | `entry_cjs_named_named`                                                                                 |
 | 4   | ~~Entry~~  | ~~Esm~~  | ~~Default~~   | ~~default~~ | ~~N/A~~                      | **INVALID** (ESM wrap adds extra exports)                                                               |
@@ -31,14 +31,16 @@ Based on the code in `crates/rolldown/src/module_finalizers/mod.rs` (lines 330-3
 
 ## Bugs Found
 
-### Test #1: Entry + Cjs + Default + default
+### Test #1: Entry + Cjs + Default + default (fixed, see [#11027](https://github.com/rolldown/rolldown/issues/11027))
 
-The generated output has a bug where `lib.js` generates TWO `module.exports =` statements:
+The runtime used to be merged into `lib.js`, so it generated TWO `module.exports =` statements:
 
-1. First exports the runtime helpers (`__toESM`, `__toCommonJS`, `__name`)
-2. Second exports the actual value (overwriting the first)
+1. First exports the actual value
+2. Second exports the runtime helper `__toESM` (overwriting the first)
 
-This causes `main.js` to fail at runtime with `require_lib$1.__toESM is not a function` because the runtime helpers are overwritten.
+This caused `main.js` to fail at runtime with `require_lib$1.__toESM is not a function`, and `require('./lib.js')` returned `__toESM`.
+
+A CommonJS entry now counts as an entry with exports under `preserveEntrySignatures: 'exports-only'`, so the runtime stays in its own chunk and the fixture executes its output. `preserveEntrySignatures: 'allow-extension'` still merges the runtime, so that variant is pinned with `_expectExecutionFailure`.
 
 ## Test Naming Convention
 

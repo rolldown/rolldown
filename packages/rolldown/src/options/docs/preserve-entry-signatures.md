@@ -2,7 +2,7 @@
 
 ##### `'exports-only'`
 
-Follows `'strict'` behavior for entry modules that have exports, but allows `'allow-extension'` behavior for entry modules without exports.
+Follows `'strict'` behavior for entry modules that have exports, but allows `'allow-extension'` behavior for entry modules without exports. A CommonJS entry module counts as having exports, because its `module.exports` becomes the default export of the entry chunk.
 
 ##### `'strict'`
 

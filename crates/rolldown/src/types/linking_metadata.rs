@@ -128,6 +128,17 @@ impl LinkingMetadata {
     self.sorted_and_non_ambiguous_resolved_exports.is_empty()
   }
 
+  /// Whether an entry chunk for this module has exports, which `preserveEntrySignatures:
+  /// 'exports-only'` keeps fixed.
+  ///
+  /// A CommonJS module has no static exports, but its entry chunk always exports `module.exports`
+  /// as `default` (see `get_chunk_export_names`). Merging other code into that chunk would add
+  /// exports, and in CJS output with the `default` export mode each one is rendered as another
+  /// `module.exports =` that overwrites the entry's value.
+  pub fn entry_has_exports(&self) -> bool {
+    !self.is_canonical_exports_empty() || matches!(self.wrap_kind, WrapKind::Cjs)
+  }
+
   #[inline]
   pub fn wrap_kind(&self) -> WrapKind {
     self.wrap_kind

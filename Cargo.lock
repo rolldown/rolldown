@@ -885,6 +885,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "globstar"
+version = "0.0.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "5eb403f8548b623d8a2e74c1a6003b2c251f9dfcc357ab6bedbd144d5f272595"
+
+[[package]]
 name = "half"
 version = "2.7.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2541,18 +2547,18 @@ dependencies = [
 
 [[package]]
 name = "rolldown-file-id"
-version = "0.2.10"
+version = "0.2.11"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "62966a34acc45ec51dbdfa29a3641e30ae9ee22cd195756a55729050776e38a4"
+checksum = "76c1d1beeaaa4dc5da10a197d4826f83adec1f40ee6e79d90ccdcfd5bcfb41c3"
 dependencies = [
  "windows-sys 0.61.2",
 ]
 
 [[package]]
 name = "rolldown-notify"
-version = "10.5.1"
+version = "11.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e233e1c24e0f4d8dc82251f9196c03f7c77fba9a5ca45e64c2fc96a57726de99"
+checksum = "43c65ad424b3737dcd3f32b96820fb77fea1a942fc6c7c54a788c68d7ace872e"
 dependencies = [
  "bitflags",
  "inotify",
@@ -2570,9 +2576,9 @@ dependencies = [
 
 [[package]]
 name = "rolldown-notify-debouncer-full"
-version = "0.7.11"
+version = "0.8.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ce455a17f7f338a23bfc92cf9ee9b7ed93fbdb646ef096da60cfd6fc9f68d3b1"
+checksum = "32cc46781e5070fc3285f4a82d4a915afb27fb5f75ec53939739d7a04e03fc3f"
 dependencies = [
  "rolldown-file-id",
  "rolldown-notify",
@@ -2584,9 +2590,9 @@ dependencies = [
 
 [[package]]
 name = "rolldown-notify-types"
-version = "2.0.2"
+version = "2.0.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1931923a28e14c01a27ca56669669eb3e3de4068859c34e17b96c93ba3a61afe"
+checksum = "5ca46043afcb01d8dbb414ed52e863c62ebfecbefe370fdfe030983225c5ef7a"
 
 [[package]]
 name = "rolldown_binding"
@@ -2793,10 +2799,12 @@ dependencies = [
 name = "rolldown_fs_watcher"
 version = "1.2.12"
 dependencies = [
+ "globstar",
  "rolldown-notify",
  "rolldown-notify-debouncer-full",
  "rolldown_common",
  "rolldown_error",
+ "rolldown_utils",
  "rustc-hash",
  "tracing",
  "walkdir",

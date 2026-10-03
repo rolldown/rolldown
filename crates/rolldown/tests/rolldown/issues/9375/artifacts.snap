@@ -6,14 +6,14 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## index.js
 
 ```js
-var __expose__ = (function(pinia) {
+var __expose__ = (function(pinia$1) {
 	// HIDDEN [\0rolldown/runtime.js]
 	//#region index.ts
 	//#endregion
 	return (/* @__PURE__ */ __commonJSMin(((exports, module) => {
 		var freeModule = freeExports && typeof module == "object" && module && !module.nodeType && module;
-		var pinia$1 = (0, pinia.createPinia)();
-		console.log([pinia$1, freeModule]);
+		var pinia = (0, pinia$1.createPinia)();
+		console.log([pinia, freeModule]);
 	})))();
 })(Pinia);
 
@@ -28,14 +28,14 @@ var __expose__ = (function(pinia) {
 ```js
 (function(global, factory) {
 	typeof exports === "object" && typeof module !== "undefined" ? module.exports = factory(require("pinia")) : typeof define === "function" && define.amd ? define(["pinia"], factory) : (global = typeof globalThis !== "undefined" ? globalThis : global || self, global.__expose__ = factory(global.Pinia));
-})(this, function(pinia) {
+})(this, function(pinia$1) {
 	// HIDDEN [\0rolldown/runtime.js]
 	//#region index.ts
 	//#endregion
 	return (/* @__PURE__ */ __commonJSMin(((exports, module) => {
 		var freeModule = freeExports && typeof module == "object" && module && !module.nodeType && module;
-		var pinia$1 = (0, pinia.createPinia)();
-		console.log([pinia$1, freeModule]);
+		var pinia = (0, pinia$1.createPinia)();
+		console.log([pinia, freeModule]);
 	})))();
 });
 

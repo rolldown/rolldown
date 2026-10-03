@@ -19,13 +19,19 @@ Source: `crates/rolldown/src/stages/link_stage/reference_needed_symbols.rs`.
 … wrap_modules → generate_lazy_export → determine_side_effects
   → bind_imports_and_exports → create_exports_for_ecma_modules
   → reference_needed_symbols   ← this pass
-  → cross_module_optimization → include_statements → patch_module_dependencies
+  → cross_module_optimization → prune_constant_branches → include_statements
+  → patch_module_dependencies
 ```
 
 Position is load-bearing in two directions:
 
 1. **`wrap_kind` and `wrapper_ref` must already exist.** Every CJS/ESM-wrap arm reads `metas[importee.idx].wrap_kind()` and dereferences `wrapper_ref.unwrap()`. `wrap_modules` and `generate_lazy_export` populate them.
 2. **`include_statements` must run after.** Tree-shaking traverses `stmt_info.referenced_symbols` and joins `depended_runtime_helper` against included statements. Without the data this pass writes, wrappers and helpers would be silently dropped from the output.
+
+`prune_constant_branches` runs after this pass but skips statements containing import records,
+so import-lowering dependencies stay intact. It removes only references witnessed exclusively
+in dead subtrees and shares those branch decisions with finalization; see
+[constant branches](../../constant-branches/implementation.md).
 
 `determine_side_effects` propagates effects from dependencies to their importers through a worklist. User-defined verdicts remain authoritative. Re-exports that need wrapper initialization or a `__reExport` call also start propagation. Each module enters the worklist at most once, so the pass takes O(modules + imports).
 

@@ -1,0 +1,335 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## a.js
+
+```js
+//#region errors.js
+function oops(values) {
+	{}
+	throw new Error("https://example.com/oops");
+}
+
+//#endregion
+//#region forms.js
+function forms() {
+	0, false;
+	0, !false;
+	0, false;
+	return false, "production";
+}
+
+//#endregion
+//#region a.js
+function a(name) {
+	if (!name) oops({ name: "a" });
+	return name;
+}
+
+//#endregion
+export { a, forms };
+```
+
+## b.js
+
+```js
+//#region warnings.js
+function careful(values) {
+	{
+		console.warn("https://example.com/careful");
+	}
+}
+
+//#endregion
+//#region b.js
+function b(name) {
+	if (!name) careful({ name: "b" });
+	return name;
+}
+
+//#endregion
+export { b };
+```
+
+# Variant: [minify: true]
+
+## Assets
+
+### a.js
+
+```js
+function e(e){throw Error(`https://example.com/oops`)}function t(){return`production`}function n(t){return t||e({name:`a`}),t}export{n as a,t as forms};
+```
+
+### b.js
+
+```js
+function e(e){console.warn(`https://example.com/careful`)}function t(t){return t||e({name:`b`}),t}export{t as b};
+```
+
+# Variant: [inline_const: Config(InlineConstConfig { mode: Some(All), pass: 1 })]
+
+## Assets
+
+### a.js
+
+```js
+//#region errors.js
+function oops(values) {
+	{}
+	throw new Error("https://example.com/oops");
+}
+
+//#endregion
+//#region forms.js
+function forms() {
+	0, false;
+	0, !false;
+	0, false;
+	return false, "production";
+}
+
+//#endregion
+//#region a.js
+function a(name) {
+	if (!name) oops({ name: "a" });
+	return name;
+}
+
+//#endregion
+export { a, forms };
+```
+
+### b.js
+
+```js
+//#region warnings.js
+function careful(values) {
+	{
+		console.warn("https://example.com/careful");
+	}
+}
+
+//#endregion
+//#region b.js
+function b(name) {
+	if (!name) careful({ name: "b" });
+	return name;
+}
+
+//#endregion
+export { b };
+```
+
+# Variant: [inline_const: Config(InlineConstConfig { mode: None, pass: 3 })]
+
+## Assets
+
+### a.js
+
+```js
+//#region errors.js
+function oops(values) {
+	{}
+	throw new Error("https://example.com/oops");
+}
+
+//#endregion
+//#region forms.js
+function forms() {
+	0, false;
+	0, !false;
+	0, false;
+	return false, "production";
+}
+
+//#endregion
+//#region a.js
+function a(name) {
+	if (!name) oops({ name: "a" });
+	return name;
+}
+
+//#endregion
+export { a, forms };
+```
+
+### b.js
+
+```js
+//#region warnings.js
+function careful(values) {
+	{
+		console.warn("https://example.com/careful");
+	}
+}
+
+//#endregion
+//#region b.js
+function b(name) {
+	if (!name) careful({ name: "b" });
+	return name;
+}
+
+//#endregion
+export { b };
+```
+
+# Variant: no-treeshake: [treeshake: Boolean(false)]
+
+## Assets
+
+### a.js
+
+```js
+import { n as throw_error, t as bold } from "./internal.js";
+
+//#region errors.js
+function oops(values) {
+	if (false) {
+		throw_error("oops", `Something went wrong with ${values.name}`);
+	}
+	throw new Error("https://example.com/oops");
+}
+
+//#endregion
+//#region forms.js
+function forms() {
+	false && throw_error("and", "dead");
+	!false || throw_error("or", "dead");
+	false ?? throw_error("nullish", "dead");
+	return false ? bold : "production";
+}
+
+//#endregion
+//#region a.js
+function a(name) {
+	if (!name) oops({ name: "a" });
+	return name;
+}
+
+//#endregion
+export { a, forms };
+```
+
+### b.js
+
+```js
+import { t as bold } from "./internal.js";
+
+//#region warnings.js
+function careful(values) {
+	if (false) {
+		console.warn(`%c careful ${values.name}`, bold);
+	} else {
+		console.warn("https://example.com/careful");
+	}
+}
+
+//#endregion
+//#region b.js
+function b(name) {
+	if (!name) careful({ name: "b" });
+	return name;
+}
+
+//#endregion
+export { b };
+```
+
+### internal.js
+
+```js
+//#region env.js
+const DEV = false;
+
+//#endregion
+//#region internal.js
+const bold = "font-weight: bold";
+function throw_error(code, message) {
+	const error = new Error(`${code}\n${message}\nhttps://example.com/${code}`);
+	error.name = "Rich error";
+	throw error;
+}
+
+//#endregion
+export { throw_error as n, bold as t };
+```
+
+# Variant: no-inline: [inline_const: Bool(false)]
+
+## Assets
+
+### a.js
+
+```js
+import { n as throw_error, r as DEV, t as bold } from "./internal.js";
+
+//#region errors.js
+function oops(values) {
+	if (DEV) throw_error("oops", `Something went wrong with ${values.name}`);
+	throw new Error("https://example.com/oops");
+}
+
+//#endregion
+//#region forms.js
+function forms() {
+	DEV && throw_error("and", "dead");
+	!DEV || throw_error("or", "dead");
+	DEV ?? throw_error("nullish", "dead");
+	return DEV ? bold : "production";
+}
+
+//#endregion
+//#region a.js
+function a(name) {
+	if (!name) oops({ name: "a" });
+	return name;
+}
+
+//#endregion
+export { a, forms };
+```
+
+### b.js
+
+```js
+import { r as DEV, t as bold } from "./internal.js";
+
+//#region warnings.js
+function careful(values) {
+	if (DEV) console.warn(`%c careful ${values.name}`, bold);
+	else console.warn("https://example.com/careful");
+}
+
+//#endregion
+//#region b.js
+function b(name) {
+	if (!name) careful({ name: "b" });
+	return name;
+}
+
+//#endregion
+export { b };
+```
+
+### internal.js
+
+```js
+//#region env.js
+const DEV = false;
+
+//#endregion
+//#region internal.js
+const bold = "font-weight: bold";
+function throw_error(code, message) {
+	const error = /* @__PURE__ */ new Error(`${code}\n${message}\nhttps://example.com/${code}`);
+	error.name = "Rich error";
+	throw error;
+}
+
+//#endregion
+export { throw_error as n, DEV as r, bold as t };
+```

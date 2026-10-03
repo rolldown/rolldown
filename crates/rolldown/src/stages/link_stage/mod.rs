@@ -38,6 +38,7 @@ mod cross_module_optimization;
 mod determine_module_exports_kind;
 mod generate_lazy_export;
 mod patch_module_dependencies;
+mod prune_constant_branches;
 mod reference_needed_symbols;
 mod sort_modules;
 mod tree_shaking;
@@ -250,6 +251,7 @@ impl<'a> LinkStage<'a> {
     self.create_exports_for_ecma_modules();
     self.reference_needed_symbols();
     let unreachable_import_expression_node_ids = self.cross_module_optimization();
+    self.prune_constant_branches();
     self.include_statements(&unreachable_import_expression_node_ids);
     self.patch_module_dependencies();
 

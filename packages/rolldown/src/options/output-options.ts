@@ -249,10 +249,11 @@ export interface OutputOptions {
    * - `RegExp`: Files matching this regular expression will be included in the ignore list
    * - `function`: Custom function to determine if a source should be ignored
    *
-   * :::tip Performance
-   * Using static values (`boolean`, `string`, or `RegExp`) is significantly more performant than functions.
-   * Calling JavaScript functions from Rust has extremely high overhead, so prefer static patterns when possible.
-   * :::
+   * > [!TIP]
+   * > **Performance**
+   * >
+   * > Using static values (`boolean`, `string`, or `RegExp`) is significantly more performant than functions.
+   * > Calling JavaScript functions from Rust has extremely high overhead, so prefer static patterns when possible.
    *
    * @example
    * ```js
@@ -448,6 +449,11 @@ export interface OutputOptions {
    *   }
    * });
    * ```
+   *
+   * <!--
+   *   Separate code blocks, not tabs
+   * -->
+   *
    * ```js
    * // output
    * var MyBundle = (function () {
@@ -474,10 +480,20 @@ export interface OutputOptions {
    *   }
    * });
    * ```
+   *
+   * <!--
+   *   Separate code blocks, not tabs
+   * -->
+   *
    * ```js
    * // input
    * import $ from 'jquery';
    * ```
+   *
+   * <!--
+   *   Separate code blocks, not tabs
+   * -->
+   *
    * ```js
    * // output
    * var MyBundle = (function ($) {
@@ -595,9 +611,9 @@ export interface OutputOptions {
    * @deprecated
    * Please use {@linkcode codeSplitting | output.codeSplitting} instead.
    *
-   * :::warning
-   * If `manualChunks` and `codeSplitting` are both specified, `manualChunks` option will be ignored.
-   * :::
+   * > [!WARNING]
+   * > If `manualChunks` and `codeSplitting` are both specified, `manualChunks` option will be ignored.
+   *
    */
   manualChunks?: ManualChunksFunction;
   /**
@@ -638,9 +654,9 @@ export interface OutputOptions {
    *
    * Allows you to do manual chunking.
    *
-   * :::warning
-   * If `advancedChunks` and `codeSplitting` are both specified, `advancedChunks` option will be ignored.
-   * :::
+   * > [!WARNING]
+   * > If `advancedChunks` and `codeSplitting` are both specified, `advancedChunks` option will be ignored.
+   *
    */
   advancedChunks?: {
     includeDependenciesRecursively?: boolean;
@@ -857,13 +873,12 @@ export type CodeSplittingGroup = {
    * });
    * ```
    *
-   * :::warning
-   * Constraints like `minSize`, `maxSize`, etc. are applied separately for different names returned by the function.
-   * :::
+   * > [!WARNING]
+   * > Constraints like `minSize`, `maxSize`, etc. are applied separately for different names returned by the function.
    *
-   * :::warning
-   * Rolldown calls a function `name` once for each captured module, in a deterministic order. It calls `test` for every candidate module of the group first. Do not read a "current module" variable that `test` wrote, because that variable holds the last module `test` saw. Store such state under the module id instead.
-   * :::
+   * > [!WARNING]
+   * > Rolldown calls a function `name` once for each captured module, in a deterministic order. It calls `test` for every candidate module of the group first. Do not read a "current module" variable that `test` wrote, because that variable holds the last module `test` saw. Store such state under the module id instead.
+   *
    */
   name: string | CodeSplittingNameFunction;
   /**
@@ -874,15 +889,14 @@ export type CodeSplittingGroup = {
    * - If `test` is a function, modules for which `test(id)` returns `true` will be captured.
    * - If `test` is empty, any module will be considered as matched.
    *
-   * :::warning
-   * When using regular expression, it's recommended to use `[\\/]` to match the path separator instead of `/` to avoid potential issues on Windows.
-   * - ✅ Recommended: `/node_modules[\\/]react/`
-   * - ❌ Not recommended: `/node_modules/react/`
-   * :::
+   * > [!WARNING]
+   * > When using regular expression, it's recommended to use `[\\/]` to match the path separator instead of `/` to avoid potential issues on Windows.
+   * > - ✅ Recommended: `/node_modules[\\/]react/`
+   * > - ❌ Not recommended: `/node_modules/react/`
    *
-   * :::warning
-   * Rolldown calls a function `test` once for each candidate module, in a deterministic order. It makes every `test` call of a group before it makes the first `name` call of that group. Rolldown processes the groups in the order that you declare them.
-   * :::
+   * > [!WARNING]
+   * > Rolldown calls a function `test` once for each candidate module, in a deterministic order. It makes every `test` call of a group before it makes the first `name` call of that group. Rolldown processes the groups in the order that you declare them.
+   *
    */
   test?: StringOrRegExp | CodeSplittingTestFunction;
   /**

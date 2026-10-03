@@ -50,13 +50,12 @@ export default {
 };
 ```
 
-::: warning Performance Overhead
-
-Using the function form has significant performance overhead because Rolldown is written in Rust and must call JavaScript functions from Rust for every module in your dependency graph.
-
-Unless the logic relies on values other than `id`, it is recommended to use non-function values.
-
-:::
+> [!WARNING]
+> **Performance Overhead**
+>
+> Using the function form has significant performance overhead because Rolldown is written in Rust and must call JavaScript functions from Rust for every module in your dependency graph.
+>
+> Unless the logic relies on values other than `id`, it is recommended to use non-function values.
 
 #### Caveats
 

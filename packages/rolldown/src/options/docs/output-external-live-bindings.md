@@ -5,6 +5,10 @@
 export { x } from 'external';
 ```
 
+<!--
+  Separate code blocks, not tabs
+-->
+
 ```js
 // CJS output with externalLiveBindings: true
 var external = require('external');
@@ -16,6 +20,10 @@ Object.defineProperty(exports, 'x', {
   },
 });
 ```
+
+<!--
+  Separate code blocks, not tabs
+-->
 
 ```js
 // CJS output with externalLiveBindings: false

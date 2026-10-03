@@ -144,11 +144,32 @@ minimumReleaseAgeExclude:
   - oxc-transform
   - '@voidzero-dev/*'
   - vite-plus
-  - vitepress-plugin-feedback-tracker@0.2.0-alpha.1
   - void
   - '@napi-rs/wasm-runtime'
   - '@emnapi/*'
   - emnapi
+  - '@doc-kit/core@1.2.1'
+  - '@doc-kit/generator-react@0.4.0'
+  - '@doc-kit/cli@1.0.4'
+
+# The docs use the fonts and images of the VoidZero theme, not the theme itself
+packageExtensions:
+  '@voidzero-dev/vitepress-theme':
+    peerDependenciesMeta:
+      vitepress:
+        optional: true
 
 # avoid accidentally relying on `NODE_PATH` env var
 extendNodePath: false
+
+# doc-kit from a clone next to this repository, at the top of the stack of
+# pull requests adding what the docs need (the TypeDoc plugin, diagrams,
+# llms-full.txt): https://github.com/nodejs/doc-kit/pull/1127. Remove once
+# those are released. TypeDoc is the plugin's own, as a linked package keeps
+# its dependencies, and the plugin extends TypeDoc's classes.
+overrides:
+  '@doc-kit/cli': link:../doc-kit/packages/cli
+  '@doc-kit/core': link:../doc-kit/packages/core
+  '@doc-kit/generator-react': link:../doc-kit/packages/react
+  '@doc-kit/typedoc': link:../doc-kit/packages/typedoc
+  typedoc: link:../doc-kit/packages/typedoc/node_modules/typedoc

@@ -1,3 +1,6 @@
+/**
+ * @module rolldown/utils
+ */
 export { parse, parseSync, type ParseResult, type ParserOptions } from './utils/parse';
 export type * as ESTree from '@oxc-project/types';
 export { minify, type MinifyOptions, type MinifyResult, minifySync } from './utils/minify';

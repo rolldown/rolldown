@@ -1,8 +1,6 @@
 Consider the following input files:
 
-::: code-group
-
-```js [lib.js]
+```js displayName="lib.js"
 export class Test {}
 console.log(Test.name); // Expected: "Test"
 
@@ -10,15 +8,13 @@ export function test() {}
 console.log(test.name); // Expected: "test"
 ```
 
-```js [main.js (entry)]
+```js displayName="main.js (entry)"
 import { Test as T, test as t } from './lib';
 
 export class Test extends T {}
 
 export function test() {}
 ```
-
-:::
 
 Output with `keepNames: false` (default):
 

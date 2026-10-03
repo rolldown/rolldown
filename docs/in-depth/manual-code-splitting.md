@@ -35,7 +35,7 @@ export default function App() {
 
 and you get the following output:
 
-```js [output-hash0.js]
+```js displayName="output-hash0.js"
 // node_modules/react/index.js
 'React library code';
 
@@ -67,7 +67,7 @@ Let's talk about cache invalidation first. Cache invalidation here means that wh
 
 For example, if you change the `app.jsx` file:
 
-```jsx [app.jsx]
+```jsx displayName="app.jsx"
 function App() {
   return <Button onClick={() => alert('Button clicked!')} />; // [!code --]
   return <Button onClick={() => alert('Button clicked!!!')} />; // [!code ++]
@@ -80,7 +80,7 @@ Now, if you deploy this new version of your application, the browser will need t
 
 To solve this problem, we can use the codeSplitting option to split output libraries into separate chunks, because they don't change frequently compared to application code.
 
-```js [rolldown.config.js]
+```js displayName="rolldown.config.js"
 export default {
   // ... other configurations
   output: {
@@ -98,9 +98,7 @@ export default {
 
 By using the above codeSplitting option, the output will look like this:
 
-:::code-group
-
-```js [output-hash0.js]
+```js displayName="output-hash0.js"
 import ... from './libs-hash0.js';
 // App.js
 function App() {
@@ -112,7 +110,7 @@ function App() {
 ReactDom.createRoot(document.getElementById("root")).render(<App />);
 ```
 
-```js [libs-hash0.js]
+```js displayName="libs-hash0.js"
 // node_modules/react/index.js
 "React library code";
 
@@ -125,11 +123,9 @@ ReactDom.createRoot(document.getElementById("root")).render(<App />);
 export { ... };
 ```
 
-:::
-
 For example, after you change the `app.jsx` file
 
-```jsx [app.jsx]
+```jsx displayName="app.jsx"
 function App() {
   return <Button onClick={() => alert('Button clicked!')} />; // [!code --]
   return <Button onClick={() => alert('Button clicked!!!')} />; // [!code ++]
@@ -138,9 +134,7 @@ function App() {
 
 you will get output like this:
 
-:::code-group
-
-```js [output-hash1.js]
+```js displayName="output-hash1.js"
 import ... from './libs-hash0.js';
 // App.js
 function App() {
@@ -152,7 +146,7 @@ function App() {
 ReactDom.createRoot(document.getElementById("root")).render(<App />);
 ```
 
-```js [libs-hash0.js]
+```js displayName="libs-hash0.js"
 // node_modules/react/index.js
 "React library code";
 
@@ -164,8 +158,6 @@ ReactDom.createRoot(document.getElementById("root")).render(<App />);
 
 export { ... };
 ```
-
-:::
 
 - The `libs-hash0.js` file is not changed, so the browser can use the cached version of the file.
 - The `output-hash1.js` file is changed, so the browser will download the new version of the file.
@@ -178,7 +170,7 @@ In the previous example, we put all the libraries into a single chunk, which is 
 
 To solve this problem, we can use the codeSplitting option to split the libraries into separate chunks, so that the browser can download them in parallel.
 
-```js [rolldown.config.js]
+```js displayName="rolldown.config.js"
 export default {
   // ... other configurations
   output: {
@@ -203,9 +195,8 @@ export default {
 ```
 
 By using the above codeSplitting option, the output will look like this:
-:::code-group
 
-```js [output-hash0.js]
+```js displayName="output-hash0.js"
 import ... from './react-hash0.js';
 import ... from './react-dom-hash0.js';
 import ... from './ui-lib-hash0.js';
@@ -218,22 +209,21 @@ function App() {
 ReactDom.createRoot(document.getElementById("root")).render(<App />);
 ```
 
-```js [react-hash0.js]
+```js displayName="react-hash0.js"
 "React library code";
 export { ... };
 ```
 
-```js [react-dom-hash0.js]
+```js displayName="react-dom-hash0.js"
 "ReactDOM library code";
 export { ... };
 ```
 
-```js [ui-lib-hash0.js]
+```js displayName="ui-lib-hash0.js"
 "UI library code";
 export { ... };
 ```
 
-:::
 Now, the libraries are split into separate chunks, and the browser can download them in parallel. This can significantly improve the loading performance of your application, especially if the libraries are large.
 
 ## Limitations
@@ -375,9 +365,7 @@ export const value = 'b';
 
 Let's say we want to move the `a.js` module into a separate chunk while keeping the `b.js` module in the same chunk as `entry.js`. We get
 
-:::code-group
-
-```js [entry.js]
+```js displayName="entry.js"
 import { value } from './a.js';
 
 // b.js
@@ -390,30 +378,27 @@ console.log(value);
 export { foo, value };
 ```
 
-```js [a.js]
+```js displayName="a.js"
 import { value } from './entry.js';
 
 // a.js
 export const value = 'a' + value;
 ```
 
-:::
-
 You could see, to make `a.js` work, we have to change the export signature of the entry chunk `entry.js` and add an additional export `value`. This totally violates the original intention of the code, which is to only export `foo` from `entry.js`.
 
 If you don't want this behavior, you could use [`codeSplitting.includeDependenciesRecursively: false`](/reference/OutputOptions.codeSplitting#includedependenciesrecursively) to disable it.
 
-:::warning Caveats
-
-With `includeDependenciesRecursively: false`, depended modules of a group might be left in the entry chunks. It's invalid to export non-entry module from an entry chunk. To avoid this, Rolldown will implicitly set `preserveEntrySignatures: 'allow-extension'` if you didn't set it explicitly.
-
-- [`InputOptions.preserveEntrySignatures: false | 'allow-extension'`](/reference/InputOptions.preserveEntrySignatures)
-
-`includeDependenciesRecursively: false` increases the chance of generating invalid output code. If you encounter issues due to execution order or circular dependencies, consider enabling:
-
-- [`strictExecutionOrder: true`](/reference/OutputOptions.strictExecutionOrder)
-
-:::
+> [!WARNING]
+> **Caveats**
+>
+> With `includeDependenciesRecursively: false`, depended modules of a group might be left in the entry chunks. It's invalid to export non-entry module from an entry chunk. To avoid this, Rolldown will implicitly set `preserveEntrySignatures: 'allow-extension'` if you didn't set it explicitly.
+>
+> - [`InputOptions.preserveEntrySignatures: false | 'allow-extension'`](/reference/InputOptions.preserveEntrySignatures)
+>
+> `includeDependenciesRecursively: false` increases the chance of generating invalid output code. If you encounter issues due to execution order or circular dependencies, consider enabling:
+>
+> - [`strictExecutionOrder: true`](/reference/OutputOptions.strictExecutionOrder)
 
 ### Why is the chunk bigger than `maxSize`?
 

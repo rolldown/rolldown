@@ -49,7 +49,7 @@ Rust Core (crates/rolldown)
 - `packages/rolldown-tests`: Test suite for the `rolldown` package using Vitest.
 - `packages/rollup-tests`: Compatibility test suite for Rollup plugins.
 - `crates/rolldown_watcher`: Watch mode coordinator. See `internal-docs/watch-mode/implementation.md` for architecture, state machine, debounce/consolidation rules, and event lifecycle.
-- `docs/`: Documentation site built with VitePress.
+- `docs/`: Documentation site, built with [doc-kit](https://github.com/nodejs/doc-kit). The API reference is generated from the TypeScript sources of `packages/rolldown` with TypeDoc and doc-kit's TypeDoc plugin (`docs/typedoc.config.mjs`).
 - `internal-docs/`: Internal design & implementation docs — one folder per feature (`design.md` + `implementation.md`). See the "Context Engineering" section above.
 - Path manipulation: read `internal-docs/path-manipulation/style-guide.md` before composing paths, and prefer its consuming `rolldown_std_utils` helpers for owned `PathBuf` values.
 

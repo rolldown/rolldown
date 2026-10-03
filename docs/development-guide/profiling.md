@@ -10,11 +10,8 @@ First you need to install [`samply`](https://github.com/mstange/samply). You can
 cargo binstall samply
 ```
 
-::: warning
-
-Samply does not work well on macOS. We recommend using Xcode Instruments instead.
-
-:::
+> [!WARNING]
+> Samply does not work well on macOS. We recommend using Xcode Instruments instead.
 
 ### Build
 
@@ -78,11 +75,8 @@ First you need to install `heaptrack` and `heaptrack-gui`. If you are using Ubun
 sudo apt install heaptrack heaptrack-gui
 ```
 
-::: warning
-
-`heaptrack` only supports Linux. It works fine on WSL.
-
-:::
+> [!WARNING]
+> `heaptrack` only supports Linux. It works fine on WSL.
 
 ### Build
 
@@ -100,15 +94,14 @@ After building, you can run Rolldown with the following command to profile memor
 heaptrack node ./path/to/script-rolldown-is-used.js
 ```
 
-::: tip Using asdf or other version manager that uses shims?
-
-In that case, you may need to use the actual path to the Node binary. For example, if you are using asdf, you can run it with:
-
-```shell
-heaptrack $(asdf which node) ./path/to/script-rolldown-is-used.js
-```
-
-:::
+> [!TIP]
+> **Using asdf or other version manager that uses shims?**
+>
+> In that case, you may need to use the actual path to the Node binary. For example, if you are using asdf, you can run it with:
+>
+> ```shell
+> heaptrack $(asdf which node) ./path/to/script-rolldown-is-used.js
+> ```
 
 The heaptrack GUI will open automatically after the script finishes running.
 

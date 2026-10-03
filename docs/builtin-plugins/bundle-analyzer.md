@@ -2,9 +2,10 @@
 
 The `bundleAnalyzerPlugin` is a built-in Rolldown plugin that emits a detailed report describing your bundle's chunks, modules, dependencies, and reachability information. The report can be consumed by visualization tools, custom scripts, or LLM-based coding agents.
 
-:::tip EXPERIMENTAL
-This plugin is currently experimental and is exported from `rolldown/experimental`. Its API may change in future releases.
-:::
+> [!TIP]
+> **EXPERIMENTAL**
+>
+> This plugin is currently experimental and is exported from `rolldown/experimental`. Its API may change in future releases.
 
 ## Usage
 

@@ -33,7 +33,7 @@
     "**/CHANGELOG.md": true,
     "**/generated/**": true,
     "packages/rolldown/src/*{binding,worker}*.*{j,d.t}s": true,
-    "docs/reference/**": true
+    "docs/reference/*.{md,json}": true
   },
   "git.ignoreLimitWarning": true,
   "json.schemas": [

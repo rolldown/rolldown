@@ -1,38 +1,36 @@
 # Getting Started
 
-:::tip Looking for specific use cases?
-For most applications, using [Rolldown through Vite](https://vite.dev/guide/rolldown.html#how-to-try-rolldown) is the recommended approach, as it provides a complete development experience with dev server, HMR, and optimized production builds.
-
-For library bundling, check out [tsdown](https://tsdown.dev/).
-:::
+> [!TIP]
+> **Looking for specific use cases?**
+>
+> For most applications, using [Rolldown through Vite](https://vite.dev/guide/rolldown.html#how-to-try-rolldown) is the recommended approach, as it provides a complete development experience with dev server, HMR, and optimized production builds.
+>
+> For library bundling, check out [tsdown](https://tsdown.dev/).
 
 ## Installation
 
-::: code-group
-
-```sh [vp]
+```sh displayName="vp"
 $ vp add -D rolldown
 ```
 
-```sh [npm]
+```sh displayName="npm"
 $ npm install -D rolldown
 ```
 
-```sh [pnpm]
+```sh displayName="pnpm"
 $ pnpm add -D rolldown
 ```
 
-```sh [yarn]
+```sh displayName="yarn"
 $ yarn add -D rolldown
 ```
 
-```sh [bun]
+```sh displayName="bun"
 $ bun add -D rolldown
 ```
 
-:::
-
-::: details Using a minor platform (CPU architecture, OS) ?
+<details>
+<summary>Using a minor platform (CPU architecture, OS) ?</summary>
 
 Prebuilt binaries are distributed for the following platforms (grouped by [Node.js v24 platform support tier](https://github.com/nodejs/node/blob/v24.x/BUILDING.md#platform-list)):
 
@@ -79,7 +77,7 @@ If you are using a platform that a prebuilt binary is not distributed, you have 
   3. Build the project by following [the build instructions](/development-guide/building-and-running).
   4. Set the `NAPI_RS_NATIVE_LIBRARY_PATH` environment variable to the path of `packages/rolldown` in the cloned repository.
 
-:::
+</details>
 
 ### Release Channels
 
@@ -104,13 +102,17 @@ $ ./node_modules/.bin/rolldown --help
 
 Let's create two source JavaScript files:
 
-```js [src/main.js]
+```js displayName="src/main.js"
 import { hello } from './hello.js';
 
 hello();
 ```
 
-```js [src/hello.js]
+<!--
+  Adjacent code blocks render as tabs; this comment keeps both files visible.
+-->
+
+```js displayName="src/hello.js"
 export function hello() {
   console.log('Hello Rolldown!');
 }
@@ -134,7 +136,7 @@ You should see `Hello Rolldown!` printed.
 
 To avoid typing the long command, we can move it inside a `package.json` script:
 
-```json{5} [package.json]
+```json displayName="package.json" highlight="5"
 {
   "name": "my-rolldown-project",
   "type": "module",
@@ -149,35 +151,31 @@ To avoid typing the long command, we can move it inside a `package.json` script:
 
 Now we can run the build with just:
 
-::: code-group
-
-```sh [vp]
+```sh displayName="vp"
 $ vp run build
 ```
 
-```sh [npm]
+```sh displayName="npm"
 $ npm run build
 ```
 
-```sh [pnpm]
+```sh displayName="pnpm"
 $ pnpm run build
 ```
 
-```sh [yarn]
+```sh displayName="yarn"
 $ yarn build
 ```
 
-```sh [bun]
+```sh displayName="bun"
 $ bun run build
 ```
-
-:::
 
 ## Using the Config File
 
 When more options are needed, it is recommended to use a config file for more flexibility. A config file can be written in `.js`, `.cjs`, `.mjs`, `.ts`, `.mts`, or `.cts` formats. Let's create the following config file:
 
-```js [rolldown.config.js]
+```js displayName="rolldown.config.js"
 import { defineConfig } from 'rolldown';
 
 export default defineConfig({
@@ -194,7 +192,7 @@ While exporting a plain object also works, it is recommended to utilize the [`de
 
 Next, in the npm script, we can instruct Rolldown to use the config file with the `--config` CLI option (`-c` for short):
 
-```json{5} [package.json]
+```json displayName="package.json" highlight="5"
 {
   "name": "my-rolldown-project",
   "type": "module",
@@ -211,7 +209,7 @@ Next, in the npm script, we can instruct Rolldown to use the config file with th
 
 You can also specify multiple configurations as an array, and Rolldown will bundle them in parallel.
 
-```js [rolldown.config.js]
+```js displayName="rolldown.config.js"
 import { defineConfig } from 'rolldown';
 
 export default defineConfig([

@@ -1,6 +1,4 @@
-::: code-group
-
-```js [rolldown.config.js]
+```js displayName="rolldown.config.js"
 export default {
   transform: {
     jsx: 'preserve',
@@ -8,12 +6,10 @@ export default {
 };
 ```
 
-```json [tsconfig.json]
+```json displayName="tsconfig.json"
 {
   "compilerOptions": {
     "jsx": "react"
   }
 }
 ```
-
-:::

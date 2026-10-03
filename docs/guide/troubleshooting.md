@@ -19,7 +19,8 @@ To improve performance on Windows, consider using alternative file system enviro
 1. [**Dev Drive**](https://learn.microsoft.com/en-us/windows/dev-drive/): A newer Windows feature designed for developer workloads, using the Resilient File System (ReFS). Using a Dev Drive can lead to a **2x to 3x speedup** compared to the standard Windows NTFS file system for file system operations.
 2. [**Windows Subsystem for Linux (WSL)**](https://learn.microsoft.com/en-us/windows/wsl/): WSL lets Linux environment to run on Windows easily, which offers significantly better file system performance. Placing your project files and running the build process within WSL can result in speedups of around **10x** compared to the standard Windows NTFS file system for file system operations.
 
-:::details Benchmark Reference
+<details>
+<summary>Benchmark Reference</summary>
 
 The benchmark script used is described in this blog post ([How fast can you open 1000 files?](https://lemire.me/blog/2025/03/01/how-fast-can-you-open-1000-files/)).
 
@@ -38,7 +39,7 @@ The benchmark was ran on the following environment:
 - Memory: DDR4-3600 32GB
 - SSD: Western Digital Black SN850X 1TB
 
-:::
+</details>
 
 <!-- Maybe write about macOS as well? -->
 
@@ -139,11 +140,10 @@ However, **Rolldown does not necessarily preserve the value of `this`** for this
 
 The reason for this behavior is because preserving the value of `this` limits the possibilities of tree-shaking. For example, if the `this` variable needs to be bound to the module namespace object, all the exports in that module cannot be tree-shaken even if they are not used through the `import`s.
 
-::: tip A similar issue when outputting your code as CJS
-
-Similar to the issue described above, Rolldown does not necessarily preserve the value of `this` of exported functions when outputting your code as CJS. In this case, `this` that should be `undefined` may be bound to the `module.exports` object instead.
-
-:::
+> [!TIP]
+> **A similar issue when outputting your code as CJS**
+>
+> Similar to the issue described above, Rolldown does not necessarily preserve the value of `this` of exported functions when outputting your code as CJS. In this case, `this` that should be `undefined` may be bound to the `module.exports` object instead.
 
 ## Avoid relying on Temporal Dead Zone (TDZ) errors
 
@@ -167,13 +167,11 @@ class X {}
 
 As another example, Rolldown may inline exported `const` values at their use sites, even across an import cycle. When the cycle causes the constant to be read before its declaration runs, ESM would throw, but Rolldown returns the inlined value instead.
 
-::: code-group
-
-```js [entry.js]
+```js displayName="entry.js"
 import './constants.js';
 ```
 
-```js [constants.js]
+```js displayName="constants.js"
 export const foo = 123;
 export function bar() {
   return foo;
@@ -181,14 +179,12 @@ export function bar() {
 import './cycle.js';
 ```
 
-```js [cycle.js]
+```js displayName="cycle.js"
 import { bar } from './constants.js';
 // In ESM, `bar()` throws ReferenceError because `foo` is in TDZ.
 // In Rolldown's bundled output, `bar()` returns `123`.
 console.log(bar());
 ```
-
-:::
 
 ## Warning: "Sourcemap is likely to be incorrect"
 
@@ -202,7 +198,9 @@ This error means Node.js found the `rolldown` package but not the platform-speci
 
 It can also happen when the config file lives in a symlinked directory that points into another project, for example one shared between Windows and WSL ([#9854](https://github.com/rolldown/rolldown/issues/9854)). Node.js resolves the config to its real path before resolving its imports, so `import ... from 'rolldown'` can pick up a `node_modules` installed for a different platform. Keep the config outside the symlinked directory, or run with the `NODE_OPTIONS=--preserve-symlinks` environment variable set (not compatible with pnpm, whose `node_modules` layout relies on symlinks).
 
-## Error: "Rolldown panicked" {#panic-debug-info}
+<div id="panic-debug-info"></div>
+
+## Error: "Rolldown panicked"
 
 A panic is always a bug in Rolldown. Report it with the [panic report template](https://github.com/rolldown/rolldown/issues/new?template=panic_report.yml).
 
@@ -266,6 +264,5 @@ stack backtrace:
              at ./crates/rolldown/src/some_file.rs:42:5
 ```
 
-::: tip
-The next `npm install` replaces the binding package and deletes the unpacked file. Unpack the archive again after each install.
-:::
+> [!TIP]
+> The next `npm install` replaces the binding package and deletes the unpacked file. Unpack the archive again after each install.

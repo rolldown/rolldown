@@ -1,7 +1,3 @@
-<script setup lang="ts">
-  import { data } from '../data-loading/node-version.data.js'
-</script>
-
 # Setup the project
 
 ## Prerequisites
@@ -13,35 +9,31 @@ Only a few tools are required to build and run Rolldown. You'll need:
 
 You could install `just` quickly by running the following command or by following the official [guide](https://github.com/casey/just?tab=readme-ov-file#installation):
 
-::: code-group
-
-```sh [Npm]
+```sh displayName="Npm"
 npm install --global just-install
 ```
 
-```sh [Pnpm]
+```sh displayName="Pnpm"
 pnpm --global add just-install
 ```
 
-```sh [Yarn]
+```sh displayName="Yarn"
 yarn global add just-install
 ```
 
-```sh [Homebrew]
+```sh displayName="Homebrew"
 brew install just
 ```
 
-```sh [Cargo]
+```sh displayName="Cargo"
 cargo install just
 ```
-
-:::
 
 - Install `cmake`
 
 You could install it by following the official [Download](https://cmake.org/download/).
 
-- Install Node.js >= {{ data.nodeVersion }} / 21.2.0
+- Install Node.js >= <NodeVersion /> / 21.2.0
 
 ## `just setup`
 
@@ -51,12 +43,10 @@ If you are seeing `✅✅✅ Setup complete!` at the end, that means you have ev
 
 You could run `just roll` to verify if everything is working correctly.
 
-::: tip
-
-- `just roll` might take a while to run, since it will build rolldown from scratch and run all the tests.
-- If you want to know what `just setup` does under the hood, you can check the [`justfile`](https://github.com/rolldown/rolldown/blob/main/justfile) in the repository root.
-
-:::
+> [!TIP]
+>
+> - `just roll` might take a while to run, since it will build rolldown from scratch and run all the tests.
+> - If you want to know what `just setup` does under the hood, you can check the [`justfile`](https://github.com/rolldown/rolldown/blob/main/justfile) in the repository root.
 
 Now, you could move to next chapter [Building and Running](./building-and-running.md). Continue reading if you want to have a in-depth understanding of the setup process.
 
@@ -73,7 +63,7 @@ Rolldown is built on Rust and requires `rustup` and `cargo` to exist in your env
 
 Rolldown is a npm package built with [NAPI-RS](https://napi.rs/) and is published to the npm registry, and as such requires Node.js and pnpm (for dependency management).
 
-We recommend installing Node.js with a version manager, like [nvm](https://github.com/nvm-sh/nvm) or [fnm](https://github.com/Schniz/fnm). Make sure to install and use Node.js version {{ data.nodeVersion }}+, which is the minimum requirement for this project. You can skip this step if you are already using a Node.js version manager of your choice and on a Node.js version that meets the requirement.
+We recommend installing Node.js with a version manager, like [nvm](https://github.com/nvm-sh/nvm) or [fnm](https://github.com/Schniz/fnm). Make sure to install and use Node.js version <NodeVersion />+, which is the minimum requirement for this project. You can skip this step if you are already using a Node.js version manager of your choice and on a Node.js version that meets the requirement.
 
 #### Setup pnpm
 

@@ -57,7 +57,7 @@ The resolved ID (e.g. `'/project/node_modules/vue/dist/vue.runtime.esm-bundler.j
 
 Regardless of which step marked the module as external (first check, plugin, or second check), [`makeAbsoluteExternalsRelative`](/reference/InputOptions.makeAbsoluteExternalsRelative) applies uniformly to determine the import path in the output:
 
-- **Bare specifiers** (e.g. `'lodash'`, `'node:fs'`) — appear as-is when matched on the first check. If matched on the second check (resolved path), the full resolved path appears instead (see the [caveat about `/node_modules/`](/reference/InputOptions.external#avoid-node-modules-for-npm-packages)).
+- **Bare specifiers** (e.g. `'lodash'`, `'node:fs'`) — appear as-is when matched on the first check. If matched on the second check (resolved path), the full resolved path appears instead (see the [caveat about `/node_modules/`](/reference/InputOptions.external#avoid-node_modules-for-npm-packages)).
 
 - **Relative and absolute specifiers** — two things happen:
   1. **Resolve-time normalization** — for the first check and `return false`, when `makeAbsoluteExternalsRelative` is enabled (which it is by default), relative specifiers (the **original import specifier**) are normalized to absolute paths by resolving against the importer's directory. This ensures that `'./utils'` imported from different directories correctly maps to different external modules. For the second check and `return { id, external: true }`, the **resolved module ID** is already absolute.
@@ -99,10 +99,9 @@ console.log(used);
 
 Note that even if every import is removed, the statement itself usually stays. External modules are assumed to have side effects, so it becomes a bare `import 'ext-pkg';`. The statement goes away completely only when the external module is also marked side-effect-free.
 
-::: warning Difference from bundled modules
-
-If a bundled module does not actually export `unused`, Rolldown emits a `MISSING_EXPORT` error at build time, whether or not the import is used.
-
-For external modules, Rolldown does not know what exports exist, so it cannot check. If `unused` does not exist, importing it would throw at runtime, and removing the import removes that error along with it. Causing a semantic change without any message is normally a bad idea, but Rolldown makes an exception here. An unused import usually comes from dead code elimination, either Rolldown's own or a plugin's, rather than being written by hand, so the error is rarely the one you intended to see.
-
-:::
+> [!WARNING]
+> **Difference from bundled modules**
+>
+> If a bundled module does not actually export `unused`, Rolldown emits a `MISSING_EXPORT` error at build time, whether or not the import is used.
+>
+> For external modules, Rolldown does not know what exports exist, so it cannot check. If `unused` does not exist, importing it would throw at runtime, and removing the import removes that error along with it. Causing a semantic change without any message is normally a bad idea, but Rolldown makes an exception here. An unused import usually comes from dead code elimination, either Rolldown's own or a plugin's, rather than being written by hand, so the error is rarely the one you intended to see.

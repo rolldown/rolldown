@@ -21,16 +21,14 @@ You could get a list of available commands by running the command `just` only.
 
 > Most of commands will run both Rust and Node.js scripts. To only target one, append `-rust` or `-node` to the just command. For example, `just lint-rust` or `just test-node`.
 
-::: tip
-`just roll` would be the most used command in your development workflow. It will help you, without any thinking, to check if everything is working correctly for any changes you made.
-
-It will help you catch errors locally rather than pushing your changes to GitHub and waiting for the CI.
-
-- `just roll-rust` - Run only Rust checks.
-- `just roll-node` - Run only Node.js checks.
-- `just roll-repo` - Checks for non-code related issues, like file name.
-
-:::
+> [!TIP]
+> `just roll` would be the most used command in your development workflow. It will help you, without any thinking, to check if everything is working correctly for any changes you made.
+>
+> It will help you catch errors locally rather than pushing your changes to GitHub and waiting for the CI.
+>
+> - `just roll-rust` - Run only Rust checks.
+> - `just roll-node` - Run only Node.js checks.
+> - `just roll-repo` - Checks for non-code related issues, like file name.
 
 ## Building
 
@@ -70,6 +68,5 @@ pnpm rolldown
 
 `just run` is just an alias for the above command.
 
-::: warning
-Make sure you have built the `rolldown` package using `just build` before running it.
-:::
+> [!WARNING]
+> Make sure you have built the `rolldown` package using `just build` before running it.

@@ -2,7 +2,7 @@
 
 This document outlines the structure of the repository and the purpose of each directory.
 
-# `/crates`
+## `/crates`
 
 We store all the Rust crates in this directory.
 
@@ -10,7 +10,7 @@ We store all the Rust crates in this directory.
 - `/rolldown` Core logic of rolldown the bundler.
 - `/rolldown_binding` Glue code that binds the core logic to the Node.js.
 
-# `/packages`
+## `/packages`
 
 We store all the Node.js packages in this directory.
 
@@ -19,19 +19,19 @@ We store all the Node.js packages in this directory.
 - `/rollup-tests` Adapter for running rollup tests with rolldown.
 - `/vite-tests` Script to run Vite's own test suite with local rolldown, on a throwaway clone of the shared root `/vite` checkout.
 
-# `/vite`
+## `/vite`
 
 The single Vite checkout shared by the dev-server test harness (`packages/test-dev-server`) and `packages/vite-tests`: a gitignored clone of [vitejs/vite](https://github.com/vitejs/vite) at the latest `rolldown-canary` rebased onto the latest `main`, created by `just setup-vite`. It must stay unpatched: never edit Vite source files inside it.
 
-# `/examples`
+## `/examples`
 
 This directory contains examples of how to use `rolldown` in Node.js for various scenarios.
 
-# `/scripts`
+## `/scripts`
 
 This directory contains scripts that are used to automate various tasks for the project.
 
-# `/web`
+## `/web`
 
 This directory contains some websites related to the project.
 

@@ -12,6 +12,10 @@ export default {
 };
 ```
 
+<!--
+  Separate code blocks, not tabs
+-->
+
 ```js
 // After: Using `onLog`
 export default {

@@ -37,9 +37,8 @@ Rolldown's native MagicString implementation rewrites the core functionality in 
 
 When `experimental.nativeMagicString` is enabled, Rolldown modifies the transformation pipeline. The diagrams below show the architectural differences:
 
-:::info
-Some technical details are simplified for better illustration. The native MagicString implementation provides a `magicString` object in the `meta` parameter of transform hooks, which plugins can use just like the JavaScript version.
-:::
+> [!NOTE]
+> Some technical details are simplified for better illustration. The native MagicString implementation provides a `magicString` object in the `meta` parameter of transform hooks, which plugins can use just like the JavaScript version.
 
 ### Without Native MagicString
 
@@ -136,7 +135,7 @@ For detailed benchmark results, see the [benchmark pull request](https://github.
 
 ### Basic Plugin with Native MagicString
 
-```js [rolldown.config.js]
+```js displayName="rolldown.config.js"
 import { defineConfig } from 'rolldown';
 
 export default defineConfig({
@@ -178,7 +177,7 @@ export default defineConfig({
 
 ### Checking for Native MagicString Availability
 
-```javascript [rolldown.config.js]
+```javascript displayName="rolldown.config.js"
 transform(code, id, meta) {
   if (meta?.magicString) {
     // Native MagicString is available
@@ -209,7 +208,7 @@ transform(code, id, meta) {
 
 This feature is Rolldown-specific and not available in Rollup. For plugins that need to work with both bundlers:
 
-```javascript [plugin.js]
+```javascript displayName="plugin.js"
 function createTransform() {
   return function (code, id, meta) {
     if (meta?.magicString) {
@@ -223,11 +222,8 @@ function createTransform() {
 }
 ```
 
-::: tip
-
-You can use [`rolldown-string`](https://github.com/sxzz/rolldown-string), which provides a unified interface that works with both bundlers.
-
-:::
+> [!TIP]
+> You can use [`rolldown-string`](https://github.com/sxzz/rolldown-string), which provides a unified interface that works with both bundlers.
 
 ## When to Use Native MagicString
 
@@ -251,7 +247,7 @@ You can use [`rolldown-string`](https://github.com/sxzz/rolldown-string), which 
 
 1. **Update Configuration**:
 
-```javascript [rolldown.config.js]
+```javascript displayName="rolldown.config.js"
 export default {
   experimental: {
     nativeMagicString: true,
@@ -264,7 +260,7 @@ export default {
 
 2. **Update Plugins**:
 
-```javascript [rolldown.config.js]
+```javascript displayName="rolldown.config.js"
 // Before
 transform(code, id) {
   const ms = new MagicString(code);

@@ -1,0 +1,8 @@
+# {project}
+
+> Fast Rust-based bundler for JavaScript with Rollup-compatible API
+
+Every page below is Markdown; {baseURL}/llms-full.txt has all of them in one file.
+
+## Pages
+

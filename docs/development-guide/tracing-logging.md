@@ -32,9 +32,8 @@ These rules also apply to the `#[tracing::instrument]` attribute.
 - If the function is called only once during the bundling, use `#[tracing::instrument(level = "debug", skip_all)]`.
 - If the function is called multiple times due to the scale of the input, use `#[tracing::instrument(level = "trace", skip_all]`.
 
-::: info
-What information should be traced could be opinionated, so the reviewer will decide whether to let you leave tracing statements in or whether to ask you to remove them before merging.
-:::
+> [!NOTE]
+> What information should be traced could be opinionated, so the reviewer will decide whether to let you leave tracing statements in or whether to ask you to remove them before merging.
 
 ## Function level filters
 

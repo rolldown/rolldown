@@ -2,8 +2,7 @@ If you need to add additional information, you can use the [`meta`](/reference/I
 
 If the logLevel option is set to `"silent"`, this method will do nothing.
 
-::: tip Lazily Compute
-
-If you need to do expensive computations to generate the log, make sure to use the function form so that these computations are only performed if the log is actually processed.
-
-:::
+> [!TIP]
+> **Lazily Compute**
+>
+> If you need to do expensive computations to generate the log, make sure to use the function form so that these computations are only performed if the log is actually processed.

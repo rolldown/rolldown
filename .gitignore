@@ -159,10 +159,9 @@ scripts/tmp/
 
 pkg/
 
-# vitepress
-docs/.vitepress/cache
-docs/reference
-docs/public/og
+# docs: the generated API reference, but for its index page
+docs/reference/*
+!docs/reference/index.mdx
 
 # void
 docs/.void

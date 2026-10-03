@@ -1,3 +1,7 @@
+/**
+ * @module rolldown
+ * @mergeModuleWith <project>
+ */
 import './setup';
 import { build, type BuildOptions } from './api/build';
 import { rolldown } from './api/rolldown';

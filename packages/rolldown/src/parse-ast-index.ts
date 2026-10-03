@@ -1,3 +1,6 @@
+/**
+ * @module rolldown/parseAst
+ */
 import type { Program } from '@oxc-project/types';
 import type {
   ParseResult as BindingParseResult,

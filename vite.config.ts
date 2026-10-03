@@ -47,6 +47,7 @@ export default defineConfig({
             'group',
             'typeParam',
             'inlineType',
+            'mergeModuleWith',
           ],
         },
       ],

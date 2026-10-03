@@ -1,3 +1,6 @@
+/**
+ * @module rolldown/getLogFilter
+ */
 import type { RolldownLog } from './log/logging';
 
 /**

@@ -154,7 +154,13 @@ The state transition is managed by `LazyCompilationContext.mark_as_fetched()`.
 
 ### 4. Dev Server Integration
 
-The dev server handles `/@vite/lazy?id=...&clientId=...` requests:
+The dev server handles `/@vite/lazy?id=...&clientId=...` requests. The endpoint path is prefixed
+with `experimental.devMode.base` (the dev server's public base path) where it is generated from
+Rust — the HMR finalizer's nested-import rewrite prefixes it via
+`crate::hmr::utils::lazy_endpoint_url` — so the requests stay reachable when the server is not
+mounted at the domain root (e.g. Vite's `base`). The full build's proxy module
+(`proxy-module-template.js`) still emits the root-absolute path; threading `base` through it is
+pending the re-land of the single-request lazy fetch (reverted in #10982).
 
 1. Receive request with the **proxy module ID** (absolute path with `?rolldown-lazy=1`) and the client's UUID
 2. Call `DevEngine.compileEntry(moduleId, clientId)` (TS) / `DevEngine::compile_lazy_entry` (Rust)

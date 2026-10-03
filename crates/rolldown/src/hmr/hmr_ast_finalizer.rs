@@ -25,7 +25,7 @@ use rolldown_utils::{
 };
 use rustc_hash::FxHashMap;
 
-use crate::hmr::utils::{HmrAstBuilder, MODULE_EXPORTS_NAME_FOR_ESM};
+use crate::hmr::utils::{HmrAstBuilder, MODULE_EXPORTS_NAME_FOR_ESM, lazy_endpoint_url};
 
 pub struct HmrAstFinalizer<'me, 'ast> {
   // Outside input
@@ -33,6 +33,10 @@ pub struct HmrAstFinalizer<'me, 'ast> {
   pub modules: &'me IndexModules,
   pub module: &'me NormalModule,
   pub use_pife_for_module_wrappers: bool,
+  /// The dev server's public base path (`experimental.devMode.base`). Prefixes the
+  /// lazy compilation endpoint when rewriting a nested `import()` of a lazy proxy
+  /// module inside a lazy chunk / HMR patch.
+  pub lazy_base: Option<String>,
 
   // Each module has a unique index, which is used to generate something that needs to be unique.
   pub unique_index: usize,
@@ -568,7 +572,7 @@ impl<'ast> HmrAstFinalizer<'_, 'ast> {
     // body gets wrapped inside a `registerFactory` closure and its top-level `export` is lost.
     // To keep the same surface as the full build, we rewrite the dynamic import to:
     //
-    //   import(`/@vite/lazy?id=...&clientId=...`)
+    //   import(`<base>/@vite/lazy?id=...&clientId=...`)
     //     .then(() => __rolldown_runtime__.loadExports("<stable_proxy_id>"))
     //
     // After the partial bundle evaluates, the proxy module is registered under
@@ -588,13 +592,14 @@ impl<'ast> HmrAstFinalizer<'_, 'ast> {
         self,
       );
 
-      // Build template literal: `/@vite/lazy?id=${encodeURIComponent(importee.id)}&clientId=${__rolldown_runtime__.clientId}`
+      // Build template literal: `<base>/@vite/lazy?id=${encodeURIComponent(importee.id)}&clientId=${__rolldown_runtime__.clientId}`
       let url_expr = {
+        let url_head = format!("{}?id=", lazy_endpoint_url(self.lazy_base.as_deref()));
         let quasis = oxc::allocator::Vec::from_iter_in(
           [
             ast::TemplateElement::new(
               SPAN,
-              ast::TemplateElementValue { raw: Str::from("/@vite/lazy?id="), cooked: None },
+              ast::TemplateElementValue { raw: Str::from_str_in(&url_head, self), cooked: None },
               false,
               self,
             ),
@@ -623,7 +628,7 @@ impl<'ast> HmrAstFinalizer<'_, 'ast> {
         ast::Expression::new_template_literal(SPAN, quasis, expressions, self)
       };
 
-      // Build: import(`/@vite/lazy?id=...&clientId=...`)
+      // Build: import(`<base>/@vite/lazy?id=...&clientId=...`)
       let import_expr = ast::Expression::new_import_expression(SPAN, url_expr, None, None, self);
 
       // Build: __rolldown_runtime__.loadExports("<stable_proxy_id>")

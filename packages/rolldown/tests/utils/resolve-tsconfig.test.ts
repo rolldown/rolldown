@@ -22,22 +22,6 @@ describe('resolveTsconfig', () => {
     expect(result).toBeNull();
   });
 
-  it('should accept a TsconfigCache', () => {
-    const cache = new TsconfigCache();
-    const result1 = resolveTsconfig(path.join(fixtures, 'test1.ts'), cache);
-    expect(result1).not.toBeNull();
-    expect(cache.size()).toBe(1);
-
-    // Second call should use the cache
-    const result2 = resolveTsconfig(path.join(fixtures, 'test1.ts'), cache);
-    expect(result2).not.toBeNull();
-    expect(cache.size()).toBe(1);
-
-    expect(result1!.tsconfig.compilerOptions.useDefineForClassFields).toBe(
-      result2!.tsconfig.compilerOptions.useDefineForClassFields,
-    );
-  });
-
   it('should use an explicit tsconfig with TsconfigCache', () => {
     const explicitTsconfig = path.join(fixtures, 'extends', 'tsconfig.json');
     const cache = new TsconfigCache(explicitTsconfig);

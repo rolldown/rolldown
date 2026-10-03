@@ -9,5 +9,5 @@ export {
   type TsconfigRawOptions,
   type TsconfigCompilerOptions,
 } from './utils/transform';
-export { TsconfigCache } from './utils/resolve-tsconfig';
+export { resolveTsconfig, resolveTsconfigSync, TsconfigCache } from './utils/resolve-tsconfig';
 export { Visitor, type VisitorObject } from './utils/visitor';

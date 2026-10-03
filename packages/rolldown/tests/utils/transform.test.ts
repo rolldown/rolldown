@@ -269,71 +269,58 @@ describe('enhanced transform', () => {
   describe('TsconfigCache', () => {
     const fixtures = path.join(import.meta.dirname, 'fixtures');
 
-    it('should create cache instance', () => {
-      const cache = new TsconfigCache();
-      expect(cache.size()).toBe(0);
+    it('should use an explicit tsconfig from a cache', async () => {
+      const tsconfig = path.join(fixtures, 'define-true', 'tsconfig.json');
+      const cache = new TsconfigCache(tsconfig);
+      const result = await transform(
+        path.join(fixtures, 'test1.ts'),
+        'export class Foo { bar = 1 }',
+        { target: 'esnext' },
+        cache,
+      );
+
+      expect(result.code).toContain('bar = 1');
+      expect(result.code).not.toContain('this.bar = 1');
+      expect(result.tsconfigFilePaths).toStrictEqual([tsconfig]);
     });
 
-    it('should use cache for multiple transforms', async () => {
-      const cache = new TsconfigCache();
-      const result1 = await transform(
+    it('should use an explicit tsconfig from a cache synchronously', () => {
+      const tsconfig = path.join(fixtures, 'define-true', 'tsconfig.json');
+      const cache = new TsconfigCache(tsconfig);
+      const result = transformSync(
+        path.join(fixtures, 'test1.ts'),
+        'export class Foo { bar = 1 }',
+        { target: 'esnext' },
+        cache,
+      );
+
+      expect(result.code).toContain('bar = 1');
+      expect(result.code).not.toContain('this.bar = 1');
+      expect(result.tsconfigFilePaths).toStrictEqual([tsconfig]);
+    });
+
+    it('should return transform errors when cache resolution fails', async () => {
+      const missingTsconfig = path.join(fixtures, 'missing-tsconfig.json');
+      const cache = new TsconfigCache(missingTsconfig);
+      const result = await transform(
         path.join(fixtures, 'test1.ts'),
         'export const a: number = 1;',
         undefined,
         cache,
       );
-      const result2 = await transform(
-        path.join(fixtures, 'test2.ts'),
-        'export const b: number = 2;',
-        undefined,
-        cache,
-      );
-      expect(result1.code).toBe('export const a = 1;\n');
-      expect(result2.code).toBe('export const b = 2;\n');
-      expect(cache.size()).toBe(1);
-      cache.clear();
-      expect(cache.size()).toBe(0);
-    });
 
-    it('should use cache for sync transforms', () => {
-      const cache = new TsconfigCache();
-      const result1 = transformSync(
+      expect(result.errors).toHaveLength(1);
+      expect(result.errors[0]).toMatchObject({ code: 'TSCONFIG_ERROR' });
+      expect(result.errors[0].message).toContain('tsconfig');
+
+      const syncResult = transformSync(
         path.join(fixtures, 'test1.ts'),
         'export const a: number = 1;',
         undefined,
         cache,
       );
-      const result2 = transformSync(
-        path.join(fixtures, 'test2.ts'),
-        'export const b: number = 2;',
-        undefined,
-        cache,
-      );
-      expect(result1.code).toBe('export const a = 1;\n');
-      expect(result2.code).toBe('export const b = 2;\n');
-      expect(cache.size()).toBe(1);
-      cache.clear();
-      expect(cache.size()).toBe(0);
-    });
-
-    it('should produce correct results when transforming same file twice with cache', async () => {
-      const cache = new TsconfigCache();
-      const result1 = await transform(
-        path.join(fixtures, 'test1.ts'),
-        'export const a: number = 1;',
-        undefined,
-        cache,
-      );
-      const result2 = await transform(
-        path.join(fixtures, 'test1.ts'),
-        'export const a: number = 2;',
-        undefined,
-        cache,
-      );
-      expect(result1.code).toBe('export const a = 1;\n');
-      expect(result2.code).toBe('export const a = 2;\n');
-      // Same tsconfig resolved, cache should not grow
-      expect(cache.size()).toBe(1);
+      expect(syncResult.errors).toHaveLength(1);
+      expect(syncResult.errors[0]).toMatchObject({ code: 'TSCONFIG_ERROR' });
     });
   });
 

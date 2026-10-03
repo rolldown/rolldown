@@ -573,7 +573,10 @@ export interface ValueSpan {
 export declare class ResolverFactory {
   constructor(options?: NapiResolveOptions | undefined | null)
   static default(): ResolverFactory
-  /** Clone the resolver using the same underlying cache. */
+  /**
+   * Clone the resolver, reusing the underlying cache when tsconfig and Yarn PnP options are
+   * unchanged.
+   */
   cloneWithOptions(options: NapiResolveOptions): ResolverFactory
   /**
    * Clear the underlying cache.
@@ -581,6 +584,10 @@ export declare class ResolverFactory {
    * Warning: The caller must ensure that there're no ongoing resolution operations when calling this method. Otherwise, it may cause those operations to return an incorrect result.
    */
   clearCache(): void
+  /** Synchronously find the tsconfig associated with an absolute source file path. */
+  findTsconfigSync(filename: string): TsconfigResult | null
+  /** Asynchronously find the tsconfig associated with an absolute source file path. */
+  findTsconfigAsync(filename: string): Promise<TsconfigResult | null>
   /** Synchronously resolve `specifier` at an absolute path to a `directory`. */
   sync(directory: string, request: string): ResolveResult
   /** Asynchronously resolve `specifier` at an absolute path to a `directory`. */
@@ -853,6 +860,39 @@ export interface Restriction {
 
 export declare function sync(path: string, request: string): ResolveResult
 
+export interface Tsconfig {
+  files?: Array<string>
+  include?: Array<string>
+  exclude?: Array<string>
+  compilerOptions: TsconfigCompilerOptions
+}
+
+export interface TsconfigCompilerOptions {
+  baseUrl?: string
+  paths?: Record<string, Array<string>>
+  experimentalDecorators?: boolean
+  emitDecoratorMetadata?: boolean
+  strict?: boolean
+  strictNullChecks?: boolean
+  useDefineForClassFields?: boolean
+  rewriteRelativeImportExtensions?: boolean
+  jsx?: string
+  jsxFactory?: string
+  jsxFragmentFactory?: string
+  jsxImportSource?: string
+  verbatimModuleSyntax?: boolean
+  preserveValueImports?: boolean
+  importsNotUsedAsValues?: string
+  target?: string
+  module?: string
+  allowJs?: boolean
+  rootDirs?: Array<string>
+  outDir?: string
+  declarationDir?: string
+  resolveJsonModule?: boolean
+  checkJs?: boolean
+}
+
 /**
  * Tsconfig Options
  *
@@ -872,6 +912,11 @@ export interface TsconfigOptions {
    * * `'auto'`: use the `references` field from tsconfig of `config_file`.
    */
   references?: 'auto'
+}
+
+export interface TsconfigResult {
+  tsconfigPaths: Array<string>
+  tsconfig: Tsconfig
 }
 
 /** See <https://tc39.es/ecma426/#sec-source-map-format>. */
@@ -1919,19 +1964,6 @@ export declare class TraceSubscriberGuard {
   close(): void
 }
 
-export declare class TsconfigCache {
-  /** Create a new transform cache with auto or manual tsconfig discovery enabled. */
-  constructor(yarnPnp: boolean, pathToTsconfig?: string | undefined | null)
-  /**
-   * Clear the cache.
-   *
-   * Call this when tsconfig files have changed to ensure fresh resolution.
-   */
-  clear(): void
-  /** Get the number of cached entries. */
-  size(): number
-}
-
 export interface AliasItem {
   find: string
   replacements: Array<string | undefined | null>
@@ -2035,26 +2067,6 @@ export interface BindingCommentsOptions {
   legal?: boolean
   annotation?: boolean
   jsdoc?: boolean
-}
-
-export interface BindingCompilerOptions {
-  baseUrl?: string
-  paths?: Record<string, Array<string>>
-  experimentalDecorators?: boolean
-  emitDecoratorMetadata?: boolean
-  useDefineForClassFields?: boolean
-  rewriteRelativeImportExtensions?: boolean
-  jsx?: string
-  jsxFactory?: string
-  jsxFragmentFactory?: string
-  jsxImportSource?: string
-  verbatimModuleSyntax?: boolean
-  preserveValueImports?: boolean
-  importsNotUsedAsValues?: string
-  target?: string
-  module?: string
-  allowJs?: boolean
-  rootDirs?: Array<string>
 }
 
 export interface BindingDeferSyncScanData {
@@ -2903,13 +2915,6 @@ export interface BindingTreeshake {
   propertyWriteSideEffects?: BindingPropertyWriteSideEffects
 }
 
-export interface BindingTsconfig {
-  files?: Array<string>
-  include?: Array<string>
-  exclude?: Array<string>
-  compilerOptions: BindingCompilerOptions
-}
-
 /**
  * TypeScript compiler options for inline tsconfig configuration.
  *
@@ -2955,11 +2960,6 @@ export interface BindingTsconfigCompilerOptions {
 export interface BindingTsconfigRawOptions {
   /** TypeScript compiler options. */
   compilerOptions?: BindingTsconfigCompilerOptions
-}
-
-export interface BindingTsconfigResult {
-  tsconfig: BindingTsconfig
-  tsconfigFilePaths: Array<string>
 }
 
 export interface BindingUpdateOptions {
@@ -3106,9 +3106,9 @@ export interface BindingWatchOption {
 
 export declare function collapseSourcemaps(sourcemapChain: Array<BindingSourcemap>): BindingJsonSourcemap
 
-export declare function enhancedTransform(filename: string, sourceText: string, options: BindingEnhancedTransformOptions | undefined | null, cache: TsconfigCache | undefined | null, yarnPnp: boolean): Promise<BindingEnhancedTransformResult>
+export declare function enhancedTransform(filename: string, sourceText: string, options: BindingEnhancedTransformOptions | undefined | null, resolver: ResolverFactory | undefined | null, yarnPnp: boolean): Promise<BindingEnhancedTransformResult>
 
-export declare function enhancedTransformSync(filename: string, sourceText: string, options: BindingEnhancedTransformOptions | undefined | null, cache: TsconfigCache | undefined | null, yarnPnp: boolean): BindingEnhancedTransformResult
+export declare function enhancedTransformSync(filename: string, sourceText: string, options: BindingEnhancedTransformOptions | undefined | null, resolver: ResolverFactory | undefined | null, yarnPnp: boolean): BindingEnhancedTransformResult
 
 export interface ExtensionAliasItem {
   target: string
@@ -3197,8 +3197,6 @@ export declare function registerPlugins(id: number, plugins: Array<BindingPlugin
  * without the `tracking_allocator` cargo feature.
  */
 export declare function resetNativeMemoryStats(): void
-
-export declare function resolveTsconfig(filename: string, cache: TsconfigCache | undefined | null, yarnPnp: boolean): BindingTsconfigResult | null
 
 /**
  * Release one holder of the tokio runtime, shutting it down once none are left.

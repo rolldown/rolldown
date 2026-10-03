@@ -1,0 +1,64 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+//#region main.js
+const { serverExports } = await import("./server2.js");
+if (serverExports.name !== "server") throw new Error(`expected the namespace to be built, got ${serverExports.name}`);
+console.log("ok");
+//#endregion
+
+```
+
+## routes.js
+
+```js
+import { r as getRouter } from "./server.js";
+//#region routes.js
+const route = () => `route(${getRouter()})`;
+//#endregion
+export { route };
+
+```
+
+## server.js
+
+```js
+//#region router.js
+var toNamespace = (all) => {
+	const target = {};
+	for (const key in all) Object.defineProperty(target, key, {
+		value: all[key],
+		enumerable: true
+	});
+	return target;
+};
+const getRouter = () => `router(${getContext()})`;
+//#endregion
+//#region server.js
+function getContext() {
+	return "context";
+}
+async function loadRoutes() {
+	return [(await import("./routes.js")).route(), getRouter()];
+}
+const serverExports = toNamespace({
+	name: "server",
+	loadRoutes
+});
+//#endregion
+export { serverExports as n, getRouter as r, getContext as t };
+
+```
+
+## server2.js
+
+```js
+import { n as serverExports } from "./server.js";
+export { serverExports };
+
+```

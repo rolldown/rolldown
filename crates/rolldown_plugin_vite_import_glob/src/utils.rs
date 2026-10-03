@@ -27,6 +27,7 @@ pub struct GlobImportVisit<'a> {
   pub magic_string: Option<MagicString<'a>>,
   pub import_decls: Vec<String>,
   pub errors: Vec<anyhow::Error>,
+  pub is_dev_mode: bool,
 }
 
 impl<'ast> VisitJs<'ast> for GlobImportVisit<'_> {
@@ -474,8 +475,19 @@ impl GlobImportVisit<'_> {
       return None;
     }
 
+    // Nothing can match, and the common base would be the whole root.
+    if positive_globs.is_empty() {
+      return Some(());
+    }
+
     let common = self.get_common_base(&positive_globs);
-    let entries = walkdir::WalkDir::new(common.as_ref())
+    let common_path = Path::new(common.as_ref());
+
+    if self.is_dev_mode {
+      self.watch_walk_root(common_path);
+    }
+
+    let entries = walkdir::WalkDir::new(common_path)
       .follow_links(true)
       .sort_by(|a, b| a.file_name().cmp(b.file_name()))
       .into_iter()
@@ -548,6 +560,17 @@ impl GlobImportVisit<'_> {
       files.push(ImportGlobFileData { file_path, import_path });
     }
     Some(())
+  }
+
+  /// A directory is watched with everything below it, so the walk root covers all the walk
+  /// reads. The watcher can only wait for a missing path whose parent exists.
+  fn watch_walk_root(&self, walk_root: &Path) {
+    // The id of a virtual module can make it relative.
+    if walk_root.is_absolute() {
+      let path =
+        walk_root.ancestors().take_while(|path| !path.exists()).last().unwrap_or(walk_root);
+      self.ctx.add_watch_file(&path.to_slash_lossy());
+    }
   }
 
   fn update_options(arg: &Argument, options: &mut ImportGlobOptions) {

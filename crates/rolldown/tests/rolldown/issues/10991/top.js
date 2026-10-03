@@ -1,0 +1,3 @@
+import './middle.js';
+
+export {};

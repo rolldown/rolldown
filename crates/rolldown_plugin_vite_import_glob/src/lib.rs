@@ -5,7 +5,10 @@ use std::{borrow::Cow, path::PathBuf};
 
 use arcstr::ArcStr;
 use oxc::ast_visit::VisitJs;
-use rolldown_plugin::{HookTransformOutput, HookTransformOutputMap, HookUsage, Plugin};
+use rolldown_plugin::{
+  HookHotUpdateArgs, HookHotUpdateReturn, HookTransformOutput, HookTransformOutputMap, HookUsage,
+  Plugin, PluginContext,
+};
 use rolldown_plugin_utils::parse_program;
 use rolldown_utils::dashmap::FxDashMap;
 use sugar_path::SugarPath as _;
@@ -26,7 +29,7 @@ impl Plugin for ViteImportGlobPlugin {
   }
 
   fn register_hook_usage(&self) -> HookUsage {
-    HookUsage::Transform
+    HookUsage::Transform | HookUsage::HotUpdate
   }
 
   async fn transform(
@@ -78,5 +81,13 @@ impl Plugin for ViteImportGlobPlugin {
       self.set_globs(&args.id.to_slash_lossy(), matchers);
     }
     Ok(output)
+  }
+
+  async fn hot_update(
+    &self,
+    _ctx: &PluginContext,
+    args: &HookHotUpdateArgs,
+  ) -> HookHotUpdateReturn {
+    Ok(self.add_glob_owners(args))
   }
 }

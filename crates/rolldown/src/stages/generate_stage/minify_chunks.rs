@@ -40,7 +40,7 @@ impl GenerateStage<'_> {
     let source_type = options.format.source_type().with_jsx(true);
 
     let property_mangle_cache = OnceLock::new();
-    chunks.par_iter_mut().try_for_each(|chunk| -> anyhow::Result<()> {
+    chunks.par_iter_mut().try_for_each(|chunk| -> BuildResult<()> {
       if !is_minifiable_ecma_chunk(chunk) {
         return Ok(());
       }
@@ -75,7 +75,7 @@ impl GenerateStage<'_> {
           compress,
           minify_options.clone(),
           codegen_options,
-        );
+        )?;
         if let Some(cache) = chunk_property_mangle_cache {
           property_mangle_cache
             .set(cache)

@@ -10,6 +10,7 @@ use oxc::{
   ast_visit::{VisitJs, walk_js},
   semantic::{NodeId, SymbolId},
 };
+use oxc_ecmascript::constant_evaluation::ConstantEvaluation;
 use rolldown_common::{
   AstScopes, ConstExportMeta, EcmaViewMeta, FlatOptions, GetLocalDb, IndexModules,
   MemberExprRefResolutionMap, ModuleIdx, SharedNormalizedBundlerOptions, Specifier, StmtEvalFlags,
@@ -21,7 +22,7 @@ use rustc_hash::{FxHashMap, FxHashSet};
 
 use crate::ast_scanner::{
   const_eval::{ConstEvalCtx, try_extract_const_literal},
-  stmt_eval_analyzer::StmtEvalAnalyzer,
+  stmt_eval_analyzer::{ConstantConditions, StmtEvalAnalyzer, condition_key},
 };
 
 use super::LinkStage;
@@ -76,8 +77,8 @@ impl LinkStage<'_> {
       return FxHashSet::default();
     }
     // Explain `inline_const.pass`:
-    // - if `inline_const.pass` is 1, we don't need the extra visit pass, since we already do it in
-    // scan phase. This would already cover most of the cases, and the overhead is minimal.
+    // - if `inline_const.pass` is 1, constant discovery happens in the scan phase. Linked
+    // statement side effects are refined afterwards by `refine_constant_statement_side_effects`.
     // - if `inline_const.pass` is greater than 1, and there is no cycle in module graph,
     // we could just revisit the ast of module in topological order only once.
     // - TODO:
@@ -86,7 +87,7 @@ impl LinkStage<'_> {
     //  potential optimization:
     //  - if in one pass there is no new constant export found, we can stop the pass early.
     //  - if all dependencies of a module has no constant export, we don't need to visit ast at all.
-    // The extra passes only run when user enable `inline_const` and set `pass` greater than 1.
+    // Extra constant-discovery passes only run with `inline_const.pass` greater than 1.
     let mut ctx = CrossModuleOptimizationCtx::new(config);
     let mut constant_symbol_map = std::mem::take(&mut self.global_constant_symbol_map);
     let mut unreachable_node_ids = FxHashSet::default();
@@ -126,6 +127,106 @@ impl LinkStage<'_> {
     // Return all unreachable import expression node IDs instead of add it as a field of LinkStage,
     // Because this set is only used include statement stage.
     unreachable_node_ids
+  }
+
+  /// Refine statement inclusion before chunk dependencies are computed, even with the default
+  /// single inline-constant pass. Finalization is too late: a dead reference can already have
+  /// forced its declaration to be exported from a shared chunk.
+  ///
+  /// Only clears effects: a statement is re-analyzed only if it has no import records and
+  /// references a linked immutable ESM constant. Every link-stage pass that adds effects to a
+  /// statement after scanning (import lowering in `reference_needed_symbols`) does so on
+  /// statements with import records, so skipping those keeps its decisions intact. A future pass
+  /// that forces effects on record-free statements must run after this one or be excluded here.
+  // See internal-docs/linking/reference-needed-symbols/implementation.md.
+  pub(super) fn refine_constant_statement_side_effects(&mut self) {
+    if self.options.treeshake.is_none() || self.global_constant_symbol_map.is_empty() {
+      return;
+    }
+    let constant_meta = |symbol_ref: SymbolRef| {
+      // Mutable CJS properties are not immutable ES module bindings.
+      self
+        .global_constant_symbol_map
+        .get(&self.symbols.canonical_ref_for(symbol_ref))
+        .filter(|meta| !meta.commonjs_export)
+    };
+    let refined: Vec<(ModuleIdx, Vec<StmtInfoIdx>)> = self
+      .sorted_modules
+      .par_iter()
+      .filter_map(|&module_idx| {
+        let module = self.module_table[module_idx].as_normal()?;
+        let stmt_infos = &self.stmt_infos[module_idx];
+        let candidates: Vec<StmtInfoIdx> = stmt_infos
+          .iter_enumerated_without_namespace_stmt()
+          .filter(|(_, stmt_info)| {
+            stmt_info.import_records.is_empty()
+              && stmt_info.eval_flags.has_side_effect_for_tree_shaking()
+              && stmt_info
+                .referenced_symbols
+                .iter()
+                .any(|reference| constant_meta(*reference.symbol_ref()).is_some())
+          })
+          .map(|(idx, _)| idx)
+          .collect();
+        if candidates.is_empty() {
+          return None;
+        }
+        let ast = self.ast_table[module_idx].as_ref()?;
+        let namespace_object_symbol_ids: FxHashSet<SymbolId> = module
+          .named_imports
+          .iter()
+          .filter_map(|(local_ref, import)| {
+            matches!(import.imported, Specifier::Star).then_some(local_ref.symbol)
+          })
+          .collect();
+        let scope = &self.symbols.local_db(module_idx).ast_scopes;
+        let reference_meta =
+          |reference_id| constant_meta((module_idx, scope.symbol_id_for(reference_id)?).into());
+        let evaluate_reference = |reference_id| {
+          reference_meta(reference_id)
+            .map(|meta| oxc_ecmascript::constant_evaluation::ConstantValue::from(&meta.value))
+        };
+        let value_type = |reference_id| reference_meta(reference_id).map(|m| m.value.value_type());
+        let constant_map = FxHashMap::default();
+        // Constant evaluation may allocate temporary values. Keep those off the shared module
+        // arena, and release them when this module's refinement finishes.
+        let allocator = oxc::allocator::Allocator::default();
+        let eval_ctx = ConstEvalCtx {
+          ast: AstBuilder::new(&allocator),
+          scope: scope.scoping(),
+          constant_map: &constant_map,
+          overrode_get_constant_value_from_reference_id: Some(&evaluate_reference),
+        };
+        let body = &ast.program().body;
+        let cleared = candidates
+          .into_iter()
+          .filter(|&stmt_info_idx| {
+            // `0` is the namespace stmt, so top-level statement `i` is stmt info `i + 1`.
+            let stmt = &body[stmt_info_idx.index() - 1];
+            let mut collector =
+              ConstantConditionCollector { eval_ctx: &eval_ctx, conditions: FxHashMap::default() };
+            collector.visit_statement(stmt);
+            let flags = StmtEvalAnalyzer::new(
+              scope,
+              self.flat_options,
+              self.options,
+              None,
+              Some(&namespace_object_symbol_ids),
+            )
+            .with_constants(&value_type, &collector.conditions)
+            .analyze_stmt(stmt)
+            .tree_shaking_flags();
+            !flags.has_side_effect_for_tree_shaking()
+          })
+          .collect::<Vec<_>>();
+        (!cleared.is_empty()).then_some((module_idx, cleared))
+      })
+      .collect();
+    for (module_idx, stmt_info_idxs) in refined {
+      for stmt_info_idx in stmt_info_idxs {
+        self.stmt_infos[module_idx][stmt_info_idx].eval_flags = StmtEvalFlags::empty();
+      }
+    }
   }
 
   /// Find all modules that have imports resolving to any of the given constant canonical refs.
@@ -276,6 +377,42 @@ impl LinkStage<'_> {
       all_unreachable_node_ids.extend(unreachable_node_ids);
     }
     new_constant_refs
+  }
+}
+
+struct ConstantConditionCollector<'a, 'ast> {
+  eval_ctx: &'a ConstEvalCtx<'a, 'ast>,
+  conditions: ConstantConditions,
+}
+
+impl<'ast> ConstantConditionCollector<'_, 'ast> {
+  fn record(&mut self, test: &Expression<'ast>) {
+    if let Some(value) = test.evaluate_value_to_boolean(self.eval_ctx) {
+      self.conditions.insert(condition_key(test), value);
+    }
+  }
+}
+
+impl<'ast> VisitJs<'ast> for ConstantConditionCollector<'_, 'ast> {
+  // Function bodies are not evaluated when the statement runs, so the analyzer never asks about
+  // conditions inside them.
+  fn visit_function(&mut self, _: &oxc::ast::ast::Function<'ast>, _: oxc::semantic::ScopeFlags) {}
+
+  fn visit_arrow_function_expression(&mut self, _: &oxc::ast::ast::ArrowFunctionExpression<'ast>) {}
+
+  fn visit_if_statement(&mut self, stmt: &oxc::ast::ast::IfStatement<'ast>) {
+    self.record(&stmt.test);
+    walk_js::walk_if_statement(self, stmt);
+  }
+
+  fn visit_conditional_expression(&mut self, expr: &oxc::ast::ast::ConditionalExpression<'ast>) {
+    self.record(&expr.test);
+    walk_js::walk_conditional_expression(self, expr);
+  }
+
+  fn visit_logical_expression(&mut self, expr: &oxc::ast::ast::LogicalExpression<'ast>) {
+    self.record(&expr.left);
+    walk_js::walk_logical_expression(self, expr);
   }
 }
 

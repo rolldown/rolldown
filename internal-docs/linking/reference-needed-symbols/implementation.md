@@ -11,6 +11,39 @@
 
 It writes data; it does not decide what is included. `include_statements` is the next pass and consumes everything written here.
 
+Between dependency recording and inclusion, `refine_constant_statement_side_effects` (in
+`cross_module_optimization.rs`, called from `link()` right after `cross_module_optimization`)
+refines side-effect flags using linked immutable ESM constants, including with the default single
+inline-constant pass. The scan-time analyzer cannot resolve imported bindings. Without this
+refinement, a top-level `if (DEV) warn()` with imported `DEV = false` demands `warn` before
+finalization removes the call; if `warn` belongs to another chunk, its generated chunk export
+becomes a root for the later chunk-local DCE and retains the otherwise dead function.
+
+The refinement only clears effects, and only re-analyzes statements that have no import records
+and reference a linked constant. Skipping statements with import records preserves effects
+introduced by import lowering, which is the only post-scan pass that adds effects today. A future
+pass that forces effects on record-free statements must run after this refinement or be excluded
+by it. Statements already cleared by the function-purity pass are skipped because they no longer
+have effects. Conditions are evaluated separately from their effects: a known-false condition with
+an effectful test must still execute that test. Known conditions are keyed by expression address,
+not `NodeId`, because synthesized nodes may share `NodeId::DUMMY`. Linked constants also report
+their value type to Oxc (`value_type_for_reference_id`), which proves template interpolation and
+string concatenation of primitives effect-free without trusting mutable bindings or objects with
+observable coercion. Substitution-free template literals are collected as string constants during
+scanning.
+
+The pass does not mutate the AST or semantic IDs, nor remove references from a retained
+statement; it refines whole-statement inclusion. Pruning references from retained statements was
+rejected: it is only sound if finalization reliably deletes the matching dead branch, and a miss
+would emit a dangling reference. Consequently, dead branches inside live functions, such as
+`function f() { if (DEV) warn() }`, still keep their callees and cross-chunk exports. Statements
+with import records (`if (DEV) import('./devtools')`), namespace member conditions
+(`if (ns.DEV)`), and `??` are also not refined.
+
+Regression fixtures: `optimization/inline_const/dead_shared_chunk_export`,
+`optimization/inline_const/cross_chunk_value_type` (#6939), and
+`optimization/inline_const/constant_effects_safety` under `crates/rolldown/tests/rolldown/`.
+
 Source: `crates/rolldown/src/stages/link_stage/reference_needed_symbols.rs`.
 
 ## Pipeline placement

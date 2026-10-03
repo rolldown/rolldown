@@ -64,6 +64,18 @@ impl From<&ConstantValue> for constant_evaluation::ConstantValue<'_> {
 }
 
 impl ConstantValue {
+  pub fn value_type(&self) -> oxc_ecmascript::ValueType {
+    use oxc_ecmascript::ValueType;
+    match self {
+      ConstantValue::Number(_) => ValueType::Number,
+      ConstantValue::BigInt(_) => ValueType::BigInt,
+      ConstantValue::String(_) => ValueType::String,
+      ConstantValue::Boolean(_) => ValueType::Boolean,
+      ConstantValue::Undefined => ValueType::Undefined,
+      ConstantValue::Null => ValueType::Null,
+    }
+  }
+
   pub fn to_expression<'ast>(&self, ast: &oxc::ast::builder::AstBuilder<'ast>) -> Expression<'ast> {
     match self {
       ConstantValue::Number(n) => {

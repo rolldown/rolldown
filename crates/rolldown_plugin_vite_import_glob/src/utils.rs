@@ -107,6 +107,44 @@ impl<'a> PathWithGlob<'a> {
   }
 }
 
+// `walkdir` resolves a root that is a symlink itself, so a linked directory's entries are still walked under the link's path.
+fn walk_files(root: PathBuf, exhaustive: bool) -> impl Iterator<Item = walkdir::DirEntry> {
+  walkdir::WalkDir::new(root)
+    .sort_by(|a, b| a.file_name().cmp(b.file_name()))
+    .into_iter()
+    .filter_entry(move |entry| {
+      exhaustive || entry.depth() == 0 || {
+        let path = entry.file_name();
+        if path.as_encoded_bytes().first() == Some(&b'.') {
+          return false;
+        }
+        path.to_str().is_none_or(|s| s != "node_modules")
+      }
+    })
+    .filter_map(Result::ok)
+    .filter(|entry| !entry.file_type().is_dir())
+}
+
+/// The directories this branch walked, as canonical `(root, left through)` pairs, extended with the walk `link` opens.
+/// `None` when following `link` would walk in circles.
+fn follow_link(link: &Path, walked: &[(PathBuf, PathBuf)]) -> Option<Vec<(PathBuf, PathBuf)>> {
+  let target = std::fs::canonicalize(link).ok()?;
+  let exit = link.parent().and_then(|dir| std::fs::canonicalize(dir).ok())?;
+
+  let mut walked = walked.to_vec();
+  if let Some((_, last_exit)) = walked.last_mut() {
+    *last_exit = exit;
+  }
+
+  // This is `walkdir`'s loop check: every walked pair spans the directories one walk descended through, and re-entering any of them repeats that tree.
+  if walked.iter().any(|(root, exit)| target.starts_with(root) && exit.starts_with(&target)) {
+    return None;
+  }
+
+  walked.push((target.clone(), target));
+  Some(walked)
+}
+
 #[derive(Clone, Copy, Debug)]
 enum ImportGlobOmitType {
   Keys,
@@ -475,24 +513,40 @@ impl GlobImportVisit<'_> {
     }
 
     let common = self.get_common_base(&positive_globs);
-    let entries = walkdir::WalkDir::new(common.as_ref())
-      .follow_links(true)
-      .sort_by(|a, b| a.file_name().cmp(b.file_name()))
-      .into_iter()
-      .filter_entry(|entry| {
-        options.exhaustive || entry.depth() == 0 || {
-          let path = entry.file_name();
-          if path.as_encoded_bytes().first() == Some(&b'.') {
-            return false;
-          }
-          path.to_str().is_none_or(|s| s != "node_modules")
-        }
-      })
-      .filter_map(Result::ok)
-      .filter(|e| !e.file_type().is_dir());
+    let root =
+      std::fs::canonicalize(common.as_ref()).unwrap_or_else(|_| PathBuf::from(common.as_ref()));
 
-    for entry in entries {
+    // `walkdir`'s `follow_links` needs `same-file`, which has no wasm implementation, so walk every directory symlink from its own root instead.
+    let mut stack = vec![(
+      walk_files(PathBuf::from(common.as_ref()), options.exhaustive),
+      vec![(root.clone(), root)],
+    )];
+    while !stack.is_empty() {
+      let top = stack.len() - 1;
+      let Some(entry) = stack[top].0.next() else {
+        stack.pop();
+        continue;
+      };
+
       let file = entry.path();
+
+      // A linked directory is walked right here, so its files keep the position they had while `walkdir` followed links itself.
+      // A link at depth 0 is the root `walkdir` already resolved, so only deeper ones open a walk.
+      if entry.file_type().is_symlink() {
+        let Ok(metadata) = std::fs::metadata(file) else {
+          continue;
+        };
+        if metadata.is_dir() {
+          if entry.depth() > 0 {
+            let walked = follow_link(file, &stack[top].1);
+            if let Some(walked) = walked {
+              stack.push((walk_files(file.to_path_buf(), options.exhaustive), walked));
+            }
+          }
+          continue;
+        }
+      }
+
       let path = file.to_slash_lossy();
 
       // Skip the file itself if it matches the glob pattern, to avoid self-importing.

@@ -32,8 +32,8 @@ struct PreGeneratedChunkName {
   /// The full chunk name including directory structure relative to `preserveModulesRoot`.
   /// This appears in `PreRenderedChunk.name` and hooks like `entryFileNames`.
   chunk_name: ArcStr,
-  /// The base filename for generating preliminary filenames.
-  /// Absolute path without extension, used as input to filename templates.
+  /// The input for the `[name]` placeholder of filename templates. For a preserved module,
+  /// this is its sanitized relative path without the extension.
   chunk_filename: ArcStr,
 }
 
@@ -347,12 +347,12 @@ impl<'a> GenerateStage<'a> {
               let (representative_chunk_name, absolute_chunk_file_name, ext) =
                 representative_file_name_for_preserve_modules(module_id.as_path());
 
-              let sanitized_absolute_filename =
-                sanitize_filename.call(absolute_chunk_file_name.as_str()).await?;
-
-              // Apply the same logic as get_preserve_modules_chunk_name to include directory structure
-              let chunk_name = {
-                let p = PathBuf::from(sanitized_absolute_filename.as_str());
+              // The relative path is built from the raw id and sanitized once at the end:
+              // `preserveModulesRoot` and the input base are raw paths, so a sanitized id may no
+              // longer start with them, or may start with another directory that sanitizes to
+              // the same name.
+              let relative_path = {
+                let p = PathBuf::from(absolute_chunk_file_name.as_str());
                 // Besides genuinely absolute paths, `node_style_absolute` anchors
                 // a rooted-but-volume-less id (`/favicon`, `\favicon`) to the
                 // cwd volume root (a drive or UNC share): Node and Rollup treat
@@ -361,15 +361,12 @@ impl<'a> GenerateStage<'a> {
                 // and letting them fall into the `virtual_dirname` join below
                 // would discard the prefix and leak the leading slash into
                 // `[name]`.
-                let relative_path = if let Some(abs) = node_style_absolute(&p, &cwd) {
+                if let Some(abs) = node_style_absolute(&p, &cwd) {
                   let stripped_by_root =
                     preserve_modules_root.as_ref().and_then(|preserve_modules_root| {
                       // See internal-docs/module-id/implementation.md: output paths may normalize separators even
                       // when module ids keep native separators.
-                      strip_path_prefix_to_slash(
-                        &node_style_absolute(absolute_chunk_file_name.as_path(), &cwd)?,
-                        preserve_modules_root.as_path(),
-                      )
+                      strip_path_prefix_to_slash(&abs, preserve_modules_root.as_path())
                     });
                   if let Some(relative_path) = stripped_by_root {
                     relative_path
@@ -378,23 +375,25 @@ impl<'a> GenerateStage<'a> {
                   }
                 } else {
                   path_buf_to_slash(PathBuf::from(virtual_dirname.as_str()).join(p))
-                };
-                // `p` may be an absolute or relative path without extension, depending on the module path.
-                // Now we need to add the extension back when generating the relative chunk name.
-                // skip some common extension https://github.com/rollup/rollup/pull/4565/files
-                match ext.as_deref() {
-                  Some(e) if COMMON_JS_EXTENSIONS.contains(&e) => relative_path,
-                  Some(e) if !e.is_empty() => format!("{relative_path}.{e}"),
-                  _ => relative_path,
                 }
+              };
+              // The `[name]` placeholder gets the path without the extension.
+              let chunk_filename = sanitize_filename.call(&relative_path).await?;
+              // `relative_path` has no extension. The chunk name gets it back, except for
+              // common ones: https://github.com/rollup/rollup/pull/4565/files
+              let chunk_name = match ext.as_deref() {
+                Some(e) if !e.is_empty() && !COMMON_JS_EXTENSIONS.contains(&e) => {
+                  sanitize_filename.call(&format!("{relative_path}.{e}")).await?
+                }
+                _ => chunk_filename.clone(),
               };
 
               let sanitized_representative_chunk_name =
                 sanitize_filename.call(&representative_chunk_name).await?;
               PreGeneratedChunkName {
                 representative_chunk_name: sanitized_representative_chunk_name,
-                chunk_name: chunk_name.into(),
-                chunk_filename: sanitized_absolute_filename,
+                chunk_name,
+                chunk_filename,
               }
             } else if meta.contains(rolldown_common::ChunkMeta::UserDefinedEntry) {
               // try extract meaningful input name from path

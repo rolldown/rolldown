@@ -1,0 +1,7 @@
+{
+  "_comment": "The common directory of the modules contains `+`, which `sanitizeFileName` replaces. Chunk names must be relative to the raw directory, not escape it with `../src_x/`.",
+  "config": {
+    "input": [{ "name": "main", "import": "./src+x/main.js" }],
+    "preserveModules": true
+  }
+}

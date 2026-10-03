@@ -18,7 +18,6 @@ export enum HookUsageKind {
   closeBundle = 1 << 13,
   watchChange = 1 << 14,
   closeWatcher = 1 << 15,
-  transformAst = 1 << 16,
   banner = 1 << 17,
   footer = 1 << 18,
   intro = 1 << 19,

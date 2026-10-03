@@ -165,9 +165,11 @@ extendNodePath: false
 # doc-kit from a clone next to this repository, at the top of the stack of
 # pull requests adding what the docs need (the TypeDoc plugin, diagrams,
 # llms-full.txt): https://github.com/nodejs/doc-kit/pull/1127. Remove once
-# those are released.
+# those are released. TypeDoc is the plugin's own, as a linked package keeps
+# its dependencies, and the plugin extends TypeDoc's classes.
 overrides:
   '@doc-kit/cli': link:../doc-kit/packages/cli
   '@doc-kit/core': link:../doc-kit/packages/core
   '@doc-kit/generator-react': link:../doc-kit/packages/react
   '@doc-kit/typedoc': link:../doc-kit/packages/typedoc
+  typedoc: link:../doc-kit/packages/typedoc/node_modules/typedoc

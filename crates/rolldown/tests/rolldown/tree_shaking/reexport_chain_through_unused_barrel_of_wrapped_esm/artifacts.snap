@@ -1,0 +1,74 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+//#region core.js
+function count(x) {
+	return x * 2;
+}
+//#endregion
+//#region io.js
+function create() {
+	return 1;
+}
+//#endregion
+//#region main.js
+if (count(create()) !== 2) throw new Error("unexpected result");
+//#endregion
+
+```
+
+# Variant: [preserve_modules: true]
+
+## Assets
+
+### _virtual/_rolldown/runtime.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+export { __esmMin };
+
+```
+
+### core.js
+
+```js
+import { __esmMin } from "./_virtual/_rolldown/runtime.js";
+//#region core.js
+function count(x) {
+	return x * 2;
+}
+var init_core = __esmMin((() => {}));
+//#endregion
+init_core();
+export { count, init_core };
+
+```
+
+### io.js
+
+```js
+//#region io.js
+function create() {
+	return 1;
+}
+//#endregion
+export { create };
+
+```
+
+### main.js
+
+```js
+import { count } from "./core.js";
+import { create } from "./io.js";
+//#region main.js
+if (count(create()) !== 2) throw new Error("unexpected result");
+//#endregion
+
+```

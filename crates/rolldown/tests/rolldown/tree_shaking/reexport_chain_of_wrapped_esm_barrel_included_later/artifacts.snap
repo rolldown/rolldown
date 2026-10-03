@@ -1,0 +1,59 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## dyn.js
+
+```js
+import { t as __esmMin } from "./rolldown-runtime.js";
+import { t as init_core } from "./main.js";
+//#region surface.js
+//#endregion
+//#region index.js
+__esmMin((() => {
+	init_core();
+}))();
+function tag() {
+	return "tag";
+}
+//#endregion
+//#region dyn.js
+var dyn_default = tag();
+//#endregion
+export { dyn_default as default };
+
+```
+
+## main.js
+
+```js
+import { t as __esmMin } from "./rolldown-runtime.js";
+//#region core.js
+function count(x) {
+	return x * 2;
+}
+var init_core = __esmMin((() => {}));
+//#endregion
+//#region io.js
+function create() {
+	return 1;
+}
+//#endregion
+//#region main.js
+if (count(create()) !== 2) throw new Error("unexpected result");
+import("./dyn.js").then((m) => {
+	if (m.default !== "tag") throw new Error("unexpected tag");
+});
+//#endregion
+export { init_core as t };
+
+```
+
+## rolldown-runtime.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+export { __esmMin as t };
+
+```

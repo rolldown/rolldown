@@ -530,6 +530,8 @@ fn handle_include_module(ctx: &mut IncludeContext, module_idx: ModuleIdx) {
     return;
   }
 
+  demand_deferred_import_wrappers(ctx, module);
+
   let forced_no_treeshake = matches!(module.side_effects, DeterminedSideEffects::NoTreeshake);
   if ctx.tree_shaking && !forced_no_treeshake {
     sweep_side_effect_statements(ctx, module);
@@ -1013,7 +1015,19 @@ fn handle_include_statement(
     include_kind |= SymbolIncludeReason::JsonDefaultExportSelfReference;
   }
 
+  let is_module_included = ctx.is_module_included_vec.has_bit(module.idx);
+
   stmt_info.referenced_symbols.iter().for_each(|reference_ref| {
+    // A module that is not included renders nothing, so the wrapper calls its imports lower to
+    // never run. `demand_deferred_import_wrappers` demands them once the module is included.
+    // See internal-docs/linking/reference-needed-symbols/implementation.md.
+    if !is_module_included
+      && let SymbolOrMemberExprRef::Symbol(symbol_ref) = reference_ref
+      && is_import_record_wrapper_ref(ctx.metas, module, stmt_info, *symbol_ref)
+    {
+      return;
+    }
+
     if let Some(member_expr_resolution) = match reference_ref {
       SymbolOrMemberExprRef::Symbol(_) => None,
       SymbolOrMemberExprRef::MemberExpr(member_expr_ref) => {
@@ -1057,6 +1071,39 @@ fn handle_include_statement(
       push_symbol_and_check_cjs_bailout(ctx, *original_ref, include_kind);
     }
   });
+}
+
+/// Whether `symbol_ref` is the wrapper (`init_*` / `require_*`) of a module that one of the
+/// statement's import records points at. Lowering turns that import into a wrapper call in the
+/// importer's own code, so the call only runs when the importer is rendered.
+fn is_import_record_wrapper_ref(
+  metas: &LinkingMetadataVec,
+  module: &NormalModule,
+  stmt_info: &StmtInfo,
+  symbol_ref: SymbolRef,
+) -> bool {
+  stmt_info.import_records.iter().any(|rec_idx| {
+    module.import_records[*rec_idx]
+      .resolved_module
+      .is_some_and(|importee_idx| metas[importee_idx].wrapper_ref == Some(symbol_ref))
+  })
+}
+
+/// A statement can be included before its module, as the declaration of a binding that a
+/// re-export chain passes through. Such a statement skipped the wrapper calls of its imports (see
+/// `handle_include_statement`). Now that the module is included and rendered, demand them.
+fn demand_deferred_import_wrappers(ctx: &mut IncludeContext, module: &NormalModule) {
+  let stmt_infos = &ctx.stmt_infos[module.idx];
+  for stmt_info_idx in ctx.is_included_vec[module.idx].index_of_one() {
+    let stmt_info = stmt_infos.get(stmt_info_idx);
+    for reference_ref in &stmt_info.referenced_symbols {
+      if let SymbolOrMemberExprRef::Symbol(symbol_ref) = reference_ref
+        && is_import_record_wrapper_ref(ctx.metas, module, stmt_info, *symbol_ref)
+      {
+        ctx.pending.push(WorkItem::Symbol(*symbol_ref, SymbolIncludeReason::Normal));
+      }
+    }
+  }
 }
 
 /// FIXME: bailout for require() import for now

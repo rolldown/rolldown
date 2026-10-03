@@ -90,6 +90,25 @@ pub trait ExpressionFactoryExt<'ast> {
     )
   }
 
+  /// `async () => <expr>`
+  ///
+  /// Same as [`Self::new_arrow_returning`] but marks the arrow `async`, so an
+  /// `await` inside `expr` stays in an async scope and remains valid syntax.
+  fn new_async_arrow_returning<B: GetAstBuilder<'ast> + GetAllocator<'ast>>(
+    expr: Expression<'ast>,
+    builder: &B,
+  ) -> Expression<'ast> {
+    Expression::new_arrow_function_expression(
+      SPAN,
+      true,
+      None,
+      FormalParameters::boxed(SPAN, FormalParameterKind::Signature, [], None, builder),
+      None,
+      ArrowFunctionBody::from(expr),
+      builder,
+    )
+  }
+
   /// `<object>.<property>` as an `Expression`.
   fn new_member_access_expr<B: GetAstBuilder<'ast> + GetAllocator<'ast>>(
     object: &str,

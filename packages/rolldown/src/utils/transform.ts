@@ -72,7 +72,7 @@ export async function transform(
   options?: TransformOptions | null,
   cache?: TsconfigCache | null,
 ): Promise<TransformResult> {
-  const result = await originalTransform(filename, sourceText, options, cache, yarnPnp);
+  const result = await originalTransform(filename, sourceText, options, cache?.resolver, yarnPnp);
   return {
     ...result,
     errors: result.errors.map(normalizeBindingError),
@@ -103,7 +103,7 @@ export function transformSync(
   options?: TransformOptions | null,
   cache?: TsconfigCache | null,
 ): TransformResult {
-  const result = originalTransformSync(filename, sourceText, options, cache, yarnPnp);
+  const result = originalTransformSync(filename, sourceText, options, cache?.resolver, yarnPnp);
   return {
     ...result,
     errors: result.errors.map(normalizeBindingError),

@@ -58,7 +58,6 @@ pub mod native_memory;
 pub mod options;
 pub mod parallel_js_plugin_registry;
 pub mod transform;
-pub mod transform_cache;
 pub mod types;
 pub mod utils;
 pub mod watcher;

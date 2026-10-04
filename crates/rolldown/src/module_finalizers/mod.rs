@@ -603,6 +603,22 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
         {
           return true;
         }
+        // Strict ordering may place re-exported leaves with this importer while the root wrapper
+        // stays in another chunk, so emit the import record's complete local init target set.
+        if self.ctx.options.is_strict_execution_order_enabled()
+          && record_is_init_obligation(
+            ObligationPurpose::Emit,
+            self.ctx.order_wrap_state,
+            self.ctx.module,
+            rec,
+            rec_idx,
+            true,
+          )
+          && let Some(init_stmt) = self.wrapped_esm_init_stmt_for_import_record(rec_idx)
+        {
+          *stmt = init_stmt;
+          return false;
+        }
         self.generated_init_esm_importee_ids.insert(importee.idx);
         // `init_foo()` / `await init_foo()`
         let init_expr = self.wrapped_esm_init_call_expr(importee.idx, stmt.span(), false, true);

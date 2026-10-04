@@ -1,9 +1,9 @@
 use oxc_index::IndexVec;
 use oxc_str::CompactStr;
 use rolldown_common::{
-  ChunkIdx, ImportKind, ImportRecordIdx, ImportRecordMeta, ModuleIdx, RUNTIME_HELPER_NAMES,
-  RuntimeHelper, RuntimeModuleBrief, StmtInfoIdx, StmtInfos, SymbolOrMemberExprRef, SymbolRef,
-  SymbolRefDb, TaggedSymbolRef, WrapKind,
+  ChunkIdx, ImportKind, ImportRecordIdx, ImportRecordMeta, IndexModules, ModuleIdx,
+  RUNTIME_HELPER_NAMES, RuntimeHelper, RuntimeModuleBrief, StmtInfoIdx, StmtInfos,
+  SymbolOrMemberExprRef, SymbolRef, SymbolRefDb, TaggedSymbolRef, WrapKind,
 };
 use rolldown_utils::indexmap::FxIndexSet;
 use rustc_hash::{FxHashMap, FxHashSet};
@@ -41,9 +41,25 @@ pub struct OrderWrapState {
   runtime_symbols: FxHashSet<SymbolRef>,
   nested_reexport_records: FxHashSet<(ModuleIdx, ImportRecordIdx)>,
   consumed_reexport_facades: FxHashSet<SymbolRef>,
+  /// Modules directly reached by `require()` edges, for require-mediated re-export routing.
+  required_modules: FxHashSet<ModuleIdx>,
 }
 
 impl OrderWrapState {
+  pub(crate) fn set_required_modules(&mut self, modules: &IndexModules) {
+    self.required_modules = modules
+      .iter()
+      .filter_map(|module| module.as_normal())
+      .flat_map(|module| &module.import_records)
+      .filter(|record| record.kind == ImportKind::Require)
+      .filter_map(|record| record.resolved_module)
+      .collect();
+  }
+
+  pub(crate) fn is_required_module(&self, module_idx: ModuleIdx) -> bool {
+    self.required_modules.contains(&module_idx)
+  }
+
   pub(crate) fn has_import_overlays(&self) -> bool {
     !self.import_overlays.is_empty()
   }

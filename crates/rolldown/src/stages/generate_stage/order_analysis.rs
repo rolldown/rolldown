@@ -107,6 +107,7 @@ impl GenerateStage<'_> {
     used_symbol_refs_builder: &UsedSymbolRefsBuilder,
   ) -> super::order_wrap_state::OrderWrapState {
     let mut state = super::order_wrap_state::OrderWrapState::default();
+    state.set_required_modules(&self.link_output.module_table.modules);
     if !self.options.is_strict_execution_order_enabled() {
       return state;
     }
@@ -586,6 +587,7 @@ impl GenerateStage<'_> {
     reverse_static_imports: &IndexVec<ModuleIdx, Vec<ModuleIdx>>,
   ) -> super::order_wrap_state::OrderWrapState {
     let mut probe_state = super::order_wrap_state::OrderWrapState::default();
+    probe_state.set_required_modules(&self.link_output.module_table.modules);
     self.populate_probe_order_targets(plan, used_symbol_refs_builder, &mut probe_state);
 
     // Populate exactly the nested re-export records and per-record overlays `lower_order_state`

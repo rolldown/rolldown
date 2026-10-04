@@ -407,6 +407,18 @@ fn collect_esm_init_targets_for_record(
     return targets;
   }
 
+  let importee_owns_initialization = forwarding_module_owns_initialization(importee_idx);
+  // A barrel wrapper reached through a required intermediary cannot initialize leaves that code
+  // splitting placed in this importer. Follow bindings only for that cross-chunk require path.
+  let importee_has_required_importer =
+    if ctx.strict_execution_order && !importee_owns_initialization {
+      ctx.modules[importee_idx].as_normal().is_some_and(|module| {
+        module.importers_idx.iter().any(|idx| ctx.order_wrap_state.is_required_module(*idx))
+      })
+    } else {
+      false
+    };
+  let trace_cross_chunk_required_reexports = importee_has_required_importer;
   if wrapped_esm_target_is_reachable(
     importee_idx,
     importee_meta,
@@ -415,7 +427,9 @@ fn collect_esm_init_targets_for_record(
   ) {
     if !route_through_transparent_wrapper {
       targets.push(WrappedEsmInitTarget::Module(importee_idx));
-      return targets;
+      if !trace_cross_chunk_required_reexports {
+        return targets;
+      }
     }
   }
 
@@ -507,6 +521,13 @@ fn collect_esm_init_targets_for_record(
     targets.retain(|target| !discharged.contains(target));
   }
 
+  if trace_cross_chunk_required_reexports {
+    targets.retain(|target| {
+      target.owner() == importee_idx
+        || matches!(target, WrappedEsmInitTarget::Module(module_idx)
+          if forwarding_module_owns_initialization(*module_idx))
+    });
+  }
   if route_through_transparent_wrapper {
     targets.sort_by_key(|target| consumer_local_target_order(ctx, importee_idx, *target));
   }

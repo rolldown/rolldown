@@ -309,7 +309,8 @@ impl GenerateStage<'_> {
   ///   through it (asserted in `compute_cross_chunk_links`). So no facade edge is constructible.
   ///
   /// Unioning the projected edges with the baseline value/side-effect edges still over-approximates
-  /// the real post-lowering topology — it omits the wrapping's own liveness suppression — which is
+  /// the real post-lowering topology — it omits the wrapping's own liveness suppression, and it
+  /// keeps the records of a re-export-transparent wrapper, which registration skips — which is
   /// sound: extra edges only ever wrap more, and wrapping more is always legal (wrap-all wraps
   /// everything and is the standing correctness proof).
   ///

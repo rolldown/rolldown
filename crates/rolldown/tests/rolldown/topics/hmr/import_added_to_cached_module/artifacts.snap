@@ -54,7 +54,7 @@ __rolldown_runtime__.registerModule("main.js", { exports: main_exports });
 ## Code
 
 ```js
-__rolldown_runtime__.registerGraph({ids:["adder.js","lib.js"],localCount:1,edges:[[1]]});
+__rolldown_runtime__.registerGraph({ids:["adder.js","lib.js"],localCount:2,edges:[[1],[]]});
 //#region adder.js
 __rolldown_runtime__.registerFactory("adder.js", (function(__rolldown_module_id__) {
 	try {
@@ -65,6 +65,17 @@ __rolldown_runtime__.registerFactory("adder.js", (function(__rolldown_module_id_
 		const hot_adder = __rolldown_runtime__.createModuleHotContext(__rolldown_module_id__);
 		const tag = `adder-${import_lib_00.value}`;
 		hot_adder.accept();
+	} finally {}
+}));
+
+//#endregion
+//#region lib.js
+__rolldown_runtime__.registerFactory("lib.js", (function(__rolldown_module_id__) {
+	try {
+		var __rolldown_exports__ = __rolldown_runtime__.__exportAll({ value: () => value });
+		__rolldown_runtime__.registerModule(__rolldown_module_id__, { exports: __rolldown_exports__ });
+		const hot_lib = __rolldown_runtime__.createModuleHotContext(__rolldown_module_id__);
+		const value = "lib";
 	} finally {}
 }));
 

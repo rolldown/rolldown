@@ -242,15 +242,13 @@ impl DevEngine {
     loop {
       loop_count += 1;
       if loop_count > 100 {
-        if cfg!(debug_assertions) {
-          panic!(
-            "[DevEngine] ensure_latest_bundle_output has looped {loop_count} times, something is definitely wrong",
-          );
-        } else {
-          tracing::warn!(
-            "[DevEngine] ensure_latest_bundle_output has looped {loop_count} times, something might be wrong",
-          );
-        }
+        debug_assert!(
+          false,
+          "[DevEngine] ensure_latest_bundle_output has looped {loop_count} times, something is definitely wrong",
+        );
+        tracing::warn!(
+          "[DevEngine] ensure_latest_bundle_output has looped {loop_count} times, something might be wrong",
+        );
         break;
       }
       let (reply_sender, reply_receiver) = tokio::sync::oneshot::channel();

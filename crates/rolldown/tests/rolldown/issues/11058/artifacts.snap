@@ -1,0 +1,36 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+import { InjectionToken, Injector } from "ext";
+export { InjectionToken, Injector };
+
+```
+
+# Variant: [format: Cjs]
+
+## Assets
+
+### main.js
+
+```js
+Object.defineProperty(exports, Symbol.toStringTag, { value: "Module" });
+let ext = require("ext");
+Object.defineProperty(exports, "InjectionToken", {
+	enumerable: true,
+	get: function() {
+		return ext.InjectionToken;
+	}
+});
+Object.defineProperty(exports, "Injector", {
+	enumerable: true,
+	get: function() {
+		return ext.Injector;
+	}
+});
+
+```

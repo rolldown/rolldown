@@ -2975,6 +2975,7 @@ version = "1.2.12"
 dependencies = [
  "anyhow",
  "arcstr",
+ "json-escape-simd",
  "memchr",
  "oxc",
  "rolldown_common",
@@ -3048,6 +3049,7 @@ dependencies = [
 name = "rolldown_plugin_vite_json"
 version = "0.1.0"
 dependencies = [
+ "json-escape-simd",
  "memchr",
  "rolldown_common",
  "rolldown_plugin",

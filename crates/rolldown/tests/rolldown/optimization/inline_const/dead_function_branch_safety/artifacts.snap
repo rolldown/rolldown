@@ -1,0 +1,250 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## a.js
+
+```js
+import { a as enable, i as object, n as live, o as mutable, r as mutableHelper, t as dead } from "./internal.js";
+
+//#region effect.js
+globalThis.branchEffects.push("import");
+
+//#endregion
+//#region a.js
+function a() {
+	{
+		globalThis.branchEffects.push("test"), false;
+	}
+	{}
+	{
+		globalThis.branchEffects.push("live branch");
+	}
+	0, false;
+	0, true;
+	0, true;
+	null ?? globalThis.branchEffects.push("nullish");
+	globalThis.branchEffects.push((false, "ternary"));
+	if (mutable) return mutableHelper();
+	return live();
+}
+function hoisted() {
+	if (false) var value = dead();
+	return value;
+}
+function shadowed(DEV) {
+	if (DEV) return live();
+	return "shadowed";
+}
+function indirectLogical() {
+	return (object.method || (0, false))();
+}
+function indirectConditional() {
+	return (true, object.method)();
+}
+function throwingCondition() {
+	{
+		(() => {
+			throw new Error("condition");
+		})(), false;
+	}
+}
+function nested(outer) {
+	if (outer) {
+		{
+			return "nested";
+		}
+	}
+	return "neither";
+}
+function lexical() {
+	const value = "outer";
+	{
+		globalThis.branchEffects.push("inner");
+	}
+	return value;
+}
+
+//#endregion
+export { a, enable, hoisted, indirectConditional, indirectLogical, lexical, nested, shadowed, throwingCondition };
+```
+
+## b.js
+
+```js
+import { n as live } from "./internal.js";
+
+//#region b.js
+function b() {
+	{}
+	return true, live();
+}
+
+//#endregion
+export { b };
+```
+
+## internal.js
+
+```js
+//#region env.js
+let mutable = false;
+function enable() {
+	mutable = true;
+}
+
+//#endregion
+//#region internal.js
+function dead() {
+	throw new Error("dead helper retained");
+}
+function live() {
+	return "live";
+}
+function mutableHelper() {
+	return "mutable";
+}
+const object = { method() {
+	return this;
+} };
+
+//#endregion
+export { enable as a, object as i, live as n, mutable as o, mutableHelper as r, dead as t };
+```
+
+# Variant: [minify: true]
+
+## Assets
+
+### a.js
+
+```js
+import{a as e,i as t,n,o as r,r as i}from"./internal.js";globalThis.branchEffects.push(`import`);function a(){return globalThis.branchEffects.push(`test`),globalThis.branchEffects.push(`live branch`),globalThis.branchEffects.push(`nullish`),globalThis.branchEffects.push(`ternary`),r?i():n()}function o(){if(0)var e;return e}function s(e){return e?n():`shadowed`}function c(){return(t.method||!1)()}function l(){return(0,t.method)()}function u(){(()=>{throw Error(`condition`)})()}function d(e){return e?`nested`:`neither`}function f(){return globalThis.branchEffects.push(`inner`),`outer`}export{a,e as enable,o as hoisted,l as indirectConditional,c as indirectLogical,f as lexical,d as nested,s as shadowed,u as throwingCondition};
+```
+
+### b.js
+
+```js
+import{n as e}from"./internal.js";function t(){return e()}export{t as b};
+```
+
+### internal.js
+
+```js
+let e=!1;function t(){e=!0}function n(){throw Error(`dead helper retained`)}function r(){return`live`}function i(){return`mutable`}const a={method(){return this}};export{t as a,a as i,r as n,e as o,i as r,n as t};
+```
+
+# Variant: [inline_const: Config(InlineConstConfig { mode: Some(All), pass: 1 })]
+
+## Assets
+
+### a.js
+
+```js
+import { a as enable, i as object, n as live, o as mutable, r as mutableHelper, t as dead } from "./internal.js";
+
+//#region effect.js
+globalThis.branchEffects.push("import");
+
+//#endregion
+//#region a.js
+function a() {
+	{
+		globalThis.branchEffects.push("test"), false;
+	}
+	{}
+	{
+		globalThis.branchEffects.push("live branch");
+	}
+	0, false;
+	0, true;
+	0, true;
+	null ?? globalThis.branchEffects.push("nullish");
+	globalThis.branchEffects.push((false, "ternary"));
+	if (mutable) return mutableHelper();
+	return live();
+}
+function hoisted() {
+	if (false) var value = dead();
+	return value;
+}
+function shadowed(DEV) {
+	if (DEV) return live();
+	return "shadowed";
+}
+function indirectLogical() {
+	return (object.method || (0, false))();
+}
+function indirectConditional() {
+	return (true, object.method)();
+}
+function throwingCondition() {
+	{
+		(() => {
+			throw new Error("condition");
+		})(), false;
+	}
+}
+function nested(outer) {
+	if (outer) {
+		{
+			return "nested";
+		}
+	}
+	return "neither";
+}
+function lexical() {
+	const value = "outer";
+	{
+		globalThis.branchEffects.push("inner");
+	}
+	return value;
+}
+
+//#endregion
+export { a, enable, hoisted, indirectConditional, indirectLogical, lexical, nested, shadowed, throwingCondition };
+```
+
+### b.js
+
+```js
+import { n as live } from "./internal.js";
+
+//#region b.js
+function b() {
+	{}
+	return true, live();
+}
+
+//#endregion
+export { b };
+```
+
+### internal.js
+
+```js
+//#region env.js
+let mutable = false;
+function enable() {
+	mutable = true;
+}
+
+//#endregion
+//#region internal.js
+function dead() {
+	throw new Error("dead helper retained");
+}
+function live() {
+	return "live";
+}
+function mutableHelper() {
+	return "mutable";
+}
+const object = { method() {
+	return this;
+} };
+
+//#endregion
+export { enable as a, object as i, live as n, mutable as o, mutableHelper as r, dead as t };
+```

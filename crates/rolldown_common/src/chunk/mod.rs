@@ -106,7 +106,7 @@ pub struct Chunk {
   pub chunk_reason_type: Box<ChunkReasonType>,
   pub preserve_entry_signature: Option<PreserveEntrySignatures>,
   pub depended_runtime_helper: RuntimeHelper,
-  /// Externals this entry chunk re-exports as a whole, sorted by exec order.
+  /// The externals that this entry chunk re-exports at entry level, sorted by exec order.
   pub entry_level_externals: Vec<EntryLevelExternal>,
   pub insert_map: FxHashMap<ModuleIdx, Vec<(ModuleIdx, ImportRecordIdx)>>,
   pub remove_map: FxHashMap<ModuleIdx, Vec<ImportRecordIdx>>,

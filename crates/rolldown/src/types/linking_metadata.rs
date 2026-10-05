@@ -142,11 +142,12 @@ impl LinkingMetadata {
   ///
   /// This is the single source of truth for the emission decision: the module finalizer emits
   /// the call through it, and any pass that needs to predict the emission must call it instead
-  /// of re-deriving the condition. In ESM output an entry-level external star
-  /// re-export (`is_entry_level`, from `ChunkGraph::is_entry_level_star_record`) is flattened to a
-  /// chunk-level `export * from '<external>'` statement instead, so no runtime call is needed —
-  /// unless the namespace object is genuinely observed ([`ModuleNamespaceIncludedReason::Unknown`]),
-  /// in which case the namespace must still merge the external's exports at runtime.
+  /// of re-deriving the condition. In ESM output, the entry chunk prints an entry-level star
+  /// record as a chunk-level `export * from '<external>'` statement. `is_entry_level` is true for
+  /// such a record (see `ChunkGraph::is_entry_level_star_record`). Then the namespace needs no
+  /// runtime call. The exception is a namespace object with the
+  /// [`ModuleNamespaceIncludedReason::Unknown`] reason. Code can observe that object, so it must
+  /// still merge the exports of the external at runtime.
   pub fn ns_star_external_re_export_emitted(
     &self,
     is_entry_level: bool,

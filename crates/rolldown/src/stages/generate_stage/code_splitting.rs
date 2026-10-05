@@ -668,8 +668,9 @@ impl GenerateStage<'_> {
     self.link_output.retained_export_symbols = retained;
   }
 
-  /// Fills each live entry chunk's `entry_level_externals` and `entry_level_star_records`, then
-  /// re-propagates `has_dynamic_exports` for the modules whose external star records changed.
+  /// Rebuilds `Chunk::entry_level_externals` for each live entry chunk, and
+  /// `ChunkGraph::entry_level_star_records`. Then it re-propagates `has_dynamic_exports` for the
+  /// modules whose entry-level star records changed.
   /// See internal-docs/external-star-exports/implementation.md.
   pub(super) fn find_entry_level_external_module(&mut self, chunk_graph: &mut ChunkGraph) {
     let previous_records = std::mem::take(&mut chunk_graph.entry_level_star_records);
@@ -679,8 +680,8 @@ impl GenerateStage<'_> {
 
     let module_table = &self.link_output.module_table;
     let graph = &*chunk_graph;
-    // Walk the `export * from` edges from each live entry module, in breadth-first order. Each
-    // external record on the way is re-exported by that entry chunk.
+    // The walk follows the `export *` edges from each live entry module, in breadth-first order.
+    // The entry chunk re-exports at entry level each external that the walk reaches.
     let walks = graph
       .chunk_table
       .par_iter_enumerated()
@@ -694,7 +695,7 @@ impl GenerateStage<'_> {
         let mut queue = VecDeque::from([*module]);
         let mut visited = FxHashSet::default();
         let mut records: Vec<(ModuleIdx, ImportRecordIdx)> = vec![];
-        // Each external, with its first record that has import attributes.
+        // Maps each external to its first record that has a `with` clause.
         let mut externals: FxHashMap<ModuleIdx, Option<(ModuleIdx, ImportRecordIdx)>> =
           FxHashMap::default();
         while let Some(module_idx) = queue.pop_front() {
@@ -734,16 +735,17 @@ impl GenerateStage<'_> {
           attribute_record,
         })
         .collect_vec();
-      // Statically imported externals have distinct exec orders, so the map's order doesn't leak.
+      // Each statically imported external has a different exec order, so the order of the hash
+      // map does not change the result.
       externals.sort_unstable_by_key(|item| module_table[item.external_idx].exec_order());
       chunk_graph.chunk_table[chunk_idx].entry_level_externals = externals;
       chunk_graph.entry_level_star_records.extend(records);
     }
 
-    // Seed with the modules whose external star records are flattened now or were flattened by the
-    // previous walk, so a record that is no longer flattened gets its dynamic exports back. A
-    // module whose namespace is observed (`Unknown`) keeps merging the external at runtime, so it
-    // stays dynamic.
+    // The seeds are the modules with an entry-level star record from this walk or from the
+    // previous walk. Thus a module whose record is no longer at entry level gets its dynamic
+    // exports back. A module with an observed namespace (`Unknown`) still merges the external at
+    // runtime. Thus it stays dynamic, and it is not a seed.
     let mut invalidated_modules: FxHashSet<ModuleIdx> = chunk_graph
       .entry_level_star_records
       .iter()

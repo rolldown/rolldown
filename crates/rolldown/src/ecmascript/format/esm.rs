@@ -68,9 +68,9 @@ pub fn render_esm<'code>(
         let importee = &ctx.link_output.module_table[entry_level.external_idx];
         if let Some(m) = importee.as_external() {
           let ext_name = m.get_import_path(ctx.chunk, ctx.resolved_paths);
-          // Preserve the `with { ... }` import attribute from the originating
-          // `export * from "..." with { ... }` record (issue #9160) instead of dropping it. The
-          // entry's export-star walk picked the record (see `EntryLevelExternal`).
+          // Keep the `with { ... }` clause of the `export * from "..." with { ... }` record
+          // (issue #9160). The `export *` walk of the entry chose this record (see
+          // `EntryLevelExternal`).
           let with_clause = entry_level.attribute_record.and_then(|(module_idx, rec_idx)| {
             ctx.link_output.module_table[module_idx].as_normal()?.import_attribute_map.get(&rec_idx)
           });

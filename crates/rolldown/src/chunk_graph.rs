@@ -32,8 +32,9 @@ pub struct ChunkGraph {
   ///
   /// We use the second approach to avoid the overhead of re-indexing at the cost of some extra memory.
   pub post_chunk_optimization_operations: FxHashMap<ChunkIdx, PostChunkOptimizationOperation>,
-  /// `export * from '<external>'` records that some live entry chunk re-exports at entry level
-  /// (see `Chunk::entry_level_externals`). Rebuilt together with those lists.
+  /// The `export * from '<external>'` records that at least one live entry chunk re-exports at
+  /// entry level (see `Chunk::entry_level_externals`). `find_entry_level_external_module` rebuilds
+  /// this set and those lists together.
   pub entry_level_star_records: FxHashSet<(ModuleIdx, ImportRecordIdx)>,
 }
 
@@ -53,8 +54,8 @@ impl ChunkGraph {
     }
   }
 
-  /// Whether some live entry chunk re-exports this `export * from '<external>'` record at entry
-  /// level.
+  /// Returns true if at least one live entry chunk re-exports this `export * from '<external>'`
+  /// record at entry level.
   pub fn is_entry_level_star_record(
     &self,
     module_idx: ModuleIdx,

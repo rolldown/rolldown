@@ -26,7 +26,12 @@ Object.defineProperty(exports, Symbol.toStringTag, { value: "Module" });
 const require_rolldown_runtime = require("./rolldown-runtime.js");
 let node_https = require("node:https");
 node_https = require_rolldown_runtime.__toESM(node_https);
-exports.d = node_https.default;
+Object.defineProperty(exports, "d", {
+	enumerable: true,
+	get: function() {
+		return node_https.default;
+	}
+});
 
 ```
 

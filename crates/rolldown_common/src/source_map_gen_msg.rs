@@ -1,14 +1,11 @@
-use arcstr::ArcStr;
-use string_wizard::MagicString;
+use std::sync::Arc;
 
-use crate::PluginIdx;
+use crate::PendingSourcemap;
 
 #[derive(Debug)]
 pub enum SourceMapGenMsg {
-  /// `(module_idx, plugin_idx, module_id, magic_string)`.
-  ///
-  /// `module_id` is carried so the sourcemap worker can fill the generated
-  /// map's `source` with it
-  MagicString(Box<(crate::ModuleIdx, PluginIdx, ArcStr, MagicString<'static>)>),
+  /// Ask the sourcemap worker to generate the map. The plugin driver sends it
+  /// once the module's transform hooks are done. See `PendingSourcemap`.
+  MagicString(Arc<PendingSourcemap>),
   Terminate,
 }

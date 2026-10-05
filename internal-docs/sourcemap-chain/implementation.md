@@ -9,7 +9,8 @@ Each module keeps a `sourcemap_chain` of the maps that the `load` and `transform
 `SourcemapChainElement` (`crates/rolldown_common/src/types/sourcemap_chain_element.rs`):
 
 - `Load(map)`: the `load` hook map (`crates/rolldown/src/utils/load_source.rs`). It is always first.
-- `Transform((plugin_idx, map))`: a `transform` hook map (`PluginDriver::transform` in `crates/rolldown_plugin/src/plugin_driver/build_hooks.rs`), or a native MagicString map (`create_sourcemap_channel` in `crates/rolldown/src/stages/scan_stage.rs`).
+- `Transform((plugin_idx, map))`: a `transform` hook map (`PluginDriver::transform` in `crates/rolldown_plugin/src/plugin_driver/build_hooks.rs`).
+- `MagicString((plugin_idx, pending))`: the map of a native MagicString that a `transform` hook returned without a `map`, when `experimental.nativeMagicString` and source maps are on. `PluginDriver::transform` adds it in plugin order. `PendingSourcemap` generates the map on first use: in `this.getCombinedSourcemap()` of a later hook, or else on the sourcemap worker thread (`create_sourcemap_channel` in `crates/rolldown/src/stages/scan_stage.rs`) after the module's last `transform` hook. The scan stage joins the worker, so every map exists before render.
 - `Omitted`: the hook returned code without a map, even if the code did not change. It collapses as an empty map, so the module map has no mappings, and the build warns `SOURCEMAP_BROKEN`.
 - `Null`: the hook changed the code and returned `map: null`. Positions pass through unchanged. If no real map is in the chain, its pre-transform code becomes the content.
 

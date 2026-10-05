@@ -84,6 +84,9 @@ pub fn collapse_module_sourcemap(
       SourcemapChainElement::Transform((_, sourcemap)) | SourcemapChainElement::Load(sourcemap) => {
         owned_chain.push(sourcemap);
       }
+      SourcemapChainElement::MagicString((_, pending)) => {
+        owned_chain.push(pending.get());
+      }
       SourcemapChainElement::Omitted { plugin_name, .. } => {
         owned_chain.push(&empty);
         warnings.push(

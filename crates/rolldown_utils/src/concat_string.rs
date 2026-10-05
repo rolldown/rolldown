@@ -45,18 +45,38 @@
 /// ```
 macro_rules! concat_string {
     () => { String::with_capacity(0) };
-    ($($s:expr_2021),+) => {{
-        use std::ops::AddAssign;
-        let mut len = 0;
-        $(len.add_assign(AsRef::<str>::as_ref(&$s).len());)+
-        let mut buf = String::with_capacity(len);
-        $(buf.push_str($s.as_ref());)+
-        buf
-    }};
+    // Each argument is evaluated exactly once, so an expensive call such as `escape(..)` can be
+    // passed inline. Temporaries live until the end of the enclosing statement.
+    ($($s:expr_2021),+) => {
+        $crate::concat_string::concat_strs([$(AsRef::<str>::as_ref(&$s)),+])
+    };
+}
+
+#[doc(hidden)]
+#[inline]
+pub fn concat_strs<const N: usize>(parts: [&str; N]) -> String {
+  let len = parts.iter().map(|s| s.len()).sum();
+  let mut buf = String::with_capacity(len);
+  for s in parts {
+    buf.push_str(s);
+  }
+  buf
 }
 
 #[cfg(test)]
 mod tests {
+  #[test]
+  fn concat_string_evaluates_each_argument_once() {
+    let mut calls = 0;
+    let mut next = || {
+      calls += 1;
+      String::from("bar")
+    };
+    let s = concat_string!("foo", next(), "baz");
+    assert_eq!(s, String::from("foobarbaz"));
+    assert_eq!(calls, 1);
+  }
+
   #[test]
   fn concat_string_0_args() {
     let s = concat_string!();

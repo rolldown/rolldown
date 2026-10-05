@@ -143,7 +143,9 @@ impl HybridRegex {
 
   pub fn replace<'a>(&self, haystack: &'a str, replacement: &str) -> Cow<'a, str> {
     match &self.0 {
-      HybridRegexInner::Optimized(regex) => regex.replace(haystack, replacement),
+      HybridRegexInner::Optimized(regex) => {
+        regex.replace(haystack, brace_numbered_captures(replacement).as_ref())
+      }
       HybridRegexInner::Ecma(_) => {
         // `regress` uses regex-crate-style replacement tokens, not full
         // `String.prototype.replace` semantics. Numbered captures match JS and
@@ -155,7 +157,9 @@ impl HybridRegex {
 
   pub fn replace_all<'a>(&self, haystack: &'a str, replacement: &str) -> Cow<'a, str> {
     match &self.0 {
-      HybridRegexInner::Optimized(regex) => regex.replace_all(haystack, replacement),
+      HybridRegexInner::Optimized(regex) => {
+        regex.replace_all(haystack, brace_numbered_captures(replacement).as_ref())
+      }
       HybridRegexInner::Ecma(_) => self.replace_all_ecma(haystack, replacement),
     }
   }
@@ -189,6 +193,47 @@ impl HybridRegex {
   fn uses_ecma(&self) -> bool {
     matches!(self.0, HybridRegexInner::Ecma(_))
   }
+}
+
+/// Rewrites `$N` to `${N}` for the `regex` crate.
+///
+/// The `regex` crate reads the longest possible group name after `$`, so `$1Icon` is the
+/// (missing) group named `1Icon` and expands to nothing. JavaScript and the `regress` fallback
+/// end a numbered reference at the first non-digit: `$1Icon` is capture 1 followed by `Icon`.
+/// Bracing the digits gives the optimized path the same result.
+fn brace_numbered_captures(replacement: &str) -> Cow<'_, str> {
+  if !replacement.contains('$') {
+    return Cow::Borrowed(replacement);
+  }
+  let bytes = replacement.as_bytes();
+  let mut result = String::with_capacity(replacement.len() + 4);
+  let mut copied_until = 0;
+  let mut i = 0;
+  while i < bytes.len() {
+    if bytes[i] != b'$' {
+      i += 1;
+      continue;
+    }
+    if bytes.get(i + 1) == Some(&b'$') {
+      // `$$` is a literal `$`; skip both so the second one can't start a reference.
+      i += 2;
+      continue;
+    }
+    let digits_end = i + 1 + bytes[i + 1..].iter().take_while(|b| b.is_ascii_digit()).count();
+    if digits_end > i + 1 {
+      result.push_str(&replacement[copied_until..=i]);
+      result.push('{');
+      result.push_str(&replacement[i + 1..digits_end]);
+      result.push('}');
+      copied_until = digits_end;
+    }
+    i = digits_end;
+  }
+  if copied_until == 0 {
+    return Cow::Borrowed(replacement);
+  }
+  result.push_str(&replacement[copied_until..]);
+  Cow::Owned(result)
 }
 
 #[cfg(test)]
@@ -227,6 +272,20 @@ mod test {
     let reg = HybridRegex::new(r"(\d+)(?=px)").unwrap();
     assert!(reg.uses_ecma());
     assert_eq!(reg.replace_all("10px 20px", "$1rem"), "10rempx 20rempx");
+  }
+
+  #[test]
+  fn optimized_replace_ends_numbered_capture_at_non_digit() {
+    // Same as JavaScript and the ECMAScript path: `$1Icon` is capture 1 followed by `Icon`.
+    let reg = HybridRegex::new(r"^@icons/(.*)$").unwrap();
+    assert!(!reg.uses_ecma());
+    assert_eq!(reg.replace("@icons/home", "/src/icons/$1Icon.vue"), "/src/icons/homeIcon.vue");
+    assert_eq!(reg.replace("@icons/home", "/src/icons/$1_icon.vue"), "/src/icons/home_icon.vue");
+    assert_eq!(reg.replace("@icons/home", "$$1:$0"), "$1:@icons/home");
+
+    let reg = HybridRegex::new(r"(\d+)px").unwrap();
+    assert!(!reg.uses_ecma());
+    assert_eq!(reg.replace_all("10px 20px", "$1rem"), "10rem 20rem");
   }
 
   #[test]

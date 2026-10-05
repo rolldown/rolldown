@@ -1,0 +1,19 @@
+crates/rolldown_utils/src/concat_string.rs
+  s_2092e3a36ee475::t_692defbafcbec1 48-63,68-79
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "c3465c60ec16191eacb43a3afce60a4028a04bad",
+  "prompts": {},
+  "sessions": {
+    "s_2092e3a36ee475": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "75281a3e-ba4e-470f-96d6-c5941cb02120",
+        "model": "unknown"
+      },
+      "human_author": "IWANABETHATGUY <iwanabethatguy@qq.com>"
+    }
+  }
+}

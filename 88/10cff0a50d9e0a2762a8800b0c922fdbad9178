@@ -1,0 +1,35 @@
+crates/rolldown/src/chunk_graph.rs
+  s_e4c6def3f81fc0::t_00e08d69e1e53b 35-37,57-58
+crates/rolldown/src/ecmascript/format/esm.rs
+  s_e4c6def3f81fc0::t_a94cbedc912bb7 71-73
+crates/rolldown/src/stages/generate_stage/code_splitting.rs
+  s_e4c6def3f81fc0::t_4b8fb6a184516f 671-673,683-684,698,738-739,745-748
+crates/rolldown/src/types/linking_metadata.rs
+  s_e4c6def3f81fc0::t_701971d08b40f6 145-150
+crates/rolldown_common/src/chunk/mod.rs
+  s_e4c6def3f81fc0::t_6ec799ba42eebc 109
+crates/rolldown_common/src/chunk/types/entry_level_external.rs
+  s_e4c6def3f81fc0::t_0115278171d56e 3-4,9-10
+internal-docs/code-splitting/implementation.md
+  s_e4c6def3f81fc0::t_14b239a1db0711 303
+internal-docs/external-star-exports/design.md
+  s_e4c6def3f81fc0::t_bcada592629d3d 5-15,19-23,27-28
+internal-docs/external-star-exports/implementation.md
+  s_e4c6def3f81fc0::t_e8d539db969f20 3,7-14,18-19,23,26-32,36-43,47-51,55
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "8810cff0a50d9e0a2762a8800b0c922fdbad9178",
+  "prompts": {},
+  "sessions": {
+    "s_e4c6def3f81fc0": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "5109669f-0417-4592-b207-141f5b4782b8",
+        "model": "unknown"
+      },
+      "human_author": "IWANABETHATGUY <iwanabethatguy@qq.com>"
+    }
+  }
+}

@@ -1,0 +1,257 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## a.js
+
+```js
+import { t as shared } from "./shared.js";
+//#region a.js
+const a = shared();
+//#endregion
+export { a };
+
+```
+
+## b.js
+
+```js
+import { t as shared } from "./shared.js";
+//#region b.js
+const b = shared();
+//#endregion
+export { b };
+
+```
+
+## main.js
+
+```js
+//#region main.js
+const load_a = () => import("./a.js");
+const load_b = () => import("./b.js");
+const load_named = () => import("./named.js");
+//#endregion
+export { load_a, load_b, load_named };
+
+```
+
+## named.js
+
+```js
+import { t as shared } from "./shared.js";
+//#region named.js
+const named = shared();
+//#endregion
+export { named };
+
+```
+
+## shared.js
+
+```js
+//#region warnings.js
+//#endregion
+//#region shared.js
+function shared() {
+	return "shared";
+}
+//#endregion
+export { shared as t };
+
+```
+
+# Variant: all: [inline_const: Config(InlineConstConfig { mode: Some(All), pass: 1 })]
+
+## Assets
+
+### a.js
+
+```js
+import { t as shared } from "./shared.js";
+//#region a.js
+const a = shared();
+//#endregion
+export { a };
+
+```
+
+### b.js
+
+```js
+import { t as shared } from "./shared.js";
+//#region b.js
+const b = shared();
+//#endregion
+export { b };
+
+```
+
+### main.js
+
+```js
+//#region main.js
+const load_a = () => import("./a.js");
+const load_b = () => import("./b.js");
+const load_named = () => import("./named.js");
+//#endregion
+export { load_a, load_b, load_named };
+
+```
+
+### named.js
+
+```js
+import { t as shared } from "./shared.js";
+//#region named.js
+const named = shared();
+//#endregion
+export { named };
+
+```
+
+### shared.js
+
+```js
+//#region warnings.js
+//#endregion
+//#region shared.js
+function shared() {
+	return "shared";
+}
+//#endregion
+export { shared as t };
+
+```
+
+# Variant: multi-pass: [inline_const: Config(InlineConstConfig { mode: Some(Smart), pass: 3 })]
+
+## Assets
+
+### a.js
+
+```js
+import { t as shared } from "./shared.js";
+//#region a.js
+const a = shared();
+//#endregion
+export { a };
+
+```
+
+### b.js
+
+```js
+import { t as shared } from "./shared.js";
+//#region b.js
+const b = shared();
+//#endregion
+export { b };
+
+```
+
+### main.js
+
+```js
+//#region main.js
+const load_a = () => import("./a.js");
+const load_b = () => import("./b.js");
+const load_named = () => import("./named.js");
+//#endregion
+export { load_a, load_b, load_named };
+
+```
+
+### named.js
+
+```js
+import { t as shared } from "./shared.js";
+//#region named.js
+const named = shared();
+//#endregion
+export { named };
+
+```
+
+### shared.js
+
+```js
+//#region warnings.js
+//#endregion
+//#region shared.js
+function shared() {
+	return "shared";
+}
+//#endregion
+export { shared as t };
+
+```
+
+# Variant: no-treeshake: [treeshake: Boolean(false)]
+
+## Assets
+
+### a.js
+
+```js
+import { t as shared } from "./shared.js";
+//#region a.js
+const a = shared();
+//#endregion
+export { a };
+
+```
+
+### b.js
+
+```js
+import { t as shared } from "./shared.js";
+//#region b.js
+const b = shared();
+//#endregion
+export { b };
+
+```
+
+### main.js
+
+```js
+//#region main.js
+const load_a = () => import("./a.js");
+const load_b = () => import("./b.js");
+const load_named = () => import("./named.js");
+//#endregion
+export { load_a, load_b, load_named };
+
+```
+
+### named.js
+
+```js
+import { t as shared } from "./shared.js";
+//#region named.js
+const named = shared();
+//#endregion
+export { named };
+
+```
+
+### shared.js
+
+```js
+//#region dev.js
+//#endregion
+//#region warnings.js
+function dead() {
+	console.log("DEAD");
+}
+//#endregion
+//#region shared.js
+function shared() {
+	return "shared";
+}
+//#endregion
+export { dead as n, shared as t };
+
+```

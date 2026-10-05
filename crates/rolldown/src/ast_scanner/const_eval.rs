@@ -82,5 +82,10 @@ pub fn try_extract_const_literal<'me, 'ast: 'me>(
   ctx: &ConstEvalCtx<'me, 'ast>,
   expr: &Expression<'ast>,
 ) -> Option<ConstantValue> {
+  if let Expression::TemplateLiteral(template) = expr
+    && template.is_no_substitution_template()
+  {
+    return template.single_quasi().map(|value| ConstantValue::String(value.to_string()));
+  }
   expr.evaluate_value(ctx).map(ConstantValue::from)
 }

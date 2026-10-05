@@ -2550,26 +2550,6 @@ dependencies = [
 
 [[package]]
 name = "rolldown-notify"
-version = "10.5.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e233e1c24e0f4d8dc82251f9196c03f7c77fba9a5ca45e64c2fc96a57726de99"
-dependencies = [
- "bitflags",
- "inotify",
- "kqueue",
- "libc",
- "mio",
- "objc2-core-foundation",
- "objc2-core-services",
- "rolldown-notify-types",
- "rustc-hash",
- "tracing",
- "walkdir",
- "windows-sys 0.61.2",
-]
-
-[[package]]
-name = "rolldown-notify"
 version = "11.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "43c65ad424b3737dcd3f32b96820fb77fea1a942fc6c7c54a788c68d7ace872e"
@@ -2595,7 +2575,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "32cc46781e5070fc3285f4a82d4a915afb27fb5f75ec53939739d7a04e03fc3f"
 dependencies = [
  "rolldown-file-id",
- "rolldown-notify 11.0.0",
+ "rolldown-notify",
  "rolldown-notify-types",
  "rustc-hash",
  "tracing",
@@ -2813,7 +2793,7 @@ dependencies = [
 name = "rolldown_fs_watcher"
 version = "1.2.12"
 dependencies = [
- "rolldown-notify 10.5.1",
+ "rolldown-notify",
  "rolldown-notify-debouncer-full",
  "rolldown_common",
  "rolldown_error",

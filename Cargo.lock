@@ -2519,7 +2519,6 @@ dependencies = [
  "serde_json",
  "serde_yaml",
  "smallvec",
- "string_wizard",
  "sugar_path",
  "testing_macros",
  "tokio",

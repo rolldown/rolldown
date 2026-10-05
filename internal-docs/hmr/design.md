@@ -142,6 +142,42 @@ subtracts the ship map only. The entry chunk is scope-hoisted (principle 3) and 
 re-runnable code. A patch that re-runs it must ship its factory once;
 after that the ship map covers it.
 
+Both kinds also carry what their own code reaches. A module that runs
+from a payload calls `initModule` on each static dep, and a dep that
+never ran in this client needs a factory. The server cannot see which
+modules ran, so it walks static imports (`collect_unheld_sync_deps`,
+`hmr_stage.rs`) and sorts each module it reaches:
+
+- **Boot-evaluated, current copy** — its exports are live. The walk
+  stops: the entry chunk ran its static deps too.
+- **Shipped, current copy** — not carried, but the walk goes through it.
+  A payload can carry a module the client never ran (a patch carries
+  importers of the changed module whether or not they ran), so its deps
+  may be missing.
+- **Anything else** — carried, and the walk goes through it.
+
+A lazy chunk walks from its entry. A patch walks only from the static
+imports the rebuild added: the new deps of a changed module and every
+dep of a new module. The old deps of a module that ran have run too.
+Walking from every carried module would ship the whole static closure
+whenever the boot-evaluated map is empty (several user entries). Even
+so, with an empty map an edit that adds an import can carry modules the
+client already ran. That costs bytes once; the ship map covers them
+afterwards.
+
+Example: tab B has not opened a route yet. An edit of `shared.js`
+carries `route.js` to tab B, because `route.js` imports `shared.js`.
+Tab B never runs it. When tab B opens the route, the lazy chunk walks
+through `route.js` and carries `dep.js`.
+
+```mermaid
+flowchart LR
+  main["main.js — boot-evaluated"] --> shared["shared.js — boot-evaluated: stop"]
+  main -. "import()" .-> route["route.js — shipped by the patch: walk through"]
+  route --> shared
+  route --> dep["dep.js — not held: carry"]
+```
+
 ### 3. The module graph ships as compiler data
 
 The client walk needs the import graph. Webpack learns it by
@@ -312,7 +348,9 @@ build error already on screen, the shared Vite client hook
 page never fully loaded.
 
 The engine emits a full reload on its own only when the graph must be
-rebuilt from scratch (a tsconfig change, `bundling_task.rs`). Vite's
+rebuilt from scratch: a tsconfig change, or an update that failed after
+it merged its edit into the graph, so no client received the edit
+(`bundling_task.rs`). Vite's
 server sends its own reload in two more places. Once after the initial
 build, for the fallback page. And when a page request finds the output
 stale or the last HMR stage failed (`triggerBundleRegenerationIfStale`,

@@ -13,7 +13,7 @@ use oxc::ast::builder::AstBuilder;
 use oxc_traverse::traverse_mut;
 use rolldown_common::{
   ClientHmrInput, ClientHmrUpdate, HmrLazyChunkOutput, HmrPatch, HmrStampTable, HmrUpdate,
-  ImportKind, Module, ModuleIdx, ModuleTable, ScanMode, WatcherChangeKind,
+  ImportKind, Module, ModuleIdx, ModuleTable, NormalModule, ScanMode, WatcherChangeKind,
 };
 use rolldown_ecmascript::{EcmaAst, EcmaCompiler, PrintCommentsOptions, PrintOptions};
 use rolldown_error::BuildResult;
@@ -48,6 +48,7 @@ pub struct HmrStageInput<'a, Fs: FileSystem + Clone + 'static> {
   pub resolver: SharedResolver<Fs>,
   pub plugin_driver: SharedPluginDriver,
   pub cache: &'a mut ScanStageCache,
+  pub lost_hmr_update: &'a mut bool,
   pub next_hmr_patch_id: Arc<AtomicU32>,
 }
 
@@ -113,6 +114,8 @@ impl<'a, Fs: FileSystem + Clone + 'static> HmrStage<'a, Fs> {
       clients = %clients.iter().map(|client| client.client_id).join(", "),
       "[HmrStage] starts computing HMR updates"
     );
+    // An earlier lost update stays lost: this one does not carry its edit.
+    let lost_before = *self.lost_hmr_update;
 
     // 1. Identify changed modules — per changed file: compute the default affected set, then (if
     // the hook is enabled and any plugin registered `hotUpdate`) let the plugin replace-chain
@@ -283,6 +286,16 @@ impl<'a, Fs: FileSystem + Clone + 'static> HmrStage<'a, Fs> {
         .collect::<FxHashMap<_, _>>()
     };
 
+    let modules = &self.module_table().modules;
+    let pre_rebuild_static_deps = changed_modules
+      .iter()
+      .filter_map(|module_idx| {
+        let module = modules[*module_idx].as_normal()?;
+        let deps = static_deps(module).map(|dep_idx| modules[dep_idx].id().clone());
+        Some((*module_idx, deps.collect::<FxHashSet<_>>()))
+      })
+      .collect::<FxHashMap<_, _>>();
+
     // 1. Do ONE module refetch and cache merge — the update-superset walk (which
     // selects the factories to ship) runs on the post-rebuild table; boundary
     // decisions belong to the client's own walk.
@@ -331,6 +344,8 @@ impl<'a, Fs: FileSystem + Clone + 'static> HmrStage<'a, Fs> {
         "added modules"
       );
 
+      // From here on, a failure leaves the graph with an edit that no client received.
+      *self.lost_hmr_update = true;
       let plugin_driver = Arc::clone(&self.plugin_driver);
       self.cache.merge(module_loader_output.into(), &plugin_driver)?;
 
@@ -400,6 +415,19 @@ impl<'a, Fs: FileSystem + Clone + 'static> HmrStage<'a, Fs> {
       })
       .collect::<Vec<_>>();
 
+    // A re-run importer needs a factory for each import the rebuild added.
+    let modules = &self.module_table().modules;
+    let added_static_deps = changed_modules
+      .iter()
+      .chain(new_added_modules.iter())
+      .filter_map(|module_idx| modules[*module_idx].as_normal())
+      .flat_map(|module| {
+        let before = pre_rebuild_static_deps.get(&module.idx);
+        static_deps(module)
+          .filter(move |dep| before.is_none_or(|before| !before.contains(modules[*dep].id())))
+      })
+      .collect::<FxIndexSet<_>>();
+
     let mut affected = self.collect_client_update_superset(&changed_modules);
     affected.extend(new_added_modules.iter().copied());
     affected.retain(|idx| self.module_table().modules[*idx].is_normal());
@@ -447,10 +475,26 @@ impl<'a, Fs: FileSystem + Clone + 'static> HmrStage<'a, Fs> {
         }
       }
 
+      if !added_static_deps.is_empty() {
+        let held = ClientHeldCopies {
+          shipped: client.shipped,
+          evaluated: client.top_level_evaluated,
+          stamp_table,
+        };
+        self.collect_unheld_sync_deps(
+          &[],
+          added_static_deps.iter().copied(),
+          None,
+          &held,
+          &mut carried,
+        );
+      }
+
       let update = self.render_hmr_patch(carried, changed_ids.clone(), stamp_table).await?;
       client_updates.push(ClientHmrUpdate { client_id: client.client_id.to_string(), update });
     }
 
+    *self.lost_hmr_update = lost_before;
     Ok(client_updates)
   }
 
@@ -595,18 +639,14 @@ impl<'a, Fs: FileSystem + Clone + 'static> HmrStage<'a, Fs> {
     let options = Arc::clone(&self.options);
     self.cache.update_defer_sync_data(&options).await?;
 
-    // Collect all sync dependencies, stopping at modules whose current copy this client
-    // already holds — factory resident per the ship map, or exports live per the
-    // top-level-evaluated map. Overlapping concurrent lazy compiles both see an
-    // unmarked ship map and re-ship shared factories — duplicate idempotent bytes, never
-    // a missing factory.
     let mut modules_to_be_updated = FxIndexSet::default();
-    self.collect_sync_dependencies_for_client(
-      entry_module_idx,
+    modules_to_be_updated.insert(entry_module_idx);
+    self.collect_unheld_sync_deps(
+      &[entry_module_idx],
+      [],
+      Some(entry_module_idx),
+      &ClientHeldCopies { shipped, evaluated, stamp_table },
       &mut modules_to_be_updated,
-      shipped,
-      evaluated,
-      stamp_table,
     );
 
     // Remove external modules - no way to "compile" them
@@ -955,54 +995,72 @@ struct ModuleRenderInput {
   pub ecma_ast: EcmaAst,
 }
 
+struct ClientHeldCopies<'a> {
+  shipped: &'a FxHashMap<ArcStr, u32>,
+  evaluated: &'a FxHashMap<ArcStr, u32>,
+  stamp_table: &'a HmrStampTable,
+}
+
+impl ClientHeldCopies<'_> {
+  fn holds_current(&self, map: &FxHashMap<ArcStr, u32>, stable_id: &str) -> bool {
+    map.get(stable_id).is_some_and(|stamp| !self.stamp_table.is_stale(stable_id, *stamp))
+  }
+}
+
+fn static_deps(module: &NormalModule) -> impl Iterator<Item = ModuleIdx> + '_ {
+  module
+    .import_records
+    .iter()
+    .filter(|rec| rec.kind.is_static())
+    .filter_map(|rec| rec.resolved_module)
+}
+
 impl<Fs: FileSystem + Clone + 'static> HmrStage<'_, Fs> {
-  fn collect_sync_dependencies_for_client(
+  /// Goes through shipped modules: a patch can carry a module the client never ran. See
+  /// internal-docs/hmr/design.md, principle 2. `walk_from` modules are never carried.
+  fn collect_unheld_sync_deps(
     &self,
-    proxy_entry_idx: ModuleIdx,
-    result: &mut FxIndexSet<ModuleIdx>,
-    shipped: &FxHashMap<ArcStr, u32>,
-    evaluated: &FxHashMap<ArcStr, u32>,
-    stamp_table: &HmrStampTable,
+    walk_from: &[ModuleIdx],
+    targets: impl IntoIterator<Item = ModuleIdx>,
+    follow_dynamic_of: Option<ModuleIdx>,
+    held: &ClientHeldCopies<'_>,
+    out: &mut FxIndexSet<ModuleIdx>,
   ) {
     let modules = &self.module_table().modules;
-    let mut stack = vec![proxy_entry_idx];
+    let mut visited = walk_from.iter().copied().collect::<FxHashSet<_>>();
+    let mut to_walk = walk_from.to_vec();
+    let mut to_sort = targets.into_iter().collect::<Vec<_>>();
 
-    while let Some(module_idx) = stack.pop() {
-      if !result.insert(module_idx) {
-        continue;
+    loop {
+      while let Some(module_idx) = to_sort.pop() {
+        if !visited.insert(module_idx) {
+          continue;
+        }
+        let Module::Normal(module) = &modules[module_idx] else {
+          continue;
+        };
+        let stable_id = module.stable_id.as_str();
+        if held.holds_current(held.evaluated, stable_id) {
+          continue;
+        }
+        if !held.holds_current(held.shipped, stable_id) {
+          out.insert(module_idx);
+        }
+        to_walk.push(module_idx);
       }
 
+      let Some(module_idx) = to_walk.pop() else {
+        break;
+      };
       let Module::Normal(module) = &modules[module_idx] else {
         continue;
       };
-
       for rec in &module.import_records {
-        // For the proxy entry module, also follow dynamic imports.
-        // The proxy's fetched template has `import($MODULE_ID)` pointing to the real module.
-        // We need to include the real module and its sync dependencies in the patch.
-        let should_follow = rec.kind.is_static()
-          || (module_idx == proxy_entry_idx && rec.kind == ImportKind::DynamicImport);
-
-        if should_follow && let Some(dep_idx) = rec.resolved_module {
-          // A module with N importers hits this edge check N times; the cheap
-          // visited test spares the ship-map string hashing for all but the first.
-          if result.contains(&dep_idx) {
-            continue;
-          }
-          if let Module::Normal(normal_dep) = &modules[dep_idx] {
-            // Skip deps whose current copy this client already holds: factory
-            // resident per the ship map, or exports live per the top-level-evaluated
-            // map (a lazy import never re-runs an evaluated module, so
-            // `initModule` serves it without a factory).
-            let stable_id = normal_dep.stable_id.as_str();
-            let holds_current = |map: &FxHashMap<ArcStr, u32>| {
-              map.get(stable_id).is_some_and(|stamp| !stamp_table.is_stale(stable_id, *stamp))
-            };
-            if holds_current(shipped) || holds_current(evaluated) {
-              continue;
-            }
-          }
-          stack.push(dep_idx);
+        // The proxy entry's fetched template reaches the real module through `import()`.
+        let follow = rec.kind.is_static()
+          || (Some(module_idx) == follow_dynamic_of && rec.kind == ImportKind::DynamicImport);
+        if follow && let Some(dep_idx) = rec.resolved_module {
+          to_sort.push(dep_idx);
         }
       }
     }

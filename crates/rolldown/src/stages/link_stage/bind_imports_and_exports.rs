@@ -19,7 +19,10 @@ use rolldown_error::{
 #[cfg(not(target_family = "wasm"))]
 use rolldown_utils::rayon::IndexedParallelIterator;
 use rolldown_utils::{
-  ecmascript::{is_validate_identifier_name, legitimize_identifier_name},
+  ecmascript::{
+    is_validate_identifier_name, legitimize_identifier_name,
+    none_preserved_keyword_or_global_object_ext,
+  },
   index_vec_ext::{IndexVecExt, IndexVecRefExt},
   indexmap::{FxIndexMap, FxIndexSet},
   rayon::{IntoParallelRefIterator, IntoParallelRefMutIterator, ParallelIterator},
@@ -198,6 +201,62 @@ impl ImportStatus {
   }
 }
 
+/// A binding of an external module, as an `export *` candidate resolves to it.
+///
+/// `ResolveExport` treats candidates as one export when they resolve to the same
+/// `(module, binding name)`. Bindings declared in the bundle are told apart by their canonical
+/// symbol, but an external module declares none: every module importing from it keeps a local
+/// binding of its own (see `bind_imports_and_exports`). Two such bindings are the same one exactly
+/// when they import the same name from the same external module.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
+struct ExternalBinding<'a> {
+  module: ModuleIdx,
+  /// `None` is the namespace object (`import * as ns from 'ext'`).
+  imported: Option<&'a str>,
+}
+
+impl<'a> ExternalBinding<'a> {
+  /// The external binding `symbol_ref` stands for, if any. That is either:
+  /// - a module's own import of an external module: `import { a } from 'ext'`, or the binding
+  ///   behind `export { a } from 'ext'`
+  /// - the external module's namespace object, which a namespace import links to when the output
+  ///   format doesn't keep ESM imports
+  fn of(modules: &'a IndexModules, symbol_ref: SymbolRef) -> Option<Self> {
+    let owner = match &modules[symbol_ref.owner] {
+      Module::External(external) => {
+        return (external.namespace_ref == symbol_ref)
+          .then_some(Self { module: symbol_ref.owner, imported: None });
+      }
+      Module::Normal(owner) => owner,
+    };
+    let named_import = owner.named_imports.get(&symbol_ref)?;
+    let module = owner.import_records[named_import.record_idx].resolved_module?;
+    modules[module].is_external().then(|| Self {
+      module,
+      imported: match &named_import.imported {
+        Specifier::Star => None,
+        Specifier::Literal(name) => Some(name.as_str()),
+      },
+    })
+  }
+}
+
+/// What an `export *` candidate resolves to once imports are bound, compared the way
+/// `ResolveExport` compares candidates.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
+enum ResolvedBinding<'a> {
+  External(ExternalBinding<'a>),
+  /// Any other binding, identified by its canonical symbol.
+  Symbol(SymbolRef),
+}
+
+impl<'a> ResolvedBinding<'a> {
+  fn of(modules: &'a IndexModules, symbols: &SymbolRefDb, symbol_ref: SymbolRef) -> Self {
+    let canonical_ref = symbols.canonical_ref_for(symbol_ref);
+    ExternalBinding::of(modules, canonical_ref).map_or(Self::Symbol(canonical_ref), Self::External)
+  }
+}
+
 impl LinkStage<'_> {
   /// Notices:
   /// - For external import like
@@ -320,11 +379,12 @@ impl LinkStage<'_> {
         if let Some(potentially_ambiguous_symbol_refs) =
           &resolved_export.potentially_ambiguous_symbol_refs
         {
-          let main_ref = self.symbols.canonical_ref_for(resolved_export.symbol_ref);
+          let modules = &self.module_table.modules;
+          let main_binding =
+            ResolvedBinding::of(modules, &self.symbols, resolved_export.symbol_ref);
 
           for ambiguous_ref in potentially_ambiguous_symbol_refs.iter() {
-            let ambiguous_ref = self.symbols.canonical_ref_for(*ambiguous_ref);
-            if main_ref != ambiguous_ref {
+            if ResolvedBinding::of(modules, &self.symbols, *ambiguous_ref) != main_binding {
               continue 'next_export;
             }
           }
@@ -346,7 +406,7 @@ impl LinkStage<'_> {
   }
 
   fn detect_namespace_conflicts(&mut self) {
-    let mut conflicts: FxHashMap<(CompactStr, Vec<SymbolRef>), (u32, ModuleIdx)> =
+    let mut conflicts: FxHashMap<(CompactStr, Vec<ResolvedBinding<'_>>), (u32, ModuleIdx)> =
       FxHashMap::default();
     for (module_idx, meta) in self.metas.iter_enumerated() {
       if meta.resolved_exports.len() == meta.sorted_and_non_ambiguous_resolved_exports.len() {
@@ -361,27 +421,32 @@ impl LinkStage<'_> {
         else {
           continue;
         };
-        let mut canonical_refs = std::iter::once(resolved_export.symbol_ref)
+        let mut bindings = std::iter::once(resolved_export.symbol_ref)
           .chain(potentially_ambiguous_symbol_refs.iter().copied())
-          .map(|symbol_ref| self.symbols.canonical_ref_for(symbol_ref))
+          .map(|symbol_ref| {
+            ResolvedBinding::of(&self.module_table.modules, &self.symbols, symbol_ref)
+          })
           .collect::<Vec<_>>();
-        canonical_refs.sort_unstable();
-        canonical_refs.dedup();
-        if canonical_refs.len() < 2 {
+        bindings.sort_unstable();
+        bindings.dedup();
+        if bindings.len() < 2 {
           continue;
         }
-        let all_bound_local = canonical_refs.iter().all(|canonical_ref| {
-          match &self.module_table[canonical_ref.owner] {
+        // Only a declaration or an external module's binding is known to differ from the others.
+        // A binding still held by an import (e.g. of a CommonJS module's export) may be the same.
+        let all_bound_known = bindings.iter().all(|binding| match binding {
+          ResolvedBinding::External(_) => true,
+          ResolvedBinding::Symbol(canonical_ref) => match &self.module_table[canonical_ref.owner] {
             Module::Normal(owner) => !owner.named_imports.contains_key(canonical_ref),
             Module::External(_) => false,
-          }
+          },
         });
-        if !all_bound_local {
+        if !all_bound_known {
           continue;
         }
         let candidate = (module.exec_order, module_idx);
         conflicts
-          .entry((export_name.clone(), canonical_refs))
+          .entry((export_name.clone(), bindings))
           .and_modify(|best| *best = (*best).min(candidate))
           .or_insert(candidate);
       }
@@ -1440,6 +1505,36 @@ impl BindImportsAndExportsContext<'_> {
     }
   }
 
+  /// The external module's binding a match resolves to, if any (see `ExternalBinding`). One
+  /// binding takes several shapes here: walking a re-export of an external import stops at the
+  /// re-exporting module's own binding (`Normal`), while a star branch resolved through
+  /// `ImportStatus::External` yields the branch module's binding (`Normal`) or, when the output
+  /// format doesn't keep ESM imports, a read off the external namespace.
+  fn external_binding_of<'k>(&'k self, kind: &'k MatchImportKind) -> Option<ExternalBinding<'k>> {
+    let (namespace_ref, imported) = match kind {
+      MatchImportKind::Normal(MatchImportKindNormal { symbol, .. }) => {
+        return ExternalBinding::of(self.index_modules, *symbol);
+      }
+      MatchImportKind::Namespace { namespace_ref } => (namespace_ref, None),
+      MatchImportKind::NormalAndNamespace { namespace_ref, alias } => {
+        (namespace_ref, Some(alias.as_str()))
+      }
+      MatchImportKind::Cycle { .. }
+      | MatchImportKind::Ambiguous { .. }
+      | MatchImportKind::NoMatch => return None,
+    };
+    self.index_modules[namespace_ref.owner]
+      .is_external()
+      .then_some(ExternalBinding { module: namespace_ref.owner, imported })
+  }
+
+  /// Whether two star branches resolve to the same binding, which is what `ResolveExport`
+  /// requires of an export that isn't ambiguous.
+  fn is_same_binding(&self, a: &MatchImportKind, b: &MatchImportKind) -> bool {
+    let (a_external, b_external) = (self.external_binding_of(a), self.external_binding_of(b));
+    if a_external.is_some() || b_external.is_some() { a_external == b_external } else { a == b }
+  }
+
   /// Apply `ResolveExport`'s null-cycle rule to the collected star branches. Cycle branches are
   /// dropped from the agreement set: `ResolveExport` skips a star branch that resolves to null
   /// instead of failing the whole lookup. Walking a cycle also re-visits the same module once per
@@ -1659,7 +1754,7 @@ impl BindImportsAndExportsContext<'_> {
       Self::promote_first_surviving_star_branch(ret, ambiguous_results);
 
     if let Some(symbol_ref) = ret.bound_symbol()
-      && deduped_ambiguous_results.keys().any(|result| *result != ret)
+      && deduped_ambiguous_results.keys().any(|result| !self.is_same_binding(result, &ret))
     {
       return MatchImportKind::Ambiguous {
         symbol_ref,
@@ -1701,7 +1796,11 @@ impl BindImportsAndExportsContext<'_> {
               .shimmed_missing_exports
               .entry(imported.clone())
               .or_insert_with(|| {
-                self.symbol_db.create_facade_root_symbol_ref(tracker.importee, imported.as_str())
+                let mut name = legitimize_identifier_name(imported);
+                if !none_preserved_keyword_or_global_object_ext(&name) {
+                  name = Cow::Owned(format!("_{name}"));
+                }
+                self.symbol_db.create_facade_root_symbol_ref(tracker.importee, &name)
               });
             return MatchImportKind::Normal(MatchImportKindNormal {
               symbol: *shimmed_symbol_ref,

@@ -30,6 +30,8 @@ Bundler (long-lived)
   │     ├── module_idx_by_abs_path
   │     └── module_idx_by_stable_id
   │
+  ├── lost_hmr_update
+  │
   └── Session (devtools tracing)
 
 Bundle (per-build, consumed after use)
@@ -88,6 +90,31 @@ Bundler.cache (ScanStageCache) ──(move)──> Bundle.cache (temporary holde
 | `barrel_state`                   | Barrel export optimization state                                                              |
 | `module_idx_by_abs_path`         | Path-based lookup for watcher                                                                 |
 | `module_idx_by_stable_id`        | Stable ID lookup for HMR                                                                      |
+
+`Bundler::lost_hmr_update` lives next to the cache, not in it. An HMR update
+sets it before it merges its rescan into the graph, and clears it when it
+returns its patches. If the update fails in between, no client ran an edit
+that the graph already has, and the next patch would not re-run it. The
+dev engine then reloads every client and runs a full build instead of the
+next task, whatever its kind (`BundlingTask::run_inner`). It lives outside
+the cache because a full scan drops the whole `ScanStageCache`
+(`ModuleLoader::new`), even when the scan fails.
+
+A successful full build clears it (`Bundler::incremental_bundle`). The task
+that started that build has already sent every client a `FullReload`, and
+Vite holds that reload until the build output arrives. So the tabs reload
+onto the new output, which has the lost edit. If the full build fails, Vite
+drops the pending reload, but the flag stays set, so the next task sends
+the reload again.
+
+The check covers `FullBuild` tasks too. After a failed full build, a file
+change queues a `FullBuild` (`FullBuildFailed` in `BundleCoordinator`). Vite
+does not reload after that build unless a reload is pending, so without the
+engine's `FullReload` the tabs would keep the code from before the lost
+edit. A `FullBuild` has no changed files, and Vite ignores an update whose
+`changedFiles` is empty, so the engine sends `["*"]` instead. `"*"` is not a
+path. It is a workaround until Vite delivers a `FullReload` with no changed
+files.
 
 ### Cache integrity on a failed build
 

@@ -1,0 +1,150 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+import assert from "node:assert";
+// HIDDEN [\0rolldown/runtime.js]
+__rolldown_runtime__.registerGraph({
+	ids: [
+		"hmr.js",
+		"other.js",
+		"main.js"
+	],
+	localCount: 3,
+	edges: [
+		[],
+		[],
+		[0, 1]
+	]
+});
+//#region hmr.js
+var hmr_exports = /* @__PURE__ */ __exportAll({ value: () => "v1" });
+const hmr_hot = __rolldown_runtime__.createModuleHotContext("hmr.js");
+__rolldown_runtime__.registerModule("hmr.js", { exports: hmr_exports });
+hmr_hot.accept();
+//#endregion
+//#region other.js
+var other_exports = /* @__PURE__ */ __exportAll({ other: () => "v1" });
+const other_hot = __rolldown_runtime__.createModuleHotContext("other.js");
+__rolldown_runtime__.registerModule("other.js", { exports: other_exports });
+other_hot.accept();
+//#endregion
+//#region main.js
+var main_exports = /* @__PURE__ */ __exportAll({});
+__rolldown_runtime__.createModuleHotContext("main.js");
+__rolldown_runtime__.registerModule("main.js", { exports: main_exports });
+process.on("beforeExit", (code) => {
+	if (code !== 0) return;
+	assert.strictEqual(globalThis.__reload_after_failed_patch_static, "static");
+	assert.strictEqual(globalThis.__reload_after_failed_patch_dynamic, "dynamic");
+});
+//#endregion
+
+//# sourceMappingURL=main.js.map
+```
+
+# HMR Step 0
+
+## Errors
+
+### UNHANDLEABLE_ERROR
+
+```text
+[UNHANDLEABLE_ERROR] Something went wrong inside rolldown, please report this problem at https://github.com/rolldown/rolldown/issues.
+simulated failure while rendering an HMR patch
+
+```
+
+# HMR Step 1
+
+## Meta
+
+- update type: full-reload
+- reason: an earlier hot update failed
+
+## Build Output
+
+### Assets
+
+#### main.js
+
+```js
+import assert from "node:assert";
+// HIDDEN [\0rolldown/runtime.js]
+__rolldown_runtime__.registerGraph({
+	ids: [
+		"new-static.js",
+		"hmr.js",
+		"other.js",
+		"main.js",
+		"new-dynamic.js"
+	],
+	localCount: 4,
+	edges: [
+		[],
+		[0],
+		[],
+		[1, 2]
+	],
+	dynamicEdges: { 1: [4] }
+});
+//#region new-static.js
+var new_static_exports = /* @__PURE__ */ __exportAll({ value: () => value$1 });
+__rolldown_runtime__.createModuleHotContext("new-static.js");
+__rolldown_runtime__.registerModule("new-static.js", { exports: new_static_exports });
+const value$1 = "static";
+//#endregion
+//#region hmr.js
+var hmr_exports = /* @__PURE__ */ __exportAll({ value: () => "v2" });
+const hmr_hot = __rolldown_runtime__.createModuleHotContext("hmr.js");
+__rolldown_runtime__.registerModule("hmr.js", { exports: hmr_exports });
+globalThis.__reload_after_failed_patch_static = value$1;
+import("./new-dynamic.js").then((mod) => {
+	globalThis.__reload_after_failed_patch_dynamic = mod.value;
+});
+hmr_hot.accept();
+//#endregion
+//#region other.js
+var other_exports = /* @__PURE__ */ __exportAll({ other: () => "v2" });
+const other_hot = __rolldown_runtime__.createModuleHotContext("other.js");
+__rolldown_runtime__.registerModule("other.js", { exports: other_exports });
+other_hot.accept();
+//#endregion
+//#region main.js
+var main_exports = /* @__PURE__ */ __exportAll({});
+__rolldown_runtime__.createModuleHotContext("main.js");
+__rolldown_runtime__.registerModule("main.js", { exports: main_exports });
+process.on("beforeExit", (code) => {
+	if (code !== 0) return;
+	assert.strictEqual(globalThis.__reload_after_failed_patch_static, "static");
+	assert.strictEqual(globalThis.__reload_after_failed_patch_dynamic, "dynamic");
+});
+//#endregion
+export { __exportAll as t };
+
+//# sourceMappingURL=main.js.map
+```
+
+#### new-dynamic.js
+
+```js
+import { t as __exportAll } from "./main.js";
+__rolldown_runtime__.registerGraph({
+	ids: ["new-dynamic.js"],
+	localCount: 1,
+	edges: [[]]
+});
+//#region new-dynamic.js
+var new_dynamic_exports = /* @__PURE__ */ __exportAll({ value: () => value });
+__rolldown_runtime__.createModuleHotContext("new-dynamic.js");
+__rolldown_runtime__.registerModule("new-dynamic.js", { exports: new_dynamic_exports });
+const value = "dynamic";
+//#endregion
+export { value };
+
+//# sourceMappingURL=new-dynamic.js.map
+```

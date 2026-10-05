@@ -12,7 +12,7 @@ use oxc::{
   span::{SPAN, Span},
 };
 use oxc_str::CompactStr;
-use rolldown_common::{ConcatenateWrappedModuleKind, SymbolRef, ThisExprReplaceKind};
+use rolldown_common::{ConcatenateWrappedModuleKind, StmtInfoIdx, SymbolRef, ThisExprReplaceKind};
 use rolldown_ecmascript::ToSourceString;
 use rolldown_ecmascript_utils::{
   EsmWrapperBodyKind, EsmWrapperCallKind, EsmWrapperDeclKind, EsmWrapperStmtOptions,
@@ -223,7 +223,10 @@ impl<'ast> VisitJsMut<'ast> for ScopeHoistingFinalizer<'_, 'ast> {
       self.ctx.linking_info.shimmed_missing_exports.iter().collect::<Vec<_>>();
     shimmed_exports.sort_unstable_by_key(|(name, _)| name.as_str());
     shimmed_exports.into_iter().for_each(|(_name, symbol_ref)| {
-      debug_assert!(!self.ctx.stmt_infos.declared_stmts_by_symbol(symbol_ref).is_empty());
+      debug_assert_ne!(
+        self.ctx.stmt_infos.declared_stmts_by_symbol(symbol_ref),
+        [] as [StmtInfoIdx; 0]
+      );
       let is_included: bool = self
         .ctx
         .stmt_infos

@@ -134,8 +134,8 @@ mod tests {
       [(a.clone(), Update)]
     );
     assert_eq!(map(EventKind::Remove(RemoveKind::File), &[&a]), [(a.clone(), Delete)]);
-    assert!(map(EventKind::Access(AccessKind::Read), &[&a]).is_empty());
-    assert!(map(EventKind::Any, &[&a]).is_empty());
+    assert_eq!(map(EventKind::Access(AccessKind::Read), &[&a]), []);
+    assert_eq!(map(EventKind::Any, &[&a]), []);
   }
 
   #[test]
@@ -188,7 +188,7 @@ mod tests {
       MetadataKind::Extended,
       MetadataKind::Other,
     ] {
-      assert!(map(EventKind::Modify(ModifyKind::Metadata(kind)), &[&a]).is_empty());
+      assert_eq!(map(EventKind::Modify(ModifyKind::Metadata(kind)), &[&a]), []);
     }
   }
 
@@ -205,12 +205,10 @@ mod tests {
     ] {
       assert_eq!(map(kind, &[&dir]), files_below);
     }
-    assert!(
-      map(EventKind::Create(CreateKind::Folder), &[&fixture.path("nested/empty")]).is_empty()
-    );
+    assert_eq!(map(EventKind::Create(CreateKind::Folder), &[&fixture.path("nested/empty")]), []);
 
-    assert!(map(EventKind::Modify(ModifyKind::Metadata(MetadataKind::Any)), &[&dir]).is_empty());
-    assert!(map(EventKind::Modify(ModifyKind::Data(DataChange::Content)), &[&dir]).is_empty());
+    assert_eq!(map(EventKind::Modify(ModifyKind::Metadata(MetadataKind::Any)), &[&dir]), []);
+    assert_eq!(map(EventKind::Modify(ModifyKind::Data(DataChange::Content)), &[&dir]), []);
 
     fs::remove_dir_all(&dir).unwrap();
     assert_eq!(map(EventKind::Remove(RemoveKind::Folder), &[&dir]), [(dir.clone(), Delete)]);

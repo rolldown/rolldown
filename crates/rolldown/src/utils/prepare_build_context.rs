@@ -209,10 +209,6 @@ fn verify_inline_common_chunks_options(
     "`output.format` to be `'es'`",
   );
   require(
-    raw_options.strict_execution_order != Some(false),
-    "`output.strictExecutionOrder` not to be `false` (when omitted, it is turned on)",
-  );
-  require(
     matches!(raw_options.preserve_entry_signatures, Some(PreserveEntrySignatures::False)),
     "`preserveEntrySignatures` to be explicitly set to `false`",
   );
@@ -269,8 +265,8 @@ pub fn prepare_build_context(
       max_size: options.max_size.unwrap_or(0.0) as usize,
       exclude: options.exclude.clone().unwrap_or_default(),
     });
-  // `experimentalInlineCommonChunks` needs wrap-all strict execution order, so it turns the option
-  // on when the user left it out; `verify_raw_options` rejected an explicit `false`.
+  // Without strict execution order only chunks whose members are wrapped or free of side effects
+  // are inlined, so the option turns it on when the user left it out.
   let strict_execution_order =
     raw_options.strict_execution_order.unwrap_or_else(|| inline_common_chunks.is_some());
 

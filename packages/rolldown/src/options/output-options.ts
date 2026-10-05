@@ -1047,7 +1047,8 @@ export type AdvancedChunksGroup = CodeSplittingGroup;
  *   `import.meta.url` to the same URL from every copy and are not affected.
  * - The option turns `strictExecutionOrder` on when it is omitted. Strict execution order has an
  *   open issue with top-level await inside static import cycles (rolldown/rolldown#9548), so run
- *   the application under `strictExecutionOrder: true` before adding this option.
+ *   the application under `strictExecutionOrder: true` before adding this option, or set it to
+ *   `false` to inline only chunks whose modules are free of side effects (see `maxSize`).
  * - Addons (`banner`, `intro`, `outro` and `footer`), including plugin hooks, apply to emitted
  *   files. An inlined chunk shares the addon bindings of the file that registers its factory
  *   first. Exclude modules that depend on separate file-local bindings or addon initialization order.
@@ -1069,8 +1070,14 @@ export type ExperimentalInlineCommonChunksOptions = {
    * A value greater than `0` requires `output.format: 'es'`, an explicit
    * `preserveEntrySignatures: false` and code splitting, and it turns on
    * {@linkcode OutputOptions.strictExecutionOrder | strictExecutionOrder} when that option is
-   * omitted. `output.strictExecutionOrder: false` is an error, `output.preserveModules`,
-   * `experimental.devMode` and `experimental.onDemandWrapping` must be off.
+   * omitted. `output.preserveModules`, `experimental.devMode` and
+   * `experimental.onDemandWrapping` must be off.
+   *
+   * With `output.strictExecutionOrder: false`, a common chunk is a candidate only when every one
+   * of its modules is wrapped (CommonJS or required ESM) or free of side effects (by analysis or
+   * by `sideEffects: false` in its `package.json`): an inlined chunk's code runs when its first
+   * reader starts, which can be after the reader's later imports, and only a module without side
+   * effects cannot tell. Chunks in a static import cycle with another chunk stay files.
    *
    * @default 0
    */

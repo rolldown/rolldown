@@ -9,10 +9,10 @@ source: crates/rolldown_testing/src/integration_test.rs
 import assert from "node:assert";
 // HIDDEN [\0rolldown/runtime.js]
 //#region esm-impl.mjs
-var esm_impl_exports = /* @__PURE__ */ __exportAll({ foo: () => foo$1 });
-var foo$1;
+var esm_impl_exports = /* @__PURE__ */ __exportAll({ foo: () => foo });
+var foo;
 var init_esm_impl = __esmMin((() => {
-	foo$1 = "from-esm";
+	foo = "from-esm";
 }));
 //#endregion
 //#region cjs-impl.js

@@ -8,10 +8,10 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```js
 // HIDDEN [\0rolldown/runtime.js]
 let foo = require("foo");
-let foo$3 = __toESM(foo, 1);
+let foo$1 = __toESM(foo, 1);
 foo = __toESM(foo);
 //#region sub1.mjs
-console.log(foo$3.default.bar);
+console.log(foo$1.default.bar);
 //#endregion
 //#region sub2.js
 console.log(foo.default.baz);

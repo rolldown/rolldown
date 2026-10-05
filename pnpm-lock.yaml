@@ -208,7 +208,7 @@ catalogs:
       specifier: ^0.27.0
       version: 0.27.0
     ws:
-      specifier: ^8.20.1
+      specifier: ^8.22.0
       version: 8.22.0
     zx:
       specifier: ^8.1.2
@@ -280,7 +280,7 @@ importers:
         specifier: ^2.1.0
         version: 2.2.1
       knip:
-        specifier: ^6.38.0
+        specifier: ^6.39.0
         version: 6.39.0
       playwright-chromium:
         specifier: ^1.63.0
@@ -356,7 +356,7 @@ importers:
         specifier: ^0.22.0
         version: 0.22.0(@types/node@24.10.3)(arktype@2.2.0)(kysely@0.29.5)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)(valibot@1.5.0(typescript@6.0.3))(vite@8.3.2(@types/node@24.10.3)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.51.2)(tsx@4.23.15)(yaml@2.9.1))(vitest@4.1.11)(vue@3.5.43(typescript@6.0.3))(wrangler@4.146.0(@cloudflare/workers-types@4.20260702.1)(@types/node@24.10.3))(zod@4.5.4)
       wrangler:
-        specifier: ^4.139.0
+        specifier: ^4.146.0
         version: 4.146.0(@cloudflare/workers-types@4.20260702.1)(@types/node@24.10.3)
 
   examples/basic-typescript:

@@ -42,7 +42,7 @@ use sugar_path::SugarPath;
 use crate::esm_init_obligations::{
   ObligationPurpose, WrappedEsmInitTarget, WrappedEsmInitTargetContext,
   collect_entry_reexported_wrapper_inits, collect_wrapped_esm_init_targets_for_import_record,
-  record_is_init_obligation,
+  module_has_required_reexport_importer, record_is_init_obligation,
 };
 use crate::stages::generate_stage::{InlineReader, order_wrap_state::OrderCjsCarrierKey};
 use crate::utils;
@@ -606,6 +606,12 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
         // Strict ordering may place re-exported leaves with this importer while the root wrapper
         // stays in another chunk, so emit the import record's complete local init target set.
         if self.ctx.options.is_strict_execution_order_enabled()
+          && self.ctx.chunk_graph.module_to_chunk[importee.idx] != Some(self.ctx.chunk_idx)
+          && module_has_required_reexport_importer(
+            self.ctx.modules,
+            self.ctx.order_wrap_state,
+            importee.idx,
+          )
           && record_is_init_obligation(
             ObligationPurpose::Emit,
             self.ctx.order_wrap_state,

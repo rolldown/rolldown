@@ -326,7 +326,7 @@ pub fn collect_wrapped_esm_init_targets_for_import_record(
   )
 }
 
-pub(crate) fn module_has_required_reexport_importer(
+pub fn module_has_required_reexport_importer(
   modules: &IndexModules,
   order_wrap_state: &OrderWrapState,
   module_idx: ModuleIdx,

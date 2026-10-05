@@ -25,7 +25,7 @@ fn static_external_imports<'a>(
     .direct_imports_from_external_modules
     .iter()
     .map(|(idx, _)| *idx)
-    .merge_by(chunk.entry_level_external_module_idx.iter().copied(), |a, b| {
+    .merge_by(chunk.entry_level_externals.iter().map(|item| item.external_idx), |a, b| {
       module_table[*a].exec_order() <= module_table[*b].exec_order()
     })
     .dedup()

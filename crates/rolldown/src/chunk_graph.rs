@@ -2,8 +2,8 @@ use arcstr::ArcStr;
 use itertools::Itertools;
 use oxc_index::{IndexVec, index_vec};
 use rolldown_common::{
-  Chunk, ChunkIdx, ChunkKind, ChunkMeta, ChunkModulesOrderBy, ChunkTable, EcmaViewMeta, ModuleIdx,
-  PostChunkOptimizationOperation, RuntimeHelper, SymbolRef,
+  Chunk, ChunkIdx, ChunkKind, ChunkMeta, ChunkModulesOrderBy, ChunkTable, EcmaViewMeta,
+  ImportRecordIdx, ModuleIdx, PostChunkOptimizationOperation, RuntimeHelper, SymbolRef,
 };
 use rustc_hash::{FxHashMap, FxHashSet};
 
@@ -32,6 +32,9 @@ pub struct ChunkGraph {
   ///
   /// We use the second approach to avoid the overhead of re-indexing at the cost of some extra memory.
   pub post_chunk_optimization_operations: FxHashMap<ChunkIdx, PostChunkOptimizationOperation>,
+  /// `export * from '<external>'` records that some live entry chunk re-exports at entry level
+  /// (see `Chunk::entry_level_externals`). Rebuilt together with those lists.
+  pub entry_level_star_records: FxHashSet<(ModuleIdx, ImportRecordIdx)>,
 }
 
 impl ChunkGraph {
@@ -46,7 +49,18 @@ impl ChunkGraph {
       common_chunk_exported_facade_chunk_namespace: FxHashMap::default(),
       common_chunk_preserve_export_names_modules: FxHashMap::default(),
       post_chunk_optimization_operations: FxHashMap::default(),
+      entry_level_star_records: FxHashSet::default(),
     }
+  }
+
+  /// Whether some live entry chunk re-exports this `export * from '<external>'` record at entry
+  /// level.
+  pub fn is_entry_level_star_record(
+    &self,
+    module_idx: ModuleIdx,
+    rec_idx: ImportRecordIdx,
+  ) -> bool {
+    self.entry_level_star_records.contains(&(module_idx, rec_idx))
   }
 
   #[expect(unused)]

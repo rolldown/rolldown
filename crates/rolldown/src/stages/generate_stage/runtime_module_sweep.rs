@@ -56,7 +56,7 @@ impl GenerateStage<'_> {
     if runtime_module.side_effects.has_side_effects() {
       return;
     }
-    if self.runtime_helpers_still_demanded(runtime_idx) {
+    if self.runtime_helpers_still_demanded(chunk_graph, runtime_idx) {
       return;
     }
 
@@ -90,7 +90,11 @@ impl GenerateStage<'_> {
   /// post-walk-back facts the module finalizer will render from. Conservative by design:
   /// any uncertain case answers `true` (keep the runtime), which is at worst today's
   /// behavior.
-  fn runtime_helpers_still_demanded(&self, runtime_idx: ModuleIdx) -> bool {
+  fn runtime_helpers_still_demanded(
+    &self,
+    chunk_graph: &ChunkGraph,
+    runtime_idx: ModuleIdx,
+  ) -> bool {
     let link = &self.link_output;
     let symbol_db = &link.symbol_db;
     for (module_idx, module) in link.module_table.modules.iter_enumerated() {
@@ -134,7 +138,7 @@ impl GenerateStage<'_> {
         }
         if meta.star_exports_from_external_modules.iter().any(|rec_idx| {
           meta.ns_star_external_re_export_emitted(
-            module.import_records[*rec_idx].meta,
+            chunk_graph.is_entry_level_star_record(module_idx, *rec_idx),
             self.options.format,
           )
         }) {

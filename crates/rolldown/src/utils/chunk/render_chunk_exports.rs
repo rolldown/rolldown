@@ -353,7 +353,7 @@ pub fn render_chunk_exports(
             .star_exports_from_external_modules
             .iter()
             .filter_map(|rec_idx| module.ecma_view.import_records[*rec_idx].resolved_module)
-            .chain(ctx.chunk.entry_level_external_module_idx.iter().copied())
+            .chain(ctx.chunk.entry_level_externals.iter().map(|item| item.external_idx))
             .collect::<FxIndexSet<ModuleIdx>>();
 
           // Track already imported external modules to avoid duplicates

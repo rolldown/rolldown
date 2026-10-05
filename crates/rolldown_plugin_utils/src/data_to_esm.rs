@@ -1,5 +1,6 @@
 use std::fmt::Write as _;
 
+use json_escape_simd::escape;
 use rolldown_utils::concat_string;
 use serde_json::Value;
 
@@ -9,8 +10,7 @@ use super::constants::THRESHOLD_SIZE;
 fn serialize_value(value: &Value) -> Result<String, serde_json::Error> {
   let value_as_string = serde_json::to_string(value)?;
   if value_as_string.len() > THRESHOLD_SIZE && value.is_object() {
-    let value = serde_json::to_string(&value_as_string)?;
-    Ok(concat_string!("/*#__PURE__*/ JSON.parse(", value, ")"))
+    Ok(concat_string!("/*#__PURE__*/ JSON.parse(", escape(&value_as_string), ")"))
   } else {
     Ok(value_as_string)
   }
@@ -34,7 +34,7 @@ pub fn data_to_esm(data: &Value, named_exports: bool) -> String {
       writeln!(named_export_code, "export const {key} = {value};").unwrap();
       writeln!(default_object_code, "  {key},").unwrap();
     } else {
-      let key = serde_json::to_string(key).unwrap();
+      let key = escape(key);
       writeln!(default_object_code, "  {key}: {value},").unwrap();
     }
   }
@@ -78,6 +78,17 @@ mod test {
     let data = serde_json::json!({"foo": "foo", "bar": "bar"});
     assert_eq!(
       "export const foo = \"foo\";\nexport const bar = \"bar\";\nexport default {\n  foo,\n  bar\n};",
+      data_to_esm(&data, true)
+    );
+  }
+
+  #[test]
+  fn to_esm_named_exports_large_object() {
+    let data = serde_json::json!({"foo": {"bar": "\"\\\n\t\u{1}é".repeat(2000)}});
+    let foo = serde_json::to_string(&data["foo"]).unwrap();
+    let foo = serde_json::to_string(&foo).unwrap();
+    assert_eq!(
+      format!("export const foo = /*#__PURE__*/ JSON.parse({foo});\nexport default {{\n  foo\n}};"),
       data_to_esm(&data, true)
     );
   }

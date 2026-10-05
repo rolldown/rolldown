@@ -312,6 +312,40 @@ chunk omits a module only if the payload carrying it was acked first.
 Concurrent fetches both carry the shared factory. The result is
 duplicate bytes, which is safe.
 
+Registration keeps the newest copy. Payloads can land out of render
+order: a lazy chunk rendered before an edit can land after the patch
+for that edit. Each payload passes the module's stamp to
+`registerFactory` (a third argument, left out when 0) and to
+`registerGraph` (`stamps`). The runtime drops a factory or a graph row
+older than the one it holds. Equal stamps mean equal code, so the later
+write wins.
+
+That rule needs a stamp to name one rendered factory, not only one
+source. An importer's factory also reads facts about each importee:
+its `exports_kind` and whether it has a lazy export. These choose the
+interop code (`__toESM`, `__toDynamicImportESM`). So when an edit
+changes them, the update stamps every importer of that module too and
+carries it like a changed module, even though the importer's own source
+did not change. It does not add the importer to the changed ids, so no
+client re-runs it for this reason.
+
+Example: `importer.js` imports `dep.js`, and an edit turns `dep.js`
+from ESM into CommonJS. The patch carries `importer.js` with the new
+stamp and the `__toESM` interop. A lazy chunk that was rendered before
+the edit still has the old `importer.js` at the old stamp, so the
+runtime drops it when it lands late.
+
+```mermaid
+flowchart LR
+  edit["edit: dep.js ESM → CJS"] --> dep["dep.js — stamp 1"]
+  edit --> imp["importer.js — stamp 1, __toESM interop"]
+  late["late lazy chunk: importer.js — stamp 0"] -. "0 < 1: dropped" .-> imp
+```
+
+Full-build chunks carry no stamps. They run their code right
+away, so their rows always replace the old ones. An older runtime ignores
+the extra argument and field.
+
 ## Failure policy
 
 Full reload is the fallback for these delivery and state failures:

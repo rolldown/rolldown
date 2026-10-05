@@ -486,6 +486,7 @@ E2E playground: `packages/test-dev-server/tests/playground/lazy-compilation/` (o
 | `basic`                     | lazy module arrives as two separate JS requests (proxy chunk + real chunk)        |
 | `aliased-import`            | idempotent proxy-id creation under alias re-entrancy (vite#22454)                 |
 | `emitted-asset`             | assets emitted during lazy compile are servable on first load (vite#22596)        |
+| `late-lazy-chunk`           | a lazy chunk that lands after a newer HMR patch does not replace its code         |
 | `lazy-init-error`           | init errors catchable with try/catch — cold and warm paths (#9975/#9981)          |
 | `lazy-init-error-unhandled` | exactly one `unhandledrejection` without a handler — cold and warm paths          |
 | `nested-dynamic-import`     | nested lazy `import()` inside a lazy chunk resolves on first click                |

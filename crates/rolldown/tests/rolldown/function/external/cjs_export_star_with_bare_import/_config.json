@@ -1,0 +1,7 @@
+{
+  "_comment": "`other.js` imports `ext` only for its side effects. The entry-level `export * from 'ext'` still needs the `ext` binding for its key merge; it used to throw `ReferenceError: ext is not defined`.",
+  "config": {
+    "external": ["ext"],
+    "format": "cjs"
+  }
+}

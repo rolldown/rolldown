@@ -132,7 +132,11 @@ fn render_cjs_chunk_imports(ctx: &GenerateContext<'_>) -> String {
       let import_path = escape(&importee.get_import_path(ctx.chunk, ctx.resolved_paths));
       let require_path_str = concat_string!("require(", import_path, ")");
 
-      if ctx.link_output.used_external_symbols.contains(&importee.namespace_ref) {
+      // An entry-level external needs a binding for the key merge in the chunk exports.
+      // See internal-docs/external-star-exports/implementation.md.
+      if ctx.chunk.entry_level_external(*importee_idx).is_some()
+        || ctx.link_output.used_external_symbols.contains(&importee.namespace_ref)
+      {
         let external_module_symbol_name = ctx
           .link_output
           .symbol_db

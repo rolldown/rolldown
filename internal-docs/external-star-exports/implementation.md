@@ -4,7 +4,7 @@
 
 ## Summary
 
-One walk in the generate stage decides which entry chunks re-export which externals at entry level.
+One walk in the generate stage decides which entry chunks re-export which externals at entry level. Each entry-level external is part of the imports of its chunk. The printers upgrade its import in place.
 
 ## Terms
 
@@ -34,15 +34,22 @@ One walk in the generate stage decides which entry chunks re-export which extern
 ## Consumers
 
 - **Namespace emission.** `LinkingMetadata::ns_star_external_re_export_emitted(is_entry_level, format)` decides if the namespace declaration merges the external at runtime. In ESM, the merge is `import * as` plus `__reExport`. In other formats, the merge is `__reExport(ns, require(...))`. Two parts call this function: the finalizer (`generate_declaration_of_module_namespace_object`) and the runtime sweep (`runtime_helpers_still_demanded`).
-- **ESM** (`render_esm`). After the imports, `render_esm` prints each entry-level external as `export * from`, with the `with` clause of `attribute_record`.
-- **CJS, IIFE, UMD** (`render_chunk_exports`). `render_chunk_exports` requires each entry-level external, unless a direct import already covers it. Then it merges the keys of the external into `exports`.
-- **Other readers.** These parts also read the chunk list:
-  - symbol deconflicting
-  - `OutputChunk.imports`
-  - the order-wrap facade collapse
-  - the selection of inline common chunks
+- **Chunk imports** (`compute_cross_chunk_links.rs`). `collect_depended_symbols` adds each entry-level external of a chunk to the external imports of that chunk.
+- **ESM** (`render_esm_chunk_imports`). `render_esm_chunk_imports` prints no bare import for an entry-level external. It prints `export * from` after the named imports of the external, with the `with` clause of `attribute_record`.
+- **CJS, IIFE, UMD.**
+  - `render_cjs_chunk_imports` and `render_chunk_external_imports` bind an entry-level external, also when its namespace symbol is unused.
+  - `render_chunk_exports` prints only the key merge.
+  - `determine_export_mode` resolves `auto` to `named` for a chunk with entry-level externals.
+  - IIFE and UMD count these externals in `has_exports`.
+- **Guards.** The order-wrap facade collapse and the selection of inline common chunks skip chunks with entry-level externals.
 
 ## Tests
+
+These fixtures check the position and the binding at runtime:
+
+- `function/external/export_star_keeps_import_order`
+- `function/external/cjs_export_star_loads_before_body`
+- `function/external/cjs_export_star_with_bare_import`
 
 These fixtures cover the walk-back, the runtime sweep, and the facades:
 

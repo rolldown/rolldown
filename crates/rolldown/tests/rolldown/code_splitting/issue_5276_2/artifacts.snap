@@ -8,10 +8,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```js
 // HIDDEN [\0rolldown/runtime.js]
 //#region imp.js
-var imp_exports = /* @__PURE__ */ __exportAll({
-	imp2: () => 2,
-	imp22: () => 22
-});
+var imp_exports = /* @__PURE__ */ __exportAll({ imp22: () => 22 });
 const imp22 = 22;
 //#endregion
 export { imp_exports as n, imp22 as t };
@@ -44,10 +41,7 @@ load();
 
 ```js
 //#region imp.js
-var imp_exports = /* @__PURE__ */ require("./rolldown-runtime.js").__exportAll({
-	imp2: () => 2,
-	imp22: () => 22
-});
+var imp_exports = /* @__PURE__ */ require("./rolldown-runtime.js").__exportAll({ imp22: () => 22 });
 const imp22 = 22;
 //#endregion
 Object.defineProperty(exports, "imp22", {

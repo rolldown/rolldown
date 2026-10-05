@@ -100,6 +100,9 @@ pub struct LinkingMetadata {
   /// Set when the runtime module has side effects (e.g. dev/HMR mode).
   pub has_side_effectful_runtime_dep: bool,
   pub module_namespace_included_reason: ModuleNamespaceIncludedReason,
+  /// The exports a namespace object rebuilt for an absorbed dynamic entry holds, when it was
+  /// narrowed to what the dynamic imports read; see `narrow_namespace_stmt_to_used_symbols`.
+  pub dynamic_facade_export_names: Option<FxHashSet<CompactStr>>,
   /// Final decision on whether this module's namespace object is retained in the output.
   /// Computed by [`crate::stages::generate_stage`]'s `finalized_module_namespace_ref_usage`
   /// from `module_namespace_included_reason` together with the module's `exports_kind` and

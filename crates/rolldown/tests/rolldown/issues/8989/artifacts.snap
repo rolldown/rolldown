@@ -64,7 +64,7 @@ export { node_2, node_3 as reexport_2_3, node2_exports as t };
 ```js
 // HIDDEN [\0rolldown/runtime.js]
 //#region node4.js
-var node4_exports = /* @__PURE__ */ __exportAll({ node_4: () => node_4 });
+var node4_exports = /* @__PURE__ */ __exportAll({});
 globalThis.__acyclic_output_fuzz_4 = 4;
 var node_4 = {};
 node_4.value = 4;

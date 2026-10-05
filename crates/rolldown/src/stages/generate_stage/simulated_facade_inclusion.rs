@@ -1,6 +1,7 @@
+use oxc_str::CompactStr;
 use rolldown_common::{
-  ModuleIdx, ModuleNamespaceIncludedReason, RuntimeHelper, StmtInfos, UsedSymbolRefsBuilder,
-  WrapKind,
+  ModuleIdx, ModuleNamespaceIncludedReason, RuntimeHelper, StmtInfos, SymbolRef,
+  UsedSymbolRefsBuilder, WrapKind, dynamic_import_usage::DynamicImportExportsUsage,
 };
 use rustc_hash::{FxHashMap, FxHashSet};
 
@@ -34,16 +35,54 @@ impl GenerateStage<'_> {
     // Instead, we should include the wrapper_ref (`require_xxx`), which will be handled
     // in the `include_simulated_facade_namespace` call.
     if !matches!(wrap_kind, WrapKind::Cjs) {
+      let dynamically_read_names = self.dynamically_read_export_names(entry_module_idx);
+      let dynamically_read = dynamically_read_names.as_ref().map(|names| {
+        let meta = &self.link_output.metas[entry_module_idx];
+        names
+          .iter()
+          .filter_map(|name| meta.resolved_exports.get(name))
+          .map(|export| self.link_output.symbol_db.canonical_ref_for(export.symbol_ref))
+          .collect::<FxHashSet<SymbolRef>>()
+      });
+      // The finalizer prints the namespace object's getters from these names, so the getters
+      // and the cross-chunk imports derived from the statement below stay in step.
+      self.link_output.metas[entry_module_idx].dynamic_facade_export_names = dynamically_read_names;
       // Filter in place to avoid cloning
       self.link_output.stmt_infos[entry_module_idx][StmtInfos::NAMESPACE_STMT_IDX]
         .referenced_symbols
         .retain(|item| match item {
           rolldown_common::SymbolOrMemberExprRef::Symbol(symbol_ref) => {
             // module namespace symbol requires `__exportAll` runtime helper
-            used_symbol_refs_builder.contains(symbol_ref) || symbol_ref.owner == runtime_module_idx
+            symbol_ref.owner == runtime_module_idx
+              || (used_symbol_refs_builder.contains(symbol_ref)
+                && dynamically_read.as_ref().is_none_or(|read| {
+                  read.contains(&self.link_output.symbol_db.canonical_ref_for(*symbol_ref))
+                }))
           }
           rolldown_common::SymbolOrMemberExprRef::MemberExpr(_member_expr_ref) => true,
         });
+    }
+  }
+
+  /// The exports the dynamic imports of `entry_module_idx` read, when they are known and nothing
+  /// else needs its namespace object. A getter for an export used only by static importers can
+  /// point into a chunk that already imports the one the namespace lands in, which would close a
+  /// chunk import cycle.
+  fn dynamically_read_export_names(
+    &self,
+    entry_module_idx: ModuleIdx,
+  ) -> Option<FxHashSet<CompactStr>> {
+    let meta = &self.link_output.metas[entry_module_idx];
+    if meta.module_namespace_included_reason.intersects(
+      ModuleNamespaceIncludedReason::Unknown
+        | ModuleNamespaceIncludedReason::ReExportDynamicExports,
+    ) {
+      return None;
+    }
+    match self.link_output.dynamic_import_exports_usage_map.get(&entry_module_idx)? {
+      DynamicImportExportsUsage::Complete => None,
+      DynamicImportExportsUsage::Partial(names) => Some(names.clone()),
+      DynamicImportExportsUsage::Single(name) => Some(std::iter::once(name.clone()).collect()),
     }
   }
 

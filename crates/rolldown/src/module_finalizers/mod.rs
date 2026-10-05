@@ -1071,6 +1071,7 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
           .ctx
           .order_wrap_state
           .simulated_facade_export_names(self.ctx.module.namespace_object_ref)
+          .or(self.ctx.linking_info.dynamic_facade_export_names.as_ref())
       })
       .flatten();
 

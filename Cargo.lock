@@ -2665,6 +2665,7 @@ dependencies = [
  "fast-glob",
  "insta",
  "itertools",
+ "json-escape-simd",
  "num-bigint 0.5.1",
  "oxc",
  "oxc_ecmascript",

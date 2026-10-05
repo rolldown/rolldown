@@ -694,7 +694,9 @@ impl GenerateStage<'_> {
         let mut queue = VecDeque::from([*module]);
         let mut visited = FxHashSet::default();
         let mut records: Vec<(ModuleIdx, ImportRecordIdx)> = vec![];
-        let mut externals: Vec<EntryLevelExternal> = vec![];
+        // Each external, with its first record that has import attributes.
+        let mut externals: FxHashMap<ModuleIdx, Option<(ModuleIdx, ImportRecordIdx)>> =
+          FxHashMap::default();
         while let Some(module_idx) = queue.pop_front() {
           if !visited.insert(module_idx) {
             continue;
@@ -714,15 +716,9 @@ impl GenerateStage<'_> {
               continue;
             }
             records.push((module_idx, rec_idx));
-            let attribute_record =
-              module.import_attribute_map.contains_key(&rec_idx).then_some((module_idx, rec_idx));
-            match externals.iter_mut().find(|item| item.external_idx == importee_idx) {
-              Some(item) => {
-                item.attribute_record = item.attribute_record.or(attribute_record);
-              }
-              None => {
-                externals.push(EntryLevelExternal { external_idx: importee_idx, attribute_record });
-              }
+            let attribute_record = externals.entry(importee_idx).or_default();
+            if attribute_record.is_none() && module.import_attribute_map.contains_key(&rec_idx) {
+              *attribute_record = Some((module_idx, rec_idx));
             }
           }
         }
@@ -730,7 +726,15 @@ impl GenerateStage<'_> {
       })
       .collect::<Vec<_>>();
 
-    for (chunk_idx, records, mut externals) in walks {
+    for (chunk_idx, records, externals) in walks {
+      let mut externals = externals
+        .into_iter()
+        .map(|(external_idx, attribute_record)| EntryLevelExternal {
+          external_idx,
+          attribute_record,
+        })
+        .collect_vec();
+      // Statically imported externals have distinct exec orders, so the map's order doesn't leak.
       externals.sort_unstable_by_key(|item| module_table[item.external_idx].exec_order());
       chunk_graph.chunk_table[chunk_idx].entry_level_externals = externals;
       chunk_graph.entry_level_star_records.extend(records);

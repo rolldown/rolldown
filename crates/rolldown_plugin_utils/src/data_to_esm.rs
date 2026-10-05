@@ -10,7 +10,8 @@ use super::constants::THRESHOLD_SIZE;
 fn serialize_value(value: &Value) -> Result<String, serde_json::Error> {
   let value_as_string = serde_json::to_string(value)?;
   if value_as_string.len() > THRESHOLD_SIZE && value.is_object() {
-    Ok(concat_string!("/*#__PURE__*/ JSON.parse(", escape(&value_as_string), ")"))
+    let value = escape(&value_as_string);
+    Ok(concat_string!("/*#__PURE__*/ JSON.parse(", value, ")"))
   } else {
     Ok(value_as_string)
   }

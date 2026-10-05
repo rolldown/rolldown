@@ -57,8 +57,9 @@ impl Plugin for ViteJsonPlugin {
         Cow::Borrowed(code)
       };
 
+      let json = escape(&json);
       return Ok(Some(HookTransformOutput {
-        code: Some(concat_string!("export default /*#__PURE__*/ JSON.parse(", escape(&json), ")")),
+        code: Some(concat_string!("export default /*#__PURE__*/ JSON.parse(", json, ")")),
         map: SourceMap::default().into(),
         module_type: Some(ModuleType::Js),
         ..Default::default()

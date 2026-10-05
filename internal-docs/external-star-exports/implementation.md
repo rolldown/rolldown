@@ -4,7 +4,7 @@
 
 ## Summary
 
-One walk in the generate stage decides which entry chunks re-export which externals at entry level. Each entry-level external is part of the imports of its chunk. The printers upgrade its import in place.
+One walk in the generate stage decides which entry chunks re-export which externals at entry level. The import list of a chunk treats every external star record as an ordinary import. The printers upgrade the import of each external that the chunk re-exports at entry level.
 
 ## Terms
 
@@ -33,9 +33,13 @@ One walk in the generate stage decides which entry chunks re-export which extern
 
 ## Consumers
 
-- **Namespace emission.** `LinkingMetadata::ns_star_external_re_export_emitted(is_entry_level, format)` decides if the namespace declaration merges the external at runtime. In ESM, the merge is `import * as` plus `__reExport`. In other formats, the merge is `__reExport(ns, require(...))`. Two parts call this function: the finalizer (`generate_declaration_of_module_namespace_object`) and the runtime sweep (`runtime_helpers_still_demanded`).
-- **Chunk imports** (`compute_cross_chunk_links.rs`). `collect_depended_symbols` adds each entry-level external of a chunk to the external imports of that chunk.
-- **ESM** (`render_esm_chunk_imports`). `render_esm_chunk_imports` prints no bare import for an entry-level external. It prints `export * from` after the named imports of the external, with the `with` clause of `attribute_record`.
+- **Namespace emission.** `LinkingMetadata::ns_star_external_re_export_emitted(is_entry_level, format)` decides if the namespace declaration merges the external at runtime. In ESM, the merge is `import * as` plus `__reExport`. In other formats, the merge is `__reExport(ns, require(...))`. Three parts call this function: the finalizer (`generate_declaration_of_module_namespace_object`), the runtime sweep (`runtime_helpers_still_demanded`), and `namespace_renders_external_star`.
+- **Chunk imports** (`compute_cross_chunk_links.rs`).
+  - `collect_depended_symbols` adds each entry-level external of a chunk to the external imports of that chunk.
+  - `collect_external_import` adds the external of each static import record, also of `export *` records. It does not add the external when `namespace_renders_external_star` is true.
+- **ESM** (`render_esm_chunk_imports`).
+  - `render_esm_chunk_imports` prints no bare import for an entry-level external. It prints `export * from` after the named imports of the external, with the `with` clause of `attribute_record`.
+  - A bare import uses the `with` clause of the first static record in the chunk that has one (`bare_import_attributes`).
 - **CJS, IIFE, UMD.**
   - `render_cjs_chunk_imports` and `render_chunk_external_imports` bind an entry-level external, also when its namespace symbol is unused.
   - `render_chunk_exports` prints only the key merge.
@@ -45,11 +49,18 @@ One walk in the generate stage decides which entry chunks re-export which extern
 
 ## Tests
 
-These fixtures check the position and the binding at runtime:
+These fixtures check the import of an unused external star record:
+
+- `issues/11092` (ESM and CJS)
+- `issues/11092_shared_chunk`
+- `issues/11092_import_attributes`
+
+These fixtures check the position, the binding, and the attributes at runtime:
 
 - `function/external/export_star_keeps_import_order`
 - `function/external/cjs_export_star_loads_before_body`
 - `function/external/cjs_export_star_with_bare_import`
+- `function/external/bare_import_keeps_import_attributes`
 
 These fixtures cover the walk-back, the runtime sweep, and the facades:
 
@@ -61,3 +72,4 @@ These fixtures cover the walk-back, the runtime sweep, and the facades:
 
 - [design.md](./design.md) — the principles and trade-offs behind this implementation
 - `../code-splitting/implementation.md` — the chunk plan and the runtime sweep
+- `../linking/reference-needed-symbols/implementation.md` — the link-stage view of external star records

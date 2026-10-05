@@ -96,6 +96,7 @@ export { b };
 
 ```js
 import { n as __exportAll, r as __reExport, t as __esmMin } from "./rolldown-runtime.js";
+import "external";
 
 //#region entry_b.js
 var b;

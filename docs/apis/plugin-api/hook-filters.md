@@ -72,6 +72,7 @@ The following properties are supported by each hook:
 - `resolveId` hook: `id`
 - `load` hook: `id`
 - `transform` hook: `id`, `moduleType`, `code`
+- `renderChunk` hook: `code`
 
 See [`HookFilter`](/reference/Interface.HookFilter) as well.
 

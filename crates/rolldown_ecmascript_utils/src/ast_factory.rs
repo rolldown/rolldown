@@ -31,7 +31,7 @@ use oxc::{
   },
   span::{GetSpanMut, SPAN, Span},
 };
-use rolldown_common::{EcmaModuleAstUsage, Interop, MemberExprProp};
+use rolldown_common::{Interop, MemberExprProp};
 use rolldown_utils::ecmascript::is_validate_identifier_name;
 
 /// Options for [`StatementFactoryExt::new_esm_wrapper_stmt`].
@@ -736,54 +736,49 @@ pub trait StatementFactoryExt<'ast> {
     )
   }
 
-  /// `var <binding_name> = __commonJS(... (exports, module) => { <statements> } ...)`
+  /// `var <binding_name> = __commonJS(... (<params>) => { <statements> } ...)`
+  ///
+  /// The closure is an arrow function, so it binds only `params`. The `this` and `arguments` of
+  /// the module resolve past it.
   #[expect(clippy::too_many_arguments)]
   fn new_commonjs_wrapper_stmt<B: GetAstBuilder<'ast> + GetAllocator<'ast>>(
     binding_name: &str,
     commonjs_expr: Expression<'ast>,
     statements: allocator::Vec<'ast, Statement<'ast>>,
-    ast_usage: EcmaModuleAstUsage,
+    params: &[&str],
     profiler_names: bool,
     stable_id: &str,
     is_async: bool,
     builder: &B,
   ) -> Statement<'ast> {
-    let mut params = FormalParameters::boxed(
+    let params = FormalParameters::boxed(
       SPAN,
       FormalParameterKind::Signature,
-      oxc::allocator::Vec::with_capacity_in(1, builder),
+      oxc::allocator::Vec::from_iter_in(
+        params.iter().map(|name| {
+          FormalParameter::new(
+            SPAN,
+            [],
+            BindingPattern::new_binding_identifier(
+              SPAN,
+              oxc::ast::ast::Str::from_str_in(name, builder),
+              builder,
+            ),
+            None,
+            None,
+            false,
+            None,
+            false,
+            false,
+            builder,
+          )
+        }),
+        builder,
+      ),
       None,
       builder,
     );
     let body = FunctionBody::boxed(SPAN, [], statements, builder);
-    if ast_usage.intersects(EcmaModuleAstUsage::ModuleOrExports) {
-      params.items.push(FormalParameter::new(
-        SPAN,
-        [],
-        BindingPattern::new_binding_identifier(SPAN, "exports", builder),
-        None,
-        None,
-        false,
-        None,
-        false,
-        false,
-        builder,
-      ));
-    }
-    if ast_usage.contains(EcmaModuleAstUsage::ModuleRef) {
-      params.items.push(FormalParameter::new(
-        SPAN,
-        [],
-        BindingPattern::new_binding_identifier(SPAN, "module", builder),
-        None,
-        None,
-        false,
-        None,
-        false,
-        false,
-        builder,
-      ));
-    }
     let mut commonjs_call_expr =
       CallExpression::new_with_pure(SPAN, commonjs_expr, None, [], false, true, builder);
     let mut arrow_expr = ArrowFunctionExpression::boxed(

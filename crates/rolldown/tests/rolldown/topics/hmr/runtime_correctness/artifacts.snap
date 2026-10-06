@@ -88,12 +88,12 @@ var require_cjs_lib_reassign_module_exports = /* @__PURE__ */ __commonJSMin(((ex
 }));
 //#endregion
 //#region cases/require/cjs-lib.js
-var require_cjs_lib = /* @__PURE__ */ __commonJSMin(((exports, module) => {
+var require_cjs_lib = /* @__PURE__ */ __commonJSMin(((exports, module, this$2) => {
 	init_trigger_dep();
 	__rolldown_runtime__.createModuleHotContext("cases/require/cjs-lib.js");
 	__rolldown_runtime__.registerModule("cases/require/cjs-lib.js", module);
 	exports.foo = "foo";
-	exports.bar = "bar";
+	this$2.bar = "bar";
 	var Noop = class {
 		static baz2 = this.baz3 = "wrong";
 		static {
@@ -101,11 +101,11 @@ var require_cjs_lib = /* @__PURE__ */ __commonJSMin(((exports, module) => {
 		}
 	};
 	console.log(Noop);
-	exports.qux = "qux";
+	this$2.qux = "qux";
 }));
 //#endregion
 //#region cases/require/umd-lib.js
-var require_umd_lib = /* @__PURE__ */ __commonJSMin(((exports, module) => {
+var require_umd_lib = /* @__PURE__ */ __commonJSMin(((exports, module, this$1) => {
 	init_trigger_dep();
 	__rolldown_runtime__.createModuleHotContext("cases/require/umd-lib.js");
 	__rolldown_runtime__.registerModule("cases/require/umd-lib.js", module);
@@ -115,12 +115,12 @@ var require_umd_lib = /* @__PURE__ */ __commonJSMin(((exports, module) => {
 			return umdLib();
 		});
 		else root.umdLib = umdLib();
-	})(exports, function() {
-		const exports$1 = function() {
+	})(this$1, function() {
+		const exports = function() {
 			return "exports";
 		};
-		exports$1.foo = "foo";
-		return exports$1;
+		exports.foo = "foo";
+		return exports;
 	});
 }));
 //#endregion

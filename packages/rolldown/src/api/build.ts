@@ -27,7 +27,7 @@ export type BuildOptions = InputOptions & {
  */
 async function build(options: BuildOptions): Promise<RolldownOutput>;
 /**
- * Build multiple outputs __sequentially__.
+ * Build multiple outputs __in parallel__.
  *
  * @param options The build options.
  * @returns A Promise that resolves to the build outputs for each option.

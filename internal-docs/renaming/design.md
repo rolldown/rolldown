@@ -34,6 +34,13 @@ The renamer divides the output into two levels:
 
 #7425 made the root scope of a CJS-wrapped module an inner scope. Thus the locals of a CJS-wrapped module stopped taking top-level names, and they stopped adding `$N` suffixes to unrelated top-level bindings. But other parts of the renamer continued to treat these locals as top-level bindings in some places and as nested bindings in other places. Most CJS renaming bugs came from this difference (#9055, #9375, #9630, #9882, #10970).
 
+Thus one place decides the level of a binding: the top-level naming loop. It decides from the location where the finalizer prints the binding. In a CJS-wrapped module, only two kinds of binding are at the top level:
+
+- a facade;
+- a binding of an external `import` declaration, because rolldown moves that declaration out of the CJS closure.
+
+A binding that a `require()` call initializes stays a local of the CJS closure, also when the required module is external. Each inner-binding pass skips the bindings that the top-level naming loop gives a name to.
+
 ## Design principles
 
 1. **The renamer renames an inner binding only when necessary.** A renamed binding makes the output more difficult to read and debug. Thus an inner binding keeps its name unless a reference in its scope must resolve to a binding outside it. Top-level bindings always get unique names, because they share one namespace.

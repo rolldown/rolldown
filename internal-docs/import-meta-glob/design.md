@@ -33,26 +33,26 @@ must implement `hotUpdate`. See [rolldown#10059](https://github.com/rolldown/rol
 
 ## Principles
 
-1. **A created file is judged the way the walk judges it.** `GlobMatcher` stores the inputs the
-   walk used (walk root, the `(static prefix, pattern)` split, `exhaustive`, `caseSensitive`) and
-   decides with the same `fast_glob` call and the same pruning rules. A predicate of its own would
-   drift, and both directions are bugs: a laxer hook runs modules again whose glob output cannot
-   have changed, a stricter one silently drops updates. The unit tests split their globs with the
-   splitter of the walk for the same reason.
+1. **The hook asks what vite's hook asks.** `GlobMatcher` is the matcher of vite's
+   `vite:import-glob` plugin, with globstar in the place of picomatch. It holds one union of the
+   affirmed globs and one of the negated globs, all absolute. `exhaustive` turns `dot` on,
+   `caseSensitive: false` turns case folding on, and `**/node_modules/**` is excluded unless
+   `exhaustive` is set. A created or deleted file concerns a module if one of its matchers matches
+   the file.
 
-   This is also why the hook does not copy vite's matcher. Vite treats "only negative patterns" as
-   matching everything (`affirmed.length === 0 || affirmedMatcher(file)`), while rolldown's walk
-   yields nothing for that input.
+   One input differs from vite. Vite treats "only negative patterns" as matching everything
+   (`affirmed.length === 0 || affirmedMatcher(file)`), while rolldown's walk returns before it
+   starts for that input and records no matcher.
 
-2. **The result of the last walk answers what the predicate cannot.** `GlobMatcher` also keeps the
-   files the walk matched. Two events need them:
-   - A deleted directory is reported as itself, because its files are unknown by then. No pattern
-     matches a directory, but the result shows whether one of its files was below it.
-   - A file saved by renaming a temporary file over it is reported as created. The result shows that
-     it is already part of it, so nothing changes.
+2. **The matcher is a second predicate next to the walk, and the only state.** The walk still
+   decides with `fast_glob` on a split path and prunes with `filter_entry`. The matcher decides with
+   globstar on the whole path. Vite has the same pair, tinyglobby for the walk and picomatch for the
+   hook. Where the two disagree, a module is updated although its output did not change, or an
+   update is missed until the module is transformed again.
 
-   Being exact matters here. A module the hook selects always ships, because it is exempt from the
-   unchanged-output suppression.
+   The hook does not remember which files the last walk matched. So it cannot tell a new file from
+   one that is created again, and it does not know what was below a deleted directory. Both are
+   listed under [Unresolved questions](#unresolved-questions).
 
 3. **Watch the walk root, once.** The watcher watches a directory with everything below it and
    reports only files: a directory that appears is reported as the files inside it. So the walk root
@@ -76,8 +76,7 @@ must implement `hotUpdate`. See [rolldown#10059](https://github.com/rolldown/rol
    including the partial scans that transform only the changed modules again. A reset would drop the
    matchers of every module the scan left alone. `transform` runs on every fetch, so replacing and
    removing per module is accurate, and it covers a user deleting the `import.meta.glob` call. A
-   module deleted from disk never reaches `transform` again, so the hook forgets it when it sees
-   the deletion.
+   module deleted from disk never reaches `transform` again, so its matchers stay in the table.
 
 7. **The hook adds to the affected set, it does not replace it.** Same as vite's
    `[...oldModules, ...modules]`. A file can be both a glob match and a module in its own right. The
@@ -88,13 +87,32 @@ must implement `hotUpdate`. See [rolldown#10059](https://github.com/rolldown/rol
 - **The `hotUpdate` hook is off by default.** `dev.hotUpdate` stays off until file-to-module
   invalidation is complete ([rolldown#10714](https://github.com/rolldown/rolldown/pull/10714)), and
   Vite does not pass the option yet ([vite#22956](https://github.com/vitejs/vite/pull/22956)). Until
-  then a new file does not reach the glob under Vite, and the playground is skipped. A deleted file
-  does, through the importers of its own module.
+  then a new file does not reach the glob under Vite. A deleted file does, through the importers of
+  its own module. The playground turns the hook on with `experimental.devMode.hotUpdate`.
 - **`rolldown --watch` is not covered.** `hotUpdate` only runs in the dev engine, so a plain watch
   build still misses new glob matches.
-- **`caseSensitive: false` is ASCII-only**, in the hook exactly as in the walk: `fast_glob` has no
-  nocase flag, so both sides are lowercased. Character-class ranges (`[A-Z]`) and non-ASCII case
-  folding can diverge from picomatch's `nocase`.
+- **A file saved by rename is reported as created.** An editor that writes a temporary file and
+  renames it over the target makes the watcher report `Create` for a file that is already in the
+  result. The matcher matches it, so the module of the glob is updated with every such save although
+  its output is the same. A module the hook selects always ships, because it is exempt from the
+  unchanged-output suppression. Vite does not see this, because chokidar reports such a save as a
+  change.
+- **A deleted directory is not followed.** It is reported as itself, and no glob matches a
+  directory. The result is refreshed only where the watcher also reports the files below it. On
+  macOS it does for the files that are modules. This is not confirmed for the other backends.
+- **The matchers of a deleted module stay.** If a later file matches one of them, the hook returns
+  the id of a module that cannot be fetched again. The engine still knows the id, because partial
+  scans do not prune `module_idx_by_abs_path`. Vite keeps its entries too, but looks each one up in
+  its module graph.
+- **The walk and the matcher can disagree.** The walk prunes every dot entry and `node_modules`
+  below its root. The matcher keeps wildcards from matching a dot entry, and ignores `node_modules`
+  anywhere in the path. So a glob in a module below `node_modules` never matches in the hook, like
+  in vite, and a dot directory the glob names after a wildcard (`./*/.cache/*.js`) matches in the
+  hook only. `fast_glob` and globstar can also read an unusual pattern differently.
+- **`caseSensitive: false` folds differently on the two sides.** `fast_glob` has no nocase flag, so
+  the walk lowercases the glob and the path. The matcher uses globstar's `case_insensitive`, which
+  folds ASCII only. Character-class ranges (`[A-Z]`) can diverge from picomatch's `nocase` in the
+  walk.
 - **Paths are compared as strings.** The walk follows symbolic links and keeps the path it walked,
   while FSEvents reports canonical paths, so a file created below a linked directory is missed on
   macOS. On a disk that ignores case, a glob written in another case than the directory is missed

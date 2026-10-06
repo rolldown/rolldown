@@ -7,7 +7,7 @@
 `crates/rolldown_plugin_vite_import_glob` does two jobs. `transform` rewrites each
 `import.meta.glob(...)` call into a literal object of imports by walking the filesystem. In dev mode
 only, the same walk has two side outputs that keep that rewrite fresh: the walk root goes into the
-watch set, and a `GlobMatcher` per call is kept so `hotUpdate` can map a created or deleted path back
+watch set, and a `GlobMatcher` per call is kept so `hotUpdate` can map a created or deleted file back
 to the module that has to be transformed again.
 
 ## Concept → file map
@@ -15,7 +15,7 @@ to the module that has to be transformed again.
 | Concept                              | Location                                                               |
 | ------------------------------------ | ---------------------------------------------------------------------- |
 | Plugin, `transform`, `hotUpdate`     | `src/lib.rs`                                                           |
-| Matchers, their table, the owners    | `src/matcher.rs`                                                       |
+| Matcher and its table                | `src/matcher.rs`                                                       |
 | AST visit, glob resolution, the walk | `src/utils.rs`                                                         |
 | `hotUpdate` chain over plugins       | `crates/rolldown_plugin/src/plugin_driver/watch_hooks.rs`              |
 | Where the chain runs in an HMR round | `crates/rolldown/src/hmr/hmr_stage.rs`                                 |
@@ -47,28 +47,25 @@ is not registered. `utils.rs` holds the inner
 transform dependency, which would put the module into the affected set of every change below the
 directory.
 
-The walk collects the files it matched, and the matcher is built from them after the loop.
+The matcher is built before the walk, from the same `PathWithGlob`s. `to_absolute_glob` joins the two
+halves back into one absolute glob and escapes the glob syntax of the static prefix, like vite's
+`globSafeResolvedPath`, so a directory named `[lang]` stays literal. A glob that globstar does not
+compile leaves the call without a matcher.
 
 ## Matcher (`matcher.rs`)
 
-`GlobMatcher` holds the inputs of the walk and its result. It answers two questions, one per event
-kind:
+`GlobMatcher` is two compiled globstar globs:
 
-- `gains(file)`: would creating `file` add it to the result? The walk must match it, and it must not
-  be part of the result already.
-- `loses(path)`: would deleting `path` remove files from the result? `path` must be a file of the
-  result or a directory above one.
+- `affirmed`: the union of the positive globs.
+- `negated`: the union of the negated globs, plus `**/node_modules/**` unless `exhaustive` is set.
+  It is `None` when that leaves nothing.
 
-`matches(file)` replays the decision of the walk in the order the walk reaches it:
+Both are compiled with `dot = exhaustive` and `case_insensitive = !caseSensitive`. These are the
+options vite passes to picomatch as `dot`, `nocase` and `ignore`.
 
-1. `file` must be `walk_root` or live under it, compared on separator boundaries, so `/a/bc.js` is
-   not read as living inside `/a/b`. This is also the cheap early exit for an unrelated path.
-2. Unless `exhaustive`, no segment of `file` relative to `walk_root` may start with `.` or be
-   `node_modules`. Testing only the relative segments reproduces the `depth() == 0` exemption of
-   `filter_entry`: a dot directory that is part of the glob's own root (`./.storybook/*.js`) is fine,
-   one below it is not.
-3. `!negated.any(rule) && positive.any(rule)`, with `rule` the same pair of `strip_prefix` and
-   `glob_match` the walk uses. `caseSensitive: false` lowercases both sides, like the walk.
+`is_match(file)` is `affirmed.is_match(file) && !negated.is_match(file)`, on the slash-normalized
+absolute path the hook receives. With `dot` off a wildcard does not match a segment that starts with
+`.`, while a dot directory the glob names (`./.storybook/*.js`) matches as written.
 
 ## Matcher table and `hotUpdate` (`lib.rs`, `matcher.rs`)
 
@@ -82,19 +79,15 @@ matchers of the module, or removes them when there are none: the glob call is go
 is not JavaScript. A transform that fails leaves them as they were. Outside dev mode the table is
 never touched. Principle 6 in `design.md` explains why `buildStart` is the wrong place.
 
-`hot_update` returns `add_glob_owners`, which:
+`hot_update`:
 
-- Picks the question by event kind: `gains` for `Create`, `loses` for `Delete`. It declines `Update`
-  like vite: a content edit cannot change which files a glob matches, and the default mapping of the
-  engine already covers the file's own module.
-- For `Delete`, first forgets the modules that are `file` or live below it. They cannot be fetched
-  again. The id is compared without its query.
-- Collects every module id with a matcher that says yes. It skips the module that is `file`, which
-  the walk leaves out too, and the modules that are in `args.modules` already.
+- Declines `Update` like vite. A content edit cannot change which files a glob matches, and the
+  default mapping of the engine already covers the file's own module.
+- Collects every module id with a matcher that matches `args.file`.
 - Returns `None` when nothing is collected. Declining leaves the default set of the engine
   untouched, which is what makes a stray file in a watched directory end the round as a noop.
 - Otherwise returns `args.modules` with the collected ids appended, sorted, because the table has no
-  stable order.
+  stable order. The engine drops an id it does not know, and its set ignores one it has already.
 
 `register_hook_usage` therefore reports `Transform | HotUpdate`.
 
@@ -108,8 +101,8 @@ Creating `pages/c.js` under `import.meta.glob('./pages/*.js')` in `main.js`, wit
 2. `HmrStage::compute_hmr_update_for_file_changes` computes the default affected set for
    `…/pages/c.js`. It is empty, since no module and no transform dependency point at it. The
    `hotUpdate` chain runs anyway.
-3. The matcher of `main.js` gains the file, so the hook returns `[main.js]`. Modules returned by a
-   hook are exempt from the unchanged-output suppression.
+3. The matcher of `main.js` matches the file, so the hook returns `[main.js]`. Modules returned by
+   a hook are exempt from the unchanged-output suppression.
 4. `main.js` is fetched again: `transform` walks `pages/`, emits the object with `./pages/c.js` in it,
    and replaces the matchers.
 5. The partial scan pulls `pages/c.js` into the graph and the patch ships. `main.js` accepts itself,
@@ -120,15 +113,14 @@ itself and the engine expands to its importers.
 
 ## Tests
 
-- The unit tests in `src/matcher.rs` cover the matcher and `add_glob_owners`. They are the only
-  tests of the hook that run while the playground is skipped. The globs are split by
-  `PathWithGlob`, like in the walk.
+- The unit tests in `src/matcher.rs` cover the matcher, the escaping in `to_absolute_glob`, and the
+  hook.
 - `packages/rolldown/tests/fixtures/builtin-plugin/import-glob/*` are the build-time snapshots. They
   must not move: none of this changes what `transform` emits.
 - `packages/test-dev-server/tests/playground/hmr-import-glob` is the end-to-end check: add, delete, a
-  file that does not match, a new nested directory, a directory moved away, a directory missing at
-  boot, with and without its parent. It runs on the browser platform, where vite installs the native
-  plugin itself. It is skipped while `dev.hotUpdate` is off by default. Running it locally needs
+  file that does not match, a new nested directory, a directory missing at boot, with and without
+  its parent. It runs on the browser platform, where vite installs the native plugin itself, and it
+  turns the hook on with `experimental.devMode.hotUpdate`. Running it locally needs
   `just setup-vite`.
 
 ## Related

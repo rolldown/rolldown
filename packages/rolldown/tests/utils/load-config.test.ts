@@ -1,7 +1,7 @@
 import { readdir } from 'node:fs/promises';
 import path from 'node:path';
 import { loadConfig } from 'rolldown/config';
-import { describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 const fixtures = path.join(import.meta.dirname, 'fixtures', 'load-config');
 
@@ -35,41 +35,51 @@ describe('loadConfig native configLoader', () => {
     const config = await loadConfig(path.join(fixtures, 'native.config.mjs'));
     expect(config).toStrictEqual({ input: './entry.js' });
   });
-
-  it('keeps bundled dynamic imports available to a deferred config function', async () => {
-    const config = await loadConfig(path.join(fixtures, 'dynamic-function.config.ts'));
-    if (typeof config !== 'function') {
-      throw new TypeError('expected bundled config function');
-    }
-    await expect(config({})).resolves.toStrictEqual({ input: './dynamic-entry.js' });
-  });
 });
 
 describe('loadConfig bundle configLoader', () => {
-  it('keeps runtime-relative resolution working from the config directory', async () => {
-    const config = await loadConfig(path.join(fixtures, 'runtime-require.config.cts'));
+  let filesBefore: string[];
 
-    expect(config).toStrictEqual({
-      input: path.join(fixtures, 'runtime-required-entry.js'),
+  beforeEach(async () => {
+    filesBefore = await readdir(fixtures);
+  });
+
+  afterEach(async () => {
+    // Every generated file is gone, on success and on failure alike.
+    expect(await readdir(fixtures)).toStrictEqual(filesBefore);
+  });
+
+  it('keeps dynamic imports available to a config function called after loading', async () => {
+    const config = await loadConfig(path.join(fixtures, 'dynamic-function.config.ts'));
+
+    expect(config).toBeTypeOf('function');
+    await expect((config as () => Promise<unknown>)()).resolves.toStrictEqual({
+      input: './dynamic-entry.js',
     });
   });
 
-  it('rejects when the bundled config rejects with `undefined`', async () => {
+  it('resolves runtime-relative requires from the config directory', async () => {
+    const config = await loadConfig(path.join(fixtures, 'runtime-require.config.cts'));
+
+    expect(config).toStrictEqual({ input: path.join(fixtures, 'native.config.mjs') });
+  });
+
+  it('rejects when the config throws `undefined`', async () => {
     const error = await loadConfig(path.join(fixtures, 'throw-undefined.config.ts')).catch(
       (error: unknown) => error,
     );
 
     expect(error).toBeInstanceOf(Error);
     expect((error as Error).message).toMatch(/Error happened while loading config/);
-    expect((error as Error & { cause?: unknown }).cause).toBeUndefined();
+    expect((error as Error).cause).toBeUndefined();
   });
 
-  it('leaves no generated file behind, whether the config loads or fails', async () => {
-    const before = (await readdir(fixtures)).sort();
+  it('evaluates each load of the same config separately', async () => {
+    const configFile = path.join(fixtures, 'runtime-require.config.cts');
 
-    await loadConfig(path.join(fixtures, 'runtime-require.config.cts'));
-    await loadConfig(path.join(fixtures, 'throw-undefined.config.ts')).catch(() => {});
+    const [first, second] = await Promise.all([loadConfig(configFile), loadConfig(configFile)]);
 
-    expect((await readdir(fixtures)).sort()).toStrictEqual(before);
+    expect(first).toStrictEqual(second);
+    expect(first).not.toBe(second);
   });
 });

@@ -1,3 +1,4 @@
+import { randomBytes } from 'node:crypto';
 import fs from 'node:fs';
 import { readdir } from 'node:fs/promises';
 import path from 'node:path';
@@ -15,19 +16,14 @@ interface BundledConfig {
 }
 
 /**
- * Remove every file the config build emitted, collecting instead of throwing so
- * a cleanup failure never hides the failure that triggered the cleanup.
+ * Returns the removal errors instead of throwing them, so a cleanup failure
+ * never hides the failure that triggered the cleanup.
  */
-async function removeGeneratedFiles(generatedFiles: string[]): Promise<unknown[]> {
-  const errors: unknown[] = [];
-  for (const generatedFile of generatedFiles) {
-    try {
-      await fs.promises.rm(generatedFile, { force: true });
-    } catch (error) {
-      errors.push(error);
-    }
-  }
-  return errors;
+async function removeFiles(files: string[]): Promise<unknown[]> {
+  const results = await Promise.allSettled(
+    files.map((file) => fs.promises.rm(file, { force: true })),
+  );
+  return results.flatMap((result) => (result.status === 'rejected' ? [result.reason] : []));
 }
 
 async function bundleTsConfig(configFile: string, isEsm: boolean): Promise<BundledConfig> {
@@ -67,25 +63,27 @@ async function bundleTsConfig(configFile: string, isEsm: boolean): Promise<Bundl
       },
     ],
   });
-  // The generated module has to sit next to the original config file: configs may
-  // keep runtime-relative resolution that Rolldown leaves untouched (for example
-  // `require.resolve('./helper')`), and Node resolves those against the directory
-  // the generated file lives in. Writing into a nested temporary directory would
-  // break them, so every emitted file is tracked and removed individually instead.
+  // Node resolves runtime-relative lookups left in the output, such as
+  // `require.resolve('./helper')`, from the generated file's own directory, so
+  // the bundle is written beside the config. The per-call token keeps concurrent
+  // loads of the same config from sharing one file, and lets a failed write find
+  // the files it left behind.
   const outputDir = path.dirname(configFile);
+  const outputPrefix = `rolldown.config.${randomBytes(4).toString('hex')}.`;
+  const errors: unknown[] = [];
   let entryFile: string | undefined;
-  let generatedFiles: string[] = [];
-  let bundleFailed = false;
-  let operationError: unknown;
+  let generatedFiles: string[] | undefined;
   try {
     const result = await bundle.write({
       dir: outputDir,
       format: isEsm ? 'esm' : 'cjs',
+      // A single file: a deferred config function may still `import()` after
+      // the generated files are removed, so nothing may live in a sibling chunk.
       codeSplitting: false,
       sourcemap: 'inline',
       // respect the original file extension, mts -> mjs, cts -> cjs
       // mts should be generate mjs, it avoid add `type: module` at package.json
-      entryFileNames: `rolldown.config.[hash]${path.extname(configFile).replace('ts', 'js')}`,
+      entryFileNames: `${outputPrefix}${path.extname(configFile).replace('ts', 'js')}`,
     });
     generatedFiles = result.output.map((output) => path.join(outputDir, output.fileName));
     const fileName = result.output.find(
@@ -96,28 +94,27 @@ async function bundleTsConfig(configFile: string, isEsm: boolean): Promise<Bundl
     }
     entryFile = path.join(outputDir, fileName);
   } catch (error) {
-    bundleFailed = true;
-    operationError = error;
+    errors.push(error);
   }
 
-  let closeFailed = false;
-  let closeError: unknown;
   try {
     await bundle.close();
   } catch (error) {
-    closeFailed = true;
-    closeError = error;
+    errors.push(error);
   }
 
-  const errors: unknown[] = [];
-  if (bundleFailed) errors.push(operationError);
-  if (closeFailed) errors.push(closeError);
   if (errors.length > 0) {
-    errors.push(...(await removeGeneratedFiles(generatedFiles)));
+    try {
+      generatedFiles ??= (await readdir(outputDir))
+        .filter((name) => name.startsWith(outputPrefix))
+        .map((name) => path.join(outputDir, name));
+      errors.push(...(await removeFiles(generatedFiles)));
+    } catch (error) {
+      errors.push(error);
+    }
+    throwCollectedErrors(errors, 'Config bundling and cleanup both failed');
   }
-
-  throwCollectedErrors(errors, 'Config bundling and cleanup both failed');
-  return { entryFile: entryFile!, generatedFiles };
+  return { entryFile: entryFile!, generatedFiles: generatedFiles! };
 }
 
 const SUPPORTED_JS_CONFIG_FORMATS = ['.js', '.mjs', '.cjs'];
@@ -138,21 +135,15 @@ async function findConfigFileNameInCwd(): Promise<string> {
 async function loadTsConfig(configFile: string): Promise<ConfigExport> {
   const isEsm = isFilePathESM(configFile);
   const { entryFile, generatedFiles } = await bundleTsConfig(configFile, isEsm);
+  // The config may throw `undefined`, so a failure is recorded by push, not by value.
+  const errors: unknown[] = [];
   let config: ConfigExport | undefined;
-  // Track completion separately from the rejection value: a config is free to
-  // reject with any value, `undefined` included, and that still is a failure.
-  let imported = false;
-  let importError: unknown;
   try {
     config = (await import(pathToFileURL(entryFile).href)).default;
-    imported = true;
   } catch (error) {
-    importError = error;
+    errors.push(error);
   }
-
-  const errors: unknown[] = [];
-  if (!imported) errors.push(importError);
-  errors.push(...(await removeGeneratedFiles(generatedFiles)));
+  errors.push(...(await removeFiles(generatedFiles)));
   throwCollectedErrors(errors, 'Config import and cleanup both failed');
   return config!;
 }

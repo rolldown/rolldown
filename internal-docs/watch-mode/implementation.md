@@ -110,7 +110,7 @@ Data flow:
 
 - `Watcher` only holds lifecycle state (`tx`, the close signal, and `coordinator_state`) — lightweight, no bundler access.
 - `WatchCoordinator` owns ALL mutable state. No external mutation.
-- ONE `FsWatcher` exists per config group, shared by that group's `WatchTask`s via `Arc<std::sync::Mutex<FsWatcher>>`, so a save of a file watched by several outputs of one config arrives once, tagged with the group. Membership stays per task (`watched_files`); backend registration is deduplicated by the shared watcher's registered-path set, so a member never re-registers a sibling's path (on macOS that would restart the group's FSEvents stream, see [File Watching](#file-watching)).
+- ONE `FsWatcher` exists per config group, shared by that group's `WatchTask`s via `Arc<std::sync::Mutex<FsWatcher>>`, so a save of a file watched by several outputs of one config arrives once, tagged with the group. Membership stays per task (`watched_files`); a path the shared watcher already covers (registered itself, or below a watched directory) is adopted into the member's set without a backend batch, so a member never re-registers what a sibling already watches (on macOS that would restart the group's FSEvents stream, see [File Watching](#file-watching)).
 - Bundler is `Arc<TokioMutex<>>` because event data structs carry a clone for consumer access (e.g. `BUNDLE_END.result`).
 
 ### Three-Layer Stack
@@ -322,9 +322,9 @@ Configured via `WatcherOptions`, fires **immediately** on file change (before de
 ## File Watching
 
 - After each build, `bundler.watch_files()` returns the current set.
-- `WatchTask::update_watch_files()` diffs against the task's own `watched_files` set, then hands the new candidates to the config group's shared `FsWatcher`. The watcher's own path set is the group-wide registered set: a path a sibling output already registered is skipped there without opening a native batch, and the task adopts it into its own `watched_files` (`FsWatcher::is_registered`); only paths new to the whole group reach the backend. A changed path belongs to a task when it, or one of its ancestors, is in that task's `watched_files`. `FsWatcher::is_watched` is not used for task membership, because the shared set also holds paths only a sibling watches.
+- `WatchTask::update_watch_files()` diffs against the task's own `watched_files` set, then hands the new candidates to the config group's shared `FsWatcher`. The watcher's own path set is the group-wide registered set. A candidate the group already covers, because it is registered itself or lies below a registered directory (`FsWatcher::is_watched`), goes straight into the task's `watched_files` without a backend batch: adds are recursive, so the OS watch already reports it, and on macOS a batch would restart the group's FSEvents stream. Only uncovered paths reach `watch_paths`, and the task adopts those that ended up registered (`FsWatcher::is_registered`). A changed path belongs to a task when it, or one of its ancestors, is in that task's `watched_files`. `FsWatcher::is_watched` is not used for task membership, because the shared set also holds paths only a sibling watches.
 - `include`/`exclude` patterns filter which files are watched (via `pattern_filter`).
-- Files are watched **non-recursively** (individual file watches).
+- Each path is added with `RecursiveMode::Recursive`: a file is watched by itself, a directory with everything below it.
 - `FsWatcher::watch_paths` filters and deduplicates new paths before opening a notify batch. If none remain, it leaves the backend untouched: on macOS, opening a batch stops the FSEvents stream, and committing even an empty batch restarts it from "now", potentially losing edits in between. A path is recorded only after registration and commit succeed, so a skipped path is tried again with the next build.
 
 ### Backend selection

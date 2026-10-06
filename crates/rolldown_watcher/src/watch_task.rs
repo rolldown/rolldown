@@ -263,9 +263,17 @@ impl WatchTask {
     }
 
     let mut fs_watcher = fs_watcher.lock().expect("fs_watcher lock poisoned");
-    let result = fs_watcher.watch_paths(candidates.iter(), |_| true);
-    // Adopt what the group watcher holds: a sibling's earlier paths plus this batch's successes.
-    for path in candidates {
+    // A path the group already covers (itself or a watched ancestor directory, from this task
+    // or a sibling) is adopted without a backend batch: on macOS a batch restarts the group's
+    // FSEvents stream. See internal-docs/watch-mode/implementation.md ("File Watching").
+    let (covered, uncovered): (Vec<&Path>, Vec<&Path>) =
+      candidates.into_iter().partition(|path| fs_watcher.is_watched(path));
+    for path in covered {
+      watched_files.insert(path.to_path_buf());
+    }
+    let result = fs_watcher.watch_paths(uncovered.iter(), |_| true);
+    // Adopt this batch's successes; a refused path stays out and is retried next build.
+    for path in uncovered {
       if fs_watcher.is_registered(path) {
         watched_files.insert(path.to_path_buf());
       }
@@ -339,4 +347,66 @@ pub enum BuildOutcome {
   Error(WatchErrorEventData),
   /// `watcher.close()` was called during the build; output was discarded.
   Closed,
+}
+
+#[cfg(test)]
+mod tests {
+  use super::*;
+  use crate::task_fs_event_handler::GroupFsEventHandler;
+  use rolldown::BundlerOptions;
+  use rolldown_fs_watcher::FsWatcherConfig;
+  use std::fs;
+
+  struct TestDir(PathBuf);
+
+  impl Drop for TestDir {
+    fn drop(&mut self) {
+      let _ = fs::remove_dir_all(&self.0);
+    }
+  }
+
+  fn task(cwd: &Path, fs_watcher: &Arc<std::sync::Mutex<FsWatcher>>) -> WatchTask {
+    let options = BundlerOptions { cwd: Some(cwd.to_path_buf()), ..Default::default() };
+    WatchTask::new(
+      BundlerConfig::new(options, vec![]),
+      Arc::clone(fs_watcher),
+      &Arc::new(AtomicBool::new(false)),
+    )
+    .expect("create watch task")
+  }
+
+  /// A file below a directory a sibling already watches is adopted without a backend batch:
+  /// adds are recursive, and on macOS a batch restarts the group's FSEvents stream.
+  #[test]
+  fn path_covered_by_sibling_directory_is_adopted_without_batch() {
+    let dir =
+      std::env::temp_dir().join(format!("rolldown-watch-task-covered-{}", std::process::id()));
+    fs::create_dir_all(dir.join("assets")).expect("create assets directory");
+    let dir = TestDir(dunce::canonicalize(dir).expect("canonicalize test directory"));
+    let assets = dir.0.join("assets");
+    let svg = assets.join("x.svg");
+    fs::write(&svg, "<svg/>").expect("write asset");
+
+    let (tx, _rx) = tokio::sync::mpsc::unbounded_channel();
+    let fs_watcher = FsWatcher::new(
+      GroupFsEventHandler { group_index: WatchGroupIdx::from_usize(0), tx },
+      // The no-op backend accepts every add, so a path absent from the registered set
+      // never reached a batch.
+      &FsWatcherConfig { enabled: false, ..FsWatcherConfig::default() },
+    )
+    .expect("create fs watcher");
+    let fs_watcher = Arc::new(std::sync::Mutex::new(fs_watcher));
+    let a = task(&dir.0, &fs_watcher);
+    let b = task(&dir.0, &fs_watcher);
+
+    a.update_watch_files(&[ArcStr::from(assets.to_string_lossy())]).expect("watch directory");
+    b.update_watch_files(&[ArcStr::from(svg.to_string_lossy())]).expect("watch file");
+
+    let svg = svg.to_string_lossy();
+    assert!(b.is_watched_file(&svg), "task B must own the covered file");
+    assert!(
+      !fs_watcher.lock().expect("fs_watcher lock").is_registered(Path::new(svg.as_ref())),
+      "a covered file must not open a backend batch"
+    );
+  }
 }

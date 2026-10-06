@@ -716,7 +716,9 @@ true` and calls `rebuild()`.
   files, the client inputs, the stamp table, `next_hmr_patch_id`,
   `last_build_errored`, and `hot_update`.
   `last_build_errored` is `DevContext::last_task_errored`;
-  `hot_update` is the dev option (`bundling_task.rs:272-273`).
+  `hot_update` is the dev option (`bundling_task.rs:272-273`). The HMR
+  stage also turns the hook on when `experimental.devMode.hotUpdate` is set
+  (`hmr_stage.rs`, step 1).
 - Assigns `patch.seq` from `session.next_seq` for every
   `HmrUpdate::Patch` (`bundling_task.rs:286-296`). A `Noop` sends
   nothing, so it does not advance the counter; the client requires
@@ -743,7 +745,8 @@ Per changed file:
    dependencies), in a stable order: own module first, then
    registrants sorted by stable id.
 2. **`hotUpdate` plugin chain** (dev-only, off by default) — runs only
-   when the `hotUpdate` dev option is `true`. It stays off until
+   when `experimental.devMode.hotUpdate` or the `hotUpdate` dev option
+   is `true`. It stays off until
    file-to-module invalidation is complete (rolldown/rolldown#10714),
    because the set the hook receives is not yet correct for query-variant
    modules. When enabled, plugins run in hook order and each may replace

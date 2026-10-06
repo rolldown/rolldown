@@ -271,8 +271,9 @@ the seed only; the client-side decision is unchanged.
 - **The `hotUpdate` plugin hook** runs first. A plugin may replace the
   changed set for a file — a config file that affects many modules, a
   content file that is not a module at all. The hook runs only when the
-  `dev.hotUpdate` option is on (off by default, see Unresolved
-  Questions). Vite does not pass this option yet.
+  `experimental.devMode.hotUpdate` input option or the `dev.hotUpdate`
+  option is on (off by default, see Unresolved Questions). Vite forwards
+  `experimental.devMode` from the user config, but not `dev.hotUpdate`.
 - **Unchanged-output suppression** runs second. If a module's rendered
   output is byte-identical before and after the rebuild, it is dropped
   from the changed set. A save with no effective change no longer
@@ -427,11 +428,11 @@ the changed module.
   `css-update` message, and module cache removal for styles are
   unspecified. `hot.prune` callbacks never run in FBM, because the
   server never sends a `prune` message.
-- **`hotUpdate` gate** — the engine hook exists but `dev.hotUpdate`
-  stays off by default until file-to-module invalidation is complete
-  (rolldown/rolldown#10714): the set a hook receives is not yet correct
-  for query-variant modules. Vite does not pass the option and does not
-  run its `handleHotUpdate` / `hotUpdate` hooks in FBM yet.
+- **`hotUpdate` gate** — the engine hook exists but stays off by default
+  until file-to-module invalidation is complete (rolldown/rolldown#10714):
+  the set a hook receives is not yet correct for query-variant modules.
+  `experimental.devMode.hotUpdate` or `dev.hotUpdate` turns it on. Vite
+  does not run its own `handleHotUpdate` / `hotUpdate` hooks in FBM yet.
 - **Lazy dynamic-import HMR** — an edit under a lazy boundary
   (`app → proxy → foo`, where the proxy is the placeholder module that
   stands in for a lazy-compiled module) full-reloads until the walk can

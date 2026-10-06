@@ -147,6 +147,7 @@ rolldown_watcher/
 rolldown_fs_watcher/
 ├── lib.rs                     // Public exports: FsWatcher, FsWatcherConfig, FsEvent*
 ├── config.rs                  // FsWatcherConfig (enabled, use_polling, use_debounce, …)
+├── filter.rs                  // IgnoreFilter: watch.exclude, also notify's ignore filter
 ├── event.rs                   // FsEvent (path + WatcherChangeKind), FsEventHandler
 ├── watcher.rs                 // FsWatcher: the watched paths, on top of a WatcherBackend
 └── notify/                    // everything that speaks notify
@@ -323,7 +324,10 @@ Configured via `WatcherOptions`, fires **immediately** on file change (before de
 
 - After each build, `bundler.watch_files()` returns the current set.
 - `WatchTask::update_watch_files()` diffs against the task's own `watched_files` set, then hands the new candidates to the config group's shared `FsWatcher`. The watcher's own path set is the group-wide registered set. On the FSEvents backend (`FsWatcher::add_restarts_stream`: macOS native, not polling), a candidate the group already covers, because it is registered itself or lies below a registered directory (`FsWatcher::is_watched`), goes straight into the task's `watched_files` without a backend batch: a batch there restarts the group's stream, and the kernel reports everything below a watched root. On other backends every candidate reaches `watch_paths`: a redundant add is harmless there, and an explicit watch survives a recursive watch the backend could not extend (inotify needs one watch per directory and cannot add one for a new subdirectory once its watch table is full). Either way the task adopts the paths sent to `watch_paths` that ended up registered (`FsWatcher::is_registered`). A changed path belongs to a task when it, or one of its ancestors, is in that task's `watched_files`. `FsWatcher::is_watched` is not used for task membership, because the shared set also holds paths only a sibling watches.
-- `include`/`exclude` patterns filter which files are watched (via `pattern_filter`).
+- `exclude` becomes `FsWatcherConfig::ignored`, compiled once per watcher into an `IgnoreFilter` (`rolldown_fs_watcher/src/filter.rs`, globs via `globstar`). `FsWatcher::watch_paths` skips ignored paths, and notify gets the same filter through `Config::with_ignored`, so an ignored path is never scanned or reported. `map_notify_event` applies it too when it expands a created directory into its files.
+- `exclude` is about files, as in Rollup. The filter gets notify's `EntryKind`: a file is ignored if it matches (`Glob::is_match`). A directory is ignored only if everything below it matches (`DirMatch::matches_all_below`). A path of unknown kind (a missing path, or every event on Windows) could be either, so it is ignored if one of the two holds. So `dist/**` skips `dist` as a whole, and `**/*.log` does not hide `foo.log/a.js` below a directory named `foo.log`. A regex cannot tell whether it matches everything below a directory, so it never ignores one. Its files are still ignored one by one.
+- Why a directory that merely matches is not ignored: inotify, kqueue and poll never look below an ignored directory, while FSEvents and Windows ask about every path below it. The backends only agree if ignoring a directory and ignoring each path below it give the same result.
+- `include`/`exclude` still decide which discovered files are registered (via `pattern_filter`), so an excluded path is filtered twice: by the caller at registration and by the watcher.
 - Each path is added with `RecursiveMode::Recursive`: a file is watched by itself, a directory with everything below it.
 - `FsWatcher::watch_paths` filters and deduplicates new paths before opening a notify batch. If none remain, it leaves the backend untouched: on macOS, opening a batch stops the FSEvents stream, and committing even an empty batch restarts it from "now", potentially losing edits in between. A path is recorded only after registration and commit succeed, so a skipped path is tried again with the next build.
 
@@ -335,7 +339,11 @@ A group with no outputs (`output: []`) keeps its empty `group_members` slot,
 so later group indices stay aligned, and gets no watcher.
 `FsWatcher` is a concrete type; the notify implementations stay crate-private.
 `WatcherConfig::to_fs_watcher_config()` maps watch options onto `FsWatcherConfig`,
-and construction picks the backend:
+`group_fs_watcher_config` adds the group's shared `ignored` and `cwd` — only when
+every member's `watch.exclude` and `cwd` agree, since one shared watcher cannot
+express differing excludes (differing members get no backend filter and drop
+their own excluded paths at event time in `WatchTask::is_watched_file`) — and
+construction picks the backend:
 
 | `use_polling` | `use_debounce` | Backend                               |
 | ------------- | -------------- | ------------------------------------- |

@@ -5,6 +5,7 @@ use std::{borrow::Cow, path::PathBuf};
 
 use arcstr::ArcStr;
 use oxc::ast_visit::VisitJs;
+use rolldown_common::WatcherChangeKind;
 use rolldown_plugin::{
   HookHotUpdateArgs, HookHotUpdateReturn, HookTransformOutput, HookTransformOutputMap, HookUsage,
   Plugin, PluginContext,
@@ -88,6 +89,22 @@ impl Plugin for ViteImportGlobPlugin {
     _ctx: &PluginContext,
     args: &HookHotUpdateArgs,
   ) -> HookHotUpdateReturn {
-    Ok(self.add_glob_owners(args))
+    if args.kind == WatcherChangeKind::Update {
+      return Ok(None);
+    }
+
+    let mut owners = self
+      .glob_matchers
+      .iter()
+      .filter(|entry| entry.value().iter().any(|matcher| matcher.is_match(&args.file)))
+      .map(|entry| entry.key().clone())
+      .collect::<Vec<_>>();
+    if owners.is_empty() {
+      return Ok(None);
+    }
+    // The map has no stable order.
+    owners.sort_unstable();
+
+    Ok(Some(args.modules.iter().cloned().chain(owners).collect()))
   }
 }

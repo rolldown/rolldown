@@ -21,6 +21,7 @@ workspace = true
 anyhow = { workspace = true }
 arcstr = { workspace = true }
 fast-glob = { workspace = true }
+globstar = { workspace = true }
 itoa = { workspace = true }
 oxc = { workspace = true }
 path-posix = { workspace = true }

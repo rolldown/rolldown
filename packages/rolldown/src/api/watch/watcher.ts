@@ -123,7 +123,7 @@ export async function createWatcher(
       )
       .flat(),
   );
-  warnMultiplePollingOptions(bundlerOptions);
+  warnMultipleWatcherOptions(bundlerOptions);
   const callback = createEventCallback(emitter);
   const bindingWatcher = new BindingWatcher(
     bundlerOptions.map((option) => option.bundlerOptions),
@@ -136,12 +136,21 @@ export async function createWatcher(
   );
 }
 
-function warnMultiplePollingOptions(bundlerOptions: BundlerOptionWithStopWorker[]) {
+function warnMultipleWatcherOptions(bundlerOptions: BundlerOptionWithStopWorker[]) {
   let found = false;
   for (const option of bundlerOptions) {
     const watch = option.inputOptions.watch;
     const watcher = watch && typeof watch === 'object' ? watch.watcher : undefined;
-    if (watcher && (watcher.usePolling != null || watcher.pollInterval != null)) {
+    // Mirrors selects_watcher_backend in crates/rolldown_binding/src/watcher.rs
+    if (
+      watcher &&
+      (watcher.usePolling != null ||
+        watcher.pollInterval != null ||
+        watcher.compareContentsForPolling != null ||
+        watcher.useDebounce != null ||
+        watcher.debounceDelay != null ||
+        watcher.debounceTickRate != null)
+    ) {
       if (found) {
         option.onLog(LOG_LEVEL_WARN, logMultipleWatcherOption());
         return;

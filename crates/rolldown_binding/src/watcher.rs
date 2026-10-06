@@ -206,5 +206,21 @@ mod tests {
       config(WatchOption { use_polling: true, ..Default::default() }),
     ];
     assert!(!create_watcher_config(&configs, &[true, true]).use_polling);
+
+    // A debouncer-only earlier config also selects the backend: a later `usePolling` is ignored.
+    let configs = vec![
+      config(WatchOption {
+        use_debounce: true,
+        debounce_delay: Some(10),
+        debounce_tick_rate: Some(5),
+        ..Default::default()
+      }),
+      config(WatchOption { use_polling: true, ..Default::default() }),
+    ];
+    let watcher_config = create_watcher_config(&configs, &[true, true]);
+    assert!(!watcher_config.use_polling);
+    assert!(watcher_config.use_debounce);
+    assert_eq!(watcher_config.debounce_delay, Some(10));
+    assert_eq!(watcher_config.debounce_tick_rate, Some(5));
   }
 }

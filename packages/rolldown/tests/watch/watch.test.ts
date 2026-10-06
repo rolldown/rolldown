@@ -1111,6 +1111,47 @@ test.concurrent(
   },
 );
 
+test.concurrent(
+  'warning when a debouncer-only config is followed by a polling config',
+  { retry: TEST_RETRY, timeout: TEST_TIMEOUT },
+  async ({ task, expect, onTestFinished }) => {
+    const retryCount = task.result?.retryCount ?? 0;
+    const { input, output, dir } = createTestInputAndOutput(
+      'watch-debounce-then-polling-warning',
+      retryCount,
+    );
+    const {
+      input: foo,
+      output: fooOutput,
+      dir: fooDir,
+    } = createTestInputAndOutput('watch-debounce-then-polling-warning-foo', retryCount);
+    onTestFinished(() => {
+      if (!process.env.CI) {
+        fs.rmSync(dir, { recursive: true, force: true });
+        fs.rmSync(fooDir, { recursive: true, force: true });
+      }
+    });
+    const logs: [string, string | undefined][] = [];
+    // `_watch`: the `watch` wrapper injects `usePolling` into every config.
+    const watcher = _watch([
+      {
+        input,
+        output: { file: output },
+        watch: { watcher: { useDebounce: true, debounceDelay: 10 } },
+      },
+      {
+        input: foo,
+        output: { file: fooOutput },
+        watch: { watcher: { usePolling: true } },
+        plugins: [{ name: 'test', onLog: (level, log) => void logs.push([level, log.code]) }],
+      },
+    ]);
+    onTestFinished(async () => await watcher.close());
+
+    await expect.poll(() => logs).toContainEqual(['warn', 'MULTIPLE_WATCHER_OPTION']);
+  },
+);
+
 if (process.platform === 'win32') {
   test.concurrent(
     'watch linux path at windows #4385',

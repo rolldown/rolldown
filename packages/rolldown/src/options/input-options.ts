@@ -224,6 +224,11 @@ export type DevModeOptions =
        */
       skipCommonRuntimeInjection?: boolean;
       lazy?: boolean;
+      /**
+       * Call the `hotUpdate` plugin hook. The `hotUpdate` option of `dev()` also turns it on.
+       * @default false
+       */
+      hotUpdate?: boolean;
     };
 
 export type OptimizationOptions = {

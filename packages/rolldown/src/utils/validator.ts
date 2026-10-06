@@ -628,6 +628,7 @@ const DevModeSchema = v.union([
     implement: v.optional(v.string()),
     skipCommonRuntimeInjection: v.optional(v.boolean()),
     lazy: v.optional(v.boolean()),
+    hotUpdate: v.optional(v.boolean()),
   }),
 ]);
 isTypeTrue<IsSchemaSubType<typeof DevModeSchema, DevModeOptions>>();

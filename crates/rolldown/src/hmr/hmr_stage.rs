@@ -119,8 +119,10 @@ impl<'a, Fs: FileSystem + Clone + 'static> HmrStage<'a, Fs> {
 
     // 1. Identify changed modules — per changed file: compute the default affected set, then (if
     // the hook is enabled and any plugin registered `hotUpdate`) let the plugin replace-chain
-    // edit it before re-fetching. `hot_update_hook_enabled` is the `hot_update` dev option,
-    // off by default — see `DevOptions::hot_update`.
+    // edit it before re-fetching. The hook is off by default. Either `DevOptions::hot_update`
+    // (`hot_update_hook_enabled`) or `DevModeOptions::hot_update` turns it on.
+    let hot_update_hook_enabled = hot_update_hook_enabled
+      || self.options.experimental.dev_mode.as_ref().is_some_and(|d| d.hot_update == Some(true));
     let hot_update_hook_registered =
       hot_update_hook_enabled && self.plugin_driver.has_hot_update_hook();
     let mut changed_modules = FxIndexSet::default();

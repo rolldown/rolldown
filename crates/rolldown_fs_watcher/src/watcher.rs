@@ -63,6 +63,11 @@ impl FsWatcher {
     path.ancestors().any(|ancestor| self.watched_paths.contains(ancestor))
   }
 
+  /// Exact match only, unlike `is_watched`.
+  pub fn is_registered(&self, path: &Path) -> bool {
+    self.watched_paths.contains(path)
+  }
+
   pub fn watched_paths(&self) -> impl Iterator<Item = &Path> {
     self.watched_paths.iter().map(PathBuf::as_path)
   }

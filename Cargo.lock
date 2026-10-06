@@ -3310,6 +3310,7 @@ version = "1.2.12"
 dependencies = [
  "anyhow",
  "arcstr",
+ "dunce",
  "futures",
  "oxc_index",
  "rolldown",

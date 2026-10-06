@@ -1,7 +1,7 @@
 use crate::handler::WatcherEventHandler;
-use crate::task_fs_event_handler::TaskFsEventHandler;
+use crate::task_fs_event_handler::GroupFsEventHandler;
 use crate::watch_coordinator::WatchCoordinator;
-use crate::watch_task::{WatchTask, WatchTaskIdx};
+use crate::watch_task::{WatchGroupIdx, WatchTask, WatchTaskIdx};
 use crate::watcher_msg::WatcherMsg;
 use anyhow::Result;
 use futures::FutureExt;
@@ -71,7 +71,7 @@ struct CoordinatorState {
 
 /// The main watcher that manages multiple bundlers.
 ///
-/// Usage: `Watcher::new(configs, handler, &config)` → `watcher.run()` → `watcher.close()`.
+/// Usage: `Watcher::new(groups, handler, &config)` → `watcher.run()` → `watcher.close()`.
 pub struct Watcher {
   coordinator_state: std::sync::Mutex<CoordinatorState>,
   tx: mpsc::UnboundedSender<WatcherMsg>,
@@ -80,21 +80,23 @@ pub struct Watcher {
 }
 
 impl Watcher {
-  /// Create a new watcher with multiple bundler configs and a handler.
+  /// Create a new watcher from config groups and a handler. Each inner `Vec` holds the
+  /// per-output configs of one input config.
   /// The coordinator future is created but not spawned — call `run()` to start.
   pub fn new<H: WatcherEventHandler + 'static>(
-    configs: Vec<BundlerConfig>,
+    groups: Vec<Vec<BundlerConfig>>,
     handler: H,
     watcher_config: &WatcherConfig,
   ) -> BuildResult<Self> {
     let (tx, rx) = mpsc::unbounded_channel();
     let closed = Arc::new(AtomicBool::new(false));
     let close_notify = Arc::new(Notify::new());
-    let tasks = Self::create_tasks(configs, watcher_config, &tx, &closed)?;
+    let (tasks, group_members) = Self::create_tasks(groups, watcher_config, &tx, &closed)?;
     let coordinator = WatchCoordinator::new(
       rx,
       handler,
       tasks,
+      group_members,
       watcher_config,
       Arc::clone(&closed),
       Arc::clone(&close_notify),
@@ -144,22 +146,31 @@ impl Watcher {
     Ok(())
   }
 
+  // See internal-docs/watch-mode/implementation.md
+  #[expect(clippy::type_complexity)]
   fn create_tasks(
-    configs: Vec<BundlerConfig>,
+    groups: Vec<Vec<BundlerConfig>>,
     watcher_config: &WatcherConfig,
     tx: &mpsc::UnboundedSender<WatcherMsg>,
     closed: &Arc<AtomicBool>,
-  ) -> BuildResult<IndexVec<WatchTaskIdx, WatchTask>> {
+  ) -> BuildResult<(IndexVec<WatchTaskIdx, WatchTask>, IndexVec<WatchGroupIdx, Vec<WatchTaskIdx>>)>
+  {
     let fs_watcher_config = watcher_config.to_fs_watcher_config();
-    let mut tasks = IndexVec::with_capacity(configs.len());
-    for (index, config) in configs.into_iter().enumerate() {
-      let task_index = WatchTaskIdx::from_usize(index);
-      let fs_handler = TaskFsEventHandler { task_index, tx: tx.clone() };
-      let fs_watcher = FsWatcher::new(fs_handler, &fs_watcher_config)?;
-      let task = WatchTask::new(config, fs_watcher, closed)?;
-      tasks.push(task);
+    let mut tasks = IndexVec::with_capacity(groups.iter().map(Vec::len).sum());
+    let mut group_members = IndexVec::with_capacity(groups.len());
+    for (index, group) in groups.into_iter().enumerate() {
+      let group_index = WatchGroupIdx::from_usize(index);
+      let fs_handler = GroupFsEventHandler { group_index, tx: tx.clone() };
+      let fs_watcher =
+        Arc::new(std::sync::Mutex::new(FsWatcher::new(fs_handler, &fs_watcher_config)?));
+      let mut members = Vec::with_capacity(group.len());
+      for config in group {
+        let task = WatchTask::new(config, Arc::clone(&fs_watcher), closed)?;
+        members.push(tasks.push(task));
+      }
+      group_members.push(members);
     }
-    Ok(tasks)
+    Ok((tasks, group_members))
   }
 }
 

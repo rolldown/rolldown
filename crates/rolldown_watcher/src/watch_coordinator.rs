@@ -1,7 +1,7 @@
 use crate::event::WatchEvent;
 use crate::file_change_event::FileChangeEvent;
 use crate::handler::WatcherEventHandler;
-use crate::watch_task::{BuildOutcome, WatchTask, WatchTaskIdx};
+use crate::watch_task::{BuildOutcome, WatchGroupIdx, WatchTask, WatchTaskIdx};
 use crate::watcher::WatcherConfig;
 use crate::watcher_msg::WatcherMsg;
 use crate::watcher_state::WatcherState;
@@ -22,6 +22,7 @@ pub struct WatchCoordinator<H: WatcherEventHandler> {
   state: WatcherState,
   debounce_duration: Duration,
   tasks: IndexVec<WatchTaskIdx, WatchTask>,
+  group_members: IndexVec<WatchGroupIdx, Vec<WatchTaskIdx>>,
   closed: Arc<AtomicBool>,
   close_notify: Arc<Notify>,
 }
@@ -31,6 +32,7 @@ impl<H: WatcherEventHandler> WatchCoordinator<H> {
     rx: mpsc::UnboundedReceiver<WatcherMsg>,
     handler: H,
     tasks: IndexVec<WatchTaskIdx, WatchTask>,
+    group_members: IndexVec<WatchGroupIdx, Vec<WatchTaskIdx>>,
     config: &WatcherConfig,
     closed: Arc<AtomicBool>,
     close_notify: Arc<Notify>,
@@ -41,6 +43,7 @@ impl<H: WatcherEventHandler> WatchCoordinator<H> {
       state: WatcherState::Idle,
       debounce_duration: config.debounce_duration(),
       tasks,
+      group_members,
       closed,
       close_notify,
     }
@@ -59,8 +62,8 @@ impl<H: WatcherEventHandler> WatchCoordinator<H> {
         WatcherState::Idle => {
           let msg = self.rx.recv().await;
           match msg {
-            Some(WatcherMsg::FileChanges { task_index, changes }) => {
-              self.process_file_changes(task_index, changes).await;
+            Some(WatcherMsg::FileChanges { group_index, changes }) => {
+              self.process_file_changes(group_index, changes).await;
             }
             Some(WatcherMsg::Close) => {
               self.handle_close().await;
@@ -86,8 +89,8 @@ impl<H: WatcherEventHandler> WatchCoordinator<H> {
             }
             msg = self.rx.recv() => {
               match msg {
-                Some(WatcherMsg::FileChanges { task_index, changes }) => {
-                  self.process_file_changes(task_index, changes).await;
+                Some(WatcherMsg::FileChanges { group_index, changes }) => {
+                  self.process_file_changes(group_index, changes).await;
                 }
                 Some(WatcherMsg::Close) => {
                   self.handle_close().await;
@@ -252,19 +255,27 @@ impl<H: WatcherEventHandler> WatchCoordinator<H> {
     }
   }
 
-  /// Process file changes: call on_invalidate per file, mark task for rebuild,
-  /// then batch all changes into a single state transition.
+  /// Process file changes for a config group: mark every member whose watch set contains
+  /// the path (calling its on_invalidate), then batch all changes into a single state transition.
+  // See internal-docs/watch-mode/implementation.md
   async fn process_file_changes(
     &mut self,
-    task_index: WatchTaskIdx,
+    group_index: WatchGroupIdx,
     changes: Vec<FileChangeEvent>,
   ) {
     let mut effective_changes: Vec<FileChangeEvent> = Vec::new();
 
-    if let Some(task) = self.tasks.get_mut(task_index) {
+    if let Some(members) = self.group_members.get(group_index) {
       for change in changes {
-        if task.mark_needs_rebuild(&change.path) {
-          task.call_on_invalidate(&change.path).await;
+        let mut effective = false;
+        for &member in members {
+          let task = &mut self.tasks[member];
+          if task.mark_needs_rebuild(&change.path) {
+            task.call_on_invalidate(&change.path).await;
+            effective = true;
+          }
+        }
+        if effective {
           effective_changes.push(change);
         }
       }
@@ -283,8 +294,8 @@ impl<H: WatcherEventHandler> WatchCoordinator<H> {
   async fn drain_buffered_events(&mut self) {
     loop {
       match self.rx.try_recv() {
-        Ok(WatcherMsg::FileChanges { task_index, changes }) => {
-          self.process_file_changes(task_index, changes).await;
+        Ok(WatcherMsg::FileChanges { group_index, changes }) => {
+          self.process_file_changes(group_index, changes).await;
         }
         Ok(WatcherMsg::Close) => {
           self.handle_close().await;
@@ -317,5 +328,310 @@ impl<H: WatcherEventHandler> WatchCoordinator<H> {
     }
 
     self.state = mem::take(&mut self.state).to_closed();
+  }
+}
+
+#[cfg(test)]
+mod tests {
+  use super::*;
+  use crate::task_fs_event_handler::GroupFsEventHandler;
+  use rolldown::{BundlerConfig, BundlerOptions, plugin};
+  use rolldown_fs_watcher::{FsWatcher, FsWatcherConfig};
+  use std::{
+    borrow::Cow,
+    fs,
+    path::{Path, PathBuf},
+    sync::{
+      Mutex,
+      atomic::{AtomicUsize, Ordering},
+    },
+  };
+
+  static NEXT_TEST_DIR: AtomicUsize = AtomicUsize::new(0);
+
+  struct TestDir(PathBuf);
+
+  impl TestDir {
+    fn new() -> Self {
+      let path = std::env::temp_dir().join(format!(
+        "rolldown-watch-coordinator-group-{}-{}",
+        std::process::id(),
+        NEXT_TEST_DIR.fetch_add(1, Ordering::Relaxed)
+      ));
+      fs::create_dir_all(&path).expect("create test directory");
+      Self(path)
+    }
+
+    /// Write `content` to `name` and return the path the resolver reports for it.
+    fn write(&self, name: &str, content: &str) -> PathBuf {
+      let path = self.0.join(name);
+      fs::write(&path, content).expect("write input");
+      dunce::canonicalize(path).expect("canonicalize input")
+    }
+  }
+
+  impl Drop for TestDir {
+    fn drop(&mut self) {
+      let _ = fs::remove_dir_all(&self.0);
+    }
+  }
+
+  /// Records the event stream and wakes the test on the initial and the rebuild `End`.
+  struct EnvelopeRecordingHandler {
+    events: Arc<Mutex<Vec<String>>>,
+    end_count: Arc<AtomicUsize>,
+    initial_end: Arc<Notify>,
+    rebuild_end: Arc<Notify>,
+  }
+
+  impl WatcherEventHandler for EnvelopeRecordingHandler {
+    async fn on_event(&self, event: WatchEvent) {
+      self.events.lock().expect("events lock").push(event.as_str().to_string());
+      if matches!(event, WatchEvent::End) {
+        if self.end_count.fetch_add(1, Ordering::SeqCst) == 0 {
+          self.initial_end.notify_one();
+        } else {
+          self.rebuild_end.notify_one();
+        }
+      }
+    }
+
+    async fn on_change(&self, _path: &str, _kind: WatcherChangeKind) {
+      self.events.lock().expect("events lock").push("CHANGE".to_string());
+    }
+
+    async fn on_restart(&self) {
+      self.events.lock().expect("events lock").push("RESTART".to_string());
+    }
+
+    async fn on_close(&self) {
+      self.events.lock().expect("events lock").push("CLOSE".to_string());
+    }
+  }
+
+  /// Fails every build after the first one, turning a rebuild into an `ERROR` outcome.
+  #[derive(Debug)]
+  struct FailAfterFirstBuildPlugin {
+    builds: Arc<AtomicUsize>,
+  }
+
+  impl plugin::Plugin for FailAfterFirstBuildPlugin {
+    fn name(&self) -> Cow<'static, str> {
+      "fail-after-first-build".into()
+    }
+
+    fn register_hook_usage(&self) -> plugin::HookUsage {
+      plugin::HookUsage::BuildStart
+    }
+
+    async fn build_start(
+      &self,
+      _ctx: &plugin::PluginContext,
+      _args: &plugin::HookBuildStartArgs<'_>,
+    ) -> plugin::HookNoopReturn {
+      if self.builds.fetch_add(1, Ordering::SeqCst) >= 1 {
+        anyhow::bail!("intentional sibling rebuild failure");
+      }
+      Ok(())
+    }
+  }
+
+  /// Runs a coordinator whose tasks are all outputs of ONE config group (sharing one
+  /// disabled fs watcher), delivers ONE `FileChanges` message for `save_path` after the
+  /// initial build, and returns the recorded events and the `End` count.
+  async fn run_one_group_save(
+    task_inputs: Vec<(PathBuf, &str, Vec<plugin::__inner::SharedPluginable>)>,
+    save_path: &Path,
+  ) -> (Vec<String>, usize) {
+    let (tx, rx) = mpsc::unbounded_channel();
+    let closed = Arc::new(AtomicBool::new(false));
+    let close_notify = Arc::new(Notify::new());
+    let group_index = WatchGroupIdx::from_usize(0);
+
+    let fs_watcher = FsWatcher::new(
+      GroupFsEventHandler { group_index, tx: tx.clone() },
+      &FsWatcherConfig { enabled: false, ..FsWatcherConfig::default() },
+    )
+    .expect("create fs watcher");
+    let fs_watcher = Arc::new(Mutex::new(fs_watcher));
+    let mut tasks = IndexVec::new();
+    let mut members = Vec::new();
+    for (input, out_file, plugins) in task_inputs {
+      let options = BundlerOptions {
+        cwd: Some(input.parent().expect("input has parent").to_path_buf()),
+        input: Some(vec![input.to_string_lossy().into_owned().into()]),
+        file: Some(out_file.into()),
+        ..Default::default()
+      };
+      let task =
+        WatchTask::new(BundlerConfig::new(options, plugins), Arc::clone(&fs_watcher), &closed)
+          .expect("create watch task");
+      members.push(tasks.push(task));
+    }
+    let mut group_members = IndexVec::new();
+    group_members.push(members);
+
+    let events = Arc::new(Mutex::new(Vec::new()));
+    let end_count = Arc::new(AtomicUsize::new(0));
+    let initial_end = Arc::new(Notify::new());
+    let rebuild_end = Arc::new(Notify::new());
+    let coordinator = WatchCoordinator::new(
+      rx,
+      EnvelopeRecordingHandler {
+        events: Arc::clone(&events),
+        end_count: Arc::clone(&end_count),
+        initial_end: Arc::clone(&initial_end),
+        rebuild_end: Arc::clone(&rebuild_end),
+      },
+      tasks,
+      group_members,
+      &WatcherConfig::default(),
+      Arc::clone(&closed),
+      Arc::clone(&close_notify),
+    );
+    let handle = tokio::spawn(coordinator.run());
+
+    tokio::time::timeout(Duration::from_secs(30), initial_end.notified())
+      .await
+      .expect("initial build should finish");
+    // ONE message for the save, as the group's shared watcher delivers it.
+    tx.send(WatcherMsg::FileChanges {
+      group_index,
+      changes: vec![FileChangeEvent::new(
+        save_path.to_string_lossy().into_owned(),
+        WatcherChangeKind::Update,
+      )],
+    })
+    .expect("send file change");
+    tokio::time::timeout(Duration::from_secs(30), rebuild_end.notified())
+      .await
+      .expect("rebuild should finish");
+
+    closed.store(true, Ordering::Relaxed);
+    close_notify.notify_one();
+    tx.send(WatcherMsg::Close).expect("send close");
+    tokio::time::timeout(Duration::from_secs(30), handle)
+      .await
+      .expect("coordinator should close")
+      .expect("coordinator task should not panic");
+
+    let events = events.lock().expect("events lock").clone();
+    (events, end_count.load(Ordering::SeqCst))
+  }
+
+  /// rolldown#10613: one save of a file watched by both outputs of one config rebuilds both
+  /// inside ONE `START..END` envelope.
+  #[tokio::test(flavor = "multi_thread")]
+  async fn single_save_rebuilds_every_group_member_in_one_envelope() {
+    let test_dir = TestDir::new();
+    let input = test_dir.write("main.js", "export const value = 1;");
+
+    let (events, end_count) = run_one_group_save(
+      vec![(input.clone(), "dist0/out.js", vec![]), (input.clone(), "dist1/out.js", vec![])],
+      &input,
+    )
+    .await;
+
+    assert_eq!(
+      events,
+      [
+        "START",
+        "BUNDLE_START",
+        "BUNDLE_END",
+        "BUNDLE_START",
+        "BUNDLE_END",
+        "END",
+        "CHANGE",
+        "RESTART",
+        "START",
+        "BUNDLE_START",
+        "BUNDLE_END",
+        "BUNDLE_START",
+        "BUNDLE_END",
+        "END",
+        "CLOSE",
+      ]
+    );
+    assert_eq!(end_count, 2);
+  }
+
+  /// Membership stays per task: a change only one member watches rebuilds only that member.
+  #[tokio::test(flavor = "multi_thread")]
+  async fn group_change_hitting_one_member_rebuilds_only_that_member() {
+    let test_dir = TestDir::new();
+    let input_a = test_dir.write("a.js", "export const a = 1;");
+    let input_b = test_dir.write("b.js", "export const b = 1;");
+
+    let (events, end_count) = run_one_group_save(
+      vec![(input_a.clone(), "dist0/out.js", vec![]), (input_b, "dist1/out.js", vec![])],
+      &input_a,
+    )
+    .await;
+
+    assert_eq!(
+      events,
+      [
+        "START",
+        "BUNDLE_START",
+        "BUNDLE_END",
+        "BUNDLE_START",
+        "BUNDLE_END",
+        "END",
+        "CHANGE",
+        "RESTART",
+        "START",
+        "BUNDLE_START",
+        "BUNDLE_END",
+        "END",
+        "CLOSE",
+      ]
+    );
+    assert_eq!(end_count, 2);
+  }
+
+  /// A member failing mid-envelope reports `ERROR`, and the envelope still ends with `End`.
+  #[tokio::test(flavor = "multi_thread")]
+  async fn sibling_error_mid_envelope_still_emits_end() {
+    let test_dir = TestDir::new();
+    let input = test_dir.write("main.js", "export const value = 1;");
+    let builds = Arc::new(AtomicUsize::new(0));
+
+    let (events, end_count) = run_one_group_save(
+      vec![
+        (input.clone(), "dist0/out.js", vec![]),
+        (
+          input.clone(),
+          "dist1/out.js",
+          vec![plugin::__inner::Pluginable::new_shared(FailAfterFirstBuildPlugin {
+            builds: Arc::clone(&builds),
+          })],
+        ),
+      ],
+      &input,
+    )
+    .await;
+
+    assert_eq!(
+      events,
+      [
+        "START",
+        "BUNDLE_START",
+        "BUNDLE_END",
+        "BUNDLE_START",
+        "BUNDLE_END",
+        "END",
+        "CHANGE",
+        "RESTART",
+        "START",
+        "BUNDLE_START",
+        "BUNDLE_END",
+        "BUNDLE_START",
+        "ERROR",
+        "END",
+        "CLOSE",
+      ]
+    );
+    assert_eq!(end_count, 2);
+    assert_eq!(builds.load(Ordering::SeqCst), 2, "member 1 must attempt exactly two builds");
   }
 }

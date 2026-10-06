@@ -128,6 +128,8 @@ export async function createWatcher(
   const bindingWatcher = new BindingWatcher(
     bundlerOptions.map((option) => option.bundlerOptions),
     callback,
+    // Outputs per input config: each config's outputs share one fs watcher.
+    options.map((option) => arraify(option.output || {}).length),
   );
   new Watcher(
     emitter,

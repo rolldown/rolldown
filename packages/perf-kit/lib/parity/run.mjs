@@ -46,7 +46,7 @@ function failedPage(pagePath, state, reason, lcp) {
   };
 }
 
-function writeEvidence(dir, { a1, c1, result, identical }) {
+function writeEvidence(dir, { a1, c1, result }) {
   fs.rmSync(dir, { recursive: true, force: true });
   fs.mkdirSync(dir, { recursive: true });
   const files = {};
@@ -57,10 +57,8 @@ function writeEvidence(dir, { a1, c1, result, identical }) {
   };
   put('anchor', a1.viewport);
   if (a1.full) put('anchor-full', a1.full);
-  if (!identical) {
-    put('current', c1.viewport);
-    if (c1.full) put('current-full', c1.full);
-  }
+  put('current', c1.viewport);
+  if (c1.full) put('current-full', c1.full);
   // A diff image for every view that changed, and for every view too unstable to
   // judge - its blue areas are where masks belong.
   for (const [name, view] of Object.entries(result.views)) {
@@ -73,11 +71,7 @@ function writeEvidence(dir, { a1, c1, result, identical }) {
   return files;
 }
 
-/**
- * Compare every page; `identical` (same dist hash as the original) skips the
- * candidate captures - the original's two captures still run, so a page too
- * unstable to judge is reported on the very first scan, before any change.
- */
+/** Compare every given page of the candidate build with the original. */
 export async function runParity({
   cdp,
   anchorDist,
@@ -85,7 +79,6 @@ export async function runParity({
   pages,
   masks,
   outDir,
-  identical,
   lcpByPage = {},
   log = () => {},
 }) {
@@ -110,11 +103,8 @@ export async function runParity({
       const lcp = lcpByPage[pagePath] ?? null;
       log(`parity ${pagePath}: original build...`);
       const a1 = await capture(anchorDist, pagePath, CONDITION_A);
-      let c1 = a1;
-      if (!identical) {
-        log(`parity ${pagePath}: this build...`);
-        c1 = await capture(candidateDist, pagePath, CONDITION_A);
-      }
+      log(`parity ${pagePath}: this build...`);
+      const c1 = await capture(candidateDist, pagePath, CONDITION_A);
       log(`parity ${pagePath}: original build again (moved clock, new seed)...`);
       const a2 = await capture(anchorDist, pagePath, CONDITION_B);
       if (a1.error || a2.error) {
@@ -133,19 +123,14 @@ export async function runParity({
       let result = comparePage({ a1, a2, c1, lcp });
       // A finding must reproduce: a second capture of this build has to disagree
       // with the original in the same pixels / lines / errors before it is reported.
-      if (!identical && result.state === 'open') {
+      if (result.state === 'open') {
         log(`parity ${pagePath}: confirming with a second capture of this build...`);
         const c2 = await capture(candidateDist, pagePath, CONDITION_A);
         if (!c2.error) result = comparePage({ a1, a2, c1, c2, lcp });
       }
       result.page = pagePath;
       result.signature = pageSignature(result, c1.images);
-      result.files = writeEvidence(path.join(outDir, pageSlug(pagePath)), {
-        a1,
-        c1,
-        result,
-        identical,
-      });
+      result.files = writeEvidence(path.join(outDir, pageSlug(pagePath)), { a1, c1, result });
       for (const view of Object.values(result.views)) {
         view.changedCells = view.cells.length;
         delete view.masks;

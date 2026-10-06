@@ -28,6 +28,11 @@ export function parityPaths(targetDir) {
     report: path.join(dir, 'report.json'),
     approvals: path.join(dir, 'approvals.json'),
     pages: path.join(dir, 'pages'),
+    // recover mode: present while a check has found a difference not yet fixed
+    recover: path.join(dir, 'recover.json'),
+    // every check, in order, with a copy of its evidence images
+    history: path.join(dir, 'history.jsonl'),
+    snapshots: path.join(dir, 'snapshots'),
   };
 }
 

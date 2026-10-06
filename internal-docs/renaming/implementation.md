@@ -23,7 +23,9 @@ Paths are relative to `crates/rolldown/src/`.
 
 `deconflict_chunk_symbols` gives names in this order. An earlier binding gets its original name first, so the order sets the priority.
 
-1. Reserve the ambient names of the format (`require`, `module`, `exports`, `__filename` and `__dirname` for CJS, `exports` for IIFE/UMD), `Object`, `Promise`, the JS keywords and the global objects (`Renamer::new`). Also reserve each unresolved reference of the modules of the chunk (for example `console` and `window`).
+1. Reserve the fixed names:
+   - `Renamer::new` reserves the fixed names that the format prints: `require`, `module`, `exports`, `__filename`, `__dirname` and `Symbol` for CJS, and `exports` and `Symbol` for IIFE/UMD. It also reserves `Object`, `Promise`, the JS keywords and the global objects.
+   - `reserve_names_resolving_to_globals` reserves each unresolved reference of the modules of the chunk (for example `console` and `window`). It also reserves the fixed names that the bodies of these modules print.
 2. IIFE/UMD/CJS: external module namespaces (factory parameters, `require()` bindings). Authored.
 3. Entry chunks: the symbols that the entry exports (`referenced_symbols_by_entry_point_chunk`). ESM: the external import bindings that the chunk uses. Authored.
 4. The included top-level declarations of each module, entry module first (descending execution order). HMR references are synthesized. All other bindings go through `root_binding_kind`. In a CJS-wrapped module, this step gives names only to two kinds of binding:
@@ -50,13 +52,13 @@ Paths are relative to `crates/rolldown/src/`.
 
 ## Inner bindings
 
-`NestedScopeRenamer` runs five passes for each module:
+`NestedScopeRenamer` runs three passes for each module:
 
 - `rename_bindings_shadowing_star_imports`: for each resolved `ns.foo` member access, it checks the name that the finalizer prints for `foo`.
 - `rename_bindings_shadowing_named_imports`: for each reference to a named import, it checks the name that the finalizer prints for the import.
-- `rename_bindings_shadowing_wrapper_params`: it renames the nested bindings that have the name of the `exports` or `module` parameter of the CJS closure of a CJS-wrapped module. Under IIFE/UMD/CJS output, it also renames the nested bindings that have the name of the factory parameter of an external module.
-- `rename_bindings_shadowing_cjs_ambient_names`: CJS output only. It renames the inner bindings with the name `require`, `__filename` or `__dirname`, because rewrites print these names as bare identifiers.
-- `rename_cjs_root_bindings_shadowing_lowered_import`: in a CJS-wrapped module that has an `import()`, it renames the root bindings with the name `Promise` or `Object`. A lowered `import()` prints these names inside the CJS closure. For a top-level binding, `Renamer::new` reserves them.
+- `rename_bindings_shadowing_fixed_names`: it renames the inner bindings that have a fixed name that the body of the module can print. `fixed_names_in_module_body` is the list. Each entry tells the rewrite and the module contents that cause it. A CJS-wrapped module with a top-level `this` adds `exports`, the parameter of its CJS closure. There, a top-level `var exports` is the binding of that parameter itself, and the pass does not rename it.
+
+The factory parameter of an external module (IIFE/UMD) is a top-level binding that the renamer gives a name to. The finalizer prints each reference to it for an import binding. Thus the named-import pass covers it through `printed_name`.
 
 The first two passes use `Renamer::printed_name`. This function follows a namespace alias to its namespace binding, as `finalized_expr_for_symbol_ref` does. The passes also use `rename_bindings_on_path`, which goes through the scope ancestors of the reference. It stops at the root scope, unless `root_scope_is_inner` is true (the module is CJS-wrapped). It renames each binding with that name, except the binding that the reference resolves to.
 
@@ -66,7 +68,7 @@ The first two passes use `Renamer::printed_name`. This function follows a namesp
 
 - A new kind of synthesized top-level binding that has a symbol: pass `RootBindingKind::Synthesized`, or make sure that `root_binding_kind` returns `Synthesized` for it. For a binding without a symbol, use `create_conflictless_name`. In both cases, the binding needs no shadowing pass.
 - A new facade that represents a binding with a source name: exclude it in `root_binding_kind`. If you do not exclude it, it avoids inner names without a reason and takes unnecessary `$N` suffixes.
-- A new rewrite that prints a bare identifier that is not a top-level binding (for example the CJS ambient names): the rewrite needs a pass in `NestedScopeRenamer`.
+- A new rewrite that prints a global or host name (for example `Promise` or `require`): add the name to `fixed_names_in_module_body`, with the module contents that cause the rewrite. If only the top level of the chunk prints the name, add it to the list in `Renamer::new`. The name needs no pass of its own.
 
 ## Tests
 

@@ -9,7 +9,9 @@ use crate::{
     external_import_interop::{
       ChunkAssignments, chunk_external_interop_modes, chunk_has_node_esm_reader,
     },
-    renamer::{InnerBindingNames, NestedScopeRenamer, Renamer, RootBindingKind},
+    renamer::{
+      InnerBindingNames, NestedScopeRenamer, Renamer, RootBindingKind, fixed_names_in_module_body,
+    },
   },
 };
 use arcstr::ArcStr;
@@ -69,25 +71,7 @@ pub fn deconflict_chunk_symbols(
       .collect(),
   );
   let mut renamer = Renamer::new(&link_output.symbol_db, format, inner_binding_names);
-  // Reserve global scope symbols (unresolved references) to prevent generating conflicting names.
-  // These are identifiers referenced but not defined in the module's scope (e.g., `console`, `window`).
-  modules
-    .iter()
-    .copied()
-    .filter_map(|idx| {
-      Some(
-        link_output.symbol_db[idx]
-          .as_ref()?
-          .ast_scopes
-          .scoping()
-          .root_unresolved_references()
-          .keys(),
-      )
-    })
-    .flatten()
-    .for_each(|name| {
-      renamer.reserve(CompactStr::new(name));
-    });
+  reserve_names_resolving_to_globals(&mut renamer, modules, link_output, format);
 
   if matches!(format, OutputFormat::Iife | OutputFormat::Umd | OutputFormat::Cjs) {
     // deconflict iife introduce symbols by external
@@ -303,6 +287,41 @@ pub fn deconflict_chunk_symbols(
   inline_names
 }
 
+/// Reserve the names that no top-level binding can take:
+/// - each unresolved reference of the modules of the chunk (for example `console` and `window`),
+///   because these references must resolve to globals;
+/// - the fixed names that the bodies of the modules print (`fixed_names_in_module_body`), because
+///   the body of an ESM module is at the top level.
+fn reserve_names_resolving_to_globals(
+  renamer: &mut Renamer<'_>,
+  modules: &[ModuleIdx],
+  link_output: &LinkStageOutput,
+  format: OutputFormat,
+) {
+  modules
+    .iter()
+    .copied()
+    .filter_map(|idx| {
+      Some(
+        link_output.symbol_db[idx]
+          .as_ref()?
+          .ast_scopes
+          .scoping()
+          .root_unresolved_references()
+          .keys(),
+      )
+    })
+    .flatten()
+    .for_each(|name| {
+      renamer.reserve(CompactStr::new(name));
+    });
+  modules
+    .iter()
+    .filter_map(|&idx| link_output.module_table[idx].as_normal())
+    .flat_map(|module| fixed_names_in_module_body(module, link_output, format))
+    .for_each(|name| renamer.reserve(CompactStr::new_const(name)));
+}
+
 /// Whether `stmt_info` is an `import` declaration of an external module. In a CJS-wrapped module,
 /// rolldown moves that declaration out of the CJS closure. A `require('external')` initializer
 /// stays in the closure, and its binding stays a local of the closure.
@@ -414,12 +433,6 @@ fn rename_shadowing_symbols_in_nested_scopes<'a>(
 
     ctx.rename_bindings_shadowing_star_imports();
     ctx.rename_bindings_shadowing_named_imports();
-    ctx.rename_bindings_shadowing_wrapper_params(matches!(
-      output_format,
-      OutputFormat::Iife | OutputFormat::Umd | OutputFormat::Cjs
-    ));
-
-    ctx.rename_bindings_shadowing_cjs_ambient_names(output_format);
-    ctx.rename_cjs_root_bindings_shadowing_lowered_import();
+    ctx.rename_bindings_shadowing_fixed_names(output_format);
   }
 }

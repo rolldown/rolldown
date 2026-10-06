@@ -378,12 +378,12 @@ impl<'a> GenerateStage<'a> {
                 }
               };
               // The `[name]` placeholder gets the path without the extension.
-              let chunk_filename = sanitize_filename.call(&relative_path).await?;
+              let chunk_filename = sanitize_filename.call_relative(&relative_path).await?;
               // `relative_path` has no extension. The chunk name gets it back, except for
               // common ones: https://github.com/rollup/rollup/pull/4565/files
               let chunk_name = match ext.as_deref() {
                 Some(e) if !e.is_empty() && !COMMON_JS_EXTENSIONS.contains(&e) => {
-                  sanitize_filename.call(&format!("{relative_path}.{e}")).await?
+                  sanitize_filename.call_relative(&format!("{relative_path}.{e}")).await?
                 }
                 _ => chunk_filename.clone(),
               };

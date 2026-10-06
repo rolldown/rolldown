@@ -21,11 +21,7 @@ const text = (selector: string) => page.textContent(selector);
 const readRuns = () =>
   page.evaluate(() => (window as unknown as { __globRuns?: number }).__globRuns ?? -1);
 
-// SKIPPED: the `hotUpdate` hook is off by default (`hotUpdate` dev
-// option, see rolldown/rolldown#10714). This playground runs on Vite's bundled
-// dev, which does not pass that option yet; un-skip once Vite can enable it
-// (vitejs/vite#22956).
-describe.skip('hmr-import-glob', () => {
+describe('hmr-import-glob', () => {
   test('renders the initial glob results', async () => {
     await waitForBuildStable();
     await expect.poll(() => text('.pages')).toBe('./pages/a.js,./pages/b.js');

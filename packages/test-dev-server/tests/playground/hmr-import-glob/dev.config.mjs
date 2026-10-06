@@ -13,7 +13,7 @@ export default defineDevConfig({
     platform: 'browser',
     treeshake: false,
     experimental: {
-      devMode: {},
+      devMode: { hotUpdate: true },
     },
   },
 });

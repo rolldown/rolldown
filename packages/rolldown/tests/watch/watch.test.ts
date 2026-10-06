@@ -410,6 +410,58 @@ test.concurrent(
   },
 );
 
+// A config with `output: []` builds nothing, and its siblings still rebuild.
+test.concurrent(
+  'watch accepts a config with no outputs',
+  { retry: TEST_RETRY, timeout: TEST_TIMEOUT },
+  async ({ task, expect, onTestFinished }) => {
+    const retryCount = task.result?.retryCount ?? 0;
+    const { input, dir, outputDir } = createTestInputAndOutput('watch-empty-output', retryCount);
+    const watcher = watch([
+      { input, output: [] },
+      { input, output: { dir: outputDir } },
+    ]);
+    onTestFinished(async () => {
+      await watcher.close();
+      if (!process.env.CI) {
+        fs.rmSync(dir, { recursive: true, force: true });
+      }
+    });
+
+    const events: string[] = [];
+    watcher.on('event', async (event) => {
+      events.push(event.code);
+      if (event.code === 'BUNDLE_END' || event.code === 'ERROR') {
+        await event.result.close();
+      }
+    });
+
+    const expectedEvents = ['START', 'BUNDLE_START', 'BUNDLE_END', 'END'];
+    await expect.poll(() => events).toEqual(expectedEvents);
+    events.length = 0;
+    await editFile(input, 'console.log(2)');
+    await expect.poll(() => events).toEqual(expectedEvents);
+  },
+);
+
+test.concurrent(
+  'watch accepts an empty config list',
+  { retry: TEST_RETRY, timeout: TEST_TIMEOUT },
+  async ({ expect, onTestFinished }) => {
+    const watcher = watch([]);
+    onTestFinished(async () => {
+      await watcher.close();
+    });
+
+    const events: string[] = [];
+    watcher.on('event', (event) => {
+      events.push(event.code);
+    });
+
+    await expect.poll(() => events).toEqual(['START', 'END']);
+  },
+);
+
 test.concurrent(
   'watch event off',
   { retry: TEST_RETRY, timeout: TEST_TIMEOUT },

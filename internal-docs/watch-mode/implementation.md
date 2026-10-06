@@ -331,6 +331,8 @@ Configured via `WatcherOptions`, fires **immediately** on file change (before de
 
 `Watcher::create_tasks` builds ONE watcher per config group with
 `FsWatcher::new(handler, &config)` and shares it among the group's tasks.
+A group with no outputs (`output: []`) keeps its empty `group_members` slot,
+so later group indices stay aligned, and gets no watcher.
 `FsWatcher` is a concrete type; the notify implementations stay crate-private.
 `WatcherConfig::to_fs_watcher_config()` maps watch options onto `FsWatcherConfig`,
 and construction picks the backend:
@@ -453,7 +455,7 @@ close() → inner.close()         // sends Close msg, awaits shared future
 
 ### Binding as Thin Wrapper
 
-`BindingWatcher` is intentionally a thin wrapper — it holds a `rolldown_watcher::Watcher` and delegates directly. No state machine, no locking, no logic beyond type conversion. All lifecycle management lives in the Rust core. The constructor takes `options` (the flat per-output configs), `listener`, and `groupSizes` (outputs per input config, from `createWatcher`), splits the flat list into config groups in contiguous chunks (`split_configs_into_groups`, which rejects a size mismatch), creates the `NapiWatcherEventHandler`, and passes both to `Watcher::new()`. Each NAPI method (`run`, `waitForClose`, `close`) is a direct delegation to the inner watcher.
+`BindingWatcher` is intentionally a thin wrapper — it holds a `rolldown_watcher::Watcher` and delegates directly. No state machine, no locking, no logic beyond type conversion. All lifecycle management lives in the Rust core. The constructor takes `options` (the flat per-output configs), `listener`, and `groupSizes` (outputs per input config, from `createWatcher`), splits the flat list into config groups in contiguous chunks (`split_configs_into_groups`, which rejects a size mismatch but accepts an empty group and an empty list, so `output: []` and `watch([])` build nothing), creates the `NapiWatcherEventHandler`, and passes both to `Watcher::new()`. Each NAPI method (`run`, `waitForClose`, `close`) is a direct delegation to the inner watcher.
 
 ### Event Emitter
 

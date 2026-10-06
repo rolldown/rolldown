@@ -159,6 +159,12 @@ impl Watcher {
     let mut tasks = IndexVec::with_capacity(groups.iter().map(Vec::len).sum());
     let mut group_members = IndexVec::with_capacity(groups.len());
     for (index, group) in groups.into_iter().enumerate() {
+      // A config with `output: []` has no task: keep its slot so later group indices stay
+      // aligned, but open no file-system watcher for it.
+      if group.is_empty() {
+        group_members.push(Vec::new());
+        continue;
+      }
       let group_index = WatchGroupIdx::from_usize(index);
       let fs_handler = GroupFsEventHandler { group_index, tx: tx.clone() };
       let fs_watcher =

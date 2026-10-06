@@ -22,20 +22,11 @@ use crate::utils::{
 
 /// Split the flat per-output config list into config groups. `group_sizes[i]` is the number of
 /// output configs created from input config `i`; the JS layer builds the flat list in group order.
+/// A group may be empty (`output: []`) and the list may be empty (`watch([])`); both build nothing.
 fn split_configs_into_groups(
   configs: Vec<BundlerConfig>,
   group_sizes: &[u32],
 ) -> napi::Result<Vec<Vec<BundlerConfig>>> {
-  if group_sizes.is_empty() {
-    return Err(napi::Error::from_reason(
-      "Watcher requires at least one config group, but groupSizes was empty",
-    ));
-  }
-  if let Some(position) = group_sizes.iter().position(|&size| size == 0) {
-    return Err(napi::Error::from_reason(format!(
-      "Watcher config group {position} is empty; every group must contain at least one output config",
-    )));
-  }
   let total: usize = group_sizes.iter().map(|&size| size as usize).sum();
   if total != configs.len() {
     return Err(napi::Error::from_reason(format!(
@@ -177,23 +168,17 @@ mod tests {
   }
 
   #[test]
-  fn group_split_rejects_zero_groups() {
-    let error = split_configs_into_groups(default_configs(1), &[])
-      .expect_err("an empty group list must be rejected");
-    assert_eq!(
-      error.reason,
-      "Watcher requires at least one config group, but groupSizes was empty"
-    );
+  fn group_split_accepts_zero_groups() {
+    let groups =
+      split_configs_into_groups(vec![], &[]).expect("an empty group list must be accepted");
+    assert!(groups.is_empty());
   }
 
   #[test]
-  fn group_split_rejects_empty_group() {
-    let error = split_configs_into_groups(default_configs(2), &[2, 0])
-      .expect_err("a zero-size group must be rejected");
-    assert_eq!(
-      error.reason,
-      "Watcher config group 1 is empty; every group must contain at least one output config"
-    );
+  fn group_split_accepts_empty_group() {
+    let groups = split_configs_into_groups(default_configs(2), &[2, 0])
+      .expect("a zero-size group must be accepted");
+    assert_eq!(groups.iter().map(Vec::len).collect::<Vec<_>>(), [2, 0]);
   }
 
   #[test]

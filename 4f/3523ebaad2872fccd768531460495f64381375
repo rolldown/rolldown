@@ -1,0 +1,27 @@
+crates/rolldown/src/utils/chunk/deconflict_chunk_symbols.rs
+  s_d43624d0762669::t_482a7548c1dab7 12,20,58-67,98,106,116-117,130,156,158-160,191-206,215,225-226,298,300,306-331,335,339,345,357-360,363,366-367,369-371
+crates/rolldown/src/utils/renamer.rs
+  s_d43624d0762669::t_1ec2b2e219bca2 1,6,8,11,18-79,87,94,115,132-142,147,149-152,155-158,162-164,166,172,175-178,181-183,193-198,203-204,206-209,212-218,220-222,234,261-262,266,269-274,285-317,359,363-367,371,399-402,411,415-418,423,425-427,429,477,505,511,551-554,558
+crates/rolldown/tests/rolldown/topics/deconflict/cjs_shadowing_require_namespace_object/artifacts.snap
+  s_d43624d0762669::t_22f282d43c090d 11,25-26
+crates/rolldown/tests/rolldown/topics/deconflict/cjs_shadowing_suffixed_wrapper_name/artifacts.snap
+  s_d43624d0762669::t_5766c03544b7c6 11,16,24-25,28,45,50,58-59,62
+crates/rolldown/tests/rolldown/topics/deconflict/cjs_shadowing_wrapper_name_unused_require/artifacts.snap
+  s_d43624d0762669::t_4eb0cf366cbd70 11,16,25-27,30,47,52,61-63,66
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "4f3523ebaad2872fccd768531460495f64381375",
+  "prompts": {},
+  "sessions": {
+    "s_d43624d0762669": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "7f7265c1-aa11-4a4b-9d11-215aef9a579c",
+        "model": "unknown"
+      },
+      "human_author": "IWANABETHATGUY <iwanabethatguy@qq.com>"
+    }
+  }
+}

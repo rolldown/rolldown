@@ -885,6 +885,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "globstar"
+version = "0.0.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "5eb403f8548b623d8a2e74c1a6003b2c251f9dfcc357ab6bedbd144d5f272595"
+
+[[package]]
 name = "half"
 version = "2.7.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2793,10 +2799,12 @@ dependencies = [
 name = "rolldown_fs_watcher"
 version = "1.2.12"
 dependencies = [
+ "globstar",
  "rolldown-notify",
  "rolldown-notify-debouncer-full",
  "rolldown_common",
  "rolldown_error",
+ "rolldown_utils",
  "rustc-hash",
  "tracing",
  "walkdir",
@@ -3689,7 +3697,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "32497e9a4c7b38532efcdebeef879707aa9f794296a4f0244f6f69e9bc8574bd"
 dependencies = [
  "fastrand",
- "getrandom 0.3.4",
+ "getrandom 0.4.3",
  "once_cell",
  "rustix",
  "windows-sys 0.61.2",

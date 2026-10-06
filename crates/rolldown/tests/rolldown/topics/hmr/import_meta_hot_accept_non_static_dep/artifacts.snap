@@ -1,0 +1,56 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Errors
+
+## UNSUPPORTED_FEATURE
+
+```text
+[UNSUPPORTED_FEATURE] `import.meta.hot.accept()` can only accept string literals or an array of string literals.
+    ╭─[ main.js:10:37 ]
+    │
+ 10 │ import.meta.hot.accept(['./dep.js', ...rest], cb);
+    │                                     ───┬───  
+    │                                        ╰───── 
+────╯
+
+```
+
+## UNSUPPORTED_FEATURE
+
+```text
+[UNSUPPORTED_FEATURE] `import.meta.hot.accept()` can only accept string literals or an array of string literals.
+   ╭─[ main.js:7:24 ]
+   │
+ 7 │ import.meta.hot.accept(`./${name}.js`, cb);
+   │                        ───────┬──────  
+   │                               ╰──────── 
+───╯
+
+```
+
+## UNSUPPORTED_FEATURE
+
+```text
+[UNSUPPORTED_FEATURE] `import.meta.hot.accept()` can only accept string literals or an array of string literals.
+   ╭─[ main.js:8:37 ]
+   │
+ 8 │ import.meta.hot.accept(['./dep.js', name], cb);
+   │                                     ──┬─  
+   │                                       ╰─── 
+───╯
+
+```
+
+## UNSUPPORTED_FEATURE
+
+```text
+[UNSUPPORTED_FEATURE] `import.meta.hot.accept()` can only accept string literals or an array of string literals.
+   ╭─[ main.js:9:37 ]
+   │
+ 9 │ import.meta.hot.accept(['./dep.js', `./${name}.js`], cb);
+   │                                     ───────┬──────  
+   │                                            ╰──────── 
+───╯
+
+```

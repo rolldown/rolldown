@@ -1,0 +1,37 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+//#region h1.js
+var h1_exports = /* @__PURE__ */ __exportAll({ h1: () => h1 });
+var h1;
+var init_h1 = __esmMin((() => {
+	init_app();
+	h1 = () => load;
+}));
+
+//#endregion
+//#region data.json
+var data_default = {};
+
+//#endregion
+//#region app.js
+var load, value;
+var init_app = __esmMin((() => {
+	init_h1();
+	load = () => Promise.resolve().then(() => (init_h1(), h1_exports));
+	value = [h1, data_default];
+}));
+
+//#endregion
+//#region main.js
+init_app();
+
+//#endregion
+export { value };
+```

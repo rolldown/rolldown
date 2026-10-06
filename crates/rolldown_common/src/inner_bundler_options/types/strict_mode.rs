@@ -35,7 +35,7 @@ impl TryFrom<String> for StrictMode {
   fn try_from(value: String) -> Result<Self, Self::Error> {
     match value.as_str() {
       "auto" => Ok(Self::Auto),
-      _ => Err(format!("Unknown strict mode: {value:?}")),
+      _ => Err(format!("Unknown strict mode: {value}")),
     }
   }
 }

@@ -3,7 +3,7 @@ use std::collections::VecDeque;
 use arcstr::ArcStr;
 use itertools::Itertools;
 use rolldown_common::{
-  AddonRenderContext, ExportsKind, ExternalModule, ImportAttribute, ImportRecordIdx,
+  AddonRenderContext, ChunkIdx, ExportsKind, ExternalModule, ImportAttribute, ImportRecordIdx,
   ImportRecordMeta, ModuleIdx, ModuleTable, RUNTIME_MODULE_KEY, Specifier, SymbolRef,
 };
 use rolldown_sourcemap::SourceJoiner;
@@ -17,13 +17,19 @@ use crate::{
 };
 use json_escape_simd::escape;
 
-use super::utils::{is_use_strict_directive, render_chunk_directives};
+use super::{
+  share_factory::render_inline_records,
+  utils::{is_use_strict_directive, render_chunk_directives},
+};
 
+/// `carried_sources`: the inline common chunk records this file carries, finalized and printed
+/// for it; empty unless this file carries a record.
 #[expect(clippy::needless_pass_by_value)]
 pub fn render_esm<'code>(
-  ctx: &GenerateContext<'_>,
+  ctx: &GenerateContext<'code>,
   addon_render_context: AddonRenderContext<'code>,
   module_sources: &'code RenderedModuleSources,
+  carried_sources: &'code [(ChunkIdx, RenderedModuleSources)],
 ) -> SourceJoiner<'code> {
   let mut source_joiner = SourceJoiner::default();
   let AddonRenderContext { hashbang, banner, intro, outro, footer, directives } =
@@ -53,6 +59,10 @@ pub fn render_esm<'code>(
   if let Some(imports) = render_esm_chunk_imports(ctx) {
     source_joiner.append_source(imports);
   }
+
+  // Registrations and bridges of inline common chunk records come right after the imports and
+  // before anything of this file's own runs.
+  render_inline_records(ctx, &mut source_joiner, carried_sources);
 
   if let Some(entry_module) = ctx.chunk.entry_module(&ctx.link_output.module_table) {
     if matches!(entry_module.exports_kind, ExportsKind::Esm) {
@@ -179,6 +189,7 @@ fn render_chunk_content<'code>(
     crate::hmr::module_graph_delta::render_register_graph_source(
       &ctx.link_output.module_table,
       ctx.chunk.modules.iter().copied(),
+      None,
     )
   } else {
     None

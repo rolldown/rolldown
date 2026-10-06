@@ -23,6 +23,12 @@ pub struct DevTestMeta {
   /// build failed (a failed scan is reverted, so the state intentionally
   /// stays at the last good build). Default is `true`.
   pub check_state_parity: bool,
+  #[serde(default)]
+  /// After each listed HMR step (0-based), trigger a full build and wait for it. Vite does
+  /// this when a page loads after an HMR-stage failure, and then reloads every tab if the build
+  /// succeeds. The test client reloads too: it runs the new output and only the patches of later
+  /// steps. A failed build does not reload it.
+  pub full_build_after_steps: Vec<usize>,
 }
 
 impl Default for DevTestMeta {

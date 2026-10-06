@@ -11,6 +11,8 @@ import assert from "node:assert/strict";
 //#region y.b64
 var y_default = "eQ==";
 //#endregion
+//#region x.b64
+//#endregion
 //#region entry.js
 const x_b64 = (/* @__PURE__ */ __commonJSMin(((exports, module) => {
 	module.exports = "eA==";

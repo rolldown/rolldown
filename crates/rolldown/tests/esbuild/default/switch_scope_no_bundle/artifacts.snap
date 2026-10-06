@@ -10,9 +10,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 switch (foo) {
 	default: var foo;
 }
-switch (bar) {
-	default:
-}
+bar;
 //#endregion
 
 ```

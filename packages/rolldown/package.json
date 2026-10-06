@@ -1,6 +1,6 @@
 {
   "name": "rolldown",
-  "version": "1.2.0",
+  "version": "1.2.12",
   "description": "Fast JavaScript/TypeScript bundler in Rust with Rollup-compatible API.",
   "keywords": [
     "bundler",
@@ -11,6 +11,9 @@
     "webpack"
   ],
   "homepage": "https://rolldown.rs/",
+  "bugs": {
+    "url": "https://github.com/rolldown/rolldown/issues"
+  },
   "license": "MIT",
   "repository": {
     "type": "git",
@@ -24,6 +27,8 @@
     "bin",
     "cli",
     "dist",
+    "LICENSE",
+    "THIRD-PARTY-LICENSE",
     "!dist/*.node"
   ],
   "type": "module",
@@ -48,6 +53,10 @@
     },
     "./experimental/runtime-types": {
       "types": "./dist/experimental-runtime-types.d.ts"
+    },
+    "./experimental/runtime": {
+      "types": "./dist/experimental-runtime.d.ts",
+      "default": "./dist/experimental-runtime.mjs"
     },
     "./filter": {
       "dev": "./src/filter-index.ts",
@@ -83,6 +92,10 @@
       "./experimental/runtime-types": {
         "types": "./dist/experimental-runtime-types.d.ts"
       },
+      "./experimental/runtime": {
+        "types": "./dist/experimental-runtime.d.ts",
+        "default": "./dist/experimental-runtime.mjs"
+      },
       "./filter": "./dist/filter-index.mjs",
       "./getLogFilter": "./dist/get-log-filter.mjs",
       "./parallelPlugin": "./dist/parallel-plugin.mjs",
@@ -115,7 +128,7 @@
     "build-browser-pkg:debug": "TARGET='browser' pnpm run --sequential '/^build-(binding:wasi|node)$/'",
     "build-browser-pkg:release": "TARGET='browser' pnpm run --sequential '/^build-(binding:wasi:release|node)$/'",
     "# Scrips for docs #": "_",
-    "prepublishOnly": "napi pre-publish -t npm --no-gh-release ${NAPI_DRY_RUN:+--dry-run}",
+    "prepublishOnly": "napi pre-publish -t npm --no-gh-release ${NAPI_DRY_RUN:+--dry-run} ${NAPI_SKIP_OPTIONAL_PUBLISH:+--skip-optional-publish}",
     "publint": "publint ."
   },
   "dependencies": {
@@ -123,13 +136,14 @@
     "@rolldown/pluginutils": "catalog:"
   },
   "devDependencies": {
+    "@emnapi/core": "catalog:",
+    "@emnapi/runtime": "catalog:",
     "@napi-rs/cli": "catalog:",
     "@napi-rs/wasm-runtime": "catalog:",
     "@oxc-node/cli": "catalog:",
-    "@rollup/plugin-json": "catalog:",
-    "buble": "catalog:",
     "cac": "catalog:",
     "consola": "catalog:",
+    "emnapi": "catalog:",
     "execa": "catalog:",
     "fresh-import": "catalog:",
     "glob": "catalog:",
@@ -149,21 +163,22 @@
     "dtsHeader": "type MaybePromise<T> = T | Promise<T>\ntype Nullable<T> = T | null | undefined\ntype VoidNullable<T = void> = T | null | undefined | void\nexport type BindingStringOrRegex = string | RegExp\nexport type BindingResult<T> = { errors: BindingError[], isBindingErrors: boolean } | T\n\n",
     "packageName": "@rolldown/binding",
     "targets": [
-      "x86_64-apple-darwin",
-      "x86_64-pc-windows-msvc",
-      "x86_64-unknown-linux-gnu",
-      "x86_64-unknown-linux-musl",
-      "x86_64-unknown-freebsd",
-      "armv7-unknown-linux-gnueabihf",
-      "aarch64-unknown-linux-gnu",
       "aarch64-apple-darwin",
+      "aarch64-linux-android",
+      "aarch64-pc-windows-msvc",
+      "aarch64-unknown-linux-gnu",
       "aarch64-unknown-linux-musl",
       "aarch64-unknown-linux-ohos",
-      "aarch64-pc-windows-msvc",
-      "aarch64-linux-android",
-      "wasm32-wasip1-threads",
+      "armv7-linux-androideabi",
+      "armv7-unknown-linux-gnueabihf",
+      "powerpc64le-unknown-linux-gnu",
       "s390x-unknown-linux-gnu",
-      "powerpc64le-unknown-linux-gnu"
+      "wasm32-wasip1-threads",
+      "x86_64-apple-darwin",
+      "x86_64-pc-windows-msvc",
+      "x86_64-unknown-freebsd",
+      "x86_64-unknown-linux-gnu",
+      "x86_64-unknown-linux-musl"
     ],
     "wasm": {
       "initialMemory": 16384,

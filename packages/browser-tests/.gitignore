@@ -1,0 +1,9 @@
+# produced by scripts/prepare-fixture.mjs
+tests/fixtures/browser/rolldown-browser.tgz
+tests/fixtures/node/rolldown.tgz
+tests/fixtures/node/rolldown-binding-wasm32-wasi.tgz
+# the page app installs the packed tarball, so its lockfile is build output too
+tests/browser/pnpm-lock.yaml
+# vitest browser mode failure screenshots
+.vitest-attachments/
+tests/*/__screenshots__/

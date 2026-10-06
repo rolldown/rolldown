@@ -61,7 +61,8 @@ export async function bundleWithCliOptions(cliOptions: NormalizedCliOptions): Pr
 
   if (outputs.length === 0) {
     logger.error('No output generated');
-    process.exit(1);
+    process.exitCode = 1;
+    return;
   }
 
   for (const file of outputs) {

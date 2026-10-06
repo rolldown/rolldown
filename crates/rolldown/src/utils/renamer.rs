@@ -7,8 +7,8 @@ use oxc::syntax::keyword::{GLOBAL_OBJECTS, RESERVED_KEYWORDS};
 use oxc_str::CompactStr;
 
 use rolldown_common::{
-  ExportsKind, ImportRecordMeta, ModuleIdx, NormalModule, OutputFormat, SymbolRef, SymbolRefDb,
-  SymbolRefDbForModule, WrapKind,
+  ChunkIdx, ExportsKind, ImportRecordMeta, ModuleIdx, NormalModule, OutputFormat, SymbolRef,
+  SymbolRefDb, SymbolRefDbForModule, WrapKind,
 };
 use rolldown_utils::concat_string;
 
@@ -186,6 +186,25 @@ impl<'name> Renamer<'name> {
     self.resolver.resolve(CompactStr::new(hint), |_, _| true)
   }
 
+  /// Like [`Self::create_conflictless_name`], but also skips names bound in a nested scope of
+  /// any of `modules`, and names bound at the root of the `cjs_wrapped` modules among them (that
+  /// root scope is emitted inside a `__commonJS` closure): a chunk-level binding that references
+  /// inside those modules resolve to must stay visible from all of them.
+  pub fn create_conflictless_name_for_modules(
+    &mut self,
+    hint: &str,
+    modules: &[ModuleIdx],
+    cjs_wrapped: &[ModuleIdx],
+  ) -> CompactStr {
+    let symbol_db = self.symbol_db;
+    self.resolver.resolve(CompactStr::new(hint), |candidate, _| {
+      !modules.iter().any(|module_idx| has_nested_scope_binding(symbol_db, *module_idx, candidate))
+        && !cjs_wrapped
+          .iter()
+          .any(|module_idx| has_root_scope_binding(symbol_db, *module_idx, candidate))
+    })
+  }
+
   pub fn register_nested_scope_symbols(&mut self, symbol_ref: SymbolRef, original_name: &str) {
     let canonical_ref = symbol_ref.canonical_ref(self.symbol_db);
     if self.canonical_names.contains_key(&canonical_ref) {
@@ -262,6 +281,15 @@ fn has_nested_scope_binding(symbol_db: &SymbolRefDb, module_idx: ModuleIdx, name
   };
   // Skip root scope (index 0), check nested scopes only
   db.ast_scopes.scoping().iter_bindings().skip(1).any(|(_, bindings)| bindings.contains_key(name))
+}
+
+/// Returns true if `name` is bound in the root scope of the module.
+fn has_root_scope_binding(symbol_db: &SymbolRefDb, module_idx: ModuleIdx, name: &str) -> bool {
+  let Some(db) = &symbol_db[module_idx] else {
+    return false;
+  };
+  let scoping = db.ast_scopes.scoping();
+  scoping.get_binding(scoping.root_scope_id(), name.into()).is_some()
 }
 
 /// Context for renaming nested scope symbols that would shadow top-level symbols.
@@ -480,6 +508,58 @@ impl NestedScopeRenamer<'_, '_> {
     }
   }
 
+  /// Rename nested bindings that would shadow the ambient names of CommonJS output.
+  ///
+  /// Several rewrites emit bare, renamer-invisible identifiers into the module body, at arbitrary
+  /// nesting depth:
+  /// - `require(...)` — external imports, dynamic-import lowering, and the `import.meta.url`
+  ///   polyfill (`require("url").pathToFileURL(__filename).href`)
+  /// - `__filename` — the argument of that polyfill, and the `import.meta.filename` rewrite
+  /// - `__dirname` — the `import.meta.dirname` rewrite
+  ///
+  /// Those identifiers mean the CommonJS ambient bindings, so a nested binding of the same name
+  /// must not capture them. `module`/`exports` are deliberately not in the set: nothing injects
+  /// them into nested scopes, and `rename_bindings_shadowing_wrapper_params` already covers the
+  /// CJS-wrapped-module case.
+  ///
+  /// A `var` binding is hoisted, so it shadows even an injected call inside its own initializer:
+  ///
+  /// ```js
+  /// // input, the shape emscripten emits with `-s EXPORT_ES6=1 -s ENVIRONMENT='node'`
+  /// function init() {
+  ///   var require = createRequire(import.meta.url);
+  ///   return require("node:path").sep;
+  /// }
+  /// ```
+  ///
+  /// Without renaming, the polyfill resolves to the still-undefined local and the module throws
+  /// `require is not a function` on first call:
+  ///
+  /// ```js
+  /// var require = createRequire(require("url").pathToFileURL(__filename).href);
+  /// ```
+  ///
+  /// The same capture breaks a nested `var __filename`/`var __dirname` the same way
+  /// (`pathToFileURL(__filename)` reads the still-undefined local and throws).
+  ///
+  /// Only CommonJS output injects these names. The pass does nothing for the other formats.
+  pub fn rename_bindings_shadowing_cjs_ambient_names(&mut self, output_format: OutputFormat) {
+    if !matches!(output_format, OutputFormat::Cjs) {
+      return;
+    }
+
+    // Skip root scope (index 0), check nested scopes only. Root-scope bindings are already covered
+    // by the renamer's `manual_reserved` list for CommonJS output.
+    for (_, bindings) in self.scoping.iter_bindings().skip(1) {
+      for (&name, symbol_id) in bindings {
+        if matches!(name.as_str(), "require" | "__filename" | "__dirname") {
+          let symbol_ref = (self.module_idx, *symbol_id).into();
+          self.renamer.register_nested_scope_symbols(symbol_ref, name.as_str());
+        }
+      }
+    }
+  }
+
   /// Rename a CJS-wrapped module's *root-scope* locals that shadow a chunk-root binding the closure
   /// actually references.
   ///
@@ -494,7 +574,11 @@ impl NestedScopeRenamer<'_, '_> {
   /// This is reference-precise: a root-scope local is renamed only when the module genuinely
   /// references a chunk-root binding of the same final name, leaving unrelated same-named locals
   /// untouched.
-  pub fn rename_cjs_locals_shadowing_referenced_chunk_bindings(&mut self) {
+  pub fn rename_cjs_locals_shadowing_referenced_chunk_bindings(
+    &mut self,
+    output_format: OutputFormat,
+    chunk_idx: ChunkIdx,
+  ) {
     if !matches!(self.link_output.metas[self.module_idx].wrap_kind(), WrapKind::Cjs) {
       return;
     }
@@ -557,35 +641,46 @@ impl NestedScopeRenamer<'_, '_> {
       }
     }
 
-    // `require()` of a wrapped-ESM importee — the finalizer rewrites it to
-    // `(init_x(), __toCommonJS(xxx_exports))`, so a root-scope local sharing the importee's
-    // namespace-object final name shadows that read (issue #9882, require()/namespace channel).
-    // We mirror the finalizer's gate (`module_finalizers/mod.rs`): a non-CommonJS importee whose
-    // require is actually used. The namespace object lives in the importee module, never in
-    // `self.module`, so any same-named root-scope local here is a genuine shadowing local.
+    // `require()` of a wrapped importee — the finalizer rewrites it to the importee's chunk-root
+    // facades: `require_x()` for a CJS-wrapped importee, `(init_x(), __toCommonJS(xxx_exports))`
+    // for a wrapped-ESM one. A root-scope local sharing one of those final names shadows the read
+    // (issue #9882, require()/namespace channel). We mirror the finalizer's gate
+    // (`module_finalizers/mod.rs`): an importee whose require is actually used. Both facades live
+    // in the importee module, so a same-named root-scope local here is a genuine shadowing local —
+    // except for a self-require, which the owner guard rules out.
     for rec in &self.module.import_records {
       let Some(importee_idx) = rec.resolved_module else {
         continue;
       };
-      if rec.meta.contains(ImportRecordMeta::IsRequireUnused) {
-        continue;
-      }
       let Some(importee) = self.link_output.module_table[importee_idx].as_normal() else {
         continue;
       };
-      if matches!(importee.exports_kind, ExportsKind::CommonJs) {
-        continue;
-      }
-      let Some(canonical_name) =
-        self.renamer.get_canonical_name(importee.namespace_object_ref).cloned()
-      else {
-        continue;
-      };
-      if let Some(binding) = self.scoping.get_binding(root_scope_id, canonical_name.as_str().into())
-      {
-        let local_ref: SymbolRef = (self.module_idx, binding).into();
-        if self.link_output.symbol_db.canonical_ref_for(local_ref).owner == self.module_idx {
-          shadowing_locals.insert(local_ref);
+      // The namespace object only backs the wrapped-ESM rewrite; a CommonJS importee is read
+      // through its `require_x` wrapper alone. An unused require drops the `__toCommonJS(ns)`
+      // half of that rewrite, but the finalizer still emits the wrapper call, so the wrapper
+      // name stays shadowable.
+      let namespace_object_ref = (!matches!(importee.exports_kind, ExportsKind::CommonJs)
+        && !rec.meta.contains(ImportRecordMeta::IsRequireUnused))
+      .then_some(importee.namespace_object_ref);
+      // The wrapper facade is what a bundled `require_<basename>` local collides with. Rolldown's
+      // own CJS output names require-locals from the same namespace it derives wrapper names from
+      // (`require_<basename>`, `$N`-suffixed for duplicate basenames), so re-bundling it lands a
+      // local on a deconflicted wrapper name such as `require_dup$1`.
+      let wrapper_ref = self.link_output.metas[importee_idx].wrapper_ref;
+      for referenced_ref in namespace_object_ref.into_iter().chain(wrapper_ref) {
+        if !self.is_shadowable_chunk_binding(referenced_ref, output_format, chunk_idx) {
+          continue;
+        }
+        let Some(canonical_name) = self.renamer.get_canonical_name(referenced_ref).cloned() else {
+          continue;
+        };
+        if let Some(binding) =
+          self.scoping.get_binding(root_scope_id, canonical_name.as_str().into())
+        {
+          let local_ref: SymbolRef = (self.module_idx, binding).into();
+          if self.link_output.symbol_db.canonical_ref_for(local_ref).owner == self.module_idx {
+            shadowing_locals.insert(local_ref);
+          }
         }
       }
     }
@@ -594,5 +689,23 @@ impl NestedScopeRenamer<'_, '_> {
       let original_name = self.scoping.symbol_name(local_ref.symbol);
       self.renamer.override_root_scope_binding(local_ref, original_name, self.scoping);
     }
+  }
+
+  /// Whether a root-scope local of this module could shadow `symbol_ref`'s final name.
+  ///
+  /// CJS output reaches a symbol owned by another chunk through a member access on that chunk's
+  /// require binding (`require_other.foo`, see `finalized_expr_for_cross_chunk_symbol`), so the
+  /// name never resolves against this module's scopes and nothing can shadow it. A facade owned by
+  /// this very module (a self-`require`) is not a chunk-root binding either.
+  fn is_shadowable_chunk_binding(
+    &self,
+    symbol_ref: SymbolRef,
+    output_format: OutputFormat,
+    chunk_idx: ChunkIdx,
+  ) -> bool {
+    let canonical_ref = self.link_output.symbol_db.canonical_ref_for(symbol_ref);
+    canonical_ref.owner != self.module_idx
+      && (!matches!(output_format, OutputFormat::Cjs)
+        || self.link_output.symbol_db.get(canonical_ref).chunk_idx == Some(chunk_idx))
   }
 }

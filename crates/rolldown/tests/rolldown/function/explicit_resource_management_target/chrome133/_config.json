@@ -1,0 +1,8 @@
+{
+  "_comment": "Engine targets do not reduce to a single ES version the way `es2024` does, so they reach `has_feature` differently: Chrome 133 ships unicode-sets RegExp but not `using`. A gate keyed on unicode-sets alone left `using` unlowered here, which is the case that motivated widening it.",
+  "config": {
+    "transform": {
+      "target": "chrome133"
+    }
+  }
+}

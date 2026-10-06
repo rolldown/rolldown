@@ -1,0 +1,234 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+var singleChunkDynamicImportWrappedModule = (function(exports) {
+	Object.defineProperty(exports, Symbol.toStringTag, { value: "Module" });
+	// HIDDEN [\0rolldown/runtime.js]
+	//#region shared.js
+	function mark(entry) {
+		globalThis.log.push(entry);
+	}
+	var label;
+	var init_shared = __esmMin((() => {
+		globalThis.log.push("shared");
+		label = "shared";
+	}));
+	//#endregion
+	//#region lazy-dep.js
+	var init_lazy_dep = __esmMin((() => {
+		globalThis.log.push("lazy-dep");
+	}));
+	//#endregion
+	//#region lazy.js
+	var lazy_exports = /* @__PURE__ */ __exportAll({
+		sharedLabel: () => sharedLabel,
+		value: () => value
+	});
+	var value, sharedLabel;
+	var init_lazy = __esmMin((() => {
+		init_shared();
+		init_lazy_dep();
+		mark("lazy-body");
+		value = "dep";
+		sharedLabel = label;
+	}));
+	//#endregion
+	//#region main.js
+	var ready;
+	function init_main() {
+		return (init_main = __esmMin((() => {
+			init_shared();
+			mark("main-body");
+			ready = Promise.all([Promise.resolve().then(() => (init_lazy(), lazy_exports)), Promise.resolve().then(() => (init_lazy(), lazy_exports))]).then(([first, second]) => {
+				mark(`lazy-resolved:${first.value}:${first.sharedLabel}`);
+				mark(`same-namespace:${first === second}`);
+			});
+			globalThis.ready = ready;
+			mark(`lazy-pending:${!globalThis.log.includes("lazy-body")}`);
+		})))();
+	}
+	//#endregion
+	init_main();
+	exports.ready = ready;
+	return exports;
+})({});
+
+```
+
+# Variant: iife-on-demand: [on_demand_wrapping: true]
+
+## Assets
+
+### main.js
+
+```js
+var singleChunkDynamicImportWrappedModule = (function(exports) {
+	Object.defineProperty(exports, Symbol.toStringTag, { value: "Module" });
+	// HIDDEN [\0rolldown/runtime.js]
+	//#region shared.js
+	function mark(entry) {
+		globalThis.log.push(entry);
+	}
+	var label;
+	var init_shared = __esmMin((() => {
+		globalThis.log.push("shared");
+		label = "shared";
+	}));
+	//#endregion
+	//#region lazy-dep.js
+	var init_lazy_dep = __esmMin((() => {
+		globalThis.log.push("lazy-dep");
+	}));
+	//#endregion
+	//#region lazy.js
+	var lazy_exports = /* @__PURE__ */ __exportAll({
+		sharedLabel: () => sharedLabel,
+		value: () => value
+	});
+	var value, sharedLabel;
+	var init_lazy = __esmMin((() => {
+		init_shared();
+		init_lazy_dep();
+		mark("lazy-body");
+		value = "dep";
+		sharedLabel = label;
+	}));
+	//#endregion
+	//#region main.js
+	init_shared();
+	mark("main-body");
+	const ready = Promise.all([Promise.resolve().then(() => (init_lazy(), lazy_exports)), Promise.resolve().then(() => (init_lazy(), lazy_exports))]).then(([first, second]) => {
+		mark(`lazy-resolved:${first.value}:${first.sharedLabel}`);
+		mark(`same-namespace:${first === second}`);
+	});
+	globalThis.ready = ready;
+	mark(`lazy-pending:${!globalThis.log.includes("lazy-body")}`);
+	//#endregion
+	exports.ready = ready;
+	return exports;
+})({});
+
+```
+
+# Variant: umd-wrap-all: [format: Umd]
+
+## Assets
+
+### main.js
+
+```js
+(function(global, factory) {
+	typeof exports === "object" && typeof module !== "undefined" ? factory(exports) : typeof define === "function" && define.amd ? define(["exports"], factory) : (global = typeof globalThis !== "undefined" ? globalThis : global || self, factory(global.singleChunkDynamicImportWrappedModule = {}));
+})(this, function(exports) {
+	Object.defineProperty(exports, Symbol.toStringTag, { value: "Module" });
+	// HIDDEN [\0rolldown/runtime.js]
+	//#region shared.js
+	function mark(entry) {
+		globalThis.log.push(entry);
+	}
+	var label;
+	var init_shared = __esmMin((() => {
+		globalThis.log.push("shared");
+		label = "shared";
+	}));
+	//#endregion
+	//#region lazy-dep.js
+	var init_lazy_dep = __esmMin((() => {
+		globalThis.log.push("lazy-dep");
+	}));
+	//#endregion
+	//#region lazy.js
+	var lazy_exports = /* @__PURE__ */ __exportAll({
+		sharedLabel: () => sharedLabel,
+		value: () => value
+	});
+	var value, sharedLabel;
+	var init_lazy = __esmMin((() => {
+		init_shared();
+		init_lazy_dep();
+		mark("lazy-body");
+		value = "dep";
+		sharedLabel = label;
+	}));
+	//#endregion
+	//#region main.js
+	var ready;
+	function init_main() {
+		return (init_main = __esmMin((() => {
+			init_shared();
+			mark("main-body");
+			ready = Promise.all([Promise.resolve().then(() => (init_lazy(), lazy_exports)), Promise.resolve().then(() => (init_lazy(), lazy_exports))]).then(([first, second]) => {
+				mark(`lazy-resolved:${first.value}:${first.sharedLabel}`);
+				mark(`same-namespace:${first === second}`);
+			});
+			globalThis.ready = ready;
+			mark(`lazy-pending:${!globalThis.log.includes("lazy-body")}`);
+		})))();
+	}
+	//#endregion
+	init_main();
+	exports.ready = ready;
+});
+
+```
+
+# Variant: umd-on-demand: [format: Umd] [on_demand_wrapping: true]
+
+## Assets
+
+### main.js
+
+```js
+(function(global, factory) {
+	typeof exports === "object" && typeof module !== "undefined" ? factory(exports) : typeof define === "function" && define.amd ? define(["exports"], factory) : (global = typeof globalThis !== "undefined" ? globalThis : global || self, factory(global.singleChunkDynamicImportWrappedModule = {}));
+})(this, function(exports) {
+	Object.defineProperty(exports, Symbol.toStringTag, { value: "Module" });
+	// HIDDEN [\0rolldown/runtime.js]
+	//#region shared.js
+	function mark(entry) {
+		globalThis.log.push(entry);
+	}
+	var label;
+	var init_shared = __esmMin((() => {
+		globalThis.log.push("shared");
+		label = "shared";
+	}));
+	//#endregion
+	//#region lazy-dep.js
+	var init_lazy_dep = __esmMin((() => {
+		globalThis.log.push("lazy-dep");
+	}));
+	//#endregion
+	//#region lazy.js
+	var lazy_exports = /* @__PURE__ */ __exportAll({
+		sharedLabel: () => sharedLabel,
+		value: () => value
+	});
+	var value, sharedLabel;
+	var init_lazy = __esmMin((() => {
+		init_shared();
+		init_lazy_dep();
+		mark("lazy-body");
+		value = "dep";
+		sharedLabel = label;
+	}));
+	//#endregion
+	//#region main.js
+	init_shared();
+	mark("main-body");
+	const ready = Promise.all([Promise.resolve().then(() => (init_lazy(), lazy_exports)), Promise.resolve().then(() => (init_lazy(), lazy_exports))]).then(([first, second]) => {
+		mark(`lazy-resolved:${first.value}:${first.sharedLabel}`);
+		mark(`same-namespace:${first === second}`);
+	});
+	globalThis.ready = ready;
+	mark(`lazy-pending:${!globalThis.log.includes("lazy-body")}`);
+	//#endregion
+	exports.ready = ready;
+});
+
+```

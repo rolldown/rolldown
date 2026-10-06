@@ -13,13 +13,15 @@ const yarnPnp = typeof process === 'object' && !!process.versions?.pnp;
  * The cache stores resolved tsconfig configurations keyed by their file paths.
  * When transforming multiple files in the same project, tsconfig lookups are
  * deduplicated, improving performance.
+ * Pass a tsconfig path to use that configuration for every lookup. When the
+ * path is omitted, the nearest tsconfig is discovered automatically.
  *
  * @category Utilities
  * @experimental
  */
 export class TsconfigCache extends OriginalTsconfigCache {
-  constructor() {
-    super(yarnPnp);
+  constructor(pathToTsconfig?: string) {
+    super(yarnPnp, pathToTsconfig);
   }
 }
 

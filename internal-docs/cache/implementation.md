@@ -19,7 +19,7 @@ and will drift; treat them as starting points.
 
 ## Cache inventory
 
-Counting types literally named `*Cache`, there are 14. Grouped by purpose:
+Counting types literally named `*Cache`, there are 13. Grouped by purpose:
 
 ### 1. Incremental-build cache
 
@@ -39,14 +39,13 @@ incremental build knows what to invalidate / can answer plugin queries.
 
 ### 3. Within-build memoization
 
-| Type                                | Location                                                                         | Stores                                                                                                              |
-| ----------------------------------- | -------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------- |
-| `SideEffectCache` (enum)            | `crates/rolldown/src/stages/link_stage/tree_shaking/determine_side_effects.rs:9` | `None` / `Visited` / `Cache(DeterminedSideEffects)`; a transient local memo during the link-stage side-effect walk. |
-| `PackageJsonCache`                  | `crates/rolldown_plugin_vite_resolve/src/package_json_cache.rs:9`                | `side_effects_cache: FxDashMap<PathBuf, Arc<PackageJson>>`, `optional_peer_dep_cache: FxDashMap<PathBuf, Arc<…>>`.  |
-| `ResolverCaches`                    | `crates/rolldown_plugin_vite_resolve/src/resolver.rs:77`                         | `package_json: PackageJsonCache`, `importer_exists: FxDashSet<String>`.                                             |
-| `TsconfigCache`                     | `crates/rolldown_binding/src/transform_cache.rs:12`                              | `resolver: Arc<Resolver>`, `cache: FxDashMap<PathBuf, Arc<TsConfig>>`. NAPI-exposed (`#[napi]`).                    |
-| `RawTransformOptions` `cache` field | `crates/rolldown_common/src/inner_bundler_options/types/transform_options.rs`    | tsconfig → compiled Oxc transform options.                                                                          |
-| oxc_resolver internal cache         | external crate, held by the bundler-level `SharedResolver`                       | filesystem/path metadata.                                                                                           |
+| Type                                | Location                                                                      | Stores                                                                                                             |
+| ----------------------------------- | ----------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------ |
+| `PackageJsonCache`                  | `crates/rolldown_plugin_vite_resolve/src/package_json_cache.rs:9`             | `side_effects_cache: FxDashMap<PathBuf, Arc<PackageJson>>`, `optional_peer_dep_cache: FxDashMap<PathBuf, Arc<…>>`. |
+| `ResolverCaches`                    | `crates/rolldown_plugin_vite_resolve/src/resolver.rs:77`                      | `package_json: PackageJsonCache`, `importer_exists: FxDashSet<String>`.                                            |
+| `TsconfigCache`                     | `crates/rolldown_binding/src/transform_cache.rs:12`                           | `resolver: Arc<Resolver>`, `cache: FxDashMap<PathBuf, Arc<TsConfig>>`. NAPI-exposed (`#[napi]`).                   |
+| `RawTransformOptions` `cache` field | `crates/rolldown_common/src/inner_bundler_options/types/transform_options.rs` | tsconfig → compiled Oxc transform options.                                                                         |
+| oxc_resolver internal cache         | external crate, held by the bundler-level `SharedResolver`                    | filesystem/path metadata.                                                                                          |
 
 ### 4. Plugin scratch state (in `PluginContext.meta()`)
 
@@ -340,9 +339,11 @@ arm is `unreachable!()`.
    `EcmaView::rebuild_importer_sets`. The scan does this only for modules it
    produced; a cached module whose importer added/removed/re-kinded an import
    of it is refreshed here (issue #7416).
-5. **Merge entry points** — for a matching existing entry
-   point, drop `related_stmt_infos` for re-scanned modules and extend with the
-   new ones; otherwise push the new entry point.
+5. **Merge entry points** — collect every module present in the partial scan,
+   remove those modules' references from every cached dynamic entry, then merge
+   the new rows. The cleanup is global because deleting or retargeting an import
+   produces no row for the old target. Drop stale entries left without call
+   sites; the merge can re-add an unspanned import with empty `related_stmt_infos`.
 6. **Patch barrel modules** — drain
    `barrel_state.resolved_barrel_modules` and write the resolved import records
    back into the cached modules.

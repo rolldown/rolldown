@@ -46,6 +46,7 @@ demo();
 ### pagea.js
 
 ```js
+//#region pagea.js
 //#endregion
 
 ```
@@ -53,6 +54,7 @@ demo();
 ### pageb.js
 
 ```js
+//#region pageb.js
 //#endregion
 
 ```

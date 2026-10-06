@@ -7,6 +7,8 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 // HIDDEN [\0rolldown/runtime.js]
+//#region dep.cjs
+//#endregion
 //#region app.js
 var import_dep = (/* @__PURE__ */ __commonJSMin(((exports, module) => {
 	module.exports.hello = function() {
@@ -30,30 +32,30 @@ globalThis.a = app;
 
 ```
 - ../dep.cjs
-(0:0) "module." --> (5:1) "module."
-(0:7) "exports." --> (5:8) "exports."
-(0:15) "hello = " --> (5:16) "hello = "
-(0:23) "function () " --> (5:24) "function() "
-(0:35) "{\n" --> (5:35) "{\n"
-(1:2) "return " --> (6:2) "return "
-(1:9) "'hi';\n" --> (6:9) "\"hi\";\n"
-(2:0) "};\n" --> (7:1) "};\n"
+(0:0) "module." --> (7:1) "module."
+(0:7) "exports." --> (7:8) "exports."
+(0:15) "hello = " --> (7:16) "hello = "
+(0:23) "function () " --> (7:24) "function() "
+(0:35) "{\n" --> (7:35) "{\n"
+(1:2) "return " --> (8:2) "return "
+(1:9) "'hi';\n" --> (8:9) "\"hi\";\n"
+(2:0) "};\n" --> (9:1) "};\n"
 - ../app.js
-(0:0) "export function " --> (9:0) "function "
-(0:16) "app() " --> (9:9) "app() "
-(0:22) "{\n" --> (9:15) "{\n"
-(1:2) "globalThis." --> (10:1) "globalThis."
-(1:13) "side = " --> (10:12) "side = "
-(1:20) "1;\n" --> (10:19) "1;\n"
-(2:2) "return " --> (11:1) "return "
-(2:9) "42;\n" --> (11:8) "42;\n"
-(3:0) "}\n" --> (12:0) "}\n"
+(0:0) "export function " --> (11:0) "function "
+(0:16) "app() " --> (11:9) "app() "
+(0:22) "{\n" --> (11:15) "{\n"
+(1:2) "globalThis." --> (12:1) "globalThis."
+(1:13) "side = " --> (12:12) "side = "
+(1:20) "1;\n" --> (12:19) "1;\n"
+(2:2) "return " --> (13:1) "return "
+(2:9) "42;\n" --> (13:8) "42;\n"
+(3:0) "}\n" --> (14:0) "}\n"
 - ../main.js
-(2:0) "globalThis." --> (15:0) "globalThis."
-(2:11) "h = " --> (15:11) "h = "
-(2:15) "hello;\n" --> (15:15) "import_dep."
-(2:15) "hello;\n" --> (15:26) "hello;\n"
-(3:0) "globalThis." --> (16:0) "globalThis."
-(3:11) "a = " --> (16:11) "a = "
-(3:15) "app;\n" --> (16:15) "app;\n"
+(2:0) "globalThis." --> (17:0) "globalThis."
+(2:11) "h = " --> (17:11) "h = "
+(2:15) "hello;\n" --> (17:15) "import_dep."
+(2:15) "hello;\n" --> (17:26) "hello;\n"
+(3:0) "globalThis." --> (18:0) "globalThis."
+(3:11) "a = " --> (18:11) "a = "
+(3:15) "app;\n" --> (18:15) "app;\n"
 ```

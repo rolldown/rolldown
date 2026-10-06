@@ -1,0 +1,65 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+import assert from "node:assert";
+import * as pathNs from "node:path";
+import { join, sep } from "node:path";
+// HIDDEN [\0rolldown/runtime.js]
+//#region barrel.js
+var barrel_exports = /* @__PURE__ */ __exportAll({
+	join: () => join,
+	pathNs: () => pathNs,
+	sep: () => sep
+});
+//#endregion
+//#region main.js
+assert.strictEqual(join, pathNs.join);
+assert.strictEqual(sep, pathNs.sep);
+assert.strictEqual(pathNs.join, pathNs.join);
+assert.strictEqual(join, pathNs.join);
+assert.deepStrictEqual(Object.keys(barrel_exports), [
+	"join",
+	"pathNs",
+	"sep"
+]);
+//#endregion
+
+```
+
+# Variant: [format: Cjs]
+
+## Assets
+
+### main.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+let node_assert = require("node:assert");
+node_assert = __toESM(node_assert);
+let node_path = require("node:path");
+node_path = __toESM(node_path);
+//#region barrel.js
+var barrel_exports = /* @__PURE__ */ __exportAll({
+	join: () => node_path.join,
+	pathNs: () => node_path,
+	sep: () => node_path.sep
+});
+//#endregion
+//#region main.js
+node_assert.default.strictEqual(node_path.join, node_path.join);
+node_assert.default.strictEqual(node_path.sep, node_path.sep);
+node_assert.default.strictEqual(node_path.join, node_path.join);
+node_assert.default.strictEqual(node_path.join, node_path.join);
+node_assert.default.deepStrictEqual(Object.keys(barrel_exports), [
+	"join",
+	"pathNs",
+	"sep"
+]);
+//#endregion
+
+```

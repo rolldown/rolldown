@@ -1,6 +1,27 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
 ---
+# warnings
+
+## NAMESPACE_CONFLICT
+
+```text
+[NAMESPACE_CONFLICT] Conflicting namespaces: "common.js" re-exports "y" from one of the modules "foo.js" and "bar.js" (will be ignored).
+   ╭─[ foo.js:2:14 ]
+   │
+ 2 │ export const y = 2
+   │              ┬  
+   │              ╰── One matching export is here.
+   │
+   ├─[ bar.js:1:14 ]
+   │
+ 1 │ export const y = 3
+   │              ┬  
+   │              ╰── One matching export is here.
+───╯
+
+```
+
 # Assets
 
 ## entry.js

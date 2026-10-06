@@ -7,14 +7,8 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 import assert from "assert";
-var __esmMin = (fn, res, err) => () => {
-	if (err) throw err[0];
-	try {
-		return fn && (res = fn(fn = 0)), res;
-	} catch (e) {
-		throw err = [e], e;
-	}
-};
+// HIDDEN [\0rolldown/runtime.js]
+//#region foo.js
 function foo$1(a$1) {
 	console.log(a$1, a$2);
 }
@@ -25,6 +19,8 @@ var init_foo = __esmMin((() => {
 //#endregion
 //#region bar.js
 init_foo();
+//#endregion
+//#region main.js
 const { foo } = { foo: foo$1 };
 assert.strictEqual(typeof foo, "function");
 init_foo();
@@ -37,35 +33,35 @@ init_foo();
 
 ```
 - ../foo.js
-(2:0) "export function " --> (9:0) "function "
-(2:16) "foo(" --> (9:9) "foo$1("
-(2:20) "a$1) " --> (9:15) "a$1) "
-(2:25) "{\n" --> (9:20) "{\n"
-(3:2) "console." --> (10:1) "console."
-(3:10) "log(" --> (10:9) "log("
-(3:14) "a$1, " --> (10:13) "a$1, "
-(3:19) "a" --> (10:18) "a$2"
-(3:20) ");\n" --> (10:21) ");\n"
-(4:0) "}\n" --> (11:0) "}\n"
-(0:6) "a = " --> (14:1) "a$2 = "
-(0:10) "1;\n" --> (14:7) "1;\n"
+(2:0) "export function " --> (12:0) "function "
+(2:16) "foo(" --> (12:9) "foo$1("
+(2:20) "a$1) " --> (12:15) "a$1) "
+(2:25) "{\n" --> (12:20) "{\n"
+(3:2) "console." --> (13:1) "console."
+(3:10) "log(" --> (13:9) "log("
+(3:14) "a$1, " --> (13:13) "a$1, "
+(3:19) "a" --> (13:18) "a$2"
+(3:20) ");\n" --> (13:21) ");\n"
+(4:0) "}\n" --> (14:0) "}\n"
+(0:6) "a = " --> (17:1) "a$2 = "
+(0:10) "1;\n" --> (17:7) "1;\n"
 - ../bar.js
-(0:27) ";\n" --> (18:0) "init_foo("
-(0:27) ";\n" --> (18:9) ");\n"
+(0:27) ";\n" --> (21:0) "init_foo("
+(0:27) ";\n" --> (21:9) ");\n"
 - ../main.js
-(5:0) "const " --> (19:0) "const "
-(5:6) "{ " --> (19:6) "{ "
-(5:8) "foo } = " --> (19:8) "foo } = "
-(5:16) "bar;\n" --> (19:16) "{ "
+(5:0) "const " --> (24:0) "const "
+(5:6) "{ " --> (24:6) "{ "
+(5:8) "foo } = " --> (24:8) "foo } = "
+(5:16) "bar;\n" --> (24:16) "{ "
 - ../bar.js
-(2:17) "foo };\n" --> (19:18) "foo: "
-(2:17) "foo };\n" --> (19:23) "foo$1 "
+(2:17) "foo };\n" --> (24:18) "foo: "
+(2:17) "foo };\n" --> (24:23) "foo$1 "
 - ../main.js
-(5:16) "bar;\n" --> (19:29) "};\n"
-(7:0) "assert." --> (20:0) "assert."
-(7:7) "strictEqual(" --> (20:7) "strictEqual("
-(7:19) "typeof " --> (20:19) "typeof "
-(7:26) "foo, " --> (20:26) "foo, "
-(7:31) "'function'" --> (20:31) "\"function\""
-(7:41) ");\n" --> (20:41) ");\n"
+(5:16) "bar;\n" --> (24:29) "};\n"
+(7:0) "assert." --> (25:0) "assert."
+(7:7) "strictEqual(" --> (25:7) "strictEqual("
+(7:19) "typeof " --> (25:19) "typeof "
+(7:26) "foo, " --> (25:26) "foo, "
+(7:31) "'function'" --> (25:31) "\"function\""
+(7:41) ");\n" --> (25:41) ");\n"
 ```

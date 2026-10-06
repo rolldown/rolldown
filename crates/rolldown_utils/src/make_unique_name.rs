@@ -5,7 +5,11 @@ use cow_utils::CowUtils as _;
 use dashmap::Entry;
 use sugar_path::SugarPath as _;
 
-use crate::{concat_string, dashmap::FxDashMap};
+use crate::{
+  concat_string,
+  dashmap::FxDashMap,
+  hash_placeholder::{HASH_PLACEHOLDER_LEFT_FINDER, find_hash_placeholders},
+};
 
 /// Copy from rust std
 fn split_file_at_dot(file: &OsStr) -> (&OsStr, Option<&OsStr>) {
@@ -29,6 +33,26 @@ fn split_file_at_dot(file: &OsStr) -> (&OsStr, Option<&OsStr>) {
   }
 }
 
+/// Deduplication key for `candidate`: the name lowercased, so that names differing only
+/// by case collide on case-insensitive filesystems (macOS APFS, Windows NTFS) — or the
+/// exact bytes when the name contains hash placeholders (`!~{...}~`). The placeholder
+/// index alphabet is case-sensitive base64, so folding it would make distinct
+/// placeholders (e.g. `!~{00d}~` and `!~{00D}~`) falsely collide. Byte-identical
+/// repeats still collide, and case conflicts between hashed chunk names are resolved
+/// by the `deconflict_filenames` rehash loop (internal-docs/chunk-hash/implementation.md).
+/// Deliberately unprotected, matching Rollup: a `[chunkhash]` sourcemap name whose
+/// literal parts differ from its chunk's name only by case while sharing the extension.
+fn case_insensitive_key(candidate: &ArcStr) -> ArcStr {
+  let s = candidate.as_str();
+  if find_hash_placeholders(s, &HASH_PLACEHOLDER_LEFT_FINDER).next().is_some() {
+    return candidate.clone();
+  }
+  match s.cow_to_ascii_lowercase() {
+    Cow::Borrowed(_) => candidate.clone(),
+    Cow::Owned(owned) => owned.into(),
+  }
+}
+
 pub fn make_unique_name(name: &ArcStr, used_name_counts: &FxDashMap<ArcStr, u32>) -> ArcStr {
   let mut candidate = name.clone();
   let extension = name
@@ -41,13 +65,7 @@ pub fn make_unique_name(name: &ArcStr, used_name_counts: &FxDashMap<ArcStr, u32>
     .unwrap_or_default();
   let file_name = &name[..name.len() - extension.len()];
   loop {
-    // Lowercase key for case-insensitive filesystems (macOS APFS, Windows NTFS).
-    // When already lowercase, reuse the `candidate` Arc directly to avoid allocation.
-    let lowercase_candidate = match candidate.as_str().cow_to_ascii_lowercase() {
-      Cow::Borrowed(_) => candidate.clone(),
-      Cow::Owned(s) => s.into(),
-    };
-    match used_name_counts.entry(lowercase_candidate) {
+    match used_name_counts.entry(case_insensitive_key(&candidate)) {
       Entry::Occupied(mut occ) => {
         // This name is already used
         let next_count = *occ.get();
@@ -107,6 +125,28 @@ mod tests {
 
     let unique_name = make_unique_name(&ArcStr::from("foo.d.js"), &used_name_counts);
     assert_eq!(unique_name.as_str(), "foo2.d.js");
+  }
+
+  #[test]
+  fn hash_placeholders_stay_case_sensitive() {
+    let used_name_counts = FxDashMap::default();
+
+    // `!~{00d}~` (index 13) and `!~{00D}~` (index 39) are distinct placeholders
+    let unique_name = make_unique_name(&ArcStr::from("chunks/!~{00d}~.js"), &used_name_counts);
+    assert_eq!(unique_name.as_str(), "chunks/!~{00d}~.js");
+
+    let unique_name = make_unique_name(&ArcStr::from("chunks/!~{00D}~.js"), &used_name_counts);
+    assert_eq!(unique_name.as_str(), "chunks/!~{00D}~.js");
+
+    // a byte-identical placeholder name still collides
+    let unique_name = make_unique_name(&ArcStr::from("chunks/!~{00D}~.js"), &used_name_counts);
+    assert_eq!(unique_name.as_str(), "chunks/!~{00D}~2.js");
+
+    // placeholder names are keyed verbatim, so a case-differing literal part does not
+    // collide here; hashed chunk names deconflict at finalize, and the `[chunkhash]`
+    // sourcemap corner this leaves open is deliberately unprotected (as in Rollup)
+    let unique_name = make_unique_name(&ArcStr::from("CHUNKS/!~{00d}~.js"), &used_name_counts);
+    assert_eq!(unique_name.as_str(), "CHUNKS/!~{00d}~.js");
   }
 
   #[test]

@@ -1,0 +1,35 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## entry_mjs.js
+
+```js
+//#region entry.mjs
+await import("./main.js");
+//#endregion
+
+```
+
+## main.js
+
+```js
+//#region b.mjs
+function b() {
+	return typeof a;
+}
+//#endregion
+//#region dep.mjs
+const tla = await Promise.resolve("x");
+//#endregion
+//#region a.mjs
+function a() {
+	return b() + tla;
+}
+//#endregion
+//#region main.mjs
+console.log(a());
+//#endregion
+
+```

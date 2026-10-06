@@ -5,14 +5,11 @@ use std::{
 };
 
 use anyhow::Context;
-use arcstr::ArcStr;
 use futures::FutureExt;
-use notify::EventKind;
 use rolldown_common::WatcherChangeKind;
 use rolldown_error::BuildResult;
-use rolldown_fs_watcher::{DynFsWatcher, FsEventResult, RecursiveMode};
-use rolldown_utils::{dashmap::FxDashSet, indexmap::FxIndexMap, pattern_filter};
-use sugar_path::SugarPath;
+use rolldown_fs_watcher::{FsEvent, FsWatcher};
+use rolldown_utils::{indexmap::FxIndexMap, pattern_filter};
 use tokio::sync::Mutex;
 
 use rolldown::Bundler;
@@ -38,8 +35,7 @@ pub struct BundleCoordinator {
   /// field doc on `DevEngine::next_hmr_patch_id`.
   next_hmr_patch_id: Arc<AtomicU32>,
   rx: CoordinatorReceiver,
-  watcher: StdMutex<DynFsWatcher>,
-  watched_files: FxDashSet<ArcStr>,
+  watcher: StdMutex<FsWatcher>,
   /// Tracks the state of the initial build
   state: CoordinatorState,
   /// File changes that arrived during initial build
@@ -55,7 +51,7 @@ impl BundleCoordinator {
     bundler: Arc<Mutex<Bundler>>,
     ctx: SharedDevContext,
     rx: CoordinatorReceiver,
-    watcher: DynFsWatcher,
+    watcher: FsWatcher,
     next_hmr_patch_id: Arc<AtomicU32>,
   ) -> Self {
     Self {
@@ -64,7 +60,6 @@ impl BundleCoordinator {
       next_hmr_patch_id,
       rx,
       watcher: StdMutex::new(watcher),
-      watched_files: FxDashSet::default(),
       state: CoordinatorState::Initialized,
       queued_file_changes_waited_for_full_build: FxIndexMap::default(),
       // Initialize build state with initial build task
@@ -125,7 +120,13 @@ impl BundleCoordinator {
         }
         #[cfg(feature = "testing")]
         CoordinatorMsg::GetWatchedFiles { reply } => {
-          let result = self.watched_files.iter().map(|s| s.to_string()).collect();
+          let result = self
+            .watcher
+            .lock()
+            .map(|watcher| {
+              watcher.watched_paths().map(|path| path.to_string_lossy().into_owned()).collect()
+            })
+            .unwrap_or_default();
           let _ = reply.send(result);
         }
         CoordinatorMsg::ModuleChanged { module_id } => {
@@ -158,47 +159,12 @@ impl BundleCoordinator {
     }
   }
 
-  /// Handle file change events from watcher
-  async fn handle_watch_event(&mut self, watch_event: FsEventResult) {
-    match watch_event {
-      Ok(batched_events) => {
-        let mut changed_files = FxIndexMap::default();
-        batched_events.into_iter().for_each(|batched_event| {
-          match &batched_event.detail.kind {
-            EventKind::Create(_create_kind) => {
-              for path in batched_event.detail.paths {
-                changed_files.insert(path, WatcherChangeKind::Create);
-              }
-            }
-            #[cfg(target_os = "macos")]
-            EventKind::Modify(notify::event::ModifyKind::Metadata(_))
-              if !self.ctx.options.use_polling =>
-            {
-              // When using kqueue on mac, ignore metadata changes as it happens frequently and doesn't affect the build in most cases
-              // Note that when using polling, we shouldn't ignore metadata changes as the polling watcher prefer to emit them over
-              // content change events
-            }
-            EventKind::Modify(notify::event::ModifyKind::Name(notify::event::RenameMode::From))
-            | EventKind::Remove(_) => {
-              for path in batched_event.detail.paths {
-                changed_files.insert(path, WatcherChangeKind::Delete);
-              }
-            }
-            EventKind::Modify(_modify_kind) => {
-              for path in batched_event.detail.paths {
-                changed_files.insert(path, WatcherChangeKind::Update);
-              }
-            }
-            _ => {}
-          }
-        });
-
-        self.handle_file_changes(changed_files).await;
-      }
-      Err(e) => {
-        tracing::error!("notify error: {e:?}");
-      }
-    }
+  /// Handle file change events from watcher.
+  ///
+  /// See `internal-docs/dev-engine/implementation.md` ("From fs event to queued task").
+  async fn handle_watch_event(&mut self, events: Vec<FsEvent>) {
+    let changed_files = events.into_iter().map(|event| (event.path, event.kind)).collect();
+    self.handle_file_changes(changed_files).await;
   }
 
   /// Handle file changes based on initial build state
@@ -230,7 +196,8 @@ impl BundleCoordinator {
         // Recovery choice (per Design principles §3 corollary): a Rebuild-stage
         // failure left the bundle output stale w.r.t. source, so the recovery
         // task must include a rebuild. An Hmr-stage failure (incl. watch_change
-        // hook) is recoverable by re-running the Hmr task alone.
+        // hook) is recoverable by re-running the Hmr task alone, which becomes a
+        // full build when the failed update already merged its edit (`run_inner`).
         let force_rebuild = matches!(last_error_stage, ErrorStage::Rebuild);
         let task_input = if force_rebuild || self.ctx.options.rebuild_strategy.is_always() {
           TaskInput::HmrRebuild { changed_files }
@@ -486,24 +453,15 @@ impl BundleCoordinator {
   /// Update watcher paths based on current build output
   async fn update_watch_paths(&self) -> BuildResult<()> {
     let bundler = self.bundler.lock().await;
-    let watch_files = bundler.watch_files();
-    let cwd = bundler.options().cwd.to_string_lossy().to_string();
+    let cwd = bundler.options().cwd.to_string_lossy();
 
     let include = self.ctx.options.watch_include.as_deref();
     let exclude = self.ctx.options.watch_exclude.as_deref();
 
     let mut watcher = self.watcher.lock().ok().context("Failed to acquire watcher lock")?;
-    let mut paths_mut = watcher.paths_mut();
-    for watch_file in watch_files.iter() {
-      let watch_file = &**watch_file;
-      if !self.watched_files.contains(watch_file)
-        && pattern_filter::filter(exclude, include, watch_file, &cwd).inner()
-      {
-        self.watched_files.insert(watch_file.to_string().into());
-        paths_mut.add(watch_file.as_path(), RecursiveMode::NonRecursive)?;
-      }
-    }
-    paths_mut.commit()?;
-    Ok(())
+    watcher
+      .watch_paths(bundler.watch_files().iter().map(|file| PathBuf::from(file.as_str())), |path| {
+        pattern_filter::filter(exclude, include, &path.to_string_lossy(), &cwd).inner()
+      })
   }
 }

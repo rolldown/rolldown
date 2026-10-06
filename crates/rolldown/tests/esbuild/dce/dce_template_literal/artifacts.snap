@@ -7,10 +7,8 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 //#region entry.js
-var alsoKeep;
 `${keep}`;
 `${keep ? 1 : 2n}`;
-`${alsoKeep}`;
 //#endregion
 
 ```

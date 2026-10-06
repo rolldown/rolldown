@@ -21,6 +21,8 @@ var require_dev = /* @__PURE__ */ __commonJSMin(((exports) => {
 	exports.b = b;
 }));
 //#endregion
+//#region lib/index.js
+//#endregion
 //#region main.js
 const lib = (/* @__PURE__ */ __commonJSMin(((exports, module) => {
 	if (process.env.NODE_ENV === "production") module.exports = require_prod();

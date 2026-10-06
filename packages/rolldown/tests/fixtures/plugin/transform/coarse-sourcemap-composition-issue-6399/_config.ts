@@ -46,7 +46,7 @@ export default defineTest({
       {
         name: 'load-detailed-source-map',
         load(id) {
-          if (!id.endsWith('/main.js')) {
+          if (!id.endsWith('main.js')) {
             return;
           }
           return {
@@ -67,7 +67,7 @@ export default defineTest({
       {
         name: 'replace-define-component',
         transform(_code, id) {
-          if (!id.endsWith('/main.js')) {
+          if (!id.endsWith('main.js')) {
             return;
           }
           return {

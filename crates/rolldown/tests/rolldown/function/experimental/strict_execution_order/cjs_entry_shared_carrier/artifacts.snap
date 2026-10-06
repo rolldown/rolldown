@@ -52,14 +52,6 @@ export { __commonJSMin as i, init_s1 as n, s1_exports as r, require_b as t };
 ### a.js
 
 ```js
-import { t as require_a } from "./a2.js";
-export default require_a();
-
-```
-
-### a2.js
-
-```js
 import { i as __commonJSMin, n as init_s1 } from "./b2.js";
 //#region a.cjs
 var require_a = /* @__PURE__ */ __commonJSMin((() => {
@@ -67,7 +59,7 @@ var require_a = /* @__PURE__ */ __commonJSMin((() => {
 	console.log("A");
 }));
 //#endregion
-export { require_a as t };
+export default require_a();
 
 ```
 

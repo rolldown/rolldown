@@ -6,9 +6,12 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## main.js
 
 ```js
+//#region src/utils/util0.js
 function fn0(x) {
 	return x + "u0";
 }
+//#endregion
+//#region src/utils/util1.js
 function fn1(x) {
 	return x + "u1";
 }

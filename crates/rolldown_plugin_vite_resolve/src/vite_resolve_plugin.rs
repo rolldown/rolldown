@@ -39,6 +39,7 @@ const FS_PREFIX: &str = "/@fs/";
 #[derive(Debug)]
 pub struct ViteResolveOptions {
   pub resolve_options: ViteResolveResolveOptions,
+  pub tsconfig: Option<String>,
   pub environment_consumer: String,
   pub environment_name: String,
   pub builtins: Vec<StringOrRegex>,
@@ -153,6 +154,7 @@ impl ViteResolvePlugin {
       root: PathBuf::from(&options.resolve_options.root),
       preserve_symlinks: options.resolve_options.preserve_symlinks,
       tsconfig_paths: options.resolve_options.tsconfig_paths,
+      tsconfig: options.tsconfig.map(PathBuf::from),
       yarn_pnp: options.yarn_pnp,
     };
     let builtin_checker = Arc::new(BuiltinChecker::new(options.builtins));

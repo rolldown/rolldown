@@ -32,6 +32,7 @@ export default require_c();
 
 ```js
 import { n as __esmMin } from "./index.js";
+//#region e.js
 //#endregion
 __esmMin((() => {
 	console.log("event");
@@ -43,6 +44,8 @@ __esmMin((() => {
 
 ```js
 // HIDDEN [\0rolldown/runtime.js]
+//#region b.js
+//#endregion
 //#region a.js
 (/* @__PURE__ */ __commonJSMin(((exports) => {
 	exports.defaultProvider = async function test() {

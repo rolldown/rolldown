@@ -1,0 +1,15 @@
+{
+  "config": {
+    "input": [
+      {
+        "name": "entry\nconsole.log(\"injected\")",
+        "import": "./main.js"
+      }
+    ],
+    "entryFilenames": "entry.js",
+    "experimental": {
+      "attachDebugInfo": "full"
+    }
+  },
+  "expectExecuted": false
+}

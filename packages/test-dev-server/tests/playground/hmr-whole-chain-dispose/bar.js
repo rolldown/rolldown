@@ -5,11 +5,11 @@ export const bar = `bar(${baz})`;
 (window.__hotStates ??= []).push({
   id: 'bar',
   gen: import.meta.hot?.data.gen ?? null,
-  leak: import.meta.hot?.data.leak ?? null,
+  own: import.meta.hot?.data.own ?? null,
 });
 
 if (import.meta.hot) {
-  import.meta.hot.data.leak = 'bar-own-write';
+  import.meta.hot.data.own = 'bar-own-write';
 }
 
 import.meta.hot?.dispose((data) => {

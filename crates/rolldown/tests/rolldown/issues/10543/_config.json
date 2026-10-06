@@ -1,0 +1,22 @@
+{
+  "config": {
+    "input": [
+      {
+        "name": "styles",
+        "import": "./styles.js"
+      },
+      {
+        "name": "icon",
+        "import": "./icon.js"
+      },
+      {
+        "name": "lab",
+        "import": "./lab.cjs"
+      }
+    ],
+    "treeshake": {
+      "moduleSideEffects": false
+    }
+  },
+  "_comment": "Regression test for rolldown/rolldown#10543: the `styles` entry re-exports bindings owned by the ESM-wrapped `w.js` (wrapping propagates from `lab.cjs` requiring `top.js`), `icon` pulls `w.js` into a wider shared chunk than the re-export barrels', and the barrels' forwarding statements are all tree-shaken (declared side-effect-free, like the `sideEffects: false` packages in the original report, while `w.js` carries a real side effect). No included statement owns `w.js`'s init, so the entry must call the cross-chunk `init_w` itself \u2014 and, per ESM evaluation order, before its own body: the entry body's probe observes `w.js`'s side effect."
+}

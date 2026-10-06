@@ -31,7 +31,7 @@ init_b();
 ## common.js
 
 ```js
-import { n as __exportAll, t as __esmMin } from "./rolldown-runtime.js";
+// HIDDEN [\0rolldown/runtime.js]
 //#region shared.js
 var shared_exports = /* @__PURE__ */ __exportAll({ foo: () => foo });
 function foo() {
@@ -57,14 +57,6 @@ function init_b() {
 }
 //#endregion
 export { init_a as n, init_b as t };
-
-```
-
-## rolldown-runtime.js
-
-```js
-// HIDDEN [\0rolldown/runtime.js]
-export { __exportAll as n, __esmMin as t };
 
 ```
 
@@ -100,12 +92,11 @@ init_b();
 ### common.js
 
 ```js
-import { t as __esmMin } from "./rolldown-runtime.js";
+// HIDDEN [\0rolldown/runtime.js]
+//#region shared.js
+var shared_exports = /* @__PURE__ */ __exportAll({ foo: () => foo });
 function foo() {
 	(globalThis.sideEffectLog ??= []).push("shared-foo");
-}
-function init_shared() {
-	return (init_shared = __esmMin((() => {})))();
 }
 //#endregion
 //#region a.js
@@ -120,29 +111,12 @@ function init_a() {
 function init_b() {
 	return (init_b = __esmMin((() => {
 		(globalThis.sideEffectLog ??= []).push("b");
-		import("./shared.js").then(({ foo }) => {
+		Promise.resolve().then(() => shared_exports).then(({ foo }) => {
 			foo();
 		});
 	})))();
 }
 //#endregion
-export { init_shared as i, init_a as n, foo as r, init_b as t };
-
-```
-
-### rolldown-runtime.js
-
-```js
-// HIDDEN [\0rolldown/runtime.js]
-export { __exportAll as n, __esmMin as t };
-
-```
-
-### shared.js
-
-```js
-import { i as init_shared, r as foo } from "./common.js";
-init_shared();
-export { foo };
+export { init_a as n, init_b as t };
 
 ```

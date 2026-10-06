@@ -1,0 +1,8 @@
+{
+  "_comment": "The import writer is `shim.mjs`, which is ESM by definition format, so Node's interop applies and `ns.default` must be the raw `module.exports`. Recovering that writer by walking `SymbolRefDb::link` is unsound: `link` is a union-find parent, and resolving it path-compresses, so once `shim.mjs` is linked first the consumer points straight at the external namespace and the shim disappears from the walk. `entry.js` exists to force that discovery order. Provenance comes from import records instead, which linking leaves untouched. Reported by @hyfdev on #10516.",
+  "config": {
+    "input": [{ "name": "entry", "import": "./entry.js" }],
+    "external": ["external-pkg"],
+    "format": "cjs"
+  }
+}

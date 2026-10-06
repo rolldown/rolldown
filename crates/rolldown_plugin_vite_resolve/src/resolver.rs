@@ -1,12 +1,14 @@
 use std::{
   borrow::Cow,
   ffi::OsString,
-  fs,
   path::{self, Path, PathBuf},
   sync::Arc,
 };
 
-use oxc_resolver::{PackageJson, ResolveOptions, TsconfigDiscovery};
+use oxc_resolver::{
+  FileSystem as _, FileSystemOs, PackageJson, ResolveOptions, TsconfigDiscovery, TsconfigOptions,
+  TsconfigReferences,
+};
 use rolldown_common::side_effects::HookSideEffects;
 use rolldown_plugin::{HookResolveIdOutput, HookResolveIdReturn};
 use rolldown_utils::{dashmap::FxDashSet, url::clean_url};
@@ -34,6 +36,7 @@ pub struct BaseOptions<'a> {
   pub root: PathBuf,
   pub preserve_symlinks: bool,
   pub tsconfig_paths: bool,
+  pub tsconfig: Option<PathBuf>,
   pub yarn_pnp: bool,
 }
 
@@ -74,10 +77,11 @@ impl From<u8> for AdditionalOptions {
   }
 }
 
-#[derive(Debug, Default)]
+#[derive(Debug)]
 struct ResolverCaches {
   package_json: PackageJsonCache,
   importer_exists: FxDashSet<String>,
+  file_system: FileSystemOs,
 }
 
 #[derive(Debug)]
@@ -94,15 +98,23 @@ impl Resolvers {
     external_conditions: &Vec<String>,
     builtin_checker: Arc<BuiltinChecker>,
   ) -> Self {
-    let resolver_caches = Arc::new(ResolverCaches::default());
+    let file_system = FileSystemOs::new(base_options.yarn_pnp);
+    let resolver_caches = Arc::new(ResolverCaches {
+      package_json: PackageJsonCache::default(),
+      importer_exists: FxDashSet::default(),
+      file_system: file_system.clone(),
+    });
 
     let resolver_lock = Arc::new(ResolverLock::new());
 
-    let base_resolver = oxc_resolver::Resolver::new(oxc_resolver::ResolveOptions {
-      // NOTE: yarn_pnp option affects the underlying fs cache, so it should be consistent for all resolvers
-      yarn_pnp: base_options.yarn_pnp,
-      ..oxc_resolver::ResolveOptions::default()
-    });
+    let base_resolver = oxc_resolver::Resolver::new_with_file_system(
+      file_system,
+      oxc_resolver::ResolveOptions {
+        // NOTE: yarn_pnp option affects the underlying fs cache, so it should be consistent for all resolvers
+        yarn_pnp: base_options.yarn_pnp,
+        ..oxc_resolver::ResolveOptions::default()
+      },
+    );
 
     let resolvers = (0..RESOLVER_COUNT)
       .map(|v| {
@@ -172,7 +184,14 @@ fn get_resolve_options(
   let main_fields = base_options.main_fields.clone();
 
   oxc_resolver::ResolveOptions {
-    tsconfig: base_options.tsconfig_paths.then_some(TsconfigDiscovery::Auto),
+    tsconfig: base_options.tsconfig_paths.then(|| {
+      base_options.tsconfig.as_ref().map_or(TsconfigDiscovery::Auto, |config_file| {
+        TsconfigDiscovery::Manual(TsconfigOptions {
+          config_file: config_file.clone(),
+          references: TsconfigReferences::Auto,
+        })
+      })
+    }),
     alias_fields: if base_options.main_fields.iter().any(|field| field == "browser") {
       vec![vec!["browser".to_string()]]
     } else {
@@ -475,7 +494,12 @@ impl Resolver {
     p: &str,
   ) -> Option<Arc<PackageJsonWithOptionalPeerDependencies>> {
     let pj = self.get_nearest_package_json(p)?;
-    Some(self.resolver_caches.package_json.cached_package_json_optional_peer_dep(&pj))
+    Some(
+      self
+        .resolver_caches
+        .package_json
+        .cached_package_json_optional_peer_dep(&pj, &self.resolver_caches.file_system),
+    )
   }
 
   pub fn resolve_bare_import(
@@ -553,7 +577,7 @@ impl Resolver {
           return true;
         }
 
-        let exists = fs::exists(importer).unwrap_or(false);
+        let exists = self.resolver_caches.file_system.metadata(Path::new(importer)).is_ok();
         if exists {
           self.resolver_caches.importer_exists.insert(importer.to_string());
         }
@@ -616,7 +640,41 @@ impl ResolverLock {
 
 #[cfg(test)]
 mod tests {
-  use super::get_path_with_prefix;
+  use std::path::PathBuf;
+
+  use oxc_resolver::TsconfigDiscovery;
+
+  use super::{AdditionalOptions, BaseOptions, get_path_with_prefix, get_resolve_options};
+
+  #[test]
+  fn uses_explicit_tsconfig_instead_of_auto_discovery() {
+    let main_fields = Vec::new();
+    let conditions = Vec::new();
+    let extensions = Vec::new();
+    let try_prefix = None;
+    let tsconfig = PathBuf::from("explicit.tsconfig.json");
+    let base_options = BaseOptions {
+      main_fields: &main_fields,
+      conditions: &conditions,
+      extensions: &extensions,
+      is_production: false,
+      try_index: true,
+      try_prefix: &try_prefix,
+      as_src: false,
+      root: PathBuf::new(),
+      preserve_symlinks: false,
+      tsconfig_paths: true,
+      tsconfig: Some(tsconfig.clone()),
+      yarn_pnp: false,
+    };
+
+    let options = get_resolve_options(&base_options, AdditionalOptions::new(false, false));
+
+    let Some(TsconfigDiscovery::Manual(options)) = options.tsconfig else {
+      panic!("expected manual tsconfig discovery");
+    };
+    assert_eq!(options.config_file, tsconfig);
+  }
 
   #[test]
   fn prefixes_bare_deep_imports_with_posix_separators() {
@@ -643,5 +701,59 @@ mod tests {
   fn preserves_existing_package_root_prefix_behavior() {
     assert_eq!(get_path_with_prefix("pkg", "_").as_deref(), Some("_pkg"));
     assert_eq!(get_path_with_prefix("@scope/pkg", "_").as_deref(), Some("@scope/_pkg"));
+  }
+
+  #[test]
+  fn preserves_yarn_pnp_virtual_importer() {
+    use std::fs::{create_dir_all, remove_dir_all, write};
+    use std::sync::Arc;
+
+    use rustc_hash::FxHashSet;
+
+    use super::{AdditionalOptions, BaseOptions, BuiltinChecker, Resolvers};
+
+    let root = std::env::temp_dir().join(format!("rolldown-pnp-importer-{}", std::process::id()));
+    let physical_file = root.join(".yarn/cache/pkg/index.js");
+    create_dir_all(physical_file.parent().unwrap()).unwrap();
+    write(&physical_file, b"export {};").unwrap();
+
+    let empty = Vec::new();
+    let resolvers = Resolvers::new(
+      &BaseOptions {
+        main_fields: &empty,
+        conditions: &empty,
+        extensions: &empty,
+        is_production: false,
+        try_index: false,
+        try_prefix: &None,
+        as_src: false,
+        root: root.clone(),
+        preserve_symlinks: false,
+        tsconfig_paths: false,
+        tsconfig: None,
+        yarn_pnp: true,
+      },
+      &Vec::new(),
+      Arc::new(BuiltinChecker::new(Vec::new())),
+    );
+    let resolver = resolvers.get(AdditionalOptions::new(false, false));
+
+    let dedupe = FxHashSet::default();
+    let virtual_importer = root.join(".yarn/__virtual__/pkg-virtual/0/cache/pkg/index.js");
+    assert!(!virtual_importer.exists());
+    assert!(resolver.should_use_importer(
+      "react",
+      Some(virtual_importer.to_str().unwrap()),
+      &dedupe
+    ));
+
+    let missing_importer = root.join(".yarn/__virtual__/pkg-virtual/0/cache/missing/index.js");
+    assert!(!resolver.should_use_importer(
+      "react",
+      Some(missing_importer.to_str().unwrap()),
+      &dedupe
+    ));
+
+    remove_dir_all(root).unwrap();
   }
 }

@@ -61,7 +61,8 @@ export var __reExport = (target, mod, secondTarget) => (
 export var __toESM = (mod, isNodeMode, target) => (
   (target = mod != null ? __create(__getProtoOf(mod)) : {}),
   __copyProps(
-    isNodeMode || !mod || !mod.__esModule
+    // `__esModule` alone is not enough: the module must own a `default` (#10360).
+    isNodeMode || !mod || !mod.__esModule || !__hasOwnProp.call(mod, 'default')
       ? __defProp(target, 'default', { value: mod, enumerable: true })
       : target,
     mod,
@@ -71,6 +72,38 @@ export var __toCommonJS = (mod) =>
   __hasOwnProp.call(mod, 'module.exports')
     ? mod['module.exports']
     : __copyProps(__defProp({}, '__esModule', { value: true }), mod);
+// `__share*`: the registry behind `codeSplitting.experimentalInlineCommonChunks`. A chunk factory
+// is registered under its record id by every file that carries it; the first registration wins,
+// `__share_require` runs the winning factory once and hands every reader the same exports object.
+// See internal-docs/inline-common-chunks/implementation.md.
+export var __share_factories = /* @__PURE__ */ __create(null);
+export var __share_records = /* @__PURE__ */ __create(null);
+export var __share = (id, factory) => {
+  if (!(id in __share_factories)) __share_factories[id] = factory;
+};
+export var __share_require = (id) => {
+  var record = __share_records[id];
+  if (record) {
+    // A failed factory rethrows the same value on every read, including `undefined`; a factory
+    // that is still running hands back its partially filled exports object.
+    if (record.failed) throw record.error;
+    return record.exports;
+  }
+  var factory = __share_factories[id];
+  if (!factory) throw new Error('Shared chunk "' + id + '" was not registered before it was required.');
+  record = __share_records[id] = { exports: {}, failed: false, error: void 0 };
+  try {
+    factory(record.exports);
+  } catch (error) {
+    record.failed = true;
+    record.error = error;
+    throw error;
+  }
+  return record.exports;
+};
+export var __share_export = (target, all) => {
+  for (var name in all) __defProp(target, name, { get: all[name], enumerable: true });
+};
 export var __toBinaryNode = (base64) => new Uint8Array(Buffer.from(base64, 'base64'));
 export var __toBinary = /* @__PURE__ */ (() => {
   var table = new Uint8Array(128);

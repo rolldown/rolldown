@@ -7,12 +7,12 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 //#region entry.js
-(class {
+let keep1 = class {
 	static x = x;
-});
-(class {
+};
+let keep2 = class {
 	static ["x"] = x;
-});
+};
 x;
 x;
 x;

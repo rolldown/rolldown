@@ -1,6 +1,23 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
 ---
+# warnings
+
+## MODULE_LEVEL_DIRECTIVE
+
+```text
+[MODULE_LEVEL_DIRECTIVE] The semantics of the module level directive "use loose" in "entry.js" may not be preserved when bundling.
+   ╭─[ entry.js:2:1 ]
+   │
+ 2 │ 'use loose'
+   │ ─────┬─────  
+   │      ╰─────── module level directive may not be preserved
+   │ 
+   │ Help: For more information, see https://rolldown.rs/in-depth/directives#other-directives
+───╯
+
+```
+
 # Assets
 
 ## entry.js

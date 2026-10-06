@@ -6,16 +6,8 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## main.js
 
 ```js
-import { t as init_main } from "./main2.js";
-init_main();
-
-```
-
-## main2.js
-
-```js
-import { n as init_facade, t as getPref } from "./pref.js";
 import { t as __esmMin } from "./rolldown-runtime.js";
+import { n as init_facade, t as getPref } from "./pref.js";
 //#region first.js
 function init_first() {
 	return (init_first = __esmMin((() => {
@@ -26,11 +18,6 @@ function init_first() {
 //#region node_modules/pref-pkg/index.js
 function tag(value) {
 	return `tag:${value}`;
-}
-function init_pref_pkg() {
-	return (init_pref_pkg = __esmMin((() => {
-		init_facade();
-	})))();
 }
 //#endregion
 //#region main.js
@@ -50,7 +37,7 @@ function init_main() {
 	})))();
 }
 //#endregion
-export { init_first as n, init_main as t };
+init_main();
 
 ```
 
@@ -96,16 +83,8 @@ export { __esmMin as t };
 ### main.js
 
 ```js
-import { t as init_main } from "./main2.js";
-init_main();
-
-```
-
-### main2.js
-
-```js
-import { n as init_facade, t as getPref } from "./pref.js";
 import { t as __esmMin } from "./rolldown-runtime.js";
+import { n as init_facade, t as getPref } from "./pref.js";
 //#region first.js
 (globalThis.__events ??= []).push("first");
 //#endregion
@@ -130,7 +109,7 @@ function init_main() {
 	})))();
 }
 //#endregion
-export { init_main as t };
+init_main();
 
 ```
 

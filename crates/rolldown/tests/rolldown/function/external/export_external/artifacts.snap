@@ -8,6 +8,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```js
 import * as ext1 from "external";
 import { a, a as a$1, a as a1, b, b as b$1, b as b1 } from "external";
+//#region foo.js
 console.log(1);
 //#endregion
 //#region main.js

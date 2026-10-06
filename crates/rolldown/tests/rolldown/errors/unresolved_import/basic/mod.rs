@@ -1,4 +1,4 @@
-use std::{borrow::Cow, sync::Arc};
+use std::borrow::Cow;
 
 use rolldown::{BundlerOptions, InputItem};
 use rolldown_plugin::{
@@ -47,7 +47,7 @@ async fn should_failed_to_resolve_the_module_with_diagnostic() {
         }]),
         ..Default::default()
       },
-      vec![Arc::new(UnresolvedImport)],
+      vec![Plugin::new_shared(UnresolvedImport)],
     )
     .await;
 }

@@ -18,6 +18,13 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## c.js
 
 ```js
+//#region x.js
+//#endregion
+//#region y.js
+//#endregion
+//#region z.js
+//#endregion
+//#region c.js
 //#endregion
 
 ```

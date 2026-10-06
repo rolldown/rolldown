@@ -36,6 +36,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```js
 import * as _foo from "path2";
 import * as _ns from "path1";
+//#region nested.js
 //#endregion
 //#region entry.js
 console.log(_foo, 123);

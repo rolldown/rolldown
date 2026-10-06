@@ -1,0 +1,119 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## a.js
+
+```js
+import { i as __share_require, n as __share, r as __share_export, t as __esmMin } from "./rolldown-runtime.js";
+import { n as init_vendor, t as helper$1 } from "./vendor.js";
+__share("shared-ZmCA4nrZ", (exports) => {
+	//#region shared.js
+	function bump() {
+		count += 1;
+		return helper$1() + count;
+	}
+	var count, marker;
+	function init_shared$1() {
+		return (init_shared$1 = __esmMin((() => {
+			init_vendor();
+			count = 0;
+			marker = { tag: "shared" };
+		})))();
+	}
+	//#endregion
+	__share_export(exports, {
+		i: () => marker,
+		n: () => count,
+		r: () => init_shared$1,
+		t: () => bump
+	});
+});
+var share_shared = __share_require("shared-ZmCA4nrZ");
+//#region a.js
+function count$1() {
+	return "entry-count$1";
+}
+var helper, init_shared;
+function init_a() {
+	return (init_a = __esmMin((() => {
+		init_vendor();
+		share_shared.r();
+		helper = "entry-helper";
+		init_shared = "entry-init";
+		globalThis.events.push("A " + (0, share_shared.t)() + " " + share_shared.n + " " + helper + " " + init_shared + " " + count$1() + " 100");
+		globalThis.markers.push(share_shared.i);
+	})))();
+}
+//#endregion
+init_a();
+
+```
+
+## b.js
+
+```js
+import { i as __share_require, n as __share, r as __share_export, t as __esmMin } from "./rolldown-runtime.js";
+import { n as init_vendor, t as helper$1 } from "./vendor.js";
+__share("shared-ZmCA4nrZ", (exports) => {
+	//#region shared.js
+	function bump() {
+		count += 1;
+		return helper$1() + count;
+	}
+	var count, marker;
+	function init_shared() {
+		return (init_shared = __esmMin((() => {
+			init_vendor();
+			count = 0;
+			marker = { tag: "shared" };
+		})))();
+	}
+	//#endregion
+	__share_export(exports, {
+		i: () => marker,
+		n: () => count,
+		r: () => init_shared,
+		t: () => bump
+	});
+});
+var share_shared = __share_require("shared-ZmCA4nrZ");
+//#region b.js
+var helper;
+function init_b() {
+	return (init_b = __esmMin((() => {
+		share_shared.r();
+		helper = () => "entry-b-helper";
+		globalThis.events.push("B " + (0, share_shared.t)() + " " + share_shared.n + " " + helper());
+		globalThis.markers.push(share_shared.i);
+	})))();
+}
+//#endregion
+init_b();
+
+```
+
+## rolldown-runtime.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+export { __share_require as i, __share as n, __share_export as r, __esmMin as t };
+
+```
+
+## vendor.js
+
+```js
+import { t as __esmMin } from "./rolldown-runtime.js";
+//#region vendor.js
+function helper() {
+	return "vendor";
+}
+function init_vendor() {
+	return (init_vendor = __esmMin((() => {})))();
+}
+//#endregion
+export { init_vendor as n, helper as t };
+
+```

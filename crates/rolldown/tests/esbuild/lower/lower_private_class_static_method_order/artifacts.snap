@@ -7,12 +7,14 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 import assert from "node:assert";
-assert(class Foo {
+//#region entry.js
+var Foo = class Foo {
 	static bar = Foo.#foo();
 	static #foo() {
 		return 123;
 	}
-}.bar === 123);
+};
+assert(Foo.bar === 123);
 var FooThis = class {
 	static bar = this.#foo();
 	static #foo() {

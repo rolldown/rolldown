@@ -6,6 +6,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## input.js
 
 ```js
+//#region input.js
 console.log("production");
 //#endregion
 
@@ -16,8 +17,8 @@ console.log("production");
 
 ```
 - ../input.js
-(5:2) "console." --> (0:0) "console."
-(5:10) "log(" --> (0:8) "log("
-(5:14) "'production'" --> (0:12) "\"production\""
-(5:26) ");\n" --> (0:24) ");\n"
+(5:2) "console." --> (1:0) "console."
+(5:10) "log(" --> (1:8) "log("
+(5:14) "'production'" --> (1:12) "\"production\""
+(5:26) ");\n" --> (1:24) ");\n"
 ```

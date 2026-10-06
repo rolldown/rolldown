@@ -1,0 +1,9 @@
+{
+  "_comment": "Same `es2024` target as the sibling fixture, but on the other transform-options variant. `tsconfig` defaults to auto-discovery, which puts the siblings on `Raw` (options resolved per file); `false` pins `Normal` (options resolved once up front). The gate has to agree on both.",
+  "config": {
+    "tsconfig": false,
+    "transform": {
+      "target": "es2024"
+    }
+  }
+}

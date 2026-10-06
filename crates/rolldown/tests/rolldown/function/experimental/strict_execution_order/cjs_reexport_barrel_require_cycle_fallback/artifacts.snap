@@ -1,0 +1,108 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+//#region bridge.js
+var init_bridge = __esmMin((() => {
+	init_barrel();
+	globalThis.__events.push("bridge");
+}));
+//#endregion
+//#region a.cjs
+var require_a = /* @__PURE__ */ __commonJSMin(((exports, module) => {
+	globalThis.__events.push("a:start");
+	init_bridge();
+	globalThis.__events.push("a:end");
+	module.exports = "a";
+}));
+//#endregion
+//#region b.cjs
+var require_b = /* @__PURE__ */ __commonJSMin(((exports, module) => {
+	globalThis.__events.push("b");
+	module.exports = "b";
+}));
+//#endregion
+//#region node_modules/pure-cycle-leaf/index.js
+var x;
+var init_pure_cycle_leaf = __esmMin((() => {
+	x = "x";
+}));
+//#endregion
+//#region barrel.js
+var init_barrel = __esmMin((() => {
+	require_a();
+	require_b();
+	init_pure_cycle_leaf();
+}));
+//#endregion
+//#region main.js
+function init_main() {
+	return (init_main = __esmMin((() => {
+		init_barrel();
+		globalThis.__events.push(`main:x`);
+	})))();
+}
+//#endregion
+init_main();
+export { x };
+
+```
+
+# Variant: on-demand: [on_demand_wrapping: true]
+
+## Assets
+
+### main.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+//#region bridge.js
+var init_bridge = __esmMin((() => {
+	init_barrel();
+	globalThis.__events.push("bridge");
+}));
+//#endregion
+//#region a.cjs
+var require_a = /* @__PURE__ */ __commonJSMin(((exports, module) => {
+	globalThis.__events.push("a:start");
+	init_bridge();
+	globalThis.__events.push("a:end");
+	module.exports = "a";
+}));
+//#endregion
+//#region b.cjs
+var require_b = /* @__PURE__ */ __commonJSMin(((exports, module) => {
+	globalThis.__events.push("b");
+	module.exports = "b";
+}));
+//#endregion
+//#region node_modules/pure-cycle-leaf/index.js
+var x;
+var init_pure_cycle_leaf = __esmMin((() => {
+	x = "x";
+}));
+//#endregion
+//#region barrel.js
+var init_barrel = __esmMin((() => {
+	require_a();
+	require_b();
+	init_pure_cycle_leaf();
+}));
+//#endregion
+//#region main.js
+function init_main() {
+	return (init_main = __esmMin((() => {
+		init_barrel();
+		globalThis.__events.push(`main:x`);
+	})))();
+}
+//#endregion
+init_main();
+export { x };
+
+```

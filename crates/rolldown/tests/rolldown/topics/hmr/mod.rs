@@ -1,3 +1,9 @@
+mod add_watch_dir;
 mod add_watch_file;
+mod failing_patch;
+mod no_reload_after_full_build;
 mod recover_after_generate_bundle_error;
+mod reload_after_failed_full_build;
+mod reload_after_failed_patch;
+mod reload_after_failed_patch_of_deleted_file;
 mod retry_pending_rescans_on_empty_update;

@@ -22,7 +22,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## main.js
 
 ```js
-//! User-defined Entry: [Entry-Module-Id: main.js] [Name: Some("main")]
+//! User-defined Entry: [Entry-Module-Id: main.js] [Name: main]
 //! Eliminated Facade Chunk: [Chunk-Name: unnamed] [Entry-Module-Id: dynamic-a.js] [Reason: Dynamic entry chunk merged into user-defined entry chunk]
 //! Eliminated Facade Chunk: [Chunk-Name: unnamed] [Entry-Module-Id: dynamic-b.js] [Reason: Dynamic entry chunk merged into user-defined entry chunk]
 // HIDDEN [\0rolldown/runtime.js]
@@ -49,7 +49,7 @@ console.log(a, b);
 ### dynamic-a.js
 
 ```js
-//! Dynamic Entry: [Entry-Module-Id: dynamic-a.js] [Name: None]
+//! Dynamic Entry: [Entry-Module-Id: dynamic-a.js] [Name: <none>]
 import { t as a } from "./dynamic-a2.js";
 export { a };
 
@@ -69,7 +69,7 @@ export { a as t };
 ### dynamic-b.js
 
 ```js
-//! Dynamic Entry: [Entry-Module-Id: dynamic-b.js] [Name: None]
+//! Dynamic Entry: [Entry-Module-Id: dynamic-b.js] [Name: <none>]
 import { t as b } from "./dynamic-b2.js";
 export { b };
 
@@ -89,7 +89,7 @@ export { b as t };
 ### main.js
 
 ```js
-//! User-defined Entry: [Entry-Module-Id: main.js] [Name: Some("main")]
+//! User-defined Entry: [Entry-Module-Id: main.js] [Name: main]
 import { t as a } from "./dynamic-a2.js";
 import { t as b } from "./dynamic-b2.js";
 //#region main.js

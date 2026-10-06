@@ -6,8 +6,8 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## dynamic.js
 
 ```js
-import { n as init_read, r as read } from "./main2.js";
 import { t as __esmMin } from "./rolldown-runtime.js";
+import { n as init_read, r as read } from "./main2.js";
 //#region dynamic.js
 function init_dynamic() {
 	return (init_dynamic = __esmMin((() => {
@@ -16,14 +16,6 @@ function init_dynamic() {
 	})))();
 }
 //#endregion
-export { init_dynamic as t };
-
-```
-
-## dynamic2.js
-
-```js
-import { t as init_dynamic } from "./dynamic.js";
 init_dynamic();
 
 ```
@@ -70,7 +62,7 @@ function init_main() {
 		init_read();
 		setup();
 		read();
-		import("./dynamic2.js");
+		import("./dynamic.js");
 		nodeAssert.strictEqual(globalThis.foo, "foo");
 	})))();
 }
@@ -94,8 +86,8 @@ export { __esmMin as t };
 ### dynamic.js
 
 ```js
-import { n as init_read, r as read } from "./main2.js";
 import { t as __esmMin } from "./rolldown-runtime.js";
+import { n as init_read, r as read } from "./main2.js";
 //#region dynamic.js
 function init_dynamic() {
 	return (init_dynamic = __esmMin((() => {
@@ -104,14 +96,6 @@ function init_dynamic() {
 	})))();
 }
 //#endregion
-export { init_dynamic as t };
-
-```
-
-### dynamic2.js
-
-```js
-import { t as init_dynamic } from "./dynamic.js";
 init_dynamic();
 
 ```
@@ -158,7 +142,7 @@ function init_main() {
 		init_read();
 		setup();
 		read();
-		import("./dynamic2.js");
+		import("./dynamic.js");
 		nodeAssert.strictEqual(globalThis.foo, "foo");
 	})))();
 }

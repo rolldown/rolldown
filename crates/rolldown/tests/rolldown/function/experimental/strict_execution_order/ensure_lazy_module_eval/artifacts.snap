@@ -23,6 +23,7 @@ export { require_dynamic as t };
 ```js
 import { t as require_dynamic } from "./dynamic.js";
 import { strictEqual } from "node:assert";
+//#region sideeffects.js
 require_dynamic();
 globalThis.a = 2;
 //#endregion

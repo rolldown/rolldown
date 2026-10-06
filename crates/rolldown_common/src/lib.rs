@@ -41,6 +41,9 @@ pub mod bundler_options {
       generated_code_options::GeneratedCodeOptions,
       hash_characters::HashCharacters,
       inject_import::InjectImport,
+      inline_common_chunks_options::{
+        InlineCommonChunksOptions, NormalizedInlineCommonChunksOptions,
+      },
       input_item::InputItem,
       invalidate_js_side_cache::InvalidateJsSideCache,
       is_external::IsExternal,
@@ -51,7 +54,8 @@ pub mod bundler_options {
         ChunkingContext, ManualCodeSplittingOptions, MatchGroup, MatchGroupName, MatchGroupTest,
       },
       minify_options::{
-        MinifyOptions, RawCompressOptions, RawMangleOptions, RawMinifyOptions,
+        EnabledMinifyOptions, ManglePropertiesPattern, ManglePropertiesPatterns, MinifyOptions,
+        RawCompressOptions, RawMangleOptions, RawManglePropertiesOptions, RawMinifyOptions,
         RawMinifyOptionsDetailed,
       },
       module_type::ModuleType,
@@ -68,6 +72,7 @@ pub mod bundler_options {
         GlobalsOutputOption, PathsOutputOption, PreserveEntrySignatures,
       },
       platform::Platform,
+      plugin_timings_option::PluginTimingsOption,
       resolve_options::ResolveOptions,
       sanitize_filename::SanitizeFilename,
       source_map_type::SourceMapType,
@@ -218,9 +223,9 @@ pub use crate::{
   types::symbol_ref_db::{
     GetLocalDb, GetLocalDbMut, SymbolRefDb, SymbolRefDbForModule, SymbolRefFlags,
   },
-  types::used_external_symbols::UsedExternalSymbols,
-  types::used_symbol_refs::{UsedSymbolRefs, UsedSymbolRefsBuilder},
-  types::watch::WatcherChangeKind,
+  types::used_external_symbols::{ExternalInteropUse, UsedExternalSymbols},
+  types::used_symbol_refs::{UsedSymbolRefs, UsedSymbolRefsBuilder, UsedSymbolRefsView},
+  types::watch::{WatchPath, WatcherChangeKind},
   types::wrap_kind::WrapKind,
 };
 pub use bundler_options::*;

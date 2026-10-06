@@ -1,0 +1,85 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## entry.js
+
+```js
+//#region library/family-a.js
+function eagerValueA() {
+	return "value-a";
+}
+//#endregion
+//#region library/family-b.js
+function eagerValueB() {
+	return "value-b";
+}
+//#endregion
+//#region library/index.js
+(globalThis.fixtureLog ??= []).push("initialize");
+globalThis.fixtureInitialized = true;
+//#endregion
+//#region eager-consumer.js
+(globalThis.fixtureLog ??= []).push(`eager:${eagerValueB()}`);
+//#endregion
+//#region entry.js
+(globalThis.fixtureLog ??= []).push(`entry:${eagerValueA()}`);
+async function loadPart(part) {
+	if (part === "a") return import("./lazy-consumer-a.js");
+	if (part === "b") return import("./lazy-consumer-b.js");
+	return import("./lazy-consumer-c.js");
+}
+//#endregion
+export { loadPart };
+
+```
+
+## lazy-consumer-a.js
+
+```js
+import "./entry.js";
+//#region library/family-c.js
+const prefix = "value-a";
+function lazyValueA1() {
+	return `${prefix}-1`;
+}
+function lazyValueA2() {
+	return `${prefix}-2`;
+}
+//#endregion
+//#region lazy-consumer-a.js
+(globalThis.fixtureLog ??= []).push(`lazy-a:${lazyValueA1()}+${lazyValueA2()}`);
+//#endregion
+
+```
+
+## lazy-consumer-b.js
+
+```js
+import "./entry.js";
+//#region library/family-d.js
+function lazyValueB() {
+	return "value-b";
+}
+//#endregion
+//#region lazy-consumer-b.js
+(globalThis.fixtureLog ??= []).push(`lazy-b:${lazyValueB()}`);
+//#endregion
+
+```
+
+## lazy-consumer-c.js
+
+```js
+import "./entry.js";
+//#region library/family-e.js
+function lazyValueC() {
+	return "value-c";
+}
+//#endregion
+//#region lazy-consumer-c.js
+(globalThis.fixtureLog ??= []).push(`lazy-c:${lazyValueC()}`);
+//#endregion
+
+```

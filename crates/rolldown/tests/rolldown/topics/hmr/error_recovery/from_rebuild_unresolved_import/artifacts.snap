@@ -10,8 +10,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 __rolldown_runtime__.registerGraph({
 	ids: ["dep.js", "main.js"],
 	localCount: 2,
-	edges: [[], [0]],
-	dynamicEdges: [[], []]
+	edges: [[], [0]]
 });
 //#region dep.js
 var dep_exports = /* @__PURE__ */ __exportAll({ value: () => "dep" });
@@ -54,9 +53,9 @@ console.log("dep");
 ## Code
 
 ```js
-__rolldown_runtime__.registerGraph({ids:["dep.js"],localCount:1,edges:[[]],dynamicEdges:[[]]});
+__rolldown_runtime__.registerGraph({ids:["dep.js"],localCount:1,edges:[[]],stamps:{0:1}});
 //#region dep.js
-__rolldown_runtime__.registerFactory("dep.js", "esm", (function(__rolldown_module_id__) {
+__rolldown_runtime__.registerFactory("dep.js", (function(__rolldown_module_id__) {
 	try {
 		var __rolldown_exports__ = __rolldown_runtime__.__exportAll({ value: () => value });
 		__rolldown_runtime__.registerModule(__rolldown_module_id__, { exports: __rolldown_exports__ });
@@ -66,7 +65,7 @@ __rolldown_runtime__.registerFactory("dep.js", "esm", (function(__rolldown_modul
 			hot_dep.accept();
 		}
 	} finally {}
-}));
+}), 1);
 
 //#endregion
 ```
@@ -90,8 +89,7 @@ __rolldown_runtime__.registerFactory("dep.js", "esm", (function(__rolldown_modul
 __rolldown_runtime__.registerGraph({
 	ids: ["dep.js", "main.js"],
 	localCount: 2,
-	edges: [[], [0]],
-	dynamicEdges: [[], []]
+	edges: [[], [0]]
 });
 //#region dep.js
 var dep_exports = /* @__PURE__ */ __exportAll({ value: () => "dep" });

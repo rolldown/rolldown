@@ -12,6 +12,8 @@ import { n as require_c3 } from "./main2.js";
 var require_c4 = /* @__PURE__ */ __commonJSMin((() => {
 	console.log("c4");
 }));
+//#endregion
+//#region m2.js
 function init_m2() {
 	return (init_m2 = __esmMin((() => {
 		require_c4();
@@ -19,6 +21,8 @@ function init_m2() {
 		console.log("m2");
 	})))();
 }
+//#endregion
+//#region m1.js
 function init_m1() {
 	return (init_m1 = __esmMin((() => {
 		require_c3();
@@ -84,6 +88,8 @@ import { n as require_c3 } from "./main2.js";
 var require_c4 = /* @__PURE__ */ __commonJSMin((() => {
 	console.log("c4");
 }));
+//#endregion
+//#region m2.js
 function init_m2() {
 	return (init_m2 = __esmMin((() => {
 		require_c4();
@@ -91,6 +97,8 @@ function init_m2() {
 		console.log("m2");
 	})))();
 }
+//#endregion
+//#region m1.js
 function init_m1() {
 	return (init_m1 = __esmMin((() => {
 		require_c3();

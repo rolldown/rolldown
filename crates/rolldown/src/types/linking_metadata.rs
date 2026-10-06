@@ -110,16 +110,6 @@ pub struct LinkingMetadata {
   pub stmt_info_included: IndexBitSet<StmtInfoIdx>,
   /// Tracks whether the module is included after tree-shaking.
   pub is_included: bool,
-  /// Set for a standalone wrapped (`WrapKind::Esm`) module whose `__esm` closure body is empty
-  /// (every top-level statement is a hoisted function declaration or a source-less export clause,
-  /// so nothing lands inside the wrapper closure). Calling such an `init_*` is a no-op, so init
-  /// call sites are marked `@__PURE__` and the default `dce-only` minifier drops them (and the
-  /// now-unused wrapper). Computed by [`crate::stages::generate_stage`]'s
-  /// `compute_wrapped_esm_init_metadata`.
-  pub init_is_noop: bool,
-  /// Wrapped ESM targets emitted at excluded import or re-export statements.
-  /// Ordinary order-wrap imports must already be in [`Self::execution_dependencies`].
-  pub transitive_esm_init_targets: FxHashMap<StmtInfoIdx, Vec<ModuleIdx>>,
 }
 
 impl LinkingMetadata {

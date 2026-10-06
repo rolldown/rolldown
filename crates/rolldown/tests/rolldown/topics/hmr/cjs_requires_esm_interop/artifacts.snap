@@ -30,12 +30,6 @@ __rolldown_runtime__.registerGraph({
 		[],
 		[0, 1],
 		[2]
-	],
-	dynamicEdges: [
-		[],
-		[],
-		[],
-		[]
 	]
 });
 //#region data.json
@@ -93,10 +87,10 @@ process.on("beforeExit", (code) => {
 ## Code
 
 ```js
-__rolldown_runtime__.registerGraph({ids:["shim.js","data.json","esm.js"],localCount:1,edges:[[1,2]],dynamicEdges:[[]]});
+__rolldown_runtime__.registerGraph({ids:["shim.js","data.json","esm.js"],localCount:1,edges:[[1,2]],stamps:{0:1}});
 //#region shim.js
 import * as import_node_assert_00 from "node:assert";
-__rolldown_runtime__.registerFactory("shim.js", "esm", (function(__rolldown_module_id__) {
+__rolldown_runtime__.registerFactory("shim.js", (function(__rolldown_module_id__) {
 	try {
 		var __rolldown_exports__ = __rolldown_runtime__.__exportAll({});
 		__rolldown_runtime__.registerModule(__rolldown_module_id__, { exports: __rolldown_exports__ });
@@ -113,7 +107,7 @@ __rolldown_runtime__.registerFactory("shim.js", "esm", (function(__rolldown_modu
 		import_node_assert_00.default.strictEqual(fromEsm.__esModule, true);
 		globalThis.__cjs_requires_esm_interop_patch_ran = true;
 	} finally {}
-}));
+}), 1);
 
 //#endregion
 ```

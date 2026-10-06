@@ -1,0 +1,7 @@
+{
+  "_comment": "https://github.com/rolldown/rolldown/issues/10069 - two levels of re-export between the external import and its use. Both intermediate modules are tree-shaken away, so nothing on `main.js`'s dependency edges carries the `__toESM` request any more.",
+  "config": {
+    "external": ["node:https"],
+    "format": "cjs"
+  }
+}

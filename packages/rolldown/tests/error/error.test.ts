@@ -1,5 +1,6 @@
 import type { Plugin } from 'rolldown';
 import { rolldown } from 'rolldown';
+import { isWasiTest } from 'rolldown-tests/utils';
 import { describe, expect, test, vi } from 'vitest';
 
 async function buildWithPlugin(plugin: Plugin) {
@@ -164,7 +165,8 @@ test('call transformContext error', async () => {
 });
 
 // #4141
-test('should print original error if it can not be assigned', async () => {
+// Under the wasm binding the `structuredClone` failure degrades to a plain `Error`, losing the `DataCloneError` name.
+test.skipIf(isWasiTest)('should print original error if it can not be assigned', async () => {
   const error = await buildWithPlugin({
     name: 'test',
     transform() {

@@ -6,7 +6,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## main.js
 
 ```js
-//! User-defined Entry: [Entry-Module-Id: main.js] [Name: Some("main")]
+//! User-defined Entry: [Entry-Module-Id: main.js] [Name: main]
 import "./vendor-similarity.js";
 import "./vendor-similarity2.js";
 //#region src/app-shell.js

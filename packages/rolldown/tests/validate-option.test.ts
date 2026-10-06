@@ -42,6 +42,27 @@ test('validate output option', async () => {
   );
 });
 
+test('requires RegExp for mangleProps include', async () => {
+  const consoleSpy = vi.spyOn(console, 'warn');
+  const bundle = await rolldown({
+    input: './build-api/main.js',
+    cwd: import.meta.dirname,
+  });
+  await expect(
+    bundle.generate({
+      minify: {
+        mangleProps: {
+          // @ts-ignore invalid value
+          include: '^_',
+        },
+      },
+    }),
+  ).rejects.toThrow();
+  expect(consoleSpy).toHaveBeenCalledWith(
+    expect.stringContaining('Invalid type: Expected RegExp but received "^_"'),
+  );
+});
+
 test('give a warning for hoistTransitiveImports: true', async () => {
   const consoleSpy = vi.spyOn(console, 'warn');
   const bundle = await rolldown({
@@ -55,4 +76,33 @@ test('give a warning for hoistTransitiveImports: true', async () => {
   expect(consoleSpy).toHaveBeenCalledWith(
     `\x1b[33mWarning: Invalid output options (1 issue found)\n- For the "hoistTransitiveImports". Invalid type: Expected false but received true. \x1b[0m`,
   );
+});
+
+test('requires a string for codeSplitting group debugName', async () => {
+  const consoleSpy = vi.spyOn(console, 'warn');
+  const bundle = await rolldown({
+    input: './build-api/main.js',
+    cwd: import.meta.dirname,
+  });
+  try {
+    await bundle.generate({
+      codeSplitting: {
+        groups: [
+          {
+            // @ts-ignore invalid value
+            debugName: 1,
+            name: 'group',
+          },
+        ],
+      },
+    });
+    expect(consoleSpy).toHaveBeenCalledWith(
+      expect.stringContaining('For the "codeSplitting.groups,0,debugName"'),
+    );
+    expect(consoleSpy).toHaveBeenCalledWith(
+      expect.stringContaining('Invalid type: Expected string but received 1'),
+    );
+  } finally {
+    await bundle.close();
+  }
 });

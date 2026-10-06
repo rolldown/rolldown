@@ -7,10 +7,14 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 // HIDDEN [\0rolldown/runtime.js]
+//#region foo.js
+//#endregion
 //#region cjs.js
 var require_cjs = /* @__PURE__ */ __commonJSMin(((exports, module) => {
 	module.exports = 1;
 }));
+//#endregion
+//#region esm.js
 //#endregion
 //#region main.js
 Promise.resolve().then(() => /* @__PURE__ */ Object.freeze({ __proto__: null }));
@@ -28,10 +32,14 @@ Promise.resolve().then(() => /* @__PURE__ */ Object.freeze({ __proto__: null }))
 
 ```js
 // HIDDEN [\0rolldown/runtime.js]
+//#region foo.js
+//#endregion
 //#region cjs.js
 var require_cjs = /* @__PURE__ */ __commonJSMin(((exports, module) => {
 	module.exports = 1;
 }));
+//#endregion
+//#region esm.js
 //#endregion
 //#region main.js
 Promise.resolve().then(() => /* @__PURE__ */ Object.freeze({ __proto__: null }));
@@ -50,10 +58,14 @@ Promise.resolve().then(() => /* @__PURE__ */ Object.freeze({ __proto__: null }))
 ```js
 (function() {
 	// HIDDEN [\0rolldown/runtime.js]
+	//#region foo.js
+	//#endregion
 	//#region cjs.js
 	var require_cjs = /* @__PURE__ */ __commonJSMin(((exports, module) => {
 		module.exports = 1;
 	}));
+	//#endregion
+	//#region esm.js
 	//#endregion
 	//#region main.js
 	Promise.resolve().then(() => /* @__PURE__ */ Object.freeze({ __proto__: null }));

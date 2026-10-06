@@ -70,22 +70,13 @@ export { __esmMin as n, __exportAll as r, __commonJSMin as t };
 import { n as __esmMin } from "./rolldown-runtime.js";
 //#region node0.js
 var node_0;
-var init_node0 = __esmMin((() => {
+//#endregion
+__esmMin((() => {
 	globalThis.__acyclic_output_fuzz_0 = 0;
 	import("./node12.js").then((n) => (n.n(), n.r));
 	node_0 = {};
 	node_0.value = 0;
-}));
-//#endregion
-export { node_0 as n, init_node0 as t };
-
-```
-
-### node02.js
-
-```js
-import { t as init_node0 } from "./node0.js";
-init_node0();
+}))();
 
 ```
 
@@ -106,7 +97,7 @@ var node2_exports = /* @__PURE__ */ __exportAll({ node_2: () => node_2 });
 var node_2;
 var init_node2 = __esmMin((() => {
 	globalThis.__acyclic_output_fuzz_2 = 2;
-	import("./node02.js");
+	import("./node0.js");
 	node_2 = {};
 	node_2.value = 2;
 }));

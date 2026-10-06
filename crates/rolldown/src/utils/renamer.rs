@@ -1,19 +1,82 @@
+use std::cell::OnceCell;
 use std::collections::hash_map::Entry;
 
 use rustc_hash::{FxHashMap, FxHashSet};
 
 use oxc::semantic::Scoping;
 use oxc::syntax::keyword::{GLOBAL_OBJECTS, RESERVED_KEYWORDS};
-use oxc_str::CompactStr;
+use oxc_str::{CompactStr, Ident, IdentHashSet};
 
 use rolldown_common::{
-  ChunkIdx, ExportsKind, ImportRecordMeta, ModuleIdx, NormalModule, OutputFormat, SymbolRef,
-  SymbolRefDb, SymbolRefDbForModule, WrapKind,
+  ModuleIdx, NormalModule, OutputFormat, SymbolRef, SymbolRefDb, SymbolRefDbForModule, WrapKind,
 };
 use rolldown_utils::concat_string;
 
 use crate::stages::link_stage::LinkStageOutput;
 use crate::utils::chunk::conflict_resolver::ConflictResolver;
+
+/// The kind of a top-level binding. The kind decides how the renamer gives the binding a name.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum RootBindingKind {
+  /// Source code declares the binding, or the binding gets its name from the source (an external
+  /// import binding). The binding keeps its original name when that name is free at the top level.
+  Authored,
+  /// Rolldown makes the binding: for example a wrapper binding, a namespace object, an interop
+  /// binding or a runtime helper. The finalizer prints references to it at any depth. Thus it
+  /// never takes a name that an inner binding uses ([`InnerBindingNames`]), and no source binding
+  /// can capture these references.
+  Synthesized,
+}
+
+/// The names that the *inner* scopes of the chunk bind. Inner scopes are the scopes below the top
+/// level of the chunk in the output: the nested scopes of each module, and the root scope of each
+/// CJS-wrapped module. The finalizer prints that root scope as the body of the
+/// `__commonJS((exports, module) => { ... })` closure.
+///
+/// The renamer builds this set on first use. Thus a chunk with no synthesized binding does not pay
+/// for it.
+pub struct InnerBindingNames<'a> {
+  /// Each module's scoping, and whether its root scope is an inner scope.
+  scopings: Vec<(&'a Scoping, bool)>,
+  names: OnceCell<IdentHashSet<'a>>,
+}
+
+impl<'a> InnerBindingNames<'a> {
+  pub fn new(scopings: Vec<(&'a Scoping, bool)>) -> Self {
+    Self { scopings, names: OnceCell::new() }
+  }
+
+  fn contains(&self, name: &str) -> bool {
+    self
+      .names
+      .get_or_init(|| {
+        let mut names = IdentHashSet::default();
+        for (scoping, root_is_inner) in &self.scopings {
+          // Walk the symbol table rather than each scope's bindings map: it is one contiguous
+          // array, and nearly every symbol is a binding of some scope.
+          let root_scope_id = scoping.root_scope_id();
+          for symbol_id in scoping.symbol_ids() {
+            let name = scoping.symbol_ident(symbol_id);
+            if scoping.symbol_scope_id(symbol_id) == root_scope_id
+              // Facades are created in the root scope but never bound there.
+              && (!root_is_inner || scoping.get_binding(root_scope_id, name) != Some(symbol_id))
+            {
+              continue;
+            }
+            names.insert(name);
+          }
+        }
+        names
+      })
+      .contains(&Ident::from(name))
+  }
+}
+
+impl std::fmt::Debug for InnerBindingNames<'_> {
+  fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    f.debug_struct("InnerBindingNames").finish_non_exhaustive()
+  }
+}
 
 #[derive(Debug)]
 pub struct Renamer<'name> {
@@ -24,6 +87,7 @@ pub struct Renamer<'name> {
   symbol_db: &'name SymbolRefDb,
   /// Entry module index for this chunk, if any.
   entry_module_idx: Option<ModuleIdx>,
+  inner_binding_names: InnerBindingNames<'name>,
 }
 
 impl<'name> Renamer<'name> {
@@ -31,6 +95,7 @@ impl<'name> Renamer<'name> {
     base_module_index: Option<ModuleIdx>,
     symbol_db: &'name SymbolRefDb,
     format: OutputFormat,
+    inner_binding_names: InnerBindingNames<'name>,
   ) -> Self {
     // Port from https://github.com/rollup/rollup/blob/master/src/Chunk.ts#L1377-L1394.
     let mut manual_reserved = match format {
@@ -52,6 +117,7 @@ impl<'name> Renamer<'name> {
           .map(|s| CompactStr::new(s)),
       ),
       entry_module_idx: base_module_index,
+      inner_binding_names,
     }
   }
 
@@ -154,24 +220,15 @@ impl<'name> Renamer<'name> {
     true
   }
 
-  /// Assign a canonical name to a top-level symbol, avoiding conflicts with
-  /// other top-level names and nested scope names that could cause capture.
-  pub fn add_symbol_in_root_scope(&mut self, symbol_ref: SymbolRef, needs_deconflict: bool) {
+  /// Assign a canonical name to a symbol that the finalizer prints at the top level of the chunk.
+  /// The name is different from all other top-level names. `kind` decides which inner names the
+  /// name must also avoid (see [`RootBindingKind`]).
+  pub fn add_symbol_in_root_scope(&mut self, symbol_ref: SymbolRef, kind: RootBindingKind) {
     let canonical_ref = symbol_ref.canonical_ref(self.symbol_db);
 
-    // The `!needs_deconflict` path always stores the bare original name and never
-    // dedups, so build and insert directly.
-    if !needs_deconflict {
-      self.canonical_names.insert(canonical_ref, self.symbol_db.original_name(canonical_ref));
-      return;
-    }
-
-    // Deconflict path: fuse the dedup check and the final insert into a single
-    // `canonical_names` probe via the entry API. An Occupied slot means this
-    // canonical_ref was already assigned, so re-adding is a no-op — and we still
-    // skip building the owned name on that path (dedup-before-alloc). The previous
-    // `contains_key(&canonical_ref)` + `insert(canonical_ref, _)` pair hashed and
-    // walked the table twice for the same key.
+    // Fuse the dedup check and the final insert into a single `canonical_names` probe via the
+    // entry API. An Occupied slot means this canonical_ref was already assigned, so re-adding is
+    // a no-op — and we still skip building the owned name on that path (dedup-before-alloc).
     let Entry::Vacant(slot) = self.canonical_names.entry(canonical_ref) else {
       return;
     };
@@ -182,44 +239,38 @@ impl<'name> Renamer<'name> {
     // `self.resolver` (mutable, in `resolve`) does not overlap a borrow of `self`.
     let symbol_db = self.symbol_db;
     let entry_module_idx = self.entry_module_idx;
-    let resolved = self.resolver.resolve(original_name, |candidate, is_original| {
-      Self::is_name_available_with(
+    let inner_binding_names = &self.inner_binding_names;
+    let resolved = self.resolver.resolve(original_name, |candidate, is_original| match kind {
+      RootBindingKind::Authored => Self::is_name_available_with(
         symbol_db,
         entry_module_idx,
         candidate,
         canonical_ref,
         is_original,
-      )
+      ),
+      RootBindingKind::Synthesized => !inner_binding_names.contains(candidate),
     });
     slot.insert(resolved);
   }
 
+  /// Returns a name for a synthesized top-level binding that has no symbol, for example a
+  /// cross-chunk `require_*` binding or a bridge. Like each synthesized binding, the name avoids
+  /// the inner names of the chunk.
   pub fn create_conflictless_name(&mut self, hint: &str) -> CompactStr {
-    self.resolver.resolve(CompactStr::new(hint), |_, _| true)
+    let inner_binding_names = &self.inner_binding_names;
+    self
+      .resolver
+      .resolve(CompactStr::new(hint), |candidate, _| !inner_binding_names.contains(candidate))
   }
 
-  /// Like [`Self::create_conflictless_name`], but also skips names bound in a nested scope of
-  /// any of `modules`, and names bound at the root of the `cjs_wrapped` modules among them (that
-  /// root scope is emitted inside a `__commonJS` closure): a chunk-level binding that references
-  /// inside those modules resolve to must stay visible from all of them.
-  pub fn create_conflictless_name_for_modules(
-    &mut self,
-    hint: &str,
-    modules: &[ModuleIdx],
-    cjs_wrapped: &[ModuleIdx],
-  ) -> CompactStr {
-    let symbol_db = self.symbol_db;
-    self.resolver.resolve(CompactStr::new(hint), |candidate, _| {
-      !modules.iter().any(|module_idx| has_nested_scope_binding(symbol_db, *module_idx, candidate))
-        && !cjs_wrapped
-          .iter()
-          .any(|module_idx| has_root_scope_binding(symbol_db, *module_idx, candidate))
-    })
-  }
-
+  /// Rename a nested-scope binding, or a root-scope binding of a CJS-wrapped module. After the
+  /// rename, the binding no longer captures a reference in its scope that must resolve to an outer
+  /// binding.
   pub fn register_nested_scope_symbols(&mut self, symbol_ref: SymbolRef, original_name: &str) {
     let canonical_ref = symbol_ref.canonical_ref(self.symbol_db);
-    if self.canonical_names.contains_key(&canonical_ref) {
+    // A binding linked to a symbol elsewhere (an import binding) is printed under that symbol's
+    // name, not its own: renaming it would rename the other symbol.
+    if canonical_ref != symbol_ref || self.canonical_names.contains_key(&canonical_ref) {
       return;
     }
 
@@ -250,37 +301,6 @@ impl<'name> Renamer<'name> {
     }
   }
 
-  /// Override the chunk-root name of a CJS closure-internal binding that shadows a chunk-root
-  /// binding the closure references. The main deconfliction loop already gave this binding its
-  /// original name (CJS root-scope symbols are exempt there, so `register_nested_scope_symbols`
-  /// would skip it as already-named) — hence the override. The replacement skips names reserved at
-  /// chunk scope and names used by any binding in the same module (root or nested); the latter
-  /// stops it from landing on a sibling closure-local (the #9882 second-order case).
-  pub fn override_root_scope_binding(
-    &mut self,
-    symbol_ref: SymbolRef,
-    original_name: &str,
-    scoping: &Scoping,
-  ) {
-    let canonical_ref = symbol_ref.canonical_ref(self.symbol_db);
-    for count in 1u32.. {
-      let candidate: CompactStr =
-        concat_string!(original_name, "$", itoa::Buffer::new().format(count)).into();
-      if self.resolver.contains(&candidate) {
-        continue;
-      }
-      if scoping.iter_bindings().any(|(_, bindings)| bindings.contains_key(candidate.as_str())) {
-        // Reserve so a later-deconflicted chunk-root symbol can't be renamed onto this
-        // module-binding name and then be shadowed by it.
-        self.resolver.reserve(candidate);
-        continue;
-      }
-      self.resolver.reserve(candidate.clone());
-      self.canonical_names.insert(canonical_ref, candidate);
-      return;
-    }
-  }
-
   #[inline]
   pub fn into_canonical_names(self) -> FxHashMap<SymbolRef, CompactStr> {
     self.canonical_names
@@ -305,16 +325,18 @@ fn has_binding(symbol_db: &SymbolRefDb, module_idx: ModuleIdx, name: &str) -> bo
   db.ast_scopes.scoping().iter_bindings().any(|(_, bindings)| bindings.contains_key(name))
 }
 
-/// Returns true if `name` is bound in the root scope of the module.
-fn has_root_scope_binding(symbol_db: &SymbolRefDb, module_idx: ModuleIdx, name: &str) -> bool {
-  let Some(db) = &symbol_db[module_idx] else {
-    return false;
-  };
-  let scoping = db.ast_scopes.scoping();
-  scoping.get_binding(scoping.root_scope_id(), name.into()).is_some()
-}
-
-/// Context for renaming nested scope symbols that would shadow top-level symbols.
+/// The context of the passes that rename the nested-scope symbols of one module that would shadow
+/// top-level symbols.
+///
+/// The passes go from each reference up to the root scope of the module. The finalizer prints the
+/// root bindings of a CJS-wrapped module inside its CJS closure, and these bindings get no
+/// top-level name. Thus the passes rename a root binding of a CJS-wrapped module like a nested
+/// binding. The root bindings of other modules already have their top-level names, and the passes
+/// do not change them.
+///
+/// Generated references resolve to synthesized top-level bindings. These bindings never have the
+/// name of a nested binding or of a binding in a CJS closure. Thus the passes check only the
+/// references that the source contains.
 pub struct NestedScopeRenamer<'a, 'r> {
   pub module_idx: ModuleIdx,
   pub module: &'a NormalModule,
@@ -584,154 +606,5 @@ impl NestedScopeRenamer<'_, '_> {
         }
       }
     }
-  }
-
-  /// Rename a CJS-wrapped module's *root-scope* locals that shadow a chunk-root binding the closure
-  /// actually references.
-  ///
-  /// A CJS module's real top-level statements render *inside* its `__commonJS((exports, module) =>
-  /// { ... })` closure, and that closure captures every name at chunk-root scope. The main
-  /// deconfliction loop leaves these root-scope locals with their original name (CJS root-scope
-  /// symbols are exempt there), so a same-named binding rendered at chunk root ends up shadowed
-  /// inside the closure — issue #9882. Unlike the other passes, the shadowing binding lives at
-  /// module-root scope and is already named, so we *override* it via `override_root_scope_binding`
-  /// (which also steers clear of sibling locals — the #9882 second-order case).
-  ///
-  /// This is reference-precise: a root-scope local is renamed only when the module genuinely
-  /// references a chunk-root binding of the same final name, leaving unrelated same-named locals
-  /// untouched.
-  pub fn rename_cjs_locals_shadowing_referenced_chunk_bindings(
-    &mut self,
-    output_format: OutputFormat,
-    chunk_idx: ChunkIdx,
-  ) {
-    if !matches!(self.link_output.metas[self.module_idx].wrap_kind(), WrapKind::Cjs) {
-      return;
-    }
-    let root_scope_id = self.scoping.root_scope_id();
-
-    // Resolve against the immutable views first, then override (a `&mut self` step). A *root-scope*
-    // local shadows a referenced chunk-root binding when it shares that binding's final name. The
-    // `binding != reference` guard is essential: the referenced binding is itself a root-scope
-    // binding (e.g. `import * as m` accessed as `m.default`), so without it we'd "rename" the
-    // reference onto itself (issue #7444). Looking only at the root scope keeps us off bindings the
-    // other (nested-scope) passes already handle.
-    let mut shadowing_locals: FxHashSet<SymbolRef> = FxHashSet::default();
-
-    // `import { x } from ...` — a root-scope local sharing the import's final name shadows it.
-    for (import_ref, _) in &self.module.named_imports {
-      if self.db.is_facade_symbol(import_ref.symbol) {
-        continue;
-      }
-      // Unused imports aren't referenced, so nothing shadows them.
-      if self.scoping.get_resolved_references(import_ref.symbol).next().is_none() {
-        continue;
-      }
-      let Some(canonical_name) = self.renamer.get_canonical_name(*import_ref).cloned() else {
-        continue;
-      };
-      if let Some(binding) = self.scoping.get_binding(root_scope_id, canonical_name.as_str().into())
-        && binding != import_ref.symbol
-      {
-        let local_ref: SymbolRef = (self.module_idx, binding).into();
-        if self.link_output.symbol_db.canonical_ref_for(local_ref).owner == self.module_idx {
-          shadowing_locals.insert(local_ref);
-        }
-      }
-    }
-
-    // `ns.foo` star-import member accesses — a root-scope local sharing the resolved export's final
-    // name shadows the namespace reference.
-    for member_expr_ref in
-      self.link_output.metas[self.module_idx].resolved_member_expr_refs.values()
-    {
-      let Some(reference_id) = member_expr_ref.reference_id else {
-        continue;
-      };
-      let Some(reference_symbol) = self.scoping.get_reference(reference_id).symbol_id() else {
-        continue;
-      };
-      let Some(resolved_symbol) = member_expr_ref.resolved else {
-        continue;
-      };
-      let Some(canonical_name) = self.renamer.get_canonical_name(resolved_symbol).cloned() else {
-        continue;
-      };
-      if let Some(binding) = self.scoping.get_binding(root_scope_id, canonical_name.as_str().into())
-        && binding != reference_symbol
-      {
-        let local_ref: SymbolRef = (self.module_idx, binding).into();
-        if self.link_output.symbol_db.canonical_ref_for(local_ref).owner == self.module_idx {
-          shadowing_locals.insert(local_ref);
-        }
-      }
-    }
-
-    // `require()` of a wrapped importee — the finalizer rewrites it to the importee's chunk-root
-    // facades: `require_x()` for a CJS-wrapped importee, `(init_x(), __toCommonJS(xxx_exports))`
-    // for a wrapped-ESM one. A root-scope local sharing one of those final names shadows the read
-    // (issue #9882, require()/namespace channel). We mirror the finalizer's gate
-    // (`module_finalizers/mod.rs`): an importee whose require is actually used. Both facades live
-    // in the importee module, so a same-named root-scope local here is a genuine shadowing local —
-    // except for a self-require, which the owner guard rules out.
-    for rec in &self.module.import_records {
-      let Some(importee_idx) = rec.resolved_module else {
-        continue;
-      };
-      let Some(importee) = self.link_output.module_table[importee_idx].as_normal() else {
-        continue;
-      };
-      // The namespace object only backs the wrapped-ESM rewrite; a CommonJS importee is read
-      // through its `require_x` wrapper alone. An unused require drops the `__toCommonJS(ns)`
-      // half of that rewrite, but the finalizer still emits the wrapper call, so the wrapper
-      // name stays shadowable.
-      let namespace_object_ref = (!matches!(importee.exports_kind, ExportsKind::CommonJs)
-        && !rec.meta.contains(ImportRecordMeta::IsRequireUnused))
-      .then_some(importee.namespace_object_ref);
-      // The wrapper facade is what a bundled `require_<basename>` local collides with. Rolldown's
-      // own CJS output names require-locals from the same namespace it derives wrapper names from
-      // (`require_<basename>`, `$N`-suffixed for duplicate basenames), so re-bundling it lands a
-      // local on a deconflicted wrapper name such as `require_dup$1`.
-      let wrapper_ref = self.link_output.metas[importee_idx].wrapper_ref;
-      for referenced_ref in namespace_object_ref.into_iter().chain(wrapper_ref) {
-        if !self.is_shadowable_chunk_binding(referenced_ref, output_format, chunk_idx) {
-          continue;
-        }
-        let Some(canonical_name) = self.renamer.get_canonical_name(referenced_ref).cloned() else {
-          continue;
-        };
-        if let Some(binding) =
-          self.scoping.get_binding(root_scope_id, canonical_name.as_str().into())
-        {
-          let local_ref: SymbolRef = (self.module_idx, binding).into();
-          if self.link_output.symbol_db.canonical_ref_for(local_ref).owner == self.module_idx {
-            shadowing_locals.insert(local_ref);
-          }
-        }
-      }
-    }
-
-    for local_ref in shadowing_locals {
-      let original_name = self.scoping.symbol_name(local_ref.symbol);
-      self.renamer.override_root_scope_binding(local_ref, original_name, self.scoping);
-    }
-  }
-
-  /// Whether a root-scope local of this module could shadow `symbol_ref`'s final name.
-  ///
-  /// CJS output reaches a symbol owned by another chunk through a member access on that chunk's
-  /// require binding (`require_other.foo`, see `finalized_expr_for_cross_chunk_symbol`), so the
-  /// name never resolves against this module's scopes and nothing can shadow it. A facade owned by
-  /// this very module (a self-`require`) is not a chunk-root binding either.
-  fn is_shadowable_chunk_binding(
-    &self,
-    symbol_ref: SymbolRef,
-    output_format: OutputFormat,
-    chunk_idx: ChunkIdx,
-  ) -> bool {
-    let canonical_ref = self.link_output.symbol_db.canonical_ref_for(symbol_ref);
-    canonical_ref.owner != self.module_idx
-      && (!matches!(output_format, OutputFormat::Cjs)
-        || self.link_output.symbol_db.get(canonical_ref).chunk_idx == Some(chunk_idx))
   }
 }

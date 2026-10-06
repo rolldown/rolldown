@@ -6,7 +6,7 @@ use oxc_index::IndexVec;
 use render_chunk_to_assets::set_emitted_chunk_preliminary_filenames;
 use rolldown_common::{
   ChunkIdx, ChunkKind, InstantiationKind, ModuleIdx, OutputExports, PackageJson, PathsOutputOption,
-  RUNTIME_HELPER_NAMES, UsedSymbolRefs, UsedSymbolRefsBuilder,
+  UsedSymbolRefs, UsedSymbolRefsBuilder,
 };
 use rolldown_devtools::{action, trace_action, trace_action_enabled};
 use rolldown_error::{BuildDiagnostic, BuildResult};
@@ -238,22 +238,6 @@ impl<'a> GenerateStage<'a> {
     }
     set_emitted_chunk_preliminary_filenames(&self.plugin_driver.file_emitter, &chunk_graph);
 
-    let rendered_modules =
-      order_state.has_import_overlays().then(|| rendered_module_set(&chunk_graph));
-    let symbols = &self.link_output.symbol_db;
-    let runtime = &self.link_output.runtime;
-    let order_live_symbols = order_state.live_symbols(
-      |symbol_ref| symbols.canonical_ref_resolving_namespace(symbol_ref),
-      |helper| {
-        let index = helper.bits().trailing_zeros() as usize;
-        runtime.resolve_symbol(RUNTIME_HELPER_NAMES[index])
-      },
-      |importer_idx| {
-        rendered_modules
-          .as_ref()
-          .is_some_and(|rendered_modules| rendered_modules.contains(&importer_idx))
-      },
-    );
     // A file names its carried records' modules together with its own.
     // See internal-docs/inline-common-chunks/implementation.md ("Deconflicting").
     let inline_naming_inputs = self.inline_naming_inputs(&chunk_graph);
@@ -273,7 +257,6 @@ impl<'a> GenerateStage<'a> {
             chunk,
             self.link_output,
             &order_state,
-            &order_live_symbols,
             self.options.format,
             &index_chunk_id_to_name,
             chunk_assignments,

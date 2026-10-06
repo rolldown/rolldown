@@ -463,9 +463,13 @@ mod tests {
         file: Some(out_file.into()),
         ..Default::default()
       };
-      let task =
-        WatchTask::new(BundlerConfig::new(options, plugins), Arc::clone(&fs_watcher), &closed)
-          .expect("create watch task");
+      let task = WatchTask::new(
+        BundlerConfig::new(options, plugins),
+        tasks.next_idx(),
+        Arc::clone(&fs_watcher),
+        &closed,
+      )
+      .expect("create watch task");
       members.push(tasks.push(task));
     }
     let mut group_members = IndexVec::new();

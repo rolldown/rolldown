@@ -91,8 +91,8 @@ Watcher (public API)
                                └── tasks: IndexVec<WatchTaskIdx, WatchTask>
                                     ├── WatchTask 0  ─┐ config group 0 shares
                                     │   ├── bundler: Arc<TokioMutex<Bundler>>
-                                    │   ├── fs_watcher: Arc<Mutex<FsWatcher>> (ONE per config group, holds the group's registered paths)
-                                    │   ├── watched_files: FxDashSet<PathBuf> (per task)
+                                    │   ├── index: WatchTaskIdx (its owner id in the shared fs_watcher)
+                                    │   ├── fs_watcher: Arc<Mutex<FsWatcher>> (ONE per config group, records which member watches each path)
                                     │   └── needs_rebuild: bool
                                     ├── WatchTask 1  ─┘ the same fs_watcher Arc
                                     └── WatchTask N ... (next group → next fs watcher)
@@ -110,7 +110,7 @@ Data flow:
 
 - `Watcher` only holds lifecycle state (`tx`, the close signal, and `coordinator_state`) — lightweight, no bundler access.
 - `WatchCoordinator` owns ALL mutable state. No external mutation.
-- ONE `FsWatcher` exists per config group, shared by that group's `WatchTask`s via `Arc<std::sync::Mutex<FsWatcher>>`, so a save of a file watched by several outputs of one config arrives once, tagged with the group. Membership stays per task (`watched_files`). On the FSEvents backend, a path the shared watcher already covers (registered itself, or below a watched directory) is adopted into the member's set without a backend batch, because a batch there restarts the group's stream; on other backends every new path is registered (see [File Watching](#file-watching)).
+- ONE `FsWatcher` exists per config group, shared by that group's `WatchTask`s via `Arc<std::sync::Mutex<FsWatcher>>`, so a save of a file watched by several outputs of one config arrives once, tagged with the group. The `FsWatcher` records each watched path with the members that asked for it (the task's `WatchTaskIdx` is its owner id), so it answers both "is this path watched" and "does this member watch it" (see [File Watching](#file-watching)).
 - Bundler is `Arc<TokioMutex<>>` because event data structs carry a clone for consumer access (e.g. `BUNDLE_END.result`).
 
 ### Three-Layer Stack
@@ -149,7 +149,7 @@ rolldown_fs_watcher/
 ├── config.rs                  // FsWatcherConfig (enabled, use_polling, use_debounce, …)
 ├── filter.rs                  // IgnoreFilter: watch.exclude, also notify's ignore filter
 ├── event.rs                   // FsEvent (path + WatcherChangeKind), FsEventHandler
-├── watcher.rs                 // FsWatcher: the watched paths, on top of a WatcherBackend
+├── watcher.rs                 // FsWatcher: the watched paths and their owners, on top of a WatcherBackend
 └── notify/                    // everything that speaks notify
     ├── mod.rs                 // WatcherBackend + PathsMut traits, create_backend() — selects backend from config
     ├── immediate.rs           // recommended / poll, no debounce
@@ -251,8 +251,8 @@ Watcher spawns coordinator
 File change detected by the config group's shared FsWatcher
   → GroupFsEventHandler sends WatcherMsg::FileChanges { group_index }
   → process_file_changes():
-      - for EVERY member task of the group whose watched_files contains the path
-        or one of its ancestor directories (addWatchFile of a directory):
+      - for EVERY member task of the group that watches the path or one of its
+        ancestor directories (addWatchFile of a directory), per FsWatcher::is_watched_by:
           task.mark_needs_rebuild(path) → sets needs_rebuild = true
           task.call_on_invalidate(path) → fires immediately, before debounce
       - State: Idle → Debouncing, or extends deadline
@@ -323,7 +323,9 @@ Configured via `WatcherOptions`, fires **immediately** on file change (before de
 ## File Watching
 
 - After each build, `bundler.watch_files()` returns the current set.
-- `WatchTask::update_watch_files()` diffs against the task's own `watched_files` set, then hands the new candidates to the config group's shared `FsWatcher`. The watcher's own path set is the group-wide registered set. On the FSEvents backend (`FsWatcher::add_restarts_stream`: macOS native, not polling), a candidate the group already covers, because it is registered itself or lies below a registered directory (`FsWatcher::is_watched`), goes straight into the task's `watched_files` without a backend batch: a batch there restarts the group's stream, and the kernel reports everything below a watched root. On other backends every candidate reaches `watch_paths`: a redundant add is harmless there, and an explicit watch survives a recursive watch the backend could not extend (inotify needs one watch per directory and cannot add one for a new subdirectory once its watch table is full). Either way the task adopts the paths sent to `watch_paths` that ended up registered (`FsWatcher::is_registered`). A changed path belongs to a task when it, or one of its ancestors, is in that task's `watched_files`. `FsWatcher::is_watched` is not used for task membership, because the shared set also holds paths only a sibling watches.
+- `WatchTask::update_watch_files()` hands the set to the config group's shared `FsWatcher` with `watch_paths_as(owner, …)`, the owner being the task's index. The watcher maps each watched path to the owners that asked for it. A path another member already watches is recorded for this owner without a backend batch. On the FSEvents backend (macOS native, not polling), so is a path below a directory any member watches: a batch there restarts the group's stream, and the kernel reports everything below a watched root. On other backends such a path is still registered: a redundant add is harmless there, and an explicit watch survives a recursive watch the backend could not extend (inotify needs one watch per directory and cannot add one for a new subdirectory once its watch table is full). A path the backend refuses is not recorded, so it is tried again next build.
+- A changed path belongs to a task when `FsWatcher::is_watched_by(owner, path)` finds it, or one of its ancestors, recorded for that owner. `FsWatcher::is_watched` asks the same for any owner.
+- The dev engine has one caller per watcher and uses `watch_paths`, which records a single owner and registers every new path.
 - `exclude` becomes `FsWatcherConfig::ignored`, compiled once per watcher into an `IgnoreFilter` (`rolldown_fs_watcher/src/filter.rs`, globs via `globstar`). `FsWatcher::watch_paths` skips ignored paths, and notify gets the same filter through `Config::with_ignored`, so an ignored path is never scanned or reported. `map_notify_event` applies it too when it expands a created directory into its files.
 - `exclude` is about files, as in Rollup. The filter gets notify's `EntryKind`: a file is ignored if it matches (`Glob::is_match`). A directory is ignored only if everything below it matches (`DirMatch::matches_all_below`). A path of unknown kind (a missing path, or every event on Windows) could be either, so it is ignored if one of the two holds. So `dist/**` skips `dist` as a whole, and `**/*.log` does not hide `foo.log/a.js` below a directory named `foo.log`. A regex cannot tell whether it matches everything below a directory, so it never ignores one. Its files are still ignored one by one.
 - Why a directory that merely matches is not ignored: inotify, kqueue and poll never look below an ignored directory, while FSEvents and Windows ask about every path below it. The backends only agree if ignoring a directory and ignoring each path below it give the same result.

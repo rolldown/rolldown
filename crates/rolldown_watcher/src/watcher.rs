@@ -173,7 +173,7 @@ impl Watcher {
       )?));
       let mut members = Vec::with_capacity(group.len());
       for config in group {
-        let task = WatchTask::new(config, Arc::clone(&fs_watcher), closed)?;
+        let task = WatchTask::new(config, tasks.next_idx(), Arc::clone(&fs_watcher), closed)?;
         members.push(tasks.push(task));
       }
       group_members.push(members);

@@ -8,8 +8,8 @@ use rolldown_error::{
   filter_out_disabled_diagnostics,
 };
 use rolldown_fs_watcher::FsWatcher;
-use rolldown_utils::{dashmap::FxDashSet, pattern_filter};
-use std::path::{Path, PathBuf};
+use rolldown_utils::pattern_filter;
+use std::path::Path;
 use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::time::Instant;
@@ -30,10 +30,10 @@ oxc_index::define_index_type! {
 pub struct WatchTask {
   bundler: Arc<TokioMutex<Bundler>>,
   options: Arc<NormalizedBundlerOptions>,
-  /// Shared by the group, so its path set also holds paths only a sibling watches.
+  /// This task's owner id in the group's shared `fs_watcher`.
+  index: WatchTaskIdx,
+  /// Shared by the group; records which member watches each path.
   fs_watcher: Arc<std::sync::Mutex<FsWatcher>>,
-  /// Paths THIS task watches; decides whether a change rebuilds this task.
-  watched_files: FxDashSet<PathBuf>,
   pub(crate) needs_rebuild: bool,
   closed: Arc<AtomicBool>,
 }
@@ -41,6 +41,7 @@ pub struct WatchTask {
 impl WatchTask {
   pub(crate) fn new(
     config: BundlerConfig,
+    index: WatchTaskIdx,
     fs_watcher: Arc<std::sync::Mutex<FsWatcher>>,
     closed: &Arc<AtomicBool>,
   ) -> BuildResult<Self> {
@@ -66,8 +67,8 @@ impl WatchTask {
     Ok(Self {
       bundler: Arc::new(TokioMutex::new(bundler)),
       options,
+      index,
       fs_watcher,
-      watched_files: FxDashSet::default(),
       needs_rebuild: true,
       closed: Arc::clone(closed),
     })
@@ -86,7 +87,7 @@ impl WatchTask {
     // Use field-level borrows so the closure can capture fs_watcher/options
     // without conflicting with the &mut self borrow on bundler.
     let fs_watcher_ref = &*self.fs_watcher;
-    let watched_files_ref = &self.watched_files;
+    let index = self.index;
     let options_ref = &*self.options;
 
     // Scope the bundler lock to minimize lock duration
@@ -116,12 +117,7 @@ impl WatchTask {
           // (so files are watched even on error — enables recovery when user fixes the issue)
           let watch_files: Vec<ArcStr> =
             bundle.get_watch_files().iter().map(|f| f.clone()).collect();
-          Self::update_watch_files_from(
-            fs_watcher_ref,
-            watched_files_ref,
-            options_ref,
-            &watch_files,
-          )?;
+          Self::update_watch_files_from(fs_watcher_ref, index, options_ref, &watch_files)?;
 
           let scan_output = scan_result?;
 
@@ -231,24 +227,23 @@ impl WatchTask {
 
   /// Update watched files by adding new ones to the fs watcher.
   fn update_watch_files(&self, files: &[ArcStr]) -> BuildResult<()> {
-    Self::update_watch_files_from(&self.fs_watcher, &self.watched_files, &self.options, files)
+    Self::update_watch_files_from(&self.fs_watcher, self.index, &self.options, files)
   }
 
   /// Static helper: update FS watcher with newly discovered files.
   /// Separated from `&self` to allow calling from closures during build.
   fn update_watch_files_from(
     fs_watcher: &std::sync::Mutex<FsWatcher>,
-    watched_files: &FxDashSet<PathBuf>,
+    index: WatchTaskIdx,
     options: &NormalizedBundlerOptions,
     files: &[ArcStr],
   ) -> BuildResult<()> {
     let cwd = options.cwd.to_string_lossy();
-    let candidates: Vec<&Path> = files
-      .iter()
-      .map(|file| Path::new(file.as_str()))
-      .filter(|path| {
-        !watched_files.contains(*path)
-          && path.exists()
+    fs_watcher.lock().expect("fs_watcher lock poisoned").watch_paths_as(
+      index.index(),
+      files.iter().map(ArcStr::as_str),
+      |path| {
+        path.exists()
           && pattern_filter::filter(
             options.watch.exclude.as_deref(),
             options.watch.include.as_deref(),
@@ -256,32 +251,8 @@ impl WatchTask {
             &cwd,
           )
           .inner()
-      })
-      .collect();
-    if candidates.is_empty() {
-      return Ok(());
-    }
-
-    let mut fs_watcher = fs_watcher.lock().expect("fs_watcher lock poisoned");
-    // Where a batch restarts the group's stream (FSEvents), a path the group already covers
-    // (itself or a watched ancestor directory, from this task or a sibling) is adopted without
-    // one; the kernel reports it through the watched root. Elsewhere every path is registered:
-    // a redundant add is harmless, and an explicit watch survives a recursive watch the backend
-    // could not extend. See internal-docs/watch-mode/implementation.md ("File Watching").
-    let skip_covered = fs_watcher.add_restarts_stream();
-    let (covered, uncovered): (Vec<&Path>, Vec<&Path>) =
-      candidates.into_iter().partition(|path| skip_covered && fs_watcher.is_watched(path));
-    for path in covered {
-      watched_files.insert(path.to_path_buf());
-    }
-    let result = fs_watcher.watch_paths(uncovered.iter(), |_| true);
-    // Adopt this batch's successes; a refused path stays out and is retried next build.
-    for path in uncovered {
-      if fs_watcher.is_registered(path) {
-        watched_files.insert(path.to_path_buf());
-      }
-    }
-    result
+      },
+    )
   }
 
   /// Mark this task as needing rebuild if the changed file is in our watch list.
@@ -336,7 +307,11 @@ impl WatchTask {
   }
 
   fn is_watched_file(&self, path: &str) -> bool {
-    Path::new(path).ancestors().any(|ancestor| self.watched_files.contains(ancestor))
+    self
+      .fs_watcher
+      .lock()
+      .expect("fs_watcher lock poisoned")
+      .is_watched_by(self.index.index(), Path::new(path))
   }
 }
 
@@ -350,81 +325,4 @@ pub enum BuildOutcome {
   Error(WatchErrorEventData),
   /// `watcher.close()` was called during the build; output was discarded.
   Closed,
-}
-
-#[cfg(test)]
-mod tests {
-  use super::*;
-  use crate::task_fs_event_handler::GroupFsEventHandler;
-  use rolldown::BundlerOptions;
-  use rolldown_fs_watcher::FsWatcherConfig;
-  use std::fs;
-
-  struct TestDir(PathBuf);
-
-  impl Drop for TestDir {
-    fn drop(&mut self) {
-      let _ = fs::remove_dir_all(&self.0);
-    }
-  }
-
-  fn task(cwd: &Path, fs_watcher: &Arc<std::sync::Mutex<FsWatcher>>) -> WatchTask {
-    let options = BundlerOptions { cwd: Some(cwd.to_path_buf()), ..Default::default() };
-    WatchTask::new(
-      BundlerConfig::new(options, vec![]),
-      Arc::clone(fs_watcher),
-      &Arc::new(AtomicBool::new(false)),
-    )
-    .expect("create watch task")
-  }
-
-  /// Task A watches `assets/`, then task B, sharing A's group watcher, asks for
-  /// `assets/x.svg`. Returns whether B owns the file and whether the group registered it.
-  fn watch_file_below_sibling_directory(config: &FsWatcherConfig, name: &str) -> (bool, bool) {
-    let dir =
-      std::env::temp_dir().join(format!("rolldown-watch-task-{name}-{}", std::process::id()));
-    fs::create_dir_all(dir.join("assets")).expect("create assets directory");
-    // FSEvents reports canonical paths, including macOS's /var -> /private/var alias.
-    let dir = TestDir(dunce::canonicalize(dir).expect("canonicalize test directory"));
-    let assets = dir.0.join("assets");
-    let svg = assets.join("x.svg");
-    fs::write(&svg, "<svg/>").expect("write asset");
-
-    let (tx, _rx) = tokio::sync::mpsc::unbounded_channel();
-    let fs_watcher =
-      FsWatcher::new(GroupFsEventHandler { group_index: WatchGroupIdx::from_usize(0), tx }, config)
-        .expect("create fs watcher");
-    let fs_watcher = Arc::new(std::sync::Mutex::new(fs_watcher));
-    let a = task(&dir.0, &fs_watcher);
-    let b = task(&dir.0, &fs_watcher);
-
-    a.update_watch_files(&[ArcStr::from(assets.to_string_lossy())]).expect("watch directory");
-    b.update_watch_files(&[ArcStr::from(svg.to_string_lossy())]).expect("watch file");
-
-    let owned = b.is_watched_file(&svg.to_string_lossy());
-    let registered = fs_watcher.lock().expect("fs_watcher lock").is_registered(&svg);
-    (owned, registered)
-  }
-
-  /// On FSEvents a batch restarts the group's stream, so a file below a directory a sibling
-  /// already watches is adopted without one: the kernel reports it through the watched root.
-  #[cfg(target_os = "macos")]
-  #[test]
-  fn path_covered_by_sibling_directory_is_adopted_without_batch() {
-    let config = FsWatcherConfig { use_polling: false, ..FsWatcherConfig::default() };
-    let (owned, registered) = watch_file_below_sibling_directory(&config, "fsevents");
-    assert!(owned, "task B must own the covered file");
-    assert!(!registered, "a covered file must not open a backend batch on FSEvents");
-  }
-
-  /// Elsewhere a covered file is still registered: the redundant add is harmless, and an
-  /// explicit watch survives a recursive watch the backend could not extend.
-  #[test]
-  fn path_covered_by_sibling_directory_is_registered_on_other_backends() {
-    // The no-op backend accepts every add, like a native backend with room in its watch table.
-    let config = FsWatcherConfig { enabled: false, ..FsWatcherConfig::default() };
-    let (owned, registered) = watch_file_below_sibling_directory(&config, "other");
-    assert!(owned, "task B must own the covered file");
-    assert!(registered, "a covered file must be registered with the backend");
-  }
 }

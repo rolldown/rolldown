@@ -2806,6 +2806,7 @@ dependencies = [
  "rolldown_error",
  "rolldown_utils",
  "rustc-hash",
+ "smallvec",
  "tracing",
  "walkdir",
 ]

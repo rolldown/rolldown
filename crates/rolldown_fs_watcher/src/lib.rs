@@ -8,4 +8,4 @@ mod watcher;
 
 pub use config::FsWatcherConfig;
 pub use event::{FsEvent, FsEventHandler};
-pub use watcher::FsWatcher;
+pub use watcher::{FsWatcher, WatchOwner};

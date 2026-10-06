@@ -71,28 +71,34 @@ statically; do not report a measured number for either.
 
 ## The rendered output must not change
 
-The first scan of a target saves the build as the ORIGINAL — so run it before you
-touch any code. Every full scan then renders the original and your build side by
-side and compares them on every pinned page: first-screen and full-page pixels, page
-height, visible text, accessible names, new runtime errors, and the LCP element. It
-is the first line of the verdict.
+The first scan of a target saves the build as the ORIGINAL — run it before you touch
+any code, and pin the client-side routes your work can reach with it:
+`scan --app <appDir> --pages /pricing,/settings` (entry HTML files are found
+automatically; a shared chunk or stylesheet you change for `/` can break another page).
 
-- **A difference is a revert, even when LCP improved** — often LCP improved BECAUSE
-  something broke: a style that stopped applying (a stylesheet split, reordered or
-  made non-blocking without the swap), a font deferred until it never loads, a hero
-  hidden or swapped for a skeleton (LCP then times a smaller element or the
-  placeholder). The scan says "NOT a keeper" and pinning refuses. Read what it names
-  — the element and the property or font that changed, the missing text, the new
-  error — and the diff image it points to; fix the change or revert it, rebuild,
-  re-scan.
-- **Never** run `parity approve`, `parity anchor --replace`, or add a `--mask`, to
-  make a difference go away. Those are human decisions and every verdict lists them.
-  If you believe a difference is intended, stop and say so, with the evidence path.
-- Before your first change, pin the client-side routes your work can reach:
-  `scan --pages /pricing,/settings` (entry HTML files are found automatically). A
-  shared chunk or stylesheet you change for `/` can break another page.
-- UNKNOWN there means the original itself renders differently between two loads, or
-  the LCP element was not compared yet — report it; a human adds masks.
+- **Optimize freely** — nothing is compared per change. Each scan only says whether the
+  LCP element is still the original's; when it is not, LCP is timing a cheaper paint
+  (a hidden hero, a placeholder) and that gain is probably not real — find out why
+  before you build on it.
+- **When you have finished: `scan --parity`.** It takes the final measurement and
+  compares every pinned page with the original: first-screen and full-page pixels, page
+  height, visible text, accessible names, new runtime errors, the LCP element. The
+  verdict holds it as PENDING until then; you are not done without it.
+- **A difference starts RECOVER MODE**: that build's LCP numbers do not count until it
+  matches again — often it was faster BECAUSE it broke (a stylesheet split, reordered or
+  made non-blocking without the swap; a font deferred until it never loads). The output
+  names what changed — the element and the property or font, the missing text, the new
+  error — and points at a diff image. Fix the change or revert it, and choose how you
+  re-check: `parity strategy each-tweak` (every scan re-checks and records a snapshot)
+  or `on-demand` (you run `parity`; `--only /page` re-checks just the broken pages).
+  `parity recover` lists the options, including bisecting your kept commits with
+  `git bisect run` and `parity --exit-code`; `parity history` shows every check. A fix
+  may give back part of the gain — report the number of the build that matches.
+- **Never** run `parity approve`, `parity anchor --replace`, or add a `--mask`, to make a
+  difference go away. Those are human decisions and every verdict lists them. If you
+  believe a difference is intended, stop and say so, with the evidence path.
+- UNKNOWN there means the original itself renders differently between two loads (a
+  human adds masks) or the LCP element was not compared yet (scan).
 
 ## The optimization loop
 
@@ -154,15 +160,15 @@ is the first line of the verdict.
 5. Rebuild. Run the app's own functional check (it must pass). `scan` — or
    `scan --quick` (1 run, no profile) as a cheap probe on slow apps; quick results
    are indicative only, so confirm any accept/revert/pin with a full scan.
-6. "improvement beyond noise" AND the check passes AND the rendered output matches
-   the original → keep it, `scan --pin` (or `baseline`), commit. Anything else →
-   revert the change exactly and rebuild.
+6. "improvement beyond noise" AND the check passes → keep it, `scan --pin` (or
+   `baseline`), commit. Anything else → revert the change exactly and rebuild.
    (A deferral that measures worse while a render gap exists is worth retrying
    after the gap is fixed.)
-7. Repeat. Declare done ONLY when the verdict reports every signal class clear and
-   fresh — never because a single report looks empty. One tool's silence only means
-   that tool sees nothing; the verdict checks them all and tells you which signals
-   you haven't gathered yet.
+7. Repeat. When you have finished optimizing, run `scan --parity` (above) and work any
+   difference in recover mode. Declare done ONLY when the verdict reports every signal
+   class clear and fresh — never because a single report looks empty. One tool's
+   silence only means that tool sees nothing; the verdict checks them all and tells
+   you which signals you haven't gathered yet.
 8. Report: baseline LCP, final LCP, % change, entry size before/after, and one
    sentence per kept change — **plus the final verdict checklist, copied verbatim.**
    A re-pinned baseline records a gain; it does NOT close the checklist. If you stop

@@ -1,0 +1,83 @@
+crates/rolldown/src/ast_scanner/mod.rs
+  s_d43624d0762669::t_46245af644c848 358
+crates/rolldown/src/module_finalizers/impl_visit_mut.rs
+  s_d43624d0762669::t_bbbb506ad1a211 274-276,581-583
+crates/rolldown/src/runtime/runtime-base.js
+  s_d43624d0762669::t_3cffaa2141082f 28,32
+crates/rolldown/src/utils/renamer.rs
+  s_d43624d0762669::t_4746623a04813b 514,527
+crates/rolldown/tests/esbuild/default/jsx_dev_self_edge_cases/artifacts.snap
+  s_d43624d0762669::t_8879204bcc77f9 208,213
+crates/rolldown/tests/esbuild/default/this_with_es6_syntax/artifacts.snap
+  s_d43624d0762669::t_351a8fb75af0b6 92,94
+crates/rolldown/tests/esbuild/lower/lower_async_this2016_common_js/artifacts.snap
+  s_d43624d0762669::t_fd3c502a08c37f 11-12
+crates/rolldown/tests/rolldown/cjs_compat/optimize_interop_default_with_cjs_bailout/artifacts.snap
+  s_d43624d0762669::t_9a101165d30342 21-22
+crates/rolldown/tests/rolldown/cjs_compat/top_level_this_is_initial_exports/_config.json
+  s_d43624d0762669::t_5fcfc49de19fd1 1-10
+crates/rolldown/tests/rolldown/cjs_compat/top_level_this_is_initial_exports/_test.mjs
+  s_d43624d0762669::t_d8eacd782a1c01 1-20
+crates/rolldown/tests/rolldown/cjs_compat/top_level_this_is_initial_exports/arrow.cjs
+  s_d43624d0762669::t_86c7212930826d 1-6
+crates/rolldown/tests/rolldown/cjs_compat/top_level_this_is_initial_exports/artifacts.snap
+  s_d43624d0762669::t_3bebe0c98a8dfc 1-349
+crates/rolldown/tests/rolldown/cjs_compat/top_level_this_is_initial_exports/assigned.cjs
+  s_d43624d0762669::t_63d9b568eac55f 1-2
+crates/rolldown/tests/rolldown/cjs_compat/top_level_this_is_initial_exports/declared.cjs
+  s_d43624d0762669::t_2196ecf01b77f0 1-2
+crates/rolldown/tests/rolldown/cjs_compat/top_level_this_is_initial_exports/fnexports.cjs
+  s_d43624d0762669::t_2d2cd03480f98e 1-2
+crates/rolldown/tests/rolldown/cjs_compat/top_level_this_is_initial_exports/main.js
+  s_d43624d0762669::t_d185db83eaa83a 1-11
+crates/rolldown/tests/rolldown/cjs_compat/top_level_this_is_initial_exports/nulled.cjs
+  s_d43624d0762669::t_bf637675eaaf5a 1-2
+crates/rolldown/tests/rolldown/cjs_compat/top_level_this_is_initial_exports/plain.cjs
+  s_d43624d0762669::t_903a08154520e6 1-3
+crates/rolldown/tests/rolldown/cjs_compat/top_level_this_is_initial_exports/replaced.cjs
+  s_d43624d0762669::t_1bb05304162212 1-3
+crates/rolldown/tests/rolldown/cjs_compat/top_level_this_is_initial_exports/varmodule.cjs
+  s_d43624d0762669::t_77511e0e824d39 1-2
+crates/rolldown/tests/rolldown/function/experimental/strict_execution_order/cjs_carrier_gap/artifacts.snap
+  s_d43624d0762669::t_6f7bbbc7ac9b13 59,143
+crates/rolldown/tests/rolldown/function/experimental/strict_execution_order/cjs_carrier_pure_value_gap/artifacts.snap
+  s_d43624d0762669::t_1beb8b9282be2d 110,261
+crates/rolldown/tests/rolldown/function/experimental/strict_execution_order/internal_wrapped_entry_order/artifacts.snap
+  s_d43624d0762669::t_f27368d52a90dc 89,191
+crates/rolldown/tests/rolldown/function/experimental/strict_execution_order/wrapped_entry_chunk_cycle/artifacts.snap
+  s_d43624d0762669::t_b38fa8226cc35e 94,238,399,523
+crates/rolldown/tests/rolldown/issues/5242/artifacts.snap
+  s_d43624d0762669::t_bfa10ea0690218 12,14
+crates/rolldown/tests/rolldown/misc/common_js_min/artifacts.snap
+  s_d43624d0762669::t_1918e5fdf2fda4 9
+crates/rolldown/tests/rolldown/sourcemap/imported_cjs_callee/artifacts.snap
+  s_d43624d0762669::t_a1d8ae4abd9043 68,76,78-93,95-106
+crates/rolldown/tests/rolldown/topics/hmr/runtime_correctness/artifacts.snap
+  s_d43624d0762669::t_b98a70bd121ed8 75,80,88,92,102-103,106-107
+crates/rolldown_common/src/ecmascript/ecma_view.rs
+  s_d43624d0762669::t_285d1e4625ecf4 55-57
+crates/rolldown_ecmascript_utils/src/ast_factory.rs
+  s_d43624d0762669::t_d24343d237163a 25,740-742,752,793-822,835,845
+internal-docs/linking/determine-module-exports-kind/implementation.md
+  s_d43624d0762669::t_d6d6d0cad2562a 69,71
+internal-docs/renaming/design.md
+  s_d43624d0762669::t_b5ec94b7566e05 40-41,48
+internal-docs/renaming/implementation.md
+  s_d43624d0762669::t_ead625a83c71fd 52
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "fa782b6ac7f40aca4dda9aa1eb9868bbeef10847",
+  "prompts": {},
+  "sessions": {
+    "s_d43624d0762669": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "7f7265c1-aa11-4a4b-9d11-215aef9a579c",
+        "model": "unknown"
+      },
+      "human_author": "IWANABETHATGUY <iwanabethatguy@qq.com>"
+    }
+  }
+}

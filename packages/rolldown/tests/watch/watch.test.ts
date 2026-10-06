@@ -363,6 +363,53 @@ test.concurrent(
   },
 );
 
+// Each config's outputs are read once: an `options` hook that adds an output
+// must not change the group sizes handed to the binding after the fact.
+test.concurrent(
+  'watch ignores outputs an options hook adds',
+  { retry: TEST_RETRY, timeout: TEST_TIMEOUT },
+  async ({ task, expect, onTestFinished }) => {
+    const retryCount = task.result?.retryCount ?? 0;
+    const { input, dir } = createTestInputAndOutput('watch-options-hook-output', retryCount);
+    const outDir = (name: string) => ({ dir: path.join(dir, name) });
+    const watcher = watch([
+      {
+        input,
+        output: [outDir('a1')],
+        plugins: [
+          {
+            name: 'push-output',
+            // The hook receives the watch config object itself, `output` included.
+            options(options) {
+              (options as WatchOptions & { output: { dir: string }[] }).output.push(outDir('a2'));
+            },
+          },
+        ],
+      },
+      { input, output: outDir('b1') },
+    ]);
+    onTestFinished(async () => {
+      await watcher.close();
+      if (!process.env.CI) {
+        fs.rmSync(dir, { recursive: true, force: true });
+      }
+    });
+
+    const events: string[] = [];
+    watcher.on('event', async (event) => {
+      events.push(event.code);
+      if (event.code === 'BUNDLE_END' || event.code === 'ERROR') {
+        await event.result.close();
+      }
+    });
+
+    await expect
+      .poll(() => events)
+      .toEqual(['START', 'BUNDLE_START', 'BUNDLE_END', 'BUNDLE_START', 'BUNDLE_END', 'END']);
+    expect(fs.existsSync(path.join(dir, 'a2'))).toBe(false);
+  },
+);
+
 test.concurrent(
   'watch event off',
   { retry: TEST_RETRY, timeout: TEST_TIMEOUT },

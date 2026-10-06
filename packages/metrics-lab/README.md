@@ -44,7 +44,10 @@ every build also refreshes the build-side report under `state/rolldown-metrics/`
 | `node harness.mjs graph`                                          | **Static split candidates ranked by retained size** — per module, the bytes its dominator subtree would remove from the initial load if its import edge were deferred, with `via` naming the single import chain to cut. Reads `module-graph.json` from a rolldown devtools-metrics build (vite ≥ 8: `build.rolldownOptions.devtools = { mode: "metrics" }`; the demo app emits it natively).                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             |
 | `node harness.mjs what-if <module> [--keep a,b]`                  | The exact modules + bytes one deferral frees (unique-reachable closure; equals the module's retained size). `--keep` marks sentry modules that stay eager. Instant candidate ranking; verify the winner's LCP effect with `scan`.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         |
 | `node harness.mjs verdict`                                        | Fuses all signals into an OPEN/clear/UNKNOWN lead checklist with staleness tracking. Refuses to say "done" while leads are open or signals are missing/stale; the all-clear states the tools' blind-spot boundary. While leads are OPEN it also instructs the operator/agent to copy the checklist into their summary and justify any early stop lead-by-lead — a re-pinned baseline records a gain, it does not close the checklist.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     |
-| `node harness.mjs baseline`                                       | Pin the last measurement (and the build-side `.state.json`) as the fixed reference for every following `baselineDelta`.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   |
+| `node harness.mjs parity [--pages /a,/b] [--mask <sel>]`          | **Rendered output vs the original build**, every pinned page, both builds rendered back to back in one browser session: first-screen + full-page pixels, page height, visible text, accessible names, new runtime errors, and the LCP element. Every full `scan` runs it; this runs it alone. The first scan/measure/parity of a target saves the original. `--pages` adds client-side routes (entry HTML files are found automatically); `--mask` hides a region the original renders differently on every load.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         |
+| `node harness.mjs parity anchor [--replace]`                      | Show the saved original (commit, pages, masks, its LCP element). `--replace` makes the current build the original — a human decision, recorded in every later verdict.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    |
+| `node harness.mjs parity approve <page> --reason "…"`             | A human accepts one exact, intended difference (keyed on the changed pixels and every judged difference — any further change reopens the page). Listed in every later verdict.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            |
+| `node harness.mjs baseline`                                       | Pin the last measurement (and the build-side `.state.json`) as the fixed reference for every following `baselineDelta`. Refused while the build renders differently from the original, or was never compared with it (see [Rendered-output parity](#rendered-output-parity)).                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             |
 | `node harness.mjs defer <feature>` / `undefer <feature>`          | Rewrite that feature's marker block in `app/src/main.ts` between static import and post-paint `import()`. Rebuild afterwards.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             |
 | `node harness.mjs status`                                         | Feature modes, entry size, last/baseline LCP.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             |
 | `node harness.mjs serve [--port 4646]`                            | Serve `app/dist` for manual poking.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       |
@@ -52,6 +55,83 @@ every build also refreshes the build-side report under `state/rolldown-metrics/`
 `measure` and `coverage` also take `--dist <dir>` (plus optional `--entry`,
 `--features a,b`) to point at any other built app; candidates are then advisory
 per-module (the agent finds the import seams itself).
+
+## Rendered-output parity
+
+An LCP number only means something if the page still renders what it rendered
+before. Agent runs showed the failure this section exists for: a change that
+broke a style, deferred a font that then never loaded, or let a placeholder become
+the LCP element — the page still loaded, the functional check still passed, and the
+"gain" was measured on a broken page. Sometimes the break IS the gain (a hidden hero
+makes LCP measure a smaller, earlier element).
+
+So every full `scan` (or `parity` alone) compares the current build with the
+**original** and the verdict treats a difference as a gate: it OPENs, "keep this
+change" turns into "NOT a keeper", and `scan --pin` / `baseline` refuse to pin.
+
+**The original is a copy of the build, frozen.** The first scan / measure / parity of
+a target copies the build directory into the lab state (`parity/anchor/`), with the
+app's commit and a content hash. Each check serves it next to the current build from
+one origin and renders both in the same browser session, so a Chrome update, a newly
+installed font or machine load never shows up as a difference. Unlike the perf
+baseline, the loop never re-pins it: compared to the step before, a broken step looks
+clean and becomes the next step's reference; compared to the original, every step
+answers the real question. `parity anchor --replace` exists for a human who decides
+the reference must move, and every later verdict says it was replaced.
+
+**Pages are pinned.** The original's entry HTML files are found automatically (files
+that load bundled scripts or stylesheets — a self-contained `stats.html` is skipped);
+client-side routes are added with `--pages`. Pages can be added at any time (the
+original build is kept, so a new page is rendered from it on demand), never removed.
+
+**Captures are made repeatable before anything is compared**, with the sequence
+hosted visual-regression tools converged on (Chromatic, Percy, Cloudflare's Delta):
+1280×900 at scale 1, no throttle, reduced motion, a CSS switch that zeroes
+animations and transitions, `document.fonts.ready`, then animation-frame, DOM and
+network quiet windows under one shared deadline (a page with an endless animation
+loop stops being waited on after 2s), Web Animations and SMIL frozen right before
+each screenshot, a pinned `Date` and a seeded `Math.random`, cleared storage per
+capture, and a scroll through the page so sections that render on scroll exist in
+both builds before the full-page shot.
+
+**Noise is measured, not guessed.** Each page renders three times: original,
+current, original again — the second original under a clock moved by 1d1h1m1s and
+another random seed. Whatever differs between the two originals (a clock, random
+content, a race) becomes that page's unstable mask; a difference there is reported
+as "not judged", never as a break. Because both builds render on the same machine in
+the same session, the remaining tolerance can be tiny (a channel move of more than
+10/255 over at least 20 pixels) — a hosted service's 0.5%-of-the-screen default
+would let a missing 24px icon through. A page whose original moves over more than
+30% of the view is UNKNOWN: "nothing changed" would only cover the part that holds
+still. A difference found once is confirmed by a second capture of the current
+build before it is reported.
+
+**What decides, and what explains.** Judged — any one opens the page:
+first-screen and full-page pixels, page height, visible text (`innerText`, order-
+insensitive), accessible names of controls/landmarks/headings/images, where the page
+ended up, runtime errors the original never produced (uncaught exceptions,
+`console.error`, failed requests, HTTP ≥ 400), and — for `/` — the LCP element from
+the timed runs, compared with the original's: a different element, the same element
+much smaller, or a placeholder (LCP fired on content the element later replaced: a
+blurred image swapped for the real one, skeleton text swapped for copy, a skeleton
+node removed). A same-size swap emits no new LCP entry, so the timestamp keeps
+pointing at the placeholder; only the settled element shows it. Explanatory only —
+they say why, never decide: computed styles per element, the font Chrome actually
+drew each first-screen text element with (fallbacks included), images, loaded font
+faces, and which elements sit under each changed region. A legitimate deferral
+changes none of the judged facts but may change explanatory ones (a wrapper element,
+a renamed image file).
+
+**Masks and approvals are for humans, and visible.** `--mask <selector>` paints a
+region opaque in every capture; one added after the original was saved is listed in
+every verdict. `parity approve <page> --reason "…"` accepts one exact difference —
+keyed on the changed pixels and every judged difference, so any further change
+reopens the page — and is listed in every verdict with its reason.
+
+Evidence per page lands in `parity/pages/<page>/`: `anchor.png`, `current.png`,
+`diff.png` (changes red, unstable areas blue) and the `-full` variants. A check costs
+three unthrottled loads per page (four when a difference is confirmed); on the
+rolldown docs build that is ~2.5s per load.
 
 ## Server startup mode (node / deno)
 
@@ -115,6 +195,9 @@ actually move), plus the same `delta` / `baselineDelta` shape the browser side w
    - **Guard must pass**: `guard.allFeaturesReady && guard.heroRendered &&
 guard.lcpObservedInAllRuns`, and `runtime.cls` must not grow by more than 0.02.
      A faster build that broke a feature is a revert, not a win.
+   - **Rendered output must match the original**: the verdict's parity line is
+     clear (`parity`, or any full scan). A faster build that renders differently is
+     a revert too — and `baseline` refuses to pin it.
    - **Improvement must beat noise**: `baselineDelta["runtime.lcp_ms"].delta` ≤
      −max(30ms, 2% of baseline). Judge by `baselineDelta`, not the chain `delta`.
 5. **Decide**:
@@ -138,6 +221,10 @@ Log the decision trail with `--label`; every measure also appends to
   `totalBytes − paintBytes`, framework runtimes flagged).
 - `state/rolldown-metrics/` — the build-side report (`output.max_initial_load_bytes`
   should drop with every accepted defer while `output.total_bytes` stays flat).
+- `state/parity/` — `anchor/` (the original build's copy + `manifest.json`: commit,
+  content hash, pinned pages and masks with the time each was added, the original's
+  LCP element), `report.json` (per page: state, the judged reasons, notes, region
+  explanations, approval signature), `approvals.json`, and `pages/<page>/*.png`.
 
 ## The demo app
 
@@ -173,3 +260,12 @@ guard catches a defer that broke behavior.
   does on a real codebase: rewriting the import site into a post-paint `import()`.
 - Lab INP is meaningless (no real interaction); field metrics are Phase 3's
   beacon path, not this harness.
+- Parity sees what the build renders **served statically, without interaction**:
+  states behind a click, a login or live API data are not compared (both builds
+  render the same failed-fetch state, which is compared). Full pages are compared
+  down to 10 viewport heights, styles explain the first 4000 elements, shadow-DOM
+  content is compared by pixels only, and workers keep an unseeded `Math.random`.
+  Cross-origin resources (third-party fonts, CDNs) are fetched live by both builds:
+  a flaky one mostly shows up as instability between the two originals or fails the
+  confirmation capture, but one that fails exactly while the current build is being
+  captured (twice) reads as a difference.

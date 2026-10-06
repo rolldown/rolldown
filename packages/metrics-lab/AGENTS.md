@@ -69,9 +69,35 @@ a top-level import and a render-blocking import are the same edge in the module 
 Bun is not supported (JavaScriptCore, not V8) and edge runtimes can only be analyzed
 statically; do not report a measured number for either.
 
+## The rendered output must not change
+
+The first scan of a target saves the build as the ORIGINAL — so run it before you
+touch any code. Every full scan then renders the original and your build side by
+side and compares them on every pinned page: first-screen and full-page pixels, page
+height, visible text, accessible names, new runtime errors, and the LCP element. It
+is the first line of the verdict.
+
+- **A difference is a revert, even when LCP improved** — often LCP improved BECAUSE
+  something broke: a style that stopped applying (a stylesheet split, reordered or
+  made non-blocking without the swap), a font deferred until it never loads, a hero
+  hidden or swapped for a skeleton (LCP then times a smaller element or the
+  placeholder). The scan says "NOT a keeper" and pinning refuses. Read what it names
+  — the element and the property or font that changed, the missing text, the new
+  error — and the diff image it points to; fix the change or revert it, rebuild,
+  re-scan.
+- **Never** run `parity approve`, `parity anchor --replace`, or add a `--mask`, to
+  make a difference go away. Those are human decisions and every verdict lists them.
+  If you believe a difference is intended, stop and say so, with the evidence path.
+- Before your first change, pin the client-side routes your work can reach:
+  `scan --pages /pricing,/settings` (entry HTML files are found automatically). A
+  shared chunk or stylesheet you change for `/` can break another page.
+- UNKNOWN there means the original itself renders differently between two loads, or
+  the LCP element was not compared yet — report it; a human adds masks.
+
 ## The optimization loop
 
-1. Build the app. `scan --app <appDir>` — the first scan is your baseline.
+1. Build the app. `scan --app <appDir>` — the first scan is your baseline and saves
+   the original build.
 2. Read EVERY signal class in the scan output; each is a lead with a next-step:
    - **render-blocking CSS gate** — FCP cannot precede the last render-blocking
      stylesheet; when they land together, CSS is the paint gate and no amount of
@@ -128,8 +154,9 @@ statically; do not report a measured number for either.
 5. Rebuild. Run the app's own functional check (it must pass). `scan` — or
    `scan --quick` (1 run, no profile) as a cheap probe on slow apps; quick results
    are indicative only, so confirm any accept/revert/pin with a full scan.
-6. "improvement beyond noise" AND the check passes → keep it, `scan --pin` (or
-   `baseline`), commit. Anything else → revert the change exactly and rebuild.
+6. "improvement beyond noise" AND the check passes AND the rendered output matches
+   the original → keep it, `scan --pin` (or `baseline`), commit. Anything else →
+   revert the change exactly and rebuild.
    (A deferral that measures worse while a render gap exists is worth retrying
    after the gap is fixed.)
 7. Repeat. Declare done ONLY when the verdict reports every signal class clear and
@@ -149,7 +176,8 @@ statically; do not report a measured number for either.
 
 - Judge speed ONLY by the `vs pinned baseline` verdict. Never by the chain
   "vs previous measure" line, never by intuition.
-- A faster page that breaks a feature is a failure, not an optimization.
+- A faster page that breaks a feature, or renders differently from the original, is
+  a failure, not an optimization.
 - Never edit this package, the app's build/check scripts, or any thresholds to move
   the numbers.
 - **The functional check is the contract — never modify it.** If it fails after your

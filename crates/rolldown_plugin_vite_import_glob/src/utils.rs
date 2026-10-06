@@ -17,6 +17,8 @@ use rolldown_std_utils::relative_path_to_slash;
 use string_wizard::MagicString;
 use sugar_path::SugarPath;
 
+use crate::matcher::GlobMatcher;
+
 pub struct GlobImportVisit<'a> {
   pub ctx: &'a PluginContext,
   pub id: &'a str,
@@ -28,6 +30,7 @@ pub struct GlobImportVisit<'a> {
   pub import_decls: Vec<String>,
   pub errors: Vec<anyhow::Error>,
   pub is_dev_mode: bool,
+  pub matchers: Vec<GlobMatcher>,
 }
 
 impl<'ast> VisitJs<'ast> for GlobImportVisit<'_> {
@@ -75,6 +78,11 @@ impl<'a> PathWithGlob<'a> {
     let i = Self::find_glob_syntax(&glob[glob.len() - j..]);
     path.truncate(path.len() - i);
     Self { path, glob: &glob[glob.len() - i..] }
+  }
+
+  /// Owned copy for the long-lived [`GlobMatcher`]
+  fn to_owned_parts(&self) -> (String, String) {
+    (self.path.clone(), self.glob.to_string())
   }
 
   fn find_glob_syntax(path: &str) -> usize {
@@ -480,13 +488,14 @@ impl GlobImportVisit<'_> {
       return Some(());
     }
 
-    let common = self.get_common_base(&positive_globs);
-    let common_path = Path::new(common.as_ref());
+    let common = self.get_common_base(&positive_globs).into_owned();
+    let common_path = Path::new(&common);
 
     if self.is_dev_mode {
       self.watch_walk_root(common_path);
     }
 
+    let mut matched = Vec::new();
     let entries = walkdir::WalkDir::new(common_path)
       .follow_links(true)
       .sort_by(|a, b| a.file_name().cmp(b.file_name()))
@@ -532,6 +541,10 @@ impl GlobImportVisit<'_> {
         continue;
       }
 
+      if self.is_dev_mode {
+        matched.push(path.to_string());
+      }
+
       let file_path = self.relative_path(file, None);
       if is_virtual_module {
         let import_path =
@@ -558,6 +571,17 @@ impl GlobImportVisit<'_> {
       };
 
       files.push(ImportGlobFileData { file_path, import_path });
+    }
+
+    if self.is_dev_mode {
+      self.matchers.push(GlobMatcher {
+        walk_root: common,
+        positive: positive_globs.iter().map(PathWithGlob::to_owned_parts).collect(),
+        negated: negated_globs.iter().map(PathWithGlob::to_owned_parts).collect(),
+        exhaustive: options.exhaustive,
+        case_sensitive,
+        matched,
+      });
     }
     Some(())
   }

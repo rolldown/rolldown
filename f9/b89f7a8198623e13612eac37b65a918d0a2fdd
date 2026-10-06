@@ -1,0 +1,23 @@
+crates/rolldown/src/module_finalizers/impl_visit_mut.rs
+  s_d43624d0762669::t_9788b5ba0fffbd 274-275,580-582
+crates/rolldown/src/runtime/runtime-base.js
+  s_d43624d0762669::t_086137098aa9d0 28,32
+crates/rolldown_ecmascript_utils/src/ast_factory.rs
+  s_d43624d0762669::t_54dd6b54fb6bb2 25,740-742,752,793-822,835,845
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "f9b89f7a8198623e13612eac37b65a918d0a2fdd",
+  "prompts": {},
+  "sessions": {
+    "s_d43624d0762669": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "7f7265c1-aa11-4a4b-9d11-215aef9a579c",
+        "model": "unknown"
+      },
+      "human_author": "IWANABETHATGUY <iwanabethatguy@qq.com>"
+    }
+  }
+}

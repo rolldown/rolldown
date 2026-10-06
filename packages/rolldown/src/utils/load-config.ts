@@ -26,6 +26,8 @@ async function removeFiles(files: string[]): Promise<unknown[]> {
   return results.flatMap((result) => (result.status === 'rejected' ? [result.reason] : []));
 }
 
+let configLoadCount = 0;
+
 async function bundleTsConfig(configFile: string, isEsm: boolean): Promise<BundledConfig> {
   const dirnameVarName = 'injected_original_dirname';
   const filenameVarName = 'injected_original_filename';
@@ -67,9 +69,11 @@ async function bundleTsConfig(configFile: string, isEsm: boolean): Promise<Bundl
   // `require.resolve('./helper')`, from the generated file's own directory, so
   // the bundle is written beside the config. The per-call token keeps concurrent
   // loads of the same config from sharing one file, and lets a failed write find
-  // the files it left behind.
+  // the files it left behind. The module cache keys on the URL for the whole
+  // process, so a repeated name would return a stale module: the counter keeps
+  // names unique in this process, the random part across processes.
   const outputDir = path.dirname(configFile);
-  const outputPrefix = `rolldown.config.${randomBytes(4).toString('hex')}.`;
+  const outputPrefix = `rolldown.config.${++configLoadCount}.${randomBytes(8).toString('hex')}.`;
   const errors: unknown[] = [];
   let entryFile: string | undefined;
   let generatedFiles: string[] | undefined;

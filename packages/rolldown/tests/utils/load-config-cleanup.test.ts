@@ -1,16 +1,23 @@
+import type * as Crypto from 'node:crypto';
 import fs from 'node:fs';
 import { mkdtemp, readdir, rm, writeFile } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-const { close, rolldown, write } = vi.hoisted(() => ({
+const { close, randomBytes, rolldown, write } = vi.hoisted(() => ({
   close: vi.fn(),
+  randomBytes: vi.fn(),
   rolldown: vi.fn(),
   write: vi.fn(),
 }));
 
 vi.mock('../../src/api/rolldown', () => ({ rolldown }));
+vi.mock('node:crypto', async (importOriginal) => {
+  const crypto = await importOriginal<typeof Crypto>();
+  randomBytes.mockImplementation(crypto.randomBytes);
+  return { ...crypto, randomBytes };
+});
 
 import { loadConfig } from '../../src/utils/load-config';
 
@@ -81,6 +88,20 @@ describe('loadConfig bundle cleanup', () => {
     const [first, second] = write.mock.calls.map(([options]) => options.entryFileNames);
     expect(first).not.toBe(second);
     expect(await readdir(configDir)).toStrictEqual([]);
+  });
+
+  it('evaluates every load even when the random part of the name repeats', async () => {
+    const repeated = Buffer.alloc(8);
+    randomBytes.mockReturnValueOnce(repeated).mockReturnValueOnce(repeated);
+    write
+      .mockImplementationOnce(emit({ entry: 'export default { load: 1 }' }))
+      .mockImplementationOnce(emit({ entry: 'export default { load: 2 }' }));
+
+    await expect(loadConfig(configFile)).resolves.toStrictEqual({ load: 1 });
+    await expect(loadConfig(configFile)).resolves.toStrictEqual({ load: 2 });
+
+    const [first, second] = write.mock.calls.map(([options]) => options.entryFileNames);
+    expect(first).not.toBe(second);
   });
 
   it('removes what a failed write left behind and still closes the build', async () => {

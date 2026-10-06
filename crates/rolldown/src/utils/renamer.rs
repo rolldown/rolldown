@@ -85,14 +85,11 @@ pub struct Renamer<'name> {
   /// Final symbol → name mappings.
   canonical_names: FxHashMap<SymbolRef, CompactStr>,
   symbol_db: &'name SymbolRefDb,
-  /// Entry module index for this chunk, if any.
-  entry_module_idx: Option<ModuleIdx>,
   inner_binding_names: InnerBindingNames<'name>,
 }
 
 impl<'name> Renamer<'name> {
   pub fn new(
-    base_module_index: Option<ModuleIdx>,
     symbol_db: &'name SymbolRefDb,
     format: OutputFormat,
     inner_binding_names: InnerBindingNames<'name>,
@@ -116,7 +113,6 @@ impl<'name> Renamer<'name> {
           .chain(GLOBAL_OBJECTS.iter())
           .map(|s| CompactStr::new(s)),
       ),
-      entry_module_idx: base_module_index,
       inner_binding_names,
     }
   }
@@ -146,67 +142,51 @@ impl<'name> Renamer<'name> {
     self.resolver.reserve(name);
   }
 
-  /// Check if a candidate name is available for a top-level symbol without causing
-  /// unintended variable capture in nested scopes.
+  /// Check if a candidate name is available for a top-level symbol, so that no nested binding
+  /// captures a reference to the symbol.
   ///
-  /// This function prevents a top-level symbol from being renamed to a name that
-  /// already exists in a nested scope, which would cause the nested binding to
-  /// "capture" references meant for the top-level symbol.
+  /// This function stops the renamer from giving a top-level symbol a name that a nested scope
+  /// already binds. Such a nested binding would capture the references to the top-level symbol.
   ///
-  /// # Rules
+  /// A renamed candidate must not be equal to a nested binding of the module that owns the symbol.
+  /// This is also true for the entry module, because no later pass renames a nested binding that
+  /// captures the references of a module to its own renamed top-level symbol. The original name
+  /// can be shadowed, because the author wrote that shadowing intentionally.
   ///
-  /// 1. **Entry module symbols**: Always available. Shadowing conflicts are resolved
-  ///    later by `NestedScopeRenamer` which renames the nested bindings instead.
-  ///
-  /// 2. **Facade symbols** (e.g., external module namespaces): Must not conflict with
-  ///    entry module's nested scopes, since facade symbols can't be traced via references.
-  ///
-  /// 3. **Renamed candidates**: Must not conflict with the symbol's own module's nested
-  ///    bindings. Original names are allowed to shadow (that's intentional by the author).
-  ///
-  /// # Example: Why renamed candidates must avoid nested bindings
+  /// # Example: why a renamed candidate must avoid nested bindings
   ///
   /// ```js
   /// // entry.js
-  /// import { foo } from './dep.js';  // Suppose `foo` conflicts, try renaming to `foo$1`
-  /// function bar(foo$1) {            // Nested binding `foo$1` exists!
-  ///   console.log(foo$1);            // Would capture the wrong value
+  /// import { foo } from './dep.js';  // `foo` has a conflict, so the renamer tries `foo$1`.
+  /// function bar(foo$1) {            // A nested binding `foo$1` exists.
+  ///   console.log(foo$1);            // This reference would read the wrong value.
   /// }
-  /// console.log(foo);                // Should reference the import
+  /// console.log(foo);                // This reference must read the import.
   /// ```
   ///
-  /// If we renamed the import to `foo$1`, the nested parameter would capture it.
-  /// So `is_name_available("foo$1", ...)` returns `false`, and we try `foo$2` instead.
+  /// If the renamer gave the import the name `foo$1`, the nested parameter would capture it. Thus
+  /// `is_name_available("foo$1", ...)` returns `false`, and the renamer tries `foo$2`.
   ///
-  /// # Example: Why original names are allowed to shadow
+  /// # Example: why the original name can be shadowed
   ///
   /// ```js
   /// // entry.js
-  /// import { value } from './dep.js';  // Original name is `value`
-  /// function helper(value) {           // Nested `value` intentionally shadows
-  ///   return value * 2;                // Author intended to use parameter
+  /// import { value } from './dep.js';  // The original name is `value`.
+  /// function helper(value) {           // The nested `value` shadows the import intentionally.
+  ///   return value * 2;                // The author wants the parameter here.
   /// }
-  /// console.log(value);                // Uses the import
+  /// console.log(value);                // This reference reads the import.
   /// ```
   ///
-  /// Here the author intentionally wrote a parameter named `value` that shadows the import.
-  /// We allow this (`is_original_name = true`), so the import keeps its name `value`.
+  /// Here the author wrote a parameter `value` that shadows the import intentionally. This
+  /// function allows it (`is_original_name = true`), so the import keeps its name `value`.
   #[inline]
   fn is_name_available_with(
     symbol_db: &SymbolRefDb,
-    entry_module_idx: Option<ModuleIdx>,
     candidate_name: &str,
     symbol_ref: SymbolRef,
     is_original_name: bool,
   ) -> bool {
-    if let Some(entry_idx) = entry_module_idx {
-      if symbol_ref.owner == entry_idx {
-        // Entry module symbols can use their original names freely - shadowing is
-        // handled by reference-based renaming of nested bindings later
-        return true;
-      }
-    }
-
     // Renamed candidates must not conflict with own module's nested bindings
     // (original names are allowed to shadow - that's intentional)
     if !is_original_name && has_nested_scope_binding(symbol_db, symbol_ref.owner, candidate_name) {
@@ -234,16 +214,11 @@ impl<'name> Renamer<'name> {
     // Bind the fields the `accept` closure reads as locals so the borrow of
     // `self.resolver` (mutable, in `resolve`) does not overlap a borrow of `self`.
     let symbol_db = self.symbol_db;
-    let entry_module_idx = self.entry_module_idx;
     let inner_binding_names = &self.inner_binding_names;
     let resolved = self.resolver.resolve(original_name, |candidate, is_original| match kind {
-      RootBindingKind::Authored => Self::is_name_available_with(
-        symbol_db,
-        entry_module_idx,
-        candidate,
-        canonical_ref,
-        is_original,
-      ),
+      RootBindingKind::Authored => {
+        Self::is_name_available_with(symbol_db, candidate, canonical_ref, is_original)
+      }
       RootBindingKind::Synthesized => !inner_binding_names.contains(candidate),
     });
     slot.insert(resolved);

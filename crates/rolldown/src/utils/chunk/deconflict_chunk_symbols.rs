@@ -39,7 +39,6 @@ pub struct InlineNamingInput {
 /// `inline` is `Some` for a file that reads inline common chunk records, see [`InlineNamingInput`].
 #[tracing::instrument(level = "trace", skip_all)]
 #[expect(clippy::too_many_arguments)]
-#[expect(clippy::too_many_lines)]
 pub fn deconflict_chunk_symbols(
   chunk_idx: ChunkIdx,
   chunk: &mut Chunk,
@@ -65,8 +64,7 @@ pub fn deconflict_chunk_symbols(
       })
       .collect(),
   );
-  let mut renamer =
-    Renamer::new(chunk.entry_module_idx(), &link_output.symbol_db, format, inner_binding_names);
+  let mut renamer = Renamer::new(&link_output.symbol_db, format, inner_binding_names);
   // Reserve global scope symbols (unresolved references) to prevent generating conflicting names.
   // These are identifiers referenced but not defined in the module's scope (e.g., `console`, `window`).
   modules

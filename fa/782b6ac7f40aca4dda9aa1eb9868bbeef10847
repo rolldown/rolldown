@@ -2,8 +2,10 @@ crates/rolldown/src/ast_scanner/mod.rs
   s_d43624d0762669::t_46245af644c848 358
 crates/rolldown/src/module_finalizers/impl_visit_mut.rs
   s_d43624d0762669::t_bbbb506ad1a211 274-276,581-583
+  s_d43624d0762669::t_9788b5ba0fffbd 276,581-583
 crates/rolldown/src/runtime/runtime-base.js
   s_d43624d0762669::t_3cffaa2141082f 28,32
+  s_d43624d0762669::t_086137098aa9d0 28,32
 crates/rolldown/src/utils/renamer.rs
   s_d43624d0762669::t_4746623a04813b 514,527
 crates/rolldown/tests/esbuild/default/jsx_dev_self_edge_cases/artifacts.snap
@@ -58,6 +60,7 @@ crates/rolldown_common/src/ecmascript/ecma_view.rs
   s_d43624d0762669::t_285d1e4625ecf4 55-57
 crates/rolldown_ecmascript_utils/src/ast_factory.rs
   s_d43624d0762669::t_d24343d237163a 25,740-742,752,793-822,835,845
+  s_d43624d0762669::t_54dd6b54fb6bb2 25,740-742,752,793-822,835,845
 internal-docs/linking/determine-module-exports-kind/implementation.md
   s_d43624d0762669::t_d6d6d0cad2562a 69,71
 internal-docs/renaming/design.md

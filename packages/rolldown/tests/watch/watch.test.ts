@@ -449,16 +449,13 @@ test.concurrent(
       }
     });
 
-    const eventFn = vi.fn();
+    // Assert outside the listener: a listener that throws only logs on the Rust side.
+    const outputs: (readonly string[])[] = [];
     watcher.on('event', (event) => {
-      if (event.code === 'BUNDLE_END') {
-        eventFn();
-        expect(event.output).toEqual([output]);
-      }
+      if (event.code === 'BUNDLE_END') outputs.push(event.output);
     });
 
-    // test first build event
-    await expect.poll(() => eventFn).toBeCalled();
+    await expect.poll(() => outputs).toEqual([[output]]);
   },
 );
 

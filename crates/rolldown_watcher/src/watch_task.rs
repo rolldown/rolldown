@@ -303,13 +303,8 @@ impl WatchTask {
   }
 }
 
-/// Resolve the output path reported by `BundleEnd` events.
-///
-/// Rollup reports the resolved `output.file` (falling back to `output.dir`)
-/// here, so honor `file` when it is set instead of always using `out_dir`,
-/// and normalize `.`/`..` components for a stable absolute path.
-///
-/// See "API Contract" in `internal-docs/watch-mode/implementation.md`.
+/// Absolute, normalized form of `output.file` / `output.dir` for `BundleEnd.output`.
+// See internal-docs/watch-mode/implementation.md ("API Contract").
 fn resolve_output_path(cwd: &Path, output: &str) -> PathBuf {
   let output = Path::new(output);
   let path = join_absolute(cwd, output);
@@ -323,6 +318,7 @@ fn resolve_output_path(cwd: &Path, output: &str) -> PathBuf {
   for component in absolute_path.components() {
     match component {
       Component::CurDir => {}
+      // `pop` never removes a root or prefix, so excess `..` stays at the root.
       Component::ParentDir => {
         normalized.pop();
       }
@@ -334,12 +330,8 @@ fn resolve_output_path(cwd: &Path, output: &str) -> PathBuf {
   normalized
 }
 
-/// Join `path` onto `base`, producing an absolute path when `base` is absolute.
-///
-/// This is `Path::join` plus handling for Windows drive-relative paths such as
-/// `C:foo` (a `Prefix` component without a `RootDir`). Plain `join` would let
-/// such a path replace `base` entirely (`PathBuf::push`: "if `path` has a
-/// prefix but no root, it replaces `self`"), leaking a non-absolute path.
+/// `Path::join` that keeps the result absolute for Windows drive-relative paths (`C:foo`),
+/// which `join` would otherwise let replace `base`.
 fn join_absolute(base: &Path, path: &Path) -> PathBuf {
   if path.is_absolute() {
     return path.to_path_buf();
@@ -361,9 +353,7 @@ fn join_absolute(base: &Path, path: &Path) -> PathBuf {
     return if drive_relative_uses_base(drive, base_drive) {
       base.join(remainder)
     } else {
-      // `base` lives on another drive (or has no disk prefix), so it cannot
-      // anchor the path; per-drive current directories are process state we do
-      // not track, so fall back to the drive's root.
+      // Per-drive current directories are process state we do not track: use the drive root.
       let mut resolved = PathBuf::from(format!("{}:\\", char::from(drive)));
       resolved.push(remainder);
       resolved
@@ -373,10 +363,7 @@ fn join_absolute(base: &Path, path: &Path) -> PathBuf {
   base.join(path)
 }
 
-/// Decision logic for a Windows drive-relative path (e.g. `C:foo`): it may be
-/// resolved against the base directory only when both sit on the same drive
-/// (drive letters compare ASCII case-insensitively); otherwise it must be
-/// resolved from its own drive.
+/// A drive-relative path resolves against `base` only on the same drive (letters ignore case).
 #[cfg(any(windows, test))]
 fn drive_relative_uses_base(path_drive: u8, base_drive: Option<u8>) -> bool {
   base_drive.is_some_and(|base_drive| base_drive.eq_ignore_ascii_case(&path_drive))
@@ -405,34 +392,28 @@ mod tests {
 
     let absolute = cwd.join("absolute.js");
     assert_eq!(resolve_output_path(&cwd, absolute.to_string_lossy().as_ref()), absolute);
+
+    let root = cwd.ancestors().last().expect("root");
+    let above_root = format!("{}x.js", "../".repeat(cwd.components().count() + 1));
+    assert_eq!(resolve_output_path(&cwd, &above_root), root.join("x.js"));
   }
 
   #[test]
   fn drive_relative_decision_logic() {
-    // Same drive (ASCII case-insensitive): resolve against the base directory.
     assert!(drive_relative_uses_base(b'C', Some(b'C')));
     assert!(drive_relative_uses_base(b'c', Some(b'C')));
-    assert!(drive_relative_uses_base(b'D', Some(b'd')));
-    // Different drive: the base directory cannot anchor the path.
     assert!(!drive_relative_uses_base(b'D', Some(b'C')));
-    // Base without a disk prefix (e.g. a UNC path): same.
+    // A base without a disk prefix (UNC) cannot anchor a drive-relative path.
     assert!(!drive_relative_uses_base(b'C', None));
   }
 
-  /// `output.file` is arbitrary user config, so drive-relative (`C:bundle.js`)
-  /// and root-relative (`\bundle.js`) forms must still resolve to the absolute
-  /// path promised by the `BUNDLE_END.output` contract.
   #[cfg(windows)]
   #[test]
   fn windows_drive_relative_output_path_resolves_against_cwd() {
     let cwd = PathBuf::from(r"C:\proj");
-    // Drive-relative on the same drive resolves inside `cwd`.
     assert_eq!(resolve_output_path(&cwd, "C:bundle.js"), PathBuf::from(r"C:\proj\bundle.js"));
-    // Drive letters match case-insensitively; the prefix comes from `cwd`.
     assert_eq!(resolve_output_path(&cwd, "c:bundle.js"), PathBuf::from(r"C:\proj\bundle.js"));
-    // Drive-relative on another drive resolves from that drive's root.
     assert_eq!(resolve_output_path(&cwd, "D:bundle.js"), PathBuf::from(r"D:\bundle.js"));
-    // Root-relative keeps `cwd`'s drive.
     assert_eq!(resolve_output_path(&cwd, r"\bundle.js"), PathBuf::from(r"C:\bundle.js"));
   }
 }

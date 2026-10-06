@@ -50,10 +50,10 @@ type RolldownWatcherEvent =
   | { code: 'ERROR'; error: Error; result: RolldownWatchBuild };
 ```
 
-`BUNDLE_END.output` carries one absolute, normalized path per task: the resolved `output.file` when
-set, otherwise `output.dir`. Rollup reports the same thing, so a config writing a single file gets
-the file path rather than its parent directory (`resolve_output_path()` in
-`crates/rolldown_watcher/src/watch_task.rs`).
+`BUNDLE_END.output` carries one absolute, normalized path per task: `output.file` when set,
+otherwise `output.dir`, resolved against `cwd` (`resolve_output_path()` in
+`crates/rolldown_watcher/src/watch_task.rs`). This matches Rollup's `path.resolve(output.file || output.dir)`.
+`out_dir` cannot be used alone: with `output.file` it holds the file's parent directory.
 
 Event listeners are normally **awaited** before proceeding — blocking semantics matching Rollup.
 The coordinator may stop waiting for an `event`, `change`, or `restart` listener only when a close
@@ -448,18 +448,16 @@ close() → inner.close()         // sends Close msg, awaits shared future
 
 ### Binding as Thin Wrapper
 
-`BindingWatcher` is intentionally a thin wrapper — it holds a `rolldown_watcher::Watcher` and delegates directly. No state machine, no locking. All lifecycle management lives in the Rust core. The constructor takes both `options` and `listener`, creates the `NapiWatcherEventHandler`, and passes it to `Watcher::new()`. Each NAPI method (`run`, `waitForClose`, `close`) is a direct delegation to the inner watcher.
-
-The one piece of logic beyond type conversion is folding the per-config watch options into the single `WatcherConfig` the core expects — see below.
+`BindingWatcher` is intentionally a thin wrapper — it holds a `rolldown_watcher::Watcher` and delegates directly. No state machine, no locking. All lifecycle management lives in the Rust core. The constructor takes both `options` and `listener`, creates the `NapiWatcherEventHandler`, and passes it to `Watcher::new()`. Each NAPI method (`run`, `waitForClose`, `close`) is a direct delegation to the inner watcher. Its only logic beyond type conversion is the multi-config fold below.
 
 ### Multi-Config Watcher Options
 
-`watch()` accepts multiple configs, and each output becomes its own `BundlerConfig`/`WatchTask`. But `Watcher::new()` takes exactly one `WatcherConfig`: it sets the coordinator's debounce window, and `to_fs_watcher_config()` derives the `FsWatcherConfig` handed to every task's `DynFsWatcher`. Tasks own separate watcher instances, but they are all configured identically. So `create_watcher_config()` (`crates/rolldown_binding/src/watcher.rs`) has to reduce N configs to one:
+Each output of each config becomes its own `WatchTask`, but `Watcher::new()` takes one `WatcherConfig`: it sets the coordinator's debounce window, and `to_fs_watcher_config()` configures every task's `FsWatcher` the same way. `create_watcher_config()` (`crates/rolldown_binding/src/watcher.rs`) folds N configs into it:
 
-- **`buildDelay` — maximum across configs.** Matches Rollup, which delays the shared rebuild by the largest requested delay. A config asking for 250ms is not satisfied by a 50ms window, so the longest wins.
-- **Backend/debouncer fields — first config that sets one.** `usePolling`, `pollInterval`, `compareContentsForPolling`, `useDebounce`, `debounceDelay`, `debounceTickRate` are not mergeable: the fs watcher is either polling or it isn't. The first config that explicitly sets any of them supplies all six; if none do, the first config's watch options are used. This matches the `MULTIPLE_WATCHER_OPTION` warning the JS layer emits when more than one config specifies watcher options ("using first one to start watcher", `warnMultiplePollingOptions()` in `packages/rolldown/src/api/watch/watcher.ts`).
+- **`buildDelay`: the maximum across configs.** The rebuild is shared, and a config asking for 250ms is not served by a 50ms window. Rollup does the same.
+- **Backend/debouncer fields: the first config that sets any of them.** `usePolling`, `pollInterval`, `compareContentsForPolling`, `useDebounce`, `debounceDelay` and `debounceTickRate` cannot be merged (the watcher polls or it does not), so that config supplies all six; if no config sets one, the first config's options are used. This is what the `MULTIPLE_WATCHER_OPTION` warning promises ("using first one to start watcher", `warnMultiplePollingOptions()` in `packages/rolldown/src/api/watch/watcher.ts`).
 
-**Invariant:** "explicitly set" must be evaluated on `BindingWatchOption`, _before_ `From<BindingWatchOption> for WatchOption` runs. That conversion resolves the `Option<bool>` fields with `unwrap_or_default()`, so by the time a `BundlerConfig` exists, an explicit `usePolling: false` is indistinguishable from an unset option. Selecting on the converted `bool` would skip a config that deliberately opted out of polling and pick up a later `usePolling: true` instead — the opposite of what the warning promises. `BindingWatcher::new()` therefore records a per-config `selects_backend` flag before converting, and passes it to `create_watcher_config()`.
+**Invariant:** "sets" is read from `BindingWatchOption` before `From<BindingWatchOption> for WatchOption` runs. That conversion turns `Some(false)` and `None` into `false`, so reading it afterwards would skip an explicit `usePolling: false` and pick a later `usePolling: true`. `BindingWatcher::new()` records the per-config flags first and passes them to `create_watcher_config()`.
 
 ### Event Emitter
 

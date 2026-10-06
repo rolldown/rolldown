@@ -1,0 +1,31 @@
+crates/rolldown/tests/rolldown/cjs_compat/top_level_this_with_rebound_exports/_config.json
+  s_d43624d0762669::t_f13508a660b446 1-5
+crates/rolldown/tests/rolldown/cjs_compat/top_level_this_with_rebound_exports/_test.mjs
+  s_d43624d0762669::t_3770d85d6801f1 1-8
+crates/rolldown/tests/rolldown/cjs_compat/top_level_this_with_rebound_exports/artifacts.snap
+  s_d43624d0762669::t_418e3cf038cf0f 1-34
+crates/rolldown/tests/rolldown/cjs_compat/top_level_this_with_rebound_exports/assigned.cjs
+  s_d43624d0762669::t_a242fb3be51ab4 1-3
+crates/rolldown/tests/rolldown/cjs_compat/top_level_this_with_rebound_exports/declared.cjs
+  s_d43624d0762669::t_0ff3e489f6f463 1-10
+crates/rolldown/tests/rolldown/cjs_compat/top_level_this_with_rebound_exports/main.js
+  s_d43624d0762669::t_ca478a208bf4da 1-3
+internal-docs/linking/determine-module-exports-kind/implementation.md
+  s_d43624d0762669::t_e06ef14be746aa 69
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "7c13f37bcf10dba0abe71135b773899851bc8c00",
+  "prompts": {},
+  "sessions": {
+    "s_d43624d0762669": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "7f7265c1-aa11-4a4b-9d11-215aef9a579c",
+        "model": "unknown"
+      },
+      "human_author": "IWANABETHATGUY <iwanabethatguy@qq.com>"
+    }
+  }
+}

@@ -336,19 +336,7 @@ impl WatchTask {
   }
 
   fn is_watched_file(&self, path: &str) -> bool {
-    if !Path::new(path).ancestors().any(|ancestor| self.watched_files.contains(ancestor)) {
-      return false;
-    }
-    // The group watcher can only carry the `exclude` every member shares, so apply this task's
-    // own `exclude` at event time too: a path below a watched directory is otherwise "watched"
-    // even though the task excludes it. See internal-docs/watch-mode/implementation.md.
-    pattern_filter::filter(
-      self.options.watch.exclude.as_deref(),
-      None,
-      path,
-      &self.options.cwd.to_string_lossy(),
-    )
-    .inner()
+    Path::new(path).ancestors().any(|ancestor| self.watched_files.contains(ancestor))
   }
 }
 

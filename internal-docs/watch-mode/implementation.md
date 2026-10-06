@@ -339,11 +339,9 @@ A group with no outputs (`output: []`) keeps its empty `group_members` slot,
 so later group indices stay aligned, and gets no watcher.
 `FsWatcher` is a concrete type; the notify implementations stay crate-private.
 `WatcherConfig::to_fs_watcher_config()` maps watch options onto `FsWatcherConfig`,
-`group_fs_watcher_config` adds the group's shared `ignored` and `cwd` — only when
-every member's `watch.exclude` and `cwd` agree, since one shared watcher cannot
-express differing excludes (differing members get no backend filter and drop
-their own excluded paths at event time in `WatchTask::is_watched_file`) — and
-construction picks the backend:
+`group_fs_watcher_config` adds the group's `ignored` and `cwd` from its first
+member (every member is an output of the same input config, and `watch` and
+`cwd` are input options), and construction picks the backend:
 
 | `use_polling` | `use_debounce` | Backend                               |
 | ------------- | -------------- | ------------------------------------- |

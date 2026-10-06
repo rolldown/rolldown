@@ -10,7 +10,6 @@ use oxc_index::IndexVec;
 use rolldown::BundlerConfig;
 use rolldown_error::BuildResult;
 use rolldown_fs_watcher::{FsWatcher, FsWatcherConfig};
-use rolldown_utils::pattern_filter::StringOrRegex;
 use std::future::Future;
 use std::pin::Pin;
 use std::sync::Arc;
@@ -170,7 +169,7 @@ impl Watcher {
       let fs_handler = GroupFsEventHandler { group_index, tx: tx.clone() };
       let fs_watcher = Arc::new(std::sync::Mutex::new(FsWatcher::new(
         fs_handler,
-        &group_fs_watcher_config(&group, &fs_watcher_config),
+        &group_fs_watcher_config(&group[0], &fs_watcher_config),
       )?));
       let mut members = Vec::with_capacity(group.len());
       for config in group {
@@ -183,59 +182,18 @@ impl Watcher {
   }
 }
 
-/// The shared watcher of a config group can carry one `watch.exclude` ignore filter only when
-/// every member's `exclude` and `cwd` agree — the normal case, since `watch` options come from
-/// the input config. When they differ, the backend gets no filter and each task drops its own
-/// excluded paths at event time (`WatchTask::is_watched_file`); a union would silence one
-/// member's excludes for all members.
+/// Every member of a group is an output of the same input config, and `watch` and `cwd` are
+/// input options, so the first member's `watch.exclude` is the group's ignore filter.
 /// See internal-docs/watch-mode/implementation.md ("Backend selection").
 fn group_fs_watcher_config(
-  group: &[BundlerConfig],
+  first: &BundlerConfig,
   fs_watcher_config: &FsWatcherConfig,
 ) -> FsWatcherConfig {
-  let Some(first) = group.first() else { return fs_watcher_config.clone() };
-  let first_watch = first.options.watch.as_ref();
-  let shared = group[1..].iter().all(|config| {
-    let watch = config.options.watch.as_ref();
-    config.options.cwd == first.options.cwd
-      && same_patterns(
-        watch.and_then(|watch| watch.exclude.as_deref()),
-        first_watch.and_then(|watch| watch.exclude.as_deref()),
-      )
-  });
-  if shared {
-    FsWatcherConfig {
-      ignored: first_watch.and_then(|watch| watch.exclude.clone()),
-      // Normalization defaults a missing `cwd` to `current_dir` (prepare_build_context.rs).
-      cwd: first.options.cwd.clone().unwrap_or_else(|| std::env::current_dir().unwrap_or_default()),
-      ..fs_watcher_config.clone()
-    }
-  } else {
-    fs_watcher_config.clone()
-  }
-}
-
-/// Structural equality for `watch.exclude` patterns. A regex compares by its source pattern
-/// when it uses the optimized engine; an ECMAScript fallback regex exposes no source and is
-/// therefore only "same" by pointer, which we cannot observe — treat it as different so the
-/// group falls back to no shared filter.
-fn same_patterns(left: Option<&[StringOrRegex]>, right: Option<&[StringOrRegex]>) -> bool {
-  match (left, right) {
-    (None, None) => true,
-    (Some(left), Some(right)) => {
-      left.len() == right.len()
-        && left.iter().zip(right).all(|(left, right)| match (left, right) {
-          (StringOrRegex::String(left), StringOrRegex::String(right)) => left == right,
-          (StringOrRegex::Regex(left), StringOrRegex::Regex(right)) => {
-            match (left.regex_pattern(), right.regex_pattern()) {
-              (Some(left), Some(right)) => left == right,
-              _ => false,
-            }
-          }
-          _ => false,
-        })
-    }
-    _ => false,
+  FsWatcherConfig {
+    ignored: first.options.watch.as_ref().and_then(|watch| watch.exclude.clone()),
+    // Normalization defaults a missing `cwd` to `current_dir` (prepare_build_context.rs).
+    cwd: first.options.cwd.clone().unwrap_or_else(|| std::env::current_dir().unwrap_or_default()),
+    ..fs_watcher_config.clone()
   }
 }
 

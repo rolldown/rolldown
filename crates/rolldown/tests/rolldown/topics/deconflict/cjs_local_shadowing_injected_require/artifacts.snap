@@ -1,0 +1,21 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+//#region lib.cjs
+//#endregion
+//#region main.js
+var main_default = (/* @__PURE__ */ __toESM((/* @__PURE__ */ __commonJSMin(((exports) => {
+	var require$1 = () => "local";
+	exports.local = require$1();
+	exports.load = () => Promise.resolve().then(() => /* @__PURE__ */ __toESM(require("node:path"), 1));
+})))())).default;
+//#endregion
+module.exports = main_default;
+
+```

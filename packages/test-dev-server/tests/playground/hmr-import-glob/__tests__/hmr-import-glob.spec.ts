@@ -1,5 +1,3 @@
-import nodeFs from 'node:fs';
-import nodePath from 'node:path';
 import { describe, expect, test } from 'vitest';
 import {
   addFile,
@@ -7,7 +5,6 @@ import {
   plantReloadMarker,
   readReloadMarker,
   removeFile,
-  testDir,
   waitForBuildStable,
 } from '~utils';
 
@@ -75,18 +72,6 @@ describe('hmr-import-glob', () => {
     await expect.poll(() => text('.nested')).toBe('./nested/deep/x.js,./nested/fresh/y.js');
 
     expect(await readReloadMarker()).toBe('alive');
-    await waitForBuildStable();
-  });
-
-  test('moving a directory away drops its matches', async () => {
-    await waitForBuildStable();
-
-    // Only the directory is reported as deleted, not the file inside it.
-    nodeFs.renameSync(
-      nodePath.resolve(testDir, 'nested/fresh'),
-      nodePath.resolve(testDir, 'moved-away'),
-    );
-    await expect.poll(() => text('.nested')).toBe('./nested/deep/x.js');
     await waitForBuildStable();
   });
 

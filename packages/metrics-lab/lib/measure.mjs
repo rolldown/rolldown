@@ -33,11 +33,50 @@ export function scaleThrottle(base, netScale = 1) {
   };
 }
 
+/**
+ * Element identity helpers shared by every injected script that names elements:
+ * a structural path (tag:nth-of-type chain from <body>, stable across builds that
+ * keep the DOM shape) and a short human label.
+ */
+export const ELEMENT_PATH_JS = `const pathOf = (el) => {
+    const parts = [];
+    for (let n = el; n && n !== document.documentElement; n = n.parentElement) {
+      let i = 1;
+      for (let s = n.previousElementSibling; s; s = s.previousElementSibling) if (s.tagName === n.tagName) i++;
+      parts.push(n.tagName.toLowerCase() + ':' + i);
+    }
+    return parts.reverse().join('>');
+  };
+  const labelOf = (el) => {
+    let label = el.tagName.toLowerCase();
+    if (el.id) label += '#' + el.id;
+    else if (typeof el.className === 'string' && el.className.trim()) {
+      label += '.' + el.className.trim().split(/\\s+/).slice(0, 2).join('.');
+    }
+    return label.slice(0, 60);
+  };`;
+
 export const OBSERVER_JS = `(() => {
-  const M = (window.__perfMetrics = { fcp: null, lcp: null, cls: 0, longtasks: [] });
+  const M = (window.__perfMetrics = { fcp: null, lcp: null, lcpEntry: null, lcpNode: null, cls: 0, longtasks: [] });
+  ${ELEMENT_PATH_JS}
   try {
     new PerformanceObserver((list) => {
-      for (const e of list.getEntries()) M.lcp = e.startTime;
+      for (const e of list.getEntries()) {
+        M.lcp = e.startTime;
+        // What the timestamp belongs to, as of the entry - parity compares it with
+        // the original build's and with what the element shows once settled. No
+        // layout reads here: this runs inside the timed, throttled load.
+        const el = e.element;
+        M.lcpNode = el;
+        M.lcpEntry = {
+          size: e.size,
+          url: e.url || '',
+          tag: el ? el.tagName.toLowerCase() : null,
+          path: el ? pathOf(el) : null,
+          label: el ? labelOf(el) : null,
+          text: el ? (el.textContent || '').replace(/\\s+/g, ' ').trim().slice(0, 80) : '',
+        };
+      }
     }).observe({ type: 'largest-contentful-paint', buffered: true });
     new PerformanceObserver((list) => {
       for (const e of list.getEntries()) if (e.name === 'first-contentful-paint') M.fcp = e.startTime;
@@ -123,6 +162,29 @@ const COLLECT_JS = `(() => {
     ready: Object.assign({}, window.__ready || {}),
     heroTitle: (() => { const el = document.getElementById('hero-title'); return el ? el.textContent || '' : null; })(),
     heroSubtitle: (() => { const el = document.getElementById('hero-subtitle'); return el ? el.textContent || '' : null; })(),
+    // The LCP entry plus what its element shows after settle. A same-size swap
+    // (placeholder image -> real image, skeleton -> copy) emits no new LCP entry,
+    // so the timestamp keeps pointing at the placeholder - visible only here.
+    lcpElement: (() => {
+      const d = M.lcpEntry;
+      if (!d) return null;
+      const el = M.lcpNode;
+      if (!el || !el.isConnected) return Object.assign({}, d, { detached: true });
+      const r = el.getBoundingClientRect();
+      let finalUrl = null;
+      if (d.url) {
+        if (el.tagName === 'IMG') finalUrl = el.currentSrc || el.src;
+        else if (el.tagName === 'image') finalUrl = el.href && el.href.baseVal;
+        else finalUrl = (getComputedStyle(el).backgroundImage.match(/url\\("?(.*?)"?\\)/) || [])[1] || null;
+        finalUrl = finalUrl ? finalUrl.replace(location.origin, '') : d.url;
+      }
+      return Object.assign({}, d, {
+        detached: false,
+        rect: { w: Math.round(r.width), h: Math.round(r.height) },
+        finalUrl,
+        finalText: (el.textContent || '').replace(/\\s+/g, ' ').trim().slice(0, 80),
+      });
+    })(),
   };
 })()`;
 
@@ -268,6 +330,25 @@ export function renderBlockingGate(samples) {
   };
 }
 
+/**
+ * The element the LCP timestamp belongs to, by majority across runs (a page whose
+ * LCP element flips between runs reports the common one and how often it won).
+ */
+export function lcpElementOf(samples) {
+  const tally = new Map();
+  for (const sample of samples) {
+    const d = sample.lcpElement;
+    if (!d?.tag) continue;
+    const key = `${d.path}|${d.url}`;
+    const entry = tally.get(key) ?? { d, runs: 0 };
+    entry.runs += 1;
+    tally.set(key, entry);
+  }
+  let best = null;
+  for (const entry of tally.values()) if (!best || entry.runs > best.runs) best = entry;
+  return best ? { ...best.d, runs: best.runs, of: samples.length } : null;
+}
+
 /** Fold N samples into the flat runtime metric-id map plus the correctness guard. */
 export function summarize(samples, expectedFeatures = []) {
   const nums = (key) => samples.map((s) => s[key]).filter((v) => typeof v === 'number');
@@ -300,6 +381,7 @@ export function summarize(samples, expectedFeatures = []) {
     gatingFetches: gatingFetches(samples),
     resourceWeight: resourceWeight(samples),
     renderBlockingGate: renderBlockingGate(samples),
+    lcpElement: lcpElementOf(samples),
     guard: {
       allFeaturesReady: samples.every((s) =>
         expectedFeatures.every((f) => s.ready && s.ready[f] === true),

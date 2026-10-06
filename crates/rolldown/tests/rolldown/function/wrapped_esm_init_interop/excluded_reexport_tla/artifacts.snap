@@ -1,0 +1,46 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+//#region leaf.js
+var used;
+var init_leaf = __esmMin((async () => {
+	globalThis.__log.push("LEAF:before");
+	await Promise.resolve();
+	globalThis.__ready = "ready";
+	globalThis.__log.push("LEAF:after");
+	used = "used";
+}));
+//#endregion
+//#region carrier.js
+var marker;
+var init_carrier = __esmMin((async () => {
+	await init_leaf();
+	globalThis.__log.push(`CARRIER:${globalThis.__ready}`);
+	marker = "marker";
+}));
+//#endregion
+//#region barrel.js
+var barrel_exports = /* @__PURE__ */ __exportAll({ result: () => result });
+var result;
+var init_barrel = __esmMin((async () => {
+	await init_carrier();
+	await init_leaf();
+	globalThis.__log.push(`BARREL:${used}:${marker}`);
+	result = used + marker;
+}));
+//#endregion
+//#region main.js
+async function run() {
+	const { result } = await init_barrel().then(() => barrel_exports);
+	return result;
+}
+//#endregion
+export { run as default };
+
+```

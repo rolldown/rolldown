@@ -9,6 +9,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 // HIDDEN [\0rolldown/runtime.js]
 let node_assert_strict = require("node:assert/strict");
 node_assert_strict = __toESM(node_assert_strict);
+//#region cjs.js
 //#endregion
 //#region main.js
 var import_cjs = /* @__PURE__ */ __toESM((/* @__PURE__ */ __commonJSMin(((exports, module) => {

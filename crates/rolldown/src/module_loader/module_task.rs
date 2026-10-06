@@ -76,7 +76,7 @@ impl<Fs: FileSystem + Clone + 'static> ModuleTask<Fs> {
     }
   }
 
-  #[tracing::instrument(name="NormalModuleTask::run", level = "trace", skip_all, fields(module_id = ?self.resolved_id.id))]
+  #[tracing::instrument(name="NormalModuleTask::run", level = "trace", skip_all, fields(module_id = %self.resolved_id.id))]
   pub async fn run(mut self) {
     if let Err(errs) = self.run_inner().await {
       self.ctx.plugin_driver.mark_context_load_modules_loaded(self.resolved_id.id.clone());
@@ -315,7 +315,7 @@ impl<Fs: FileSystem + Clone + 'static> ModuleTask<Fs> {
       // e.g.
       // sass -> recommended npm install `sass` etc
       Err(anyhow::anyhow!(
-        "`{:?}` is not specified module type,  rolldown can't handle this asset correctly. Please use the load/transform hook to transform the resource",
+        "`{}` is not specified module type,  rolldown can't handle this asset correctly. Please use the load/transform hook to transform the resource",
         self.resolved_id.id
       ))?;
     }

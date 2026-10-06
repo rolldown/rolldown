@@ -1,6 +1,23 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
 ---
+# warnings
+
+## MODULE_LEVEL_DIRECTIVE
+
+```text
+[MODULE_LEVEL_DIRECTIVE] The semantics of the module level directive "use wtf" in "hoist-directive.js" may not be preserved when bundling.
+   ╭─[ hoist-directive.js:1:1 ]
+   │
+ 1 │ "use wtf"
+   │ ────┬────  
+   │     ╰────── module level directive may not be preserved
+   │ 
+   │ Help: For more information, see https://rolldown.rs/in-depth/directives#other-directives
+───╯
+
+```
+
 # Assets
 
 ## hoist-directive.js

@@ -65,7 +65,7 @@ pub fn render_ecma_module(
 ///
 /// A `SOURCEMAP_BROKEN` warning is pushed onto `warnings` for every plugin that
 /// omitted its sourcemap, since that breaks the mapping chain for `module_id`.
-fn collapse_module_sourcemap(
+pub fn collapse_module_sourcemap(
   sourcemap_chain: &[SourcemapChainElement],
   codegen_map: Option<SourceMap>,
   module_id: &str,

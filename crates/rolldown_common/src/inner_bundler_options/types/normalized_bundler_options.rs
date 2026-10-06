@@ -14,6 +14,7 @@ use super::code_splitting_mode::CodeSplittingMode;
 use super::comments::CommentsOptions;
 use super::experimental_options::ExperimentalOptions;
 use super::generated_code_options::GeneratedCodeOptions;
+use super::inline_common_chunks_options::NormalizedInlineCommonChunksOptions;
 use super::legal_comments::LegalComments;
 use super::manual_code_splitting_options::ManualCodeSplittingOptions;
 use super::minify_options::MinifyOptions;
@@ -33,8 +34,8 @@ use crate::inner_bundler_options::types::optimization::NormalizedOptimizationCon
 use crate::{
   DeferSyncScanDataOption, EmittedAsset, EsModuleFlag, FilenameTemplate, GlobalsOutputOption,
   HashCharacters, InjectImport, InputItem, InvalidateJsSideCache, LogLevel,
-  MakeAbsoluteExternalsRelative, ModuleType, OnLog, RollupPreRenderedAsset, StrictMode,
-  TransformOptions,
+  MakeAbsoluteExternalsRelative, ModuleType, OnLog, PluginTimingsOption, RollupPreRenderedAsset,
+  StrictMode, TransformOptions,
 };
 
 #[expect(clippy::struct_excessive_bools)] // Using raw booleans is more clear in this case
@@ -93,6 +94,8 @@ pub struct NormalizedBundlerOptions {
   pub code_splitting: CodeSplittingMode,
   pub dynamic_import_in_cjs: bool,
   pub manual_code_splitting: Option<ManualCodeSplittingOptions>,
+  /// See internal-docs/inline-common-chunks/implementation.md.
+  pub inline_common_chunks: Option<NormalizedInlineCommonChunksOptions>,
   pub checks: EventKindSwitcher,
   pub profiler_names: bool,
   pub watch: WatchOption,
@@ -101,6 +104,8 @@ pub struct NormalizedBundlerOptions {
   pub drop_labels: FxHashSet<String>,
   pub polyfill_require: bool,
   pub defer_sync_scan_data: Option<DeferSyncScanDataOption>,
+  /// Pulled at close so the measurement includes `closeBundle`.
+  pub plugin_timings: Option<PluginTimingsOption>,
   pub transform_options: Box<TransformOptions>,
   pub make_absolute_externals_relative: MakeAbsoluteExternalsRelative,
   pub invalidate_js_side_cache: Option<InvalidateJsSideCache>,
@@ -172,6 +177,7 @@ impl Default for NormalizedBundlerOptions {
       code_splitting: CodeSplittingMode::default(),
       dynamic_import_in_cjs: true,
       manual_code_splitting: Default::default(),
+      inline_common_chunks: Default::default(),
       checks: Default::default(),
       profiler_names: Default::default(),
       watch: Default::default(),
@@ -180,6 +186,7 @@ impl Default for NormalizedBundlerOptions {
       drop_labels: Default::default(),
       polyfill_require: Default::default(),
       defer_sync_scan_data: Default::default(),
+      plugin_timings: Default::default(),
       transform_options: Default::default(),
       make_absolute_externals_relative: Default::default(),
       invalidate_js_side_cache: Default::default(),
@@ -220,6 +227,20 @@ impl NormalizedBundlerOptions {
     self.strict_execution_order
   }
 
+  /// Strict execution order with on-demand wrapping — the selective mode that derives its wrapping
+  /// plan from the execution-order analysis instead of deferring every eligible module.
+  pub fn is_strict_on_demand_wrapping_enabled(&self) -> bool {
+    self.strict_execution_order && self.experimental.is_on_demand_wrapping_enabled()
+  }
+
+  pub fn has_manual_code_splitting_groups(&self) -> bool {
+    self
+      .manual_code_splitting
+      .as_ref()
+      .and_then(|options| options.groups.as_ref())
+      .is_some_and(|groups| !groups.is_empty())
+  }
+
   /// make sure the `polyfill_require` is only valid for `esm` format with `node` platform
   #[inline]
   pub fn polyfill_require_for_esm_format_with_node_platform(&self) -> bool {
@@ -235,7 +256,7 @@ impl NormalizedBundlerOptions {
   ) -> anyhow::Result<FilenameTemplate> {
     Ok(FilenameTemplate::new(
       self.asset_filenames.call(rollup_pre_rendered_asset).await?,
-      "assetFileNames",
+      "output.assetFileNames",
     ))
   }
 
@@ -256,7 +277,7 @@ impl NormalizedBundlerOptions {
         .map_or(vec![], |original_file_name| vec![original_file_name.into()]),
     };
     let asset_filename = self.asset_filenames.call(&rollup_pre_rendered_asset).await?;
-    Ok(Some(FilenameTemplate::new(asset_filename, "assetFileNames")))
+    Ok(Some(FilenameTemplate::new(asset_filename, "output.assetFileNames")))
   }
 
   pub async fn sanitize_file_name_with_file(

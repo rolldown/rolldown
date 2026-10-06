@@ -108,14 +108,6 @@ export { __esmMin as n, __exportAll as r, __commonJSMin as t };
 ### e1.js
 
 ```js
-import { t as require_e1 } from "./e12.js";
-export default require_e1();
-
-```
-
-### e12.js
-
-```js
 import { t as __commonJSMin } from "./rolldown-runtime.js";
 import { t as require_m5 } from "./m5.js";
 import { t as init_m2 } from "./m22.js";
@@ -126,19 +118,11 @@ var require_e1 = /* @__PURE__ */ __commonJSMin((() => {
 	globalThis.__entryInteropOrder.push("e1");
 }));
 //#endregion
-export { require_e1 as t };
+export default require_e1();
 
 ```
 
 ### e2.js
-
-```js
-import { t as require_e2 } from "./e22.js";
-export default require_e2();
-
-```
-
-### e22.js
 
 ```js
 import { t as __commonJSMin } from "./rolldown-runtime.js";
@@ -149,7 +133,7 @@ var require_e2 = /* @__PURE__ */ __commonJSMin((() => {
 	globalThis.__entryInteropOrder.push("e2");
 }));
 //#endregion
-export { require_e2 as t };
+export default require_e2();
 
 ```
 

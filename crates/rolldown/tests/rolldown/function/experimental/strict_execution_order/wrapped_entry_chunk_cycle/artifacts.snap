@@ -35,6 +35,7 @@ export { extend, useDep };
 ```js
 import { n as __esmMin, t as __commonJSMin } from "./rolldown-runtime.js";
 import { n as init_dep } from "./dep.js";
+//#region shared.js
 var extend;
 var init_shared = __esmMin((() => {
 	extend = Object.assign;
@@ -45,6 +46,8 @@ var require_interop = /* @__PURE__ */ __commonJSMin((() => {
 	init_shared();
 	init_dep();
 }));
+//#endregion
+//#region hub.js
 var init_hub = __esmMin((() => {
 	require_interop();
 	init_shared();
@@ -56,15 +59,6 @@ export { extend as n, init_shared as r, init_hub as t };
 ```
 
 ## main.js
-
-```js
-import { n as init_main, t as go } from "./main2.js";
-init_main();
-export { go };
-
-```
-
-## main2.js
 
 ```js
 import { n as __esmMin } from "./rolldown-runtime.js";
@@ -79,7 +73,8 @@ function init_main() {
 	})))();
 }
 //#endregion
-export { init_main as n, go as t };
+init_main();
+export { go };
 
 ```
 
@@ -166,6 +161,7 @@ exports.useDep = require_dep.useDep;
 ```js
 const require_rolldown_runtime = require("./rolldown-runtime.js");
 const require_dep = require("./dep.js");
+//#region shared.js
 var extend;
 var init_shared = require_rolldown_runtime.__esmMin((() => {
 	extend = Object.assign;
@@ -176,6 +172,8 @@ var require_interop = /* @__PURE__ */ require_rolldown_runtime.__commonJSMin((()
 	init_shared();
 	require_dep.init_dep();
 }));
+//#endregion
+//#region hub.js
 var init_hub = require_rolldown_runtime.__esmMin((() => {
 	require_interop();
 	init_shared();
@@ -207,15 +205,6 @@ Object.defineProperty(exports, "init_shared", {
 
 ```js
 Object.defineProperty(exports, Symbol.toStringTag, { value: "Module" });
-const require_main = require("./main2.js");
-require_main.init_main();
-exports.go = require_main.go;
-
-```
-
-### main2.js
-
-```js
 const require_rolldown_runtime = require("./rolldown-runtime.js");
 const require_dep = require("./dep.js");
 const require_hub = require("./hub2.js");
@@ -228,18 +217,8 @@ function init_main() {
 	})))();
 }
 //#endregion
-Object.defineProperty(exports, "go", {
-	enumerable: true,
-	get: function() {
-		return go;
-	}
-});
-Object.defineProperty(exports, "init_main", {
-	enumerable: true,
-	get: function() {
-		return init_main;
-	}
-});
+init_main();
+exports.go = go;
 
 ```
 
@@ -343,6 +322,7 @@ exports.useDep = require_dep.useDep;
 ```js
 const require_rolldown_runtime = require("./rolldown-runtime.js");
 const require_dep = require("./dep.js");
+//#region shared.js
 var extend;
 var init_shared = require_rolldown_runtime.__esmMin((() => {
 	extend = Object.assign;
@@ -353,6 +333,8 @@ var require_interop = /* @__PURE__ */ require_rolldown_runtime.__commonJSMin((()
 	init_shared();
 	require_dep.init_dep();
 }));
+//#endregion
+//#region hub.js
 var init_hub = require_rolldown_runtime.__esmMin((() => {
 	require_interop();
 	init_shared();
@@ -384,15 +366,6 @@ Object.defineProperty(exports, "init_shared", {
 
 ```js
 Object.defineProperty(exports, Symbol.toStringTag, { value: "Module" });
-const require_main = require("./main2.js");
-require_main.init_main();
-exports.go = require_main.go;
-
-```
-
-### main2.js
-
-```js
 const require_rolldown_runtime = require("./rolldown-runtime.js");
 const require_dep = require("./dep.js");
 const require_hub = require("./hub2.js");
@@ -405,18 +378,8 @@ function init_main() {
 	})))();
 }
 //#endregion
-Object.defineProperty(exports, "go", {
-	enumerable: true,
-	get: function() {
-		return go;
-	}
-});
-Object.defineProperty(exports, "init_main", {
-	enumerable: true,
-	get: function() {
-		return init_main;
-	}
-});
+init_main();
+exports.go = go;
 
 ```
 
@@ -501,6 +464,7 @@ export { extend, useDep };
 ```js
 import { n as __esmMin, t as __commonJSMin } from "./rolldown-runtime.js";
 import { n as init_dep } from "./dep.js";
+//#region shared.js
 var extend;
 var init_shared = __esmMin((() => {
 	extend = Object.assign;
@@ -511,6 +475,8 @@ var require_interop = /* @__PURE__ */ __commonJSMin((() => {
 	init_shared();
 	init_dep();
 }));
+//#endregion
+//#region hub.js
 var init_hub = __esmMin((() => {
 	require_interop();
 	init_shared();
@@ -522,15 +488,6 @@ export { extend as n, init_shared as r, init_hub as t };
 ```
 
 ### main.js
-
-```js
-import { n as init_main, t as go } from "./main2.js";
-init_main();
-export { go };
-
-```
-
-### main2.js
 
 ```js
 import { n as __esmMin } from "./rolldown-runtime.js";
@@ -545,7 +502,8 @@ function init_main() {
 	})))();
 }
 //#endregion
-export { init_main as n, go as t };
+init_main();
+export { go };
 
 ```
 

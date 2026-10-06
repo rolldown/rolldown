@@ -9,6 +9,11 @@ pub fn create_bundler_config_from_binding_options(
   option: BindingBundlerOptions,
 ) -> napi::Result<BundlerConfig> {
   let BindingBundlerOptions { input_options, output_options, parallel_plugins_registry } = option;
+  // Only the parallel-plugin worker pool reads the registry, and wasm has no
+  // threads for that pool. Borrow it so the binding counts as used. Do not
+  // bind it to `_`: that would drop it here instead of at the end of scope.
+  #[cfg(target_family = "wasm")]
+  let _ = &parallel_plugins_registry;
 
   #[cfg(not(target_family = "wasm"))]
   let worker_count =

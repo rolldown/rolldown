@@ -8,6 +8,8 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```js
 //#region circular-import-cycle.js
 console.log(bar());
+//#endregion
+//#region circular-import-constants.js
 function bar() {
 	return 123;
 }
@@ -20,6 +22,8 @@ function bar() {
 ```js
 //#region circular-re-export-cycle.js
 console.log(bar());
+//#endregion
+//#region circular-re-export-constants.js
 function bar() {
 	return 123;
 }
@@ -35,6 +39,8 @@ console.log(0);
 ```js
 //#region circular-re-export-star-cycle.js
 console.log(bar());
+//#endregion
+//#region circular-re-export-star-constants.js
 function bar() {
 	return 123;
 }
@@ -45,6 +51,7 @@ function bar() {
 ## cross-module-entry.js
 
 ```js
+//#region cross-module-constants.js
 //#endregion
 //#region cross-module-entry.js
 console.log(1, 1);
@@ -67,6 +74,7 @@ export { y_keep };
 ## non-circular-export-entry.js
 
 ```js
+//#region non-circular-export-constants.js
 function bar() {
 	return 123;
 }
@@ -80,6 +88,7 @@ console.log(123, bar());
 ## print-shorthand-entry.js
 
 ```js
+//#region print-shorthand-constants.js
 //#endregion
 //#region print-shorthand-entry.js
 console.log({

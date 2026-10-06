@@ -149,7 +149,7 @@ serving. What the harness does own lives in `src/vite-server.ts`:
 Fixes and test adjustments belong on the vitejs/vite `rolldown-canary` branch,
 which both this harness and `packages/vite-tests` track. Everything
 environment-specific happens in untracked files, via the
-`scripts/src/setup-vite/` script (`just setup-vite`, idempotent, `vp`-only).
+`scripts/src/setup-vite/` script (`just setup-vite`, idempotent).
 It is the only entry point that touches `vite/`: the command that moves the
 commit also rebuilds everything right after, so the checkout and the built
 dist never drift apart. The steps:
@@ -158,13 +158,19 @@ dist never drift apart. The steps:
    (clone if missing, update otherwise); a checkout taken over by the
    developer (dirty, or off `rolldown-canary`) is built exactly as-is,
 2. `vp install --frozen-lockfile` (vp delegates to the checkout's pinned
-   pnpm; this also resets a previous step-4 swap, so the build always uses
-   Vite's own pinned rolldown),
-3. build `packages/vite` via its own `build` script (`vp run build`),
-4. swap `vite/packages/vite/node_modules/rolldown` to a symlink at the
-   workspace's `packages/rolldown`, so Vite's dist resolves the local binding
-   at runtime. Any install inside the checkout resets this, so re-run the
-   script after such an install.
+   pnpm; this also resets any previous step-3 symlink swap),
+3. link `vite/packages/vite/node_modules/rolldown` to the workspace's
+   `packages/rolldown` before building: Vite's browser client inlines
+   `rolldown/experimental/runtime`, so its `DevRuntime` must match the code
+   emitted by the workspace rolldown,
+4. rebuild `packages/vite/dist/node` and `dist/client` with the workspace
+   Rolldown CLI, skipping the type build. `execFileSync` runs the CLI with
+   the current Node executable, avoiding `.bin` shims and Windows shell
+   parsing. Using `vp run` here would re-sync dependencies and undo the link,
+5. verify that Vite's `rolldown` resolution lands in the workspace package.
+
+Any install inside the checkout resets the link, so re-run the setup script
+after such an install.
 
 Repo-wide tools ignore `vite/**` (a `.gitignore`
 entry covers gitignore-respecting walkers like oxfmt, plus `.typos.toml` and

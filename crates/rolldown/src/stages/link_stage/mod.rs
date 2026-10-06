@@ -23,7 +23,10 @@ use rustc_hash::{FxHashMap, FxHashSet};
 use crate::{
   SharedOptions,
   type_alias::{IndexEcmaAst, IndexStmtInfos},
-  types::linking_metadata::{LinkingMetadata, LinkingMetadataVec},
+  types::{
+    linking_metadata::{LinkingMetadata, LinkingMetadataVec},
+    member_read_star_reexport_path::MemberReadStarReexportPath,
+  },
 };
 
 use super::scan_stage::NormalizedScanStageOutput;
@@ -79,6 +82,7 @@ pub struct LinkStageOutput {
   pub normal_symbol_exports_chain_map: FxHashMap<SymbolRef, Vec<SymbolRef>>,
   pub star_reexport_records_by_imported_symbol:
     FxHashMap<SymbolRef, Vec<Vec<(ModuleIdx, rolldown_common::ImportRecordIdx)>>>,
+  pub member_read_star_reexport_paths: Vec<MemberReadStarReexportPath>,
   pub user_defined_entry_modules: FxHashSet<ModuleIdx>,
   /// True if any module has enum member values to inline. Computed once to avoid
   /// repeated full module table scans.
@@ -107,13 +111,14 @@ pub struct LinkStage<'a> {
   pub diagnostics: Diagnostics,
   pub ast_table: IndexEcmaAst,
   pub options: &'a SharedOptions,
-  pub used_symbol_refs: UsedSymbolRefsBuilder,
+  pub used_symbol_refs_builder: UsedSymbolRefsBuilder,
   pub used_external_symbols: UsedExternalSymbols,
   pub safely_merge_cjs_ns_map: FxHashMap<ModuleIdx, SafelyMergeCjsNsInfo>,
   pub dynamic_import_exports_usage_map: FxHashMap<ModuleIdx, DynamicImportExportsUsage>,
   pub normal_symbol_exports_chain_map: FxHashMap<SymbolRef, Vec<SymbolRef>>,
   pub star_reexport_records_by_imported_symbol:
     FxHashMap<SymbolRef, Vec<Vec<(ModuleIdx, rolldown_common::ImportRecordIdx)>>>,
+  pub member_read_star_reexport_paths: Vec<MemberReadStarReexportPath>,
   pub external_import_namespace_merger: FxHashMap<ModuleIdx, FxIndexSet<SymbolRef>>,
   pub overrode_preserve_entry_signature_map: FxHashMap<ModuleIdx, PreserveEntrySignatures>,
   pub entry_point_to_reference_ids: FxHashMap<EntryPoint, Vec<ArcStr>>,
@@ -214,11 +219,12 @@ impl<'a> LinkStage<'a> {
       ast_table: scan_stage_output.index_ecma_ast,
       dynamic_import_exports_usage_map: scan_stage_output.dynamic_import_exports_usage_map,
       options,
-      used_symbol_refs: UsedSymbolRefsBuilder::default(),
+      used_symbol_refs_builder: UsedSymbolRefsBuilder::default(),
       used_external_symbols: UsedExternalSymbols::default(),
       safely_merge_cjs_ns_map: FxHashMap::default(),
       normal_symbol_exports_chain_map: FxHashMap::default(),
       star_reexport_records_by_imported_symbol: FxHashMap::default(),
+      member_read_star_reexport_paths: Vec::new(),
       external_import_namespace_merger: FxHashMap::default(),
       overrode_preserve_entry_signature_map: scan_stage_output
         .overrode_preserve_entry_signature_map,
@@ -247,7 +253,12 @@ impl<'a> LinkStage<'a> {
     self.include_statements(&unreachable_import_expression_node_ids);
     self.patch_module_dependencies();
 
-    tracing::trace!("meta {:#?}", self.metas.iter_enumerated().collect::<Vec<_>>());
+    tracing::trace!(
+      modules = self.metas.len(),
+      included_modules = self.metas.iter().filter(|meta| meta.is_included).count(),
+      resolved_exports = self.metas.iter().map(|meta| meta.resolved_exports.len()).sum::<usize>(),
+      "link metadata ready"
+    );
 
     (
       LinkStageOutput {
@@ -269,11 +280,12 @@ impl<'a> LinkStage<'a> {
         global_constant_symbol_map: self.global_constant_symbol_map,
         normal_symbol_exports_chain_map: self.normal_symbol_exports_chain_map,
         star_reexport_records_by_imported_symbol: self.star_reexport_records_by_imported_symbol,
+        member_read_star_reexport_paths: self.member_read_star_reexport_paths,
         user_defined_entry_modules: self.user_defined_entry_modules,
         has_enum_inlining: self.has_enum_inlining,
       },
       self.ast_table,
-      self.used_symbol_refs,
+      self.used_symbol_refs_builder,
     )
   }
 

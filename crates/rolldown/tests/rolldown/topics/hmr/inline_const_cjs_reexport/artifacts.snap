@@ -21,14 +21,9 @@ __rolldown_runtime__.registerGraph({
 		[],
 		[0, 1],
 		[2]
-	],
-	dynamicEdges: [
-		[],
-		[],
-		[],
-		[]
 	]
 });
+//#region jsx-dev-runtime.production.js
 //#endregion
 //#region jsx-dev-runtime.development.js
 var require_jsx_dev_runtime_development = /* @__PURE__ */ __commonJSMin(((exports, module) => {

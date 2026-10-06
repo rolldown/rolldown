@@ -1,0 +1,23 @@
+{
+  "_comment": "A wrapped CJS dynamic entry can reach an external star only transitively. Collapsing its facade must not drop that external interface from the resolved import namespace.",
+  "configName": "wrap-all",
+  "config": {
+    "external": ["external"],
+    "format": "cjs",
+    "preserveEntrySignatures": "allow-extension",
+    "strictExecutionOrder": true,
+    "codeSplitting": {
+      "includeDependenciesRecursively": false,
+      "groups": [
+        {
+          "name": "reader",
+          "test": "[\\\\/]reader\\.js$"
+        }
+      ]
+    },
+    "experimental": {
+      "attachDebugInfo": "full"
+    }
+  },
+  "hiddenRuntimeModule": false
+}

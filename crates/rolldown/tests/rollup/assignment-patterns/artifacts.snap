@@ -7,6 +7,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 import assert from "assert";
+//#region other.js
 //#endregion
 //#region main.js
 function foo(bar = 1, { baz } = { baz: 2 }, [[[, x = 3] = []] = []] = [], ...items) {

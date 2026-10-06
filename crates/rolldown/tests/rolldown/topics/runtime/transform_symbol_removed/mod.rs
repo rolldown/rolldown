@@ -1,4 +1,4 @@
-use std::{borrow::Cow, sync::Arc};
+use std::borrow::Cow;
 
 use rolldown::{BundlerOptions, InputItem};
 use rolldown_common::RUNTIME_MODULE_KEY;
@@ -53,7 +53,7 @@ async fn runtime_module_symbol_removed_error() {
         }]),
         ..Default::default()
       },
-      vec![Arc::new(RuntimeBreakingPlugin)],
+      vec![Plugin::new_shared(RuntimeBreakingPlugin)],
     )
     .await;
 }

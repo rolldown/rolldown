@@ -1,4 +1,5 @@
 use std::{
+  borrow::Cow,
   cmp::{Ordering, Reverse},
   collections::BinaryHeap,
   path::Path,
@@ -6,17 +7,18 @@ use std::{
 };
 
 use arcstr::ArcStr;
-use itertools::Itertools;
+use itertools::{Either, Itertools};
 use oxc_index::IndexVec;
 use rolldown_common::{
   Chunk, ChunkKind, ChunkingContext, EntryPoint, ManualCodeSplittingOptions, MatchGroup,
-  MatchGroupTest, Module, ModuleIdx, ModuleTable, ModuleTagBitSet, ModuleTagRegistry,
+  MatchGroupName, Module, ModuleIdx, ModuleTable, ModuleTagBitSet, ModuleTagRegistry, NormalModule,
 };
 use rolldown_error::BuildResult;
 use rolldown_plugin::SharedPluginDriver;
 use rolldown_utils::{BitSet, IndexBitSet, xxhash::xxhash_with_base};
 use rustc_hash::{FxHashMap, FxHashSet};
 
+use crate::utils::module_id_matcher::match_module_ids;
 use crate::{
   SharedOptions, chunk_graph::ChunkGraph, stages::link_stage::LinkStageOutput,
   types::linking_metadata::LinkingMetadataVec,
@@ -112,6 +114,49 @@ impl ManualSplitter<'_> {
     Ok(())
   }
 
+  /// Runs the checks that sit between a group's `test` call and its `name` call.
+  ///
+  /// They read data that only Rust holds. That is why `test` and `name` need two calls.
+  fn passes_static_filters(
+    &self,
+    match_group_index: usize,
+    match_group: &MatchGroup,
+    module: &NormalModule,
+  ) -> bool {
+    let splitting_info = &self.index_splitting_info[module.idx];
+
+    // Filter by module tags. See internal-docs/module-tags/implementation.md
+    if let Some(required_tags) = &self.match_group_required_tags[match_group_index] {
+      if !splitting_info.tags_bit_set.contains_all(required_tags) {
+        return false;
+      }
+    }
+
+    let allow_min_module_size =
+      match_group.min_module_size.map_or(self.chunking_options.min_module_size, Some);
+    let allow_max_module_size =
+      match_group.max_module_size.map_or(self.chunking_options.max_module_size, Some);
+
+    let is_min_module_size_satisfied =
+      allow_min_module_size.is_none_or(|min_module_size| module.size() >= min_module_size);
+    let is_max_module_size_satisfied =
+      allow_max_module_size.is_none_or(|max_module_size| module.size() <= max_module_size);
+
+    if !is_min_module_size_satisfied || !is_max_module_size_satisfied {
+      return false;
+    }
+
+    if let Some(allow_min_share_count) =
+      match_group.min_share_count.map_or(self.chunking_options.min_share_count, Some)
+    {
+      if splitting_info.share_count < allow_min_share_count {
+        return false;
+      }
+    }
+
+    true
+  }
+
   async fn build_module_groups(
     &self,
   ) -> BuildResult<(IndexVec<ModuleGroupIdx, ModuleGroup>, Vec<ModuleGroup>)> {
@@ -127,74 +172,64 @@ impl ManualSplitter<'_> {
     // Without this, a stateful function would produce different chunk assignments across runs
     // because `ModuleIdx` is assigned in module-load completion order, which varies with
     // parallel `resolveId`/`load`.
-    let sorted_normal_modules = self
+    let candidate_modules = self
       .link_output
       .module_table
       .modules
       .iter()
       .filter_map(Module::as_normal)
-      .sorted_unstable_by(|a, b| a.stable_id.cmp(&b.stable_id));
+      .filter(|module| {
+        metas[module.idx].is_included && !self.module_to_assigned.has_bit(module.idx)
+      })
+      .sorted_unstable_by(|a, b| a.stable_id.cmp(&b.stable_id))
+      .collect_vec();
 
-    for normal_module in sorted_normal_modules {
-      if !metas[normal_module.idx].is_included {
+    // `test` and `name` are JS callbacks, so one call per module would cross the napi boundary
+    // M * G times. One batched call per group replaces that.
+    //
+    // A group cannot narrow `candidate_modules` to what earlier groups left behind. Priority
+    // resolves the overlap later, in `emit_chunk_from_group`. If this loop dropped matched
+    // modules, a module would go to the first group in the list, not to the group with the
+    // highest priority.
+    let ctx = ChunkingContext::new(Arc::clone(&self.plugin_driver.module_infos));
+
+    for (match_group_index, match_group) in self.match_groups.iter().copied().enumerate() {
+      let matched = match &match_group.test {
+        None => vec![true; candidate_modules.len()],
+        Some(test) => {
+          let ids = candidate_modules.iter().map(|module| module.id.as_str()).collect_vec();
+          match_module_ids(test, &ids, "a `codeSplitting` group `test` function").await?
+        }
+      };
+
+      let captured = candidate_modules
+        .iter()
+        .copied()
+        .zip(matched)
+        .filter(|(module, is_matched)| {
+          *is_matched && self.passes_static_filters(match_group_index, match_group, module)
+        })
+        .map(|(module, _)| module)
+        .collect_vec();
+
+      if captured.is_empty() {
         continue;
       }
 
-      if self.module_to_assigned.has_bit(normal_module.idx) {
-        continue;
-      }
-
-      let splitting_info = &self.index_splitting_info[normal_module.idx];
-
-      for (match_group_index, match_group) in self.match_groups.iter().copied().enumerate() {
-        let is_matched = match &match_group.test {
-          None => true,
-          Some(MatchGroupTest::Regex(reg)) => reg.matches(&normal_module.id),
-          Some(MatchGroupTest::Function(func)) => {
-            func(&normal_module.id).await?.unwrap_or_default()
-          }
-        };
-
-        if !is_matched {
-          continue;
+      let names = match &match_group.name {
+        MatchGroupName::Static(name) => vec![Some(Cow::Borrowed(name.as_str())); captured.len()],
+        MatchGroupName::Dynamic(_) => {
+          let module_ids = captured.iter().map(|module| module.id.to_string()).collect_vec();
+          match_group.name.values(&ctx, module_ids).await?
         }
+      };
 
-        // Filter by module tags. See internal-docs/module-tags/implementation.md
-        if let Some(required_tags) = &self.match_group_required_tags[match_group_index] {
-          if !splitting_info.tags_bit_set.contains_all(required_tags) {
-            continue;
-          }
-        }
-
-        let allow_min_module_size =
-          match_group.min_module_size.map_or(self.chunking_options.min_module_size, Some);
-        let allow_max_module_size =
-          match_group.max_module_size.map_or(self.chunking_options.max_module_size, Some);
-
-        let is_min_module_size_satisfied = allow_min_module_size
-          .is_none_or(|min_module_size| normal_module.size() >= min_module_size);
-        let is_max_module_size_satisfied = allow_max_module_size
-          .is_none_or(|max_module_size| normal_module.size() <= max_module_size);
-
-        if !is_min_module_size_satisfied || !is_max_module_size_satisfied {
-          continue;
-        }
-
-        if let Some(allow_min_share_count) =
-          match_group.min_share_count.map_or(self.chunking_options.min_share_count, Some)
-        {
-          if splitting_info.share_count < allow_min_share_count {
-            continue;
-          }
-        }
-
-        let ctx = ChunkingContext::new(Arc::clone(&self.plugin_driver.module_infos));
-
-        let Some(group_name) = match_group.name.value(&ctx, &normal_module.id).await? else {
+      for (normal_module, group_name) in captured.into_iter().zip(names) {
+        let Some(group_name) = group_name else {
           // Group which doesn't have a name will be ignored.
           continue;
         };
-        let group_name = ArcStr::from(group_name);
+        let group_name = ArcStr::from(group_name.as_ref());
 
         let entries_aware = match_group.entries_aware.unwrap_or(false);
         let module_group_id = ModuleGroupId { match_group_index, name: group_name.clone() };
@@ -270,12 +305,25 @@ impl ManualSplitter<'_> {
       let match_group_index = group.match_group_index;
       let name = group.name.clone();
       let priority = group.priority;
+      let merge_threshold =
+        self.match_groups[match_group_index].entries_aware_merge_threshold.unwrap_or(0.0);
+      let group_modules = group.modules.into_iter();
+      // Merge ties use subgroup keys, so assign them in execution order.
+      // See internal-docs/manual-code-splitting/implementation.md.
+      let group_modules = if merge_threshold > 0.0 {
+        Either::Left(
+          group_modules
+            .sorted_unstable_by_key(|idx| self.link_output.module_table[*idx].exec_order()),
+        )
+      } else {
+        Either::Right(group_modules)
+      };
 
       // Group modules by their bitset pattern into subgroups
       let mut bits_to_key: FxHashMap<BitSet, u32> = FxHashMap::default();
       let mut subgroups: FxHashMap<u32, EntriesAwareSubgroup> = FxHashMap::default();
       let mut next_key: u32 = 0;
-      for module_idx in group.modules {
+      for module_idx in group_modules {
         let bits = &self.index_splitting_info[module_idx].bits;
         let key = match bits_to_key.entry(bits.clone()) {
           std::collections::hash_map::Entry::Occupied(occupied) => *occupied.get(),
@@ -300,8 +348,6 @@ impl ManualSplitter<'_> {
       }
 
       // Optionally merge small subgroups
-      let merge_threshold =
-        self.match_groups[match_group_index].entries_aware_merge_threshold.unwrap_or(0.0);
       if merge_threshold > 0.0 && subgroups.len() > 1 {
         let keys: Vec<u32> = subgroups.keys().copied().collect();
         merge_entries_aware_subgroups(
@@ -526,7 +572,15 @@ impl GenerateStage<'_> {
       module_to_assigned,
       flattened_entries,
     };
-    splitter.split().await
+    let result = splitter.split().await;
+    // Release the JS module-info cache on both success and failure.
+    // See internal-docs/manual-code-splitting/implementation.md.
+    if let Some(invalidate_module_info_cache) =
+      &chunking_options.internal_invalidate_module_info_cache
+    {
+      return result.and(invalidate_module_info_cache.call().await.map_err(Into::into));
+    }
+    result
   }
 }
 
@@ -832,6 +886,9 @@ fn derive_entries_aware_chunk_name(
   }
 }
 
+/// `visited` guards one walk against cycles and repeated paths, and nothing more. A set shared
+/// across matched modules gave no measured gain. It would also have to belong to one
+/// `ModuleGroup`, because a dynamic `name` splits one match group across several groups.
 fn add_module_and_dependencies_to_group_recursively(
   module_group: &mut ModuleGroup,
   module_idx: ModuleIdx,

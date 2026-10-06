@@ -39,17 +39,8 @@ global.foo.log();
 ### entry1.js
 
 ```js
-import "./run-dep.js";
-import { t as init_entry1 } from "./entry12.js";
-init_entry1();
-
-```
-
-### entry12.js
-
-```js
-import { t as init_run_dep } from "./run-dep.js";
 import { t as __esmMin } from "./rolldown-runtime.js";
+import { t as init_run_dep } from "./run-dep.js";
 //#region init-dep-1.js
 function init_init_dep_1() {
 	return (init_init_dep_1 = __esmMin((() => {
@@ -65,24 +56,15 @@ function init_entry1() {
 	})))();
 }
 //#endregion
-export { init_init_dep_1 as n, init_entry1 as t };
+init_entry1();
 
 ```
 
 ### entry2.js
 
 ```js
-import "./run-dep.js";
-import { t as init_entry2 } from "./entry22.js";
-init_entry2();
-
-```
-
-### entry22.js
-
-```js
-import { t as init_run_dep } from "./run-dep.js";
 import { t as __esmMin } from "./rolldown-runtime.js";
+import { t as init_run_dep } from "./run-dep.js";
 //#region init-dep-2.js
 function init_init_dep_2() {
 	return (init_init_dep_2 = __esmMin((() => {
@@ -98,7 +80,7 @@ function init_entry2() {
 	})))();
 }
 //#endregion
-export { init_init_dep_2 as n, init_entry2 as t };
+init_entry2();
 
 ```
 
@@ -132,17 +114,8 @@ export { init_run_dep as t };
 ### entry1.js
 
 ```js
-import "./run-dep.js";
-import { t as init_entry1 } from "./entry12.js";
-init_entry1();
-
-```
-
-### entry12.js
-
-```js
-import { t as init_run_dep } from "./run-dep.js";
 import { t as __esmMin } from "./rolldown-runtime.js";
+import { t as init_run_dep } from "./run-dep.js";
 //#region init-dep-1.js
 global.foo = { log: () => console.log("foo.log() (from entry 1) called") };
 //#endregion
@@ -153,24 +126,15 @@ function init_entry1() {
 	})))();
 }
 //#endregion
-export { init_entry1 as t };
+init_entry1();
 
 ```
 
 ### entry2.js
 
 ```js
-import "./run-dep.js";
-import { t as init_entry2 } from "./entry22.js";
-init_entry2();
-
-```
-
-### entry22.js
-
-```js
-import { t as init_run_dep } from "./run-dep.js";
 import { t as __esmMin } from "./rolldown-runtime.js";
+import { t as init_run_dep } from "./run-dep.js";
 //#region init-dep-2.js
 global.foo = { log: () => console.log("foo.log() (from entry 2) called") };
 //#endregion
@@ -181,7 +145,7 @@ function init_entry2() {
 	})))();
 }
 //#endregion
-export { init_entry2 as t };
+init_entry2();
 
 ```
 

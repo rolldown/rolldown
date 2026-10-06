@@ -1,15 +1,31 @@
 import type { BindingChunkingContext, BindingOutputOptions } from '../binding.cjs';
-import type { OutputOptions } from '../options/output-options';
+import type { LogHandler } from '../log/log-handler';
+import { logMissingCodeSplittingGroupDebugName } from '../log/logs';
+import { LOG_LEVEL_WARN } from '../log/logging';
+import type {
+  CodeSplittingGroup,
+  CodeSplittingNameFunction,
+  CodeSplittingTestFunction,
+  OutputOptions,
+} from '../options/output-options';
 import type { PluginContextData } from '../plugin/plugin-context-data';
 import { ChunkingContextImpl } from '../types/chunking-context';
 import { transformAssetSource } from './asset-source';
-import { unimplemented } from './misc';
+import { arraify, unimplemented } from './misc';
 import { transformRenderedChunk } from './transform-rendered-chunk';
 import { logger } from '../cli/logger';
+import {
+  measureHookCost,
+  measureIfFunction,
+  OUTPUT_OPTIONS_OWNER,
+  type PluginTimingsRecorder,
+} from './plugin-timings';
 
 export function bindingifyOutputOptions(
   outputOptions: OutputOptions,
   pluginContextData: PluginContextData,
+  onLog: LogHandler,
+  timings: PluginTimingsRecorder | undefined,
 ): BindingOutputOptions {
   const {
     dir,
@@ -38,6 +54,7 @@ export function bindingifyOutputOptions(
     paths,
     generatedCode,
     file,
+    // Already measured at the source; see `createBundlerOptions`.
     sanitizeFileName,
     preserveModules,
     virtualDirname,
@@ -61,6 +78,8 @@ export function bindingifyOutputOptions(
     outputOptions.advancedChunks,
     manualChunks,
     pluginContextData,
+    onLog,
+    timings,
   );
 
   return {
@@ -73,25 +92,55 @@ export function bindingifyOutputOptions(
     sourcemap: bindingifySourcemap(sourcemap),
     sourcemapBaseUrl,
     sourcemapDebugIds,
-    sourcemapFileNames,
+    sourcemapFileNames: measureIfFunction(
+      timings,
+      OUTPUT_OPTIONS_OWNER,
+      'sourcemapFileNames',
+      sourcemapFileNames,
+    ),
     sourcemapExcludeSources,
-    sourcemapIgnoreList: sourcemapIgnoreList ?? /node_modules/,
-    sourcemapPathTransform,
-    banner: bindingifyAddon(banner),
-    footer: bindingifyAddon(footer),
-    postBanner: bindingifyAddon(postBanner),
-    postFooter: bindingifyAddon(postFooter),
-    intro: bindingifyAddon(intro),
-    outro: bindingifyAddon(outro),
+    sourcemapIgnoreList: batchSourcemapIgnoreList(
+      measureIfFunction(
+        timings,
+        OUTPUT_OPTIONS_OWNER,
+        'sourcemapIgnoreList',
+        sourcemapIgnoreList ?? /node_modules/,
+      ),
+    ),
+    sourcemapPathTransform: batchSourcemapPathTransform(
+      measureIfFunction(
+        timings,
+        OUTPUT_OPTIONS_OWNER,
+        'sourcemapPathTransform',
+        sourcemapPathTransform,
+      ),
+    ),
+    banner: bindingifyAddon(banner, 'banner', timings),
+    footer: bindingifyAddon(footer, 'footer', timings),
+    postBanner: bindingifyAddon(postBanner, 'postBanner', timings),
+    postFooter: bindingifyAddon(postFooter, 'postFooter', timings),
+    intro: bindingifyAddon(intro, 'intro', timings),
+    outro: bindingifyAddon(outro, 'outro', timings),
     extend: outputOptions.extend,
-    globals,
-    paths,
+    globals: measureIfFunction(timings, OUTPUT_OPTIONS_OWNER, 'globals', globals),
+    paths: measureIfFunction(timings, OUTPUT_OPTIONS_OWNER, 'paths', paths),
     generatedCode,
     esModule,
     name,
+    // Already measured at the source; see `createBundlerOptions`.
     assetFileNames: bindingifyAssetFilenames(assetFileNames),
-    entryFileNames,
-    chunkFileNames,
+    entryFileNames: measureIfFunction(
+      timings,
+      OUTPUT_OPTIONS_OWNER,
+      'entryFileNames',
+      entryFileNames,
+    ),
+    chunkFileNames: measureIfFunction(
+      timings,
+      OUTPUT_OPTIONS_OWNER,
+      'chunkFileNames',
+      chunkFileNames,
+    ),
     // TODO(sapphi-red): support parallel plugins
     plugins: [],
     minify: outputOptions.minify,
@@ -116,12 +165,19 @@ export function bindingifyOutputOptions(
 
 type AddonKeys = 'banner' | 'footer' | 'intro' | 'outro';
 
-function bindingifyAddon(configAddon: OutputOptions[AddonKeys]): BindingOutputOptions[AddonKeys] {
+function bindingifyAddon(
+  configAddon: OutputOptions[AddonKeys],
+  name: AddonKeys | 'postBanner' | 'postFooter',
+  timings: PluginTimingsRecorder | undefined,
+): BindingOutputOptions[AddonKeys] {
   if (configAddon == null || configAddon === '') {
     return undefined;
   }
   if (typeof configAddon === 'function') {
-    return async (chunk) => configAddon(transformRenderedChunk(chunk));
+    // Measure the user's callback, not `transformRenderedChunk` around it, so the row is
+    // their work rather than the conversion their choice of a function forced.
+    const measured = measureHookCost(timings, OUTPUT_OPTIONS_OWNER, name, configAddon);
+    return async (chunk) => measured(transformRenderedChunk(chunk));
   }
   return configAddon;
 }
@@ -201,12 +257,17 @@ function bindingifyCodeSplitting(
   advancedChunks: OutputOptions['advancedChunks'],
   manualChunks: OutputOptions['manualChunks'],
   pluginContextData: PluginContextData,
+  onLog: LogHandler,
+  timings: PluginTimingsRecorder | undefined,
 ): {
   inlineDynamicImports: BindingOutputOptions['inlineDynamicImports'];
   advancedChunks: BindingOutputOptions['manualCodeSplitting'];
 } {
   let inlineDynamicImports: boolean | undefined;
   let effectiveChunksOption: Exclude<OutputOptions['codeSplitting'], boolean> | undefined;
+  let migratedManualChunksGroup: CodeSplittingGroup | undefined;
+  // Rows name the option the user actually wrote, not the one they were migrated into.
+  let chunksOptionName: 'codeSplitting' | 'advancedChunks' | 'manualChunks' = 'codeSplitting';
 
   // Handle codeSplitting boolean values
   if (codeSplitting === false) {
@@ -248,6 +309,7 @@ function bindingifyCodeSplitting(
   } else {
     // codeSplitting is an object (advanced config)
     effectiveChunksOption = codeSplitting;
+    chunksOptionName = 'codeSplitting';
     // Ignore inlineDynamicImports if codeSplitting object is specified
     if (inlineDynamicImportsOption != null) {
       logger.warn(
@@ -268,6 +330,7 @@ function bindingifyCodeSplitting(
     if (advancedChunks != null) {
       logger.warn('`advancedChunks` option is deprecated, please use `codeSplitting` instead.');
       effectiveChunksOption = advancedChunks;
+      chunksOptionName = 'advancedChunks';
     }
   } else if (advancedChunks != null) {
     logger.warn(
@@ -281,16 +344,16 @@ function bindingifyCodeSplitting(
       '`manualChunks` option is ignored because the `codeSplitting` option is specified.',
     );
   } else if (manualChunks != null) {
+    chunksOptionName = 'manualChunks';
+    migratedManualChunksGroup = {
+      name(moduleId, ctx) {
+        return manualChunks(moduleId, {
+          getModuleInfo: (id) => ctx.getModuleInfo(id),
+        });
+      },
+    };
     effectiveChunksOption = {
-      groups: [
-        {
-          name(moduleId, ctx) {
-            return manualChunks(moduleId, {
-              getModuleInfo: (id) => ctx.getModuleInfo(id),
-            });
-          },
-        },
-      ],
+      groups: [migratedManualChunksGroup],
     };
   }
 
@@ -309,17 +372,91 @@ function bindingifyCodeSplitting(
   // Transform effectiveChunksOption to binding format
   let advancedChunksResult: BindingOutputOptions['manualCodeSplitting'];
   if (effectiveChunksOption != null) {
-    const { groups, ...restOptions } = effectiveChunksOption;
+    const { groups, experimentalInlineCommonChunks, ...restOptions } = effectiveChunksOption;
+    let chunkingContext: ChunkingContextImpl | undefined;
+    const getChunkingContext = (bindingContext: BindingChunkingContext) =>
+      (chunkingContext ??= new ChunkingContextImpl(bindingContext, pluginContextData));
     advancedChunksResult = {
       ...restOptions,
-      groups: groups?.map((group) => {
-        const { name, ...restGroup } = group;
+      experimentalInlineCommonChunks:
+        experimentalInlineCommonChunks == null
+          ? undefined
+          : {
+              maxSize: experimentalInlineCommonChunks.maxSize,
+              exclude:
+                experimentalInlineCommonChunks.exclude == null
+                  ? undefined
+                  : arraify(experimentalInlineCommonChunks.exclude).map((matcher) =>
+                      typeof matcher === 'function'
+                        ? batchTest(
+                            measureHookCost(
+                              timings,
+                              OUTPUT_OPTIONS_OWNER,
+                              'codeSplitting.experimentalInlineCommonChunks.exclude',
+                              matcher,
+                            ),
+                            'output.codeSplitting.experimentalInlineCommonChunks.exclude',
+                          )
+                        : matcher,
+                    ),
+            },
+      internalInvalidateModuleInfoCache: () => {
+        chunkingContext?.clearModuleInfoCache();
+        chunkingContext = undefined;
+      },
+      groups: groups?.map((group, index) => {
+        const { debugName, name, test, ...restGroup } = group;
+        // The group object supplies a stable key across repeated outputs.
+        // Different group objects remain separate when their labels match.
+        // The migration creates a new group for each output. The original `manualChunks`
+        // callback keeps one timing row across repeated outputs.
+        const timingKey = group === migratedManualChunksGroup ? (manualChunks ?? group) : group;
+        const timingOwner =
+          timings === undefined
+            ? OUTPUT_OPTIONS_OWNER
+            : { ...OUTPUT_OPTIONS_OWNER, key: timingKey };
+        // Each group gets its own row, so the rows have to be tellable apart. The position
+        // identifies the group in the config, and a label makes that position easier to read.
+        const groupName = `${chunksOptionName} groups[${index}]`;
+        let testTimingName = `${groupName}.test`;
+        let nameTimingName = `${groupName}.name`;
+        if (timings !== undefined) {
+          if (chunksOptionName === 'manualChunks') {
+            nameTimingName = 'manualChunks';
+          } else {
+            const label = debugName ?? (typeof name === 'string' ? name : undefined);
+            if (label === undefined) {
+              if (typeof name === 'function' && !timings.warnedMissingGroupLabels.has(timingKey)) {
+                timings.warnedMissingGroupLabels.add(timingKey);
+                onLog(
+                  LOG_LEVEL_WARN,
+                  logMissingCodeSplittingGroupDebugName(
+                    `output.${chunksOptionName}.groups[${index}]`,
+                  ),
+                );
+              }
+            } else {
+              const labelSuffix = ` ${JSON.stringify(label)}`;
+              testTimingName = `${groupName}.test${labelSuffix}`;
+              nameTimingName = `${groupName}.name${labelSuffix}`;
+            }
+          }
+        }
         return {
           ...restGroup,
+          test:
+            typeof test === 'function'
+              ? batchTest(measureHookCost(timings, timingOwner, testTimingName, test))
+              : test,
+          // The core calls this classifier directly rather than through a plugin, so it
+          // belongs to no plugin's rows — and it runs once per module, which is how it ends
+          // up dominating a build.
           name:
             typeof name === 'function'
-              ? (id: string, ctx: BindingChunkingContext) =>
-                  name(id, new ChunkingContextImpl(ctx, pluginContextData))
+              ? batchName(
+                  measureHookCost(timings, timingOwner, nameTimingName, name),
+                  getChunkingContext,
+                )
               : name,
         };
       }),
@@ -329,5 +466,127 @@ function bindingifyCodeSplitting(
   return {
     inlineDynamicImports,
     advancedChunks: advancedChunksResult,
+  };
+}
+
+/**
+ * Wraps a per-id `test` in the batched shim that the binding expects.
+ *
+ * The loop runs in JS so that a group makes one napi crossing, not one per module.
+ *
+ * The result is a `Uint8Array`, which crosses as a buffer instead of one tagged value per id.
+ */
+function batchTest(
+  test: CodeSplittingTestFunction,
+  optionName = 'output.codeSplitting.groups[].test',
+): (ids: string[]) => Uint8Array {
+  return (ids) => {
+    const results = new Uint8Array(ids.length);
+    for (let index = 0; index < ids.length; index++) {
+      const result = test(ids[index]);
+      // napi reports the type of the array, not of the bad element, so the check runs here.
+      if (result != null && typeof result !== 'boolean') {
+        throw new TypeError(
+          `\`${optionName}\` returned ${typeof result} for module "${
+            ids[index]
+          }", but expected a boolean, null or undefined.`,
+        );
+      }
+      results[index] = result === true ? 1 : 0;
+    }
+    return results;
+  };
+}
+
+/**
+ * This is the `name` equivalent of {@linkcode batchTest}. All groups in a chunking pass share
+ * a context so repeated module queries reuse their JavaScript values.
+ */
+function batchName(
+  name: CodeSplittingNameFunction,
+  getChunkingContext: (bindingContext: BindingChunkingContext) => ChunkingContextImpl,
+): (
+  ids: string[],
+  bindingContext: BindingChunkingContext,
+) => ReturnType<CodeSplittingNameFunction>[] {
+  return (ids, bindingContext) => {
+    const context = getChunkingContext(bindingContext);
+    const results: ReturnType<CodeSplittingNameFunction>[] = [];
+    for (let index = 0; index < ids.length; index++) {
+      const result = name(ids[index], context);
+      // napi reports the type of the array, not of the bad element, so the check runs here.
+      if (result != null && typeof result !== 'string') {
+        throw new TypeError(
+          `\`output.codeSplitting.groups[].name\` returned ${typeof result} for module "${
+            ids[index]
+          }", but expected a string, null or undefined.`,
+        );
+      }
+      results.push(result);
+    }
+    return results;
+  };
+}
+
+/**
+ * Wraps a per-source `sourcemapIgnoreList` in the batched shim that the binding expects.
+ *
+ * The loop runs in JS so that a sourcemap makes one napi crossing, not one per source. The old
+ * Rust loop also awaited each call before it started the next.
+ *
+ * The result is a `Uint8Array`, which crosses as a buffer instead of one tagged value per source.
+ *
+ * A boolean, string or regular expression passes through. Rust reads those without a call.
+ */
+function batchSourcemapIgnoreList(
+  ignoreList: OutputOptions['sourcemapIgnoreList'],
+): BindingOutputOptions['sourcemapIgnoreList'] {
+  if (typeof ignoreList !== 'function') {
+    return ignoreList;
+  }
+  return (sources, sourcemapPath) => {
+    const results = new Uint8Array(sources.length);
+    for (let index = 0; index < sources.length; index++) {
+      const result = ignoreList(sources[index], sourcemapPath);
+      // napi reports the type of the array, not of the bad element, so the check runs here.
+      if (typeof result !== 'boolean') {
+        throw new TypeError(
+          `\`output.sourcemapIgnoreList\` returned ${typeof result} for source "${
+            sources[index]
+          }", but expected a boolean.`,
+        );
+      }
+      results[index] = result ? 1 : 0;
+    }
+    return results;
+  };
+}
+
+/**
+ * The `sourcemapPathTransform` counterpart of {@linkcode batchSourcemapIgnoreList}.
+ *
+ * A path cannot be reduced to a byte, so this batch is still an array of strings. napi reports the
+ * type of the array, not of the bad element, so the check runs here.
+ */
+function batchSourcemapPathTransform(
+  pathTransform: OutputOptions['sourcemapPathTransform'],
+): BindingOutputOptions['sourcemapPathTransform'] {
+  if (typeof pathTransform !== 'function') {
+    return pathTransform;
+  }
+  return (sources, sourcemapPath) => {
+    const results: string[] = [];
+    for (let index = 0; index < sources.length; index++) {
+      const result = pathTransform(sources[index], sourcemapPath);
+      if (typeof result !== 'string') {
+        throw new TypeError(
+          `\`output.sourcemapPathTransform\` returned ${typeof result} for source "${
+            sources[index]
+          }", but expected a string.`,
+        );
+      }
+      results.push(result);
+    }
+    return results;
   };
 }

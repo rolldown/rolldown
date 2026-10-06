@@ -10,6 +10,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 let node_assert = require("node:assert");
 node_assert = __toESM(node_assert);
 let node_util = require("node:util");
+//#region ../../../../../../../node_modules/.pnpm/util-deprecate@1.0.2/node_modules/util-deprecate/node.js
 //#endregion
 //#region main.js
 const exports$1 = (/* @__PURE__ */ __commonJSMin(((exports, module) => {

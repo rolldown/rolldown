@@ -1,0 +1,6 @@
+{
+  "_comment": "`with { type: 'json' }` on an internal module is inert: the JSON module is already bundled, the attribute selects no loader and does not affect module identity, and a static attributed import of an internal module drops it too. The call must therefore rewrite to the emitted chunk with no `with` clause left in the output.",
+  "config": {
+    "chunkFilenames": "[name]-[hash].js"
+  }
+}

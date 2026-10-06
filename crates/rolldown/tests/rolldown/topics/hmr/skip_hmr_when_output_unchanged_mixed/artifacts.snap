@@ -21,12 +21,6 @@ __rolldown_runtime__.registerGraph({
 		[],
 		[0, 1],
 		[2]
-	],
-	dynamicEdges: [
-		[],
-		[],
-		[],
-		[]
 	]
 });
 //#region a.js
@@ -68,9 +62,9 @@ process.on("beforeExit", (code) => {
 ## Code
 
 ```js
-__rolldown_runtime__.registerGraph({ids:["b.js","hub.js","a.js"],localCount:2,edges:[[],[2,0]],dynamicEdges:[[],[]]});
+__rolldown_runtime__.registerGraph({ids:["b.js","hub.js","a.js"],localCount:2,edges:[[],[2,0]],stamps:{0:1}});
 //#region b.js
-__rolldown_runtime__.registerFactory("b.js", "esm", (function(__rolldown_module_id__) {
+__rolldown_runtime__.registerFactory("b.js", (function(__rolldown_module_id__) {
 	try {
 		var __rolldown_exports__ = __rolldown_runtime__.__exportAll({ b: () => b });
 		__rolldown_runtime__.registerModule(__rolldown_module_id__, { exports: __rolldown_exports__ });
@@ -78,19 +72,19 @@ __rolldown_runtime__.registerFactory("b.js", "esm", (function(__rolldown_module_
 		const b = "b2";
 		globalThis.__mixed_runs_b = (globalThis.__mixed_runs_b ?? 0) + 1;
 	} finally {}
-}));
+}), 1);
 
 //#endregion
 //#region hub.js
-__rolldown_runtime__.registerFactory("hub.js", "esm", (function(__rolldown_module_id__) {
+__rolldown_runtime__.registerFactory("hub.js", (function(__rolldown_module_id__) {
 	try {
 		var __rolldown_exports__ = __rolldown_runtime__.__exportAll({ combined: () => combined });
 		__rolldown_runtime__.registerModule(__rolldown_module_id__, { exports: __rolldown_exports__ });
 		__rolldown_runtime__.initModule("a.js");
-		__rolldown_runtime__.initModule("b.js");
-		const hot_hub = __rolldown_runtime__.createModuleHotContext(__rolldown_module_id__);
 		var import_a_10 = __rolldown_runtime__.loadExports("a.js");
+		__rolldown_runtime__.initModule("b.js");
 		var import_b_11 = __rolldown_runtime__.loadExports("b.js");
+		const hot_hub = __rolldown_runtime__.createModuleHotContext(__rolldown_module_id__);
 		const combined = import_a_10.a + import_b_11.b;
 		globalThis.__mixed_runs_hub = (globalThis.__mixed_runs_hub ?? 0) + 1;
 		if (hot_hub) {
@@ -121,9 +115,9 @@ __rolldown_runtime__.registerFactory("hub.js", "esm", (function(__rolldown_modul
 ## Code
 
 ```js
-__rolldown_runtime__.registerGraph({ids:["a.js","hub.js","b.js"],localCount:2,edges:[[],[0,2]],dynamicEdges:[[],[]]});
+__rolldown_runtime__.registerGraph({ids:["a.js","hub.js","b.js"],localCount:2,edges:[[],[0,2]],stamps:{0:3}});
 //#region a.js
-__rolldown_runtime__.registerFactory("a.js", "esm", (function(__rolldown_module_id__) {
+__rolldown_runtime__.registerFactory("a.js", (function(__rolldown_module_id__) {
 	try {
 		var __rolldown_exports__ = __rolldown_runtime__.__exportAll({ a: () => a });
 		__rolldown_runtime__.registerModule(__rolldown_module_id__, { exports: __rolldown_exports__ });
@@ -131,19 +125,19 @@ __rolldown_runtime__.registerFactory("a.js", "esm", (function(__rolldown_module_
 		const a = "a2";
 		globalThis.__mixed_runs_a = (globalThis.__mixed_runs_a ?? 0) + 1;
 	} finally {}
-}));
+}), 3);
 
 //#endregion
 //#region hub.js
-__rolldown_runtime__.registerFactory("hub.js", "esm", (function(__rolldown_module_id__) {
+__rolldown_runtime__.registerFactory("hub.js", (function(__rolldown_module_id__) {
 	try {
 		var __rolldown_exports__ = __rolldown_runtime__.__exportAll({ combined: () => combined });
 		__rolldown_runtime__.registerModule(__rolldown_module_id__, { exports: __rolldown_exports__ });
 		__rolldown_runtime__.initModule("a.js");
-		__rolldown_runtime__.initModule("b.js");
-		const hot_hub = __rolldown_runtime__.createModuleHotContext(__rolldown_module_id__);
 		var import_a_10 = __rolldown_runtime__.loadExports("a.js");
+		__rolldown_runtime__.initModule("b.js");
 		var import_b_11 = __rolldown_runtime__.loadExports("b.js");
+		const hot_hub = __rolldown_runtime__.createModuleHotContext(__rolldown_module_id__);
 		const combined = import_a_10.a + import_b_11.b;
 		globalThis.__mixed_runs_hub = (globalThis.__mixed_runs_hub ?? 0) + 1;
 		if (hot_hub) {

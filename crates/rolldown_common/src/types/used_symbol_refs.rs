@@ -29,7 +29,29 @@ pub struct UsedSymbolRefs {
 
 impl UsedSymbolRefs {
   #[inline]
+  pub fn view(&self) -> UsedSymbolRefsView<'_> {
+    UsedSymbolRefsView { inner: &self.inner }
+  }
+
+  #[inline]
   pub fn contains(&self, symbol_ref: &SymbolRef) -> bool {
+    self.inner.contains(symbol_ref)
+  }
+}
+
+/// A shared read-only borrow of either phase of used-symbol collection.
+///
+/// Keeping this view concrete lets readers shared by the mutable and sealed phases compile once
+/// without exposing mutation or allowing a builder to satisfy an API that requires the sealed
+/// [`UsedSymbolRefs`] artifact.
+#[derive(Clone, Copy)]
+pub struct UsedSymbolRefsView<'a> {
+  inner: &'a FxHashSet<SymbolRef>,
+}
+
+impl UsedSymbolRefsView<'_> {
+  #[inline]
+  pub fn contains(self, symbol_ref: &SymbolRef) -> bool {
     self.inner.contains(symbol_ref)
   }
 }
@@ -43,6 +65,11 @@ pub struct UsedSymbolRefsBuilder {
 }
 
 impl UsedSymbolRefsBuilder {
+  #[inline]
+  pub fn view(&self) -> UsedSymbolRefsView<'_> {
+    UsedSymbolRefsView { inner: &self.inner }
+  }
+
   #[inline]
   pub fn insert(&mut self, symbol_ref: SymbolRef) {
     self.inner.insert(symbol_ref);

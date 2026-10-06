@@ -27,5 +27,6 @@ bitflags! {
     const Intro = 1 << 19;
     const Outro = 1 << 20;
     const ResolveFileUrl = 1 << 21;
+    const HotUpdate = 1 << 22;
   }
 }

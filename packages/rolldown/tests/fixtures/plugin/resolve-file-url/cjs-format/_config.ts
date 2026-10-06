@@ -1,6 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { defineTest } from 'rolldown-tests';
+import { REFERENCE_ID_REGEX } from 'rolldown-tests/utils';
 import { expect } from 'vitest';
 
 const seen: Record<string, string>[] = [];
@@ -45,7 +46,7 @@ export default defineTest({
     expect(args.format).toBe('cjs');
     expect(args.chunkId).toBe('main.js');
     expect(args.moduleId.replace(/\\/g, '/')).toContain('resolve-file-url/cjs-format/main.js');
-    expect(args.referenceId).toMatch(/^[$_a-zA-Z][$\w]*$/);
+    expect(args.referenceId).toMatch(REFERENCE_ID_REGEX);
     expect(args.fileName).toMatch(/^assets\/asset-\w+\.txt$/);
     expect(args.relativePath).toBe(args.fileName);
 

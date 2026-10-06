@@ -140,7 +140,11 @@ impl Plugin for EsmExternalRequirePlugin {
         "import * as m from '",
         module_id,
         "';module.exports = ",
-        if is_nodejs_builtin_module(module_id) { "m.default" } else { "{ ...m }" },
+        if is_nodejs_builtin_module(module_id) {
+          "m.default"
+        } else {
+          "Object.prototype.hasOwnProperty.call(m, 'module.exports') ? m['module.exports'] : { ...m }"
+        },
         ";"
       );
       HookLoadOutput { code: code.into(), ..Default::default() }

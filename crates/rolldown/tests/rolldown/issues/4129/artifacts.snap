@@ -11,8 +11,7 @@ import assert from "node:assert";
 __rolldown_runtime__.registerGraph({
 	ids: ["lib.js", "main.js"],
 	localCount: 2,
-	edges: [[], [0]],
-	dynamicEdges: [[], []]
+	edges: [[], [0]]
 });
 //#region lib.js
 var require_lib = /* @__PURE__ */ __commonJSMin(((exports, module) => {

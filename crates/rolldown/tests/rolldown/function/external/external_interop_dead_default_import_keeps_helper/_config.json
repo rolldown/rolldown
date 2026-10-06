@@ -1,0 +1,11 @@
+{
+  "_comment": "Pins the *static-import* channel of the `__toESM` wrap/edge invariant (see internal-docs/runtime-helpers/implementation.md). `dead-default-user` writes a default import whose binding nothing reads, so the inclusion pass records no observer for it — yet the chunk still wraps, because `chunk_external_interop_modes` counts the `default` specifier in the chunk's `named_imports` with no liveness filter. Two more readings of that same `specifier_needs_interop` predicate carry the matching runtime edge: `reference_needed_symbols` registers `__toESM` against the kept import statement, and `compute_chunk_imports` re-adds the cross-chunk import for any chunk whose direct external imports need interop. Drop one and the runtime stops being shared (this snapshot changes); drop both and finalization panics on the missing cross-chunk binding. `live-default-user` is the observer-channel half, kept here so the runtime is a separate chunk and the binding really is cross-chunk.",
+  "config": {
+    "input": [
+      { "name": "dead-default-user", "import": "./dead-default-user.js" },
+      { "name": "live-default-user", "import": "./live-default-user.js" }
+    ],
+    "external": ["node:https"],
+    "format": "cjs"
+  }
+}

@@ -1081,6 +1081,13 @@
             "null"
           ]
         },
+        "skipCommonRuntimeInjection": {
+          "description": "Do not inject the common dev runtime before the custom implementation.\n\nDeprecated: common runtime injection will be disabled by default in the future.",
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
         "lazy": {
           "description": "Enable lazy compilation for dynamic imports.",
           "type": [
@@ -1277,6 +1284,17 @@
           "items": {
             "$ref": "#/$defs/MatchGroup"
           }
+        },
+        "experimentalInlineCommonChunks": {
+          "description": "See internal-docs/inline-common-chunks/design.md. Experimental.",
+          "anyOf": [
+            {
+              "$ref": "#/$defs/InlineCommonChunksOptions"
+            },
+            {
+              "type": "null"
+            }
+          ]
         }
       },
       "additionalProperties": false
@@ -1380,6 +1398,21 @@
         "$initial"
       ]
     },
+    "InlineCommonChunksOptions": {
+      "description": "`output.codeSplitting.experimentalInlineCommonChunks`, as the user wrote it.\n\nSee internal-docs/inline-common-chunks/design.md.",
+      "type": "object",
+      "properties": {
+        "maxSize": {
+          "description": "A candidate's pre-render size must be strictly smaller than this. `0` (the default) turns\nthe feature off; positive infinity removes the size limit.",
+          "type": [
+            "number",
+            "null"
+          ],
+          "format": "double"
+        }
+      },
+      "additionalProperties": false
+    },
     "ChecksOptions": {
       "type": "object",
       "properties": {
@@ -1437,6 +1470,12 @@
             "null"
           ]
         },
+        "moduleLevelDirective": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
         "commonJsVariableInEsm": {
           "type": [
             "boolean",
@@ -1485,7 +1524,14 @@
             "null"
           ]
         },
+        "bundlerTimings": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
         "pluginTimings": {
+          "description": "Deprecated alias for `bundlerTimings`. Rolldown uses `bundlerTimings` if both options have values.",
           "type": [
             "boolean",
             "null"
@@ -1516,6 +1562,12 @@
           ]
         },
         "sourcemapBroken": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "namespaceConflict": {
           "type": [
             "boolean",
             "null"
@@ -2089,6 +2141,16 @@
           "description": "After each HMR step, run a fresh full build of the current file state\nand assert the incremental scan state matches it. Skipped automatically\nfor steps whose state does not build and for steps whose incremental\nbuild failed (a failed scan is reverted, so the state intentionally\nstays at the last good build). Default is `true`.",
           "type": "boolean",
           "default": true
+        },
+        "fullBuildAfterSteps": {
+          "description": "After each listed HMR step (0-based), trigger a full build and wait for it. Vite does\nthis when a page loads after an HMR-stage failure, and then reloads every tab if the build\nsucceeds. The test client reloads too: it runs the new output and only the patches of later\nsteps. A failed build does not reload it.",
+          "type": "array",
+          "items": {
+            "type": "integer",
+            "format": "uint",
+            "minimum": 0
+          },
+          "default": []
         }
       },
       "additionalProperties": false
@@ -2114,6 +2176,13 @@
             {
               "type": "null"
             }
+          ]
+        },
+        "hotUpdate": {
+          "description": "Whether the `hotUpdate` plugin hook is called. Off by default until Vite supports it.",
+          "type": [
+            "boolean",
+            "null"
           ]
         }
       },

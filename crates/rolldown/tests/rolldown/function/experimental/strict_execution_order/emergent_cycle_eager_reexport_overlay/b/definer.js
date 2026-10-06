@@ -1,6 +1,6 @@
 // Side-effect-free definer in chunk B, order-wrapped through the premature deviation. It is the
-// target of the forwarder's re-export hop, so its `init_definer` is what the lowering imports
-// across the chunk boundary via the eager forwarder's overlay, creating the emergent A -> B edge.
+// target of the forwarder's re-export hop: both strict modes import its initializer at the real
+// consumer.
 function makePv() {
   return 'PV';
 }

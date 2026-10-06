@@ -2,12 +2,12 @@ use oxc::{
   ast::{
     AstKind,
     ast::{
-      BindingIdentifier, BindingPattern, Declaration, ExportDefaultDeclaration,
-      ExportDefaultDeclarationKind, ExportNamedDeclaration, Expression,
+      BindingIdentifier, BindingPattern, Declaration, ExportDeclaration, ExportDefaultDeclaration,
+      ExportDefaultDeclarationKind, Expression,
     },
     builder::AstBuilder,
   },
-  ast_visit::{Visit, walk},
+  ast_visit::{VisitJs, walk_js},
   semantic::{NodeId, SymbolId},
 };
 use rolldown_common::{
@@ -353,7 +353,7 @@ impl<'ast> CrossModuleOptimizationRunnerContext<'_, 'ast> {
   }
 }
 
-impl<'a, 'ast: 'a> Visit<'ast> for CrossModuleOptimizationRunnerContext<'a, 'ast> {
+impl<'a, 'ast: 'a> VisitJs<'ast> for CrossModuleOptimizationRunnerContext<'a, 'ast> {
   fn enter_node(&mut self, kind: AstKind<'ast>) {
     self.visit_path.push(kind);
   }
@@ -407,7 +407,7 @@ impl<'a, 'ast: 'a> Visit<'ast> for CrossModuleOptimizationRunnerContext<'a, 'ast
         }
       }
     }
-    walk::walk_import_expression(self, it);
+    walk_js::walk_import_expression(self, it);
   }
 
   fn visit_call_expression(&mut self, it: &oxc::ast::ast::CallExpression<'ast>) {
@@ -444,17 +444,15 @@ impl<'a, 'ast: 'a> Visit<'ast> for CrossModuleOptimizationRunnerContext<'a, 'ast
         pre_node_id = self.latest_side_effect_free_call_expr_node_id.replace(it.node_id());
       }
     }
-    walk::walk_call_expression(self, it);
+    walk_js::walk_call_expression(self, it);
     if let Some(node_id) = pre_node_id {
       self.latest_side_effect_free_call_expr_node_id = Some(node_id);
     }
   }
 
-  fn visit_export_named_declaration(&mut self, it: &ExportNamedDeclaration<'ast>) {
-    if it.source.is_none()
-      && self.immutable_ctx.config.inline_const_optimization
-      && let Some(ref decl) = it.declaration
-      && let Declaration::VariableDeclaration(var_decl) = decl
+  fn visit_export_declaration(&mut self, it: &ExportDeclaration<'ast>) {
+    if self.immutable_ctx.config.inline_const_optimization
+      && let Declaration::VariableDeclaration(var_decl) = &it.declaration
     {
       var_decl.declarations.iter().for_each(|declarator| {
         if let BindingPattern::BindingIdentifier(ref binding) = declarator.id {
@@ -482,7 +480,7 @@ impl<'a, 'ast: 'a> Visit<'ast> for CrossModuleOptimizationRunnerContext<'a, 'ast
         }
       });
     }
-    walk::walk_export_named_declaration(self, it);
+    walk_js::walk_export_declaration(self, it);
   }
 
   fn visit_export_default_declaration(&mut self, it: &ExportDefaultDeclaration<'ast>) {
@@ -494,7 +492,7 @@ impl<'a, 'ast: 'a> Visit<'ast> for CrossModuleOptimizationRunnerContext<'a, 'ast
     {
       return;
     }
-    walk::walk_export_default_declaration(self, it);
+    walk_js::walk_export_default_declaration(self, it);
     let Some(expr) = it.declaration.as_expression() else {
       return;
     };

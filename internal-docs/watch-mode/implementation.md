@@ -87,13 +87,12 @@ Watcher (public API)
                                └── tasks: IndexVec<WatchTaskIdx, WatchTask>
                                     ├── WatchTask 0
                                     │   ├── bundler: Arc<TokioMutex<Bundler>>
-                                    │   ├── fs_watcher: DynFsWatcher (owned, per-task)
-                                    │   ├── watched_files: FxDashSet<ArcStr>
+                                    │   ├── fs_watcher: FsWatcher (owned, per-task, holds the watched paths)
                                     │   └── needs_rebuild: bool
                                     └── WatchTask N ...
 
 Data flow:
-  DynFsWatcher ──(TaskFsEventHandler: maps notify events → FileChangeEvent)──→ WatcherMsg::FileChanges ──→ WatchCoordinator
+  FsWatcher ──(FsEvent: path + WatcherChangeKind)──→ TaskFsEventHandler ──→ WatcherMsg::FileChanges ──→ WatchCoordinator
   WatchCoordinator ──→ dispatch_event / dispatch_change / dispatch_restart
                          └── await_handler_or_close()
                                ├── handler.on_*().await ──→ Consumer (NAPI/Rust)
@@ -104,7 +103,7 @@ Data flow:
 
 - `Watcher` only holds lifecycle state (`tx`, the close signal, and `coordinator_state`) — lightweight, no bundler access.
 - `WatchCoordinator` owns ALL mutable state. No external mutation.
-- Each `WatchTask` owns its `DynFsWatcher`. Per-task watchers mean isolated watch sets and simpler ownership.
+- Each `WatchTask` owns its `FsWatcher`. Per-task watchers mean isolated watch sets and simpler ownership.
 - Bundler is `Arc<TokioMutex<>>` because event data structs carry a clone for consumer access (e.g. `BUNDLE_END.result`).
 
 ### Three-Layer Stack
@@ -131,12 +130,24 @@ rolldown_watcher/
 ├── watcher.rs                 // Watcher (public API) + WatcherConfig
 ├── watch_coordinator.rs       // WatchCoordinator (actor + event loop)
 ├── watch_task.rs              // WatchTask (bundler + fs watcher) + WatchTaskIdx + BuildOutcome
-├── task_fs_event_handler.rs   // TaskFsEventHandler (notify → FileChangeEvent mapping)
+├── task_fs_event_handler.rs   // TaskFsEventHandler (FsEvent → FileChangeEvent)
 ├── handler.rs                 // WatcherEventHandler async trait
 ├── event.rs                   // WatchEvent, BundleStartEventData, BundleEndEventData, WatchErrorEventData
 ├── file_change_event.rs       // FileChangeEvent (path + kind)
 ├── watcher_state.rs           // WatcherState enum + transitions
 └── watcher_msg.rs             // WatcherMsg enum (FileChanges, Close)
+
+rolldown_fs_watcher/
+├── lib.rs                     // Public exports: FsWatcher, FsWatcherConfig, FsEvent*
+├── config.rs                  // FsWatcherConfig (enabled, use_polling, use_debounce, …)
+├── event.rs                   // FsEvent (path + WatcherChangeKind), FsEventHandler
+├── watcher.rs                 // FsWatcher: the watched paths, on top of a WatcherBackend
+└── notify/                    // everything that speaks notify
+    ├── mod.rs                 // WatcherBackend + PathsMut traits, create_backend() — selects backend from config
+    ├── immediate.rs           // recommended / poll, no debounce
+    ├── debounced.rs           // recommended / poll + notify-debouncer-full
+    ├── noop.rs                // no-op backend when enabled: false
+    └── event_map.rs           // map_notify_event: notify events → FsEvents, files only
 ```
 
 ## State Machine
@@ -168,7 +179,7 @@ enum WatcherState {
 There are two possible debounce layers:
 
 1. **Coordinator-level** (`WatcherState::Debouncing`) — batches file changes across files before triggering a rebuild. Controlled by `buildDelay`. This is the primary mechanism.
-2. **Fs-watcher-level** (`notify-debouncer-full`) — deduplicates rapid OS-level events for the same file (e.g. editors that write multiple times per save). Available in `rolldown_fs_watcher` but not used by the watcher.
+2. **Fs-watcher-level** (`notify-debouncer-full`) — deduplicates rapid OS-level events for the same file (e.g. editors that write multiple times per save). Off by default. Watch mode turns it on with `watch.watcher.useDebounce` (`FsWatcherConfig.use_debounce`).
 
 Only coordinator-level debounce is active by default. This matches Rollup, which implements its own `setTimeout`/`clearTimeout` debounce on top of chokidar (chokidar has no debounce option — only `awaitWriteFinish` for write completion detection).
 
@@ -207,7 +218,7 @@ Like Rollup's `eventsRewrites` table, rolldown consolidates change kinds when mu
 
 This matters because plugins receive the `WatcherChangeKind` in `watchChange` hooks and may behave differently based on whether a file was created vs. modified.
 
-The fs-watcher layer (`notify-debouncer-full`) is available as an option for users who need OS-level event deduplication (noisy editors, network drives), exposed through `watch.watcher` options (`usePolling` / `pollInterval`). Using both layers adds latency and makes timing harder to reason about, so it's not the default.
+The fs-watcher layer (`notify-debouncer-full`) is available as an option for users who need OS-level event deduplication (noisy editors, network drives), exposed through `watch.watcher.useDebounce` (`debounceDelay` / `debounceTickRate`). Polling is a separate backend choice (`usePolling` / `pollInterval`). Using both debounce layers adds latency and makes timing harder to reason about, so fs-level debounce is not the default.
 
 ### Default Delay
 
@@ -232,7 +243,6 @@ Watcher spawns coordinator
 File change detected by per-task FsWatcher
   → TaskFsEventHandler sends WatcherMsg::FileChanges
   → process_fs_event():
-      - Maps notify EventKind → WatcherChangeKind (Create/Update/Delete)
       - task.invalidate(path) → sets needs_rebuild = true
       - task.call_on_invalidate(path) → fires immediately, before debounce
       - State: Idle → Debouncing, or extends deadline
@@ -303,10 +313,27 @@ Configured via `WatcherOptions`, fires **immediately** on file change (before de
 ## File Watching
 
 - After each build, `bundler.watch_files()` returns the current set.
-- `WatchTask::update_watch_files()` diffs against the current set — new files are added to the per-task `DynFsWatcher`.
+- `WatchTask::update_watch_files()` hands the set to the per-task `FsWatcher`, which registers the paths it does not watch yet. `FsWatcher::is_watched` answers whether a changed path is one of them, or lies below one.
 - `include`/`exclude` patterns filter which files are watched (via `pattern_filter`).
 - Files are watched **non-recursively** (individual file watches).
-- Batch operations: `fs_watcher.paths_mut()` returns a guard for batching adds, committed via `.commit()`.
+- `FsWatcher::watch_paths` filters and deduplicates new paths before opening a notify batch. If none remain, it leaves the backend untouched: on macOS, opening a batch stops the FSEvents stream, and committing even an empty batch restarts it from "now", potentially losing edits in between. A path is recorded only after registration and commit succeed, so a skipped path is tried again with the next build.
+
+### Backend selection
+
+Each `WatchTask` builds its watcher with `FsWatcher::new(handler, &config)`.
+`FsWatcher` is a concrete type; the notify implementations stay crate-private.
+`WatcherConfig::to_fs_watcher_config()` maps watch options onto `FsWatcherConfig`,
+and construction picks the backend:
+
+| `use_polling` | `use_debounce` | Backend                               |
+| ------------- | -------------- | ------------------------------------- |
+| false         | false          | notify `RecommendedWatcher` (default) |
+| true          | false          | notify `PollWatcher`                  |
+| false         | true           | debounced `RecommendedWatcher`        |
+| true          | true           | debounced `PollWatcher`               |
+
+Watch mode leaves `enabled` at its default (`true`). The no-op backend is a
+dev-engine concern (`disable_watcher` → `FsWatcherConfig.enabled: false`).
 
 ### Split-Phase Build for Watch Mode
 
@@ -329,25 +356,37 @@ When an import resolves to a non-existent file, the build errors. Watch mode rel
 
 ### Notify Event Mapping
 
+`rolldown_fs_watcher` translates notify events into `FsEvent`s (`path` + `WatcherChangeKind`) in `map_notify_event`, before they reach `rolldown_watcher` or bundled dev.
+Do not re-implement this table in `rolldown_dev` or `rolldown_watcher`.
+
 ```
-notify::EventKind::Create(_)                              → WatcherChangeKind::Create
-notify::EventKind::Modify(Name(RenameMode::To))           → WatcherChangeKind::Create
+notify::EventKind::Create(_)                              → WatcherChangeKind::Create   (disk-checked)
+notify::EventKind::Modify(Name(RenameMode::To))           → WatcherChangeKind::Create   (disk-checked)
+notify::EventKind::Modify(Name(RenameMode::Any | Other))  → WatcherChangeKind::Create   (disk-checked; FSEvents/kqueue do not tell the side)
 notify::EventKind::Modify(Name(RenameMode::Both))         → per-path (see below)
 notify::EventKind::Modify(Name(RenameMode::From))         → WatcherChangeKind::Delete
 notify::EventKind::Remove(_)                              → WatcherChangeKind::Delete
-notify::EventKind::Modify(_)  (other)                     → WatcherChangeKind::Update
+notify::EventKind::Modify(Metadata(Any | WriteTime))      → WatcherChangeKind::Update   (disk-checked)
+notify::EventKind::Modify(Metadata(_))  (other)           → None (permissions, ownership, extended attributes, access time)
+notify::EventKind::Modify(_)  (other)                     → WatcherChangeKind::Update   (disk-checked)
 notify::EventKind::Access(_)                              → None (ignored — prevents infinite rebuild loops on Linux)
 ```
 
-**Rename handling:** Linux inotify can emit `Modify(Name(Both))` when both source and destination are known in a single rename event. This event carries two paths `[from, to]`. The event handler splits it into two `FileChangeEvent`s: `Delete` for the source path and `Create` for the destination path. This preserves both signals — the delete ensures stale cache entries are invalidated, and the create triggers missing-dir rebuilds. `RenameMode::To` and `RenameMode::From` are the single-path equivalents.
+**Disk-checked:** the backends' kinds are not always right — FSEvents reports `Name(Any)` for both sides of a rename and repeats earlier flags of a path (a `Create` for the old name of a renamed file), and no backend reports the files of a directory that appears. So for a kind that says the path exists now, the disk decides: a missing path is reported as `Delete`; a directory is reported as `Create` of every file below it (for `Create`), or not at all (for `Update`).
+
+**Directories:** only files are reported, like chokidar's `add`/`change`/`unlink`. A directory that appears is expanded into its files, because the backends do not report the files of a moved-in directory and can miss a file written right after `mkdir`. A directory that disappears is reported as `Delete` of the directory itself, since its files are unknown by then; consumers match it against watched paths by ancestors. A modified directory is not reported.
+
+**Rename handling:** Linux inotify can emit `Modify(Name(Both))` when both source and destination are known in a single rename event. This event carries two paths `[from, to]`. `map_notify_event` splits it into two events: `Delete` for the source path and `Create` for the destination path. This preserves both signals — the delete ensures stale cache entries are invalidated, and the create triggers missing-dir rebuilds. `RenameMode::To` and `RenameMode::From` are the single-path equivalents.
+
+**Metadata filtering:** `touch` is a metadata change on every native backend (FSEvents reports only `Metadata(Any)` for it), and polling reports a write as `Metadata(WriteTime)`, so those are `Update`. Kinds that cannot be a write are dropped; FSEvents reports `Extended` next to every write. `chmod` is `Metadata(Any)` on inotify and kqueue too, which costs a harmless extra rebuild.
 
 **Access filtering:** The build process reads watched source files, which on Linux triggers `IN_OPEN`/`IN_CLOSE_NOWRITE` events. Without filtering, these cause infinite rebuild loops.
 
 ### Path Identity
 
-The watch set stores paths as raw `ArcStr` strings. The `notify` crate reports events with OS-native paths. If these don't match exactly, `is_watched_file()` fails silently. The current `#[cfg(windows)]` backslash fallback is a symptom.
+Watch files are absolute and normalized before they reach the watcher: module ids come from the resolver, and a path passed to `this.addWatchFile` is resolved against `cwd` and normalized (`WatchPath`) when it is added. `FsWatcher` keeps them as `PathBuf`, the form notify reports events in, and `Path` compares by components, so `\` vs `/` on Windows is not a mismatch. A changed path is looked up together with its ancestors, which is how a change below a watched directory is found; the transform dependencies HMR records are `WatchPath`s and are matched the same way.
 
-**Recommendation:** Use `PathBuf` for the watched file set instead of `ArcStr`. This handles trailing slashes, double separators, `.` segments, and Windows `\` vs `/` — all common mismatch sources between resolver output and notify events.
+Symbolic links are not resolved, while FSEvents reports canonical paths.
 
 See [module-id.md](../module-id/implementation.md) for the full analysis of path identity across the bundler, `PathBuf` comparison behavior, and Rollup's approach.
 
@@ -438,12 +477,15 @@ WatchCoordinator.run_build_sequence()
 ```typescript
 interface WatcherOptions {
   skipWrite?: boolean; // Skip bundle.write(). Default: false
-  buildDelay?: number; // Debounce ms. Default: 0
+  buildDelay?: number; // Coordinator debounce ms. Default: 0
   watcher?: {
     usePolling?: boolean; // Use polling backend. Default: false
     pollInterval?: number; // Polling interval ms. Default: 100
+    compareContentsForPolling?: boolean; // Default: false
+    useDebounce?: boolean; // FS-level debounce. Default: false
+    debounceDelay?: number; // FS-level debounce delay ms. Default: 10
+    debounceTickRate?: number; // Debouncer tick rate ms. Default: auto
   };
-  notify?: { ... }; // Deprecated — use `watcher` instead
   include?: StringOrRegExp | StringOrRegExp[];
   exclude?: StringOrRegExp | StringOrRegExp[];
   onInvalidate?: (id: string) => void;
@@ -492,6 +534,6 @@ Tracks progress from old watcher → new `rolldown_watcher`. Items link to [#648
 - [module-id](../module-id/implementation.md) — Module ID, path identity, and normalization
 - [#6482](https://github.com/rolldown/rolldown/issues/6482) — Watch mode issue collection (tracks all known bugs)
 - `crates/rolldown_watcher/` — Implementation
-- `crates/rolldown_fs_watcher/` — File system watching abstraction over `notify`
+- `crates/rolldown_fs_watcher/` — One public `FsWatcher`; notify backends stay private
 - `crates/rolldown_dev/` — Dev mode, uses same actor pattern for reference
 - `packages/rolldown/src/api/watch/` — TypeScript API layer

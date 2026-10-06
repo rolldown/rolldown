@@ -21,6 +21,7 @@ pub struct ChecksOptions {
   pub unresolved_entry: Option<bool>,
   pub unresolved_import: Option<bool>,
   pub filename_conflict: Option<bool>,
+  pub module_level_directive: Option<bool>,
   pub common_js_variable_in_esm: Option<bool>,
   pub import_is_undefined: Option<bool>,
   pub empty_import_meta: Option<bool>,
@@ -29,12 +30,15 @@ pub struct ChecksOptions {
   pub configuration_field_conflict: Option<bool>,
   pub prefer_builtin_feature: Option<bool>,
   pub could_not_clean_directory: Option<bool>,
+  pub bundler_timings: Option<bool>,
+  /// Deprecated alias for `bundlerTimings`. Rolldown uses `bundlerTimings` if both options have values.
   pub plugin_timings: Option<bool>,
   pub duplicate_shebang: Option<bool>,
   pub unsupported_tsconfig_option: Option<bool>,
   pub ineffective_dynamic_import: Option<bool>,
   pub large_barrel_modules: Option<bool>,
   pub sourcemap_broken: Option<bool>,
+  pub namespace_conflict: Option<bool>,
 }
 impl From<ChecksOptions> for rolldown_error::EventKindSwitcher {
   fn from(value: ChecksOptions) -> Self {
@@ -70,6 +74,10 @@ impl From<ChecksOptions> for rolldown_error::EventKindSwitcher {
       value.filename_conflict.unwrap_or(true),
     );
     flag.set(
+      rolldown_error::EventKindSwitcher::ModuleLevelDirective,
+      value.module_level_directive.unwrap_or(true),
+    );
+    flag.set(
       rolldown_error::EventKindSwitcher::CommonJsVariableInEsm,
       value.common_js_variable_in_esm.unwrap_or(true),
     );
@@ -101,8 +109,10 @@ impl From<ChecksOptions> for rolldown_error::EventKindSwitcher {
       rolldown_error::EventKindSwitcher::CouldNotCleanDirectory,
       value.could_not_clean_directory.unwrap_or(true),
     );
-    flag
-      .set(rolldown_error::EventKindSwitcher::PluginTimings, value.plugin_timings.unwrap_or(true));
+    flag.set(
+      rolldown_error::EventKindSwitcher::PluginTimings,
+      value.bundler_timings.or(value.plugin_timings).unwrap_or(true),
+    );
     flag.set(
       rolldown_error::EventKindSwitcher::DuplicateShebang,
       value.duplicate_shebang.unwrap_or(true),
@@ -122,6 +132,10 @@ impl From<ChecksOptions> for rolldown_error::EventKindSwitcher {
     flag.set(
       rolldown_error::EventKindSwitcher::SourcemapBroken,
       value.sourcemap_broken.unwrap_or(true),
+    );
+    flag.set(
+      rolldown_error::EventKindSwitcher::NamespaceConflict,
+      value.namespace_conflict.unwrap_or(true),
     );
     flag
   }

@@ -1,6 +1,33 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
 ---
+# warnings
+
+## NAMESPACE_CONFLICT
+
+```text
+[NAMESPACE_CONFLICT] Conflicting namespaces: "entry.js" re-exports "x" from one of the modules "a.js", "b.js" and "c.js" (will be ignored).
+   ╭─[ a.js:1:19 ]
+   │
+ 1 │ export let a = 1, x = 2
+   │                   ┬  
+   │                   ╰── One matching export is here.
+   │
+   ├─[ b.js:1:28 ]
+   │
+ 1 │ export let b = 3; export { b as x }
+   │                            ───┬──  
+   │                               ╰──── One matching export is here.
+   │
+   ├─[ c.js:1:19 ]
+   │
+ 1 │ export let c = 4, x = 5
+   │                   ┬  
+   │                   ╰── One matching export is here.
+───╯
+
+```
+
 # Assets
 
 ## entry.js

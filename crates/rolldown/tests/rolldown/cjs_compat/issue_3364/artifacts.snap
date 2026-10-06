@@ -21,6 +21,8 @@ var require_b = /* @__PURE__ */ __commonJSMin(((exports, module) => {
 	};
 }));
 //#endregion
+//#region commonjs.js
+//#endregion
 //#region main.js
 var import_commonjs = /* @__PURE__ */ __toESM((/* @__PURE__ */ __commonJSMin(((exports, module) => {
 	module.exports = Math.random() < .5 ? require_a() : require_b();

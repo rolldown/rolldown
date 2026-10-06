@@ -1,14 +1,33 @@
-When enabled, Rolldown measures time spent in each plugin hook. If plugins significantly impact build performance, a warning is emitted with a breakdown of plugin timings.
+When you enable this check, Rolldown measures the execution time for each plugin hook and each option callback.
+Rolldown warns you if these operations use a significant part of the build time.
+
+When both `checks.bundlerTimings` and the deprecated `checks.pluginTimings` are set, `checks.bundlerTimings` takes priority. The warning code is `PLUGIN_TIMINGS`.
 
 **How it works:**
 
-1. **Minimum build time**: To avoid noisy warnings for fast builds, the warning is only triggered if Rolldown's internal build time (Rust side) exceeds **3 seconds**.
+The clock starts and stops **inside the JavaScript callback**, not around the call. Rolldown dispatches most hooks concurrently and they queue up on JavaScript's single thread, so the time between handing a call over and getting a result back is mostly time the call spent waiting. Measuring from inside the callback excludes that wait by construction.
 
-2. **Detection threshold**: A warning is triggered when plugin time (total build time minus link stage time) exceeds 100x the link stage time. This threshold was determined by studying plugin impact on real-world projects.
+1. **Minimum build time**: to avoid noisy warnings for fast builds, the warning is only triggered if Rolldown's internal build time (Rust side) exceeds **3 seconds**.
 
-3. **Identifying plugins**: When the threshold is exceeded, Rolldown reports up to 5 plugins that take longer than the average plugin time, sorted by duration. Each plugin shows its percentage of total plugin time. Only plugins with total duration of at least 1 second are included in the report.
+2. **Detection threshold**: a warning is triggered when plugin time (total build time minus link stage time) exceeds 100x the link stage time. This threshold was determined by studying plugin impact on real-world projects. The link stage is the one part of a build that runs no plugins at all, which is what makes it a usable baseline.
 
-> [!WARNING]
-> For hooks using [`this.resolve()`](/reference/Interface.PluginContext#resolve) or [`this.load()`](/reference/Interface.PluginContext#load), the reported time includes waiting for other plugins, which may overestimate that plugin's actual cost.
+3. **Rows**: The report lists up to 12 callbacks. It sorts the callbacks by measured time. Each row shows its build-time share and call count. Only callbacks that cost at least 1 second get a row. Option callbacks appear under `input options` or `output options`.
+
+   These callbacks include `external`, `treeshake.moduleSideEffects`, file-name callbacks, and addon callbacks. They also include `manualChunks` and the group callbacks in [`output.codeSplitting`](/reference/OutputOptions.codeSplitting). The deprecated [`output.advancedChunks`](/reference/OutputOptions.advancedChunks) option uses the same group callbacks.
+
+   Code-splitting rows include the group index and an available label. Rolldown uses `debugName` first. It uses a string `name` when `debugName` is absent. Set `debugName` when `name` is a function. When the group has no label, Rolldown warns once for that group.
+
+   The headline figure is the wall time in which at least one measured callback ran. Overlap counts once. The figure can be more than the build time, because `closeBundle` runs after the build clock stops. The message says so when that happens. The rows can add up to more than the headline figure, because callbacks can overlap. One callback can run inside another: `this.emitFile()` in `buildStart` runs your `assetFileNames`, and that time counts for both. Two `async` callbacks can also run at the same time.
+
+> [!IMPORTANT]
+> **The message lists some callbacks without a time.**
 >
-> Additionally, since plugin hooks execute concurrently, the statistics represent accumulated time rather than wall-clock time. The measured duration also includes Rust-side processing overhead, Tokio async scheduling overhead, NAPI data conversion overhead, and JavaScript event loop overhead.
+> Only plugin hooks appear here. Every option callback is synchronous, so it cannot overlap itself.
+>
+> A span from hook entry to hook exit can be added to another span only if the two never overlap. A synchronous hook cannot overlap — it holds the thread until it returns. An `async` one can: it may suspend at an `await` and let another call of the same hook begin, and then both spans cover the same wall clock and adding them counts it twice. Overlap also changes what the span means — a hook that awaits Rolldown itself, via `this.resolve` or `this.load`, spends most of its span waiting for the bundler, so its elapsed time describes the bundler rather than your plugin.
+>
+> Rolldown measures the overlap rather than assuming it, and judges its size: it records exactly how much of a hook's total is double counted, and keeps the number when that is under 1% of the span. So a hook dispatched concurrently is still measured exactly when its calls happen not to overlap, and one incidental overlap among thousands of calls does not discard an otherwise good measurement — which also keeps the report stable from run to run rather than dependent on scheduling. A hook that genuinely overlaps itself is named but given no number, because any number would be an upper bound that ranks it above hooks doing more work. To find the real cost of those, profile the JavaScript directly — for example `node --cpu-prof` on your build script, which samples what is actually executing.
+
+**What the listed numbers mean.** Measuring from inside the callback excludes the time a call spent queued; it does not separate running from awaiting. A listed callback is wall time for that callback, not CPU time, so one that awaits I/O without overlapping another call of itself is charged for the wait. The figure excludes the data conversion Rolldown does on either side of the call.
+
+**Not covered.** Plugins written in Rust (`builtin:` and the plugins Rolldown ships internally) have no JavaScript callback to measure and never appear. Neither do parallel plugins, whose hooks run on worker threads. The report is produced when the build is closed, so watch and dev-server rebuilds do not emit it.

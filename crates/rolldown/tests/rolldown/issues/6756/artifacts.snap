@@ -7,6 +7,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 import { n as utilityClass, t as helper } from "./main.js";
+//#region dynamic.js
 new utilityClass(helper());
 //#endregion
 

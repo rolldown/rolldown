@@ -6,17 +6,8 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## e0.js
 
 ```js
-import "./gb.js";
-import { t as init_e0 } from "./e02.js";
-init_e0();
-
-```
-
-## e02.js
-
-```js
-import { r as init_m13 } from "./gb.js";
 import { t as __esmMin } from "./rolldown-runtime.js";
+import { r as init_m13 } from "./gb.js";
 //#region e0.js
 var reg;
 function init_e0() {
@@ -27,15 +18,15 @@ function init_e0() {
 	})))();
 }
 //#endregion
-export { init_e0 as t };
+init_e0();
 
 ```
 
 ## gb.js
 
 ```js
-import { t as init_m31 } from "./m31.js";
 import { t as __esmMin } from "./rolldown-runtime.js";
+import { t as init_m31 } from "./m31.js";
 //#region m13.js
 function init_m13() {
 	return (init_m13 = __esmMin((() => {
@@ -97,17 +88,8 @@ export { __esmMin as t };
 ### e0.js
 
 ```js
-import "./gb.js";
-import { t as init_e0 } from "./e02.js";
-init_e0();
-
-```
-
-### e02.js
-
-```js
-import { r as init_m13 } from "./gb.js";
 import { t as __esmMin } from "./rolldown-runtime.js";
+import { r as init_m13 } from "./gb.js";
 //#region e0.js
 var reg;
 function init_e0() {
@@ -118,15 +100,15 @@ function init_e0() {
 	})))();
 }
 //#endregion
-export { init_e0 as t };
+init_e0();
 
 ```
 
 ### gb.js
 
 ```js
-import { t as init_m31 } from "./m31.js";
 import { t as __esmMin } from "./rolldown-runtime.js";
+import { t as init_m31 } from "./m31.js";
 //#region m13.js
 function init_m13() {
 	return (init_m13 = __esmMin((() => {

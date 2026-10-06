@@ -1,0 +1,23 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Errors
+
+## REQUIRE_TLA
+
+```text
+[REQUIRE_TLA] This require call is not allowed because the imported file "dep.js" contains a top-level await
+   ╭─[ main.js:1:1 ]
+   │
+ 1 │ require("./dep.js");
+   │ ─────────┬─────────  
+   │          ╰─────────── The require() call is here:
+   │
+   ├─[ dep.js:4:1 ]
+   │
+ 4 │ await using handle = resource;
+   │ ───────────────┬──────────────  
+   │                ╰──────────────── The top-level await in "dep.js" is here:
+───╯
+
+```

@@ -33,7 +33,7 @@ use super::events::json_parse::JsonParse;
 use super::events::missing_global_name::MissingGlobalName;
 use super::events::missing_name_option_for_iife_export::MissingNameOptionForIifeExport;
 use super::events::plugin_error::{CausedPlugin, PluginError};
-use super::events::plugin_timings::{PluginTimingInfo, PluginTimings};
+use super::events::plugin_timings::PluginTimings;
 use super::events::prefer_builtin_feature::PreferBuiltinFeature;
 use super::events::require_tla::RequireTla;
 use super::events::resolve_error::DiagnosableResolveError;
@@ -57,12 +57,23 @@ use super::events::{
   invalid_export_option::InvalidExportOption,
   missing_export::MissingExport,
   mixed_exports::MixedExports,
+  module_level_directive::ModuleLevelDirective,
+  namespace_conflict::{NamespaceConflict, NamespaceConflictExporter},
   oxc_error::OxcError,
   unresolved_entry::UnresolvedEntry,
 };
 
 impl BuildDiagnostic {
   // --- Rollup related
+  pub fn module_level_directive(
+    module_id: String,
+    directive: String,
+    source: ArcStr,
+    span: Span,
+  ) -> Self {
+    Self::new_inner(ModuleLevelDirective { module_id, directive, source, span })
+  }
+
   pub fn entry_cannot_be_external(unresolved_id: impl AsRef<Path>) -> Self {
     Self::new_inner(ExternalEntry { id: unresolved_id.as_ref().to_path_buf() })
   }
@@ -78,6 +89,20 @@ impl BuildDiagnostic {
       importee,
       importer,
       exporter,
+    })
+  }
+
+  pub fn namespace_conflict(
+    binding: String,
+    reexporting_module_id: String,
+    reexporting_module_stable_id: String,
+    exporters: Vec<NamespaceConflictExporter>,
+  ) -> Self {
+    Self::new_inner(NamespaceConflict {
+      binding,
+      reexporting_module_id,
+      reexporting_module_stable_id,
+      exporters,
     })
   }
 
@@ -111,6 +136,7 @@ impl BuildDiagnostic {
     source: ArcStr,
     span: oxc::span::Span,
     is_before_function_declaration: bool,
+    is_no_side_effects: bool,
   ) -> Self {
     Self::new_inner(InvalidAnnotation {
       module_id,
@@ -118,6 +144,7 @@ impl BuildDiagnostic {
       source,
       span,
       is_before_function_declaration,
+      is_no_side_effects,
     })
   }
 
@@ -428,8 +455,8 @@ impl BuildDiagnostic {
     Self::new_inner(CouldNotCleanDirectory { dir, reason })
   }
 
-  pub fn plugin_timings(plugins: Vec<PluginTimingInfo>) -> Self {
-    Self::new_inner(PluginTimings { plugins })
+  pub fn plugin_timings(timings: PluginTimings) -> Self {
+    Self::new_inner(timings)
   }
 
   pub fn duplicate_shebang(filename: String, source: &str) -> Self {

@@ -9,10 +9,7 @@ use std::fmt::Write as _;
 use arcstr::ArcStr;
 use rolldown_common::OutputExports;
 use rolldown_error::{BuildDiagnostic, BuildResult};
-use rolldown_utils::{
-  concat_string,
-  ecmascript::{is_validate_assignee_identifier_name, is_validate_identifier_name},
-};
+use rolldown_utils::ecmascript::{is_validate_assignee_identifier_name, property_access_str};
 
 use crate::types::generator::GenerateContext;
 
@@ -131,11 +128,7 @@ pub fn generate_identifier(
 /// - If the name is not an invalid identifier, it will generate a caller like `.name`.
 /// - Otherwise, it will generate a caller like `["-foo"]`.
 pub fn render_property_access(name: &str) -> String {
-  if is_validate_identifier_name(name) {
-    concat_string!(".", name)
-  } else {
-    concat_string!("[\"", name, "\"]")
-  }
+  property_access_str("", name)
 }
 
 #[cfg(test)]

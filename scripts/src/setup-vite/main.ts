@@ -6,10 +6,12 @@
 //      `main` (a checkout taken over by the developer is built as-is, see
 //      checkout.ts),
 //   2. `pnpm install --frozen-lockfile` (no manifest or lockfile writes),
-//   3. build the `vite` package with its own pinned dependencies,
-//   4. swap the `packages/vite/node_modules/rolldown` symlink to point at the
-//      workspace's `packages/rolldown`, so Vite's dist resolves the local
-//      rolldown (and its native binding) at runtime.
+//   3. swap the `packages/vite/node_modules/rolldown` symlink to point at the
+//      workspace's `packages/rolldown`,
+//   4. build the `vite` package. Vite's browser client inlines rolldown's
+//      `DevRuntime` (`rolldown/experimental/runtime`) at build time, so the
+//      swap must be in place BEFORE this step: the runtime the browser runs
+//      has to match the code the workspace rolldown emits for it.
 //
 // The Vite source files are never patched. The swap is undone by any
 // `pnpm install` inside the checkout, so re-run this script after that (it is
@@ -19,6 +21,7 @@
 //
 // Usage: `just setup-vite` (or `vp run --filter @rolldown-internal/scripts setup-vite`)
 
+import { execFileSync } from 'node:child_process';
 import nodeFs from 'node:fs';
 import { createRequire } from 'node:module';
 import nodePath from 'node:path';
@@ -42,29 +45,40 @@ ensureViteCheckout();
 // 2. Install Vite's workspace deps exactly as pinned upstream, via vp. It
 // delegates to the checkout's pinned pnpm itself, so no pnpm needs to be
 // installed separately. This also resets any previous symlink swap from
-// step 4, so the build below always uses Vite's own pinned rolldown.
+// step 3, so the swap below always starts from a clean install.
 run('vp install --frozen-lockfile', viteDir);
 
-// 3. Build the vite package (dist/node + dist/client, plus its type build)
-// via its own `build` script. vp delegates to the checkout's pinned package
-// manager, so no pnpm needs to be installed separately.
+// 3. Point Vite's `rolldown` resolution at the workspace package.
 const vitePkgDir = nodePath.join(viteDir, 'packages', 'vite');
-run('vp run build', vitePkgDir);
-
-// 4. Point Vite's runtime `rolldown` resolution at the workspace package.
 const linkPath = nodePath.join(vitePkgDir, 'node_modules', 'rolldown');
-const target = nodePath.relative(nodePath.dirname(linkPath), localRolldownDir);
+// Absolute on purpose: Node resolves a relative junction target against the
+// lexical parent of `linkPath`, which is the wrong base when `vite/` is itself
+// a symlink or junction.
+const target = nodeFs.realpathSync(localRolldownDir);
 const current = nodeFs.existsSync(linkPath) ? nodeFs.realpathSync(linkPath) : null;
-if (current !== nodeFs.realpathSync(localRolldownDir)) {
+if (current !== target) {
   nodeFs.rmSync(linkPath, { recursive: true, force: true });
   // 'junction' sidesteps Windows' symlink privilege requirement (admin /
-  // Developer Mode); on other platforms the type is ignored. Node resolves
-  // the target to an absolute path itself when creating a junction.
+  // Developer Mode); on other platforms the type is ignored.
   nodeFs.symlinkSync(target, linkPath, 'junction');
   console.log(`[setup-vite] linked ${linkPath} -> ${target}`);
 } else {
   console.log('[setup-vite] rolldown symlink already points at the workspace package');
 }
+
+// 4. Build the vite package (dist/node + dist/client). This mirrors Vite's
+// own `build` script minus the type build, which the tests do not need.
+// Invoke the workspace CLI directly with Node so Windows does not have to
+// execute a POSIX-style `.bin` path through cmd.exe. `vp run` would re-sync
+// node_modules and undo the swap from step 3, inlining the pinned runtime.
+// See internal-docs/dev-server-test-harness/implementation.md.
+nodeFs.rmSync(nodePath.join(vitePkgDir, 'dist'), { recursive: true, force: true });
+const rolldownCli = nodePath.join(localRolldownDir, 'bin', 'cli.mjs');
+console.log(`[setup-vite] node ${rolldownCli} --config rolldown.config.ts`);
+execFileSync(process.execPath, [rolldownCli, '--config', 'rolldown.config.ts'], {
+  cwd: vitePkgDir,
+  stdio: 'inherit',
+});
 
 // 5. Verify the override took: resolving `rolldown` from the vite package must
 // land inside the workspace copy. Failing loudly here beats silently running

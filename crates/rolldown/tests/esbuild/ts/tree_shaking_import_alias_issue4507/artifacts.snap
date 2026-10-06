@@ -1,0 +1,23 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## entry_ts.js
+
+```js
+//#region dep.js
+var Base = class {
+	static hello() {
+		return "dep code is present";
+	}
+};
+//#endregion
+//#region entry.ts
+function make() {
+	return new Base();
+}
+//#endregion
+export { make };
+
+```

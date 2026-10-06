@@ -1,0 +1,50 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# warnings
+
+## MODULE_LEVEL_DIRECTIVE
+
+```text
+[MODULE_LEVEL_DIRECTIVE] The semantics of the module level directive "use asm" in "main.js" may not be preserved when bundling.
+   ╭─[ main.js:2:1 ]
+   │
+ 2 │ 'use asm';
+   │ ─────┬────  
+   │      ╰────── module level directive may not be preserved
+   │ 
+   │ Help: For more information, see https://rolldown.rs/in-depth/directives#other-directives
+───╯
+
+```
+
+## MODULE_LEVEL_DIRECTIVE
+
+```text
+[MODULE_LEVEL_DIRECTIVE] The semantics of the module level directive "use client" in "main.js" may not be preserved when bundling.
+   ╭─[ main.js:3:1 ]
+   │
+ 3 │ 'use client';
+   │ ──────┬──────  
+   │       ╰──────── module level directive may not be preserved
+   │ 
+   │ Help: For more information, see https://rolldown.rs/in-depth/directives#other-directives
+───╯
+
+```
+
+# Assets
+
+## main.js
+
+```js
+"use asm";
+"use client";
+//#region main.js
+function nested() {
+	"nested directive";
+}
+//#endregion
+export { nested as default };
+
+```

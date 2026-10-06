@@ -9,9 +9,9 @@ const { close, rolldown, write } = vi.hoisted(() => ({
   write: vi.fn(),
 }));
 
-vi.mock('@src/api/rolldown', () => ({ rolldown }));
+vi.mock('../../src/api/rolldown', () => ({ rolldown }));
 
-import { loadConfig } from '@src/utils/load-config';
+import { loadConfig } from '../../src/utils/load-config';
 
 const fixture = path.join(
   import.meta.dirname,

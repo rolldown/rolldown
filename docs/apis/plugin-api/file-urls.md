@@ -116,3 +116,46 @@ export const size = 6;
 :::
 
 If you build this code, both the main chunk and the worklet will share the code from `config.js` via a shared chunk. This enables us to make use of the browser cache to reduce transmitted data and speed up loading the worklet.
+
+## Passing a `urlId`
+
+::: warning Experimental
+
+The `urlId` API is experimental and may change in minor versions.
+
+:::
+
+Rolldown extends the syntax with an optional `urlId` (`import.meta.ROLLDOWN_FILE_URL_referenceId_urlId`). The `urlId` is an arbitrary identifier that is forwarded to the [`resolveFileUrl`](/reference/Interface.Plugin#resolvefileurl) hook as `args.urlId`, so a single plugin can resolve the same emitted file differently depending on where it is referenced from:
+
+```js [rolldown-plugin-svg-resolver.js]
+import path from 'node:path';
+import fs from 'node:fs';
+
+function svgResolverPlugin() {
+  return {
+    name: 'svg-resolver',
+    load: {
+      filter: { id: /\.svg$/ },
+      handler(id) {
+        const referenceId = this.emitFile({
+          type: 'asset',
+          name: path.basename(id),
+          source: fs.readFileSync(id),
+        });
+        // Append a `urlId` so `resolveFileUrl` can special-case this reference.
+        return `export default import.meta.ROLLDOWN_FILE_URL_${referenceId}_inline;`;
+      },
+    },
+    resolveFileUrl({ referenceId, relativePath, urlId }) {
+      if (urlId === 'inline') {
+        // resolve inlined references differently
+      }
+      // ...
+    },
+  };
+}
+```
+
+The `urlId` is only recognized on the rolldown-specific `ROLLDOWN_FILE_URL_` prefix. The Rollup-compatible `ROLLUP_FILE_URL_` alias never carries one. The default resolution (when no plugin handles the reference) ignores `urlId`.
+
+The `urlId` can only contain ASCII identifier characters: letters (`a`-`z`, `A`-`Z`), digits (`0`-`9`), `_`, and `$`.

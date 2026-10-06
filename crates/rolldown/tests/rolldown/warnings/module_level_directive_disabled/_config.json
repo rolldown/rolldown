@@ -1,0 +1,10 @@
+{
+  "config": {
+    "checks": {
+      "moduleLevelDirective": false
+    }
+  },
+  "expectExecuted": false,
+  "expectWarning": false,
+  "snapshot": false
+}

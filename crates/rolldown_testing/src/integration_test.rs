@@ -1,20 +1,19 @@
-use std::path::PathBuf;
-use std::sync::Arc;
 use std::{
   fs,
   io::{Read, Write},
-  path::Path,
+  path::{Path, PathBuf},
   process::Command,
+  sync::Arc,
 };
 
 use anyhow::Context;
 use oxc::parser::{ParseOptions, Parser};
 use oxc::span::SourceType;
 use rolldown::{
-  BundleOutput, Bundler, BundlerBuilder, BundlerOptions, IsExternal, OutputFormat, Platform,
-  SourceMapType, plugin::__inner::SharedPluginable,
+  BundleOutput, Bundler, BundlerBuilder, BundlerOptions, ChecksOptions, IsExternal,
+  NormalizedBundlerOptions, OutputFormat, Platform, SourceMapType,
+  plugin::{__inner::SharedPluginable, Plugin},
 };
-use rolldown::{ChecksOptions, NormalizedBundlerOptions};
 use rolldown_common::Output;
 use rolldown_dev::{BundlerConfig, DevEngine, DevOptions, DevWatchOptions};
 use rolldown_error::BuildResult;
@@ -26,6 +25,7 @@ use crate::hmr_files::{
   apply_hmr_edit_files_to_hmr_temp_dir, collect_hmr_edit_files,
   copy_non_hmr_edit_files_to_hmr_temp_dir, get_changed_files_from_hmr_edit_files,
 };
+use crate::preserve_region_markers::PreserveRegionMarkersPlugin;
 use crate::types::{
   BuildArtifactsSnapshot, BuildRoundOutput, DevArtifactsSnapshot, DevRoundOutput, HmrStepOutput,
 };
@@ -56,6 +56,35 @@ pub struct NamedBundlerOptions {
 
 fn default_test_input_item() -> rolldown::InputItem {
   rolldown::InputItem { name: Some("main".to_string()), import: "./main.js".to_string() }
+}
+
+fn read_output_files(dir: &Path) -> Vec<(PathBuf, Vec<u8>)> {
+  let mut files = vec![];
+  let mut dirs = vec![dir.to_path_buf()];
+  while let Some(dir) = dirs.pop() {
+    let Ok(entries) = fs::read_dir(&dir) else { continue };
+    for entry in entries {
+      let path = entry.unwrap().path();
+      if path.is_dir() {
+        dirs.push(path);
+      } else {
+        let content = fs::read(&path).unwrap();
+        files.push((path, content));
+      }
+    }
+  }
+  files
+}
+
+fn restore_output_files(dir: &Path, files: &[(PathBuf, Vec<u8>)]) {
+  fs::remove_dir_all(dir)
+    .or_else(|err| if err.kind() == std::io::ErrorKind::NotFound { Ok(()) } else { Err(err) })
+    .unwrap();
+  fs::create_dir_all(dir).unwrap();
+  for (path, content) in files {
+    fs::create_dir_all(path.parent().unwrap()).unwrap();
+    fs::write(path, content).unwrap();
+  }
 }
 
 impl IntegrationTest {
@@ -131,7 +160,7 @@ impl IntegrationTest {
           .with_options(ParseOptions { allow_return_outside_function: true, ..Default::default() })
           .parse();
 
-        if ret.panicked || !ret.diagnostics.is_empty() {
+        if ret.fatal_error || !ret.diagnostics.is_empty() {
           let errors_str = ret
             .diagnostics
             .iter()
@@ -250,8 +279,16 @@ impl IntegrationTest {
       dev_engine.run().await.unwrap();
       dev_engine.create_client_for_testing().await;
 
+      // Later builds overwrite the output directory, but a client keeps running the output it
+      // loaded until it reloads. Keep the files the test client loaded.
+      let mut client_output = read_output_files(Path::new(&output_dir));
+      // The last step that reloaded the test client: a full reload, or a full build from
+      // `full_build_after_steps`, whose build succeeded. The client then runs the output of that
+      // reload and only the patches of later steps.
+      let mut reloaded_after_step = None;
+
       // Process HMR steps
-      for hmr_edit_files in hmr_steps {
+      for (step, hmr_edit_files) in hmr_steps.iter().enumerate() {
         // Prepare new vecs for this step's callbacks
         hmr_updates_by_steps.lock().unwrap().push(vec![]);
         build_results_by_steps.lock().unwrap().push(vec![]);
@@ -264,7 +301,9 @@ impl IntegrationTest {
         );
         let watched_files = dev_engine.get_watched_files().await.unwrap();
         assert!(
-          changed_files.iter().all(|(file, _)| watched_files.contains(file)),
+          changed_files.iter().all(|(file, _)| std::path::Path::new(file)
+            .ancestors()
+            .any(|path| path.to_str().is_some_and(|path| watched_files.contains(path)))),
           "All changed files must be in watched files: {changed_files:#?} not in {watched_files:#?}"
         );
         dev_engine
@@ -276,6 +315,36 @@ impl IntegrationTest {
         // Optionally wait for async builds to complete
         if self.test_meta.dev.ensure_latest_build_output_for_each_step {
           dev_engine.ensure_latest_bundle_output().await.unwrap();
+        }
+
+        // Like Vite, ignore an update with no changed files.
+        let full_reload = hmr_updates_by_steps.lock().unwrap().last().is_some_and(|updates| {
+          updates
+            .iter()
+            .flatten()
+            .filter(|(_, changed_files)| !changed_files.is_empty())
+            .flat_map(|(updates, _)| updates)
+            .any(|u| u.update.is_full_reload())
+        });
+        let full_build = self.test_meta.dev.full_build_after_steps.contains(&step);
+        if full_build {
+          dev_engine.trigger_full_build().unwrap();
+        }
+        if full_reload || full_build {
+          dev_engine.ensure_latest_bundle_output().await.unwrap();
+          // Like Vite, reload only after a successful build. A failed build drops the reload,
+          // and the client keeps the output and patches it already had.
+          let build_succeeded = build_results_by_steps
+            .lock()
+            .unwrap()
+            .last()
+            .and_then(|results| results.last())
+            .is_some_and(Result::is_ok);
+          if build_succeeded {
+            dev_engine.create_client_for_testing().await;
+            client_output = read_output_files(Path::new(&output_dir));
+            reloaded_after_step = Some(step);
+          }
         }
 
         // Compare the incremental scan state with a fresh full build of the
@@ -355,9 +424,16 @@ impl IntegrationTest {
             }
           }
 
+          if self.test_meta.write_to_disk {
+            restore_output_files(Path::new(&output_dir), &client_output);
+          }
+
           // Process HMR updates and patches for execution
           let mut patch_chunks: Vec<(String, Vec<String>)> = vec![];
-          for step_output in &build_snapshot.hmr_steps {
+          for (step, step_output) in build_snapshot.hmr_steps.iter().enumerate() {
+            if reloaded_after_step.is_some_and(|reloaded| step <= reloaded) {
+              continue;
+            }
             if let Ok((client_updates, _changed_files)) = &step_output.hmr_updates {
               for hmr_update in client_updates {
                 match &hmr_update.update {
@@ -366,13 +442,11 @@ impl IntegrationTest {
                     fs::write(&output_path, &patch.code).unwrap();
                     patch_chunks.push((format!("./{}", patch.filename), patch.changed_ids.clone()));
                   }
-                  rolldown_common::HmrUpdate::FullReload { reason } => {
-                    assert!(
-                      !self.should_execute_output(),
-                      "execute_output should be false when full reload happens; reason: {reason:?}"
-                    );
-                  }
-                  rolldown_common::HmrUpdate::Noop => {}
+                  // A full reload that ran reloads the test client, which skips this step. One
+                  // left here was dropped, as Vite drops it: its build failed, or it had no
+                  // changed files.
+                  rolldown_common::HmrUpdate::FullReload { .. }
+                  | rolldown_common::HmrUpdate::Noop => {}
                 }
               }
             }
@@ -560,8 +634,12 @@ impl IntegrationTest {
   pub async fn run_multiple(
     &self,
     mut multiple_options: Vec<NamedBundlerOptions>,
-    plugins: Vec<SharedPluginable>,
+    mut plugins: Vec<SharedPluginable>,
   ) {
+    // Registered last so it runs right before the internal dce pass; see the module docs of
+    // `preserve_region_markers` for why snapshots need markers kept intact.
+    plugins.push(Plugin::new_shared(PreserveRegionMarkersPlugin));
+
     let test_folder_path = &self.test_folder_path;
 
     // Detect HMR mode by checking for HMR edit files
@@ -610,10 +688,11 @@ impl IntegrationTest {
     // Dispatch to appropriate build method and generate snapshot
     let snapshot_content = if hmr_mode_enabled {
       let artifacts_snapshot =
-        self.run_multiple_for_dev(multiple_options, plugins, &hmr_steps).await;
+        Box::pin(self.run_multiple_for_dev(multiple_options, plugins, &hmr_steps)).await;
       artifacts_snapshot.render(&self.test_meta)
     } else {
-      let artifacts_snapshot = self.run_multiple_for_build(multiple_options, plugins).await;
+      let artifacts_snapshot =
+        Box::pin(self.run_multiple_for_build(multiple_options, plugins)).await;
       artifacts_snapshot.render(&self.test_meta)
     };
 
@@ -667,16 +746,21 @@ impl IntegrationTest {
     if let Some(experimental) = &mut options.experimental {
       if let Some(dev_mode) = &mut experimental.dev_mode {
         if dev_mode.implement.is_none() {
-          dev_mode.implement = Some(include_str!("./hmr-runtime.js").to_owned());
+          dev_mode.implement = Some(format!(
+            "{}\n{}",
+            include_str!("../../rolldown_plugin_hmr/src/runtime/runtime-extra-dev-common.js"),
+            include_str!("./hmr-runtime.js")
+          ));
+          dev_mode.skip_common_runtime_injection = Some(true);
         }
       }
     }
 
-    // Disable plugin timings in tests to reduce snapshot noise
+    // The test harness disables bundler timings by default to reduce snapshot noise.
     if let Some(checks) = &mut options.checks {
-      checks.plugin_timings = Some(false);
+      checks.bundler_timings.get_or_insert(checks.plugin_timings.unwrap_or(false));
     } else {
-      options.checks = Some(ChecksOptions { plugin_timings: Some(false), ..Default::default() });
+      options.checks = Some(ChecksOptions { bundler_timings: Some(false), ..Default::default() });
     }
   }
 

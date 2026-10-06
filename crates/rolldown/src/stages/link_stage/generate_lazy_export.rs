@@ -74,6 +74,7 @@ impl LinkStage<'_> {
       }
       // ExportsKind == Esm && ModuleType == Json
       if is_json {
+        unwrap_json_module(self, module_idx);
         if json_object_expr_to_esm(self, module_idx) {
           continue;
         }
@@ -202,11 +203,11 @@ fn json_object_expr_to_esm(link_staged: &mut LinkStage, module_idx: ModuleIdx) -
             property.computed = true;
           } else if is_legal_ident {
             property.shorthand = is_legal_ident;
-            property.key = ast::PropertyKey::StaticIdentifier(ast::IdentifierName::boxed(
+            property.key = ast::PropertyKey::new_static_identifier(
               SPAN,
               oxc::ast::ast::Str::from_str_in(legitimized_ident.as_ref(), &ast_builder),
               &ast_builder,
-            ));
+            );
           }
           match index_map.entry(legitimized_ident) {
             Entry::Occupied(mut occ) => {
@@ -232,7 +233,6 @@ fn json_object_expr_to_esm(link_staged: &mut LinkStage, module_idx: ModuleIdx) -
       )))
       // export all declaration
       .chain(std::iter::once(Statement::new_export_named_stmt(
-        None,
         declaration_binding_names.iter(),
         &ast_builder,
       )));
@@ -310,11 +310,20 @@ fn json_object_expr_to_esm(link_staged: &mut LinkStage, module_idx: ModuleIdx) -
       .with_declared_symbols(smallvec![TaggedSymbolRef::normal(namespace_object_ref)])
       .with_referenced_symbols(all_declared_symbols),
   );
-  // for a es json module it did not needs to be wrapped anyway.
-  link_staged.metas[module_idx].wrapper_stmt_info = None;
-  link_staged.metas[module_idx].wrapper_ref = None;
-  link_staged.metas[module_idx].set_wrap_kind(WrapKind::None);
 
   link_staged.symbols.store_local_db(module_idx, symbol_ref_db);
   true
+}
+
+/// Removes the wrapper that `wrap_modules` created for an ESM JSON module, for any JSON root. A
+/// JSON module declares only data, so no code can see a difference if it runs at load time. Call
+/// this function before the JSON transform, which can replace the statement infos.
+fn unwrap_json_module(link_staged: &mut LinkStage, module_idx: ModuleIdx) {
+  let meta = &mut link_staged.metas[module_idx];
+  if let Some(wrapper_stmt_idx) = meta.wrapper_stmt_info.take() {
+    // The wrapper statement has no AST node, so an empty statement info removes it.
+    *link_staged.stmt_infos[module_idx].get_mut(wrapper_stmt_idx) = StmtInfo::default();
+  }
+  meta.wrapper_ref = None;
+  meta.set_wrap_kind(WrapKind::None);
 }

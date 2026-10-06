@@ -40,7 +40,9 @@ impl GenerateStage<'_> {
     // do not depend on module discovery order.
     for chunk_idx in &chunk_graph.sorted_chunk_idx_vec {
       let chunk = &chunk_graph.chunk_table[*chunk_idx];
-      if chunk.modules.is_empty() {
+      // An inline common chunk record has no file, and selection keeps every module that uses
+      // `import.meta`, file URL references included, out of records.
+      if chunk.modules.is_empty() || self.inline_state.is_record(*chunk_idx) {
         continue;
       }
       let chunk_id = chunk
@@ -59,7 +61,7 @@ impl GenerateStage<'_> {
           continue;
         }
 
-        for RolldownFileUrlReference { node_id, stmt_info_idx, reference_id } in
+        for RolldownFileUrlReference { node_id, stmt_info_idx, reference_id, url_id } in
           &module.ecma_view.rolldown_file_url_references
         {
           if !self.link_output.metas[module.idx].stmt_info_included.has_bit(*stmt_info_idx) {
@@ -81,6 +83,7 @@ impl GenerateStage<'_> {
               module_id: module.id.as_str(),
               reference_id,
               relative_path: &relative_path,
+              url_id: url_id.as_deref(),
             };
             self.plugin_driver.resolve_file_url(&args).await?
           } else {

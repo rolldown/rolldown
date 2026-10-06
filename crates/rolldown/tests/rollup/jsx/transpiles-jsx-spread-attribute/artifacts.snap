@@ -6,11 +6,14 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## main.js
 
 ```js
+//#region dep1.js
 console.log({ value1: true });
 //#endregion
 //#region dep2.js
 const obj$1 = { value2: true };
 console.log(obj$1);
+//#endregion
+//#region dep3.js
 console.log({ value3: true });
 //#endregion
 //#region main.js

@@ -11,8 +11,7 @@ import { t as trim } from "./string.js";
 __rolldown_runtime__.registerGraph({
 	ids: ["bar.js", "utils/string.js"],
 	localCount: 1,
-	edges: [[1]],
-	dynamicEdges: [[]]
+	edges: [[1]]
 });
 //#region bar.js
 var bar_exports = /* @__PURE__ */ __exportAll({ default: () => bar_default });
@@ -38,8 +37,7 @@ __rolldown_runtime__.registerGraph({
 		"utils/string.js"
 	],
 	localCount: 2,
-	edges: [[2], [0]],
-	dynamicEdges: [[], []]
+	edges: [[2], [0]]
 });
 //#region utils/index.js
 var utils_exports = /* @__PURE__ */ __exportAll({
@@ -73,10 +71,11 @@ __rolldown_runtime__.registerGraph({
 	],
 	localCount: 1,
 	edges: [[]],
-	dynamicEdges: [[1, 2]]
+	dynamicEdges: { 0: [1, 2] }
 });
+//#region main.js
 __rolldown_runtime__.createModuleHotContext("main.js");
-__rolldown_runtime__.registerModule("main.js", {});
+__rolldown_runtime__.registerModule("main.js");
 import("./foo.js"), import("./bar.js");
 //#endregion
 export { __exportAll as t };
@@ -90,8 +89,7 @@ import { t as __exportAll } from "./main.js";
 __rolldown_runtime__.registerGraph({
 	ids: ["utils/string.js"],
 	localCount: 1,
-	edges: [[]],
-	dynamicEdges: [[]]
+	edges: [[]]
 });
 //#region utils/string.js
 var string_exports = /* @__PURE__ */ __exportAll({

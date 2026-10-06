@@ -21,7 +21,7 @@ impl TryFrom<&str> for Platform {
       "node" => Ok(Self::Node),
       "browser" => Ok(Self::Browser),
       "neutral" => Ok(Self::Neutral),
-      _ => Err(format!("Unknown platform: {value:?}")),
+      _ => Err(format!("Unknown platform: {value}")),
     }
   }
 }

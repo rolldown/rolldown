@@ -1,9 +1,9 @@
 import assert from 'node:assert';
 
-// Regression pin for the B (partial forwarder discharge) x C (emergent cycle) composition: the
-// forwarder discharges its live `pv` hop (closing the emergent A <-> B cycle the fixpoint wraps),
-// its dead `unused` hop triggers nothing, and the eager interop reader is deferred past both chunk
-// bodies. Must deliver initialized values in both strict modes with no startup crash.
+// Regression pin for partial-forwarder routing: the live `pv` hop reaches `init_definer`, while
+// the dead `unused` hop triggers nothing. On-demand mode must not add a phantom forwarder edge;
+// wrap-all may conservatively defer the eager interop reader. Both modes must deliver initialized
+// values with no startup crash.
 await import('./dist/main.js');
 
 assert.strictEqual(

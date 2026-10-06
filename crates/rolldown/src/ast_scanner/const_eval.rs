@@ -23,17 +23,19 @@ pub struct ConstEvalCtx<'me, 'ast: 'me> {
 
 impl<'ast> ConstantEvaluationCtx<'ast> for ConstEvalCtx<'_, 'ast> {}
 
-impl<'ast> GetAllocator<'ast> for ConstEvalCtx<'_, 'ast> {
-  fn allocator(&self) -> &'ast Allocator {
-    self.ast.allocator()
-  }
-}
-
 impl<'ast> GetAstBuilder<'ast> for ConstEvalCtx<'_, 'ast> {
   type Builder = oxc::ast::builder::AstBuilder<'ast>;
 
+  #[inline]
   fn builder(&self) -> &oxc::ast::builder::AstBuilder<'ast> {
     &self.ast
+  }
+}
+
+impl<'ast> GetAllocator<'ast> for ConstEvalCtx<'_, 'ast> {
+  #[inline]
+  fn allocator(&self) -> &'ast Allocator {
+    self.ast.allocator()
   }
 }
 

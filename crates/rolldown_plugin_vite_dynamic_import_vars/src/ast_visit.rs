@@ -3,7 +3,7 @@ use std::{borrow::Cow, path::Path};
 use cow_utils::CowUtils;
 use oxc::{
   ast::{Comment, ast::Expression},
-  ast_visit::{Visit, walk},
+  ast_visit::{VisitJs, walk_js},
 };
 use rolldown_plugin::{LogWithoutPlugin, PluginContext};
 use rolldown_std_utils::relative_path_to_slash;
@@ -32,10 +32,10 @@ pub struct DynamicImportVarsVisit<'ast, 'b> {
   pub magic_string: Option<MagicString<'b>>,
 }
 
-impl<'ast> Visit<'ast> for DynamicImportVarsVisit<'ast, '_> {
+impl<'ast> VisitJs<'ast> for DynamicImportVarsVisit<'ast, '_> {
   fn visit_expression(&mut self, expr: &Expression<'ast>) {
     if self.rewrite_variable_dynamic_import(expr, None) {
-      walk::walk_expression(self, expr);
+      walk_js::walk_expression(self, expr);
     }
   }
 }

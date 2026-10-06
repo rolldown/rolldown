@@ -6,7 +6,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## A.js
 
 ```js
-//! User-defined Entry: [Entry-Module-Id: entry-a.js] [Name: Some("A")]
+//! User-defined Entry: [Entry-Module-Id: entry-a.js] [Name: A]
 import "./shared.js";
 import "./Splitted.js";
 //#region entry-a.js
@@ -19,7 +19,7 @@ import("./dyn-entry.js").then(console.log);
 ## B.js
 
 ```js
-//! User-defined Entry: [Entry-Module-Id: entry-b.js] [Name: Some("B")]
+//! User-defined Entry: [Entry-Module-Id: entry-b.js] [Name: B]
 import "./shared.js";
 import "./Splitted.js";
 //#region entry-b.js
@@ -41,7 +41,7 @@ console.log("share-splitted");
 ## dyn-entry.js
 
 ```js
-//! Dynamic Entry: [Entry-Module-Id: dyn-entry.js] [Name: None]
+//! Dynamic Entry: [Entry-Module-Id: dyn-entry.js] [Name: <none>]
 import "./shared.js";
 //#region dyn-entry.js
 console.log("dyn-entry");

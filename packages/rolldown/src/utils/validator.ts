@@ -12,7 +12,7 @@ import type {
   LogLevelOption,
   LogLevelWithError,
   LogOrStringHandler,
-} from '../log/logging';
+} from '../log/logging.ts';
 import type {
   DevModeOptions,
   ExternalOption,
@@ -21,7 +21,7 @@ import type {
   OnLogFunction,
   OnwarnFunction,
   OptimizationOptions,
-} from '../options/input-options';
+} from '../options/input-options.ts';
 import type {
   AddonFunction,
   CodeSplittingNameFunction,
@@ -30,6 +30,7 @@ import type {
   ChunkFileNamesFunction,
   GlobalsFunction,
   ManualChunksFunction,
+  ManglePropertiesOptions,
   OutputOptions,
   PathsFunction,
   PreRenderedAsset,
@@ -37,15 +38,16 @@ import type {
   MinifyOptions,
   ModuleFormat,
   CodeSplittingOptions,
+  ExperimentalInlineCommonChunksOptions,
   GeneratedCodePreset,
   GeneratedCodeOptions,
-} from '../options/output-options';
-import type { RolldownOutputPluginOption, RolldownPluginOption } from '../plugin';
-import type { SourcemapIgnoreListOption, SourcemapPathTransformOption } from '../types/misc';
-import type { RenderedChunk } from '../types/rolldown-output';
-import type { AnyFn, StringOrRegExp } from '../types/utils';
-import { flattenValibotSchema } from './flatten-valibot-schema';
-import { styleText } from './style-text';
+} from '../options/output-options.ts';
+import type { RolldownOutputPluginOption, RolldownPluginOption } from '../plugin/index.ts';
+import type { SourcemapIgnoreListOption, SourcemapPathTransformOption } from '../types/misc.ts';
+import type { RenderedChunk } from '../types/rolldown-output.ts';
+import type { AnyFn, StringOrRegExp } from '../types/utils.ts';
+import { flattenValibotSchema } from './flatten-valibot-schema.ts';
+import { styleText } from './style-text.ts';
 import type {
   ChecksOptions,
   InputOption,
@@ -54,7 +56,7 @@ import type {
   TransformOptions,
   TreeshakingOptions,
   WatcherOptions,
-} from '..';
+} from '../index.ts';
 
 type IsSchemaSubType<
   SubTypeSchema extends v.BaseSchema<unknown, unknown, v.BaseIssue<unknown>>,
@@ -357,6 +359,10 @@ const ChecksOptionsSchema = v.strictObject({
       'Whether to emit warnings when files generated have the same name with different contents',
     ),
   ),
+  moduleLevelDirective: v.pipe(
+    v.optional(v.boolean()),
+    v.description('Whether to emit warnings for module-level directives other than `use strict`'),
+  ),
   commonJsVariableInEsm: v.pipe(
     v.optional(v.boolean()),
     v.description('Whether to emit warnings when a CommonJS variable is used in an ES module'),
@@ -395,10 +401,16 @@ const ChecksOptionsSchema = v.strictObject({
     v.optional(v.boolean()),
     v.description('Whether to emit warnings when Rolldown could not clean the output directory'),
   ),
+  bundlerTimings: v.pipe(
+    v.optional(v.boolean()),
+    v.description(
+      'Whether to emit warnings when plugins and option callbacks take significant time during the build process',
+    ),
+  ),
   pluginTimings: v.pipe(
     v.optional(v.boolean()),
     v.description(
-      'Whether to emit warnings when plugins take significant time during the build process',
+      'Deprecated alias for bundlerTimings. Rolldown uses bundlerTimings if both options have values.',
     ),
   ),
   duplicateShebang: v.pipe(
@@ -427,6 +439,12 @@ const ChecksOptionsSchema = v.strictObject({
     v.optional(v.boolean()),
     v.description(
       'Whether to emit warnings when a plugin transforms code without generating a sourcemap',
+    ),
+  ),
+  namespaceConflict: v.pipe(
+    v.optional(v.boolean()),
+    v.description(
+      'Whether to emit warnings when multiple star re-exports provide the same name from different modules',
     ),
   ),
 });
@@ -481,8 +499,19 @@ const MangleOptionsSchema = v.strictObject({
 }) satisfies v.GenericSchema<MangleOptions>;
 isTypeTrue<IsSchemaSubType<typeof MangleOptionsSchema, MangleOptions>>();
 
+const ManglePropertiesOptionsSchema = v.strictObject({
+  include: v.instance(RegExp),
+  exclude: v.optional(v.instance(RegExp)),
+  reserved: v.optional(v.array(v.string())),
+  quoted: v.optional(v.boolean()),
+  debug: v.optional(v.boolean()),
+  cache: v.optional(v.record(v.string(), v.union([v.string(), v.literal(false)]))),
+});
+isTypeTrue<IsSchemaSubType<typeof ManglePropertiesOptionsSchema, ManglePropertiesOptions>>();
+
 const CodegenOptionsSchema = v.strictObject({
   removeWhitespace: v.optional(v.boolean()),
+  asciiOnly: v.optional(v.boolean()),
   legalComments: v.optional(
     v.union([
       v.literal('none'),
@@ -498,6 +527,7 @@ isTypeTrue<IsSchemaSubType<typeof CodegenOptionsSchema, CodegenOptions>>();
 const MinifyOptionsSchema = v.strictObject({
   compress: v.optional(v.union([v.boolean(), CompressOptionsSchema])),
   mangle: v.optional(v.union([v.boolean(), MangleOptionsSchema])),
+  mangleProps: v.optional(ManglePropertiesOptionsSchema),
   codegen: v.optional(v.union([v.boolean(), CodegenOptionsSchema])),
 });
 isTypeTrue<IsSchemaSubType<typeof MinifyOptionsSchema, MinifyOptions>>();
@@ -596,6 +626,7 @@ const DevModeSchema = v.union([
     port: v.optional(v.number()),
     host: v.optional(v.string()),
     implement: v.optional(v.string()),
+    skipCommonRuntimeInjection: v.optional(v.boolean()),
     lazy: v.optional(v.boolean()),
   }),
 ]);
@@ -815,6 +846,24 @@ const AdvancedChunksTestFunctionSchema = v.pipe(
 );
 isTypeTrue<IsSchemaSubType<typeof AdvancedChunksTestFunctionSchema, CodeSplittingTestFunction>>();
 
+const InlineCommonChunksExcludeItemSchema = v.union([
+  StringOrRegExpSchema,
+  AdvancedChunksTestFunctionSchema,
+]);
+
+const ExperimentalInlineCommonChunksSchema = v.strictObject({
+  maxSize: v.optional(v.number()),
+  exclude: v.optional(
+    v.union([InlineCommonChunksExcludeItemSchema, v.array(InlineCommonChunksExcludeItemSchema)]),
+  ),
+});
+isTypeTrue<
+  IsSchemaSubType<
+    typeof ExperimentalInlineCommonChunksSchema,
+    ExperimentalInlineCommonChunksOptions
+  >
+>();
+
 const AdvancedChunksSchema = v.strictObject({
   includeDependenciesRecursively: v.optional(v.boolean()),
   minSize: v.optional(v.number()),
@@ -825,6 +874,7 @@ const AdvancedChunksSchema = v.strictObject({
   groups: v.optional(
     v.array(
       v.strictObject({
+        debugName: v.optional(v.string()),
         name: v.union([v.string(), AdvancedChunksNameFunctionSchema]),
         test: v.optional(v.union([StringOrRegExpSchema, AdvancedChunksTestFunctionSchema])),
         priority: v.optional(v.number()),
@@ -840,6 +890,7 @@ const AdvancedChunksSchema = v.strictObject({
       }),
     ),
   ),
+  experimentalInlineCommonChunks: v.optional(ExperimentalInlineCommonChunksSchema),
 });
 isTypeTrue<IsSchemaSubType<typeof AdvancedChunksSchema, CodeSplittingOptions>>();
 

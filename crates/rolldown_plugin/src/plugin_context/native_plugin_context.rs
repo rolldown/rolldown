@@ -10,7 +10,7 @@ use derive_more::Debug;
 use rolldown_common::{
   FilenameTemplate, LogLevel, LogWithoutPlugin, ModuleDefFormat, ModuleId, ModuleLoaderMsg,
   PackageJson, PluginIdx, ResolvedId, SharedFileEmitter, SharedModuleInfoDashMap,
-  SharedNormalizedBundlerOptions, side_effects::HookSideEffects,
+  SharedNormalizedBundlerOptions, WatchPath, side_effects::HookSideEffects,
 };
 use rolldown_resolver::{ResolveError, Resolver};
 use rolldown_utils::dashmap::FxDashSet;
@@ -149,7 +149,10 @@ impl NativePluginContextImpl {
   ) -> anyhow::Result<ArcStr> {
     let file_name_is_none = file.file_name.is_none();
     let asset_filename_template = file_name_is_none.then(|| {
-      FilenameTemplate::new(self.options.asset_filenames.value(fn_asset_filename), "assetFileNames")
+      FilenameTemplate::new(
+        self.options.asset_filenames.value(fn_asset_filename),
+        "output.assetFileNames",
+      )
     });
     let sanitized_file_name = file_name_is_none.then(|| {
       self.options.sanitize_filename.value(file.name_for_sanitize(), fn_sanitized_file_name)
@@ -187,8 +190,9 @@ impl NativePluginContextImpl {
     self.resolver.cwd()
   }
 
+  /// The path is resolved against `cwd`, so the watch files are absolute and normalized.
   pub fn add_watch_file(&self, file: &str) {
-    self.watch_files.insert(file.into());
+    self.watch_files.insert(WatchPath::new(file, &self.options.cwd).to_string().into());
   }
 
   fn log(&self, level: LogLevel, log: LogWithoutPlugin) {

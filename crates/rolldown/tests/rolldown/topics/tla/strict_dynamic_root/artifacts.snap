@@ -30,25 +30,17 @@ export { value };
 ### main.js
 
 ```js
-import { n as loaded, t as init_main } from "./main2.js";
-init_main();
-export { loaded };
-
-```
-
-### main2.js
-
-```js
 import { t as __esmMin } from "./rolldown-runtime.js";
 //#region main.js
 var loaded;
 function init_main() {
 	return (init_main = __esmMin((() => {
-		loaded = import("./tla-target2.js").then((mod) => mod.value);
+		loaded = import("./tla-target.js").then((mod) => mod.value);
 	})))();
 }
 //#endregion
-export { loaded as n, init_main as t };
+init_main();
+export { loaded };
 
 ```
 
@@ -72,14 +64,6 @@ function init_tla_target() {
 	})))();
 }
 //#endregion
-export { value as n, init_tla_target as t };
-
-```
-
-### tla-target2.js
-
-```js
-import { n as value, t as init_tla_target } from "./tla-target.js";
 await init_tla_target();
 export { value };
 

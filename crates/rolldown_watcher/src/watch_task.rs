@@ -263,11 +263,14 @@ impl WatchTask {
     }
 
     let mut fs_watcher = fs_watcher.lock().expect("fs_watcher lock poisoned");
-    // A path the group already covers (itself or a watched ancestor directory, from this task
-    // or a sibling) is adopted without a backend batch: on macOS a batch restarts the group's
-    // FSEvents stream. See internal-docs/watch-mode/implementation.md ("File Watching").
+    // Where a batch restarts the group's stream (FSEvents), a path the group already covers
+    // (itself or a watched ancestor directory, from this task or a sibling) is adopted without
+    // one; the kernel reports it through the watched root. Elsewhere every path is registered:
+    // a redundant add is harmless, and an explicit watch survives a recursive watch the backend
+    // could not extend. See internal-docs/watch-mode/implementation.md ("File Watching").
+    let skip_covered = fs_watcher.add_restarts_stream();
     let (covered, uncovered): (Vec<&Path>, Vec<&Path>) =
-      candidates.into_iter().partition(|path| fs_watcher.is_watched(path));
+      candidates.into_iter().partition(|path| skip_covered && fs_watcher.is_watched(path));
     for path in covered {
       watched_files.insert(path.to_path_buf());
     }
@@ -375,26 +378,22 @@ mod tests {
     .expect("create watch task")
   }
 
-  /// A file below a directory a sibling already watches is adopted without a backend batch:
-  /// adds are recursive, and on macOS a batch restarts the group's FSEvents stream.
-  #[test]
-  fn path_covered_by_sibling_directory_is_adopted_without_batch() {
+  /// Task A watches `assets/`, then task B, sharing A's group watcher, asks for
+  /// `assets/x.svg`. Returns whether B owns the file and whether the group registered it.
+  fn watch_file_below_sibling_directory(config: &FsWatcherConfig, name: &str) -> (bool, bool) {
     let dir =
-      std::env::temp_dir().join(format!("rolldown-watch-task-covered-{}", std::process::id()));
+      std::env::temp_dir().join(format!("rolldown-watch-task-{name}-{}", std::process::id()));
     fs::create_dir_all(dir.join("assets")).expect("create assets directory");
+    // FSEvents reports canonical paths, including macOS's /var -> /private/var alias.
     let dir = TestDir(dunce::canonicalize(dir).expect("canonicalize test directory"));
     let assets = dir.0.join("assets");
     let svg = assets.join("x.svg");
     fs::write(&svg, "<svg/>").expect("write asset");
 
     let (tx, _rx) = tokio::sync::mpsc::unbounded_channel();
-    let fs_watcher = FsWatcher::new(
-      GroupFsEventHandler { group_index: WatchGroupIdx::from_usize(0), tx },
-      // The no-op backend accepts every add, so a path absent from the registered set
-      // never reached a batch.
-      &FsWatcherConfig { enabled: false, ..FsWatcherConfig::default() },
-    )
-    .expect("create fs watcher");
+    let fs_watcher =
+      FsWatcher::new(GroupFsEventHandler { group_index: WatchGroupIdx::from_usize(0), tx }, config)
+        .expect("create fs watcher");
     let fs_watcher = Arc::new(std::sync::Mutex::new(fs_watcher));
     let a = task(&dir.0, &fs_watcher);
     let b = task(&dir.0, &fs_watcher);
@@ -402,11 +401,30 @@ mod tests {
     a.update_watch_files(&[ArcStr::from(assets.to_string_lossy())]).expect("watch directory");
     b.update_watch_files(&[ArcStr::from(svg.to_string_lossy())]).expect("watch file");
 
-    let svg = svg.to_string_lossy();
-    assert!(b.is_watched_file(&svg), "task B must own the covered file");
-    assert!(
-      !fs_watcher.lock().expect("fs_watcher lock").is_registered(Path::new(svg.as_ref())),
-      "a covered file must not open a backend batch"
-    );
+    let owned = b.is_watched_file(&svg.to_string_lossy());
+    let registered = fs_watcher.lock().expect("fs_watcher lock").is_registered(&svg);
+    (owned, registered)
+  }
+
+  /// On FSEvents a batch restarts the group's stream, so a file below a directory a sibling
+  /// already watches is adopted without one: the kernel reports it through the watched root.
+  #[cfg(target_os = "macos")]
+  #[test]
+  fn path_covered_by_sibling_directory_is_adopted_without_batch() {
+    let config = FsWatcherConfig { use_polling: false, ..FsWatcherConfig::default() };
+    let (owned, registered) = watch_file_below_sibling_directory(&config, "fsevents");
+    assert!(owned, "task B must own the covered file");
+    assert!(!registered, "a covered file must not open a backend batch on FSEvents");
+  }
+
+  /// Elsewhere a covered file is still registered: the redundant add is harmless, and an
+  /// explicit watch survives a recursive watch the backend could not extend.
+  #[test]
+  fn path_covered_by_sibling_directory_is_registered_on_other_backends() {
+    // The no-op backend accepts every add, like a native backend with room in its watch table.
+    let config = FsWatcherConfig { enabled: false, ..FsWatcherConfig::default() };
+    let (owned, registered) = watch_file_below_sibling_directory(&config, "other");
+    assert!(owned, "task B must own the covered file");
+    assert!(registered, "a covered file must be registered with the backend");
   }
 }

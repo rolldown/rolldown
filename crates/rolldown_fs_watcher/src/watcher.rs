@@ -11,6 +11,7 @@ use crate::{
 pub struct FsWatcher {
   backend: Box<dyn WatcherBackend>,
   watched_paths: FxHashSet<PathBuf>,
+  add_restarts_stream: bool,
 }
 
 impl FsWatcher {
@@ -18,6 +19,8 @@ impl FsWatcher {
     Ok(Self {
       backend: create_backend(event_handler, config)?,
       watched_paths: FxHashSet::default(),
+      // The macOS native backend is FSEvents (notify's default `macos_fsevent` feature).
+      add_restarts_stream: cfg!(target_os = "macos") && config.enabled && !config.use_polling,
     })
   }
 
@@ -68,6 +71,14 @@ impl FsWatcher {
     self.watched_paths.contains(path)
   }
 
+  /// True when committing a non-empty batch restarts the backend's event stream, so edits made
+  /// meanwhile can be lost. That is the FSEvents backend (macOS native, not polling); it also
+  /// covers everything below a watched directory in the kernel. False for the polling backend,
+  /// the disabled backend, and every other platform.
+  pub fn add_restarts_stream(&self) -> bool {
+    self.add_restarts_stream
+  }
+
   pub fn watched_paths(&self) -> impl Iterator<Item = &Path> {
     self.watched_paths.iter().map(PathBuf::as_path)
   }
@@ -88,8 +99,11 @@ mod tests {
 
   #[test]
   fn empty_watch_paths_does_not_open_batch() {
-    let mut watcher =
-      FsWatcher { backend: Box::new(UnexpectedBatch), watched_paths: FxHashSet::default() };
+    let mut watcher = FsWatcher {
+      backend: Box::new(UnexpectedBatch),
+      watched_paths: FxHashSet::default(),
+      add_restarts_stream: false,
+    };
     watcher.watch_paths(std::iter::empty::<&Path>(), |_| panic!("no paths to filter")).unwrap();
   }
 
@@ -99,6 +113,7 @@ mod tests {
     let mut watcher = FsWatcher {
       backend: Box::new(UnexpectedBatch),
       watched_paths: FxHashSet::from_iter([path.clone()]),
+      add_restarts_stream: false,
     };
     watcher
       .watch_paths([&path, &path], |_| panic!("already watched paths must not be filtered again"))
@@ -114,6 +129,7 @@ mod tests {
     let mut watcher = FsWatcher {
       backend: Box::new(UnexpectedBatch),
       watched_paths: FxHashSet::from_iter([watched.clone()]),
+      add_restarts_stream: false,
     };
     let mut asked = Vec::new();
     watcher

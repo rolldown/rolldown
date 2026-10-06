@@ -16,6 +16,7 @@ use crate::stages::link_stage::LinkStageOutput;
 use crate::utils::chunk::conflict_resolver::ConflictResolver;
 
 /// The kind of a top-level binding. The kind decides how the renamer gives the binding a name.
+/// See internal-docs/renaming/design.md.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum RootBindingKind {
   /// Source code declares the binding, or the binding gets its name from the source (an external

@@ -36,7 +36,10 @@ pub struct InlineNamingInput {
   pub factories: Vec<(ChunkIdx, Vec<(ChunkIdx, ArcStr)>)>,
 }
 
-/// `inline` is `Some` for a file that reads inline common chunk records, see [`InlineNamingInput`].
+/// Give names to the bindings of one chunk. See internal-docs/renaming/implementation.md.
+///
+/// `inline` is `Some` for a file that reads the records of inline common chunks (see
+/// [`InlineNamingInput`]).
 #[tracing::instrument(level = "trace", skip_all)]
 #[expect(clippy::too_many_arguments)]
 pub fn deconflict_chunk_symbols(
@@ -370,7 +373,7 @@ fn bridge_name(renamer: &mut Renamer<'_>, chunk_name: &str) -> CompactStr {
 ///
 /// An inner binding keeps its original name unless it would capture a reference. Synthesized
 /// top-level bindings never have the name of an inner binding. Thus this function checks only the
-/// references that the source contains.
+/// references that the source contains. See internal-docs/renaming/design.md.
 fn rename_shadowing_symbols_in_nested_scopes<'a>(
   modules: &[ModuleIdx],
   link_output: &'a LinkStageOutput,

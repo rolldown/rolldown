@@ -1,0 +1,72 @@
+# Renaming — Implementation
+
+> [design.md](./design.md) gives the reasons and the principles for this code.
+
+## Summary
+
+`deconflict_chunk_symbols` (`crates/rolldown/src/utils/chunk/deconflict_chunk_symbols.rs`) uses a `Renamer` (`crates/rolldown/src/utils/renamer.rs`) to give names to the bindings of one chunk. It runs once for each chunk in the generate stage, after the chunks and the links between chunks are final. It writes `chunk.canonical_names`. The finalizer reads these names. If a symbol has no entry, the finalizer prints the symbol with its source name.
+
+## Components
+
+Paths are relative to `crates/rolldown/src/`.
+
+| Piece                | Where                                     | Role                                                                                                                                                       |
+| -------------------- | ----------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `ConflictResolver`   | `utils/chunk/conflict_resolver.rs`        | The flat top-level namespace of the chunk. It resolves a name to itself or to the first free `name$N`. It asks the caller if each candidate is acceptable. |
+| `Renamer`            | `utils/renamer.rs`                        | Owns the resolver and `canonical_names`. Gives names to top-level bindings and renames inner bindings.                                                     |
+| `RootBindingKind`    | `utils/renamer.rs`                        | `Authored` or `Synthesized`. Decides which inner names a top-level binding must avoid.                                                                     |
+| `InnerBindingNames`  | `utils/renamer.rs`                        | The names that the inner scopes of the chunk bind. The renamer builds it for the first synthesized binding.                                                |
+| `root_binding_kind`  | `utils/chunk/deconflict_chunk_symbols.rs` | Returns the kind of a top-level symbol.                                                                                                                    |
+| `NestedScopeRenamer` | `utils/renamer.rs`                        | The passes for one module that rename the inner bindings that capture a reference.                                                                         |
+
+## Naming order
+
+`deconflict_chunk_symbols` gives names in this order. An earlier binding gets its original name first, so the order sets the priority.
+
+1. Reserve the ambient names of the format (`require`, `module`, `exports`, `__filename` and `__dirname` for CJS, `exports` for IIFE/UMD), `Object`, `Promise`, the JS keywords and the global objects (`Renamer::new`). Also reserve each unresolved reference of the modules of the chunk (for example `console` and `window`).
+2. IIFE/UMD/CJS: external module namespaces (factory parameters, `require()` bindings). Authored.
+3. Entry chunks: the symbols that the entry exports (`referenced_symbols_by_entry_point_chunk`). ESM: the external import bindings that the chunk uses. Authored.
+4. The included top-level declarations of each module, entry module first (descending execution order). HMR references are synthesized. All other bindings go through `root_binding_kind`. In a CJS-wrapped module, this step gives names only to facades and to external import bindings. Each other root binding is a local of the CJS closure, and this step skips it.
+5. Order-wrap synthetic declarations. Synthesized.
+6. Import bindings from other chunks (`imports_from_other_chunks`), through `root_binding_kind`.
+7. Names with no symbol, through `create_conflictless_name` (synthesized): cross-chunk `require_<chunk>` bindings, external namespaces in node mode, and inline-common-chunk bridges.
+8. `rename_shadowing_symbols_in_nested_scopes`: the inner-binding passes, entry module first.
+
+## Top-level names
+
+`Renamer::add_symbol_in_root_scope(symbol_ref, kind)` asks the resolver for the original name of the symbol:
+
+- `Authored`: the renamer accepts the original name if the resolver has it free. A `$N` candidate must also not be bound in a nested scope of the module that owns the symbol (`is_name_available_with`). There, the candidate would capture the references of the renamed binding itself.
+- `Synthesized`: no candidate can be in `InnerBindingNames`, original or not.
+
+`root_binding_kind` returns `Synthesized` for runtime-module symbols and for the facades that a normal module owns. A facade that represents a binding with a source name is an exception: a re-export (in `named_imports`), `default_export_ref`, and `shimmed_missing_exports`. The symbols of external modules are `Authored`, because their names come from the importing source.
+
+`InnerBindingNames` reads the symbol table of each module once. It keeps each symbol that is not declared in the root scope. It also keeps the root-scope symbols of a CJS-wrapped module that the module really binds there. Facades are in the root scope, but no declaration binds them, so `InnerBindingNames` does not keep them.
+
+## Inner bindings
+
+`NestedScopeRenamer` runs four passes for each module:
+
+- `rename_bindings_shadowing_star_imports`: for each resolved `ns.foo` member access, it checks the name that the finalizer prints for `foo`.
+- `rename_bindings_shadowing_named_imports`: for each reference to a named import, it checks the name that the finalizer prints for the import.
+- `rename_bindings_shadowing_wrapper_params`: it renames the nested bindings that have the name of the `exports` or `module` parameter of the CJS closure of a CJS-wrapped module. Under IIFE/UMD/CJS output, it also renames the nested bindings that have the name of the factory parameter of an external module.
+- `rename_bindings_shadowing_cjs_ambient_names`: CJS output only. It renames the inner bindings with the name `require`, `__filename` or `__dirname`, because rewrites print these names as bare identifiers.
+
+The first two passes use `Renamer::printed_name`. This function follows a namespace alias to its namespace binding, as `finalized_expr_for_symbol_ref` does. The passes also use `rename_bindings_on_path`, which goes through the scope ancestors of the reference. It stops at the root scope, unless `root_scope_is_inner` is true (the module is CJS-wrapped). It renames each binding with that name, except the binding that the reference resolves to.
+
+`Renamer::rename_inner_binding` takes the first `name$N` that is not in the resolver and that no scope of the module binds. Then it reserves that name. It skips a binding that already has a name. It also skips a binding that is linked to another symbol (an import binding), because the finalizer prints that binding with the name of the other symbol.
+
+## How to add a binding
+
+- A new kind of synthesized top-level binding that has a symbol: pass `RootBindingKind::Synthesized`, or make sure that `root_binding_kind` returns `Synthesized` for it. For a binding without a symbol, use `create_conflictless_name`. In both cases, the binding needs no shadowing pass.
+- A new facade that represents a binding with a source name: exclude it in `root_binding_kind`. If you do not exclude it, it avoids inner names without a reason and takes unnecessary `$N` suffixes.
+- A new rewrite that prints a bare identifier that is not a top-level binding (for example the CJS ambient names): the rewrite needs a pass in `NestedScopeRenamer`.
+
+## Tests
+
+The fixtures are in `crates/rolldown/tests/rolldown/topics/deconflict/`. Each `_test.mjs` runs the output and checks the values. When a binding captures a reference, the output usually runs and reads the wrong binding. It does not fail to parse.
+
+## Related
+
+- [design.md](./design.md): the principles and the trade-offs of this code
+- [../inline-common-chunks/implementation.md](../inline-common-chunks/implementation.md): carriers give names to the modules of their records in one renamer

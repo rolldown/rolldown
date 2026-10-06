@@ -45,7 +45,6 @@ describe('loadConfig bundle configLoader', () => {
   });
 
   afterEach(async () => {
-    // Every generated file is gone, on success and on failure alike.
     expect(await readdir(fixtures)).toStrictEqual(filesBefore);
   });
 

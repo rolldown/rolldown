@@ -9,16 +9,11 @@ import type { ConfigExport } from './define-config';
 import type { OutputChunk } from '../types/rolldown-output';
 
 interface BundledConfig {
-  /** Absolute path of the generated entry chunk. */
   entryFile: string;
-  /** Absolute paths of every file the config build emitted. */
   generatedFiles: string[];
 }
 
-/**
- * Returns the removal errors instead of throwing them, so a cleanup failure
- * never hides the failure that triggered the cleanup.
- */
+/** Returns the removal errors, so a cleanup failure never hides the error that caused it. */
 async function removeFiles(files: string[]): Promise<unknown[]> {
   const results = await Promise.allSettled(
     files.map((file) => fs.promises.rm(file, { force: true })),
@@ -65,13 +60,8 @@ async function bundleTsConfig(configFile: string, isEsm: boolean): Promise<Bundl
       },
     ],
   });
-  // Node resolves runtime-relative lookups left in the output, such as
-  // `require.resolve('./helper')`, from the generated file's own directory, so
-  // the bundle is written beside the config. The per-call token keeps concurrent
-  // loads of the same config from sharing one file, and lets a failed write find
-  // the files it left behind. The module cache keys on the URL for the whole
-  // process, so a repeated name would return a stale module: the counter keeps
-  // names unique in this process, the random part across processes.
+  // A unique name per load: the counter defeats the process-wide module cache
+  // (keyed by URL), the random part defeats other processes loading the same config.
   const outputDir = path.dirname(configFile);
   const outputPrefix = `rolldown.config.${++configLoadCount}.${randomBytes(8).toString('hex')}.`;
   const errors: unknown[] = [];
@@ -81,8 +71,7 @@ async function bundleTsConfig(configFile: string, isEsm: boolean): Promise<Bundl
     const result = await bundle.write({
       dir: outputDir,
       format: isEsm ? 'esm' : 'cjs',
-      // A single file: a deferred config function may still `import()` after
-      // the generated files are removed, so nothing may live in a sibling chunk.
+      // One file: a deferred config function may still `import()` after cleanup.
       codeSplitting: false,
       sourcemap: 'inline',
       // respect the original file extension, mts -> mjs, cts -> cjs
@@ -139,7 +128,6 @@ async function findConfigFileNameInCwd(): Promise<string> {
 async function loadTsConfig(configFile: string): Promise<ConfigExport> {
   const isEsm = isFilePathESM(configFile);
   const { entryFile, generatedFiles } = await bundleTsConfig(configFile, isEsm);
-  // The config may throw `undefined`, so a failure is recorded by push, not by value.
   const errors: unknown[] = [];
   let config: ConfigExport | undefined;
   try {

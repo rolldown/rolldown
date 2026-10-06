@@ -26,7 +26,6 @@ interface WriteOptions {
   entryFileNames: string;
 }
 
-// The bundler is mocked, so the config file itself is never read.
 let configDir: string;
 let configFile: string;
 
@@ -44,7 +43,7 @@ afterEach(async () => {
   await rm(configDir, { recursive: true, force: true });
 });
 
-/** Writes `files` the way `bundle.write` would, the first one being the entry. */
+/** Mocked `bundle.write`: the first file is the entry. */
 function emit(files: Record<string, string>) {
   return async ({ dir, entryFileNames }: WriteOptions) => {
     const output = Object.entries(files).map(([fileName, code], index) => ({

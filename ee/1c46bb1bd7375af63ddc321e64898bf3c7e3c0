@@ -1,0 +1,71 @@
+crates/rolldown/src/utils/chunk/deconflict_chunk_symbols.rs
+  s_d43624d0762669::t_977e2daf349fed 12-14,73,297-329,431
+crates/rolldown/src/utils/renamer.rs
+  s_d43624d0762669::t_f0effcc4c60ffb 4,11-12,97-101,104-107,109-111,312-345,494-495,497,507-508,513-519,522-529,531-534,536-537
+crates/rolldown/tests/rolldown/topics/deconflict/cjs_nested_binding_renamed_onto_root_local/dep.js
+  s_d43624d0762669::t_117047a8c7bd39 1
+crates/rolldown/tests/rolldown/topics/deconflict/cjs_nested_binding_renamed_onto_root_local/lib.cjs
+  s_d43624d0762669::t_da0d87f681df67 1-5,7-8,11
+crates/rolldown/tests/rolldown/topics/deconflict/file_url_shadowed_by_binding/_test.mjs
+  s_d43624d0762669::t_a3539ebc4f6860 1-4
+crates/rolldown/tests/rolldown/topics/deconflict/file_url_shadowed_by_binding/artifacts.snap
+  s_8bf48f7952c507::t_ec6d12f3bcb663 1-26
+crates/rolldown/tests/rolldown/topics/deconflict/file_url_shadowed_by_binding/main.js
+  s_d43624d0762669::t_5aacc5406fdba0 1-7
+crates/rolldown/tests/rolldown/topics/deconflict/file_url_shadowed_by_binding/mod.rs
+  s_d43624d0762669::t_de49699edbdfea 1-58
+crates/rolldown/tests/rolldown/topics/deconflict/file_url_shadowed_by_binding/other.js
+  s_d43624d0762669::t_006589e813360d 1-2
+crates/rolldown/tests/rolldown/topics/deconflict/inner_binding_shadowing_lowered_dynamic_import/_config.json
+  s_d43624d0762669::t_4ff2959a216eb9 1-6
+crates/rolldown/tests/rolldown/topics/deconflict/inner_binding_shadowing_lowered_dynamic_import/_test.mjs
+  s_d43624d0762669::t_89161ab4d9bc45 1-6
+crates/rolldown/tests/rolldown/topics/deconflict/inner_binding_shadowing_lowered_dynamic_import/artifacts.snap
+  s_d43624d0762669::t_5967bd7ed6d035 1-34
+crates/rolldown/tests/rolldown/topics/deconflict/inner_binding_shadowing_lowered_dynamic_import/dep.js
+  s_d43624d0762669::t_3e109edede0d37 1
+crates/rolldown/tests/rolldown/topics/deconflict/inner_binding_shadowing_lowered_dynamic_import/lib.cjs
+  s_d43624d0762669::t_05c45ee53bb80b 1-8
+crates/rolldown/tests/rolldown/topics/deconflict/inner_binding_shadowing_lowered_dynamic_import/main.js
+  s_d43624d0762669::t_a198b43580c9a7 1-7
+crates/rolldown/tests/rolldown/topics/deconflict/inner_binding_shadowing_lowered_dynamic_import/pure.js
+  s_d43624d0762669::t_50f0f0af9c2d59 1
+crates/rolldown/tests/rolldown/topics/deconflict/mod.rs
+  s_d43624d0762669::t_2a70b6cef6b7bb 1-2
+crates/rolldown/tests/rolldown/topics/deconflict/top_level_binding_shadowing_symbol_to_string_tag/_config.json
+  s_d43624d0762669::t_49887c3e6b5dae 1-7
+crates/rolldown/tests/rolldown/topics/deconflict/top_level_binding_shadowing_symbol_to_string_tag/_test.mjs
+  s_d43624d0762669::t_2dc91e635e3fb3 1-13
+crates/rolldown/tests/rolldown/topics/deconflict/top_level_binding_shadowing_symbol_to_string_tag/main.js
+  s_d43624d0762669::t_90492c170b49d5 1-4
+crates/rolldown/tests/rolldown/topics/mod.rs
+  s_d43624d0762669::t_619e0de1cd0191 1
+internal-docs/renaming/design.md
+  s_d43624d0762669::t_5b043a05d6815c 38-39,51
+internal-docs/renaming/implementation.md
+  s_d43624d0762669::t_0cf85683636fb3 26,48,52-54,64
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "ee1c46bb1bd7375af63ddc321e64898bf3c7e3c0",
+  "prompts": {},
+  "sessions": {
+    "s_8bf48f7952c507": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "48edf8e9-241d-4211-af4b-470a0203a12c",
+        "model": "unknown"
+      },
+      "human_author": "IWANABETHATGUY <iwanabethatguy@qq.com>"
+    },
+    "s_d43624d0762669": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "7f7265c1-aa11-4a4b-9d11-215aef9a579c",
+        "model": "unknown"
+      },
+      "human_author": "IWANABETHATGUY <iwanabethatguy@qq.com>"
+    }
+  }
+}

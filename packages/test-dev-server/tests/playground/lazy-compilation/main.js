@@ -15,3 +15,4 @@ import './circular-namespace-reexport/setup.js';
 import './circular-reexport/setup.js';
 import './circular-import-binding/setup.js';
 import './walk-through-shipped/setup.js';
+import './top-level-await/setup.js';

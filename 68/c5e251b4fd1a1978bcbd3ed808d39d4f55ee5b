@@ -1,0 +1,29 @@
+crates/rolldown/tests/rolldown/cjs_compat/top_level_this_exports/artifacts.snap
+  s_8bf48f7952c507::t_28b306df05fcf1 13,15-16
+crates/rolldown/tests/rolldown/issues/4289/artifacts.snap
+  s_8bf48f7952c507::t_dc537776121423 52-55,120-123,174-177
+crates/rolldown/tests/rolldown/issues/4782/artifacts.snap
+  s_8bf48f7952c507::t_9696b4fb173ab9 16,18-19
+crates/rolldown/tests/rolldown/issues/5531/artifacts.snap
+  s_8bf48f7952c507::t_c32eb6b1874f44 15,17-18
+crates/rolldown/tests/rolldown/topics/deconflict/cjs_nested_binding_renamed_onto_root_local/artifacts.snap
+  s_8bf48f7952c507::t_5e680ec4b10e0d 15-16,38-39
+crates/rolldown/tests/rolldown/topics/hmr/runtime_correctness/artifacts.snap
+  s_8bf48f7952c507::t_4acf67308c258b 103,106-107
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "68c5e251b4fd1a1978bcbd3ed808d39d4f55ee5b",
+  "prompts": {},
+  "sessions": {
+    "s_8bf48f7952c507": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "48edf8e9-241d-4211-af4b-470a0203a12c",
+        "model": "unknown"
+      },
+      "human_author": "IWANABETHATGUY <iwanabethatguy@qq.com>"
+    }
+  }
+}

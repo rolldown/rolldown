@@ -4,6 +4,7 @@ use oxc::{
   span::SPAN,
 };
 use oxc_traverse::Traverse;
+use rolldown_common::EcmaModuleAstUsage;
 use rolldown_ecmascript::{
   CJS_EXPORTS_REF_STR, CJS_MODULE_REF_STR, CJS_ROLLDOWN_EXPORTS_REF,
   CJS_ROLLDOWN_EXPORTS_REF_IDENT, CJS_ROLLDOWN_MODULE_REF, CJS_ROLLDOWN_MODULE_REF_IDENT,
@@ -227,13 +228,14 @@ impl<'ast> Traverse<'ast, ()> for HmrAstFinalizer<'_, 'ast> {
       None,
       self,
     );
+    let is_async = self.module.ast_usage.contains(EcmaModuleAstUsage::TopLevelAwait);
     // function () { [user code] }
     let mut user_code_wrapper = ast::Function::boxed(
       SPAN,
       ast::FunctionType::FunctionExpression,
       None,
       false,
-      false,
+      is_async,
       false,
       None,
       None,

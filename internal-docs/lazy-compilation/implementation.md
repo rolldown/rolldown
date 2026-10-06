@@ -93,6 +93,25 @@ Two `/lazy` requests in quick succession, before the first chunk's delivery ack 
 
 An HMR patch re-runs a module for a different reason: the client's apply step removes the module from the module cache first (`removeModuleCache`), so `initModule` will run the factory again. The factory shape is the same in both payload kinds (see [hmr/design.md](../hmr/design.md), principle 5).
 
+### Top-Level Await
+
+A module whose own body uses top-level await (`await`, `for await`, `await using`) gets an `async` factory: `async function (__rolldown_module_id__) { … }` (`enter_program` in `impl_traverse_for_hmr_ast_finalizer.rs`). This applies to lazy chunks and HMR patches alike. Without it, the `await` is a syntax error and the whole chunk fails to parse (#11110).
+
+`initModule` does not await the factory. The factory registers the module before its first `await`, so importers get the exports object right away. The rest of the body runs later:
+
+```js
+// tla.js
+export const value = await Promise.resolve(1);
+
+// importer.js, in the same lazy chunk
+import { value } from './tla.js';
+console.log(value); // TDZ error: `value` is set only after the await
+```
+
+An error thrown in the body becomes a rejected promise that `initModule` drops, so it shows up only as an unhandled rejection, not at the importer.
+
+We do not keep the order of top-level await in lazy chunks and HMR patches. For now, we only make sure the syntax is correct, not the semantics.
+
 ### Link-Stage-Synthesized Exports (JSON, text, base64, dataurl)
 
 Modules whose exports are synthesized at link time are **broken inside lazy chunks** (and HMR patches): JSON/text/base64/dataurl modules are scanned as a bare expression statement with `ExportsKind::None`, and the `export default` is materialized only by the link stage's `generate_lazy_export` — which the lazy/HMR render path never runs (it renders pristine scan-time AST clones). The lazy chunk registers them with no exports holder — `registerModule(id)`, which the runtime fills in as `{ exports: {} }` — so importers see **empty exports on first lazy load**; after the background rebuild + a page refresh the full build applies the transform and the same import works. No playground fixture covers this yet.
@@ -481,17 +500,18 @@ The injected helper function is inserted **after** any directive prologues (e.g.
 
 E2E playground: `packages/test-dev-server/tests/playground/lazy-compilation/` (one dev server config with `experimental.devMode.lazy: true` + an alias plugin):
 
-| Spec                        | Pins                                                                              |
-| --------------------------- | --------------------------------------------------------------------------------- |
-| `basic`                     | lazy module arrives as two separate JS requests (proxy chunk + real chunk)        |
-| `aliased-import`            | idempotent proxy-id creation under alias re-entrancy (vite#22454)                 |
-| `emitted-asset`             | assets emitted during lazy compile are servable on first load (vite#22596)        |
-| `late-lazy-chunk`           | a lazy chunk that lands after a newer HMR patch does not replace its code         |
-| `lazy-init-error`           | init errors catchable with try/catch — cold and warm paths (#9975/#9981)          |
-| `lazy-init-error-unhandled` | exactly one `unhandledrejection` without a handler — cold and warm paths          |
-| `nested-dynamic-import`     | nested lazy `import()` inside a lazy chunk resolves on first click                |
-| `shared-module`             | export-name preservation in shared chunks (#9132) + watch/auto-reload after fetch |
-| `walk-through-shipped`      | a lazy chunk carries the deps of a module that a patch shipped but never ran      |
+| Spec                        | Pins                                                                                       |
+| --------------------------- | ------------------------------------------------------------------------------------------ |
+| `basic`                     | lazy module arrives as two separate JS requests (proxy chunk + real chunk)                 |
+| `aliased-import`            | idempotent proxy-id creation under alias re-entrancy (vite#22454)                          |
+| `emitted-asset`             | assets emitted during lazy compile are servable on first load (vite#22596)                 |
+| `late-lazy-chunk`           | a lazy chunk that lands after a newer HMR patch does not replace its code                  |
+| `lazy-init-error`           | init errors catchable with try/catch — cold and warm paths (#9975/#9981)                   |
+| `lazy-init-error-unhandled` | exactly one `unhandledrejection` without a handler — cold and warm paths                   |
+| `nested-dynamic-import`     | nested lazy `import()` inside a lazy chunk resolves on first click                         |
+| `shared-module`             | export-name preservation in shared chunks (#9132) + watch/auto-reload after fetch          |
+| `walk-through-shipped`      | a lazy chunk carries the deps of a module that a patch shipped but never ran               |
+| `top-level-await`           | a lazy module with top-level await parses and runs (#11110); its importer gets a TDZ error |
 
 Several specs use `retry: 0` because the bugs only reproduce on the first interaction with a fresh server. Unit test: `packages/rolldown/tests/dev/dev-lazy-compile.test.ts` pins the unknown-id rejection (#9969).
 

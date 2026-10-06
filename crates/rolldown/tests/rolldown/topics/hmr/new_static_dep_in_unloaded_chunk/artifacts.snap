@@ -71,7 +71,7 @@ export { __exportAll as t };
 ## Code
 
 ```js
-__rolldown_runtime__.registerGraph({ids:["heavy.js","hmr.js"],localCount:2,edges:[[],[0]]});
+__rolldown_runtime__.registerGraph({ids:["heavy.js","hmr.js"],localCount:2,edges:[[],[0]],stamps:{1:1}});
 //#region heavy.js
 __rolldown_runtime__.registerFactory("heavy.js", (function(__rolldown_module_id__) {
 	try {
@@ -95,7 +95,7 @@ __rolldown_runtime__.registerFactory("hmr.js", (function(__rolldown_module_id__)
 		console.log("hmr", value, import_heavy_10.heavy);
 		hot_hmr.accept();
 	} finally {}
-}));
+}), 1);
 
 //#endregion
 ```

@@ -438,9 +438,10 @@ pub fn render_chunk_exports(
 
 #[inline]
 pub fn render_object_define_property(key: &str, value: &str) -> String {
+  let key = serde_json::to_string(key).unwrap();
   concat_string!(
     "Object.defineProperty(exports, ",
-    serde_json::to_string(key).unwrap(),
+    key,
     ", {
   enumerable: true,
   get: function () {
@@ -454,9 +455,10 @@ pub fn render_object_define_property(key: &str, value: &str) -> String {
 
 #[inline]
 pub fn render_object_define_property_value(key: &str, value: &str) -> String {
+  let key = serde_json::to_string(key).unwrap();
   concat_string!(
     "Object.defineProperty(exports, ",
-    serde_json::to_string(key).unwrap(),
+    key,
     ", {
   enumerable: true,
   value: ",
@@ -510,18 +512,17 @@ fn must_keep_live_binding(
 ) -> bool {
   let canonical_ref = symbol_db.canonical_ref_for(export_ref);
 
+  // Local write analysis cannot prove an external export is immutable.
+  if canonical_ref.is_created_by_import_stmt_that_target_external(symbol_db, modules) {
+    return options.external_live_bindings;
+  }
+
   if canonical_ref.is_declared_by_const(symbol_db) {
     return false;
   }
 
   if canonical_ref.is_not_reassigned(symbol_db) {
     // For unknown case, we consider it as reassigned.
-    return false;
-  }
-
-  if !options.external_live_bindings
-    && canonical_ref.is_created_by_import_stmt_that_target_external(symbol_db, modules)
-  {
     return false;
   }
 

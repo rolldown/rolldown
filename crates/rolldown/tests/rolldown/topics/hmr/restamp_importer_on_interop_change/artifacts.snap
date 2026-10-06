@@ -1,0 +1,121 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# warnings
+
+## INEFFECTIVE_DYNAMIC_IMPORT
+
+```text
+[INEFFECTIVE_DYNAMIC_IMPORT] dep.js is dynamically imported by watcher.js but also statically imported by importer.js, watcher.js, dynamic import will not move module into another chunk.
+
+```
+
+# Assets
+
+## main.js
+
+```js
+import assert from "node:assert";
+// HIDDEN [\0rolldown/runtime.js]
+__rolldown_runtime__.registerGraph({
+	ids: [
+		"dep.js",
+		"importer.js",
+		"watcher.js",
+		"main.js"
+	],
+	localCount: 4,
+	edges: [
+		[],
+		[0],
+		[0],
+		[1, 2]
+	]
+});
+//#region dep.js
+var dep_exports = /* @__PURE__ */ __exportAll({ default: () => dep_default });
+__rolldown_runtime__.createModuleHotContext("dep.js");
+__rolldown_runtime__.registerModule("dep.js", { exports: dep_exports });
+var dep_default = { v: 1 };
+//#endregion
+//#region importer.js
+var importer_exports = /* @__PURE__ */ __exportAll({});
+const importer_hot = __rolldown_runtime__.createModuleHotContext("importer.js");
+__rolldown_runtime__.registerModule("importer.js", { exports: importer_exports });
+globalThis.__restamp_importer_value = dep_default;
+importer_hot.accept();
+//#endregion
+//#region watcher.js
+var watcher_exports = /* @__PURE__ */ __exportAll({ initial: () => initial });
+const watcher_hot = __rolldown_runtime__.createModuleHotContext("watcher.js");
+__rolldown_runtime__.registerModule("watcher.js", { exports: watcher_exports });
+watcher_hot.accept("dep.js", () => {});
+const initial = dep_default;
+//#endregion
+//#region main.js
+var main_exports = /* @__PURE__ */ __exportAll({});
+__rolldown_runtime__.createModuleHotContext("main.js");
+__rolldown_runtime__.registerModule("main.js", { exports: main_exports });
+process.on("beforeExit", (code) => {
+	if (code !== 0) return;
+	assert.deepStrictEqual(globalThis.__restamp_importer_value, { v: 2 });
+});
+//#endregion
+
+```
+
+# HMR Step 0
+
+## Code
+
+```js
+__rolldown_runtime__.registerGraph({ids:["dep.js","importer.js","watcher.js"],localCount:3,edges:[[],[0],[0]],stamps:{0:1,1:1,2:1}});
+//#region dep.js
+__rolldown_runtime__.registerFactory("dep.js", (function(__rolldown_module_id__) {
+	try {
+		var __rolldown_module__ = { exports: {} };
+		var __rolldown_exports__ = __rolldown_module__.exports;
+		__rolldown_runtime__.registerModule(__rolldown_module_id__, __rolldown_module__);
+		const hot_dep = __rolldown_runtime__.createModuleHotContext(__rolldown_module_id__);
+		__rolldown_module__.exports = { v: 2 };
+	} finally {}
+}), 1);
+
+//#endregion
+//#region importer.js
+__rolldown_runtime__.registerFactory("importer.js", (function(__rolldown_module_id__) {
+	try {
+		var __rolldown_exports__ = __rolldown_runtime__.__exportAll({});
+		__rolldown_runtime__.registerModule(__rolldown_module_id__, { exports: __rolldown_exports__ });
+		__rolldown_runtime__.initModule("dep.js");
+		var import_dep_10 = __rolldown_runtime__.__toESM(__rolldown_runtime__.loadExports("dep.js"));
+		const hot_importer = __rolldown_runtime__.createModuleHotContext(__rolldown_module_id__);
+		globalThis.__restamp_importer_value = import_dep_10.default;
+		hot_importer.accept();
+	} finally {}
+}), 1);
+
+//#endregion
+//#region watcher.js
+__rolldown_runtime__.registerFactory("watcher.js", (function(__rolldown_module_id__) {
+	try {
+		var __rolldown_exports__ = __rolldown_runtime__.__exportAll({ initial: () => initial });
+		__rolldown_runtime__.registerModule(__rolldown_module_id__, { exports: __rolldown_exports__ });
+		__rolldown_runtime__.initModule("dep.js");
+		var import_dep_20 = __rolldown_runtime__.__toESM(__rolldown_runtime__.loadExports("dep.js"));
+		const hot_watcher = __rolldown_runtime__.createModuleHotContext(__rolldown_module_id__);
+		hot_watcher.accept("dep.js", () => {});
+		const initial = import_dep_20.default;
+	} finally {}
+}), 1);
+
+//#endregion
+```
+
+## Meta
+
+- update type: patch
+
+### Changed Ids
+
+- dep.js

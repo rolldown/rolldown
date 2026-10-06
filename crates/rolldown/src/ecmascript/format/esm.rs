@@ -190,6 +190,7 @@ fn render_chunk_content<'code>(
     crate::hmr::module_graph_delta::render_register_graph_source(
       &ctx.link_output.module_table,
       ctx.chunk.modules.iter().copied(),
+      None,
     )
   } else {
     None

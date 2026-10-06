@@ -118,11 +118,23 @@ impl EcmaCompiler {
     compress: bool,
     minify_options: MinifierOptions,
     codegen_options: CodegenOptions,
-  ) -> (String, Option<SourceMap<'a>>, Option<ManglePropertyCache>) {
-    let mut program = Parser::new(allocator, source_text, source_type)
+  ) -> BuildResult<(String, Option<SourceMap<'a>>, Option<ManglePropertyCache>)> {
+    let ret = Parser::new(allocator, source_text, source_type)
       .with_options(ParseOptions { preserve_parens: false, ..ParseOptions::default() })
-      .parse()
-      .program;
+      .parse();
+    if ret.fatal_error || !ret.diagnostics.is_empty() {
+      return Err(
+        BuildDiagnostic::from_oxc_diagnostics(
+          ret.diagnostics,
+          &ArcStr::from(source_text),
+          filename,
+          Severity::Error,
+          EventKind::ParseError,
+        )
+        .into(),
+      );
+    }
+    let mut program = ret.program;
     let minifier = Minifier::new(minify_options);
     let ret = if compress {
       minifier.minify(allocator, &mut program)
@@ -138,7 +150,7 @@ impl EcmaCompiler {
       .with_scoping(ret.scoping)
       .with_private_member_mappings(ret.class_private_mappings)
       .build(&program);
-    (ret.code, ret.map, property_mangle_cache)
+    Ok((ret.code, ret.map, property_mangle_cache))
   }
 }
 

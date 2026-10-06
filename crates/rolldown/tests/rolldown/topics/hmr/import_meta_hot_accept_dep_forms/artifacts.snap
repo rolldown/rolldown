@@ -223,7 +223,7 @@ process.on("beforeExit", (code) => {
 ## Code
 
 ```js
-__rolldown_runtime__.registerGraph({ids:["one_arg/child.js"],localCount:1,edges:[[]]});
+__rolldown_runtime__.registerGraph({ids:["one_arg/child.js"],localCount:1,edges:[[]],stamps:{0:1}});
 //#region one_arg/child.js
 __rolldown_runtime__.registerFactory("one_arg/child.js", (function(__rolldown_module_id__) {
 	try {
@@ -233,7 +233,7 @@ __rolldown_runtime__.registerFactory("one_arg/child.js", (function(__rolldown_mo
 		globalThis.one_argChildRuns = (globalThis.one_argChildRuns ?? 0) + 1;
 		const count = 1;
 	} finally {}
-}));
+}), 1);
 
 //#endregion
 ```
@@ -251,7 +251,7 @@ __rolldown_runtime__.registerFactory("one_arg/child.js", (function(__rolldown_mo
 ## Code
 
 ```js
-__rolldown_runtime__.registerGraph({ids:["three_args/child.js"],localCount:1,edges:[[]]});
+__rolldown_runtime__.registerGraph({ids:["three_args/child.js"],localCount:1,edges:[[]],stamps:{0:2}});
 //#region three_args/child.js
 __rolldown_runtime__.registerFactory("three_args/child.js", (function(__rolldown_module_id__) {
 	try {
@@ -261,7 +261,7 @@ __rolldown_runtime__.registerFactory("three_args/child.js", (function(__rolldown
 		globalThis.three_argsChildRuns = (globalThis.three_argsChildRuns ?? 0) + 1;
 		const count = 1;
 	} finally {}
-}));
+}), 2);
 
 //#endregion
 ```
@@ -279,7 +279,7 @@ __rolldown_runtime__.registerFactory("three_args/child.js", (function(__rolldown
 ## Code
 
 ```js
-__rolldown_runtime__.registerGraph({ids:["template/child.js"],localCount:1,edges:[[]]});
+__rolldown_runtime__.registerGraph({ids:["template/child.js"],localCount:1,edges:[[]],stamps:{0:3}});
 //#region template/child.js
 __rolldown_runtime__.registerFactory("template/child.js", (function(__rolldown_module_id__) {
 	try {
@@ -289,7 +289,7 @@ __rolldown_runtime__.registerFactory("template/child.js", (function(__rolldown_m
 		globalThis.templateChildRuns = (globalThis.templateChildRuns ?? 0) + 1;
 		const count = 1;
 	} finally {}
-}));
+}), 3);
 
 //#endregion
 ```
@@ -307,7 +307,7 @@ __rolldown_runtime__.registerFactory("template/child.js", (function(__rolldown_m
 ## Code
 
 ```js
-__rolldown_runtime__.registerGraph({ids:["template_array/a.js"],localCount:1,edges:[[]]});
+__rolldown_runtime__.registerGraph({ids:["template_array/a.js"],localCount:1,edges:[[]],stamps:{0:4}});
 //#region template_array/a.js
 __rolldown_runtime__.registerFactory("template_array/a.js", (function(__rolldown_module_id__) {
 	try {
@@ -317,7 +317,7 @@ __rolldown_runtime__.registerFactory("template_array/a.js", (function(__rolldown
 		globalThis.template_array_aRuns = (globalThis.template_array_aRuns ?? 0) + 1;
 		const count = 1;
 	} finally {}
-}));
+}), 4);
 
 //#endregion
 ```
@@ -335,7 +335,7 @@ __rolldown_runtime__.registerFactory("template_array/a.js", (function(__rolldown
 ## Code
 
 ```js
-__rolldown_runtime__.registerGraph({ids:["template_array/b.js"],localCount:1,edges:[[]]});
+__rolldown_runtime__.registerGraph({ids:["template_array/b.js"],localCount:1,edges:[[]],stamps:{0:5}});
 //#region template_array/b.js
 __rolldown_runtime__.registerFactory("template_array/b.js", (function(__rolldown_module_id__) {
 	try {
@@ -345,7 +345,7 @@ __rolldown_runtime__.registerFactory("template_array/b.js", (function(__rolldown
 		globalThis.template_array_bRuns = (globalThis.template_array_bRuns ?? 0) + 1;
 		const count = 1;
 	} finally {}
-}));
+}), 5);
 
 //#endregion
 ```
@@ -363,7 +363,7 @@ __rolldown_runtime__.registerFactory("template_array/b.js", (function(__rolldown
 ## Code
 
 ```js
-__rolldown_runtime__.registerGraph({ids:["falsy_deps/self.js"],localCount:1,edges:[[]]});
+__rolldown_runtime__.registerGraph({ids:["falsy_deps/self.js"],localCount:1,edges:[[]],stamps:{0:6}});
 //#region falsy_deps/self.js
 __rolldown_runtime__.registerFactory("falsy_deps/self.js", (function(__rolldown_module_id__) {
 	try {
@@ -376,7 +376,7 @@ __rolldown_runtime__.registerFactory("falsy_deps/self.js", (function(__rolldown_
 			globalThis.falsy_depsCallbackRan = true;
 		});
 	} finally {}
-}));
+}), 6);
 
 //#endregion
 ```
@@ -394,7 +394,7 @@ __rolldown_runtime__.registerFactory("falsy_deps/self.js", (function(__rolldown_
 ## Code
 
 ```js
-__rolldown_runtime__.registerGraph({ids:["array_one_arg/child.js"],localCount:1,edges:[[]]});
+__rolldown_runtime__.registerGraph({ids:["array_one_arg/child.js"],localCount:1,edges:[[]],stamps:{0:7}});
 //#region array_one_arg/child.js
 __rolldown_runtime__.registerFactory("array_one_arg/child.js", (function(__rolldown_module_id__) {
 	try {
@@ -404,7 +404,7 @@ __rolldown_runtime__.registerFactory("array_one_arg/child.js", (function(__rolld
 		globalThis.array_one_argChildRuns = (globalThis.array_one_argChildRuns ?? 0) + 1;
 		const count = 1;
 	} finally {}
-}));
+}), 7);
 
 //#endregion
 ```

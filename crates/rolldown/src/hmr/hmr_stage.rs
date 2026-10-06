@@ -12,8 +12,8 @@ use itertools::Itertools;
 use oxc::ast::builder::AstBuilder;
 use oxc_traverse::traverse_mut;
 use rolldown_common::{
-  ClientHmrInput, ClientHmrUpdate, HmrLazyChunkOutput, HmrPatch, HmrStampTable, HmrUpdate,
-  ImportKind, Module, ModuleIdx, ModuleTable, NormalModule, ScanMode, WatcherChangeKind,
+  ClientHmrInput, ClientHmrUpdate, ExportsKind, HmrLazyChunkOutput, HmrPatch, HmrStampTable,
+  HmrUpdate, ImportKind, Module, ModuleIdx, ModuleTable, NormalModule, ScanMode, WatcherChangeKind,
 };
 use rolldown_ecmascript::{EcmaAst, EcmaCompiler, PrintCommentsOptions, PrintOptions};
 use rolldown_error::BuildResult;
@@ -119,8 +119,10 @@ impl<'a, Fs: FileSystem + Clone + 'static> HmrStage<'a, Fs> {
 
     // 1. Identify changed modules — per changed file: compute the default affected set, then (if
     // the hook is enabled and any plugin registered `hotUpdate`) let the plugin replace-chain
-    // edit it before re-fetching. `hot_update_hook_enabled` is the `hot_update` dev option,
-    // off by default — see `DevOptions::hot_update`.
+    // edit it before re-fetching. The hook is off by default. Either `DevOptions::hot_update`
+    // (`hot_update_hook_enabled`) or `DevModeOptions::hot_update` turns it on.
+    let hot_update_hook_enabled = hot_update_hook_enabled
+      || self.options.experimental.dev_mode.as_ref().is_some_and(|d| d.hot_update == Some(true));
     let hot_update_hook_registered =
       hot_update_hook_enabled && self.plugin_driver.has_hot_update_hook();
     let mut changed_modules = FxIndexSet::default();
@@ -279,7 +281,7 @@ impl<'a, Fs: FileSystem + Clone + 'static> HmrStage<'a, Fs> {
         .into_par_iter()
         .map(|render_input| {
           let module_idx = render_input.idx;
-          (module_idx, self.render_module_code(render_input, 0, false).0)
+          (module_idx, self.render_module_code(render_input, 0, 0, false).0)
         })
         .collect::<Vec<_>>()
         .into_iter()
@@ -293,6 +295,12 @@ impl<'a, Fs: FileSystem + Clone + 'static> HmrStage<'a, Fs> {
         let module = modules[*module_idx].as_normal()?;
         let deps = static_deps(module).map(|dep_idx| modules[dep_idx].id().clone());
         Some((*module_idx, deps.collect::<FxHashSet<_>>()))
+      })
+      .collect::<FxHashMap<_, _>>();
+    let pre_rebuild_interop = changed_modules
+      .iter()
+      .filter_map(|module_idx| {
+        Some((*module_idx, importee_interop(modules[*module_idx].as_normal()?)))
       })
       .collect::<FxHashMap<_, _>>();
 
@@ -374,7 +382,7 @@ impl<'a, Fs: FileSystem + Clone + 'static> HmrStage<'a, Fs> {
       .into_par_iter()
       .filter_map(|render_input| {
         let module_idx = render_input.idx;
-        let (code, _) = self.render_module_code(render_input, 0, false);
+        let (code, _) = self.render_module_code(render_input, 0, 0, false);
         (pre_rebuild_renders[&module_idx] == code).then_some(module_idx)
       })
       .collect::<Vec<_>>()
@@ -392,10 +400,45 @@ impl<'a, Fs: FileSystem + Clone + 'static> HmrStage<'a, Fs> {
       changed_modules.retain(|module_idx| !output_unchanged_modules.contains(module_idx));
     }
 
-    // 2. Stamp the rebuild: `latest[m] = rebuild_seq` for every changed or newly added
-    // module — the versioned ship map's staleness source.
+    // An importer's factory reads its importees' interop facts, so it changes with them even
+    // when its own source did not. Stamp and carry such importers like changed modules: a
+    // stamp must name one rendered factory (see internal-docs/hmr/design.md, "Registration
+    // keeps the newest copy").
+    let modules = &self.module_table().modules;
+    let interop_changed = changed_modules
+      .iter()
+      .copied()
+      .filter(|module_idx| {
+        let before = pre_rebuild_interop.get(module_idx);
+        let after = modules[*module_idx].as_normal().map(importee_interop);
+        before.is_some_and(|before| after.is_some_and(|after| *before != after))
+      })
+      .collect::<FxHashSet<_>>();
+    // Import records, not `importers_idx`: that set leaves out lazy-compilation proxies, whose
+    // `import()` of the real module also reads its interop facts.
+    let rerendered_importers = if interop_changed.is_empty() {
+      FxIndexSet::default()
+    } else {
+      modules
+        .iter()
+        .filter_map(Module::as_normal)
+        .filter(|module| !changed_modules.contains(&module.idx))
+        .filter(|module| {
+          module
+            .import_records
+            .iter()
+            .any(|rec| rec.resolved_module.is_some_and(|dep| interop_changed.contains(&dep)))
+        })
+        .map(|module| module.idx)
+        .collect::<FxIndexSet<_>>()
+    };
+
+    // 2. Stamp the rebuild: `latest[m] = rebuild_seq` for every changed, newly added or
+    // re-rendered module — the versioned ship map's staleness source.
     let rebuild_seq = stamp_table.begin_rebuild();
-    for module_idx in changed_modules.iter().chain(new_added_modules.iter()) {
+    for module_idx in
+      changed_modules.iter().chain(new_added_modules.iter()).chain(rerendered_importers.iter())
+    {
       if let Module::Normal(module) = &self.module_table().modules[*module_idx] {
         stamp_table.stamp(module.stable_id.as_arc_str(), rebuild_seq);
       }
@@ -430,6 +473,7 @@ impl<'a, Fs: FileSystem + Clone + 'static> HmrStage<'a, Fs> {
 
     let mut affected = self.collect_client_update_superset(&changed_modules);
     affected.extend(new_added_modules.iter().copied());
+    affected.extend(rerendered_importers.iter().copied());
     affected.retain(|idx| self.module_table().modules[*idx].is_normal());
 
     // Client-invariant per-module data, resolved once instead of per client:
@@ -685,6 +729,7 @@ impl<'a, Fs: FileSystem + Clone + 'static> HmrStage<'a, Fs> {
     if let Some(prelude) = crate::hmr::module_graph_delta::render_register_graph_source(
       self.module_table(),
       modules_to_be_updated.iter().copied(),
+      Some(stamp_table),
     ) {
       source_joiner.append_source(prelude);
     }
@@ -693,7 +738,9 @@ impl<'a, Fs: FileSystem + Clone + 'static> HmrStage<'a, Fs> {
       .enumerate()
       .flat_map(|(index, render_input)| {
         let affected_module_idx = render_input.idx;
-        let (code, map) = self.render_module_code(render_input, index, true);
+        let stamp = stamp_table
+          .render_time_stamp(self.module_table().modules[affected_module_idx].stable_id().as_str());
+        let (code, map) = self.render_module_code(render_input, index, stamp, true);
 
         let affected_module = &self.module_table().modules[affected_module_idx];
         let Module::Normal(affected_module) = affected_module else {
@@ -815,6 +862,7 @@ impl<'a, Fs: FileSystem + Clone + 'static> HmrStage<'a, Fs> {
     if let Some(prelude) = crate::hmr::module_graph_delta::render_register_graph_source(
       self.module_table(),
       carried_modules.iter().copied(),
+      Some(stamp_table),
     ) {
       source_joiner.append_source(prelude);
     }
@@ -823,7 +871,9 @@ impl<'a, Fs: FileSystem + Clone + 'static> HmrStage<'a, Fs> {
       .enumerate()
       .flat_map(|(index, render_input)| {
         let affected_module_idx = render_input.idx;
-        let (code, map) = self.render_module_code(render_input, index, true);
+        let stamp = stamp_table
+          .render_time_stamp(self.module_table().modules[affected_module_idx].stable_id().as_str());
+        let (code, map) = self.render_module_code(render_input, index, stamp, true);
 
         let affected_module = &self.module_table().modules[affected_module_idx];
         let Module::Normal(affected_module) = affected_module else {
@@ -900,12 +950,13 @@ impl<'a, Fs: FileSystem + Clone + 'static> HmrStage<'a, Fs> {
   ///
   /// `unique_index` seeds the payload-position-dependent binding suffixes, so two
   /// renders of the same module compare equal only when they pin it to the same
-  /// value. `with_sourcemap: false` skips sourcemap generation even when the
-  /// options ask for one.
+  /// value, and likewise the same `stamp`. `with_sourcemap: false` skips sourcemap
+  /// generation even when the options ask for one.
   fn render_module_code(
     &self,
     render_input: ModuleRenderInput,
     unique_index: usize,
+    stamp: u32,
     with_sourcemap: bool,
   ) -> (String, Option<SourceMap>) {
     let ModuleRenderInput { idx: module_idx, ecma_ast: mut ast } = render_input;
@@ -939,6 +990,7 @@ impl<'a, Fs: FileSystem + Clone + 'static> HmrStage<'a, Fs> {
         re_export_all_dependencies: FxIndexSet::default(),
         generated_static_import_stmts_from_external: FxIndexMap::default(),
         unique_index,
+        stamp,
         named_exports: FxHashMap::default(),
       };
 
@@ -1005,6 +1057,12 @@ impl ClientHeldCopies<'_> {
   fn holds_current(&self, map: &FxHashMap<ArcStr, u32>, stable_id: &str) -> bool {
     map.get(stable_id).is_some_and(|stamp| !self.stamp_table.is_stale(stable_id, *stamp))
   }
+}
+
+/// What an importer's render reads from a normal importee (`HmrAstFinalizer`), apart from
+/// `def_format`, which comes from the path and `package.json`, not from the module's source.
+fn importee_interop(module: &NormalModule) -> (ExportsKind, bool) {
+  (module.exports_kind, module.meta.has_lazy_export())
 }
 
 fn static_deps(module: &NormalModule) -> impl Iterator<Item = ModuleIdx> + '_ {

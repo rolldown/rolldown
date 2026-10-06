@@ -206,7 +206,7 @@ jobs:
           RUSTUP_IO_THREADS: 1
         with:
           operating_system: freebsd
-          version: '15.0'
+          version: '15.1'
           memory: 8G
           cpu_count: 3
           environment_variables: 'DEBUG RUSTUP_IO_THREADS'
@@ -235,6 +235,66 @@ jobs:
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: bindings-x86_64-unknown-freebsd
+          path: ./packages/rolldown/src/rolldown-binding.*.node
+          if-no-files-found: error
+
+  build-freebsd-arm64:
+    name: Build FreeBSD arm64
+    runs-on: ubuntu-latest
+    steps:
+      - uses: taiki-e/checkout-action@7d1e50e93dc4fb3bba58f85018fadf77898aee8b # v1.4.2
+      - name: Build
+        id: build
+        uses: cross-platform-actions/action@e0b9770014ba65d5e0815f15b74031c3a635f641 # v1.6.0
+        env:
+          DEBUG: napi:*
+          RUSTUP_IO_THREADS: 1
+        with:
+          operating_system: freebsd
+          # Cross-compile from the native x86_64 guest. There is no aarch64
+          # FreeBSD runner with KVM, and rustup / @oxc-node/core ship no
+          # aarch64-freebsd builds, so building inside an emulated arm64 VM is
+          # both slow and blocked. Run the tooling natively on x86_64 and
+          # cross-link with the base clang against an arm64 sysroot instead.
+          architecture: x86-64
+          version: '15.1'
+          memory: 8G
+          cpu_count: 3
+          environment_variables: 'DEBUG RUSTUP_IO_THREADS'
+          shell: bash
+          run: |
+            sudo pkg install -y -f curl node libnghttp2 npm cmake
+            curl https://sh.rustup.rs -sSf --output rustup.sh
+            sh rustup.sh -y --profile minimal --default-toolchain stable
+            source "$HOME/.cargo/env"
+            rustup toolchain install
+            rustup target add aarch64-unknown-freebsd
+            # aarch64 sysroot (headers, libc, crt) for the cross link
+            SYSROOT=/tmp/sysroot
+            sudo mkdir -p "$SYSROOT"
+            fetch -q -o /tmp/base.txz "https://download.freebsd.org/releases/arm64/aarch64/15.1-RELEASE/base.txz"
+            sudo tar -xJf /tmp/base.txz -C "$SYSROOT"
+            printf '#!/bin/sh\nexec clang --target=aarch64-unknown-freebsd --sysroot=%s "$@"\n' "$SYSROOT" > /tmp/aarch64-cc
+            chmod +x /tmp/aarch64-cc
+            export CARGO_TARGET_AARCH64_UNKNOWN_FREEBSD_LINKER=/tmp/aarch64-cc
+            export CC_aarch64_unknown_freebsd=/tmp/aarch64-cc
+            export CXX_aarch64_unknown_freebsd=/tmp/aarch64-cc
+            export CFLAGS_aarch64_unknown_freebsd="--target=aarch64-unknown-freebsd --sysroot=$SYSROOT"
+            export CXXFLAGS_aarch64_unknown_freebsd="--target=aarch64-unknown-freebsd --sysroot=$SYSROOT"
+            echo "~~~~ rustc --version ~~~~"
+            rustc --version
+            echo "~~~~ node -v ~~~~"
+            node -v
+            sudo corepack enable
+            sudo npm i -g corepack@latest # use a newer corepack due to https://github.com/nodejs/corepack/issues/612
+            pnpm install --ignore-scripts
+            pnpm run ci:build-release-binding --target aarch64-unknown-freebsd
+            rm -rf node_modules
+            rm -rf target
+      - name: Upload artifact
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: bindings-aarch64-unknown-freebsd
           path: ./packages/rolldown/src/rolldown-binding.*.node
           if-no-files-found: error
 

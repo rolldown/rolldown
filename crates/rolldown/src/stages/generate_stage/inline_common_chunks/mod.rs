@@ -21,7 +21,7 @@ use arcstr::ArcStr;
 use itertools::Itertools;
 use oxc_str::CompactStr;
 use rolldown_common::{ChunkIdx, ModuleIdx, SymbolRef, SymbolRefDb};
-use rolldown_utils::{base64::to_url_safe_base64, indexmap::FxIndexMap};
+use rolldown_utils::{base64::to_url_safe_base64, concat_string, indexmap::FxIndexMap};
 use rustc_hash::{FxHashMap, FxHashSet};
 use xxhash_rust::xxh3::Xxh3;
 
@@ -99,7 +99,7 @@ pub(super) fn record_id<'a>(
   }
   loop {
     let hash = to_url_safe_base64(hasher.digest128().to_le_bytes());
-    let id = ArcStr::from(format!("{chunk_name}-{}", &hash[..RECORD_ID_HASH_LEN]));
+    let id = ArcStr::from(concat_string!(chunk_name, "-", &hash[..RECORD_ID_HASH_LEN]));
     if taken.insert(id.clone()) {
       return id;
     }

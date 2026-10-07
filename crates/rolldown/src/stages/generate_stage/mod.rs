@@ -16,8 +16,9 @@ use rolldown_std_utils::{
   representative_file_name_for_preserve_modules, strip_path_prefix_to_slash,
 };
 use rolldown_utils::{
-  dashmap::FxDashMap, hash_placeholder::HashPlaceholderGenerator, index_vec_ext::IndexVecExt as _,
-  indexmap::FxIndexSet, node_style_absolute, rayon::ParallelIterator as _,
+  concat_string, dashmap::FxDashMap, hash_placeholder::HashPlaceholderGenerator,
+  index_vec_ext::IndexVecExt as _, indexmap::FxIndexSet, node_style_absolute,
+  rayon::ParallelIterator as _,
 };
 use rustc_hash::{FxHashMap, FxHashSet};
 use sugar_path::SugarPath as _;
@@ -383,7 +384,7 @@ impl<'a> GenerateStage<'a> {
               // common ones: https://github.com/rollup/rollup/pull/4565/files
               let chunk_name = match ext.as_deref() {
                 Some(e) if !e.is_empty() && !COMMON_JS_EXTENSIONS.contains(&e) => {
-                  sanitize_filename.call_relative(&format!("{relative_path}.{e}")).await?
+                  sanitize_filename.call_relative(&concat_string!(relative_path, ".", e)).await?
                 }
                 _ => chunk_filename.clone(),
               };

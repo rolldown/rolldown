@@ -1579,11 +1579,13 @@ export declare class BindingCallableBuiltinPlugin {
 }
 
 export declare class BindingChunkingContext {
+  dropInner(): ExternalMemoryStatus
   getModuleInfo(moduleId: string): BindingModuleInfo | null
 }
 
 /** A decoded source map with mappings as an array of arrays instead of VLQ-encoded string. */
 export declare class BindingDecodedMap {
+  dropInner(): ExternalMemoryStatus
   /** The source map version (always 3). */
   get version(): number
   /** The generated file name. */
@@ -1640,12 +1642,18 @@ export declare class BindingDevEngine {
 }
 
 export declare class BindingLoadPluginContext {
+  dropInner(): ExternalMemoryStatus
   inner(): BindingPluginContext
   addWatchFile(file: string): void
 }
 
 export declare class BindingMagicString {
   constructor(source: string, options?: BindingMagicStringOptions | undefined | null)
+  /**
+   * Releases the source text and its UTF-16 mapping table — together about nine
+   * times the source bytes — without waiting for a finalizer.
+   */
+  dropInner(): ExternalMemoryStatus
   get original(): string
   get filename(): string | null
   get indentExclusionRanges(): Array<Array<number>> | Array<number> | null
@@ -1740,10 +1748,12 @@ export declare class BindingModuleInfo {
   exports: Array<string>
   isEntry: boolean
   inputFormat: 'es' | 'cjs' | 'unknown'
+  dropInner(): ExternalMemoryStatus
   get code(): string | null
 }
 
 export declare class BindingNormalizedOptions {
+  dropInner(): ExternalMemoryStatus
   get input(): Array<string> | Record<string, string>
   get cwd(): string
   get platform(): 'node' | 'browser' | 'neutral'
@@ -1815,6 +1825,7 @@ export declare class BindingOutputChunk {
 }
 
 export declare class BindingPluginContext {
+  dropInner(): ExternalMemoryStatus
   load(specifier: string, sideEffects: boolean | 'no-treeshake' | undefined, packageJsonPath?: string): Promise<void>
   resolve(specifier: string, importer?: string | undefined | null, extraOptions?: BindingPluginContextResolveOptions | undefined | null): Promise<BindingPluginContextResolvedId | null>
   emitFile(file: BindingEmittedAsset, assetFilename?: string | undefined | null, fnSanitizedFileName?: string | undefined | null): string
@@ -1827,6 +1838,7 @@ export declare class BindingPluginContext {
 }
 
 export declare class BindingRenderedChunk {
+  dropInner(): ExternalMemoryStatus
   get name(): string
   get isEntry(): boolean
   get isDynamicEntry(): boolean
@@ -1840,16 +1852,19 @@ export declare class BindingRenderedChunk {
 }
 
 export declare class BindingRenderedChunkMeta {
+  dropInner(): ExternalMemoryStatus
   get chunks(): Record<string, BindingRenderedChunk>
 }
 
 export declare class BindingRenderedModule {
+  dropInner(): ExternalMemoryStatus
   get code(): string | null
   get renderedExports(): Array<string>
 }
 
 /** A source map object with properties matching the SourceMap V3 specification. */
 export declare class BindingSourceMap {
+  dropInner(): ExternalMemoryStatus
   /** The source map version (always 3). */
   get version(): number
   /** The generated file name. */
@@ -1871,6 +1886,7 @@ export declare class BindingSourceMap {
 }
 
 export declare class BindingTransformPluginContext {
+  dropInner(): ExternalMemoryStatus
   getCombinedSourcemap(): string
   inner(): BindingPluginContext
   addWatchFile(file: string): void
@@ -2423,6 +2439,11 @@ export interface BindingHookTransformOutput {
   moduleType?: string
 }
 
+export interface BindingHostRegistration {
+  high: number
+  low: number
+}
+
 export interface BindingHotUpdateArgs {
   kind: 'create' | 'update' | 'delete'
   /** Normalized absolute path of the changed file. */
@@ -2870,6 +2891,42 @@ export interface BindingResolveOptions {
   yarnPnp?: boolean
 }
 
+/**
+ * What this binding is -- flavor, target -- and the capabilities that follow
+ * from it. Frozen at binding load; never re-read from the environment.
+ */
+export interface BindingRuntimeCapabilities {
+  /** The executor flavor in effect. */
+  flavor: BindingRuntimeFlavor
+  /**
+   * The compile target: 'native', 'wasi' (threadless `wasm32-wasip1`) or
+   * 'wasi-threads' (`wasm32-wasip1-threads`).
+   */
+  target: 'native' | 'wasi' | 'wasi-threads'
+  /** The binding is a WebAssembly/WASI artifact (`target !== 'native'`). */
+  wasi: boolean
+  /**
+   * The scheduler spreads its work over several executor threads (`flavor
+   * === 'MultiThread'`). Native is always MultiThread; its data-parallel
+   * work runs on the executor's own Rayon pool, where spawned futures are
+   * polled. `false` only on threadless WASI and on threaded WASI under
+   * `ROLLDOWN_RUNTIME=single`.
+   */
+  threads: boolean
+  /**
+   * Dev mode is supported by this runtime: true on MultiThread, false on
+   * CurrentThread.
+   */
+  devSupported: boolean
+  /**
+   * Watch mode is supported by this artifact: true on native, false on every
+   * wasm artifact.
+   */
+  watchSupported: boolean
+}
+
+export type BindingRuntimeFlavor = 'CurrentThread' | 'MultiThread'
+
 export interface BindingSourcemap {
   inner: string | BindingJsonSourcemap
 }
@@ -3124,13 +3181,28 @@ export interface ExternalMemoryStatus {
 export type FilterTokenKind = 'Id' | 'ImporterId' | 'Code' | 'ModuleType' | 'And' | 'Or' | 'Not' | 'Include' | 'Exclude' | 'CleanUrl' | 'QueryKey' | 'QueryValue'
 
 /**
+ * Return the CurrentThread task-host ABI version this binding implements.
+ * Check it before calling either async-runtime host registration.
+ */
+export declare function getCurrentThreadTaskHostContractVersion(): number
+
+/**
  * Returns the Rust-side allocator counters, or `None` when this binding was
  * built without the `tracking_allocator` cargo feature (the default —
  * tracking costs a few atomic operations per allocation).
  */
 export declare function getNativeMemoryStats(): BindingNativeMemoryStats | null
 
+/** Report the loaded binding's runtime capabilities. */
+export declare function getRuntimeCapabilities(): BindingRuntimeCapabilities
+
 export declare function initTraceSubscriber(): TraceSubscriberGuard | null
+
+/**
+ * Return whether the given CurrentThread task- or timer-host registration is
+ * still live. A registration already evicted natively reads false.
+ */
+export declare function isCurrentThreadHostRegistrationActive(registrationHigh: number, registrationLow: number): boolean
 
 export interface JsChangedOutputs {
   deleted: Set<string>
@@ -3190,7 +3262,25 @@ export interface PreRenderedChunk {
   exports: Array<string>
 }
 
+/**
+ * Install the native host turn that polls CurrentThread runnables. Call it
+ * once per importing environment; passing a JavaScript callback throws.
+ */
+export declare function registerCurrentThreadTaskHost(registrationHigh: number, registrationLow: number, dispatch?: never): void
+
 export declare function registerPlugins(id: number, plugins: Array<BindingPluginWithIndex>): void
+
+/**
+ * Accept the host timer callbacks of the CurrentThread host contract. They are
+ * never called: CurrentThread runs no timers.
+ */
+export declare function registerTimerHost(registrationHigh: number, registrationLow: number, schedule: (id: number, ms: number) => Promise<void>, cancel: (id: number) => void): void
+
+/**
+ * Reserve a CurrentThread host registration capability. The returned words
+ * must be passed back to exactly one host registration call.
+ */
+export declare function reserveCurrentThreadHostRegistration(): BindingHostRegistration
 
 /**
  * Starts a new measuring window: the peak restarts from the current live
@@ -3202,15 +3292,22 @@ export declare function resetNativeMemoryStats(): void
 export declare function resolveTsconfig(filename: string, cache: TsconfigCache | undefined | null, yarnPnp: boolean): BindingTsconfigResult | null
 
 /**
- * Release one holder of the tokio runtime, shutting it down once none are left.
- *
- * This is required for the wasm target with `tokio_unstable` cfg.
- * In the wasm runtime, the `park` threads will hang there until the tokio::Runtime is shutdown.
+ * A no-op kept for compatibility; the async runtime follows the N-API
+ * environment lifecycle.
  */
 export declare function shutdownAsyncRuntime(): void
 
-/** Acquire one holder of the tokio runtime, starting it if it is not running. */
+/**
+ * A no-op kept for compatibility; the async runtime follows the N-API
+ * environment lifecycle.
+ */
 export declare function startAsyncRuntime(): void
+
+/** Evict one host installed by `registerCurrentThreadTaskHost`. */
+export declare function unregisterCurrentThreadTaskHost(registrationHigh: number, registrationLow: number): void
+
+/** Evict one registration made by `registerTimerHost`. */
+export declare function unregisterTimerHost(registrationHigh: number, registrationLow: number): void
 
 export interface ViteImportGlobMeta {
   isSubImportsPattern?: boolean

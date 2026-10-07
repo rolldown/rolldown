@@ -1,5 +1,9 @@
 use std::path::PathBuf;
 
+mod test_dir;
+
+pub use test_dir::TestDir;
+
 /// Get the absolute path to the root of the workspace/repository.
 /// The root is always the directory containing the root `Cargo.toml`, `package.json`, `pnpm-workspace.yaml` etc.
 pub fn root_dir() -> PathBuf {

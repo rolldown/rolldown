@@ -5,10 +5,10 @@ use std::{
 };
 
 use arcstr::ArcStr;
+use async_lock::Mutex;
 use futures::future::Shared;
 use rolldown_common::HmrStampTable;
 use rustc_hash::FxHashMap;
-use tokio::sync::Mutex;
 
 use crate::{
   NormalizedDevOptions, SharedClients, type_aliases::CoordinatorSender,

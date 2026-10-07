@@ -13,7 +13,8 @@ import { OutputChunkImpl } from '../types/output-chunk-impl';
 import type { OutputAsset, OutputChunk, RolldownOutput, SourceMap } from '../types/rolldown-output';
 import { bindingifySourcemap } from '../types/sourcemap';
 import { type AssetSource, bindingAssetSource, transformAssetSource } from './asset-source';
-import { transformChunkModules } from './transform-rendered-chunk';
+import { shouldEagerlyFreeOutputs } from './threadless-free';
+import { snapshotChunkModules, transformChunkModules } from './transform-rendered-chunk';
 
 export function transformToRollupSourceMap(map: string): SourceMap {
   const parsed: Omit<SourceMap, 'toString' | 'toUrl'> = JSON.parse(map);
@@ -23,10 +24,20 @@ export function transformToRollupSourceMap(map: string): SourceMap {
       return JSON.stringify(obj);
     },
     toUrl() {
-      return `data:application/json;charset=utf-8;base64,${Buffer.from(
-        obj.toString(),
-        'utf-8',
-      ).toString('base64')}`;
+      const json = obj.toString();
+      // Browsers and workerd without Node compatibility have no `Buffer`. Each chunk is encoded
+      // at once (no full-size binary string); a multiple of 3 bytes leaves padding to the last.
+      let base64: string;
+      if (typeof Buffer === 'function') {
+        base64 = Buffer.from(json, 'utf-8').toString('base64');
+      } else {
+        const bytes = new TextEncoder().encode(json);
+        base64 = '';
+        for (let i = 0; i < bytes.length; i += 0x7ffe) {
+          base64 += btoa(String.fromCharCode(...bytes.subarray(i, i + 0x7ffe)));
+        }
+      }
+      return `data:application/json;charset=utf-8;base64,${base64}`;
     },
   };
   // Preserve Rollup's legacy property for plugins while serializing the standard `ignoreList`.
@@ -39,7 +50,7 @@ export function transformToRollupSourceMap(map: string): SourceMap {
   return obj;
 }
 
-function transformToRollupOutputChunk(bindingChunk: BindingOutputChunk): OutputChunk {
+function transformToRollupOutputChunk(bindingChunk: BindingOutputChunk): OutputChunkImpl {
   return new OutputChunkImpl(bindingChunk);
 }
 
@@ -55,7 +66,13 @@ function transformToMutableRollupOutputChunk(
     fileName: bindingChunk.getFileName(),
     name: bindingChunk.getName(),
     get modules() {
-      return transformChunkModules(bindingChunk.getModules());
+      // Each getModules() call mints per-module boxes only finalizers reclaim,
+      // so snapshot and release them on threadless WASI. Safe because the proxy
+      // caches this map and `collectChangedBundle` submits an empty one.
+      const bindingModules = bindingChunk.getModules();
+      return shouldEagerlyFreeOutputs()
+        ? snapshotChunkModules(bindingModules)
+        : transformChunkModules(bindingModules);
     },
     get imports() {
       return bindingChunk.getImports();
@@ -99,7 +116,7 @@ function transformToMutableRollupOutputChunk(
   });
 }
 
-function transformToRollupOutputAsset(bindingAsset: BindingOutputAsset): OutputAsset {
+function transformToRollupOutputAsset(bindingAsset: BindingOutputAsset): OutputAssetImpl {
   return new OutputAssetImpl(bindingAsset);
 }
 
@@ -138,14 +155,22 @@ function transformToMutableRollupOutputAsset(
 
 export function transformToRollupOutput(output: BindingOutputs): RolldownOutput {
   const { chunks, assets } = output;
+  const chunkItems = chunks.map((chunk) => transformToRollupOutputChunk(chunk));
+  const assetItems = assets.map((asset) => transformToRollupOutputAsset(asset));
+  const outputItems: (OutputChunk | OutputAsset)[] = [...chunkItems, ...assetItems];
   const transformed = {
-    output: [
-      ...chunks.map((chunk) => transformToRollupOutputChunk(chunk)),
-      ...assets.map((asset) => transformToRollupOutputAsset(asset)),
-    ],
+    output: outputItems,
   } as RolldownOutput;
   if (output.mangleCache !== undefined) {
     transformed.mangleCache = output.mangleCache;
+  }
+  if (shouldEagerlyFreeOutputs()) {
+    for (const item of [...chunkItems, ...assetItems]) {
+      // keepDataAlive: cache every lazy field, then release the native
+      // payload. Runs after `output.mangleCache` is copied, so the release is
+      // the final native read.
+      item.__rolldown_external_memory_handle__(true);
+    }
   }
   return transformed;
 }

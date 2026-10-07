@@ -146,12 +146,10 @@ impl GenerateStage<'_> {
     // record such a file would print stays a file. Removing a record moves other records'
     // carriers, so the placement is recomputed until every record passes.
     let eval_files = self.eval_files(chunk_graph);
-    let untracked_dynamic_importers = self.untracked_dynamic_importers(chunk_graph);
     let placement = loop {
       let placement = compute_placement(
         &static_importees,
         &link_state.index_cross_chunk_dynamic_imports,
-        &untracked_dynamic_importers,
         is_live,
         |chunk_idx| {
           chunk_graph.chunk_table[chunk_idx].is_user_defined_entry()
@@ -419,28 +417,6 @@ impl GenerateStage<'_> {
       }
     }
     owners
-  }
-
-  pub(super) fn untracked_dynamic_importers(
-    &self,
-    chunk_graph: &ChunkGraph,
-  ) -> FxHashSet<ChunkIdx> {
-    self
-      .link_output
-      .module_table
-      .modules
-      .iter()
-      .filter_map(|module| module.as_normal())
-      .filter(|module| {
-        let meta = &self.link_output.metas[module.idx];
-        meta.is_included
-          && self.link_output.stmt_infos[module.idx].iter_enumerated().any(|(idx, stmt)| {
-            meta.stmt_info_included.has_bit(idx)
-              && stmt.meta.contains(StmtInfoMeta::NonStaticDynamicImport)
-          })
-      })
-      .filter_map(|module| chunk_graph.module_to_chunk[module.idx])
-      .collect()
   }
 
   /// The chunks holding an included module that uses direct `eval`.

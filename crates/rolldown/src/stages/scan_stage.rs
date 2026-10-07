@@ -206,10 +206,20 @@ impl<Fs: FileSystem + Clone + 'static> ScanStage<Fs> {
   }
 
   fn create_sourcemap_channel(&self) -> SourcemapChannel {
+    // Gated on the target, not the scheduler flavor: the drainer is an OS
+    // thread, so it cannot starve the executor that feeds it, even on
+    // `CurrentThread`. Wasm generates maps inline.
+    if !rolldown_utils::futures::can_spawn_os_threads() {
+      return (None, None);
+    }
+
     if self.options.experimental.is_native_magic_string_enabled()
       && self.options.is_sourcemap_enabled()
     {
       let (tx, rx) = std::sync::mpsc::channel::<SourceMapGenMsg>();
+      // Dedicated OS thread, never a runtime `spawn_blocking`: a drainer that
+      // took this consumer inline would block in `rx.recv()` forever, leaving
+      // the module tasks that feed the channel unpolled -> deadlock.
       let handler = thread::spawn(move || {
         let mut map: FxHashMap<ModuleIdx, Vec<_>> = FxHashMap::default();
         while let Ok(msg) = rx.recv() {

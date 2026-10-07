@@ -1,4 +1,4 @@
-import { BindingBundler, shutdownAsyncRuntime, startAsyncRuntime } from '../../binding.cjs';
+import { BindingBundler } from '../../binding.cjs';
 import type { InputOptions } from '../../options/input-options';
 import type { OutputOptions } from '../../options/output-options';
 import type { HasProperty, TypeAssert } from '../../types/assert';
@@ -7,6 +7,7 @@ import { RolldownOutputImpl } from '../../types/rolldown-output-impl';
 import { createBundlerOptions } from '../../utils/create-bundler-option';
 import { unwrapBindingResult } from '../../utils/error';
 import { noop } from '../../utils/misc';
+import { shouldEagerlyFreeOutputs } from '../../utils/threadless-free';
 import { validateOption } from '../../utils/validator';
 // oxlint-disable-next-line no-unused-vars -- this is used in JSDoc links
 import type { rolldown } from './index';
@@ -31,7 +32,6 @@ export class RolldownBuild {
   constructor(inputOptions: InputOptions) {
     this.#inputOptions = inputOptions;
     this.#bundler = new BindingBundler();
-    startAsyncRuntime();
   }
 
   /**
@@ -91,11 +91,10 @@ export class RolldownBuild {
    * ```
    */
   async close(): Promise<void> {
-    // Every cleanup step (stop workers, `BindingBundler.close`, release the async runtime) runs
-    // exactly once, even when an earlier step fails, and a repeated `close` never re-runs any of
-    // them: a second native close runs `closeBundle` again, and on wasm it spawns onto the async
-    // runtime the first one released, which traps. The first caller gets any error; a repeat only
-    // waits.
+    // Every cleanup step (stop workers, `BindingBundler.close`) runs exactly once, even when an
+    // earlier step fails, and a repeated `close` never re-runs any of them: the native close takes
+    // the last bundle handle, so a second native close would resolve before the first one's
+    // `closeBundle` ends. The first caller gets any error; a repeat only waits.
     // See internal-docs/rust-classic-bundler/implementation.md ("Close Mechanism").
     if (this.#closing) {
       await this.#closing.catch(noop);
@@ -108,18 +107,13 @@ export class RolldownBuild {
   async #close(): Promise<void> {
     let stopWorkersError: { error: unknown } | undefined;
     try {
-      try {
-        await this.#stopWorkers?.();
-      } catch (error) {
-        stopWorkersError = { error };
-      }
-      this.#stopWorkers = void 0;
-      // `BindingBundler.close` spawns onto the runtime, so release only after it settles.
-      // If it throws too, its error wins over the worker one.
-      await this.#bundler.close();
-    } finally {
-      shutdownAsyncRuntime();
+      await this.#stopWorkers?.();
+    } catch (error) {
+      stopWorkersError = { error };
     }
+    this.#stopWorkers = void 0;
+    // If `BindingBundler.close` throws too, its error wins over the worker one.
+    await this.#bundler.close();
     if (stopWorkersError) {
       throw stopWorkersError.error;
     }
@@ -151,6 +145,9 @@ export class RolldownBuild {
       /* measureTimings */ true,
     );
 
+    let result: RolldownOutput;
+    // The native invalidate callback fires only on success (before
+    // `writeBundle`), so every settlement path below releases the boxes.
     try {
       this.#stopWorkers = option.stopWorkers;
       let output: Awaited<ReturnType<BindingBundler['generate']>>;
@@ -159,11 +156,20 @@ export class RolldownBuild {
       } else {
         output = await this.#bundler.generate(option.bundlerOptions);
       }
-      return new RolldownOutputImpl(unwrapBindingResult(output));
+      result = new RolldownOutputImpl(unwrapBindingResult(output));
+      // A threadless WASI host may never run GC finalizers: reading `output`
+      // fires the getter's eager box release even when the caller ignores the
+      // result.
+      if (shouldEagerlyFreeOutputs()) {
+        void result.output;
+      }
     } catch (e) {
+      option.releaseOptionBoxes();
       await option.stopWorkers?.();
       throw e;
     }
+    option.releaseOptionBoxes();
+    return result;
   }
 }
 

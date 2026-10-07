@@ -12,7 +12,8 @@ import type { PluginContextData } from '../plugin/plugin-context-data';
 import { ChunkingContextImpl } from '../types/chunking-context';
 import { transformAssetSource } from './asset-source';
 import { arraify, unimplemented } from './misc';
-import { transformRenderedChunk } from './transform-rendered-chunk';
+import { shouldEagerlyFreeOutputs } from './threadless-free';
+import { snapshotRenderedChunk, transformRenderedChunk } from './transform-rendered-chunk';
 import { logger } from '../cli/logger';
 import {
   measureHookCost,
@@ -163,11 +164,11 @@ export function bindingifyOutputOptions(
   };
 }
 
-type AddonKeys = 'banner' | 'footer' | 'intro' | 'outro';
+type AddonKeys = 'banner' | 'footer' | 'postBanner' | 'postFooter' | 'intro' | 'outro';
 
 function bindingifyAddon(
   configAddon: OutputOptions[AddonKeys],
-  name: AddonKeys | 'postBanner' | 'postFooter',
+  name: AddonKeys,
   timings: PluginTimingsRecorder | undefined,
 ): BindingOutputOptions[AddonKeys] {
   if (configAddon == null || configAddon === '') {
@@ -177,7 +178,15 @@ function bindingifyAddon(
     // Measure the user's callback, not `transformRenderedChunk` around it, so the row is
     // their work rather than the conversion their choice of a function forced.
     const measured = measureHookCost(timings, OUTPUT_OPTIONS_OWNER, name, configAddon);
-    return async (chunk) => measured(transformRenderedChunk(chunk));
+    return async (chunk) => {
+      // A threadless WASI host may never run the GC finalizers the
+      // per-invocation chunk box would otherwise wait for; hand the callback a
+      // plain-data snapshot and release the box up front.
+      const rendered = shouldEagerlyFreeOutputs()
+        ? snapshotRenderedChunk(chunk)
+        : transformRenderedChunk(chunk);
+      return measured(rendered);
+    };
   }
   return configAddon;
 }
@@ -374,8 +383,16 @@ function bindingifyCodeSplitting(
   if (effectiveChunksOption != null) {
     const { groups, experimentalInlineCommonChunks, ...restOptions } = effectiveChunksOption;
     let chunkingContext: ChunkingContextImpl | undefined;
-    const getChunkingContext = (bindingContext: BindingChunkingContext) =>
-      (chunkingContext ??= new ChunkingContextImpl(bindingContext, pluginContextData));
+    const getChunkingContext = (bindingContext: BindingChunkingContext) => {
+      if (chunkingContext) {
+        // One context serves the whole pass (its module-info cache spans every
+        // group); adopt each batch's fresh box. The build-scoped registry
+        // releases every box.
+        chunkingContext.useBindingContext(bindingContext);
+        return chunkingContext;
+      }
+      return (chunkingContext = new ChunkingContextImpl(bindingContext, pluginContextData));
+    };
     advancedChunksResult = {
       ...restOptions,
       experimentalInlineCommonChunks:
@@ -456,6 +473,7 @@ function bindingifyCodeSplitting(
               ? batchName(
                   measureHookCost(timings, timingOwner, nameTimingName, name),
                   getChunkingContext,
+                  pluginContextData,
                 )
               : name,
         };
@@ -505,6 +523,7 @@ function batchTest(
 function batchName(
   name: CodeSplittingNameFunction,
   getChunkingContext: (bindingContext: BindingChunkingContext) => ChunkingContextImpl,
+  pluginContextData: PluginContextData,
 ): (
   ids: string[],
   bindingContext: BindingChunkingContext,
@@ -512,17 +531,24 @@ function batchName(
   return (ids, bindingContext) => {
     const context = getChunkingContext(bindingContext);
     const results: ReturnType<CodeSplittingNameFunction>[] = [];
-    for (let index = 0; index < ids.length; index++) {
-      const result = name(ids[index], context);
-      // napi reports the type of the array, not of the bad element, so the check runs here.
-      if (result != null && typeof result !== 'string') {
-        throw new TypeError(
-          `\`output.codeSplitting.groups[].name\` returned ${typeof result} for module "${
-            ids[index]
-          }", but expected a string, null or undefined.`,
-        );
+    // A classifier may keep the context and read it after its batch ends
+    // (`renderChunk` and `renderError` do), so the box is parked on the
+    // build-scoped registry, which releases it when the build settles.
+    try {
+      for (let index = 0; index < ids.length; index++) {
+        const result = name(ids[index], context);
+        // napi reports the type of the array, not of the bad element, so the check runs here.
+        if (result != null && typeof result !== 'string') {
+          throw new TypeError(
+            `\`output.codeSplitting.groups[].name\` returned ${typeof result} for module "${
+              ids[index]
+            }", but expected a string, null or undefined.`,
+          );
+        }
+        results.push(result);
       }
-      results.push(result);
+    } finally {
+      pluginContextData.retainContextBox(bindingContext);
     }
     return results;
   };

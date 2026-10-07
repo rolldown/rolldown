@@ -19,6 +19,8 @@ export type ParseResult = BindingParseResult;
 export type ParserOptions = BindingParserOptions;
 
 function wrap(result: ParseResult, filename: string | undefined, sourceText: string) {
+  // No drain here: `wrapParseResult` in `utils/parse.ts` already read every
+  // native getter on threadless WASI, failed parses included.
   if (result.errors.length > 0) {
     return normalizeParseError(filename, sourceText, result.errors);
   }

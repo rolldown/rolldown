@@ -1,0 +1,13 @@
+{
+  "name": "workerd-tests",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test:suite": "node ./suite.mjs",
+    "test:memory": "node --expose-gc ./memory.mjs"
+  },
+  "devDependencies": {
+    "miniflare": "catalog:"
+  }
+}

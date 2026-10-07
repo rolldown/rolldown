@@ -59,11 +59,11 @@ running, and `watcher.close()` still waits for the complete close sequence.
 
 ```rust
 let watcher = Watcher::new(configs, handler, &watcher_config)?;
-watcher.run();       // spawns the coordinator (non-blocking)
+watcher.run()?;      // submits the coordinator (non-blocking)
 watcher.close().await?;  // sends Close, awaits completion
 ```
 
-Follows the same `new → run → close` pattern as `DevEngine`. `new()` creates the coordinator future but doesn't spawn it. `run()` spawns it on the tokio runtime. `close()` sets the shared close signal, sends a fire-and-forget `Close` message, and awaits the shared completion future. `wait_for_close()` gives consumers a reliable way to await the watcher's completion without closing it.
+Follows the same `new → run → close` pattern as `DevEngine`. `new()` creates the coordinator future but doesn't spawn it. `run()` submits it with `rolldown_utils::futures::try_spawn` on the [shared async runtime](../async-runtime/implementation.md); if the runtime rejects the task, `run()` returns `WatcherStartError` and the coordinator is dropped. `close()` sets the shared close signal and sends a fire-and-forget `Close` message (the private `publish_close()`), starts a not-yet-started coordinator, and awaits the shared completion future. Publishing first means a same-tick close never enters the initial build. `wait_for_close()` gives consumers a reliable way to await the watcher's completion without closing it.
 
 ### Known Divergences from Rollup
 
@@ -80,8 +80,8 @@ Follows the same `new → run → close` pattern as `DevEngine`. `new()` creates
 
 ```
 Watcher (public API)
-  ├── tx: mpsc::Sender ──→ WatchCoordinator (actor, owns everything)
-  └── close_notify ──────→ wakes the coordinator while it awaits a consumer callback
+  ├── tx: futures mpsc::UnboundedSender ──→ WatchCoordinator (actor, owns everything)
+  └── close_notify (event_listener::Event) ──→ wakes the coordinator while it awaits a consumer callback
                                ├── handler: H (WatcherEventHandler impl)
                                ├── state: WatcherState
                                └── tasks: IndexVec<WatchTaskIdx, WatchTask>
@@ -104,7 +104,7 @@ Data flow:
 - `Watcher` only holds lifecycle state (`tx`, the close signal, and `coordinator_state`) — lightweight, no bundler access.
 - `WatchCoordinator` owns ALL mutable state. No external mutation.
 - Each `WatchTask` owns its `FsWatcher`. Per-task watchers mean isolated watch sets and simpler ownership.
-- Bundler is `Arc<TokioMutex<>>` because event data structs carry a clone for consumer access (e.g. `BUNDLE_END.result`).
+- Bundler is `Arc<async_lock::Mutex<Bundler>>` (imported as `TokioMutex` in `watch_task.rs`) because event data structs carry a clone for consumer access (e.g. `BUNDLE_END.result`).
 
 ### Three-Layer Stack
 
@@ -160,7 +160,7 @@ Debouncing ──(timeout)──→ run rebuild sequence → drain buffered → 
 Any ──(Close)──→ Closing → Closed
 ```
 
-**No explicit Building state.** The coordinator's event loop blocks during build (it `await`s). Fs events buffer in the mpsc channel. After build, `drain_buffered_events()` via `try_recv()` picks them up.
+**No explicit Building state.** The coordinator's event loop blocks during build (it `await`s). Fs events buffer in the unbounded `futures::channel::mpsc` channel. After build, `drain_buffered_events()` via `try_recv()` picks them up.
 
 ```rust
 enum WatcherState {
@@ -200,7 +200,7 @@ Changes accumulate in an `invalidatedIds` Map during the delay window — both p
 
 ### Rolldown's Approach
 
-The `WatcherState::Debouncing` state does the same thing with `tokio::select!` and a deadline reset:
+The `WatcherState::Debouncing` state does the same thing with a deadline reset. `wait_for_debounce_input()` runs an unbiased `futures` `select!` over the mpsc receiver and a `rolldown_utils::time::sleep_until(deadline)` timer:
 
 - File change → `Idle` becomes `Debouncing { changes, deadline }`
 - More changes → deadline resets, changes accumulate with kind consolidation per path
@@ -247,7 +247,7 @@ File change detected by per-task FsWatcher
       - task.invalidate(path) → sets needs_rebuild = true
       - task.call_on_invalidate(path) → fires immediately, before debounce
       - State: Idle → Debouncing, or extends deadline
-  → Debounce timer fires (tokio::select!)
+  → Debounce deadline fires (`sleep_until` wins the `select!`)
   → run_build_sequence(changes):
       1. handler.on_change(path, kind) for each change
       2. task.call_watch_change(path, kind) for each task × each change
@@ -289,6 +289,10 @@ runs the normal close hooks, closes every bundler, and emits `close`; only after
 original `watcher.close()` promise resolve. This breaks the self-wait cycle without weakening the
 meaning of a resolved close promise.
 
+The JavaScript `Watcher` (`api/watch/watcher.ts`) stops each output's
+parallel-plugin workers, then awaits `BindingWatcher.close()`, and frees the
+option boxes on every outcome. A second `close()` returns at once.
+
 ### Error Recovery
 
 Build errors do **not** stop the watcher. On error, `event('ERROR')` is emitted with the error details and a `result` handle. The watcher continues watching — when the user fixes the error and saves, a rebuild triggers.
@@ -319,7 +323,7 @@ Configured via `WatcherOptions`, fires **immediately** on file change (before de
 - `exclude` is about files, as in Rollup. The filter gets notify's `EntryKind`: a file is ignored if it matches (`Glob::is_match`). A directory is ignored only if everything below it matches (`DirMatch::matches_all_below`). A path of unknown kind (a missing path, or every event on Windows) could be either, so it is ignored if one of the two holds. So `dist/**` skips `dist` as a whole, and `**/*.log` does not hide `foo.log/a.js` below a directory named `foo.log`. A regex cannot tell whether it matches everything below a directory, so it never ignores one. Its files are still ignored one by one.
 - Why a directory that merely matches is not ignored: inotify, kqueue and poll never look below an ignored directory, while FSEvents and Windows ask about every path below it. The backends only agree if ignoring a directory and ignoring each path below it give the same result.
 - `include`/`exclude` still decide which discovered files are registered (via `pattern_filter`), so an excluded path is filtered twice: by the caller at registration and by the watcher.
-- Files are watched **non-recursively** (individual file watches).
+- Files are watched **recursively**, so a directory passed to `addWatchFile` covers its descendants; for a plain file this is the same as a single-file watch.
 - `FsWatcher::watch_paths` filters and deduplicates new paths before opening a notify batch. If none remain, it leaves the backend untouched: on macOS, opening a batch stops the FSEvents stream, and committing even an empty batch restarts it from "now", potentially losing edits in between. A path is recorded only after registration and commit succeed, so a skipped path is tried again with the next build.
 
 ### Backend selection
@@ -440,7 +444,7 @@ impl WatcherEventHandler for NapiWatcherEventHandler {
 
 ```
 constructor(options, listener)  // creates Watcher with handler, ready to run
-run()   → inner.run()           // spawns coordinator (non-blocking)
+run()   → inner.run()           // submits or rejects; never silently succeeds
         → inner.waitForClose()  // pending Promise keeps Node alive
 close() → inner.close()         // sends Close msg, awaits shared future
                                 // waitForClose() resolves, event loop free to exit
@@ -448,7 +452,7 @@ close() → inner.close()         // sends Close msg, awaits shared future
 
 ### Binding as Thin Wrapper
 
-`BindingWatcher` is intentionally a thin wrapper — it holds a `rolldown_watcher::Watcher` and delegates directly. No state machine, no locking, no logic beyond type conversion. All lifecycle management lives in the Rust core. The constructor takes both `options` and `listener`, creates the `NapiWatcherEventHandler`, and passes it to `Watcher::new()`. Each NAPI method (`run`, `waitForClose`, `close`) is a direct delegation to the inner watcher.
+`BindingWatcher` is intentionally a thin wrapper — it holds a `rolldown_watcher::Watcher` and delegates directly. No state machine, no locking, no logic beyond type conversion. All lifecycle management lives in the Rust core. The constructor takes both `options` and `listener`, creates the `NapiWatcherEventHandler`, and passes it to `Watcher::new()`. Each NAPI method (`run`, `waitForClose`, `close`) is a direct delegation to the inner watcher. `run()` calls `Watcher::run()` synchronously, so a stopped runtime returns a rejected Promise (`WatcherStartError`); the refused coordinator is dropped, so a later `run()` starts nothing.
 
 ### Event Emitter
 
@@ -515,7 +519,6 @@ Tracks progress from old watcher → new `rolldown_watcher`. Items link to [#648
 
 ### Cleanup
 
-- [ ] Remove `reset_closed_for_watch_mode()` hack — see [rust-bundler.md](../rust-bundler/implementation.md) for the `Bundle.close()` design that replaces it
 - [ ] Rename `WatcherChangeKind` → `FileChangeEventKind` (type stays in `rolldown_common`)
 - [ ] CLI `--watch` mode working with new watcher ([#7759](https://github.com/rolldown/rolldown/issues/7759))
 
@@ -534,6 +537,7 @@ Tracks progress from old watcher → new `rolldown_watcher`. Items link to [#648
 ## Related
 
 - [design.md](./design.md) — watch-mode design principles and open questions
+- [async-runtime](../async-runtime/implementation.md) — the shared async runtime the coordinator is spawned on (`try_spawn`, `sleep_until`)
 - [rust-bundler](../rust-bundler/implementation.md) — Core Bundler struct and `Bundle.close()` design
 - [rust-classic-bundler](../rust-classic-bundler/implementation.md) — Rollup API compatibility wrapper
 - [module-id](../module-id/implementation.md) — Module ID, path identity, and normalization

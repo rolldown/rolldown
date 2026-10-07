@@ -6,6 +6,7 @@ import type { RolldownOutput } from '../../types/rolldown-output';
 import { RolldownOutputImpl } from '../../types/rolldown-output-impl';
 import { createBundlerOptions } from '../../utils/create-bundler-option';
 import { unwrapBindingResult } from '../../utils/error';
+import { noop } from '../../utils/misc';
 import { validateOption } from '../../utils/validator';
 // oxlint-disable-next-line no-unused-vars -- this is used in JSDoc links
 import type { rolldown } from './index';
@@ -24,7 +25,7 @@ export class RolldownBuild {
   #inputOptions: InputOptions;
   #bundler: BindingBundler;
   #stopWorkers?: () => Promise<void>;
-  #asyncRuntimeReleased = false;
+  #closing?: Promise<void>;
 
   /** @hidden should not be used directly */
   constructor(inputOptions: InputOptions) {
@@ -90,18 +91,25 @@ export class RolldownBuild {
    * ```
    */
   async close(): Promise<void> {
-    // Claim the release before the first await so a second `close` cannot release twice.
-    const shouldRelease = !this.#asyncRuntimeReleased;
-    this.#asyncRuntimeReleased = true;
+    // A repeated `close` waits for the first one instead of calling `BindingBundler.close` again:
+    // a second native close runs `closeBundle` again, and on wasm it spawns onto the async runtime
+    // the first one released, which traps. The first caller gets any error; a repeat only waits.
+    if (this.#closing) {
+      await this.#closing.catch(noop);
+      return;
+    }
+    this.#closing = this.#close();
+    await this.#closing;
+  }
+
+  async #close(): Promise<void> {
     try {
       await this.#stopWorkers?.();
       // `BindingBundler.close` spawns onto the runtime, so release only after it settles.
       await this.#bundler.close();
       this.#stopWorkers = void 0;
     } finally {
-      if (shouldRelease) {
-        shutdownAsyncRuntime();
-      }
+      shutdownAsyncRuntime();
     }
   }
 

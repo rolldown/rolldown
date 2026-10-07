@@ -101,6 +101,27 @@ test('supports closeBundle hook', async () => {
   }
 });
 
+test('a repeated close() does not run closeBundle again', async () => {
+  let closeBundleCalls = 0;
+  const bundle = await rolldown({
+    input: './main.js',
+    cwd: import.meta.dirname,
+    plugins: [
+      {
+        name: 'test',
+        closeBundle() {
+          closeBundleCalls++;
+        },
+      },
+    ],
+  });
+  await bundle.generate();
+  await bundle.close();
+  await bundle.close();
+  expect(closeBundleCalls).toBe(1);
+  expect(bundle.closed).toBe(true);
+});
+
 test('closeBundle hook is not called if closed directly', async () => {
   const task = async () => {
     const bundle = await rolldown({

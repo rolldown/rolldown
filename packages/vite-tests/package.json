@@ -8,6 +8,7 @@
   "license": "MIT",
   "devDependencies": {
     "@oxc-node/cli": "catalog:",
-    "tinyexec": "catalog:"
+    "tinyexec": "catalog:",
+    "yaml": "catalog:"
   }
 }

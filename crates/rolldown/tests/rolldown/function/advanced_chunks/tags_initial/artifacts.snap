@@ -37,7 +37,6 @@ export { lazyDep };
 ## main.js
 
 ```js
-import { n as required, r as shared, t as lazy } from "./initial-deps.js";
-export { lazy, required, shared };
+export { t as lazy, n as required, r as shared } from "./initial-deps.js";
 
 ```

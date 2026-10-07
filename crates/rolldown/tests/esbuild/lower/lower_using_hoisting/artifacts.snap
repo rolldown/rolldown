@@ -190,12 +190,11 @@ export { foo as default };
 ## hoist-export-from.js
 
 ```js
-import { x, y } from "./foo";
 //#region hoist-export-from.js
+//#endregion
+export { x, y } from "./foo";
 using a = b;
 using c = d;
-//#endregion
-export { x, y };
 
 ```
 

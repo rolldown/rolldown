@@ -14,8 +14,7 @@ export { __exportAll };
 ## index.js
 
 ```js
-import { two_exports } from "./two.js";
-export { two_exports as two };
+export { two_exports as two } from "./two.js";
 
 ```
 

@@ -6,12 +6,11 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## main.js
 
 ```js
-import { "\n\"\\'" as test } from "external";
-export { test as "\n\"\\'" };
+export { "\n\"\\'" } from "external";
 
 ```
 
-# Variant: [format: Cjs]
+# Variant: cjs: [format: Cjs]
 
 ## Assets
 

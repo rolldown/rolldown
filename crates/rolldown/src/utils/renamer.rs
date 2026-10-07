@@ -212,7 +212,7 @@ impl<'name> Renamer<'name> {
     }
 
     // Find unique name: skip candidates that conflict with top-level symbols
-    // or with existing bindings in nested scopes of the same module.
+    // or with existing bindings in any scope of the same module.
     for count in 1u32.. {
       let name: CompactStr =
         concat_string!(original_name, "$", itoa::Buffer::new().format(count)).into();
@@ -221,11 +221,13 @@ impl<'name> Renamer<'name> {
         continue;
       }
 
-      // Also skip if the candidate name conflicts with an existing binding in
-      // a nested scope of the same module. Without this check, renaming `child`
-      // to `child$1` could collide with an existing `child$1` binding in the
-      // same scope (e.g. from Gleam's variable shadowing convention).
-      if has_nested_scope_binding(self.symbol_db, symbol_ref.owner, &name) {
+      // Also skip if the candidate name is bound anywhere in the same module.
+      // Without this check, renaming `child` to `child$1` could collide with an
+      // existing `child$1` binding in the same scope (e.g. from Gleam's variable
+      // shadowing convention), or capture a root-scope `child$1` that the
+      // resolver never saw: a CJS-wrapped module's root bindings are printed
+      // inside its `__commonJS` closure and keep their original names.
+      if has_binding(self.symbol_db, symbol_ref.owner, &name) {
         self.resolver.reserve(name);
         continue;
       }
@@ -281,6 +283,14 @@ fn has_nested_scope_binding(symbol_db: &SymbolRefDb, module_idx: ModuleIdx, name
   };
   // Skip root scope (index 0), check nested scopes only
   db.ast_scopes.scoping().iter_bindings().skip(1).any(|(_, bindings)| bindings.contains_key(name))
+}
+
+/// Returns true if any scope of the module, also the root scope, binds `name`.
+fn has_binding(symbol_db: &SymbolRefDb, module_idx: ModuleIdx, name: &str) -> bool {
+  let Some(db) = &symbol_db[module_idx] else {
+    return false;
+  };
+  db.ast_scopes.scoping().iter_bindings().any(|(_, bindings)| bindings.contains_key(name))
 }
 
 /// Returns true if `name` is bound in the root scope of the module.

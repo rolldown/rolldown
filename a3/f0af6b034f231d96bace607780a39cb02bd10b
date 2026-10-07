@@ -1,0 +1,19 @@
+crates/rolldown/tests/esbuild/default/jsx_dev_self_edge_cases/diff.md
+  s_d43624d0762669::t_bca9a674fe0889 534,539,560,565
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "a3f0af6b034f231d96bace607780a39cb02bd10b",
+  "prompts": {},
+  "sessions": {
+    "s_d43624d0762669": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "7f7265c1-aa11-4a4b-9d11-215aef9a579c",
+        "model": "unknown"
+      },
+      "human_author": "IWANABETHATGUY <iwanabethatguy@qq.com>"
+    }
+  }
+}

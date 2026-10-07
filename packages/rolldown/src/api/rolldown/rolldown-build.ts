@@ -91,9 +91,11 @@ export class RolldownBuild {
    * ```
    */
   async close(): Promise<void> {
-    // A repeated `close` waits for the first one instead of calling `BindingBundler.close` again:
-    // a second native close runs `closeBundle` again, and on wasm it spawns onto the async runtime
-    // the first one released, which traps. The first caller gets any error; a repeat only waits.
+    // Every cleanup step (stop workers, `BindingBundler.close`, release the async runtime) runs
+    // exactly once, even when an earlier step fails, and a repeated `close` never re-runs any of
+    // them: a second native close runs `closeBundle` again, and on wasm it spawns onto the async
+    // runtime the first one released, which traps. The first caller gets any error; a repeat only
+    // waits.
     if (this.#closing) {
       await this.#closing.catch(noop);
       return;
@@ -103,13 +105,22 @@ export class RolldownBuild {
   }
 
   async #close(): Promise<void> {
+    let stopWorkersError: { error: unknown } | undefined;
     try {
-      await this.#stopWorkers?.();
-      // `BindingBundler.close` spawns onto the runtime, so release only after it settles.
-      await this.#bundler.close();
+      try {
+        await this.#stopWorkers?.();
+      } catch (error) {
+        stopWorkersError = { error };
+      }
       this.#stopWorkers = void 0;
+      // `BindingBundler.close` spawns onto the runtime, so release only after it settles.
+      // If it throws too, its error wins over the worker one.
+      await this.#bundler.close();
     } finally {
       shutdownAsyncRuntime();
+    }
+    if (stopWorkersError) {
+      throw stopWorkersError.error;
     }
   }
 

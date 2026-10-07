@@ -27,6 +27,11 @@ async function bundleTsConfig(configFile: string, isEsm: boolean): Promise<Bundl
   const dirnameVarName = 'injected_original_dirname';
   const filenameVarName = 'injected_original_filename';
   const importMetaUrlVarName = 'injected_original_import_meta_url';
+  // Before `rolldown()`: a throw here must not skip `close()`.
+  // A unique name per load: the counter defeats the process-wide module cache
+  // (keyed by URL), the random part defeats other processes loading the same config.
+  const outputDir = path.dirname(configFile);
+  const outputPrefix = `rolldown.config.${++configLoadCount}.${randomBytes(8).toString('hex')}.`;
   const bundle = await rolldown({
     input: configFile,
     platform: 'node',
@@ -60,10 +65,6 @@ async function bundleTsConfig(configFile: string, isEsm: boolean): Promise<Bundl
       },
     ],
   });
-  // A unique name per load: the counter defeats the process-wide module cache
-  // (keyed by URL), the random part defeats other processes loading the same config.
-  const outputDir = path.dirname(configFile);
-  const outputPrefix = `rolldown.config.${++configLoadCount}.${randomBytes(8).toString('hex')}.`;
   const errors: unknown[] = [];
   let entryFile: string | undefined;
   let generatedFiles: string[] | undefined;

@@ -77,20 +77,32 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
     }
   }
 
+  /// Whether the member expression at `visit_path[member_idx]` is the target of an assignment or
+  /// a `delete`, not only an object on the way to a deeper target (`ns.a[k] = 1`).
+  pub fn is_member_expr_written(&self, member_idx: usize) -> bool {
+    let Some(member_expr_kind) =
+      self.visit_path.get(member_idx).and_then(AstKind::as_member_expression_kind)
+    else {
+      return false;
+    };
+    let ancestor =
+      |depth: usize| member_idx.checked_sub(depth).and_then(|i| self.visit_path.get(i));
+    let Some(parent_kind) = ancestor(1) else {
+      return false;
+    };
+    let is_unary_expression_with_delete_operator = |kind: &AstKind| matches!(kind, AstKind::UnaryExpression(expr) if expr.operator == UnaryOperator::Delete);
+    member_expr_kind.is_assigned_to_in_parent(parent_kind)
+      // delete namespace.module
+      || is_unary_expression_with_delete_operator(parent_kind)
+      // delete namespace?.module
+      || matches!(parent_kind, AstKind::ChainExpression(_) if ancestor(2).is_some_and(is_unary_expression_with_delete_operator))
+  }
+
   pub fn get_span_if_namespace_specifier_updated(&self) -> Option<(Span, &'ast str)> {
     let ancestor_cursor = self.visit_path.len() - 1;
     let parent_node = self.visit_path.get(ancestor_cursor)?;
     if let Some(member_expr_kind) = parent_node.as_member_expression_kind() {
-      let parent_parent_kind = self.visit_path.get(ancestor_cursor - 1)?;
-      let is_unary_expression_with_delete_operator = |kind: &AstKind| matches!(kind, AstKind::UnaryExpression(expr) if expr.operator == UnaryOperator::Delete);
-      if member_expr_kind.is_assigned_to_in_parent(parent_parent_kind)
-        // delete namespace.module
-        || is_unary_expression_with_delete_operator(parent_parent_kind)
-        // delete namespace?.module
-        || matches!(parent_parent_kind, AstKind::ChainExpression(_) if self.visit_path.get(ancestor_cursor - 2).is_some_and(|item| {
-          is_unary_expression_with_delete_operator(item)
-        }))
-      {
+      if self.is_member_expr_written(ancestor_cursor) {
         return match member_expr_kind {
           MemberExpressionKind::Computed(expr) => match &expr.expression {
             Expression::StringLiteral(lit) => Some((lit.span, lit.value.as_str())),

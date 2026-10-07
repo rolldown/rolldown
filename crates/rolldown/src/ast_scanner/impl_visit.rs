@@ -593,15 +593,20 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
                 let symbol_ref_flags = root_symbol_id.flags_mut(&mut self.result.symbol_ref_db);
                 *symbol_ref_flags |= SymbolRefFlags::HasComputedMemberWrite;
               }
-              self.add_member_expr_reference(MemberExprRef::new(
-                root_symbol_id,
-                props,
+              // The chain holds the nearest ancestors, so its last prop is at this index.
+              let is_write_target =
+                self.is_member_expr_written(self.visit_path.len() - props.len());
+              self.add_member_expr_reference(MemberExprRef {
+                object_ref: root_symbol_id,
+                prop_and_span_list: props,
                 node_id,
                 span,
-                ty,
-                ident_ref.reference_id.get(),
-                is_member_write,
-              ));
+                object_ref_type: ty,
+                reference_id: ident_ref.reference_id.get(),
+                // oxc does not flag `delete ns.a?.b` (oxc-project/oxc#27419).
+                is_write: is_member_write || is_write_target,
+                is_write_target,
+              });
             }
           } else if is_member_write
             && matches!(

@@ -8,9 +8,9 @@ use oxc_str::CompactStr;
 // if we want more enhancements related to exports.
 use rolldown_common::{
   EcmaModuleAstUsage, ExportsKind, ImportRecordIdx, IndexModules, MemberExprObjectReferencedType,
-  MemberExprRefResolution, Module, ModuleIdx, ModuleType, NamespaceAlias, NormalModule,
-  OutputFormat, ResolvedExport, Specifier, StmtInfoIdx, StmtInfos, SymbolOrMemberExprRef,
-  SymbolRef, SymbolRefDb, SymbolRefFlags,
+  MemberExprRef, MemberExprRefResolution, Module, ModuleIdx, ModuleType, NamespaceAlias,
+  NormalModule, OutputFormat, ResolvedExport, Specifier, StmtInfoIdx, StmtInfos,
+  SymbolOrMemberExprRef, SymbolRef, SymbolRefDb, SymbolRefFlags,
 };
 use rolldown_error::{
   AmbiguousExternalNamespaceModule, BuildDiagnostic, Diagnostics, EventKindSwitcher,
@@ -726,7 +726,7 @@ impl LinkStage<'_> {
     side_effects_modules: &FxHashSet<ModuleIdx>,
     normal_symbol_exports_chain_map: &FxHashMap<SymbolRef, Vec<SymbolRef>>,
   ) {
-    let warnings = append_only_vec::AppendOnlyVec::new();
+    let diagnostics = append_only_vec::AppendOnlyVec::new();
     // A JSON default object whose `data.key` accesses get rewritten to the statically split
     // per-key exports must stay un-split once it is mutated or escapes (see
     // `collect_non_splittable_json_defaults`). Such a mutation/escape in one module invalidates
@@ -817,6 +817,14 @@ impl LinkStage<'_> {
                 while cursor < member_expr_ref.prop_and_span_list.len() && is_namespace_ref {
                   let prop = &member_expr_ref.prop_and_span_list[cursor];
                   let name = &prop.name;
+                  // Stop before the written prop: the finalizer cannot write its bare binding into a
+                  // member write target.
+                  if let Some(error) =
+                    namespace_member_write_error(module, member_expr_ref, cursor, &self.symbols)
+                  {
+                    diagnostics.push(error);
+                    break;
+                  }
                   let meta = &self.metas[canonical_ref_owner.idx];
                   let export_symbol = meta.resolved_exports.get(name).and_then(|resolved_export| {
                     (!resolved_export.came_from_commonjs).then_some(resolved_export)
@@ -841,7 +849,7 @@ impl LinkStage<'_> {
                     if !self.metas[canonical_ref_owner.idx].has_dynamic_exports
                       && !is_json_import_ns
                     {
-                      warnings.push(
+                      diagnostics.push(
                         BuildDiagnostic::import_is_undefined(
                           module.id.as_arc_str().clone(),
                           module.source.clone(),
@@ -1060,7 +1068,7 @@ impl LinkStage<'_> {
       .collect::<Vec<_>>();
 
     debug_assert_eq!(self.metas.len(), resolved_meta_data.len());
-    self.diagnostics.extend(warnings);
+    self.diagnostics.extend(diagnostics);
     // Remove CJS exported symbols that are written to by importers from the constant map
     // to prevent incorrect inlining of mutated values.
     // First, collect statically-known written symbols gathered during resolution above.
@@ -1871,4 +1879,27 @@ fn collect_star_reexport_path(
     return;
   };
   collect_star_reexport_path(importee_idx, &next_export_name, modules, metas, path, visited);
+}
+
+/// Returns the `ASSIGN_TO_IMPORT` error when the prop at `cursor` is the target of a namespace
+/// member write (`ns.foo = 1`). The scanner reports this only when `ns` comes from `import * as`.
+#[inline]
+fn namespace_member_write_error(
+  module: &NormalModule,
+  member_expr_ref: &MemberExprRef,
+  cursor: usize,
+  symbols: &SymbolRefDb,
+) -> Option<BuildDiagnostic> {
+  if !member_expr_ref.is_write_target || cursor + 1 != member_expr_ref.prop_and_span_list.len() {
+    return None;
+  }
+  let prop = &member_expr_ref.prop_and_span_list[cursor];
+  Some(BuildDiagnostic::assign_to_import(
+    module.id.as_arc_str().clone(),
+    module.source.clone(),
+    prop.span,
+    ArcStr::from(prop.name.as_str()),
+    module.named_imports.get(&member_expr_ref.object_ref).map(|import| import.span_imported),
+    Some(ArcStr::from(member_expr_ref.object_ref.name(symbols))),
+  ))
 }

@@ -1,0 +1,34 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+import assert from "node:assert";
+//#region dep.js
+const obj = {};
+const returned = {};
+const fn = () => returned;
+var C = class {
+	#x = 0;
+	static poke() {
+		inst.#x = 1;
+		return inst.#x;
+	}
+};
+const inst = new C();
+//#endregion
+//#region main.js
+function setKey(key) {
+	obj[key] = 1;
+}
+setKey("k");
+fn().x = 1;
+assert.strictEqual(obj.k, 1);
+assert.strictEqual(fn().x, 1);
+assert.strictEqual(C.poke(), 1);
+//#endregion
+
+```

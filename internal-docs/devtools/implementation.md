@@ -101,7 +101,7 @@ The system is built on the `tracing` crate. The core idea: **spans carry context
 
 ### ID Generation
 
-- **Session ID:** `sid_{atomic_seed}_{unix_ms}` — unique per `ClassicBundler` / `Bundler` instance.
+- **Session ID:** `devtools.sessionId` when set (one path segment; `unknown-session` is reserved regardless of case for events without a session context); otherwise `sid_{atomic_seed}_{unix_ms}`, unique per `ClassicBundler` / `Bundler` instance. A custom id is not checked for uniqueness: callers must give each concurrent bundler its own id, because the writer keys its files and state by that id.
 - **Build ID:** `bid_{atomic_seed}_count_{build_count}` — unique per `Bundle` within a session. The `build_count` increments per build in the same `BundleFactory`.
 
 ### Lifecycle Integration
@@ -109,7 +109,7 @@ The system is built on the `tracing` crate. The core idea: **spans carry context
 **`ClassicBundler`** (binding layer, Rollup-compatible API):
 
 1. `new()` — generates `session_id`, creates dummy session
-2. `enable_debug_tracing_if_needed()` — on first build with `devtools` option, initializes `DebugTracer` and creates real session span
+2. `enable_debug_tracing_if_needed()` — on first build with `devtools` option, swaps in `devtools.sessionId` if given, initializes `DebugTracer` and creates real session span
 3. Passes `Session` to `BundleFactory` on each `create_bundle()` call
 
 **`BundleFactory`** (core):

@@ -777,6 +777,11 @@ export interface InputOptions {
    * Consumers can parse the output with `@rolldown/debug` after
    * `await bundle.close()` resolves.
    *
+   * `sessionId` replaces the generated session id. It must be one path segment: not empty, not
+   * `.` or `..`, and without `/`, `\` or NUL. Rolldown does not check that it is unique: give each
+   * bundler that runs at the same time its own `sessionId`, or their devtools output mixes.
+   * The name `unknown-session` is reserved regardless of case.
+   *
    * @experimental
    */
   devtools?: {

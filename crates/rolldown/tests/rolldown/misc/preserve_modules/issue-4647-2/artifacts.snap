@@ -6,8 +6,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## dynamic.js
 
 ```js
-import { a } from "./mod.js";
-export { a };
+export { a } from "./mod.js";
 
 ```
 

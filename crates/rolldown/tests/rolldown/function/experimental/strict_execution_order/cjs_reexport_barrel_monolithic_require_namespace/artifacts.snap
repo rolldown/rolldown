@@ -48,16 +48,16 @@ var require_outer = /* @__PURE__ */ __commonJSMin(((exports, module) => {
 		keys: Object.keys(ns).sort()
 	};
 }));
-//#endregion
-//#region main.js
 var import_outer;
-function init_main() {
-	return (init_main = __esmMin((() => {
+function init_main_cjs_1() {
+	return (init_main_cjs_1 = __esmMin((() => {
 		import_outer = /* @__PURE__ */ __toESM(require_outer());
 	})))();
 }
 //#endregion
-init_main();
+//#region main.js
+//#endregion
+init_main_cjs_1();
 var result = import_outer.default;
 export { result };
 
@@ -112,16 +112,16 @@ var require_outer = /* @__PURE__ */ __commonJSMin(((exports, module) => {
 		keys: Object.keys(ns).sort()
 	};
 }));
-//#endregion
-//#region main.js
 var import_outer;
-function init_main() {
-	return (init_main = __esmMin((() => {
+function init_main_cjs_1() {
+	return (init_main_cjs_1 = __esmMin((() => {
 		import_outer = /* @__PURE__ */ __toESM(require_outer());
 	})))();
 }
 //#endregion
-init_main();
+//#region main.js
+//#endregion
+init_main_cjs_1();
 var result = import_outer.default;
 export { result };
 

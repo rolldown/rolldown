@@ -1,5 +1,6 @@
 use std::fmt::Display;
 
+use json_escape_simd::escape;
 use oxc::ast::ast;
 use oxc_str::CompactStr;
 use rolldown_utils::indexmap::FxIndexMap;
@@ -66,8 +67,8 @@ impl Display for ImportAttribute {
       .entries
       .iter()
       .map(|(key, value)| match key {
-        ImportAttributeKey::String(s) => format!("\"{s}\": \"{value}\""),
-        ImportAttributeKey::Identifier(id) => format!("{id}: \"{value}\""),
+        ImportAttributeKey::String(s) => format!("{}: {}", escape(s), escape(value)),
+        ImportAttributeKey::Identifier(id) => format!("{id}: {}", escape(value)),
       })
       .collect::<Vec<_>>()
       .join(", ");

@@ -1,0 +1,7 @@
+{
+  "_comment": "Import attribute keys and values are rendered as escaped string literals. Node rejects unknown attributes, so the output isn't executed.",
+  "config": {
+    "external": ["ext-bare", "ext-named", "ext-star"]
+  },
+  "expectExecuted": false
+}

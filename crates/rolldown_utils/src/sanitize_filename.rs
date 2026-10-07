@@ -36,11 +36,22 @@ const fn is_invalid_byte(byte: u8) -> bool {
 }
 
 pub fn default_sanitize_file_name(str: &str) -> Cow<'_, str> {
+  sanitize_file_name(str, true)
+}
+
+/// Like [`default_sanitize_file_name`], but for names relative to the output directory.
+/// A leading `X:` is not a drive there; it would be a drive-relative path on Windows
+/// (or an alternate data stream elsewhere), so every `:` is replaced.
+pub fn default_sanitize_relative_file_name(str: &str) -> Cow<'_, str> {
+  sanitize_file_name(str, false)
+}
+
+fn sanitize_file_name(str: &str, allow_drive_prefix: bool) -> Cow<'_, str> {
   // A `:` is only allowed as part of a windows drive letter (ex: C:\foo).
   // Otherwise, avoid them because they can refer to NTFS alternate data streams.
   // Skip the two-byte drive prefix so its `:` is preserved, but every later `:`
   // is still treated as invalid. Both prefix bytes are ASCII, so `2` is a char boundary.
-  let scan_start = if starts_with_windows_drive(str) { 2 } else { 0 };
+  let scan_start = if allow_drive_prefix && starts_with_windows_drive(str) { 2 } else { 0 };
 
   let Some(first_invalid) = str.as_bytes()[scan_start..]
     .iter()
@@ -86,6 +97,10 @@ fn test_sanitize_file_name() {
   // A drive-letter `:` is preserved, but any later `:` is replaced.
   assert!(matches!(default_sanitize_file_name("C:/foo.js"), Cow::Borrowed("C:/foo.js")));
   assert_eq!(default_sanitize_file_name("C:/a:b.js"), "C:/a_b.js");
+
+  // A relative name has no drive, so its leading `X:` is replaced too.
+  assert_eq!(default_sanitize_relative_file_name("a:b"), "a_b");
+  assert_eq!(default_sanitize_relative_file_name("C:/foo.js"), "C_/foo.js");
 
   // Dirty inputs are rewritten and owned.
   assert!(matches!(default_sanitize_file_name("a?b"), Cow::Owned(_)));

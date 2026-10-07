@@ -244,12 +244,14 @@ fn render_proxy_template(
   original_id: &str,
   lazy_endpoint: &str,
 ) -> serde_json::Result<String> {
-  Ok(template
-    .replace("$PROXY_MODULE_ID", &serde_json::to_string(proxy_id)?)
-    .replace("$STABLE_MODULE_ID", &serde_json::to_string(stable_id)?)
-    .replace("$STABLE_PROXY_MODULE_ID", &serde_json::to_string(stable_proxy_id)?)
-    .replace("$MODULE_ID", &serde_json::to_string(original_id)?)
-    .replace("$LAZY_ENDPOINT", lazy_endpoint))
+  Ok(
+    template
+      .replace("$PROXY_MODULE_ID", &serde_json::to_string(proxy_id)?)
+      .replace("$STABLE_MODULE_ID", &serde_json::to_string(stable_id)?)
+      .replace("$STABLE_PROXY_MODULE_ID", &serde_json::to_string(stable_proxy_id)?)
+      .replace("$MODULE_ID", &serde_json::to_string(original_id)?)
+      .replace("$LAZY_ENDPOINT", lazy_endpoint),
+  )
 }
 
 #[cfg(test)]
@@ -297,15 +299,9 @@ mod tests {
 
   #[test]
   fn lazy_endpoint_is_substituted_verbatim() {
-    let rendered = render_proxy_template(
-      "`$LAZY_ENDPOINT?id=${x}`",
-      "p",
-      "s",
-      "sp",
-      "o",
-      "/foo/@vite/lazy",
-    )
-    .unwrap();
+    let rendered =
+      render_proxy_template("`$LAZY_ENDPOINT?id=${x}`", "p", "s", "sp", "o", "/foo/@vite/lazy")
+        .unwrap();
     assert_eq!(rendered, "`/foo/@vite/lazy?id=${x}`");
   }
 }

@@ -242,8 +242,8 @@ pub fn deconflict_chunk_symbols(
       (
         *id,
         renamer
-          .create_conflictless_name(&legitimize_identifier_name(&format!(
-            "require_{}",
+          .create_conflictless_name(&legitimize_identifier_name(&concat_string!(
+            "require_",
             index_chunk_id_to_name[id]
           )))
           .to_string(),

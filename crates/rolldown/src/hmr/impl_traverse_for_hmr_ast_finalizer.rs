@@ -1,6 +1,6 @@
 use oxc::{
   allocator::TakeIn,
-  ast::ast::{self, Expression},
+  ast::ast::{self, Expression, NumberBase},
   span::SPAN,
 };
 use oxc_traverse::Traverse;
@@ -289,6 +289,22 @@ impl<'ast> Traverse<'ast, ()> for HmrAstFinalizer<'_, 'ast> {
     self.rewrite_hot_accept_call_deps(node);
   }
 
+  fn exit_call_expression(
+    &mut self,
+    node: &mut ast::CallExpression<'ast>,
+    ctx: &mut oxc_traverse::TraverseCtx<'ast, ()>,
+  ) {
+    self.guard_import_binding_callee(&mut node.callee, ctx);
+  }
+
+  fn exit_tagged_template_expression(
+    &mut self,
+    node: &mut ast::TaggedTemplateExpression<'ast>,
+    ctx: &mut oxc_traverse::TraverseCtx<'ast, ()>,
+  ) {
+    self.guard_import_binding_callee(&mut node.tag, ctx);
+  }
+
   fn exit_expression(
     &mut self,
     node: &mut oxc::ast::ast::Expression<'ast>,
@@ -340,5 +356,34 @@ impl<'ast> HmrAstFinalizer<'_, 'ast> {
     } else if ident.name == CJS_MODULE_REF_STR {
       ident.name = CJS_ROLLDOWN_MODULE_REF_IDENT;
     }
+  }
+
+  /// An import binding renamed to `import_foo.bar` or `import_foo["a-b"]` would be called as a
+  /// method, with the exports object as `this`. Wrap it as `(0, import_foo.bar)` so `this` stays
+  /// `undefined`. A namespace import is renamed to `import_foo` alone and is left as it is.
+  fn guard_import_binding_callee(
+    &self,
+    callee: &mut Expression<'ast>,
+    ctx: &oxc_traverse::TraverseCtx<'ast, ()>,
+  ) {
+    let callee = callee.without_parentheses_mut();
+    let Expression::Identifier(ident) = callee else {
+      return;
+    };
+    let Some(reference_id) = ident.reference_id.get() else {
+      return;
+    };
+    let Some(symbol_id) = ctx.scoping().get_reference(reference_id).symbol_id() else {
+      return;
+    };
+    if !self.import_bindings.get(&symbol_id).is_some_and(|name| name.contains(['.', '['])) {
+      return;
+    }
+    let member = callee.take_in(self);
+    *callee = Expression::new_seq_in_parens(
+      Expression::new_numeric_literal(SPAN, 0.0, Some("0".into()), NumberBase::Decimal, self),
+      member,
+      self,
+    );
   }
 }

@@ -142,16 +142,20 @@ impl<'name> Renamer<'name> {
     self.resolver.reserve(name);
   }
 
-  /// Check if a candidate name is available for a top-level symbol, so that no nested binding
-  /// captures a reference to the symbol.
+  /// Check if a candidate name is available for a top-level symbol, so that no binding of its
+  /// module captures a reference to the symbol or collides with it.
   ///
-  /// This function stops the renamer from giving a top-level symbol a name that a nested scope
-  /// already binds. Such a nested binding would capture the references to the top-level symbol.
+  /// This function stops the renamer from giving a top-level symbol a name that a scope of its
+  /// module already binds. A nested binding with that name would capture the references to the
+  /// top-level symbol.
   ///
-  /// A renamed candidate must not be equal to a nested binding of the module that owns the symbol.
-  /// This is also true for the entry module, because no later pass renames a nested binding that
-  /// captures the references of a module to its own renamed top-level symbol. The original name
-  /// can be shadowed, because the author wrote that shadowing intentionally.
+  /// A renamed candidate must not be equal to any binding of the module that owns the symbol, in
+  /// any scope. This is also true for the entry module, because no later pass renames a nested
+  /// binding that captures the references of a module to its own renamed top-level symbol. The root
+  /// bindings count too: the finalizer prints the root bindings of a CJS-wrapped module inside its
+  /// CJS closure, so the conflict resolver does not see them, and a duplicate declaration would
+  /// result. The original name can be shadowed, because the author wrote that shadowing
+  /// intentionally.
   ///
   /// # Example: why a renamed candidate must avoid nested bindings
   ///
@@ -187,9 +191,9 @@ impl<'name> Renamer<'name> {
     symbol_ref: SymbolRef,
     is_original_name: bool,
   ) -> bool {
-    // Renamed candidates must not conflict with own module's nested bindings
+    // Renamed candidates must not conflict with any binding of the own module
     // (original names are allowed to shadow - that's intentional)
-    if !is_original_name && has_nested_scope_binding(symbol_db, symbol_ref.owner, candidate_name) {
+    if !is_original_name && has_binding(symbol_db, symbol_ref.owner, candidate_name) {
       return false;
     }
 
@@ -274,16 +278,6 @@ impl<'name> Renamer<'name> {
   pub fn into_canonical_names(self) -> FxHashMap<SymbolRef, CompactStr> {
     self.canonical_names
   }
-}
-
-/// Returns true if `name` exists in any nested (non-root) scope of the module.
-/// Returns false for modules without AST (external modules).
-fn has_nested_scope_binding(symbol_db: &SymbolRefDb, module_idx: ModuleIdx, name: &str) -> bool {
-  let Some(db) = &symbol_db[module_idx] else {
-    return false;
-  };
-  // Skip root scope (index 0), check nested scopes only
-  db.ast_scopes.scoping().iter_bindings().skip(1).any(|(_, bindings)| bindings.contains_key(name))
 }
 
 /// Returns true if any scope of the module, also the root scope, binds `name`.

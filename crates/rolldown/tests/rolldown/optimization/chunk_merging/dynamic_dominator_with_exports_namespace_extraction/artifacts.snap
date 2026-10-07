@@ -22,8 +22,7 @@ export { sharedDynamic as n, promise, dynamic1_exports as t };
 ## dynamic2.js
 
 ```js
-import { n as sharedDynamic } from "./dynamic1.js";
-export { sharedDynamic };
+export { n as sharedDynamic } from "./dynamic1.js";
 
 ```
 

@@ -1,0 +1,11 @@
+{
+  "_comment": "Oxc #25534 merges compatible imports even across another module request. Keep imported aliases, default/namespace interop, and first-request evaluation order in ESM and CJS output.",
+  "config": {
+    "platform": "node"
+  },
+  "configVariants": [
+    {
+      "format": "cjs"
+    }
+  ]
+}

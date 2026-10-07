@@ -23,8 +23,7 @@ export { main };
 ## sorter.js
 
 ```js
-import { t as createSorter } from "./sorter2.js";
-export { createSorter };
+export { t as createSorter } from "./sorter2.js";
 
 ```
 

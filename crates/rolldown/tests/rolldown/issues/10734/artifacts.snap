@@ -74,7 +74,6 @@ export { entryValue, loadChainA, loadCyclic, loadShared, shared as n, chainB as 
 ## shared.js
 
 ```js
-import { n as shared } from "./service.js";
-export { shared };
+export { n as shared } from "./service.js";
 
 ```

@@ -26,15 +26,13 @@ export { A };
 ## entrya.js
 
 ```js
-import { A } from "./a.js";
-export { A };
+export { A } from "./a.js";
 
 ```
 
 ## entryb.js
 
 ```js
-import { A } from "./b.js";
-export { A };
+export { A } from "./b.js";
 
 ```

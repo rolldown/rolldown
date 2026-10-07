@@ -6,8 +6,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## a.js
 
 ```js
-import b from "./b.js";
-export { b as B };
+export { default as B } from "./b.js";
 
 ```
 
@@ -24,7 +23,6 @@ export { b as default };
 ## main.js
 
 ```js
-import b from "./b.js";
-export { b as B };
+export { default as B } from "./b.js";
 
 ```

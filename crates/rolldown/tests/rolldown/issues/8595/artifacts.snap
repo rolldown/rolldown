@@ -81,8 +81,7 @@ export { a };
 ## index2.js
 
 ```js
-import { a } from "./index1.js";
-export { a };
+export { a } from "./index1.js";
 
 ```
 

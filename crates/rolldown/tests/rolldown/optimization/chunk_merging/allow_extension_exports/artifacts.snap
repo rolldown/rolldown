@@ -23,8 +23,7 @@ import("./libs.js").then((n) => n.t).then((m) => {
 ## lib1.js
 
 ```js
-import { n as value1 } from "./libs.js";
-export { value1 };
+export { n as value1 } from "./libs.js";
 
 ```
 

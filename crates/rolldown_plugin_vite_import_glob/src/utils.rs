@@ -17,6 +17,8 @@ use rolldown_std_utils::relative_path_to_slash;
 use string_wizard::MagicString;
 use sugar_path::SugarPath;
 
+use crate::matcher::GlobMatcher;
+
 pub struct GlobImportVisit<'a> {
   pub ctx: &'a PluginContext,
   pub id: &'a str,
@@ -27,6 +29,8 @@ pub struct GlobImportVisit<'a> {
   pub magic_string: Option<MagicString<'a>>,
   pub import_decls: Vec<String>,
   pub errors: Vec<anyhow::Error>,
+  pub is_dev_mode: bool,
+  pub matchers: Vec<GlobMatcher>,
 }
 
 impl<'ast> VisitJs<'ast> for GlobImportVisit<'_> {
@@ -74,6 +78,11 @@ impl<'a> PathWithGlob<'a> {
     let i = Self::find_glob_syntax(&glob[glob.len() - j..]);
     path.truncate(path.len() - i);
     Self { path, glob: &glob[glob.len() - i..] }
+  }
+
+  /// Owned copy for the long-lived [`GlobMatcher`]
+  fn to_owned_parts(&self) -> (String, String) {
+    (self.path.clone(), self.glob.to_string())
   }
 
   fn find_glob_syntax(path: &str) -> usize {
@@ -474,8 +483,20 @@ impl GlobImportVisit<'_> {
       return None;
     }
 
-    let common = self.get_common_base(&positive_globs);
-    let entries = walkdir::WalkDir::new(common.as_ref())
+    // Nothing can match, and the common base would be the whole root.
+    if positive_globs.is_empty() {
+      return Some(());
+    }
+
+    let common = self.get_common_base(&positive_globs).into_owned();
+    let common_path = Path::new(&common);
+
+    if self.is_dev_mode {
+      self.watch_walk_root(common_path);
+    }
+
+    let mut matched = Vec::new();
+    let entries = walkdir::WalkDir::new(common_path)
       .follow_links(true)
       .sort_by(|a, b| a.file_name().cmp(b.file_name()))
       .into_iter()
@@ -520,6 +541,10 @@ impl GlobImportVisit<'_> {
         continue;
       }
 
+      if self.is_dev_mode {
+        matched.push(path.to_string());
+      }
+
       let file_path = self.relative_path(file, None);
       if is_virtual_module {
         let import_path =
@@ -547,7 +572,29 @@ impl GlobImportVisit<'_> {
 
       files.push(ImportGlobFileData { file_path, import_path });
     }
+
+    if self.is_dev_mode {
+      self.matchers.push(GlobMatcher {
+        walk_root: common,
+        positive: positive_globs.iter().map(PathWithGlob::to_owned_parts).collect(),
+        negated: negated_globs.iter().map(PathWithGlob::to_owned_parts).collect(),
+        exhaustive: options.exhaustive,
+        case_sensitive,
+        matched,
+      });
+    }
     Some(())
+  }
+
+  /// A directory is watched with everything below it, so the walk root covers all the walk
+  /// reads. The watcher can only wait for a missing path whose parent exists.
+  fn watch_walk_root(&self, walk_root: &Path) {
+    // The id of a virtual module can make it relative.
+    if walk_root.is_absolute() {
+      let path =
+        walk_root.ancestors().take_while(|path| !path.exists()).last().unwrap_or(walk_root);
+      self.ctx.add_watch_file(&path.to_slash_lossy());
+    }
   }
 
   fn update_options(arg: &Argument, options: &mut ImportGlobOptions) {

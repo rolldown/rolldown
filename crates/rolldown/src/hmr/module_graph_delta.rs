@@ -1,7 +1,7 @@
 use json_escape_simd::escape;
 use rolldown_common::{
-  ImportKind, ImportRecordIdx, ImportRecordMeta, Module, ModuleIdx, ModuleTable, NormalModule,
-  RUNTIME_MODULE_KEY, Specifier,
+  HmrStampTable, ImportKind, ImportRecordIdx, ImportRecordMeta, Module, ModuleIdx, ModuleTable,
+  NormalModule, RUNTIME_MODULE_KEY, Specifier,
 };
 use rustc_hash::{FxHashMap, FxHashSet};
 
@@ -86,11 +86,15 @@ fn edge_bindings<'a>(
 /// dynamic edges. `edges` stays a dense array: most modules import something, and an empty
 /// row (`[]`) is shorter than a row key.
 ///
+/// `stamps` (patches and lazy chunks only) is sparse like `dynamicEdges`; a missing row means
+/// stamp 0.
+///
 /// `ids[0, local_count)` are the carried modules in input order; `ids[local_count, ..)` are
 /// foreign edge targets interned on first use. Returns `None` when the payload carries no rows.
 pub fn render_register_graph_source(
   module_table: &ModuleTable,
   carried_modules: impl IntoIterator<Item = ModuleIdx>,
+  stamp_table: Option<&HmrStampTable>,
 ) -> Option<String> {
   let mut ids: Vec<ModuleIdx> = Vec::new();
   let mut id_to_index: FxHashMap<ModuleIdx, usize> = FxHashMap::default();
@@ -235,6 +239,24 @@ pub fn render_register_graph_source(
         source.push_str(itoa::Buffer::new().format(*target_pos));
       }
       source.push(']');
+    }
+    source.push('}');
+  }
+  if let Some(stamp_table) = stamp_table {
+    source.push_str(",stamps:{");
+    let mut first = true;
+    for (row, idx) in ids[..local_count].iter().enumerate() {
+      let stamp = stamp_table.render_time_stamp(module_table.modules[*idx].stable_id().as_str());
+      if stamp == 0 {
+        continue;
+      }
+      if !first {
+        source.push(',');
+      }
+      first = false;
+      source.push_str(itoa::Buffer::new().format(row));
+      source.push(':');
+      source.push_str(itoa::Buffer::new().format(stamp));
     }
     source.push('}');
   }

@@ -76,6 +76,7 @@ impl DevEngine {
       .build()?;
 
     let module_infos = bundler.module_infos();
+    let cwd = bundler.options().cwd.clone();
     let bundler = Arc::new(Mutex::new(bundler));
 
     let normalized_options = normalize_dev_options(options);
@@ -106,6 +107,8 @@ impl DevEngine {
       debounce_tick_rate: ctx.options.debounce_tick_rate,
       use_polling: ctx.options.use_polling,
       use_debounce: ctx.options.use_debounce,
+      ignored: ctx.options.watch_exclude.clone(),
+      cwd,
     };
 
     let event_handler = BundleCoordinator::create_watcher_event_handler(coordinator_tx.clone());
@@ -242,15 +245,13 @@ impl DevEngine {
     loop {
       loop_count += 1;
       if loop_count > 100 {
-        if cfg!(debug_assertions) {
-          panic!(
-            "[DevEngine] ensure_latest_bundle_output has looped {loop_count} times, something is definitely wrong",
-          );
-        } else {
-          tracing::warn!(
-            "[DevEngine] ensure_latest_bundle_output has looped {loop_count} times, something might be wrong",
-          );
-        }
+        debug_assert!(
+          false,
+          "[DevEngine] ensure_latest_bundle_output has looped {loop_count} times, something is definitely wrong",
+        );
+        tracing::warn!(
+          "[DevEngine] ensure_latest_bundle_output has looped {loop_count} times, something might be wrong",
+        );
         break;
       }
       let (reply_sender, reply_receiver) = tokio::sync::oneshot::channel();

@@ -83,7 +83,7 @@ export { __exportAll as n, __commonJSMin as t };
 ## Code
 
 ```js
-__rolldown_runtime__.registerGraph({ids:["hmr.js","new-dep-cjs.js","new-dep-esm.js","exist-dep-cjs.js","exist-dep-esm.js"],localCount:3,edges:[[],[],[]],dynamicEdges:{0:[3,4,1,2]}});
+__rolldown_runtime__.registerGraph({ids:["hmr.js","new-dep-cjs.js","new-dep-esm.js","exist-dep-cjs.js","exist-dep-esm.js"],localCount:3,edges:[[],[],[]],dynamicEdges:{0:[3,4,1,2]},stamps:{0:1,1:1,2:1}});
 //#region hmr.js
 __rolldown_runtime__.registerFactory("hmr.js", (function(__rolldown_module_id__) {
 	try {
@@ -107,7 +107,7 @@ __rolldown_runtime__.registerFactory("hmr.js", (function(__rolldown_module_id__)
 			}
 		});
 	} finally {}
-}));
+}), 1);
 
 //#endregion
 //#region new-dep-cjs.js
@@ -119,7 +119,7 @@ __rolldown_runtime__.registerFactory("new-dep-cjs.js", (function(__rolldown_modu
 		const hot_new_dep_cjs = __rolldown_runtime__.createModuleHotContext(__rolldown_module_id__);
 		__rolldown_exports__.value = "new-cjs";
 	} finally {}
-}));
+}), 1);
 
 //#endregion
 //#region new-dep-esm.js
@@ -130,7 +130,7 @@ __rolldown_runtime__.registerFactory("new-dep-esm.js", (function(__rolldown_modu
 		const hot_new_dep_esm = __rolldown_runtime__.createModuleHotContext(__rolldown_module_id__);
 		const value = "new-esm";
 	} finally {}
-}));
+}), 1);
 
 //#endregion
 ```

@@ -20,6 +20,11 @@ export { test as "\n\"\\'" };
 ```js
 Object.defineProperty(exports, Symbol.toStringTag, { value: "Module" });
 let external = require("external");
-exports["\n\"\\'"] = external["\n\"\\'"];
+Object.defineProperty(exports, "\n\"\\'", {
+	enumerable: true,
+	get: function() {
+		return external["\n\"\\'"];
+	}
+});
 
 ```

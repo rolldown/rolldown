@@ -1,0 +1,86 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+//#region shared-equality.js
+function isEqual(left, right) {
+	return left === right || typeof left === "object" && hasOwnProperty.call(left, right);
+}
+var hasOwnProperty;
+function init_shared_equality() {
+	return (init_shared_equality = __esmMin((() => {
+		hasOwnProperty = Object.prototype.hasOwnProperty;
+	})))();
+}
+//#endregion
+//#region utilities/index.js
+var utilities_exports = /* @__PURE__ */ __exportAll({
+	hasExpectedValue: () => hasExpectedValue,
+	isEqual: () => isEqual
+});
+import * as import_node_path from "node:path";
+__reExport(utilities_exports, import_node_path);
+function hasExpectedValue(actual) {
+	return actual === "expected";
+}
+function init_utilities() {
+	return (init_utilities = __esmMin((() => {
+		init_shared_equality();
+	})))();
+}
+//#endregion
+//#region main.js
+function init_main() {
+	return (init_main = __esmMin((() => {
+		init_utilities();
+		globalThis.__result = [
+			hasExpectedValue("expected"),
+			isEqual({ key: 1 }, "key"),
+			typeof utilities_exports.sep
+		];
+	})))();
+}
+//#endregion
+init_main();
+
+```
+
+# Variant: on-demand: [on_demand_wrapping: true]
+
+## Assets
+
+### main.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+//#region shared-equality.js
+const hasOwnProperty = Object.prototype.hasOwnProperty;
+function isEqual(left, right) {
+	return left === right || typeof left === "object" && hasOwnProperty.call(left, right);
+}
+//#endregion
+//#region utilities/index.js
+var utilities_exports = /* @__PURE__ */ __exportAll({
+	hasExpectedValue: () => hasExpectedValue,
+	isEqual: () => isEqual
+});
+import * as import_node_path from "node:path";
+__reExport(utilities_exports, import_node_path);
+function hasExpectedValue(actual) {
+	return actual === "expected";
+}
+//#endregion
+//#region main.js
+globalThis.__result = [
+	hasExpectedValue("expected"),
+	isEqual({ key: 1 }, "key"),
+	typeof utilities_exports.sep
+];
+//#endregion
+
+```

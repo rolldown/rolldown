@@ -1,0 +1,170 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## app.js
+
+```js
+import { t as __esmMin } from "./rolldown-runtime.js";
+import { n as init_utilities, t as hasExpectedValue } from "./utilities.js";
+//#region shared-equality.js
+function isEqual(left, right) {
+	return left === right || typeof left === "object" && hasOwnProperty.call(left, right);
+}
+var hasOwnProperty;
+function init_shared_equality() {
+	return (init_shared_equality = __esmMin((() => {
+		hasOwnProperty = Object.prototype.hasOwnProperty;
+	})))();
+}
+//#endregion
+//#region user.js
+var flag;
+function init_user() {
+	return (init_user = __esmMin((() => {
+		init_shared_equality();
+		flag = hasExpectedValue("expected");
+	})))();
+}
+//#endregion
+//#region main.js
+function init_main() {
+	return (init_main = __esmMin((() => {
+		init_shared_equality();
+		init_user();
+		globalThis.__app = [
+			hasExpectedValue("expected"),
+			isEqual({ key: 1 }, "key"),
+			flag,
+			isEqual({ key: 1 }, "key")
+		];
+	})))();
+}
+//#endregion
+init_main();
+
+```
+
+## page.js
+
+```js
+import { t as __esmMin } from "./rolldown-runtime.js";
+import { n as init_utilities, t as hasExpectedValue } from "./utilities.js";
+//#region page.js
+function init_page() {
+	return (init_page = __esmMin((() => {
+		globalThis.__page = hasExpectedValue("page");
+	})))();
+}
+//#endregion
+init_page();
+
+```
+
+## rolldown-runtime.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+export { __esmMin as t };
+
+```
+
+## utilities.js
+
+```js
+import { t as __esmMin } from "./rolldown-runtime.js";
+//#region utilities/index.js
+function hasExpectedValue(actual) {
+	return actual === "expected";
+}
+function init_utilities() {
+	return (init_utilities = __esmMin((() => {})))();
+}
+//#endregion
+export { init_utilities as n, hasExpectedValue as t };
+
+```
+
+# Variant: on-demand: [on_demand_wrapping: true]
+
+## Assets
+
+### app.js
+
+```js
+import { t as __esmMin } from "./rolldown-runtime.js";
+import { t as hasExpectedValue } from "./utilities.js";
+//#region shared-equality.js
+function isEqual(left, right) {
+	return left === right || typeof left === "object" && hasOwnProperty.call(left, right);
+}
+var hasOwnProperty;
+function init_shared_equality() {
+	return (init_shared_equality = __esmMin((() => {
+		hasOwnProperty = Object.prototype.hasOwnProperty;
+	})))();
+}
+//#endregion
+//#region user.js
+var flag;
+function init_user() {
+	return (init_user = __esmMin((() => {
+		init_shared_equality();
+		flag = hasExpectedValue("expected");
+	})))();
+}
+//#endregion
+//#region main.js
+function init_main() {
+	return (init_main = __esmMin((() => {
+		init_shared_equality();
+		init_user();
+		globalThis.__app = [
+			hasExpectedValue("expected"),
+			isEqual({ key: 1 }, "key"),
+			flag,
+			isEqual({ key: 1 }, "key")
+		];
+	})))();
+}
+//#endregion
+init_main();
+
+```
+
+### page.js
+
+```js
+import { t as __esmMin } from "./rolldown-runtime.js";
+import { t as hasExpectedValue } from "./utilities.js";
+//#region page.js
+function init_page() {
+	return (init_page = __esmMin((() => {
+		globalThis.__page = hasExpectedValue("page");
+	})))();
+}
+//#endregion
+init_page();
+
+```
+
+### rolldown-runtime.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+export { __esmMin as t };
+
+```
+
+### utilities.js
+
+```js
+//#region utilities/index.js
+function hasExpectedValue(actual) {
+	return actual === "expected";
+}
+//#endregion
+export { hasExpectedValue as t };
+
+```

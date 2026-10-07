@@ -1,0 +1,33 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+//#region w.js
+var init_w = __esmMin((() => {
+	init_x();
+}));
+
+//#endregion
+//#region data.json
+var data_default = {};
+
+//#endregion
+//#region x.js
+var x_exports = /* @__PURE__ */ __exportAll({});
+var init_x = __esmMin((() => {
+	init_w();
+}));
+
+//#endregion
+//#region main.js
+init_x();
+init_w();
+
+//#endregion
+export { data_default as default };
+```

@@ -39,7 +39,7 @@ catalog:
   '@emnapi/runtime': 2.0.0-alpha.5
   '@jridgewell/trace-mapping': ^0.3.31
   '@napi-rs/cli': ^3.10.0
-  '@napi-rs/wasm-runtime': ~1.2.2
+  '@napi-rs/wasm-runtime': ~1.2.5
   '@oxc-node/cli': ^0.1.0
   '@oxc-node/core': ^0.1.0
   '@oxc-project/runtime': '=0.152.0'
@@ -99,7 +99,7 @@ catalog:
   vitest: ^4.1.6
   vue: ^3.5.35
   web-tree-sitter: ^0.27.0
-  ws: ^8.20.1
+  ws: ^8.22.0
   zx: ^8.1.2
 
 catalogs:

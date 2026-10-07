@@ -54,7 +54,6 @@ impl GenerateStage<'_> {
     let placement = compute_placement(
       &static_importees,
       &dynamic_importees,
-      &self.untracked_dynamic_importers(chunk_graph),
       |chunk_idx| !chunk_graph.post_chunk_optimization_operations.contains_key(&chunk_idx),
       |chunk_idx| {
         chunk_graph.chunk_table[chunk_idx].is_user_defined_entry()

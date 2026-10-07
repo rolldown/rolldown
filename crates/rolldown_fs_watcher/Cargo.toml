@@ -10,10 +10,12 @@ description = "Filesystem watching implementation for Rolldown"
 readme = "../../README.md"
 
 [dependencies]
+globstar = { workspace = true }
 rolldown-notify = { workspace = true }
 rolldown-notify-debouncer-full = { workspace = true }
 rolldown_common = { workspace = true }
 rolldown_error = { workspace = true }
+rolldown_utils = { workspace = true }
 rustc-hash = { workspace = true }
 tracing = { workspace = true }
 walkdir = { workspace = true }

@@ -53,7 +53,7 @@ console.log("dep");
 ## Code
 
 ```js
-__rolldown_runtime__.registerGraph({ids:["dep.js"],localCount:1,edges:[[]]});
+__rolldown_runtime__.registerGraph({ids:["dep.js"],localCount:1,edges:[[]],stamps:{0:1}});
 //#region dep.js
 __rolldown_runtime__.registerFactory("dep.js", (function(__rolldown_module_id__) {
 	try {
@@ -65,7 +65,7 @@ __rolldown_runtime__.registerFactory("dep.js", (function(__rolldown_module_id__)
 			hot_dep.accept();
 		}
 	} finally {}
-}));
+}), 1);
 
 //#endregion
 ```

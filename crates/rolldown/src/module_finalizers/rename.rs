@@ -1,4 +1,5 @@
 use oxc::ast::ast::{self, Expression, IdentifierReference, MemberExpression};
+use oxc::span::GetSpanMut;
 use rolldown_common::SymbolRef;
 use rolldown_ecmascript_utils::{ExpressionExt, MemberExpressionFactoryExt as _};
 
@@ -47,6 +48,13 @@ impl<'ast> ScopeHoistingFinalizer<'_, 'ast> {
       ast::Expression::StaticMemberExpression(it) => {
         it.span = id_ref.span;
         it.property.span = id_ref.span;
+        if let Some(object) = it.object.as_identifier_mut() {
+          object.span = id_ref.span;
+        }
+      }
+      ast::Expression::ComputedMemberExpression(it) => {
+        it.span = id_ref.span;
+        *it.expression.span_mut() = id_ref.span;
         if let Some(object) = it.object.as_identifier_mut() {
           object.span = id_ref.span;
         }

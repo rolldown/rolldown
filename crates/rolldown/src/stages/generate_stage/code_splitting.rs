@@ -21,7 +21,7 @@ use oxc_index::{IndexVec, index_vec};
 use rolldown_common::{
   Chunk, ChunkIdx, ChunkKind, ChunkMeta, EntryPointKind, ExportsKind, ImportKind, ImportRecordIdx,
   ImportRecordMeta, IndexModules, Module, ModuleId, ModuleIdx, ModuleNamespaceIncludedReason,
-  ModuleTag, ModuleTagBitSet, ModuleTagRegistry, PostChunkOptimizationOperation,
+  ModuleTag, ModuleTagBitSet, ModuleTagRegistry, ModuleType, PostChunkOptimizationOperation,
   PreserveEntrySignatures, RetainedExportSymbols, SymbolRef, UsedSymbolRefs, UsedSymbolRefsBuilder,
   WrapKind,
 };
@@ -386,7 +386,14 @@ impl GenerateStage<'_> {
       for idx in js_import_order {
         match self.link_output.metas[idx].wrap_kind() {
           WrapKind::None => {
-            if !wrapped_modules.is_empty() {
+            // An unwrapped JSON module declares only data, so it needs no other module to
+            // initialize first and is never a target (#10999). A wrapped JSON module stays a
+            // dependency: its data exists only after its wrapper runs.
+            // See internal-docs/code-splitting/implementation.md.
+            let is_json = self.link_output.module_table[idx]
+              .as_normal()
+              .is_some_and(|module| matches!(module.module_type, ModuleType::Json));
+            if !wrapped_modules.is_empty() && !is_json {
               none_wrapped_module_to_wrapped_dependency_length.insert(idx, wrapped_modules.len());
             }
           }

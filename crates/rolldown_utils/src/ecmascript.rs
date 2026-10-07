@@ -54,6 +54,10 @@ pub fn legitimize_json_local_binding_name(
 }
 
 pub fn legitimize_identifier_name(name: &str) -> Cow<'_, str> {
+  if name.is_empty() {
+    return Cow::Borrowed("_");
+  }
+
   let mut chars_indices = name.char_indices();
 
   let mut first_invalid_char_index = None;
@@ -98,7 +102,8 @@ pub fn property_access_str(obj: &str, prop: &str) -> String {
   if is_validate_identifier_name(prop) {
     concat_string!(obj, ".", prop)
   } else {
-    concat_string!(obj, "[", serde_json::to_string(prop).unwrap(), "]")
+    let prop = serde_json::to_string(prop).unwrap();
+    concat_string!(obj, "[", prop, "]")
   }
 }
 

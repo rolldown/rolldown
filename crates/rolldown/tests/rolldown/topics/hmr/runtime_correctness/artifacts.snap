@@ -21,9 +21,14 @@ __rolldown_runtime__.registerGraph({
 		"cases/deconflict_import_bindings/foo.mjs",
 		"cases/deconflict_import_bindings/foo/index.mjs",
 		"cases/deconflict_import_bindings/index.js",
+		"cases/string_import_name/lib.js",
+		"cases/string_import_name/reexport.js",
+		"cases/string_import_name/index.js",
+		"cases/imported_callee_this/lib.js",
+		"cases/imported_callee_this/index.js",
 		"main.js"
 	],
-	localCount: 12,
+	localCount: 17,
 	edges: [
 		[],
 		[0],
@@ -45,10 +50,21 @@ __rolldown_runtime__.registerGraph({
 			9,
 			0
 		],
+		[0],
+		[11, 0],
+		[
+			11,
+			12,
+			0
+		],
+		[0],
+		[14, 0],
 		[
 			4,
 			7,
-			10
+			10,
+			13,
+			15
 		]
 	]
 });
@@ -131,13 +147,13 @@ assert.strictEqual(requiredUmdLib.foo, "foo");
 }
 //#endregion
 //#region cases/manual_reexport/lib.js
-var lib_exports = /* @__PURE__ */ __exportAll({
+var lib_exports$2 = /* @__PURE__ */ __exportAll({
 	Globals: () => Globals,
 	value: () => "lib"
 });
 init_trigger_dep();
 __rolldown_runtime__.createModuleHotContext("cases/manual_reexport/lib.js");
-__rolldown_runtime__.registerModule("cases/manual_reexport/lib.js", { exports: lib_exports });
+__rolldown_runtime__.registerModule("cases/manual_reexport/lib.js", { exports: lib_exports$2 });
 const Globals = Object;
 //#endregion
 //#region cases/manual_reexport/barrel.js
@@ -178,6 +194,53 @@ __rolldown_runtime__.registerModule("cases/deconflict_import_bindings/index.js",
 assert.strictEqual("foo", "foo");
 assert.strictEqual(foo, "foo-index");
 //#endregion
+//#region cases/string_import_name/lib.js
+var lib_exports$1 = /* @__PURE__ */ __exportAll({ "a-b": () => "lib" });
+init_trigger_dep();
+__rolldown_runtime__.createModuleHotContext("cases/string_import_name/lib.js");
+__rolldown_runtime__.registerModule("cases/string_import_name/lib.js", { exports: lib_exports$1 });
+//#endregion
+//#region cases/string_import_name/reexport.js
+var reexport_exports = /* @__PURE__ */ __exportAll({ value: () => "lib" });
+init_trigger_dep();
+__rolldown_runtime__.createModuleHotContext("cases/string_import_name/reexport.js");
+__rolldown_runtime__.registerModule("cases/string_import_name/reexport.js", { exports: reexport_exports });
+//#endregion
+//#region cases/string_import_name/index.js
+var string_import_name_exports = /* @__PURE__ */ __exportAll({});
+init_trigger_dep();
+__rolldown_runtime__.createModuleHotContext("cases/string_import_name/index.js");
+__rolldown_runtime__.registerModule("cases/string_import_name/index.js", { exports: string_import_name_exports });
+assert.strictEqual("lib", "lib");
+assert.strictEqual("lib", "lib");
+//#endregion
+//#region cases/imported_callee_this/lib.js
+var lib_exports = /* @__PURE__ */ __exportAll({
+	default: () => getThisDefault,
+	"get-this": () => getThis,
+	getThis: () => getThis
+});
+init_trigger_dep();
+__rolldown_runtime__.createModuleHotContext("cases/imported_callee_this/lib.js");
+__rolldown_runtime__.registerModule("cases/imported_callee_this/lib.js", { exports: lib_exports });
+function getThis() {
+	return this;
+}
+function getThisDefault() {
+	return this;
+}
+//#endregion
+//#region cases/imported_callee_this/index.js
+var imported_callee_this_exports = /* @__PURE__ */ __exportAll({});
+init_trigger_dep();
+__rolldown_runtime__.createModuleHotContext("cases/imported_callee_this/index.js");
+__rolldown_runtime__.registerModule("cases/imported_callee_this/index.js", { exports: imported_callee_this_exports });
+assert.strictEqual(getThis(), void 0);
+assert.strictEqual(getThis?.(), void 0);
+assert.strictEqual(getThis`x`, void 0);
+assert.strictEqual(getThisDefault(), void 0);
+assert.strictEqual(getThis(), void 0);
+//#endregion
 //#region main.js
 var main_exports = /* @__PURE__ */ __exportAll({});
 const main_hot = __rolldown_runtime__.createModuleHotContext("main.js");
@@ -192,7 +255,7 @@ if (main_hot) main_hot.accept();
 ## Code
 
 ```js
-__rolldown_runtime__.registerGraph({ids:["cases/deconflict_import_bindings/foo.mjs","cases/deconflict_import_bindings/foo/index.mjs","cases/deconflict_import_bindings/index.js","cases/manual_reexport/barrel.js","cases/manual_reexport/index.js","cases/manual_reexport/lib.js","cases/require/cjs-lib-reassign-module-exports.js","cases/require/cjs-lib.js","cases/require/index.js","cases/require/umd-lib.js","main.js","trigger-dep.js"],localCount:12,edges:[[11],[11],[0,1,11],[5,11],[3,11],[11],[11],[11],[11,6,7,9],[11],[8,4,2],[]]});
+__rolldown_runtime__.registerGraph({ids:["cases/deconflict_import_bindings/foo.mjs","cases/deconflict_import_bindings/foo/index.mjs","cases/deconflict_import_bindings/index.js","cases/imported_callee_this/index.js","cases/imported_callee_this/lib.js","cases/manual_reexport/barrel.js","cases/manual_reexport/index.js","cases/manual_reexport/lib.js","cases/require/cjs-lib-reassign-module-exports.js","cases/require/cjs-lib.js","cases/require/index.js","cases/require/umd-lib.js","cases/string_import_name/index.js","cases/string_import_name/lib.js","cases/string_import_name/reexport.js","main.js","trigger-dep.js"],localCount:17,edges:[[16],[16],[0,1,16],[4,16],[16],[7,16],[5,16],[16],[16],[16],[16,8,9,11],[16],[13,14,16],[16],[13,16],[10,6,2,12,3],[]],stamps:{16:1}});
 //#region cases/deconflict_import_bindings/foo.mjs
 __rolldown_runtime__.registerFactory("cases/deconflict_import_bindings/foo.mjs", (function(__rolldown_module_id__) {
 	try {
@@ -238,36 +301,78 @@ __rolldown_runtime__.registerFactory("cases/deconflict_import_bindings/index.js"
 }));
 
 //#endregion
+//#region cases/imported_callee_this/index.js
+import * as import_node_assert_30 from "node:assert";
+__rolldown_runtime__.registerFactory("cases/imported_callee_this/index.js", (function(__rolldown_module_id__) {
+	try {
+		var __rolldown_exports__ = __rolldown_runtime__.__exportAll({});
+		__rolldown_runtime__.registerModule(__rolldown_module_id__, { exports: __rolldown_exports__ });
+		__rolldown_runtime__.initModule("cases/imported_callee_this/lib.js");
+		var import_lib_31 = __rolldown_runtime__.loadExports("cases/imported_callee_this/lib.js");
+		__rolldown_runtime__.initModule("trigger-dep.js");
+		var import_trigger_dep_32 = __rolldown_runtime__.loadExports("trigger-dep.js");
+		const hot_imported_callee_this = __rolldown_runtime__.createModuleHotContext(__rolldown_module_id__);
+		import_node_assert_30.default.strictEqual((0, import_lib_31.getThis)(), undefined);
+		import_node_assert_30.default.strictEqual((0, import_lib_31.getThis)?.(), undefined);
+		import_node_assert_30.default.strictEqual((0, import_lib_31.getThis)`x`, undefined);
+		import_node_assert_30.default.strictEqual((0, import_lib_31.default)(), undefined);
+		import_node_assert_30.default.strictEqual((0, import_lib_31["get-this"])(), undefined);
+	} finally {}
+}));
+
+//#endregion
+//#region cases/imported_callee_this/lib.js
+__rolldown_runtime__.registerFactory("cases/imported_callee_this/lib.js", (function(__rolldown_module_id__) {
+	try {
+		var __rolldown_exports__ = __rolldown_runtime__.__exportAll({
+			getThis: () => getThis,
+			default: () => getThisDefault,
+			["get-this"]: () => getThis
+		});
+		__rolldown_runtime__.registerModule(__rolldown_module_id__, { exports: __rolldown_exports__ });
+		__rolldown_runtime__.initModule("trigger-dep.js");
+		var import_trigger_dep_40 = __rolldown_runtime__.loadExports("trigger-dep.js");
+		const hot_lib = __rolldown_runtime__.createModuleHotContext(__rolldown_module_id__);
+		function getThis() {
+			return this;
+		}
+		function getThisDefault() {
+			return this;
+		}
+	} finally {}
+}));
+
+//#endregion
 //#region cases/manual_reexport/barrel.js
 __rolldown_runtime__.registerFactory("cases/manual_reexport/barrel.js", (function(__rolldown_module_id__) {
 	try {
 		var __rolldown_exports__ = __rolldown_runtime__.__exportAll({
-			Globals: () => import_lib_30.Globals,
-			value: () => import_lib_30.value
+			Globals: () => import_lib_50.Globals,
+			value: () => import_lib_50.value
 		});
 		__rolldown_runtime__.registerModule(__rolldown_module_id__, { exports: __rolldown_exports__ });
 		__rolldown_runtime__.initModule("cases/manual_reexport/lib.js");
-		var import_lib_30 = __rolldown_runtime__.loadExports("cases/manual_reexport/lib.js");
+		var import_lib_50 = __rolldown_runtime__.loadExports("cases/manual_reexport/lib.js");
 		__rolldown_runtime__.initModule("trigger-dep.js");
-		var import_trigger_dep_31 = __rolldown_runtime__.loadExports("trigger-dep.js");
+		var import_trigger_dep_51 = __rolldown_runtime__.loadExports("trigger-dep.js");
 		const hot_barrel = __rolldown_runtime__.createModuleHotContext(__rolldown_module_id__);
 	} finally {}
 }));
 
 //#endregion
 //#region cases/manual_reexport/index.js
-import * as import_node_assert_40 from "node:assert";
+import * as import_node_assert_60 from "node:assert";
 __rolldown_runtime__.registerFactory("cases/manual_reexport/index.js", (function(__rolldown_module_id__) {
 	try {
 		var __rolldown_exports__ = __rolldown_runtime__.__exportAll({});
 		__rolldown_runtime__.registerModule(__rolldown_module_id__, { exports: __rolldown_exports__ });
 		__rolldown_runtime__.initModule("cases/manual_reexport/barrel.js");
-		var import_barrel_41 = __rolldown_runtime__.loadExports("cases/manual_reexport/barrel.js");
+		var import_barrel_61 = __rolldown_runtime__.loadExports("cases/manual_reexport/barrel.js");
 		__rolldown_runtime__.initModule("trigger-dep.js");
-		var import_trigger_dep_42 = __rolldown_runtime__.loadExports("trigger-dep.js");
+		var import_trigger_dep_62 = __rolldown_runtime__.loadExports("trigger-dep.js");
 		const hot_manual_reexport = __rolldown_runtime__.createModuleHotContext(__rolldown_module_id__);
-		import_node_assert_40.default.strictEqual(import_barrel_41.value, "lib");
-		import_node_assert_40.default.strictEqual(import_barrel_41.Globals, Object);
+		import_node_assert_60.default.strictEqual(import_barrel_61.value, "lib");
+		import_node_assert_60.default.strictEqual(import_barrel_61.Globals, Object);
 	} finally {}
 }));
 
@@ -281,7 +386,7 @@ __rolldown_runtime__.registerFactory("cases/manual_reexport/lib.js", (function(_
 		});
 		__rolldown_runtime__.registerModule(__rolldown_module_id__, { exports: __rolldown_exports__ });
 		__rolldown_runtime__.initModule("trigger-dep.js");
-		var import_trigger_dep_50 = __rolldown_runtime__.loadExports("trigger-dep.js");
+		var import_trigger_dep_70 = __rolldown_runtime__.loadExports("trigger-dep.js");
 		const hot_lib = __rolldown_runtime__.createModuleHotContext(__rolldown_module_id__);
 		const Globals = Object;
 		const value = "lib";
@@ -296,7 +401,7 @@ __rolldown_runtime__.registerFactory("cases/require/cjs-lib-reassign-module-expo
 		var __rolldown_exports__ = __rolldown_module__.exports;
 		__rolldown_runtime__.registerModule(__rolldown_module_id__, __rolldown_module__);
 		__rolldown_runtime__.initModule("trigger-dep.js");
-		var import_trigger_dep_60 = __rolldown_runtime__.loadExports("trigger-dep.js");
+		var import_trigger_dep_80 = __rolldown_runtime__.loadExports("trigger-dep.js");
 		const hot_cjs_lib_reassign_module_exports = __rolldown_runtime__.createModuleHotContext(__rolldown_module_id__);
 		__rolldown_module__.exports = function() {
 			return "exports";
@@ -313,7 +418,7 @@ __rolldown_runtime__.registerFactory("cases/require/cjs-lib.js", (function(__rol
 		var __rolldown_exports__ = __rolldown_module__.exports;
 		__rolldown_runtime__.registerModule(__rolldown_module_id__, __rolldown_module__);
 		__rolldown_runtime__.initModule("trigger-dep.js");
-		var import_trigger_dep_70 = __rolldown_runtime__.loadExports("trigger-dep.js");
+		var import_trigger_dep_90 = __rolldown_runtime__.loadExports("trigger-dep.js");
 		const hot_cjs_lib = __rolldown_runtime__.createModuleHotContext(__rolldown_module_id__);
 		__rolldown_exports__.foo = "foo";
 		__rolldown_exports__.bar = "bar";
@@ -333,29 +438,29 @@ __rolldown_runtime__.registerFactory("cases/require/cjs-lib.js", (function(__rol
 
 //#endregion
 //#region cases/require/index.js
-import * as import_node_assert_80 from "node:assert";
+import * as import_node_assert_100 from "node:assert";
 __rolldown_runtime__.registerFactory("cases/require/index.js", (function(__rolldown_module_id__) {
 	try {
 		var __rolldown_exports__ = __rolldown_runtime__.__exportAll({});
 		__rolldown_runtime__.registerModule(__rolldown_module_id__, { exports: __rolldown_exports__ });
 		__rolldown_runtime__.initModule("trigger-dep.js");
-		var import_trigger_dep_81 = __rolldown_runtime__.loadExports("trigger-dep.js");
+		var import_trigger_dep_101 = __rolldown_runtime__.loadExports("trigger-dep.js");
 		const hot_require = __rolldown_runtime__.createModuleHotContext(__rolldown_module_id__);
 		const requiredCjsLibReassignModuleExports = (__rolldown_runtime__.initModule("cases/require/cjs-lib-reassign-module-exports.js"), __rolldown_runtime__.loadExports("cases/require/cjs-lib-reassign-module-exports.js"));
-		import_node_assert_80.default.strictEqual(requiredCjsLibReassignModuleExports(), "exports");
-		import_node_assert_80.default.strictEqual(requiredCjsLibReassignModuleExports.foo, "foo");
+		import_node_assert_100.default.strictEqual(requiredCjsLibReassignModuleExports(), "exports");
+		import_node_assert_100.default.strictEqual(requiredCjsLibReassignModuleExports.foo, "foo");
 		const requireCjsLib = (__rolldown_runtime__.initModule("cases/require/cjs-lib.js"), __rolldown_runtime__.loadExports("cases/require/cjs-lib.js"));
-		import_node_assert_80.default.strictEqual(requireCjsLib.foo, "foo");
-		import_node_assert_80.default.strictEqual(requireCjsLib.bar, "bar");
-		import_node_assert_80.default.strictEqual(requireCjsLib.baz, undefined);
-		import_node_assert_80.default.strictEqual(requireCjsLib.baz3, undefined);
-		import_node_assert_80.default.strictEqual(requireCjsLib.qux, "qux");
+		import_node_assert_100.default.strictEqual(requireCjsLib.foo, "foo");
+		import_node_assert_100.default.strictEqual(requireCjsLib.bar, "bar");
+		import_node_assert_100.default.strictEqual(requireCjsLib.baz, undefined);
+		import_node_assert_100.default.strictEqual(requireCjsLib.baz3, undefined);
+		import_node_assert_100.default.strictEqual(requireCjsLib.qux, "qux");
 		const requiredUmdLib = (__rolldown_runtime__.initModule("cases/require/umd-lib.js"), __rolldown_runtime__.loadExports("cases/require/umd-lib.js"));
-		import_node_assert_80.default.strictEqual(requiredUmdLib(), "exports");
-		import_node_assert_80.default.strictEqual(requiredUmdLib.foo, "foo");
+		import_node_assert_100.default.strictEqual(requiredUmdLib(), "exports");
+		import_node_assert_100.default.strictEqual(requiredUmdLib.foo, "foo");
 		{
 			const require = () => 1;
-			import_node_assert_80.default.strictEqual(require(), 1);
+			import_node_assert_100.default.strictEqual(require(), 1);
 		}
 	} finally {}
 }));
@@ -368,7 +473,7 @@ __rolldown_runtime__.registerFactory("cases/require/umd-lib.js", (function(__rol
 		var __rolldown_exports__ = __rolldown_module__.exports;
 		__rolldown_runtime__.registerModule(__rolldown_module_id__, __rolldown_module__);
 		__rolldown_runtime__.initModule("trigger-dep.js");
-		var import_trigger_dep_90 = __rolldown_runtime__.loadExports("trigger-dep.js");
+		var import_trigger_dep_110 = __rolldown_runtime__.loadExports("trigger-dep.js");
 		const hot_umd_lib = __rolldown_runtime__.createModuleHotContext(__rolldown_module_id__);
 		(function(root, umdLib) {
 			if (typeof __rolldown_runtime__.loadExports === "function" && typeof __rolldown_exports__ === "object" && typeof __rolldown_module__ === "object") {
@@ -391,17 +496,67 @@ __rolldown_runtime__.registerFactory("cases/require/umd-lib.js", (function(__rol
 }));
 
 //#endregion
+//#region cases/string_import_name/index.js
+import * as import_node_assert_120 from "node:assert";
+__rolldown_runtime__.registerFactory("cases/string_import_name/index.js", (function(__rolldown_module_id__) {
+	try {
+		var __rolldown_exports__ = __rolldown_runtime__.__exportAll({});
+		__rolldown_runtime__.registerModule(__rolldown_module_id__, { exports: __rolldown_exports__ });
+		__rolldown_runtime__.initModule("cases/string_import_name/lib.js");
+		var import_lib_121 = __rolldown_runtime__.loadExports("cases/string_import_name/lib.js");
+		__rolldown_runtime__.initModule("cases/string_import_name/reexport.js");
+		var import_reexport_122 = __rolldown_runtime__.loadExports("cases/string_import_name/reexport.js");
+		__rolldown_runtime__.initModule("trigger-dep.js");
+		var import_trigger_dep_123 = __rolldown_runtime__.loadExports("trigger-dep.js");
+		const hot_string_import_name = __rolldown_runtime__.createModuleHotContext(__rolldown_module_id__);
+		import_node_assert_120.default.strictEqual(import_lib_121["a-b"], "lib");
+		import_node_assert_120.default.strictEqual(import_reexport_122.value, "lib");
+	} finally {}
+}));
+
+//#endregion
+//#region cases/string_import_name/lib.js
+__rolldown_runtime__.registerFactory("cases/string_import_name/lib.js", (function(__rolldown_module_id__) {
+	try {
+		var __rolldown_exports__ = __rolldown_runtime__.__exportAll({ ["a-b"]: () => value });
+		__rolldown_runtime__.registerModule(__rolldown_module_id__, { exports: __rolldown_exports__ });
+		__rolldown_runtime__.initModule("trigger-dep.js");
+		var import_trigger_dep_130 = __rolldown_runtime__.loadExports("trigger-dep.js");
+		const hot_lib = __rolldown_runtime__.createModuleHotContext(__rolldown_module_id__);
+		const value = "lib";
+	} finally {}
+}));
+
+//#endregion
+//#region cases/string_import_name/reexport.js
+__rolldown_runtime__.registerFactory("cases/string_import_name/reexport.js", (function(__rolldown_module_id__) {
+	try {
+		var __rolldown_exports__ = __rolldown_runtime__.__exportAll({ value: () => import_lib_140["a-b"] });
+		__rolldown_runtime__.registerModule(__rolldown_module_id__, { exports: __rolldown_exports__ });
+		__rolldown_runtime__.initModule("cases/string_import_name/lib.js");
+		var import_lib_140 = __rolldown_runtime__.loadExports("cases/string_import_name/lib.js");
+		__rolldown_runtime__.initModule("trigger-dep.js");
+		var import_trigger_dep_141 = __rolldown_runtime__.loadExports("trigger-dep.js");
+		const hot_reexport = __rolldown_runtime__.createModuleHotContext(__rolldown_module_id__);
+	} finally {}
+}));
+
+//#endregion
 //#region main.js
 __rolldown_runtime__.registerFactory("main.js", (function(__rolldown_module_id__) {
 	try {
 		var __rolldown_exports__ = __rolldown_runtime__.__exportAll({});
 		__rolldown_runtime__.registerModule(__rolldown_module_id__, { exports: __rolldown_exports__ });
 		__rolldown_runtime__.initModule("cases/require/index.js");
-		var import_require_100 = __rolldown_runtime__.loadExports("cases/require/index.js");
+		var import_require_150 = __rolldown_runtime__.loadExports("cases/require/index.js");
 		__rolldown_runtime__.initModule("cases/manual_reexport/index.js");
-		var import_manual_reexport_101 = __rolldown_runtime__.loadExports("cases/manual_reexport/index.js");
+		var import_manual_reexport_151 = __rolldown_runtime__.loadExports("cases/manual_reexport/index.js");
 		__rolldown_runtime__.initModule("cases/deconflict_import_bindings/index.js");
-		var import_deconflict_import_bindings_102 = __rolldown_runtime__.loadExports("cases/deconflict_import_bindings/index.js");
+		var import_deconflict_import_bindings_152 = __rolldown_runtime__.loadExports("cases/deconflict_import_bindings/index.js");
+		__rolldown_runtime__.initModule("cases/string_import_name/index.js");
+		var import_string_import_name_153 = __rolldown_runtime__.loadExports("cases/string_import_name/index.js");
+		__rolldown_runtime__.initModule("cases/imported_callee_this/index.js");
+		var import_imported_callee_this_154 = __rolldown_runtime__.loadExports("cases/imported_callee_this/index.js");
 		const hot_main = __rolldown_runtime__.createModuleHotContext(__rolldown_module_id__);
 		if (hot_main) {
 			hot_main.accept();
@@ -417,7 +572,7 @@ __rolldown_runtime__.registerFactory("trigger-dep.js", (function(__rolldown_modu
 		const hot_trigger_dep = __rolldown_runtime__.createModuleHotContext(__rolldown_module_id__);
 		console.log("hmr");
 	} finally {}
-}));
+}), 1);
 
 //#endregion
 ```

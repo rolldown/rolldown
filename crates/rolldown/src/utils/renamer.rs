@@ -68,6 +68,18 @@ impl<'name> Renamer<'name> {
     self.canonical_names.get(&canonical_ref)
   }
 
+  /// Returns the top-level name that the finalizer prints for a reference to `symbol_ref`. The
+  /// finalizer prints a namespace alias through its namespace binding (`import_foo.default`,
+  /// `node_path.join`). Thus a local with the name of that binding can capture the reference.
+  /// This function does the same as `finalized_expr_for_symbol_ref`.
+  pub fn printed_name(&self, symbol_ref: SymbolRef) -> Option<&CompactStr> {
+    let canonical_ref = self.symbol_db.canonical_ref_for(symbol_ref);
+    match &self.symbol_db.get(canonical_ref).namespace_alias {
+      Some(alias) => self.get_canonical_name(alias.namespace_ref),
+      None => self.canonical_names.get(&canonical_ref),
+    }
+  }
+
   pub fn reserve(&mut self, name: CompactStr) {
     self.resolver.reserve(name);
   }
@@ -355,12 +367,12 @@ impl NestedScopeRenamer<'_, '_> {
 
       // Only check for shadowing if the symbol was processed by the renamer
       // (i.e. it has a canonical name entry and is rendered at the chunk's root scope).
-      let Some(canonical_name) = self.renamer.get_canonical_name(resolved_symbol).cloned() else {
+      let Some(printed_name) = self.renamer.printed_name(resolved_symbol).cloned() else {
         continue;
       };
 
       for scope_id in self.scoping.scope_ancestors(current_reference.scope_id()) {
-        if let Some(binding) = self.scoping.get_binding(scope_id, canonical_name.as_str().into())
+        if let Some(binding) = self.scoping.get_binding(scope_id, printed_name.as_str().into())
           && binding != symbol
         {
           let symbol_ref = (self.module_idx, binding).into();
@@ -370,11 +382,10 @@ impl NestedScopeRenamer<'_, '_> {
     }
   }
 
-  /// Rename nested bindings that would capture renamed named imports.
+  /// Rename the nested bindings that would capture a reference to a renamed named import.
   ///
-  /// When a named import is renamed due to a top-level conflict, and a nested binding
-  /// has the same name as the renamed import, that nested binding must be renamed
-  /// to avoid capturing references.
+  /// A top-level conflict can rename a named import. If a nested binding has the new name of the
+  /// import, the reference resolves to that binding. Thus this pass renames the nested binding.
   ///
   /// # Example (`basic_scoped`)
   ///
@@ -384,20 +395,25 @@ impl NestedScopeRenamer<'_, '_> {
   ///
   /// // main.js
   /// import { a as aJs } from './a';
-  /// const a = 'main.js';       // Takes priority, so import renamed to a$1
-  /// function foo(a$1) {        // Parameter would capture reference to aJs
+  /// const a = 'main.js';       // This binding keeps `a`, so the import becomes `a$1`.
+  /// function foo(a$1) {        // This parameter would capture the reference to `aJs`.
   ///   return [a$1, a, aJs];
   /// }
   /// ```
   ///
   /// Output:
   /// ```js
-  /// const a$1 = "a.js";        // Import renamed due to conflict
+  /// const a$1 = "a.js";        // The import gets the name `a$1`.
   /// const a = "main.js";
-  /// function foo(a$1$1) {      // Parameter renamed to avoid capturing
-  ///   return [a$1$1, a, a$1];  // aJs correctly resolves to `a$1`
+  /// function foo(a$1$1) {      // The pass renames the parameter.
+  ///   return [a$1$1, a, a$1];  // `aJs` resolves to `a$1`.
   /// }
   /// ```
+  ///
+  /// The pass checks the name that the finalizer prints. The finalizer prints an import that the
+  /// code reads through a namespace binding as `node_path.join` (an external under CJS output). A
+  /// local with the name of the namespace can capture it, also in a module that does not import
+  /// the external.
   pub fn rename_bindings_shadowing_named_imports(&mut self) {
     for (symbol_ref, _named_import) in &self.module.named_imports {
       if self.db.is_facade_symbol(symbol_ref.symbol) {
@@ -406,13 +422,13 @@ impl NestedScopeRenamer<'_, '_> {
 
       // Only check for shadowing if the symbol was processed by the renamer
       // (i.e. it has a canonical name entry and is rendered at the chunk's root scope).
-      let Some(canonical_name) = self.renamer.get_canonical_name(*symbol_ref).cloned() else {
+      let Some(printed_name) = self.renamer.printed_name(*symbol_ref).cloned() else {
         continue;
       };
 
       for reference in self.scoping.get_resolved_references(symbol_ref.symbol) {
         for scope_id in self.scoping.scope_ancestors(reference.scope_id()) {
-          if let Some(binding) = self.scoping.get_binding(scope_id, canonical_name.as_str().into())
+          if let Some(binding) = self.scoping.get_binding(scope_id, printed_name.as_str().into())
             && binding != symbol_ref.symbol
           {
             let nested_symbol_ref = (self.module_idx, binding).into();

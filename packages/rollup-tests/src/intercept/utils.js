@@ -64,14 +64,22 @@ const status = {
 /**
  * @param {string} id
  */
+function shouldIgnoreTestExceptTreeshaking(id) {
+  return ignoredTests.has(id) || ignoredSnapshotDifferentTests.has(id) || unsupportedFeaturesIgnoredTests.find((test) => test.includes(id))
+}
+
+/**
+ * @param {string} id
+ */
 function shouldIgnoredTest(id) {
-  return ignoredTests.has(id) || ignoredSnapshotDifferentTests.has(id) || ignoredTreeshakingTests.has(id) || unsupportedFeaturesIgnoredTests.find((test) => test.includes(id))
+  return ignoredTreeshakingTests.has(id) || shouldIgnoreTestExceptTreeshaking(id)
 }
 
 module.exports = {
   calcTestId,
   loadFailedTests,
   updateFailedTestsJson,
+  shouldIgnoreTestExceptTreeshaking,
   shouldIgnoredTest,
   status
 }

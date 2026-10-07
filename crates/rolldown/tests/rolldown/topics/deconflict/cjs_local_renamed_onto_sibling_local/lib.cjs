@@ -1,5 +1,5 @@
-// The local `require_dup` claims the natural wrapper name of `dup.cjs`, so that wrapper is
-// deconflicted to `require_dup$2` and `require_dup` becomes a captured chunk-scope name.
+// The local `require_dup` has the usual wrapper name of `dup.cjs`. The wrapper binding of `dup.cjs`
+// is synthesized, so it takes a different name (`require_dup$2`).
 const require_dup = require('./dup.cjs');
 
 module.exports = require_dup.pair.map((item) => item.value);

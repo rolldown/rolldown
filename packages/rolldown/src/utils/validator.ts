@@ -709,7 +709,23 @@ const InputOptionsSchema = v.strictObject({
   devtools: v.pipe(
     v.optional(
       v.object({
-        sessionId: v.pipe(v.optional(v.string()), v.description('Used to name the build.')),
+        sessionId: v.pipe(
+          v.optional(
+            v.pipe(
+              v.string(),
+              // The id names the `node_modules/.rolldown/{sessionId}` directory.
+              v.check(
+                (id) => id !== '' && id !== '.' && id !== '..' && !/[/\\\0]/.test(id),
+                'Expected one path segment: not empty, not "." or "..", and without "/", "\\" or NUL',
+              ),
+              v.check(
+                (id) => id.toLowerCase().toUpperCase() !== 'UNKNOWN-SESSION',
+                '"unknown-session" is reserved for devtools events without a session context',
+              ),
+            ),
+          ),
+          v.description('Used to name the build.'),
+        ),
       }),
     ),
     v.description(

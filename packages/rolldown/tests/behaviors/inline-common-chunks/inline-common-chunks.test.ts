@@ -437,30 +437,96 @@ describe('experimentalInlineCommonChunks', () => {
     }
   });
 
-  test.each(
-    ['computed', 'ignored'].flatMap((kind) =>
-      [false, true].map((parentHasShared) => ({ kind, parentHasShared })),
-    ),
-  )(
-    'an untracked dynamic parent contributes its registrations: %j',
-    async ({ kind, parentHasShared }) => {
-      const pair = await differential(`untracked-parent-${kind}-${parentHasShared}`, {
+  test.each(['computed', 'ignored', 'external'] as const)(
+    'lazy readers reuse the parent factory alongside runtime plugin imports: %s',
+    async (kind) => {
+      const load =
+        kind === 'computed'
+          ? 'import(target)'
+          : kind === 'external'
+            ? "import('#ext/plugin')"
+            : "import(/* @vite-ignore */ './ext-plugin.js')";
+      const pair = await differential(`runtime-plugin-${kind}`, {
         input: { a: './a.js', b: './b.js' },
         modules: {
-          './shared.js': `export const state = { count: 0 };`,
-          './a.js': `import { state } from './shared.js'; globalThis.__log('a', state.count); globalThis.load = () => import('./lazy.js');`,
+          './shared.js': `export const state = { count: 42 };`,
+          './a.js': `
+            import { state } from './shared.js';
+            globalThis.__log('a', state.count);
+            globalThis.__chain = import('./lazy.js').then(m => globalThis.__log('lazy', m.value.count));
+          `,
           './b.js': `
-          ${parentHasShared ? "import { state } from './shared.js'; globalThis.__log('b', state.count);" : ''}
-          const target = globalThis.__target ?? './lazy.js';
-          globalThis.__chain = ${kind === 'computed' ? 'import(target)' : "import(/* @vite-ignore */ './lazy.js')"}
-            .then(m => globalThis.__log('lazy', m.value.count));
-        `,
+            const target = globalThis.__target ?? './ext-plugin.js';
+            globalThis.__chain = ${load}.then(m => globalThis.__log('plugin', m.value));
+          `,
           './lazy.js': `import { state } from './shared.js'; export const value = state;`,
         },
+        inputOptions: { external: ['#ext/plugin'] },
+        files: { 'ext-plugin.js': `export const value = 123;` },
       });
-      const lazy = chunkContaining(pair.on, 'lazy.js')!;
-      expect(lazy.moduleIds.includes('./shared.js')).toBe(!parentHasShared);
-      expect(runRoot(pair.on, 'b.js').error).toBeNull();
+      expect(recordIds(pair.on)).toHaveLength(1);
+      expect(
+        pair.on.chunks.filter((chunk) => chunk.moduleIds.includes('./shared.js')),
+      ).toHaveLength(1);
+      expect(chunkContaining(pair.on, 'lazy.js')!.moduleIds).not.toContain('./shared.js');
+      expect(runRoot(pair.on, 'a.js').logs).toEqual([
+        'a:string 42:number',
+        'lazy:string 42:number',
+      ]);
+      expect(runRoot(pair.on, 'b.js').logs).toEqual(['plugin:string 123:number']);
+    },
+  );
+
+  test.each(['emitted entry', 'excluded shared module'] as const)(
+    'runtime imports load public modules through an %s',
+    async (kind) => {
+      const pair = await differential(`runtime-public-module-${kind}`, {
+        input: { a: './a.js', b: './b.js' },
+        modules: {
+          './shared.js': `export const state = { count: 42 };`,
+          './a.js': `
+            import { state } from './shared.js';
+            globalThis.__log('a', state.count);
+            globalThis.__chain = import('./plugin.js').then(m => globalThis.__log('plugin', m.value.count));
+          `,
+          './b.js': `
+            const target = globalThis.__target ?? './plugin.js';
+            globalThis.__chain = import(target).then(m => globalThis.__log('plugin', m.value.count));
+          `,
+          './plugin.js': `import { state } from './shared.js'; export const value = state;`,
+        },
+        plugins:
+          kind === 'emitted entry'
+            ? [
+                {
+                  name: 'public-plugin',
+                  buildStart() {
+                    this.emitFile({
+                      type: 'chunk',
+                      id: './plugin.js',
+                      fileName: 'plugin.js',
+                      preserveSignature: 'strict',
+                    });
+                  },
+                },
+              ]
+            : [],
+        inline: {
+          maxSize: 1 << 20,
+          ...(kind === 'excluded shared module' ? { exclude: /shared\.js$/ } : {}),
+        },
+      });
+      if (kind === 'emitted entry') {
+        expectInlined(pair, 'shared.js');
+        expect(pair.on.chunks.find((chunk) => chunk.fileName === 'plugin.js')!.exports).toContain(
+          'value',
+        );
+      } else {
+        expectKeptAsFile(pair, 'shared.js');
+      }
+      const result = runRoot(pair.on, 'b.js');
+      expect(result.error).toBeNull();
+      expect(result.logs).toEqual(['plugin:string 42:number']);
     },
   );
 
@@ -1453,10 +1519,6 @@ test('a CommonJS module inside a record keeps its local apart from the factory b
   expectInlined(pair, 'shared.js');
 });
 
-// Two builds publish into one directory and a page loads a root from each. Their runtime chunks
-// have the same content, so the same hashed name, and with the option on one registry serves both
-// builds: a record's id must therefore tell the two builds' records apart whenever a hashed file
-// name would, or the second build's consumers would run the first build's factory.
 test('an edit inside one carrier leaves the record id and every other hashed file alone', async () => {
   // `shared/utils.js` is a record carried by `a`, `big` and `p2`. The second version adds
   // `pages/utils.js` to `a` only, whose `init_utils` makes `a` rename the record's own `init_utils`

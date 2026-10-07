@@ -41,7 +41,11 @@ pub fn apply_inner_plugins(
   if let Some(dev_mode) = &options.experimental.dev_mode {
     before_user_plugins.push(Plugin::new_shared(rolldown_plugin_hmr::HmrPlugin));
     if dev_mode.lazy == Some(true) {
-      let plugin = rolldown_plugin_lazy_compilation::LazyCompilationPlugin::new();
+      // The dev server's public base path prefixes the lazy compilation endpoint
+      // so the URL stays reachable when the server is not mounted at the domain root.
+      let lazy_endpoint = crate::hmr::utils::lazy_endpoint_url(dev_mode.base.as_deref());
+      let plugin =
+        rolldown_plugin_lazy_compilation::LazyCompilationPlugin::new(lazy_endpoint);
       lazy_compilation_context = Some(plugin.context());
       before_user_plugins.push(Plugin::new_shared(plugin));
     }

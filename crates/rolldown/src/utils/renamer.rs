@@ -139,11 +139,7 @@ impl<'name> Renamer<'name> {
   /// `node_path.join`). Thus a local with the name of that binding can capture the reference.
   /// This function does the same as `finalized_expr_for_symbol_ref`.
   pub fn printed_name(&self, symbol_ref: SymbolRef) -> Option<&CompactStr> {
-    let canonical_ref = self.symbol_db.canonical_ref_for(symbol_ref);
-    match &self.symbol_db.get(canonical_ref).namespace_alias {
-      Some(alias) => self.get_canonical_name(alias.namespace_ref),
-      None => self.canonical_names.get(&canonical_ref),
-    }
+    self.get_canonical_name(self.symbol_db.canonical_ref_resolving_namespace(symbol_ref))
   }
 
   pub fn reserve(&mut self, name: CompactStr) {

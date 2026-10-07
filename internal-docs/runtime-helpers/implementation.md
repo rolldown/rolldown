@@ -6,6 +6,16 @@ After the first call in either helper, `mod` is set and `cb` is never accessed a
 
 Reference: https://github.com/rolldown/rolldown/issues/9063
 
+## `__share`, `__share_require`, `__share_export`: the inline common chunk registry
+
+`experimentalInlineCommonChunks` (see `internal-docs/inline-common-chunks/`) prints a common chunk's modules into the files that read them, wrapped in a factory. The registry makes those copies one module instance:
+
+- `__share(id, factory)` — records `factory` under `id` unless an id is already registered. The first registration wins; a page that loads two carriers keeps the first factory it saw and ignores the second. Registration never runs the factory.
+- `__share_require(id)` — the five states. _Unregistered_: throws `Error("Shared chunk \"<id>\" was not registered before it was required.")`; along supported loading paths, the bundler places a registration before every require, earlier in the same file, in a static dependency outside the file's import cycle, or on every known prior entry loading path. Loading through paths outside the build graph can reach this state (see `inline-common-chunks/design.md`, Supported loading paths). _Registered_: creates the record `{ exports: {}, failed: false, error }`, stores it before calling the factory, and calls `factory(exports)`. _Executing_: a nested require of the same id (a cycle between records) returns the same, partially filled `exports` object. _Completed_: returns the same `exports` object every time. _Failed_: a factory that threw is never re-run; the same thrown value is rethrown, including `undefined` and `null` (`failed` is a separate flag so `throw undefined` is not mistaken for success).
+- `__share_export(target, all)` — installs `all`'s entries as enumerable getters on `target`, like `__exportAll`, so readers see live bindings.
+
+The factories only define wrappers (`init_*`, `require_*`) and the getter table; user code still runs inside the wrappers, so a failure while a shared module executes is reported by `__esmMin`/`__commonJS` as for any wrapped module. The registry is a binding of the runtime module rather than a `globalThis` property: files share it exactly when they import the same runtime chunk URL, which two builds that emit an identical runtime file into one directory do (see `internal-docs/inline-common-chunks/design.md`, Unresolved questions), and it takes part in tree shaking, naming and hashing like every other helper.
+
 ## `__toESM`: deciding interop for external modules
 
 `require("external")` returns the raw CommonJS exports, so non-ESM formats must run it through `__toESM` whenever the bundle reads it _as an ES module_ — `import * as ns`, or `ns.default`. A named-only import reads the CommonJS object directly and must not be wrapped.

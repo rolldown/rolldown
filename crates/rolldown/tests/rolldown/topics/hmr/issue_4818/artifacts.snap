@@ -10,8 +10,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 __rolldown_runtime__.registerGraph({
 	ids: ["foo.json", "main.js"],
 	localCount: 2,
-	edges: [[], [0]],
-	dynamicEdges: [[], []]
+	edges: [[], [0]]
 });
 //#region foo.json
 var foo_exports = /* @__PURE__ */ __exportAll({

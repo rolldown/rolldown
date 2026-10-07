@@ -6,8 +6,8 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## ca.js
 
 ```js
-import { t as init_cyc_b } from "./cb.js";
 import { t as __esmMin } from "./rolldown-runtime.js";
+import { t as init_cyc_b } from "./cb.js";
 //#region cyc-a.js
 function init_cyc_a() {
 	return (init_cyc_a = __esmMin((() => {
@@ -23,8 +23,8 @@ export { init_cyc_a as t };
 ## carbon.js
 
 ```js
-import { i as init_checkbox, n as init_radio } from "./comp.js";
 import { t as __esmMin } from "./rolldown-runtime.js";
+import { i as init_checkbox, n as init_radio } from "./comp.js";
 //#region barrel.js
 function init_barrel() {
 	return (init_barrel = __esmMin((() => {
@@ -41,8 +41,8 @@ export { init_barrel as t };
 ## cb.js
 
 ```js
-import { t as init_cyc_a } from "./ca.js";
 import { t as __esmMin } from "./rolldown-runtime.js";
+import { t as init_cyc_a } from "./ca.js";
 //#region cyc-b.js
 function init_cyc_b() {
 	return (init_cyc_b = __esmMin((() => {
@@ -88,10 +88,10 @@ export { init_checkbox as i, init_radio as n, Checkbox as r, Radio as t };
 ## dynamic-page.js
 
 ```js
+import { t as __esmMin } from "./rolldown-runtime.js";
 import { r as Checkbox, t as Radio } from "./comp.js";
 import { t as init_barrel } from "./carbon.js";
 import { t as init_cyc_a } from "./ca.js";
-import { t as __esmMin } from "./rolldown-runtime.js";
 //#region reader.js
 function render() {
 	return `${Checkbox ? Checkbox.name : "NO_CHECKBOX"}|${Radio ? Radio.name : "NO_RADIO"}`;
@@ -151,8 +151,8 @@ export { __esmMin as t };
 ### ca.js
 
 ```js
-import { t as init_cyc_b } from "./cb.js";
 import { t as __esmMin } from "./rolldown-runtime.js";
+import { t as init_cyc_b } from "./cb.js";
 //#region cyc-a.js
 function init_cyc_a() {
 	return (init_cyc_a = __esmMin((() => {
@@ -168,8 +168,8 @@ export { init_cyc_a as t };
 ### carbon.js
 
 ```js
-import { i as init_checkbox, n as init_radio } from "./comp.js";
 import { t as __esmMin } from "./rolldown-runtime.js";
+import { i as init_checkbox, n as init_radio } from "./comp.js";
 //#region barrel.js
 function init_barrel() {
 	return (init_barrel = __esmMin((() => {
@@ -186,8 +186,8 @@ export { init_barrel as t };
 ### cb.js
 
 ```js
-import { t as init_cyc_a } from "./ca.js";
 import { t as __esmMin } from "./rolldown-runtime.js";
+import { t as init_cyc_a } from "./ca.js";
 //#region cyc-b.js
 function init_cyc_b() {
 	return (init_cyc_b = __esmMin((() => {
@@ -233,10 +233,10 @@ export { init_checkbox as i, init_radio as n, Checkbox as r, Radio as t };
 ### dynamic-page.js
 
 ```js
+import { t as __esmMin } from "./rolldown-runtime.js";
 import { r as Checkbox, t as Radio } from "./comp.js";
 import { t as init_barrel } from "./carbon.js";
 import { t as init_cyc_a } from "./ca.js";
-import { t as __esmMin } from "./rolldown-runtime.js";
 //#region reader.js
 function render() {
 	return `${Checkbox ? Checkbox.name : "NO_CHECKBOX"}|${Radio ? Radio.name : "NO_RADIO"}`;

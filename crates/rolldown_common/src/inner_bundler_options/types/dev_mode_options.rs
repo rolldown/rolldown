@@ -27,4 +27,6 @@ pub struct DevModeOptions {
   /// URLs of dev-server endpoints referenced from generated code (currently the
   /// lazy compilation endpoint `/@vite/lazy`) are prefixed with it.
   pub base: Option<String>,
+  /// Call the `hotUpdate` plugin hook. Off by default. The `hotUpdate` dev option also turns it on.
+  pub hot_update: Option<bool>,
 }

@@ -1,0 +1,70 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## a.js
+
+```js
+import { n as __esmMin } from "./chunks/rolldown-runtime.js";
+import { n as url, t as init_shared } from "./chunks/shared.js";
+//#region a.js
+function init_a() {
+	return (init_a = __esmMin((() => {
+		init_shared();
+		console.log("A", url);
+	})))();
+}
+//#endregion
+init_a();
+
+```
+
+## assets/logo-Byt54u-j.png
+
+## b.js
+
+```js
+import { n as __esmMin } from "./chunks/rolldown-runtime.js";
+import { n as url, t as init_shared } from "./chunks/shared.js";
+//#region b.js
+function init_b() {
+	return (init_b = __esmMin((() => {
+		init_shared();
+		console.log("B", url);
+	})))();
+}
+//#endregion
+init_b();
+
+```
+
+## chunks/rolldown-runtime.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+export { __esmMin as n, __toESM as r, __commonJSMin as t };
+
+```
+
+## chunks/shared.js
+
+```js
+import { n as __esmMin, r as __toESM, t as __commonJSMin } from "./rolldown-runtime.js";
+//#region logo.png
+var require_logo = /* @__PURE__ */ __commonJSMin(((exports, module) => {
+	module.exports = "../assets/logo-Byt54u-j.png";
+}));
+//#endregion
+//#region shared.js
+var import_logo, url;
+function init_shared() {
+	return (init_shared = __esmMin((() => {
+		import_logo = /* @__PURE__ */ __toESM(require_logo());
+		url = import_logo.default;
+	})))();
+}
+//#endregion
+export { url as n, init_shared as t };
+
+```

@@ -1,3 +1,4 @@
+use json_escape_simd::escape;
 use rolldown_common::{AddonRenderContext, ExternalModule, OutputExports};
 use rolldown_error::{BuildDiagnostic, BuildResult};
 use rolldown_sourcemap::SourceJoiner;
@@ -148,11 +149,7 @@ fn render_amd_dependencies(
     dependencies.push("'exports'".to_string());
   }
   externals.iter().for_each(|external| {
-    dependencies.push(concat_string!(
-      "'",
-      external.get_import_path(ctx.chunk, ctx.resolved_paths),
-      "'"
-    ));
+    dependencies.push(escape(&external.get_import_path(ctx.chunk, ctx.resolved_paths)));
   });
   dependencies.join(", ")
 }
@@ -168,11 +165,8 @@ fn render_cjs_dependencies(
     dependencies.push("exports".to_string());
   }
   externals.iter().for_each(|external| {
-    dependencies.push(concat_string!(
-      "require('",
-      external.get_import_path(ctx.chunk, ctx.resolved_paths),
-      "')"
-    ));
+    let import_path = escape(&external.get_import_path(ctx.chunk, ctx.resolved_paths));
+    dependencies.push(concat_string!("require(", import_path, ")"));
   });
   dependencies.join(", ")
 }

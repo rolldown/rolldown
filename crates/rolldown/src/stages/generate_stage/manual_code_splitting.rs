@@ -7,18 +7,18 @@ use std::{
 };
 
 use arcstr::ArcStr;
-use itertools::Itertools;
+use itertools::{Either, Itertools};
 use oxc_index::IndexVec;
 use rolldown_common::{
   Chunk, ChunkKind, ChunkingContext, EntryPoint, ManualCodeSplittingOptions, MatchGroup,
-  MatchGroupName, MatchGroupTest, Module, ModuleIdx, ModuleTable, ModuleTagBitSet,
-  ModuleTagRegistry, NormalModule,
+  MatchGroupName, Module, ModuleIdx, ModuleTable, ModuleTagBitSet, ModuleTagRegistry, NormalModule,
 };
 use rolldown_error::BuildResult;
 use rolldown_plugin::SharedPluginDriver;
-use rolldown_utils::{BitSet, IndexBitSet, xxhash::xxhash_with_base};
+use rolldown_utils::{BitSet, IndexBitSet, concat_string, xxhash::xxhash_with_base};
 use rustc_hash::{FxHashMap, FxHashSet};
 
+use crate::utils::module_id_matcher::match_module_ids;
 use crate::{
   SharedOptions, chunk_graph::ChunkGraph, stages::link_stage::LinkStageOutput,
   types::linking_metadata::LinkingMetadataVec,
@@ -196,24 +196,9 @@ impl ManualSplitter<'_> {
     for (match_group_index, match_group) in self.match_groups.iter().copied().enumerate() {
       let matched = match &match_group.test {
         None => vec![true; candidate_modules.len()],
-        Some(MatchGroupTest::Regex(reg)) => {
-          candidate_modules.iter().map(|module| reg.matches(&module.id)).collect_vec()
-        }
-        Some(MatchGroupTest::Function(func)) => {
-          let module_ids =
-            candidate_modules.iter().map(|module| module.id.to_string()).collect_vec();
-          let results = func(module_ids).await?;
-          if results.len() != candidate_modules.len() {
-            return Err(
-              anyhow::anyhow!(
-                "a `codeSplitting` group `test` function returned {} results for {} modules",
-                results.len(),
-                candidate_modules.len()
-              )
-              .into(),
-            );
-          }
-          results
+        Some(test) => {
+          let ids = candidate_modules.iter().map(|module| module.id.as_str()).collect_vec();
+          match_module_ids(test, &ids, "a `codeSplitting` group `test` function").await?
         }
       };
 
@@ -320,12 +305,25 @@ impl ManualSplitter<'_> {
       let match_group_index = group.match_group_index;
       let name = group.name.clone();
       let priority = group.priority;
+      let merge_threshold =
+        self.match_groups[match_group_index].entries_aware_merge_threshold.unwrap_or(0.0);
+      let group_modules = group.modules.into_iter();
+      // Merge ties use subgroup keys, so assign them in execution order.
+      // See internal-docs/manual-code-splitting/implementation.md.
+      let group_modules = if merge_threshold > 0.0 {
+        Either::Left(
+          group_modules
+            .sorted_unstable_by_key(|idx| self.link_output.module_table[*idx].exec_order()),
+        )
+      } else {
+        Either::Right(group_modules)
+      };
 
       // Group modules by their bitset pattern into subgroups
       let mut bits_to_key: FxHashMap<BitSet, u32> = FxHashMap::default();
       let mut subgroups: FxHashMap<u32, EntriesAwareSubgroup> = FxHashMap::default();
       let mut next_key: u32 = 0;
-      for module_idx in group.modules {
+      for module_idx in group_modules {
         let bits = &self.index_splitting_info[module_idx].bits;
         let key = match bits_to_key.entry(bits.clone()) {
           std::collections::hash_map::Entry::Occupied(occupied) => *occupied.get(),
@@ -350,8 +348,6 @@ impl ManualSplitter<'_> {
       }
 
       // Optionally merge small subgroups
-      let merge_threshold =
-        self.match_groups[match_group_index].entries_aware_merge_threshold.unwrap_or(0.0);
       if merge_threshold > 0.0 && subgroups.len() > 1 {
         let keys: Vec<u32> = subgroups.keys().copied().collect();
         merge_entries_aware_subgroups(
@@ -874,7 +870,7 @@ fn derive_entries_aware_chunk_name(
   let full_name = if entry_names.is_empty() {
     group_name.to_string()
   } else {
-    format!("{}~{}", group_name, entry_names.join("~"))
+    concat_string!(group_name, "~", entry_names.join("~"))
   };
 
   if full_name.len() > MAX_CHUNK_NAME_LEN {
@@ -884,7 +880,7 @@ fn derive_entries_aware_chunk_name(
       truncate_at -= 1;
     }
     let truncated = &full_name[..truncate_at];
-    ArcStr::from(format!("{truncated}~{}", &hash[..HASH_DISPLAY_LEN]))
+    ArcStr::from(concat_string!(truncated, "~", &hash[..HASH_DISPLAY_LEN]))
   } else {
     ArcStr::from(full_name)
   }

@@ -257,8 +257,9 @@ nested/consumption-gated hops (owned by a wrapped ancestor, tree-shaken for an e
 skipped so the projection never over-wraps a tree-shaking-equivalent graph; entry-facade edges are
 omitted because a facade holds zero modules, hence zero static indegree, and can never sit in a
 static SCC (debug-asserted in the final link pass). The remaining over-approximation (it omits the
-wrapping's own liveness suppression) only ever wraps more, which is always legal — wrap-all is the
-standing proof.
+wrapping's own liveness suppression, and it keeps the records of a re-export-transparent wrapper,
+which registration skips) only ever wraps more, which is always legal — wrap-all is the standing
+proof.
 
 ## Non-Goals
 
@@ -400,6 +401,7 @@ pub struct OrderLoweringInput<'a> {
   pub export_chains: &'a FxHashMap<SymbolRef, Vec<SymbolRef>>,
   pub star_reexport_records_by_imported_symbol:
     &'a FxHashMap<SymbolRef, Vec<Vec<(ModuleIdx, ImportRecordIdx)>>>,
+  pub member_read_star_reexport_paths: &'a [MemberReadStarReexportPath],
   pub used_symbol_refs_builder: &'a UsedSymbolRefsBuilder,
   pub cyclic_modules: &'a FxHashSet<ModuleIdx>,
   pub tree_shaking: bool,

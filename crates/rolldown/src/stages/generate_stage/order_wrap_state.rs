@@ -304,6 +304,25 @@ impl OrderWrapState {
     );
   }
 
+  /// Register a runtime-helper demand that no module statement carries: the registry calls a
+  /// reading file prints for `experimentalInlineCommonChunks`. The synthetic statement
+  /// declares and references nothing; it only makes the helpers reach `required_runtime_helpers`
+  /// (the sweep gate and the finalizer's runtime filter), the chunk's depended symbols (the import
+  /// from the runtime chunk), and the runtime symbol closure.
+  pub(crate) fn insert_runtime_helper_demand(
+    &mut self,
+    chunk_idx: ChunkIdx,
+    helpers: RuntimeHelper,
+  ) {
+    let stmt_idx = self.add_synthetic_statement(OrderSyntheticStmt {
+      declared_symbols: vec![],
+      referenced_symbols: vec![],
+      runtime_helpers: helpers,
+      chunk: None,
+    });
+    self.assign_synthetic_statement_chunk(stmt_idx, chunk_idx);
+  }
+
   pub(crate) fn add_synthetic_statement(
     &mut self,
     stmt: OrderSyntheticStmt,
@@ -431,6 +450,16 @@ impl OrderWrapState {
 
   pub(crate) fn order_cjs_carrier(&self, key: OrderCjsCarrierKey) -> Option<&OrderCjsCarrier> {
     self.cjs_carriers.get(&key)
+  }
+
+  /// Every wrapper the lowering declares: the `init_*` of each order-wrapped module and the
+  /// wrapper of each CommonJS carrier.
+  pub(crate) fn wrapper_refs(&self) -> impl Iterator<Item = SymbolRef> + '_ {
+    self
+      .modules
+      .values()
+      .map(|module| module.wrapper_ref)
+      .chain(self.cjs_carrier_wrapper_refs.iter().copied())
   }
 
   pub(crate) fn has_order_cjs_carrier(&self, key: OrderCjsCarrierKey) -> bool {

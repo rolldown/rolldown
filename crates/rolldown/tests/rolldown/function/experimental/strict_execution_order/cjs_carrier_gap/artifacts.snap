@@ -6,8 +6,8 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## main.js
 
 ```js
-import { t as init_p } from "./p.js";
 import { n as __esmMin } from "./rolldown-runtime.js";
+import { t as init_p } from "./p.js";
 //#region e.js
 console.log("E");
 //#endregion
@@ -65,8 +65,8 @@ export { __esmMin as n, __commonJSMin as t };
 ## second.js
 
 ```js
-import { t as init_p } from "./p.js";
 import { n as __esmMin } from "./rolldown-runtime.js";
+import { t as init_p } from "./p.js";
 //#region second.js
 function init_second() {
 	return (init_second = __esmMin((() => {
@@ -85,8 +85,8 @@ init_second();
 ### main.js
 
 ```js
-import { t as init_p } from "./p.js";
 import { n as __esmMin } from "./rolldown-runtime.js";
+import { t as init_p } from "./p.js";
 //#region e.js
 function init_e() {
 	return (init_e = __esmMin((() => {
@@ -149,8 +149,8 @@ export { __esmMin as n, __commonJSMin as t };
 ### second.js
 
 ```js
-import { t as init_p } from "./p.js";
 import { n as __esmMin } from "./rolldown-runtime.js";
+import { t as init_p } from "./p.js";
 //#region second.js
 function init_second() {
 	return (init_second = __esmMin((() => {

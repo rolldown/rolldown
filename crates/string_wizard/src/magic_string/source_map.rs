@@ -73,7 +73,7 @@ impl MagicString<'_> {
 
     if self.ignore_list {
       // The source is always at index 0 for a single MagicString instance.
-      source_map.set_x_google_ignore_list(vec![0]);
+      source_map.set_ignore_list(vec![0]);
     }
 
     source_map

@@ -6,8 +6,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## a.js
 
 ```js
-import { t as value } from "./entry-a.js";
-export { value };
+export { t as value } from "./entry-a.js";
 
 ```
 
@@ -48,8 +47,8 @@ export { value };
 ### b.js
 
 ```js
-import { n as value, t as init_entry_a } from "./entry-a.js";
 import { t as __esmMin } from "./rolldown-runtime.js";
+import { n as value, t as init_entry_a } from "./entry-a.js";
 //#region entry-b.js
 var combined;
 function init_entry_b() {
@@ -95,8 +94,7 @@ export { __esmMin as t };
 ### a.js
 
 ```js
-import { t as value } from "./entry-a.js";
-export { value };
+export { t as value } from "./entry-a.js";
 
 ```
 

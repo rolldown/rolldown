@@ -1,0 +1,141 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+import assert from "node:assert";
+// HIDDEN [\0rolldown/runtime.js]
+__rolldown_runtime__.registerGraph({
+	ids: [
+		"hmr.js",
+		"other.js",
+		"main.js"
+	],
+	localCount: 3,
+	edges: [
+		[],
+		[],
+		[0, 1]
+	]
+});
+//#region hmr.js
+var hmr_exports = /* @__PURE__ */ __exportAll({ value: () => "v1" });
+const hmr_hot = __rolldown_runtime__.createModuleHotContext("hmr.js");
+__rolldown_runtime__.registerModule("hmr.js", { exports: hmr_exports });
+hmr_hot.accept();
+//#endregion
+//#region other.js
+var other_exports = /* @__PURE__ */ __exportAll({ other: () => "v1" });
+const other_hot = __rolldown_runtime__.createModuleHotContext("other.js");
+__rolldown_runtime__.registerModule("other.js", { exports: other_exports });
+globalThis.__no_reload_after_full_build_other_runs = (globalThis.__no_reload_after_full_build_other_runs ?? 0) + 1;
+other_hot.accept();
+//#endregion
+//#region main.js
+var main_exports = /* @__PURE__ */ __exportAll({});
+__rolldown_runtime__.createModuleHotContext("main.js");
+__rolldown_runtime__.registerModule("main.js", { exports: main_exports });
+process.on("beforeExit", (code) => {
+	if (code !== 0) return;
+	assert.strictEqual(globalThis.__no_reload_after_full_build_runs, 1);
+	assert.strictEqual(globalThis.__no_reload_after_full_build_other_runs, 2);
+});
+//#endregion
+
+//# sourceMappingURL=main.js.map
+```
+
+# HMR Step 0
+
+## Errors
+
+### UNHANDLEABLE_ERROR
+
+```text
+[UNHANDLEABLE_ERROR] Something went wrong inside rolldown, please report this problem at https://github.com/rolldown/rolldown/issues.
+simulated failure while rendering an HMR patch
+
+```
+
+## Build Output
+
+### Assets
+
+#### main.js
+
+```js
+import assert from "node:assert";
+// HIDDEN [\0rolldown/runtime.js]
+__rolldown_runtime__.registerGraph({
+	ids: [
+		"hmr.js",
+		"other.js",
+		"main.js"
+	],
+	localCount: 3,
+	edges: [
+		[],
+		[],
+		[0, 1]
+	]
+});
+//#region hmr.js
+var hmr_exports = /* @__PURE__ */ __exportAll({ value: () => "v2" });
+const hmr_hot = __rolldown_runtime__.createModuleHotContext("hmr.js");
+__rolldown_runtime__.registerModule("hmr.js", { exports: hmr_exports });
+globalThis.__no_reload_after_full_build_runs = (globalThis.__no_reload_after_full_build_runs ?? 0) + 1;
+hmr_hot.accept();
+//#endregion
+//#region other.js
+var other_exports = /* @__PURE__ */ __exportAll({ other: () => "v1" });
+const other_hot = __rolldown_runtime__.createModuleHotContext("other.js");
+__rolldown_runtime__.registerModule("other.js", { exports: other_exports });
+globalThis.__no_reload_after_full_build_other_runs = (globalThis.__no_reload_after_full_build_other_runs ?? 0) + 1;
+other_hot.accept();
+//#endregion
+//#region main.js
+var main_exports = /* @__PURE__ */ __exportAll({});
+__rolldown_runtime__.createModuleHotContext("main.js");
+__rolldown_runtime__.registerModule("main.js", { exports: main_exports });
+process.on("beforeExit", (code) => {
+	if (code !== 0) return;
+	assert.strictEqual(globalThis.__no_reload_after_full_build_runs, 1);
+	assert.strictEqual(globalThis.__no_reload_after_full_build_other_runs, 2);
+});
+//#endregion
+
+//# sourceMappingURL=main.js.map
+```
+
+# HMR Step 1
+
+## Code
+
+```js
+__rolldown_runtime__.registerGraph({ids:["other.js"],localCount:1,edges:[[]],stamps:{0:2}});
+//#region other.js
+__rolldown_runtime__.registerFactory("other.js", (function(__rolldown_module_id__) {
+	try {
+		var __rolldown_exports__ = __rolldown_runtime__.__exportAll({ other: () => other });
+		__rolldown_runtime__.registerModule(__rolldown_module_id__, { exports: __rolldown_exports__ });
+		const hot_other = __rolldown_runtime__.createModuleHotContext(__rolldown_module_id__);
+		const other = "v2";
+		globalThis.__no_reload_after_full_build_other_runs = (globalThis.__no_reload_after_full_build_other_runs ?? 0) + 1;
+		hot_other.accept();
+	} finally {}
+}), 2);
+
+//#endregion
+//# sourceMappingURL=hmr_patch_1.js.map
+```
+
+## Meta
+
+- update type: patch
+
+### Changed Ids
+
+- other.js

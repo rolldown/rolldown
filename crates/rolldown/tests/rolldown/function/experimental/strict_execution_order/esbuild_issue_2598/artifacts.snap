@@ -39,8 +39,8 @@ export { foo as t };
 ### lazy-chunk.js
 
 ```js
-import { n as foo, r as init_user_lib } from "./main2.js";
 import { t as __esmMin } from "./rolldown-runtime.js";
+import { n as foo, r as init_user_lib } from "./main2.js";
 //#region lazy-chunk.js
 function init_lazy_chunk() {
 	return (init_lazy_chunk = __esmMin((() => {
@@ -110,8 +110,8 @@ export { __esmMin as t };
 ### lazy-chunk.js
 
 ```js
-import { n as foo, r as init_user_lib } from "./main2.js";
 import { t as __esmMin } from "./rolldown-runtime.js";
+import { n as foo, r as init_user_lib } from "./main2.js";
 //#region lazy-chunk.js
 function init_lazy_chunk() {
 	return (init_lazy_chunk = __esmMin((() => {

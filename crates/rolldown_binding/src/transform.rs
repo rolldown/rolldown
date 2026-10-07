@@ -64,16 +64,16 @@ fn enhanced_transform_internal(
   Ok(BindingEnhancedTransformResult::from_enhanced_transform_result(result, cwd))
 }
 
-pub struct EnhancedTransformTask<'a> {
+pub struct EnhancedTransformTask {
   filename: String,
   source_text: String,
   options: Option<BindingEnhancedTransformOptions>,
-  cache: Option<&'a TsconfigCache>,
+  cache: Option<TsconfigCache>,
   yarn_pnp: bool,
 }
 
 #[napi]
-impl Task for EnhancedTransformTask<'_> {
+impl Task for EnhancedTransformTask {
   type JsValue = BindingEnhancedTransformResult;
   type Output = BindingEnhancedTransformResult;
 
@@ -82,7 +82,7 @@ impl Task for EnhancedTransformTask<'_> {
       &self.filename,
       &self.source_text,
       self.options.take(),
-      self.cache,
+      self.cache.as_ref(),
       self.yarn_pnp,
     )
   }
@@ -99,8 +99,15 @@ pub fn enhanced_transform(
   options: Option<BindingEnhancedTransformOptions>,
   cache: Option<&TsconfigCache>,
   yarn_pnp: bool,
-) -> AsyncTask<EnhancedTransformTask<'_>> {
-  AsyncTask::new(EnhancedTransformTask { filename, source_text, options, cache, yarn_pnp })
+) -> AsyncTask<EnhancedTransformTask> {
+  // The task runs on another thread and may outlive the JS `TsconfigCache` object.
+  AsyncTask::new(EnhancedTransformTask {
+    filename,
+    source_text,
+    options,
+    cache: cache.cloned(),
+    yarn_pnp,
+  })
 }
 
 #[napi]

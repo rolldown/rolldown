@@ -29,6 +29,13 @@ export function transformToRollupSourceMap(map: string): SourceMap {
       ).toString('base64')}`;
     },
   };
+  // Preserve Rollup's legacy property for plugins while serializing the standard `ignoreList`.
+  Object.defineProperty(obj, 'x_google_ignoreList', {
+    get: () => obj.ignoreList,
+    set: (value: number[] | undefined) => {
+      obj.ignoreList = value;
+    },
+  });
   return obj;
 }
 

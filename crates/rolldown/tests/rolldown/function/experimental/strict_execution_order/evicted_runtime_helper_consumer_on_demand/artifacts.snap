@@ -1,0 +1,279 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## a.js
+
+```js
+import { n as __exportAll } from "./rolldown-runtime.js";
+//#region c.js
+//#endregion
+//#region a.js
+console.log("A", Object.keys(/* @__PURE__ */ __exportAll({ c: () => 1 })).join());
+//#endregion
+
+```
+
+## e0.js
+
+```js
+import { t as __esmMin } from "./rolldown-runtime.js";
+import { n as p, t as init_b } from "./group-b.js";
+import "./a.js";
+import { n as init_q } from "./z2.js";
+//#region e0.js
+function init_e0() {
+	return (init_e0 = __esmMin((() => {
+		init_b();
+		init_q();
+		console.log("E0", Object.keys(p).join());
+	})))();
+}
+//#endregion
+init_e0();
+
+```
+
+## e1.js
+
+```js
+import "./a.js";
+//#region e1.js
+console.log("E1");
+//#endregion
+
+```
+
+## group-b.js
+
+```js
+import { n as __exportAll, t as __esmMin } from "./rolldown-runtime.js";
+//#region p.js
+const p = {};
+//#endregion
+//#region d.js
+var d_exports = /* @__PURE__ */ __exportAll({ d: () => 1 });
+//#endregion
+//#region b.js
+function init_b() {
+	return (init_b = __esmMin((() => {
+		console.log("B", Object.keys(d_exports).join());
+	})))();
+}
+//#endregion
+export { p as n, init_b as t };
+
+```
+
+## rolldown-runtime.js
+
+```js
+//#region \0rolldown/runtime.js
+var __defProp = Object.defineProperty;
+var __esmMin = (fn, res, err) => () => {
+	if (err) throw err[0];
+	try {
+		return fn && (res = fn(fn = 0)), res;
+	} catch (e) {
+		throw err = [e], e;
+	}
+};
+var __exportAll = (all, no_symbols) => {
+	let target = {};
+	for (var name in all) __defProp(target, name, {
+		get: all[name],
+		enumerable: true
+	});
+	if (!no_symbols) __defProp(target, Symbol.toStringTag, { value: "Module" });
+	return target;
+};
+//#endregion
+export { __exportAll as n, __esmMin as t };
+
+```
+
+## z.js
+
+```js
+import { t as init_z } from "./z2.js";
+init_z();
+
+```
+
+## z2.js
+
+```js
+import { t as __esmMin } from "./rolldown-runtime.js";
+//#region q.js
+function init_q() {
+	return (init_q = __esmMin((() => {
+		console.log("Q");
+	})))();
+}
+//#endregion
+//#region z.js
+function init_z() {
+	return (init_z = __esmMin((() => {
+		console.log("Z");
+	})))();
+}
+//#endregion
+export { init_q as n, init_z as t };
+
+```
+
+# Variant: on-demand-cjs: [format: Cjs]
+
+## Assets
+
+### a.js
+
+```js
+//#region c.js
+//#endregion
+//#region a.js
+console.log("A", Object.keys(/* @__PURE__ */ require("./rolldown-runtime.js").__exportAll({ c: () => 1 })).join());
+//#endregion
+
+```
+
+### e0.js
+
+```js
+const require_rolldown_runtime = require("./rolldown-runtime.js");
+const require_group_b = require("./group-b.js");
+require("./a.js");
+const require_z = require("./z2.js");
+//#region e0.js
+function init_e0() {
+	return (init_e0 = require_rolldown_runtime.__esmMin((() => {
+		require_group_b.init_b();
+		require_z.init_q();
+		console.log("E0", Object.keys(require_group_b.p).join());
+	})))();
+}
+//#endregion
+init_e0();
+
+```
+
+### e1.js
+
+```js
+require("./a.js");
+//#region e1.js
+console.log("E1");
+//#endregion
+
+```
+
+### group-b.js
+
+```js
+const require_rolldown_runtime = require("./rolldown-runtime.js");
+//#region p.js
+const p = {};
+//#endregion
+//#region d.js
+var d_exports = /* @__PURE__ */ require_rolldown_runtime.__exportAll({ d: () => 1 });
+//#endregion
+//#region b.js
+function init_b() {
+	return (init_b = require_rolldown_runtime.__esmMin((() => {
+		console.log("B", Object.keys(d_exports).join());
+	})))();
+}
+//#endregion
+Object.defineProperty(exports, "init_b", {
+	enumerable: true,
+	get: function() {
+		return init_b;
+	}
+});
+Object.defineProperty(exports, "p", {
+	enumerable: true,
+	get: function() {
+		return p;
+	}
+});
+
+```
+
+### rolldown-runtime.js
+
+```js
+//#region \0rolldown/runtime.js
+var __defProp = Object.defineProperty;
+var __esmMin = (fn, res, err) => () => {
+	if (err) throw err[0];
+	try {
+		return fn && (res = fn(fn = 0)), res;
+	} catch (e) {
+		throw err = [e], e;
+	}
+};
+var __exportAll = (all, no_symbols) => {
+	let target = {};
+	for (var name in all) __defProp(target, name, {
+		get: all[name],
+		enumerable: true
+	});
+	if (!no_symbols) __defProp(target, Symbol.toStringTag, { value: "Module" });
+	return target;
+};
+//#endregion
+Object.defineProperty(exports, "__esmMin", {
+	enumerable: true,
+	get: function() {
+		return __esmMin;
+	}
+});
+Object.defineProperty(exports, "__exportAll", {
+	enumerable: true,
+	get: function() {
+		return __exportAll;
+	}
+});
+
+```
+
+### z.js
+
+```js
+require("./z2.js").init_z();
+
+```
+
+### z2.js
+
+```js
+const require_rolldown_runtime = require("./rolldown-runtime.js");
+//#region q.js
+function init_q() {
+	return (init_q = require_rolldown_runtime.__esmMin((() => {
+		console.log("Q");
+	})))();
+}
+//#endregion
+//#region z.js
+function init_z() {
+	return (init_z = require_rolldown_runtime.__esmMin((() => {
+		console.log("Z");
+	})))();
+}
+//#endregion
+Object.defineProperty(exports, "init_q", {
+	enumerable: true,
+	get: function() {
+		return init_q;
+	}
+});
+Object.defineProperty(exports, "init_z", {
+	enumerable: true,
+	get: function() {
+		return init_z;
+	}
+});
+
+```

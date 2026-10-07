@@ -1,0 +1,67 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+import assertAgain, * as assertNamespace from "node:assert";
+//#region dep.js
+globalThis.__events.push("dep");
+var dep_default = "default";
+const value = "named";
+//#endregion
+//#region other.js
+globalThis.__events.push("other");
+//#endregion
+//#region main.js
+function read() {
+	return {
+		defaultValue: dep_default,
+		aliasDefault: dep_default,
+		value,
+		alias: value,
+		sameDefault: assertAgain === assertAgain,
+		sameNamespace: assertAgain === assertNamespace.default
+	};
+}
+//#endregion
+export { read };
+
+```
+
+# Variant: [format: Cjs]
+
+## Assets
+
+### main.js
+
+```js
+Object.defineProperty(exports, Symbol.toStringTag, { value: "Module" });
+// HIDDEN [\0rolldown/runtime.js]
+let node_assert = require("node:assert");
+node_assert = __toESM(node_assert);
+//#region dep.js
+globalThis.__events.push("dep");
+var dep_default = "default";
+const value = "named";
+//#endregion
+//#region other.js
+globalThis.__events.push("other");
+//#endregion
+//#region main.js
+function read() {
+	return {
+		defaultValue: dep_default,
+		aliasDefault: dep_default,
+		value,
+		alias: value,
+		sameDefault: node_assert.default === node_assert.default,
+		sameNamespace: node_assert.default === node_assert.default
+	};
+}
+//#endregion
+exports.read = read;
+
+```

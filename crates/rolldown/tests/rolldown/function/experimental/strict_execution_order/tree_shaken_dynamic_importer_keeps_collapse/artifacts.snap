@@ -55,8 +55,8 @@ export { target_exports as n, load as r, init_target as t };
 ### a.js
 
 ```js
-import { i as load, r as init_loader } from "./dyn.js";
 import { t as __esmMin } from "./rolldown-runtime.js";
+import { i as load, r as init_loader } from "./dyn.js";
 //#region a.js
 var targetPromise;
 function init_a() {

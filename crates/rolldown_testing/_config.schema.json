@@ -1101,6 +1101,13 @@
             "string",
             "null"
           ]
+        },
+        "hotUpdate": {
+          "description": "Call the `hotUpdate` plugin hook. Off by default. The `hotUpdate` dev option also turns it on.",
+          "type": [
+            "boolean",
+            "null"
+          ]
         }
       },
       "additionalProperties": false
@@ -1291,6 +1298,17 @@
           "items": {
             "$ref": "#/$defs/MatchGroup"
           }
+        },
+        "experimentalInlineCommonChunks": {
+          "description": "See internal-docs/inline-common-chunks/design.md. Experimental.",
+          "anyOf": [
+            {
+              "$ref": "#/$defs/InlineCommonChunksOptions"
+            },
+            {
+              "type": "null"
+            }
+          ]
         }
       },
       "additionalProperties": false
@@ -1393,6 +1411,21 @@
       "enum": [
         "$initial"
       ]
+    },
+    "InlineCommonChunksOptions": {
+      "description": "`output.codeSplitting.experimentalInlineCommonChunks`, as the user wrote it.\n\nSee internal-docs/inline-common-chunks/design.md.",
+      "type": "object",
+      "properties": {
+        "maxSize": {
+          "description": "A candidate's pre-render size must be strictly smaller than this. `0` (the default) turns\nthe feature off; positive infinity removes the size limit.",
+          "type": [
+            "number",
+            "null"
+          ],
+          "format": "double"
+        }
+      },
+      "additionalProperties": false
     },
     "ChecksOptions": {
       "type": "object",
@@ -2122,6 +2155,16 @@
           "description": "After each HMR step, run a fresh full build of the current file state\nand assert the incremental scan state matches it. Skipped automatically\nfor steps whose state does not build and for steps whose incremental\nbuild failed (a failed scan is reverted, so the state intentionally\nstays at the last good build). Default is `true`.",
           "type": "boolean",
           "default": true
+        },
+        "fullBuildAfterSteps": {
+          "description": "After each listed HMR step (0-based), trigger a full build and wait for it. Vite does\nthis when a page loads after an HMR-stage failure, and then reloads every tab if the build\nsucceeds. The test client reloads too: it runs the new output and only the patches of later\nsteps. A failed build does not reload it.",
+          "type": "array",
+          "items": {
+            "type": "integer",
+            "format": "uint",
+            "minimum": 0
+          },
+          "default": []
         }
       },
       "additionalProperties": false
@@ -2150,7 +2193,7 @@
           ]
         },
         "hotUpdate": {
-          "description": "Whether the `hotUpdate` plugin hook is called. Off by default until Vite supports it.",
+          "description": "Whether the `hotUpdate` plugin hook is called. Off by default. `DevModeOptions::hot_update`\nalso turns it on.",
           "type": [
             "boolean",
             "null"

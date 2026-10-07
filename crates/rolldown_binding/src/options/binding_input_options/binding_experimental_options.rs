@@ -68,6 +68,7 @@ pub struct BindingExperimentalDevModeOptions {
   pub skip_common_runtime_injection: Option<bool>,
   pub lazy: Option<bool>,
   pub base: Option<String>,
+  pub hot_update: Option<bool>,
 }
 
 impl From<BindingExperimentalDevModeOptions> for rolldown_common::DevModeOptions {
@@ -79,6 +80,7 @@ impl From<BindingExperimentalDevModeOptions> for rolldown_common::DevModeOptions
       skip_common_runtime_injection: value.skip_common_runtime_injection,
       lazy: value.lazy,
       base: value.base,
+      hot_update: value.hot_update,
     }
   }
 }

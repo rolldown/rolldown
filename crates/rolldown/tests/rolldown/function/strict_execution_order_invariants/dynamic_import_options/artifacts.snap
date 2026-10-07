@@ -17,8 +17,8 @@ export { targetPromise };
 ## b.js
 
 ```js
-import { r as init_observer } from "./dyn.js";
 import { t as __esmMin } from "./rolldown-runtime.js";
+import { r as init_observer } from "./dyn.js";
 //#region b.js
 function init_b() {
 	return (init_b = __esmMin((() => {

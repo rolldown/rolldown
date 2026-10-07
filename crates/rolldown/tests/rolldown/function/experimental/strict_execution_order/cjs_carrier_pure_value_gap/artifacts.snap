@@ -25,8 +25,8 @@ export default require_pure_cjs();
 ## main.js
 
 ```js
-import { n as read, t as init_reader } from "./reader.js";
 import { n as __esmMin } from "./rolldown-runtime.js";
+import { n as read, t as init_reader } from "./reader.js";
 //#region e.js
 globalThis.__strict_order_value = "ready";
 console.log("E");
@@ -78,9 +78,9 @@ export { init_pure_carrier_cjs_0 as n, require_pure_cjs as r, import_pure_cjs as
 ## reader.js
 
 ```js
+import { n as __esmMin } from "./rolldown-runtime.js";
 import { n as init_pure_carrier_cjs_0, t as import_pure_cjs } from "./pure-cjs.js";
 import "./pure-carrier.js";
-import { n as __esmMin } from "./rolldown-runtime.js";
 //#region reader.js
 function read() {
 	return import_pure_cjs.snapshot;
@@ -116,8 +116,8 @@ export { __esmMin as n, __commonJSMin as t };
 ## second.js
 
 ```js
-import { n as read, t as init_reader } from "./reader.js";
 import { n as __esmMin } from "./rolldown-runtime.js";
+import { n as read, t as init_reader } from "./reader.js";
 //#region second.js
 function init_second() {
 	return (init_second = __esmMin((() => {
@@ -171,8 +171,8 @@ export default require_pure_cjs();
 ### main.js
 
 ```js
-import { n as read, t as init_reader } from "./reader.js";
 import { n as __esmMin } from "./rolldown-runtime.js";
+import { n as read, t as init_reader } from "./reader.js";
 //#region e.js
 function init_e() {
 	return (init_e = __esmMin((() => {
@@ -229,9 +229,9 @@ export { init_pure_carrier_cjs_0 as n, require_pure_cjs as r, import_pure_cjs as
 ### reader.js
 
 ```js
+import { n as __esmMin } from "./rolldown-runtime.js";
 import { n as init_pure_carrier_cjs_0, t as import_pure_cjs } from "./pure-cjs.js";
 import "./pure-carrier.js";
-import { n as __esmMin } from "./rolldown-runtime.js";
 //#region reader.js
 function read() {
 	return import_pure_cjs.snapshot;
@@ -267,8 +267,8 @@ export { __esmMin as n, __commonJSMin as t };
 ### second.js
 
 ```js
-import { n as read, t as init_reader } from "./reader.js";
 import { n as __esmMin } from "./rolldown-runtime.js";
+import { n as read, t as init_reader } from "./reader.js";
 //#region second.js
 function init_second() {
 	return (init_second = __esmMin((() => {

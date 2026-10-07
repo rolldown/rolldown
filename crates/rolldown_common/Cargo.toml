@@ -1,6 +1,6 @@
 [package]
 name = "rolldown_common"
-version = "1.2.11"
+version = "1.2.12"
 publish = true
 description = "This crate is mostly for sharing code between rolldwon crates."
 readme = "../../README.md"
@@ -21,6 +21,7 @@ dashmap = { workspace = true }
 derive_more = { workspace = true }
 fast-glob = { workspace = true }
 itertools = { workspace = true }
+json-escape-simd = { workspace = true }
 oxc = { workspace = true }
 oxc_ecmascript = { workspace = true }
 oxc_index = { workspace = true }

@@ -223,11 +223,17 @@ fn transitive_esm_init_targets(
   stmt_infos: &StmtInfos,
   ctx: &EsmInitTargetContext<'_>,
 ) -> FxHashMap<StmtInfoIdx, Vec<WrappedEsmInitTarget>> {
+  let mut targets_by_stmt = FxHashMap::<StmtInfoIdx, Vec<WrappedEsmInitTarget>>::default();
+  // A transparent order wrapper owns no init calls: its consumers route through it to the leaves
+  // they read. A transparent module whose wrapper comes from interop takes the legacy path below.
+  // See internal-docs/code-splitting/design.md#tree-shaking-parity-across-strict-modes.
+  if ctx.order_wrap && ctx.order_state.reexport_init_is_transparent(module.idx) {
+    return targets_by_stmt;
+  }
   // Shared across all excluded re-export statements of this importer, so a barrel subtree is
   // traversed at most once and each target is attributed to the first statement that reaches
   // it (matching the finalizer's per-module emission dedup).
   let mut visited = FxHashSet::default();
-  let mut targets_by_stmt = FxHashMap::<StmtInfoIdx, Vec<WrappedEsmInitTarget>>::default();
   for (stmt_idx, stmt_info) in stmt_infos.iter_enumerated_without_namespace_stmt() {
     let stmt_is_included = meta.stmt_info_included.has_bit(stmt_idx);
     if stmt_is_included && !ctx.order_wrap {
@@ -466,9 +472,6 @@ fn order_wrap_record_forwards(
   is_reexport: bool,
   retention: ReexportRetentionEvidence,
 ) -> bool {
-  if order_state.is_consumer_local_reexport_route(importer_idx) {
-    return false;
-  }
   execution_dependencies.contains(&root)
     || (retention.any()
       && reexport_record_owns_hop(order_state, importer_idx, rec_idx, is_reexport))

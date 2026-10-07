@@ -309,7 +309,8 @@ impl GenerateStage<'_> {
   ///   through it (asserted in `compute_cross_chunk_links`). So no facade edge is constructible.
   ///
   /// Unioning the projected edges with the baseline value/side-effect edges still over-approximates
-  /// the real post-lowering topology — it omits the wrapping's own liveness suppression — which is
+  /// the real post-lowering topology — it omits the wrapping's own liveness suppression, and it
+  /// keeps the records of a re-export-transparent wrapper, which registration skips — which is
   /// sound: extra edges only ever wrap more, and wrapping more is always legal (wrap-all wraps
   /// everything and is the standing correctness proof).
   ///
@@ -525,12 +526,13 @@ impl GenerateStage<'_> {
   ///
   /// The walk passes `retained_reexport_path: None` while the real metadata pass can carry `Some`
   /// even through a non-included forwarder — retained star paths are recorded pre-tree-shaking
-  /// (`record_star_reexport_path`), so a path can structurally route through a forwarder that later
-  /// loses inclusion. The two calls then differ only at the same-chunk prune inside
-  /// `collect_order_wrap_esm_init_targets`: `None` prunes a same-chunk included waypoint where
-  /// `Some(path)` walks through it. That divergence never loses a real cross-chunk edge: every
-  /// target reachable across a retained re-export path is a resolved export of the importer and is
-  /// already projected by [`Self::project_collector_edges`]; this walk only needs to add the
+  /// (`record_star_reexport_path` and the namespace-member loop in `resolve_member_expr_refs`), so
+  /// a path can structurally route through a forwarder that later loses inclusion. The two calls
+  /// then differ only at the same-chunk prune inside `collect_order_wrap_esm_init_targets`: `None`
+  /// prunes a same-chunk included waypoint where `Some(path)` walks through it. That divergence
+  /// never loses a real cross-chunk edge: every target reachable across a retained re-export path
+  /// is a resolved export of the importer and is already projected by
+  /// [`Self::project_collector_edges`]; this walk only needs to add the
   /// forwarder's *plain-import* targets (which lie on no retained path), so `None` is faithful for
   /// exactly the edges this source owns.
   fn project_excluded_forwarder_edges(
@@ -605,6 +607,7 @@ impl GenerateStage<'_> {
       star_reexport_records_by_imported_symbol: &self
         .link_output
         .star_reexport_records_by_imported_symbol,
+      member_read_star_reexport_paths: &self.link_output.member_read_star_reexport_paths,
       used_symbol_refs_builder,
       cyclic_modules: &cyclic_modules,
       tree_shaking: self.options.treeshake.is_some(),
@@ -675,6 +678,7 @@ impl GenerateStage<'_> {
       star_reexport_records_by_imported_symbol: &self
         .link_output
         .star_reexport_records_by_imported_symbol,
+      member_read_star_reexport_paths: &self.link_output.member_read_star_reexport_paths,
       used_symbol_refs_builder,
       cyclic_modules: &cyclic_modules,
       tree_shaking: self.options.treeshake.is_some(),

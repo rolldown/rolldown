@@ -62,8 +62,8 @@ export { vDef as n, barrel_exports as t };
 ### a.js
 
 ```js
-import { i as vDef, n as init_barrel, t as barrel_exports } from "./barrel.js";
 import { t as __esmMin } from "./rolldown-runtime.js";
+import { i as vDef, n as init_barrel, t as barrel_exports } from "./barrel.js";
 //#region a.js
 var defValue, nsObject;
 function init_a() {
@@ -83,8 +83,8 @@ export { defValue, nsObject };
 ### b.js
 
 ```js
-import { i as vDef, n as init_barrel } from "./barrel.js";
 import { t as __esmMin } from "./rolldown-runtime.js";
+import { i as vDef, n as init_barrel } from "./barrel.js";
 //#region b.js
 var sharedDef;
 function init_b() {

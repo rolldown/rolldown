@@ -9,8 +9,8 @@ use oxc_str::CompactStr;
 use rolldown_common::{
   EcmaModuleAstUsage, ExportsKind, ImportRecordIdx, IndexModules, MemberExprObjectReferencedType,
   MemberExprRefResolution, Module, ModuleIdx, ModuleType, NamespaceAlias, NormalModule,
-  OutputFormat, ResolvedExport, Specifier, StmtInfos, SymbolOrMemberExprRef, SymbolRef,
-  SymbolRefDb, SymbolRefFlags,
+  OutputFormat, ResolvedExport, Specifier, StmtInfoIdx, StmtInfos, SymbolOrMemberExprRef,
+  SymbolRef, SymbolRefDb, SymbolRefFlags,
 };
 use rolldown_error::{
   AmbiguousExternalNamespaceModule, BuildDiagnostic, Diagnostics, EventKindSwitcher,
@@ -19,7 +19,10 @@ use rolldown_error::{
 #[cfg(not(target_family = "wasm"))]
 use rolldown_utils::rayon::IndexedParallelIterator;
 use rolldown_utils::{
-  ecmascript::{is_validate_identifier_name, legitimize_identifier_name},
+  ecmascript::{
+    is_validate_identifier_name, legitimize_identifier_name,
+    none_preserved_keyword_or_global_object_ext,
+  },
   index_vec_ext::{IndexVecExt, IndexVecRefExt},
   indexmap::{FxIndexMap, FxIndexSet},
   rayon::{IntoParallelRefIterator, IntoParallelRefMutIterator, ParallelIterator},
@@ -27,7 +30,13 @@ use rolldown_utils::{
 
 use rustc_hash::{FxHashMap, FxHashSet};
 
-use crate::{SharedOptions, types::linking_metadata::LinkingMetadataVec};
+use crate::{
+  SharedOptions,
+  types::{
+    linking_metadata::LinkingMetadataVec,
+    member_read_star_reexport_path::MemberReadStarReexportPath,
+  },
+};
 
 use super::LinkStage;
 
@@ -38,6 +47,10 @@ struct ImportTracker {
   pub imported: Specifier,
   pub imported_as: SymbolRef,
 }
+
+/// A namespace-member read that statically resolved through re-export hops: the reading statement,
+/// the resolved binding, and every (module, export) step the chain went through. Strict-only.
+type MemberReadConsumption = (StmtInfoIdx, SymbolRef, Vec<(ModuleIdx, CompactStr)>);
 
 #[derive(Debug)]
 pub struct MatchingContext {
@@ -188,6 +201,62 @@ impl ImportStatus {
   }
 }
 
+/// A binding of an external module, as an `export *` candidate resolves to it.
+///
+/// `ResolveExport` treats candidates as one export when they resolve to the same
+/// `(module, binding name)`. Bindings declared in the bundle are told apart by their canonical
+/// symbol, but an external module declares none: every module importing from it keeps a local
+/// binding of its own (see `bind_imports_and_exports`). Two such bindings are the same one exactly
+/// when they import the same name from the same external module.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
+struct ExternalBinding<'a> {
+  module: ModuleIdx,
+  /// `None` is the namespace object (`import * as ns from 'ext'`).
+  imported: Option<&'a str>,
+}
+
+impl<'a> ExternalBinding<'a> {
+  /// The external binding `symbol_ref` stands for, if any. That is either:
+  /// - a module's own import of an external module: `import { a } from 'ext'`, or the binding
+  ///   behind `export { a } from 'ext'`
+  /// - the external module's namespace object, which a namespace import links to when the output
+  ///   format doesn't keep ESM imports
+  fn of(modules: &'a IndexModules, symbol_ref: SymbolRef) -> Option<Self> {
+    let owner = match &modules[symbol_ref.owner] {
+      Module::External(external) => {
+        return (external.namespace_ref == symbol_ref)
+          .then_some(Self { module: symbol_ref.owner, imported: None });
+      }
+      Module::Normal(owner) => owner,
+    };
+    let named_import = owner.named_imports.get(&symbol_ref)?;
+    let module = owner.import_records[named_import.record_idx].resolved_module?;
+    modules[module].is_external().then(|| Self {
+      module,
+      imported: match &named_import.imported {
+        Specifier::Star => None,
+        Specifier::Literal(name) => Some(name.as_str()),
+      },
+    })
+  }
+}
+
+/// What an `export *` candidate resolves to once imports are bound, compared the way
+/// `ResolveExport` compares candidates.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
+enum ResolvedBinding<'a> {
+  External(ExternalBinding<'a>),
+  /// Any other binding, identified by its canonical symbol.
+  Symbol(SymbolRef),
+}
+
+impl<'a> ResolvedBinding<'a> {
+  fn of(modules: &'a IndexModules, symbols: &SymbolRefDb, symbol_ref: SymbolRef) -> Self {
+    let canonical_ref = symbols.canonical_ref_for(symbol_ref);
+    ExternalBinding::of(modules, canonical_ref).map_or(Self::Symbol(canonical_ref), Self::External)
+  }
+}
+
 impl LinkStage<'_> {
   /// Notices:
   /// - For external import like
@@ -217,7 +286,8 @@ impl LinkStage<'_> {
         .collect::<FxHashMap<_, _>>();
 
       let mut module_stack = vec![];
-      // The star-export origin map only feeds `record_star_reexport_path`, which is strict-only.
+      // The star-export origin map only feeds `collect_star_reexport_path`, whose callers are all
+      // strict-only.
       let mut star_export_record_by_name =
         self.options.is_strict_execution_order_enabled().then(FxHashMap::default);
       if module.has_star_export() || module.ast_usage.contains(EcmaModuleAstUsage::IsCjsReexport) {
@@ -309,11 +379,12 @@ impl LinkStage<'_> {
         if let Some(potentially_ambiguous_symbol_refs) =
           &resolved_export.potentially_ambiguous_symbol_refs
         {
-          let main_ref = self.symbols.canonical_ref_for(resolved_export.symbol_ref);
+          let modules = &self.module_table.modules;
+          let main_binding =
+            ResolvedBinding::of(modules, &self.symbols, resolved_export.symbol_ref);
 
           for ambiguous_ref in potentially_ambiguous_symbol_refs.iter() {
-            let ambiguous_ref = self.symbols.canonical_ref_for(*ambiguous_ref);
-            if main_ref != ambiguous_ref {
+            if ResolvedBinding::of(modules, &self.symbols, *ambiguous_ref) != main_binding {
               continue 'next_export;
             }
           }
@@ -335,7 +406,7 @@ impl LinkStage<'_> {
   }
 
   fn detect_namespace_conflicts(&mut self) {
-    let mut conflicts: FxHashMap<(CompactStr, Vec<SymbolRef>), (u32, ModuleIdx)> =
+    let mut conflicts: FxHashMap<(CompactStr, Vec<ResolvedBinding<'_>>), (u32, ModuleIdx)> =
       FxHashMap::default();
     for (module_idx, meta) in self.metas.iter_enumerated() {
       if meta.resolved_exports.len() == meta.sorted_and_non_ambiguous_resolved_exports.len() {
@@ -350,27 +421,32 @@ impl LinkStage<'_> {
         else {
           continue;
         };
-        let mut canonical_refs = std::iter::once(resolved_export.symbol_ref)
+        let mut bindings = std::iter::once(resolved_export.symbol_ref)
           .chain(potentially_ambiguous_symbol_refs.iter().copied())
-          .map(|symbol_ref| self.symbols.canonical_ref_for(symbol_ref))
+          .map(|symbol_ref| {
+            ResolvedBinding::of(&self.module_table.modules, &self.symbols, symbol_ref)
+          })
           .collect::<Vec<_>>();
-        canonical_refs.sort_unstable();
-        canonical_refs.dedup();
-        if canonical_refs.len() < 2 {
+        bindings.sort_unstable();
+        bindings.dedup();
+        if bindings.len() < 2 {
           continue;
         }
-        let all_bound_local = canonical_refs.iter().all(|canonical_ref| {
-          match &self.module_table[canonical_ref.owner] {
+        // Only a declaration or an external module's binding is known to differ from the others.
+        // A binding still held by an import (e.g. of a CommonJS module's export) may be the same.
+        let all_bound_known = bindings.iter().all(|binding| match binding {
+          ResolvedBinding::External(_) => true,
+          ResolvedBinding::Symbol(canonical_ref) => match &self.module_table[canonical_ref.owner] {
             Module::Normal(owner) => !owner.named_imports.contains_key(canonical_ref),
             Module::External(_) => false,
-          }
+          },
         });
-        if !all_bound_local {
+        if !all_bound_known {
           continue;
         }
         let candidate = (module.exec_order, module_idx);
         conflicts
-          .entry((export_name.clone(), canonical_refs))
+          .entry((export_name.clone(), bindings))
           .and_modify(|best| *best = (*best).min(candidate))
           .or_insert(candidate);
       }
@@ -688,9 +764,8 @@ impl LinkStage<'_> {
           let mut resolved_map = FxHashMap::default();
           let mut side_effects_dependency = vec![];
           let mut written_cjs_exports: Vec<SymbolRef> = vec![];
-          let mut star_reexport_consumptions: Vec<(SymbolRef, Vec<(ModuleIdx, CompactStr)>)> =
-            vec![];
-          stmt_infos.iter().for_each(|stmt_info| {
+          let mut star_reexport_consumptions: Vec<MemberReadConsumption> = vec![];
+          stmt_infos.iter_enumerated().for_each(|(stmt_info_idx, stmt_info)| {
             stmt_info.referenced_symbols.iter().for_each(|symbol_ref| {
               // `depended_refs` is used to store necessary symbols that must be included once the resolved symbol gets included
               let mut depended_refs: Vec<SymbolRef> = vec![];
@@ -730,6 +805,14 @@ impl LinkStage<'_> {
                     .is_none_or(|prop| prop.name.as_str() != "default");
                 let mut is_namespace_ref =
                   canonical_ref_owner.namespace_object_ref == canonical_ref || is_json_import_ns;
+                if strict_execution_order
+                  && is_namespace_ref
+                  && let Some(import) = module.named_imports.get(&member_expr_ref.object_ref)
+                  && let Specifier::Literal(name) = &import.imported
+                  && let Some(importee) = module.import_records[import.record_idx].resolved_module
+                {
+                  star_reexport_steps.push((importee, name.clone()));
+                }
                 let mut cursor = 0;
                 while cursor < member_expr_ref.prop_and_span_list.len() && is_namespace_ref {
                   let prop = &member_expr_ref.prop_and_span_list[cursor];
@@ -943,12 +1026,16 @@ impl LinkStage<'_> {
                 }
 
                 if cursor > 0 || target_commonjs_exported_symbol.is_some() {
-                  // Key the consumed steps by the final canonical ref: it is the symbol the
-                  // inclusion pass marks used for this read (an inlined constant never is, and
-                  // needs no init), which is exactly the usedness gate
-                  // `collect_frozen_reexport_usage` applies to this index.
+                  // Record the consumed steps with the reading statement and the final canonical
+                  // ref: `collect_frozen_reexport_usage` retains them only while that statement
+                  // is included and the symbol is used (an inlined constant never is, and needs
+                  // no init).
                   if !star_reexport_steps.is_empty() {
-                    star_reexport_consumptions.push((canonical_ref, star_reexport_steps));
+                    star_reexport_consumptions.push((
+                      stmt_info_idx,
+                      canonical_ref,
+                      star_reexport_steps,
+                    ));
                   }
                   resolved_map.insert(
                     member_expr_ref.node_id,
@@ -1006,25 +1093,37 @@ impl LinkStage<'_> {
     // A statically resolved namespace member read consumes re-export hops exactly like a named
     // import: without this, a side-effect-free definer reached only through an `export *` barrel
     // by namespace readers leaves the barrel's forwarding hop without retention evidence, and the
-    // wrapped barrel's `init_*` never initializes the definer (`collect_frozen_reexport_usage`
-    // keys its retained re-export paths off this same index).
+    // wrapped barrel's `init_*` never initializes the definer. `collect_frozen_reexport_usage`
+    // retains each recorded path while its reading statement is included.
     if strict_execution_order {
       let mut recorded = FxHashSet::default();
-      for (_, _, _, star_reexport_consumptions) in &resolved_meta_data {
-        for (imported_as_ref, steps) in star_reexport_consumptions {
+      for (module, (_, _, _, star_reexport_consumptions)) in
+        self.module_table.modules.iter().zip(&resolved_meta_data)
+      {
+        for (stmt_info_idx, resolved, steps) in star_reexport_consumptions {
+          if !recorded.insert((module.idx(), *stmt_info_idx, *resolved, steps)) {
+            continue;
+          }
+          // Preserve the namespace's forwarding prefix and member hops as one initialization path.
+          // See internal-docs/code-splitting/implementation.md.
+          let mut path = vec![];
+          let mut visited = FxHashSet::default();
           for (module_idx, export_name) in steps {
-            if !recorded.insert((*module_idx, export_name.clone(), *imported_as_ref)) {
-              continue;
-            }
-            record_star_reexport_path(
+            collect_star_reexport_path(
               *module_idx,
               export_name,
-              *imported_as_ref,
               &self.module_table.modules,
               &self.metas,
-              &mut self.star_reexport_records_by_imported_symbol,
-              &mut FxHashSet::default(),
+              &mut path,
+              &mut visited,
             );
+          }
+          if !path.is_empty() {
+            self.member_read_star_reexport_paths.push(MemberReadStarReexportPath {
+              reader: (module.idx(), *stmt_info_idx),
+              resolved: *resolved,
+              path,
+            });
           }
         }
       }
@@ -1406,6 +1505,36 @@ impl BindImportsAndExportsContext<'_> {
     }
   }
 
+  /// The external module's binding a match resolves to, if any (see `ExternalBinding`). One
+  /// binding takes several shapes here: walking a re-export of an external import stops at the
+  /// re-exporting module's own binding (`Normal`), while a star branch resolved through
+  /// `ImportStatus::External` yields the branch module's binding (`Normal`) or, when the output
+  /// format doesn't keep ESM imports, a read off the external namespace.
+  fn external_binding_of<'k>(&'k self, kind: &'k MatchImportKind) -> Option<ExternalBinding<'k>> {
+    let (namespace_ref, imported) = match kind {
+      MatchImportKind::Normal(MatchImportKindNormal { symbol, .. }) => {
+        return ExternalBinding::of(self.index_modules, *symbol);
+      }
+      MatchImportKind::Namespace { namespace_ref } => (namespace_ref, None),
+      MatchImportKind::NormalAndNamespace { namespace_ref, alias } => {
+        (namespace_ref, Some(alias.as_str()))
+      }
+      MatchImportKind::Cycle { .. }
+      | MatchImportKind::Ambiguous { .. }
+      | MatchImportKind::NoMatch => return None,
+    };
+    self.index_modules[namespace_ref.owner]
+      .is_external()
+      .then_some(ExternalBinding { module: namespace_ref.owner, imported })
+  }
+
+  /// Whether two star branches resolve to the same binding, which is what `ResolveExport`
+  /// requires of an export that isn't ambiguous.
+  fn is_same_binding(&self, a: &MatchImportKind, b: &MatchImportKind) -> bool {
+    let (a_external, b_external) = (self.external_binding_of(a), self.external_binding_of(b));
+    if a_external.is_some() || b_external.is_some() { a_external == b_external } else { a == b }
+  }
+
   /// Apply `ResolveExport`'s null-cycle rule to the collected star branches. Cycle branches are
   /// dropped from the agreement set: `ResolveExport` skips a star branch that resolves to null
   /// instead of failing the whole lookup. Walking a cycle also re-visits the same module once per
@@ -1625,7 +1754,7 @@ impl BindImportsAndExportsContext<'_> {
       Self::promote_first_surviving_star_branch(ret, ambiguous_results);
 
     if let Some(symbol_ref) = ret.bound_symbol()
-      && deduped_ambiguous_results.keys().any(|result| *result != ret)
+      && deduped_ambiguous_results.keys().any(|result| !self.is_same_binding(result, &ret))
     {
       return MatchImportKind::Ambiguous {
         symbol_ref,
@@ -1667,7 +1796,11 @@ impl BindImportsAndExportsContext<'_> {
               .shimmed_missing_exports
               .entry(imported.clone())
               .or_insert_with(|| {
-                self.symbol_db.create_facade_root_symbol_ref(tracker.importee, imported.as_str())
+                let mut name = legitimize_identifier_name(imported);
+                if !none_preserved_keyword_or_global_object_ext(&name) {
+                  name = Cow::Owned(format!("_{name}"));
+                }
+                self.symbol_db.create_facade_root_symbol_ref(tracker.importee, &name)
               });
             return MatchImportKind::Normal(MatchImportKindNormal {
               symbol: *shimmed_symbol_ref,
@@ -1728,6 +1861,7 @@ fn collect_star_reexport_path(
       return;
     };
     let Specifier::Literal(next_export_name) = &named_import.imported else {
+      path.push((module_idx, named_import.record_idx));
       return;
     };
     (named_import.record_idx, next_export_name.clone())

@@ -50,8 +50,7 @@ console.log(a, b);
 
 ```js
 //! Dynamic Entry: [Entry-Module-Id: dynamic-a.js] [Name: <none>]
-import { t as a } from "./dynamic-a2.js";
-export { a };
+export { t as a } from "./dynamic-a2.js";
 
 ```
 
@@ -70,8 +69,7 @@ export { a as t };
 
 ```js
 //! Dynamic Entry: [Entry-Module-Id: dynamic-b.js] [Name: <none>]
-import { t as b } from "./dynamic-b2.js";
-export { b };
+export { t as b } from "./dynamic-b2.js";
 
 ```
 

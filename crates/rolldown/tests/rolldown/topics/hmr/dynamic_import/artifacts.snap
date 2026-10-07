@@ -10,8 +10,7 @@ import { t as __commonJSMin } from "./main.js";
 __rolldown_runtime__.registerGraph({
 	ids: ["exist-dep-cjs.js"],
 	localCount: 1,
-	edges: [[]],
-	dynamicEdges: [[]]
+	edges: [[]]
 });
 //#region exist-dep-cjs.js
 var require_exist_dep_cjs = /* @__PURE__ */ __commonJSMin(((exports, module) => {
@@ -31,8 +30,7 @@ import { n as __exportAll } from "./main.js";
 __rolldown_runtime__.registerGraph({
 	ids: ["exist-dep-esm.js"],
 	localCount: 1,
-	edges: [[]],
-	dynamicEdges: [[]]
+	edges: [[]]
 });
 //#region exist-dep-esm.js
 var exist_dep_esm_exports = /* @__PURE__ */ __exportAll({ value: () => value });
@@ -57,7 +55,7 @@ __rolldown_runtime__.registerGraph({
 	],
 	localCount: 2,
 	edges: [[], [0]],
-	dynamicEdges: [[2, 3], []]
+	dynamicEdges: { 0: [2, 3] }
 });
 //#region hmr.js
 var hmr_exports = /* @__PURE__ */ __exportAll({ foo: () => foo });
@@ -85,7 +83,7 @@ export { __exportAll as n, __commonJSMin as t };
 ## Code
 
 ```js
-__rolldown_runtime__.registerGraph({ids:["hmr.js","new-dep-cjs.js","new-dep-esm.js","exist-dep-cjs.js","exist-dep-esm.js"],localCount:3,edges:[[],[],[]],dynamicEdges:[[3,4,1,2],[],[]]});
+__rolldown_runtime__.registerGraph({ids:["hmr.js","new-dep-cjs.js","new-dep-esm.js","exist-dep-cjs.js","exist-dep-esm.js"],localCount:3,edges:[[],[],[]],dynamicEdges:{0:[3,4,1,2]},stamps:{0:1,1:1,2:1}});
 //#region hmr.js
 __rolldown_runtime__.registerFactory("hmr.js", (function(__rolldown_module_id__) {
 	try {
@@ -109,7 +107,7 @@ __rolldown_runtime__.registerFactory("hmr.js", (function(__rolldown_module_id__)
 			}
 		});
 	} finally {}
-}));
+}), 1);
 
 //#endregion
 //#region new-dep-cjs.js
@@ -121,7 +119,7 @@ __rolldown_runtime__.registerFactory("new-dep-cjs.js", (function(__rolldown_modu
 		const hot_new_dep_cjs = __rolldown_runtime__.createModuleHotContext(__rolldown_module_id__);
 		__rolldown_exports__.value = "new-cjs";
 	} finally {}
-}));
+}), 1);
 
 //#endregion
 //#region new-dep-esm.js
@@ -132,7 +130,7 @@ __rolldown_runtime__.registerFactory("new-dep-esm.js", (function(__rolldown_modu
 		const hot_new_dep_esm = __rolldown_runtime__.createModuleHotContext(__rolldown_module_id__);
 		const value = "new-esm";
 	} finally {}
-}));
+}), 1);
 
 //#endregion
 ```

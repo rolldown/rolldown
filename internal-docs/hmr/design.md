@@ -142,6 +142,42 @@ subtracts the ship map only. The entry chunk is scope-hoisted (principle 3) and 
 re-runnable code. A patch that re-runs it must ship its factory once;
 after that the ship map covers it.
 
+Both kinds also carry what their own code reaches. A module that runs
+from a payload calls `initModule` on each static dep, and a dep that
+never ran in this client needs a factory. The server cannot see which
+modules ran, so it walks static imports (`collect_unheld_sync_deps`,
+`hmr_stage.rs`) and sorts each module it reaches:
+
+- **Boot-evaluated, current copy** — its exports are live. The walk
+  stops: the entry chunk ran its static deps too.
+- **Shipped, current copy** — not carried, but the walk goes through it.
+  A payload can carry a module the client never ran (a patch carries
+  importers of the changed module whether or not they ran), so its deps
+  may be missing.
+- **Anything else** — carried, and the walk goes through it.
+
+A lazy chunk walks from its entry. A patch walks only from the static
+imports the rebuild added: the new deps of a changed module and every
+dep of a new module. The old deps of a module that ran have run too.
+Walking from every carried module would ship the whole static closure
+whenever the boot-evaluated map is empty (several user entries). Even
+so, with an empty map an edit that adds an import can carry modules the
+client already ran. That costs bytes once; the ship map covers them
+afterwards.
+
+Example: tab B has not opened a route yet. An edit of `shared.js`
+carries `route.js` to tab B, because `route.js` imports `shared.js`.
+Tab B never runs it. When tab B opens the route, the lazy chunk walks
+through `route.js` and carries `dep.js`.
+
+```mermaid
+flowchart LR
+  main["main.js — boot-evaluated"] --> shared["shared.js — boot-evaluated: stop"]
+  main -. "import()" .-> route["route.js — shipped by the patch: walk through"]
+  route --> shared
+  route --> dep["dep.js — not held: carry"]
+```
+
 ### 3. The module graph ships as compiler data
 
 The client walk needs the import graph. Webpack learns it by
@@ -235,8 +271,9 @@ the seed only; the client-side decision is unchanged.
 - **The `hotUpdate` plugin hook** runs first. A plugin may replace the
   changed set for a file — a config file that affects many modules, a
   content file that is not a module at all. The hook runs only when the
-  `dev.hotUpdate` option is on (off by default, see Unresolved
-  Questions). Vite does not pass this option yet.
+  `experimental.devMode.hotUpdate` input option or the `dev.hotUpdate`
+  option is on (off by default, see Unresolved Questions). Vite forwards
+  `experimental.devMode` from the user config, but not `dev.hotUpdate`.
 - **Unchanged-output suppression** runs second. If a module's rendered
   output is byte-identical before and after the rebuild, it is dropped
   from the changed set. A save with no effective change no longer
@@ -276,6 +313,40 @@ chunk omits a module only if the payload carrying it was acked first.
 Concurrent fetches both carry the shared factory. The result is
 duplicate bytes, which is safe.
 
+Registration keeps the newest copy. Payloads can land out of render
+order: a lazy chunk rendered before an edit can land after the patch
+for that edit. Each payload passes the module's stamp to
+`registerFactory` (a third argument, left out when 0) and to
+`registerGraph` (`stamps`). The runtime drops a factory or a graph row
+older than the one it holds. Equal stamps mean equal code, so the later
+write wins.
+
+That rule needs a stamp to name one rendered factory, not only one
+source. An importer's factory also reads facts about each importee:
+its `exports_kind` and whether it has a lazy export. These choose the
+interop code (`__toESM`, `__toDynamicImportESM`). So when an edit
+changes them, the update stamps every importer of that module too and
+carries it like a changed module, even though the importer's own source
+did not change. It does not add the importer to the changed ids, so no
+client re-runs it for this reason.
+
+Example: `importer.js` imports `dep.js`, and an edit turns `dep.js`
+from ESM into CommonJS. The patch carries `importer.js` with the new
+stamp and the `__toESM` interop. A lazy chunk that was rendered before
+the edit still has the old `importer.js` at the old stamp, so the
+runtime drops it when it lands late.
+
+```mermaid
+flowchart LR
+  edit["edit: dep.js ESM → CJS"] --> dep["dep.js — stamp 1"]
+  edit --> imp["importer.js — stamp 1, __toESM interop"]
+  late["late lazy chunk: importer.js — stamp 0"] -. "0 < 1: dropped" .-> imp
+```
+
+Full-build chunks carry no stamps. They run their code right
+away, so their rows always replace the old ones. An older runtime ignores
+the extra argument and field.
+
 ## Failure policy
 
 Full reload is the fallback for these delivery and state failures:
@@ -312,7 +383,9 @@ build error already on screen, the shared Vite client hook
 page never fully loaded.
 
 The engine emits a full reload on its own only when the graph must be
-rebuilt from scratch (a tsconfig change, `bundling_task.rs`). Vite's
+rebuilt from scratch: a tsconfig change, or an update that failed after
+it merged its edit into the graph, so no client received the edit
+(`bundling_task.rs`). Vite's
 server sends its own reload in two more places. Once after the initial
 build, for the fallback page. And when a page request finds the output
 stale or the last HMR stage failed (`triggerBundleRegenerationIfStale`,
@@ -355,11 +428,11 @@ the changed module.
   `css-update` message, and module cache removal for styles are
   unspecified. `hot.prune` callbacks never run in FBM, because the
   server never sends a `prune` message.
-- **`hotUpdate` gate** — the engine hook exists but `dev.hotUpdate`
-  stays off by default until file-to-module invalidation is complete
-  (rolldown/rolldown#10714): the set a hook receives is not yet correct
-  for query-variant modules. Vite does not pass the option and does not
-  run its `handleHotUpdate` / `hotUpdate` hooks in FBM yet.
+- **`hotUpdate` gate** — the engine hook exists but stays off by default
+  until file-to-module invalidation is complete (rolldown/rolldown#10714):
+  the set a hook receives is not yet correct for query-variant modules.
+  `experimental.devMode.hotUpdate` or `dev.hotUpdate` turns it on. Vite
+  does not run its own `handleHotUpdate` / `hotUpdate` hooks in FBM yet.
 - **Lazy dynamic-import HMR** — an edit under a lazy boundary
   (`app → proxy → foo`, where the proxy is the placeholder module that
   stands in for a lazy-compiled module) full-reloads until the walk can

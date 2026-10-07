@@ -15,15 +15,15 @@ const target = "node:path";
 //#endregion
 //#region main.js
 var import_cjs_root = /* @__PURE__ */ __toESM((/* @__PURE__ */ __commonJSMin(((exports, module) => {
-	var Object$1 = process.env.TEST_IMPORT_PATH || "node:path";
+	var Object$2 = process.env.TEST_IMPORT_PATH || "node:path";
 	module.exports = {
-		specifier: Object$1,
-		load: () => Promise.resolve().then(() => /* @__PURE__ */ __toESM(require(Object$1), 1))
+		specifier: Object$2,
+		load: () => Promise.resolve().then(() => /* @__PURE__ */ __toESM(require(Object$2), 1))
 	};
 })))());
 const viaImport = () => Promise.resolve().then(() => /* @__PURE__ */ __toESM(require(target)));
-function viaParam(Object) {
-	return Promise.resolve().then(() => /* @__PURE__ */ __toESM(require(Object)));
+function viaParam(Object$1) {
+	return Promise.resolve().then(() => /* @__PURE__ */ __toESM(require(Object$1)));
 }
 //#endregion
 Object.defineProperty(exports, "cjsRoot", {

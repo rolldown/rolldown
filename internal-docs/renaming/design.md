@@ -72,6 +72,8 @@ A binding that a `require()` call initializes stays a local of the CJS closure, 
 
    One list tells which rewrite prints each fixed name, and which module contents cause the rewrite. Both levels use this list. The renamer renames a binding only in a module that can print the fixed name in the scope of the binding. Thus `var Promise = require('bluebird')` keeps its name in all other modules.
 
+   For `Promise` and `Object`, the list counts each module that has an `import()`, also when the finalizer keeps that `import()` native. The finalizer decides from the chunk graph and the options if it lowers an `import()`, and a copy of these conditions in the renamer could become different from the finalizer. Thus a `Promise` or `Object` binding in such a module can get a `$N` suffix that it does not need. This cost is deliberate, like the costs of principle 2.
+
 ## Rejected alternatives
 
 - **One shadowing pass for each kind of generated reference.** The previous design used this method. `collect_chunk_scope_captured_names` listed the names that CJS closures captured: wrapper bindings, IIFE factory parameters, order-wrap symbols and cross-chunk wrapper bindings. `rename_cjs_locals_shadowing_referenced_chunk_bindings` renamed the locals of CJS closures, one channel at a time: named imports, star imports and `require()`. Each new kind of generated reference needed one more case. The passes used five different methods to decide if a name is free. When a case was missing, the output ran but read the wrong binding, frequently with no error.

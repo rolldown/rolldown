@@ -316,14 +316,13 @@ impl WatchTask {
 /// Absolute, normalized form of `output.file` / `output.dir` for `BundleEnd.output`.
 // See internal-docs/watch-mode/implementation.md ("API Contract").
 fn resolve_output_path(cwd: &Path, output: &str) -> PathBuf {
-  let output = Path::new(output);
-  let path = join_absolute(cwd, output);
-  let absolute_path = if path.is_absolute() {
-    path
-  } else {
-    std::env::current_dir().map_or(path.clone(), |current_dir| join_absolute(&current_dir, &path))
-  };
+  // Same join as `Bundle::bundle_write`, then the resolution `std::fs` applies when it writes:
+  // on Windows `absolute` is `GetFullPathNameW`, so a drive-relative `D:out.js` (which `join`
+  // lets replace `cwd`) resolves against the process's current directory for that drive.
+  let joined = cwd.join(output);
+  let absolute_path = std::path::absolute(&joined).unwrap_or(joined);
 
+  // `absolute` keeps `..` on Unix; resolve it lexically, like Rollup's `path.resolve`.
   let mut normalized = PathBuf::new();
   for component in absolute_path.components() {
     match component {
@@ -338,45 +337,6 @@ fn resolve_output_path(cwd: &Path, output: &str) -> PathBuf {
     }
   }
   normalized
-}
-
-/// `Path::join` that keeps the result absolute for Windows drive-relative paths (`C:foo`),
-/// which `join` would otherwise let replace `base`.
-fn join_absolute(base: &Path, path: &Path) -> PathBuf {
-  if path.is_absolute() {
-    return path.to_path_buf();
-  }
-
-  #[cfg(windows)]
-  if let Some(Component::Prefix(prefix)) = path.components().next()
-    && let std::path::Prefix::Disk(drive) = prefix.kind()
-    && !path.has_root()
-  {
-    let remainder: PathBuf = path.components().skip(1).collect();
-    let base_drive = match base.components().next() {
-      Some(Component::Prefix(base_prefix)) => match base_prefix.kind() {
-        std::path::Prefix::Disk(d) | std::path::Prefix::VerbatimDisk(d) => Some(d),
-        _ => None,
-      },
-      _ => None,
-    };
-    return if drive_relative_uses_base(drive, base_drive) {
-      base.join(remainder)
-    } else {
-      // Per-drive current directories are process state we do not track: use the drive root.
-      let mut resolved = PathBuf::from(format!("{}:\\", char::from(drive)));
-      resolved.push(remainder);
-      resolved
-    };
-  }
-
-  base.join(path)
-}
-
-/// A drive-relative path resolves against `base` only on the same drive (letters ignore case).
-#[cfg(any(windows, test))]
-fn drive_relative_uses_base(path_drive: u8, base_drive: Option<u8>) -> bool {
-  base_drive.is_some_and(|base_drive| base_drive.eq_ignore_ascii_case(&path_drive))
 }
 
 /// Outcome of a build attempt
@@ -408,22 +368,30 @@ mod tests {
     assert_eq!(resolve_output_path(&cwd, &above_root), root.join("x.js"));
   }
 
-  #[test]
-  fn drive_relative_decision_logic() {
-    assert!(drive_relative_uses_base(b'C', Some(b'C')));
-    assert!(drive_relative_uses_base(b'c', Some(b'C')));
-    assert!(!drive_relative_uses_base(b'D', Some(b'C')));
-    // A base without a disk prefix (UNC) cannot anchor a drive-relative path.
-    assert!(!drive_relative_uses_base(b'C', None));
-  }
-
   #[cfg(windows)]
   #[test]
-  fn windows_drive_relative_output_path_resolves_against_cwd() {
-    let cwd = PathBuf::from(r"C:\proj");
-    assert_eq!(resolve_output_path(&cwd, "C:bundle.js"), PathBuf::from(r"C:\proj\bundle.js"));
-    assert_eq!(resolve_output_path(&cwd, "c:bundle.js"), PathBuf::from(r"C:\proj\bundle.js"));
-    assert_eq!(resolve_output_path(&cwd, "D:bundle.js"), PathBuf::from(r"D:\bundle.js"));
-    assert_eq!(resolve_output_path(&cwd, r"\bundle.js"), PathBuf::from(r"C:\bundle.js"));
+  fn windows_drive_relative_output_path_matches_the_written_file() {
+    // The writer joins `cwd` (which a drive-relative path replaces) and lets the OS resolve the
+    // rest from the process's per-drive current directory, not from `cwd`.
+    let process_cwd = std::env::current_dir().expect("current directory");
+    let Some(Component::Prefix(prefix)) = process_cwd.components().next() else { return };
+    let std::path::Prefix::Disk(drive) = prefix.kind() else { return };
+    let drive = char::from(drive);
+    let other_cwd = PathBuf::from(format!(r"{drive}:\rolldown-not-the-process-cwd"));
+    assert_eq!(
+      resolve_output_path(&other_cwd, &format!("{drive}:bundle.js")),
+      process_cwd.join("bundle.js")
+    );
+    // Another drive: whatever `GetFullPathNameW` picks (its current directory, else its root).
+    let other = if drive.eq_ignore_ascii_case(&'Z') { 'Y' } else { 'Z' };
+    let output = format!("{other}:bundle.js");
+    assert_eq!(
+      resolve_output_path(&other_cwd, &output),
+      std::path::absolute(&output).expect("absolute")
+    );
+    assert_eq!(
+      resolve_output_path(&other_cwd, r"\bundle.js"),
+      PathBuf::from(format!(r"{drive}:\bundle.js"))
+    );
   }
 }

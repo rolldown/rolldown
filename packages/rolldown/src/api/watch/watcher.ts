@@ -113,17 +113,20 @@ export async function createWatcher(
   input: WatchOptions | WatchOptions[],
 ): Promise<void> {
   const options = arraify(input);
-  const bundlerOptions = await Promise.all(
-    options
-      .map((option) =>
+  // One group per config: the outputs of one config share its watch options.
+  const bundlerOptionsByConfig = await Promise.all(
+    options.map((option) =>
+      Promise.all(
         arraify(option.output || {}).map(async (output) => {
           const inputOptions = await PluginDriver.callOptionsHook(option, true);
           return createBundlerOptions(inputOptions, output, true);
         }),
-      )
-      .flat(),
+      ),
+    ),
   );
-  warnMultipleWatcherOptions(bundlerOptions);
+  const bundlerOptions = bundlerOptionsByConfig.flat();
+  // Count each config once, or a config with several outputs warns against itself.
+  warnMultipleWatcherOptions(bundlerOptionsByConfig.flatMap((group) => group.slice(0, 1)));
   const callback = createEventCallback(emitter);
   const bindingWatcher = new BindingWatcher(
     bundlerOptions.map((option) => option.bundlerOptions),

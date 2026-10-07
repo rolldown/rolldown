@@ -420,5 +420,6 @@ fn rename_shadowing_symbols_in_nested_scopes<'a>(
     ));
 
     ctx.rename_bindings_shadowing_cjs_ambient_names(output_format);
+    ctx.rename_cjs_root_bindings_shadowing_lowered_import();
   }
 }

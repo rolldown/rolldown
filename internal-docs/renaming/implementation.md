@@ -50,12 +50,13 @@ Paths are relative to `crates/rolldown/src/`.
 
 ## Inner bindings
 
-`NestedScopeRenamer` runs four passes for each module:
+`NestedScopeRenamer` runs five passes for each module:
 
 - `rename_bindings_shadowing_star_imports`: for each resolved `ns.foo` member access, it checks the name that the finalizer prints for `foo`.
 - `rename_bindings_shadowing_named_imports`: for each reference to a named import, it checks the name that the finalizer prints for the import.
 - `rename_bindings_shadowing_wrapper_params`: it renames the nested bindings that have the name of the `exports` or `module` parameter of the CJS closure of a CJS-wrapped module. Under IIFE/UMD/CJS output, it also renames the nested bindings that have the name of the factory parameter of an external module.
 - `rename_bindings_shadowing_cjs_ambient_names`: CJS output only. It renames the inner bindings with the name `require`, `__filename` or `__dirname`, because rewrites print these names as bare identifiers.
+- `rename_cjs_root_bindings_shadowing_lowered_import`: in a CJS-wrapped module that has an `import()`, it renames the root bindings with the name `Promise` or `Object`. A lowered `import()` prints these names inside the CJS closure. For a top-level binding, `Renamer::new` reserves them.
 
 The first two passes use `Renamer::printed_name`. This function follows a namespace alias to its namespace binding, as `finalized_expr_for_symbol_ref` does. The passes also use `rename_bindings_on_path`, which goes through the scope ancestors of the reference. It stops at the root scope, unless `root_scope_is_inner` is true (the module is CJS-wrapped). It renames each binding with that name, except the binding that the reference resolves to.
 

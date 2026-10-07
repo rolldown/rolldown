@@ -292,12 +292,6 @@
   "rollup@form@namespace-optimization-in-operator: it does static optimization of internal namespaces when checking whether an export exists",
   "rollup@form@preserves-comments-after-imports: preserves comments between imports and first statement@generates es",
   "rollup@form@reexport-self: handles recursions when a module reexports its own namespace",
-  "rollup@form@same-variable-returns: resolves return values when all return statements return the same variable",
-  "rollup@form@try-statement-deoptimization@follow-properties: retains callbacks of feature detection helpers that are accessed as properties",
-  "rollup@form@try-statement-deoptimization@integer-keys: retains callbacks of feature detection helpers that are accessed via integer keys and does not retain callbacks for integer keys without a matching property",
-  "rollup@form@try-statement-deoptimization@reassigned-helpers-deactivated: tree-shakes callbacks of reassigned feature detection helpers when the deoptimization is deactivated",
-  "rollup@form@try-statement-deoptimization@reassigned-helpers: retains callbacks of feature detection helpers that are reached through reassigned variables",
-  "rollup@form@unresolved-property-call-arguments: keeps the arguments side effects of calls to unresolvable properties",
   "rollup@function@catch-scope-nested-deconflicting: deconflicts nested catch scope parameters correctly",
   "rollup@function@emit-file@no-input: It is not necessary to provide an input if a dynamic entry is emitted",
   "rollup@function@resolveid-recursive-call: skipSelf: true option in resolveId hook option should skip the plugin if it has been called before with the same id and importer, see #5768 for more details"

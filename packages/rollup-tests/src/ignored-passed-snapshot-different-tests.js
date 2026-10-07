@@ -151,6 +151,7 @@ module.exports = [
     // Passed. `undefined` -> `void 0`
     "rollup@form@proper-this-context: make sure \"this\" respects the context for arrow functions",
     "rollup@form@this-is-undefined: top-level `this` expression is rewritten as `undefined`@generates es",
+    "rollup@form@unresolved-property-call-arguments: keeps the arguments side effects of calls to unresolvable properties",
 
     // Passed, but sourcemap/code is different from rollup
     "rollup@function@sourcemap-true-generatebundle: emits sourcemaps before generateBundle hook",

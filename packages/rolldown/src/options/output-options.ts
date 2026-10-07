@@ -1021,10 +1021,18 @@ export type AdvancedChunksGroup = CodeSplittingGroup;
  * Options for `codeSplitting.experimentalInlineCommonChunks`.
  *
  * Small common chunks produced by automatic code splitting are replaced by a factory function
- * that is copied into the chunks reading them (a chunk whose static dependency already carries the
- * factory uses that copy). A registry in the runtime chunk makes sure the chunk's modules keep one
+ * that is copied into the chunks reading them, unless every known entry loading path already registers
+ * the factory. A registry in the runtime chunk makes sure the chunk's modules keep one
  * state, one execution and one set of export identities across all copies, so no entry downloads
  * code it could not reach with the option off.
+ *
+ * Non-entry chunks rely on loading paths visible to the build. Loading one by its
+ * output URL through an unresolved import or external module can bypass required registrations.
+ * Emit independently loaded modules as entries, using `this.emitFile` with
+ * `preserveSignature: 'strict'` when their exports must be preserved. Alternatively, exclude
+ * their shared dependencies from inlining, including transitive dependencies.
+ * Static cycles through external modules back into generated output, including entries, are
+ * unsupported. Bundle the modules forming such cycles together or exclude their shared dependencies.
  *
  * Before enabling it, check the plugins and code shapes that see a chunk's modules as one file:
  *

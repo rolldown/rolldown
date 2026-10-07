@@ -254,9 +254,8 @@ impl<'a> GenerateStage<'a> {
           .is_some_and(|rendered_modules| rendered_modules.contains(&importer_idx))
       },
     );
-    // A file that reads inline common chunk records names the carried records' modules together
-    // with its own; a record is also named on its own, for the rendering its id hashes. See
-    // internal-docs/inline-common-chunks/implementation.md ("Deconflicting").
+    // A file names its carried records' modules together with its own.
+    // See internal-docs/inline-common-chunks/implementation.md ("Deconflicting").
     let inline_naming_inputs = self.inline_naming_inputs(&chunk_graph);
     debug_span!("deconflict_chunk_symbols").in_scope(|| {
       // Borrow the chunk table mutably alongside the assignment tables it does not touch, so
@@ -267,6 +266,7 @@ impl<'a> GenerateStage<'a> {
         ChunkAssignments::new(&*module_to_chunk, &*post_chunk_optimization_operations);
       let inline_names = chunk_table
         .par_iter_mut_enumerated()
+        .filter(|(chunk_idx, _)| !self.inline_state.is_record(*chunk_idx))
         .filter_map(|(chunk_idx, chunk)| {
           let names = deconflict_chunk_symbols(
             chunk_idx,

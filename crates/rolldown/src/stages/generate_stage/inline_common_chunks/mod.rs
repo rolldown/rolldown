@@ -1,7 +1,7 @@
 //! `output.codeSplitting.experimentalInlineCommonChunks`.
 //!
 //! A selected common chunk ("record") is not written as a file. Every file that carries it (a
-//! reader, unless a static dependency outside its import cycle already registers it) prints its
+//! reader, unless every known entry loading path already registers it) prints its
 //! own copy of the record's modules inside a registry factory (`__share(id, (exports) => {
 //! ... })`), finalized and named as part of that file, and every reader obtains the shared
 //! exports object through `__share_require(id)` ("bridge"). The decisions live here, separate from `ChunkGraph`:
@@ -42,7 +42,7 @@ pub struct InlineCommonChunksState {
   records: FxIndexMap<ChunkIdx, InlineRecord>,
   /// Who reads and who carries each record, computed at selection.
   placement: InlinePlacement,
-  /// File or record -> the names its deconflict pass chose for the feature's bindings.
+  /// File -> the names its deconflict pass chose for the feature's bindings.
   names: FxHashMap<ChunkIdx, FileInlineNames>,
   runtime_chunk: Option<ChunkIdx>,
 }
@@ -53,8 +53,8 @@ pub struct InlineRecord {
   pub id: ArcStr,
 }
 
-/// The bindings `experimentalInlineCommonChunks` adds to one output file, or to a record's own
-/// rendering, named by that chunk's deconflict pass together with everything else it declares.
+/// The bindings `experimentalInlineCommonChunks` adds to one output file,
+/// named by that file's deconflict pass together with everything else it declares.
 #[derive(Debug)]
 pub struct FileInlineNames {
   /// The parameter every factory printed in the file receives the registry's exports object in.

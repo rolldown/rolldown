@@ -32,7 +32,6 @@ impl InlinePlacement {
 pub(super) fn compute_placement(
   static_importees: &IndexVec<ChunkIdx, FxHashSet<ChunkIdx>>,
   dynamic_importees: &IndexVec<ChunkIdx, FxIndexSet<ChunkIdx>>,
-  untracked_dynamic_importers: &FxHashSet<ChunkIdx>,
   is_live: impl Fn(ChunkIdx) -> bool,
   is_entry: impl Fn(ChunkIdx) -> bool,
   exec_order: impl Fn(ChunkIdx) -> u32,
@@ -141,7 +140,6 @@ pub(super) fn compute_placement(
   prune_async_inherited_records(
     &projected,
     dynamic_importees,
-    untracked_dynamic_importers,
     &is_entry,
     records,
     &registered,
@@ -158,16 +156,12 @@ pub(super) fn compute_placement(
 fn prune_async_inherited_records(
   projected: &FxHashMap<ChunkIdx, FxHashSet<ChunkIdx>>,
   dynamic_importees: &IndexVec<ChunkIdx, FxIndexSet<ChunkIdx>>,
-  untracked_dynamic_importers: &FxHashSet<ChunkIdx>,
   is_entry: &impl Fn(ChunkIdx) -> bool,
   records: &FxIndexSet<ChunkIdx>,
   registered: &FxHashMap<ChunkIdx, FxHashSet<ChunkIdx>>,
   carried: &mut FxHashMap<ChunkIdx, Vec<ChunkIdx>>,
 ) {
-  if carried.is_empty()
-    || (untracked_dynamic_importers.is_empty()
-      && dynamic_importees.iter().all(FxIndexSet::is_empty))
-  {
+  if carried.is_empty() || dynamic_importees.iter().all(FxIndexSet::is_empty) {
     return;
   }
   let record_count = u32::try_from(records.len()).expect("Too many inline records");
@@ -200,12 +194,10 @@ fn prune_async_inherited_records(
     at_dynamic_import.extend(registered[&file].iter().map(|record| record_bits[record]));
     // A static dependency evaluates before the importing file's registrations. A dynamic
     // import runs after those registrations and its dependencies outside the static cycle.
-    let unknown_targets = untracked_dynamic_importers.contains(&file).then(|| projected.keys());
     for (&target, available) in projected[&file]
       .iter()
       .map(|target| (target, &at_start))
       .chain(projected_dynamic[&file].iter().map(|target| (target, &at_dynamic_import)))
-      .chain(unknown_targets.into_iter().flatten().map(|target| (target, &at_dynamic_import)))
     {
       if !projected.contains_key(&target) {
         continue;
@@ -308,7 +300,6 @@ mod tests {
     compute_placement(
       &static_importees,
       &dynamic_importees,
-      &FxHashSet::default(),
       |_| true,
       |chunk_idx| entries.contains(&chunk_idx.raw()),
       ChunkIdx::raw,
@@ -410,7 +401,6 @@ mod tests {
     let placement = compute_placement(
       &static_importees,
       &IndexVec::from_vec(vec![FxIndexSet::default(); 3]),
-      &FxHashSet::default(),
       |chunk_idx| chunk_idx != idx(1),
       |_| true,
       ChunkIdx::raw,

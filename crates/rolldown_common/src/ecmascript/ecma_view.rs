@@ -53,8 +53,10 @@ pub enum ThisExprReplaceKind {
   /// It depends on `context` set by the user. If it's unset, replace it with `undefined`.
   Context,
   /// The top-level `this` of a CommonJS module, which is the initial exports object of the module.
-  /// The finalizer prints it as `EcmaView::cjs_this_ref`. The HMR finalizer prints its own exports
-  /// reference instead.
+  /// If the finalizer prints the module inside a CJS closure, it prints `this` as
+  /// `EcmaView::cjs_this_ref`. If the module is an unwrapped CommonJS entry, the finalizer keeps
+  /// `this`, which is the module `this` of Node. The HMR finalizer prints its own exports reference
+  /// instead.
   Exports,
 }
 
@@ -158,10 +160,12 @@ pub struct EcmaView {
   /// matching Rollup, so duplicates are meaningful.
   pub rolldown_file_url_references: Vec<RolldownFileUrlReference>,
   pub this_expr_replace_map: FxHashMap<NodeId, ThisExprReplaceKind>,
-  /// The binding that the finalizer prints for the top-level `this` of a CommonJS module. It is a
-  /// parameter of the CJS closure, and the runtime passes the initial exports object of the module
-  /// to it. The renamer gives it a name, so the module cannot declare or assign a binding with that
-  /// name. See internal-docs/renaming/design.md.
+  /// The facade symbol for the top-level `this` of a CommonJS module. The scanner makes it for each
+  /// CommonJS module that reads its top-level `this`. If the finalizer prints the module inside a
+  /// CJS closure, the renamer gives the symbol a name, and the finalizer prints it as the third
+  /// parameter of the closure. The runtime passes the initial exports object of the module to that
+  /// parameter. The name is synthesized, so no binding of the module can capture it. An unwrapped
+  /// CommonJS entry does not use this symbol. See internal-docs/renaming/design.md.
   pub cjs_this_ref: Option<SymbolRef>,
 
   pub hmr_hot_ref: Option<SymbolRef>,

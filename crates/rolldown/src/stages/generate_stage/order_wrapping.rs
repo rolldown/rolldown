@@ -21,6 +21,7 @@ use rolldown_common::{
 };
 use rolldown_ecmascript::EcmaAst;
 use rolldown_ecmascript_utils::StatementExt;
+use rolldown_utils::concat_string;
 use rustc_hash::{FxHashMap, FxHashSet};
 
 use super::{
@@ -1442,7 +1443,7 @@ fn lower_order_state(
       input.modules[module_idx].as_normal().expect("order wrap only applies to normal modules");
     let wrapper_ref = output
       .symbols
-      .create_facade_root_symbol_ref(module_idx, &format!("init_{}", module.repr_name));
+      .create_facade_root_symbol_ref(module_idx, &concat_string!("init_", module.repr_name));
     output.state.insert_order_wrapper(module_idx, wrapper_ref, runtime_helper);
     if order_wrapper_is_reexport_transparent(
       &input.linking[module_idx],

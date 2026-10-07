@@ -2,7 +2,9 @@ use derive_more::Debug;
 use std::{future::Future, pin::Pin, sync::Arc};
 
 use arcstr::ArcStr;
-use rolldown_utils::sanitize_filename::default_sanitize_file_name;
+use rolldown_utils::sanitize_filename::{
+  default_sanitize_file_name, default_sanitize_relative_file_name,
+};
 
 type SanitizeFileNameFunction = dyn Fn(&str) -> Pin<Box<dyn Future<Output = anyhow::Result<String>> + Send + 'static>>
   + Send
@@ -33,6 +35,15 @@ impl SanitizeFilename {
         }
       }
       Self::Fn(value) => value(name).await.map(Into::into),
+    }
+  }
+
+  /// Like [`Self::call`], for a name relative to the output directory, where a leading
+  /// `X:` is never a drive prefix. A user-provided function receives the name unchanged.
+  pub async fn call_relative(&self, name: &str) -> anyhow::Result<ArcStr> {
+    match self {
+      Self::Boolean(true) => Ok(default_sanitize_relative_file_name(name).into()),
+      _ => self.call(name).await,
     }
   }
 

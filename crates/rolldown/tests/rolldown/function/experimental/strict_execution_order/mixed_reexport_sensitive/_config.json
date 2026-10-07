@@ -1,0 +1,11 @@
+{
+  "config": {
+    "strictExecutionOrder": true
+  },
+  "configVariants": [
+    {
+      "_configName": "no-optimization",
+      "chunkOptimization": false
+    }
+  ]
+}

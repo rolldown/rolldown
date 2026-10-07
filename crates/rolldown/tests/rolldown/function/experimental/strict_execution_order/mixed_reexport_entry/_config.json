@@ -1,0 +1,15 @@
+{
+  "config": {
+    "strictExecutionOrder": true
+  },
+  "configVariants": [
+    {
+      "_configName": "no-optimization",
+      "chunkOptimization": false
+    },
+    {
+      "_configName": "on-demand",
+      "onDemandWrapping": true
+    }
+  ]
+}

@@ -1,0 +1,154 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+import { t as __esmMin } from "./rolldown-runtime.js";
+//#region value.js
+var VALUE;
+function init_value() {
+	return (init_value = __esmMin((() => {
+		VALUE = { value: "entry" };
+	})))();
+}
+//#endregion
+//#region main.js
+var LOCAL, load;
+function init_main() {
+	return (init_main = __esmMin((() => {
+		init_value();
+		LOCAL = "local";
+		load = () => import("./shared.js").then((module) => module.FORWARDED);
+	})))();
+}
+//#endregion
+init_main();
+export { LOCAL, VALUE, load };
+
+```
+
+## rolldown-runtime.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+export { __esmMin as t };
+
+```
+
+## shared.js
+
+```js
+import { t as __esmMin } from "./rolldown-runtime.js";
+//#region forwarded.js
+var FORWARDED;
+function init_forwarded() {
+	return (init_forwarded = __esmMin((() => {
+		FORWARDED = { value: "dynamic" };
+	})))();
+}
+//#endregion
+//#region shared.js
+function init_shared() {
+	return (init_shared = __esmMin((() => {
+		init_forwarded();
+	})))();
+}
+//#endregion
+init_shared();
+export { FORWARDED };
+
+```
+
+# Variant: no-optimization: [chunk_optimization: Bool(false)]
+
+## Assets
+
+### main.js
+
+```js
+import { t as __esmMin } from "./rolldown-runtime.js";
+//#region value.js
+var VALUE;
+function init_value() {
+	return (init_value = __esmMin((() => {
+		VALUE = { value: "entry" };
+	})))();
+}
+//#endregion
+//#region main.js
+var LOCAL, load;
+function init_main() {
+	return (init_main = __esmMin((() => {
+		init_value();
+		LOCAL = "local";
+		load = () => import("./shared.js").then((module) => module.FORWARDED);
+	})))();
+}
+//#endregion
+init_main();
+export { LOCAL, VALUE, load };
+
+```
+
+### rolldown-runtime.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+export { __esmMin as t };
+
+```
+
+### shared.js
+
+```js
+import { t as __esmMin } from "./rolldown-runtime.js";
+//#region forwarded.js
+var FORWARDED;
+function init_forwarded() {
+	return (init_forwarded = __esmMin((() => {
+		FORWARDED = { value: "dynamic" };
+	})))();
+}
+//#endregion
+//#region shared.js
+function init_shared() {
+	return (init_shared = __esmMin((() => {
+		init_forwarded();
+	})))();
+}
+//#endregion
+init_shared();
+export { FORWARDED };
+
+```
+
+# Variant: on-demand: [on_demand_wrapping: true]
+
+## Assets
+
+### main.js
+
+```js
+//#region value.js
+const VALUE = { value: "entry" };
+//#endregion
+//#region main.js
+const LOCAL = "local";
+const load = () => import("./shared.js").then((module) => module.FORWARDED);
+//#endregion
+export { LOCAL, VALUE, load };
+
+```
+
+### shared.js
+
+```js
+//#region forwarded.js
+const FORWARDED = { value: "dynamic" };
+//#endregion
+export { FORWARDED };
+
+```

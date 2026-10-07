@@ -1,0 +1,330 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## lazy-a.js
+
+```js
+import { t as __esmMin } from "./rolldown-runtime.js";
+import { n as init_shared } from "./shared.js";
+//#region a.js
+var A;
+function init_a() {
+	return (init_a = __esmMin((() => {
+		A = { value: "a" };
+	})))();
+}
+//#endregion
+//#region lazy-a.js
+function read() {
+	return A;
+}
+function init_lazy_a() {
+	return (init_lazy_a = __esmMin((() => {
+		init_a(), init_shared();
+	})))();
+}
+//#endregion
+init_lazy_a();
+export { read };
+
+```
+
+## lazy-b.js
+
+```js
+import { t as __esmMin } from "./rolldown-runtime.js";
+import { n as init_shared } from "./shared.js";
+//#region b.js
+var B;
+function init_b() {
+	return (init_b = __esmMin((() => {
+		B = { value: "b" };
+	})))();
+}
+//#endregion
+//#region lazy-b.js
+function read() {
+	return B;
+}
+function init_lazy_b() {
+	return (init_lazy_b = __esmMin((() => {
+		init_b(), init_shared();
+	})))();
+}
+//#endregion
+init_lazy_b();
+export { read };
+
+```
+
+## main.js
+
+```js
+import { t as __esmMin } from "./rolldown-runtime.js";
+import { n as init_shared, t as LOCAL } from "./shared.js";
+//#region main.js
+var local, loadA, loadB;
+function init_main() {
+	return (init_main = __esmMin((() => {
+		init_shared();
+		local = LOCAL;
+		loadA = () => import("./lazy-a.js").then((module) => module.read());
+		loadB = () => import("./lazy-b.js").then((module) => module.read());
+	})))();
+}
+//#endregion
+init_main();
+export { loadA, loadB, local };
+
+```
+
+## rolldown-runtime.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+export { __esmMin as t };
+
+```
+
+## shared.js
+
+```js
+import { t as __esmMin } from "./rolldown-runtime.js";
+//#region required.js
+var REQUIRED;
+function init_required() {
+	return (init_required = __esmMin((() => {
+		globalThis.events.push("required");
+		REQUIRED = "required";
+	})))();
+}
+//#endregion
+//#region shared.js
+var LOCAL;
+function init_shared() {
+	return (init_shared = __esmMin((() => {
+		init_required();
+		globalThis.events.push("shared");
+		LOCAL = REQUIRED;
+	})))();
+}
+//#endregion
+export { init_shared as n, LOCAL as t };
+
+```
+
+# Variant: no-optimization: [chunk_optimization: Bool(false)]
+
+## Assets
+
+### lazy-a.js
+
+```js
+import { t as __esmMin } from "./rolldown-runtime.js";
+import { n as init_shared } from "./shared.js";
+//#region a.js
+var A;
+function init_a() {
+	return (init_a = __esmMin((() => {
+		A = { value: "a" };
+	})))();
+}
+//#endregion
+//#region lazy-a.js
+function read() {
+	return A;
+}
+function init_lazy_a() {
+	return (init_lazy_a = __esmMin((() => {
+		init_a(), init_shared();
+	})))();
+}
+//#endregion
+init_lazy_a();
+export { read };
+
+```
+
+### lazy-b.js
+
+```js
+import { t as __esmMin } from "./rolldown-runtime.js";
+import { n as init_shared } from "./shared.js";
+//#region b.js
+var B;
+function init_b() {
+	return (init_b = __esmMin((() => {
+		B = { value: "b" };
+	})))();
+}
+//#endregion
+//#region lazy-b.js
+function read() {
+	return B;
+}
+function init_lazy_b() {
+	return (init_lazy_b = __esmMin((() => {
+		init_b(), init_shared();
+	})))();
+}
+//#endregion
+init_lazy_b();
+export { read };
+
+```
+
+### main.js
+
+```js
+import { t as __esmMin } from "./rolldown-runtime.js";
+import { n as init_shared, t as LOCAL } from "./shared.js";
+//#region main.js
+var local, loadA, loadB;
+function init_main() {
+	return (init_main = __esmMin((() => {
+		init_shared();
+		local = LOCAL;
+		loadA = () => import("./lazy-a.js").then((module) => module.read());
+		loadB = () => import("./lazy-b.js").then((module) => module.read());
+	})))();
+}
+//#endregion
+init_main();
+export { loadA, loadB, local };
+
+```
+
+### rolldown-runtime.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+export { __esmMin as t };
+
+```
+
+### shared.js
+
+```js
+import { t as __esmMin } from "./rolldown-runtime.js";
+//#region required.js
+var REQUIRED;
+function init_required() {
+	return (init_required = __esmMin((() => {
+		globalThis.events.push("required");
+		REQUIRED = "required";
+	})))();
+}
+//#endregion
+//#region shared.js
+var LOCAL;
+function init_shared() {
+	return (init_shared = __esmMin((() => {
+		init_required();
+		globalThis.events.push("shared");
+		LOCAL = REQUIRED;
+	})))();
+}
+//#endregion
+export { init_shared as n, LOCAL as t };
+
+```
+
+# Variant: on-demand: [on_demand_wrapping: true]
+
+## Assets
+
+### lazy-a.js
+
+```js
+import "./shared.js";
+//#region a.js
+const A = { value: "a" };
+//#endregion
+//#region lazy-a.js
+function read() {
+	return A;
+}
+//#endregion
+export { read };
+
+```
+
+### lazy-b.js
+
+```js
+import "./shared.js";
+//#region b.js
+const B = { value: "b" };
+//#endregion
+//#region lazy-b.js
+function read() {
+	return B;
+}
+//#endregion
+export { read };
+
+```
+
+### main.js
+
+```js
+import { t as LOCAL } from "./shared.js";
+//#region main.js
+const local = LOCAL;
+const loadA = () => import("./lazy-a.js").then((module) => module.read());
+const loadB = () => import("./lazy-b.js").then((module) => module.read());
+//#endregion
+export { loadA, loadB, local };
+
+```
+
+### shared.js
+
+```js
+//#region required.js
+globalThis.events.push("required");
+const REQUIRED = "required";
+//#endregion
+//#region shared.js
+globalThis.events.push("shared");
+const LOCAL = REQUIRED;
+//#endregion
+export { LOCAL as t };
+
+```
+
+# Variant: minified-cjs: [format: Cjs] [minify: true]
+
+## Assets
+
+### lazy-a.js
+
+```js
+const e=require("./rolldown-runtime.js"),t=require("./shared.js");var n;function r(){return(r=e.t((()=>{n={value:`a`}})))()}function i(){return n}function a(){return(a=e.t((()=>{r(),t.n()})))()}a(),exports.read=i;
+```
+
+### lazy-b.js
+
+```js
+const e=require("./rolldown-runtime.js"),t=require("./shared.js");var n;function r(){return(r=e.t((()=>{n={value:`b`}})))()}function i(){return n}function a(){return(a=e.t((()=>{r(),t.n()})))()}a(),exports.read=i;
+```
+
+### main.js
+
+```js
+Object.defineProperty(exports,Symbol.toStringTag,{value:`Module`});const e=require("./rolldown-runtime.js"),t=require("./shared.js");var n,r,i;function a(){return(a=e.t((()=>{t.n(),n=t.t,r=()=>Promise.resolve().then(()=>require("./lazy-a.js")).then(e=>e.read()),i=()=>Promise.resolve().then(()=>require("./lazy-b.js")).then(e=>e.read())})))()}a(),exports.loadA=r,exports.loadB=i,exports.local=n;
+```
+
+### rolldown-runtime.js
+
+```js
+var e=(e,t,n)=>()=>{if(n)throw n[0];try{return e&&(t=e(e=0)),t}catch(e){throw n=[e],e}};Object.defineProperty(exports,"t",{enumerable:!0,get:function(){return e}});
+```
+
+### shared.js
+
+```js
+const e=require("./rolldown-runtime.js");var t;function n(){return(n=e.t((()=>{globalThis.events.push(`required`),t=`required`})))()}var r;function i(){return(i=e.t((()=>{n(),globalThis.events.push(`shared`),r=t})))()}Object.defineProperty(exports,"n",{enumerable:!0,get:function(){return i}}),Object.defineProperty(exports,"t",{enumerable:!0,get:function(){return r}});
+```

@@ -1,6 +1,7 @@
 import './cases/require';
 import './cases/manual_reexport';
 import './cases/deconflict_import_bindings';
+import './cases/string_import_name';
 
 if (import.meta.hot) {
   import.meta.hot.accept();

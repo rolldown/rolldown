@@ -21,9 +21,12 @@ __rolldown_runtime__.registerGraph({
 		"cases/deconflict_import_bindings/foo.mjs",
 		"cases/deconflict_import_bindings/foo/index.mjs",
 		"cases/deconflict_import_bindings/index.js",
+		"cases/string_import_name/lib.js",
+		"cases/string_import_name/reexport.js",
+		"cases/string_import_name/index.js",
 		"main.js"
 	],
-	localCount: 12,
+	localCount: 15,
 	edges: [
 		[],
 		[0],
@@ -45,10 +48,18 @@ __rolldown_runtime__.registerGraph({
 			9,
 			0
 		],
+		[0],
+		[11, 0],
+		[
+			11,
+			12,
+			0
+		],
 		[
 			4,
 			7,
-			10
+			10,
+			13
 		]
 	]
 });
@@ -131,13 +142,13 @@ assert.strictEqual(requiredUmdLib.foo, "foo");
 }
 //#endregion
 //#region cases/manual_reexport/lib.js
-var lib_exports = /* @__PURE__ */ __exportAll({
+var lib_exports$1 = /* @__PURE__ */ __exportAll({
 	Globals: () => Globals,
 	value: () => "lib"
 });
 init_trigger_dep();
 __rolldown_runtime__.createModuleHotContext("cases/manual_reexport/lib.js");
-__rolldown_runtime__.registerModule("cases/manual_reexport/lib.js", { exports: lib_exports });
+__rolldown_runtime__.registerModule("cases/manual_reexport/lib.js", { exports: lib_exports$1 });
 const Globals = Object;
 //#endregion
 //#region cases/manual_reexport/barrel.js
@@ -178,6 +189,26 @@ __rolldown_runtime__.registerModule("cases/deconflict_import_bindings/index.js",
 assert.strictEqual("foo", "foo");
 assert.strictEqual(foo, "foo-index");
 //#endregion
+//#region cases/string_import_name/lib.js
+var lib_exports = /* @__PURE__ */ __exportAll({ "a-b": () => "lib" });
+init_trigger_dep();
+__rolldown_runtime__.createModuleHotContext("cases/string_import_name/lib.js");
+__rolldown_runtime__.registerModule("cases/string_import_name/lib.js", { exports: lib_exports });
+//#endregion
+//#region cases/string_import_name/reexport.js
+var reexport_exports = /* @__PURE__ */ __exportAll({ value: () => "lib" });
+init_trigger_dep();
+__rolldown_runtime__.createModuleHotContext("cases/string_import_name/reexport.js");
+__rolldown_runtime__.registerModule("cases/string_import_name/reexport.js", { exports: reexport_exports });
+//#endregion
+//#region cases/string_import_name/index.js
+var string_import_name_exports = /* @__PURE__ */ __exportAll({});
+init_trigger_dep();
+__rolldown_runtime__.createModuleHotContext("cases/string_import_name/index.js");
+__rolldown_runtime__.registerModule("cases/string_import_name/index.js", { exports: string_import_name_exports });
+assert.strictEqual("lib", "lib");
+assert.strictEqual("lib", "lib");
+//#endregion
 //#region main.js
 var main_exports = /* @__PURE__ */ __exportAll({});
 const main_hot = __rolldown_runtime__.createModuleHotContext("main.js");
@@ -192,7 +223,7 @@ if (main_hot) main_hot.accept();
 ## Code
 
 ```js
-__rolldown_runtime__.registerGraph({ids:["cases/deconflict_import_bindings/foo.mjs","cases/deconflict_import_bindings/foo/index.mjs","cases/deconflict_import_bindings/index.js","cases/manual_reexport/barrel.js","cases/manual_reexport/index.js","cases/manual_reexport/lib.js","cases/require/cjs-lib-reassign-module-exports.js","cases/require/cjs-lib.js","cases/require/index.js","cases/require/umd-lib.js","main.js","trigger-dep.js"],localCount:12,edges:[[11],[11],[0,1,11],[5,11],[3,11],[11],[11],[11],[11,6,7,9],[11],[8,4,2],[]],stamps:{11:1}});
+__rolldown_runtime__.registerGraph({ids:["cases/deconflict_import_bindings/foo.mjs","cases/deconflict_import_bindings/foo/index.mjs","cases/deconflict_import_bindings/index.js","cases/manual_reexport/barrel.js","cases/manual_reexport/index.js","cases/manual_reexport/lib.js","cases/require/cjs-lib-reassign-module-exports.js","cases/require/cjs-lib.js","cases/require/index.js","cases/require/umd-lib.js","cases/string_import_name/index.js","cases/string_import_name/lib.js","cases/string_import_name/reexport.js","main.js","trigger-dep.js"],localCount:15,edges:[[14],[14],[0,1,14],[5,14],[3,14],[14],[14],[14],[14,6,7,9],[14],[11,12,14],[14],[11,14],[8,4,2,10],[]],stamps:{14:1}});
 //#region cases/deconflict_import_bindings/foo.mjs
 __rolldown_runtime__.registerFactory("cases/deconflict_import_bindings/foo.mjs", (function(__rolldown_module_id__) {
 	try {
@@ -391,17 +422,65 @@ __rolldown_runtime__.registerFactory("cases/require/umd-lib.js", (function(__rol
 }));
 
 //#endregion
+//#region cases/string_import_name/index.js
+import * as import_node_assert_100 from "node:assert";
+__rolldown_runtime__.registerFactory("cases/string_import_name/index.js", (function(__rolldown_module_id__) {
+	try {
+		var __rolldown_exports__ = __rolldown_runtime__.__exportAll({});
+		__rolldown_runtime__.registerModule(__rolldown_module_id__, { exports: __rolldown_exports__ });
+		__rolldown_runtime__.initModule("cases/string_import_name/lib.js");
+		var import_lib_101 = __rolldown_runtime__.loadExports("cases/string_import_name/lib.js");
+		__rolldown_runtime__.initModule("cases/string_import_name/reexport.js");
+		var import_reexport_102 = __rolldown_runtime__.loadExports("cases/string_import_name/reexport.js");
+		__rolldown_runtime__.initModule("trigger-dep.js");
+		var import_trigger_dep_103 = __rolldown_runtime__.loadExports("trigger-dep.js");
+		const hot_string_import_name = __rolldown_runtime__.createModuleHotContext(__rolldown_module_id__);
+		import_node_assert_100.default.strictEqual(import_lib_101["a-b"], "lib");
+		import_node_assert_100.default.strictEqual(import_reexport_102.value, "lib");
+	} finally {}
+}));
+
+//#endregion
+//#region cases/string_import_name/lib.js
+__rolldown_runtime__.registerFactory("cases/string_import_name/lib.js", (function(__rolldown_module_id__) {
+	try {
+		var __rolldown_exports__ = __rolldown_runtime__.__exportAll({ ["a-b"]: () => value });
+		__rolldown_runtime__.registerModule(__rolldown_module_id__, { exports: __rolldown_exports__ });
+		__rolldown_runtime__.initModule("trigger-dep.js");
+		var import_trigger_dep_110 = __rolldown_runtime__.loadExports("trigger-dep.js");
+		const hot_lib = __rolldown_runtime__.createModuleHotContext(__rolldown_module_id__);
+		const value = "lib";
+	} finally {}
+}));
+
+//#endregion
+//#region cases/string_import_name/reexport.js
+__rolldown_runtime__.registerFactory("cases/string_import_name/reexport.js", (function(__rolldown_module_id__) {
+	try {
+		var __rolldown_exports__ = __rolldown_runtime__.__exportAll({ value: () => import_lib_120["a-b"] });
+		__rolldown_runtime__.registerModule(__rolldown_module_id__, { exports: __rolldown_exports__ });
+		__rolldown_runtime__.initModule("cases/string_import_name/lib.js");
+		var import_lib_120 = __rolldown_runtime__.loadExports("cases/string_import_name/lib.js");
+		__rolldown_runtime__.initModule("trigger-dep.js");
+		var import_trigger_dep_121 = __rolldown_runtime__.loadExports("trigger-dep.js");
+		const hot_reexport = __rolldown_runtime__.createModuleHotContext(__rolldown_module_id__);
+	} finally {}
+}));
+
+//#endregion
 //#region main.js
 __rolldown_runtime__.registerFactory("main.js", (function(__rolldown_module_id__) {
 	try {
 		var __rolldown_exports__ = __rolldown_runtime__.__exportAll({});
 		__rolldown_runtime__.registerModule(__rolldown_module_id__, { exports: __rolldown_exports__ });
 		__rolldown_runtime__.initModule("cases/require/index.js");
-		var import_require_100 = __rolldown_runtime__.loadExports("cases/require/index.js");
+		var import_require_130 = __rolldown_runtime__.loadExports("cases/require/index.js");
 		__rolldown_runtime__.initModule("cases/manual_reexport/index.js");
-		var import_manual_reexport_101 = __rolldown_runtime__.loadExports("cases/manual_reexport/index.js");
+		var import_manual_reexport_131 = __rolldown_runtime__.loadExports("cases/manual_reexport/index.js");
 		__rolldown_runtime__.initModule("cases/deconflict_import_bindings/index.js");
-		var import_deconflict_import_bindings_102 = __rolldown_runtime__.loadExports("cases/deconflict_import_bindings/index.js");
+		var import_deconflict_import_bindings_132 = __rolldown_runtime__.loadExports("cases/deconflict_import_bindings/index.js");
+		__rolldown_runtime__.initModule("cases/string_import_name/index.js");
+		var import_string_import_name_133 = __rolldown_runtime__.loadExports("cases/string_import_name/index.js");
 		const hot_main = __rolldown_runtime__.createModuleHotContext(__rolldown_module_id__);
 		if (hot_main) {
 			hot_main.accept();

@@ -1249,7 +1249,9 @@ impl GenerateStage<'_> {
           // The resolver below only changes placement for consumer-local waypoints. Check that
           // cheap route fact before scanning all named imports and included statement references
           // for importer-local binding demand.
-          if !pre_chunk_order_state.is_consumer_local_reexport_route(importee_idx) {
+          if !pre_chunk_order_state.is_consumer_local_reexport_route(importee_idx)
+            && !pre_chunk_order_state.has_consumer_local_reexport_records(importee_idx)
+          {
             continue;
           }
           let has_live_binding =

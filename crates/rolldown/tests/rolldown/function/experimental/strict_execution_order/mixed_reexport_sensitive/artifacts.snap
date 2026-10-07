@@ -1,0 +1,200 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## lazy.js
+
+```js
+import { n as __exportAll, t as __esmMin } from "./rolldown-runtime.js";
+import { a as state, i as init_state, n as init_shared } from "./shared.js";
+//#region snapshots/value.js
+var SNAPSHOT;
+function init_value() {
+	return (init_value = __esmMin((() => {
+		init_state();
+		SNAPSHOT = state;
+	})))();
+}
+//#endregion
+//#region pure.js
+var PURE;
+function init_pure() {
+	return (init_pure = __esmMin((() => {
+		PURE = "pure";
+	})))();
+}
+//#endregion
+//#region lazy.js
+var lazy_exports = /* @__PURE__ */ __exportAll({ read: () => read });
+function read() {
+	return [SNAPSHOT, PURE];
+}
+function init_lazy() {
+	return (init_lazy = __esmMin((() => {
+		init_pure(), init_shared();
+	})))();
+}
+//#endregion
+export { lazy_exports as n, init_value as r, init_lazy as t };
+
+```
+
+## main.js
+
+```js
+import { t as __esmMin } from "./rolldown-runtime.js";
+import { i as init_state, n as init_shared, r as bump, t as LOCAL } from "./shared.js";
+//#region main.js
+var local, load;
+function init_main() {
+	return (init_main = __esmMin((() => {
+		init_shared();
+		init_state();
+		local = LOCAL;
+		bump();
+		load = () => import("./lazy.js").then((n) => (n.t(), n.n)).then((module) => module.read());
+	})))();
+}
+//#endregion
+init_main();
+export { load, local };
+
+```
+
+## rolldown-runtime.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+export { __exportAll as n, __esmMin as t };
+
+```
+
+## shared.js
+
+```js
+import { t as __esmMin } from "./rolldown-runtime.js";
+import { r as init_value } from "./lazy.js";
+//#region state.js
+function bump() {
+	state++;
+}
+var state;
+function init_state() {
+	return (init_state = __esmMin((() => {
+		state = 0;
+	})))();
+}
+//#endregion
+//#region shared.js
+var LOCAL;
+function init_shared() {
+	return (init_shared = __esmMin((() => {
+		init_value();
+		LOCAL = "local";
+	})))();
+}
+//#endregion
+export { state as a, init_state as i, init_shared as n, bump as r, LOCAL as t };
+
+```
+
+# Variant: no-optimization: [chunk_optimization: Bool(false)]
+
+## Assets
+
+### lazy.js
+
+```js
+import { n as __exportAll, t as __esmMin } from "./rolldown-runtime.js";
+import { a as state, i as init_state, n as init_shared } from "./shared.js";
+//#region snapshots/value.js
+var SNAPSHOT;
+function init_value() {
+	return (init_value = __esmMin((() => {
+		init_state();
+		SNAPSHOT = state;
+	})))();
+}
+//#endregion
+//#region pure.js
+var PURE;
+function init_pure() {
+	return (init_pure = __esmMin((() => {
+		PURE = "pure";
+	})))();
+}
+//#endregion
+//#region lazy.js
+var lazy_exports = /* @__PURE__ */ __exportAll({ read: () => read });
+function read() {
+	return [SNAPSHOT, PURE];
+}
+function init_lazy() {
+	return (init_lazy = __esmMin((() => {
+		init_pure(), init_shared();
+	})))();
+}
+//#endregion
+export { lazy_exports as n, init_value as r, init_lazy as t };
+
+```
+
+### main.js
+
+```js
+import { t as __esmMin } from "./rolldown-runtime.js";
+import { i as init_state, n as init_shared, r as bump, t as LOCAL } from "./shared.js";
+//#region main.js
+var local, load;
+function init_main() {
+	return (init_main = __esmMin((() => {
+		init_shared();
+		init_state();
+		local = LOCAL;
+		bump();
+		load = () => import("./lazy.js").then((n) => (n.t(), n.n)).then((module) => module.read());
+	})))();
+}
+//#endregion
+init_main();
+export { load, local };
+
+```
+
+### rolldown-runtime.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+export { __exportAll as n, __esmMin as t };
+
+```
+
+### shared.js
+
+```js
+import { t as __esmMin } from "./rolldown-runtime.js";
+import { r as init_value } from "./lazy.js";
+//#region state.js
+function bump() {
+	state++;
+}
+var state;
+function init_state() {
+	return (init_state = __esmMin((() => {
+		state = 0;
+	})))();
+}
+//#endregion
+//#region shared.js
+var LOCAL;
+function init_shared() {
+	return (init_shared = __esmMin((() => {
+		init_value();
+		LOCAL = "local";
+	})))();
+}
+//#endregion
+export { state as a, init_state as i, init_shared as n, bump as r, LOCAL as t };
+
+```

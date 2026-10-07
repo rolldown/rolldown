@@ -1,6 +1,6 @@
 use std::{
   borrow::Cow,
-  collections::BTreeMap,
+  collections::{BTreeMap, BTreeSet},
   path::{Path, PathBuf},
   process::Command,
 };
@@ -274,6 +274,88 @@ async fn wrap_all_mode_wraps_even_hazard_free_output() {
     wrap_all.values().any(|code| code.contains("init_")),
     "wrap-all output should contain order wrappers",
   );
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn mixed_reexports_keep_lazy_consumers_out_of_static_imports() {
+  for (fixture, lazy_modules) in [
+    ("../../issues/11145", &["lazy.js", "values.js"][..]),
+    (
+      "../experimental/strict_execution_order/mixed_reexport_records",
+      &["lazy-a.js", "lazy-b.js", "a.js", "b.js"][..],
+    ),
+  ] {
+    for on_demand_wrapping in [false, true] {
+      for chunk_optimization in [false, true] {
+        let mut bundler = Bundler::new(BundlerOptions {
+          input: Some(vec![InputItem {
+            name: Some("main".to_string()),
+            import: "./main.js".to_string(),
+          }]),
+          cwd: Some(format!("{FIXTURE_ROOT}/{fixture}").into()),
+          format: Some(OutputFormat::Esm),
+          entry_filenames: Some("[name].js".to_string().into()),
+          strict_execution_order: Some(true),
+          experimental: Some(rolldown_common::ExperimentalOptions {
+            on_demand_wrapping: Some(on_demand_wrapping),
+            chunk_optimization: Some(rolldown_common::ChunkOptimizationOption::Bool(
+              chunk_optimization,
+            )),
+            ..Default::default()
+          }),
+          ..Default::default()
+        })
+        .expect("bundler should be created");
+        let chunks = bundler
+          .generate()
+          .await
+          .expect("build should succeed")
+          .assets
+          .into_iter()
+          .filter_map(|output| match output {
+            Output::Chunk(chunk) => Some((chunk.filename.to_string(), chunk)),
+            Output::Asset(_) => None,
+          })
+          .collect::<BTreeMap<_, _>>();
+        let mut assertions = vec![("main.js", lazy_modules)];
+        if lazy_modules.contains(&"lazy-a.js") {
+          for (root, forbidden) in
+            [("lazy-a.js", &["lazy-b.js", "b.js"][..]), ("lazy-b.js", &["lazy-a.js", "a.js"][..])]
+          {
+            let chunk = chunks
+              .values()
+              .find(|chunk| {
+                chunk
+                  .module_ids
+                  .iter()
+                  .any(|id| Path::new(id.as_str()).file_name().is_some_and(|name| name == root))
+              })
+              .expect("lazy module should be emitted");
+            assertions.push((chunk.filename.as_str(), forbidden));
+          }
+        }
+        for (root, forbidden) in assertions {
+          let mut pending = vec![root];
+          let mut visited = BTreeSet::new();
+          while let Some(filename) = pending.pop() {
+            if !visited.insert(filename) {
+              continue;
+            }
+            let chunk = chunks.get(filename).expect("static dependency should be emitted");
+            for id in &chunk.module_ids {
+              assert!(
+                !Path::new(id.as_str())
+                  .file_name()
+                  .is_some_and(|name| { forbidden.iter().any(|forbidden| name == *forbidden) }),
+                "{root} statically loads {id} through {filename} (on-demand: {on_demand_wrapping}, chunk optimization: {chunk_optimization})",
+              );
+            }
+            pending.extend(chunk.imports.iter().map(arcstr::ArcStr::as_str));
+          }
+        }
+      }
+    }
+  }
 }
 
 #[tokio::test(flavor = "multi_thread")]

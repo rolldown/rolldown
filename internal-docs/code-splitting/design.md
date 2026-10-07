@@ -167,9 +167,9 @@ inline mode as tree shaking. Module-global leaf or namespace liveness is deliber
 because another importer can make the same canonical symbol live without retaining it for this
 consumer.
 
-The optimization is deliberately restricted to source modules whose body consists entirely of
-direct re-exports. Tree shaking must be enabled, and the module must not be in a synchronous
-`import`/`require` SCC, be the target of an opaque CommonJS `require()`, carry top-level await or a
+The CJS-carrier optimization is deliberately restricted to source modules whose body consists
+entirely of direct re-exports. Tree shaking must be enabled, and the module must not be in a
+synchronous `import`/`require` SCC, be the target of an opaque CommonJS `require()`, carry top-level await or a
 TLA dependency, expose dynamic exports, require a missing-export shim, or be a concatenated
 wrapper. CJS `export *` is also excluded because its namespace is dynamic. These shapes keep the
 existing monolithic initialization path. Rejecting a synchronous SCC is the first-line cycle
@@ -189,6 +189,30 @@ from the incoming consumer that chose them. Preserving waypoint modules keeps ev
 routing barrel reachable without reopening its union of unrelated leaves. A barrel that is itself
 a user or dynamic entry exposes its complete namespace and therefore uses the conservative full
 traversal and an entry prologue containing every statically known target.
+
+A wrapped mixed ESM module keeps its own guarded initializer for local code and mandatory dependencies.
+Eligible direct re-export records route initialization from the binding consumer instead: importing
+`LOCAL` from `export * from './values.js'; export const LOCAL = 'local'` calls only the mixed
+module's initializer, while importing a forwarded binding also initializes its defining module.
+The routing decision is per record, so evaluating the local body cannot discharge a later
+consumer's demand for a forwarded binding. The existing module guards preserve one-time execution.
+If on-demand wrapping leaves the mixed module unwrapped, consumers retain the initialization
+obligations that its included statements do not discharge.
+
+A routed target must be side-effect-free and have no `ExecutionOrderSensitive` module in its static
+or binding dependency closure, apart from the inert runtime helpers. Side-effect metadata alone is
+insufficient: a pure initializer can snapshot an imported mutable value, and postponing that read changes the exported value. The
+closure includes excluded forwarding modules and conservatively includes unused static records.
+Interop wrappers, synchronous cycles, require targets, TLA, dynamic exports, missing-export shims,
+concatenated modules, and no-treeshake contracts retain their current initialization. Namespace-valued
+re-exports and mixed modules with an opaque namespace consumer also retain the monolithic path;
+namespace getters have their own static loading dependencies. A statically resolved namespace member
+read can still select an ordinary forwarded binding.
+
+Mixed modules keep their complete `load_dependencies` traversal. Their local bodies may depend on
+imports even when forwarding work is consumer-local, so the empty-barrel shortcut does not apply.
+Entry activation includes the retained forwarded targets followed by the mixed module's local
+initializer, including activation at a collapsed dynamic-entry call site.
 
 A namespace synthesized only to replace a collapsed dynamic-entry facade is not an opaque namespace
 consumer. Its getters are restricted to the export interface already retained by link-time
@@ -384,7 +408,7 @@ pub struct OrderImportOverlay {
 - entry facades are explicit chunk-graph changes made by the caller after lowering, while required runtime symbols are derived from synthetic statements and import overlays;
 - namespace requirements retain the live importer modules that require each namespace, so a dead overlay cannot keep a namespace alive;
 - nested re-export records and consumed facades preserve the frozen tree-shaking decisions used by re-export init routing;
-- the table stays empty when no wrappers or import overlays are needed.
+- consumer-local re-export records can remain in the table even when no wrappers or import overlays are needed.
 
 ### Lowering API boundary
 

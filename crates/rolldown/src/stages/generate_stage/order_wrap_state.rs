@@ -19,6 +19,7 @@ pub struct OrderWrapState {
   modules: FxHashMap<ModuleIdx, OrderWrappedModule>,
   reexport_init_transparent: FxHashSet<ModuleIdx>,
   consumer_local_reexport_routes: FxHashSet<ModuleIdx>,
+  consumer_local_reexport_records: FxHashMap<ModuleIdx, FxHashSet<ImportRecordIdx>>,
   consumer_local_namespace_targets: FxHashMap<ModuleIdx, Vec<WrappedEsmInitTarget>>,
   cjs_carriers: FxHashMap<OrderCjsCarrierKey, OrderCjsCarrier>,
   cjs_carriers_by_importee: FxHashMap<ModuleIdx, Vec<OrderCjsCarrierKey>>,
@@ -431,6 +432,30 @@ impl OrderWrapState {
 
   pub(crate) fn has_consumer_local_reexport_routes(&self) -> bool {
     !self.consumer_local_reexport_routes.is_empty()
+      || !self.consumer_local_reexport_records.is_empty()
+  }
+
+  pub(crate) fn insert_consumer_local_reexport_record(
+    &mut self,
+    module_idx: ModuleIdx,
+    rec_idx: ImportRecordIdx,
+  ) {
+    self.consumer_local_reexport_records.entry(module_idx).or_default().insert(rec_idx);
+  }
+
+  pub(crate) fn has_consumer_local_reexport_records(&self, module_idx: ModuleIdx) -> bool {
+    self.consumer_local_reexport_records.contains_key(&module_idx)
+  }
+
+  pub(crate) fn is_consumer_local_reexport_record(
+    &self,
+    module_idx: ModuleIdx,
+    rec_idx: ImportRecordIdx,
+  ) -> bool {
+    self
+      .consumer_local_reexport_records
+      .get(&module_idx)
+      .is_some_and(|records| records.contains(&rec_idx))
   }
 
   pub(crate) fn set_consumer_local_namespace_targets(

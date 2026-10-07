@@ -1,0 +1,287 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## lazy.js
+
+```js
+import { t as __esmMin } from "./rolldown-runtime.js";
+import { n as init_shared } from "./shared.js";
+//#region values.js
+var LAZY;
+function init_values() {
+	return (init_values = __esmMin((() => {
+		LAZY = "lazy";
+	})))();
+}
+//#endregion
+//#region lazy.js
+function read() {
+	return LAZY;
+}
+function init_lazy() {
+	return (init_lazy = __esmMin((() => {
+		init_values(), init_shared();
+	})))();
+}
+//#endregion
+init_lazy();
+export { read };
+
+```
+
+## main.js
+
+```js
+import { t as __esmMin } from "./rolldown-runtime.js";
+import { n as init_shared, t as LOCAL } from "./shared.js";
+//#region main.js
+var local, load;
+function init_main() {
+	return (init_main = __esmMin((() => {
+		init_shared();
+		local = LOCAL;
+		load = () => import("./lazy.js").then((module) => module.read());
+	})))();
+}
+//#endregion
+init_main();
+export { load, local };
+
+```
+
+## rolldown-runtime.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+export { __esmMin as t };
+
+```
+
+## shared.js
+
+```js
+import { t as __esmMin } from "./rolldown-runtime.js";
+//#region shared.js
+var LOCAL;
+function init_shared() {
+	return (init_shared = __esmMin((() => {
+		LOCAL = "local";
+	})))();
+}
+//#endregion
+export { init_shared as n, LOCAL as t };
+
+```
+
+# Variant: no-optimization: [chunk_optimization: Bool(false)]
+
+## Assets
+
+### lazy.js
+
+```js
+import { t as __esmMin } from "./rolldown-runtime.js";
+import { n as init_shared } from "./shared.js";
+//#region values.js
+var LAZY;
+function init_values() {
+	return (init_values = __esmMin((() => {
+		LAZY = "lazy";
+	})))();
+}
+//#endregion
+//#region lazy.js
+function read() {
+	return LAZY;
+}
+function init_lazy() {
+	return (init_lazy = __esmMin((() => {
+		init_values(), init_shared();
+	})))();
+}
+//#endregion
+init_lazy();
+export { read };
+
+```
+
+### main.js
+
+```js
+import { t as __esmMin } from "./rolldown-runtime.js";
+import { n as init_shared, t as LOCAL } from "./shared.js";
+//#region main.js
+var local, load;
+function init_main() {
+	return (init_main = __esmMin((() => {
+		init_shared();
+		local = LOCAL;
+		load = () => import("./lazy.js").then((module) => module.read());
+	})))();
+}
+//#endregion
+init_main();
+export { load, local };
+
+```
+
+### rolldown-runtime.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+export { __esmMin as t };
+
+```
+
+### shared.js
+
+```js
+import { t as __esmMin } from "./rolldown-runtime.js";
+//#region shared.js
+var LOCAL;
+function init_shared() {
+	return (init_shared = __esmMin((() => {
+		LOCAL = "local";
+	})))();
+}
+//#endregion
+export { init_shared as n, LOCAL as t };
+
+```
+
+# Variant: on-demand: [on_demand_wrapping: true]
+
+## Assets
+
+### lazy.js
+
+```js
+//#region values.js
+const LAZY = "lazy";
+//#endregion
+//#region lazy.js
+function read() {
+	return LAZY;
+}
+//#endregion
+export { read };
+
+```
+
+### main.js
+
+```js
+import { t as LOCAL } from "./shared.js";
+//#region main.js
+const local = LOCAL;
+const load = () => import("./lazy.js").then((module) => module.read());
+//#endregion
+export { load, local };
+
+```
+
+### shared.js
+
+```js
+//#region shared.js
+const LOCAL = "local";
+//#endregion
+export { LOCAL as t };
+
+```
+
+# Variant: on-demand-cjs: [format: Cjs] [on_demand_wrapping: true]
+
+## Assets
+
+### lazy.js
+
+```js
+//#region values.js
+const LAZY = "lazy";
+//#endregion
+//#region lazy.js
+function read() {
+	return LAZY;
+}
+//#endregion
+exports.read = read;
+
+```
+
+### main.js
+
+```js
+Object.defineProperty(exports, Symbol.toStringTag, { value: "Module" });
+//#region main.js
+const local = require("./shared.js").LOCAL;
+const load = () => Promise.resolve().then(() => require("./lazy.js")).then((module) => module.read());
+//#endregion
+exports.load = load;
+exports.local = local;
+
+```
+
+### shared.js
+
+```js
+//#region shared.js
+const LOCAL = "local";
+//#endregion
+Object.defineProperty(exports, "LOCAL", {
+	enumerable: true,
+	get: function() {
+		return LOCAL;
+	}
+});
+
+```
+
+# Variant: on-demand-cjs-no-optimization: [chunk_optimization: Bool(false)] [format: Cjs] [on_demand_wrapping: true]
+
+## Assets
+
+### lazy.js
+
+```js
+//#region values.js
+const LAZY = "lazy";
+//#endregion
+//#region lazy.js
+function read() {
+	return LAZY;
+}
+//#endregion
+exports.read = read;
+
+```
+
+### main.js
+
+```js
+Object.defineProperty(exports, Symbol.toStringTag, { value: "Module" });
+//#region main.js
+const local = require("./shared.js").LOCAL;
+const load = () => Promise.resolve().then(() => require("./lazy.js")).then((module) => module.read());
+//#endregion
+exports.load = load;
+exports.local = local;
+
+```
+
+### shared.js
+
+```js
+//#region shared.js
+const LOCAL = "local";
+//#endregion
+Object.defineProperty(exports, "LOCAL", {
+	enumerable: true,
+	get: function() {
+		return LOCAL;
+	}
+});
+
+```

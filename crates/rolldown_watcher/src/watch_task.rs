@@ -322,7 +322,8 @@ fn resolve_output_path(cwd: &Path, output: &str) -> PathBuf {
   let joined = cwd.join(output);
   let absolute_path = std::path::absolute(&joined).unwrap_or(joined);
 
-  // `absolute` keeps `..` on Unix; resolve it lexically, like Rollup's `path.resolve`.
+  // `absolute` keeps `..` (on Unix) and a trailing separator; resolve both lexically, like
+  // Rollup's `path.resolve`: `components()` yields no separator, so `dist/` reports as `dist`.
   let mut normalized = PathBuf::new();
   for component in absolute_path.components() {
     match component {
@@ -359,6 +360,8 @@ mod tests {
   fn relative_output_path_is_resolved_and_normalized() {
     let cwd = std::env::current_dir().expect("current directory");
     assert_eq!(resolve_output_path(&cwd, "./nested/../dist/out.js"), cwd.join("dist/out.js"));
+    // `Path` equality ignores a trailing separator, so compare the reported string.
+    assert_eq!(resolve_output_path(&cwd, "dist/").as_os_str(), cwd.join("dist").as_os_str());
 
     let absolute = cwd.join("absolute.js");
     assert_eq!(resolve_output_path(&cwd, absolute.to_string_lossy().as_ref()), absolute);

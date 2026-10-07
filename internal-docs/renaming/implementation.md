@@ -36,7 +36,7 @@ Paths are relative to `crates/rolldown/src/`.
 
 `Renamer::add_symbol_in_root_scope(symbol_ref, kind)` asks the resolver for the original name of the symbol:
 
-- `Authored`: the renamer accepts the original name if the resolver has it free. A `$N` candidate must also not be bound in a nested scope of the module that owns the symbol (`is_name_available_with`). There, the candidate would capture the references of the renamed binding itself.
+- `Authored`: the renamer accepts the original name if the resolver has it free. A `$N` candidate must also not be bound in any scope of the module that owns the symbol (`is_name_available_with`). In a nested scope, the candidate would capture the references of the renamed binding itself. In the root scope of a CJS-wrapped module, the resolver does not see the binding, so the candidate would declare the same name two times.
 - `Synthesized`: no candidate can be in `InnerBindingNames`, original or not.
 
 `root_binding_kind` returns `Synthesized` for runtime-module symbols and for the facades that a normal module owns. A facade that represents a binding with a source name is an exception: a re-export (in `named_imports`), `default_export_ref`, and `shimmed_missing_exports`. The symbols of external modules are `Authored`, because their names come from the importing source.

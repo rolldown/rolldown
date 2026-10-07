@@ -124,22 +124,29 @@ test('a repeated close() does not run closeBundle again', async () => {
   expect(bundle.closed).toBe(true);
 });
 
-test('concurrent close() calls run the native close once', async () => {
+test('concurrent close() calls run the native close once and settle together', async () => {
   let closeBundleCalls = 0;
+  let closeBundleEnded = false;
   const bundle = await rolldown({
     input: './main.js',
     cwd: import.meta.dirname,
     plugins: [
       {
         name: 'test',
-        closeBundle() {
+        async closeBundle() {
           closeBundleCalls++;
+          await new Promise((resolve) => setTimeout(resolve, 50));
+          closeBundleEnded = true;
         },
       },
     ],
   });
   await bundle.generate();
-  await Promise.all([bundle.close(), bundle.close()]);
+  const first = bundle.close();
+  // The second call waits for the first close; `closeBundle` has ended once it returns.
+  await bundle.close();
+  expect(closeBundleEnded).toBe(true);
+  await first;
   expect(closeBundleCalls).toBe(1);
   expect(bundle.closed).toBe(true);
 });

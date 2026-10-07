@@ -125,8 +125,18 @@ export async function createWatcher(
     ),
   );
   const bundlerOptions = bundlerOptionsByConfig.flat();
-  // Count each config once, or a config with several outputs warns against itself.
-  warnMultipleWatcherOptions(bundlerOptionsByConfig.flatMap((group) => group.slice(0, 1)));
+  // The `options` hook runs per output and may return different watcher settings,
+  // so collapse by value: identical settings count once per config, divergent ones still warn.
+  warnMultipleWatcherOptions(
+    bundlerOptionsByConfig.flatMap((group) => {
+      const seen = new Map<string, BundlerOptionWithStopWorker>();
+      for (const option of group) {
+        const key = watcherOptionsKey(option);
+        if (!seen.has(key)) seen.set(key, option);
+      }
+      return [...seen.values()];
+    }),
+  );
   const callback = createEventCallback(emitter);
   const bindingWatcher = new BindingWatcher(
     bundlerOptions.map((option) => option.bundlerOptions),
@@ -139,11 +149,27 @@ export async function createWatcher(
   );
 }
 
+function getWatcherOptions(option: BundlerOptionWithStopWorker) {
+  const watch = option.inputOptions.watch;
+  return watch && typeof watch === 'object' ? watch.watcher : undefined;
+}
+
+function watcherOptionsKey(option: BundlerOptionWithStopWorker): string {
+  const watcher = getWatcherOptions(option);
+  return JSON.stringify([
+    watcher?.usePolling,
+    watcher?.pollInterval,
+    watcher?.compareContentsForPolling,
+    watcher?.useDebounce,
+    watcher?.debounceDelay,
+    watcher?.debounceTickRate,
+  ]);
+}
+
 function warnMultipleWatcherOptions(bundlerOptions: BundlerOptionWithStopWorker[]) {
   let found = false;
   for (const option of bundlerOptions) {
-    const watch = option.inputOptions.watch;
-    const watcher = watch && typeof watch === 'object' ? watch.watcher : undefined;
+    const watcher = getWatcherOptions(option);
     // Mirrors selects_watcher_backend in crates/rolldown_binding/src/watcher.rs
     if (
       watcher &&

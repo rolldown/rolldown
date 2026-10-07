@@ -78,7 +78,7 @@ A binding that a `require()` call initializes stays a local of the CJS closure, 
 
 7. **A wrapper binds only the parameters that rolldown prints.** A wrapper adds a scope that is not in the source. Thus each binding of the wrapper is between the references of the module and their targets. The CJS closure is an arrow function, and an arrow function binds no implicit names. A `function` also binds `this`, `arguments` and `new.target`, so it changes the bindings that these references of the module resolve to.
 
-   One function, `cjs_wrapper_fixed_params`, gives the parameters of the CJS closure (`exports`, `module`, and the `this` binding). The printer and the top-level reservation both use this function. Thus no top-level binding has the name of a parameter, and a parameter cannot capture a reference to a top-level binding.
+   One function, `cjs_wrapper_fixed_params`, gives the fixed parameters of the CJS closure: `exports` and `module`. The printer and the top-level reservation both use this function, so no top-level binding has the name of a fixed parameter. After the fixed parameters, the finalizer (`cjs_wrapper_params`) adds the `this` binding, which is synthesized, so invariant S keeps all bindings of the chunk off its name. Thus a parameter cannot capture a reference to a top-level binding.
 
 ## Rejected alternatives
 

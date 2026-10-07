@@ -96,6 +96,7 @@ export class RolldownBuild {
     // them: a second native close runs `closeBundle` again, and on wasm it spawns onto the async
     // runtime the first one released, which traps. The first caller gets any error; a repeat only
     // waits.
+    // See internal-docs/rust-classic-bundler/implementation.md ("Close Mechanism").
     if (this.#closing) {
       await this.#closing.catch(noop);
       return;

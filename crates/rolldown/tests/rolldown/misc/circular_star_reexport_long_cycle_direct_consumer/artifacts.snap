@@ -7,8 +7,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 import "./b.js";
-import { foo } from "./d.js";
-export { foo };
+export { foo } from "./d.js";
 
 ```
 
@@ -23,9 +22,8 @@ import "./c.js";
 ## c.js
 
 ```js
-import { foo } from "./d.js";
+export { foo } from "./d.js";
 import "./a.js";
-export { foo };
 
 ```
 

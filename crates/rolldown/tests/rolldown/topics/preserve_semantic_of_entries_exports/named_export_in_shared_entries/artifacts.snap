@@ -17,7 +17,6 @@ export { main_default as default, foo };
 ## entry2.js
 
 ```js
-import main_default, { foo } from "./entry.js";
-export { main_default as default, foo };
+export { default, foo } from "./entry.js";
 
 ```

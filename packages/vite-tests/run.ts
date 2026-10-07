@@ -2,12 +2,12 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { styleText } from 'node:util';
 import { x } from 'tinyexec';
+import { parseDocument } from 'yaml';
 
 const VITE_DIR = path.resolve(import.meta.dirname, '../../vite');
 const REPO_PATH = path.resolve(import.meta.dirname, './repo');
 const ROLLDOWN_DIR = path.resolve(import.meta.dirname, '../rolldown');
-// JSON string = valid YAML double-quoted scalar, so Windows backslashes survive.
-const ROLLDOWN_OVERRIDE = `  rolldown: ${JSON.stringify(`link:${ROLLDOWN_DIR}`)}`;
+const ROLLDOWN_OVERRIDE = `link:${ROLLDOWN_DIR}`;
 
 function printTitle(title: string) {
   console.info(styleText(['cyan', 'bold'], title));
@@ -64,34 +64,17 @@ await runCmdAndPipeOrExit(
 );
 
 // Write the `rolldown` override ourselves: Vite no longer carries a
-// `rolldown: $rolldown` line for us to rewrite.
-function withRolldownOverride(yaml: string): string {
-  const lines = yaml.split('\n');
-  const start = lines.findIndex(line => line.startsWith('overrides:'));
-  if (start === -1) {
-    return `${yaml.endsWith('\n') ? yaml : `${yaml}\n`}overrides:\n${ROLLDOWN_OVERRIDE}\n`;
-  }
-  if (!/^overrides:\s*$/.test(lines[start])) {
-    throw new Error(`Expected a block \`overrides:\` mapping, got: ${lines[start]}`);
-  }
-  let end = start + 1;
-  while (end < lines.length && (lines[end].trim() === '' || /^\s/.test(lines[end]))) end++;
-  const existing = lines
-    .slice(start + 1, end)
-    .findIndex(line => /^\s+['"]?rolldown['"]?\s*:/.test(line));
-  if (existing === -1) {
-    lines.splice(start + 1, 0, ROLLDOWN_OVERRIDE);
-  } else {
-    lines[start + 1 + existing] = ROLLDOWN_OVERRIDE;
-  }
-  return lines.join('\n');
-}
-
+// `rolldown: $rolldown` line for us to rewrite. A document edit keeps
+// comments and survives any YAML formatting Vite picks.
 printTitle('# Updating pnpm-workspace.yaml to link to local rolldown...');
 const pnpmWorkspace = path.resolve(REPO_PATH, 'pnpm-workspace.yaml');
-const newPnpmWorkspaceYaml = withRolldownOverride(fs.readFileSync(pnpmWorkspace, 'utf-8'));
-if (!newPnpmWorkspaceYaml.split('\n').includes(ROLLDOWN_OVERRIDE)) {
-  console.error(styleText(['red', 'bold'], `Failed to add \`${ROLLDOWN_OVERRIDE.trim()}\` to ${pnpmWorkspace}`));
+const workspaceDoc = parseDocument(fs.readFileSync(pnpmWorkspace, 'utf-8'));
+workspaceDoc.setIn(['overrides', 'rolldown'], ROLLDOWN_OVERRIDE);
+const newPnpmWorkspaceYaml = workspaceDoc.toString();
+if (parseDocument(newPnpmWorkspaceYaml).getIn(['overrides', 'rolldown']) !== ROLLDOWN_OVERRIDE) {
+  console.error(
+    styleText(['red', 'bold'], `Failed to set \`overrides.rolldown: ${ROLLDOWN_OVERRIDE}\` in ${pnpmWorkspace}`),
+  );
   process.exit(1);
 }
 fs.writeFileSync(pnpmWorkspace, newPnpmWorkspaceYaml, 'utf-8');

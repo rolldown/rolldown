@@ -31,8 +31,8 @@ export { foo as t };
 ### main.js
 
 ```js
-import { n as init_foo, t as foo } from "./vendor.js";
 import { t as __esmMin } from "./rolldown-runtime.js";
+import { n as init_foo, t as foo } from "./vendor.js";
 import nodeAssert from "node:assert";
 //#region main.js
 function init_main() {

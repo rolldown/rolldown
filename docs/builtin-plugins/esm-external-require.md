@@ -83,14 +83,14 @@ Since this plugin changes `require()` calls to `import` statements, there are so
 
 - resolution is now based on `import` behavior, not `require` behavior
   - For example, `import` condition is used instead of `require` condition
-- The values may be different from the original `require()` calls, especially for modules with default exports.
+- The values may be different from the original `require()` calls, especially for modules with default exports that don't expose a `'module.exports'` named export.
 
 ## How It Works
 
 This plugin intercepts `require()` calls for dependencies specified in the option and creates virtual facade modules that:
 
 1. Import the dependency using ESM `import * as m from '...'`
-2. Re-export it using `module.exports = m` for CommonJS compatibility
+2. Use the dependency's `'module.exports'` named export when present, or fall back to a copy of its namespace
 3. Replace the original `require()` with the virtual module reference
 
 For non-external `require()` calls, Rolldown automatically wraps them and converts them into ESM imports.
@@ -104,5 +104,9 @@ const react = require('builtin:esm-external-require-react');
 
 // Virtual module: builtin:esm-external-require-react
 import * as m from 'react';
-module.exports = m;
+module.exports = Object.prototype.hasOwnProperty.call(m, 'module.exports')
+  ? m['module.exports']
+  : { ...m };
 ```
+
+The `'module.exports'` named export follows [Node.js CommonJS namespace semantics](https://nodejs.org/api/esm.html#commonjs-namespaces). Node.js v23.0.0 and later adds it to the namespace of every CommonJS module, so `require()` receives the exact `module.exports` value, including callable, `null`, and `undefined` values. Modules that don't expose this export fall back to a plain copy of the namespace. Node.js built-in modules use their default export directly.

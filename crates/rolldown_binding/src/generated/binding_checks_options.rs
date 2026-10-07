@@ -22,6 +22,8 @@ pub struct BindingChecksOptions {
   pub configuration_field_conflict: Option<bool>,
   pub prefer_builtin_feature: Option<bool>,
   pub could_not_clean_directory: Option<bool>,
+  pub bundler_timings: Option<bool>,
+  /// Deprecated alias for `bundlerTimings`. Rolldown uses `bundlerTimings` if both options have values.
   pub plugin_timings: Option<bool>,
   pub duplicate_shebang: Option<bool>,
   pub unsupported_tsconfig_option: Option<bool>,
@@ -51,6 +53,7 @@ impl From<BindingChecksOptions> for rolldown_common::ChecksOptions {
       configuration_field_conflict: value.configuration_field_conflict,
       prefer_builtin_feature: value.prefer_builtin_feature,
       could_not_clean_directory: value.could_not_clean_directory,
+      bundler_timings: value.bundler_timings,
       plugin_timings: value.plugin_timings,
       duplicate_shebang: value.duplicate_shebang,
       unsupported_tsconfig_option: value.unsupported_tsconfig_option,

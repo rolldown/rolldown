@@ -10,8 +10,7 @@ import { t as __exportAll } from "./rolldown-runtime.js";
 __rolldown_runtime__.registerGraph({
 	ids: ["foo_inner.js", "foo.js"],
 	localCount: 2,
-	edges: [[], [0]],
-	dynamicEdges: [[], []]
+	edges: [[], [0]]
 });
 //#region foo_inner.js
 var foo_inner_exports = /* @__PURE__ */ __exportAll({ default: () => foo_inner_default });
@@ -36,8 +35,7 @@ import "./foo.js";
 __rolldown_runtime__.registerGraph({
 	ids: ["main.js", "foo.js"],
 	localCount: 1,
-	edges: [[1]],
-	dynamicEdges: [[]]
+	edges: [[1]]
 });
 //#region main.js
 var main_exports = /* @__PURE__ */ __exportAll({});

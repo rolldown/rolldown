@@ -111,6 +111,10 @@ test-vite: # We don't use `test-node-vite` because it's not expected to run in `
 test-webcontainer:
   vp run --filter browser-tests test:webcontainer
 
+# Install the packed `rolldown` with no binding at all and check that its WebContainer fallback loads the packed WASI binding. Plain Node, no WebContainer.
+test-webcontainer-fallback:
+  vp run --filter browser-tests test:webcontainer-fallback
+
 # Build `@rolldown/browser` and smoke test the packed artifact inside a real browser page.
 test-browser:
   vp run --filter browser-tests test:browser

@@ -6,9 +6,18 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## a.js
 
 ```js
+import "./b.js";
 import { foo } from "./e.js";
 import "./d.js";
 export { foo };
+
+```
+
+## b.js
+
+```js
+import "./e.js";
+import "./a.js";
 
 ```
 

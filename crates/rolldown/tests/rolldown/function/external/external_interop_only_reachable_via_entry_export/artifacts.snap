@@ -20,6 +20,11 @@ console.log(node_https.default.Agent.name);
 ```js
 Object.defineProperty(exports, Symbol.toStringTag, { value: "Module" });
 let node_https = require("node:https");
-exports.foo = node_https.request;
+Object.defineProperty(exports, "foo", {
+	enumerable: true,
+	get: function() {
+		return node_https.request;
+	}
+});
 
 ```

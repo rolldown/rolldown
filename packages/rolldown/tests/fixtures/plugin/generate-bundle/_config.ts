@@ -88,6 +88,7 @@ export default defineTest({
           expect(map.sourcesContent.at(-1)).toBe('console.log("updated")');
           expect(map.names.at(-1)).toBe('updated-name');
           expect(map.x_google_ignoreList).toStrictEqual([0]);
+          expect(map.ignoreList).toStrictEqual([0]);
           expect(map.debugId).toBe('updated-debugId');
         },
       },

@@ -1,15 +1,60 @@
 use oxc::allocator::GetAllocator;
 use oxc::ast::builder::AstBuilder;
-use oxc::{ast::ast, span::SPAN};
-use rolldown_common::NormalModule;
+use oxc::{
+  ast::ast,
+  span::{GetSpan, SPAN},
+};
+use rolldown_common::{IndexModules, NormalModule};
 use rolldown_ecmascript::CJS_MODULE_REF;
 #[cfg(feature = "experimental")]
 use rolldown_ecmascript::CJS_ROLLDOWN_MODULE_REF;
-use rolldown_ecmascript_utils::ExpressionFactoryExt as _;
+use rolldown_ecmascript_utils::ExpressionExt;
 
 #[cfg(feature = "experimental")]
 use crate::hmr::hmr_ast_finalizer::HmrAstFinalizer;
 use crate::module_finalizers::ScopeHoistingFinalizer;
+
+/// The runtime matches accepted deps by stable id, so each recorded dep is rewritten to it.
+pub fn rewrite_hot_accept_deps<'ast>(
+  call_expr: &mut ast::CallExpression<'ast>,
+  module: &NormalModule,
+  modules: &IndexModules,
+  builder: &AstBuilder<'ast>,
+) {
+  if !call_expr.callee.is_import_meta_hot_accept() {
+    return;
+  }
+  let rewrite = |expr: &mut ast::Expression<'ast>| {
+    let Some(request) = expr.as_static_module_request() else { return };
+    let Some(record_idx) =
+      module.hmr_info.module_request_to_import_record_idx.get(request.as_str())
+    else {
+      return;
+    };
+    let Some(module_idx) = module.import_records[*record_idx].resolved_module else { return };
+    *expr = ast::Expression::new_string_literal(
+      expr.span(),
+      ast::Str::from_str_in(modules[module_idx].stable_id(), builder),
+      None,
+      builder,
+    );
+  };
+  match call_expr.arguments.first_mut() {
+    Some(ast::Argument::ArrayExpression(array_expression)) => {
+      array_expression
+        .elements
+        .iter_mut()
+        .filter_map(|element| element.as_expression_mut())
+        .for_each(rewrite);
+    }
+    Some(argument) => {
+      if let Some(expr) = argument.as_expression_mut() {
+        rewrite(expr);
+      }
+    }
+    None => {}
+  }
+}
 
 #[cfg(feature = "experimental")]
 pub static MODULE_EXPORTS_NAME_FOR_ESM: &str = "__rolldown_exports__";
@@ -31,7 +76,7 @@ pub trait HmrAstBuilder<'any, 'ast> {
 
   /// How to refer to the current module id at the emission site.
   ///
-  /// The HMR/lazy path wraps each module body in `createEsmInitializer(id, function () { … })`,
+  /// The HMR/lazy path wraps each module body in `registerFactory(id, function () { … })`,
   /// so inside the body the id is available as an identifier (`__rolldown_module_id__`) passed in
   /// by the runtime. The main-bundle path has no such wrapper, so it still needs to emit the
   /// stable id as a string literal.
@@ -161,8 +206,7 @@ impl<'any, 'ast> HmrAstBuilder<'any, 'ast> for HmrAstFinalizer<'any, 'ast> {
   }
 
   /// HMR/lazy path: each module body is wrapped in
-  /// `createEsmInitializer(id, function (__rolldown_module_id__) { … })`
-  /// (or `createCjsInitializer(id, function (exports, module, __rolldown_module_id__) { … })`),
+  /// `registerFactory(id, function (__rolldown_module_id__) { … })`,
   /// so the id is in lexical scope as a parameter.
   fn module_id_argument(&self) -> ast::Argument<'ast> {
     ast::Argument::new_identifier(SPAN, MODULE_ID_PARAM_FOR_HMR, &self.builder())
@@ -192,107 +236,4 @@ impl<'any, 'ast> HmrAstBuilder<'any, 'ast> for ScopeHoistingFinalizer<'any, 'ast
   fn cjs_module_name() -> &'static str {
     CJS_MODULE_REF
   }
-}
-
-const LAZY_PROXY_QUERY: &str = "?rolldown-lazy=1";
-
-/// The characters JS `encodeURIComponent` leaves as-is.
-const URI_COMPONENT_ENCODE_SET: &percent_encoding::AsciiSet = &percent_encoding::NON_ALPHANUMERIC
-  .remove(b'-')
-  .remove(b'_')
-  .remove(b'.')
-  .remove(b'!')
-  .remove(b'~')
-  .remove(b'*')
-  .remove(b'\'')
-  .remove(b'(')
-  .remove(b')');
-
-/// `__rolldown_runtime__.requestLazy("<stable_real_id>", () => import(`/@vite/lazy?id=<encoded proxy id>&clientId=${__rolldown_runtime__.clientId}`))`
-///
-/// The one shape both codegen paths emit for a lazy boundary, so a boundary never becomes a
-/// chunk the browser fetches.
-///
-/// The proxy id is percent-encoded here rather than by emitting `encodeURIComponent(...)`: the
-/// call lands in the importer's own scope, where a user binding of that name would shadow the
-/// global and produce a broken URL.
-pub fn create_request_lazy_call<'ast, B>(
-  proxy_module_id: &str,
-  stable_proxy_id: &str,
-  builder: &B,
-) -> ast::Expression<'ast>
-where
-  B: oxc::ast::builder::GetAstBuilder<'ast> + GetAllocator<'ast>,
-{
-  let url_expr = {
-    let url_head = format!(
-      "/@vite/lazy?id={}&clientId=",
-      percent_encoding::utf8_percent_encode(proxy_module_id, URI_COMPONENT_ENCODE_SET)
-    );
-    let quasis = oxc::allocator::Vec::from_iter_in(
-      [
-        ast::TemplateElement::new(
-          SPAN,
-          ast::TemplateElementValue {
-            raw: ast::Str::from_str_in(&url_head, builder),
-            cooked: None,
-          },
-          false,
-          builder,
-        ),
-        ast::TemplateElement::new(
-          SPAN,
-          ast::TemplateElementValue { raw: ast::Str::from(""), cooked: None },
-          true,
-          builder,
-        ),
-      ],
-      builder,
-    );
-    let expressions = oxc::allocator::Vec::from_iter_in(
-      [ast::Expression::new_member_access_expr("__rolldown_runtime__", "clientId", builder)],
-      builder,
-    );
-    ast::Expression::new_template_literal(SPAN, quasis, expressions, builder)
-  };
-
-  // () => import(`/@vite/lazy?...`)
-  let fetch_chunk = ast::Expression::new_arrow_function_expression(
-    SPAN,
-    /* async */ false,
-    None,
-    ast::FormalParameters::boxed(
-      SPAN,
-      ast::FormalParameterKind::ArrowFormalParameters,
-      [],
-      None,
-      builder,
-    ),
-    None,
-    ast::ArrowFunctionBody::from(ast::Expression::new_import_expression(
-      SPAN, url_expr, None, None, builder,
-    )),
-    builder,
-  );
-
-  ast::Expression::new_call_expression(
-    SPAN,
-    ast::Expression::new_identifier(SPAN, "__rolldown_runtime__.requestLazy", builder),
-    None,
-    [
-      // Stripping the marker recovers the id the delivered chunk registers a factory under.
-      ast::Argument::new_string_literal(
-        SPAN,
-        ast::Str::from_str_in(
-          stable_proxy_id.strip_suffix(LAZY_PROXY_QUERY).unwrap_or(stable_proxy_id),
-          builder,
-        ),
-        None,
-        builder,
-      ),
-      ast::Argument::from(fetch_chunk),
-    ],
-    false,
-    builder,
-  )
 }

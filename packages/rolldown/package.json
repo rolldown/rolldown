@@ -1,6 +1,6 @@
 {
   "name": "rolldown",
-  "version": "1.2.8",
+  "version": "1.2.12",
   "description": "Fast JavaScript/TypeScript bundler in Rust with Rollup-compatible API.",
   "keywords": [
     "bundler",
@@ -36,8 +36,6 @@
   "module": "./dist/index.mjs",
   "types": "./dist/index.d.mts",
   "imports": {
-    "#default-runtime": "./dist/experimental-default-runtime.mjs",
-    "#runtime": "./dist/experimental-runtime.mjs",
     "#parallel-plugin-worker": "./dist/parallel-plugin-worker.mjs"
   },
   "exports": {
@@ -130,7 +128,7 @@
     "build-browser-pkg:debug": "TARGET='browser' pnpm run --sequential '/^build-(binding:wasi|node)$/'",
     "build-browser-pkg:release": "TARGET='browser' pnpm run --sequential '/^build-(binding:wasi:release|node)$/'",
     "# Scrips for docs #": "_",
-    "prepublishOnly": "napi pre-publish -t npm --no-gh-release ${NAPI_DRY_RUN:+--dry-run}",
+    "prepublishOnly": "napi pre-publish -t npm --no-gh-release ${NAPI_DRY_RUN:+--dry-run} ${NAPI_SKIP_OPTIONAL_PUBLISH:+--skip-optional-publish}",
     "publint": "publint ."
   },
   "dependencies": {

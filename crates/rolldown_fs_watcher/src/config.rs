@@ -1,4 +1,9 @@
-use std::time::Duration;
+use std::{path::PathBuf, sync::Arc, time::Duration};
+
+use rolldown_error::BuildResult;
+use rolldown_utils::pattern_filter::StringOrRegex;
+
+use crate::filter::IgnoreFilter;
 
 #[derive(Debug, Clone)]
 #[expect(clippy::struct_excessive_bools)] // Raw booleans make this configuration easier to read.
@@ -44,6 +49,13 @@ pub struct FsWatcherConfig {
   ///
   /// ⚠️Only used by `FsWatcher::new` for backend selection.
   pub use_debounce: bool,
+
+  /// Never watch the paths matching one of these patterns, nor anything below a matching directory.
+  /// Default: None.
+  pub ignored: Option<Vec<StringOrRegex>>,
+
+  /// Relative globs in `ignored` are resolved against this directory.
+  pub cwd: PathBuf,
 }
 
 impl Default for FsWatcherConfig {
@@ -57,6 +69,8 @@ impl Default for FsWatcherConfig {
       debounce_tick_rate: None,
       use_polling: false,
       use_debounce: false,
+      ignored: None,
+      cwd: PathBuf::new(),
     }
   }
 }
@@ -74,9 +88,18 @@ impl FsWatcherConfig {
     self.debounce_tick_rate.map(Duration::from_millis)
   }
 
-  pub fn to_notify_config(&self) -> notify::Config {
-    notify::Config::default()
+  /// `None` when nothing is ignored.
+  pub(crate) fn ignore_filter(&self) -> BuildResult<Option<IgnoreFilter>> {
+    IgnoreFilter::new(self.ignored.as_deref(), &self.cwd)
+  }
+
+  pub(crate) fn to_notify_config(&self, filter: Option<Arc<IgnoreFilter>>) -> notify::Config {
+    let config = notify::Config::default()
       .with_poll_interval(self.poll_interval_duration())
-      .with_compare_contents(self.compare_contents_for_polling)
+      .with_compare_contents(self.compare_contents_for_polling);
+    match filter {
+      Some(filter) => config.with_ignored(move |path, kind| filter.is_ignored(path, kind)),
+      None => config,
+    }
   }
 }

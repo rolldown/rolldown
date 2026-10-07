@@ -18,11 +18,6 @@ __rolldown_runtime__.registerGraph({
 		[],
 		[],
 		[0, 1]
-	],
-	dynamicEdges: [
-		[],
-		[],
-		[]
 	]
 });
 //#region cjs.js

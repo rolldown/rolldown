@@ -3,8 +3,9 @@ use std::collections::VecDeque;
 use arcstr::ArcStr;
 use itertools::Itertools;
 use rolldown_common::{
-  AddonRenderContext, ExportsKind, ExternalModule, ImportAttribute, ImportRecordIdx,
-  ImportRecordMeta, ModuleIdx, ModuleTable, RUNTIME_MODULE_KEY, Specifier, SymbolRef,
+  AddonRenderContext, ChunkIdx, ExportsKind, ExternalModule, ImportAttribute, ImportKind,
+  ImportRecordIdx, ImportRecordMeta, ModuleIdx, ModuleTable, RUNTIME_MODULE_KEY, Specifier,
+  SymbolRef,
 };
 use rolldown_sourcemap::SourceJoiner;
 use rolldown_utils::{concat_string, ecmascript::to_module_import_export_name};
@@ -17,13 +18,19 @@ use crate::{
 };
 use json_escape_simd::escape;
 
-use super::utils::{is_use_strict_directive, render_chunk_directives};
+use super::{
+  share_factory::render_inline_records,
+  utils::{is_use_strict_directive, render_chunk_directives},
+};
 
+/// `carried_sources`: the inline common chunk records this file carries, finalized and printed
+/// for it; empty unless this file carries a record.
 #[expect(clippy::needless_pass_by_value)]
 pub fn render_esm<'code>(
-  ctx: &GenerateContext<'_>,
+  ctx: &GenerateContext<'code>,
   addon_render_context: AddonRenderContext<'code>,
   module_sources: &'code RenderedModuleSources,
+  carried_sources: &'code [(ChunkIdx, RenderedModuleSources)],
 ) -> SourceJoiner<'code> {
   let mut source_joiner = SourceJoiner::default();
   let AddonRenderContext { hashbang, banner, intro, outro, footer, directives } =
@@ -53,6 +60,10 @@ pub fn render_esm<'code>(
   if let Some(imports) = render_esm_chunk_imports(ctx) {
     source_joiner.append_source(imports);
   }
+
+  // Registrations and bridges of inline common chunk records come right after the imports and
+  // before anything of this file's own runs.
+  render_inline_records(ctx, &mut source_joiner, carried_sources);
 
   if let Some(entry_module) = ctx.chunk.entry_module(&ctx.link_output.module_table) {
     if matches!(entry_module.exports_kind, ExportsKind::Esm) {
@@ -179,6 +190,7 @@ fn render_chunk_content<'code>(
     crate::hmr::module_graph_delta::render_register_graph_source(
       &ctx.link_output.module_table,
       ctx.chunk.modules.iter().copied(),
+      None,
     )
   } else {
     None
@@ -375,6 +387,7 @@ fn render_esm_chunk_imports(ctx: &GenerateContext<'_>) -> Option<String> {
     ));
   });
   let mut rendered_external_import_namespace_modules = FxHashSet::default();
+  let bare_import_attributes = bare_import_attributes(ctx);
   // render external imports
   ctx.chunk.direct_imports_from_external_modules.iter().for_each(|(importee_id, named_imports)| {
     let importee = &ctx.link_output.module_table[*importee_id]
@@ -398,9 +411,37 @@ fn render_esm_chunk_imports(ctx: &GenerateContext<'_>) -> Option<String> {
       &mut has_importee_imported,
       &mut rendered_external_import_namespace_modules,
       import_attribute,
+      bare_import_attributes.get(importee_id).copied(),
     );
   });
   (!s.is_empty()).then_some(s)
+}
+
+/// The `with` clause that a bare import of each external keeps: the one of the first static record
+/// in this chunk that imports the external with one.
+fn bare_import_attributes(
+  ctx: &GenerateContext<'_>,
+) -> FxHashMap<ModuleIdx, (ModuleIdx, ImportRecordIdx)> {
+  let mut ret = FxHashMap::default();
+  for module_idx in &ctx.chunk.modules {
+    let Some(module) = ctx.link_output.module_table[*module_idx].as_normal() else {
+      continue;
+    };
+    if module.import_attribute_map.is_empty() {
+      continue;
+    }
+    for (rec_idx, rec) in module.import_records.iter_enumerated() {
+      if rec.kind != ImportKind::Import || !module.import_attribute_map.contains_key(&rec_idx) {
+        continue;
+      }
+      if let Some(importee_idx) = rec.resolved_module
+        && ctx.link_output.module_table[importee_idx].is_external()
+      {
+        ret.entry(importee_idx).or_insert((module.idx, rec_idx));
+      }
+    }
+  }
+  ret
 }
 
 fn create_import_declaration(
@@ -460,6 +501,7 @@ fn render_named_imports<'a, I>(
   is_importee_rendered: &mut bool,
   rendered_external_import_namespace_modules: &mut FxHashSet<ModuleIdx>,
   with_clause: Option<(ModuleIdx, ImportRecordIdx)>,
+  bare_import_with_clause: Option<(ModuleIdx, ImportRecordIdx)>,
 ) -> String
 where
   I: Iterator<Item = &'a (ModuleIdx, rolldown_common::NamedImport)>,
@@ -523,6 +565,11 @@ where
     || (importee.side_effects.has_side_effects() && !*is_importee_rendered)
   {
     *is_importee_rendered = true;
+    let with_clause = if specifiers.is_empty() && default_alias.is_empty() {
+      with_clause.or(bare_import_with_clause)
+    } else {
+      with_clause
+    };
     s.push_str(&create_import_declaration(
       &ctx.link_output.module_table,
       specifiers,

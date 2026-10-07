@@ -346,6 +346,7 @@ function toViteConfig(
     },
     experimental: {
       bundledDev: true,
+      hmrPartialAccept: true,
     },
     // Vite 8 runs rolldown natively, so the fixtures' rolldown-style plugins
     // (transform/generateBundle hooks, rolldown builtin plugins) pass through

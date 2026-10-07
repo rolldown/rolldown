@@ -245,8 +245,9 @@ the linker registers — so it stays in lockstep with emission instead of forkin
 - **Retained re-export overlays** — an importer's `OrderImportOverlay` referencing an order-wrapped
   target's wrapper, registered with no init-owner gate, so an _eager_ forwarder's cross-chunk hop
   counts too. Admitted only for order-wrapped (not interop `WrapKind::Esm`) non-nested targets.
-- **Included + retained excluded re-export forwarding** — a wrapped importer's included imports and
-  retained excluded re-export hops, via the shared `collect_wrapped_esm_init_targets_for_import_record`.
+- **Included + retained excluded re-export forwarding** — a wrapped importer's included imports,
+  retained excluded re-export hops, and excluded plain imports that declare bindings, via the shared
+  `collect_wrapped_esm_init_targets_for_import_record`.
 - **Non-included forwarder hops** — a wrapped importer's re-export of a _non-included_ forwarder,
   walking the forwarder's every static import (not just its resolved exports), the excluded-statement
   metadata routing.
@@ -256,8 +257,9 @@ nested/consumption-gated hops (owned by a wrapped ancestor, tree-shaken for an e
 skipped so the projection never over-wraps a tree-shaking-equivalent graph; entry-facade edges are
 omitted because a facade holds zero modules, hence zero static indegree, and can never sit in a
 static SCC (debug-asserted in the final link pass). The remaining over-approximation (it omits the
-wrapping's own liveness suppression) only ever wraps more, which is always legal — wrap-all is the
-standing proof.
+wrapping's own liveness suppression, and it keeps the records of a re-export-transparent wrapper,
+which registration skips) only ever wraps more, which is always legal — wrap-all is the standing
+proof.
 
 ## Non-Goals
 
@@ -399,6 +401,7 @@ pub struct OrderLoweringInput<'a> {
   pub export_chains: &'a FxHashMap<SymbolRef, Vec<SymbolRef>>,
   pub star_reexport_records_by_imported_symbol:
     &'a FxHashMap<SymbolRef, Vec<Vec<(ModuleIdx, ImportRecordIdx)>>>,
+  pub member_read_star_reexport_paths: &'a [MemberReadStarReexportPath],
   pub used_symbol_refs_builder: &'a UsedSymbolRefsBuilder,
   pub cyclic_modules: &'a FxHashSet<ModuleIdx>,
   pub tree_shaking: bool,
@@ -533,8 +536,8 @@ link + tree shaking
 - Every import overlay is backed by an immutable link-stage execution dependency or retained re-export contract.
 - Every synthesized init call references a reachable interop or order wrapper.
 - A planned static chunk SCC includes every eligible order-sensitive module in that SCC.
-- Every ordinary-import init obligation corresponds to a link-stage execution dependency.
-- Every excluded-statement init obligation is either a retained re-export obligation or a synthetic obligation backed by an execution dependency.
+- Every ordinary-import init obligation corresponds to a link-stage execution dependency or to importer-local binding demand (a used binding, a statically folded member read, or a re-exported facade a downstream consumer reaches).
+- Every excluded-statement init obligation is a retained re-export obligation, a synthetic obligation backed by an execution dependency, or a binding-demand obligation of an excluded plain import; a binding-less excluded plain import routes nothing.
 - Final cross-chunk registration and finalizer emission require the same `Sealed<FinalEsmInitMetadata>` type; pre-final projection cannot supply one and does not consume final metadata.
 - Wrap-all and on-demand preserve the same link-stage statement and binding liveness; only their wrapper plans may differ.
 - Emit, Register, Project, and pre-chunk placement resolve consumer-local records through the same target model.

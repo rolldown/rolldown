@@ -23,10 +23,14 @@ class Module {
 }
 
 /**
- * Compiler-emitted module-graph delta — pure topology (static + dynamic edges).
+ * Compiler-emitted module-graph delta — topology (static + dynamic edges).
  * `ids[0, localCount)` are the modules this payload carries; `ids[localCount, …)` are foreign edge targets.
  * `edges[i]` / `dynamicEdges[i]` are the static / dynamic-`import()` out-edges of `ids[i]`.
- * @typedef {{ ids: string[], localCount: number, edges: number[][], dynamicEdges?: number[][] }} ModuleGraphDelta
+ * `bindings[i][j]` are the export names `ids[i]` imports through `edges[i][j]`. `bindings` holds
+ * only some rows; a missing row, or a missing or `null` entry, means the whole namespace.
+ * `dynamicEdges` also holds only some rows; a missing row means no dynamic edges.
+ * `stamps[i]` is the rebuild stamp of `ids[i]`; a missing row means 0.
+ * @typedef {{ ids: string[], localCount: number, edges: number[][], bindings?: Record<number, (string[] | null)[]>, dynamicEdges?: Record<number, number[]>, stamps?: Record<number, number> }} ModuleGraphDelta
  * @typedef {{ createModuleHotContext(moduleId: string): any, onModuleCacheRemoval(moduleId: string): void }} DevRuntimeHooks
  */
 
@@ -57,7 +61,8 @@ export class DevRuntime {
   /**
    * Static import edges from `registerGraph` — entries persist across `removeModuleCache`
    * and change only by replacement from a newer payload (last write wins).
-   * @type {Map<string, { edges: string[] }>}
+   * `bindings` is the payload row as sent; `getImportedBindings` resolves a missing entry.
+   * @type {Map<string, { edges: string[], bindings: (string[] | null)[] | undefined }>}
    */
   staticImports = new Map();
   /**
@@ -88,9 +93,17 @@ export class DevRuntime {
   /**
    * Re-runnable factories from HMR patches and lazy chunks. The initial bundle stays
    * scope-hoisted and contributes none.
-   * @type {Map<string, { kind: 'esm' | 'cjs', fn: (id: string) => void }>}
+   * @type {Map<string, (id: string) => void>}
    */
   factories = new Map();
+  /**
+   * A late payload (a slow lazy chunk after an HMR patch) must not replace newer rows or
+   * factories.
+   * @type {Map<string, number>}
+   */
+  rowStamps = new Map();
+  /** @type {Map<string, number>} */
+  factoryStamps = new Map();
   /**
    * Installed by the dev client at boot. The runtime is a store + executor and makes
    * no HMR decisions; accepting, disposing, and reloading live behind these hooks.
@@ -104,6 +117,15 @@ export class DevRuntime {
   registerGraph(delta) {
     for (let i = 0; i < delta.localCount; i++) {
       const id = delta.ids[i];
+      if (delta.stamps) {
+        const stamp = delta.stamps[i] ?? 0;
+        if (stamp < (this.rowStamps.get(id) ?? 0)) continue;
+        this.rowStamps.set(id, stamp);
+      } else {
+        // A full-build chunk has no stamps. It runs its code right away, so its row always
+        // replaces the old one.
+        this.rowStamps.delete(id);
+      }
       const edges = delta.edges[i].map((j) => delta.ids[j]);
       for (const target of this.staticImports.get(id)?.edges ?? []) {
         this.importers.get(target)?.delete(id);
@@ -116,7 +138,7 @@ export class DevRuntime {
         }
         importerSet.add(id);
       }
-      this.staticImports.set(id, { edges });
+      this.staticImports.set(id, { edges, bindings: delta.bindings?.[i] });
 
       // Dynamic `import()` edges are maintained in a parallel reverse index with the same
       // last-write-wins bookkeeping; `getImporters` unions the two.
@@ -138,11 +160,13 @@ export class DevRuntime {
 
   /**
    * @param {string} id
-   * @param {'esm' | 'cjs'} kind
    * @param {(id: string) => void} fn
+   * @param {number} [stamp]
    */
-  registerFactory(id, kind, fn) {
-    this.factories.set(id, { kind, fn });
+  registerFactory(id, fn, stamp = 0) {
+    if (stamp < (this.factoryStamps.get(id) ?? 0)) return;
+    this.factoryStamps.set(id, stamp);
+    this.factories.set(id, fn);
   }
 
   /**
@@ -171,6 +195,23 @@ export class DevRuntime {
   }
 
   /**
+   * `"*"` means the whole namespace, an empty list a side-effect-only import, `undefined` no edge.
+   * @param {string} importer
+   * @param {string} id
+   * @returns {string[] | undefined}
+   */
+  getImportedBindings(importer, id) {
+    const record = this.staticImports.get(importer);
+    const j = record ? record.edges.indexOf(id) : -1;
+    const names = j === -1 ? undefined : (record?.bindings?.[j] ?? ['*']);
+    if (!this.dynamicImports.get(importer)?.edges.includes(id)) {
+      return names;
+    }
+    if (!names) return ['*'];
+    return names.includes('*') ? names : [...names, '*'];
+  }
+
+  /**
    * @param {string} id
    */
   isExecuted(id) {
@@ -191,9 +232,6 @@ export class DevRuntime {
    */
   removeModuleCache(id) {
     this.moduleCache.delete(id);
-    // `registerModule` installs a fresh namespace on every run, so a kept memo would hand a
-    // later `import()` the pre-edit exports forever.
-    this.lazyRequests.delete(id);
     this.hooks?.onModuleCacheRemoval(id);
   }
 
@@ -210,7 +248,7 @@ export class DevRuntime {
     if (!factory) {
       throw new MissingFactoryError(id);
     }
-    factory.fn(id);
+    factory(id);
     return this.loadExports(id);
   }
 
@@ -225,45 +263,6 @@ export class DevRuntime {
       console.warn(`Module ${id} not found`);
       return {};
     }
-  }
-
-  /** @type {Map<string, Promise<any>>} */
-  lazyRequests = new Map();
-
-  /**
-   * The entry point for a lazy `import()`. `id` is the module the boundary stands for; the
-   * boundary's own id appears only inside `fetchChunk`'s URL.
-   *
-   * Nothing is registered under the boundary id, deliberately. A cache entry with no factory
-   * behind it reads as "executed" to the HMR boundary walk, and `applyUpdate` turns an
-   * updated-but-factory-less module into a full page reload.
-   *
-   * A rejection is memoized like any other outcome, matching `import()` of a module that
-   * threw. Retrying could not work anyway: a factory registers its module before running its
-   * body, so re-running `initModule` would return half-initialized exports as success.
-   *
-   * @param {string} id
-   * @param {() => Promise<unknown>} fetchChunk
-   * @returns {Promise<any>}
-   */
-  requestLazy(id, fetchChunk) {
-    const pending = this.lazyRequests.get(id);
-    if (pending) {
-      return pending;
-    }
-
-    // Factories outlive `removeModuleCache`, so an evicted module can be re-run without the
-    // server — and must be, since the memo went with the cache entry. `Promise.resolve` keeps
-    // a synchronous `initModule` throw from escaping the call site.
-    const runnableHere = this.moduleCache.has(id) || this.factories.has(id);
-    const promise = runnableHere
-      ? Promise.resolve().then(() => this.initModule(id))
-      : Promise.resolve()
-          .then(fetchChunk)
-          .then(() => this.initModule(id));
-
-    this.lazyRequests.set(id, promise);
-    return promise;
   }
 
   /**

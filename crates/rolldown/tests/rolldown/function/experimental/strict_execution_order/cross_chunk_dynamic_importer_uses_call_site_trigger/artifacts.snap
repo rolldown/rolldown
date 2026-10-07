@@ -76,8 +76,8 @@ export { aTargetPromise };
 ### b.js
 
 ```js
-import { a as unrelated, i as setValue, o as value, r as init_leaf } from "./ga.js";
 import { t as __esmMin } from "./rolldown-runtime.js";
+import { a as unrelated, i as setValue, o as value, r as init_leaf } from "./ga.js";
 //#region b.js
 var bTargetPromise;
 function init_b() {

@@ -769,6 +769,10 @@ export interface OutputOptions {
    *
    * > [!WARNING]
    * > Enabling this option increases bundle size because wrapped modules need runtime init helpers.
+   *
+   * {@linkcode CodeSplittingOptions.experimentalInlineCommonChunks | experimentalInlineCommonChunks}
+   * with a `maxSize` above `0` turns this option on when it is omitted.
+   *
    * @default false
    */
   strictExecutionOrder?: boolean;
@@ -797,6 +801,12 @@ export type BuiltinModuleTag = '$initial';
 
 /** @category Code Splitting */
 export type CodeSplittingGroup = {
+  /**
+   * `debugName` gives this group a label in the bundler timing report.
+   *
+   * Set this option when `name` is a function. This option does not change the chunk name.
+   */
+  debugName?: string;
   /**
    * Name of the group. It will be also used as the name of the chunk and replace the `[name]` placeholder in the {@linkcode OutputOptions.chunkFileNames | output.chunkFileNames} option.
    *
@@ -1008,6 +1018,75 @@ export type CodeSplittingGroup = {
 export type AdvancedChunksGroup = CodeSplittingGroup;
 
 /**
+ * Options for `codeSplitting.experimentalInlineCommonChunks`.
+ *
+ * Small common chunks produced by automatic code splitting are replaced by a factory function
+ * that is copied into the chunks reading them, unless every known entry loading path already registers
+ * the factory. A registry in the runtime chunk makes sure the chunk's modules keep one
+ * state, one execution and one set of export identities across all copies, so no entry downloads
+ * code it could not reach with the option off.
+ *
+ * Non-entry chunks rely on loading paths visible to the build. Loading one by its
+ * output URL through an unresolved import or external module can bypass required registrations.
+ * Emit independently loaded modules as entries, using `this.emitFile` with
+ * `preserveSignature: 'strict'` when their exports must be preserved. Alternatively, exclude
+ * their shared dependencies from inlining, including transitive dependencies.
+ * Static cycles through external modules back into generated output, including entries, are
+ * unsupported. Bundle the modules forming such cycles together or exclude their shared dependencies.
+ *
+ * Before enabling it, check the plugins and code shapes that see a chunk's modules as one file:
+ *
+ * - A module of an inlined chunk appears in the `moduleIds` and `modules` of every chunk that
+ *   prints a copy, so a plugin that asks which chunk owns a module gets several answers. Vite's
+ *   CSS plugin, for example, emits a style module's CSS from every chunk whose `moduleIds` list
+ *   it; a Vite build passes `exclude: /\.(css|scss|sass|less|styl|stylus|pcss|postcss|sss)(\?|$)/`
+ *   so chunks holding styles stay files.
+ * - A `renderChunk` hook whose rewrite yields different values in different directories makes
+ *   the copies differ, and the first chunk to run decides which text every reader sees; exclude
+ *   the modules concerned. Vite's asset URLs under a relative `base` resolve through
+ *   `import.meta.url` to the same URL from every copy and are not affected.
+ * - The option turns `strictExecutionOrder` on when it is omitted. Strict execution order has an
+ *   open issue with top-level await inside static import cycles (rolldown/rolldown#9548), so run
+ *   the application under `strictExecutionOrder: true` before adding this option.
+ * - Addons (`banner`, `intro`, `outro` and `footer`), including plugin hooks, apply to emitted
+ *   files. An inlined chunk shares the addon bindings of the file that registers its factory
+ *   first. Exclude modules that depend on separate file-local bindings or addon initialization order.
+ * - A chunk that prints an inlined chunk names both sets of modules together, so a function or
+ *   class in either can get a `$1`-style suffix when the other declares the same name, and the
+ *   `.name` of an inlined chunk's function or class depends on which chunk loads first (under
+ *   `minify`, the mangled name does too). `output.keepNames` keeps every name.
+ *
+ * @experimental This feature is experimental. Its behavior and option shape may change in any release.
+ *
+ * @category Code Splitting
+ */
+export type ExperimentalInlineCommonChunksOptions = {
+  /**
+   * Common chunks whose pre-render size (the sum of the transformed source sizes of their modules,
+   * in bytes) is strictly smaller than this value are candidates for inlining.
+   * Use `Infinity` to remove the size limit.
+   *
+   * A value greater than `0` requires `output.format: 'es'`, an explicit
+   * `preserveEntrySignatures: false` and code splitting, and it turns on
+   * {@linkcode OutputOptions.strictExecutionOrder | strictExecutionOrder} when that option is
+   * omitted. `output.strictExecutionOrder: false` is an error, `output.preserveModules`,
+   * `experimental.devMode` and `experimental.onDemandWrapping` must be off.
+   *
+   * @default 0
+   */
+  maxSize?: number;
+  /**
+   * A matcher for module ids, or an array of them: a string (matched as a regular expression), a
+   * RegExp, or a function, each applied like {@linkcode CodeSplittingGroup.test | test}. A common
+   * chunk is kept as a file when any of its modules matches any matcher.
+   */
+  exclude?:
+    | StringOrRegExp
+    | CodeSplittingTestFunction
+    | Array<StringOrRegExp | CodeSplittingTestFunction>;
+};
+
+/**
  * Configuration options for advanced code splitting.
  *
  * @category Code Splitting
@@ -1041,6 +1120,12 @@ export type CodeSplittingOptions = {
    * Groups to be used for code splitting.
    */
   groups?: CodeSplittingGroup[];
+  /**
+   * Replace small automatic common chunks with factory copies in their consumers.
+   *
+   * @experimental This feature is experimental. Its behavior and option shape may change in any release.
+   */
+  experimentalInlineCommonChunks?: ExperimentalInlineCommonChunksOptions;
 };
 
 /**

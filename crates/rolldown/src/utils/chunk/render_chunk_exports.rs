@@ -1,6 +1,7 @@
 use std::borrow::Cow;
 use std::fmt::Write as _;
 
+use json_escape_simd::escape;
 use oxc_str::CompactStr;
 use rolldown_common::{
   Chunk, ChunkKind, ExportsKind, IndexModules, ModuleIdx, NormalizedBundlerOptions, OutputExports,
@@ -216,6 +217,17 @@ pub fn render_chunk_exports(
         .map(|(exported_name, export_ref)| {
           let canonical_ref = link_output.symbol_db.canonical_ref_for(export_ref);
           let symbol = link_output.symbol_db.get(canonical_ref);
+          // An ESM export needs a binding of this file; a symbol an inline common chunk record
+          // owns is reachable only through a bridge, so selection keeps such a record a file.
+          assert!(
+            symbol
+              .chunk_idx
+              .is_none_or(|owner| owner == ctx.chunk_idx || !ctx.inline_state.is_record(owner)),
+            "chunk {:?} exports `{}`, a symbol of inline common chunk record {:?}",
+            ctx.chunk_idx,
+            exported_name,
+            symbol.chunk_idx
+          );
           let canonical_name = link_output
             .symbol_db
             .canonical_name_for_or_original(canonical_ref, &chunk.canonical_names);
@@ -227,9 +239,7 @@ pub fn render_chunk_exports(
             s.push_str("var ");
             s.push_str(canonical_name);
             s.push_str(" = ");
-            s.push_str(canonical_ns_name);
-            s.push('.');
-            s.push_str(property_name);
+            s.push_str(&property_access_str(canonical_ns_name, property_name));
             s.push_str(";\n");
           }
 
@@ -383,7 +393,8 @@ pub fn render_chunk_exports(
           s.push('\n');
           // Only generate require statement if this external module hasn't been imported yet
           if imported_external_modules.insert(external.namespace_ref) {
-            writeln!(s, "var {} = require(\"{}\");", binding_ref_name, external.get_import_path(chunk, ctx.resolved_paths)).unwrap();
+            let import_path = escape(&external.get_import_path(chunk, ctx.resolved_paths));
+            writeln!(s, "var {binding_ref_name} = require({import_path});").unwrap();
           }
           s.push_str(&import_stmt);
         });
@@ -406,7 +417,7 @@ pub fn render_chunk_exports(
                   let property_name = &ns_alias.property_name;
                   render_object_define_property(
                     &exported_name,
-                    &concat_string!(canonical_ns_name, ".", property_name),
+                    &property_access_str(canonical_ns_name, property_name),
                   )
                 }
                 _ => render_object_define_property(&exported_name, canonical_name),
@@ -427,10 +438,11 @@ pub fn render_chunk_exports(
 
 #[inline]
 pub fn render_object_define_property(key: &str, value: &str) -> String {
+  let key = serde_json::to_string(key).unwrap();
   concat_string!(
-    "Object.defineProperty(exports, '",
+    "Object.defineProperty(exports, ",
     key,
-    "', {
+    ", {
   enumerable: true,
   get: function () {
     return ",
@@ -443,10 +455,11 @@ pub fn render_object_define_property(key: &str, value: &str) -> String {
 
 #[inline]
 pub fn render_object_define_property_value(key: &str, value: &str) -> String {
+  let key = serde_json::to_string(key).unwrap();
   concat_string!(
-    "Object.defineProperty(exports, '",
+    "Object.defineProperty(exports, ",
     key,
-    "', {
+    ", {
   enumerable: true,
   value: ",
     value,
@@ -499,18 +512,17 @@ fn must_keep_live_binding(
 ) -> bool {
   let canonical_ref = symbol_db.canonical_ref_for(export_ref);
 
+  // Local write analysis cannot prove an external export is immutable.
+  if canonical_ref.is_created_by_import_stmt_that_target_external(symbol_db, modules) {
+    return options.external_live_bindings;
+  }
+
   if canonical_ref.is_declared_by_const(symbol_db) {
     return false;
   }
 
   if canonical_ref.is_not_reassigned(symbol_db) {
     // For unknown case, we consider it as reassigned.
-    return false;
-  }
-
-  if !options.external_live_bindings
-    && canonical_ref.is_created_by_import_stmt_that_target_external(symbol_db, modules)
-  {
     return false;
   }
 

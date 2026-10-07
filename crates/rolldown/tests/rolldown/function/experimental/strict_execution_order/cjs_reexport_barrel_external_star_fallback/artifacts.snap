@@ -24,9 +24,9 @@ export { init_cn as n, cn as t };
 ## main.js
 
 ```js
+import { n as __esmMin } from "./rolldown-runtime.js";
 import { t as cn } from "./cn.js";
 import { r as init_pure_barrel } from "./route.js";
-import { n as __esmMin } from "./rolldown-runtime.js";
 //#region main.js
 function loadRoute() {
 	return import("./route.js").then((n) => (n.t(), n.n));
@@ -54,8 +54,8 @@ export { __toESM as a, __reExport as i, __esmMin as n, __exportAll as r, __commo
 ## route.js
 
 ```js
-import { n as init_cn, t as cn } from "./cn.js";
 import { a as __toESM, i as __reExport, n as __esmMin, r as __exportAll, t as __commonJSMin } from "./rolldown-runtime.js";
+import { n as init_cn, t as cn } from "./cn.js";
 //#region node_modules/pure-barrel/clone-deep.cjs
 var require_clone_deep = /* @__PURE__ */ __commonJSMin(((exports, module) => {
 	globalThis.__events.push("clone-deep");
@@ -114,9 +114,9 @@ export { cn as t };
 ### main.js
 
 ```js
+import { n as __esmMin } from "./rolldown-runtime.js";
 import { t as cn } from "./cn.js";
 import { r as init_pure_barrel } from "./route.js";
-import { n as __esmMin } from "./rolldown-runtime.js";
 //#region main.js
 function loadRoute() {
 	return import("./route.js").then((n) => (n.t(), n.n));
@@ -144,8 +144,8 @@ export { __toESM as a, __reExport as i, __esmMin as n, __exportAll as r, __commo
 ### route.js
 
 ```js
-import { t as cn } from "./cn.js";
 import { a as __toESM, i as __reExport, n as __esmMin, r as __exportAll, t as __commonJSMin } from "./rolldown-runtime.js";
+import { t as cn } from "./cn.js";
 //#region node_modules/pure-barrel/clone-deep.cjs
 var require_clone_deep = /* @__PURE__ */ __commonJSMin(((exports, module) => {
 	globalThis.__events.push("clone-deep");

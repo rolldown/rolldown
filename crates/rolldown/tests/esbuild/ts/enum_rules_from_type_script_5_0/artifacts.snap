@@ -10,10 +10,10 @@ source: crates/rolldown_testing/src/integration_test.rs
 console.log("1", "1.5");
 console.log("1000000000", "1000000000000");
 var TemplateExpressions = /* @__PURE__ */ function(TemplateExpressions) {
-	TemplateExpressions[TemplateExpressions["NULL"] = "null"] = "NULL";
-	TemplateExpressions[TemplateExpressions["TRUE"] = "true"] = "TRUE";
-	TemplateExpressions[TemplateExpressions["FALSE"] = "false"] = "FALSE";
-	TemplateExpressions[TemplateExpressions["BIGINT"] = "123"] = "BIGINT";
+	TemplateExpressions["NULL"] = "null";
+	TemplateExpressions["TRUE"] = "true";
+	TemplateExpressions["FALSE"] = "false";
+	TemplateExpressions["BIGINT"] = "123";
 	return TemplateExpressions;
 }(TemplateExpressions || {});
 console.log(TemplateExpressions.NULL, TemplateExpressions.TRUE, TemplateExpressions.FALSE, TemplateExpressions.BIGINT);

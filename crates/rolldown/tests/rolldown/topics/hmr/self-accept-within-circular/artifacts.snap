@@ -21,12 +21,6 @@ __rolldown_runtime__.registerGraph({
 		[0],
 		[1],
 		[2]
-	],
-	dynamicEdges: [
-		[],
-		[],
-		[],
-		[]
 	]
 });
 //#region c.js
@@ -64,10 +58,10 @@ assert.strictEqual(a.b.c, "c");
 ## Code
 
 ```js
-__rolldown_runtime__.registerGraph({ids:["c.js","b.js"],localCount:1,edges:[[1]],dynamicEdges:[[]]});
+__rolldown_runtime__.registerGraph({ids:["c.js","b.js"],localCount:1,edges:[[1]],stamps:{0:1}});
 //#region c.js
 import * as import_node_assert_00 from "node:assert";
-__rolldown_runtime__.registerFactory("c.js", "esm", (function(__rolldown_module_id__) {
+__rolldown_runtime__.registerFactory("c.js", (function(__rolldown_module_id__) {
 	try {
 		var __rolldown_exports__ = __rolldown_runtime__.__exportAll({ c: () => c });
 		__rolldown_runtime__.registerModule(__rolldown_module_id__, { exports: __rolldown_exports__ });
@@ -80,7 +74,7 @@ __rolldown_runtime__.registerFactory("c.js", "esm", (function(__rolldown_module_
 			import_node_assert_00.default.fail("the last generation has no further edit to accept");
 		});
 	} finally {}
-}));
+}), 1);
 
 //#endregion
 ```

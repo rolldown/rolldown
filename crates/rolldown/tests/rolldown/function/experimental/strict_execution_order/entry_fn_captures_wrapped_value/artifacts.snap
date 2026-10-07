@@ -6,8 +6,8 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## main.js
 
 ```js
-import { n as init_facade, t as getPref } from "./pref.js";
 import { t as __esmMin } from "./rolldown-runtime.js";
+import { n as init_facade, t as getPref } from "./pref.js";
 //#region first.js
 function init_first() {
 	return (init_first = __esmMin((() => {
@@ -83,8 +83,8 @@ export { __esmMin as t };
 ### main.js
 
 ```js
-import { n as init_facade, t as getPref } from "./pref.js";
 import { t as __esmMin } from "./rolldown-runtime.js";
+import { n as init_facade, t as getPref } from "./pref.js";
 //#region first.js
 (globalThis.__events ??= []).push("first");
 //#endregion

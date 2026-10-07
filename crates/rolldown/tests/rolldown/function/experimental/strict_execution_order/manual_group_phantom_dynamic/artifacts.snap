@@ -6,9 +6,9 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## group-0.js
 
 ```js
+import { t as __esmMin } from "./rolldown-runtime.js";
 import { t as init_leafhost } from "./group-l.js";
 import { t as init_x } from "./x.js";
-import { t as __esmMin } from "./rolldown-runtime.js";
 //#region y.js
 function init_y() {
 	return (init_y = __esmMin((() => {
@@ -56,8 +56,8 @@ export { init_leafhost as t };
 ## main.js
 
 ```js
-import "./group-l.js";
 import { t as init_main } from "./group-0.js";
+import "./group-l.js";
 import "./x.js";
 init_main();
 
@@ -74,8 +74,8 @@ export { __exportAll as n, __esmMin as t };
 ## x.js
 
 ```js
-import { n as init_y } from "./group-0.js";
 import { t as __esmMin } from "./rolldown-runtime.js";
+import { n as init_y } from "./group-0.js";
 //#region x.js
 function init_x() {
 	return (init_x = __esmMin((() => {
@@ -95,9 +95,9 @@ export { init_x as t };
 ### group-0.js
 
 ```js
+import { t as __esmMin } from "./rolldown-runtime.js";
 import { t as init_leafhost } from "./group-l.js";
 import { t as init_x } from "./x.js";
-import { t as __esmMin } from "./rolldown-runtime.js";
 //#region y.js
 function init_y() {
 	return (init_y = __esmMin((() => {
@@ -145,8 +145,8 @@ export { init_leafhost as t };
 ### main.js
 
 ```js
-import "./group-l.js";
 import { t as init_main } from "./group-0.js";
+import "./group-l.js";
 import "./x.js";
 init_main();
 
@@ -163,8 +163,8 @@ export { __exportAll as n, __esmMin as t };
 ### x.js
 
 ```js
-import { n as init_y } from "./group-0.js";
 import { t as __esmMin } from "./rolldown-runtime.js";
+import { n as init_y } from "./group-0.js";
 //#region x.js
 function init_x() {
 	return (init_x = __esmMin((() => {

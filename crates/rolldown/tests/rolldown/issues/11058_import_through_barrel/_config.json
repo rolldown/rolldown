@@ -1,0 +1,12 @@
+{
+  "_comment": "https://github.com/rolldown/rolldown/issues/11058. `barrel.js` reaches the same bindings of the external `node:path` along several `export *` paths: re-exported directly, through another module, as an `import` then `export`, and as `export * as`. Importing them through the barrel must bind them, not report them as ambiguous.",
+  "expectWarning": false,
+  "config": {
+    "external": ["node:assert", "node:path"]
+  },
+  "configVariants": [
+    {
+      "format": "cjs"
+    }
+  ]
+}

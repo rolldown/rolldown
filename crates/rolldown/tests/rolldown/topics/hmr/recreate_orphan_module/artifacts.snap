@@ -18,11 +18,6 @@ __rolldown_runtime__.registerGraph({
 		[],
 		[0],
 		[1]
-	],
-	dynamicEdges: [
-		[],
-		[],
-		[]
 	]
 });
 //#region child.js
@@ -60,9 +55,9 @@ __rolldown_runtime__.registerModule("main.js", { exports: main_exports });
 ## Code
 
 ```js
-__rolldown_runtime__.registerGraph({ids:["parent.js"],localCount:1,edges:[[]],dynamicEdges:[[]]});
+__rolldown_runtime__.registerGraph({ids:["parent.js"],localCount:1,edges:[[]],stamps:{0:1}});
 //#region parent.js
-__rolldown_runtime__.registerFactory("parent.js", "esm", (function(__rolldown_module_id__) {
+__rolldown_runtime__.registerFactory("parent.js", (function(__rolldown_module_id__) {
 	try {
 		var __rolldown_exports__ = __rolldown_runtime__.__exportAll({
 			childValue: () => childValue,
@@ -78,7 +73,7 @@ __rolldown_runtime__.registerFactory("parent.js", "esm", (function(__rolldown_mo
 			assert.strictEqual(childValue, "not-child");
 		});
 	} finally {}
-}));
+}), 1);
 
 //#endregion
 ```
@@ -108,35 +103,46 @@ __rolldown_runtime__.registerFactory("parent.js", "esm", (function(__rolldown_mo
 ## Code
 
 ```js
-__rolldown_runtime__.registerGraph({ids:["main.js","parent.js","child.js"],localCount:2,edges:[[1],[2]],dynamicEdges:[[],[]]});
+__rolldown_runtime__.registerGraph({ids:["child.js","main.js","parent.js"],localCount:3,edges:[[],[2],[0]],stamps:{2:3}});
+//#region child.js
+__rolldown_runtime__.registerFactory("child.js", (function(__rolldown_module_id__) {
+	try {
+		var __rolldown_exports__ = __rolldown_runtime__.__exportAll({ value: () => value });
+		__rolldown_runtime__.registerModule(__rolldown_module_id__, { exports: __rolldown_exports__ });
+		const hot_child = __rolldown_runtime__.createModuleHotContext(__rolldown_module_id__);
+		const value = "child";
+	} finally {}
+}));
+
+//#endregion
 //#region main.js
-__rolldown_runtime__.registerFactory("main.js", "esm", (function(__rolldown_module_id__) {
+__rolldown_runtime__.registerFactory("main.js", (function(__rolldown_module_id__) {
 	try {
 		var __rolldown_exports__ = __rolldown_runtime__.__exportAll({});
 		__rolldown_runtime__.registerModule(__rolldown_module_id__, { exports: __rolldown_exports__ });
 		__rolldown_runtime__.initModule("parent.js");
-		var import_parent_00 = __rolldown_runtime__.loadExports("parent.js");
+		var import_parent_10 = __rolldown_runtime__.loadExports("parent.js");
 		const hot_main = __rolldown_runtime__.createModuleHotContext(__rolldown_module_id__);
 	} finally {}
 }));
 
 //#endregion
 //#region parent.js
-__rolldown_runtime__.registerFactory("parent.js", "esm", (function(__rolldown_module_id__) {
+__rolldown_runtime__.registerFactory("parent.js", (function(__rolldown_module_id__) {
 	try {
 		var __rolldown_exports__ = __rolldown_runtime__.__exportAll({
 			parentValue: () => parentValue,
-			childValue: () => import_child_10.value
+			childValue: () => import_child_20.value
 		});
 		__rolldown_runtime__.registerModule(__rolldown_module_id__, { exports: __rolldown_exports__ });
 		__rolldown_runtime__.initModule("child.js");
-		var import_child_10 = __rolldown_runtime__.loadExports("child.js");
+		var import_child_20 = __rolldown_runtime__.loadExports("child.js");
 		const hot_parent = __rolldown_runtime__.createModuleHotContext(__rolldown_module_id__);
 		const parentValue = "parent";
 		assert.strictEqual(parentValue, "parent");
-		assert.strictEqual(import_child_10.value, "child");
+		assert.strictEqual(import_child_20.value, "child");
 	} finally {}
-}));
+}), 3);
 
 //#endregion
 ```

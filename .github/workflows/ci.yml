@@ -31,8 +31,9 @@ jobs:
       node-changes: "${{ (steps.filter.outputs.node-changes == 'true') || (github.ref_name == 'main') || (steps.pr-labels.outputs.run-windows == 'true') }}"
       # Allows opting into Windows CI per-PR by adding the `ci: windows` label.
       run-windows: "${{ steps.pr-labels.outputs.run-windows == 'true' }}"
-      # Allows opting into the WebContainer smoke test per-PR by adding the `ci: webcontainer` label.
-      run-webcontainer: "${{ steps.pr-labels.outputs.run-webcontainer == 'true' }}"
+      # The WebContainer smoke test is opt-in: the `ci: webcontainer` label, or a PR that touches the
+      # binding loader glue and its packaging (the `webcontainer-changes` filter below). Never on main.
+      run-webcontainer: "${{ (steps.pr-labels.outputs.run-webcontainer == 'true') || (github.event_name == 'pull_request' && steps.filter.outputs.webcontainer-changes == 'true') }}"
     steps:
       # Reruns keep the original event payload, so query the current labels instead.
       - name: Read pull request labels
@@ -82,10 +83,22 @@ jobs:
               - 'examples/**'
               - 'scripts/**'
               - 'rollup'
+            # the generated binding loader, its WebContainer fallback and the suite itself: only a
+            # real WebContainer run exercises these, so a PR touching them opts in without the label
+            webcontainer-changes:
+              - '.github/workflows/reusable-browser.yml'
+              - 'packages/browser-tests/**'
+              - 'packages/rolldown/build.ts'
+              - 'packages/rolldown/package.json'
+              - 'packages/rolldown/src/binding.cjs'
+              - 'packages/rolldown/src/rolldown-binding.wasi*'
+              - 'packages/rolldown/src/wasi-worker*'
+              - 'packages/rolldown/src/webcontainer-fallback.cjs'
       - name: Show outputs
         run: |
           echo "Rust changes: ${{ (steps.filter.outputs.rust-changes == 'true') || (github.ref_name == 'main') || (steps.pr-labels.outputs.run-windows == 'true') }}"
           echo "Node changes: ${{ (steps.filter.outputs.node-changes == 'true') || (github.ref_name == 'main') || (steps.pr-labels.outputs.run-windows == 'true') }}"
+          echo "WebContainer: ${{ (steps.pr-labels.outputs.run-webcontainer == 'true') || (github.event_name == 'pull_request' && steps.filter.outputs.webcontainer-changes == 'true') }}"
 
   rust-validation:
     name: Rust Validation
@@ -173,9 +186,10 @@ jobs:
     with:
       changed: ${{ needs.changes.outputs.node-changes == 'true' }}
 
-  # Runs the packed @rolldown/browser in a real browser page on every PR that touches node code. The
-  # `ci: webcontainer` label adds the WebContainer suite to the same job; it never runs on path
-  # changes or on main.
+  # Runs the packed @rolldown/browser in a real browser page, and the packed `rolldown` through its
+  # WebContainer fallback in plain Node, on every PR that touches node code. The `ci: webcontainer`
+  # label, or a change to the loader glue (the `webcontainer-changes` filter), adds the WebContainer
+  # suite to the same job; it never runs on main.
   browser:
     needs: changes
     uses: ./.github/workflows/reusable-browser.yml
@@ -237,9 +251,9 @@ jobs:
     steps:
       - uses: taiki-e/checkout-action@7d1e50e93dc4fb3bba58f85018fadf77898aee8b # v1.4.2
 
-      - uses: voidzero-dev/setup-vp@9fd26ff49f9b5e6276c2b493da4454ad4527f7f4 # v1.20.0
+      - uses: voidzero-dev/setup-vp@3754dd7dbdb32bd8f6d28b6043de13ad3a75f21f # v1.21.1
         with:
-          version: '0.3.1'
+          version: '1.0.0'
           cache: true
 
       - name: Download Native Rolldown Build
@@ -283,9 +297,9 @@ jobs:
           env-mapping: |
             PNPM_HOME,{{ DEV_DRIVE }}/.pnpm
 
-      - uses: voidzero-dev/setup-vp@9fd26ff49f9b5e6276c2b493da4454ad4527f7f4 # v1.20.0
+      - uses: voidzero-dev/setup-vp@3754dd7dbdb32bd8f6d28b6043de13ad3a75f21f # v1.21.1
         with:
-          version: '0.3.1'
+          version: '1.0.0'
           cache: true
 
       - name: Download Native Rolldown Build
@@ -347,9 +361,9 @@ jobs:
           cache-key: native-build
           save-cache: false
 
-      - uses: voidzero-dev/setup-vp@9fd26ff49f9b5e6276c2b493da4454ad4527f7f4 # v1.20.0
+      - uses: voidzero-dev/setup-vp@3754dd7dbdb32bd8f6d28b6043de13ad3a75f21f # v1.21.1
         with:
-          version: '0.3.1'
+          version: '1.0.0'
           cache: true
 
       - name: Download Native Rolldown Build
@@ -401,9 +415,9 @@ jobs:
           save-cache: ${{ github.ref_name == 'main' }}
           components: rustfmt
 
-      - uses: voidzero-dev/setup-vp@9fd26ff49f9b5e6276c2b493da4454ad4527f7f4 # v1.20.0
+      - uses: voidzero-dev/setup-vp@3754dd7dbdb32bd8f6d28b6043de13ad3a75f21f # v1.21.1
         with:
-          version: '0.3.1'
+          version: '1.0.0'
           cache: true
 
       - name: Lint Filename
@@ -419,6 +433,6 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: taiki-e/checkout-action@7d1e50e93dc4fb3bba58f85018fadf77898aee8b # v1.4.2
-      - uses: crate-ci/typos@d43b6c087ac471e2ea7b8af622ff15f05c0c365b # v1.50.1
+      - uses: crate-ci/typos@00f422f3b19c57bc6338715ebfe3316d38768461 # v1.50.3
         with:
           files: .

@@ -91,7 +91,6 @@ export { __esmMin as n, __toESM as r, __commonJSMin as t };
 
 ```js
 import { n as __esmMin, t as __commonJSMin } from "./rolldown-runtime.js";
-import { t as init_definer } from "./b.js";
 //#region a/a-first.js
 function init_a_first() {
 	return (init_a_first = __esmMin((() => {
@@ -111,9 +110,7 @@ function marker() {
 	return "F";
 }
 function init_forwarder() {
-	return (init_forwarder = __esmMin((() => {
-		init_definer();
-	})))();
+	return (init_forwarder = __esmMin((() => {})))();
 }
 //#endregion
 export { init_a_first as i, marker as n, require_carrier_cjs as r, init_forwarder as t };

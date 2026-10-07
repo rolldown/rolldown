@@ -41,8 +41,8 @@ export { other as t };
 ### a.js
 
 ```js
-import { n as other, t as init_helper } from "./helper.js";
 import { t as __esmMin } from "./rolldown-runtime.js";
+import { n as other, t as init_helper } from "./helper.js";
 //#region entry-a.js
 function init_entry_a() {
 	return (init_entry_a = __esmMin((() => {
@@ -59,8 +59,8 @@ init_entry_a();
 ### b.js
 
 ```js
-import { n as other, t as init_helper } from "./helper.js";
 import { t as __esmMin } from "./rolldown-runtime.js";
+import { n as other, t as init_helper } from "./helper.js";
 //#region entry-b.js
 function init_entry_b() {
 	return (init_entry_b = __esmMin((() => {

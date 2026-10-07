@@ -1,7 +1,7 @@
 use super::normalize_binding_transform_options;
 use crate::options::BindingGeneratedCodeOptions;
 use crate::options::binding_manual_code_splitting_options::{
-  BindingChunkingContext, BindingManualCodeSplittingOptions,
+  BindingChunkingContext, BindingManualCodeSplittingOptions, BindingMatchGroupTest,
 };
 use crate::options::{
   AssetFileNamesOutputOption, BindingOnLog, ChunkFileNamesOutputOption, SanitizeFileName,
@@ -28,10 +28,11 @@ use oxc::transformer::EngineTargets;
 use rolldown::{
   AddonOutputOption, AssetFilenamesOutputOption, BundlerConfig, BundlerOptions,
   ChunkFilenamesOutputOption, CodeSplittingMode, DeferSyncScanDataOption, HashCharacters,
-  IsExternal, ManglePropertiesPattern, ManglePropertiesPatterns, ManualCodeSplittingOptions,
-  MatchGroup, MatchGroupName, ModuleType, OptimizationOption, OutputExports, OutputFormat,
-  Platform, PluginTimingsOption, RawCompressOptions, RawMangleOptions, RawManglePropertiesOptions,
-  RawMinifyOptions, RawMinifyOptionsDetailed, SanitizeFilename, StrictMode, TsConfig,
+  InlineCommonChunksOptions, IsExternal, ManglePropertiesPattern, ManglePropertiesPatterns,
+  ManualCodeSplittingOptions, MatchGroup, MatchGroupName, ModuleType, OptimizationOption,
+  OutputExports, OutputFormat, Platform, PluginTimingsOption, RawCompressOptions, RawMangleOptions,
+  RawManglePropertiesOptions, RawMinifyOptions, RawMinifyOptionsDetailed, SanitizeFilename,
+  StrictMode, TsConfig,
 };
 use rolldown_common::DeferSyncScanData;
 use rolldown_common::GeneratedCodeOptions;
@@ -289,16 +290,16 @@ fn normalize_sourcemap_ignore_list_option(
       rolldown::SourceMapIgnoreList::from_string_or_regex(string_or_regex.inner())
     }
     Either3::C(ts_fn) => {
-      rolldown::SourceMapIgnoreList::new(Arc::new(move |source, sourcemap_path| {
+      rolldown::SourceMapIgnoreList::new(Arc::new(move |sources, sourcemap_path| {
         let ts_fn = Arc::clone(&ts_fn);
-        let source = source.to_string();
         let sourcemap_path = sourcemap_path.to_string();
         Box::pin(async move {
           ts_fn
-            .invoke_async((source, sourcemap_path).into())
+            .invoke_async((sources, sourcemap_path).into())
             .await
             .context("sourcemapIgnoreList option")
             .map_err(anyhow::Error::from)
+            .map(|flags| flags.iter().map(|flag| *flag != 0).collect())
         })
       }))
     }
@@ -306,16 +307,15 @@ fn normalize_sourcemap_ignore_list_option(
 }
 
 fn normalize_sourcemap_path_transform_option(
-  sourcemap_path_transform: Option<JsCallback<FnArgs<(String, String)>, String>>,
+  sourcemap_path_transform: Option<JsCallback<FnArgs<(Vec<String>, String)>, Vec<String>>>,
 ) -> Option<rolldown::SourceMapPathTransform> {
   sourcemap_path_transform.map(|ts_fn| {
-    rolldown::SourceMapPathTransform::new(Arc::new(move |source, sourcemap_path| {
+    rolldown::SourceMapPathTransform::new(Arc::new(move |sources, sourcemap_path| {
       let ts_fn = Arc::clone(&ts_fn);
-      let source = source.to_string();
       let sourcemap_path = sourcemap_path.to_string();
       Box::pin(async move {
         ts_fn
-          .invoke_async((source, sourcemap_path).into())
+          .invoke_async((sources, sourcemap_path).into())
           .await
           .context("sourcemapPathTransform option")
           .map_err(anyhow::Error::from)
@@ -351,6 +351,33 @@ fn normalize_on_log_option(on_log: BindingOnLog) -> Option<rolldown::OnLog> {
       })
     }))
   })
+}
+
+/// One `test`-shaped matcher: a string or `RegExp` becomes a regex; a function is the batched
+/// shim the JS side wrapped around the user's per-id predicate.
+fn normalize_match_group_test(
+  test: BindingMatchGroupTest,
+  regex_label: &str,
+  callback_context: &'static str,
+) -> napi::Result<rolldown::MatchGroupTest> {
+  match test {
+    Either::A(reg) => Ok(rolldown::MatchGroupTest::Regex(reg.try_into().map_err(|err| {
+      napi::Error::from_reason(format!("Invalid regex in {regex_label}: {err}"))
+    })?)),
+    Either::B(func) => {
+      Ok(rolldown::MatchGroupTest::Function(Arc::new(move |module_ids: Vec<String>| {
+        let func = Arc::clone(&func);
+        Box::pin(async move {
+          func
+            .invoke_async((module_ids,).into())
+            .await
+            .context(callback_context)
+            .map_err(anyhow::Error::from)
+            .map(|flags| flags.iter().map(|flag| *flag != 0).collect())
+        })
+      })))
+    }
+  }
 }
 
 fn normalize_code_splitting(
@@ -401,29 +428,12 @@ fn normalize_code_splitting(
                   },
                   test: item
                     .test
-                    .map(|inner| -> napi::Result<rolldown::MatchGroupTest> {
-                      match inner {
-                        Either::A(reg) => {
-                          Ok(rolldown::MatchGroupTest::Regex(reg.try_into().map_err(|err| {
-                            napi::Error::from_reason(format!(
-                              "Invalid regex in `manualCodeSplitting` group `test`: {err}"
-                            ))
-                          })?))
-                        }
-                        Either::B(func) => Ok(rolldown::MatchGroupTest::Function(Arc::new(
-                          move |module_ids: Vec<String>| {
-                            let func = Arc::clone(&func);
-                            Box::pin(async move {
-                              func
-                                .invoke_async((module_ids,).into())
-                                .await
-                                .context("advancedChunks group test option")
-                                .map_err(anyhow::Error::from)
-                                .map(|flags| flags.iter().map(|flag| *flag != 0).collect())
-                            })
-                          },
-                        ))),
-                      }
+                    .map(|inner| {
+                      normalize_match_group_test(
+                        inner,
+                        "`manualCodeSplitting` group `test`",
+                        "advancedChunks group test option",
+                      )
                     })
                     .transpose()?,
                   priority: item.priority,
@@ -442,6 +452,29 @@ fn normalize_code_splitting(
           })
           .transpose()?,
         include_dependencies_recursively: inner.include_dependencies_recursively,
+        experimental_inline_common_chunks: inner
+          .experimental_inline_common_chunks
+          .map(|inner| -> napi::Result<InlineCommonChunksOptions> {
+            Ok(InlineCommonChunksOptions {
+              max_size: inner.max_size,
+              exclude: inner
+                .exclude
+                .map(|exclude| {
+                  exclude
+                    .into_iter()
+                    .map(|test| {
+                      normalize_match_group_test(
+                        test,
+                        "`codeSplitting.experimentalInlineCommonChunks.exclude`",
+                        "codeSplitting.experimentalInlineCommonChunks.exclude option",
+                      )
+                    })
+                    .collect::<napi::Result<Vec<_>>>()
+                })
+                .transpose()?,
+            })
+          })
+          .transpose()?,
       })
     })
     .transpose()?;

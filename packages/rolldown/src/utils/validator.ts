@@ -12,7 +12,7 @@ import type {
   LogLevelOption,
   LogLevelWithError,
   LogOrStringHandler,
-} from '../log/logging';
+} from '../log/logging.ts';
 import type {
   DevModeOptions,
   ExternalOption,
@@ -21,7 +21,7 @@ import type {
   OnLogFunction,
   OnwarnFunction,
   OptimizationOptions,
-} from '../options/input-options';
+} from '../options/input-options.ts';
 import type {
   AddonFunction,
   CodeSplittingNameFunction,
@@ -38,15 +38,16 @@ import type {
   MinifyOptions,
   ModuleFormat,
   CodeSplittingOptions,
+  ExperimentalInlineCommonChunksOptions,
   GeneratedCodePreset,
   GeneratedCodeOptions,
-} from '../options/output-options';
-import type { RolldownOutputPluginOption, RolldownPluginOption } from '../plugin';
-import type { SourcemapIgnoreListOption, SourcemapPathTransformOption } from '../types/misc';
-import type { RenderedChunk } from '../types/rolldown-output';
-import type { AnyFn, StringOrRegExp } from '../types/utils';
-import { flattenValibotSchema } from './flatten-valibot-schema';
-import { styleText } from './style-text';
+} from '../options/output-options.ts';
+import type { RolldownOutputPluginOption, RolldownPluginOption } from '../plugin/index.ts';
+import type { SourcemapIgnoreListOption, SourcemapPathTransformOption } from '../types/misc.ts';
+import type { RenderedChunk } from '../types/rolldown-output.ts';
+import type { AnyFn, StringOrRegExp } from '../types/utils.ts';
+import { flattenValibotSchema } from './flatten-valibot-schema.ts';
+import { styleText } from './style-text.ts';
 import type {
   ChecksOptions,
   InputOption,
@@ -55,7 +56,7 @@ import type {
   TransformOptions,
   TreeshakingOptions,
   WatcherOptions,
-} from '..';
+} from '../index.ts';
 
 type IsSchemaSubType<
   SubTypeSchema extends v.BaseSchema<unknown, unknown, v.BaseIssue<unknown>>,
@@ -400,10 +401,16 @@ const ChecksOptionsSchema = v.strictObject({
     v.optional(v.boolean()),
     v.description('Whether to emit warnings when Rolldown could not clean the output directory'),
   ),
+  bundlerTimings: v.pipe(
+    v.optional(v.boolean()),
+    v.description(
+      'Whether to emit warnings when plugins and option callbacks take significant time during the build process',
+    ),
+  ),
   pluginTimings: v.pipe(
     v.optional(v.boolean()),
     v.description(
-      'Whether to emit warnings when plugins take significant time during the build process',
+      'Deprecated alias for bundlerTimings. Rolldown uses bundlerTimings if both options have values.',
     ),
   ),
   duplicateShebang: v.pipe(
@@ -621,6 +628,7 @@ const DevModeSchema = v.union([
     implement: v.optional(v.string()),
     skipCommonRuntimeInjection: v.optional(v.boolean()),
     lazy: v.optional(v.boolean()),
+    hotUpdate: v.optional(v.boolean()),
   }),
 ]);
 isTypeTrue<IsSchemaSubType<typeof DevModeSchema, DevModeOptions>>();
@@ -701,7 +709,23 @@ const InputOptionsSchema = v.strictObject({
   devtools: v.pipe(
     v.optional(
       v.object({
-        sessionId: v.pipe(v.optional(v.string()), v.description('Used to name the build.')),
+        sessionId: v.pipe(
+          v.optional(
+            v.pipe(
+              v.string(),
+              // The id names the `node_modules/.rolldown/{sessionId}` directory.
+              v.check(
+                (id) => id !== '' && id !== '.' && id !== '..' && !/[/\\\0]/.test(id),
+                'Expected one path segment: not empty, not "." or "..", and without "/", "\\" or NUL',
+              ),
+              v.check(
+                (id) => id.toLowerCase().toUpperCase() !== 'UNKNOWN-SESSION',
+                '"unknown-session" is reserved for devtools events without a session context',
+              ),
+            ),
+          ),
+          v.description('Used to name the build.'),
+        ),
       }),
     ),
     v.description(
@@ -839,6 +863,24 @@ const AdvancedChunksTestFunctionSchema = v.pipe(
 );
 isTypeTrue<IsSchemaSubType<typeof AdvancedChunksTestFunctionSchema, CodeSplittingTestFunction>>();
 
+const InlineCommonChunksExcludeItemSchema = v.union([
+  StringOrRegExpSchema,
+  AdvancedChunksTestFunctionSchema,
+]);
+
+const ExperimentalInlineCommonChunksSchema = v.strictObject({
+  maxSize: v.optional(v.number()),
+  exclude: v.optional(
+    v.union([InlineCommonChunksExcludeItemSchema, v.array(InlineCommonChunksExcludeItemSchema)]),
+  ),
+});
+isTypeTrue<
+  IsSchemaSubType<
+    typeof ExperimentalInlineCommonChunksSchema,
+    ExperimentalInlineCommonChunksOptions
+  >
+>();
+
 const AdvancedChunksSchema = v.strictObject({
   includeDependenciesRecursively: v.optional(v.boolean()),
   minSize: v.optional(v.number()),
@@ -849,6 +891,7 @@ const AdvancedChunksSchema = v.strictObject({
   groups: v.optional(
     v.array(
       v.strictObject({
+        debugName: v.optional(v.string()),
         name: v.union([v.string(), AdvancedChunksNameFunctionSchema]),
         test: v.optional(v.union([StringOrRegExpSchema, AdvancedChunksTestFunctionSchema])),
         priority: v.optional(v.number()),
@@ -864,6 +907,7 @@ const AdvancedChunksSchema = v.strictObject({
       }),
     ),
   ),
+  experimentalInlineCommonChunks: v.optional(ExperimentalInlineCommonChunksSchema),
 });
 isTypeTrue<IsSchemaSubType<typeof AdvancedChunksSchema, CodeSplittingOptions>>();
 

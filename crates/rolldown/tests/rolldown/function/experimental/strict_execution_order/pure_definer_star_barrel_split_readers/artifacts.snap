@@ -15,8 +15,8 @@ export { defValue };
 ## a2.js
 
 ```js
-import { t as init_barrel } from "./barrel.js";
 import { t as __esmMin } from "./rolldown-runtime.js";
+import { t as init_barrel } from "./barrel.js";
 //#region definer.js
 function build() {
 	return { value: 7 };
@@ -45,8 +45,8 @@ export { init_a as n, init_definer as r, defValue as t };
 ## b.js
 
 ```js
-import { r as vSib, t as init_barrel } from "./barrel.js";
 import { t as __esmMin } from "./rolldown-runtime.js";
+import { r as vSib, t as init_barrel } from "./barrel.js";
 //#region b.js
 var sibValue;
 function init_b() {
@@ -65,8 +65,8 @@ export { sibValue };
 ## barrel.js
 
 ```js
-import { r as init_definer } from "./a2.js";
 import { t as __esmMin } from "./rolldown-runtime.js";
+import { r as init_definer } from "./a2.js";
 //#region sibling.js
 var vSib;
 function init_sibling() {
@@ -112,8 +112,8 @@ export { defValue };
 ### a2.js
 
 ```js
-import { t as init_barrel } from "./barrel.js";
 import { t as __esmMin } from "./rolldown-runtime.js";
+import { t as init_barrel } from "./barrel.js";
 //#region definer.js
 function build() {
 	return { value: 7 };
@@ -142,8 +142,8 @@ export { init_a as n, init_definer as r, defValue as t };
 ### b.js
 
 ```js
-import { r as vSib, t as init_barrel } from "./barrel.js";
 import { t as __esmMin } from "./rolldown-runtime.js";
+import { r as vSib, t as init_barrel } from "./barrel.js";
 //#region b.js
 var sibValue;
 function init_b() {
@@ -162,8 +162,8 @@ export { sibValue };
 ### barrel.js
 
 ```js
-import { r as init_definer } from "./a2.js";
 import { t as __esmMin } from "./rolldown-runtime.js";
+import { r as init_definer } from "./a2.js";
 //#region sibling.js
 var vSib;
 function init_sibling() {

@@ -43,8 +43,8 @@ export { lazy };
 ## main.js
 
 ```js
-import dep, { init_dep } from "./dep.js";
 import { __esmMin } from "./rolldown-runtime.js";
+import dep, { init_dep } from "./dep.js";
 //#region main.js
 var mod;
 function init_main() {

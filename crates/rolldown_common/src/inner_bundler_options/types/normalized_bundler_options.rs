@@ -14,6 +14,7 @@ use super::code_splitting_mode::CodeSplittingMode;
 use super::comments::CommentsOptions;
 use super::experimental_options::ExperimentalOptions;
 use super::generated_code_options::GeneratedCodeOptions;
+use super::inline_common_chunks_options::NormalizedInlineCommonChunksOptions;
 use super::legal_comments::LegalComments;
 use super::manual_code_splitting_options::ManualCodeSplittingOptions;
 use super::minify_options::MinifyOptions;
@@ -93,6 +94,8 @@ pub struct NormalizedBundlerOptions {
   pub code_splitting: CodeSplittingMode,
   pub dynamic_import_in_cjs: bool,
   pub manual_code_splitting: Option<ManualCodeSplittingOptions>,
+  /// See internal-docs/inline-common-chunks/implementation.md.
+  pub inline_common_chunks: Option<NormalizedInlineCommonChunksOptions>,
   pub checks: EventKindSwitcher,
   pub profiler_names: bool,
   pub watch: WatchOption,
@@ -174,6 +177,7 @@ impl Default for NormalizedBundlerOptions {
       code_splitting: CodeSplittingMode::default(),
       dynamic_import_in_cjs: true,
       manual_code_splitting: Default::default(),
+      inline_common_chunks: Default::default(),
       checks: Default::default(),
       profiler_names: Default::default(),
       watch: Default::default(),

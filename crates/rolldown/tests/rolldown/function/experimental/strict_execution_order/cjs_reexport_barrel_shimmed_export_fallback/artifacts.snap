@@ -70,8 +70,8 @@ export { __esmMin as n, __toESM as r, __commonJSMin as t };
 ## route.js
 
 ```js
-import { i as init_pure_barrel, r as import_clone_deep } from "./main2.js";
 import { n as __esmMin } from "./rolldown-runtime.js";
+import { i as init_pure_barrel, r as import_clone_deep } from "./main2.js";
 //#region route.js
 var value;
 function init_route() {

@@ -24,11 +24,6 @@ jobs:
     steps:
       - uses: taiki-e/checkout-action@7d1e50e93dc4fb3bba58f85018fadf77898aee8b # v1.4.2
 
-      # pnpm v11 requires Node >=22.13, so fall back to pnpm 10 when testing on Node 20.
-      - name: Pin pnpm 10 for Node 20
-        if: ${{ inputs.node-version == 20 }}
-        run: npm pkg set packageManager=pnpm@10.33.4
-
       - uses: voidzero-dev/setup-vp@3754dd7dbdb32bd8f6d28b6043de13ad3a75f21f # v1.21.1
         with:
           version: '1.0.0'

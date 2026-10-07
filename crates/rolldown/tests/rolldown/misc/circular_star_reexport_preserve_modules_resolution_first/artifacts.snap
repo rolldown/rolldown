@@ -6,10 +6,9 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## a.js
 
 ```js
-import { foo } from "./e.js";
+export { foo } from "./e.js";
 import "./d.js";
 import "./b.js";
-export { foo };
 
 ```
 
@@ -24,8 +23,7 @@ import "./a.js";
 ## d.js
 
 ```js
-import { foo } from "./e.js";
-export { foo };
+export { foo } from "./e.js";
 
 ```
 

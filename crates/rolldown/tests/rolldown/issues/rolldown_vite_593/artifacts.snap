@@ -29,8 +29,7 @@ export { Component };
 ## safehtml.js
 
 ```js
-import { n as SafeHtml } from "./shared.js";
-export { SafeHtml };
+export { n as SafeHtml } from "./shared.js";
 
 ```
 

@@ -6,16 +6,14 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## a.js
 
 ```js
-import { n as a } from "./common.js";
-export { a };
+export { n as a } from "./common.js";
 
 ```
 
 ## b.js
 
 ```js
-import { t as b } from "./common.js";
-export { b };
+export { t as b } from "./common.js";
 
 ```
 

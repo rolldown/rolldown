@@ -75,24 +75,21 @@ export { imp1 as i, imp33 as n, imp2 as r, imp3 as t };
 ### imp1.js
 
 ```js
-import { i as imp1 } from "./imp.js";
-export { imp1 };
+export { i as imp1 } from "./imp.js";
 
 ```
 
 ### imp2.js
 
 ```js
-import { r as imp2 } from "./imp.js";
-export { imp2 };
+export { r as imp2 } from "./imp.js";
 
 ```
 
 ### imp3.js
 
 ```js
-import { n as imp33, t as imp3 } from "./imp.js";
-export { imp3, imp33 };
+export { t as imp3, n as imp33 } from "./imp.js";
 
 ```
 

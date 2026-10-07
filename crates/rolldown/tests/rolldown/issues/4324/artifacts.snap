@@ -6,8 +6,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## main.js
 
 ```js
-import * as what from "node:http";
-import dh from "node:http";
+import dh, * as what from "node:http";
 import { URL } from "node:net";
 //#region file.js
 console.log("file", what, URL, dh);

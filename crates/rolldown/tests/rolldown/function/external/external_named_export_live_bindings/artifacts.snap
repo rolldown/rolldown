@@ -68,31 +68,27 @@ Object.defineProperty(exports, "foo", {
 ### imported-barrel.js
 
 ```js
-import { foo } from "./imported.js";
-export { foo };
+export { foo } from "./imported.js";
 
 ```
 
 ### imported.js
 
 ```js
-import { request as foo } from "node:https";
-export { foo };
+export { request as foo } from "node:https";
 
 ```
 
 ### reexported-barrel.js
 
 ```js
-import { foo } from "./reexported.js";
-export { foo };
+export { foo } from "./reexported.js";
 
 ```
 
 ### reexported.js
 
 ```js
-import { request as foo } from "node:https";
-export { foo };
+export { request as foo } from "node:https";
 
 ```

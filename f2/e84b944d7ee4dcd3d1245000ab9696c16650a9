@@ -1,0 +1,73 @@
+crates/rolldown/src/stages/link_stage/bind_imports_and_exports.rs
+  s_efad607f5a7d7d::t_9ba2d6a1e14959 201-248,371-373,376,398,413,415-417,419-421,424-428,431,433,438,1497-1526,1746
+crates/rolldown/tests/integration/snapshots/integration__test262__test262_module_code.snap
+  s_efad607f5a7d7d::t_524763b41ab165 57,60-62
+crates/rolldown/tests/rolldown/issues/11058/_config.json
+  s_efad607f5a7d7d::t_6b17f04505af32 1-13
+crates/rolldown/tests/rolldown/issues/11058/a.js
+  s_efad607f5a7d7d::t_17a18da6e25887 1
+crates/rolldown/tests/rolldown/issues/11058/artifacts.snap
+  s_efad607f5a7d7d::t_bc612777869174 1-36
+crates/rolldown/tests/rolldown/issues/11058/b.js
+  s_efad607f5a7d7d::t_8d986839cd3bde 1
+crates/rolldown/tests/rolldown/issues/11058/main.js
+  s_efad607f5a7d7d::t_6122fcd19e76a0 1-3
+crates/rolldown/tests/rolldown/issues/11058/only-c.js
+  s_efad607f5a7d7d::t_16cd224a971522 1
+crates/rolldown/tests/rolldown/issues/11058_ambiguous_external_import/_config.json
+  s_efad607f5a7d7d::t_8e46d63d6d5cf8 1-12
+crates/rolldown/tests/rolldown/issues/11058_ambiguous_external_import/a.js
+  s_efad607f5a7d7d::t_9f0e3c5f444e05 1
+crates/rolldown/tests/rolldown/issues/11058_ambiguous_external_import/artifacts.snap
+  s_efad607f5a7d7d::t_7691d07139be17 1-52
+crates/rolldown/tests/rolldown/issues/11058_ambiguous_external_import/b.js
+  s_efad607f5a7d7d::t_a1d1c31b41abb8 1
+crates/rolldown/tests/rolldown/issues/11058_ambiguous_external_import/barrel.js
+  s_efad607f5a7d7d::t_d3689874c8ed88 1-2
+crates/rolldown/tests/rolldown/issues/11058_ambiguous_external_import/main.js
+  s_efad607f5a7d7d::t_556e4974380519 1-2
+crates/rolldown/tests/rolldown/issues/11058_conflicting_external_bindings/_config.json
+  s_efad607f5a7d7d::t_0ebedc1e88a38a 1-8
+crates/rolldown/tests/rolldown/issues/11058_conflicting_external_bindings/a.js
+  s_efad607f5a7d7d::t_a98232d1c58e3f 1
+crates/rolldown/tests/rolldown/issues/11058_conflicting_external_bindings/artifacts.snap
+  s_efad607f5a7d7d::t_25516eac6f015d 1-52
+crates/rolldown/tests/rolldown/issues/11058_conflicting_external_bindings/b.js
+  s_efad607f5a7d7d::t_deb7a6c1181ddc 1-2
+crates/rolldown/tests/rolldown/issues/11058_conflicting_external_bindings/main.js
+  s_efad607f5a7d7d::t_c36101dc496c86 1-2
+crates/rolldown/tests/rolldown/issues/11058_import_through_barrel/_config.json
+  s_efad607f5a7d7d::t_e8bbfc014a808c 1-12
+crates/rolldown/tests/rolldown/issues/11058_import_through_barrel/a.js
+  s_efad607f5a7d7d::t_cb3eab4d2c0204 1-2
+crates/rolldown/tests/rolldown/issues/11058_import_through_barrel/artifacts.snap
+  s_efad607f5a7d7d::t_3ae88ef8784787 1-65
+crates/rolldown/tests/rolldown/issues/11058_import_through_barrel/b.js
+  s_efad607f5a7d7d::t_54317cfc8c9bda 1-2
+crates/rolldown/tests/rolldown/issues/11058_import_through_barrel/b2.js
+  s_efad607f5a7d7d::t_7f31ab85f048ff 1
+crates/rolldown/tests/rolldown/issues/11058_import_through_barrel/barrel.js
+  s_efad607f5a7d7d::t_2b772daf6aaccf 1-3
+crates/rolldown/tests/rolldown/issues/11058_import_through_barrel/c.js
+  s_efad607f5a7d7d::t_da3644e6cc99e9 1-2
+crates/rolldown/tests/rolldown/issues/11058_import_through_barrel/main.js
+  s_efad607f5a7d7d::t_cc4c695de07d2a 1-10
+crates/rolldown/tests/test262_failures.json
+  s_efad607f5a7d7d::t_a0c3e9cbce7bbf 147
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "f2e84b944d7ee4dcd3d1245000ab9696c16650a9",
+  "prompts": {},
+  "sessions": {
+    "s_efad607f5a7d7d": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "75914a2c-be5d-416e-ac18-88062d163586",
+        "model": "unknown"
+      },
+      "human_author": "IWANABETHATGUY <iwanabethatguy@qq.com>"
+    }
+  }
+}

@@ -1,0 +1,47 @@
+crates/rolldown/tests/rolldown/topics/deconflict/cjs_entry_local_renamed_onto_sibling_local/_config.json
+  s_d43624d0762669::t_86d82e1621f472 1-6
+crates/rolldown/tests/rolldown/topics/deconflict/cjs_entry_local_renamed_onto_sibling_local/_test.mjs
+  s_d43624d0762669::t_620ccec52d8035 1-15
+crates/rolldown/tests/rolldown/topics/deconflict/cjs_entry_local_renamed_onto_sibling_local/artifacts.snap
+  s_d43624d0762669::t_86952ad606c42d 1-32
+crates/rolldown/tests/rolldown/topics/deconflict/cjs_entry_local_renamed_onto_sibling_local/main.cjs
+  s_d43624d0762669::t_466dd7c246ac8b 1-8
+crates/rolldown/tests/rolldown/topics/deconflict/cjs_local_renamed_onto_sibling_local/_config.json
+  s_d43624d0762669::t_1329819f8dd13d 1-6
+crates/rolldown/tests/rolldown/topics/deconflict/cjs_local_renamed_onto_sibling_local/_test.mjs
+  s_d43624d0762669::t_58522808838d8d 1-12
+crates/rolldown/tests/rolldown/topics/deconflict/cjs_local_renamed_onto_sibling_local/artifacts.snap
+  s_d43624d0762669::t_d77e3d1552ebd7 1-48
+crates/rolldown/tests/rolldown/topics/deconflict/cjs_local_renamed_onto_sibling_local/dup.cjs
+  s_d43624d0762669::t_b52b5087121842 1-8
+crates/rolldown/tests/rolldown/topics/deconflict/cjs_local_renamed_onto_sibling_local/lib.cjs
+  s_d43624d0762669::t_d23529dee5883a 1-5
+crates/rolldown/tests/rolldown/topics/deconflict/cjs_local_renamed_onto_sibling_local/main.js
+  s_d43624d0762669::t_909298b2f2d352 1-5
+crates/rolldown/tests/rolldown/topics/deconflict/cjs_nested_binding_renamed_onto_root_local/_config.json
+  s_d43624d0762669::t_9f8c51afef7456 1-6
+crates/rolldown/tests/rolldown/topics/deconflict/cjs_nested_binding_renamed_onto_root_local/_test.mjs
+  s_d43624d0762669::t_b01c0b506f6865 1-12
+crates/rolldown/tests/rolldown/topics/deconflict/cjs_nested_binding_renamed_onto_root_local/artifacts.snap
+  s_d43624d0762669::t_77c038f72c6e11 1-46
+crates/rolldown/tests/rolldown/topics/deconflict/cjs_nested_binding_renamed_onto_root_local/lib.cjs
+  s_d43624d0762669::t_59aaac1e9bfc68 1-11
+crates/rolldown/tests/rolldown/topics/deconflict/cjs_nested_binding_renamed_onto_root_local/main.js
+  s_d43624d0762669::t_a55ce5bdf28a6e 1-4
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "9c4eaa50673b7461474344294e6a736968c2ba1b",
+  "prompts": {},
+  "sessions": {
+    "s_d43624d0762669": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "7f7265c1-aa11-4a4b-9d11-215aef9a579c",
+        "model": "unknown"
+      },
+      "human_author": "IWANABETHATGUY <iwanabethatguy@qq.com>"
+    }
+  }
+}

@@ -5,9 +5,9 @@ import { x } from 'tinyexec';
 
 const VITE_DIR = path.resolve(import.meta.dirname, '../../vite');
 const REPO_PATH = path.resolve(import.meta.dirname, './repo');
-const OVERRIDES = [
-  `  rolldown: ${path.resolve(import.meta.dirname, '../rolldown')}`
-];
+const ROLLDOWN_DIR = path.resolve(import.meta.dirname, '../rolldown');
+// JSON string = valid YAML double-quoted scalar, so Windows backslashes survive.
+const ROLLDOWN_OVERRIDE = `  rolldown: ${JSON.stringify(`link:${ROLLDOWN_DIR}`)}`;
 
 function printTitle(title: string) {
   console.info(styleText(['cyan', 'bold'], title));
@@ -63,19 +63,66 @@ await runCmdAndPipeOrExit(
   ['git', ['clone', VITE_DIR, REPO_PATH]],
 );
 
+// Write the `rolldown` override ourselves: Vite no longer carries a
+// `rolldown: $rolldown` line for us to rewrite.
+function withRolldownOverride(yaml: string): string {
+  const lines = yaml.split('\n');
+  const start = lines.findIndex(line => line.startsWith('overrides:'));
+  if (start === -1) {
+    return `${yaml.endsWith('\n') ? yaml : `${yaml}\n`}overrides:\n${ROLLDOWN_OVERRIDE}\n`;
+  }
+  if (!/^overrides:\s*$/.test(lines[start])) {
+    throw new Error(`Expected a block \`overrides:\` mapping, got: ${lines[start]}`);
+  }
+  let end = start + 1;
+  while (end < lines.length && (lines[end].trim() === '' || /^\s/.test(lines[end]))) end++;
+  const existing = lines
+    .slice(start + 1, end)
+    .findIndex(line => /^\s+['"]?rolldown['"]?\s*:/.test(line));
+  if (existing === -1) {
+    lines.splice(start + 1, 0, ROLLDOWN_OVERRIDE);
+  } else {
+    lines[start + 1 + existing] = ROLLDOWN_OVERRIDE;
+  }
+  return lines.join('\n');
+}
+
 printTitle('# Updating pnpm-workspace.yaml to link to local rolldown...');
 const pnpmWorkspace = path.resolve(REPO_PATH, 'pnpm-workspace.yaml');
-const pnpmWorkspaceYaml = fs.readFileSync(pnpmWorkspace, 'utf-8');
-const newPnpmWorkspaceYaml = pnpmWorkspaceYaml.replace(
-  /overrides:\n\s*rolldown:\s*\$rolldown\n/,
-  `overrides:\n${OVERRIDES.join('\n')}\n`
-);
+const newPnpmWorkspaceYaml = withRolldownOverride(fs.readFileSync(pnpmWorkspace, 'utf-8'));
+if (!newPnpmWorkspaceYaml.split('\n').includes(ROLLDOWN_OVERRIDE)) {
+  console.error(styleText(['red', 'bold'], `Failed to add \`${ROLLDOWN_OVERRIDE.trim()}\` to ${pnpmWorkspace}`));
+  process.exit(1);
+}
 fs.writeFileSync(pnpmWorkspace, newPnpmWorkspaceYaml, 'utf-8');
 
 await runCmdAndPipeOrExit(
   '# Running `pnpm install`...',
   ['pnpm', ['install', '--no-frozen-lockfile'], { nodeOptions: { cwd: REPO_PATH } }],
 );
+
+// Fail when the clone does not resolve the workspace rolldown, so the suites
+// never silently test an npm release again.
+printTitle('# Checking that vite resolves the workspace rolldown...');
+const resolveResult = await x(
+  process.execPath,
+  ['-e', "console.log(require('fs').realpathSync(require.resolve('rolldown/package.json')))"],
+  { nodeOptions: { cwd: path.join(REPO_PATH, 'packages/vite') } },
+);
+const resolvedRolldownPkg = resolveResult.stdout.trim();
+const expectedRolldownPkg = fs.realpathSync(path.join(ROLLDOWN_DIR, 'package.json'));
+if (resolveResult.exitCode !== 0 || resolvedRolldownPkg !== expectedRolldownPkg) {
+  console.error(
+    styleText(
+      ['red', 'bold'],
+      `vite resolves rolldown to ${resolvedRolldownPkg || resolveResult.stderr.trim()}, expected ${expectedRolldownPkg}`,
+    ),
+  );
+  process.exit(1);
+}
+const { version: rolldownVersion } = JSON.parse(fs.readFileSync(resolvedRolldownPkg, 'utf-8'));
+console.info(`vite resolves rolldown ${rolldownVersion} at ${resolvedRolldownPkg}`);
+
 await runCmdAndPipeOrExit(
   '# Running `pnpm exec playwright install chromium`...',
   ['pnpm', ['exec', 'playwright', 'install', 'chromium'], { nodeOptions: { cwd: REPO_PATH } }],

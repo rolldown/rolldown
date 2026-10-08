@@ -38,15 +38,10 @@ impl BindingTransformPluginContext {
     magic_string: &mut BindingMagicString<'static>,
   ) -> napi::Result<Option<String>> {
     // This moves the contents out, leaving `magic_string` unusable from JS onwards —
-    // including for a repeated send, which errors here instead of queueing the empty
-    // leftover into the sourcemap channel.
+    // including for a repeated send, which errors here instead of registering the
+    // empty leftover as the hook's sourcemap.
     let internal_magic_string = magic_string.take_inner()?;
 
-    self.inner.send_magic_string(internal_magic_string).map_err(|_| {
-      napi::Error::from_reason(
-        "TransformPluginContext: failed to send MagicString to sourcemap worker - sourcemap \
-         generation thread terminated unexpectedly during transform",
-      )
-    })
+    Ok(self.inner.send_magic_string(internal_magic_string)?)
   }
 }

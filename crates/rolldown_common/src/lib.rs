@@ -211,7 +211,7 @@ pub use crate::{
   types::scan_mode::ScanMode,
   types::side_effects,
   types::source_mutation::SourceMutation,
-  types::sourcemap_chain_element::SourcemapChainElement,
+  types::sourcemap_chain_element::{PendingSourcemap, SourcemapChainElement},
   types::stable_module_id::StableModuleId,
   types::stmt_eval_flags::StmtEvalFlags,
   types::stmt_info::{

@@ -619,6 +619,11 @@ impl GenerateStage<'_> {
       .copied()
       .or(chunk_graph.module_to_chunk[importee_module_idx])
       .expect("importee chunk should exist");
+    if chunk_graph.module_to_chunk[importer_idx]
+      .is_some_and(|importer_chunk| importer_chunk == importee_chunk)
+    {
+      return;
+    }
     cross_chunk_dynamic_imports.insert(importee_chunk);
   }
 

@@ -200,11 +200,16 @@ Changes accumulate in an `invalidatedIds` Map during the delay window — both p
 
 ### Rolldown's Approach
 
-The `WatcherState::Debouncing` state does the same thing with a deadline reset. `wait_for_debounce_input()` runs an unbiased `futures` `select!` over the mpsc receiver and a `rolldown_utils::time::sleep_until(deadline)` timer:
+The `WatcherState::Debouncing` state does the same thing with a deadline reset. `wait_for_debounce_input()` runs a `futures` `select_biased!` over the mpsc receiver (polled first) and a `rolldown_utils::time::sleep_until(deadline)` timer:
 
 - File change → `Idle` becomes `Debouncing { changes, deadline }`
 - More changes → deadline resets, changes accumulate with kind consolidation per path
 - Deadline fires → if changes are non-empty, passed to `run_build_sequence()`; if empty (all cancelled out by kind consolidation), silently return to Idle
+
+One OS notification can reach the coordinator as several `FileChanges` messages: notify splits it into one event per change kind of the file (create, metadata, content) and hands them over one at a time, microseconds apart. A build must not start on part of one notification: the rest would be drained after `END` and start a second build of the same save, and an edit made during that second build would get its `END` from the wrong build. Two rules keep the parts together:
+
+- **Debounce floor:** the deadline is `now + max(buildDelay, MIN_DEBOUNCE)` (1 ms, `watcher_state.rs`), so even `buildDelay: 0` leaves time for the rest of the notification to arrive.
+- **Input first:** a message already in the channel wins over a deadline that is already due.
 
 #### Kind Consolidation
 
@@ -223,7 +228,7 @@ The fs-watcher layer (`notify-debouncer-full`) is available as an option for use
 
 ### Default Delay
 
-Rollup defaults `buildDelay` to 0ms. The new `rolldown_watcher` defaults to 0ms (`DEFAULT_DEBOUNCE_MS`), matching Rollup.
+Rollup defaults `buildDelay` to 0ms. The new `rolldown_watcher` defaults to 0ms (`DEFAULT_DEBOUNCE_MS`), matching Rollup; the debounce floor above still applies.
 
 ## Event Lifecycle
 
@@ -247,7 +252,7 @@ File change detected by per-task FsWatcher
       - task.invalidate(path) → sets needs_rebuild = true
       - task.call_on_invalidate(path) → fires immediately, before debounce
       - State: Idle → Debouncing, or extends deadline
-  → Debounce deadline fires (`sleep_until` wins the `select!`)
+  → Debounce deadline fires (`sleep_until` is due and no message is queued)
   → run_build_sequence(changes):
       1. handler.on_change(path, kind) for each change
       2. task.call_watch_change(path, kind) for each task × each change

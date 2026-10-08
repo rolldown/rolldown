@@ -8,7 +8,8 @@ use oxc::syntax::keyword::{GLOBAL_OBJECTS, RESERVED_KEYWORDS};
 use oxc_str::{CompactStr, Ident, IdentHashSet};
 
 use rolldown_common::{
-  ModuleIdx, NormalModule, OutputFormat, SymbolRef, SymbolRefDb, SymbolRefDbForModule, WrapKind,
+  ModuleIdx, NormalModule, OutputFormat, StmtInfoMeta, SymbolRef, SymbolRefDb,
+  SymbolRefDbForModule, WrapKind,
 };
 use rolldown_utils::concat_string;
 
@@ -583,6 +584,33 @@ impl NestedScopeRenamer<'_, '_> {
           let symbol_ref = (self.module_idx, *symbol_id).into();
           self.renamer.rename_inner_binding(symbol_ref, name.as_str());
         }
+      }
+    }
+  }
+
+  /// Rename the root bindings of a CJS-wrapped module with the name `Promise` or `Object`, if the
+  /// module has an `import()`. The finalizer prints a lowered `import()` as
+  /// `Promise.resolve().then(...)`, and a dead one as `Object.freeze(...)`, inside the CJS closure.
+  ///
+  /// For a top-level binding, `Renamer::new` reserves these names. A root binding of a CJS-wrapped
+  /// module gets no top-level name, so this pass gives it the same protection. This includes a
+  /// binding that an external `require()` initializes.
+  pub fn rename_cjs_root_bindings_shadowing_lowered_import(&mut self) {
+    if !self.root_scope_is_inner() {
+      return;
+    }
+    // Under CommonJS output even an `import(expr)` without an import record is lowered.
+    let has_import_expr = self.module.import_records.iter().any(|rec| rec.kind.is_dynamic())
+      || self.link_output.stmt_infos[self.module_idx]
+        .iter()
+        .any(|stmt_info| stmt_info.meta.contains(StmtInfoMeta::NonStaticDynamicImport));
+    if !has_import_expr {
+      return;
+    }
+    let root_scope_id = self.scoping.root_scope_id();
+    for name in ["Promise", "Object"] {
+      if let Some(symbol_id) = self.scoping.get_binding(root_scope_id, name.into()) {
+        self.renamer.rename_inner_binding((self.module_idx, symbol_id).into(), name);
       }
     }
   }

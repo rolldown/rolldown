@@ -2759,7 +2759,7 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
     }
   }
 
-  fn try_rewrite_import_expression(&self, node: &mut ast::Expression<'ast>) -> bool {
+  fn try_rewrite_import_expression(&mut self, node: &mut ast::Expression<'ast>) -> bool {
     let ast::Expression::ImportExpression(expr) = node else {
       return false;
     };
@@ -2776,7 +2776,10 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
         && !self.ctx.options.dynamic_import_in_cjs
         && expr.options.is_none()
       {
-        // Transform `import(expr)` to `Promise.resolve().then(() => __toESM(require(expr)))`
+        // Transform `import(expr)` to `Promise.resolve().then(() => __toESM(require(expr)))`.
+        // The specifier moves into the `require()` call, and the walker does not visit a rewritten
+        // node, so finalize the references in the specifier now.
+        oxc::ast_visit::VisitJsMut::visit_expression(self, &mut expr.source);
         let to_esm_fn_name = self.finalized_expr_for_runtime_symbol("__toESM");
         node.replace_with(|old| {
           let ast::Expression::ImportExpression(import_expr) = old else { unreachable!() };

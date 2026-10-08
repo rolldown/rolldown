@@ -1,0 +1,8 @@
+{
+  "config": {
+    "input": [{ "name": "main", "import": "./main.js" }],
+    "format": "cjs",
+    "dynamicImportInCjs": false,
+    "platform": "node"
+  }
+}

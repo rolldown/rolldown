@@ -1,0 +1,36 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+Object.defineProperty(exports, Symbol.toStringTag, { value: "Module" });
+// HIDDEN [\0rolldown/runtime.js]
+//#region promise-lib.cjs
+var require_promise_lib = /* @__PURE__ */ __commonJSMin(((exports, module) => {
+	var Promise$1 = require("node:os");
+	module.exports = {
+		os: [typeof Promise$1.platform, typeof Promise$1.arch],
+		path: Promise.resolve().then(() => /* @__PURE__ */ __toESM(require("node:path"), 1))
+	};
+}));
+//#endregion
+//#region esm.js
+//#endregion
+//#region object-lib.cjs
+var require_object_lib = /* @__PURE__ */ __commonJSMin(((exports) => {
+	var Object$1 = require("node:os");
+	exports.os = [typeof Object$1.platform, typeof Object$1.arch];
+	Promise.resolve().then(() => /* @__PURE__ */ Object.freeze({ __proto__: null }));
+}));
+//#endregion
+//#region main.js
+var import_promise_lib = /* @__PURE__ */ __toESM(require_promise_lib());
+var import_object_lib = /* @__PURE__ */ __toESM(require_object_lib());
+//#endregion
+exports.objectLib = import_object_lib.default;
+exports.promiseLib = import_promise_lib.default;
+
+```

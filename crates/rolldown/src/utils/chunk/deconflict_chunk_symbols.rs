@@ -14,7 +14,8 @@ use crate::{
 };
 use arcstr::ArcStr;
 use rolldown_common::{
-  Chunk, ChunkIdx, ChunkKind, GetLocalDb, ModuleIdx, OutputFormat, SymbolRef, WrapKind,
+  Chunk, ChunkIdx, ChunkKind, GetLocalDb, ImportKind, ModuleIdx, NormalModule, OutputFormat,
+  StmtInfo, SymbolRef, WrapKind,
 };
 use rolldown_utils::{concat_string, ecmascript::legitimize_identifier_name};
 use rustc_hash::FxHashMap;
@@ -197,11 +198,7 @@ pub fn deconflict_chunk_symbols(
             // Every other symbol is a closure-local, renamed only if it would capture a reference.
             if is_cjs_wrapped_module
               && !link_output.symbol_db.is_facade_symbol(canonical_ref)
-              && !stmt_info.import_records.iter().any(|import_rec_idx| {
-                module.import_records[*import_rec_idx]
-                  .resolved_module
-                  .is_some_and(|module_idx| link_output.module_table[module_idx].is_external())
-              })
+              && !is_external_import_declaration(link_output, module, stmt_info)
             {
               continue;
             }
@@ -306,6 +303,23 @@ pub fn deconflict_chunk_symbols(
   inline_names
 }
 
+/// Whether `stmt_info` is an `import` declaration of an external module. In a CJS-wrapped module,
+/// rolldown moves that declaration out of the CJS closure. A `require('external')` initializer
+/// stays in the closure, and its binding stays a local of the closure.
+fn is_external_import_declaration(
+  link_output: &LinkStageOutput,
+  module: &NormalModule,
+  stmt_info: &StmtInfo,
+) -> bool {
+  stmt_info.import_records.iter().any(|import_rec_idx| {
+    let import_record = &module.import_records[*import_rec_idx];
+    import_record.kind == ImportKind::Import
+      && import_record
+        .resolved_module
+        .is_some_and(|module_idx| link_output.module_table[module_idx].is_external())
+  })
+}
+
 /// Returns the kind of a top-level symbol. A symbol is synthesized if it is a runtime helper, or a
 /// facade that a normal module owns (for example a wrapper binding, a namespace object or an
 /// interop namespace). The finalizer prints references to these symbols at any location in the
@@ -406,5 +420,6 @@ fn rename_shadowing_symbols_in_nested_scopes<'a>(
     ));
 
     ctx.rename_bindings_shadowing_cjs_ambient_names(output_format);
+    ctx.rename_cjs_root_bindings_shadowing_lowered_import();
   }
 }

@@ -26,7 +26,12 @@ Paths are relative to `crates/rolldown/src/`.
 1. Reserve the ambient names of the format (`require`, `module`, `exports`, `__filename` and `__dirname` for CJS, `exports` for IIFE/UMD), `Object`, `Promise`, the JS keywords and the global objects (`Renamer::new`). Also reserve each unresolved reference of the modules of the chunk (for example `console` and `window`).
 2. IIFE/UMD/CJS: external module namespaces (factory parameters, `require()` bindings). Authored.
 3. Entry chunks: the symbols that the entry exports (`referenced_symbols_by_entry_point_chunk`). ESM: the external import bindings that the chunk uses. Authored.
-4. The included top-level declarations of each module, entry module first (descending execution order). HMR references are synthesized. All other bindings go through `root_binding_kind`. In a CJS-wrapped module, this step gives names only to facades and to external import bindings. Each other root binding is a local of the CJS closure, and this step skips it.
+4. The included top-level declarations of each module, entry module first (descending execution order). HMR references are synthesized. All other bindings go through `root_binding_kind`. In a CJS-wrapped module, this step gives names only to two kinds of binding:
+   - facades;
+   - bindings of an external `import` declaration, because rolldown moves that declaration out of the CJS closure.
+
+   Each other root binding is a local of the CJS closure, and this step skips it. This includes a binding that an external `require()` initializes.
+
 5. Order-wrap synthetic declarations. Synthesized.
 6. Import bindings from other chunks (`imports_from_other_chunks`), through `root_binding_kind`.
 7. Names with no symbol, through `create_conflictless_name` (synthesized): cross-chunk `require_<chunk>` bindings, external namespaces in node mode, and inline-common-chunk bridges.
@@ -45,12 +50,13 @@ Paths are relative to `crates/rolldown/src/`.
 
 ## Inner bindings
 
-`NestedScopeRenamer` runs four passes for each module:
+`NestedScopeRenamer` runs five passes for each module:
 
 - `rename_bindings_shadowing_star_imports`: for each resolved `ns.foo` member access, it checks the name that the finalizer prints for `foo`.
 - `rename_bindings_shadowing_named_imports`: for each reference to a named import, it checks the name that the finalizer prints for the import.
 - `rename_bindings_shadowing_wrapper_params`: it renames the nested bindings that have the name of the `exports` or `module` parameter of the CJS closure of a CJS-wrapped module. Under IIFE/UMD/CJS output, it also renames the nested bindings that have the name of the factory parameter of an external module.
 - `rename_bindings_shadowing_cjs_ambient_names`: CJS output only. It renames the inner bindings with the name `require`, `__filename` or `__dirname`, because rewrites print these names as bare identifiers.
+- `rename_cjs_root_bindings_shadowing_lowered_import`: in a CJS-wrapped module that has an `import()`, it renames the root bindings with the name `Promise` or `Object`. A lowered `import()` prints these names inside the CJS closure. For a top-level binding, `Renamer::new` reserves them.
 
 The first two passes use `Renamer::printed_name`. This function follows a namespace alias to its namespace binding, as `finalized_expr_for_symbol_ref` does. The passes also use `rename_bindings_on_path`, which goes through the scope ancestors of the reference. It stops at the root scope, unless `root_scope_is_inner` is true (the module is CJS-wrapped). It renames each binding with that name, except the binding that the reference resolves to.
 

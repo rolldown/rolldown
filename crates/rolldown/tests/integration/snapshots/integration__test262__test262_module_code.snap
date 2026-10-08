@@ -2,7 +2,7 @@
 source: crates/rolldown/tests/integration/test262.rs
 expression: snapshot
 ---
-Summary: 545 passed, 54 failed, 599 total
+Summary: 547 passed, 52 failed, 599 total
 
 ---
 
@@ -1361,33 +1361,25 @@ Runtime error: Failed to import test module: Test262Error {
 ---
 
 # language/module-code/namespace/internals/delete-exported-init.js
-Result: FAIL
-Reason: Rolldown treats deletions of export bindings as bundle errors instead of runtime errors
+Result: PASS
 Expected: success
-Actual:
-Cannot assign to import 'indirect'
-Cannot assign to import 'local1'
-Cannot assign to import 'renamed'
+Actual: Runtime execution succeeded
 ---
 
 # language/module-code/namespace/internals/delete-exported-uninit.js
 Result: FAIL
-Reason: Rolldown treats deletions of export bindings as bundle errors instead of runtime errors
+Reason: Rolldown does not preserve TDZ semantics
 Expected: success
 Actual:
-Cannot assign to import 'default'
-Cannot assign to import 'indirect'
-Cannot assign to import 'local1'
-Cannot assign to import 'renamed'
+Runtime error: Failed to import test module: Test262Error {
+  message: 'binding unmodified: local1 Expected a ReferenceError to be thrown but no exception was thrown at all'
+}
 ---
 
 # language/module-code/namespace/internals/delete-non-exported.js
-Result: FAIL
-Reason: Rolldown treats deletions of export bindings as bundle errors instead of runtime errors
+Result: PASS
 Expected: success
-Actual:
-Cannot assign to import 'default'
-Cannot assign to import 'undef'
+Actual: Runtime execution succeeded
 ---
 
 # language/module-code/namespace/internals/enumerate-binding-uninit.js
@@ -1610,14 +1602,11 @@ Runtime error: Failed to import test module: Test262Error {
 
 # language/module-code/namespace/internals/set.js
 Result: FAIL
-Reason: Rolldown treats assignments to const as bundle errors instead of runtime errors
+Reason: Rolldown treats assignments to names that a module namespace does not export as bundle errors instead of runtime errors
 Expected: success
 Actual:
 Cannot assign to import 'default'
-Cannot assign to import 'indirect'
-Cannot assign to import 'local1'
 Cannot assign to import 'local2'
-Cannot assign to import 'renamed'
 ---
 
 # language/module-code/namespace/internals/super-access-to-tdz-binding.js

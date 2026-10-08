@@ -105,6 +105,8 @@ const ignoreTests = [
   "rollup@function@ast-validations@update-expression-of-import-fails: disallows updates to imported bindings",
   // ### assignment to a const variable is an error instead of a warning in Rolldown
   "rollup@function@warning-const-reassign: Cannot reassign a variable declared with `const`",
+  // ### rolldown warns with `ASSIGN_TO_IMPORT` instead of `ILLEGAL_REASSIGNMENT`, keeps the write on the
+  // namespace object (`foo_exports.foo = 2` instead of `foo = 2`), and errors for a name the namespace does not export
   "rollup@function@namespace-reassign-import-fails: warns for reassignments to namespace exports",
   "rollup@function@namespace-update-import-fails: disallows updates to namespace exports",
   // ### Rolldown does not support `UNUSED_EXTERNAL_IMPORT` warning

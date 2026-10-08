@@ -80,14 +80,8 @@
   "language/module-code/namespace/internals/define-own-property.js": {
     "reason": "Rolldown allows defining properties on module namespace objects"
   },
-  "language/module-code/namespace/internals/delete-exported-init.js": {
-    "reason": "Rolldown treats deletions of export bindings as bundle errors instead of runtime errors"
-  },
   "language/module-code/namespace/internals/delete-exported-uninit.js": {
-    "reason": "Rolldown treats deletions of export bindings as bundle errors instead of runtime errors"
-  },
-  "language/module-code/namespace/internals/delete-non-exported.js": {
-    "reason": "Rolldown treats deletions of export bindings as bundle errors instead of runtime errors"
+    "reason": "Rolldown does not preserve TDZ semantics"
   },
   "language/module-code/namespace/internals/enumerate-binding-uninit.js": {
     "reason": "Rolldown does not preserve TDZ semantics"
@@ -123,7 +117,7 @@
     "reason": "Rolldown allows setting the prototype of module namespace objects"
   },
   "language/module-code/namespace/internals/set.js": {
-    "reason": "Rolldown treats assignments to const as bundle errors instead of runtime errors"
+    "reason": "Rolldown treats assignments to names that a module namespace does not export as bundle errors instead of runtime errors"
   },
   "language/module-code/top-level-await/async-module-does-not-block-sibling-modules.js": {
     "reason": "Rolldown does not support preserving TLA semantics perfectly"

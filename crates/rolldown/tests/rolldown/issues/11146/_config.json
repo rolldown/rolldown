@@ -1,3 +1,9 @@
 {
-  "expectError": true
+  "config": {},
+  "configVariants": [
+    {
+      "format": "cjs",
+      "strict": "always"
+    }
+  ]
 }

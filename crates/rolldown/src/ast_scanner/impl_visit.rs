@@ -634,7 +634,7 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
             .reference_stmt_for_symbol_id(self.current_stmt_idx, root_symbol_id);
         }
 
-        self.check_import_assign(ident_ref, root_symbol_id.symbol);
+        self.check_import_assign(ident_ref, root_symbol_id.symbol, is_inserted_before);
 
         match (self.cur_class_decl, self.resolve_symbol_from_reference(ident_ref)) {
           (Some(cur_class_decl), Some(referenced_to)) if cur_class_decl == referenced_to => {

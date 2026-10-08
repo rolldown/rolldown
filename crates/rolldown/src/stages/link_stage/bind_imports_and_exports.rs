@@ -10,7 +10,7 @@ use rolldown_common::{
   EcmaModuleAstUsage, ExportsKind, ImportRecordIdx, IndexModules, MemberExprObjectReferencedType,
   MemberExprRef, MemberExprRefResolution, MemberExprWriteKind, Module, ModuleIdx, ModuleType,
   NamespaceAlias, NormalModule, OutputFormat, ResolvedExport, Specifier, StmtInfoIdx, StmtInfos,
-  SymbolOrMemberExprRef, SymbolRef, SymbolRefDb, SymbolRefFlags,
+  StrictMode, SymbolOrMemberExprRef, SymbolRef, SymbolRefDb, SymbolRefFlags,
 };
 use rolldown_error::{
   AmbiguousExternalNamespaceModule, BuildDiagnostic, Diagnostics, EventKindSwitcher,
@@ -727,6 +727,9 @@ impl LinkStage<'_> {
     normal_symbol_exports_chain_map: &FxHashMap<SymbolRef, Vec<SymbolRef>>,
   ) {
     let diagnostics = append_only_vec::AppendOnlyVec::new();
+    // See `namespace_member_write_diagnostic`. ESM output is always strict code.
+    let is_strict_output = matches!(self.options.format, OutputFormat::Esm)
+      || matches!(self.options.strict, StrictMode::Always);
     // A JSON default object whose `data.key` accesses get rewritten to the statically split
     // per-key exports must stay un-split once it is mutated or escapes (see
     // `collect_non_splittable_json_defaults`). Such a mutation/escape in one module invalidates
@@ -780,7 +783,16 @@ impl LinkStage<'_> {
                 let mut canonical_ref_owner: &NormalModule =
                   match &self.module_table[canonical_ref.owner] {
                     Module::Normal(module) => module,
-                    Module::External(_) => return,
+                    Module::External(_) => {
+                      if let Some(error) = unresolved_namespace_member_write_error(
+                        module,
+                        member_expr_ref,
+                        &self.symbols,
+                      ) {
+                        diagnostics.push(error);
+                      }
+                      return;
+                    }
                   };
                 // Treat `import data from './x.json'; data.foo` as a namespace access so
                 // it can be optimized to the underlying `foo` export. Skip this for writes
@@ -805,6 +817,12 @@ impl LinkStage<'_> {
                     .is_none_or(|prop| prop.name.as_str() != "default");
                 let mut is_namespace_ref =
                   canonical_ref_owner.namespace_object_ref == canonical_ref || is_json_import_ns;
+                if !is_namespace_ref
+                  && let Some(error) =
+                    unresolved_namespace_member_write_error(module, member_expr_ref, &self.symbols)
+                {
+                  diagnostics.push(error);
+                }
                 if strict_execution_order
                   && is_namespace_ref
                   && let Some(import) = module.named_imports.get(&member_expr_ref.object_ref)
@@ -818,16 +836,17 @@ impl LinkStage<'_> {
                   let prop = &member_expr_ref.prop_and_span_list[cursor];
                   let name = &prop.name;
                   let meta = &self.metas[canonical_ref_owner.idx];
-                  // Stop before the written prop: the finalizer cannot write its bare binding into a
-                  // member write target.
-                  if let Some(error) = namespace_member_write_error(
+                  // Stop before the written prop, so the write stays on the namespace object: the
+                  // finalizer cannot write a bare binding into a member write target.
+                  if let Some(diagnostic) = namespace_member_write_diagnostic(
                     module,
                     member_expr_ref,
                     cursor,
                     meta,
+                    is_strict_output,
                     &self.symbols,
                   ) {
-                    diagnostics.push(error);
+                    diagnostics.push(diagnostic);
                     break;
                   }
                   let export_symbol = meta.resolved_exports.get(name).and_then(|resolved_export| {
@@ -1885,39 +1904,71 @@ fn collect_star_reexport_path(
   collect_star_reexport_path(importee_idx, &next_export_name, modules, metas, path, visited);
 }
 
-/// Returns the `ASSIGN_TO_IMPORT` error when the prop at `cursor` is the target of a namespace
-/// member write (`ns.foo = 1`). The scanner reports this only when `ns` comes from `import * as`.
+/// Returns `ASSIGN_TO_IMPORT` when the prop at `cursor` is the target of a namespace member write
+/// (`ns.foo = 1`, `delete ns.foo`).
+///
+/// The write stays on the namespace object (`foo_exports.foo = 1`), whose exported props are
+/// getter-only and non-configurable, so strict code throws the `TypeError` that native ESM throws.
+/// Then it is only a warning, as in Rollup. It stays an error when the output would not throw:
+/// sloppy output ignores the write, and a write to a missing name adds a prop to the object.
 #[inline]
-fn namespace_member_write_error(
+fn namespace_member_write_diagnostic(
   module: &NormalModule,
   member_expr_ref: &MemberExprRef,
   cursor: usize,
   meta: &LinkingMetadata,
+  is_strict_output: bool,
   symbols: &SymbolRefDb,
 ) -> Option<BuildDiagnostic> {
   if cursor + 1 != member_expr_ref.prop_and_span_list.len() {
     return None;
   }
-  let prop = &member_expr_ref.prop_and_span_list[cursor];
-  match member_expr_ref.write_target? {
-    MemberExprWriteKind::Assign => {}
+  let write_kind = member_expr_ref.write_target?;
+  let name = &member_expr_ref.prop_and_span_list[cursor].name;
+  let is_exported =
+    meta.resolved_exports.get(name).is_some_and(|export| !export.came_from_commonjs)
+      && meta.sorted_and_non_ambiguous_resolved_exports.contains_key(name);
+  if !is_exported && write_kind == MemberExprWriteKind::Delete {
     // Deleting a name that the namespace does not export is legal and returns `true`, so let the
     // caller handle `delete ns.missing` like a read of a missing export.
-    MemberExprWriteKind::Delete => {
-      let is_exported =
-        meta.resolved_exports.get(&prop.name).is_some_and(|export| !export.came_from_commonjs)
-          && meta.sorted_and_non_ambiguous_resolved_exports.contains_key(&prop.name);
-      if !is_exported {
-        return None;
-      }
-    }
+    return None;
   }
-  Some(BuildDiagnostic::assign_to_import(
+  let diagnostic = assign_to_namespace_member(module, member_expr_ref, cursor, symbols);
+  Some(if is_exported && is_strict_output {
+    diagnostic.with_severity_warning()
+  } else {
+    diagnostic
+  })
+}
+
+/// Returns the `ASSIGN_TO_IMPORT` error for `ns.foo = 1` or `delete ns.foo` when `ns` comes from
+/// `import * as` of a module whose exports the link stage does not resolve, such as an external or
+/// a CommonJS module.
+#[inline]
+fn unresolved_namespace_member_write_error(
+  module: &NormalModule,
+  member_expr_ref: &MemberExprRef,
+  symbols: &SymbolRefDb,
+) -> Option<BuildDiagnostic> {
+  (member_expr_ref.object_ref_type == MemberExprObjectReferencedType::Namespace
+    && member_expr_ref.write_target.is_some()
+    && member_expr_ref.prop_and_span_list.len() == 1)
+    .then(|| assign_to_namespace_member(module, member_expr_ref, 0, symbols))
+}
+
+fn assign_to_namespace_member(
+  module: &NormalModule,
+  member_expr_ref: &MemberExprRef,
+  cursor: usize,
+  symbols: &SymbolRefDb,
+) -> BuildDiagnostic {
+  let prop = &member_expr_ref.prop_and_span_list[cursor];
+  BuildDiagnostic::assign_to_import(
     module.id.as_arc_str().clone(),
     module.source.clone(),
     prop.span,
     ArcStr::from(prop.name.as_str()),
     module.named_imports.get(&member_expr_ref.object_ref).map(|import| import.span_imported),
     Some(ArcStr::from(member_expr_ref.object_ref.name(symbols))),
-  ))
+  )
 }

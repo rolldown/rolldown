@@ -183,7 +183,7 @@ mod tests {
       &mut warnings,
     )
     .unwrap();
-    assert_snapshot!(result.to_json_string(), @r#"{"version":3,"names":[],"sources":[],"mappings":""}"#);
+    assert_snapshot!(result.to_json_string(), @r#"{"version":3,"names":[],"sources":[],"mappings":"A,M"}"#);
     // An omitted sourcemap breaks the chain, so a `SOURCEMAP_BROKEN` warning is emitted.
     assert_eq!(warnings.len(), 1);
   }

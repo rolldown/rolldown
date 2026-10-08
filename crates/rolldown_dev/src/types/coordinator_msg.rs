@@ -1,4 +1,8 @@
+use std::sync::Arc;
+
+use arcstr::ArcStr;
 use rolldown_fs_watcher::FsEvent;
+use rolldown_utils::dashmap::FxDashSet;
 
 use crate::type_aliases::{EnsureLatestBundleOutputSender, GetStateSender};
 #[cfg(feature = "testing")]
@@ -34,6 +38,9 @@ pub enum CoordinatorMsg {
   /// Notify that a module has changed programmatically (e.g., lazy compilation executed)
   ModuleChanged {
     module_id: String,
+    /// The watch list of the build the lazy compile ran against. It holds the files
+    /// the compile loaded. See `DevEngine::compile_lazy_entry`.
+    watch_files: Arc<FxDashSet<ArcStr>>,
   },
   Close,
 }

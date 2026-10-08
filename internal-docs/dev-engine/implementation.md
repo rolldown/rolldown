@@ -195,7 +195,10 @@ pub enum CoordinatorMsg {
   EnsureLatestBundleOutput { reply: … },     // "I need a fresh full bundle"
   TriggerFullBuild,                           // unconditional full build (fire-and-forget)
   GetWatchedFiles { reply: … },              // list of watched paths
-  ModuleChanged { module_id: String },       // programmatic module change
+  ModuleChanged {                            // programmatic module change
+    module_id: String,
+    watch_files: Arc<FxDashSet<ArcStr>>,     // the lazy compile's watch list; see §15
+  },
   Close,                                     // shut the coordinator down
 }
 ```
@@ -211,7 +214,7 @@ Routing happens in `BundleCoordinator::run` (`bundle_coordinator.rs:98-150`):
 | `EnsureLatestBundleOutput` | `ensure_latest_bundle_output`, reply         |
 | `TriggerFullBuild`         | `trigger_full_build` (no reply)              |
 | `GetWatchedFiles`          | reply with the watched paths of the watcher  |
-| `ModuleChanged`            | queue a `Rebuild`, schedule                  |
+| `ModuleChanged`            | watch its files, queue a `Rebuild`, schedule |
 | `Close`                    | await running task, then `break` the loop    |
 
 The producers:
@@ -330,7 +333,7 @@ of them.
 | File change, steady state (`Idle` / `InProgress` / `Failed`) | `Hmr` or `HmrRebuild`          | `InProgress`          | `handle_file_changes`, `:202`                       |
 | File change, `FullBuildFailed`                               | `FullBuild` (clears the stash) | `FullBuildInProgress` | `handle_file_changes`, `:248`                       |
 | Browser access while stale (`EnsureLatestBundleOutput`)      | empty-files `Rebuild`          | `InProgress`          | `ensure_latest_bundle_output`, `:401` (push `:419`) |
-| Programmatic module change (`ModuleChanged`)                 | `Rebuild`                      | `InProgress`          | run loop, `:128-145`                                |
+| Programmatic module change (`ModuleChanged`)                 | `Rebuild`                      | `InProgress`          | run loop, `:138-155`                                |
 | Manual full build (`TriggerFullBuild`)                       | clears queue, `FullBuild`      | `FullBuildInProgress` | `trigger_full_build`, `:457`                        |
 
 ---
@@ -580,7 +583,7 @@ started it:
 | Trigger                                                                   | Task                   |
 | ------------------------------------------------------------------------- | ---------------------- |
 | A file change                                                             | `Hmr` / `HmrRebuild`   |
-| A tab opens a lazy route (`ModuleChanged`, `bundle_coordinator.rs:132`)   | `Rebuild { proxy id }` |
+| A tab opens a lazy route (`ModuleChanged`, `bundle_coordinator.rs:138`)   | `Rebuild { proxy id }` |
 | Vite page access while `Failed{Hmr}` (`triggerBundleRegenerationIfStale`) | `FullBuild`            |
 | Manual retry (`trigger_full_build`, `bundle_coordinator.rs:427`)          | `FullBuild`            |
 
@@ -1251,9 +1254,30 @@ Beyond `ensure_latest_bundle_output`, the public methods on `DevEngine`
 | `close()`                                        | sends `Close`, runs `closeBundle`, awaits coordinator shutdown                                 |
 | `is_closed()` / `bundler_options()`              | accessors                                                                                      |
 
-`ModuleChanged` handling (`bundle_coordinator.rs:123-140`): updates watch
-paths, queues a `TaskInput::Rebuild` for the changed module, sets
-`has_stale_bundle_output = true`, schedules.
+`ModuleChanged` handling (`bundle_coordinator.rs:138-155`): registers the
+watch files the message carries, queues a `TaskInput::Rebuild` for the
+changed module, sets `has_stale_bundle_output = true`, schedules.
+
+Why the message carries the watch files: each build starts with a new,
+empty watch list (`PluginDriverFactory::create_plugin_driver`), and
+`update_watch_paths` (§11) reads only the latest build's list. A lazy
+compile adds the files it loads to the list of the build that is latest
+while it holds the bundler lock. A new build can start between the
+compile and the moment the coordinator handles the message:
+
+```
+compile_lazy_entry              rebuild task             coordinator
+loads lazy.js into list A
+sends ModuleChanged
+                                new build, list B (empty)
+                                                         handles ModuleChanged
+```
+
+Reading the latest list there reads list B. Cached modules are not
+loaded again, so no later build adds `lazy.js` back, and edits to it go
+unseen for the rest of the session. So `compile_lazy_entry` sends the
+`Arc` of list A (`Bundler::watch_files()`, read under the same lock), and
+the coordinator registers list A, whichever build is the latest by then.
 
 The three client-session methods are the engine's whole view of a
 client. Vite's server calls them from three client messages: the hello

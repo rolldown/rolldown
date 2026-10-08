@@ -8,8 +8,8 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```js
 // HIDDEN [\0rolldown/runtime.js]
 //#region entry.js
-var require_entry = /* @__PURE__ */ __commonJSMin(((exports) => {
-	exports.foo = async () => exports;
+var require_entry = /* @__PURE__ */ __commonJSMin(((exports, module, this$1) => {
+	exports.foo = async () => this$1;
 }));
 //#endregion
 export default require_entry();

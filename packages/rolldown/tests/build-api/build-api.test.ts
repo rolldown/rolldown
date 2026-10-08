@@ -1,6 +1,8 @@
 import path from 'node:path';
+import { Worker } from 'node:worker_threads';
 import { rolldown } from 'rolldown';
-import { expect, test } from 'vitest';
+import { defineParallelPlugin } from 'rolldown/experimental';
+import { expect, test, vi } from 'vitest';
 
 test('rolldown write twice', async () => {
   const bundle = await rolldown({
@@ -98,6 +100,96 @@ test('supports closeBundle hook', async () => {
     await bundle.close();
   } finally {
     expect(closeBundleCalls).toBe(1);
+  }
+});
+
+test('a repeated close() does not run closeBundle again', async () => {
+  let closeBundleCalls = 0;
+  const bundle = await rolldown({
+    input: './main.js',
+    cwd: import.meta.dirname,
+    plugins: [
+      {
+        name: 'test',
+        closeBundle() {
+          closeBundleCalls++;
+        },
+      },
+    ],
+  });
+  await bundle.generate();
+  await bundle.close();
+  await bundle.close();
+  expect(closeBundleCalls).toBe(1);
+  expect(bundle.closed).toBe(true);
+});
+
+test('concurrent close() calls run the native close once and settle together', async () => {
+  let closeBundleCalls = 0;
+  let closeBundleEnded = false;
+  const bundle = await rolldown({
+    input: './main.js',
+    cwd: import.meta.dirname,
+    plugins: [
+      {
+        name: 'test',
+        async closeBundle() {
+          closeBundleCalls++;
+          await new Promise((resolve) => setTimeout(resolve, 50));
+          closeBundleEnded = true;
+        },
+      },
+    ],
+  });
+  await bundle.generate();
+  const first = bundle.close();
+  // The second call waits for the first close; `closeBundle` has ended once it returns.
+  await bundle.close();
+  expect(closeBundleEnded).toBe(true);
+  await first;
+  expect(closeBundleCalls).toBe(1);
+  expect(bundle.closed).toBe(true);
+});
+
+test('a failed worker shutdown still closes the native bundler', async () => {
+  let closeBundleCalls = 0;
+  const parallelNoopPlugin = defineParallelPlugin<void>(
+    path.join(import.meta.dirname, 'parallel-noop-plugin-impl.js'),
+  );
+  const bundle = await rolldown({
+    input: './main.js',
+    cwd: import.meta.dirname,
+    plugins: [
+      parallelNoopPlugin(),
+      {
+        name: 'test',
+        closeBundle() {
+          closeBundleCalls++;
+        },
+      },
+    ],
+  });
+  await bundle.generate();
+  // Stop the worker for real, then report a failure, so no thread outlives the test.
+  const terminate: (this: Worker) => Promise<number> = Object.getOwnPropertyDescriptor(
+    Worker.prototype,
+    'terminate',
+  )!.value;
+  const terminateSpy = vi
+    .spyOn(Worker.prototype, 'terminate')
+    .mockImplementationOnce(async function (this: Worker) {
+      await terminate.call(this);
+      throw new Error('terminate failed');
+    });
+  try {
+    await expect(bundle.close()).rejects.toThrow('terminate failed');
+    expect(terminateSpy).toHaveBeenCalled();
+    expect(bundle.closed).toBe(true);
+    expect(closeBundleCalls).toBe(1);
+    await expect(bundle.close()).resolves.toBeUndefined();
+    expect(closeBundleCalls).toBe(1);
+  } finally {
+    terminateSpy.mockRestore();
   }
 });
 

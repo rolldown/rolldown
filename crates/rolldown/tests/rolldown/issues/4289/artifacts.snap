@@ -47,12 +47,12 @@ main();
 //#endregion
 //#region main.js
 (/* @__PURE__ */ __commonJSMin(((exports, module) => {
-	const nodeAssert$2 = __require("node:assert");
+	const nodeAssert = __require("node:assert");
 	async function main() {
-		const exports$1 = await import("./lib.js").then((m) => /* @__PURE__ */ __toESM(m.default, 1));
-		nodeAssert$2.deepEqual(Object.keys(exports$1).sort(), ["default", "parse"]);
-		nodeAssert$2.strictEqual(exports$1.parse, "parse", "Expected export exists and is correct");
-		nodeAssert$2.strictEqual(exports$1.default.parse, "parse", "Target has __esModule, but this file triggered node compat mode");
+		const exports = await import("./lib.js").then((m) => /* @__PURE__ */ __toESM(m.default, 1));
+		nodeAssert.deepEqual(Object.keys(exports).sort(), ["default", "parse"]);
+		nodeAssert.strictEqual(exports.parse, "parse", "Expected export exists and is correct");
+		nodeAssert.strictEqual(exports.default.parse, "parse", "Target has __esModule, but this file triggered node compat mode");
 	}
 	main();
 	module.exports = {};
@@ -117,10 +117,10 @@ main();
 (/* @__PURE__ */ __commonJSMin(((exports, module) => {
 	const nodeAssert = require("node:assert");
 	async function main() {
-		const exports$1 = await Promise.resolve().then(() => /* @__PURE__ */ __toESM(require("./lib.js").default, 1));
-		nodeAssert.deepEqual(Object.keys(exports$1).sort(), ["default", "parse"]);
-		nodeAssert.strictEqual(exports$1.parse, "parse", "Expected export exists and is correct");
-		nodeAssert.strictEqual(exports$1.default.parse, "parse", "Target has __esModule, but this file triggered node compat mode");
+		const exports = await Promise.resolve().then(() => /* @__PURE__ */ __toESM(require("./lib.js").default, 1));
+		nodeAssert.deepEqual(Object.keys(exports).sort(), ["default", "parse"]);
+		nodeAssert.strictEqual(exports.parse, "parse", "Expected export exists and is correct");
+		nodeAssert.strictEqual(exports.default.parse, "parse", "Target has __esModule, but this file triggered node compat mode");
 	}
 	main();
 	module.exports = {};
@@ -169,12 +169,12 @@ main();
 //#endregion
 //#region main.js
 (/* @__PURE__ */ __commonJSMin(((exports, module) => {
-	const nodeAssert$2 = __require("node:assert");
+	const nodeAssert = __require("node:assert");
 	async function main() {
-		const exports$1 = await Promise.resolve().then(() => /* @__PURE__ */ __toESM(require_lib(), 1));
-		nodeAssert$2.deepEqual(Object.keys(exports$1).sort(), ["default", "parse"]);
-		nodeAssert$2.strictEqual(exports$1.parse, "parse", "Expected export exists and is correct");
-		nodeAssert$2.strictEqual(exports$1.default.parse, "parse", "Target has __esModule, but this file triggered node compat mode");
+		const exports = await Promise.resolve().then(() => /* @__PURE__ */ __toESM(require_lib(), 1));
+		nodeAssert.deepEqual(Object.keys(exports).sort(), ["default", "parse"]);
+		nodeAssert.strictEqual(exports.parse, "parse", "Expected export exists and is correct");
+		nodeAssert.strictEqual(exports.default.parse, "parse", "Target has __esModule, but this file triggered node compat mode");
 	}
 	main();
 	module.exports = {};

@@ -1,0 +1,34 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+//#region dep.js
+var dep_exports = /* @__PURE__ */ __exportAll({ value: () => "dep" });
+var init_dep = __esmMin((() => {}));
+//#endregion
+//#region pure.js
+//#endregion
+//#region lib.cjs
+//#endregion
+//#region main.js
+var import_lib = /* @__PURE__ */ __toESM((/* @__PURE__ */ __commonJSMin(((exports) => {
+	var Promise$2 = () => "local";
+	var Object$1 = () => "object";
+	exports.local = Promise$2();
+	exports.object = Object$1();
+	exports.load = () => Promise.resolve().then(() => (init_dep(), dep_exports));
+	Promise.resolve().then(() => /* @__PURE__ */ Object.freeze({ __proto__: null }));
+})))());
+function nested(Promise$1) {
+	return Promise.resolve().then(() => (init_dep(), dep_exports));
+}
+//#endregion
+var lib = import_lib.default;
+export { lib, nested };
+
+```

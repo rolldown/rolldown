@@ -1,0 +1,25 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+let node_path = require("node:path");
+//#region lib.cjs
+//#endregion
+//#region main.js
+var import_lib = /* @__PURE__ */ __toESM((/* @__PURE__ */ __commonJSMin(((exports, module) => {
+	var node_path = require("node:path");
+	var node_path$1 = "sibling";
+	module.exports = function() {
+		return [node_path.sep, node_path$1];
+	};
+})))());
+var main_default = [node_path.sep, ...(0, import_lib.default)()];
+//#endregion
+module.exports = main_default;
+
+```

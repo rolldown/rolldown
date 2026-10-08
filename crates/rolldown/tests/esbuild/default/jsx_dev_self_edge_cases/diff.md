@@ -531,12 +531,12 @@ export default require_top_level_this_cjs();
 import { jsxDEV } from "react/jsx-dev-runtime";
 // HIDDEN [\0rolldown/runtime.js]
 //#region top-level-this-cjs.jsx
-var require_top_level_this_cjs = /* @__PURE__ */ __commonJSMin(((exports) => {
+var require_top_level_this_cjs = /* @__PURE__ */ __commonJSMin(((exports, module, this$1) => {
 	exports.foo = /* @__PURE__ */ jsxDEV("div", {}, void 0, false, {
 		fileName: "top-level-this-cjs.jsx",
 		lineNumber: 1,
 		columnNumber: 15
-	}, exports);
+	}, this$1);
 }));
 //#endregion
 export default require_top_level_this_cjs();
@@ -557,12 +557,12 @@ export default require_top_level_this_cjs();
 -            columnNumber: 15
 -        });
 -    }
-+var require_top_level_this_cjs = __commonJSMin(exports => {
++var require_top_level_this_cjs = __commonJSMin((exports, module, this$1) => {
 +    exports.foo = jsxDEV("div", {}, void 0, false, {
 +        fileName: "top-level-this-cjs.jsx",
 +        lineNumber: 1,
 +        columnNumber: 15
-+    }, exports);
++    }, this$1);
  });
  export default require_top_level_this_cjs();
 

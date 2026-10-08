@@ -1,0 +1,28 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+import { createRequire } from "node:module";
+// HIDDEN [\0rolldown/runtime.js]
+//#region main.cjs
+var require_main = /* @__PURE__ */ __commonJSMin(((exports, module) => {
+	const Promise = __require("node:events");
+	const Promise$2 = "sibling";
+	function param(Promise$1) {
+		return Promise$1;
+	}
+	module.exports = [
+		typeof Promise,
+		Promise$2,
+		param("nested")
+	];
+}));
+//#endregion
+export default require_main();
+export {};
+
+```

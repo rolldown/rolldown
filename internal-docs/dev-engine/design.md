@@ -85,7 +85,7 @@ no such exception — only new input recovers those. (Wired up in Vite:
 `triggerBundleRegenerationIfStale` in `bundledDev.ts`.)
 
 Realized in: `handle_file_changes` (§7) and the `ModuleChanged` handler
-(`bundle_coordinator.rs:132`) are the only producers of post-failure
+(`bundle_coordinator.rs:138`) are the only producers of post-failure
 rebuild tasks. `triggerFullBuild` (§13e) is an explicit escape hatch
 for cases the watcher cannot observe (e.g. missing-import resolution;
 see Unresolved Questions).

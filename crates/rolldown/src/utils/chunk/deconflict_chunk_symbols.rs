@@ -9,15 +9,19 @@ use crate::{
     external_import_interop::{
       ChunkAssignments, chunk_external_interop_modes, chunk_has_node_esm_reader,
     },
-    renamer::{NestedScopeRenamer, Renamer},
+    renamer::{
+      InnerBindingNames, NestedScopeRenamer, Renamer, RootBindingKind, cjs_wrapper_fixed_params,
+      fixed_names_in_module_body,
+    },
   },
 };
 use arcstr::ArcStr;
 use rolldown_common::{
-  Chunk, ChunkIdx, ChunkKind, GetLocalDb, ModuleIdx, OutputFormat, SymbolRef, WrapKind,
+  Chunk, ChunkIdx, ChunkKind, GetLocalDb, ImportKind, ModuleIdx, NormalModule, OutputFormat,
+  StmtInfo, SymbolRef, WrapKind,
 };
 use rolldown_utils::{concat_string, ecmascript::legitimize_identifier_name};
-use rustc_hash::{FxHashMap, FxHashSet};
+use rustc_hash::FxHashMap;
 
 /// What `experimentalInlineCommonChunks` adds to one file's naming. The modules and synthetic
 /// statements of every record the file carries are named in the file's namespace, because their
@@ -36,16 +40,17 @@ pub struct InlineNamingInput {
   pub factories: Vec<(ChunkIdx, Vec<(ChunkIdx, ArcStr)>)>,
 }
 
-/// `inline` is `Some` for a file that reads inline common chunk records, see [`InlineNamingInput`].
+/// Give names to the bindings of one chunk. See internal-docs/renaming/implementation.md.
+///
+/// `inline` is `Some` for a file that reads the records of inline common chunks (see
+/// [`InlineNamingInput`]).
 #[tracing::instrument(level = "trace", skip_all)]
 #[expect(clippy::too_many_arguments)]
-#[expect(clippy::too_many_lines)]
 pub fn deconflict_chunk_symbols(
   chunk_idx: ChunkIdx,
   chunk: &mut Chunk,
   link_output: &LinkStageOutput,
   order_wrap_state: &OrderWrapState,
-  order_live_symbols: &FxHashSet<SymbolRef>,
   format: OutputFormat,
   index_chunk_id_to_name: &FxHashMap<ChunkIdx, ArcStr>,
   chunk_assignments: ChunkAssignments<'_>,
@@ -57,26 +62,17 @@ pub fn deconflict_chunk_symbols(
     Some(inline) => (&inline.modules, &inline.chunks),
     None => (&chunk.modules, &own_chunk),
   };
-  let mut renamer = Renamer::new(chunk.entry_module_idx(), &link_output.symbol_db, format);
-  // Reserve global scope symbols (unresolved references) to prevent generating conflicting names.
-  // These are identifiers referenced but not defined in the module's scope (e.g., `console`, `window`).
-  modules
-    .iter()
-    .copied()
-    .filter_map(|idx| {
-      Some(
-        link_output.symbol_db[idx]
-          .as_ref()?
-          .ast_scopes
-          .scoping()
-          .root_unresolved_references()
-          .keys(),
-      )
-    })
-    .flatten()
-    .for_each(|name| {
-      renamer.reserve(CompactStr::new(name));
-    });
+  let inner_binding_names = InnerBindingNames::new(
+    modules
+      .iter()
+      .filter_map(|&idx| {
+        let scoping = link_output.symbol_db[idx].as_ref()?.ast_scopes.scoping();
+        Some((scoping, matches!(link_output.metas[idx].wrap_kind(), WrapKind::Cjs)))
+      })
+      .collect(),
+  );
+  let mut renamer = Renamer::new(&link_output.symbol_db, format, inner_binding_names);
+  reserve_fixed_names(&mut renamer, modules, link_output, format);
 
   if matches!(format, OutputFormat::Iife | OutputFormat::Umd | OutputFormat::Cjs) {
     // deconflict iife introduce symbols by external
@@ -88,7 +84,7 @@ pub fn deconflict_chunk_symbols(
       .chain(chunk.entry_level_external_module_idx.iter().copied())
       .filter_map(|idx| link_output.module_table[idx].as_external())
       .for_each(|external_module| {
-        renamer.add_symbol_in_root_scope(external_module.namespace_ref, true);
+        renamer.add_symbol_in_root_scope(external_module.namespace_ref, RootBindingKind::Authored);
       });
 
     chunk
@@ -96,7 +92,7 @@ pub fn deconflict_chunk_symbols(
       .iter()
       .filter_map(|idx| link_output.module_table[*idx].as_external())
       .for_each(|external_module| {
-        renamer.add_symbol_in_root_scope(external_module.namespace_ref, true);
+        renamer.add_symbol_in_root_scope(external_module.namespace_ref, RootBindingKind::Authored);
       });
   }
 
@@ -106,7 +102,8 @@ pub fn deconflict_chunk_symbols(
       meta.referenced_symbols_by_entry_point_chunk.iter().for_each(
         |(symbol_ref, came_from_cjs)| {
           if !came_from_cjs {
-            renamer.add_symbol_in_root_scope(*symbol_ref, true);
+            renamer
+              .add_symbol_in_root_scope(*symbol_ref, root_binding_kind(link_output, *symbol_ref));
           }
         },
       );
@@ -119,22 +116,11 @@ pub fn deconflict_chunk_symbols(
       db.classic_data.iter_enumerated().for_each(|(symbol, _)| {
         let symbol_ref = (*module, symbol).into();
         if link_output.used_external_symbols.contains(&symbol_ref) {
-          renamer.add_symbol_in_root_scope(symbol_ref, true);
+          renamer.add_symbol_in_root_scope(symbol_ref, RootBindingKind::Authored);
         }
       });
     });
   }
-
-  let chunk_scope_captured_names = collect_chunk_scope_captured_names(
-    chunks,
-    modules,
-    chunk,
-    link_output,
-    order_wrap_state,
-    order_live_symbols,
-    format,
-    &renamer,
-  );
 
   // The renamer relies on `modules` being in ascending exec_order so that
   // `.rev()` yields entry-first / descending exec_order — the same priority as
@@ -156,12 +142,20 @@ pub fn deconflict_chunk_symbols(
     .filter_map(|id| link_output.module_table[id].as_normal())
     .for_each(|module| {
       if let Some(hmr_hot_ref) = module.hmr_hot_ref {
-        renamer.add_symbol_in_root_scope(hmr_hot_ref, true);
+        renamer.add_symbol_in_root_scope(hmr_hot_ref, RootBindingKind::Synthesized);
       }
-      // Skip deconflicting top-level symbols for CJS modules since they are wrapped in a function scope
-      // and their symbols don't pollute the chunk's root scope.
+      // A CJS-wrapped module's top-level statements are printed inside its `__commonJS` closure, so
+      // the bindings they declare are inner bindings, not chunk-level ones: they keep their names
+      // unless they would capture a reference (`rename_shadowing_symbols_in_nested_scopes`).
       let meta = &link_output.metas[module.idx];
       let is_cjs_wrapped_module = matches!(meta.wrap_kind(), WrapKind::Cjs);
+      // A parameter of the CJS closure, named like a top-level binding so that no inner binding
+      // and no other top-level binding uses its name.
+      if let Some(this_ref) = module.cjs_this_ref
+        && is_cjs_wrapped_module
+      {
+        renamer.add_symbol_in_root_scope(this_ref, RootBindingKind::Synthesized);
+      }
 
       link_output.stmt_infos[module.idx]
         .iter_enumerated()
@@ -190,30 +184,18 @@ pub fn deconflict_chunk_symbols(
             if canonical_ref.owner != module.idx {
               continue;
             }
-            // For CJS wrapped modules, only facade symbols need deconflicting.
-            // Facade symbols are synthetic symbols created during linking (e.g., `require_foo` wrapper,
-            // namespace objects) that don't exist in the original AST. These are rendered at the chunk's
-            // root scope and must be deconflicted. Non-facade (real AST) symbols in CJS modules are
-            // wrapped inside the `__commonJS` closure and don't pollute the chunk's root scope.
-            let needs_deconflict = if is_cjs_wrapped_module {
-              // Note:
-              // 1. Some facade symbols may originate from external modules (e.g., namespace objects for external imports).
-              // 2. Since we merge external module symbols, external symbol declared in a cjs module also needs to be deconflicted
-              let is_facade_or_external = link_output.symbol_db.is_facade_symbol(canonical_ref)
-                || stmt_info.import_records.iter().any(|import_rec_idx| {
-                  module.import_records[*import_rec_idx]
-                    .resolved_module
-                    .is_some_and(|module_idx| link_output.module_table[module_idx].is_external())
-                });
-              // Deconflict bindings that would shadow a name captured by the enclosing
-              // `__commonJS` closure (issues #9055, #9375).
-              let shadows_chunk_scope_name =
-                chunk_scope_captured_names.contains(canonical_ref.name(&link_output.symbol_db));
-              is_facade_or_external || shadows_chunk_scope_name
-            } else {
-              true
-            };
-            renamer.add_symbol_in_root_scope(symbol_ref, needs_deconflict);
+            // In a CJS-wrapped module only facade symbols (the `require_foo` wrapper, namespace
+            // objects, ...) are printed at the chunk's top level. Since we merge external module
+            // symbols, an external import binding declared in a CJS module is a top-level one too.
+            // Every other symbol is a closure-local, renamed only if it would capture a reference.
+            if is_cjs_wrapped_module
+              && !link_output.symbol_db.is_facade_symbol(canonical_ref)
+              && !is_external_import_declaration(link_output, module, stmt_info)
+            {
+              continue;
+            }
+            renamer
+              .add_symbol_in_root_scope(symbol_ref, root_binding_kind(link_output, canonical_ref));
           }
         });
     });
@@ -222,7 +204,7 @@ pub fn deconflict_chunk_symbols(
     chunks.iter().flat_map(|idx| order_wrap_state.synthetic_statements_for_chunk(*idx))
   {
     for declared_symbol in synthetic.declared_symbols.iter().filter(|item| item.is_normal()) {
-      renamer.add_symbol_in_root_scope(declared_symbol.inner(), true);
+      renamer.add_symbol_in_root_scope(declared_symbol.inner(), RootBindingKind::Synthesized);
     }
   }
 
@@ -232,7 +214,8 @@ pub fn deconflict_chunk_symbols(
   // point to them can be resolved in runtime.
   // So we add them in the deconflict process to generate conflict-less names in this chunk.
   chunk.imports_from_other_chunks.iter().flat_map(|(_, items)| items.iter()).for_each(|item| {
-    renamer.add_symbol_in_root_scope(item.import_ref, true);
+    renamer
+      .add_symbol_in_root_scope(item.import_ref, root_binding_kind(link_output, item.import_ref));
   });
 
   chunk.require_binding_names_for_other_chunks = chunk
@@ -304,43 +287,118 @@ pub fn deconflict_chunk_symbols(
     chunk.node_mode_external_ns_names = node_mode_names;
   }
 
-  let inline_names = inline.map(|inline| name_inline_bindings(&mut renamer, inline, link_output));
+  let inline_names = inline.map(|inline| name_inline_bindings(&mut renamer, inline));
 
-  rename_shadowing_symbols_in_nested_scopes(chunk_idx, modules, link_output, format, &mut renamer);
+  rename_shadowing_symbols_in_nested_scopes(modules, link_output, format, &mut renamer);
 
   chunk.canonical_names = renamer.into_canonical_names();
   inline_names
 }
 
+/// Reserve the names that no top-level binding can take:
+/// - each unresolved reference of the modules of the chunk (for example `console` and `window`),
+///   because these references must resolve to globals;
+/// - the fixed names that the bodies of the modules print (`fixed_names_in_module_body`), because
+///   the body of an ESM module is at the top level;
+/// - the fixed parameters of their CJS closures (`cjs_wrapper_fixed_params`), because a parameter
+///   would capture a reference to a top-level binding with its name.
+fn reserve_fixed_names(
+  renamer: &mut Renamer<'_>,
+  modules: &[ModuleIdx],
+  link_output: &LinkStageOutput,
+  format: OutputFormat,
+) {
+  modules
+    .iter()
+    .copied()
+    .filter_map(|idx| {
+      Some(
+        link_output.symbol_db[idx]
+          .as_ref()?
+          .ast_scopes
+          .scoping()
+          .root_unresolved_references()
+          .keys(),
+      )
+    })
+    .flatten()
+    .for_each(|name| {
+      renamer.reserve(CompactStr::new(name));
+    });
+  modules.iter().filter_map(|&idx| link_output.module_table[idx].as_normal()).for_each(|module| {
+    let wrapper_params = if matches!(link_output.metas[module.idx].wrap_kind(), WrapKind::Cjs) {
+      cjs_wrapper_fixed_params(module)
+    } else {
+      &[]
+    };
+    for name in fixed_names_in_module_body(module, link_output, format)
+      .into_iter()
+      .chain(wrapper_params.iter().copied())
+    {
+      renamer.reserve(CompactStr::new_const(name));
+    }
+  });
+}
+
+/// Whether `stmt_info` is an `import` declaration of an external module. In a CJS-wrapped module,
+/// rolldown moves that declaration out of the CJS closure. A `require('external')` initializer
+/// stays in the closure, and its binding stays a local of the closure.
+fn is_external_import_declaration(
+  link_output: &LinkStageOutput,
+  module: &NormalModule,
+  stmt_info: &StmtInfo,
+) -> bool {
+  stmt_info.import_records.iter().any(|import_rec_idx| {
+    let import_record = &module.import_records[*import_rec_idx];
+    import_record.kind == ImportKind::Import
+      && import_record
+        .resolved_module
+        .is_some_and(|module_idx| link_output.module_table[module_idx].is_external())
+  })
+}
+
+/// Returns the kind of a top-level symbol. A symbol is synthesized if it is a runtime helper, or a
+/// facade that a normal module owns (for example a wrapper binding, a namespace object or an
+/// interop namespace). The finalizer prints references to these symbols at any location in the
+/// body of a module.
+///
+/// A facade is authored if it represents a binding with a source name: a re-export binding, the
+/// default export binding, or a shim for a missing export. Only the references of the source read
+/// these facades, and `rename_shadowing_symbols_in_nested_scopes` checks those references at their
+/// locations. The facades of an external module are also authored, because their names come from
+/// the source that imports them.
+fn root_binding_kind(link_output: &LinkStageOutput, symbol_ref: SymbolRef) -> RootBindingKind {
+  let canonical_ref = link_output.symbol_db.canonical_ref_for(symbol_ref);
+  if canonical_ref.owner == link_output.runtime.id() {
+    return RootBindingKind::Synthesized;
+  }
+  let Some(module) = link_output.module_table[canonical_ref.owner].as_normal() else {
+    return RootBindingKind::Authored;
+  };
+  let is_synthesized = link_output.symbol_db.is_facade_symbol(canonical_ref)
+    && !module.named_imports.contains_key(&canonical_ref)
+    && module.default_export_ref != canonical_ref
+    && !link_output.metas[module.idx]
+      .shimmed_missing_exports
+      .values()
+      .any(|shim| *shim == canonical_ref);
+  if is_synthesized { RootBindingKind::Synthesized } else { RootBindingKind::Authored }
+}
+
 /// A bridge is read wherever a record symbol was referenced, including inside nested scopes, so
 /// its name must be free in every nested scope of the file's modules, like an import binding.
 /// The factories' `exports` parameter avoids everything the file declares and reads.
-fn name_inline_bindings(
-  renamer: &mut Renamer<'_>,
-  inline: &InlineNamingInput,
-  link_output: &LinkStageOutput,
-) -> FileInlineNames {
-  // A CommonJS-wrapped module's root scope is emitted inside its `__commonJS` closure, where a
-  // local named like a bridge would shadow it.
-  let cjs_wrapped = inline
-    .modules
-    .iter()
-    .copied()
-    .filter(|module_idx| matches!(link_output.metas[*module_idx].wrap_kind(), WrapKind::Cjs))
-    .collect::<Vec<_>>();
+fn name_inline_bindings(renamer: &mut Renamer<'_>, inline: &InlineNamingInput) -> FileInlineNames {
   let bridges = inline
     .file_bridges
     .iter()
-    .map(|(record, name)| (*record, bridge_name(renamer, name, &inline.modules, &cjs_wrapped)))
+    .map(|(record, name)| (*record, bridge_name(renamer, name)))
     .collect();
   let factory_bridges = inline
     .factories
     .iter()
     .map(|(record, reads)| {
-      let names = reads
-        .iter()
-        .map(|(other, name)| (*other, bridge_name(renamer, name, &inline.modules, &cjs_wrapped)))
-        .collect();
+      let names = reads.iter().map(|(other, name)| (*other, bridge_name(renamer, name))).collect();
       (*record, names)
     })
     .collect();
@@ -352,94 +410,22 @@ fn name_inline_bindings(
   FileInlineNames { exports_param, bridges, factory_bridges }
 }
 
-fn bridge_name(
-  renamer: &mut Renamer<'_>,
-  chunk_name: &str,
-  modules: &[ModuleIdx],
-  cjs_wrapped: &[ModuleIdx],
-) -> CompactStr {
+/// A bridge is a synthesized binding. Thus, like each synthesized binding, it avoids the names of
+/// the inner bindings of the file. These include the root bindings of CJS-wrapped modules, because
+/// the finalizer prints them inside their CJS closures.
+fn bridge_name(renamer: &mut Renamer<'_>, chunk_name: &str) -> CompactStr {
   let hint_source = concat_string!("share_", chunk_name);
   let hint = legitimize_identifier_name(&hint_source);
-  renamer.create_conflictless_name_for_modules(&hint, modules, cjs_wrapped)
+  renamer.create_conflictless_name(&hint)
 }
 
-/// Collect the canonical names of things that are emitted at the chunk's root scope and thus
-/// captured by every CJS-wrapped module's `__commonJS((exports, module) => { ... })` closure.
-/// A real-AST root-scope binding inside the closure whose name matches one of these would
-/// shadow the captured value at runtime (issues #9055, #9375, #9630). We track only
-/// rolldown-emitted names — iife/umd factory params and `require_xxx` wrapper facades — and
-/// intentionally exclude the names of import bindings that get rewritten away at codegen time.
-/// We use the symbols' *original* names here: wrapper symbols haven't been renamed yet at this
-/// point, and if any of them ends up renamed in the deconfliction loop, the conflict that
-/// triggered the rename would have been the user-source local — which is exactly the case we
-/// want to catch.
-#[expect(clippy::too_many_arguments)]
-fn collect_chunk_scope_captured_names(
-  chunks: &[ChunkIdx],
-  modules: &[ModuleIdx],
-  chunk: &Chunk,
-  link_output: &LinkStageOutput,
-  order_wrap_state: &OrderWrapState,
-  order_live_symbols: &FxHashSet<SymbolRef>,
-  format: OutputFormat,
-  renamer: &Renamer<'_>,
-) -> FxHashSet<CompactStr> {
-  let mut captured: FxHashSet<CompactStr> = FxHashSet::default();
-  for synthetic in
-    chunks.iter().flat_map(|idx| order_wrap_state.synthetic_statements_for_chunk(*idx))
-  {
-    for declared in &synthetic.declared_symbols {
-      captured.insert(CompactStr::new(declared.inner().name(&link_output.symbol_db)));
-    }
-  }
-  if matches!(format, OutputFormat::Iife | OutputFormat::Umd) {
-    // Mirror the set rendered as factory params by `render_chunk_external_imports` +
-    // `render_factory_parameters`.
-    for (external_idx, _) in &chunk.direct_imports_from_external_modules {
-      let Some(external) = link_output.module_table[*external_idx].as_external() else {
-        continue;
-      };
-      if let Some(name) = renamer.get_canonical_name(external.namespace_ref) {
-        captured.insert(name.clone());
-      }
-    }
-  }
-  // CJS wrapper facades (e.g. `require_foo`) are rendered at chunk scope and captured by every
-  // CJS-wrapped module's closure in this chunk.
-  for module_idx in modules.iter().copied() {
-    if let Some(wrapper_ref) = link_output.metas[module_idx].wrapper_ref {
-      let canonical_ref = link_output.symbol_db.canonical_ref_for(wrapper_ref);
-      captured.insert(CompactStr::new(canonical_ref.name(&link_output.symbol_db)));
-    }
-  }
-  if matches!(format, OutputFormat::Esm) {
-    // A CJS wrapper whose module lives in *another* chunk is hoisted here as a real root-scope
-    // import binding (`import { ... as require_foo } from "./other.js"`) and is likewise captured
-    // by every CJS-wrapped closure in this chunk. The in-chunk loop above can't see it because its
-    // owner module isn't in `chunk.modules`, so we recover it from the cross-chunk import list.
-    // Without this, an author-local of the same name inside a CJS closure shadows the imported
-    // wrapper, emitting the self-referential `var require_foo = require_foo()` (issue #9630).
-    for item in chunk.imports_from_other_chunks.values().flatten() {
-      let canonical_ref = link_output.symbol_db.canonical_ref_for(item.import_ref);
-      let is_cjs_wrapper =
-        link_output.metas[canonical_ref.owner].wrapper_ref.is_some_and(|wrapper_ref| {
-          link_output.symbol_db.canonical_ref_for(wrapper_ref) == canonical_ref
-        });
-      if is_cjs_wrapper || order_live_symbols.contains(&canonical_ref) {
-        captured.insert(CompactStr::new(canonical_ref.name(&link_output.symbol_db)));
-      }
-    }
-  }
-  captured
-}
-
-/// Rename nested scope symbols that would shadow top-level symbols.
+/// Rename the inner bindings that would capture a reference to a top-level symbol. Inner bindings
+/// are the nested-scope bindings, and the root-scope bindings of CJS-wrapped modules.
 ///
-/// Since we avoid conflicting names during root scope renaming, most nested scope
-/// symbols can keep their original names. However, we still need to handle cases
-/// where a nested binding would capture a reference to a top-level symbol.
+/// An inner binding keeps its original name unless it would capture a reference. Synthesized
+/// top-level bindings never have the name of an inner binding. Thus this function checks only the
+/// references that the source contains. See internal-docs/renaming/design.md.
 fn rename_shadowing_symbols_in_nested_scopes<'a>(
-  chunk_idx: ChunkIdx,
   modules: &[ModuleIdx],
   link_output: &'a LinkStageOutput,
   output_format: OutputFormat,
@@ -465,12 +451,6 @@ fn rename_shadowing_symbols_in_nested_scopes<'a>(
 
     ctx.rename_bindings_shadowing_star_imports();
     ctx.rename_bindings_shadowing_named_imports();
-    ctx.rename_bindings_shadowing_wrapper_params(matches!(
-      output_format,
-      OutputFormat::Iife | OutputFormat::Umd | OutputFormat::Cjs
-    ));
-
-    ctx.rename_bindings_shadowing_cjs_ambient_names(output_format);
-    ctx.rename_cjs_locals_shadowing_referenced_chunk_bindings(output_format, chunk_idx);
+    ctx.rename_bindings_shadowing_fixed_names(output_format);
   }
 }

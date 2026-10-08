@@ -1,0 +1,44 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+//#region lib.cjs
+//#endregion
+//#region main.js
+var main_default = (/* @__PURE__ */ __toESM((/* @__PURE__ */ __commonJSMin(((exports, module, this$1) => {
+	module.exports = {
+		sameThis: this$1 === exports,
+		sep: arguments[1]("node:path").sep
+	};
+})))())).default;
+//#endregion
+module.exports = main_default;
+
+```
+
+# Variant: profiler: [profiler_names: true]
+
+## Assets
+
+### main.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+//#region lib.cjs
+//#endregion
+//#region main.js
+var main_default = (/* @__PURE__ */ __toESM((/* @__PURE__ */ __commonJS({ "lib.cjs": ((exports, module, this$1) => {
+	module.exports = {
+		sameThis: this$1 === exports,
+		sep: arguments[1]("node:path").sep
+	};
+}) }))())).default;
+//#endregion
+module.exports = main_default;
+
+```

@@ -63,8 +63,8 @@ Per-client outcomes when a fetched lazy module is later edited (see "Editing a f
 
 After successful lazy compilation:
 
-1. `DevEngine` notifies the coordinator via `ModuleChanged` (carrying the **raw proxy id**, `?rolldown-lazy=1` included)
-2. Coordinator first calls `update_watch_paths()` — watch files discovered during the lazy compile would otherwise be dropped when the rebuild task starts; this step is what makes later edits to the lazy module trigger rebuilds at all
+1. `DevEngine` notifies the coordinator via `ModuleChanged` (carrying the **raw proxy id**, `?rolldown-lazy=1` included, and the watch list the compile wrote to)
+2. Coordinator first registers that watch list — it holds the files the compile loaded. The latest build's list can miss them, because a build that starts before the coordinator handles the message begins with an empty list (see [dev-engine §15](../dev-engine/implementation.md)); this step is what makes later edits to the lazy module trigger rebuilds at all
 3. Coordinator queues a `Rebuild` task with the proxy id as the changed file and marks output as stale
 4. The rebuild swaps the stub for the fetched template in the build output; future page loads get it directly (no `/lazy` request needed)
 
@@ -218,14 +218,14 @@ After successful lazy compilation, the dev engine's success branch does two thin
 if result.is_ok() {
   // 1. deliver assets emitted during the compile (before the code returns)
   if let Some(on_additional_assets) = ... { ... }
-  // 2. queue the background rebuild
-  self.notify_module_changed(proxy_module_id);
+  // 2. queue the background rebuild, with the watch list the compile wrote to
+  self.notify_module_changed(proxy_module_id, Arc::clone(bundler.watch_files()));
 }
 ```
 
 The coordinator handles `ModuleChanged`:
 
-1. Call `update_watch_paths()` first (see "Data Lifecycle → Build Output Refresh" for why)
+1. Register the watch list the message carries (see "Data Lifecycle → Build Output Refresh" for why)
 2. Queue a `TaskInput::Rebuild` with the raw proxy id as the changed file
 3. Set `has_stale_bundle_output = true`
 4. Schedule build if stale (runs immediately only when the coordinator is Idle/Failed; otherwise waits in the queue)
@@ -249,7 +249,7 @@ The error contract (no longer "POC — Err or panic is fine"):
 
 ### Editing a Fetched Lazy Module
 
-After `/lazy`, the real module and its sync deps are ordinary watched graph modules (thanks to the `update_watch_paths()` step), and an edit flows through the standard watch → per-client HMR path:
+After `/lazy`, the real module and its sync deps are ordinary watched graph modules (thanks to the coordinator registering the compile's watch list), and an edit flows through the standard watch → per-client HMR path:
 
 - The server walk (`collect_client_update_superset`, `hmr_stage.rs`) climbs static and dynamic importers, but proxy importers (`?rolldown-lazy=1`) are left out of the dynamic-importer index (`rebuild_importer_sets`, `crates/rolldown_common/src/ecmascript/ecma_view.rs`), so the walk stops at the lazy module. Every connected client gets a push with `changedIds`; the patch carries what that client lacks or holds stale
 - The boundary decision runs in the browser (Vite `BundledDevHMRClient`). If the lazy module self-accepts (`import.meta.hot.accept()`), a client that executed it applies a hot update. Otherwise the client walk crosses the proxy edge, finds no executed importer, and sends `vite:bundled-dev:reload-needed`; the server answers that client with a full reload once the rebuild output lands (see [hmr/design.md](../hmr/design.md), "Failure policy" and "Lazy dynamic-import HMR"). Pinned by the shared-module spec's watch/auto-reload test
@@ -327,7 +327,7 @@ After `/lazy`, the real module and its sync deps are ordinary watched graph modu
 │ 7. BUILD OUTPUT REFRESH (Background)                                    │
 ├─────────────────────────────────────────────────────────────────────────┤
 │  - DevEngine sends CoordinatorMsg::ModuleChanged { proxyModuleId }      │
-│  - Coordinator: update_watch_paths() → queue Rebuild → mark stale       │
+│  - Coordinator: watch compile's files → queue Rebuild → mark stale      │
 │  - Rebuild updates build output with fetched template                   │
 │  - Silent to connected clients; future page loads skip /lazy            │
 └─────────────────────────────────────────────────────────────────────────┘
@@ -531,7 +531,7 @@ For future debugging, these files handle lazy compilation:
 
 6. **`crates/rolldown_dev/src/dev_engine.rs`** - `compile_lazy_entry()` (ship-map + boot-evaluated snapshot, mark-as-fetched, pending-payload insert, asset delivery, `notify_module_changed()`), client sessions (`register_client`, `remove_client`, `notify_payload_delivered`; types in `types/client_session.rs` and `types/pending_payload.rs`)
 7. **`crates/rolldown_dev/src/types/coordinator_msg.rs`** - `ModuleChanged` message variant
-8. **`crates/rolldown_dev/src/bundle_coordinator.rs`** - Handles `ModuleChanged` (`update_watch_paths` + rebuild), state machine
+8. **`crates/rolldown_dev/src/bundle_coordinator.rs`** - Handles `ModuleChanged` (watch the compile's files + rebuild), state machine
 9. **`crates/rolldown_binding/src/binding_dev_engine.rs`** - napi surface (`compile_entry`, `register_client`, `notify_payload_delivered`, `remove_client`)
 
 ### HMR/Build

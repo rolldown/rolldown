@@ -1,0 +1,38 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+Object.defineProperty(exports, Symbol.toStringTag, { value: "Module" });
+// HIDDEN [\0rolldown/runtime.js]
+//#region target.js
+const target = "node:path";
+//#endregion
+//#region cjs-root.cjs
+//#endregion
+//#region main.js
+var import_cjs_root = /* @__PURE__ */ __toESM((/* @__PURE__ */ __commonJSMin(((exports, module) => {
+	var Object$2 = process.env.TEST_IMPORT_PATH || "node:path";
+	module.exports = {
+		specifier: Object$2,
+		load: () => Promise.resolve().then(() => /* @__PURE__ */ __toESM(require(Object$2), 1))
+	};
+})))());
+const viaImport = () => Promise.resolve().then(() => /* @__PURE__ */ __toESM(require(target)));
+function viaParam(Object$1) {
+	return Promise.resolve().then(() => /* @__PURE__ */ __toESM(require(Object$1)));
+}
+//#endregion
+Object.defineProperty(exports, "cjsRoot", {
+	enumerable: true,
+	get: function() {
+		return import_cjs_root.default;
+	}
+});
+exports.viaImport = viaImport;
+exports.viaParam = viaParam;
+
+```

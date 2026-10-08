@@ -189,6 +189,7 @@ impl<Fs: FileSystem + Clone + 'static> RuntimeModuleTask<Fs> {
         new_url_references,
         rolldown_file_url_references,
         this_expr_replace_map: FxHashMap::default(),
+        cjs_this_ref: None,
         hmr_info: scan_result.hmr_info,
         hmr_hot_ref: None,
         directive_range: vec![],

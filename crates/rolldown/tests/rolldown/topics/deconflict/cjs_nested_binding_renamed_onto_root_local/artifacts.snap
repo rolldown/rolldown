@@ -3,22 +3,47 @@ source: crates/rolldown_testing/src/integration_test.rs
 ---
 # Assets
 
+## dep.js
+
+```js
+import { n as __esmMin } from "./rolldown-runtime.js";
+//#region dep.js
+var value;
+//#endregion
+__esmMin((() => {
+	value = "dep";
+}))();
+export { value };
+
+```
+
 ## main.js
 
 ```js
-// HIDDEN [\0rolldown/runtime.js]
+import { r as __toESM, t as __commonJSMin } from "./rolldown-runtime.js";
 //#region lib.cjs
 //#endregion
 //#region main.js
 var main_default = (/* @__PURE__ */ __toESM((/* @__PURE__ */ __commonJSMin(((exports, module) => {
-	const exports$1 = { tag: "root-local" };
-	function read(exports$2) {
-		return [exports$2.tag, exports$1.tag];
+	const Promise$1 = { tag: "root-local" };
+	function read(Promise$2) {
+		return [Promise$2.tag, Promise$1.tag];
 	}
-	module.exports = { read };
+	module.exports = {
+		read,
+		load: () => import("./dep.js")
+	};
 })))())).default.read({ tag: "param" });
 //#endregion
 export { main_default as default };
+
+```
+
+## rolldown-runtime.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+export { __esmMin as n, __toESM as r, __commonJSMin as t };
 
 ```
 
@@ -26,21 +51,64 @@ export { main_default as default };
 
 ## Assets
 
+### dep.js
+
+```js
+const require_rolldown_runtime = require("./rolldown-runtime.js");
+//#region dep.js
+var value;
+//#endregion
+require_rolldown_runtime.__esmMin((() => {
+	value = "dep";
+}))();
+exports.value = value;
+
+```
+
 ### main.js
 
 ```js
-// HIDDEN [\0rolldown/runtime.js]
+const require_rolldown_runtime = require("./rolldown-runtime.js");
 //#region lib.cjs
+var require_lib = /* @__PURE__ */ require_rolldown_runtime.__commonJSMin(((exports, module) => {
+	const Promise$1 = { tag: "root-local" };
+	function read(Promise$2) {
+		return [Promise$2.tag, Promise$1.tag];
+	}
+	module.exports = {
+		read,
+		load: () => Promise.resolve().then(() => require("./dep.js"))
+	};
+}));
 //#endregion
 //#region main.js
-var main_default = (/* @__PURE__ */ __toESM((/* @__PURE__ */ __commonJSMin(((exports, module) => {
-	const exports$1 = { tag: "root-local" };
-	function read(exports$2) {
-		return [exports$2.tag, exports$1.tag];
-	}
-	module.exports = { read };
-})))())).default.read({ tag: "param" });
+var main_default = (/* @__PURE__ */ require_rolldown_runtime.__toESM(require_lib())).default.read({ tag: "param" });
 //#endregion
 module.exports = main_default;
+
+```
+
+### rolldown-runtime.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+Object.defineProperty(exports, "__commonJSMin", {
+	enumerable: true,
+	get: function() {
+		return __commonJSMin;
+	}
+});
+Object.defineProperty(exports, "__esmMin", {
+	enumerable: true,
+	get: function() {
+		return __esmMin;
+	}
+});
+Object.defineProperty(exports, "__toESM", {
+	enumerable: true,
+	get: function() {
+		return __toESM;
+	}
+});
 
 ```

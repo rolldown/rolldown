@@ -1,0 +1,18 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+Object.defineProperty(exports, Symbol.toStringTag, { value: "Module" });
+let node_path = require("node:path");
+//#region main.js
+function read(node_path$1) {
+	return [typeof node_path.join, node_path$1];
+}
+//#endregion
+exports.read = read;
+
+```

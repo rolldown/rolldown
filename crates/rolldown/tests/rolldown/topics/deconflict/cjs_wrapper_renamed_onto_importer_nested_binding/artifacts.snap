@@ -1,0 +1,48 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+//#region dup.cjs
+var require_dup$3 = /* @__PURE__ */ __commonJSMin(((exports, module) => {
+	module.exports = "dep";
+}));
+//#endregion
+//#region main.js
+const require_dup = "outer";
+function read(require_dup$2) {
+	return [require_dup$3(), require_dup$2()];
+}
+//#endregion
+export { read, require_dup };
+
+```
+
+# Variant: cjs: [format: Cjs]
+
+## Assets
+
+### main.js
+
+```js
+Object.defineProperty(exports, Symbol.toStringTag, { value: "Module" });
+// HIDDEN [\0rolldown/runtime.js]
+//#region dup.cjs
+var require_dup$3 = /* @__PURE__ */ __commonJSMin(((exports, module) => {
+	module.exports = "dep";
+}));
+//#endregion
+//#region main.js
+const require_dup = "outer";
+function read(require_dup$2) {
+	return [require_dup$3(), require_dup$2()];
+}
+//#endregion
+exports.read = read;
+exports.require_dup = require_dup;
+
+```

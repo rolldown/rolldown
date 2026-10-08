@@ -1,0 +1,18 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+Object.defineProperty(exports, Symbol.toStringTag, { value: "Module" });
+//#region main.js
+const exports$2 = "local-exports";
+function f(exports$1) {
+	return [exports$2, exports$1];
+}
+//#endregion
+exports.f = f;
+
+```

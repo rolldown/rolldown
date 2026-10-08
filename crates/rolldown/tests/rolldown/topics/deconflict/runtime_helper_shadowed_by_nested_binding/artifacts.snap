@@ -1,0 +1,38 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## dep.js
+
+```js
+import { t as __commonJSMin } from "./rolldown-runtime.js";
+//#region dep.cjs
+var require_dep = /* @__PURE__ */ __commonJSMin(((exports) => {
+	exports.v = 1;
+}));
+//#endregion
+export default require_dep();
+
+```
+
+## main.js
+
+```js
+import { n as __toESM$1 } from "./rolldown-runtime.js";
+//#region main.js
+async function read(__toESM) {
+	return [(await import("./dep.js").then((m) => /* @__PURE__ */ __toESM$1(m.default))).default.v, __toESM];
+}
+//#endregion
+export { read };
+
+```
+
+## rolldown-runtime.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+export { __toESM as n, __commonJSMin as t };
+
+```

@@ -1,0 +1,22 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+//#region dep.cjs
+//#endregion
+//#region main.js
+var import_dep$1 = /* @__PURE__ */ __toESM((/* @__PURE__ */ __commonJSMin(((exports) => {
+	exports.v = 1;
+})))());
+function read(import_dep) {
+	return [import_dep$1.v, import_dep];
+}
+//#endregion
+export { read };
+
+```

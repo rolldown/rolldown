@@ -80,9 +80,17 @@ impl<'a> PathWithGlob<'a> {
     Self { path, glob: &glob[glob.len() - i..] }
   }
 
-  /// Owned copy for the long-lived [`GlobMatcher`]
-  fn to_owned_parts(&self) -> (String, String) {
-    (self.path.clone(), self.glob.to_string())
+  /// `path` is literal, so its glob syntax is escaped, like vite's `globSafeResolvedPath`.
+  fn to_absolute_glob(&self) -> String {
+    let mut glob = String::with_capacity(self.path.len() + self.glob.len());
+    for char in self.path.chars() {
+      if matches!(char, '\\' | '*' | '?' | '[' | ']' | '{' | '}') {
+        glob.push('\\');
+      }
+      glob.push(char);
+    }
+    glob.push_str(self.glob);
+    glob
   }
 
   fn find_glob_syntax(path: &str) -> usize {
@@ -493,9 +501,19 @@ impl GlobImportVisit<'_> {
 
     if self.is_dev_mode {
       self.watch_walk_root(common_path);
+      let to_absolute_globs =
+        |globs: &[PathWithGlob]| globs.iter().map(PathWithGlob::to_absolute_glob).collect();
+      // A glob that globstar rejects gets no matcher. The walk does not fail on it either.
+      if let Ok(matcher) = GlobMatcher::new(
+        to_absolute_globs(&positive_globs),
+        to_absolute_globs(&negated_globs),
+        options.exhaustive,
+        case_sensitive,
+      ) {
+        self.matchers.push(matcher);
+      }
     }
 
-    let mut matched = Vec::new();
     let entries = walkdir::WalkDir::new(common_path)
       .follow_links(true)
       .sort_by(|a, b| a.file_name().cmp(b.file_name()))
@@ -541,10 +559,6 @@ impl GlobImportVisit<'_> {
         continue;
       }
 
-      if self.is_dev_mode {
-        matched.push(path.to_string());
-      }
-
       let file_path = self.relative_path(file, None);
       if is_virtual_module {
         let import_path =
@@ -573,16 +587,6 @@ impl GlobImportVisit<'_> {
       files.push(ImportGlobFileData { file_path, import_path });
     }
 
-    if self.is_dev_mode {
-      self.matchers.push(GlobMatcher {
-        walk_root: common,
-        positive: positive_globs.iter().map(PathWithGlob::to_owned_parts).collect(),
-        negated: negated_globs.iter().map(PathWithGlob::to_owned_parts).collect(),
-        exhaustive: options.exhaustive,
-        case_sensitive,
-        matched,
-      });
-    }
     Some(())
   }
 

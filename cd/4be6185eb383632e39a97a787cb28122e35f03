@@ -1,0 +1,19 @@
+crates/rolldown_common/src/ecmascript/ecma_view.rs
+  s_d43624d0762669::t_85c24b5b3dfa17 56-59,163-168
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "cd4be6185eb383632e39a97a787cb28122e35f03",
+  "prompts": {},
+  "sessions": {
+    "s_d43624d0762669": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "7f7265c1-aa11-4a4b-9d11-215aef9a579c",
+        "model": "unknown"
+      },
+      "human_author": "IWANABETHATGUY <iwanabethatguy@qq.com>"
+    }
+  }
+}

@@ -17,44 +17,18 @@ export { load, loadOther };
 ## other.js
 
 ```js
-import { t as __esmMin } from "./rolldown-runtime.js";
-//#region motion.js
-const motion$1 = {};
-//#endregion
-//#region react.js
-var motion;
-function init_react() {
-	return (init_react = __esmMin((() => {
-		motion = motion$1;
-	})))();
-}
-//#endregion
+import { t as motion } from "./react.js";
 //#region other.js
-var check;
-function init_other() {
-	return (init_other = __esmMin((() => {
-		init_react();
-		check = () => motion;
-	})))();
-}
+const check = () => motion;
 //#endregion
-init_other();
 export { check };
 
 ```
 
-## rolldown-runtime.js
+## react.js
 
 ```js
 // HIDDEN [\0rolldown/runtime.js]
-export { __exportAll as n, __esmMin as t };
-
-```
-
-## story.js
-
-```js
-import { n as __exportAll } from "./rolldown-runtime.js";
 //#region group.js
 const Group = { name: "Group" };
 //#endregion
@@ -67,6 +41,19 @@ var namespace_exports = /* @__PURE__ */ __exportAll({
 	Item: () => Item
 });
 //#endregion
+//#region motion.js
+//#endregion
+//#region react.js
+const motion = {};
+//#endregion
+export { namespace_exports as n, motion as t };
+
+```
+
+## story.js
+
+```js
+import { n as namespace_exports } from "./react.js";
 //#region story.js
 const check = () => Object.keys(namespace_exports).map((key) => namespace_exports[key]);
 //#endregion
@@ -86,8 +73,8 @@ import { t as __esmMin } from "./rolldown-runtime.js";
 var load, loadOther;
 function init_main() {
 	return (init_main = __esmMin((() => {
-		load = () => import("./story.js").then((n) => (n.t(), n.n));
-		loadOther = () => import("./other.js").then((n) => (n.t(), n.n));
+		load = () => import("./story.js");
+		loadOther = () => import("./other.js");
 	})))();
 }
 //#endregion
@@ -99,28 +86,9 @@ export { load, loadOther };
 ### other.js
 
 ```js
-import { n as __exportAll, t as __esmMin } from "./rolldown-runtime.js";
-import { r as init_namespace } from "./story.js";
-//#region motion.js
-var motion$1;
-function init_motion() {
-	return (init_motion = __esmMin((() => {
-		motion$1 = {};
-	})))();
-}
-//#endregion
-//#region react.js
-var motion;
-function init_react() {
-	return (init_react = __esmMin((() => {
-		init_motion();
-		init_namespace();
-		motion = motion$1;
-	})))();
-}
-//#endregion
+import { t as __esmMin } from "./rolldown-runtime.js";
+import { n as motion, t as init_react } from "./react.js";
 //#region other.js
-var other_exports = /* @__PURE__ */ __exportAll({ check: () => check });
 var check;
 function init_other() {
 	return (init_other = __esmMin((() => {
@@ -129,23 +97,15 @@ function init_other() {
 	})))();
 }
 //#endregion
-export { other_exports as n, init_react as r, init_other as t };
+init_other();
+export { check };
 
 ```
 
-### rolldown-runtime.js
-
-```js
-// HIDDEN [\0rolldown/runtime.js]
-export { __exportAll as n, __esmMin as t };
-
-```
-
-### story.js
+### react.js
 
 ```js
 import { n as __exportAll, t as __esmMin } from "./rolldown-runtime.js";
-import { r as init_react } from "./other.js";
 //#region group.js
 var Group;
 function init_group() {
@@ -174,8 +134,42 @@ function init_namespace() {
 	})))();
 }
 //#endregion
+//#region motion.js
+var motion$1;
+function init_motion() {
+	return (init_motion = __esmMin((() => {
+		motion$1 = {};
+	})))();
+}
+//#endregion
+//#region react.js
+var motion;
+function init_react() {
+	return (init_react = __esmMin((() => {
+		init_motion();
+		init_namespace();
+		motion = motion$1;
+	})))();
+}
+//#endregion
+export { namespace_exports as i, motion as n, init_namespace as r, init_react as t };
+
+```
+
+### rolldown-runtime.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+export { __exportAll as n, __esmMin as t };
+
+```
+
+### story.js
+
+```js
+import { t as __esmMin } from "./rolldown-runtime.js";
+import { i as namespace_exports, t as init_react } from "./react.js";
 //#region story.js
-var story_exports = /* @__PURE__ */ __exportAll({ check: () => check });
 var check;
 function init_story() {
 	return (init_story = __esmMin((() => {
@@ -184,6 +178,7 @@ function init_story() {
 	})))();
 }
 //#endregion
-export { story_exports as n, init_namespace as r, init_story as t };
+init_story();
+export { check };
 
 ```

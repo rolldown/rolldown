@@ -117,13 +117,15 @@ fn remap_tokens<const TRACK_NAMES: bool>(
   chain: &[(&oxc_sourcemap::SourceMap<'_>, Vec<&[Token]>, u32)],
   last_offset: u32,
 ) -> Box<[Token]> {
+  let mut mapped_line = None;
   last_map
     .get_source_view_tokens()
-    .map(|token| {
+    .filter_map(|token| {
       let unmapped_token =
         || Token::new(token.get_dst_line(), token.get_dst_col(), 0, 0, None, None);
       if token.get_source_id().is_none() {
-        return unmapped_token();
+        mapped_line = None;
+        return Some(unmapped_token());
       }
 
       let mut original_token = token;
@@ -134,10 +136,13 @@ fn remap_tokens<const TRACK_NAMES: bool>(
           original_token.get_src_line(),
           original_token.get_src_col(),
         ) else {
-          return unmapped_token();
+          let ends_mapped_range = mapped_line == Some(token.get_dst_line());
+          mapped_line = None;
+          return ends_mapped_range.then(unmapped_token);
         };
         if traced.get_source_id().is_none() {
-          return unmapped_token();
+          mapped_line = None;
+          return Some(unmapped_token());
         }
         if TRACK_NAMES {
           // Prefer the name from this (earlier) map; otherwise carry forward the downstream one.
@@ -146,14 +151,15 @@ fn remap_tokens<const TRACK_NAMES: bool>(
         original_token = traced;
       }
 
-      Token::new(
+      mapped_line = Some(token.get_dst_line());
+      Some(Token::new(
         token.get_dst_line(),
         token.get_dst_col(),
         original_token.get_src_line(),
         original_token.get_src_col(),
         original_token.get_source_id(),
         name_id,
-      )
+      ))
     })
     .collect()
 }

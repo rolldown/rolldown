@@ -26,6 +26,7 @@ impl GenerateStage<'_> {
     // external-export facts. Prepare those inputs on the provisional topology first.
     self.find_entry_level_external_module(chunk_graph);
     let mut order_state = OrderWrapState::default();
+    order_state.set_required_modules(&self.link_output.module_table.modules);
     self.finalized_module_namespace_ref_usage(chunk_graph, &order_state);
 
     let mut order_analysis = self.analyze_execution_order(chunk_graph, used_symbol_refs_builder);

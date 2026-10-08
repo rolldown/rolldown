@@ -326,6 +326,22 @@ pub fn collect_wrapped_esm_init_targets_for_import_record(
   )
 }
 
+pub fn module_has_required_reexport_importer(
+  modules: &IndexModules,
+  order_wrap_state: &OrderWrapState,
+  module_idx: ModuleIdx,
+) -> bool {
+  modules[module_idx].as_normal().is_some_and(|module| {
+    let is_reexporting = module.star_export_records().next().is_some()
+      || module
+        .named_exports
+        .values()
+        .any(|export| module.named_imports.contains_key(&export.referenced));
+    is_reexporting
+      && module.importers_idx.iter().any(|idx| order_wrap_state.is_required_module(*idx))
+  })
+}
+
 /// Resolve the complete statically-known namespace of a consumer-local module. Normal named
 /// consumers bypass the shared barrel wrapper and select only their bindings; a materialized
 /// namespace must initialize every leaf and per-record CJS carrier instead of calling the
@@ -407,6 +423,13 @@ fn collect_esm_init_targets_for_record(
     return targets;
   }
 
+  let importee_owns_initialization = forwarding_module_owns_initialization(importee_idx);
+  // A barrel wrapper reached through a required intermediary cannot initialize leaves that code
+  // splitting placed in this importer. Follow bindings only for that cross-chunk require path.
+  let importee_has_required_importer = ctx.strict_execution_order
+    && !importee_owns_initialization
+    && module_has_required_reexport_importer(ctx.modules, ctx.order_wrap_state, importee_idx);
+  let trace_cross_chunk_required_reexports = importee_has_required_importer;
   if wrapped_esm_target_is_reachable(
     importee_idx,
     importee_meta,
@@ -415,7 +438,9 @@ fn collect_esm_init_targets_for_record(
   ) {
     if !route_through_transparent_wrapper {
       targets.push(WrappedEsmInitTarget::Module(importee_idx));
-      return targets;
+      if !trace_cross_chunk_required_reexports {
+        return targets;
+      }
     }
   }
 
@@ -507,6 +532,13 @@ fn collect_esm_init_targets_for_record(
     targets.retain(|target| !discharged.contains(target));
   }
 
+  if trace_cross_chunk_required_reexports {
+    targets.retain(|target| {
+      target.owner() == importee_idx
+        || matches!(target, WrappedEsmInitTarget::Module(module_idx)
+          if forwarding_module_owns_initialization(*module_idx))
+    });
+  }
   if route_through_transparent_wrapper {
     targets.sort_by_key(|target| consumer_local_target_order(ctx, importee_idx, *target));
   }

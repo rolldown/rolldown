@@ -1,0 +1,122 @@
+crates/rolldown/tests/rolldown/topics/deconflict/cjs_wrapper_params_shadowing_top_level_binding/_config.json
+  s_d43624d0762669::t_2ddf1165bccafa 1-6
+crates/rolldown/src/module_loader/runtime_module_task.rs
+  s_d43624d0762669::t_b97e30b5480aaf 192
+crates/rolldown/tests/rolldown/misc/common_js_min/artifacts.snap
+  s_d43624d0762669::t_1918e5fdf2fda4 9
+crates/rolldown/tests/rolldown/cjs_compat/top_level_this_is_initial_exports/_config.json
+  s_d43624d0762669::t_5fcfc49de19fd1 1-10
+crates/rolldown/tests/esbuild/default/this_with_es6_syntax/artifacts.snap
+  s_d43624d0762669::t_351a8fb75af0b6 92,94
+crates/rolldown/tests/rolldown/cjs_compat/top_level_this_is_initial_exports/varmodule.cjs
+  s_d43624d0762669::t_77511e0e824d39 1-2
+crates/rolldown/src/runtime/runtime-base.js
+  s_d43624d0762669::t_086137098aa9d0 28,32
+internal-docs/renaming/design.md
+  s_d43624d0762669::t_1a11a1879fb13f 26
+  s_d43624d0762669::t_7437b4fb509690 58
+  s_d43624d0762669::t_75ce86682829c4 57
+  s_d43624d0762669::t_b5ec94b7566e05 40-43,50-51
+crates/rolldown/tests/rolldown/function/experimental/strict_execution_order/cjs_carrier_pure_value_gap/artifacts.snap
+  s_d43624d0762669::t_1beb8b9282be2d 110,261
+crates/rolldown/src/module_finalizers/impl_visit_mut.rs
+  s_d43624d0762669::t_84e19ba47ae408 23-25,31-46,287,596-598
+crates/rolldown/tests/rolldown/function/experimental/strict_execution_order/internal_wrapped_entry_order/artifacts.snap
+  s_d43624d0762669::t_f27368d52a90dc 89,191
+crates/rolldown/tests/rolldown/cjs_compat/top_level_this_is_initial_exports/plain.cjs
+  s_d43624d0762669::t_903a08154520e6 1-3
+crates/rolldown/tests/rolldown/cjs_compat/top_level_arguments/artifacts.snap
+  s_d43624d0762669::t_b80b22ac4867d8 1-44
+crates/rolldown_ecmascript_utils/src/ast_factory.rs
+  s_d43624d0762669::t_54dd6b54fb6bb2 740-741
+  s_d43624d0762669::t_9b8ceae692a406 739
+  s_d43624d0762669::t_4ffa242bc1c9dd 34,748,754,757-777
+  s_d43624d0762669::t_d9310334931ea4 742
+crates/rolldown_common/src/ecmascript/ecma_view.rs
+  s_d43624d0762669::t_285d1e4625ecf4 55-56
+  s_d43624d0762669::t_18a5879f3834b1 160-163
+crates/rolldown/src/ecmascript/ecma_module_view_factory.rs
+  s_d43624d0762669::t_79caba9ee37e32 87,150
+crates/rolldown/tests/rolldown/cjs_compat/top_level_arguments/lib.cjs
+  s_d43624d0762669::t_33c48ef326a8ca 1-6
+crates/rolldown/tests/rolldown/cjs_compat/top_level_this_is_initial_exports/main.js
+  s_d43624d0762669::t_d185db83eaa83a 1-11
+crates/rolldown/tests/rolldown/topics/hmr/runtime_correctness/artifacts.snap
+  s_d43624d0762669::t_b98a70bd121ed8 75,80,88,92,102-103,106-107
+crates/rolldown/tests/rolldown/cjs_compat/top_level_this_is_initial_exports/_test.mjs
+  s_d43624d0762669::t_d8eacd782a1c01 1-20
+crates/rolldown/tests/rolldown/topics/deconflict/cjs_wrapper_params_shadowing_top_level_binding/artifacts.snap
+  s_d43624d0762669::t_f7c3e6954bd470 1-57
+crates/rolldown/tests/rolldown/cjs_compat/top_level_arguments/_config.json
+  s_d43624d0762669::t_81d55e81e3175d 1-9
+crates/rolldown/src/ast_scanner/mod.rs
+  s_d43624d0762669::t_1eac4fa233ed83 119-120,229,364-365
+  s_d43624d0762669::t_46245af644c848 361
+crates/rolldown/tests/rolldown/cjs_compat/top_level_this_is_initial_exports/declared.cjs
+  s_d43624d0762669::t_2196ecf01b77f0 1-2
+crates/rolldown/tests/rolldown/cjs_compat/top_level_this_is_initial_exports/artifacts.snap
+  s_d43624d0762669::t_3bebe0c98a8dfc 1-333
+crates/rolldown/tests/rolldown/cjs_compat/top_level_this_is_initial_exports/replaced.cjs
+  s_d43624d0762669::t_1bb05304162212 1-3
+crates/rolldown/tests/rolldown/function/experimental/strict_execution_order/wrapped_entry_chunk_cycle/artifacts.snap
+  s_d43624d0762669::t_b38fa8226cc35e 94,238,399,523
+crates/rolldown/tests/rolldown/cjs_compat/top_level_this_is_initial_exports/assigned.cjs
+  s_d43624d0762669::t_63d9b568eac55f 1-2
+crates/rolldown/tests/rolldown/topics/deconflict/cjs_wrapper_params_shadowing_top_level_binding/esm.js
+  s_d43624d0762669::t_6fa9bf2636ecb4 1-2
+crates/rolldown/tests/rolldown/function/experimental/strict_execution_order/cjs_carrier_gap/artifacts.snap
+  s_d43624d0762669::t_6f7bbbc7ac9b13 59,143
+crates/rolldown/tests/rolldown/cjs_compat/top_level_this_is_initial_exports/arrow.cjs
+  s_d43624d0762669::t_86c7212930826d 1-6
+crates/rolldown/tests/rolldown/topics/deconflict/cjs_wrapper_params_shadowing_top_level_binding/_test.mjs
+  s_d43624d0762669::t_684787e77db034 1-9
+crates/rolldown/src/utils/chunk/deconflict_chunk_symbols.rs
+  s_d43624d0762669::t_977e2daf349fed 13-14,74,151-157,305-309,332-344
+internal-docs/renaming/implementation.md
+  s_d43624d0762669::t_0cf85683636fb3 26
+  s_d43624d0762669::t_ead625a83c71fd 52
+  s_d43624d0762669::t_dd23a1bf949103 29
+crates/rolldown/tests/esbuild/default/jsx_dev_self_edge_cases/artifacts.snap
+  s_d43624d0762669::t_8879204bcc77f9 208,213
+crates/rolldown/tests/rolldown/topics/deconflict/cjs_wrapper_params_shadowing_top_level_binding/main.js
+  s_d43624d0762669::t_02446659265111 1-2
+crates/rolldown/tests/rolldown/issues/5242/artifacts.snap
+  s_d43624d0762669::t_bfa10ea0690218 12,14
+crates/rolldown/tests/rolldown/cjs_compat/optimize_interop_default_with_cjs_bailout/artifacts.snap
+  s_d43624d0762669::t_9a101165d30342 21-22
+crates/rolldown/tests/rolldown/cjs_compat/top_level_this_is_initial_exports/nulled.cjs
+  s_d43624d0762669::t_bf637675eaaf5a 1-2
+crates/rolldown/tests/rolldown/topics/deconflict/cjs_wrapper_params_shadowing_top_level_binding/lib.js
+  s_d43624d0762669::t_e9fa5bc30a4c1b 1-6
+crates/rolldown/tests/rolldown/cjs_compat/top_level_this_is_initial_exports/fnexports.cjs
+  s_d43624d0762669::t_2d2cd03480f98e 1-2
+crates/rolldown/tests/esbuild/lower/lower_async_this2016_common_js/artifacts.snap
+  s_d43624d0762669::t_fd3c502a08c37f 11-12
+crates/rolldown/src/utils/renamer.rs
+  s_d43624d0762669::t_f0effcc4c60ffb 11,346-359
+  s_d43624d0762669::t_4746623a04813b 528,541
+crates/rolldown/tests/rolldown/sourcemap/imported_cjs_callee/artifacts.snap
+  s_d43624d0762669::t_a1d8ae4abd9043 68,76,78-93,95-106
+crates/rolldown/tests/rolldown/cjs_compat/top_level_arguments/main.js
+  s_d43624d0762669::t_d1f543c74955d0 1-2
+internal-docs/linking/determine-module-exports-kind/implementation.md
+  s_d43624d0762669::t_d6d6d0cad2562a 69,71
+crates/rolldown/tests/rolldown/cjs_compat/top_level_arguments/_test.mjs
+  s_d43624d0762669::t_8159becc07955a 1-4
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "afac8175a3dbc96c5d8fff7c2c72317ef98ec597",
+  "prompts": {},
+  "sessions": {
+    "s_d43624d0762669": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "7f7265c1-aa11-4a4b-9d11-215aef9a579c",
+        "model": "unknown"
+      },
+      "human_author": "IWANABETHATGUY <iwanabethatguy@qq.com>"
+    }
+  }
+}

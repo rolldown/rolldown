@@ -1,0 +1,43 @@
+crates/rolldown/src/stages/scan_stage.rs
+  s_1375922e72f7d6::t_3d9957627d0f76 11,28-29,193,196-198,216-218
+crates/rolldown/src/utils/render_ecma_module.rs
+  s_1375922e72f7d6::t_1c99c46715cb44 87-89
+crates/rolldown_binding/src/options/plugin/binding_callable_builtin_plugin.rs
+  s_1375922e72f7d6::t_6bc18b3767aa02 13,52
+crates/rolldown_binding/src/options/plugin/binding_transform_context.rs
+  s_1375922e72f7d6::t_97fe7ad289a9bf 41-42,45
+crates/rolldown_common/src/lib.rs
+  s_1375922e72f7d6::t_bc958b81f38cdd 214
+crates/rolldown_common/src/source_map_gen_msg.rs
+  s_1375922e72f7d6::t_3275bf3a2f2406 1,3,7-9
+crates/rolldown_common/src/types/sourcemap_chain_element.rs
+  s_1375922e72f7d6::t_54ea9e339a09a5 1-2,5,13-17,26-88
+crates/rolldown_plugin/src/plugin_context/transform_plugin_context.rs
+  s_1375922e72f7d6::t_8c2fd5d0655eab 1-4,8,20-26,36,38-46,57-59,102-103,107-117,119-124
+crates/rolldown_plugin/src/plugin_driver/build_hooks.rs
+  s_1375922e72f7d6::t_38be213792ac65 316-323,326,334-342,393-405
+packages/rolldown/src/plugin/bindingify-build-hooks.ts
+  s_1375922e72f7d6::t_d8c0c48f11e8cb 228-232,240
+packages/rolldown/tests/fixtures/plugin/native-magic-string-double-send/_config.ts
+  s_1375922e72f7d6::t_5189ef11f5951c 37-38
+packages/rolldown/tests/fixtures/plugin/transform/combined-sourcemap-native-magic-string/_config.ts
+  s_1375922e72f7d6::t_8c93b4bfc29580 1-56
+packages/rolldown/tests/fixtures/plugin/transform/combined-sourcemap-native-magic-string/main.js
+  s_1375922e72f7d6::t_f9f71690ecf740 1-2
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "fb80aaf51cb27289e08ed5e2eea66cb776538422",
+  "prompts": {},
+  "sessions": {
+    "s_1375922e72f7d6": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "6ed28c6e-b520-460d-bae7-79374bd17d8b",
+        "model": "unknown"
+      },
+      "human_author": "IWANABETHATGUY <iwanabethatguy@qq.com>"
+    }
+  }
+}

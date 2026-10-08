@@ -1,0 +1,35 @@
+crates/rolldown/tests/rolldown/topics/deconflict/cjs_external_require_local_renamed_onto_sibling_local/_test.mjs
+  s_d43624d0762669::t_08603499a819db 1-5
+crates/rolldown/tests/rolldown/topics/deconflict/cjs_external_require_local_renamed_onto_sibling_local/main.js
+  s_d43624d0762669::t_3d30810c2c58ec 1-5
+internal-docs/renaming/implementation.md
+  s_d43624d0762669::t_dd23a1bf949103 29
+crates/rolldown/tests/rolldown/topics/deconflict/cjs_external_require_local_renamed_onto_sibling_local/lib.cjs
+  s_d43624d0762669::t_52af296b072f4f 1-7
+crates/rolldown/src/utils/chunk/deconflict_chunk_symbols.rs
+  s_d43624d0762669::t_6e3dab0323b164 17-18,200,313-329
+crates/rolldown/tests/rolldown/topics/deconflict/cjs_external_require_local_renamed_onto_sibling_local/artifacts.snap
+  s_d43624d0762669::t_9deb8c4928161a 1-25
+crates/rolldown/tests/rolldown/topics/deconflict/cjs_external_require_local_renamed_onto_sibling_local/_config.json
+  s_d43624d0762669::t_8ea18ef30bcb08 1-8
+crates/rolldown/tests/rolldown/issues/4289/artifacts.snap
+  s_d43624d0762669::t_7f105ca869ad7c 50,53-55,172,175-177
+internal-docs/renaming/design.md
+  s_d43624d0762669::t_7c10429639ec29 18-19
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "f7f2125408a54de96123fdaf27241f32aff9d32a",
+  "prompts": {},
+  "sessions": {
+    "s_d43624d0762669": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "7f7265c1-aa11-4a4b-9d11-215aef9a579c",
+        "model": "unknown"
+      },
+      "human_author": "IWANABETHATGUY <iwanabethatguy@qq.com>"
+    }
+  }
+}

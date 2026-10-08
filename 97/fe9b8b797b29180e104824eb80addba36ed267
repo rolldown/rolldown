@@ -1,0 +1,37 @@
+crates/rolldown/tests/rolldown/issues/11058_conflicting_external_bindings/_config.json
+  s_efad607f5a7d7d::t_021720c3249017 2,6-12
+crates/rolldown/tests/rolldown/issues/11058_conflicting_external_bindings/a.js
+  s_efad607f5a7d7d::t_0d851187f15fcd 2-3
+crates/rolldown/tests/rolldown/issues/11058_conflicting_external_bindings/artifacts.snap
+  s_efad607f5a7d7d::t_fcca6b9aa33f89 8-26,68,70-157
+crates/rolldown/tests/rolldown/issues/11058_conflicting_external_bindings/b.js
+  s_efad607f5a7d7d::t_3d181c2fd1301a 3-4
+packages/rolldown/tests/fixtures/issues/11058/_config.ts
+  s_efad607f5a7d7d::t_7da0a66cc4e1f6 1-25
+packages/rolldown/tests/fixtures/issues/11058/a.js
+  s_efad607f5a7d7d::t_433f7d83aec9e2 1
+packages/rolldown/tests/fixtures/issues/11058/b.js
+  s_efad607f5a7d7d::t_a01c075214dfe7 1
+packages/rolldown/tests/fixtures/issues/11058/main.js
+  s_efad607f5a7d7d::t_3491035d0fbe4b 1-3
+packages/rolldown/tests/fixtures/issues/11058/only-c.js
+  s_efad607f5a7d7d::t_f70b25eac81d87 1
+crates/rolldown/src/stages/link_stage/bind_imports_and_exports.rs
+  s_efad607f5a7d7d::t_caa4cfaecb6b3f 216-228,253,1513
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "97fe9b8b797b29180e104824eb80addba36ed267",
+  "prompts": {},
+  "sessions": {
+    "s_efad607f5a7d7d": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "75914a2c-be5d-416e-ac18-88062d163586",
+        "model": "unknown"
+      },
+      "human_author": "IWANABETHATGUY <iwanabethatguy@qq.com>"
+    }
+  }
+}

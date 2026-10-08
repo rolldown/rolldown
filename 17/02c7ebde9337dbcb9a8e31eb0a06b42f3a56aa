@@ -1,0 +1,19 @@
+crates/rolldown/tests/rolldown/cjs_compat/dynamic_import_in_cjs_non_static_specifier_names/artifacts.snap
+  s_d43624d0762669::t_ca1ecbadb24d4a 18,20-21,25-26
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "1702c7ebde9337dbcb9a8e31eb0a06b42f3a56aa",
+  "prompts": {},
+  "sessions": {
+    "s_d43624d0762669": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "7f7265c1-aa11-4a4b-9d11-215aef9a579c",
+        "model": "unknown"
+      },
+      "human_author": "IWANABETHATGUY <iwanabethatguy@qq.com>"
+    }
+  }
+}

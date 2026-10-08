@@ -1,0 +1,27 @@
+crates/rolldown/tests/rolldown/topics/deconflict/cjs_entry_local_renamed_onto_sibling_local/main.cjs
+  s_d43624d0762669::t_5d9195865d2259 1-4
+crates/rolldown/tests/rolldown/topics/deconflict/cjs_local_renamed_onto_sibling_local/dup.cjs
+  s_d43624d0762669::t_ea1d6ed1030b2b 1-5
+crates/rolldown/tests/rolldown/topics/deconflict/cjs_local_renamed_onto_sibling_local/lib.cjs
+  s_d43624d0762669::t_a26a08788a1eac 1-2
+crates/rolldown/tests/rolldown/topics/deconflict/cjs_shadowing_require_namespace_object/main.js
+  s_d43624d0762669::t_e4d523ec7c7879 10-11
+crates/rolldown/tests/rolldown/topics/deconflict/cjs_shadowing_wrapper_name_unused_require/lib.cjs
+  s_d43624d0762669::t_861138ff7c8aa6 5-6,9-10
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "2d9308fcbb432795467098b23a2a4b636880c3df",
+  "prompts": {},
+  "sessions": {
+    "s_d43624d0762669": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "7f7265c1-aa11-4a4b-9d11-215aef9a579c",
+        "model": "unknown"
+      },
+      "human_author": "IWANABETHATGUY <iwanabethatguy@qq.com>"
+    }
+  }
+}

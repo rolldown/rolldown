@@ -32,11 +32,19 @@ pub struct MemberExprRef {
   /// enabling detection of potential shadowing by nested scope bindings.
   pub reference_id: Option<ReferenceId>,
   /// Whether the recorded expression or a member below it is assigned or deleted
-  /// (`ns.a = 1`, `ns.a[k] = 1`). Set from oxc's `MemberWriteTarget` flag or `is_write_target`.
+  /// (`ns.a = 1`, `ns.a[k] = 1`). Set from oxc's `MemberWriteTarget` flag or `write_target`.
   pub is_write: bool,
-  /// Whether the recorded expression (`object_ref` plus `prop_and_span_list`) is itself assigned
-  /// or deleted. `ns.a[k] = 1` records only `ns.a`, so `is_write` is true but this is false.
-  pub is_write_target: bool,
+  /// How the recorded expression (`object_ref` plus `prop_and_span_list`) is itself written, if it
+  /// is. `ns.a[k] = 1` records only `ns.a`, so `is_write` is true but this is `None`.
+  pub write_target: Option<MemberExprWriteKind>,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub enum MemberExprWriteKind {
+  /// `ns.a = 1`, `ns.a++`, `[ns.a] = []`, `for (ns.a of [])`
+  Assign,
+  /// `delete ns.a`, `delete ns?.a`
+  Delete,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]

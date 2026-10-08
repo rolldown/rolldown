@@ -594,8 +594,7 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
                 *symbol_ref_flags |= SymbolRefFlags::HasComputedMemberWrite;
               }
               // The chain holds the nearest ancestors, so its last prop is at this index.
-              let is_write_target =
-                self.is_member_expr_written(self.visit_path.len() - props.len());
+              let write_target = self.member_expr_write_kind(self.visit_path.len() - props.len());
               self.add_member_expr_reference(MemberExprRef {
                 object_ref: root_symbol_id,
                 prop_and_span_list: props,
@@ -604,8 +603,8 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
                 object_ref_type: ty,
                 reference_id: ident_ref.reference_id.get(),
                 // oxc does not flag `delete ns.a?.b` (oxc-project/oxc#27419).
-                is_write: is_member_write || is_write_target,
-                is_write_target,
+                is_write: is_member_write || write_target.is_some(),
+                write_target,
               });
             }
           } else if is_member_write

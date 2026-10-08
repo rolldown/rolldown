@@ -8,8 +8,8 @@ use oxc_str::CompactStr;
 // if we want more enhancements related to exports.
 use rolldown_common::{
   EcmaModuleAstUsage, ExportsKind, ImportRecordIdx, IndexModules, MemberExprObjectReferencedType,
-  MemberExprRef, MemberExprRefResolution, Module, ModuleIdx, ModuleType, NamespaceAlias,
-  NormalModule, OutputFormat, ResolvedExport, Specifier, StmtInfoIdx, StmtInfos,
+  MemberExprRef, MemberExprRefResolution, MemberExprWriteKind, Module, ModuleIdx, ModuleType,
+  NamespaceAlias, NormalModule, OutputFormat, ResolvedExport, Specifier, StmtInfoIdx, StmtInfos,
   SymbolOrMemberExprRef, SymbolRef, SymbolRefDb, SymbolRefFlags,
 };
 use rolldown_error::{
@@ -33,7 +33,7 @@ use rustc_hash::{FxHashMap, FxHashSet};
 use crate::{
   SharedOptions,
   types::{
-    linking_metadata::LinkingMetadataVec,
+    linking_metadata::{LinkingMetadata, LinkingMetadataVec},
     member_read_star_reexport_path::MemberReadStarReexportPath,
   },
 };
@@ -817,15 +817,19 @@ impl LinkStage<'_> {
                 while cursor < member_expr_ref.prop_and_span_list.len() && is_namespace_ref {
                   let prop = &member_expr_ref.prop_and_span_list[cursor];
                   let name = &prop.name;
+                  let meta = &self.metas[canonical_ref_owner.idx];
                   // Stop before the written prop: the finalizer cannot write its bare binding into a
                   // member write target.
-                  if let Some(error) =
-                    namespace_member_write_error(module, member_expr_ref, cursor, &self.symbols)
-                  {
+                  if let Some(error) = namespace_member_write_error(
+                    module,
+                    member_expr_ref,
+                    cursor,
+                    meta,
+                    &self.symbols,
+                  ) {
                     diagnostics.push(error);
                     break;
                   }
-                  let meta = &self.metas[canonical_ref_owner.idx];
                   let export_symbol = meta.resolved_exports.get(name).and_then(|resolved_export| {
                     (!resolved_export.came_from_commonjs).then_some(resolved_export)
                   });
@@ -1888,12 +1892,26 @@ fn namespace_member_write_error(
   module: &NormalModule,
   member_expr_ref: &MemberExprRef,
   cursor: usize,
+  meta: &LinkingMetadata,
   symbols: &SymbolRefDb,
 ) -> Option<BuildDiagnostic> {
-  if !member_expr_ref.is_write_target || cursor + 1 != member_expr_ref.prop_and_span_list.len() {
+  if cursor + 1 != member_expr_ref.prop_and_span_list.len() {
     return None;
   }
   let prop = &member_expr_ref.prop_and_span_list[cursor];
+  match member_expr_ref.write_target? {
+    MemberExprWriteKind::Assign => {}
+    // Deleting a name that the namespace does not export is legal and returns `true`, so let the
+    // caller handle `delete ns.missing` like a read of a missing export.
+    MemberExprWriteKind::Delete => {
+      let is_exported =
+        meta.resolved_exports.get(&prop.name).is_some_and(|export| !export.came_from_commonjs)
+          && meta.sorted_and_non_ambiguous_resolved_exports.contains_key(&prop.name);
+      if !is_exported {
+        return None;
+      }
+    }
+  }
   Some(BuildDiagnostic::assign_to_import(
     module.id.as_arc_str().clone(),
     module.source.clone(),

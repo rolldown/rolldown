@@ -1,0 +1,29 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+Object.defineProperty(exports, Symbol.toStringTag, { value: "Module" });
+// HIDDEN [\0rolldown/runtime.js]
+let node_https = require("node:https");
+let node_https$2 = __toESM(node_https, 1);
+node_https = __toESM(node_https);
+//#region node-mode.mjs
+function read(node_https$1) {
+	return [
+		typeof node_https$2.request,
+		node_https$1,
+		typeof node_https$2.default.request
+	];
+}
+//#endregion
+//#region non-node.js
+const value = typeof node_https.default.request;
+//#endregion
+exports.read = read;
+exports.value = value;
+
+```

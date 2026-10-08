@@ -1,0 +1,26 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+//#region dep.cjs
+var require_dep$1 = /* @__PURE__ */ __commonJSMin(((exports) => {
+	exports.v = 1;
+}));
+//#endregion
+//#region lib.cjs
+//#endregion
+//#region main.js
+//#endregion
+var read = (/* @__PURE__ */ __toESM((/* @__PURE__ */ __commonJSMin(((exports, module) => {
+	module.exports = function(require_dep) {
+		return [require_dep$1().v, require_dep];
+	};
+})))())).default;
+export { read };
+
+```

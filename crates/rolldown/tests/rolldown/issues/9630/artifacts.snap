@@ -99,10 +99,10 @@ Object.defineProperty(exports, "require_isArrayLike", {
 ### last.js
 
 ```js
-const require_isArrayLike$1 = require("./isArrayLike.js");
+const require_isArrayLike$3 = require("./isArrayLike.js");
 //#region last.cjs
-var require_last = /* @__PURE__ */ require_isArrayLike$1.__commonJSMin(((exports) => {
-	var require_isArrayLike = require_isArrayLike$1.require_isArrayLike();
+var require_last = /* @__PURE__ */ require_isArrayLike$3.__commonJSMin(((exports) => {
+	var require_isArrayLike = require_isArrayLike$3.require_isArrayLike();
 	function last(array) {
 		if (!require_isArrayLike.isArrayLike(array)) return;
 		return array[array.length - 1];

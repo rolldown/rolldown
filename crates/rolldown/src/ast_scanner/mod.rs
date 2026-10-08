@@ -116,6 +116,8 @@ pub struct ScanResult {
   /// `import.meta.ROLLDOWN_FILE_URL_<referenceId>[_<urlId>]`, one entry per occurrence.
   pub rolldown_file_url_references: Vec<RolldownFileUrlReference>,
   pub this_expr_replace_map: FxHashMap<NodeId, ThisExprReplaceKind>,
+  /// See `EcmaView::cjs_this_ref`.
+  pub cjs_this_ref: Option<SymbolRef>,
   pub hmr_info: HmrInfo,
   pub hmr_hot_ref: Option<SymbolRef>,
   pub directive_range: Vec<Span>,
@@ -224,6 +226,7 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
       new_url_references: FxHashMap::default(),
       rolldown_file_url_references: Vec::new(),
       this_expr_replace_map: FxHashMap::default(),
+      cjs_this_ref: None,
       hmr_info: HmrInfo::default(),
       hmr_hot_ref,
       directive_range: vec![],
@@ -355,10 +358,11 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
       self.result.this_expr_replace_map = generate_replace_this_expr_map(
         &self.top_level_this_expr_set,
         if exports_kind.is_commonjs() {
-          // The rewrite changes `this` to `exports`.
-          // The wrapper requires an `exports` parameter for the new reference.
+          // Top-level `this` is the module's exports object, an implicit `exports` reference.
           // See internal-docs/linking/determine-module-exports-kind/implementation.md.
           self.result.ast_usage.insert(EcmaModuleAstUsage::ExportsRef);
+          self.result.cjs_this_ref =
+            Some(self.result.symbol_ref_db.create_facade_root_symbol_ref("this"));
           ThisExprReplaceKind::Exports
         } else {
           ThisExprReplaceKind::Context

@@ -1,0 +1,57 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+//#region esm.js
+var module$1, exports$1;
+var init_esm = __esmMin((() => {
+	module$1 = "esm-module";
+	exports$1 = "esm-exports";
+}));
+//#endregion
+//#region lib.js
+//#endregion
+//#region main.js
+var main_default = (/* @__PURE__ */ __toESM((/* @__PURE__ */ __commonJSMin(((exports, module, this$1) => {
+	init_esm();
+	exports.value = [module$1, exports$1];
+	exports.self = this$1 === exports;
+})))())).default;
+//#endregion
+export { main_default as default };
+
+```
+
+# Variant: iife: [format: Iife] [name: "lib"]
+
+## Assets
+
+### main.js
+
+```js
+var lib = (function() {
+	// HIDDEN [\0rolldown/runtime.js]
+	//#region esm.js
+	var module$1, exports$1;
+	var init_esm = __esmMin((() => {
+		module$1 = "esm-module";
+		exports$1 = "esm-exports";
+	}));
+	//#endregion
+	//#region lib.js
+	//#endregion
+	//#region main.js
+	//#endregion
+	return (/* @__PURE__ */ __toESM((/* @__PURE__ */ __commonJSMin(((exports, module, this$1) => {
+		init_esm();
+		exports.value = [module$1, exports$1];
+		exports.self = this$1 === exports;
+	})))())).default;
+})();
+
+```

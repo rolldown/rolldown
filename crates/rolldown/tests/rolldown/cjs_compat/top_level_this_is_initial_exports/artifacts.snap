@@ -1,0 +1,333 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+//#region declared.cjs
+var require_declared = /* @__PURE__ */ __commonJSMin(((exports, module, this$8) => {
+	this$8.viaThis = { local: true }.local;
+}));
+//#endregion
+//#region assigned.cjs
+var require_assigned = /* @__PURE__ */ __commonJSMin(((exports, module, this$7) => {
+	exports = { local: true };
+	this$7.viaThis = exports.local;
+}));
+//#endregion
+//#region replaced.cjs
+var require_replaced = /* @__PURE__ */ __commonJSMin(((exports, module, this$6) => {
+	exports = {};
+	module.exports = { value: "replacement" };
+	this$6.value = "original";
+}));
+//#endregion
+//#region nulled.cjs
+var require_nulled = /* @__PURE__ */ __commonJSMin(((exports, module, this$5) => {
+	module.exports = null;
+	this$5.value = "original";
+}));
+//#endregion
+//#region fnexports.cjs
+var require_fnexports = /* @__PURE__ */ __commonJSMin(((exports, module, this$4) => {
+	function exports() {}
+	this$4.value = typeof exports;
+}));
+//#endregion
+//#region varmodule.cjs
+var require_varmodule = /* @__PURE__ */ __commonJSMin(((exports, module, this$3) => {
+	this$3.value = { exports: "fake" }.exports;
+}));
+//#endregion
+//#region arrow.cjs
+var require_arrow = /* @__PURE__ */ __commonJSMin(((exports, module, this$2) => {
+	const set = () => {
+		this$2.viaArrow = ["nested", "nested-module"];
+	};
+	set();
+}));
+//#endregion
+//#region plain.cjs
+var require_plain = /* @__PURE__ */ __commonJSMin(((exports, module, this$1) => {
+	this$1.a = 1;
+	exports.b = 2;
+	module.exports.c = this$1 === exports;
+}));
+//#endregion
+//#region main.js
+var import_declared = /* @__PURE__ */ __toESM(require_declared());
+var import_assigned = /* @__PURE__ */ __toESM(require_assigned());
+var import_replaced = /* @__PURE__ */ __toESM(require_replaced());
+var import_nulled = /* @__PURE__ */ __toESM(require_nulled());
+var import_fnexports = /* @__PURE__ */ __toESM(require_fnexports());
+var import_varmodule = /* @__PURE__ */ __toESM(require_varmodule());
+var import_arrow = /* @__PURE__ */ __toESM(require_arrow());
+var import_plain = /* @__PURE__ */ __toESM(require_plain());
+const all = {
+	declared: import_declared.default,
+	assigned: import_assigned.default,
+	replaced: import_replaced.default,
+	nulled: import_nulled.default,
+	fnexports: import_fnexports.default,
+	varmodule: import_varmodule.default,
+	arrow: import_arrow.default,
+	plain: import_plain.default
+};
+//#endregion
+export { all };
+
+```
+
+# Variant: cjs: [format: Cjs]
+
+## Assets
+
+### main.js
+
+```js
+Object.defineProperty(exports, Symbol.toStringTag, { value: "Module" });
+// HIDDEN [\0rolldown/runtime.js]
+//#region declared.cjs
+var require_declared = /* @__PURE__ */ __commonJSMin(((exports, module, this$8) => {
+	this$8.viaThis = { local: true }.local;
+}));
+//#endregion
+//#region assigned.cjs
+var require_assigned = /* @__PURE__ */ __commonJSMin(((exports, module, this$7) => {
+	exports = { local: true };
+	this$7.viaThis = exports.local;
+}));
+//#endregion
+//#region replaced.cjs
+var require_replaced = /* @__PURE__ */ __commonJSMin(((exports, module, this$6) => {
+	exports = {};
+	module.exports = { value: "replacement" };
+	this$6.value = "original";
+}));
+//#endregion
+//#region nulled.cjs
+var require_nulled = /* @__PURE__ */ __commonJSMin(((exports, module, this$5) => {
+	module.exports = null;
+	this$5.value = "original";
+}));
+//#endregion
+//#region fnexports.cjs
+var require_fnexports = /* @__PURE__ */ __commonJSMin(((exports, module, this$4) => {
+	function exports() {}
+	this$4.value = typeof exports;
+}));
+//#endregion
+//#region varmodule.cjs
+var require_varmodule = /* @__PURE__ */ __commonJSMin(((exports, module, this$3) => {
+	this$3.value = { exports: "fake" }.exports;
+}));
+//#endregion
+//#region arrow.cjs
+var require_arrow = /* @__PURE__ */ __commonJSMin(((exports, module, this$2) => {
+	const set = () => {
+		this$2.viaArrow = ["nested", "nested-module"];
+	};
+	set();
+}));
+//#endregion
+//#region plain.cjs
+var require_plain = /* @__PURE__ */ __commonJSMin(((exports, module, this$1) => {
+	this$1.a = 1;
+	exports.b = 2;
+	module.exports.c = this$1 === exports;
+}));
+//#endregion
+//#region main.js
+var import_declared = /* @__PURE__ */ __toESM(require_declared());
+var import_assigned = /* @__PURE__ */ __toESM(require_assigned());
+var import_replaced = /* @__PURE__ */ __toESM(require_replaced());
+var import_nulled = /* @__PURE__ */ __toESM(require_nulled());
+var import_fnexports = /* @__PURE__ */ __toESM(require_fnexports());
+var import_varmodule = /* @__PURE__ */ __toESM(require_varmodule());
+var import_arrow = /* @__PURE__ */ __toESM(require_arrow());
+var import_plain = /* @__PURE__ */ __toESM(require_plain());
+const all = {
+	declared: import_declared.default,
+	assigned: import_assigned.default,
+	replaced: import_replaced.default,
+	nulled: import_nulled.default,
+	fnexports: import_fnexports.default,
+	varmodule: import_varmodule.default,
+	arrow: import_arrow.default,
+	plain: import_plain.default
+};
+//#endregion
+exports.all = all;
+
+```
+
+# Variant: umd: [format: Umd] [name: "lib"]
+
+## Assets
+
+### main.js
+
+```js
+(function(global, factory) {
+	typeof exports === "object" && typeof module !== "undefined" ? factory(exports) : typeof define === "function" && define.amd ? define(["exports"], factory) : (global = typeof globalThis !== "undefined" ? globalThis : global || self, factory(global.lib = {}));
+})(this, function(exports) {
+	Object.defineProperty(exports, Symbol.toStringTag, { value: "Module" });
+	// HIDDEN [\0rolldown/runtime.js]
+	//#region declared.cjs
+	var require_declared = /* @__PURE__ */ __commonJSMin(((exports, module, this$8) => {
+		this$8.viaThis = { local: true }.local;
+	}));
+	//#endregion
+	//#region assigned.cjs
+	var require_assigned = /* @__PURE__ */ __commonJSMin(((exports, module, this$7) => {
+		exports = { local: true };
+		this$7.viaThis = exports.local;
+	}));
+	//#endregion
+	//#region replaced.cjs
+	var require_replaced = /* @__PURE__ */ __commonJSMin(((exports, module, this$6) => {
+		exports = {};
+		module.exports = { value: "replacement" };
+		this$6.value = "original";
+	}));
+	//#endregion
+	//#region nulled.cjs
+	var require_nulled = /* @__PURE__ */ __commonJSMin(((exports, module, this$5) => {
+		module.exports = null;
+		this$5.value = "original";
+	}));
+	//#endregion
+	//#region fnexports.cjs
+	var require_fnexports = /* @__PURE__ */ __commonJSMin(((exports, module, this$4) => {
+		function exports() {}
+		this$4.value = typeof exports;
+	}));
+	//#endregion
+	//#region varmodule.cjs
+	var require_varmodule = /* @__PURE__ */ __commonJSMin(((exports, module, this$3) => {
+		this$3.value = { exports: "fake" }.exports;
+	}));
+	//#endregion
+	//#region arrow.cjs
+	var require_arrow = /* @__PURE__ */ __commonJSMin(((exports, module, this$2) => {
+		const set = () => {
+			this$2.viaArrow = ["nested", "nested-module"];
+		};
+		set();
+	}));
+	//#endregion
+	//#region plain.cjs
+	var require_plain = /* @__PURE__ */ __commonJSMin(((exports, module, this$1) => {
+		this$1.a = 1;
+		exports.b = 2;
+		module.exports.c = this$1 === exports;
+	}));
+	//#endregion
+	//#region main.js
+	var import_declared = /* @__PURE__ */ __toESM(require_declared());
+	var import_assigned = /* @__PURE__ */ __toESM(require_assigned());
+	var import_replaced = /* @__PURE__ */ __toESM(require_replaced());
+	var import_nulled = /* @__PURE__ */ __toESM(require_nulled());
+	var import_fnexports = /* @__PURE__ */ __toESM(require_fnexports());
+	var import_varmodule = /* @__PURE__ */ __toESM(require_varmodule());
+	var import_arrow = /* @__PURE__ */ __toESM(require_arrow());
+	var import_plain = /* @__PURE__ */ __toESM(require_plain());
+	//#endregion
+	exports.all = {
+		declared: import_declared.default,
+		assigned: import_assigned.default,
+		replaced: import_replaced.default,
+		nulled: import_nulled.default,
+		fnexports: import_fnexports.default,
+		varmodule: import_varmodule.default,
+		arrow: import_arrow.default,
+		plain: import_plain.default
+	};
+});
+
+```
+
+# Variant: profiler: [profiler_names: true]
+
+## Assets
+
+### main.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+//#region declared.cjs
+var require_declared = /* @__PURE__ */ __commonJS({ "declared.cjs": ((exports, module, this$8) => {
+	this$8.viaThis = { local: true }.local;
+}) });
+//#endregion
+//#region assigned.cjs
+var require_assigned = /* @__PURE__ */ __commonJS({ "assigned.cjs": ((exports, module, this$7) => {
+	exports = { local: true };
+	this$7.viaThis = exports.local;
+}) });
+//#endregion
+//#region replaced.cjs
+var require_replaced = /* @__PURE__ */ __commonJS({ "replaced.cjs": ((exports, module, this$6) => {
+	exports = {};
+	module.exports = { value: "replacement" };
+	this$6.value = "original";
+}) });
+//#endregion
+//#region nulled.cjs
+var require_nulled = /* @__PURE__ */ __commonJS({ "nulled.cjs": ((exports, module, this$5) => {
+	module.exports = null;
+	this$5.value = "original";
+}) });
+//#endregion
+//#region fnexports.cjs
+var require_fnexports = /* @__PURE__ */ __commonJS({ "fnexports.cjs": ((exports, module, this$4) => {
+	function exports() {}
+	this$4.value = typeof exports;
+}) });
+//#endregion
+//#region varmodule.cjs
+var require_varmodule = /* @__PURE__ */ __commonJS({ "varmodule.cjs": ((exports, module, this$3) => {
+	this$3.value = { exports: "fake" }.exports;
+}) });
+//#endregion
+//#region arrow.cjs
+var require_arrow = /* @__PURE__ */ __commonJS({ "arrow.cjs": ((exports, module, this$2) => {
+	const set = () => {
+		this$2.viaArrow = ["nested", "nested-module"];
+	};
+	set();
+}) });
+//#endregion
+//#region plain.cjs
+var require_plain = /* @__PURE__ */ __commonJS({ "plain.cjs": ((exports, module, this$1) => {
+	this$1.a = 1;
+	exports.b = 2;
+	module.exports.c = this$1 === exports;
+}) });
+//#endregion
+//#region main.js
+var import_declared = /* @__PURE__ */ __toESM(require_declared());
+var import_assigned = /* @__PURE__ */ __toESM(require_assigned());
+var import_replaced = /* @__PURE__ */ __toESM(require_replaced());
+var import_nulled = /* @__PURE__ */ __toESM(require_nulled());
+var import_fnexports = /* @__PURE__ */ __toESM(require_fnexports());
+var import_varmodule = /* @__PURE__ */ __toESM(require_varmodule());
+var import_arrow = /* @__PURE__ */ __toESM(require_arrow());
+var import_plain = /* @__PURE__ */ __toESM(require_plain());
+const all = {
+	declared: import_declared.default,
+	assigned: import_assigned.default,
+	replaced: import_replaced.default,
+	nulled: import_nulled.default,
+	fnexports: import_fnexports.default,
+	varmodule: import_varmodule.default,
+	arrow: import_arrow.default,
+	plain: import_plain.default
+};
+//#endregion
+export { all };
+
+```

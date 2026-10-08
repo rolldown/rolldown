@@ -8,7 +8,7 @@ use oxc::syntax::keyword::{GLOBAL_OBJECTS, RESERVED_KEYWORDS};
 use oxc_str::{CompactStr, Ident, IdentHashSet};
 
 use rolldown_common::{
-  ModuleIdx, NormalModule, OutputFormat, StmtInfoMeta, SymbolRef, SymbolRefDb,
+  EcmaModuleAstUsage, ModuleIdx, NormalModule, OutputFormat, StmtInfoMeta, SymbolRef, SymbolRefDb,
   SymbolRefDbForModule, WrapKind,
 };
 use rolldown_utils::concat_string;
@@ -333,6 +333,21 @@ pub fn fixed_names_in_module_body(
   names
 }
 
+/// Returns the fixed parameters of the CJS closure of a module, in the order that the runtime
+/// passes them: `exports`, then `module`. After them, the closure takes the `this` binding of the
+/// module (`EcmaView::cjs_this_ref`), which gets its name from the renamer. A parameter can
+/// capture a reference that the finalizer prints inside the closure, so the chunk reserves these
+/// names at its top level. See internal-docs/renaming/design.md.
+pub fn cjs_wrapper_fixed_params(module: &NormalModule) -> &'static [&'static str] {
+  if module.cjs_this_ref.is_some() || module.ast_usage.contains(EcmaModuleAstUsage::ModuleRef) {
+    &["exports", "module"]
+  } else if module.ast_usage.intersects(EcmaModuleAstUsage::ModuleOrExports) {
+    &["exports"]
+  } else {
+    &[]
+  }
+}
+
 /// The context of the passes that rename the inner bindings of one module that would capture a
 /// reference.
 ///
@@ -511,11 +526,7 @@ impl NestedScopeRenamer<'_, '_> {
   /// var require = createRequire(require("url").pathToFileURL(__filename).href);
   /// ```
   pub fn rename_bindings_shadowing_fixed_names(&mut self, output_format: OutputFormat) {
-    let mut fixed_names = fixed_names_in_module_body(self.module, self.link_output, output_format);
-    // A CJS-wrapped module's top-level `this` is printed as its closure's `exports` parameter.
-    if self.root_scope_is_inner() && !self.module.ecma_view.this_expr_replace_map.is_empty() {
-      fixed_names.push("exports");
-    }
+    let fixed_names = fixed_names_in_module_body(self.module, self.link_output, output_format);
     if fixed_names.is_empty() {
       return;
     }
@@ -528,9 +539,7 @@ impl NestedScopeRenamer<'_, '_> {
         continue;
       }
       for (&name, symbol_id) in bindings {
-        // A CJS-wrapped module's top-level `var exports` is its closure parameter's own binding,
-        // not one that shadows it, so there is nothing to rename.
-        if !fixed_names.contains(&name.as_str()) || (is_root && name == "exports") {
+        if !fixed_names.contains(&name.as_str()) {
           continue;
         }
         let symbol_ref = (self.module_idx, *symbol_id).into();

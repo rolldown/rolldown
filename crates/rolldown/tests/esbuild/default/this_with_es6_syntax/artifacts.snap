@@ -89,9 +89,9 @@ console.log(void 0);
 //#region es6-export-assign.ts
 //#endregion
 //#region es6-export-import-assign.ts
-(/* @__PURE__ */ __commonJSMin(((exports, module) => {
+(/* @__PURE__ */ __commonJSMin(((exports, module, this$1) => {
 	module.exports = 123;
-	console.log(exports);
+	console.log(this$1);
 })))();
 init_dummy(), __toCommonJS(dummy_exports);
 console.log(void 0);

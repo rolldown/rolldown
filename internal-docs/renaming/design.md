@@ -48,7 +48,7 @@ A binding that a `require()` call initializes stays a local of the CJS closure, 
 
 2. **A synthesized top-level name is never equal to an inner binding name (invariant S).** There are two kinds of top-level binding (`RootBindingKind`):
    - _Authored_: source code declares the binding, or the binding gets its name from the source. Examples: the top-level bindings of a module, re-exports, the default export binding, shims for missing exports, external import bindings and external namespaces.
-   - _Synthesized_: rolldown makes the binding. Examples: `require_x` and `init_x` wrapper bindings, `x_exports` namespace objects, `import_x` interop bindings, runtime helpers (for example `__toESM`), cross-chunk `require_<chunk>` bindings, inline-common-chunk bridges, HMR references, and order-wrap synthetic bindings.
+   - _Synthesized_: rolldown makes the binding. Examples: `require_x` and `init_x` wrapper bindings, `x_exports` namespace objects, `import_x` interop bindings, runtime helpers (for example `__toESM`), cross-chunk `require_<chunk>` bindings, inline-common-chunk bridges, HMR references, order-wrap synthetic bindings, and the `this$N` parameter for the top-level `this` of a CJS-wrapped module.
 
    The finalizer prints references to synthesized bindings at any location in the body of a module. For example, `require('./x')` becomes `require_x()` at the call, and an import from a CJS module becomes `import_x.foo` at each read. These references have no source reference, so the renamer cannot check them one kind at a time. Instead, a synthesized binding never takes a name that an inner binding of the chunk uses. Thus no source binding can capture a reference to it.
 
@@ -74,18 +74,27 @@ A binding that a `require()` call initializes stays a local of the CJS closure, 
 
    For `Promise` and `Object`, the list counts each module that has an `import()`, also when the finalizer keeps that `import()` native. The finalizer decides from the chunk graph and the options if it lowers an `import()`, and a copy of these conditions in the renamer could become different from the finalizer. Thus a `Promise` or `Object` binding in such a module can get a `$N` suffix that it does not need. This cost is deliberate, like the costs of principle 2.
 
+   Rolldown prints no other name that it cannot change. The finalizer prints the top-level `this` of a CJS-wrapped module as a parameter of the CJS closure (`this$1`). The renamer gives this parameter its name, and the runtime passes the initial exports object of the module to it. The parameter is a synthesized binding, so invariant S keeps all bindings of the chunk off its name.
+
+7. **A wrapper binds only the parameters that rolldown prints.** A wrapper adds a scope that is not in the source. Thus each binding of the wrapper is between the references of the module and their targets. The CJS closure is an arrow function, and an arrow function binds no implicit names. A `function` also binds `this`, `arguments` and `new.target`, so it changes the bindings that these references of the module resolve to.
+
+   One function, `cjs_wrapper_fixed_params`, gives the fixed parameters of the CJS closure: `exports` and `module`. The printer and the top-level reservation both use this function, so no top-level binding has the name of a fixed parameter. After the fixed parameters, the finalizer (`cjs_wrapper_params`) adds the `this` binding, which is synthesized, so invariant S keeps all bindings of the chunk off its name. Thus a parameter cannot capture a reference to a top-level binding.
+
 ## Rejected alternatives
 
 - **One shadowing pass for each kind of generated reference.** The previous design used this method. `collect_chunk_scope_captured_names` listed the names that CJS closures captured: wrapper bindings, IIFE factory parameters, order-wrap symbols and cross-chunk wrapper bindings. `rename_cjs_locals_shadowing_referenced_chunk_bindings` renamed the locals of CJS closures, one channel at a time: named imports, star imports and `require()`. Each new kind of generated reference needed one more case. The passes used five different methods to decide if a name is free. When a case was missing, the output ran but read the wrong binding, frequently with no error.
 - **A rename of the source local, not of the generated name.** The previous design did this for CJS closures. It changes names that the user wrote. Also, the new local name must avoid all sibling bindings, and it did not always do that (#10970).
 - **CJS closure locals in the top-level namespace again** (the state before #7425). This method is correct, but each closure local then competes for top-level names, and the output gets many `$N` suffixes.
 - **Only the inner names of the modules that read a synthesized binding.** This method is more precise. But it must know each location where the finalizer prints a reference, and principle 2 removes exactly this per-channel knowledge. One set for the full chunk is simple and safe.
+- **A name that the module can write to, for the top-level `this` of a CJS module.** `exports` is no longer the initial exports object after the module binds it again, with `var exports` or with `exports = ...`. (`var exports` declares the binding of the closure parameter itself.) `module.exports` is no longer the initial exports object after the module replaces it. A rename cannot help, because a top-level `var exports` is the binding that the name refers to.
+- **A `function` CJS closure that the runtime calls with the exports object as `this`.** This method keeps the native `this`, but the function also binds `arguments`. A module that read `arguments[1]` got `module`, not the value from the code around the closure (`require`, under CJS output). Principle 7 does not allow this method.
 - **Names from the scope tree of the output.** This model is the most precise. But the output AST does not exist before the finalizer runs, and the finalizer needs the names first.
 
 ## Unresolved questions
 
 - Direct `eval` reads bindings by their source names. The renamer does not protect these reads.
-- The finalizer prints the top-level `this` of a CJS-wrapped module as the `exports` parameter of its CJS closure. The module itself can bind that parameter again, with `var exports` or with `exports = ...`. Principle 6 cannot help: a top-level `var exports` is the binding of the parameter itself, so the renamer has nothing to rename.
+- Under CJS output, an unwrapped CJS entry is at the top level of the output file. There, the top-level `var exports` of the entry is the `exports` parameter of Node itself. But the top-level reservation renames it to `exports$1`. Thus a read before the declaration (`exports.a = 1; var exports = {}`) throws an error. To fix this, the reservation must keep the name of a binding that is a host parameter itself. This is the same reason why the finalizer does not print the `this` of a CJS module as `exports`.
+- The top-level `arguments` and `new.target` of a CJS module resolve past its arrow closure to the code around the chunk. They do not resolve to the module wrapper of Node. Under ESM output, `arguments` is not defined there. Principle 7 keeps this behavior. To give the arguments of the Node wrapper, rolldown must pass `require`, `__filename` and `__dirname` into each closure.
 
 ## Related
 

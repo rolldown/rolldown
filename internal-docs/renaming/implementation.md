@@ -25,10 +25,10 @@ Paths are relative to `crates/rolldown/src/`.
 
 1. Reserve the fixed names:
    - `Renamer::new` reserves the fixed names that the format prints: `require`, `module`, `exports`, `__filename`, `__dirname` and `Symbol` for CJS, and `exports` and `Symbol` for IIFE/UMD. It also reserves `Object`, `Promise`, the JS keywords and the global objects.
-   - `reserve_names_resolving_to_globals` reserves each unresolved reference of the modules of the chunk (for example `console` and `window`). It also reserves the fixed names that the bodies of these modules print.
+   - `reserve_fixed_names` reserves each unresolved reference of the modules of the chunk (for example `console` and `window`). It also reserves the fixed names that the bodies of these modules print, and the fixed parameters of their CJS closures (`cjs_wrapper_fixed_params`).
 2. IIFE/UMD/CJS: external module namespaces (factory parameters, `require()` bindings). Authored.
 3. Entry chunks: the symbols that the entry exports (`referenced_symbols_by_entry_point_chunk`). ESM: the external import bindings that the chunk uses. Authored.
-4. The included top-level declarations of each module, entry module first (descending execution order). HMR references are synthesized. All other bindings go through `root_binding_kind`. In a CJS-wrapped module, this step gives names only to two kinds of binding:
+4. The included top-level declarations of each module, entry module first (descending execution order). HMR references and the `this` binding of a CJS-wrapped module (`cjs_this_ref`) are synthesized. All other bindings go through `root_binding_kind`. In a CJS-wrapped module, this step gives names only to two kinds of binding:
    - facades;
    - bindings of an external `import` declaration, because rolldown moves that declaration out of the CJS closure.
 
@@ -56,7 +56,7 @@ Paths are relative to `crates/rolldown/src/`.
 
 - `rename_bindings_shadowing_star_imports`: for each resolved `ns.foo` member access, it checks the name that the finalizer prints for `foo`.
 - `rename_bindings_shadowing_named_imports`: for each reference to a named import, it checks the name that the finalizer prints for the import.
-- `rename_bindings_shadowing_fixed_names`: it renames the inner bindings that have a fixed name that the body of the module can print. `fixed_names_in_module_body` is the list. Each entry tells the rewrite and the module contents that cause it. A CJS-wrapped module with a top-level `this` adds `exports`, the parameter of its CJS closure. There, a top-level `var exports` is the binding of that parameter itself, and the pass does not rename it.
+- `rename_bindings_shadowing_fixed_names`: it renames the inner bindings that have a fixed name that the body of the module can print. `fixed_names_in_module_body` is the list. Each entry tells the rewrite and the module contents that cause it.
 
 The factory parameter of an external module (IIFE/UMD) is a top-level binding that the renamer gives a name to. The finalizer prints each reference to it for an import binding. Thus the named-import pass covers it through `printed_name`.
 

@@ -1,0 +1,10 @@
+{
+  "config": {
+    "input": [{ "name": "main", "import": "./main.js" }]
+  },
+  "configVariants": [
+    { "_configName": "cjs", "format": "cjs" },
+    { "_configName": "umd", "format": "umd", "name": "lib" },
+    { "_configName": "profiler", "profilerNames": true }
+  ]
+}

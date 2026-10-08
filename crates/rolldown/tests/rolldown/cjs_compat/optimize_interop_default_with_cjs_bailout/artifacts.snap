@@ -18,8 +18,8 @@ var init_json = __esmMin((() => {
 //#region commonjs.js
 //#endregion
 //#region main.js
-var import_commonjs = /* @__PURE__ */ __toESM((/* @__PURE__ */ __commonJSMin(((exports) => {
-	var __importDefault = exports && exports.__importDefault || function(mod) {
+var import_commonjs = /* @__PURE__ */ __toESM((/* @__PURE__ */ __commonJSMin(((exports, module, this$1) => {
+	var __importDefault = this$1 && this$1.__importDefault || function(mod) {
 		return mod && mod.__esModule ? mod : { default: mod };
 	};
 	Object.defineProperty(exports, "__esModule", { value: true });

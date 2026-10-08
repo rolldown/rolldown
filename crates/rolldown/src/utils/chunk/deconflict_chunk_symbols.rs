@@ -10,7 +10,8 @@ use crate::{
       ChunkAssignments, chunk_external_interop_modes, chunk_has_node_esm_reader,
     },
     renamer::{
-      InnerBindingNames, NestedScopeRenamer, Renamer, RootBindingKind, fixed_names_in_module_body,
+      InnerBindingNames, NestedScopeRenamer, Renamer, RootBindingKind, cjs_wrapper_fixed_params,
+      fixed_names_in_module_body,
     },
   },
 };
@@ -71,7 +72,7 @@ pub fn deconflict_chunk_symbols(
       .collect(),
   );
   let mut renamer = Renamer::new(&link_output.symbol_db, format, inner_binding_names);
-  reserve_names_resolving_to_globals(&mut renamer, modules, link_output, format);
+  reserve_fixed_names(&mut renamer, modules, link_output, format);
 
   if matches!(format, OutputFormat::Iife | OutputFormat::Umd | OutputFormat::Cjs) {
     // deconflict iife introduce symbols by external
@@ -148,6 +149,13 @@ pub fn deconflict_chunk_symbols(
       // unless they would capture a reference (`rename_shadowing_symbols_in_nested_scopes`).
       let meta = &link_output.metas[module.idx];
       let is_cjs_wrapped_module = matches!(meta.wrap_kind(), WrapKind::Cjs);
+      // A parameter of the CJS closure, named like a top-level binding so that no inner binding
+      // and no other top-level binding uses its name.
+      if let Some(this_ref) = module.cjs_this_ref
+        && is_cjs_wrapped_module
+      {
+        renamer.add_symbol_in_root_scope(this_ref, RootBindingKind::Synthesized);
+      }
 
       link_output.stmt_infos[module.idx]
         .iter_enumerated()
@@ -291,8 +299,10 @@ pub fn deconflict_chunk_symbols(
 /// - each unresolved reference of the modules of the chunk (for example `console` and `window`),
 ///   because these references must resolve to globals;
 /// - the fixed names that the bodies of the modules print (`fixed_names_in_module_body`), because
-///   the body of an ESM module is at the top level.
-fn reserve_names_resolving_to_globals(
+///   the body of an ESM module is at the top level;
+/// - the fixed parameters of their CJS closures (`cjs_wrapper_fixed_params`), because a parameter
+///   would capture a reference to a top-level binding with its name.
+fn reserve_fixed_names(
   renamer: &mut Renamer<'_>,
   modules: &[ModuleIdx],
   link_output: &LinkStageOutput,
@@ -315,11 +325,19 @@ fn reserve_names_resolving_to_globals(
     .for_each(|name| {
       renamer.reserve(CompactStr::new(name));
     });
-  modules
-    .iter()
-    .filter_map(|&idx| link_output.module_table[idx].as_normal())
-    .flat_map(|module| fixed_names_in_module_body(module, link_output, format))
-    .for_each(|name| renamer.reserve(CompactStr::new_const(name)));
+  modules.iter().filter_map(|&idx| link_output.module_table[idx].as_normal()).for_each(|module| {
+    let wrapper_params = if matches!(link_output.metas[module.idx].wrap_kind(), WrapKind::Cjs) {
+      cjs_wrapper_fixed_params(module)
+    } else {
+      &[]
+    };
+    for name in fixed_names_in_module_body(module, link_output, format)
+      .into_iter()
+      .chain(wrapper_params.iter().copied())
+    {
+      renamer.reserve(CompactStr::new_const(name));
+    }
+  });
 }
 
 /// Whether `stmt_info` is an `import` declaration of an external module. In a CJS-wrapped module,

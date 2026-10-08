@@ -95,6 +95,14 @@ The machinery: [implementation.md](./implementation.md).
    (`parse`, `transform`) is served by the loader's emnapi worker pool, not by
    a runtime rolldown owns.
 
+10. **No slack in timers or locks.** A timer fires at its exact deadline, so a
+    zero-length sleep is ready on its first poll, and the runtime's locks are
+    fair only on average. Code must not depend on timer rounding or on the
+    order in which waiters get a lock. The watcher enforces this with its
+    debounce floor and by taking queued input before a due deadline; see
+    "Rolldown's Approach" in
+    [watch-mode/implementation.md](../watch-mode/implementation.md).
+
 ## Why two WASI artifacts
 
 Can one `.wasm` switch between threaded and single-threaded at runtime? No.

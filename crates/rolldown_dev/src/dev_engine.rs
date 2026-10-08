@@ -663,4 +663,71 @@ mod tests {
     std::fs::remove_dir_all(&dir).unwrap();
     assert!(watched.contains(&lazy) && watched.contains(&dep), "{watched:#?}");
   }
+
+  /// With `RebuildStrategy::Always` one task runs the HMR stage and then a rebuild. The HMR
+  /// stage adds the files it loads to the latest build's watch list. The rebuild starts a
+  /// new, empty list and does not load those cached modules again, so the coordinator must
+  /// still end up watching them.
+  #[cfg(feature = "testing")]
+  #[tokio::test]
+  async fn hmr_stage_files_stay_watched_when_the_same_task_rebuilds() {
+    use rolldown::{DevModeOptions, ExperimentalOptions};
+    use rolldown_common::WatcherChangeKind;
+    use rolldown_utils::indexmap::FxIndexMap;
+
+    let dir =
+      std::env::temp_dir().join(format!("rolldown-dev-hmr-rebuild-watch-{}", std::process::id()));
+    std::fs::create_dir_all(&dir).unwrap();
+    // The resolver returns real paths, and the temp dir can sit behind a symlink.
+    let dir = std::fs::canonicalize(&dir).unwrap();
+    std::fs::write(dir.join("main.js"), "export const main = 1;\n").unwrap();
+    std::fs::write(dir.join("dep.js"), "export const dep = 1;\n").unwrap();
+    let main = dir.join("main.js").to_string_lossy().into_owned();
+    let dep = dir.join("dep.js").to_string_lossy().into_owned();
+
+    let engine = super::DevEngine::new(
+      BundlerConfig::new(
+        BundlerOptions {
+          input: Some(vec!["./main.js".to_string().into()]),
+          cwd: Some(dir.clone()),
+          experimental: Some(ExperimentalOptions {
+            dev_mode: Some(DevModeOptions::default()),
+            ..Default::default()
+          }),
+          ..Default::default()
+        },
+        vec![],
+      ),
+      crate::DevOptions {
+        rebuild_strategy: Some(crate::RebuildStrategy::Always),
+        watch: Some(crate::DevWatchOptions {
+          disable_watcher: Some(true),
+          skip_write: Some(true),
+          ..Default::default()
+        }),
+        ..Default::default()
+      },
+    )
+    .unwrap();
+    engine.run().await.unwrap();
+    let watched = engine.get_watched_files().await.unwrap();
+    assert!(watched.contains(&main) && !watched.contains(&dep), "{watched:#?}");
+
+    std::fs::write(
+      dir.join("main.js"),
+      "import { dep } from './dep.js';\nexport const main = dep;\n",
+    )
+    .unwrap();
+    engine
+      .ensure_task_with_changed_files(FxIndexMap::from_iter([(
+        dir.join("main.js"),
+        WatcherChangeKind::Update,
+      )]))
+      .await;
+
+    let watched = engine.get_watched_files().await.unwrap();
+    engine.close().await.unwrap();
+    std::fs::remove_dir_all(&dir).unwrap();
+    assert!(watched.contains(&dep), "{watched:#?}");
+  }
 }

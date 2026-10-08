@@ -19,6 +19,9 @@ pub enum CoordinatorMsg {
     /// the next file change. See `internal-docs/dev-engine/implementation.md` §7.
     error_stage: Option<ErrorStage>,
     has_generated_bundle_output: bool,
+    /// The watch list the task's HMR stage added its loaded files to, when the task's
+    /// rebuild then replaced it with a new list. See `BundlingTask::rebuild`.
+    hmr_stage_watch_files: Option<Arc<FxDashSet<ArcStr>>>,
   },
   #[cfg(feature = "testing")]
   ScheduleBuildIfStale {

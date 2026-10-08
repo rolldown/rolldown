@@ -105,8 +105,18 @@ impl BundleCoordinator {
         CoordinatorMsg::WatchEvent(watch_event) => {
           self.handle_watch_event(watch_event).await;
         }
-        CoordinatorMsg::BundleCompleted { error_stage, has_generated_bundle_output } => {
-          self.handle_bundle_completed(error_stage, has_generated_bundle_output).await;
+        CoordinatorMsg::BundleCompleted {
+          error_stage,
+          has_generated_bundle_output,
+          hmr_stage_watch_files,
+        } => {
+          self
+            .handle_bundle_completed(
+              error_stage,
+              has_generated_bundle_output,
+              hmr_stage_watch_files.as_deref(),
+            )
+            .await;
         }
         #[cfg(feature = "testing")]
         CoordinatorMsg::ScheduleBuildIfStale { reply } => {
@@ -142,7 +152,7 @@ impl BundleCoordinator {
           // updates. Take them from the list the message carries, not from the latest
           // build: a build that started after the compile has a new list without them,
           // and no later build loads these cached modules again.
-          let _ = self.register_watch_files(&watch_files);
+          let _ = self.register_watch_files([&*watch_files]);
 
           let mut changed_files = FxIndexMap::default();
           changed_files.insert(PathBuf::from(&module_id), WatcherChangeKind::Update);
@@ -238,6 +248,7 @@ impl BundleCoordinator {
     &mut self,
     error_stage: Option<ErrorStage>,
     has_generated_bundle_output: bool,
+    hmr_stage_watch_files: Option<&FxDashSet<ArcStr>>,
   ) {
     match self.state {
       CoordinatorState::Initialized
@@ -254,7 +265,7 @@ impl BundleCoordinator {
 
         // Even if the build failed, update the watch paths
         // so that a new full build is triggered by the change for those files
-        let _ = self.update_watch_paths().await;
+        let _ = self.update_watch_paths(hmr_stage_watch_files).await;
 
         if error_stage.is_some() {
           // FullBuildFailed always recovers via FullBuild on next file change,
@@ -279,9 +290,9 @@ impl BundleCoordinator {
         // Clear current build
         self.current_bundling_future = None;
 
-        // Register any new files this rebuild pulled into `watch_files`
+        // Register any new files this task pulled into `watch_files`
         // (e.g. an edit that introduced a new transitive import).
-        let _ = self.update_watch_paths().await;
+        let _ = self.update_watch_paths(hmr_stage_watch_files).await;
 
         if let Some(stage) = error_stage {
           self.set_initial_build_state(CoordinatorState::Failed { last_error_stage: stage });
@@ -456,22 +467,32 @@ impl BundleCoordinator {
     self.state = new_state;
   }
 
-  /// Update watcher paths based on current build output
-  async fn update_watch_paths(&self) -> BuildResult<()> {
+  /// Watch the files a finished task loaded: the latest build's list, and the list its HMR
+  /// stage wrote to when its rebuild replaced that list. The rebuild does not load again the
+  /// modules the HMR stage cached, so the latest list can miss them.
+  async fn update_watch_paths(
+    &self,
+    hmr_stage_watch_files: Option<&FxDashSet<ArcStr>>,
+  ) -> BuildResult<()> {
     let bundler = self.bundler.lock().await;
-    self.register_watch_files(bundler.watch_files())
+    self.register_watch_files(hmr_stage_watch_files.into_iter().chain([&**bundler.watch_files()]))
   }
 
-  /// Add `watch_files` to the watcher, filtered by `watch.include` / `watch.exclude`.
-  fn register_watch_files(&self, watch_files: &FxDashSet<ArcStr>) -> BuildResult<()> {
+  /// Add the files of `watch_files` lists to the watcher in one batch, filtered by
+  /// `watch.include` / `watch.exclude`.
+  fn register_watch_files<'a>(
+    &self,
+    watch_files: impl IntoIterator<Item = &'a FxDashSet<ArcStr>>,
+  ) -> BuildResult<()> {
     let cwd = self.cwd.to_string_lossy();
 
     let include = self.ctx.options.watch_include.as_deref();
     let exclude = self.ctx.options.watch_exclude.as_deref();
 
     let mut watcher = self.watcher.lock().ok().context("Failed to acquire watcher lock")?;
-    watcher.watch_paths(watch_files.iter().map(|file| PathBuf::from(file.as_str())), |path| {
-      pattern_filter::filter(exclude, include, &path.to_string_lossy(), &cwd).inner()
-    })
+    watcher.watch_paths(
+      watch_files.into_iter().flat_map(|list| list.iter().map(|file| PathBuf::from(file.as_str()))),
+      |path| pattern_filter::filter(exclude, include, &path.to_string_lossy(), &cwd).inner(),
+    )
   }
 }

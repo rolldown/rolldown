@@ -1,7 +1,7 @@
 use std::cell::OnceCell;
 use std::collections::hash_map::Entry;
 
-use rustc_hash::{FxHashMap, FxHashSet};
+use rustc_hash::FxHashMap;
 
 use oxc::semantic::{ScopeId, Scoping, SymbolId};
 use oxc::syntax::keyword::{GLOBAL_OBJECTS, RESERVED_KEYWORDS};
@@ -96,13 +96,21 @@ impl<'name> Renamer<'name> {
     format: OutputFormat,
     inner_binding_names: InnerBindingNames<'name>,
   ) -> Self {
-    // Port from https://github.com/rollup/rollup/blob/master/src/Chunk.ts#L1377-L1394.
+    // The fixed names the format prints: names rolldown prints without choosing them, which must
+    // resolve to the host's or the language's binding. See internal-docs/renaming/design.md.
+    // The format's own bindings are ported from
+    // https://github.com/rollup/rollup/blob/master/src/Chunk.ts#L1377-L1394, plus `Symbol` for the
+    // export code's `Object.defineProperty(exports, Symbol.toStringTag, ...)`.
     let mut manual_reserved = match format {
       OutputFormat::Esm => vec![],
-      OutputFormat::Cjs => vec!["module", "require", "__filename", "__dirname", "exports"],
-      OutputFormat::Iife | OutputFormat::Umd => vec!["exports"], // Also for AMD, but we don't support it yet.
+      OutputFormat::Cjs => {
+        vec!["module", "require", "__filename", "__dirname", "exports", "Symbol"]
+      }
+      OutputFormat::Iife | OutputFormat::Umd => vec!["exports", "Symbol"], // Also for AMD, but we don't support it yet.
     };
-    // https://github.com/rollup/rollup/blob/bfbea66569491f5466fbba99de2ba6a0225f851b/src/Chunk.ts#L1359
+    // Reserved in every chunk, as Rollup does
+    // (https://github.com/rollup/rollup/blob/bfbea66569491f5466fbba99de2ba6a0225f851b/src/Chunk.ts#L1359).
+    // The fixed names a module body prints are reserved per chunk (`fixed_names_in_module_body`).
     manual_reserved.extend(["Object", "Promise"]);
 
     Self {
@@ -290,6 +298,41 @@ fn has_binding(symbol_db: &SymbolRefDb, module_idx: ModuleIdx, name: &str) -> bo
   db.ast_scopes.scoping().iter_bindings().any(|(_, bindings)| bindings.contains_key(name))
 }
 
+/// Returns the fixed names that the body of a module can print. A rewrite prints a fixed name that
+/// the renamer cannot change, and the name must resolve to a host or language binding. The chunk
+/// reserves these names at its top level, and
+/// `NestedScopeRenamer::rename_bindings_shadowing_fixed_names` keeps them off the inner bindings
+/// of the module. Each entry tells which module contents cause the rewrite. See
+/// internal-docs/renaming/design.md.
+pub fn fixed_names_in_module_body(
+  module: &NormalModule,
+  link_output: &LinkStageOutput,
+  output_format: OutputFormat,
+) -> Vec<&'static str> {
+  let stmt_infos = &link_output.stmt_infos[module.idx];
+  let mut names = vec![];
+  // A lowered `import()`: `Promise.resolve().then(...)`, and `Object.freeze(...)` for a dead one.
+  // Under CommonJS output even an `import(expr)` without an import record is lowered.
+  if module.import_records.iter().any(|rec| rec.kind.is_dynamic())
+    || stmt_infos
+      .iter()
+      .any(|stmt_info| stmt_info.meta.contains(StmtInfoMeta::NonStaticDynamicImport))
+  {
+    names.extend(["Promise", "Object"]);
+  }
+  // `import.meta.ROLLDOWN_FILE_URL_*`: `new URL(...)`.
+  if !module.ecma_view.rolldown_file_url_references.is_empty() {
+    names.push("URL");
+  }
+  // CommonJS output: `require(...)` for external imports, a lowered `import()` and the
+  // `import.meta.url` polyfill (`require("url").pathToFileURL(__filename).href`), and
+  // `__filename`/`__dirname` for `import.meta.filename`/`import.meta.dirname`.
+  if matches!(output_format, OutputFormat::Cjs) {
+    names.extend(["require", "__filename", "__dirname"]);
+  }
+  names
+}
+
 /// The context of the passes that rename the inner bindings of one module that would capture a
 /// reference.
 ///
@@ -446,110 +489,12 @@ impl NestedScopeRenamer<'_, '_> {
     }
   }
 
-  /// Rename the nested bindings that would shadow the parameters of a wrapper or a factory.
+  /// Rename the inner bindings that have a fixed name that the body of this module can print
+  /// (`fixed_names_in_module_body`). Then each printed fixed name resolves to its host or language
+  /// binding.
   ///
-  /// This pass covers two cases:
-  /// 1. The parameters of the CJS closure (`exports`, `module`), for CJS-wrapped modules.
-  /// 2. The factory parameters of external modules, for the IIFE, UMD and CJS formats.
-  ///
-  /// # Example (CJS closure parameters)
-  ///
-  /// ```js
-  /// // cjs-module.js (a CommonJS module)
-  /// function helper() {
-  ///   const exports = {};  // This binding would shadow the `exports` parameter of the closure.
-  ///   return exports;
-  /// }
-  /// module.exports = helper;
-  /// ```
-  ///
-  /// Output:
-  /// ```js
-  /// var require_cjs = __commonJS((exports, module) => {
-  ///   function helper() {
-  ///     const exports$1 = {};  // The pass renames the binding.
-  ///     return exports$1;
-  ///   }
-  ///   module.exports = helper;
-  /// });
-  /// ```
-  ///
-  /// # Example (external module)
-  ///
-  /// ```js
-  /// // entry.js
-  /// import Quill from 'quill';
-  /// export class Editor {
-  ///   constructor(quill) {     // This parameter would shadow the factory parameter `quill`.
-  ///     console.log(Quill);    // The bundle prints this reference as `quill.default`.
-  ///   }
-  /// }
-  /// ```
-  ///
-  /// Output:
-  /// ```js
-  /// (function(exports, quill) {
-  ///   class Editor {
-  ///     constructor(quill$1) {   // The pass renames the parameter.
-  ///       console.log(quill.default);  // The call reads the factory parameter.
-  ///     }
-  ///   }
-  /// })
-  /// ```
-  pub fn rename_bindings_shadowing_wrapper_params(&mut self, has_factory_params: bool) {
-    /// CJS wrapper parameter names that nested scopes should avoid shadowing.
-    const CJS_WRAPPER_NAMES: [&str; 2] = ["exports", "module"];
-
-    let is_cjs_wrapped = self.root_scope_is_inner();
-
-    // Collect all wrapper/factory param names to check against
-    let mut wrapper_param_names: FxHashSet<CompactStr> = FxHashSet::default();
-
-    // Add CJS wrapper names if module is CJS wrapped
-    if is_cjs_wrapped {
-      wrapper_param_names.extend(CJS_WRAPPER_NAMES.iter().map(|s| CompactStr::new(s)));
-    }
-
-    // Add external module factory param names
-    if has_factory_params {
-      wrapper_param_names.extend(self.module.import_records.iter().filter_map(|rec| {
-        let resolved_module = rec.resolved_module?;
-        let external_module = self.link_output.module_table[resolved_module].as_external()?;
-        self.renamer.get_canonical_name(external_module.namespace_ref).cloned()
-      }));
-    }
-
-    if wrapper_param_names.is_empty() {
-      return;
-    }
-
-    // Skip root scope (index 0), check nested scopes only
-    for (_, bindings) in self.scoping.iter_bindings().skip(1) {
-      for (&name, symbol_id) in bindings {
-        if wrapper_param_names.contains(name.into()) {
-          let symbol_ref = (self.module_idx, *symbol_id).into();
-          self.renamer.rename_inner_binding(symbol_ref, name.as_str());
-        }
-      }
-    }
-  }
-
-  /// Rename the inner bindings that would shadow the ambient names of CommonJS output.
-  ///
-  /// Some rewrites print bare identifiers into the body of a module, at any depth. The renamer does
-  /// not see these identifiers:
-  /// - `require(...)`: for external imports, for a lowered dynamic import, and for the polyfill of
-  ///   `import.meta.url` (`require("url").pathToFileURL(__filename).href`).
-  /// - `__filename`: the argument of that polyfill, and the rewrite of `import.meta.filename`.
-  /// - `__dirname`: the rewrite of `import.meta.dirname`.
-  ///
-  /// These identifiers refer to the ambient bindings of CommonJS, so a nested binding with the same
-  /// name must not capture them. This pass does not rename `module` and `exports`, for two reasons.
-  /// No rewrite prints them into nested scopes, and `rename_bindings_shadowing_wrapper_params`
-  /// already covers the CJS-wrapped module.
-  ///
-  /// A `var` binding is hoisted. Thus it shadows also a call that a rewrite prints inside its own
-  /// initializer:
+  /// A `var` binding is hoisted. Thus it shadows also a name that the finalizer prints inside its
+  /// own initializer:
   ///
   /// ```js
   /// // The input. emscripten makes this code with `-s EXPORT_ES6=1 -s ENVIRONMENT='node'`.
@@ -559,58 +504,37 @@ impl NestedScopeRenamer<'_, '_> {
   /// }
   /// ```
   ///
-  /// Without a rename, the polyfill resolves to the local, which is still undefined. The module
-  /// then throws `require is not a function` on the first call:
+  /// Without a rename, the CommonJS polyfill for `import.meta.url` resolves to the local, which is
+  /// still undefined. The module then throws `require is not a function` on the first call:
   ///
   /// ```js
   /// var require = createRequire(require("url").pathToFileURL(__filename).href);
   /// ```
-  ///
-  /// A nested `var __filename` or `var __dirname` causes the same error, because
-  /// `pathToFileURL(__filename)` reads the local, which is still undefined.
-  ///
-  /// Only CommonJS output prints these names. For the other formats, the pass does nothing.
-  pub fn rename_bindings_shadowing_cjs_ambient_names(&mut self, output_format: OutputFormat) {
-    if !matches!(output_format, OutputFormat::Cjs) {
-      return;
+  pub fn rename_bindings_shadowing_fixed_names(&mut self, output_format: OutputFormat) {
+    let mut fixed_names = fixed_names_in_module_body(self.module, self.link_output, output_format);
+    // A CJS-wrapped module's top-level `this` is printed as its closure's `exports` parameter.
+    if self.root_scope_is_inner() && !self.module.ecma_view.this_expr_replace_map.is_empty() {
+      fixed_names.push("exports");
     }
-
-    // Inner scopes only. Top-level bindings are already covered by the renamer's
-    // `manual_reserved` list for CommonJS output.
-    for (_, bindings) in self.scoping.iter_bindings().skip(usize::from(!self.root_scope_is_inner()))
-    {
-      for (&name, symbol_id) in bindings {
-        if matches!(name.as_str(), "require" | "__filename" | "__dirname") {
-          let symbol_ref = (self.module_idx, *symbol_id).into();
-          self.renamer.rename_inner_binding(symbol_ref, name.as_str());
-        }
-      }
-    }
-  }
-
-  /// Rename the root bindings of a CJS-wrapped module with the name `Promise` or `Object`, if the
-  /// module has an `import()`. The finalizer prints a lowered `import()` as
-  /// `Promise.resolve().then(...)`, and a dead one as `Object.freeze(...)`, inside the CJS closure.
-  ///
-  /// For a top-level binding, `Renamer::new` reserves these names. A root binding of a CJS-wrapped
-  /// module gets no top-level name, so this pass gives it the same protection. This includes a
-  /// binding that an external `require()` initializes.
-  pub fn rename_cjs_root_bindings_shadowing_lowered_import(&mut self) {
-    if !self.root_scope_is_inner() {
-      return;
-    }
-    // Under CommonJS output even an `import(expr)` without an import record is lowered.
-    let has_import_expr = self.module.import_records.iter().any(|rec| rec.kind.is_dynamic())
-      || self.link_output.stmt_infos[self.module_idx]
-        .iter()
-        .any(|stmt_info| stmt_info.meta.contains(StmtInfoMeta::NonStaticDynamicImport));
-    if !has_import_expr {
+    if fixed_names.is_empty() {
       return;
     }
     let root_scope_id = self.scoping.root_scope_id();
-    for name in ["Promise", "Object"] {
-      if let Some(symbol_id) = self.scoping.get_binding(root_scope_id, name.into()) {
-        self.renamer.rename_inner_binding((self.module_idx, symbol_id).into(), name);
+    let root_scope_is_inner = self.root_scope_is_inner();
+    for (scope_id, bindings) in self.scoping.iter_bindings() {
+      let is_root = scope_id == root_scope_id;
+      // `Renamer::new` reserved the fixed names at the top level.
+      if is_root && !root_scope_is_inner {
+        continue;
+      }
+      for (&name, symbol_id) in bindings {
+        // A CJS-wrapped module's top-level `var exports` is its closure parameter's own binding,
+        // not one that shadows it, so there is nothing to rename.
+        if !fixed_names.contains(&name.as_str()) || (is_root && name == "exports") {
+          continue;
+        }
+        let symbol_ref = (self.module_idx, *symbol_id).into();
+        self.renamer.rename_inner_binding(symbol_ref, name.as_str());
       }
     }
   }

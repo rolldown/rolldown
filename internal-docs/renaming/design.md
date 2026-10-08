@@ -22,6 +22,7 @@ The renamer runs once for each chunk, in `deconflict_chunk_symbols`, before the 
 - **Facade**: a symbol that rolldown makes for a module, for example a wrapper binding or a namespace object. The source does not declare it.
 - **Synthesized binding**: a binding that rolldown makes. The source does not contain it.
 - **Generated reference**: a reference that rolldown prints. The source does not contain it.
+- **Fixed name**: a name that rolldown prints but cannot change, for example `Promise` or `require`. See principle 6.
 - **Wrapper**: a function that rolldown puts around the code of a module.
 - **CJS closure**: the wrapper of a CJS-wrapped module, `__commonJS((exports, module) => { ... })`.
 
@@ -59,6 +60,20 @@ A binding that a `require()` call initializes stays a local of the CJS closure, 
 
 5. **The renamer checks the name that the finalizer prints.** The finalizer prints an import that the code reads through a namespace binding as `node_path.join` or `import_x.default`. Thus a local with the name `node_path` captures the import, although the name of the import is `join`.
 
+6. **A fixed name always resolves to its global or host binding.** Some names that the finalizer prints are not bindings that the renamer gives names to. They are global or host bindings that the output uses:
+   - `Promise` and `Object`, for a lowered `import()`;
+   - `URL`, for `import.meta.ROLLDOWN_FILE_URL_*`;
+   - `Symbol` and `Object`, in the export code;
+   - `require`, `__filename` and `__dirname`, under CJS output.
+
+   The renamer cannot change a fixed name. Invariant S changes the synthesized name, but for a fixed name the renamer changes the bindings:
+   - A chunk that can print a fixed name reserves it at its top level.
+   - A module whose body can print a fixed name renames its inner bindings with that name.
+
+   One list tells which rewrite prints each fixed name, and which module contents cause the rewrite. Both levels use this list. The renamer renames a binding only in a module that can print the fixed name in the scope of the binding. Thus `var Promise = require('bluebird')` keeps its name in all other modules.
+
+   For `Promise` and `Object`, the list counts each module that has an `import()`, also when the finalizer keeps that `import()` native. The finalizer decides from the chunk graph and the options if it lowers an `import()`, and a copy of these conditions in the renamer could become different from the finalizer. Thus a `Promise` or `Object` binding in such a module can get a `$N` suffix that it does not need. This cost is deliberate, like the costs of principle 2.
+
 ## Rejected alternatives
 
 - **One shadowing pass for each kind of generated reference.** The previous design used this method. `collect_chunk_scope_captured_names` listed the names that CJS closures captured: wrapper bindings, IIFE factory parameters, order-wrap symbols and cross-chunk wrapper bindings. `rename_cjs_locals_shadowing_referenced_chunk_bindings` renamed the locals of CJS closures, one channel at a time: named imports, star imports and `require()`. Each new kind of generated reference needed one more case. The passes used five different methods to decide if a name is free. When a case was missing, the output ran but read the wrong binding, frequently with no error.
@@ -70,7 +85,7 @@ A binding that a `require()` call initializes stays a local of the CJS closure, 
 ## Unresolved questions
 
 - Direct `eval` reads bindings by their source names. The renamer does not protect these reads.
-- The CJS ambient names (`require`, `__filename`, `__dirname`) and the parameters of wrappers and factories (`exports`, `module`, external factory parameters) are not top-level bindings. Thus invariant S cannot protect them, and they keep their own passes.
+- The finalizer prints the top-level `this` of a CJS-wrapped module as the `exports` parameter of its CJS closure. The module itself can bind that parameter again, with `var exports` or with `exports = ...`. Principle 6 cannot help: a top-level `var exports` is the binding of the parameter itself, so the renamer has nothing to rename.
 
 ## Related
 

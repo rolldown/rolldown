@@ -8,12 +8,12 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```js
 // HIDDEN [\0rolldown/runtime.js]
 //#region a/dup.cjs
-var require_dup$2 = /* @__PURE__ */ __commonJSMin(((exports) => {
+var require_dup$3 = /* @__PURE__ */ __commonJSMin(((exports) => {
 	exports.value = "a";
 }));
 //#endregion
 //#region b/dup.cjs
-var require_dup$1 = /* @__PURE__ */ __commonJSMin(((exports) => {
+var require_dup$2 = /* @__PURE__ */ __commonJSMin(((exports) => {
 	globalThis.__dupBEvaluated = true;
 	exports.value = "b";
 }));
@@ -22,12 +22,12 @@ var require_dup$1 = /* @__PURE__ */ __commonJSMin(((exports) => {
 //#endregion
 //#region main.js
 var main_default = (/* @__PURE__ */ __toESM((/* @__PURE__ */ __commonJSMin(((exports, module) => {
-	const require_dup = require_dup$2();
-	const require_dup$1$1 = "local-string";
-	require_dup$1();
+	const require_dup = require_dup$3();
+	const require_dup$1 = "local-string";
+	require_dup$2();
 	module.exports = {
 		a: require_dup.value,
-		local: require_dup$1$1
+		local: require_dup$1
 	};
 })))())).default;
 //#endregion
@@ -44,12 +44,12 @@ export { main_default as default };
 ```js
 // HIDDEN [\0rolldown/runtime.js]
 //#region a/dup.cjs
-var require_dup$2 = /* @__PURE__ */ __commonJSMin(((exports) => {
+var require_dup$3 = /* @__PURE__ */ __commonJSMin(((exports) => {
 	exports.value = "a";
 }));
 //#endregion
 //#region b/dup.cjs
-var require_dup$1 = /* @__PURE__ */ __commonJSMin(((exports) => {
+var require_dup$2 = /* @__PURE__ */ __commonJSMin(((exports) => {
 	globalThis.__dupBEvaluated = true;
 	exports.value = "b";
 }));
@@ -58,12 +58,12 @@ var require_dup$1 = /* @__PURE__ */ __commonJSMin(((exports) => {
 //#endregion
 //#region main.js
 var main_default = (/* @__PURE__ */ __toESM((/* @__PURE__ */ __commonJSMin(((exports, module) => {
-	const require_dup = require_dup$2();
-	const require_dup$1$1 = "local-string";
-	require_dup$1();
+	const require_dup = require_dup$3();
+	const require_dup$1 = "local-string";
+	require_dup$2();
 	module.exports = {
 		a: require_dup.value,
-		local: require_dup$1$1
+		local: require_dup$1
 	};
 })))())).default;
 //#endregion

@@ -2,12 +2,12 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { styleText } from 'node:util';
 import { x } from 'tinyexec';
+import { parseDocument } from 'yaml';
 
 const VITE_DIR = path.resolve(import.meta.dirname, '../../vite');
 const REPO_PATH = path.resolve(import.meta.dirname, './repo');
-const OVERRIDES = [
-  `  rolldown: ${path.resolve(import.meta.dirname, '../rolldown')}`
-];
+const ROLLDOWN_DIR = path.resolve(import.meta.dirname, '../rolldown');
+const ROLLDOWN_OVERRIDE = `link:${ROLLDOWN_DIR}`;
 
 function printTitle(title: string) {
   console.info(styleText(['cyan', 'bold'], title));
@@ -63,19 +63,49 @@ await runCmdAndPipeOrExit(
   ['git', ['clone', VITE_DIR, REPO_PATH]],
 );
 
+// Write the `rolldown` override ourselves: Vite no longer carries a
+// `rolldown: $rolldown` line for us to rewrite. A document edit keeps
+// comments and survives any YAML formatting Vite picks.
 printTitle('# Updating pnpm-workspace.yaml to link to local rolldown...');
 const pnpmWorkspace = path.resolve(REPO_PATH, 'pnpm-workspace.yaml');
-const pnpmWorkspaceYaml = fs.readFileSync(pnpmWorkspace, 'utf-8');
-const newPnpmWorkspaceYaml = pnpmWorkspaceYaml.replace(
-  /overrides:\n\s*rolldown:\s*\$rolldown\n/,
-  `overrides:\n${OVERRIDES.join('\n')}\n`
-);
+const workspaceDoc = parseDocument(fs.readFileSync(pnpmWorkspace, 'utf-8'));
+workspaceDoc.setIn(['overrides', 'rolldown'], ROLLDOWN_OVERRIDE);
+const newPnpmWorkspaceYaml = workspaceDoc.toString();
+if (parseDocument(newPnpmWorkspaceYaml).getIn(['overrides', 'rolldown']) !== ROLLDOWN_OVERRIDE) {
+  console.error(
+    styleText(['red', 'bold'], `Failed to set \`overrides.rolldown: ${ROLLDOWN_OVERRIDE}\` in ${pnpmWorkspace}`),
+  );
+  process.exit(1);
+}
 fs.writeFileSync(pnpmWorkspace, newPnpmWorkspaceYaml, 'utf-8');
 
 await runCmdAndPipeOrExit(
   '# Running `pnpm install`...',
   ['pnpm', ['install', '--no-frozen-lockfile'], { nodeOptions: { cwd: REPO_PATH } }],
 );
+
+// Fail when the clone does not resolve the workspace rolldown, so the suites
+// never silently test an npm release again.
+printTitle('# Checking that vite resolves the workspace rolldown...');
+const resolveResult = await x(
+  process.execPath,
+  ['-e', "console.log(require('fs').realpathSync(require.resolve('rolldown/package.json')))"],
+  { nodeOptions: { cwd: path.join(REPO_PATH, 'packages/vite') } },
+);
+const resolvedRolldownPkg = resolveResult.stdout.trim();
+const expectedRolldownPkg = fs.realpathSync(path.join(ROLLDOWN_DIR, 'package.json'));
+if (resolveResult.exitCode !== 0 || resolvedRolldownPkg !== expectedRolldownPkg) {
+  console.error(
+    styleText(
+      ['red', 'bold'],
+      `vite resolves rolldown to ${resolvedRolldownPkg || resolveResult.stderr.trim()}, expected ${expectedRolldownPkg}`,
+    ),
+  );
+  process.exit(1);
+}
+const { version: rolldownVersion } = JSON.parse(fs.readFileSync(resolvedRolldownPkg, 'utf-8'));
+console.info(`vite resolves rolldown ${rolldownVersion} at ${resolvedRolldownPkg}`);
+
 await runCmdAndPipeOrExit(
   '# Running `pnpm exec playwright install chromium`...',
   ['pnpm', ['exec', 'playwright', 'install', 'chromium'], { nodeOptions: { cwd: REPO_PATH } }],

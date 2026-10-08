@@ -1,0 +1,21 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+import { join } from "node:path";
+//#region other.js
+globalThis.__joinType = typeof join;
+//#endregion
+//#region main.js
+const join$2 = "local-join";
+function f(join$1) {
+	return [join$2, join$1];
+}
+//#endregion
+export { f };
+
+```

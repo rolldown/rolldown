@@ -1,0 +1,55 @@
+crates/rolldown/src/stages/link_stage/tree_shaking/include_statements.rs
+  s_7b2a6ae90950dd::t_feaeab88e0367a 700,922-928,938-942
+crates/rolldown/tests/rolldown/issues/10543/_config.json
+  s_f8a7bf3dafda90::t_2068b71bed82bd 21
+crates/rolldown/tests/rolldown/issues/10543/_test.mjs
+  s_f8a7bf3dafda90::t_19b7e923c9c45a 7
+crates/rolldown/tests/rolldown/issues/10543/artifacts.snap
+  s_7b2a6ae90950dd::t_15d30ee361728c 21,39-44,50,63,74
+crates/rolldown/tests/rolldown/issues/11091/artifacts.snap
+  s_7b2a6ae90950dd::t_06c0304ad50d56 1-156
+crates/rolldown/tests/rolldown/issues/11091/initialization_order/_config.json
+  s_f8a7bf3dafda90::t_a05bf2ac876870 1-27
+crates/rolldown/tests/rolldown/issues/11091/initialization_order/_test.mjs
+  s_f8a7bf3dafda90::t_0099e704059fdb 1-6
+crates/rolldown/tests/rolldown/issues/11091/initialization_order/artifacts.snap
+  s_7b2a6ae90950dd::t_6c6809110afc14 1-98
+crates/rolldown/tests/rolldown/issues/11091/initialization_order/bar.js
+  s_f8a7bf3dafda90::t_cd69f7be2f7f1c 1-4
+crates/rolldown/tests/rolldown/issues/11091/initialization_order/barrel.js
+  s_f8a7bf3dafda90::t_540ddd0f2d400b 1-2
+crates/rolldown/tests/rolldown/issues/11091/initialization_order/entry.js
+  s_f8a7bf3dafda90::t_7258efd3e8fbf3 1-2
+crates/rolldown/tests/rolldown/issues/11091/initialization_order/foo.js
+  s_f8a7bf3dafda90::t_46f20dd55cae1b 1-3
+crates/rolldown/tests/rolldown/issues/11091/initialization_order/lib.js
+  s_f8a7bf3dafda90::t_ce7079335dbe86 1
+crates/rolldown/tests/rolldown/issues/11091/initialization_order/req.js
+  s_f8a7bf3dafda90::t_6fd319c1603f4b 1
+crates/rolldown/tests/rolldown/issues/11091/initialization_order/state.js
+  s_f8a7bf3dafda90::t_27637c9e8df061 1-5
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "a0561eb8c3396b1dda154ea19ce4a992639f532c",
+  "prompts": {},
+  "sessions": {
+    "s_7b2a6ae90950dd": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a11469-befc-7c02-a2ba-975feb5f6cd9",
+        "model": "gpt-6.1-sol"
+      },
+      "human_author": "Yunfei He <i.heyunfei@gmail.com>"
+    },
+    "s_f8a7bf3dafda90": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a11eb6-4b0f-7c32-bca8-f6bd99cd6c93",
+        "model": "gpt-6.1-sol"
+      },
+      "human_author": "Yunfei He <i.heyunfei@gmail.com>"
+    }
+  }
+}

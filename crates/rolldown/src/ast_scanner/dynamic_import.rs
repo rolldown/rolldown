@@ -67,6 +67,10 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
             None => DynamicImportExportsUsage::Complete,
           }
         }
+
+        AstKind::BinaryExpression(_) | AstKind::UnaryExpression(_) => {
+          DynamicImportExportsUsage::Partial(FxHashSet::default())
+        }
         _ => DynamicImportExportsUsage::Complete,
       },
     };

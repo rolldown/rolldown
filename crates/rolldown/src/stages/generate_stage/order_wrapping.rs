@@ -15,7 +15,7 @@ use itertools::Itertools;
 use oxc::ast::ast::{Declaration, ExportDefaultDeclarationKind, Statement};
 use oxc_index::{IndexVec, index_vec};
 use rolldown_common::{
-  Chunk, ChunkIdx, ChunkKind, ChunkMeta, EntryPointKind, ImportKind, ImportRecordIdx,
+  Chunk, ChunkIdx, ChunkKind, ChunkMeta, EcmaViewMeta, EntryPointKind, ImportKind, ImportRecordIdx,
   ImportRecordMeta, IndexModules, ModuleIdx, OutputFormat, PostChunkOptimizationOperation,
   RuntimeHelper, StmtInfoIdx, SymbolRef, SymbolRefDb, UsedSymbolRefsBuilder, WrapKind,
 };
@@ -166,9 +166,14 @@ pub(super) fn consumer_local_reexport_plan(
   input: &OrderLoweringInput<'_>,
   state: &OrderWrapState,
 ) -> ConsumerLocalReexportPlan {
+  if !input.tree_shaking {
+    return ConsumerLocalReexportPlan::default();
+  }
   let mut modules = Vec::new();
   let mut accepted_modules = FxHashSet::default();
+  let mut cjs_routes = FxHashSet::default();
   let mut carriers = Vec::new();
+  let independent_modules = independently_initialized_esm_modules(input);
   // `require()` consumes an ESM module as an opaque namespace. The importer-local resolver does
   // not yet lower require call sites into a complete namespace-target sequence, so keep those
   // barrels on the existing monolithic wrapper path. This is intentionally module-wide and
@@ -194,16 +199,12 @@ pub(super) fn consumer_local_reexport_plan(
   // transitive side-effect bit after that importee has itself become a consumer-local waypoint.
   // Each round accepts at least one new module or stops, so this is bounded by the plan size.
   loop {
-    let accepted_before = modules.len();
+    let accepted_before = accepted_modules.len();
     for &module_idx in &ordered_modules {
       if accepted_modules.contains(&module_idx) {
         continue;
       }
-      if state.is_consumer_local_reexport_route(module_idx)
-        || !input.tree_shaking
-        || input.cyclic_modules.contains(&module_idx)
-        || required_modules.contains(&module_idx)
-      {
+      if input.cyclic_modules.contains(&module_idx) || required_modules.contains(&module_idx) {
         continue;
       }
       let meta = &input.linking[module_idx];
@@ -231,6 +232,8 @@ pub(super) fn consumer_local_reexport_plan(
 
       let mut module_carriers = Vec::new();
       let mut forwards_consumer_local_route = false;
+      let mut forwards_cjs_route = false;
+      let mut cjs_route_supported = true;
       let mut supported = true;
       for (stmt_idx, stmt_info) in input.statements[module_idx].iter_enumerated() {
         let stmt_is_included = meta.stmt_info_included.has_bit(stmt_idx);
@@ -312,15 +315,10 @@ pub(super) fn consumer_local_reexport_plan(
               let importee_is_consumer_local = accepted_modules.contains(&importee_idx)
                 || state.is_consumer_local_reexport_route(importee_idx);
               forwards_consumer_local_route |= importee_is_consumer_local;
-              // A previously accepted inner routing waypoint may report transitive side effects
-              // because it contains eager CJS carriers. Those effects are already represented as
-              // per-record eager obligations, so an outer re-export-only barrel can forward them
-              // without regaining a monolithic body. A genuinely effectful leaf still rejects the
-              // optimization.
-              if importee.side_effects.has_side_effects() && !importee_is_consumer_local {
-                supported = false;
-                break;
-              }
+              let importee_is_cjs_route = cjs_routes.contains(&importee_idx);
+              forwards_cjs_route |= importee_is_cjs_route;
+              cjs_route_supported &=
+                !importee.side_effects.has_side_effects() || importee_is_cjs_route;
             }
           }
         }
@@ -329,22 +327,72 @@ pub(super) fn consumer_local_reexport_plan(
         }
       }
 
-      // Carrier-free direct barrels are part of the same route when they forward an inner
-      // carrierized barrel. Marking every supported re-export-only waypoint keeps an arbitrarily
-      // deep chain importer-local; its non-CJS leaves are side-effect-free by the check above, so
-      // there is no module-local evaluation work to preserve here.
-      if supported && (!module_carriers.is_empty() || forwards_consumer_local_route) {
+      // Forwarding an independent ESM route does not prove the outer barrel's other imports
+      // independent. CJS carrier extraction retains its record-based eligibility.
+      let is_cjs_route = cjs_route_supported && (!module_carriers.is_empty() || forwards_cjs_route);
+      let is_independent_esm_route = independent_modules.contains(&module_idx)
+        && (matches!(meta.wrap_kind(), WrapKind::Esm) || forwards_consumer_local_route);
+      if supported && (is_cjs_route || is_independent_esm_route) {
         accepted_modules.insert(module_idx);
-        modules.push(module_idx);
-        carriers.extend(module_carriers);
+        if is_cjs_route {
+          cjs_routes.insert(module_idx);
+        }
+        if !state.is_consumer_local_reexport_route(module_idx) {
+          modules.push(module_idx);
+          carriers.extend(module_carriers);
+        }
       }
     }
-    if modules.len() == accepted_before {
+    if accepted_modules.len() == accepted_before {
       break;
     }
   }
 
   ConsumerLocalReexportPlan { modules, carriers }
+}
+
+fn independently_initialized_esm_modules(input: &OrderLoweringInput<'_>) -> FxHashSet<ModuleIdx> {
+  if !input.linking.iter().any(|meta| matches!(meta.wrap_kind(), WrapKind::Esm)) {
+    return FxHashSet::default();
+  }
+  let mut independent = FxHashSet::default();
+  let mut rejected = Vec::new();
+  let reverse_imports = super::order_analysis::reverse_static_import_index(input.modules);
+  for (module_idx, module) in input.modules.iter_enumerated() {
+    let meta = &input.linking[module_idx];
+    if module.as_normal().is_some_and(|module| {
+      module.meta.contains(EcmaViewMeta::IndependentInitialization)
+        && module
+          .import_records
+          .iter()
+          .all(|record| record.kind != ImportKind::Import || record.resolved_module.is_some())
+        && !matches!(
+          module.side_effects,
+          rolldown_common::side_effects::DeterminedSideEffects::UserDefined(true)
+            | rolldown_common::side_effects::DeterminedSideEffects::NoTreeshake
+        )
+    }) && !matches!(meta.wrap_kind(), WrapKind::Cjs)
+      && !meta.is_tla_or_contains_tla_dependency
+      && meta.shimmed_missing_exports.is_empty()
+      && matches!(
+        meta.concatenated_wrapped_module_kind,
+        rolldown_common::ConcatenateWrappedModuleKind::None
+      )
+      && !input.cyclic_modules.contains(&module_idx)
+    {
+      independent.insert(module_idx);
+    } else {
+      rejected.push(module_idx);
+    }
+  }
+  while let Some(module_idx) = rejected.pop() {
+    for &importer in &reverse_imports[module_idx] {
+      if independent.remove(&importer) {
+        rejected.push(importer);
+      }
+    }
+  }
+  independent
 }
 
 fn apply_consumer_local_reexport_plan(

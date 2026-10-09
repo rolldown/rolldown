@@ -1,9 +1,11 @@
+import type { Program } from '@oxc-project/types';
 import {
   parse as originalParse,
   type ParseResult as BindingParseResult,
   type ParserOptions as BindingParserOptions,
   parseSync as originalParseSync,
 } from '../binding.cjs';
+import { shouldEagerlyFreeOutputs } from './threadless-free';
 // @ts-ignore
 import * as oxcParserWrap from 'oxc-parser/src-js/wrap.js';
 
@@ -19,6 +21,49 @@ export interface ParseResult extends BindingParseResult {}
  * @category Utilities
  */
 export interface ParserOptions extends BindingParserOptions {}
+
+/**
+ * Wrap a native `ParseResult` for consumers. Lazy flavors use oxc-parser's
+ * wrap object, whose getters drain each native field on first access.
+ * A threadless WASI host may never run GC finalizers and the napi class has no
+ * `dropInner`, so all four getters are read at once; `program` is still revived
+ * lazily through the same `jsonParseAst` path.
+ */
+function wrapParseResult(result: BindingParseResult): ParseResult {
+  if (!shouldEagerlyFreeOutputs()) {
+    return oxcParserWrap.wrap(result);
+  }
+  // The native `program` getter returns the serialized AST JSON string (a
+  // `mem::take` drain), despite the declared `Program` type.
+  let programJson: string | undefined = result.program as unknown as string;
+  const module = result.module;
+  const comments = result.comments;
+  const errors = result.errors;
+  let program: Program | undefined;
+  let revived = false;
+  return {
+    get program() {
+      if (!revived) {
+        program = oxcParserWrap.jsonParseAst(programJson) as Program;
+        // Drop the JSON once revived, so a kept result holds only the AST.
+        // Only after `jsonParseAst` returns (a throw keeps the string for a
+        // retry); the memo keys on `revived`, not on a truthy AST.
+        revived = true;
+        programJson = undefined;
+      }
+      return program as Program;
+    },
+    get module() {
+      return module;
+    },
+    get comments() {
+      return comments;
+    },
+    get errors() {
+      return errors;
+    },
+  };
+}
 
 /**
  * Parse JS/TS source asynchronously on a separate thread.
@@ -40,7 +85,7 @@ export async function parse(
   sourceText: string,
   options?: ParserOptions | null,
 ): Promise<ParseResult> {
-  return oxcParserWrap.wrap(await originalParse(filename, sourceText, options));
+  return wrapParseResult(await originalParse(filename, sourceText, options));
 }
 
 /**
@@ -60,5 +105,5 @@ export function parseSync(
   sourceText: string,
   options?: ParserOptions | null,
 ): ParseResult {
-  return oxcParserWrap.wrap(originalParseSync(filename, sourceText, options));
+  return wrapParseResult(originalParseSync(filename, sourceText, options));
 }

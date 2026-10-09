@@ -146,6 +146,7 @@ export async function createBundlerOptions(
       inputOptions,
       onLog,
       stopWorkers: parallelPluginInitResult?.stopWorkers,
+      releaseOptionBoxes: () => pluginContextData.releaseRetainedOptionBoxes(),
     };
   } catch (e) {
     await parallelPluginInitResult?.stopWorkers();
@@ -158,4 +159,10 @@ export interface BundlerOptionWithStopWorker {
   inputOptions: InputOptions;
   onLog: LogHandler;
   stopWorkers?: () => Promise<void>;
+  /**
+   * Releases the native boxes this build's hooks retained (see
+   * {@linkcode PluginContextData.releaseRetainedOptionBoxes}). Call once the
+   * build is settled, scanned, or closed.
+   */
+  releaseOptionBoxes: () => void;
 }

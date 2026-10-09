@@ -26,15 +26,23 @@ allowBuilds:
 overrides:
   # 12.10 dropped the Node 20 prebuilds, which the CI matrix still covers
   better-sqlite3: 12.9.0
+  # `napi build` links the emnapi v2 C archives into the .wasm and refuses to link when this
+  # package's version differs from `@emnapi/core`; pinned exact, in sync with the catalog below.
+  emnapi: 2.0.0-alpha.6
 
 catalog:
   '@babel/core': ^7.29.7
   '@babel/preset-env': ^7.29.7
   '@babel/preset-typescript': ^7.29.7
-  '@emnapi/core': 2.0.0-alpha.5
-  '@emnapi/runtime': 2.0.0-alpha.5
+  # Same release as `emnapi`: the .wasm links its v2 C archives, so the JS runtime must match.
+  '@emnapi/core': 2.0.0-alpha.6
+  '@emnapi/runtime': 2.0.0-alpha.6
   '@jridgewell/trace-mapping': ^0.3.31
-  '@napi-rs/cli': ^3.10.0
+  # Host protocol the cli-generated WASI loaders import when `napi.wasm.asyncRuntime` is set.
+  '@napi-rs/async-runtime': ^0.2.0
+  # Floor: 3.10.8 is the first cli whose `napi artifacts` keeps a WASI-declared root
+  # entry (`binding.cjs`) that differs from package.json#main.
+  '@napi-rs/cli': ^3.10.8
   '@napi-rs/wasm-runtime': ~1.2.5
   '@oxc-node/cli': ^0.1.0
   '@oxc-node/core': ^0.1.0
@@ -54,6 +62,7 @@ catalog:
   '@types/ws': ^8.18.0
   acorn: ^8.17.0
   astring: ^1.9.0
+  buffer: ^6.0.3
   cac: ^7.0.0
   chalk: ^5.3.0
   change-case: ^5.4.4
@@ -61,7 +70,8 @@ catalog:
   consola: ^3.4.2
   dedent: ^1.5.3
   diff: ^9.0.0
-  emnapi: 2.0.0-alpha.5
+  # `overrides.emnapi` above pins the same version; keep both in sync.
+  emnapi: 2.0.0-alpha.6
   esbuild: ^0.28.0
   estree-toolkit: ^1.7.8
   execa: ^9.2.0
@@ -72,6 +82,7 @@ catalog:
   glob: ^13.0.0
   lodash-es: ^4.17.21
   micromatch: ^4.0.8
+  miniflare: ^4.20260611.0
   oxc-parser: '=0.153.0'
   oxc-transform: '=0.153.0'
   pathe: ^2.0.3
@@ -132,6 +143,7 @@ trustPolicyExclude:
 verifyDepsBeforeRun: install
 minimumReleaseAgeExcludePrune: true
 minimumReleaseAgeExclude:
+  - '@napi-rs/async-runtime'
   - '@napi-rs/cli'
   - '@oxc-minify/*'
   - '@oxc-parser/*'

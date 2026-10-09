@@ -6,6 +6,8 @@ export {
   type BindingClientHmrUpdate,
   type BindingNativeMemoryStats,
   BindingRebuildStrategy,
+  type BindingRuntimeCapabilities,
+  type BindingRuntimeFlavor as AsyncRuntimeFlavor,
   getNativeMemoryStats,
   isolatedDeclaration,
   type IsolatedDeclarationsOptions,
@@ -18,6 +20,12 @@ export {
   ResolverFactory,
 } from './binding.cjs';
 export { resolveTsconfig } from './utils/resolve-tsconfig';
+export {
+  getRuntimeSupport,
+  type RuntimeFeature,
+  type RuntimeSupport,
+  UnsupportedRuntimeFeatureError,
+} from './runtime-support';
 
 export { defineParallelPlugin } from './plugin/parallel-plugin';
 

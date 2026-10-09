@@ -32,51 +32,228 @@ jobs:
           version: '1.0.0'
           cache: true
 
-      - name: Add WASI target
-        run: rustup target add wasm32-wasip1-threads
+      - name: Add WASI targets
+        run: rustup target add wasm32-wasip1 wasm32-wasip1-threads
 
-      - name: Build Rolldown with WASI Binding
+      # Each WASI build re-points packages/rolldown/dist at its own loaders, so every
+      # flavor's tests must run right after that flavor's build.
+      - name: Build Rolldown with threaded WASI binding
         run: just build-rolldown-wasi
 
+      # The threaded artifact defaults to MultiThread (2 workers); ROLLDOWN_RUNTIME=single
+      # selects CurrentThread. threaded-wasi.test.ts (which pins the flavor), the
+      # stability test and the lifecycle test run once per flavor; only the whole
+      # node suite runs on MultiThread alone.
+      #
+      # No retry: a trap here is a regression of napi's heap-sync workaround.
+      - name: Node Test (threaded WASI, MultiThread default)
+        run: timeout 300 vp run --filter rolldown-tests test:wasi-threaded
+
+      - name: Stability Test (threaded WASI, MultiThread default)
+        run: timeout 300 vp run --filter rolldown-tests test:stability
+
+      # Pins the lane's shape: MultiThread, and `dev()` builds.
+      - name: Threaded WASI Runtime Lifecycle Test (MultiThread default)
+        run: vp run --filter rolldown-tests test:wasi-runtime-lifecycle
+
+      # Needed at collection time: tests/dev/*.test.ts import it at module scope.
       - name: Build `@rolldown/test-dev-server`
         run: vp run --filter '@rolldown/test-dev-server' build
 
-      # `test:wasi` is `test:main` with `ROLLDOWN_WASI_TEST=1`, which skips the tests that the wasm binding cannot pass; every skip states its own reason.
-      #
-      # The suite is flaky under the wasm binding (~1/3 of runs) because multiple
-      # wasm instances share one dlmalloc heap and corrupt it under concurrent
-      # allocation while the memory grows — a "memory access out of bounds" trap
-      # that has nothing to do with the code under test. See #10697. Retry the
-      # whole step (the crash takes down the wasm process, so a per-test retry
-      # cannot help); a real failure still fails all attempts and reds the job.
-      # The crash also shows up as a hung suite: a dead worker is dropped
-      # silently, so in-flight builds wait forever and the plain retry loop
-      # stalls on the first attempt without ever retrying, eating the whole
-      # 45-minute job budget. `timeout` caps each attempt so a hang becomes a
-      # failed attempt (exit 124) and retries; the suite finishes in 1-2 min.
-      - name: Node Test
+      # The whole node suite on the threaded build. `isWasiTest` skips apply; the
+      # `isSingleThread` ones do not, since the default flavor is MultiThread.
+      # No `NAPI_RS_WASI_FLAVOR`: `vp` is a napi-rs binary too and would obey it.
+      # The dist holds only the threaded loader, and the expectation flag makes
+      # threaded-wasi.test.ts fail if another binding loaded.
+      # `timeout` turns a hung suite into a failed step instead of a spent job budget.
+      - name: Node tests on the threaded build (MultiThread default)
+        env:
+          ROLLDOWN_EXPECT_WASI_THREADS: '1'
+        run: timeout 300 vp run --filter rolldown-tests test:wasi
+
+      # Retried for the known gaps of the heap-sync workaround for the V8 shared
+      # memory growth bug; the stress steps below are not retried and catch
+      # a regression. The crash kills the wasm process, so the whole step retries,
+      # and it can also hang the suite, so `timeout` turns a hang into a failed attempt.
+      - name: Node Test (threaded WASI, CurrentThread, ROLLDOWN_RUNTIME=single)
+        env:
+          ROLLDOWN_RUNTIME: single
         run: |
           for attempt in 1 2 3; do
-            if timeout 300 vp run --filter rolldown-tests test:wasi; then
+            if timeout 300 vp run --filter rolldown-tests test:wasi-threaded; then
               exit 0
             fi
 
             if [ "$attempt" -lt 3 ]; then
-              echo "::warning::wasi Node Test attempt ${attempt} failed or hung; retrying (known flake, see #10697)"
+              echo "::warning::wasi Node Test attempt ${attempt} failed or hung; retrying (see #10697)"
             else
-              echo "::warning::wasi Node Test attempt ${attempt} failed or hung; no more retries (known flake, see #10697)"
+              echo "::warning::wasi Node Test attempt ${attempt} failed or hung; no more retries (see #10697)"
             fi
           done
           exit 1
 
-      - name: Stability Test
-        run: vp run --filter rolldown-tests test:stability
+      - name: Stability Test (threaded WASI, CurrentThread, ROLLDOWN_RUNTIME=single)
+        env:
+          ROLLDOWN_RUNTIME: single
+        run: timeout 300 vp run --filter rolldown-tests test:stability
 
-      # Runs against the WASI binding itself (NAPI_RS_FORCE_WASI), which no
-      # other CI test does. Regression coverage for #8411 and #8747.
-      - name: Tokio Runtime Lifecycle Test
-        run: vp run --filter rolldown-tests test:wasi-runtime
+      # Pins the CurrentThread shape: one lane, and `dev()` fails closed.
+      - name: Threaded WASI Runtime Lifecycle Test (CurrentThread, ROLLDOWN_RUNTIME=single)
+        env:
+          ROLLDOWN_RUNTIME: single
+        run: vp run --filter rolldown-tests test:wasi-runtime-lifecycle
 
+      # Each case sets its own runtime flavor, so this one step covers both flavors.
+      # Not retried: without napi's heap-sync workaround one run fails nearly every time.
+      # See internal-docs/async-runtime/implementation.md, "Threaded WASI heap sync".
+      - name: Threaded WASI memory stress
+        run: timeout 600 vp run --filter rolldown-tests test:wasi-threaded-stress
+
+      # The heap-sync allocator lock on hosts without V8's wasm trap handler,
+      # where plain loads and stores are bounds-checked against a thread's stale memory
+      # size too. `--wasm-enforce-bounds-checks` stands in for such hosts, and
+      # `--disable-wasm-trap-handler` turns the handler off. Not retried: one failure
+      # is a regression.
+      - name: Threaded WASI heap sync without trap handler (bounds checks, 20 runs)
+        run: timeout 300 vp run --filter rolldown-tests test:wasi-threaded-stress:bounds-checks
+
+      - name: Threaded WASI heap sync without trap handler (handler off, 10 runs)
+        run: timeout 300 vp run --filter rolldown-tests test:wasi-threaded-stress:no-trap-handler
+
+      # The loader's shared memory starts at the module's minimum here, so the heap grows
+      # while four workers allocate (each run asserts that it did), under bounds checks:
+      # plain builds, then builds with an async JS plugin (blocks cross between the
+      # workers and the JS thread).
+      - name: Threaded WASI heap sync with forced growth (20 runs)
+        run: timeout 300 vp run --filter rolldown-tests test:wasi-threaded-stress:forced-growth
+
+      - name: Threaded WASI heap sync with forced growth and JS plugin handoff (20 runs)
+        run: timeout 300 vp run --filter rolldown-tests test:wasi-threaded-stress:handoff
+
+      # Holds 1.5 GiB inside wasm, then builds: the allocator uses the loader's initial
+      # memory before it grows, so the heap stays below 2^31 (Node's `node:wasi` rejects
+      # pointers above it).
+      - name: Threaded WASI heap ceiling
+        run: timeout 300 vp run --filter rolldown-tests test:wasi-threaded-stress:heap-ceiling
+
+      # With the default loader, 16 builds never grow the memory.
+      - name: Threaded WASI heap grows only past the initial memory
+        run: timeout 300 vp run --filter rolldown-tests test:wasi-threaded-stress:no-growth
+
+      # Forces a pool worker's wasm thread to die (MultiThread w4, 16 concurrent
+      # builds) and checks the loader's crash latch: an unhandled crash exits
+      # non-zero, and the public disposer rejects instead of hanging. Not retried: a
+      # hang here is a regression.
+      # See internal-docs/async-runtime/implementation.md ("Crash latch").
+      - name: Threaded WASI worker crash latch
+        run: timeout 300 vp run --filter rolldown-tests test:wasi-worker-crash
+
+      # The napi-rs loader preloads one pool Worker per MultiThread worker at load.
+      # See internal-docs/async-runtime/implementation.md ("Pool worker preload").
+      - name: Threaded WASI pool worker preload
+        run: timeout 300 vp run --filter rolldown-tests test:wasi-pool-preload
+
+      - name: Build Rolldown with non-threaded WASI binding
+        run: just build-rolldown-wasi-single
+
+      # The same suite on the threadless loader runs only its in-flight dispose case.
+      - name: Threadless WASI dispose over in-flight work
+        run: timeout 300 vp run --filter rolldown-tests test:wasi-pool-preload
+
+      # Glue only — reuses the single-thread binding built above instead of recompiling WASI.
+      - name: Build `@rolldown/browser` artifacts
+        run: vp run --filter '@rolldown/browser' build-node
+
+      - name: Stage self-contained WASI packages
+        run: node scripts/wasi/stage-wasi-packages.mjs
+
+      - name: Exercise concurrent workerd instance lifecycle and memory canary
+        run: node --expose-gc packages/workerd-tests/memory.mjs --max-rss-growth-mb=128
+
+      # Both skip families apply on this lane: the binding reports the CurrentThread
+      # flavor and the wasi target, so `isSingleThread` and `isWasiTest` skips both hold
+      # — see tests/src/runtime-flavor.ts.
+      - name: Node Test (single-thread WASI)
+        run: vp run --filter rolldown-tests test:wasi
+
+      # `@example/typescript` is shared with the watch example, which is unsupported on
+      # WASI; its basic and chunk-import-map cases are covered by the native `Build Examples`
+      # step of the `Node Test` job in reusable-node-test.yml.
       # `@example/native-magic-string` is excluded because it depends on a native-only addon.
       - name: Build Examples
-        run: vp run --filter '@example/*' --filter '!@example/native-magic-string' build
+        run: vp run --filter '@example/*' --filter '!@example/native-magic-string' --filter '!@example/typescript' build
+
+  # The `run` job tests the debug-profile threaded wasm, but the heap-sync workaround
+  # is sensitive to the build profile. This job builds the threaded wasm the
+  # way reusable-release-build.yml does (`release-wasi` profile, `TARGET_CC=clang`)
+  # and runs the allocator checks against it.
+  # See internal-docs/async-runtime/implementation.md, "Threaded WASI heap sync".
+  release-threaded:
+    name: WASI (threaded, release artifact)
+    if: ${{ inputs.changed }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Setup Rust
+        uses: oxc-project/setup-rust@3d6fb132fbe7cdcb66bf8ec193911c2945369d12 # v1.0.17
+        with:
+          cache-key: release-build-wasi
+          save-cache: ${{ github.ref_name == 'main' }}
+
+      - uses: voidzero-dev/setup-vp@3754dd7dbdb32bd8f6d28b6043de13ad3a75f21f # v1.21.1
+        with:
+          version: '1.0.0'
+          cache: true
+
+      - name: Add threaded WASI target
+        run: rustup target add wasm32-wasip1-threads
+
+      # Builds the native binding first: build.ts bundles the package with it.
+      - name: Build Rolldown with release threaded WASI binding
+        env:
+          TARGET_CC: clang
+        run: vp run --filter rolldown build-wasi:release
+
+      # The dist must carry the stripped `.wasm` the release ships; the loader prefers
+      # a colocated `.debug.wasm`, so fail if one is there.
+      - name: Assert the dist carries the release wasm
+        run: |
+          rm -f packages/rolldown/src/rolldown-binding.wasm32-wasi.debug.wasm
+          if [ -e packages/rolldown/dist/rolldown-binding.wasm32-wasi.debug.wasm ]; then
+            echo "::error::dist has rolldown-binding.wasm32-wasi.debug.wasm; the loader would pick it"
+            exit 1
+          fi
+          cmp packages/rolldown/src/rolldown-binding.wasm32-wasi.wasm packages/rolldown/dist/rolldown-binding.wasm32-wasi.wasm
+          sha256sum packages/rolldown/dist/rolldown-binding.wasm32-wasi.wasm
+
+      # Not retried: one failure is a regression of the release artifact.
+      - name: Node Test (threaded WASI, MultiThread default)
+        run: timeout 300 vp run --filter rolldown-tests test:wasi-threaded
+
+      - name: Threaded WASI heap sync without trap handler (bounds checks, 20 runs)
+        run: timeout 300 vp run --filter rolldown-tests test:wasi-threaded-stress:bounds-checks
+
+      - name: Threaded WASI heap sync without trap handler (handler off, 10 runs)
+        run: timeout 300 vp run --filter rolldown-tests test:wasi-threaded-stress:no-trap-handler
+
+      - name: Threaded WASI heap sync with forced growth (20 runs)
+        run: timeout 300 vp run --filter rolldown-tests test:wasi-threaded-stress:forced-growth
+
+      - name: Threaded WASI heap sync with forced growth and JS plugin handoff (20 runs)
+        run: timeout 300 vp run --filter rolldown-tests test:wasi-threaded-stress:handoff
+
+      - name: Threaded WASI heap ceiling
+        run: timeout 300 vp run --filter rolldown-tests test:wasi-threaded-stress:heap-ceiling
+
+      - name: Threaded WASI heap grows only past the initial memory
+        run: timeout 300 vp run --filter rolldown-tests test:wasi-threaded-stress:no-growth
+
+      - name: Threaded WASI worker crash latch
+        run: timeout 300 vp run --filter rolldown-tests test:wasi-worker-crash
+
+      - name: Threaded WASI pool worker preload
+        run: timeout 300 vp run --filter rolldown-tests test:wasi-pool-preload

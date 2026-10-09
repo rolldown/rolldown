@@ -2,6 +2,7 @@ import os from 'node:os';
 import { Worker } from 'node:worker_threads';
 import { ParallelJsPluginRegistry } from '../binding.cjs';
 import type { RolldownPlugin } from '../plugin';
+import { assertParallelPluginsSupported } from '../plugin/parallel-plugin';
 import { getParallelPluginInfo } from './parallel-plugin';
 
 export type WorkerData = {
@@ -34,6 +35,10 @@ export async function initializeParallelPlugins(plugins: RolldownPlugin[]): Prom
   if (pluginInfos.length <= 0) {
     return undefined;
   }
+
+  // Descriptors can come from older package copies or be constructed directly,
+  // so the consuming artifact must enforce its own capability boundary.
+  assertParallelPluginsSupported();
 
   const count = availableParallelism();
   const parallelJsPluginRegistry = new ParallelJsPluginRegistry(count);

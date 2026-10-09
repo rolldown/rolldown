@@ -26,4 +26,8 @@ rustflags = [
 ]
 
 [target.wasm32-wasip1-threads]
-rustflags = ["-C", "target-feature=+simd128", "--cfg", "tokio_unstable"]
+rustflags = ["-C", "target-feature=+simd128"]
+
+# The browser and workerd package builds from this target; the shipped binary already needs a SIMD engine.
+[target.wasm32-wasip1]
+rustflags = ["-C", "target-feature=+simd128"]

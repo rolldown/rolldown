@@ -45,18 +45,24 @@ async function bundleTsConfig(configFile: string, isEsm: boolean): Promise<strin
     ],
   });
   const outputDir = path.dirname(configFile);
-  const result = await bundle.write({
-    dir: outputDir,
-    format: isEsm ? 'esm' : 'cjs',
-    sourcemap: 'inline',
-    // respect the original file extension, mts -> mjs, cts -> cjs
-    // mts should be generate mjs, it avoid add `type: module` at package.json
-    entryFileNames: `rolldown.config.[hash]${path.extname(configFile).replace('ts', 'js')}`,
-  });
-  const fileName = result.output.find(
-    (chunk): chunk is OutputChunk => chunk.type === 'chunk' && chunk.isEntry,
-  )!.fileName;
-  return path.join(outputDir, fileName);
+  try {
+    const result = await bundle.write({
+      dir: outputDir,
+      format: isEsm ? 'esm' : 'cjs',
+      sourcemap: 'inline',
+      // respect the original file extension, mts -> mjs, cts -> cjs
+      // mts should be generate mjs, it avoid add `type: module` at package.json
+      entryFileNames: `rolldown.config.[hash]${path.extname(configFile).replace('ts', 'js')}`,
+    });
+    const fileName = result.output.find(
+      (chunk): chunk is OutputChunk => chunk.type === 'chunk' && chunk.isEntry,
+    )!.fileName;
+    return path.join(outputDir, fileName);
+  } finally {
+    // A threadless WASI host may never run GC finalizers, so on that build the
+    // bundle's native memory is freed only here.
+    await bundle.close();
+  }
 }
 
 const SUPPORTED_JS_CONFIG_FORMATS = ['.js', '.mjs', '.cjs'];

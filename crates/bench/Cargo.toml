@@ -15,13 +15,13 @@ doctest = false
 test = false
 
 [dependencies]
-criterion2 = { workspace = true, features = ["async_tokio"] }
+criterion2 = { workspace = true, features = ["async"] }
 ignore = { workspace = true }
 rolldown = { workspace = true, features = ["experimental"] }
 rolldown_fs = { workspace = true, features = ["memory"] }
 rolldown_resolver = { workspace = true }
+rolldown_utils = { workspace = true }
 rolldown_workspace = { workspace = true }
-tokio = { workspace = true, features = ["rt", "rt-multi-thread"] }
 
 [[bench]]
 harness = false

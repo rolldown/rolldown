@@ -4,6 +4,7 @@ import type { InputOptions } from '../src/options/input-options';
 import type { CodeSplittingGroup, OutputOptions } from '../src/options/output-options';
 import { createBundlerOptions } from '../src/utils/create-bundler-option';
 import { pluginTimingsRecorderFor, summarizePluginTimings } from '../src/utils/plugin-timings';
+import { shouldEagerlyFreeOutputs } from '../src/utils/threadless-free';
 
 vi.mock('../src/binding.cjs', async () => {
   const { loadBinding } = await import('./src/load-binding');
@@ -37,11 +38,28 @@ function runTest(group: BindingMatchGroup): void {
   group.test(['entry.js']);
 }
 
-function runName(group: BindingMatchGroup): void {
+// One fake per `runName` call, like the native box per batch. On threadless WASI
+// the build-scoped registry releases each box through `dropInner()`.
+function fakeChunkingContext(): BindingChunkingContext & { drops: number } {
+  const box = {
+    drops: 0,
+    dropInner: () => {
+      box.drops++;
+      return { freed: true };
+    },
+    getModuleInfo: () => null,
+  };
+  return box;
+}
+
+function runName(
+  group: BindingMatchGroup,
+  box: BindingChunkingContext = fakeChunkingContext(),
+): void {
   if (typeof group.name !== 'function') {
     throw new Error('Expected a code-splitting name callback');
   }
-  group.name(['entry.js'], { getModuleInfo: () => null } as BindingChunkingContext);
+  group.name(['entry.js'], box);
 }
 
 afterEach(() => {
@@ -271,6 +289,25 @@ describe('code-splitting group timings', () => {
     );
 
     expect(warnings).toEqual([]);
+  });
+
+  it('releases each batch chunking-context box once', async () => {
+    const { bundlerOptions, releaseOptionBoxes } = await createBundlerOptions(
+      {},
+      { codeSplitting: { groups: [{ name: () => 'shared' }] } },
+      false,
+      true,
+    );
+    const [group] = getBindingGroups(bundlerOptions);
+    const first = fakeChunkingContext();
+    const second = fakeChunkingContext();
+    runName(group, first);
+    runName(group, second);
+    releaseOptionBoxes();
+
+    const expected = shouldEagerlyFreeOutputs() ? 1 : 0;
+    expect(first.drops).toBe(expected);
+    expect(second.drops).toBe(expected);
   });
 
   it('keeps one manualChunks row across repeated outputs', async () => {

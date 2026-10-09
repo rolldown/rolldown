@@ -68,9 +68,15 @@ pub fn closed(&self) -> bool {
 This is fundamentally different from `Bundler.closed`:
 
 - **`ClassicBundler.closed`** — User-facing API contract. "This build result is done, don't call write/generate again." Correct.
-- **`Bundler.closed`** — Internal hack. Exists to gate `closeBundle` calls, but `closeBundle` is a per-build concern that should live on `Bundle`. Being removed — see [rust-bundler.md](../rust-bundler/implementation.md).
+- **`Bundler.closed`** — Owner guard. `Bundler::close()` sets it, then `write`/`generate`/`scan` reject with "Bundler is closed" and a second `close()` is a no-op. `closeBundle` itself is per-build state on `BundleHandle`; see [rust-bundler](../rust-bundler/implementation.md), "Close mechanism".
 
-`ClassicBundler.close()` does not guard against a second call: it clones the last bundle handle, so every call runs `closeBundle` again. The JS side guarantees one call: `RolldownBuild.close()` in `packages/rolldown/src/api/rolldown/rolldown-build.ts` keeps the first close promise, and a repeated `close()` only waits for it (the first caller gets any error). Inside that first close every cleanup step runs exactly once, even when an earlier one fails: it stops the parallel-plugin workers, then always calls `BindingBundler.close()`, then releases the async runtime holder (`shutdownAsyncRuntime`), and only then rethrows a worker shutdown error. On wasm, once the last holder is gone, a second `BindingBundler.close()` would spawn onto the released runtime and trap.
+`close()` takes the last `BundleHandle` (`take`, not `clone`): a copy left on
+the struct would be freed only by the N-API finalizer, which never runs on
+threadless WASI. A second close therefore finds no handle and does not run
+`closeBundle` again. `closeBundle` runs under `catch_unwind`, so a panicking hook
+becomes an error.
+
+Because the handle is gone, a second native close resolves at once, before the first one's `closeBundle` ends. The JS side guarantees one call: `RolldownBuild.close()` in `packages/rolldown/src/api/rolldown/rolldown-build.ts` keeps the first close promise, and a repeated `close()` only waits for it (the first caller gets any error). Inside that first close every cleanup step runs exactly once, even when an earlier one fails: it stops the parallel-plugin workers, then always calls `BindingBundler.close()`, and only then rethrows a worker shutdown error.
 
 ## Related
 

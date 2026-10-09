@@ -29,6 +29,13 @@ jobs:
         with:
           persist-credentials: false
 
+      - uses: voidzero-dev/setup-vp@3754dd7dbdb32bd8f6d28b6043de13ad3a75f21f # v1.21.1
+        id: vp-setup
+        background: true
+        with:
+          version: '1.0.0'
+          cache: true
+
       - name: Setup Rust
         uses: oxc-project/setup-rust@3d6fb132fbe7cdcb66bf8ec193911c2945369d12 # v1.0.17
         with:
@@ -37,29 +44,31 @@ jobs:
           cache-key: debug-build-wasi
           save-cache: false
 
-      - uses: voidzero-dev/setup-vp@3754dd7dbdb32bd8f6d28b6043de13ad3a75f21f # v1.21.1
-        with:
-          version: '1.0.0'
-          cache: true
-
       - name: Add WASI target
         run: rustup target add wasm32-wasip1-threads
+
+      - wait: vp-setup
+
+      - name: Prepare browser test fixtures
+        env:
+          FIXTURE_SUITE: ${{ inputs.changed && 'all' || 'webcontainer' }}
+        run: vp run --filter browser-tests prepare-fixture "$FIXTURE_SUITE"
 
       # no browser download: the vitest config points Playwright at the runner's system Chrome
       - name: Browser Smoke Test
         if: ${{ inputs.changed }}
-        run: just test-browser
+        run: vp exec --filter browser-tests vitest run --project browser
 
       # plain Node, no WebContainer: the packed `rolldown` with no binding installed has to load
       # the packed WASI binding through webcontainer-fallback.cjs, the path vite.new takes
       - name: WebContainer Fallback Test
         if: ${{ inputs.changed }}
-        run: just test-webcontainer-fallback
+        run: vp exec --filter browser-tests vitest run --project webcontainer-fallback
 
       # opt-in only, and slower: it boots a WebContainer from StackBlitz's CDN
       - name: WebContainer Smoke Test
         if: ${{ inputs.webcontainer }}
-        run: just test-webcontainer
+        run: vp exec --filter browser-tests vitest run --project webcontainer
 
       - name: Upload failure screenshots
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1

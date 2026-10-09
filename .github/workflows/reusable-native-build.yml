@@ -31,18 +31,19 @@ jobs:
             RUSTUP_HOME,{{ DEV_DRIVE }}/.rustup
             PNPM_HOME,{{ DEV_DRIVE }}/.pnpm
 
-      - name: Setup Rust
-        uses: oxc-project/setup-rust@3d6fb132fbe7cdcb66bf8ec193911c2945369d12 # v1.0.17
-        with:
-          tools: just
-          cache-key: native-build
-          save-cache: ${{ github.ref_name == 'main' }}
-          target-dir: ${{ runner.os == 'Windows' && format('{0}/target', env.DEV_DRIVE) || '' }}
+      - parallel:
+          - name: Setup Rust
+            uses: oxc-project/setup-rust@3d6fb132fbe7cdcb66bf8ec193911c2945369d12 # v1.0.17
+            with:
+              tools: just
+              cache-key: native-build
+              save-cache: ${{ github.ref_name == 'main' }}
+              target-dir: ${{ runner.os == 'Windows' && format('{0}/target', env.DEV_DRIVE) || '' }}
 
-      - uses: voidzero-dev/setup-vp@3754dd7dbdb32bd8f6d28b6043de13ad3a75f21f # v1.21.1
-        with:
-          version: '1.0.0'
-          cache: true
+          - uses: voidzero-dev/setup-vp@3754dd7dbdb32bd8f6d28b6043de13ad3a75f21f # v1.21.1
+            with:
+              version: '1.0.0'
+              cache: true
 
       - name: Build Native Rolldown
         run: just build-rolldown

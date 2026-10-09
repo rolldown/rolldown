@@ -117,28 +117,34 @@ fn remap_tokens<const TRACK_NAMES: bool>(
   chain: &[(&oxc_sourcemap::SourceMap<'_>, Vec<&[Token]>, u32)],
   last_offset: u32,
 ) -> Box<[Token]> {
-  last_map
-    .get_source_view_tokens()
-    .map(|token| {
-      let unmapped_token =
-        || Token::new(token.get_dst_line(), token.get_dst_col(), 0, 0, None, None);
-      if token.get_source_id().is_none() {
-        return unmapped_token();
-      }
+  let source_view_tokens = last_map.get_source_view_tokens();
+  let mut remapped = Vec::with_capacity(source_view_tokens.size_hint().0);
+  let mut dst_line = None;
+  let mut has_mapping = false;
+  let mut is_mapped = false;
+  let mut leading_unmapped = None;
+
+  for token in source_view_tokens {
+    if dst_line != Some(token.get_dst_line()) {
+      dst_line = Some(token.get_dst_line());
+      has_mapping = false;
+      is_mapped = false;
+      leading_unmapped = None;
+    }
+
+    let unmapped_token = || Token::new(token.get_dst_line(), token.get_dst_col(), 0, 0, None, None);
+    let mapped_token = (|| {
+      token.get_source_id()?;
 
       let mut original_token = token;
       let mut name_id = token.get_name_id().map(|id| id + last_offset);
       for (sourcemap, lookup_table, offset) in chain {
-        let Some(traced) = sourcemap.lookup_source_view_token_approx(
+        let traced = sourcemap.lookup_source_view_token_approx(
           lookup_table,
           original_token.get_src_line(),
           original_token.get_src_col(),
-        ) else {
-          return unmapped_token();
-        };
-        if traced.get_source_id().is_none() {
-          return unmapped_token();
-        }
+        )?;
+        traced.get_source_id()?;
         if TRACK_NAMES {
           // Prefer the name from this (earlier) map; otherwise carry forward the downstream one.
           name_id = traced.get_name_id().map(|id| id + offset).or(name_id);
@@ -146,16 +152,41 @@ fn remap_tokens<const TRACK_NAMES: bool>(
         original_token = traced;
       }
 
-      Token::new(
+      Some(Token::new(
         token.get_dst_line(),
         token.get_dst_col(),
         original_token.get_src_line(),
         original_token.get_src_col(),
         original_token.get_source_id(),
         name_id,
-      )
-    })
-    .collect()
+      ))
+    })();
+
+    if let Some(mapped_token) = mapped_token {
+      if !has_mapping {
+        // Keep a leading unmapped segment when this line later becomes mapped. Approximate
+        // lookups clamp positions before the first segment, so dropping it would extend the
+        // first mapping backwards during another composition.
+        if let Some(leading_unmapped) = leading_unmapped.take() {
+          remapped.push(leading_unmapped);
+        }
+        has_mapping = true;
+      }
+      remapped.push(mapped_token);
+      is_mapped = true;
+    } else if is_mapped {
+      // One segment is enough to terminate the mapped range. Further misses on this line remain
+      // unmapped without additional tokens.
+      remapped.push(unmapped_token());
+      is_mapped = false;
+    } else if !has_mapping && leading_unmapped.is_none() {
+      // Defer this segment until the line produces a mapping. A wholly unmapped line needs no
+      // tokens, but a leading unmapped range before a later mapping must remain explicit.
+      leading_unmapped = Some(unmapped_token());
+    }
+  }
+
+  remapped.into_boxed_slice()
 }
 
 #[test]
@@ -334,6 +365,7 @@ fn test_collapse_sourcemaps_preserves_boundary_when_trace_has_no_mapping() {
     outer_builder.add_source_and_content("intermediate.js", "mapped\ngenerated\n");
   outer_builder.add_token(0, 0, 0, 0, Some(intermediate_source), None);
   outer_builder.add_token(0, 5, 1, 0, Some(intermediate_source), None);
+  outer_builder.add_token(0, 6, 1, 1, Some(intermediate_source), None);
   let outer_map = outer_builder.into_sourcemap().into_owned();
 
   let collapsed = collapse_sourcemaps(&[&detailed_map, &outer_map]);
@@ -343,6 +375,31 @@ fn test_collapse_sourcemaps_preserves_boundary_when_trace_has_no_mapping() {
   assert_eq!(collapsed.lookup_token(&lookup_table, 0, 4).unwrap().get_source_id(), Some(0));
   assert_eq!(collapsed.lookup_token(&lookup_table, 0, 5).unwrap().get_source_id(), None);
   assert_eq!(collapsed.lookup_token(&lookup_table, 0, 9).unwrap().get_source_id(), None);
+}
+
+#[test]
+fn test_collapse_sourcemaps_preserves_leading_unmapped_range_before_mapping() {
+  use oxc_sourcemap::SourceMapBuilder;
+
+  let mut detailed_builder = SourceMapBuilder::default();
+  let original_source = detailed_builder.add_source_and_content("original.js", "mapped\n");
+  detailed_builder.add_token(0, 0, 0, 0, None, None);
+  detailed_builder.add_token(0, 5, 0, 0, Some(original_source), None);
+  let detailed_map = detailed_builder.into_sourcemap().into_owned();
+
+  let mut outer_builder = SourceMapBuilder::default();
+  let intermediate_source =
+    outer_builder.add_source_and_content("intermediate.js", "unmapped mapped\n");
+  outer_builder.add_token(0, 0, 0, 0, Some(intermediate_source), None);
+  outer_builder.add_token(0, 5, 0, 5, Some(intermediate_source), None);
+  let outer_map = outer_builder.into_sourcemap().into_owned();
+
+  let collapsed = collapse_sourcemaps(&[&detailed_map, &outer_map]);
+  let lookup_table = collapsed.generate_lookup_table();
+
+  assert_eq!(collapsed.get_tokens().count(), 2);
+  assert_eq!(collapsed.lookup_token(&lookup_table, 0, 0).unwrap().get_source_id(), None);
+  assert_eq!(collapsed.lookup_token(&lookup_table, 0, 5).unwrap().get_source_id(), Some(0));
 }
 
 /// Test for https://github.com/rollup/rollup/issues/5955

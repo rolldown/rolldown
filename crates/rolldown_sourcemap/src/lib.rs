@@ -119,23 +119,25 @@ fn remap_tokens<const TRACK_NAMES: bool>(
 ) -> Box<[Token]> {
   last_map
     .get_source_view_tokens()
-    .filter_map(|token| {
+    .map(|token| {
       let unmapped_token =
         || Token::new(token.get_dst_line(), token.get_dst_col(), 0, 0, None, None);
       if token.get_source_id().is_none() {
-        return Some(unmapped_token());
+        return unmapped_token();
       }
 
       let mut original_token = token;
       let mut name_id = token.get_name_id().map(|id| id + last_offset);
       for (sourcemap, lookup_table, offset) in chain {
-        let traced = sourcemap.lookup_source_view_token_approx(
+        let Some(traced) = sourcemap.lookup_source_view_token_approx(
           lookup_table,
           original_token.get_src_line(),
           original_token.get_src_col(),
-        )?;
+        ) else {
+          return unmapped_token();
+        };
         if traced.get_source_id().is_none() {
-          return Some(unmapped_token());
+          return unmapped_token();
         }
         if TRACK_NAMES {
           // Prefer the name from this (earlier) map; otherwise carry forward the downstream one.
@@ -144,14 +146,14 @@ fn remap_tokens<const TRACK_NAMES: bool>(
         original_token = traced;
       }
 
-      Some(Token::new(
+      Token::new(
         token.get_dst_line(),
         token.get_dst_col(),
         original_token.get_src_line(),
         original_token.get_src_col(),
         original_token.get_source_id(),
         name_id,
-      ))
+      )
     })
     .collect()
 }
@@ -309,6 +311,32 @@ fn test_collapse_sourcemaps_preserves_an_explicitly_unmapped_intermediate_bounda
   let outer_map = outer_builder.into_sourcemap().into_owned();
 
   let collapsed = collapse_sourcemaps(&[&detailed_map, &intermediate_map, &outer_map]);
+  let lookup_table = collapsed.generate_lookup_table();
+
+  assert_eq!(collapsed.get_tokens().count(), 2);
+  assert_eq!(collapsed.lookup_token(&lookup_table, 0, 4).unwrap().get_source_id(), Some(0));
+  assert_eq!(collapsed.lookup_token(&lookup_table, 0, 5).unwrap().get_source_id(), None);
+  assert_eq!(collapsed.lookup_token(&lookup_table, 0, 9).unwrap().get_source_id(), None);
+}
+
+/// Test for https://github.com/vitejs/vite/issues/20721
+#[test]
+fn test_collapse_sourcemaps_preserves_boundary_when_trace_has_no_mapping() {
+  use oxc_sourcemap::SourceMapBuilder;
+
+  let mut detailed_builder = SourceMapBuilder::default();
+  let original_source = detailed_builder.add_source_and_content("original.js", "mapped\n");
+  detailed_builder.add_token(0, 0, 0, 0, Some(original_source), None);
+  let detailed_map = detailed_builder.into_sourcemap().into_owned();
+
+  let mut outer_builder = SourceMapBuilder::default();
+  let intermediate_source =
+    outer_builder.add_source_and_content("intermediate.js", "mapped\ngenerated\n");
+  outer_builder.add_token(0, 0, 0, 0, Some(intermediate_source), None);
+  outer_builder.add_token(0, 5, 1, 0, Some(intermediate_source), None);
+  let outer_map = outer_builder.into_sourcemap().into_owned();
+
+  let collapsed = collapse_sourcemaps(&[&detailed_map, &outer_map]);
   let lookup_table = collapsed.generate_lookup_table();
 
   assert_eq!(collapsed.get_tokens().count(), 2);

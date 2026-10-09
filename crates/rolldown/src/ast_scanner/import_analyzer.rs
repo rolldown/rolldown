@@ -12,7 +12,15 @@ use rolldown_error::BuildDiagnostic;
 use super::AstScanner;
 
 impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
-  pub fn check_import_assign(&mut self, ident: &IdentifierReference, symbol_id: SymbolId) {
+  /// `is_member_expr_recorded`: whether `ident` starts a member expression recorded as a
+  /// `MemberExprRef`. The link stage reports writes to its namespace members, because only it
+  /// knows whether the namespace exports the written name.
+  pub fn check_import_assign(
+    &mut self,
+    ident: &IdentifierReference,
+    symbol_id: SymbolId,
+    is_member_expr_recorded: bool,
+  ) {
     let symbol_flag = self.result.symbol_ref_db.scoping().symbol_flags(symbol_id);
     if symbol_flag.contains(SymbolFlags::Import) {
       let symbol_ref: SymbolRef = (self.immutable_ctx.idx, symbol_id).into();
@@ -48,7 +56,9 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
           }
         }
 
-        if let Some((span, name)) = self.get_span_if_namespace_specifier_updated() {
+        if !is_member_expr_recorded
+          && let Some((span, name)) = self.get_span_if_namespace_specifier_updated()
+        {
           // For namespace imports, get the actual imported name (the namespace identifier)
           let imported_name = self.result.symbol_ref_db.symbol_name(symbol_id);
           self.result.errors.push(BuildDiagnostic::assign_to_import(

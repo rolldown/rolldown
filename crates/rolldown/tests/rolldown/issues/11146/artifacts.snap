@@ -1,19 +1,36 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
 ---
-# Errors
+# warnings
 
 ## ASSIGN_TO_IMPORT
 
 ```text
 [ASSIGN_TO_IMPORT] Cannot assign to import 'FOO'
-    ╭─[ main.js:10:8 ]
+    ╭─[ main.js:11:7 ]
     │
-  2 │ import * as ns from './nested.js';
-    │             ─┬  
-    │              ╰── 'ns' is imported here
+  2 │ import { env } from './dynamic.js';
+    │          ─┬─  
+    │           ╰─── 'env' is imported here
     │ 
- 10 │ ns.sub.FOO = 'changed';
+ 11 │   env.FOO++;
+    │       ─┬─  
+    │        ╰─── Imports are immutable in JavaScript. To modify the value of this import, you must export a setter function in the imported file (e.g. 'setFoo') and then import and call that function here instead.
+────╯
+
+```
+
+## ASSIGN_TO_IMPORT
+
+```text
+[ASSIGN_TO_IMPORT] Cannot assign to import 'FOO'
+    ╭─[ main.js:14:8 ]
+    │
+  2 │ import { env } from './dynamic.js';
+    │          ─┬─  
+    │           ╰─── 'env' is imported here
+    │ 
+ 14 │   [env.FOO] = ['changed'];
     │        ─┬─  
     │         ╰─── Imports are immutable in JavaScript. To modify the value of this import, you must export a setter function in the imported file (e.g. 'setFoo') and then import and call that function here instead.
 ────╯
@@ -24,16 +41,16 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```text
 [ASSIGN_TO_IMPORT] Cannot assign to import 'FOO'
-   ╭─[ main.js:4:5 ]
-   │
- 1 │ import { env } from './dynamic.js';
-   │          ─┬─  
-   │           ╰─── 'env' is imported here
-   │ 
- 4 │ env.FOO = 'changed';
-   │     ─┬─  
-   │      ╰─── Imports are immutable in JavaScript. To modify the value of this import, you must export a setter function in the imported file (e.g. 'setFoo') and then import and call that function here instead.
-───╯
+    ╭─[ main.js:17:12 ]
+    │
+  2 │ import { env } from './dynamic.js';
+    │          ─┬─  
+    │           ╰─── 'env' is imported here
+    │ 
+ 17 │   for (env.FOO of ['changed']);
+    │            ─┬─  
+    │             ╰─── Imports are immutable in JavaScript. To modify the value of this import, you must export a setter function in the imported file (e.g. 'setFoo') and then import and call that function here instead.
+────╯
 
 ```
 
@@ -41,16 +58,16 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```text
 [ASSIGN_TO_IMPORT] Cannot assign to import 'FOO'
-   ╭─[ main.js:5:5 ]
-   │
- 1 │ import { env } from './dynamic.js';
-   │          ─┬─  
-   │           ╰─── 'env' is imported here
-   │ 
- 5 │ env.FOO++;
-   │     ─┬─  
-   │      ╰─── Imports are immutable in JavaScript. To modify the value of this import, you must export a setter function in the imported file (e.g. 'setFoo') and then import and call that function here instead.
-───╯
+    ╭─[ main.js:20:14 ]
+    │
+  2 │ import { env } from './dynamic.js';
+    │          ─┬─  
+    │           ╰─── 'env' is imported here
+    │ 
+ 20 │   delete env.FOO;
+    │              ─┬─  
+    │               ╰─── Imports are immutable in JavaScript. To modify the value of this import, you must export a setter function in the imported file (e.g. 'setFoo') and then import and call that function here instead.
+────╯
 
 ```
 
@@ -58,16 +75,16 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```text
 [ASSIGN_TO_IMPORT] Cannot assign to import 'FOO'
-   ╭─[ main.js:6:6 ]
-   │
- 1 │ import { env } from './dynamic.js';
-   │          ─┬─  
-   │           ╰─── 'env' is imported here
-   │ 
- 6 │ [env.FOO] = ['changed'];
-   │      ─┬─  
-   │       ╰─── Imports are immutable in JavaScript. To modify the value of this import, you must export a setter function in the imported file (e.g. 'setFoo') and then import and call that function here instead.
-───╯
+    ╭─[ main.js:23:15 ]
+    │
+  2 │ import { env } from './dynamic.js';
+    │          ─┬─  
+    │           ╰─── 'env' is imported here
+    │ 
+ 23 │   delete env?.FOO;
+    │               ─┬─  
+    │                ╰─── Imports are immutable in JavaScript. To modify the value of this import, you must export a setter function in the imported file (e.g. 'setFoo') and then import and call that function here instead.
+────╯
 
 ```
 
@@ -75,16 +92,16 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```text
 [ASSIGN_TO_IMPORT] Cannot assign to import 'FOO'
-   ╭─[ main.js:7:10 ]
-   │
- 1 │ import { env } from './dynamic.js';
-   │          ─┬─  
-   │           ╰─── 'env' is imported here
-   │ 
- 7 │ for (env.FOO of ['changed']);
-   │          ─┬─  
-   │           ╰─── Imports are immutable in JavaScript. To modify the value of this import, you must export a setter function in the imported file (e.g. 'setFoo') and then import and call that function here instead.
-───╯
+    ╭─[ main.js:26:10 ]
+    │
+  3 │ import * as ns from './nested.js';
+    │             ─┬  
+    │              ╰── 'ns' is imported here
+    │ 
+ 26 │   ns.sub.FOO = 'changed';
+    │          ─┬─  
+    │           ╰─── Imports are immutable in JavaScript. To modify the value of this import, you must export a setter function in the imported file (e.g. 'setFoo') and then import and call that function here instead.
+────╯
 
 ```
 
@@ -92,16 +109,16 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```text
 [ASSIGN_TO_IMPORT] Cannot assign to import 'FOO'
-   ╭─[ main.js:8:12 ]
-   │
- 1 │ import { env } from './dynamic.js';
-   │          ─┬─  
-   │           ╰─── 'env' is imported here
-   │ 
- 8 │ delete env.FOO;
-   │            ─┬─  
-   │             ╰─── Imports are immutable in JavaScript. To modify the value of this import, you must export a setter function in the imported file (e.g. 'setFoo') and then import and call that function here instead.
-───╯
+    ╭─[ main.js:29:10 ]
+    │
+  4 │ import * as server from './server.js';
+    │             ───┬──  
+    │                ╰──── 'server' is imported here
+    │ 
+ 29 │   server.FOO = 'changed';
+    │          ─┬─  
+    │           ╰─── Imports are immutable in JavaScript. To modify the value of this import, you must export a setter function in the imported file (e.g. 'setFoo') and then import and call that function here instead.
+────╯
 
 ```
 
@@ -109,15 +126,277 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```text
 [ASSIGN_TO_IMPORT] Cannot assign to import 'FOO'
-   ╭─[ main.js:9:13 ]
+    ╭─[ main.js:32:17 ]
+    │
+  4 │ import * as server from './server.js';
+    │             ───┬──  
+    │                ╰──── 'server' is imported here
+    │ 
+ 32 │   delete server.FOO;
+    │                 ─┬─  
+    │                  ╰─── Imports are immutable in JavaScript. To modify the value of this import, you must export a setter function in the imported file (e.g. 'setFoo') and then import and call that function here instead.
+────╯
+
+```
+
+## ASSIGN_TO_IMPORT
+
+```text
+[ASSIGN_TO_IMPORT] Cannot assign to import 'FOO'
+   ╭─[ main.js:8:7 ]
    │
- 1 │ import { env } from './dynamic.js';
+ 2 │ import { env } from './dynamic.js';
    │          ─┬─  
    │           ╰─── 'env' is imported here
    │ 
- 9 │ delete env?.FOO;
-   │             ─┬─  
-   │              ╰─── Imports are immutable in JavaScript. To modify the value of this import, you must export a setter function in the imported file (e.g. 'setFoo') and then import and call that function here instead.
+ 8 │   env.FOO = 'changed';
+   │       ─┬─  
+   │        ╰─── Imports are immutable in JavaScript. To modify the value of this import, you must export a setter function in the imported file (e.g. 'setFoo') and then import and call that function here instead.
 ───╯
+
+```
+
+# Assets
+
+## main.js
+
+```js
+import assert from "node:assert";
+// HIDDEN [\0rolldown/runtime.js]
+//#region server.js
+var server_exports = /* @__PURE__ */ __exportAll({ FOO: () => "foo" });
+//#endregion
+//#region main.js
+assert.throws(() => {
+	server_exports.FOO = "changed";
+}, TypeError);
+assert.throws(() => {
+	server_exports.FOO++;
+}, TypeError);
+assert.throws(() => {
+	[server_exports.FOO] = ["changed"];
+}, TypeError);
+assert.throws(() => {
+	for (server_exports.FOO of ["changed"]);
+}, TypeError);
+assert.throws(() => {
+	delete server_exports.FOO;
+}, TypeError);
+assert.throws(() => {
+	delete server_exports?.FOO;
+}, TypeError);
+assert.throws(() => {
+	server_exports.FOO = "changed";
+}, TypeError);
+assert.throws(() => {
+	server_exports.FOO = "changed";
+}, TypeError);
+assert.throws(() => {
+	delete server_exports.FOO;
+}, TypeError);
+assert.strictEqual("foo", "foo");
+//#endregion
+
+```
+
+# Variant: [format: Cjs] [strict: Always]
+
+## warnings
+
+### ASSIGN_TO_IMPORT
+
+```text
+[ASSIGN_TO_IMPORT] Cannot assign to import 'FOO'
+    ╭─[ main.js:11:7 ]
+    │
+  2 │ import { env } from './dynamic.js';
+    │          ─┬─  
+    │           ╰─── 'env' is imported here
+    │ 
+ 11 │   env.FOO++;
+    │       ─┬─  
+    │        ╰─── Imports are immutable in JavaScript. To modify the value of this import, you must export a setter function in the imported file (e.g. 'setFoo') and then import and call that function here instead.
+────╯
+
+```
+
+### ASSIGN_TO_IMPORT
+
+```text
+[ASSIGN_TO_IMPORT] Cannot assign to import 'FOO'
+    ╭─[ main.js:14:8 ]
+    │
+  2 │ import { env } from './dynamic.js';
+    │          ─┬─  
+    │           ╰─── 'env' is imported here
+    │ 
+ 14 │   [env.FOO] = ['changed'];
+    │        ─┬─  
+    │         ╰─── Imports are immutable in JavaScript. To modify the value of this import, you must export a setter function in the imported file (e.g. 'setFoo') and then import and call that function here instead.
+────╯
+
+```
+
+### ASSIGN_TO_IMPORT
+
+```text
+[ASSIGN_TO_IMPORT] Cannot assign to import 'FOO'
+    ╭─[ main.js:17:12 ]
+    │
+  2 │ import { env } from './dynamic.js';
+    │          ─┬─  
+    │           ╰─── 'env' is imported here
+    │ 
+ 17 │   for (env.FOO of ['changed']);
+    │            ─┬─  
+    │             ╰─── Imports are immutable in JavaScript. To modify the value of this import, you must export a setter function in the imported file (e.g. 'setFoo') and then import and call that function here instead.
+────╯
+
+```
+
+### ASSIGN_TO_IMPORT
+
+```text
+[ASSIGN_TO_IMPORT] Cannot assign to import 'FOO'
+    ╭─[ main.js:20:14 ]
+    │
+  2 │ import { env } from './dynamic.js';
+    │          ─┬─  
+    │           ╰─── 'env' is imported here
+    │ 
+ 20 │   delete env.FOO;
+    │              ─┬─  
+    │               ╰─── Imports are immutable in JavaScript. To modify the value of this import, you must export a setter function in the imported file (e.g. 'setFoo') and then import and call that function here instead.
+────╯
+
+```
+
+### ASSIGN_TO_IMPORT
+
+```text
+[ASSIGN_TO_IMPORT] Cannot assign to import 'FOO'
+    ╭─[ main.js:23:15 ]
+    │
+  2 │ import { env } from './dynamic.js';
+    │          ─┬─  
+    │           ╰─── 'env' is imported here
+    │ 
+ 23 │   delete env?.FOO;
+    │               ─┬─  
+    │                ╰─── Imports are immutable in JavaScript. To modify the value of this import, you must export a setter function in the imported file (e.g. 'setFoo') and then import and call that function here instead.
+────╯
+
+```
+
+### ASSIGN_TO_IMPORT
+
+```text
+[ASSIGN_TO_IMPORT] Cannot assign to import 'FOO'
+    ╭─[ main.js:26:10 ]
+    │
+  3 │ import * as ns from './nested.js';
+    │             ─┬  
+    │              ╰── 'ns' is imported here
+    │ 
+ 26 │   ns.sub.FOO = 'changed';
+    │          ─┬─  
+    │           ╰─── Imports are immutable in JavaScript. To modify the value of this import, you must export a setter function in the imported file (e.g. 'setFoo') and then import and call that function here instead.
+────╯
+
+```
+
+### ASSIGN_TO_IMPORT
+
+```text
+[ASSIGN_TO_IMPORT] Cannot assign to import 'FOO'
+    ╭─[ main.js:29:10 ]
+    │
+  4 │ import * as server from './server.js';
+    │             ───┬──  
+    │                ╰──── 'server' is imported here
+    │ 
+ 29 │   server.FOO = 'changed';
+    │          ─┬─  
+    │           ╰─── Imports are immutable in JavaScript. To modify the value of this import, you must export a setter function in the imported file (e.g. 'setFoo') and then import and call that function here instead.
+────╯
+
+```
+
+### ASSIGN_TO_IMPORT
+
+```text
+[ASSIGN_TO_IMPORT] Cannot assign to import 'FOO'
+    ╭─[ main.js:32:17 ]
+    │
+  4 │ import * as server from './server.js';
+    │             ───┬──  
+    │                ╰──── 'server' is imported here
+    │ 
+ 32 │   delete server.FOO;
+    │                 ─┬─  
+    │                  ╰─── Imports are immutable in JavaScript. To modify the value of this import, you must export a setter function in the imported file (e.g. 'setFoo') and then import and call that function here instead.
+────╯
+
+```
+
+### ASSIGN_TO_IMPORT
+
+```text
+[ASSIGN_TO_IMPORT] Cannot assign to import 'FOO'
+   ╭─[ main.js:8:7 ]
+   │
+ 2 │ import { env } from './dynamic.js';
+   │          ─┬─  
+   │           ╰─── 'env' is imported here
+   │ 
+ 8 │   env.FOO = 'changed';
+   │       ─┬─  
+   │        ╰─── Imports are immutable in JavaScript. To modify the value of this import, you must export a setter function in the imported file (e.g. 'setFoo') and then import and call that function here instead.
+───╯
+
+```
+
+## Assets
+
+### main.js
+
+```js
+"use strict";
+// HIDDEN [\0rolldown/runtime.js]
+let node_assert = require("node:assert");
+node_assert = __toESM(node_assert);
+//#region server.js
+var server_exports = /* @__PURE__ */ __exportAll({ FOO: () => "foo" });
+//#endregion
+//#region main.js
+node_assert.default.throws(() => {
+	server_exports.FOO = "changed";
+}, TypeError);
+node_assert.default.throws(() => {
+	server_exports.FOO++;
+}, TypeError);
+node_assert.default.throws(() => {
+	[server_exports.FOO] = ["changed"];
+}, TypeError);
+node_assert.default.throws(() => {
+	for (server_exports.FOO of ["changed"]);
+}, TypeError);
+node_assert.default.throws(() => {
+	delete server_exports.FOO;
+}, TypeError);
+node_assert.default.throws(() => {
+	delete server_exports?.FOO;
+}, TypeError);
+node_assert.default.throws(() => {
+	server_exports.FOO = "changed";
+}, TypeError);
+node_assert.default.throws(() => {
+	server_exports.FOO = "changed";
+}, TypeError);
+node_assert.default.throws(() => {
+	delete server_exports.FOO;
+}, TypeError);
+node_assert.default.strictEqual("foo", "foo");
+//#endregion
 
 ```

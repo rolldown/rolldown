@@ -1,0 +1,18 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+import assert from "node:assert";
+//#region data.json
+var data_default = { other: 2 };
+//#endregion
+//#region main.js
+assert.strictEqual(delete data_default?.other, true);
+assert.strictEqual(data_default.other, void 0);
+//#endregion
+
+```

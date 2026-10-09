@@ -8,9 +8,9 @@ use oxc_str::CompactStr;
 // if we want more enhancements related to exports.
 use rolldown_common::{
   EcmaModuleAstUsage, ExportsKind, ImportRecordIdx, IndexModules, MemberExprObjectReferencedType,
-  MemberExprRefResolution, Module, ModuleIdx, ModuleType, NamespaceAlias, NormalModule,
-  OutputFormat, ResolvedExport, Specifier, StmtInfoIdx, StmtInfos, SymbolOrMemberExprRef,
-  SymbolRef, SymbolRefDb, SymbolRefFlags,
+  MemberExprRef, MemberExprRefResolution, MemberExprWriteKind, Module, ModuleIdx, ModuleType,
+  NamespaceAlias, NormalModule, OutputFormat, ResolvedExport, Specifier, StmtInfoIdx, StmtInfos,
+  SymbolOrMemberExprRef, SymbolRef, SymbolRefDb, SymbolRefFlags,
 };
 use rolldown_error::{
   AmbiguousExternalNamespaceModule, BuildDiagnostic, Diagnostics, EventKindSwitcher,
@@ -33,7 +33,7 @@ use rustc_hash::{FxHashMap, FxHashSet};
 use crate::{
   SharedOptions,
   types::{
-    linking_metadata::LinkingMetadataVec,
+    linking_metadata::{LinkingMetadata, LinkingMetadataVec},
     member_read_star_reexport_path::MemberReadStarReexportPath,
   },
 };
@@ -726,7 +726,7 @@ impl LinkStage<'_> {
     side_effects_modules: &FxHashSet<ModuleIdx>,
     normal_symbol_exports_chain_map: &FxHashMap<SymbolRef, Vec<SymbolRef>>,
   ) {
-    let warnings = append_only_vec::AppendOnlyVec::new();
+    let diagnostics = append_only_vec::AppendOnlyVec::new();
     // A JSON default object whose `data.key` accesses get rewritten to the statically split
     // per-key exports must stay un-split once it is mutated or escapes (see
     // `collect_non_splittable_json_defaults`). Such a mutation/escape in one module invalidates
@@ -818,6 +818,18 @@ impl LinkStage<'_> {
                   let prop = &member_expr_ref.prop_and_span_list[cursor];
                   let name = &prop.name;
                   let meta = &self.metas[canonical_ref_owner.idx];
+                  // Stop before the written prop: the finalizer cannot write its bare binding into a
+                  // member write target.
+                  if let Some(error) = namespace_member_write_error(
+                    module,
+                    member_expr_ref,
+                    cursor,
+                    meta,
+                    &self.symbols,
+                  ) {
+                    diagnostics.push(error);
+                    break;
+                  }
                   let export_symbol = meta.resolved_exports.get(name).and_then(|resolved_export| {
                     (!resolved_export.came_from_commonjs).then_some(resolved_export)
                   });
@@ -841,7 +853,7 @@ impl LinkStage<'_> {
                     if !self.metas[canonical_ref_owner.idx].has_dynamic_exports
                       && !is_json_import_ns
                     {
-                      warnings.push(
+                      diagnostics.push(
                         BuildDiagnostic::import_is_undefined(
                           module.id.as_arc_str().clone(),
                           module.source.clone(),
@@ -1060,7 +1072,7 @@ impl LinkStage<'_> {
       .collect::<Vec<_>>();
 
     debug_assert_eq!(self.metas.len(), resolved_meta_data.len());
-    self.diagnostics.extend(warnings);
+    self.diagnostics.extend(diagnostics);
     // Remove CJS exported symbols that are written to by importers from the constant map
     // to prevent incorrect inlining of mutated values.
     // First, collect statically-known written symbols gathered during resolution above.
@@ -1871,4 +1883,41 @@ fn collect_star_reexport_path(
     return;
   };
   collect_star_reexport_path(importee_idx, &next_export_name, modules, metas, path, visited);
+}
+
+/// Returns the `ASSIGN_TO_IMPORT` error when the prop at `cursor` is the target of a namespace
+/// member write (`ns.foo = 1`). The scanner reports this only when `ns` comes from `import * as`.
+#[inline]
+fn namespace_member_write_error(
+  module: &NormalModule,
+  member_expr_ref: &MemberExprRef,
+  cursor: usize,
+  meta: &LinkingMetadata,
+  symbols: &SymbolRefDb,
+) -> Option<BuildDiagnostic> {
+  if cursor + 1 != member_expr_ref.prop_and_span_list.len() {
+    return None;
+  }
+  let prop = &member_expr_ref.prop_and_span_list[cursor];
+  match member_expr_ref.write_target? {
+    MemberExprWriteKind::Assign => {}
+    // Deleting a name that the namespace does not export is legal and returns `true`, so let the
+    // caller handle `delete ns.missing` like a read of a missing export.
+    MemberExprWriteKind::Delete => {
+      let is_exported =
+        meta.resolved_exports.get(&prop.name).is_some_and(|export| !export.came_from_commonjs)
+          && meta.sorted_and_non_ambiguous_resolved_exports.contains_key(&prop.name);
+      if !is_exported {
+        return None;
+      }
+    }
+  }
+  Some(BuildDiagnostic::assign_to_import(
+    module.id.as_arc_str().clone(),
+    module.source.clone(),
+    prop.span,
+    ArcStr::from(prop.name.as_str()),
+    module.named_imports.get(&member_expr_ref.object_ref).map(|import| import.span_imported),
+    Some(ArcStr::from(member_expr_ref.object_ref.name(symbols))),
+  ))
 }

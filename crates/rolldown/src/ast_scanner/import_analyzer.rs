@@ -6,7 +6,7 @@ use oxc::{
   semantic::{SymbolFlags, SymbolId},
   span::Span,
 };
-use rolldown_common::{Specifier, SymbolRef};
+use rolldown_common::{MemberExprWriteKind, Specifier, SymbolRef};
 use rolldown_error::BuildDiagnostic;
 
 use super::AstScanner;
@@ -77,20 +77,31 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
     }
   }
 
+  /// How the member expression at `visit_path[member_idx]` is written when it is the target of an
+  /// assignment or a `delete`. `None` when it is only an object on the way to a deeper target
+  /// (`ns.a[k] = 1`), or is not written.
+  pub fn member_expr_write_kind(&self, member_idx: usize) -> Option<MemberExprWriteKind> {
+    let member_expr_kind =
+      self.visit_path.get(member_idx).and_then(AstKind::as_member_expression_kind)?;
+    let ancestor =
+      |depth: usize| member_idx.checked_sub(depth).and_then(|i| self.visit_path.get(i));
+    let parent_kind = ancestor(1)?;
+    let is_unary_expression_with_delete_operator = |kind: &AstKind| matches!(kind, AstKind::UnaryExpression(expr) if expr.operator == UnaryOperator::Delete);
+    if member_expr_kind.is_assigned_to_in_parent(parent_kind) {
+      return Some(MemberExprWriteKind::Assign);
+    }
+    // delete namespace.module
+    let is_deleted = is_unary_expression_with_delete_operator(parent_kind)
+      // delete namespace?.module
+      || matches!(parent_kind, AstKind::ChainExpression(_) if ancestor(2).is_some_and(is_unary_expression_with_delete_operator));
+    is_deleted.then_some(MemberExprWriteKind::Delete)
+  }
+
   pub fn get_span_if_namespace_specifier_updated(&self) -> Option<(Span, &'ast str)> {
     let ancestor_cursor = self.visit_path.len() - 1;
     let parent_node = self.visit_path.get(ancestor_cursor)?;
     if let Some(member_expr_kind) = parent_node.as_member_expression_kind() {
-      let parent_parent_kind = self.visit_path.get(ancestor_cursor - 1)?;
-      let is_unary_expression_with_delete_operator = |kind: &AstKind| matches!(kind, AstKind::UnaryExpression(expr) if expr.operator == UnaryOperator::Delete);
-      if member_expr_kind.is_assigned_to_in_parent(parent_parent_kind)
-        // delete namespace.module
-        || is_unary_expression_with_delete_operator(parent_parent_kind)
-        // delete namespace?.module
-        || matches!(parent_parent_kind, AstKind::ChainExpression(_) if self.visit_path.get(ancestor_cursor - 2).is_some_and(|item| {
-          is_unary_expression_with_delete_operator(item)
-        }))
-      {
+      if self.member_expr_write_kind(ancestor_cursor).is_some() {
         return match member_expr_kind {
           MemberExpressionKind::Computed(expr) => match &expr.expression {
             Expression::StringLiteral(lit) => Some((lit.span, lit.value.as_str())),

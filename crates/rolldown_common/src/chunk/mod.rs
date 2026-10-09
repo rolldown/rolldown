@@ -9,7 +9,8 @@ use crate::{
   NormalModule, NormalizedBundlerOptions, OutputExports, PreserveEntrySignatures,
   RenderedConcatenatedModuleParts, RollupPreRenderedChunk, RuntimeHelper, SymbolRef,
   chunk::types::{
-    chunk_debug_info::ChunkDebugInfo, chunk_reason_type::ChunkReasonType, module_group::ModuleGroup,
+    chunk_debug_info::ChunkDebugInfo, chunk_reason_type::ChunkReasonType,
+    entry_level_external::EntryLevelExternal, module_group::ModuleGroup,
   },
 };
 pub mod chunk_table;
@@ -104,8 +105,8 @@ pub struct Chunk {
   pub chunk_reason_type: Box<ChunkReasonType>,
   pub preserve_entry_signature: Option<PreserveEntrySignatures>,
   pub depended_runtime_helper: RuntimeHelper,
-  /// related to [`crate::types::import_record::ImportRecordMeta::EntryLevelExternal`]
-  pub entry_level_external_module_idx: Vec<ModuleIdx>,
+  /// The externals that this entry chunk re-exports at entry level, sorted by exec order.
+  pub entry_level_externals: Vec<EntryLevelExternal>,
   pub insert_map: FxHashMap<ModuleIdx, Vec<(ModuleIdx, ImportRecordIdx)>>,
   pub remove_map: FxHashMap<ModuleIdx, Vec<ImportRecordIdx>>,
   pub transformed_parts_rendered: FxIndexMap<(ModuleIdx, ImportRecordIdx), String>,

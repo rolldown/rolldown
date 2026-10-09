@@ -1,7 +1,7 @@
 use rolldown_common::{
-  DeclaredSymbols, EntryPoint, ExportsKind, ImportRecordMeta, ModuleIdx, OutputFormat,
-  PreserveEntrySignatures, SharedNormalizedBundlerOptions, StmtInfo, StmtInfoMeta, TaggedSymbolRef,
-  WrapKind, dynamic_import_usage::DynamicImportExportsUsage,
+  DeclaredSymbols, EntryPoint, ExportsKind, ModuleIdx, OutputFormat, PreserveEntrySignatures,
+  SharedNormalizedBundlerOptions, StmtInfo, StmtInfoMeta, TaggedSymbolRef, WrapKind,
+  dynamic_import_usage::DynamicImportExportsUsage,
 };
 use rustc_hash::{FxHashMap, FxHashSet};
 use smallvec::smallvec;
@@ -103,13 +103,9 @@ impl LinkStage<'_> {
           match self.options.format {
             OutputFormat::Esm => {
               meta.star_exports_from_external_modules.iter().copied().for_each(|rec_idx| {
-                let rec = &ecma_module.import_records[rec_idx];
-                if rec.meta.contains(ImportRecordMeta::EntryLevelExternal) {
-                  return;
-                }
-                referenced_symbols.push(rec.namespace_ref.into());
-                declared_symbols
-                  .push(TaggedSymbolRef::normal(ecma_module.import_records[rec_idx].namespace_ref));
+                let namespace_ref = ecma_module.import_records[rec_idx].namespace_ref;
+                referenced_symbols.push(namespace_ref.into());
+                declared_symbols.push(TaggedSymbolRef::normal(namespace_ref));
               });
             }
             OutputFormat::Cjs | OutputFormat::Iife | OutputFormat::Umd => {}

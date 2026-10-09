@@ -866,7 +866,7 @@ impl GenerateStage<'_> {
           // chunk-level `export *`; CJS-like formats would replace a deduplicated `Object.keys`
           // merge with per-record `__reExport` calls (which also differ for primitive exports).
           // The chunk fact includes direct and transitive star chains, so keep either shape.
-          && chunk_graph.chunk_table[entry_chunk_idx].entry_level_external_module_idx.is_empty()
+          && chunk_graph.chunk_table[entry_chunk_idx].entry_level_externals.is_empty()
           && !self.order_wrap_host_can_expose_then_export(
             chunk_graph,
             entry_chunk_idx,

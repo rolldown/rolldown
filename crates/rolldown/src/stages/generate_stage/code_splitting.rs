@@ -19,11 +19,11 @@ use arcstr::ArcStr;
 use itertools::Itertools;
 use oxc_index::{IndexVec, index_vec};
 use rolldown_common::{
-  Chunk, ChunkIdx, ChunkKind, ChunkMeta, EntryPointKind, ExportsKind, ImportKind, ImportRecordIdx,
-  ImportRecordMeta, IndexModules, Module, ModuleId, ModuleIdx, ModuleNamespaceIncludedReason,
-  ModuleTag, ModuleTagBitSet, ModuleTagRegistry, ModuleType, PostChunkOptimizationOperation,
-  PreserveEntrySignatures, RetainedExportSymbols, SymbolRef, UsedSymbolRefs, UsedSymbolRefsBuilder,
-  WrapKind,
+  Chunk, ChunkIdx, ChunkKind, ChunkMeta, EntryLevelExternal, EntryPointKind, ExportsKind,
+  ImportKind, ImportRecordIdx, ImportRecordMeta, IndexModules, Module, ModuleId, ModuleIdx,
+  ModuleNamespaceIncludedReason, ModuleTag, ModuleTagBitSet, ModuleTagRegistry, ModuleType,
+  PostChunkOptimizationOperation, PreserveEntrySignatures, RetainedExportSymbols, SymbolRef,
+  UsedSymbolRefs, UsedSymbolRefsBuilder, WrapKind,
 };
 use rolldown_error::BuildResult;
 use rolldown_std_utils::PathBufExt as _;
@@ -668,89 +668,95 @@ impl GenerateStage<'_> {
     self.link_output.retained_export_symbols = retained;
   }
 
-  /// Find all entry level external modules, and re propagate `has_dynamic_exports` for affected modules.
+  /// Rebuilds `Chunk::entry_level_externals` for each live entry chunk, and
+  /// `ChunkGraph::entry_level_star_records`. Then it re-propagates `has_dynamic_exports` for the
+  /// modules whose entry-level star records changed.
+  /// See internal-docs/external-star-exports/implementation.md.
   pub(super) fn find_entry_level_external_module(&mut self, chunk_graph: &mut ChunkGraph) {
+    let previous_records = std::mem::take(&mut chunk_graph.entry_level_star_records);
     for chunk in chunk_graph.chunk_table.iter_mut() {
-      chunk.entry_level_external_module_idx.clear();
+      chunk.entry_level_externals.clear();
     }
 
-    let module_to_entry_level_external_rec_list_maps = chunk_graph
+    let module_table = &self.link_output.module_table;
+    let graph = &*chunk_graph;
+    // The walk follows the `export *` edges from each live entry module, in breadth-first order.
+    // The entry chunk re-exports at entry level each external that the walk reaches.
+    let walks = graph
       .chunk_table
       .par_iter_enumerated()
-      .filter_map(|(idx, chunk)| {
+      .filter_map(|(chunk_idx, chunk)| {
         let ChunkKind::EntryPoint { module, .. } = &chunk.kind else {
           return None;
         };
-        let mut q = VecDeque::from_iter([*module]);
+        if !graph.chunk_is_live(chunk_idx) {
+          return None;
+        }
+        let mut queue = VecDeque::from([*module]);
         let mut visited = FxHashSet::default();
-        let mut entry_external_module_map: FxHashMap<ModuleIdx, Vec<ImportRecordIdx>> =
+        let mut records: Vec<(ModuleIdx, ImportRecordIdx)> = vec![];
+        // Maps each external to its first record that has a `with` clause.
+        let mut externals: FxHashMap<ModuleIdx, Option<(ModuleIdx, ImportRecordIdx)>> =
           FxHashMap::default();
-        while let Some(module_idx) = q.pop_front() {
+        while let Some(module_idx) = queue.pop_front() {
           if !visited.insert(module_idx) {
             continue;
           }
-          let Module::Normal(module) = &self.link_output.module_table[module_idx] else {
-            // In theory we will not append external module to `q`.
+          let Module::Normal(module) = &module_table[module_idx] else {
             continue;
           };
-          module
-            .import_records
-            .iter_enumerated()
-            .filter_map(|(idx, rec)| rec.resolved_module.map(|module_idx| (idx, rec, module_idx)))
-            .for_each(|(idx, rec, resolved_module_idx)| {
-              if !rec.meta.contains(ImportRecordMeta::IsExportStar) {
-                return;
-              }
-              match &self.link_output.module_table[resolved_module_idx] {
-                Module::Normal(_) => {
-                  q.push_back(resolved_module_idx);
-                }
-                Module::External(_) => {
-                  entry_external_module_map.entry(module_idx).or_default().push(idx);
-                }
-              }
-            });
-        }
-        (!entry_external_module_map.is_empty()).then_some((idx, entry_external_module_map))
-      })
-      .collect::<Vec<(ChunkIdx, FxHashMap<ModuleIdx, Vec<ImportRecordIdx>>)>>();
-    let mut invalidated_modules = FxHashSet::default();
-    for (chunk_idx, entry_external_module_map) in module_to_entry_level_external_rec_list_maps {
-      let mut entry_level_external_modules = FxHashSet::default();
-      for (module_idx, rec_list) in entry_external_module_map {
-        let Some(module) = self.link_output.module_table[module_idx].as_normal_mut() else {
-          continue;
-        };
-        // If a module namespace is not included due to reexport a entry level external module, we
-        // can't do any further optimization. e.g.
-        // ```js
-        // // index.js
-        // import * as ns from './lib.js';
-        // export {ns}
-        // // lib.js
-        // export * from 'external'
-        // ```
-        // since the `ns` is exported from entry module, it(namespace object) needs to include all exported symbol
-        // from external module.
-        for rec_idx in rec_list {
-          let rec = &mut module.import_records[rec_idx];
-          if let Some(module_idx) = rec.resolved_module {
-            rec.meta.insert(ImportRecordMeta::EntryLevelExternal);
-            entry_level_external_modules.insert(module_idx);
+          for (rec_idx, rec) in module.import_records.iter_enumerated() {
+            if !rec.meta.contains(ImportRecordMeta::IsExportStar) {
+              continue;
+            }
+            let Some(importee_idx) = rec.resolved_module else {
+              continue;
+            };
+            if module_table[importee_idx].is_normal() {
+              queue.push_back(importee_idx);
+              continue;
+            }
+            records.push((module_idx, rec_idx));
+            let attribute_record = externals.entry(importee_idx).or_default();
+            if attribute_record.is_none() && module.import_attribute_map.contains_key(&rec_idx) {
+              *attribute_record = Some((module_idx, rec_idx));
+            }
           }
         }
+        (!records.is_empty()).then_some((chunk_idx, records, externals))
+      })
+      .collect::<Vec<_>>();
 
-        if !self.link_output.metas[module_idx]
+    for (chunk_idx, records, externals) in walks {
+      let mut externals = externals
+        .into_iter()
+        .map(|(external_idx, attribute_record)| EntryLevelExternal {
+          external_idx,
+          attribute_record,
+        })
+        .collect_vec();
+      // Each statically imported external has a different exec order, so the order of the hash
+      // map does not change the result.
+      externals.sort_unstable_by_key(|item| module_table[item.external_idx].exec_order());
+      chunk_graph.chunk_table[chunk_idx].entry_level_externals = externals;
+      chunk_graph.entry_level_star_records.extend(records);
+    }
+
+    // The seeds are the modules with an entry-level star record from this walk or from the
+    // previous walk. Thus a module whose record is no longer at entry level gets its dynamic
+    // exports back. A module with an observed namespace (`Unknown`) still merges the external at
+    // runtime. Thus it stays dynamic, and it is not a seed.
+    let mut invalidated_modules: FxHashSet<ModuleIdx> = chunk_graph
+      .entry_level_star_records
+      .iter()
+      .chain(&previous_records)
+      .map(|(module_idx, _)| *module_idx)
+      .filter(|module_idx| {
+        !self.link_output.metas[*module_idx]
           .module_namespace_included_reason
           .contains(ModuleNamespaceIncludedReason::Unknown)
-        {
-          invalidated_modules.insert(module.idx);
-        }
-      }
-      let mut vec = entry_level_external_modules.into_iter().collect_vec();
-      vec.sort_unstable_by_key(|idx| self.link_output.module_table[*idx].exec_order());
-      chunk_graph.chunk_table[chunk_idx].entry_level_external_module_idx = vec;
-    }
+      })
+      .collect();
     // Re-propagate `meta.has_dynamic_exports` for affected modules: the seeds (modules whose
     // external star re-exports were just flattened) plus every transitive importer, since any
     // module whose own star chain passes through a seed derived its flag from the seed's
@@ -778,6 +784,7 @@ impl GenerateStage<'_> {
         module_idx,
         &self.link_output.module_table,
         &mut self.link_output.metas,
+        &chunk_graph.entry_level_star_records,
         &mut visited,
         &mut invalidated_modules,
       );
@@ -1299,6 +1306,7 @@ fn propagate_has_dynamic_exports(
   target: ModuleIdx,
   modules: &IndexModules,
   linking_infos: &mut LinkingMetadataVec,
+  entry_level_star_records: &FxHashSet<(ModuleIdx, ImportRecordIdx)>,
   visited_modules: &mut FxHashSet<ModuleIdx>,
   invalidate_modules: &mut FxHashSet<ModuleIdx>,
 ) -> bool {
@@ -1314,19 +1322,22 @@ fn propagate_has_dynamic_exports(
       } else {
         module
           .import_records
-          .iter()
-          .filter_map(|rec| rec.resolved_module.map(|module_idx| (rec, module_idx)))
-          .any(|(rec, module_idx)| {
+          .iter_enumerated()
+          .filter_map(|(rec_idx, rec)| {
+            rec.resolved_module.map(|module_idx| (rec_idx, rec, module_idx))
+          })
+          .any(|(rec_idx, rec, module_idx)| {
             if module_idx == target || !rec.meta.contains(ImportRecordMeta::IsExportStar) {
               return false;
             }
-            if rec.meta.contains(ImportRecordMeta::EntryLevelExternal) {
+            if entry_level_star_records.contains(&(target, rec_idx)) {
               return false;
             }
             propagate_has_dynamic_exports(
               module_idx,
               modules,
               linking_infos,
+              entry_level_star_records,
               visited_modules,
               invalidate_modules,
             )

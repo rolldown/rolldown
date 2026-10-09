@@ -1162,11 +1162,10 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
           let re_export_name = self.canonical_name_for_runtime("__reExport");
           let stmts = export_all_externals_rec_ids.iter().copied().flat_map(|idx| {
             let rec = &self.ctx.module.import_records[idx];
-            if !self
-              .ctx
-              .linking_info
-              .ns_star_external_re_export_emitted(rec.meta, self.ctx.options.format)
-            {
+            if !self.ctx.linking_info.ns_star_external_re_export_emitted(
+              self.ctx.chunk_graph.is_entry_level_star_record(self.ctx.module.idx, idx),
+              self.ctx.options.format,
+            ) {
               return vec![];
             }
             // importee_exports

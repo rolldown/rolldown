@@ -214,6 +214,16 @@ imports even when forwarding work is consumer-local, so the empty-barrel shortcu
 Entry activation includes the retained forwarded targets followed by the mixed module's local
 initializer, including activation at a collapsed dynamic-entry call site.
 
+Monolithic initialization also participates in pre-chunk reachability. A binding flattened to its
+defining module can leave an initializer dependency absent from `load_dependencies`; registering
+that dependency after placement imports whichever lazy entry happens to host the target. The
+pre-chunk pass uses Register's included-record gate and the final metadata pass's excluded-statement
+collector to add the retained targets to the consuming entry's bits. Frozen re-export paths,
+overlays, namespace demand, and transparent-wrapper ownership apply before placement as well as
+during final emission. Cycle projection's broader record gate is unsuitable for these loading
+edges: retaining an unused forwarding hop can load and execute a pure initializer too early in
+on-demand mode. Link-owned liveness and interop decisions remain fixed.
+
 A namespace synthesized only to replace a collapsed dynamic-entry facade is not an opaque namespace
 consumer. Its getters are restricted to the export interface already retained by link-time
 `import()` consumers, and its synthetic statement references every non-inlined binding behind those
@@ -540,7 +550,7 @@ Lowering precomputes the complete, source-ordered namespace target list for ever
 ```text
 link + tree shaking
   -> immutable LinkingMetadata and execution dependencies
-  -> pre-chunk consumer-local probe + importer-local entry-bit propagation
+  -> pre-chunk order probe + retained init edges + importer-local entry-bit propagation
   -> provisional ChunkGraph
   -> OrderAnalysis / OrderWrapPlan
   -> lower plan into OrderWrapState + final ChunkGraph

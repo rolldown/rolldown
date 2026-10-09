@@ -6,17 +6,8 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## lazy.js
 
 ```js
-import { n as __exportAll, t as __esmMin } from "./rolldown-runtime.js";
-import { a as state, i as init_state, n as init_shared } from "./shared.js";
-//#region snapshots/value.js
-var SNAPSHOT;
-function init_value() {
-	return (init_value = __esmMin((() => {
-		init_state();
-		SNAPSHOT = state;
-	})))();
-}
-//#endregion
+import { t as __esmMin } from "./rolldown-runtime.js";
+import { n as init_shared, r as SNAPSHOT } from "./shared.js";
 //#region pure.js
 var PURE;
 function init_pure() {
@@ -26,7 +17,6 @@ function init_pure() {
 }
 //#endregion
 //#region lazy.js
-var lazy_exports = /* @__PURE__ */ __exportAll({ read: () => read });
 function read() {
 	return [SNAPSHOT, PURE];
 }
@@ -36,7 +26,8 @@ function init_lazy() {
 	})))();
 }
 //#endregion
-export { lazy_exports as n, init_value as r, init_lazy as t };
+init_lazy();
+export { read };
 
 ```
 
@@ -44,7 +35,7 @@ export { lazy_exports as n, init_value as r, init_lazy as t };
 
 ```js
 import { t as __esmMin } from "./rolldown-runtime.js";
-import { i as init_state, n as init_shared, r as bump, t as LOCAL } from "./shared.js";
+import { a as bump, n as init_shared, o as init_state, t as LOCAL } from "./shared.js";
 //#region main.js
 var local, load;
 function init_main() {
@@ -53,7 +44,7 @@ function init_main() {
 		init_state();
 		local = LOCAL;
 		bump();
-		load = () => import("./lazy.js").then((n) => (n.t(), n.n)).then((module) => module.read());
+		load = () => import("./lazy.js").then((module) => module.read());
 	})))();
 }
 //#endregion
@@ -66,7 +57,7 @@ export { load, local };
 
 ```js
 // HIDDEN [\0rolldown/runtime.js]
-export { __exportAll as n, __esmMin as t };
+export { __esmMin as t };
 
 ```
 
@@ -74,7 +65,6 @@ export { __exportAll as n, __esmMin as t };
 
 ```js
 import { t as __esmMin } from "./rolldown-runtime.js";
-import { r as init_value } from "./lazy.js";
 //#region state.js
 function bump() {
 	state++;
@@ -83,6 +73,15 @@ var state;
 function init_state() {
 	return (init_state = __esmMin((() => {
 		state = 0;
+	})))();
+}
+//#endregion
+//#region snapshots/value.js
+var SNAPSHOT;
+function init_value() {
+	return (init_value = __esmMin((() => {
+		init_state();
+		SNAPSHOT = state;
 	})))();
 }
 //#endregion
@@ -95,7 +94,7 @@ function init_shared() {
 	})))();
 }
 //#endregion
-export { state as a, init_state as i, init_shared as n, bump as r, LOCAL as t };
+export { bump as a, init_value as i, init_shared as n, init_state as o, SNAPSHOT as r, LOCAL as t };
 
 ```
 
@@ -106,17 +105,8 @@ export { state as a, init_state as i, init_shared as n, bump as r, LOCAL as t };
 ### lazy.js
 
 ```js
-import { n as __exportAll, t as __esmMin } from "./rolldown-runtime.js";
-import { a as state, i as init_state, n as init_shared } from "./shared.js";
-//#region snapshots/value.js
-var SNAPSHOT;
-function init_value() {
-	return (init_value = __esmMin((() => {
-		init_state();
-		SNAPSHOT = state;
-	})))();
-}
-//#endregion
+import { t as __esmMin } from "./rolldown-runtime.js";
+import { n as init_shared, r as SNAPSHOT } from "./shared.js";
 //#region pure.js
 var PURE;
 function init_pure() {
@@ -126,7 +116,6 @@ function init_pure() {
 }
 //#endregion
 //#region lazy.js
-var lazy_exports = /* @__PURE__ */ __exportAll({ read: () => read });
 function read() {
 	return [SNAPSHOT, PURE];
 }
@@ -136,7 +125,8 @@ function init_lazy() {
 	})))();
 }
 //#endregion
-export { lazy_exports as n, init_value as r, init_lazy as t };
+init_lazy();
+export { read };
 
 ```
 
@@ -144,7 +134,7 @@ export { lazy_exports as n, init_value as r, init_lazy as t };
 
 ```js
 import { t as __esmMin } from "./rolldown-runtime.js";
-import { i as init_state, n as init_shared, r as bump, t as LOCAL } from "./shared.js";
+import { a as bump, n as init_shared, o as init_state, t as LOCAL } from "./shared.js";
 //#region main.js
 var local, load;
 function init_main() {
@@ -153,7 +143,7 @@ function init_main() {
 		init_state();
 		local = LOCAL;
 		bump();
-		load = () => import("./lazy.js").then((n) => (n.t(), n.n)).then((module) => module.read());
+		load = () => import("./lazy.js").then((module) => module.read());
 	})))();
 }
 //#endregion
@@ -166,7 +156,7 @@ export { load, local };
 
 ```js
 // HIDDEN [\0rolldown/runtime.js]
-export { __exportAll as n, __esmMin as t };
+export { __esmMin as t };
 
 ```
 
@@ -174,7 +164,6 @@ export { __exportAll as n, __esmMin as t };
 
 ```js
 import { t as __esmMin } from "./rolldown-runtime.js";
-import { r as init_value } from "./lazy.js";
 //#region state.js
 function bump() {
 	state++;
@@ -183,6 +172,15 @@ var state;
 function init_state() {
 	return (init_state = __esmMin((() => {
 		state = 0;
+	})))();
+}
+//#endregion
+//#region snapshots/value.js
+var SNAPSHOT;
+function init_value() {
+	return (init_value = __esmMin((() => {
+		init_state();
+		SNAPSHOT = state;
 	})))();
 }
 //#endregion
@@ -195,6 +193,6 @@ function init_shared() {
 	})))();
 }
 //#endregion
-export { state as a, init_state as i, init_shared as n, bump as r, LOCAL as t };
+export { bump as a, init_value as i, init_shared as n, init_state as o, SNAPSHOT as r, LOCAL as t };
 
 ```

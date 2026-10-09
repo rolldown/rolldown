@@ -2,11 +2,8 @@
 //! answers "which wrapped modules must this importer's record initialize, and does this record
 //! carry that obligation at all?".
 //!
-//! Three consumers enumerate the same module-level obligations for three purposes
-//! ([`ObligationPurpose`]), and historically each carried its own copy of the record gating and
-//! (before the emergent-cycle projection repair) its own route traversal, which let them drift
-//! apart — the C-class under-projection holes were exactly such drift. Everything they share now
-//! lives here:
+//! Final emission, cross-chunk registration, cycle projection, and pre-chunk reachability share
+//! these record gates and target collectors. Their record contracts use [`ObligationPurpose`]:
 //!
 //! - **Emit** — the finalizer replaces each *included* static-import statement with the `init_*()`
 //!   calls of the targets that record must initialize
@@ -24,6 +21,10 @@
 //!   enumerator/collector against a probe [`OrderWrapState`], extended to the excluded records
 //!   whose registration flows through the metadata pass rather than the included-record path.
 //!
+//! Pre-chunk reachability uses Register for initialization loading edges and Project for
+//! consumer-local routes. Target liveness uses included declarations before chunks exist, and
+//! same-chunk delegation is unavailable. See internal-docs/code-splitting/implementation.md.
+//!
 //! Excluded statements are the one structural asymmetry: for Emit and Register their targets are
 //! precomputed once by `compute_wrapped_esm_init_metadata` (post-convergence, returned as
 //! `Sealed<FinalEsmInitMetadata>`), while Project must recompute them per fixpoint round from the
@@ -37,15 +38,13 @@
 
 use oxc_str::CompactStr;
 use rolldown_common::{
-  ChunkIdx, ConcatenateWrappedModuleKind, ConstExportMeta, ExportsKind, ImportKind,
-  ImportRecordIdx, ImportRecordMeta, IndexModules, InlineConstMode, Module, ModuleIdx,
-  NormalModule, ResolvedImportRecord, Specifier, SymbolOrMemberExprRef, SymbolRef, SymbolRefDb,
-  WrapKind,
+  ConcatenateWrappedModuleKind, ConstExportMeta, ExportsKind, ImportKind, ImportRecordIdx,
+  ImportRecordMeta, IndexModules, InlineConstMode, Module, ModuleIdx, NormalModule,
+  ResolvedImportRecord, Specifier, SymbolOrMemberExprRef, SymbolRef, SymbolRefDb, WrapKind,
 };
 use rustc_hash::{FxHashMap, FxHashSet};
 
 use crate::{
-  chunk_graph::ChunkGraph,
   stages::generate_stage::order_wrap_state::{EsmInitOrigin, OrderCjsCarrierKey, OrderWrapState},
   type_alias::IndexStmtInfos,
   types::linking_metadata::{LinkingMetadata, LinkingMetadataVec},
@@ -82,7 +81,7 @@ pub enum ObligationPurpose {
 }
 
 /// THE record gate: whether `rec` carries an init-forwarding obligation of the importer for this
-/// purpose. All three consumers consult this one predicate (Emit per record at its included
+/// purpose. Each consumer consults this predicate (Emit per record at its included
 /// statement position; Register/Project through [`for_each_init_obligation_record`]).
 pub fn record_is_init_obligation(
   purpose: ObligationPurpose,
@@ -1025,36 +1024,33 @@ fn forwarder_discharged_targets(
 }
 
 /// Follow excluded re-exports through barrels to included wrapped importees — the excluded-hop
-/// router shared by the metadata pass (Emit/Register's precompute) and the fixpoint projector.
+/// router shared by final metadata, cycle projection, and pre-chunk reachability.
 ///
 /// Called with `retained_reexport_path: None` on a *non-included* forwarder, it walks the
-/// forwarder's every static import to the wrapped modules they reach — the excluded-hop routing the
-/// real metadata pass performs, and the edge source the resolved-exports-only projection missed
-/// (Hole 2). The real pass can pass `Some(path)` even through a non-included forwarder (retained
-/// star paths are recorded pre-tree-shaking); the projector's `None` differs from that only at the
-/// same-chunk prune below, and every retained-path target is a resolved export of the importer that
-/// the projector already covers through its collector source — see
-/// `project_excluded_forwarder_edges`.
+/// forwarder's static imports to the wrapped modules they reach. `Some(path)` follows retained
+/// re-export records and their required eager carriers. Callers supply target liveness and ownership:
+/// pre-chunk reachability uses included declarations, while final metadata and cycle projection
+/// use live chunks and same-chunk delegation.
 #[expect(clippy::too_many_arguments)]
 pub fn collect_order_wrap_esm_init_targets(
   modules: &IndexModules,
   metas: &LinkingMetadataVec,
-  chunk_graph: &ChunkGraph,
   order_state: &OrderWrapState,
-  importer_chunk_idx: ChunkIdx,
   root: ModuleIdx,
   retained_reexport_path: Option<&[(ModuleIdx, ImportRecordIdx)]>,
   visited: &mut FxHashSet<ModuleIdx>,
   targets: &mut Vec<WrappedEsmInitTarget>,
+  target_is_reachable: &impl Fn(WrappedEsmInitTarget) -> bool,
+  forwarding_module_owns_initialization: &impl Fn(ModuleIdx) -> bool,
 ) {
   if retained_reexport_path.is_none() && order_state.is_consumer_local_reexport_route(root) {
     collect_live_eager_carriers_for_consumer_local_route(
       modules,
-      chunk_graph,
       order_state,
       root,
       visited,
       targets,
+      target_is_reachable,
     );
     return;
   }
@@ -1080,8 +1076,7 @@ pub fn collect_order_wrap_esm_init_targets(
       continue;
     }
 
-    // Only collect modules whose wrapper is declared (i.e. the module is included in the output)
-    // and assigned to a chunk. Cross-chunk wrapper imports are registered after this pass.
+    // The caller supplies declaration liveness before placement and live-chunk liveness after it.
     let transparent_retained_waypoint = (retained_reexport_path.is_some()
       && order_state.reexport_init_is_transparent(importee.idx))
       || order_state.is_consumer_local_reexport_route(importee.idx);
@@ -1092,11 +1087,7 @@ pub fn collect_order_wrap_esm_init_targets(
       })
     });
     let owns_non_routed_init = importee_linking_info.is_included
-      && order_state.esm_init_included_in_live_chunk(
-        importee_linking_info,
-        importee.idx,
-        chunk_graph,
-      )
+      && target_is_reachable(WrappedEsmInitTarget::Module(importee.idx))
       && !transparent_retained_waypoint;
     if owns_non_routed_init {
       if !routes_retained_records {
@@ -1109,7 +1100,7 @@ pub fn collect_order_wrap_esm_init_targets(
     if (!routes_retained_records
       && retained_reexport_path.is_none()
       && importee_linking_info.is_included
-      && chunk_graph.module_to_chunk[importee.idx] == Some(importer_chunk_idx))
+      && forwarding_module_owns_initialization(importee.idx))
       || !matches!(importee.exports_kind, ExportsKind::Esm | ExportsKind::None)
     {
       continue;
@@ -1134,10 +1125,10 @@ pub fn collect_order_wrap_esm_init_targets(
           && let Some(carrier) = order_state
             .order_cjs_carrier(OrderCjsCarrierKey { importer: importee.idx, record: rec_idx })
           && carrier.eager
-          && order_state.order_cjs_carrier_included_in_live_chunk(
-            OrderCjsCarrierKey { importer: importee.idx, record: rec_idx },
-            chunk_graph,
-          )
+          && target_is_reachable(WrappedEsmInitTarget::CjsCarrier(OrderCjsCarrierKey {
+            importer: importee.idx,
+            record: rec_idx,
+          }))
         {
           stack.push(OrderInitTraversalItem::Target(WrappedEsmInitTarget::CjsCarrier(
             OrderCjsCarrierKey { importer: importee.idx, record: rec_idx },
@@ -1150,7 +1141,7 @@ pub fn collect_order_wrap_esm_init_targets(
       {
         let carrier_key = OrderCjsCarrierKey { importer: importee.idx, record: rec_idx };
         if order_state.has_order_cjs_carrier(carrier_key) {
-          if order_state.order_cjs_carrier_included_in_live_chunk(carrier_key, chunk_graph) {
+          if target_is_reachable(WrappedEsmInitTarget::CjsCarrier(carrier_key)) {
             stack
               .push(OrderInitTraversalItem::Target(WrappedEsmInitTarget::CjsCarrier(carrier_key)));
           }
@@ -1204,11 +1195,11 @@ fn collect_eager_retained_path_modules(
 
 fn collect_live_eager_carriers_for_consumer_local_route(
   modules: &IndexModules,
-  chunk_graph: &ChunkGraph,
   order_state: &OrderWrapState,
   module_idx: ModuleIdx,
   visited: &mut FxHashSet<ModuleIdx>,
   targets: &mut Vec<WrappedEsmInitTarget>,
+  target_is_reachable: &impl Fn(WrappedEsmInitTarget) -> bool,
 ) {
   if !visited.insert(module_idx) {
     return;
@@ -1219,7 +1210,7 @@ fn collect_live_eager_carriers_for_consumer_local_route(
   for (rec_idx, rec) in module.import_records.iter_enumerated() {
     let key = OrderCjsCarrierKey { importer: module_idx, record: rec_idx };
     if let Some(carrier) = order_state.order_cjs_carrier(key) {
-      if carrier.eager && order_state.order_cjs_carrier_included_in_live_chunk(key, chunk_graph) {
+      if carrier.eager && target_is_reachable(WrappedEsmInitTarget::CjsCarrier(key)) {
         targets.push(WrappedEsmInitTarget::CjsCarrier(key));
       }
       continue;
@@ -1233,11 +1224,11 @@ fn collect_live_eager_carriers_for_consumer_local_route(
     {
       collect_live_eager_carriers_for_consumer_local_route(
         modules,
-        chunk_graph,
         order_state,
         importee_idx,
         visited,
         targets,
+        target_is_reachable,
       );
     }
   }

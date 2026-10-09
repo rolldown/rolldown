@@ -94,7 +94,7 @@ struct ActualOrderTraversal {
 }
 
 impl GenerateStage<'_> {
-  /// Build the wrapper/carrier portion of the order-lowering probe before chunk assignment.
+  /// Build the order-lowering probe, including retained import paths, before chunk assignment.
   ///
   /// Code splitting needs the same consumer-local routing decision as lowering: otherwise the
   /// module-wide `load_dependencies` of a shared re-export barrel gives every entry the union of
@@ -106,12 +106,15 @@ impl GenerateStage<'_> {
     &self,
     used_symbol_refs_builder: &UsedSymbolRefsBuilder,
   ) -> super::order_wrap_state::OrderWrapState {
-    let mut state = super::order_wrap_state::OrderWrapState::default();
     if !self.options.is_strict_execution_order_enabled() {
-      return state;
+      return super::order_wrap_state::OrderWrapState::default();
     }
     let plan = self.wrap_all_order_analysis().plan;
-    self.populate_probe_order_targets(&plan, used_symbol_refs_builder, &mut state);
+    let reverse_static_imports =
+      reverse_static_import_index(&self.link_output.module_table.modules);
+    let mut state =
+      self.probe_order_state(None, &plan, used_symbol_refs_builder, &reverse_static_imports);
+    self.populate_consumer_local_namespace_targets(&mut state);
     state
   }
 
@@ -327,8 +330,12 @@ impl GenerateStage<'_> {
     reverse_static_imports: &IndexVec<ModuleIdx, Vec<ModuleIdx>>,
   ) -> IndexVec<ChunkIdx, FxHashSet<ChunkIdx>> {
     let mut edges = baseline.clone();
-    let probe_state =
-      self.probe_order_state(chunk_graph, plan, used_symbol_refs_builder, reverse_static_imports);
+    let probe_state = self.probe_order_state(
+      Some(chunk_graph),
+      plan,
+      used_symbol_refs_builder,
+      reverse_static_imports,
+    );
 
     for module in self.link_output.module_table.modules.iter().filter_map(Module::as_normal) {
       let importer_idx = module.idx;
@@ -560,13 +567,22 @@ impl GenerateStage<'_> {
       collect_order_wrap_esm_init_targets(
         &self.link_output.module_table.modules,
         &self.link_output.metas,
-        chunk_graph,
         probe_state,
-        importer_chunk,
         forwarder_idx,
         None,
         &mut visited,
         targets,
+        &|target| match target {
+          WrappedEsmInitTarget::Module(module_idx) => probe_state.esm_init_included_in_live_chunk(
+            &self.link_output.metas[module_idx],
+            module_idx,
+            chunk_graph,
+          ),
+          WrappedEsmInitTarget::CjsCarrier(key) => {
+            probe_state.order_cjs_carrier_included_in_live_chunk(key, chunk_graph)
+          }
+        },
+        &|module_idx| chunk_graph.module_to_chunk[module_idx] == Some(importer_chunk),
       );
     }
   }
@@ -575,19 +591,36 @@ impl GenerateStage<'_> {
   /// `esm_init_target` answers "is this module wrapped by this plan?" during edge projection.
   /// Reuses each module's existing namespace symbol as the wrapper placeholder — the projector only
   /// reads target *identity*, never the wrapper symbol's value — so no facade symbols are minted and
-  /// no symbol chunk ownership is touched. Each wrapper is assigned its module's own chunk (exactly
-  /// as `place_order_wrap_modules` does after real lowering) so `esm_init_included_in_live_chunk`
-  /// answers truthfully — the transitive excluded-hop projection depends on it. Built fresh per
-  /// fixpoint round, so it always reflects the current plan with no stale routes.
+  /// no symbol chunk ownership is touched. When chunks exist, each wrapper is assigned its module's
+  /// own chunk so excluded-hop projection sees real liveness. Before placement, wrappers have no
+  /// chunk assignment and the loading collector uses declaration liveness. Built fresh per plan.
   fn probe_order_state(
     &self,
-    chunk_graph: &ChunkGraph,
+    chunk_graph: Option<&ChunkGraph>,
     plan: &OrderWrapPlan,
     used_symbol_refs_builder: &UsedSymbolRefsBuilder,
     reverse_static_imports: &IndexVec<ModuleIdx, Vec<ModuleIdx>>,
   ) -> super::order_wrap_state::OrderWrapState {
     let mut probe_state = super::order_wrap_state::OrderWrapState::default();
-    self.populate_probe_order_targets(plan, used_symbol_refs_builder, &mut probe_state);
+    for module_idx in plan.modules() {
+      if !self.is_order_wrap_eligible(module_idx) {
+        // Only `WrapKind::None` ESM/None modules become order wrappers (mirrors `lower_order_state`);
+        // an interop wrapper is already visible to `esm_init_target` through its metadata.
+        continue;
+      }
+      let placeholder_wrapper_ref = self.link_output.module_table.modules[module_idx]
+        .as_normal()
+        .expect("order wrap only applies to normal modules")
+        .namespace_object_ref;
+      probe_state.insert_order_wrapper_probe(module_idx, placeholder_wrapper_ref);
+      if super::order_wrapping::order_wrapper_is_reexport_transparent(
+        &self.link_output.metas[module_idx],
+        self.ast_table[module_idx].as_ref(),
+        self.options.keep_names,
+      ) {
+        probe_state.set_reexport_init_transparent(module_idx);
+      }
+    }
 
     // Populate exactly the nested re-export records and per-record overlays `lower_order_state`
     // mints for this plan, so the transitive excluded-hop projection restricts each barrel's walk
@@ -614,19 +647,29 @@ impl GenerateStage<'_> {
       tree_shaking: self.options.treeshake.is_some(),
       runtime_idx: self.link_output.runtime.id(),
     };
-    for module_idx in plan.modules() {
-      if probe_state.has_order_wrapper(module_idx)
-        && let Some(chunk_idx) = chunk_graph.module_to_chunk[module_idx]
-      {
-        probe_state.assign_order_wrapper_chunk(module_idx, chunk_idx);
+    let consumer_local_plan =
+      super::order_wrapping::consumer_local_reexport_plan(&input, &probe_state);
+    super::order_wrapping::apply_consumer_local_reexport_plan_probe(
+      &mut probe_state,
+      &consumer_local_plan,
+    );
+    if let Some(chunk_graph) = chunk_graph {
+      for module_idx in plan.modules() {
+        if probe_state.has_order_wrapper(module_idx)
+          && let Some(chunk_idx) = chunk_graph.module_to_chunk[module_idx]
+        {
+          probe_state.assign_order_wrapper_chunk(module_idx, chunk_idx);
+        }
       }
-    }
-    let carrier_keys = probe_state.order_cjs_carrier_keys().collect::<Vec<_>>();
-    for key in carrier_keys {
-      let importee =
-        probe_state.order_cjs_carrier(key).expect("probe order CJS carrier should exist").importee;
-      if let Some(chunk_idx) = chunk_graph.module_to_chunk[importee] {
-        probe_state.assign_order_cjs_carrier_chunk(key, chunk_idx);
+      let carrier_keys = probe_state.order_cjs_carrier_keys().collect::<Vec<_>>();
+      for key in carrier_keys {
+        let importee = probe_state
+          .order_cjs_carrier(key)
+          .expect("probe order CJS carrier should exist")
+          .importee;
+        if let Some(chunk_idx) = chunk_graph.module_to_chunk[importee] {
+          probe_state.assign_order_cjs_carrier_chunk(key, chunk_idx);
+        }
       }
     }
     let reexport_usage = super::order_wrapping::collect_frozen_reexport_usage(&input, &probe_state);
@@ -640,65 +683,6 @@ impl GenerateStage<'_> {
       reverse_static_imports,
     );
     probe_state
-  }
-
-  fn populate_probe_order_targets(
-    &self,
-    plan: &OrderWrapPlan,
-    used_symbol_refs_builder: &UsedSymbolRefsBuilder,
-    probe_state: &mut super::order_wrap_state::OrderWrapState,
-  ) {
-    for module_idx in plan.modules() {
-      if !self.is_order_wrap_eligible(module_idx) {
-        // Only `WrapKind::None` ESM/None modules become order wrappers (mirrors `lower_order_state`);
-        // an interop wrapper is already visible to `esm_init_target` through its metadata.
-        continue;
-      }
-      let placeholder_wrapper_ref = self.link_output.module_table.modules[module_idx]
-        .as_normal()
-        .expect("order wrap only applies to normal modules")
-        .namespace_object_ref;
-      probe_state.insert_order_wrapper_probe(module_idx, placeholder_wrapper_ref);
-      if super::order_wrapping::order_wrapper_is_reexport_transparent(
-        &self.link_output.metas[module_idx],
-        self.ast_table[module_idx].as_ref(),
-        self.options.keep_names,
-      ) {
-        probe_state.set_reexport_init_transparent(module_idx);
-      }
-    }
-    let cyclic_modules =
-      super::order_wrapping::synchronous_cycle_modules(&self.link_output.module_table.modules);
-    let input = super::order_wrapping::OrderLoweringInput {
-      plan,
-      modules: &self.link_output.module_table.modules,
-      linking: &self.link_output.metas,
-      statements: &self.link_output.stmt_infos,
-      asts: &self.ast_table,
-      keep_names: self.options.keep_names,
-      export_chains: &self.link_output.normal_symbol_exports_chain_map,
-      star_reexport_records_by_imported_symbol: &self
-        .link_output
-        .star_reexport_records_by_imported_symbol,
-      member_read_star_reexport_paths: &self.link_output.member_read_star_reexport_paths,
-      used_symbol_refs_builder,
-      cyclic_modules: &cyclic_modules,
-      tree_shaking: self.options.treeshake.is_some(),
-      runtime_idx: self.link_output.runtime.id(),
-    };
-    let consumer_local_plan =
-      super::order_wrapping::consumer_local_reexport_plan(&input, probe_state);
-    super::order_wrapping::apply_consumer_local_reexport_plan_probe(
-      probe_state,
-      &consumer_local_plan,
-    );
-    // Re-export flattening can remove an import declaration and its local facade from the normal
-    // used-symbol set even though an outer consumer still reaches that binding. Preserve the same
-    // frozen facade evidence real lowering uses so pre-chunk routing can cross arbitrary barrel
-    // chains without falling back to bundle-global leaf liveness.
-    let reexport_usage = super::order_wrapping::collect_frozen_reexport_usage(&input, probe_state);
-    probe_state.set_nested_reexport_records(reexport_usage.nested_records().clone());
-    probe_state.set_consumed_reexport_facades(reexport_usage.consumed_facades().clone());
   }
 
   fn wrap_all_order_analysis(&self) -> OrderAnalysis {

@@ -43,11 +43,13 @@ The entry point is `generate_chunks()` in `code_splitting.rs`, called from `Gene
 ```
 generate_chunks()
     │
+    ├─ pre_chunk_order_state()        Discover possible order wrappers and consumer-local routes
+    │
     ├─ init_entry_point()             Assign bit positions, create entry chunks
     │
     ├─ split_chunks()
     │    │
-    │    ├─ pre_chunk_order_state()                   Discover consumer-local barrels/carriers
+    │    ├─ pre_chunk_init_dependencies()             Retained initializer loading edges
     │    ├─ determine_reachable_modules_for_entry()   BFS + importer-local route bits per entry
     │    │
     │    ├─ apply_manual_code_splitting()             User-defined chunk groups (manualChunks)
@@ -190,7 +192,13 @@ Top-level-await refinements are intentionally not modeled here yet. The existing
 
 `determine_reachable_modules_for_entry()` runs BFS from each entry module, setting `splitting_info[module].bits.set_bit(entry_index)` on every reachable module. External modules are skipped during traversal (they're not `Module::Normal`).
 
-Strict builds first construct a discovery-only wrap-all `OrderWrapState`. This is required before chunk assignment: a re-export barrel's ordinary `load_dependencies` is a bundle-wide union, so using it would give an eager entry the leaves that only a dynamic entry consumes before the real per-record carriers exist. When an incoming record targets a consumer-local barrel, the shared resolver adds only that record's selected leaf modules and CJS carrier importees to the queue. Processing a non-entry consumer-local barrel marks the waypoint reachable, queues any directly nested consumer-local waypoints, skips its module-wide dependency union, and recursively queues only effectful carriers. A user or dynamic entry whose module is itself such a barrel keeps full traversal because importing that entry observes its complete namespace.
+Strict builds first construct a discovery-only wrap-all `OrderWrapState`, including the frozen re-export usage and import overlays real lowering computes. `pre_chunk_init_dependencies()` collects each included module's initialization targets before placement. Included records use the Register gate and `collect_wrapped_esm_init_targets_for_import_record`; excluded records use `transitive_esm_init_targets`, the same retention and path collector that produces the final metadata. This includes modules that keep monolithic initialization. The targets supplement ordinary `load_dependencies`: tree shaking can resolve a binding to its defining module while strict lowering still imports the initializer of an intervening module. If that initializer's targets receive only a lazy entry's bits, importing the initializer also loads unrelated code sharing the lazy entry's output file. Giving those targets the consuming entry's bits keeps the required initialization code shared. The additional target lists are computed once per module, deduplicated, and reused by each entry's BFS. Strict-disabled builds skip this pass.
+
+Before chunks exist, target reachability means that the declaration is included, and same-chunk delegation is unavailable. The excluded-hop walker takes those two predicates from its caller; final metadata and cycle projection supply their existing live-chunk and same-chunk predicates. Namespace inclusion before placement uses the same predicate as `finalized_module_namespace_ref_usage`, without writing the derived namespace flag. Excluded interop routing remains post-chunk because its targets are confined to the importer's own chunk. The pre-chunk collector returns target identities; `FinalEsmInitMetadata` is still computed and sealed after final placement.
+
+Transparent wrappers and excluded pure re-exports with no retained statement, path, execution dependency, or namespace demand contribute no initialization edge. An excluded ordinary import requires importer-local binding demand or a re-exported binding. The broader Project gate is retained only for the existing consumer-local placement routes; it is not used to predict monolithic initialization. This preserves late pure initialization in forwarding cycles while accounting for generated cross-chunk init imports.
+
+A consumer-local barrel's ordinary `load_dependencies` is a bundle-wide union, so using it would give an eager entry the leaves that only a dynamic entry consumes. Incoming consumer records use the same resolver to select only their leaf modules and CJS carrier importees. Processing a non-entry consumer-local barrel marks the waypoint reachable, queues any directly nested consumer-local waypoints, skips its module-wide dependency union, and recursively queues only effectful carriers. A user or dynamic entry whose module is itself such a barrel keeps full traversal because importing that entry observes its complete namespace.
 
 The resulting entry bits place each carrier in the same chunk as its CJS importee. Later order lowering assigns the carrier's synthetic statement to that chunk, while the carrier symbol still belongs to the re-exporting module for binding identity. Symbol assignment and deconfliction therefore use the synthetic statement's explicit chunk rather than assuming that every declared symbol is hosted by its owner module. CJS namespace merging and lazy-init transfer skip these carrier records because moving or coalescing their require sites would destroy the per-record route boundary.
 

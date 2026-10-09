@@ -623,39 +623,7 @@ impl GenerateStage<'_> {
       code_splitting_disabled,
       &consumer_local_plan,
     );
-    let consumer_local_namespace_targets = self
-      .link_output
-      .module_table
-      .modules
-      .iter_enumerated()
-      .filter(|(module_idx, _)| {
-        order_state.is_consumer_local_reexport_route(*module_idx)
-          || (order_state.has_consumer_local_reexport_records(*module_idx)
-            && self.link_output.entries.contains_key(module_idx))
-      })
-      .filter_map(|(module_idx, module)| {
-        let module = module.as_normal()?;
-        let targets = collect_wrapped_esm_init_targets_for_module_namespace(
-          &WrappedEsmInitTargetContext {
-            importer: module,
-            importer_meta: &self.link_output.metas[module_idx],
-            modules: &self.link_output.module_table.modules,
-            metas: &self.link_output.metas,
-            stmt_infos: &self.link_output.stmt_infos,
-            symbol_db: &self.link_output.symbol_db,
-            constant_value_map: &self.link_output.global_constant_symbol_map,
-            inline_const_mode: self.options.optimization.inline_const.map(|config| config.mode),
-            order_wrap_state: order_state,
-            strict_execution_order: true,
-          },
-          |_| true,
-        );
-        Some((module_idx, targets))
-      })
-      .collect_vec();
-    for (module_idx, targets) in consumer_local_namespace_targets {
-      order_state.set_consumer_local_namespace_targets(module_idx, targets);
-    }
+    self.populate_consumer_local_namespace_targets(order_state);
     let runtime_idx = self.link_output.runtime.id();
     order_state.compute_runtime_symbol_closure(
       &self.link_output.runtime,
@@ -720,6 +688,42 @@ impl GenerateStage<'_> {
     chunk_graph.sort_chunk_modules(self.link_output, self.options);
     self.renumber_live_chunks(chunk_graph);
     true
+  }
+
+  pub(super) fn populate_consumer_local_namespace_targets(&self, order_state: &mut OrderWrapState) {
+    let consumer_local_namespace_targets = self
+      .link_output
+      .module_table
+      .modules
+      .iter_enumerated()
+      .filter(|(module_idx, _)| {
+        order_state.is_consumer_local_reexport_route(*module_idx)
+          || (order_state.has_consumer_local_reexport_records(*module_idx)
+            && self.link_output.entries.contains_key(module_idx))
+      })
+      .filter_map(|(module_idx, module)| {
+        let module = module.as_normal()?;
+        let targets = collect_wrapped_esm_init_targets_for_module_namespace(
+          &WrappedEsmInitTargetContext {
+            importer: module,
+            importer_meta: &self.link_output.metas[module_idx],
+            modules: &self.link_output.module_table.modules,
+            metas: &self.link_output.metas,
+            stmt_infos: &self.link_output.stmt_infos,
+            symbol_db: &self.link_output.symbol_db,
+            constant_value_map: &self.link_output.global_constant_symbol_map,
+            inline_const_mode: self.options.optimization.inline_const.map(|config| config.mode),
+            order_wrap_state: order_state,
+            strict_execution_order: true,
+          },
+          |_| true,
+        );
+        Some((module_idx, targets))
+      })
+      .collect_vec();
+    for (module_idx, targets) in consumer_local_namespace_targets {
+      order_state.set_consumer_local_namespace_targets(module_idx, targets);
+    }
   }
 
   /// The no-lowering tail of [`GenerateStage::apply_order_wraps`]: nothing is order-wrapped and

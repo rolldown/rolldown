@@ -1095,6 +1095,13 @@
             "null"
           ]
         },
+        "base": {
+          "description": "Public base path of the dev server.\n\nURLs of dev-server endpoints referenced from generated code (currently the\nlazy compilation endpoint `/@vite/lazy`) are prefixed with it.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
         "hotUpdate": {
           "description": "Call the `hotUpdate` plugin hook. Off by default. The `hotUpdate` dev option also turns it on.",
           "type": [

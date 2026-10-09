@@ -628,6 +628,7 @@ const DevModeSchema = v.union([
     implement: v.optional(v.string()),
     skipCommonRuntimeInjection: v.optional(v.boolean()),
     lazy: v.optional(v.boolean()),
+    base: v.optional(v.string()),
     hotUpdate: v.optional(v.boolean()),
   }),
 ]);

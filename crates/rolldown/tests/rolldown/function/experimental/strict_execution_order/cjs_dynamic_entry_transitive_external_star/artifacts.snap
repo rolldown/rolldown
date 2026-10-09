@@ -119,6 +119,7 @@ Object.defineProperty(exports, "__reExport", {
 //! Common Chunk: [Shared-By: target.js]
 const require_rolldown_runtime = require("./rolldown-runtime.js");
 const require_reader = require("./reader.js");
+require("external");
 //#region barrel.js
 function init_barrel() {
 	return (init_barrel = require_rolldown_runtime.__esmMin((() => {})))();

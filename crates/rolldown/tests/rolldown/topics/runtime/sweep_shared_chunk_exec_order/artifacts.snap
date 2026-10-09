@@ -34,6 +34,7 @@ export { c };
 ## re.js
 
 ```js
+import "external";
 //#region re.js
 console.log("re side effect");
 //#endregion

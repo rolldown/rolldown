@@ -66,6 +66,7 @@ export { __esmMin as t };
 //! Common Chunk: [Shared-By: target.js]
 import { t as __esmMin } from "./rolldown-runtime.js";
 import { n as read, t as init_reader } from "./reader.js";
+import "external";
 //#region target.js
 var x;
 function init_target() {

@@ -1,0 +1,6 @@
+{
+  "_comment": "Regression test for https://github.com/rolldown/rolldown/issues/11092 - `main.js` imports `lib.js` only for its side effects, and `lib.js` only does `export * from 'data' with { type: 'json' }`. The output must import `data` with its `with` clause.",
+  "config": {
+    "external": ["data"]
+  }
+}

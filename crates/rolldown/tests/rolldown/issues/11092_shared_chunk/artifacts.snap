@@ -1,0 +1,26 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## a.js
+
+```js
+import "./lib.js";
+export * from "ext";
+
+```
+
+## b.js
+
+```js
+import "./lib.js";
+
+```
+
+## lib.js
+
+```js
+import "ext";
+
+```

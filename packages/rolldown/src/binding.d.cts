@@ -1883,7 +1883,7 @@ export declare class BindingTransformPluginContext {
 }
 
 export declare class BindingWatcher {
-  constructor(options: BindingBundlerOptions[], listener: (data: BindingWatcherEvent) => void)
+  constructor(options: BindingBundlerOptions[], listener: (data: BindingWatcherEvent) => void, groupSizes: Array<number>)
   run(): Promise<void>
   /**
    * Gives consumers a reliable way to await the watcher's completion.

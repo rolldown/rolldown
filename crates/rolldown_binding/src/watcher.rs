@@ -8,6 +8,7 @@ use napi::{
   bindgen_prelude::{FnArgs, PromiseRaw},
 };
 use napi_derive::napi;
+use rolldown::BundlerConfig;
 use rolldown_common::WatcherChangeKind;
 use rolldown_watcher::{WatchEvent, WatcherConfig, WatcherEventHandler};
 
@@ -18,6 +19,24 @@ use crate::utils::{
   create_bundler_config_from_binding_options::create_bundler_config_from_binding_options,
   spawn_boxed_future,
 };
+
+/// Split the flat per-output config list into config groups. `group_sizes[i]` is the number of
+/// output configs created from input config `i`; the JS layer builds the flat list in group order.
+/// A group may be empty (`output: []`) and the list may be empty (`watch([])`); both build nothing.
+fn split_configs_into_groups(
+  configs: Vec<BundlerConfig>,
+  group_sizes: &[u32],
+) -> napi::Result<Vec<Vec<BundlerConfig>>> {
+  let total: usize = group_sizes.iter().map(|&size| size as usize).sum();
+  if total != configs.len() {
+    return Err(napi::Error::from_reason(format!(
+      "Watcher groupSizes sum to {total}, but {} output configs were provided",
+      configs.len(),
+    )));
+  }
+  let mut configs = configs.into_iter();
+  Ok(group_sizes.iter().map(|&size| configs.by_ref().take(size as usize).collect()).collect())
+}
 
 /// Bridges watcher events from Rust to JS via a `ThreadsafeFunction`.
 struct NapiWatcherEventHandler {
@@ -63,11 +82,12 @@ pub struct BindingWatcher {
 impl BindingWatcher {
   #[napi(
     constructor,
-    ts_args_type = "options: BindingBundlerOptions[], listener: (data: BindingWatcherEvent) => void"
+    ts_args_type = "options: BindingBundlerOptions[], listener: (data: BindingWatcherEvent) => void, groupSizes: Array<number>"
   )]
   pub fn new(
     options: Vec<BindingBundlerOptions>,
     listener: MaybeAsyncJsCallback<FnArgs<(BindingWatcherEvent,)>>,
+    group_sizes: Vec<u32>,
   ) -> napi::Result<Self> {
     let configs = options
       .into_iter()
@@ -86,9 +106,11 @@ impl BindingWatcher {
       debounce_tick_rate: watch.and_then(|w| w.debounce_tick_rate),
     };
 
+    let groups = split_configs_into_groups(configs, &group_sizes)?;
+
     let handler = NapiWatcherEventHandler { listener: Arc::new(listener) };
     let inner =
-      rolldown_watcher::Watcher::new(configs, handler, &watcher_config).map_err(|errs| {
+      rolldown_watcher::Watcher::new(groups, handler, &watcher_config).map_err(|errs| {
         napi::Error::new(
           napi::Status::GenericFailure,
           errs.iter().map(|e| e.to_diagnostic().to_string()).collect::<Vec<_>>().join("\n"),
@@ -126,5 +148,43 @@ impl BindingWatcher {
     spawn_boxed_future(env, async move {
       inner.close().await.map_err(|e| napi::Error::new(napi::Status::GenericFailure, e.to_string()))
     })
+  }
+}
+
+#[cfg(test)]
+mod tests {
+  use super::*;
+  use rolldown::BundlerOptions;
+
+  fn default_configs(count: usize) -> Vec<BundlerConfig> {
+    (0..count).map(|_| BundlerConfig::new(BundlerOptions::default(), vec![])).collect()
+  }
+
+  #[test]
+  fn group_split_reconstructs_contiguous_groups() {
+    let groups = split_configs_into_groups(default_configs(3), &[2, 1])
+      .expect("matching group sizes must split");
+    assert_eq!(groups.iter().map(Vec::len).collect::<Vec<_>>(), [2, 1]);
+  }
+
+  #[test]
+  fn group_split_accepts_zero_groups() {
+    let groups =
+      split_configs_into_groups(vec![], &[]).expect("an empty group list must be accepted");
+    assert!(groups.is_empty());
+  }
+
+  #[test]
+  fn group_split_accepts_empty_group() {
+    let groups = split_configs_into_groups(default_configs(2), &[2, 0])
+      .expect("a zero-size group must be accepted");
+    assert_eq!(groups.iter().map(Vec::len).collect::<Vec<_>>(), [2, 0]);
+  }
+
+  #[test]
+  fn group_split_rejects_size_sum_mismatch() {
+    let error = split_configs_into_groups(default_configs(3), &[2, 2])
+      .expect_err("a group size sum mismatch must be rejected");
+    assert_eq!(error.reason, "Watcher groupSizes sum to 4, but 3 output configs were provided");
   }
 }

@@ -31,7 +31,7 @@ export { main_default as default };
 - ../main.js
 (2:0) "export default " --> (26:0) "var "
 (2:0) "export default " --> (26:4) "main_default = ("
-(2:15) "filePath;\n" --> (26:20) "/* @__PURE__ */ __toESM((/* @__PURE__ */ __commonJSMin(((exports, module) => {\n"
+(2:15) "filePath;\n" --> (26:20) "/* @__PURE__ */ "
 - ../foo.txt
 (0:0) "module." --> (27:1) "module."
 (0:7) "exports = " --> (27:8) "exports = "

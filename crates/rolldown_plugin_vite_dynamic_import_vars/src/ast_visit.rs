@@ -95,13 +95,17 @@ impl<'ast> DynamicImportVarsVisit<'ast, '_> {
       };
 
       let raw = source.span.shrink(1).source_text(self.source_text);
-      let raw_pattern = if &glob[..index] == source.quasis[0].value.raw {
-        Cow::Borrowed(raw)
-      } else {
-        let mut s = String::with_capacity(index + source.quasis[0].value.raw.len());
+      let raw_pattern = if async_imports.is_some() {
+        // The resolver replaced the bare/alias prefix with `glob`, so splice the resolved
+        // prefix onto the source after that prefix.
+        let prefix = source.quasis[0].value.raw.len();
+        let mut s = String::with_capacity(index + raw.len() - prefix);
         s.push_str(&glob[..index]);
-        s.push_str(&raw[source.quasis[0].value.raw.len()..]);
+        s.push_str(&raw[prefix..]);
         Cow::Owned(s)
+      } else {
+        // A relative specifier's source reproduces the path at runtime as-is.
+        Cow::Borrowed(raw)
       };
 
       let base = self.importer.parent().unwrap_or(self.root);

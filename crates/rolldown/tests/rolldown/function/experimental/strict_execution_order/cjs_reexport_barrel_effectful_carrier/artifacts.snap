@@ -7,7 +7,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 import { n as __esmMin } from "./rolldown-runtime.js";
-import { n as init_barrel_cjs_0, r as init_barrel_cjs_1 } from "./outer.js";
+import { n as init_barrel_cjs_1, t as init_barrel_cjs_0 } from "./outer.js";
 //#region bare.js
 function init_bare() {
 	return (init_bare = __esmMin((() => {
@@ -25,7 +25,7 @@ init_bare();
 
 ```js
 import { n as __esmMin } from "./rolldown-runtime.js";
-import { n as init_barrel_cjs_0, r as init_barrel_cjs_1 } from "./outer.js";
+import { n as init_barrel_cjs_1, t as init_barrel_cjs_0 } from "./outer.js";
 //#region node_modules/pure-leaves/cn.js
 function cn(...values) {
 	return values.filter(Boolean).join(" ");
@@ -81,11 +81,8 @@ function init_barrel_cjs_1() {
 //#region barrel.js
 //#endregion
 //#region outer.js
-function init_outer() {
-	return (init_outer = __esmMin((() => {})))();
-}
 //#endregion
-export { init_barrel_cjs_0 as n, init_barrel_cjs_1 as r, init_outer as t };
+export { init_barrel_cjs_1 as n, init_barrel_cjs_0 as t };
 
 ```
 
@@ -101,7 +98,7 @@ export { __esmMin as n, __toESM as r, __commonJSMin as t };
 
 ```js
 import { n as __esmMin } from "./rolldown-runtime.js";
-import { n as init_barrel_cjs_0, r as init_barrel_cjs_1 } from "./outer.js";
+import { n as init_barrel_cjs_1, t as init_barrel_cjs_0 } from "./outer.js";
 //#region node_modules/pure-leaves/stack.js
 var Stack;
 function init_stack() {
@@ -134,7 +131,7 @@ export { stack };
 
 ```js
 import { n as __esmMin } from "./rolldown-runtime.js";
-import { n as init_barrel_cjs_0, r as init_barrel_cjs_1 } from "./outer.js";
+import { n as init_barrel_cjs_1, t as init_barrel_cjs_0 } from "./outer.js";
 //#region bare.js
 function init_bare() {
 	return (init_bare = __esmMin((() => {
@@ -152,7 +149,7 @@ init_bare();
 
 ```js
 import { n as __esmMin } from "./rolldown-runtime.js";
-import { n as init_barrel_cjs_0, r as init_barrel_cjs_1 } from "./outer.js";
+import { n as init_barrel_cjs_1, t as init_barrel_cjs_0 } from "./outer.js";
 //#region node_modules/pure-leaves/cn.js
 function cn(...values) {
 	return values.filter(Boolean).join(" ");
@@ -208,11 +205,8 @@ function init_barrel_cjs_1() {
 //#region barrel.js
 //#endregion
 //#region outer.js
-function init_outer() {
-	return (init_outer = __esmMin((() => {})))();
-}
 //#endregion
-export { init_barrel_cjs_0 as n, init_barrel_cjs_1 as r, init_outer as t };
+export { init_barrel_cjs_1 as n, init_barrel_cjs_0 as t };
 
 ```
 
@@ -228,7 +222,7 @@ export { __esmMin as n, __toESM as r, __commonJSMin as t };
 
 ```js
 import { n as __esmMin } from "./rolldown-runtime.js";
-import { n as init_barrel_cjs_0, r as init_barrel_cjs_1 } from "./outer.js";
+import { n as init_barrel_cjs_1, t as init_barrel_cjs_0 } from "./outer.js";
 //#region node_modules/pure-leaves/stack.js
 var Stack;
 function init_stack() {

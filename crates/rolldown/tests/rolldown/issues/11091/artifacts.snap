@@ -7,25 +7,9 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 import { t as __esmMin } from "./rolldown-runtime.js";
-//#region foo.js
-var Foo;
-var init_foo = __esmMin((() => {
-	Foo = { name: "Foo" };
-}));
-//#endregion
-//#region bar.js
-var bar;
-var init_bar = __esmMin((() => {
-	bar = { name: "bar" };
-}));
-//#endregion
 //#region barrel.js
-var init_barrel = __esmMin((() => {
-	init_foo();
-	init_bar();
-}));
+__esmMin((() => {}));
 //#endregion
-export { init_foo as a, Foo as i, bar as n, init_bar as r, init_barrel as t };
 
 ```
 
@@ -33,11 +17,16 @@ export { init_foo as a, Foo as i, bar as n, init_bar as r, init_barrel as t };
 
 ```js
 import { n as __exportAll, r as __toCommonJS, t as __esmMin } from "./rolldown-runtime.js";
-import { n as bar, t as init_barrel } from "./barrel.js";
+//#region bar.js
+var bar;
+var init_bar = __esmMin((() => {
+	bar = { name: "bar" };
+}));
+//#endregion
 //#region req.js
 var req_exports = /* @__PURE__ */ __exportAll({ bar: () => bar });
 var init_req = __esmMin((() => {
-	init_barrel();
+	init_bar();
 }));
 //#endregion
 //#region entry.js
@@ -59,15 +48,14 @@ export { Foo };
 
 ```js
 import { t as __esmMin } from "./rolldown-runtime.js";
-import { i as Foo, t as init_barrel } from "./barrel.js";
-//#region lib.js
-function init_lib() {
-	return (init_lib = __esmMin((() => {
-		init_barrel();
-	})))();
-}
+//#region foo.js
+var Foo;
 //#endregion
-init_lib();
+//#region lib.js
+//#endregion
+__esmMin((() => {
+	Foo = { name: "Foo" };
+}))();
 export { Foo };
 
 ```
@@ -88,25 +76,9 @@ export { __exportAll as n, __toCommonJS as r, __esmMin as t };
 
 ```js
 import { t as __esmMin } from "./rolldown-runtime.js";
-//#region foo.js
-var Foo;
-var init_foo = __esmMin((() => {
-	Foo = { name: "Foo" };
-}));
-//#endregion
-//#region bar.js
-var bar;
-var init_bar = __esmMin((() => {
-	bar = { name: "bar" };
-}));
-//#endregion
 //#region barrel.js
-var init_barrel = __esmMin((() => {
-	init_foo();
-	init_bar();
-}));
+__esmMin((() => {}));
 //#endregion
-export { init_foo as a, Foo as i, bar as n, init_bar as r, init_barrel as t };
 
 ```
 
@@ -114,11 +86,16 @@ export { init_foo as a, Foo as i, bar as n, init_bar as r, init_barrel as t };
 
 ```js
 import { n as __exportAll, r as __toCommonJS, t as __esmMin } from "./rolldown-runtime.js";
-import { n as bar, t as init_barrel } from "./barrel.js";
+//#region bar.js
+var bar;
+var init_bar = __esmMin((() => {
+	bar = { name: "bar" };
+}));
+//#endregion
 //#region req.js
 var req_exports = /* @__PURE__ */ __exportAll({ bar: () => bar });
 var init_req = __esmMin((() => {
-	init_barrel();
+	init_bar();
 }));
 //#endregion
 //#region entry.js
@@ -139,10 +116,15 @@ export { Foo };
 ### lib.js
 
 ```js
-import { i as Foo, t as init_barrel } from "./barrel.js";
-//#region lib.js
-init_barrel();
+import { t as __esmMin } from "./rolldown-runtime.js";
+//#region foo.js
+var Foo;
 //#endregion
+//#region lib.js
+//#endregion
+__esmMin((() => {
+	Foo = { name: "Foo" };
+}))();
 export { Foo };
 
 ```

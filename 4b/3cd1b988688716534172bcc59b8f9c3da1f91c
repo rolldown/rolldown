@@ -1,0 +1,23 @@
+crates/rolldown/src/esm_init_obligations.rs
+  s_7b2a6ae90950dd::t_616980ad427ed9 98,352,509,515,518-528,530-539,542,545-546,548-549,551,554,556-561,564-590,592,596-606,609-620
+crates/rolldown/src/stages/generate_stage/compute_cross_chunk_links.rs
+  s_7b2a6ae90950dd::t_06ac6441358cd4 714-715,933-939
+internal-docs/code-splitting/implementation.md
+  s_7b2a6ae90950dd::t_33e28451fd3179 101,120-124,128,132
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "4b3cd1b988688716534172bcc59b8f9c3da1f91c",
+  "prompts": {},
+  "sessions": {
+    "s_7b2a6ae90950dd": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a11469-befc-7c02-a2ba-975feb5f6cd9",
+        "model": "gpt-6.1-sol"
+      },
+      "human_author": "Yunfei He <i.heyunfei@gmail.com>"
+    }
+  }
+}

@@ -1,0 +1,8 @@
+{
+  "config": {
+    "strictExecutionOrder": true,
+    "experimental": {
+      "onDemandWrapping": true
+    }
+  }
+}

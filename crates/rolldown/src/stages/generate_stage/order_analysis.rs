@@ -431,8 +431,9 @@ impl GenerateStage<'_> {
         // - With an *empty* retained path, minting the overlay requires an execution dependency on
         //   a planned target, which `build_order_wrap_plan`'s closure
         //   (`statically_imports_wrapped_member`) turns into wrapping this importer itself before
-        //   any probe is built — and a wrapped (or interop `WrapKind::Esm`) importer's records are
-        //   never nested (`module_owns_reexport_init`), so for a live importer this combination is
+        //   any probe is built — and a wrapped (or interop `WrapKind::Esm`) importer's non-routed records
+        //   are never nested (`record_owns_reexport_init`). Consumer-local records create no overlay,
+        //   so for a live importer this combination is
         //   unreachable. Assert it so the unproven corner (a concatenated-inner importer — a
         //   dormant feature on this branch) trips loudly instead of silently dropping an edge.
         debug_assert!(
@@ -611,6 +612,7 @@ impl GenerateStage<'_> {
       used_symbol_refs_builder,
       cyclic_modules: &cyclic_modules,
       tree_shaking: self.options.treeshake.is_some(),
+      runtime_idx: self.link_output.runtime.id(),
     };
     for module_idx in plan.modules() {
       if probe_state.has_order_wrapper(module_idx)
@@ -682,6 +684,7 @@ impl GenerateStage<'_> {
       used_symbol_refs_builder,
       cyclic_modules: &cyclic_modules,
       tree_shaking: self.options.treeshake.is_some(),
+      runtime_idx: self.link_output.runtime.id(),
     };
     let consumer_local_plan =
       super::order_wrapping::consumer_local_reexport_plan(&input, probe_state);

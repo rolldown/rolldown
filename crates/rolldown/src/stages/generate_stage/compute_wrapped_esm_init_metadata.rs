@@ -244,6 +244,9 @@ fn transitive_esm_init_targets(
       if rec.kind != ImportKind::Import {
         continue;
       }
+      if ctx.order_state.is_consumer_local_reexport_record(module.idx, rec_idx) {
+        continue;
+      }
       let is_reexport =
         rec.meta.intersects(ImportRecordMeta::IsExportStar | ImportRecordMeta::IsReExportOnly);
       let Some(root) = rec.resolved_module else { continue };

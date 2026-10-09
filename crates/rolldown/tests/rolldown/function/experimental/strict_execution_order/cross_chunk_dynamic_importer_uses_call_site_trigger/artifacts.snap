@@ -86,7 +86,7 @@ function init_b() {
 		(globalThis.log ??= []).push("b");
 		setValue(1);
 		if (value !== 1 || unrelated() !== "unrelated") throw new Error("retained barrel exports have the wrong value");
-		bTargetPromise = import("./ga.js").then((n) => (n.t(), n.n)).then(({ value }) => ({ value }));
+		bTargetPromise = import("./ga.js").then((n) => (n.r(), n.t(), n.n)).then(({ value }) => ({ value }));
 	})))();
 }
 //#endregion
@@ -104,7 +104,7 @@ var aTargetPromise;
 function init_a() {
 	return (init_a = __esmMin((() => {
 		(globalThis.log ??= []).push("a");
-		aTargetPromise = Promise.resolve().then(() => (init_target(), target_exports)).then(({ value }) => ({ value }));
+		aTargetPromise = Promise.resolve().then(() => (init_leaf(), init_target(), target_exports)).then(({ value }) => ({ value }));
 	})))();
 }
 //#endregion
@@ -126,7 +126,6 @@ function init_leaf() {
 var target_exports = /* @__PURE__ */ __exportAll({ value: () => value });
 function init_target() {
 	return (init_target = __esmMin((() => {
-		init_leaf();
 		(globalThis.log ??= []).push("target");
 	})))();
 }

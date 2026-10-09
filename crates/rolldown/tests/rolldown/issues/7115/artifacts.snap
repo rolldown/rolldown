@@ -6,8 +6,9 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## main.js
 
 ```js
+Object.defineProperty(exports, Symbol.toStringTag, { value: "Module" });
 require("./server.js");
-var external_lib = require("external-lib");
+let external_lib = require("external-lib");
 Object.keys(external_lib).forEach(function(k) {
 	if (k !== "default" && !Object.prototype.hasOwnProperty.call(exports, k)) Object.defineProperty(exports, k, {
 		enumerable: true,
@@ -22,7 +23,7 @@ Object.keys(external_lib).forEach(function(k) {
 ## server.js
 
 ```js
-var external_lib = require("external-lib");
+let external_lib = require("external-lib");
 Object.keys(external_lib).forEach(function(k) {
 	if (k !== "default" && !Object.prototype.hasOwnProperty.call(exports, k)) Object.defineProperty(exports, k, {
 		enumerable: true,

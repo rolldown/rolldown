@@ -66,7 +66,10 @@ pub fn render_chunk_external_imports<'a>(
         .symbol_db
         .canonical_name_for_or_original(importee.namespace_ref, &ctx.chunk.canonical_names);
 
-      if ctx.link_output.used_external_symbols.contains(&importee.namespace_ref) {
+      // An entry-level external needs a binding for the key merge in the chunk exports.
+      if ctx.chunk.entry_level_external(*importee_id).is_some()
+        || ctx.link_output.used_external_symbols.contains(&importee.namespace_ref)
+      {
         // `named_imports` only covers imports written by modules that live in this chunk, so the
         // mode set also folds in what the inclusion pass recorded for observers landing here.
         // Deconflicting derives the mixed-mode binding names from this same call.

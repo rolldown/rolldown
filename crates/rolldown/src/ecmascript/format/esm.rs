@@ -62,32 +62,6 @@ pub fn render_esm<'code>(
   // before anything of this file's own runs.
   render_inline_records(ctx, &mut source_joiner, carried_sources);
 
-  if let Some(entry_module) = ctx.chunk.entry_module(&ctx.link_output.module_table) {
-    if matches!(entry_module.exports_kind, ExportsKind::Esm) {
-      for entry_level in &ctx.chunk.entry_level_externals {
-        let importee = &ctx.link_output.module_table[entry_level.external_idx];
-        if let Some(m) = importee.as_external() {
-          let ext_name = m.get_import_path(ctx.chunk, ctx.resolved_paths);
-          // Keep the `with { ... }` clause of the `export * from "..." with { ... }` record
-          // (issue #9160). The `export *` walk of the entry chose this record (see
-          // `EntryLevelExternal`).
-          let with_clause = entry_level.attribute_record.and_then(|(module_idx, rec_idx)| {
-            ctx.link_output.module_table[module_idx].as_normal()?.import_attribute_map.get(&rec_idx)
-          });
-          // An absent attribute is just an empty suffix, so both cases collapse to a
-          // single `append_source` (same shape `create_import_declaration` uses below).
-          source_joiner.append_source(concat_string!(
-            "export * from \"",
-            ext_name,
-            "\"",
-            with_clause.map(|attr| concat_string!(" ", attr.to_string())).unwrap_or_default(),
-            "\n"
-          ));
-        }
-      }
-    }
-  }
-
   // chunk content
   render_chunk_content(ctx, module_sources, &mut source_joiner);
 
@@ -320,13 +294,23 @@ fn render_esm_chunk_imports(ctx: &GenerateContext<'_>) -> Option<String> {
     ));
   });
   let mut rendered_external_import_namespace_modules = FxHashSet::default();
+  // Only an ESM entry module re-exports externals at entry level.
+  let renders_entry_level = ctx
+    .chunk
+    .entry_module(&ctx.link_output.module_table)
+    .is_some_and(|module| matches!(module.exports_kind, ExportsKind::Esm));
   let bare_import_attributes = bare_import_attributes(ctx);
   // render external imports
   ctx.chunk.direct_imports_from_external_modules.iter().for_each(|(importee_id, named_imports)| {
     let importee = &ctx.link_output.module_table[*importee_id]
       .as_external()
       .expect("Should be external module here");
-    let mut has_importee_imported = false;
+    // An entry-level external is upgraded to `export * from` in place. That statement loads the
+    // external too, so the external needs no bare import.
+    // See internal-docs/external-star-exports/implementation.md.
+    let entry_level =
+      renders_entry_level.then(|| ctx.chunk.entry_level_external(*importee_id)).flatten();
+    let mut has_importee_imported = entry_level.is_some();
     let mut import_attribute = None;
     // TODO: Warning same import record has different import attributes. https://tinyurl.com/2ddnbbc8
     named_imports.iter().for_each(|(idx, named_import)| {
@@ -346,6 +330,17 @@ fn render_esm_chunk_imports(ctx: &GenerateContext<'_>) -> Option<String> {
       import_attribute,
       bare_import_attributes.get(importee_id).copied(),
     );
+    if let Some(entry_level) = entry_level {
+      let with_clause = entry_level.attribute_record.and_then(|(module_idx, rec_idx)| {
+        ctx.link_output.module_table[module_idx].as_normal()?.import_attribute_map.get(&rec_idx)
+      });
+      s.push_str(&concat_string!(
+        "export * from ",
+        escape(&importee.get_import_path(ctx.chunk, ctx.resolved_paths)),
+        with_clause.map(|attr| concat_string!(" ", attr.to_string())).unwrap_or_default(),
+        ";\n"
+      ));
+    }
   });
   (!s.is_empty()).then_some(s)
 }

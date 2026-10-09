@@ -7,8 +7,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 import { b } from "./entry_b.js";
-
-export * from "external"
+export * from "external";
 
 //#region entry_a.js
 const a = "a";
@@ -20,7 +19,7 @@ export { a, b };
 ## entry_b.js
 
 ```js
-export * from "external"
+export * from "external";
 
 //#region entry_b.js
 const b = "b";
@@ -37,8 +36,7 @@ export { b };
 
 ```js
 import { b } from "./entry_b.js";
-
-export * from "external"
+export * from "external";
 
 //#region entry_a.js
 const a = "a";
@@ -50,7 +48,7 @@ export { a, b };
 ### entry_b.js
 
 ```js
-export * from "external"
+export * from "external";
 
 //#region entry_b.js
 const b = "b";
@@ -68,8 +66,7 @@ export { b };
 ```js
 import { n as __exportAll, r as __reExport, t as __esmMin } from "./rolldown-runtime.js";
 import { n as init_entry_b, t as b } from "./entry_b2.js";
-
-export * from "external"
+export * from "external";
 
 //#region entry_a.js
 var a;
@@ -89,8 +86,7 @@ export { a, b };
 
 ```js
 import { n as init_entry_b, t as b } from "./entry_b2.js";
-
-export * from "external"
+export * from "external";
 
 init_entry_b();
 export { b };

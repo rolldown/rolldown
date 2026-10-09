@@ -1,0 +1,7 @@
+{
+  "_comment": "`export * from 'ext'` loads `ext` before the body of `main.js`. The `require` used to be printed with the key merge, after the body.",
+  "config": {
+    "external": ["ext"],
+    "format": "cjs"
+  }
+}

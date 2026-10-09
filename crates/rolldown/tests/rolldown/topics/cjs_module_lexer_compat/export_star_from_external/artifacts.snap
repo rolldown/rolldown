@@ -6,7 +6,9 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## main.js
 
 ```js
-var node_fs = require("node:fs");
+Object.defineProperty(exports, Symbol.toStringTag, { value: "Module" });
+let node_fs = require("node:fs");
+let node_path = require("node:path");
 Object.keys(node_fs).forEach(function(k) {
 	if (k !== "default" && !Object.prototype.hasOwnProperty.call(exports, k)) Object.defineProperty(exports, k, {
 		enumerable: true,
@@ -15,7 +17,6 @@ Object.keys(node_fs).forEach(function(k) {
 		}
 	});
 });
-var node_path = require("node:path");
 Object.keys(node_path).forEach(function(k) {
 	if (k !== "default" && !Object.prototype.hasOwnProperty.call(exports, k)) Object.defineProperty(exports, k, {
 		enumerable: true,

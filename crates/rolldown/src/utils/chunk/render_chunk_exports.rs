@@ -1,7 +1,6 @@
 use std::borrow::Cow;
 use std::fmt::Write as _;
 
-use json_escape_simd::escape;
 use oxc_str::CompactStr;
 use rolldown_common::{
   Chunk, ChunkKind, ExportsKind, IndexModules, ModuleIdx, NormalizedBundlerOptions, OutputExports,
@@ -10,9 +9,7 @@ use rolldown_common::{
 use rolldown_utils::{
   concat_string,
   ecmascript::{property_access_str, to_module_import_export_name},
-  indexmap::FxIndexSet,
 };
-use rustc_hash::FxHashSet;
 
 use crate::esm_init_obligations::{WrappedEsmInitTarget, collect_entry_reexported_wrapper_inits};
 use crate::{stages::link_stage::LinkStageOutput, types::generator::GenerateContext};
@@ -182,7 +179,6 @@ fn render_entry_reexported_wrapper_init_calls(
   (!rendered.is_empty()).then_some(rendered)
 }
 
-#[expect(clippy::too_many_lines)] // Dispatches over every output format and export mode inline.
 pub fn render_chunk_exports(
   ctx: &GenerateContext<'_>,
   export_mode: Option<&OutputExports>,
@@ -348,56 +344,27 @@ pub fn render_chunk_exports(
             s.push_str(&rendered_items.join("\n"));
           }
 
-          let meta = &ctx.link_output.metas[module.idx];
-          let external_modules = meta
-            .star_exports_from_external_modules
-            .iter()
-            .filter_map(|rec_idx| module.ecma_view.import_records[*rec_idx].resolved_module)
-            .chain(ctx.chunk.entry_level_externals.iter().map(|item| item.external_idx))
-            .collect::<FxIndexSet<ModuleIdx>>();
-
-          // Track already imported external modules to avoid duplicates
-          // First check if any of these external modules have already been imported elsewhere in the chunk
-          let mut imported_external_modules: FxHashSet<SymbolRef> = ctx
-            .chunk
-            .direct_imports_from_external_modules
-            .iter()
-            .map(|(idx, _)| {
-              let external = &ctx.link_output.module_table[*idx]
-                .as_external()
-                .expect("Should be external module here");
-              external.namespace_ref
-            })
-            .chain(ctx.chunk.import_symbol_from_external_modules.iter().map(|idx| {
-              let external = &ctx.link_output.module_table[*idx]
-                .as_external()
-                .expect("Should be external module here");
-              external.namespace_ref
-            }))
-            .collect();
-          external_modules.iter().for_each(|idx| {
-          let external = &ctx.link_output.module_table[*idx].as_external().expect("Should be external module here");
-          let binding_ref_name = ctx
-            .link_output
-            .symbol_db
-            .canonical_name_for_or_original(external.namespace_ref, &ctx.chunk.canonical_names);
-          let import_stmt = concat_string!(
-            "Object.keys(",binding_ref_name, ").forEach(function (k) {\n",
-            "  if (k !== 'default' && !Object.prototype.hasOwnProperty.call(exports, k)) Object.defineProperty(exports, k, {\n",
-            "    enumerable: true,\n",
-            "    get: function () { return ",binding_ref_name,"[k]; }\n",
-            "  });\n",
-            "});\n"
-          );
-
-          s.push('\n');
-          // Only generate require statement if this external module hasn't been imported yet
-          if imported_external_modules.insert(external.namespace_ref) {
-            let import_path = escape(&external.get_import_path(chunk, ctx.resolved_paths));
-            writeln!(s, "var {binding_ref_name} = require({import_path});").unwrap();
+          // The chunk imports bind every entry-level external (`render_cjs_chunk_imports`,
+          // `render_chunk_external_imports`), so only the key merge is left here.
+          // See internal-docs/external-star-exports/implementation.md.
+          for item in &ctx.chunk.entry_level_externals {
+            let external = &ctx.link_output.module_table[item.external_idx]
+              .as_external()
+              .expect("Should be external module here");
+            let binding_ref_name = ctx
+              .link_output
+              .symbol_db
+              .canonical_name_for_or_original(external.namespace_ref, &ctx.chunk.canonical_names);
+            s.push('\n');
+            s.push_str(&concat_string!(
+              "Object.keys(",binding_ref_name, ").forEach(function (k) {\n",
+              "  if (k !== 'default' && !Object.prototype.hasOwnProperty.call(exports, k)) Object.defineProperty(exports, k, {\n",
+              "    enumerable: true,\n",
+              "    get: function () { return ",binding_ref_name,"[k]; }\n",
+              "  });\n",
+              "});\n"
+            ));
           }
-          s.push_str(&import_stmt);
-        });
         }
         ChunkKind::Common => {
           let rendered_items = export_items

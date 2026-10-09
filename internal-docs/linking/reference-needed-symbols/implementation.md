@@ -13,6 +13,15 @@ It writes data; it does not decide what is included. `include_statements` is the
 
 Source: `crates/rolldown/src/stages/link_stage/reference_needed_symbols.rs`.
 
+Binding demand retains initialization as well as the declaration. In
+`tree_shaking/include_statements.rs`, `demand_esm_initialization` retains an interop ESM owner's
+wrapper and the declaring statements along the binding's linked re-export chain. An entry export
+must carry that chain just as a binding read in an included statement does. Keeping only the
+canonical declaration leaves a named re-export's `init_*` call excluded; splitting the declaration
+into a dynamic chunk then leaves its value uninitialized. Retaining the forwarding statements
+during linking supplies their wrapper references to dependency propagation and chunk placement,
+and preserves initialization at the original import-record positions.
+
 ## Pipeline placement
 
 ```

@@ -1,0 +1,43 @@
+crates/rolldown/src/ast_scanner/impl_visit.rs
+  s_bd04312b686058::t_7a2d529f8236d5 597,606-607
+crates/rolldown/src/ast_scanner/import_analyzer.rs
+  s_bd04312b686058::t_e9dd21aca1d5b7 9,80-85,88,90-94,96-97,104
+crates/rolldown/src/stages/link_stage/bind_imports_and_exports.rs
+  s_bd04312b686058::t_d9cb71a2617bc3 11-12,36,820,823-829,1895,1898,1902-1914
+crates/rolldown/tests/rolldown/issues/11146_namespace_delete_missing/_config.json
+  s_f1f1b7b6189784::t_a87fa63e48e459 1-4
+crates/rolldown/tests/rolldown/issues/11146_namespace_delete_missing/dynamic.js
+  s_f1f1b7b6189784::t_edc49a4dc1c241 1-2
+crates/rolldown/tests/rolldown/issues/11146_namespace_delete_missing/main.js
+  s_bd04312b686058::t_c3ab91e0e3ffb7 1-5
+crates/rolldown/tests/rolldown/issues/11146_namespace_delete_missing/server.js
+  s_f1f1b7b6189784::t_123b79a004be57 1
+crates/rolldown_common/src/lib.rs
+  s_bd04312b686058::t_536b45f3f188ec 187-189
+crates/rolldown_common/src/types/member_expr_ref.rs
+  s_bd04312b686058::t_6ad78db5ecd313 35,37-47
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "a0c2f902d49284272a8ef77262325b0044c8352b",
+  "prompts": {},
+  "sessions": {
+    "s_bd04312b686058": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "a28054c5-9362-4660-908e-dae73191824e",
+        "model": "unknown"
+      },
+      "human_author": "IWANABETHATGUY <iwanabethatguy@qq.com>"
+    },
+    "s_f1f1b7b6189784": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a11ad8-4156-7f81-8e68-e0c62f71ca0e",
+        "model": "unknown"
+      },
+      "human_author": "IWANABETHATGUY <iwanabethatguy@qq.com>"
+    }
+  }
+}

@@ -697,7 +697,7 @@ fn handle_include_symbol(
     note_external_interop_use(ctx, symbol_ref, alias_holder_ref, canonical_ref);
   }
   if let Module::Normal(module) = &ctx.modules[canonical_ref.owner] {
-    demand_esm_init_wrapper(ctx, canonical_ref);
+    demand_esm_initialization(ctx, symbol_ref, canonical_ref);
     note_json_self_reference(ctx, module, canonical_ref, include_reason);
     enqueue_declaring_statements(ctx, &canonical_ref);
     if !is_simulated_facade_chunk {
@@ -919,9 +919,13 @@ fn note_namespace_inclusion_reason(
   }
 }
 
-/// Using any binding of a `WrapKind::Esm` module demands its `init_*` wrapper: the binding is
-/// only initialized once the wrapper runs.
-fn demand_esm_init_wrapper(ctx: &mut IncludeContext, canonical_ref: SymbolRef) {
+/// A wrapped ESM binding needs its wrapper and the forwarding declarations that call it.
+/// See internal-docs/linking/reference-needed-symbols/implementation.md.
+fn demand_esm_initialization(
+  ctx: &mut IncludeContext,
+  symbol_ref: SymbolRef,
+  canonical_ref: SymbolRef,
+) {
   let wrapper_ref = {
     let meta = &ctx.metas[canonical_ref.owner];
     matches!(meta.wrap_kind(), WrapKind::Esm)
@@ -931,6 +935,11 @@ fn demand_esm_init_wrapper(ctx: &mut IncludeContext, canonical_ref: SymbolRef) {
   };
   if let Some(wrapper_ref) = wrapper_ref {
     ctx.pending.push(WorkItem::Symbol(wrapper_ref, SymbolIncludeReason::Normal));
+    std::iter::once(&symbol_ref)
+      .chain(ctx.normal_symbol_exports_chain_map.get(&symbol_ref).map(Vec::as_slice).unwrap_or(&[]))
+      .for_each(|forwarding_ref| {
+        enqueue_declaring_statements(ctx, forwarding_ref);
+      });
   }
 }
 

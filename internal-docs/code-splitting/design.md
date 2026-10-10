@@ -136,6 +136,31 @@ is marked re-export-transparent when it has no local executable body, generated 
 assignment, unconditional execution dependency, or `keepNames` work. Each consumer then routes
 through it only to the leaf bindings that consumer retained.
 
+An interop ESM wrapper can also make a direct re-export-only barrel initialize all retained
+exports together, including bindings used only by a dynamic consumer. ESM-only consumer-local
+routing bypasses that shared initializer only when the entire static dependency graph can
+initialize independently of outside state. This proof is stronger than `moduleSideEffects: false`:
+an initializer such as `export const snapshot = importedValue` has no write side effect, but
+delaying it past a mutation changes its exported value. Calls annotated pure, getter reads and
+coercions can observe the same timing difference.
+
+The scanner proves a restricted set of local initializations: literal data, inert functions and
+classes, and reads of already initialized local bindings. Function bodies and instance field
+initializers are deferred; imported/global eager reads, calls, spreads, destructuring, computed
+keys, class definition-time work and possible local TDZ reads reject the proof. A reverse
+static-import worklist rejects every module depending on an unproven module, an external, a
+synchronous cycle, TLA, a missing-export shim, a concatenated wrapper or an explicit effectful
+module contract. Ordinary tree-shaking analysis remains separate: generated star-re-export glue
+can mark a module effectful even when this source-level proof succeeds.
+
+Eager consumers then initialize only the leaf bindings they use; a dynamic consumer initializes
+its own leaves when loaded. The leaves retain their existing memoized module initializers, live
+bindings and shared object identities. ESM-only route seeds require an interop `WrapKind::Esm`;
+every ESM-only outer forwarder must satisfy the same complete dependency proof. CJS carrier
+routes keep their separate record-based eligibility in the routing fixpoint. This keeps a
+hazard-free unwrapped graph byte-identical under on-demand mode. Direct `require()` targets and
+unproven graphs keep their guarded module initialization.
+
 A direct CJS re-export used to disqualify an otherwise pure barrel because the ordinary CJS
 finalizer generated `namespace = __toESM(require_cjs())` inside the shared barrel wrapper. Strict
 lowering now represents that generated body as one `OrderCjsCarrier` per import record. The barrel
@@ -185,8 +210,10 @@ Code-splitting placement makes the same consumer-local decision before chunks ex
 incoming record through the shared resolver. Once a non-entry consumer-local barrel is reached,
 its module-wide `load_dependencies` union is not traversed; only recursively eager carriers and
 consumer-local waypoint modules are unconditional. Named leaves and pure carriers get bits only
-from the incoming consumer that chose them. Preserving waypoint modules keeps every included
-routing barrel reachable without reopening its union of unrelated leaves. A barrel that is itself
+from the incoming consumer that chose them. A waypoint with an observably used namespace object
+receives bits only from consumers of that object; propagating it through unrelated routes would
+load every namespace getter target prematurely. Other waypoint modules stay reachable without
+reopening their union of unrelated leaves. A barrel that is itself
 a user or dynamic entry exposes its complete namespace and therefore uses the conservative full
 traversal and an entry prologue containing every statically known target.
 

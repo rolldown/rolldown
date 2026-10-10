@@ -30,6 +30,8 @@ bitflags! {
         const TopExportedSideEffectsFreeFunction = 1 << 5;
         /// Module evaluation reads at least one imported binding.
         const TopLevelImportRead = 1 << 6;
+        /// Local initialization creates data and functions without observing outside state.
+        const IndependentInitialization = 1 << 7;
     }
 }
 

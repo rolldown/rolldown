@@ -95,9 +95,7 @@ pub fn record_is_init_obligation(
   if rec.kind != ImportKind::Import {
     return false;
   }
-  if order_state.is_consumer_local_reexport_route(importer.idx)
-    && rec.meta.intersects(ImportRecordMeta::IsExportStar | ImportRecordMeta::IsReExportOnly)
-  {
+  if order_state.is_consumer_local_reexport_route(importer.idx) {
     return false;
   }
   match purpose {
@@ -351,7 +349,7 @@ pub fn collect_wrapped_esm_init_targets_for_module_namespace(
       &mut visited_symbols,
     );
   }
-  targets.sort_by_key(|target| consumer_local_target_order(ctx, ctx.importer.idx, *target));
+  sort_consumer_local_targets(ctx, ctx.importer.idx, &mut targets);
   targets
 }
 
@@ -508,84 +506,118 @@ fn collect_esm_init_targets_for_record(
   }
 
   if route_through_transparent_wrapper {
-    targets.sort_by_key(|target| consumer_local_target_order(ctx, importee_idx, *target));
+    sort_consumer_local_targets(ctx, importee_idx, &mut targets);
   }
 
   targets
 }
 
-fn consumer_local_target_order(
+fn sort_consumer_local_targets(
   ctx: &WrappedEsmInitTargetContext<'_>,
   forwarder_idx: ModuleIdx,
-  target: WrappedEsmInitTarget,
-) -> Vec<usize> {
+  targets: &mut [WrappedEsmInitTarget],
+) {
+  if targets.len() < 2 {
+    return;
+  }
+  let mut targets_by_owner = FxHashMap::<ModuleIdx, Vec<WrappedEsmInitTarget>>::default();
+  let mut ranks = FxHashMap::default();
+  for &target in targets.iter() {
+    targets_by_owner.entry(target.owner()).or_default().push(target);
+    ranks.insert(target, usize::MAX);
+  }
   let mut visited = FxHashSet::default();
-  consumer_local_target_order_path(ctx, forwarder_idx, target, &mut visited)
-    .unwrap_or_else(|| vec![usize::MAX])
+  let mut next_rank = 0;
+  collect_consumer_local_target_order(
+    ctx,
+    forwarder_idx,
+    &targets_by_owner,
+    &mut ranks,
+    &mut visited,
+    &mut next_rank,
+  );
+  targets.sort_by_key(|target| ranks[target]);
 }
 
-fn consumer_local_target_order_path(
+fn collect_consumer_local_target_order(
   ctx: &WrappedEsmInitTargetContext<'_>,
   forwarder_idx: ModuleIdx,
-  target: WrappedEsmInitTarget,
+  targets_by_owner: &FxHashMap<ModuleIdx, Vec<WrappedEsmInitTarget>>,
+  ranks: &mut FxHashMap<WrappedEsmInitTarget, usize>,
   visited: &mut FxHashSet<ModuleIdx>,
-) -> Option<Vec<usize>> {
+  next_rank: &mut usize,
+) {
   if !visited.insert(forwarder_idx) {
-    return None;
+    return;
   }
   let Some(forwarder) = ctx.modules[forwarder_idx].as_normal() else {
-    visited.remove(&forwarder_idx);
-    return None;
+    return;
   };
-  if let WrappedEsmInitTarget::CjsCarrier(key) = target
-    && key.importer == forwarder_idx
-  {
-    let position = forwarder
-      .import_records
-      .iter_enumerated()
-      .position(|(rec_idx, _)| rec_idx == key.record)
-      .unwrap_or(usize::MAX);
-    visited.remove(&forwarder_idx);
-    return Some(vec![position]);
+  let mut named_owners = FxHashMap::<ImportRecordIdx, FxHashSet<ModuleIdx>>::default();
+  for (symbol_ref, import) in &forwarder.named_imports {
+    named_owners
+      .entry(import.record_idx)
+      .or_default()
+      .insert(ctx.symbol_db.canonical_ref_resolving_namespace(*symbol_ref).owner);
   }
 
-  let target_owner = target.owner();
-  for (position, (rec_idx, rec)) in forwarder.import_records.iter_enumerated().enumerate() {
-    if matches!(target, WrappedEsmInitTarget::Module(module_idx) if rec.resolved_module == Some(module_idx))
-    {
-      visited.remove(&forwarder_idx);
-      return Some(vec![position]);
+  for (rec_idx, rec) in forwarder.import_records.iter_enumerated() {
+    // Reserve the parent rank before descending. Resolve child routes before fallback owners,
+    // so a target found in a child keeps its full source path rather than the parent's prefix.
+    let rank = *next_rank;
+    *next_rank += 1;
+    assign_consumer_local_target_rank(
+      ranks,
+      WrappedEsmInitTarget::CjsCarrier(OrderCjsCarrierKey {
+        importer: forwarder_idx,
+        record: rec_idx,
+      }),
+      rank,
+    );
+    if let Some(importee_idx) = rec.resolved_module {
+      assign_consumer_local_target_rank(ranks, WrappedEsmInitTarget::Module(importee_idx), rank);
+      if ctx.order_wrap_state.is_consumer_local_reexport_route(importee_idx)
+        || ctx.order_wrap_state.reexport_init_is_transparent(importee_idx)
+      {
+        collect_consumer_local_target_order(
+          ctx,
+          importee_idx,
+          targets_by_owner,
+          ranks,
+          visited,
+          next_rank,
+        );
+      }
     }
-    if let Some(importee_idx) = rec.resolved_module
-      && (ctx.order_wrap_state.is_consumer_local_reexport_route(importee_idx)
-        || ctx.order_wrap_state.reexport_init_is_transparent(importee_idx))
-      && let Some(mut path) = consumer_local_target_order_path(ctx, importee_idx, target, visited)
-    {
-      path.insert(0, position);
-      visited.remove(&forwarder_idx);
-      return Some(path);
-    }
-    if forwarder.named_imports.iter().filter(|(_, import)| import.record_idx == rec_idx).any(
-      |(imported_as_ref, _)| {
-        ctx.symbol_db.canonical_ref_resolving_namespace(*imported_as_ref).owner == target_owner
-      },
-    ) {
-      visited.remove(&forwarder_idx);
-      return Some(vec![position]);
-    }
+    let mut owners = named_owners.remove(&rec_idx).unwrap_or_default();
     if rec.meta.contains(ImportRecordMeta::IsExportStar)
       && let Some(importee_idx) = rec.resolved_module
-      && ctx.metas[importee_idx].resolved_exports.values().any(|resolved_export| {
-        ctx.symbol_db.canonical_ref_resolving_namespace(resolved_export.symbol_ref).owner
-          == target_owner
-      })
     {
-      visited.remove(&forwarder_idx);
-      return Some(vec![position]);
+      owners.extend(ctx.metas[importee_idx].resolved_exports.values().map(|resolved_export| {
+        ctx.symbol_db.canonical_ref_resolving_namespace(resolved_export.symbol_ref).owner
+      }));
+    }
+    for owner in owners {
+      for &target in targets_by_owner.get(&owner).into_iter().flatten() {
+        if !matches!(target, WrappedEsmInitTarget::CjsCarrier(key) if key.importer == forwarder_idx)
+        {
+          assign_consumer_local_target_rank(ranks, target, rank);
+        }
+      }
     }
   }
-  visited.remove(&forwarder_idx);
-  None
+}
+
+fn assign_consumer_local_target_rank(
+  ranks: &mut FxHashMap<WrappedEsmInitTarget, usize>,
+  target: WrappedEsmInitTarget,
+  rank: usize,
+) {
+  if let Some(target_rank) = ranks.get_mut(&target)
+    && *target_rank == usize::MAX
+  {
+    *target_rank = rank;
+  }
 }
 
 fn add_eager_order_cjs_carriers_for_consumer_local_route(

@@ -711,7 +711,8 @@ impl GenerateStage<'_> {
                 order_state.has_order_cjs_carrier(super::order_wrap_state::OrderCjsCarrierKey {
                   importer: module.idx,
                   record: *rec_idx,
-                })
+                }) || (order_state.is_consumer_local_reexport_route(module.idx)
+                  && module.import_records[*rec_idx].kind == ImportKind::Import)
               }) {
                 return;
               }
@@ -929,6 +930,13 @@ impl GenerateStage<'_> {
     symbol_ref: SymbolRef,
   ) {
     let meta = &self.link_output.metas[symbol_ref.owner];
+    if order_state.is_consumer_local_reexport_route(symbol_ref.owner)
+      && order_state
+        .esm_init_target(symbol_ref.owner, meta)
+        .is_some_and(|target| target.wrapper_ref == symbol_ref)
+    {
+      return;
+    }
     if !self.options.is_strict_execution_order_enabled() {
       // Off-strict keeps main's exact shape: lowering never mutates the chunk graph, so the
       // liveness guards below can never fire.

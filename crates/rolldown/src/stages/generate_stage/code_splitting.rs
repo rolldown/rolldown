@@ -1213,9 +1213,14 @@ impl GenerateStage<'_> {
       // import record through the shared resolver.
       if is_consumer_local_barrel && module_idx != entry_module_idx {
         for rec in &module.import_records {
+          // A materialized namespace belongs to the consumers of that object. Adding it as an
+          // unconditional waypoint would import all its getter targets into unrelated consumers.
           if rec.kind == ImportKind::Import
             && let Some(importee_idx) = rec.resolved_module
             && pre_chunk_order_state.is_consumer_local_reexport_route(importee_idx)
+            && !self.link_output.metas[importee_idx]
+              .module_namespace_included_reason
+              .contains(ModuleNamespaceIncludedReason::Unknown)
           {
             q.push_back(importee_idx);
           }

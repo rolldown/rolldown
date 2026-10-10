@@ -65,6 +65,17 @@ impl<'me, 'ast: 'me> VisitJs<'ast> for AstScanner<'me, 'ast> {
     );
     // Custom visit
 
+    if self.immutable_ctx.options.is_strict_execution_order_enabled()
+      && self.immutable_ctx.options.treeshake.is_some()
+      && super::independent_init::has_independent_initialization(
+        program,
+        &self.result.symbol_ref_db.ast_scopes,
+        self.immutable_ctx.options.keep_names,
+      )
+    {
+      self.result.ecma_view_meta.insert(EcmaViewMeta::IndependentInitialization);
+    }
+
     for (idx, stmt) in program.body.iter().enumerate() {
       // `0` is reserved for Module Namespace Object stmt info
       #[expect(

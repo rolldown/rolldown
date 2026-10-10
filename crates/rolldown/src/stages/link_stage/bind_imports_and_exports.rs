@@ -375,6 +375,9 @@ impl LinkStage<'_> {
     }
 
     self.register_shimmed_exports();
+    if self.options.shim_missing_exports {
+      self.shim_missing_namespace_exports();
+    }
 
     self.metas.par_iter_mut().for_each(|meta| {
       let mut sorted_and_non_ambiguous_resolved_exports = vec![];
@@ -701,6 +704,16 @@ impl LinkStage<'_> {
         let meta = &self.metas[module.idx];
         let mut exports = meta.resolved_exports.clone();
         let mut records = meta.star_export_record_by_name.clone();
+        // Namespace requests can add earlier candidates, so select star shims afresh.
+        exports.retain(|name, export| {
+          let symbol = export.symbol_ref;
+          let is_propagated_shim = symbol.owner != module.idx
+            && self.metas[symbol.owner].shimmed_missing_exports.get(name) == Some(&symbol);
+          if is_propagated_shim {
+            records.remove(name);
+          }
+          !is_propagated_shim
+        });
         Self::add_exports_for_export_star(
           &self.module_table.modules,
           &mut exports,
@@ -717,6 +730,63 @@ impl LinkStage<'_> {
       self.metas[idx].resolved_exports = exports;
       self.metas[idx].star_export_record_by_name = records;
     }
+  }
+
+  fn shim_missing_namespace_exports(&mut self) {
+    let mut requested = FxIndexSet::default();
+    for stmt_infos in &self.stmt_infos {
+      for stmt in stmt_infos.iter() {
+        for reference in &stmt.referenced_symbols {
+          let SymbolOrMemberExprRef::MemberExpr(member) = reference else { continue };
+          let mut symbol = self.symbols.canonical_ref_for(member.object_ref);
+          for (cursor, prop) in member.prop_and_span_list.iter().enumerate() {
+            if cursor + 1 == member.prop_and_span_list.len() && member.write_target.is_some() {
+              break;
+            }
+            let Some(module) = self.module_table[symbol.owner].as_normal() else { break };
+            if module.namespace_object_ref != symbol {
+              break;
+            }
+            let meta = &self.metas[module.idx];
+            let Some(export) = meta.resolved_exports.get(&prop.name) else {
+              if !meta.has_dynamic_exports {
+                requested.insert((module.idx, prop.name.clone()));
+              }
+              break;
+            };
+            if export.came_from_commonjs
+              || export.potentially_ambiguous_symbol_refs.as_ref().is_some_and(|others| {
+                others.iter().any(|&other| {
+                  ResolvedBinding::of(&self.module_table.modules, &self.symbols, other)
+                    != ResolvedBinding::of(
+                      &self.module_table.modules,
+                      &self.symbols,
+                      export.symbol_ref,
+                    )
+                })
+              })
+            {
+              break;
+            }
+            symbol = self.symbols.canonical_ref_for(export.symbol_ref);
+          }
+        }
+      }
+    }
+    if requested.is_empty() {
+      return;
+    }
+    for (idx, name) in requested {
+      shim_missing_export(
+        self.module_table[idx].as_normal().unwrap(),
+        &name,
+        &mut self.metas[idx],
+        &mut self.symbols,
+        &mut self.diagnostics,
+        self.options.checks.contains(EventKindSwitcher::ShimmedExport),
+      );
+    }
+    self.register_shimmed_exports();
   }
 
   /// Strict-execution-order only: record the star re-export paths behind every non-ambiguous

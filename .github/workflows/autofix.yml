@@ -16,16 +16,17 @@ jobs:
     steps:
       - uses: taiki-e/checkout-action@7d1e50e93dc4fb3bba58f85018fadf77898aee8b # v1.4.2
 
-      - uses: voidzero-dev/setup-vp@3754dd7dbdb32bd8f6d28b6043de13ad3a75f21f # v1.21.1
-        with:
-          version: '1.0.0'
-          cache: true
+      - parallel:
+          - uses: voidzero-dev/setup-vp@3754dd7dbdb32bd8f6d28b6043de13ad3a75f21f # v1.21.1
+            with:
+              version: '1.0.0'
+              cache: true
 
-      - uses: oxc-project/setup-rust@3d6fb132fbe7cdcb66bf8ec193911c2945369d12 # v1.0.17
-        with:
-          restore-cache: false
-          tools: cargo-shear@1.12.4
-          components: rustfmt
+          - uses: oxc-project/setup-rust@3d6fb132fbe7cdcb66bf8ec193911c2945369d12 # v1.0.17
+            with:
+              restore-cache: false
+              tools: cargo-shear@1.12.4
+              components: rustfmt
 
       - name: cargo-shear
         id: shear

@@ -78,7 +78,7 @@ function packBrowserPackage() {
   browserPacked = true;
 
   if (shouldBuild) {
-    run('pnpm', ['run', '--filter', 'rolldown', 'build-browser-pkg:debug'], repoRoot, 'browser');
+    run('pnpm', ['run', '--filter', 'rolldown', 'build-node'], repoRoot, 'browser');
   }
   pack(
     join(repoRoot, 'packages/browser'),
@@ -90,7 +90,6 @@ function packBrowserPackage() {
 
 function packNodePackages() {
   if (shouldBuild) {
-    run('pnpm', ['run', '--filter', 'rolldown', 'build-binding:wasi'], repoRoot);
     // TARGET is dropped so `dist` keeps the published shape, without the wasm inlined
     run('pnpm', ['run', '--filter', 'rolldown', 'build-node'], repoRoot);
   }
@@ -116,6 +115,10 @@ function packNodePackages() {
 // from the tarball instead of being linked to packages/browser
 function installBrowserPage() {
   run('pnpm', ['install', '--ignore-workspace', '--no-frozen-lockfile'], browserPage);
+}
+
+if (shouldBuild) {
+  run('pnpm', ['run', '--filter', 'rolldown', 'build-binding:wasi'], repoRoot);
 }
 
 if (suite === 'webcontainer' || suite === 'all') {

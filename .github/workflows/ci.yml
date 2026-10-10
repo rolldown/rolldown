@@ -251,17 +251,18 @@ jobs:
     steps:
       - uses: taiki-e/checkout-action@7d1e50e93dc4fb3bba58f85018fadf77898aee8b # v1.4.2
 
-      - uses: voidzero-dev/setup-vp@3754dd7dbdb32bd8f6d28b6043de13ad3a75f21f # v1.21.1
-        with:
-          version: '1.0.0'
-          cache: true
+      - parallel:
+          - uses: voidzero-dev/setup-vp@3754dd7dbdb32bd8f6d28b6043de13ad3a75f21f # v1.21.1
+            with:
+              version: '1.0.0'
+              cache: true
 
-      - name: Download Native Rolldown Build
-        if: ${{ needs.changes.outputs.node-changes == 'true' }}
-        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
-        with:
-          name: rolldown-native-ubuntu-latest
-          path: packages/rolldown/dist
+          - name: Download Native Rolldown Build
+            if: ${{ needs.changes.outputs.node-changes == 'true' }}
+            uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+            with:
+              name: rolldown-native-ubuntu-latest
+              path: packages/rolldown/dist
 
       - name: Configure Git
         run: |
@@ -297,16 +298,17 @@ jobs:
           env-mapping: |
             PNPM_HOME,{{ DEV_DRIVE }}/.pnpm
 
-      - uses: voidzero-dev/setup-vp@3754dd7dbdb32bd8f6d28b6043de13ad3a75f21f # v1.21.1
-        with:
-          version: '1.0.0'
-          cache: true
+      - parallel:
+          - uses: voidzero-dev/setup-vp@3754dd7dbdb32bd8f6d28b6043de13ad3a75f21f # v1.21.1
+            with:
+              version: '1.0.0'
+              cache: true
 
-      - name: Download Native Rolldown Build
-        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
-        with:
-          name: rolldown-native-windows-latest
-          path: packages/rolldown/dist
+          - name: Download Native Rolldown Build
+            uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+            with:
+              name: rolldown-native-windows-latest
+              path: packages/rolldown/dist
 
       - name: Configure Git
         run: |
@@ -354,26 +356,31 @@ jobs:
     steps:
       - uses: taiki-e/checkout-action@7d1e50e93dc4fb3bba58f85018fadf77898aee8b # v1.4.2
 
-      - name: Setup Rust
-        uses: oxc-project/setup-rust@3d6fb132fbe7cdcb66bf8ec193911c2945369d12 # v1.0.17
-        with:
-          tools: just
-          cache-key: native-build
-          save-cache: false
-
       - uses: voidzero-dev/setup-vp@3754dd7dbdb32bd8f6d28b6043de13ad3a75f21f # v1.21.1
+        id: vp-setup
+        background: true
         with:
           version: '1.0.0'
           cache: true
 
-      - name: Download Native Rolldown Build
-        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
-        with:
-          name: rolldown-native-ubuntu-latest
-          path: packages/rolldown/dist
+      - parallel:
+          - name: Setup Rust
+            uses: oxc-project/setup-rust@3d6fb132fbe7cdcb66bf8ec193911c2945369d12 # v1.0.17
+            with:
+              tools: just
+              cache-key: native-build
+              save-cache: false
+
+          - name: Download Native Rolldown Build
+            uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+            with:
+              name: rolldown-native-ubuntu-latest
+              path: packages/rolldown/dist
 
       - name: Add WASI target
         run: rustup target add wasm32-wasip1-threads
+
+      - wait: vp-setup
 
       - name: Build @rolldown/browser
         run: just build-browser
@@ -387,20 +394,21 @@ jobs:
       - name: Make sure generated code of `@rolldown/debug` is up-to-date
         run: git diff --exit-code
 
-      - name: Lint Code
-        run: vp lint
+      - parallel:
+          - name: Lint Code
+            run: vp lint
 
-      - name: Node Type Test
-        run: vp run --filter rolldown-tests test:types
+          - name: Node Type Test
+            run: vp run --filter rolldown-tests test:types
 
-      - name: Lint publint
-        run: vp run lint-publint
+          - name: Lint publint
+            run: vp run lint-publint
 
-      - name: Lint exports & dependencies
-        run: vp run lint-knip
+          - name: Lint exports & dependencies
+            run: vp run lint-knip
 
-      - name: Validate workspace package
-        run: node scripts/misc/published-package-check.mjs
+          - name: Validate workspace package
+            run: node scripts/misc/published-package-check.mjs
 
   repo-validation:
     name: Repo Validation
@@ -408,17 +416,18 @@ jobs:
     steps:
       - uses: taiki-e/checkout-action@7d1e50e93dc4fb3bba58f85018fadf77898aee8b # v1.4.2
 
-      - name: Setup Rust
-        uses: oxc-project/setup-rust@3d6fb132fbe7cdcb66bf8ec193911c2945369d12 # v1.0.17
-        with:
-          cache-key: repo-validation
-          save-cache: ${{ github.ref_name == 'main' }}
-          components: rustfmt
+      - parallel:
+          - name: Setup Rust
+            uses: oxc-project/setup-rust@3d6fb132fbe7cdcb66bf8ec193911c2945369d12 # v1.0.17
+            with:
+              cache-key: repo-validation
+              save-cache: ${{ github.ref_name == 'main' }}
+              components: rustfmt
 
-      - uses: voidzero-dev/setup-vp@3754dd7dbdb32bd8f6d28b6043de13ad3a75f21f # v1.21.1
-        with:
-          version: '1.0.0'
-          cache: true
+          - uses: voidzero-dev/setup-vp@3754dd7dbdb32bd8f6d28b6043de13ad3a75f21f # v1.21.1
+            with:
+              version: '1.0.0'
+              cache: true
 
       - name: Lint Filename
         run: cargo ls-lint

@@ -207,4 +207,10 @@ export interface ChecksOptions {
    * @default true
    * */
   namespaceConflict?: boolean;
+
+  /**
+   * Whether to emit warnings when a missing export is replaced with an undefined binding.
+   * @default true
+   * */
+  shimmedExport?: boolean;
 }

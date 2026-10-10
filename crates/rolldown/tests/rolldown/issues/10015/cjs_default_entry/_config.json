@@ -1,0 +1,10 @@
+{
+  "config": {
+    "input": [{ "name": "main", "import": "./main.js" }],
+    "platform": "node",
+    "format": "cjs",
+    "exports": "auto",
+    "preserveEntrySignatures": "strict",
+    "minifyInternalExports": false
+  }
+}

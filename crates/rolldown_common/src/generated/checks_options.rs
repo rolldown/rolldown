@@ -39,6 +39,7 @@ pub struct ChecksOptions {
   pub large_barrel_modules: Option<bool>,
   pub sourcemap_broken: Option<bool>,
   pub namespace_conflict: Option<bool>,
+  pub shimmed_export: Option<bool>,
 }
 impl From<ChecksOptions> for rolldown_error::EventKindSwitcher {
   fn from(value: ChecksOptions) -> Self {
@@ -137,6 +138,8 @@ impl From<ChecksOptions> for rolldown_error::EventKindSwitcher {
       rolldown_error::EventKindSwitcher::NamespaceConflict,
       value.namespace_conflict.unwrap_or(true),
     );
+    flag
+      .set(rolldown_error::EventKindSwitcher::ShimmedExport, value.shimmed_export.unwrap_or(true));
     flag
   }
 }

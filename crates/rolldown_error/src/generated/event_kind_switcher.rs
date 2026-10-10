@@ -55,5 +55,6 @@ bitflags! {
     const LargeBarrelModules = 1 << 47;
     const SourcemapBroken = 1 << 48;
     const NamespaceConflict = 1 << 49;
+    const ShimmedExport = 1 << 50;
   }
 }

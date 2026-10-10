@@ -14,7 +14,7 @@ The order decision can only be made after provisional chunk placement. Reusing `
 - User module and statement liveness are fixed before order planning starts.
 - Order lowering may add only synthetic wrapper, init, runtime, facade, symbol, and topology state.
 - Finalization and cross-chunk linking consume interop wrappers and order wrappers through an explicit shared read interface.
-- Flag-off builds leave order-wrapper state empty and create no strict-only facades.
+- Disabling `strictExecutionOrder` leaves order-wrapper state empty and disables execution-order facades.
 - The external differential fuzzer remains the semantic verifier. Rolldown does not add a test-only execution model or assertions that merely turn lowering bugs into build failures.
 
 ## Modes
@@ -417,7 +417,7 @@ The API does not expose mutable `LinkingMetadata`, `StmtInfos`, or the chunk gra
 
 ### Final ESM init metadata
 
-After wrapper selection and final chunk topology are fixed, `compute_wrapped_esm_init_metadata` derives the two facts that depend on both link and order state: whether an `init_*()` call is a no-op, and which wrapped modules must be initialized at each excluded statement. Interop and execution-order wrappers share one sealed result instead of writing the same kind of final fact back into either owner's mutable state:
+After wrapper selection, `compute_wrapped_esm_init_metadata` derives the two facts that depend on both link and order state: whether an `init_*()` call is a no-op, and which wrapped modules must be initialized at each excluded statement. Interop and execution-order wrappers share one sealed result for a chunk layout. `finalize_chunk_plan` sweeps unused runtime helpers before deriving this result and replaces it if signature-facade creation changes the layout:
 
 ```rust
 pub struct Sealed<T>(T); // private field and constructor; Deref only, never DerefMut or unwrap
@@ -519,9 +519,12 @@ link + tree shaking
   -> pre-chunk consumer-local probe + importer-local entry-bit propagation
   -> provisional ChunkGraph
   -> OrderAnalysis / OrderWrapPlan
-  -> lower plan into OrderWrapState + final ChunkGraph
-  -> compute Sealed<FinalEsmInitMetadata> using LinkingMetadata + OrderWrapState
-  -> compute cross-chunk links using EsmInitTarget + Sealed<FinalEsmInitMetadata>
+  -> lower plan into OrderWrapState
+  -> sweep unused runtime
+  -> derive sealed init metadata and cross-chunk links
+  -> preserve strict entry signatures with public facades
+  -> rederive init metadata and links if facades changed topology
+  -> seal liveness and commit cross-chunk links
   -> finalize modules using explicit interop/order wrapper cases + Sealed<FinalEsmInitMetadata>
   -> render entry prologues using the shared EsmInitTarget view
 ```
@@ -542,7 +545,7 @@ link + tree shaking
 - Wrap-all and on-demand preserve the same link-stage statement and binding liveness; only their wrapper plans may differ.
 - Emit, Register, Project, and pre-chunk placement resolve consumer-local records through the same target model.
 - Every order-wrapped entry has an explicit entry trigger.
-- Flag-off builds create no order wrappers or strict-only entry facades.
+- Execution-order wrappers and facades require `strictExecutionOrder`; signature facades obey `preserveEntrySignatures` independently.
 
 ## Verification
 

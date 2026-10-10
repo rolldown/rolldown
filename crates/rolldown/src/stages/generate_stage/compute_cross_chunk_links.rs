@@ -55,7 +55,7 @@ pub(super) struct CrossChunkLinkState {
   pub(super) index_cross_chunk_dynamic_imports: IndexCrossChunkDynamicImports,
   pub(super) index_chunk_dynamic_imports_from_external_modules:
     IndexChunkDynamicImportsFromExternalModules,
-  order_live_symbols: FxHashSet<SymbolRef>,
+  pub(super) order_live_symbols: FxHashSet<SymbolRef>,
   symbol_chunk_table: SymbolChunkTable,
 }
 
@@ -1430,14 +1430,8 @@ impl GenerateStage<'_> {
           // the inclusion fixpoint (whose dead refs here are constants that got inlined —
           // constants kept as bindings, e.g. entry exports, stay live — and over-collected
           // refs).
-          let is_live = if let Some(m) = self.link_output.module_table[import_ref.owner].as_normal()
-            && m.namespace_object_ref == import_ref
+          if !self.cross_chunk_symbol_is_live(used_symbol_refs_view, order_live_symbols, import_ref)
           {
-            self.link_output.metas[import_ref.owner].namespace_included
-          } else {
-            non_namespace_symbol_is_live(used_symbol_refs_view, order_live_symbols, import_ref)
-          };
-          if !is_live {
             continue;
           }
           // If the symbol from external module and the format is commonjs, we might need to insert runtime
@@ -1740,14 +1734,11 @@ impl GenerateStage<'_> {
       {
         // Same liveness rule as the cross-chunk import loop above (dynamic entries
         // register their namespace refs among the exported-symbol candidates).
-        let is_live = if let Some(m) = self.link_output.module_table[chunk_export.owner].as_normal()
-          && m.namespace_object_ref == *chunk_export
-        {
-          self.link_output.metas[chunk_export.owner].namespace_included
-        } else {
-          non_namespace_symbol_is_live(used_symbol_refs.view(), order_live_symbols, *chunk_export)
-        };
-        if !is_live {
+        if !self.cross_chunk_symbol_is_live(
+          used_symbol_refs.view(),
+          order_live_symbols,
+          *chunk_export,
+        ) {
           continue;
         }
         let original_name: CompactStr = match predefined_names.as_slice() {
@@ -1797,14 +1788,21 @@ impl GenerateStage<'_> {
       }
     }
   }
-}
 
-fn non_namespace_symbol_is_live(
-  used_symbol_refs_view: UsedSymbolRefsView<'_>,
-  order_live_symbols: &FxHashSet<SymbolRef>,
-  symbol_ref: SymbolRef,
-) -> bool {
-  used_symbol_refs_view.contains(&symbol_ref) || order_live_symbols.contains(&symbol_ref)
+  pub(super) fn cross_chunk_symbol_is_live(
+    &self,
+    used_symbol_refs: UsedSymbolRefsView<'_>,
+    order_live_symbols: &FxHashSet<SymbolRef>,
+    symbol_ref: SymbolRef,
+  ) -> bool {
+    if let Some(module) = self.link_output.module_table[symbol_ref.owner].as_normal()
+      && module.namespace_object_ref == symbol_ref
+    {
+      self.link_output.metas[symbol_ref.owner].namespace_included
+    } else {
+      used_symbol_refs.contains(&symbol_ref) || order_live_symbols.contains(&symbol_ref)
+    }
+  }
 }
 
 // The same implementation with https://github.com/oxc-project/oxc/blob/crates_v0.86.0/crates/oxc_mangler/src/base54.rs#L30-L31

@@ -1,0 +1,77 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## consumer.js
+
+```js
+const require_main$1 = require("./main2.js");
+//#region consumer.cjs
+module.exports = () => require_main$1.require_main();
+//#endregion
+
+```
+
+## dynamic.js
+
+```js
+const require_main = require("./main2.js");
+//#region dynamic.cjs
+var require_dynamic = /* @__PURE__ */ require_main.__commonJSMin(((exports, module) => {
+	module.exports = require_main.require_shared();
+}));
+//#endregion
+Object.defineProperty(exports, "default", {
+	enumerable: true,
+	get: function() {
+		return require_dynamic();
+	}
+});
+
+```
+
+## main.js
+
+```js
+const require_main$1 = require("./main2.js");
+module.exports = require_main$1.require_main();
+
+```
+
+## main2.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+//#region shared.cjs
+var require_shared = /* @__PURE__ */ __commonJSMin(((exports, module) => {
+	globalThis.sharedInitializations = (globalThis.sharedInitializations ?? 0) + 1;
+	module.exports = { tag: "shared" };
+}));
+//#endregion
+//#region main.cjs
+var require_main = /* @__PURE__ */ __commonJSMin(((exports) => {
+	const shared = require_shared();
+	exports.POST = async () => (await Promise.resolve().then(() => /* @__PURE__ */ __toESM(require("./dynamic.js").default, 1))).default === shared;
+}));
+//#endregion
+Object.defineProperty(exports, "__commonJSMin", {
+	enumerable: true,
+	get: function() {
+		return __commonJSMin;
+	}
+});
+Object.defineProperty(exports, "require_main", {
+	enumerable: true,
+	get: function() {
+		return require_main;
+	}
+});
+Object.defineProperty(exports, "require_shared", {
+	enumerable: true,
+	get: function() {
+		return require_shared;
+	}
+});
+
+```

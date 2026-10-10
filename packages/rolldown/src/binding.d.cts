@@ -2014,6 +2014,7 @@ export interface BindingChecksOptions {
   largeBarrelModules?: boolean
   sourcemapBroken?: boolean
   namespaceConflict?: boolean
+  shimmedExport?: boolean
 }
 
 export interface BindingChunkImportMap {
@@ -2548,6 +2549,7 @@ export interface BindingLog {
   id?: string
   code?: string
   exporter?: string
+  binding?: string
   plugin?: string
   /** Location information (line, column, file) */
   loc?: BindingLogLocation

@@ -1,0 +1,18 @@
+{
+  "config": {
+    "input": [{ "name": "main", "import": "./main.js" }],
+    "shimMissingExports": true,
+    "preserveEntrySignatures": "strict"
+  },
+  "configVariants": [
+    { "_configName": "strict", "strictExecutionOrder": true, "_snapshot": false },
+    {
+      "_configName": "on-demand",
+      "strictExecutionOrder": true,
+      "onDemandWrapping": true,
+      "_snapshot": false
+    },
+    { "_configName": "preserve-modules", "preserveModules": true, "_snapshot": false },
+    { "_configName": "minify", "minify": true, "_snapshot": false }
+  ]
+}

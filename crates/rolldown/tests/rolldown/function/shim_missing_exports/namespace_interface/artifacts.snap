@@ -1,0 +1,79 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# warnings
+
+## INEFFECTIVE_DYNAMIC_IMPORT
+
+```text
+[INEFFECTIVE_DYNAMIC_IMPORT] barrel.js is dynamically imported by main.js but also statically imported by main.js, dynamic import will not move module into another chunk.
+
+```
+
+## SHIMMED_EXPORT
+
+```text
+[SHIMMED_EXPORT] Missing export "a-b" has been shimmed in module "dep.js".
+
+```
+
+## SHIMMED_EXPORT
+
+```text
+[SHIMMED_EXPORT] Missing export "default" has been shimmed in module "dep.js".
+
+```
+
+## SHIMMED_EXPORT
+
+```text
+[SHIMMED_EXPORT] Missing export "missing" has been shimmed in module "dep.js".
+
+```
+
+## SHIMMED_EXPORT
+
+```text
+[SHIMMED_EXPORT] Missing export "unused" has been shimmed in module "dep.js".
+
+```
+
+# Assets
+
+## main.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+//#region dep.js
+var dep_exports = /* @__PURE__ */ __exportAll({
+	"a-b": () => a_b,
+	default: () => _default,
+	missing: () => missing,
+	unused: () => unused,
+	value: () => 1
+});
+var a_b = void 0;
+var _default = void 0;
+var missing = void 0;
+var unused = void 0;
+//#endregion
+//#region barrel.js
+var barrel_exports = /* @__PURE__ */ __exportAll({
+	"a-b": () => a_b,
+	missing: () => missing,
+	unused: () => unused,
+	value: () => 1
+});
+//#endregion
+//#region main.js
+const values = [
+	_default,
+	a_b,
+	missing
+];
+const keys = [Object.keys(dep_exports).sort(), Object.keys(barrel_exports).sort()];
+const load = () => Promise.resolve().then(() => barrel_exports);
+//#endregion
+export { keys, load, values };
+
+```

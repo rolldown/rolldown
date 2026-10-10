@@ -726,7 +726,9 @@ test.concurrent(
       output: { file: output },
       watch: {
         buildDelay: pollInterval * 10,
-        watcher: { usePolling: true, pollInterval },
+        // The second edit lands right after the first one is seen, possibly within the same mtime
+        // second, so detect it by content rather than by mtime alone.
+        watcher: { usePolling: true, pollInterval, compareContentsForPolling: true },
         onInvalidate: () => {
           invalidations++;
           invalidationWaiters.shift()?.();

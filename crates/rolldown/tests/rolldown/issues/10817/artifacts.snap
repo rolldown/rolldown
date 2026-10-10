@@ -1,0 +1,21 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+//#region constants.js
+const SECOND = 1e3;
+
+//#endregion
+//#region derived.js
+const used = "used";
+
+//#endregion
+//#region main.js
+console.log(SECOND, used);
+
+//#endregion
+```

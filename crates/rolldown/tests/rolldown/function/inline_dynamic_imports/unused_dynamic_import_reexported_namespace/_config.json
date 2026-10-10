@@ -1,0 +1,10 @@
+{
+  "config": {
+    "codeSplitting": false
+  },
+  "configVariants": [
+    {
+      "format": "iife"
+    }
+  ]
+}

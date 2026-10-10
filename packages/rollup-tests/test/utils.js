@@ -116,7 +116,7 @@ function normalizeExpectedError(error) {
 	delete clone.frame;
 	delete clone.watchFiles;
 	delete clone.url;
-	delete clone.binding;
+	if (clone.code !== 'SHIMMED_EXPORT') delete clone.binding;
 	if (parseErrorRollupErrorCodes.has(clone.code)) {
 		clone.code = 'PARSE_ERROR';
 	}

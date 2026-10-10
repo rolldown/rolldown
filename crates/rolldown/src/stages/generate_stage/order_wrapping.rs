@@ -901,59 +901,9 @@ impl GenerateStage<'_> {
         continue;
       }
 
-      let Some((meta, bit, name, file_name, bits, input_base, preserve_entry_signature)) = ({
-        let entry_chunk = &mut chunk_graph.chunk_table[entry_chunk_idx];
-        match entry_chunk.kind {
-          ChunkKind::EntryPoint { meta, bit, module }
-            if module == entry_module_idx && !entry_chunk.modules.is_empty() =>
-          {
-            let bits = entry_chunk.bits.clone();
-            let input_base = entry_chunk.input_base.clone();
-            let name = entry_chunk.name.take();
-            let file_name = entry_chunk.file_name.take();
-            let preserve_entry_signature = entry_chunk.preserve_entry_signature.take();
-            entry_chunk.kind = ChunkKind::Common;
-            entry_chunk.add_creation_reason(
-              ChunkCreationReason::CommonChunk { bits: &bits, link_output: self.link_output },
-              self.options,
-            );
-            Some((meta, bit, name, file_name, bits, input_base, preserve_entry_signature))
-          }
-          ChunkKind::EntryPoint { .. } | ChunkKind::Common => None,
-        }
-      }) else {
-        continue;
-      };
-
-      let mut facade_chunk = Chunk::new(
-        name,
-        file_name,
-        bits,
-        vec![],
-        ChunkKind::EntryPoint { meta, bit, module: entry_module_idx },
-        input_base,
-        preserve_entry_signature,
-      );
-      let entry_module = &self.link_output.module_table[entry_module_idx];
-      facade_chunk.add_creation_reason(
-        ChunkCreationReason::Entry {
-          is_user_defined_entry: meta.contains(ChunkMeta::UserDefinedEntry),
-          entry_module_id: entry_module.stable_id(),
-          name: self
-            .link_output
-            .entries
-            .get(&entry_module_idx)
-            .and_then(|entries| entries.first())
-            .and_then(|entry| entry.name.as_ref()),
-        },
-        self.options,
-      );
-      let facade_chunk_idx = chunk_graph.add_chunk(facade_chunk);
-      chunk_graph.entry_module_to_entry_chunk.insert(entry_module_idx, facade_chunk_idx);
-      if let Some(reference_ids) = chunk_graph.chunk_idx_to_reference_ids.remove(&entry_chunk_idx) {
-        chunk_graph.chunk_idx_to_reference_ids.insert(facade_chunk_idx, reference_ids);
+      if chunk_graph.chunk_table[entry_chunk_idx].entry_module_idx() == Some(entry_module_idx) {
+        created |= self.create_entry_facade(chunk_graph, entry_chunk_idx);
       }
-      created = true;
     }
     created
   }

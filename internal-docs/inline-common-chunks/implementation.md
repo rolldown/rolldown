@@ -23,9 +23,8 @@ A fixture's `configVariants` entry with `codeSplitting: { experimentalInlineComm
 generate()
   ├─ prepare_inline_common_chunks()          evaluates `exclude` once (async), marks `.d.ts`
   ├─ generate_chunks()                        try_merge_runtime_chunk() returns early while on
-  ├─ finalize_chunk_plan()                    order lowering, sweep: no record-specific behavior
-  ├─ used_symbol_refs.seal(); compute_wrapped_esm_init_metadata()
-  ├─ compute_cross_chunk_link_state()         pure derivation of the final logical edges
+  ├─ finalize_chunk_plan()                    order lowering, sweep, signature facades; returns final init metadata and derived logical links
+  ├─ used_symbol_refs.seal()
   ├─ select_inline_common_chunks()            <- selection point: records, placement, registry demand
   ├─ compute_cross_chunk_link_state()         again, only when something was selected: the demand
   │                                            adds the runtime chunk's `__share*` imports/exports

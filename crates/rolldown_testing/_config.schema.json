@@ -1579,6 +1579,12 @@
             "boolean",
             "null"
           ]
+        },
+        "shimmedExport": {
+          "type": [
+            "boolean",
+            "null"
+          ]
         }
       },
       "additionalProperties": false

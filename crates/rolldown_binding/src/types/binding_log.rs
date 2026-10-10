@@ -19,6 +19,7 @@ pub struct BindingLog {
   pub id: Option<String>,
   pub code: Option<String>,
   pub exporter: Option<String>,
+  pub binding: Option<String>,
   pub plugin: Option<String>,
   /// Location information (line, column, file)
   pub loc: Option<BindingLogLocation>,
@@ -35,6 +36,7 @@ impl From<rolldown_common::Log> for BindingLog {
       message: value.message,
       id: value.id,
       exporter: value.exporter,
+      binding: value.binding,
       plugin: value.plugin,
       loc: value.loc.map(Into::into),
       pos: value.pos,

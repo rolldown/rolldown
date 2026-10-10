@@ -172,6 +172,8 @@ impl OrderWrapState {
     self.consumed_reexport_facades.contains(&symbol_ref)
   }
 
+  /// The wrapper evaluates the module-owned body. Consumer-local re-exports require the
+  /// additional targets selected by the import-record or complete-namespace resolver.
   pub(crate) fn esm_init_target(
     &self,
     module_idx: ModuleIdx,

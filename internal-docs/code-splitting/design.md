@@ -336,6 +336,7 @@ pub struct OrderWrapState {
   modules: FxHashMap<ModuleIdx, OrderWrappedModule>,
   reexport_init_transparent: FxHashSet<ModuleIdx>,
   consumer_local_reexport_routes: FxHashSet<ModuleIdx>,
+  consumer_local_reexport_records: FxHashMap<ModuleIdx, FxHashSet<ImportRecordIdx>>,
   consumer_local_namespace_targets: FxHashMap<ModuleIdx, Vec<WrappedEsmInitTarget>>,
   cjs_carriers: FxHashMap<OrderCjsCarrierKey, OrderCjsCarrier>,
   cjs_carriers_by_importee: FxHashMap<ModuleIdx, Vec<OrderCjsCarrierKey>>,

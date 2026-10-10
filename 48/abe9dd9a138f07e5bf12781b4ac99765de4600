@@ -1,0 +1,25 @@
+crates/rolldown/tests/rolldown/function/experimental/strict_execution_order/mixed_reexport_namespace/artifacts.snap
+  s_7b2a6ae90950dd::t_926dee77624b11 1-50
+crates/rolldown/tests/rolldown/function/experimental/strict_execution_order/mixed_reexport_namespace/deep/artifacts.snap
+  s_7b2a6ae90950dd::t_c4b7ff87453cfd 1-53
+crates/rolldown/tests/rolldown/function/experimental/strict_execution_order/mixed_reexport_namespace/lazy/artifacts.snap
+  s_7b2a6ae90950dd::t_a99961555c908d 1-76
+crates/rolldown/tests/rolldown/function/experimental/strict_execution_order/mixed_reexport_namespace/visibility/artifacts.snap
+  s_7b2a6ae90950dd::t_1399010354877b 1-148
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "48abe9dd9a138f07e5bf12781b4ac99765de4600",
+  "prompts": {},
+  "sessions": {
+    "s_7b2a6ae90950dd": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a11469-befc-7c02-a2ba-975feb5f6cd9",
+        "model": "gpt-6.1-sol"
+      },
+      "human_author": "Yunfei He <i.heyunfei@gmail.com>"
+    }
+  }
+}

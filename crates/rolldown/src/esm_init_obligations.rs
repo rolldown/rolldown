@@ -29,7 +29,8 @@
 //! `Sealed<FinalEsmInitMetadata>`), while Project must recompute them per fixpoint round from the
 //! current plan — both through the same routers (the excluded-hop router
 //! [`collect_order_wrap_esm_init_targets`] for re-export hops, the shared per-record collector
-//! [`collect_wrapped_esm_init_targets_for_import_record`] for binding-demand plain imports), so
+//! [`collect_wrapped_esm_init_targets_for_import_record`] for namespace-retained star records and
+//! binding-demand plain imports), so
 //! the routing itself cannot drift.
 //!
 //! Purpose contracts are deliberately *not* identical, and each divergence is encoded (and
@@ -449,6 +450,14 @@ fn collect_esm_init_targets_for_record(
   let mut visited_symbols = FxHashSet::default();
   if record.meta.contains(ImportRecordMeta::IsExportStar) {
     for export_name in importee_meta.sorted_and_non_ambiguous_resolved_exports.keys() {
+      // A star record initializes only names visible through that record in the importer's
+      // namespace. Other consumers can keep a shadowed or ambiguous export's wrapper live.
+      if ctx.strict_execution_order
+        && (ctx.importer_meta.star_export_record_by_name.get(export_name) != Some(&rec_idx)
+          || !ctx.importer_meta.sorted_and_non_ambiguous_resolved_exports.contains_key(export_name))
+      {
+        continue;
+      }
       if owns_non_routed_init && !export_has_consumer_local_init(ctx, importee_idx, export_name) {
         continue;
       }

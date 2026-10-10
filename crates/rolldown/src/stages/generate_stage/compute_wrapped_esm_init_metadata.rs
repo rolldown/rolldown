@@ -295,7 +295,7 @@ fn transitive_esm_init_targets(
           // module's `init_*`, so the wrapper must initialize the leaves that demand selects
           // (issue #10690). Included plain imports emit at their own statement position instead.
           if !stmt_is_included && !is_reexport {
-            let record_targets = excluded_plain_import_init_targets(module, meta, ctx, rec_idx);
+            let record_targets = retained_import_record_init_targets(module, meta, ctx, rec_idx);
             if !record_targets.is_empty() {
               targets_by_stmt.entry(stmt_idx).or_default().extend(record_targets);
             }
@@ -311,36 +311,14 @@ fn transitive_esm_init_targets(
         continue;
       }
       let mut targets = vec![];
-      if namespace_reexport_is_retained && ctx.order_state.is_consumer_local_reexport_route(root) {
-        let namespace_targets = ctx
-          .order_state
-          .consumer_local_namespace_targets(root)
-          .expect("consumer-local route should have complete namespace targets");
-        targets.extend(namespace_targets.iter().copied().filter(|target| match target {
-          WrappedEsmInitTarget::Module(module_idx) => {
-            ctx.order_state.esm_init_included_in_live_chunk(
-              &ctx.metas[*module_idx],
-              *module_idx,
-              ctx.chunk_graph,
-            )
-          }
-          WrappedEsmInitTarget::CjsCarrier(key) => {
-            ctx.order_state.order_cjs_carrier_included_in_live_chunk(*key, ctx.chunk_graph)
-          }
-        }));
+      if namespace_reexport_is_retained
+        && (ctx.order_wrap || ctx.order_state.is_consumer_local_reexport_route(root))
+      {
+        targets.extend(retained_import_record_init_targets(module, meta, ctx, rec_idx));
       } else if ctx.order_wrap {
-        // A recorded retained path restricts the hop walk to the chains resolved reads consumed.
-        // That is only sound when the path is the record's whole evidence: an included namespace
-        // (or forwarded dynamic exports) retains EVERY non-ambiguous export of this star record —
-        // including chains no resolved read recorded — so the walk must stay unrestricted there or
-        // the off-path pure definers lose their only init call site.
-        let retained_reexport_path = if namespace_reexport_is_retained {
-          None
-        } else {
-          overlay
-            .filter(|overlay| !overlay.retained_reexport_path.is_empty())
-            .map(|overlay| overlay.retained_reexport_path.as_slice())
-        };
+        let retained_reexport_path = overlay
+          .filter(|overlay| !overlay.retained_reexport_path.is_empty())
+          .map(|overlay| overlay.retained_reexport_path.as_slice());
         let mut retained_path_visited = FxHashSet::default();
         collect_order_wrap_esm_init_targets(
           ctx.modules,
@@ -372,21 +350,10 @@ fn transitive_esm_init_targets(
   targets_by_stmt
 }
 
-/// Resolve the binding demand of one excluded, non-forwarding plain-import record through the
-/// shared per-record router — the same resolver Emit runs for included statements — so the
-/// wrapper's excluded-statement metadata owns exactly the leaves and carriers this importer's
-/// consumers reach through it. Registration consumes the same metadata, which is what makes every
-/// collected wrapper reachable; the live-chunk filter below keeps emission from calling a wrapper
-/// that no live chunk declares.
-///
-/// The router runs only when the record carries binding demand: a live binding consumer
-/// (used binding, consumed facade, or member read in this module's included statements) or a
-/// binding this module re-exports, which downstream consumers reach through its export surface
-/// even when every read was statically folded away. A demand-less record — a side-effect-only
-/// import of a side-effect-free module, or dead named imports — was stripped by tree shaking
-/// deliberately, and routing it would resurrect that edge (the router initializes a wrapped
-/// importee wholesale, matching an included import's evaluation semantics).
-fn excluded_plain_import_init_targets(
+/// Resolve retained namespace and binding consumers through the included-record router. A mixed
+/// module's local initializer does not initialize its consumer-local re-exports.
+/// See internal-docs/code-splitting/design.md#tree-shaking-parity-across-strict-modes.
+fn retained_import_record_init_targets(
   module: &NormalModule,
   meta: &LinkingMetadata,
   ctx: &EsmInitTargetContext<'_>,
@@ -402,14 +369,13 @@ fn excluded_plain_import_init_targets(
     constant_value_map: ctx.constant_value_map,
     inline_const_mode: ctx.inline_const_mode,
     order_wrap_state: ctx.order_state,
-    // Only order-wrapped modules reach this router, and order wrapping exists only under strict
-    // execution order.
     strict_execution_order: true,
   };
   let record_reexports_binding = module.named_imports.iter().any(|(imported_as_ref, import)| {
     import.record_idx == rec_idx && importer_reexports_binding(module, *imported_as_ref)
   });
-  if !record_reexports_binding
+  if !module.import_records[rec_idx].meta.contains(ImportRecordMeta::IsExportStar)
+    && !record_reexports_binding
     && !import_record_has_live_binding_consumer(&router_ctx, rec_idx, |symbol_ref| {
       ctx.used_symbol_refs.contains(&symbol_ref)
     })

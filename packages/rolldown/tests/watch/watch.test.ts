@@ -711,11 +711,28 @@ test.concurrent(
   async ({ task, expect, onTestFinished }) => {
     const retryCount = task.result?.retryCount ?? 0;
     const { input, output, dir } = createTestInputAndOutput('watch-buildDelay', retryCount);
+    // The poller only sees a change on its next scan, so two edits can reach the watcher up to
+    // one poll interval (plus the scan itself) apart. `buildDelay` must cover that gap, or
+    // whether the edits share one rebuild is a race between the next scan and the delay.
+    const pollInterval = 50;
+    let invalidations = 0;
+    const invalidationWaiters: Array<() => void> = [];
+    const nextInvalidation = () =>
+      new Promise<void>((resolve) => {
+        invalidationWaiters.push(resolve);
+      });
     const watcher = watch({
       input,
       output: { file: output },
       watch: {
-        buildDelay: 50,
+        buildDelay: pollInterval * 10,
+        // The second edit lands right after the first one is seen, possibly within the same mtime
+        // second, so detect it by content rather than by mtime alone.
+        watcher: { usePolling: true, pollInterval, compareContentsForPolling: true },
+        onInvalidate: () => {
+          invalidations++;
+          invalidationWaiters.shift()?.();
+        },
       },
     });
     onTestFinished(async () => {
@@ -726,19 +743,28 @@ test.concurrent(
     });
     await waitBuildFinished(watcher);
 
-    const restartFn = vi.fn();
-    watcher.on('restart', restartFn);
+    // Records how many edits the watcher had seen when each rebuild started.
+    const invalidationsAtRestart: number[] = [];
+    watcher.on('restart', () => {
+      invalidationsAtRestart.push(invalidations);
+    });
+    const rebuilt = waitBuildFinished(watcher);
 
     // Sleep to ensure mtime crosses second boundary from initial creation
     await sleep(1000);
+    // Make the second edit only after the watcher has seen the first, so the two edits always
+    // arrive as separate changes and the rebuild has to wait out `buildDelay` to batch them.
+    const firstSeen = nextInvalidation();
     fs.writeFileSync(input, 'console.log(4)');
-    await sleep(20);
+    await firstSeen;
+    const secondSeen = nextInvalidation();
     fs.writeFileSync(input, 'console.log(5)');
+    await secondSeen;
 
-    // sleep 200ms to wait the build finished, if the buildDelay is working, the restartFn should be called once
-    await sleep(200);
-    await expect.poll(() => fs.readFileSync(output, 'utf-8')).toContain('console.log(5)');
-    expect(restartFn).toBeCalledTimes(1);
+    await rebuilt;
+    expect(fs.readFileSync(output, 'utf-8')).toContain('console.log(5)');
+    // One rebuild, started after both edits were seen.
+    expect(invalidationsAtRestart).toEqual([2]);
   },
 );
 

@@ -1,5 +1,5 @@
 import assert from 'node:assert';
-import { entries, read } from './main.js';
+import { entries, read } from './dist/main.js';
 
 assert.deepEqual(entries, {
   shadowed: [

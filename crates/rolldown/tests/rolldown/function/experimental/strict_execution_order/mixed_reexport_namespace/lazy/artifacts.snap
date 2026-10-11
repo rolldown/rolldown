@@ -18,12 +18,11 @@ function init_leaf() {
 //#endregion
 //#region lazy.js
 function init_lazy() {
-	return (init_lazy = __esmMin((() => {
-		init_leaf();
-		init_mixed();
-	})))();
+	return (init_lazy = __esmMin((() => {})))();
 }
 //#endregion
+init_mixed();
+init_leaf();
 init_lazy();
 export { LOCAL, VALUE };
 

@@ -17,9 +17,9 @@ use rustc_hash::{FxHashMap, FxHashSet};
 use crate::{
   chunk_graph::ChunkGraph,
   esm_init_obligations::{
-    WrappedEsmInitTarget, WrappedEsmInitTargetContext, collect_order_wrap_esm_init_targets,
-    collect_wrapped_esm_init_targets_for_import_record, import_record_has_live_binding_consumer,
-    importer_reexports_binding, reexport_record_owns_hop,
+    EsmInitTargetPurpose, WrappedEsmInitTarget, WrappedEsmInitTargetContext,
+    collect_order_wrap_esm_init_targets, collect_wrapped_esm_init_targets_for_import_record,
+    import_record_has_live_binding_consumer, importer_reexports_binding, reexport_record_owns_hop,
   },
   type_alias::{IndexEcmaAst, IndexStmtInfos},
   types::linking_metadata::{LinkingMetadata, LinkingMetadataVec},
@@ -51,7 +51,7 @@ impl<T> Deref for Sealed<T> {
   }
 }
 
-/// Final post-chunking facts needed to emit wrapped ESM initialization.
+/// Final post-chunking facts needed to emit module initialization.
 ///
 /// This artifact is deliberately separate from both link-owned [`LinkingMetadata`] and
 /// order-lowering-owned [`OrderWrapState`]. It is computed once after chunk topology and wrapper
@@ -104,8 +104,12 @@ impl GenerateStage<'_> {
         if !meta.is_included {
           return None;
         }
-        let init_target = order_state.esm_init_target(module_idx, meta)?;
-        let is_noop = init_is_noop(meta, ast_table[module_idx].as_ref(), keep_names);
+        let init_target = order_state.esm_init_target(module_idx, meta);
+        if init_target.is_none() && (!strict || meta.static_init_dependencies.is_none()) {
+          return None;
+        }
+        let is_noop =
+          init_target.is_some() && init_is_noop(meta, ast_table[module_idx].as_ref(), keep_names);
         let targets_by_stmt = modules[module_idx]
           .as_normal()
           .zip(module_to_chunk[module_idx])
@@ -119,7 +123,8 @@ impl GenerateStage<'_> {
                 modules,
                 metas,
                 placement: Some((chunk_graph, chunk_idx)),
-                order_wrap: matches!(init_target.origin, EsmInitOrigin::ExecutionOrder),
+                order_wrap: init_target
+                  .is_some_and(|target| matches!(target.origin, EsmInitOrigin::ExecutionOrder)),
                 execution_dependencies: &meta.execution_dependencies,
                 order_state,
                 stmt_infos_vec,
@@ -148,7 +153,7 @@ impl GenerateStage<'_> {
     used_symbol_refs: UsedSymbolRefsView<'_>,
   ) -> Vec<WrappedEsmInitTarget> {
     // Interop's excluded-statement targets are confined to the importer's own chunk.
-    // Only order wrapping can introduce a cross-chunk loading obligation here.
+    // Mandatory evaluation targets of eager importers are already in load_dependencies.
     if !order_state.has_order_wrapper(module.idx) {
       return Vec::new();
     }
@@ -220,6 +225,7 @@ impl EsmInitTargetContext<'_> {
             })
         }
       }
+      WrappedEsmInitTarget::CjsModule(module_idx) => self.module_is_live(module_idx),
       WrappedEsmInitTarget::CjsCarrier(key) => {
         if let Some((graph, _)) = self.placement {
           self.order_state.order_cjs_carrier_included_in_live_chunk(key, graph)
@@ -289,8 +295,8 @@ fn contributes_no_closure_body(stmt: &Statement, keep_names: bool) -> bool {
   }
 }
 
-/// For each non-included static import/re-export statement of `module`, the wrapped-ESM modules
-/// whose `init_*()` calls the finalizer must emit in the statement's place.
+/// For each non-included static import/re-export statement, initialization targets the finalizer
+/// must emit in the statement's place.
 fn transitive_esm_init_targets(
   module: &NormalModule,
   meta: &LinkingMetadata,
@@ -318,12 +324,21 @@ fn transitive_esm_init_targets(
       if rec.kind != ImportKind::Import {
         continue;
       }
-      if ctx.order_state.is_consumer_local_reexport_record(module.idx, rec_idx) {
+      if ctx.order_state.is_consumer_local_reexport_record(module.idx, rec_idx)
+        && meta.static_init_dependencies_for_record(rec_idx).is_empty()
+      {
         continue;
       }
       let is_reexport =
         rec.meta.intersects(ImportRecordMeta::IsExportStar | ImportRecordMeta::IsReExportOnly);
       let Some(root) = rec.resolved_module else { continue };
+      if !stmt_is_included && !meta.static_init_dependencies_for_record(rec_idx).is_empty() {
+        let targets = retained_import_record_init_targets(module, meta, ctx, rec_idx);
+        if !targets.is_empty() {
+          targets_by_stmt.entry(stmt_idx).or_default().extend(targets);
+        }
+        continue;
+      }
       let overlay = ctx.order_state.import_overlay(OrderImportKey {
         importer: module.idx,
         statement: stmt_idx,
@@ -461,6 +476,7 @@ fn retained_import_record_init_targets(
     import.record_idx == rec_idx && importer_reexports_binding(module, *imported_as_ref)
   });
   if !module.import_records[rec_idx].meta.contains(ImportRecordMeta::IsExportStar)
+    && meta.static_init_dependencies_for_record(rec_idx).is_empty()
     && !record_reexports_binding
     && !import_record_has_live_binding_consumer(&router_ctx, rec_idx, |symbol_ref| {
       ctx.used_symbol_refs.contains(&symbol_ref)
@@ -471,6 +487,7 @@ fn retained_import_record_init_targets(
   collect_wrapped_esm_init_targets_for_import_record(
     &router_ctx,
     rec_idx,
+    EsmInitTargetPurpose::Evaluation,
     |symbol_ref| ctx.used_symbol_refs.contains(&symbol_ref),
     |_| true,
     |forwarding_module_idx| ctx.forwarding_module_owns_initialization(forwarding_module_idx),

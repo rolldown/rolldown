@@ -65,6 +65,8 @@ impl<'me, 'ast: 'me> VisitJs<'ast> for AstScanner<'me, 'ast> {
     );
     // Custom visit
 
+    let record_statement_order = self.immutable_ctx.options.is_strict_execution_order_enabled()
+      && self.immutable_ctx.options.treeshake.is_some();
     for (idx, stmt) in program.body.iter().enumerate() {
       // `0` is reserved for Module Namespace Object stmt info
       #[expect(
@@ -86,7 +88,8 @@ impl<'me, 'ast: 'me> VisitJs<'ast> for AstScanner<'me, 'ast> {
       // modules `sort_chunk_modules` may sort by id — so it has to mean the same thing in every
       // strict plan. Collecting the reasons only for the selective plan left the default weaker.
       if self.immutable_ctx.options.is_strict_execution_order_enabled()
-        && !self.result.ecma_view_meta.contains(EcmaViewMeta::ExecutionOrderSensitive)
+        && (record_statement_order
+          || !self.result.ecma_view_meta.contains(EcmaViewMeta::ExecutionOrderSensitive))
         && !stmt_eval_facts.is_order_sensitive()
       {
         analyzer.add_top_level_eager_order_reasons(stmt, &mut stmt_eval_facts);
@@ -103,10 +106,17 @@ impl<'me, 'ast: 'me> VisitJs<'ast> for AstScanner<'me, 'ast> {
       // Top-level reads of imported bindings are detected by a separate uniform walk so the
       // signal is complete by construction (no per-expression-form gaps).
       if self.immutable_ctx.options.is_strict_execution_order_enabled() {
-        let has_top_level_import_read =
-          self.result.ecma_view_meta.contains(EcmaViewMeta::TopLevelImportRead)
-            || TopLevelImportReadDetector::detect(&self.result.symbol_ref_db.ast_scopes, stmt);
-        if stmt_eval_facts.is_order_sensitive() || has_top_level_import_read {
+        let has_top_level_import_read = (!record_statement_order
+          && self.result.ecma_view_meta.contains(EcmaViewMeta::TopLevelImportRead))
+          || TopLevelImportReadDetector::detect(&self.result.symbol_ref_db.ast_scopes, stmt);
+        let is_order_sensitive = stmt_eval_facts.is_order_sensitive() || has_top_level_import_read;
+        if record_statement_order {
+          self
+            .current_stmt_info
+            .meta
+            .set(StmtInfoMeta::ExecutionOrderSensitive, is_order_sensitive);
+        }
+        if is_order_sensitive {
           self.result.ecma_view_meta.insert(EcmaViewMeta::ExecutionOrderSensitive);
         }
         if has_top_level_import_read {

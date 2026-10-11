@@ -134,6 +134,7 @@ var outer_barrel_exports = /* @__PURE__ */ __exportAll({
 });
 function init_outer_barrel() {
 	return (init_outer_barrel = __esmMin((() => {
+		init_definer();
 		init_inner_barrel();
 	})))();
 }

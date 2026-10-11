@@ -48,6 +48,7 @@ function init_main() {
 	})))();
 }
 //#endregion
+init_dep();
 init_main();
 export { dep_default as dep };
 

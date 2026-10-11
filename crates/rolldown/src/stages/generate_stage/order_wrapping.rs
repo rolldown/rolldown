@@ -347,13 +347,16 @@ pub(super) fn consumer_local_reexport_plan(
     }
   }
 
-  let records = consumer_local_reexport_records(input, &required_modules);
+  let records = consumer_local_reexport_records(input, &required_modules, |module_idx| {
+    accepted_modules.contains(&module_idx) || state.is_consumer_local_reexport_route(module_idx)
+  });
   ConsumerLocalReexportPlan { modules, carriers, records }
 }
 
 fn consumer_local_reexport_records(
   input: &OrderLoweringInput<'_>,
   required_modules: &FxHashSet<ModuleIdx>,
+  is_complete_route: impl Fn(ModuleIdx) -> bool,
 ) -> Vec<(ModuleIdx, ImportRecordIdx)> {
   if !input.tree_shaking {
     return Vec::new();
@@ -378,6 +381,7 @@ fn consumer_local_reexport_records(
       let module = module.as_normal()?;
       let meta = &input.linking[module.idx];
       (meta.is_included
+        && !is_complete_route(module.idx)
         && supported_module(module.idx)
         && !matches!(
           module.side_effects,
@@ -389,11 +393,7 @@ fn consumer_local_reexport_records(
         )
         && input.asts[module.idx].as_ref().is_some_and(|ast| {
           ast.program().body.iter().any(statement_is_direct_reexport)
-            && !ast
-              .program()
-              .body
-              .iter()
-              .all(|stmt| statement_has_no_local_wrapper_body(stmt, input.keep_names))
+            && !order_wrapper_is_reexport_transparent(meta, Some(ast), input.keep_names)
         }))
       .then_some(module)
     })
@@ -417,7 +417,8 @@ fn consumer_local_reexport_records(
             && importer_reexports_binding(module, *local_ref)
         })
         && (module_idx == input.runtime_idx
-          || !module.meta.contains(EcmaViewMeta::ExecutionOrderSensitive))
+          || !module.meta.contains(EcmaViewMeta::ExecutionOrderSensitive)
+          || input.linking[module_idx].has_order_sensitive_initialization)
     });
     if !safe {
       pending.push(module_idx);
@@ -446,7 +447,8 @@ fn consumer_local_reexport_records(
         && !namespace_records.contains(&rec_idx)
         && let Some(importee_idx) = rec.resolved_module
         && !eager_modules.contains(&importee_idx)
-        && !input.linking[module.idx].execution_dependencies.contains(&importee_idx)
+        && (!input.linking[module.idx].execution_dependencies.contains(&importee_idx)
+          || !input.linking[module.idx].static_init_dependencies_for_record(rec_idx).is_empty())
       {
         records.push((module.idx, rec_idx));
       }
@@ -965,7 +967,7 @@ impl GenerateStage<'_> {
             WrappedEsmInitTarget::Module(module_idx) => order_state
               .esm_init_target(*module_idx, &self.link_output.metas[*module_idx])
               .is_some_and(|target| !target.tla_tainted),
-            WrappedEsmInitTarget::CjsCarrier(_) => true,
+            WrappedEsmInitTarget::CjsModule(_) | WrappedEsmInitTarget::CjsCarrier(_) => true,
           })
         } else {
           order_state

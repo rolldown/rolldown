@@ -7,10 +7,8 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 //#region constants.js
-function mark() {
-	globalThis.inlineNamespaceValue = 0;
-}
-const y = /* @__PURE__ */ mark();
+globalThis.inlineNamespaceValue = 0;
+const y = () => void 0;
 //#endregion
 export { y as t };
 
@@ -63,13 +61,11 @@ export { render };
 ```js
 import { t as __esmMin } from "./rolldown-runtime.js";
 //#region constants.js
-function mark() {
-	globalThis.inlineNamespaceValue = 0;
-}
 var y;
 function init_constants() {
 	return (init_constants = __esmMin((() => {
-		y = /* @__PURE__ */ mark();
+		globalThis.inlineNamespaceValue = 0;
+		y = () => void 0;
 	})))();
 }
 //#endregion
@@ -146,13 +142,11 @@ export { __esmMin as t };
 ```js
 import { t as __esmMin } from "./rolldown-runtime.js";
 //#region constants.js
-function mark() {
-	globalThis.inlineNamespaceValue = 0;
-}
 var y;
 function init_constants() {
 	return (init_constants = __esmMin((() => {
-		y = /* @__PURE__ */ mark();
+		globalThis.inlineNamespaceValue = 0;
+		y = () => void 0;
 	})))();
 }
 //#endregion

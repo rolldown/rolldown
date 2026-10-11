@@ -66,6 +66,9 @@ pub fn render_wrapped_entry_chunk(
             debug_assert!(!target.tla_tainted);
             target.wrapper_ref
           }
+          WrappedEsmInitTarget::CjsModule(module_idx) => ctx.link_output.metas[*module_idx]
+            .wrapper_ref
+            .expect("entry CJS module init target should have a wrapper"),
           WrappedEsmInitTarget::CjsCarrier(key) => {
             ctx
               .order_wrap_state

@@ -144,6 +144,8 @@ var outer_exports = /* @__PURE__ */ __exportAll({
 });
 function init_outer() {
 	return (init_outer = __esmMin((() => {
+		init_definer1();
+		init_definer2();
 		init_mid();
 	})))();
 }

@@ -25,26 +25,20 @@ await init_main();
 import { t as __esmMin } from "./rolldown-runtime.js";
 import assert from "node:assert";
 //#region default-only.js
-function mark$1() {
-	globalThis.defaultValue = typeof globalThis.defaultValue === "number" ? globalThis.defaultValue + 1 : 0;
-	return 42;
-}
 var default_only_default;
 function init_default_only() {
 	return (init_default_only = __esmMin((() => {
-		default_only_default = /* @__PURE__ */ mark$1();
+		globalThis.defaultValue = typeof globalThis.defaultValue === "number" ? globalThis.defaultValue + 1 : 0;
+		default_only_default = () => 42;
 	})))();
 }
 //#endregion
 //#region shadowed.js
-function mark() {
-	globalThis.shadowedValue = typeof globalThis.shadowedValue === "number" ? globalThis.shadowedValue + 1 : 0;
-	return 2;
-}
 var x;
 function init_shadowed() {
 	return (init_shadowed = __esmMin((() => {
-		x = /* @__PURE__ */ mark();
+		globalThis.shadowedValue = typeof globalThis.shadowedValue === "number" ? globalThis.shadowedValue + 1 : 0;
+		x = () => 2;
 	})))();
 }
 //#endregion
@@ -55,8 +49,8 @@ function init_page_a() {
 		init_shadowed();
 		assert.strictEqual(globalThis.defaultValue, 0);
 		assert.strictEqual(globalThis.shadowedValue, 0);
-		assert.strictEqual(default_only_default, 42);
-		assert.strictEqual(x, 2);
+		assert.strictEqual(default_only_default(), 42);
+		assert.strictEqual(x(), 2);
 	})))();
 }
 //#endregion
@@ -120,26 +114,20 @@ await import("./page-a.js");
 import { t as __esmMin } from "./rolldown-runtime.js";
 import assert from "node:assert";
 //#region default-only.js
-function mark$1() {
-	globalThis.defaultValue = typeof globalThis.defaultValue === "number" ? globalThis.defaultValue + 1 : 0;
-	return 42;
-}
 var default_only_default;
 function init_default_only() {
 	return (init_default_only = __esmMin((() => {
-		default_only_default = /* @__PURE__ */ mark$1();
+		globalThis.defaultValue = typeof globalThis.defaultValue === "number" ? globalThis.defaultValue + 1 : 0;
+		default_only_default = () => 42;
 	})))();
 }
 //#endregion
 //#region shadowed.js
-function mark() {
-	globalThis.shadowedValue = typeof globalThis.shadowedValue === "number" ? globalThis.shadowedValue + 1 : 0;
-	return 2;
-}
 var x;
 function init_shadowed() {
 	return (init_shadowed = __esmMin((() => {
-		x = /* @__PURE__ */ mark();
+		globalThis.shadowedValue = typeof globalThis.shadowedValue === "number" ? globalThis.shadowedValue + 1 : 0;
+		x = () => 2;
 	})))();
 }
 //#endregion
@@ -150,8 +138,8 @@ function init_page_a() {
 		init_shadowed();
 		assert.strictEqual(globalThis.defaultValue, 0);
 		assert.strictEqual(globalThis.shadowedValue, 0);
-		assert.strictEqual(default_only_default, 42);
-		assert.strictEqual(x, 2);
+		assert.strictEqual(default_only_default(), 42);
+		assert.strictEqual(x(), 2);
 	})))();
 }
 //#endregion

@@ -7,7 +7,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 import { t as __esmMin } from "./rolldown-runtime.js";
-import { n as init_shared, r as SNAPSHOT } from "./shared.js";
+import { i as init_value, n as init_shared, r as SNAPSHOT } from "./shared.js";
 //#region pure.js
 var PURE;
 function init_pure() {
@@ -22,7 +22,7 @@ function read() {
 }
 function init_lazy() {
 	return (init_lazy = __esmMin((() => {
-		init_pure(), init_shared();
+		init_value(), init_pure(), init_shared();
 	})))();
 }
 //#endregion
@@ -106,7 +106,7 @@ export { bump as a, init_value as i, init_shared as n, init_state as o, SNAPSHOT
 
 ```js
 import { t as __esmMin } from "./rolldown-runtime.js";
-import { n as init_shared, r as SNAPSHOT } from "./shared.js";
+import { i as init_value, n as init_shared, r as SNAPSHOT } from "./shared.js";
 //#region pure.js
 var PURE;
 function init_pure() {
@@ -121,7 +121,7 @@ function read() {
 }
 function init_lazy() {
 	return (init_lazy = __esmMin((() => {
-		init_pure(), init_shared();
+		init_value(), init_pure(), init_shared();
 	})))();
 }
 //#endregion

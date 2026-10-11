@@ -3,7 +3,7 @@ use std::{borrow::Cow, cmp::Ordering, collections::VecDeque, path::Path};
 use crate::{
   chunk_graph::ChunkGraph,
   esm_init_obligations::{
-    ObligationPurpose, WrappedEsmInitTarget, WrappedEsmInitTargetContext,
+    EsmInitTargetPurpose, ObligationPurpose, WrappedEsmInitTarget, WrappedEsmInitTargetContext,
     collect_eager_order_cjs_carriers_for_consumer_local_route,
     collect_wrapped_esm_init_targets_for_import_record, import_record_has_live_binding_consumer,
     record_is_init_obligation,
@@ -1172,6 +1172,7 @@ impl GenerateStage<'_> {
               ObligationPurpose::Project,
               pre_chunk_order_state,
               module,
+              meta,
               record,
               rec_idx,
               stmt_is_included,
@@ -1183,6 +1184,7 @@ impl GenerateStage<'_> {
               ObligationPurpose::Register,
               pre_chunk_order_state,
               module,
+              meta,
               record,
               rec_idx,
               stmt_is_included,
@@ -1190,9 +1192,16 @@ impl GenerateStage<'_> {
           {
             continue;
           }
+          let purpose =
+            if pre_chunk_order_state.is_consumer_local_reexport_record(module.idx, rec_idx) {
+              EsmInitTargetPurpose::Evaluation
+            } else {
+              EsmInitTargetPurpose::BindingAccess
+            };
           init_targets.extend(collect_wrapped_esm_init_targets_for_import_record(
             &ctx,
             rec_idx,
+            purpose,
             |symbol_ref| used_symbol_refs_builder.contains(&symbol_ref),
             |_| true,
             |_| false,
@@ -1202,7 +1211,8 @@ impl GenerateStage<'_> {
       let targets = &mut dependencies[module.idx];
       for target in init_targets {
         let target_idx = match target {
-          WrappedEsmInitTarget::Module(target_idx) => target_idx,
+          WrappedEsmInitTarget::Module(target_idx)
+          | WrappedEsmInitTarget::CjsModule(target_idx) => target_idx,
           WrappedEsmInitTarget::CjsCarrier(key) => {
             pre_chunk_order_state
               .order_cjs_carrier(key)
@@ -1281,7 +1291,10 @@ impl GenerateStage<'_> {
       // ordinary full traversal. Otherwise preserve only consumer-local waypoint chains and
       // effectful carriers unconditionally. Selected leaves come from the consuming modules'
       // precomputed initialization dependencies.
-      if is_consumer_local_barrel && module_idx != entry_module_idx {
+      if is_consumer_local_barrel
+        && module_idx != entry_module_idx
+        && !self.options.code_splitting.is_disabled()
+      {
         for rec in &module.import_records {
           if rec.kind == ImportKind::Import
             && let Some(importee_idx) = rec.resolved_module

@@ -12,7 +12,7 @@ use rustc_hash::{FxHashMap, FxHashSet};
 
 use crate::chunk_graph::ChunkGraph;
 use crate::esm_init_obligations::{
-  ObligationPurpose, WrappedEsmInitTarget, WrappedEsmInitTargetContext,
+  EsmInitTargetPurpose, ObligationPurpose, WrappedEsmInitTarget, WrappedEsmInitTargetContext,
   collect_order_wrap_esm_init_targets, collect_wrapped_esm_init_targets_for_import_record,
   for_each_init_obligation_record,
 };
@@ -372,7 +372,8 @@ impl GenerateStage<'_> {
 
       for target in targets {
         let target_idx = match target {
-          WrappedEsmInitTarget::Module(module_idx) => module_idx,
+          WrappedEsmInitTarget::Module(module_idx)
+          | WrappedEsmInitTarget::CjsModule(module_idx) => module_idx,
           WrappedEsmInitTarget::CjsCarrier(key) => {
             probe_state
               .order_cjs_carrier(key)
@@ -514,6 +515,7 @@ impl GenerateStage<'_> {
         targets.extend(collect_wrapped_esm_init_targets_for_import_record(
           &ctx,
           rec_idx,
+          EsmInitTargetPurpose::Evaluation,
           |symbol_ref| used_symbol_refs_builder.contains(&symbol_ref),
           |_| true,
           |forwarding_module_idx| {
@@ -578,6 +580,9 @@ impl GenerateStage<'_> {
             module_idx,
             chunk_graph,
           ),
+          WrappedEsmInitTarget::CjsModule(module_idx) => {
+            chunk_graph.module_is_in_live_chunk(module_idx)
+          }
           WrappedEsmInitTarget::CjsCarrier(key) => {
             probe_state.order_cjs_carrier_included_in_live_chunk(key, chunk_graph)
           }

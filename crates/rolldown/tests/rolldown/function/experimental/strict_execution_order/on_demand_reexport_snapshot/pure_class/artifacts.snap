@@ -1,0 +1,146 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## lazy.js
+
+```js
+import { t as __esmMin } from "./rolldown-runtime.js";
+import { i as init_leaf, n as init_mixed, r as SNAPSHOT } from "./mixed.js";
+//#region lazy.js
+function init_lazy() {
+	return (init_lazy = __esmMin((() => {
+		init_mixed();
+	})))();
+}
+//#endregion
+init_leaf();
+init_lazy();
+export { SNAPSHOT };
+
+```
+
+## main.js
+
+```js
+import { t as __esmMin } from "./rolldown-runtime.js";
+import { a as init_state, n as init_mixed, o as mutate, t as LOCAL } from "./mixed.js";
+//#region main.js
+async function read() {
+	return (await import("./lazy.js")).SNAPSHOT.value;
+}
+var result;
+function init_main() {
+	return (init_main = __esmMin((() => {
+		init_mixed();
+		init_state();
+		mutate();
+		result = LOCAL;
+	})))();
+}
+//#endregion
+init_main();
+export { read, result };
+
+```
+
+## mixed.js
+
+```js
+import { t as __esmMin } from "./rolldown-runtime.js";
+//#region ../state.js
+function mutate() {
+	state = "after";
+}
+var state;
+function init_state() {
+	return (init_state = __esmMin((() => {
+		state = "before";
+	})))();
+}
+//#endregion
+//#region leaf.js
+var Capture, SNAPSHOT;
+function init_leaf() {
+	return (init_leaf = __esmMin((() => {
+		init_state();
+		Capture = class {
+			constructor() {
+				this.value = state;
+			}
+		};
+		SNAPSHOT = /* @__PURE__ */ new Capture();
+	})))();
+}
+//#endregion
+//#region mixed.js
+var LOCAL;
+function init_mixed() {
+	return (init_mixed = __esmMin((() => {
+		init_leaf();
+		LOCAL = "local";
+	})))();
+}
+//#endregion
+export { init_state as a, init_leaf as i, init_mixed as n, mutate as o, SNAPSHOT as r, LOCAL as t };
+
+```
+
+## rolldown-runtime.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+export { __esmMin as t };
+
+```
+
+# Variant: on-demand: [on_demand_wrapping: true]
+
+## Assets
+
+### lazy.js
+
+```js
+export { n as SNAPSHOT } from "./mixed.js";
+
+```
+
+### main.js
+
+```js
+import { r as mutate, t as LOCAL } from "./mixed.js";
+//#region main.js
+mutate();
+const result = LOCAL;
+async function read() {
+	return (await import("./lazy.js")).SNAPSHOT.value;
+}
+//#endregion
+export { read, result };
+
+```
+
+### mixed.js
+
+```js
+//#region ../state.js
+let state = "before";
+function mutate() {
+	state = "after";
+}
+//#endregion
+//#region leaf.js
+var Capture = class {
+	constructor() {
+		this.value = state;
+	}
+};
+const SNAPSHOT = /* @__PURE__ */ new Capture();
+//#endregion
+//#region mixed.js
+const LOCAL = "local";
+//#endregion
+export { SNAPSHOT as n, mutate as r, LOCAL as t };
+
+```

@@ -82,6 +82,11 @@ pub struct LinkingMetadata {
   pub load_dependencies: FxIndexSet<ModuleIdx>,
   /// Retained evaluation dependencies, excluding entry targets kept only for placement.
   pub execution_dependencies: FxIndexSet<ModuleIdx>,
+  /// Per-record evaluation dependencies of retained bindings sensitive to initialization timing.
+  /// Excluded forwarding modules are bypassed; targets keep their own initialization guard.
+  pub static_init_dependencies: Option<Box<FxHashMap<ImportRecordIdx, Vec<ModuleIdx>>>>,
+  /// A retained binding initializer in this module's static graph depends on initialization timing.
+  pub has_order_sensitive_initialization: bool,
   // `None` the member expression resolve to a ambiguous export.
   pub resolved_member_expr_refs: MemberExprRefResolutionMap,
   pub star_exports_from_external_modules: Vec<ImportRecordIdx>,
@@ -113,6 +118,14 @@ pub struct LinkingMetadata {
 }
 
 impl LinkingMetadata {
+  pub fn static_init_dependencies_for_record(&self, rec_idx: ImportRecordIdx) -> &[ModuleIdx] {
+    self
+      .static_init_dependencies
+      .as_ref()
+      .and_then(|dependencies| dependencies.get(&rec_idx))
+      .map_or(&[], Vec::as_slice)
+  }
+
   pub fn canonical_exports(
     &self,
     needs_commonjs_export: bool,

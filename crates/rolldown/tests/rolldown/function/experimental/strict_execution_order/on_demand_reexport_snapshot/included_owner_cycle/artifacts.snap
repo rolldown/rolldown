@@ -1,0 +1,215 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## a.js
+
+```js
+import { t as __esmMin } from "./rolldown-runtime.js";
+//#region d.js
+var DValue;
+function init_d() {
+	return (init_d = __esmMin((() => {
+		DValue = globalThis.events.push("d");
+	})))();
+}
+//#endregion
+//#region b.js
+function init_b() {
+	return (init_b = __esmMin((() => {
+		init_a();
+		init_d();
+	})))();
+}
+//#endregion
+//#region c.js
+function readD() {
+	return DValue;
+}
+var CValue;
+function init_c() {
+	return (init_c = __esmMin((() => {
+		init_b();
+		CValue = globalThis.events.push("c");
+	})))();
+}
+//#endregion
+//#region a.js
+function init_a() {
+	return (init_a = __esmMin((() => {
+		init_c();
+		init_b();
+	})))();
+}
+//#endregion
+export { init_b as a, readD as i, CValue as n, DValue as o, init_c as r, init_d as s, init_a as t };
+
+```
+
+## entry-a.js
+
+```js
+import { t as __esmMin } from "./rolldown-runtime.js";
+import { i as readD, n as CValue, o as DValue, t as init_a } from "./a.js";
+//#region entry-a.js
+function init_entry_a() {
+	return (init_entry_a = __esmMin((() => {
+		init_a();
+	})))();
+}
+//#endregion
+init_entry_a();
+export { CValue, DValue, readD };
+
+```
+
+## entry-b.js
+
+```js
+import { t as __esmMin } from "./rolldown-runtime.js";
+import { a as init_b, i as readD, n as CValue, o as DValue } from "./a.js";
+//#region entry-b.js
+function init_entry_b() {
+	return (init_entry_b = __esmMin((() => {
+		init_b();
+	})))();
+}
+//#endregion
+init_entry_b();
+export { CValue, DValue, readD };
+
+```
+
+## main.js
+
+```js
+import { t as __esmMin } from "./rolldown-runtime.js";
+//#region main.js
+function loadA() {
+	return import("./entry-a.js");
+}
+function loadB() {
+	return import("./entry-b.js");
+}
+function init_main() {
+	return (init_main = __esmMin((() => {})))();
+}
+//#endregion
+init_main();
+export { loadA, loadB };
+
+```
+
+## rolldown-runtime.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+export { __esmMin as t };
+
+```
+
+# Variant: on-demand: [on_demand_wrapping: true]
+
+## Assets
+
+### a.js
+
+```js
+import { t as __esmMin } from "./rolldown-runtime.js";
+//#region d.js
+var DValue;
+function init_d() {
+	return (init_d = __esmMin((() => {
+		DValue = globalThis.events.push("d");
+	})))();
+}
+//#endregion
+//#region b.js
+function init_b() {
+	return (init_b = __esmMin((() => {
+		init_a();
+		init_d();
+	})))();
+}
+//#endregion
+//#region c.js
+function readD() {
+	return DValue;
+}
+var CValue;
+function init_c() {
+	return (init_c = __esmMin((() => {
+		init_b();
+		CValue = globalThis.events.push("c");
+	})))();
+}
+//#endregion
+//#region a.js
+function init_a() {
+	return (init_a = __esmMin((() => {
+		init_c();
+		init_b();
+	})))();
+}
+//#endregion
+export { init_b as a, readD as i, CValue as n, DValue as o, init_c as r, init_d as s, init_a as t };
+
+```
+
+### entry-a.js
+
+```js
+import { t as __esmMin } from "./rolldown-runtime.js";
+import { i as readD, n as CValue, o as DValue, t as init_a } from "./a.js";
+//#region entry-a.js
+function init_entry_a() {
+	return (init_entry_a = __esmMin((() => {
+		init_a();
+	})))();
+}
+//#endregion
+init_entry_a();
+export { CValue, DValue, readD };
+
+```
+
+### entry-b.js
+
+```js
+import { t as __esmMin } from "./rolldown-runtime.js";
+import { a as init_b, i as readD, n as CValue, o as DValue } from "./a.js";
+//#region entry-b.js
+function init_entry_b() {
+	return (init_entry_b = __esmMin((() => {
+		init_b();
+	})))();
+}
+//#endregion
+init_entry_b();
+export { CValue, DValue, readD };
+
+```
+
+### main.js
+
+```js
+//#region main.js
+function loadA() {
+	return import("./entry-a.js");
+}
+function loadB() {
+	return import("./entry-b.js");
+}
+//#endregion
+export { loadA, loadB };
+
+```
+
+### rolldown-runtime.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+export { __esmMin as t };
+
+```

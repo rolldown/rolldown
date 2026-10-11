@@ -1,0 +1,50 @@
+{
+  "config": {
+    "strictExecutionOrder": true,
+    "codeSplitting": false,
+    "input": [
+      {
+        "name": "main",
+        "import": "../unused-named.js"
+      }
+    ]
+  },
+  "configVariants": [
+    {
+      "_configName": "on-demand",
+      "onDemandWrapping": true
+    },
+    {
+      "_configName": "on-demand-cjs",
+      "_snapshot": false,
+      "onDemandWrapping": true,
+      "format": "cjs",
+      "minify": true
+    },
+    {
+      "_configName": "on-demand-split",
+      "_snapshot": false,
+      "onDemandWrapping": true,
+      "codeSplitting": {}
+    },
+    {
+      "_configName": "on-demand-split-cjs",
+      "_snapshot": false,
+      "onDemandWrapping": true,
+      "codeSplitting": {},
+      "format": "cjs",
+      "minify": true
+    },
+    {
+      "_configName": "wrap-all-cjs",
+      "_snapshot": false,
+      "format": "cjs",
+      "minify": true
+    },
+    {
+      "_configName": "wrap-all-split",
+      "_snapshot": false,
+      "codeSplitting": {}
+    }
+  ]
+}

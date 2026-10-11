@@ -1,0 +1,7 @@
+{
+  "sideEffects": [
+    "./main.js",
+    "./page-a.js",
+    "./page-b.js"
+  ]
+}

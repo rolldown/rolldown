@@ -40,7 +40,7 @@ use rustc_hash::{FxHashMap, FxHashSet};
 use sugar_path::SugarPath;
 
 use crate::esm_init_obligations::{
-  ObligationPurpose, WrappedEsmInitTarget, WrappedEsmInitTargetContext,
+  EsmInitTargetPurpose, ObligationPurpose, WrappedEsmInitTarget, WrappedEsmInitTargetContext,
   collect_entry_reexported_wrapper_inits, collect_wrapped_esm_init_targets_for_import_record,
   record_is_init_obligation,
 };
@@ -94,9 +94,8 @@ pub struct ScopeHoistingFinalizer<'me, 'ast: 'me> {
   pub ctx: ScopeHoistingFinalizerContext<'me>,
   pub scope: &'me AstScopes,
   pub ast_builder: AstBuilder<'ast>,
-  /// Wrapped-ESM importees whose `init_*()` call was already emitted while finalizing this
-  /// module, so the various init-emission paths don't emit duplicates.
-  pub generated_init_esm_importee_ids: FxHashSet<ModuleIdx>,
+  /// Modules with an initialization-wrapper call already emitted in this module.
+  pub generated_init_module_ids: FxHashSet<ModuleIdx>,
   pub generated_order_cjs_carriers: FxHashSet<OrderCjsCarrierKey>,
   pub scope_stack: Vec<ScopeFlags>,
   pub state: TraverseState,
@@ -233,8 +232,11 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
       .order_wrap_state
       .order_cjs_carrier(key)
       .expect("order CJS carrier call should have a target");
-    let (wrapper_ref_expr, _) =
-      self.finalized_expr_for_symbol_ref(carrier.wrapper_ref, false, false);
+    self.wrapper_call_expr(carrier.wrapper_ref, call_span)
+  }
+
+  fn wrapper_call_expr(&self, wrapper_ref: SymbolRef, call_span: Span) -> ast::Expression<'ast> {
+    let (wrapper_ref_expr, _) = self.finalized_expr_for_symbol_ref(wrapper_ref, false, false);
     ast::Expression::new_call_expression(call_span, wrapper_ref_expr, None, [], false, self)
   }
 
@@ -248,6 +250,9 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
           .expect("module init target should have a wrapper")
           .wrapper_ref
       }
+      WrappedEsmInitTarget::CjsModule(module_idx) => self.ctx.linking_infos[module_idx]
+        .wrapper_ref
+        .expect("CJS module init target should have a wrapper"),
       WrappedEsmInitTarget::CjsCarrier(key) => {
         self
           .ctx
@@ -267,6 +272,9 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
     match target {
       WrappedEsmInitTarget::Module(module_idx) => {
         self.wrapped_esm_init_call_expr(module_idx, call_span, true, false)
+      }
+      WrappedEsmInitTarget::CjsModule(_) => {
+        self.wrapper_call_expr(self.wrapped_esm_init_target_wrapper_ref(target), call_span)
       }
       WrappedEsmInitTarget::CjsCarrier(key) => {
         self.order_cjs_carrier_init_call_expr(key, call_span)
@@ -391,6 +399,7 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
         strict_execution_order: self.ctx.options.is_strict_execution_order_enabled(),
       },
       rec_idx,
+      EsmInitTargetPurpose::Evaluation,
       |symbol_ref| self.ctx.used_symbol_refs.contains(&symbol_ref),
       |wrapper_ref| self.wrapper_is_reachable_in_chunk(wrapper_ref),
       |forwarding_module_idx| {
@@ -399,10 +408,16 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
     );
     let mut init_exprs = targets.into_iter().filter_map(|target| match target {
       WrappedEsmInitTarget::Module(module_idx) => {
-        if !self.generated_init_esm_importee_ids.insert(module_idx) {
+        if !self.generated_init_module_ids.insert(module_idx) {
           return None;
         }
         Some(self.wrapped_esm_init_call_expr(module_idx, SPAN, true, true))
+      }
+      WrappedEsmInitTarget::CjsModule(module_idx) => {
+        if !self.generated_init_module_ids.insert(module_idx) {
+          return None;
+        }
+        Some(self.wrapped_esm_init_target_call_expr(target, SPAN))
       }
       WrappedEsmInitTarget::CjsCarrier(key) => {
         if !self.generated_order_cjs_carriers.insert(key) {
@@ -433,7 +448,7 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
   /// sources) before the importer's body, but when every connecting statement is tree-shaken no
   /// statement position owns those `init_*()` calls (issue #10543). Only the missing ones are
   /// prepended — a module already initialized at an included statement position keeps that call
-  /// (the shared `generated_init_esm_importee_ids` dedup). Facade entry chunks (entry hosted in
+  /// (the shared `generated_init_module_ids` dedup). Facade entry chunks (entry hosted in
   /// another chunk, so no body renders here) and wrapped entries (their body runs inside the
   /// wrapper invoked at the chunk tail, after these calls' tail counterparts) take the
   /// `render_wrapped_entry_chunk` path instead.
@@ -457,7 +472,7 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
     );
     let mut stmts = vec![];
     for init in inits {
-      if !self.generated_init_esm_importee_ids.insert(init.owner) {
+      if !self.generated_init_module_ids.insert(init.owner) {
         continue;
       }
       let init_expr = self.wrapped_esm_init_call_expr(init.owner, SPAN, true, true);
@@ -489,6 +504,7 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
         ObligationPurpose::Emit,
         self.ctx.order_wrap_state,
         self.ctx.module,
+        self.ctx.linking_info,
         rec,
         rec_idx,
         true,
@@ -507,6 +523,7 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
           ObligationPurpose::Emit,
           self.ctx.order_wrap_state,
           self.ctx.module,
+          self.ctx.linking_info,
           rec,
           rec_idx,
           true,
@@ -599,11 +616,11 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
         if matches!(
           importee_linking_info.concatenated_wrapped_module_kind,
           ConcatenateWrappedModuleKind::Inner
-        ) || self.generated_init_esm_importee_ids.contains(&importee.idx)
+        ) || self.generated_init_module_ids.contains(&importee.idx)
         {
           return true;
         }
-        self.generated_init_esm_importee_ids.insert(importee.idx);
+        self.generated_init_module_ids.insert(importee.idx);
         // `init_foo()` / `await init_foo()`
         let init_expr = self.wrapped_esm_init_call_expr(importee.idx, stmt.span(), false, true);
         *stmt = ast::Statement::new_expression_statement(SPAN, init_expr, self);
@@ -1878,6 +1895,15 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
       match &self.ctx.modules[importee_id] {
         Module::Normal(importee) => {
           let importee_linking_info = &self.ctx.linking_infos[importee_id];
+          if let Some(targets) =
+            self.ctx.order_wrap_state.consumer_local_namespace_targets(importee_id)
+          {
+            let (namespace, _) =
+              self.finalized_expr_for_symbol_ref(importee.namespace_object_ref, false, false);
+            let initialized_namespace =
+              self.wrapped_esm_init_targets_with_namespace_expr(targets, namespace);
+            return Some(Expression::new_promise_resolve_then(initialized_namespace, self));
+          }
           let new_expr = match importee_linking_info.wrap_kind() {
             WrapKind::Esm => {
               // Rewrite `import('./foo.mjs')` to `(init_foo(), foo_exports)`
@@ -1979,10 +2005,8 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
           self.ctx.linking_info.stmt_info_included.has_bit(stmt_info_idx) || is_order_runtime_stmt;
 
         if !is_stmt_included {
-          // For ESM-wrapped modules, excluded re-export statements still need init calls for
-          // correct initialization order. Their targets are precomputed by the generate
-          // stage's `Sealed<FinalEsmInitMetadata>`; emitting the calls (with the module-wide dedup
-          // below) is all that happens here.
+          // Excluded static statements can still own required initialization calls. Final metadata
+          // preserves those targets at the original statement position for wrapped and eager bodies.
           if let Some(targets) = self
             .ctx
             .final_esm_init_metadata
@@ -1992,13 +2016,19 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
             for &target in targets {
               let init_expr = match target {
                 WrappedEsmInitTarget::Module(importee_idx) => {
-                  if !self.generated_init_esm_importee_ids.insert(importee_idx) {
+                  if !self.generated_init_module_ids.insert(importee_idx) {
                     continue;
                   }
                   // An excluded re-export can forward to a TLA-tainted wrapper. The current
                   // module is then TLA-tainted as well, so its async init body must await the
                   // forwarded promise before later statements observe the importee's bindings.
                   self.wrapped_esm_init_call_expr(importee_idx, SPAN, true, true)
+                }
+                WrappedEsmInitTarget::CjsModule(importee_idx) => {
+                  if !self.generated_init_module_ids.insert(importee_idx) {
+                    continue;
+                  }
+                  self.wrapped_esm_init_target_call_expr(target, SPAN)
                 }
                 WrappedEsmInitTarget::CjsCarrier(key) => {
                   if !self.generated_order_cjs_carriers.insert(key) {
@@ -2097,6 +2127,7 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
                   ObligationPurpose::Emit,
                   self.ctx.order_wrap_state,
                   self.ctx.module,
+                  self.ctx.linking_info,
                   rec,
                   rec_idx,
                   true,

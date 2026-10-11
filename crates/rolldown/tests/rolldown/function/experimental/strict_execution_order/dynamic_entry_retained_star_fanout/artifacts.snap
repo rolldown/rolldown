@@ -21,24 +21,20 @@ import { t as __esmMin } from "./rolldown-runtime.js";
 import "./page-b.js";
 import assert from "node:assert";
 //#region common-a.js
-function init$1() {
-	globalThis.valueA = typeof globalThis.valueA === "number" ? globalThis.valueA + 1 : 0;
-}
 var commonA;
 function init_common_a() {
 	return (init_common_a = __esmMin((() => {
-		commonA = /* @__PURE__ */ init$1();
+		globalThis.valueA = typeof globalThis.valueA === "number" ? globalThis.valueA + 1 : 0;
+		commonA = () => void 0;
 	})))();
 }
 //#endregion
 //#region common-b.js
-function init() {
-	globalThis.valueB = typeof globalThis.valueB === "number" ? globalThis.valueB + 1 : 0;
-}
 var commonB;
 function init_common_b() {
 	return (init_common_b = __esmMin((() => {
-		commonB = /* @__PURE__ */ init();
+		globalThis.valueB = typeof globalThis.valueB === "number" ? globalThis.valueB + 1 : 0;
+		commonB = () => void 0;
 	})))();
 }
 //#endregion
@@ -117,24 +113,20 @@ import { t as __esmMin } from "./rolldown-runtime.js";
 import "./page-b.js";
 import assert from "node:assert";
 //#region common-a.js
-function init$1() {
-	globalThis.valueA = typeof globalThis.valueA === "number" ? globalThis.valueA + 1 : 0;
-}
 var commonA;
 function init_common_a() {
 	return (init_common_a = __esmMin((() => {
-		commonA = /* @__PURE__ */ init$1();
+		globalThis.valueA = typeof globalThis.valueA === "number" ? globalThis.valueA + 1 : 0;
+		commonA = () => void 0;
 	})))();
 }
 //#endregion
 //#region common-b.js
-function init() {
-	globalThis.valueB = typeof globalThis.valueB === "number" ? globalThis.valueB + 1 : 0;
-}
 var commonB;
 function init_common_b() {
 	return (init_common_b = __esmMin((() => {
-		commonB = /* @__PURE__ */ init();
+		globalThis.valueB = typeof globalThis.valueB === "number" ? globalThis.valueB + 1 : 0;
+		commonB = () => void 0;
 	})))();
 }
 //#endregion

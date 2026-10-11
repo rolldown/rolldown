@@ -1,0 +1,229 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## extra.js
+
+```js
+import { t as __esmMin } from "./rolldown-runtime.js";
+import { n as init_mixed } from "./mixed.js";
+//#region pure.js
+var EXTRA;
+function init_pure() {
+	return (init_pure = __esmMin((() => {
+		EXTRA = "extra";
+	})))();
+}
+//#endregion
+//#region extra.js
+function init_extra() {
+	return (init_extra = __esmMin((() => {
+		init_mixed();
+	})))();
+}
+//#endregion
+init_pure();
+init_extra();
+export { EXTRA };
+
+```
+
+## lazy.js
+
+```js
+import { t as __esmMin } from "./rolldown-runtime.js";
+import { i as init_leaf, n as init_mixed, r as SNAPSHOT } from "./mixed.js";
+//#region lazy.js
+function init_lazy() {
+	return (init_lazy = __esmMin((() => {
+		init_mixed();
+	})))();
+}
+//#endregion
+init_leaf();
+init_lazy();
+export { SNAPSHOT };
+
+```
+
+## main.js
+
+```js
+import { t as __esmMin } from "./rolldown-runtime.js";
+import { a as init_state, n as init_mixed, o as mutate, t as LOCAL } from "./mixed.js";
+//#region main.js
+async function read() {
+	return (await import("./lazy.js")).SNAPSHOT;
+}
+async function readExtra() {
+	return (await import("./extra.js")).EXTRA;
+}
+var result;
+function init_main() {
+	return (init_main = __esmMin((() => {
+		init_mixed();
+		init_state();
+		mutate();
+		result = LOCAL();
+	})))();
+}
+//#endregion
+init_main();
+export { read, readExtra, result };
+
+```
+
+## mixed.js
+
+```js
+import { t as __esmMin } from "./rolldown-runtime.js";
+//#region ../state.js
+function mutate() {
+	state = "after";
+}
+var state;
+function init_state() {
+	return (init_state = __esmMin((() => {
+		state = "before";
+	})))();
+}
+//#endregion
+//#region leaf.js
+var SNAPSHOT;
+function init_leaf() {
+	return (init_leaf = __esmMin((() => {
+		init_state();
+		SNAPSHOT = state;
+	})))();
+}
+//#endregion
+//#region mixed.js
+function LOCAL() {
+	return "local";
+}
+function init_mixed() {
+	return (init_mixed = __esmMin((() => {
+		init_leaf();
+	})))();
+}
+//#endregion
+export { init_state as a, init_leaf as i, init_mixed as n, mutate as o, SNAPSHOT as r, LOCAL as t };
+
+```
+
+## rolldown-runtime.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+export { __esmMin as t };
+
+```
+
+# Variant: on-demand: [on_demand_wrapping: true]
+
+## Assets
+
+### extra.js
+
+```js
+import { t as __esmMin } from "./rolldown-runtime.js";
+import { n as init_mixed } from "./mixed.js";
+//#region pure.js
+const EXTRA = "extra";
+//#endregion
+//#region extra.js
+function init_extra() {
+	return (init_extra = __esmMin((() => {
+		init_mixed();
+	})))();
+}
+//#endregion
+init_extra();
+export { EXTRA };
+
+```
+
+### lazy.js
+
+```js
+import { t as __esmMin } from "./rolldown-runtime.js";
+import { i as init_leaf, n as init_mixed, r as SNAPSHOT } from "./mixed.js";
+//#region lazy.js
+function init_lazy() {
+	return (init_lazy = __esmMin((() => {
+		init_mixed();
+	})))();
+}
+//#endregion
+init_leaf();
+init_lazy();
+export { SNAPSHOT };
+
+```
+
+### main.js
+
+```js
+import { t as __esmMin } from "./rolldown-runtime.js";
+import { a as mutate, n as init_mixed, t as LOCAL } from "./mixed.js";
+//#region main.js
+async function read() {
+	return (await import("./lazy.js")).SNAPSHOT;
+}
+async function readExtra() {
+	return (await import("./extra.js")).EXTRA;
+}
+var result;
+function init_main() {
+	return (init_main = __esmMin((() => {
+		init_mixed();
+		mutate();
+		result = LOCAL();
+	})))();
+}
+//#endregion
+init_main();
+export { read, readExtra, result };
+
+```
+
+### mixed.js
+
+```js
+import { t as __esmMin } from "./rolldown-runtime.js";
+//#region ../state.js
+let state = "before";
+function mutate() {
+	state = "after";
+}
+//#endregion
+//#region leaf.js
+var SNAPSHOT;
+function init_leaf() {
+	return (init_leaf = __esmMin((() => {
+		SNAPSHOT = state;
+	})))();
+}
+//#endregion
+//#region mixed.js
+function LOCAL() {
+	return "local";
+}
+function init_mixed() {
+	return (init_mixed = __esmMin((() => {
+		init_leaf();
+	})))();
+}
+//#endregion
+export { mutate as a, init_leaf as i, init_mixed as n, SNAPSHOT as r, LOCAL as t };
+
+```
+
+### rolldown-runtime.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+export { __esmMin as t };
+
+```

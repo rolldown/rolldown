@@ -7,8 +7,8 @@ if (
   namespaceCopy.x() !== 1 ||
   namespaceCopy.common !== 'common' ||
   namespaceCopy.commonLeaf !== 'common' ||
-  namespaceCopy._ !== undefined ||
-  namespaceCopy.underscoreLeaf !== undefined
+  namespaceCopy._() !== undefined ||
+  namespaceCopy.underscoreLeaf() !== undefined
 ) {
   throw new Error('opaque dynamic import observed the wrong namespace');
 }

@@ -1,0 +1,95 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+//#region ../state.cjs
+var require_state = /* @__PURE__ */ __commonJSMin(((exports) => {
+	exports.state = "before";
+	exports.mutate = () => {
+		exports.state = "after";
+	};
+}));
+//#endregion
+//#region ../leaf.cjs
+var require_leaf = /* @__PURE__ */ __commonJSMin(((exports) => {
+	exports.SNAPSHOT = require_state().state;
+}));
+//#endregion
+//#region ../mixed.js
+var import_leaf;
+var init_mixed = __esmMin((() => {
+	import_leaf = require_leaf();
+}));
+//#endregion
+//#region ../lazy.js
+var lazy_exports = /* @__PURE__ */ __exportAll({ SNAPSHOT: () => import_leaf.SNAPSHOT });
+var init_lazy = __esmMin((() => {
+	init_mixed();
+}));
+//#endregion
+//#region ../unused-named.js
+async function read() {
+	return (await Promise.resolve().then(() => (init_lazy(), lazy_exports))).SNAPSHOT;
+}
+var import_state;
+function init_unused_named() {
+	return (init_unused_named = __esmMin((() => {
+		require_leaf();
+		import_state = require_state();
+		(0, import_state.mutate)();
+	})))();
+}
+//#endregion
+init_unused_named();
+export { read };
+
+```
+
+# Variant: on-demand: [on_demand_wrapping: true]
+
+## Assets
+
+### main.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+//#region ../state.cjs
+var require_state = /* @__PURE__ */ __commonJSMin(((exports) => {
+	exports.state = "before";
+	exports.mutate = () => {
+		exports.state = "after";
+	};
+}));
+//#endregion
+//#region ../leaf.cjs
+var require_leaf = /* @__PURE__ */ __commonJSMin(((exports) => {
+	exports.SNAPSHOT = require_state().state;
+}));
+//#endregion
+//#region ../mixed.js
+var import_leaf;
+var init_mixed = __esmMin((() => {
+	import_leaf = require_leaf();
+}));
+//#endregion
+//#region ../lazy.js
+var lazy_exports = /* @__PURE__ */ __exportAll({ SNAPSHOT: () => import_leaf.SNAPSHOT });
+var init_lazy = __esmMin((() => {
+	init_mixed();
+}));
+//#endregion
+//#region ../unused-named.js
+require_leaf();
+(0, require_state().mutate)();
+async function read() {
+	return (await Promise.resolve().then(() => (init_lazy(), lazy_exports))).SNAPSHOT;
+}
+//#endregion
+export { read };
+
+```

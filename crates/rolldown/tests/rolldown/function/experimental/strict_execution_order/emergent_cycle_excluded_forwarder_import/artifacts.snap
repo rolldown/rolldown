@@ -7,6 +7,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 import { n as __esmMin, t as __commonJSMin } from "./rolldown-runtime.js";
+import { t as init_t } from "./c.js";
 //#region a/a-first.js
 function init_a_first() {
 	return (init_a_first = __esmMin((() => {
@@ -28,6 +29,7 @@ function mkWv() {
 var wv;
 function init_wrapper() {
 	return (init_wrapper = __esmMin((() => {
+		init_t();
 		wv = /* @__PURE__ */ mkWv();
 	})))();
 }
@@ -114,6 +116,7 @@ export { __esmMin as n, __toESM as r, __commonJSMin as t };
 
 ```js
 import { n as __esmMin, t as __commonJSMin } from "./rolldown-runtime.js";
+import { t as init_t } from "./c.js";
 //#region a/a-first.js
 function init_a_first() {
 	return (init_a_first = __esmMin((() => {
@@ -135,6 +138,7 @@ function mkWv() {
 var wv;
 function init_wrapper() {
 	return (init_wrapper = __esmMin((() => {
+		init_t();
 		wv = /* @__PURE__ */ mkWv();
 	})))();
 }

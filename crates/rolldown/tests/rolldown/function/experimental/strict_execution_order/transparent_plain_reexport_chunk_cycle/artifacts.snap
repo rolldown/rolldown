@@ -7,29 +7,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 import { t as __esmMin } from "./rolldown-runtime.js";
-import { t as hasExpectedValue } from "./utilities.js";
-//#region shared-identity.js
-function isSame(left, right) {
-	return is(left, right);
-}
-var is;
-function init_shared_identity() {
-	return (init_shared_identity = __esmMin((() => {
-		is = Object.is;
-	})))();
-}
-//#endregion
-//#region shared-equality.js
-function isEqual(left, right) {
-	return left === right || typeof left === "object" && hasOwnProperty.call(left, right);
-}
-var hasOwnProperty;
-function init_shared_equality() {
-	return (init_shared_equality = __esmMin((() => {
-		hasOwnProperty = Object.prototype.hasOwnProperty;
-	})))();
-}
-//#endregion
+import { a as init_shared_identity, i as isEqual, n as init_utilities, o as isSame, t as hasExpectedValue } from "./utilities.js";
 //#region toast.js
 function showToast(value) {
 	if (hasExpectedValue(value) && isEqual({ [value]: true }, "expected") && isSame(value, "expected")) console.log("The expected value was received");
@@ -37,7 +15,7 @@ function showToast(value) {
 function init_toast() {
 	return (init_toast = __esmMin((() => {
 		init_shared_identity();
-		init_shared_equality();
+		init_utilities();
 	})))();
 }
 //#endregion
@@ -65,57 +43,6 @@ export { __esmMin as t };
 
 ```js
 import { t as __esmMin } from "./rolldown-runtime.js";
-//#region utilities/index.js
-function hasExpectedValue(actual) {
-	return actual === "expected";
-}
-function init_utilities() {
-	return (init_utilities = __esmMin((() => {})))();
-}
-//#endregion
-export { init_utilities as n, hasExpectedValue as t };
-
-```
-
-## utility-page.js
-
-```js
-import { t as __esmMin } from "./rolldown-runtime.js";
-import { t as hasExpectedValue } from "./utilities.js";
-//#region utilities-page.js
-function init_utilities_page() {
-	return (init_utilities_page = __esmMin((() => {
-		console.log(hasExpectedValue("utilities"));
-	})))();
-}
-//#endregion
-init_utilities_page();
-
-```
-
-# Variant: inline-large: [code_splitting: enabled]
-
-## Assets
-
-### app.js
-
-```js
-import { i as __share_require, n as __share, r as __share_export, t as __esmMin } from "./rolldown-runtime.js";
-__share("utilities-I-4Ibty4", (exports) => {
-	//#region utilities/index.js
-	function hasExpectedValue(actual) {
-		return actual === "expected";
-	}
-	function init_utilities() {
-		return (init_utilities = __esmMin((() => {})))();
-	}
-	//#endregion
-	__share_export(exports, {
-		n: () => init_utilities,
-		t: () => hasExpectedValue
-	});
-});
-var share_utilities = __share_require("utilities-I-4Ibty4");
 //#region shared-identity.js
 function isSame(left, right) {
 	return is(left, right);
@@ -138,14 +65,98 @@ function init_shared_equality() {
 	})))();
 }
 //#endregion
+//#region utilities/index.js
+function hasExpectedValue(actual) {
+	return actual === "expected";
+}
+function init_utilities() {
+	return (init_utilities = __esmMin((() => {
+		init_shared_equality();
+		init_shared_identity();
+	})))();
+}
+//#endregion
+export { init_shared_identity as a, isEqual as i, init_utilities as n, isSame as o, init_shared_equality as r, hasExpectedValue as t };
+
+```
+
+## utility-page.js
+
+```js
+import { t as __esmMin } from "./rolldown-runtime.js";
+import { n as init_utilities, t as hasExpectedValue } from "./utilities.js";
+//#region utilities-page.js
+function init_utilities_page() {
+	return (init_utilities_page = __esmMin((() => {
+		init_utilities();
+		console.log(hasExpectedValue("utilities"));
+	})))();
+}
+//#endregion
+init_utilities_page();
+
+```
+
+# Variant: inline-large: [code_splitting: enabled]
+
+## Assets
+
+### app.js
+
+```js
+import { i as __share_require, n as __share, r as __share_export, t as __esmMin } from "./rolldown-runtime.js";
+__share("utilities-npRf8WEA", (exports) => {
+	//#region shared-identity.js
+	function isSame(left, right) {
+		return is(left, right);
+	}
+	var is;
+	function init_shared_identity() {
+		return (init_shared_identity = __esmMin((() => {
+			is = Object.is;
+		})))();
+	}
+	//#endregion
+	//#region shared-equality.js
+	function isEqual(left, right) {
+		return left === right || typeof left === "object" && hasOwnProperty.call(left, right);
+	}
+	var hasOwnProperty;
+	function init_shared_equality() {
+		return (init_shared_equality = __esmMin((() => {
+			hasOwnProperty = Object.prototype.hasOwnProperty;
+		})))();
+	}
+	//#endregion
+	//#region utilities/index.js
+	function hasExpectedValue(actual) {
+		return actual === "expected";
+	}
+	function init_utilities() {
+		return (init_utilities = __esmMin((() => {
+			init_shared_equality();
+			init_shared_identity();
+		})))();
+	}
+	//#endregion
+	__share_export(exports, {
+		a: () => init_shared_identity,
+		i: () => isEqual,
+		n: () => init_utilities,
+		o: () => isSame,
+		r: () => init_shared_equality,
+		t: () => hasExpectedValue
+	});
+});
+var share_utilities = __share_require("utilities-npRf8WEA");
 //#region toast.js
 function showToast(value) {
-	if ((0, share_utilities.t)(value) && isEqual({ [value]: true }, "expected") && isSame(value, "expected")) console.log("The expected value was received");
+	if ((0, share_utilities.t)(value) && (0, share_utilities.i)({ [value]: true }, "expected") && (0, share_utilities.o)(value, "expected")) console.log("The expected value was received");
 }
 function init_toast() {
 	return (init_toast = __esmMin((() => {
-		init_shared_identity();
-		init_shared_equality();
+		share_utilities.a();
+		share_utilities.n();
 	})))();
 }
 //#endregion
@@ -173,24 +184,54 @@ export { __share_require as i, __share as n, __share_export as r, __esmMin as t 
 
 ```js
 import { i as __share_require, n as __share, r as __share_export, t as __esmMin } from "./rolldown-runtime.js";
-__share("utilities-I-4Ibty4", (exports) => {
+__share("utilities-npRf8WEA", (exports) => {
+	//#region shared-identity.js
+	function isSame(left, right) {
+		return is(left, right);
+	}
+	var is;
+	function init_shared_identity() {
+		return (init_shared_identity = __esmMin((() => {
+			is = Object.is;
+		})))();
+	}
+	//#endregion
+	//#region shared-equality.js
+	function isEqual(left, right) {
+		return left === right || typeof left === "object" && hasOwnProperty.call(left, right);
+	}
+	var hasOwnProperty;
+	function init_shared_equality() {
+		return (init_shared_equality = __esmMin((() => {
+			hasOwnProperty = Object.prototype.hasOwnProperty;
+		})))();
+	}
+	//#endregion
 	//#region utilities/index.js
 	function hasExpectedValue(actual) {
 		return actual === "expected";
 	}
 	function init_utilities() {
-		return (init_utilities = __esmMin((() => {})))();
+		return (init_utilities = __esmMin((() => {
+			init_shared_equality();
+			init_shared_identity();
+		})))();
 	}
 	//#endregion
 	__share_export(exports, {
+		a: () => init_shared_identity,
+		i: () => isEqual,
 		n: () => init_utilities,
+		o: () => isSame,
+		r: () => init_shared_equality,
 		t: () => hasExpectedValue
 	});
 });
-var share_utilities = __share_require("utilities-I-4Ibty4");
+var share_utilities = __share_require("utilities-npRf8WEA");
 //#region utilities-page.js
 function init_utilities_page() {
 	return (init_utilities_page = __esmMin((() => {
+		share_utilities.n();
 		console.log((0, share_utilities.t)("utilities"));
 	})))();
 }
@@ -207,29 +248,7 @@ init_utilities_page();
 
 ```js
 import { t as __esmMin } from "./rolldown-runtime.js";
-import { t as hasExpectedValue } from "./utilities.js";
-//#region shared-identity.js
-function isSame(left, right) {
-	return is(left, right);
-}
-var is;
-function init_shared_identity() {
-	return (init_shared_identity = __esmMin((() => {
-		is = Object.is;
-	})))();
-}
-//#endregion
-//#region shared-equality.js
-function isEqual(left, right) {
-	return left === right || typeof left === "object" && hasOwnProperty.call(left, right);
-}
-var hasOwnProperty;
-function init_shared_equality() {
-	return (init_shared_equality = __esmMin((() => {
-		hasOwnProperty = Object.prototype.hasOwnProperty;
-	})))();
-}
-//#endregion
+import { a as init_shared_identity, i as isEqual, n as init_utilities, o as isSame, t as hasExpectedValue } from "./utilities.js";
 //#region toast.js
 function showToast(value) {
 	if (hasExpectedValue(value) && isEqual({ [value]: true }, "expected") && isSame(value, "expected")) console.log("The expected value was received");
@@ -237,7 +256,7 @@ function showToast(value) {
 function init_toast() {
 	return (init_toast = __esmMin((() => {
 		init_shared_identity();
-		init_shared_equality();
+		init_utilities();
 	})))();
 }
 //#endregion
@@ -264,12 +283,41 @@ export { __esmMin as t };
 ### utilities.js
 
 ```js
+import { t as __esmMin } from "./rolldown-runtime.js";
+//#region shared-identity.js
+function isSame(left, right) {
+	return is(left, right);
+}
+var is;
+function init_shared_identity() {
+	return (init_shared_identity = __esmMin((() => {
+		is = Object.is;
+	})))();
+}
+//#endregion
+//#region shared-equality.js
+function isEqual(left, right) {
+	return left === right || typeof left === "object" && hasOwnProperty.call(left, right);
+}
+var hasOwnProperty;
+function init_shared_equality() {
+	return (init_shared_equality = __esmMin((() => {
+		hasOwnProperty = Object.prototype.hasOwnProperty;
+	})))();
+}
+//#endregion
 //#region utilities/index.js
 function hasExpectedValue(actual) {
 	return actual === "expected";
 }
+function init_utilities() {
+	return (init_utilities = __esmMin((() => {
+		init_shared_equality();
+		init_shared_identity();
+	})))();
+}
 //#endregion
-export { hasExpectedValue as t };
+export { init_shared_identity as a, isEqual as i, init_utilities as n, isSame as o, init_shared_equality as r, hasExpectedValue as t };
 
 ```
 
@@ -277,10 +325,11 @@ export { hasExpectedValue as t };
 
 ```js
 import { t as __esmMin } from "./rolldown-runtime.js";
-import { t as hasExpectedValue } from "./utilities.js";
+import { n as init_utilities, t as hasExpectedValue } from "./utilities.js";
 //#region utilities-page.js
 function init_utilities_page() {
 	return (init_utilities_page = __esmMin((() => {
+		init_utilities();
 		console.log(hasExpectedValue("utilities"));
 	})))();
 }

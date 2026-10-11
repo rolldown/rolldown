@@ -1,6 +1,3 @@
-function mark() {
-  globalThis.valueB = typeof globalThis.valueB === 'number' ? globalThis.valueB + 1 : 0;
-  return 'b';
-}
+globalThis.valueB = typeof globalThis.valueB === 'number' ? globalThis.valueB + 1 : 0;
 
-export const collision = /* @__PURE__ */ mark();
+export const collision = () => 'b';

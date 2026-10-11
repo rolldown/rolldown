@@ -133,6 +133,8 @@ bitflags! {
         /// Statement contains non-static dynamic import like `import(foo)` or `import('a' + 'b')`
         const NonStaticDynamicImport = 1 << 3;
         const ImportMeta = 1 << 4;
+        /// Evaluation can read mutable state or perform runtime work sensitive to source order.
+        const ExecutionOrderSensitive = 1 << 5;
     }
 }
 

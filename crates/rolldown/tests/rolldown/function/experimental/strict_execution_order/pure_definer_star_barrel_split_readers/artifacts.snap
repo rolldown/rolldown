@@ -52,12 +52,12 @@ export { vDef as n, vSib as t };
 
 ```js
 import { t as __esmMin } from "./rolldown-runtime.js";
-import { a as vDef, t as init_barrel } from "./barrel.js";
+import { a as vDef, i as init_definer, t as init_barrel } from "./barrel.js";
 //#region a.js
 var defValue;
 function init_a() {
 	return (init_a = __esmMin((() => {
-		init_barrel();
+		init_definer(), init_barrel();
 		(globalThis.__events ??= []).push("a");
 		defValue = vDef;
 	})))();

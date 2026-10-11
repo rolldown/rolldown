@@ -21,14 +21,12 @@ import { t as __esmMin } from "./rolldown-runtime.js";
 import "./page-b.js";
 import assert from "node:assert";
 //#region common.js
-function init() {
-	globalThis.value = typeof globalThis.value === "number" ? globalThis.value + 1 : 0;
-}
 var common, _;
 function init_common() {
 	return (init_common = __esmMin((() => {
 		common = "common";
-		_ = /* @__PURE__ */ init();
+		globalThis.value = typeof globalThis.value === "number" ? globalThis.value + 1 : 0;
+		_ = () => void 0;
 	})))();
 }
 //#endregion
@@ -104,14 +102,12 @@ import { t as __esmMin } from "./rolldown-runtime.js";
 import "./page-b.js";
 import assert from "node:assert";
 //#region common.js
-function init() {
-	globalThis.value = typeof globalThis.value === "number" ? globalThis.value + 1 : 0;
-}
 var common, _;
 function init_common() {
 	return (init_common = __esmMin((() => {
 		common = "common";
-		_ = /* @__PURE__ */ init();
+		globalThis.value = typeof globalThis.value === "number" ? globalThis.value + 1 : 0;
+		_ = () => void 0;
 	})))();
 }
 //#endregion

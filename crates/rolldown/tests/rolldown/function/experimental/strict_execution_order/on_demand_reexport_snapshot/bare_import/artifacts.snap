@@ -1,0 +1,99 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+//#region ../state.js
+function mutate() {
+	state = "after";
+}
+var state;
+var init_state = __esmMin((() => {
+	state = "before";
+}));
+//#endregion
+//#region ../leaf.js
+var SNAPSHOT;
+var init_leaf = __esmMin((() => {
+	init_state();
+	SNAPSHOT = state;
+}));
+//#endregion
+//#region ../mixed.js
+var init_mixed = __esmMin((() => {
+	init_leaf();
+}));
+//#endregion
+//#region ../lazy.js
+var lazy_exports = /* @__PURE__ */ __exportAll({ SNAPSHOT: () => SNAPSHOT });
+var init_lazy = __esmMin((() => {
+	init_mixed();
+}));
+//#endregion
+//#region main.js
+async function read() {
+	return (await Promise.resolve().then(() => (init_lazy(), lazy_exports))).SNAPSHOT;
+}
+function init_main() {
+	return (init_main = __esmMin((() => {
+		init_leaf();
+		init_state();
+		mutate();
+	})))();
+}
+//#endregion
+init_main();
+export { read };
+
+```
+
+# Variant: on-demand: [on_demand_wrapping: true]
+
+## Assets
+
+### main.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+//#region ../state.js
+function mutate() {
+	state = "after";
+}
+var state;
+var init_state = __esmMin((() => {
+	state = "before";
+}));
+//#endregion
+//#region ../leaf.js
+var SNAPSHOT;
+var init_leaf = __esmMin((() => {
+	init_state();
+	SNAPSHOT = state;
+}));
+//#endregion
+//#region ../mixed.js
+var init_mixed = __esmMin((() => {
+	init_leaf();
+}));
+//#endregion
+//#region ../lazy.js
+var lazy_exports = /* @__PURE__ */ __exportAll({ SNAPSHOT: () => SNAPSHOT });
+var init_lazy = __esmMin((() => {
+	init_mixed();
+}));
+//#endregion
+//#region main.js
+init_leaf();
+init_state();
+mutate();
+async function read() {
+	return (await Promise.resolve().then(() => (init_lazy(), lazy_exports))).SNAPSHOT;
+}
+//#endregion
+export { read };
+
+```

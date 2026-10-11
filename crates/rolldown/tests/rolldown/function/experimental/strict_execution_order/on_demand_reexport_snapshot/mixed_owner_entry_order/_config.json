@@ -1,0 +1,34 @@
+{
+  "config": {
+    "strictExecutionOrder": true
+  },
+  "configVariants": [
+    {
+      "_configName": "on-demand",
+      "onDemandWrapping": true
+    },
+    {
+      "_configName": "no-optimization",
+      "_snapshot": false,
+      "chunkOptimization": false
+    },
+    {
+      "_configName": "minified-cjs",
+      "_snapshot": false,
+      "format": "cjs",
+      "minify": true
+    },
+    {
+      "_configName": "on-demand-cjs",
+      "_snapshot": false,
+      "onDemandWrapping": true,
+      "format": "cjs",
+      "minify": true
+    },
+    {
+      "_configName": "disabled-splitting",
+      "_snapshot": false,
+      "codeSplitting": false
+    }
+  ]
+}

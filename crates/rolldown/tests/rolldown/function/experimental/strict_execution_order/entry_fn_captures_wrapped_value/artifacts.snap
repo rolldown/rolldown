@@ -19,6 +19,11 @@ function init_first() {
 function tag(value) {
 	return `tag:${value}`;
 }
+function init_pref_pkg() {
+	return (init_pref_pkg = __esmMin((() => {
+		init_facade();
+	})))();
+}
 //#endregion
 //#region main.js
 function boot() {
@@ -30,7 +35,7 @@ async function initApplication() {
 function init_main() {
 	return (init_main = __esmMin((() => {
 		init_first();
-		init_facade();
+		init_pref_pkg();
 		(globalThis.__events ??= []).push("main");
 		globalThis.__result = boot();
 		globalThis.__ready = initApplication();
@@ -92,6 +97,11 @@ import { n as init_facade, t as getPref } from "./pref.js";
 function tag(value) {
 	return `tag:${value}`;
 }
+function init_pref_pkg() {
+	return (init_pref_pkg = __esmMin((() => {
+		init_facade();
+	})))();
+}
 //#endregion
 //#region main.js
 function boot() {
@@ -102,7 +112,7 @@ async function initApplication() {
 }
 function init_main() {
 	return (init_main = __esmMin((() => {
-		init_facade();
+		init_pref_pkg();
 		(globalThis.__events ??= []).push("main");
 		globalThis.__result = boot();
 		globalThis.__ready = initApplication();

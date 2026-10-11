@@ -21,7 +21,7 @@ export { x as t };
 //#region main.js
 await import("./page-b.js");
 const namespaceCopy = { ...await import("./page-a.js") };
-if (namespaceCopy.x() !== 1 || namespaceCopy.common !== "common" || namespaceCopy.commonLeaf !== "common" || namespaceCopy._ !== void 0 || namespaceCopy.underscoreLeaf !== void 0) throw new Error("opaque dynamic import observed the wrong namespace");
+if (namespaceCopy.x() !== 1 || namespaceCopy.common !== "common" || namespaceCopy.commonLeaf !== "common" || namespaceCopy._() !== void 0 || namespaceCopy.underscoreLeaf() !== void 0) throw new Error("opaque dynamic import observed the wrong namespace");
 //#endregion
 
 ```
@@ -32,14 +32,12 @@ if (namespaceCopy.x() !== 1 || namespaceCopy.common !== "common" || namespaceCop
 import { t as __esmMin } from "./rolldown-runtime.js";
 import { t as x } from "./bridge.js";
 //#region common.js
-function init() {
-	globalThis.value = typeof globalThis.value === "number" ? globalThis.value + 1 : 0;
-}
 var common, _;
 function init_common() {
 	return (init_common = __esmMin((() => {
 		common = "common";
-		_ = /* @__PURE__ */ init();
+		globalThis.value = typeof globalThis.value === "number" ? globalThis.value + 1 : 0;
+		_ = () => void 0;
 	})))();
 }
 //#endregion
@@ -111,7 +109,7 @@ function init_main() {
 	return (init_main = __esmMin((async () => {
 		await import("./page-b.js");
 		namespaceCopy = { ...await import("./page-a.js") };
-		if (namespaceCopy.x() !== 1 || namespaceCopy.common !== "common" || namespaceCopy.commonLeaf !== "common" || namespaceCopy._ !== void 0 || namespaceCopy.underscoreLeaf !== void 0) throw new Error("opaque dynamic import observed the wrong namespace");
+		if (namespaceCopy.x() !== 1 || namespaceCopy.common !== "common" || namespaceCopy.commonLeaf !== "common" || namespaceCopy._() !== void 0 || namespaceCopy.underscoreLeaf() !== void 0) throw new Error("opaque dynamic import observed the wrong namespace");
 	})))();
 }
 //#endregion
@@ -125,14 +123,12 @@ await init_main();
 import { t as __esmMin } from "./rolldown-runtime.js";
 import { n as x } from "./bridge.js";
 //#region common.js
-function init() {
-	globalThis.value = typeof globalThis.value === "number" ? globalThis.value + 1 : 0;
-}
 var common, _;
 function init_common() {
 	return (init_common = __esmMin((() => {
 		common = "common";
-		_ = /* @__PURE__ */ init();
+		globalThis.value = typeof globalThis.value === "number" ? globalThis.value + 1 : 0;
+		_ = () => void 0;
 	})))();
 }
 //#endregion

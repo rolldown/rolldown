@@ -71,14 +71,12 @@ impl GenerateContext<'_> {
     let canonical_symbol = symbol_db.get(canonical_ref);
     let namespace_alias = &canonical_symbol.namespace_alias;
     if let Some(ns_alias) = namespace_alias {
-      // The namespace itself may be declared in another chunk. This is normally hidden by the
-      // facade and namespace living together, but generated per-record interop carriers place the
-      // namespace beside the CJS importee while its re-export facade stays owned by the barrel.
-      // Resolve the namespace through the same cross-chunk path as an ordinary symbol before
-      // appending the property; otherwise CJS output renders a bare, undeclared local identifier.
-      // The same applies to a namespace owned by an inline common chunk record.
+      // Re-export facades can outlive their namespace's chunk. Resolve the namespace as a symbol
+      // before adding the property so CommonJS output reads the required chunk's live binding.
+      let canonical_namespace = symbol_db.canonical_ref_for(ns_alias.namespace_ref);
       let canonical_ns_name =
         if self.order_wrap_state.is_order_cjs_carrier_namespace(ns_alias.namespace_ref)
+          || symbol_db.get(canonical_namespace).chunk_idx.is_some_and(|idx| idx != cur_chunk_idx)
           || self.inline_bridge_pattern(ns_alias.namespace_ref, cur_chunk_idx).is_some()
         {
           self.finalized_string_pattern_for_symbol_ref(

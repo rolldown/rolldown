@@ -1,0 +1,183 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## entry-a.js
+
+```js
+import { t as __esmMin } from "./rolldown-runtime.js";
+import { i as init_leaf_a, n as init_leaf_b, r as AValue, t as BValue } from "./leaf-b.js";
+//#region ../entry-a.js
+function init_entry_a() {
+	return (init_entry_a = __esmMin((() => {
+		init_leaf_a(), init_leaf_b();
+	})))();
+}
+//#endregion
+init_entry_a();
+export { AValue, BValue };
+
+```
+
+## entry-b.js
+
+```js
+import { t as __esmMin } from "./rolldown-runtime.js";
+import { i as init_leaf_a, n as init_leaf_b, r as AValue, t as BValue } from "./leaf-b.js";
+//#region ../entry-b.js
+function init_entry_b() {
+	return (init_entry_b = __esmMin((() => {
+		init_leaf_b(), init_leaf_a();
+	})))();
+}
+//#endregion
+init_entry_b();
+export { AValue, BValue };
+
+```
+
+## leaf-b.js
+
+```js
+import { t as __esmMin } from "./rolldown-runtime.js";
+//#region ../leaf-a.js
+var AValue;
+function init_leaf_a() {
+	return (init_leaf_a = __esmMin((() => {
+		AValue = globalThis.orderValue;
+	})))();
+}
+//#endregion
+//#region ../leaf-b.js
+function value() {
+	globalThis.orderValue = "after";
+	return "b";
+}
+var BValue;
+function init_leaf_b() {
+	return (init_leaf_b = __esmMin((() => {
+		BValue = value();
+	})))();
+}
+//#endregion
+export { init_leaf_a as i, init_leaf_b as n, AValue as r, BValue as t };
+
+```
+
+## main.js
+
+```js
+import { t as __esmMin } from "./rolldown-runtime.js";
+//#region ../main.js
+function loadA() {
+	return import("./entry-a.js");
+}
+function loadB() {
+	return import("./entry-b.js");
+}
+function init_main() {
+	return (init_main = __esmMin((() => {})))();
+}
+//#endregion
+init_main();
+export { loadA, loadB };
+
+```
+
+## rolldown-runtime.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+export { __esmMin as t };
+
+```
+
+# Variant: on-demand: [on_demand_wrapping: true]
+
+## Assets
+
+### entry-a.js
+
+```js
+import { t as __esmMin } from "./rolldown-runtime.js";
+import { i as init_leaf_a, n as init_leaf_b, r as AValue, t as BValue } from "./leaf-b.js";
+//#region ../entry-a.js
+function init_entry_a() {
+	return (init_entry_a = __esmMin((() => {
+		init_leaf_a(), init_leaf_b();
+	})))();
+}
+//#endregion
+init_entry_a();
+export { AValue, BValue };
+
+```
+
+### entry-b.js
+
+```js
+import { t as __esmMin } from "./rolldown-runtime.js";
+import { i as init_leaf_a, n as init_leaf_b, r as AValue, t as BValue } from "./leaf-b.js";
+//#region ../entry-b.js
+function init_entry_b() {
+	return (init_entry_b = __esmMin((() => {
+		init_leaf_b(), init_leaf_a();
+	})))();
+}
+//#endregion
+init_entry_b();
+export { AValue, BValue };
+
+```
+
+### leaf-b.js
+
+```js
+import { t as __esmMin } from "./rolldown-runtime.js";
+//#region ../leaf-a.js
+var AValue;
+function init_leaf_a() {
+	return (init_leaf_a = __esmMin((() => {
+		AValue = globalThis.orderValue;
+	})))();
+}
+//#endregion
+//#region ../leaf-b.js
+function value() {
+	globalThis.orderValue = "after";
+	return "b";
+}
+var BValue;
+function init_leaf_b() {
+	return (init_leaf_b = __esmMin((() => {
+		BValue = value();
+	})))();
+}
+//#endregion
+export { init_leaf_a as i, init_leaf_b as n, AValue as r, BValue as t };
+
+```
+
+### main.js
+
+```js
+//#region ../main.js
+function loadA() {
+	return import("./entry-a.js");
+}
+function loadB() {
+	return import("./entry-b.js");
+}
+//#endregion
+export { loadA, loadB };
+
+```
+
+### rolldown-runtime.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+export { __esmMin as t };
+
+```

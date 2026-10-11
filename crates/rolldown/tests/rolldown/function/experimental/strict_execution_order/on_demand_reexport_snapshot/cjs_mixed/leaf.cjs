@@ -1,0 +1,1 @@
+exports.SNAPSHOT = globalThis.marker;

@@ -19,7 +19,7 @@ export { y as t };
 //#region main.js
 await import("./page-b.js").then((n) => (n.t(), n.n));
 const pageA = await import("./page-a.js");
-if (pageA.y !== 1e3 || pageA.common !== "common" || pageA._ !== void 0) throw new Error("partial dynamic import observed the wrong constant");
+if (pageA.y !== 1e3 || pageA.common !== "common" || pageA._() !== void 0) throw new Error("partial dynamic import observed the wrong constant");
 //#endregion
 
 ```
@@ -31,14 +31,12 @@ import { t as __esmMin } from "./rolldown-runtime.js";
 import { t as y } from "./const.js";
 import "./page-b.js";
 //#region common.js
-function init() {
-	globalThis.value = typeof globalThis.value === "number" ? globalThis.value + 1 : 0;
-}
 var common, _;
 function init_common() {
 	return (init_common = __esmMin((() => {
 		common = "common";
-		_ = /* @__PURE__ */ init();
+		globalThis.value = typeof globalThis.value === "number" ? globalThis.value + 1 : 0;
+		_ = () => void 0;
 	})))();
 }
 //#endregion
@@ -116,7 +114,7 @@ function init_main() {
 	return (init_main = __esmMin((async () => {
 		await import("./page-b.js").then((n) => (n.t(), n.n));
 		pageA = await import("./page-a.js");
-		if (pageA.y !== 1e3 || pageA.common !== "common" || pageA._ !== void 0) throw new Error("partial dynamic import observed the wrong constant");
+		if (pageA.y !== 1e3 || pageA.common !== "common" || pageA._() !== void 0) throw new Error("partial dynamic import observed the wrong constant");
 	})))();
 }
 //#endregion
@@ -131,14 +129,12 @@ import { t as __esmMin } from "./rolldown-runtime.js";
 import { n as y, t as init_const } from "./const.js";
 import "./page-b.js";
 //#region common.js
-function init() {
-	globalThis.value = typeof globalThis.value === "number" ? globalThis.value + 1 : 0;
-}
 var common, _;
 function init_common() {
 	return (init_common = __esmMin((() => {
 		common = "common";
-		_ = /* @__PURE__ */ init();
+		globalThis.value = typeof globalThis.value === "number" ? globalThis.value + 1 : 0;
+		_ = () => void 0;
 	})))();
 }
 //#endregion

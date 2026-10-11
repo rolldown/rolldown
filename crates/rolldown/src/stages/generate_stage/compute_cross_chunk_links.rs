@@ -1,7 +1,7 @@
 use super::{FinalEsmInitMetadata, GenerateStage, Sealed};
 use crate::chunk_graph::ChunkGraph;
 use crate::esm_init_obligations::{
-  ObligationPurpose, WrappedEsmInitTarget, WrappedEsmInitTargetContext,
+  EsmInitTargetPurpose, ObligationPurpose, WrappedEsmInitTarget, WrappedEsmInitTargetContext,
   collect_entry_reexported_wrapper_inits, collect_wrapped_esm_init_targets_for_import_record,
   for_each_init_obligation_record,
 };
@@ -1065,6 +1065,13 @@ impl GenerateStage<'_> {
           depended_symbols.insert(target.wrapper_ref);
         }
       }
+      WrappedEsmInitTarget::CjsModule(target_idx) => {
+        if chunk_graph.module_is_in_live_chunk(target_idx)
+          && let Some(wrapper_ref) = self.link_output.metas[target_idx].wrapper_ref
+        {
+          depended_symbols.insert(wrapper_ref);
+        }
+      }
       WrappedEsmInitTarget::CjsCarrier(key) => {
         if order_state.order_cjs_carrier_included_in_live_chunk(key, chunk_graph)
           && let Some(carrier) = order_state.order_cjs_carrier(key)
@@ -1164,6 +1171,7 @@ impl GenerateStage<'_> {
         let targets = collect_wrapped_esm_init_targets_for_import_record(
           &ctx,
           rec_idx,
+          EsmInitTargetPurpose::Evaluation,
           |symbol_ref| used_symbol_refs_view.contains(&symbol_ref),
           |_| true,
           |forwarding_module_idx| {
@@ -1391,6 +1399,9 @@ impl GenerateStage<'_> {
                       .expect("dynamic-entry module target should have a wrapper")
                       .wrapper_ref
                   }
+                  WrappedEsmInitTarget::CjsModule(module_idx) => self.link_output.metas[module_idx]
+                    .wrapper_ref
+                    .expect("dynamic-entry CJS module should have a wrapper"),
                   WrappedEsmInitTarget::CjsCarrier(key) => {
                     order_state
                       .order_cjs_carrier(key)

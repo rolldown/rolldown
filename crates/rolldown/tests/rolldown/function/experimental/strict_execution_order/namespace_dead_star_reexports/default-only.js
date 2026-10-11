@@ -1,7 +1,4 @@
-function mark() {
-  globalThis.defaultValue =
-    typeof globalThis.defaultValue === 'number' ? globalThis.defaultValue + 1 : 0;
-  return 42;
-}
+globalThis.defaultValue =
+  typeof globalThis.defaultValue === 'number' ? globalThis.defaultValue + 1 : 0;
 
-export default /* @__PURE__ */ mark();
+export default () => 42;

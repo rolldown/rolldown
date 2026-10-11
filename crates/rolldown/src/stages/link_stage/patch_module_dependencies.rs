@@ -1,8 +1,9 @@
-use rolldown_common::{Module, ModuleIdx, RuntimeHelper, SymbolRef};
+use petgraph::{Direction, prelude::DiGraphMap};
+use rolldown_common::{ImportKind, Module, ModuleIdx, RuntimeHelper, StmtInfoMeta, SymbolRef};
 use rolldown_utils::{
   index_vec_ext::IndexVecRefExt, indexmap::FxIndexSet, rayon::ParallelIterator,
 };
-use rustc_hash::FxHashSet;
+use rustc_hash::{FxHashMap, FxHashSet};
 
 use super::LinkStage;
 
@@ -239,6 +240,10 @@ impl LinkStage<'_> {
       }
     }
 
+    if strict_execution_order && tree_shaking {
+      self.patch_order_sensitive_static_dependencies();
+    }
+
     // If the runtime module has side effects (e.g. from a plugin transform) and is included,
     // ensure entry modules depend on it so the code splitter can reach it via BFS.
     let runtime_idx = self.runtime.id();
@@ -254,6 +259,119 @@ impl LinkStage<'_> {
             self.metas[entry_module_idx].has_side_effectful_runtime_dep = true;
           }
         }
+      }
+    }
+  }
+
+  fn patch_order_sensitive_static_dependencies(&mut self) {
+    let mut graph = DiGraphMap::<ModuleIdx, ()>::new();
+    let mut reaches_sensitive_init = FxHashSet::default();
+    for module in self.module_table.modules.iter().filter_map(Module::as_normal) {
+      graph.add_node(module.idx);
+      for rec in &module.import_records {
+        if rec.kind == ImportKind::Import
+          && let Some(importee_idx) = rec.resolved_module
+        {
+          graph.add_edge(module.idx, importee_idx, ());
+        }
+      }
+      let meta = &self.metas[module.idx];
+      if meta.is_included
+        && self.stmt_infos[module.idx].iter_enumerated_without_namespace_stmt().any(
+          |(stmt_idx, stmt_info)| {
+            meta.stmt_info_included.has_bit(stmt_idx)
+              && stmt_info.meta.contains(StmtInfoMeta::ExecutionOrderSensitive)
+              && (!stmt_info.declared_symbols.is_empty()
+                || !stmt_info.referenced_symbols.is_empty())
+          },
+        )
+      {
+        reaches_sensitive_init.insert(module.idx);
+      }
+    }
+    if reaches_sensitive_init.is_empty() {
+      return;
+    }
+
+    let mut pending = reaches_sensitive_init.iter().copied().collect::<Vec<_>>();
+    while let Some(module_idx) = pending.pop() {
+      for importer_idx in graph.neighbors_directed(module_idx, Direction::Incoming) {
+        if reaches_sensitive_init.insert(importer_idx) {
+          pending.push(importer_idx);
+        }
+      }
+    }
+    let components = petgraph::algo::tarjan_scc(&graph);
+    for component in &components {
+      if (component.len() > 1 || graph.contains_edge(component[0], component[0]))
+        && component.iter().any(|idx| reaches_sensitive_init.contains(idx))
+      {
+        for &module_idx in component {
+          self.metas[module_idx].is_included = true;
+        }
+      }
+    }
+    for (module_idx, meta) in self.metas.iter_mut_enumerated() {
+      meta.has_order_sensitive_initialization = reaches_sensitive_init.contains(&module_idx);
+    }
+
+    // Cycles retain their module guards. Acyclic excluded forwarders preserve each import path's
+    // record order; global execution order cannot represent opposite-order entry paths.
+    // See internal-docs/code-splitting/design.md#tree-shaking-parity-across-strict-modes.
+    let mut first_included = FxHashMap::<ModuleIdx, Vec<ModuleIdx>>::default();
+    for component in components {
+      for module_idx in component {
+        if !reaches_sensitive_init.contains(&module_idx) {
+          continue;
+        }
+        if self.metas[module_idx].is_included {
+          first_included.insert(module_idx, vec![module_idx]);
+          continue;
+        }
+        let module = self.module_table[module_idx]
+          .as_normal()
+          .expect("static forwarders should be normal modules");
+        let mut targets = FxIndexSet::default();
+        for rec in &module.import_records {
+          if rec.kind == ImportKind::Import
+            && let Some(importee_idx) = rec.resolved_module
+            && reaches_sensitive_init.contains(&importee_idx)
+          {
+            targets.extend(
+              first_included
+                .get(&importee_idx)
+                .expect("dependency components precede their importers")
+                .iter()
+                .copied(),
+            );
+          }
+        }
+        first_included.insert(module_idx, targets.into_iter().collect());
+      }
+    }
+
+    for module in self.module_table.modules.iter().filter_map(Module::as_normal) {
+      let meta = &mut self.metas[module.idx];
+      if !meta.is_included {
+        continue;
+      }
+      let mut dependencies = FxHashMap::default();
+      for (rec_idx, rec) in module.import_records.iter_enumerated() {
+        if rec.kind == ImportKind::Import
+          && let Some(importee_idx) = rec.resolved_module
+          && let Some(targets) = first_included.get(&importee_idx)
+          && !targets.is_empty()
+        {
+          dependencies.insert(rec_idx, targets.clone());
+        }
+      }
+      if !dependencies.is_empty() {
+        for targets in dependencies.values() {
+          meta.dependencies.extend(targets.iter().copied());
+          meta.load_dependencies.extend(targets.iter().copied());
+          meta.execution_dependencies.extend(targets.iter().copied());
+        }
+        meta.static_init_dependencies = Some(Box::new(dependencies));
       }
     }
   }

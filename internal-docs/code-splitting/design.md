@@ -193,16 +193,36 @@ traversal and an entry prologue containing every statically known target.
 A wrapped mixed ESM module keeps its own guarded initializer for local code and mandatory dependencies.
 Eligible direct re-export records route initialization from the binding consumer instead: importing
 `LOCAL` from `export * from './values.js'; export const LOCAL = 'local'` calls only the mixed
-module's initializer, while importing a forwarded binding also initializes its defining module.
+module's initializer when the re-export targets are time-independent. Retained order-sensitive
+targets initialize before its local body. Importing a forwarded binding also initializes its defining module.
 The routing decision is per record, so evaluating the local body cannot discharge a later
 consumer's demand for a forwarded binding. The existing module guards preserve one-time execution.
 If on-demand wrapping leaves the mixed module unwrapped, consumers retain the initialization
 obligations that its included statements do not discharge.
 
-A routed target must be side-effect-free and have no `ExecutionOrderSensitive` module in its static
-or binding dependency closure, apart from the inert runtime helpers. Side-effect metadata alone is
-insufficient: a pure initializer can snapshot an imported mutable value, and postponing that read changes the exported value. The
-closure includes excluded forwarding modules and conservatively includes unused static records.
+A routed target must be side-effect-free. Its retained order-sensitive initialization is recorded
+before chunk placement and remains an evaluation dependency, even when forwarding its bindings is
+consumer-local. Side-effect metadata alone cannot establish that evaluation may be postponed: an
+annotated pure call can snapshot mutable state or throw, and a retained result must preserve that
+evaluation time. Strict scanning records sensitivity per statement. After tree shaking, link-stage
+dependency patching selects included sensitive declarations and statements that reference module
+bindings, including imported bindings, then propagates that requirement through the original static-import graph.
+Global-only instrumentation in a `moduleSideEffects: false` module creates no binding obligation.
+
+Each included importer's record stores the first initialization owners behind acyclic excluded
+forwarders, in that import path's record order. A static SCC that reaches retained sensitive
+initialization keeps its module guards: the evaluating state of an otherwise empty barrel can
+determine when a sibling initializer runs. Statement inclusion and export liveness remain the
+tree-shaking result. Chunk placement, order planning and finalization consume these immutable
+`static_init_dependencies`. Namespace activation preserves the original static-record paths through
+excluded forwarders; export-name order or global module execution order cannot represent
+opposite-order entry paths.
+An ESM owner uses its initializer; a CJS owner uses its require wrapper or the forwarding
+record's existing carrier. Unrelated time-independent forwarded bindings retain consumer-local
+initialization. Unsupported order-sensitive work still rejects mixed-record routing.
+
+The eligibility closure includes excluded forwarding modules and conservatively includes unused
+static records.
 Interop wrappers, synchronous cycles, require targets, TLA, dynamic exports, missing-export shims,
 concatenated modules, and no-treeshake contracts retain their current initialization. Namespace-valued
 re-exports and mixed modules with an opaque namespace consumer also retain the monolithic path;
@@ -475,11 +495,12 @@ The table is sparse: a missing entry means `init_is_noop == false` and no exclud
 
 ### Shared init-target view
 
-Finalization and cross-chunk linking need to work with three sources of lazy initialization:
+Finalization and cross-chunk linking need to work with four sources of lazy initialization:
 
 1. interop ESM wrappers from `LinkingMetadata`;
 2. order wrappers from `OrderWrapState`;
-3. generated per-record CJS carriers from `OrderWrapState`.
+3. retained CJS require wrappers from `LinkingMetadata`;
+4. generated per-record CJS carriers from `OrderWrapState`.
 
 They use a read-only view instead of testing an effective `WrapKind`:
 
@@ -497,11 +518,12 @@ pub enum EsmInitOrigin {
 
 pub enum WrappedEsmInitTarget {
   Module(ModuleIdx),
+  CjsModule(ModuleIdx),
   CjsCarrier(OrderCjsCarrierKey),
 }
 ```
 
-An accessor resolves at most one ESM init target for a module. Interop ESM wrapping takes precedence because an already interop-wrapped module is represented by that existing wrapper; the order planner selects an eligible carrier instead of adding a second wrapper. Record routing returns `WrappedEsmInitTarget`, so Emit, Register, Project, and pre-chunk placement agree on whether an obligation names a module wrapper or a CJS carrier. The module view carries structural wrapper identity only; final no-op and excluded-statement facts come from `FinalEsmInitMetadata`.
+An accessor resolves at most one ESM init target for a module. Interop ESM wrapping takes precedence because an already interop-wrapped module is represented by that existing wrapper; the order planner selects an eligible carrier instead of adding a second wrapper. Record routing returns `WrappedEsmInitTarget`, so Emit, Register, Project, and pre-chunk placement agree on whether an obligation names an ESM initializer, a CJS require wrapper, or a per-record CJS carrier. The module view carries structural wrapper identity only; final no-op and excluded-statement facts come from `FinalEsmInitMetadata`.
 
 ### Synthetic symbol inclusion
 
@@ -572,7 +594,7 @@ link + tree shaking
 - Every synthesized init call references a reachable interop or order wrapper.
 - A planned static chunk SCC includes every eligible order-sensitive module in that SCC.
 - Every ordinary-import init obligation corresponds to a link-stage execution dependency or to importer-local binding demand (a used binding, a statically folded member read, or a re-exported facade a downstream consumer reaches).
-- Every excluded-statement init obligation is a retained re-export obligation, a synthetic obligation backed by an execution dependency, or a binding-demand obligation of an excluded plain import; a binding-less excluded plain import routes nothing.
+- Every excluded-statement init obligation is a retained re-export obligation, a synthetic obligation backed by an execution dependency, or a plain import's recorded mandatory evaluation or binding demand. A binding-less excluded plain import routes only its recorded mandatory evaluation targets.
 - Final cross-chunk registration and finalizer emission require the same `Sealed<FinalEsmInitMetadata>` type; pre-final projection cannot supply one and does not consume final metadata.
 - Wrap-all and on-demand preserve the same link-stage statement and binding liveness; only their wrapper plans may differ.
 - Emit, Register, Project, and pre-chunk placement resolve consumer-local records through the same target model.

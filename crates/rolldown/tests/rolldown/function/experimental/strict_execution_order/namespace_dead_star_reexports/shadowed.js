@@ -1,7 +1,4 @@
-function mark() {
-  globalThis.shadowedValue =
-    typeof globalThis.shadowedValue === 'number' ? globalThis.shadowedValue + 1 : 0;
-  return 2;
-}
+globalThis.shadowedValue =
+  typeof globalThis.shadowedValue === 'number' ? globalThis.shadowedValue + 1 : 0;
 
-export const x = /* @__PURE__ */ mark();
+export const x = () => 2;

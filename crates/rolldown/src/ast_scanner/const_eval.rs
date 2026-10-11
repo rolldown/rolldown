@@ -8,7 +8,7 @@ use oxc::{
   semantic::{IsGlobalReference, ReferenceId, Scoping, SymbolId},
 };
 use oxc_ecmascript::{
-  GlobalContext, ToJsString, ValueType,
+  GlobalContext, ToJsString,
   constant_evaluation::{ConstantEvaluation, ConstantEvaluationCtx},
   side_effects::MayHaveSideEffectsContext,
 };
@@ -103,7 +103,7 @@ pub fn eval_can_assign(scoping: &Scoping, symbol_id: SymbolId) -> bool {
 }
 
 /// Returns the text of an untagged template. Returns `None` when a substitution does not evaluate
-/// or a text piece has a lone surrogate.
+/// to a primitive constant or a text piece has a lone surrogate.
 ///
 /// oxc's `evaluate_value` has no arm for template literals (#10817), and its `ToJsString` folds
 /// only global identifiers. So this evaluates each substitution with the constant map.
@@ -121,7 +121,9 @@ fn template_text<'ast>(
       None => {}
       Some(Expression::TemplateLiteral(inner)) => text.push_str(&template_text(ctx, inner)?),
       Some(expr) => {
-        let value = expr.evaluate_value_to(ctx, Some(ValueType::String))?;
+        // A string target lets oxc coerce objects speculatively (or use regexp source spelling).
+        // Only stringify an evaluated primitive, whose coercion cannot depend on prototypes.
+        let value = expr.evaluate_value(ctx)?;
         text.push_str(&value.to_js_string(ctx)?);
       }
     }
@@ -210,5 +212,20 @@ mod tests {
     assert_eq!(extract("const NAME = 'rolldown'; const a = `${NAME}${x}`;", "a"), None);
     // A new string literal cannot carry a lone surrogate.
     assert_eq!(extract("const a = `\\uD800`;", "a"), None);
+  }
+
+  #[test]
+  fn test_template_literal_does_not_cache_object_coercions() {
+    assert_eq!(extract("const a = `${/foo/ig}`;", "a"), None);
+    assert_eq!(extract("const a = `${{}}`;", "a"), None);
+    assert_eq!(extract("const a = `${[1, 2]}`;", "a"), None);
+    assert_eq!(extract("const a = `${`${/foo/ig}`}`;", "a"), None);
+  }
+
+  #[test]
+  fn test_template_literal_uses_primitive_values_instead_of_source_spelling() {
+    assert_eq!(extract("const a = `${0xffn}`;", "a"), Some(string("255")));
+    assert_eq!(extract("const a = `${0b10n}`;", "a"), Some(string("2")));
+    assert_eq!(extract("const a = `${-0}`;", "a"), Some(string("0")));
   }
 }

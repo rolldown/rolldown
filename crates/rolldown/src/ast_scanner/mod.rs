@@ -9,7 +9,7 @@ pub mod stmt_eval_analyzer;
 mod top_level_import_read;
 
 use arcstr::ArcStr;
-use const_eval::{ConstEvalCtx, try_extract_const_literal};
+use const_eval::{ConstEvalCtx, eval_can_assign, try_extract_const_literal};
 use oxc::ast::ast::{BindingPattern, Expression, ImportExpression};
 use oxc::ast::{AstKind, ast};
 use oxc::semantic::{NodeId, Reference, ScopeFlags, Scoping};
@@ -1129,11 +1129,7 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
     let scoping = self.result.symbol_ref_db.scoping();
     let is_mutated = !self.result.symbol_ref_db.is_facade_symbol(symbol_id)
       && scoping.symbol_is_mutated(symbol_id);
-    // Direct `eval` can assign a `let`, a `var`, or an `exports` property without a write
-    // reference, so only a `const` is stable in such a module.
-    let eval_can_assign = scoping.root_scope_flags().contains_direct_eval()
-      && !scoping.symbol_flags(symbol_id).is_const_variable();
-    if is_mutated || eval_can_assign {
+    if is_mutated || eval_can_assign(scoping, symbol_id) {
       return;
     }
     self.result.constant_export_map.insert(symbol_id, value);

@@ -21,7 +21,7 @@ use rustc_hash::{FxHashMap, FxHashSet};
 
 use crate::{
   ast_scanner::{
-    const_eval::{ConstEvalCtx, try_extract_const_literal},
+    const_eval::{ConstEvalCtx, eval_can_assign, try_extract_const_literal},
     stmt_eval_analyzer::StmtEvalAnalyzer,
   },
   type_alias::IndexStmtInfos,
@@ -475,13 +475,13 @@ impl<'a, 'ast: 'a> VisitJs<'ast> for CrossModuleOptimizationRunnerContext<'a, 'a
       var_decl.declarations.iter().for_each(|declarator| {
         if let BindingPattern::BindingIdentifier(ref binding) = declarator.id {
           let symbol_ref: SymbolRef = (self.immutable_ctx.module_idx, binding.symbol_id()).into();
-          let is_not_assigned = self
-            .immutable_ctx
-            .symbols
-            .local_db(self.immutable_ctx.module_idx)
+          let local_db = self.immutable_ctx.symbols.local_db(self.immutable_ctx.module_idx);
+          // `IsNotReassigned` does not see an assignment inside direct `eval`.
+          let is_not_assigned = local_db
             .flags
             .get(&symbol_ref.symbol)
-            .is_some_and(|flag| flag.contains(SymbolRefFlags::IsNotReassigned));
+            .is_some_and(|flag| flag.contains(SymbolRefFlags::IsNotReassigned))
+            && !eval_can_assign(local_db.scoping(), symbol_ref.symbol);
 
           if is_not_assigned
             && let Some(value) = declarator

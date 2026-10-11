@@ -93,6 +93,15 @@ pub fn try_extract_const_literal<'me, 'ast: 'me>(
   }
 }
 
+/// Returns whether direct `eval` in the module can assign `symbol_id`.
+///
+/// Direct `eval` can assign a `let`, a `var`, or an `exports` property without a write reference,
+/// so only a `const` is stable in such a module.
+pub fn eval_can_assign(scoping: &Scoping, symbol_id: SymbolId) -> bool {
+  scoping.root_scope_flags().contains_direct_eval()
+    && !scoping.symbol_flags(symbol_id).is_const_variable()
+}
+
 /// Returns the text of an untagged template. Returns `None` when a substitution does not evaluate
 /// or a text piece has a lone surrogate.
 ///

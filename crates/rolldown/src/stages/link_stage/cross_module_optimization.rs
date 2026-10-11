@@ -193,6 +193,7 @@ impl LinkStage<'_> {
               let symbol_id = reference.symbol_id()?;
               let symbol_ref: SymbolRef = (module_idx, symbol_id).into();
               let canonical_ref = self.symbols.canonical_ref_for(symbol_ref);
+              let value = constant_symbol_map.get(&canonical_ref).map(|meta| &meta.value)?;
               // A binding has no value before it is initialized. `ALIAS` in
               // `export const ALIAS = VALUE; export var VALUE = 1n;` is `undefined`, and an import
               // from a later module of the same cycle is in its TDZ.
@@ -205,10 +206,7 @@ impl LinkStage<'_> {
                 stmt_infos: &self.stmt_infos,
                 constants: constant_symbol_map,
               };
-              if !lookup.is_initialized(canonical_ref) {
-                return None;
-              }
-              constant_symbol_map.get(&canonical_ref).map(|meta| &meta.value)
+              lookup.is_initialized(canonical_ref).then_some(value)
             }),
             constant_map: &constant_map,
           };

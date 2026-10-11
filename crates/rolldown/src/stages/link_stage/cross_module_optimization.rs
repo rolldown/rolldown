@@ -189,9 +189,7 @@ impl LinkStage<'_> {
               let symbol_id = reference.symbol_id()?;
               let symbol_ref: SymbolRef = (module_idx, symbol_id).into();
               let canonical_ref = self.symbols.canonical_ref_for(symbol_ref);
-              constant_symbol_map
-                .get(&canonical_ref)
-                .map(|meta| oxc_ecmascript::constant_evaluation::ConstantValue::from(&meta.value))
+              constant_symbol_map.get(&canonical_ref).map(|meta| &meta.value)
             }),
             constant_map: &constant_map,
           };

@@ -9,7 +9,7 @@ use oxc::{
   semantic::{IsGlobalReference, ReferenceId, Scoping, SymbolId},
 };
 use oxc_ecmascript::{
-  GlobalContext, ToJsString,
+  GlobalContext, ToJsString, ValueType,
   constant_evaluation::{ConstantEvaluation, ConstantEvaluationCtx},
   side_effects::MayHaveSideEffectsContext,
 };
@@ -20,9 +20,20 @@ pub struct ConstEvalCtx<'me, 'ast: 'me> {
   pub ast: oxc::ast::builder::AstBuilder<'ast>,
   pub scope: &'me Scoping,
   pub constant_map: &'me FxHashMap<SymbolId, ConstExportMeta>,
-  pub overrode_get_constant_value_from_reference_id: Option<
-    &'me dyn Fn(ReferenceId) -> Option<oxc_ecmascript::constant_evaluation::ConstantValue<'ast>>,
-  >,
+  pub overrode_get_constant_value_from_reference_id:
+    Option<&'me dyn Fn(ReferenceId) -> Option<&'me ConstantValue>>,
+}
+
+impl<'me> ConstEvalCtx<'me, '_> {
+  fn constant_value(&self, reference_id: ReferenceId) -> Option<&'me ConstantValue> {
+    // If there is an override function, return the result produced by the overrode function
+    // whatever.
+    if let Some(f) = self.overrode_get_constant_value_from_reference_id {
+      return f(reference_id);
+    }
+    let symbol_id = self.scope.get_reference(reference_id).symbol_id()?;
+    self.constant_map.get(&symbol_id).map(|meta| &meta.value)
+  }
 }
 
 impl<'ast> ConstantEvaluationCtx<'ast> for ConstEvalCtx<'_, 'ast> {}
@@ -52,15 +63,12 @@ impl<'ast> GlobalContext<'ast> for ConstEvalCtx<'_, 'ast> {
     &self,
     reference_id: oxc::semantic::ReferenceId,
   ) -> Option<oxc_ecmascript::constant_evaluation::ConstantValue<'ast>> {
-    // If there is an override function, return the result produced by the overrode function
-    // whatever.
-    if let Some(f) = self.overrode_get_constant_value_from_reference_id {
-      return f(reference_id);
-    }
-    let reference = self.scope.get_reference(reference_id);
-    let symbol_id = reference.symbol_id()?;
-    let v = self.constant_map.get(&symbol_id)?;
-    Some(oxc_ecmascript::constant_evaluation::ConstantValue::from(&v.value))
+    self.constant_value(reference_id).map(oxc_ecmascript::constant_evaluation::ConstantValue::from)
+  }
+
+  // Without the type, oxc's `+` reads a string constant as a number: `'3' + 1` gives `4`.
+  fn value_type_for_reference_id(&self, reference_id: ReferenceId) -> Option<ValueType> {
+    self.constant_value(reference_id).map(ConstantValue::value_type)
   }
 }
 
@@ -228,6 +236,9 @@ mod tests {
       extract("const NAME = 'rolldown'; const a = `${`${NAME}`}!`;", "a"),
       Some(string("rolldown!"))
     );
+    // `+` concatenates when one operand is a string constant.
+    assert_eq!(extract("const NAME = '3'; const a = `${NAME + 1}`;", "a"), Some(string("31")));
+    assert_eq!(extract("const NAME = '3'; const a = NAME + 1;", "a"), Some(string("31")));
   }
 
   #[test]

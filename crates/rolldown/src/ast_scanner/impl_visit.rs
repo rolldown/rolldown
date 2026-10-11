@@ -80,6 +80,9 @@ impl<'me, 'ast: 'me> VisitJs<'ast> for AstScanner<'me, 'ast> {
         self.immutable_ctx.options,
         None,
         Some(&self.namespace_object_symbol_ids),
+        // Constants that earlier statements declared. The map grows in statement order, so no read
+        // precedes its declaration.
+        Some(&self.result.constant_export_map),
       );
       let mut stmt_eval_facts = analyzer.analyze_stmt(stmt);
       // `ExecutionOrderSensitive` is read outside the wrap planner too — it gates which leaf
@@ -352,30 +355,16 @@ impl<'me, 'ast: 'me> VisitJs<'ast> for AstScanner<'me, 'ast> {
     if decl.kind == ast::VariableDeclarationKind::AwaitUsing && self.is_valid_tla_scope() {
       self.handle_top_level_await(decl.span());
     }
-    match decl.declarations.as_slice() {
-      [decl] => {
-        if let (BindingPattern::BindingIdentifier(binding), Some(init)) = (&decl.id, &decl.init) {
-          // Extract constant value for top-level variable declarations
-          if self.is_root_symbol(binding.symbol_id()) {
-            if let Some(value) = self.extract_constant_value_from_expr(Some(init)) {
-              self.add_constant_symbol(binding.symbol_id(), ConstExportMeta::new(value, false));
-            }
-          }
+    // Record constants only from a module-level statement, which always runs its initializers. A
+    // `var` in a nested statement also declares a root binding, but its initializer can be skipped.
+    if matches!(self.visit_path.as_slice(), [] | [AstKind::ExportDeclaration(_)]) {
+      for declarator in &decl.declarations {
+        if let (BindingPattern::BindingIdentifier(binding), Some(init)) =
+          (&declarator.id, &declarator.init)
+          && let Some(value) = self.extract_constant_value_from_expr(Some(init))
+        {
+          self.add_constant_symbol(binding.symbol_id(), ConstExportMeta::new(value, false));
         }
-      }
-      _ => {
-        if self.immutable_ctx.flat_options.inline_const_enabled() && self.is_root_scope() {
-          for var_decl in &decl.declarations {
-            if let BindingPattern::BindingIdentifier(binding) = &var_decl.id {
-              if let Some(init) = &var_decl.init {
-                if let Some(value) = self.extract_constant_value_from_expr(Some(init)) {
-                  self.add_constant_symbol(binding.symbol_id(), ConstExportMeta::new(value, false));
-                }
-              }
-            }
-          }
-        }
-        // Handle multiple declarations in a single statement
       }
     }
     walk_js::walk_variable_declaration(self, decl);

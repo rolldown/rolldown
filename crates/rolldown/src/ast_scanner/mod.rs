@@ -9,7 +9,7 @@ pub mod stmt_eval_analyzer;
 mod top_level_import_read;
 
 use arcstr::ArcStr;
-use const_eval::{ConstEvalCtx, try_extract_const_literal};
+use const_eval::{ConstEvalCtx, eval_can_assign, try_extract_const_literal};
 use oxc::ast::ast::{BindingPattern, Expression, ImportExpression};
 use oxc::ast::{AstKind, ast};
 use oxc::semantic::{NodeId, Reference, ScopeFlags, Scoping};
@@ -1126,9 +1126,10 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
   }
 
   pub fn add_constant_symbol(&mut self, symbol_id: SymbolId, value: ConstExportMeta) {
+    let scoping = self.result.symbol_ref_db.scoping();
     let is_mutated = !self.result.symbol_ref_db.is_facade_symbol(symbol_id)
-      && self.result.symbol_ref_db.scoping().symbol_is_mutated(symbol_id);
-    if is_mutated {
+      && scoping.symbol_is_mutated(symbol_id);
+    if is_mutated || eval_can_assign(scoping, symbol_id) {
       return;
     }
     self.result.constant_export_map.insert(symbol_id, value);

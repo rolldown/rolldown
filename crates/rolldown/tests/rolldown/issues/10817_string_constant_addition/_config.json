@@ -1,0 +1,14 @@
+{
+  "_comment": "With tree shaking off, no DCE folds `NAME + 1` before the scan. The constant evaluation must see that `NAME` is a string, so both values are `'31'`.",
+  "config": {
+    "input": [
+      {
+        "name": "main",
+        "import": "./main.js"
+      }
+    ],
+    "minify": false,
+    "treeshake": false
+  },
+  "snapshot": false
+}

@@ -99,20 +99,25 @@ impl LinkedConstantLookup<'_> {
       canonical_ref.owner != self.module_idx && self.exporter_runs_first(canonical_ref.owner)
     })
   }
-}
 
-impl ConstantSymbolLookup for LinkedConstantLookup<'_> {
-  fn constant_value(&self, symbol_id: SymbolId) -> Option<&ConstantValue> {
-    let (canonical_ref, value) = self.canonical_constant((self.module_idx, symbol_id).into())?;
-    let initialized = if canonical_ref.owner == self.module_idx {
+  /// Returns whether the binding `canonical_ref` is initialized when statement `stmt_idx` runs,
+  /// by the rules in the type documentation.
+  pub fn is_initialized(&self, canonical_ref: SymbolRef) -> bool {
+    if canonical_ref.owner == self.module_idx {
       self.stmt_infos[self.module_idx]
         .declared_stmts_by_symbol(&canonical_ref)
         .iter()
         .all(|declaring_stmt_idx| *declaring_stmt_idx < self.stmt_idx)
     } else {
       self.exporter_runs_first(canonical_ref.owner)
-    };
-    initialized.then_some(value)
+    }
+  }
+}
+
+impl ConstantSymbolLookup for LinkedConstantLookup<'_> {
+  fn constant_value(&self, symbol_id: SymbolId) -> Option<&ConstantValue> {
+    let (canonical_ref, value) = self.canonical_constant((self.module_idx, symbol_id).into())?;
+    self.is_initialized(canonical_ref).then_some(value)
   }
 }
 

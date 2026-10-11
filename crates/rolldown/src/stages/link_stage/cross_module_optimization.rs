@@ -1,3 +1,5 @@
+use std::cell::Cell;
+
 use oxc::{
   ast::{
     AstKind,
@@ -181,6 +183,8 @@ impl LinkStage<'_> {
         let constant_map = FxHashMap::default();
         ast.program.with_dependent(|owner, dep| {
           let module_symbol_table = self.symbols.local_db(module_idx);
+          // `0` is preserved for namespace stmt
+          let toplevel_stmt_idx = Cell::new(StmtInfoIdx::from_raw_unchecked(1));
           let eval_ctx = ConstEvalCtx {
             ast: AstBuilder::new(&owner.allocator),
             scope: module_symbol_table.scoping(),
@@ -189,6 +193,21 @@ impl LinkStage<'_> {
               let symbol_id = reference.symbol_id()?;
               let symbol_ref: SymbolRef = (module_idx, symbol_id).into();
               let canonical_ref = self.symbols.canonical_ref_for(symbol_ref);
+              // A binding has no value before it is initialized. `ALIAS` in
+              // `export const ALIAS = VALUE; export var VALUE = 1n;` is `undefined`, and an import
+              // from a later module of the same cycle is in its TDZ.
+              let lookup = LinkedConstantLookup {
+                module_idx,
+                stmt_idx: toplevel_stmt_idx.get(),
+                modules: &self.module_table.modules,
+                import_cycles: &self.import_cycles,
+                symbols: &self.symbols,
+                stmt_infos: &self.stmt_infos,
+                constants: constant_symbol_map,
+              };
+              if !lookup.is_initialized(canonical_ref) {
+                return None;
+              }
               constant_symbol_map.get(&canonical_ref).map(|meta| &meta.value)
             }),
             constant_map: &constant_map,
@@ -231,8 +250,7 @@ impl LinkStage<'_> {
               stmt_infos: &self.stmt_infos,
               constant_symbol_map,
             },
-            // `0` is preserved for namespace stmt
-            toplevel_stmt_idx: StmtInfoIdx::from_raw_unchecked(1),
+            toplevel_stmt_idx: &toplevel_stmt_idx,
             visit_path: vec![],
             latest_side_effect_free_call_expr_node_id: None,
             unreachable_import_expression_node_ids: FxHashSet::default(),
@@ -315,7 +333,8 @@ struct CrossModuleOptimizationRunnerContext<'a, 'ast: 'a> {
   tree_shaking_flags_mutations: FxHashMap<StmtInfoIdx, StmtEvalFlags>,
   side_effect_free_call_expr_node_ids: FxHashSet<NodeId>,
   immutable_ctx: CrossModuleOptimizationImmutableCtx<'a, 'ast>,
-  toplevel_stmt_idx: StmtInfoIdx,
+  /// Shared with the constant lookup of `eval_ctx`.
+  toplevel_stmt_idx: &'a Cell<StmtInfoIdx>,
   visit_path: Vec<AstKind<'ast>>,
   latest_side_effect_free_call_expr_node_id: Option<NodeId>,
   /// Import expressions that are inside lazy paths (e.g., inside a PURE-annotated function)
@@ -405,13 +424,13 @@ impl<'a, 'ast: 'a> VisitJs<'ast> for CrossModuleOptimizationRunnerContext<'a, 'a
           .tree_shaking_flags_mutations
           .insert(stmt_info_idx, stmt_eval_facts.tree_shaking_flags());
       }
-      self.toplevel_stmt_idx += 1;
+      self.toplevel_stmt_idx.set(self.toplevel_stmt_idx.get() + 1);
     }
   }
 
   fn visit_import_expression(&mut self, it: &oxc::ast::ast::ImportExpression<'ast>) {
     if let Some(node_ids) =
-      self.stmt_idx_to_dynamic_import_expr_node_ids.get(&self.toplevel_stmt_idx)
+      self.stmt_idx_to_dynamic_import_expr_node_ids.get(&self.toplevel_stmt_idx.get())
     {
       if node_ids.contains(&it.node_id()) {
         // search the latest side effect free call expression parent

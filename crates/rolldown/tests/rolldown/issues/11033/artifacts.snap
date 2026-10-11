@@ -11,8 +11,8 @@ import { t as __esmMin } from "./rolldown-runtime.js";
 var load, loadOther;
 function init_main() {
 	return (init_main = __esmMin((() => {
-		load = () => import("./story.js").then((n) => (n.t(), n.n));
-		loadOther = () => import("./other.js").then((n) => (n.t(), n.n));
+		load = () => import("./story.js");
+		loadOther = () => import("./other.js");
 	})))();
 }
 //#endregion
@@ -24,8 +24,42 @@ export { load, loadOther };
 ## other.js
 
 ```js
-import { n as __exportAll, t as __esmMin } from "./rolldown-runtime.js";
-import { i as init_group, r as init_item } from "./story.js";
+import { t as __esmMin } from "./rolldown-runtime.js";
+import { n as motion, t as init_react } from "./react.js";
+//#region other.js
+var check;
+function init_other() {
+	return (init_other = __esmMin((() => {
+		init_react();
+		check = () => motion;
+	})))();
+}
+//#endregion
+init_other();
+export { check };
+
+```
+
+## react.js
+
+```js
+import { t as __esmMin } from "./rolldown-runtime.js";
+//#region group.js
+var Group;
+function init_group() {
+	return (init_group = __esmMin((() => {
+		Group = { name: "Group" };
+	})))();
+}
+//#endregion
+//#region item.js
+var Item;
+function init_item() {
+	return (init_item = __esmMin((() => {
+		Item = { name: "Item" };
+	})))();
+}
+//#endregion
 //#region motion.js
 var motion$1;
 function init_motion() {
@@ -45,17 +79,7 @@ function init_react() {
 	})))();
 }
 //#endregion
-//#region other.js
-var other_exports = /* @__PURE__ */ __exportAll({ check: () => check });
-var check;
-function init_other() {
-	return (init_other = __esmMin((() => {
-		init_react();
-		check = () => motion;
-	})))();
-}
-//#endregion
-export { other_exports as n, init_react as r, init_other as t };
+export { Group as a, init_item as i, motion as n, init_group as o, Item as r, init_react as t };
 
 ```
 
@@ -63,33 +87,16 @@ export { other_exports as n, init_react as r, init_other as t };
 
 ```js
 // HIDDEN [\0rolldown/runtime.js]
-export { __exportAll as n, __esmMin as t };
+export { __esmMin as t };
 
 ```
 
 ## story.js
 
 ```js
-import { n as __exportAll, t as __esmMin } from "./rolldown-runtime.js";
-import { r as init_react } from "./other.js";
-//#region group.js
-var Group;
-function init_group() {
-	return (init_group = __esmMin((() => {
-		Group = { name: "Group" };
-	})))();
-}
-//#endregion
-//#region item.js
-var Item;
-function init_item() {
-	return (init_item = __esmMin((() => {
-		Item = { name: "Item" };
-	})))();
-}
-//#endregion
+import { t as __esmMin } from "./rolldown-runtime.js";
+import { a as Group, r as Item, t as init_react } from "./react.js";
 //#region story.js
-var story_exports = /* @__PURE__ */ __exportAll({ check: () => check });
 var check;
 function init_story() {
 	return (init_story = __esmMin((() => {
@@ -98,7 +105,8 @@ function init_story() {
 	})))();
 }
 //#endregion
-export { init_group as i, story_exports as n, init_item as r, init_story as t };
+init_story();
+export { check };
 
 ```
 
@@ -120,33 +128,15 @@ export { load, loadOther };
 ### other.js
 
 ```js
-// HIDDEN [\0rolldown/runtime.js]
-//#region motion.js
-const motion$1 = {};
-//#endregion
-//#region react.js
-var motion;
-function init_react() {
-	return (init_react = __esmMin((() => {
-		motion = motion$1;
-	})))();
-}
-//#endregion
+import { t as motion } from "./react.js";
 //#region other.js
-var check;
-function init_other() {
-	return (init_other = __esmMin((() => {
-		init_react();
-		check = () => motion;
-	})))();
-}
+const check = () => motion;
 //#endregion
-init_other();
 export { check };
 
 ```
 
-### story.js
+### react.js
 
 ```js
 //#region group.js
@@ -155,6 +145,19 @@ const Group = { name: "Group" };
 //#region item.js
 const Item = { name: "Item" };
 //#endregion
+//#region motion.js
+//#endregion
+//#region react.js
+const motion = {};
+//#endregion
+export { Item as n, Group as r, motion as t };
+
+```
+
+### story.js
+
+```js
+import { n as Item, r as Group } from "./react.js";
 //#region story.js
 const check = () => [Group, Item];
 //#endregion

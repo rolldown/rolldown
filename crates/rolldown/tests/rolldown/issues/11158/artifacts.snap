@@ -1,0 +1,44 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## adapter.js
+
+```js
+//#region adapter.js
+async function load() {
+	const { lib } = await import("./main2.js").then((n) => n.n);
+	return lib();
+}
+//#endregion
+export { load };
+
+```
+
+## main.js
+
+```js
+export { t as default } from "./main2.js";
+
+```
+
+## main2.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+//#region lib.js
+var lib_exports = /* @__PURE__ */ __exportAll({ lib: () => lib });
+function lib() {
+	return "lib";
+}
+//#endregion
+//#region main.js
+async function main() {
+	const { load } = await import("./adapter.js");
+	return lib() + await load();
+}
+//#endregion
+export { lib_exports as n, main as t };
+
+```

@@ -31,13 +31,13 @@ export default defineTest({
     for (const chunk of renderChunks) {
       switch (chunk.facadeModuleId) {
         case path.join(__dirname, 'main.js'):
-          expect(chunk.fileName).toMatch('main-!~{000}~.js');
+          expect(chunk.fileName).toMatch('main-!~{001}~.js');
           expect(chunk.imports).toMatchObject(['shared-!~{002}~.js']);
           expect(chunk.dynamicImports).toMatchObject(['dynamic-!~{003}~.js']);
           break;
 
         case path.join(__dirname, 'entry.js'):
-          expect(chunk.fileName).toMatch('entry-!~{001}~.js');
+          expect(chunk.fileName).toMatch('entry-!~{000}~.js');
           expect(chunk.imports).toMatchObject(['shared-!~{002}~.js']);
           expect(chunk.dynamicImports).toStrictEqual([]);
           break;
@@ -56,7 +56,7 @@ export default defineTest({
     for (const chunk of chunks) {
       switch (chunk.facadeModuleId) {
         case path.join(__dirname, 'main.js'):
-          expect(chunk.preliminaryFileName).toMatchInlineSnapshot(`"main-!~{000}~.js"`);
+          expect(chunk.preliminaryFileName).toMatchInlineSnapshot(`"main-!~{001}~.js"`);
           expect(chunk.fileName).toMatchInlineSnapshot(`"main-BJeIkFVr.js"`);
           expect(chunk.imports).toMatchInlineSnapshot(
             `

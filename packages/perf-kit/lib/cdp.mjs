@@ -145,7 +145,14 @@ export function connect(wsUrl) {
       on(method, handler, sessionId = '') {
         const key = `${sessionId}:${method}`;
         if (!listeners.has(key)) listeners.set(key, []);
-        listeners.get(key).push(handler);
+        const handlers = listeners.get(key);
+        handlers.push(handler);
+        return () => {
+          const index = handlers.indexOf(handler);
+          if (index === -1) return;
+          handlers.splice(index, 1);
+          if (!handlers.length) listeners.delete(key);
+        };
       },
       close() {
         ws.close();

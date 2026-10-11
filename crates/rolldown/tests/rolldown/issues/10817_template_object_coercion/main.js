@@ -17,3 +17,12 @@ Array.prototype.toString = originalArrayToString;
 
 export const bigintText = `${0xffn}`;
 export const bigintResult = bigintText || '';
+
+// oxfmt-ignore
+export const compoundText = `${/foo/ig + ''}`;
+export const compoundResult = compoundText || '';
+
+// oxfmt-ignore
+const coerced = /foo/ig + '';
+export const cachedText = `${coerced}`;
+export const cachedResult = cachedText || '';

@@ -4,6 +4,7 @@ use oxc::{
     ast::{Expression, TemplateLiteral},
     builder::GetAstBuilder,
   },
+  ast_visit::{VisitJs, walk_js},
   minifier::PropertyReadSideEffects,
   semantic::{IsGlobalReference, ReferenceId, Scoping, SymbolId},
 };
@@ -85,12 +86,40 @@ pub fn try_extract_const_literal<'me, 'ast: 'me>(
   ctx: &ConstEvalCtx<'me, 'ast>,
   expr: &Expression<'ast>,
 ) -> Option<ConstantValue> {
-  match expr {
+  let value = match expr {
     Expression::TemplateLiteral(template) => {
       template_text(ctx, template).map(ConstantValue::String)
     }
     _ => expr.evaluate_value(ctx).map(ConstantValue::from),
+  }?;
+  (!contains_object_literal(expr)).then_some(value)
+}
+
+/// Returns whether `expr` contains an array, object, or regexp literal.
+///
+/// oxc converts such a literal with the default `toString`, and keeps the source order of regexp
+/// flags. A program can patch a prototype, and the runtime prints regexp flags in a fixed order.
+fn contains_object_literal(expr: &Expression) -> bool {
+  struct Finder(bool);
+  impl<'a> VisitJs<'a> for Finder {
+    fn visit_expression(&mut self, it: &Expression<'a>) {
+      if self.0 {
+        return;
+      }
+      self.0 = matches!(
+        it,
+        Expression::ArrayExpression(_)
+          | Expression::ObjectExpression(_)
+          | Expression::RegExpLiteral(_)
+      );
+      if !self.0 {
+        walk_js::walk_expression(self, it);
+      }
+    }
   }
+  let mut finder = Finder(false);
+  finder.visit_expression(expr);
+  finder.0
 }
 
 /// Returns whether direct `eval` in the module can assign `symbol_id`.
@@ -121,8 +150,6 @@ fn template_text<'ast>(
       None => {}
       Some(Expression::TemplateLiteral(inner)) => text.push_str(&template_text(ctx, inner)?),
       Some(expr) => {
-        // A string target lets oxc coerce objects speculatively (or use regexp source spelling).
-        // Only stringify an evaluated primitive, whose coercion cannot depend on prototypes.
         let value = expr.evaluate_value(ctx)?;
         text.push_str(&value.to_js_string(ctx)?);
       }
@@ -220,6 +247,10 @@ mod tests {
     assert_eq!(extract("const a = `${{}}`;", "a"), None);
     assert_eq!(extract("const a = `${[1, 2]}`;", "a"), None);
     assert_eq!(extract("const a = `${`${/foo/ig}`}`;", "a"), None);
+    // oxc also converts an object operand of a compound expression.
+    assert_eq!(extract("const a = `${/foo/ig + ''}`;", "a"), None);
+    assert_eq!(extract("const a = /foo/ig + '';", "a"), None);
+    assert_eq!(extract("const C = /foo/ig + ''; const a = `${C}`;", "a"), None);
   }
 
   #[test]

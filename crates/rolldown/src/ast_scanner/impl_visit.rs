@@ -563,21 +563,20 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
         // use this flag to avoid insert it as `Symbol` at the same time.
         let mut is_inserted_before = false;
         if let Some(named_import) = self.result.named_imports.get(&root_symbol_id) {
-          let (ty, max_tract_len) = match named_import.imported {
-            rolldown_common::Specifier::Star => {
-              (MemberExprObjectReferencedType::Namespace, usize::MAX)
-            }
+          let ty = match named_import.imported {
+            rolldown_common::Specifier::Star => MemberExprObjectReferencedType::Namespace,
             rolldown_common::Specifier::Literal(ref compact_str)
               if compact_str.as_str() == "default" =>
             {
-              (MemberExprObjectReferencedType::Default, 2)
+              MemberExprObjectReferencedType::Default
             }
-            rolldown_common::Specifier::Literal(_) => {
-              (MemberExprObjectReferencedType::Named, usize::MAX)
-            }
+            rolldown_common::Specifier::Literal(_) => MemberExprObjectReferencedType::Named,
           };
+          // Record the whole chain for every import kind: a default or named import can resolve
+          // to a namespace (`export * as default from`), and the link stage resolves and shims
+          // missing exports through each nested namespace in the chain.
           if let Some((node_id, span, props)) =
-            self.try_extract_parent_static_member_expr_chain(max_tract_len)
+            self.try_extract_parent_static_member_expr_chain(usize::MAX)
           {
             if !span.is_unspanned() {
               is_inserted_before = true;

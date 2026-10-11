@@ -1,0 +1,32 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# warnings
+
+## SHIMMED_EXPORT
+
+```text
+[SHIMMED_EXPORT] Missing export "missing" has been shimmed in module "dep.js".
+
+```
+
+# Assets
+
+## main.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+//#region dep.js
+var dep_exports = /* @__PURE__ */ __exportAll({
+	missing: () => missing,
+	value: () => 1
+});
+var missing = void 0;
+//#endregion
+//#region main.js
+const value = missing;
+const keys = Object.keys(dep_exports).sort();
+//#endregion
+export { keys, value };
+
+```

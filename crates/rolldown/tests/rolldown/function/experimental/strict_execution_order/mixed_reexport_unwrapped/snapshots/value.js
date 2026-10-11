@@ -1,3 +1,1 @@
-import { state } from '../state.js';
-
-export const SNAPSHOT = state;
+export const SNAPSHOT = globalThis.__seed ?? 0;

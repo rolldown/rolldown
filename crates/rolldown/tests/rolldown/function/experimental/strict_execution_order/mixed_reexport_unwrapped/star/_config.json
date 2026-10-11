@@ -1,8 +1,18 @@
 {
   "config": {
     "strictExecutionOrder": true,
+    "preserveEntrySignatures": "allow-extension",
     "experimental": {
       "onDemandWrapping": true
+    },
+    "codeSplitting": {
+      "includeDependenciesRecursively": false,
+      "groups": [
+        {
+          "name": "snapshot",
+          "test": "[\\\\/]snapshots[\\\\/]value\\.js$"
+        }
+      ]
     }
   },
   "configVariants": [

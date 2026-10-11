@@ -284,6 +284,14 @@ async fn mixed_reexports_keep_lazy_consumers_out_of_static_imports() {
       "../experimental/strict_execution_order/mixed_reexport_records",
       &["lazy-a.js", "lazy-b.js", "a.js", "b.js"][..],
     ),
+    (
+      "../experimental/strict_execution_order/mixed_reexport_namespace/lazy",
+      &["lazy.js", "leaf.js"][..],
+    ),
+    (
+      "../experimental/strict_execution_order/mixed_reexport_namespace/visibility",
+      &["lazy.js", "leaf.js", "leaf-default.js"][..],
+    ),
   ] {
     for on_demand_wrapping in [false, true] {
       for chunk_optimization in [false, true] {

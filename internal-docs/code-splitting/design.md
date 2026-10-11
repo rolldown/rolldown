@@ -346,6 +346,7 @@ pub struct OrderWrapState {
   modules: FxHashMap<ModuleIdx, OrderWrappedModule>,
   reexport_init_transparent: FxHashSet<ModuleIdx>,
   consumer_local_reexport_routes: FxHashSet<ModuleIdx>,
+  consumer_local_reexport_records: FxHashMap<ModuleIdx, FxHashSet<ImportRecordIdx>>,
   consumer_local_namespace_targets: FxHashMap<ModuleIdx, Vec<WrappedEsmInitTarget>>,
   cjs_carriers: FxHashMap<OrderCjsCarrierKey, OrderCjsCarrier>,
   cjs_carriers_by_importee: FxHashMap<ModuleIdx, Vec<OrderCjsCarrierKey>>,
@@ -539,7 +540,7 @@ Removed user import/re-export statements are finalized with any matching `OrderI
 
 ### Complete consumer-local namespaces and entry prologues
 
-Lowering precomputes the complete, source-ordered namespace target list for every consumer-local route. Included import/re-export records route through the importer-local resolver even when the route also has a link-stage interop wrapper; excluded `export *` records whose namespace is materialized use the cached complete list from final metadata. Both paths keep the calls inside the consuming monolithic wrapper's evaluating guard and at the re-export record's source position. Entry rendering and collapsed dynamic-entry call-site activation consume the same list: a consumer-local barrel entry cannot call its intentionally empty shared wrapper, so its prologue or rewritten `import()` calls every namespace target instead. For a cross-chunk rewrite, the host chunk imports and re-exports every target wrapper/carrier beside the simulated namespace; the callback invokes them in list order before returning that namespace. Other order-wrapped entries emit an explicit init call, and interop entries used internally keep an inert implementation chunk behind their public facade.
+Lowering precomputes the complete, source-ordered namespace target list for every consumer-local route. Included import/re-export records and namespace-retained excluded `export *` records use the same importer-local resolver, including routes with a link-stage interop wrapper. Each star record selects only names it contributes to the importer's non-ambiguous export surface; `default`, shadowed names, and conflicting names create no forwarded initialization demand. A mixed module's own initializer covers its local body and mandatory dependencies, so an opaque outer namespace consumer must also initialize the forwarded bindings it exposes. Calls stay inside the consuming wrapper's evaluating guard and at the re-export record's source position. Entry rendering and collapsed dynamic-entry call-site activation consume the cached complete list: a consumer-local barrel entry's prologue or rewritten `import()` calls every namespace target. For a cross-chunk rewrite, the host chunk imports and re-exports every target wrapper/carrier beside the simulated namespace; the callback invokes them in list order before returning that namespace. Other order-wrapped entries emit an explicit init call, and interop entries used internally keep an inert implementation chunk behind their public facade.
 
 ### Topology
 

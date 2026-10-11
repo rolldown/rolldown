@@ -24,15 +24,15 @@ Source: `crates/rolldown/src/stages/link_stage/reference_needed_symbols.rs`.
   → include_statements → patch_module_dependencies
 ```
 
-Position is load-bearing in three directions:
+This position matters for three reasons:
 
 1. **`wrap_kind` and `wrapper_ref` must already exist.** Every CJS/ESM-wrap arm reads `metas[importee.idx].wrap_kind()` and dereferences `wrapper_ref.unwrap()`. `wrap_modules` and `generate_lazy_export` populate them.
-2. **Module side effects must be final.** The import-statement flags this pass writes copy `importee.side_effects`. `cross_module_optimization` and `refine_stmt_side_effects_with_imported_constants` relax statement flags after `determine_side_effects`, so `recompute_analyzed_side_effects` rebuilds the module verdicts first. Otherwise this pass keeps a side-effect-only `import './mod'` of a module that became side-effect free.
-3. **`include_statements` must run after.** Tree-shaking traverses `stmt_info.referenced_symbols` and joins `depended_runtime_helper` against included statements. Without the data this pass writes, wrappers and helpers would be silently dropped from the output.
+2. **Module side effects must be final.** This pass copies the verdict `importee.side_effects` into the import-statement flags. `cross_module_optimization` and `refine_stmt_side_effects_with_imported_constants` relax statement flags after `determine_side_effects` runs. Thus `recompute_analyzed_side_effects` recalculates the module verdicts before this pass runs. Without this step, this pass keeps a side-effect-only `import './mod'` of a module that became side-effect free.
+3. **`include_statements` must run after this pass.** It traverses `stmt_info.referenced_symbols` and joins `depended_runtime_helper` against included statements. Without the data from this pass, it silently drops wrappers and helpers from the output.
 
-`determine_side_effects` propagates effects from dependencies to their importers through a worklist. User-defined verdicts remain authoritative. Re-exports that need wrapper initialization or a `__reExport` call also start propagation. Each module enters the worklist at most once, so the pass takes O(modules + imports).
+`determine_side_effects` propagates side effects from dependencies to their importers through a worklist. User-defined verdicts do not change. Re-exports that need wrapper initialization or a `__reExport` call also start propagation. Each module enters the worklist at most once, so each propagation takes O(modules + imports).
 
-A recursive cache can finish one member of an import cycle before it discovers an effectful dependency of another member. For `a → b → a` and `a → effect`, it can cache `b` as effect-free before discovering `effect`. A separate entry that imports `b` then loses the effect. The fixture `crates/rolldown/tests/rolldown/tree_shaking/multi_entry_side_effect_cycle` reproduces this without constant refinement.
+A recursive walk can cache a member of an import cycle as side-effect free too early. For `a → b → a` and `a → effect`, it can cache `b` as side-effect free before it reaches `effect`. A separate entry that imports `b` then loses the side effect. The fixture `crates/rolldown/tests/rolldown/tree_shaking/multi_entry_side_effect_cycle` tests this case.
 
 ## Dispatch
 
